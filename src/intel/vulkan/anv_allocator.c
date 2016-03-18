@@ -794,12 +794,10 @@ struct bo_pool_bo_link {
 };
 
 void
-anv_bo_pool_init(struct anv_bo_pool *pool,
-                 struct anv_device *device, uint32_t bo_size)
+anv_bo_pool_init(struct anv_bo_pool *pool, struct anv_device *device)
 {
    pool->device = device;
-   pool->bo_size = bo_size;
-   pool->free_list = NULL;
+   memset(pool->free_list, 0, sizeof(pool->free_list));
 
    VG(VALGRIND_CREATE_MEMPOOL(pool, 0, false));
 }
@@ -807,13 +805,15 @@ anv_bo_pool_init(struct anv_bo_pool *pool,
 void
 anv_bo_pool_finish(struct anv_bo_pool *pool)
 {
-   struct bo_pool_bo_link *link = PFL_PTR(pool->free_list);
-   while (link != NULL) {
-      struct bo_pool_bo_link link_copy = VG_NOACCESS_READ(link);
+   for (unsigned i = 0; i < ARRAY_SIZE(pool->free_list); i++) {
+      struct bo_pool_bo_link *link = PFL_PTR(pool->free_list[i]);
+      while (link != NULL) {
+         struct bo_pool_bo_link link_copy = VG_NOACCESS_READ(link);
 
-      anv_gem_munmap(link_copy.bo.map, pool->bo_size);
-      anv_gem_close(pool->device, link_copy.bo.gem_handle);
-      link = link_copy.next;
+         anv_gem_munmap(link_copy.bo.map, link_copy.bo.size);
+         anv_gem_close(pool->device, link_copy.bo.gem_handle);
+         link = link_copy.next;
+      }
    }
 
    VG(VALGRIND_DESTROY_MEMPOOL(pool));
@@ -824,29 +824,32 @@ anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo, uint32_t size)
 {
    VkResult result;
 
-   assert(pool->bo_size <= size);
+   const unsigned size_log2 = size < 4096 ? 12 : ilog2_round_up(size);
+   const unsigned pow2_size = 1 << size_log2;
+   const unsigned bucket = size_log2 - 12;
+   assert(bucket < ARRAY_SIZE(pool->free_list));
 
    void *next_free_void;
-   if (anv_ptr_free_list_pop(&pool->free_list, &next_free_void)) {
+   if (anv_ptr_free_list_pop(&pool->free_list[bucket], &next_free_void)) {
       struct bo_pool_bo_link *next_free = next_free_void;
       *bo = VG_NOACCESS_READ(&next_free->bo);
       assert(bo->map == next_free);
-      assert(bo->size == pool->bo_size);
+      assert(size <= bo->size);
 
-      VG(VALGRIND_MEMPOOL_ALLOC(pool, bo->map, pool->bo_size));
+      VG(VALGRIND_MEMPOOL_ALLOC(pool, bo->map, size));
 
       return VK_SUCCESS;
    }
 
    struct anv_bo new_bo;
 
-   result = anv_bo_init_new(&new_bo, pool->device, pool->bo_size);
+   result = anv_bo_init_new(&new_bo, pool->device, pow2_size);
    if (result != VK_SUCCESS)
       return result;
 
-   assert(new_bo.size == pool->bo_size);
+   assert(new_bo.size == pow2_size);
 
-   new_bo.map = anv_gem_mmap(pool->device, new_bo.gem_handle, 0, pool->bo_size, 0);
+   new_bo.map = anv_gem_mmap(pool->device, new_bo.gem_handle, 0, pow2_size, 0);
    if (new_bo.map == NULL) {
       anv_gem_close(pool->device, new_bo.gem_handle);
       return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
@@ -854,7 +857,7 @@ anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo, uint32_t size)
 
    *bo = new_bo;
 
-   VG(VALGRIND_MEMPOOL_ALLOC(pool, bo->map, pool->bo_size));
+   VG(VALGRIND_MEMPOOL_ALLOC(pool, bo->map, size));
 
    return VK_SUCCESS;
 }
@@ -867,6 +870,11 @@ anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo_in)
    struct bo_pool_bo_link *link = bo.map;
    link->bo = bo;
 
+   assert(util_is_power_of_two(bo.size));
+   const unsigned size_log2 = ilog2_round_up(bo.size);
+   const unsigned bucket = size_log2 - 12;
+   assert(bucket < ARRAY_SIZE(pool->free_list));
+
    VG(VALGRIND_MEMPOOL_FREE(pool, bo.map));
-   anv_ptr_free_list_push(&pool->free_list, link);
+   anv_ptr_free_list_push(&pool->free_list[bucket], link);
 }

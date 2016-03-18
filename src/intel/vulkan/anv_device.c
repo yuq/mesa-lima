@@ -716,8 +716,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
 
    /* Kernel driver requires 8 byte aligned batch length */
    size = align_u32(batch->next - batch->start, 8);
-   assert(size < device->batch_bo_pool.bo_size);
-   result = anv_bo_pool_alloc(&device->batch_bo_pool, &bo, 4096);
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &bo, size);
    if (result != VK_SUCCESS)
       return result;
 
@@ -829,7 +828,7 @@ VkResult anv_CreateDevice(
 
    pthread_mutex_init(&device->mutex, NULL);
 
-   anv_bo_pool_init(&device->batch_bo_pool, device, ANV_CMD_BUFFER_BATCH_SIZE);
+   anv_bo_pool_init(&device->batch_bo_pool, device);
 
    anv_block_pool_init(&device->dynamic_state_block_pool, device, 16384);
 

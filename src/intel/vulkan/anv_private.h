@@ -468,13 +468,10 @@ struct anv_state anv_state_stream_alloc(struct anv_state_stream *stream,
 struct anv_bo_pool {
    struct anv_device *device;
 
-   uint32_t bo_size;
-
-   void *free_list;
+   void *free_list[16];
 };
 
-void anv_bo_pool_init(struct anv_bo_pool *pool,
-                      struct anv_device *device, uint32_t block_size);
+void anv_bo_pool_init(struct anv_bo_pool *pool, struct anv_device *device);
 void anv_bo_pool_finish(struct anv_bo_pool *pool);
 VkResult anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo,
                            uint32_t size);
