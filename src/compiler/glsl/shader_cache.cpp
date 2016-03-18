@@ -416,6 +416,123 @@ read_hash_tables(struct blob_reader *metadata, struct gl_shader_program *prog)
 }
 
 static void
+write_program_resource_data(struct blob *metadata,
+                            struct gl_shader_program *prog,
+                            struct gl_program_resource *res)
+{
+   switch(res->Type) {
+   case GL_PROGRAM_INPUT:
+   case GL_PROGRAM_OUTPUT: {
+      const gl_shader_variable *var = (gl_shader_variable *)res->Data;
+      blob_write_bytes(metadata, var, sizeof(gl_shader_variable));
+      encode_type_to_blob(metadata, var->type);
+
+      if (var->interface_type)
+         encode_type_to_blob(metadata, var->interface_type);
+
+      if (var->outermost_struct_type)
+         encode_type_to_blob(metadata, var->outermost_struct_type);
+
+      blob_write_string(metadata, var->name);
+      break;
+   }
+   case GL_BUFFER_VARIABLE:
+   case GL_VERTEX_SUBROUTINE_UNIFORM:
+   case GL_GEOMETRY_SUBROUTINE_UNIFORM:
+   case GL_FRAGMENT_SUBROUTINE_UNIFORM:
+   case GL_COMPUTE_SUBROUTINE_UNIFORM:
+   case GL_TESS_CONTROL_SUBROUTINE_UNIFORM:
+   case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
+   case GL_UNIFORM:
+      for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
+         if (strcmp(((gl_uniform_storage *)res->Data)->name,
+                    prog->data->UniformStorage[i].name) == 0) {
+            blob_write_uint32(metadata, i);
+            break;
+         }
+      }
+      break;
+   default:
+      assert(!"Support for writing resource not yet implemented.");
+   }
+}
+
+static void
+read_program_resource_data(struct blob_reader *metadata,
+                           struct gl_shader_program *prog,
+                           struct gl_program_resource *res)
+{
+   switch(res->Type) {
+   case GL_PROGRAM_INPUT:
+   case GL_PROGRAM_OUTPUT: {
+      gl_shader_variable *var = ralloc(prog, struct gl_shader_variable);
+
+      blob_copy_bytes(metadata, (uint8_t *) var, sizeof(gl_shader_variable));
+      var->type = decode_type_from_blob(metadata);
+
+      if (var->interface_type)
+         var->interface_type = decode_type_from_blob(metadata);
+
+      if (var->outermost_struct_type)
+         var->outermost_struct_type = decode_type_from_blob(metadata);
+
+      var->name = ralloc_strdup(prog, blob_read_string(metadata));
+
+      res->Data = var;
+      break;
+   }
+   case GL_BUFFER_VARIABLE:
+   case GL_VERTEX_SUBROUTINE_UNIFORM:
+   case GL_GEOMETRY_SUBROUTINE_UNIFORM:
+   case GL_FRAGMENT_SUBROUTINE_UNIFORM:
+   case GL_COMPUTE_SUBROUTINE_UNIFORM:
+   case GL_TESS_CONTROL_SUBROUTINE_UNIFORM:
+   case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
+   case GL_UNIFORM:
+      res->Data = &prog->data->UniformStorage[blob_read_uint32(metadata)];
+      break;
+   default:
+      assert(!"Support for reading resource not yet implemented.");
+   }
+}
+
+static void
+write_program_resource_list(struct blob *metadata,
+                            struct gl_shader_program *prog)
+{
+   blob_write_uint32(metadata, prog->data->NumProgramResourceList);
+
+   for (unsigned i = 0; i < prog->data->NumProgramResourceList; i++) {
+      blob_write_uint32(metadata, prog->data->ProgramResourceList[i].Type);
+      write_program_resource_data(metadata, prog,
+                                  &prog->data->ProgramResourceList[i]);
+      blob_write_bytes(metadata,
+                       &prog->data->ProgramResourceList[i].StageReferences,
+                       sizeof(prog->data->ProgramResourceList[i].StageReferences));
+   }
+}
+
+static void
+read_program_resource_list(struct blob_reader *metadata,
+                           struct gl_shader_program *prog)
+{
+   prog->data->NumProgramResourceList = blob_read_uint32(metadata);
+
+   prog->data->ProgramResourceList =
+      ralloc_array(prog, gl_program_resource,
+                   prog->data->NumProgramResourceList);
+
+   for (unsigned i = 0; i < prog->data->NumProgramResourceList; i++) {
+      prog->data->ProgramResourceList[i].Type = blob_read_uint32(metadata);
+      read_program_resource_data(metadata, prog,
+                                 &prog->data->ProgramResourceList[i]);
+      blob_copy_bytes(metadata,
+                      (uint8_t *) &prog->data->ProgramResourceList[i].StageReferences,
+                      sizeof(prog->data->ProgramResourceList[i].StageReferences));
+   }
+}
+
+static void
 write_shader_parameters(struct blob *metadata,
                         struct gl_program_parameter_list *params)
 {
@@ -576,6 +693,8 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
 
    write_uniform_remap_table(metadata, prog);
 
+   write_program_resource_list(metadata, prog);
+
    char sha1_buf[41];
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       disk_cache_put_key(cache, prog->Shaders[i]->sha1);
@@ -678,6 +797,8 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
    }
 
    read_uniform_remap_table(&metadata, prog);
+
+   read_program_resource_list(&metadata, prog);
 
    if (metadata.current != metadata.end || metadata.overrun) {
       /* Something has gone wrong discard the item from the cache and rebuild
