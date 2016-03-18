@@ -871,6 +871,7 @@ st_create_fp_variant(struct st_context *st,
       variant->bitmap_sampler = ffs(~stfp->Base.Base.SamplersUsed) - 1;
 
       tokens = st_get_bitmap_shader(tgsi.tokens,
+                                    st->internal_target,
                                     variant->bitmap_sampler,
                                     st->needs_texcoord_semantic,
                                     st->bitmap.tex_format ==

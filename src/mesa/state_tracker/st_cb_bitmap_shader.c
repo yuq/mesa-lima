@@ -36,6 +36,7 @@ struct tgsi_bitmap_transform {
    struct tgsi_transform_context base;
    struct tgsi_shader_info info;
    unsigned sampler_index;
+   unsigned tex_target;
    bool use_texcoord;
    bool swizzle_xxxx;
    bool first_instruction_emitted;
@@ -53,6 +54,8 @@ transform_instr(struct tgsi_transform_context *tctx,
 {
    struct tgsi_bitmap_transform *ctx = tgsi_bitmap_transform(tctx);
    struct tgsi_full_instruction inst;
+   unsigned tgsi_tex_target = ctx->tex_target == PIPE_TEXTURE_2D
+      ? TGSI_TEXTURE_2D : TGSI_TEXTURE_RECT;
    unsigned i, semantic;
    int texcoord_index = -1;
 
@@ -92,7 +95,7 @@ transform_instr(struct tgsi_transform_context *tctx,
    tgsi_transform_tex_inst(tctx,
                            TGSI_FILE_TEMPORARY, 0,
                            TGSI_FILE_INPUT, texcoord_index,
-                           TGSI_TEXTURE_2D, ctx->sampler_index);
+                           tgsi_tex_target, ctx->sampler_index);
 
    /* KIL if -tmp0 < 0 # texel=0 -> keep / texel=0 -> discard */
    inst = tgsi_default_full_instruction();
@@ -121,15 +124,19 @@ transform_instr(struct tgsi_transform_context *tctx,
 
 const struct tgsi_token *
 st_get_bitmap_shader(const struct tgsi_token *tokens,
-                     unsigned sampler_index,
+                     unsigned tex_target, unsigned sampler_index,
                      bool use_texcoord, bool swizzle_xxxx)
 {
    struct tgsi_bitmap_transform ctx;
    struct tgsi_token *newtoks;
    int newlen;
 
+   assert(tex_target == PIPE_TEXTURE_2D ||
+          tex_target == PIPE_TEXTURE_RECT);
+
    memset(&ctx, 0, sizeof(ctx));
    ctx.base.transform_instruction = transform_instr;
+   ctx.tex_target = tex_target;
    ctx.sampler_index = sampler_index;
    ctx.use_texcoord = use_texcoord;
    ctx.swizzle_xxxx = swizzle_xxxx;
