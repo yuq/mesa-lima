@@ -476,7 +476,8 @@ struct anv_bo_pool {
 void anv_bo_pool_init(struct anv_bo_pool *pool,
                       struct anv_device *device, uint32_t block_size);
 void anv_bo_pool_finish(struct anv_bo_pool *pool);
-VkResult anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo);
+VkResult anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo,
+                           uint32_t size);
 void anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo);
 
 

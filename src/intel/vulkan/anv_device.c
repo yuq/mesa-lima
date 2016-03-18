@@ -717,7 +717,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
    /* Kernel driver requires 8 byte aligned batch length */
    size = align_u32(batch->next - batch->start, 8);
    assert(size < device->batch_bo_pool.bo_size);
-   result = anv_bo_pool_alloc(&device->batch_bo_pool, &bo);
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &bo, 4096);
    if (result != VK_SUCCESS)
       return result;
 
@@ -1390,7 +1390,7 @@ VkResult anv_CreateFence(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
 
-   result = anv_bo_pool_alloc(&device->batch_bo_pool, &fence_bo);
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &fence_bo, 4096);
    if (result != VK_SUCCESS)
       return result;
 

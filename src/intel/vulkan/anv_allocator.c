@@ -820,9 +820,11 @@ anv_bo_pool_finish(struct anv_bo_pool *pool)
 }
 
 VkResult
-anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo)
+anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo, uint32_t size)
 {
    VkResult result;
+
+   assert(pool->bo_size <= size);
 
    void *next_free_void;
    if (anv_ptr_free_list_pop(&pool->free_list, &next_free_void)) {

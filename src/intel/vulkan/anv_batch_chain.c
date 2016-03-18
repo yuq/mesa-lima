@@ -251,7 +251,8 @@ anv_batch_bo_create(struct anv_cmd_buffer *cmd_buffer,
    if (bbo == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_bo_pool_alloc(&cmd_buffer->device->batch_bo_pool, &bbo->bo);
+   result = anv_bo_pool_alloc(&cmd_buffer->device->batch_bo_pool, &bbo->bo,
+                              ANV_CMD_BUFFER_BATCH_SIZE);
    if (result != VK_SUCCESS)
       goto fail_alloc;
 
@@ -283,7 +284,8 @@ anv_batch_bo_clone(struct anv_cmd_buffer *cmd_buffer,
    if (bbo == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_bo_pool_alloc(&cmd_buffer->device->batch_bo_pool, &bbo->bo);
+   result = anv_bo_pool_alloc(&cmd_buffer->device->batch_bo_pool, &bbo->bo,
+                              other_bbo->bo.size);
    if (result != VK_SUCCESS)
       goto fail_alloc;
 
