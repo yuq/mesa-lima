@@ -264,11 +264,11 @@ aa_transform_epilog(struct tgsi_transform_context *ctx)
    if (aactx->colorOutput != -1) {
       /* insert texture sampling code for antialiasing. */
 
-      /* TEX texTemp, input_coord, sampler */
-      tgsi_transform_tex_2d_inst(ctx,
-                                 TGSI_FILE_TEMPORARY, aactx->texTemp,
-                                 TGSI_FILE_INPUT, aactx->maxInput + 1,
-                                 aactx->freeSampler);
+      /* TEX texTemp, input_coord, sampler, 2D */
+      tgsi_transform_tex_inst(ctx,
+                              TGSI_FILE_TEMPORARY, aactx->texTemp,
+                              TGSI_FILE_INPUT, aactx->maxInput + 1,
+                              TGSI_TEXTURE_2D, aactx->freeSampler);
 
       /* MOV rgb */
       tgsi_transform_op1_inst(ctx, TGSI_OPCODE_MOV,

@@ -344,11 +344,11 @@ pstip_transform_prolog(struct tgsi_transform_context *ctx)
                            pctx->wincoordFile, wincoordInput,
                            TGSI_FILE_IMMEDIATE, pctx->numImmed);
 
-   /* TEX texTemp, texTemp, sampler; */
-   tgsi_transform_tex_2d_inst(ctx,
-                              TGSI_FILE_TEMPORARY, texTemp,
-                              TGSI_FILE_TEMPORARY, texTemp,
-                              sampIdx);
+   /* TEX texTemp, texTemp, sampler, 2D; */
+   tgsi_transform_tex_inst(ctx,
+                           TGSI_FILE_TEMPORARY, texTemp,
+                           TGSI_FILE_TEMPORARY, texTemp,
+                           TGSI_TEXTURE_2D, sampIdx);
 
    /* KILL_IF -texTemp;   # if -texTemp < 0, kill fragment */
    tgsi_transform_kill_inst(ctx,

@@ -516,14 +516,17 @@ tgsi_transform_kill_inst(struct tgsi_transform_context *ctx,
 
 
 static inline void
-tgsi_transform_tex_2d_inst(struct tgsi_transform_context *ctx,
-                           unsigned dst_file,
-                           unsigned dst_index,
-                           unsigned src_file,
-                           unsigned src_index,
-                           unsigned sampler_index)
+tgsi_transform_tex_inst(struct tgsi_transform_context *ctx,
+                        unsigned dst_file,
+                        unsigned dst_index,
+                        unsigned src_file,
+                        unsigned src_index,
+                        unsigned tex_target,
+                        unsigned sampler_index)
 {
    struct tgsi_full_instruction inst;
+
+   assert(tex_target < TGSI_TEXTURE_COUNT);
 
    inst = tgsi_default_full_instruction();
    inst.Instruction.Opcode = TGSI_OPCODE_TEX;
@@ -532,7 +535,7 @@ tgsi_transform_tex_2d_inst(struct tgsi_transform_context *ctx,
    inst.Dst[0].Register.Index = dst_index;
    inst.Instruction.NumSrcRegs = 2;
    inst.Instruction.Texture = TRUE;
-   inst.Texture.Texture = TGSI_TEXTURE_2D;
+   inst.Texture.Texture = tex_target;
    inst.Src[0].Register.File = src_file;
    inst.Src[0].Register.Index = src_index;
    inst.Src[1].Register.File = TGSI_FILE_SAMPLER;

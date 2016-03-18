@@ -89,10 +89,10 @@ transform_instr(struct tgsi_transform_context *tctx,
    tgsi_transform_sampler_decl(tctx, ctx->sampler_index);
 
    /* TEX tmp0, fragment.texcoord[0], texture[0], 2D; */
-   tgsi_transform_tex_2d_inst(tctx,
-                              TGSI_FILE_TEMPORARY, 0,
-                              TGSI_FILE_INPUT, texcoord_index,
-                              ctx->sampler_index);
+   tgsi_transform_tex_inst(tctx,
+                           TGSI_FILE_TEMPORARY, 0,
+                           TGSI_FILE_INPUT, texcoord_index,
+                           TGSI_TEXTURE_2D, ctx->sampler_index);
 
    /* KIL if -tmp0 < 0 # texel=0 -> keep / texel=0 -> discard */
    inst = tgsi_default_full_instruction();

@@ -129,9 +129,9 @@ transform_instr(struct tgsi_transform_context *tctx,
    /* Get initial pixel color from the texture.
     * TEX temp, fragment.texcoord[0], texture[0], 2D;
     */
-   tgsi_transform_tex_2d_inst(tctx, TGSI_FILE_TEMPORARY, ctx->color_temp,
-                              TGSI_FILE_INPUT, texcoord_index,
-                              ctx->drawpix_sampler);
+   tgsi_transform_tex_inst(tctx, TGSI_FILE_TEMPORARY, ctx->color_temp,
+                           TGSI_FILE_INPUT, texcoord_index,
+                           TGSI_TEXTURE_2D, ctx->drawpix_sampler);
 
    /* Apply the scale and bias. */
    if (ctx->scale_and_bias) {
