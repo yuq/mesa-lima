@@ -354,13 +354,85 @@ static void si_upload_compute_input(struct si_context *sctx,
 	pipe_resource_reference((struct pipe_resource**)&input_buffer, NULL);
 }
 
+static void si_setup_tgsi_grid(struct si_context *sctx,
+                                const struct pipe_grid_info *info)
+{
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	unsigned grid_size_reg = R_00B900_COMPUTE_USER_DATA_0 +
+	                          4 * SI_SGPR_GRID_SIZE;
+
+	if (info->indirect) {
+		uint64_t base_va = r600_resource(info->indirect)->gpu_address;
+		uint64_t va = base_va + info->indirect_offset;
+		int i;
+
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		                 (struct r600_resource *)info->indirect,
+		                 RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
+
+		for (i = 0; i < 3; ++i) {
+			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
+					COPY_DATA_DST_SEL(COPY_DATA_REG));
+			radeon_emit(cs, (va +  4 * i));
+			radeon_emit(cs, (va + 4 * i) >> 32);
+			radeon_emit(cs, (grid_size_reg >> 2) + i);
+			radeon_emit(cs, 0);
+		}
+	} else {
+
+		radeon_set_sh_reg_seq(cs, grid_size_reg, 3);
+		radeon_emit(cs, info->grid[0]);
+		radeon_emit(cs, info->grid[1]);
+		radeon_emit(cs, info->grid[2]);
+	}
+}
+
+static void si_emit_dispatch_packets(struct si_context *sctx,
+                                     const struct pipe_grid_info *info)
+{
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	bool render_cond_bit = sctx->b.render_cond && !sctx->b.render_cond_force_off;
+
+	radeon_set_sh_reg_seq(cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
+	radeon_emit(cs, S_00B81C_NUM_THREAD_FULL(info->block[0]));
+	radeon_emit(cs, S_00B820_NUM_THREAD_FULL(info->block[1]));
+	radeon_emit(cs, S_00B824_NUM_THREAD_FULL(info->block[2]));
+
+	if (info->indirect) {
+		uint64_t base_va = r600_resource(info->indirect)->gpu_address;
+
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		                 (struct r600_resource *)info->indirect,
+		                 RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
+
+		radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0) |
+		                PKT3_SHADER_TYPE_S(1));
+		radeon_emit(cs, 1);
+		radeon_emit(cs, base_va);
+		radeon_emit(cs, base_va >> 32);
+
+		radeon_emit(cs, PKT3(PKT3_DISPATCH_INDIRECT, 1, render_cond_bit) |
+		                PKT3_SHADER_TYPE_S(1));
+		radeon_emit(cs, info->indirect_offset);
+		radeon_emit(cs, 1);
+	} else {
+		radeon_emit(cs, PKT3(PKT3_DISPATCH_DIRECT, 3, render_cond_bit) |
+		                PKT3_SHADER_TYPE_S(1));
+		radeon_emit(cs, info->grid[0]);
+		radeon_emit(cs, info->grid[1]);
+		radeon_emit(cs, info->grid[2]);
+		radeon_emit(cs, 1);
+	}
+}
+
+
 static void si_launch_grid(
 		struct pipe_context *ctx, const struct pipe_grid_info *info)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct si_compute *program = sctx->cs_shader_state.program;
-	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
-	unsigned i;
+	int i;
 
 	si_need_cs_space(sctx);
 
@@ -375,20 +447,11 @@ static void si_launch_grid(
 			 SI_CONTEXT_FLAG_COMPUTE;
 	si_emit_cache_flush(sctx, NULL);
 
-	pm4->compute_pkt = true;
-
 	if (!si_switch_compute_shader(sctx, program, &program->shader, info->pc))
 		return;
 
 	if (program->input_size || program->ir_type == PIPE_SHADER_IR_NATIVE)
 		si_upload_compute_input(sctx, info);
-
-	si_pm4_set_reg(pm4, R_00B81C_COMPUTE_NUM_THREAD_X,
-				S_00B81C_NUM_THREAD_FULL(info->block[0]));
-	si_pm4_set_reg(pm4, R_00B820_COMPUTE_NUM_THREAD_Y,
-				S_00B820_NUM_THREAD_FULL(info->block[1]));
-	si_pm4_set_reg(pm4, R_00B824_COMPUTE_NUM_THREAD_Z,
-				S_00B824_NUM_THREAD_FULL(info->block[2]));
 
 	/* Global buffers */
 	for (i = 0; i < MAX_GLOBAL_BUFFERS; i++) {
@@ -402,23 +465,10 @@ static void si_launch_grid(
 					  RADEON_PRIO_COMPUTE_GLOBAL);
 	}
 
-	si_pm4_cmd_begin(pm4, PKT3_DISPATCH_DIRECT);
-	si_pm4_cmd_add(pm4, info->grid[0]); /* Thread groups DIM_X */
-	si_pm4_cmd_add(pm4, info->grid[1]); /* Thread groups DIM_Y */
-	si_pm4_cmd_add(pm4, info->grid[2]); /* Thread gropus DIM_Z */
-	si_pm4_cmd_add(pm4, 1); /* DISPATCH_INITIATOR */
-        si_pm4_cmd_end(pm4, false);
+	if (program->ir_type == PIPE_SHADER_IR_TGSI)
+		si_setup_tgsi_grid(sctx, info);
 
-	si_pm4_emit(sctx, pm4);
-
-#if 0
-	fprintf(stderr, "cdw: %i\n", sctx->cs->cdw);
-	for (i = 0; i < sctx->cs->cdw; i++) {
-		fprintf(stderr, "%4i : 0x%08X\n", i, sctx->cs->buf[i]);
-	}
-#endif
-
-	si_pm4_free_state(sctx, pm4, ~0);
+	si_emit_dispatch_packets(sctx, info);
 
 	sctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH |
 			 SI_CONTEXT_INV_VMEM_L1 |
