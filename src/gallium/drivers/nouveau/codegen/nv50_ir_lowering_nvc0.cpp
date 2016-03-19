@@ -1098,6 +1098,7 @@ NVC0LoweringPass::handleSharedATOM(Instruction *atom)
          break;
       default:
          assert(0);
+         return;
       }
 
       Instruction *i =
