@@ -186,7 +186,8 @@ static void si_reinitialize_ce_ram(struct si_context *sctx,
 }
 
 static bool si_upload_descriptors(struct si_context *sctx,
-				  struct si_descriptors *desc)
+				  struct si_descriptors *desc,
+				  struct r600_atom * atom)
 {
 	unsigned list_size = desc->num_elements * desc->element_dw_size * 4;
 
@@ -232,7 +233,10 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	}
 	desc->pointer_dirty = true;
 	desc->dirty_mask = 0;
-	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
+
+	if (atom)
+		si_mark_atom_dirty(sctx, atom);
+
 	return true;
 }
 
@@ -1373,7 +1377,8 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 	desc->pointer_dirty = keep_dirty;
 }
 
-void si_emit_shader_userdata(struct si_context *sctx, struct r600_atom *atom)
+void si_emit_graphics_shader_userdata(struct si_context *sctx,
+                                      struct r600_atom *atom)
 {
 	unsigned i;
 	uint32_t *sh_base = sctx->shader_userdata.sh_base;
@@ -1397,7 +1402,7 @@ void si_emit_shader_userdata(struct si_context *sctx, struct r600_atom *atom)
 				       R_00B130_SPI_SHADER_USER_DATA_VS_0, true);
 	}
 
-	for (i = 0; i < SI_NUM_SHADERS; i++) {
+	for (i = 0; i < SI_NUM_GRAPHICS_SHADERS; i++) {
 		unsigned base = sh_base[i];
 
 		if (!base)
@@ -1412,6 +1417,20 @@ void si_emit_shader_userdata(struct si_context *sctx, struct r600_atom *atom)
 		si_emit_shader_pointer(sctx, &sctx->images[i].desc, base, false);
 	}
 	si_emit_shader_pointer(sctx, &sctx->vertex_buffers, sh_base[PIPE_SHADER_VERTEX], false);
+}
+
+void si_emit_compute_shader_userdata(struct si_context *sctx)
+{
+	unsigned base = R_00B900_COMPUTE_USER_DATA_0;
+
+	si_emit_shader_pointer(sctx, &sctx->const_buffers[PIPE_SHADER_COMPUTE].desc,
+	                       base, false);
+	si_emit_shader_pointer(sctx, &sctx->shader_buffers[PIPE_SHADER_COMPUTE].desc,
+	                       base, false);
+	si_emit_shader_pointer(sctx, &sctx->samplers[PIPE_SHADER_COMPUTE].views.desc,
+	                       base, false);
+	si_emit_shader_pointer(sctx, &sctx->images[PIPE_SHADER_COMPUTE].desc,
+	                       base, false);
 }
 
 /* INIT/DEINIT/UPLOAD */
@@ -1460,7 +1479,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 
 	/* Shader user data. */
 	si_init_atom(sctx, &sctx->shader_userdata.atom, &sctx->atoms.s.shader_userdata,
-		     si_emit_shader_userdata);
+		     si_emit_graphics_shader_userdata);
 
 	/* Set default and immutable mappings. */
 	si_set_user_data_base(sctx, PIPE_SHADER_VERTEX, R_00B130_SPI_SHADER_USER_DATA_VS_0);
@@ -1469,19 +1488,39 @@ void si_init_all_descriptors(struct si_context *sctx)
 	si_set_user_data_base(sctx, PIPE_SHADER_FRAGMENT, R_00B030_SPI_SHADER_USER_DATA_PS_0);
 }
 
-bool si_upload_shader_descriptors(struct si_context *sctx)
+bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
 {
 	int i;
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
-		if (!si_upload_descriptors(sctx, &sctx->const_buffers[i].desc) ||
-		    !si_upload_descriptors(sctx, &sctx->rw_buffers[i].desc) ||
-		    !si_upload_descriptors(sctx, &sctx->shader_buffers[i].desc) ||
-		    !si_upload_descriptors(sctx, &sctx->samplers[i].views.desc) ||
-		    !si_upload_descriptors(sctx, &sctx->images[i].desc))
+		if (!si_upload_descriptors(sctx, &sctx->const_buffers[i].desc,
+		                           &sctx->shader_userdata.atom) ||
+		    !si_upload_descriptors(sctx, &sctx->rw_buffers[i].desc,
+		                           &sctx->shader_userdata.atom) ||
+		    !si_upload_descriptors(sctx, &sctx->shader_buffers[i].desc,
+		                           &sctx->shader_userdata.atom) ||
+		    !si_upload_descriptors(sctx, &sctx->samplers[i].views.desc,
+		                           &sctx->shader_userdata.atom) ||
+		    !si_upload_descriptors(sctx, &sctx->images[i].desc,
+		                           &sctx->shader_userdata.atom))
 			return false;
 	}
 	return si_upload_vertex_buffer_descriptors(sctx);
+}
+
+bool si_upload_compute_shader_descriptors(struct si_context *sctx)
+{
+	/* Does not update rw_buffers as that is not needed for compute shaders
+	 * and the input buffer is using the same SGPR's anyway.
+	 */
+	return si_upload_descriptors(sctx,
+	                &sctx->const_buffers[PIPE_SHADER_COMPUTE].desc, NULL) &&
+	       si_upload_descriptors(sctx,
+	               &sctx->shader_buffers[PIPE_SHADER_COMPUTE].desc, NULL) &&
+	       si_upload_descriptors(sctx,
+	               &sctx->samplers[PIPE_SHADER_COMPUTE].views.desc, NULL) &&
+	       si_upload_descriptors(sctx,
+	               &sctx->images[PIPE_SHADER_COMPUTE].desc,  NULL);
 }
 
 void si_release_all_descriptors(struct si_context *sctx)

@@ -452,6 +452,9 @@ static void si_launch_grid(
 	if (!si_switch_compute_shader(sctx, program, &program->shader, info->pc))
 		return;
 
+	si_upload_compute_shader_descriptors(sctx);
+	si_emit_compute_shader_userdata(sctx);
+
 	if (si_is_atom_dirty(sctx, sctx->atoms.s.render_cond)) {
 		sctx->atoms.s.render_cond->emit(&sctx->b,
 		                                sctx->atoms.s.render_cond);

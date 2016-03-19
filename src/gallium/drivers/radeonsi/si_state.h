@@ -257,14 +257,17 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			bool add_tid, bool swizzle,
 			unsigned element_size, unsigned index_stride, uint64_t offset);
 void si_init_all_descriptors(struct si_context *sctx);
-bool si_upload_shader_descriptors(struct si_context *sctx);
+bool si_upload_graphics_shader_descriptors(struct si_context *sctx);
+bool si_upload_compute_shader_descriptors(struct si_context *sctx);
 void si_release_all_descriptors(struct si_context *sctx);
 void si_all_descriptors_begin_new_cs(struct si_context *sctx);
 void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuffer,
 			    const uint8_t *ptr, unsigned size, uint32_t *const_offset);
 void si_shader_change_notify(struct si_context *sctx);
 void si_update_compressed_colortex_masks(struct si_context *sctx);
-void si_emit_shader_userdata(struct si_context *sctx, struct r600_atom *atom);
+void si_emit_graphics_shader_userdata(struct si_context *sctx,
+                                      struct r600_atom *atom);
+void si_emit_compute_shader_userdata(struct si_context *sctx);
 
 /* si_state.c */
 struct si_shader_selector;
