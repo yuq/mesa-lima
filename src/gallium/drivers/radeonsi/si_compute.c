@@ -22,6 +22,7 @@
  *
  */
 
+#include "tgsi/tgsi_parse.h"
 #include "util/u_memory.h"
 #include "radeon/r600_pipe_common.h"
 #include "radeon/radeon_elf_util.h"
@@ -35,13 +36,11 @@
 #define MAX_GLOBAL_BUFFERS 20
 
 struct si_compute {
-	struct si_context *ctx;
-
+	unsigned ir_type;
 	unsigned local_size;
 	unsigned private_size;
 	unsigned input_size;
 	struct si_shader shader;
-	unsigned num_user_sgprs;
 
 	struct r600_resource *input_buffer;
 	struct pipe_resource *global_buffers[MAX_GLOBAL_BUFFERS];
@@ -93,33 +92,74 @@ static void *si_create_compute_state(
 	const struct pipe_compute_state *cso)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_screen *sscreen = (struct si_screen *)ctx->screen;
 	struct si_compute *program = CALLOC_STRUCT(si_compute);
-	const struct pipe_llvm_program_header *header;
-	const char *code;
+	struct si_shader *shader = &program->shader;
 
-	header = cso->prog;
-	code = cso->prog + sizeof(struct pipe_llvm_program_header);
 
-	program->ctx = sctx;
+	program->ir_type = cso->ir_type;
 	program->local_size = cso->req_local_mem;
 	program->private_size = cso->req_private_mem;
 	program->input_size = cso->req_input_mem;
 
-	radeon_elf_read(code, header->num_bytes, &program->shader.binary);
 
-	/* init_scratch_buffer patches the shader code with the scratch address,
-	 * so we need to call it before si_shader_binary_read() which uploads
-	 * the shader code to the GPU.
-	 */
-	init_scratch_buffer(sctx, program);
-	si_shader_binary_read_config(&program->shader.binary,
-				     &program->shader.config, 0);
+	if (cso->ir_type == PIPE_SHADER_IR_TGSI) {
+		struct si_shader_selector sel;
+		bool scratch_enabled;
+
+		memset(&sel, 0, sizeof(sel));
+
+		sel.tokens = tgsi_dup_tokens(cso->prog);
+		if (!sel.tokens) {
+			return NULL;
+		}
+
+		tgsi_scan_shader(cso->prog, &sel.info);
+		sel.type = PIPE_SHADER_COMPUTE;
+		sel.local_size = cso->req_local_mem;
+
+		p_atomic_inc(&sscreen->b.num_shaders_created);
+
+		program->shader.selector = &sel;
+
+		if (si_compile_tgsi_shader(sscreen, sctx->tm, &program->shader,
+		                           true, &sctx->b.debug)) {
+			FREE(sel.tokens);
+			return NULL;
+		}
+
+		scratch_enabled = shader->config.scratch_bytes_per_wave > 0;
+
+		shader->config.rsrc2 = S_00B84C_USER_SGPR(SI_CS_NUM_USER_SGPR) |
+			   S_00B84C_SCRATCH_EN(scratch_enabled) |
+			   S_00B84C_TGID_X_EN(1) | S_00B84C_TGID_Y_EN(1) |
+			   S_00B84C_TGID_Z_EN(1) | S_00B84C_TIDIG_COMP_CNT(2) |
+			   S_00B84C_LDS_SIZE(shader->config.lds_size);
+
+		FREE(sel.tokens);
+	} else {
+		const struct pipe_llvm_program_header *header;
+		const char *code;
+		header = cso->prog;
+		code = cso->prog + sizeof(struct pipe_llvm_program_header);
+
+		radeon_elf_read(code, header->num_bytes, &program->shader.binary);
+		/* init_scratch_buffer patches the shader code with the scratch address,
+		* so we need to call it before si_shader_binary_read() which uploads
+		* the shader code to the GPU.
+		*/
+		init_scratch_buffer(sctx, program);
+		si_shader_binary_read_config(&program->shader.binary,
+			     &program->shader.config, 0);
+	}
 	si_shader_dump(sctx->screen, &program->shader, &sctx->b.debug,
 		       TGSI_PROCESSOR_COMPUTE, stderr);
 	si_shader_binary_upload(sctx->screen, &program->shader);
 
-	program->input_buffer =	si_resource_create_custom(sctx->b.b.screen,
-		PIPE_USAGE_IMMUTABLE, program->input_size);
+	if (program->input_size) {
+		program->input_buffer =	si_resource_create_custom(sctx->b.b.screen,
+			PIPE_USAGE_IMMUTABLE, program->input_size);
+	}
 
 	return program;
 }
