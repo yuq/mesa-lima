@@ -934,6 +934,7 @@ NV50LoweringPreSSA::handleTXD(TexInstruction *i)
 
    handleTEX(i);
    i->op = OP_TEX; // no need to clone dPdx/dPdy later
+   i->tex.derivAll = true;
 
    for (c = 0; c < dim; ++c)
       crd[c] = bld.getScratch();
