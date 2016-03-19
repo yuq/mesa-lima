@@ -812,7 +812,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
 	}
 
-	si_decompress_textures(sctx);
+	si_decompress_graphics_textures(sctx);
 
 	/* Set the rasterization primitive type.
 	 *

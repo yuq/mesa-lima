@@ -374,7 +374,8 @@ si_decompress_image_color_textures(struct si_context *sctx,
 	}
 }
 
-void si_decompress_textures(struct si_context *sctx)
+static void si_decompress_textures(struct si_context *sctx, int shader_start,
+                                   int shader_end)
 {
 	unsigned compressed_colortex_counter;
 
@@ -389,7 +390,7 @@ void si_decompress_textures(struct si_context *sctx)
 	}
 
 	/* Flush depth textures which need to be flushed. */
-	for (int i = 0; i < SI_NUM_SHADERS; i++) {
+	for (int i = shader_start; i < shader_end; i++) {
 		if (sctx->samplers[i].depth_texture_mask) {
 			si_flush_depth_textures(sctx, &sctx->samplers[i]);
 		}
@@ -400,6 +401,14 @@ void si_decompress_textures(struct si_context *sctx)
 			si_decompress_image_color_textures(sctx, &sctx->images[i]);
 		}
 	}
+}
+
+void si_decompress_graphics_textures(struct si_context *sctx) {
+	si_decompress_textures(sctx, 0, SI_NUM_GRAPHICS_SHADERS);
+}
+
+void si_decompress_compute_textures(struct si_context *sctx) {
+	si_decompress_textures(sctx, SI_NUM_GRAPHICS_SHADERS, SI_NUM_SHADERS);
 }
 
 static void si_clear(struct pipe_context *ctx, unsigned buffers,

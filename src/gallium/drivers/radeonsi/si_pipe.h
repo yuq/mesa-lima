@@ -339,7 +339,8 @@ void cik_sdma_copy(struct pipe_context *ctx,
 
 /* si_blit.c */
 void si_init_blit_functions(struct si_context *sctx);
-void si_decompress_textures(struct si_context *sctx);
+void si_decompress_graphics_textures(struct si_context *sctx);
+void si_decompress_compute_textures(struct si_context *sctx);
 void si_resource_copy_region(struct pipe_context *ctx,
 			     struct pipe_resource *dst,
 			     unsigned dst_level,

@@ -434,6 +434,8 @@ static void si_launch_grid(
 	struct si_compute *program = sctx->cs_shader_state.program;
 	int i;
 
+	si_decompress_compute_textures(sctx);
+
 	si_need_cs_space(sctx);
 
 	if (!sctx->cs_shader_state.initialized)
