@@ -233,6 +233,8 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
                         prog->data->UniformStorage[i].top_level_array_size);
       blob_write_uint32(metadata,
                         prog->data->UniformStorage[i].top_level_array_stride);
+      blob_write_bytes(metadata, prog->data->UniformStorage[i].opaque,
+                       sizeof(prog->data->UniformStorage[i].opaque));
    }
 }
 
@@ -272,6 +274,10 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
       uniforms[i].top_level_array_size = blob_read_uint32(metadata);
       uniforms[i].top_level_array_stride = blob_read_uint32(metadata);
       prog->UniformHash->put(i, uniforms[i].name);
+
+      memcpy(uniforms[i].opaque,
+             blob_read_bytes(metadata, sizeof(uniforms[i].opaque)),
+             sizeof(uniforms[i].opaque));
    }
 }
 
@@ -596,6 +602,12 @@ write_shader_metadata(struct blob *metadata, gl_linked_shader *shader)
                     sizeof(glprog->TexturesUsed));
    blob_write_uint64(metadata, glprog->SamplersUsed);
 
+   blob_write_bytes(metadata, glprog->SamplerUnits,
+                    sizeof(glprog->SamplerUnits));
+   blob_write_bytes(metadata, glprog->sh.SamplerTargets,
+                    sizeof(glprog->sh.SamplerTargets));
+   blob_write_uint32(metadata, glprog->ShadowSamplers);
+
    write_shader_parameters(metadata, glprog->Parameters);
 }
 
@@ -607,6 +619,12 @@ read_shader_metadata(struct blob_reader *metadata,
    blob_copy_bytes(metadata, (uint8_t *) glprog->TexturesUsed,
                    sizeof(glprog->TexturesUsed));
    glprog->SamplersUsed = blob_read_uint64(metadata);
+
+   blob_copy_bytes(metadata, (uint8_t *) glprog->SamplerUnits,
+                   sizeof(glprog->SamplerUnits));
+   blob_copy_bytes(metadata, (uint8_t *) glprog->sh.SamplerTargets,
+                   sizeof(glprog->sh.SamplerTargets));
+   glprog->ShadowSamplers = blob_read_uint32(metadata);
 
    glprog->Parameters = _mesa_new_parameter_list();
    read_shader_parameters(metadata, glprog->Parameters);
