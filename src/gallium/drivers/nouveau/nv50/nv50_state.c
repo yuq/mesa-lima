@@ -1180,8 +1180,10 @@ nv50_set_stream_output_targets(struct pipe_context *pipe,
    }
    nv50->num_so_targets = num_targets;
 
-   if (nv50->so_targets_dirty)
+   if (nv50->so_targets_dirty) {
+      nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_SO);
       nv50->dirty_3d |= NV50_NEW_3D_STRMOUT;
+   }
 }
 
 static void
