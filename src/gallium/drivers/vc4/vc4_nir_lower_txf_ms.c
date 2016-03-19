@@ -23,7 +23,6 @@
 
 #include "vc4_qir.h"
 #include "kernel/vc4_packet.h"
-#include "tgsi/tgsi_info.h"
 #include "compiler/nir/nir_builder.h"
 
 /** @file vc4_nir_lower_txf_ms.c
