@@ -646,23 +646,34 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 			uint64_t *grid_size = ret;
 			grid_size[0] = 65535;
 			grid_size[1] = 65535;
-			grid_size[2] = 1;
+			grid_size[2] = 65535;
 		}
 		return 3 * sizeof(uint64_t) ;
 
 	case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
 		if (ret) {
 			uint64_t *block_size = ret;
-			block_size[0] = 256;
-			block_size[1] = 256;
-			block_size[2] = 256;
+			if (rscreen->chip_class >= SI && HAVE_LLVM >= 0x309 &&
+			    ir_type == PIPE_SHADER_IR_TGSI) {
+				block_size[0] = 2048;
+				block_size[1] = 2048;
+				block_size[2] = 2048;
+			} else {
+				block_size[0] = 256;
+				block_size[1] = 256;
+				block_size[2] = 256;
+			}
 		}
 		return 3 * sizeof(uint64_t);
 
 	case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
 		if (ret) {
 			uint64_t *max_threads_per_block = ret;
-			*max_threads_per_block = 256;
+			if (rscreen->chip_class >= SI && HAVE_LLVM >= 0x309 &&
+			    ir_type == PIPE_SHADER_IR_TGSI)
+				*max_threads_per_block = 2048;
+			else
+				*max_threads_per_block = 256;
 		}
 		return sizeof(uint64_t);
 

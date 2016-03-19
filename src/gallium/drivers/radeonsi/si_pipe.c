@@ -473,6 +473,8 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 
 static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enum pipe_shader_cap param)
 {
+	struct si_screen *sscreen = (struct si_screen *)pscreen;
+
 	switch(shader)
 	{
 	case PIPE_SHADER_FRAGMENT:
@@ -490,9 +492,19 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 		case PIPE_SHADER_CAP_PREFERRED_IR:
 			return PIPE_SHADER_IR_NATIVE;
 
-		case PIPE_SHADER_CAP_SUPPORTED_IRS:
-			return 0;
+		case PIPE_SHADER_CAP_SUPPORTED_IRS: {
+			int ir = 1 << PIPE_SHADER_IR_NATIVE;
 
+			/* Old kernels disallowed some register writes for SI
+			 * that are used for indirect dispatches. */
+			if (HAVE_LLVM >= 0x309 && (sscreen->b.chip_class >= CIK ||
+			                           sscreen->b.info.drm_major == 3 ||
+			                           (sscreen->b.info.drm_major == 2 &&
+			                            sscreen->b.info.drm_minor >= 45)))
+				ir |= 1 << PIPE_SHADER_IR_TGSI;
+
+			return ir;
+		}
 		case PIPE_SHADER_CAP_DOUBLES:
 			return HAVE_LLVM >= 0x0307;
 
