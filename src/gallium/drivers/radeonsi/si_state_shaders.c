@@ -1406,6 +1406,9 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 		 * Don't set any other bits.
 		 * (FLAT_SHADE=1 completely changes behavior) */
 		ps_input_cntl = S_028644_OFFSET(0x20);
+		/* D3D 9 behaviour. GL is undefined */
+		if (name == TGSI_SEMANTIC_COLOR && index == 0)
+			ps_input_cntl |= S_028644_DEFAULT_VAL(3);
 	}
 	return ps_input_cntl;
 }
