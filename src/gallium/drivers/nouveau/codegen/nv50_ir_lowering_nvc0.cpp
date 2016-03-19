@@ -1780,7 +1780,7 @@ NVC0LoweringPass::handleSQRT(Instruction *i)
 {
    if (i->dType == TYPE_F64) {
       Value *pred = bld.getSSA(1, FILE_PREDICATE);
-      Value *zero = bld.loadImm(NULL, 0.0d);
+      Value *zero = bld.loadImm(NULL, 0);
       Value *dst = bld.getSSA(8);
       bld.mkOp1(OP_RSQ, i->dType, dst, i->getSrc(0));
       bld.mkCmp(OP_SET, CC_LE, i->dType, pred, i->dType, i->getSrc(0), zero);
