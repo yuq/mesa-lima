@@ -746,9 +746,13 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
       }
 
       Value *arrayIndex = i->tex.target.isArray() ? i->getSrc(lyr) : NULL;
-      for (int s = dim; s >= 1; --s)
-         i->setSrc(s, i->getSrc(s - 1));
-      i->setSrc(0, arrayIndex);
+      if (arrayIndex) {
+         for (int s = dim; s >= 1; --s)
+            i->setSrc(s, i->getSrc(s - 1));
+         i->setSrc(0, arrayIndex);
+      } else {
+         i->moveSources(0, 1);
+      }
 
       if (arrayIndex) {
          int sat = (i->op == OP_TXF) ? 1 : 0;
