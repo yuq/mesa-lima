@@ -874,7 +874,17 @@ NVC0LoweringPass::handleManualTXD(TexInstruction *i)
    Value *zero = bld.loadImm(bld.getSSA(), 0);
    int l, c;
    const int dim = i->tex.target.getDim() + i->tex.target.isCube();
-   const int array = i->tex.target.isArray();
+
+   // This function is invoked after handleTEX lowering, so we have to expect
+   // the arguments in the order that the hw wants them. For Fermi, array and
+   // indirect are both in the leading arg, while for Kepler, array and
+   // indirect are separate (and both precede the coordinates). Maxwell is
+   // handled in a separate function.
+   unsigned array;
+   if (targ->getChipset() < NVISA_GK104_CHIPSET)
+      array = i->tex.target.isArray() || i->tex.rIndirectSrc >= 0;
+   else
+      array = i->tex.target.isArray() + (i->tex.rIndirectSrc >= 0);
 
    i->op = OP_TEX; // no need to clone dPdx/dPdy later
 
