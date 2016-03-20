@@ -2628,6 +2628,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			constbuf.user_buffer = sctx->b.sample_locations_16x;
 			break;
 		default:
+			R600_ERR("Requested an invalid number of samples %i.\n",
+				 sctx->framebuffer.nr_samples);
 			assert(0);
 		}
 		constbuf.buffer_size = sctx->framebuffer.nr_samples * 2 * 4;
