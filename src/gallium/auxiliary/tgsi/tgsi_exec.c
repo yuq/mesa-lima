@@ -1995,11 +1995,11 @@ fetch_sampler_unit(struct tgsi_exec_machine *mach,
                    uint sampler)
 {
    uint unit;
-
+   int i;
    if (inst->Src[sampler].Register.Indirect) {
       const struct tgsi_full_src_register *reg = &inst->Src[sampler];
       union tgsi_exec_channel indir_index, index2;
-
+      const uint execmask = mach->ExecMask;
       index2.i[0] =
       index2.i[1] =
       index2.i[2] =
@@ -2012,7 +2012,13 @@ fetch_sampler_unit(struct tgsi_exec_machine *mach,
                              &index2,
                              &ZeroVec,
                              &indir_index);
-      unit = inst->Src[sampler].Register.Index + indir_index.i[0];
+      for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+         if (execmask & (1 << i)) {
+            unit = inst->Src[sampler].Register.Index + indir_index.i[i];
+            break;
+         }
+      }
+
    } else {
       unit = inst->Src[sampler].Register.Index;
    }
