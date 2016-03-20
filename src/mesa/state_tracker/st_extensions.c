@@ -253,6 +253,13 @@ void st_init_limits(struct pipe_screen *screen,
       pc->MaxLocalParams = MIN2(pc->MaxParameters, MAX_PROGRAM_LOCAL_PARAMS);
       pc->MaxEnvParams = MIN2(pc->MaxParameters, MAX_PROGRAM_ENV_PARAMS);
 
+      if (screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_INTEGERS)) {
+         pc->LowInt.RangeMin = 31;
+         pc->LowInt.RangeMax = 30;
+         pc->LowInt.Precision = 0;
+         pc->MediumInt = pc->HighInt = pc->LowInt;
+      }
+
       options->EmitNoNoise = TRUE;
 
       /* TODO: make these more fine-grained if anyone needs it */
