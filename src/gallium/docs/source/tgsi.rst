@@ -2710,7 +2710,7 @@ TGSI_SEMANTIC_COLOR
 """""""""""""""""""
 
 For vertex shader outputs or fragment shader inputs/outputs, this
-label indicates that the resister contains an R,G,B,A color.
+label indicates that the register contains an R,G,B,A color.
 
 Several shader inputs/outputs may contain colors so the semantic index
 is used to distinguish them.  For example, color[0] may be the diffuse
