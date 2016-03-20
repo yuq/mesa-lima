@@ -2000,6 +2000,11 @@ boolean si_is_format_supported(struct pipe_screen *screen,
 		case 4:
 		case 8:
 			break;
+		case 16:
+			if (format == PIPE_FORMAT_NONE)
+				return TRUE;
+			else
+				return FALSE;
 		default:
 			return FALSE;
 		}
