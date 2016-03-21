@@ -532,6 +532,37 @@ static LLVMValueRef get_indirect_index(struct si_shader_context *ctx,
 }
 
 /**
+ * Like get_indirect_index, but restricts the return value to a (possibly
+ * undefined) value inside [0..num).
+ */
+static LLVMValueRef get_bounded_indirect_index(struct si_shader_context *ctx,
+					       const struct tgsi_ind_register *ind,
+					       int rel_index, unsigned num)
+{
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef result = get_indirect_index(ctx, ind, rel_index);
+	LLVMValueRef c_max = LLVMConstInt(ctx->i32, num - 1, 0);
+	LLVMValueRef cc;
+
+	if (util_is_power_of_two(num)) {
+		result = LLVMBuildAnd(builder, result, c_max, "");
+	} else {
+		/* In theory, this MAX pattern should result in code that is
+		 * as good as the bit-wise AND above.
+		 *
+		 * In practice, LLVM generates worse code (at the time of
+		 * writing), because its value tracking is not strong enough.
+		 */
+		cc = LLVMBuildICmp(builder, LLVMIntULE, result, c_max, "");
+		result = LLVMBuildSelect(builder, cc, result, c_max, "");
+	}
+
+	return result;
+}
+
+
+/**
  * Calculate a dword address given an input or output register and a stride.
  */
 static LLVMValueRef get_dw_address(struct si_shader_context *ctx,
@@ -2814,7 +2845,18 @@ image_fetch_rsrc(
 		LLVMValueRef rsrc_ptr;
 		LLVMValueRef tmp;
 
-		ind_index = get_indirect_index(ctx, &image->Indirect, image->Register.Index);
+		/* From the GL_ARB_shader_image_load_store extension spec:
+		 *
+		 *    If a shader performs an image load, store, or atomic
+		 *    operation using an image variable declared as an array,
+		 *    and if the index used to select an individual element is
+		 *    negative or greater than or equal to the size of the
+		 *    array, the results of the operation are undefined but may
+		 *    not lead to termination.
+		 */
+		ind_index = get_bounded_indirect_index(ctx, &image->Indirect,
+						       image->Register.Index,
+						       SI_NUM_IMAGES);
 
 		rsrc_ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_IMAGES);
 		tmp = build_indexed_load_const(ctx, rsrc_ptr, ind_index);
