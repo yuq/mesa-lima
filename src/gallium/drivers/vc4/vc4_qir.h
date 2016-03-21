@@ -63,6 +63,11 @@ struct qreg {
         int pack;
 };
 
+static inline struct qreg qir_reg(enum qfile file, uint32_t index)
+{
+        return (struct qreg){file, index};
+}
+
 enum qop {
         QOP_UNDEF,
         QOP_MOV,
@@ -702,8 +707,7 @@ qir_POW(struct vc4_compile *c, struct qreg x, struct qreg y)
 static inline void
 qir_VPM_WRITE(struct vc4_compile *c, struct qreg val)
 {
-        static const struct qreg vpm = { QFILE_VPM, 0 };
-        qir_emit(c, qir_inst(QOP_MOV, vpm, val, c->undef));
+        qir_MOV_dest(c, qir_reg(QFILE_VPM, 0), val);
 }
 
 #endif /* VC4_QIR_H */

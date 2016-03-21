@@ -448,12 +448,11 @@ qir_uniform(struct vc4_compile *c,
         for (int i = 0; i < c->num_uniforms; i++) {
                 if (c->uniform_contents[i] == contents &&
                     c->uniform_data[i] == data) {
-                        return (struct qreg) { QFILE_UNIF, i };
+                        return qir_reg(QFILE_UNIF, i);
                 }
         }
 
         uint32_t uniform = c->num_uniforms++;
-        struct qreg u = { QFILE_UNIF, uniform };
 
         if (uniform >= c->uniform_array_size) {
                 c->uniform_array_size = MAX2(MAX2(16, uniform + 1),
@@ -470,7 +469,7 @@ qir_uniform(struct vc4_compile *c,
         c->uniform_contents[uniform] = contents;
         c->uniform_data[uniform] = data;
 
-        return u;
+        return qir_reg(QFILE_UNIF, uniform);
 }
 
 void
@@ -486,8 +485,7 @@ qir_SF(struct vc4_compile *c, struct qreg src)
         if (src.file != QFILE_TEMP ||
             !c->defs[src.index] ||
             last_inst != c->defs[src.index]) {
-                struct qreg null = { QFILE_NULL, 0 };
-                last_inst = qir_MOV_dest(c, null, src);
+                last_inst = qir_MOV_dest(c, qir_reg(QFILE_NULL, 0), src);
                 last_inst = (struct qinst *)c->instructions.prev;
         }
         last_inst->sf = true;

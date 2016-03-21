@@ -637,8 +637,8 @@ emit_vertex_input(struct vc4_compile *c, int attr)
 
         c->vattr_sizes[attr] = align(attr_size, 4);
         for (int i = 0; i < align(attr_size, 4) / 4; i++) {
-                struct qreg vpm = { QFILE_VPM, attr * 4 + i };
-                c->inputs[attr * 4 + i] = qir_MOV(c, vpm);
+                c->inputs[attr * 4 + i] =
+                        qir_MOV(c, qir_reg(QFILE_VPM, attr * 4 + i));
                 c->num_inputs++;
         }
 }
@@ -1303,8 +1303,7 @@ emit_stub_vpm_read(struct vc4_compile *c)
                 return;
 
         c->vattr_sizes[0] = 4;
-        struct qreg vpm = { QFILE_VPM, 0 };
-        (void)qir_MOV(c, vpm);
+        (void)qir_MOV(c, qir_reg(QFILE_VPM, 0));
         c->num_inputs++;
 }
 
