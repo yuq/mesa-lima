@@ -5199,6 +5199,8 @@ tgsi_exec_machine_run( struct tgsi_exec_machine *mach )
       default_mask = 0x1;
    }
 
+   if (mach->NonHelperMask == 0)
+      mach->NonHelperMask = default_mask;
    mach->CondMask = default_mask;
    mach->LoopMask = default_mask;
    mach->ContMask = default_mask;

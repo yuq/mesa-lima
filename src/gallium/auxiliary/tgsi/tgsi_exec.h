@@ -312,6 +312,9 @@ struct tgsi_exec_machine
    struct tgsi_exec_vector       QuadPos;
    float                         Face;    /**< +1 if front facing, -1 if back facing */
    bool                          flatshade_color;
+
+   /* See GLSL 4.50 specification for definition of helper invocations */
+   uint NonHelperMask;  /**< non-helpers */
    /* Conditional execution masks */
    uint CondMask;  /**< For IF/ELSE/ENDIF */
    uint LoopMask;  /**< For BGNLOOP/ENDLOOP */
