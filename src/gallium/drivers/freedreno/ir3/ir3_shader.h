@@ -252,6 +252,9 @@ struct ir3_shader {
 	uint32_t id;
 	uint32_t variant_count;
 
+	/* so we know when we can disable TGSI related hacks: */
+	bool from_tgsi;
+
 	struct ir3_compiler *compiler;
 
 	nir_shader *nir;

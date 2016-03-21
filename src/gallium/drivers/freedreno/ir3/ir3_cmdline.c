@@ -241,6 +241,7 @@ int main(int argc, char **argv)
 		tgsi_dump(toks, 0);
 
 	nir_shader *nir = ir3_tgsi_to_nir(toks);
+	s.from_tgsi = true;
 	s.compiler = ir3_compiler_create(NULL, gpu_id);
 	s.nir = ir3_optimize_nir(&s, nir, NULL);
 

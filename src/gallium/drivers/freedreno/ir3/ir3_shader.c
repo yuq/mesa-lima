@@ -294,6 +294,7 @@ ir3_shader_create(struct ir3_compiler *compiler,
 			tgsi_dump(cso->tokens, 0);
 		}
 		nir = ir3_tgsi_to_nir(cso->tokens);
+		shader->from_tgsi = true;
 	}
 	/* do first pass optimization, ignoring the key: */
 	shader->nir = ir3_optimize_nir(shader, nir, NULL);
