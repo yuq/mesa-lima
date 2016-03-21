@@ -300,6 +300,11 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 last_vpm_read_index = qinst->src[i].index;
                                 src[i] = qpu_ra(QPU_R_VPM);
                                 break;
+                        case QFILE_TLB_COLOR_WRITE:
+                        case QFILE_TLB_COLOR_WRITE_MS:
+                        case QFILE_TLB_Z_WRITE:
+                        case QFILE_TLB_STENCIL_SETUP:
+                                unreachable("bad qir src file");
                         }
                 }
 
@@ -314,6 +319,23 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QFILE_VPM:
                         dst = qpu_ra(QPU_W_VPM);
                         break;
+
+                case QFILE_TLB_COLOR_WRITE:
+                        dst = qpu_tlbc();
+                        break;
+
+                case QFILE_TLB_COLOR_WRITE_MS:
+                        dst = qpu_tlbc_ms();
+                        break;
+
+                case QFILE_TLB_Z_WRITE:
+                        dst = qpu_ra(QPU_W_TLB_Z);
+                        break;
+
+                case QFILE_TLB_STENCIL_SETUP:
+                        dst = qpu_ra(QPU_W_TLB_STENCIL_SETUP);
+                        break;
+
                 case QFILE_VARY:
                 case QFILE_UNIF:
                 case QFILE_SMALL_IMM:
@@ -383,36 +405,11 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                          */
                         break;
 
-                case QOP_TLB_STENCIL_SETUP:
-                        assert(!unpack);
-                        queue(c, qpu_a_MOV(qpu_ra(QPU_W_TLB_STENCIL_SETUP),
-                                           src[0]) | unpack);
-                        break;
-
-                case QOP_TLB_Z_WRITE:
-                        queue(c, qpu_a_MOV(qpu_ra(QPU_W_TLB_Z),
-                                           src[0]) | unpack);
-                        set_last_cond_add(c, qinst->cond);
-                        handled_qinst_cond = true;
-                        break;
-
                 case QOP_TLB_COLOR_READ:
                         queue(c, qpu_NOP());
                         *last_inst(c) = qpu_set_sig(*last_inst(c),
                                                     QPU_SIG_COLOR_LOAD);
                         handle_r4_qpu_write(c, qinst, dst);
-                        break;
-
-                case QOP_TLB_COLOR_WRITE:
-                        queue(c, qpu_a_MOV(qpu_tlbc(), src[0]) | unpack);
-                        set_last_cond_add(c, qinst->cond);
-                        handled_qinst_cond = true;
-                        break;
-
-                case QOP_TLB_COLOR_WRITE_MS:
-                        queue(c, qpu_a_MOV(qpu_tlbc_ms(), src[0]));
-                        set_last_cond_add(c, qinst->cond);
-                        handled_qinst_cond = true;
                         break;
 
                 case QOP_VARY_ADD_C:

@@ -1192,12 +1192,15 @@ emit_frag_end(struct vc4_compile *c)
         }
 
         if (c->fs_key->stencil_enabled) {
-                qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 0));
+                qir_MOV_dest(c, qir_reg(QFILE_TLB_STENCIL_SETUP, 0),
+                             qir_uniform(c, QUNIFORM_STENCIL, 0));
                 if (c->fs_key->stencil_twoside) {
-                        qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 1));
+                        qir_MOV_dest(c, qir_reg(QFILE_TLB_STENCIL_SETUP, 0),
+                                     qir_uniform(c, QUNIFORM_STENCIL, 1));
                 }
                 if (c->fs_key->stencil_full_writemasks) {
-                        qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 2));
+                        qir_MOV_dest(c, qir_reg(QFILE_TLB_STENCIL_SETUP, 0),
+                                     qir_uniform(c, QUNIFORM_STENCIL, 2));
                 }
         }
 
@@ -1206,24 +1209,24 @@ emit_frag_end(struct vc4_compile *c)
         }
 
         if (c->fs_key->depth_enabled) {
-                struct qreg z;
                 if (c->output_position_index != -1) {
-                        z = qir_FTOI(c, qir_FMUL(c, c->outputs[c->output_position_index + 2],
-                                                 qir_uniform_f(c, 0xffffff)));
+                        qir_FTOI_dest(c, qir_reg(QFILE_TLB_Z_WRITE, 0),
+                                      qir_FMUL(c,
+                                               c->outputs[c->output_position_index + 2],
+                                               qir_uniform_f(c, 0xffffff)))->cond = discard_cond;
                 } else {
-                        z = qir_FRAG_Z(c);
+                        qir_MOV_dest(c, qir_reg(QFILE_TLB_Z_WRITE, 0),
+                                     qir_FRAG_Z(c))->cond = discard_cond;
                 }
-                struct qinst *inst = qir_TLB_Z_WRITE(c, z);
-                inst->cond = discard_cond;
         }
 
         if (!c->msaa_per_sample_output) {
-                struct qinst *inst = qir_TLB_COLOR_WRITE(c, color);
-                inst->cond = discard_cond;
+                qir_MOV_dest(c, qir_reg(QFILE_TLB_COLOR_WRITE, 0),
+                             color)->cond = discard_cond;
         } else {
                 for (int i = 0; i < VC4_MAX_SAMPLES; i++) {
-                        struct qinst *inst = qir_TLB_COLOR_WRITE_MS(c, c->sample_colors[i]);
-                        inst->cond = discard_cond;
+                        qir_MOV_dest(c, qir_reg(QFILE_TLB_COLOR_WRITE_MS, 0),
+                                     c->sample_colors[i])->cond = discard_cond;
                 }
         }
 }

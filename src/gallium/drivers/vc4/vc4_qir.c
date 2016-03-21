@@ -68,10 +68,6 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_RSQ] = { "rsq", 1, 1 },
         [QOP_EXP2] = { "exp2", 1, 2 },
         [QOP_LOG2] = { "log2", 1, 2 },
-        [QOP_TLB_STENCIL_SETUP] = { "tlb_stencil_setup", 0, 1, true },
-        [QOP_TLB_Z_WRITE] = { "tlb_z", 0, 1, true },
-        [QOP_TLB_COLOR_WRITE] = { "tlb_color", 0, 1, true },
-        [QOP_TLB_COLOR_WRITE_MS] = { "tlb_color_ms", 0, 1, true },
         [QOP_TLB_COLOR_READ] = { "tlb_color_read", 1, 0 },
         [QOP_MS_MASK] = { "ms_mask", 0, 1, true },
         [QOP_VARY_ADD_C] = { "vary_add_c", 1, 1 },
@@ -115,6 +111,16 @@ qir_get_op_nsrc(enum qop qop)
 bool
 qir_has_side_effects(struct vc4_compile *c, struct qinst *inst)
 {
+        switch (inst->dst.file) {
+        case QFILE_TLB_Z_WRITE:
+        case QFILE_TLB_COLOR_WRITE:
+        case QFILE_TLB_COLOR_WRITE_MS:
+        case QFILE_TLB_STENCIL_SETUP:
+                return true;
+        default:
+                break;
+        }
+
         return qir_op_info[inst->op].has_side_effects;
 }
 
@@ -226,24 +232,44 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
                 [QFILE_TEMP] = "t",
                 [QFILE_VARY] = "v",
                 [QFILE_UNIF] = "u",
+                [QFILE_TLB_COLOR_WRITE] = "tlb_c",
+                [QFILE_TLB_COLOR_WRITE_MS] = "tlb_c_ms",
+                [QFILE_TLB_Z_WRITE] = "tlb_z",
+                [QFILE_TLB_STENCIL_SETUP] = "tlb_stencil",
         };
 
-        if (reg.file == QFILE_NULL) {
+        switch (reg.file) {
+
+        case QFILE_NULL:
                 fprintf(stderr, "null");
-        } else if (reg.file == QFILE_SMALL_IMM) {
+                break;
+
+        case QFILE_SMALL_IMM:
                 if ((int)reg.index >= -16 && (int)reg.index <= 15)
                         fprintf(stderr, "%d", reg.index);
                 else
                         fprintf(stderr, "%f", uif(reg.index));
-        } else if (reg.file == QFILE_VPM) {
+                break;
+
+        case QFILE_VPM:
                 if (write) {
                         fprintf(stderr, "vpm");
                 } else {
                         fprintf(stderr, "vpm%d.%d",
                                 reg.index / 4, reg.index % 4);
                 }
-        } else {
+                break;
+
+        case QFILE_TLB_COLOR_WRITE:
+        case QFILE_TLB_COLOR_WRITE_MS:
+        case QFILE_TLB_Z_WRITE:
+        case QFILE_TLB_STENCIL_SETUP:
+                fprintf(stderr, "%s", files[reg.file]);
+                break;
+
+        default:
                 fprintf(stderr, "%s%d", files[reg.file], reg.index);
+                break;
         }
 
         if (reg.file == QFILE_UNIF &&

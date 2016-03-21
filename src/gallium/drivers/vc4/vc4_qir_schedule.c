@@ -228,11 +228,7 @@ calculate_deps(struct schedule_setup_state *state, struct schedule_node *n)
                 add_write_dep(dir, &state->last_tex_result, n);
                 break;
 
-        case QOP_TLB_COLOR_WRITE:
-        case QOP_TLB_COLOR_WRITE_MS:
         case QOP_TLB_COLOR_READ:
-        case QOP_TLB_Z_WRITE:
-        case QOP_TLB_STENCIL_SETUP:
         case QOP_MS_MASK:
                 add_write_dep(dir, &state->last_tlb, n);
                 break;
@@ -241,10 +237,25 @@ calculate_deps(struct schedule_setup_state *state, struct schedule_node *n)
                 break;
         }
 
-        if (inst->dst.file == QFILE_VPM)
+        switch (inst->dst.file) {
+        case QFILE_VPM:
                 add_write_dep(dir, &state->last_vpm_write, n);
-        else if (inst->dst.file == QFILE_TEMP)
+                break;
+
+        case QFILE_TEMP:
                 add_write_dep(dir, &state->last_temp_write[inst->dst.index], n);
+                break;
+
+        case QFILE_TLB_COLOR_WRITE:
+        case QFILE_TLB_COLOR_WRITE_MS:
+        case QFILE_TLB_Z_WRITE:
+        case QFILE_TLB_STENCIL_SETUP:
+                add_write_dep(dir, &state->last_tlb, n);
+                break;
+
+        default:
+                break;
+        }
 
         if (qir_depends_on_flags(inst))
                 add_dep(dir, state->last_sf, n);
@@ -358,11 +369,13 @@ get_register_pressure_cost(struct schedule_state *state, struct qinst *inst)
 static bool
 locks_scoreboard(struct qinst *inst)
 {
-        switch (inst->op) {
-        case QOP_TLB_Z_WRITE:
-        case QOP_TLB_COLOR_WRITE:
-        case QOP_TLB_COLOR_WRITE_MS:
-        case QOP_TLB_COLOR_READ:
+        if (inst->op == QOP_TLB_COLOR_READ)
+                return true;
+
+        switch (inst->dst.file) {
+        case QFILE_TLB_Z_WRITE:
+        case QFILE_TLB_COLOR_WRITE:
+        case QFILE_TLB_COLOR_WRITE_MS:
                 return true;
         default:
                 return false;

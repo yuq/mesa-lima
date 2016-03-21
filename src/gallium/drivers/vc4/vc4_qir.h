@@ -49,6 +49,10 @@ enum qfile {
         QFILE_VARY,
         QFILE_UNIF,
         QFILE_VPM,
+        QFILE_TLB_COLOR_WRITE,
+        QFILE_TLB_COLOR_WRITE_MS,
+        QFILE_TLB_Z_WRITE,
+        QFILE_TLB_STENCIL_SETUP,
 
         /**
          * Stores an immediate value in the index field that can be turned
@@ -106,10 +110,6 @@ enum qop {
         QOP_LOG2,
         QOP_VW_SETUP,
         QOP_VR_SETUP,
-        QOP_TLB_STENCIL_SETUP,
-        QOP_TLB_Z_WRITE,
-        QOP_TLB_COLOR_WRITE,
-        QOP_TLB_COLOR_WRITE_MS,
         QOP_TLB_COLOR_READ,
         QOP_MS_MASK,
         QOP_VARY_ADD_C,
@@ -629,10 +629,6 @@ QIR_ALU0(FRAG_W)
 QIR_ALU0(FRAG_REV_FLAG)
 QIR_ALU0(TEX_RESULT)
 QIR_ALU0(TLB_COLOR_READ)
-QIR_NODST_1(TLB_COLOR_WRITE)
-QIR_NODST_1(TLB_COLOR_WRITE_MS)
-QIR_NODST_1(TLB_Z_WRITE)
-QIR_NODST_1(TLB_STENCIL_SETUP)
 QIR_NODST_1(MS_MASK)
 
 static inline struct qreg
