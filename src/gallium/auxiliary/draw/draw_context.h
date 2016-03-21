@@ -48,6 +48,7 @@ struct draw_vertex_shader;
 struct draw_geometry_shader;
 struct draw_fragment_shader;
 struct tgsi_sampler;
+struct tgsi_image;
 
 /*
  * structure to contain driver internal information 
@@ -153,6 +154,11 @@ void
 draw_texture_sampler(struct draw_context *draw,
                      uint shader_type,
                      struct tgsi_sampler *sampler);
+
+void
+draw_image(struct draw_context *draw,
+           uint shader_type,
+           struct tgsi_image *image);
 
 void
 draw_set_sampler_views(struct draw_context *draw,

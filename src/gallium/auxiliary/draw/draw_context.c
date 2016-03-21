@@ -731,6 +731,24 @@ draw_texture_sampler(struct draw_context *draw,
    }
 }
 
+/**
+ * Provide TGSI image objects for vertex/geometry shaders that use
+ * texture fetches.  This state only needs to be set once per context.
+ * This might only be used by software drivers for the time being.
+ */
+void
+draw_image(struct draw_context *draw,
+           uint shader,
+           struct tgsi_image *image)
+{
+   if (shader == PIPE_SHADER_VERTEX) {
+      draw->vs.tgsi.image = image;
+   } else {
+      debug_assert(shader == PIPE_SHADER_GEOMETRY);
+      draw->gs.tgsi.image = image;
+   }
+}
+
 
 
 
