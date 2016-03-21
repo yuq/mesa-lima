@@ -229,6 +229,7 @@ calculate_deps(struct schedule_setup_state *state, struct schedule_node *n)
                 break;
 
         case QOP_TLB_COLOR_WRITE:
+        case QOP_TLB_COLOR_WRITE_MS:
         case QOP_TLB_COLOR_READ:
         case QOP_TLB_Z_WRITE:
         case QOP_TLB_STENCIL_SETUP:
