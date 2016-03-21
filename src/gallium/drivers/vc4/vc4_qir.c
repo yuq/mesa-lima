@@ -72,11 +72,8 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_MS_MASK] = { "ms_mask", 0, 1, true },
         [QOP_VARY_ADD_C] = { "vary_add_c", 1, 1 },
 
-        [QOP_FRAG_X] = { "frag_x", 1, 0 },
-        [QOP_FRAG_Y] = { "frag_y", 1, 0 },
         [QOP_FRAG_Z] = { "frag_z", 1, 0 },
         [QOP_FRAG_W] = { "frag_w", 1, 0 },
-        [QOP_FRAG_REV_FLAG] = { "frag_rev_flag", 1, 0 },
 
         [QOP_TEX_S] = { "tex_s", 0, 2 },
         [QOP_TEX_T] = { "tex_t", 0, 2 },
@@ -236,6 +233,9 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
                 [QFILE_TLB_COLOR_WRITE_MS] = "tlb_c_ms",
                 [QFILE_TLB_Z_WRITE] = "tlb_z",
                 [QFILE_TLB_STENCIL_SETUP] = "tlb_stencil",
+                [QFILE_FRAG_X] = "frag_x",
+                [QFILE_FRAG_Y] = "frag_y",
+                [QFILE_FRAG_REV_FLAG] = "frag_rev_flag",
         };
 
         switch (reg.file) {

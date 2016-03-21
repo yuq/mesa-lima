@@ -646,8 +646,8 @@ emit_vertex_input(struct vc4_compile *c, int attr)
 static void
 emit_fragcoord_input(struct vc4_compile *c, int attr)
 {
-        c->inputs[attr * 4 + 0] = qir_FRAG_X(c);
-        c->inputs[attr * 4 + 1] = qir_FRAG_Y(c);
+        c->inputs[attr * 4 + 0] = qir_ITOF(c, qir_reg(QFILE_FRAG_X, 0));
+        c->inputs[attr * 4 + 1] = qir_ITOF(c, qir_reg(QFILE_FRAG_Y, 0));
         c->inputs[attr * 4 + 2] =
                 qir_FMUL(c,
                          qir_ITOF(c, qir_FRAG_Z(c)),
@@ -1428,7 +1428,9 @@ ntq_setup_inputs(struct vc4_compile *c)
                         if (var->data.location == VARYING_SLOT_POS) {
                                 emit_fragcoord_input(c, loc);
                         } else if (var->data.location == VARYING_SLOT_FACE) {
-                                c->inputs[loc * 4 + 0] = qir_FRAG_REV_FLAG(c);
+                                c->inputs[loc * 4 + 0] =
+                                        qir_ITOF(c, qir_reg(QFILE_FRAG_REV_FLAG,
+                                                            0));
                         } else if (var->data.location >= VARYING_SLOT_VAR0 &&
                                    (c->fs_key->point_sprite_mask &
                                     (1 << (var->data.location -

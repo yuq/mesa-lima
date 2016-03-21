@@ -300,6 +300,17 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 last_vpm_read_index = qinst->src[i].index;
                                 src[i] = qpu_ra(QPU_R_VPM);
                                 break;
+
+                        case QFILE_FRAG_X:
+                                src[i] = qpu_ra(QPU_R_XY_PIXEL_COORD);
+                                break;
+                        case QFILE_FRAG_Y:
+                                src[i] = qpu_rb(QPU_R_XY_PIXEL_COORD);
+                                break;
+                        case QFILE_FRAG_REV_FLAG:
+                                src[i] = qpu_rb(QPU_R_MS_REV_FLAGS);
+                                break;
+
                         case QFILE_TLB_COLOR_WRITE:
                         case QFILE_TLB_COLOR_WRITE_MS:
                         case QFILE_TLB_Z_WRITE:
@@ -339,6 +350,9 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QFILE_VARY:
                 case QFILE_UNIF:
                 case QFILE_SMALL_IMM:
+                case QFILE_FRAG_X:
+                case QFILE_FRAG_Y:
+                case QFILE_FRAG_REV_FLAG:
                         assert(!"not reached");
                         break;
                 }
@@ -373,21 +387,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 
                         handle_r4_qpu_write(c, qinst, dst);
 
-                        break;
-
-                case QOP_FRAG_X:
-                        queue(c, qpu_a_ITOF(dst,
-                                            qpu_ra(QPU_R_XY_PIXEL_COORD)));
-                        break;
-
-                case QOP_FRAG_Y:
-                        queue(c, qpu_a_ITOF(dst,
-                                            qpu_rb(QPU_R_XY_PIXEL_COORD)));
-                        break;
-
-                case QOP_FRAG_REV_FLAG:
-                        queue(c, qpu_a_ITOF(dst,
-                                            qpu_rb(QPU_R_MS_REV_FLAGS)));
                         break;
 
                 case QOP_MS_MASK:

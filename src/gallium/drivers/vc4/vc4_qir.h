@@ -54,6 +54,13 @@ enum qfile {
         QFILE_TLB_Z_WRITE,
         QFILE_TLB_STENCIL_SETUP,
 
+        /* Payload registers that aren't in the physical register file, so we
+         * can just use the corresponding qpu_reg at qpu_emit time.
+         */
+        QFILE_FRAG_X,
+        QFILE_FRAG_Y,
+        QFILE_FRAG_REV_FLAG,
+
         /**
          * Stores an immediate value in the index field that can be turned
          * into a small immediate field by qpu_encode_small_immediate().
@@ -114,11 +121,8 @@ enum qop {
         QOP_MS_MASK,
         QOP_VARY_ADD_C,
 
-        QOP_FRAG_X,
-        QOP_FRAG_Y,
         QOP_FRAG_Z,
         QOP_FRAG_W,
-        QOP_FRAG_REV_FLAG,
 
         /** Texture x coordinate parameter write */
         QOP_TEX_S,
@@ -622,11 +626,8 @@ QIR_NODST_2(TEX_T)
 QIR_NODST_2(TEX_R)
 QIR_NODST_2(TEX_B)
 QIR_NODST_2(TEX_DIRECT)
-QIR_ALU0(FRAG_X)
-QIR_ALU0(FRAG_Y)
 QIR_ALU0(FRAG_Z)
 QIR_ALU0(FRAG_W)
-QIR_ALU0(FRAG_REV_FLAG)
 QIR_ALU0(TEX_RESULT)
 QIR_ALU0(TLB_COLOR_READ)
 QIR_NODST_1(MS_MASK)
