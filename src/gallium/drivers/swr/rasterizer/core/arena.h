@@ -51,7 +51,10 @@ public:
     }
 };
 
+static const size_t ARENA_BLOCK_SHIFT = 5;
 static const size_t ARENA_BLOCK_ALIGN = KNOB_SIMD_WIDTH * 4;
+static_assert((1U << ARENA_BLOCK_SHIFT) == ARENA_BLOCK_ALIGN,
+              "Invalid value for ARENA_BLOCK_ALIGN/SHIFT");
 
 struct ArenaBlock
 {
@@ -59,9 +62,158 @@ struct ArenaBlock
     size_t      blockSize = 0;
     ArenaBlock* pNext = nullptr;
 };
-static_assert(sizeof(ArenaBlock) <= ARENA_BLOCK_ALIGN, "Increase BLOCK_ALIGN size");
+static_assert(sizeof(ArenaBlock) <= ARENA_BLOCK_ALIGN,
+              "Increase BLOCK_ALIGN size");
 
-template<typename MutexT = std::mutex, typename T = DefaultAllocator>
+// Caching Allocator for Arena
+template<uint32_t NumBucketsT = 1, uint32_t StartBucketBitT = 20>
+struct CachingAllocatorT : DefaultAllocator
+{
+    static uint32_t GetBucketId(size_t blockSize)
+    {
+        uint32_t bucketId = 0;
+
+#if defined(BitScanReverseSizeT)
+        BitScanReverseSizeT((unsigned long*)&bucketId, blockSize >> CACHE_START_BUCKET_BIT);
+        bucketId = std::min<uint32_t>(bucketId, CACHE_NUM_BUCKETS - 1);
+#endif
+
+        return bucketId;
+    }
+
+    void* AllocateAligned(size_t size, size_t align)
+    {
+        SWR_ASSERT(size >= sizeof(ArenaBlock));
+        SWR_ASSERT(size <= uint32_t(-1));
+
+        size_t blockSize = size - ARENA_BLOCK_ALIGN;
+
+        {
+            // search cached blocks
+            std::lock_guard<std::mutex> l(m_mutex);
+            ArenaBlock* pPrevBlock = &m_cachedBlocks[GetBucketId(blockSize)];
+            ArenaBlock* pBlock = pPrevBlock->pNext;
+            ArenaBlock* pPotentialBlock = nullptr;
+            ArenaBlock* pPotentialPrev = nullptr;
+
+            while (pBlock)
+            {
+                if (pBlock->blockSize >= blockSize)
+                {
+                    if (pBlock == AlignUp(pBlock, align))
+                    {
+                        if (pBlock->blockSize == blockSize)
+                        {
+                            // Won't find a better match
+                            break;
+                        }
+
+                        // We could use this as it is larger than we wanted, but
+                        // continue to search for a better match
+                        pPotentialBlock = pBlock;
+                        pPotentialPrev = pPrevBlock;
+                    }
+                }
+                else
+                {
+                    // Blocks are sorted by size (biggest first)
+                    // So, if we get here, there are no blocks 
+                    // large enough, fall through to allocation.
+                    pBlock = nullptr;
+                    break;
+                }
+
+                pPrevBlock = pBlock;
+                pBlock = pBlock->pNext;
+            }
+
+            if (!pBlock)
+            {
+                // Couldn't find an exact match, use next biggest size
+                pBlock = pPotentialBlock;
+                pPrevBlock = pPotentialPrev;
+            }
+
+            if (pBlock)
+            {
+                SWR_ASSERT(pPrevBlock && pPrevBlock->pNext == pBlock);
+                pPrevBlock->pNext = pBlock->pNext;
+                pBlock->pNext = nullptr;
+
+                return pBlock;
+            }
+
+            m_totalAllocated += size;
+
+#if 0
+            {
+                static uint32_t count = 0;
+                char buf[128];
+                sprintf_s(buf, "Arena Alloc %d 0x%llx bytes - 0x%llx total\n", ++count, uint64_t(size), uint64_t(m_totalAllocated));
+                OutputDebugStringA(buf);
+            }
+#endif
+        }
+
+        return this->DefaultAllocator::AllocateAligned(size, align);
+    }
+
+    void  Free(void* pMem)
+    {
+        if (pMem)
+        {
+            ArenaBlock* pNewBlock = reinterpret_cast<ArenaBlock*>(pMem);
+            SWR_ASSERT(pNewBlock->blockSize >= 0 && pNewBlock->pMem != nullptr);
+
+            std::unique_lock<std::mutex> l(m_mutex);
+            ArenaBlock* pPrevBlock = &m_cachedBlocks[GetBucketId(pNewBlock->blockSize)];
+            ArenaBlock* pBlock = pPrevBlock->pNext;
+
+            while (pBlock)
+            {
+                if (pNewBlock->blockSize >= pBlock->blockSize)
+                {
+                    // Insert here
+                    break;
+                }
+                pPrevBlock = pBlock;
+                pBlock = pBlock->pNext;
+            }
+
+            // Insert into list
+            SWR_ASSERT(pPrevBlock);
+            pPrevBlock->pNext = pNewBlock;
+            pNewBlock->pNext = pBlock;
+        }
+    }
+
+    ~CachingAllocatorT()
+    {
+        // Free all cached blocks
+        for (uint32_t i = 0; i < CACHE_NUM_BUCKETS; ++i)
+        {
+            ArenaBlock* pBlock = m_cachedBlocks[i].pNext;
+            while (pBlock)
+            {
+                ArenaBlock* pNext = pBlock->pNext;
+                this->DefaultAllocator::Free(pBlock);
+                pBlock = pNext;
+            }
+        }
+    }
+
+    // buckets, for block sizes < (1 << (start+1)), < (1 << (start+2)), ...
+    static const uint32_t   CACHE_NUM_BUCKETS       = NumBucketsT;
+    static const uint32_t   CACHE_START_BUCKET_BIT  = StartBucketBitT;
+
+    ArenaBlock              m_cachedBlocks[CACHE_NUM_BUCKETS];
+    std::mutex              m_mutex;
+
+    size_t                  m_totalAllocated = 0;
+};
+typedef CachingAllocatorT<> CachingAllocator;
+
+template<typename T = DefaultAllocator>
 class TArena
 {
 public:
@@ -91,8 +243,8 @@ public:
             // a new block
         }
 
-        static const size_t ArenaBlockSize = 1024 * 1024;
-        size_t blockSize = std::max<size_t>(m_size + ArenaBlockSize, std::max(size, ArenaBlockSize));
+        static const size_t ArenaBlockSize = 1024 * 1024 - ARENA_BLOCK_ALIGN;
+        size_t blockSize = std::max(size, ArenaBlockSize);
 
         // Add in one BLOCK_ALIGN unit to store ArenaBlock in.
         blockSize = AlignUp(blockSize + ARENA_BLOCK_ALIGN, ARENA_BLOCK_ALIGN);
@@ -177,101 +329,11 @@ private:
     size_t              m_size      = 0;
 
     /// @note Mutex is only used by sync allocation functions.
-    MutexT              m_mutex;
+    std::mutex          m_mutex;
 
     DefaultAllocator    m_defAllocator;
     T&                  m_allocator;
 };
 
-template<typename T>
-using Arena     = TArena<std::mutex, T>;
-using StdArena  = Arena<DefaultAllocator>;
-
-struct NullMutex
-{
-    void lock() {}
-    void unlock() {}
-};
-
-// Ref counted Arena for ArenaAllocator
-// NOT THREAD SAFE!!
-struct RefArena : TArena<NullMutex>
-{
-    uint32_t AddRef() { return ++m_refCount; }
-    uint32_t Release() { if (--m_refCount) { return m_refCount; } delete this; return 0; }
-
-    void* allocate(std::size_t n)
-    {
-        ++m_numAllocations;
-        return Alloc(n);
-    }
-
-    void deallocate(void* p) { --m_numAllocations; }
-    void clear() { SWR_ASSERT(0 == m_numAllocations); Reset(); }
-
-private:
-    uint32_t m_refCount = 0;
-    uint32_t m_numAllocations = 0;
-};
-
-#if 0 // THIS DOESN'T WORK!!!
-// Arena based replacement for std::allocator
-template <typename T>
-struct ArenaAllocator
-{
-    typedef T value_type;
-    ArenaAllocator()
-    {
-        m_pArena = new RefArena();
-        m_pArena->AddRef();
-    }
-    ~ArenaAllocator()
-    {
-        m_pArena->Release(); m_pArena = nullptr;
-    }
-    ArenaAllocator(const ArenaAllocator& copy)
-    {
-        m_pArena = const_cast<RefArena*>(copy.m_pArena); m_pArena->AddRef();
-    }
-
-
-    template <class U> ArenaAllocator(const ArenaAllocator<U>& copy)
-    {
-        m_pArena = const_cast<RefArena*>(copy.m_pArena); m_pArena->AddRef();
-    }
-    T* allocate(std::size_t n)
-    {
-#if defined(_DEBUG)
-        char buf[32];
-        sprintf_s(buf, "Alloc: %lld\n", n);
-        OutputDebugStringA(buf);
-#endif
-        void* p = m_pArena->allocate(n * sizeof(T));
-        return static_cast<T*>(p);
-    }
-    void deallocate(T* p, std::size_t n)
-    {
-#if defined(_DEBUG)
-        char buf[32];
-        sprintf_s(buf, "Dealloc: %lld\n", n);
-        OutputDebugStringA(buf);
-#endif
-        m_pArena->deallocate(p);
-    }
-    void clear() { m_pArena->clear(); }
-
-    RefArena* m_pArena = nullptr;
-};
-
-template <class T, class U>
-bool operator== (const ArenaAllocator<T>&, const ArenaAllocator<U>&)
-{
-    return true;
-}
-
-template <class T, class U>
-bool operator!= (const ArenaAllocator<T>&, const ArenaAllocator<U>&)
-{
-    return false;
-}
-#endif
+using StdArena      = TArena<DefaultAllocator>;
+using CachingArena  = TArena<CachingAllocator>;

@@ -54,9 +54,11 @@
 
 #if defined(_WIN32)
 #if defined(_WIN64)
+#define BitScanReverseSizeT BitScanReverse64
 #define BitScanForwardSizeT BitScanForward64
 #define _mm_popcount_sizeT _mm_popcnt_u64
 #else
+#define BitScanReverseSizeT BitScanReverse
 #define BitScanForwardSizeT BitScanForward
 #define _mm_popcount_sizeT _mm_popcnt_u32
 #endif
