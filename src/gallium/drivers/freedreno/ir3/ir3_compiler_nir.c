@@ -2031,6 +2031,18 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 				so->inputs[n].bary = false;
 				so->frag_coord = true;
 				instr = create_frag_coord(ctx, i);
+			} else if (slot == VARYING_SLOT_PNTC) {
+				/* see for example st_get_generic_varying_index().. this is
+				 * maybe a bit mesa/st specific.  But we need things to line
+				 * up for this in fdN_program:
+				 *    unsigned texmask = 1 << (slot - VARYING_SLOT_VAR0);
+				 *    if (emit->sprite_coord_enable & texmask) {
+				 *       ...
+				 *    }
+				 */
+				so->inputs[n].slot = VARYING_SLOT_VAR8;
+				so->inputs[n].bary = true;
+				instr = create_frag_input(ctx, false);
 			} else if (slot == VARYING_SLOT_FACE) {
 				so->inputs[n].bary = false;
 				so->frag_face = true;
