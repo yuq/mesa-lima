@@ -290,7 +290,7 @@ INLINE void CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
         _ReadWriteBarrier();
 
         // Cleanup memory allocations
-        pDC->pArena->Reset();
+        pDC->pArena->Reset(true);
         pDC->pTileMgr->initialize();
 
         pContext->dcRing.Dequeue();  // Remove from tail

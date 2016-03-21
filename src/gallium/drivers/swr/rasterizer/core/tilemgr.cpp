@@ -56,7 +56,7 @@ void DispatchQueue::operator delete(void *p)
     _aligned_free(p);
 }
 
-MacroTileMgr::MacroTileMgr(Arena& arena) : mArena(arena)
+MacroTileMgr::MacroTileMgr(CachingArena& arena) : mArena(arena)
 {
 }
 

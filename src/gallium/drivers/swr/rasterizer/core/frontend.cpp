@@ -881,7 +881,7 @@ static void GeometryShaderStage(
 static INLINE void AllocateGsBuffers(DRAW_CONTEXT* pDC, const API_STATE& state, void** ppGsOut, void** ppCutBuffer,
     void **ppStreamCutBuffer)
 {
-    Arena* pArena = pDC->pArena;
+    auto pArena = pDC->pArena;
     SWR_ASSERT(pArena != nullptr);
     SWR_ASSERT(state.gsState.gsEnable);
     // allocate arena space to hold GS output verts
@@ -1813,7 +1813,7 @@ void BinTriangles(
             work.pfnWork = gRasterizerTable[rastState.scissorEnable][SWR_MULTISAMPLE_1X];
         }
 
-        Arena* pArena = pDC->pArena;
+        auto pArena = pDC->pArena;
         SWR_ASSERT(pArena != nullptr);
 
         // store active attribs
@@ -1985,7 +1985,7 @@ void BinPoints(
 
             work.pfnWork = RasterizeSimplePoint;
 
-            Arena* pArena = pDC->pArena;
+            auto pArena = pDC->pArena;
             SWR_ASSERT(pArena != nullptr);
 
             // store attributes
@@ -2119,7 +2119,7 @@ void BinPoints(
 
             work.pfnWork = RasterizeTriPoint;
 
-            Arena* pArena = pDC->pArena;
+            auto pArena = pDC->pArena;
             SWR_ASSERT(pArena != nullptr);
 
             // store active attribs
@@ -2336,7 +2336,7 @@ void BinLines(
 
         work.pfnWork = RasterizeLine;
 
-        Arena* pArena = pDC->pArena;
+        auto pArena = pDC->pArena;
         SWR_ASSERT(pArena != nullptr);
 
         // store active attribs

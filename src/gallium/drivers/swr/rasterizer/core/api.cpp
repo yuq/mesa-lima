@@ -66,11 +66,11 @@ HANDLE SwrCreateContext(
 
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
-        pContext->dcRing[dc].pArena = new Arena();
+        pContext->dcRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
         pContext->dcRing[dc].pTileMgr = new MacroTileMgr(*(pContext->dcRing[dc].pArena));
         pContext->dcRing[dc].pDispatch = new DispatchQueue(); /// @todo Could lazily allocate this if Dispatch seen.
 
-        pContext->dsRing[dc].pArena = new Arena();
+        pContext->dsRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
     }
 
     if (!KNOB_SINGLE_THREADED)
@@ -252,7 +252,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         uint32_t dsIndex = pContext->curStateId % KNOB_MAX_DRAWS_IN_FLIGHT;
         pCurDrawContext->pState = &pContext->dsRing[dsIndex];
 
-        Arena& stateArena = *(pCurDrawContext->pState->pArena);
+        auto& stateArena = *(pCurDrawContext->pState->pArena);
 
         // Copy previous state to current state.
         if (pContext->pPrevDrawContext)

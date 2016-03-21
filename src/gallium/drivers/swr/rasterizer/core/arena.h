@@ -51,6 +51,16 @@ public:
     }
 };
 
+static const size_t ARENA_BLOCK_ALIGN = KNOB_SIMD_WIDTH * 4;
+
+struct ArenaBlock
+{
+    void*       pMem = nullptr;
+    size_t      blockSize = 0;
+    ArenaBlock* pNext = nullptr;
+};
+static_assert(sizeof(ArenaBlock) <= ARENA_BLOCK_ALIGN, "Increase BLOCK_ALIGN size");
+
 template<typename MutexT = std::mutex, typename T = DefaultAllocator>
 class TArena
 {
@@ -67,12 +77,12 @@ public:
         if (m_pCurBlock)
         {
             ArenaBlock* pCurBlock = m_pCurBlock;
-            pCurBlock->offset = AlignUp(pCurBlock->offset, align);
+            m_offset = AlignUp(m_offset, align);
 
-            if ((pCurBlock->offset + size) <= pCurBlock->blockSize)
+            if ((m_offset + size) <= pCurBlock->blockSize)
             {
-                void* pMem = PtrAdd(pCurBlock->pMem, pCurBlock->offset);
-                pCurBlock->offset += size;
+                void* pMem = PtrAdd(pCurBlock->pMem, m_offset);
+                m_offset += size;
                 m_size += size;
                 return pMem;
             }
@@ -85,21 +95,21 @@ public:
         size_t blockSize = std::max<size_t>(m_size + ArenaBlockSize, std::max(size, ArenaBlockSize));
 
         // Add in one BLOCK_ALIGN unit to store ArenaBlock in.
-        blockSize = AlignUp(blockSize + BLOCK_ALIGN, BLOCK_ALIGN);
+        blockSize = AlignUp(blockSize + ARENA_BLOCK_ALIGN, ARENA_BLOCK_ALIGN);
 
-        void *pMem = m_allocator.AllocateAligned(blockSize, BLOCK_ALIGN);    // Arena blocks are always simd byte aligned.
+        void *pMem = m_allocator.AllocateAligned(blockSize, ARENA_BLOCK_ALIGN);    // Arena blocks are always simd byte aligned.
         SWR_ASSERT(pMem != nullptr);
 
         ArenaBlock* pNewBlock = new (pMem) ArenaBlock();
 
         if (pNewBlock != nullptr)
         {
+            m_offset = 0;
             pNewBlock->pNext = m_pCurBlock;
 
             m_pCurBlock = pNewBlock;
-            m_pCurBlock->pMem = PtrAdd(pMem, BLOCK_ALIGN);
-            m_pCurBlock->blockSize = blockSize - BLOCK_ALIGN;
-
+            m_pCurBlock->pMem = PtrAdd(pMem, ARENA_BLOCK_ALIGN);
+            m_pCurBlock->blockSize = blockSize - ARENA_BLOCK_ALIGN;
         }
 
         return AllocAligned(size, align);
@@ -134,10 +144,10 @@ public:
 
     void Reset(bool removeAll = false)
     {
+        m_offset = 0;
+
         if (m_pCurBlock)
         {
-            m_pCurBlock->offset = 0;
-
             ArenaBlock *pUsedBlocks = m_pCurBlock->pNext;
             m_pCurBlock->pNext = nullptr;
             while (pUsedBlocks)
@@ -162,28 +172,20 @@ public:
 
 private:
 
-    static const size_t BLOCK_ALIGN = KNOB_SIMD_WIDTH * 4;
+    ArenaBlock*         m_pCurBlock = nullptr;
+    size_t              m_offset    = 0;
+    size_t              m_size      = 0;
+
+    /// @note Mutex is only used by sync allocation functions.
+    MutexT              m_mutex;
 
     DefaultAllocator    m_defAllocator;
     T&                  m_allocator;
-
-    struct ArenaBlock
-    {
-        void*       pMem        = nullptr;
-        size_t      blockSize   = 0;
-        size_t      offset      = 0;
-        ArenaBlock* pNext       = nullptr;
-    };
-    static_assert(sizeof(ArenaBlock) <= BLOCK_ALIGN, "Increase BLOCK_ALIGN size");
-
-    ArenaBlock*     m_pCurBlock = nullptr;
-    size_t          m_size      = 0;
-
-    /// @note Mutex is only used by sync allocation functions.
-    MutexT          m_mutex;
 };
 
-typedef TArena<> Arena;
+template<typename T>
+using Arena     = TArena<std::mutex, T>;
+using StdArena  = Arena<DefaultAllocator>;
 
 struct NullMutex
 {

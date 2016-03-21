@@ -59,7 +59,8 @@ struct MacroTileQueue
 
     //////////////////////////////////////////////////////////////////////////
     /// @brief Clear fifo and unlock it.
-    void clear(Arena& arena)
+    template <typename ArenaT>
+    void clear(ArenaT& arena)
     {
         mFifo.clear(arena);
     }
@@ -71,7 +72,8 @@ struct MacroTileQueue
         return mFifo.peek();
     }
 
-    bool enqueue_try_nosync(Arena& arena, const BE_WORK* entry)
+    template <typename ArenaT>
+    bool enqueue_try_nosync(ArenaT& arena, const BE_WORK* entry)
     {
         return mFifo.enqueue_try_nosync(arena, entry);
     }
@@ -104,7 +106,7 @@ private:
 class MacroTileMgr
 {
 public:
-    MacroTileMgr(Arena& arena);
+    MacroTileMgr(CachingArena& arena);
     ~MacroTileMgr()
     {
         for (auto &tile : mTiles)
@@ -142,7 +144,7 @@ public:
     void operator delete (void *p);
 
 private:
-    Arena& mArena;
+    CachingArena& mArena;
     std::unordered_map<uint32_t, MacroTileQueue> mTiles;
 
     // Any tile that has work queued to it is a dirty tile.
