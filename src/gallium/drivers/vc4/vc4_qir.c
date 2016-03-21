@@ -31,7 +31,6 @@ struct qir_op_info {
         const char *name;
         uint8_t ndst, nsrc;
         bool has_side_effects;
-        bool multi_instruction;
 };
 
 static const struct qir_op_info qir_op_info[] = {
@@ -65,10 +64,10 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_XOR] = { "xor", 1, 2 },
         [QOP_NOT] = { "not", 1, 1 },
 
-        [QOP_RCP] = { "rcp", 1, 1, false, true },
-        [QOP_RSQ] = { "rsq", 1, 1, false, true },
-        [QOP_EXP2] = { "exp2", 1, 2, false, true },
-        [QOP_LOG2] = { "log2", 1, 2, false, true },
+        [QOP_RCP] = { "rcp", 1, 1 },
+        [QOP_RSQ] = { "rsq", 1, 1 },
+        [QOP_EXP2] = { "exp2", 1, 2 },
+        [QOP_LOG2] = { "log2", 1, 2 },
         [QOP_TLB_STENCIL_SETUP] = { "tlb_stencil_setup", 0, 1, true },
         [QOP_TLB_Z_WRITE] = { "tlb_z", 0, 1, true },
         [QOP_TLB_COLOR_WRITE] = { "tlb_color", 0, 1, true },
@@ -141,12 +140,6 @@ qir_has_side_effect_reads(struct vc4_compile *c, struct qinst *inst)
                 return true;
 
         return false;
-}
-
-bool
-qir_is_multi_instruction(struct qinst *inst)
-{
-        return qir_op_info[inst->op].multi_instruction;
 }
 
 bool
@@ -492,8 +485,7 @@ qir_SF(struct vc4_compile *c, struct qreg src)
 
         if (src.file != QFILE_TEMP ||
             !c->defs[src.index] ||
-            last_inst != c->defs[src.index] ||
-            qir_is_multi_instruction(last_inst)) {
+            last_inst != c->defs[src.index]) {
                 struct qreg null = { QFILE_NULL, 0 };
                 last_inst = qir_MOV_dest(c, null, src);
                 last_inst = (struct qinst *)c->instructions.prev;

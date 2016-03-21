@@ -463,7 +463,6 @@ int qir_get_op_nsrc(enum qop qop);
 bool qir_reg_equals(struct qreg a, struct qreg b);
 bool qir_has_side_effects(struct vc4_compile *c, struct qinst *inst);
 bool qir_has_side_effect_reads(struct vc4_compile *c, struct qinst *inst);
-bool qir_is_multi_instruction(struct qinst *inst);
 bool qir_is_mul(struct qinst *inst);
 bool qir_is_raw_mov(struct qinst *inst);
 bool qir_is_tex(struct qinst *inst);
