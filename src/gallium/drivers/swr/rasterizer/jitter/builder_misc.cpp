@@ -234,7 +234,7 @@ Value *Builder::VUNDEF(Type* t)
     return UndefValue::get(VectorType::get(t, mVWidth));
 }
 
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
 Value *Builder::VINSERT(Value *vec, Value *val, uint64_t index)
 {
     return VINSERT(vec, val, C((int64_t)index));
@@ -521,7 +521,7 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
 
     // get a pointer to the first character in the constant string array
     std::vector<Constant*> geplist{C(0),C(0)};
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
     Constant *strGEP = ConstantExpr::getGetElementPtr(gvPtr,geplist,false);
 #else
     Constant *strGEP = ConstantExpr::getGetElementPtr(nullptr, gvPtr,geplist,false);
@@ -1409,7 +1409,7 @@ Value *Builder::FCLAMP(Value* src, float low, float high)
 Value* Builder::STACKSAVE()
 {
     Function* pfnStackSave = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::stacksave);
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
     return CALL(pfnStackSave);
 #else
     return CALLA(pfnStackSave);
@@ -1467,7 +1467,7 @@ void __cdecl CallPrint(const char* fmt, ...)
 
 Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)
 {
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
     Function *func =
         Intrinsic::getDeclaration(JM()->mpCurrentModule,
                                   Intrinsic::x86_avx_vextractf128_si_256);
@@ -1484,7 +1484,7 @@ Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)
 
 Value *Builder::VINSERTI128(Value* a, Value* b, Constant* imm8)
 {
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
     Function *func =
         Intrinsic::getDeclaration(JM()->mpCurrentModule,
                                   Intrinsic::x86_avx_vinsertf128_si_256);

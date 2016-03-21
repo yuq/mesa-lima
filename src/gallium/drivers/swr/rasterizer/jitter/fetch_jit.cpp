@@ -174,7 +174,12 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 
     verifyFunction(*fetch);
 
-    FunctionPassManager setupPasses(JM()->mpCurrentModule);
+#if HAVE_LLVM == 0x306
+        FunctionPassManager
+#else
+        llvm::legacy::FunctionPassManager
+#endif
+            setupPasses(JM()->mpCurrentModule);
 
     ///@todo We don't need the CFG passes for fetch. (e.g. BreakCriticalEdges and CFGSimplification)
     setupPasses.add(createBreakCriticalEdgesPass());
@@ -186,7 +191,12 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 
     JitManager::DumpToFile(fetch, "se");
 
-    FunctionPassManager optPasses(JM()->mpCurrentModule);
+#if HAVE_LLVM == 0x306
+        FunctionPassManager
+#else
+        llvm::legacy::FunctionPassManager
+#endif
+            optPasses(JM()->mpCurrentModule);
 
     ///@todo Haven't touched these either. Need to remove some of these and add others.
     optPasses.add(createCFGSimplificationPass());

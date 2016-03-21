@@ -59,7 +59,7 @@ Value *VUNDEF_F();
 Value *VUNDEF_I();
 Value *VUNDEF(Type* ty, uint32_t size);
 Value *VUNDEF_IPTR();
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
 Value *VINSERT(Value *vec, Value *val, uint64_t index);
 #endif
 Value *VBROADCAST(Value *src);

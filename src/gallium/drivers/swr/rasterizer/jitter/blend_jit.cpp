@@ -717,7 +717,13 @@ struct BlendJit : public Builder
 
         JitManager::DumpToFile(blendFunc, "");
 
-        FunctionPassManager passes(JM()->mpCurrentModule);
+#if HAVE_LLVM == 0x306
+        FunctionPassManager
+#else
+        llvm::legacy::FunctionPassManager
+#endif
+            passes(JM()->mpCurrentModule);
+
         passes.add(createBreakCriticalEdgesPass());
         passes.add(createCFGSimplificationPass());
         passes.add(createEarlyCSEPass());
