@@ -98,6 +98,46 @@ enum tgsi_sampler_control
    TGSI_SAMPLER_GATHER,
 };
 
+struct tgsi_image_params {
+   unsigned unit;
+   unsigned tgsi_tex_instr;
+   enum pipe_format format;
+   unsigned execmask;
+};
+
+struct tgsi_image {
+   /* image interfaces */
+   void (*load)(const struct tgsi_image *image,
+                const struct tgsi_image_params *params,
+                const int s[TGSI_QUAD_SIZE],
+                const int t[TGSI_QUAD_SIZE],
+                const int r[TGSI_QUAD_SIZE],
+                const int sample[TGSI_QUAD_SIZE],
+                float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
+
+   void (*store)(const struct tgsi_image *image,
+                 const struct tgsi_image_params *params,
+                 const int s[TGSI_QUAD_SIZE],
+                 const int t[TGSI_QUAD_SIZE],
+                 const int r[TGSI_QUAD_SIZE],
+                 const int sample[TGSI_QUAD_SIZE],
+                 float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
+
+   void (*op)(const struct tgsi_image *image,
+              const struct tgsi_image_params *params,
+              unsigned opcode,
+              const int s[TGSI_QUAD_SIZE],
+              const int t[TGSI_QUAD_SIZE],
+              const int r[TGSI_QUAD_SIZE],
+              const int sample[TGSI_QUAD_SIZE],
+              float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE],
+              float rgba2[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
+
+   void (*get_dims)(const struct tgsi_image *image,
+                    const struct tgsi_image_params *params,
+                    int dims[4]);
+};
+
 /**
  * Information for sampling textures, which must be implemented
  * by code outside the TGSI executor.
@@ -293,6 +333,7 @@ struct tgsi_exec_machine
 
    struct tgsi_sampler           *Sampler;
 
+   struct tgsi_image             *Image;
    unsigned                      ImmLimit;
 
    const void *Consts[PIPE_MAX_CONSTANT_BUFFERS];
@@ -382,7 +423,8 @@ void
 tgsi_exec_machine_bind_shader(
    struct tgsi_exec_machine *mach,
    const struct tgsi_token *tokens,
-   struct tgsi_sampler *sampler);
+   struct tgsi_sampler *sampler,
+   struct tgsi_image *image);
 
 uint
 tgsi_exec_machine_run(
