@@ -65,7 +65,7 @@ qir_opt_vpm(struct vc4_compile *c)
          * result, try to move the instruction up in place of the VPM read.
          */
         list_for_each_entry(struct qinst, inst, &c->instructions, link) {
-                if (!inst || qir_is_multi_instruction(inst))
+                if (!inst)
                         continue;
 
                 if (qir_depends_on_flags(inst) || inst->sf)
@@ -132,7 +132,7 @@ qir_opt_vpm(struct vc4_compile *c)
                         continue;
 
                 struct qinst *inst = c->defs[temp];
-                if (!inst || qir_is_multi_instruction(inst))
+                if (!inst)
                         continue;
 
                 if (qir_depends_on_flags(inst) || inst->sf)
