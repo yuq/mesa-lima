@@ -72,11 +72,14 @@ struct svga_query {
 
 /** cast wrapper */
 static inline struct svga_query *
-svga_query( struct pipe_query *q )
+svga_query(struct pipe_query *q)
 {
    return (struct svga_query *)q;
 }
 
+/**
+ * VGPU9
+ */
 
 static boolean
 svga_get_query_result(struct pipe_context *pipe,
