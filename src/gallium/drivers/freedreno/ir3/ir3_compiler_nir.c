@@ -1258,7 +1258,14 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			ctx->frag_face = create_input(b, 0);
 			ctx->frag_face->regs[0]->flags |= IR3_REG_HALF;
 		}
-		dst[0] = ir3_ADD_S(b, ctx->frag_face, 0, create_immed(b, 1), 0);
+		/* for fragface, we always get -1 or 0, but that is inverse
+		 * of what nir expects (where ~0 is true).  Unfortunately
+		 * trying to widen from half to full in add.s seems to do a
+		 * non-sign-extending widen (resulting in something that
+		 * gets interpreted as float Inf??)
+		 */
+		dst[0] = ir3_COV(b, ctx->frag_face, TYPE_S16, TYPE_S32);
+		dst[0] = ir3_ADD_S(b, dst[0], 0, create_immed(b, 1), 0);
 		break;
 	case nir_intrinsic_discard_if:
 	case nir_intrinsic_discard: {
