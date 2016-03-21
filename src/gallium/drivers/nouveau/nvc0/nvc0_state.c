@@ -413,7 +413,7 @@ nvc0_sampler_state_delete(struct pipe_context *pipe, void *hwcso)
 {
    unsigned s, i;
 
-   for (s = 0; s < 5; ++s)
+   for (s = 0; s < 6; ++s)
       for (i = 0; i < nvc0_context(pipe)->num_samplers[s]; ++i)
          if (nvc0_context(pipe)->samplers[s][i] == hwcso)
             nvc0_context(pipe)->samplers[s][i] = NULL;
