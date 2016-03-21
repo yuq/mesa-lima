@@ -2217,7 +2217,8 @@ unsigned r600_get_swizzle_combined(const unsigned char *swizzle_format,
 uint32_t r600_translate_texformat(struct pipe_screen *screen,
 				  enum pipe_format format,
 				  const unsigned char *swizzle_view,
-				  uint32_t *word4_p, uint32_t *yuv_format_p)
+				  uint32_t *word4_p, uint32_t *yuv_format_p,
+				  bool do_endian_swap)
 {
 	struct r600_screen *rscreen = (struct r600_screen *)screen;
 	uint32_t result = 0, word4 = 0, yuv_format = 0;
@@ -2579,7 +2580,8 @@ out_unknown:
 	return ~0;
 }
 
-uint32_t r600_translate_colorformat(enum chip_class chip, enum pipe_format format)
+uint32_t r600_translate_colorformat(enum chip_class chip, enum pipe_format format,
+						bool do_endian_swap)
 {
 	const struct util_format_description *desc = util_format_description(format);
 	int channel = util_format_get_first_non_void_channel(format);
@@ -2679,7 +2681,7 @@ uint32_t r600_translate_colorformat(enum chip_class chip, enum pipe_format forma
 	return ~0U;
 }
 
-uint32_t r600_colorformat_endian_swap(uint32_t colorformat)
+uint32_t r600_colorformat_endian_swap(uint32_t colorformat, bool do_endian_swap)
 {
 	if (R600_BIG_ENDIAN) {
 		switch(colorformat) {

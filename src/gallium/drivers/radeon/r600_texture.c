@@ -1392,7 +1392,7 @@ static void r600_surface_destroy(struct pipe_context *pipe,
 	FREE(surface);
 }
 
-unsigned r600_translate_colorswap(enum pipe_format format)
+unsigned r600_translate_colorswap(enum pipe_format format, bool do_endian_swap)
 {
 	const struct util_format_description *desc = util_format_description(format);
 
@@ -1491,7 +1491,7 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 	    surface_format == PIPE_FORMAT_B5G6R5_SRGB) {
 		extra_channel = -1;
 	} else if (desc->layout == UTIL_FORMAT_LAYOUT_PLAIN) {
-		if(r600_translate_colorswap(surface_format) <= 1)
+		if(r600_translate_colorswap(surface_format, FALSE) <= 1)
 			extra_channel = desc->nr_channels - 1;
 		else
 			extra_channel = 0;
