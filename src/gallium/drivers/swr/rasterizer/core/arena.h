@@ -58,7 +58,6 @@ static_assert((1U << ARENA_BLOCK_SHIFT) == ARENA_BLOCK_ALIGN,
 
 struct ArenaBlock
 {
-    void*       pMem = nullptr;
     size_t      blockSize = 0;
     ArenaBlock* pNext = nullptr;
 };
@@ -163,7 +162,7 @@ struct CachingAllocatorT : DefaultAllocator
         if (pMem)
         {
             ArenaBlock* pNewBlock = reinterpret_cast<ArenaBlock*>(pMem);
-            SWR_ASSERT(pNewBlock->blockSize >= 0 && pNewBlock->pMem != nullptr);
+            SWR_ASSERT(pNewBlock->blockSize >= 0);
 
             std::unique_lock<std::mutex> l(m_mutex);
             ArenaBlock* pPrevBlock = &m_cachedBlocks[GetBucketId(pNewBlock->blockSize)];
@@ -226,16 +225,18 @@ public:
 
     void* AllocAligned(size_t size, size_t  align)
     {
+        SWR_ASSERT(size);
+        SWR_ASSERT(align <= ARENA_BLOCK_ALIGN);
+
         if (m_pCurBlock)
         {
             ArenaBlock* pCurBlock = m_pCurBlock;
-            m_offset = AlignUp(m_offset, align);
+            size_t offset = AlignUp(m_offset, align);
 
-            if ((m_offset + size) <= pCurBlock->blockSize)
+            if ((offset + size) <= pCurBlock->blockSize)
             {
-                void* pMem = PtrAdd(pCurBlock->pMem, m_offset);
-                m_offset += size;
-                m_size += size;
+                void* pMem = PtrAdd(pCurBlock, offset + ARENA_BLOCK_ALIGN);
+                m_offset = offset + size;
                 return pMem;
             }
 
@@ -247,9 +248,9 @@ public:
         size_t blockSize = std::max(size, ArenaBlockSize);
 
         // Add in one BLOCK_ALIGN unit to store ArenaBlock in.
-        blockSize = AlignUp(blockSize + ARENA_BLOCK_ALIGN, ARENA_BLOCK_ALIGN);
+        blockSize = AlignUp(blockSize, ARENA_BLOCK_ALIGN);
 
-        void *pMem = m_allocator.AllocateAligned(blockSize, ARENA_BLOCK_ALIGN);    // Arena blocks are always simd byte aligned.
+        void *pMem = m_allocator.AllocateAligned(blockSize + ARENA_BLOCK_ALIGN, ARENA_BLOCK_ALIGN);    // Arena blocks are always simd byte aligned.
         SWR_ASSERT(pMem != nullptr);
 
         ArenaBlock* pNewBlock = new (pMem) ArenaBlock();
@@ -260,8 +261,7 @@ public:
             pNewBlock->pNext = m_pCurBlock;
 
             m_pCurBlock = pNewBlock;
-            m_pCurBlock->pMem = PtrAdd(pMem, ARENA_BLOCK_ALIGN);
-            m_pCurBlock->blockSize = blockSize - ARENA_BLOCK_ALIGN;
+            m_pCurBlock->blockSize = blockSize;
         }
 
         return AllocAligned(size, align);
@@ -316,17 +316,17 @@ public:
                 m_pCurBlock = nullptr;
             }
         }
-
-        m_size = 0;
     }
 
-    size_t Size() const { return m_size; }
+    bool IsEmpty()
+    {
+        return (m_pCurBlock == nullptr) || (m_offset == 0 && m_pCurBlock->pNext == nullptr);
+    }
 
 private:
 
     ArenaBlock*         m_pCurBlock = nullptr;
     size_t              m_offset    = 0;
-    size_t              m_size      = 0;
 
     /// @note Mutex is only used by sync allocation functions.
     std::mutex          m_mutex;
