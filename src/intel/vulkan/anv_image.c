@@ -138,7 +138,7 @@ make_surface(const struct anv_device *dev,
       .array_len = vk_info->arrayLayers,
       .samples = vk_info->samples,
       .min_alignment = 0,
-      .min_pitch = 0,
+      .min_pitch = anv_info->stride,
       .usage = choose_isl_surf_usage(image->usage, aspect),
       .tiling_flags = tiling_flags);
 
