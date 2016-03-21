@@ -116,7 +116,8 @@ setup_pos_vector(const struct tgsi_interp_coef *coef,
 static unsigned 
 exec_run( const struct sp_fragment_shader_variant *var,
 	  struct tgsi_exec_machine *machine,
-	  struct quad_header *quad )
+	  struct quad_header *quad,
+	  bool early_depth_test )
 {
    /* Compute X, Y, Z, W vals for this quad */
    setup_pos_vector(quad->posCoef, 
@@ -155,16 +156,19 @@ exec_run( const struct sp_fragment_shader_variant *var,
             {
                uint j;
 
-               for (j = 0; j < 4; j++)
-                  quad->output.depth[j] = machine->Outputs[i].xyzw[2].f[j];
+               if (!early_depth_test) {
+                  for (j = 0; j < 4; j++)
+                     quad->output.depth[j] = machine->Outputs[i].xyzw[2].f[j];
+               }
             }
             break;
          case TGSI_SEMANTIC_STENCIL:
             {
                uint j;
-
-               for (j = 0; j < 4; j++)
-                  quad->output.stencil[j] = (unsigned)machine->Outputs[i].xyzw[1].u[j];
+               if (!early_depth_test) {
+                  for (j = 0; j < 4; j++)
+                     quad->output.stencil[j] = (unsigned)machine->Outputs[i].xyzw[1].u[j];
+               }
             }
             break;
          }

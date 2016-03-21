@@ -85,7 +85,8 @@ struct sp_fragment_shader_variant
 
    unsigned (*run)(const struct sp_fragment_shader_variant *shader,
 		   struct tgsi_exec_machine *machine,
-		   struct quad_header *quad);
+		   struct quad_header *quad,
+		   bool early_depth_test);
 
    /* Deletes this instance of the object */
    void (*delete)(struct sp_fragment_shader_variant *shader,

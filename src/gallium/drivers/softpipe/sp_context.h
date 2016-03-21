@@ -175,6 +175,8 @@ struct softpipe_context {
    } tgsi;
 
    struct tgsi_exec_machine *fs_machine;
+   /** whether early depth testing is enabled */
+   bool early_depth;
 
    /** The primitive drawing context */
    struct draw_context *draw;
