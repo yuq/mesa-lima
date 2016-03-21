@@ -167,6 +167,16 @@ set_last_dst_pack(struct vc4_compile *c, struct qinst *inst)
         }
 }
 
+static void
+handle_r4_qpu_write(struct vc4_compile *c, struct qinst *qinst,
+                    struct qpu_reg dst)
+{
+        if (dst.mux != QPU_MUX_R4)
+                queue(c, qpu_a_MOV(dst, qpu_r4()));
+        else if (qinst->sf)
+                queue(c, qpu_a_MOV(qpu_ra(QPU_W_NOP), qpu_r4()));
+}
+
 void
 vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 {
@@ -339,8 +349,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 abort();
                         }
 
-                        if (dst.mux != QPU_MUX_R4)
-                                queue(c, qpu_a_MOV(dst, qpu_r4()));
+                        handle_r4_qpu_write(c, qinst, dst);
 
                         break;
 
@@ -391,9 +400,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         queue(c, qpu_NOP());
                         *last_inst(c) = qpu_set_sig(*last_inst(c),
                                                     QPU_SIG_COLOR_LOAD);
-
-                        if (dst.mux != QPU_MUX_R4)
-                                queue(c, qpu_a_MOV(dst, qpu_r4()));
+                        handle_r4_qpu_write(c, qinst, dst);
                         break;
 
                 case QOP_TLB_COLOR_WRITE:
@@ -432,8 +439,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         queue(c, qpu_NOP());
                         *last_inst(c) = qpu_set_sig(*last_inst(c),
                                                     QPU_SIG_LOAD_TMU0);
-                        if (dst.mux != QPU_MUX_R4)
-                                queue(c, qpu_a_MOV(dst, qpu_r4()));
+                        handle_r4_qpu_write(c, qinst, dst);
                         break;
 
                 default:
@@ -476,10 +482,8 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 assert(qinst->cond == QPU_COND_ALWAYS ||
                        handled_qinst_cond);
 
-                if (qinst->sf) {
-                        assert(!qir_is_multi_instruction(qinst));
+                if (qinst->sf)
                         *last_inst(c) |= QPU_SF;
-                }
         }
 
         uint32_t cycles = qpu_schedule_instructions(c);
