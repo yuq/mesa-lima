@@ -50,7 +50,7 @@
 #include "sp_query.h"
 #include "sp_screen.h"
 #include "sp_tex_sample.h"
-
+#include "sp_image.h"
 
 static void
 softpipe_destroy( struct pipe_context *pipe )
@@ -199,6 +199,10 @@ softpipe_create_context(struct pipe_screen *screen,
       softpipe->tgsi.sampler[i] = sp_create_tgsi_sampler();
    }
 
+   for (i = 0; i < PIPE_SHADER_TYPES; i++) {
+      softpipe->tgsi.image[i] = sp_create_tgsi_image();
+   }
+
    softpipe->dump_fs = debug_get_bool_option( "SOFTPIPE_DUMP_FS", FALSE );
    softpipe->dump_gs = debug_get_bool_option( "SOFTPIPE_DUMP_GS", FALSE );
 
@@ -216,6 +220,7 @@ softpipe_create_context(struct pipe_screen *screen,
    softpipe_init_streamout_funcs(&softpipe->pipe);
    softpipe_init_texture_funcs( &softpipe->pipe );
    softpipe_init_vertex_funcs(&softpipe->pipe);
+   softpipe_init_image_funcs(&softpipe->pipe);
 
    softpipe->pipe.set_framebuffer_state = softpipe_set_framebuffer_state;
 
@@ -223,7 +228,8 @@ softpipe_create_context(struct pipe_screen *screen,
 
    softpipe->pipe.clear = softpipe_clear;
    softpipe->pipe.flush = softpipe_flush_wrapped;
-
+   softpipe->pipe.texture_barrier = softpipe_texture_barrier;
+   softpipe->pipe.memory_barrier = softpipe_memory_barrier;
    softpipe->pipe.render_condition = softpipe_render_condition;
    
    /*
@@ -271,6 +277,16 @@ softpipe_create_context(struct pipe_screen *screen,
                         PIPE_SHADER_GEOMETRY,
                         (struct tgsi_sampler *)
                            softpipe->tgsi.sampler[PIPE_SHADER_GEOMETRY]);
+
+   draw_image(softpipe->draw,
+              PIPE_SHADER_VERTEX,
+              (struct tgsi_image *)
+              softpipe->tgsi.image[PIPE_SHADER_VERTEX]);
+
+   draw_image(softpipe->draw,
+              PIPE_SHADER_GEOMETRY,
+              (struct tgsi_image *)
+              softpipe->tgsi.image[PIPE_SHADER_GEOMETRY]);
 
    if (debug_get_bool_option( "SOFTPIPE_NO_RAST", FALSE ))
       softpipe->no_rast = TRUE;

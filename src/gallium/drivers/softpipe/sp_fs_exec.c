@@ -62,14 +62,15 @@ sp_exec_fragment_shader(const struct sp_fragment_shader_variant *var)
 static void
 exec_prepare( const struct sp_fragment_shader_variant *var,
               struct tgsi_exec_machine *machine,
-              struct tgsi_sampler *sampler )
+              struct tgsi_sampler *sampler,
+              struct tgsi_image *image )
 {
    /*
     * Bind tokens/shader to the interpreter's machine state.
     */
    tgsi_exec_machine_bind_shader(machine,
                                  var->tokens,
-                                 sampler, NULL);
+                                 sampler, image);
 }
 
 
@@ -127,6 +128,7 @@ exec_run( const struct sp_fragment_shader_variant *var,
    /* convert 0 to 1.0 and 1 to -1.0 */
    machine->Face = (float) (quad->input.facing * -2 + 1);
 
+   machine->NonHelperMask = quad->inout.mask;
    quad->inout.mask &= tgsi_exec_machine_run( machine );
    if (quad->inout.mask == 0)
       return FALSE;

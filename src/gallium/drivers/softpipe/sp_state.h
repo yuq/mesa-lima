@@ -56,6 +56,7 @@
 
 
 struct tgsi_sampler;
+struct tgsi_image;
 struct tgsi_exec_machine;
 struct vertex_info;
 
@@ -81,7 +82,8 @@ struct sp_fragment_shader_variant
 
    void (*prepare)(const struct sp_fragment_shader_variant *shader,
 		   struct tgsi_exec_machine *machine,
-		   struct tgsi_sampler *sampler);
+		   struct tgsi_sampler *sampler,
+		   struct tgsi_image *image);
 
    unsigned (*run)(const struct sp_fragment_shader_variant *shader,
 		   struct tgsi_exec_machine *machine,
@@ -148,6 +150,9 @@ softpipe_init_streamout_funcs(struct pipe_context *pipe);
 
 void
 softpipe_init_vertex_funcs(struct pipe_context *pipe);
+
+void
+softpipe_init_image_funcs(struct pipe_context *pipe);
 
 void
 softpipe_set_framebuffer_state(struct pipe_context *,

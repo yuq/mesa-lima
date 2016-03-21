@@ -10,6 +10,7 @@ C_SOURCES := \
 	sp_flush.h \
 	sp_fs_exec.c \
 	sp_fs.h \
+	sp_image.c \
 	sp_limits.h \
 	sp_prim_vbuf.c \
 	sp_prim_vbuf.h \
@@ -31,6 +32,7 @@ C_SOURCES := \
 	sp_state_blend.c \
 	sp_state_clip.c \
 	sp_state_derived.c \
+	sp_state_image.c \
 	sp_state.h \
 	sp_state_rasterizer.c \
 	sp_state_sampler.c \
