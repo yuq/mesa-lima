@@ -51,10 +51,7 @@ public:
     }
 };
 
-static const size_t ARENA_BLOCK_SHIFT = 5;
-static const size_t ARENA_BLOCK_ALIGN = KNOB_SIMD_WIDTH * 4;
-static_assert((1U << ARENA_BLOCK_SHIFT) == ARENA_BLOCK_ALIGN,
-              "Invalid value for ARENA_BLOCK_ALIGN/SHIFT");
+static const size_t ARENA_BLOCK_ALIGN = 64;
 
 struct ArenaBlock
 {
@@ -65,7 +62,7 @@ static_assert(sizeof(ArenaBlock) <= ARENA_BLOCK_ALIGN,
               "Increase BLOCK_ALIGN size");
 
 // Caching Allocator for Arena
-template<uint32_t NumBucketsT = 1, uint32_t StartBucketBitT = 20>
+template<uint32_t NumBucketsT = 4, uint32_t StartBucketBitT = 16>
 struct CachingAllocatorT : DefaultAllocator
 {
     static uint32_t GetBucketId(size_t blockSize)

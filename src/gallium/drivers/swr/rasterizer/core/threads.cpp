@@ -279,11 +279,10 @@ bool CheckDependency(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint64_t lastReti
     return (pDC->dependency > lastRetiredDraw);
 }
 
-
-
-INLINE void CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+INLINE int64_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
     int64_t result = InterlockedDecrement64(&pDC->threadsDone);
+    SWR_ASSERT(result >= 0);
 
     if (result == 0)
     {
@@ -299,6 +298,8 @@ INLINE void CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 
         pContext->dcRing.Dequeue();  // Remove from tail
     }
+
+    return result;
 }
 
 INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint64_t& curDrawBE)

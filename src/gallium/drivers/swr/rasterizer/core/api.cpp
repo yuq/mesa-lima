@@ -160,20 +160,12 @@ void WakeAllThreads(SWR_CONTEXT *pContext)
 template<bool IsDraw>
 void QueueWork(SWR_CONTEXT *pContext)
 {
-    if (IsDraw)
-    {
-        // Each worker thread looks at a DC for both FE and BE work at different times and so we
-        // multiply threadDone by 2.  When the threadDone counter has reached 0 then all workers
-        // have moved past this DC. (i.e. Each worker has checked this DC for both FE and BE work and
-        // then moved on if all work is done.)
-        pContext->pCurDrawContext->threadsDone =
-            pContext->NumWorkerThreads ? pContext->NumWorkerThreads * 2 : 2;
-    }
-    else
-    {
-        pContext->pCurDrawContext->threadsDone =
-            pContext->NumWorkerThreads ? pContext->NumWorkerThreads : 1;
-    }
+    // Each worker thread looks at a DC for both FE and BE work at different times and so we
+    // multiply threadDone by 2.  When the threadDone counter has reached 0 then all workers
+    // have moved past this DC. (i.e. Each worker has checked this DC for both FE and BE work and
+    // then moved on if all work is done.)
+    pContext->pCurDrawContext->threadsDone =
+        pContext->NumWorkerThreads ? pContext->NumWorkerThreads * 2 : 2;
 
     _ReadWriteBarrier();
     {
@@ -201,10 +193,7 @@ void QueueWork(SWR_CONTEXT *pContext)
         }
 
         // Dequeue the work here, if not already done, since we're single threaded (i.e. no workers).
-        if (!pContext->dcRing.IsEmpty())
-        {
-            pContext->dcRing.Dequeue();
-        }
+        while (CompleteDrawContext(pContext, pContext->pCurDrawContext) > 0) {}
 
         // restore csr
         _mm_setcsr(mxcsr);
@@ -252,8 +241,6 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         uint32_t dsIndex = pContext->curStateId % KNOB_MAX_DRAWS_IN_FLIGHT;
         pCurDrawContext->pState = &pContext->dsRing[dsIndex];
 
-        auto& stateArena = *(pCurDrawContext->pState->pArena);
-
         // Copy previous state to current state.
         if (pContext->pPrevDrawContext)
         {
@@ -266,7 +253,9 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
             {
                 CopyState(*pCurDrawContext->pState, *pPrevDrawContext->pState);
 
-                stateArena.Reset(true);    // Reset memory.
+                // Should have been cleaned up previously
+                SWR_ASSERT(pCurDrawContext->pState->pArena->IsEmpty() == true);
+
                 pCurDrawContext->pState->pPrivateState = nullptr;
 
                 pContext->curStateId++;  // Progress state ring index forward.
@@ -276,16 +265,18 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
                 // If its a split draw then just copy the state pointer over
                 // since its the same draw.
                 pCurDrawContext->pState = pPrevDrawContext->pState;
+                SWR_ASSERT(pPrevDrawContext->cleanupState == false);
             }
         }
         else
         {
-            stateArena.Reset();    // Reset memory.
+            SWR_ASSERT(pCurDrawContext->pState->pArena->IsEmpty() == true);
             pContext->curStateId++;  // Progress state ring index forward.
         }
 
+        SWR_ASSERT(pCurDrawContext->pArena->IsEmpty() == true);
+
         pCurDrawContext->dependency = 0;
-        pCurDrawContext->pArena->Reset();
         pCurDrawContext->pContext = pContext;
         pCurDrawContext->isCompute = false; // Dispatch has to set this to true.
 
