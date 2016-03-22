@@ -47,6 +47,10 @@
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/IRReader/IRReader.h"
 
+#if LLVM_USE_INTEL_JITEVENTS
+#include "llvm/ExecutionEngine/JITEventListener.h"
+#endif
+
 #include "core/state.h"
 #include "common/containers.hpp"
 
