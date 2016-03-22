@@ -60,7 +60,7 @@ _swrast_delete_texture_image(struct gl_context *ctx,
 }
 
 static unsigned int
-texture_slices(struct gl_texture_image *texImage)
+texture_slices(const struct gl_texture_image *texImage)
 {
    if (texImage->TexObject->Target == GL_TEXTURE_1D_ARRAY)
       return texImage->Height;
