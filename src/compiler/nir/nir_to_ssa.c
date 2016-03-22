@@ -221,6 +221,7 @@ rewrite_def_forwards(nir_dest *dest, void *_state)
    list_del(&dest->reg.def_link);
    nir_ssa_dest_init(state->parent_instr, dest, reg->num_components,
                      reg->bit_size, name);
+   ralloc_free(name);
 
    /* push our SSA destination on the stack */
    state->states[index].index++;
@@ -274,6 +275,7 @@ rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
       list_del(&instr->dest.dest.reg.def_link);
       nir_ssa_dest_init(&instr->instr, &instr->dest.dest, num_components,
                         reg->bit_size, name);
+      ralloc_free(name);
 
       if (nir_op_infos[instr->op].output_size == 0) {
          /*

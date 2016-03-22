@@ -1317,12 +1317,13 @@ nir_instr_rewrite_dest(nir_instr *instr, nir_dest *dest, nir_dest new_dest)
       src_add_all_uses(dest->reg.indirect, instr, NULL);
 }
 
+/* note: does *not* take ownership of 'name' */
 void
 nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
                  unsigned num_components,
                  unsigned bit_size, const char *name)
 {
-   def->name = name;
+   def->name = ralloc_strdup(instr, name);
    def->parent_instr = instr;
    list_inithead(&def->uses);
    list_inithead(&def->if_uses);
@@ -1339,6 +1340,7 @@ nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
    }
 }
 
+/* note: does *not* take ownership of 'name' */
 void
 nir_ssa_dest_init(nir_instr *instr, nir_dest *dest,
                  unsigned num_components, unsigned bit_size,

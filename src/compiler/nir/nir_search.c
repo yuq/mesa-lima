@@ -469,7 +469,7 @@ construct_value(const nir_search_value *value,
 
       switch (c->type) {
       case nir_type_float:
-         load->def.name = ralloc_asprintf(mem_ctx, "%f", c->data.d);
+         load->def.name = ralloc_asprintf(load, "%f", c->data.d);
          switch (bitsize->dest_size) {
          case 32:
             load->value.f32[0] = c->data.d;
@@ -483,7 +483,7 @@ construct_value(const nir_search_value *value,
          break;
 
       case nir_type_int:
-         load->def.name = ralloc_asprintf(mem_ctx, "%ld", c->data.i);
+         load->def.name = ralloc_asprintf(load, "%ld", c->data.i);
          switch (bitsize->dest_size) {
          case 32:
             load->value.i32[0] = c->data.i;
@@ -497,7 +497,7 @@ construct_value(const nir_search_value *value,
          break;
 
       case nir_type_uint:
-         load->def.name = ralloc_asprintf(mem_ctx, "%lu", c->data.u);
+         load->def.name = ralloc_asprintf(load, "%lu", c->data.u);
          switch (bitsize->dest_size) {
          case 32:
             load->value.u32[0] = c->data.u;
