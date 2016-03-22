@@ -212,7 +212,7 @@ struct CachingAllocatorT : DefaultAllocator
 };
 typedef CachingAllocatorT<> CachingAllocator;
 
-template<typename T = DefaultAllocator>
+template<typename T = DefaultAllocator, size_t BlockSizeT = (128 * 1024)>
 class TArena
 {
 public:
@@ -225,7 +225,11 @@ public:
 
     void* AllocAligned(size_t size, size_t  align)
     {
-        SWR_ASSERT(size);
+        if (0 == size)
+        {
+            return nullptr;
+        }
+
         SWR_ASSERT(align <= ARENA_BLOCK_ALIGN);
 
         if (m_pCurBlock)
@@ -244,7 +248,7 @@ public:
             // a new block
         }
 
-        static const size_t ArenaBlockSize = 1024 * 1024 - ARENA_BLOCK_ALIGN;
+        static const size_t ArenaBlockSize = BlockSizeT - ARENA_BLOCK_ALIGN;
         size_t blockSize = std::max(size, ArenaBlockSize);
 
         // Add in one BLOCK_ALIGN unit to store ArenaBlock in.
