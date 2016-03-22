@@ -961,7 +961,7 @@ nvc0_screen_create(struct nouveau_device *dev)
       /* TIC and TSC entries for each unit (nve4+ only) */
       /* auxiliary constants (6 user clip planes, base instance id) */
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, 1024);
+      PUSH_DATA (push, 2048);
       PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(i));
       PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(i));
       BEGIN_NVC0(push, NVC0_3D(CB_BIND(i)), 1);

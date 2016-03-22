@@ -206,7 +206,7 @@ nvc0_compute_validate_driverconst(struct nvc0_context *nvc0)
    struct nvc0_screen *screen = nvc0->screen;
 
    BEGIN_NVC0(push, NVC0_CP(CB_SIZE), 3);
-   PUSH_DATA (push, 1024);
+   PUSH_DATA (push, 2048);
    PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(5));
    PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(5));
    BEGIN_NVC0(push, NVC0_CP(CB_BIND), 1);
@@ -224,7 +224,7 @@ nvc0_compute_validate_buffers(struct nvc0_context *nvc0)
    int i;
 
    BEGIN_NVC0(push, NVC0_CP(CB_SIZE), 3);
-   PUSH_DATA (push, 1024);
+   PUSH_DATA (push, 2048);
    PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
    PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
    BEGIN_1IC0(push, NVC0_CP(CB_POS), 1 + 4 * NVC0_MAX_BUFFERS);

@@ -721,7 +721,7 @@ nve4_set_tex_handles(struct nvc0_context *nvc0)
       if (!dirty)
          continue;
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, 1024);
+      PUSH_DATA (push, 2048);
       PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       do {

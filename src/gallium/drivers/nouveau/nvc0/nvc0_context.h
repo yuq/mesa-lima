@@ -101,9 +101,9 @@
 /* 6 user uniform buffers, at 64K each */
 #define NVC0_CB_USR_INFO(s)         (s << 16)
 #define NVC0_CB_USR_SIZE            (6 << 16)
-/* 6 driver constbuts, at 1K each */
-#define NVC0_CB_AUX_INFO(s)         NVC0_CB_USR_SIZE + (s << 10)
-#define NVC0_CB_AUX_SIZE            (6 << 10)
+/* 6 driver constbuts, at 2K each */
+#define NVC0_CB_AUX_INFO(s)         NVC0_CB_USR_SIZE + (s << 11)
+#define NVC0_CB_AUX_SIZE            (6 << 11)
 /* XXX: Figure out what this UNK data is. */
 #define NVC0_CB_AUX_UNK_INFO        0x000
 #define NVC0_CB_AUX_UNK_SIZE        (8 * 4)

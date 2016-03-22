@@ -543,7 +543,7 @@ nve4_compute_setup_launch_desc(struct nvc0_context *nvc0,
                                  NVC0_CB_USR_INFO(5), 1 << 16);
    }
    nve4_cp_launch_desc_set_cb(desc, 7, screen->uniform_bo,
-                              NVC0_CB_AUX_INFO(5), 1 << 10);
+                              NVC0_CB_AUX_INFO(5), 1 << 11);
 }
 
 static inline struct nve4_cp_launch_desc *
