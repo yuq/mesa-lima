@@ -210,7 +210,6 @@ anv_resolve_entrypoint(uint32_t index)
       return validate_layer.entrypoints[index];
 
    if (dispatch_devinfo == NULL) {
-      assert(anv_layer.entrypoints[index]);
       return anv_layer.entrypoints[index];
    }
 
