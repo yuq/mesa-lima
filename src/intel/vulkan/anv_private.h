@@ -1670,6 +1670,39 @@ struct anv_buffer_view {
 const struct anv_format *
 anv_format_for_descriptor_type(VkDescriptorType type);
 
+static inline struct VkExtent3D
+anv_sanitize_image_extent(const VkImageType imageType,
+                          const struct VkExtent3D imageExtent)
+{
+   switch (imageType) {
+   case VK_IMAGE_TYPE_1D:
+      return (VkExtent3D) { imageExtent.width, 1, 1 };
+   case VK_IMAGE_TYPE_2D:
+      return (VkExtent3D) { imageExtent.width, imageExtent.height, 1 };
+   case VK_IMAGE_TYPE_3D:
+      return imageExtent;
+   default:
+      unreachable("invalid image type");
+   }
+}
+
+static inline struct VkOffset3D
+anv_sanitize_image_offset(const VkImageType imageType,
+                          const struct VkOffset3D imageOffset)
+{
+   switch (imageType) {
+   case VK_IMAGE_TYPE_1D:
+      return (VkOffset3D) { imageOffset.x, 0, 0 };
+   case VK_IMAGE_TYPE_2D:
+      return (VkOffset3D) { imageOffset.x, imageOffset.y, 0 };
+   case VK_IMAGE_TYPE_3D:
+      return imageOffset;
+   default:
+      unreachable("invalid image type");
+   }
+}
+
+
 void anv_fill_buffer_surface_state(struct anv_device *device,
                                    struct anv_state state,
                                    enum isl_format format,

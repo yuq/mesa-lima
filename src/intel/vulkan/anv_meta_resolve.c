@@ -719,6 +719,27 @@ void anv_CmdResolveImage(
          anv_meta_get_iview_layer(dest_image, &region->dstSubresource,
                                   &region->dstOffset);
 
+      /**
+       * From Vulkan 1.0.6 spec: 18.6 Resolving Multisample Images
+       *
+       *    extent is the size in texels of the source image to resolve in width,
+       *    height and depth. 1D images use only x and width. 2D images use x, y,
+       *    width and height. 3D images use x, y, z, width, height and depth.
+       *
+       *    srcOffset and dstOffset select the initial x, y, and z offsets in
+       *    texels of the sub-regions of the source and destination image data.
+       *    extent is the size in texels of the source image to resolve in width,
+       *    height and depth. 1D images use only x and width. 2D images use x, y,
+       *    width and height. 3D images use x, y, z, width, height and depth.
+       */
+      const struct VkExtent3D extent =
+         anv_sanitize_image_extent(src_image->type, region->extent);
+      const struct VkOffset3D srcOffset =
+         anv_sanitize_image_offset(src_image->type, region->srcOffset);
+      const struct VkOffset3D dstOffset =
+         anv_sanitize_image_offset(dest_image->type, region->dstOffset);
+
+
       for (uint32_t layer = 0; layer < region->srcSubresource.layerCount;
            ++layer) {
 
@@ -780,12 +801,12 @@ void anv_CmdResolveImage(
                .framebuffer = fb_h,
                .renderArea = {
                   .offset = {
-                     region->dstOffset.x,
-                     region->dstOffset.y,
+                     dstOffset.x,
+                     dstOffset.y,
                   },
                   .extent = {
-                     region->extent.width,
-                     region->extent.height,
+                     extent.width,
+                     extent.height,
                   }
                },
                .clearValueCount = 0,
@@ -796,17 +817,17 @@ void anv_CmdResolveImage(
          emit_resolve(cmd_buffer,
              &src_iview,
              &(VkOffset2D) {
-               .x = region->srcOffset.x,
-               .y = region->srcOffset.y,
+               .x = srcOffset.x,
+               .y = srcOffset.y,
              },
              &dest_iview,
              &(VkOffset2D) {
-               .x = region->dstOffset.x,
-               .y = region->dstOffset.y,
+               .x = dstOffset.x,
+               .y = dstOffset.y,
              },
              &(VkExtent2D) {
-               .width = region->extent.width,
-               .height = region->extent.height,
+               .width = extent.width,
+               .height = extent.height,
              });
 
          ANV_CALL(CmdEndRenderPass)(cmd_buffer_h);

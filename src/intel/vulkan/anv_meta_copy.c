@@ -28,16 +28,16 @@
  * if Image is uncompressed or compressed, respectively.
  */
 static struct VkExtent3D
-meta_region_extent_el(const VkFormat format,
+meta_region_extent_el(const struct anv_image *image,
                       const struct VkExtent3D *extent)
 {
    const struct isl_format_layout *isl_layout =
-      anv_format_for_vk_format(format)->isl_layout;
-   return (VkExtent3D) {
+      anv_format_for_vk_format(image->vk_format)->isl_layout;
+   return anv_sanitize_image_extent(image->type, (VkExtent3D) {
       .width  = DIV_ROUND_UP(extent->width , isl_layout->bw),
       .height = DIV_ROUND_UP(extent->height, isl_layout->bh),
       .depth  = DIV_ROUND_UP(extent->depth , isl_layout->bd),
-   };
+   });
 }
 
 /* Returns the user-provided VkBufferImageCopy::imageOffset in units of
@@ -49,11 +49,11 @@ meta_region_offset_el(const struct anv_image *image,
                       const struct VkOffset3D *offset)
 {
    const struct isl_format_layout *isl_layout = image->format->isl_layout;
-   return (VkOffset3D) {
+   return anv_sanitize_image_offset(image->type, (VkOffset3D) {
       .x = offset->x / isl_layout->bw,
       .y = offset->y / isl_layout->bh,
       .z = offset->z / isl_layout->bd,
-   };
+   });
 }
 
 static struct anv_meta_blit2d_surf
@@ -115,17 +115,28 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
 
    for (unsigned r = 0; r < regionCount; r++) {
 
-      /* Start creating blit rect */
+      /**
+       * From the Vulkan 1.0.6 spec: 18.3 Copying Data Between Images
+       *    extent is the size in texels of the source image to copy in width,
+       *    height and depth. 1D images use only x and width. 2D images use x, y,
+       *    width and height. 3D images use x, y, z, width, height and depth.
+       *
+       *
+       * Also, convert the offsets and extent from units of texels to units of
+       * blocks - which is the highest resolution accessible in this command.
+       */
       const VkOffset3D img_offset_el =
          meta_region_offset_el(image, &pRegions[r].imageOffset);
       const VkExtent3D bufferExtent = {
          .width = pRegions[r].bufferRowLength,
          .height = pRegions[r].bufferImageHeight,
       };
+
+      /* Start creating blit rect */
       const VkExtent3D buf_extent_el =
-         meta_region_extent_el(image->vk_format, &bufferExtent);
+         meta_region_extent_el(image, &bufferExtent);
       const VkExtent3D img_extent_el =
-         meta_region_extent_el(image->vk_format, &pRegions[r].imageExtent);
+         meta_region_extent_el(image, &pRegions[r].imageExtent);
       struct anv_meta_blit2d_rect rect = {
          .width = MAX2(buf_extent_el.width, img_extent_el.width),
          .height = MAX2(buf_extent_el.height, img_extent_el.height),
@@ -152,7 +163,7 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
       uint32_t *y_offset = forward ? &rect.dst_y : &rect.src_y;
 
       /* Loop through each 3D or array slice */
-      unsigned num_slices_3d = pRegions[r].imageExtent.depth;
+      unsigned num_slices_3d = img_extent_el.depth;
       unsigned num_slices_array = pRegions[r].imageSubresource.layerCount;
       unsigned slice_3d = 0;
       unsigned slice_array = 0;
@@ -163,7 +174,7 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
                                     pRegions[r].imageSubresource.mipLevel,
                                     pRegions[r].imageSubresource.baseArrayLayer
                                        + slice_array,
-                                    pRegions[r].imageOffset.z + slice_3d,
+                                    img_offset_el.z + slice_3d,
                                     x_offset,
                                     y_offset);
          *x_offset += img_offset_el.x;
@@ -259,20 +270,30 @@ void anv_CmdCopyImage(
       struct anv_meta_blit2d_surf b_dst =
          blit_surf_for_image(dest_image, dst_isl_surf);
 
-      /* Start creating blit rect */
+      /**
+       * From the Vulkan 1.0.6 spec: 18.4 Copying Data Between Buffers and Images
+       *    imageExtent is the size in texels of the image to copy in width, height
+       *    and depth. 1D images use only x and width. 2D images use x, y, width
+       *    and height. 3D images use x, y, z, width, height and depth.
+       *
+       * Also, convert the offsets and extent from units of texels to units of
+       * blocks - which is the highest resolution accessible in this command.
+       */
       const VkOffset3D dst_offset_el =
          meta_region_offset_el(dest_image, &pRegions[r].dstOffset);
       const VkOffset3D src_offset_el =
          meta_region_offset_el(src_image, &pRegions[r].srcOffset);
       const VkExtent3D img_extent_el =
-         meta_region_extent_el(src_image->vk_format, &pRegions[r].extent);
+         meta_region_extent_el(src_image, &pRegions[r].extent);
+
+      /* Start creating blit rect */
       struct anv_meta_blit2d_rect rect = {
          .width = img_extent_el.width,
          .height = img_extent_el.height,
       };
 
       /* Loop through each 3D or array slice */
-      unsigned num_slices_3d = pRegions[r].extent.depth;
+      unsigned num_slices_3d = img_extent_el.depth;
       unsigned num_slices_array = pRegions[r].dstSubresource.layerCount;
       unsigned slice_3d = 0;
       unsigned slice_array = 0;
@@ -283,14 +304,14 @@ void anv_CmdCopyImage(
                                     pRegions[r].dstSubresource.mipLevel,
                                     pRegions[r].dstSubresource.baseArrayLayer
                                        + slice_array,
-                                    pRegions[r].dstOffset.z + slice_3d,
+                                    dst_offset_el.z + slice_3d,
                                     &rect.dst_x,
                                     &rect.dst_y);
          isl_surf_get_image_offset_el(src_isl_surf,
                                     pRegions[r].srcSubresource.mipLevel,
                                     pRegions[r].srcSubresource.baseArrayLayer
                                        + slice_array,
-                                    pRegions[r].srcOffset.z + slice_3d,
+                                    src_offset_el.z + slice_3d,
                                     &rect.src_x,
                                     &rect.src_y);
          rect.dst_x += dst_offset_el.x;
