@@ -2993,7 +2993,8 @@ si_make_texture_descriptor(struct si_screen *screen,
 	if (type == V_008F1C_SQ_RSRC_IMG_1D_ARRAY) {
 	        height = 1;
 		depth = res->array_size;
-	} else if (type == V_008F1C_SQ_RSRC_IMG_2D_ARRAY) {
+	} else if (type == V_008F1C_SQ_RSRC_IMG_2D_ARRAY ||
+		   type == V_008F1C_SQ_RSRC_IMG_2D_MSAA_ARRAY) {
 		if (sampler || res->target != PIPE_TEXTURE_3D)
 			depth = res->array_size;
 	} else if (type == V_008F1C_SQ_RSRC_IMG_CUBE)
