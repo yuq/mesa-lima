@@ -297,6 +297,8 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
 
         // Assign unique drawId for this DC
         pCurDrawContext->drawId = pContext->dcRing.GetHead();
+
+        pCurDrawContext->cleanupState = true;
     }
     else
     {
@@ -1076,6 +1078,8 @@ void DrawInstanced(
         pDC->FeWork.desc.draw.startPrimID = draw * primsPerDraw;
         pDC->FeWork.desc.draw.startVertexID = draw * maxVertsPerDraw;
 
+        pDC->cleanupState = (remainingVerts == numVertsForDraw);
+
         //enqueue DC
         QueueDraw(pContext);
 
@@ -1209,6 +1213,8 @@ void DrawIndexedInstance(
         pDC->FeWork.desc.draw.startInstance = startInstance;
         pDC->FeWork.desc.draw.baseVertex = baseVertex;
         pDC->FeWork.desc.draw.startPrimID = draw * primsPerDraw;
+
+        pDC->cleanupState = (remainingIndices == numIndicesForDraw);
 
         //enqueue DC
         QueueDraw(pContext);

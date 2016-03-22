@@ -402,6 +402,8 @@ struct DRAW_CONTEXT
     CachingArena* pArena;
 
     uint8_t* pSpillFill[KNOB_MAX_NUM_THREADS];  // Scratch space used for spill fills.
+
+    bool  cleanupState; // True if this is the last draw using an entry in the state ring.
 };
 
 INLINE const API_STATE& GetApiState(const DRAW_CONTEXT* pDC)
