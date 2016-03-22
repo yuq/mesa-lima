@@ -208,6 +208,68 @@ decode_type_from_blob(struct blob_reader *blob)
 }
 
 static void
+write_subroutines(struct blob *metadata, struct gl_shader_program *prog)
+{
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      if (!sh)
+         continue;
+
+      struct gl_program *glprog = sh->Program;
+
+      blob_write_uint32(metadata, glprog->sh.NumSubroutineUniforms);
+      blob_write_uint32(metadata, glprog->sh.MaxSubroutineFunctionIndex);
+      blob_write_uint32(metadata, glprog->sh.NumSubroutineFunctions);
+      for (unsigned j = 0; j < glprog->sh.NumSubroutineFunctions; j++) {
+         int num_types = glprog->sh.SubroutineFunctions[j].num_compat_types;
+
+         blob_write_string(metadata, glprog->sh.SubroutineFunctions[j].name);
+         blob_write_uint32(metadata, glprog->sh.SubroutineFunctions[j].index);
+         blob_write_uint32(metadata, num_types);
+
+         for (int k = 0; k < num_types; k++) {
+            encode_type_to_blob(metadata,
+                                glprog->sh.SubroutineFunctions[j].types[k]);
+         }
+      }
+   }
+}
+
+static void
+read_subroutines(struct blob_reader *metadata, struct gl_shader_program *prog)
+{
+   struct gl_subroutine_function *subs;
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      if (!sh)
+         continue;
+
+      struct gl_program *glprog = sh->Program;
+
+      glprog->sh.NumSubroutineUniforms = blob_read_uint32(metadata);
+      glprog->sh.MaxSubroutineFunctionIndex = blob_read_uint32(metadata);
+      glprog->sh.NumSubroutineFunctions = blob_read_uint32(metadata);
+
+      subs = rzalloc_array(prog, struct gl_subroutine_function,
+                           glprog->sh.NumSubroutineFunctions);
+      glprog->sh.SubroutineFunctions = subs;
+
+      for (unsigned j = 0; j < glprog->sh.NumSubroutineFunctions; j++) {
+         subs[j].name = ralloc_strdup(prog, blob_read_string (metadata));
+         subs[j].index = (int) blob_read_uint32(metadata);
+         subs[j].num_compat_types = (int) blob_read_uint32(metadata);
+
+         subs[j].types = rzalloc_array(prog, const struct glsl_type *,
+                                       subs[j].num_compat_types);
+         for (int k = 0; k < subs[j].num_compat_types; k++) {
+            subs[j].types[k] = decode_type_from_blob(metadata);
+         }
+      }
+   }
+}
+
+static void
 write_xfb(struct blob *metadata, struct gl_shader_program *shProg)
 {
    struct gl_program *prog = shProg->last_vert_prog;
@@ -500,10 +562,28 @@ read_hash_tables(struct blob_reader *metadata, struct gl_shader_program *prog)
 }
 
 static void
+write_shader_subroutine_index(struct blob *metadata,
+                              struct gl_linked_shader *sh,
+                              struct gl_program_resource *res)
+{
+   assert(sh);
+
+   for (unsigned j = 0; j < sh->Program->sh.NumSubroutineFunctions; j++) {
+      if (strcmp(((gl_subroutine_function *)res->Data)->name,
+                 sh->Program->sh.SubroutineFunctions[j].name) == 0) {
+         blob_write_uint32(metadata, j);
+         break;
+      }
+   }
+}
+
+static void
 write_program_resource_data(struct blob *metadata,
                             struct gl_shader_program *prog,
                             struct gl_program_resource *res)
 {
+   struct gl_linked_shader *sh;
+
    switch(res->Type) {
    case GL_PROGRAM_INPUT:
    case GL_PROGRAM_OUTPUT: {
@@ -554,6 +634,16 @@ write_program_resource_data(struct blob *metadata,
          }
       }
       break;
+   case GL_VERTEX_SUBROUTINE:
+   case GL_TESS_CONTROL_SUBROUTINE:
+   case GL_TESS_EVALUATION_SUBROUTINE:
+   case GL_GEOMETRY_SUBROUTINE:
+   case GL_FRAGMENT_SUBROUTINE:
+   case GL_COMPUTE_SUBROUTINE:
+      sh =
+         prog->_LinkedShaders[_mesa_shader_stage_from_subroutine(res->Type)];
+      write_shader_subroutine_index(metadata, sh, res);
+      break;
    default:
       assert(!"Support for writing resource not yet implemented.");
    }
@@ -564,6 +654,8 @@ read_program_resource_data(struct blob_reader *metadata,
                            struct gl_shader_program *prog,
                            struct gl_program_resource *res)
 {
+   struct gl_linked_shader *sh;
+
    switch(res->Type) {
    case GL_PROGRAM_INPUT:
    case GL_PROGRAM_OUTPUT: {
@@ -600,6 +692,17 @@ read_program_resource_data(struct blob_reader *metadata,
    case GL_TRANSFORM_FEEDBACK_VARYING:
       res->Data = &prog->last_vert_prog->
          sh.LinkedTransformFeedback->Varyings[blob_read_uint32(metadata)];
+      break;
+   case GL_VERTEX_SUBROUTINE:
+   case GL_TESS_CONTROL_SUBROUTINE:
+   case GL_TESS_EVALUATION_SUBROUTINE:
+   case GL_GEOMETRY_SUBROUTINE:
+   case GL_FRAGMENT_SUBROUTINE:
+   case GL_COMPUTE_SUBROUTINE:
+      sh =
+         prog->_LinkedShaders[_mesa_shader_stage_from_subroutine(res->Type)];
+      res->Data =
+         &sh->Program->sh.SubroutineFunctions[blob_read_uint32(metadata)];
       break;
    default:
       assert(!"Support for reading resource not yet implemented.");
@@ -817,6 +920,8 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
 
    write_uniform_remap_table(metadata, prog);
 
+   write_subroutines(metadata, prog);
+
    write_program_resource_list(metadata, prog);
 
    char sha1_buf[41];
@@ -923,6 +1028,8 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
    read_xfb(&metadata, prog);
 
    read_uniform_remap_table(&metadata, prog);
+
+   read_subroutines(&metadata, prog);
 
    read_program_resource_list(&metadata, prog);
 
