@@ -1039,6 +1039,9 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
    case TGSI_PROPERTY_NUM_CULLDIST_ENABLED:
       info->io.cullDistances = prop->u[0].Data;
       break;
+   case TGSI_PROPERTY_NEXT_SHADER:
+      /* Do not need to know the next shader stage. */
+      break;
    default:
       INFO("unhandled TGSI property %d\n", prop->Property.PropertyName);
       break;
