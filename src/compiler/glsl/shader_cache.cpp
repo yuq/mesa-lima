@@ -270,6 +270,141 @@ read_subroutines(struct blob_reader *metadata, struct gl_shader_program *prog)
 }
 
 static void
+write_buffer_block(struct blob *metadata, struct gl_uniform_block *b)
+{
+   blob_write_string(metadata, b->Name);
+   blob_write_uint32(metadata, b->NumUniforms);
+   blob_write_uint32(metadata, b->Binding);
+   blob_write_uint32(metadata, b->UniformBufferSize);
+   blob_write_uint32(metadata, b->stageref);
+
+   for (unsigned j = 0; j < b->NumUniforms; j++) {
+      blob_write_string(metadata, b->Uniforms[j].Name);
+      blob_write_string(metadata, b->Uniforms[j].IndexName);
+      encode_type_to_blob(metadata, b->Uniforms[j].Type);
+      blob_write_uint32(metadata, b->Uniforms[j].Offset);
+   }
+}
+
+static void
+write_buffer_blocks(struct blob *metadata, struct gl_shader_program *prog)
+{
+   blob_write_uint32(metadata, prog->data->NumUniformBlocks);
+   blob_write_uint32(metadata, prog->data->NumShaderStorageBlocks);
+
+   for (unsigned i = 0; i < prog->data->NumUniformBlocks; i++) {
+      write_buffer_block(metadata, &prog->data->UniformBlocks[i]);
+   }
+
+   for (unsigned i = 0; i < prog->data->NumShaderStorageBlocks; i++) {
+      write_buffer_block(metadata, &prog->data->ShaderStorageBlocks[i]);
+   }
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      if (!sh)
+         continue;
+
+      struct gl_program *glprog = sh->Program;
+
+      blob_write_uint32(metadata, glprog->info.num_ubos);
+      blob_write_uint32(metadata, glprog->info.num_ssbos);
+
+      for (unsigned j = 0; j < glprog->info.num_ubos; j++) {
+         uint32_t offset =
+            glprog->sh.UniformBlocks[j] - prog->data->UniformBlocks;
+         blob_write_uint32(metadata, offset);
+      }
+
+      for (unsigned j = 0; j < glprog->info.num_ssbos; j++) {
+         uint32_t offset = glprog->sh.ShaderStorageBlocks[j] -
+            prog->data->ShaderStorageBlocks;
+         blob_write_uint32(metadata, offset);
+      }
+   }
+}
+
+static void
+read_buffer_block(struct blob_reader *metadata, struct gl_uniform_block *b,
+                  struct gl_shader_program *prog)
+{
+      b->Name = ralloc_strdup(prog->data, blob_read_string (metadata));
+      b->NumUniforms = blob_read_uint32(metadata);
+      b->Binding = blob_read_uint32(metadata);
+      b->UniformBufferSize = blob_read_uint32(metadata);
+      b->stageref = blob_read_uint32(metadata);
+
+      b->Uniforms =
+         rzalloc_array(prog->data, struct gl_uniform_buffer_variable,
+                       b->NumUniforms);
+      for (unsigned j = 0; j < b->NumUniforms; j++) {
+         b->Uniforms[j].Name = ralloc_strdup(prog->data,
+                                             blob_read_string (metadata));
+
+         char *index_name = blob_read_string(metadata);
+         if (strcmp(b->Uniforms[j].Name, index_name) == 0) {
+            b->Uniforms[j].IndexName = b->Uniforms[j].Name;
+         } else {
+            b->Uniforms[j].IndexName = ralloc_strdup(prog->data, index_name);
+         }
+
+         b->Uniforms[j].Type = decode_type_from_blob(metadata);
+         b->Uniforms[j].Offset = blob_read_uint32(metadata);
+      }
+}
+
+static void
+read_buffer_blocks(struct blob_reader *metadata,
+                   struct gl_shader_program *prog)
+{
+   prog->data->NumUniformBlocks = blob_read_uint32(metadata);
+   prog->data->NumShaderStorageBlocks = blob_read_uint32(metadata);
+
+   prog->data->UniformBlocks =
+      rzalloc_array(prog->data, struct gl_uniform_block,
+                    prog->data->NumUniformBlocks);
+
+   prog->data->ShaderStorageBlocks =
+      rzalloc_array(prog->data, struct gl_uniform_block,
+                    prog->data->NumShaderStorageBlocks);
+
+   for (unsigned i = 0; i < prog->data->NumUniformBlocks; i++) {
+      read_buffer_block(metadata, &prog->data->UniformBlocks[i], prog);
+   }
+
+   for (unsigned i = 0; i < prog->data->NumShaderStorageBlocks; i++) {
+      read_buffer_block(metadata, &prog->data->ShaderStorageBlocks[i], prog);
+   }
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      if (!sh)
+         continue;
+
+      struct gl_program *glprog = sh->Program;
+
+      glprog->info.num_ubos = blob_read_uint32(metadata);
+      glprog->info.num_ssbos = blob_read_uint32(metadata);
+
+      glprog->sh.UniformBlocks =
+         rzalloc_array(glprog, gl_uniform_block *, glprog->info.num_ubos);
+      glprog->sh.ShaderStorageBlocks =
+         rzalloc_array(glprog, gl_uniform_block *, glprog->info.num_ssbos);
+
+      for (unsigned j = 0; j < glprog->info.num_ubos; j++) {
+         uint32_t offset = blob_read_uint32(metadata);
+         glprog->sh.UniformBlocks[j] = prog->data->UniformBlocks + offset;
+      }
+
+      for (unsigned j = 0; j < glprog->info.num_ssbos; j++) {
+         uint32_t offset = blob_read_uint32(metadata);
+         glprog->sh.ShaderStorageBlocks[j] =
+            prog->data->ShaderStorageBlocks + offset;
+      }
+   }
+}
+
+static void
 write_xfb(struct blob *metadata, struct gl_shader_program *shProg)
 {
    struct gl_program *prog = shProg->last_vert_prog;
@@ -636,6 +771,24 @@ write_program_resource_data(struct blob *metadata,
       blob_write_string(metadata, var->name);
       break;
    }
+   case GL_UNIFORM_BLOCK:
+      for (unsigned i = 0; i < prog->data->NumUniformBlocks; i++) {
+         if (strcmp(((gl_uniform_block *)res->Data)->Name,
+                    prog->data->UniformBlocks[i].Name) == 0) {
+            blob_write_uint32(metadata, i);
+            break;
+         }
+      }
+      break;
+   case GL_SHADER_STORAGE_BLOCK:
+      for (unsigned i = 0; i < prog->data->NumShaderStorageBlocks; i++) {
+         if (strcmp(((gl_uniform_block *)res->Data)->Name,
+                    prog->data->ShaderStorageBlocks[i].Name) == 0) {
+            blob_write_uint32(metadata, i);
+            break;
+         }
+      }
+      break;
    case GL_BUFFER_VARIABLE:
    case GL_VERTEX_SUBROUTINE_UNIFORM:
    case GL_GEOMETRY_SUBROUTINE_UNIFORM:
@@ -711,6 +864,12 @@ read_program_resource_data(struct blob_reader *metadata,
       res->Data = var;
       break;
    }
+   case GL_UNIFORM_BLOCK:
+      res->Data = &prog->data->UniformBlocks[blob_read_uint32(metadata)];
+      break;
+   case GL_SHADER_STORAGE_BLOCK:
+      res->Data = &prog->data->ShaderStorageBlocks[blob_read_uint32(metadata)];
+      break;
    case GL_BUFFER_VARIABLE:
    case GL_VERTEX_SUBROUTINE_UNIFORM:
    case GL_GEOMETRY_SUBROUTINE_UNIFORM:
@@ -956,6 +1115,8 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
 
    write_uniform_remap_tables(metadata, prog);
 
+   write_buffer_blocks(metadata, prog);
+
    write_subroutines(metadata, prog);
 
    write_program_resource_list(metadata, prog);
@@ -1064,6 +1225,8 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
    read_xfb(&metadata, prog);
 
    read_uniform_remap_tables(&metadata, prog);
+
+   read_buffer_blocks(&metadata, prog);
 
    read_subroutines(&metadata, prog);
 
