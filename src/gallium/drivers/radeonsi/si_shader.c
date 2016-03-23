@@ -5362,7 +5362,7 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 			       LLVMTargetMachineRef tm)
 {
 	struct lp_build_tgsi_context *bld_base;
-	struct lp_build_tgsi_action tmpl;
+	struct lp_build_tgsi_action tmpl = {};
 
 	memset(ctx, 0, sizeof(*ctx));
 	radeon_llvm_context_init(&ctx->radeon_bld, "amdgcn--");
