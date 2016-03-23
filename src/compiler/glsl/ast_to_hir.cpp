@@ -2792,8 +2792,164 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
 }
 
 
+static void
+validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
+                                 YYLTYPE *loc,
+                                 const glsl_interp_qualifier interpolation,
+                                 const struct ast_type_qualifier *qual,
+                                 const struct glsl_type *var_type,
+                                 ir_variable_mode mode)
+{
+   /* Interpolation qualifiers can only apply to shader inputs or outputs, but
+    * not to vertex shader inputs nor fragment shader outputs.
+    *
+    * From section 4.3 ("Storage Qualifiers") of the GLSL 1.30 spec:
+    *    "Outputs from a vertex shader (out) and inputs to a fragment
+    *    shader (in) can be further qualified with one or more of these
+    *    interpolation qualifiers"
+    *    ...
+    *    "These interpolation qualifiers may only precede the qualifiers in,
+    *    centroid in, out, or centroid out in a declaration. They do not apply
+    *    to the deprecated storage qualifiers varying or centroid
+    *    varying. They also do not apply to inputs into a vertex shader or
+    *    outputs from a fragment shader."
+    *
+    * From section 4.3 ("Storage Qualifiers") of the GLSL ES 3.00 spec:
+    *    "Outputs from a shader (out) and inputs to a shader (in) can be
+    *    further qualified with one of these interpolation qualifiers."
+    *    ...
+    *    "These interpolation qualifiers may only precede the qualifiers
+    *    in, centroid in, out, or centroid out in a declaration. They do
+    *    not apply to inputs into a vertex shader or outputs from a
+    *    fragment shader."
+    */
+   if (state->is_version(130, 300)
+       && interpolation != INTERP_QUALIFIER_NONE) {
+      const char *i = interpolation_string(interpolation);
+      if (mode != ir_var_shader_in && mode != ir_var_shader_out)
+         _mesa_glsl_error(loc, state,
+                          "interpolation qualifier `%s' can only be applied to "
+                          "shader inputs or outputs.", i);
+
+      switch (state->stage) {
+      case MESA_SHADER_VERTEX:
+         if (mode == ir_var_shader_in) {
+            _mesa_glsl_error(loc, state,
+                             "interpolation qualifier '%s' cannot be applied to "
+                             "vertex shader inputs", i);
+         }
+         break;
+      case MESA_SHADER_FRAGMENT:
+         if (mode == ir_var_shader_out) {
+            _mesa_glsl_error(loc, state,
+                             "interpolation qualifier '%s' cannot be applied to "
+                             "fragment shader outputs", i);
+         }
+         break;
+      default:
+         break;
+      }
+   }
+
+   /* Interpolation qualifiers cannot be applied to 'centroid' and
+    * 'centroid varying'.
+    *
+    * From section 4.3 ("Storage Qualifiers") of the GLSL 1.30 spec:
+    *    "interpolation qualifiers may only precede the qualifiers in,
+    *    centroid in, out, or centroid out in a declaration. They do not apply
+    *    to the deprecated storage qualifiers varying or centroid varying."
+    *
+    * These deprecated storage qualifiers do not exist in GLSL ES 3.00.
+    */
+   if (state->is_version(130, 0)
+       && interpolation != INTERP_QUALIFIER_NONE
+       && qual->flags.q.varying) {
+
+      const char *i = interpolation_string(interpolation);
+      const char *s;
+      if (qual->flags.q.centroid)
+         s = "centroid varying";
+      else
+         s = "varying";
+
+      _mesa_glsl_error(loc, state,
+                       "qualifier '%s' cannot be applied to the "
+                       "deprecated storage qualifier '%s'", i, s);
+   }
+
+   /* Integer fragment inputs must be qualified with 'flat'.  In GLSL ES,
+    * so must integer vertex outputs.
+    *
+    * From section 4.3.4 ("Inputs") of the GLSL 1.50 spec:
+    *    "Fragment shader inputs that are signed or unsigned integers or
+    *    integer vectors must be qualified with the interpolation qualifier
+    *    flat."
+    *
+    * From section 4.3.4 ("Input Variables") of the GLSL 3.00 ES spec:
+    *    "Fragment shader inputs that are, or contain, signed or unsigned
+    *    integers or integer vectors must be qualified with the
+    *    interpolation qualifier flat."
+    *
+    * From section 4.3.6 ("Output Variables") of the GLSL 3.00 ES spec:
+    *    "Vertex shader outputs that are, or contain, signed or unsigned
+    *    integers or integer vectors must be qualified with the
+    *    interpolation qualifier flat."
+    *
+    * Note that prior to GLSL 1.50, this requirement applied to vertex
+    * outputs rather than fragment inputs.  That creates problems in the
+    * presence of geometry shaders, so we adopt the GLSL 1.50 rule for all
+    * desktop GL shaders.  For GLSL ES shaders, we follow the spec and
+    * apply the restriction to both vertex outputs and fragment inputs.
+    *
+    * Note also that the desktop GLSL specs are missing the text "or
+    * contain"; this is presumably an oversight, since there is no
+    * reasonable way to interpolate a fragment shader input that contains
+    * an integer. See Khronos bug #15671.
+    */
+   if (state->is_version(130, 300)
+       && var_type->contains_integer()
+       && interpolation != INTERP_QUALIFIER_FLAT
+       && ((state->stage == MESA_SHADER_FRAGMENT && mode == ir_var_shader_in)
+           || (state->stage == MESA_SHADER_VERTEX && mode == ir_var_shader_out
+               && state->es_shader))) {
+      const char *shader_var_type = (state->stage == MESA_SHADER_VERTEX) ?
+         "vertex output" : "fragment input";
+      _mesa_glsl_error(loc, state, "if a %s is (or contains) "
+                       "an integer, then it must be qualified with 'flat'",
+                       shader_var_type);
+   }
+
+   /* Double fragment inputs must be qualified with 'flat'.
+    *
+    * From the "Overview" of the ARB_gpu_shader_fp64 extension spec:
+    *    "This extension does not support interpolation of double-precision
+    *    values; doubles used as fragment shader inputs must be qualified as
+    *    "flat"."
+    *
+    * From section 4.3.4 ("Inputs") of the GLSL 4.00 spec:
+    *    "Fragment shader inputs that are signed or unsigned integers, integer
+    *    vectors, or any double-precision floating-point type must be
+    *    qualified with the interpolation qualifier flat."
+    *
+    * Note that the GLSL specs are missing the text "or contain"; this is
+    * presumably an oversight. See Khronos bug #15671.
+    *
+    * The 'double' type does not exist in GLSL ES so far.
+    */
+   if ((state->ARB_gpu_shader_fp64_enable
+        || state->is_version(400, 0))
+       && var_type->contains_double()
+       && interpolation != INTERP_QUALIFIER_FLAT
+       && state->stage == MESA_SHADER_FRAGMENT
+       && mode == ir_var_shader_in) {
+      _mesa_glsl_error(loc, state, "if a fragment input is (or contains) "
+                       "a double, then it must be qualified with 'flat'");
+   }
+}
+
 static glsl_interp_qualifier
 interpret_interpolation_qualifier(const struct ast_type_qualifier *qual,
+                                  const struct glsl_type *var_type,
                                   ir_variable_mode mode,
                                   struct _mesa_glsl_parse_state *state,
                                   YYLTYPE *loc)
@@ -2805,37 +2961,23 @@ interpret_interpolation_qualifier(const struct ast_type_qualifier *qual,
       interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
    else if (qual->flags.q.smooth)
       interpolation = INTERP_QUALIFIER_SMOOTH;
-   else
-      interpolation = INTERP_QUALIFIER_NONE;
-
-   if (interpolation != INTERP_QUALIFIER_NONE) {
-      if (mode != ir_var_shader_in && mode != ir_var_shader_out) {
-         _mesa_glsl_error(loc, state,
-                          "interpolation qualifier `%s' can only be applied to "
-                          "shader inputs or outputs.",
-                          interpolation_string(interpolation));
-
-      }
-
-      if ((state->stage == MESA_SHADER_VERTEX && mode == ir_var_shader_in) ||
-          (state->stage == MESA_SHADER_FRAGMENT && mode == ir_var_shader_out)) {
-         _mesa_glsl_error(loc, state,
-                          "interpolation qualifier `%s' cannot be applied to "
-                          "vertex shader inputs or fragment shader outputs",
-                          interpolation_string(interpolation));
-      }
-   } else if (state->es_shader &&
-              ((mode == ir_var_shader_in &&
-                state->stage != MESA_SHADER_VERTEX) ||
-               (mode == ir_var_shader_out &&
-                state->stage != MESA_SHADER_FRAGMENT))) {
+   else if (state->es_shader &&
+            ((mode == ir_var_shader_in &&
+              state->stage != MESA_SHADER_VERTEX) ||
+             (mode == ir_var_shader_out &&
+              state->stage != MESA_SHADER_FRAGMENT)))
       /* Section 4.3.9 (Interpolation) of the GLSL ES 3.00 spec says:
        *
        *    "When no interpolation qualifier is present, smooth interpolation
        *    is used."
        */
       interpolation = INTERP_QUALIFIER_SMOOTH;
-   }
+   else
+      interpolation = INTERP_QUALIFIER_NONE;
+
+   validate_interpolation_qualifier(state, loc,
+                                    interpolation,
+                                    qual, var_type, mode);
 
    return interpolation;
 }
@@ -3575,7 +3717,8 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
    }
 
    var->data.interpolation =
-      interpret_interpolation_qualifier(qual, (ir_variable_mode) var->data.mode,
+      interpret_interpolation_qualifier(qual, var->type,
+                                        (ir_variable_mode) var->data.mode,
                                         state, loc);
 
    /* Does the declaration use the deprecated 'attribute' or 'varying'
@@ -4755,124 +4898,6 @@ ast_declarator_list::hir(exec_list *instructions,
          /* declare subroutine uniforms as hidden */
          var->data.how_declared = ir_var_hidden;
       }
-
-      /* Integer fragment inputs must be qualified with 'flat'.  In GLSL ES,
-       * so must integer vertex outputs.
-       *
-       * From section 4.3.4 ("Inputs") of the GLSL 1.50 spec:
-       *    "Fragment shader inputs that are signed or unsigned integers or
-       *    integer vectors must be qualified with the interpolation qualifier
-       *    flat."
-       *
-       * From section 4.3.4 ("Input Variables") of the GLSL 3.00 ES spec:
-       *    "Fragment shader inputs that are, or contain, signed or unsigned
-       *    integers or integer vectors must be qualified with the
-       *    interpolation qualifier flat."
-       *
-       * From section 4.3.6 ("Output Variables") of the GLSL 3.00 ES spec:
-       *    "Vertex shader outputs that are, or contain, signed or unsigned
-       *    integers or integer vectors must be qualified with the
-       *    interpolation qualifier flat."
-       *
-       * Note that prior to GLSL 1.50, this requirement applied to vertex
-       * outputs rather than fragment inputs.  That creates problems in the
-       * presence of geometry shaders, so we adopt the GLSL 1.50 rule for all
-       * desktop GL shaders.  For GLSL ES shaders, we follow the spec and
-       * apply the restriction to both vertex outputs and fragment inputs.
-       *
-       * Note also that the desktop GLSL specs are missing the text "or
-       * contain"; this is presumably an oversight, since there is no
-       * reasonable way to interpolate a fragment shader input that contains
-       * an integer.
-       */
-      if (state->is_version(130, 300) &&
-          var->type->contains_integer() &&
-          var->data.interpolation != INTERP_QUALIFIER_FLAT &&
-          ((state->stage == MESA_SHADER_FRAGMENT && var->data.mode == ir_var_shader_in)
-           || (state->stage == MESA_SHADER_VERTEX && var->data.mode == ir_var_shader_out
-               && state->es_shader))) {
-         const char *var_type = (state->stage == MESA_SHADER_VERTEX) ?
-            "vertex output" : "fragment input";
-         _mesa_glsl_error(&loc, state, "if a %s is (or contains) "
-                          "an integer, then it must be qualified with 'flat'",
-                          var_type);
-      }
-
-      /* Double fragment inputs must be qualified with 'flat'. */
-      if (var->type->contains_double() &&
-          var->data.interpolation != INTERP_QUALIFIER_FLAT &&
-          state->stage == MESA_SHADER_FRAGMENT &&
-          var->data.mode == ir_var_shader_in) {
-         _mesa_glsl_error(&loc, state, "if a fragment input is (or contains) "
-                          "a double, then it must be qualified with 'flat'",
-                          var_type);
-      }
-
-      /* Interpolation qualifiers cannot be applied to 'centroid' and
-       * 'centroid varying'.
-       *
-       * From page 29 (page 35 of the PDF) of the GLSL 1.30 spec:
-       *    "interpolation qualifiers may only precede the qualifiers in,
-       *    centroid in, out, or centroid out in a declaration. They do not apply
-       *    to the deprecated storage qualifiers varying or centroid varying."
-       *
-       * These deprecated storage qualifiers do not exist in GLSL ES 3.00.
-       */
-      if (state->is_version(130, 0)
-          && this->type->qualifier.has_interpolation()
-          && this->type->qualifier.flags.q.varying) {
-
-         const char *i = interpolation_string(var->data.interpolation);
-         const char *s;
-         if (this->type->qualifier.flags.q.centroid)
-            s = "centroid varying";
-         else
-            s = "varying";
-
-         _mesa_glsl_error(&loc, state,
-                          "qualifier '%s' cannot be applied to the "
-                          "deprecated storage qualifier '%s'", i, s);
-      }
-
-
-      /* Interpolation qualifiers can only apply to vertex shader outputs and
-       * fragment shader inputs.
-       *
-       * From page 29 (page 35 of the PDF) of the GLSL 1.30 spec:
-       *    "Outputs from a vertex shader (out) and inputs to a fragment
-       *    shader (in) can be further qualified with one or more of these
-       *    interpolation qualifiers"
-       *
-       * From page 31 (page 37 of the PDF) of the GLSL ES 3.00 spec:
-       *    "These interpolation qualifiers may only precede the qualifiers
-       *    in, centroid in, out, or centroid out in a declaration. They do
-       *    not apply to inputs into a vertex shader or outputs from a
-       *    fragment shader."
-       */
-      if (state->is_version(130, 300)
-          && this->type->qualifier.has_interpolation()) {
-
-         const char *i = interpolation_string(var->data.interpolation);
-         switch (state->stage) {
-         case MESA_SHADER_VERTEX:
-            if (this->type->qualifier.flags.q.in) {
-               _mesa_glsl_error(&loc, state,
-                                "qualifier '%s' cannot be applied to vertex "
-                                "shader inputs", i);
-            }
-            break;
-         case MESA_SHADER_FRAGMENT:
-            if (this->type->qualifier.flags.q.out) {
-               _mesa_glsl_error(&loc, state,
-                                "qualifier '%s' cannot be applied to fragment "
-                                "shader outputs", i);
-            }
-            break;
-         default:
-            break;
-         }
-      }
-
 
       /* From section 4.3.4 of the GLSL 4.00 spec:
        *    "Input variables may not be declared using the patch in qualifier
@@ -6608,7 +6633,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          fields[i].type = field_type;
          fields[i].name = decl->identifier;
          fields[i].interpolation =
-            interpret_interpolation_qualifier(qual, var_mode, state, &loc);
+            interpret_interpolation_qualifier(qual, field_type,
+                                              var_mode, state, &loc);
          fields[i].centroid = qual->flags.q.centroid ? 1 : 0;
          fields[i].sample = qual->flags.q.sample ? 1 : 0;
          fields[i].patch = qual->flags.q.patch ? 1 : 0;
