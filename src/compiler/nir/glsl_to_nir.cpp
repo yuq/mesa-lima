@@ -735,7 +735,7 @@ nir_visitor::visit(ir_call *ir)
       case nir_intrinsic_image_samples:
       case nir_intrinsic_image_size: {
          nir_ssa_undef_instr *instr_undef =
-            nir_ssa_undef_instr_create(shader, 1);
+            nir_ssa_undef_instr_create(shader, 1, 32);
          nir_builder_instr_insert(&b, &instr_undef->instr);
 
          /* Set the image variable dereference. */

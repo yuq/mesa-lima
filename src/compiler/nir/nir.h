@@ -1845,7 +1845,8 @@ nir_phi_instr *nir_phi_instr_create(nir_shader *shader);
 nir_parallel_copy_instr *nir_parallel_copy_instr_create(nir_shader *shader);
 
 nir_ssa_undef_instr *nir_ssa_undef_instr_create(nir_shader *shader,
-                                                unsigned num_components);
+                                                unsigned num_components,
+                                                unsigned bit_size);
 
 nir_deref_var *nir_deref_var_create(void *mem_ctx, nir_variable *var);
 nir_deref_array *nir_deref_array_create(void *mem_ctx);

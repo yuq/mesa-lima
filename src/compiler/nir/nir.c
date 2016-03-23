@@ -558,12 +558,14 @@ nir_parallel_copy_instr_create(nir_shader *shader)
 }
 
 nir_ssa_undef_instr *
-nir_ssa_undef_instr_create(nir_shader *shader, unsigned num_components)
+nir_ssa_undef_instr_create(nir_shader *shader,
+                           unsigned num_components,
+                           unsigned bit_size)
 {
    nir_ssa_undef_instr *instr = ralloc(shader, nir_ssa_undef_instr);
    instr_init(&instr->instr, nir_instr_type_ssa_undef);
 
-   nir_ssa_def_init(&instr->instr, &instr->def, num_components, 32, NULL);
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, bit_size, NULL);
 
    return instr;
 }
