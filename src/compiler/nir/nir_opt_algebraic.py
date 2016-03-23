@@ -122,7 +122,7 @@ optimizations = [
    (('flt', 0.0, ('fabs', a)), ('fne', a, 0.0)),
 
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
-   (('bcsel', ('flt', a, b), a, b), ('fmin', a, b)),
+   (('bcsel', ('flt', b, a), b, a), ('fmin', a, b)),
    (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
    (('bcsel', ('inot', 'a@bool'), b, c), ('bcsel', a, c, b)),
    (('bcsel', a, ('bcsel', a, b, c), d), ('bcsel', a, b, d)),
