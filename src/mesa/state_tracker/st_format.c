@@ -1309,7 +1309,7 @@ static const struct format_mapping format_map[] = {
    },
    {
       { GL_SRGB_ALPHA_EXT, GL_SRGB8_ALPHA8_EXT, 0 },
-      { DEFAULT_SRGBA_FORMATS }
+      { PIPE_FORMAT_R8G8B8A8_SRGB, DEFAULT_SRGBA_FORMATS }
    },
    {
       { GL_COMPRESSED_SRGB_EXT, GL_COMPRESSED_SRGB_S3TC_DXT1_EXT, 0 },
