@@ -410,9 +410,16 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
         type_sz(inst->src[arg].type)) % type_sz(entry->src.type) != 0)
       return false;
 
+   /* Since semantics of source modifiers are type-dependent we need to
+    * ensure that the meaning of the instruction remains the same if we
+    * change the type. If the sizes of the types are different the new
+    * instruction will read a different amount of data than the original
+    * and the semantics will always be different.
+    */
    if (has_source_modifiers &&
        entry->dst.type != inst->src[arg].type &&
-       !inst->can_change_types())
+       (!inst->can_change_types() ||
+        type_sz(entry->dst.type) != type_sz(inst->src[arg].type)))
       return false;
 
    if (devinfo->gen >= 8 && (entry->src.negate || entry->src.abs) &&
