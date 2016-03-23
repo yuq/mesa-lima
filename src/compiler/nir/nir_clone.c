@@ -127,11 +127,10 @@ nir_constant_clone(const nir_constant *c, nir_variable *nvar)
 /* NOTE: for cloning nir_variable's, bypass nir_variable_create to avoid
  * having to deal with locals and globals separately:
  */
-static nir_variable *
-clone_variable(clone_state *state, const nir_variable *var)
+nir_variable *
+nir_variable_clone(const nir_variable *var, nir_shader *shader)
 {
-   nir_variable *nvar = rzalloc(state->ns, nir_variable);
-   add_remap(state, nvar, var);
+   nir_variable *nvar = rzalloc(shader, nir_variable);
 
    nvar->type = var->type;
    nvar->name = ralloc_strdup(nvar, var->name);
@@ -145,6 +144,15 @@ clone_variable(clone_state *state, const nir_variable *var)
          nir_constant_clone(var->constant_initializer, nvar);
    }
    nvar->interface_type = var->interface_type;
+
+   return nvar;
+}
+
+static nir_variable *
+clone_variable(clone_state *state, const nir_variable *var)
+{
+   nir_variable *nvar = nir_variable_clone(var, state->ns);
+   add_remap(state, nvar, var);
 
    return nvar;
 }
