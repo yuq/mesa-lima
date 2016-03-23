@@ -2125,7 +2125,9 @@ process_array_size(exec_node *node,
    }
 
    ir_constant *const size = ir->constant_expression_value();
-   if (size == NULL || array_size->has_sequence_subexpression()) {
+   if (size == NULL ||
+       (state->is_version(120, 300) &&
+        array_size->has_sequence_subexpression())) {
       _mesa_glsl_error(& loc, state, "array size must be a "
                        "constant valued expression");
       return 0;
