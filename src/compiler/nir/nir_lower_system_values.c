@@ -75,7 +75,7 @@ convert_block(nir_block *block, void *void_state)
             nir_load_system_value(b, nir_intrinsic_load_local_invocation_id, 0);
 
          sysval = nir_iadd(b, nir_imul(b, group_id,
-                                          nir_build_imm(b, 3, local_size)),
+                                       nir_build_imm(b, 3, 32, local_size)),
                               local_id);
          break;
       }

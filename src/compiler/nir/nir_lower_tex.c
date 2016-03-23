@@ -232,7 +232,7 @@ get_zero_or_one(nir_builder *b, nir_alu_type type, uint8_t swizzle_val)
          v.u32[0] = v.u32[1] = v.u32[2] = v.u32[3] = 1;
    }
 
-   return nir_build_imm(b, 4, v);
+   return nir_build_imm(b, 4, 32, v);
 }
 
 static void
