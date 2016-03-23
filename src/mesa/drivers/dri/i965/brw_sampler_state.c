@@ -460,9 +460,7 @@ brw_update_sampler_state(struct brw_context *brw,
       /* Cube maps must use the same wrap mode for all three coordinate
        * dimensions.  Prior to Haswell, only CUBE and CLAMP are valid.
        */
-      if ((tex_cube_map_seamless || sampler->CubeMapSeamless) &&
-         (sampler->MinFilter != GL_NEAREST ||
-          sampler->MagFilter != GL_NEAREST)) {
+      if (tex_cube_map_seamless || sampler->CubeMapSeamless) {
 	 wrap_s = BRW_TEXCOORDMODE_CUBE;
 	 wrap_t = BRW_TEXCOORDMODE_CUBE;
 	 wrap_r = BRW_TEXCOORDMODE_CUBE;
