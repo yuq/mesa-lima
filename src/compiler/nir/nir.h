@@ -1830,7 +1830,8 @@ nir_alu_instr *nir_alu_instr_create(nir_shader *shader, nir_op op);
 nir_jump_instr *nir_jump_instr_create(nir_shader *shader, nir_jump_type type);
 
 nir_load_const_instr *nir_load_const_instr_create(nir_shader *shader,
-                                                  unsigned num_components);
+                                                  unsigned num_components,
+                                                  unsigned bit_size);
 
 nir_intrinsic_instr *nir_intrinsic_instr_create(nir_shader *shader,
                                                 nir_intrinsic_op op);

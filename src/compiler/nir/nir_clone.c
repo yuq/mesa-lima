@@ -359,7 +359,8 @@ static nir_load_const_instr *
 clone_load_const(clone_state *state, const nir_load_const_instr *lc)
 {
    nir_load_const_instr *nlc =
-      nir_load_const_instr_create(state->ns, lc->def.num_components);
+      nir_load_const_instr_create(state->ns, lc->def.num_components,
+                                  lc->def.bit_size);
 
    memcpy(&nlc->value, &lc->value, sizeof(nlc->value));
 

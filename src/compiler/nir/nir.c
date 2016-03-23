@@ -469,12 +469,13 @@ nir_jump_instr_create(nir_shader *shader, nir_jump_type type)
 }
 
 nir_load_const_instr *
-nir_load_const_instr_create(nir_shader *shader, unsigned num_components)
+nir_load_const_instr_create(nir_shader *shader, unsigned num_components,
+                            unsigned bit_size)
 {
    nir_load_const_instr *instr = ralloc(shader, nir_load_const_instr);
    instr_init(&instr->instr, nir_instr_type_load_const);
 
-   nir_ssa_def_init(&instr->instr, &instr->def, num_components, 32, NULL);
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, bit_size, NULL);
 
    return instr;
 }
@@ -694,7 +695,8 @@ nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref)
    }
 
    nir_load_const_instr *load =
-      nir_load_const_instr_create(shader, glsl_get_vector_elements(tail->type));
+      nir_load_const_instr_create(shader, glsl_get_vector_elements(tail->type),
+                                  32);
 
    matrix_offset *= load->def.num_components;
    for (unsigned i = 0; i < load->def.num_components; i++) {

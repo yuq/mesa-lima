@@ -92,7 +92,7 @@ static inline nir_ssa_def *
 nir_build_imm(nir_builder *build, unsigned num_components, nir_const_value value)
 {
    nir_load_const_instr *load_const =
-      nir_load_const_instr_create(build->shader, num_components);
+      nir_load_const_instr_create(build->shader, num_components, 32);
    if (!load_const)
       return NULL;
 

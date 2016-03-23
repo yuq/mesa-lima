@@ -161,7 +161,7 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
 
       if (src.reg.indirect) {
          nir_load_const_instr *load_const =
-            nir_load_const_instr_create(state->shader, 1);
+            nir_load_const_instr_create(state->shader, 1, 32);
          load_const->value.u32[0] = glsl_get_length(parent_type);
          nir_instr_insert_before(instr, &load_const->instr);
 
