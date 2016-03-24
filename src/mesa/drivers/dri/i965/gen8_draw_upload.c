@@ -34,6 +34,20 @@
 #include "intel_batchbuffer.h"
 #include "intel_buffer_objects.h"
 
+static bool
+is_passthru_format(uint32_t format)
+{
+   switch (format) {
+   case BRW_SURFACEFORMAT_R64_PASSTHRU:
+   case BRW_SURFACEFORMAT_R64G64_PASSTHRU:
+   case BRW_SURFACEFORMAT_R64G64B64_PASSTHRU:
+   case BRW_SURFACEFORMAT_R64G64B64A64_PASSTHRU:
+      return true;
+   default:
+      return false;
+   }
+}
+
 static void
 gen8_emit_vertices(struct brw_context *brw)
 {
@@ -192,6 +206,12 @@ gen8_emit_vertices(struct brw_context *brw)
       uint32_t comp1 = BRW_VE1_COMPONENT_STORE_SRC;
       uint32_t comp2 = BRW_VE1_COMPONENT_STORE_SRC;
       uint32_t comp3 = BRW_VE1_COMPONENT_STORE_SRC;
+
+      /* From the BDW PRM, Volume 2d, page 588 (VERTEX_ELEMENT_STATE):
+       * "Any SourceElementFormat of *64*_PASSTHRU cannot be used with an
+       * element which has edge flag enabled."
+       */
+      assert(!(is_passthru_format(format) && uses_edge_flag));
 
       /* The gen4 driver expects edgeflag to come in as a float, and passes
        * that float on to the tests in the clipper.  Mesa's current vertex
