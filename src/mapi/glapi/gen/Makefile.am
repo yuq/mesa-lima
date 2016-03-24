@@ -100,6 +100,8 @@ XORG_OUTPUTS = \
 	$(XORG_GLX_DIR)/indirect_size_get.h \
 	$(XORG_GLX_DIR)/indirect_table.c
 
+.PHONY: $(XORG_OUTPUTS)
+
 ######################################################################
 
 API_XML = \
