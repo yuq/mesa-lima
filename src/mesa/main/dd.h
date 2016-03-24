@@ -477,6 +477,11 @@ struct dd_function_table {
    /** Delete a program */
    void (*DeleteProgram)(struct gl_context *ctx, struct gl_program *prog);   
    /**
+    * Allocate a program to associate with the new ATI fragment shader (optional)
+    */
+   struct gl_program * (*NewATIfs)(struct gl_context *ctx,
+                                   struct ati_fragment_shader *curProg);
+   /**
     * Notify driver that a program string (and GPU code) has been specified
     * or modified.  Return GL_TRUE or GL_FALSE to indicate if the program is
     * supported by the driver.

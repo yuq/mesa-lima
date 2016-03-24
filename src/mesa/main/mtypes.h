@@ -2196,6 +2196,7 @@ struct ati_fragment_shader
    GLboolean interpinp1;
    GLboolean isValid;
    GLuint swizzlerq;
+   struct gl_program *Program;
 };
 
 /**
