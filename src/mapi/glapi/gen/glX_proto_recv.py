@@ -55,15 +55,15 @@ class PrintGlxDispatch_h(gl_XML.gl_print_base):
             if not func.ignore and not func.vectorequiv:
                 if func.glx_rop:
                     print 'extern _X_HIDDEN void __glXDisp_%s(GLbyte * pc);' % (func.name)
-                    print 'extern _X_HIDDEN void __glXDispSwap_%s(GLbyte * pc);' % (func.name)
+                    print 'extern _X_HIDDEN _X_COLD void __glXDispSwap_%s(GLbyte * pc);' % (func.name)
                 elif func.glx_sop or func.glx_vendorpriv:
                     print 'extern _X_HIDDEN int __glXDisp_%s(struct __GLXclientStateRec *, GLbyte *);' % (func.name)
-                    print 'extern _X_HIDDEN int __glXDispSwap_%s(struct __GLXclientStateRec *, GLbyte *);' % (func.name)
+                    print 'extern _X_HIDDEN _X_COLD int __glXDispSwap_%s(struct __GLXclientStateRec *, GLbyte *);' % (func.name)
 
                     if func.glx_sop and func.glx_vendorpriv:
                         n = func.glx_vendorpriv_names[0]
                         print 'extern _X_HIDDEN int __glXDisp_%s(struct __GLXclientStateRec *, GLbyte *);' % (n)
-                        print 'extern _X_HIDDEN int __glXDispSwap_%s(struct __GLXclientStateRec *, GLbyte *);' % (n)
+                        print 'extern _X_HIDDEN _X_COLD int __glXDispSwap_%s(struct __GLXclientStateRec *, GLbyte *);' % (n)
 
         return
 
