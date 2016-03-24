@@ -77,18 +77,12 @@
 
 typedef void			VOID;
 typedef void*           LPVOID;
-typedef CARD8			BOOL;
-typedef wchar_t			WCHAR;
-typedef uint16_t		UINT16;
 typedef int				INT;
 typedef unsigned int	UINT;
-typedef uint32_t		UINT32;
 typedef uint64_t		UINT64;
-typedef int64_t		    INT64;
 typedef void*			HANDLE;
 typedef float			FLOAT;
 typedef int			    LONG;
-typedef CARD8		    BYTE;
 typedef unsigned char   UCHAR;
 typedef unsigned int	DWORD;
 
