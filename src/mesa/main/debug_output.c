@@ -779,7 +779,7 @@ _mesa_get_debug_state_int(struct gl_context *ctx, GLenum pname)
       break;
    case GL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH:
       val = (debug->Log.NumMessages) ?
-         debug->Log.Messages[debug->Log.NextMessage].length : 0;
+         debug->Log.Messages[debug->Log.NextMessage].length + 1 : 0;
       break;
    case GL_DEBUG_GROUP_STACK_DEPTH:
       val = debug->CurrentGroup + 1;
