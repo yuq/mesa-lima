@@ -1189,6 +1189,9 @@ _mesa_PushDebugGroup(GLenum source, GLuint id, GLsizei length,
    if (!validate_length(ctx, callerstr, length, message))
       return; /* GL_INVALID_VALUE */
 
+   if (length < 0)
+      length = strlen(message);
+
    debug = _mesa_lock_debug_state(ctx);
    if (!debug)
       return;
