@@ -3484,6 +3484,24 @@ formats_differ_in_component_sizes(mesa_format f1, mesa_format f2)
    return GL_FALSE;
 }
 
+static bool
+can_avoid_reallocation(struct gl_texture_image *texImage, GLenum internalFormat,
+                       mesa_format texFormat, GLint x, GLint y, GLsizei width,
+                       GLsizei height, GLint border)
+{
+   if (texImage->InternalFormat != internalFormat)
+      return false;
+   if (texImage->TexFormat != texFormat)
+      return false;
+   if (texImage->Border != border)
+      return false;
+   if (texImage->Width2 != width)
+      return false;
+   if (texImage->Height2 != height)
+      return false;
+   return true;
+}
+
 /**
  * Implement the glCopyTexImage1/2D() functions.
  */
@@ -3526,6 +3544,24 @@ copyteximage(struct gl_context *ctx, GLuint dims,
 
    texFormat = _mesa_choose_texture_format(ctx, texObj, target, level,
                                            internalFormat, GL_NONE, GL_NONE);
+
+   /* First check if reallocating the texture buffer can be avoided.
+    * Without the realloc the copy can be 20x faster.
+    */
+   _mesa_lock_texture(ctx, texObj);
+   {
+      texImage = _mesa_select_tex_image(texObj, target, level);
+      if (texImage && can_avoid_reallocation(texImage, internalFormat, texFormat,
+                                             x, y, width, height, border)) {
+         _mesa_unlock_texture(ctx, texObj);
+         return _mesa_copy_texture_sub_image(ctx, dims, texObj, target, level,
+                                             0, 0, 0, x, y, width, height,
+                                             "CopyTexImage");
+      }
+   }
+   _mesa_unlock_texture(ctx, texObj);
+   _mesa_perf_debug(ctx, MESA_DEBUG_SEVERITY_LOW, "glCopyTexImage "
+                    "can't avoid reallocating texture storage\n");
 
    rb = _mesa_get_read_renderbuffer_for_format(ctx, internalFormat);
 
