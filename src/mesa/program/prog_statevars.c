@@ -502,7 +502,7 @@ _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
                minImplSize = ctx->Const.MinPointSizeAA;
                maxImplSize = ctx->Const.MaxPointSize;
             }
-            else if (ctx->Point.SmoothFlag || ctx->Multisample._Enabled) {
+            else if (ctx->Point.SmoothFlag || _mesa_is_multisample_enabled(ctx)) {
                minImplSize = ctx->Const.MinPointSizeAA;
                maxImplSize = ctx->Const.MaxPointSizeAA;
             }

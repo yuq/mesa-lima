@@ -31,6 +31,7 @@
   */
  
 #include "main/macros.h"
+#include "main/framebuffer.h"
 #include "st_context.h"
 #include "st_atom.h"
 #include "st_debug.h"
@@ -235,12 +236,12 @@ static void update_raster_state( struct st_context *st )
    raster->line_stipple_factor = ctx->Line.StippleFactor - 1;
 
    /* _NEW_MULTISAMPLE */
-   raster->multisample = ctx->Multisample._Enabled;
+   raster->multisample = _mesa_is_multisample_enabled(ctx);
 
    /* _NEW_MULTISAMPLE | _NEW_BUFFERS */
    raster->force_persample_interp =
          !st->force_persample_in_shader &&
-         ctx->Multisample._Enabled &&
+         _mesa_is_multisample_enabled(ctx) &&
          ctx->Multisample.SampleShading &&
          ctx->Multisample.MinSampleShadingValue *
          ctx->DrawBuffer->Visual.samples > 1;

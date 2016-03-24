@@ -178,7 +178,7 @@ upload_sf(struct brw_context *brw)
       dw3 |= GEN6_SF_USE_STATE_POINT_WIDTH;
 
    /* _NEW_POINT | _NEW_MULTISAMPLE */
-   if ((ctx->Point.SmoothFlag || ctx->Multisample._Enabled) &&
+   if ((ctx->Point.SmoothFlag || _mesa_is_multisample_enabled(ctx)) &&
        !ctx->Point.PointSprite) {
       dw3 |= GEN8_SF_SMOOTH_POINT_ENABLE;
    }
@@ -249,7 +249,7 @@ upload_raster(struct brw_context *brw)
    if (ctx->Point.SmoothFlag)
       dw1 |= GEN8_RASTER_SMOOTH_POINT_ENABLE;
 
-   if (ctx->Multisample._Enabled)
+   if (_mesa_is_multisample_enabled(ctx))
       dw1 |= GEN8_RASTER_API_MULTISAMPLE_ENABLE;
 
    if (ctx->Polygon.OffsetFill)

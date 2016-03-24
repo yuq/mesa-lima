@@ -171,7 +171,7 @@ gen6_determine_sample_mask(struct brw_context *brw)
    /* BRW_NEW_NUM_SAMPLES */
    unsigned num_samples = brw->num_samples;
 
-   if (ctx->Multisample._Enabled) {
+   if (_mesa_is_multisample_enabled(ctx)) {
       if (ctx->Multisample.SampleCoverage) {
          coverage = ctx->Multisample.SampleCoverageValue;
          coverage_invert = ctx->Multisample.SampleCoverageInvert;

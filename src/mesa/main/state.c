@@ -344,20 +344,6 @@ update_frontbit(struct gl_context *ctx)
 
 
 /**
- * Update derived multisample state.
- */
-static void
-update_multisample(struct gl_context *ctx)
-{
-   ctx->Multisample._Enabled = GL_FALSE;
-   if (ctx->Multisample.Enabled &&
-       ctx->DrawBuffer &&
-       _mesa_geometric_samples(ctx->DrawBuffer) > 0)
-      ctx->Multisample._Enabled = GL_TRUE;
-}
-
-
-/**
  * Update the ctx->VertexProgram._TwoSideEnabled flag.
  */
 static void
@@ -449,9 +435,6 @@ _mesa_update_state_locked( struct gl_context *ctx )
 
    if (new_state & _NEW_PIXEL)
       _mesa_update_pixel( ctx, new_state );
-
-   if (new_state & (_NEW_MULTISAMPLE | _NEW_BUFFERS))
-      update_multisample( ctx );
 
    /* ctx->_NeedEyeCoords is now up to date.
     *
