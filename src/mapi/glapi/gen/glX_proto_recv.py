@@ -117,6 +117,9 @@ class PrintGlxDispatchFunctions(glX_proto_common.glx_print_proto):
 
         return
 
+    def fptrType(self, name):
+	fptr = "pfngl" + name + "proc"
+	return fptr.upper()
 
     def printFunction(self, f, name):
         if (f.glx_sop or f.glx_vendorpriv) and (len(f.get_images()) != 0):
@@ -133,6 +136,9 @@ class PrintGlxDispatchFunctions(glX_proto_common.glx_print_proto):
             print 'int %s_%s(__GLXclientState *cl, GLbyte *pc)' % (base, name)
 
         print '{'
+
+        if not f.is_abi():
+            print '    %s %s = __glGetProcAddress("gl%s");' % (self.fptrType(name), name, name)
 
         if f.glx_rop or f.vectorequiv:
             self.printRenderFunction(f)
@@ -218,6 +224,7 @@ class PrintGlxDispatchFunctions(glX_proto_common.glx_print_proto):
 
     def emit_function_call(self, f, retval_assign, indent):
         list = []
+        prefix = "gl" if f.is_abi() else ""
 
         for param in f.parameterIterator():
             if param.is_padding:
@@ -230,8 +237,7 @@ class PrintGlxDispatchFunctions(glX_proto_common.glx_print_proto):
 
             list.append( '%s        %s' % (indent, location) )
 
-
-        print '%s    %sgl%s(%s);' % (indent, retval_assign, f.name, string.join(list, ',\n'))
+        print '%s    %s%s%s(%s);' % (indent, retval_assign, prefix, f.name, string.join(list, ',\n'))
 
 
     def common_func_print_just_start(self, f, indent):
