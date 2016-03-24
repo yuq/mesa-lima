@@ -171,11 +171,11 @@ class PrintGlxDispatchFunctions(glX_proto_common.glx_print_proto):
                 if t.glx_name not in already_done:
                     real_name = self.real_types[t_size]
 
-                    print 'static %s' % (t_name)
-                    print 'bswap_%s( const void * src )' % (t.glx_name)
+                    print 'static _X_UNUSED %s' % (t_name)
+                    print 'bswap_%s(const void * src)' % (t.glx_name)
                     print '{'
                     print '    union { %s dst; %s ret; } x;' % (real_name, t_name)
-                    print '    x.dst = bswap_%u( *(%s *) src );' % (t_size * 8, real_name)
+                    print '    x.dst = bswap_%u(*(%s *) src);' % (t_size * 8, real_name)
                     print '    return x.ret;'
                     print '}'
                     print ''
@@ -183,12 +183,12 @@ class PrintGlxDispatchFunctions(glX_proto_common.glx_print_proto):
 
         for bits in [16, 32, 64]:
             print 'static void *'
-            print 'bswap_%u_array( uint%u_t * src, unsigned count )' % (bits, bits)
+            print 'bswap_%u_array(uint%u_t * src, unsigned count)' % (bits, bits)
             print '{'
             print '    unsigned  i;'
             print ''
-            print '    for ( i = 0 ; i < count ; i++ ) {'
-            print '        uint%u_t temp = bswap_%u( src[i] );' % (bits, bits)
+            print '    for (i = 0 ; i < count ; i++) {'
+            print '        uint%u_t temp = bswap_%u(src[i]);' % (bits, bits)
             print '        src[i] = temp;'
             print '    }'
             print ''
