@@ -330,7 +330,7 @@ $(XORG_GLX_DIR)/indirect_dispatch.h: glX_proto_recv.py gl_and_glX_API.xml $(COMM
 
 $(XORG_GLX_DIR)/indirect_size_get.h: glX_proto_size.py $(COMMON_GLX)
 	$(PYTHON_GEN) $< -f $(srcdir)/gl_API.xml -m size_h \
-           --only-get -h '_INDIRECT_SIZE_GET_H_' \
+           --only-get --header-tag '_INDIRECT_SIZE_GET_H_' \
 	  | $(INDENT) $(XORG_INDENT_FLAGS) > $@
 
 $(XORG_GLX_DIR)/indirect_size_get.c: glX_proto_size.py $(COMMON_GLX)
@@ -339,7 +339,7 @@ $(XORG_GLX_DIR)/indirect_size_get.c: glX_proto_size.py $(COMMON_GLX)
 
 $(XORG_GLX_DIR)/indirect_reqsize.h: glX_proto_size.py $(COMMON_GLX)
 	$(PYTHON_GEN) $< -f $(srcdir)/gl_API.xml -m reqsize_h \
-           --only-get -h '_INDIRECT_SIZE_GET_H_' \
+           --only-get --header-tag '_INDIRECT_SIZE_GET_H_' \
 	  | $(INDENT) $(XORG_INDENT_FLAGS) > $@
 
 $(XORG_GLX_DIR)/indirect_reqsize.c: glX_proto_size.py $(COMMON_GLX)
