@@ -46,8 +46,7 @@ void OpenBitmapFromFile(
     uint32_t *height);
 #endif
 
-/// @todo assume linux is always 64 bit
-#if defined(_WIN64) || defined(__linux__) || defined(__gnu_linux__)
+#if defined(_WIN64) || defined(__x86_64__)
 #define _MM_INSERT_EPI64 _mm_insert_epi64
 #define _MM_EXTRACT_EPI64 _mm_extract_epi64
 #else
