@@ -83,7 +83,7 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     if (pDC->pSpillFill[workerId] == nullptr)
     {
         ///@todo Add state which indicates the spill fill size.
-        pDC->pSpillFill[workerId] = (uint8_t*)pDC->pArena->AllocAlignedSync(4096 * 1024, sizeof(float) * 8);
+        pDC->pSpillFill[workerId] = (uint8_t*)pDC->pArena->AllocAlignedSync(4 * sizeof(MEGABYTE), sizeof(float) * 8);
     }
 
     const API_STATE& state = GetApiState(pDC);

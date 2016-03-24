@@ -209,7 +209,7 @@ struct CachingAllocatorT : DefaultAllocator
 };
 typedef CachingAllocatorT<> CachingAllocator;
 
-template<typename T = DefaultAllocator, size_t BlockSizeT = (128 * 1024)>
+template<typename T = DefaultAllocator, size_t BlockSizeT = 128 * sizeof(KILOBYTE)>
 class TArena
 {
 public:

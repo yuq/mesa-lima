@@ -93,8 +93,16 @@ HANDLE SwrCreateContext(
     ///@note We could lazily allocate this but its rather small amount of memory.
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
     {
-        ///@todo Use numa API for allocations using numa information from thread data (if exists).
-        pContext->pScratch[i] = (uint8_t*)_aligned_malloc((32 * 1024), KNOB_SIMD_WIDTH * 4);
+#if defined(_WIN32)
+        uint32_t numaNode = pContext->threadPool.pThreadData ?
+            pContext->threadPool.pThreadData[i].numaId : 0;
+        pContext->pScratch[i] = (uint8_t*)VirtualAllocExNuma(
+            GetCurrentProcess(), nullptr, 32 * sizeof(KILOBYTE),
+            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE,
+            numaNode);
+#else
+        pContext->pScratch[i] = (uint8_t*)_aligned_malloc(32 * sizeof(KILOBYTE), KNOB_SIMD_WIDTH * 4);
+#endif
     }
 
     // State setup AFTER context is fully initialized
@@ -138,7 +146,11 @@ void SwrDestroyContext(HANDLE hContext)
     // Free scratch space.
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
     {
+#if defined(_WIN32)
+        VirtualFree(pContext->pScratch[i], 0, MEM_RELEASE);
+#else
         _aligned_free(pContext->pScratch[i]);
+#endif
     }
 
     delete(pContext->pHotTileMgr);
