@@ -53,6 +53,7 @@
 #include "st_context.h"
 #include "st_program.h"
 #include "st_mesa_to_tgsi.h"
+#include "st_atifs_to_tgsi.h"
 #include "cso_cache/cso_context.h"
 
 
@@ -811,7 +812,22 @@ st_translate_fragment_program(struct st_context *st,
 
       free_glsl_to_tgsi_visitor(stfp->glsl_to_tgsi);
       stfp->glsl_to_tgsi = NULL;
-   } else
+   } else if (stfp->ati_fs)
+      st_translate_atifs_program(ureg,
+                                 stfp->ati_fs,
+                                 &stfp->Base.Base,
+                                 /* inputs */
+                                 fs_num_inputs,
+                                 inputMapping,
+                                 input_semantic_name,
+                                 input_semantic_index,
+                                 interpMode,
+                                 /* outputs */
+                                 fs_num_outputs,
+                                 outputMapping,
+                                 fs_output_semantic_name,
+                                 fs_output_semantic_index);
+   else
       st_translate_mesa_program(st->ctx,
                                 TGSI_PROCESSOR_FRAGMENT,
                                 ureg,
@@ -849,6 +865,16 @@ st_create_fp_variant(struct st_context *st,
 
    assert(!(key->bitmap && key->drawpixels));
 
+   /* Fix texture targets and add fog for ATI_fs */
+   if (stfp->ati_fs) {
+      const struct tgsi_token *tokens = st_fixup_atifs(tgsi.tokens, key);
+
+      if (tokens)
+         tgsi.tokens = tokens;
+      else
+         fprintf(stderr, "mesa: cannot post-process ATI_fs\n");
+   }
+
    /* Emulate features. */
    if (key->clamp_color || key->persample_shading) {
       const struct tgsi_token *tokens;
@@ -858,9 +884,11 @@ st_create_fp_variant(struct st_context *st,
 
       tokens = tgsi_emulate(tgsi.tokens, flags);
 
-      if (tokens)
+      if (tokens) {
+         if (tgsi.tokens != stfp->tgsi.tokens)
+            tgsi_free_tokens(tgsi.tokens);
          tgsi.tokens = tokens;
-      else
+      } else
          fprintf(stderr, "mesa: cannot emulate deprecated features\n");
    }
 

@@ -395,6 +395,7 @@ VBO_FILES = \
 	vbo/vbo_split_inplace.c
 
 STATETRACKER_FILES = \
+	state_tracker/st_atifs_to_tgsi.c \
 	state_tracker/st_atom_array.c \
 	state_tracker/st_atom_atomicbuf.c \
 	state_tracker/st_atom_blend.c \
