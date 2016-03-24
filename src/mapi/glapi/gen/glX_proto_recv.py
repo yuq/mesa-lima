@@ -437,6 +437,10 @@ class PrintGlxDispatchFunctions(glX_proto_common.glx_print_proto):
                 print '        %s %s = __glXGetAnswerBuffer(cl, %s%s, answerBuffer, sizeof(answerBuffer), %u);' % (param.type_string(), param.name, param.counter, size_scale, type_size)
                 answer_string = param.name
                 answer_count = param.counter
+                print ''
+                print '        if (%s == NULL) return BadAlloc;' % (param.name)
+                print '        __glXClearErrorOccured();'
+                print ''
             elif c >= 1:
                 print '        %s %s[%u];' % (answer_type, param.name, c)
                 answer_string = param.name
