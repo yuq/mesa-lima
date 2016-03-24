@@ -1167,8 +1167,14 @@ struct PA_FACTORY
         {
             memset(&indexStore, 0, sizeof(indexStore));
             DWORD numAttribs;
-            _BitScanReverse(&numAttribs, state.feAttribMask);
-            numAttribs++;
+            if (_BitScanReverse(&numAttribs, state.feAttribMask))
+            {
+                numAttribs++;
+            }
+            else
+            {
+                numAttribs = 0;
+            }
             new (&this->paCut) PA_STATE_CUT(pDC, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * KNOB_SIMD_WIDTH, 
                 &this->indexStore[0], numVerts, numAttribs, state.topology, false);
             cutPA = true;

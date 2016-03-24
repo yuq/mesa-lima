@@ -272,7 +272,7 @@ class HotTileMgr
 public:
     HotTileMgr()
     {
-        memset(&mHotTiles[0][0], 0, sizeof(mHotTiles));
+        memset(mHotTiles, 0, sizeof(mHotTiles));
 
         // cache hottile size
         for (uint32_t i = SWR_ATTACHMENT_COLOR0; i <= SWR_ATTACHMENT_COLOR7; ++i)

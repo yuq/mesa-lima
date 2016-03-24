@@ -68,7 +68,10 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
 
 #if defined(_WIN32)
 
-    SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX buffer[KNOB_MAX_NUM_THREADS];
+    static std::mutex m;
+    std::lock_guard<std::mutex> l(m);
+
+    static SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX buffer[KNOB_MAX_NUM_THREADS];
     DWORD bufSize = sizeof(buffer);
 
     BOOL ret = GetLogicalProcessorInformationEx(RelationProcessorCore, buffer, &bufSize);

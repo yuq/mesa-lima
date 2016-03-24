@@ -793,8 +793,14 @@ static void GeometryShaderStage(
             uint8_t* pCutBase = pCutBufferBase + instance * cutInstanceStride;
             
             DWORD numAttribs;
-            _BitScanReverse(&numAttribs, state.feAttribMask);
-            numAttribs++;
+            if (_BitScanReverse(&numAttribs, state.feAttribMask))
+            {
+                numAttribs++;
+            }
+            else
+            {
+                numAttribs = 0;
+            }
 
             for (uint32_t stream = 0; stream < MAX_SO_STREAMS; ++stream)
             {
