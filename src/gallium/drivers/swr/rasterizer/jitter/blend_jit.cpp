@@ -576,9 +576,12 @@ struct BlendJit : public Builder
             src1[i] = LOAD(pSrc1, { i });
         }
         Value* currentMask = VIMMED1(-1);
-        if(state.desc.alphaToCoverageEnable)
+        if (state.desc.alphaToCoverageEnable)
         {
-            currentMask = FP_TO_SI(FMUL(src[3], VBROADCAST(C((float)state.desc.numSamples))), mSimdInt32Ty);
+            Value* pClampedSrc = FCLAMP(src[3], 0.0f, 1.0f);
+            uint32_t bits = (1 << state.desc.numSamples) - 1;
+            currentMask = FMUL(pClampedSrc, VBROADCAST(C((float)bits)));
+            currentMask = FP_TO_SI(FADD(currentMask, VIMMED1(0.5f)), mSimdInt32Ty);
         }
 
         // alpha test
@@ -700,6 +703,12 @@ struct BlendJit : public Builder
             sampleMask = VBROADCAST(ICMP_SGT(sampleMask, C(0)));
             sampleMask = S_EXT(sampleMask, mSimdInt32Ty);
             currentMask = AND(sampleMask, currentMask);
+        }
+
+        if (state.desc.alphaToCoverageEnable)
+        {
+            Value* sampleMasked = SHL(C(1), sampleNum);
+            currentMask = AND(currentMask, VBROADCAST(sampleMasked));
         }
 
         if(state.desc.sampleMaskEnable || state.desc.alphaToCoverageEnable ||
