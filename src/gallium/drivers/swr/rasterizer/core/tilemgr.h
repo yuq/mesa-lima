@@ -291,11 +291,7 @@ public:
             {
                 for (int a = 0; a < SWR_NUM_ATTACHMENTS; ++a)
                 {
-                    if (mHotTiles[x][y].Attachment[a].pBuffer != NULL)
-                    {
-                        _aligned_free(mHotTiles[x][y].Attachment[a].pBuffer);
-                        mHotTiles[x][y].Attachment[a].pBuffer = NULL;
-                    }
+                    FreeHotTileMem(mHotTiles[x][y].Attachment[a].pBuffer);
                 }
             }
         }
@@ -315,5 +311,30 @@ public:
 private:
     HotTileSet mHotTiles[KNOB_NUM_HOT_TILES_X][KNOB_NUM_HOT_TILES_Y];
     uint32_t mHotTileSize[SWR_NUM_ATTACHMENTS];
+
+    void* AllocHotTileMem(size_t size, uint32_t align, uint32_t numaNode)
+    {
+        void* p = nullptr;
+#if defined(_WIN32)
+        HANDLE hProcess = GetCurrentProcess();
+        p = VirtualAllocExNuma(hProcess, nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE, numaNode);
+#else
+        p = _aligned_malloc(size, align);
+#endif
+
+        return p;
+    }
+
+    void FreeHotTileMem(void* pBuffer)
+    {
+        if (pBuffer)
+        {
+#if defined(_WIN32)
+            VirtualFree(pBuffer, 0, MEM_RELEASE);
+#else
+            _aligned_free(pBuffer);
+#endif
+        }
+    }
 };
 

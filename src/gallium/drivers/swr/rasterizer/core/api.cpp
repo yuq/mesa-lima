@@ -184,7 +184,7 @@ void QueueWork(SWR_CONTEXT *pContext)
             static TileSet lockedTiles;
             uint64_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
             WorkOnFifoFE(pContext, 0, curDraw[0], 0);
-            WorkOnFifoBE(pContext, 0, curDraw[1], lockedTiles);
+            WorkOnFifoBE(pContext, 0, curDraw[1], lockedTiles, 0, 0);
         }
         else
         {

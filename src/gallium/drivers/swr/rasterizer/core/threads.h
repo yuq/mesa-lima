@@ -51,6 +51,7 @@ struct THREAD_POOL
 {
     THREAD_PTR threads[KNOB_MAX_NUM_THREADS];
     uint32_t numThreads;
+    uint32_t numaMask;
     volatile bool inThreadShutdown;
     THREAD_DATA *pThreadData;
 };
@@ -61,7 +62,7 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
 void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
 
 // Expose FE and BE worker functions to the API thread if single threaded
-void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE, int numaNode);
-void WorkOnFifoBE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawBE, TileSet &usedTiles);
+void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE, uint32_t numaNode);
+void WorkOnFifoBE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawBE, TileSet &usedTiles, uint32_t numaNode, uint32_t numaMask);
 void WorkOnCompute(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawBE);
 int64_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC);

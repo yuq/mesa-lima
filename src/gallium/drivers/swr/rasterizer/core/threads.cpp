@@ -349,7 +349,9 @@ void WorkOnFifoBE(
     SWR_CONTEXT *pContext,
     uint32_t workerId,
     uint64_t &curDrawBE,
-    TileSet& lockedTiles)
+    TileSet& lockedTiles,
+    uint32_t numaNode,
+    uint32_t numaMask)
 {
     // Find the first incomplete draw that has pending work. If no such draw is found then
     // return. FindFirstIncompleteDraw is responsible for incrementing the curDrawBE.
@@ -390,68 +392,78 @@ void WorkOnFifoBE(
 
         for (uint32_t tileID : macroTiles)
         {
+            // Only work on tiles for for this numa node
+            uint32_t x, y;
+            pDC->pTileMgr->getTileIndices(tileID, x, y);
+            if (((x ^ y) & numaMask) != numaNode)
+            {
+                continue;
+            }
+
             MacroTileQueue &tile = pDC->pTileMgr->getMacroTileQueue(tileID);
             
-            // can only work on this draw if it's not in use by other threads
-            if (lockedTiles.find(tileID) == lockedTiles.end())
+            if (!tile.getNumQueued())
             {
-                if (tile.getNumQueued())
+                continue;
+            }
+
+            // can only work on this draw if it's not in use by other threads
+            if (lockedTiles.find(tileID) != lockedTiles.end())
+            {
+                continue;
+            }
+
+            if (tile.tryLock())
+            {
+                BE_WORK *pWork;
+
+                RDTSC_START(WorkerFoundWork);
+
+                uint32_t numWorkItems = tile.getNumQueued();
+                SWR_ASSERT(numWorkItems);
+
+                pWork = tile.peek();
+                SWR_ASSERT(pWork);
+                if (pWork->type == DRAW)
                 {
-                    if (tile.tryLock())
-                    {
-                        BE_WORK *pWork;
-
-                        RDTSC_START(WorkerFoundWork);
-
-                        uint32_t numWorkItems = tile.getNumQueued();
-
-                        if (numWorkItems != 0)
-                        {
-                            pWork = tile.peek();
-                            SWR_ASSERT(pWork);
-                            if (pWork->type == DRAW)
-                            {
-                                pContext->pHotTileMgr->InitializeHotTiles(pContext, pDC, tileID);
-                            }
-                        }
-
-                        while ((pWork = tile.peek()) != nullptr)
-                        {
-                            pWork->pfnWork(pDC, workerId, tileID, &pWork->desc);
-                            tile.dequeue();
-                        }
-                        RDTSC_STOP(WorkerFoundWork, numWorkItems, pDC->drawId);
-
-                        _ReadWriteBarrier();
-
-                        pDC->pTileMgr->markTileComplete(tileID);
-
-                        // Optimization: If the draw is complete and we're the last one to have worked on it then
-                        // we can reset the locked list as we know that all previous draws before the next are guaranteed to be complete.
-                        if ((curDrawBE == i) && pDC->pTileMgr->isWorkComplete())
-                        {
-                            // We can increment the current BE and safely move to next draw since we know this draw is complete.
-                            curDrawBE++;
-                            CompleteDrawContext(pContext, pDC);
-
-                            lastRetiredDraw++;
-
-                            lockedTiles.clear();
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        // This tile is already locked. So let's add it to our locked tiles set. This way we don't try locking this one again.
-                        lockedTiles.insert(tileID);
-                    }
+                    pContext->pHotTileMgr->InitializeHotTiles(pContext, pDC, tileID);
                 }
+
+                while ((pWork = tile.peek()) != nullptr)
+                {
+                    pWork->pfnWork(pDC, workerId, tileID, &pWork->desc);
+                    tile.dequeue();
+                }
+                RDTSC_STOP(WorkerFoundWork, numWorkItems, pDC->drawId);
+
+                _ReadWriteBarrier();
+
+                pDC->pTileMgr->markTileComplete(tileID);
+
+                // Optimization: If the draw is complete and we're the last one to have worked on it then
+                // we can reset the locked list as we know that all previous draws before the next are guaranteed to be complete.
+                if ((curDrawBE == i) && pDC->pTileMgr->isWorkComplete())
+                {
+                    // We can increment the current BE and safely move to next draw since we know this draw is complete.
+                    curDrawBE++;
+                    CompleteDrawContext(pContext, pDC);
+
+                    lastRetiredDraw++;
+
+                    lockedTiles.clear();
+                    break;
+                }
+            }
+            else
+            {
+                // This tile is already locked. So let's add it to our locked tiles set. This way we don't try locking this one again.
+                lockedTiles.insert(tileID);
             }
         }
     }
 }
 
-void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE, int numaNode)
+void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE, uint32_t numaNode)
 {
     // Try to grab the next DC from the ring
     uint64_t drawEnqueued = GetEnqueuedDraw(pContext);
@@ -547,7 +559,8 @@ DWORD workerThreadMain(LPVOID pData)
 
     RDTSC_INIT(threadId);
 
-    int numaNode = (int)pThreadData->numaId;
+    uint32_t numaNode = pThreadData->numaId;
+    uint32_t numaMask = pContext->threadPool.numaMask;
 
     // flush denormals to 0
     _mm_setcsr(_mm_getcsr() | _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON);
@@ -619,7 +632,7 @@ DWORD workerThreadMain(LPVOID pData)
         }
 
         RDTSC_START(WorkerWorkOnFifoBE);
-        WorkOnFifoBE(pContext, workerId, curDrawBE, lockedTiles);
+        WorkOnFifoBE(pContext, workerId, curDrawBE, lockedTiles, numaNode, numaMask);
         RDTSC_STOP(WorkerWorkOnFifoBE, 0, 0);
 
         WorkOnCompute(pContext, workerId, curDrawBE);
@@ -740,6 +753,7 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 
     pPool->inThreadShutdown = false;
     pPool->pThreadData = (THREAD_DATA *)malloc(pPool->numThreads * sizeof(THREAD_DATA));
+    pPool->numaMask = 0;
 
     if (KNOB_MAX_WORKER_THREADS)
     {
@@ -760,6 +774,8 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
     }
     else
     {
+        pPool->numaMask = numNodes - 1; // Only works for 2**n numa nodes (1, 2, 4, etc.)
+
         uint32_t workerId = 0;
         for (uint32_t n = 0; n < numNodes; ++n)
         {

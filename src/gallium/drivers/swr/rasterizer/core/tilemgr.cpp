@@ -119,7 +119,8 @@ HOTTILE* HotTileMgr::GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32
         if (create)
         {
             uint32_t size = numSamples * mHotTileSize[attachment];
-            hotTile.pBuffer = (uint8_t*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
+            uint32_t numaNode = ((x ^ y) & pContext->threadPool.numaMask);
+            hotTile.pBuffer = (uint8_t*)AllocHotTileMem(size, KNOB_SIMD_WIDTH * 4, numaNode);
             hotTile.state = HOTTILE_INVALID;
             hotTile.numSamples = numSamples;
             hotTile.renderTargetArrayIndex = renderTargetArrayIndex;
@@ -139,10 +140,11 @@ HOTTILE* HotTileMgr::GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32
             SWR_ASSERT((hotTile.state == HOTTILE_INVALID) ||
                 (hotTile.state == HOTTILE_RESOLVED) ||
                 (hotTile.state == HOTTILE_CLEAR));
-            _aligned_free(hotTile.pBuffer);
+            FreeHotTileMem(hotTile.pBuffer);
 
             uint32_t size = numSamples * mHotTileSize[attachment];
-            hotTile.pBuffer = (uint8_t*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
+            uint32_t numaNode = ((x ^ y) & pContext->threadPool.numaMask);
+            hotTile.pBuffer = (uint8_t*)AllocHotTileMem(size, KNOB_SIMD_WIDTH * 4, numaNode);
             hotTile.state = HOTTILE_INVALID;
             hotTile.numSamples = numSamples;
         }
