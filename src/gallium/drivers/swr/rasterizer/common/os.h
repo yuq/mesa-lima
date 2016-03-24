@@ -30,10 +30,6 @@
 
 #define SWR_API __cdecl
 
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -52,7 +48,6 @@
 
 #define PRAGMA_WARNING_POP() __pragma(warning(pop))
 
-#if defined(_WIN32)
 #if defined(_WIN64)
 #define BitScanReverseSizeT BitScanReverse64
 #define BitScanForwardSizeT BitScanForward64
@@ -61,7 +56,6 @@
 #define BitScanReverseSizeT BitScanReverse
 #define BitScanForwardSizeT BitScanForward
 #define _mm_popcount_sizeT _mm_popcnt_u32
-#endif
 #endif
 
 #elif defined(FORCE_LINUX) || defined(__linux__) || defined(__gnu_linux__)
