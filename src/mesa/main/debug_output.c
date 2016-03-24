@@ -1009,15 +1009,16 @@ _mesa_DebugMessageInsert(GLenum source, GLenum type, GLuint id,
    if (!validate_length(ctx, callerstr, length, buf))
       return; /* GL_INVALID_VALUE */
 
+   /* if length not specified, string will be null terminated: */
+   if (length < 0)
+      length = strlen(buf);
+
    _mesa_log_msg(ctx, gl_enum_to_debug_source(source),
                  gl_enum_to_debug_type(type), id,
                  gl_enum_to_debug_severity(severity),
                  length, buf);
 
    if (type == GL_DEBUG_TYPE_MARKER && ctx->Driver.EmitStringMarker) {
-      /* if length not specified, string will be null terminated: */
-      if (length < 0)
-         length = strlen(buf);
       ctx->Driver.EmitStringMarker(ctx, buf, length);
    }
 }
