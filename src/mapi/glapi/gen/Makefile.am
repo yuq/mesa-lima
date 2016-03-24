@@ -89,18 +89,7 @@ EXTRA_DIST= \
 XORG_GLX_DIR = $(XORG_BASE)/glx
 XORG_GLAPI_DIR = $(XORG_BASE)/glx
 
-XORG_GLAPI_OUTPUTS = \
-	$(XORG_GLAPI_DIR)/glprocs.h \
-	$(XORG_GLAPI_DIR)/glapitable.h \
-	$(XORG_GLAPI_DIR)/dispatch.h
-
-if HAVE_APPLEDRI
-XORG_GLAPI_OUTPUTS += \
-	$(XORG_GLAPI_DIR)/glapi_gentable.c
-endif
-
 XORG_OUTPUTS = \
-	$(XORG_GLAPI_OUTPUTS) \
 	$(XORG_GLX_DIR)/indirect_dispatch.c \
 	$(XORG_GLX_DIR)/indirect_dispatch_swap.c \
 	$(XORG_GLX_DIR)/indirect_dispatch.h \
