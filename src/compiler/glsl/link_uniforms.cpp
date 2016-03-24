@@ -954,6 +954,8 @@ link_cross_validate_uniform_block(void *mem_ctx,
           new_block->Uniforms,
           sizeof(*linked_block->Uniforms) * linked_block->NumUniforms);
 
+   linked_block->Name = ralloc_strdup(*linked_blocks, linked_block->Name);
+
    for (unsigned int i = 0; i < linked_block->NumUniforms; i++) {
       struct gl_uniform_buffer_variable *ubo_var =
          &linked_block->Uniforms[i];
@@ -1005,9 +1007,9 @@ link_update_uniform_buffer_variables(struct gl_shader *shader)
 
       const unsigned l = strlen(var->name);
       for (unsigned i = 0; i < shader->NumBufferInterfaceBlocks; i++) {
-         for (unsigned j = 0; j < shader->BufferInterfaceBlocks[i].NumUniforms; j++) {
+         for (unsigned j = 0; j < shader->BufferInterfaceBlocks[i]->NumUniforms; j++) {
             if (sentinel) {
-               const char *begin = shader->BufferInterfaceBlocks[i].Uniforms[j].Name;
+               const char *begin = shader->BufferInterfaceBlocks[i]->Uniforms[j].Name;
                const char *end = strchr(begin, sentinel);
 
                if (end == NULL)
@@ -1022,7 +1024,7 @@ link_update_uniform_buffer_variables(struct gl_shader *shader)
                   break;
                }
             } else if (!strcmp(var->name,
-                               shader->BufferInterfaceBlocks[i].Uniforms[j].Name)) {
+                               shader->BufferInterfaceBlocks[i]->Uniforms[j].Name)) {
                found = true;
                var->data.location = j;
                break;
@@ -1148,9 +1150,9 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       sh->num_combined_uniform_components = sh->num_uniform_components;
 
       for (unsigned i = 0; i < sh->NumBufferInterfaceBlocks; i++) {
-         if (!sh->BufferInterfaceBlocks[i].IsShaderStorage) {
+         if (!sh->BufferInterfaceBlocks[i]->IsShaderStorage) {
             sh->num_combined_uniform_components +=
-               sh->BufferInterfaceBlocks[i].UniformBufferSize / 4;
+               sh->BufferInterfaceBlocks[i]->UniformBufferSize / 4;
          }
       }
    }

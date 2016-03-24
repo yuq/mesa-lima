@@ -124,11 +124,6 @@ _mesa_clear_shader_program_data(struct gl_shader_program *shProg)
       shProg->InterfaceBlockStageIndex[i] = NULL;
    }
 
-   ralloc_free(shProg->UboInterfaceBlockIndex);
-   shProg->UboInterfaceBlockIndex = NULL;
-   ralloc_free(shProg->SsboInterfaceBlockIndex);
-   shProg->SsboInterfaceBlockIndex = NULL;
-
    ralloc_free(shProg->AtomicBuffers);
    shProg->AtomicBuffers = NULL;
    shProg->NumAtomicBuffers = 0;

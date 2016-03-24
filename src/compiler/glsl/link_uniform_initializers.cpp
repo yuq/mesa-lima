@@ -183,7 +183,7 @@ set_block_binding(gl_shader_program *prog, const char *block_name, int binding)
 
          if (stage_index != -1) {
             struct gl_shader *sh = prog->_LinkedShaders[i];
-            sh->BufferInterfaceBlocks[stage_index].Binding = binding;
+            sh->BufferInterfaceBlocks[stage_index]->Binding = binding;
          }
       }
 }
