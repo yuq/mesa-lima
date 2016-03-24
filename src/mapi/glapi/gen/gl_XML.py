@@ -130,7 +130,7 @@ class gl_print_base(object):
                 % (self.name)
         print ''
         print '/*'
-        print ' * ' + self.license.replace('\n', '\n * ')
+        print (' * ' + self.license.replace('\n', '\n * ')).replace(' \n', '\n')
         print ' */'
         print ''
         if self.header_tag:
