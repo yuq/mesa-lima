@@ -351,7 +351,7 @@ Value *Builder::MASKLOADD(Value* src,Value* mask)
     else
     {
         Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule,Intrinsic::x86_avx_maskload_ps_256);
-        Value* fMask = BITCAST(mask,VectorType::get(mFP32Ty,mVWidth));
+        Value* fMask = BITCAST(mask,VectorType::get(mInt32Ty,mVWidth));
         vResult = BITCAST(CALL(func,{src,fMask}), VectorType::get(mInt32Ty,mVWidth));
     }
     return vResult;
