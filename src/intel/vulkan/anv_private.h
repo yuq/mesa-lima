@@ -813,6 +813,15 @@ __gen_combine_address(struct anv_batch *batch, void *location,
 #define __anv_cmd_length_bias(cmd) cmd ## _length_bias
 #define __anv_cmd_header(cmd) cmd ## _header
 #define __anv_cmd_pack(cmd) cmd ## _pack
+#define __anv_reg_num(reg) reg ## _num
+
+#define anv_pack_struct(dst, struc, ...) do {                              \
+      struct struc __template = {                                          \
+         __VA_ARGS__                                                       \
+      };                                                                   \
+      __anv_cmd_pack(struc)(NULL, dst, &__template);                       \
+      VG(VALGRIND_CHECK_MEM_IS_DEFINED(dst, __anv_cmd_length(struc) * 4)); \
+   } while (0)
 
 #define anv_batch_emit(batch, cmd, ...) do {                               \
       void *__dst = anv_batch_emit_dwords(batch, __anv_cmd_length(cmd));   \
