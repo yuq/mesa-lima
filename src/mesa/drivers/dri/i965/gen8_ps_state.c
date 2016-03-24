@@ -91,10 +91,15 @@ gen8_upload_ps_extra(struct brw_context *brw,
     * GEN8_PSX_PIXEL_SHADER_NO_RT_WRITE is not set it shouldn't make any
     * difference so we may just disable it here.
     *
+    * Gen8 hardware tries to compute ThreadDispatchEnable for us but doesn't
+    * take into account KillPixels when no depth or stencil writes are enabled.
+    * In order for occlusion queries to work correctly with no attachments, we
+    * need to force-enable here.
+    *
     * BRW_NEW_FS_PROG_DATA | BRW_NEW_FRAGMENT_PROGRAM | _NEW_BUFFERS | _NEW_COLOR
     */
-   if (_mesa_active_fragment_shader_has_side_effects(&brw->ctx) &&
-       !brw_color_buffer_write_enabled(brw))
+   if ((_mesa_active_fragment_shader_has_side_effects(ctx) ||
+        prog_data->uses_kill) && !brw_color_buffer_write_enabled(brw))
       dw1 |= GEN8_PSX_SHADER_HAS_UAV;
 
    if (prog_data->computed_stencil) {
