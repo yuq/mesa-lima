@@ -202,6 +202,13 @@ def safe_name(name):
 
     return name
 
+def num_from_str(num_str):
+    if num_str.lower().startswith('0x'):
+        return int(num_str, base=16)
+    else:
+        assert(not num_str.startswith('0') and 'octals numbers not allowed')
+        return int(num_str)
+
 class Field:
     ufixed_pattern = re.compile("u(\d+)\.(\d+)")
     sfixed_pattern = re.compile("s(\d+)\.(\d+)")
@@ -472,25 +479,24 @@ class Parser:
 
         self.instruction = None
         self.structs = {}
+        self.registers = {}
 
     def start_element(self, name, attrs):
         if name == "genxml":
             self.platform = attrs["name"]
             self.gen = attrs["gen"].replace('.', '')
             print(pack_header % {'license': license, 'platform': self.platform})
-        elif name == "instruction":
-            self.instruction = safe_name(attrs["name"])
-            self.length_bias = int(attrs["bias"])
-            if "length" in attrs:
-                self.length = int(attrs["length"])
-                size = self.length * 32
-            else:
-                self.length = None
-                size = 0
-            self.group = Group(self, None, 0, 1, size)
-        elif name == "struct":
-            self.struct = safe_name(attrs["name"])
-            self.structs[attrs["name"]] = 1
+        elif name in ("instruction", "struct", "register"):
+            if name == "instruction":
+                self.instruction = safe_name(attrs["name"])
+                self.length_bias = int(attrs["bias"])
+            elif name == "struct":
+                self.struct = safe_name(attrs["name"])
+                self.structs[attrs["name"]] = 1
+            elif name == "register":
+                self.register = safe_name(attrs["name"])
+                self.reg_num = num_from_str(attrs["num"])
+                self.registers[attrs["name"]] = 1
             if "length" in attrs:
                 self.length = int(attrs["length"])
                 size = self.length * 32
@@ -522,9 +528,14 @@ class Parser:
             self.emit_instruction()
             self.instruction = None
             self.group = None
-        elif name  == "struct":
+        elif name == "struct":
             self.emit_struct()
             self.struct = None
+            self.group = None
+        elif name == "register":
+            self.emit_register()
+            self.register = None
+            self.reg_num = None
             self.group = None
         elif name == "group":
             self.group = self.group.parent
@@ -560,9 +571,9 @@ class Parser:
     def emit_instruction(self):
         name = self.instruction
         if not self.length == None:
-            print('#define %-33s %4d' %
+            print('#define %-33s %6d' %
                   (self.gen_prefix(name + "_length"), self.length))
-        print('#define %-33s %4d' %
+        print('#define %-33s %6d' %
               (self.gen_prefix(name + "_length_bias"), self.length_bias))
 
         default_fields = []
@@ -571,7 +582,7 @@ class Parser:
                 continue
             if field.default == None:
                 continue
-            default_fields.append("   .%-35s = %4d" % (field.name, field.default))
+            default_fields.append("   .%-35s = %6d" % (field.name, field.default))
 
         if default_fields:
             print('#define %-40s\\' % (self.gen_prefix(name + '_header')))
@@ -582,10 +593,23 @@ class Parser:
 
         self.emit_pack_function(self.instruction, self.group)
 
+    def emit_register(self):
+        name = self.register
+        if not self.reg_num == None:
+            print('#define %-33s 0x%04x' %
+                  (self.gen_prefix(name + "_num"), self.reg_num))
+
+        if not self.length == None:
+            print('#define %-33s %6d' %
+                  (self.gen_prefix(name + "_length"), self.length))
+
+        self.emit_template_struct(self.register, self.group)
+        self.emit_pack_function(self.register, self.group)
+
     def emit_struct(self):
         name = self.struct
         if not self.length == None:
-            print('#define %-33s %4d' %
+            print('#define %-33s %6d' %
                   (self.gen_prefix(name + "_length"), self.length))
 
         self.emit_template_struct(self.struct, self.group)
@@ -598,7 +622,7 @@ class Parser:
                 name = self.prefix + "_" + value.name
             else:
                 name = value.name
-            print('#define %-36s %4d' % (name.upper(), value.value))
+            print('#define %-36s %6d' % (name.upper(), value.value))
         print('')
 
     def parse(self, filename):
