@@ -810,6 +810,7 @@ void st_init_extensions(struct pipe_screen *screen,
    extensions->EXT_texture_env_dot3 = GL_TRUE;
    extensions->EXT_vertex_array_bgra = GL_TRUE;
 
+   extensions->ATI_fragment_shader = GL_TRUE;
    extensions->ATI_texture_env_combine3 = GL_TRUE;
 
    extensions->MESA_pack_invert = GL_TRUE;
