@@ -576,7 +576,7 @@ class gl_parameter(object):
                 list.append( str(s) )
 
             if len(list) > 1 and use_parens :
-                return "(%s)" % (string.join(list, " * "))
+                return "safe_mul(%s)" % (string.join(list, ", "))
             else:
                 return string.join(list, " * ")
 

@@ -177,8 +177,6 @@ class PrintGlxProtoStubs(glX_proto_common.glx_print_proto):
         print '#include <limits.h>'
 
         print ''
-        print '#define __GLX_PAD(n) (((n) + 3) & ~3)'
-        print ''
         self.printFastcall()
         self.printNoinline()
         print ''

@@ -89,8 +89,6 @@ class PrintGlxDispatchFunctions(glX_proto_common.glx_print_proto):
         print '#include "indirect_util.h"'
         print '#include "singlesize.h"'
         print ''
-        print '#define __GLX_PAD(x)  (((x) + 3) & ~3)'
-        print ''
         print 'typedef struct {'
         print '    __GLX_PIXEL_3D_HDR;'
         print '} __GLXpixel3DHeader;'
