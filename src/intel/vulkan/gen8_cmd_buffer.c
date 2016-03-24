@@ -108,15 +108,10 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
 }
 #endif
 
-static void
-emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
-{
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM),
-                  .RegisterOffset = reg,
-                  .DataDWord = imm);
-}
-
-#define GEN8_L3CNTLREG                  0x7034
+#define emit_lri(batch, reg, imm)                       \
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM),    \
+                  .RegisterOffset = __anv_reg_num(reg), \
+                  .DataDWord = imm)
 
 void
 genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
@@ -127,12 +122,16 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
     * - src/mesa/drivers/dri/i965/gen7_l3_state.c
     */
 
-   uint32_t val = enable_slm ?
-      /* All = 48 ways; URB = 16 ways; DC and RO = 0, SLM = 1 */
-      0x60000021 :
-      /* All = 48 ways; URB = 48 ways; DC, RO and SLM = 0 */
-      0x60000060;
-   bool changed = cmd_buffer->state.current_l3_config != val;
+   uint32_t l3cr_slm, l3cr_noslm;
+   anv_pack_struct(&l3cr_noslm, GENX(L3CNTLREG),
+                   .URBAllocation = 48,
+                   .AllAllocation = 48);
+   anv_pack_struct(&l3cr_slm, GENX(L3CNTLREG),
+                   .SLMEnable = 1,
+                   .URBAllocation = 16,
+                   .AllAllocation = 48);
+   const uint32_t l3cr_val = enable_slm ? l3cr_slm : l3cr_noslm;
+   bool changed = cmd_buffer->state.current_l3_config != l3cr_val;
 
    if (changed) {
       /* According to the hardware docs, the L3 partitioning can only be changed
@@ -157,8 +156,8 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
                      .PostSyncOperation = NoWrite,
                      .CommandStreamerStallEnable = true);
 
-      emit_lri(&cmd_buffer->batch, GEN8_L3CNTLREG, val);
-      cmd_buffer->state.current_l3_config = val;
+      emit_lri(&cmd_buffer->batch, GENX(L3CNTLREG), l3cr_val);
+      cmd_buffer->state.current_l3_config = l3cr_val;
    }
 }
 

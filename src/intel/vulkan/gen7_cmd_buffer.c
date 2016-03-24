@@ -294,17 +294,10 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    return VK_SUCCESS;
 }
 
-static void
-emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
-{
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM),
-                  .RegisterOffset = reg,
-                  .DataDWord = imm);
-}
-
-#define GEN7_L3SQCREG1                     0xb010
-#define GEN7_L3CNTLREG2                    0xb020
-#define GEN7_L3CNTLREG3                    0xb024
+#define emit_lri(batch, reg, imm)                       \
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM),    \
+                  .RegisterOffset = __anv_reg_num(reg), \
+                  .DataDWord = imm)
 
 void
 genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
@@ -315,12 +308,19 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
     * - src/mesa/drivers/dri/i965/gen7_l3_state.c
     */
 
-   uint32_t l3c2_val = enable_slm ?
-      /* All = 0 ways; URB = 16 ways; DC and RO = 16; SLM = 1 */
-      /*0x02040021*/0x010000a1 :
-      /* All = 0 ways; URB = 32 ways; DC = 0; RO = 32; SLM = 0 */
-      /*0x04080040*/0x02000030;
-   bool changed = cmd_buffer->state.current_l3_config != l3c2_val;
+   uint32_t l3cr2_slm, l3cr2_noslm;
+   anv_pack_struct(&l3cr2_noslm, GENX(L3CNTLREG2),
+                   .URBAllocation = 24,
+                   .ROAllocation = 0,
+                   .DCAllocation = 16);
+   anv_pack_struct(&l3cr2_slm, GENX(L3CNTLREG2),
+                   .SLMEnable = 1,
+                   .URBAllocation = 16,
+                   .URBLowBandwidth = 1,
+                   .ROAllocation = 0,
+                   .DCAllocation = 8);
+   const uint32_t l3cr2_val = enable_slm ? l3cr2_slm : l3cr2_noslm;
+   bool changed = cmd_buffer->state.current_l3_config != l3cr2_val;
 
    if (changed) {
       /* According to the hardware docs, the L3 partitioning can only be changed
@@ -346,10 +346,21 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
                      .CommandStreamerStallEnable = true);
 
       anv_finishme("write GEN7_L3SQCREG1");
-      emit_lri(&cmd_buffer->batch, GEN7_L3CNTLREG2, l3c2_val);
-      emit_lri(&cmd_buffer->batch, GEN7_L3CNTLREG3,
-               enable_slm ? 0x00040810 : 0x00040410);
-      cmd_buffer->state.current_l3_config = l3c2_val;
+      emit_lri(&cmd_buffer->batch, GENX(L3CNTLREG2), l3cr2_val);
+
+      uint32_t l3cr3_slm, l3cr3_noslm;
+      anv_pack_struct(&l3cr3_noslm, GENX(L3CNTLREG3),
+                      .ISAllocation = 8,
+                      .CAllocation = 4,
+                      .TAllocation = 8);
+      anv_pack_struct(&l3cr3_slm, GENX(L3CNTLREG3),
+                      .ISAllocation = 8,
+                      .CAllocation = 8,
+                      .TAllocation = 8);
+      const uint32_t l3cr3_val = enable_slm ? l3cr3_slm : l3cr3_noslm;
+      emit_lri(&cmd_buffer->batch, GENX(L3CNTLREG3), l3cr3_val);
+
+      cmd_buffer->state.current_l3_config = l3cr2_val;
    }
 }
 
