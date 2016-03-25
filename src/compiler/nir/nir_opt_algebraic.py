@@ -371,6 +371,37 @@ optimizations = [
      'options->lower_unpack_snorm_4x8'),
 ]
 
+def fexp2i(exp):
+   # We assume that exp is already in the range [-126, 127].
+   return ('ishl', ('iadd', exp, 127), 23)
+
+def ldexp32(f, exp):
+   # First, we clamp exp to a reasonable range.  The maximum possible range
+   # for a normal exponent is [-126, 127] and, throwing in denormals, you get
+   # a maximum range of [-149, 127].  This means that we can potentially have
+   # a swing of +-276.  If you start with FLT_MAX, you actually have to do
+   # ldexp(FLT_MAX, -278) to get it to flush all the way to zero.  The GLSL
+   # spec, on the other hand, only requires that we handle an exponent value
+   # in the range [-126, 128].  This implementation is *mostly* correct; it
+   # handles a range on exp of [-252, 254] which allows you to create any
+   # value (including denorms if the hardware supports it) and to adjust the
+   # exponent of any normal value to anything you want.
+   exp = ('imin', ('imax', exp, -252), 254)
+
+   # Now we compute two powers of 2, one for exp/2 and one for exp-exp/2.
+   # (We use ishr which isn't the same for -1, but the -1 case still works
+   # since we use exp-exp/2 as the second exponent.)  While the spec
+   # technically defines ldexp as f * 2.0^exp, simply multiplying once doesn't
+   # work with denormals and doesn't allow for the full swing in exponents
+   # that you can get with normalized values.  Instead, we create two powers
+   # of two and multiply by them each in turn.  That way the effective range
+   # of our exponent is doubled.
+   pow2_1 = fexp2i(('ishr', exp, 1))
+   pow2_2 = fexp2i(('isub', exp, ('ishr', exp, 1)))
+   return ('fmul', ('fmul', f, pow2_1), pow2_2)
+
+optimizations += [(('ldexp', 'x', 'exp'), ldexp32('x', 'exp'))]
+
 # Unreal Engine 4 demo applications open-codes bitfieldReverse()
 def bitfield_reverse(u):
     step1 = ('ior', ('ishl', u, 16), ('ushr', u, 16))
