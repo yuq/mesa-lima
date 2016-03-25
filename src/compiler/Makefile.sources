@@ -178,10 +178,10 @@ NIR_FILES = \
 	nir/nir_from_ssa.c \
 	nir/nir_gs_count_vertices.c \
 	nir/nir_inline_functions.c \
-	nir/nir_intrinsics.c \
-	nir/nir_intrinsics.h \
 	nir/nir_instr_set.c \
 	nir/nir_instr_set.h \
+	nir/nir_intrinsics.c \
+	nir/nir_intrinsics.h \
 	nir/nir_liveness.c \
 	nir/nir_lower_alu_to_scalar.c \
 	nir/nir_lower_atomics.c \
@@ -220,8 +220,8 @@ NIR_FILES = \
 	nir/nir_phi_builder.c \
 	nir/nir_phi_builder.h \
 	nir/nir_print.c \
-	nir/nir_repair_ssa.c \
 	nir/nir_remove_dead_variables.c \
+	nir/nir_repair_ssa.c \
 	nir/nir_search.c \
 	nir/nir_search.h \
 	nir/nir_split_var_copies.c \

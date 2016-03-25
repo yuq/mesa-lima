@@ -21,10 +21,10 @@ NIR_FILES = \
 	nir_from_ssa.c \
 	nir_gs_count_vertices.c \
 	nir_inline_functions.c \
-	nir_intrinsics.c \
-	nir_intrinsics.h \
 	nir_instr_set.c \
 	nir_instr_set.h \
+	nir_intrinsics.c \
+	nir_intrinsics.h \
 	nir_liveness.c \
 	nir_lower_alu_to_scalar.c \
 	nir_lower_atomics.c \
@@ -63,8 +63,8 @@ NIR_FILES = \
 	nir_phi_builder.c \
 	nir_phi_builder.h \
 	nir_print.c \
-	nir_repair_ssa.c \
 	nir_remove_dead_variables.c \
+	nir_repair_ssa.c \
 	nir_search.c \
 	nir_search.h \
 	nir_split_var_copies.c \
