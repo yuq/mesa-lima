@@ -97,6 +97,9 @@ nir_lower_outputs_to_temporaries(nir_shader *shader)
       /* Reparent the name to the new variable */
       ralloc_steal(output, output->name);
 
+      /* Reparent the constant initializer (if any) */
+      ralloc_steal(output, output->constant_initializer);
+
       /* Give the output a new name with @out-temp appended */
       temp->name = ralloc_asprintf(var, "%s@out-temp", output->name);
       temp->data.mode = nir_var_global;
