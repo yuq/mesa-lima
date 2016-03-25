@@ -1116,8 +1116,44 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_umod:
+   case nir_op_irem:
+      /* According to the sign table for INT DIV in the Ivy Bridge PRM, it
+       * appears that our hardware just does the right thing for signed
+       * remainder.
+       */
       emit_math(SHADER_OPCODE_INT_REMAINDER, dst, op[0], op[1]);
       break;
+
+   case nir_op_imod: {
+      /* Get a regular C-style remainder.  If a % b == 0, set the predicate. */
+      inst = emit_math(SHADER_OPCODE_INT_REMAINDER, dst, op[0], op[1]);
+
+      /* Math instructions don't support conditional mod */
+      inst = emit(MOV(dst_null_d(), src_reg(dst)));
+      inst->conditional_mod = BRW_CONDITIONAL_NZ;
+
+      /* Now, we need to determine if signs of the sources are different.
+       * When we XOR the sources, the top bit is 0 if they are the same and 1
+       * if they are different.  We can then use a conditional modifier to
+       * turn that into a predicate.  This leads us to an XOR.l instruction.
+       *
+       * Technically, according to the PRM, you're not allowed to use .l on a
+       * XOR instruction.  However, emperical experiments and Curro's reading
+       * of the simulator source both indicate that it's safe.
+       */
+      src_reg tmp = src_reg(this, glsl_type::ivec4_type);
+      inst = emit(XOR(dst_reg(tmp), op[0], op[1]));
+      inst->predicate = BRW_PREDICATE_NORMAL;
+      inst->conditional_mod = BRW_CONDITIONAL_L;
+
+      /* If the result of the initial remainder operation is non-zero and the
+       * two sources have different signs, add in a copy of op[1] to get the
+       * final integer modulus value.
+       */
+      inst = emit(ADD(dst, src_reg(dst), op[1]));
+      inst->predicate = BRW_PREDICATE_NORMAL;
+      break;
+   }
 
    case nir_op_ldexp:
       unreachable("not reached: should be handled by ldexp_to_arith()");
