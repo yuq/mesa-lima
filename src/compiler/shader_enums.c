@@ -201,6 +201,7 @@ gl_system_value_name(gl_system_value sysval)
    static const char *names[] = {
      ENUM(SYSTEM_VALUE_VERTEX_ID),
      ENUM(SYSTEM_VALUE_INSTANCE_ID),
+     ENUM(SYSTEM_VALUE_INSTANCE_INDEX),
      ENUM(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE),
      ENUM(SYSTEM_VALUE_BASE_VERTEX),
      ENUM(SYSTEM_VALUE_INVOCATION_ID),

@@ -379,6 +379,13 @@ typedef enum
    SYSTEM_VALUE_INSTANCE_ID,
 
    /**
+    * Vulkan InstanceIndex.
+    *
+    * InstanceIndex = gl_InstanceID + gl_BaseInstance
+    */
+   SYSTEM_VALUE_INSTANCE_INDEX,
+
+   /**
     * DirectX-style vertex ID.
     *
     * Unlike \c SYSTEM_VALUE_VERTEX_ID, this system value does \b not include
