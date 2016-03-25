@@ -38,11 +38,8 @@ vtn_undef_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
 
    if (glsl_type_is_vector_or_scalar(type)) {
       unsigned num_components = glsl_get_vector_elements(val->type);
-      nir_ssa_undef_instr *undef =
-         nir_ssa_undef_instr_create(b->shader, num_components);
-
-      nir_instr_insert_before_cf_list(&b->impl->body, &undef->instr);
-      val->def = &undef->def;
+      unsigned bit_size = glsl_get_bit_size(glsl_get_base_type(val->type));
+      val->def = nir_ssa_undef(&b->nb, num_components, bit_size);
    } else {
       unsigned elems = glsl_get_length(val->type);
       val->elems = ralloc_array(b, struct vtn_ssa_value *, elems);
@@ -1863,13 +1860,11 @@ vtn_vector_shuffle(struct vtn_builder *b, unsigned num_components,
 {
    nir_alu_instr *vec = create_vec(b->shader, num_components, src0->bit_size);
 
-   nir_ssa_undef_instr *undef = nir_ssa_undef_instr_create(b->shader, 1);
-   nir_builder_instr_insert(&b->nb, &undef->instr);
-
    for (unsigned i = 0; i < num_components; i++) {
       uint32_t index = indices[i];
       if (index == 0xffffffff) {
-         vec->src[i].src = nir_src_for_ssa(&undef->def);
+         vec->src[i].src =
+            nir_src_for_ssa(nir_ssa_undef(&b->nb, 1, src0->bit_size));
       } else if (index < src0->num_components) {
          vec->src[i].src = nir_src_for_ssa(src0);
          vec->src[i].swizzle[0] = index;
