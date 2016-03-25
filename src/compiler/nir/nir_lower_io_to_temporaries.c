@@ -22,9 +22,12 @@
  */
 
 /*
- * Implements a pass that lowers output variables to a temporary plus an
- * output variable with a single copy at each exit point of the shader.
- * This way the output variable is only ever written.
+ * Implements a pass that lowers output and/or input variables to a
+ * temporary plus an output variable with a single copy at each exit
+ * point of the shader and/or an input variable with a single copy
+ * at the entrance point of the shader.  This way the output variable
+ * is only ever written once and/or input is only read once, and there
+ * are no indirect outut/input accesses.
  */
 
 #include "nir.h"
@@ -33,6 +36,7 @@ struct lower_io_state {
    nir_shader *shader;
    nir_function *entrypoint;
    struct exec_list old_outputs;
+   struct exec_list old_inputs;
 };
 
 static void
@@ -88,6 +92,16 @@ emit_output_copies_impl(struct lower_io_state *state, nir_function_impl *impl)
    }
 }
 
+static void
+emit_input_copies_impl(struct lower_io_state *state, nir_function_impl *impl)
+{
+   if (impl->function == state->entrypoint) {
+      nir_cursor cursor = nir_before_block(nir_start_block(impl));
+      emit_copies(cursor, state->shader, &state->old_inputs,
+                  &state->shader->inputs);
+   }
+}
+
 static nir_variable *
 create_shadow_temp(struct lower_io_state *state, nir_variable *var)
 {
@@ -103,8 +117,8 @@ create_shadow_temp(struct lower_io_state *state, nir_variable *var)
    /* Reparent the constant initializer (if any) */
    ralloc_steal(nvar, nvar->constant_initializer);
 
-   /* Give the output a new name with @out-temp appended */
-   const char *mode = "out";
+   /* Give the original a new name with @<mode>-temp appended */
+   const char *mode = (temp->data.mode == nir_var_shader_in) ? "in" : "out";
    temp->name = ralloc_asprintf(var, "%s@%s-temp", mode, nvar->name);
    temp->data.mode = nir_var_global;
    temp->constant_initializer = NULL;
@@ -113,7 +127,8 @@ create_shadow_temp(struct lower_io_state *state, nir_variable *var)
 }
 
 void
-nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint)
+nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint,
+                            bool outputs, bool inputs)
 {
    struct lower_io_state state;
 
@@ -122,7 +137,16 @@ nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint)
 
    state.shader = shader;
    state.entrypoint = entrypoint;
-   exec_list_move_nodes_to(&shader->outputs, &state.old_outputs);
+
+   if (inputs)
+      exec_list_move_nodes_to(&shader->inputs, &state.old_inputs);
+   else
+      exec_list_make_empty(&state.old_inputs);
+
+   if (outputs)
+      exec_list_move_nodes_to(&shader->outputs, &state.old_outputs);
+   else
+      exec_list_make_empty(&state.old_outputs);
 
    /* Walk over all of the outputs turn each output into a temporary and
     * make a new variable for the actual output.
@@ -132,15 +156,26 @@ nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint)
       exec_list_push_tail(&shader->outputs, &output->node);
    }
 
+   /* and same for inputs: */
+   nir_foreach_variable(var, &state.old_inputs) {
+      nir_variable *input = create_shadow_temp(&state, var);
+      exec_list_push_tail(&shader->inputs, &input->node);
+   }
+
    nir_foreach_function(function, shader) {
       if (function->impl == NULL)
          continue;
 
-      emit_output_copies_impl(&state, function->impl);
+      if (inputs)
+         emit_input_copies_impl(&state, function->impl);
+
+      if (outputs)
+         emit_output_copies_impl(&state, function->impl);
 
       nir_metadata_preserve(function->impl, nir_metadata_block_index |
                                             nir_metadata_dominance);
    }
 
+   exec_list_append(&shader->globals, &state.old_inputs);
    exec_list_append(&shader->globals, &state.old_outputs);
 }
