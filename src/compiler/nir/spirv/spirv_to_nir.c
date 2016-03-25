@@ -1496,7 +1496,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
          assert(w[5] == SpvImageOperandsSampleMask);
          image.sample = vtn_ssa_value(b, w[6])->def;
       } else {
-         image.sample = nir_ssa_undef(&b->nb, 1);
+         image.sample = nir_ssa_undef(&b->nb, 1, 32);
       }
       break;
 
@@ -1511,7 +1511,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
          assert(w[4] == SpvImageOperandsSampleMask);
          image.sample = vtn_ssa_value(b, w[5])->def;
       } else {
-         image.sample = nir_ssa_undef(&b->nb, 1);
+         image.sample = nir_ssa_undef(&b->nb, 1, 32);
       }
       break;
 
