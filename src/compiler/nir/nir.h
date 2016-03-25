@@ -1626,6 +1626,9 @@ typedef struct nir_shader_compiler_options {
     * are simulated by floats.)
     */
    bool native_integers;
+
+   /* Indicates that the driver only has zero-based vertex id */
+   bool vertex_id_zero_based;
 } nir_shader_compiler_options;
 
 typedef struct nir_shader_info {

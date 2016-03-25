@@ -82,7 +82,8 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
    .lower_uadd_carry = true,                                                  \
    .lower_usub_borrow = true,                                                 \
    .lower_fdiv = true,                                                        \
-   .native_integers = true
+   .native_integers = true,                                                   \
+   .vertex_id_zero_based = true
 
 static const struct nir_shader_compiler_options scalar_nir_options = {
    COMMON_OPTIONS,
