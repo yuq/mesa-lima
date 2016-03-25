@@ -399,6 +399,22 @@ nir_store_var(nir_builder *build, nir_variable *var, nir_ssa_def *value,
 }
 
 static inline void
+nir_store_deref_var(nir_builder *build, nir_deref_var *deref,
+                    nir_ssa_def *value, unsigned writemask)
+{
+   const unsigned num_components =
+      glsl_get_vector_elements(nir_deref_tail(&deref->deref)->type);
+
+   nir_intrinsic_instr *store =
+      nir_intrinsic_instr_create(build->shader, nir_intrinsic_store_var);
+   store->num_components = num_components;
+   store->const_index[0] = writemask & ((1 << num_components) - 1);
+   store->variables[0] = nir_deref_as_var(nir_copy_deref(store, &deref->deref));
+   store->src[0] = nir_src_for_ssa(value);
+   nir_builder_instr_insert(build, &store->instr);
+}
+
+static inline void
 nir_copy_deref_var(nir_builder *build, nir_deref_var *dest, nir_deref_var *src)
 {
    assert(nir_deref_tail(&dest->deref)->type ==
