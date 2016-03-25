@@ -986,8 +986,8 @@ typedef enum {
    NIR_INTRINSIC_UCP_ID = 4,
 
    /**
-    * The range of a load operation.  This specifies the maximum amount of
-    * data starting at the base offset (if any) that can be accessed.
+    * The ammount of data, starting from BASE, that this instruction may
+    * access.  This is used to provide bounds if the offset is not constant.
     */
    NIR_INTRINSIC_RANGE = 5,
 
