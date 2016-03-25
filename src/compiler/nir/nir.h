@@ -976,6 +976,16 @@ typedef enum {
     */
    NIR_INTRINSIC_RANGE = 5,
 
+   /**
+    * The Vulkan descriptor set for vulkan_resource_index intrinsic.
+    */
+   NIR_INTRINSIC_DESC_SET = 6,
+
+   /**
+    * The Vulkan descriptor set binding for vulkan_resource_index intrinsic.
+    */
+   NIR_INTRINSIC_BINDING = 7,
+
    NIR_INTRINSIC_NUM_INDEX_FLAGS,
 
 } nir_intrinsic_index_flag;
@@ -1040,6 +1050,8 @@ INTRINSIC_IDX_ACCESSORS(base, BASE, int)
 INTRINSIC_IDX_ACCESSORS(stream_id, STREAM_ID, unsigned)
 INTRINSIC_IDX_ACCESSORS(ucp_id, UCP_ID, unsigned)
 INTRINSIC_IDX_ACCESSORS(range, RANGE, unsigned)
+INTRINSIC_IDX_ACCESSORS(desc_set, DESC_SET, unsigned)
+INTRINSIC_IDX_ACCESSORS(binding, BINDING, unsigned)
 
 /**
  * \group texture information
