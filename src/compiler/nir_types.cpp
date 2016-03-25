@@ -124,6 +124,13 @@ glsl_get_aoa_size(const struct glsl_type *type)
    return type->arrays_of_arrays_size();
 }
 
+unsigned
+glsl_count_attribute_slots(const struct glsl_type *type,
+                           bool vertex_input_slots)
+{
+   return type->count_attribute_slots(vertex_input_slots);
+}
+
 const char *
 glsl_get_struct_elem_name(const struct glsl_type *type, unsigned index)
 {
