@@ -2293,6 +2293,7 @@ void nir_lower_io(nir_shader *shader,
 nir_src *nir_get_io_offset_src(nir_intrinsic_instr *instr);
 nir_src *nir_get_io_vertex_index_src(nir_intrinsic_instr *instr);
 
+void nir_lower_io_types(nir_shader *shader);
 void nir_lower_vars_to_ssa(nir_shader *shader);
 
 bool nir_remove_dead_variables(nir_shader *shader, nir_variable_mode modes);
