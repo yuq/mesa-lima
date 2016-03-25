@@ -334,6 +334,9 @@ typedef struct nir_variable {
 #define nir_foreach_variable(var, var_list) \
    foreach_list_typed(nir_variable, var, node, var_list)
 
+#define nir_foreach_variable_safe(var, var_list) \
+   foreach_list_typed_safe(nir_variable, var, node, var_list)
+
 static inline bool
 nir_variable_is_global(const nir_variable *var)
 {
