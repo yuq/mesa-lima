@@ -29,13 +29,13 @@
 
 #include "nir.h"
 
-struct lower_outputs_state {
+struct lower_io_state {
    nir_shader *shader;
    struct exec_list old_outputs;
 };
 
 static void
-emit_output_copies(nir_cursor cursor, struct lower_outputs_state *state)
+emit_output_copies(nir_cursor cursor, struct lower_io_state *state)
 {
    assert(exec_list_length(&state->shader->outputs) ==
           exec_list_length(&state->old_outputs));
@@ -55,9 +55,9 @@ emit_output_copies(nir_cursor cursor, struct lower_outputs_state *state)
 }
 
 void
-nir_lower_outputs_to_temporaries(nir_shader *shader, nir_function *entrypoint)
+nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint)
 {
-   struct lower_outputs_state state;
+   struct lower_io_state state;
 
    if (shader->stage == MESA_SHADER_TESS_CTRL)
       return;

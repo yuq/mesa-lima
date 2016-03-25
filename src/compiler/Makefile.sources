@@ -199,8 +199,8 @@ NIR_FILES = \
 	nir/nir_lower_idiv.c \
 	nir/nir_lower_indirect_derefs.c \
 	nir/nir_lower_io.c \
+	nir/nir_lower_io_to_temporaries.c \
 	nir/nir_lower_io_types.c \
-	nir/nir_lower_outputs_to_temporaries.c \
 	nir/nir_lower_passthrough_edgeflags.c \
 	nir/nir_lower_phis_to_scalar.c \
 	nir/nir_lower_returns.c \

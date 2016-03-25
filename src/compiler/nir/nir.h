@@ -2279,8 +2279,8 @@ bool nir_lower_indirect_derefs(nir_shader *shader, nir_variable_mode modes);
 
 bool nir_lower_locals_to_regs(nir_shader *shader);
 
-void nir_lower_outputs_to_temporaries(nir_shader *shader,
-                                      nir_function *entrypoint);
+void nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint);
+
 void nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint);
 
 void nir_assign_var_locations(struct exec_list *var_list,
