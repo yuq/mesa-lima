@@ -1910,7 +1910,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
 
         vc4_optimize_nir(c->s);
 
-        NIR_PASS_V(c->s, nir_remove_dead_variables);
+        NIR_PASS_V(c->s, nir_remove_dead_variables, nir_var_local);
         NIR_PASS_V(c->s, nir_convert_from_ssa, true);
 
         if (vc4_debug & VC4_DEBUG_SHADERDB) {

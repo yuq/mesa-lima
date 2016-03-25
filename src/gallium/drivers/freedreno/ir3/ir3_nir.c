@@ -142,7 +142,7 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 
 	} while (progress);
 
-	OPT_V(s, nir_remove_dead_variables);
+	OPT_V(s, nir_remove_dead_variables, nir_var_local);
 
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		debug_printf("----------------------\n");

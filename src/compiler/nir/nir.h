@@ -2205,7 +2205,7 @@ nir_src *nir_get_io_vertex_index_src(nir_intrinsic_instr *instr);
 
 void nir_lower_vars_to_ssa(nir_shader *shader);
 
-bool nir_remove_dead_variables(nir_shader *shader);
+bool nir_remove_dead_variables(nir_shader *shader, nir_variable_mode modes);
 
 void nir_move_vec_src_uses_to_dest(nir_shader *shader);
 bool nir_lower_vec_to_movs(nir_shader *shader);
