@@ -25,10 +25,6 @@
  * Implements a pass that lowers output variables to a temporary plus an
  * output variable with a single copy at each exit point of the shader.
  * This way the output variable is only ever written.
- *
- * Because valid NIR requires that output variables are never read, this
- * pass is more of a helper for NIR producers and must be run before the
- * shader is ever validated.
  */
 
 #include "nir.h"
