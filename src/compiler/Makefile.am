@@ -84,7 +84,7 @@ check_PROGRAMS +=					\
 	glsl/tests/sampler-types-test			\
 	glsl/tests/uniform-initializer-test
 
-noinst_PROGRAMS = glsl_compiler spirv2nir
+noinst_PROGRAMS = glsl_compiler
 
 glsl_tests_blob_test_SOURCES =				\
 	glsl/tests/blob_test.c
@@ -174,20 +174,6 @@ glsl_glsl_test_SOURCES = \
 glsl_glsl_test_LDADD =					\
 	glsl/libglsl.la					\
 	$(top_builddir)/src/libglsl_util.la		\
-	$(PTHREAD_LIBS)
-
-spirv2nir_SOURCES = \
-	nir/spirv2nir.c
-
-spirv2nir_CPPFLAGS =					\
-	$(AM_CPPFLAGS)					\
-	-I$(top_builddir)/src/compiler/nir		\
-	-I$(top_srcdir)/src/compiler/nir
-
-spirv2nir_LDADD =					\
-	nir/libnir.la					\
-	$(top_builddir)/src/util/libmesautil.la		\
-	-lm -lstdc++					\
 	$(PTHREAD_LIBS)
 
 # We write our own rules for yacc and lex below. We'd rather use automake,
