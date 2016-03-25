@@ -75,6 +75,20 @@ nir_builder_cf_insert(nir_builder *build, nir_cf_node *cf)
 }
 
 static inline nir_ssa_def *
+nir_ssa_undef(nir_builder *build, unsigned num_components, unsigned bit_size)
+{
+   nir_ssa_undef_instr *undef =
+      nir_ssa_undef_instr_create(build->shader, num_components);
+   undef->def.bit_size = bit_size;
+   if (!undef)
+      return NULL;
+
+   nir_instr_insert(nir_before_cf_list(&build->impl->body), &undef->instr);
+
+   return &undef->def;
+}
+
+static inline nir_ssa_def *
 nir_build_imm(nir_builder *build, unsigned num_components, nir_const_value value)
 {
    nir_load_const_instr *load_const =
