@@ -33,6 +33,7 @@
 #include "core/api.h"
 #include "core/backend.h"
 #include "core/context.h"
+#include "core/depthstencil.h"
 #include "core/frontend.h"
 #include "core/rasterizer.h"
 #include "core/rdtsc_core.h"
@@ -883,6 +884,25 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
                  !pState->state.blendState.renderTarget[rt].writeDisableGreen ||
                  !pState->state.blendState.renderTarget[rt].writeDisableBlue) ? (1 << rt) : 0;
         }
+    }
+
+    // Setup depth quantization function
+    if (pState->state.depthHottileEnable)
+    {
+        switch (pState->state.rastState.depthFormat)
+        {
+        case R32_FLOAT_X8X24_TYPELESS: pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT_X8X24_TYPELESS > ; break;
+        case R32_FLOAT: pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT > ; break;
+        case R24_UNORM_X8_TYPELESS: pState->state.pfnQuantizeDepth = QuantizeDepth < R24_UNORM_X8_TYPELESS > ; break;
+        case R16_UNORM: pState->state.pfnQuantizeDepth = QuantizeDepth < R16_UNORM > ; break;
+        default: SWR_ASSERT(false, "Unsupported depth format for depth quantiztion.");
+            pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT > ;
+        }
+    }
+    else
+    {
+        // set up pass-through quantize if depth isn't enabled
+        pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT > ;
     }
 }
 

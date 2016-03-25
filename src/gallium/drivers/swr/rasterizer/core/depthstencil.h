@@ -80,13 +80,51 @@ void StencilOp(SWR_STENCILOP op, simdscalar mask, simdscalar stencilRefps, simds
 }
 
 
+template<SWR_FORMAT depthFormatT>
+simdscalar QuantizeDepth(simdscalar depth)
+{
+    SWR_TYPE depthType = FormatTraits<depthFormatT>::GetType(0);
+    uint32_t depthBpc = FormatTraits<depthFormatT>::GetBPC(0);
+
+    if (depthType == SWR_TYPE_FLOAT)
+    {
+        // assume only 32bit float depth supported
+        SWR_ASSERT(depthBpc == 32);
+
+        // matches shader precision, no quantizing needed
+        return depth;
+    }
+
+    // should be unorm depth if not float
+    SWR_ASSERT(depthType == SWR_TYPE_UNORM);
+
+    float quantize = (float)((1 << depthBpc) - 1);
+    simdscalar result = _simd_mul_ps(depth, _simd_set1_ps(quantize));
+    result = _simd_add_ps(result, _simd_set1_ps(0.5f));
+    result = _simd_round_ps(result, _MM_FROUND_TO_ZERO);
+    
+    if (depthBpc > 16)
+    {
+        result = _simd_div_ps(result, _simd_set1_ps(quantize));
+    }
+    else
+    {
+        result = _simd_mul_ps(result, _simd_set1_ps(1.0f / quantize));
+    }
+
+    return result;
+}
+
 INLINE
-simdscalar DepthStencilTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENCIL_STATE* pDSState,
+simdscalar DepthStencilTest(const API_STATE* pState,
                  bool frontFacing, simdscalar interpZ, uint8_t* pDepthBase, simdscalar coverageMask, uint8_t *pStencilBase,
                  simdscalar* pStencilMask)
 {
     static_assert(KNOB_DEPTH_HOT_TILE_FORMAT == R32_FLOAT, "Unsupported depth hot tile format");
     static_assert(KNOB_STENCIL_HOT_TILE_FORMAT == R8_UINT, "Unsupported stencil hot tile format");
+
+    const SWR_DEPTH_STENCIL_STATE* pDSState = &pState->depthStencilState;
+    const SWR_VIEWPORT* pViewport = &pState->vp[0];
 
     simdscalar depthResult = _simd_set1_ps(-1.0f);
     simdscalar zbuf;

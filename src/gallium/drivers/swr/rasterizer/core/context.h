@@ -308,6 +308,8 @@ OSALIGNLINE(struct) API_STATE
         uint32_t depthHottileEnable: 1;
         uint32_t stencilHottileEnable : 1;
     };
+
+    PFN_QUANTIZE_DEPTH      pfnQuantizeDepth;
 };
 
 class MacroTileMgr;
