@@ -1124,14 +1124,15 @@ void st_init_extensions(struct pipe_screen *screen,
       if (compute_supported_irs & (1 << PIPE_SHADER_IR_TGSI)) {
          uint64_t grid_size[3], block_size[3];
 
-         screen->get_compute_param(screen, PIPE_COMPUTE_CAP_MAX_GRID_SIZE,
-                                   grid_size);
-         screen->get_compute_param(screen, PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE,
-                                   block_size);
-         screen->get_compute_param(screen,
+         screen->get_compute_param(screen, PIPE_SHADER_IR_TGSI,
+                                   PIPE_COMPUTE_CAP_MAX_GRID_SIZE, grid_size);
+         screen->get_compute_param(screen, PIPE_SHADER_IR_TGSI,
+                                   PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE, block_size);
+         screen->get_compute_param(screen, PIPE_SHADER_IR_TGSI,
                                    PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK,
                                    &consts->MaxComputeWorkGroupInvocations);
-         screen->get_compute_param(screen, PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE,
+         screen->get_compute_param(screen, PIPE_SHADER_IR_TGSI,
+                                   PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE,
                                    &consts->MaxComputeSharedMemorySize);
 
          for (i = 0; i < 3; i++) {

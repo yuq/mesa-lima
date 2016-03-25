@@ -467,7 +467,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 
 		case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE: {
 			uint64_t max_const_buffer_size;
-			pscreen->get_compute_param(pscreen,
+			pscreen->get_compute_param(pscreen, PIPE_SHADER_IR_TGSI,
 				PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE,
 				&max_const_buffer_size);
 			return max_const_buffer_size;

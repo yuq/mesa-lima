@@ -368,6 +368,7 @@ nv50_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 
 static int
 nv50_screen_get_compute_param(struct pipe_screen *pscreen,
+                              enum pipe_shader_ir ir_type,
                               enum pipe_compute_cap param, void *data)
 {
    struct nv50_screen *screen = nv50_screen(pscreen);

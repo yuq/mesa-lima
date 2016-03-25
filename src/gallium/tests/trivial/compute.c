@@ -58,7 +58,9 @@ struct context {
                 uint64_t __v[4];                                        \
                 int __i, __n;                                           \
                                                                         \
-                __n = ctx->screen->get_compute_param(ctx->screen, c, __v); \
+                __n = ctx->screen->get_compute_param(ctx->screen,       \
+                                                     PIPE_SHADER_IR_TGSI, \
+                                                     c, __v);           \
                 printf("%s: {", #c);                                    \
                                                                         \
                 for (__i = 0; __i < __n / sizeof(*__v); ++__i)          \
