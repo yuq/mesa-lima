@@ -3022,6 +3022,10 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 
    fs_reg coordinate, shadow_comparitor, lod, lod2, sample_index, mcs, tex_offset;
 
+   /* The hardware requires a LOD for buffer textures */
+   if (instr->sampler_dim == GLSL_SAMPLER_DIM_BUF)
+      lod = brw_imm_d(0);
+
    for (unsigned i = 0; i < instr->num_srcs; i++) {
       fs_reg src = get_nir_src(instr->src[i].src);
       switch (instr->src[i].src_type) {
