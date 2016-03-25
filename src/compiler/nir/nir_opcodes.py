@@ -443,8 +443,22 @@ binop_convert("uadd_carry", tuint, tuint, commutative, "src0 + src1 < src0")
 
 binop_convert("usub_borrow", tuint, tuint, "", "src0 < src1")
 
-binop("fmod", tfloat, "", "src0 - src1 * floorf(src0 / src1)")
 binop("umod", tuint, "", "src1 == 0 ? 0 : src0 % src1")
+
+# For signed integers, there are several different possible definitions of
+# "modulus" or "remainder".  We follow the conventions used by LLVM and
+# SPIR-V.  The irem opcode implements the standard C/C++ signed "%"
+# operation while the imod opcode implements the more mathematical
+# "modulus" operation.  For details on the difference, see
+#
+# http://mathforum.org/library/drmath/view/52343.html
+
+binop("irem", tint, "", "src1 == 0 ? 0 : src0 % src1")
+binop("imod", tint, "",
+      "src1 == 0 ? 0 : ((src0 % src1 == 0 || (src0 >= 0) == (src1 >= 0)) ?"
+      "                 src0 % src1 : src0 % src1 + src1)")
+binop("fmod", tfloat, "", "src0 - src1 * floorf(src0 / src1)")
+binop("frem", tfloat, "", "src0 - src1 * truncf(src0 / src1)")
 
 #
 # Comparisons
