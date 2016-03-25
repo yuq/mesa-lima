@@ -495,7 +495,7 @@ brw_postprocess_nir(nir_shader *nir,
 
    if (devinfo->gen >= 6) {
       /* Try and fuse multiply-adds */
-//      OPT(brw_nir_opt_peephole_ffma);
+      OPT(brw_nir_opt_peephole_ffma);
    }
 
    OPT(nir_opt_algebraic_late);
