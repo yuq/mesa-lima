@@ -1248,7 +1248,6 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       /* Select that or zero based on normal status */
       inst = emit(BRW_OPCODE_SEL, dst, zero, tmp32);
       inst->predicate = BRW_PREDICATE_NORMAL;
-      inst->predicate_inverse = true;
       inst->saturate = instr->dest.saturate;
       break;
    }
