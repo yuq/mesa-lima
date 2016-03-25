@@ -83,8 +83,7 @@ nir_ssa_undef(nir_builder *build, unsigned num_components, unsigned bit_size)
    if (!undef)
       return NULL;
 
-   nir_instr_insert(nir_before_block(nir_start_block(build->impl)),
-                    &undef->instr);
+   nir_instr_insert(nir_before_cf_list(&build->impl->body), &undef->instr);
 
    return &undef->def;
 }
