@@ -325,8 +325,8 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 }
 
 static void
-si_decompress_color_textures(struct si_context *sctx,
-			     struct si_textures_info *textures)
+si_decompress_sampler_color_textures(struct si_context *sctx,
+				     struct si_textures_info *textures)
 {
 	unsigned i;
 	unsigned mask = textures->compressed_colortex_mask;
@@ -346,6 +346,33 @@ si_decompress_color_textures(struct si_context *sctx,
 		si_blit_decompress_color(&sctx->b.b, tex,
 					 view->u.tex.first_level, view->u.tex.last_level,
 					 0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level),
+					 false);
+	}
+}
+
+static void
+si_decompress_image_color_textures(struct si_context *sctx,
+				   struct si_images_info *images)
+{
+	unsigned i;
+	unsigned mask = images->compressed_colortex_mask;
+
+	while (mask) {
+		const struct pipe_image_view *view;
+		struct r600_texture *tex;
+
+		i = u_bit_scan(&mask);
+
+		view = &images->views[i];
+		assert(view->resource->target != PIPE_BUFFER);
+
+		tex = (struct r600_texture *)view->resource;
+		if (!tex->cmask.size && !tex->fmask.size && !tex->dcc_offset)
+			continue;
+
+		si_blit_decompress_color(&sctx->b.b, tex,
+					 view->u.tex.level, view->u.tex.level,
+					 0, util_max_layer(&tex->resource.b.b, view->u.tex.level),
 					 false);
 	}
 }
@@ -370,7 +397,10 @@ void si_decompress_textures(struct si_context *sctx)
 			si_flush_depth_textures(sctx, &sctx->samplers[i]);
 		}
 		if (sctx->samplers[i].compressed_colortex_mask) {
-			si_decompress_color_textures(sctx, &sctx->samplers[i]);
+			si_decompress_sampler_color_textures(sctx, &sctx->samplers[i]);
+		}
+		if (sctx->images[i].compressed_colortex_mask) {
+			si_decompress_image_color_textures(sctx, &sctx->images[i]);
 		}
 	}
 }

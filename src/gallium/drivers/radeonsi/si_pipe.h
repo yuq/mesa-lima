@@ -141,6 +141,12 @@ struct si_textures_info {
 	uint32_t			compressed_colortex_mask;
 };
 
+struct si_images_info {
+	struct si_descriptors		desc;
+	struct pipe_image_view		views[SI_NUM_IMAGES];
+	uint32_t			compressed_colortex_mask;
+};
+
 struct si_framebuffer {
 	struct r600_atom		atom;
 	struct pipe_framebuffer_state	state;
@@ -251,6 +257,7 @@ struct si_context {
 	struct si_buffer_resources	const_buffers[SI_NUM_SHADERS];
 	struct si_buffer_resources	rw_buffers[SI_NUM_SHADERS];
 	struct si_textures_info		samplers[SI_NUM_SHADERS];
+	struct si_images_info		images[SI_NUM_SHADERS];
 
 	/* other shader resources */
 	struct pipe_constant_buffer	null_const_buf; /* used for set_constant_buffer(NULL) on CIK */

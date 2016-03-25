@@ -335,7 +335,6 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
    info->io.ucpBase = NV50_CB_AUX_UCP_OFFSET;
    info->io.genUserClip = prog->vp.clpd_nr;
 
-   info->io.resInfoCBSlot = 15;
    info->io.suInfoBase = NV50_CB_AUX_TEX_MS_OFFSET;
    info->io.sampleInfoBase = NV50_CB_AUX_SAMPLE_OFFSET;
    info->io.msInfoCBSlot = 15;

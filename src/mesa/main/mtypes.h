@@ -667,7 +667,6 @@ struct gl_list_attrib
 struct gl_multisample_attrib
 {
    GLboolean Enabled;
-   GLboolean _Enabled;   /**< true if Enabled and multisample buffer */
    GLboolean SampleAlphaToCoverage;
    GLboolean SampleAlphaToOne;
    GLboolean SampleCoverage;

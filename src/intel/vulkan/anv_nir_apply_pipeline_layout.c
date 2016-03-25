@@ -119,7 +119,7 @@ lower_res_index_intrinsic(nir_intrinsic_instr *intrin,
 
    nir_ssa_def *block_index;
    if (const_block_idx) {
-      block_index = nir_imm_int(b, surface_index + const_block_idx->u[0]);
+      block_index = nir_imm_int(b, surface_index + const_block_idx->u32[0]);
    } else {
       block_index = nir_iadd(b, nir_imm_int(b, surface_index),
                              nir_ssa_for_src(b, intrin->src[0], 1));

@@ -114,6 +114,8 @@ ureg_create_shader( struct ureg_program *,
                     struct pipe_context *pipe,
 		    const struct pipe_stream_output_info *so );
 
+void
+ureg_set_next_shader_processor(struct ureg_program *ureg, unsigned processor);
 
 /* Alternately, return the built token stream and hand ownership of
  * that memory to the caller:
@@ -338,7 +340,7 @@ struct ureg_src
 ureg_DECL_buffer(struct ureg_program *ureg, unsigned nr, bool atomic);
 
 struct ureg_src
-ureg_DECL_shared_memory(struct ureg_program *ureg);
+ureg_DECL_memory(struct ureg_program *ureg, unsigned memory_type);
 
 static inline struct ureg_src
 ureg_imm4f( struct ureg_program *ureg,

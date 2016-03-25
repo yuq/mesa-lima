@@ -66,7 +66,7 @@ struct nvc0_screen {
 
    struct nouveau_bo *text;
    struct nouveau_bo *parm;       /* for COMPUTE */
-   struct nouveau_bo *uniform_bo; /* for 3D */
+   struct nouveau_bo *uniform_bo;
    struct nouveau_bo *tls;
    struct nouveau_bo *txc; /* TIC (offset 0) and TSC (65536) */
    struct nouveau_bo *poly_cache;

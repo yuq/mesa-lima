@@ -140,9 +140,8 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		sctx->b.b.create_video_buffer = vl_video_buffer_create;
 	}
 
-	sctx->b.gfx.cs = ws->cs_create(sctx->b.ctx, RING_GFX, si_context_gfx_flush,
-				       sctx, sscreen->b.trace_bo ?
-					       sscreen->b.trace_bo->buf : NULL);
+	sctx->b.gfx.cs = ws->cs_create(sctx->b.ctx, RING_GFX,
+				       si_context_gfx_flush, sctx);
 	sctx->b.gfx.flush = si_context_gfx_flush;
 
 	/* Border colors. */
@@ -539,8 +538,9 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
-	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 		return 0;
+	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
+		return HAVE_LLVM >= 0x0309 ? SI_NUM_IMAGES : 0;
 	}
 	return 0;
 }

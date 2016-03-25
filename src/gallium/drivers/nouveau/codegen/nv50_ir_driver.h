@@ -160,7 +160,7 @@ struct nv50_ir_prog_info
       uint8_t clipDistances;     /* number of clip distance outputs */
       uint8_t cullDistances;     /* number of cull distance outputs */
       int8_t genUserClip;        /* request user clip planes for ClipVertex */
-      uint8_t auxCBSlot;         /* constant buffer index of UCP/draw data */
+      uint8_t auxCBSlot;         /* driver constant buffer slot */
       uint16_t ucpBase;          /* base address for UCPs */
       uint16_t drawInfoBase;     /* base address for draw parameters */
       uint8_t pointSize;         /* output index for PointSize */
@@ -175,7 +175,6 @@ struct nv50_ir_prog_info
       uint8_t globalAccess;      /* 1 for read, 2 for wr, 3 for rw */
       bool fp64;                 /* program uses fp64 math */
       bool nv50styleSurfaces;    /* generate gX[] access for raw buffers */
-      uint8_t resInfoCBSlot;     /* cX[] used for tex handles, surface info */
       uint16_t texBindBase;      /* base address for tex handles (nve4) */
       uint16_t suInfoBase;       /* base address for surface info (nve4) */
       uint16_t sampleInfoBase;   /* base address for sample positions */

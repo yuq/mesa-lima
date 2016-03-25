@@ -89,6 +89,7 @@ static void set_fragment_shader(void)
       "DCL IN[0], GENERIC[0], PERSPECTIVE\n"
       "DCL OUT[0], COLOR\n"
       "DCL SAMP[0]\n"
+      "DCL SVIEW[0], 2D, FLOAT\n"
       "  0: TXP OUT[0], IN[0], SAMP[0], 2D\n"
       "  2: END\n";
 

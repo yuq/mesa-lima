@@ -29,6 +29,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 #include "brw_wm.h"
+#include "main/framebuffer.h"
 
 /**
  * Helper function to emit depth related command packets.
@@ -303,7 +304,7 @@ pma_fix_enable(const struct brw_context *brw)
    const bool kill_pixel =
       brw->wm.prog_data->uses_kill ||
       brw->wm.prog_data->uses_omask ||
-      (ctx->Multisample._Enabled && ctx->Multisample.SampleAlphaToCoverage) ||
+      (_mesa_is_multisample_enabled(ctx) && ctx->Multisample.SampleAlphaToCoverage) ||
       ctx->Color.AlphaEnabled;
 
    /* The big formula in CACHE_MODE_1::NP PMA FIX ENABLE. */

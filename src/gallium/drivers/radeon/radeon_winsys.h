@@ -515,7 +515,7 @@ struct radeon_winsys {
      */
     struct pb_buffer *(*buffer_from_handle)(struct radeon_winsys *ws,
                                             struct winsys_handle *whandle,
-                                            unsigned *stride);
+                                            unsigned *stride, unsigned *offset);
 
     /**
      * Get a winsys buffer from a user pointer. The resulting buffer can't
@@ -546,7 +546,8 @@ struct radeon_winsys {
      * \return          TRUE on success.
      */
     boolean (*buffer_get_handle)(struct pb_buffer *buf,
-                                 unsigned stride,
+                                 unsigned stride, unsigned offset,
+                                 unsigned slice_size,
                                  struct winsys_handle *whandle);
 
     /**
@@ -592,14 +593,12 @@ struct radeon_winsys {
      * \param ring_type The ring type (GFX, DMA, UVD)
      * \param flush     Flush callback function associated with the command stream.
      * \param user      User pointer that will be passed to the flush callback.
-     * \param trace_buf Trace buffer when tracing is enabled
      */
     struct radeon_winsys_cs *(*cs_create)(struct radeon_winsys_ctx *ctx,
                                           enum ring_type ring_type,
                                           void (*flush)(void *ctx, unsigned flags,
 							struct pipe_fence_handle **fence),
-                                          void *flush_ctx,
-                                          struct pb_buffer *trace_buf);
+                                          void *flush_ctx);
 
     /**
      * Destroy a command stream.
@@ -672,12 +671,10 @@ struct radeon_winsys {
      * \param flags,      RADEON_FLUSH_ASYNC or 0.
      * \param fence       Pointer to a fence. If non-NULL, a fence is inserted
      *                    after the CS and is returned through this parameter.
-     * \param cs_trace_id A unique identifier of the cs, used for tracing.
      */
     void (*cs_flush)(struct radeon_winsys_cs *cs,
                      unsigned flags,
-                     struct pipe_fence_handle **fence,
-                     uint32_t cs_trace_id);
+                     struct pipe_fence_handle **fence);
 
     /**
      * Return TRUE if a buffer is referenced by a command stream.

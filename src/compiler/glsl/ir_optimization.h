@@ -124,7 +124,8 @@ void lower_shared_reference(struct gl_shader *shader, unsigned *shared_size);
 void lower_ubo_reference(struct gl_shader *shader);
 void lower_packed_varyings(void *mem_ctx,
                            unsigned locations_used, ir_variable_mode mode,
-                           unsigned gs_input_vertices, gl_shader *shader);
+                           unsigned gs_input_vertices, gl_shader *shader,
+                           bool disable_varying_packing, bool xfb_enabled);
 bool lower_vector_insert(exec_list *instructions, bool lower_nonconstant_index);
 bool lower_vector_derefs(gl_shader *shader);
 void lower_named_interface_blocks(void *mem_ctx, gl_shader *shader);
@@ -138,6 +139,7 @@ bool lower_tess_level(gl_shader *shader);
 bool lower_vertex_id(gl_shader *shader);
 
 bool lower_subroutine(exec_list *instructions, struct _mesa_glsl_parse_state *state);
+void propagate_invariance(exec_list *instructions);
 
 ir_rvalue *
 compare_index_block(exec_list *instructions, ir_variable *index,

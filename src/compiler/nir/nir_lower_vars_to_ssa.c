@@ -505,6 +505,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
             nir_ssa_undef_instr *undef =
                nir_ssa_undef_instr_create(state->shader,
                                           intrin->num_components);
+            undef->def.bit_size = intrin->dest.ssa.bit_size;
 
             nir_instr_insert_before(&intrin->instr, &undef->instr);
             nir_instr_remove(&intrin->instr);
@@ -528,7 +529,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 
          mov->dest.write_mask = (1 << intrin->num_components) - 1;
          nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
-                           intrin->num_components, NULL);
+                           intrin->num_components,
+                           intrin->dest.ssa.bit_size, NULL);
 
          nir_instr_insert_before(&intrin->instr, &mov->instr);
          nir_instr_remove(&intrin->instr);
@@ -719,6 +721,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
       node->pb_value =
          nir_phi_builder_add_value(state.phi_builder,
                                    glsl_get_vector_elements(node->type),
+                                   glsl_get_bit_size(glsl_get_base_type(node->type)),
                                    store_blocks);
 
       if (node->deref->var->constant_initializer) {

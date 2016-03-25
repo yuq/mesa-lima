@@ -335,8 +335,7 @@ amdgpu_cs_create(struct radeon_winsys_ctx *rwctx,
                  enum ring_type ring_type,
                  void (*flush)(void *ctx, unsigned flags,
                                struct pipe_fence_handle **fence),
-                 void *flush_ctx,
-                 struct pb_buffer *trace_buf)
+                 void *flush_ctx)
 {
    struct amdgpu_ctx *ctx = (struct amdgpu_ctx*)rwctx;
    struct amdgpu_cs *cs;
@@ -609,8 +608,7 @@ DEBUG_GET_ONCE_BOOL_OPTION(all_bos, "RADEON_ALL_BOS", FALSE)
 
 static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
                             unsigned flags,
-                            struct pipe_fence_handle **fence,
-                            uint32_t cs_trace_id)
+                            struct pipe_fence_handle **fence)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct amdgpu_winsys *ws = cs->ctx->ws;

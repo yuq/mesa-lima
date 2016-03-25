@@ -127,11 +127,10 @@ nir_constant_clone(const nir_constant *c, nir_variable *nvar)
 /* NOTE: for cloning nir_variable's, bypass nir_variable_create to avoid
  * having to deal with locals and globals separately:
  */
-static nir_variable *
-clone_variable(clone_state *state, const nir_variable *var)
+nir_variable *
+nir_variable_clone(const nir_variable *var, nir_shader *shader)
 {
-   nir_variable *nvar = rzalloc(state->ns, nir_variable);
-   add_remap(state, nvar, var);
+   nir_variable *nvar = rzalloc(shader, nir_variable);
 
    nvar->type = var->type;
    nvar->name = ralloc_strdup(nvar, var->name);
@@ -145,6 +144,15 @@ clone_variable(clone_state *state, const nir_variable *var)
          nir_constant_clone(var->constant_initializer, nvar);
    }
    nvar->interface_type = var->interface_type;
+
+   return nvar;
+}
+
+static nir_variable *
+clone_variable(clone_state *state, const nir_variable *var)
+{
+   nir_variable *nvar = nir_variable_clone(var, state->ns);
+   add_remap(state, nvar, var);
 
    return nvar;
 }
@@ -220,7 +228,8 @@ __clone_dst(clone_state *state, nir_instr *ninstr,
 {
    ndst->is_ssa = dst->is_ssa;
    if (dst->is_ssa) {
-      nir_ssa_dest_init(ninstr, ndst, dst->ssa.num_components, dst->ssa.name);
+      nir_ssa_dest_init(ninstr, ndst, dst->ssa.num_components,
+                        dst->ssa.bit_size, dst->ssa.name);
       add_remap(state, &ndst->ssa, &dst->ssa);
    } else {
       ndst->reg.reg = remap_reg(state, dst->reg.reg);
@@ -303,6 +312,7 @@ static nir_alu_instr *
 clone_alu(clone_state *state, const nir_alu_instr *alu)
 {
    nir_alu_instr *nalu = nir_alu_instr_create(state->ns, alu->op);
+   nalu->exact = alu->exact;
 
    __clone_dst(state, &nalu->instr, &nalu->dest.dest, &alu->dest.dest);
    nalu->dest.saturate = alu->dest.saturate;

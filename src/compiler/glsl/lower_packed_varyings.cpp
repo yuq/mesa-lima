@@ -168,7 +168,9 @@ public:
                                  ir_variable_mode mode,
                                  unsigned gs_input_vertices,
                                  exec_list *out_instructions,
-                                 exec_list *out_variables);
+                                 exec_list *out_variables,
+                                 bool disable_varying_packing,
+                                 bool xfb_enabled);
 
    void run(struct gl_shader *shader);
 
@@ -231,6 +233,9 @@ private:
     * Exec list into which the visitor should insert any new variables.
     */
    exec_list *out_variables;
+
+   bool disable_varying_packing;
+   bool xfb_enabled;
 };
 
 } /* anonymous namespace */
@@ -238,7 +243,8 @@ private:
 lower_packed_varyings_visitor::lower_packed_varyings_visitor(
       void *mem_ctx, unsigned locations_used, ir_variable_mode mode,
       unsigned gs_input_vertices, exec_list *out_instructions,
-      exec_list *out_variables)
+      exec_list *out_variables, bool disable_varying_packing,
+      bool xfb_enabled)
    : mem_ctx(mem_ctx),
      locations_used(locations_used),
      packed_varyings((ir_variable **)
@@ -247,7 +253,9 @@ lower_packed_varyings_visitor::lower_packed_varyings_visitor(
      mode(mode),
      gs_input_vertices(gs_input_vertices),
      out_instructions(out_instructions),
-     out_variables(out_variables)
+     out_variables(out_variables),
+     disable_varying_packing(disable_varying_packing),
+     xfb_enabled(xfb_enabled)
 {
 }
 
@@ -656,7 +664,18 @@ lower_packed_varyings_visitor::needs_lowering(ir_variable *var)
    if (var->data.explicit_location)
       return false;
 
-   const glsl_type *type = var->type->without_array();
+   /* Override disable_varying_packing if the var is only used by transform
+    * feedback. Also override it if transform feedback is enabled and the
+    * variable is an array, struct or matrix as the elements of these types
+    * will always has the same interpolation and therefore asre safe to pack.
+    */
+   const glsl_type *type = var->type;
+   if (disable_varying_packing && !var->data.is_xfb_only &&
+       !((type->is_array() || type->is_record() || type->is_matrix()) &&
+         xfb_enabled))
+      return false;
+
+   type = type->without_array();
    if (type->vector_elements == 4 && !type->is_double())
       return false;
    return true;
@@ -709,7 +728,8 @@ lower_packed_varyings_gs_splicer::visit_leave(ir_emit_vertex *ev)
 void
 lower_packed_varyings(void *mem_ctx, unsigned locations_used,
                       ir_variable_mode mode, unsigned gs_input_vertices,
-                      gl_shader *shader)
+                      gl_shader *shader, bool disable_varying_packing,
+                      bool xfb_enabled)
 {
    exec_list *instructions = shader->ir;
    ir_function *main_func = shader->symbols->get_function("main");
@@ -720,7 +740,9 @@ lower_packed_varyings(void *mem_ctx, unsigned locations_used,
    lower_packed_varyings_visitor visitor(mem_ctx, locations_used, mode,
                                          gs_input_vertices,
                                          &new_instructions,
-                                         &new_variables);
+                                         &new_variables,
+                                         disable_varying_packing,
+                                         xfb_enabled);
    visitor.run(shader);
    if (mode == ir_var_shader_out) {
       if (shader->Stage == MESA_SHADER_GEOMETRY) {

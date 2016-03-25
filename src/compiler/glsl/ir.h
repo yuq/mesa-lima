@@ -720,6 +720,13 @@ public:
       unsigned is_unmatched_generic_inout:1;
 
       /**
+       * Is this varying used only by transform feedback?
+       *
+       * This is used by the linker to decide if its safe to pack the varying.
+       */
+      unsigned is_xfb_only:1;
+
+      /**
        * If non-zero, then this variable may be packed along with other variables
        * into a single varying slot, so this offset should be applied when
        * accessing components.  For example, an offset of 1 means that the x

@@ -25,7 +25,38 @@
 
 #include "nir.h"
 
+/** A helper for placing phi nodes in a NIR shader
+ *
+ * Basic usage goes something like this:
+ *
+ *     each variable, var, has:
+ *         a bitset var.defs of blocks where the variable is defined
+ *         a struct nir_phi_builder_value *pb_val
+ *
+ *     // initialize bitsets
+ *     foreach block:
+ *         foreach def of variable var:
+ *             var.defs[def.block] = true;
+ *
+ *     // initialize phi builder
+ *     pb = nir_phi_builder_create()
+ *     foreach var:
+ *         var.pb_val = nir_phi_builder_add_value(pb, var.defs)
+ *
+ *     // Visit each block.  This needs to visit dominators first;
+ *     // nir_for_each_block() will be ok.
+ *     foreach block:
+ *         foreach instruction:
+ *             foreach use of variable var:
+ *                 replace use with nir_phi_builder_get_block_def(var.pb_val)
+ *             foreach def of variable var:
+ *                 create ssa def, register with
+ *     nir_phi_builder_set_block_def(var.pb_val)
+ *
+ *     nir_phi_builder_finish(pb)
+ */
 struct nir_phi_builder;
+
 struct nir_phi_builder_value;
 
 /* Create a new phi builder.
@@ -43,7 +74,7 @@ struct nir_phi_builder *nir_phi_builder_create(nir_function_impl *impl);
  */
 struct nir_phi_builder_value *
 nir_phi_builder_add_value(struct nir_phi_builder *pb, unsigned num_components,
-                          const BITSET_WORD *defs);
+                          unsigned bit_size, const BITSET_WORD *defs);
 
 /* Register a definition for the given value and block.
  *

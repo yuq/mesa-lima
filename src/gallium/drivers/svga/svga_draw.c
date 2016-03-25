@@ -458,6 +458,14 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
       ret = svga_rebind_shaders(svga);
       if (ret != PIPE_OK)
          return ret;
+
+      /* Rebind stream output targets */
+      ret = svga_rebind_stream_output_targets(svga);
+      if (ret != PIPE_OK)
+         return ret;
+
+      /* Force rebinding the index buffer when needed */
+      svga->state.hw_draw.ib = NULL;
    }
 
    ret = validate_sampler_resources(svga);

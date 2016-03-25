@@ -1390,8 +1390,18 @@ static boolean parse_declaration( struct translate_ctx *ctx )
             ctx->cur = cur;
          }
       } else if (file == TGSI_FILE_MEMORY) {
-         if (str_match_nocase_whole(&cur, "SHARED")) {
-            decl.Declaration.Shared = 1;
+         if (str_match_nocase_whole(&cur, "GLOBAL")) {
+            /* Note this is a no-op global is the default */
+            decl.Declaration.MemType = TGSI_MEMORY_TYPE_GLOBAL;
+            ctx->cur = cur;
+         } else if (str_match_nocase_whole(&cur, "SHARED")) {
+            decl.Declaration.MemType = TGSI_MEMORY_TYPE_SHARED;
+            ctx->cur = cur;
+         } else if (str_match_nocase_whole(&cur, "PRIVATE")) {
+            decl.Declaration.MemType = TGSI_MEMORY_TYPE_PRIVATE;
+            ctx->cur = cur;
+         } else if (str_match_nocase_whole(&cur, "INPUT")) {
+            decl.Declaration.MemType = TGSI_MEMORY_TYPE_INPUT;
             ctx->cur = cur;
          }
       } else {

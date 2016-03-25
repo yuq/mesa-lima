@@ -2029,10 +2029,6 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		cs->buf[cs->cdw++] = EVENT_TYPE(EVENT_TYPE_SQ_NON_EVENT);
 	}
 
-	if (rctx->screen->b.trace_bo) {
-		r600_trace_emit(rctx);
-	}
-
 	/* Set the depth buffer as dirty. */
 	if (rctx->framebuffer.state.zsbuf) {
 		struct pipe_surface *surf = rctx->framebuffer.state.zsbuf;
@@ -2926,23 +2922,4 @@ void r600_init_common_state_functions(struct r600_context *rctx)
 	rctx->b.invalidate_buffer = r600_invalidate_buffer;
 	rctx->b.set_occlusion_query_state = r600_set_occlusion_query_state;
 	rctx->b.need_gfx_cs_space = r600_need_gfx_cs_space;
-}
-
-void r600_trace_emit(struct r600_context *rctx)
-{
-	struct r600_screen *rscreen = rctx->screen;
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
-	uint64_t va;
-	uint32_t reloc;
-
-	va = rscreen->b.trace_bo->gpu_address;
-	reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rscreen->b.trace_bo,
-				      RADEON_USAGE_READWRITE, RADEON_PRIO_TRACE);
-	radeon_emit(cs, PKT3(PKT3_MEM_WRITE, 3, 0));
-	radeon_emit(cs, va & 0xFFFFFFFFUL);
-	radeon_emit(cs, (va >> 32UL) & 0xFFUL);
-	radeon_emit(cs, cs->cdw);
-	radeon_emit(cs, rscreen->b.cs_count);
-	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-	radeon_emit(cs, reloc);
 }

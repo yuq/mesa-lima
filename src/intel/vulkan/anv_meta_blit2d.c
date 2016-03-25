@@ -455,7 +455,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    tex->texture = nir_deref_var_create(tex, sampler);
    tex->sampler = NULL;
 
-   nir_ssa_dest_init(&tex->instr, &tex->dest, 4, "tex");
+   nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, "tex");
    nir_builder_instr_insert(&b, &tex->instr);
 
    nir_variable *color_out = nir_variable_create(b.shader, nir_var_shader_out,

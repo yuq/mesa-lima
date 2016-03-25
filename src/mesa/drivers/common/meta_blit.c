@@ -597,6 +597,7 @@ blitframebuffer_texture(struct gl_context *ctx,
                         GLenum filter, GLint flipX, GLint flipY,
                         GLboolean glsl_version, GLboolean do_depth)
 {
+   struct save_state *save = &ctx->Meta->Save[ctx->Meta->SaveStackDepth - 1];
    int att_index = do_depth ? BUFFER_DEPTH : readFb->_ColorReadBufferIndex;
    const struct gl_renderbuffer_attachment *readAtt =
       &readFb->Attachment[att_index];
@@ -709,7 +710,7 @@ blitframebuffer_texture(struct gl_context *ctx,
    fb_tex_blit.samp_obj = _mesa_meta_setup_sampler(ctx, texObj, target, filter,
                                                    srcLevel);
 
-   /* Always do our blits with no net sRGB decode or encode.
+   /* For desktop GL, we do our blits with no net sRGB decode or encode.
     *
     * However, if both the src and dst can be srgb decode/encoded, enable them
     * so that we do any blending (from scaling or from MSAA resolves) in the
@@ -723,18 +724,42 @@ blitframebuffer_texture(struct gl_context *ctx,
     *      scissor test."
     *
     * The GL 4.4 specification disagrees and says that the sRGB part of the
-    * fragment pipeline applies, but this was found to break applications.
+    * fragment pipeline applies, but this was found to break applications
+    * (such as Left 4 Dead 2).
+    *
+    * However, for ES 3.0, we follow the specification and perform sRGB
+    * decoding and encoding.  The specification has always been clear in
+    * the ES world, and hasn't changed over time.
     */
    if (ctx->Extensions.EXT_texture_sRGB_decode) {
-      if (_mesa_get_format_color_encoding(rb->Format) == GL_SRGB &&
-          drawFb->Visual.sRGBCapable) {
+      bool src_srgb = _mesa_get_format_color_encoding(rb->Format) == GL_SRGB;
+      if (save->API == API_OPENGLES2 && ctx->Version >= 30) {
+         /* From the ES 3.0.4 specification, page 198:
+          * "When values are taken from the read buffer, if the value of
+          *  FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING for the framebuffer
+          *  attachment corresponding to the read buffer is SRGB (see section
+          *  6.1.13), the red, green, and blue components are converted from
+          *  the non-linear sRGB color space according to equation 3.24.
+          *
+          *  When values are written to the draw buffers, blit operations
+          *  bypass the fragment pipeline. The only fragment operations which
+          *  affect a blit are the pixel ownership test, the scissor test,
+          *  and sRGB conversion (see section 4.1.8)."
+          */
          _mesa_set_sampler_srgb_decode(ctx, fb_tex_blit.samp_obj,
-                                       GL_DECODE_EXT);
-         _mesa_set_framebuffer_srgb(ctx, GL_TRUE);
+                                       src_srgb ? GL_DECODE_EXT
+                                                : GL_SKIP_DECODE_EXT);
+         _mesa_set_framebuffer_srgb(ctx, drawFb->Visual.sRGBCapable);
       } else {
-         _mesa_set_sampler_srgb_decode(ctx, fb_tex_blit.samp_obj,
-                                       GL_SKIP_DECODE_EXT);
-         /* set_framebuffer_srgb was set by _mesa_meta_begin(). */
+         if (src_srgb && drawFb->Visual.sRGBCapable) {
+            _mesa_set_sampler_srgb_decode(ctx, fb_tex_blit.samp_obj,
+                                          GL_DECODE_EXT);
+            _mesa_set_framebuffer_srgb(ctx, GL_TRUE);
+         } else {
+            _mesa_set_sampler_srgb_decode(ctx, fb_tex_blit.samp_obj,
+                                          GL_SKIP_DECODE_EXT);
+            /* set_framebuffer_srgb was set by _mesa_meta_begin(). */
+         }
       }
    }
 

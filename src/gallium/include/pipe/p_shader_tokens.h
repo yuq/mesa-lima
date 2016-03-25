@@ -117,6 +117,12 @@ enum tgsi_file_type {
 #define TGSI_CYLINDRICAL_WRAP_Z (1 << 2)
 #define TGSI_CYLINDRICAL_WRAP_W (1 << 3)
 
+#define TGSI_MEMORY_TYPE_GLOBAL        0 /* OpenCL global              */
+#define TGSI_MEMORY_TYPE_SHARED        1 /* OpenCL local / GLSL shared */
+#define TGSI_MEMORY_TYPE_PRIVATE       2 /* OpenCL private             */
+#define TGSI_MEMORY_TYPE_INPUT         3 /* OpenCL kernel input params */
+#define TGSI_MEMORY_TYPE_COUNT         4
+
 struct tgsi_declaration
 {
    unsigned Type        : 4;  /**< TGSI_TOKEN_TYPE_DECLARATION */
@@ -130,8 +136,8 @@ struct tgsi_declaration
    unsigned Local       : 1;  /**< optimize as subroutine local variable? */
    unsigned Array       : 1;  /**< extra array info? */
    unsigned Atomic      : 1;  /**< atomic only? for TGSI_FILE_BUFFER */
-   unsigned Shared      : 1;  /**< shared storage for TGSI_FILE_MEMORY */
-   unsigned Padding     : 4;
+   unsigned MemType     : 2;  /**< TGSI_MEMORY_TYPE_x for TGSI_FILE_MEMORY */
+   unsigned Padding     : 3;
 };
 
 struct tgsi_declaration_range
@@ -231,15 +237,6 @@ struct tgsi_declaration_array {
    unsigned Padding : 22;
 };
 
-/*
- * Special resources that don't need to be declared.  They map to the
- * GLOBAL/LOCAL/PRIVATE/INPUT compute memory spaces.
- */
-#define TGSI_RESOURCE_GLOBAL	0x7fff
-#define TGSI_RESOURCE_LOCAL	0x7ffe
-#define TGSI_RESOURCE_PRIVATE	0x7ffd
-#define TGSI_RESOURCE_INPUT	0x7ffc
-
 #define TGSI_IMM_FLOAT32   0
 #define TGSI_IMM_UINT32    1
 #define TGSI_IMM_INT32     2
@@ -278,7 +275,8 @@ union tgsi_immediate_data
 #define TGSI_PROPERTY_NUM_CLIPDIST_ENABLED   15
 #define TGSI_PROPERTY_NUM_CULLDIST_ENABLED   16
 #define TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL 17
-#define TGSI_PROPERTY_COUNT                  18
+#define TGSI_PROPERTY_NEXT_SHADER            18
+#define TGSI_PROPERTY_COUNT                  19
 
 struct tgsi_property {
    unsigned Type         : 4;  /**< TGSI_TOKEN_TYPE_PROPERTY */

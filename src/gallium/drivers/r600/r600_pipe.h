@@ -28,8 +28,6 @@
 
 #include "radeon/r600_pipe_common.h"
 #include "radeon/r600_cs.h"
-
-#include "r600_llvm.h"
 #include "r600_public.h"
 
 #include "util/u_suballoc.h"
@@ -60,7 +58,6 @@
 /* the number of CS dwords for flushing and drawing */
 #define R600_MAX_FLUSH_CS_DWORDS	16
 #define R600_MAX_DRAW_CS_DWORDS		58
-#define R600_TRACE_CS_DWORDS		7
 
 #define R600_MAX_USER_CONST_BUFFERS 13
 #define R600_MAX_DRIVER_CONST_BUFFERS 3
@@ -244,7 +241,6 @@ struct r600_gs_rings_state {
 
 /* This must start from 16. */
 /* features */
-#define DBG_LLVM		(1 << 29)
 #define DBG_NO_CP_DMA		(1 << 30)
 /* shader backend */
 #define DBG_NO_SB		(1 << 21)
@@ -571,15 +567,10 @@ static inline void r600_mark_atom_dirty(struct r600_context *rctx,
 	r600_set_atom_dirty(rctx, atom, true);
 }
 
-void r600_trace_emit(struct r600_context *rctx);
-
 static inline void r600_emit_atom(struct r600_context *rctx, struct r600_atom *atom)
 {
 	atom->emit(&rctx->b, atom);
 	r600_set_atom_dirty(rctx, atom, false);
-	if (rctx->screen->b.trace_bo) {
-		r600_trace_emit(rctx);
-	}
 }
 
 static inline void r600_set_cso_state(struct r600_context *rctx,

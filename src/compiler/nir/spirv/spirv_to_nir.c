@@ -92,7 +92,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
             nir_load_const_instr_create(b->shader, num_components);
 
          for (unsigned i = 0; i < num_components; i++)
-            load->value.u[i] = constant->value.u[i];
+            load->value.u32[i] = constant->value.u[i];
 
          nir_instr_insert_before_cf_list(&b->impl->body, &load->instr);
          val->def = &load->def;
@@ -109,7 +109,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
                nir_load_const_instr_create(b->shader, rows);
 
             for (unsigned j = 0; j < rows; j++)
-               load->value.u[j] = constant->value.u[rows * i + j];
+               load->value.u32[j] = constant->value.u[rows * i + j];
 
             nir_instr_insert_before_cf_list(&b->impl->body, &load->instr);
             col_val->def = &load->def;
@@ -1035,6 +1035,8 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap);
 
          unsigned num_components = glsl_get_vector_elements(val->const_type);
+         unsigned bit_size =
+            glsl_get_bit_size(glsl_get_base_type(val->const_type));
 
          nir_const_value src[3];
          assert(count <= 7);
@@ -1043,14 +1045,16 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                vtn_value(b, w[4 + i], vtn_value_type_constant)->constant;
 
             unsigned j = swap ? 1 - i : i;
+            assert(bit_size == 32);
             for (unsigned k = 0; k < num_components; k++)
-               src[j].u[k] = c->value.u[k];
+               src[j].u32[k] = c->value.u[k];
          }
 
-         nir_const_value res = nir_eval_const_opcode(op, num_components, src);
+         nir_const_value res = nir_eval_const_opcode(op, num_components,
+                                                     bit_size, src);
 
          for (unsigned k = 0; k < num_components; k++)
-            val->constant->value.u[k] = res.u[k];
+            val->constant->value.u[k] = res.u32[k];
 
          return;
       } /* default */
@@ -1414,7 +1418,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    }
 
    nir_ssa_dest_init(&instr->instr, &instr->dest,
-                     nir_tex_instr_dest_size(instr), NULL);
+                     nir_tex_instr_dest_size(instr), 32, NULL);
 
    assert(glsl_get_vector_elements(ret_type->type) ==
           nir_tex_instr_dest_size(instr));
@@ -1600,7 +1604,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    if (opcode != SpvOpImageWrite) {
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
       struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
-      nir_ssa_dest_init(&intrin->instr, &intrin->dest, 4, NULL);
+      nir_ssa_dest_init(&intrin->instr, &intrin->dest, 4, 32, NULL);
 
       nir_builder_instr_insert(&b->nb, &intrin->instr);
 
@@ -1738,7 +1742,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
       fill_common_atomic_sources(b, opcode, w, &atomic->src[2]);
    }
 
-   nir_ssa_dest_init(&atomic->instr, &atomic->dest, 1, NULL);
+   nir_ssa_dest_init(&atomic->instr, &atomic->dest, 1, 32, NULL);
 
    struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
@@ -1750,7 +1754,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
 }
 
 static nir_alu_instr *
-create_vec(nir_shader *shader, unsigned num_components)
+create_vec(nir_shader *shader, unsigned num_components, unsigned bit_size)
 {
    nir_op op;
    switch (num_components) {
@@ -1762,7 +1766,8 @@ create_vec(nir_shader *shader, unsigned num_components)
    }
 
    nir_alu_instr *vec = nir_alu_instr_create(shader, op);
-   nir_ssa_dest_init(&vec->instr, &vec->dest.dest, num_components, NULL);
+   nir_ssa_dest_init(&vec->instr, &vec->dest.dest, num_components,
+                     bit_size, NULL);
    vec->dest.write_mask = (1 << num_components) - 1;
 
    return vec;
@@ -1779,7 +1784,8 @@ vtn_ssa_transpose(struct vtn_builder *b, struct vtn_ssa_value *src)
 
    for (unsigned i = 0; i < glsl_get_matrix_columns(dest->type); i++) {
       nir_alu_instr *vec = create_vec(b->shader,
-                                      glsl_get_matrix_columns(src->type));
+                                      glsl_get_matrix_columns(src->type),
+                                      glsl_get_bit_size(glsl_get_base_type(src->type)));
       if (glsl_type_is_vector_or_scalar(src->type)) {
           vec->src[0].src = nir_src_for_ssa(src->def);
           vec->src[0].swizzle[0] = i;
@@ -1809,7 +1815,8 @@ nir_ssa_def *
 vtn_vector_insert(struct vtn_builder *b, nir_ssa_def *src, nir_ssa_def *insert,
                   unsigned index)
 {
-   nir_alu_instr *vec = create_vec(b->shader, src->num_components);
+   nir_alu_instr *vec = create_vec(b->shader, src->num_components,
+                                   src->bit_size);
 
    for (unsigned i = 0; i < src->num_components; i++) {
       if (i == index) {
@@ -1854,7 +1861,7 @@ vtn_vector_shuffle(struct vtn_builder *b, unsigned num_components,
                    nir_ssa_def *src0, nir_ssa_def *src1,
                    const uint32_t *indices)
 {
-   nir_alu_instr *vec = create_vec(b->shader, num_components);
+   nir_alu_instr *vec = create_vec(b->shader, num_components, src0->bit_size);
 
    nir_ssa_undef_instr *undef = nir_ssa_undef_instr_create(b->shader, 1);
    nir_builder_instr_insert(&b->nb, &undef->instr);
@@ -1884,7 +1891,8 @@ static nir_ssa_def *
 vtn_vector_construct(struct vtn_builder *b, unsigned num_components,
                      unsigned num_srcs, nir_ssa_def **srcs)
 {
-   nir_alu_instr *vec = create_vec(b->shader, num_components);
+   nir_alu_instr *vec = create_vec(b->shader, num_components,
+                                   srcs[0]->bit_size);
 
    unsigned dest_idx = 0;
    for (unsigned i = 0; i < num_srcs; i++) {

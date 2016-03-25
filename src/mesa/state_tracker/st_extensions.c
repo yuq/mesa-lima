@@ -253,6 +253,13 @@ void st_init_limits(struct pipe_screen *screen,
       pc->MaxLocalParams = MIN2(pc->MaxParameters, MAX_PROGRAM_LOCAL_PARAMS);
       pc->MaxEnvParams = MIN2(pc->MaxParameters, MAX_PROGRAM_ENV_PARAMS);
 
+      if (screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_INTEGERS)) {
+         pc->LowInt.RangeMin = 31;
+         pc->LowInt.RangeMax = 30;
+         pc->LowInt.Precision = 0;
+         pc->MediumInt = pc->HighInt = pc->LowInt;
+      }
+
       options->EmitNoNoise = TRUE;
 
       /* TODO: make these more fine-grained if anyone needs it */
@@ -783,6 +790,7 @@ void st_init_extensions(struct pipe_screen *screen,
    extensions->ARB_fragment_shader = GL_TRUE;
    extensions->ARB_half_float_vertex = GL_TRUE;
    extensions->ARB_internalformat_query = GL_TRUE;
+   extensions->ARB_internalformat_query2 = GL_TRUE;
    extensions->ARB_map_buffer_range = GL_TRUE;
    extensions->ARB_texture_border_clamp = GL_TRUE; /* XXX temp */
    extensions->ARB_texture_cube_map = GL_TRUE;

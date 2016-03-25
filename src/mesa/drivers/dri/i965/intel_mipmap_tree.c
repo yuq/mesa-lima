@@ -2172,7 +2172,8 @@ intel_miptree_updownsample(struct brw_context *brw,
                               src->logical_width0, src->logical_height0,
                               0, 0,
                               dst->logical_width0, dst->logical_height0,
-                              GL_NEAREST, false, false /*mirror x, y*/);
+                              GL_NEAREST, false, false /*mirror x, y*/,
+                              false, false);
    } else if (src->format == MESA_FORMAT_S_UINT8) {
       brw_meta_stencil_updownsample(brw, src, dst);
    } else {
@@ -2194,7 +2195,8 @@ intel_miptree_updownsample(struct brw_context *brw,
                               src->logical_width0, src->logical_height0,
                               0, 0,
                               dst->logical_width0, dst->logical_height0,
-                              GL_NEAREST, false, false /*mirror x, y*/);
+                              GL_NEAREST, false, false /*mirror x, y*/,
+                              false, false /* decode/encode srgb */);
    }
 }
 

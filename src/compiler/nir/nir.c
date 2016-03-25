@@ -70,6 +70,7 @@ reg_create(void *mem_ctx, struct exec_list *list)
    list_inithead(&reg->if_uses);
 
    reg->num_components = 0;
+   reg->bit_size = 32;
    reg->num_array_elems = 0;
    reg->is_packed = false;
    reg->name = NULL;
@@ -473,7 +474,7 @@ nir_load_const_instr_create(nir_shader *shader, unsigned num_components)
    nir_load_const_instr *instr = ralloc(shader, nir_load_const_instr);
    instr_init(&instr->instr, nir_instr_type_load_const);
 
-   nir_ssa_def_init(&instr->instr, &instr->def, num_components, NULL);
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, 32, NULL);
 
    return instr;
 }
@@ -562,7 +563,7 @@ nir_ssa_undef_instr_create(nir_shader *shader, unsigned num_components)
    nir_ssa_undef_instr *instr = ralloc(shader, nir_ssa_undef_instr);
    instr_init(&instr->instr, nir_instr_type_ssa_undef);
 
-   nir_ssa_def_init(&instr->instr, &instr->def, num_components, NULL);
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, 32, NULL);
 
    return instr;
 }
@@ -699,10 +700,10 @@ nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref)
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_INT:
       case GLSL_TYPE_UINT:
-         load->value.u[i] = constant->value.u[matrix_offset + i];
+         load->value.u32[i] = constant->value.u[matrix_offset + i];
          break;
       case GLSL_TYPE_BOOL:
-         load->value.u[i] = constant->value.b[matrix_offset + i] ?
+         load->value.u32[i] = constant->value.b[matrix_offset + i] ?
                              NIR_TRUE : NIR_FALSE;
          break;
       default:
@@ -731,18 +732,11 @@ reduce_cursor(nir_cursor cursor)
 {
    switch (cursor.option) {
    case nir_cursor_before_block:
+      assert(nir_cf_node_prev(&cursor.block->cf_node) == NULL ||
+             nir_cf_node_prev(&cursor.block->cf_node)->type != nir_cf_node_block);
       if (exec_list_is_empty(&cursor.block->instr_list)) {
          /* Empty block.  After is as good as before. */
          cursor.option = nir_cursor_after_block;
-      } else {
-         /* Try to switch to after the previous block if there is one.
-          * (This isn't likely, but it can happen.)
-          */
-         nir_cf_node *prev_node = nir_cf_node_prev(&cursor.block->cf_node);
-         if (prev_node && prev_node->type == nir_cf_node_block) {
-            cursor.block = nir_cf_node_as_block(prev_node);
-            cursor.option = nir_cursor_after_block;
-         }
       }
       return cursor;
 
@@ -1379,15 +1373,18 @@ nir_instr_rewrite_dest(nir_instr *instr, nir_dest *dest, nir_dest new_dest)
       src_add_all_uses(dest->reg.indirect, instr, NULL);
 }
 
+/* note: does *not* take ownership of 'name' */
 void
 nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
-                 unsigned num_components, const char *name)
+                 unsigned num_components,
+                 unsigned bit_size, const char *name)
 {
-   def->name = name;
+   def->name = ralloc_strdup(instr, name);
    def->parent_instr = instr;
    list_inithead(&def->uses);
    list_inithead(&def->if_uses);
    def->num_components = num_components;
+   def->bit_size = bit_size;
 
    if (instr->block) {
       nir_function_impl *impl =
@@ -1399,12 +1396,14 @@ nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
    }
 }
 
+/* note: does *not* take ownership of 'name' */
 void
 nir_ssa_dest_init(nir_instr *instr, nir_dest *dest,
-                 unsigned num_components, const char *name)
+                 unsigned num_components, unsigned bit_size,
+                 const char *name)
 {
    dest->is_ssa = true;
-   nir_ssa_def_init(instr, &dest->ssa, num_components, name);
+   nir_ssa_def_init(instr, &dest->ssa, num_components, bit_size, name);
 }
 
 void

@@ -3213,6 +3213,14 @@ Whether depth test, stencil test, and occlusion query should run before
 the fragment shader (regardless of fragment shader side effects). Corresponds
 to GLSL early_fragment_tests.
 
+NEXT_SHADER
+"""""""""""
+
+Which shader stage will MOST LIKELY follow after this shader when the shader
+is bound. This is only a hint to the driver and doesn't have to be precise.
+Only set for VS and TES.
+
+
 Texture Sampling and Texture Formats
 ------------------------------------
 

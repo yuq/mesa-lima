@@ -535,29 +535,27 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
 
    info->io.genUserClip = prog->vp.num_ucps;
    info->io.auxCBSlot = 15;
-   info->io.ucpBase = 256;
-   info->io.drawInfoBase = 256 + 128;
+   info->io.ucpBase = NVC0_CB_AUX_UCP_INFO;
+   info->io.drawInfoBase = NVC0_CB_AUX_DRAW_INFO;
 
    if (prog->type == PIPE_SHADER_COMPUTE) {
       if (chipset >= NVISA_GK104_CHIPSET) {
-         info->io.resInfoCBSlot = 0;
+         info->io.auxCBSlot = 0;
          info->io.texBindBase = NVE4_CP_INPUT_TEX(0);
          info->io.suInfoBase = NVE4_CP_INPUT_SUF(0);
          info->prop.cp.gridInfoBase = NVE4_CP_INPUT_GRID_INFO(0);
       } else {
-         info->io.resInfoCBSlot = 15;
-         info->io.suInfoBase = 512;
+         info->io.suInfoBase = NVC0_CB_AUX_BUF_INFO(0);
       }
       info->io.msInfoCBSlot = 0;
       info->io.msInfoBase = NVE4_CP_INPUT_MS_OFFSETS;
    } else {
       if (chipset >= NVISA_GK104_CHIPSET) {
-         info->io.texBindBase = 0x20;
+         info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
          info->io.suInfoBase = 0; /* TODO */
       }
-      info->io.resInfoCBSlot = 15;
-      info->io.sampleInfoBase = 256 + 128;
-      info->io.suInfoBase = 512;
+      info->io.sampleInfoBase = NVC0_CB_AUX_SAMPLE_INFO;
+      info->io.suInfoBase = NVC0_CB_AUX_BUF_INFO(0);
       info->io.msInfoCBSlot = 15;
       info->io.msInfoBase = 0; /* TODO */
    }

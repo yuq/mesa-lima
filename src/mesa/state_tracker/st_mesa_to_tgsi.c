@@ -241,39 +241,71 @@ src_register( struct st_translate *t,
  * Map mesa texture target to TGSI texture target.
  */
 unsigned
-st_translate_texture_target( GLuint textarget,
-                          GLboolean shadow )
+st_translate_texture_target(GLuint textarget, GLboolean shadow)
 {
    if (shadow) {
-      switch( textarget ) {
-      case TEXTURE_1D_INDEX:   return TGSI_TEXTURE_SHADOW1D;
-      case TEXTURE_2D_INDEX:   return TGSI_TEXTURE_SHADOW2D;
-      case TEXTURE_RECT_INDEX: return TGSI_TEXTURE_SHADOWRECT;
-      case TEXTURE_1D_ARRAY_INDEX: return TGSI_TEXTURE_SHADOW1D_ARRAY;
-      case TEXTURE_2D_ARRAY_INDEX: return TGSI_TEXTURE_SHADOW2D_ARRAY;
-      case TEXTURE_CUBE_INDEX: return TGSI_TEXTURE_SHADOWCUBE;
-      case TEXTURE_CUBE_ARRAY_INDEX: return TGSI_TEXTURE_SHADOWCUBE_ARRAY;
-      default: break;
+      switch (textarget) {
+      case TEXTURE_1D_INDEX:
+         return TGSI_TEXTURE_SHADOW1D;
+      case TEXTURE_2D_INDEX:
+         return TGSI_TEXTURE_SHADOW2D;
+      case TEXTURE_RECT_INDEX:
+         return TGSI_TEXTURE_SHADOWRECT;
+      case TEXTURE_1D_ARRAY_INDEX:
+         return TGSI_TEXTURE_SHADOW1D_ARRAY;
+      case TEXTURE_2D_ARRAY_INDEX:
+         return TGSI_TEXTURE_SHADOW2D_ARRAY;
+      case TEXTURE_CUBE_INDEX:
+         return TGSI_TEXTURE_SHADOWCUBE;
+      case TEXTURE_CUBE_ARRAY_INDEX:
+         return TGSI_TEXTURE_SHADOWCUBE_ARRAY;
+      default:
+         break;
       }
    }
 
-   switch( textarget ) {
-   case TEXTURE_2D_MULTISAMPLE_INDEX: return TGSI_TEXTURE_2D_MSAA;
-   case TEXTURE_2D_MULTISAMPLE_ARRAY_INDEX: return TGSI_TEXTURE_2D_ARRAY_MSAA;
-   case TEXTURE_BUFFER_INDEX: return TGSI_TEXTURE_BUFFER;
-   case TEXTURE_1D_INDEX:   return TGSI_TEXTURE_1D;
-   case TEXTURE_2D_INDEX:   return TGSI_TEXTURE_2D;
-   case TEXTURE_3D_INDEX:   return TGSI_TEXTURE_3D;
-   case TEXTURE_CUBE_INDEX: return TGSI_TEXTURE_CUBE;
-   case TEXTURE_CUBE_ARRAY_INDEX: return TGSI_TEXTURE_CUBE_ARRAY;
-   case TEXTURE_RECT_INDEX: return TGSI_TEXTURE_RECT;
-   case TEXTURE_1D_ARRAY_INDEX:   return TGSI_TEXTURE_1D_ARRAY;
-   case TEXTURE_2D_ARRAY_INDEX:   return TGSI_TEXTURE_2D_ARRAY;
-   case TEXTURE_EXTERNAL_INDEX:   return TGSI_TEXTURE_2D;
+   switch (textarget) {
+   case TEXTURE_2D_MULTISAMPLE_INDEX:
+      return TGSI_TEXTURE_2D_MSAA;
+   case TEXTURE_2D_MULTISAMPLE_ARRAY_INDEX:
+      return TGSI_TEXTURE_2D_ARRAY_MSAA;
+   case TEXTURE_BUFFER_INDEX:
+      return TGSI_TEXTURE_BUFFER;
+   case TEXTURE_1D_INDEX:
+      return TGSI_TEXTURE_1D;
+   case TEXTURE_2D_INDEX:
+      return TGSI_TEXTURE_2D;
+   case TEXTURE_3D_INDEX:
+      return TGSI_TEXTURE_3D;
+   case TEXTURE_CUBE_INDEX:
+      return TGSI_TEXTURE_CUBE;
+   case TEXTURE_CUBE_ARRAY_INDEX:
+      return TGSI_TEXTURE_CUBE_ARRAY;
+   case TEXTURE_RECT_INDEX:
+      return TGSI_TEXTURE_RECT;
+   case TEXTURE_1D_ARRAY_INDEX:
+      return TGSI_TEXTURE_1D_ARRAY;
+   case TEXTURE_2D_ARRAY_INDEX:
+      return TGSI_TEXTURE_2D_ARRAY;
+   case TEXTURE_EXTERNAL_INDEX:
+      return TGSI_TEXTURE_2D;
    default:
-      debug_assert( 0 );
+      debug_assert(!"unexpected texture target index");
       return TGSI_TEXTURE_1D;
    }
+}
+
+
+/**
+ * Translate a (1 << TEXTURE_x_INDEX) bit into a TGSI_TEXTURE_x enum.
+ */
+static unsigned
+translate_texture_index(GLbitfield texBit, bool shadow)
+{
+   int index = ffs(texBit);
+   assert(index > 0);
+   assert(index - 1 < NUM_TEXTURE_TARGETS);
+   return st_translate_texture_target(index - 1, shadow);
 }
 
 
@@ -1128,7 +1160,16 @@ st_translate_mesa_program(
    /* texture samplers */
    for (i = 0; i < ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits; i++) {
       if (program->SamplersUsed & (1 << i)) {
+         unsigned target =
+            translate_texture_index(program->TexturesUsed[i],
+                                    !!(program->ShadowSamplers & (1 << i)));
          t->samplers[i] = ureg_DECL_sampler( ureg, i );
+         ureg_DECL_sampler_view(ureg, i, target,
+                                TGSI_RETURN_TYPE_FLOAT,
+                                TGSI_RETURN_TYPE_FLOAT,
+                                TGSI_RETURN_TYPE_FLOAT,
+                                TGSI_RETURN_TYPE_FLOAT);
+
       }
    }
 

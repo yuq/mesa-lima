@@ -357,6 +357,7 @@ vmw_drm_surface_get_handle(struct svga_winsys_screen *sws,
     vsrf = vmw_svga_winsys_surface(surface);
     whandle->handle = vsrf->sid;
     whandle->stride = stride;
+    whandle->offset = 0;
 
     switch (whandle->type) {
     case DRM_API_HANDLE_TYPE_SHARED:

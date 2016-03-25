@@ -85,7 +85,7 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
       offset_load->src[0] = nir_src_for_ssa(nir_imul(b, res_intrin->src[0].ssa,
                                                      nir_imm_int(b, 8)));
 
-      nir_ssa_dest_init(&offset_load->instr, &offset_load->dest, 2, NULL);
+      nir_ssa_dest_init(&offset_load->instr, &offset_load->dest, 2, 32, NULL);
       nir_builder_instr_insert(b, &offset_load->instr);
 
       nir_src *offset_src = nir_get_io_offset_src(intrin);
@@ -107,7 +107,8 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
          /* It's a load, we need a phi node */
          nir_phi_instr *phi = nir_phi_instr_create(b->shader);
          nir_ssa_dest_init(&phi->instr, &phi->dest,
-                           intrin->num_components, NULL);
+                           intrin->num_components,
+                           intrin->dest.ssa.bit_size, NULL);
 
          nir_phi_src *src1 = ralloc(phi, nir_phi_src);
          struct exec_node *tnode = exec_list_get_tail(&if_stmt->then_list);
@@ -117,7 +118,7 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
 
          b->cursor = nir_after_cf_list(&if_stmt->else_list);
          nir_ssa_def *zero = nir_build_imm(b, intrin->num_components,
-            (nir_const_value) { .u = { 0, 0, 0, 0 } });
+            (nir_const_value) { .u32 = { 0, 0, 0, 0 } });
 
          nir_phi_src *src2 = ralloc(phi, nir_phi_src);
          struct exec_node *enode = exec_list_get_tail(&if_stmt->else_list);

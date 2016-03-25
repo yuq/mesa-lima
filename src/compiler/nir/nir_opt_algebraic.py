@@ -35,9 +35,16 @@ d = 'd'
 
 # Written in the form (<search>, <replace>) where <search> is an expression
 # and <replace> is either an expression or a value.  An expression is
-# defined as a tuple of the form (<op>, <src0>, <src1>, <src2>, <src3>)
+# defined as a tuple of the form ([~]<op>, <src0>, <src1>, <src2>, <src3>)
 # where each source is either an expression or a value.  A value can be
 # either a numeric constant or a string representing a variable name.
+#
+# If the opcode in a search expression is prefixed by a '~' character, this
+# indicates that the operation is inexact.  Such operations will only get
+# applied to SSA values that do not have the exact bit set.  This should be
+# used by by any optimizations that are not bit-for-bit exact.  It should not,
+# however, be used for backend-requested lowering operations as those need to
+# happen regardless of precision.
 #
 # Variable names are specified as "[#]name[@type]" where "#" inicates that
 # the given variable will only match constants and the type indicates that
@@ -55,19 +62,19 @@ optimizations = [
    (('fabs', ('fneg', a)), ('fabs', a)),
    (('iabs', ('iabs', a)), ('iabs', a)),
    (('iabs', ('ineg', a)), ('iabs', a)),
-   (('fadd', a, 0.0), a),
+   (('~fadd', a, 0.0), a),
    (('iadd', a, 0), a),
    (('usadd_4x8', a, 0), a),
    (('usadd_4x8', a, ~0), ~0),
-   (('fadd', ('fmul', a, b), ('fmul', a, c)), ('fmul', a, ('fadd', b, c))),
+   (('~fadd', ('fmul', a, b), ('fmul', a, c)), ('fmul', a, ('fadd', b, c))),
    (('iadd', ('imul', a, b), ('imul', a, c)), ('imul', a, ('iadd', b, c))),
-   (('fadd', ('fneg', a), a), 0.0),
+   (('~fadd', ('fneg', a), a), 0.0),
    (('iadd', ('ineg', a), a), 0),
    (('iadd', ('ineg', a), ('iadd', a, b)), b),
    (('iadd', a, ('iadd', ('ineg', a), b)), b),
-   (('fadd', ('fneg', a), ('fadd', a, b)), b),
-   (('fadd', a, ('fadd', ('fneg', a), b)), b),
-   (('fmul', a, 0.0), 0.0),
+   (('~fadd', ('fneg', a), ('fadd', a, b)), b),
+   (('~fadd', a, ('fadd', ('fneg', a), b)), b),
+   (('~fmul', a, 0.0), 0.0),
    (('imul', a, 0), 0),
    (('umul_unorm_4x8', a, 0), 0),
    (('umul_unorm_4x8', a, ~0), a),
@@ -76,32 +83,48 @@ optimizations = [
    (('fmul', a, -1.0), ('fneg', a)),
    (('imul', a, -1), ('ineg', a)),
    (('fdiv', a, b), ('fmul', a, ('frcp', b)), 'options->lower_fdiv'),
-   (('ffma', 0.0, a, b), b),
-   (('ffma', a, 0.0, b), b),
-   (('ffma', a, b, 0.0), ('fmul', a, b)),
+   (('~ffma', 0.0, a, b), b),
+   (('~ffma', a, 0.0, b), b),
+   (('~ffma', a, b, 0.0), ('fmul', a, b)),
    (('ffma', a, 1.0, b), ('fadd', a, b)),
    (('ffma', 1.0, a, b), ('fadd', a, b)),
-   (('flrp', a, b, 0.0), a),
-   (('flrp', a, b, 1.0), b),
-   (('flrp', a, a, b), a),
-   (('flrp', 0.0, a, b), ('fmul', a, b)),
+   (('~flrp', a, b, 0.0), a),
+   (('~flrp', a, b, 1.0), b),
+   (('~flrp', a, a, b), a),
+   (('~flrp', 0.0, a, b), ('fmul', a, b)),
+   (('~flrp', a, b, ('b2f', c)), ('bcsel', c, b, a), 'options->lower_flrp'),
    (('flrp', a, b, c), ('fadd', ('fmul', c, ('fsub', b, a)), a), 'options->lower_flrp'),
    (('ffract', a), ('fsub', a, ('ffloor', a)), 'options->lower_ffract'),
-   (('fadd', ('fmul', a, ('fadd', 1.0, ('fneg', c))), ('fmul', b, c)), ('flrp', a, b, c), '!options->lower_flrp'),
-   (('fadd', a, ('fmul', c, ('fadd', b, ('fneg', a)))), ('flrp', a, b, c), '!options->lower_flrp'),
+   (('~fadd', ('fmul', a, ('fadd', 1.0, ('fneg', ('b2f', c)))), ('fmul', b, ('b2f', c))), ('bcsel', c, b, a), 'options->lower_flrp'),
+   (('~fadd', ('fmul', a, ('fadd', 1.0, ('fneg',         c ))), ('fmul', b,         c )), ('flrp', a, b, c), '!options->lower_flrp'),
+   (('~fadd', a, ('fmul', ('b2f', c), ('fadd', b, ('fneg', a)))), ('bcsel', c, b, a), 'options->lower_flrp'),
+   (('~fadd', a, ('fmul',         c , ('fadd', b, ('fneg', a)))), ('flrp', a, b, c), '!options->lower_flrp'),
    (('ffma', a, b, c), ('fadd', ('fmul', a, b), c), 'options->lower_ffma'),
-   (('fadd', ('fmul', a, b), c), ('ffma', a, b, c), '!options->lower_ffma'),
+   (('~fadd', ('fmul', a, b), c), ('ffma', a, b, c), '!options->lower_ffma'),
    # Comparison simplifications
-   (('inot', ('flt', a, b)), ('fge', a, b)),
-   (('inot', ('fge', a, b)), ('flt', a, b)),
-   (('inot', ('feq', a, b)), ('fne', a, b)),
-   (('inot', ('fne', a, b)), ('feq', a, b)),
+   (('~inot', ('flt', a, b)), ('fge', a, b)),
+   (('~inot', ('fge', a, b)), ('flt', a, b)),
+   (('~inot', ('feq', a, b)), ('fne', a, b)),
+   (('~inot', ('fne', a, b)), ('feq', a, b)),
    (('inot', ('ilt', a, b)), ('ige', a, b)),
    (('inot', ('ige', a, b)), ('ilt', a, b)),
    (('inot', ('ieq', a, b)), ('ine', a, b)),
    (('inot', ('ine', a, b)), ('ieq', a, b)),
+
+   # 0.0 >= b2f(a)
+   # b2f(a) <= 0.0
+   # b2f(a) == 0.0 because b2f(a) can only be 0 or 1
+   # inot(a)
+   (('fge', 0.0, ('b2f', a)), ('inot', a)),
+
+   # 0.0 < fabs(a)
+   # fabs(a) > 0.0
+   # fabs(a) != 0.0 because fabs(a) must be >= 0
+   # a != 0.0
+   (('flt', 0.0, ('fabs', a)), ('fne', a, 0.0)),
+
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
-   (('bcsel', ('flt', a, b), a, b), ('fmin', a, b)),
+   (('bcsel', ('flt', b, a), b, a), ('fmin', a, b)),
    (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
    (('bcsel', ('inot', 'a@bool'), b, c), ('bcsel', a, c, b)),
    (('bcsel', a, ('bcsel', a, b, c), d), ('bcsel', a, b, d)),
@@ -111,15 +134,19 @@ optimizations = [
    (('imax', a, a), a),
    (('umin', a, a), a),
    (('umax', a, a), a),
-   (('fmin', ('fmax', a, 0.0), 1.0), ('fsat', a), '!options->lower_fsat'),
-   (('fmax', ('fmin', a, 1.0), 0.0), ('fsat', a), '!options->lower_fsat'),
+   (('~fmin', ('fmax', a, 0.0), 1.0), ('fsat', a), '!options->lower_fsat'),
+   (('~fmax', ('fmin', a, 1.0), 0.0), ('fsat', a), '!options->lower_fsat'),
    (('fsat', a), ('fmin', ('fmax', a, 0.0), 1.0), 'options->lower_fsat'),
    (('fsat', ('fsat', a)), ('fsat', a)),
    (('fmin', ('fmax', ('fmin', ('fmax', a, 0.0), 1.0), 0.0), 1.0), ('fmin', ('fmax', a, 0.0), 1.0)),
-   (('ior', ('flt', a, b), ('flt', a, c)), ('flt', a, ('fmax', b, c))),
-   (('ior', ('flt', a, c), ('flt', b, c)), ('flt', ('fmin', a, b), c)),
-   (('ior', ('fge', a, b), ('fge', a, c)), ('fge', a, ('fmin', b, c))),
-   (('ior', ('fge', a, c), ('fge', b, c)), ('fge', ('fmax', a, b), c)),
+   (('~ior', ('flt', a, b), ('flt', a, c)), ('flt', a, ('fmax', b, c))),
+   (('~ior', ('flt', a, c), ('flt', b, c)), ('flt', ('fmin', a, b), c)),
+   (('~ior', ('fge', a, b), ('fge', a, c)), ('fge', a, ('fmin', b, c))),
+   (('~ior', ('fge', a, c), ('fge', b, c)), ('fge', ('fmax', a, b), c)),
+   (('fabs', ('slt', a, b)), ('slt', a, b)),
+   (('fabs', ('sge', a, b)), ('sge', a, b)),
+   (('fabs', ('seq', a, b)), ('seq', a, b)),
+   (('fabs', ('sne', a, b)), ('sne', a, b)),
    (('slt', a, b), ('b2f', ('flt', a, b)), 'options->lower_scmp'),
    (('sge', a, b), ('b2f', ('fge', a, b)), 'options->lower_scmp'),
    (('seq', a, b), ('b2f', ('feq', a, b)), 'options->lower_scmp'),
@@ -151,7 +178,6 @@ optimizations = [
    (('ior', a, 0), a),
    (('fxor', a, a), 0.0),
    (('ixor', a, a), 0),
-   (('fxor', a, 0.0), a),
    (('ixor', a, 0), a),
    (('inot', ('inot', a)), a),
    # DeMorgan's Laws
@@ -167,35 +193,35 @@ optimizations = [
    (('iand', 0xff, ('ushr', a, 24)), ('ushr', a, 24)),
    (('iand', 0xffff, ('ushr', a, 16)), ('ushr', a, 16)),
    # Exponential/logarithmic identities
-   (('fexp2', ('flog2', a)), a), # 2^lg2(a) = a
-   (('flog2', ('fexp2', a)), a), # lg2(2^a) = a
+   (('~fexp2', ('flog2', a)), a), # 2^lg2(a) = a
+   (('~flog2', ('fexp2', a)), a), # lg2(2^a) = a
    (('fpow', a, b), ('fexp2', ('fmul', ('flog2', a), b)), 'options->lower_fpow'), # a^b = 2^(lg2(a)*b)
-   (('fexp2', ('fmul', ('flog2', a), b)), ('fpow', a, b), '!options->lower_fpow'), # 2^(lg2(a)*b) = a^b
-   (('fexp2', ('fadd', ('fmul', ('flog2', a), b), ('fmul', ('flog2', c), d))),
-    ('fmul', ('fpow', a, b), ('fpow', c, d)), '!options->lower_fpow'), # 2^(lg2(a) * b + lg2(c) + d) = a^b * c^d
-   (('fpow', a, 1.0), a),
-   (('fpow', a, 2.0), ('fmul', a, a)),
-   (('fpow', a, 4.0), ('fmul', ('fmul', a, a), ('fmul', a, a))),
-   (('fpow', 2.0, a), ('fexp2', a)),
-   (('fpow', ('fpow', a, 2.2), 0.454545), a),
-   (('fpow', ('fabs', ('fpow', a, 2.2)), 0.454545), ('fabs', a)),
-   (('fsqrt', ('fexp2', a)), ('fexp2', ('fmul', 0.5, a))),
-   (('frcp', ('fexp2', a)), ('fexp2', ('fneg', a))),
-   (('frsq', ('fexp2', a)), ('fexp2', ('fmul', -0.5, a))),
-   (('flog2', ('fsqrt', a)), ('fmul', 0.5, ('flog2', a))),
-   (('flog2', ('frcp', a)), ('fneg', ('flog2', a))),
-   (('flog2', ('frsq', a)), ('fmul', -0.5, ('flog2', a))),
-   (('flog2', ('fpow', a, b)), ('fmul', b, ('flog2', a))),
-   (('fadd', ('flog2', a), ('flog2', b)), ('flog2', ('fmul', a, b))),
-   (('fadd', ('flog2', a), ('fneg', ('flog2', b))), ('flog2', ('fdiv', a, b))),
-   (('fmul', ('fexp2', a), ('fexp2', b)), ('fexp2', ('fadd', a, b))),
+   (('~fexp2', ('fmul', ('flog2', a), b)), ('fpow', a, b), '!options->lower_fpow'), # 2^(lg2(a)*b) = a^b
+   (('~fexp2', ('fadd', ('fmul', ('flog2', a), b), ('fmul', ('flog2', c), d))),
+    ('~fmul', ('fpow', a, b), ('fpow', c, d)), '!options->lower_fpow'), # 2^(lg2(a) * b + lg2(c) + d) = a^b * c^d
+   (('~fpow', a, 1.0), a),
+   (('~fpow', a, 2.0), ('fmul', a, a)),
+   (('~fpow', a, 4.0), ('fmul', ('fmul', a, a), ('fmul', a, a))),
+   (('~fpow', 2.0, a), ('fexp2', a)),
+   (('~fpow', ('fpow', a, 2.2), 0.454545), a),
+   (('~fpow', ('fabs', ('fpow', a, 2.2)), 0.454545), ('fabs', a)),
+   (('~fsqrt', ('fexp2', a)), ('fexp2', ('fmul', 0.5, a))),
+   (('~frcp', ('fexp2', a)), ('fexp2', ('fneg', a))),
+   (('~frsq', ('fexp2', a)), ('fexp2', ('fmul', -0.5, a))),
+   (('~flog2', ('fsqrt', a)), ('fmul', 0.5, ('flog2', a))),
+   (('~flog2', ('frcp', a)), ('fneg', ('flog2', a))),
+   (('~flog2', ('frsq', a)), ('fmul', -0.5, ('flog2', a))),
+   (('~flog2', ('fpow', a, b)), ('fmul', b, ('flog2', a))),
+   (('~fadd', ('flog2', a), ('flog2', b)), ('flog2', ('fmul', a, b))),
+   (('~fadd', ('flog2', a), ('fneg', ('flog2', b))), ('flog2', ('fdiv', a, b))),
+   (('~fmul', ('fexp2', a), ('fexp2', b)), ('fexp2', ('fadd', a, b))),
    # Division and reciprocal
-   (('fdiv', 1.0, a), ('frcp', a)),
+   (('~fdiv', 1.0, a), ('frcp', a)),
    (('fdiv', a, b), ('fmul', a, ('frcp', b)), 'options->lower_fdiv'),
-   (('frcp', ('frcp', a)), a),
-   (('frcp', ('fsqrt', a)), ('frsq', a)),
+   (('~frcp', ('frcp', a)), a),
+   (('~frcp', ('fsqrt', a)), ('frsq', a)),
    (('fsqrt', a), ('frcp', ('frsq', a)), 'options->lower_fsqrt'),
-   (('frcp', ('frsq', a)), ('fsqrt', a), '!options->lower_fsqrt'),
+   (('~frcp', ('frsq', a)), ('fsqrt', a), '!options->lower_fsqrt'),
    # Boolean simplifications
    (('ieq', 'a@bool', True), a),
    (('ine', 'a@bool', True), ('inot', a)),
@@ -216,6 +242,10 @@ optimizations = [
    (('i2b', ('b2i', a)), a),
    (('f2i', ('ftrunc', a)), ('f2i', a)),
    (('f2u', ('ftrunc', a)), ('f2u', a)),
+   (('i2b', ('ineg', a)), ('i2b', a)),
+   (('i2b', ('iabs', a)), ('i2b', a)),
+   (('fabs', ('b2f', a)), ('b2f', a)),
+   (('iabs', ('b2i', a)), ('b2i', a)),
 
    # Byte extraction
    (('ushr', a, 24), ('extract_u8', a, 3), '!options->lower_extract_byte'),
@@ -228,7 +258,7 @@ optimizations = [
    (('iand', 0xffff, a), ('extract_u16', a, 0), '!options->lower_extract_word'),
 
    # Subtracts
-   (('fsub', a, ('fsub', 0.0, b)), ('fadd', a, b)),
+   (('~fsub', a, ('fsub', 0.0, b)), ('fadd', a, b)),
    (('isub', a, ('isub', 0, b)), ('iadd', a, b)),
    (('ussub_4x8', a, 0), a),
    (('ussub_4x8', a, ~0), 0),
@@ -236,7 +266,7 @@ optimizations = [
    (('isub', a, b), ('iadd', a, ('ineg', b)), 'options->lower_sub'),
    (('fneg', a), ('fsub', 0.0, a), 'options->lower_negate'),
    (('ineg', a), ('isub', 0, a), 'options->lower_negate'),
-   (('fadd', a, ('fsub', 0.0, b)), ('fsub', a, b)),
+   (('~fadd', a, ('fsub', 0.0, b)), ('fsub', a, b)),
    (('iadd', a, ('isub', 0, b)), ('isub', a, b)),
    (('fabs', ('fsub', 0.0, a)), ('fabs', a)),
    (('iabs', ('isub', 0, a)), ('iabs', a)),
@@ -368,10 +398,13 @@ for op in ['flt', 'fge', 'feq', 'fne',
 # they help code generation but do not necessarily produce code that is
 # more easily optimizable.
 late_optimizations = [
+   # Most of these optimizations aren't quite safe when you get infinity or
+   # Nan involved but the first one should be fine.
    (('flt', ('fadd', a, b), 0.0), ('flt', a, ('fneg', b))),
-   (('fge', ('fadd', a, b), 0.0), ('fge', a, ('fneg', b))),
-   (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
-   (('fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
+   (('~fge', ('fadd', a, b), 0.0), ('fge', a, ('fneg', b))),
+   (('~feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
+   (('~fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
+
    (('fdot2', a, b), ('fdot_replicated2', a, b), 'options->fdot_replicates'),
    (('fdot3', a, b), ('fdot_replicated3', a, b), 'options->fdot_replicates'),
    (('fdot4', a, b), ('fdot_replicated4', a, b), 'options->fdot_replicates'),

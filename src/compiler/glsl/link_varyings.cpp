@@ -826,7 +826,7 @@ namespace {
 class varying_matches
 {
 public:
-   varying_matches(bool disable_varying_packing,
+   varying_matches(bool disable_varying_packing, bool xfb_enabled,
                    gl_shader_stage producer_stage,
                    gl_shader_stage consumer_stage);
    ~varying_matches();
@@ -836,12 +836,28 @@ public:
    void store_locations() const;
 
 private:
+   bool is_varying_packing_safe(const glsl_type *type,
+                                const ir_variable *var);
+
    /**
     * If true, this driver disables varying packing, so all varyings need to
     * be aligned on slot boundaries, and take up a number of slots equal to
     * their number of matrix columns times their array size.
+    *
+    * Packing may also be disabled because our current packing method is not
+    * safe in SSO or versions of OpenGL where interpolation qualifiers are not
+    * guaranteed to match across stages.
     */
    const bool disable_varying_packing;
+
+   /**
+    * If true, this driver has transform feedback enabled. The transform
+    * feedback code requires at least some packing be done even when varying
+    * packing is disabled, fortunately where transform feedback requires
+    * packing it's safe to override the disabled setting. See
+    * is_varying_packing_safe().
+    */
+   const bool xfb_enabled;
 
    /**
     * Enum representing the order in which varyings are packed within a
@@ -862,6 +878,7 @@ private:
    static unsigned compute_packing_class(const ir_variable *var);
    static packing_order_enum compute_packing_order(const ir_variable *var);
    static int match_comparator(const void *x_generic, const void *y_generic);
+   static int xfb_comparator(const void *x_generic, const void *y_generic);
 
    /**
     * Structure recording the relationship between a single producer output
@@ -917,9 +934,11 @@ private:
 } /* anonymous namespace */
 
 varying_matches::varying_matches(bool disable_varying_packing,
+                                 bool xfb_enabled,
                                  gl_shader_stage producer_stage,
                                  gl_shader_stage consumer_stage)
    : disable_varying_packing(disable_varying_packing),
+     xfb_enabled(xfb_enabled),
      producer_stage(producer_stage),
      consumer_stage(consumer_stage)
 {
@@ -938,6 +957,24 @@ varying_matches::varying_matches(bool disable_varying_packing,
 varying_matches::~varying_matches()
 {
    free(this->matches);
+}
+
+
+/**
+ * Packing is always safe on individual arrays, structure and matices. It is
+ * also safe if the varying is only used for transform feedback.
+ */
+bool
+varying_matches::is_varying_packing_safe(const glsl_type *type,
+                                         const ir_variable *var)
+{
+   if (consumer_stage == MESA_SHADER_TESS_EVAL ||
+       consumer_stage == MESA_SHADER_TESS_CTRL ||
+       producer_stage == MESA_SHADER_TESS_CTRL)
+      return false;
+
+   return xfb_enabled && (type->is_array() || type->is_record() ||
+                          type->is_matrix() || var->data.is_xfb_only);
 }
 
 
@@ -1020,7 +1057,7 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
       = this->compute_packing_class(var);
    this->matches[this->num_matches].packing_order
       = this->compute_packing_order(var);
-   if (this->disable_varying_packing) {
+   if (this->disable_varying_packing && !is_varying_packing_safe(type, var)) {
       unsigned slots = type->count_attribute_slots(false);
       this->matches[this->num_matches].num_components = slots * 4;
    } else {
@@ -1046,37 +1083,28 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
                                   uint64_t reserved_slots,
                                   bool separate_shader)
 {
-   /* We disable varying sorting for separate shader programs for the
-    * following reasons:
-    *
-    * 1/ All programs must sort the code in the same order to guarantee the
-    *    interface matching. However varying_matches::record() will change the
-    *    interpolation qualifier of some stages.
-    *
-    * 2/ GLSL version 4.50 removes the matching constrain on the interpolation
-    *    qualifier.
-    *
-    * From Section 4.5 (Interpolation Qualifiers) of the GLSL 4.40 spec:
-    *
-    *    "The type and presence of interpolation qualifiers of variables with
-    *    the same name declared in all linked shaders for the same cross-stage
-    *    interface must match, otherwise the link command will fail.
-    *
-    *    When comparing an output from one stage to an input of a subsequent
-    *    stage, the input and output don't match if their interpolation
-    *    qualifiers (or lack thereof) are not the same."
-    *
-    *    "It is a link-time error if, within the same stage, the interpolation
-    *    qualifiers of variables of the same name do not match."
+   /* If packing has been disabled then we cannot safely sort the varyings by
+    * class as it may mean we are using a version of OpenGL where
+    * interpolation qualifiers are not guaranteed to be matching across
+    * shaders, sorting in this case could result in mismatching shader
+    * interfaces.
+    * When packing is disabled the sort orders varyings used by transform
+    * feedback first, but also depends on *undefined behaviour* of qsort to
+    * reverse the order of the varyings. See: xfb_comparator().
     */
-   if (!separate_shader) {
+   if (!this->disable_varying_packing) {
       /* Sort varying matches into an order that makes them easy to pack. */
       qsort(this->matches, this->num_matches, sizeof(*this->matches),
             &varying_matches::match_comparator);
+   } else {
+      /* Only sort varyings that are only used by transform feedback. */
+      qsort(this->matches, this->num_matches, sizeof(*this->matches),
+            &varying_matches::xfb_comparator);
    }
 
    unsigned generic_location = 0;
    unsigned generic_patch_location = MAX_VARYING*4;
+   bool previous_var_xfb_only = false;
 
    for (unsigned i = 0; i < this->num_matches; i++) {
       unsigned *location = &generic_location;
@@ -1100,16 +1128,30 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
       /* Advance to the next slot if this varying has a different packing
        * class than the previous one, and we're not already on a slot
        * boundary.
+       *
+       * Also advance to the next slot if packing is disabled. This makes sure
+       * we don't assign varyings the same locations which is possible
+       * because we still pack individual arrays, records and matrices even
+       * when packing is disabled. Note we don't advance to the next slot if
+       * we can pack varyings together that are only used for transform
+       * feedback.
        */
-      if (i > 0 &&
-          this->matches[i - 1].packing_class
-          != this->matches[i].packing_class) {
+      if ((this->disable_varying_packing &&
+           !(previous_var_xfb_only && var->data.is_xfb_only)) ||
+          (i > 0 && this->matches[i - 1].packing_class
+          != this->matches[i].packing_class )) {
          *location = ALIGN(*location, 4);
       }
 
+      previous_var_xfb_only = var->data.is_xfb_only;
+
       unsigned num_elements =  type->count_attribute_slots(is_vertex_input);
-      unsigned slot_end = this->disable_varying_packing ? 4 :
-         type->without_array()->vector_elements;
+      unsigned slot_end;
+      if (this->disable_varying_packing &&
+          !is_varying_packing_safe(type, var))
+         slot_end = 4;
+      else
+         slot_end = type->without_array()->vector_elements;
       slot_end += *location - 1;
 
       /* FIXME: We could be smarter in the below code and loop back over
@@ -1133,7 +1175,8 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
          /* Increase the slot to make sure there is enough room for next
           * array element.
           */
-         if (this->disable_varying_packing)
+         if (this->disable_varying_packing &&
+             !is_varying_packing_safe(type, var))
             slot_end += 4;
          else
             slot_end += type->without_array()->vector_elements;
@@ -1255,6 +1298,32 @@ varying_matches::match_comparator(const void *x_generic, const void *y_generic)
    if (x->packing_class != y->packing_class)
       return x->packing_class - y->packing_class;
    return x->packing_order - y->packing_order;
+}
+
+
+/**
+ * Comparison function passed to qsort() to sort varyings used only by
+ * transform feedback when packing of other varyings is disabled.
+ */
+int
+varying_matches::xfb_comparator(const void *x_generic, const void *y_generic)
+{
+   const match *x = (const match *) x_generic;
+
+   if (x->producer_var != NULL && x->producer_var->data.is_xfb_only)
+         return match_comparator(x_generic, y_generic);
+
+   /* FIXME: When the comparator returns 0 it means the elements being
+    * compared are equivalent. However the qsort documentation says:
+    *
+    *    "The order of equivalent elements is undefined."
+    *
+    * In practice the sort ends up reversing the order of the varyings which
+    * means locations are also assigned in this reversed order and happens to
+    * be what we want. This is also whats happening in
+    * varying_matches::match_comparator().
+    */
+   return 0;
 }
 
 
@@ -1573,26 +1642,60 @@ assign_varying_locations(struct gl_context *ctx,
                          unsigned num_tfeedback_decls,
                          tfeedback_decl *tfeedback_decls)
 {
-   if (ctx->Const.DisableVaryingPacking) {
-      /* Transform feedback code assumes varyings are packed, so if the driver
-       * has disabled varying packing, make sure it does not support transform
-       * feedback.
-       */
-      assert(!ctx->Extensions.EXT_transform_feedback);
-   }
-
    /* Tessellation shaders treat inputs and outputs as shared memory and can
     * access inputs and outputs of other invocations.
     * Therefore, they can't be lowered to temps easily (and definitely not
     * efficiently).
     */
-   bool disable_varying_packing =
-      ctx->Const.DisableVaryingPacking ||
+   bool unpackable_tess =
       (consumer && consumer->Stage == MESA_SHADER_TESS_EVAL) ||
       (consumer && consumer->Stage == MESA_SHADER_TESS_CTRL) ||
       (producer && producer->Stage == MESA_SHADER_TESS_CTRL);
 
-   varying_matches matches(disable_varying_packing,
+   /* Transform feedback code assumes varying arrays are packed, so if the
+    * driver has disabled varying packing, make sure to at least enable
+    * packing required by transform feedback.
+    */
+   bool xfb_enabled =
+      ctx->Extensions.EXT_transform_feedback && !unpackable_tess;
+
+   /* Disable varying packing for GL 4.4+ as there is no guarantee
+    * that interpolation qualifiers will match between shaders in these
+    * versions. We also disable packing on outerward facing interfaces for
+    * SSO because in ES we need to retain the unpacked varying information
+    * for draw time validation. For desktop GL we could allow packing for
+    * versions < 4.4 but its just safer not to do packing.
+    *
+    * Packing is still enabled on individual arrays, structs, and matrices as
+    * these are required by the transform feedback code and it is still safe
+    * to do so. We also enable packing when a varying is only used for
+    * transform feedback and its not a SSO.
+    *
+    * Varying packing currently only packs together varyings with matching
+    * interpolation qualifiers as the backends assume all packed components
+    * are to be processed in the same way. Therefore we cannot do packing in
+    * these versions of GL without the risk of mismatching interfaces.
+    *
+    * From Section 4.5 (Interpolation Qualifiers) of the GLSL 4.30 spec:
+    *
+    *    "The type and presence of interpolation qualifiers of variables with
+    *    the same name declared in all linked shaders for the same cross-stage
+    *    interface must match, otherwise the link command will fail.
+    *
+    *    When comparing an output from one stage to an input of a subsequent
+    *    stage, the input and output don't match if their interpolation
+    *    qualifiers (or lack thereof) are not the same."
+    *
+    * This text was also in at least revison 7 of the 4.40 spec but is no
+    * longer in revision 9 and not in the 4.50 spec.
+    */
+   bool disable_varying_packing =
+      ctx->Const.DisableVaryingPacking || unpackable_tess;
+   if ((ctx->API == API_OPENGL_CORE && ctx->Version >= 44) ||
+       (prog->SeparateShader && (producer == NULL || consumer == NULL)))
+      disable_varying_packing = true;
+
+   varying_matches matches(disable_varying_packing, xfb_enabled,
                            producer ? producer->Stage : (gl_shader_stage)-1,
                            consumer ? consumer->Stage : (gl_shader_stage)-1);
    hash_table *tfeedback_candidates
@@ -1711,8 +1814,10 @@ assign_varying_locations(struct gl_context *ctx,
          return false;
       }
 
-      if (matched_candidate->toplevel_var->data.is_unmatched_generic_inout)
+      if (matched_candidate->toplevel_var->data.is_unmatched_generic_inout) {
+         matched_candidate->toplevel_var->data.is_xfb_only = 1;
          matches.record(matched_candidate->toplevel_var, NULL);
+      }
    }
 
    const uint64_t reserved_slots =
@@ -1784,15 +1889,16 @@ assign_varying_locations(struct gl_context *ctx,
                                               ir_var_shader_in);
    }
 
-   if (!disable_varying_packing) {
-      if (producer) {
-         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
-                               0, producer);
-      }
-      if (consumer) {
-         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
-                               consumer_vertices, consumer);
-      }
+   if (producer) {
+      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
+                            0, producer, disable_varying_packing,
+                            xfb_enabled);
+   }
+
+   if (consumer) {
+      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
+                            consumer_vertices, consumer,
+                            disable_varying_packing, xfb_enabled);
    }
 
    return true;

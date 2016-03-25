@@ -1887,6 +1887,7 @@ do_common_optimization(exec_list *ir, bool linked,
       OPT(do_dead_functions, ir);
       OPT(do_structure_splitting, ir);
    }
+   propagate_invariance(ir);
    OPT(do_if_simplification, ir);
    OPT(opt_flatten_nested_if_blocks, ir);
    OPT(opt_conditional_discard, ir);

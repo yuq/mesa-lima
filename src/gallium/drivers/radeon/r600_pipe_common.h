@@ -61,7 +61,7 @@
 /* gap - reuse */
 #define DBG_COMPUTE		(1 << 2)
 #define DBG_VM			(1 << 3)
-#define DBG_TRACE_CS		(1 << 4)
+/* gap - reuse */
 /* shader logging */
 #define DBG_FS			(1 << 5)
 #define DBG_VS			(1 << 6)
@@ -302,10 +302,6 @@ struct r600_common_screen {
 	 * It must be locked prior to using and flushed before unlocking. */
 	struct pipe_context		*aux_context;
 	pipe_mutex			aux_context_lock;
-
-	struct r600_resource		*trace_bo;
-	uint32_t			*trace_ptr;
-	unsigned			cs_count;
 
 	/* This must be in the screen, because UE4 uses one context for
 	 * compilation and another one for rendering.
@@ -610,6 +606,8 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   struct r600_atom *fb_state,
 				   unsigned *buffers, unsigned *dirty_cbufs,
 				   const union pipe_color_union *color);
+void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
+			      struct r600_texture *rtex);
 void r600_init_screen_texture_functions(struct r600_common_screen *rscreen);
 void r600_init_context_texture_functions(struct r600_common_context *rctx);
 

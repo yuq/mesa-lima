@@ -448,6 +448,8 @@ svga_texture_transfer_map(struct pipe_context *pipe,
             ret = readback_image_vgpu9(svga, surf, st->slice, transfer->level);
          }
 
+         svga->hud.num_readbacks++;
+
          assert(ret == PIPE_OK);
          (void) ret;
 
@@ -680,6 +682,8 @@ svga_texture_transfer_unmap(struct pipe_context *pipe,
       } else {
          ret = update_image_vgpu9(svga, surf, &box, st->slice, transfer->level);
       }
+
+      svga->hud.num_resource_updates++;
 
       assert(ret == PIPE_OK);
       (void) ret;

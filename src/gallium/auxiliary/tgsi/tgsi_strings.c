@@ -145,6 +145,7 @@ const char *tgsi_property_names[TGSI_PROPERTY_COUNT] =
    "NUM_CLIPDIST_ENABLED",
    "NUM_CULLDIST_ENABLED",
    "FS_EARLY_DEPTH_STENCIL",
+   "NEXT_SHADER",
 };
 
 const char *tgsi_return_type_names[TGSI_RETURN_TYPE_COUNT] =

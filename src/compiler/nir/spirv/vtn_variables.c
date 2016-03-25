@@ -190,7 +190,9 @@ _vtn_local_load_store(struct vtn_builder *b, bool load, nir_deref_var *deref,
 
       if (load) {
          nir_ssa_dest_init(&intrin->instr, &intrin->dest,
-                           intrin->num_components, NULL);
+                           intrin->num_components,
+                           glsl_get_bit_size(glsl_get_base_type(tail->type)),
+                           NULL);
          inout->def = &intrin->dest.ssa;
       } else {
          nir_intrinsic_set_write_mask(intrin, (1 << intrin->num_components) - 1);
@@ -322,7 +324,7 @@ get_vulkan_resource_index(struct vtn_builder *b, struct vtn_access_chain *chain,
    nir_intrinsic_set_desc_set(instr, chain->var->descriptor_set);
    nir_intrinsic_set_binding(instr, chain->var->binding);
 
-   nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
+   nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
    nir_builder_instr_insert(&b->nb, &instr->instr);
 
    return &instr->dest.ssa;
@@ -411,7 +413,8 @@ _vtn_load_store_tail(struct vtn_builder *b, nir_intrinsic_op op, bool load,
 
    if (load) {
       nir_ssa_dest_init(&instr->instr, &instr->dest,
-                        instr->num_components, NULL);
+                        instr->num_components,
+                        glsl_get_bit_size(glsl_get_base_type(type)), NULL);
       (*inout)->def = &instr->dest.ssa;
    }
 
@@ -1385,7 +1388,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          nir_intrinsic_instr_create(b->nb.shader,
                                     nir_intrinsic_get_buffer_size);
       instr->src[0] = nir_src_for_ssa(index);
-      nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
+      nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
       nir_builder_instr_insert(&b->nb, &instr->instr);
       nir_ssa_def *buf_size = &instr->dest.ssa;
 

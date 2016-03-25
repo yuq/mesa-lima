@@ -192,6 +192,69 @@ static const struct u_resource_vtbl r600_global_buffer_vtbl =
 	r600_compute_global_transfer_inline_write /* transfer_inline_write */
 };
 
+/* We need to define these R600 registers here, because we can't include
+ * evergreend.h and r600d.h.
+ */
+#define R_028868_SQ_PGM_RESOURCES_VS                 0x028868
+#define R_028850_SQ_PGM_RESOURCES_PS                 0x028850
+
+#ifdef HAVE_OPENCL
+
+static void r600_shader_binary_read_config(const struct radeon_shader_binary *binary,
+					   struct r600_bytecode *bc,
+					   uint64_t symbol_offset,
+					   boolean *use_kill)
+{
+       unsigned i;
+       const unsigned char *config =
+               radeon_shader_binary_config_start(binary, symbol_offset);
+
+       for (i = 0; i < binary->config_size_per_symbol; i+= 8) {
+               unsigned reg =
+                       util_le32_to_cpu(*(uint32_t*)(config + i));
+               unsigned value =
+                       util_le32_to_cpu(*(uint32_t*)(config + i + 4));
+               switch (reg) {
+               /* R600 / R700 */
+               case R_028850_SQ_PGM_RESOURCES_PS:
+               case R_028868_SQ_PGM_RESOURCES_VS:
+               /* Evergreen / Northern Islands */
+               case R_028844_SQ_PGM_RESOURCES_PS:
+               case R_028860_SQ_PGM_RESOURCES_VS:
+               case R_0288D4_SQ_PGM_RESOURCES_LS:
+                       bc->ngpr = MAX2(bc->ngpr, G_028844_NUM_GPRS(value));
+                       bc->nstack = MAX2(bc->nstack, G_028844_STACK_SIZE(value));
+                       break;
+               case R_02880C_DB_SHADER_CONTROL:
+                       *use_kill = G_02880C_KILL_ENABLE(value);
+                       break;
+               case R_0288E8_SQ_LDS_ALLOC:
+                       bc->nlds_dw = value;
+                       break;
+               }
+       }
+}
+
+static unsigned r600_create_shader(struct r600_bytecode *bc,
+				   const struct radeon_shader_binary *binary,
+				   boolean *use_kill)
+
+{
+	assert(binary->code_size % 4 == 0);
+	bc->bytecode = CALLOC(1, binary->code_size);
+	memcpy(bc->bytecode, binary->code, binary->code_size);
+	bc->ndw = binary->code_size / 4;
+
+	r600_shader_binary_read_config(binary, bc, 0, use_kill);
+	return 0;
+}
+
+#endif
+
+static void r600_destroy_shader(struct r600_bytecode *bc)
+{
+	FREE(bc->bytecode);
+}
 
 void *evergreen_create_compute_state(
 	struct pipe_context *ctx_,
@@ -236,13 +299,11 @@ void evergreen_delete_compute_state(struct pipe_context *ctx_, void* state)
 	if (!shader)
 		return;
 
-#ifdef HAVE_OPENCL
 	radeon_shader_binary_clean(&shader->binary);
 	r600_destroy_shader(&shader->bc);
 
 	/* TODO destroy shader->code_bo, shader->const_bo
 	 * we'll need something like r600_buffer_free */
-#endif
 	FREE(shader);
 }
 

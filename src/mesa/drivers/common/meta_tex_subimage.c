@@ -263,6 +263,9 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto fail;
 
+   /* Explicitly disable sRGB encoding */
+   ctx->DrawBuffer->Visual.sRGBCapable = false;
+
    _mesa_update_state(ctx);
 
    if (_mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
@@ -419,6 +422,9 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto fail;
+
+   /* Explicitly disable sRGB encoding */
+   ctx->DrawBuffer->Visual.sRGBCapable = false;
 
    _mesa_update_state(ctx);
 

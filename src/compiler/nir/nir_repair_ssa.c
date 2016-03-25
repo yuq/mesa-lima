@@ -85,7 +85,8 @@ repair_ssa_def(nir_ssa_def *def, void *void_state)
    BITSET_SET(state->def_set, def->parent_instr->block->index);
 
    struct nir_phi_builder_value *val =
-      nir_phi_builder_add_value(pb, def->num_components, state->def_set);
+      nir_phi_builder_add_value(pb, def->num_components, def->bit_size,
+                                state->def_set);
 
    nir_phi_builder_value_set_block_def(val, def->parent_instr->block, def);
 

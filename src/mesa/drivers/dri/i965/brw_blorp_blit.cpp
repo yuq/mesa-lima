@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "main/context.h"
 #include "main/teximage.h"
 #include "main/fbobject.h"
 
@@ -63,7 +64,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
                         float src_x1, float src_y1,
                         float dst_x0, float dst_y0,
                         float dst_x1, float dst_y1,
-                        GLenum filter, bool mirror_x, bool mirror_y)
+                        GLenum filter, bool mirror_x, bool mirror_y,
+                        bool decode_srgb, bool encode_srgb)
 {
    /* Get ready to blit.  This includes depth resolving the src and dst
     * buffers if necessary.  Note: it's not necessary to do a color resolve on
@@ -88,6 +90,12 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        dst_mt->num_samples, _mesa_get_format_name(dst_mt->format), dst_mt,
        dst_level, dst_layer, dst_x0, dst_y0, dst_x1, dst_y1,
        mirror_x, mirror_y);
+
+   if (!decode_srgb && _mesa_get_format_color_encoding(src_format) == GL_SRGB)
+      src_format = _mesa_get_srgb_format_linear(src_format);
+
+   if (!encode_srgb && _mesa_get_format_color_encoding(dst_format) == GL_SRGB)
+      dst_format = _mesa_get_srgb_format_linear(dst_format);
 
    brw_blorp_blit_params params(brw,
                                 src_mt, src_level, src_layer, src_format,
@@ -114,6 +122,8 @@ do_blorp_blit(struct brw_context *brw, GLbitfield buffer_bit,
    struct intel_mipmap_tree *src_mt = find_miptree(buffer_bit, src_irb);
    struct intel_mipmap_tree *dst_mt = find_miptree(buffer_bit, dst_irb);
 
+   const bool es3 = _mesa_is_gles3(&brw->ctx);
+
    /* Do the blit */
    brw_blorp_blit_miptrees(brw,
                            src_mt, src_irb->mt_level, src_irb->mt_layer,
@@ -122,7 +132,8 @@ do_blorp_blit(struct brw_context *brw, GLbitfield buffer_bit,
                            dst_format,
                            srcX0, srcY0, srcX1, srcY1,
                            dstX0, dstY0, dstX1, dstY1,
-                           filter, mirror_x, mirror_y);
+                           filter, mirror_x, mirror_y,
+                           es3, es3);
 
    dst_irb->need_downsample = true;
 }
@@ -289,7 +300,8 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
                            dst_image->TexFormat,
                            srcX0, srcY0, srcX1, srcY1,
                            dstX0, dstY0, dstX1, dstY1,
-                           GL_NEAREST, false, mirror_y);
+                           GL_NEAREST, false, mirror_y,
+                           false, false);
 
    /* If we're copying to a packed depth stencil texture and the source
     * framebuffer has separate stencil, we need to also copy the stencil data
@@ -314,7 +326,8 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
                                  dst_mt->format,
                                  srcX0, srcY0, srcX1, srcY1,
                                  dstX0, dstY0, dstX1, dstY1,
-                                 GL_NEAREST, false, mirror_y);
+                                 GL_NEAREST, false, mirror_y,
+                                 false, false);
       }
    }
 

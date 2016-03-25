@@ -519,7 +519,8 @@ amdgpu_bo_create(struct radeon_winsys *rws,
 
 static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
                                                struct winsys_handle *whandle,
-                                               unsigned *stride)
+                                               unsigned *stride,
+                                               unsigned *offset)
 {
    struct amdgpu_winsys *ws = amdgpu_winsys(rws);
    struct amdgpu_winsys_bo *bo;
@@ -587,6 +588,8 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
 
    if (stride)
       *stride = whandle->stride;
+   if (offset)
+      *offset = whandle->offset;
 
    if (bo->initial_domain & RADEON_DOMAIN_VRAM)
       ws->allocated_vram += align(bo->base.size, ws->gart_page_size);
@@ -609,7 +612,8 @@ error:
 }
 
 static boolean amdgpu_bo_get_handle(struct pb_buffer *buffer,
-                                    unsigned stride,
+                                    unsigned stride, unsigned offset,
+                                    unsigned slice_size,
                                     struct winsys_handle *whandle)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(buffer);
@@ -637,6 +641,8 @@ static boolean amdgpu_bo_get_handle(struct pb_buffer *buffer,
       return FALSE;
 
    whandle->stride = stride;
+   whandle->offset = offset;
+   whandle->offset += slice_size * whandle->layer;
    bo->is_shared = true;
    return TRUE;
 }

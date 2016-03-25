@@ -52,6 +52,7 @@ struct nir_phi_builder_value {
 
    /* Needed so we can create phis and undefs */
    unsigned num_components;
+   unsigned bit_size;
 
    /* The list of phi nodes associated with this value.  Phi nodes are not
     * added directly.  Instead, they are created, the instr->block pointer
@@ -61,8 +62,18 @@ struct nir_phi_builder_value {
     */
    struct exec_list phis;
 
-   /* Array of SSA defs, indexed by block.  If a phi needs to be inserted
-    * in a given block, it will have the magic value NEEDS_PHI.
+   /* Array of SSA defs, indexed by block.  For each block, this array has has
+    * one of three types of values:
+    *
+    *  - NULL. Indicates that there is no known definition in this block.  If
+    *    you need to find one, look at the block's immediate dominator.
+    *
+    *  - NEEDS_PHI. Indicates that the block may need a phi node but none has
+    *    been created yet.  If a def is requested for a block, a phi will need
+    *    to be created.
+    *
+    *  - A regular SSA def.  This will be either the result of a phi node or
+    *    one of the defs provided by nir_phi_builder_value_set_blocK_def().
     */
    nir_ssa_def *defs[0];
 };
@@ -101,7 +112,7 @@ nir_phi_builder_create(nir_function_impl *impl)
 
 struct nir_phi_builder_value *
 nir_phi_builder_add_value(struct nir_phi_builder *pb, unsigned num_components,
-                          const BITSET_WORD *defs)
+                          unsigned bit_size, const BITSET_WORD *defs)
 {
    struct nir_phi_builder_value *val;
    unsigned i, w_start = 0, w_end = 0;
@@ -109,6 +120,7 @@ nir_phi_builder_add_value(struct nir_phi_builder *pb, unsigned num_components,
    val = rzalloc_size(pb, sizeof(*val) + sizeof(val->defs[0]) * pb->num_blocks);
    val->builder = pb;
    val->num_components = num_components;
+   val->bit_size = bit_size;
    exec_list_make_empty(&val->phis);
    exec_list_push_tail(&pb->values, &val->node);
 
@@ -127,8 +139,7 @@ nir_phi_builder_add_value(struct nir_phi_builder *pb, unsigned num_components,
       set_foreach(cur->dom_frontier, dom_entry) {
          nir_block *next = (nir_block *) dom_entry->key;
 
-         /*
-          * If there's more than one return statement, then the end block
+         /* If there's more than one return statement, then the end block
           * can be a join point for some definitions. However, there are
           * no instructions in the end block, so nothing would use those
           * phi nodes. Of course, we couldn't place those phi nodes
@@ -139,6 +150,10 @@ nir_phi_builder_add_value(struct nir_phi_builder *pb, unsigned num_components,
             continue;
 
          if (val->defs[next->index] == NULL) {
+            /* Instead of creating a phi node immediately, we simply set the
+             * value to the magic value NEEDS_PHI.  Later, we create phi nodes
+             * on demand in nir_phi_builder_value_get_block_def().
+             */
             val->defs[next->index] = NEEDS_PHI;
 
             if (pb->work[next->index] < pb->iter_count) {
@@ -163,7 +178,9 @@ nir_ssa_def *
 nir_phi_builder_value_get_block_def(struct nir_phi_builder_value *val,
                                     nir_block *block)
 {
+   /* For each block, we have one of three types of values */
    if (val->defs[block->index] == NULL) {
+      /* NULL indicates that we have no SSA def for this block. */
       if (block->imm_dom) {
          /* Grab it from our immediate dominator.  We'll stash it here for
           * easy access later.
@@ -185,17 +202,36 @@ nir_phi_builder_value_get_block_def(struct nir_phi_builder_value *val,
          return &undef->def;
       }
    } else if (val->defs[block->index] == NEEDS_PHI) {
-      /* If we need a phi instruction, go ahead and create one but don't
-       * add it to the program yet.  Later, we'll go through and set up phi
-       * sources and add the instructions will be added at that time.
+      /* The magic value NEEDS_PHI indicates that the block needs a phi node
+       * but none has been created.  We need to create one now so we can
+       * return it to the caller.
+       *
+       * Because a phi node may use SSA defs that it does not dominate (this
+       * happens in loops), we do not yet have enough information to fully
+       * fill out the phi node.  Instead, the phi nodes we create here will be
+       * empty (have no sources) and won't actually be placed in the block's
+       * instruction list yet.  Later, in nir_phi_builder_finish(), we walk
+       * over all of the phi instructions, fill out the sources lists, and
+       * place them at the top of their respective block's instruction list.
+       *
+       * Creating phi nodes on-demand allows us to avoid creating dead phi
+       * nodes that will just get deleted later. While this probably isn't a
+       * big win for a full into-SSA pass, other users may use the phi builder
+       * to make small SSA form repairs where most of the phi nodes will never
+       * be used.
        */
       nir_phi_instr *phi = nir_phi_instr_create(val->builder->shader);
-      nir_ssa_dest_init(&phi->instr, &phi->dest, val->num_components, NULL);
+      nir_ssa_dest_init(&phi->instr, &phi->dest, val->num_components,
+                        val->bit_size, NULL);
       phi->instr.block = block;
       exec_list_push_tail(&val->phis, &phi->instr.node);
       val->defs[block->index] = &phi->dest.ssa;
       return &phi->dest.ssa;
    } else {
+      /* In this case, we have an actual SSA def.  It's either the result of a
+       * phi node created by the case above or one passed to us through
+       * nir_phi_builder_value_set_block_def().
+       */
       return val->defs[block->index];
    }
 }
@@ -216,9 +252,14 @@ nir_phi_builder_finish(struct nir_phi_builder *pb)
    NIR_VLA(nir_block *, preds, num_blocks);
 
    foreach_list_typed(struct nir_phi_builder_value, val, node, &pb->values) {
-      /* We can't iterate over the list of phis normally because we are
-       * removing them as we go and, in some cases, adding new phis as we
-       * build the source lists of others.
+      /* We treat the linked list of phi nodes like a worklist.  The list is
+       * pre-populated by calls to nir_phi_builder_value_get_block_def() that
+       * create phi nodes.  As we fill in the sources of phi nodes, more may
+       * be created and are added to the end of the list.
+       *
+       * Because we are adding and removing phi nodes from the list as we go,
+       * we can't iterate over it normally.  Instead, we just iterate until
+       * the list is empty.
        */
       while (!exec_list_is_empty(&val->phis)) {
          struct exec_node *head = exec_list_get_head(&val->phis);

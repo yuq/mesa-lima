@@ -165,7 +165,7 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
          }
 
          default:
-            if (nir_op_infos[alu->op].output_type == nir_type_bool) {
+            if (nir_alu_type_get_base_type(nir_op_infos[alu->op].output_type) == nir_type_bool) {
                /* This instructions will turn into a CMP when we actually emit
                 * them so the result will have to be resolved before it can be
                 * used.
@@ -225,7 +225,7 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
           * have to worry about resolving them.
           */
          instr->pass_flags &= ~BRW_NIR_BOOLEAN_MASK;
-         if (load->value.u[0] == NIR_TRUE || load->value.u[0] == NIR_FALSE) {
+         if (load->value.u32[0] == NIR_TRUE || load->value.u32[0] == NIR_FALSE) {
             instr->pass_flags |= BRW_NIR_BOOLEAN_NO_RESOLVE;
          } else {
             instr->pass_flags |= BRW_NIR_NON_BOOLEAN;

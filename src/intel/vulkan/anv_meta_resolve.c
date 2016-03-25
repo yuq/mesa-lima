@@ -164,7 +164,7 @@ build_nir_fs(uint32_t num_samples)
       tex->dest_type = nir_type_float;
       tex->is_array = false;
       tex->coord_components = 3;
-      nir_ssa_dest_init(&tex->instr, &tex->dest, /*num_components*/ 4, "tex");
+      nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, "tex");
       nir_builder_instr_insert(&b, &tex->instr);
 
       accum = nir_fadd(&b, accum, &tex->dest.ssa);

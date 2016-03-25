@@ -79,6 +79,20 @@ bool
 _mesa_is_valid_generate_texture_mipmap_internalformat(struct gl_context *ctx,
                                                       GLenum internalformat)
 {
+   if (_mesa_is_gles3(ctx)) {
+      /* From the ES 3.2 specification's description of GenerateMipmap():
+       * "An INVALID_OPERATION error is generated if the levelbase array was
+       *  not specified with an unsized internal format from table 8.3 or a
+       *  sized internal format that is both color-renderable and
+       *  texture-filterable according to table 8.10."
+       */
+      return internalformat == GL_RGBA || internalformat == GL_RGB ||
+             internalformat == GL_LUMINANCE_ALPHA ||
+             internalformat == GL_LUMINANCE || internalformat == GL_ALPHA ||
+             (_mesa_is_es3_color_renderable(internalformat) &&
+              _mesa_is_es3_texture_filterable(internalformat));
+   }
+
    return (!_mesa_is_enum_format_integer(internalformat) &&
            !_mesa_is_depthstencil_format(internalformat) &&
            !_mesa_is_astc_format(internalformat) &&

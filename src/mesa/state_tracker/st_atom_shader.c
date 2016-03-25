@@ -74,7 +74,7 @@ update_fp( struct st_context *st )
    /* _NEW_MULTISAMPLE | _NEW_BUFFERS */
    key.persample_shading =
       st->force_persample_in_shader &&
-      st->ctx->Multisample._Enabled &&
+      _mesa_is_multisample_enabled(st->ctx) &&
       st->ctx->Multisample.SampleShading &&
       st->ctx->Multisample.MinSampleShadingValue *
       _mesa_geometric_samples(st->ctx->DrawBuffer) > 1;

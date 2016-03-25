@@ -1294,7 +1294,7 @@ pop_if_stack(struct brw_codegen *p)
 static void
 push_loop_stack(struct brw_codegen *p, brw_inst *inst)
 {
-   if (p->loop_stack_array_size < p->loop_stack_depth) {
+   if (p->loop_stack_array_size <= (p->loop_stack_depth + 1)) {
       p->loop_stack_array_size *= 2;
       p->loop_stack = reralloc(p->mem_ctx, p->loop_stack, int,
 			       p->loop_stack_array_size);

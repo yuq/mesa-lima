@@ -140,7 +140,7 @@ get_texture_size(nir_builder *b, nir_tex_instr *tex)
    txs->src[0].src = nir_src_for_ssa(nir_imm_int(b, 0));
    txs->src[0].src_type = nir_tex_src_lod;
 
-   nir_ssa_dest_init(&txs->instr, &txs->dest, 2, NULL);
+   nir_ssa_dest_init(&txs->instr, &txs->dest, 2, 32, NULL);
    nir_builder_instr_insert(b, &txs->instr);
 
    return nir_i2f(b, &txs->dest.ssa);
@@ -223,13 +223,13 @@ get_zero_or_one(nir_builder *b, nir_alu_type type, uint8_t swizzle_val)
    memset(&v, 0, sizeof(v));
 
    if (swizzle_val == 4) {
-      v.u[0] = v.u[1] = v.u[2] = v.u[3] = 0;
+      v.u32[0] = v.u32[1] = v.u32[2] = v.u32[3] = 0;
    } else {
       assert(swizzle_val == 5);
       if (type == nir_type_float)
-         v.f[0] = v.f[1] = v.f[2] = v.f[3] = 1.0;
+         v.f32[0] = v.f32[1] = v.f32[2] = v.f32[3] = 1.0;
       else
-         v.u[0] = v.u[1] = v.u[2] = v.u[3] = 1;
+         v.u32[0] = v.u32[1] = v.u32[2] = v.u32[3] = 1;
    }
 
    return nir_build_imm(b, 4, v);

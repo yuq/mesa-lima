@@ -217,6 +217,7 @@ LIBGLSL_FILES = \
 	opt_tree_grafting.cpp \
 	opt_vectorize.cpp \
 	program.h \
+	propagate_invariance.cpp \
 	s_expression.cpp \
 	s_expression.h
 

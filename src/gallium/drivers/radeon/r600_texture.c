@@ -201,9 +201,11 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 
 static int r600_setup_surface(struct pipe_screen *screen,
 			      struct r600_texture *rtex,
-			      unsigned pitch_in_bytes_override)
+			      unsigned pitch_in_bytes_override,
+			      unsigned offset)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+	unsigned i;
 	int r;
 
 	r = rscreen->ws->surface_init(rscreen->ws, &rtex->surface);
@@ -224,6 +226,11 @@ static int r600_setup_surface(struct pipe_screen *screen,
 			rtex->surface.stencil_offset =
 			rtex->surface.stencil_level[0].offset = rtex->surface.level[0].slice_size;
 		}
+	}
+
+	if (offset) {
+		for (i = 0; i < Elements(rtex->surface.level); ++i)
+			rtex->surface.level[i].offset += offset;
 	}
 	return 0;
 }
@@ -290,8 +297,8 @@ static void r600_texture_disable_cmask(struct r600_common_screen *rscreen,
 	p_atomic_inc(&rscreen->compressed_colortex_counter);
 }
 
-static void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
-				     struct r600_texture *rtex)
+void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
+			      struct r600_texture *rtex)
 {
 	struct r600_common_context *rctx =
 		(struct r600_common_context *)rscreen->aux_context;
@@ -366,6 +373,8 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 
 	return rscreen->ws->buffer_get_handle(res->buf,
 					      rtex->surface.level[0].pitch_bytes,
+					      rtex->surface.level[0].offset,
+					      rtex->surface.level[0].slice_size,
 					      whandle);
 }
 
@@ -629,8 +638,14 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 	    rscreen->info.drm_major == 2 && rscreen->info.drm_minor < 38)
 		return 0;
 
-	/* Overalign HTILE on Stoney to fix piglit/depthstencil-render-miplevels 585. */
-	if (rscreen->family == CHIP_STONEY)
+	/* Overalign HTILE on P2 configs to work around GPU hangs in
+	 * piglit/depthstencil-render-miplevels 585.
+	 *
+	 * This has been confirmed to help Kabini & Stoney, where the hangs
+	 * are always reproducible. I think I have seen the test hang
+	 * on Carrizo too, though it was very rare there.
+	 */
+	if (rscreen->chip_class >= CIK && num_pipes < 4)
 		num_pipes = 4;
 
 	switch (num_pipes) {
@@ -791,6 +806,7 @@ static struct r600_texture *
 r600_texture_create_object(struct pipe_screen *screen,
 			   const struct pipe_resource *base,
 			   unsigned pitch_in_bytes_override,
+			   unsigned offset,
 			   struct pb_buffer *buf,
 			   struct radeon_surf *surface)
 {
@@ -812,7 +828,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 	rtex->is_depth = util_format_has_depth(util_format_description(rtex->resource.b.b.format));
 
 	rtex->surface = *surface;
-	if (r600_setup_surface(screen, rtex, pitch_in_bytes_override)) {
+	if (r600_setup_surface(screen, rtex, pitch_in_bytes_override, offset)) {
 		FREE(rtex);
 		return NULL;
 	}
@@ -979,7 +995,7 @@ struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 	if (r) {
 		return NULL;
 	}
-	return (struct pipe_resource *)r600_texture_create_object(screen, templ,
+	return (struct pipe_resource *)r600_texture_create_object(screen, templ, 0,
 								  0, NULL, &surface);
 }
 
@@ -990,7 +1006,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct pb_buffer *buf = NULL;
-	unsigned stride = 0;
+	unsigned stride = 0, offset = 0;
 	unsigned array_mode;
 	struct radeon_surf surface;
 	int r;
@@ -1002,7 +1018,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	      templ->depth0 != 1 || templ->last_level != 0)
 		return NULL;
 
-	buf = rscreen->ws->buffer_from_handle(rscreen->ws, whandle, &stride);
+	buf = rscreen->ws->buffer_from_handle(rscreen->ws, whandle, &stride, &offset);
 	if (!buf)
 		return NULL;
 
@@ -1029,8 +1045,8 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	if (metadata.scanout)
 		surface.flags |= RADEON_SURF_SCANOUT;
 
-	rtex = r600_texture_create_object(screen, templ,
-					  stride, buf, &surface);
+	rtex = r600_texture_create_object(screen, templ, stride,
+					  offset, buf, &surface);
 	if (!rtex)
 		return NULL;
 

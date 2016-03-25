@@ -62,7 +62,7 @@ vc4_nir_get_dst_color(nir_builder *b, int sample)
         load->num_components = 1;
         load->const_index[0] = VC4_NIR_TLB_COLOR_READ_INPUT + sample;
         load->src[0] = nir_src_for_ssa(nir_imm_int(b, 0));
-        nir_ssa_dest_init(&load->instr, &load->dest, 1, NULL);
+        nir_ssa_dest_init(&load->instr, &load->dest, 1, 32, NULL);
         nir_builder_instr_insert(b, &load->instr);
         return &load->dest.ssa;
 }
@@ -627,7 +627,7 @@ vc4_nir_lower_blend_instr(struct vc4_compile *c, nir_builder *b,
                         nir_intrinsic_instr_create(b->shader,
                                                    nir_intrinsic_load_sample_mask_in);
                 load->num_components = 1;
-                nir_ssa_dest_init(&load->instr, &load->dest, 1, NULL);
+                nir_ssa_dest_init(&load->instr, &load->dest, 1, 32, NULL);
                 nir_builder_instr_insert(b, &load->instr);
 
                 nir_ssa_def *bitmask = &load->dest.ssa;

@@ -289,7 +289,8 @@ nir_lower_io_block(nir_block *block, void *void_state)
 
          if (intrin->dest.is_ssa) {
             nir_ssa_dest_init(&load->instr, &load->dest,
-                              intrin->num_components, NULL);
+                              intrin->num_components,
+                              intrin->dest.ssa.bit_size, NULL);
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
                                      nir_src_for_ssa(&load->dest.ssa));
          } else {
@@ -369,7 +370,8 @@ nir_lower_io_block(nir_block *block, void *void_state)
 
          if (intrin->dest.is_ssa) {
             nir_ssa_dest_init(&atomic->instr, &atomic->dest,
-                              intrin->dest.ssa.num_components, NULL);
+                              intrin->dest.ssa.num_components,
+                              intrin->dest.ssa.bit_size, NULL);
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
                                      nir_src_for_ssa(&atomic->dest.ssa));
          } else {

@@ -794,9 +794,15 @@ static void si_shader_ps(struct si_shader *shader)
 	 * - the shader uses at least 2 VMEM instructions, or
 	 * - the code size is at least 50 2-dword instructions or 100 1-dword
 	 *   instructions.
+	 *
+	 * Shaders with side effects that must execute independently of the
+	 * depth test require LATE_Z.
 	 */
-	if (info->num_memory_instructions >= 2 ||
-	    shader->binary.code_size > 100*4)
+	if (info->writes_memory &&
+	    !info->properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL])
+		shader->z_order = V_02880C_LATE_Z;
+	else if (info->num_memory_instructions >= 2 ||
+	         shader->binary.code_size > 100*4)
 		shader->z_order = V_02880C_EARLY_Z_THEN_RE_Z;
 	else
 		shader->z_order = V_02880C_EARLY_Z_THEN_LATE_Z;
@@ -1042,6 +1048,31 @@ static int si_shader_select(struct pipe_context *ctx,
 	return si_shader_select_with_key(ctx, state, &key);
 }
 
+static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
+					  union si_shader_key *key)
+{
+	unsigned next_shader = info->properties[TGSI_PROPERTY_NEXT_SHADER];
+
+	switch (info->processor) {
+	case TGSI_PROCESSOR_VERTEX:
+		switch (next_shader) {
+		case TGSI_PROCESSOR_GEOMETRY:
+			key->vs.as_es = 1;
+			break;
+		case TGSI_PROCESSOR_TESS_CTRL:
+		case TGSI_PROCESSOR_TESS_EVAL:
+			key->vs.as_ls = 1;
+			break;
+		}
+		break;
+
+	case TGSI_PROCESSOR_TESS_EVAL:
+		if (next_shader == TGSI_PROCESSOR_GEOMETRY)
+			key->tes.as_es = 1;
+		break;
+	}
+}
+
 static void *si_create_shader_selector(struct pipe_context *ctx,
 				       const struct pipe_shader_state *state)
 {
@@ -1157,6 +1188,10 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	if (sel->info.properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL])
 		sel->db_shader_control |= S_02880C_DEPTH_BEFORE_SHADER(1);
 
+	if (sel->info.writes_memory)
+		sel->db_shader_control |= S_02880C_EXEC_ON_HIER_FAIL(1) |
+					  S_02880C_EXEC_ON_NOOP(1);
+
 	/* Compile the main shader part for use with a prolog and/or epilog. */
 	if (sel->type != PIPE_SHADER_GEOMETRY &&
 	    !sscreen->use_monolithic_shaders) {
@@ -1167,6 +1202,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			goto error;
 
 		shader->selector = sel;
+		si_parse_next_shader_property(&sel->info, &shader->key);
 
 		tgsi_binary = si_get_tgsi_binary(sel);
 
@@ -1202,6 +1238,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		union si_shader_key key;
 
 		memset(&key, 0, sizeof(key));
+		si_parse_next_shader_property(&sel->info, &key);
 
 		/* Set reasonable defaults, so that the shader key doesn't
 		 * cause any code to be eliminated.

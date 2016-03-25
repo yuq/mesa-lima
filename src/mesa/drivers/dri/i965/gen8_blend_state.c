@@ -65,7 +65,7 @@ gen8_upload_blend_state(struct brw_context *brw)
 
    if (rb_zero_type != GL_INT && rb_zero_type != GL_UNSIGNED_INT) {
       /* _NEW_MULTISAMPLE */
-      if (ctx->Multisample._Enabled) {
+      if (_mesa_is_multisample_enabled(ctx)) {
          if (ctx->Multisample.SampleAlphaToCoverage) {
             blend[0] |= GEN8_BLEND_ALPHA_TO_COVERAGE_ENABLE;
             blend[0] |= GEN8_BLEND_ALPHA_TO_COVERAGE_DITHER_ENABLE;
@@ -183,7 +183,7 @@ gen8_upload_blend_state(struct brw_context *brw)
       * "If Dual Source Blending is enabled, this bit must be disabled."
       */
       WARN_ONCE(ctx->Color.Blend[i]._UsesDualSrc &&
-                ctx->Multisample._Enabled &&
+                _mesa_is_multisample_enabled(ctx) &&
                 ctx->Multisample.SampleAlphaToOne,
                 "HW workaround: disabling alpha to one with dual src "
                 "blending\n");
@@ -226,7 +226,7 @@ gen8_upload_ps_blend(struct brw_context *brw)
       dw1 |= GEN8_PS_BLEND_ALPHA_TEST_ENABLE;
 
    /* _NEW_MULTISAMPLE */
-   if (ctx->Multisample._Enabled && ctx->Multisample.SampleAlphaToCoverage)
+   if (_mesa_is_multisample_enabled(ctx) && ctx->Multisample.SampleAlphaToCoverage)
       dw1 |= GEN8_PS_BLEND_ALPHA_TO_COVERAGE_ENABLE;
 
    /* Used for implementing the following bit of GL_EXT_texture_integer:

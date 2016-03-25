@@ -1655,10 +1655,8 @@ CodeEmitterGK110::emitSTORE(const Instruction *i)
       break;
    }
 
-   if (i->src(0).getFile() != FILE_MEMORY_GLOBAL)
-      offset &= 0xffffff;
-
    if (code[0] & 0x2) {
+      offset &= 0xffffff;
       emitLoadStoreType(i->dType, 0x33);
       if (i->src(0).getFile() == FILE_MEMORY_LOCAL)
          emitCachingMode(i->cache, 0x2f);

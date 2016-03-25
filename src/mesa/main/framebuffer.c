@@ -983,3 +983,22 @@ _mesa_is_front_buffer_drawing(const struct gl_framebuffer *fb)
    return (fb->_NumColorDrawBuffers >= 1 &&
            fb->_ColorDrawBufferIndexes[0] == BUFFER_FRONT_LEFT);
 }
+
+static inline GLuint
+_mesa_geometric_nonvalidated_samples(const struct gl_framebuffer *buffer)
+{
+   return buffer->_HasAttachments ?
+      buffer->Visual.samples :
+      buffer->DefaultGeometry.NumSamples;
+}
+
+bool _mesa_is_multisample_enabled(const struct gl_context *ctx)
+{
+   /* The sample count may not be validated by the driver, but when it is set,
+    * we know that is in a valid range and no driver should ever validate a
+    * multisampled framebuffer to non-multisampled and vice-versa.
+    */
+   return ctx->Multisample.Enabled &&
+          ctx->DrawBuffer &&
+          _mesa_geometric_nonvalidated_samples(ctx->DrawBuffer) > 1;
+}

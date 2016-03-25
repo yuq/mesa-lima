@@ -56,7 +56,7 @@
  */
 static void flush(struct rvce_encoder *enc)
 {
-	enc->ws->cs_flush(enc->cs, RADEON_FLUSH_ASYNC, NULL, 0);
+	enc->ws->cs_flush(enc->cs, RADEON_FLUSH_ASYNC, NULL);
 	enc->task_info_idx = 0;
 	enc->bs_idx = 0;
 }
@@ -429,7 +429,7 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 
 	enc->screen = context->screen;
 	enc->ws = ws;
-	enc->cs = ws->cs_create(rctx->ctx, RING_VCE, rvce_cs_flush, enc, NULL);
+	enc->cs = ws->cs_create(rctx->ctx, RING_VCE, rvce_cs_flush, enc);
 	if (!enc->cs) {
 		RVID_ERR("Can't get command submission context.\n");
 		goto error;

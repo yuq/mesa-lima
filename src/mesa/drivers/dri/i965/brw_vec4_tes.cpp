@@ -149,9 +149,15 @@ vec4_tes_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                src_reg(brw_vec8_grf(1, 0))));
       break;
    case nir_intrinsic_load_tess_level_outer:
-      emit(MOV(get_nir_dest(instr->dest, BRW_REGISTER_TYPE_F),
-               swizzle(src_reg(ATTR, 1, glsl_type::vec4_type),
-                       BRW_SWIZZLE_WZYX)));
+      if (tes_prog_data->domain == BRW_TESS_DOMAIN_ISOLINE) {
+         emit(MOV(get_nir_dest(instr->dest, BRW_REGISTER_TYPE_F),
+                  swizzle(src_reg(ATTR, 1, glsl_type::vec4_type),
+                          BRW_SWIZZLE_ZWZW)));
+      } else {
+         emit(MOV(get_nir_dest(instr->dest, BRW_REGISTER_TYPE_F),
+                  swizzle(src_reg(ATTR, 1, glsl_type::vec4_type),
+                          BRW_SWIZZLE_WZYX)));
+      }
       break;
    case nir_intrinsic_load_tess_level_inner:
       if (tes_prog_data->domain == BRW_TESS_DOMAIN_QUAD) {

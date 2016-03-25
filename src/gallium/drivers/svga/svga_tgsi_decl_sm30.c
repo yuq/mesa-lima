@@ -517,15 +517,15 @@ vs30_output(struct svga_shader_emitter *emit,
 static ubyte
 svga_tgsi_sampler_type(const struct svga_shader_emitter *emit, int idx)
 {
-   switch (emit->key.tex[idx].texture_target) {
-   case PIPE_TEXTURE_1D:
+   switch (emit->sampler_target[idx]) {
+   case TGSI_TEXTURE_1D:
       return SVGA3DSAMP_2D;
-   case PIPE_TEXTURE_2D:
-   case PIPE_TEXTURE_RECT:
+   case TGSI_TEXTURE_2D:
+   case TGSI_TEXTURE_RECT:
       return SVGA3DSAMP_2D;
-   case PIPE_TEXTURE_3D:
+   case TGSI_TEXTURE_3D:
       return SVGA3DSAMP_VOLUME;
-   case PIPE_TEXTURE_CUBE:
+   case TGSI_TEXTURE_CUBE:
       return SVGA3DSAMP_CUBE;
    }
 
@@ -583,6 +583,14 @@ svga_translate_decl_sm30( struct svga_shader_emitter *emit,
             ok = vs30_output( emit, decl->Semantic, idx );
          else
             ok = ps30_output( emit, decl->Semantic, idx );
+         break;
+
+      case TGSI_FILE_SAMPLER_VIEW:
+         {
+            unsigned unit = decl->Range.First;
+            assert(decl->Range.First == decl->Range.Last);
+            emit->sampler_target[unit] = decl->SamplerView.Resource;
+         }
          break;
 
       default:

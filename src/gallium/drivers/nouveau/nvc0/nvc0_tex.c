@@ -707,21 +707,20 @@ void
 nve4_set_tex_handles(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-   uint64_t address;
+   struct nvc0_screen *screen = nvc0->screen;
    unsigned s;
 
    if (nvc0->screen->base.class_3d < NVE4_3D_CLASS)
       return;
-   address = nvc0->screen->uniform_bo->offset + (6 << 16);
 
-   for (s = 0; s < 5; ++s, address += (1 << 10)) {
+   for (s = 0; s < 5; ++s) {
       uint32_t dirty = nvc0->textures_dirty[s] | nvc0->samplers_dirty[s];
       if (!dirty)
          continue;
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
       PUSH_DATA (push, 1024);
-      PUSH_DATAh(push, address);
-      PUSH_DATA (push, address);
+      PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
+      PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       do {
          int i = ffs(dirty) - 1;
          dirty &= ~(1 << i);

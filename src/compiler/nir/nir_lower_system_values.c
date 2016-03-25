@@ -65,9 +65,9 @@ convert_block(nir_block *block, void *void_state)
           */
 
          nir_const_value local_size;
-         local_size.u[0] = b->shader->info.cs.local_size[0];
-         local_size.u[1] = b->shader->info.cs.local_size[1];
-         local_size.u[2] = b->shader->info.cs.local_size[2];
+         local_size.u32[0] = b->shader->info.cs.local_size[0];
+         local_size.u32[1] = b->shader->info.cs.local_size[1];
+         local_size.u32[2] = b->shader->info.cs.local_size[2];
 
          nir_ssa_def *group_id =
             nir_load_system_value(b, nir_intrinsic_load_work_group_id, 0);

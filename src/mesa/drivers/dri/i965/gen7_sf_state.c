@@ -188,8 +188,9 @@ upload_sf_state(struct brw_context *brw)
       dw2 |= GEN6_SF_CULL_NONE;
    }
 
-   /* _NEW_SCISSOR */
-   if (ctx->Scissor.EnableFlags)
+   /* _NEW_SCISSOR _NEW_POLYGON BRW_NEW_GEOMETRY_PROGRAM BRW_NEW_PRIMITIVE */
+   if (ctx->Scissor.EnableFlags ||
+       is_drawing_points(brw) || is_drawing_lines(brw))
       dw2 |= GEN6_SF_SCISSOR_ENABLE;
 
    /* _NEW_LINE */
@@ -254,7 +255,8 @@ const struct brw_tracked_state gen7_sf_state = {
                _NEW_POLYGON |
                _NEW_PROGRAM |
                _NEW_SCISSOR,
-      .brw   = BRW_NEW_CONTEXT,
+      .brw   = BRW_NEW_CONTEXT |
+               BRW_NEW_PRIMITIVE,
    },
    .emit = upload_sf_state,
 };

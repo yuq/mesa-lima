@@ -98,6 +98,31 @@
 #define NVC0_BIND_M2MF          0
 #define NVC0_BIND_FENCE         1
 
+/* 6 user uniform buffers, at 64K each */
+#define NVC0_CB_USR_INFO(s)         (s << 16)
+#define NVC0_CB_USR_SIZE            (6 << 16)
+/* 6 driver constbuts, at 1K each */
+#define NVC0_CB_AUX_INFO(s)         NVC0_CB_USR_SIZE + (s << 10)
+#define NVC0_CB_AUX_SIZE            (6 << 10)
+/* XXX: Figure out what this UNK data is. */
+#define NVC0_CB_AUX_UNK_INFO        0x000
+#define NVC0_CB_AUX_UNK_SIZE        (8 * 4)
+/* 32 textures handles, at 1 32-bits integer each */
+#define NVC0_CB_AUX_TEX_INFO(i)     0x020 + (i) * 4
+#define NVC0_CB_AUX_TEX_SIZE        (32 * 4)
+/* 8 user clip planes, at 4 32-bits floats each */
+#define NVC0_CB_AUX_UCP_INFO        0x100
+#define NVC0_CB_AUX_UCP_SIZE        (PIPE_MAX_CLIP_PLANES * 4 * 4)
+/* 8 sets of 32-bits integer pairs sample offsets */
+#define NVC0_CB_AUX_SAMPLE_INFO     0x180 /* FP */
+#define NVC0_CB_AUX_SAMPLE_SIZE     (8 * 4 * 2)
+/* draw parameters (index bais, base instance, drawid) */
+#define NVC0_CB_AUX_DRAW_INFO       0x180 /* VP */
+/* 32 user buffers, at 4 32-bits integers each */
+#define NVC0_CB_AUX_BUF_INFO(i)     0x200 + (i) * 4 * 4
+#define NVC0_CB_AUX_BUF_SIZE        (NVC0_MAX_BUFFERS * 4 * 4)
+/* 4 32-bits floats for the vertex runout, put at the end */
+#define NVC0_CB_AUX_RUNOUT_INFO     NVC0_CB_USR_SIZE + NVC0_CB_AUX_SIZE
 
 struct nvc0_blitctx;
 

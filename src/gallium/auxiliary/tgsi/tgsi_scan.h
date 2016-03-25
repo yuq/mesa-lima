@@ -111,12 +111,22 @@ struct tgsi_shader_info
    boolean writes_clipvertex;
    boolean writes_viewport_index;
    boolean writes_layer;
+   boolean writes_memory; /**< contains stores or atomics to buffers or images */
    boolean is_msaa_sampler[PIPE_MAX_SAMPLERS];
    boolean uses_doubles; /**< uses any of the double instructions */
    unsigned clipdist_writemask;
    unsigned culldist_writemask;
    unsigned num_written_culldistance;
    unsigned num_written_clipdistance;
+   /**
+    * Bitmask indicating which images are written to (STORE / ATOM*).
+    * Indirect image accesses are not reflected in this mask.
+    */
+   unsigned images_writemask;
+   /**
+    * Bitmask indicating which declared image is a buffer.
+    */
+   unsigned images_buffers;
    /**
     * Bitmask indicating which register files are accessed with
     * indirect addressing.  The bits are (1 << TGSI_FILE_x), etc.

@@ -820,6 +820,7 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
    struct nv04_resource *buf_count = nv04_resource(info->indirect_params);
    unsigned size, macro, count = info->indirect_count, drawid = info->drawid;
    uint32_t offset = buf->offset + info->indirect_offset;
+   struct nvc0_screen *screen = nvc0->screen;
 
    PUSH_SPACE(push, 7);
 
@@ -833,10 +834,10 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
    /* Queue things up to let the macros write params to the driver constbuf */
    BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
    PUSH_DATA (push, 512);
-   PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (6 << 16) + (0 << 9));
-   PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (6 << 16) + (0 << 9));
+   PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(0));
+   PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(0));
    BEGIN_NVC0(push, NVC0_3D(CB_POS), 1);
-   PUSH_DATA (push, 256 + 128);
+   PUSH_DATA (push, NVC0_CB_AUX_DRAW_INFO);
 
    if (info->indexed) {
       assert(nvc0->idxbuf.buffer);
@@ -934,6 +935,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_screen *screen = nvc0->screen;
    int s;
 
    /* NOTE: caller must ensure that (min_index + index_bias) is >= 0 */
@@ -975,11 +977,11 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       PUSH_SPACE(push, 9);
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
       PUSH_DATA (push, 512);
-      PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (6 << 16) + (0 << 9));
-      PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (6 << 16) + (0 << 9));
+      PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(0));
+      PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(0));
       if (!info->indirect) {
          BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 3);
-         PUSH_DATA (push, 256 + 128);
+         PUSH_DATA (push, NVC0_CB_AUX_DRAW_INFO);
          PUSH_DATA (push, info->index_bias);
          PUSH_DATA (push, info->start_instance);
          PUSH_DATA (push, info->drawid);

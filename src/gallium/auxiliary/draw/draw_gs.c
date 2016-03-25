@@ -206,12 +206,6 @@ static unsigned tgsi_gs_run(struct draw_geometry_shader *shader,
 {
    struct tgsi_exec_machine *machine = shader->machine;
 
-   tgsi_set_exec_mask(machine,
-                      1,
-                      input_primitives > 1,
-                      input_primitives > 2,
-                      input_primitives > 3);
-
    /* run interpreter */
    tgsi_exec_machine_run(machine);
 

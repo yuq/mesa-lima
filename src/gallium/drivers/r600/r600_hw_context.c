@@ -57,18 +57,11 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 
 		/* The number of dwords all the dirty states would take. */
 		mask = ctx->dirty_atoms;
-		while (mask != 0) {
+		while (mask != 0)
 			num_dw += ctx->atoms[u_bit_scan64(&mask)]->num_dw;
-			if (ctx->screen->b.trace_bo) {
-				num_dw += R600_TRACE_CS_DWORDS;
-			}
-		}
 
 		/* The upper-bound of how much space a draw command would take. */
 		num_dw += R600_MAX_FLUSH_CS_DWORDS + R600_MAX_DRAW_CS_DWORDS;
-		if (ctx->screen->b.trace_bo) {
-			num_dw += R600_TRACE_CS_DWORDS;
-		}
 	}
 
 	/* Count in queries_suspend. */
@@ -273,7 +266,7 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 	flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
 
 	/* Flush the CS. */
-	ctx->b.ws->cs_flush(cs, flags, fence, ctx->screen->b.cs_count++);
+	ctx->b.ws->cs_flush(cs, flags, fence);
 
 	r600_begin_new_cs(ctx);
 }
