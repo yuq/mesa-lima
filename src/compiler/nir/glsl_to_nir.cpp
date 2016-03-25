@@ -46,7 +46,7 @@ namespace {
 class nir_visitor : public ir_visitor
 {
 public:
-   nir_visitor(nir_shader *shader, gl_shader *sh);
+   nir_visitor(nir_shader *shader);
    ~nir_visitor();
 
    virtual void visit(ir_variable *);
@@ -84,8 +84,6 @@ private:
                        nir_ssa_def *src2, nir_ssa_def *src3);
 
    bool supports_ints;
-
-   struct gl_shader *sh;
 
    nir_shader *shader;
    nir_function_impl *impl;
@@ -140,7 +138,7 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
 
    nir_shader *shader = nir_shader_create(NULL, stage, options);
 
-   nir_visitor v1(shader, sh);
+   nir_visitor v1(shader);
    nir_function_visitor v2(&v1);
    v2.run(sh->ir);
    visit_exec_list(sh->ir, &v1);
@@ -215,11 +213,10 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    return shader;
 }
 
-nir_visitor::nir_visitor(nir_shader *shader, gl_shader *sh)
+nir_visitor::nir_visitor(nir_shader *shader)
 {
    this->supports_ints = shader->options->native_integers;
    this->shader = shader;
-   this->sh = sh;
    this->is_global = true;
    this->var_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
