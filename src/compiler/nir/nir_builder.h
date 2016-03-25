@@ -305,6 +305,23 @@ nir_swizzle(nir_builder *build, nir_ssa_def *src, unsigned swiz[4],
                      nir_imov_alu(build, alu_src, num_components);
 }
 
+/* Selects the right fdot given the number of components in each source. */
+static inline nir_ssa_def *
+nir_fdot(nir_builder *build, nir_ssa_def *src0, nir_ssa_def *src1)
+{
+   assert(src0->num_components == src1->num_components);
+   switch (src0->num_components) {
+   case 1: return nir_fmul(build, src0, src1);
+   case 2: return nir_fdot2(build, src0, src1);
+   case 3: return nir_fdot3(build, src0, src1);
+   case 4: return nir_fdot4(build, src0, src1);
+   default:
+      unreachable("bad component size");
+   }
+
+   return NULL;
+}
+
 static inline nir_ssa_def *
 nir_channel(nir_builder *b, nir_ssa_def *def, unsigned c)
 {
