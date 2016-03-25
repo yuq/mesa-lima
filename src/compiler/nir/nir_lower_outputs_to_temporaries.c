@@ -74,7 +74,7 @@ emit_output_copies_block(nir_block *block, void *state)
 }
 
 void
-nir_lower_outputs_to_temporaries(nir_shader *shader)
+nir_lower_outputs_to_temporaries(nir_shader *shader, nir_function *entrypoint)
 {
    struct lower_outputs_state state;
 
@@ -117,7 +117,7 @@ nir_lower_outputs_to_temporaries(nir_shader *shader)
           * before each EmitVertex call.
           */
          nir_foreach_block(function->impl, emit_output_copies_block, &state);
-      } else if (strcmp(function->name, "main") == 0) {
+      } else if (function == entrypoint) {
          /* For all other shader types, we need to do the copies right before
           * the jumps to the end block.
           */
