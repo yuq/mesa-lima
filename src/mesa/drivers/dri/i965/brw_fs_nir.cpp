@@ -2368,6 +2368,82 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
       nir_emit_shared_atomic(bld, BRW_AOP_CMPWR, instr);
       break;
 
+   case nir_intrinsic_load_shared: {
+      assert(devinfo->gen >= 7);
+
+      fs_reg surf_index = brw_imm_ud(GEN7_BTI_SLM);
+
+      /* Get the offset to read from */
+      fs_reg offset_reg;
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
+      if (const_offset) {
+         offset_reg = brw_imm_ud(instr->const_index[0] + const_offset->u32[0]);
+      } else {
+         offset_reg = vgrf(glsl_type::uint_type);
+         bld.ADD(offset_reg,
+                 retype(get_nir_src(instr->src[0]), BRW_REGISTER_TYPE_UD),
+                 brw_imm_ud(instr->const_index[0]));
+      }
+
+      /* Read the vector */
+      fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
+                                             1 /* dims */,
+                                             instr->num_components,
+                                             BRW_PREDICATE_NONE);
+      read_result.type = dest.type;
+      for (int i = 0; i < instr->num_components; i++)
+         bld.MOV(offset(dest, bld, i), offset(read_result, bld, i));
+
+      break;
+   }
+
+   case nir_intrinsic_store_shared: {
+      assert(devinfo->gen >= 7);
+
+      /* Block index */
+      fs_reg surf_index = brw_imm_ud(GEN7_BTI_SLM);
+
+      /* Value */
+      fs_reg val_reg = get_nir_src(instr->src[0]);
+
+      /* Writemask */
+      unsigned writemask = instr->const_index[1];
+
+      /* Combine groups of consecutive enabled channels in one write
+       * message. We use ffs to find the first enabled channel and then ffs on
+       * the bit-inverse, down-shifted writemask to determine the length of
+       * the block of enabled bits.
+       */
+      while (writemask) {
+         unsigned first_component = ffs(writemask) - 1;
+         unsigned length = ffs(~(writemask >> first_component)) - 1;
+         fs_reg offset_reg;
+
+         nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
+         if (const_offset) {
+            offset_reg = brw_imm_ud(instr->const_index[0] + const_offset->u32[0] +
+                                    4 * first_component);
+         } else {
+            offset_reg = vgrf(glsl_type::uint_type);
+            bld.ADD(offset_reg,
+                    retype(get_nir_src(instr->src[1]), BRW_REGISTER_TYPE_UD),
+                    brw_imm_ud(instr->const_index[0] + 4 * first_component));
+         }
+
+         emit_untyped_write(bld, surf_index, offset_reg,
+                            offset(val_reg, bld, first_component),
+                            1 /* dims */, length,
+                            BRW_PREDICATE_NONE);
+
+         /* Clear the bits in the writemask that we just wrote, then try
+          * again to see if more channels are left.
+          */
+         writemask &= (15 << (first_component + length));
+      }
+
+      break;
+   }
+
    default:
       nir_emit_intrinsic(bld, instr);
       break;
@@ -2687,82 +2763,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       read_result.type = dest.type;
       for (int i = 0; i < instr->num_components; i++)
          bld.MOV(offset(dest, bld, i), offset(read_result, bld, i));
-
-      break;
-   }
-
-   case nir_intrinsic_load_shared: {
-      assert(devinfo->gen >= 7);
-
-      fs_reg surf_index = brw_imm_ud(GEN7_BTI_SLM);
-
-      /* Get the offset to read from */
-      fs_reg offset_reg;
-      nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
-      if (const_offset) {
-         offset_reg = brw_imm_ud(instr->const_index[0] + const_offset->u32[0]);
-      } else {
-         offset_reg = vgrf(glsl_type::uint_type);
-         bld.ADD(offset_reg,
-                 retype(get_nir_src(instr->src[0]), BRW_REGISTER_TYPE_UD),
-                 brw_imm_ud(instr->const_index[0]));
-      }
-
-      /* Read the vector */
-      fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
-                                             1 /* dims */,
-                                             instr->num_components,
-                                             BRW_PREDICATE_NONE);
-      read_result.type = dest.type;
-      for (int i = 0; i < instr->num_components; i++)
-         bld.MOV(offset(dest, bld, i), offset(read_result, bld, i));
-
-      break;
-   }
-
-   case nir_intrinsic_store_shared: {
-      assert(devinfo->gen >= 7);
-
-      /* Block index */
-      fs_reg surf_index = brw_imm_ud(GEN7_BTI_SLM);
-
-      /* Value */
-      fs_reg val_reg = get_nir_src(instr->src[0]);
-
-      /* Writemask */
-      unsigned writemask = instr->const_index[1];
-
-      /* Combine groups of consecutive enabled channels in one write
-       * message. We use ffs to find the first enabled channel and then ffs on
-       * the bit-inverse, down-shifted writemask to determine the length of
-       * the block of enabled bits.
-       */
-      while (writemask) {
-         unsigned first_component = ffs(writemask) - 1;
-         unsigned length = ffs(~(writemask >> first_component)) - 1;
-         fs_reg offset_reg;
-
-         nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
-         if (const_offset) {
-            offset_reg = brw_imm_ud(instr->const_index[0] + const_offset->u32[0] +
-                                    4 * first_component);
-         } else {
-            offset_reg = vgrf(glsl_type::uint_type);
-            bld.ADD(offset_reg,
-                    retype(get_nir_src(instr->src[1]), BRW_REGISTER_TYPE_UD),
-                    brw_imm_ud(instr->const_index[0] + 4 * first_component));
-         }
-
-         emit_untyped_write(bld, surf_index, offset_reg,
-                            offset(val_reg, bld, first_component),
-                            1 /* dims */, length,
-                            BRW_PREDICATE_NONE);
-
-         /* Clear the bits in the writemask that we just wrote, then try
-          * again to see if more channels are left.
-          */
-         writemask &= (15 << (first_component + length));
-      }
 
       break;
    }
