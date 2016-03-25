@@ -993,6 +993,34 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_fquantize2f16: {
+      fs_reg tmp16 = bld.vgrf(BRW_REGISTER_TYPE_D);
+      fs_reg tmp32 = bld.vgrf(BRW_REGISTER_TYPE_F);
+      fs_reg zero = bld.vgrf(BRW_REGISTER_TYPE_F);
+
+      /* The destination stride must be at least as big as the source stride. */
+      tmp16.type = BRW_REGISTER_TYPE_W;
+      tmp16.stride = 2;
+
+      /* Check for denormal */
+      fs_reg abs_src0 = op[0];
+      abs_src0.abs = true;
+      bld.CMP(bld.null_reg_f(), abs_src0, brw_imm_f(ldexpf(1.0, -14)),
+              BRW_CONDITIONAL_L);
+      /* Get the appropriately signed zero */
+      bld.AND(retype(zero, BRW_REGISTER_TYPE_UD),
+              retype(op[0], BRW_REGISTER_TYPE_UD),
+              brw_imm_ud(0x80000000));
+      /* Do the actual F32 -> F16 -> F32 conversion */
+      bld.emit(BRW_OPCODE_F32TO16, tmp16, op[0]);
+      bld.emit(BRW_OPCODE_F16TO32, tmp32, tmp16);
+      /* Select that or zero based on normal status */
+      inst = bld.SEL(result, zero, tmp32);
+      inst->predicate = BRW_PREDICATE_NORMAL;
+      inst->saturate = instr->dest.saturate;
+      break;
+   }
+
    case nir_op_fmin:
    case nir_op_imin:
    case nir_op_umin:

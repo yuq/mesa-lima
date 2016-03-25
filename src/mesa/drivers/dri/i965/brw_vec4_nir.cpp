@@ -1188,6 +1188,31 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_fquantize2f16: {
+      /* See also vec4_visitor::emit_pack_half_2x16() */
+      src_reg tmp16 = src_reg(this, glsl_type::uvec4_type);
+      src_reg tmp32 = src_reg(this, glsl_type::vec4_type);
+      src_reg zero = src_reg(this, glsl_type::vec4_type);
+
+      /* Check for denormal */
+      src_reg abs_src0 = op[0];
+      abs_src0.abs = true;
+      emit(CMP(dst_null_f(), abs_src0, brw_imm_f(ldexpf(1.0, -14)),
+               BRW_CONDITIONAL_L));
+      /* Get the appropriately signed zero */
+      emit(AND(retype(dst_reg(zero), BRW_REGISTER_TYPE_UD),
+               retype(op[0], BRW_REGISTER_TYPE_UD),
+               brw_imm_ud(0x80000000)));
+      /* Do the actual F32 -> F16 -> F32 conversion */
+      emit(F32TO16(dst_reg(tmp16), op[0]));
+      emit(F16TO32(dst_reg(tmp32), tmp16));
+      /* Select that or zero based on normal status */
+      inst = emit(BRW_OPCODE_SEL, dst, zero, tmp32);
+      inst->predicate = BRW_PREDICATE_NORMAL;
+      inst->saturate = instr->dest.saturate;
+      break;
+   }
+
    case nir_op_fmin:
    case nir_op_imin:
    case nir_op_umin:
