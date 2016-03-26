@@ -335,7 +335,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	 */
 	if (resource->target != PIPE_BUFFER &&
 	    (resource->nr_samples > 1 || rtex->is_depth))
-		return NULL;
+		return false;
 
 	if (!res->is_shared) {
 		res->is_shared = true;
