@@ -181,11 +181,33 @@ scan_instruction(struct tgsi_shader_info *info,
          info->indirect_files_read |= (1 << src->Register.File);
       }
 
-      /* MSAA samplers */
+      /* Texture samplers */
       if (src->Register.File == TGSI_FILE_SAMPLER) {
-         assert(fullinst->Instruction.Texture);
-         assert(src->Register.Index < Elements(info->is_msaa_sampler));
+         const unsigned index = src->Register.Index;
+         const unsigned target = fullinst->Texture.Texture;
 
+         assert(fullinst->Instruction.Texture);
+         assert(index < Elements(info->is_msaa_sampler));
+         assert(index < PIPE_MAX_SAMPLERS);
+         assert(target < TGSI_TEXTURE_UNKNOWN);
+
+         if (tgsi_get_opcode_info(fullinst->Instruction.Opcode)->is_tex) {
+            /* for texture instructions, check that the texture instruction
+             * target matches the previous sampler view declaration (if there
+             * was one.)
+             */
+            if (info->sampler_targets[index] == TGSI_TEXTURE_UNKNOWN) {
+               /* probably no sampler view declaration */
+               info->sampler_targets[index] = target;
+            } else {
+               /* Make sure the texture instruction's sampler/target info
+                * agrees with the sampler view declaration.
+                */
+               assert(info->sampler_targets[index] == target);
+            }
+         }
+
+         /* MSAA samplers */
          if (fullinst->Instruction.Texture &&
              (fullinst->Texture.Texture == TGSI_TEXTURE_2D_MSAA ||
               fullinst->Texture.Texture == TGSI_TEXTURE_2D_ARRAY_MSAA)) {
@@ -431,6 +453,16 @@ scan_declaration(struct tgsi_shader_info *info,
          }
       } else if (file == TGSI_FILE_SAMPLER) {
          info->samplers_declared |= 1 << reg;
+      } else if (file == TGSI_FILE_SAMPLER_VIEW) {
+         unsigned target = fulldecl->SamplerView.Resource;
+         assert(target < TGSI_TEXTURE_UNKNOWN);
+         if (info->sampler_targets[reg] == TGSI_TEXTURE_UNKNOWN) {
+            /* Save sampler target for this sampler index */
+            info->sampler_targets[reg] = target;
+         } else {
+            /* if previously declared, make sure targets agree */
+            assert(info->sampler_targets[reg] == target);
+         }
       } else if (file == TGSI_FILE_IMAGE) {
          if (fulldecl->Image.Resource == TGSI_TEXTURE_BUFFER)
             info->images_buffers |= 1 << reg;
@@ -493,6 +525,8 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
    for (i = 0; i < Elements(info->const_file_max); i++)
       info->const_file_max[i] = -1;
    info->properties[TGSI_PROPERTY_GS_INVOCATIONS] = 1;
+   for (i = 0; i < Elements(info->sampler_targets); i++)
+      info->sampler_targets[i] = TGSI_TEXTURE_UNKNOWN;
 
    /**
     ** Setup to begin parsing input shader
