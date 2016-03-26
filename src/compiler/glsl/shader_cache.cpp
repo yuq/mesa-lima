@@ -405,6 +405,79 @@ read_buffer_blocks(struct blob_reader *metadata,
 }
 
 static void
+write_atomic_buffers(struct blob *metadata, struct gl_shader_program *prog)
+{
+   blob_write_uint32(metadata, prog->data->NumAtomicBuffers);
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (prog->_LinkedShaders[i]) {
+         struct gl_program *glprog = prog->_LinkedShaders[i]->Program;
+         blob_write_uint32(metadata, glprog->info.num_abos);
+      }
+   }
+
+   for (unsigned i = 0; i < prog->data->NumAtomicBuffers; i++) {
+      blob_write_uint32(metadata, prog->data->AtomicBuffers[i].Binding);
+      blob_write_uint32(metadata, prog->data->AtomicBuffers[i].MinimumSize);
+      blob_write_uint32(metadata, prog->data->AtomicBuffers[i].NumUniforms);
+
+      blob_write_bytes(metadata, prog->data->AtomicBuffers[i].StageReferences,
+                       sizeof(prog->data->AtomicBuffers[i].StageReferences));
+
+      for (unsigned j = 0; j < prog->data->AtomicBuffers[i].NumUniforms; j++) {
+         blob_write_uint32(metadata, prog->data->AtomicBuffers[i].Uniforms[j]);
+      }
+   }
+}
+
+static void
+read_atomic_buffers(struct blob_reader *metadata,
+                     struct gl_shader_program *prog)
+{
+   prog->data->NumAtomicBuffers = blob_read_uint32(metadata);
+   prog->data->AtomicBuffers =
+      rzalloc_array(prog, gl_active_atomic_buffer,
+                    prog->data->NumAtomicBuffers);
+
+   struct gl_active_atomic_buffer **stage_buff_list[MESA_SHADER_STAGES];
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (prog->_LinkedShaders[i]) {
+         struct gl_program *glprog = prog->_LinkedShaders[i]->Program;
+
+         glprog->info.num_abos = blob_read_uint32(metadata);
+         glprog->sh.AtomicBuffers =
+            rzalloc_array(glprog, gl_active_atomic_buffer *,
+                          glprog->info.num_abos);
+         stage_buff_list[i] = glprog->sh.AtomicBuffers;
+      }
+   }
+
+   for (unsigned i = 0; i < prog->data->NumAtomicBuffers; i++) {
+      prog->data->AtomicBuffers[i].Binding = blob_read_uint32(metadata);
+      prog->data->AtomicBuffers[i].MinimumSize = blob_read_uint32(metadata);
+      prog->data->AtomicBuffers[i].NumUniforms = blob_read_uint32(metadata);
+
+      blob_copy_bytes(metadata,
+                      (uint8_t *) &prog->data->AtomicBuffers[i].StageReferences,
+                      sizeof(prog->data->AtomicBuffers[i].StageReferences));
+
+      prog->data->AtomicBuffers[i].Uniforms = rzalloc_array(prog, unsigned,
+         prog->data->AtomicBuffers[i].NumUniforms);
+
+      for (unsigned j = 0; j < prog->data->AtomicBuffers[i].NumUniforms; j++) {
+         prog->data->AtomicBuffers[i].Uniforms[j] = blob_read_uint32(metadata);
+      }
+
+      for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
+         if (prog->data->AtomicBuffers[i].StageReferences[j]) {
+            *stage_buff_list[j] = &prog->data->AtomicBuffers[i];
+            stage_buff_list[j]++;
+         }
+      }
+   }
+}
+
+static void
 write_xfb(struct blob *metadata, struct gl_shader_program *shProg)
 {
    struct gl_program *prog = shProg->last_vert_prog;
@@ -805,6 +878,15 @@ write_program_resource_data(struct blob *metadata,
          }
       }
       break;
+   case GL_ATOMIC_COUNTER_BUFFER:
+      for (unsigned i = 0; i < prog->data->NumAtomicBuffers; i++) {
+         if (((gl_active_atomic_buffer *)res->Data)->Binding ==
+             prog->data->AtomicBuffers[i].Binding) {
+            blob_write_uint32(metadata, i);
+            break;
+         }
+      }
+      break;
    case GL_TRANSFORM_FEEDBACK_BUFFER:
       for (unsigned i = 0; i < MAX_FEEDBACK_BUFFERS; i++) {
          if (((gl_transform_feedback_buffer *)res->Data)->Binding ==
@@ -879,6 +961,9 @@ read_program_resource_data(struct blob_reader *metadata,
    case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
    case GL_UNIFORM:
       res->Data = &prog->data->UniformStorage[blob_read_uint32(metadata)];
+      break;
+   case GL_ATOMIC_COUNTER_BUFFER:
+      res->Data = &prog->data->AtomicBuffers[blob_read_uint32(metadata)];
       break;
    case GL_TRANSFORM_FEEDBACK_BUFFER:
       res->Data = &prog->last_vert_prog->
@@ -1115,6 +1200,8 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
 
    write_uniform_remap_tables(metadata, prog);
 
+   write_atomic_buffers(metadata, prog);
+
    write_buffer_blocks(metadata, prog);
 
    write_subroutines(metadata, prog);
@@ -1225,6 +1312,8 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
    read_xfb(&metadata, prog);
 
    read_uniform_remap_tables(&metadata, prog);
+
+   read_atomic_buffers(&metadata, prog);
 
    read_buffer_blocks(&metadata, prog);
 
