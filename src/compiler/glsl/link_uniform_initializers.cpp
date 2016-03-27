@@ -162,8 +162,6 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
             }
          }
       }
-
-      storage->initialized = true;
    }
 }
 
@@ -267,8 +265,6 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
          }
       }
    }
-
-   storage->initialized = true;
 }
 }
 

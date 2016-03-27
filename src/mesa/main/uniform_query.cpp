@@ -815,8 +815,6 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
       }
    }
 
-   uni->initialized = true;
-
    _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
 
    /* If the uniform is a sampler, do the extra magic necessary to propagate
@@ -1029,8 +1027,6 @@ _mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
 	 src += elements;
       }
    }
-
-   uni->initialized = true;
 
    _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
 }

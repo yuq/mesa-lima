@@ -799,7 +799,6 @@ private:
 
       this->uniforms[id].name = ralloc_strdup(this->uniforms, name);
       this->uniforms[id].type = base_type;
-      this->uniforms[id].initialized = 0;
       this->uniforms[id].num_driver_storage = 0;
       this->uniforms[id].driver_storage = NULL;
       this->uniforms[id].atomic_buffer_index = -1;
