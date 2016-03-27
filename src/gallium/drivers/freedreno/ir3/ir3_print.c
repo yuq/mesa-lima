@@ -35,6 +35,8 @@
 
 static void print_instr_name(struct ir3_instruction *instr)
 {
+	if (!instr)
+		return;
 #ifdef DEBUG
 	printf("%04u:", instr->serialno);
 #endif
@@ -61,7 +63,7 @@ static void print_instr_name(struct ir3_instruction *instr)
 			}
 			break;
 		}
-	} else if (instr->category == 1) {
+	} else if (instr->opc == OPC_MOV) {
 		static const char *type[] = {
 				[TYPE_F16] = "f16",
 				[TYPE_F32] = "f32",
@@ -191,10 +193,8 @@ print_instr(struct ir3_instruction *instr, int lvl)
 		printf("]");
 	}
 
-	if (is_meta(instr)) {
-		if (instr->opc == OPC_META_FO) {
-			printf(", off=%d", instr->fo.off);
-		}
+	if (instr->opc == OPC_META_FO) {
+		printf(", off=%d", instr->fo.off);
 	}
 
 	if (is_flow(instr) && instr->cat0.target) {

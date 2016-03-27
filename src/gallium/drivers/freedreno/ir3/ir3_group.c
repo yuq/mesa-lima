@@ -69,8 +69,7 @@ static void arr_insert_mov_in(void *arr, int idx, struct ir3_instruction *instr)
 
 	/* create src reg for meta:in and fixup to now be a mov: */
 	ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = in;
-	instr->category = 1;
-	instr->opc = 0;
+	instr->opc = OPC_MOV;
 	instr->cat1.src_type = TYPE_F32;
 	instr->cat1.dst_type = TYPE_F32;
 
@@ -117,7 +116,7 @@ restart:
 				conflicts(instr->cp.right, right);
 
 			/* RA can't yet deal very well w/ group'd phi's: */
-			if (is_meta(instr) && (instr->opc == OPC_META_PHI))
+			if (instr->opc == OPC_META_PHI)
 				conflict = true;
 
 			/* we also can't have an instr twice in the group: */
@@ -168,7 +167,7 @@ instr_find_neighbors(struct ir3_instruction *instr)
 	if (ir3_instr_check_mark(instr))
 		return;
 
-	if (is_meta(instr) && (instr->opc == OPC_META_FI))
+	if (instr->opc == OPC_META_FI)
 		group_n(&instr_ops, instr, instr->regs_count - 1);
 
 	foreach_ssa_src(src, instr)

@@ -58,14 +58,14 @@ static bool is_eligible_mov(struct ir3_instruction *instr, bool allow_flags)
 				return false;
 
 		/* TODO: remove this hack: */
-		if (is_meta(src_instr) && (src_instr->opc == OPC_META_FO))
+		if (src_instr->opc == OPC_META_FO)
 			return false;
 		/* TODO: we currently don't handle left/right neighbors
 		 * very well when inserting parallel-copies into phi..
 		 * to avoid problems don't eliminate a mov coming out
 		 * of phi..
 		 */
-		if (is_meta(src_instr) && (src_instr->opc == OPC_META_PHI))
+		if (src_instr->opc == OPC_META_PHI)
 			return false;
 		return true;
 	}
@@ -96,7 +96,7 @@ static bool valid_flags(struct ir3_instruction *instr, unsigned n,
 		return false;
 
 	/* clear flags that are 'ok' */
-	switch (instr->category) {
+	switch (opc_cat(instr->opc)) {
 	case 1:
 		valid_flags = IR3_REG_IMMED | IR3_REG_CONST | IR3_REG_RELATIV;
 		if (flags & ~valid_flags)
@@ -205,15 +205,6 @@ static void combine_flags(unsigned *dstflags, unsigned srcflags)
 	*dstflags |= srcflags & IR3_REG_ARRAY;
 }
 
-/* the "plain" MAD's (ie. the ones that don't shift first src prior to
- * multiply) can swap their first two srcs if src[0] is !CONST and
- * src[1] is CONST:
- */
-static bool is_valid_mad(struct ir3_instruction *instr)
-{
-	return (instr->category == 3) && is_mad(instr->opc);
-}
-
 /**
  * Handle cp for a given src register.  This additionally handles
  * the cases of collapsing immedate/const (which replace the src
@@ -257,8 +248,12 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 		if (!valid_flags(instr, n, new_flags)) {
 			/* special case for "normal" mad instructions, we can
 			 * try swapping the first two args if that fits better.
+			 *
+			 * the "plain" MAD's (ie. the ones that don't shift first
+			 * src prior to multiply) can swap their first two srcs if
+			 * src[0] is !CONST and src[1] is CONST:
 			 */
-			if ((n == 1) && is_valid_mad(instr) &&
+			if ((n == 1) && is_mad(instr->opc) &&
 					!(instr->regs[0 + 1]->flags & (IR3_REG_CONST | IR3_REG_RELATIV)) &&
 					valid_flags(instr, 0, new_flags)) {
 				/* swap src[0] and src[1]: */
@@ -292,7 +287,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 			 * just somehow don't work out.  This restriction may only
 			 * apply if the first src is also CONST.
 			 */
-			if ((instr->category == 3) && (n == 2) &&
+			if ((opc_cat(instr->opc) == 3) && (n == 2) &&
 					(src_reg->flags & IR3_REG_RELATIV) &&
 					(src_reg->array.offset == 0))
 				return;
@@ -328,10 +323,9 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 		if (src_reg->flags & IR3_REG_IMMED) {
 			int32_t iim_val = src_reg->iim_val;
 
-			debug_assert((instr->category == 1) ||
-					(instr->category == 6) ||
-					((instr->category == 2) &&
-						ir3_cat2_int(instr->opc)));
+			debug_assert((opc_cat(instr->opc) == 1) ||
+					(opc_cat(instr->opc) == 6) ||
+					ir3_cat2_int(instr->opc));
 
 			if (new_flags & IR3_REG_SABS)
 				iim_val = abs(iim_val);
@@ -343,7 +337,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 				iim_val = ~iim_val;
 
 			/* other than category 1 (mov) we can only encode up to 10 bits: */
-			if ((instr->category == 1) || !(iim_val & ~0x3ff)) {
+			if ((instr->opc == OPC_MOV) || !(iim_val & ~0x3ff)) {
 				new_flags &= ~(IR3_REG_SABS | IR3_REG_SNEG | IR3_REG_BNOT);
 				src_reg = ir3_reg_clone(instr->block->shader, src_reg);
 				src_reg->flags = new_flags;

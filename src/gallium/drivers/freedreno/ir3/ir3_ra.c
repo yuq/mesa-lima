@@ -342,7 +342,7 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 		return id->defn;
 	}
 
-	if (is_meta(instr) && (instr->opc == OPC_META_FI)) {
+	if (instr->opc == OPC_META_FI) {
 		/* What about the case where collect is subset of array, we
 		 * need to find the distance between where actual array starts
 		 * and fanin..  that probably doesn't happen currently.
@@ -436,7 +436,7 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 		}
 	}
 
-	if (is_meta(d) && (d->opc == OPC_META_PHI)) {
+	if (d->opc == OPC_META_PHI) {
 		/* we have already inserted parallel-copies into
 		 * the phi, so we don't need to chase definers
 		 */
@@ -456,7 +456,7 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 		d = dd;
 	}
 
-	if (is_meta(d) && (d->opc == OPC_META_FO)) {
+	if (d->opc == OPC_META_FO) {
 		struct ir3_instruction *dd;
 		int dsz, doff;
 
@@ -869,7 +869,7 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 /* some instructions need fix-up if dst register is half precision: */
 static void fixup_half_instr_dst(struct ir3_instruction *instr)
 {
-	switch (instr->category) {
+	switch (opc_cat(instr->opc)) {
 	case 1: /* move instructions */
 		instr->cat1.dst_type = half_type(instr->cat1.dst_type);
 		break;
@@ -910,9 +910,11 @@ static void fixup_half_instr_dst(struct ir3_instruction *instr)
 /* some instructions need fix-up if src register is half precision: */
 static void fixup_half_instr_src(struct ir3_instruction *instr)
 {
-	switch (instr->category) {
-	case 1: /* move instructions */
+	switch (instr->opc) {
+	case OPC_MOV:
 		instr->cat1.src_type = half_type(instr->cat1.src_type);
+		break;
+	default:
 		break;
 	}
 }

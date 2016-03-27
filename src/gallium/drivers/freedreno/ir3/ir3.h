@@ -130,7 +130,6 @@ struct ir3_register {
 
 struct ir3_instruction {
 	struct ir3_block *block;
-	int category;
 	opc_t opc;
 	enum {
 		/* (sy) flag is set on first instruction, and after sample
@@ -508,17 +507,17 @@ static inline uint32_t reg_comp(struct ir3_register *reg)
 
 static inline bool is_flow(struct ir3_instruction *instr)
 {
-	return (instr->category == 0);
+	return (opc_cat(instr->opc) == 0);
 }
 
 static inline bool is_kill(struct ir3_instruction *instr)
 {
-	return is_flow(instr) && (instr->opc == OPC_KILL);
+	return instr->opc == OPC_KILL;
 }
 
 static inline bool is_nop(struct ir3_instruction *instr)
 {
-	return is_flow(instr) && (instr->opc == OPC_NOP);
+	return instr->opc == OPC_NOP;
 }
 
 /* Is it a non-transformative (ie. not type changing) mov?  This can
@@ -538,75 +537,71 @@ static inline bool is_same_type_mov(struct ir3_instruction *instr)
 	if (dst->flags & (IR3_REG_RELATIV | IR3_REG_ARRAY))
 		return false;
 
-	if ((instr->category == 1) &&
-			(instr->cat1.src_type == instr->cat1.dst_type))
+	switch (instr->opc) {
+	case OPC_MOV:
+		return instr->cat1.src_type == instr->cat1.dst_type;
+	case OPC_ABSNEG_F:
+	case OPC_ABSNEG_S:
 		return true;
-	if ((instr->category == 2) && ((instr->opc == OPC_ABSNEG_F) ||
-			(instr->opc == OPC_ABSNEG_S)))
-		return true;
-	return false;
+	default:
+		return false;
+	}
 }
 
 static inline bool is_alu(struct ir3_instruction *instr)
 {
-	return (1 <= instr->category) && (instr->category <= 3);
+	return (1 <= opc_cat(instr->opc)) && (opc_cat(instr->opc) <= 3);
 }
 
 static inline bool is_sfu(struct ir3_instruction *instr)
 {
-	return (instr->category == 4);
+	return (opc_cat(instr->opc) == 4);
 }
 
 static inline bool is_tex(struct ir3_instruction *instr)
 {
-	return (instr->category == 5);
+	return (opc_cat(instr->opc) == 5);
 }
 
 static inline bool is_mem(struct ir3_instruction *instr)
 {
-	return (instr->category == 6);
+	return (opc_cat(instr->opc) == 6);
 }
 
 static inline bool
 is_store(struct ir3_instruction *instr)
 {
-	if (is_mem(instr)) {
-		/* these instructions, the "destination" register is
-		 * actually a source, the address to store to.
-		 */
-		switch (instr->opc) {
-		case OPC_STG:
-		case OPC_STP:
-		case OPC_STL:
-		case OPC_STLW:
-		case OPC_L2G:
-		case OPC_G2L:
-			return true;
-		default:
-			break;
-		}
+	/* these instructions, the "destination" register is
+	 * actually a source, the address to store to.
+	 */
+	switch (instr->opc) {
+	case OPC_STG:
+	case OPC_STP:
+	case OPC_STL:
+	case OPC_STLW:
+	case OPC_L2G:
+	case OPC_G2L:
+		return true;
+	default:
+		return false;
 	}
-	return false;
 }
 
 static inline bool is_load(struct ir3_instruction *instr)
 {
-	if (is_mem(instr)) {
-		switch (instr->opc) {
-		case OPC_LDG:
-		case OPC_LDL:
-		case OPC_LDP:
-		case OPC_L2G:
-		case OPC_LDLW:
-		case OPC_LDC_4:
-		case OPC_LDLV:
+	switch (instr->opc) {
+	case OPC_LDG:
+	case OPC_LDL:
+	case OPC_LDP:
+	case OPC_L2G:
+	case OPC_LDLW:
+	case OPC_LDC_4:
+	case OPC_LDLV:
 		/* probably some others too.. */
-			return true;
-		default:
-			break;
-		}
+		return true;
+	default:
+		return false;
 	}
-	return false;
 }
 
 static inline bool is_input(struct ir3_instruction *instr)
@@ -615,9 +610,13 @@ static inline bool is_input(struct ir3_instruction *instr)
 	 * interpolation.. fortunately inloc is the first src
 	 * register in either case
 	 */
-	if (is_mem(instr) && (instr->opc == OPC_LDLV))
+	switch (instr->opc) {
+	case OPC_LDLV:
+	case OPC_BARY_F:
 		return true;
-	return (instr->category == 2) && (instr->opc == OPC_BARY_F);
+	default:
+		return false;
+	}
 }
 
 static inline bool is_meta(struct ir3_instruction *instr)
@@ -626,7 +625,7 @@ static inline bool is_meta(struct ir3_instruction *instr)
 	 * might actually contribute some instructions to the final
 	 * result?
 	 */
-	return (instr->category == -1);
+	return (opc_cat(instr->opc) == -1);
 }
 
 static inline bool writes_addr(struct ir3_instruction *instr)

@@ -146,7 +146,7 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 		 * clever if we were aware of this during scheduling, but
 		 * this should be a pretty rare case:
 		 */
-		if ((n->flags & IR3_INSTR_SS) && (n->category >= 5)) {
+		if ((n->flags & IR3_INSTR_SS) && (opc_cat(n->opc) >= 5)) {
 			struct ir3_instruction *nop;
 			nop = ir3_NOP(block);
 			nop->flags |= IR3_INSTR_SS;
@@ -154,7 +154,7 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 		}
 
 		/* need to be able to set (ss) on first instruction: */
-		if (list_empty(&block->instr_list) && (n->category >= 5))
+		if (list_empty(&block->instr_list) && (opc_cat(n->opc) >= 5))
 			ir3_NOP(block);
 
 		if (is_nop(n) && !list_empty(&block->instr_list)) {

@@ -1651,7 +1651,7 @@ resolve_phis(struct ir3_compile *ctx, struct ir3_block *block)
 		nir_phi_instr *nphi;
 
 		/* phi's only come at start of block: */
-		if (!(is_meta(instr) && (instr->opc == OPC_META_PHI)))
+		if (instr->opc != OPC_META_PHI)
 			break;
 
 		if (!instr->phi.nphi)
@@ -2323,12 +2323,12 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 			 * in which case we need to propagate the half-reg flag
 			 * up to the definer so that RA sees it:
 			 */
-			if (is_meta(out) && (out->opc == OPC_META_FO)) {
+			if (out->opc == OPC_META_FO) {
 				out = out->regs[1]->instr;
 				out->regs[0]->flags |= IR3_REG_HALF;
 			}
 
-			if (out->category == 1) {
+			if (out->opc == OPC_MOV) {
 				out->cat1.dst_type = half_type(out->cat1.dst_type);
 			}
 		}

@@ -612,7 +612,7 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 
 	list_for_each_entry (struct ir3_block, block, &shader->block_list, node) {
 		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
-			int ret = emit[instr->category](instr, dwords, info);
+			int ret = emit[opc_cat(instr->opc)](instr, dwords, info);
 			if (ret)
 				goto fail;
 			info->instrs_count += 1 + instr->repeat;
@@ -687,7 +687,6 @@ struct ir3_instruction * ir3_instr_create2(struct ir3_block *block,
 {
 	struct ir3_instruction *instr = instr_create(block, nreg);
 	instr->block = block;
-	instr->category = category;
 	debug_assert(opc_cat(opc) == category);
 	instr->opc = opc;
 	insert_instr(block, instr);
