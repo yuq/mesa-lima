@@ -183,10 +183,16 @@ process_glsl_ir(struct brw_context *brw,
 
    if (ctx->_Shader->Flags & GLSL_DUMP) {
       fprintf(stderr, "\n");
-      fprintf(stderr, "GLSL IR for linked %s program %d:\n",
-              _mesa_shader_stage_to_string(shader->Stage),
-              shader_prog->Name);
-      _mesa_print_ir(stderr, shader->ir, NULL);
+      if (shader->ir) {
+         fprintf(stderr, "GLSL IR for linked %s program %d:\n",
+                 _mesa_shader_stage_to_string(shader->Stage),
+                 shader_prog->Name);
+         _mesa_print_ir(stderr, shader->ir, NULL);
+      } else {
+         fprintf(stderr, "No GLSL IR for linked %s program %d (shader may be "
+                 "from cache)\n", _mesa_shader_stage_to_string(shader->Stage),
+                 shader_prog->Name);
+      }
       fprintf(stderr, "\n");
    }
 }
