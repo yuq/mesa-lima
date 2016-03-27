@@ -1052,6 +1052,9 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
    case TGSI_PROPERTY_NEXT_SHADER:
       /* Do not need to know the next shader stage. */
       break;
+   case TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL:
+      info->prop.fp.earlyFragTests = prop->u[0].Data;
+      break;
    default:
       INFO("unhandled TGSI property %d\n", prop->Property.PropertyName);
       break;
