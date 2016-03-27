@@ -1303,6 +1303,17 @@ nvc0_blit_3d(struct nvc0_context *nvc0, const struct pipe_blit_info *info)
    }
    nvc0->state.num_vtxelts = 2;
 
+   if (nvc0->state.prim_restart) {
+      IMMED_NVC0(push, NVC0_3D(PRIM_RESTART_ENABLE), 0);
+      nvc0->state.prim_restart = 0;
+   }
+
+   if (nvc0->state.index_bias) {
+      IMMED_NVC0(push, NVC0_3D(VB_ELEMENT_BASE), 0);
+      IMMED_NVC0(push, NVC0_3D(VERTEX_ID_BASE), 0);
+      nvc0->state.index_bias = 0;
+   }
+
    for (i = 0; i < info->dst.box.depth; ++i, z += dz) {
       if (info->dst.box.z + i) {
          BEGIN_NVC0(push, NVC0_3D(LAYER), 1);
