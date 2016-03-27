@@ -190,7 +190,8 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	uint64_t va = r600_resource(dst)->gpu_address + offset;
 
 	/* Flush the caches. */
-	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH | flush_flags;
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+	                 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
 
 	while (size) {
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
@@ -296,7 +297,8 @@ void si_copy_buffer(struct si_context *sctx,
 	}
 
 	/* Flush the caches. */
-	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH | flush_flags;
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+	                 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
 
 	/* This is the main part doing the copying. Src is always aligned. */
 	main_dst_offset = dst_offset + skipped_size;

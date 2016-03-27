@@ -2436,7 +2436,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 */
 	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
 			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
+			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
+			 SI_CONTEXT_CS_PARTIAL_FLUSH;
 
 	/* Take the maximum of the old and new count. If the new count is lower,
 	 * dirtying is needed to disable the unbound colorbuffers.
@@ -3458,7 +3459,8 @@ static void si_texture_barrier(struct pipe_context *ctx)
 
 	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
 			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_FLUSH_AND_INV_CB;
+			 SI_CONTEXT_FLUSH_AND_INV_CB |
+			 SI_CONTEXT_CS_PARTIAL_FLUSH;
 }
 
 static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
@@ -3467,7 +3469,8 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 
 	/* Subsequent commands must wait for all shader invocations to
 	 * complete. */
-	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+	                 SI_CONTEXT_CS_PARTIAL_FLUSH;
 
 	if (flags & PIPE_BARRIER_CONSTANT_BUFFER)
 		sctx->b.flags |= SI_CONTEXT_INV_SMEM_L1 |
@@ -3477,7 +3480,8 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 		     PIPE_BARRIER_SHADER_BUFFER |
 		     PIPE_BARRIER_TEXTURE |
 		     PIPE_BARRIER_IMAGE |
-		     PIPE_BARRIER_STREAMOUT_BUFFER)) {
+		     PIPE_BARRIER_STREAMOUT_BUFFER |
+		     PIPE_BARRIER_GLOBAL_BUFFER)) {
 		/* As far as I can tell, L1 contents are written back to L2
 		 * automatically at end of shader, but the contents of other
 		 * L1 caches might still be stale. */

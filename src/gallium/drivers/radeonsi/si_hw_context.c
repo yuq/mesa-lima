@@ -117,6 +117,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
 			SI_CONTEXT_INV_VMEM_L1 |
 			SI_CONTEXT_INV_GLOBAL_L2 |
+			SI_CONTEXT_CS_PARTIAL_FLUSH |
 			/* this is probably not needed anymore */
 			SI_CONTEXT_PS_PARTIAL_FLUSH;
 	si_emit_cache_flush(ctx, NULL);

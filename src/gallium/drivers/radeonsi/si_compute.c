@@ -441,13 +441,8 @@ static void si_launch_grid(
 	if (!sctx->cs_shader_state.initialized)
 		si_initialize_compute(sctx);
 
-	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
-			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_INV_ICACHE |
-			 SI_CONTEXT_INV_SMEM_L1 |
-			 SI_CONTEXT_FLUSH_WITH_INV_L2 |
-			 SI_CONTEXT_FLAG_COMPUTE;
-	si_emit_cache_flush(sctx, NULL);
+	if (sctx->b.flags)
+		si_emit_cache_flush(sctx, NULL);
 
 	if (!si_switch_compute_shader(sctx, program, &program->shader, info->pc))
 		return;
@@ -480,14 +475,6 @@ static void si_launch_grid(
 		si_setup_tgsi_grid(sctx, info);
 
 	si_emit_dispatch_packets(sctx, info);
-
-	sctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH |
-			 SI_CONTEXT_INV_VMEM_L1 |
-			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_INV_ICACHE |
-			 SI_CONTEXT_INV_SMEM_L1 |
-			 SI_CONTEXT_FLAG_COMPUTE;
-	si_emit_cache_flush(sctx, NULL);
 }
 
 
