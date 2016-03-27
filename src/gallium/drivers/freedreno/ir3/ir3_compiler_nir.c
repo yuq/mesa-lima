@@ -286,7 +286,7 @@ create_immed(struct ir3_block *block, uint32_t val)
 {
 	struct ir3_instruction *mov;
 
-	mov = ir3_instr_create(block, 1, 0);
+	mov = ir3_instr_create(block, 1, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
@@ -366,7 +366,7 @@ create_uniform(struct ir3_compile *ctx, unsigned n)
 {
 	struct ir3_instruction *mov;
 
-	mov = ir3_instr_create(ctx->block, 1, 0);
+	mov = ir3_instr_create(ctx->block, 1, OPC_MOV);
 	/* TODO get types right? */
 	mov->cat1.src_type = TYPE_F32;
 	mov->cat1.dst_type = TYPE_F32;
@@ -382,7 +382,7 @@ create_uniform_indirect(struct ir3_compile *ctx, int n,
 {
 	struct ir3_instruction *mov;
 
-	mov = ir3_instr_create(ctx->block, 1, 0);
+	mov = ir3_instr_create(ctx->block, 1, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
@@ -418,7 +418,7 @@ create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, int n,
 	struct ir3_instruction *mov;
 	struct ir3_register *src;
 
-	mov = ir3_instr_create(block, 1, 0);
+	mov = ir3_instr_create(block, 1, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
@@ -441,7 +441,7 @@ create_var_load(struct ir3_compile *ctx, struct ir3_array *arr, int n,
 	struct ir3_instruction *mov;
 	struct ir3_register *src;
 
-	mov = ir3_instr_create(block, 1, 0);
+	mov = ir3_instr_create(block, 1, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
@@ -469,7 +469,7 @@ create_var_store(struct ir3_compile *ctx, struct ir3_array *arr, int n,
 	struct ir3_instruction *mov;
 	struct ir3_register *dst;
 
-	mov = ir3_instr_create(block, 1, 0);
+	mov = ir3_instr_create(block, 1, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	dst = ir3_reg_create(mov, 0, IR3_REG_ARRAY |

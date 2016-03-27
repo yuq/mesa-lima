@@ -902,7 +902,7 @@ static inline struct ir3_instruction *
 ir3_MOV(struct ir3_block *block, struct ir3_instruction *src, type_t type)
 {
 	struct ir3_instruction *instr =
-		ir3_instr_create(block, 1, 0);
+		ir3_instr_create(block, 1, OPC_MOV);
 	ir3_reg_create(instr, 0, 0);   /* dst */
 	if (src->regs[0]->flags & IR3_REG_ARRAY) {
 		struct ir3_register *src_reg =
@@ -923,7 +923,7 @@ ir3_COV(struct ir3_block *block, struct ir3_instruction *src,
 		type_t src_type, type_t dst_type)
 {
 	struct ir3_instruction *instr =
-		ir3_instr_create(block, 1, 0);
+		ir3_instr_create(block, 1, OPC_MOV);
 	ir3_reg_create(instr, 0, 0);   /* dst */
 	ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = src;
 	instr->cat1.src_type = src_type;
