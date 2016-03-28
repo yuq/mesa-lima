@@ -329,6 +329,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	struct r600_resource *res = (struct r600_resource*)resource;
 	struct r600_texture *rtex = (struct r600_texture*)resource;
 	struct radeon_bo_metadata metadata;
+	bool update_metadata = false;
 
 	/* This is not supported now, but it might be required for OpenCL
 	 * interop in the future.
@@ -337,29 +338,30 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	    (resource->nr_samples > 1 || rtex->is_depth))
 		return false;
 
-	if (!res->is_shared) {
-		res->is_shared = true;
-		res->external_usage = usage;
+	if (resource->target != PIPE_BUFFER) {
+		/* Since shader image stores don't support DCC on VI,
+		 * disable it for external clients that want write
+		 * access.
+		 */
+		if (usage & PIPE_HANDLE_USAGE_WRITE && rtex->dcc_offset) {
+			r600_texture_disable_dcc(rscreen, rtex);
+			update_metadata = true;
+		}
 
-		if (resource->target != PIPE_BUFFER) {
-			/* Since shader image stores don't support DCC on VI,
-			 * disable it for external clients that want write
-			 * access.
+		if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) &&
+		    rtex->cmask.size) {
+			/* Eliminate fast clear (both CMASK and DCC) */
+			r600_eliminate_fast_color_clear(rscreen, rtex);
+
+			/* Disable CMASK if flush_resource isn't going
+			 * to be called.
 			 */
-			if (usage & PIPE_HANDLE_USAGE_WRITE)
-				r600_texture_disable_dcc(rscreen, rtex);
+			r600_texture_disable_cmask(rscreen, rtex);
+			update_metadata = true;
+		}
 
-			if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH)) {
-				/* Eliminate fast clear (both CMASK and DCC) */
-				r600_eliminate_fast_color_clear(rscreen, rtex);
-
-				/* Disable CMASK if flush_resource isn't going
-				 * to be called.
-				 */
-				r600_texture_disable_cmask(rscreen, rtex);
-			}
-
-			/* Set metadata. */
+		/* Set metadata. */
+		if (!res->is_shared || update_metadata) {
 			r600_texture_init_metadata(rtex, &metadata);
 			if (rscreen->query_opaque_metadata)
 				rscreen->query_opaque_metadata(rscreen, rtex,
@@ -367,8 +369,18 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 
 			rscreen->ws->buffer_set_metadata(res->buf, &metadata);
 		}
+	}
+
+	if (res->is_shared) {
+		/* USAGE_EXPLICIT_FLUSH must be cleared if at least one user
+		 * doesn't set it.
+		 */
+		res->external_usage |= usage & ~PIPE_HANDLE_USAGE_EXPLICIT_FLUSH;
+		if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH))
+			res->external_usage &= ~PIPE_HANDLE_USAGE_EXPLICIT_FLUSH;
 	} else {
-		assert(res->external_usage == usage);
+		res->is_shared = true;
+		res->external_usage = usage;
 	}
 
 	return rscreen->ws->buffer_get_handle(res->buf,
