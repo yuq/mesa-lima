@@ -389,8 +389,43 @@ build_nir_vertex_shader(void)
    return b.shader;
 }
 
+typedef nir_ssa_def* (*texel_fetch_build_func)(struct nir_builder *,
+                                               struct anv_device *,
+                                               nir_ssa_def *, nir_ssa_def *);
+
+static nir_ssa_def *
+build_nir_texel_fetch(struct nir_builder *b, struct anv_device *device,
+                      nir_ssa_def *tex_pos, nir_ssa_def *tex_pitch)
+{
+   const struct glsl_type *sampler_type =
+      glsl_sampler_type(GLSL_SAMPLER_DIM_2D, false, false, GLSL_TYPE_FLOAT);
+   nir_variable *sampler = nir_variable_create(b->shader, nir_var_uniform,
+                                               sampler_type, "s_tex");
+   sampler->data.descriptor_set = 0;
+   sampler->data.binding = 0;
+
+   nir_tex_instr *tex = nir_tex_instr_create(b->shader, 2);
+   tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
+   tex->op = nir_texop_txf;
+   tex->src[0].src_type = nir_tex_src_coord;
+   tex->src[0].src = nir_src_for_ssa(tex_pos);
+   tex->src[1].src_type = nir_tex_src_lod;
+   tex->src[1].src = nir_src_for_ssa(nir_imm_int(b, 0));
+   tex->dest_type = nir_type_float; /* TODO */
+   tex->is_array = false;
+   tex->coord_components = 2;
+   tex->texture = nir_deref_var_create(tex, sampler);
+   tex->sampler = NULL;
+
+   nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, "tex");
+   nir_builder_instr_insert(b, &tex->instr);
+
+   return &tex->dest.ssa;
+}
+
 static nir_shader *
-build_nir_copy_fragment_shader()
+build_nir_copy_fragment_shader(struct anv_device *device,
+                               texel_fetch_build_func txf_func)
 {
    const struct glsl_type *vec4 = glsl_vec4_type();
    const struct glsl_type *vec2 = glsl_vector_type(GLSL_TYPE_FLOAT, 2);
@@ -402,36 +437,14 @@ build_nir_copy_fragment_shader()
    nir_variable *tex_pos_in = nir_variable_create(b.shader, nir_var_shader_in,
                                                   vec2, "v_tex_pos");
    tex_pos_in->data.location = VARYING_SLOT_VAR0;
-   nir_ssa_def *const tex_pos = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
-
-   const struct glsl_type *sampler_type =
-      glsl_sampler_type(GLSL_SAMPLER_DIM_2D, false, false,
-                        glsl_get_base_type(vec4));
-   nir_variable *sampler = nir_variable_create(b.shader, nir_var_uniform,
-                                               sampler_type, "s_tex");
-   sampler->data.descriptor_set = 0;
-   sampler->data.binding = 0;
-
-   nir_tex_instr *tex = nir_tex_instr_create(b.shader, 2);
-   tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
-   tex->op = nir_texop_txf;
-   tex->src[0].src_type = nir_tex_src_coord;
-   tex->src[0].src = nir_src_for_ssa(tex_pos);
-   tex->src[1].src_type = nir_tex_src_lod;
-   tex->src[1].src = nir_src_for_ssa(nir_imm_int(&b, 0));
-   tex->dest_type = nir_type_float; /* TODO */
-   tex->is_array = false;
-   tex->coord_components = tex_pos->num_components;
-   tex->texture = nir_deref_var_create(tex, sampler);
-   tex->sampler = NULL;
-
-   nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, "tex");
-   nir_builder_instr_insert(&b, &tex->instr);
 
    nir_variable *color_out = nir_variable_create(b.shader, nir_var_shader_out,
                                                  vec4, "f_color");
    color_out->data.location = FRAG_RESULT_DATA0;
-   nir_store_var(&b, color_out, &tex->dest.ssa, 0xf);
+
+   nir_ssa_def *const tex_pos = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
+   nir_ssa_def *color = txf_func(&b, device, tex_pos, NULL);
+   nir_store_var(&b, color_out, color, 0xf);
 
    return b.shader;
 }
@@ -501,7 +514,7 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
    };
 
    struct anv_shader_module fs_2d = {
-      .nir = build_nir_copy_fragment_shader(),
+      .nir = build_nir_copy_fragment_shader(device, build_nir_texel_fetch),
    };
 
    VkPipelineVertexInputStateCreateInfo vi_create_info = {
