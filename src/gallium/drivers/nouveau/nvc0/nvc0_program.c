@@ -544,20 +544,22 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
          info->io.texBindBase = NVE4_CP_INPUT_TEX(0);
          info->io.suInfoBase = NVE4_CP_INPUT_SUF(0);
          info->prop.cp.gridInfoBase = NVE4_CP_INPUT_GRID_INFO(0);
+         info->io.bufInfoBase = 0; /* TODO */
       } else {
-         info->io.suInfoBase = NVC0_CB_AUX_BUF_INFO(0);
+         info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
+         info->io.suInfoBase = 0; /* TODO */
       }
       info->io.msInfoCBSlot = 0;
       info->io.msInfoBase = NVE4_CP_INPUT_MS_OFFSETS;
    } else {
       if (chipset >= NVISA_GK104_CHIPSET) {
          info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
-         info->io.suInfoBase = 0; /* TODO */
       }
       info->io.sampleInfoBase = NVC0_CB_AUX_SAMPLE_INFO;
-      info->io.suInfoBase = NVC0_CB_AUX_BUF_INFO(0);
+      info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
       info->io.msInfoCBSlot = 15;
       info->io.msInfoBase = 0; /* TODO */
+      info->io.suInfoBase = 0; /* TODO */
    }
 
    info->assignSlots = nvc0_program_assign_varying_slots;
