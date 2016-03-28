@@ -329,29 +329,8 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    /* Collect the various SSA sources */
    const unsigned num_inputs = count - 3;
    struct vtn_ssa_value *vtn_src[4] = { NULL, };
-   for (unsigned i = 0; i < num_inputs; i++) {
+   for (unsigned i = 0; i < num_inputs; i++)
       vtn_src[i] = vtn_ssa_value(b, w[i + 3]);
-
-      /* The way SPIR-V defines the NoContraction decoration is rediculous.
-       * It expressly says in the SPIR-V spec:
-       *
-       *    "For example, if applied to an OpFMul, that multiply can’t be
-       *    combined with an addition to yield a fused multiply-add
-       *    operation."
-       *
-       * Technically, this means we would have to either rewrite NIR with
-       * another silly "don't fuse me" flag or we would have to propagate
-       * the NoContraction decoration to all consumers of a value which
-       * would make it far more infectious than anyone intended.
-       *
-       * Instead, we take a short-cut by simply looking at the sources and
-       * see if any of them have it.  That should be good enough.
-       *
-       * See also issue #17 on the SPIR-V gitlab
-       */
-      vtn_foreach_decoration(b, vtn_untyped_value(b, w[i + 3]),
-                             handle_no_contraction, NULL);
-   }
 
    if (glsl_type_is_matrix(vtn_src[0]->type) ||
        (num_inputs >= 2 && glsl_type_is_matrix(vtn_src[1]->type))) {
