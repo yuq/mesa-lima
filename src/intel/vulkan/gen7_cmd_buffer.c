@@ -323,22 +323,38 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
    bool changed = cmd_buffer->state.current_l3_config != l3cr2_val;
 
    if (changed) {
-      /* According to the hardware docs, the L3 partitioning can only be changed
-       * while the pipeline is completely drained and the caches are flushed,
-       * which involves a first PIPE_CONTROL flush which stalls the pipeline and
-       * initiates invalidation of the relevant caches...
+      /* According to the hardware docs, the L3 partitioning can only be
+       * changed while the pipeline is completely drained and the caches are
+       * flushed, which involves a first PIPE_CONTROL flush which stalls the
+       * pipeline...
+       */
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
+                     .DCFlushEnable = true,
+                     .PostSyncOperation = NoWrite,
+                     .CommandStreamerStallEnable = true);
+
+      /* ...followed by a second pipelined PIPE_CONTROL that initiates
+       * invalidation of the relevant caches. Note that because RO
+       * invalidation happens at the top of the pipeline (i.e. right away as
+       * the PIPE_CONTROL command is processed by the CS) we cannot combine it
+       * with the previous stalling flush as the hardware documentation
+       * suggests, because that would cause the CS to stall on previous
+       * rendering *after* RO invalidation and wouldn't prevent the RO caches
+       * from being polluted by concurrent rendering before the stall
+       * completes. This intentionally doesn't implement the SKL+ hardware
+       * workaround suggesting to enable CS stall on PIPE_CONTROLs with the
+       * texture cache invalidation bit set for GPGPU workloads because the
+       * previous and subsequent PIPE_CONTROLs already guarantee that there is
+       * no concurrent GPGPU kernel execution (see SKL HSD 2132585).
        */
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                      .TextureCacheInvalidationEnable = true,
                      .ConstantCacheInvalidationEnable = true,
                      .InstructionCacheInvalidateEnable = true,
-                     .DCFlushEnable = true,
-                     .PostSyncOperation = NoWrite,
-                     .CommandStreamerStallEnable = true);
+                     .PostSyncOperation = NoWrite);
 
-      /* ...followed by a second stalling flush which guarantees that
-       * invalidation is complete when the L3 configuration registers are
-       * modified.
+      /* Now send a third stalling flush to make sure that invalidation is
+       * complete when the L3 configuration registers are modified.
        */
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                      .DCFlushEnable = true,
