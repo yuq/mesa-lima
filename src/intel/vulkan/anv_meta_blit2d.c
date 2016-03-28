@@ -431,7 +431,7 @@ build_nir_copy_fragment_shader()
    nir_variable *color_out = nir_variable_create(b.shader, nir_var_shader_out,
                                                  vec4, "f_color");
    color_out->data.location = FRAG_RESULT_DATA0;
-   nir_store_var(&b, color_out, &tex->dest.ssa, 4);
+   nir_store_var(&b, color_out, &tex->dest.ssa, 0xf);
 
    return b.shader;
 }
