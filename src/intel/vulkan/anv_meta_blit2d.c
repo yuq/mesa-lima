@@ -393,19 +393,19 @@ static nir_shader *
 build_nir_copy_fragment_shader()
 {
    const struct glsl_type *vec4 = glsl_vec4_type();
-   const struct glsl_type *vec3 = glsl_vector_type(GLSL_TYPE_FLOAT, 3);
+   const struct glsl_type *vec2 = glsl_vector_type(GLSL_TYPE_FLOAT, 2);
    nir_builder b;
 
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
    b.shader->info.name = ralloc_strdup(b.shader, "meta_blit2d_fs");
 
    nir_variable *tex_pos_in = nir_variable_create(b.shader, nir_var_shader_in,
-                                                  vec3, "v_tex_pos");
+                                                  vec2, "v_tex_pos");
    tex_pos_in->data.location = VARYING_SLOT_VAR0;
    nir_ssa_def *const tex_pos = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
 
    const struct glsl_type *sampler_type =
-      glsl_sampler_type(GLSL_SAMPLER_DIM_2D, false, true,
+      glsl_sampler_type(GLSL_SAMPLER_DIM_2D, false, false,
                         glsl_get_base_type(vec4));
    nir_variable *sampler = nir_variable_create(b.shader, nir_var_uniform,
                                                sampler_type, "s_tex");
@@ -420,7 +420,7 @@ build_nir_copy_fragment_shader()
    tex->src[1].src_type = nir_tex_src_lod;
    tex->src[1].src = nir_src_for_ssa(nir_imm_int(&b, 0));
    tex->dest_type = nir_type_float; /* TODO */
-   tex->is_array = glsl_sampler_type_is_array(sampler_type);
+   tex->is_array = false;
    tex->coord_components = tex_pos->num_components;
    tex->texture = nir_deref_var_create(tex, sampler);
    tex->sampler = NULL;
