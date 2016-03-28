@@ -5065,6 +5065,18 @@ static void create_function(struct si_shader_context *ctx)
 					  S_0286D0_LINEAR_CENTROID_ENA(1) |
 					  S_0286D0_FRONT_FACE_ENA(1) |
 					  S_0286D0_POS_FIXED_PT_ENA(1));
+	} else if (ctx->type == TGSI_PROCESSOR_COMPUTE) {
+		const unsigned *properties = shader->selector->info.properties;
+		unsigned max_work_group_size =
+		               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] *
+		               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT] *
+		               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH];
+
+		assert(max_work_group_size);
+
+		radeon_llvm_add_attribute(ctx->radeon_bld.main_fn,
+		                          "amdgpu-max-work-group-size",
+		                          max_work_group_size);
 	}
 
 	shader->info.num_input_sgprs = 0;
