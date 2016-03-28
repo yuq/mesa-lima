@@ -99,6 +99,17 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
+   device->cmd_parser_version = -1;
+   if (device->info->gen == 7) {
+      device->cmd_parser_version =
+         anv_gem_get_param(fd, I915_PARAM_CMD_PARSER_VERSION);
+      if (device->cmd_parser_version == -1) {
+         result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                            "failed to get command parser version");
+         goto fail;
+      }
+   }
+
    if (anv_gem_get_aperture(fd, &device->aperture_size) == -1) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
                          "failed to get aperture size: %m");

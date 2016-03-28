@@ -546,6 +546,7 @@ struct anv_physical_device {
     uint64_t                                    aperture_size;
     struct brw_compiler *                       compiler;
     struct isl_device                           isl_dev;
+    int                                         cmd_parser_version;
 };
 
 struct anv_wsi_interaface;
