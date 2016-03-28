@@ -84,6 +84,17 @@ get_mul_for_src(nir_alu_src *src, int num_components,
       return NULL;
 
    nir_alu_instr *alu = nir_instr_as_alu(instr);
+
+   /* We want to bail if any of the other ALU operations involved is labled
+    * exact.  One reason for this is that, while the value that is changing is
+    * actually the result of the add and not the multiply, the intention of
+    * the user when they specify an exact multiply is that they want *that*
+    * value and what they don't care about is the add.  Another reason is that
+    * SPIR-V explicitly requires this behaviour.
+    */
+   if (alu->exact)
+      return NULL;
+
    switch (alu->op) {
    case nir_op_imov:
    case nir_op_fmov:
