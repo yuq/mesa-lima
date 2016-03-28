@@ -81,6 +81,11 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CBindingWrapping.h>
 
+#include <llvm/Config/llvm-config.h>
+#if LLVM_USE_INTEL_JITEVENTS
+#include <llvm/ExecutionEngine/JITEventListener.h>
+#endif
+
 // Workaround http://llvm.org/PR23628
 #if HAVE_LLVM >= 0x0307
 #  pragma pop_macro("DEBUG")
@@ -629,6 +634,10 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
    ExecutionEngine *JIT;
 
    JIT = builder.create();
+#if LLVM_USE_INTEL_JITEVENTS
+   JITEventListener *JEL = JITEventListener::createIntelJITEventListener();
+   JIT->RegisterJITEventListener(JEL);
+#endif
    if (JIT) {
       *OutJIT = wrap(JIT);
       return 0;
