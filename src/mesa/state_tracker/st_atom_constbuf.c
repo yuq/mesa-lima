@@ -65,8 +65,8 @@ void st_upload_constants( struct st_context *st,
           shader_type == PIPE_SHADER_COMPUTE);
 
    /* update the ATI constants before rendering */
-   struct ati_fragment_shader *ati_fs = st->fp->ati_fs;
-   if (shader_type == PIPE_SHADER_FRAGMENT && ati_fs) {
+   if (shader_type == PIPE_SHADER_FRAGMENT && st->fp->ati_fs) {
+      struct ati_fragment_shader *ati_fs = st->fp->ati_fs;
       unsigned c;
 
       for (c = 0; c < MAX_NUM_FRAGMENT_CONSTANTS_ATI; c++) {
