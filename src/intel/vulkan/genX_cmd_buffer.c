@@ -638,6 +638,24 @@ void genX(CmdDrawIndexedIndirect)(
       .PrimitiveTopologyType                    = pipeline->topology);
 }
 
+#if GEN_GEN == 7
+
+static bool
+verify_cmd_parser(const struct anv_device *device,
+                  int required_version,
+                  const char *function)
+{
+   if (device->instance->physicalDevice.cmd_parser_version < required_version) {
+      vk_errorf(VK_ERROR_FEATURE_NOT_PRESENT,
+                "cmd parser version %d is required for %s",
+                required_version, function);
+      return false;
+   } else {
+      return true;
+   }
+}
+
+#endif
 
 void genX(CmdDispatch)(
     VkCommandBuffer                             commandBuffer,
@@ -698,6 +716,14 @@ void genX(CmdDispatchIndirect)(
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
    struct anv_batch *batch = &cmd_buffer->batch;
+
+#if GEN_GEN == 7
+   /* Linux 4.4 added command parser version 5 which allows the GPGPU
+    * indirect dispatch registers to be written.
+    */
+   if (verify_cmd_parser(cmd_buffer->device, 5, "vkCmdDispatchIndirect"))
+      return;
+#endif
 
    if (prog_data->uses_num_work_groups) {
       cmd_buffer->state.num_workgroups_offset = bo_offset;
