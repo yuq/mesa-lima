@@ -870,6 +870,13 @@ st_create_fp_variant(struct st_context *st,
    struct pipe_context *pipe = st->pipe;
    struct st_fp_variant *variant = CALLOC_STRUCT(st_fp_variant);
    struct pipe_shader_state tgsi = {0};
+   struct gl_program_parameter_list *params = stfp->Base.Base.Parameters;
+   static const gl_state_index texcoord_state[STATE_LENGTH] =
+      { STATE_INTERNAL, STATE_CURRENT_ATTRIB, VERT_ATTRIB_TEX0 };
+   static const gl_state_index scale_state[STATE_LENGTH] =
+      { STATE_INTERNAL, STATE_PT_SCALE };
+   static const gl_state_index bias_state[STATE_LENGTH] =
+      { STATE_INTERNAL, STATE_PT_BIAS };
 
    if (!variant)
       return NULL;
@@ -930,7 +937,6 @@ st_create_fp_variant(struct st_context *st,
    if (key->drawpixels) {
       const struct tgsi_token *tokens;
       unsigned scale_const = 0, bias_const = 0, texcoord_const = 0;
-      struct gl_program_parameter_list *params = stfp->Base.Base.Parameters;
 
       /* Find the first unused slot. */
       variant->drawpix_sampler = ffs(~stfp->Base.Base.SamplersUsed) - 1;
@@ -943,21 +949,11 @@ st_create_fp_variant(struct st_context *st,
       }
 
       if (key->scaleAndBias) {
-         static const gl_state_index scale_state[STATE_LENGTH] =
-            { STATE_INTERNAL, STATE_PT_SCALE };
-         static const gl_state_index bias_state[STATE_LENGTH] =
-            { STATE_INTERNAL, STATE_PT_BIAS };
-
          scale_const = _mesa_add_state_reference(params, scale_state);
          bias_const = _mesa_add_state_reference(params, bias_state);
       }
 
-      {
-         static const gl_state_index state[STATE_LENGTH] =
-            { STATE_INTERNAL, STATE_CURRENT_ATTRIB, VERT_ATTRIB_TEX0 };
-
-         texcoord_const = _mesa_add_state_reference(params, state);
-      }
+      texcoord_const = _mesa_add_state_reference(params, texcoord_state);
 
       tokens = st_get_drawpix_shader(tgsi.tokens,
                                      st->needs_texcoord_semantic,
