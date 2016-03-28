@@ -390,7 +390,7 @@ build_nir_vertex_shader(void)
 }
 
 static nir_shader *
-build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
+build_nir_copy_fragment_shader()
 {
    const struct glsl_type *vec4 = glsl_vec4_type();
    const struct glsl_type *vec3 = glsl_vector_type(GLSL_TYPE_FLOAT, 3);
@@ -405,7 +405,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    nir_ssa_def *const tex_pos = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
 
    const struct glsl_type *sampler_type =
-      glsl_sampler_type(tex_dim, false, tex_dim != GLSL_SAMPLER_DIM_3D,
+      glsl_sampler_type(GLSL_SAMPLER_DIM_2D, false, true,
                         glsl_get_base_type(vec4));
    nir_variable *sampler = nir_variable_create(b.shader, nir_var_uniform,
                                                sampler_type, "s_tex");
@@ -413,7 +413,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    sampler->data.binding = 0;
 
    nir_tex_instr *tex = nir_tex_instr_create(b.shader, 2);
-   tex->sampler_dim = tex_dim;
+   tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
    tex->op = nir_texop_txf;
    tex->src[0].src_type = nir_tex_src_coord;
    tex->src[0].src = nir_src_for_ssa(tex_pos);
@@ -501,7 +501,7 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
    };
 
    struct anv_shader_module fs_2d = {
-      .nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_2D),
+      .nir = build_nir_copy_fragment_shader(),
    };
 
    VkPipelineVertexInputStateCreateInfo vi_create_info = {
