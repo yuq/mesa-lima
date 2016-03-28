@@ -1810,11 +1810,11 @@ _mesa_next_mipmap_level_size(GLenum target, GLint border,
  * for mipmap generation.  If not, (re) allocate it.
  * \return GL_TRUE if successful, GL_FALSE if mipmap generation should stop
  */
-GLboolean
-_mesa_prepare_mipmap_level(struct gl_context *ctx,
-                           struct gl_texture_object *texObj, GLuint level,
-                           GLsizei width, GLsizei height, GLsizei depth,
-                           GLsizei border, GLenum intFormat, mesa_format format)
+static GLboolean
+prepare_mipmap_level(struct gl_context *ctx,
+                     struct gl_texture_object *texObj, GLuint level,
+                     GLsizei width, GLsizei height, GLsizei depth,
+                     GLsizei border, GLenum intFormat, mesa_format format)
 {
    const GLuint numFaces = _mesa_num_tex_faces(texObj->Target);
    GLuint face;
@@ -1902,9 +1902,9 @@ _mesa_prepare_mipmap_levels(struct gl_context *ctx,
          break;
       }
 
-      if (!_mesa_prepare_mipmap_level(ctx, texObj, level,
-                                      newWidth, newHeight, newDepth,
-                                      border, intFormat, texFormat)) {
+      if (!prepare_mipmap_level(ctx, texObj, level,
+                                newWidth, newHeight, newDepth,
+                                border, intFormat, texFormat)) {
          break;
       }
 
