@@ -351,6 +351,7 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
                      .TextureCacheInvalidationEnable = true,
                      .ConstantCacheInvalidationEnable = true,
                      .InstructionCacheInvalidateEnable = true,
+                     .StateCacheInvalidationEnable = true,
                      .PostSyncOperation = NoWrite);
 
       /* Now send a third stalling flush to make sure that invalidation is
