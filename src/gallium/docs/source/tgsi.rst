@@ -3220,6 +3220,12 @@ Which shader stage will MOST LIKELY follow after this shader when the shader
 is bound. This is only a hint to the driver and doesn't have to be precise.
 Only set for VS and TES.
 
+TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH / HEIGHT / DEPTH
+"""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Threads per block in each dimension, if known at compile time. If the block size
+is known all three should be at least 1. If it is unknown they should all be set
+to 0 or not set.
 
 Texture Sampling and Texture Formats
 ------------------------------------
