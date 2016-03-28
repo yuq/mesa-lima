@@ -173,6 +173,10 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
 struct blit2d_src_temps {
    VkImage image;
    struct anv_image_view iview;
+
+   struct anv_buffer buffer;
+   struct anv_buffer_view bview;
+
    VkDescriptorPool desc_pool;
    VkDescriptorSet set;
 };
@@ -187,56 +191,130 @@ blit2d_bind_src(struct anv_cmd_buffer *cmd_buffer,
    struct anv_device *device = cmd_buffer->device;
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
 
-   create_iview(cmd_buffer, src, rect, VK_IMAGE_USAGE_SAMPLED_BIT,
-                &tmp->image, &tmp->iview);
+   if (src_type == BLIT2D_SRC_TYPE_NORMAL) {
+      create_iview(cmd_buffer, src, rect, VK_IMAGE_USAGE_SAMPLED_BIT,
+                   &tmp->image, &tmp->iview);
 
-   anv_CreateDescriptorPool(vk_device,
-      &(const VkDescriptorPoolCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-         .pNext = NULL,
-         .flags = 0,
-         .maxSets = 1,
-         .poolSizeCount = 1,
-         .pPoolSizes = (VkDescriptorPoolSize[]) {
-            {
-               .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-               .descriptorCount = 1
-            },
-         }
-      }, &cmd_buffer->pool->alloc, &tmp->desc_pool);
-
-   anv_AllocateDescriptorSets(vk_device,
-      &(VkDescriptorSetAllocateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = tmp->desc_pool,
-         .descriptorSetCount = 1,
-         .pSetLayouts = &device->meta_state.blit2d.img_ds_layout
-      }, &tmp->set);
-
-   anv_UpdateDescriptorSets(vk_device,
-      1, /* writeCount */
-      (VkWriteDescriptorSet[]) {
-         {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = tmp->set,
-            .dstBinding = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .pImageInfo = (VkDescriptorImageInfo[]) {
+      anv_CreateDescriptorPool(vk_device,
+         &(const VkDescriptorPoolCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .pNext = NULL,
+            .flags = 0,
+            .maxSets = 1,
+            .poolSizeCount = 1,
+            .pPoolSizes = (VkDescriptorPoolSize[]) {
                {
-                  .sampler = NULL,
-                  .imageView = anv_image_view_to_handle(&tmp->iview),
-                  .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+                  .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                  .descriptorCount = 1
                },
             }
-         }
-      }, 0, NULL);
+         }, &cmd_buffer->pool->alloc, &tmp->desc_pool);
 
-   anv_CmdBindDescriptorSets(anv_cmd_buffer_to_handle(cmd_buffer),
-                             VK_PIPELINE_BIND_POINT_GRAPHICS,
-                             device->meta_state.blit2d.img_p_layout, 0, 1,
-                             &tmp->set, 0, NULL);
+      anv_AllocateDescriptorSets(vk_device,
+         &(VkDescriptorSetAllocateInfo) {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorPool = tmp->desc_pool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &device->meta_state.blit2d.img_ds_layout
+         }, &tmp->set);
+
+      anv_UpdateDescriptorSets(vk_device,
+         1, /* writeCount */
+         (VkWriteDescriptorSet[]) {
+            {
+               .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+               .dstSet = tmp->set,
+               .dstBinding = 0,
+               .dstArrayElement = 0,
+               .descriptorCount = 1,
+               .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+               .pImageInfo = (VkDescriptorImageInfo[]) {
+                  {
+                     .sampler = NULL,
+                     .imageView = anv_image_view_to_handle(&tmp->iview),
+                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+                  },
+               }
+            }
+         }, 0, NULL);
+
+      anv_CmdBindDescriptorSets(anv_cmd_buffer_to_handle(cmd_buffer),
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                device->meta_state.blit2d.img_p_layout, 0, 1,
+                                &tmp->set, 0, NULL);
+   } else {
+      assert(src_type == BLIT2D_SRC_TYPE_W_DETILE);
+      assert(src->tiling == ISL_TILING_W);
+      assert(src->bs == 1);
+
+      uint32_t tile_offset = 0;
+      isl_tiling_get_intratile_offset_el(&cmd_buffer->device->isl_dev,
+                                         ISL_TILING_W, 1, src->pitch,
+                                         rect->src_x, rect->src_y,
+                                         &tile_offset,
+                                         &rect->src_x, &rect->src_y);
+
+      tmp->buffer = (struct anv_buffer) {
+         .device = device,
+         .size = align_u32(rect->src_y + rect->height, 64) * src->pitch,
+         .usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
+         .bo = src->bo,
+         .offset = src->base_offset + tile_offset,
+      };
+
+      anv_buffer_view_init(&tmp->bview, device,
+         &(VkBufferViewCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+            .buffer = anv_buffer_to_handle(&tmp->buffer),
+            .format = VK_FORMAT_R8_UINT,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE,
+         }, cmd_buffer);
+
+      anv_CreateDescriptorPool(vk_device,
+         &(const VkDescriptorPoolCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .pNext = NULL,
+            .flags = 0,
+            .maxSets = 1,
+            .poolSizeCount = 1,
+            .pPoolSizes = (VkDescriptorPoolSize[]) {
+               {
+                  .type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+                  .descriptorCount = 1
+               },
+            }
+         }, &cmd_buffer->pool->alloc, &tmp->desc_pool);
+
+      anv_AllocateDescriptorSets(vk_device,
+         &(VkDescriptorSetAllocateInfo) {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorPool = tmp->desc_pool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &device->meta_state.blit2d.buf_ds_layout
+         }, &tmp->set);
+
+      anv_UpdateDescriptorSets(vk_device,
+         1, /* writeCount */
+         (VkWriteDescriptorSet[]) {
+            {
+               .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+               .dstSet = tmp->set,
+               .dstBinding = 0,
+               .dstArrayElement = 0,
+               .descriptorCount = 1,
+               .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+               .pTexelBufferView = (VkBufferView[]) {
+                  anv_buffer_view_to_handle(&tmp->bview),
+               },
+            }
+         }, 0, NULL);
+
+      anv_CmdBindDescriptorSets(anv_cmd_buffer_to_handle(cmd_buffer),
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                device->meta_state.blit2d.buf_p_layout, 0, 1,
+                                &tmp->set, 0, NULL);
+   }
 }
 
 static void
@@ -246,8 +324,10 @@ blit2d_unbind_src(struct anv_cmd_buffer *cmd_buffer,
 {
    anv_DestroyDescriptorPool(anv_device_to_handle(cmd_buffer->device),
                              tmp->desc_pool, &cmd_buffer->pool->alloc);
-   anv_DestroyImage(anv_device_to_handle(cmd_buffer->device),
-                    tmp->image, &cmd_buffer->pool->alloc);
+   if (src_type == BLIT2D_SRC_TYPE_NORMAL) {
+      anv_DestroyImage(anv_device_to_handle(cmd_buffer->device),
+                       tmp->image, &cmd_buffer->pool->alloc);
+   }
 }
 
 void
@@ -479,6 +559,80 @@ typedef nir_ssa_def* (*texel_fetch_build_func)(struct nir_builder *,
                                                nir_ssa_def *, nir_ssa_def *);
 
 static nir_ssa_def *
+nir_copy_bits(struct nir_builder *b, nir_ssa_def *dst, unsigned dst_offset,
+              nir_ssa_def *src, unsigned src_offset, unsigned num_bits)
+{
+   unsigned src_mask = (~1u >> (32 - num_bits)) << src_offset;
+   nir_ssa_def *masked = nir_iand(b, src, nir_imm_int(b, src_mask));
+
+   nir_ssa_def *shifted;
+   if (dst_offset > src_offset) {
+      shifted = nir_ishl(b, masked, nir_imm_int(b, dst_offset - src_offset));
+   } else if (dst_offset < src_offset) {
+      shifted = nir_ushr(b, masked, nir_imm_int(b, src_offset - dst_offset));
+   } else {
+      assert(dst_offset == src_offset);
+      shifted = masked;
+   }
+
+   return nir_ior(b, dst, shifted);
+}
+
+static nir_ssa_def *
+build_nir_w_tiled_fetch(struct nir_builder *b, struct anv_device *device,
+                        nir_ssa_def *tex_pos, nir_ssa_def *tex_pitch)
+{
+   nir_ssa_def *x = nir_channel(b, tex_pos, 0);
+   nir_ssa_def *y = nir_channel(b, tex_pos, 1);
+
+   /* First, compute the block-aligned offset */
+   nir_ssa_def *x_major = nir_ushr(b, x, nir_imm_int(b, 6));
+   nir_ssa_def *y_major = nir_ushr(b, y, nir_imm_int(b, 6));
+   nir_ssa_def *offset =
+      nir_iadd(b, nir_imul(b, y_major,
+                              nir_imul(b, tex_pitch, nir_imm_int(b, 64))),
+                  nir_imul(b, x_major, nir_imm_int(b, 4096)));
+
+   /* Compute the bottom 12 bits of the offset */
+   offset = nir_copy_bits(b, offset, 0, x, 0, 1);
+   offset = nir_copy_bits(b, offset, 1, y, 0, 1);
+   offset = nir_copy_bits(b, offset, 2, x, 1, 1);
+   offset = nir_copy_bits(b, offset, 3, y, 1, 1);
+   offset = nir_copy_bits(b, offset, 4, x, 2, 1);
+   offset = nir_copy_bits(b, offset, 5, y, 2, 4);
+   offset = nir_copy_bits(b, offset, 9, x, 3, 3);
+
+   if (device->isl_dev.has_bit6_swizzling) {
+      offset = nir_ixor(b, offset,
+                        nir_ushr(b, nir_iand(b, offset, nir_imm_int(b, 0x0200)),
+                                 nir_imm_int(b, 3)));
+   }
+
+   const struct glsl_type *sampler_type =
+      glsl_sampler_type(GLSL_SAMPLER_DIM_BUF, false, false, GLSL_TYPE_FLOAT);
+   nir_variable *sampler = nir_variable_create(b->shader, nir_var_uniform,
+                                               sampler_type, "s_tex");
+   sampler->data.descriptor_set = 0;
+   sampler->data.binding = 0;
+
+   nir_tex_instr *tex = nir_tex_instr_create(b->shader, 1);
+   tex->sampler_dim = GLSL_SAMPLER_DIM_BUF;
+   tex->op = nir_texop_txf;
+   tex->src[0].src_type = nir_tex_src_coord;
+   tex->src[0].src = nir_src_for_ssa(offset);
+   tex->dest_type = nir_type_float; /* TODO */
+   tex->is_array = false;
+   tex->coord_components = 1;
+   tex->texture = nir_deref_var_create(tex, sampler);
+   tex->sampler = NULL;
+
+   nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, "tex");
+   nir_builder_instr_insert(b, &tex->instr);
+
+   return &tex->dest.ssa;
+}
+
+static nir_ssa_def *
 build_nir_texel_fetch(struct nir_builder *b, struct anv_device *device,
                       nir_ssa_def *tex_pos, nir_ssa_def *tex_pitch)
 {
@@ -595,9 +749,10 @@ blit2d_init_pipeline(struct anv_device *device,
       src_func = build_nir_texel_fetch;
       break;
    case BLIT2D_SRC_TYPE_W_DETILE:
-      /* Not yet supported */
+      src_func = build_nir_w_tiled_fetch;
+      break;
    default:
-      return VK_SUCCESS;
+      unreachable("Invalid blit2d source type");
    }
 
    struct anv_shader_module fs = { .nir = NULL };
