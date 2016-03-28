@@ -28,6 +28,8 @@
 #include "nir_search.h"
 
 struct match_state {
+   bool inexact_match;
+   bool has_exact_alu;
    unsigned variables_seen;
    nir_alu_src variables[NIR_SEARCH_MAX_VARIABLES];
 };
@@ -239,7 +241,10 @@ match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
       return false;
 
    assert(instr->dest.dest.is_ssa);
-   if (expr->inexact && instr->exact)
+
+   state->inexact_match = expr->inexact || state->inexact_match;
+   state->has_exact_alu = instr->exact || state->has_exact_alu;
+   if (state->inexact_match && state->has_exact_alu)
       return false;
 
    assert(!instr->dest.saturate);
@@ -410,7 +415,7 @@ bitsize_tree_filter_down(bitsize_tree *tree, unsigned size)
 
 static nir_alu_src
 construct_value(const nir_search_value *value,
-                unsigned num_components, bitsize_tree *bitsize, bool exact,
+                unsigned num_components, bitsize_tree *bitsize,
                 struct match_state *state,
                 nir_instr *instr, void *mem_ctx)
 {
@@ -424,9 +429,15 @@ construct_value(const nir_search_value *value,
       nir_alu_instr *alu = nir_alu_instr_create(mem_ctx, expr->opcode);
       nir_ssa_dest_init(&alu->instr, &alu->dest.dest, num_components,
                         bitsize->dest_size, NULL);
-      alu->exact = exact;
       alu->dest.write_mask = (1 << num_components) - 1;
       alu->dest.saturate = false;
+
+      /* We have no way of knowing what values in a given search expression
+       * map to a particular replacement value.  Therefore, if the
+       * expression we are replacing has any exact values, the entire
+       * replacement should be exact.
+       */
+      alu->exact = state->has_exact_alu;
 
       for (unsigned i = 0; i < nir_op_infos[expr->opcode].num_inputs; i++) {
          /* If the source is an explicitly sized source, then we need to reset
@@ -436,7 +447,7 @@ construct_value(const nir_search_value *value,
             num_components = nir_op_infos[alu->op].input_sizes[i];
 
          alu->src[i] = construct_value(expr->srcs[i],
-                                       num_components, bitsize->srcs[i], exact,
+                                       num_components, bitsize->srcs[i],
                                        state, instr, mem_ctx);
       }
 
@@ -546,6 +557,8 @@ nir_replace_instr(nir_alu_instr *instr, const nir_search_expression *search,
    assert(instr->dest.dest.is_ssa);
 
    struct match_state state;
+   state.inexact_match = false;
+   state.has_exact_alu = false;
    state.variables_seen = 0;
 
    if (!match_expression(search, instr, instr->dest.dest.ssa.num_components,
@@ -569,7 +582,7 @@ nir_replace_instr(nir_alu_instr *instr, const nir_search_expression *search,
 
    mov->src[0] = construct_value(replace,
                                  instr->dest.dest.ssa.num_components, tree,
-                                 instr->exact, &state, &instr->instr, mem_ctx);
+                                 &state, &instr->instr, mem_ctx);
    nir_instr_insert_before(&instr->instr, &mov->instr);
 
    nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa,
