@@ -2013,6 +2013,10 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 	DBG("; in: slot=%u, len=%ux%u, drvloc=%u",
 			slot, array_len, ncomp, n);
 
+	/* let's pretend things other than vec4 don't exist: */
+	ncomp = MAX2(ncomp, 4);
+	compile_assert(ctx, ncomp == 4);
+
 	so->inputs[n].slot = slot;
 	so->inputs[n].compmask = (1 << ncomp) - 1;
 	so->inputs_count = MAX2(so->inputs_count, n + 1);
@@ -2093,6 +2097,10 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 
 	DBG("; out: slot=%u, len=%ux%u, drvloc=%u",
 			slot, array_len, ncomp, n);
+
+	/* let's pretend things other than vec4 don't exist: */
+	ncomp = MAX2(ncomp, 4);
+	compile_assert(ctx, ncomp == 4);
 
 	if (ctx->so->type == SHADER_FRAGMENT) {
 		switch (slot) {

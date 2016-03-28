@@ -35,23 +35,30 @@
 
 #include "nir/tgsi_to_nir.h"
 
+static const nir_shader_compiler_options options = {
+		.lower_fpow = true,
+		.lower_fsat = true,
+		.lower_scmp = true,
+		.lower_flrp32 = true,
+		.lower_flrp64 = true,
+		.lower_ffract = true,
+		.fuse_ffma = true,
+		.native_integers = true,
+		.vertex_id_zero_based = true,
+		.lower_extract_byte = true,
+		.lower_extract_word = true,
+};
+
 struct nir_shader *
 ir3_tgsi_to_nir(const struct tgsi_token *tokens)
 {
-	static const nir_shader_compiler_options options = {
-			.lower_fpow = true,
-			.lower_fsat = true,
-			.lower_scmp = true,
-			.lower_flrp32 = true,
-			.lower_flrp64 = true,
-			.lower_ffract = true,
-			.fuse_ffma = true,
-			.native_integers = true,
-			.vertex_id_zero_based = true,
-			.lower_extract_byte = true,
-			.lower_extract_word = true,
-	};
 	return tgsi_to_nir(tokens, &options);
+}
+
+const nir_shader_compiler_options *
+ir3_get_compiler_options(void)
+{
+	return &options;
 }
 
 /* for given shader key, are any steps handled in nir? */

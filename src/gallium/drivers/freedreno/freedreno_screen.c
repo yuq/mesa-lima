@@ -54,6 +54,8 @@
 #include "a3xx/fd3_screen.h"
 #include "a4xx/fd4_screen.h"
 
+#include "ir3/ir3_nir.h"
+
 /* XXX this should go away */
 #include "state_tracker/drm_driver.h"
 
@@ -72,6 +74,7 @@ static const struct debug_named_value debug_options[] = {
 		{"shaderdb",  FD_DBG_SHADERDB, "Enable shaderdb output"},
 		{"flush",     FD_DBG_FLUSH,  "Force flush after every draw"},
 		{"deqp",      FD_DBG_DEQP,   "Enable dEQP hacks"},
+		{"nir",       FD_DBG_NIR,    "Prefer NIR as native IR"},
 		DEBUG_NAMED_VALUE_END
 };
 
@@ -447,7 +450,7 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 	case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
-        case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
+	case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
 		return 0;
 	case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
 		return 1;
@@ -459,6 +462,8 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 	case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
 		return 16;
 	case PIPE_SHADER_CAP_PREFERRED_IR:
+		if ((fd_mesa_debug & FD_DBG_NIR) && is_ir3(screen))
+			return PIPE_SHADER_IR_NIR;
 		return PIPE_SHADER_IR_TGSI;
 	case PIPE_SHADER_CAP_SUPPORTED_IRS:
 		return 0;
@@ -470,6 +475,18 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 	}
 	debug_printf("unknown shader param %d\n", param);
 	return 0;
+}
+
+static const void *
+fd_get_compiler_options(struct pipe_screen *pscreen,
+		enum pipe_shader_ir ir, unsigned shader)
+{
+	struct fd_screen *screen = fd_screen(pscreen);
+
+	if (is_ir3(screen))
+		return ir3_get_compiler_options();
+
+	return NULL;
 }
 
 boolean
@@ -630,6 +647,7 @@ fd_screen_create(struct fd_device *dev)
 	pscreen->get_param = fd_screen_get_param;
 	pscreen->get_paramf = fd_screen_get_paramf;
 	pscreen->get_shader_param = fd_screen_get_shader_param;
+	pscreen->get_compiler_options = fd_get_compiler_options;
 
 	fd_resource_screen_init(pscreen);
 	fd_query_screen_init(pscreen);
