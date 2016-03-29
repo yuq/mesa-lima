@@ -459,8 +459,12 @@ brw_update_sampler_state(struct brw_context *brw,
        target == GL_TEXTURE_CUBE_MAP_ARRAY) {
       /* Cube maps must use the same wrap mode for all three coordinate
        * dimensions.  Prior to Haswell, only CUBE and CLAMP are valid.
+       *
+       * Ivybridge and Baytrail seem to have problems with CUBE mode and
+       * integer formats.  Fall back to CLAMP for now.
        */
-      if (tex_cube_map_seamless || sampler->CubeMapSeamless) {
+      if ((tex_cube_map_seamless || sampler->CubeMapSeamless) &&
+          !(brw->gen == 7 && !brw->is_haswell && is_integer_format)) {
 	 wrap_s = BRW_TEXCOORDMODE_CUBE;
 	 wrap_t = BRW_TEXCOORDMODE_CUBE;
 	 wrap_r = BRW_TEXCOORDMODE_CUBE;
