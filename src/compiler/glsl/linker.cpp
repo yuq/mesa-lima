@@ -3503,12 +3503,20 @@ create_shader_variable(struct gl_shader_program *shProg, const ir_variable *in)
    if (!out)
       return NULL;
 
-   out->type = in->type;
-   out->name = ralloc_strdup(shProg, in->name);
+   /* Since gl_VertexID may be lowered to gl_VertexIDMESA, but applications
+    * expect to see gl_VertexID in the program resource list.  Pretend.
+    */
+   if (in->data.mode == ir_var_system_value &&
+       in->data.location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) {
+      out->name = ralloc_strdup(shProg, "gl_VertexID");
+   } else {
+      out->name = ralloc_strdup(shProg, in->name);
+   }
 
    if (!out->name)
       return NULL;
 
+   out->type = in->type;
    out->location = in->data.location;
    out->index = in->data.index;
    out->patch = in->data.patch;

@@ -164,15 +164,6 @@ _mesa_GetActiveAttrib(GLuint program, GLuint desired_index,
 
    const char *var_name = var->name;
 
-   /* Since gl_VertexID may be lowered to gl_VertexIDMESA, we need to
-    * consider gl_VertexIDMESA as gl_VertexID for purposes of checking
-    * active attributes.
-    */
-   if (var->mode == ir_var_system_value &&
-       var->location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) {
-      var_name = "gl_VertexID";
-   }
-
    _mesa_copy_string(name, maxLength, length, var_name);
 
    if (size)
@@ -421,7 +412,6 @@ _mesa_GetFragDataLocation(GLuint program, const GLchar *name)
 const char*
 _mesa_program_resource_name(struct gl_program_resource *res)
 {
-   const gl_shader_variable *var;
    switch (res->Type) {
    case GL_UNIFORM_BLOCK:
    case GL_SHADER_STORAGE_BLOCK:
@@ -429,13 +419,6 @@ _mesa_program_resource_name(struct gl_program_resource *res)
    case GL_TRANSFORM_FEEDBACK_VARYING:
       return RESOURCE_XFV(res)->Name;
    case GL_PROGRAM_INPUT:
-      var = RESOURCE_VAR(res);
-      /* Special case gl_VertexIDMESA -> gl_VertexID. */
-      if (var->mode == ir_var_system_value &&
-          var->location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) {
-         return "gl_VertexID";
-      }
-   /* fallthrough */
    case GL_PROGRAM_OUTPUT:
       return RESOURCE_VAR(res)->name;
    case GL_UNIFORM:
