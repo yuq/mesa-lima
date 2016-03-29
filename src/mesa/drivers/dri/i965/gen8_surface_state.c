@@ -70,8 +70,8 @@ surface_tiling_resource_mode(uint32_t tr_mode)
    }
 }
 
-static uint32_t
-surface_tiling_mode(uint32_t tiling)
+uint32_t
+gen8_surface_tiling_mode(uint32_t tiling)
 {
    switch (tiling) {
    case I915_TILING_X:
@@ -83,10 +83,10 @@ surface_tiling_mode(uint32_t tiling)
    }
 }
 
-static unsigned
-vertical_alignment(const struct brw_context *brw,
-                   const struct intel_mipmap_tree *mt,
-                   uint32_t surf_type)
+unsigned
+gen8_vertical_alignment(const struct brw_context *brw,
+                        const struct intel_mipmap_tree *mt,
+                        uint32_t surf_type)
 {
    /* On Gen9+ vertical alignment is ignored for 1D surfaces and when
     * tr_mode is not TRMODE_NONE. Set to an arbitrary non-reserved value.
@@ -108,10 +108,10 @@ vertical_alignment(const struct brw_context *brw,
    }
 }
 
-static unsigned
-horizontal_alignment(const struct brw_context *brw,
-                     const struct intel_mipmap_tree *mt,
-                     uint32_t surf_type)
+unsigned
+gen8_horizontal_alignment(const struct brw_context *brw,
+                          const struct intel_mipmap_tree *mt,
+                          uint32_t surf_type)
 {
    /* On Gen9+ horizontal alignment is ignored when tr_mode is not
     * TRMODE_NONE. Set to an arbitrary non-reserved value.
@@ -133,8 +133,9 @@ horizontal_alignment(const struct brw_context *brw,
    }
 }
 
-static uint32_t *
-allocate_surface_state(struct brw_context *brw, uint32_t *out_offset, int index)
+uint32_t *
+gen8_allocate_surface_state(struct brw_context *brw,
+                            uint32_t *out_offset, int index)
 {
    int dwords = brw->gen >= 9 ? 16 : 13;
    uint32_t *surf = __brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
@@ -154,7 +155,7 @@ gen8_emit_buffer_surface_state(struct brw_context *brw,
                                bool rw)
 {
    const unsigned mocs = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
-   uint32_t *surf = allocate_surface_state(brw, out_offset, -1);
+   uint32_t *surf = gen8_allocate_surface_state(brw, out_offset, -1);
 
    surf[0] = BRW_SURFACE_BUFFER << BRW_SURFACE_TYPE_SHIFT |
              surface_format << BRW_SURFACE_FORMAT_SHIFT |
@@ -183,9 +184,9 @@ gen8_emit_buffer_surface_state(struct brw_context *brw,
    }
 }
 
-static void
-gen8_emit_fast_clear_color(struct brw_context *brw,
-                           struct intel_mipmap_tree *mt,
+void
+gen8_emit_fast_clear_color(const struct brw_context *brw,
+                           const struct intel_mipmap_tree *mt,
                            uint32_t *surf)
 {
    if (brw->gen >= 9) {
@@ -243,7 +244,7 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
       tiling_mode = GEN8_SURFACE_TILING_W;
       pitch = 2 * mt->pitch;
    } else {
-      tiling_mode = surface_tiling_mode(mt->tiling);
+      tiling_mode = gen8_surface_tiling_mode(mt->tiling);
       pitch = mt->pitch;
    }
 
@@ -256,12 +257,12 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
       aux_mode = GEN8_SURFACE_AUX_MODE_NONE;
    }
 
-   uint32_t *surf = allocate_surface_state(brw, surf_offset, surf_index);
+   uint32_t *surf = gen8_allocate_surface_state(brw, surf_offset, surf_index);
 
    surf[0] = SET_FIELD(surf_type, BRW_SURFACE_TYPE) |
              format << BRW_SURFACE_FORMAT_SHIFT |
-             vertical_alignment(brw, mt, surf_type) |
-             horizontal_alignment(brw, mt, surf_type) |
+             gen8_vertical_alignment(brw, mt, surf_type) |
+             gen8_horizontal_alignment(brw, mt, surf_type) |
              tiling_mode;
 
    if (surf_type == BRW_SURFACE_CUBE) {
@@ -406,7 +407,7 @@ gen8_emit_null_surface_state(struct brw_context *brw,
                              unsigned samples,
                              uint32_t *out_offset)
 {
-   uint32_t *surf = allocate_surface_state(brw, out_offset, -1);
+   uint32_t *surf = gen8_allocate_surface_state(brw, out_offset, -1);
 
    surf[0] = BRW_SURFACE_NULL << BRW_SURFACE_TYPE_SHIFT |
              BRW_SURFACEFORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT |
@@ -484,14 +485,14 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    struct intel_mipmap_tree *aux_mt = mt->mcs_mt;
    const uint32_t aux_mode = gen8_get_aux_mode(brw, mt, surf_type);
 
-   uint32_t *surf = allocate_surface_state(brw, &offset, surf_index);
+   uint32_t *surf = gen8_allocate_surface_state(brw, &offset, surf_index);
 
    surf[0] = (surf_type << BRW_SURFACE_TYPE_SHIFT) |
              (is_array ? GEN7_SURFACE_IS_ARRAY : 0) |
              (format << BRW_SURFACE_FORMAT_SHIFT) |
-             vertical_alignment(brw, mt, surf_type) |
-             horizontal_alignment(brw, mt, surf_type) |
-             surface_tiling_mode(tiling);
+             gen8_vertical_alignment(brw, mt, surf_type) |
+             gen8_horizontal_alignment(brw, mt, surf_type) |
+             gen8_surface_tiling_mode(tiling);
 
    surf[1] = SET_FIELD(mocs, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
 
