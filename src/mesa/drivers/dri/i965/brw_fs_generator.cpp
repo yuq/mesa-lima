@@ -1138,12 +1138,16 @@ fs_generator::generate_ddy(enum opcode opcode,
        *
        * Similar text exists in the g45 PRM.
        *
+       * Empirically, compressed align16 instructions using odd register
+       * numbers don't appear to work on Sandybridge either.
+       *
        * On these platforms, if we're building a SIMD16 shader, we need to
        * manually unroll to a pair of SIMD8 instructions.
        */
       bool unroll_to_simd8 =
          (dispatch_width == 16 &&
-          (devinfo->gen == 4 || (devinfo->gen == 7 && !devinfo->is_haswell)));
+          (devinfo->gen == 4 || devinfo->gen == 6 ||
+           (devinfo->gen == 7 && !devinfo->is_haswell)));
 
       /* produce accurate derivatives */
       struct brw_reg src0 = brw_reg(src.file, src.nr, 0,
