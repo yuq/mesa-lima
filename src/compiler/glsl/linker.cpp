@@ -3519,8 +3519,10 @@ create_shader_variable(struct gl_shader_program *shProg, const ir_variable *in)
 
 static bool
 add_interface_variables(struct gl_shader_program *shProg,
-                        exec_list *ir, GLenum programInterface)
+                        unsigned stage, GLenum programInterface)
 {
+   exec_list *ir = shProg->_LinkedShaders[stage]->ir;
+
    foreach_in_list(ir_instruction, node, ir) {
       ir_variable *var = node->as_variable();
       uint8_t mask = 0;
@@ -3893,12 +3895,10 @@ build_program_resource_list(struct gl_context *ctx,
       return;
 
    /* Add inputs and outputs to the resource list. */
-   if (!add_interface_variables(shProg, shProg->_LinkedShaders[input_stage]->ir,
-                                GL_PROGRAM_INPUT))
+   if (!add_interface_variables(shProg, input_stage, GL_PROGRAM_INPUT))
       return;
 
-   if (!add_interface_variables(shProg, shProg->_LinkedShaders[output_stage]->ir,
-                                GL_PROGRAM_OUTPUT))
+   if (!add_interface_variables(shProg, output_stage, GL_PROGRAM_OUTPUT))
       return;
 
    /* Add transform feedback varyings. */
