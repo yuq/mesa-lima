@@ -246,6 +246,9 @@ void
 gen7_blorp_exec(struct brw_context *brw,
                 const brw_blorp_params *params);
 
+void
+gen8_blorp_exec(struct brw_context *brw, const brw_blorp_params *params);
+
 /**
  * Parameters for a HiZ or depth resolve operation.
  *
