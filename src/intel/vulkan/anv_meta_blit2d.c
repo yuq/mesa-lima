@@ -131,11 +131,11 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
 
 static void
 meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
-               struct anv_image_view *src_iview,
-               VkOffset3D src_offset,
-               struct anv_image_view *dest_iview,
-               VkOffset3D dest_offset,
-               VkExtent3D extent)
+                 struct anv_image_view *src_iview,
+                 VkOffset3D src_offset,
+                 struct anv_image_view *dest_iview,
+                 VkOffset3D dest_offset,
+                 VkExtent3D extent)
 {
    struct anv_device *device = cmd_buffer->device;
 
@@ -348,11 +348,11 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
 
       /* Perform blit */
       meta_emit_blit2d(cmd_buffer,
-                     &src_iview,
-                     (VkOffset3D){rects[r].src_x, rects[r].src_y, 0},
-                     &dst_iview,
-                     (VkOffset3D){rects[r].dst_x, rects[r].dst_y, 0},
-                     (VkExtent3D){rects[r].width, rects[r].height, 1});
+                       &src_iview,
+                       (VkOffset3D){rects[r].src_x, rects[r].src_y, 0},
+                       &dst_iview,
+                       (VkOffset3D){rects[r].dst_x, rects[r].dst_y, 0},
+                       (VkExtent3D){rects[r].width, rects[r].height, 1});
 
       anv_DestroyImage(vk_device, src_img, &cmd_buffer->pool->alloc);
       anv_DestroyImage(vk_device, dst_img, &cmd_buffer->pool->alloc);
