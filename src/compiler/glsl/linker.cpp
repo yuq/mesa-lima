@@ -3525,7 +3525,6 @@ add_interface_variables(struct gl_shader_program *shProg,
 
    foreach_in_list(ir_instruction, node, ir) {
       ir_variable *var = node->as_variable();
-      uint8_t stages = 0;
 
       if (!var || var->data.how_declared == ir_var_hidden)
          continue;
@@ -3560,9 +3559,7 @@ add_interface_variables(struct gl_shader_program *shProg,
       if (!sha_v)
          return false;
 
-      stages |= 1 << stage;
-
-      if (!add_program_resource(shProg, programInterface, sha_v, stages))
+      if (!add_program_resource(shProg, programInterface, sha_v, 1 << stage))
          return false;
    }
    return true;
