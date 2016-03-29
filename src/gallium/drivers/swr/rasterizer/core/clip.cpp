@@ -162,8 +162,8 @@ int ClipTriToPlane( const float *pInPts, int numInPts,
 void Clip(const float *pTriangle, const float *pAttribs, int numAttribs, float *pOutTriangles, int *numVerts, float *pOutAttribs)
 {
     // temp storage to hold at least 6 sets of vertices, the max number that can be created during clipping
-    OSALIGN(float, 16) tempPts[6 * 4];
-    OSALIGN(float, 16) tempAttribs[6 * KNOB_NUM_ATTRIBUTES * 4];
+    OSALIGNSIMD(float) tempPts[6 * 4];
+    OSALIGNSIMD(float) tempAttribs[6 * KNOB_NUM_ATTRIBUTES * 4];
 
     // we opt to clip to viewport frustum to produce smaller triangles for rasterization precision
     int NumOutPts = ClipTriToPlane<FRUSTUM_NEAR>(pTriangle, 3, pAttribs, numAttribs, tempPts, tempAttribs);

@@ -265,8 +265,8 @@ public:
     // clip a single primitive
     int ClipScalar(PA_STATE& pa, uint32_t primIndex, float* pOutPos, float* pOutAttribs)
     {
-        OSALIGN(float, 16) inVerts[3 * 4];
-        OSALIGN(float, 16) inAttribs[3 * KNOB_NUM_ATTRIBUTES * 4];
+        OSALIGNSIMD(float) inVerts[3 * 4];
+        OSALIGNSIMD(float) inAttribs[3 * KNOB_NUM_ATTRIBUTES * 4];
 
         // transpose primitive position
         __m128 verts[3];

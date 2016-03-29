@@ -1017,13 +1017,13 @@ struct PA_TESS : PA_STATE
     {
         SWR_ASSERT(numPrims <= KNOB_SIMD_WIDTH);
 #if KNOB_SIMD_WIDTH == 8
-        static const OSALIGN(int32_t, 64) maskGen[KNOB_SIMD_WIDTH * 2] =
+        static const OSALIGNLINE(int32_t) maskGen[KNOB_SIMD_WIDTH * 2] =
         {
             -1, -1, -1, -1, -1, -1, -1, -1,
              0,  0,  0,  0,  0,  0,  0,  0
         };
 #elif KNOB_SIMD_WIDTH == 16
-        static const OSALIGN(int32_t, 128) maskGen[KNOB_SIMD_WIDTH * 2] =
+        static const OSALIGNLINE(int32_t) maskGen[KNOB_SIMD_WIDTH * 2] =
         {
             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
              0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
