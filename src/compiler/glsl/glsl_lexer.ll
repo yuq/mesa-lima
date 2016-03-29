@@ -472,6 +472,13 @@ layout		{
 \.[0-9]+([eE][+-]?[0-9]+)?[fF]?		|
 [0-9]+\.([eE][+-]?[0-9]+)?[fF]?		|
 [0-9]+[eE][+-]?[0-9]+[fF]?		{
+			    struct _mesa_glsl_parse_state *state = yyextra;
+			    char suffix = yytext[strlen(yytext) - 1];
+			    if (!state->is_version(120, 300) &&
+			        (suffix == 'f' || suffix == 'F')) {
+			        _mesa_glsl_error(yylloc, state,
+			                         "Float suffixes are invalid in GLSL 1.10");
+			    }
 			    yylval->real = _mesa_strtof(yytext, NULL);
 			    return FLOATCONSTANT;
 			}
