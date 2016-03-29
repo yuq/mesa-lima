@@ -1692,6 +1692,65 @@ NVC0LoweringPass::handleWRSV(Instruction *i)
 }
 
 void
+NVC0LoweringPass::handleLDST(Instruction *i)
+{
+   if (i->src(0).getFile() == FILE_SHADER_INPUT) {
+      if (prog->getType() == Program::TYPE_COMPUTE) {
+         i->getSrc(0)->reg.file = FILE_MEMORY_CONST;
+         i->getSrc(0)->reg.fileIndex = 0;
+      } else
+      if (prog->getType() == Program::TYPE_GEOMETRY &&
+          i->src(0).isIndirect(0)) {
+         // XXX: this assumes vec4 units
+         Value *ptr = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
+                                 i->getIndirect(0, 0), bld.mkImm(4));
+         i->setIndirect(0, 0, ptr);
+         i->op = OP_VFETCH;
+      } else {
+         i->op = OP_VFETCH;
+         assert(prog->getType() != Program::TYPE_FRAGMENT); // INTERP
+      }
+   } else if (i->src(0).getFile() == FILE_MEMORY_CONST) {
+      if (i->src(0).isIndirect(1)) {
+         Value *ptr;
+         if (i->src(0).isIndirect(0))
+            ptr = bld.mkOp3v(OP_INSBF, TYPE_U32, bld.getSSA(),
+                             i->getIndirect(0, 1), bld.mkImm(0x1010),
+                             i->getIndirect(0, 0));
+         else
+            ptr = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
+                             i->getIndirect(0, 1), bld.mkImm(16));
+         i->setIndirect(0, 1, NULL);
+         i->setIndirect(0, 0, ptr);
+         i->subOp = NV50_IR_SUBOP_LDC_IS;
+      }
+   } else if (i->src(0).getFile() == FILE_SHADER_OUTPUT) {
+      assert(prog->getType() == Program::TYPE_TESSELLATION_CONTROL);
+      i->op = OP_VFETCH;
+   } else if (i->src(0).getFile() == FILE_MEMORY_GLOBAL) {
+      Value *ind = i->getIndirect(0, 1);
+      Value *ptr = loadBufInfo64(ind, i->getSrc(0)->reg.fileIndex * 16);
+      // XXX come up with a way not to do this for EVERY little access but
+      // rather to batch these up somehow. Unfortunately we've lost the
+      // information about the field width by the time we get here.
+      Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType));
+      Value *length = loadBufLength32(ind, i->getSrc(0)->reg.fileIndex * 16);
+      Value *pred = new_LValue(func, FILE_PREDICATE);
+      if (i->src(0).isIndirect(0)) {
+         bld.mkOp2(OP_ADD, TYPE_U64, ptr, ptr, i->getIndirect(0, 0));
+         bld.mkOp2(OP_ADD, TYPE_U32, offset, offset, i->getIndirect(0, 0));
+      }
+      i->setIndirect(0, 1, NULL);
+      i->setIndirect(0, 0, ptr);
+      bld.mkCmp(OP_SET, CC_GT, TYPE_U32, pred, TYPE_U32, offset, length);
+      i->setPredicate(CC_NOT_P, pred);
+      if (i->defExists(0)) {
+         bld.mkMov(i->getDef(0), bld.mkImm(0));
+      }
+   }
+}
+
+void
 NVC0LoweringPass::readTessCoord(LValue *dst, int c)
 {
    Value *laneid = bld.getSSA();
@@ -2016,60 +2075,7 @@ NVC0LoweringPass::visit(Instruction *i)
       return handleWRSV(i);
    case OP_STORE:
    case OP_LOAD:
-      if (i->src(0).getFile() == FILE_SHADER_INPUT) {
-         if (prog->getType() == Program::TYPE_COMPUTE) {
-            i->getSrc(0)->reg.file = FILE_MEMORY_CONST;
-            i->getSrc(0)->reg.fileIndex = 0;
-         } else
-         if (prog->getType() == Program::TYPE_GEOMETRY &&
-             i->src(0).isIndirect(0)) {
-            // XXX: this assumes vec4 units
-            Value *ptr = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
-                                    i->getIndirect(0, 0), bld.mkImm(4));
-            i->setIndirect(0, 0, ptr);
-            i->op = OP_VFETCH;
-         } else {
-            i->op = OP_VFETCH;
-            assert(prog->getType() != Program::TYPE_FRAGMENT); // INTERP
-         }
-      } else if (i->src(0).getFile() == FILE_MEMORY_CONST) {
-         if (i->src(0).isIndirect(1)) {
-            Value *ptr;
-            if (i->src(0).isIndirect(0))
-               ptr = bld.mkOp3v(OP_INSBF, TYPE_U32, bld.getSSA(),
-                                i->getIndirect(0, 1), bld.mkImm(0x1010),
-                                i->getIndirect(0, 0));
-            else
-               ptr = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
-                                i->getIndirect(0, 1), bld.mkImm(16));
-            i->setIndirect(0, 1, NULL);
-            i->setIndirect(0, 0, ptr);
-            i->subOp = NV50_IR_SUBOP_LDC_IS;
-         }
-      } else if (i->src(0).getFile() == FILE_SHADER_OUTPUT) {
-         assert(prog->getType() == Program::TYPE_TESSELLATION_CONTROL);
-         i->op = OP_VFETCH;
-      } else if (i->src(0).getFile() == FILE_MEMORY_GLOBAL) {
-         Value *ind = i->getIndirect(0, 1);
-         Value *ptr = loadBufInfo64(ind, i->getSrc(0)->reg.fileIndex * 16);
-         // XXX come up with a way not to do this for EVERY little access but
-         // rather to batch these up somehow. Unfortunately we've lost the
-         // information about the field width by the time we get here.
-         Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType));
-         Value *length = loadBufLength32(ind, i->getSrc(0)->reg.fileIndex * 16);
-         Value *pred = new_LValue(func, FILE_PREDICATE);
-         if (i->src(0).isIndirect(0)) {
-            bld.mkOp2(OP_ADD, TYPE_U64, ptr, ptr, i->getIndirect(0, 0));
-            bld.mkOp2(OP_ADD, TYPE_U32, offset, offset, i->getIndirect(0, 0));
-         }
-         i->setIndirect(0, 1, NULL);
-         i->setIndirect(0, 0, ptr);
-         bld.mkCmp(OP_SET, CC_GT, TYPE_U32, pred, TYPE_U32, offset, length);
-         i->setPredicate(CC_NOT_P, pred);
-         if (i->defExists(0)) {
-            bld.mkMov(i->getDef(0), bld.mkImm(0));
-         }
-      }
+      handleLDST(i);
       break;
    case OP_ATOM:
    {

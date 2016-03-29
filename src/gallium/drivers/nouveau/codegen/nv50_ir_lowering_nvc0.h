@@ -106,6 +106,7 @@ protected:
    bool handleCasExch(Instruction *, bool needCctl);
    void handleSurfaceOpNVE4(TexInstruction *);
    void handleSharedATOM(Instruction *);
+   void handleLDST(Instruction *);
 
    void checkPredicate(Instruction *);
 
