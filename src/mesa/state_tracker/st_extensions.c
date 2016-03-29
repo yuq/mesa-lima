@@ -1016,6 +1016,12 @@ void st_init_extensions(struct pipe_screen *screen,
                              PIPE_BIND_SAMPLER_VIEW);
    }
 
+   extensions->OES_texture_buffer =
+      extensions->ARB_texture_buffer_object &&
+      extensions->ARB_texture_buffer_range &&
+      extensions->ARB_texture_buffer_object_rgb32 &&
+      extensions->ARB_shader_image_load_store;
+
    /* Unpacking a varying in the fragment shader costs 1 texture indirection.
     * If the number of available texture indirections is very limited, then we
     * prefer to disable varying packing rather than run the risk of varying
