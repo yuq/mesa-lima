@@ -780,10 +780,6 @@ program_resource_location(struct gl_shader_program *shProg,
                           struct gl_program_resource *res, const char *name,
                           unsigned array_index)
 {
-   /* VERT_ATTRIB_GENERIC0 and FRAG_RESULT_DATA0 are decremented as these
-    * offsets are used internally to differentiate between built-in attributes
-    * and user-defined attributes.
-    */
    switch (res->Type) {
    case GL_PROGRAM_INPUT: {
       const gl_shader_variable *var = RESOURCE_VAR(res);
@@ -796,9 +792,8 @@ program_resource_location(struct gl_shader_program *shProg,
           && array_index >= var->type->length) {
          return -1;
       }
-      return (var->location +
-	      (array_index * var->type->without_array()->matrix_columns) -
-	      VERT_ATTRIB_GENERIC0);
+      return var->location +
+	     (array_index * var->type->without_array()->matrix_columns);
    }
    case GL_PROGRAM_OUTPUT:
       if (RESOURCE_VAR(res)->location == -1)
@@ -809,7 +804,7 @@ program_resource_location(struct gl_shader_program *shProg,
           && array_index >= RESOURCE_VAR(res)->type->length) {
          return -1;
       }
-      return RESOURCE_VAR(res)->location + array_index - FRAG_RESULT_DATA0;
+      return RESOURCE_VAR(res)->location + array_index;
    case GL_UNIFORM:
       /* If the uniform is built-in, fail. */
       if (RESOURCE_UNI(res)->builtin)

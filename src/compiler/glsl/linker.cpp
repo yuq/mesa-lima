@@ -3498,7 +3498,8 @@ build_stageref(struct gl_shader_program *shProg, const char *name,
  */
 static gl_shader_variable *
 create_shader_variable(struct gl_shader_program *shProg,
-                       const ir_variable *in, bool use_implicit_location)
+                       const ir_variable *in, bool use_implicit_location,
+                       int location_bias)
 {
    gl_shader_variable *out = ralloc(shProg, struct gl_shader_variable);
    if (!out)
@@ -3536,7 +3537,7 @@ create_shader_variable(struct gl_shader_program *shProg,
        !(in->data.explicit_location || use_implicit_location)) {
       out->location = -1;
    } else {
-      out->location = in->data.location;
+      out->location = in->data.location - location_bias;
    }
 
    out->type = in->type;
@@ -3559,15 +3560,21 @@ add_interface_variables(struct gl_shader_program *shProg,
       if (!var || var->data.how_declared == ir_var_hidden)
          continue;
 
+      int loc_bias;
+
       switch (var->data.mode) {
       case ir_var_system_value:
       case ir_var_shader_in:
          if (programInterface != GL_PROGRAM_INPUT)
             continue;
+         loc_bias = (stage == MESA_SHADER_VERTEX) ? int(VERT_ATTRIB_GENERIC0)
+                                                  : int(VARYING_SLOT_VAR0);
          break;
       case ir_var_shader_out:
          if (programInterface != GL_PROGRAM_OUTPUT)
             continue;
+         loc_bias = (stage == MESA_SHADER_FRAGMENT) ? int(FRAG_RESULT_DATA0)
+                                                    : int(VARYING_SLOT_VAR0);
          break;
       default:
          continue;
@@ -3590,7 +3597,7 @@ add_interface_variables(struct gl_shader_program *shProg,
          (stage == MESA_SHADER_FRAGMENT && var->data.mode == ir_var_shader_out);
 
       gl_shader_variable *sha_v =
-         create_shader_variable(shProg, var, vs_input_or_fs_output);
+         create_shader_variable(shProg, var, vs_input_or_fs_output, loc_bias);
       if (!sha_v)
          return false;
 
@@ -3625,7 +3632,7 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
 
          if (type == iface) {
             gl_shader_variable *sha_v =
-               create_shader_variable(shProg, var, false);
+               create_shader_variable(shProg, var, false, VARYING_SLOT_VAR0);
             if (!sha_v)
                return false;
             if (!add_program_resource(shProg, iface, sha_v,
@@ -3650,7 +3657,8 @@ add_fragdata_arrays(struct gl_shader_program *shProg)
       ir_variable *var = node->as_variable();
       if (var) {
          assert(var->data.mode == ir_var_shader_out);
-         gl_shader_variable *sha_v = create_shader_variable(shProg, var, true);
+         gl_shader_variable *sha_v =
+            create_shader_variable(shProg, var, true, FRAG_RESULT_DATA0);
          if (!sha_v)
             return false;
          if (!add_program_resource(shProg, GL_PROGRAM_OUTPUT, sha_v,
