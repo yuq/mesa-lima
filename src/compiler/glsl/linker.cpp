@@ -3574,7 +3574,7 @@ add_interface_variables(struct gl_shader_program *shProg,
       if (!sha_v)
          return false;
 
-      stages |= build_stageref(shProg, sha_v->name, sha_v->mode);
+      stages |= 1 << stage;
 
       if (!add_program_resource(shProg, programInterface, sha_v, stages))
          return false;
