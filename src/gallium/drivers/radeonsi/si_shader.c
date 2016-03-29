@@ -3452,7 +3452,7 @@ static void atomic_fetch_args(
 
 		buffer_append_args(ctx, emit_data, rsrc, bld_base->uint_bld.zero,
 				   offset, true);
-	} else {
+	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE) {
 		unsigned target = inst->Memory.Texture;
 		LLVMValueRef coords;
 
@@ -3473,16 +3473,91 @@ static void atomic_fetch_args(
 	}
 }
 
+static void atomic_emit_memory(struct si_shader_context *ctx,
+                               struct lp_build_emit_data *emit_data) {
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	LLVMValueRef ptr, result, arg;
+
+	ptr = get_memory_ptr(ctx, inst, ctx->i32, 1);
+
+	arg = lp_build_emit_fetch(&ctx->radeon_bld.soa.bld_base, inst, 2, 0);
+	arg = LLVMBuildBitCast(builder, arg, ctx->i32, "");
+
+	if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS) {
+		LLVMValueRef new_data;
+		new_data = lp_build_emit_fetch(&ctx->radeon_bld.soa.bld_base,
+		                               inst, 3, 0);
+
+		new_data = LLVMBuildBitCast(builder, new_data, ctx->i32, "");
+
+#if HAVE_LLVM >= 0x309
+		result = LLVMBuildAtomicCmpXchg(builder, ptr, arg, new_data,
+		                       LLVMAtomicOrderingSequentiallyConsistent,
+		                       LLVMAtomicOrderingSequentiallyConsistent,
+		                       false);
+#endif
+
+		result = LLVMBuildExtractValue(builder, result, 0, "");
+	} else {
+		LLVMAtomicRMWBinOp op;
+
+		switch(inst->Instruction.Opcode) {
+			case TGSI_OPCODE_ATOMUADD:
+				op = LLVMAtomicRMWBinOpAdd;
+				break;
+			case TGSI_OPCODE_ATOMXCHG:
+				op = LLVMAtomicRMWBinOpXchg;
+				break;
+			case TGSI_OPCODE_ATOMAND:
+				op = LLVMAtomicRMWBinOpAnd;
+				break;
+			case TGSI_OPCODE_ATOMOR:
+				op = LLVMAtomicRMWBinOpOr;
+				break;
+			case TGSI_OPCODE_ATOMXOR:
+				op = LLVMAtomicRMWBinOpXor;
+				break;
+			case TGSI_OPCODE_ATOMUMIN:
+				op = LLVMAtomicRMWBinOpUMin;
+				break;
+			case TGSI_OPCODE_ATOMUMAX:
+				op = LLVMAtomicRMWBinOpUMax;
+				break;
+			case TGSI_OPCODE_ATOMIMIN:
+				op = LLVMAtomicRMWBinOpMin;
+				break;
+			case TGSI_OPCODE_ATOMIMAX:
+				op = LLVMAtomicRMWBinOpMax;
+				break;
+			default:
+				unreachable("unknown atomic opcode");
+		}
+
+		result = LLVMBuildAtomicRMW(builder, op, ptr, arg,
+		                       LLVMAtomicOrderingSequentiallyConsistent,
+		                       false);
+	}
+	emit_data->output[emit_data->chan] = LLVMBuildBitCast(builder, result, emit_data->dst_type, "");
+}
+
 static void atomic_emit(
 		const struct lp_build_tgsi_action *action,
 		struct lp_build_tgsi_context *bld_base,
 		struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	char intrinsic_name[40];
 	LLVMValueRef tmp;
+
+	if (inst->Src[0].Register.File == TGSI_FILE_MEMORY) {
+		atomic_emit_memory(ctx, emit_data);
+		return;
+	}
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
 	    inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
