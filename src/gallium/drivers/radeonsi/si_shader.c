@@ -3071,7 +3071,7 @@ static void load_fetch_args(
 
 		buffer_append_args(ctx, emit_data, rsrc, bld_base->uint_bld.zero,
 				   offset, false);
-	} else {
+	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE) {
 		LLVMValueRef coords;
 
 		image_fetch_rsrc(bld_base, &inst->Src[0], false, &rsrc);
@@ -3124,6 +3124,53 @@ static void load_emit_buffer(struct si_shader_context *ctx,
 			LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
 }
 
+static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
+                                   const struct tgsi_full_instruction *inst,
+                                   LLVMTypeRef type, int arg)
+{
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef offset, ptr;
+	int addr_space;
+
+	offset = lp_build_emit_fetch(&ctx->radeon_bld.soa.bld_base, inst, arg, 0);
+	offset = LLVMBuildBitCast(builder, offset, ctx->i32, "");
+
+	ptr = ctx->shared_memory;
+	ptr = LLVMBuildGEP(builder, ptr, &offset, 1, "");
+	addr_space = LLVMGetPointerAddressSpace(LLVMTypeOf(ptr));
+	ptr = LLVMBuildBitCast(builder, ptr, LLVMPointerType(type, addr_space), "");
+
+	return ptr;
+}
+
+static void load_emit_memory(
+		struct si_shader_context *ctx,
+		struct lp_build_emit_data *emit_data)
+{
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	struct lp_build_context *base = &ctx->radeon_bld.soa.bld_base.base;
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	unsigned writemask = inst->Dst[0].Register.WriteMask;
+	LLVMValueRef channels[4], ptr, derived_ptr, index;
+	int chan;
+
+	ptr = get_memory_ptr(ctx, inst, base->elem_type, 1);
+
+	for (chan = 0; chan < 4; ++chan) {
+		if (!(writemask & (1 << chan))) {
+			channels[chan] = LLVMGetUndef(base->elem_type);
+			continue;
+		}
+
+		index = lp_build_const_int32(gallivm, chan);
+		derived_ptr = LLVMBuildGEP(builder, ptr, &index, 1, "");
+		channels[chan] = LLVMBuildLoad(builder, derived_ptr, "");
+	}
+	emit_data->output[emit_data->chan] = lp_build_gather_values(gallivm, channels, 4);
+}
+
 static void load_emit(
 		const struct lp_build_tgsi_action *action,
 		struct lp_build_tgsi_context *bld_base,
@@ -3135,6 +3182,11 @@ static void load_emit(
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	char intrinsic_name[32];
 	char coords_type[8];
+
+	if (inst->Src[0].Register.File == TGSI_FILE_MEMORY) {
+		load_emit_memory(ctx, emit_data);
+		return;
+	}
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
 		emit_optimization_barrier(ctx);
@@ -3201,7 +3253,7 @@ static void store_fetch_args(
 
 		buffer_append_args(ctx, emit_data, rsrc, bld_base->uint_bld.zero,
 				   offset, false);
-	} else {
+	} else if (inst->Dst[0].Register.File == TGSI_FILE_IMAGE) {
 		unsigned target = inst->Memory.Texture;
 		LLVMValueRef coords;
 
@@ -3297,6 +3349,31 @@ static void store_emit_buffer(
 	}
 }
 
+static void store_emit_memory(
+		struct si_shader_context *ctx,
+		struct lp_build_emit_data *emit_data)
+{
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	struct lp_build_context *base = &ctx->radeon_bld.soa.bld_base.base;
+	LLVMBuilderRef builder = gallivm->builder;
+	unsigned writemask = inst->Dst[0].Register.WriteMask;
+	LLVMValueRef ptr, derived_ptr, data, index;
+	int chan;
+
+	ptr = get_memory_ptr(ctx, inst, base->elem_type, 0);
+
+	for (chan = 0; chan < 4; ++chan) {
+		if (!(writemask & (1 << chan))) {
+			continue;
+		}
+		data = lp_build_emit_fetch(&ctx->radeon_bld.soa.bld_base, inst, 1, chan);
+		index = lp_build_const_int32(gallivm, chan);
+		derived_ptr = LLVMBuildGEP(builder, ptr, &index, 1, "");
+		LLVMBuildStore(builder, data, derived_ptr);
+	}
+}
+
 static void store_emit(
 		const struct lp_build_tgsi_action *action,
 		struct lp_build_tgsi_context *bld_base,
@@ -3311,6 +3388,9 @@ static void store_emit(
 
 	if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER) {
 		store_emit_buffer(si_shader_context(bld_base), emit_data);
+		return;
+	} else if (inst->Dst[0].Register.File == TGSI_FILE_MEMORY) {
+		store_emit_memory(si_shader_context(bld_base), emit_data);
 		return;
 	}
 
