@@ -208,9 +208,8 @@ scan_instruction(struct tgsi_shader_info *info,
          }
 
          /* MSAA samplers */
-         if (fullinst->Instruction.Texture &&
-             (fullinst->Texture.Texture == TGSI_TEXTURE_2D_MSAA ||
-              fullinst->Texture.Texture == TGSI_TEXTURE_2D_ARRAY_MSAA)) {
+         if (target == TGSI_TEXTURE_2D_MSAA ||
+             target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
             info->is_msaa_sampler[src->Register.Index] = TRUE;
          }
       }
