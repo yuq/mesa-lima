@@ -535,7 +535,6 @@ svga_tgsi_sampler_type(const struct svga_shader_emitter *emit, int idx)
 
 static boolean
 ps30_sampler( struct svga_shader_emitter *emit,
-              struct tgsi_declaration_semantic semantic,
               unsigned idx )
 {
    SVGA3DOpDclArgs dcl;
@@ -553,6 +552,17 @@ ps30_sampler( struct svga_shader_emitter *emit,
            svga_shader_emit_dwords( emit, dcl.values, Elements(dcl.values)));
 }
 
+boolean
+svga_shader_emit_samplers_decl( struct svga_shader_emitter *emit )
+{
+   unsigned i;
+
+   for (i = 0; i < emit->num_samplers; i++) {
+      if (!ps30_sampler(emit, i))
+         return FALSE;
+   }
+   return TRUE;
+}
 
 boolean
 svga_translate_decl_sm30( struct svga_shader_emitter *emit,
@@ -563,12 +573,15 @@ svga_translate_decl_sm30( struct svga_shader_emitter *emit,
    unsigned idx;
 
    for( idx = first; idx <= last; idx++ ) {
-      boolean ok;
+      boolean ok = TRUE;
 
       switch (decl->Declaration.File) {
       case TGSI_FILE_SAMPLER:
          assert (emit->unit == PIPE_SHADER_FRAGMENT);
-         ok = ps30_sampler( emit, decl->Semantic, idx );
+         /* just keep track of the number of samplers here.
+          * Will emit the declaration in the helpers function.
+          */
+         emit->num_samplers = MAX2(emit->num_samplers, decl->Range.Last + 1);
          break;
 
       case TGSI_FILE_INPUT:
