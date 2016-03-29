@@ -132,6 +132,7 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
 static void
 meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
                  struct anv_image_view *src_iview,
+                 uint32_t src_pitch,
                  VkOffset3D src_offset,
                  struct anv_image_view *dest_iview,
                  VkOffset3D dest_offset,
@@ -159,7 +160,7 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
       .tex_coord = {
          src_offset.x + extent.width,
          src_offset.y + extent.height,
-         src_offset.z,
+         src_pitch,
       },
    };
 
@@ -171,7 +172,7 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
       .tex_coord = {
          src_offset.x,
          src_offset.y + extent.height,
-         src_offset.z,
+         src_pitch,
       },
    };
 
@@ -183,7 +184,7 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
       .tex_coord = {
          src_offset.x,
          src_offset.y,
-         src_offset.z,
+         src_pitch,
       },
    };
 
@@ -348,7 +349,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
 
       /* Perform blit */
       meta_emit_blit2d(cmd_buffer,
-                       &src_iview,
+                       &src_iview, src->pitch,
                        (VkOffset3D){rects[r].src_x, rects[r].src_y, 0},
                        &dst_iview,
                        (VkOffset3D){rects[r].dst_x, rects[r].dst_y, 0},
@@ -428,22 +429,26 @@ build_nir_copy_fragment_shader(struct anv_device *device,
                                texel_fetch_build_func txf_func)
 {
    const struct glsl_type *vec4 = glsl_vec4_type();
-   const struct glsl_type *vec2 = glsl_vector_type(GLSL_TYPE_FLOAT, 2);
+   const struct glsl_type *vec3 = glsl_vector_type(GLSL_TYPE_FLOAT, 3);
    nir_builder b;
 
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
    b.shader->info.name = ralloc_strdup(b.shader, "meta_blit2d_fs");
 
    nir_variable *tex_pos_in = nir_variable_create(b.shader, nir_var_shader_in,
-                                                  vec2, "v_tex_pos");
+                                                  vec3, "v_tex_pos");
    tex_pos_in->data.location = VARYING_SLOT_VAR0;
 
    nir_variable *color_out = nir_variable_create(b.shader, nir_var_shader_out,
                                                  vec4, "f_color");
    color_out->data.location = FRAG_RESULT_DATA0;
 
-   nir_ssa_def *const tex_pos = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
-   nir_ssa_def *color = txf_func(&b, device, tex_pos, NULL);
+   nir_ssa_def *pos_int = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
+   unsigned swiz[4] = { 0, 1 };
+   nir_ssa_def *tex_pos = nir_swizzle(&b, pos_int, swiz, 2, false);
+   nir_ssa_def *tex_pitch = nir_channel(&b, pos_int, 2);
+
+   nir_ssa_def *color = txf_func(&b, device, tex_pos, tex_pitch);
    nir_store_var(&b, color_out, color, 0xf);
 
    return b.shader;
