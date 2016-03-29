@@ -121,6 +121,8 @@ struct si_shader_context
 	LLVMTypeRef v4i32;
 	LLVMTypeRef v4f32;
 	LLVMTypeRef v8i32;
+
+	LLVMValueRef shared_memory;
 };
 
 static struct si_shader_context *si_shader_context(
@@ -1318,6 +1320,30 @@ static void declare_system_value(
 	}
 
 	radeon_bld->system_values[index] = value;
+}
+
+static void declare_compute_memory(struct radeon_llvm_context *radeon_bld,
+                                   const struct tgsi_full_declaration *decl)
+{
+	struct si_shader_context *ctx =
+		si_shader_context(&radeon_bld->soa.bld_base);
+	struct si_shader_selector *sel = ctx->shader->selector;
+	struct gallivm_state *gallivm = &radeon_bld->gallivm;
+
+	LLVMTypeRef i8p = LLVMPointerType(ctx->i8, LOCAL_ADDR_SPACE);
+	LLVMValueRef var;
+
+	assert(decl->Declaration.MemType == TGSI_MEMORY_TYPE_SHARED);
+	assert(decl->Range.First == decl->Range.Last);
+	assert(!ctx->shared_memory);
+
+	var = LLVMAddGlobalInAddressSpace(gallivm->module,
+	                                  LLVMArrayType(ctx->i8, sel->local_size),
+	                                  "compute_lds",
+	                                  LOCAL_ADDR_SPACE);
+	LLVMSetAlignment(var, 4);
+
+	ctx->shared_memory = LLVMBuildBitCast(gallivm->builder, var, i8p, "");
 }
 
 static LLVMValueRef fetch_constant(
@@ -5824,6 +5850,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			bld_base->emit_epilogue = si_llvm_return_fs_outputs;
 		break;
 	case TGSI_PROCESSOR_COMPUTE:
+		ctx.radeon_bld.declare_memory_region = declare_compute_memory;
 		break;
 	default:
 		assert(!"Unsupported shader type");

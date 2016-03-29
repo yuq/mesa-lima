@@ -250,6 +250,9 @@ struct si_shader_selector {
 	 */
 	unsigned	colors_written_4bit;
 
+	/* CS parameters */
+	unsigned local_size;
+
 	/* masks of "get_unique_index" bits */
 	uint64_t	outputs_written;
 	uint32_t	patch_outputs_written;

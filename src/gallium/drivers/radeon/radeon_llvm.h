@@ -68,6 +68,9 @@ struct radeon_llvm_context {
 			unsigned index,
 			const struct tgsi_full_declaration *decl);
 
+	void (*declare_memory_region)(struct radeon_llvm_context *,
+			const struct tgsi_full_declaration *decl);
+
 	/** This array contains the input values for the shader.  Typically these
 	  * values will be in the form of a target intrinsic that will inform the
 	  * backend how to load the actual inputs to the shader. 

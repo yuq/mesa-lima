@@ -366,6 +366,10 @@ static void emit_declaration(
 		break;
 	}
 
+	case TGSI_FILE_MEMORY:
+		ctx->declare_memory_region(ctx, decl);
+		break;
+
 	default:
 		break;
 	}
