@@ -436,17 +436,14 @@ brw_update_sampler_state(struct brw_context *brw,
       }
    }
 
-   /* Set address rounding bits.  The conditions are empirically
-    * derived in order to pass test cases.
-    */
-   bool round_nearest = brw->gen >= 6 && target != GL_TEXTURE_3D;
+   /* Set address rounding bits if not using nearest filtering. */
    unsigned address_rounding = 0;
-   if (min_filter != BRW_MAPFILTER_NEAREST || round_nearest) {
+   if (min_filter != BRW_MAPFILTER_NEAREST) {
       address_rounding |= BRW_ADDRESS_ROUNDING_ENABLE_U_MIN |
                           BRW_ADDRESS_ROUNDING_ENABLE_V_MIN |
                           BRW_ADDRESS_ROUNDING_ENABLE_R_MIN;
    }
-   if (mag_filter != BRW_MAPFILTER_NEAREST || round_nearest) {
+   if (mag_filter != BRW_MAPFILTER_NEAREST) {
       address_rounding |= BRW_ADDRESS_ROUNDING_ENABLE_U_MAG |
                           BRW_ADDRESS_ROUNDING_ENABLE_V_MAG |
                           BRW_ADDRESS_ROUNDING_ENABLE_R_MAG;
