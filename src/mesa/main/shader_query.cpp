@@ -112,14 +112,7 @@ is_active_attrib(const gl_shader_variable *var)
       return var->location != -1;
 
    case ir_var_system_value:
-      /* From GL 4.3 core spec, section 11.1.1 (Vertex Attributes):
-       * "For GetActiveAttrib, all active vertex shader input variables
-       * are enumerated, including the special built-in inputs gl_VertexID
-       * and gl_InstanceID."
-       */
-      return var->location == SYSTEM_VALUE_VERTEX_ID ||
-             var->location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE ||
-             var->location == SYSTEM_VALUE_INSTANCE_ID;
+      return true;
 
    default:
       return false;

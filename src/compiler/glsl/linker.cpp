@@ -3531,17 +3531,7 @@ add_interface_variables(struct gl_shader_program *shProg,
          continue;
 
       switch (var->data.mode) {
-      /* From GL 4.3 core spec, section 11.1.1 (Vertex Attributes):
-       * "For GetActiveAttrib, all active vertex shader input variables
-       * are enumerated, including the special built-in inputs gl_VertexID
-       * and gl_InstanceID."
-       */
       case ir_var_system_value:
-         if (var->data.location != SYSTEM_VALUE_VERTEX_ID &&
-             var->data.location != SYSTEM_VALUE_VERTEX_ID_ZERO_BASE &&
-             var->data.location != SYSTEM_VALUE_INSTANCE_ID)
-            continue;
-         /* FALLTHROUGH */
       case ir_var_shader_in:
          if (programInterface != GL_PROGRAM_INPUT)
             continue;
