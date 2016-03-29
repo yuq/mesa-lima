@@ -2353,11 +2353,11 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[type_idx];
          }
          case GLSL_SAMPLER_DIM_BUF: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
-            static const char *const names[4] = {
-              "samplerBuffer", NULL, NULL, NULL
+            static const char *const names[8] = {
+              "samplerBuffer", NULL, NULL, NULL,
+              "imageBuffer", NULL, NULL, NULL
             };
-            return names[type_idx];
+            return names[offset + type_idx];
          }
          case GLSL_SAMPLER_DIM_EXTERNAL: {
             assert(type->base_type == GLSL_TYPE_SAMPLER);
@@ -2415,11 +2415,11 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[type_idx];
          }
          case GLSL_SAMPLER_DIM_BUF: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
-            static const char *const names[4] = {
-              "isamplerBuffer", NULL, NULL, NULL
+            static const char *const names[8] = {
+              "isamplerBuffer", NULL, NULL, NULL,
+              "iimageBuffer", NULL, NULL, NULL
             };
-            return names[type_idx];
+            return names[offset + type_idx];
          }
          default:
             unreachable("Unsupported isampler/iimage dimensionality");
@@ -2470,11 +2470,11 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[type_idx];
          }
          case GLSL_SAMPLER_DIM_BUF: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
-            static const char *const names[4] = {
-              "usamplerBuffer", NULL, NULL, NULL
+            static const char *const names[8] = {
+              "usamplerBuffer", NULL, NULL, NULL,
+              "uimageBuffer", NULL, NULL, NULL
             };
-            return names[type_idx];
+            return names[offset + type_idx];
          }
          default:
             unreachable("Unsupported usampler/uimage dimensionality");
