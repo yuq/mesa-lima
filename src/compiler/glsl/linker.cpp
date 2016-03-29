@@ -3525,7 +3525,7 @@ add_interface_variables(struct gl_shader_program *shProg,
 
    foreach_in_list(ir_instruction, node, ir) {
       ir_variable *var = node->as_variable();
-      uint8_t mask = 0;
+      uint8_t stages = 0;
 
       if (!var || var->data.how_declared == ir_var_hidden)
          continue;
@@ -3544,7 +3544,7 @@ add_interface_variables(struct gl_shader_program *shProg,
          /* Mark special built-in inputs referenced by the vertex stage so
           * that they are considered active by the shader queries.
           */
-         mask = (1 << (MESA_SHADER_VERTEX));
+         stages = (1 << (MESA_SHADER_VERTEX));
          /* FALLTHROUGH */
       case ir_var_shader_in:
          if (programInterface != GL_PROGRAM_INPUT)
@@ -3574,9 +3574,9 @@ add_interface_variables(struct gl_shader_program *shProg,
       if (!sha_v)
          return false;
 
-      if (!add_program_resource(shProg, programInterface, sha_v,
-                                build_stageref(shProg, sha_v->name,
-                                               sha_v->mode) | mask))
+      stages |= build_stageref(shProg, sha_v->name, sha_v->mode);
+
+      if (!add_program_resource(shProg, programInterface, sha_v, stages))
          return false;
    }
    return true;
