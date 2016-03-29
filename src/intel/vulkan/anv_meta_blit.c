@@ -115,8 +115,7 @@ static void
 meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
                   struct anv_meta_saved_state *saved_state)
 {
-   anv_meta_save(saved_state, cmd_buffer,
-                 (1 << VK_DYNAMIC_STATE_VIEWPORT));
+   anv_meta_save(saved_state, cmd_buffer, 0);
 }
 
 static void
@@ -305,16 +304,6 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
                           VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
    }
-
-   anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 0, 1,
-                      &(VkViewport) {
-                        .x = 0.0f,
-                        .y = 0.0f,
-                        .width = dest_iview->extent.width,
-                        .height = dest_iview->extent.height,
-                        .minDepth = 0.0f,
-                        .maxDepth = 1.0f,
-                      });
 
    anv_CmdBindDescriptorSets(anv_cmd_buffer_to_handle(cmd_buffer),
                              VK_PIPELINE_BIND_POINT_GRAPHICS,

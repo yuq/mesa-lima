@@ -44,7 +44,6 @@ meta_clear_begin(struct anv_meta_saved_state *saved_state,
 {
    anv_meta_save(saved_state, cmd_buffer,
                  (1 << VK_DYNAMIC_STATE_VIEWPORT) |
-                 (1 << VK_DYNAMIC_STATE_SCISSOR) |
                  (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE) |
                  (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK));
 
@@ -397,26 +396,6 @@ emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
       .offset = state.offset,
    };
 
-   ANV_CALL(CmdSetViewport)(cmd_buffer_h, 0, 1,
-      (VkViewport[]) {
-         {
-            .x = 0,
-            .y = 0,
-            .width = fb->width,
-            .height = fb->height,
-            .minDepth = 0.0,
-            .maxDepth = 1.0,
-         },
-      });
-
-   ANV_CALL(CmdSetScissor)(cmd_buffer_h, 0, 1,
-      (VkRect2D[]) {
-         {
-            .offset = { 0, 0 },
-            .extent = { fb->width, fb->height },
-         }
-      });
-
    ANV_CALL(CmdBindVertexBuffers)(cmd_buffer_h, 0, 1,
       (VkBuffer[]) { anv_buffer_to_handle(&vertex_buffer) },
       (VkDeviceSize[]) { 0 });
@@ -594,14 +573,6 @@ emit_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
             .minDepth = clear_value.depth,
             .maxDepth = clear_value.depth,
          },
-      });
-
-   ANV_CALL(CmdSetScissor)(cmd_buffer_h, 0, 1,
-      (VkRect2D[]) {
-         {
-            .offset = { 0, 0 },
-            .extent = { fb->width, fb->height },
-         }
       });
 
    if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {

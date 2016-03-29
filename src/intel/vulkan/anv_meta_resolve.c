@@ -41,9 +41,7 @@ static void
 meta_resolve_save(struct anv_meta_saved_state *saved_state,
                   struct anv_cmd_buffer *cmd_buffer)
 {
-   anv_meta_save(saved_state, cmd_buffer,
-                 (1 << VK_DYNAMIC_STATE_VIEWPORT) |
-                 (1 << VK_DYNAMIC_STATE_SCISSOR));
+   anv_meta_save(saved_state, cmd_buffer, 0);
 
    cmd_buffer->state.dynamic.viewport.count = 0;
    cmd_buffer->state.dynamic.scissor.count = 0;
@@ -481,7 +479,6 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
    struct anv_device *device = cmd_buffer->device;
    VkDevice device_h = anv_device_to_handle(device);
    VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
-   const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_image *src_image = src_iview->image;
 
    const struct vertex_attrs vertex_data[3] = {
@@ -608,30 +605,6 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
       },
       /*copyCount*/ 0,
       /*copies */ NULL);
-
-   ANV_CALL(CmdSetViewport)(cmd_buffer_h,
-      /*firstViewport*/ 0,
-      /*viewportCount*/ 1,
-      (VkViewport[]) {
-         {
-            .x = 0,
-            .y = 0,
-            .width = fb->width,
-            .height = fb->height,
-            .minDepth = 0.0,
-            .maxDepth = 1.0,
-         },
-      });
-
-   ANV_CALL(CmdSetScissor)(cmd_buffer_h,
-      /*firstScissor*/ 0,
-      /*scissorCount*/ 1,
-      (VkRect2D[]) {
-         {
-            .offset = { 0, 0 },
-            .extent = (VkExtent2D) { fb->width, fb->height },
-         },
-      });
 
    VkPipeline pipeline_h = *get_pipeline_h(device, src_image->samples);
    ANV_FROM_HANDLE(anv_pipeline, pipeline, pipeline_h);

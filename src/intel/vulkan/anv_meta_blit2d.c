@@ -344,17 +344,6 @@ blit2d_bind_dst(struct anv_cmd_buffer *cmd_buffer,
          .height = height,
          .layers = 1
       }, &cmd_buffer->pool->alloc, &tmp->fb);
-
-
-   anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 0, 1,
-                      &(VkViewport) {
-                         .x = 0.0f,
-                         .y = 0.0f,
-                         .width = width,
-                         .height = height,
-                         .minDepth = 0.0f,
-                         .maxDepth = 1.0f,
-                      });
 }
 
 static void
@@ -377,8 +366,7 @@ void
 anv_meta_begin_blit2d(struct anv_cmd_buffer *cmd_buffer,
                       struct anv_meta_saved_state *save)
 {
-   anv_meta_save(save, cmd_buffer,
-                 (1 << VK_DYNAMIC_STATE_VIEWPORT));
+   anv_meta_save(save, cmd_buffer, 0);
 }
 
 static void
