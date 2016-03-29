@@ -3541,10 +3541,6 @@ add_interface_variables(struct gl_shader_program *shProg,
              var->data.location != SYSTEM_VALUE_VERTEX_ID_ZERO_BASE &&
              var->data.location != SYSTEM_VALUE_INSTANCE_ID)
             continue;
-         /* Mark special built-in inputs referenced by the vertex stage so
-          * that they are considered active by the shader queries.
-          */
-         stages = (1 << (MESA_SHADER_VERTEX));
          /* FALLTHROUGH */
       case ir_var_shader_in:
          if (programInterface != GL_PROGRAM_INPUT)
