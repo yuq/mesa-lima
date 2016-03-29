@@ -545,7 +545,7 @@ ptn_lrp(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 }
 
 static void
-ptn_kil(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
+ptn_kil(nir_builder *b, nir_ssa_def **src)
 {
    nir_ssa_def *cmp = b->shader->options->native_integers ?
       nir_bany_inequal4(b, nir_flt(b, src[0], nir_imm_float(b, 0.0)), nir_imm_int(b, 0)) :
@@ -830,7 +830,7 @@ ptn_emit_instruction(struct ptn_compile *c, struct prog_instruction *prog_inst)
       break;
 
    case OPCODE_KIL:
-      ptn_kil(b, dest, src);
+      ptn_kil(b, src);
       break;
 
    case OPCODE_CMP:
