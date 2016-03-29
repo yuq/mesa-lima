@@ -721,7 +721,7 @@ void genX(CmdDispatchIndirect)(
    /* Linux 4.4 added command parser version 5 which allows the GPGPU
     * indirect dispatch registers to be written.
     */
-   if (verify_cmd_parser(cmd_buffer->device, 5, "vkCmdDispatchIndirect"))
+   if (!verify_cmd_parser(cmd_buffer->device, 5, "vkCmdDispatchIndirect"))
       return;
 #endif
 
