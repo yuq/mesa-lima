@@ -1095,6 +1095,11 @@ write_shader_metadata(struct blob *metadata, gl_linked_shader *shader)
                     sizeof(glprog->sh.SamplerTargets));
    blob_write_uint32(metadata, glprog->ShadowSamplers);
 
+   blob_write_bytes(metadata, glprog->sh.ImageAccess,
+                    sizeof(glprog->sh.ImageAccess));
+   blob_write_bytes(metadata, glprog->sh.ImageUnits,
+                    sizeof(glprog->sh.ImageUnits));
+
    write_shader_parameters(metadata, glprog->Parameters);
 }
 
@@ -1112,6 +1117,11 @@ read_shader_metadata(struct blob_reader *metadata,
    blob_copy_bytes(metadata, (uint8_t *) glprog->sh.SamplerTargets,
                    sizeof(glprog->sh.SamplerTargets));
    glprog->ShadowSamplers = blob_read_uint32(metadata);
+
+   blob_copy_bytes(metadata, (uint8_t *) glprog->sh.ImageAccess,
+                   sizeof(glprog->sh.ImageAccess));
+   blob_copy_bytes(metadata, (uint8_t *) glprog->sh.ImageUnits,
+                   sizeof(glprog->sh.ImageUnits));
 
    glprog->Parameters = _mesa_new_parameter_list();
    read_shader_parameters(metadata, glprog->Parameters);
