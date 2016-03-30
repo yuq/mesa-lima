@@ -184,14 +184,14 @@ scan_instruction(struct tgsi_shader_info *info,
       /* Texture samplers */
       if (src->Register.File == TGSI_FILE_SAMPLER) {
          const unsigned index = src->Register.Index;
-         const unsigned target = fullinst->Texture.Texture;
 
          assert(fullinst->Instruction.Texture);
          assert(index < Elements(info->is_msaa_sampler));
          assert(index < PIPE_MAX_SAMPLERS);
-         assert(target < TGSI_TEXTURE_UNKNOWN);
 
          if (tgsi_get_opcode_info(fullinst->Instruction.Opcode)->is_tex) {
+            const unsigned target = fullinst->Texture.Texture;
+            assert(target < TGSI_TEXTURE_UNKNOWN);
             /* for texture instructions, check that the texture instruction
              * target matches the previous sampler view declaration (if there
              * was one.)
@@ -205,12 +205,11 @@ scan_instruction(struct tgsi_shader_info *info,
                 */
                assert(info->sampler_targets[index] == target);
             }
-         }
-
-         /* MSAA samplers */
-         if (target == TGSI_TEXTURE_2D_MSAA ||
-             target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
-            info->is_msaa_sampler[src->Register.Index] = TRUE;
+            /* MSAA samplers */
+            if (target == TGSI_TEXTURE_2D_MSAA ||
+                target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
+               info->is_msaa_sampler[src->Register.Index] = TRUE;
+            }
          }
       }
 
