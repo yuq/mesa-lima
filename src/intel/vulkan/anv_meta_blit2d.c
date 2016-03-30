@@ -168,7 +168,7 @@ blit2d_bind_src(struct anv_cmd_buffer *cmd_buffer,
          .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
          .descriptorPool = tmp->desc_pool,
          .descriptorSetCount = 1,
-         .pSetLayouts = &device->meta_state.blit2d.image_ds_layout
+         .pSetLayouts = &device->meta_state.blit2d.img_ds_layout
       }, &tmp->set);
 
    anv_UpdateDescriptorSets(vk_device,
@@ -193,7 +193,7 @@ blit2d_bind_src(struct anv_cmd_buffer *cmd_buffer,
 
    anv_CmdBindDescriptorSets(anv_cmd_buffer_to_handle(cmd_buffer),
                              VK_PIPELINE_BIND_POINT_GRAPHICS,
-                             device->meta_state.blit2d.image_p_layout, 0, 1,
+                             device->meta_state.blit2d.img_p_layout, 0, 1,
                              &tmp->set, 0, NULL);
 }
 
@@ -473,15 +473,27 @@ anv_device_finish_meta_blit2d_state(struct anv_device *device)
                           &device->meta_state.alloc);
    }
 
-   if (device->meta_state.blit2d.image_p_layout) {
+   if (device->meta_state.blit2d.img_p_layout) {
       anv_DestroyPipelineLayout(anv_device_to_handle(device),
-                                device->meta_state.blit2d.image_p_layout,
+                                device->meta_state.blit2d.img_p_layout,
                                 &device->meta_state.alloc);
    }
 
-   if (device->meta_state.blit2d.image_ds_layout) {
+   if (device->meta_state.blit2d.img_ds_layout) {
       anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
-                                     device->meta_state.blit2d.image_ds_layout,
+                                     device->meta_state.blit2d.img_ds_layout,
+                                     &device->meta_state.alloc);
+   }
+
+   if (device->meta_state.blit2d.buf_p_layout) {
+      anv_DestroyPipelineLayout(anv_device_to_handle(device),
+                                device->meta_state.blit2d.buf_p_layout,
+                                &device->meta_state.alloc);
+   }
+
+   if (device->meta_state.blit2d.buf_ds_layout) {
+      anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
+                                     device->meta_state.blit2d.buf_ds_layout,
                                      &device->meta_state.alloc);
    }
 }
@@ -539,7 +551,7 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
                .pImmutableSamplers = NULL
             },
          }
-      }, &device->meta_state.alloc, &device->meta_state.blit2d.image_ds_layout);
+      }, &device->meta_state.alloc, &device->meta_state.blit2d.img_ds_layout);
    if (result != VK_SUCCESS)
       goto fail;
 
@@ -547,9 +559,36 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
       &(VkPipelineLayoutCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
          .setLayoutCount = 1,
-         .pSetLayouts = &device->meta_state.blit2d.image_ds_layout,
+         .pSetLayouts = &device->meta_state.blit2d.img_ds_layout,
       },
-      &device->meta_state.alloc, &device->meta_state.blit2d.image_p_layout);
+      &device->meta_state.alloc, &device->meta_state.blit2d.img_p_layout);
+   if (result != VK_SUCCESS)
+      goto fail;
+
+   result = anv_CreateDescriptorSetLayout(anv_device_to_handle(device),
+      &(VkDescriptorSetLayoutCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+         .bindingCount = 1,
+         .pBindings = (VkDescriptorSetLayoutBinding[]) {
+            {
+               .binding = 0,
+               .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+               .descriptorCount = 1,
+               .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+               .pImmutableSamplers = NULL
+            },
+         }
+      }, &device->meta_state.alloc, &device->meta_state.blit2d.buf_ds_layout);
+   if (result != VK_SUCCESS)
+      goto fail;
+
+   result = anv_CreatePipelineLayout(anv_device_to_handle(device),
+      &(VkPipelineLayoutCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+         .setLayoutCount = 1,
+         .pSetLayouts = &device->meta_state.blit2d.buf_ds_layout,
+      },
+      &device->meta_state.alloc, &device->meta_state.blit2d.buf_p_layout);
    if (result != VK_SUCCESS)
       goto fail;
 
@@ -678,7 +717,7 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
          },
       },
       .flags = 0,
-      .layout = device->meta_state.blit2d.image_p_layout,
+      .layout = device->meta_state.blit2d.img_p_layout,
       .renderPass = device->meta_state.blit2d.render_pass,
       .subpass = 0,
    };

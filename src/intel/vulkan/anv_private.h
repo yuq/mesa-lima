@@ -612,8 +612,10 @@ struct anv_meta_state {
       /** Pipeline that copies from a 2D image. */
       VkPipeline pipeline_2d_src;
 
-      VkPipelineLayout                          image_p_layout;
-      VkDescriptorSetLayout                     image_ds_layout;
+      VkPipelineLayout                          img_p_layout;
+      VkDescriptorSetLayout                     img_ds_layout;
+      VkPipelineLayout                          buf_p_layout;
+      VkDescriptorSetLayout                     buf_ds_layout;
    } blit2d;
 
    struct {
