@@ -29,6 +29,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
+#include <new>
 
 #include "core/api.h"
 #include "core/backend.h"
@@ -65,11 +66,14 @@ HANDLE SwrCreateContext(
     pContext->dcRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
     pContext->dsRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
 
+    pContext->pMacroTileManagerArray = (MacroTileMgr*)_aligned_malloc(sizeof(MacroTileMgr) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
+    pContext->pDispatchQueueArray = (DispatchQueue*)_aligned_malloc(sizeof(DispatchQueue) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
+
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
         pContext->dcRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
-        pContext->dcRing[dc].pTileMgr = new MacroTileMgr(*(pContext->dcRing[dc].pArena));
-        pContext->dcRing[dc].pDispatch = new DispatchQueue(); /// @todo Could lazily allocate this if Dispatch seen.
+        new (&pContext->pMacroTileManagerArray[dc]) MacroTileMgr(*pContext->dcRing[dc].pArena);
+        new (&pContext->pDispatchQueueArray[dc]) DispatchQueue();
 
         pContext->dsRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
     }
@@ -143,9 +147,12 @@ void SwrDestroyContext(HANDLE hContext)
     {
         delete pContext->dcRing[i].pArena;
         delete pContext->dsRing[i].pArena;
-        delete(pContext->dcRing[i].pTileMgr);
-        delete(pContext->dcRing[i].pDispatch);
+        pContext->pMacroTileManagerArray[i].~MacroTileMgr();
+        pContext->pDispatchQueueArray[i].~DispatchQueue();
     }
+
+    _aligned_free(pContext->pDispatchQueueArray);
+    _aligned_free(pContext->pMacroTileManagerArray);
 
     // Free scratch space.
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
@@ -176,6 +183,15 @@ void WakeAllThreads(SWR_CONTEXT *pContext)
 template<bool IsDraw>
 void QueueWork(SWR_CONTEXT *pContext)
 {
+    DRAW_CONTEXT* pDC = pContext->pCurDrawContext;
+    uint32_t dcIndex = pDC->drawId % KNOB_MAX_DRAWS_IN_FLIGHT;
+
+    if (IsDraw)
+    {
+        pDC->pTileMgr = &pContext->pMacroTileManagerArray[dcIndex];
+        pDC->pTileMgr->initialize();
+    }
+
     // Each worker thread looks at a DC for both FE and BE work at different times and so we
     // multiply threadDone by 2.  When the threadDone counter has reached 0 then all workers
     // have moved past this DC. (i.e. Each worker has checked this DC for both FE and BE work and
@@ -298,8 +314,6 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pCurDrawContext->doneFE = false;
         pCurDrawContext->FeLock = 0;
         pCurDrawContext->threadsDone = 0;
-
-        pCurDrawContext->pTileMgr->initialize();
 
         // Assign unique drawId for this DC
         pCurDrawContext->drawId = pContext->dcRing.GetHead();
@@ -1368,9 +1382,6 @@ void SwrDispatch(
 
     pDC->isCompute = true;      // This is a compute context.
 
-    // Ensure spill fill pointers are initialized to nullptr.
-    memset(pDC->pSpillFill, 0, sizeof(pDC->pSpillFill));
-
     COMPUTE_DESC* pTaskData = (COMPUTE_DESC*)pDC->pArena->AllocAligned(sizeof(COMPUTE_DESC), 64);
 
     pTaskData->threadGroupCountX = threadGroupCountX;
@@ -1378,6 +1389,8 @@ void SwrDispatch(
     pTaskData->threadGroupCountZ = threadGroupCountZ;
 
     uint32_t totalThreadGroups = threadGroupCountX * threadGroupCountY * threadGroupCountZ;
+    uint32_t dcIndex = pDC->drawId % KNOB_MAX_DRAWS_IN_FLIGHT;
+    pDC->pDispatch = &pContext->pDispatchQueueArray[dcIndex];
     pDC->pDispatch->initialize(totalThreadGroups, pTaskData);
 
     QueueDispatch(pContext);

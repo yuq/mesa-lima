@@ -70,7 +70,7 @@ static PFN_CLEAR_TILES sClearTilesTable[NUM_SWR_FORMATS];
 /// @param pDC - pointer to draw context (dispatch).
 /// @param workerId - The unique worker ID that is assigned to this thread.
 /// @param threadGroupId - the linear index for the thread group within the dispatch.
-void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroupId)
+void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroupId, void*& pSpillFillBuffer)
 {
     RDTSC_START(BEDispatch);
 
@@ -80,10 +80,10 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     SWR_ASSERT(pTaskData != nullptr);
 
     // Ensure spill fill memory has been allocated.
-    if (pDC->pSpillFill[workerId] == nullptr)
+    if (pSpillFillBuffer == nullptr)
     {
         ///@todo Add state which indicates the spill fill size.
-        pDC->pSpillFill[workerId] = (uint8_t*)pDC->pArena->AllocAlignedSync(4 * sizeof(MEGABYTE), sizeof(float) * 8);
+        pSpillFillBuffer = pDC->pArena->AllocAlignedSync(4 * sizeof(MEGABYTE), sizeof(float) * 8);
     }
 
     const API_STATE& state = GetApiState(pDC);
@@ -94,7 +94,7 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     csContext.dispatchDims[1] = pTaskData->threadGroupCountY;
     csContext.dispatchDims[2] = pTaskData->threadGroupCountZ;
     csContext.pTGSM = pContext->pScratch[workerId];
-    csContext.pSpillFillBuffer = pDC->pSpillFill[workerId];
+    csContext.pSpillFillBuffer = (uint8_t*)pSpillFillBuffer;
 
     state.pfnCsFunc(GetPrivateState(pDC), &csContext);
 

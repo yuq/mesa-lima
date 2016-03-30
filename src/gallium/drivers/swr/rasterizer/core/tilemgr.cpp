@@ -35,27 +35,6 @@
 
 #define TILE_ID(x,y) ((x << 16 | y))
 
-// override new/delete for alignment
-void *MacroTileMgr::operator new(size_t size)
-{
-    return _aligned_malloc(size, 64);
-}
-
-void MacroTileMgr::operator delete(void *p)
-{
-    _aligned_free(p);
-}
-
-void* DispatchQueue::operator new(size_t size)
-{
-    return _aligned_malloc(size, 64);
-}
-
-void DispatchQueue::operator delete(void *p)
-{
-    _aligned_free(p);
-}
-
 MacroTileMgr::MacroTileMgr(CachingArena& arena) : mArena(arena)
 {
 }

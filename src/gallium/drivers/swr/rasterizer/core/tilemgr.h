@@ -140,9 +140,6 @@ public:
         x = (tileID >> 16) & 0xffff;
     }
 
-    void *operator new(size_t size);
-    void operator delete (void *p);
-
 private:
     CachingArena& mArena;
     std::unordered_map<uint32_t, MacroTileQueue> mTiles;
@@ -228,9 +225,6 @@ public:
     {
         return mpTaskData;
     }
-
-    void *operator new(size_t size);
-    void operator delete (void *p);
 
     void* mpTaskData{ nullptr };        // The API thread will set this up and the callback task function will interpet this.
 

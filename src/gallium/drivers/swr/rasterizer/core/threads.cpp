@@ -291,7 +291,10 @@ INLINE int64_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
     {
         // Cleanup memory allocations
         pDC->pArena->Reset(true);
-        pDC->pTileMgr->initialize();
+        if (!pDC->isCompute)
+        {
+            pDC->pTileMgr->initialize();
+        }
         if (pDC->cleanupState)
         {
             pDC->pState->pArena->Reset(true);
@@ -546,10 +549,11 @@ void WorkOnCompute(
         // Is there any work remaining?
         if (queue.getNumQueued() > 0)
         {
+            void* pSpillFillBuffer = nullptr;
             uint32_t threadGroupId = 0;
             while (queue.getWork(threadGroupId))
             {
-                ProcessComputeBE(pDC, workerId, threadGroupId);
+                ProcessComputeBE(pDC, workerId, threadGroupId, pSpillFillBuffer);
 
                 queue.finishedWork();
             }

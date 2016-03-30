@@ -384,8 +384,11 @@ struct DRAW_CONTEXT
 {
     SWR_CONTEXT*    pContext;
     uint64_t        drawId;
-    MacroTileMgr*   pTileMgr;
-    DispatchQueue*  pDispatch;      // Queue for thread groups. (isCompute)
+    union
+    {
+        MacroTileMgr*   pTileMgr;
+        DispatchQueue*  pDispatch;      // Queue for thread groups. (isCompute)
+    };
     uint64_t        dependency;
     DRAW_STATE*     pState;
     CachingArena*   pArena;
@@ -394,12 +397,10 @@ struct DRAW_CONTEXT
     bool            cleanupState;   // True if this is the last draw using an entry in the state ring.
     volatile bool   doneFE;         // Is FE work done for this draw?
 
+    FE_WORK         FeWork;
+
     volatile OSALIGNLINE(uint32_t)   FeLock;
     volatile int64_t    threadsDone;
-
-    OSALIGNLINE(FE_WORK) FeWork;
-    uint8_t*        pSpillFill[KNOB_MAX_NUM_THREADS];  // Scratch space used for spill fills.
-
 };
 
 static_assert((sizeof(DRAW_CONTEXT) & 63) == 0, "Invalid size for DRAW_CONTEXT");
@@ -444,6 +445,9 @@ struct SWR_CONTEXT
 
     DRAW_CONTEXT *pCurDrawContext;    // This points to DC entry in ring for an unsubmitted draw.
     DRAW_CONTEXT *pPrevDrawContext;   // This points to DC entry for the previous context submitted that we can copy state from.
+
+    MacroTileMgr* pMacroTileManagerArray;
+    DispatchQueue* pDispatchQueueArray;
 
     // Draw State Ring
     //  When draw are very large (lots of primitives) then the API thread will break these up.
