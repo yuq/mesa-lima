@@ -2676,6 +2676,9 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
 
    b->shader = nir_shader_create(NULL, stage, options);
 
+   /* Set shader info defaults */
+   b->shader->info.gs.invocations = 1;
+
    /* Parse execution modes */
    vtn_foreach_execution_mode(b, b->entry_point,
                               vtn_handle_execution_mode, NULL);
