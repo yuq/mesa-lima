@@ -4755,6 +4755,35 @@ get_fpu_lowered_simd_width(const struct brw_device_info *devinfo,
    if (inst->is_3src(devinfo) && !devinfo->supports_simd16_3src)
       max_width = MIN2(max_width, inst->exec_size / reg_count);
 
+   /* Pre-Gen8 EUs are hardwired to use the QtrCtrl+1 (where QtrCtrl is
+    * the 8-bit quarter of the execution mask signals specified in the
+    * instruction control fields) for the second compressed half of any
+    * single-precision instruction (for double-precision instructions
+    * it's hardwired to use NibCtrl+1, at least on HSW), which means that
+    * the EU will apply the wrong execution controls for the second
+    * sequential GRF write if the number of channels per GRF is not exactly
+    * eight in single-precision mode (or four in double-float mode).
+    *
+    * In this situation we calculate the maximum size of the split
+    * instructions so they only ever write to a single register.
+    */
+   if (devinfo->gen < 8 && inst->regs_written > 1 &&
+       !inst->force_writemask_all) {
+      const unsigned channels_per_grf = inst->exec_size / inst->regs_written;
+      unsigned exec_type_size = 0;
+      for (int i = 0; i < inst->sources; i++) {
+         if (inst->src[i].file != BAD_FILE)
+            exec_type_size = MAX2(exec_type_size, type_sz(inst->src[i].type));
+      }
+      assert(exec_type_size);
+
+      /* The hardware shifts exactly 8 channels per compressed half of the
+       * instruction in single-precision mode and exactly 4 in double-precision.
+       */
+      if (channels_per_grf != (exec_type_size == 8 ? 4 : 8))
+         max_width = MIN2(max_width, channels_per_grf);
+   }
+
    /* Only power-of-two execution sizes are representable in the instruction
     * control fields.
     */
