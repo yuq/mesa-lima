@@ -127,6 +127,9 @@ private:
    Value *loadBufInfo32(Value *ptr, uint32_t off);
    Value *loadBufInfo64(Value *ptr, uint32_t off);
    Value *loadBufLength32(Value *ptr, uint32_t off);
+   Value *loadUboInfo32(Value *ptr, uint32_t off);
+   Value *loadUboInfo64(Value *ptr, uint32_t off);
+   Value *loadUboLength32(Value *ptr, uint32_t off);
    Value *loadMsInfo32(Value *ptr, uint32_t off);
    Value *loadTexHandle(Value *ptr, unsigned int slot);
 

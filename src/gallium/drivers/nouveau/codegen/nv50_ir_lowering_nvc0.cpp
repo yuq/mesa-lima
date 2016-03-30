@@ -1322,6 +1322,24 @@ NVC0LoweringPass::loadBufLength32(Value *ptr, uint32_t off)
 }
 
 inline Value *
+NVC0LoweringPass::loadUboInfo32(Value *ptr, uint32_t off)
+{
+   return loadResInfo32(ptr, off, prog->driver->io.uboInfoBase);
+}
+
+inline Value *
+NVC0LoweringPass::loadUboInfo64(Value *ptr, uint32_t off)
+{
+   return loadResInfo64(ptr, off, prog->driver->io.uboInfoBase);
+}
+
+inline Value *
+NVC0LoweringPass::loadUboLength32(Value *ptr, uint32_t off)
+{
+   return loadResLength32(ptr, off, prog->driver->io.uboInfoBase);
+}
+
+inline Value *
 NVC0LoweringPass::loadMsInfo32(Value *ptr, uint32_t off)
 {
    uint8_t b = prog->driver->io.msInfoCBSlot;
@@ -1711,7 +1729,42 @@ NVC0LoweringPass::handleLDST(Instruction *i)
          assert(prog->getType() != Program::TYPE_FRAGMENT); // INTERP
       }
    } else if (i->src(0).getFile() == FILE_MEMORY_CONST) {
-      if (i->src(0).isIndirect(1)) {
+      if (targ->getChipset() >= NVISA_GK104_CHIPSET &&
+          prog->getType() == Program::TYPE_COMPUTE) {
+         // The launch descriptor only allows to set up 8 CBs, but OpenGL
+         // requires at least 12 UBOs. To bypass this limitation, we store the
+         // addrs into the driver constbuf and we directly load from the global
+         // memory.
+         int8_t fileIndex = i->getSrc(0)->reg.fileIndex - 1;
+         Value *ind = i->getIndirect(0, 1);
+         Value *ptr = loadUboInfo64(ind, fileIndex * 16);
+
+         // TODO: clamp the offset to the maximum number of const buf.
+         if (i->src(0).isIndirect(1)) {
+            Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType));
+            Value *length = loadUboLength32(ind, fileIndex * 16);
+            Value *pred = new_LValue(func, FILE_PREDICATE);
+            if (i->src(0).isIndirect(0)) {
+               bld.mkOp2(OP_ADD, TYPE_U64, ptr, ptr, i->getIndirect(0, 0));
+               bld.mkOp2(OP_ADD, TYPE_U32, offset, offset, i->getIndirect(0, 0));
+            }
+            i->getSrc(0)->reg.file = FILE_MEMORY_GLOBAL;
+            i->setIndirect(0, 1, NULL);
+            i->setIndirect(0, 0, ptr);
+            bld.mkCmp(OP_SET, CC_GT, TYPE_U32, pred, TYPE_U32, offset, length);
+            i->setPredicate(CC_NOT_P, pred);
+            if (i->defExists(0)) {
+               bld.mkMov(i->getDef(0), bld.mkImm(0));
+            }
+         } else if (fileIndex >= 0) {
+            if (i->src(0).isIndirect(0)) {
+               bld.mkOp2(OP_ADD, TYPE_U64, ptr, ptr, i->getIndirect(0, 0));
+            }
+            i->getSrc(0)->reg.file = FILE_MEMORY_GLOBAL;
+            i->setIndirect(0, 1, NULL);
+            i->setIndirect(0, 0, ptr);
+         }
+      } else if (i->src(0).isIndirect(1)) {
          Value *ptr;
          if (i->src(0).isIndirect(0))
             ptr = bld.mkOp3v(OP_INSBF, TYPE_U32, bld.getSSA(),
