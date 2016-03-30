@@ -783,6 +783,10 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
         for (uint32_t n = 0; n < numNodes; ++n)
         {
             auto& node = nodes[n];
+            if (node.cores.size() == 0)
+            {
+               continue;
+            }
 
             uint32_t numCores = numCoresPerNode;
             for (uint32_t c = 0; c < numCores; ++c)
