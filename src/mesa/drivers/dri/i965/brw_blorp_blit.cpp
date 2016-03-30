@@ -256,8 +256,8 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
        src_mt->num_samples > 8 || dst_mt->num_samples > 8)
       return false;
 
-   /* BLORP is only supported for Gen6-7. */
-   if (brw->gen < 6 || brw->gen > 7)
+   /* BLORP is only supported from Gen6 onwards. */
+   if (brw->gen < 6)
       return false;
 
    if (_mesa_get_format_base_format(src_rb->Format) !=
@@ -359,7 +359,7 @@ brw_blorp_framebuffer(struct brw_context *brw,
                       GLbitfield mask, GLenum filter)
 {
    /* BLORP is not supported before Gen6. */
-   if (brw->gen < 6 || brw->gen >= 8)
+   if (brw->gen < 6)
       return mask;
 
    /* There is support only for four and eight samples. */

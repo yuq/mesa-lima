@@ -210,7 +210,7 @@ void
 brw_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
 {
    struct gl_context *ctx = &brw->ctx;
-   uint32_t estimated_max_batch_usage = 1500;
+   const uint32_t estimated_max_batch_usage = brw->gen >= 8 ? 1800 : 1500;
    bool check_aperture_failed_once = false;
 
    /* Flush the sampler and render caches.  We definitely need to flush the
@@ -235,6 +235,10 @@ retry:
       break;
    case 7:
       gen7_blorp_exec(brw, params);
+      break;
+   case 8:
+   case 9:
+      gen8_blorp_exec(brw, params);
       break;
    default:
       /* BLORP is not supported before Gen6. */
