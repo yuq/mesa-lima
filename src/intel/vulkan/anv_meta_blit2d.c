@@ -129,190 +129,6 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
                        }, cmd_buffer, img_o, usage);
 }
 
-static void
-meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
-                 struct anv_image_view *src_iview,
-                 uint32_t src_pitch,
-                 VkOffset3D src_offset,
-                 struct anv_image_view *dest_iview,
-                 VkOffset3D dest_offset,
-                 VkExtent3D extent)
-{
-   struct anv_device *device = cmd_buffer->device;
-
-   struct blit_vb_data {
-      float pos[2];
-      float tex_coord[3];
-   } *vb_data;
-
-   unsigned vb_size = sizeof(struct anv_vue_header) + 3 * sizeof(*vb_data);
-
-   struct anv_state vb_state =
-      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, vb_size, 16);
-   memset(vb_state.map, 0, sizeof(struct anv_vue_header));
-   vb_data = vb_state.map + sizeof(struct anv_vue_header);
-
-   vb_data[0] = (struct blit_vb_data) {
-      .pos = {
-         dest_offset.x + extent.width,
-         dest_offset.y + extent.height,
-      },
-      .tex_coord = {
-         src_offset.x + extent.width,
-         src_offset.y + extent.height,
-         src_pitch,
-      },
-   };
-
-   vb_data[1] = (struct blit_vb_data) {
-      .pos = {
-         dest_offset.x,
-         dest_offset.y + extent.height,
-      },
-      .tex_coord = {
-         src_offset.x,
-         src_offset.y + extent.height,
-         src_pitch,
-      },
-   };
-
-   vb_data[2] = (struct blit_vb_data) {
-      .pos = {
-         dest_offset.x,
-         dest_offset.y,
-      },
-      .tex_coord = {
-         src_offset.x,
-         src_offset.y,
-         src_pitch,
-      },
-   };
-
-   anv_state_clflush(vb_state);
-
-   struct anv_buffer vertex_buffer = {
-      .device = device,
-      .size = vb_size,
-      .bo = &device->dynamic_state_block_pool.bo,
-      .offset = vb_state.offset,
-   };
-
-   anv_CmdBindVertexBuffers(anv_cmd_buffer_to_handle(cmd_buffer), 0, 2,
-      (VkBuffer[]) {
-         anv_buffer_to_handle(&vertex_buffer),
-         anv_buffer_to_handle(&vertex_buffer)
-      },
-      (VkDeviceSize[]) {
-         0,
-         sizeof(struct anv_vue_header),
-      });
-
-   VkDescriptorPool desc_pool;
-   anv_CreateDescriptorPool(anv_device_to_handle(device),
-      &(const VkDescriptorPoolCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-         .pNext = NULL,
-         .flags = 0,
-         .maxSets = 1,
-         .poolSizeCount = 1,
-         .pPoolSizes = (VkDescriptorPoolSize[]) {
-            {
-               .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-               .descriptorCount = 1
-            },
-         }
-      }, &cmd_buffer->pool->alloc, &desc_pool);
-
-   VkDescriptorSet set;
-   anv_AllocateDescriptorSets(anv_device_to_handle(device),
-      &(VkDescriptorSetAllocateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = desc_pool,
-         .descriptorSetCount = 1,
-         .pSetLayouts = &device->meta_state.blit2d.ds_layout
-      }, &set);
-
-   anv_UpdateDescriptorSets(anv_device_to_handle(device),
-      1, /* writeCount */
-      (VkWriteDescriptorSet[]) {
-         {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = set,
-            .dstBinding = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .pImageInfo = (VkDescriptorImageInfo[]) {
-               {
-                  .sampler = NULL,
-                  .imageView = anv_image_view_to_handle(src_iview),
-                  .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-               },
-            }
-         }
-      }, 0, NULL);
-
-   VkFramebuffer fb;
-   anv_CreateFramebuffer(anv_device_to_handle(device),
-      &(VkFramebufferCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-         .attachmentCount = 1,
-         .pAttachments = (VkImageView[]) {
-            anv_image_view_to_handle(dest_iview),
-         },
-         .width = dest_iview->extent.width,
-         .height = dest_iview->extent.height,
-         .layers = 1
-      }, &cmd_buffer->pool->alloc, &fb);
-
-   ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
-      &(VkRenderPassBeginInfo) {
-         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-         .renderPass = device->meta_state.blit2d.render_pass,
-         .framebuffer = fb,
-         .renderArea = {
-            .offset = { dest_offset.x, dest_offset.y },
-            .extent = { extent.width, extent.height },
-         },
-         .clearValueCount = 0,
-         .pClearValues = NULL,
-      }, VK_SUBPASS_CONTENTS_INLINE);
-
-   VkPipeline pipeline = device->meta_state.blit2d.pipeline_2d_src;
-
-   if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(pipeline)) {
-      anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
-                          VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-   }
-
-   anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 0, 1,
-                      &(VkViewport) {
-                        .x = 0.0f,
-                        .y = 0.0f,
-                        .width = dest_iview->extent.width,
-                        .height = dest_iview->extent.height,
-                        .minDepth = 0.0f,
-                        .maxDepth = 1.0f,
-                      });
-
-   anv_CmdBindDescriptorSets(anv_cmd_buffer_to_handle(cmd_buffer),
-                             VK_PIPELINE_BIND_POINT_GRAPHICS,
-                             device->meta_state.blit2d.pipeline_layout, 0, 1,
-                             &set, 0, NULL);
-
-   ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer), 3, 1, 0, 0);
-
-   ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
-
-   /* At the point where we emit the draw call, all data from the
-    * descriptor sets, etc. has been used.  We are free to delete it.
-    */
-   anv_DestroyDescriptorPool(anv_device_to_handle(device),
-                             desc_pool, &cmd_buffer->pool->alloc);
-   anv_DestroyFramebuffer(anv_device_to_handle(device), fb,
-                          &cmd_buffer->pool->alloc);
-}
-
 void
 anv_meta_end_blit2d(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_meta_saved_state *save)
@@ -335,6 +151,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
                 unsigned num_rects,
                 struct anv_meta_blit2d_rect *rects)
 {
+   struct anv_device *device = cmd_buffer->device;
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    VkImageUsageFlags src_usage = VK_IMAGE_USAGE_SAMPLED_BIT;
    VkImageUsageFlags dst_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -347,13 +164,175 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
       create_iview(cmd_buffer, src, &rects[r], src_usage, &src_img, &src_iview);
       create_iview(cmd_buffer, dst, &rects[r], dst_usage, &dst_img, &dst_iview);
 
-      /* Perform blit */
-      meta_emit_blit2d(cmd_buffer,
-                       &src_iview, src->pitch,
-                       (VkOffset3D){rects[r].src_x, rects[r].src_y, 0},
-                       &dst_iview,
-                       (VkOffset3D){rects[r].dst_x, rects[r].dst_y, 0},
-                       (VkExtent3D){rects[r].width, rects[r].height, 1});
+      struct blit_vb_data {
+         float pos[2];
+         float tex_coord[3];
+      } *vb_data;
+
+      unsigned vb_size = sizeof(struct anv_vue_header) + 3 * sizeof(*vb_data);
+
+      struct anv_state vb_state =
+         anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, vb_size, 16);
+      memset(vb_state.map, 0, sizeof(struct anv_vue_header));
+      vb_data = vb_state.map + sizeof(struct anv_vue_header);
+
+      vb_data[0] = (struct blit_vb_data) {
+         .pos = {
+            rects[r].dst_x + rects[r].width,
+            rects[r].dst_y + rects[r].height,
+         },
+         .tex_coord = {
+            rects[r].src_x + rects[r].width,
+            rects[r].src_y + rects[r].height,
+            src->pitch,
+         },
+      };
+
+      vb_data[1] = (struct blit_vb_data) {
+         .pos = {
+            rects[r].dst_x,
+            rects[r].dst_y + rects[r].height,
+         },
+         .tex_coord = {
+            rects[r].src_x,
+            rects[r].src_y + rects[r].height,
+            src->pitch,
+         },
+      };
+
+      vb_data[2] = (struct blit_vb_data) {
+         .pos = {
+            rects[r].dst_x,
+            rects[r].dst_y,
+         },
+         .tex_coord = {
+            rects[r].src_x,
+            rects[r].src_y,
+            src->pitch,
+         },
+      };
+
+      anv_state_clflush(vb_state);
+
+      struct anv_buffer vertex_buffer = {
+         .device = device,
+         .size = vb_size,
+         .bo = &device->dynamic_state_block_pool.bo,
+         .offset = vb_state.offset,
+      };
+
+      anv_CmdBindVertexBuffers(anv_cmd_buffer_to_handle(cmd_buffer), 0, 2,
+         (VkBuffer[]) {
+            anv_buffer_to_handle(&vertex_buffer),
+            anv_buffer_to_handle(&vertex_buffer)
+         },
+         (VkDeviceSize[]) {
+            0,
+            sizeof(struct anv_vue_header),
+         });
+
+      VkDescriptorPool desc_pool;
+      anv_CreateDescriptorPool(vk_device,
+         &(const VkDescriptorPoolCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .pNext = NULL,
+            .flags = 0,
+            .maxSets = 1,
+            .poolSizeCount = 1,
+            .pPoolSizes = (VkDescriptorPoolSize[]) {
+               {
+                  .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                  .descriptorCount = 1
+               },
+            }
+         }, &cmd_buffer->pool->alloc, &desc_pool);
+
+      VkDescriptorSet set;
+      anv_AllocateDescriptorSets(vk_device,
+         &(VkDescriptorSetAllocateInfo) {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorPool = desc_pool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &device->meta_state.blit2d.ds_layout
+         }, &set);
+
+      anv_UpdateDescriptorSets(vk_device,
+         1, /* writeCount */
+         (VkWriteDescriptorSet[]) {
+            {
+               .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+               .dstSet = set,
+               .dstBinding = 0,
+               .dstArrayElement = 0,
+               .descriptorCount = 1,
+               .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+               .pImageInfo = (VkDescriptorImageInfo[]) {
+                  {
+                     .sampler = NULL,
+                     .imageView = anv_image_view_to_handle(&src_iview),
+                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+                  },
+               }
+            }
+         }, 0, NULL);
+
+      VkFramebuffer fb;
+      anv_CreateFramebuffer(vk_device,
+         &(VkFramebufferCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .attachmentCount = 1,
+            .pAttachments = (VkImageView[]) {
+               anv_image_view_to_handle(&dst_iview),
+            },
+            .width = dst_iview.extent.width,
+            .height = dst_iview.extent.height,
+            .layers = 1
+         }, &cmd_buffer->pool->alloc, &fb);
+
+      ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
+         &(VkRenderPassBeginInfo) {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .renderPass = device->meta_state.blit2d.render_pass,
+            .framebuffer = fb,
+            .renderArea = {
+               .offset = { rects[r].dst_x, rects[r].dst_y, },
+               .extent = { rects[r].width, rects[r].height },
+            },
+            .clearValueCount = 0,
+            .pClearValues = NULL,
+         }, VK_SUBPASS_CONTENTS_INLINE);
+
+      VkPipeline pipeline = device->meta_state.blit2d.pipeline_2d_src;
+
+      if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(pipeline)) {
+         anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
+                             VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+      }
+
+      anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 0, 1,
+                         &(VkViewport) {
+                           .x = 0.0f,
+                           .y = 0.0f,
+                           .width = dst_iview.extent.width,
+                           .height = dst_iview.extent.height,
+                           .minDepth = 0.0f,
+                           .maxDepth = 1.0f,
+                         });
+
+      anv_CmdBindDescriptorSets(anv_cmd_buffer_to_handle(cmd_buffer),
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                device->meta_state.blit2d.pipeline_layout, 0, 1,
+                                &set, 0, NULL);
+
+      ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer), 3, 1, 0, 0);
+
+      ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
+
+      /* At the point where we emit the draw call, all data from the
+       * descriptor sets, etc. has been used.  We are free to delete it.
+       */
+      anv_DestroyDescriptorPool(vk_device, desc_pool, &cmd_buffer->pool->alloc);
+      anv_DestroyFramebuffer(vk_device, fb, &cmd_buffer->pool->alloc);
 
       anv_DestroyImage(vk_device, src_img, &cmd_buffer->pool->alloc);
       anv_DestroyImage(vk_device, dst_img, &cmd_buffer->pool->alloc);
