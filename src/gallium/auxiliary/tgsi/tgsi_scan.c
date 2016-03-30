@@ -54,6 +54,20 @@ is_memory_file(unsigned file)
 }
 
 
+/**
+ * Is the opcode a "true" texture instruction which samples from a
+ * texture map?
+ */
+static bool
+is_texture_inst(unsigned opcode)
+{
+   return (opcode != TGSI_OPCODE_TXQ &&
+           opcode != TGSI_OPCODE_TXQS &&
+           opcode != TGSI_OPCODE_TXQ_LZ &&
+           opcode != TGSI_OPCODE_LODQ &&
+           tgsi_get_opcode_info(opcode)->is_tex);
+}
+
 static void
 scan_instruction(struct tgsi_shader_info *info,
                  const struct tgsi_full_instruction *fullinst,
@@ -189,7 +203,7 @@ scan_instruction(struct tgsi_shader_info *info,
          assert(index < Elements(info->is_msaa_sampler));
          assert(index < PIPE_MAX_SAMPLERS);
 
-         if (tgsi_get_opcode_info(fullinst->Instruction.Opcode)->is_tex) {
+         if (is_texture_inst(fullinst->Instruction.Opcode)) {
             const unsigned target = fullinst->Texture.Texture;
             assert(target < TGSI_TEXTURE_UNKNOWN);
             /* for texture instructions, check that the texture instruction
