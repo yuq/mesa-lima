@@ -87,7 +87,10 @@ HANDLE SwrCreateContext(
     // Calling createThreadPool() above can set SINGLE_THREADED
     if (KNOB_SINGLE_THREADED)
     {
+        SET_KNOB(HYPERTHREADED_FE, false);
         pContext->NumWorkerThreads = 1;
+        pContext->NumFEThreads = 1;
+        pContext->NumBEThreads = 1;
     }
 
     // Allocate scratch space for workers.
@@ -177,8 +180,7 @@ void QueueWork(SWR_CONTEXT *pContext)
     // multiply threadDone by 2.  When the threadDone counter has reached 0 then all workers
     // have moved past this DC. (i.e. Each worker has checked this DC for both FE and BE work and
     // then moved on if all work is done.)
-    pContext->pCurDrawContext->threadsDone =
-        pContext->NumWorkerThreads ? pContext->NumWorkerThreads * 2 : 2;
+    pContext->pCurDrawContext->threadsDone = pContext->NumFEThreads + pContext->NumBEThreads;
 
     _ReadWriteBarrier();
     {
@@ -196,7 +198,7 @@ void QueueWork(SWR_CONTEXT *pContext)
         {
             static TileSet lockedTiles;
             uint64_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
-            WorkOnFifoFE(pContext, 0, curDraw[0], 0);
+            WorkOnFifoFE(pContext, 0, curDraw[0]);
             WorkOnFifoBE(pContext, 0, curDraw[1], lockedTiles, 0, 0);
         }
         else

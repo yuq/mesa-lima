@@ -382,31 +382,27 @@ struct DRAW_STATE
 //    This draw context maintains all of the state needed for the draw operation.
 struct DRAW_CONTEXT
 {
-    SWR_CONTEXT *pContext;
+    SWR_CONTEXT*    pContext;
+    uint64_t        drawId;
+    MacroTileMgr*   pTileMgr;
+    DispatchQueue*  pDispatch;      // Queue for thread groups. (isCompute)
+    uint64_t        dependency;
+    DRAW_STATE*     pState;
+    CachingArena*   pArena;
 
-    uint64_t drawId;
+    bool            isCompute;      // Is this DC a compute context?
+    bool            cleanupState;   // True if this is the last draw using an entry in the state ring.
+    volatile bool   doneFE;         // Is FE work done for this draw?
 
-    bool isCompute;    // Is this DC a compute context?
+    volatile OSALIGNLINE(uint32_t)   FeLock;
+    volatile int64_t    threadsDone;
 
-    FE_WORK FeWork;
-    volatile OSALIGNLINE(uint32_t) FeLock;
-    volatile OSALIGNLINE(bool) doneFE;    // Is FE work done for this draw?
-    volatile OSALIGNLINE(int64_t) threadsDone;
+    OSALIGNLINE(FE_WORK) FeWork;
+    uint8_t*        pSpillFill[KNOB_MAX_NUM_THREADS];  // Scratch space used for spill fills.
 
-    uint64_t dependency;
-
-    MacroTileMgr* pTileMgr;
-
-    // The following fields are valid if isCompute is true.
-    DispatchQueue* pDispatch;               // Queue for thread groups. (isCompute)
-
-    DRAW_STATE* pState;
-    CachingArena* pArena;
-
-    uint8_t* pSpillFill[KNOB_MAX_NUM_THREADS];  // Scratch space used for spill fills.
-
-    bool  cleanupState; // True if this is the last draw using an entry in the state ring.
 };
+
+static_assert((sizeof(DRAW_CONTEXT) & 63) == 0, "Invalid size for DRAW_CONTEXT");
 
 INLINE const API_STATE& GetApiState(const DRAW_CONTEXT* pDC)
 {
@@ -459,6 +455,8 @@ struct SWR_CONTEXT
     uint32_t curStateId;               // Current index to the next available entry in the DS ring.
 
     uint32_t NumWorkerThreads;
+    uint32_t NumFEThreads;
+    uint32_t NumBEThreads;
 
     THREAD_POOL threadPool; // Thread pool associated with this context
 
