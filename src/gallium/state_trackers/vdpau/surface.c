@@ -426,17 +426,17 @@ VdpStatus vlVdpVideoSurfaceDMABuf(VdpVideoSurface surface,
 
    struct pipe_surface *surf;
 
-   memset(result, 0, sizeof(*result));
-   result->handle = -1;
-
    if (!p_surf)
       return VDP_STATUS_INVALID_HANDLE;
 
    if (plane > 3)
       return VDP_STATUS_INVALID_VALUE;
 
-   if (result)
+   if (!result)
       return VDP_STATUS_INVALID_POINTER;
+
+   memset(result, 0, sizeof(*result));
+   result->handle = -1;
 
    pipe_mutex_lock(p_surf->device->mutex);
    if (p_surf->video_buffer == NULL) {
