@@ -1682,6 +1682,11 @@ struct anv_buffer_view {
    struct brw_image_param storage_image_param;
 };
 
+void anv_buffer_view_init(struct anv_buffer_view *view,
+                          struct anv_device *device,
+                          const VkBufferViewCreateInfo* pCreateInfo,
+                          struct anv_cmd_buffer *cmd_buffer);
+
 const struct anv_format *
 anv_format_for_descriptor_type(VkDescriptorType type);
 

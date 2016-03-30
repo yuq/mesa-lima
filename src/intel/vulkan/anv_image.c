@@ -646,20 +646,13 @@ anv_DestroyImageView(VkDevice _device, VkImageView _iview,
    anv_free2(&device->alloc, pAllocator, iview);
 }
 
-VkResult
-anv_CreateBufferView(VkDevice _device,
-                     const VkBufferViewCreateInfo *pCreateInfo,
-                     const VkAllocationCallbacks *pAllocator,
-                     VkBufferView *pView)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
-   struct anv_buffer_view *view;
 
-   view = anv_alloc2(&device->alloc, pAllocator, sizeof(*view), 8,
-                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (!view)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+void anv_buffer_view_init(struct anv_buffer_view *view,
+                          struct anv_device *device,
+                          const VkBufferViewCreateInfo* pCreateInfo,
+                          struct anv_cmd_buffer *cmd_buffer)
+{
+   ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
 
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
@@ -671,8 +664,7 @@ anv_CreateBufferView(VkDevice _device,
                  buffer->size - view->offset : pCreateInfo->range;
 
    if (buffer->usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
-      view->surface_state =
-         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+      view->surface_state = alloc_surface_state(device, cmd_buffer);
 
       anv_fill_buffer_surface_state(device, view->surface_state,
                                     view->format,
@@ -683,8 +675,7 @@ anv_CreateBufferView(VkDevice _device,
    }
 
    if (buffer->usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
-      view->storage_surface_state =
-         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+      view->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
       enum isl_format storage_format =
          has_matching_storage_typed_format(device, view->format) ?
@@ -703,6 +694,23 @@ anv_CreateBufferView(VkDevice _device,
    } else {
       view->storage_surface_state = (struct anv_state){ 0 };
    }
+}
+
+VkResult
+anv_CreateBufferView(VkDevice _device,
+                     const VkBufferViewCreateInfo *pCreateInfo,
+                     const VkAllocationCallbacks *pAllocator,
+                     VkBufferView *pView)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_buffer_view *view;
+
+   view = anv_alloc2(&device->alloc, pAllocator, sizeof(*view), 8,
+                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (!view)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   anv_buffer_view_init(view, device, pCreateInfo, NULL);
 
    *pView = anv_buffer_view_to_handle(view);
 
