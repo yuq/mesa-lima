@@ -543,6 +543,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
          info->io.auxCBSlot = 7;
          info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
          info->prop.cp.gridInfoBase = NVC0_CB_AUX_GRID_INFO;
+         info->io.uboInfoBase = NVC0_CB_AUX_UBO_INFO(0);
       }
       info->io.msInfoCBSlot = 0;
       info->io.msInfoBase = NVC0_CB_AUX_MS_INFO;

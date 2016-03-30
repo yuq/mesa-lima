@@ -336,7 +336,31 @@ nve4_compute_validate_constbufs(struct nvc0_context *nvc0)
          PUSH_DATAp(push, nvc0->constbuf[s][0].u.data, size / 4);
       }
       else {
-         /* TODO: will be updated in the next commit */
+         struct nv04_resource *res =
+            nv04_resource(nvc0->constbuf[s][i].u.buf);
+         if (res) {
+            uint64_t address
+               = nvc0->screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s);
+
+            assert(i > 0); /* we really only want uniform buffer objects */
+
+            BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+            PUSH_DATAh(push, address + NVC0_CB_AUX_UBO_INFO(i - 1));
+            PUSH_DATA (push, address + NVC0_CB_AUX_UBO_INFO(i - 1));
+            BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+            PUSH_DATA (push, 4 * 4);
+            PUSH_DATA (push, 0x1);
+            BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 4);
+            PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
+
+            PUSH_DATA (push, res->address + nvc0->constbuf[s][i].offset);
+            PUSH_DATAh(push, res->address + nvc0->constbuf[s][i].offset);
+            PUSH_DATA (push, nvc0->constbuf[5][i].size);
+            PUSH_DATA (push, 0);
+            BCTX_REFN(nvc0->bufctx_cp, CP_CB(i), res, RD);
+
+            res->cb_bindings[s] |= 1 << i;
+         }
       }
    }
 

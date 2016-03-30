@@ -181,6 +181,7 @@ struct nv50_ir_prog_info
       uint16_t sampleInfoBase;   /* base address for sample positions */
       uint8_t msInfoCBSlot;      /* cX[] used for multisample info */
       uint16_t msInfoBase;       /* base address for multisample info */
+      uint16_t uboInfoBase;      /* base address for compute UBOs (gk104+) */
    } io;
 
    /* driver callback to assign input/output locations */

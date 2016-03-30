@@ -119,6 +119,9 @@
 /* 8 user clip planes, at 4 32-bits floats each */
 #define NVC0_CB_AUX_UCP_INFO        0x100
 #define NVC0_CB_AUX_UCP_SIZE        (PIPE_MAX_CLIP_PLANES * 4 * 4)
+/* 13 ubos, at 4 32-bits integer each */
+#define NVC0_CB_AUX_UBO_INFO(i)     0x100 + (i) * 4 * 4 /* CP */
+#define NVC0_CB_AUX_UBO_SIZE        ((NVC0_MAX_PIPE_CONSTBUFS - 1) * 4 * 4)
 /* 8 sets of 32-bits integer pairs sample offsets */
 #define NVC0_CB_AUX_SAMPLE_INFO     0x180 /* FP */
 #define NVC0_CB_AUX_SAMPLE_SIZE     (8 * 4 * 2)
