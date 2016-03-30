@@ -5,5 +5,4 @@
 /wayland-drm-protocol.c
 /wayland-drm-client-protocol.h
 /dev_icd.json
-/intel_icd.json
 /gen*_pack.h
