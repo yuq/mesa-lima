@@ -609,13 +609,16 @@ struct anv_meta_state {
    struct {
       VkRenderPass render_pass;
 
-      /** Pipeline that copies from a 2D image. */
-      VkPipeline pipeline_2d_src;
-
       VkPipelineLayout                          img_p_layout;
       VkDescriptorSetLayout                     img_ds_layout;
       VkPipelineLayout                          buf_p_layout;
       VkDescriptorSetLayout                     buf_ds_layout;
+
+      /* Pipelines indexed by source and destination type.  See the
+       * blit2d_src_type and blit2d_dst_type enums in anv_meta_blit2d.c to
+       * see what these mean.
+       */
+      VkPipeline pipelines[2][3];
    } blit2d;
 
    struct {

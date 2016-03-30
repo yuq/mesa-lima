@@ -24,6 +24,44 @@
 #include "anv_meta.h"
 #include "nir/nir_builder.h"
 
+enum blit2d_src_type {
+   /* We can make a "normal" image view of this source and just texture
+    * from it like you would in any other shader.
+    */
+   BLIT2D_SRC_TYPE_NORMAL,
+
+   /* The source is W-tiled and we need to detile manually in the shader.
+    * This will work on any platform but is needed for all W-tiled sources
+    * prior to Broadwell.
+    */
+   BLIT2D_SRC_TYPE_W_DETILE,
+
+   BLIT2D_NUM_SRC_TYPES,
+};
+
+enum blit2d_dst_type {
+   /* We can bind this destination as a "normal" render target and render
+    * to it just like you would anywhere else.
+    */
+   BLIT2D_DST_TYPE_NORMAL,
+
+   /* The destination is W-tiled and we need to do the tiling manually in
+    * the shader.  This is required for all W-tiled destinations.
+    *
+    * Sky Lake adds a feature for providing explicit stencil values in the
+    * shader but mesa doesn't support that yet so neither do we.
+    */
+   BLIT2D_DST_TYPE_W_TILE,
+
+   /* The destination has a 3-channel RGB format.  Since we can't render to
+    * non-power-of-two textures, we have to bind it as a red texture and
+    * select the correct component for the given red pixel in the shader.
+    */
+   BLIT2D_DST_TYPE_RGB,
+
+   BLIT2D_NUM_DST_TYPES,
+};
+
 static VkFormat
 vk_format_for_size(int bs)
 {
@@ -139,6 +177,7 @@ struct blit2d_src_temps {
 static void
 blit2d_bind_src(struct anv_cmd_buffer *cmd_buffer,
                 struct anv_meta_blit2d_surf *src,
+                enum blit2d_src_type src_type,
                 struct anv_meta_blit2d_rect *rect,
                 struct blit2d_src_temps *tmp)
 {
@@ -199,6 +238,7 @@ blit2d_bind_src(struct anv_cmd_buffer *cmd_buffer,
 
 static void
 blit2d_unbind_src(struct anv_cmd_buffer *cmd_buffer,
+                  enum blit2d_src_type src_type,
                   struct blit2d_src_temps *tmp)
 {
    anv_DestroyDescriptorPool(anv_device_to_handle(cmd_buffer->device),
@@ -222,12 +262,27 @@ anv_meta_begin_blit2d(struct anv_cmd_buffer *cmd_buffer,
                  (1 << VK_DYNAMIC_STATE_VIEWPORT));
 }
 
-void
-anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
-                struct anv_meta_blit2d_surf *src,
-                struct anv_meta_blit2d_surf *dst,
-                unsigned num_rects,
-                struct anv_meta_blit2d_rect *rects)
+static void
+bind_pipeline(struct anv_cmd_buffer *cmd_buffer,
+              enum blit2d_src_type src_type,
+              enum blit2d_dst_type dst_type)
+{
+   VkPipeline pipeline =
+      cmd_buffer->device->meta_state.blit2d.pipelines[src_type][dst_type];
+
+   if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(pipeline)) {
+      anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
+                          VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+   }
+}
+
+static void
+anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
+                           struct anv_meta_blit2d_surf *src,
+                           enum blit2d_src_type src_type,
+                           struct anv_meta_blit2d_surf *dst,
+                           unsigned num_rects,
+                           struct anv_meta_blit2d_rect *rects)
 {
    struct anv_device *device = cmd_buffer->device;
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
@@ -235,7 +290,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
 
    for (unsigned r = 0; r < num_rects; ++r) {
       struct blit2d_src_temps src_temps;
-      blit2d_bind_src(cmd_buffer, src, &rects[r], &src_temps);
+      blit2d_bind_src(cmd_buffer, src, src_type, &rects[r], &src_temps);
 
       VkImage dst_img;
       struct anv_image_view dst_iview;
@@ -334,12 +389,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
             .pClearValues = NULL,
          }, VK_SUBPASS_CONTENTS_INLINE);
 
-      VkPipeline pipeline = device->meta_state.blit2d.pipeline_2d_src;
-
-      if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(pipeline)) {
-         anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
-                             VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-      }
+      bind_pipeline(cmd_buffer, src_type, BLIT2D_DST_TYPE_NORMAL);
 
       anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 0, 1,
                          &(VkViewport) {
@@ -358,12 +408,39 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
       /* At the point where we emit the draw call, all data from the
        * descriptor sets, etc. has been used.  We are free to delete it.
        */
-      blit2d_unbind_src(cmd_buffer, &src_temps);
+      blit2d_unbind_src(cmd_buffer, src_type, &src_temps);
       anv_DestroyFramebuffer(vk_device, fb, &cmd_buffer->pool->alloc);
       anv_DestroyImage(vk_device, dst_img, &cmd_buffer->pool->alloc);
    }
 }
 
+void
+anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
+                struct anv_meta_blit2d_surf *src,
+                struct anv_meta_blit2d_surf *dst,
+                unsigned num_rects,
+                struct anv_meta_blit2d_rect *rects)
+{
+   enum blit2d_src_type src_type;
+   if (src->tiling == ISL_TILING_W && cmd_buffer->device->info.gen < 8) {
+      src_type = BLIT2D_SRC_TYPE_W_DETILE;
+   } else {
+      src_type = BLIT2D_SRC_TYPE_NORMAL;
+   }
+
+   if (dst->tiling == ISL_TILING_W) {
+      assert(dst->bs == 1);
+      anv_finishme("Blitting to w-tiled destinations not yet supported");
+      return;
+   } else if (dst->bs % 3 == 0) {
+      anv_finishme("Blitting to RGB destinations not yet supported");
+      return;
+   } else {
+      assert(util_is_power_of_two(dst->bs));
+      anv_meta_blit2d_normal_dst(cmd_buffer, src, src_type, dst,
+                                 num_rects, rects);
+   }
+}
 
 static nir_shader *
 build_nir_vertex_shader(void)
@@ -467,12 +544,6 @@ anv_device_finish_meta_blit2d_state(struct anv_device *device)
                             &device->meta_state.alloc);
    }
 
-   if (device->meta_state.blit2d.pipeline_2d_src) {
-      anv_DestroyPipeline(anv_device_to_handle(device),
-                          device->meta_state.blit2d.pipeline_2d_src,
-                          &device->meta_state.alloc);
-   }
-
    if (device->meta_state.blit2d.img_p_layout) {
       anv_DestroyPipelineLayout(anv_device_to_handle(device),
                                 device->meta_state.blit2d.img_p_layout,
@@ -496,6 +567,193 @@ anv_device_finish_meta_blit2d_state(struct anv_device *device)
                                      device->meta_state.blit2d.buf_ds_layout,
                                      &device->meta_state.alloc);
    }
+
+   for (unsigned src = 0; src < BLIT2D_NUM_SRC_TYPES; src++) {
+      for (unsigned dst = 0; dst < BLIT2D_NUM_DST_TYPES; dst++) {
+         if (device->meta_state.blit2d.pipelines[src][dst]) {
+            anv_DestroyPipeline(anv_device_to_handle(device),
+                                device->meta_state.blit2d.pipelines[src][dst],
+                                &device->meta_state.alloc);
+         }
+      }
+   }
+}
+
+static VkResult
+blit2d_init_pipeline(struct anv_device *device,
+                     enum blit2d_src_type src_type,
+                     enum blit2d_dst_type dst_type)
+{
+   VkResult result;
+
+   texel_fetch_build_func src_func;
+   switch (src_type) {
+   case BLIT2D_SRC_TYPE_NORMAL:
+      src_func = build_nir_texel_fetch;
+      break;
+   case BLIT2D_SRC_TYPE_W_DETILE:
+      /* Not yet supported */
+   default:
+      return VK_SUCCESS;
+   }
+
+   struct anv_shader_module fs = { .nir = NULL };
+   switch (dst_type) {
+   case BLIT2D_DST_TYPE_NORMAL:
+      fs.nir = build_nir_copy_fragment_shader(device, src_func);
+      break;
+   case BLIT2D_DST_TYPE_W_TILE:
+   case BLIT2D_DST_TYPE_RGB:
+      /* Not yet supported */
+   default:
+      return VK_SUCCESS;
+   }
+
+   /* We don't use a vertex shader for blitting, but instead build and pass
+    * the VUEs directly to the rasterization backend.  However, we do need
+    * to provide GLSL source for the vertex shader so that the compiler
+    * does not dead-code our inputs.
+    */
+   struct anv_shader_module vs = {
+      .nir = build_nir_vertex_shader(),
+   };
+
+   VkPipelineVertexInputStateCreateInfo vi_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+      .vertexBindingDescriptionCount = 2,
+      .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
+         {
+            .binding = 0,
+            .stride = 0,
+            .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
+         },
+         {
+            .binding = 1,
+            .stride = 5 * sizeof(float),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+         },
+      },
+      .vertexAttributeDescriptionCount = 3,
+      .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
+         {
+            /* VUE Header */
+            .location = 0,
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_UINT,
+            .offset = 0
+         },
+         {
+            /* Position */
+            .location = 1,
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = 0
+         },
+         {
+            /* Texture Coordinate */
+            .location = 2,
+            .binding = 1,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = 8
+         }
+      }
+   };
+
+   VkPipelineShaderStageCreateInfo pipeline_shader_stages[] = {
+      {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         .stage = VK_SHADER_STAGE_VERTEX_BIT,
+         .module = anv_shader_module_to_handle(&vs),
+         .pName = "main",
+         .pSpecializationInfo = NULL
+      }, {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+         .module = anv_shader_module_to_handle(&fs),
+         .pName = "main",
+         .pSpecializationInfo = NULL
+      },
+   };
+
+   const VkGraphicsPipelineCreateInfo vk_pipeline_info = {
+      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      .stageCount = ARRAY_SIZE(pipeline_shader_stages),
+      .pStages = pipeline_shader_stages,
+      .pVertexInputState = &vi_create_info,
+      .pInputAssemblyState = &(VkPipelineInputAssemblyStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+         .primitiveRestartEnable = false,
+      },
+      .pViewportState = &(VkPipelineViewportStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+         .viewportCount = 1,
+         .scissorCount = 1,
+      },
+      .pRasterizationState = &(VkPipelineRasterizationStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+         .rasterizerDiscardEnable = false,
+         .polygonMode = VK_POLYGON_MODE_FILL,
+         .cullMode = VK_CULL_MODE_NONE,
+         .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE
+      },
+      .pMultisampleState = &(VkPipelineMultisampleStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+         .rasterizationSamples = 1,
+         .sampleShadingEnable = false,
+         .pSampleMask = (VkSampleMask[]) { UINT32_MAX },
+      },
+      .pColorBlendState = &(VkPipelineColorBlendStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+         .attachmentCount = 1,
+         .pAttachments = (VkPipelineColorBlendAttachmentState []) {
+            { .colorWriteMask =
+                 VK_COLOR_COMPONENT_A_BIT |
+                 VK_COLOR_COMPONENT_R_BIT |
+                 VK_COLOR_COMPONENT_G_BIT |
+                 VK_COLOR_COMPONENT_B_BIT },
+         }
+      },
+      .pDynamicState = &(VkPipelineDynamicStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+         .dynamicStateCount = 9,
+         .pDynamicStates = (VkDynamicState[]) {
+            VK_DYNAMIC_STATE_VIEWPORT,
+            VK_DYNAMIC_STATE_SCISSOR,
+            VK_DYNAMIC_STATE_LINE_WIDTH,
+            VK_DYNAMIC_STATE_DEPTH_BIAS,
+            VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+            VK_DYNAMIC_STATE_DEPTH_BOUNDS,
+            VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
+            VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
+            VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+         },
+      },
+      .flags = 0,
+      .layout = device->meta_state.blit2d.img_p_layout,
+      .renderPass = device->meta_state.blit2d.render_pass,
+      .subpass = 0,
+   };
+
+   const struct anv_graphics_pipeline_create_info anv_pipeline_info = {
+      .color_attachment_count = -1,
+      .use_repclear = false,
+      .disable_viewport = true,
+      .disable_scissor = true,
+      .disable_vs = true,
+      .use_rectlist = true
+   };
+
+   result = anv_graphics_pipeline_create(anv_device_to_handle(device),
+      VK_NULL_HANDLE,
+      &vk_pipeline_info, &anv_pipeline_info,
+      &device->meta_state.alloc,
+      &device->meta_state.blit2d.pipelines[src_type][dst_type]);
+
+   ralloc_free(vs.nir);
+   ralloc_free(fs.nir);
+
+   return result;
 }
 
 VkResult
@@ -592,156 +850,13 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
    if (result != VK_SUCCESS)
       goto fail;
 
-   /* We don't use a vertex shader for blitting, but instead build and pass
-    * the VUEs directly to the rasterization backend.  However, we do need
-    * to provide GLSL source for the vertex shader so that the compiler
-    * does not dead-code our inputs.
-    */
-   struct anv_shader_module vs = {
-      .nir = build_nir_vertex_shader(),
-   };
-
-   struct anv_shader_module fs_2d = {
-      .nir = build_nir_copy_fragment_shader(device, build_nir_texel_fetch),
-   };
-
-   VkPipelineVertexInputStateCreateInfo vi_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .vertexBindingDescriptionCount = 2,
-      .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
-         {
-            .binding = 0,
-            .stride = 0,
-            .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
-         },
-         {
-            .binding = 1,
-            .stride = 5 * sizeof(float),
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-         },
-      },
-      .vertexAttributeDescriptionCount = 3,
-      .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
-         {
-            /* VUE Header */
-            .location = 0,
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32A32_UINT,
-            .offset = 0
-         },
-         {
-            /* Position */
-            .location = 1,
-            .binding = 1,
-            .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = 0
-         },
-         {
-            /* Texture Coordinate */
-            .location = 2,
-            .binding = 1,
-            .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = 8
-         }
+   for (unsigned src = 0; src < BLIT2D_NUM_SRC_TYPES; src++) {
+      for (unsigned dst = 0; dst < BLIT2D_NUM_DST_TYPES; dst++) {
+         result = blit2d_init_pipeline(device, src, dst);
+         if (result != VK_SUCCESS)
+            goto fail;
       }
-   };
-
-   VkPipelineShaderStageCreateInfo pipeline_shader_stages[] = {
-      {
-         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-         .stage = VK_SHADER_STAGE_VERTEX_BIT,
-         .module = anv_shader_module_to_handle(&vs),
-         .pName = "main",
-         .pSpecializationInfo = NULL
-      }, {
-         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-         .module = VK_NULL_HANDLE, /* TEMPLATE VALUE! FILL ME IN! */
-         .pName = "main",
-         .pSpecializationInfo = NULL
-      },
-   };
-
-   const VkGraphicsPipelineCreateInfo vk_pipeline_info = {
-      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-      .stageCount = ARRAY_SIZE(pipeline_shader_stages),
-      .pStages = pipeline_shader_stages,
-      .pVertexInputState = &vi_create_info,
-      .pInputAssemblyState = &(VkPipelineInputAssemblyStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-         .primitiveRestartEnable = false,
-      },
-      .pViewportState = &(VkPipelineViewportStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-         .viewportCount = 1,
-         .scissorCount = 1,
-      },
-      .pRasterizationState = &(VkPipelineRasterizationStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-         .rasterizerDiscardEnable = false,
-         .polygonMode = VK_POLYGON_MODE_FILL,
-         .cullMode = VK_CULL_MODE_NONE,
-         .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE
-      },
-      .pMultisampleState = &(VkPipelineMultisampleStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-         .rasterizationSamples = 1,
-         .sampleShadingEnable = false,
-         .pSampleMask = (VkSampleMask[]) { UINT32_MAX },
-      },
-      .pColorBlendState = &(VkPipelineColorBlendStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-         .attachmentCount = 1,
-         .pAttachments = (VkPipelineColorBlendAttachmentState []) {
-            { .colorWriteMask =
-                 VK_COLOR_COMPONENT_A_BIT |
-                 VK_COLOR_COMPONENT_R_BIT |
-                 VK_COLOR_COMPONENT_G_BIT |
-                 VK_COLOR_COMPONENT_B_BIT },
-         }
-      },
-      .pDynamicState = &(VkPipelineDynamicStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-         .dynamicStateCount = 9,
-         .pDynamicStates = (VkDynamicState[]) {
-            VK_DYNAMIC_STATE_VIEWPORT,
-            VK_DYNAMIC_STATE_SCISSOR,
-            VK_DYNAMIC_STATE_LINE_WIDTH,
-            VK_DYNAMIC_STATE_DEPTH_BIAS,
-            VK_DYNAMIC_STATE_BLEND_CONSTANTS,
-            VK_DYNAMIC_STATE_DEPTH_BOUNDS,
-            VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
-            VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
-            VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-         },
-      },
-      .flags = 0,
-      .layout = device->meta_state.blit2d.img_p_layout,
-      .renderPass = device->meta_state.blit2d.render_pass,
-      .subpass = 0,
-   };
-
-   const struct anv_graphics_pipeline_create_info anv_pipeline_info = {
-      .color_attachment_count = -1,
-      .use_repclear = false,
-      .disable_viewport = true,
-      .disable_scissor = true,
-      .disable_vs = true,
-      .use_rectlist = true
-   };
-
-   pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_2d);
-   result = anv_graphics_pipeline_create(anv_device_to_handle(device),
-      VK_NULL_HANDLE,
-      &vk_pipeline_info, &anv_pipeline_info,
-      &device->meta_state.alloc, &device->meta_state.blit2d.pipeline_2d_src);
-
-   ralloc_free(vs.nir);
-   ralloc_free(fs_2d.nir);
-
-   if (result != VK_SUCCESS)
-      goto fail;
+   }
 
    return VK_SUCCESS;
 
