@@ -145,12 +145,15 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
    /* Create a VkImageView that starts at the tile aligned offset closest
     * to the provided x/y offset into the surface.
     */
+   struct isl_surf *isl_surf = &anv_image_from_handle(*img)->color_surface.isl;
+
    uint32_t img_o = 0;
-   isl_surf_get_image_intratile_offset_el_xy(&cmd_buffer->device->isl_dev,
-                                             &anv_image_from_handle(*img)->
-                                                color_surface.isl,
-                                             *rect_x, *rect_y,
-                                             &img_o, rect_x, rect_y);
+   isl_tiling_get_intratile_offset_el(&cmd_buffer->device->isl_dev,
+                                      isl_surf->tiling, surf->bs,
+                                      isl_surf->row_pitch,
+                                      *rect_x * surf->bs, *rect_y,
+                                      &img_o, rect_x, rect_y);
+
    anv_image_view_init(iview, cmd_buffer->device,
                        &(VkImageViewCreateInfo) {
                           .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,

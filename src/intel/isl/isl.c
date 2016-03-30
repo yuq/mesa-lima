@@ -1417,33 +1417,39 @@ isl_surf_get_image_offset_el(const struct isl_surf *surf,
 }
 
 void
-isl_surf_get_image_intratile_offset_el_xy(const struct isl_device *dev,
-                                       const struct isl_surf *surf,
-                                       uint32_t total_x_offset_el,
-                                       uint32_t total_y_offset_el,
-                                       uint32_t *base_address_offset,
-                                       uint32_t *x_offset_el,
-                                       uint32_t *y_offset_el)
+isl_tiling_get_intratile_offset_el(const struct isl_device *dev,
+                                   enum isl_tiling tiling,
+                                   uint8_t bs,
+                                   uint32_t row_pitch,
+                                   uint32_t total_x_offset_el,
+                                   uint32_t total_y_offset_el,
+                                   uint32_t *base_address_offset,
+                                   uint32_t *x_offset_el,
+                                   uint32_t *y_offset_el)
 {
-   const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
-
    struct isl_tile_info tile_info;
-   isl_surf_get_tile_info(dev, surf, &tile_info);
+   isl_tiling_get_info(dev, tiling, bs, &tile_info);
+
+   /* This function only really works for power-of-two surfaces.  In
+    * theory, we could make it work for non-power-of-two surfaces by going
+    * to the left until we find a block that is bs-aligned.  The Vulkan
+    * driver doesn't use non-power-of-two tiled surfaces so we'll leave
+    * this unimplemented for now.
+    */
+   assert(tiling == ISL_TILING_LINEAR || isl_is_pow2(bs));
 
    uint32_t small_y_offset_el = total_y_offset_el % tile_info.height;
    uint32_t big_y_offset_el = total_y_offset_el - small_y_offset_el;
-   uint32_t big_y_offset_B = big_y_offset_el * surf->row_pitch;
+   uint32_t big_y_offset_B = big_y_offset_el * row_pitch;
 
-   uint32_t total_x_offset_B = total_x_offset_el * fmtl->bs;
+   uint32_t total_x_offset_B = total_x_offset_el * bs;
    uint32_t small_x_offset_B = total_x_offset_B % tile_info.width;
-   uint32_t small_x_offset_el = small_x_offset_B / fmtl->bs;
+   uint32_t small_x_offset_el = small_x_offset_B / bs;
    uint32_t big_x_offset_B = (total_x_offset_B / tile_info.width) * tile_info.size;
 
    *base_address_offset = big_y_offset_B + big_x_offset_B;
    *x_offset_el = small_x_offset_el;
    *y_offset_el = small_y_offset_el;
-
-
 }
 
 void
@@ -1456,6 +1462,8 @@ isl_surf_get_image_intratile_offset_el(const struct isl_device *dev,
                                        uint32_t *x_offset_el,
                                        uint32_t *y_offset_el)
 {
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
+
    uint32_t total_x_offset_el;
    uint32_t total_y_offset_el;
    isl_surf_get_image_offset_el(surf, level,
@@ -1464,12 +1472,14 @@ isl_surf_get_image_intratile_offset_el(const struct isl_device *dev,
                                 &total_x_offset_el,
                                 &total_y_offset_el);
 
-   isl_surf_get_image_intratile_offset_el_xy(dev, surf,
-                                total_x_offset_el,
-                                total_y_offset_el,
-                                base_address_offset,
-                                x_offset_el,
-                                y_offset_el);
+
+   isl_tiling_get_intratile_offset_el(dev, surf->tiling, fmtl->bs,
+                                      surf->row_pitch,
+                                      total_x_offset_el,
+                                      total_y_offset_el,
+                                      base_address_offset,
+                                      x_offset_el,
+                                      y_offset_el);
 }
 
 uint32_t

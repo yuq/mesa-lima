@@ -1143,6 +1143,27 @@ isl_surf_get_image_offset_el(const struct isl_surf *surf,
                              uint32_t *y_offset_el);
 
 /**
+ * @brief Calculate the intratile offsets to a surface.
+ *
+ * In @a base_address_offset return the offset from the base of the surface to
+ * the base address of the first tile of the subimage. In @a x_offset_B and
+ * @a y_offset_rows, return the offset, in units of bytes and rows, from the
+ * tile's base to the subimage's first surface element. The x and y offsets
+ * are intratile offsets; that is, they do not exceed the boundary of the
+ * surface's tiling format.
+ */
+void
+isl_tiling_get_intratile_offset_el(const struct isl_device *dev,
+                                   enum isl_tiling tiling,
+                                   uint8_t bs,
+                                   uint32_t row_pitch,
+                                   uint32_t total_x_offset_B,
+                                   uint32_t total_y_offset_rows,
+                                   uint32_t *base_address_offset,
+                                   uint32_t *x_offset_B,
+                                   uint32_t *y_offset_rows);
+
+/**
  * @brief Calculate the intratile offsets to a subimage in the surface.
  *
  * In @a base_address_offset return the offset from the base of the surface to
@@ -1158,18 +1179,6 @@ isl_surf_get_image_intratile_offset_el(const struct isl_device *dev,
                                        uint32_t level,
                                        uint32_t logical_array_layer,
                                        uint32_t logical_z_offset,
-                                       uint32_t *base_address_offset,
-                                       uint32_t *x_offset_el,
-                                       uint32_t *y_offset_el);
-
-/**
- * See above.
- */
-void
-isl_surf_get_image_intratile_offset_el_xy(const struct isl_device *dev,
-                                       const struct isl_surf *surf,
-                                       uint32_t total_x_offset_el,
-                                       uint32_t total_y_offset_el,
                                        uint32_t *base_address_offset,
                                        uint32_t *x_offset_el,
                                        uint32_t *y_offset_el);
