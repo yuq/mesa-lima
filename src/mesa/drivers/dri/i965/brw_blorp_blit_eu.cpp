@@ -96,13 +96,14 @@ brw_blorp_eu_emitter::emit_texture_lookup(const struct brw_reg &dst,
 
 void
 brw_blorp_eu_emitter::emit_render_target_write(const struct brw_reg &src0,
-                                               unsigned msg_reg_nr,
+                                               int msg_reg_nr,
                                                unsigned msg_length,
                                                bool use_header)
 {
    fs_inst *inst = new (mem_ctx) fs_inst(FS_OPCODE_BLORP_FB_WRITE, 16);
 
    inst->src[0] = src0;
+   inst->sources = 1;
    inst->base_mrf = msg_reg_nr;
    inst->mlen = msg_length;
    inst->header_size = use_header ? 2 : 0;

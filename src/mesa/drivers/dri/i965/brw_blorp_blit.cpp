@@ -1786,7 +1786,7 @@ brw_blorp_blit_program::render_target_write()
    /* Now write to the render target and terminate the thread */
    emit_render_target_write(
       mrf_rt_write,
-      base_mrf,
+      brw->gen < 8 ? base_mrf : -1,
       mrf_offset /* msg_length.  TODO: Should be smaller for non-RGBA formats. */,
       use_header);
 }

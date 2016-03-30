@@ -47,7 +47,7 @@ protected:
                             unsigned msg_length);
 
    void emit_render_target_write(const struct brw_reg &src0,
-                                 unsigned msg_reg_nr,
+                                 int msg_reg_nr,
                                  unsigned msg_length,
                                  bool use_header);
 
