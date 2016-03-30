@@ -2054,7 +2054,8 @@ exec_tex(struct tgsi_exec_machine *mach,
    assert(modifier != TEX_MODIFIER_LEVEL_ZERO);
    assert(inst->Texture.Texture != TGSI_TEXTURE_BUFFER);
 
-   dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture, &shadow_ref);
+   dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture);
+   shadow_ref = tgsi_util_get_shadow_ref_src_index(inst->Texture.Texture);
 
    assert(dim <= 4);
    if (shadow_ref >= 0)
@@ -2153,7 +2154,7 @@ exec_lodq(struct tgsi_exec_machine *mach,
    union tgsi_exec_channel r[2];
 
    unit = fetch_sampler_unit(mach, inst, 1);
-   dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture, NULL);
+   dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture);
    assert(dim <= Elements(coords));
    /* fetch coordinates */
    for (i = 0; i < dim; i++) {

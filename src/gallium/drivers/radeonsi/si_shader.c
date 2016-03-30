@@ -2874,8 +2874,7 @@ static LLVMValueRef image_fetch_coords(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	unsigned target = inst->Memory.Texture;
-	int sample;
-	unsigned num_coords = tgsi_util_get_texture_coord_dim(target, &sample);
+	unsigned num_coords = tgsi_util_get_texture_coord_dim(target);
 	LLVMValueRef coords[4];
 	LLVMValueRef tmp;
 	int chan;
@@ -3387,8 +3386,8 @@ static void tex_fetch_args(
 	unsigned target = inst->Texture.Texture;
 	LLVMValueRef coords[5], derivs[6];
 	LLVMValueRef address[16];
-	int ref_pos;
-	unsigned num_coords = tgsi_util_get_texture_coord_dim(target, &ref_pos);
+	unsigned num_coords = tgsi_util_get_texture_coord_dim(target);
+	int ref_pos = tgsi_util_get_shadow_ref_src_index(target);
 	unsigned count = 0;
 	unsigned chan;
 	unsigned num_deriv_channels = 0;

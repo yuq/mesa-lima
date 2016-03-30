@@ -740,7 +740,9 @@ fs_prepare_tgsi_sampling(struct fs_compile_context *fcc,
       break;
    }
 
-   num_coords = tgsi_util_get_texture_coord_dim(inst->tex.target, &ref_pos);
+   num_coords = tgsi_util_get_texture_coord_dim(inst->tex.target);
+   ref_pos = tgsi_util_get_shadow_ref_src_index(inst->tex.target);
+
    tsrc_transpose(inst->src[0], coords);
    bias_or_lod = tsrc_null();
    ref_or_si = tsrc_null();

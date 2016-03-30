@@ -407,7 +407,8 @@ vs_prepare_tgsi_sampling(struct vs_compile_context *vcc,
    num_derivs = 0;
    sampler_src = 1;
 
-   num_coords = tgsi_util_get_texture_coord_dim(inst->tex.target, &ref_pos);
+   num_coords = tgsi_util_get_texture_coord_dim(inst->tex.target);
+   ref_pos = tgsi_util_get_shadow_ref_src_index(inst->tex.target);
 
    /* extract the parameters */
    switch (inst->opcode) {

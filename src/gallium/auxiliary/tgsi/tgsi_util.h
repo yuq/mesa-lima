@@ -80,7 +80,10 @@ struct tgsi_src_register
 tgsi_util_get_src_from_ind(const struct tgsi_ind_register *reg);
 
 int
-tgsi_util_get_texture_coord_dim(int tgsi_tex, int *shadow_or_sample);
+tgsi_util_get_texture_coord_dim(unsigned tgsi_tex);
+
+int
+tgsi_util_get_shadow_ref_src_index(unsigned tgsi_tex);
 
 boolean
 tgsi_is_shadow_target(unsigned target);
