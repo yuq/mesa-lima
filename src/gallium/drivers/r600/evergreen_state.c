@@ -997,6 +997,190 @@ static void evergreen_get_scissor_rect(struct r600_context *rctx,
 	*br = S_028244_BR_X(scissor.maxx) | S_028244_BR_Y(scissor.maxy);
 }
 
+struct r600_tex_color_info {
+	unsigned info;
+	unsigned view;
+	unsigned dim;
+	unsigned pitch;
+	unsigned slice;
+	unsigned attrib;
+	unsigned ntype;
+	unsigned fmask;
+	unsigned fmask_slice;
+	uint64_t offset;
+	boolean export_16bpc;
+};
+
+static void evergreen_set_color_surface_common(struct r600_context *rctx,
+					       struct r600_texture *rtex,
+					       unsigned level,
+					       unsigned first_layer,
+					       unsigned last_layer,
+					       enum pipe_format pformat,
+					       struct r600_tex_color_info *color)
+{
+	struct r600_screen *rscreen = rctx->screen;
+	unsigned pitch, slice;
+	unsigned non_disp_tiling, macro_aspect, tile_split, bankh, bankw, fmask_bankh, nbanks;
+	unsigned format, swap, ntype, endian;
+	const struct util_format_description *desc;
+	bool blend_clamp = 0, blend_bypass = 0, do_endian_swap = FALSE;
+	int i;
+
+	color->offset = rtex->surface.level[level].offset;
+	color->view = S_028C6C_SLICE_START(first_layer) |
+			S_028C6C_SLICE_MAX(last_layer);
+
+	color->offset += rtex->resource.gpu_address;
+	color->offset >>= 8;
+
+	color->dim = 0;
+	pitch = (rtex->surface.level[level].nblk_x) / 8 - 1;
+	slice = (rtex->surface.level[level].nblk_x * rtex->surface.level[level].nblk_y) / 64;
+	if (slice) {
+		slice = slice - 1;
+	}
+
+	color->info = 0;
+	switch (rtex->surface.level[level].mode) {
+	default:
+	case RADEON_SURF_MODE_LINEAR_ALIGNED:
+		color->info = S_028C70_ARRAY_MODE(V_028C70_ARRAY_LINEAR_ALIGNED);
+		non_disp_tiling = 1;
+		break;
+	case RADEON_SURF_MODE_1D:
+		color->info = S_028C70_ARRAY_MODE(V_028C70_ARRAY_1D_TILED_THIN1);
+		non_disp_tiling = rtex->non_disp_tiling;
+		break;
+	case RADEON_SURF_MODE_2D:
+		color->info = S_028C70_ARRAY_MODE(V_028C70_ARRAY_2D_TILED_THIN1);
+		non_disp_tiling = rtex->non_disp_tiling;
+		break;
+	}
+	tile_split = rtex->surface.tile_split;
+	macro_aspect = rtex->surface.mtilea;
+	bankw = rtex->surface.bankw;
+	bankh = rtex->surface.bankh;
+	if (rtex->fmask.size)
+		fmask_bankh = rtex->fmask.bank_height;
+	else
+		fmask_bankh = rtex->surface.bankh;
+	tile_split = eg_tile_split(tile_split);
+	macro_aspect = eg_macro_tile_aspect(macro_aspect);
+	bankw = eg_bank_wh(bankw);
+	bankh = eg_bank_wh(bankh);
+	fmask_bankh = eg_bank_wh(fmask_bankh);
+
+	if (rscreen->b.chip_class == CAYMAN) {
+		if (util_format_get_blocksize(pformat) >= 16)
+			non_disp_tiling = 1;
+	}
+	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
+	desc = util_format_description(pformat);
+	for (i = 0; i < 4; i++) {
+		if (desc->channel[i].type != UTIL_FORMAT_TYPE_VOID) {
+			break;
+		}
+	}
+	color->attrib = S_028C74_TILE_SPLIT(tile_split)|
+		S_028C74_NUM_BANKS(nbanks) |
+		S_028C74_BANK_WIDTH(bankw) |
+		S_028C74_BANK_HEIGHT(bankh) |
+		S_028C74_MACRO_TILE_ASPECT(macro_aspect) |
+		S_028C74_NON_DISP_TILING_ORDER(non_disp_tiling) |
+		S_028C74_FMASK_BANK_HEIGHT(fmask_bankh);
+
+	if (rctx->b.chip_class == CAYMAN) {
+		color->attrib |= S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] ==
+							   PIPE_SWIZZLE_1);
+
+		if (rtex->resource.b.b.nr_samples > 1) {
+			unsigned log_samples = util_logbase2(rtex->resource.b.b.nr_samples);
+			color->attrib |= S_028C74_NUM_SAMPLES(log_samples) |
+					S_028C74_NUM_FRAGMENTS(log_samples);
+		}
+	}
+
+	ntype = V_028C70_NUMBER_UNORM;
+	if (desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB)
+		ntype = V_028C70_NUMBER_SRGB;
+	else if (desc->channel[i].type == UTIL_FORMAT_TYPE_SIGNED) {
+		if (desc->channel[i].normalized)
+			ntype = V_028C70_NUMBER_SNORM;
+		else if (desc->channel[i].pure_integer)
+			ntype = V_028C70_NUMBER_SINT;
+	} else if (desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED) {
+		if (desc->channel[i].normalized)
+			ntype = V_028C70_NUMBER_UNORM;
+		else if (desc->channel[i].pure_integer)
+			ntype = V_028C70_NUMBER_UINT;
+	}
+
+	if (R600_BIG_ENDIAN)
+		do_endian_swap = !rtex->db_compatible;
+
+	format = r600_translate_colorformat(rctx->b.chip_class, pformat, do_endian_swap);
+	assert(format != ~0);
+	swap = r600_translate_colorswap(pformat, do_endian_swap);
+	assert(swap != ~0);
+
+	endian = r600_colorformat_endian_swap(format, do_endian_swap);
+
+	/* blend clamp should be set for all NORM/SRGB types */
+	if (ntype == V_028C70_NUMBER_UNORM || ntype == V_028C70_NUMBER_SNORM ||
+	    ntype == V_028C70_NUMBER_SRGB)
+		blend_clamp = 1;
+
+	/* set blend bypass according to docs if SINT/UINT or
+	   8/24 COLOR variants */
+	if (ntype == V_028C70_NUMBER_UINT || ntype == V_028C70_NUMBER_SINT ||
+	    format == V_028C70_COLOR_8_24 || format == V_028C70_COLOR_24_8 ||
+	    format == V_028C70_COLOR_X24_8_32_FLOAT) {
+		blend_clamp = 0;
+		blend_bypass = 1;
+	}
+
+	color->ntype = ntype;
+	color->info |= S_028C70_FORMAT(format) |
+		S_028C70_COMP_SWAP(swap) |
+		S_028C70_BLEND_CLAMP(blend_clamp) |
+		S_028C70_BLEND_BYPASS(blend_bypass) |
+		S_028C70_NUMBER_TYPE(ntype) |
+		S_028C70_ENDIAN(endian);
+
+	if (rtex->fmask.size) {
+		color->info |= S_028C70_COMPRESSION(1);
+	}
+
+	/* EXPORT_NORM is an optimzation that can be enabled for better
+	 * performance in certain cases.
+	 * EXPORT_NORM can be enabled if:
+	 * - 11-bit or smaller UNORM/SNORM/SRGB
+	 * - 16-bit or smaller FLOAT
+	 */
+	color->export_16bpc = false;
+	if (desc->colorspace != UTIL_FORMAT_COLORSPACE_ZS &&
+	    ((desc->channel[i].size < 12 &&
+	      desc->channel[i].type != UTIL_FORMAT_TYPE_FLOAT &&
+	      ntype != V_028C70_NUMBER_UINT && ntype != V_028C70_NUMBER_SINT) ||
+	     (desc->channel[i].size < 17 &&
+	      desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT))) {
+		color->info |= S_028C70_SOURCE_FORMAT(V_028C70_EXPORT_4C_16BPC);
+		color->export_16bpc = true;
+	}
+
+	color->pitch = S_028C64_PITCH_TILE_MAX(pitch);
+	color->slice = S_028C68_SLICE_TILE_MAX(slice);
+
+	if (rtex->fmask.size) {
+		color->fmask = (rtex->resource.gpu_address + rtex->fmask.offset) >> 8;
+		color->fmask_slice = S_028C88_TILE_MAX(rtex->fmask.slice_tile_max);
+	} else {
+		color->fmask = color->offset;
+		color->fmask_slice = S_028C88_TILE_MAX(slice);
+	}
+}
+
 /**
  * This function intializes the CB* register values for RATs.  It is meant
  * to be used for 1D aligned buffers that do not have an associated
@@ -1049,179 +1233,34 @@ void evergreen_init_color_surface_rat(struct r600_context *rctx,
 	surf->cb_color_fmask_slice = 0;
 }
 
+
 void evergreen_init_color_surface(struct r600_context *rctx,
 				  struct r600_surface *surf)
 {
-	struct r600_screen *rscreen = rctx->screen;
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
 	unsigned level = surf->base.u.tex.level;
-	unsigned pitch, slice;
-	unsigned color_info, color_attrib, color_dim = 0, color_view;
-	unsigned format, swap, ntype, endian;
-	uint64_t offset, base_offset;
-	unsigned non_disp_tiling, macro_aspect, tile_split, bankh, bankw, fmask_bankh, nbanks;
-	const struct util_format_description *desc;
-	int i;
-	bool blend_clamp = 0, blend_bypass = 0, do_endian_swap = FALSE;
+	struct r600_tex_color_info color;
 
-	offset = rtex->surface.level[level].offset;
-	color_view = S_028C6C_SLICE_START(surf->base.u.tex.first_layer) |
-		     S_028C6C_SLICE_MAX(surf->base.u.tex.last_layer);
+	evergreen_set_color_surface_common(rctx, rtex, level,
+					   surf->base.u.tex.first_layer,
+					   surf->base.u.tex.last_layer,
+					   surf->base.format,
+					   &color);
 
-	pitch = (rtex->surface.level[level].nblk_x) / 8 - 1;
-	slice = (rtex->surface.level[level].nblk_x * rtex->surface.level[level].nblk_y) / 64;
-	if (slice) {
-		slice = slice - 1;
-	}
-	color_info = 0;
-	switch (rtex->surface.level[level].mode) {
-	default:
-	case RADEON_SURF_MODE_LINEAR_ALIGNED:
-		color_info = S_028C70_ARRAY_MODE(V_028C70_ARRAY_LINEAR_ALIGNED);
-		non_disp_tiling = 1;
-		break;
-	case RADEON_SURF_MODE_1D:
-		color_info = S_028C70_ARRAY_MODE(V_028C70_ARRAY_1D_TILED_THIN1);
-		non_disp_tiling = rtex->non_disp_tiling;
-		break;
-	case RADEON_SURF_MODE_2D:
-		color_info = S_028C70_ARRAY_MODE(V_028C70_ARRAY_2D_TILED_THIN1);
-		non_disp_tiling = rtex->non_disp_tiling;
-		break;
-	}
-	tile_split = rtex->surface.tile_split;
-	macro_aspect = rtex->surface.mtilea;
-	bankw = rtex->surface.bankw;
-	bankh = rtex->surface.bankh;
-	if (rtex->fmask.size)
-		fmask_bankh = rtex->fmask.bank_height;
-	else
-		fmask_bankh = rtex->surface.bankh;
-	tile_split = eg_tile_split(tile_split);
-	macro_aspect = eg_macro_tile_aspect(macro_aspect);
-	bankw = eg_bank_wh(bankw);
-	bankh = eg_bank_wh(bankh);
-	fmask_bankh = eg_bank_wh(fmask_bankh);
-
-	/* 128 bit formats require tile type = 1 */
-	if (rscreen->b.chip_class == CAYMAN) {
-		if (util_format_get_blocksize(surf->base.format) >= 16)
-			non_disp_tiling = 1;
-	}
-	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
-	desc = util_format_description(surf->base.format);
-	for (i = 0; i < 4; i++) {
-		if (desc->channel[i].type != UTIL_FORMAT_TYPE_VOID) {
-			break;
-		}
-	}
-
-	color_attrib = S_028C74_TILE_SPLIT(tile_split)|
-			S_028C74_NUM_BANKS(nbanks) |
-			S_028C74_BANK_WIDTH(bankw) |
-			S_028C74_BANK_HEIGHT(bankh) |
-			S_028C74_MACRO_TILE_ASPECT(macro_aspect) |
-			S_028C74_NON_DISP_TILING_ORDER(non_disp_tiling) |
-		        S_028C74_FMASK_BANK_HEIGHT(fmask_bankh);
-
-	if (rctx->b.chip_class == CAYMAN) {
-		color_attrib |=	S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] ==
-							   PIPE_SWIZZLE_1);
-
-		if (rtex->resource.b.b.nr_samples > 1) {
-			unsigned log_samples = util_logbase2(rtex->resource.b.b.nr_samples);
-			color_attrib |= S_028C74_NUM_SAMPLES(log_samples) |
-					S_028C74_NUM_FRAGMENTS(log_samples);
-		}
-	}
-
-	ntype = V_028C70_NUMBER_UNORM;
-	if (desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB)
-		ntype = V_028C70_NUMBER_SRGB;
-	else if (desc->channel[i].type == UTIL_FORMAT_TYPE_SIGNED) {
-		if (desc->channel[i].normalized)
-			ntype = V_028C70_NUMBER_SNORM;
-		else if (desc->channel[i].pure_integer)
-			ntype = V_028C70_NUMBER_SINT;
-	} else if (desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED) {
-		if (desc->channel[i].normalized)
-			ntype = V_028C70_NUMBER_UNORM;
-		else if (desc->channel[i].pure_integer)
-			ntype = V_028C70_NUMBER_UINT;
-	}
-
-	if (R600_BIG_ENDIAN)
-		do_endian_swap = !rtex->db_compatible;
-
-	format = r600_translate_colorformat(rctx->b.chip_class, surf->base.format,
-			                              do_endian_swap);
-	assert(format != ~0);
-
-	swap = r600_translate_colorswap(surf->base.format, do_endian_swap);
-	assert(swap != ~0);
-
-	endian = r600_colorformat_endian_swap(format, do_endian_swap);
-
-	/* blend clamp should be set for all NORM/SRGB types */
-	if (ntype == V_028C70_NUMBER_UNORM || ntype == V_028C70_NUMBER_SNORM ||
-	    ntype == V_028C70_NUMBER_SRGB)
-		blend_clamp = 1;
-
-	/* set blend bypass according to docs if SINT/UINT or
-	   8/24 COLOR variants */
-	if (ntype == V_028C70_NUMBER_UINT || ntype == V_028C70_NUMBER_SINT ||
-	    format == V_028C70_COLOR_8_24 || format == V_028C70_COLOR_24_8 ||
-	    format == V_028C70_COLOR_X24_8_32_FLOAT) {
-		blend_clamp = 0;
-		blend_bypass = 1;
-	}
-
-	surf->alphatest_bypass = ntype == V_028C70_NUMBER_UINT || ntype == V_028C70_NUMBER_SINT;
-
-	color_info |= S_028C70_FORMAT(format) |
-		S_028C70_COMP_SWAP(swap) |
-		S_028C70_BLEND_CLAMP(blend_clamp) |
-		S_028C70_BLEND_BYPASS(blend_bypass) |
-		S_028C70_NUMBER_TYPE(ntype) |
-		S_028C70_ENDIAN(endian);
-
-	/* EXPORT_NORM is an optimzation that can be enabled for better
-	 * performance in certain cases.
-	 * EXPORT_NORM can be enabled if:
-	 * - 11-bit or smaller UNORM/SNORM/SRGB
-	 * - 16-bit or smaller FLOAT
-	 */
-	if (desc->colorspace != UTIL_FORMAT_COLORSPACE_ZS &&
-	    ((desc->channel[i].size < 12 &&
-	      desc->channel[i].type != UTIL_FORMAT_TYPE_FLOAT &&
-	      ntype != V_028C70_NUMBER_UINT && ntype != V_028C70_NUMBER_SINT) ||
-	     (desc->channel[i].size < 17 &&
-	      desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT))) {
-		color_info |= S_028C70_SOURCE_FORMAT(V_028C70_EXPORT_4C_16BPC);
-		surf->export_16bpc = true;
-	}
-
-	if (rtex->fmask.size) {
-		color_info |= S_028C70_COMPRESSION(1);
-	}
-
-	base_offset = rtex->resource.gpu_address;
+	surf->alphatest_bypass = color.ntype == V_028C70_NUMBER_UINT ||
+		color.ntype == V_028C70_NUMBER_SINT;
+	surf->export_16bpc = color.export_16bpc;
 
 	/* XXX handle enabling of CB beyond BASE8 which has different offset */
-	surf->cb_color_base = (base_offset + offset) >> 8;
-	surf->cb_color_dim = color_dim;
-	surf->cb_color_info = color_info;
-	surf->cb_color_pitch = S_028C64_PITCH_TILE_MAX(pitch);
-	surf->cb_color_slice = S_028C68_SLICE_TILE_MAX(slice);
-	surf->cb_color_view = color_view;
-	surf->cb_color_attrib = color_attrib;
-	if (rtex->fmask.size) {
-		surf->cb_color_fmask = (base_offset + rtex->fmask.offset) >> 8;
-		surf->cb_color_fmask_slice = S_028C88_TILE_MAX(rtex->fmask.slice_tile_max);
-	} else {
-		surf->cb_color_fmask = surf->cb_color_base;
-		surf->cb_color_fmask_slice = S_028C88_TILE_MAX(slice);
-	}
+	surf->cb_color_base = color.offset;
+	surf->cb_color_dim = color.dim;
+	surf->cb_color_info = color.info;
+	surf->cb_color_pitch = color.pitch;
+	surf->cb_color_slice = color.slice;
+	surf->cb_color_view = color.view;
+	surf->cb_color_attrib = color.attrib;
+	surf->cb_color_fmask = color.fmask;
+	surf->cb_color_fmask_slice = color.fmask_slice;
 
 	surf->color_initialized = true;
 }
