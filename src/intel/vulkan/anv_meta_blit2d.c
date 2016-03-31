@@ -514,6 +514,149 @@ anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
+static void
+anv_meta_blit2d_w_tiled_dst(struct anv_cmd_buffer *cmd_buffer,
+                            struct anv_meta_blit2d_surf *src,
+                            enum blit2d_src_type src_type,
+                            struct anv_meta_blit2d_surf *dst,
+                            unsigned num_rects,
+                            struct anv_meta_blit2d_rect *rects)
+{
+   struct anv_device *device = cmd_buffer->device;
+
+   for (unsigned r = 0; r < num_rects; ++r) {
+      struct blit2d_src_temps src_temps;
+      blit2d_bind_src(cmd_buffer, src, src_type, &rects[r], &src_temps);
+
+      assert(dst->bs == 1);
+      uint32_t offset;
+      isl_tiling_get_intratile_offset_el(&cmd_buffer->device->isl_dev,
+                                         ISL_TILING_W, 1, dst->pitch,
+                                         rects[r].dst_x, rects[r].dst_y,
+                                         &offset,
+                                         &rects[r].dst_x, &rects[r].dst_y);
+
+      /* The original coordinates were in terms of an actual W-tiled offset
+       * but we are binding this image as Y-tiled.  We need to adjust our
+       * rectangle accordingly.
+       */
+      uint32_t xmin_Y, xmax_Y, ymin_Y, ymax_Y;
+      xmin_Y = (rects[r].dst_x / 8) * 16;
+      xmax_Y = DIV_ROUND_UP(rects[r].dst_x + rects[r].width, 8) * 16;
+      ymin_Y = (rects[r].dst_y / 4) * 2;
+      ymax_Y = DIV_ROUND_UP(rects[r].dst_y + rects[r].height, 4) * 2;
+
+      struct anv_meta_blit2d_surf dst_Y = {
+         .bo = dst->bo,
+         .tiling = ISL_TILING_Y0,
+         .base_offset = dst->base_offset,
+         .bs = 1,
+         .pitch = dst->pitch * 2,
+      };
+
+      struct blit2d_dst_temps dst_temps;
+      blit2d_bind_dst(cmd_buffer, &dst_Y, offset, xmax_Y, ymax_Y, &dst_temps);
+
+      struct blit_vb_header {
+         struct anv_vue_header vue;
+         int32_t tex_offset[2];
+         uint32_t tex_pitch;
+         uint32_t bounds[4];
+      } *vb_header;
+
+      struct blit_vb_data {
+         float pos[2];
+      } *vb_data;
+
+      unsigned vb_size = sizeof(*vb_header) + 3 * sizeof(*vb_data);
+
+      struct anv_state vb_state =
+         anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, vb_size, 16);
+      vb_header = vb_state.map;
+
+      *vb_header = (struct blit_vb_header) {
+         .tex_offset = {
+            rects[r].src_x - rects[r].dst_x,
+            rects[r].src_y - rects[r].dst_y,
+         },
+         .tex_pitch = src->pitch,
+         .bounds = {
+            rects[r].dst_x,
+            rects[r].dst_y,
+            rects[r].dst_x + rects[r].width,
+            rects[r].dst_y + rects[r].height,
+         },
+      };
+
+      vb_data = (void *)(vb_header + 1);
+
+      vb_data[0] = (struct blit_vb_data) {
+         .pos = {
+            xmax_Y,
+            ymax_Y,
+         },
+      };
+
+      vb_data[1] = (struct blit_vb_data) {
+         .pos = {
+            xmin_Y,
+            ymax_Y,
+         },
+      };
+
+      vb_data[2] = (struct blit_vb_data) {
+         .pos = {
+            xmin_Y,
+            ymin_Y,
+         },
+      };
+
+      anv_state_clflush(vb_state);
+
+      struct anv_buffer vertex_buffer = {
+         .device = device,
+         .size = vb_size,
+         .bo = &device->dynamic_state_block_pool.bo,
+         .offset = vb_state.offset,
+      };
+
+      anv_CmdBindVertexBuffers(anv_cmd_buffer_to_handle(cmd_buffer), 0, 2,
+         (VkBuffer[]) {
+            anv_buffer_to_handle(&vertex_buffer),
+            anv_buffer_to_handle(&vertex_buffer)
+         },
+         (VkDeviceSize[]) {
+            0,
+            (void *)vb_data - vb_state.map,
+         });
+
+      ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
+         &(VkRenderPassBeginInfo) {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .renderPass = device->meta_state.blit2d.render_pass,
+            .framebuffer = dst_temps.fb,
+            .renderArea = {
+               .offset = { xmin_Y, ymin_Y, },
+               .extent = { xmax_Y - xmin_Y, ymax_Y - ymin_Y },
+            },
+            .clearValueCount = 0,
+            .pClearValues = NULL,
+         }, VK_SUBPASS_CONTENTS_INLINE);
+
+      bind_pipeline(cmd_buffer, src_type, BLIT2D_DST_TYPE_W_TILE);
+
+      ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer), 3, 1, 0, 0);
+
+      ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
+
+      /* At the point where we emit the draw call, all data from the
+       * descriptor sets, etc. has been used.  We are free to delete it.
+       */
+      blit2d_unbind_src(cmd_buffer, src_type, &src_temps);
+      blit2d_unbind_dst(cmd_buffer, &dst_temps);
+   }
+}
+
 void
 anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
                 struct anv_meta_blit2d_surf *src,
@@ -529,8 +672,8 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
    }
 
    if (dst->tiling == ISL_TILING_W) {
-      assert(dst->bs == 1);
-      anv_finishme("Blitting to w-tiled destinations not yet supported");
+      anv_meta_blit2d_w_tiled_dst(cmd_buffer, src, src_type, dst,
+                                  num_rects, rects);
       return;
    } else if (dst->bs % 3 == 0) {
       anv_finishme("Blitting to RGB destinations not yet supported");
@@ -688,6 +831,47 @@ build_nir_texel_fetch(struct nir_builder *b, struct anv_device *device,
    return &tex->dest.ssa;
 }
 
+static const VkPipelineVertexInputStateCreateInfo normal_vi_create_info = {
+   .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+   .vertexBindingDescriptionCount = 2,
+   .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
+      {
+         .binding = 0,
+         .stride = 0,
+         .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
+      },
+      {
+         .binding = 1,
+         .stride = 5 * sizeof(float),
+         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+      },
+   },
+   .vertexAttributeDescriptionCount = 3,
+   .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
+      {
+         /* VUE Header */
+         .location = 0,
+         .binding = 0,
+         .format = VK_FORMAT_R32G32B32A32_UINT,
+         .offset = 0
+      },
+      {
+         /* Position */
+         .location = 1,
+         .binding = 1,
+         .format = VK_FORMAT_R32G32_SFLOAT,
+         .offset = 0
+      },
+      {
+         /* Texture Coordinate */
+         .location = 2,
+         .binding = 1,
+         .format = VK_FORMAT_R32G32B32_SFLOAT,
+         .offset = 8
+      },
+   },
+};
+
 static nir_shader *
 build_nir_copy_fragment_shader(struct anv_device *device,
                                texel_fetch_build_func txf_func)
@@ -711,6 +895,136 @@ build_nir_copy_fragment_shader(struct anv_device *device,
    unsigned swiz[4] = { 0, 1 };
    nir_ssa_def *tex_pos = nir_swizzle(&b, pos_int, swiz, 2, false);
    nir_ssa_def *tex_pitch = nir_channel(&b, pos_int, 2);
+
+   nir_ssa_def *color = txf_func(&b, device, tex_pos, tex_pitch);
+   nir_store_var(&b, color_out, color, 0xf);
+
+   return b.shader;
+}
+
+static const VkPipelineVertexInputStateCreateInfo w_tiled_vi_create_info = {
+   .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+   .vertexBindingDescriptionCount = 2,
+   .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
+      {
+         .binding = 0,
+         .stride = 0,
+         .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
+      },
+      {
+         .binding = 1,
+         .stride = 2 * sizeof(float),
+         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+      },
+   },
+   .vertexAttributeDescriptionCount = 4,
+   .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
+      {
+         /* VUE Header */
+         .location = 0,
+         .binding = 0,
+         .format = VK_FORMAT_R32G32B32A32_UINT,
+         .offset = 0
+      },
+      {
+         /* Position */
+         .location = 1,
+         .binding = 1,
+         .format = VK_FORMAT_R32G32_SFLOAT,
+         .offset = 0
+      },
+      {
+         /* Texture Offset */
+         .location = 2,
+         .binding = 0,
+         .format = VK_FORMAT_R32G32B32_UINT,
+         .offset = 16
+      },
+      {
+         /* Destination bounds */
+         .location = 3,
+         .binding = 0,
+         .format = VK_FORMAT_R32G32B32A32_UINT,
+         .offset = 28
+      },
+   },
+};
+
+static nir_shader *
+build_nir_w_tiled_fragment_shader(struct anv_device *device,
+                                  texel_fetch_build_func txf_func)
+{
+   const struct glsl_type *vec4 = glsl_vec4_type();
+   const struct glsl_type *ivec3 = glsl_vector_type(GLSL_TYPE_INT, 3);
+   const struct glsl_type *uvec4 = glsl_vector_type(GLSL_TYPE_UINT, 4);
+   nir_builder b;
+
+   nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
+   b.shader->info.name = ralloc_strdup(b.shader, "meta_blit2d_fs");
+
+   /* We need gl_FragCoord so we know our Y-tiled position */
+   nir_variable *frag_coord_in = nir_variable_create(b.shader,
+                                                     nir_var_shader_in,
+                                                     vec4, "gl_FragCoord");
+   frag_coord_in->data.location = VARYING_SLOT_POS;
+   frag_coord_in->data.origin_upper_left = true;
+
+   /* In location 0 we have an ivec3 that has the offset from dest to
+    * source in the first two components and the stride in the third.
+    */
+   nir_variable *tex_off_in = nir_variable_create(b.shader, nir_var_shader_in,
+                                                  ivec3, "v_tex_off");
+   tex_off_in->data.location = VARYING_SLOT_VAR0;
+   tex_off_in->data.interpolation = INTERP_QUALIFIER_FLAT;
+
+   /* In location 1 we have a uvec4 that gives us the bounds of the
+    * destination.  We need to discard if we get outside this boundary.
+    */
+   nir_variable *bounds_in = nir_variable_create(b.shader, nir_var_shader_in,
+                                                 uvec4, "v_bounds");
+   bounds_in->data.location = VARYING_SLOT_VAR1;
+   bounds_in->data.interpolation = INTERP_QUALIFIER_FLAT;
+
+   nir_variable *color_out = nir_variable_create(b.shader, nir_var_shader_out,
+                                                 vec4, "f_color");
+   color_out->data.location = FRAG_RESULT_DATA0;
+
+   nir_ssa_def *frag_coord_int = nir_f2i(&b, nir_load_var(&b, frag_coord_in));
+   nir_ssa_def *x_Y = nir_channel(&b, frag_coord_int, 0);
+   nir_ssa_def *y_Y = nir_channel(&b, frag_coord_int, 1);
+
+   /* Compute the W-tiled position from the Y-tiled position */
+   nir_ssa_def *x_W = nir_iand(&b, x_Y, nir_imm_int(&b, 0xffffff80));
+   x_W = nir_ushr(&b, x_W, nir_imm_int(&b, 1));
+   x_W = nir_copy_bits(&b, x_W, 0, x_Y, 0, 1);
+   x_W = nir_copy_bits(&b, x_W, 1, x_Y, 2, 1);
+   x_W = nir_copy_bits(&b, x_W, 2, y_Y, 0, 1);
+   x_W = nir_copy_bits(&b, x_W, 3, x_Y, 4, 3);
+
+   nir_ssa_def *y_W = nir_iand(&b, y_Y, nir_imm_int(&b, 0xffffffe0));
+   y_W = nir_ishl(&b, y_W, nir_imm_int(&b, 1));
+   y_W = nir_copy_bits(&b, y_W, 0, x_Y, 1, 1);
+   y_W = nir_copy_bits(&b, y_W, 1, x_Y, 3, 1);
+   y_W = nir_copy_bits(&b, y_W, 2, y_Y, 1, 4);
+
+   /* Figure out if we are out-of-bounds and discard */
+   nir_ssa_def *bounds = nir_load_var(&b, bounds_in);
+   nir_ssa_def *oob =
+      nir_ior(&b, nir_ult(&b, x_W, nir_channel(&b, bounds, 0)),
+      nir_ior(&b, nir_ult(&b, y_W, nir_channel(&b, bounds, 1)),
+      nir_ior(&b, nir_uge(&b, x_W, nir_channel(&b, bounds, 2)),
+                  nir_uge(&b, y_W, nir_channel(&b, bounds, 3)))));
+
+   nir_intrinsic_instr *discard =
+      nir_intrinsic_instr_create(b.shader, nir_intrinsic_discard_if);
+   discard->src[0] = nir_src_for_ssa(oob);
+   nir_builder_instr_insert(&b, &discard->instr);
+
+   unsigned swiz[4] = { 0, 1, 0, 0 };
+   nir_ssa_def *tex_off =
+      nir_swizzle(&b, nir_load_var(&b, tex_off_in), swiz, 2, false);
+   nir_ssa_def *tex_pos = nir_iadd(&b, nir_vec2(&b, x_W, y_W), tex_off);
+   nir_ssa_def *tex_pitch = nir_channel(&b, nir_load_var(&b, tex_off_in), 2);
 
    nir_ssa_def *color = txf_func(&b, device, tex_pos, tex_pitch);
    nir_store_var(&b, color_out, color, 0xf);
@@ -781,12 +1095,17 @@ blit2d_init_pipeline(struct anv_device *device,
       unreachable("Invalid blit2d source type");
    }
 
+   const VkPipelineVertexInputStateCreateInfo *vi_create_info;
    struct anv_shader_module fs = { .nir = NULL };
    switch (dst_type) {
    case BLIT2D_DST_TYPE_NORMAL:
       fs.nir = build_nir_copy_fragment_shader(device, src_func);
+      vi_create_info = &normal_vi_create_info;
       break;
    case BLIT2D_DST_TYPE_W_TILE:
+      fs.nir = build_nir_w_tiled_fragment_shader(device, src_func);
+      vi_create_info = &w_tiled_vi_create_info;
+      break;
    case BLIT2D_DST_TYPE_RGB:
       /* Not yet supported */
    default:
@@ -800,47 +1119,6 @@ blit2d_init_pipeline(struct anv_device *device,
     */
    struct anv_shader_module vs = {
       .nir = build_nir_vertex_shader(),
-   };
-
-   VkPipelineVertexInputStateCreateInfo vi_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .vertexBindingDescriptionCount = 2,
-      .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
-         {
-            .binding = 0,
-            .stride = 0,
-            .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
-         },
-         {
-            .binding = 1,
-            .stride = 5 * sizeof(float),
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-         },
-      },
-      .vertexAttributeDescriptionCount = 3,
-      .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
-         {
-            /* VUE Header */
-            .location = 0,
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32A32_UINT,
-            .offset = 0
-         },
-         {
-            /* Position */
-            .location = 1,
-            .binding = 1,
-            .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = 0
-         },
-         {
-            /* Texture Coordinate */
-            .location = 2,
-            .binding = 1,
-            .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = 8
-         }
-      }
    };
 
    VkPipelineShaderStageCreateInfo pipeline_shader_stages[] = {
@@ -863,7 +1141,7 @@ blit2d_init_pipeline(struct anv_device *device,
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
       .stageCount = ARRAY_SIZE(pipeline_shader_stages),
       .pStages = pipeline_shader_stages,
-      .pVertexInputState = &vi_create_info,
+      .pVertexInputState = vi_create_info,
       .pInputAssemblyState = &(VkPipelineInputAssemblyStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
          .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
