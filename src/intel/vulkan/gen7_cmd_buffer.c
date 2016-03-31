@@ -133,10 +133,11 @@ clamp_int64(int64_t x, int64_t min, int64_t max)
 }
 
 #if GEN_GEN == 7 && !GEN_IS_HASWELL
-static void
-emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
-                   uint32_t count, const VkRect2D *scissors)
+void
+gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
 {
+   uint32_t count = cmd_buffer->state.dynamic.scissor.count;
+   const VkRect2D *scissors =  cmd_buffer->state.dynamic.scissor.scissors;
    struct anv_state scissor_state =
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 8, 32);
 
@@ -177,25 +178,6 @@ emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
 
    if (!cmd_buffer->device->info.has_llc)
       anv_state_clflush(scissor_state);
-}
-
-void
-gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
-{
-   if (cmd_buffer->state.dynamic.scissor.count > 0) {
-      emit_scissor_state(cmd_buffer, cmd_buffer->state.dynamic.scissor.count,
-                         cmd_buffer->state.dynamic.scissor.scissors);
-   } else {
-      /* Emit a default scissor based on the currently bound framebuffer */
-      emit_scissor_state(cmd_buffer, 1,
-                         &(VkRect2D) {
-                            .offset = { .x = 0, .y = 0, },
-                            .extent = {
-                               .width = cmd_buffer->state.framebuffer->width,
-                               .height = cmd_buffer->state.framebuffer->height,
-                            },
-                         });
-   }
 }
 #endif
 

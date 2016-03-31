@@ -47,8 +47,8 @@ meta_clear_begin(struct anv_meta_saved_state *saved_state,
                  (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE) |
                  (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK));
 
+   /* Avoid uploading more viewport states than necessary */
    cmd_buffer->state.dynamic.viewport.count = 0;
-   cmd_buffer->state.dynamic.scissor.count = 0;
 }
 
 static void

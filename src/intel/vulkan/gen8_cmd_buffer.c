@@ -33,10 +33,11 @@
 #include "genxml/genX_pack.h"
 
 #if GEN_GEN == 8
-static void
-emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
-                    uint32_t count, const VkViewport *viewports)
+void
+gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
 {
+   uint32_t count = cmd_buffer->state.dynamic.viewport.count;
+   const VkViewport *viewports = cmd_buffer->state.dynamic.viewport.viewports;
    struct anv_state sf_clip_state =
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 64, 64);
    struct anv_state cc_state =
@@ -85,26 +86,6 @@ emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
    anv_batch_emit(&cmd_buffer->batch,
                   GENX(3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP),
                   .SFClipViewportPointer = sf_clip_state.offset);
-}
-
-void
-gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
-{
-   if (cmd_buffer->state.dynamic.viewport.count > 0) {
-      emit_viewport_state(cmd_buffer, cmd_buffer->state.dynamic.viewport.count,
-                          cmd_buffer->state.dynamic.viewport.viewports);
-   } else {
-      /* If viewport count is 0, this is taken to mean "use the default" */
-      emit_viewport_state(cmd_buffer, 1,
-                          &(VkViewport) {
-                             .x = 0.0f,
-                             .y = 0.0f,
-                             .width = cmd_buffer->state.framebuffer->width,
-                             .height = cmd_buffer->state.framebuffer->height,
-                             .minDepth = 0.0f,
-                             .maxDepth = 1.0f,
-                          });
-   }
 }
 #endif
 

@@ -42,9 +42,6 @@ meta_resolve_save(struct anv_meta_saved_state *saved_state,
                   struct anv_cmd_buffer *cmd_buffer)
 {
    anv_meta_save(saved_state, cmd_buffer, 0);
-
-   cmd_buffer->state.dynamic.viewport.count = 0;
-   cmd_buffer->state.dynamic.scissor.count = 0;
 }
 
 static void
