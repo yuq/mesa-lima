@@ -47,7 +47,7 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
       .StatisticsEnable                         = true,
       .FrontFaceFillMode                        = vk_to_gen_fillmode[info->polygonMode],
       .BackFaceFillMode                         = vk_to_gen_fillmode[info->polygonMode],
-      .ViewTransformEnable                      = !(extra && extra->disable_viewport),
+      .ViewTransformEnable                      = !(extra && extra->use_rectlist),
       .FrontWinding                             = vk_to_gen_front_face[info->frontFace],
       /* bool                                         AntiAliasingEnable; */
 
@@ -225,7 +225,7 @@ genX(graphics_pipeline_create)(
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP),
       .FrontWinding                             = vk_to_gen_front_face[rs_info->frontFace],
       .CullMode                                 = vk_to_gen_cullmode[rs_info->cullMode],
-      .ClipEnable                               = true,
+      .ClipEnable                               = !(extra && extra->use_rectlist),
       .APIMode                                  = APIMODE_OGL,
       .ViewportXYClipTestEnable                 = !(extra && extra->disable_viewport),
       .ClipMode                                 = CLIPMODE_NORMAL,

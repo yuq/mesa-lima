@@ -56,7 +56,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
 
    struct GENX(3DSTATE_SF) sf = {
       GENX(3DSTATE_SF_header),
-      .ViewportTransformEnable = !(extra && extra->disable_viewport),
+      .ViewportTransformEnable = !(extra && extra->use_rectlist),
       .TriangleStripListProvokingVertexSelect = 0,
       .LineStripListProvokingVertexSelect = 0,
       .TriangleFanProvokingVertexSelect = 1,
@@ -348,7 +348,7 @@ genX(graphics_pipeline_create)(
 
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP),
-                  .ClipEnable = true,
+                  .ClipEnable = !(extra && extra->use_rectlist),
                   .EarlyCullEnable = true,
                   .APIMode = 1, /* D3D */
                   .ViewportXYClipTestEnable = !(extra && extra->disable_viewport),
