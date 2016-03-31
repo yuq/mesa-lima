@@ -700,7 +700,8 @@ fs_inst::is_partial_write() const
 {
    return ((this->predicate && this->opcode != BRW_OPCODE_SEL) ||
            (this->exec_size * type_sz(this->dst.type)) < 32 ||
-           !this->dst.is_contiguous());
+           !this->dst.is_contiguous() ||
+           this->dst.subreg_offset > 0);
 }
 
 unsigned
