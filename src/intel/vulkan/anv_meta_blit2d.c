@@ -568,6 +568,15 @@ build_nir_vertex_shader(void)
    tex_pos_out->data.interpolation = INTERP_QUALIFIER_SMOOTH;
    nir_copy_var(&b, tex_pos_out, tex_pos_in);
 
+   nir_variable *other_in = nir_variable_create(b.shader, nir_var_shader_in,
+                                                vec4, "a_other");
+   other_in->data.location = VERT_ATTRIB_GENERIC2;
+   nir_variable *other_out = nir_variable_create(b.shader, nir_var_shader_out,
+                                                   vec4, "v_other");
+   other_out->data.location = VARYING_SLOT_VAR1;
+   other_out->data.interpolation = INTERP_QUALIFIER_FLAT;
+   nir_copy_var(&b, other_out, other_in);
+
    return b.shader;
 }
 
