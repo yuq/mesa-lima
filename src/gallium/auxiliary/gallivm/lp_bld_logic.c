@@ -314,11 +314,13 @@ lp_build_select(struct lp_build_context *bld,
       mask = LLVMBuildTrunc(builder, mask, LLVMInt1TypeInContext(lc), "");
       res = LLVMBuildSelect(builder, mask, a, b, "");
    }
-   else if (0) {
+   else if (HAVE_LLVM >= 0x0303) {
       /* Generate a vector select.
        *
-       * XXX: Using vector selects would avoid emitting intrinsics, but they aren't
-       * properly supported yet.
+       * Using vector selects would avoid emitting intrinsics, but they weren't
+       * properly supported yet for a long time.
+       *
+       * LLVM 3.3 appears to reliably support it.
        *
        * LLVM 3.1 supports it, but it yields buggy code (e.g. lp_blend_test).
        *
