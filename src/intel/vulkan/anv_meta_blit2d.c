@@ -95,29 +95,20 @@ vk_format_for_size(int bs)
 static void
 create_iview(struct anv_cmd_buffer *cmd_buffer,
              struct anv_meta_blit2d_surf *surf,
-             struct anv_meta_blit2d_rect *rect,
+             uint64_t offset,
              VkImageUsageFlags usage,
+             uint32_t width,
+             uint32_t height,
              VkImage *img,
              struct anv_image_view *iview)
 {
-   struct isl_tile_info tile_info;
-   isl_tiling_get_info(&cmd_buffer->device->isl_dev,
-                       surf->tiling, surf->bs, &tile_info);
-   const unsigned tile_width_px = tile_info.width > surf->bs ?
-                                  tile_info.width / surf->bs : 1;
-   uint32_t *rect_y = (usage == VK_IMAGE_USAGE_SAMPLED_BIT) ?
-                      &rect->src_y : &rect->dst_y;
-   uint32_t *rect_x = (usage == VK_IMAGE_USAGE_SAMPLED_BIT) ?
-                      &rect->src_x : &rect->dst_x;
-
-   /* Define the shared state among all created image views */
    const VkImageCreateInfo image_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .imageType = VK_IMAGE_TYPE_2D,
       .format = vk_format_for_size(surf->bs),
       .extent = {
-         .width = rect->width + (*rect_x) % tile_width_px,
-         .height = rect->height + (*rect_y) % tile_info.height,
+         .width = width,
+         .height = height,
          .depth = 1,
       },
       .mipLevels = 1,
@@ -142,18 +133,6 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
    anv_image_from_handle(*img)->bo = surf->bo;
    anv_image_from_handle(*img)->offset = surf->base_offset;
 
-   /* Create a VkImageView that starts at the tile aligned offset closest
-    * to the provided x/y offset into the surface.
-    */
-   struct isl_surf *isl_surf = &anv_image_from_handle(*img)->color_surface.isl;
-
-   uint32_t img_o = 0;
-   isl_tiling_get_intratile_offset_el(&cmd_buffer->device->isl_dev,
-                                      isl_surf->tiling, surf->bs,
-                                      isl_surf->row_pitch,
-                                      *rect_x * surf->bs, *rect_y,
-                                      &img_o, rect_x, rect_y);
-
    anv_image_view_init(iview, cmd_buffer->device,
                        &(VkImageViewCreateInfo) {
                           .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -167,7 +146,7 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
                              .baseArrayLayer = 0,
                              .layerCount = 1
                           },
-                       }, cmd_buffer, img_o, usage);
+                       }, cmd_buffer, offset, usage);
 }
 
 struct blit2d_src_temps {
@@ -192,7 +171,14 @@ blit2d_bind_src(struct anv_cmd_buffer *cmd_buffer,
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
 
    if (src_type == BLIT2D_SRC_TYPE_NORMAL) {
-      create_iview(cmd_buffer, src, rect, VK_IMAGE_USAGE_SAMPLED_BIT,
+      uint32_t offset = 0;
+      isl_tiling_get_intratile_offset_el(&cmd_buffer->device->isl_dev,
+                                         src->tiling, src->bs, src->pitch,
+                                         rect->src_x, rect->src_y,
+                                         &offset, &rect->src_x, &rect->src_y);
+
+      create_iview(cmd_buffer, src, offset, VK_IMAGE_USAGE_SAMPLED_BIT,
+                   rect->src_x + rect->width, rect->src_y + rect->height,
                    &tmp->image, &tmp->iview);
 
       anv_CreateDescriptorPool(vk_device,
@@ -369,15 +355,24 @@ anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_device *device = cmd_buffer->device;
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
-   VkImageUsageFlags dst_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
    for (unsigned r = 0; r < num_rects; ++r) {
       struct blit2d_src_temps src_temps;
       blit2d_bind_src(cmd_buffer, src, src_type, &rects[r], &src_temps);
 
+      uint32_t offset = 0;
+      isl_tiling_get_intratile_offset_el(&cmd_buffer->device->isl_dev,
+                                         dst->tiling, dst->bs, dst->pitch,
+                                         rects[r].dst_x, rects[r].dst_y,
+                                         &offset,
+                                         &rects[r].dst_x, &rects[r].dst_y);
+
       VkImage dst_img;
       struct anv_image_view dst_iview;
-      create_iview(cmd_buffer, dst, &rects[r], dst_usage, &dst_img, &dst_iview);
+      create_iview(cmd_buffer, dst, offset, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                   rects[r].dst_x + rects[r].width,
+                   rects[r].dst_y + rects[r].height,
+                   &dst_img, &dst_iview);
 
       struct blit_vb_data {
          float pos[2];
