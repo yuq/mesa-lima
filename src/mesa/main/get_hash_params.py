@@ -888,9 +888,6 @@ descriptor=[
   [ "VIEWPORT_BOUNDS_RANGE", "CONTEXT_FLOAT2(Const.ViewportBounds), extra_ARB_viewport_array" ],
   [ "VIEWPORT_INDEX_PROVOKING_VERTEX", "CONTEXT_ENUM(Const.LayerAndVPIndexProvokingVertex), extra_ARB_viewport_array" ],
 
-# GL_ARB_gpu_shader5
-  [ "MAX_GEOMETRY_SHADER_INVOCATIONS", "CONST(MAX_GEOMETRY_SHADER_INVOCATIONS), extra_ARB_gpu_shader5" ],
-
 # GL_ARB_tessellation_shader
   [ "PATCH_VERTICES", "CONTEXT_INT(TessCtrlProgram.patch_vertices), extra_ARB_tessellation_shader" ],
   [ "PATCH_DEFAULT_OUTER_LEVEL", "CONTEXT_FLOAT4(TessCtrlProgram.patch_default_outer_level), extra_ARB_tessellation_shader" ],
