@@ -5439,7 +5439,7 @@ emit_txf(struct svga_shader_emitter_v10 *emit,
          const struct tgsi_full_instruction *inst)
 {
    const uint unit = inst->Src[1].Register.Index;
-   const unsigned msaa = emit->key.tex[unit].texture_msaa;
+   const boolean msaa = tgsi_is_msaa_target(inst->Texture.Texture);
    int offsets[3];
    struct tex_swizzle_info swz_info;
 
