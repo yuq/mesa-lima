@@ -2288,6 +2288,9 @@ Resource Access Opcodes
                texture arrays and 2D textures.  address.w is always
                ignored.
 
+               A swizzle suffix may be added to the resource argument
+               this will cause the resource data to be swizzled accordingly.
+
 .. opcode:: STORE - Write data to a shader resource
 
                Syntax: ``STORE resource, address, src``

@@ -2385,14 +2385,18 @@ Converter::handleLOAD(Value *dst0[4])
 
          Value *off;
          Symbol *sym;
+         uint32_t src0_component_offset = tgsi.getSrc(0).getSwizzle(c) * 4;
+
          if (tgsi.getSrc(1).getFile() == TGSI_FILE_IMMEDIATE) {
             off = NULL;
             sym = makeSym(tgsi.getSrc(0).getFile(), r, -1, c,
-                          tgsi.getSrc(1).getValueU32(0, info) + 4 * c);
+                          tgsi.getSrc(1).getValueU32(0, info) +
+                          src0_component_offset);
          } else {
             // yzw are ignored for buffers
             off = fetchSrc(1, 0);
-            sym = makeSym(tgsi.getSrc(0).getFile(), r, -1, c, 4 * c);
+            sym = makeSym(tgsi.getSrc(0).getFile(), r, -1, c,
+                          src0_component_offset);
          }
 
          Instruction *ld = mkLoad(TYPE_U32, dst0[c], sym, off);
