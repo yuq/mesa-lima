@@ -813,7 +813,7 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
                      .layerCount = 1
                   },
                },
-               cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+               cmd_buffer, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
             VkFramebuffer fb;
             anv_CreateFramebuffer(device_h,

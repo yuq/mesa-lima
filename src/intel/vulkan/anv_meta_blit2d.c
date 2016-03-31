@@ -131,7 +131,7 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
     * creating a dummy memory object etc. so there's really no point.
     */
    anv_image_from_handle(*img)->bo = surf->bo;
-   anv_image_from_handle(*img)->offset = surf->base_offset;
+   anv_image_from_handle(*img)->offset = surf->base_offset + offset;
 
    anv_image_view_init(iview, cmd_buffer->device,
                        &(VkImageViewCreateInfo) {
@@ -146,7 +146,7 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
                              .baseArrayLayer = 0,
                              .layerCount = 1
                           },
-                       }, cmd_buffer, offset, usage);
+                       }, cmd_buffer, usage);
 }
 
 struct blit2d_src_temps {

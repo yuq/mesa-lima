@@ -384,7 +384,7 @@ void anv_CmdBlitImage(
                .layerCount = 1
             },
          },
-         cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
+         cmd_buffer, VK_IMAGE_USAGE_SAMPLED_BIT);
 
       const VkOffset3D dest_offset = {
          .x = pRegions[r].dstOffsets[0].x,
@@ -434,7 +434,7 @@ void anv_CmdBlitImage(
                .layerCount = 1
             },
          },
-         cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+         cmd_buffer, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
       meta_emit_blit(cmd_buffer,
                      src_image, &src_iview,
