@@ -271,7 +271,7 @@ optimizations = [
 
    # Propagate negation up multiplication chains
    (('fmul', ('fneg', a), b), ('fneg', ('fmul', a, b))),
-   (('imul', ('ineg', a), b), ('ineg', ('fmul', a, b))),
+   (('imul', ('ineg', a), b), ('ineg', ('imul', a, b))),
 
    # Misc. lowering
    (('fmod', a, b), ('fsub', a, ('fmul', b, ('ffloor', ('fdiv', a, b)))), 'options->lower_fmod'),
