@@ -596,56 +596,78 @@ static void *evergreen_create_sampler_state(struct pipe_context *ctx,
 	return ss;
 }
 
-static struct pipe_sampler_view *
-texture_buffer_sampler_view(struct r600_context *rctx,
-			    struct r600_pipe_sampler_view *view,
-			    unsigned width0, unsigned height0)
-			    
+struct eg_buf_res_params {
+	enum pipe_format pipe_format;
+	unsigned offset;
+	unsigned size;
+	unsigned char swizzle[4];
+	bool uncached;
+};
+
+static void evergreen_fill_buffer_resource_words(struct r600_context *rctx,
+						 struct pipe_resource *buffer,
+						 struct eg_buf_res_params *params,
+						 bool *skip_mip_address_reloc,
+						 unsigned tex_resource_words[8])
 {
-	struct r600_texture *tmp = (struct r600_texture*)view->base.texture;
+	struct r600_texture *tmp = (struct r600_texture*)buffer;
 	uint64_t va;
-	int stride = util_format_get_blocksize(view->base.format);
+	int stride = util_format_get_blocksize(params->pipe_format);
 	unsigned format, num_format, format_comp, endian;
 	unsigned swizzle_res;
-	unsigned char swizzle[4];
 	const struct util_format_description *desc;
-	unsigned offset = view->base.u.buf.offset;
-	unsigned size = view->base.u.buf.size;
 
-	swizzle[0] = view->base.swizzle_r;
-	swizzle[1] = view->base.swizzle_g;
-	swizzle[2] = view->base.swizzle_b;
-	swizzle[3] = view->base.swizzle_a;
-
-	r600_vertex_data_type(view->base.format,
+	r600_vertex_data_type(params->pipe_format,
 			      &format, &num_format, &format_comp,
 			      &endian);
 
-	desc = util_format_description(view->base.format);
+	desc = util_format_description(params->pipe_format);
 
-	swizzle_res = r600_get_swizzle_combined(desc->swizzle, swizzle, TRUE);
+	swizzle_res = r600_get_swizzle_combined(desc->swizzle, params->swizzle, TRUE);
 
-	va = tmp->resource.gpu_address + offset;
-	view->tex_resource = &tmp->resource;
-
-	view->skip_mip_address_reloc = true;
-	view->tex_resource_words[0] = va;
-	view->tex_resource_words[1] = size - 1;
-	view->tex_resource_words[2] = S_030008_BASE_ADDRESS_HI(va >> 32UL) |
+	va = tmp->resource.gpu_address + params->offset;
+	*skip_mip_address_reloc = true;
+	tex_resource_words[0] = va;
+	tex_resource_words[1] = params->size - 1;
+	tex_resource_words[2] = S_030008_BASE_ADDRESS_HI(va >> 32UL) |
 		S_030008_STRIDE(stride) |
 		S_030008_DATA_FORMAT(format) |
 		S_030008_NUM_FORMAT_ALL(num_format) |
 		S_030008_FORMAT_COMP_ALL(format_comp) |
 		S_030008_ENDIAN_SWAP(endian);
-	view->tex_resource_words[3] = swizzle_res;
+	tex_resource_words[3] = swizzle_res | S_03000C_UNCACHED(params->uncached);
 	/*
 	 * in theory dword 4 is for number of elements, for use with resinfo,
 	 * but it seems to utterly fail to work, the amd gpu shader analyser
 	 * uses a const buffer to store the element sizes for buffer txq
 	 */
-	view->tex_resource_words[4] = 0;
-	view->tex_resource_words[5] = view->tex_resource_words[6] = 0;
-	view->tex_resource_words[7] = S_03001C_TYPE(V_03001C_SQ_TEX_VTX_VALID_BUFFER);
+	tex_resource_words[4] = 0;
+	tex_resource_words[5] = tex_resource_words[6] = 0;
+	tex_resource_words[7] = S_03001C_TYPE(V_03001C_SQ_TEX_VTX_VALID_BUFFER);
+}
+
+static struct pipe_sampler_view *
+texture_buffer_sampler_view(struct r600_context *rctx,
+			    struct r600_pipe_sampler_view *view,
+			    unsigned width0, unsigned height0)
+{
+	struct r600_texture *tmp = (struct r600_texture*)view->base.texture;
+	struct eg_buf_res_params params;
+
+	memset(&params, 0, sizeof(params));
+
+	params.pipe_format = view->base.format;
+	params.offset = view->base.u.buf.offset;
+	params.size = view->base.u.buf.size;
+	params.swizzle[0] = view->base.swizzle_r;
+	params.swizzle[1] = view->base.swizzle_g;
+	params.swizzle[2] = view->base.swizzle_b;
+	params.swizzle[3] = view->base.swizzle_a;
+
+	evergreen_fill_buffer_resource_words(rctx, view->base.texture,
+					     &params, &view->skip_mip_address_reloc,
+					     view->tex_resource_words);
+	view->tex_resource = &tmp->resource;
 
 	if (tmp->resource.gpu_address)
 		LIST_ADDTAIL(&view->list, &rctx->texture_buffers);
