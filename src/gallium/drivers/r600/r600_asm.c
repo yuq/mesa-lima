@@ -2125,6 +2125,8 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 				print_indent(o, 67);
 
 				fprintf(stderr, " ES:%X ", cf->output.elem_size);
+				if (cf->mark)
+					fprintf(stderr, "MARK ");
 				if (!cf->barrier)
 					fprintf(stderr, "NO_BARRIER ");
 				if (cf->end_of_program)
@@ -2165,6 +2167,8 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 				fprintf(stderr, " ES:%i ", cf->output.elem_size);
 				if (cf->output.array_size != 0xFFF)
 					fprintf(stderr, "AS:%i ", cf->output.array_size);
+				if (cf->mark)
+					fprintf(stderr, "MARK ");
 				if (!cf->barrier)
 					fprintf(stderr, "NO_BARRIER ");
 				if (cf->end_of_program)

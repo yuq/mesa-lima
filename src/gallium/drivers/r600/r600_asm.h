@@ -180,6 +180,7 @@ struct r600_bytecode_cf {
 	unsigned			eg_alu_extended;
 	unsigned			barrier;
 	unsigned			end_of_program;
+	unsigned                        mark;
 	unsigned                        vpm;
 	struct list_head		alu;
 	struct list_head		tex;

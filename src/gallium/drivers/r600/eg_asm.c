@@ -89,6 +89,7 @@ int eg_bytecode_cf_build(struct r600_bytecode *bc, struct r600_bytecode_cf *cf)
 					S_SQ_CF_ALLOC_EXPORT_WORD1_SWIZ_SEL_Z(cf->output.swizzle_z) |
 					S_SQ_CF_ALLOC_EXPORT_WORD1_SWIZ_SEL_W(cf->output.swizzle_w) |
 					S_SQ_CF_ALLOC_EXPORT_WORD1_BARRIER(cf->barrier) |
+					S_SQ_CF_ALLOC_EXPORT_WORD1_MARK(cf->mark) |
 					S_SQ_CF_ALLOC_EXPORT_WORD1_CF_INST(opcode);
 
 			if (bc->chip_class == EVERGREEN) /* no EOP on cayman */
@@ -103,6 +104,7 @@ int eg_bytecode_cf_build(struct r600_bytecode *bc, struct r600_bytecode_cf *cf)
 					S_SQ_CF_ALLOC_EXPORT_WORD0_INDEX_GPR(cf->output.index_gpr);
 			bc->bytecode[id] = S_SQ_CF_ALLOC_EXPORT_WORD1_BURST_COUNT(cf->output.burst_count - 1) |
 					S_SQ_CF_ALLOC_EXPORT_WORD1_BARRIER(cf->barrier) |
+					S_SQ_CF_ALLOC_EXPORT_WORD1_MARK(cf->mark) |
 					S_SQ_CF_ALLOC_EXPORT_WORD1_CF_INST(opcode) |
 					S_SQ_CF_ALLOC_EXPORT_WORD1_BUF_COMP_MASK(cf->output.comp_mask) |
 					S_SQ_CF_ALLOC_EXPORT_WORD1_BUF_ARRAY_SIZE(cf->output.array_size);
