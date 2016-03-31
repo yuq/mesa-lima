@@ -40,9 +40,9 @@ struct swr_vertex_shader {
    struct pipe_shader_state pipe;
    struct lp_tgsi_info info;
    unsigned linkageMask;
-   PFN_VERTEX_FUNC func;
+   std::unordered_map<swr_jit_vs_key, PFN_VERTEX_FUNC> map;
    SWR_STREAMOUT_STATE soState;
-   PFN_SO_FUNC soFunc[PIPE_PRIM_MAX];
+   PFN_SO_FUNC soFunc[PIPE_PRIM_MAX] {0};
 };
 
 struct swr_fragment_shader {
@@ -50,7 +50,7 @@ struct swr_fragment_shader {
    struct lp_tgsi_info info;
    uint32_t constantMask;
    uint32_t pointSpriteMask;
-   std::unordered_map<swr_jit_key, PFN_PIXEL_KERNEL> map;
+   std::unordered_map<swr_jit_fs_key, PFN_PIXEL_KERNEL> map;
 };
 
 /* Vertex element state */
