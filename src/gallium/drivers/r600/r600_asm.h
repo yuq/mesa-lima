@@ -268,6 +268,8 @@ int r600_bytecode_add_alu(struct r600_bytecode *bc,
 		const struct r600_bytecode_alu *alu);
 int r600_bytecode_add_vtx(struct r600_bytecode *bc,
 		const struct r600_bytecode_vtx *vtx);
+int r600_bytecode_add_vtx_tc(struct r600_bytecode *bc,
+			     const struct r600_bytecode_vtx *vtx);
 int r600_bytecode_add_tex(struct r600_bytecode *bc,
 		const struct r600_bytecode_tex *tex);
 int r600_bytecode_add_gds(struct r600_bytecode *bc,

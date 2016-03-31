@@ -1336,7 +1336,8 @@ static inline boolean last_inst_was_not_vtx_fetch(struct r600_bytecode *bc)
 			bc->cf_last->op != CF_OP_TEX));
 }
 
-int r600_bytecode_add_vtx(struct r600_bytecode *bc, const struct r600_bytecode_vtx *vtx)
+static int r600_bytecode_add_vtx_internal(struct r600_bytecode *bc, const struct r600_bytecode_vtx *vtx,
+					  bool use_tc)
 {
 	struct r600_bytecode_vtx *nvtx = r600_bytecode_vtx();
 	int r;
@@ -1363,8 +1364,13 @@ int r600_bytecode_add_vtx(struct r600_bytecode *bc, const struct r600_bytecode_v
 		switch (bc->chip_class) {
 		case R600:
 		case R700:
-		case EVERGREEN:
 			bc->cf_last->op = CF_OP_VTX;
+			break;
+		case EVERGREEN:
+			if (use_tc)
+				bc->cf_last->op = CF_OP_TEX;
+			else
+				bc->cf_last->op = CF_OP_VTX;
 			break;
 		case CAYMAN:
 			bc->cf_last->op = CF_OP_TEX;
@@ -1386,6 +1392,16 @@ int r600_bytecode_add_vtx(struct r600_bytecode *bc, const struct r600_bytecode_v
 	bc->ngpr = MAX2(bc->ngpr, vtx->dst_gpr + 1);
 
 	return 0;
+}
+
+int r600_bytecode_add_vtx(struct r600_bytecode *bc, const struct r600_bytecode_vtx *vtx)
+{
+	return r600_bytecode_add_vtx_internal(bc, vtx, false);
+}
+
+int r600_bytecode_add_vtx_tc(struct r600_bytecode *bc, const struct r600_bytecode_vtx *vtx)
+{
+	return r600_bytecode_add_vtx_internal(bc, vtx, true);
 }
 
 int r600_bytecode_add_tex(struct r600_bytecode *bc, const struct r600_bytecode_tex *tex)
