@@ -2460,6 +2460,16 @@ const struct function gles3_functions_possible[] = {
    /* GL_OES_copy_image */
    { "glCopyImageSubDataOES", 30, -1 },
 
+   /* GL_OES_draw_buffers_indexed */
+   { "glBlendFunciOES", 30, -1 },
+   { "glBlendFuncSeparateiOES", 30, -1 },
+   { "glBlendEquationiOES", 30, -1 },
+   { "glBlendEquationSeparateiOES", 30, -1 },
+   { "glColorMaskiOES", 30, -1 },
+   { "glEnableiOES", 30, -1 },
+   { "glDisableiOES", 30, -1 },
+   { "glIsEnablediOES", 30, -1 },
+
    { NULL, 0, -1 }
 };
 

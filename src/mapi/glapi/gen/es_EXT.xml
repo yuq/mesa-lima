@@ -823,6 +823,59 @@
     </function>
 </category>
 
+<category name="GL_EXT_draw_buffers_indexed" number="176">
+
+  <function name="BlendFunciEXT" alias="BlendFunciARB" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="sfactor" type="GLenum"/>
+    <param name="dfactor" type="GLenum"/>
+  </function>
+
+  <function name="BlendFuncSeparateiEXT" alias="BlendFuncSeparateiARB" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="sfactorRGB" type="GLenum"/>
+    <param name="dfactorRGB" type="GLenum"/>
+    <param name="sfactorAlpha" type="GLenum"/>
+    <param name="dfactorAlpha" type="GLenum"/>
+  </function>
+
+  <function name="BlendEquationiEXT" alias="BlendEquationiARB" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="mode" type="GLenum"/>
+  </function>
+
+  <function name="BlendEquationSeparateiEXT" alias="BlendEquationSeparateiARB" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="modeRGB" type="GLenum"/>
+    <param name="modeA" type="GLenum"/>
+  </function>
+
+  <function name="ColorMaskiEXT" alias="ColorMaski" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="r" type="GLboolean"/>
+    <param name="g" type="GLboolean"/>
+    <param name="b" type="GLboolean"/>
+    <param name="a" type="GLboolean"/>
+  </function>
+
+  <function name="EnableiEXT" alias="Enablei" es2="3.0">
+    <param name="target" type="GLenum"/>
+    <param name="index" type="GLuint"/>
+  </function>
+
+  <function name="DisableiEXT" alias="Disablei" es2="3.0">
+    <param name="target" type="GLenum"/>
+    <param name="index" type="GLuint"/>
+  </function>
+
+  <function name="IsEnablediEXT" alias="IsEnabledi" es2="3.0">
+    <param name="target" type="GLenum"/>
+    <param name="index" type="GLuint"/>
+    <return type="GLboolean"/>
+  </function>
+
+</category>
+
 <category name="GL_EXT_texture_border_clamp" number="182">
 
     <!-- The *TexParameter* functions are added in EXT_texture_integer -->
@@ -934,6 +987,59 @@
         <param name="srcHeight" type="GLsizei"/>
         <param name="srcDepth" type="GLsizei"/>
     </function>
+
+</category>
+
+<category name="GL_OES_draw_buffers_indexed" number="209">
+
+  <function name="BlendFunciOES" alias="BlendFunciARB" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="sfactor" type="GLenum"/>
+    <param name="dfactor" type="GLenum"/>
+  </function>
+
+  <function name="BlendFuncSeparateiOES" alias="BlendFuncSeparateiARB" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="sfactorRGB" type="GLenum"/>
+    <param name="dfactorRGB" type="GLenum"/>
+    <param name="sfactorAlpha" type="GLenum"/>
+    <param name="dfactorAlpha" type="GLenum"/>
+  </function>
+
+  <function name="BlendEquationiOES" alias="BlendEquationiARB" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="mode" type="GLenum"/>
+  </function>
+
+  <function name="BlendEquationSeparateiOES" alias="BlendEquationSeparateiARB" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="modeRGB" type="GLenum"/>
+    <param name="modeA" type="GLenum"/>
+  </function>
+
+  <function name="ColorMaskiOES" alias="ColorMaski" es2="3.0">
+    <param name="buf" type="GLuint"/>
+    <param name="r" type="GLboolean"/>
+    <param name="g" type="GLboolean"/>
+    <param name="b" type="GLboolean"/>
+    <param name="a" type="GLboolean"/>
+  </function>
+
+  <function name="EnableiOES" alias="Enablei" es2="3.0">
+    <param name="target" type="GLenum"/>
+    <param name="index" type="GLuint"/>
+  </function>
+
+  <function name="DisableiOES" alias="Disablei" es2="3.0">
+    <param name="target" type="GLenum"/>
+    <param name="index" type="GLuint"/>
+  </function>
+
+  <function name="IsEnablediOES" alias="IsEnabledi" es2="3.0">
+    <param name="target" type="GLenum"/>
+    <param name="index" type="GLuint"/>
+    <return type="GLboolean"/>
+  </function>
 
 </category>
 
