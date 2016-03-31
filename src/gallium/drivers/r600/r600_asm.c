@@ -2140,6 +2140,15 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 						bc->bytecode[id], bc->bytecode[id + 1], cfop->name);
 				o += print_indent(o, 43);
 				o += fprintf(stderr, "%s ", exp_type[cf->output.type]);
+
+				if (r600_isa_cf(cf->op)->flags & CF_RAT) {
+					o += fprintf(stderr, "RAT%d", cf->rat.id);
+					if (cf->rat.index_mode) {
+						o += fprintf(stderr, "[IDX%d]", cf->rat.index_mode - 1);
+					}
+					o += fprintf(stderr, " INST: %d ", cf->rat.inst);
+				}
+
 				if (cf->output.burst_count > 1) {
 					o += fprintf(stderr, "%d-%d ", cf->output.array_base,
 							cf->output.array_base + cf->output.burst_count - 1);
