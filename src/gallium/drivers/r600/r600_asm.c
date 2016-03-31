@@ -2145,7 +2145,8 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 						o += print_swizzle(7);
 				}
 
-				if (cf->output.type == V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE_IND)
+				if (cf->output.type == V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE_IND ||
+				    cf->output.type == V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_READ_IND)
 					o += fprintf(stderr, " R%d", cf->output.index_gpr);
 
 				o += print_indent(o, 67);
