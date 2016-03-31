@@ -674,68 +674,58 @@ texture_buffer_sampler_view(struct r600_context *rctx,
 	return &view->base;
 }
 
-struct pipe_sampler_view *
-evergreen_create_sampler_view_custom(struct pipe_context *ctx,
-				     struct pipe_resource *texture,
-				     const struct pipe_sampler_view *state,
-				     unsigned width0, unsigned height0,
-				     unsigned force_level)
+struct eg_tex_res_params {
+	enum pipe_format pipe_format;
+	int force_level;
+	unsigned width0;
+	unsigned height0;
+	unsigned first_level;
+	unsigned last_level;
+	unsigned first_layer;
+	unsigned last_layer;
+	unsigned target;
+	unsigned char swizzle[4];
+};
+
+static int evergreen_fill_tex_resource_words(struct r600_context *rctx,
+					     struct pipe_resource *texture,
+					     struct eg_tex_res_params *params,
+					     bool *skip_mip_address_reloc,
+					     unsigned tex_resource_words[8])
 {
-	struct r600_context *rctx = (struct r600_context*)ctx;
-	struct r600_screen *rscreen = (struct r600_screen*)ctx->screen;
-	struct r600_pipe_sampler_view *view = CALLOC_STRUCT(r600_pipe_sampler_view);
+	struct r600_screen *rscreen = (struct r600_screen*)rctx->b.b.screen;
 	struct r600_texture *tmp = (struct r600_texture*)texture;
 	unsigned format, endian;
 	uint32_t word4 = 0, yuv_format = 0, pitch = 0;
-	unsigned char swizzle[4], array_mode = 0, non_disp_tiling = 0;
+	unsigned char array_mode = 0, non_disp_tiling = 0;
 	unsigned height, depth, width;
 	unsigned macro_aspect, tile_split, bankh, bankw, nbanks, fmask_bankh;
-	enum pipe_format pipe_format = state->format;
 	struct radeon_surf_level *surflevel;
 	unsigned base_level, first_level, last_level;
 	unsigned dim, last_layer;
 	uint64_t va;
 	bool do_endian_swap = FALSE;
 
-	if (!view)
-		return NULL;
-
-	/* initialize base object */
-	view->base = *state;
-	view->base.texture = NULL;
-	pipe_reference(NULL, &texture->reference);
-	view->base.texture = texture;
-	view->base.reference.count = 1;
-	view->base.context = ctx;
-
-	if (state->target == PIPE_BUFFER)
-		return texture_buffer_sampler_view(rctx, view, width0, height0);
-
-	swizzle[0] = state->swizzle_r;
-	swizzle[1] = state->swizzle_g;
-	swizzle[2] = state->swizzle_b;
-	swizzle[3] = state->swizzle_a;
-
 	tile_split = tmp->surface.tile_split;
 	surflevel = tmp->surface.level;
 
 	/* Texturing with separate depth and stencil. */
 	if (tmp->db_compatible) {
-		switch (pipe_format) {
+		switch (params->pipe_format) {
 		case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-			pipe_format = PIPE_FORMAT_Z32_FLOAT;
+			params->pipe_format = PIPE_FORMAT_Z32_FLOAT;
 			break;
 		case PIPE_FORMAT_X8Z24_UNORM:
 		case PIPE_FORMAT_S8_UINT_Z24_UNORM:
 			/* Z24 is always stored like this for DB
 			 * compatibility.
 			 */
-			pipe_format = PIPE_FORMAT_Z24X8_UNORM;
+			params->pipe_format = PIPE_FORMAT_Z24X8_UNORM;
 			break;
 		case PIPE_FORMAT_X24S8_UINT:
 		case PIPE_FORMAT_S8X24_UINT:
 		case PIPE_FORMAT_X32_S8X24_UINT:
-			pipe_format = PIPE_FORMAT_S8_UINT;
+			params->pipe_format = PIPE_FORMAT_S8_UINT;
 			tile_split = tmp->surface.stencil_tile_split;
 			surflevel = tmp->surface.stencil_level;
 			break;
@@ -746,34 +736,33 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 	if (R600_BIG_ENDIAN)
 		do_endian_swap = !tmp->db_compatible;
 
-	format = r600_translate_texformat(ctx->screen, pipe_format,
-					  swizzle,
+	format = r600_translate_texformat(rctx->b.b.screen, params->pipe_format,
+					  params->swizzle,
 					  &word4, &yuv_format, do_endian_swap);
 	assert(format != ~0);
 	if (format == ~0) {
-		FREE(view);
-		return NULL;
+		return -1;
 	}
 
 	endian = r600_colorformat_endian_swap(format, do_endian_swap);
 
 	base_level = 0;
-	first_level = state->u.tex.first_level;
-	last_level = state->u.tex.last_level;
-	width = width0;
-	height = height0;
+	first_level = params->first_level;
+	last_level = params->last_level;
+	width = params->width0;
+	height = params->height0;
 	depth = texture->depth0;
 
-	if (force_level) {
-		base_level = force_level;
+	if (params->force_level) {
+		base_level = params->force_level;
 		first_level = 0;
 		last_level = 0;
-		width = u_minify(width, force_level);
-		height = u_minify(height, force_level);
-		depth = u_minify(depth, force_level);
+		width = u_minify(width, params->force_level);
+		height = u_minify(height, params->force_level);
+		depth = u_minify(depth, params->force_level);
 	}
 
-	pitch = surflevel[base_level].nblk_x * util_format_get_blockwidth(pipe_format);
+	pitch = surflevel[base_level].nblk_x * util_format_get_blockwidth(params->pipe_format);
 	non_disp_tiling = tmp->non_disp_tiling;
 
 	switch (surflevel[base_level].mode) {
@@ -799,20 +788,141 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 
 	/* 128 bit formats require tile type = 1 */
 	if (rscreen->b.chip_class == CAYMAN) {
-		if (util_format_get_blocksize(pipe_format) >= 16)
+		if (util_format_get_blocksize(params->pipe_format) >= 16)
 			non_disp_tiling = 1;
 	}
 	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
 
-	if (state->target == PIPE_TEXTURE_1D_ARRAY) {
+	if (params->target == PIPE_TEXTURE_1D_ARRAY) {
 	        height = 1;
 		depth = texture->array_size;
-	} else if (state->target == PIPE_TEXTURE_2D_ARRAY) {
+	} else if (params->target == PIPE_TEXTURE_2D_ARRAY) {
 		depth = texture->array_size;
-	} else if (state->target == PIPE_TEXTURE_CUBE_ARRAY)
+	} else if (params->target == PIPE_TEXTURE_CUBE_ARRAY)
 		depth = texture->array_size / 6;
 
 	va = tmp->resource.gpu_address;
+
+	/* array type views and views into array types need to use layer offset */
+	dim = params->target;
+	if (params->target != PIPE_TEXTURE_CUBE)
+		dim = MAX2(params->target, texture->target);
+
+	tex_resource_words[0] = (S_030000_DIM(r600_tex_dim(dim, texture->nr_samples)) |
+				       S_030000_PITCH((pitch / 8) - 1) |
+				       S_030000_TEX_WIDTH(width - 1));
+	if (rscreen->b.chip_class == CAYMAN)
+		tex_resource_words[0] |= CM_S_030000_NON_DISP_TILING_ORDER(non_disp_tiling);
+	else
+		tex_resource_words[0] |= S_030000_NON_DISP_TILING_ORDER(non_disp_tiling);
+	tex_resource_words[1] = (S_030004_TEX_HEIGHT(height - 1) |
+				       S_030004_TEX_DEPTH(depth - 1) |
+				       S_030004_ARRAY_MODE(array_mode));
+	tex_resource_words[2] = (surflevel[base_level].offset + va) >> 8;
+
+	*skip_mip_address_reloc = false;
+	/* TEX_RESOURCE_WORD3.MIP_ADDRESS */
+	if (texture->nr_samples > 1 && rscreen->has_compressed_msaa_texturing) {
+		if (tmp->is_depth) {
+			/* disable FMASK (0 = disabled) */
+			tex_resource_words[3] = 0;
+			*skip_mip_address_reloc = true;
+		} else {
+			/* FMASK should be in MIP_ADDRESS for multisample textures */
+			tex_resource_words[3] = (tmp->fmask.offset + va) >> 8;
+		}
+	} else if (last_level && texture->nr_samples <= 1) {
+		tex_resource_words[3] = (surflevel[1].offset + va) >> 8;
+	} else {
+		tex_resource_words[3] = (surflevel[base_level].offset + va) >> 8;
+	}
+
+	last_layer = params->last_layer;
+	if (params->target != texture->target && depth == 1) {
+		last_layer = params->first_layer;
+	}
+	tex_resource_words[4] = (word4 |
+				 S_030010_ENDIAN_SWAP(endian));
+	tex_resource_words[5] = S_030014_BASE_ARRAY(params->first_layer) |
+		                S_030014_LAST_ARRAY(last_layer);
+	tex_resource_words[6] = S_030018_TILE_SPLIT(tile_split);
+
+	if (texture->nr_samples > 1) {
+		unsigned log_samples = util_logbase2(texture->nr_samples);
+		if (rscreen->b.chip_class == CAYMAN) {
+			tex_resource_words[4] |= S_030010_LOG2_NUM_FRAGMENTS(log_samples);
+		}
+		/* LAST_LEVEL holds log2(nr_samples) for multisample textures */
+		tex_resource_words[5] |= S_030014_LAST_LEVEL(log_samples);
+		tex_resource_words[6] |= S_030018_FMASK_BANK_HEIGHT(fmask_bankh);
+	} else {
+		bool no_mip = first_level == last_level;
+
+		tex_resource_words[4] |= S_030010_BASE_LEVEL(first_level);
+		tex_resource_words[5] |= S_030014_LAST_LEVEL(last_level);
+		/* aniso max 16 samples */
+		tex_resource_words[6] |= S_030018_MAX_ANISO_RATIO(no_mip ? 0 : 4);
+	}
+
+	tex_resource_words[7] = S_03001C_DATA_FORMAT(format) |
+				      S_03001C_TYPE(V_03001C_SQ_TEX_VTX_VALID_TEXTURE) |
+				      S_03001C_BANK_WIDTH(bankw) |
+				      S_03001C_BANK_HEIGHT(bankh) |
+				      S_03001C_MACRO_TILE_ASPECT(macro_aspect) |
+				      S_03001C_NUM_BANKS(nbanks) |
+				      S_03001C_DEPTH_SAMPLE_ORDER(tmp->db_compatible);
+	return 0;
+}
+
+struct pipe_sampler_view *
+evergreen_create_sampler_view_custom(struct pipe_context *ctx,
+				     struct pipe_resource *texture,
+				     const struct pipe_sampler_view *state,
+				     unsigned width0, unsigned height0,
+				     unsigned force_level)
+{
+	struct r600_context *rctx = (struct r600_context*)ctx;
+	struct r600_pipe_sampler_view *view = CALLOC_STRUCT(r600_pipe_sampler_view);
+	struct r600_texture *tmp = (struct r600_texture*)texture;
+	struct eg_tex_res_params params;
+	int ret;
+
+	if (!view)
+		return NULL;
+
+	/* initialize base object */
+	view->base = *state;
+	view->base.texture = NULL;
+	pipe_reference(NULL, &texture->reference);
+	view->base.texture = texture;
+	view->base.reference.count = 1;
+	view->base.context = ctx;
+
+	if (state->target == PIPE_BUFFER)
+		return texture_buffer_sampler_view(rctx, view, width0, height0);
+
+	memset(&params, 0, sizeof(params));
+	params.pipe_format = state->format;
+	params.force_level = force_level;
+	params.width0 = width0;
+	params.height0 = height0;
+	params.first_level = state->u.tex.first_level;
+	params.last_level = state->u.tex.last_level;
+	params.first_layer = state->u.tex.first_layer;
+	params.last_layer = state->u.tex.last_layer;
+	params.target = state->target;
+	params.swizzle[0] = state->swizzle_r;
+	params.swizzle[1] = state->swizzle_g;
+	params.swizzle[2] = state->swizzle_b;
+	params.swizzle[3] = state->swizzle_a;
+
+	ret = evergreen_fill_tex_resource_words(rctx, texture, &params,
+						&view->skip_mip_address_reloc,
+						view->tex_resource_words);
+	if (ret != 0) {
+		FREE(view);
+		return NULL;
+	}
 
 	if (state->format == PIPE_FORMAT_X24S8_UINT ||
 	    state->format == PIPE_FORMAT_S8X24_UINT ||
@@ -822,73 +932,6 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 
 	view->tex_resource = &tmp->resource;
 
-	/* array type views and views into array types need to use layer offset */
-	dim = state->target;
-	if (state->target != PIPE_TEXTURE_CUBE)
-		dim = MAX2(state->target, texture->target);
-
-	view->tex_resource_words[0] = (S_030000_DIM(r600_tex_dim(dim, texture->nr_samples)) |
-				       S_030000_PITCH((pitch / 8) - 1) |
-				       S_030000_TEX_WIDTH(width - 1));
-	if (rscreen->b.chip_class == CAYMAN)
-		view->tex_resource_words[0] |= CM_S_030000_NON_DISP_TILING_ORDER(non_disp_tiling);
-	else
-		view->tex_resource_words[0] |= S_030000_NON_DISP_TILING_ORDER(non_disp_tiling);
-	view->tex_resource_words[1] = (S_030004_TEX_HEIGHT(height - 1) |
-				       S_030004_TEX_DEPTH(depth - 1) |
-				       S_030004_ARRAY_MODE(array_mode));
-	view->tex_resource_words[2] = (surflevel[base_level].offset + va) >> 8;
-
-	/* TEX_RESOURCE_WORD3.MIP_ADDRESS */
-	if (texture->nr_samples > 1 && rscreen->has_compressed_msaa_texturing) {
-		if (tmp->is_depth) {
-			/* disable FMASK (0 = disabled) */
-			view->tex_resource_words[3] = 0;
-			view->skip_mip_address_reloc = true;
-		} else {
-			/* FMASK should be in MIP_ADDRESS for multisample textures */
-			view->tex_resource_words[3] = (tmp->fmask.offset + va) >> 8;
-		}
-	} else if (last_level && texture->nr_samples <= 1) {
-		view->tex_resource_words[3] = (surflevel[1].offset + va) >> 8;
-	} else {
-		view->tex_resource_words[3] = (surflevel[base_level].offset + va) >> 8;
-	}
-
-	last_layer = state->u.tex.last_layer;
-	if (state->target != texture->target && depth == 1) {
-		last_layer = state->u.tex.first_layer;
-	}
-	view->tex_resource_words[4] = (word4 |
-				       S_030010_ENDIAN_SWAP(endian));
-	view->tex_resource_words[5] = S_030014_BASE_ARRAY(state->u.tex.first_layer) |
-				      S_030014_LAST_ARRAY(last_layer);
-	view->tex_resource_words[6] = S_030018_TILE_SPLIT(tile_split);
-
-	if (texture->nr_samples > 1) {
-		unsigned log_samples = util_logbase2(texture->nr_samples);
-		if (rscreen->b.chip_class == CAYMAN) {
-			view->tex_resource_words[4] |= S_030010_LOG2_NUM_FRAGMENTS(log_samples);
-		}
-		/* LAST_LEVEL holds log2(nr_samples) for multisample textures */
-		view->tex_resource_words[5] |= S_030014_LAST_LEVEL(log_samples);
-		view->tex_resource_words[6] |= S_030018_FMASK_BANK_HEIGHT(fmask_bankh);
-	} else {
-		bool no_mip = first_level == last_level;
-
-		view->tex_resource_words[4] |= S_030010_BASE_LEVEL(first_level);
-		view->tex_resource_words[5] |= S_030014_LAST_LEVEL(last_level);
-		/* aniso max 16 samples */
-		view->tex_resource_words[6] |= S_030018_MAX_ANISO_RATIO(no_mip ? 0 : 4);
-	}
-
-	view->tex_resource_words[7] = S_03001C_DATA_FORMAT(format) |
-				      S_03001C_TYPE(V_03001C_SQ_TEX_VTX_VALID_TEXTURE) |
-				      S_03001C_BANK_WIDTH(bankw) |
-				      S_03001C_BANK_HEIGHT(bankh) |
-				      S_03001C_MACRO_TILE_ASPECT(macro_aspect) |
-				      S_03001C_NUM_BANKS(nbanks) |
-				      S_03001C_DEPTH_SAMPLE_ORDER(tmp->db_compatible);
 	return &view->base;
 }
 
