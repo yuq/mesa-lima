@@ -1011,6 +1011,71 @@ struct r600_tex_color_info {
 	boolean export_16bpc;
 };
 
+static void evergreen_set_color_surface_buffer(struct r600_context *rctx,
+					       struct r600_resource *res,
+					       enum pipe_format pformat,
+					       unsigned first_element,
+					       unsigned last_element,
+					       struct r600_tex_color_info *color)
+{
+	unsigned format, swap, ntype, endian;
+	const struct util_format_description *desc;
+	unsigned block_size = align(util_format_get_blocksize(res->b.b.format), 4);
+	unsigned pitch_alignment =
+		MAX2(64, rctx->screen->b.info.pipe_interleave_bytes / block_size);
+	unsigned pitch = align(res->b.b.width0, pitch_alignment);
+	int i;
+	unsigned width_elements;
+
+	width_elements = last_element - first_element + 1;
+
+	format = r600_translate_colorformat(rctx->b.chip_class, pformat, FALSE);
+	swap = r600_translate_colorswap(pformat, FALSE);
+
+	endian = r600_colorformat_endian_swap(format, FALSE);
+
+	desc = util_format_description(pformat);
+	for (i = 0; i < 4; i++) {
+		if (desc->channel[i].type != UTIL_FORMAT_TYPE_VOID) {
+			break;
+		}
+	}
+	ntype = V_028C70_NUMBER_UNORM;
+		if (desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB)
+		ntype = V_028C70_NUMBER_SRGB;
+	else if (desc->channel[i].type == UTIL_FORMAT_TYPE_SIGNED) {
+		if (desc->channel[i].normalized)
+			ntype = V_028C70_NUMBER_SNORM;
+		else if (desc->channel[i].pure_integer)
+			ntype = V_028C70_NUMBER_SINT;
+	} else if (desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED) {
+		if (desc->channel[i].normalized)
+			ntype = V_028C70_NUMBER_UNORM;
+		else if (desc->channel[i].pure_integer)
+			ntype = V_028C70_NUMBER_UINT;
+	}
+	pitch = (pitch / 8) - 1;
+	color->pitch = S_028C64_PITCH_TILE_MAX(pitch);
+
+	color->info = S_028C70_ARRAY_MODE(V_028C70_ARRAY_LINEAR_ALIGNED);
+	color->info |= S_028C70_FORMAT(format) |
+		       S_028C70_COMP_SWAP(swap) |
+		       S_028C70_BLEND_CLAMP(0) |
+		       S_028C70_BLEND_BYPASS(1) |
+		       S_028C70_NUMBER_TYPE(ntype) |
+		       S_028C70_ENDIAN(endian);
+	color->attrib = S_028C74_NON_DISP_TILING_ORDER(1);
+	color->ntype = ntype;
+	color->export_16bpc = false;
+	color->dim = width_elements - 1;
+	color->slice = 0; /* (width_elements / 64) - 1;*/
+	color->view = 0;
+	color->offset = res->gpu_address >> 8;
+
+	color->fmask = color->offset;
+	color->fmask_slice = 0;
+}
+
 static void evergreen_set_color_surface_common(struct r600_context *rctx,
 					       struct r600_texture *rtex,
 					       unsigned level,
@@ -1190,47 +1255,27 @@ void evergreen_init_color_surface_rat(struct r600_context *rctx,
 					struct r600_surface *surf)
 {
 	struct pipe_resource *pipe_buffer = surf->base.texture;
-	unsigned format = r600_translate_colorformat(rctx->b.chip_class,
-						     surf->base.format, FALSE);
-	unsigned endian = r600_colorformat_endian_swap(format, FALSE);
-	unsigned swap = r600_translate_colorswap(surf->base.format, FALSE);
-	unsigned block_size =
-		align(util_format_get_blocksize(pipe_buffer->format), 4);
-	unsigned pitch_alignment =
-		MAX2(64, rctx->screen->b.info.pipe_interleave_bytes / block_size);
-	unsigned pitch = align(pipe_buffer->width0, pitch_alignment);
+	struct r600_tex_color_info color;
 
-	surf->cb_color_base = r600_resource(pipe_buffer)->gpu_address >> 8;
+	evergreen_set_color_surface_buffer(rctx, (struct r600_resource *)surf->base.texture,
+					   surf->base.format, 0, pipe_buffer->width0,
+					   &color);
 
-	surf->cb_color_pitch = (pitch / 8) - 1;
-
-	surf->cb_color_slice = 0;
+	surf->cb_color_base = color.offset;
+	surf->cb_color_dim = color.dim;
+	surf->cb_color_info = color.info | S_028C70_RAT(1);
+	surf->cb_color_pitch = color.pitch;
+	surf->cb_color_slice = color.slice;
+	surf->cb_color_view = color.view;
+	surf->cb_color_attrib = color.attrib;
+	surf->cb_color_fmask = color.fmask;
+	surf->cb_color_fmask_slice = color.fmask_slice;
 
 	surf->cb_color_view = 0;
-
-	surf->cb_color_info =
-		  S_028C70_ENDIAN(endian)
-		| S_028C70_FORMAT(format)
-		| S_028C70_ARRAY_MODE(V_028C70_ARRAY_LINEAR_ALIGNED)
-		| S_028C70_NUMBER_TYPE(V_028C70_NUMBER_UINT)
-		| S_028C70_COMP_SWAP(swap)
-		| S_028C70_BLEND_BYPASS(1) /* We must set this bit because we
-					    * are using NUMBER_UINT */
-		| S_028C70_RAT(1)
-		;
-
-	surf->cb_color_attrib = S_028C74_NON_DISP_TILING_ORDER(1);
-
-	/* For buffers, CB_COLOR0_DIM needs to be set to the number of
-	 * elements. */
-	surf->cb_color_dim = pipe_buffer->width0;
 
 	/* Set the buffer range the GPU will have access to: */
 	util_range_add(&r600_resource(pipe_buffer)->valid_buffer_range,
 		       0, pipe_buffer->width0);
-
-	surf->cb_color_fmask = surf->cb_color_base;
-	surf->cb_color_fmask_slice = 0;
 }
 
 
