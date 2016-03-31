@@ -3159,6 +3159,9 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 	db_shader_control |= S_02880C_STENCIL_EXPORT_ENABLE(stencil_export);
 	db_shader_control |= S_02880C_MASK_EXPORT_ENABLE(mask_export);
 
+	if (shader->selector->info.properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL])
+		db_shader_control |= S_02880C_DEPTH_BEFORE_SHADER(1);
+
 	switch (rshader->ps_conservative_z) {
 	default: /* fall through */
 	case TGSI_FS_DEPTH_LAYOUT_ANY:
