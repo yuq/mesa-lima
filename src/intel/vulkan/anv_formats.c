@@ -381,13 +381,11 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    VkFormatFeatureFlags linear = 0, tiled = 0, buffer = 0;
    if (anv_format_is_depth_or_stencil(&anv_formats[format])) {
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-      if (physical_device->info->gen >= 8) {
+      if (physical_device->info->gen >= 8)
          tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-         tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT;
-      }
-      if (anv_formats[format].has_depth) {
-         tiled |= VK_FORMAT_FEATURE_BLIT_DST_BIT;
-      }
+
+      tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT |
+               VK_FORMAT_FEATURE_BLIT_DST_BIT;
    } else {
       enum isl_format linear_fmt, tiled_fmt;
       struct anv_format_swizzle linear_swizzle, tiled_swizzle;
