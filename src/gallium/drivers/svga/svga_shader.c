@@ -195,7 +195,6 @@ svga_init_shader_key_common(const struct svga_context *svga, unsigned shader,
             }
          }
 
-         key->tex[i].texture_msaa = view->texture->nr_samples > 1;
          if (!svga->curr.sampler[shader][i]->normalized_coords) {
             assert(idx < (1 << 5));  /* width_height_idx:5 bitfield */
             key->tex[i].width_height_idx = idx++;
