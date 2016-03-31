@@ -485,6 +485,7 @@ struct SWR_CONTEXT
     uint8_t* pScratch[KNOB_MAX_NUM_THREADS];
 
     CachingAllocator cachingArenaAllocator;
+    uint32_t frameCount;
 };
 
 void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId);

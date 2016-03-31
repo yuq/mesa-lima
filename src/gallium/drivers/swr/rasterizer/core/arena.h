@@ -65,69 +65,41 @@ static_assert(sizeof(ArenaBlock) <= ARENA_BLOCK_ALIGN,
 template<uint32_t NumBucketsT = 4, uint32_t StartBucketBitT = 16>
 struct CachingAllocatorT : DefaultAllocator
 {
-    static uint32_t GetBucketId(size_t blockSize)
-    {
-        uint32_t bucketId = 0;
-
-#if defined(BitScanReverseSizeT)
-        BitScanReverseSizeT((unsigned long*)&bucketId, blockSize >> CACHE_START_BUCKET_BIT);
-        bucketId = std::min<uint32_t>(bucketId, CACHE_NUM_BUCKETS - 1);
-#endif
-
-        return bucketId;
-    }
-
     void* AllocateAligned(size_t size, size_t align)
     {
         SWR_ASSERT(size >= sizeof(ArenaBlock));
         SWR_ASSERT(size <= uint32_t(-1));
 
         size_t blockSize = size - ARENA_BLOCK_ALIGN;
+        uint32_t bucket = GetBucketId(blockSize);
 
         {
             // search cached blocks
             std::lock_guard<std::mutex> l(m_mutex);
-            ArenaBlock* pPrevBlock = &m_cachedBlocks[GetBucketId(blockSize)];
-            ArenaBlock* pBlock = pPrevBlock->pNext;
-            ArenaBlock* pPotentialBlock = nullptr;
-            ArenaBlock* pPotentialPrev = nullptr;
+            ArenaBlock* pPrevBlock = &m_cachedBlocks[bucket];
+            ArenaBlock* pBlock = SearchBlocks(pPrevBlock, blockSize, align);
 
-            while (pBlock)
+            if (pBlock)
             {
-                if (pBlock->blockSize >= blockSize)
+                m_cachedSize -= pBlock->blockSize;
+                if (pBlock == m_pLastCachedBlocks[bucket])
                 {
-                    if (pBlock == AlignUp(pBlock, align))
-                    {
-                        if (pBlock->blockSize == blockSize)
-                        {
-                            // Won't find a better match
-                            break;
-                        }
+                    m_pLastCachedBlocks[bucket] = pPrevBlock;
+                }
+            }
+            else
+            {
+                pPrevBlock = &m_oldCachedBlocks[GetBucketId(blockSize)];
+                pBlock = SearchBlocks(pPrevBlock, blockSize, align);
 
-                        // We could use this as it is larger than we wanted, but
-                        // continue to search for a better match
-                        pPotentialBlock = pBlock;
-                        pPotentialPrev = pPrevBlock;
+                if (pBlock)
+                {
+                    m_oldCachedSize -= pBlock->blockSize;
+                    if (pBlock == m_pOldLastCachedBlocks[bucket])
+                    {
+                        m_pLastCachedBlocks[bucket] = pPrevBlock;
                     }
                 }
-                else
-                {
-                    // Blocks are sorted by size (biggest first)
-                    // So, if we get here, there are no blocks 
-                    // large enough, fall through to allocation.
-                    pBlock = nullptr;
-                    break;
-                }
-
-                pPrevBlock = pBlock;
-                pBlock = pBlock->pNext;
-            }
-
-            if (!pBlock)
-            {
-                // Couldn't find an exact match, use next biggest size
-                pBlock = pPotentialBlock;
-                pPrevBlock = pPotentialPrev;
             }
 
             if (pBlock)
@@ -154,7 +126,7 @@ struct CachingAllocatorT : DefaultAllocator
         return this->DefaultAllocator::AllocateAligned(size, align);
     }
 
-    void  Free(void* pMem)
+    void Free(void* pMem)
     {
         if (pMem)
         {
@@ -162,24 +134,57 @@ struct CachingAllocatorT : DefaultAllocator
             SWR_ASSERT(pNewBlock->blockSize >= 0);
 
             std::unique_lock<std::mutex> l(m_mutex);
-            ArenaBlock* pPrevBlock = &m_cachedBlocks[GetBucketId(pNewBlock->blockSize)];
-            ArenaBlock* pBlock = pPrevBlock->pNext;
+            InsertCachedBlock(GetBucketId(pNewBlock->blockSize), pNewBlock);
+        }
+    }
 
-            while (pBlock)
+    void FreeOldBlocks()
+    {
+        if (!m_cachedSize) { return; }
+        std::lock_guard<std::mutex> l(m_mutex);
+
+        bool doFree = (m_oldCachedSize > MAX_UNUSED_SIZE);
+
+        for (uint32_t i = 0; i < CACHE_NUM_BUCKETS; ++i)
+        {
+            if (doFree)
             {
-                if (pNewBlock->blockSize >= pBlock->blockSize)
+                ArenaBlock* pBlock = m_oldCachedBlocks[i].pNext;
+                while (pBlock)
                 {
-                    // Insert here
-                    break;
+                    ArenaBlock* pNext = pBlock->pNext;
+                    m_oldCachedSize -= pBlock->blockSize;
+                    m_totalAllocated -= (pBlock->blockSize + ARENA_BLOCK_ALIGN);
+                    this->DefaultAllocator::Free(pBlock);
+                    pBlock = pNext;
                 }
-                pPrevBlock = pBlock;
-                pBlock = pBlock->pNext;
+                m_oldCachedBlocks[i].pNext = nullptr;
+                m_pOldLastCachedBlocks[i] = &m_oldCachedBlocks[i];
             }
 
-            // Insert into list
-            SWR_ASSERT(pPrevBlock);
-            pPrevBlock->pNext = pNewBlock;
-            pNewBlock->pNext = pBlock;
+            if (m_pLastCachedBlocks[i] != &m_cachedBlocks[i])
+            {
+                m_pLastCachedBlocks[i]->pNext = m_oldCachedBlocks[i].pNext;
+                m_oldCachedBlocks[i].pNext = m_cachedBlocks[i].pNext;
+                m_cachedBlocks[i].pNext = nullptr;
+                if (m_pOldLastCachedBlocks[i]->pNext)
+                {
+                    m_pOldLastCachedBlocks[i] = m_pLastCachedBlocks[i];
+                }
+                m_pLastCachedBlocks[i] = &m_cachedBlocks[i];
+            }
+        }
+
+        m_oldCachedSize += m_cachedSize;
+        m_cachedSize = 0;
+    }
+
+    CachingAllocatorT()
+    {
+        for (uint32_t i = 0; i < CACHE_NUM_BUCKETS; ++i)
+        {
+            m_pLastCachedBlocks[i] = &m_cachedBlocks[i];
+            m_pOldLastCachedBlocks[i] = &m_oldCachedBlocks[i];
         }
     }
 
@@ -195,17 +200,122 @@ struct CachingAllocatorT : DefaultAllocator
                 this->DefaultAllocator::Free(pBlock);
                 pBlock = pNext;
             }
+            pBlock = m_oldCachedBlocks[i].pNext;
+            while (pBlock)
+            {
+                ArenaBlock* pNext = pBlock->pNext;
+                this->DefaultAllocator::Free(pBlock);
+                pBlock = pNext;
+            }
         }
+    }
+
+private:
+    static uint32_t GetBucketId(size_t blockSize)
+    {
+        uint32_t bucketId = 0;
+
+#if defined(BitScanReverseSizeT)
+        BitScanReverseSizeT((unsigned long*)&bucketId, blockSize >> CACHE_START_BUCKET_BIT);
+        bucketId = std::min<uint32_t>(bucketId, CACHE_NUM_BUCKETS - 1);
+#endif
+
+        return bucketId;
+    }
+
+    void InsertCachedBlock(uint32_t bucketId, ArenaBlock* pNewBlock)
+    {
+        SWR_ASSERT(bucketId < CACHE_NUM_BUCKETS);
+
+        ArenaBlock* pPrevBlock = &m_cachedBlocks[bucketId];
+        ArenaBlock* pBlock = pPrevBlock->pNext;
+
+        while (pBlock)
+        {
+            if (pNewBlock->blockSize >= pBlock->blockSize)
+            {
+                // Insert here
+                break;
+            }
+            pPrevBlock = pBlock;
+            pBlock = pBlock->pNext;
+        }
+
+        // Insert into list
+        SWR_ASSERT(pPrevBlock);
+        pPrevBlock->pNext = pNewBlock;
+        pNewBlock->pNext = pBlock;
+
+        if (m_pLastCachedBlocks[bucketId] == pPrevBlock)
+        {
+            m_pLastCachedBlocks[bucketId] = pNewBlock;
+        }
+
+        m_cachedSize += pNewBlock->blockSize;
+    }
+
+    static ArenaBlock* SearchBlocks(ArenaBlock*& pPrevBlock, size_t blockSize, size_t align)
+    {
+        ArenaBlock* pBlock = pPrevBlock->pNext;
+        ArenaBlock* pPotentialBlock = nullptr;
+        ArenaBlock* pPotentialPrev = nullptr;
+
+        while (pBlock)
+        {
+            if (pBlock->blockSize >= blockSize)
+            {
+                if (pBlock == AlignUp(pBlock, align))
+                {
+                    if (pBlock->blockSize == blockSize)
+                    {
+                        // Won't find a better match
+                        break;
+                    }
+
+                    // We could use this as it is larger than we wanted, but
+                    // continue to search for a better match
+                    pPotentialBlock = pBlock;
+                    pPotentialPrev = pPrevBlock;
+                }
+            }
+            else
+            {
+                // Blocks are sorted by size (biggest first)
+                // So, if we get here, there are no blocks 
+                // large enough, fall through to allocation.
+                pBlock = nullptr;
+                break;
+            }
+
+            pPrevBlock = pBlock;
+            pBlock = pBlock->pNext;
+        }
+
+        if (!pBlock)
+        {
+            // Couldn't find an exact match, use next biggest size
+            pBlock = pPotentialBlock;
+            pPrevBlock = pPotentialPrev;
+        }
+
+        return pBlock;
     }
 
     // buckets, for block sizes < (1 << (start+1)), < (1 << (start+2)), ...
     static const uint32_t   CACHE_NUM_BUCKETS       = NumBucketsT;
     static const uint32_t   CACHE_START_BUCKET_BIT  = StartBucketBitT;
+    static const size_t     MAX_UNUSED_SIZE         = 20 * sizeof(MEGABYTE);
 
     ArenaBlock              m_cachedBlocks[CACHE_NUM_BUCKETS];
+    ArenaBlock*             m_pLastCachedBlocks[CACHE_NUM_BUCKETS];
+    ArenaBlock              m_oldCachedBlocks[CACHE_NUM_BUCKETS];
+    ArenaBlock*             m_pOldLastCachedBlocks[CACHE_NUM_BUCKETS];
     std::mutex              m_mutex;
 
     size_t                  m_totalAllocated = 0;
+
+    size_t                  m_cachedSize = 0;
+    size_t                  m_oldCachedSize = 0;
 };
 typedef CachingAllocatorT<> CachingAllocator;
 

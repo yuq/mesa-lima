@@ -263,7 +263,20 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
             _mm_pause();
         }
 
-        uint32_t dcIndex = pContext->dcRing.GetHead() % KNOB_MAX_DRAWS_IN_FLIGHT;
+        uint64_t curDraw = pContext->dcRing.GetHead();
+        uint32_t dcIndex = curDraw % KNOB_MAX_DRAWS_IN_FLIGHT;
+
+        static uint64_t lastDrawChecked;
+        static uint32_t lastFrameChecked;
+        if ((pContext->frameCount - lastFrameChecked) > 2 ||
+            (curDraw - lastDrawChecked) > 0x10000)
+        {
+            // Take this opportunity to clean-up old arena allocations
+            pContext->cachingArenaAllocator.FreeOldBlocks();
+
+            lastFrameChecked = pContext->frameCount;
+            lastDrawChecked = curDraw;
+        }
 
         DRAW_CONTEXT* pCurDrawContext = &pContext->dcRing[dcIndex];
         pContext->pCurDrawContext = pCurDrawContext;
@@ -1544,4 +1557,6 @@ void SWR_API SwrEndFrame(
     HANDLE hContext)
 {
     RDTSC_ENDFRAME();
+    SWR_CONTEXT *pContext = GetContext(hContext);
+    pContext->frameCount++;
 }
