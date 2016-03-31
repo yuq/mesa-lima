@@ -1996,7 +1996,7 @@ fetch_sampler_unit(struct tgsi_exec_machine *mach,
                    const struct tgsi_full_instruction *inst,
                    uint sampler)
 {
-   uint unit;
+   uint unit = 0;
    int i;
    if (inst->Src[sampler].Register.Indirect) {
       const struct tgsi_full_src_register *reg = &inst->Src[sampler];
