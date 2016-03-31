@@ -1348,7 +1348,7 @@ int r600_bytecode_add_vtx(struct r600_bytecode *bc, const struct r600_bytecode_v
 	/* Load index register if required */
 	if (bc->chip_class >= EVERGREEN) {
 		if (vtx->buffer_index_mode)
-			egcm_load_index_reg(bc, 0, false);
+			egcm_load_index_reg(bc, vtx->buffer_index_mode - 1, false);
 	}
 
 	/* cf can contains only alu or only vtx or only tex */
