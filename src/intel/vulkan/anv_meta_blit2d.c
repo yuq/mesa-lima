@@ -316,6 +316,56 @@ blit2d_unbind_src(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
+struct blit2d_dst_temps {
+   VkImage image;
+   struct anv_image_view iview;
+   VkFramebuffer fb;
+};
+
+static void
+blit2d_bind_dst(struct anv_cmd_buffer *cmd_buffer,
+                struct anv_meta_blit2d_surf *dst,
+                uint64_t offset,
+                uint32_t width,
+                uint32_t height,
+                struct blit2d_dst_temps *tmp)
+{
+   create_iview(cmd_buffer, dst, offset, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                width, height, &tmp->image, &tmp->iview);
+
+   anv_CreateFramebuffer(anv_device_to_handle(cmd_buffer->device),
+      &(VkFramebufferCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+         .attachmentCount = 1,
+         .pAttachments = (VkImageView[]) {
+            anv_image_view_to_handle(&tmp->iview),
+         },
+         .width = width,
+         .height = height,
+         .layers = 1
+      }, &cmd_buffer->pool->alloc, &tmp->fb);
+
+
+   anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 0, 1,
+                      &(VkViewport) {
+                         .x = 0.0f,
+                         .y = 0.0f,
+                         .width = width,
+                         .height = height,
+                         .minDepth = 0.0f,
+                         .maxDepth = 1.0f,
+                      });
+}
+
+static void
+blit2d_unbind_dst(struct anv_cmd_buffer *cmd_buffer,
+                  struct blit2d_dst_temps *tmp)
+{
+   VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
+   anv_DestroyFramebuffer(vk_device, tmp->fb, &cmd_buffer->pool->alloc);
+   anv_DestroyImage(vk_device, tmp->image, &cmd_buffer->pool->alloc);
+}
+
 void
 anv_meta_end_blit2d(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_meta_saved_state *save)
@@ -354,7 +404,6 @@ anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
                            struct anv_meta_blit2d_rect *rects)
 {
    struct anv_device *device = cmd_buffer->device;
-   VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
 
    for (unsigned r = 0; r < num_rects; ++r) {
       struct blit2d_src_temps src_temps;
@@ -367,12 +416,9 @@ anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
                                          &offset,
                                          &rects[r].dst_x, &rects[r].dst_y);
 
-      VkImage dst_img;
-      struct anv_image_view dst_iview;
-      create_iview(cmd_buffer, dst, offset, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                   rects[r].dst_x + rects[r].width,
-                   rects[r].dst_y + rects[r].height,
-                   &dst_img, &dst_iview);
+      struct blit2d_dst_temps dst_temps;
+      blit2d_bind_dst(cmd_buffer, dst, offset, rects[r].dst_x + rects[r].width,
+                      rects[r].dst_y + rects[r].height, &dst_temps);
 
       struct blit_vb_data {
          float pos[2];
@@ -441,24 +487,11 @@ anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
             sizeof(struct anv_vue_header),
          });
 
-      VkFramebuffer fb;
-      anv_CreateFramebuffer(vk_device,
-         &(VkFramebufferCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .attachmentCount = 1,
-            .pAttachments = (VkImageView[]) {
-               anv_image_view_to_handle(&dst_iview),
-            },
-            .width = dst_iview.extent.width,
-            .height = dst_iview.extent.height,
-            .layers = 1
-         }, &cmd_buffer->pool->alloc, &fb);
-
       ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
          &(VkRenderPassBeginInfo) {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             .renderPass = device->meta_state.blit2d.render_pass,
-            .framebuffer = fb,
+            .framebuffer = dst_temps.fb,
             .renderArea = {
                .offset = { rects[r].dst_x, rects[r].dst_y, },
                .extent = { rects[r].width, rects[r].height },
@@ -469,16 +502,6 @@ anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
 
       bind_pipeline(cmd_buffer, src_type, BLIT2D_DST_TYPE_NORMAL);
 
-      anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 0, 1,
-                         &(VkViewport) {
-                           .x = 0.0f,
-                           .y = 0.0f,
-                           .width = dst_iview.extent.width,
-                           .height = dst_iview.extent.height,
-                           .minDepth = 0.0f,
-                           .maxDepth = 1.0f,
-                         });
-
       ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer), 3, 1, 0, 0);
 
       ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
@@ -487,8 +510,7 @@ anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
        * descriptor sets, etc. has been used.  We are free to delete it.
        */
       blit2d_unbind_src(cmd_buffer, src_type, &src_temps);
-      anv_DestroyFramebuffer(vk_device, fb, &cmd_buffer->pool->alloc);
-      anv_DestroyImage(vk_device, dst_img, &cmd_buffer->pool->alloc);
+      blit2d_unbind_dst(cmd_buffer, &dst_temps);
    }
 }
 
