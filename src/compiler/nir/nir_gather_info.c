@@ -28,6 +28,7 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, nir_shader *shader)
 {
    switch (instr->intrinsic) {
    case nir_intrinsic_discard:
+   case nir_intrinsic_discard_if:
       assert(shader->stage == MESA_SHADER_FRAGMENT);
       shader->info.fs.uses_discard = true;
       break;
