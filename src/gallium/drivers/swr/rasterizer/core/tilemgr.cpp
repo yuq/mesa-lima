@@ -283,7 +283,6 @@ void HotTileMgr::ClearStencilHotTile(const HOTTILE* pHotTile)
 void HotTileMgr::InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID)
 {
     const API_STATE& state = GetApiState(pDC);
-    HotTileMgr *pHotTileMgr = pContext->pHotTileMgr;
 
     uint32_t x, y;
     MacroTileMgr::getTileIndices(macroID, x, y);

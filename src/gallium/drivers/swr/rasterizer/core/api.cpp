@@ -1090,9 +1090,9 @@ void DrawInstanced(
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    int32_t maxVertsPerDraw = MaxVertsPerDraw(pDC, numVertices, topology);
+    uint32_t maxVertsPerDraw = MaxVertsPerDraw(pDC, numVertices, topology);
     uint32_t primsPerDraw = GetNumPrims(topology, maxVertsPerDraw);
-    int32_t remainingVerts = numVertices;
+    uint32_t remainingVerts = numVertices;
 
     API_STATE    *pState = &pDC->pState->state;
     pState->topology = topology;
@@ -1210,9 +1210,9 @@ void DrawIndexedInstance(
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
     API_STATE* pState = &pDC->pState->state;
 
-    int32_t maxIndicesPerDraw = MaxVertsPerDraw(pDC, numIndices, topology);
+    uint32_t maxIndicesPerDraw = MaxVertsPerDraw(pDC, numIndices, topology);
     uint32_t primsPerDraw = GetNumPrims(topology, maxIndicesPerDraw);
-    int32_t remainingIndices = numIndices;
+    uint32_t remainingIndices = numIndices;
 
     uint32_t indexSize = 0;
     switch (pState->indexBuffer.format)
