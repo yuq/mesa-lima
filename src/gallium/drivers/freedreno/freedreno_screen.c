@@ -379,6 +379,8 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 10;
 	case PIPE_CAP_UMA:
 		return 1;
+	case PIPE_CAP_NATIVE_FENCE_FD:
+		return 0;
 	}
 	debug_printf("unknown param %d\n", param);
 	return 0;

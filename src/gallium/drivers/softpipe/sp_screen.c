@@ -289,6 +289,7 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED:
    case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
    case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
+   case PIPE_CAP_NATIVE_FENCE_FD:
       return 0;
    case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
       return 4;

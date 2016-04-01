@@ -375,6 +375,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_WINDOW_RECTANGLES:
 	case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
 	case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
+	case PIPE_CAP_NATIVE_FENCE_FD:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:

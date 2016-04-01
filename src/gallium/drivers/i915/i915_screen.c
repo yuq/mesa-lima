@@ -295,6 +295,7 @@ i915_get_param(struct pipe_screen *screen, enum pipe_cap cap)
    case PIPE_CAP_SAMPLER_VIEW_TARGET:
    case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
    case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
+   case PIPE_CAP_NATIVE_FENCE_FD:
       return 0;
 
    case PIPE_CAP_MAX_VIEWPORTS:
