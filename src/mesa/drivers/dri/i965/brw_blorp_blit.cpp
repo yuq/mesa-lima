@@ -1629,12 +1629,19 @@ brw_blorp_blit_program::texel_fetch(struct brw_reg dst)
       SAMPLER_MESSAGE_ARG_U_INT,
       SAMPLER_MESSAGE_ARG_V_INT
    };
+   static const sampler_message_arg gen9_ld_args[3] = {
+      SAMPLER_MESSAGE_ARG_U_INT,
+      SAMPLER_MESSAGE_ARG_V_INT,
+      SAMPLER_MESSAGE_ARG_ZERO_INT /* LOD */
+   };
 
    switch (brw->gen) {
    case 6:
       texture_lookup(dst, SHADER_OPCODE_TXF, gen6_args, s_is_zero ? 2 : 5);
       break;
    case 7:
+   case 8:
+   case 9:
       switch (key->tex_layout) {
       case INTEL_MSAA_LAYOUT_IMS:
          /* From the Ivy Bridge PRM, Vol4 Part1 p72 (Multisampled Surface Storage
@@ -1657,8 +1664,13 @@ brw_blorp_blit_program::texel_fetch(struct brw_reg dst)
          break;
       case INTEL_MSAA_LAYOUT_NONE:
          assert(s_is_zero);
-         texture_lookup(dst, SHADER_OPCODE_TXF, gen7_ld_args,
-                        ARRAY_SIZE(gen7_ld_args));
+         if (brw->gen < 9) {
+            texture_lookup(dst, SHADER_OPCODE_TXF, gen7_ld_args,
+                           ARRAY_SIZE(gen7_ld_args));
+         } else {
+            texture_lookup(dst, SHADER_OPCODE_TXF, gen9_ld_args,
+                           ARRAY_SIZE(gen9_ld_args));
+         }
          break;
       }
       break;
