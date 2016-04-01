@@ -239,6 +239,15 @@ brw_clear(struct gl_context *ctx, GLbitfield mask)
       }
    }
 
+   /* BLORP is currently only supported on Gen6+. */
+   if (brw->gen >= 6 && (mask & BUFFER_BITS_COLOR)) {
+      const bool encode_srgb = ctx->Color.sRGBEnabled;
+      if (brw_blorp_clear_color(brw, fb, mask, partial_clear, encode_srgb)) {
+         debug_mask("blorp color", mask & BUFFER_BITS_COLOR);
+         mask &= ~BUFFER_BITS_COLOR;
+      }
+   }
+
    /* Clear color buffers with fast clear or at least rep16 writes. */
    if (brw->gen >= 6 && (mask & BUFFER_BITS_COLOR)) {
       if (brw_meta_fast_clear(brw, fb, mask, partial_clear)) {
