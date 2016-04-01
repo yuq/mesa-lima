@@ -67,9 +67,18 @@ nv50_screen_is_format_supported(struct pipe_screen *pscreen,
       break;
    }
 
+   if (bindings & PIPE_BIND_LINEAR)
+      if (util_format_is_depth_or_stencil(format) ||
+          (target != PIPE_TEXTURE_1D &&
+           target != PIPE_TEXTURE_2D &&
+           target != PIPE_TEXTURE_RECT) ||
+          sample_count > 1)
+         return false;
+
    /* transfers & shared are always supported */
    bindings &= ~(PIPE_BIND_TRANSFER_READ |
                  PIPE_BIND_TRANSFER_WRITE |
+                 PIPE_BIND_LINEAR |
                  PIPE_BIND_SHARED);
 
    return (( nv50_format_table[format].usage |
