@@ -120,6 +120,12 @@ get_io_mask(nir_variable *var, gl_shader_stage stage)
 void
 nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
 {
+   /* This pass does not yet support tessellation shaders */
+   assert(shader->stage == MESA_SHADER_VERTEX ||
+          shader->stage == MESA_SHADER_GEOMETRY ||
+          shader->stage == MESA_SHADER_FRAGMENT ||
+          shader->stage == MESA_SHADER_COMPUTE);
+
    shader->info.inputs_read = 0;
    foreach_list_typed(nir_variable, var, node, &shader->inputs)
       shader->info.inputs_read |= get_io_mask(var, shader->stage);
