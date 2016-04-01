@@ -256,7 +256,6 @@ save_glx_visual( Display *dpy, XVisualInfo *vinfo,
    GLboolean ximageFlag = GL_TRUE;
    XMesaVisual xmvis;
    GLint i;
-   GLboolean comparePointers;
 
    if (dbFlag) {
       /* Check if the MESA_BACK_BUFFER env var is set */
@@ -279,37 +278,34 @@ save_glx_visual( Display *dpy, XVisualInfo *vinfo,
       return NULL;
    }
 
-   /* Comparing IDs uses less memory but sometimes fails. */
-   /* XXX revisit this after 3.0 is finished. */
-   if (getenv("MESA_GLX_VISUAL_HACK"))
-      comparePointers = GL_TRUE;
-   else
-      comparePointers = GL_FALSE;
 
    /* Force the visual to have an alpha channel */
    if (getenv("MESA_GLX_FORCE_ALPHA"))
       alphaFlag = GL_TRUE;
 
-   /* First check if a matching visual is already in the list */
-   for (i=0; i<NumVisuals; i++) {
-      XMesaVisual v = VisualTable[i];
-      if (v->display == dpy
-          && v->mesa_visual.level == level
-          && v->mesa_visual.numAuxBuffers == numAuxBuffers
-          && v->ximage_flag == ximageFlag
-          && v->mesa_visual.doubleBufferMode == dbFlag
-          && v->mesa_visual.stereoMode == stereoFlag
-          && (v->mesa_visual.alphaBits > 0) == alphaFlag
-          && (v->mesa_visual.depthBits >= depth_size || depth_size == 0)
-          && (v->mesa_visual.stencilBits >= stencil_size || stencil_size == 0)
-          && (v->mesa_visual.accumRedBits >= accumRedSize || accumRedSize == 0)
-          && (v->mesa_visual.accumGreenBits >= accumGreenSize || accumGreenSize == 0)
-          && (v->mesa_visual.accumBlueBits >= accumBlueSize || accumBlueSize == 0)
-          && (v->mesa_visual.accumAlphaBits >= accumAlphaSize || accumAlphaSize == 0)) {
-         /* now either compare XVisualInfo pointers or visual IDs */
-         if ((!comparePointers && v->visinfo->visualid == vinfo->visualid)
-             || (comparePointers && v->vishandle == vinfo)) {
-            return v;
+   /* Comparing IDs uses less memory but sometimes fails. */
+   /* XXX revisit this after 3.0 is finished. */
+   if (!getenv("MESA_GLX_VISUAL_HACK")) {
+      /* First check if a matching visual is already in the list */
+      for (i=0; i<NumVisuals; i++) {
+         XMesaVisual v = VisualTable[i];
+         if (v->display == dpy
+             && v->mesa_visual.level == level
+             && v->mesa_visual.numAuxBuffers == numAuxBuffers
+             && v->ximage_flag == ximageFlag
+             && v->mesa_visual.doubleBufferMode == dbFlag
+             && v->mesa_visual.stereoMode == stereoFlag
+             && (v->mesa_visual.alphaBits > 0) == alphaFlag
+             && (v->mesa_visual.depthBits >= depth_size || depth_size == 0)
+             && (v->mesa_visual.stencilBits >= stencil_size || stencil_size == 0)
+             && (v->mesa_visual.accumRedBits >= accumRedSize || accumRedSize == 0)
+             && (v->mesa_visual.accumGreenBits >= accumGreenSize || accumGreenSize == 0)
+             && (v->mesa_visual.accumBlueBits >= accumBlueSize || accumBlueSize == 0)
+             && (v->mesa_visual.accumAlphaBits >= accumAlphaSize || accumAlphaSize == 0)) {
+            /* now compare visual IDs */
+            if (v->visinfo->visualid == vinfo->visualid) {
+               return v;
+            }
          }
       }
    }
@@ -323,10 +319,6 @@ save_glx_visual( Display *dpy, XVisualInfo *vinfo,
                               accumBlueSize, accumAlphaSize, 0, level,
                               GLX_NONE_EXT );
    if (xmvis) {
-      /* Save a copy of the pointer now so we can find this visual again
-       * if we need to search for it in find_glx_visual().
-       */
-      xmvis->vishandle = vinfo;
       /* Allocate more space for additional visual */
       VisualTable = realloc(VisualTable, sizeof(XMesaVisual) * (NumVisuals + 1));
       /* add xmvis to the list */
@@ -438,13 +430,6 @@ find_glx_visual( Display *dpy, XVisualInfo *vinfo )
    for (i=0;i<NumVisuals;i++) {
       if (VisualTable[i]->display==dpy
           && VisualTable[i]->visinfo->visualid == vinfo->visualid) {
-         return VisualTable[i];
-      }
-   }
-
-   /* if that fails, try to match pointers */
-   for (i=0;i<NumVisuals;i++) {
-      if (VisualTable[i]->display==dpy && VisualTable[i]->vishandle==vinfo) {
          return VisualTable[i];
       }
    }
@@ -1225,6 +1210,7 @@ choose_visual( Display *dpy, int screen, const int *list, GLboolean fbConfig )
                                stereo_flag, depth_size, stencil_size,
                                accumRedSize, accumGreenSize,
                                accumBlueSize, accumAlphaSize, level, numAux );
+      free(vis);
    }
 
    return xmvis;
