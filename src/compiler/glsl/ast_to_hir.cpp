@@ -1905,7 +1905,8 @@ ast_expression::do_hir(exec_list *instructions,
 
          if ((var->data.mode == ir_var_auto || var->data.mode == ir_var_shader_out)
              && !this->is_lhs
-             && result->variable_referenced()->data.assigned != true) {
+             && result->variable_referenced()->data.assigned != true
+             && !is_gl_identifier(var->name)) {
             _mesa_glsl_warning(&loc, state, "`%s' used uninitialized",
                                this->primary_expression.identifier);
          }
