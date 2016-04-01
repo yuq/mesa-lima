@@ -161,7 +161,7 @@ enum brw_pipeline {
 
 enum brw_cache_id {
    BRW_CACHE_FS_PROG,
-   BRW_CACHE_BLORP_BLIT_PROG,
+   BRW_CACHE_BLORP_PROG,
    BRW_CACHE_SF_PROG,
    BRW_CACHE_VS_PROG,
    BRW_CACHE_FF_GS_PROG,
@@ -251,7 +251,7 @@ enum brw_state_id {
  * polluting the brw_state_cache code with special cases, we retain the dirty
  * bit for now.  It should eventually be removed.
  */
-#define BRW_NEW_BLORP_BLIT_PROG_DATA    (1ull << BRW_CACHE_BLORP_BLIT_PROG)
+#define BRW_NEW_BLORP_BLIT_PROG_DATA    (1ull << BRW_CACHE_BLORP_PROG)
 #define BRW_NEW_SF_PROG_DATA            (1ull << BRW_CACHE_SF_PROG)
 #define BRW_NEW_VS_PROG_DATA            (1ull << BRW_CACHE_VS_PROG)
 #define BRW_NEW_FF_GS_PROG_DATA         (1ull << BRW_CACHE_FF_GS_PROG)

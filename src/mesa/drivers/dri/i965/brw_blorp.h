@@ -49,6 +49,14 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
                         GLenum filter, bool mirror_x, bool mirror_y,
                         bool decode_srgb, bool encode_srgb);
 
+bool
+brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
+                      GLbitfield mask, bool partial_clear, bool encode_srgb);
+
+void
+brw_blorp_resolve_color(struct brw_context *brw,
+                        struct intel_mipmap_tree *mt);
+
 #ifdef __cplusplus
 } /* end extern "C" */
 

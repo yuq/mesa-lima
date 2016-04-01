@@ -2182,14 +2182,14 @@ brw_blorp_blit_params::get_wm_prog(struct brw_context *brw,
                                    brw_blorp_prog_data **prog_data) const
 {
    uint32_t prog_offset = 0;
-   if (!brw_search_cache(&brw->cache, BRW_CACHE_BLORP_BLIT_PROG,
+   if (!brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
                          &this->wm_prog_key, sizeof(this->wm_prog_key),
                          &prog_offset, prog_data)) {
       brw_blorp_blit_program prog(brw, &this->wm_prog_key);
       GLuint program_size;
       const GLuint *program = prog.compile(brw, INTEL_DEBUG & DEBUG_BLORP,
                                            &program_size);
-      brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_BLIT_PROG,
+      brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
                        &this->wm_prog_key, sizeof(this->wm_prog_key),
                        program, program_size,
                        &prog.prog_data, sizeof(prog.prog_data),
