@@ -681,7 +681,7 @@ void draw_geometry_shader_prepare(struct draw_geometry_shader *shader,
    if (!use_llvm && shader && shader->machine->Tokens != shader->state.tokens) {
       tgsi_exec_machine_bind_shader(shader->machine,
                                     shader->state.tokens,
-                                    draw->gs.tgsi.sampler);
+                                    draw->gs.tgsi.sampler, draw->gs.tgsi.image);
    }
 }
 

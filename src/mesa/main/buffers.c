@@ -222,6 +222,12 @@ read_buffer_enum_to_index(GLenum buffer)
    }
 }
 
+static bool
+is_legal_es3_readbuffer_enum(GLenum buf)
+{
+   return buf == GL_BACK || buf == GL_NONE ||
+          (buf >= GL_COLOR_ATTACHMENT0 && buf <= GL_COLOR_ATTACHMENT31);
+}
 
 /**
  * Called by glDrawBuffer() and glNamedFramebufferDrawBuffer().
@@ -715,7 +721,11 @@ read_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
    }
    else {
       /* general case / window-system framebuffer */
-      srcBuffer = read_buffer_enum_to_index(buffer);
+      if (_mesa_is_gles3(ctx) && !is_legal_es3_readbuffer_enum(buffer))
+         srcBuffer = -1;
+      else
+         srcBuffer = read_buffer_enum_to_index(buffer);
+
       if (srcBuffer == -1) {
          _mesa_error(ctx, GL_INVALID_ENUM,
                      "%s(invalid buffer %s)", caller,

@@ -60,7 +60,8 @@ DECL_RESOURCE_FUNC(VAR, gl_shader_variable);
 DECL_RESOURCE_FUNC(UBO, gl_uniform_block);
 DECL_RESOURCE_FUNC(UNI, gl_uniform_storage);
 DECL_RESOURCE_FUNC(ATC, gl_active_atomic_buffer);
-DECL_RESOURCE_FUNC(XFB, gl_transform_feedback_varying_info);
+DECL_RESOURCE_FUNC(XFV, gl_transform_feedback_varying_info);
+DECL_RESOURCE_FUNC(XFB, gl_transform_feedback_buffer);
 DECL_RESOURCE_FUNC(SUB, gl_subroutine_function);
 
 void GLAPIENTRY
@@ -433,7 +434,7 @@ _mesa_program_resource_name(struct gl_program_resource *res)
    case GL_SHADER_STORAGE_BLOCK:
       return RESOURCE_UBO(res)->Name;
    case GL_TRANSFORM_FEEDBACK_VARYING:
-      return RESOURCE_XFB(res)->Name;
+      return RESOURCE_XFV(res)->Name;
    case GL_PROGRAM_INPUT:
       var = RESOURCE_VAR(res);
       /* Special case gl_VertexIDMESA -> gl_VertexID. */
@@ -473,8 +474,8 @@ _mesa_program_resource_array_size(struct gl_program_resource *res)
 {
    switch (res->Type) {
    case GL_TRANSFORM_FEEDBACK_VARYING:
-      return RESOURCE_XFB(res)->Size > 1 ?
-             RESOURCE_XFB(res)->Size : 0;
+      return RESOURCE_XFV(res)->Size > 1 ?
+             RESOURCE_XFV(res)->Size : 0;
    case GL_PROGRAM_INPUT:
    case GL_PROGRAM_OUTPUT:
       return RESOURCE_VAR(res)->type->length;
@@ -670,6 +671,7 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
       return RESOURCE_SUB(res)->index;
    case GL_UNIFORM_BLOCK:
    case GL_SHADER_STORAGE_BLOCK:
+   case GL_TRANSFORM_FEEDBACK_BUFFER:
    case GL_TRANSFORM_FEEDBACK_VARYING:
    default:
       return calc_resource_index(shProg, res);
@@ -707,6 +709,7 @@ _mesa_program_resource_find_index(struct gl_shader_program *shProg,
       case GL_UNIFORM_BLOCK:
       case GL_ATOMIC_COUNTER_BUFFER:
       case GL_SHADER_STORAGE_BLOCK:
+      case GL_TRANSFORM_FEEDBACK_BUFFER:
          if (_mesa_program_resource_index(shProg, res) == index)
             return res;
          break;
@@ -1009,7 +1012,8 @@ get_buffer_property(struct gl_shader_program *shProg,
    GET_CURRENT_CONTEXT(ctx);
    if (res->Type != GL_UNIFORM_BLOCK &&
        res->Type != GL_ATOMIC_COUNTER_BUFFER &&
-       res->Type != GL_SHADER_STORAGE_BLOCK)
+       res->Type != GL_SHADER_STORAGE_BLOCK &&
+       res->Type != GL_TRANSFORM_FEEDBACK_BUFFER)
       goto invalid_operation;
 
    if (res->Type == GL_UNIFORM_BLOCK) {
@@ -1110,6 +1114,30 @@ get_buffer_property(struct gl_shader_program *shProg,
          }
          return RESOURCE_ATC(res)->NumUniforms;
       }
+   } else if (res->Type == GL_TRANSFORM_FEEDBACK_BUFFER) {
+      switch (prop) {
+      case GL_BUFFER_BINDING:
+         *val = RESOURCE_XFB(res)->Binding;
+         return 1;
+      case GL_NUM_ACTIVE_VARIABLES:
+         *val = RESOURCE_XFB(res)->NumVaryings;
+         return 1;
+      case GL_ACTIVE_VARIABLES:
+         int i = 0;
+         for ( ; i < shProg->LinkedTransformFeedback.NumVarying; i++) {
+            unsigned index =
+               shProg->LinkedTransformFeedback.Varyings[i].BufferIndex;
+            struct gl_program_resource *buf_res =
+               _mesa_program_resource_find_index(shProg,
+                                                 GL_TRANSFORM_FEEDBACK_BUFFER,
+                                                 index);
+            assert(buf_res);
+            if (res == buf_res) {
+               *val++ = i;
+            }
+         }
+         return RESOURCE_XFB(res)->NumVaryings;
+      }
    }
    assert(!"support for property type not implemented");
 
@@ -1140,6 +1168,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    case GL_NAME_LENGTH:
       switch (res->Type) {
       case GL_ATOMIC_COUNTER_BUFFER:
+      case GL_TRANSFORM_FEEDBACK_BUFFER:
          goto invalid_operation;
       default:
          /* Resource name length + terminator. */
@@ -1157,7 +1186,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
          *val = RESOURCE_VAR(res)->type->gl_type;
          return 1;
       case GL_TRANSFORM_FEEDBACK_VARYING:
-         *val = RESOURCE_XFB(res)->Type;
+         *val = RESOURCE_XFV(res)->Type;
          return 1;
       default:
          goto invalid_operation;
@@ -1180,15 +1209,23 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
          *val = MAX2(_mesa_program_resource_array_size(res), 1);
          return 1;
       case GL_TRANSFORM_FEEDBACK_VARYING:
-         *val = MAX2(RESOURCE_XFB(res)->Size, 1);
+         *val = MAX2(RESOURCE_XFV(res)->Size, 1);
          return 1;
       default:
          goto invalid_operation;
       }
    case GL_OFFSET:
-      VALIDATE_TYPE_2(GL_UNIFORM, GL_BUFFER_VARIABLE);
-      *val = RESOURCE_UNI(res)->offset;
-      return 1;
+      switch (res->Type) {
+      case GL_UNIFORM:
+      case GL_BUFFER_VARIABLE:
+         *val = RESOURCE_UNI(res)->offset;
+         return 1;
+      case GL_TRANSFORM_FEEDBACK_VARYING:
+         *val = RESOURCE_XFV(res)->Offset;
+         return 1;
+      default:
+         goto invalid_operation;
+      }
    case GL_BLOCK_INDEX:
       VALIDATE_TYPE_2(GL_UNIFORM, GL_BUFFER_VARIABLE);
       *val = RESOURCE_UNI(res)->block_index;
@@ -1314,6 +1351,16 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       default:
          goto invalid_operation;
       }
+
+   case GL_TRANSFORM_FEEDBACK_BUFFER_INDEX:
+      VALIDATE_TYPE(GL_TRANSFORM_FEEDBACK_VARYING);
+      *val = RESOURCE_XFV(res)->BufferIndex;
+      return 1;
+   case GL_TRANSFORM_FEEDBACK_BUFFER_STRIDE:
+      VALIDATE_TYPE(GL_TRANSFORM_FEEDBACK_BUFFER);
+      *val = RESOURCE_XFB(res)->Stride * 4;
+      return 1;
+
    default:
       goto invalid_enum;
    }

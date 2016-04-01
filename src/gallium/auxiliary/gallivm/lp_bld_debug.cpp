@@ -128,7 +128,7 @@ lp_debug_dump_value(LLVMValueRef value)
  * - http://blog.llvm.org/2010/04/intro-to-llvm-mc-project.html
  */
 static size_t
-disassemble(const void* func, std::stringstream &buffer)
+disassemble(const void* func, std::ostream &buffer)
 {
    const uint8_t *bytes = (const uint8_t *)func;
 
@@ -235,15 +235,16 @@ disassemble(const void* func, std::stringstream &buffer)
 
 
 extern "C" void
-lp_disassemble(LLVMValueRef func, const void *code) {
-   std::stringstream buffer;
+lp_disassemble(LLVMValueRef func, const void *code)
+{
+   std::ostringstream buffer;
    std::string s;
 
    buffer << LLVMGetValueName(func) << ":\n";
    disassemble(code, buffer);
    s = buffer.str();
-   _debug_printf("%s", s.c_str());
-   _debug_printf("\n");
+   os_log_message(s.c_str());
+   os_log_message("\n");
 }
 
 
@@ -259,7 +260,6 @@ extern "C" void
 lp_profile(LLVMValueRef func, const void *code)
 {
 #if defined(__linux__) && defined(PROFILE)
-   std::stringstream buffer;
    static std::ofstream perf_asm_file;
    static boolean first_time = TRUE;
    static FILE *perf_map_file = NULL;
@@ -283,9 +283,9 @@ lp_profile(LLVMValueRef func, const void *code)
    if (perf_map_file) {
       const char *symbol = LLVMGetValueName(func);
       unsigned long addr = (uintptr_t)code;
-      buffer << symbol << ":\n";
-      unsigned long size = disassemble(code, buffer);
-      perf_asm_file << buffer.rdbuf() << std::flush;
+      perf_asm_file << symbol << ":\n";
+      unsigned long size = disassemble(code, perf_asm_file);
+      perf_asm_file.flush();
       fprintf(perf_map_file, "%lx %lx %s\n", addr, size, symbol);
       fflush(perf_map_file);
    }

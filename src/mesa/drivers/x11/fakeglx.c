@@ -74,6 +74,7 @@
    "GLX_MESA_copy_sub_buffer " \
    "GLX_MESA_pixmap_colormap " \
    "GLX_MESA_release_buffers " \
+   "GLX_ARB_create_context " \
    "GLX_ARB_get_proc_address " \
    "GLX_EXT_texture_from_pixmap " \
    "GLX_EXT_visual_info " \
@@ -2831,6 +2832,56 @@ Fake_glXReleaseTexImageEXT(Display *dpy, GLXDrawable drawable, int buffer)
 }
 
 
+static GLXContext
+Fake_glXCreateContextAttribs(Display *dpy, GLXFBConfig config,
+                             GLXContext share_context, Bool direct,
+                             const int *attrib_list)
+{
+   XMesaContext xmCtx;
+   XMesaVisual xmvis = (XMesaVisual) config;
+   int i;
+   int major = 0, minor = 0, ctxFlags = 0, profileFlags = 0;
+
+   for (i = 0; attrib_list[i]; i += 2) {
+      switch (attrib_list[i]) {
+      case GLX_CONTEXT_MAJOR_VERSION_ARB:
+         major = attrib_list[i + 1];
+         break;
+      case GLX_CONTEXT_MINOR_VERSION_ARB:
+         minor = attrib_list[i + 1];
+         break;
+      case GLX_CONTEXT_FLAGS_ARB:
+         ctxFlags = attrib_list[i + 1];
+         break;
+      case GLX_CONTEXT_PROFILE_MASK_ARB:
+         profileFlags = attrib_list[i + 1];
+         break;
+      default:
+         fprintf(stderr, "Bad attribute in glXCreateContextAttribs()\n");
+         return 0;
+      }
+   }
+
+   if (major * 10 + minor > 21) {
+      /* swrast only supports GL 2.1 and earlier */
+      return 0;
+   }
+
+   /* These are ignored for now.  We'd have to enhance XMesaCreateContext
+    * to take these flags and the version, at least.
+    */
+   (void) ctxFlags;
+   (void) profileFlags;
+
+   /* deallocate unused windows/buffers */
+   XMesaGarbageCollect(dpy);
+
+   xmCtx = XMesaCreateContext(xmvis, (XMesaContext) share_context);
+
+   return (GLXContext) xmCtx;
+}
+
+
 /* silence warning */
 extern struct _glxapi_table *_mesa_GetGLXDispatchTable(void);
 
@@ -2990,5 +3041,6 @@ _mesa_GetGLXDispatchTable(void)
    glx.BindTexImageEXT = Fake_glXBindTexImageEXT;
    glx.ReleaseTexImageEXT = Fake_glXReleaseTexImageEXT;
 
+   glx.CreateContextAttribs = Fake_glXCreateContextAttribs;
    return &glx;
 }

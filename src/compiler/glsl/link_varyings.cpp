@@ -63,6 +63,125 @@ get_varying_type(const ir_variable *var, gl_shader_stage stage)
    return type;
 }
 
+static void
+create_xfb_varying_names(void *mem_ctx, const glsl_type *t, char **name,
+                         size_t name_length, unsigned *count,
+                         const char *ifc_member_name,
+                         const glsl_type *ifc_member_t, char ***varying_names)
+{
+   if (t->is_interface()) {
+      size_t new_length = name_length;
+
+      assert(ifc_member_name && ifc_member_t);
+      ralloc_asprintf_rewrite_tail(name, &new_length, ".%s", ifc_member_name);
+
+      create_xfb_varying_names(mem_ctx, ifc_member_t, name, new_length, count,
+                               NULL, NULL, varying_names);
+   } else if (t->is_record()) {
+      for (unsigned i = 0; i < t->length; i++) {
+         const char *field = t->fields.structure[i].name;
+         size_t new_length = name_length;
+
+         ralloc_asprintf_rewrite_tail(name, &new_length, ".%s", field);
+
+         create_xfb_varying_names(mem_ctx, t->fields.structure[i].type, name,
+                                  new_length, count, NULL, NULL,
+                                  varying_names);
+      }
+   } else if (t->without_array()->is_record() ||
+              t->without_array()->is_interface() ||
+              (t->is_array() && t->fields.array->is_array())) {
+      for (unsigned i = 0; i < t->length; i++) {
+         size_t new_length = name_length;
+
+         /* Append the subscript to the current variable name */
+         ralloc_asprintf_rewrite_tail(name, &new_length, "[%u]", i);
+
+         create_xfb_varying_names(mem_ctx, t->fields.array, name, new_length,
+                                  count, ifc_member_name, ifc_member_t,
+                                  varying_names);
+      }
+   } else {
+      (*varying_names)[(*count)++] = ralloc_strdup(mem_ctx, *name);
+   }
+}
+
+bool
+process_xfb_layout_qualifiers(void *mem_ctx, const gl_shader *sh,
+                              unsigned *num_tfeedback_decls,
+                              char ***varying_names)
+{
+   bool has_xfb_qualifiers = false;
+
+   /* We still need to enable transform feedback mode even if xfb_stride is
+    * only applied to a global out. Also we don't bother to propagate
+    * xfb_stride to interface block members so this will catch that case also.
+    */
+   for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
+      if (sh->TransformFeedback.BufferStride[j]) {
+         has_xfb_qualifiers = true;
+      }
+   }
+
+   foreach_in_list(ir_instruction, node, sh->ir) {
+      ir_variable *var = node->as_variable();
+      if (!var || var->data.mode != ir_var_shader_out)
+         continue;
+
+      /* From the ARB_enhanced_layouts spec:
+       *
+       *    "Any shader making any static use (after preprocessing) of any of
+       *     these *xfb_* qualifiers will cause the shader to be in a
+       *     transform feedback capturing mode and hence responsible for
+       *     describing the transform feedback setup.  This mode will capture
+       *     any output selected by *xfb_offset*, directly or indirectly, to
+       *     a transform feedback buffer."
+       */
+      if (var->data.explicit_xfb_buffer || var->data.explicit_xfb_stride) {
+         has_xfb_qualifiers = true;
+      }
+
+      if (var->data.explicit_xfb_offset) {
+         *num_tfeedback_decls += var->type->varying_count();
+         has_xfb_qualifiers = true;
+      }
+   }
+
+   if (*num_tfeedback_decls == 0)
+      return has_xfb_qualifiers;
+
+   unsigned i = 0;
+   *varying_names = ralloc_array(mem_ctx, char *, *num_tfeedback_decls);
+   foreach_in_list(ir_instruction, node, sh->ir) {
+      ir_variable *var = node->as_variable();
+      if (!var || var->data.mode != ir_var_shader_out)
+         continue;
+
+      if (var->data.explicit_xfb_offset) {
+         char *name;
+         const glsl_type *type, *member_type;
+
+         if (var->data.from_named_ifc_block) {
+            type = var->get_interface_type();
+            /* Find the member type before it was altered by lowering */
+            member_type =
+               type->fields.structure[type->field_index(var->name)].type;
+            name = ralloc_strdup(NULL, type->without_array()->name);
+         } else {
+            type = var->type;
+            member_type = NULL;
+            name = ralloc_strdup(NULL, var->name);
+         }
+         create_xfb_varying_names(mem_ctx, type, &name, strlen(name), &i,
+                                  var->name, member_type, varying_names);
+         ralloc_free(name);
+      }
+   }
+
+   assert(i == *num_tfeedback_decls);
+   return has_xfb_qualifiers;
+}
+
 /**
  * Validate the types and qualifiers of an output from one stage against the
  * matching input to another stage.
@@ -397,6 +516,8 @@ tfeedback_decl::init(struct gl_context *ctx, const void *mem_ctx,
    this->next_buffer_separator = false;
    this->matched_candidate = NULL;
    this->stream_id = 0;
+   this->buffer = 0;
+   this->offset = 0;
 
    if (ctx->Extensions.ARB_transform_feedback3) {
       /* Parse gl_NextBuffer. */
@@ -489,6 +610,8 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
       = this->matched_candidate->toplevel_var->data.location * 4
       + this->matched_candidate->toplevel_var->data.location_frac
       + this->matched_candidate->offset;
+   const unsigned dmul =
+      this->matched_candidate->type->without_array()->is_double() ? 2 : 1;
 
    if (this->matched_candidate->type->is_array()) {
       /* Array variable */
@@ -496,8 +619,6 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
          this->matched_candidate->type->fields.array->matrix_columns;
       const unsigned vector_elements =
          this->matched_candidate->type->fields.array->vector_elements;
-      const unsigned dmul =
-         this->matched_candidate->type->fields.array->is_double() ? 2 : 1;
       unsigned actual_array_size;
       switch (this->lowered_builtin_array_variable) {
       case clip_distance:
@@ -575,6 +696,12 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
     */
    this->stream_id = this->matched_candidate->toplevel_var->data.stream;
 
+   unsigned array_offset = this->array_subscript * 4 * dmul;
+   unsigned struct_offset = this->matched_candidate->offset * 4 * dmul;
+   this->buffer = this->matched_candidate->toplevel_var->data.xfb_buffer;
+   this->offset = this->matched_candidate->toplevel_var->data.offset +
+      array_offset + struct_offset;
+
    return true;
 }
 
@@ -598,14 +725,77 @@ tfeedback_decl::get_num_outputs() const
 bool
 tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
                       struct gl_transform_feedback_info *info,
-                      unsigned buffer, const unsigned max_outputs) const
+                      unsigned buffer, unsigned buffer_index,
+                      const unsigned max_outputs, bool *explicit_stride,
+                      bool has_xfb_qualifiers) const
 {
    assert(!this->next_buffer_separator);
 
    /* Handle gl_SkipComponents. */
    if (this->skip_components) {
-      info->BufferStride[buffer] += this->skip_components;
+      info->Buffers[buffer].Stride += this->skip_components;
       return true;
+   }
+
+   unsigned xfb_offset = 0;
+   if (has_xfb_qualifiers) {
+      xfb_offset = this->offset / 4;
+   } else {
+      xfb_offset = info->Buffers[buffer].Stride;
+   }
+   info->Varyings[info->NumVarying].Offset = xfb_offset * 4;
+
+   unsigned location = this->location;
+   unsigned location_frac = this->location_frac;
+   unsigned num_components = this->num_components();
+   while (num_components > 0) {
+      unsigned output_size = MIN2(num_components, 4 - location_frac);
+      assert((info->NumOutputs == 0 && max_outputs == 0) ||
+             info->NumOutputs < max_outputs);
+
+      /* From the ARB_enhanced_layouts spec:
+       *
+       *    "If such a block member or variable is not written during a shader
+       *    invocation, the buffer contents at the assigned offset will be
+       *    undefined.  Even if there are no static writes to a variable or
+       *    member that is assigned a transform feedback offset, the space is
+       *    still allocated in the buffer and still affects the stride."
+       */
+      if (this->is_varying_written()) {
+         info->Outputs[info->NumOutputs].ComponentOffset = location_frac;
+         info->Outputs[info->NumOutputs].OutputRegister = location;
+         info->Outputs[info->NumOutputs].NumComponents = output_size;
+         info->Outputs[info->NumOutputs].StreamId = stream_id;
+         info->Outputs[info->NumOutputs].OutputBuffer = buffer;
+         info->Outputs[info->NumOutputs].DstOffset = xfb_offset;
+         ++info->NumOutputs;
+      }
+      info->Buffers[buffer].Stream = this->stream_id;
+      xfb_offset += output_size;
+
+      num_components -= output_size;
+      location++;
+      location_frac = 0;
+   }
+
+   if (explicit_stride && explicit_stride[buffer]) {
+      if (this->is_double() && info->Buffers[buffer].Stride % 2) {
+         linker_error(prog, "invalid qualifier xfb_stride=%d must be a "
+                      "multiple of 8 as its applied to a type that is or "
+                      "contains a double.",
+                      info->Buffers[buffer].Stride * 4);
+         return false;
+      }
+
+      if ((this->offset / 4) / info->Buffers[buffer].Stride !=
+          (xfb_offset - 1) / info->Buffers[buffer].Stride) {
+         linker_error(prog, "xfb_offset (%d) overflows xfb_stride (%d) for "
+                      "buffer (%d)", xfb_offset * 4,
+                      info->Buffers[buffer].Stride * 4, buffer);
+         return false;
+      }
+   } else {
+      info->Buffers[buffer].Stride = xfb_offset;
    }
 
    /* From GL_EXT_transform_feedback:
@@ -614,39 +804,29 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
     *     * the total number of components to capture is greater than
     *       the constant MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS_EXT
     *       and the buffer mode is INTERLEAVED_ATTRIBS_EXT.
+    *
+    * From GL_ARB_enhanced_layouts:
+    *
+    *   "The resulting stride (implicit or explicit) must be less than or
+    *   equal to the implementation-dependent constant
+    *   gl_MaxTransformFeedbackInterleavedComponents."
     */
-   if (prog->TransformFeedback.BufferMode == GL_INTERLEAVED_ATTRIBS &&
-       info->BufferStride[buffer] + this->num_components() >
+   if ((prog->TransformFeedback.BufferMode == GL_INTERLEAVED_ATTRIBS ||
+        has_xfb_qualifiers) &&
+       info->Buffers[buffer].Stride >
        ctx->Const.MaxTransformFeedbackInterleavedComponents) {
       linker_error(prog, "The MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS "
                    "limit has been exceeded.");
       return false;
    }
 
-   unsigned location = this->location;
-   unsigned location_frac = this->location_frac;
-   unsigned num_components = this->num_components();
-   while (num_components > 0) {
-      unsigned output_size = MIN2(num_components, 4 - location_frac);
-      assert(info->NumOutputs < max_outputs);
-      info->Outputs[info->NumOutputs].ComponentOffset = location_frac;
-      info->Outputs[info->NumOutputs].OutputRegister = location;
-      info->Outputs[info->NumOutputs].NumComponents = output_size;
-      info->Outputs[info->NumOutputs].StreamId = stream_id;
-      info->Outputs[info->NumOutputs].OutputBuffer = buffer;
-      info->Outputs[info->NumOutputs].DstOffset = info->BufferStride[buffer];
-      ++info->NumOutputs;
-      info->BufferStride[buffer] += output_size;
-      info->BufferStream[buffer] = this->stream_id;
-      num_components -= output_size;
-      location++;
-      location_frac = 0;
-   }
-
-   info->Varyings[info->NumVarying].Name = ralloc_strdup(prog, this->orig_name);
+   info->Varyings[info->NumVarying].Name = ralloc_strdup(prog,
+                                                         this->orig_name);
    info->Varyings[info->NumVarying].Type = this->type;
    info->Varyings[info->NumVarying].Size = this->size;
+   info->Varyings[info->NumVarying].BufferIndex = buffer_index;
    info->NumVarying++;
+   info->Buffers[buffer].NumVaryings++;
 
    return true;
 }
@@ -731,6 +911,17 @@ parse_tfeedback_decls(struct gl_context *ctx, struct gl_shader_program *prog,
 }
 
 
+static int
+cmp_xfb_offset(const void * x_generic, const void * y_generic)
+{
+   tfeedback_decl *x = (tfeedback_decl *) x_generic;
+   tfeedback_decl *y = (tfeedback_decl *) y_generic;
+
+   if (x->get_buffer() != y->get_buffer())
+      return x->get_buffer() - y->get_buffer();
+   return x->get_offset() - y->get_offset();
+}
+
 /**
  * Store transform feedback location assignments into
  * prog->LinkedTransformFeedback based on the data stored in tfeedback_decls.
@@ -741,8 +932,13 @@ parse_tfeedback_decls(struct gl_context *ctx, struct gl_shader_program *prog,
 bool
 store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                      unsigned num_tfeedback_decls,
-                     tfeedback_decl *tfeedback_decls)
+                     tfeedback_decl *tfeedback_decls, bool has_xfb_qualifiers)
 {
+   /* Make sure MaxTransformFeedbackBuffers is less than 32 so the bitmask for
+    * tracking the number of buffers doesn't overflow.
+    */
+   assert(ctx->Const.MaxTransformFeedbackBuffers < 32);
+
    bool separate_attribs_mode =
       prog->TransformFeedback.BufferMode == GL_SEPARATE_ATTRIBS;
 
@@ -752,14 +948,24 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
    memset(&prog->LinkedTransformFeedback, 0,
           sizeof(prog->LinkedTransformFeedback));
 
+   /* The xfb_offset qualifier does not have to be used in increasing order
+    * however some drivers expect to receive the list of transform feedback
+    * declarations in order so sort it now for convenience.
+    */
+   if (has_xfb_qualifiers)
+      qsort(tfeedback_decls, num_tfeedback_decls, sizeof(*tfeedback_decls),
+            cmp_xfb_offset);
+
    prog->LinkedTransformFeedback.Varyings =
       rzalloc_array(prog,
                     struct gl_transform_feedback_varying_info,
                     num_tfeedback_decls);
 
    unsigned num_outputs = 0;
-   for (unsigned i = 0; i < num_tfeedback_decls; ++i)
-      num_outputs += tfeedback_decls[i].get_num_outputs();
+   for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
+      if (tfeedback_decls[i].is_varying_written())
+         num_outputs += tfeedback_decls[i].get_num_outputs();
+   }
 
    prog->LinkedTransformFeedback.Outputs =
       rzalloc_array(prog,
@@ -767,21 +973,47 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                     num_outputs);
 
    unsigned num_buffers = 0;
+   unsigned buffers = 0;
 
-   if (separate_attribs_mode) {
+   if (!has_xfb_qualifiers && separate_attribs_mode) {
       /* GL_SEPARATE_ATTRIBS */
       for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
          if (!tfeedback_decls[i].store(ctx, prog, &prog->LinkedTransformFeedback,
-                                       num_buffers, num_outputs))
+                                       num_buffers, num_buffers, num_outputs,
+                                       NULL, has_xfb_qualifiers))
             return false;
 
+         buffers |= 1 << num_buffers;
          num_buffers++;
       }
    }
    else {
       /* GL_INVERLEAVED_ATTRIBS */
       int buffer_stream_id = -1;
+      unsigned buffer =
+         num_tfeedback_decls ? tfeedback_decls[0].get_buffer() : 0;
+      bool explicit_stride[MAX_FEEDBACK_BUFFERS] = { false };
+
+      /* Apply any xfb_stride global qualifiers */
+      if (has_xfb_qualifiers) {
+         for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
+            if (prog->TransformFeedback.BufferStride[j]) {
+               buffers |= 1 << j;
+               explicit_stride[j] = true;
+               prog->LinkedTransformFeedback.Buffers[j].Stride =
+                  prog->TransformFeedback.BufferStride[j] / 4;
+            }
+         }
+      }
+
       for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
+         if (has_xfb_qualifiers &&
+             buffer != tfeedback_decls[i].get_buffer()) {
+            /* we have moved to the next buffer so reset stream id */
+            buffer_stream_id = -1;
+            num_buffers++;
+         }
+
          if (tfeedback_decls[i].is_next_buffer_separator()) {
             num_buffers++;
             buffer_stream_id = -1;
@@ -803,17 +1035,24 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
             return false;
          }
 
+         if (has_xfb_qualifiers) {
+            buffer = tfeedback_decls[i].get_buffer();
+         } else {
+            buffer = num_buffers;
+         }
+         buffers |= 1 << buffer;
+
          if (!tfeedback_decls[i].store(ctx, prog,
                                        &prog->LinkedTransformFeedback,
-                                       num_buffers, num_outputs))
+                                       buffer, num_buffers, num_outputs,
+                                       explicit_stride, has_xfb_qualifiers))
             return false;
       }
-      num_buffers++;
    }
 
    assert(prog->LinkedTransformFeedback.NumOutputs == num_outputs);
 
-   prog->LinkedTransformFeedback.NumBuffers = num_buffers;
+   prog->LinkedTransformFeedback.ActiveBuffers = buffers;
    return true;
 }
 
@@ -1466,8 +1705,8 @@ populate_consumer_input_sets(void *mem_ctx, exec_list *ir,
          } else if (input_var->get_interface_type() != NULL) {
             char *const iface_field_name =
                ralloc_asprintf(mem_ctx, "%s.%s",
-                               input_var->get_interface_type()->name,
-                               input_var->name);
+                  input_var->get_interface_type()->without_array()->name,
+                  input_var->name);
             hash_table_insert(consumer_interface_inputs, input_var,
                               iface_field_name);
          } else {
@@ -1498,8 +1737,8 @@ get_matching_input(void *mem_ctx,
    } else if (output_var->get_interface_type() != NULL) {
       char *const iface_field_name =
          ralloc_asprintf(mem_ctx, "%s.%s",
-                         output_var->get_interface_type()->name,
-                         output_var->name);
+            output_var->get_interface_type()->without_array()->name,
+            output_var->name);
       input_var =
          (ir_variable *) hash_table_find(consumer_interface_inputs,
                                          iface_field_name);

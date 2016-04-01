@@ -70,7 +70,9 @@ public:
     // removes all registered buckets
     void ClearBuckets()
     {
+        mThreadMutex.lock();
         mBuckets.clear();
+        mThreadMutex.unlock();
     }
 
     /// Registers a new thread with the manager.
@@ -209,7 +211,7 @@ public:
     }
 
 private:
-    void PrintBucket(FILE* f, UINT level, UINT64 threadCycles, UINT64 parentCycles, const BUCKET& bucket);
+    void PrintBucket(FILE* f, UINT level, uint64_t threadCycles, uint64_t parentCycles, const BUCKET& bucket);
     void PrintThread(FILE* f, const BUCKET_THREAD& thread);
 
     // list of active threads that have registered with this manager
@@ -227,3 +229,8 @@ private:
     bool mThreadViz{ false };
     std::string mThreadVizDir;
 };
+
+
+// C helpers for jitter
+void BucketManager_StartBucket(BucketManager* pBucketMgr, uint32_t id);
+void BucketManager_StopBucket(BucketManager* pBucketMgr, uint32_t id);

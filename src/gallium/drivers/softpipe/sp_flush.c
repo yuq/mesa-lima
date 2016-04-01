@@ -168,3 +168,29 @@ softpipe_flush_resource(struct pipe_context *pipe,
 
    return TRUE;
 }
+
+void softpipe_texture_barrier(struct pipe_context *pipe)
+{
+   struct softpipe_context *softpipe = softpipe_context(pipe);
+   uint i, sh;
+
+   for (sh = 0; sh < Elements(softpipe->tex_cache); sh++) {
+      for (i = 0; i < softpipe->num_sampler_views[sh]; i++) {
+         sp_flush_tex_tile_cache(softpipe->tex_cache[sh][i]);
+      }
+   }
+
+   for (i = 0; i < softpipe->framebuffer.nr_cbufs; i++)
+      if (softpipe->cbuf_cache[i])
+         sp_flush_tile_cache(softpipe->cbuf_cache[i]);
+
+   if (softpipe->zsbuf_cache)
+      sp_flush_tile_cache(softpipe->zsbuf_cache);
+
+   softpipe->dirty_render_cache = FALSE;
+}
+
+void softpipe_memory_barrier(struct pipe_context *pipe, unsigned flags)
+{
+   softpipe_texture_barrier(pipe);
+}

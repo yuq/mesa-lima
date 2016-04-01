@@ -28,6 +28,8 @@
 * 
 ******************************************************************************/
 #include "builder.h"
+#include "common/rdtsc_buckets.h"
+
 #include "llvm/Support/DynamicLibrary.h"
 
 void __cdecl CallPrint(const char* fmt, ...);
@@ -189,32 +191,32 @@ Constant *Builder::PRED(bool pred)
 
 Value *Builder::VIMMED1(int i)
 {
-    return ConstantVector::getSplat(JM()->mVWidth, cast<ConstantInt>(C(i)));
+    return ConstantVector::getSplat(mVWidth, cast<ConstantInt>(C(i)));
 }
 
 Value *Builder::VIMMED1(uint32_t i)
 {
-    return ConstantVector::getSplat(JM()->mVWidth, cast<ConstantInt>(C(i)));
+    return ConstantVector::getSplat(mVWidth, cast<ConstantInt>(C(i)));
 }
 
 Value *Builder::VIMMED1(float i)
 {
-    return ConstantVector::getSplat(JM()->mVWidth, cast<ConstantFP>(C(i)));
+    return ConstantVector::getSplat(mVWidth, cast<ConstantFP>(C(i)));
 }
 
 Value *Builder::VIMMED1(bool i)
 {
-    return ConstantVector::getSplat(JM()->mVWidth, cast<ConstantInt>(C(i)));
+    return ConstantVector::getSplat(mVWidth, cast<ConstantInt>(C(i)));
 }
 
 Value *Builder::VUNDEF_IPTR()
 {
-    return UndefValue::get(VectorType::get(PointerType::get(mInt32Ty, 0),JM()->mVWidth));
+    return UndefValue::get(VectorType::get(mInt32PtrTy,mVWidth));
 }
 
 Value *Builder::VUNDEF_I()
 {
-    return UndefValue::get(VectorType::get(mInt32Ty, JM()->mVWidth));
+    return UndefValue::get(VectorType::get(mInt32Ty, mVWidth));
 }
 
 Value *Builder::VUNDEF(Type *ty, uint32_t size)
@@ -224,15 +226,15 @@ Value *Builder::VUNDEF(Type *ty, uint32_t size)
 
 Value *Builder::VUNDEF_F()
 {
-    return UndefValue::get(VectorType::get(mFP32Ty, JM()->mVWidth));
+    return UndefValue::get(VectorType::get(mFP32Ty, mVWidth));
 }
 
 Value *Builder::VUNDEF(Type* t)
 {
-    return UndefValue::get(VectorType::get(t, JM()->mVWidth));
+    return UndefValue::get(VectorType::get(t, mVWidth));
 }
 
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
 Value *Builder::VINSERT(Value *vec, Value *val, uint64_t index)
 {
     return VINSERT(vec, val, C((int64_t)index));
@@ -247,7 +249,7 @@ Value *Builder::VBROADCAST(Value *src)
         return src;
     }
 
-    return VECTOR_SPLAT(JM()->mVWidth, src);
+    return VECTOR_SPLAT(mVWidth, src);
 }
 
 uint32_t Builder::IMMED(Value* v)
@@ -255,6 +257,13 @@ uint32_t Builder::IMMED(Value* v)
     SWR_ASSERT(isa<ConstantInt>(v));
     ConstantInt *pValConst = cast<ConstantInt>(v);
     return pValConst->getZExtValue();
+}
+
+int32_t Builder::S_IMMED(Value* v)
+{
+    SWR_ASSERT(isa<ConstantInt>(v));
+    ConstantInt *pValConst = cast<ConstantInt>(v);
+    return pValConst->getSExtValue();
 }
 
 Value *Builder::GEP(Value* ptr, const std::initializer_list<Value*> &indexList)
@@ -342,8 +351,8 @@ Value *Builder::MASKLOADD(Value* src,Value* mask)
     else
     {
         Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule,Intrinsic::x86_avx_maskload_ps_256);
-        Value* fMask = BITCAST(mask,VectorType::get(mFP32Ty,JM()->mVWidth));
-        vResult = BITCAST(CALL(func,{src,fMask}), VectorType::get(mInt32Ty,JM()->mVWidth));
+        Value* fMask = BITCAST(mask,VectorType::get(mInt32Ty,mVWidth));
+        vResult = BITCAST(CALL(func,{src,fMask}), VectorType::get(mInt32Ty,mVWidth));
     }
     return vResult;
 }
@@ -512,7 +521,7 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
 
     // get a pointer to the first character in the constant string array
     std::vector<Constant*> geplist{C(0),C(0)};
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
     Constant *strGEP = ConstantExpr::getGetElementPtr(gvPtr,geplist,false);
 #else
     Constant *strGEP = ConstantExpr::getGetElementPtr(nullptr, gvPtr,geplist,false);
@@ -575,7 +584,7 @@ Value *Builder::GATHERPS(Value* vSrc, Value* pBase, Value* vIndices, Value* vMas
         Value *vScaleVec = VBROADCAST(Z_EXT(scale,mInt32Ty));
         Value *vOffsets = MUL(vIndices,vScaleVec);
         Value *mask = MASK(vMask);
-        for(uint32_t i = 0; i < JM()->mVWidth; ++i)
+        for(uint32_t i = 0; i < mVWidth; ++i)
         {
             // single component byte index
             Value *offset = VEXTRACT(vOffsets,C(i));
@@ -625,7 +634,7 @@ Value *Builder::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMas
         Value *vScaleVec = VBROADCAST(Z_EXT(scale, mInt32Ty));
         Value *vOffsets = MUL(vIndices, vScaleVec);
         Value *mask = MASK(vMask);
-        for(uint32_t i = 0; i < JM()->mVWidth; ++i)
+        for(uint32_t i = 0; i < mVWidth; ++i)
         {
             // single component byte index
             Value *offset = VEXTRACT(vOffsets, C(i));
@@ -774,8 +783,57 @@ Value *Builder::PERMD(Value* a, Value* idx)
     }
     else
     {
-        res = VSHUFFLE(a, a, idx);
+        if (isa<Constant>(idx))
+        {
+            res = VSHUFFLE(a, a, idx);
+        }
+        else
+        {
+            res = VUNDEF_I();
+            for (uint32_t l = 0; l < JM()->mVWidth; ++l)
+            {
+                Value* pIndex = VEXTRACT(idx, C(l));
+                Value* pVal = VEXTRACT(a, pIndex);
+                res = VINSERT(res, pVal, C(l));
+            }
+        }
     }
+    return res;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Generate a VPERMPS operation (shuffle 32 bit float values 
+/// across 128 bit lanes) in LLVM IR.  If not supported on the underlying 
+/// platform, emulate it
+/// @param a - 256bit SIMD lane(8x32bit) of float values.
+/// @param idx - 256bit SIMD lane(8x32bit) of 3 bit lane index values
+Value *Builder::PERMPS(Value* a, Value* idx)
+{
+    Value* res;
+    // use avx2 permute instruction if available
+    if (JM()->mArch.AVX2())
+    {
+        // llvm 3.6.0 swapped the order of the args to vpermd
+        res = VPERMPS(idx, a);
+    }
+    else
+    {
+        if (isa<Constant>(idx))
+        {
+            res = VSHUFFLE(a, a, idx);
+        }
+        else
+        {
+            res = VUNDEF_F();
+            for (uint32_t l = 0; l < JM()->mVWidth; ++l)
+            {
+                Value* pIndex = VEXTRACT(idx, C(l));
+                Value* pVal = VEXTRACT(a, pIndex);
+                res = VINSERT(res, pVal, C(l));
+            }
+        }
+    }
+
     return res;
 }
 
@@ -800,7 +858,7 @@ Value *Builder::CVTPH2PS(Value* a)
         }
 
         Value* pResult = UndefValue::get(mSimdFP32Ty);
-        for (uint32_t i = 0; i < JM()->mVWidth; ++i)
+        for (uint32_t i = 0; i < mVWidth; ++i)
         {
             Value* pSrc = VEXTRACT(a, C(i));
             Value* pConv = CALL(pCvtPh2Ps, std::initializer_list<Value*>{pSrc});
@@ -833,7 +891,7 @@ Value *Builder::CVTPS2PH(Value* a, Value* rounding)
         }
 
         Value* pResult = UndefValue::get(mSimdInt16Ty);
-        for (uint32_t i = 0; i < JM()->mVWidth; ++i)
+        for (uint32_t i = 0; i < mVWidth; ++i)
         {
             Value* pSrc = VEXTRACT(a, C(i));
             Value* pConv = CALL(pCvtPs2Ph, std::initializer_list<Value*>{pSrc});
@@ -1085,8 +1143,8 @@ void Builder::GATHER4DD(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byt
 void Builder::Shuffle16bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInput[2], Value* vGatherOutput[4], bool bPackedOutput)
 {
     // cast types
-    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), JM()->mVWidth);
-    Type* v32x8Ty = VectorType::get(mInt8Ty, JM()->mVWidth * 4); // vwidth is units of 32 bits
+    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), mVWidth);
+    Type* v32x8Ty = VectorType::get(mInt8Ty, mVWidth * 4); // vwidth is units of 32 bits
 
     // input could either be float or int vector; do shuffle work in int
     vGatherInput[0] = BITCAST(vGatherInput[0], mSimdInt32Ty);
@@ -1094,7 +1152,7 @@ void Builder::Shuffle16bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInp
 
     if(bPackedOutput) 
     {
-        Type* v128bitTy = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), JM()->mVWidth / 4); // vwidth is units of 32 bits
+        Type* v128bitTy = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), mVWidth / 4); // vwidth is units of 32 bits
 
         // shuffle mask
         Value* vConstMask = C<char>({0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
@@ -1179,12 +1237,12 @@ void Builder::Shuffle16bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInp
 void Builder::Shuffle8bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInput, Value* vGatherOutput[], bool bPackedOutput)
 {
     // cast types
-    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), JM()->mVWidth);
-    Type* v32x8Ty =  VectorType::get(mInt8Ty, JM()->mVWidth * 4 ); // vwidth is units of 32 bits
+    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), mVWidth);
+    Type* v32x8Ty =  VectorType::get(mInt8Ty, mVWidth * 4 ); // vwidth is units of 32 bits
 
     if(bPackedOutput)
     {
-        Type* v128Ty = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), JM()->mVWidth / 4); // vwidth is units of 32 bits
+        Type* v128Ty = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), mVWidth / 4); // vwidth is units of 32 bits
         // shuffle mask
         Value* vConstMask = C<char>({0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
                                      0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15});
@@ -1286,16 +1344,18 @@ void Builder::SCATTERPS(Value* pDst, Value* vSrc, Value* vOffsets, Value* vMask)
 {
     Value* pStack = STACKSAVE();
 
+    Type* pSrcTy = vSrc->getType()->getVectorElementType();
+
     // allocate tmp stack for masked off lanes
-    Value* vTmpPtr = ALLOCA(vSrc->getType()->getVectorElementType());
+    Value* vTmpPtr = ALLOCA(pSrcTy);
 
     Value *mask = MASK(vMask);
-    for (uint32_t i = 0; i < JM()->mVWidth; ++i)
+    for (uint32_t i = 0; i < mVWidth; ++i)
     {
         Value *offset = VEXTRACT(vOffsets, C(i));
         // byte pointer to component
         Value *storeAddress = GEP(pDst, offset);
-        storeAddress = BITCAST(storeAddress, PointerType::get(mFP32Ty, 0));
+        storeAddress = BITCAST(storeAddress, PointerType::get(pSrcTy, 0));
         Value *selMask = VEXTRACT(mask, C(i));
         Value *srcElem = VEXTRACT(vSrc, C(i));
         // switch in a safe address to load if we're trying to access a vertex 
@@ -1349,7 +1409,7 @@ Value *Builder::FCLAMP(Value* src, float low, float high)
 Value* Builder::STACKSAVE()
 {
     Function* pfnStackSave = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::stacksave);
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
     return CALL(pfnStackSave);
 #else
     return CALLA(pfnStackSave);
@@ -1401,11 +1461,13 @@ void __cdecl CallPrint(const char* fmt, ...)
     vsnprintf_s(strBuf, _TRUNCATE, fmt, args);
     OutputDebugString(strBuf);
 #endif
+
+    va_end(args);
 }
 
 Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)
 {
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
     Function *func =
         Intrinsic::getDeclaration(JM()->mpCurrentModule,
                                   Intrinsic::x86_avx_vextractf128_si_256);
@@ -1413,8 +1475,8 @@ Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)
 #else
     bool flag = !imm8->isZeroValue();
     SmallVector<Constant*,8> idx;
-    for (unsigned i = 0; i < JM()->mVWidth / 2; i++) {
-        idx.push_back(C(flag ? i + JM()->mVWidth / 2 : i));
+    for (unsigned i = 0; i < mVWidth / 2; i++) {
+        idx.push_back(C(flag ? i + mVWidth / 2 : i));
     }
     return VSHUFFLE(a, VUNDEF_I(), ConstantVector::get(idx));
 #endif
@@ -1422,7 +1484,7 @@ Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)
 
 Value *Builder::VINSERTI128(Value* a, Value* b, Constant* imm8)
 {
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
     Function *func =
         Intrinsic::getDeclaration(JM()->mpCurrentModule,
                                   Intrinsic::x86_avx_vinsertf128_si_256);
@@ -1430,18 +1492,54 @@ Value *Builder::VINSERTI128(Value* a, Value* b, Constant* imm8)
 #else
     bool flag = !imm8->isZeroValue();
     SmallVector<Constant*,8> idx;
-    for (unsigned i = 0; i < JM()->mVWidth; i++) {
+    for (unsigned i = 0; i < mVWidth; i++) {
         idx.push_back(C(i));
     }
     Value *inter = VSHUFFLE(b, VUNDEF_I(), ConstantVector::get(idx));
 
     SmallVector<Constant*,8> idx2;
-    for (unsigned i = 0; i < JM()->mVWidth / 2; i++) {
-        idx2.push_back(C(flag ? i : i + JM()->mVWidth));
+    for (unsigned i = 0; i < mVWidth / 2; i++) {
+        idx2.push_back(C(flag ? i : i + mVWidth));
     }
-    for (unsigned i = JM()->mVWidth / 2; i < JM()->mVWidth; i++) {
-        idx2.push_back(C(flag ? i + JM()->mVWidth / 2 : i));
+    for (unsigned i = mVWidth / 2; i < mVWidth; i++) {
+        idx2.push_back(C(flag ? i + mVWidth / 2 : i));
     }
     return VSHUFFLE(a, inter, ConstantVector::get(idx2));
 #endif
 }
+
+// rdtsc buckets macros
+void Builder::RDTSC_START(Value* pBucketMgr, Value* pId)
+{
+    std::vector<Type*> args{
+        PointerType::get(mInt32Ty, 0),   // pBucketMgr
+        mInt32Ty                        // id
+    };
+
+    FunctionType* pFuncTy = FunctionType::get(Type::getVoidTy(JM()->mContext), args, false);
+    Function* pFunc = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("BucketManager_StartBucket", pFuncTy));
+    if (sys::DynamicLibrary::SearchForAddressOfSymbol("BucketManager_StartBucket") == nullptr)
+    {
+        sys::DynamicLibrary::AddSymbol("BucketManager_StartBucket", (void*)&BucketManager_StartBucket);
+    }
+
+    CALL(pFunc, { pBucketMgr, pId });
+}
+
+void Builder::RDTSC_STOP(Value* pBucketMgr, Value* pId)
+{
+    std::vector<Type*> args{
+        PointerType::get(mInt32Ty, 0),   // pBucketMgr
+        mInt32Ty                        // id
+    };
+
+    FunctionType* pFuncTy = FunctionType::get(Type::getVoidTy(JM()->mContext), args, false);
+    Function* pFunc = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("BucketManager_StopBucket", pFuncTy));
+    if (sys::DynamicLibrary::SearchForAddressOfSymbol("BucketManager_StopBucket") == nullptr)
+    {
+        sys::DynamicLibrary::AddSymbol("BucketManager_StopBucket", (void*)&BucketManager_StopBucket);
+    }
+
+    CALL(pFunc, { pBucketMgr, pId });
+}
+

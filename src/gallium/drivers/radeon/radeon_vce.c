@@ -50,6 +50,7 @@
 #define FW_50_10_2 ((50 << 24) | (10 << 16) | (2 << 8))
 #define FW_50_17_3 ((50 << 24) | (17 << 16) | (3 << 8))
 #define FW_52_0_3 ((52 << 24) | (0 << 16) | (3 << 8))
+#define FW_52_4_3 ((52 << 24) | (4 << 16) | (3 << 8))
 
 /**
  * flush commands to the hardware
@@ -408,7 +409,8 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
             rscreen->info.drm_major == 3)
 		enc->use_vui = true;
 	if (rscreen->info.family >= CHIP_TONGA &&
-             rscreen->info.family != CHIP_STONEY)
+	    rscreen->info.family != CHIP_STONEY &&
+	    rscreen->info.family != CHIP_POLARIS11)
 		enc->dual_pipe = true;
 	/* TODO enable B frame with dual instance */
 	if ((rscreen->info.family >= CHIP_TONGA) &&
@@ -482,6 +484,7 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 		break;
 
 	case FW_52_0_3:
+	case FW_52_4_3:
 		radeon_vce_52_init(enc);
 		break;
 
@@ -514,6 +517,7 @@ bool rvce_is_fw_version_supported(struct r600_common_screen *rscreen)
 	case FW_50_10_2:
 	case FW_50_17_3:
 	case FW_52_0_3:
+	case FW_52_4_3:
 		return true;
 	default:
 		return false;

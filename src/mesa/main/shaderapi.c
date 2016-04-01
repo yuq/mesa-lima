@@ -2568,7 +2568,6 @@ _mesa_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
       memcpy(&uni->storage[0], &indices[i],
              sizeof(GLuint) * uni_count);
 
-      uni->initialized = true;
       _mesa_propagate_uniforms_to_driver_storage(uni, 0, uni_count);
       i += uni_count;
    } while(i < count);
@@ -2742,7 +2741,7 @@ _mesa_shader_init_subroutine_defaults(struct gl_shader *sh)
 
       for (j = 0; j < uni_count; j++)
          memcpy(&uni->storage[j], &val, sizeof(int));
-      uni->initialized = true;
+
       _mesa_propagate_uniforms_to_driver_storage(uni, 0, uni_count);
    }
 }

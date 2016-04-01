@@ -2095,7 +2095,7 @@ after lookup.
 .. opcode:: SAMPLE
 
   Using provided address, sample data from the specified texture using the
-  filtering mode identified by the gven sampler. The source data may come from
+  filtering mode identified by the given sampler. The source data may come from
   any resource type other than buffers.
 
   Syntax: ``SAMPLE dst, address, sampler_view, sampler``

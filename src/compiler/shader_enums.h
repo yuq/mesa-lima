@@ -31,7 +31,7 @@ extern "C" {
 #endif
 
 /**
- * Shader stages. Note that these will become 5 with tessellation.
+ * Shader stages.
  *
  * The order must match how shaders are ordered in the pipeline.
  * The GLSL linker assumes that if i<j, then the j-th shader is

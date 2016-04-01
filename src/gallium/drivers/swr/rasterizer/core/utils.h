@@ -46,8 +46,7 @@ void OpenBitmapFromFile(
     uint32_t *height);
 #endif
 
-/// @todo assume linux is always 64 bit
-#if defined(_WIN64) || defined(__linux__) || defined(__gnu_linux__)
+#if defined(_WIN64) || defined(__x86_64__)
 #define _MM_INSERT_EPI64 _mm_insert_epi64
 #define _MM_EXTRACT_EPI64 _mm_extract_epi64
 #else
@@ -89,7 +88,10 @@ INLINE __m128i  _MM_INSERT_EPI64(__m128i a, INT64 b, const int32_t ndx)
 
 OSALIGNLINE(struct) BBOX
 {
-    int top, bottom, left, right;
+    int top{ 0 };
+    int bottom{ 0 };
+    int left{ 0 };
+    int right{ 0 };
 
     BBOX() {}
     BBOX(int t, int b, int l, int r) : top(t), bottom(b), left(l), right(r) {}
@@ -110,7 +112,10 @@ OSALIGNLINE(struct) BBOX
 
 struct simdBBox
 {
-    simdscalari top, bottom, left, right;
+    simdscalari top;
+    simdscalari bottom;
+    simdscalari left;
+    simdscalari right;
 };
 
 INLINE
@@ -271,7 +276,7 @@ struct TransposeSingleComponent
     /// @brief Pass-thru for single component.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst)
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst)
     {
         memcpy(pDst, pSrc, (bpp * KNOB_SIMD_WIDTH) / 8);
     }
@@ -286,7 +291,7 @@ struct Transpose8_8_8_8
     /// @brief Performs an SOA to AOS conversion for packed 8_8_8_8 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst)
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst)
     {
         simdscalari src = _simd_load_si((const simdscalari*)pSrc);
 #if KNOB_SIMD_WIDTH == 8
@@ -325,7 +330,7 @@ struct Transpose8_8_8
     /// @brief Performs an SOA to AOS conversion for packed 8_8_8 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst) = delete;
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -337,7 +342,7 @@ struct Transpose8_8
     /// @brief Performs an SOA to AOS conversion for packed 8_8 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst)
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst)
     {
         simdscalari src = _simd_load_si((const simdscalari*)pSrc);
 
@@ -361,7 +366,7 @@ struct Transpose32_32_32_32
     /// @brief Performs an SOA to AOS conversion for packed 32_32_32_32 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst)
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst)
     {
 #if KNOB_SIMD_WIDTH == 8
         simdscalar src0 = _simd_load_ps((const float*)pSrc);
@@ -394,7 +399,7 @@ struct Transpose32_32_32
     /// @brief Performs an SOA to AOS conversion for packed 32_32_32 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst)
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst)
     {
 #if KNOB_SIMD_WIDTH == 8
         simdscalar src0 = _simd_load_ps((const float*)pSrc);
@@ -426,7 +431,7 @@ struct Transpose32_32
     /// @brief Performs an SOA to AOS conversion for packed 32_32 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst)
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst)
     {
         const float* pfSrc = (const float*)pSrc;
         __m128 src_r0 = _mm_load_ps(pfSrc + 0);
@@ -456,7 +461,7 @@ struct Transpose16_16_16_16
     /// @brief Performs an SOA to AOS conversion for packed 16_16_16_16 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst)
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst)
     {
 #if KNOB_SIMD_WIDTH == 8
         simdscalari src_rg = _simd_load_si((const simdscalari*)pSrc);
@@ -496,7 +501,7 @@ struct Transpose16_16_16
     /// @brief Performs an SOA to AOS conversion for packed 16_16_16 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst)
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst)
     {
 #if KNOB_SIMD_WIDTH == 8
         simdscalari src_rg = _simd_load_si((const simdscalari*)pSrc);
@@ -535,7 +540,7 @@ struct Transpose16_16
     /// @brief Performs an SOA to AOS conversion for packed 16_16 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    INLINE static void Transpose(const BYTE* pSrc, BYTE* pDst)
+    INLINE static void Transpose(const uint8_t* pSrc, uint8_t* pDst)
     {
         simdscalar src = _simd_load_ps((const float*)pSrc);
 
@@ -566,7 +571,7 @@ struct Transpose24_8
     /// @brief Performs an SOA to AOS conversion for packed 24_8 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    static void Transpose(const BYTE* pSrc, BYTE* pDst) = delete;
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -578,7 +583,7 @@ struct Transpose32_8_24
     /// @brief Performs an SOA to AOS conversion for packed 32_8_24 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    static void Transpose(const BYTE* pSrc, BYTE* pDst) = delete;
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
 };
 
 
@@ -592,7 +597,7 @@ struct Transpose4_4_4_4
     /// @brief Performs an SOA to AOS conversion for packed 4_4_4_4 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    static void Transpose(const BYTE* pSrc, BYTE* pDst) = delete;
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -604,7 +609,7 @@ struct Transpose5_6_5
     /// @brief Performs an SOA to AOS conversion for packed 5_6_5 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    static void Transpose(const BYTE* pSrc, BYTE* pDst) = delete;
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -616,7 +621,7 @@ struct Transpose9_9_9_5
     /// @brief Performs an SOA to AOS conversion for packed 9_9_9_5 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    static void Transpose(const BYTE* pSrc, BYTE* pDst) = delete;
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -628,7 +633,7 @@ struct Transpose5_5_5_1
     /// @brief Performs an SOA to AOS conversion for packed 5_5_5_1 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    static void Transpose(const BYTE* pSrc, BYTE* pDst) = delete;
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -640,7 +645,7 @@ struct Transpose10_10_10_2
     /// @brief Performs an SOA to AOS conversion for packed 10_10_10_2 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    static void Transpose(const BYTE* pSrc, BYTE* pDst) = delete;
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -652,7 +657,7 @@ struct Transpose11_11_10
     /// @brief Performs an SOA to AOS conversion for packed 11_11_10 data.
     /// @param pSrc - source data in SOA form
     /// @param pDst - output data in AOS form
-    static void Transpose(const BYTE* pSrc, BYTE* pDst) = delete;
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
 };
 
 // helper function to unroll loops
@@ -694,7 +699,7 @@ uint32_t ComputeCRC(uint32_t crc, const void *pData, uint32_t size)
     }
 #endif
 
-    BYTE* pRemainderBytes = (BYTE*)pDataWords;
+    uint8_t* pRemainderBytes = (uint8_t*)pDataWords;
     for (uint32_t i = 0; i < sizeRemainderBytes; ++i)
     {
         crc = _mm_crc32_u8(crc, *pRemainderBytes++);

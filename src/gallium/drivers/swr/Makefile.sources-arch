@@ -59,7 +59,6 @@ COMMON_CXX_SOURCES := \
 CORE_CXX_SOURCES := \
 	rasterizer/core/api.cpp \
 	rasterizer/core/api.h \
-	rasterizer/core/arena.cpp \
 	rasterizer/core/arena.h \
 	rasterizer/core/backend.cpp \
 	rasterizer/core/backend.h \
@@ -83,6 +82,7 @@ CORE_CXX_SOURCES := \
 	rasterizer/core/rasterizer.h \
 	rasterizer/core/rdtsc_core.cpp \
 	rasterizer/core/rdtsc_core.h \
+	rasterizer/core/ringbuffer.h \
 	rasterizer/core/state.h \
 	rasterizer/core/threads.cpp \
 	rasterizer/core/threads.h \

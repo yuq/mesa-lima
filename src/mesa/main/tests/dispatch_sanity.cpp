@@ -2450,6 +2450,26 @@ const struct function gles3_functions_possible[] = {
    { "glGetSamplerParameterIivOES", 30, -1 },
    { "glGetSamplerParameterIuivOES", 30, -1 },
 
+   /* GL_OES_texture_buffer */
+   { "glTexBufferOES", 31, -1 },
+   { "glTexBufferRangeOES", 31, -1 },
+
+   /* GL_OES_sample_shading */
+   { "glMinSampleShadingOES", 30, -1 },
+
+   /* GL_OES_copy_image */
+   { "glCopyImageSubDataOES", 30, -1 },
+
+   /* GL_OES_draw_buffers_indexed */
+   { "glBlendFunciOES", 30, -1 },
+   { "glBlendFuncSeparateiOES", 30, -1 },
+   { "glBlendEquationiOES", 30, -1 },
+   { "glBlendEquationSeparateiOES", 30, -1 },
+   { "glColorMaskiOES", 30, -1 },
+   { "glEnableiOES", 30, -1 },
+   { "glDisableiOES", 30, -1 },
+   { "glIsEnablediOES", 30, -1 },
+
    { NULL, 0, -1 }
 };
 

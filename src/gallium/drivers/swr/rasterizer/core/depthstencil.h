@@ -82,7 +82,7 @@ void StencilOp(SWR_STENCILOP op, simdscalar mask, simdscalar stencilRefps, simds
 
 INLINE
 simdscalar DepthStencilTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENCIL_STATE* pDSState,
-                 bool frontFacing, simdscalar interpZ, BYTE* pDepthBase, simdscalar coverageMask, BYTE *pStencilBase,
+                 bool frontFacing, simdscalar interpZ, uint8_t* pDepthBase, simdscalar coverageMask, uint8_t *pStencilBase,
                  simdscalar* pStencilMask)
 {
     static_assert(KNOB_DEPTH_HOT_TILE_FORMAT == R32_FLOAT, "Unsupported depth hot tile format");
@@ -177,8 +177,8 @@ simdscalar DepthStencilTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENC
 
 INLINE
 void DepthStencilWrite(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENCIL_STATE* pDSState,
-        bool frontFacing, simdscalar interpZ, BYTE* pDepthBase, const simdscalar& depthMask, const simdscalar& coverageMask, 
-        BYTE *pStencilBase, const simdscalar& stencilMask)
+        bool frontFacing, simdscalar interpZ, uint8_t* pDepthBase, const simdscalar& depthMask, const simdscalar& coverageMask, 
+        uint8_t *pStencilBase, const simdscalar& stencilMask)
 {
     if (pDSState->depthWriteEnable)
     {

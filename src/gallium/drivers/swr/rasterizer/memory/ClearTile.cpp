@@ -33,7 +33,7 @@
 #include "memory/tilingtraits.h"
 #include "memory/Convert.h"
 
-typedef void(*PFN_STORE_TILES_CLEAR)(const FLOAT*, SWR_SURFACE_STATE*, UINT, UINT);
+typedef void(*PFN_STORE_TILES_CLEAR)(const float*, SWR_SURFACE_STATE*, UINT, UINT);
 
 //////////////////////////////////////////////////////////////////////////
 /// Clear Raster Tile Function Tables.
@@ -54,17 +54,17 @@ struct StoreRasterTileClear
     /// @param pDstSurface - Destination surface state
     /// @param x, y - Coordinates to raster tile.
     INLINE static void StoreClear(
-        const BYTE* dstFormattedColor,
+        const uint8_t* dstFormattedColor,
         UINT dstBytesPerPixel,
         SWR_SURFACE_STATE* pDstSurface,
         UINT x, UINT y) // (x, y) pixel coordinate to start of raster tile.
     {
         // Compute destination address for raster tile.
-        BYTE* pDstTile = (BYTE*)pDstSurface->pBaseAddress +
+        uint8_t* pDstTile = (uint8_t*)pDstSurface->pBaseAddress +
             (y * pDstSurface->pitch) + (x * dstBytesPerPixel);
 
         // start of first row
-        BYTE* pDst = pDstTile;
+        uint8_t* pDst = pDstTile;
         UINT dstBytesPerRow = 0;
 
         // For each raster tile pixel in row 0 (rx, 0)
@@ -104,15 +104,15 @@ struct StoreMacroTileClear
     /// @param pDstSurface - Destination surface state
     /// @param x, y - Coordinates to macro tile
     static void StoreClear(
-        const FLOAT *pColor,
+        const float *pColor,
         SWR_SURFACE_STATE* pDstSurface,
         UINT x, UINT y)
     {
         UINT dstBytesPerPixel = (FormatTraits<DstFormat>::bpp / 8);
 
-        BYTE dstFormattedColor[16]; // max bpp is 128, so 16 is all we need here for one pixel
+        uint8_t dstFormattedColor[16]; // max bpp is 128, so 16 is all we need here for one pixel
 
-        FLOAT srcColor[4];
+        float srcColor[4];
 
         for (UINT comp = 0; comp < FormatTraits<DstFormat>::numComps; ++comp)
         {

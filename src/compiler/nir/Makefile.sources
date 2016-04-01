@@ -22,10 +22,10 @@ NIR_FILES = \
 	nir_gather_info.c \
 	nir_gs_count_vertices.c \
 	nir_inline_functions.c \
-	nir_intrinsics.c \
-	nir_intrinsics.h \
 	nir_instr_set.c \
 	nir_instr_set.h \
+	nir_intrinsics.c \
+	nir_intrinsics.h \
 	nir_liveness.c \
 	nir_lower_alu_to_scalar.c \
 	nir_lower_atomics.c \

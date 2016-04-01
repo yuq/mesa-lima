@@ -59,7 +59,7 @@ Value *VUNDEF_F();
 Value *VUNDEF_I();
 Value *VUNDEF(Type* ty, uint32_t size);
 Value *VUNDEF_IPTR();
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
 Value *VINSERT(Value *vec, Value *val, uint64_t index);
 #endif
 Value *VBROADCAST(Value *src);
@@ -67,6 +67,7 @@ Value *VRCP(Value *va);
 Value *VPLANEPS(Value* vA, Value* vB, Value* vC, Value* &vX, Value* &vY);
 
 uint32_t IMMED(Value* i);
+int32_t S_IMMED(Value* i);
 
 Value *GEP(Value* ptr, const std::initializer_list<Value*> &indexList);
 Value *GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList);
@@ -115,6 +116,7 @@ Value *PSHUFB(Value* a, Value* b);
 Value *PMOVSXBD(Value* a);
 Value *PMOVSXWD(Value* a);
 Value *PERMD(Value* a, Value* idx);
+Value *PERMPS(Value* a, Value* idx);
 Value *CVTPH2PS(Value* a);
 Value *CVTPS2PH(Value* a, Value* rounding);
 Value *PMAXSD(Value* a, Value* b);
@@ -147,3 +149,7 @@ Value* INT3() { return INTERRUPT(C((uint8_t)3)); }
 
 Value *VEXTRACTI128(Value* a, Constant* imm8);
 Value *VINSERTI128(Value* a, Value* b, Constant* imm8);
+
+// rdtsc buckets macros
+void RDTSC_START(Value* pBucketMgr, Value* pId);
+void RDTSC_STOP(Value* pBucketMgr, Value* pId);

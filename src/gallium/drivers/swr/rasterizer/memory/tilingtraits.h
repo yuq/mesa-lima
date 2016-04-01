@@ -28,6 +28,7 @@
 #pragma once
 
 #include "core/state.h"
+#include "common/simdintrin.h"
 
 template<SWR_TILE_MODE mode, int>
 struct TilingTraits
@@ -129,63 +130,6 @@ template<int X> struct TilingTraits <SWR_TILE_MODE_WMAJOR, X>
     static UINT GetPdepX() { return 0xe15; }
     static UINT GetPdepY() { return 0x1ea; }
 };
-
-INLINE
-UINT pdep_u32(UINT a, UINT mask)
-{
-#if KNOB_ARCH==KNOB_ARCH_AVX2
-    return _pdep_u32(a, mask);
-#else
-    UINT result = 0;
-
-    // copied from http://wm.ite.pl/articles/pdep-soft-emu.html 
-    // using bsf instead of funky loop
-    DWORD maskIndex;
-    while (_BitScanForward(&maskIndex, mask))
-    {
-        // 1. isolate lowest set bit of mask
-        const UINT lowest = 1 << maskIndex;
-
-        // 2. populate LSB from src
-        const UINT LSB = (UINT)((int)(a << 31) >> 31);
-
-        // 3. copy bit from mask
-        result |= LSB & lowest;
-
-        // 4. clear lowest bit
-        mask &= ~lowest;
-
-        // 5. prepare for next iteration
-        a >>= 1;
-    }
-
-    return result;
-#endif
-}
-
-INLINE
-UINT pext_u32(UINT a, UINT mask)
-{
-#if KNOB_ARCH==KNOB_ARCH_AVX2
-    return _pext_u32(a, mask);
-#else
-    UINT result = 0;
-    DWORD maskIndex;
-    uint32_t currentBit = 0;
-    while (_BitScanForward(&maskIndex, mask))
-    {
-        // 1. isolate lowest set bit of mask
-        const UINT lowest = 1 << maskIndex;
-
-        // 2. copy bit from mask
-        result |= ((a & lowest) > 0) << currentBit++;
-
-        // 3. clear lowest bit
-        mask &= ~lowest;
-    }
-    return result;
-#endif
-}
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Computes the tileID for 2D tiled surfaces

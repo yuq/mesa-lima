@@ -41,6 +41,7 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
    int i;
    int ret;
    uint32_t obj_class;
+   uint64_t address;
 
    switch (dev->chipset & ~0xf) {
    case 0x100:
@@ -65,7 +66,7 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
       return ret;
    }
 
-   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 0, NVE4_CP_PARAM_SIZE, NULL,
+   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 0, 1 << 12, NULL,
                         &screen->parm);
    if (ret)
       return ret;
@@ -95,9 +96,9 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
     *  accessible. We cannot prevent that at the moment, so expect failure.
     */
    BEGIN_NVC0(push, NVE4_CP(LOCAL_BASE), 1);
-   PUSH_DATA (push, 1 << 24);
+   PUSH_DATA (push, 0xff << 24);
    BEGIN_NVC0(push, NVE4_CP(SHARED_BASE), 1);
-   PUSH_DATA (push, 2 << 24);
+   PUSH_DATA (push, 0xfe << 24);
 
    BEGIN_NVC0(push, NVE4_CP(CODE_ADDRESS_HIGH), 2);
    PUSH_DATAh(push, screen->text->offset);
@@ -128,15 +129,17 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
    }
 
    BEGIN_NVC0(push, NVE4_CP(TEX_CB_INDEX), 1);
-   PUSH_DATA (push, 0); /* does not interefere with 3D */
+   PUSH_DATA (push, 7); /* does not interfere with 3D */
 
    if (obj_class == NVF0_COMPUTE_CLASS)
       IMMED_NVC0(push, SUBC_CP(0x02c4), 1);
 
+   address = screen->uniform_bo->offset + NVC0_CB_AUX_INFO(5);
+
    /* MS sample coordinate offsets: these do not work with _ALT modes ! */
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
-   PUSH_DATAh(push, screen->parm->offset + NVE4_CP_INPUT_MS_OFFSETS);
-   PUSH_DATA (push, screen->parm->offset + NVE4_CP_INPUT_MS_OFFSETS);
+   PUSH_DATAh(push, address + NVC0_CB_AUX_MS_INFO);
+   PUSH_DATA (push, address + NVC0_CB_AUX_MS_INFO);
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
    PUSH_DATA (push, 64);
    PUSH_DATA (push, 1);
@@ -159,7 +162,7 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
    PUSH_DATA (push, 3); /* 7 */
    PUSH_DATA (push, 1);
 
-#ifdef DEBUG
+#ifdef NOUVEAU_NVE4_MP_TRAP_HANDLER
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
    PUSH_DATAh(push, screen->parm->offset + NVE4_CP_INPUT_TRAP_INFO_PTR);
    PUSH_DATA (push, screen->parm->offset + NVE4_CP_INPUT_TRAP_INFO_PTR);
@@ -194,6 +197,9 @@ nve4_compute_validate_surfaces(struct nvc0_context *nvc0)
    uint32_t mask;
    unsigned i;
    const unsigned t = 1;
+   uint64_t address;
+
+   address = screen->uniform_bo->offset + NVC0_CB_AUX_INFO(5);
 
    mask = nvc0->surfaces_dirty[t];
    while (mask) {
@@ -205,8 +211,8 @@ nve4_compute_validate_surfaces(struct nvc0_context *nvc0)
        * directly instead of via binding points, so we have to supply them.
        */
       BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
-      PUSH_DATAh(push, screen->parm->offset + NVE4_CP_INPUT_SUF(i));
-      PUSH_DATA (push, screen->parm->offset + NVE4_CP_INPUT_SUF(i));
+      PUSH_DATAh(push, address + NVC0_CB_AUX_BUF_INFO(i));
+      PUSH_DATA (push, address + NVC0_CB_AUX_BUF_INFO(i));
       BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
       PUSH_DATA (push, 64);
       PUSH_DATA (push, 1);
@@ -271,6 +277,7 @@ static void
 nve4_compute_set_tex_handles(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_screen *screen = nvc0->screen;
    uint64_t address;
    const unsigned s = nvc0_shader_stage(PIPE_SHADER_COMPUTE);
    unsigned i, n;
@@ -282,11 +289,11 @@ nve4_compute_set_tex_handles(struct nvc0_context *nvc0)
    n = util_logbase2(dirty) + 1 - i;
    assert(n);
 
-   address = nvc0->screen->parm->offset + NVE4_CP_INPUT_TEX(i);
+   address = screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s);
 
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
-   PUSH_DATAh(push, address);
-   PUSH_DATA (push, address);
+   PUSH_DATAh(push, address + NVC0_CB_AUX_TEX_INFO(i));
+   PUSH_DATA (push, address + NVC0_CB_AUX_TEX_INFO(i));
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
    PUSH_DATA (push, n * 4);
    PUSH_DATA (push, 0x1);
@@ -301,6 +308,103 @@ nve4_compute_set_tex_handles(struct nvc0_context *nvc0)
    nvc0->samplers_dirty[s] = 0;
 }
 
+static void
+nve4_compute_validate_constbufs(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   const int s = 5;
+
+   while (nvc0->constbuf_dirty[s]) {
+      int i = ffs(nvc0->constbuf_dirty[s]) - 1;
+      nvc0->constbuf_dirty[s] &= ~(1 << i);
+
+      if (nvc0->constbuf[s][i].user) {
+         struct nouveau_bo *bo = nvc0->screen->uniform_bo;
+         const unsigned base = NVC0_CB_USR_INFO(s);
+         const unsigned size = nvc0->constbuf[s][0].size;
+         assert(i == 0); /* we really only want OpenGL uniforms here */
+         assert(nvc0->constbuf[s][0].u.data);
+
+         BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+         PUSH_DATAh(push, bo->offset + base);
+         PUSH_DATA (push, bo->offset + base);
+         BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+         PUSH_DATA (push, size);
+         PUSH_DATA (push, 0x1);
+         BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + (size / 4));
+         PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
+         PUSH_DATAp(push, nvc0->constbuf[s][0].u.data, size / 4);
+      }
+      else {
+         struct nv04_resource *res =
+            nv04_resource(nvc0->constbuf[s][i].u.buf);
+         if (res) {
+            uint64_t address
+               = nvc0->screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s);
+
+            assert(i > 0); /* we really only want uniform buffer objects */
+
+            BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+            PUSH_DATAh(push, address + NVC0_CB_AUX_UBO_INFO(i - 1));
+            PUSH_DATA (push, address + NVC0_CB_AUX_UBO_INFO(i - 1));
+            BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+            PUSH_DATA (push, 4 * 4);
+            PUSH_DATA (push, 0x1);
+            BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 4);
+            PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
+
+            PUSH_DATA (push, res->address + nvc0->constbuf[s][i].offset);
+            PUSH_DATAh(push, res->address + nvc0->constbuf[s][i].offset);
+            PUSH_DATA (push, nvc0->constbuf[5][i].size);
+            PUSH_DATA (push, 0);
+            BCTX_REFN(nvc0->bufctx_cp, CP_CB(i), res, RD);
+
+            res->cb_bindings[s] |= 1 << i;
+         }
+      }
+   }
+
+   BEGIN_NVC0(push, NVE4_CP(FLUSH), 1);
+   PUSH_DATA (push, NVE4_COMPUTE_FLUSH_CB);
+}
+
+static void
+nve4_compute_validate_buffers(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   uint64_t address;
+   const int s = 5;
+   int i;
+
+   address = nvc0->screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s);
+
+   BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+   PUSH_DATAh(push, address + NVC0_CB_AUX_BUF_INFO(0));
+   PUSH_DATA (push, address + NVC0_CB_AUX_BUF_INFO(0));
+   BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+   PUSH_DATA (push, 4 * NVC0_MAX_BUFFERS * 4);
+   PUSH_DATA (push, 0x1);
+   BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 4 * NVC0_MAX_BUFFERS);
+   PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
+
+   for (i = 0; i < NVC0_MAX_BUFFERS; i++) {
+      if (nvc0->buffers[s][i].buffer) {
+         struct nv04_resource *res =
+            nv04_resource(nvc0->buffers[s][i].buffer);
+         PUSH_DATA (push, res->address + nvc0->buffers[s][i].buffer_offset);
+         PUSH_DATAh(push, res->address + nvc0->buffers[s][i].buffer_offset);
+         PUSH_DATA (push, nvc0->buffers[s][i].buffer_size);
+         PUSH_DATA (push, 0);
+         BCTX_REFN(nvc0->bufctx_cp, CP_BUF, res, RDWR);
+      } else {
+         PUSH_DATA (push, 0);
+         PUSH_DATA (push, 0);
+         PUSH_DATA (push, 0);
+         PUSH_DATA (push, 0);
+      }
+   }
+}
+
 static struct nvc0_state_validate
 validate_list_cp[] = {
    { nvc0_compprog_validate,              NVC0_NEW_CP_PROGRAM     },
@@ -310,6 +414,8 @@ validate_list_cp[] = {
                                           NVC0_NEW_CP_SAMPLERS    },
    { nve4_compute_validate_surfaces,      NVC0_NEW_CP_SURFACES    },
    { nvc0_compute_validate_globals,       NVC0_NEW_CP_GLOBALS     },
+   { nve4_compute_validate_buffers,       NVC0_NEW_CP_BUFFERS     },
+   { nve4_compute_validate_constbufs,     NVC0_NEW_CP_CONSTBUF    },
 };
 
 static bool
@@ -327,13 +433,16 @@ nve4_state_validate_cp(struct nvc0_context *nvc0, uint32_t mask)
 }
 
 static void
-nve4_compute_upload_input(struct nvc0_context *nvc0, const void *input,
-                          const uint *block_layout,
-                          const uint *grid_layout)
+nve4_compute_upload_input(struct nvc0_context *nvc0,
+                          struct nve4_cp_launch_desc *desc,
+                          const struct pipe_grid_info *info)
 {
    struct nvc0_screen *screen = nvc0->screen;
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct nvc0_program *cp = nvc0->compprog;
+   uint64_t address;
+
+   address = screen->uniform_bo->offset + NVC0_CB_AUX_INFO(5);
 
    if (cp->parm_size) {
       BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
@@ -344,18 +453,38 @@ nve4_compute_upload_input(struct nvc0_context *nvc0, const void *input,
       PUSH_DATA (push, 0x1);
       BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + (cp->parm_size / 4));
       PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
-      PUSH_DATAp(push, input, cp->parm_size / 4);
+      PUSH_DATAp(push, info->input, cp->parm_size / 4);
+
+      /* Bind user parameters coming from clover. */
+      /* TODO: This should be harmonized with uniform_bo. */
+      assert(!(desc->cb_mask & (1 << 0)));
+      nve4_cp_launch_desc_set_cb(desc, 0, screen->parm, 0, 1 << 12);
    }
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
-   PUSH_DATAh(push, screen->parm->offset + NVE4_CP_INPUT_GRID_INFO(0));
-   PUSH_DATA (push, screen->parm->offset + NVE4_CP_INPUT_GRID_INFO(0));
+   PUSH_DATAh(push, address + NVC0_CB_AUX_GRID_INFO);
+   PUSH_DATA (push, address + NVC0_CB_AUX_GRID_INFO);
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
    PUSH_DATA (push, 7 * 4);
    PUSH_DATA (push, 0x1);
-   BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 7);
-   PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
-   PUSH_DATAp(push, block_layout, 3);
-   PUSH_DATAp(push, grid_layout, 3);
+
+   if (unlikely(info->indirect)) {
+      struct nv04_resource *res = nv04_resource(info->indirect);
+      uint32_t offset = res->offset + info->indirect_offset;
+
+      nouveau_pushbuf_space(push, 16, 0, 1);
+      PUSH_REFN(push, res->bo, NOUVEAU_BO_RD | res->domain);
+
+      BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 7);
+      PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
+      PUSH_DATAp(push, info->block, 3);
+      nouveau_pushbuf_data(push, res->bo, offset,
+                           NVC0_IB_ENTRY_1_NO_PREFETCH | 3 * 4);
+   } else {
+      BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 7);
+      PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
+      PUSH_DATAp(push, info->block, 3);
+      PUSH_DATAp(push, info->grid, 3);
+   }
    PUSH_DATA (push, 0);
 
    BEGIN_NVC0(push, NVE4_CP(FLUSH), 1);
@@ -375,24 +504,21 @@ nve4_compute_derive_cache_split(struct nvc0_context *nvc0, uint32_t shared_size)
 static void
 nve4_compute_setup_launch_desc(struct nvc0_context *nvc0,
                                struct nve4_cp_launch_desc *desc,
-                               uint32_t label,
-                               const uint *block_layout,
-                               const uint *grid_layout)
+                               const struct pipe_grid_info *info)
 {
    const struct nvc0_screen *screen = nvc0->screen;
    const struct nvc0_program *cp = nvc0->compprog;
-   unsigned i;
 
    nve4_cp_launch_desc_init_default(desc);
 
-   desc->entry = nvc0_program_symbol_offset(cp, label);
+   desc->entry = nvc0_program_symbol_offset(cp, info->pc);
 
-   desc->griddim_x = grid_layout[0];
-   desc->griddim_y = grid_layout[1];
-   desc->griddim_z = grid_layout[2];
-   desc->blockdim_x = block_layout[0];
-   desc->blockdim_y = block_layout[1];
-   desc->blockdim_z = block_layout[2];
+   desc->griddim_x = info->grid[0];
+   desc->griddim_y = info->grid[1];
+   desc->griddim_z = info->grid[2];
+   desc->blockdim_x = info->block[0];
+   desc->blockdim_y = info->block[1];
+   desc->blockdim_z = info->block[2];
 
    desc->shared_size = align(cp->cp.smem_size, 0x100);
    desc->local_size_p = align(cp->cp.lmem_size, 0x10);
@@ -403,12 +529,15 @@ nve4_compute_setup_launch_desc(struct nvc0_context *nvc0,
    desc->gpr_alloc = cp->num_gprs;
    desc->bar_alloc = cp->num_barriers;
 
-   for (i = 0; i < 7; ++i) {
-      const unsigned s = 5;
-      if (nvc0->constbuf[s][i].u.buf)
-         nve4_cp_launch_desc_set_ctx_cb(desc, i + 1, &nvc0->constbuf[s][i]);
+   // Only bind OpenGL uniforms and the driver constant buffer through the
+   // launch descriptor because UBOs are sticked to the driver cb to avoid the
+   // limitation of 8 CBs.
+   if (nvc0->constbuf[5][0].user) {
+      nve4_cp_launch_desc_set_cb(desc, 0, screen->uniform_bo,
+                                 NVC0_CB_USR_INFO(5), 1 << 16);
    }
-   nve4_cp_launch_desc_set_cb(desc, 0, screen->parm, 0, NVE4_CP_INPUT_SIZE);
+   nve4_cp_launch_desc_set_cb(desc, 7, screen->uniform_bo,
+                              NVC0_CB_AUX_INFO(5), 1 << 10);
 }
 
 static inline struct nve4_cp_launch_desc *
@@ -448,29 +577,62 @@ nve4_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    if (ret)
       goto out;
 
-   nve4_compute_setup_launch_desc(nvc0, desc, info->pc,
-                                  info->block, info->grid);
+   nve4_compute_setup_launch_desc(nvc0, desc, info);
+
+   nve4_compute_upload_input(nvc0, desc, info);
+
 #ifdef DEBUG
    if (debug_get_num_option("NV50_PROG_DEBUG", 0))
       nve4_compute_dump_launch_desc(desc);
 #endif
 
-   nve4_compute_upload_input(nvc0, info->input, info->block, info->grid);
+   if (unlikely(info->indirect)) {
+      struct nv04_resource *res = nv04_resource(info->indirect);
+      uint32_t offset = res->offset + info->indirect_offset;
+
+      /* upload the descriptor */
+      BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+      PUSH_DATAh(push, desc_gpuaddr);
+      PUSH_DATA (push, desc_gpuaddr);
+      BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+      PUSH_DATA (push, 256);
+      PUSH_DATA (push, 1);
+      BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + (256 / 4));
+      PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x08 << 1));
+      PUSH_DATAp(push, (const uint32_t *)desc, 256 / 4);
+
+      /* overwrite griddim_x and griddim_y as two 32-bits integers even
+       * if griddim_y must be a 16-bits integer */
+      BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+      PUSH_DATAh(push, desc_gpuaddr + 48);
+      PUSH_DATA (push, desc_gpuaddr + 48);
+      BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+      PUSH_DATA (push, 8);
+      PUSH_DATA (push, 1);
+
+      nouveau_pushbuf_space(push, 16, 0, 1);
+      PUSH_REFN(push, res->bo, NOUVEAU_BO_RD | res->domain);
+
+      BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + (8 / 4));
+      PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x08 << 1));
+      nouveau_pushbuf_data(push, res->bo, offset,
+                           NVC0_IB_ENTRY_1_NO_PREFETCH | 2 * 4);
+
+      /* overwrite the 16 high bits of griddim_y with griddim_z because
+       * we need (z << 16) | x */
+      BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+      PUSH_DATAh(push, desc_gpuaddr + 54);
+      PUSH_DATA (push, desc_gpuaddr + 54);
+      BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+      PUSH_DATA (push, 4);
+      PUSH_DATA (push, 1);
+      BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + (4 / 4));
+      PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x08 << 1));
+      nouveau_pushbuf_data(push, res->bo, offset + 8,
+                           NVC0_IB_ENTRY_1_NO_PREFETCH | 1 * 4);
+   }
 
    /* upload descriptor and flush */
-#if 0
-   BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
-   PUSH_DATAh(push, desc_gpuaddr);
-   PUSH_DATA (push, desc_gpuaddr);
-   BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
-   PUSH_DATA (push, 256);
-   PUSH_DATA (push, 1);
-   BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + (256 / 4));
-   PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x08 << 1));
-   PUSH_DATAp(push, (const uint32_t *)desc, 256 / 4);
-   BEGIN_NVC0(push, NVE4_CP(FLUSH), 1);
-   PUSH_DATA (push, NVE4_COMPUTE_FLUSH_CB | NVE4_COMPUTE_FLUSH_CODE);
-#endif
    BEGIN_NVC0(push, NVE4_CP(LAUNCH_DESC_ADDRESS), 1);
    PUSH_DATA (push, desc_gpuaddr >> 8);
    BEGIN_NVC0(push, NVE4_CP(LAUNCH), 1);
@@ -495,7 +657,7 @@ nve4_compute_validate_textures(struct nvc0_context *nvc0)
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    const unsigned s = 5;
    unsigned i;
-   uint32_t commands[2][NVE4_CP_INPUT_TEX_MAX];
+   uint32_t commands[2][32];
    unsigned n[2] = { 0, 0 };
 
    for (i = 0; i < nvc0->num_textures[s]; ++i) {

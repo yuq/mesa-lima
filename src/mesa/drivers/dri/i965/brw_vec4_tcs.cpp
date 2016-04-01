@@ -182,7 +182,9 @@ vec4_tcs_visitor::emit_thread_end()
        * we don't have stride in the vec4 world, nor UV immediates in
        * align16, so we need an opcode to get invocation_id<0,4,0>.
        */
-      emit(TCS_OPCODE_SRC0_010_IS_ZERO, dst_null_d(), invocation_id);
+      set_condmod(BRW_CONDITIONAL_Z,
+                  emit(TCS_OPCODE_SRC0_010_IS_ZERO, dst_null_d(),
+                       invocation_id));
       emit(IF(BRW_PREDICATE_NORMAL));
       for (unsigned i = 0; i < key->input_vertices; i += 2) {
          /* If we have an odd number of input vertices, the last will be

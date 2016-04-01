@@ -1618,7 +1618,9 @@ struct gl_transform_feedback_varying_info
 {
    char *Name;
    GLenum Type;
+   GLint BufferIndex;
    GLint Size;
+   GLint Offset;
 };
 
 
@@ -1644,15 +1646,33 @@ struct gl_transform_feedback_output
 };
 
 
+struct gl_transform_feedback_buffer
+{
+   unsigned Binding;
+
+   unsigned NumVaryings;
+
+   /**
+    * Total number of components stored in each buffer.  This may be used by
+    * hardware back-ends to determine the correct stride when interleaving
+    * multiple transform feedback outputs in the same buffer.
+    */
+   unsigned Stride;
+
+   /**
+    * Which transform feedback stream this buffer binding is associated with.
+    */
+   unsigned Stream;
+};
+
+
 /** Post-link transform feedback info. */
 struct gl_transform_feedback_info
 {
    unsigned NumOutputs;
 
-   /**
-    * Number of transform feedback buffers in use by this program.
-    */
-   unsigned NumBuffers;
+   /* Bitmask of active buffer indices. */
+   unsigned ActiveBuffers;
 
    struct gl_transform_feedback_output *Outputs;
 
@@ -1663,17 +1683,7 @@ struct gl_transform_feedback_info
    struct gl_transform_feedback_varying_info *Varyings;
    GLint NumVarying;
 
-   /**
-    * Total number of components stored in each buffer.  This may be used by
-    * hardware back-ends to determine the correct stride when interleaving
-    * multiple transform feedback outputs in the same buffer.
-    */
-   unsigned BufferStride[MAX_FEEDBACK_BUFFERS];
-
-   /**
-    * Which transform feedback stream this buffer binding is associated with.
-    */
-   unsigned BufferStream[MAX_FEEDBACK_BUFFERS];
+   struct gl_transform_feedback_buffer Buffers[MAX_FEEDBACK_BUFFERS];
 };
 
 
@@ -2196,6 +2206,7 @@ struct ati_fragment_shader
    GLboolean interpinp1;
    GLboolean isValid;
    GLuint swizzlerq;
+   struct gl_program *Program;
 };
 
 /**
@@ -2306,7 +2317,7 @@ struct gl_shader
     * duplicated.
     */
    unsigned NumBufferInterfaceBlocks;
-   struct gl_uniform_block *BufferInterfaceBlocks;
+   struct gl_uniform_block **BufferInterfaceBlocks;
 
    unsigned NumUniformBlocks;
    struct gl_uniform_block **UniformBlocks;
@@ -2329,6 +2340,11 @@ struct gl_shader
     */
    bool origin_upper_left;
    bool pixel_center_integer;
+
+   struct {
+      /** Global xfb_stride out qualifier if any */
+      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
+   } TransformFeedback;
 
    /**
     * Tessellation Control shader state from layout qualifiers.
@@ -2672,6 +2688,8 @@ struct gl_shader_program
     */
    struct {
       GLenum BufferMode;
+      /** Global xfb_stride out qualifier if any */
+      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
       GLuint NumVarying;
       GLchar **VaryingNames;  /**< Array [NumVarying] of char * */
    } TransformFeedback;
@@ -2825,13 +2843,6 @@ struct gl_shader_program
     * GL_UNIFORM_BLOCK_REFERENCED_BY_*_SHADER queries.
     */
    int *InterfaceBlockStageIndex[MESA_SHADER_STAGES];
-
-   /**
-    * Indices into the BufferInterfaceBlocks[] array for Uniform Buffer
-    * Objects and Shader Storage Buffer Objects.
-    */
-   unsigned *UboInterfaceBlockIndex;
-   unsigned *SsboInterfaceBlockIndex;
 
    /**
     * Map of active uniform names to locations
@@ -3905,7 +3916,10 @@ struct gl_extensions
    GLboolean EXT_transform_feedback;
    GLboolean EXT_timer_query;
    GLboolean EXT_vertex_array_bgra;
+   GLboolean OES_copy_image;
+   GLboolean OES_sample_variables;
    GLboolean OES_standard_derivatives;
+   GLboolean OES_texture_buffer;
    /* vendor extensions */
    GLboolean AMD_performance_monitor;
    GLboolean AMD_pinned_memory;

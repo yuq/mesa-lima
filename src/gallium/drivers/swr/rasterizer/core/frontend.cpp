@@ -193,35 +193,71 @@ void ProcessStoreTiles(
 /// @param workerId - thread's worker id. Even thread has a unique id.
 /// @param pUserData - Pointer to user data passed back to callback.
 /// @todo This should go away when we switch this to use compute threading.
-void ProcessInvalidateTiles(
+void ProcessDiscardInvalidateTiles(
     SWR_CONTEXT *pContext,
     DRAW_CONTEXT *pDC,
     uint32_t workerId,
     void *pUserData)
 {
     RDTSC_START(FEProcessInvalidateTiles);
-    INVALIDATE_TILES_DESC *pInv = (INVALIDATE_TILES_DESC*)pUserData;
+    DISCARD_INVALIDATE_TILES_DESC *pInv = (DISCARD_INVALIDATE_TILES_DESC*)pUserData;
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
 
-    const API_STATE& state = GetApiState(pDC);
+    SWR_RECT rect;
+
+    if (pInv->rect.top | pInv->rect.bottom | pInv->rect.right | pInv->rect.left)
+    {
+        // Valid rect
+        rect = pInv->rect;
+    }
+    else
+    {
+        // Use viewport dimensions
+        const API_STATE& state = GetApiState(pDC);
+
+        rect.left   = (uint32_t)state.vp[0].x;
+        rect.right  = (uint32_t)(state.vp[0].x + state.vp[0].width);
+        rect.top    = (uint32_t)state.vp[0].y;
+        rect.bottom = (uint32_t)(state.vp[0].y + state.vp[0].height);
+    }
 
     // queue a store to each macro tile
     // compute macro tile bounds for the current render target
     uint32_t macroWidth = KNOB_MACROTILE_X_DIM;
     uint32_t macroHeight = KNOB_MACROTILE_Y_DIM;
 
-    uint32_t numMacroTilesX = ((uint32_t)state.vp[0].width + (uint32_t)state.vp[0].x + (macroWidth - 1)) / macroWidth;
-    uint32_t numMacroTilesY = ((uint32_t)state.vp[0].height + (uint32_t)state.vp[0].y + (macroHeight - 1)) / macroHeight;
+    // Setup region assuming full tiles
+    uint32_t macroTileStartX = (rect.left + (macroWidth - 1)) / macroWidth;
+    uint32_t macroTileStartY = (rect.top + (macroHeight - 1)) / macroHeight;
+
+    uint32_t macroTileEndX = rect.right / macroWidth;
+    uint32_t macroTileEndY = rect.bottom / macroHeight;
+
+    if (pInv->fullTilesOnly == false)
+    {
+        // include partial tiles
+        macroTileStartX = rect.left / macroWidth;
+        macroTileStartY = rect.top / macroHeight;
+
+        macroTileEndX = (rect.right + macroWidth - 1) / macroWidth;
+        macroTileEndY = (rect.bottom + macroHeight - 1) / macroHeight;
+    }
+
+    SWR_ASSERT(macroTileEndX <= KNOB_NUM_HOT_TILES_X);
+    SWR_ASSERT(macroTileEndY <= KNOB_NUM_HOT_TILES_Y);
+
+    macroTileEndX = std::min<uint32_t>(macroTileEndX, KNOB_NUM_HOT_TILES_X);
+    macroTileEndY = std::min<uint32_t>(macroTileEndY, KNOB_NUM_HOT_TILES_Y);
 
     // load tiles
     BE_WORK work;
-    work.type = INVALIDATETILES;
-    work.pfnWork = ProcessInvalidateTilesBE;
-    work.desc.invalidateTiles = *pInv;
+    work.type = DISCARDINVALIDATETILES;
+    work.pfnWork = ProcessDiscardInvalidateTilesBE;
+    work.desc.discardInvalidateTiles = *pInv;
 
-    for (uint32_t x = 0; x < numMacroTilesX; ++x)
+    for (uint32_t x = macroTileStartX; x < macroTileEndX; ++x)
     {
-        for (uint32_t y = 0; y < numMacroTilesY; ++y)
+        for (uint32_t y = macroTileStartY; y < macroTileEndY; ++y)
         {
             pTileMgr->enqueue(x, y, &work);
         }
@@ -630,6 +666,8 @@ void ProcessStreamIdBuffer(uint32_t stream, uint8_t* pStreamIdBase, uint32_t num
     }
 }
 
+THREAD SWR_GS_CONTEXT tlsGsContext;
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Implements GS stage.
 /// @param pDC - pointer to draw context.
@@ -651,7 +689,6 @@ static void GeometryShaderStage(
 {
     RDTSC_START(FEGeometryShader);
 
-    SWR_GS_CONTEXT gsContext;
     SWR_CONTEXT* pContext = pDC->pContext;
 
     const API_STATE& state = GetApiState(pDC);
@@ -660,9 +697,9 @@ static void GeometryShaderStage(
     SWR_ASSERT(pGsOut != nullptr, "GS output buffer should be initialized");
     SWR_ASSERT(pCutBuffer != nullptr, "GS output cut buffer should be initialized");
 
-    gsContext.pStream = (uint8_t*)pGsOut;
-    gsContext.pCutOrStreamIdBuffer = (uint8_t*)pCutBuffer;
-    gsContext.PrimitiveID = primID;
+    tlsGsContext.pStream = (uint8_t*)pGsOut;
+    tlsGsContext.pCutOrStreamIdBuffer = (uint8_t*)pCutBuffer;
+    tlsGsContext.PrimitiveID = primID;
 
     uint32_t numVertsPerPrim = NumVertsPerPrim(pa.binTopology, true);
     simdvector attrib[MAX_ATTRIBUTES];
@@ -675,7 +712,7 @@ static void GeometryShaderStage(
 
         for (uint32_t i = 0; i < numVertsPerPrim; ++i)
         {
-            gsContext.vert[i].attrib[attribSlot] = attrib[i];
+            tlsGsContext.vert[i].attrib[attribSlot] = attrib[i];
         }
     }
     
@@ -683,7 +720,7 @@ static void GeometryShaderStage(
     pa.Assemble(VERTEX_POSITION_SLOT, attrib);
     for (uint32_t i = 0; i < numVertsPerPrim; ++i)
     {
-        gsContext.vert[i].attrib[VERTEX_POSITION_SLOT] = attrib[i];
+        tlsGsContext.vert[i].attrib[VERTEX_POSITION_SLOT] = attrib[i];
     }
 
     const uint32_t vertexStride = sizeof(simdvertex);
@@ -710,14 +747,14 @@ static void GeometryShaderStage(
 
     for (uint32_t instance = 0; instance < pState->instanceCount; ++instance)
     {
-        gsContext.InstanceID = instance;
-        gsContext.mask = GenerateMask(numInputPrims);
+        tlsGsContext.InstanceID = instance;
+        tlsGsContext.mask = GenerateMask(numInputPrims);
 
         // execute the geometry shader
-        state.pfnGsFunc(GetPrivateState(pDC), &gsContext);
+        state.pfnGsFunc(GetPrivateState(pDC), &tlsGsContext);
 
-        gsContext.pStream += instanceStride;
-        gsContext.pCutOrStreamIdBuffer += cutInstanceStride;
+        tlsGsContext.pStream += instanceStride;
+        tlsGsContext.pCutOrStreamIdBuffer += cutInstanceStride;
     }
 
     // set up new binner and state for the GS output topology
@@ -736,7 +773,7 @@ static void GeometryShaderStage(
     // foreach input prim:
     // - setup a new PA based on the emitted verts for that prim
     // - loop over the new verts, calling PA to assemble each prim
-    uint32_t* pVertexCount = (uint32_t*)&gsContext.vertexCount;
+    uint32_t* pVertexCount = (uint32_t*)&tlsGsContext.vertexCount;
     uint32_t* pPrimitiveId = (uint32_t*)&primID;
 
     uint32_t totalPrimsGenerated = 0;
@@ -844,7 +881,7 @@ static void GeometryShaderStage(
 static INLINE void AllocateGsBuffers(DRAW_CONTEXT* pDC, const API_STATE& state, void** ppGsOut, void** ppCutBuffer,
     void **ppStreamCutBuffer)
 {
-    Arena* pArena = pDC->pArena;
+    auto pArena = pDC->pArena;
     SWR_ASSERT(pArena != nullptr);
     SWR_ASSERT(state.gsState.gsEnable);
     // allocate arena space to hold GS output verts
@@ -1186,7 +1223,7 @@ void ProcessDraw(
 
         // if the entire index buffer isn't being consumed, set the last index
         // so that fetches < a SIMD wide will be masked off
-        fetchInfo.pLastIndex = (const int32_t*)(((BYTE*)state.indexBuffer.pIndices) + state.indexBuffer.size);
+        fetchInfo.pLastIndex = (const int32_t*)(((uint8_t*)state.indexBuffer.pIndices) + state.indexBuffer.size);
         if (pLastRequestedIndex < fetchInfo.pLastIndex)
         {
             fetchInfo.pLastIndex = pLastRequestedIndex;
@@ -1362,7 +1399,7 @@ void ProcessDraw(
             i += KNOB_SIMD_WIDTH;
             if (IsIndexedT)
             {
-                fetchInfo.pIndices = (int*)((BYTE*)fetchInfo.pIndices + KNOB_SIMD_WIDTH * indexSize);
+                fetchInfo.pIndices = (int*)((uint8_t*)fetchInfo.pIndices + KNOB_SIMD_WIDTH * indexSize);
             }
             else
             {
@@ -1776,7 +1813,7 @@ void BinTriangles(
             work.pfnWork = gRasterizerTable[rastState.scissorEnable][SWR_MULTISAMPLE_1X];
         }
 
-        Arena* pArena = pDC->pArena;
+        auto pArena = pDC->pArena;
         SWR_ASSERT(pArena != nullptr);
 
         // store active attribs
@@ -1948,7 +1985,7 @@ void BinPoints(
 
             work.pfnWork = RasterizeSimplePoint;
 
-            Arena* pArena = pDC->pArena;
+            auto pArena = pDC->pArena;
             SWR_ASSERT(pArena != nullptr);
 
             // store attributes
@@ -2082,7 +2119,7 @@ void BinPoints(
 
             work.pfnWork = RasterizeTriPoint;
 
-            Arena* pArena = pDC->pArena;
+            auto pArena = pDC->pArena;
             SWR_ASSERT(pArena != nullptr);
 
             // store active attribs
@@ -2299,7 +2336,7 @@ void BinLines(
 
         work.pfnWork = RasterizeLine;
 
-        Arena* pArena = pDC->pArena;
+        auto pArena = pDC->pArena;
         SWR_ASSERT(pArena != nullptr);
 
         // store active attribs

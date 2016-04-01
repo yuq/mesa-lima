@@ -1192,15 +1192,32 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
 	 int index = link_cross_validate_uniform_block(prog,
 						       &prog->BufferInterfaceBlocks,
 						       &prog->NumBufferInterfaceBlocks,
-						       &sh->BufferInterfaceBlocks[j]);
+						       sh->BufferInterfaceBlocks[j]);
 
 	 if (index == -1) {
 	    linker_error(prog, "uniform block `%s' has mismatching definitions\n",
-			 sh->BufferInterfaceBlocks[j].Name);
+			 sh->BufferInterfaceBlocks[j]->Name);
 	    return false;
 	 }
 
 	 prog->InterfaceBlockStageIndex[i][index] = j;
+      }
+   }
+
+   /* Update per stage block pointers to point to the program list.
+    * FIXME: We should be able to free the per stage blocks here.
+    */
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      for (unsigned j = 0; j < prog->NumBufferInterfaceBlocks; j++) {
+	 int stage_index =
+            prog->InterfaceBlockStageIndex[i][j];
+
+	 if (stage_index != -1) {
+	    struct gl_shader *sh = prog->_LinkedShaders[i];
+
+            sh->BufferInterfaceBlocks[stage_index] =
+               &prog->BufferInterfaceBlocks[j];
+	 }
       }
    }
 
@@ -1567,6 +1584,69 @@ private:
    hash_table *unnamed_interfaces;
 };
 
+/**
+ * Check for conflicting xfb_stride default qualifiers and store buffer stride
+ * for later use.
+ */
+static void
+link_xfb_stride_layout_qualifiers(struct gl_context *ctx,
+                                  struct gl_shader_program *prog,
+			          struct gl_shader *linked_shader,
+			          struct gl_shader **shader_list,
+			          unsigned num_shaders)
+{
+   for (unsigned i = 0; i < MAX_FEEDBACK_BUFFERS; i++) {
+      linked_shader->TransformFeedback.BufferStride[i] = 0;
+   }
+
+   for (unsigned i = 0; i < num_shaders; i++) {
+      struct gl_shader *shader = shader_list[i];
+
+      for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
+         if (shader->TransformFeedback.BufferStride[j]) {
+	    if (linked_shader->TransformFeedback.BufferStride[j] != 0 &&
+                shader->TransformFeedback.BufferStride[j] != 0 &&
+	        linked_shader->TransformFeedback.BufferStride[j] !=
+                   shader->TransformFeedback.BufferStride[j]) {
+	       linker_error(prog,
+                            "intrastage shaders defined with conflicting "
+                            "xfb_stride for buffer %d (%d and %d)\n", j,
+                            linked_shader->TransformFeedback.BufferStride[j],
+			    shader->TransformFeedback.BufferStride[j]);
+	       return;
+	    }
+
+            if (shader->TransformFeedback.BufferStride[j])
+	       linked_shader->TransformFeedback.BufferStride[j] =
+                  shader->TransformFeedback.BufferStride[j];
+         }
+      }
+   }
+
+   for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
+      if (linked_shader->TransformFeedback.BufferStride[j]) {
+         prog->TransformFeedback.BufferStride[j] =
+            linked_shader->TransformFeedback.BufferStride[j];
+
+         /* We will validate doubles at a later stage */
+         if (prog->TransformFeedback.BufferStride[j] % 4) {
+            linker_error(prog, "invalid qualifier xfb_stride=%d must be a "
+                         "multiple of 4 or if its applied to a type that is "
+                         "or contains a double a multiple of 8.",
+                         prog->TransformFeedback.BufferStride[j]);
+            return;
+         }
+
+         if (prog->TransformFeedback.BufferStride[j] / 4 >
+             ctx->Const.MaxTransformFeedbackInterleavedComponents) {
+            linker_error(prog,
+                         "The MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS "
+                         "limit has been exceeded.");
+                  return;
+         }
+      }
+   }
+}
 
 /**
  * Performs the cross-validation of tessellation control shader vertices and
@@ -2069,15 +2149,23 @@ link_intrastage_shaders(void *mem_ctx,
    linked->ir = new(linked) exec_list;
    clone_ir_list(mem_ctx, linked->ir, main->ir);
 
-   linked->BufferInterfaceBlocks = uniform_blocks;
+   linked->BufferInterfaceBlocks =
+      ralloc_array(linked, gl_uniform_block *, num_uniform_blocks);
+
+   ralloc_steal(linked, uniform_blocks);
+   for (unsigned i = 0; i < num_uniform_blocks; i++) {
+      linked->BufferInterfaceBlocks[i] = &uniform_blocks[i];
+   }
+
    linked->NumBufferInterfaceBlocks = num_uniform_blocks;
-   ralloc_steal(linked, linked->BufferInterfaceBlocks);
 
    link_fs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_tcs_out_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_tes_in_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_gs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_cs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
+   link_xfb_stride_layout_qualifiers(ctx, prog, linked, shader_list,
+                                     num_shaders);
 
    populate_symbol_table(linked);
 
@@ -2869,7 +2957,8 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 	 if (prog->InterfaceBlockStageIndex[j][i] != -1) {
             struct gl_shader *sh = prog->_LinkedShaders[j];
             int stage_index = prog->InterfaceBlockStageIndex[j][i];
-            if (sh && sh->BufferInterfaceBlocks[stage_index].IsShaderStorage) {
+            if (sh &&
+                sh->BufferInterfaceBlocks[stage_index]->IsShaderStorage) {
                shader_blocks[j]++;
                total_shader_storage_blocks++;
             } else {
@@ -2986,7 +3075,8 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
          for (unsigned j = 0; j < prog->NumBufferInterfaceBlocks; j++) {
             int stage_index = prog->InterfaceBlockStageIndex[i][j];
-            if (stage_index != -1 && sh->BufferInterfaceBlocks[stage_index].IsShaderStorage)
+            if (stage_index != -1 &&
+                sh->BufferInterfaceBlocks[stage_index]->IsShaderStorage)
                total_shader_storage_blocks++;
          }
 
@@ -3762,7 +3852,8 @@ write_top_level_array_size_and_stride:
  * resource data.
  */
 void
-build_program_resource_list(struct gl_shader_program *shProg)
+build_program_resource_list(struct gl_context *ctx,
+                            struct gl_shader_program *shProg)
 {
    /* Rebuild resource list. */
    if (shProg->ProgramResourceList) {
@@ -3815,6 +3906,17 @@ build_program_resource_list(struct gl_shader_program *shProg)
       for (int i = 0; i < shProg->LinkedTransformFeedback.NumVarying; i++) {
          if (!add_program_resource(shProg, GL_TRANSFORM_FEEDBACK_VARYING,
                                    &shProg->LinkedTransformFeedback.Varyings[i],
+                                   0))
+         return;
+      }
+   }
+
+   /* Add transform feedback buffers. */
+   for (unsigned i = 0; i < ctx->Const.MaxTransformFeedbackBuffers; i++) {
+      if ((shProg->LinkedTransformFeedback.ActiveBuffers >> i) & 1) {
+         shProg->LinkedTransformFeedback.Buffers[i].Binding = i;
+         if (!add_program_resource(shProg, GL_TRANSFORM_FEEDBACK_BUFFER,
+                                   &shProg->LinkedTransformFeedback.Buffers[i],
                                    0))
          return;
       }
@@ -4006,20 +4108,22 @@ link_assign_subroutine_types(struct gl_shader_program *prog)
 
 static void
 split_ubos_and_ssbos(void *mem_ctx,
-                     struct gl_uniform_block *blocks,
+                     struct gl_uniform_block **s_blks,
+                     struct gl_uniform_block *p_blks,
                      unsigned num_blocks,
                      struct gl_uniform_block ***ubos,
                      unsigned *num_ubos,
-                     unsigned **ubo_interface_block_indices,
                      struct gl_uniform_block ***ssbos,
-                     unsigned *num_ssbos,
-                     unsigned **ssbo_interface_block_indices)
+                     unsigned *num_ssbos)
 {
    unsigned num_ubo_blocks = 0;
    unsigned num_ssbo_blocks = 0;
 
+   /* Are we spliting the list of blocks for the shader or the program */
+   bool is_shader = p_blks == NULL;
+
    for (unsigned i = 0; i < num_blocks; i++) {
-      if (blocks[i].IsShaderStorage)
+      if (is_shader ? s_blks[i]->IsShaderStorage : p_blks[i].IsShaderStorage)
          num_ssbo_blocks++;
       else
          num_ubo_blocks++;
@@ -4031,24 +4135,13 @@ split_ubos_and_ssbos(void *mem_ctx,
    *ssbos = ralloc_array(mem_ctx, gl_uniform_block *, num_ssbo_blocks);
    *num_ssbos = 0;
 
-   if (ubo_interface_block_indices)
-      *ubo_interface_block_indices =
-         ralloc_array(mem_ctx, unsigned, num_ubo_blocks);
-
-   if (ssbo_interface_block_indices)
-      *ssbo_interface_block_indices =
-         ralloc_array(mem_ctx, unsigned, num_ssbo_blocks);
-
    for (unsigned i = 0; i < num_blocks; i++) {
-      if (blocks[i].IsShaderStorage) {
-         (*ssbos)[*num_ssbos] = &blocks[i];
-         if (ssbo_interface_block_indices)
-            (*ssbo_interface_block_indices)[*num_ssbos] = i;
+      struct gl_uniform_block *blk = is_shader ? s_blks[i] : &p_blks[i];
+      if (blk->IsShaderStorage) {
+         (*ssbos)[*num_ssbos] = blk;
          (*num_ssbos)++;
       } else {
-         (*ubos)[*num_ubos] = &blocks[i];
-         if (ubo_interface_block_indices)
-            (*ubo_interface_block_indices)[*num_ubos] = i;
+         (*ubos)[*num_ubos] = blk;
          (*num_ubos)++;
       }
    }
@@ -4153,9 +4246,11 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       return;
    }
 
-   tfeedback_decl *tfeedback_decls = NULL;
-   unsigned num_tfeedback_decls = prog->TransformFeedback.NumVarying;
+   unsigned num_tfeedback_decls = 0;
    unsigned int num_explicit_uniform_locs = 0;
+   bool has_xfb_qualifiers = false;
+   char **varying_names = NULL;
+   tfeedback_decl *tfeedback_decls = NULL;
 
    void *mem_ctx = ralloc_context(NULL); // temporary linker context
 
@@ -4465,6 +4560,30 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       goto done;
    }
 
+   /* From the ARB_enhanced_layouts spec:
+    *
+    *    "If the shader used to record output variables for transform feedback
+    *    varyings uses the "xfb_buffer", "xfb_offset", or "xfb_stride" layout
+    *    qualifiers, the values specified by TransformFeedbackVaryings are
+    *    ignored, and the set of variables captured for transform feedback is
+    *    instead derived from the specified layout qualifiers."
+    */
+   for (int i = MESA_SHADER_FRAGMENT - 1; i >= 0; i--) {
+      /* Find last stage before fragment shader */
+      if (prog->_LinkedShaders[i]) {
+         has_xfb_qualifiers =
+            process_xfb_layout_qualifiers(mem_ctx, prog->_LinkedShaders[i],
+                                          &num_tfeedback_decls,
+                                          &varying_names);
+         break;
+      }
+   }
+
+   if (!has_xfb_qualifiers) {
+      num_tfeedback_decls = prog->TransformFeedback.NumVarying;
+      varying_names = prog->TransformFeedback.VaryingNames;
+   }
+
    if (num_tfeedback_decls != 0) {
       /* From GL_EXT_transform_feedback:
        *   A program will fail to link if:
@@ -4481,10 +4600,9 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       }
 
       tfeedback_decls = ralloc_array(mem_ctx, tfeedback_decl,
-                                     prog->TransformFeedback.NumVarying);
+                                     num_tfeedback_decls);
       if (!parse_tfeedback_decls(ctx, prog, mem_ctx, num_tfeedback_decls,
-                                 prog->TransformFeedback.VaryingNames,
-                                 tfeedback_decls))
+                                 varying_names, tfeedback_decls))
          goto done;
    }
 
@@ -4564,7 +4682,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       }
    }
 
-   if (!store_tfeedback_info(ctx, prog, num_tfeedback_decls, tfeedback_decls))
+   if (!store_tfeedback_info(ctx, prog, num_tfeedback_decls, tfeedback_decls,
+                             has_xfb_qualifiers))
       goto done;
 
    update_array_sizes(prog);
@@ -4627,25 +4746,23 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          gl_shader *sh = prog->_LinkedShaders[i];
          split_ubos_and_ssbos(sh,
                               sh->BufferInterfaceBlocks,
+                              NULL,
                               sh->NumBufferInterfaceBlocks,
                               &sh->UniformBlocks,
                               &sh->NumUniformBlocks,
-                              NULL,
                               &sh->ShaderStorageBlocks,
-                              &sh->NumShaderStorageBlocks,
-                              NULL);
+                              &sh->NumShaderStorageBlocks);
       }
    }
 
    split_ubos_and_ssbos(prog,
+                        NULL,
                         prog->BufferInterfaceBlocks,
                         prog->NumBufferInterfaceBlocks,
                         &prog->UniformBlocks,
                         &prog->NumUniformBlocks,
-                        &prog->UboInterfaceBlockIndex,
                         &prog->ShaderStorageBlocks,
-                        &prog->NumShaderStorageBlocks,
-                        &prog->SsboInterfaceBlockIndex);
+                        &prog->NumShaderStorageBlocks);
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)

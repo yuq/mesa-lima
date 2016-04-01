@@ -395,6 +395,7 @@ VBO_FILES = \
 	vbo/vbo_split_inplace.c
 
 STATETRACKER_FILES = \
+	state_tracker/st_atifs_to_tgsi.c \
 	state_tracker/st_atom_array.c \
 	state_tracker/st_atom_atomicbuf.c \
 	state_tracker/st_atom_blend.c \
@@ -585,6 +586,10 @@ X86_FILES =			\
 X86_64_FILES =		\
 	x86-64/x86-64.h	\
 	x86-64/xform4.S
+
+X86_SSE41_FILES = \
+	main/streaming-load-memcpy.c \
+	main/sse_minmax.c
 
 SPARC_FILES =			\
 	sparc/sparc.h		\

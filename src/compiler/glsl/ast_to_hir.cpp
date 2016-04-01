@@ -54,6 +54,7 @@
 #include "ast.h"
 #include "compiler/glsl_types.h"
 #include "program/hash_table.h"
+#include "main/macros.h"
 #include "main/shaderobj.h"
 #include "ir.h"
 #include "ir_builder.h"
@@ -819,7 +820,7 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
     * if the expression indicating the vertex number is not the identifier
     * `gl_InvocationID`.
     */
-   if (state->stage == MESA_SHADER_TESS_CTRL) {
+   if (state->stage == MESA_SHADER_TESS_CTRL && !lhs->type->is_error()) {
       ir_variable *var = lhs->variable_referenced();
       if (var->data.mode == ir_var_shader_out && !var->data.patch) {
          ir_rvalue *index = find_innermost_array_index(lhs);
@@ -1248,6 +1249,24 @@ ast_expression::hir_no_rvalue(exec_list *instructions,
    do_hir(instructions, state, false);
 }
 
+void
+ast_expression::set_is_lhs(bool new_value)
+{
+   /* is_lhs is tracked only to print "variable used uninitialized" warnings,
+    * if we lack a identifier we can just skip it.
+    */
+   if (this->primary_expression.identifier == NULL)
+      return;
+
+   this->is_lhs = new_value;
+
+   /* We need to go through the subexpressions tree to cover cases like
+    * ast_field_selection
+    */
+   if (this->subexpressions[0] != NULL)
+      this->subexpressions[0]->set_is_lhs(new_value);
+}
+
 ir_rvalue *
 ast_expression::do_hir(exec_list *instructions,
                        struct _mesa_glsl_parse_state *state,
@@ -1323,6 +1342,7 @@ ast_expression::do_hir(exec_list *instructions,
       break;
 
    case ast_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
 
@@ -1592,6 +1612,7 @@ ast_expression::do_hir(exec_list *instructions,
    case ast_div_assign:
    case ast_add_assign:
    case ast_sub_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
 
@@ -1618,6 +1639,7 @@ ast_expression::do_hir(exec_list *instructions,
    }
 
    case ast_mod_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
 
@@ -1640,6 +1662,7 @@ ast_expression::do_hir(exec_list *instructions,
 
    case ast_ls_assign:
    case ast_rs_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
       type = shift_result_type(op[0]->type, op[1]->type, this->oper, state,
@@ -1658,6 +1681,7 @@ ast_expression::do_hir(exec_list *instructions,
    case ast_and_assign:
    case ast_xor_assign:
    case ast_or_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
       type = bit_logic_result_type(op[0], op[1], this->oper, state, &loc);
@@ -1839,6 +1863,11 @@ ast_expression::do_hir(exec_list *instructions,
    case ast_array_index: {
       YYLTYPE index_loc = subexpressions[1]->get_location();
 
+      /* Getting if an array is being used uninitialized is beyond what we get
+       * from ir_value.data.assigned. Setting is_lhs as true would force to
+       * not raise a uninitialized warning when using an array
+       */
+      subexpressions[0]->set_is_lhs(true);
       op[0] = subexpressions[0]->hir(instructions, state);
       op[1] = subexpressions[1]->hir(instructions, state);
 
@@ -1873,6 +1902,14 @@ ast_expression::do_hir(exec_list *instructions,
       if (var != NULL) {
          var->data.used = true;
          result = new(ctx) ir_dereference_variable(var);
+
+         if ((var->data.mode == ir_var_auto || var->data.mode == ir_var_shader_out)
+             && !this->is_lhs
+             && result->variable_referenced()->data.assigned != true
+             && !is_gl_identifier(var->name)) {
+            _mesa_glsl_warning(&loc, state, "`%s' used uninitialized",
+                               this->primary_expression.identifier);
+         }
       } else {
          _mesa_glsl_error(& loc, state, "`%s' undeclared",
                           this->primary_expression.identifier);
@@ -2318,11 +2355,11 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[type_idx];
          }
          case GLSL_SAMPLER_DIM_BUF: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
-            static const char *const names[4] = {
-              "samplerBuffer", NULL, NULL, NULL
+            static const char *const names[8] = {
+              "samplerBuffer", NULL, NULL, NULL,
+              "imageBuffer", NULL, NULL, NULL
             };
-            return names[type_idx];
+            return names[offset + type_idx];
          }
          case GLSL_SAMPLER_DIM_EXTERNAL: {
             assert(type->base_type == GLSL_TYPE_SAMPLER);
@@ -2380,11 +2417,11 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[type_idx];
          }
          case GLSL_SAMPLER_DIM_BUF: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
-            static const char *const names[4] = {
-              "isamplerBuffer", NULL, NULL, NULL
+            static const char *const names[8] = {
+              "isamplerBuffer", NULL, NULL, NULL,
+              "iimageBuffer", NULL, NULL, NULL
             };
-            return names[type_idx];
+            return names[offset + type_idx];
          }
          default:
             unreachable("Unsupported isampler/iimage dimensionality");
@@ -2435,11 +2472,11 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[type_idx];
          }
          case GLSL_SAMPLER_DIM_BUF: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
-            static const char *const names[4] = {
-              "usamplerBuffer", NULL, NULL, NULL
+            static const char *const names[8] = {
+              "usamplerBuffer", NULL, NULL, NULL,
+              "uimageBuffer", NULL, NULL, NULL
             };
-            return names[type_idx];
+            return names[offset + type_idx];
          }
          default:
             unreachable("Unsupported usampler/uimage dimensionality");
@@ -2550,43 +2587,79 @@ validate_matrix_layout_for_type(struct _mesa_glsl_parse_state *state,
 }
 
 static bool
-process_qualifier_constant(struct _mesa_glsl_parse_state *state,
-                           YYLTYPE *loc,
-                           const char *qual_indentifier,
-                           ast_expression *const_expression,
-                           unsigned *value)
-{
-   exec_list dummy_instructions;
-
-   if (const_expression == NULL) {
-      *value = 0;
-      return true;
-   }
-
-   ir_rvalue *const ir = const_expression->hir(&dummy_instructions, state);
-
-   ir_constant *const const_int = ir->constant_expression_value();
-   if (const_int == NULL || !const_int->type->is_integer()) {
-      _mesa_glsl_error(loc, state, "%s must be an integral constant "
-                       "expression", qual_indentifier);
+validate_xfb_buffer_qualifier(YYLTYPE *loc,
+                              struct _mesa_glsl_parse_state *state,
+                              unsigned xfb_buffer) {
+   if (xfb_buffer >= state->Const.MaxTransformFeedbackBuffers) {
+      _mesa_glsl_error(loc, state,
+                       "invalid xfb_buffer specified %d is larger than "
+                       "MAX_TRANSFORM_FEEDBACK_BUFFERS - 1 (%d).",
+                       xfb_buffer,
+                       state->Const.MaxTransformFeedbackBuffers - 1);
       return false;
    }
 
-   if (const_int->value.i[0] < 0) {
-      _mesa_glsl_error(loc, state, "%s layout qualifier is invalid (%d < 0)",
-                       qual_indentifier, const_int->value.u[0]);
+   return true;
+}
+
+/* From the ARB_enhanced_layouts spec:
+ *
+ *    "Variables and block members qualified with *xfb_offset* can be
+ *    scalars, vectors, matrices, structures, and (sized) arrays of these.
+ *    The offset must be a multiple of the size of the first component of
+ *    the first qualified variable or block member, or a compile-time error
+ *    results.  Further, if applied to an aggregate containing a double,
+ *    the offset must also be a multiple of 8, and the space taken in the
+ *    buffer will be a multiple of 8.
+ */
+static bool
+validate_xfb_offset_qualifier(YYLTYPE *loc,
+                              struct _mesa_glsl_parse_state *state,
+                              int xfb_offset, const glsl_type *type,
+                              unsigned component_size) {
+  const glsl_type *t_without_array = type->without_array();
+
+   if (xfb_offset != -1 && type->is_unsized_array()) {
+      _mesa_glsl_error(loc, state,
+                       "xfb_offset can't be used with unsized arrays.");
       return false;
    }
 
-   /* If the location is const (and we've verified that
-    * it is) then no instructions should have been emitted
-    * when we converted it to HIR. If they were emitted,
-    * then either the location isn't const after all, or
-    * we are emitting unnecessary instructions.
+   /* Make sure nested structs don't contain unsized arrays, and validate
+    * any xfb_offsets on interface members.
     */
-   assert(dummy_instructions.is_empty());
+   if (t_without_array->is_record() || t_without_array->is_interface())
+      for (unsigned int i = 0; i < t_without_array->length; i++) {
+         const glsl_type *member_t = t_without_array->fields.structure[i].type;
 
-   *value = const_int->value.u[0];
+         /* When the interface block doesn't have an xfb_offset qualifier then
+          * we apply the component size rules at the member level.
+          */
+         if (xfb_offset == -1)
+            component_size = member_t->contains_double() ? 8 : 4;
+
+         int xfb_offset = t_without_array->fields.structure[i].offset;
+         validate_xfb_offset_qualifier(loc, state, xfb_offset, member_t,
+                                       component_size);
+      }
+
+  /* Nested structs or interface block without offset may not have had an
+   * offset applied yet so return.
+   */
+   if (xfb_offset == -1) {
+     return true;
+   }
+
+   if (xfb_offset % component_size) {
+      _mesa_glsl_error(loc, state,
+                       "invalid qualifier xfb_offset=%d must be a multiple "
+                       "of the first component size of the first qualified "
+                       "variable or block member. Or double if an aggregate "
+                       "that contains a double (%d).",
+                       xfb_offset, component_size);
+      return false;
+   }
+
    return true;
 }
 
@@ -3148,6 +3221,39 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
                                      &qual_stream) &&
           validate_stream_qualifier(loc, state, qual_stream)) {
          var->data.stream = qual_stream;
+      }
+   }
+
+   if (qual->flags.q.out && qual->flags.q.xfb_buffer) {
+      unsigned qual_xfb_buffer;
+      if (process_qualifier_constant(state, loc, "xfb_buffer",
+                                     qual->xfb_buffer, &qual_xfb_buffer) &&
+          validate_xfb_buffer_qualifier(loc, state, qual_xfb_buffer)) {
+         var->data.xfb_buffer = qual_xfb_buffer;
+         if (qual->flags.q.explicit_xfb_buffer)
+            var->data.explicit_xfb_buffer = true;
+      }
+   }
+
+   if (qual->flags.q.explicit_xfb_offset) {
+      unsigned qual_xfb_offset;
+      unsigned component_size = var->type->contains_double() ? 8 : 4;
+
+      if (process_qualifier_constant(state, loc, "xfb_offset",
+                                     qual->offset, &qual_xfb_offset) &&
+          validate_xfb_offset_qualifier(loc, state, (int) qual_xfb_offset,
+                                        var->type, component_size)) {
+         var->data.offset = qual_xfb_offset;
+         var->data.explicit_xfb_offset = true;
+      }
+   }
+
+   if (qual->flags.q.explicit_xfb_stride) {
+      unsigned qual_xfb_stride;
+      if (process_qualifier_constant(state, loc, "xfb_stride",
+                                     qual->xfb_stride, &qual_xfb_stride)) {
+         var->data.xfb_stride = qual_xfb_stride;
+         var->data.explicit_xfb_stride = true;
       }
    }
 
@@ -5746,6 +5852,11 @@ ast_switch_statement::test_to_hir(exec_list *instructions,
 {
    void *ctx = state;
 
+   /* set to true to avoid a duplicate "use of uninitialized variable" warning
+    * on the switch test case. The first one would be already raised when
+    * getting the test_expression at ast_switch_statement::hir
+    */
+   test_expression->set_is_lhs(true);
    /* Cache value of test expression. */
    ir_rvalue *const test_val =
       test_expression->hir(instructions,
@@ -6258,6 +6369,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                           ir_variable_mode var_mode,
                                           ast_type_qualifier *layout,
                                           unsigned block_stream,
+                                          unsigned block_xfb_buffer,
+                                          unsigned block_xfb_offset,
                                           unsigned expl_location,
                                           unsigned expl_align)
 {
@@ -6413,6 +6526,35 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          }
       }
 
+      int xfb_buffer;
+      unsigned explicit_xfb_buffer = 0;
+      if (qual->flags.q.explicit_xfb_buffer) {
+         unsigned qual_xfb_buffer;
+         if (process_qualifier_constant(state, &loc, "xfb_buffer",
+                                        qual->xfb_buffer, &qual_xfb_buffer)) {
+            explicit_xfb_buffer = 1;
+            if (qual_xfb_buffer != block_xfb_buffer)
+               _mesa_glsl_error(&loc, state, "xfb_buffer layout qualifier on "
+                                "interface block member does not match "
+                                "the interface block (%u vs %u)",
+                                qual_xfb_buffer, block_xfb_buffer);
+         }
+         xfb_buffer = (int) qual_xfb_buffer;
+      } else {
+         if (layout)
+            explicit_xfb_buffer = layout->flags.q.xfb_buffer;
+         xfb_buffer = (int) block_xfb_buffer;
+      }
+
+      int xfb_stride = -1;
+      if (qual->flags.q.explicit_xfb_stride) {
+         unsigned qual_xfb_stride;
+         if (process_qualifier_constant(state, &loc, "xfb_stride",
+                                        qual->xfb_stride, &qual_xfb_stride)) {
+            xfb_stride = (int) qual_xfb_stride;
+         }
+      }
+
       if (qual->flags.q.uniform && qual->has_interpolation()) {
          _mesa_glsl_error(&loc, state,
                           "interpolation qualifiers cannot be used "
@@ -6458,6 +6600,10 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          fields[i].sample = qual->flags.q.sample ? 1 : 0;
          fields[i].patch = qual->flags.q.patch ? 1 : 0;
          fields[i].precision = qual->precision;
+         fields[i].offset = -1;
+         fields[i].explicit_xfb_buffer = explicit_xfb_buffer;
+         fields[i].xfb_buffer = xfb_buffer;
+         fields[i].xfb_stride = xfb_stride;
 
          if (qual->flags.q.explicit_location) {
             unsigned qual_location;
@@ -6520,8 +6666,6 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                    "with std430 and std140 layouts");
                }
             }
-         } else {
-            fields[i].offset = -1;
          }
 
          if (qual->flags.q.explicit_align || expl_align != 0) {
@@ -6552,6 +6696,32 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          if (!qual->flags.q.explicit_offset) {
             if (align != 0 && size != 0)
                next_offset = glsl_align(next_offset + size, align);
+         }
+
+         /* From the ARB_enhanced_layouts spec:
+          *
+          *    "The given offset applies to the first component of the first
+          *    member of the qualified entity.  Then, within the qualified
+          *    entity, subsequent components are each assigned, in order, to
+          *    the next available offset aligned to a multiple of that
+          *    component's size.  Aggregate types are flattened down to the
+          *    component level to get this sequence of components."
+          */
+         if (qual->flags.q.explicit_xfb_offset) {
+            unsigned xfb_offset;
+            if (process_qualifier_constant(state, &loc, "xfb_offset",
+                                           qual->offset, &xfb_offset)) {
+               fields[i].offset = xfb_offset;
+               block_xfb_offset = fields[i].offset +
+                  MAX2(xfb_stride, (int) (4 * field_type->component_slots()));
+            }
+         } else {
+            if (layout && layout->flags.q.explicit_xfb_offset) {
+               unsigned align = field_type->is_double() ? 8 : 4;
+               fields[i].offset = glsl_align(block_xfb_offset, align);
+               block_xfb_offset +=
+                  MAX2(xfb_stride, (int) (4 * field_type->component_slots()));
+            }
          }
 
          /* Propogate row- / column-major information down the fields of the
@@ -6647,6 +6817,8 @@ ast_struct_specifier::hir(exec_list *instructions,
                                                 false /* allow_reserved_names */,
                                                 ir_var_auto,
                                                 layout,
+                                                0, /* for interface only */
+                                                0, /* for interface only */
                                                 0, /* for interface only */
                                                 expl_location,
                                                 0 /* for interface only */);
@@ -6807,6 +6979,29 @@ ast_interface_block::hir(exec_list *instructions,
       return NULL;
    }
 
+   unsigned qual_xfb_buffer;
+   if (!process_qualifier_constant(state, &loc, "xfb_buffer",
+                                   layout.xfb_buffer, &qual_xfb_buffer) ||
+       !validate_xfb_buffer_qualifier(&loc, state, qual_xfb_buffer)) {
+      return NULL;
+   }
+
+   unsigned qual_xfb_offset;
+   if (layout.flags.q.explicit_xfb_offset) {
+      if (!process_qualifier_constant(state, &loc, "xfb_offset",
+                                      layout.offset, &qual_xfb_offset)) {
+         return NULL;
+      }
+   }
+
+   unsigned qual_xfb_stride;
+   if (layout.flags.q.explicit_xfb_stride) {
+      if (!process_qualifier_constant(state, &loc, "xfb_stride",
+                                      layout.xfb_stride, &qual_xfb_stride)) {
+         return NULL;
+      }
+   }
+
    unsigned expl_location = 0;
    if (layout.flags.q.explicit_location) {
       if (!process_qualifier_constant(state, &loc, "location",
@@ -6842,6 +7037,8 @@ ast_interface_block::hir(exec_list *instructions,
                                                 var_mode,
                                                 &this->layout,
                                                 qual_stream,
+                                                qual_xfb_buffer,
+                                                qual_xfb_offset,
                                                 expl_location,
                                                 expl_align);
 
@@ -6956,6 +7153,12 @@ ast_interface_block::hir(exec_list *instructions,
                earlier_per_vertex->fields.structure[j].patch;
             fields[i].precision =
                earlier_per_vertex->fields.structure[j].precision;
+            fields[i].explicit_xfb_buffer =
+               earlier_per_vertex->fields.structure[j].explicit_xfb_buffer;
+            fields[i].xfb_buffer =
+               earlier_per_vertex->fields.structure[j].xfb_buffer;
+            fields[i].xfb_stride =
+               earlier_per_vertex->fields.structure[j].xfb_stride;
          }
       }
 
@@ -6985,6 +7188,12 @@ ast_interface_block::hir(exec_list *instructions,
                                         num_variables,
                                         packing,
                                         this->block_name);
+
+   unsigned component_size = block_type->contains_double() ? 8 : 4;
+   int xfb_offset =
+      layout.flags.q.explicit_xfb_offset ? (int) qual_xfb_offset : -1;
+   validate_xfb_offset_qualifier(&loc, state, xfb_offset, block_type,
+                                 component_size);
 
    if (!state->symbols->add_interface(block_type->name, block_type, var_mode)) {
       YYLTYPE loc = this->get_location();
@@ -7207,8 +7416,17 @@ ast_interface_block::hir(exec_list *instructions,
          var->data.patch = fields[i].patch;
          var->data.stream = qual_stream;
          var->data.location = fields[i].location;
+
          if (fields[i].location != -1)
             var->data.explicit_location = true;
+
+         var->data.explicit_xfb_buffer = fields[i].explicit_xfb_buffer;
+         var->data.xfb_buffer = fields[i].xfb_buffer;
+
+         if (fields[i].offset != -1)
+            var->data.explicit_xfb_offset = true;
+         var->data.offset = fields[i].offset;
+
          var->init_interface_type(block_type);
 
          if (var_mode == ir_var_shader_in || var_mode == ir_var_uniform)

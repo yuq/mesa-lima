@@ -1541,6 +1541,25 @@ layout_qualifier_id:
          }
       }
 
+      if (state->has_enhanced_layouts()) {
+         if (match_layout_qualifier("xfb_buffer", $1, state) == 0) {
+            $$.flags.q.xfb_buffer = 1;
+            $$.flags.q.explicit_xfb_buffer = 1;
+            $$.xfb_buffer = $3;
+         }
+
+         if (match_layout_qualifier("xfb_offset", $1, state) == 0) {
+            $$.flags.q.explicit_xfb_offset = 1;
+            $$.offset = $3;
+         }
+
+         if (match_layout_qualifier("xfb_stride", $1, state) == 0) {
+            $$.flags.q.xfb_stride = 1;
+            $$.flags.q.explicit_xfb_stride = 1;
+            $$.xfb_stride = $3;
+         }
+      }
+
       static const char * const local_size_qualifiers[3] = {
          "local_size_x",
          "local_size_y",
@@ -1914,6 +1933,12 @@ storage_qualifier:
           $$.flags.q.stream = 1;
           $$.flags.q.explicit_stream = 0;
           $$.stream = state->out_qualifier->stream;
+      }
+
+      if (state->has_enhanced_layouts()) {
+          $$.flags.q.xfb_buffer = 1;
+          $$.flags.q.explicit_xfb_buffer = 0;
+          $$.xfb_buffer = state->out_qualifier->xfb_buffer;
       }
    }
    | UNIFORM

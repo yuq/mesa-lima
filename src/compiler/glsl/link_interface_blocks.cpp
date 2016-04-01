@@ -242,7 +242,8 @@ public:
          return entry ? (ir_variable *) entry->data : NULL;
       } else {
          const struct hash_entry *entry =
-            _mesa_hash_table_search(ht, var->get_interface_type()->name);
+            _mesa_hash_table_search(ht,
+               var->get_interface_type()->without_array()->name);
          return entry ? (ir_variable *) entry->data : NULL;
       }
    }
@@ -263,7 +264,8 @@ public:
          snprintf(location_str, 11, "%d", var->data.location);
          _mesa_hash_table_insert(ht, ralloc_strdup(mem_ctx, location_str), var);
       } else {
-         _mesa_hash_table_insert(ht, var->get_interface_type()->name, var);
+         _mesa_hash_table_insert(ht,
+            var->get_interface_type()->without_array()->name, var);
       }
    }
 

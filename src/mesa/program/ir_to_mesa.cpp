@@ -2976,7 +2976,7 @@ _mesa_ir_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       _mesa_reference_program(ctx, &linked_prog, NULL);
    }
 
-   build_program_resource_list(prog);
+   build_program_resource_list(ctx, prog);
    return prog->LinkStatus;
 }
 

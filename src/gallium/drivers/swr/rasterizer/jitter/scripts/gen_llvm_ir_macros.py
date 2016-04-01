@@ -27,7 +27,7 @@ import json as JSON
 import operator
 
 header = r"""/****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -84,16 +84,16 @@ inst_aliases = {
 }
 
 intrinsics = [
-	    ["VGATHERPS", "x86_avx2_gather_d_ps_256", ["src", "pBase", "indices", "mask", "scale"]],
+        ["VGATHERPS", "x86_avx2_gather_d_ps_256", ["src", "pBase", "indices", "mask", "scale"]],
         ["VGATHERDD", "x86_avx2_gather_d_d_256", ["src", "pBase", "indices", "mask", "scale"]],
-	    ["VSQRTPS", "x86_avx_sqrt_ps_256", ["a"]],
-	    ["VRSQRTPS", "x86_avx_rsqrt_ps_256", ["a"]],
-	    ["VRCPPS", "x86_avx_rcp_ps_256", ["a"]],
-	    ["VMINPS", "x86_avx_min_ps_256", ["a", "b"]],
-	    ["VMAXPS", "x86_avx_max_ps_256", ["a", "b"]],
-	    ["VPMINSD", "x86_avx2_pmins_d", ["a", "b"]],
-	    ["VPMAXSD", "x86_avx2_pmaxs_d", ["a", "b"]],
-	    ["VROUND", "x86_avx_round_ps_256", ["a", "rounding"]],
+        ["VSQRTPS", "x86_avx_sqrt_ps_256", ["a"]],
+        ["VRSQRTPS", "x86_avx_rsqrt_ps_256", ["a"]],
+        ["VRCPPS", "x86_avx_rcp_ps_256", ["a"]],
+        ["VMINPS", "x86_avx_min_ps_256", ["a", "b"]],
+        ["VMAXPS", "x86_avx_max_ps_256", ["a", "b"]],
+        ["VPMINSD", "x86_avx2_pmins_d", ["a", "b"]],
+        ["VPMAXSD", "x86_avx2_pmaxs_d", ["a", "b"]],
+        ["VROUND", "x86_avx_round_ps_256", ["a", "rounding"]],
         ["VCMPPS", "x86_avx_cmp_ps_256", ["a", "b", "cmpop"]],
         ["VBLENDVPS", "x86_avx_blendv_ps_256", ["a", "b", "mask"]],
         ["BEXTR_32", "x86_bmi_bextr_32", ["src", "control"]],
@@ -103,6 +103,7 @@ intrinsics = [
         ["VPMOVSXBD", "x86_avx2_pmovsxbd", ["a"]],  # sign extend packed 8bit components
         ["VPMOVSXWD", "x86_avx2_pmovsxwd", ["a"]],  # sign extend packed 16bit components
         ["VPERMD", "x86_avx2_permd", ["idx", "a"]],
+        ["VPERMPS", "x86_avx2_permps", ["idx", "a"]],
         ["VCVTPH2PS", "x86_vcvtph2ps_256", ["a"]],
         ["VCVTPS2PH", "x86_vcvtps2ph_256", ["a", "round"]],
         ["VHSUBPS", "x86_avx_hsub_ps_256", ["a", "b"]],

@@ -146,14 +146,13 @@ float calcDeterminantInt(const __m128i vA, const __m128i vB)
     //vMul = [A1*B2 - B1*A2]
     vMul = _mm_sub_epi64(vMul, vMul2);
 
-	// According to emmintrin.h __mm_store1_pd(), address must be 16-byte aligned
-    OSALIGN(int64_t, 16) result;
-    _mm_store1_pd((double*)&result, _mm_castsi128_pd(vMul));
+    int64_t result;
+    _mm_store_sd((double*)&result, _mm_castsi128_pd(vMul));
 
-    double fResult = (double)result;
-    fResult = fResult * (1.0 / FIXED_POINT16_SCALE);
+    double dResult = (double)result;
+    dResult = dResult * (1.0 / FIXED_POINT16_SCALE);
 
-    return (float)fResult;
+    return (float)dResult;
 }
 
 INLINE
@@ -316,7 +315,7 @@ void ProcessDraw(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, vo
 
 void ProcessClear(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 void ProcessStoreTiles(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
-void ProcessInvalidateTiles(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
+void ProcessDiscardInvalidateTiles(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 void ProcessSync(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 void ProcessQueryStats(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 

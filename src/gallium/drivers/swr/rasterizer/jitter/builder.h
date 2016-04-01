@@ -43,6 +43,8 @@ struct Builder
     JitManager* mpJitMgr;
     IRBuilder<>* mpIRBuilder;
 
+    uint32_t             mVWidth;
+
     // Built in types.
     Type*                mVoidTy;
     Type*                mInt1Ty;
@@ -54,12 +56,16 @@ struct Builder
     Type*                mFP16Ty;
     Type*                mFP32Ty;
     Type*                mDoubleTy;
+    Type*                mInt8PtrTy;
+    Type*                mInt16PtrTy;
+    Type*                mInt32PtrTy;
     Type*                mSimdFP16Ty;
     Type*                mSimdFP32Ty;
     Type*                mSimdInt16Ty;
     Type*                mSimdInt32Ty;
     Type*                mSimdInt64Ty;
     Type*                mSimdIntPtrTy;
+    Type*                mSimdVectorTy;
     StructType*          mV4FP32Ty;
     StructType*          mV4Int32Ty;
 

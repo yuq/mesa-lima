@@ -132,6 +132,10 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
       this->fields.structure[i].image_volatile = fields[i].image_volatile;
       this->fields.structure[i].image_restrict = fields[i].image_restrict;
       this->fields.structure[i].precision = fields[i].precision;
+      this->fields.structure[i].explicit_xfb_buffer =
+         fields[i].explicit_xfb_buffer;
+      this->fields.structure[i].xfb_buffer = fields[i].xfb_buffer;
+      this->fields.structure[i].xfb_stride = fields[i].xfb_stride;
    }
 
    mtx_unlock(&glsl_type::mutex);
@@ -172,6 +176,10 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
       this->fields.structure[i].image_volatile = fields[i].image_volatile;
       this->fields.structure[i].image_restrict = fields[i].image_restrict;
       this->fields.structure[i].precision = fields[i].precision;
+      this->fields.structure[i].explicit_xfb_buffer =
+         fields[i].explicit_xfb_buffer;
+      this->fields.structure[i].xfb_buffer = fields[i].xfb_buffer;
+      this->fields.structure[i].xfb_stride = fields[i].xfb_stride;
    }
 
    mtx_unlock(&glsl_type::mutex);
@@ -915,6 +923,15 @@ glsl_type::record_compare(const glsl_type *b) const
       if (this->fields.structure[i].precision
           != b->fields.structure[i].precision)
          return false;
+      if (this->fields.structure[i].explicit_xfb_buffer
+          != b->fields.structure[i].explicit_xfb_buffer)
+         return false;
+      if (this->fields.structure[i].xfb_buffer
+          != b->fields.structure[i].xfb_buffer)
+         return false;
+      if (this->fields.structure[i].xfb_stride
+          != b->fields.structure[i].xfb_stride)
+         return false;
    }
 
    return true;
@@ -1329,6 +1346,38 @@ glsl_type::uniform_locations() const
    case GLSL_TYPE_ARRAY:
       return this->length * this->fields.array->uniform_locations();
    default:
+      return 0;
+   }
+}
+
+unsigned
+glsl_type::varying_count() const
+{
+   unsigned size = 0;
+
+   switch (this->base_type) {
+   case GLSL_TYPE_UINT:
+   case GLSL_TYPE_INT:
+   case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_DOUBLE:
+   case GLSL_TYPE_BOOL:
+      return 1;
+
+   case GLSL_TYPE_STRUCT:
+   case GLSL_TYPE_INTERFACE:
+      for (unsigned i = 0; i < this->length; i++)
+         size += this->fields.structure[i].type->varying_count();
+      return size;
+   case GLSL_TYPE_ARRAY:
+      /* Don't count innermost array elements */
+      if (this->without_array()->is_record() ||
+          this->without_array()->is_interface() ||
+          this->fields.array->is_array())
+         return this->length * this->fields.array->varying_count();
+      else
+         return this->fields.array->varying_count();
+   default:
+      assert(!"unsupported varying type");
       return 0;
    }
 }

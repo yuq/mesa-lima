@@ -34,8 +34,8 @@ template <uint32_t NumBits, bool Signed = false>
 struct PackTraits
 {
     static const uint32_t MyNumBits = NumBits;
-    static simdscalar loadSOA(const BYTE *pSrc) = delete;
-    static void storeSOA(BYTE *pDst, simdscalar src) = delete;
+    static simdscalar loadSOA(const uint8_t *pSrc) = delete;
+    static void storeSOA(uint8_t *pDst, simdscalar src) = delete;
     static simdscalar unpack(simdscalar &in) = delete;
     static simdscalar pack(simdscalar &in) = delete;
 };
@@ -48,8 +48,8 @@ struct PackTraits<0, false>
 {
     static const uint32_t MyNumBits = 0;
 
-    static simdscalar loadSOA(const BYTE *pSrc) { return _simd_setzero_ps(); }
-    static void storeSOA(BYTE *pDst, simdscalar src) { return; }
+    static simdscalar loadSOA(const uint8_t *pSrc) { return _simd_setzero_ps(); }
+    static void storeSOA(uint8_t *pDst, simdscalar src) { return; }
     static simdscalar unpack(simdscalar &in) { return _simd_setzero_ps(); }
     static simdscalar pack(simdscalar &in) { return _simd_setzero_ps(); }
 };
@@ -63,7 +63,7 @@ struct PackTraits<8, false>
 {
     static const uint32_t MyNumBits = 8;
 
-    static simdscalar loadSOA(const BYTE *pSrc)
+    static simdscalar loadSOA(const uint8_t *pSrc)
     {
 #if KNOB_SIMD_WIDTH == 8
         __m256 result = _mm256_setzero_ps();
@@ -74,7 +74,7 @@ struct PackTraits<8, false>
 #endif
     }
 
-    static void storeSOA(BYTE *pDst, simdscalar src)
+    static void storeSOA(uint8_t *pDst, simdscalar src)
     {
         // store simd bytes
 #if KNOB_SIMD_WIDTH == 8
@@ -125,7 +125,7 @@ struct PackTraits<8, true>
 {
     static const uint32_t MyNumBits = 8;
 
-    static simdscalar loadSOA(const BYTE *pSrc)
+    static simdscalar loadSOA(const uint8_t *pSrc)
     {
 #if KNOB_SIMD_WIDTH == 8
         __m256 result = _mm256_setzero_ps();
@@ -136,7 +136,7 @@ struct PackTraits<8, true>
 #endif
     }
 
-    static void storeSOA(BYTE *pDst, simdscalar src)
+    static void storeSOA(uint8_t *pDst, simdscalar src)
     {
         // store simd bytes
 #if KNOB_SIMD_WIDTH == 8
@@ -188,7 +188,7 @@ struct PackTraits<16, false>
 {
     static const uint32_t MyNumBits = 16;
 
-    static simdscalar loadSOA(const BYTE *pSrc)
+    static simdscalar loadSOA(const uint8_t *pSrc)
     {
 #if KNOB_SIMD_WIDTH == 8
         __m256 result = _mm256_setzero_ps();
@@ -199,7 +199,7 @@ struct PackTraits<16, false>
 #endif
     }
 
-    static void storeSOA(BYTE *pDst, simdscalar src)
+    static void storeSOA(uint8_t *pDst, simdscalar src)
     {
 #if KNOB_SIMD_WIDTH == 8
         // store 16B (2B * 8)
@@ -249,7 +249,7 @@ struct PackTraits<16, true>
 {
     static const uint32_t MyNumBits = 16;
 
-    static simdscalar loadSOA(const BYTE *pSrc)
+    static simdscalar loadSOA(const uint8_t *pSrc)
     {
 #if KNOB_SIMD_WIDTH == 8
         __m256 result = _mm256_setzero_ps();
@@ -260,7 +260,7 @@ struct PackTraits<16, true>
 #endif
     }
 
-    static void storeSOA(BYTE *pDst, simdscalar src)
+    static void storeSOA(uint8_t *pDst, simdscalar src)
     {
 #if KNOB_SIMD_WIDTH == 8
         // store 16B (2B * 8)
@@ -311,8 +311,8 @@ struct PackTraits<32, false>
 {
     static const uint32_t MyNumBits = 32;
 
-    static simdscalar loadSOA(const BYTE *pSrc) { return _simd_load_ps((const float*)pSrc); }
-    static void storeSOA(BYTE *pDst, simdscalar src) { _simd_store_ps((float*)pDst, src); }
+    static simdscalar loadSOA(const uint8_t *pSrc) { return _simd_load_ps((const float*)pSrc); }
+    static void storeSOA(uint8_t *pDst, simdscalar src) { _simd_store_ps((float*)pDst, src); }
     static simdscalar unpack(simdscalar &in) { return in; }
     static simdscalar pack(simdscalar &in) { return in; }
 };
@@ -984,7 +984,7 @@ struct ComponentTraits
         return TypeTraits<X, NumBitsX>::fromFloat();
     }
 
-    INLINE static simdscalar loadSOA(uint32_t comp, const BYTE* pSrc)
+    INLINE static simdscalar loadSOA(uint32_t comp, const uint8_t* pSrc)
     {
         switch (comp)
         {
@@ -1001,7 +1001,7 @@ struct ComponentTraits
         return TypeTraits<X, NumBitsX>::loadSOA(pSrc);
     }
 
-    INLINE static void storeSOA(uint32_t comp, BYTE *pDst, simdscalar src)
+    INLINE static void storeSOA(uint32_t comp, uint8_t *pDst, simdscalar src)
     {
         switch (comp)
         {

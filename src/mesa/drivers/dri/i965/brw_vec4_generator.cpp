@@ -1973,7 +1973,6 @@ generate_code(struct brw_codegen *p,
       case TCS_OPCODE_SRC0_010_IS_ZERO:
          /* If src_reg had stride like fs_reg, we wouldn't need this. */
          brw_MOV(p, brw_null_reg(), stride(src[0], 0, 1, 0));
-         brw_inst_set_cond_modifier(devinfo, brw_last_inst, BRW_CONDITIONAL_Z);
          break;
 
       case TCS_OPCODE_RELEASE_INPUT:

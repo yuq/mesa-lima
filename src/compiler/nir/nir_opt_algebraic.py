@@ -127,6 +127,7 @@ optimizations = [
    (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
    (('bcsel', ('inot', 'a@bool'), b, c), ('bcsel', a, c, b)),
    (('bcsel', a, ('bcsel', a, b, c), d), ('bcsel', a, b, d)),
+   (('bcsel', a, True, 'b@bool'), ('ior', a, b)),
    (('fmin', a, a), a),
    (('fmax', a, a), a),
    (('imin', a, a), a),
@@ -269,6 +270,10 @@ optimizations = [
    (('iadd', a, ('isub', 0, b)), ('isub', a, b)),
    (('fabs', ('fsub', 0.0, a)), ('fabs', a)),
    (('iabs', ('isub', 0, a)), ('iabs', a)),
+
+   # Propagate negation up multiplication chains
+   (('fmul', ('fneg', a), b), ('fneg', ('fmul', a, b))),
+   (('imul', ('ineg', a), b), ('ineg', ('imul', a, b))),
 
    # Misc. lowering
    (('fmod', a, b), ('fsub', a, ('fmul', b, ('ffloor', ('fdiv', a, b)))), 'options->lower_fmod'),

@@ -1822,6 +1822,8 @@ nir_shader_get_entrypoint(nir_shader *shader)
    assert(exec_list_length(&shader->functions) == 1);
    struct exec_node *func_node = exec_list_get_head(&shader->functions);
    nir_function *func = exec_node_data(nir_function, func_node, node);
+   assert(func->return_type == glsl_void_type());
+   assert(func->num_params == 0);
    return func;
 }
 

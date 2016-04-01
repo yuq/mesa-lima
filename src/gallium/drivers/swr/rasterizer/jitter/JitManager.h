@@ -53,6 +53,10 @@
 #include "llvm/Config/config.h"
 #endif
 
+#ifndef HAVE_LLVM
+#define HAVE_LLVM (LLVM_VERSION_MAJOR << 8) || LLVM_VERSION_MINOR
+#endif
+
 #include "llvm/IR/Verifier.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/Support/FileSystem.h"
@@ -60,11 +64,10 @@
 
 #include "llvm/Analysis/Passes.h"
 
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+#if HAVE_LLVM == 0x306
 #include "llvm/PassManager.h"
 #else
 #include "llvm/IR/LegacyPassManager.h"
-using namespace llvm::legacy;
 #endif
 
 #include "llvm/CodeGen/Passes.h"
@@ -166,7 +169,6 @@ struct JitManager
     FunctionType* mTrinaryFPTy;
     FunctionType* mUnaryIntTy;
     FunctionType* mBinaryIntTy;
-    FunctionType* mTrinaryIntTy;
 
     Type* mSimtFP32Ty;
     Type* mSimtInt32Ty;

@@ -204,8 +204,8 @@ _mesa_get_current_tex_object(struct gl_context *ctx, GLenum target)
       case GL_PROXY_TEXTURE_2D_ARRAY_EXT:
          return arrayTex ? ctx->Texture.ProxyTex[TEXTURE_2D_ARRAY_INDEX] : NULL;
       case GL_TEXTURE_BUFFER:
-         return ctx->API == API_OPENGL_CORE &&
-                ctx->Extensions.ARB_texture_buffer_object ?
+         return (_mesa_has_ARB_texture_buffer_object(ctx) ||
+                 _mesa_has_OES_texture_buffer(ctx)) ?
                 texUnit->CurrentTex[TEXTURE_BUFFER_INDEX] : NULL;
       case GL_TEXTURE_EXTERNAL_OES:
          return _mesa_is_gles(ctx) && ctx->Extensions.OES_EGL_image_external
@@ -1574,8 +1574,8 @@ _mesa_tex_target_to_index(const struct gl_context *ctx, GLenum target)
          || _mesa_is_gles3(ctx)
          ? TEXTURE_2D_ARRAY_INDEX : -1;
    case GL_TEXTURE_BUFFER:
-      return ctx->API == API_OPENGL_CORE &&
-             ctx->Extensions.ARB_texture_buffer_object ?
+      return (_mesa_has_ARB_texture_buffer_object(ctx) ||
+              _mesa_has_OES_texture_buffer(ctx)) ?
              TEXTURE_BUFFER_INDEX : -1;
    case GL_TEXTURE_EXTERNAL_OES:
       return _mesa_is_gles(ctx) && ctx->Extensions.OES_EGL_image_external

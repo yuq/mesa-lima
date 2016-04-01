@@ -79,7 +79,10 @@ ast_type_qualifier::has_layout() const
           || this->flags.q.explicit_index
           || this->flags.q.explicit_binding
           || this->flags.q.explicit_offset
-          || this->flags.q.explicit_stream;
+          || this->flags.q.explicit_stream
+          || this->flags.q.explicit_xfb_buffer
+          || this->flags.q.explicit_xfb_offset
+          || this->flags.q.explicit_xfb_stride;
 }
 
 bool
@@ -229,6 +232,43 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
       }
    }
 
+   if (state->has_enhanced_layouts()) {
+      if (!this->flags.q.explicit_xfb_buffer) {
+         if (q.flags.q.xfb_buffer) {
+            this->flags.q.xfb_buffer = 1;
+            this->xfb_buffer = q.xfb_buffer;
+         } else if (!this->flags.q.xfb_buffer && this->flags.q.out) {
+            /* Assign global xfb_buffer value */
+            this->flags.q.xfb_buffer = 1;
+            this->xfb_buffer = state->out_qualifier->xfb_buffer;
+         }
+      }
+
+      if (q.flags.q.explicit_xfb_stride)
+         this->xfb_stride = q.xfb_stride;
+
+      /* Merge all we xfb_stride qualifiers into the global out */
+      if (q.flags.q.explicit_xfb_stride || this->flags.q.xfb_stride) {
+
+         /* Set xfb_stride flag to 0 to avoid adding duplicates every time
+          * there is a merge.
+          */
+         this->flags.q.xfb_stride = 0;
+
+         unsigned buff_idx;
+         if (process_qualifier_constant(state, loc, "xfb_buffer",
+                                        this->xfb_buffer, &buff_idx)) {
+            if (state->out_qualifier->out_xfb_stride[buff_idx]) {
+               state->out_qualifier->out_xfb_stride[buff_idx]->merge_qualifier(
+                  new(state) ast_layout_expression(*loc, this->xfb_stride));
+            } else {
+               state->out_qualifier->out_xfb_stride[buff_idx] =
+                  new(state) ast_layout_expression(*loc, this->xfb_stride);
+            }
+         }
+      }
+   }
+
    if (q.flags.q.vertices) {
       if (this->vertices) {
          this->vertices->merge_qualifier(q.vertices);
@@ -300,7 +340,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    if (q.flags.q.explicit_binding)
       this->binding = q.binding;
 
-   if (q.flags.q.explicit_offset)
+   if (q.flags.q.explicit_offset || q.flags.q.explicit_xfb_offset)
       this->offset = q.offset;
 
    if (q.precision != ast_precision_none)
@@ -322,6 +362,8 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
 {
    void *mem_ctx = state;
    const bool r = this->merge_qualifier(loc, state, q, false);
+   ast_type_qualifier valid_out_mask;
+   valid_out_mask.flags.i = 0;
 
    if (state->stage == MESA_SHADER_GEOMETRY) {
       if (q.flags.q.prim_type) {
@@ -340,13 +382,45 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
 
       /* Allow future assigments of global out's stream id value */
       this->flags.q.explicit_stream = 0;
+
+      valid_out_mask.flags.q.stream = 1;
+      valid_out_mask.flags.q.explicit_stream = 1;
+      valid_out_mask.flags.q.explicit_xfb_buffer = 1;
+      valid_out_mask.flags.q.xfb_buffer = 1;
+      valid_out_mask.flags.q.explicit_xfb_stride = 1;
+      valid_out_mask.flags.q.xfb_stride = 1;
+      valid_out_mask.flags.q.max_vertices = 1;
+      valid_out_mask.flags.q.prim_type = 1;
    } else if (state->stage == MESA_SHADER_TESS_CTRL) {
       if (create_node) {
          node = new(mem_ctx) ast_tcs_output_layout(*loc);
       }
+      valid_out_mask.flags.q.vertices = 1;
+      valid_out_mask.flags.q.explicit_xfb_buffer = 1;
+      valid_out_mask.flags.q.xfb_buffer = 1;
+      valid_out_mask.flags.q.explicit_xfb_stride = 1;
+      valid_out_mask.flags.q.xfb_stride = 1;
+   } else if (state->stage == MESA_SHADER_TESS_EVAL ||
+              state->stage == MESA_SHADER_VERTEX) {
+      valid_out_mask.flags.q.explicit_xfb_buffer = 1;
+      valid_out_mask.flags.q.xfb_buffer = 1;
+      valid_out_mask.flags.q.explicit_xfb_stride = 1;
+      valid_out_mask.flags.q.xfb_stride = 1;
    } else {
       _mesa_glsl_error(loc, state, "out layout qualifiers only valid in "
-                       "tessellation control or geometry shaders");
+                       "geometry, tessellation and vertex shaders");
+      return false;
+   }
+
+   /* Allow future assigments of global out's */
+   this->flags.q.explicit_xfb_buffer = 0;
+   this->flags.q.explicit_xfb_stride = 0;
+
+   /* Generate an error when invalid input layout qualifiers are used. */
+   if ((q.flags.i & ~valid_out_mask.flags.i) != 0) {
+      _mesa_glsl_error(loc, state,
+		       "invalid output layout qualifiers used");
+      return false;
    }
 
    return r;
@@ -564,5 +638,46 @@ ast_layout_expression::process_qualifier_constant(struct _mesa_glsl_parse_state 
       assert(dummy_instructions.is_empty());
    }
 
+   return true;
+}
+
+bool
+process_qualifier_constant(struct _mesa_glsl_parse_state *state,
+                           YYLTYPE *loc,
+                           const char *qual_indentifier,
+                           ast_expression *const_expression,
+                           unsigned *value)
+{
+   exec_list dummy_instructions;
+
+   if (const_expression == NULL) {
+      *value = 0;
+      return true;
+   }
+
+   ir_rvalue *const ir = const_expression->hir(&dummy_instructions, state);
+
+   ir_constant *const const_int = ir->constant_expression_value();
+   if (const_int == NULL || !const_int->type->is_integer()) {
+      _mesa_glsl_error(loc, state, "%s must be an integral constant "
+                       "expression", qual_indentifier);
+      return false;
+   }
+
+   if (const_int->value.i[0] < 0) {
+      _mesa_glsl_error(loc, state, "%s layout qualifier is invalid (%d < 0)",
+                       qual_indentifier, const_int->value.u[0]);
+      return false;
+   }
+
+   /* If the location is const (and we've verified that
+    * it is) then no instructions should have been emitted
+    * when we converted it to HIR. If they were emitted,
+    * then either the location isn't const after all, or
+    * we are emitting unnecessary instructions.
+    */
+   assert(dummy_instructions.is_empty());
+
+   *value = const_int->value.u[0];
    return true;
 }

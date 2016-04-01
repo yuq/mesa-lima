@@ -156,7 +156,7 @@ void ProcessQueryStatsBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTil
 }
 
 template<SWR_FORMAT format>
-void ClearRasterTile(BYTE *pTileBuffer, simdvector &value)
+void ClearRasterTile(uint8_t *pTileBuffer, simdvector &value)
 {
     auto lambda = [&](int comp)
     {
@@ -299,10 +299,10 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
             /// @todo clear data should come in as RGBA32_FLOAT
             DWORD clearData[4];
             float clearFloat[4];
-            clearFloat[0] = ((BYTE*)(&pClear->clearRTColor))[0] / 255.0f;
-            clearFloat[1] = ((BYTE*)(&pClear->clearRTColor))[1] / 255.0f;
-            clearFloat[2] = ((BYTE*)(&pClear->clearRTColor))[2] / 255.0f;
-            clearFloat[3] = ((BYTE*)(&pClear->clearRTColor))[3] / 255.0f;
+            clearFloat[0] = ((uint8_t*)(&pClear->clearRTColor))[0] / 255.0f;
+            clearFloat[1] = ((uint8_t*)(&pClear->clearRTColor))[1] / 255.0f;
+            clearFloat[2] = ((uint8_t*)(&pClear->clearRTColor))[2] / 255.0f;
+            clearFloat[3] = ((uint8_t*)(&pClear->clearRTColor))[3] / 255.0f;
             clearData[0] = *(DWORD*)&clearFloat[0];
             clearData[1] = *(DWORD*)&clearFloat[1];
             clearData[2] = *(DWORD*)&clearFloat[2];
@@ -399,30 +399,32 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
 }
 
 
-void ProcessInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
+void ProcessDiscardInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
 {
-    INVALIDATE_TILES_DESC *pDesc = (INVALIDATE_TILES_DESC*)pData;
+    DISCARD_INVALIDATE_TILES_DESC *pDesc = (DISCARD_INVALIDATE_TILES_DESC *)pData;
     SWR_CONTEXT *pContext = pDC->pContext;
+
+    const int numSamples = GetNumSamples(pDC->pState->state.rastState.sampleCount);
 
     for (uint32_t i = 0; i < SWR_NUM_ATTACHMENTS; ++i)
     {
         if (pDesc->attachmentMask & (1 << i))
         {
-            HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, (SWR_RENDERTARGET_ATTACHMENT)i, false);
+            HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTileNoLoad(
+                pContext, pDC, macroTile, (SWR_RENDERTARGET_ATTACHMENT)i, pDesc->createNewTiles, numSamples);
             if (pHotTile)
             {
-                pHotTile->state = HOTTILE_INVALID;
+                pHotTile->state = (HOTTILE_STATE)pDesc->newTileState;
             }
         }
     }
 }
 
 #if KNOB_SIMD_WIDTH == 8
-const __m256 vQuadCenterOffsetsX = { 0.5, 1.5, 0.5, 1.5, 2.5, 3.5, 2.5, 3.5 };
-const __m256 vQuadCenterOffsetsY = { 0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5 };
-const __m256 vQuadULOffsetsX ={0.0, 1.0, 0.0, 1.0, 2.0, 3.0, 2.0, 3.0};
-const __m256 vQuadULOffsetsY ={0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0};
-#define MASK 0xff
+const __m256 vCenterOffsetsX = {0.5, 1.5, 0.5, 1.5, 2.5, 3.5, 2.5, 3.5};
+const __m256 vCenterOffsetsY = {0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5};
+const __m256 vULOffsetsX = {0.0, 1.0, 0.0, 1.0, 2.0, 3.0, 2.0, 3.0};
+const __m256 vULOffsetsY = {0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0};
 #else
 #error Unsupported vector width
 #endif
@@ -455,155 +457,6 @@ simdmask ComputeUserClipMask(uint8_t clipMask, float* pUserClipBuffer, simdscala
     }
 
     return _simd_movemask_ps(vClipMask);
-}
-
-template<SWR_MULTISAMPLE_COUNT sampleCountT, bool bIsStandardPattern, bool bForcedSampleCount>
-INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (&inputMask)[KNOB_SIMD_WIDTH], const uint32_t sampleMask)
-{
-
-    // will need to update for avx512
-    assert(KNOB_SIMD_WIDTH == 8);
-
-    __m256i mask[2];
-    __m256i sampleCoverage[2];
-    if(bIsStandardPattern)
-    {
-        __m256i src = _mm256_set1_epi32(0);
-        __m256i index0 = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0), index1;
-
-        if(MultisampleTraits<sampleCountT>::numSamples == 1)
-        {
-            mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, -1);
-        }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 2)
-        {
-            mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, -1, -1);
-        }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 4)
-        {
-            mask[0] = _mm256_set_epi32(0, 0, 0, 0, -1, -1, -1, -1);
-        }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 8)
-        {
-            mask[0] = _mm256_set1_epi32(-1);
-        }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 16)
-        {
-            mask[0] = _mm256_set1_epi32(-1);
-            mask[1] = _mm256_set1_epi32(-1);
-            index1 = _mm256_set_epi32(15, 14, 13, 12, 11, 10, 9, 8);
-        }
-
-        // gather coverage for samples 0-7
-        sampleCoverage[0] = _mm256_castps_si256(_simd_mask_i32gather_ps(_mm256_castsi256_ps(src), (const float*)coverageMask, index0, _mm256_castsi256_ps(mask[0]), 8));
-        if(MultisampleTraits<sampleCountT>::numSamples > 8)
-        {
-            // gather coverage for samples 8-15
-            sampleCoverage[1] = _mm256_castps_si256(_simd_mask_i32gather_ps(_mm256_castsi256_ps(src), (const float*)coverageMask, index1, _mm256_castsi256_ps(mask[1]), 8));
-        }
-    }
-    else
-    {
-        // center coverage is the same for all samples; just broadcast to the sample slots
-        uint32_t centerCoverage = ((uint32_t)(*coverageMask) & MASK);
-        if(MultisampleTraits<sampleCountT>::numSamples == 1)
-        {
-            sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, centerCoverage);
-        }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 2)
-        {
-            sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, centerCoverage, centerCoverage);
-        }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 4)
-        {
-            sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, centerCoverage, centerCoverage, centerCoverage, centerCoverage);
-        }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 8)
-        {
-            sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
-        }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 16)
-        {
-            sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
-            sampleCoverage[1] = _mm256_set1_epi32(centerCoverage);
-        }
-    }
-
-    mask[0] = _mm256_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0xC, 0x8, 0x4, 0x0,
-                              -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0xC, 0x8, 0x4, 0x0);
-    // pull out the the 8bit 4x2 coverage for samples 0-7 into the lower 32 bits of each 128bit lane
-    __m256i packedCoverage0 = _simd_shuffle_epi8(sampleCoverage[0], mask[0]);
-
-    __m256i packedCoverage1;
-    if(MultisampleTraits<sampleCountT>::numSamples > 8)
-    {
-        // pull out the the 8bit 4x2 coverage for samples 8-15 into the lower 32 bits of each 128bit lane
-        packedCoverage1 = _simd_shuffle_epi8(sampleCoverage[1], mask[0]);
-    }
-
-#if (KNOB_ARCH == KNOB_ARCH_AVX)
-    // pack lower 32 bits of each 128 bit lane into lower 64 bits of single 128 bit lane 
-    __m256i hiToLow = _mm256_permute2f128_si256(packedCoverage0, packedCoverage0, 0x83);
-    __m256 shufRes = _mm256_shuffle_ps(_mm256_castsi256_ps(hiToLow), _mm256_castsi256_ps(hiToLow), _MM_SHUFFLE(1, 1, 0, 1));
-    packedCoverage0 = _mm256_castps_si256(_mm256_blend_ps(_mm256_castsi256_ps(packedCoverage0), shufRes, 0xFE));
-
-    __m256i packedSampleCoverage;
-    if(MultisampleTraits<sampleCountT>::numSamples > 8)
-    {
-        // pack lower 32 bits of each 128 bit lane into upper 64 bits of single 128 bit lane
-        hiToLow = _mm256_permute2f128_si256(packedCoverage1, packedCoverage1, 0x83);
-        shufRes = _mm256_shuffle_ps(_mm256_castsi256_ps(hiToLow), _mm256_castsi256_ps(hiToLow), _MM_SHUFFLE(1, 1, 0, 1));
-        shufRes = _mm256_blend_ps(_mm256_castsi256_ps(packedCoverage1), shufRes, 0xFE);
-        packedCoverage1 = _mm256_castps_si256(_mm256_castpd_ps(_mm256_shuffle_pd(_mm256_castps_pd(shufRes), _mm256_castps_pd(shufRes), 0x01)));
-        packedSampleCoverage = _mm256_castps_si256(_mm256_blend_ps(_mm256_castsi256_ps(packedCoverage0), _mm256_castsi256_ps(packedCoverage1), 0xFC));
-    }
-    else
-    {
-        packedSampleCoverage = packedCoverage0;
-    }
-#else
-    __m256i permMask = _mm256_set_epi32(0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x4, 0x0);
-    // pack lower 32 bits of each 128 bit lane into lower 64 bits of single 128 bit lane 
-    packedCoverage0 = _mm256_permutevar8x32_epi32(packedCoverage0, permMask);
-
-    __m256i packedSampleCoverage;
-    if(MultisampleTraits<sampleCountT>::numSamples > 8)
-    {
-        permMask = _mm256_set_epi32(0x7, 0x7, 0x7, 0x7, 0x4, 0x0, 0x7, 0x7);
-        // pack lower 32 bits of each 128 bit lane into upper 64 bits of single 128 bit lane
-        packedCoverage1 = _mm256_permutevar8x32_epi32(packedCoverage1, permMask);
-
-        // blend coverage masks for samples 0-7 and samples 8-15 into single 128 bit lane
-        packedSampleCoverage = _mm256_blend_epi32(packedCoverage0, packedCoverage1, 0x0C);
-    }
-    else
-    {
-        packedSampleCoverage = packedCoverage0;
-    }
-#endif
-
-    for(int32_t i = KNOB_SIMD_WIDTH - 1; i >= 0; i--)
-    {
-        // convert packed sample coverage masks into single coverage masks for all samples for each pixel in the 4x2
-        inputMask[i] = _simd_movemask_epi8(packedSampleCoverage);
-
-        if(!bForcedSampleCount)
-        {
-            // input coverage has to be anded with sample mask if MSAA isn't forced on
-            inputMask[i] &= sampleMask;
-        }
-
-        // shift to the next pixel in the 4x2
-        packedSampleCoverage = _simd_slli_epi32(packedSampleCoverage, 1);
-    }
-}
-
-template<SWR_MULTISAMPLE_COUNT sampleCountT, bool bIsStandardPattern, bool bForcedSampleCount>
-INLINE void generateInputCoverage(const uint64_t *const coverageMask, __m256 &inputCoverage, const uint32_t sampleMask)
-{
-    uint32_t inputMask[KNOB_SIMD_WIDTH]; 
-    generateInputCoverage<sampleCountT, bIsStandardPattern, bForcedSampleCount>(coverageMask, inputMask, sampleMask);
-    inputCoverage = _simd_castsi_ps(_mm256_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]));
 }
 
 template<bool perspMask>
@@ -766,6 +619,8 @@ void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_REND
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     static const SWR_MULTISAMPLE_COUNT sampleCount = (SWR_MULTISAMPLE_COUNT)sampleCountT;
     uint32_t rasterTileColorOffset = MultisampleTraits<sampleCount>::RasterTileColorOffset(sample);
+    simdvector blendOut;
+
     for(uint32_t rt = 0; rt < NumRT; ++rt)
     {
         uint8_t *pColorSample;
@@ -779,6 +634,9 @@ void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_REND
         }
 
         const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
+        // pfnBlendFunc may not update all channels.  Initialize with PS output.
+        /// TODO: move this into the blend JIT.
+        blendOut = psContext.shaded[rt];
 
         // Blend outputs and update coverage mask for alpha test
         if(pfnBlendFunc[rt] != nullptr)
@@ -789,7 +647,7 @@ void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_REND
                 psContext.shaded[1],
                 sample,
                 pColorSample,
-                psContext.shaded[rt],
+                blendOut,
                 &psContext.oMask,
                 (simdscalari*)&coverageMask);
         }
@@ -805,19 +663,19 @@ void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_REND
         // store with color mask
         if(!pRTBlend->writeDisableRed)
         {
-            _simd_maskstore_ps((float*)pColorSample, outputMask, psContext.shaded[rt].x);
+            _simd_maskstore_ps((float*)pColorSample, outputMask, blendOut.x);
         }
         if(!pRTBlend->writeDisableGreen)
         {
-            _simd_maskstore_ps((float*)(pColorSample + simd), outputMask, psContext.shaded[rt].y);
+            _simd_maskstore_ps((float*)(pColorSample + simd), outputMask, blendOut.y);
         }
         if(!pRTBlend->writeDisableBlue)
         {
-            _simd_maskstore_ps((float*)(pColorSample + simd * 2), outputMask, psContext.shaded[rt].z);
+            _simd_maskstore_ps((float*)(pColorSample + simd * 2), outputMask, blendOut.z);
         }
         if(!pRTBlend->writeDisableAlpha)
         {
-            _simd_maskstore_ps((float*)(pColorSample + simd * 3), outputMask, psContext.shaded[rt].w);
+            _simd_maskstore_ps((float*)(pColorSample + simd * 3), outputMask, blendOut.w);
         }
     }
 }
@@ -884,9 +742,9 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
         // UL pixel corner
-        psContext.vY.UL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
+        psContext.vY.UL = _simd_add_ps(vULOffsetsY, _simd_set1_ps((float)yy));
         // pixel center
-        psContext.vY.center = _simd_add_ps(vQuadCenterOffsetsY, _simd_set1_ps((float)yy));
+        psContext.vY.center = _simd_add_ps(vCenterOffsetsY, _simd_set1_ps((float)yy));
 
         for(uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
@@ -898,9 +756,9 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
             if(coverageMask & MASK)
             {
                 RDTSC_START(BEBarycentric);
-                psContext.vX.UL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
+                psContext.vX.UL = _simd_add_ps(vULOffsetsX, _simd_set1_ps((float)xx));
                 // pixel center
-                psContext.vX.center = _simd_add_ps(vQuadCenterOffsetsX, _simd_set1_ps((float)xx));
+                psContext.vX.center = _simd_add_ps(vCenterOffsetsX, _simd_set1_ps((float)xx));
 
                 backendFuncs.pfnCalcPixelBarycentrics(coeffs, psContext);
 
@@ -1077,15 +935,15 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     for (uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
         // UL pixel corner
-        psContext.vY.UL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
+        psContext.vY.UL = _simd_add_ps(vULOffsetsY, _simd_set1_ps((float)yy));
         // pixel center
-        psContext.vY.center = _simd_add_ps(vQuadCenterOffsetsY, _simd_set1_ps((float)yy));
+        psContext.vY.center = _simd_add_ps(vCenterOffsetsY, _simd_set1_ps((float)yy));
         
         for (uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
-            psContext.vX.UL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
+            psContext.vX.UL = _simd_add_ps(vULOffsetsX, _simd_set1_ps((float)xx));
             // pixel center
-            psContext.vX.center = _simd_add_ps(vQuadCenterOffsetsX, _simd_set1_ps((float)xx));
+            psContext.vX.center = _simd_add_ps(vCenterOffsetsX, _simd_set1_ps((float)xx));
 
             RDTSC_START(BEBarycentric);
             backendFuncs.pfnCalcPixelBarycentrics(coeffs, psContext);
@@ -1313,14 +1171,14 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
-        psContext.vY.UL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
-        psContext.vY.center = _simd_add_ps(vQuadCenterOffsetsY, _simd_set1_ps((float)yy));
+        psContext.vY.UL = _simd_add_ps(vULOffsetsY, _simd_set1_ps((float)yy));
+        psContext.vY.center = _simd_add_ps(vCenterOffsetsY, _simd_set1_ps((float)yy));
         for(uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
-            simdscalar vZ[MultisampleTraits<sampleCount>::numSamples];
-            psContext.vX.UL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
+            simdscalar vZ[MultisampleTraits<sampleCount>::numSamples]{ 0 };
+            psContext.vX.UL = _simd_add_ps(vULOffsetsX, _simd_set1_ps((float)xx));
             // set pixel center positions
-            psContext.vX.center = _simd_add_ps(vQuadCenterOffsetsX, _simd_set1_ps((float)xx));
+            psContext.vX.center = _simd_add_ps(vCenterOffsetsX, _simd_set1_ps((float)xx));
 
             if (bInputCoverage)
             {
@@ -1353,7 +1211,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             }
             else
             {
-				psContext.activeMask = _simd_set1_epi32(-1);
+                psContext.activeMask = _simd_set1_epi32(-1);
             }
 
             // need to declare enough space for all samples
@@ -1552,9 +1410,11 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
     RDTSC_START(BESetup);
 
     static const SWR_MULTISAMPLE_COUNT sampleCount = (SWR_MULTISAMPLE_COUNT)sampleCountT;
+
     SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);
     const BACKEND_FUNCS& backendFuncs = pDC->pState->backendFuncs;
+    const SWR_RASTSTATE& rastState = pDC->pState->state.rastState;
 
     // broadcast scalars
     BarycentricCoeffs coeffs;
@@ -1572,7 +1432,7 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
 
     coeffs.vRecipDet = _simd_broadcast_ss(&work.recipDet);
 
-    BYTE *pDepthBase = renderBuffers.pDepth, *pStencilBase = renderBuffers.pStencil;
+    uint8_t *pDepthBase = renderBuffers.pDepth, *pStencilBase = renderBuffers.pStencil;
 
     RDTSC_STOP(BESetup, 0, 0);
 
@@ -1580,12 +1440,12 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
     for (uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
         // UL pixel corner
-        simdscalar vYSamplePosUL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
+        simdscalar vYSamplePosUL = _simd_add_ps(vULOffsetsY, _simd_set1_ps((float)yy));
 
         for (uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
             // UL pixel corners
-            simdscalar vXSamplePosUL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
+            simdscalar vXSamplePosUL = _simd_add_ps(vULOffsetsX, _simd_set1_ps((float)xx));
 
             // iterate over active samples
             unsigned long sample = 0;
@@ -1593,7 +1453,8 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
             while (_BitScanForward(&sample, sampleMask))
             {
                 sampleMask &= ~(1 << sample);
-                if (work.coverageMask[sample] & MASK)
+                simdmask coverageMask = work.coverageMask[sample] & MASK;
+                if (coverageMask)
                 {
                     RDTSC_START(BEBarycentric);
                     // calculate per sample positions
@@ -1607,7 +1468,14 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
 
                     RDTSC_STOP(BEBarycentric, 0, 0);
 
-                    simdscalar vCoverageMask = vMask(work.coverageMask[sample] & MASK);
+                    // interpolate user clip distance if available
+                    if (rastState.clipDistanceMask)
+                    {
+                        coverageMask &= ~ComputeUserClipMask(rastState.clipDistanceMask, work.pUserClipBuffer,
+                            psContext.vI.sample, psContext.vJ.sample);
+                    }
+
+                    simdscalar vCoverageMask = vMask(coverageMask);
                     simdscalar stencilPassMask = vCoverageMask;
 
                     // offset depth/stencil buffers current sample

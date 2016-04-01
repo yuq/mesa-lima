@@ -1066,7 +1066,7 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 			item_mask = 0x3;
 		}
 
-		while(num_tile_pipes--) {
+		while (num_tile_pipes--) {
 			i = backend_map & item_mask;
 			mask |= (1<<i);
 			backend_map >>= item_width;

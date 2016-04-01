@@ -3536,8 +3536,11 @@ Converter::exportOutputs()
          Symbol *sym = mkSymbol(FILE_SHADER_OUTPUT, 0, TYPE_F32,
                                 info->out[i].slot[c] * 4);
          Value *val = oData.load(sub.cur->values, i, c, NULL);
-         if (val)
+         if (val) {
+            if (info->out[i].sn == TGSI_SEMANTIC_POSITION)
+               mkOp1(OP_SAT, TYPE_F32, val, val);
             mkStore(OP_EXPORT, TYPE_F32, sym, NULL, val);
+         }
       }
    }
 }

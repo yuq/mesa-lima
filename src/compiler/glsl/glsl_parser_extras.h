@@ -383,6 +383,10 @@ struct _mesa_glsl_parse_state {
       /* ARB_draw_buffers */
       unsigned MaxDrawBuffers;
 
+      /* ARB_enhanced_layouts */
+      unsigned MaxTransformFeedbackBuffers;
+      unsigned MaxTransformFeedbackInterleavedComponents;
+
       /* ARB_blend_func_extended */
       unsigned MaxDualSourceDrawBuffers;
 
@@ -457,6 +461,9 @@ struct _mesa_glsl_parse_state {
       unsigned MaxTessControlTotalOutputComponents;
       unsigned MaxTessControlUniformComponents;
       unsigned MaxTessEvaluationUniformComponents;
+
+      /* GL 4.5 / OES_sample_variables */
+      unsigned MaxSamples;
    } Const;
 
    /**
@@ -597,12 +604,18 @@ struct _mesa_glsl_parse_state {
    bool OES_geometry_shader_warn;
    bool OES_gpu_shader5_enable;
    bool OES_gpu_shader5_warn;
+   bool OES_sample_variables_enable;
+   bool OES_sample_variables_warn;
    bool OES_shader_image_atomic_enable;
    bool OES_shader_image_atomic_warn;
+   bool OES_shader_multisample_interpolation_enable;
+   bool OES_shader_multisample_interpolation_warn;
    bool OES_standard_derivatives_enable;
    bool OES_standard_derivatives_warn;
    bool OES_texture_3D_enable;
    bool OES_texture_3D_warn;
+   bool OES_texture_buffer_enable;
+   bool OES_texture_buffer_warn;
    bool OES_texture_storage_multisample_2d_array_enable;
    bool OES_texture_storage_multisample_2d_array_warn;
 
@@ -632,6 +645,8 @@ struct _mesa_glsl_parse_state {
    bool EXT_shader_samples_identical_warn;
    bool EXT_texture_array_enable;
    bool EXT_texture_array_warn;
+   bool EXT_texture_buffer_enable;
+   bool EXT_texture_buffer_warn;
    /*@}*/
 
    /** Extensions supported by the OpenGL implementation. */

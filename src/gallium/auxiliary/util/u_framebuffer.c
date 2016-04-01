@@ -55,14 +55,14 @@ util_framebuffer_state_equal(const struct pipe_framebuffer_state *dst,
        dst->height != src->height)
       return FALSE;
 
-   for (i = 0; i < Elements(src->cbufs); i++) {
+   if (dst->nr_cbufs != src->nr_cbufs) {
+      return FALSE;
+   }
+
+   for (i = 0; i < src->nr_cbufs; i++) {
       if (dst->cbufs[i] != src->cbufs[i]) {
          return FALSE;
       }
-   }
-
-   if (dst->nr_cbufs != src->nr_cbufs) {
-      return FALSE;
    }
 
    if (dst->zsbuf != src->zsbuf) {

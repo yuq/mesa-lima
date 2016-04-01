@@ -105,7 +105,7 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     std::vector<Value*>    vtxInputIndices(2, C(0));
     // GEP
     pVtxOut = GEP(pVtxOut, C(0));
-    pVtxOut = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, JM()->mVWidth), 0));
+    pVtxOut = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth), 0));
 
     // SWR_FETCH_CONTEXT::pStreams
     Value*    streams = LOAD(fetchInfo,{0, SWR_FETCH_CONTEXT_pStreams});
@@ -174,7 +174,12 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 
     verifyFunction(*fetch);
 
-    FunctionPassManager setupPasses(JM()->mpCurrentModule);
+#if HAVE_LLVM == 0x306
+        FunctionPassManager
+#else
+        llvm::legacy::FunctionPassManager
+#endif
+            setupPasses(JM()->mpCurrentModule);
 
     ///@todo We don't need the CFG passes for fetch. (e.g. BreakCriticalEdges and CFGSimplification)
     setupPasses.add(createBreakCriticalEdgesPass());
@@ -186,7 +191,12 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 
     JitManager::DumpToFile(fetch, "se");
 
-    FunctionPassManager optPasses(JM()->mpCurrentModule);
+#if HAVE_LLVM == 0x306
+        FunctionPassManager
+#else
+        llvm::legacy::FunctionPassManager
+#endif
+            optPasses(JM()->mpCurrentModule);
 
     ///@todo Haven't touched these either. Need to remove some of these and add others.
     optPasses.add(createCFGSimplificationPass());
@@ -220,8 +230,8 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
 
     SWRL::UncheckedFixedVector<Value*, 16>    vectors;
 
-    std::vector<Constant*>    pMask(JM()->mVWidth);
-    for(uint32_t i = 0; i < JM()->mVWidth; ++i)
+    std::vector<Constant*>    pMask(mVWidth);
+    for(uint32_t i = 0; i < mVWidth; ++i)
     {
         pMask[i] = (C(i < 4 ? i : 4));
     }
@@ -254,7 +264,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
         Value* startVertexOffset = MUL(Z_EXT(startVertex, mInt64Ty), stride);
 
         // Load from the stream.
-        for(uint32_t lane = 0; lane < JM()->mVWidth; ++lane)
+        for(uint32_t lane = 0; lane < mVWidth; ++lane)
         {
             // Get index
             Value* index = VEXTRACT(vIndices, C(lane));
@@ -380,44 +390,44 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
             vectors.push_back(wvec);
         }
 
-        std::vector<Constant*>        v01Mask(JM()->mVWidth);
-        std::vector<Constant*>        v23Mask(JM()->mVWidth);
-        std::vector<Constant*>        v02Mask(JM()->mVWidth);
-        std::vector<Constant*>        v13Mask(JM()->mVWidth);
+        std::vector<Constant*>        v01Mask(mVWidth);
+        std::vector<Constant*>        v23Mask(mVWidth);
+        std::vector<Constant*>        v02Mask(mVWidth);
+        std::vector<Constant*>        v13Mask(mVWidth);
 
         // Concatenate the vectors together.
         elements[0] = VUNDEF_F(); 
         elements[1] = VUNDEF_F(); 
         elements[2] = VUNDEF_F(); 
         elements[3] = VUNDEF_F(); 
-        for(uint32_t b = 0, num4Wide = JM()->mVWidth / 4; b < num4Wide; ++b)
+        for(uint32_t b = 0, num4Wide = mVWidth / 4; b < num4Wide; ++b)
         {
             v01Mask[4 * b + 0] = C(0 + 4 * b);
             v01Mask[4 * b + 1] = C(1 + 4 * b);
-            v01Mask[4 * b + 2] = C(0 + 4 * b + JM()->mVWidth);
-            v01Mask[4 * b + 3] = C(1 + 4 * b + JM()->mVWidth);
+            v01Mask[4 * b + 2] = C(0 + 4 * b + mVWidth);
+            v01Mask[4 * b + 3] = C(1 + 4 * b + mVWidth);
 
             v23Mask[4 * b + 0] = C(2 + 4 * b);
             v23Mask[4 * b + 1] = C(3 + 4 * b);
-            v23Mask[4 * b + 2] = C(2 + 4 * b + JM()->mVWidth);
-            v23Mask[4 * b + 3] = C(3 + 4 * b + JM()->mVWidth);
+            v23Mask[4 * b + 2] = C(2 + 4 * b + mVWidth);
+            v23Mask[4 * b + 3] = C(3 + 4 * b + mVWidth);
 
             v02Mask[4 * b + 0] = C(0 + 4 * b);
             v02Mask[4 * b + 1] = C(2 + 4 * b);
-            v02Mask[4 * b + 2] = C(0 + 4 * b + JM()->mVWidth);
-            v02Mask[4 * b + 3] = C(2 + 4 * b + JM()->mVWidth);
+            v02Mask[4 * b + 2] = C(0 + 4 * b + mVWidth);
+            v02Mask[4 * b + 3] = C(2 + 4 * b + mVWidth);
 
             v13Mask[4 * b + 0] = C(1 + 4 * b);
             v13Mask[4 * b + 1] = C(3 + 4 * b);
-            v13Mask[4 * b + 2] = C(1 + 4 * b + JM()->mVWidth);
-            v13Mask[4 * b + 3] = C(3 + 4 * b + JM()->mVWidth);
+            v13Mask[4 * b + 2] = C(1 + 4 * b + mVWidth);
+            v13Mask[4 * b + 3] = C(3 + 4 * b + mVWidth);
 
-            std::vector<Constant*>    iMask(JM()->mVWidth);
-            for(uint32_t i = 0; i < JM()->mVWidth; ++i)
+            std::vector<Constant*>    iMask(mVWidth);
+            for(uint32_t i = 0; i < mVWidth; ++i)
             {
                 if(((4 * b) <= i) && (i < (4 * (b + 1))))
                 {
-                    iMask[i] = C(i % 4 + JM()->mVWidth);
+                    iMask[i] = C(i % 4 + mVWidth);
                 }
                 else
                 {
@@ -805,7 +815,7 @@ Value* FetchJit::GetSimdValid8bitIndices(Value* pIndices, Value* pLastIndex)
     STORE(C((uint8_t)0), pZeroIndex);
 
     // Load a SIMD of index pointers
-    for(int64_t lane = 0; lane < JM()->mVWidth; lane++)
+    for(int64_t lane = 0; lane < mVWidth; lane++)
     {
         // Calculate the address of the requested index
         Value *pIndex = GEP(pIndices, C(lane));
@@ -840,7 +850,7 @@ Value* FetchJit::GetSimdValid16bitIndices(Value* pIndices, Value* pLastIndex)
     STORE(C((uint16_t)0), pZeroIndex);
 
     // Load a SIMD of index pointers
-    for(int64_t lane = 0; lane < JM()->mVWidth; lane++)
+    for(int64_t lane = 0; lane < mVWidth; lane++)
     {
         // Calculate the address of the requested index
         Value *pIndex = GEP(pIndices, C(lane));
@@ -925,13 +935,13 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
     const uint32_t (&swizzle)[4] = std::get<9>(args);
 
     // cast types
-    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), JM()->mVWidth);
-    Type* v32x8Ty =  VectorType::get(mInt8Ty, JM()->mVWidth * 4 ); // vwidth is units of 32 bits
+    Type* vGatherTy = mSimdInt32Ty;
+    Type* v32x8Ty =  VectorType::get(mInt8Ty, mVWidth * 4 ); // vwidth is units of 32 bits
 
     // have to do extra work for sign extending
     if ((extendType == Instruction::CastOps::SExt) || (extendType == Instruction::CastOps::SIToFP)){
-        Type* v16x8Ty = VectorType::get(mInt8Ty, JM()->mVWidth * 2); // 8x16bit ints in a 128bit lane
-        Type* v128Ty = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), JM()->mVWidth / 4); // vwidth is units of 32 bits
+        Type* v16x8Ty = VectorType::get(mInt8Ty, mVWidth * 2); // 8x16bit ints in a 128bit lane
+        Type* v128Ty = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), mVWidth / 4); // vwidth is units of 32 bits
 
         // shuffle mask, including any swizzling
         const char x = (char)swizzle[0]; const char y = (char)swizzle[1];
@@ -1138,8 +1148,8 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
     Value* (&vVertexElements)[4] = std::get<8>(args);
 
     // cast types
-    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), JM()->mVWidth);
-    Type* v32x8Ty = VectorType::get(mInt8Ty, JM()->mVWidth * 4); // vwidth is units of 32 bits
+    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), mVWidth);
+    Type* v32x8Ty = VectorType::get(mInt8Ty, mVWidth * 4); // vwidth is units of 32 bits
 
     // have to do extra work for sign extending
     if ((extendType == Instruction::CastOps::SExt) || (extendType == Instruction::CastOps::SIToFP)||
@@ -1149,7 +1159,7 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
         bool bFP = (extendType == Instruction::CastOps::FPExt) ? true : false;
 
         Type* v8x16Ty = VectorType::get(mInt16Ty, 8); // 8x16bit in a 128bit lane
-        Type* v128bitTy = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), JM()->mVWidth / 4); // vwidth is units of 32 bits
+        Type* v128bitTy = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), mVWidth / 4); // vwidth is units of 32 bits
 
         // shuffle mask
         Value* vConstMask = C<char>({0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,

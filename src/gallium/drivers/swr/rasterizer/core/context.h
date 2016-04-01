@@ -41,6 +41,7 @@
 #include "core/knobs.h"
 #include "common/simdintrin.h"
 #include "core/threads.h"
+#include "ringbuffer.h"
 
 // x.8 fixed point precision values
 #define FIXED_POINT_SHIFT 8
@@ -82,6 +83,7 @@ struct SWR_TRIANGLE_DESC
     float *pUserClipBuffer;
 
     uint64_t coverageMask[SWR_MAX_NUM_MULTISAMPLES];
+    uint64_t anyCoveredSamples;
 
     TRI_FLAGS triFlags;
 };
@@ -109,12 +111,16 @@ struct CLEAR_DESC
     CLEAR_FLAGS flags;
     float clearRTColor[4];  // RGBA_32F
     float clearDepth;   // [0..1]
-    BYTE clearStencil;
+    uint8_t clearStencil;
 };
 
-struct INVALIDATE_TILES_DESC
+struct DISCARD_INVALIDATE_TILES_DESC
 {
     uint32_t attachmentMask;
+    SWR_RECT rect;
+    SWR_TILE_STATE newTileState;
+    bool createNewTiles;
+    bool fullTilesOnly;
 };
 
 struct SYNC_DESC
@@ -150,7 +156,7 @@ enum WORK_TYPE
     SYNC,
     DRAW,
     CLEAR,
-    INVALIDATETILES,
+    DISCARDINVALIDATETILES,
     STORETILES,
     QUERYSTATS,
 };
@@ -164,7 +170,7 @@ struct BE_WORK
         SYNC_DESC sync;
         TRIANGLE_WORK_DESC tri;
         CLEAR_DESC clear;
-        INVALIDATE_TILES_DESC invalidateTiles;
+        DISCARD_INVALIDATE_TILES_DESC discardInvalidateTiles;
         STORE_TILES_DESC storeTiles;
         QUERY_DESC queryStats;
     } desc;
@@ -201,7 +207,7 @@ struct FE_WORK
         SYNC_DESC sync;
         DRAW_WORK draw;
         CLEAR_DESC clear;
-        INVALIDATE_TILES_DESC invalidateTiles;
+        DISCARD_INVALIDATE_TILES_DESC discardInvalidateTiles;
         STORE_TILES_DESC storeTiles;
         QUERY_DESC queryStats;
     } desc;
@@ -354,6 +360,7 @@ struct BACKEND_FUNCS
     PFN_OUTPUT_MERGER pfnOutputMerger;
 };
 
+
 // Draw State
 struct DRAW_STATE
 {
@@ -365,7 +372,7 @@ struct DRAW_STATE
     BACKEND_FUNCS backendFuncs;
     PFN_PROCESS_PRIMS pfnProcessPrims;
 
-    Arena*    pArena;     // This should only be used by API thread.
+    CachingArena* pArena;     // This should only be used by API thread.
 };
 
 // Draw Context
@@ -381,25 +388,22 @@ struct DRAW_CONTEXT
 
     FE_WORK FeWork;
     volatile OSALIGNLINE(uint32_t) FeLock;
-    volatile OSALIGNLINE(bool) inUse;
     volatile OSALIGNLINE(bool) doneFE;    // Is FE work done for this draw?
-
-    // Have all worker threads moved past draw in DC ring?
-    volatile OSALIGNLINE(uint32_t) threadsDoneFE;
-    volatile OSALIGNLINE(uint32_t) threadsDoneBE;
+    volatile OSALIGNLINE(int64_t) threadsDone;
 
     uint64_t dependency;
 
     MacroTileMgr* pTileMgr;
 
     // The following fields are valid if isCompute is true.
-    volatile OSALIGNLINE(bool) doneCompute; // Is this dispatch done?   (isCompute)
     DispatchQueue* pDispatch;               // Queue for thread groups. (isCompute)
 
     DRAW_STATE* pState;
-    Arena*    pArena;
+    CachingArena* pArena;
 
     uint8_t* pSpillFill[KNOB_MAX_NUM_THREADS];  // Scratch space used for spill fills.
+
+    bool  cleanupState; // True if this is the last draw using an entry in the state ring.
 };
 
 INLINE const API_STATE& GetApiState(const DRAW_CONTEXT* pDC)
@@ -438,7 +442,7 @@ struct SWR_CONTEXT
     //  3. State - When an applications sets state after draw
     //     a. Same as step 1.
     //     b. State is copied from prev draw context to current.
-    DRAW_CONTEXT* dcRing;
+    RingBuffer<DRAW_CONTEXT> dcRing;
 
     DRAW_CONTEXT *pCurDrawContext;    // This points to DC entry in ring for an unsubmitted draw.
     DRAW_CONTEXT *pPrevDrawContext;   // This points to DC entry for the previous context submitted that we can copy state from.
@@ -448,13 +452,9 @@ struct SWR_CONTEXT
     //  These split draws all have identical state. So instead of storing the state directly
     //  in the Draw Context (DC) we instead store it in a Draw State (DS). This allows multiple DCs
     //  to reference a single entry in the DS ring.
-    DRAW_STATE*   dsRing;
+    RingBuffer<DRAW_STATE> dsRing;
 
     uint32_t curStateId;               // Current index to the next available entry in the DS ring.
-
-    DRAW_STATE*   subCtxSave;          // Save area for inactive contexts.
-    uint32_t      curSubCtxId;         // Current index for active state subcontext.
-    uint32_t      numSubContexts;      // Number of available subcontexts
 
     uint32_t NumWorkerThreads;
 
@@ -462,13 +462,6 @@ struct SWR_CONTEXT
 
     std::condition_variable FifosNotEmpty;
     std::mutex WaitLock;
-
-    // Draw Contexts will get a unique drawId generated from this
-    uint64_t nextDrawId;
-
-    // most recent draw id enqueued by the API thread
-    // written by api thread, read by multiple workers
-    OSALIGNLINE(volatile uint64_t) DrawEnqueued;
 
     DRIVER_TYPE driverType;
 
@@ -486,6 +479,8 @@ struct SWR_CONTEXT
 
     // Scratch space for workers.
     uint8_t* pScratch[KNOB_MAX_NUM_THREADS];
+
+    CachingAllocator cachingArenaAllocator;
 };
 
 void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId);

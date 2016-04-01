@@ -853,7 +853,8 @@ void
 tgsi_exec_machine_bind_shader(
    struct tgsi_exec_machine *mach,
    const struct tgsi_token *tokens,
-   struct tgsi_sampler *sampler)
+   struct tgsi_sampler *sampler,
+   struct tgsi_image *image)
 {
    uint k;
    struct tgsi_parse_context parse;
@@ -871,6 +872,7 @@ tgsi_exec_machine_bind_shader(
 
    mach->Tokens = tokens;
    mach->Sampler = sampler;
+   mach->Image = image;
 
    if (!tokens) {
       /* unbind and free all */
@@ -1994,12 +1996,12 @@ fetch_sampler_unit(struct tgsi_exec_machine *mach,
                    const struct tgsi_full_instruction *inst,
                    uint sampler)
 {
-   uint unit;
-
+   uint unit = 0;
+   int i;
    if (inst->Src[sampler].Register.Indirect) {
       const struct tgsi_full_src_register *reg = &inst->Src[sampler];
       union tgsi_exec_channel indir_index, index2;
-
+      const uint execmask = mach->ExecMask;
       index2.i[0] =
       index2.i[1] =
       index2.i[2] =
@@ -2012,7 +2014,13 @@ fetch_sampler_unit(struct tgsi_exec_machine *mach,
                              &index2,
                              &ZeroVec,
                              &indir_index);
-      unit = inst->Src[sampler].Register.Index + indir_index.i[0];
+      for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+         if (execmask & (1 << i)) {
+            unit = inst->Src[sampler].Register.Index + indir_index.i[i];
+            break;
+         }
+      }
+
    } else {
       unit = inst->Src[sampler].Register.Index;
    }
@@ -2046,7 +2054,8 @@ exec_tex(struct tgsi_exec_machine *mach,
    assert(modifier != TEX_MODIFIER_LEVEL_ZERO);
    assert(inst->Texture.Texture != TGSI_TEXTURE_BUFFER);
 
-   dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture, &shadow_ref);
+   dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture);
+   shadow_ref = tgsi_util_get_shadow_ref_src_index(inst->Texture.Texture);
 
    assert(dim <= 4);
    if (shadow_ref >= 0)
@@ -2145,7 +2154,7 @@ exec_lodq(struct tgsi_exec_machine *mach,
    union tgsi_exec_channel r[2];
 
    unit = fetch_sampler_unit(mach, inst, 1);
-   dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture, NULL);
+   dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture);
    assert(dim <= Elements(coords));
    /* fetch coordinates */
    for (i = 0; i < dim; i++) {
@@ -3700,6 +3709,247 @@ exec_dfracexp(struct tgsi_exec_machine *mach,
    }
 }
 
+static int
+get_image_coord_dim(unsigned tgsi_tex)
+{
+   int dim;
+   switch (tgsi_tex) {
+   case TGSI_TEXTURE_BUFFER:
+   case TGSI_TEXTURE_1D:
+      dim = 1;
+      break;
+   case TGSI_TEXTURE_2D:
+   case TGSI_TEXTURE_RECT:
+   case TGSI_TEXTURE_1D_ARRAY:
+   case TGSI_TEXTURE_2D_MSAA:
+      dim = 2;
+      break;
+   case TGSI_TEXTURE_3D:
+   case TGSI_TEXTURE_CUBE:
+   case TGSI_TEXTURE_2D_ARRAY:
+   case TGSI_TEXTURE_2D_ARRAY_MSAA:
+   case TGSI_TEXTURE_CUBE_ARRAY:
+      dim = 3;
+      break;
+   default:
+      assert(!"unknown texture target");
+      dim = 0;
+      break;
+   }
+
+   return dim;
+}
+
+static int
+get_image_coord_sample(unsigned tgsi_tex)
+{
+   int sample = 0;
+   switch (tgsi_tex) {
+   case TGSI_TEXTURE_2D_MSAA:
+      sample = 3;
+      break;
+   case TGSI_TEXTURE_2D_ARRAY_MSAA:
+      sample = 4;
+      break;
+   default:
+      break;
+   }
+   return sample;
+}
+
+static void
+exec_load(struct tgsi_exec_machine *mach,
+          const struct tgsi_full_instruction *inst)
+{
+   union tgsi_exec_channel r[4], sample_r;
+   uint unit;
+   int sample;
+   int i, j;
+   int dim;
+   uint chan;
+   float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
+   struct tgsi_image_params params;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+
+   unit = fetch_sampler_unit(mach, inst, 0);
+   dim = get_image_coord_dim(inst->Memory.Texture);
+   sample = get_image_coord_sample(inst->Memory.Texture);
+   assert(dim <= 3);
+
+   params.execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+   params.unit = unit;
+   params.tgsi_tex_instr = inst->Memory.Texture;
+   params.format = inst->Memory.Format;
+
+   for (i = 0; i < dim; i++) {
+      IFETCH(&r[i], 1, TGSI_CHAN_X + i);
+   }
+
+   if (sample)
+      IFETCH(&sample_r, 1, TGSI_CHAN_X + sample);
+
+   mach->Image->load(mach->Image, &params,
+                     r[0].i, r[1].i, r[2].i, sample_r.i,
+                     rgba);
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      r[0].f[j] = rgba[0][j];
+      r[1].f[j] = rgba[1][j];
+      r[2].f[j] = rgba[2][j];
+      r[3].f[j] = rgba[3][j];
+   }
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         store_dest(mach, &r[chan], &inst->Dst[0], inst, chan, TGSI_EXEC_DATA_FLOAT);
+      }
+   }
+}
+
+static void
+exec_store(struct tgsi_exec_machine *mach,
+           const struct tgsi_full_instruction *inst)
+{
+   union tgsi_exec_channel r[3], sample_r;
+   union tgsi_exec_channel value[4];
+   float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
+   struct tgsi_image_params params;
+   int dim;
+   int sample;
+   int i, j;
+   uint unit;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+   unit = inst->Dst[0].Register.Index;
+   dim = get_image_coord_dim(inst->Memory.Texture);
+   sample = get_image_coord_sample(inst->Memory.Texture);
+   assert(dim <= 3);
+
+   params.execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+   params.unit = unit;
+   params.tgsi_tex_instr = inst->Memory.Texture;
+   params.format = inst->Memory.Format;
+
+   for (i = 0; i < dim; i++) {
+      IFETCH(&r[i], 0, TGSI_CHAN_X + i);
+   }
+
+   for (i = 0; i < 4; i++) {
+      FETCH(&value[i], 1, TGSI_CHAN_X + i);
+   }
+   if (sample)
+      IFETCH(&sample_r, 0, TGSI_CHAN_X + sample);
+
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      rgba[0][j] = value[0].f[j];
+      rgba[1][j] = value[1].f[j];
+      rgba[2][j] = value[2].f[j];
+      rgba[3][j] = value[3].f[j];
+   }
+
+   mach->Image->store(mach->Image, &params,
+                      r[0].i, r[1].i, r[2].i, sample_r.i,
+                      rgba);
+}
+
+static void
+exec_atomop(struct tgsi_exec_machine *mach,
+            const struct tgsi_full_instruction *inst)
+{
+   union tgsi_exec_channel r[4], sample_r;
+   union tgsi_exec_channel value[4], value2[4];
+   float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
+   float rgba2[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
+   struct tgsi_image_params params;
+   int dim;
+   int sample;
+   int i, j;
+   uint unit, chan;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+   unit = fetch_sampler_unit(mach, inst, 0);
+   dim = get_image_coord_dim(inst->Memory.Texture);
+   sample = get_image_coord_sample(inst->Memory.Texture);
+   assert(dim <= 3);
+
+   params.execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+   params.unit = unit;
+   params.tgsi_tex_instr = inst->Memory.Texture;
+   params.format = inst->Memory.Format;
+
+   for (i = 0; i < dim; i++) {
+      IFETCH(&r[i], 1, TGSI_CHAN_X + i);
+   }
+
+   for (i = 0; i < 4; i++) {
+      FETCH(&value[i], 2, TGSI_CHAN_X + i);
+      if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS)
+         FETCH(&value2[i], 3, TGSI_CHAN_X + i);
+   }
+   if (sample)
+      IFETCH(&sample_r, 1, TGSI_CHAN_X + sample);
+
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      rgba[0][j] = value[0].f[j];
+      rgba[1][j] = value[1].f[j];
+      rgba[2][j] = value[2].f[j];
+      rgba[3][j] = value[3].f[j];
+   }
+   if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS) {
+      for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+         rgba2[0][j] = value2[0].f[j];
+         rgba2[1][j] = value2[1].f[j];
+         rgba2[2][j] = value2[2].f[j];
+         rgba2[3][j] = value2[3].f[j];
+      }
+   }
+
+   mach->Image->op(mach->Image, &params, inst->Instruction.Opcode,
+                   r[0].i, r[1].i, r[2].i, sample_r.i,
+                   rgba, rgba2);
+
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      r[0].f[j] = rgba[0][j];
+      r[1].f[j] = rgba[1][j];
+      r[2].f[j] = rgba[2][j];
+      r[3].f[j] = rgba[3][j];
+   }
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         store_dest(mach, &r[chan], &inst->Dst[0], inst, chan, TGSI_EXEC_DATA_FLOAT);
+      }
+   }
+}
+
+static void
+exec_resq(struct tgsi_exec_machine *mach,
+          const struct tgsi_full_instruction *inst)
+{
+   int result[4];
+   union tgsi_exec_channel r[4];
+   uint unit;
+   int i, chan, j;
+   struct tgsi_image_params params;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+
+   unit = fetch_sampler_unit(mach, inst, 0);
+
+   params.execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+   params.unit = unit;
+   params.tgsi_tex_instr = inst->Memory.Texture;
+   params.format = inst->Memory.Format;
+
+   mach->Image->get_dims(mach->Image, &params, result);
+
+   for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+      for (j = 0; j < 4; j++) {
+         r[j].i[i] = result[j];
+      }
+   }
+
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         store_dest(mach, &r[chan], &inst->Dst[0], inst, chan,
+                    TGSI_EXEC_DATA_INT);
+      }
+   }
+}
 
 static void
 micro_i2f(union tgsi_exec_channel *dst,
@@ -5166,6 +5416,34 @@ exec_instruction(
    case TGSI_OPCODE_D2U:
       exec_d2u(mach, inst);
       break;
+
+   case TGSI_OPCODE_LOAD:
+      exec_load(mach, inst);
+      break;
+
+   case TGSI_OPCODE_STORE:
+      exec_store(mach, inst);
+      break;
+
+   case TGSI_OPCODE_ATOMUADD:
+   case TGSI_OPCODE_ATOMXCHG:
+   case TGSI_OPCODE_ATOMCAS:
+   case TGSI_OPCODE_ATOMAND:
+   case TGSI_OPCODE_ATOMOR:
+   case TGSI_OPCODE_ATOMXOR:
+   case TGSI_OPCODE_ATOMUMIN:
+   case TGSI_OPCODE_ATOMUMAX:
+   case TGSI_OPCODE_ATOMIMIN:
+   case TGSI_OPCODE_ATOMIMAX:
+      exec_atomop(mach, inst);
+      break;
+
+   case TGSI_OPCODE_RESQ:
+      exec_resq(mach, inst);
+      break;
+   case TGSI_OPCODE_BARRIER:
+   case TGSI_OPCODE_MEMBAR:
+      break;
    default:
       assert( 0 );
    }
@@ -5193,6 +5471,8 @@ tgsi_exec_machine_run( struct tgsi_exec_machine *mach )
       default_mask = 0x1;
    }
 
+   if (mach->NonHelperMask == 0)
+      mach->NonHelperMask = default_mask;
    mach->CondMask = default_mask;
    mach->LoopMask = default_mask;
    mach->ContMask = default_mask;

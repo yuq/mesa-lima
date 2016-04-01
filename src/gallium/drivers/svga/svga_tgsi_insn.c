@@ -3797,6 +3797,9 @@ svga_shader_emit_helpers(struct svga_shader_emitter *emit)
    }
 
    if (emit->unit == PIPE_SHADER_FRAGMENT) {
+      if (!svga_shader_emit_samplers_decl( emit ))
+         return FALSE;
+
       if (!emit_ps_preamble( emit ))
          return FALSE;
 

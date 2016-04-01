@@ -327,6 +327,12 @@ struct glsl_type {
    unsigned uniform_locations() const;
 
    /**
+    * Used to count the number of varyings contained in the type ignoring
+    * innermost array elements.
+    */
+   unsigned varying_count() const;
+
+   /**
     * Calculate the number of attribute slots required to hold this type
     *
     * This implements the language rules of GLSL 1.50 for counting the number
@@ -839,11 +845,23 @@ struct glsl_struct_field {
 
    /**
     * For interface blocks, members may have an explicit byte offset
-    * specified; -1 otherwise.
+    * specified; -1 otherwise. Also used for xfb_offset layout qualifier.
     *
-    * Ignored for structs.
+    * Unless used for xfb_offset this field is ignored for structs.
     */
    int offset;
+
+   /**
+    * For interface blocks, members may define a transform feedback buffer;
+    * -1 otherwise.
+    */
+   int xfb_buffer;
+
+   /**
+    * For interface blocks, members may define a transform feedback stride;
+    * -1 otherwise.
+    */
+   int xfb_stride;
 
    /**
     * For interface blocks, the interpolation mode (as in
@@ -888,6 +906,13 @@ struct glsl_struct_field {
    unsigned image_coherent:1;
    unsigned image_volatile:1;
    unsigned image_restrict:1;
+
+   /**
+    * Any of the xfb_* qualifiers trigger the shader to be in transform
+    * feedback mode so we need to keep track of whether the buffer was
+    * explicitly set or if its just been assigned the default global value.
+    */
+   unsigned explicit_xfb_buffer:1;
 
 #ifdef __cplusplus
    glsl_struct_field(const struct glsl_type *_type, const char *_name)

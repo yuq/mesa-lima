@@ -57,9 +57,18 @@ nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
       if (util_format_get_blocksizebits(format) == 3 * 32)
          return false;
 
+   if (bindings & PIPE_BIND_LINEAR)
+      if (util_format_is_depth_or_stencil(format) ||
+          (target != PIPE_TEXTURE_1D &&
+           target != PIPE_TEXTURE_2D &&
+           target != PIPE_TEXTURE_RECT) ||
+          sample_count > 1)
+         return false;
+
    /* transfers & shared are always supported */
    bindings &= ~(PIPE_BIND_TRANSFER_READ |
                  PIPE_BIND_TRANSFER_WRITE |
+                 PIPE_BIND_LINEAR |
                  PIPE_BIND_SHARED);
 
    return (( nvc0_format_table[format].usage |
@@ -282,7 +291,8 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_CAP_PREFERRED_IR:
       return PIPE_SHADER_IR_TGSI;
    case PIPE_SHADER_CAP_SUPPORTED_IRS:
-      if (class_3d >= NVE4_3D_CLASS)
+      if (class_3d == NVF0_3D_CLASS &&
+          !debug_get_bool_option("NVF0_COMPUTE", false))
          return 0;
       return 1 << PIPE_SHADER_IR_TGSI;
    case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
@@ -311,8 +321,6 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
       return 65536;
    case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
-      if (shader == PIPE_SHADER_COMPUTE && class_3d >= NVE4_3D_CLASS)
-         return NVE4_MAX_PIPE_CONSTBUFS_COMPUTE;
       return NVC0_MAX_PIPE_CONSTBUFS;
    case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
       return shader != PIPE_SHADER_FRAGMENT;

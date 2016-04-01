@@ -34,7 +34,7 @@
 /// @param pSrc - source data in SOA form
 /// @param dst - output data in SOA form
 template<SWR_FORMAT SrcFormat>
-INLINE void LoadSOA(const BYTE *pSrc, simdvector &dst)
+INLINE void LoadSOA(const uint8_t *pSrc, simdvector &dst)
 {
     // fast path for float32
     if ((FormatTraits<SrcFormat>::GetType(0) == SWR_TYPE_FLOAT) && (FormatTraits<SrcFormat>::GetBPC(0) == 32))
@@ -141,7 +141,7 @@ INLINE simdscalar Normalize(simdscalar vComp, uint32_t Component)
 /// @param src - source data in SOA form
 /// @param dst - output data in SOA form
 template<SWR_FORMAT DstFormat>
-INLINE void StoreSOA(const simdvector &src, BYTE *pDst)
+INLINE void StoreSOA(const simdvector &src, uint8_t *pDst)
 {
     // fast path for float32
     if ((FormatTraits<DstFormat>::GetType(0) == SWR_TYPE_FLOAT) && (FormatTraits<DstFormat>::GetBPC(0) == 32))

@@ -16,7 +16,6 @@
 
 /* doesn't count reserved slots (for auxiliary constants, immediates, etc.) */
 #define NVC0_MAX_PIPE_CONSTBUFS         14
-#define NVE4_MAX_PIPE_CONSTBUFS_COMPUTE  7
 
 #define NVC0_MAX_SURFACE_SLOTS 16
 

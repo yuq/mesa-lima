@@ -49,7 +49,8 @@ struct QUEUE
     static const uint32_t mBlockSizeShift = 6;
     static const uint32_t mBlockSize = 1 << mBlockSizeShift;
 
-    void clear(Arena& arena)
+    template <typename ArenaT>
+    void clear(ArenaT& arena)
     {
         mHead = 0;
         mTail = 0;
@@ -102,7 +103,8 @@ struct QUEUE
         mNumEntries --;
     }
 
-    bool enqueue_try_nosync(Arena& arena, const T* entry)
+    template <typename ArenaT>
+    bool enqueue_try_nosync(ArenaT& arena, const T* entry)
     {
         memcpy(&mCurBlock[mTail], entry, sizeof(T));
 

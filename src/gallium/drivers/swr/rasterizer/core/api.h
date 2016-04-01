@@ -53,7 +53,7 @@ typedef void(SWR_API *PFN_CALLBACK_FUNC)(uint64_t data, uint64_t data2, uint64_t
 /// @param pDstHotTile - pointer to the hot tile surface
 typedef void(SWR_API *PFN_LOAD_TILE)(HANDLE hPrivateContext, SWR_FORMAT dstFormat,
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
-    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, BYTE *pDstHotTile);
+    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, uint8_t *pDstHotTile);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Function signature for store hot tiles
@@ -65,7 +65,7 @@ typedef void(SWR_API *PFN_LOAD_TILE)(HANDLE hPrivateContext, SWR_FORMAT dstForma
 /// @param pSrcHotTile - pointer to the hot tile surface
 typedef void(SWR_API *PFN_STORE_TILE)(HANDLE hPrivateContext, SWR_FORMAT srcFormat,
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
-    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, BYTE *pSrcHotTile);
+    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, uint8_t *pSrcHotTile);
 
 /// @brief Function signature for clearing from the hot tiles clear value
 /// @param hPrivateContext - handle to private data
@@ -76,6 +76,8 @@ typedef void(SWR_API *PFN_STORE_TILE)(HANDLE hPrivateContext, SWR_FORMAT srcForm
 typedef void(SWR_API *PFN_CLEAR_TILE)(HANDLE hPrivateContext,
     SWR_RENDERTARGET_ATTACHMENT rtIndex,
     uint32_t x, uint32_t y, const float* pClearColor);
+
+class BucketManager;
 
 //////////////////////////////////////////////////////////////////////////
 /// SWR_CREATECONTEXT_INFO
@@ -88,13 +90,17 @@ struct SWR_CREATECONTEXT_INFO
     // Use SwrGetPrivateContextState() to access private state.
     uint32_t privateStateSize;
 
-    // Each SWR context can have multiple sets of active state
-    uint32_t maxSubContexts;
-
-    // tile manipulation functions
+    // Tile manipulation functions
     PFN_LOAD_TILE pfnLoadTile;
     PFN_STORE_TILE pfnStoreTile;
     PFN_CLEAR_TILE pfnClearTile;
+
+    // Pointer to rdtsc buckets mgr returned to the caller.
+    // Only populated when KNOB_ENABLE_RDTSC is set
+    BucketManager* pBucketMgr;
+
+    // Output: size required memory passed to for SwrSaveState / SwrRestoreState
+    size_t  contextSaveSize;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -112,7 +118,7 @@ struct SWR_RECT
 /// @brief Create SWR Context.
 /// @param pCreateInfo - pointer to creation info.
 HANDLE SWR_API SwrCreateContext(
-    const SWR_CREATECONTEXT_INFO* pCreateInfo);
+    SWR_CREATECONTEXT_INFO* pCreateInfo);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Destroys SWR Context.
@@ -121,12 +127,24 @@ void SWR_API SwrDestroyContext(
     HANDLE hContext);
 
 //////////////////////////////////////////////////////////////////////////
-/// @brief Set currently active state context
-/// @param subContextIndex - value from 0 to
-///     SWR_CREATECONTEXT_INFO.maxSubContexts.  Defaults to 0.
-void SWR_API SwrSetActiveSubContext(
+/// @brief Saves API state associated with hContext
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param pOutputStateBlock - Memory block to receive API state data
+/// @param memSize - Size of memory pointed to by pOutputStateBlock
+void SWR_API SwrSaveState(
     HANDLE hContext,
-    uint32_t subContextIndex);
+    void* pOutputStateBlock,
+    size_t memSize);
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Restores API state to hContext previously saved with SwrSaveState
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param pStateBlock - Memory block to read API state data from
+/// @param memSize - Size of memory pointed to by pStateBlock
+void SWR_API SwrRestoreState(
+    HANDLE hContext,
+    const void* pStateBlock,
+    size_t memSize);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Sync cmd. Executes the callback func when all rendering up to this sync
@@ -391,6 +409,16 @@ void SWR_API SwrInvalidateTiles(
     uint32_t attachmentMask);
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief SwrDiscardRect
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param attachmentMask - The mask specifies which surfaces attached to the hottiles to discard.
+/// @param rect - if rect is all zeros, the entire attachment surface will be discarded
+void SWR_API SwrDiscardRect(
+    HANDLE hContext,
+    uint32_t attachmentMask,
+    SWR_RECT rect);
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief SwrDispatch
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param threadGroupCountX - Number of thread groups dispatched in X direction
@@ -419,9 +447,9 @@ void SWR_API SwrStoreTiles(
 void SWR_API SwrClearRenderTarget(
     HANDLE hContext,
     uint32_t clearMask,
-    const FLOAT clearColor[4],
+    const float clearColor[4],
     float z,
-    BYTE stencil);
+    uint8_t stencil);
 
 void SWR_API SwrSetRastState(
     HANDLE hContext,
