@@ -283,29 +283,25 @@ save_glx_visual( Display *dpy, XVisualInfo *vinfo,
    if (getenv("MESA_GLX_FORCE_ALPHA"))
       alphaFlag = GL_TRUE;
 
-   /* Comparing IDs uses less memory but sometimes fails. */
-   /* XXX revisit this after 3.0 is finished. */
-   if (!getenv("MESA_GLX_VISUAL_HACK")) {
-      /* First check if a matching visual is already in the list */
-      for (i=0; i<NumVisuals; i++) {
-         XMesaVisual v = VisualTable[i];
-         if (v->display == dpy
-             && v->mesa_visual.level == level
-             && v->mesa_visual.numAuxBuffers == numAuxBuffers
-             && v->ximage_flag == ximageFlag
-             && v->mesa_visual.doubleBufferMode == dbFlag
-             && v->mesa_visual.stereoMode == stereoFlag
-             && (v->mesa_visual.alphaBits > 0) == alphaFlag
-             && (v->mesa_visual.depthBits >= depth_size || depth_size == 0)
-             && (v->mesa_visual.stencilBits >= stencil_size || stencil_size == 0)
-             && (v->mesa_visual.accumRedBits >= accumRedSize || accumRedSize == 0)
-             && (v->mesa_visual.accumGreenBits >= accumGreenSize || accumGreenSize == 0)
-             && (v->mesa_visual.accumBlueBits >= accumBlueSize || accumBlueSize == 0)
-             && (v->mesa_visual.accumAlphaBits >= accumAlphaSize || accumAlphaSize == 0)) {
-            /* now compare visual IDs */
-            if (v->visinfo->visualid == vinfo->visualid) {
-               return v;
-            }
+   /* First check if a matching visual is already in the list */
+   for (i=0; i<NumVisuals; i++) {
+      XMesaVisual v = VisualTable[i];
+      if (v->display == dpy
+          && v->mesa_visual.level == level
+          && v->mesa_visual.numAuxBuffers == numAuxBuffers
+          && v->ximage_flag == ximageFlag
+          && v->mesa_visual.doubleBufferMode == dbFlag
+          && v->mesa_visual.stereoMode == stereoFlag
+          && (v->mesa_visual.alphaBits > 0) == alphaFlag
+          && (v->mesa_visual.depthBits >= depth_size || depth_size == 0)
+          && (v->mesa_visual.stencilBits >= stencil_size || stencil_size == 0)
+          && (v->mesa_visual.accumRedBits >= accumRedSize || accumRedSize == 0)
+          && (v->mesa_visual.accumGreenBits >= accumGreenSize || accumGreenSize == 0)
+          && (v->mesa_visual.accumBlueBits >= accumBlueSize || accumBlueSize == 0)
+          && (v->mesa_visual.accumAlphaBits >= accumAlphaSize || accumAlphaSize == 0)) {
+         /* now compare visual IDs */
+         if (v->visinfo->visualid == vinfo->visualid) {
+            return v;
          }
       }
    }
