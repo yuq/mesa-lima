@@ -272,6 +272,7 @@ const float fract_values[] = {
 
 static const struct unary_test_t
 unary_tests[] = {
+   {"abs", &lp_build_abs, &fabsf, exp2_values, Elements(exp2_values), 20.0 },
    {"neg", &lp_build_negate, &negf, exp2_values, Elements(exp2_values), 20.0 },
    {"exp2", &lp_build_exp2, &exp2f, exp2_values, Elements(exp2_values), 20.0 },
    {"log2", &lp_build_log2_safe, &log2f, log2_values, Elements(log2_values), 20.0 },
