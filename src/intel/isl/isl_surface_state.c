@@ -261,7 +261,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       .Height = info->surf->logical_level0_px.height - 1,
       .Depth = 0, /* TEMPLATE */
 
-      .SurfacePitch = info->surf->row_pitch - 1,
       .RenderTargetViewExtent = 0, /* TEMPLATE */
       .MinimumArrayElement = 0, /* TEMPLATE */
 
@@ -294,6 +293,19 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       .MCSEnable = false,
 #endif
    };
+
+   if (info->surf->tiling == ISL_TILING_W) {
+      /* From the Broadwell PRM documentation for this field:
+       *
+       *    "If the surface is a stencil buffer (and thus has Tile Mode set
+       *    to TILEMODE_WMAJOR), the pitch must be set to 2x the value
+       *    computed based on width, as the stencil buffer is stored with
+       *    two rows interleaved."
+       */
+      s.SurfacePitch = info->surf->row_pitch * 2 - 1;
+   } else {
+      s.SurfacePitch = info->surf->row_pitch - 1;
+   }
 
    if (info->view->usage & ISL_SURF_USAGE_STORAGE_BIT) {
       s.SurfaceFormat = isl_lower_storage_image_format(dev, info->view->format);
