@@ -251,6 +251,11 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
    struct intel_mipmap_tree *src_mt = src_irb->mt;
    struct intel_mipmap_tree *dst_mt = intel_image->mt;
 
+   /* There is support only for four and eight samples. */
+   if (src_mt->num_samples == 2 || dst_mt->num_samples == 2 ||
+       src_mt->num_samples > 8 || dst_mt->num_samples > 8)
+      return false;
+
    /* BLORP is only supported for Gen6-7. */
    if (brw->gen < 6 || brw->gen > 7)
       return false;
@@ -355,6 +360,11 @@ brw_blorp_framebuffer(struct brw_context *brw,
 {
    /* BLORP is not supported before Gen6. */
    if (brw->gen < 6 || brw->gen >= 8)
+      return mask;
+
+   /* There is support only for four and eight samples. */
+   if (readFb->Visual.samples == 2 || drawFb->Visual.samples == 2 ||
+       readFb->Visual.samples > 8 || drawFb->Visual.samples > 8)
       return mask;
 
    static GLbitfield buffer_bits[] = {
