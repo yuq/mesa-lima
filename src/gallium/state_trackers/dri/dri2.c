@@ -1548,7 +1548,11 @@ dri2_client_wait_sync(__DRIcontext *_ctx, void *_fence, unsigned flags,
 static void
 dri2_server_wait_sync(__DRIcontext *_ctx, void *_fence, unsigned flags)
 {
-   /* AFAIK, no driver currently supports parallel context execution. */
+   struct pipe_context *ctx = dri_context(_ctx)->st->pipe;
+   struct dri2_fence *fence = (struct dri2_fence*)_fence;
+
+   if (ctx->fence_server_sync)
+      ctx->fence_server_sync(ctx, fence->pipe_fence);
 }
 
 static __DRI2fenceExtension dri2FenceExtension = {

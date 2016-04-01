@@ -475,6 +475,12 @@ struct pipe_context {
                  unsigned flags);
 
    /**
+    * Insert commands to have GPU wait for fence to be signaled.
+    */
+   void (*fence_server_sync)(struct pipe_context *pipe,
+                             struct pipe_fence_handle *fence);
+
+   /**
     * Create a view on a texture to be used by a shader stage.
     */
    struct pipe_sampler_view * (*create_sampler_view)(struct pipe_context *ctx,
