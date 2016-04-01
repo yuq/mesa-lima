@@ -5839,6 +5839,11 @@ fs_visitor::optimize()
    progress = false;
    pass_num = 0;
 
+   if (OPT(lower_pack)) {
+      OPT(register_coalesce);
+      OPT(dead_code_eliminate);
+   }
+
    OPT(lower_simd_width);
 
    /* After SIMD lowering just in case we had to unroll the EOT send. */
@@ -5872,11 +5877,6 @@ fs_visitor::optimize()
       split_virtual_grfs();
       OPT(register_coalesce);
       OPT(compute_to_mrf);
-      OPT(dead_code_eliminate);
-   }
-
-   if (OPT(lower_pack)) {
-      OPT(register_coalesce);
       OPT(dead_code_eliminate);
    }
 
