@@ -351,7 +351,7 @@ genX(graphics_pipeline_create)(
                   .ClipEnable = !(extra && extra->use_rectlist),
                   .EarlyCullEnable = true,
                   .APIMode = 1, /* D3D */
-                  .ViewportXYClipTestEnable = !(extra && extra->disable_viewport),
+                  .ViewportXYClipTestEnable = true,
 
                   .ClipMode =
                      pCreateInfo->pRasterizationState->rasterizerDiscardEnable ?

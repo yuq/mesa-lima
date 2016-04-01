@@ -227,7 +227,7 @@ genX(graphics_pipeline_create)(
       .CullMode                                 = vk_to_gen_cullmode[rs_info->cullMode],
       .ClipEnable                               = !(extra && extra->use_rectlist),
       .APIMode                                  = APIMODE_OGL,
-      .ViewportXYClipTestEnable                 = !(extra && extra->disable_viewport),
+      .ViewportXYClipTestEnable                 = true,
       .ClipMode                                 = CLIPMODE_NORMAL,
       .TriangleStripListProvokingVertexSelect   = 0,
       .LineStripListProvokingVertexSelect       = 0,
