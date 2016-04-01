@@ -89,21 +89,49 @@ gather_info_block(nir_block *block, void *shader)
    return true;
 }
 
+/**
+ * Returns the bits in the inputs_read, outputs_written, or
+ * system_values_read bitfield corresponding to this variable.
+ */
+static inline uint64_t
+get_io_mask(nir_variable *var, gl_shader_stage stage)
+{
+   assert(var->data.mode == nir_var_shader_in ||
+          var->data.mode == nir_var_shader_out ||
+          var->data.mode == nir_var_system_value);
+   assert(var->data.location >= 0);
+
+   const struct glsl_type *var_type = var->type;
+   if (stage == MESA_SHADER_GEOMETRY && var->data.mode == nir_var_shader_in) {
+      /* Most geometry shader inputs are per-vertex arrays */
+      if (var->data.location >= VARYING_SLOT_VAR0)
+         assert(glsl_type_is_array(var_type));
+
+      if (glsl_type_is_array(var_type))
+         var_type = glsl_get_array_element(var_type);
+   }
+
+   bool is_vertex_input = (var->data.mode == nir_var_shader_in &&
+                           stage == MESA_SHADER_VERTEX);
+   unsigned slots = glsl_count_attribute_slots(var_type, is_vertex_input);
+   return ((1ull << slots) - 1) << var->data.location;
+}
+
 void
 nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
 {
    shader->info.inputs_read = 0;
    foreach_list_typed(nir_variable, var, node, &shader->inputs)
-      shader->info.inputs_read |= nir_variable_get_io_mask(var, shader->stage);
+      shader->info.inputs_read |= get_io_mask(var, shader->stage);
 
    /* TODO: Some day we may need to add stream support to NIR */
    shader->info.outputs_written = 0;
    foreach_list_typed(nir_variable, var, node, &shader->outputs)
-      shader->info.outputs_written |= nir_variable_get_io_mask(var, shader->stage);
+      shader->info.outputs_written |= get_io_mask(var, shader->stage);
 
    shader->info.system_values_read = 0;
    foreach_list_typed(nir_variable, var, node, &shader->system_values)
-      shader->info.system_values_read |= nir_variable_get_io_mask(var, shader->stage);
+      shader->info.system_values_read |= get_io_mask(var, shader->stage);
 
    shader->info.num_textures = 0;
    shader->info.num_images = 0;
