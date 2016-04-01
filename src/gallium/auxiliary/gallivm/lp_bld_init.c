@@ -399,6 +399,20 @@ lp_build_init(void)
 
    util_cpu_detect();
 
+   /* For simulating less capable machines */
+#ifdef DEBUG
+   if (debug_get_bool_option("LP_FORCE_SSE2", FALSE)) {
+      assert(util_cpu_caps.has_sse2);
+      util_cpu_caps.has_sse3 = 0;
+      util_cpu_caps.has_ssse3 = 0;
+      util_cpu_caps.has_sse4_1 = 0;
+      util_cpu_caps.has_sse4_2 = 0;
+      util_cpu_caps.has_avx = 0;
+      util_cpu_caps.has_avx2 = 0;
+      util_cpu_caps.has_f16c = 0;
+   }
+#endif
+
    /* AMD Bulldozer AVX's throughput is the same as SSE2; and because using
     * 8-wide vector needs more floating ops than 4-wide (due to padding), it is
     * actually more efficient to use 4-wide vectors on this processor.
@@ -455,17 +469,6 @@ lp_build_init(void)
 #endif
 
    gallivm_initialized = TRUE;
-
-#if 0
-   /* For simulating less capable machines */
-   util_cpu_caps.has_sse3 = 0;
-   util_cpu_caps.has_ssse3 = 0;
-   util_cpu_caps.has_sse4_1 = 0;
-   util_cpu_caps.has_sse4_2 = 0;
-   util_cpu_caps.has_avx = 0;
-   util_cpu_caps.has_avx2 = 0;
-   util_cpu_caps.has_f16c = 0;
-#endif
 
    return TRUE;
 }
