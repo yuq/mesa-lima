@@ -730,27 +730,39 @@ choose_x_overlay_visual( Display *dpy, int scr,
       vislist = XGetVisualInfo( dpy, VisualIDMask | VisualScreenMask,
                                 &vistemplate, &count );
 
+      if (!vislist) {
+         /* no matches */
+         continue;
+      }
+
       if (count!=1) {
          /* something went wrong */
+         free(vislist);
          continue;
       }
       if (preferred_class!=DONT_CARE && preferred_class!=vislist->CLASS) {
          /* wrong visual class */
+         free(vislist);
          continue;
       }
 
       /* Color-index rendering is not supported.  Make sure we have True/DirectColor */
-      if (vislist->CLASS != TrueColor && vislist->CLASS != DirectColor)
+      if (vislist->CLASS != TrueColor && vislist->CLASS != DirectColor) {
+         free(vislist);
          continue;
-
-      if (deepvis==NULL || vislist->depth > deepest) {
-         /* YES!  found a satisfactory visual */
-         free(deepvis);
-         deepest = vislist->depth;
-         deepvis = vislist;
-         /* DEBUG  tt = ov->transparent_type;*/
-         /* DEBUG  tv = ov->value; */
       }
+
+      if (deepvis!=NULL && vislist->depth <= deepest) {
+         free(vislist);
+         continue;
+      }
+
+      /* YES!  found a satisfactory visual */
+      free(deepvis);
+      deepest = vislist->depth;
+      deepvis = vislist;
+      /* DEBUG  tt = ov->transparent_type;*/
+      /* DEBUG  tv = ov->value; */
    }
 
 /*DEBUG
@@ -1912,6 +1924,7 @@ Fake_glXGetFBConfigs( Display *dpy, int screen, int *nelements )
       for (i = 0; i < *nelements; i++) {
          results[i] = create_glx_visual(dpy, visuals + i);
       }
+      free(visuals);
       return (GLXFBConfig *) results;
    }
    return NULL;
