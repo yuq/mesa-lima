@@ -1492,14 +1492,9 @@ lp_build_abs(struct lp_build_context *bld,
       return a;
 
    if(type.floating) {
-      /* Mask out the sign bit */
-      LLVMTypeRef int_vec_type = lp_build_int_vec_type(bld->gallivm, type);
-      unsigned long long absMask = ~(1ULL << (type.width - 1));
-      LLVMValueRef mask = lp_build_const_int_vec(bld->gallivm, type, ((unsigned long long) absMask));
-      a = LLVMBuildBitCast(builder, a, int_vec_type, "");
-      a = LLVMBuildAnd(builder, a, mask, "");
-      a = LLVMBuildBitCast(builder, a, vec_type, "");
-      return a;
+      char intrinsic[32];
+      util_snprintf(intrinsic, sizeof intrinsic, "llvm.fabs.v%uf%u", type.length, type.width);
+      return lp_build_intrinsic_unary(builder, intrinsic, vec_type, a);
    }
 
    if(type.width*type.length == 128 && util_cpu_caps.has_ssse3) {
