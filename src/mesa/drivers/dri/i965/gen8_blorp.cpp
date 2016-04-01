@@ -386,6 +386,7 @@ gen8_blorp_emit_ps_config(struct brw_context *brw,
       dw6 |= (64 - 2) << HSW_PS_MAX_THREADS_SHIFT;
 
    dw6 |= GEN7_PS_POSOFFSET_NONE;
+   dw6 |= params->fast_clear_op;
 
    BEGIN_BATCH(12);
    OUT_BATCH(_3DSTATE_PS << 16 | (12 - 2));

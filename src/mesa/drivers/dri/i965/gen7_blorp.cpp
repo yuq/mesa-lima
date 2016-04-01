@@ -532,6 +532,8 @@ gen7_blorp_emit_ps_config(struct brw_context *brw,
       dw5 |= prog_data->first_curbe_grf << GEN7_PS_DISPATCH_START_GRF_SHIFT_0;
    }
 
+   dw4 |= params->fast_clear_op;
+
    BEGIN_BATCH(8);
    OUT_BATCH(_3DSTATE_PS << 16 | (8 - 2));
    OUT_BATCH(params->use_wm_prog ? prog_offset : 0);

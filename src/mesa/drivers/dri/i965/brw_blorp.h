@@ -241,6 +241,7 @@ public:
    brw_blorp_surface_info src;
    brw_blorp_surface_info dst;
    enum gen6_hiz_op hiz_op;
+   unsigned fast_clear_op;
    bool use_wm_prog;
    brw_blorp_wm_push_constants wm_push_consts;
    const unsigned num_varyings;
