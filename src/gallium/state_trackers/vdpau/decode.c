@@ -68,7 +68,6 @@ vlVdpDecoderCreate(VdpDevice device,
    if (!dev)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe = dev->context;
    screen = dev->vscreen->pscreen;
 
    pipe_mutex_lock(dev->mutex);
@@ -123,6 +122,12 @@ vlVdpDecoderCreate(VdpDevice device,
       templat.level = u_get_h264_level(templat.width, templat.height,
                             &templat.max_references);
 
+   pipe = screen->context_create(screen, dev->vscreen, 0);
+   if (!pipe) {
+      ret = VDP_STATUS_RESOURCES;
+      goto error_context;
+   }
+
    vldecoder->decoder = pipe->create_video_codec(pipe, &templat);
 
    if (!vldecoder->decoder) {
@@ -145,6 +150,8 @@ error_handle:
    vldecoder->decoder->destroy(vldecoder->decoder);
 
 error_decoder:
+   pipe->destroy(pipe);
+error_context:
    pipe_mutex_unlock(dev->mutex);
    DeviceReference(&vldecoder->device, NULL);
    FREE(vldecoder);
@@ -158,15 +165,18 @@ VdpStatus
 vlVdpDecoderDestroy(VdpDecoder decoder)
 {
    vlVdpDecoder *vldecoder;
+   struct pipe_context *pipe;
 
    vldecoder = (vlVdpDecoder *)vlGetDataHTAB(decoder);
    if (!vldecoder)
       return VDP_STATUS_INVALID_HANDLE;
 
+   pipe = vldecoder->decoder->context;
    pipe_mutex_lock(vldecoder->mutex);
    vldecoder->decoder->destroy(vldecoder->decoder);
    pipe_mutex_unlock(vldecoder->mutex);
    pipe_mutex_destroy(vldecoder->mutex);
+   pipe->destroy(pipe);
 
    vlRemoveDataHTAB(decoder);
    DeviceReference(&vldecoder->device, NULL);
@@ -674,10 +684,20 @@ vlVdpDecoderRender(VdpDecoder decoder,
    if (ret != VDP_STATUS_OK)
       return ret;
 
+   /*
+    * Since we use separate contexts for the two mutex domains, we need
+    * to flush to make sure rendering operations happen in order.
+    * In particular, so that a frame is rendered before it is presented.
+    */
+   pipe_mutex_lock(vldecoder->device->mutex);
+   vldecoder->device->context->flush(vldecoder->device->context, NULL, 0);
+   pipe_mutex_unlock(vldecoder->device->mutex);
+
    pipe_mutex_lock(vldecoder->mutex);
    dec->begin_frame(dec, vlsurf->video_buffer, &desc.base);
    dec->decode_bitstream(dec, vlsurf->video_buffer, &desc.base, bitstream_buffer_count, buffers, sizes);
    dec->end_frame(dec, vlsurf->video_buffer, &desc.base);
+   dec->flush(dec);
    pipe_mutex_unlock(vldecoder->mutex);
    return ret;
 }
