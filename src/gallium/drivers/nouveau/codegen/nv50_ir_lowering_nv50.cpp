@@ -372,7 +372,8 @@ NV50LegalizeSSA::propagateWriteToOutput(Instruction *st)
       return;
 
    for (int s = 0; di->srcExists(s); ++s)
-      if (di->src(s).getFile() == FILE_IMMEDIATE)
+      if (di->src(s).getFile() == FILE_IMMEDIATE ||
+          di->src(s).getFile() == FILE_MEMORY_LOCAL)
          return;
 
    if (prog->getType() == Program::TYPE_GEOMETRY) {
