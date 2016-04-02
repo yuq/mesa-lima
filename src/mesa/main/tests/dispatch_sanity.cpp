@@ -955,6 +955,9 @@ const struct function common_desktop_functions_possible[] = {
    /* GL_EXT_window_rectangles */
    { "glWindowRectanglesEXT", 30, -1 },
 
+   /* GL_KHR_blend_equation_advanced */
+   { "glBlendBarrierKHR", 20, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2321,6 +2324,9 @@ const struct function gles2_functions_possible[] = {
    { "glGetnUniformfvKHR", 20, -1 },
    { "glGetnUniformivKHR", 20, -1 },
    { "glGetnUniformuivKHR", 20, -1 },
+
+   /* GL_KHR_blend_equation_advanced */
+   { "glBlendBarrierKHR", 20, -1 },
 
    { NULL, 0, -1 }
 };
