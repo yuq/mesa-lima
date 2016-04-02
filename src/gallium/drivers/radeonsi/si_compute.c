@@ -46,47 +46,6 @@ struct si_compute {
 	struct pipe_resource *global_buffers[MAX_GLOBAL_BUFFERS];
 };
 
-static void init_scratch_buffer(struct si_context *sctx, struct si_compute *program)
-{
-	unsigned scratch_bytes = 0;
-	uint64_t scratch_buffer_va;
-	unsigned i;
-
-	/* Compute the scratch buffer size using the maximum number of waves.
-	 * This way we don't need to recompute it for each kernel launch. */
-	unsigned scratch_waves = 32 * sctx->screen->b.info.num_good_compute_units;
-	for (i = 0; i < program->shader.binary.global_symbol_count; i++) {
-		unsigned offset =
-				program->shader.binary.global_symbol_offsets[i];
-		unsigned scratch_bytes_needed;
-
-		si_shader_binary_read_config(&program->shader.binary,
-					     &program->shader.config, offset);
-		scratch_bytes_needed = program->shader.config.scratch_bytes_per_wave;
-		scratch_bytes = MAX2(scratch_bytes, scratch_bytes_needed);
-	}
-
-	if (scratch_bytes == 0)
-		return;
-
-	program->shader.scratch_bo =
-				si_resource_create_custom(sctx->b.b.screen,
-				PIPE_USAGE_DEFAULT,
-				scratch_bytes * scratch_waves);
-
-	scratch_buffer_va = program->shader.scratch_bo->gpu_address;
-
-	/* apply_scratch_relocs needs scratch_bytes_per_wave to be set
-	 * to the maximum bytes needed, so it can compute the stride
-	 * correctly.
-	 */
-	program->shader.config.scratch_bytes_per_wave = scratch_bytes;
-
-	/* Patch the shader with the scratch buffer address. */
-	si_shader_apply_scratch_relocs(sctx,
-				&program->shader, scratch_buffer_va);
-}
-
 static void *si_create_compute_state(
 	struct pipe_context *ctx,
 	const struct pipe_compute_state *cso)
@@ -144,11 +103,6 @@ static void *si_create_compute_state(
 		code = cso->prog + sizeof(struct pipe_llvm_program_header);
 
 		radeon_elf_read(code, header->num_bytes, &program->shader.binary);
-		/* init_scratch_buffer patches the shader code with the scratch address,
-		* so we need to call it before si_shader_binary_read() which uploads
-		* the shader code to the GPU.
-		*/
-		init_scratch_buffer(sctx, program);
 		si_shader_binary_read_config(&program->shader.binary,
 			     &program->shader.config, 0);
 	}
@@ -193,43 +147,6 @@ static void si_set_global_binding(
 	}
 }
 
-/**
- * This function computes the value for R_00B860_COMPUTE_TMPRING_SIZE.WAVES
- * /p block_layout is the number of threads in each work group.
- * /p grid layout is the number of work groups.
- */
-static unsigned compute_num_waves_for_scratch(
-		const struct radeon_info *info,
-		const uint *block_layout,
-		const uint *grid_layout)
-{
-	unsigned num_sh = MAX2(info->max_sh_per_se, 1);
-	unsigned num_se = MAX2(info->max_se, 1);
-	unsigned num_blocks = 1;
-	unsigned threads_per_block = 1;
-	unsigned waves_per_block;
-	unsigned waves_per_sh;
-	unsigned waves;
-	unsigned scratch_waves;
-	unsigned i;
-
-	for (i = 0; i < 3; i++) {
-		threads_per_block *= block_layout[i];
-		num_blocks *= grid_layout[i];
-	}
-
-	waves_per_block = align(threads_per_block, 64) / 64;
-	waves = waves_per_block * num_blocks;
-	waves_per_sh = align(waves, num_sh * num_se) / (num_sh * num_se);
-	scratch_waves = waves_per_sh * num_sh * num_se;
-
-	if (waves_per_block > waves_per_sh) {
-		scratch_waves = waves_per_block * num_sh * num_se;
-	}
-
-	return scratch_waves;
-}
-
 static void si_initialize_compute(struct si_context *sctx)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
@@ -269,6 +186,44 @@ static void si_initialize_compute(struct si_context *sctx)
 	}
 
 	sctx->cs_shader_state.initialized = true;
+}
+
+static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
+                                            struct si_shader *shader,
+                                            struct si_shader_config *config)
+{
+	uint64_t scratch_bo_size, scratch_needed;
+	scratch_bo_size = 0;
+	scratch_needed = config->scratch_bytes_per_wave * sctx->scratch_waves;
+	if (sctx->compute_scratch_buffer)
+		scratch_bo_size = sctx->compute_scratch_buffer->b.b.width0;
+
+	if (scratch_bo_size < scratch_needed) {
+		pipe_resource_reference(
+			(struct pipe_resource**)&sctx->compute_scratch_buffer,
+			NULL);
+
+		sctx->compute_scratch_buffer =
+				si_resource_create_custom(&sctx->screen->b.b,
+                                PIPE_USAGE_DEFAULT, scratch_needed);
+
+		if (!sctx->compute_scratch_buffer)
+			return false;
+	}
+
+	if (sctx->compute_scratch_buffer != shader->scratch_bo && scratch_needed) {
+		uint64_t scratch_va = sctx->compute_scratch_buffer->gpu_address;
+
+		si_shader_apply_scratch_relocs(sctx, shader, scratch_va);
+
+		if (si_shader_binary_upload(sctx->screen, shader))
+			return false;
+
+		r600_resource_reference(&shader->scratch_bo,
+		                        sctx->compute_scratch_buffer);
+	}
+
+	return true;
 }
 
 static void si_upload_compute_input(struct si_context *sctx,
@@ -331,7 +286,6 @@ static void si_launch_grid(
 	unsigned i;
 	struct si_shader *shader = &program->shader;
 	unsigned lds_blocks;
-	unsigned num_waves_for_scratch;
 
 	si_need_cs_space(sctx);
 
@@ -351,19 +305,19 @@ static void si_launch_grid(
 	/* Read the config information */
 	si_shader_binary_read_config(&shader->binary, &shader->config, info->pc);
 
+	if (!si_setup_compute_scratch_buffer(sctx, shader, &shader->config))
+		return;
+
 	if (program->input_size || program->ir_type == PIPE_SHADER_IR_NATIVE)
 		si_upload_compute_input(sctx, info);
-
-	num_waves_for_scratch =	compute_num_waves_for_scratch(
-		&sctx->screen->b.info, info->block, info->grid);
 
 	if (shader->config.scratch_bytes_per_wave > 0) {
 
 		COMPUTE_DBG(sctx->screen, "Waves: %u; Scratch per wave: %u bytes; "
-		            "Total Scratch: %u bytes\n", num_waves_for_scratch,
+		            "Total Scratch: %u bytes\n", sctx->scratch_waves,
 			    shader->config.scratch_bytes_per_wave,
 			    shader->config.scratch_bytes_per_wave *
-			    num_waves_for_scratch);
+			    sctx->scratch_waves);
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 					  shader->scratch_bo,
@@ -419,15 +373,12 @@ static void si_launch_grid(
 
 	si_pm4_set_reg(pm4, R_00B84C_COMPUTE_PGM_RSRC2, shader->config.rsrc2);
 
-	num_waves_for_scratch =
-		MIN2(num_waves_for_scratch,
-		     32 * sctx->screen->b.info.num_good_compute_units);
 	si_pm4_set_reg(pm4, R_00B860_COMPUTE_TMPRING_SIZE,
 		/* The maximum value for WAVES is 32 * num CU.
 		 * If you program this value incorrectly, the GPU will hang if
 		 * COMPUTE_PGM_RSRC2.SCRATCH_EN is enabled.
 		 */
-		S_00B860_WAVES(num_waves_for_scratch)
+		S_00B860_WAVES(sctx->scratch_waves)
 		| S_00B860_WAVESIZE(shader->config.scratch_bytes_per_wave >> 10))
 		;
 

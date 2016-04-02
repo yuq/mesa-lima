@@ -306,6 +306,8 @@ struct si_context {
 	unsigned		scratch_waves;
 	unsigned		spi_tmpring_size;
 
+	struct r600_resource	*compute_scratch_buffer;
+
 	/* Emitted derived tessellation state. */
 	struct si_shader	*last_ls; /* local shader (VS) */
 	struct si_shader_selector *last_tcs;
