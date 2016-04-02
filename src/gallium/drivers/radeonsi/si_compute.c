@@ -185,6 +185,7 @@ static void si_initialize_compute(struct si_context *sctx)
 		                  0x190 /* Default value */);
 	}
 
+	sctx->cs_shader_state.emitted_program = NULL;
 	sctx->cs_shader_state.initialized = true;
 }
 
@@ -222,6 +223,83 @@ static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
 		r600_resource_reference(&shader->scratch_bo,
 		                        sctx->compute_scratch_buffer);
 	}
+
+	return true;
+}
+
+static bool si_switch_compute_shader(struct si_context *sctx,
+                                     struct si_compute *program,
+                                     struct si_shader *shader, unsigned offset)
+{
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct si_shader_config inline_config = {0};
+	struct si_shader_config *config;
+	uint64_t shader_va;
+
+	if (sctx->cs_shader_state.emitted_program == program &&
+	    sctx->cs_shader_state.offset == offset)
+		return true;
+
+	if (program->ir_type == PIPE_SHADER_IR_TGSI) {
+		config = &shader->config;
+	} else {
+		unsigned lds_blocks;
+
+		config = &inline_config;
+		si_shader_binary_read_config(&shader->binary, config, offset);
+
+		lds_blocks = config->lds_size;
+		/* XXX: We are over allocating LDS.  For SI, the shader reports
+		* LDS in blocks of 256 bytes, so if there are 4 bytes lds
+		* allocated in the shader and 4 bytes allocated by the state
+		* tracker, then we will set LDS_SIZE to 512 bytes rather than 256.
+		*/
+		if (sctx->b.chip_class <= SI) {
+			lds_blocks += align(program->local_size, 256) >> 8;
+		} else {
+			lds_blocks += align(program->local_size, 512) >> 9;
+		}
+
+		assert(lds_blocks <= 0xFF);
+
+		config->rsrc2 &= C_00B84C_LDS_SIZE;
+		config->rsrc2 |=  S_00B84C_LDS_SIZE(lds_blocks);
+	}
+
+	if (!si_setup_compute_scratch_buffer(sctx, shader, config))
+		return false;
+
+	if (shader->scratch_bo) {
+		COMPUTE_DBG(sctx->screen, "Waves: %u; Scratch per wave: %u bytes; "
+		            "Total Scratch: %u bytes\n", sctx->scratch_waves,
+			    config->scratch_bytes_per_wave,
+			    config->scratch_bytes_per_wave *
+			    sctx->scratch_waves);
+
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+			      shader->scratch_bo, RADEON_USAGE_READWRITE,
+			      RADEON_PRIO_SCRATCH_BUFFER);
+	}
+
+	shader_va = shader->bo->gpu_address + offset;
+
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, shader->bo,
+	                          RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
+
+	radeon_set_sh_reg_seq(cs, R_00B830_COMPUTE_PGM_LO, 2);
+	radeon_emit(cs, shader_va >> 8);
+	radeon_emit(cs, shader_va >> 40);
+
+	radeon_set_sh_reg_seq(cs, R_00B848_COMPUTE_PGM_RSRC1, 2);
+	radeon_emit(cs, config->rsrc1);
+	radeon_emit(cs, config->rsrc2);
+
+	radeon_set_sh_reg(cs, R_00B860_COMPUTE_TMPRING_SIZE,
+	          S_00B860_WAVES(sctx->scratch_waves)
+	             | S_00B860_WAVESIZE(config->scratch_bytes_per_wave >> 10));
+
+	sctx->cs_shader_state.emitted_program = program;
+	sctx->cs_shader_state.offset = offset;
 
 	return true;
 }
@@ -282,10 +360,7 @@ static void si_launch_grid(
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct si_compute *program = sctx->cs_shader_state.program;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
-	uint64_t shader_va;
 	unsigned i;
-	struct si_shader *shader = &program->shader;
-	unsigned lds_blocks;
 
 	si_need_cs_space(sctx);
 
@@ -302,28 +377,11 @@ static void si_launch_grid(
 
 	pm4->compute_pkt = true;
 
-	/* Read the config information */
-	si_shader_binary_read_config(&shader->binary, &shader->config, info->pc);
-
-	if (!si_setup_compute_scratch_buffer(sctx, shader, &shader->config))
+	if (!si_switch_compute_shader(sctx, program, &program->shader, info->pc))
 		return;
 
 	if (program->input_size || program->ir_type == PIPE_SHADER_IR_NATIVE)
 		si_upload_compute_input(sctx, info);
-
-	if (shader->config.scratch_bytes_per_wave > 0) {
-
-		COMPUTE_DBG(sctx->screen, "Waves: %u; Scratch per wave: %u bytes; "
-		            "Total Scratch: %u bytes\n", sctx->scratch_waves,
-			    shader->config.scratch_bytes_per_wave,
-			    shader->config.scratch_bytes_per_wave *
-			    sctx->scratch_waves);
-
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-					  shader->scratch_bo,
-					  RADEON_USAGE_READWRITE,
-					  RADEON_PRIO_SCRATCH_BUFFER);
-	}
 
 	si_pm4_set_reg(pm4, R_00B81C_COMPUTE_NUM_THREAD_X,
 				S_00B81C_NUM_THREAD_FULL(info->block[0]));
@@ -343,44 +401,6 @@ static void si_launch_grid(
 					  RADEON_USAGE_READWRITE,
 					  RADEON_PRIO_COMPUTE_GLOBAL);
 	}
-
-	shader_va = shader->bo->gpu_address;
-	shader_va += info->pc;
-
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, shader->bo,
-				  RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
-	si_pm4_set_reg(pm4, R_00B830_COMPUTE_PGM_LO, shader_va >> 8);
-	si_pm4_set_reg(pm4, R_00B834_COMPUTE_PGM_HI, shader_va >> 40);
-
-	si_pm4_set_reg(pm4, R_00B848_COMPUTE_PGM_RSRC1, shader->config.rsrc1);
-
-	lds_blocks = shader->config.lds_size;
-	/* XXX: We are over allocating LDS.  For SI, the shader reports LDS in
-	 * blocks of 256 bytes, so if there are 4 bytes lds allocated in
-	 * the shader and 4 bytes allocated by the state tracker, then
-	 * we will set LDS_SIZE to 512 bytes rather than 256.
-	 */
-	if (sctx->b.chip_class <= SI) {
-		lds_blocks += align(program->local_size, 256) >> 8;
-	} else {
-		lds_blocks += align(program->local_size, 512) >> 9;
-	}
-
-	assert(lds_blocks <= 0xFF);
-
-	shader->config.rsrc2 &= C_00B84C_LDS_SIZE;
-	shader->config.rsrc2 |=  S_00B84C_LDS_SIZE(lds_blocks);
-
-	si_pm4_set_reg(pm4, R_00B84C_COMPUTE_PGM_RSRC2, shader->config.rsrc2);
-
-	si_pm4_set_reg(pm4, R_00B860_COMPUTE_TMPRING_SIZE,
-		/* The maximum value for WAVES is 32 * num CU.
-		 * If you program this value incorrectly, the GPU will hang if
-		 * COMPUTE_PGM_RSRC2.SCRATCH_EN is enabled.
-		 */
-		S_00B860_WAVES(sctx->scratch_waves)
-		| S_00B860_WAVESIZE(shader->config.scratch_bytes_per_wave >> 10))
-		;
 
 	si_pm4_cmd_begin(pm4, PKT3_DISPATCH_DIRECT);
 	si_pm4_cmd_add(pm4, info->grid[0]); /* Thread groups DIM_X */
@@ -412,10 +432,17 @@ static void si_launch_grid(
 
 static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	struct si_compute *program = (struct si_compute *)state;
+	struct si_context *sctx = (struct si_context*)ctx;
 
 	if (!state) {
 		return;
 	}
+
+	if (program == sctx->cs_shader_state.program)
+		sctx->cs_shader_state.program = NULL;
+
+	if (program == sctx->cs_shader_state.emitted_program)
+		sctx->cs_shader_state.emitted_program = NULL;
 
 	si_shader_destroy(&program->shader);
 	FREE(program);
