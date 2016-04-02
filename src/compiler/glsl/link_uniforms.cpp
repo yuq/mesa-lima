@@ -282,7 +282,7 @@ public:
       : num_active_uniforms(0), num_hidden_uniforms(0), num_values(0),
         num_shader_samplers(0), num_shader_images(0),
         num_shader_uniform_components(0), num_shader_subroutines(0),
-        is_ubo_var(false), is_shader_storage(false), map(map),
+        is_buffer_block(false), is_shader_storage(false), map(map),
         hidden_map(hidden_map)
    {
       /* empty */
@@ -299,7 +299,7 @@ public:
    void process(ir_variable *var)
    {
       this->current_var = var;
-      this->is_ubo_var = var->is_in_buffer_block();
+      this->is_buffer_block = var->is_in_buffer_block();
       this->is_shader_storage = var->is_in_shader_storage_block();
       if (var->is_interface_instance())
          program_resource_visitor::process(var->get_interface_type(),
@@ -340,7 +340,7 @@ public:
     */
    unsigned num_shader_subroutines;
 
-   bool is_ubo_var;
+   bool is_buffer_block;
    bool is_shader_storage;
 
    struct string_to_uint_map *map;
@@ -380,7 +380,7 @@ private:
           * Note that samplers do not count against this limit because they
           * don't use any storage on current hardware.
           */
-         if (!is_ubo_var && !is_shader_storage)
+         if (!is_buffer_block)
             this->num_shader_uniform_components += values;
       }
 
