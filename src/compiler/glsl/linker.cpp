@@ -3072,13 +3072,7 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
                          ctx->Const.Program[i].MaxImageUniforms);
 
          total_image_units += sh->NumImages;
-
-         for (unsigned j = 0; j < prog->NumBufferInterfaceBlocks; j++) {
-            int stage_index = prog->InterfaceBlockStageIndex[i][j];
-            if (stage_index != -1 &&
-                sh->BufferInterfaceBlocks[stage_index]->IsShaderStorage)
-               total_shader_storage_blocks++;
-         }
+         total_shader_storage_blocks += sh->NumShaderStorageBlocks;
 
          if (i == MESA_SHADER_FRAGMENT) {
             foreach_in_list(ir_instruction, node, sh->ir) {
