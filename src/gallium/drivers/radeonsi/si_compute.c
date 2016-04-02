@@ -287,7 +287,6 @@ static void si_launch_grid(
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_compute *program = sctx->cs_shader_state.program;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
-	uint64_t scratch_buffer_va = 0;
 	uint64_t shader_va;
 	unsigned i;
 	struct si_shader *shader = &program->shader;
@@ -329,14 +328,7 @@ static void si_launch_grid(
 					  shader->scratch_bo,
 					  RADEON_USAGE_READWRITE,
 					  RADEON_PRIO_SCRATCH_BUFFER);
-
-		scratch_buffer_va = shader->scratch_bo->gpu_address;
 	}
-
-	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0 + 8, scratch_buffer_va);
-	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0 + 12,
-		S_008F04_BASE_ADDRESS_HI(scratch_buffer_va >> 32)
-		|  S_008F04_STRIDE(shader->config.scratch_bytes_per_wave / 64));
 
 	si_pm4_set_reg(pm4, R_00B810_COMPUTE_START_X, 0);
 	si_pm4_set_reg(pm4, R_00B814_COMPUTE_START_Y, 0);
