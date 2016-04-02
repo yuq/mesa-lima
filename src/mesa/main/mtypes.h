@@ -3942,6 +3942,7 @@ struct gl_extensions
    GLboolean ATI_separate_stencil;
    GLboolean GREMEDY_string_marker;
    GLboolean INTEL_performance_query;
+   GLboolean KHR_blend_equation_advanced;
    GLboolean KHR_robustness;
    GLboolean KHR_texture_compression_astc_hdr;
    GLboolean KHR_texture_compression_astc_ldr;

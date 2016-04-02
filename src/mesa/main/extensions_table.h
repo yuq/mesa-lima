@@ -282,6 +282,7 @@ EXT(INGR_blend_func_separate                , EXT_blend_func_separate           
 
 EXT(INTEL_performance_query                 , INTEL_performance_query                , GLL, GLC,  x , ES2, 2013)
 
+EXT(KHR_blend_equation_advanced             , KHR_blend_equation_advanced            , GLL, GLC,  x , ES2, 2014)
 EXT(KHR_context_flush_control               , dummy_true                             , GLL, GLC,  x , ES2, 2014)
 EXT(KHR_debug                               , dummy_true                             , GLL, GLC,  11, ES2, 2012)
 EXT(KHR_robust_buffer_access_behavior       , ARB_robust_buffer_access_behavior      , GLL, GLC,  x , ES2, 2014)
