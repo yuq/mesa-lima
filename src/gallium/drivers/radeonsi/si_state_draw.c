@@ -607,8 +607,6 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 	struct r600_common_context *sctx = &si_ctx->b;
 	struct radeon_winsys_cs *cs = sctx->gfx.cs;
 	uint32_t cp_coher_cntl = 0;
-	uint32_t compute =
-		PKT3_SHADER_TYPE_S(!!(sctx->flags & SI_CONTEXT_FLAG_COMPUTE));
 
 	/* SI has a bug that it always flushes ICACHE and KCACHE if either
 	 * bit is set. An alternative way is to write SQC_CACHES, but that
@@ -645,7 +643,7 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 
 		/* Necessary for DCC */
 		if (sctx->chip_class >= VI) {
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0) | compute);
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 			radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_DATA_TS) |
 			                EVENT_INDEX(5));
 			radeon_emit(cs, 0);
@@ -660,22 +658,17 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 	}
 
 	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB_META) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_META) | EVENT_INDEX(0));
 		/* needed for wait for idle in SURFACE_SYNC */
 		assert(sctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB);
 	}
 	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB_META) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_DB_META) | EVENT_INDEX(0));
 		/* needed for wait for idle in SURFACE_SYNC */
 		assert(sctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB);
 	}
-	if (sctx->flags & SI_CONTEXT_FLUSH_WITH_INV_L2) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
-		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CACHE_FLUSH) | EVENT_INDEX(7) |
-				EVENT_WRITE_INV_L2);
-        }
 
 	/* Wait for shader engines to go idle.
 	 * VS and PS waits are unnecessary if SURFACE_SYNC is going to wait
@@ -684,25 +677,25 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 	if (!(sctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
 			     SI_CONTEXT_FLUSH_AND_INV_DB))) {
 		if (sctx->flags & SI_CONTEXT_PS_PARTIAL_FLUSH) {
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 			radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 		} else if (sctx->flags & SI_CONTEXT_VS_PARTIAL_FLUSH) {
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 			radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 		}
 	}
 	if (sctx->flags & SI_CONTEXT_CS_PARTIAL_FLUSH) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_CS_PARTIAL_FLUSH | EVENT_INDEX(4)));
 	}
 
 	/* VGT state synchronization. */
 	if (sctx->flags & SI_CONTEXT_VGT_FLUSH) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_FLUSH) | EVENT_INDEX(0));
 	}
 	if (sctx->flags & SI_CONTEXT_VGT_STREAMOUT_SYNC) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_STREAMOUT_SYNC) | EVENT_INDEX(0));
 	}
 
