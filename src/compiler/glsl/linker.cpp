@@ -4713,6 +4713,33 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                              has_xfb_qualifiers))
       goto done;
 
+   /* Split BufferInterfaceBlocks into UniformBlocks and ShaderStorageBlocks
+    * for gl_shader_program and gl_shader, so that drivers that need separate
+    * index spaces for each set can have that.
+    */
+   for (unsigned i = MESA_SHADER_VERTEX; i < MESA_SHADER_STAGES; i++) {
+      if (prog->_LinkedShaders[i] != NULL) {
+         gl_shader *sh = prog->_LinkedShaders[i];
+         split_ubos_and_ssbos(sh,
+                              sh->BufferInterfaceBlocks,
+                              NULL,
+                              sh->NumBufferInterfaceBlocks,
+                              &sh->UniformBlocks,
+                              &sh->NumUniformBlocks,
+                              &sh->ShaderStorageBlocks,
+                              &sh->NumShaderStorageBlocks);
+      }
+   }
+
+   split_ubos_and_ssbos(prog,
+                        NULL,
+                        prog->BufferInterfaceBlocks,
+                        prog->NumBufferInterfaceBlocks,
+                        &prog->UniformBlocks,
+                        &prog->NumUniformBlocks,
+                        &prog->ShaderStorageBlocks,
+                        &prog->NumShaderStorageBlocks);
+
    update_array_sizes(prog);
    link_assign_uniform_locations(prog, ctx->Const.UniformBooleanTrue,
                                  num_explicit_uniform_locs,
@@ -4763,33 +4790,6 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 	 linker_error(prog, "program lacks a fragment shader\n");
       }
    }
-
-   /* Split BufferInterfaceBlocks into UniformBlocks and ShaderStorageBlocks
-    * for gl_shader_program and gl_shader, so that drivers that need separate
-    * index spaces for each set can have that.
-    */
-   for (unsigned i = MESA_SHADER_VERTEX; i < MESA_SHADER_STAGES; i++) {
-      if (prog->_LinkedShaders[i] != NULL) {
-         gl_shader *sh = prog->_LinkedShaders[i];
-         split_ubos_and_ssbos(sh,
-                              sh->BufferInterfaceBlocks,
-                              NULL,
-                              sh->NumBufferInterfaceBlocks,
-                              &sh->UniformBlocks,
-                              &sh->NumUniformBlocks,
-                              &sh->ShaderStorageBlocks,
-                              &sh->NumShaderStorageBlocks);
-      }
-   }
-
-   split_ubos_and_ssbos(prog,
-                        NULL,
-                        prog->BufferInterfaceBlocks,
-                        prog->NumBufferInterfaceBlocks,
-                        &prog->UniformBlocks,
-                        &prog->NumUniformBlocks,
-                        &prog->ShaderStorageBlocks,
-                        &prog->NumShaderStorageBlocks);
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)
