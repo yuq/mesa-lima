@@ -460,30 +460,33 @@ public:
       field_counter = 0;
       this->record_next_sampler = new string_to_uint_map;
 
-      ubo_block_index = -1;
+      buffer_block_index = -1;
       if (var->is_in_buffer_block()) {
+         struct gl_uniform_block **blks = var->is_in_shader_storage_block() ?
+            prog->ShaderStorageBlocks : prog->UniformBlocks;
+         unsigned num_blks = var->is_in_shader_storage_block() ?
+            prog->NumShaderStorageBlocks : prog->NumUniformBlocks;
+
          if (var->is_interface_instance() && var->type->is_array()) {
             unsigned l = strlen(var->get_interface_type()->name);
 
-            for (unsigned i = 0; i < prog->NumBufferInterfaceBlocks; i++) {
-               if (strncmp(var->get_interface_type()->name,
-                           prog->BufferInterfaceBlocks[i].Name,
-                           l) == 0
-                   && prog->BufferInterfaceBlocks[i].Name[l] == '[') {
-                  ubo_block_index = i;
+            for (unsigned i = 0; i < num_blks; i++) {
+               if (strncmp(var->get_interface_type()->name, blks[i]->Name, l)
+                   == 0 && blks[i]->Name[l] == '[') {
+                  buffer_block_index = i;
                   break;
                }
             }
          } else {
-            for (unsigned i = 0; i < prog->NumBufferInterfaceBlocks; i++) {
-               if (strcmp(var->get_interface_type()->name,
-                          prog->BufferInterfaceBlocks[i].Name) == 0) {
-                  ubo_block_index = i;
+            for (unsigned i = 0; i < num_blks; i++) {
+               if (strcmp(var->get_interface_type()->name, blks[i]->Name) ==
+                   0) {
+                  buffer_block_index = i;
                   break;
                }
             }
          }
-         assert(ubo_block_index != -1);
+         assert(buffer_block_index != -1);
 
          /* Uniform blocks that were specified with an instance name must be
           * handled a little bit differently.  The name of the variable is the
@@ -497,7 +500,7 @@ public:
                     var->get_interface_type()->name);
          } else {
             const struct gl_uniform_block *const block =
-               &prog->BufferInterfaceBlocks[ubo_block_index];
+               blks[buffer_block_index];
 
             assert(var->data.location != -1);
 
@@ -519,7 +522,7 @@ public:
       delete this->record_next_sampler;
    }
 
-   int ubo_block_index;
+   int buffer_block_index;
    int ubo_byte_offset;
    gl_shader_stage shader_type;
 
@@ -659,7 +662,7 @@ private:
    virtual void enter_record(const glsl_type *type, const char *,
                              bool row_major, const unsigned packing) {
       assert(type->is_record());
-      if (this->ubo_block_index == -1)
+      if (this->buffer_block_index == -1)
          return;
       if (packing == GLSL_INTERFACE_PACKING_STD430)
          this->ubo_byte_offset = glsl_align(
@@ -672,7 +675,7 @@ private:
    virtual void leave_record(const glsl_type *type, const char *,
                              bool row_major, const unsigned packing) {
       assert(type->is_record());
-      if (this->ubo_block_index == -1)
+      if (this->buffer_block_index == -1)
          return;
       if (packing == GLSL_INTERFACE_PACKING_STD430)
          this->ubo_byte_offset = glsl_align(
@@ -719,7 +722,7 @@ private:
       /* For array of arrays or struct arrays the base location may have
        * already been set so don't set it again.
        */
-      if (ubo_block_index == -1 && current_var->data.location == -1) {
+      if (buffer_block_index == -1 && current_var->data.location == -1) {
          current_var->data.location = id;
       }
 
@@ -766,8 +769,8 @@ private:
       this->uniforms[id].is_shader_storage =
          current_var->is_in_shader_storage_block();
 
-      if (this->ubo_block_index != -1) {
-         this->uniforms[id].block_index = this->ubo_block_index;
+      if (this->buffer_block_index != -1) {
+         this->uniforms[id].block_index = this->buffer_block_index;
 
          unsigned alignment = type->std140_base_alignment(row_major);
          if (packing == GLSL_INTERFACE_PACKING_STD430)

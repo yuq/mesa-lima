@@ -3804,7 +3804,9 @@ calculate_array_size_and_stride(struct gl_shader_program *shProg,
    int array_stride = -1;
    char *var_name = get_top_level_name(uni->name);
    char *interface_name =
-      get_top_level_name(shProg->BufferInterfaceBlocks[block_index].Name);
+      get_top_level_name(uni->is_shader_storage ?
+                         shProg->ShaderStorageBlocks[block_index]->Name :
+                         shProg->UniformBlocks[block_index]->Name);
 
    if (strcmp(var_name, interface_name) == 0) {
       /* Deal with instanced array of SSBOs */
@@ -3941,12 +3943,14 @@ build_program_resource_list(struct gl_context *ctx,
                         ir_var_uniform);
 
       /* Add stagereferences for uniforms in a uniform block. */
+      bool is_shader_storage =  shProg->UniformStorage[i].is_shader_storage;
       int block_index = shProg->UniformStorage[i].block_index;
       if (block_index != -1) {
-         stageref |= shProg->BufferInterfaceBlocks[block_index].stageref;
+         stageref |= is_shader_storage ?
+            shProg->ShaderStorageBlocks[block_index]->stageref :
+            shProg->UniformBlocks[block_index]->stageref;
       }
 
-      bool is_shader_storage =  shProg->UniformStorage[i].is_shader_storage;
       GLenum type = is_shader_storage ? GL_BUFFER_VARIABLE : GL_UNIFORM;
       if (!should_add_buffer_variable(shProg, type,
                                       shProg->UniformStorage[i].name))
