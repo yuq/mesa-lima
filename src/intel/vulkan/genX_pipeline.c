@@ -74,6 +74,8 @@ genX(compute_pipeline_create)(
    pipeline->active_stages = 0;
    pipeline->total_scratch = 0;
 
+   pipeline->needs_data_cache = false;
+
    assert(pCreateInfo->stage.stage == VK_SHADER_STAGE_COMPUTE_BIT);
    ANV_FROM_HANDLE(anv_shader_module, module,  pCreateInfo->stage.module);
    anv_pipeline_compile_cs(pipeline, cache, pCreateInfo, module,

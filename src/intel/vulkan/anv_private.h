@@ -1403,6 +1403,7 @@ struct anv_pipeline {
    struct anv_pipeline_bind_map                 bindings[MESA_SHADER_STAGES];
 
    bool                                         use_repclear;
+   bool                                         needs_data_cache;
 
    const struct brw_stage_prog_data *           prog_data[MESA_SHADER_STAGES];
    uint32_t                                     scratch_start[MESA_SHADER_STAGES];

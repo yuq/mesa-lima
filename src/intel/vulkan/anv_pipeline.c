@@ -332,8 +332,13 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (pipeline->layout && pipeline->layout->stage[stage].has_dynamic_offsets)
       prog_data->nr_params += MAX_DYNAMIC_BUFFERS * 2;
 
-   if (nir->info.num_images > 0)
+   if (nir->info.num_images > 0) {
       prog_data->nr_params += nir->info.num_images * BRW_IMAGE_PARAM_SIZE;
+      pipeline->needs_data_cache = true;
+   }
+
+   if (nir->info.num_ssbos > 0)
+      pipeline->needs_data_cache = true;
 
    if (prog_data->nr_params > 0) {
       /* XXX: I think we're leaking this */
@@ -1112,6 +1117,8 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    anv_pipeline_init_dynamic_state(pipeline, pCreateInfo);
 
    pipeline->use_repclear = extra && extra->use_repclear;
+
+   pipeline->needs_data_cache = false;
 
    /* When we free the pipeline, we detect stages based on the NULL status
     * of various prog_data pointers.  Make them NULL by default.
