@@ -24,6 +24,7 @@
 
 #include "tgsi/tgsi_parse.h"
 #include "util/u_memory.h"
+#include "util/u_upload_mgr.h"
 #include "radeon/r600_pipe_common.h"
 #include "radeon/radeon_elf_util.h"
 #include "radeon/radeon_llvm_util.h"
@@ -42,7 +43,6 @@ struct si_compute {
 	unsigned input_size;
 	struct si_shader shader;
 
-	struct r600_resource *input_buffer;
 	struct pipe_resource *global_buffers[MAX_GLOBAL_BUFFERS];
 };
 
@@ -156,11 +156,6 @@ static void *si_create_compute_state(
 		       TGSI_PROCESSOR_COMPUTE, stderr);
 	si_shader_binary_upload(sctx->screen, &program->shader);
 
-	if (program->input_size) {
-		program->input_buffer =	si_resource_create_custom(sctx->b.b.screen,
-			PIPE_USAGE_IMMUTABLE, program->input_size);
-	}
-
 	return program;
 }
 
@@ -235,6 +230,56 @@ static unsigned compute_num_waves_for_scratch(
 	return scratch_waves;
 }
 
+static void si_upload_compute_input(struct si_context *sctx,
+                                  const struct pipe_grid_info *info)
+{
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct si_compute *program = sctx->cs_shader_state.program;
+	struct r600_resource *input_buffer = NULL;
+	unsigned kernel_args_size;
+	unsigned num_work_size_bytes = 36;
+	uint32_t kernel_args_offset = 0;
+	uint32_t *kernel_args;
+	void *kernel_args_ptr;
+	uint64_t kernel_args_va;
+	unsigned i;
+
+	/* The extra num_work_size_bytes are for work group / work item size information */
+	kernel_args_size = program->input_size + num_work_size_bytes;
+
+	u_upload_alloc(sctx->b.uploader, 0, kernel_args_size, 256,
+		       &kernel_args_offset,
+		       (struct pipe_resource**)&input_buffer, &kernel_args_ptr);
+
+	kernel_args = (uint32_t*)kernel_args_ptr;
+	for (i = 0; i < 3; i++) {
+		kernel_args[i] = info->grid[i];
+		kernel_args[i + 3] = info->grid[i] * info->block[i];
+		kernel_args[i + 6] = info->block[i];
+	}
+
+	memcpy(kernel_args + (num_work_size_bytes / 4), info->input,
+	       program->input_size);
+
+
+	for (i = 0; i < (kernel_args_size / 4); i++) {
+		COMPUTE_DBG(sctx->screen, "input %u : %u\n", i,
+			kernel_args[i]);
+	}
+
+	kernel_args_va = input_buffer->gpu_address + kernel_args_offset;
+
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, input_buffer,
+				  RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
+
+	radeon_set_sh_reg_seq(cs, R_00B900_COMPUTE_USER_DATA_0, 2);
+	radeon_emit(cs, kernel_args_va);
+	radeon_emit(cs, S_008F04_BASE_ADDRESS_HI (kernel_args_va >> 32) |
+	                S_008F04_STRIDE(0));
+
+	pipe_resource_reference((struct pipe_resource**)&input_buffer, NULL);
+}
+
 static void si_launch_grid(
 		struct pipe_context *ctx, const struct pipe_grid_info *info)
 {
@@ -242,12 +287,6 @@ static void si_launch_grid(
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_compute *program = sctx->cs_shader_state.program;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
-	struct r600_resource *input_buffer = program->input_buffer;
-	unsigned kernel_args_size;
-	unsigned num_work_size_bytes = 36;
-	uint32_t kernel_args_offset = 0;
-	uint32_t *kernel_args;
-	uint64_t kernel_args_va;
 	uint64_t scratch_buffer_va = 0;
 	uint64_t shader_va;
 	unsigned i;
@@ -272,24 +311,11 @@ static void si_launch_grid(
 	/* Read the config information */
 	si_shader_binary_read_config(&shader->binary, &shader->config, info->pc);
 
-	/* Upload the kernel arguments */
-
-	/* The extra num_work_size_bytes are for work group / work item size information */
-	kernel_args_size = program->input_size + num_work_size_bytes + 8 /* For scratch va */;
-
-	kernel_args = sctx->b.ws->buffer_map(input_buffer->buf,
-			sctx->b.gfx.cs, PIPE_TRANSFER_WRITE);
-	for (i = 0; i < 3; i++) {
-		kernel_args[i] = info->grid[i];
-		kernel_args[i + 3] = info->grid[i] * info->block[i];
-		kernel_args[i + 6] = info->block[i];
-	}
+	if (program->input_size || program->ir_type == PIPE_SHADER_IR_NATIVE)
+		si_upload_compute_input(sctx, info);
 
 	num_waves_for_scratch =	compute_num_waves_for_scratch(
 		&sctx->screen->b.info, info->block, info->grid);
-
-	memcpy(kernel_args + (num_work_size_bytes / 4), info->input,
-          program->input_size);
 
 	if (shader->config.scratch_bytes_per_wave > 0) {
 
@@ -307,19 +333,6 @@ static void si_launch_grid(
 		scratch_buffer_va = shader->scratch_bo->gpu_address;
 	}
 
-	for (i = 0; i < (kernel_args_size / 4); i++) {
-		COMPUTE_DBG(sctx->screen, "input %u : %u\n", i,
-			kernel_args[i]);
-	}
-
-	kernel_args_va = input_buffer->gpu_address;
-	kernel_args_va += kernel_args_offset;
-
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, input_buffer,
-				  RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
-
-	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0, kernel_args_va);
-	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0 + 4, S_008F04_BASE_ADDRESS_HI (kernel_args_va >> 32) | S_008F04_STRIDE(0));
 	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0 + 8, scratch_buffer_va);
 	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0 + 12,
 		S_008F04_BASE_ADDRESS_HI(scratch_buffer_va >> 32)
@@ -449,8 +462,6 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	}
 
 	si_shader_destroy(&program->shader);
-	pipe_resource_reference(
-		(struct pipe_resource **)&program->input_buffer, NULL);
 	FREE(program);
 }
 
