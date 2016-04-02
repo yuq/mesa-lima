@@ -126,6 +126,7 @@ private:
    void emitF2I();
    void emitI2F();
    void emitI2I();
+   void emitSEL();
    void emitSHFL();
 
    void emitDADD();
@@ -891,6 +892,32 @@ CodeEmitterGM107::emitI2I()
    emitField(0x0a, 2, util_logbase2(typeSizeof(insn->sType)));
    emitField(0x08, 2, util_logbase2(typeSizeof(insn->dType)));
    emitGPR  (0x00, insn->def(0));
+}
+
+void
+CodeEmitterGM107::emitSEL()
+{
+   switch (insn->src(1).getFile()) {
+   case FILE_GPR:
+      emitInsn(0x5ca00000);
+      emitGPR (0x14, insn->src(1));
+      break;
+   case FILE_MEMORY_CONST:
+      emitInsn(0x4ca00000);
+      emitCBUF(0x22, -1, 0x14, 16, 2, insn->src(1));
+      break;
+   case FILE_IMMEDIATE:
+      emitInsn(0x38a00000);
+      emitIMMD(0x14, 19, insn->src(1));
+      break;
+   default:
+      assert(!"bad src1 file");
+      break;
+   }
+
+   emitPRED(0x27, insn->src(2));
+   emitGPR (0x08, insn->src(0));
+   emitGPR (0x00, insn->def(0));
 }
 
 void
@@ -2962,6 +2989,9 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
          else
             emitISETP();
       }
+      break;
+   case OP_SELP:
+      emitSEL();
       break;
    case OP_PRESIN:
    case OP_PREEX2:
