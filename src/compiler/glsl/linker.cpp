@@ -3525,7 +3525,7 @@ add_interface_variables(struct gl_shader_program *shProg,
       ir_variable *var = node->as_variable();
       uint8_t mask = 0;
 
-      if (!var)
+      if (!var || var->data.how_declared == ir_var_hidden)
          continue;
 
       switch (var->data.mode) {
