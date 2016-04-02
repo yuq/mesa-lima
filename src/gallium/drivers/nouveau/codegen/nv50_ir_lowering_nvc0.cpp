@@ -1607,7 +1607,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
       su->op == OP_SULDB || su->op == OP_SUSTB || su->op == OP_SUREDB;
    const int idx = su->tex.r;
    const int dim = su->tex.target.getDim();
-   const int arg = dim + (su->tex.target.isArray() ? 1 : 0);
+   const int arg = dim + (su->tex.target.isArray() || su->tex.target.isCube());
    const uint16_t base = idx * NVE4_SU_INFO__STRIDE;
    int c;
    Value *zero = bld.mkImm(0);
@@ -1643,7 +1643,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
    if (su->tex.target == TEX_TARGET_BUFFER) {
       src[0]->getInsn()->setFlagsDef(1, pred);
    } else
-   if (su->tex.target.isArray()) {
+   if (su->tex.target.isArray() || su->tex.target.isCube()) {
       p1 = bld.getSSA(1, FILE_PREDICATE);
       src[dim]->getInsn()->setFlagsDef(1, p1);
    }
@@ -1665,7 +1665,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
       assert(dim == 2);
       v = loadSuInfo32(NULL, base + NVE4_SU_INFO_PITCH);
       bld.mkOp3(OP_MADSP, TYPE_U32, off, src[1], v, src[0])
-         ->subOp = su->tex.target.isArray() ?
+         ->subOp = (su->tex.target.isArray() || su->tex.target.isCube()) ?
          NV50_IR_SUBOP_MADSP_SD : NV50_IR_SUBOP_MADSP(4,2,8); // u16l u16l u16l
    }
 
@@ -1690,7 +1690,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
          break;
       case 2:
          z = off;
-         if (!su->tex.target.isArray()) {
+         if (!su->tex.target.isArray() && !su->tex.target.isCube()) {
             z = loadSuInfo32(NULL, base + NVE4_SU_INFO_UNK1C);
             subOp = NV50_IR_SUBOP_SUBFM_3D;
          }
@@ -1714,7 +1714,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
       eau = bld.mkOp3v(OP_SUEAU, TYPE_U32, bld.getScratch(4), off, bf, v);
    }
    // add array layer offset
-   if (su->tex.target.isArray()) {
+   if (su->tex.target.isArray() || su->tex.target.isCube()) {
       v = loadSuInfo32(NULL, base + NVE4_SU_INFO_ARRAY);
       if (dim == 1)
          bld.mkOp3(OP_MADSP, TYPE_U32, eau, src[1], v, eau)
