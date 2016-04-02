@@ -649,6 +649,8 @@ struct _mesa_glsl_parse_state {
 
    /* KHR extensions go here, sorted alphabetically.
     */
+   bool KHR_blend_equation_advanced_enable;
+   bool KHR_blend_equation_advanced_warn;
 
    /* OES extensions go here, sorted alphabetically.
     */
