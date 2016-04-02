@@ -91,77 +91,6 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
 }
 #endif
 
-void
-genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
-{
-   /* References for GL state:
-    *
-    * - commits e307cfa..228d5a3
-    * - src/mesa/drivers/dri/i965/gen7_l3_state.c
-    */
-
-   uint32_t l3cr_slm, l3cr_noslm;
-   anv_pack_struct(&l3cr_noslm, GENX(L3CNTLREG),
-                   .URBAllocation = 48,
-                   .AllAllocation = 48);
-   anv_pack_struct(&l3cr_slm, GENX(L3CNTLREG),
-                   .SLMEnable = 1,
-                   .URBAllocation = 16,
-                   .AllAllocation = 48);
-   const uint32_t l3cr_val = enable_slm ? l3cr_slm : l3cr_noslm;
-   bool changed = cmd_buffer->state.current_l3_config != l3cr_val;
-
-   if (changed) {
-      /* According to the hardware docs, the L3 partitioning can only be
-       * changed while the pipeline is completely drained and the caches are
-       * flushed, which involves a first PIPE_CONTROL flush which stalls the
-       * pipeline...
-       */
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
-         pc.DCFlushEnable              = true;
-         pc.PostSyncOperation          = NoWrite;
-         pc.CommandStreamerStallEnable = true;
-      }
-
-      /* ...followed by a second pipelined PIPE_CONTROL that initiates
-       * invalidation of the relevant caches. Note that because RO
-       * invalidation happens at the top of the pipeline (i.e. right away as
-       * the PIPE_CONTROL command is processed by the CS) we cannot combine it
-       * with the previous stalling flush as the hardware documentation
-       * suggests, because that would cause the CS to stall on previous
-       * rendering *after* RO invalidation and wouldn't prevent the RO caches
-       * from being polluted by concurrent rendering before the stall
-       * completes. This intentionally doesn't implement the SKL+ hardware
-       * workaround suggesting to enable CS stall on PIPE_CONTROLs with the
-       * texture cache invalidation bit set for GPGPU workloads because the
-       * previous and subsequent PIPE_CONTROLs already guarantee that there is
-       * no concurrent GPGPU kernel execution (see SKL HSD 2132585).
-       */
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
-         pc.TextureCacheInvalidationEnable   = true,
-         pc.ConstantCacheInvalidationEnable  = true,
-         pc.InstructionCacheInvalidateEnable = true,
-         pc.StateCacheInvalidationEnable     = true,
-         pc.PostSyncOperation                = NoWrite;
-      }
-
-      /* Now send a third stalling flush to make sure that invalidation is
-       * complete when the L3 configuration registers are modified.
-       */
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
-         pc.DCFlushEnable              = true;
-         pc.PostSyncOperation          = NoWrite;
-         pc.CommandStreamerStallEnable = true;
-      }
-
-      anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
-         lri.RegisterOffset   = GENX(L3CNTLREG_num);
-         lri.DataDWord        = l3cr_val;
-      }
-      cmd_buffer->state.current_l3_config = l3cr_val;
-   }
-}
-
 static void
 __emit_genx_sf_state(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -448,8 +377,7 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
 
    assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
 
-   bool needs_slm = cs_prog_data->base.total_shared > 0;
-   genX(cmd_buffer_config_l3)(cmd_buffer, needs_slm);
+   genX(cmd_buffer_config_l3)(cmd_buffer, pipeline);
 
    genX(flush_pipeline_select_gpgpu)(cmd_buffer);
 

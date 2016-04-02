@@ -340,7 +340,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
     * but at least 3-D will.  In the mean time, I'm going to make this
     * gen8+ only so that we can get Haswell working again.
     */
-   genX(cmd_buffer_config_l3)(cmd_buffer, false);
+   genX(cmd_buffer_config_l3)(cmd_buffer, pipeline);
 #endif
 
    genX(flush_pipeline_select_3d)(cmd_buffer);

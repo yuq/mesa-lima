@@ -777,10 +777,34 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
    return VK_SUCCESS;
 }
 
-static void
-gen7_compute_urb_partition(struct anv_pipeline *pipeline)
+
+void
+anv_setup_pipeline_l3_config(struct anv_pipeline *pipeline)
 {
    const struct brw_device_info *devinfo = &pipeline->device->info;
+   switch (devinfo->gen) {
+   case 7:
+      if (devinfo->is_haswell)
+         gen75_setup_pipeline_l3_config(pipeline);
+      else
+         gen7_setup_pipeline_l3_config(pipeline);
+      break;
+   case 8:
+      gen8_setup_pipeline_l3_config(pipeline);
+      break;
+   case 9:
+      gen9_setup_pipeline_l3_config(pipeline);
+      break;
+   default:
+      unreachable("unsupported gen\n");
+   }
+}
+
+void
+anv_compute_urb_partition(struct anv_pipeline *pipeline)
+{
+   const struct brw_device_info *devinfo = &pipeline->device->info;
+
    bool vs_present = pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT;
    unsigned vs_size = vs_present ?
       get_vs_prog_data(pipeline)->base.urb_entry_size : 1;
@@ -804,7 +828,7 @@ gen7_compute_urb_partition(struct anv_pipeline *pipeline)
    unsigned chunk_size_bytes = 8192;
 
    /* Determine the size of the URB in chunks. */
-   unsigned urb_chunks = devinfo->urb.size * 1024 / chunk_size_bytes;
+   unsigned urb_chunks = pipeline->urb.total_size * 1024 / chunk_size_bytes;
 
    /* Reserve space for push constants */
    unsigned push_constant_kb;
@@ -1172,7 +1196,8 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
       assert(extra->disable_vs);
    }
 
-   gen7_compute_urb_partition(pipeline);
+   anv_setup_pipeline_l3_config(pipeline);
+   anv_compute_urb_partition(pipeline);
 
    const VkPipelineVertexInputStateCreateInfo *vi_info =
       pCreateInfo->pVertexInputState;

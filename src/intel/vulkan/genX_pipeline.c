@@ -84,6 +84,8 @@ genX(compute_pipeline_create)(
 
    pipeline->use_repclear = false;
 
+   anv_setup_pipeline_l3_config(pipeline);
+
    const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
    const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
 
