@@ -178,14 +178,6 @@ gallivm_dispose_target_library_info(LLVMTargetLibraryInfoRef library_info)
    *>(library_info);
 }
 
-extern "C"
-LLVMValueRef
-lp_build_load_volatile(LLVMBuilderRef B, LLVMValueRef PointerVal,
-                       const char *Name)
-{
-   return llvm::wrap(llvm::unwrap(B)->CreateLoad(llvm::unwrap(PointerVal), true, Name));
-}
-
 
 #if HAVE_LLVM < 0x0304
 
