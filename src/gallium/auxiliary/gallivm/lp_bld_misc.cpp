@@ -187,21 +187,27 @@ lp_build_load_volatile(LLVMBuilderRef B, LLVMValueRef PointerVal,
 }
 
 
-extern "C"
-void
-lp_set_load_alignment(LLVMValueRef Inst,
-                       unsigned Align)
-{
-   llvm::unwrap<llvm::LoadInst>(Inst)->setAlignment(Align);
-}
+#if HAVE_LLVM < 0x0304
 
 extern "C"
 void
-lp_set_store_alignment(LLVMValueRef Inst,
-                       unsigned Align)
+LLVMSetAlignmentBackport(LLVMValueRef V,
+                         unsigned Bytes)
 {
-   llvm::unwrap<llvm::StoreInst>(Inst)->setAlignment(Align);
+   switch (LLVMGetInstructionOpcode(V)) {
+   case LLVMLoad:
+      llvm::unwrap<llvm::LoadInst>(V)->setAlignment(Bytes);
+      break;
+   case LLVMStore:
+      llvm::unwrap<llvm::StoreInst>(V)->setAlignment(Bytes);
+      break;
+   default:
+      assert(0);
+      break;
+   }
 }
+
+#endif
 
 
 #if HAVE_LLVM < 0x0306

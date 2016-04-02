@@ -1939,7 +1939,7 @@ lp_build_clamp_border_color(struct lp_build_sample_context *bld,
                                        LLVMPointerType(vec4_bld.vec_type, 0), "");
    border_color = LLVMBuildLoad(builder, border_color_ptr, "");
    /* we don't have aligned type in the dynamic state unfortunately */
-   lp_set_load_alignment(border_color, 4);
+   LLVMSetAlignment(border_color, 4);
 
    /*
     * Instead of having some incredibly complex logic which will try to figure out

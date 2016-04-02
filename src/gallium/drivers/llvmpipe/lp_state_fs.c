@@ -786,7 +786,7 @@ load_unswizzled_block(struct gallivm_state *gallivm,
 
       dst[i] = LLVMBuildLoad(builder, dst_ptr, "");
 
-      lp_set_load_alignment(dst[i], dst_alignment);
+      LLVMSetAlignment(dst[i], dst_alignment);
    }
 }
 
@@ -830,7 +830,7 @@ store_unswizzled_block(struct gallivm_state *gallivm,
 
       src_ptr = LLVMBuildStore(builder, src[i], src_ptr);
 
-      lp_set_store_alignment(src_ptr, src_alignment);
+      LLVMSetAlignment(src_ptr, src_alignment);
    }
 }
 
