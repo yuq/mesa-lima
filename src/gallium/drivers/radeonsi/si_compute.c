@@ -230,6 +230,47 @@ static unsigned compute_num_waves_for_scratch(
 	return scratch_waves;
 }
 
+static void si_initialize_compute(struct si_context *sctx)
+{
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+
+	radeon_set_sh_reg_seq(cs, R_00B810_COMPUTE_START_X, 3);
+	radeon_emit(cs, 0);
+	radeon_emit(cs, 0);
+	radeon_emit(cs, 0);
+
+	radeon_set_sh_reg_seq(cs, R_00B854_COMPUTE_RESOURCE_LIMITS, 3);
+	radeon_emit(cs, 0);
+	/* R_00B858_COMPUTE_STATIC_THREAD_MGMT_SE0 / SE1 */
+	radeon_emit(cs, S_00B858_SH0_CU_EN(0xffff) | S_00B858_SH1_CU_EN(0xffff));
+	radeon_emit(cs, S_00B85C_SH0_CU_EN(0xffff) | S_00B85C_SH1_CU_EN(0xffff));
+
+	if (sctx->b.chip_class >= CIK) {
+		/* Also set R_00B858_COMPUTE_STATIC_THREAD_MGMT_SE2 / SE3 */
+		radeon_set_sh_reg_seq(cs,
+		                     R_00B864_COMPUTE_STATIC_THREAD_MGMT_SE2, 2);
+		radeon_emit(cs, S_00B864_SH0_CU_EN(0xffff) |
+		                S_00B864_SH1_CU_EN(0xffff));
+		radeon_emit(cs, S_00B868_SH0_CU_EN(0xffff) |
+		                S_00B868_SH1_CU_EN(0xffff));
+	}
+
+	/* This register has been moved to R_00CD20_COMPUTE_MAX_WAVE_ID
+	 * and is now per pipe, so it should be handled in the
+	 * kernel if we want to use something other than the default value,
+	 * which is now 0x22f.
+	 */
+	if (sctx->b.chip_class <= SI) {
+		/* XXX: This should be:
+		 * (number of compute units) * 4 * (waves per simd) - 1 */
+
+		radeon_set_sh_reg(cs, R_00B82C_COMPUTE_MAX_WAVE_ID,
+		                  0x190 /* Default value */);
+	}
+
+	sctx->cs_shader_state.initialized = true;
+}
+
 static void si_upload_compute_input(struct si_context *sctx,
                                   const struct pipe_grid_info *info)
 {
@@ -284,7 +325,6 @@ static void si_launch_grid(
 		struct pipe_context *ctx, const struct pipe_grid_info *info)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_compute *program = sctx->cs_shader_state.program;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 	uint64_t shader_va;
@@ -293,9 +333,10 @@ static void si_launch_grid(
 	unsigned lds_blocks;
 	unsigned num_waves_for_scratch;
 
-	radeon_emit(cs, PKT3(PKT3_CONTEXT_CONTROL, 1, 0) | PKT3_SHADER_TYPE_S(1));
-	radeon_emit(cs, 0x80000000);
-	radeon_emit(cs, 0x80000000);
+	si_need_cs_space(sctx);
+
+	if (!sctx->cs_shader_state.initialized)
+		si_initialize_compute(sctx);
 
 	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
 			 SI_CONTEXT_INV_GLOBAL_L2 |
@@ -330,10 +371,6 @@ static void si_launch_grid(
 					  RADEON_PRIO_SCRATCH_BUFFER);
 	}
 
-	si_pm4_set_reg(pm4, R_00B810_COMPUTE_START_X, 0);
-	si_pm4_set_reg(pm4, R_00B814_COMPUTE_START_Y, 0);
-	si_pm4_set_reg(pm4, R_00B818_COMPUTE_START_Z, 0);
-
 	si_pm4_set_reg(pm4, R_00B81C_COMPUTE_NUM_THREAD_X,
 				S_00B81C_NUM_THREAD_FULL(info->block[0]));
 	si_pm4_set_reg(pm4, R_00B820_COMPUTE_NUM_THREAD_Y,
@@ -351,19 +388,6 @@ static void si_launch_grid(
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, buffer,
 					  RADEON_USAGE_READWRITE,
 					  RADEON_PRIO_COMPUTE_GLOBAL);
-	}
-
-	/* This register has been moved to R_00CD20_COMPUTE_MAX_WAVE_ID
-	 * and is now per pipe, so it should be handled in the
-	 * kernel if we want to use something other than the default value,
-	 * which is now 0x22f.
-	 */
-	if (sctx->b.chip_class <= SI) {
-		/* XXX: This should be:
-		 * (number of compute units) * 4 * (waves per simd) - 1 */
-
-		si_pm4_set_reg(pm4, R_00B82C_COMPUTE_MAX_WAVE_ID,
-						0x190 /* Default value */);
 	}
 
 	shader_va = shader->bo->gpu_address;
@@ -394,17 +418,6 @@ static void si_launch_grid(
 	shader->config.rsrc2 |=  S_00B84C_LDS_SIZE(lds_blocks);
 
 	si_pm4_set_reg(pm4, R_00B84C_COMPUTE_PGM_RSRC2, shader->config.rsrc2);
-	si_pm4_set_reg(pm4, R_00B854_COMPUTE_RESOURCE_LIMITS, 0);
-
-	si_pm4_set_reg(pm4, R_00B858_COMPUTE_STATIC_THREAD_MGMT_SE0,
-		S_00B858_SH0_CU_EN(0xffff /* Default value */)
-		| S_00B858_SH1_CU_EN(0xffff /* Default value */))
-		;
-
-	si_pm4_set_reg(pm4, R_00B85C_COMPUTE_STATIC_THREAD_MGMT_SE1,
-		S_00B85C_SH0_CU_EN(0xffff /* Default value */)
-		| S_00B85C_SH1_CU_EN(0xffff /* Default value */))
-		;
 
 	num_waves_for_scratch =
 		MIN2(num_waves_for_scratch,

@@ -244,4 +244,6 @@ void si_begin_new_cs(struct si_context *ctx)
 	ctx->last_tcs = NULL;
 	ctx->last_tes_sh_base = -1;
 	ctx->last_num_tcs_input_cp = -1;
+
+	ctx->cs_shader_state.initialized = false;
 }
