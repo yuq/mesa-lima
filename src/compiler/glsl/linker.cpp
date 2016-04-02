@@ -1171,6 +1171,8 @@ cross_validate_uniforms(struct gl_shader_program *prog)
 static bool
 interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
 {
+   int *InterfaceBlockStageIndex[MESA_SHADER_STAGES];
+
    unsigned max_num_uniform_blocks = 0;
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i])
@@ -1180,10 +1182,9 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_shader *sh = prog->_LinkedShaders[i];
 
-      prog->InterfaceBlockStageIndex[i] = ralloc_array(prog, int,
-                                                       max_num_uniform_blocks);
+      InterfaceBlockStageIndex[i] = new int[max_num_uniform_blocks];
       for (unsigned int j = 0; j < max_num_uniform_blocks; j++)
-	 prog->InterfaceBlockStageIndex[i][j] = -1;
+         InterfaceBlockStageIndex[i][j] = -1;
 
       if (sh == NULL)
 	 continue;
@@ -1194,13 +1195,17 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
 						       &prog->NumBufferInterfaceBlocks,
 						       sh->BufferInterfaceBlocks[j]);
 
-	 if (index == -1) {
-	    linker_error(prog, "uniform block `%s' has mismatching definitions\n",
-			 sh->BufferInterfaceBlocks[j]->Name);
-	    return false;
-	 }
+         if (index == -1) {
+            linker_error(prog, "uniform block `%s' has mismatching definitions\n",
+                         sh->BufferInterfaceBlocks[j]->Name);
 
-	 prog->InterfaceBlockStageIndex[i][index] = j;
+            for (unsigned k = 0; k <= i; k++) {
+               delete[] InterfaceBlockStageIndex[k];
+            }
+            return false;
+         }
+
+         InterfaceBlockStageIndex[i][index] = j;
       }
    }
 
@@ -1209,16 +1214,21 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
     */
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       for (unsigned j = 0; j < prog->NumBufferInterfaceBlocks; j++) {
-	 int stage_index =
-            prog->InterfaceBlockStageIndex[i][j];
+         int stage_index = InterfaceBlockStageIndex[i][j];
 
 	 if (stage_index != -1) {
 	    struct gl_shader *sh = prog->_LinkedShaders[i];
+
+            prog->BufferInterfaceBlocks[j].stageref |= (1 << i);
 
             sh->BufferInterfaceBlocks[stage_index] =
                &prog->BufferInterfaceBlocks[j];
 	 }
       }
+   }
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      delete[] InterfaceBlockStageIndex[i];
    }
 
    return true;
@@ -3933,10 +3943,7 @@ build_program_resource_list(struct gl_context *ctx,
       /* Add stagereferences for uniforms in a uniform block. */
       int block_index = shProg->UniformStorage[i].block_index;
       if (block_index != -1) {
-         for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
-             if (shProg->InterfaceBlockStageIndex[j][block_index] != -1)
-                stageref |= (1 << j);
-         }
+         stageref |= shProg->BufferInterfaceBlocks[block_index].stageref;
       }
 
       bool is_shader_storage =  shProg->UniformStorage[i].is_shader_storage;

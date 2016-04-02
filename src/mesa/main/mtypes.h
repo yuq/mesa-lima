@@ -2529,6 +2529,9 @@ struct gl_uniform_block
     */
    bool IsShaderStorage;
 
+   /** Stages that reference this block */
+   uint8_t stageref;
+
    /**
     * Layout specified in the shader
     *
@@ -2828,16 +2831,6 @@ struct gl_shader_program
 
    unsigned NumShaderStorageBlocks;
    struct gl_uniform_block **ShaderStorageBlocks;
-
-   /**
-    * Indices into the BufferInterfaceBlocks[] array for each stage they're
-    * used in, or -1.
-    *
-    * This is used to maintain the Binding values of the stage's
-    * BufferInterfaceBlocks[] and to answer the
-    * GL_UNIFORM_BLOCK_REFERENCED_BY_*_SHADER queries.
-    */
-   int *InterfaceBlockStageIndex[MESA_SHADER_STAGES];
 
    /**
     * Map of active uniform names to locations

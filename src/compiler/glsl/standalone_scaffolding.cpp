@@ -96,8 +96,6 @@ _mesa_delete_shader(struct gl_context *ctx, struct gl_shader *sh)
 void
 _mesa_clear_shader_program_data(struct gl_shader_program *shProg)
 {
-   unsigned i;
-
    shProg->NumUniformStorage = 0;
    shProg->UniformStorage = NULL;
    shProg->NumUniformRemapTable = 0;
@@ -118,11 +116,6 @@ _mesa_clear_shader_program_data(struct gl_shader_program *shProg)
    ralloc_free(shProg->ShaderStorageBlocks);
    shProg->ShaderStorageBlocks = NULL;
    shProg->NumShaderStorageBlocks = 0;
-
-   for (i = 0; i < MESA_SHADER_STAGES; i++) {
-      ralloc_free(shProg->InterfaceBlockStageIndex[i]);
-      shProg->InterfaceBlockStageIndex[i] = NULL;
-   }
 
    ralloc_free(shProg->AtomicBuffers);
    shProg->AtomicBuffers = NULL;
