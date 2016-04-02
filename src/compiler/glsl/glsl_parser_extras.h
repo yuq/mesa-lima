@@ -746,6 +746,8 @@ struct _mesa_glsl_parse_state {
 
    bool fs_early_fragment_tests;
 
+   unsigned fs_blend_support;
+
    /**
     * For tessellation control shaders, size of the most recently seen output
     * declaration that was a sized array, or 0 if no sized output array

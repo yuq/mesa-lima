@@ -559,6 +559,32 @@ enum gl_buffer_access_qualifier
    ACCESS_VOLATILE = 4,
 };
 
+/**
+ * \brief Blend support qualifiers
+ */
+enum gl_advanced_blend_mode
+{
+   BLEND_NONE           = 0x0000,
+
+   BLEND_MULTIPLY       = 0x0001,
+   BLEND_SCREEN         = 0x0002,
+   BLEND_OVERLAY        = 0x0004,
+   BLEND_DARKEN         = 0x0008,
+   BLEND_LIGHTEN        = 0x0010,
+   BLEND_COLORDODGE     = 0x0020,
+   BLEND_COLORBURN      = 0x0040,
+   BLEND_HARDLIGHT      = 0x0080,
+   BLEND_SOFTLIGHT      = 0x0100,
+   BLEND_DIFFERENCE     = 0x0200,
+   BLEND_EXCLUSION      = 0x0400,
+   BLEND_HSL_HUE        = 0x0800,
+   BLEND_HSL_SATURATION = 0x1000,
+   BLEND_HSL_COLOR      = 0x2000,
+   BLEND_HSL_LUMINOSITY = 0x4000,
+
+   BLEND_ALL            = 0x7fff,
+};
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

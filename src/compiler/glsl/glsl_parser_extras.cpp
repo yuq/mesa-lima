@@ -292,6 +292,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->in_qualifier = new(this) ast_type_qualifier();
    this->out_qualifier = new(this) ast_type_qualifier();
    this->fs_early_fragment_tests = false;
+   this->fs_blend_support = 0;
    memset(this->atomic_counter_offsets, 0,
           sizeof(this->atomic_counter_offsets));
    this->allow_extension_directive_midshader =
@@ -1765,6 +1766,7 @@ set_shader_inout_layout(struct gl_shader *shader,
       shader->info.ARB_fragment_coord_conventions_enable =
          state->ARB_fragment_coord_conventions_enable;
       shader->info.EarlyFragmentTests = state->fs_early_fragment_tests;
+      shader->info.BlendSupport = state->fs_blend_support;
       break;
 
    default:

@@ -2319,6 +2319,11 @@ struct gl_shader_info
    bool EarlyFragmentTests;
 
    /**
+    * A bitmask of gl_advanced_blend_mode values
+    */
+   GLbitfield BlendSupport;
+
+   /**
     * Compute shader state from ARB_compute_shader layout qualifiers.
     */
    struct {
