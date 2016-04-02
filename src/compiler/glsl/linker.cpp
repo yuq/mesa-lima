@@ -2890,6 +2890,9 @@ store_fragdepth_layout(struct gl_shader_program *prog)
 static void
 check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 {
+   unsigned total_uniform_blocks = 0;
+   unsigned total_shader_storage_blocks = 0;
+
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_shader *sh = prog->_LinkedShaders[i];
 
@@ -2928,12 +2931,37 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
                          _mesa_shader_stage_to_string(i));
          }
       }
+
+      total_shader_storage_blocks += sh->NumShaderStorageBlocks;
+      total_uniform_blocks += sh->NumUniformBlocks;
+
+      const unsigned max_uniform_blocks =
+         ctx->Const.Program[i].MaxUniformBlocks;
+      if (max_uniform_blocks < sh->NumUniformBlocks) {
+         linker_error(prog, "Too many %s uniform blocks (%d/%d)\n",
+                      _mesa_shader_stage_to_string(i), sh->NumUniformBlocks,
+                      max_uniform_blocks);
+      }
+
+      const unsigned max_shader_storage_blocks =
+         ctx->Const.Program[i].MaxShaderStorageBlocks;
+      if (max_shader_storage_blocks < sh->NumShaderStorageBlocks) {
+         linker_error(prog, "Too many %s shader storage blocks (%d/%d)\n",
+                      _mesa_shader_stage_to_string(i),
+                      sh->NumShaderStorageBlocks, max_shader_storage_blocks);
+      }
    }
 
-   unsigned blocks[MESA_SHADER_STAGES] = {0};
-   unsigned total_uniform_blocks = 0;
-   unsigned shader_blocks[MESA_SHADER_STAGES] = {0};
-   unsigned total_shader_storage_blocks = 0;
+   if (total_uniform_blocks > ctx->Const.MaxCombinedUniformBlocks) {
+      linker_error(prog, "Too many combined uniform blocks (%d/%d)\n",
+                   total_uniform_blocks, ctx->Const.MaxCombinedUniformBlocks);
+   }
+
+   if (total_shader_storage_blocks > ctx->Const.MaxCombinedShaderStorageBlocks) {
+      linker_error(prog, "Too many combined shader storage blocks (%d/%d)\n",
+                   total_shader_storage_blocks,
+                   ctx->Const.MaxCombinedShaderStorageBlocks);
+   }
 
    for (unsigned i = 0; i < prog->NumBufferInterfaceBlocks; i++) {
       /* Don't check SSBOs for Uniform Block Size */
@@ -2951,57 +2979,6 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
                       prog->BufferInterfaceBlocks[i].Name,
                       prog->BufferInterfaceBlocks[i].UniformBufferSize,
                       ctx->Const.MaxShaderStorageBlockSize);
-      }
-
-      for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
-	 if (prog->InterfaceBlockStageIndex[j][i] != -1) {
-            struct gl_shader *sh = prog->_LinkedShaders[j];
-            int stage_index = prog->InterfaceBlockStageIndex[j][i];
-            if (sh &&
-                sh->BufferInterfaceBlocks[stage_index]->IsShaderStorage) {
-               shader_blocks[j]++;
-               total_shader_storage_blocks++;
-            } else {
-               blocks[j]++;
-               total_uniform_blocks++;
-            }
-	 }
-      }
-
-      if (total_uniform_blocks > ctx->Const.MaxCombinedUniformBlocks) {
-	 linker_error(prog, "Too many combined uniform blocks (%d/%d)\n",
-		      total_uniform_blocks,
-		      ctx->Const.MaxCombinedUniformBlocks);
-      } else {
-	 for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-            const unsigned max_uniform_blocks =
-               ctx->Const.Program[i].MaxUniformBlocks;
-	    if (blocks[i] > max_uniform_blocks) {
-	       linker_error(prog, "Too many %s uniform blocks (%d/%d)\n",
-			    _mesa_shader_stage_to_string(i),
-			    blocks[i],
-			    max_uniform_blocks);
-	       break;
-	    }
-	 }
-      }
-
-      if (total_shader_storage_blocks > ctx->Const.MaxCombinedShaderStorageBlocks) {
-         linker_error(prog, "Too many combined shader storage blocks (%d/%d)\n",
-                      total_shader_storage_blocks,
-                      ctx->Const.MaxCombinedShaderStorageBlocks);
-      } else {
-         for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-            const unsigned max_shader_storage_blocks =
-               ctx->Const.Program[i].MaxShaderStorageBlocks;
-            if (shader_blocks[i] > max_shader_storage_blocks) {
-               linker_error(prog, "Too many %s shader storage blocks (%d/%d)\n",
-                            _mesa_shader_stage_to_string(i),
-                            shader_blocks[i],
-                            max_shader_storage_blocks);
-               break;
-            }
-         }
       }
    }
 }
