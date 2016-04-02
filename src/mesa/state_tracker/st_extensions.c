@@ -1168,9 +1168,10 @@ void st_init_extensions(struct pipe_screen *screen,
             consts->MaxComputeWorkGroupCount[i] = grid_size[i];
             consts->MaxComputeWorkGroupSize[i] = block_size[i];
          }
-         /* XXX: ARB_compute_shader is not enabled by default because images
-          * support is still not implemented yet. */
-         /* extensions->ARB_compute_shader = true; */
+
+         extensions->ARB_compute_shader =
+                                      extensions->ARB_shader_image_load_store &&
+                                      extensions->ARB_shader_atomic_counters;
       }
    }
 }
