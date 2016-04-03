@@ -94,7 +94,7 @@ nine_convert_rasterizer_state(struct pipe_rasterizer_state *rast_state, const DW
     rast.sprite_coord_mode = PIPE_SPRITE_COORD_UPPER_LEFT;
     rast.point_quad_rasterization = 1;
     rast.point_size_per_vertex = rs[NINED3DRS_VSPOINTSIZE];
-    rast.multisample = !!rs[D3DRS_MULTISAMPLEANTIALIAS];
+    rast.multisample = rs[NINED3DRS_MULTISAMPLE];
     rast.line_smooth = !!rs[D3DRS_ANTIALIASEDLINEENABLE];
  /* rast.line_stipple_enable = 0; */
     rast.line_last_pixel = !!rs[D3DRS_LASTPIXEL];

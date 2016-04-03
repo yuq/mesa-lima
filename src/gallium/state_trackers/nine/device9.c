@@ -1833,7 +1833,7 @@ NineDevice9_SetRenderTarget( struct NineDevice9 *This,
         This->state.scissor.maxx = rt->desc.Width;
         This->state.scissor.maxy = rt->desc.Height;
 
-        This->state.changed.group |= NINE_STATE_VIEWPORT | NINE_STATE_SCISSOR;
+        This->state.changed.group |= NINE_STATE_VIEWPORT | NINE_STATE_SCISSOR | NINE_STATE_MULTISAMPLE;
     }
 
     if (This->state.rt[i] != NineSurface9(pRenderTarget)) {
