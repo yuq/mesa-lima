@@ -1328,8 +1328,9 @@ static LLVMValueRef fetch_constant(
 	if (reg->Register.Dimension && reg->Dimension.Indirect) {
 		LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_CONST_BUFFERS);
 		LLVMValueRef index;
-		index = get_indirect_index(ctx, &reg->DimIndirect,
-						   reg->Dimension.Index);
+		index = get_bounded_indirect_index(ctx, &reg->DimIndirect,
+						   reg->Dimension.Index,
+						   SI_NUM_USER_CONST_BUFFERS);
 		bufp = build_indexed_load_const(ctx, ptr, index);
 	} else
 		bufp = ctx->const_buffers[buf];
