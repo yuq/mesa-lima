@@ -2988,6 +2988,10 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 		if (sid) {
 			tmp = S_028644_SEMANTIC(sid);
 
+			/* D3D 9 behaviour. GL is undefined */
+			if (rshader->input[i].name == TGSI_SEMANTIC_COLOR && rshader->input[i].sid == 0)
+				tmp |= S_028644_DEFAULT_VAL(3);
+
 			if (rshader->input[i].name == TGSI_SEMANTIC_POSITION ||
 				rshader->input[i].interpolate == TGSI_INTERPOLATE_CONSTANT ||
 				(rshader->input[i].interpolate == TGSI_INTERPOLATE_COLOR &&
