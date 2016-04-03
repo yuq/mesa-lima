@@ -26,6 +26,7 @@
 
 #include <stdbool.h>
 #include "main/mtypes.h"
+#include "intel_mipmap_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +41,13 @@ brw_meta_mirror_clip_and_scissor(const struct gl_context *ctx,
                                  GLfloat *dstX0, GLfloat *dstY0,
                                  GLfloat *dstX1, GLfloat *dstY1,
                                  bool *mirror_x, bool *mirror_y);
+
+void
+brw_get_fast_clear_rect(const struct brw_context *brw,
+                        const struct gl_framebuffer *fb,
+                        const struct intel_mipmap_tree* mt,
+                        unsigned *x0, unsigned *y0,
+                        unsigned *x1, unsigned *y1);
 
 #ifdef __cplusplus
 }

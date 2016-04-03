@@ -58,6 +58,7 @@
 #include "intel_batchbuffer.h"
 
 #include "brw_blorp.h"
+#include "brw_meta_util.h"
 
 struct brw_fast_clear_state {
    struct gl_buffer_object *buf_obj;
@@ -171,7 +172,7 @@ brw_meta_fast_clear_free(struct brw_context *brw)
 }
 
 struct rect {
-   int x0, y0, x1, y1;
+   unsigned x0, y0, x1, y1;
 };
 
 static void
@@ -215,16 +216,19 @@ brw_draw_rectlist(struct brw_context *brw, struct rect *rect, int num_instances)
                   NULL, 0, NULL);
 }
 
-static void
-get_fast_clear_rect(struct brw_context *brw, struct gl_framebuffer *fb,
-                    struct intel_renderbuffer *irb, struct rect *rect)
+void
+brw_get_fast_clear_rect(const struct brw_context *brw,
+                        const struct gl_framebuffer *fb,
+                        const struct intel_mipmap_tree* mt,
+                        unsigned *x0, unsigned *y0,
+                        unsigned *x1, unsigned *y1)
 {
    unsigned int x_align, y_align;
    unsigned int x_scaledown, y_scaledown;
 
    /* Only single sampled surfaces need to (and actually can) be resolved. */
-   if (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE ||
-       intel_miptree_is_lossless_compressed(brw, irb->mt)) {
+   if (mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE ||
+       intel_miptree_is_lossless_compressed(brw, mt)) {
       /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
        * Target(s)", beneath the "Fast Color Clear" bullet (p327):
        *
@@ -240,7 +244,7 @@ get_fast_clear_rect(struct brw_context *brw, struct gl_framebuffer *fb,
        * alignment size returned by intel_get_non_msrt_mcs_alignment(), but
        * with X alignment multiplied by 16 and Y alignment multiplied by 32.
        */
-      intel_get_non_msrt_mcs_alignment(irb->mt, &x_align, &y_align);
+      intel_get_non_msrt_mcs_alignment(mt, &x_align, &y_align);
       x_align *= 16;
 
       /* SKL+ line alignment requirement for Y-tiled are half those of the prior
@@ -304,7 +308,7 @@ get_fast_clear_rect(struct brw_context *brw, struct gl_framebuffer *fb,
        * vertically and either 4 or 16 horizontally, and the scaledown
        * factor is 2 vertically and either 2 or 8 horizontally.
        */
-      switch (irb->mt->num_samples) {
+      switch (mt->num_samples) {
       case 2:
       case 4:
          x_scaledown = 8;
@@ -323,20 +327,20 @@ get_fast_clear_rect(struct brw_context *brw, struct gl_framebuffer *fb,
       y_align = y_scaledown * 2;
    }
 
-   rect->x0 = fb->_Xmin;
-   rect->x1 = fb->_Xmax;
+   *x0 = fb->_Xmin;
+   *x1 = fb->_Xmax;
    if (fb->Name != 0) {
-      rect->y0 = fb->_Ymin;
-      rect->y1 = fb->_Ymax;
+      *y0 = fb->_Ymin;
+      *y1 = fb->_Ymax;
    } else {
-      rect->y0 = fb->Height - fb->_Ymax;
-      rect->y1 = fb->Height - fb->_Ymin;
+      *y0 = fb->Height - fb->_Ymax;
+      *y1 = fb->Height - fb->_Ymin;
    }
 
-   rect->x0 = ROUND_DOWN_TO(rect->x0,  x_align) / x_scaledown;
-   rect->y0 = ROUND_DOWN_TO(rect->y0, y_align) / y_scaledown;
-   rect->x1 = ALIGN(rect->x1, x_align) / x_scaledown;
-   rect->y1 = ALIGN(rect->y1, y_align) / y_scaledown;
+   *x0 = ROUND_DOWN_TO(*x0,  x_align) / x_scaledown;
+   *y0 = ROUND_DOWN_TO(*y0, y_align) / y_scaledown;
+   *x1 = ALIGN(*x1, x_align) / x_scaledown;
+   *y1 = ALIGN(*y1, y_align) / y_scaledown;
 }
 
 static void
@@ -678,7 +682,9 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
          irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
          irb->need_downsample = true;
          fast_clear_buffers |= 1 << index;
-         get_fast_clear_rect(brw, fb, irb, &fast_clear_rect);
+         brw_get_fast_clear_rect(brw, fb, irb->mt,
+                                 &fast_clear_rect.x0, &fast_clear_rect.y0,
+                                 &fast_clear_rect.x1, &fast_clear_rect.y1);
          break;
 
       case REP_CLEAR:
