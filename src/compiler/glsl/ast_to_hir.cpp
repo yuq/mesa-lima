@@ -3326,6 +3326,7 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
       + qual->flags.q.depth_less
       + qual->flags.q.depth_unchanged;
    if (depth_layout_count > 0
+       && !state->is_version(420, 0)
        && !state->AMD_conservative_depth_enable
        && !state->ARB_conservative_depth_enable) {
        _mesa_glsl_error(loc, state,
@@ -3708,7 +3709,8 @@ get_variable_being_redeclared(ir_variable *var, YYLTYPE loc,
       earlier->data.interpolation = var->data.interpolation;
 
       /* Layout qualifiers for gl_FragDepth. */
-   } else if ((state->AMD_conservative_depth_enable ||
+   } else if ((state->is_version(420, 0) ||
+               state->AMD_conservative_depth_enable ||
                state->ARB_conservative_depth_enable)
               && strcmp(var->name, "gl_FragDepth") == 0
               && earlier->type == var->type
