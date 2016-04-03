@@ -250,6 +250,7 @@ gf100_create_texture_view(struct pipe_context *pipe,
    uint32_t swz[4];
    uint32_t width, height;
    uint32_t depth;
+   uint32_t tex_fmt;
    struct nv50_tic_entry *view;
    struct nv50_miptree *mt;
    bool tex_int;
@@ -275,12 +276,13 @@ gf100_create_texture_view(struct pipe_context *pipe,
    fmt = &nvc0_format_table[view->pipe.format];
 
    tex_int = util_format_is_pure_integer(view->pipe.format);
+   tex_fmt = fmt->tic.format & 0x3f;
 
    swz[0] = nv50_tic_swizzle(fmt, view->pipe.swizzle_r, tex_int);
    swz[1] = nv50_tic_swizzle(fmt, view->pipe.swizzle_g, tex_int);
    swz[2] = nv50_tic_swizzle(fmt, view->pipe.swizzle_b, tex_int);
    swz[3] = nv50_tic_swizzle(fmt, view->pipe.swizzle_a, tex_int);
-   tic[0] = (fmt->tic.format << G80_TIC_0_COMPONENTS_SIZES__SHIFT) |
+   tic[0] = (tex_fmt << G80_TIC_0_COMPONENTS_SIZES__SHIFT) |
             (fmt->tic.type_r << G80_TIC_0_R_DATA_TYPE__SHIFT) |
             (fmt->tic.type_g << G80_TIC_0_G_DATA_TYPE__SHIFT) |
             (fmt->tic.type_b << G80_TIC_0_B_DATA_TYPE__SHIFT) |
@@ -288,7 +290,8 @@ gf100_create_texture_view(struct pipe_context *pipe,
             (swz[0] << G80_TIC_0_X_SOURCE__SHIFT) |
             (swz[1] << G80_TIC_0_Y_SOURCE__SHIFT) |
             (swz[2] << G80_TIC_0_Z_SOURCE__SHIFT) |
-            (swz[3] << G80_TIC_0_W_SOURCE__SHIFT);
+            (swz[3] << G80_TIC_0_W_SOURCE__SHIFT) |
+            ((fmt->tic.format & 0x40) << (GK20A_TIC_0_USE_COMPONENT_SIZES_EXTENDED__SHIFT - 6));
 
    address = mt->base.address;
 
