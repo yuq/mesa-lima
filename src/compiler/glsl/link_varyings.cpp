@@ -488,7 +488,7 @@ remove_unused_shader_inputs_and_outputs(bool is_separate_shader_object,
        * its value is used by other shader stages. This will cause the
        * variable to have a location assigned.
        */
-      if (var->data.is_unmatched_generic_inout) {
+      if (var->data.is_unmatched_generic_inout && !var->data.is_xfb_only) {
          assert(var->data.mode != ir_var_temporary);
          var->data.mode = ir_var_auto;
       }
