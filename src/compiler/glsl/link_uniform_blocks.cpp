@@ -261,7 +261,6 @@ process_block_array(struct uniform_block_array_elements *ub_array, char **name,
       }
       blocks[i].NumUniforms =
          (unsigned)(ptrdiff_t)(&variables[parcel->index] - blocks[i].Uniforms);
-      blocks[i].IsShaderStorage = b->is_shader_storage;
 
       *block_index = *block_index + 1;
       *binding_offset = *binding_offset + 1;

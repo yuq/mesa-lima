@@ -2500,11 +2500,6 @@ struct gl_uniform_block
     */
    GLuint UniformBufferSize;
 
-   /**
-    * Is this actually an interface block for a shader storage buffer?
-    */
-   bool IsShaderStorage;
-
    /** Stages that reference this block */
    uint8_t stageref;
 
