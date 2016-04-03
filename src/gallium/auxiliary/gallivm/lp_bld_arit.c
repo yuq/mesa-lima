@@ -50,7 +50,6 @@
 #include "util/u_memory.h"
 #include "util/u_debug.h"
 #include "util/u_math.h"
-#include "util/u_string.h"
 #include "util/u_cpu_detect.h"
 
 #include "lp_bld_type.h"
@@ -259,6 +258,22 @@ lp_build_min_simple(struct lp_build_context *bld,
       cond = lp_build_cmp(bld, PIPE_FUNC_LESS, a, b);
       return lp_build_select(bld, cond, a, b);
    }
+}
+
+
+LLVMValueRef
+lp_build_fmuladd(LLVMBuilderRef builder,
+                 LLVMValueRef a,
+                 LLVMValueRef b,
+                 LLVMValueRef c)
+{
+   LLVMTypeRef type = LLVMTypeOf(a);
+   assert(type == LLVMTypeOf(b));
+   assert(type == LLVMTypeOf(c));
+   char intrinsic[32];
+   lp_format_intrinsic(intrinsic, sizeof intrinsic, "llvm.fmuladd", type);
+   LLVMValueRef args[] = { a, b, c };
+   return lp_build_intrinsic(builder, intrinsic, type, args, 3, 0);
 }
 
 
@@ -1023,6 +1038,22 @@ lp_build_mul(struct lp_build_context *bld,
 }
 
 
+/* a * b + c */
+LLVMValueRef
+lp_build_mad(struct lp_build_context *bld,
+             LLVMValueRef a,
+             LLVMValueRef b,
+             LLVMValueRef c)
+{
+   const struct lp_type type = bld->type;
+   if (type.floating) {
+      return lp_build_fmuladd(bld->gallivm->builder, a, b, c);
+   } else {
+      return lp_build_add(bld, lp_build_mul(bld, a, b), c);
+   }
+}
+
+
 /**
  * Small vector x scale multiplication optimization.
  */
@@ -1152,6 +1183,11 @@ lp_build_lerp_simple(struct lp_build_context *bld,
    assert(lp_check_value(bld->type, v1));
 
    delta = lp_build_sub(bld, v1, v0);
+
+   if (bld->type.floating) {
+      assert(flags == 0);
+      return lp_build_mad(bld, x, delta, v0);
+   }
 
    if (flags & LP_BLD_LERP_WIDE_NORMALIZED) {
       if (!bld->type.sign) {
@@ -2717,23 +2753,10 @@ lp_build_sin_or_cos(struct lp_build_context *bld,
    /*
     * The magic pass: "Extended precision modular arithmetic"
     * x = ((x - y * DP1) - y * DP2) - y * DP3;
-    * xmm1 = _mm_mul_ps(y, xmm1);
-    * xmm2 = _mm_mul_ps(y, xmm2);
-    * xmm3 = _mm_mul_ps(y, xmm3);
     */
-   LLVMValueRef xmm1 = LLVMBuildFMul(b, y_2, DP1, "xmm1");
-   LLVMValueRef xmm2 = LLVMBuildFMul(b, y_2, DP2, "xmm2");
-   LLVMValueRef xmm3 = LLVMBuildFMul(b, y_2, DP3, "xmm3");
-
-   /*
-    * x = _mm_add_ps(x, xmm1);
-    * x = _mm_add_ps(x, xmm2);
-    * x = _mm_add_ps(x, xmm3);
-    */
-
-   LLVMValueRef x_1 = LLVMBuildFAdd(b, x_abs, xmm1, "x_1");
-   LLVMValueRef x_2 = LLVMBuildFAdd(b, x_1, xmm2, "x_2");
-   LLVMValueRef x_3 = LLVMBuildFAdd(b, x_2, xmm3, "x_3");
+   LLVMValueRef x_1 = lp_build_fmuladd(b, y_2, DP1, x_abs);
+   LLVMValueRef x_2 = lp_build_fmuladd(b, y_2, DP2, x_1);
+   LLVMValueRef x_3 = lp_build_fmuladd(b, y_2, DP3, x_2);
 
    /*
     * Evaluate the first polynom  (0 <= x <= Pi/4)
@@ -2755,10 +2778,8 @@ lp_build_sin_or_cos(struct lp_build_context *bld,
     * y = *(v4sf*)_ps_coscof_p0;
     * y = _mm_mul_ps(y, z);
     */
-   LLVMValueRef y_3 = LLVMBuildFMul(b, z, coscof_p0, "y_3");
-   LLVMValueRef y_4 = LLVMBuildFAdd(b, y_3, coscof_p1, "y_4");
-   LLVMValueRef y_5 = LLVMBuildFMul(b, y_4, z, "y_5");
-   LLVMValueRef y_6 = LLVMBuildFAdd(b, y_5, coscof_p2, "y_6");
+   LLVMValueRef y_4 = lp_build_fmuladd(b, z, coscof_p0, coscof_p1);
+   LLVMValueRef y_6 = lp_build_fmuladd(b, y_4, z, coscof_p2);
    LLVMValueRef y_7 = LLVMBuildFMul(b, y_6, z, "y_7");
    LLVMValueRef y_8 = LLVMBuildFMul(b, y_7, z, "y_8");
 
@@ -2796,13 +2817,10 @@ lp_build_sin_or_cos(struct lp_build_context *bld,
     * y2 = _mm_add_ps(y2, x);
     */
 
-   LLVMValueRef y2_3 = LLVMBuildFMul(b, z, sincof_p0, "y2_3");
-   LLVMValueRef y2_4 = LLVMBuildFAdd(b, y2_3, sincof_p1, "y2_4");
-   LLVMValueRef y2_5 = LLVMBuildFMul(b, y2_4, z, "y2_5");
-   LLVMValueRef y2_6 = LLVMBuildFAdd(b, y2_5, sincof_p2, "y2_6");
+   LLVMValueRef y2_4 = lp_build_fmuladd(b, z, sincof_p0, sincof_p1);
+   LLVMValueRef y2_6 = lp_build_fmuladd(b, y2_4, z, sincof_p2);
    LLVMValueRef y2_7 = LLVMBuildFMul(b, y2_6, z, "y2_7");
-   LLVMValueRef y2_8 = LLVMBuildFMul(b, y2_7, x_3, "y2_8");
-   LLVMValueRef y2_9 = LLVMBuildFAdd(b, y2_8, x_3, "y2_9");
+   LLVMValueRef y2_9 = lp_build_fmuladd(b, y2_7, x_3, x_3);
 
    /*
     * select the correct result from the two polynoms
@@ -2969,19 +2987,19 @@ lp_build_polynomial(struct lp_build_context *bld,
 
       if (i % 2 == 0) {
          if (even)
-            even = lp_build_add(bld, coeff, lp_build_mul(bld, x2, even));
+            even = lp_build_mad(bld, x2, even, coeff);
          else
             even = coeff;
       } else {
          if (odd)
-            odd = lp_build_add(bld, coeff, lp_build_mul(bld, x2, odd));
+            odd = lp_build_mad(bld, x2, odd, coeff);
          else
             odd = coeff;
       }
    }
 
    if (odd)
-      return lp_build_add(bld, lp_build_mul(bld, odd, x), even);
+      return lp_build_mad(bld, odd, x, even);
    else if (even)
       return even;
    else
@@ -3212,7 +3230,7 @@ lp_build_log2_approx(struct lp_build_context *bld,
    LLVMValueRef exp = NULL;
    LLVMValueRef mant = NULL;
    LLVMValueRef logexp = NULL;
-   LLVMValueRef logmant = NULL;
+   LLVMValueRef p_z = NULL;
    LLVMValueRef res = NULL;
 
    assert(lp_check_value(bld->type, x));
@@ -3261,13 +3279,11 @@ lp_build_log2_approx(struct lp_build_context *bld,
       z = lp_build_mul(bld, y, y);
 
       /* compute P(z) */
-      logmant = lp_build_polynomial(bld, z, lp_build_log2_polynomial,
-                                    ARRAY_SIZE(lp_build_log2_polynomial));
+      p_z = lp_build_polynomial(bld, z, lp_build_log2_polynomial,
+                                ARRAY_SIZE(lp_build_log2_polynomial));
 
-      /* logmant = y * P(z) */
-      logmant = lp_build_mul(bld, y, logmant);
-
-      res = lp_build_add(bld, logmant, logexp);
+      /* y * P(z) + logexp */
+      res = lp_build_mad(bld, y, p_z, logexp);
 
       if (type.floating && handle_edge_cases) {
          LLVMValueRef negmask, infmask,  zmask;

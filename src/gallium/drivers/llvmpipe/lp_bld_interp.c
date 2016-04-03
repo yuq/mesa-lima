@@ -307,10 +307,8 @@ attribs_update_simple(struct lp_build_interp_soa_context *bld,
                /*
                 * a = a0 + (x * dadx + y * dady)
                 */
-               dadx = LLVMBuildFMul(builder, dadx, pixoffx, "");
-               dady = LLVMBuildFMul(builder, dady, pixoffy, "");
-               a = LLVMBuildFAdd(builder, a, dadx, "");
-               a = LLVMBuildFAdd(builder, a, dady, "");
+               a = lp_build_fmuladd(builder, dadx, pixoffx, a);
+               a = lp_build_fmuladd(builder, dady, pixoffy, a);
 
                if (interp == LP_INTERP_PERSPECTIVE) {
                   if (oow == NULL) {
@@ -437,13 +435,10 @@ coeffs_init(struct lp_build_interp_soa_context *bld,
        */
       if (interp != LP_INTERP_CONSTANT &&
           interp != LP_INTERP_FACING) {
-         LLVMValueRef axaos, ayaos;
-         axaos = LLVMBuildFMul(builder, lp_build_broadcast_scalar(setup_bld, bld->x),
-                               dadxaos, "");
-         ayaos = LLVMBuildFMul(builder, lp_build_broadcast_scalar(setup_bld, bld->y),
-                               dadyaos, "");
-         a0aos = LLVMBuildFAdd(builder, a0aos, ayaos, "");
-         a0aos = LLVMBuildFAdd(builder, a0aos, axaos, "");
+         LLVMValueRef x = lp_build_broadcast_scalar(setup_bld, bld->x);
+         LLVMValueRef y = lp_build_broadcast_scalar(setup_bld, bld->y);
+         a0aos = lp_build_fmuladd(builder, x, dadxaos, a0aos);
+         a0aos = lp_build_fmuladd(builder, y, dadyaos, a0aos);
       }
 
       /*

@@ -1577,6 +1577,19 @@ log_emit_cpu(
 
 }
 
+/* TGSI_OPCODE_MAD (CPU Only) */
+
+static void
+mad_emit_cpu(
+   const struct lp_build_tgsi_action * action,
+   struct lp_build_tgsi_context * bld_base,
+   struct lp_build_emit_data * emit_data)
+{
+   emit_data->output[emit_data->chan] =
+      lp_build_mad(&bld_base->base,
+                   emit_data->args[0], emit_data->args[1], emit_data->args[2]);
+}
+
 /* TGSI_OPCODE_MAX (CPU Only) */
 
 static void
@@ -2162,6 +2175,7 @@ lp_set_default_actions_cpu(
 
    bld_base->op_actions[TGSI_OPCODE_LG2].emit = lg2_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_LOG].emit = log_emit_cpu;
+   bld_base->op_actions[TGSI_OPCODE_MAD].emit = mad_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_MAX].emit = max_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_MIN].emit = min_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_MOD].emit = mod_emit_cpu;

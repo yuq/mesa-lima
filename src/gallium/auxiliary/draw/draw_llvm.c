@@ -1123,10 +1123,8 @@ generate_viewport(struct draw_llvm_variant *variant,
 
       /* divide by w */
       out = LLVMBuildFMul(builder, out, out3, "");
-      /* mult by scale */
-      out = LLVMBuildFMul(builder, out, scale, "");
-      /* add translation */
-      out = LLVMBuildFAdd(builder, out, trans, "");
+      /* mult by scale, add translation */
+      out = lp_build_fmuladd(builder, out, scale, trans);
 
       /* store transformed outputs */
       LLVMBuildStore(builder, out, outputs[pos][i]);
@@ -1303,22 +1301,19 @@ generate_clipmask(struct draw_llvm *llvm,
             plane_ptr = LLVMBuildGEP(builder, planes_ptr, indices, 3, "");
             plane1 = LLVMBuildLoad(builder, plane_ptr, "plane_y");
             planes = lp_build_broadcast(gallivm, vs_type_llvm, plane1);
-            test = LLVMBuildFMul(builder, planes, cv_y, "");
-            sum = LLVMBuildFAdd(builder, sum, test, "");
+            sum = lp_build_fmuladd(builder, planes, cv_y, sum);
 
             indices[2] = lp_build_const_int32(gallivm, 2);
             plane_ptr = LLVMBuildGEP(builder, planes_ptr, indices, 3, "");
             plane1 = LLVMBuildLoad(builder, plane_ptr, "plane_z");
             planes = lp_build_broadcast(gallivm, vs_type_llvm, plane1);
-            test = LLVMBuildFMul(builder, planes, cv_z, "");
-            sum = LLVMBuildFAdd(builder, sum, test, "");
+            sum = lp_build_fmuladd(builder, planes, cv_z, sum);
 
             indices[2] = lp_build_const_int32(gallivm, 3);
             plane_ptr = LLVMBuildGEP(builder, planes_ptr, indices, 3, "");
             plane1 = LLVMBuildLoad(builder, plane_ptr, "plane_w");
             planes = lp_build_broadcast(gallivm, vs_type_llvm, plane1);
-            test = LLVMBuildFMul(builder, planes, cv_w, "");
-            sum = LLVMBuildFAdd(builder, sum, test, "");
+            sum = lp_build_fmuladd(builder, planes, cv_w, sum);
 
             test = lp_build_compare(gallivm, f32_type, PIPE_FUNC_GREATER, zero, sum);
             temp = lp_build_const_int_vec(gallivm, i32_type, 1LL << plane_idx);
