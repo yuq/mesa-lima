@@ -43,6 +43,10 @@ brw_blorp_eu_emitter::get_program(struct brw_context *brw, bool debug_flag,
    cfg_t cfg(&insts);
    brw_stage_prog_data prog_data = { 0 };
    brw_wm_prog_key prog_key = { 0 };
+
+   prog_data.binding_table.texture_start =
+      BRW_BLORP_TEXTURE_BINDING_TABLE_INDEX;
+
    fs_generator generator(brw->intelScreen->compiler, brw, mem_ctx, &prog_key,
                           &prog_data, 0, false, MESA_SHADER_FRAGMENT);
 

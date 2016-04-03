@@ -56,8 +56,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
  * Binding table indices used by BLORP.
  */
 enum {
-   BRW_BLORP_TEXTURE_BINDING_TABLE_INDEX,
    BRW_BLORP_RENDERBUFFER_BINDING_TABLE_INDEX,
+   BRW_BLORP_TEXTURE_BINDING_TABLE_INDEX,
    BRW_BLORP_NUM_BINDING_TABLE_ENTRIES
 };
 
