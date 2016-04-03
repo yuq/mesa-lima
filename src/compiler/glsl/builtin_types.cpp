@@ -181,7 +181,7 @@ static const struct builtin_type_versions {
    T(sampler2DRect,                   140, 999)
    T(samplerBuffer,                   140, 320)
    T(sampler2DMS,                     150, 310)
-   T(sampler2DMSArray,                150, 999)
+   T(sampler2DMSArray,                150, 320)
 
    T(isampler1D,                      130, 999)
    T(isampler2D,                      130, 300)
@@ -193,7 +193,7 @@ static const struct builtin_type_versions {
    T(isampler2DRect,                  140, 999)
    T(isamplerBuffer,                  140, 320)
    T(isampler2DMS,                    150, 310)
-   T(isampler2DMSArray,               150, 999)
+   T(isampler2DMSArray,               150, 320)
 
    T(usampler1D,                      130, 999)
    T(usampler2D,                      130, 300)
@@ -205,7 +205,7 @@ static const struct builtin_type_versions {
    T(usampler2DRect,                  140, 999)
    T(usamplerBuffer,                  140, 320)
    T(usampler2DMS,                    150, 310)
-   T(usampler2DMSArray,               150, 999)
+   T(usampler2DMSArray,               150, 320)
 
    T(sampler1DShadow,                 110, 999)
    T(sampler2DShadow,                 110, 300)
@@ -305,11 +305,13 @@ _mesa_glsl_initialize_types(struct _mesa_glsl_parse_state *state)
       add_type(symbols, glsl_type::usamplerCubeArray_type);
    }
 
-   if (state->ARB_texture_multisample_enable ||
-       state->OES_texture_storage_multisample_2d_array_enable) {
+   if (state->ARB_texture_multisample_enable) {
       add_type(symbols, glsl_type::sampler2DMS_type);
       add_type(symbols, glsl_type::isampler2DMS_type);
       add_type(symbols, glsl_type::usampler2DMS_type);
+   }
+   if (state->ARB_texture_multisample_enable ||
+       state->OES_texture_storage_multisample_2d_array_enable) {
       add_type(symbols, glsl_type::sampler2DMSArray_type);
       add_type(symbols, glsl_type::isampler2DMSArray_type);
       add_type(symbols, glsl_type::usampler2DMSArray_type);
