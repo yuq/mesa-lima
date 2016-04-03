@@ -91,7 +91,14 @@ nvc0_memory_barrier(struct pipe_context *pipe, unsigned flags)
          }
       }
    }
-   if (flags & PIPE_BARRIER_SHADER_BUFFER) {
+
+   if (flags & (PIPE_BARRIER_SHADER_BUFFER   |
+                PIPE_BARRIER_CONSTANT_BUFFER |
+                PIPE_BARRIER_INDEX_BUFFER    |
+                PIPE_BARRIER_IMAGE           |
+                PIPE_BARRIER_TEXTURE         |
+                PIPE_BARRIER_VERTEX_BUFFER   |
+                PIPE_BARRIER_STREAMOUT_BUFFER)) {
       IMMED_NVC0(push, NVC0_3D(MEM_BARRIER), 0x1011);
    }
 }
