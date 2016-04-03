@@ -462,7 +462,7 @@ public:
 
       buffer_block_index = -1;
       if (var->is_in_buffer_block()) {
-         struct gl_uniform_block **blks = var->is_in_shader_storage_block() ?
+         struct gl_uniform_block *blks = var->is_in_shader_storage_block() ?
             prog->ShaderStorageBlocks : prog->UniformBlocks;
          unsigned num_blks = var->is_in_shader_storage_block() ?
             prog->NumShaderStorageBlocks : prog->NumUniformBlocks;
@@ -471,15 +471,15 @@ public:
             unsigned l = strlen(var->get_interface_type()->name);
 
             for (unsigned i = 0; i < num_blks; i++) {
-               if (strncmp(var->get_interface_type()->name, blks[i]->Name, l)
-                   == 0 && blks[i]->Name[l] == '[') {
+               if (strncmp(var->get_interface_type()->name, blks[i].Name, l)
+                   == 0 && blks[i].Name[l] == '[') {
                   buffer_block_index = i;
                   break;
                }
             }
          } else {
             for (unsigned i = 0; i < num_blks; i++) {
-               if (strcmp(var->get_interface_type()->name, blks[i]->Name) ==
+               if (strcmp(var->get_interface_type()->name, blks[i].Name) ==
                    0) {
                   buffer_block_index = i;
                   break;
@@ -500,7 +500,7 @@ public:
                     var->get_interface_type()->name);
          } else {
             const struct gl_uniform_block *const block =
-               blks[buffer_block_index];
+               &blks[buffer_block_index];
 
             assert(var->data.location != -1);
 
@@ -960,11 +960,16 @@ link_update_uniform_buffer_variables(struct gl_shader *shader)
          sentinel = '[';
       }
 
+      unsigned num_blocks = var->data.mode == ir_var_uniform ?
+         shader->NumUniformBlocks : shader->NumShaderStorageBlocks;
+      struct gl_uniform_block **blks = var->data.mode == ir_var_uniform ?
+         shader->UniformBlocks : shader->ShaderStorageBlocks;
+
       const unsigned l = strlen(var->name);
-      for (unsigned i = 0; i < shader->NumBufferInterfaceBlocks; i++) {
-         for (unsigned j = 0; j < shader->BufferInterfaceBlocks[i]->NumUniforms; j++) {
+      for (unsigned i = 0; i < num_blocks; i++) {
+         for (unsigned j = 0; j < blks[i]->NumUniforms; j++) {
             if (sentinel) {
-               const char *begin = shader->BufferInterfaceBlocks[i]->Uniforms[j].Name;
+               const char *begin = blks[i]->Uniforms[j].Name;
                const char *end = strchr(begin, sentinel);
 
                if (end == NULL)
@@ -978,8 +983,7 @@ link_update_uniform_buffer_variables(struct gl_shader *shader)
                   var->data.location = j;
                   break;
                }
-            } else if (!strcmp(var->name,
-                               shader->BufferInterfaceBlocks[i]->Uniforms[j].Name)) {
+            } else if (!strcmp(var->name, blks[i]->Uniforms[j].Name)) {
                found = true;
                var->data.location = j;
                break;
@@ -1104,11 +1108,9 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       sh->num_uniform_components = uniform_size.num_shader_uniform_components;
       sh->num_combined_uniform_components = sh->num_uniform_components;
 
-      for (unsigned i = 0; i < sh->NumBufferInterfaceBlocks; i++) {
-         if (!sh->BufferInterfaceBlocks[i]->IsShaderStorage) {
-            sh->num_combined_uniform_components +=
-               sh->BufferInterfaceBlocks[i]->UniformBufferSize / 4;
-         }
+      for (unsigned i = 0; i < sh->NumUniformBlocks; i++) {
+         sh->num_combined_uniform_components +=
+            sh->UniformBlocks[i]->UniformBufferSize / 4;
       }
    }
 

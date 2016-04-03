@@ -154,11 +154,17 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
 }
 
 void
-set_block_binding(gl_shader_program *prog, const char *block_name, int binding)
+set_block_binding(gl_shader_program *prog, const char *block_name,
+                  unsigned mode, int binding)
 {
-   for (unsigned i = 0; i < prog->NumBufferInterfaceBlocks; i++) {
-      if (!strcmp(prog->BufferInterfaceBlocks[i].Name, block_name)) {
-         prog->BufferInterfaceBlocks[i].Binding = binding;
+   unsigned num_blocks = mode == ir_var_uniform ? prog->NumUniformBlocks :
+      prog->NumShaderStorageBlocks;
+   struct gl_uniform_block *blks = mode == ir_var_uniform ?
+      prog->UniformBlocks : prog->ShaderStorageBlocks;
+
+   for (unsigned i = 0; i < num_blocks; i++) {
+      if (!strcmp(blks[i].Name, block_name)) {
+         blks[i].Binding = binding;
          return;
       }
    }
@@ -308,11 +314,12 @@ link_set_uniform_initializers(struct gl_shader_program *prog,
                       *     each subsequent element takes the next consecutive
                       *     uniform block binding point."
                       */
-                     linker::set_block_binding(prog, name,
+                     linker::set_block_binding(prog, name, var->data.mode,
                                                var->data.binding + i);
                   }
                } else {
                   linker::set_block_binding(prog, iface_type->name,
+                                            var->data.mode,
                                             var->data.binding);
                }
             } else if (type->contains_atomic()) {

@@ -1016,13 +1016,13 @@ _mesa_UniformBlockBinding(GLuint program,
       return;
    }
 
-   if (shProg->UniformBlocks[uniformBlockIndex]->Binding !=
+   if (shProg->UniformBlocks[uniformBlockIndex].Binding !=
        uniformBlockBinding) {
 
       FLUSH_VERTICES(ctx, 0);
       ctx->NewDriverState |= ctx->DriverFlags.NewUniformBuffer;
 
-      shProg->UniformBlocks[uniformBlockIndex]->Binding = uniformBlockBinding;
+      shProg->UniformBlocks[uniformBlockIndex].Binding = uniformBlockBinding;
    }
 }
 
@@ -1059,13 +1059,13 @@ _mesa_ShaderStorageBlockBinding(GLuint program,
       return;
    }
 
-   if (shProg->ShaderStorageBlocks[shaderStorageBlockIndex]->Binding !=
+   if (shProg->ShaderStorageBlocks[shaderStorageBlockIndex].Binding !=
        shaderStorageBlockBinding) {
 
       FLUSH_VERTICES(ctx, 0);
       ctx->NewDriverState |= ctx->DriverFlags.NewShaderStorageBuffer;
 
-      shProg->ShaderStorageBlocks[shaderStorageBlockIndex]->Binding =
+      shProg->ShaderStorageBlocks[shaderStorageBlockIndex].Binding =
          shaderStorageBlockBinding;
    }
 }

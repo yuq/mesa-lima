@@ -292,9 +292,13 @@ _mesa_clear_shader_program_data(struct gl_shader_program *shProg)
    ralloc_free(shProg->InfoLog);
    shProg->InfoLog = ralloc_strdup(shProg, "");
 
-   ralloc_free(shProg->BufferInterfaceBlocks);
-   shProg->BufferInterfaceBlocks = NULL;
-   shProg->NumBufferInterfaceBlocks = 0;
+   ralloc_free(shProg->UniformBlocks);
+   shProg->UniformBlocks = NULL;
+   shProg->NumUniformBlocks = 0;
+
+   ralloc_free(shProg->ShaderStorageBlocks);
+   shProg->ShaderStorageBlocks = NULL;
+   shProg->NumShaderStorageBlocks = 0;
 
    ralloc_free(shProg->AtomicBuffers);
    shProg->AtomicBuffers = NULL;
