@@ -216,7 +216,7 @@ process_block_array(struct uniform_block_array_elements *ub_array, char **name,
 {
    if (ub_array) {
       for (unsigned j = 0; j < ub_array->num_array_elements; j++) {
-	 size_t new_length = name_length;
+         size_t new_length = name_length;
 
          /* Append the subscript to the current variable name */
          ralloc_asprintf_rewrite_tail(name, &new_length, "[%u]",
@@ -466,7 +466,7 @@ link_uniform_blocks(void *mem_ctx,
 
 bool
 link_uniform_blocks_are_compatible(const gl_uniform_block *a,
-				   const gl_uniform_block *b)
+                                   const gl_uniform_block *b)
 {
    assert(strcmp(a->Name, b->Name) == 0);
 
@@ -489,13 +489,13 @@ link_uniform_blocks_are_compatible(const gl_uniform_block *a,
 
    for (unsigned i = 0; i < a->NumUniforms; i++) {
       if (strcmp(a->Uniforms[i].Name, b->Uniforms[i].Name) != 0)
-	 return false;
+         return false;
 
       if (a->Uniforms[i].Type != b->Uniforms[i].Type)
-	 return false;
+         return false;
 
       if (a->Uniforms[i].RowMajor != b->Uniforms[i].RowMajor)
-	 return false;
+         return false;
    }
 
    return true;
