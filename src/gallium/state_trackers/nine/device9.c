@@ -2429,10 +2429,17 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
     /* NV hack */
     if (unlikely(State == D3DRS_ADAPTIVETESS_Y)) {
         if (Value == D3DFMT_ATOC || (Value == D3DFMT_UNKNOWN && state->rs[NINED3DRS_ALPHACOVERAGE])) {
-            state->rs[NINED3DRS_ALPHACOVERAGE] = (Value == D3DFMT_ATOC);
+            state->rs[NINED3DRS_ALPHACOVERAGE] = (Value == D3DFMT_ATOC) ? 3 : 0;
+            state->rs[NINED3DRS_ALPHACOVERAGE] &= state->rs[D3DRS_ALPHATESTENABLE] ? 3 : 2;
             state->changed.group |= NINE_STATE_BLEND;
             return D3D_OK;
         }
+    }
+    if (unlikely(State == D3DRS_ALPHATESTENABLE && (state->rs[NINED3DRS_ALPHACOVERAGE] & 2))) {
+        DWORD alphacoverage_prev = state->rs[NINED3DRS_ALPHACOVERAGE];
+        state->rs[NINED3DRS_ALPHACOVERAGE] = (Value ? 3 : 2);
+        if (state->rs[NINED3DRS_ALPHACOVERAGE] != alphacoverage_prev)
+            state->changed.group |= NINE_STATE_BLEND;
     }
 
     state->rs[State] = nine_fix_render_state_value(State, Value);

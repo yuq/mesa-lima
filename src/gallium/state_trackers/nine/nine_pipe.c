@@ -162,7 +162,7 @@ nine_convert_blend_state(struct pipe_blend_state *blend_state, const DWORD *rs)
     blend.dither = !!rs[D3DRS_DITHERENABLE];
 
  /* blend.alpha_to_one = 0; */
-    blend.alpha_to_coverage = !!rs[NINED3DRS_ALPHACOVERAGE];
+    blend.alpha_to_coverage = rs[NINED3DRS_ALPHACOVERAGE] & 1;
 
     blend.rt[0].blend_enable = !!rs[D3DRS_ALPHABLENDENABLE];
     if (blend.rt[0].blend_enable) {
