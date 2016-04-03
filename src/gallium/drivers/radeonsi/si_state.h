@@ -68,6 +68,7 @@ struct si_state_rasterizer {
 	bool			uses_poly_offset;
 	bool			clamp_fragment_color;
 	bool			rasterizer_discard;
+	bool			scissor_enable;
 };
 
 struct si_dsa_stencil_ref_part {
