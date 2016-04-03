@@ -3357,7 +3357,10 @@ static void tex_fetch_ptrs(
 		const struct tgsi_full_src_register *reg = &emit_data->inst->Src[sampler_src];
 		LLVMValueRef ind_index;
 
-		ind_index = get_indirect_index(ctx, &reg->Indirect, reg->Register.Index);
+		ind_index = get_bounded_indirect_index(ctx,
+						       &reg->Indirect,
+						       reg->Register.Index,
+						       SI_NUM_USER_SAMPLERS);
 
 		*res_ptr = get_sampler_desc(ctx, ind_index, DESC_IMAGE);
 
