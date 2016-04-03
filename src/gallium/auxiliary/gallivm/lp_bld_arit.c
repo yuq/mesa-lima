@@ -1493,7 +1493,7 @@ lp_build_abs(struct lp_build_context *bld,
 
    if(type.floating) {
       char intrinsic[32];
-      util_snprintf(intrinsic, sizeof intrinsic, "llvm.fabs.v%uf%u", type.length, type.width);
+      lp_format_intrinsic(intrinsic, sizeof intrinsic, "llvm.fabs", vec_type);
       return lp_build_intrinsic_unary(builder, intrinsic, vec_type, a);
    }
 
@@ -1880,9 +1880,7 @@ lp_build_round_arch(struct lp_build_context *bld,
          break;
       }
 
-      util_snprintf(intrinsic, sizeof intrinsic, "%s.v%uf%u",
-                    intrinsic_root, type.length, type.width);
-
+      lp_format_intrinsic(intrinsic, sizeof intrinsic, intrinsic_root, bld->vec_type);
       return lp_build_intrinsic_unary(builder, intrinsic, bld->vec_type, a);
    }
    else /* (util_cpu_caps.has_altivec) */
@@ -2026,7 +2024,7 @@ lp_build_floor(struct lp_build_context *bld,
 
       if (type.width != 32) {
          char intrinsic[32];
-         util_snprintf(intrinsic, sizeof intrinsic, "llvm.floor.v%uf%u", type.length, type.width);
+         lp_format_intrinsic(intrinsic, sizeof intrinsic, "llvm.floor", vec_type);
          return lp_build_intrinsic_unary(builder, intrinsic, vec_type, a);
       }
 
@@ -2101,7 +2099,7 @@ lp_build_ceil(struct lp_build_context *bld,
 
       if (type.width != 32) {
          char intrinsic[32];
-         util_snprintf(intrinsic, sizeof intrinsic, "llvm.ceil.v%uf%u", type.length, type.width);
+         lp_format_intrinsic(intrinsic, sizeof intrinsic, "llvm.ceil", vec_type);
          return lp_build_intrinsic_unary(builder, intrinsic, vec_type, a);
       }
 
@@ -2438,15 +2436,8 @@ lp_build_sqrt(struct lp_build_context *bld,
 
    assert(lp_check_value(type, a));
 
-   /* TODO: optimize the constant case */
-
    assert(type.floating);
-   if (type.length == 1) {
-      util_snprintf(intrinsic, sizeof intrinsic, "llvm.sqrt.f%u", type.width);
-   }
-   else {
-      util_snprintf(intrinsic, sizeof intrinsic, "llvm.sqrt.v%uf%u", type.length, type.width);
-   }
+   lp_format_intrinsic(intrinsic, sizeof intrinsic, "llvm.sqrt", vec_type);
 
    return lp_build_intrinsic_unary(builder, intrinsic, vec_type, a);
 }

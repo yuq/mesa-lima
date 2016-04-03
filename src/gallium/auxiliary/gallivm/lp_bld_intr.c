@@ -45,11 +45,54 @@
 
 
 #include "util/u_debug.h"
+#include "util/u_string.h"
 
 #include "lp_bld_const.h"
 #include "lp_bld_intr.h"
 #include "lp_bld_type.h"
 #include "lp_bld_pack.h"
+
+
+void
+lp_format_intrinsic(char *name,
+                    size_t size,
+                    const char *name_root,
+                    LLVMTypeRef type)
+{
+   unsigned length = 0;
+   unsigned width;
+   char c;
+
+   LLVMTypeKind kind = LLVMGetTypeKind(type);
+   if (kind == LLVMVectorTypeKind) {
+      length = LLVMGetVectorSize(type);
+      type = LLVMGetElementType(type);
+      kind = LLVMGetTypeKind(type);
+   }
+
+   switch (kind) {
+   case LLVMIntegerTypeKind:
+      c = 'i';
+      width = LLVMGetIntTypeWidth(type);
+      break;
+   case LLVMFloatTypeKind:
+      c = 'f';
+      width = 32;
+      break;
+   case LLVMDoubleTypeKind:
+      c = 'f';
+      width = 64;
+      break;
+   default:
+      assert(0);
+   }
+
+   if (length) {
+      util_snprintf(name, size, "%s.v%u%c%u", name_root, length, c, width);
+   } else {
+      util_snprintf(name, size, "%s.%c%u", name_root, c, width);
+   }
+}
 
 
 LLVMValueRef
