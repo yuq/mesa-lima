@@ -12741,7 +12741,7 @@
     <enum name="POLYGON_OFFSET_CLAMP_EXT"             value="0x8E1B">
         <size name="Get" mode="get"/>
     </enum>
-    <function name="PolygonOffsetClampEXT">
+    <function name="PolygonOffsetClampEXT" es1="1.0" es2="2.0">
         <param name="factor" type="GLfloat"/>
         <param name="units"  type="GLfloat"/>
         <param name="clamp"  type="GLfloat"/>

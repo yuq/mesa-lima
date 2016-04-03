@@ -214,7 +214,7 @@ EXT(EXT_packed_pixels                       , dummy_true                        
 EXT(EXT_pixel_buffer_object                 , EXT_pixel_buffer_object                , GLL, GLC,  x ,  x , 2004)
 EXT(EXT_point_parameters                    , EXT_point_parameters                   , GLL,  x ,  x ,  x , 1997)
 EXT(EXT_polygon_offset                      , dummy_true                             , GLL,  x ,  x ,  x , 1995)
-EXT(EXT_polygon_offset_clamp                , EXT_polygon_offset_clamp               , GLL, GLC,  x ,  x , 2014)
+EXT(EXT_polygon_offset_clamp                , EXT_polygon_offset_clamp               , GLL, GLC, ES1, ES2, 2014)
 EXT(EXT_provoking_vertex                    , EXT_provoking_vertex                   , GLL, GLC,  x ,  x , 2009)
 EXT(EXT_read_format_bgra                    , dummy_true                             ,  x ,  x , ES1, ES2, 2009)
 EXT(EXT_rescale_normal                      , dummy_true                             , GLL,  x ,  x ,  x , 1997)
