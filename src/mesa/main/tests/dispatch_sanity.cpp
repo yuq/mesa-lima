@@ -2476,6 +2476,11 @@ const struct function gles3_functions_possible[] = {
    { "glDisableiOES", 30, -1 },
    { "glIsEnablediOES", 30, -1 },
 
+   /* GL_EXT_base_instance */
+   { "glDrawArraysInstancedBaseInstanceEXT", 30, -1 },
+   { "glDrawElementsInstancedBaseInstanceEXT", 30, -1 },
+   { "glDrawElementsInstancedBaseVertexBaseInstanceEXT", 30, -1 },
+
    { NULL, 0, -1 }
 };
 

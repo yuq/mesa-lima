@@ -1739,7 +1739,7 @@ vbo_initialize_exec_dispatch(const struct gl_context *ctx,
       }
    }
 
-   if (_mesa_is_desktop_gl(ctx)) {
+   if (_mesa_is_desktop_gl(ctx) || _mesa_is_gles3(ctx)) {
       SET_DrawArraysInstancedBaseInstance(exec, vbo_exec_DrawArraysInstancedBaseInstance);
       SET_DrawElementsInstancedBaseInstance(exec, vbo_exec_DrawElementsInstancedBaseInstance);
       SET_DrawElementsInstancedBaseVertexBaseInstance(exec, vbo_exec_DrawElementsInstancedBaseVertexBaseInstance);
