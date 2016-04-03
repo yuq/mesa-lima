@@ -138,6 +138,15 @@ gen8_blorp_emit_blend_state(struct brw_context *brw,
    memset(blend, 0, size);
 
    for (unsigned i = 0; i < params->num_draw_buffers; ++i) {
+      if (params->color_write_disable[0])
+         blend[1 + 2 * i] |= GEN8_BLEND_WRITE_DISABLE_RED;
+      if (params->color_write_disable[1])
+         blend[1 + 2 * i] |= GEN8_BLEND_WRITE_DISABLE_GREEN;
+      if (params->color_write_disable[2])
+         blend[1 + 2 * i] |= GEN8_BLEND_WRITE_DISABLE_BLUE;
+      if (params->color_write_disable[3])
+         blend[1 + 2 * i] |= GEN8_BLEND_WRITE_DISABLE_ALPHA;
+
       blend[1 + 2 * i + 1] = GEN8_BLEND_PRE_BLEND_COLOR_CLAMP_ENABLE |
                              GEN8_BLEND_POST_BLEND_COLOR_CLAMP_ENABLE |
                              GEN8_BLEND_COLOR_CLAMP_RANGE_RTFORMAT;

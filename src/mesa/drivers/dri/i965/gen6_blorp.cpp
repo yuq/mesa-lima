@@ -260,6 +260,11 @@ gen6_blorp_emit_blend_state(struct brw_context *brw,
       blend[i].blend1.pre_blend_clamp_enable = 1;
       blend[i].blend1.post_blend_clamp_enable = 1;
       blend[i].blend1.clamp_range = BRW_RENDERTARGET_CLAMPRANGE_FORMAT;
+
+      blend[i].blend1.write_disable_r = params->color_write_disable[0];
+      blend[i].blend1.write_disable_g = params->color_write_disable[1];
+      blend[i].blend1.write_disable_b = params->color_write_disable[2];
+      blend[i].blend1.write_disable_a = params->color_write_disable[3];
    }
 
    return cc_blend_state_offset;

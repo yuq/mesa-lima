@@ -170,6 +170,10 @@ brw_blorp_params::brw_blorp_params(unsigned num_varyings,
      num_draw_buffers(num_draw_buffers),
      num_layers(num_layers)
 {
+   color_write_disable[0] = false;
+   color_write_disable[1] = false;
+   color_write_disable[2] = false;
+   color_write_disable[3] = false;
 }
 
 extern "C" {
