@@ -395,10 +395,10 @@ is_color_fast_clear_compatible(struct brw_context *brw,
  * Convert the given color to a bitfield suitable for ORing into DWORD 7 of
  * SURFACE_STATE (DWORD 12-15 on SKL+).
  */
-static void
-set_fast_clear_color(struct brw_context *brw,
-                     struct intel_mipmap_tree *mt,
-                     const union gl_color_union *color)
+void
+brw_meta_set_fast_clear_color(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt,
+                              const union gl_color_union *color)
 {
    union gl_color_union override_color = *color;
 
@@ -668,7 +668,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       switch (clear_type) {
       case FAST_CLEAR:
-         set_fast_clear_color(brw, irb->mt, &ctx->Color.ClearColor);
+         brw_meta_set_fast_clear_color(brw, irb->mt, &ctx->Color.ClearColor);
          irb->need_downsample = true;
 
          /* If the buffer is already in INTEL_FAST_CLEAR_STATE_CLEAR, the
