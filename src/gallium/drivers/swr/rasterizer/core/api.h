@@ -254,12 +254,14 @@ void SWR_API SwrSetGsFunc(
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set compute shader
 /// @param hContext - Handle passed back from SwrCreateContext
-/// @param pState - Pointer to compute shader function
+/// @param pfnCsFunc - Pointer to compute shader function
 /// @param totalThreadsInGroup - product of thread group dimensions.
+/// @param totalSpillFillSize - size in bytes needed for spill/fill.
 void SWR_API SwrSetCsFunc(
     HANDLE hContext,
     PFN_CS_FUNC pfnCsFunc,
-    uint32_t totalThreadsInGroup);
+    uint32_t totalThreadsInGroup,
+    uint32_t totalSpillFillSize);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set tessellation state.

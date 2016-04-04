@@ -527,11 +527,13 @@ void SwrSetGsFunc(
 void SwrSetCsFunc(
     HANDLE hContext,
     PFN_CS_FUNC pfnCsFunc,
-    uint32_t totalThreadsInGroup)
+    uint32_t totalThreadsInGroup,
+    uint32_t totalSpillFillSize)
 {
     API_STATE* pState = GetDrawState(GetContext(hContext));
     pState->pfnCsFunc = pfnCsFunc;
     pState->totalThreadsInGroup = totalThreadsInGroup;
+    pState->totalSpillFillSize = totalSpillFillSize;
 }
 
 void SwrSetTsState(

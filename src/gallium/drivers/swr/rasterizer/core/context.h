@@ -245,6 +245,7 @@ OSALIGNLINE(struct) API_STATE
     // CS - Compute Shader
     PFN_CS_FUNC             pfnCsFunc;
     uint32_t                totalThreadsInGroup;
+    uint32_t                totalSpillFillSize;
 
     // FE - Frontend State
     SWR_FRONTEND_STATE      frontendState;
