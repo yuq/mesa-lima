@@ -44,18 +44,6 @@ get_storage(gl_uniform_storage *storage, unsigned num_storage,
    return NULL;
 }
 
-static unsigned
-get_uniform_block_index(const gl_shader_program *shProg,
-                        const char *uniformBlockName)
-{
-   for (unsigned i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
-      if (!strcmp(shProg->BufferInterfaceBlocks[i].Name, uniformBlockName))
-	 return i;
-   }
-
-   return GL_INVALID_INDEX;
-}
-
 void
 copy_constant_to_storage(union gl_constant_value *storage,
 			 const ir_constant *val,
@@ -168,22 +156,14 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
 void
 set_block_binding(gl_shader_program *prog, const char *block_name, int binding)
 {
-   const unsigned block_index = get_uniform_block_index(prog, block_name);
-
-   if (block_index == GL_INVALID_INDEX) {
-      assert(block_index != GL_INVALID_INDEX);
-      return;
+   for (unsigned i = 0; i < prog->NumBufferInterfaceBlocks; i++) {
+      if (!strcmp(prog->BufferInterfaceBlocks[i].Name, block_name)) {
+         prog->BufferInterfaceBlocks[i].Binding = binding;
+         return;
+      }
    }
 
-      /* This is a field of a UBO.  val is the binding index. */
-      for (int i = 0; i < MESA_SHADER_STAGES; i++) {
-         int stage_index = prog->InterfaceBlockStageIndex[i][block_index];
-
-         if (stage_index != -1) {
-            struct gl_shader *sh = prog->_LinkedShaders[i];
-            sh->BufferInterfaceBlocks[stage_index]->Binding = binding;
-         }
-      }
+   unreachable("Failed to initialize block binding");
 }
 
 void

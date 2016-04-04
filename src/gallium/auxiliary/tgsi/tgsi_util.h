@@ -88,6 +88,14 @@ tgsi_util_get_shadow_ref_src_index(unsigned tgsi_tex);
 boolean
 tgsi_is_shadow_target(unsigned target);
 
+
+static inline boolean
+tgsi_is_msaa_target(unsigned target)
+{
+   return (target == TGSI_TEXTURE_2D_MSAA ||
+           target == TGSI_TEXTURE_2D_ARRAY_MSAA);
+}
+
 #if defined __cplusplus
 }
 #endif

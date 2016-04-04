@@ -2064,6 +2064,9 @@ const struct function gles11_functions_possible[] = {
    { "glObjectLabelKHR", 11, -1 },
    { "glObjectPtrLabelKHR", 11, -1 },
 
+   /* GL_EXT_polygon_offset_clamp */
+   { "glPolygonOffsetClampEXT", 11, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2300,6 +2303,9 @@ const struct function gles2_functions_possible[] = {
    { "glObjectLabelKHR", 20, -1 },
    { "glObjectPtrLabelKHR", 20, -1 },
 
+   /* GL_EXT_polygon_offset_clamp */
+   { "glPolygonOffsetClampEXT", 11, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2469,6 +2475,11 @@ const struct function gles3_functions_possible[] = {
    { "glEnableiOES", 30, -1 },
    { "glDisableiOES", 30, -1 },
    { "glIsEnablediOES", 30, -1 },
+
+   /* GL_EXT_base_instance */
+   { "glDrawArraysInstancedBaseInstanceEXT", 30, -1 },
+   { "glDrawElementsInstancedBaseInstanceEXT", 30, -1 },
+   { "glDrawElementsInstancedBaseVertexBaseInstanceEXT", 30, -1 },
 
    { NULL, 0, -1 }
 };

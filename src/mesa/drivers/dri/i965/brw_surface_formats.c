@@ -793,7 +793,8 @@ brw_render_target_supported(struct brw_context *brw,
    /* Under some conditions, MSAA is not supported for formats whose width is
     * more than 64 bits.
     */
-   if (rb->NumSamples > 0 && _mesa_get_format_bytes(format) > 8) {
+   if (brw->gen < 8 &&
+       rb->NumSamples > 0 && _mesa_get_format_bytes(format) > 8) {
       /* Gen6: MSAA on >64 bit formats is unsupported. */
       if (brw->gen <= 6)
          return false;

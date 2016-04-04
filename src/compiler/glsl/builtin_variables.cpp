@@ -845,11 +845,6 @@ builtin_variable_generator::generate_constants()
                    state->Const.MaxImageSamples);
       }
 
-      if (state->is_version(450, 310)) {
-         add_const("gl_MaxCombinedShaderOutputResources",
-                   state->Const.MaxCombinedShaderOutputResources);
-      }
-
       if (state->is_version(400, 0) ||
           state->ARB_tessellation_shader_enable) {
          add_const("gl_MaxTessControlImageUniforms",
@@ -857,6 +852,12 @@ builtin_variable_generator::generate_constants()
          add_const("gl_MaxTessEvaluationImageUniforms",
                    state->Const.MaxTessEvaluationImageUniforms);
       }
+   }
+
+   if (state->is_version(450, 310) ||
+       state->ARB_ES3_1_compatibility_enable) {
+      add_const("gl_MaxCombinedShaderOutputResources",
+                state->Const.MaxCombinedShaderOutputResources);
    }
 
    if (state->is_version(410, 0) ||
@@ -880,7 +881,8 @@ builtin_variable_generator::generate_constants()
    }
 
    if (state->is_version(450, 320) ||
-       state->OES_sample_variables_enable)
+       state->OES_sample_variables_enable ||
+       state->ARB_ES3_1_compatibility_enable)
       add_const("gl_MaxSamples", state->Const.MaxSamples);
 }
 
@@ -1174,7 +1176,7 @@ builtin_variable_generator::generate_fs_special_vars()
       var->data.interpolation = INTERP_QUALIFIER_FLAT;
    }
 
-   if (state->is_version(450, 310)/* || state->ARB_ES3_1_compatibility_enable*/)
+   if (state->is_version(450, 310) || state->ARB_ES3_1_compatibility_enable)
       add_system_value(SYSTEM_VALUE_HELPER_INVOCATION, bool_t, "gl_HelperInvocation");
 }
 

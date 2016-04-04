@@ -27,6 +27,7 @@ EXT(APPLE_texture_max_level                 , dummy_true                        
 EXT(APPLE_vertex_array_object               , dummy_true                             , GLL,  x ,  x ,  x , 2002)
 
 EXT(ARB_ES2_compatibility                   , ARB_ES2_compatibility                  , GLL, GLC,  x ,  x , 2009)
+EXT(ARB_ES3_1_compatibility                 , ARB_ES3_1_compatibility                ,  x , GLC,  x ,  x , 2014)
 EXT(ARB_ES3_compatibility                   , ARB_ES3_compatibility                  , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_arrays_of_arrays                    , ARB_arrays_of_arrays                   , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_base_instance                       , ARB_base_instance                      , GLL, GLC,  x ,  x , 2011)
@@ -176,6 +177,7 @@ EXT(ATI_texture_float                       , ARB_texture_float                 
 EXT(ATI_texture_mirror_once                 , ATI_texture_mirror_once                , GLL, GLC,  x ,  x , 2006)
 
 EXT(EXT_abgr                                , dummy_true                             , GLL, GLC,  x ,  x , 1995)
+EXT(EXT_base_instance                       , ARB_base_instance                      ,  x ,  x ,  x ,  30, 2014)
 EXT(EXT_bgra                                , dummy_true                             , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_blend_color                         , EXT_blend_color                        , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_blend_equation_separate             , EXT_blend_equation_separate            , GLL, GLC,  x ,  x , 2003)
@@ -213,7 +215,7 @@ EXT(EXT_packed_pixels                       , dummy_true                        
 EXT(EXT_pixel_buffer_object                 , EXT_pixel_buffer_object                , GLL, GLC,  x ,  x , 2004)
 EXT(EXT_point_parameters                    , EXT_point_parameters                   , GLL,  x ,  x ,  x , 1997)
 EXT(EXT_polygon_offset                      , dummy_true                             , GLL,  x ,  x ,  x , 1995)
-EXT(EXT_polygon_offset_clamp                , EXT_polygon_offset_clamp               , GLL, GLC,  x ,  x , 2014)
+EXT(EXT_polygon_offset_clamp                , EXT_polygon_offset_clamp               , GLL, GLC, ES1, ES2, 2014)
 EXT(EXT_provoking_vertex                    , EXT_provoking_vertex                   , GLL, GLC,  x ,  x , 2009)
 EXT(EXT_read_format_bgra                    , dummy_true                             ,  x ,  x , ES1, ES2, 2009)
 EXT(EXT_rescale_normal                      , dummy_true                             , GLL,  x ,  x ,  x , 1997)

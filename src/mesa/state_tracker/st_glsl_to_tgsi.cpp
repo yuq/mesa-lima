@@ -5935,6 +5935,20 @@ find_array(unsigned attr, struct array_decl *arrays, unsigned count,
    return false;
 }
 
+static void
+emit_compute_block_size(const struct gl_program *program,
+                        struct ureg_program *ureg) {
+   const struct gl_compute_program *cp =
+      (const struct gl_compute_program *)program;
+
+   ureg_property(ureg, TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH,
+                       cp->LocalSize[0]);
+   ureg_property(ureg, TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT,
+                       cp->LocalSize[1]);
+   ureg_property(ureg, TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH,
+                       cp->LocalSize[2]);
+}
+
 /**
  * Translate intermediate IR (glsl_to_tgsi_instruction) to TGSI format.
  * \param program  the program to translate
@@ -6178,6 +6192,10 @@ st_translate_program(
             t->outputs[i] = ureg_writemask(t->outputs[i], TGSI_WRITEMASK_X);
          }
       }
+   }
+
+   if (procType == TGSI_PROCESSOR_COMPUTE) {
+      emit_compute_block_size(proginfo, ureg);
    }
 
    /* Declare address register.

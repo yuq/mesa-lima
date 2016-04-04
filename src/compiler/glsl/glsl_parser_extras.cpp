@@ -226,7 +226,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
       this->supported_versions[this->num_supported_versions].es = true;
       this->num_supported_versions++;
    }
-   if (_mesa_is_gles31(ctx)) {
+   if (_mesa_is_gles31(ctx) || ctx->Extensions.ARB_ES3_1_compatibility) {
       this->supported_versions[this->num_supported_versions].ver = 310;
       this->supported_versions[this->num_supported_versions].es = true;
       this->num_supported_versions++;
@@ -565,6 +565,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
 
    /* ARB extensions go here, sorted alphabetically.
     */
+   EXT(ARB_ES3_1_compatibility,          true,  false,     ARB_ES3_1_compatibility),
    EXT(ARB_arrays_of_arrays,             true,  false,     ARB_arrays_of_arrays),
    EXT(ARB_compute_shader,               true,  false,     ARB_compute_shader),
    EXT(ARB_conservative_depth,           true,  false,     ARB_conservative_depth),

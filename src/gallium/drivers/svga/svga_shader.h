@@ -99,7 +99,6 @@ struct svga_compile_key
       unsigned unnormalized:1;
       unsigned width_height_idx:5; /**< texture unit */
       unsigned is_array:1;
-      unsigned texture_msaa:1;    /**< A multisample texture? */
       unsigned sprite_texgen:1;
       unsigned swizzle_r:3;
       unsigned swizzle_g:3;

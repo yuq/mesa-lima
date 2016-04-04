@@ -727,6 +727,7 @@ struct pipe_llvm_program_header
 
 struct pipe_compute_state
 {
+   enum pipe_shader_ir ir_type; /**< IR type contained in prog. */
    const void *prog; /**< Compute program to be executed. */
    unsigned req_local_mem; /**< Required size of the LOCAL resource. */
    unsigned req_private_mem; /**< Required size of the PRIVATE resource. */

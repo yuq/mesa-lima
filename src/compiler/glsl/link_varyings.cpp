@@ -240,7 +240,16 @@ cross_validate_types_and_qualifiers(struct gl_shader_program *prog,
 
    /* Check that all of the qualifiers match between stages.
     */
-   if (input->data.centroid != output->data.centroid) {
+
+   /* According to the OpenGL and OpenGLES GLSL specs, the centroid qualifier
+    * should match until OpenGL 4.3 and OpenGLES 3.1. The OpenGLES 3.0
+    * conformance test suite does not verify that the qualifiers must match.
+    * The deqp test suite expects the opposite (OpenGLES 3.1) behavior for
+    * OpenGLES 3.0 drivers, so we relax the checking in all cases.
+    */
+   if (false /* always skip the centroid check */ &&
+       prog->Version < (prog->IsES ? 310 : 430) &&
+       input->data.centroid != output->data.centroid) {
       linker_error(prog,
                    "%s shader output `%s' %s centroid qualifier, "
                    "but %s shader input %s centroid qualifier\n",

@@ -817,7 +817,7 @@ store_aos(struct gallivm_state *gallivm,
 #endif
 
    /* Unaligned store due to the vertex header */
-   lp_set_store_alignment(LLVMBuildStore(builder, value, data_ptr), sizeof(float));
+   LLVMSetAlignment(LLVMBuildStore(builder, value, data_ptr), sizeof(float));
 }
 
 /**
@@ -1069,7 +1069,7 @@ store_clip(struct gallivm_state *gallivm,
       clip_ptr = LLVMBuildPointerCast(builder, clip_ptr, clip_ptr_type, "");
 
       /* Unaligned store */
-      lp_set_store_alignment(LLVMBuildStore(builder, aos[j], clip_ptr), sizeof(float));
+      LLVMSetAlignment(LLVMBuildStore(builder, aos[j], clip_ptr), sizeof(float));
    }
 }
 

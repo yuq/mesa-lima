@@ -248,54 +248,51 @@ _mesa_add_parameter(struct gl_program_parameter_list *paramList,
       paramList->Size = 0;
       return -1;
    }
-   else {
-      GLuint i, j;
 
-      paramList->NumParameters = oldNum + sz4;
+   GLuint i, j;
 
-      memset(&paramList->Parameters[oldNum], 0,
-             sz4 * sizeof(struct gl_program_parameter));
+   paramList->NumParameters = oldNum + sz4;
 
-      for (i = 0; i < sz4; i++) {
-         struct gl_program_parameter *p = paramList->Parameters + oldNum + i;
-         p->Name = name ? strdup(name) : NULL;
-         p->Type = type;
-         p->Size = size;
-         p->DataType = datatype;
-         if (values) {
-            if (size >= 4) {
-               COPY_4V(paramList->ParameterValues[oldNum + i], values);
+   memset(&paramList->Parameters[oldNum], 0,
+          sz4 * sizeof(struct gl_program_parameter));
+
+   for (i = 0; i < sz4; i++) {
+      struct gl_program_parameter *p = paramList->Parameters + oldNum + i;
+      p->Name = name ? strdup(name) : NULL;
+      p->Type = type;
+      p->Size = size;
+      p->DataType = datatype;
+      if (values) {
+         if (size >= 4) {
+            COPY_4V(paramList->ParameterValues[oldNum + i], values);
+         } else {
+            /* copy 1, 2 or 3 values */
+            GLuint remaining = size % 4;
+            assert(remaining < 4);
+            for (j = 0; j < remaining; j++) {
+               paramList->ParameterValues[oldNum + i][j].f = values[j].f;
             }
-            else {
-               /* copy 1, 2 or 3 values */
-               GLuint remaining = size % 4;
-               assert(remaining < 4);
-               for (j = 0; j < remaining; j++) {
-                  paramList->ParameterValues[oldNum + i][j].f = values[j].f;
-               }
-               /* fill in remaining positions with zeros */
-               for (; j < 4; j++) {
-                  paramList->ParameterValues[oldNum + i][j].f = 0.0f;
-               }
+            /* fill in remaining positions with zeros */
+            for (; j < 4; j++) {
+               paramList->ParameterValues[oldNum + i][j].f = 0.0f;
             }
-            values += 4;
-            p->Initialized = GL_TRUE;
          }
-         else {
-            /* silence valgrind */
-            for (j = 0; j < 4; j++)
-               paramList->ParameterValues[oldNum + i][j].f = 0;
-         }
-         size -= 4;
+         values += 4;
+         p->Initialized = GL_TRUE;
+      } else {
+         /* silence valgrind */
+         for (j = 0; j < 4; j++)
+            paramList->ParameterValues[oldNum + i][j].f = 0;
       }
-
-      if (state) {
-         for (i = 0; i < STATE_LENGTH; i++)
-            paramList->Parameters[oldNum].StateIndexes[i] = state[i];
-      }
-
-      return (GLint) oldNum;
+      size -= 4;
    }
+
+   if (state) {
+      for (i = 0; i < STATE_LENGTH; i++)
+         paramList->Parameters[oldNum].StateIndexes[i] = state[i];
+   }
+
+   return (GLint) oldNum;
 }
 
 

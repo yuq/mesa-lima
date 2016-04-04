@@ -77,14 +77,6 @@ func_pointer
 gallivm_jit_function(struct gallivm_state *gallivm,
                      LLVMValueRef func);
 
-void
-lp_set_load_alignment(LLVMValueRef Inst,
-                       unsigned Align);
-
-void
-lp_set_store_alignment(LLVMValueRef Inst,
-		       unsigned Align);
-
 #ifdef __cplusplus
 }
 #endif

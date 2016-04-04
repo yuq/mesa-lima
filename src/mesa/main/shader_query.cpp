@@ -101,31 +101,6 @@ _mesa_BindAttribLocation(GLuint program, GLuint index,
     */
 }
 
-static bool
-is_active_attrib(const gl_shader_variable *var)
-{
-   if (!var)
-      return false;
-
-   switch (var->mode) {
-   case ir_var_shader_in:
-      return var->location != -1;
-
-   case ir_var_system_value:
-      /* From GL 4.3 core spec, section 11.1.1 (Vertex Attributes):
-       * "For GetActiveAttrib, all active vertex shader input variables
-       * are enumerated, including the special built-in inputs gl_VertexID
-       * and gl_InstanceID."
-       */
-      return var->location == SYSTEM_VALUE_VERTEX_ID ||
-             var->location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE ||
-             var->location == SYSTEM_VALUE_INSTANCE_ID;
-
-   default:
-      return false;
-   }
-}
-
 void GLAPIENTRY
 _mesa_GetActiveAttrib(GLuint program, GLuint desired_index,
                       GLsizei maxLength, GLsizei * length, GLint * size,
@@ -166,19 +141,7 @@ _mesa_GetActiveAttrib(GLuint program, GLuint desired_index,
 
    const gl_shader_variable *const var = RESOURCE_VAR(res);
 
-   if (!is_active_attrib(var))
-      return;
-
    const char *var_name = var->name;
-
-   /* Since gl_VertexID may be lowered to gl_VertexIDMESA, we need to
-    * consider gl_VertexIDMESA as gl_VertexID for purposes of checking
-    * active attributes.
-    */
-   if (var->mode == ir_var_system_value &&
-       var->location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) {
-      var_name = "gl_VertexID";
-   }
 
    _mesa_copy_string(name, maxLength, length, var_name);
 
@@ -224,19 +187,7 @@ _mesa_GetAttribLocation(GLuint program, const GLchar * name)
    if (!res)
       return -1;
 
-   GLint loc = program_resource_location(shProg, res, name, array_index);
-
-   /* The extra check against against 0 is made because of builtin-attribute
-    * locations that have offset applied. Function program_resource_location
-    * can return built-in attribute locations < 0 and glGetAttribLocation
-    * cannot be used on "conventional" attributes.
-    *
-    * From page 95 of the OpenGL 3.0 spec:
-    *
-    *     "If name is not an active attribute, if name is a conventional
-    *     attribute, or if an error occurs, -1 will be returned."
-    */
-   return (loc >= 0) ? loc : -1;
+   return program_resource_location(shProg, res, name, array_index);
 }
 
 unsigned
@@ -251,8 +202,7 @@ _mesa_count_active_attribs(struct gl_shader_program *shProg)
    unsigned count = 0;
    for (unsigned j = 0; j < shProg->NumProgramResourceList; j++, res++) {
       if (res->Type == GL_PROGRAM_INPUT &&
-          res->StageReferences & (1 << MESA_SHADER_VERTEX) &&
-          is_active_attrib(RESOURCE_VAR(res)))
+          res->StageReferences & (1 << MESA_SHADER_VERTEX))
          count++;
    }
    return count;
@@ -410,25 +360,12 @@ _mesa_GetFragDataLocation(GLuint program, const GLchar *name)
    if (!res)
       return -1;
 
-   GLint loc = program_resource_location(shProg, res, name, array_index);
-
-   /* The extra check against against 0 is made because of builtin-attribute
-    * locations that have offset applied. Function program_resource_location
-    * can return built-in attribute locations < 0 and glGetFragDataLocation
-    * cannot be used on "conventional" attributes.
-    *
-    * From page 95 of the OpenGL 3.0 spec:
-    *
-    *     "If name is not an active attribute, if name is a conventional
-    *     attribute, or if an error occurs, -1 will be returned."
-    */
-   return (loc >= 0) ? loc : -1;
+   return program_resource_location(shProg, res, name, array_index);
 }
 
 const char*
 _mesa_program_resource_name(struct gl_program_resource *res)
 {
-   const gl_shader_variable *var;
    switch (res->Type) {
    case GL_UNIFORM_BLOCK:
    case GL_SHADER_STORAGE_BLOCK:
@@ -436,13 +373,6 @@ _mesa_program_resource_name(struct gl_program_resource *res)
    case GL_TRANSFORM_FEEDBACK_VARYING:
       return RESOURCE_XFV(res)->Name;
    case GL_PROGRAM_INPUT:
-      var = RESOURCE_VAR(res);
-      /* Special case gl_VertexIDMESA -> gl_VertexID. */
-      if (var->mode == ir_var_system_value &&
-          var->location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) {
-         return "gl_VertexID";
-      }
-   /* fallthrough */
    case GL_PROGRAM_OUTPUT:
       return RESOURCE_VAR(res)->name;
    case GL_UNIFORM:
@@ -850,34 +780,31 @@ program_resource_location(struct gl_shader_program *shProg,
                           struct gl_program_resource *res, const char *name,
                           unsigned array_index)
 {
-   /* Built-in locations should report GL_INVALID_INDEX. */
-   if (is_gl_identifier(name))
-      return GL_INVALID_INDEX;
-
-   /* VERT_ATTRIB_GENERIC0 and FRAG_RESULT_DATA0 are decremented as these
-    * offsets are used internally to differentiate between built-in attributes
-    * and user-defined attributes.
-    */
    switch (res->Type) {
    case GL_PROGRAM_INPUT: {
       const gl_shader_variable *var = RESOURCE_VAR(res);
+
+      if (var->location == -1)
+         return -1;
 
       /* If the input is an array, fail if the index is out of bounds. */
       if (array_index > 0
           && array_index >= var->type->length) {
          return -1;
       }
-      return (var->location +
-	      (array_index * var->type->without_array()->matrix_columns) -
-	      VERT_ATTRIB_GENERIC0);
+      return var->location +
+	     (array_index * var->type->without_array()->matrix_columns);
    }
    case GL_PROGRAM_OUTPUT:
+      if (RESOURCE_VAR(res)->location == -1)
+         return -1;
+
       /* If the output is an array, fail if the index is out of bounds. */
       if (array_index > 0
           && array_index >= RESOURCE_VAR(res)->type->length) {
          return -1;
       }
-      return RESOURCE_VAR(res)->location + array_index - FRAG_RESULT_DATA0;
+      return RESOURCE_VAR(res)->location + array_index;
    case GL_UNIFORM:
       /* If the uniform is built-in, fail. */
       if (RESOURCE_UNI(res)->builtin)
@@ -999,7 +926,7 @@ is_resource_referenced(struct gl_shader_program *shProg,
       return RESOURCE_ATC(res)->StageReferences[stage];
 
    if (res->Type == GL_UNIFORM_BLOCK || res->Type == GL_SHADER_STORAGE_BLOCK)
-      return shProg->InterfaceBlockStageIndex[stage][index] != -1;
+      return shProg->BufferInterfaceBlocks[index].stageref & (1 << stage);
 
    return res->StageReferences & (1 << stage);
 }

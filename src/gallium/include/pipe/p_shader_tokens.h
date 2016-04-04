@@ -276,7 +276,10 @@ union tgsi_immediate_data
 #define TGSI_PROPERTY_NUM_CULLDIST_ENABLED   16
 #define TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL 17
 #define TGSI_PROPERTY_NEXT_SHADER            18
-#define TGSI_PROPERTY_COUNT                  19
+#define TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH   19
+#define TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT  20
+#define TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH   21
+#define TGSI_PROPERTY_COUNT                  22
 
 struct tgsi_property {
    unsigned Type         : 4;  /**< TGSI_TOKEN_TYPE_PROPERTY */

@@ -612,6 +612,7 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 }
 
 static int r600_get_compute_param(struct pipe_screen *screen,
+        enum pipe_shader_ir ir_type,
         enum pipe_compute_cap param,
         void *ret)
 {
@@ -678,7 +679,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 			uint64_t *max_global_size = ret;
 			uint64_t max_mem_alloc_size;
 
-			r600_get_compute_param(screen,
+			r600_get_compute_param(screen, ir_type,
 				PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE,
 				&max_mem_alloc_size);
 
