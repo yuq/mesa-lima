@@ -111,6 +111,19 @@ static bool valid_flags(struct ir3_instruction *instr, unsigned n,
 		valid_flags = IR3_REG_IMMED;
 		if (flags & ~valid_flags)
 			return false;
+
+		if (flags & IR3_REG_IMMED) {
+			/* doesn't seem like we can have immediate src for store
+			 * instructions:
+			 *
+			 * TODO this restriction could also apply to load instructions,
+			 * but for load instructions this arg is the address (and not
+			 * really sure any good way to test a hard-coded immed addr src)
+			 */
+			if (is_store(instr) && (n == 1))
+				return false;
+		}
+
 		break;
 	case 2:
 		valid_flags = ir3_cat2_absneg(instr->opc) |
