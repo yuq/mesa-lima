@@ -1768,7 +1768,7 @@ fs_visitor::assign_vs_urb_setup()
    assert(stage == MESA_SHADER_VERTEX);
 
    /* Each attribute is 4 regs. */
-   this->first_non_payload_grf += 4 * vs_prog_data->nr_attributes;
+   this->first_non_payload_grf += 4 * vs_prog_data->nr_attribute_slots;
 
    assert(vs_prog_data->base.urb_read_length <= 15);
 

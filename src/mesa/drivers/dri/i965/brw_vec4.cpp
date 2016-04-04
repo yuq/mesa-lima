@@ -2120,6 +2120,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
          DIV_ROUND_UP(MAX2(nr_attribute_slots, 1), 2);
 
    prog_data->nr_attributes = nr_attributes;
+   prog_data->nr_attribute_slots = nr_attribute_slots;
 
    /* Since vertex shaders reuse the same VUE entry for inputs and outputs
     * (overwriting the original contents), we need to make sure the size is
