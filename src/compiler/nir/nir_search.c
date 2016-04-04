@@ -25,6 +25,7 @@
  *
  */
 
+#include <inttypes.h>
 #include "nir_search.h"
 
 struct match_state {
@@ -494,7 +495,7 @@ construct_value(const nir_search_value *value,
          break;
 
       case nir_type_int:
-         load->def.name = ralloc_asprintf(load, "%ld", c->data.i);
+         load->def.name = ralloc_asprintf(load, "%" PRIi64, c->data.i);
          switch (bitsize->dest_size) {
          case 32:
             load->value.i32[0] = c->data.i;
@@ -508,7 +509,7 @@ construct_value(const nir_search_value *value,
          break;
 
       case nir_type_uint:
-         load->def.name = ralloc_asprintf(load, "%lu", c->data.u);
+         load->def.name = ralloc_asprintf(load, "%" PRIu64, c->data.u);
          switch (bitsize->dest_size) {
          case 32:
             load->value.u32[0] = c->data.u;
