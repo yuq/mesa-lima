@@ -209,7 +209,7 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 			struct ir3_instruction *baryf;
 
 			/* (ss)bary.f (ei)r63.x, 0, r0.x */
-			baryf = ir3_instr_create(block, 2, OPC_BARY_F);
+			baryf = ir3_instr_create(block, OPC_BARY_F);
 			baryf->flags |= IR3_INSTR_SS;
 			ir3_reg_create(baryf, regid(63, 0), 0);
 			ir3_reg_create(baryf, 0, IR3_REG_IMMED)->iim_val = 0;

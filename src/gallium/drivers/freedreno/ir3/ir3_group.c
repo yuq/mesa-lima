@@ -63,7 +63,7 @@ static void arr_insert_mov_in(void *arr, int idx, struct ir3_instruction *instr)
 
 	debug_assert(instr->regs_count == 1);
 
-	in = ir3_instr_create(instr->block, -1, OPC_META_INPUT);
+	in = ir3_instr_create(instr->block, OPC_META_INPUT);
 	in->inout.block = instr->block;
 	ir3_reg_create(in, instr->regs[0]->num, 0);
 
