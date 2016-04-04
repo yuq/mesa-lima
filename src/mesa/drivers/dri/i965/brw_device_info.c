@@ -482,3 +482,15 @@ brw_get_device_info(int devid)
 
    return devinfo;
 }
+
+const char *
+brw_get_device_name(int devid)
+{
+   switch (devid) {
+#undef CHIPSET
+#define CHIPSET(id, family, name) case id: return name;
+#include "pci_ids/i965_pci_ids.h"
+   default:
+      return NULL;
+   }
+}
