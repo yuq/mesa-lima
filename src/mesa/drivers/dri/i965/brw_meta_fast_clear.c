@@ -343,17 +343,19 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
    *y1 = ALIGN(*y1, y_align) / y_scaledown;
 }
 
-static void
-get_buffer_rect(const struct gl_framebuffer *fb, struct rect *rect)
+void
+brw_meta_get_buffer_rect(const struct gl_framebuffer *fb,
+                         unsigned *x0, unsigned *y0,
+                         unsigned *x1, unsigned *y1)
 {
-   rect->x0 = fb->_Xmin;
-   rect->x1 = fb->_Xmax;
+   *x0 = fb->_Xmin;
+   *x1 = fb->_Xmax;
    if (fb->Name != 0) {
-      rect->y0 = fb->_Ymin;
-      rect->y1 = fb->_Ymax;
+      *y0 = fb->_Ymin;
+      *y1 = fb->_Ymax;
    } else {
-      rect->y0 = fb->Height - fb->_Ymax;
-      rect->y1 = fb->Height - fb->_Ymin;
+      *y0 = fb->Height - fb->_Ymax;
+      *y1 = fb->Height - fb->_Ymin;
    }
 }
 
@@ -689,12 +691,16 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       case REP_CLEAR:
          rep_clear_buffers |= 1 << index;
-         get_buffer_rect(fb, &clear_rect);
+         brw_meta_get_buffer_rect(fb,
+                                  &clear_rect.x0, &clear_rect.y0,
+                                  &clear_rect.x1, &clear_rect.y1);
          break;
 
       case PLAIN_CLEAR:
          plain_clear_buffers |= 1 << index;
-         get_buffer_rect(fb, &clear_rect);
+         brw_meta_get_buffer_rect(fb,
+                                  &clear_rect.x0, &clear_rect.y0,
+                                  &clear_rect.x1, &clear_rect.y1);
          continue;
       }
    }

@@ -55,6 +55,11 @@ brw_get_resolve_rect(const struct brw_context *brw,
                      unsigned *x0, unsigned *y0,
                      unsigned *x1, unsigned *y1);
 
+void
+brw_meta_get_buffer_rect(const struct gl_framebuffer *fb, 
+                         unsigned *x0, unsigned *y0,
+                         unsigned *x1, unsigned *y1);
+
 #ifdef __cplusplus
 }
 #endif
