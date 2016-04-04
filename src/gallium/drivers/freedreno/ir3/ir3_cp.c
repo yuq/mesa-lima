@@ -230,6 +230,12 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 {
 	struct ir3_instruction *src = ssa(reg);
 
+	/* don't propagate copies into a PHI, since we don't know if the
+	 * src block executed:
+	 */
+	if (instr->opc == OPC_META_PHI)
+		return;
+
 	if (is_eligible_mov(src, true)) {
 		/* simple case, no immed/const/relativ, only mov's w/ ssa src: */
 		struct ir3_register *src_reg = src->regs[1];
