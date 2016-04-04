@@ -434,6 +434,16 @@ struct ir3_block {
 #endif
 };
 
+static inline uint32_t
+block_id(struct ir3_block *block)
+{
+#ifdef DEBUG
+	return block->serialno;
+#else
+	return (uint32_t)(unsigned long)block;
+#endif
+}
+
 struct ir3 * ir3_create(struct ir3_compiler *compiler,
 		unsigned nin, unsigned nout);
 void ir3_destroy(struct ir3 *shader);

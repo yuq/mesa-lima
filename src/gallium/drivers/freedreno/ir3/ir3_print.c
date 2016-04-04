@@ -40,6 +40,7 @@ static void print_instr_name(struct ir3_instruction *instr)
 #ifdef DEBUG
 	printf("%04u:", instr->serialno);
 #endif
+	printf("%04u:", instr->name);
 	printf("%03u: ", instr->depth);
 
 	if (instr->flags & IR3_INSTR_SY)
@@ -146,16 +147,6 @@ tab(int lvl)
 {
 	for (int i = 0; i < lvl; i++)
 		printf("\t");
-}
-
-static uint32_t
-block_id(struct ir3_block *block)
-{
-#ifdef DEBUG
-	return block->serialno;
-#else
-	return (uint32_t)(unsigned long)block;
-#endif
 }
 
 static void

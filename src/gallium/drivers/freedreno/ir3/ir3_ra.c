@@ -31,6 +31,8 @@
 #include "util/ralloc.h"
 #include "util/bitset.h"
 
+#include "freedreno_util.h"
+
 #include "ir3.h"
 #include "ir3_compiler.h"
 
@@ -810,6 +812,22 @@ ra_compute_livein_liveout(struct ir3_ra_ctx *ctx)
 }
 
 static void
+print_bitset(const char *name, BITSET_WORD *bs, unsigned cnt)
+{
+	bool first = true;
+	debug_printf("  %s:", name);
+	for (unsigned i = 0; i < cnt; i++) {
+		if (BITSET_TEST(bs, i)) {
+			if (!first)
+				debug_printf(",");
+			debug_printf(" %04u", i);
+			first = false;
+		}
+	}
+	debug_printf("\n");
+}
+
+static void
 ra_add_interference(struct ir3_ra_ctx *ctx)
 {
 	struct ir3 *ir = ctx->ir;
@@ -830,6 +848,19 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 
 	/* update per-block livein/liveout: */
 	while (ra_compute_livein_liveout(ctx)) {}
+
+	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
+		debug_printf("AFTER LIVEIN/OUT:\n");
+		ir3_print(ir);
+		list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+			struct ir3_ra_block_data *bd = block->data;
+			debug_printf("block%u:\n", block_id(block));
+			print_bitset("def", bd->def, ctx->alloc_count);
+			print_bitset("use", bd->use, ctx->alloc_count);
+			print_bitset("l/i", bd->livein, ctx->alloc_count);
+			print_bitset("l/o", bd->liveout, ctx->alloc_count);
+		}
+	}
 
 	/* extend start/end ranges based on livein/liveout info from cfg: */
 	unsigned bitset_words = BITSET_WORDS(ctx->alloc_count);
