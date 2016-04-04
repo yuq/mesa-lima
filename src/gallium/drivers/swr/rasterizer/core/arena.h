@@ -130,6 +130,12 @@ struct CachingAllocatorT : DefaultAllocator
 #endif
         }
 
+        if (bucket && bucket < (CACHE_NUM_BUCKETS - 1))
+        {
+            // Make all blocks in this bucket the same size
+            size = size_t(1) << (bucket + 1 + CACHE_START_BUCKET_BIT);
+        }
+
         return this->DefaultAllocator::AllocateAligned(size, align);
     }
 
@@ -170,20 +176,37 @@ struct CachingAllocatorT : DefaultAllocator
 
             if (m_pLastCachedBlocks[i] != &m_cachedBlocks[i])
             {
-                m_pLastCachedBlocks[i]->pNext = m_oldCachedBlocks[i].pNext;
-                m_oldCachedBlocks[i].pNext = m_cachedBlocks[i].pNext;
-                m_cachedBlocks[i].pNext = nullptr;
-                if (m_pOldLastCachedBlocks[i]->pNext)
+                if (i && i < (CACHE_NUM_BUCKETS - 1))
                 {
-                    m_pOldLastCachedBlocks[i] = m_pLastCachedBlocks[i];
+                    // We know that all blocks are the same size.
+                    // Just move the list over.
+                    m_pLastCachedBlocks[i]->pNext = m_oldCachedBlocks[i].pNext;
+                    m_oldCachedBlocks[i].pNext = m_cachedBlocks[i].pNext;
+                    m_cachedBlocks[i].pNext = nullptr;
+                    if (m_pOldLastCachedBlocks[i]->pNext)
+                    {
+                        m_pOldLastCachedBlocks[i] = m_pLastCachedBlocks[i];
+                    }
+                    m_pLastCachedBlocks[i] = &m_cachedBlocks[i];
                 }
-                m_pLastCachedBlocks[i] = &m_cachedBlocks[i];
-            }
-        }
+                else
+                {
+                    // The end buckets can have variable sized lists.
+                    // Insert each block based on size
+                    ArenaBlock* pBlock = m_cachedBlocks[i].pNext;
+                    while (pBlock)
+                    {
+                        ArenaBlock* pNext = pBlock->pNext;
+                        pBlock->pNext = nullptr;
+                        m_cachedSize -= pBlock->blockSize;
+                        InsertCachedBlock<true>(i, pBlock);
+                        pBlock = pNext;
+                    }
 
-        if (doFree)
-        {
-            SWR_REL_ASSERT(m_oldCachedSize == 0, "Unknown whereabouts of 0x%llx bytes", (uint64_t)m_oldCachedSize);
+                    m_pLastCachedBlocks[i] = &m_cachedBlocks[i];
+                    m_cachedBlocks[i].pNext = nullptr;
+                }
+            }
         }
 
         m_oldCachedSize += m_cachedSize;
@@ -227,18 +250,19 @@ private:
         uint32_t bucketId = 0;
 
 #if defined(BitScanReverseSizeT)
-        BitScanReverseSizeT((unsigned long*)&bucketId, blockSize >> CACHE_START_BUCKET_BIT);
+        BitScanReverseSizeT((unsigned long*)&bucketId, (blockSize - 1) >> CACHE_START_BUCKET_BIT);
         bucketId = std::min<uint32_t>(bucketId, CACHE_NUM_BUCKETS - 1);
 #endif
 
         return bucketId;
     }
 
+    template <bool OldBlockT = false>
     void InsertCachedBlock(uint32_t bucketId, ArenaBlock* pNewBlock)
     {
         SWR_ASSERT(bucketId < CACHE_NUM_BUCKETS);
 
-        ArenaBlock* pPrevBlock = &m_cachedBlocks[bucketId];
+        ArenaBlock* pPrevBlock = OldBlockT ? &m_oldCachedBlocks[bucketId] : &m_cachedBlocks[bucketId];
         ArenaBlock* pBlock = pPrevBlock->pNext;
 
         while (pBlock)
@@ -257,12 +281,24 @@ private:
         pPrevBlock->pNext = pNewBlock;
         pNewBlock->pNext = pBlock;
 
-        if (m_pLastCachedBlocks[bucketId] == pPrevBlock)
+        if (OldBlockT)
         {
-            m_pLastCachedBlocks[bucketId] = pNewBlock;
-        }
+            if (m_pOldLastCachedBlocks[bucketId] == pPrevBlock)
+            {
+                m_pOldLastCachedBlocks[bucketId] = pNewBlock;
+            }
 
-        m_cachedSize += pNewBlock->blockSize;
+            m_oldCachedSize += pNewBlock->blockSize;
+        }
+        else
+        {
+            if (m_pLastCachedBlocks[bucketId] == pPrevBlock)
+            {
+                m_pLastCachedBlocks[bucketId] = pNewBlock;
+            }
+
+            m_cachedSize += pNewBlock->blockSize;
+        }
     }
 
     static ArenaBlock* SearchBlocks(ArenaBlock*& pPrevBlock, size_t blockSize, size_t align)
