@@ -49,6 +49,12 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
                         unsigned *x0, unsigned *y0,
                         unsigned *x1, unsigned *y1);
 
+void
+brw_get_resolve_rect(const struct brw_context *brw,
+                     const struct intel_mipmap_tree *mt,
+                     unsigned *x0, unsigned *y0,
+                     unsigned *x1, unsigned *y1);
+
 #ifdef __cplusplus
 }
 #endif

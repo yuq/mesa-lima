@@ -808,9 +808,11 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    return true;
 }
 
-static void
-get_resolve_rect(struct brw_context *brw,
-                 struct intel_mipmap_tree *mt, struct rect *rect)
+void
+brw_get_resolve_rect(const struct brw_context *brw,
+                     const struct intel_mipmap_tree *mt,
+                     unsigned *x0, unsigned *y0,
+                     unsigned *x1, unsigned *y1)
 {
    unsigned x_align, y_align;
    unsigned x_scaledown, y_scaledown;
@@ -838,9 +840,9 @@ get_resolve_rect(struct brw_context *brw,
       x_scaledown = x_align / 2;
       y_scaledown = y_align / 2;
    }
-   rect->x0 = rect->y0 = 0;
-   rect->x1 = ALIGN(mt->logical_width0, x_scaledown) / x_scaledown;
-   rect->y1 = ALIGN(mt->logical_height0, y_scaledown) / y_scaledown;
+   *x0 = *y0 = 0;
+   *x1 = ALIGN(mt->logical_width0, x_scaledown) / x_scaledown;
+   *y1 = ALIGN(mt->logical_height0, y_scaledown) / y_scaledown;
 }
 
 void
@@ -885,7 +887,7 @@ brw_meta_resolve_color(struct brw_context *brw,
       set_fast_clear_op(brw, GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE);
 
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
-   get_resolve_rect(brw, mt, &rect);
+   brw_get_resolve_rect(brw, mt, &rect.x0, &rect.y0, &rect.x1, &rect.y1);
 
    brw_draw_rectlist(brw, &rect, 1);
 
