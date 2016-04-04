@@ -29,9 +29,7 @@ NIR_FILES = \
 	nir/nir_control_flow_private.h \
 	nir/nir_dominance.c \
 	nir/nir_from_ssa.c \
-	nir/nir_gather_info.c \
 	nir/nir_gs_count_vertices.c \
-	nir/nir_inline_functions.c \
 	nir/nir_intrinsics.c \
 	nir/nir_intrinsics.h \
 	nir/nir_instr_set.c \
@@ -40,10 +38,8 @@ NIR_FILES = \
 	nir/nir_lower_alu_to_scalar.c \
 	nir/nir_lower_atomics.c \
 	nir/nir_lower_clip.c \
-	nir/nir_lower_returns.c \
 	nir/nir_lower_global_vars_to_local.c \
 	nir/nir_lower_gs_intrinsics.c \
-        nir/nir_lower_indirect_derefs.c \
 	nir/nir_lower_load_const_to_scalar.c \
 	nir/nir_lower_locals_to_regs.c \
 	nir/nir_lower_idiv.c \
@@ -71,11 +67,8 @@ NIR_FILES = \
 	nir/nir_opt_peephole_select.c \
 	nir/nir_opt_remove_phis.c \
 	nir/nir_opt_undef.c \
-	nir/nir_phi_builder.c \
-	nir/nir_phi_builder.h \
 	nir/nir_print.c \
 	nir/nir_remove_dead_variables.c \
-	nir/nir_repair_ssa.c \
 	nir/nir_search.c \
 	nir/nir_search.h \
 	nir/nir_split_var_copies.c \
@@ -85,15 +78,6 @@ NIR_FILES = \
 	nir/nir_vla.h \
 	nir/nir_worklist.c \
 	nir/nir_worklist.h
-
-SPIRV_FILES = \
-	nir/spirv/nir_spirv.h \
-	nir/spirv/spirv_to_nir.c \
-	nir/spirv/vtn_alu.c \
-	nir/spirv/vtn_cfg.c \
-	nir/spirv/vtn_glsl450.c \
-	nir/spirv/vtn_private.h \
-	nir/spirv/vtn_variables.c
 
 # libglsl
 
