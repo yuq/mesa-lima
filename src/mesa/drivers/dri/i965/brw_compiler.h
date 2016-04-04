@@ -100,9 +100,6 @@ struct brw_compiler {
    bool precise_trig;
 };
 
-struct brw_compiler *
-brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo);
-
 
 /**
  * Program key structures.
