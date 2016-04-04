@@ -80,9 +80,10 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     SWR_ASSERT(pTaskData != nullptr);
 
     // Ensure spill fill memory has been allocated.
-    if (pSpillFillBuffer == nullptr)
+    size_t spillFillSize = pDC->pState->state.totalSpillFillSize;
+    if (spillFillSize && pSpillFillBuffer == nullptr)
     {
-        pSpillFillBuffer = pDC->pArena->AllocAlignedSync(pDC->pState->state.totalSpillFillSize, sizeof(float) * 8);
+        pSpillFillBuffer = pDC->pArena->AllocAlignedSync(spillFillSize, KNOB_SIMD_BYTES);
     }
 
     const API_STATE& state = GetApiState(pDC);
