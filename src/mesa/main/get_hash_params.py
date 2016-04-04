@@ -535,7 +535,7 @@ descriptor=[
   [ "MAX_GEOMETRY_ATOMIC_COUNTERS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicCounters), extra_ARB_shader_atomic_counters_and_geometry_shader" ],
 
 # GL_ARB_shader_storage_buffer_object / geometry shader
-  [ "MAX_GEOMETRY_SHADER_STORAGE_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks), extra_ARB_shader_storage_buffer_object_and_geometry_shader" ],
+  [ "MAX_GEOMETRY_SHADER_STORAGE_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxShaderStorageBlocks), extra_ARB_shader_storage_buffer_object_and_geometry_shader" ],
 
 # GL_ARB_uniform_buffer_object / geometry shader
   [ "MAX_GEOMETRY_UNIFORM_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxUniformBlocks), extra_ARB_uniform_buffer_object_and_geometry_shader" ],
