@@ -76,6 +76,13 @@ struct FetchJit : public Builder
 
     void JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fetchInfo, Value* streams, Value* vIndices, Value* pVtxOut);
     void JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* fetchInfo, Value* streams, Value* vIndices, Value* pVtxOut);
+
+    bool IsOddFormat(SWR_FORMAT format);
+    bool IsUniformFormat(SWR_FORMAT format);
+    void UnpackComponents(SWR_FORMAT format, Value* vInput, Value* result[4]);
+    void CreateGatherOddFormats(SWR_FORMAT format, Value* pBase, Value* offsets, Value* result[4]);
+    void ConvertFormat(SWR_FORMAT format, Value *texels[4]);
+
 };
 
 Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
@@ -466,6 +473,169 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
     }
 }
 
+// returns true for odd formats that require special state.gather handling
+bool FetchJit::IsOddFormat(SWR_FORMAT format)
+{
+    const SWR_FORMAT_INFO& info = GetFormatInfo(format);
+    if (info.bpc[0] != 8 && info.bpc[0] != 16 && info.bpc[0] != 32)
+    {
+        return true;
+    }
+    return false;
+}
+
+// format is uniform if all components are the same size and type
+bool FetchJit::IsUniformFormat(SWR_FORMAT format)
+{
+    const SWR_FORMAT_INFO& info = GetFormatInfo(format);
+    uint32_t bpc0 = info.bpc[0];
+    uint32_t type0 = info.type[0];
+
+    for (uint32_t c = 1; c < info.numComps; ++c)
+    {
+        if (bpc0 != info.bpc[c] || type0 != info.type[c])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// unpacks components based on format
+// foreach component in the pixel
+//   mask off everything but this component
+//   shift component to LSB
+void FetchJit::UnpackComponents(SWR_FORMAT format, Value* vInput, Value* result[4])
+{
+    const SWR_FORMAT_INFO& info = GetFormatInfo(format);
+
+    uint32_t bitOffset = 0;
+    for (uint32_t c = 0; c < info.numComps; ++c)
+    {
+        uint32_t swizzledIndex = info.swizzle[c];
+        uint32_t compBits = info.bpc[c];
+        uint32_t bitmask = ((1 << compBits) - 1) << bitOffset;
+        Value* comp = AND(vInput, bitmask);
+        comp = LSHR(comp, bitOffset);
+
+        result[swizzledIndex] = comp;
+        bitOffset += compBits;
+    }
+}
+
+// gather for odd component size formats
+// gather SIMD full pixels per lane then shift/mask to move each component to their
+// own vector
+void FetchJit::CreateGatherOddFormats(SWR_FORMAT format, Value* pBase, Value* offsets, Value* result[4])
+{
+    const SWR_FORMAT_INFO &info = GetFormatInfo(format);
+
+    // only works if pixel size is <= 32bits
+    SWR_ASSERT(info.bpp <= 32);
+
+    uint32_t numComps = info.numComps;
+
+    Value* gather = VUNDEF_I();
+
+    // assign defaults
+    for (uint32_t comp = 0; comp < 4; ++comp)
+    {
+        result[comp] = VIMMED1((int)info.defaults[comp]);
+    }
+
+    // gather SIMD pixels
+    for (uint32_t e = 0; e < JM()->mVWidth; ++e)
+    {
+        Value* elemOffset = VEXTRACT(offsets, C(e));
+        Value* load = GEP(pBase, elemOffset);
+
+        // load the proper amount of data based on component size
+        switch (info.bpp)
+        {
+        case 8: load = POINTER_CAST(load, Type::getInt8PtrTy(JM()->mContext)); break;
+        case 16: load = POINTER_CAST(load, Type::getInt16PtrTy(JM()->mContext)); break;
+        case 32: load = POINTER_CAST(load, Type::getInt32PtrTy(JM()->mContext)); break;
+        default: SWR_ASSERT(0);
+        }
+
+        // load pixel
+        Value *val = LOAD(load);
+
+        // zero extend to 32bit integer
+        val = INT_CAST(val, mInt32Ty, false);
+
+        // store in simd lane
+        gather = VINSERT(gather, val, C(e));
+    }
+
+    UnpackComponents(format, gather, result);
+
+    // cast to fp32
+    result[0] = BITCAST(result[0], mSimdFP32Ty);
+    result[1] = BITCAST(result[1], mSimdFP32Ty);
+    result[2] = BITCAST(result[2], mSimdFP32Ty);
+    result[3] = BITCAST(result[3], mSimdFP32Ty);
+}
+
+void FetchJit::ConvertFormat(SWR_FORMAT format, Value *texels[4])
+{
+    const SWR_FORMAT_INFO &info = GetFormatInfo(format);
+
+    for (uint32_t c = 0; c < info.numComps; ++c)
+    {
+        uint32_t compIndex = info.swizzle[c];
+
+        // skip any conversion on UNUSED components
+        if (info.type[c] == SWR_TYPE_UNUSED)
+        {
+            continue;
+        }
+
+        if (info.isNormalized[c])
+        {
+            if (info.type[c] == SWR_TYPE_SNORM)
+            {
+                /// @todo The most-negative value maps to -1.0f. e.g. the 5-bit value 10000 maps to -1.0f.
+
+                /// result = c * (1.0f / (2^(n-1) - 1);
+                uint32_t n = info.bpc[c];
+                uint32_t pow2 = 1 << (n - 1);
+                float scale = 1.0f / (float)(pow2 - 1);
+                Value *vScale = VIMMED1(scale);
+                texels[compIndex] = BITCAST(texels[compIndex], mSimdInt32Ty);
+                texels[compIndex] = SI_TO_FP(texels[compIndex], mSimdFP32Ty);
+                texels[compIndex] = FMUL(texels[compIndex], vScale);
+            }
+            else
+            {
+                SWR_ASSERT(info.type[c] == SWR_TYPE_UNORM);
+
+                /// result = c * (1.0f / (2^n - 1))
+                uint32_t n = info.bpc[c];
+                uint32_t pow2 = 1 << n;
+                // special case 24bit unorm format, which requires a full divide to meet ULP requirement
+                if (n == 24)
+                {
+                    float scale = (float)(pow2 - 1);
+                    Value* vScale = VIMMED1(scale);
+                    texels[compIndex] = BITCAST(texels[compIndex], mSimdInt32Ty);
+                    texels[compIndex] = SI_TO_FP(texels[compIndex], mSimdFP32Ty);
+                    texels[compIndex] = FDIV(texels[compIndex], vScale);
+                }
+                else
+                {
+                    float scale = 1.0f / (float)(pow2 - 1);
+                    Value *vScale = VIMMED1(scale);
+                    texels[compIndex] = BITCAST(texels[compIndex], mSimdInt32Ty);
+                    texels[compIndex] = UI_TO_FP(texels[compIndex], mSimdFP32Ty);
+                    texels[compIndex] = FMUL(texels[compIndex], vScale);
+                }
+            }
+            continue;
+        }
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Loads attributes from memory using AVX2 GATHER(s)
 /// @param fetchState - info about attributes to be fetched from memory
@@ -575,10 +745,25 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
         const ComponentControl compCtrl[4] { (ComponentControl)ied.ComponentControl0, (ComponentControl)ied.ComponentControl1, 
                                              (ComponentControl)ied.ComponentControl2, (ComponentControl)ied.ComponentControl3}; 
 
-        if(info.type[0] == SWR_TYPE_FLOAT)
+        // Special gather/conversion for formats without equal component sizes
+        if (IsOddFormat((SWR_FORMAT)ied.Format))
+        {
+            // Only full 4 component fetch is supported for odd formats
+            SWR_ASSERT(compMask == XYZW);
+            Value* pResults[4];
+            CreateGatherOddFormats((SWR_FORMAT)ied.Format, pStreamBase, vOffsets, pResults);
+            ConvertFormat((SWR_FORMAT)ied.Format, pResults);
+
+            StoreVertexElements(pVtxOut, outputElt++, 4, pResults);
+            currentVertexElement = 0;
+        }
+        else if(info.type[0] == SWR_TYPE_FLOAT)
         {
             ///@todo: support 64 bit vb accesses
             Value* gatherSrc = VIMMED1(0.0f);
+
+            SWR_ASSERT(IsUniformFormat((SWR_FORMAT)ied.Format), 
+                "Unsupported format for standard gather fetch.");
 
             // Gather components from memory to store in a simdvertex structure
             switch(bpc)
@@ -664,6 +849,9 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
         {
             Instruction::CastOps extendCastType = Instruction::CastOps::CastOpsEnd;
             ConversionType conversionType = CONVERT_NONE;
+
+            SWR_ASSERT(IsUniformFormat((SWR_FORMAT)ied.Format), 
+                "Unsupported format for standard gather fetch.");
 
             switch(info.type[0])
             {
