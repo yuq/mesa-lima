@@ -120,7 +120,7 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
                     pCore->procGroup = procGroup;
 #if !defined(_WIN64)
                     coreId = (uint32_t)numaNode.cores.size();
-                    if ((coreId * numThreads) >= 32)
+                    if ((coreId * numThreads) > 32)
                     {
                         // Windows doesn't return threadIds >= 32 for a processor group correctly
                         // when running a 32-bit application.
@@ -234,6 +234,9 @@ void bindThread(uint32_t threadId, uint32_t procGroupId = 0, bool bindProcGroup=
 #if !defined(_WIN64)
         if (threadId >= 32)
         {
+            // Hopefully we don't get here.  Logic in CreateThreadPool should prevent this.
+            SWR_REL_ASSERT(false, "Shouldn't get here");
+
             // In a 32-bit process on Windows it is impossible to bind
             // to logical processors 32-63 within a processor group.
             // In this case set the mask to 0 and let the system assign
@@ -730,6 +733,17 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
     {
         numHyperThreads = std::min(numHyperThreads, KNOB_MAX_THREADS_PER_CORE);
     }
+
+#if defined(_WIN32) && !defined(_WIN64)
+    if (!KNOB_MAX_WORKER_THREADS)
+    {
+        // Limit 32-bit windows to bindable HW threads only
+        if ((numCoresPerNode * numHWHyperThreads) > 32)
+        {
+            numCoresPerNode = 32 / numHWHyperThreads;
+        }
+    }
+#endif
 
     if (numHyperThreads < 2)
     {
