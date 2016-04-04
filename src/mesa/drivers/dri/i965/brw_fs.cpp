@@ -2787,10 +2787,21 @@ fs_visitor::emit_repclear_shader()
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
    int base_mrf = 1;
    int color_mrf = base_mrf + 2;
+   fs_inst *mov;
 
-   fs_inst *mov = bld.exec_all().group(4, 0)
-                     .MOV(brw_message_reg(color_mrf),
-                          fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F));
+   if (uniforms > 0) {
+      mov = bld.exec_all().group(4, 0)
+               .MOV(brw_message_reg(color_mrf),
+                    fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F));
+   } else {
+      struct brw_reg reg =
+         brw_reg(BRW_GENERAL_REGISTER_FILE, 2, 3, 0, 0, BRW_REGISTER_TYPE_F,
+                 BRW_VERTICAL_STRIDE_8, BRW_WIDTH_2, BRW_HORIZONTAL_STRIDE_4,
+                 BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
+
+      mov = bld.exec_all().group(4, 0)
+               .MOV(vec4(brw_message_reg(color_mrf)), fs_reg(reg));
+   }
 
    fs_inst *write;
    if (key->nr_color_regions == 1) {
@@ -2819,8 +2830,10 @@ fs_visitor::emit_repclear_shader()
    assign_curb_setup();
 
    /* Now that we have the uniform assigned, go ahead and force it to a vec4. */
-   assert(mov->src[0].file == FIXED_GRF);
-   mov->src[0] = brw_vec4_grf(mov->src[0].nr, 0);
+   if (uniforms > 0) {
+      assert(mov->src[0].file == FIXED_GRF);
+      mov->src[0] = brw_vec4_grf(mov->src[0].nr, 0);
+   }
 }
 
 /**
