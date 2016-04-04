@@ -964,16 +964,6 @@ print_function_impl(nir_function_impl *impl, print_state *state)
 
    fprintf(fp, "{\n");
 
-   for (unsigned i = 0; i < impl->num_params; i++) {
-      fprintf(fp, "\t");
-      print_var_decl(impl->params[i], state);
-   }
-
-   if (impl->return_var) {
-      fprintf(fp, "\t");
-      print_var_decl(impl->return_var, state);
-   }
-
    nir_foreach_variable(var, &impl->locals) {
       fprintf(fp, "\t");
       print_var_decl(var, state);
