@@ -311,6 +311,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.EXT_framebuffer_multisample_blit_scaled = true;
       ctx->Extensions.EXT_transform_feedback = true;
       ctx->Extensions.OES_depth_texture_cube_map = true;
+      ctx->Extensions.OES_sample_variables = true;
 
       ctx->Extensions.ARB_timer_query = brw->intelScreen->hw_has_timestamp;
 
