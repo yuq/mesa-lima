@@ -863,11 +863,10 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 	}
 
 	/* extend start/end ranges based on livein/liveout info from cfg: */
-	unsigned bitset_words = BITSET_WORDS(ctx->alloc_count);
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		struct ir3_ra_block_data *bd = block->data;
 
-		for (unsigned i = 0; i < bitset_words; i++) {
+		for (unsigned i = 0; i < ctx->alloc_count; i++) {
 			if (BITSET_TEST(bd->livein, i)) {
 				ctx->def[i] = MIN2(ctx->def[i], block->start_ip);
 				ctx->use[i] = MAX2(ctx->use[i], block->start_ip);
