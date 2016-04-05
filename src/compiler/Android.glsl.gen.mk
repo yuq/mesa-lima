@@ -32,8 +32,9 @@ intermediates := $(call local-generated-sources-dir)
 LOCAL_SRC_FILES := $(LOCAL_SRC_FILES)
 
 LOCAL_C_INCLUDES += \
-	$(intermediates)/glcpp \
-	$(LOCAL_PATH)/glcpp \
+	$(intermediates)/glsl \
+	$(LOCAL_PATH)/glsl \
+	$(LOCAL_PATH)/glsl/glcpp \
 
 LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, \
 	$(LIBGLCPP_GENERATED_FILES) \
@@ -65,14 +66,14 @@ define local-yy-to-cpp-and-h
 	rm -f $(@:$1=$(YACC_HEADER_SUFFIX))
 endef
 
-$(intermediates)/glsl_lexer.cpp: $(LOCAL_PATH)/glsl_lexer.ll
+$(intermediates)/glsl/glsl_lexer.cpp: $(LOCAL_PATH)/glsl/glsl_lexer.ll
 	$(call local-l-or-ll-to-c-or-cpp)
 
-$(intermediates)/glsl_parser.cpp: $(LOCAL_PATH)/glsl_parser.yy
+$(intermediates)/glsl/glsl_parser.cpp: $(LOCAL_PATH)/glsl/glsl_parser.yy
 	$(call local-yy-to-cpp-and-h,.cpp)
 
-$(intermediates)/glcpp/glcpp-lex.c: $(LOCAL_PATH)/glcpp/glcpp-lex.l
+$(intermediates)/glsl/glcpp/glcpp-lex.c: $(LOCAL_PATH)/glsl/glcpp/glcpp-lex.l
 	$(call local-l-or-ll-to-c-or-cpp)
 
-$(intermediates)/glcpp/glcpp-parse.c: $(LOCAL_PATH)/glcpp/glcpp-parse.y
+$(intermediates)/glsl/glcpp/glcpp-parse.c: $(LOCAL_PATH)/glsl/glcpp/glcpp-parse.y
 	$(call glsl_local-y-to-c-and-h)

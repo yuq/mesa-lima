@@ -91,7 +91,6 @@ SUBDIRS := \
 	src/loader \
 	src/mapi \
 	src/compiler \
-	src/compiler/glsl \
 	src/mesa \
 	src/util \
 	src/egl \
