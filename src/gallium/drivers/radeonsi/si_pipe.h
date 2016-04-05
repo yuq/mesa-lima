@@ -421,6 +421,15 @@ si_set_atom_dirty(struct si_context *sctx,
 		sctx->dirty_atoms &= ~bit;
 }
 
+static inline bool
+si_is_atom_dirty(struct si_context *sctx,
+		  struct r600_atom *atom)
+{
+	unsigned bit = 1 << (atom->id - 1);
+
+	return sctx->dirty_atoms & bit;
+}
+
 static inline void
 si_mark_atom_dirty(struct si_context *sctx,
 		   struct r600_atom *atom)
