@@ -589,7 +589,9 @@ X86_64_FILES =		\
 
 X86_SSE41_FILES = \
 	main/streaming-load-memcpy.c \
-	main/sse_minmax.c
+	main/streaming-load-memcpy.h \
+	main/sse_minmax.c \
+	main/sse_minmax.h
 
 SPARC_FILES =			\
 	sparc/sparc.h		\
