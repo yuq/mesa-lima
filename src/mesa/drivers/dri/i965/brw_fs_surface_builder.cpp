@@ -725,7 +725,7 @@ namespace {
                 */
                if (is_signed && widths[c] < 32)
                   bld.AND(offset(dst, bld, c), offset(dst, bld, c),
-                          brw_imm_d((1 << widths[c]) - 1));
+                          brw_imm_d(scale(widths[c])));
             }
          }
 
@@ -804,7 +804,7 @@ namespace {
                 */
                if (is_signed && widths[c] < 32)
                   bld.AND(offset(dst, bld, c), offset(dst, bld, c),
-                          brw_imm_d((1 << widths[c]) - 1));
+                          brw_imm_d(scale(widths[c])));
             }
          }
 
