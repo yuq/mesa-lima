@@ -1661,6 +1661,16 @@ resolve_phis(struct ir3_compile *ctx, struct ir3_block *block)
 
 		foreach_list_typed(nir_phi_src, nsrc, node, &nphi->srcs) {
 			struct ir3_instruction *src = get_src(ctx, &nsrc->src)[0];
+
+			/* NOTE: src might not be in the same block as it comes from
+			 * according to the phi.. but in the end the backend assumes
+			 * it will be able to assign the same register to each (which
+			 * only works if it is assigned in the src block), so insert
+			 * an extra mov to make sure the phi src is assigned in the
+			 * block it comes from:
+			 */
+			src = ir3_MOV(get_block(ctx, nsrc->pred), src, TYPE_U32);
+
 			ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = src;
 		}
 	}
