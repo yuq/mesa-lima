@@ -545,9 +545,10 @@ class brw_blorp_blit_program : public brw_blorp_eu_emitter
 {
 public:
    brw_blorp_blit_program(struct brw_context *brw,
-                          const brw_blorp_blit_prog_key *key, bool debug_flag);
+                          const brw_blorp_blit_prog_key *key);
 
-   const GLuint *compile(struct brw_context *brw, GLuint *program_size);
+   const GLuint *compile(struct brw_context *brw, bool debug_flag,
+                         GLuint *program_size);
 
    brw_blorp_prog_data prog_data;
 
@@ -651,17 +652,13 @@ private:
 };
 
 brw_blorp_blit_program::brw_blorp_blit_program(
-      struct brw_context *brw,
-      const brw_blorp_blit_prog_key *key,
-      bool debug_flag)
-   : brw_blorp_eu_emitter(brw, debug_flag),
-     brw(brw),
-     key(key)
+      struct brw_context *brw, const brw_blorp_blit_prog_key *key)
+   : brw_blorp_eu_emitter(), brw(brw), key(key)
 {
 }
 
 const GLuint *
-brw_blorp_blit_program::compile(struct brw_context *brw,
+brw_blorp_blit_program::compile(struct brw_context *brw, bool debug_flag,
                                 GLuint *program_size)
 {
    /* Sanity checks */
@@ -817,7 +814,7 @@ brw_blorp_blit_program::compile(struct brw_context *brw,
     */
    render_target_write();
 
-   return get_program(program_size);
+   return get_program(brw, debug_flag, program_size);
 }
 
 void
@@ -2188,10 +2185,10 @@ brw_blorp_blit_params::get_wm_prog(struct brw_context *brw,
    if (!brw_search_cache(&brw->cache, BRW_CACHE_BLORP_BLIT_PROG,
                          &this->wm_prog_key, sizeof(this->wm_prog_key),
                          &prog_offset, prog_data)) {
-      brw_blorp_blit_program prog(brw, &this->wm_prog_key,
-                                  INTEL_DEBUG & DEBUG_BLORP);
+      brw_blorp_blit_program prog(brw, &this->wm_prog_key);
       GLuint program_size;
-      const GLuint *program = prog.compile(brw, &program_size);
+      const GLuint *program = prog.compile(brw, INTEL_DEBUG & DEBUG_BLORP,
+                                           &program_size);
       brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_BLIT_PROG,
                        &this->wm_prog_key, sizeof(this->wm_prog_key),
                        program, program_size,
