@@ -307,6 +307,8 @@ struct dri2_egl_image
 
 struct dri2_egl_sync {
    _EGLSync base;
+   mtx_t mutex;
+   cnd_t cond;
    int refcount;
    void *fence;
 };
