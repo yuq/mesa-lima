@@ -574,6 +574,24 @@ vec4_visitor::pack_uniform_registers()
                                    BRW_GET_SWZ(inst->src[i].swizzle, c) + 1);
          }
       }
+
+      if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT &&
+          inst->src[0].file == UNIFORM) {
+         assert(inst->src[2].file == BRW_IMMEDIATE_VALUE);
+         assert(inst->src[0].subnr == 0);
+
+         unsigned bytes_read = inst->src[2].ud;
+         assert(bytes_read % 4 == 0);
+         unsigned vec4s_read = DIV_ROUND_UP(bytes_read, 16);
+
+         /* We just mark every register touched by a MOV_INDIRECT as being
+          * fully used.  This ensures that it doesn't broken up piecewise by
+          * the next part of our packing algorithm.
+          */
+         int reg = inst->src[0].nr;
+         for (unsigned i = 0; i < vec4s_read; i++)
+            chans_used[reg + i] = 4;
+      }
    }
 
    int new_uniform_count = 0;
