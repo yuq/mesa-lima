@@ -1449,7 +1449,7 @@ private:
    void handleUserClipPlanes();
 
    // Symbol *getResourceBase(int r);
-   // void getResourceCoords(std::vector<Value *>&, int r, int s);
+   void getImageCoords(std::vector<Value *>&, int r, int s);
 
    void handleLOAD(Value *dst0[4]);
    void handleSTORE();
@@ -2255,7 +2255,7 @@ Converter::getResourceCoords(std::vector<Value *> &coords, int r, int s)
       coords[0] = mkOp1v(OP_MOV, TYPE_U32, getScratch(4, FILE_ADDRESS),
                          coords[0]);
 }
-
+*/
 static inline int
 partitionLoadStore(uint8_t comp[2], uint8_t size[2], uint8_t mask)
 {
@@ -2280,7 +2280,30 @@ partitionLoadStore(uint8_t comp[2], uint8_t size[2], uint8_t mask)
    }
    return n + 1;
 }
-*/
+
+static inline nv50_ir::TexTarget
+getImageTarget(const tgsi::Source *code, int r)
+{
+   return tgsi::translateTexture(code->images.at(r).target);
+}
+
+static inline const nv50_ir::TexInstruction::ImgFormatDesc *
+getImageFormat(const tgsi::Source *code, int r)
+{
+   return &nv50_ir::TexInstruction::formatTable[
+      tgsi::translateImgFormat(code->images.at(r).format)];
+}
+
+void
+Converter::getImageCoords(std::vector<Value *> &coords, int r, int s)
+{
+   TexInstruction::Target t =
+      TexInstruction::Target(getImageTarget(code, r));
+   const int arg = t.getDim() + (t.isArray() || t.isCube());
+
+   for (int c = 0; c < arg; ++c)
+      coords.push_back(fetchSrc(s, c));
+}
 
 // For raw loads, granularity is 4 byte.
 // Usage of the texture read mask on OP_SULDP is not allowed.
@@ -2312,6 +2335,33 @@ Converter::handleLOAD(Value *dst0[4])
          ld->cache = tgsi.getCacheMode();
          if (tgsi.getSrc(0).isIndirect(0))
             ld->setIndirect(0, 1, fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));
+      }
+      break;
+   case TGSI_FILE_IMAGE: {
+      assert(!code->images[r].raw);
+
+      getImageCoords(off, r, 1);
+      def.resize(4);
+
+      for (c = 0; c < 4; ++c) {
+         if (!dst0[c] || tgsi.getSrc(0).getSwizzle(c) != (TGSI_SWIZZLE_X + c))
+            def[c] = getScratch();
+         else
+            def[c] = dst0[c];
+      }
+
+      TexInstruction *ld =
+         mkTex(OP_SULDP, getImageTarget(code, r), code->images[r].slot, 0,
+               def, off);
+      ld->tex.mask = tgsi.getDst(0).getMask();
+      ld->tex.format = getImageFormat(code, r);
+      ld->cache = tgsi.getCacheMode();
+      if (tgsi.getSrc(0).isIndirect(0))
+         ld->setIndirectR(fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, NULL));
+
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
+         if (dst0[c] != def[c])
+            mkMov(dst0[c], def[tgsi.getSrc(0).getSwizzle(c)]);
       }
       break;
    default:
@@ -2420,6 +2470,24 @@ Converter::handleSTORE()
             st->setIndirect(0, 1, fetchSrc(tgsi.getDst(0).getIndirect(0), 0, 0));
       }
       break;
+   case TGSI_FILE_IMAGE: {
+      assert(!code->images[r].raw);
+
+      getImageCoords(off, r, 0);
+      src = off;
+
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
+         src.push_back(fetchSrc(1, c));
+
+      TexInstruction *st =
+         mkTex(OP_SUSTP, getImageTarget(code, r), code->images[r].slot,
+               0, dummy, src);
+      st->tex.mask = tgsi.getDst(0).getMask();
+      st->cache = tgsi.getCacheMode();
+      if (tgsi.getDst(0).isIndirect(0))
+         st->setIndirectR(fetchSrc(tgsi.getDst(0).getIndirect(0), 0, NULL));
+      }
+      break;
    default:
       assert(!"Unsupported dstFile for STORE");
    }
@@ -2517,6 +2585,29 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
       for (int c = 0; c < 4; ++c)
          if (dst0[c])
             dst0[c] = dst; // not equal to rDst so handleInstruction will do mkMov
+      break;
+   case TGSI_FILE_IMAGE: {
+      assert(!code->images[r].raw);
+
+      getImageCoords(srcv, r, 1);
+      defv.push_back(dst);
+      srcv.push_back(fetchSrc(2, 0));
+
+      if (subOp == NV50_IR_SUBOP_ATOM_CAS)
+         srcv.push_back(fetchSrc(3, 0));
+
+      TexInstruction *tex = mkTex(OP_SUREDP, getImageTarget(code, r),
+                                  code->images[r].slot, 0, defv, srcv);
+      tex->subOp = subOp;
+      tex->tex.mask = 1;
+      tex->setType(ty);
+      if (tgsi.getSrc(0).isIndirect(0))
+         tex->setIndirectR(fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, NULL));
+
+      for (int c = 0; c < 4; ++c)
+         if (dst0[c])
+            dst0[c] = dst; // not equal to rDst so handleInstruction will do mkMov
+      }
       break;
    default:
       assert(!"Unsupported srcFile for ATOM");
