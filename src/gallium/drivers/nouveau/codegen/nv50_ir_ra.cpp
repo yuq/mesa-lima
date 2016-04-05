@@ -2131,7 +2131,9 @@ RegAlloc::InsertConstraintsPass::texConstraintNVE0(TexInstruction *tex)
    condenseDefs(tex);
 
    if (tex->op == OP_SUSTB || tex->op == OP_SUSTP) {
-      condenseSrcs(tex, 3, (3 + typeSizeof(tex->dType) / 4) - 1);
+      int n = tex->srcCount(0xff);
+      if (n > 4)
+         condenseSrcs(tex, 3, n - 1);
    } else
    if (isTextureOp(tex->op)) {
       int n = tex->srcCount(0xff, true);
