@@ -740,6 +740,46 @@ void trace_dump_shader_buffer(const struct pipe_shader_buffer *state)
 }
 
 
+void trace_dump_image_view(const struct pipe_image_view *state)
+{
+   if (!trace_dumping_enabled_locked())
+      return;
+
+   if(!state) {
+      trace_dump_null();
+      return;
+   }
+
+   trace_dump_struct_begin("pipe_image_view");
+   trace_dump_member(resource_ptr, state, resource);
+   trace_dump_member(uint, state, format);
+   trace_dump_member(uint, state, access);
+
+   trace_dump_member_begin("u");
+   trace_dump_struct_begin(""); /* anonymous */
+   if (state->resource->target == PIPE_BUFFER) {
+      trace_dump_member_begin("buf");
+      trace_dump_struct_begin(""); /* anonymous */
+      trace_dump_member(uint, &state->u.buf, first_element);
+      trace_dump_member(uint, &state->u.buf, last_element);
+      trace_dump_struct_end(); /* anonymous */
+      trace_dump_member_end(); /* buf */
+   } else {
+      trace_dump_member_begin("tex");
+      trace_dump_struct_begin(""); /* anonymous */
+      trace_dump_member(uint, &state->u.tex, first_layer);
+      trace_dump_member(uint, &state->u.tex, last_layer);
+      trace_dump_member(uint, &state->u.tex, level);
+      trace_dump_struct_end(); /* anonymous */
+      trace_dump_member_end(); /* tex */
+   }
+   trace_dump_struct_end(); /* anonymous */
+   trace_dump_member_end(); /* u */
+
+   trace_dump_struct_end();
+}
+
+
 void trace_dump_draw_info(const struct pipe_draw_info *state)
 {
    if (!trace_dumping_enabled_locked())
