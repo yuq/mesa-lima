@@ -197,8 +197,6 @@ enum SWR_OUTER_TESSFACTOR_ID
 #define VERTEX_CLIPCULL_DIST_LO_SLOT 35 // VS writes lower 4 clip/cull dist
 #define VERTEX_CLIPCULL_DIST_HI_SLOT 36 // VS writes upper 4 clip/cull dist
 #define VERTEX_POINT_SIZE_SLOT 37       // VS writes point size here
-static_assert(VERTEX_POINT_SIZE_SLOT < KNOB_NUM_ATTRIBUTES, "Mismatched attribute slot size");
-
 // SoAoSoA
 struct simdvertex
 {

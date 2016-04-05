@@ -915,16 +915,25 @@ INLINE simdscalar vplaneps(simdscalar vA, simdscalar vB, simdscalar vC, simdscal
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Compute plane equation vA * vX + vB * vY + vC
+INLINE __m128 vplaneps128(__m128 vA, __m128 vB, __m128 vC, __m128 &vX, __m128 &vY)
+{
+    __m128 vOut = _simd128_fmadd_ps(vA, vX, vC);
+    vOut = _simd128_fmadd_ps(vB, vY, vOut);
+    return vOut;
+}
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief Interpolates a single component.
 /// @param vI - barycentric I
 /// @param vJ - barycentric J
 /// @param pInterpBuffer - pointer to attribute barycentric coeffs
-template<UINT Attrib, UINT Comp>
+template<UINT Attrib, UINT Comp, UINT numComponents = 4>
 static INLINE simdscalar InterpolateComponent(simdscalar vI, simdscalar vJ, const float *pInterpBuffer)
 {
-    const float *pInterpA = &pInterpBuffer[Attrib * 12 + 0 + Comp];
-    const float *pInterpB = &pInterpBuffer[Attrib * 12 + 4 + Comp];
-    const float *pInterpC = &pInterpBuffer[Attrib * 12 + 8 + Comp];
+    const float *pInterpA = &pInterpBuffer[Attrib * 3 * numComponents + 0 + Comp];
+    const float *pInterpB = &pInterpBuffer[Attrib * 3 * numComponents + numComponents + Comp];
+    const float *pInterpC = &pInterpBuffer[Attrib * 3 * numComponents + numComponents * 2 + Comp];
 
     simdscalar vA = _simd_broadcast_ss(pInterpA);
     simdscalar vB = _simd_broadcast_ss(pInterpB);
@@ -934,6 +943,40 @@ static INLINE simdscalar InterpolateComponent(simdscalar vI, simdscalar vJ, cons
     vC = _simd_mul_ps(vk, vC);
     
     return vplaneps(vA, vB, vC, vI, vJ);
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Interpolates a single component.
+/// @param vI - barycentric I
+/// @param vJ - barycentric J
+/// @param pInterpBuffer - pointer to attribute barycentric coeffs
+template<UINT Attrib, UINT Comp, UINT numComponents = 4>
+static INLINE __m128 InterpolateComponent(__m128 vI, __m128 vJ, const float *pInterpBuffer)
+{
+    const float *pInterpA = &pInterpBuffer[Attrib * 3 * numComponents + 0 + Comp];
+    const float *pInterpB = &pInterpBuffer[Attrib * 3 * numComponents + numComponents + Comp];
+    const float *pInterpC = &pInterpBuffer[Attrib * 3 * numComponents + numComponents * 2 + Comp];
+
+    __m128 vA = _mm_broadcast_ss(pInterpA);
+    __m128 vB = _mm_broadcast_ss(pInterpB);
+    __m128 vC = _mm_broadcast_ss(pInterpC);
+
+    __m128 vk = _mm_sub_ps(_mm_sub_ps(_mm_set1_ps(1.0f), vI), vJ);
+    vC = _mm_mul_ps(vk, vC);
+
+    return vplaneps128(vA, vB, vC, vI, vJ);
+}
+
+static INLINE __m128 _simd128_abs_ps(__m128 a)
+{
+    __m128i ai = _mm_castps_si128(a);
+    return _mm_castsi128_ps(_mm_and_si128(ai, _mm_set1_epi32(0x7fffffff)));
+}
+
+static INLINE simdscalar _simd_abs_ps(simdscalar a)
+{
+    simdscalari ai = _simd_castps_si(a);
+    return _simd_castsi_ps(_simd_and_si(ai, _simd_set1_epi32(0x7fffffff)));
 }
 
 INLINE
