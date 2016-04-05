@@ -239,6 +239,34 @@ vec4_instruction::can_do_source_mods(const struct brw_device_info *devinfo)
 }
 
 bool
+vec4_instruction::can_do_writemask(const struct brw_device_info *devinfo)
+{
+   switch (opcode) {
+   case SHADER_OPCODE_GEN4_SCRATCH_READ:
+   case VS_OPCODE_PULL_CONSTANT_LOAD:
+   case VS_OPCODE_PULL_CONSTANT_LOAD_GEN7:
+   case VS_OPCODE_SET_SIMD4X2_HEADER_GEN9:
+   case TCS_OPCODE_SET_INPUT_URB_OFFSETS:
+   case TCS_OPCODE_SET_OUTPUT_URB_OFFSETS:
+   case TES_OPCODE_CREATE_INPUT_READ_HEADER:
+   case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:
+   case VEC4_OPCODE_URB_READ:
+      return false;
+   default:
+      /* The MATH instruction on Gen6 only executes in align1 mode, which does
+       * not support writemasking.
+       */
+      if (devinfo->gen == 6 && is_math())
+         return false;
+
+      if (is_tex())
+         return false;
+
+      return true;
+   }
+}
+
+bool
 vec4_instruction::can_change_types() const
 {
    return dst.type == src[0].type &&
