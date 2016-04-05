@@ -189,8 +189,10 @@ static bool valid_flags(struct ir3_instruction *instr, unsigned n,
 /* propagate register flags from src to dst.. negates need special
  * handling to cancel each other out.
  */
-static void combine_flags(unsigned *dstflags, unsigned srcflags)
+static void combine_flags(unsigned *dstflags, struct ir3_instruction *src)
 {
+	unsigned srcflags = src->regs[1]->flags;
+
 	/* if what we are combining into already has (abs) flags,
 	 * we can drop (neg) from src:
 	 */
@@ -216,6 +218,15 @@ static void combine_flags(unsigned *dstflags, unsigned srcflags)
 	*dstflags |= srcflags & IR3_REG_IMMED;
 	*dstflags |= srcflags & IR3_REG_RELATIV;
 	*dstflags |= srcflags & IR3_REG_ARRAY;
+
+	/* if src of the src is boolean we can drop the (abs) since we know
+	 * the source value is already a postitive integer.  This cleans
+	 * up the absnegs that get inserted when converting between nir and
+	 * native boolean (see ir3_b2n/n2b)
+	 */
+	struct ir3_instruction *srcsrc = ssa(src->regs[1]);
+	if (srcsrc && is_bool(srcsrc))
+		*dstflags &= ~IR3_REG_SABS;
 }
 
 /**
@@ -241,7 +252,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 		struct ir3_register *src_reg = src->regs[1];
 		unsigned new_flags = reg->flags;
 
-		combine_flags(&new_flags, src_reg->flags);
+		combine_flags(&new_flags, src);
 
 		if (valid_flags(instr, n, new_flags)) {
 			if (new_flags & IR3_REG_ARRAY) {
@@ -262,7 +273,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 		struct ir3_register *src_reg = src->regs[1];
 		unsigned new_flags = reg->flags;
 
-		combine_flags(&new_flags, src_reg->flags);
+		combine_flags(&new_flags, src);
 
 		if (!valid_flags(instr, n, new_flags)) {
 			/* special case for "normal" mad instructions, we can

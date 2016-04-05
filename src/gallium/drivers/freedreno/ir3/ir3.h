@@ -628,6 +628,18 @@ static inline bool is_input(struct ir3_instruction *instr)
 	}
 }
 
+static inline bool is_bool(struct ir3_instruction *instr)
+{
+	switch (instr->opc) {
+	case OPC_CMPS_F:
+	case OPC_CMPS_S:
+	case OPC_CMPS_U:
+		return true;
+	default:
+		return false;
+	}
+}
+
 static inline bool is_meta(struct ir3_instruction *instr)
 {
 	/* TODO how should we count PHI (and maybe fan-in/out) which
