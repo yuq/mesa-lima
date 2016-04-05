@@ -206,6 +206,9 @@ namespace {
       // http://www.llvm.org/bugs/show_bug.cgi?id=19735
       c.getDiagnosticOpts().ShowCarets = false;
       c.getInvocation().setLangDefaults(c.getLangOpts(), clang::IK_OpenCL,
+#if HAVE_LLVM >= 0x0309
+                                        llvm::Triple(triple),
+#endif
                                         clang::LangStandard::lang_opencl11);
       c.createDiagnostics(
                           new clang::TextDiagnosticPrinter(
