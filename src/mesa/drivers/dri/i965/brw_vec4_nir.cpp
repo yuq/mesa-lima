@@ -686,23 +686,43 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    }
 
    case nir_intrinsic_load_uniform: {
-      /* Offsets are in bytes but they should always be multiples of 16 */
-      assert(instr->const_index[0] % 16 == 0);
+      /* Offsets are in bytes but they should always be multiples of 4 */
+      assert(nir_intrinsic_base(instr) % 4 == 0);
 
       dest = get_nir_dest(instr->dest);
 
       src = src_reg(dst_reg(UNIFORM, instr->const_index[0] / 16));
       src.type = dest.type;
 
+      /* Uniforms don't actually have to be vec4 aligned.  In the case that
+       * it isn't, we have to use a swizzle to shift things around.  They
+       * do still have the std140 alignment requirement that vec2's have to
+       * be vec2-aligned and vec3's and vec4's have to be vec4-aligned.
+       *
+       * The swizzle also works in the indirect case as the generator adds
+       * the swizzle to the offset for us.
+       */
+      unsigned shift = (nir_intrinsic_base(instr) % 16) / 4;
+      assert(shift + instr->num_components <= 4);
+
       nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
       if (const_offset) {
-         /* Offsets are in bytes but they should always be multiples of 16 */
-         assert(const_offset->u32[0] % 16 == 0);
-         src.reg_offset = const_offset->u32[0] / 16;
+         /* Offsets are in bytes but they should always be multiples of 4 */
+         assert(const_offset->u32[0] % 4 == 0);
+
+         unsigned offset = const_offset->u32[0] + shift * 4;
+         src.reg_offset = offset / 16;
+         shift = (nir_intrinsic_base(instr) % 16) / 4;
+         src.swizzle += BRW_SWIZZLE4(shift, shift, shift, shift);
 
          emit(MOV(dest, src));
       } else {
+         src.swizzle += BRW_SWIZZLE4(shift, shift, shift, shift);
+
          src_reg indirect = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_UD, 1);
+
+         /* MOV_INDIRECT is going to stomp the whole thing anyway */
+         dest.writemask = WRITEMASK_XYZW;
 
          emit(SHADER_OPCODE_MOV_INDIRECT, dest, src,
               indirect, brw_imm_ud(instr->const_index[1]));
