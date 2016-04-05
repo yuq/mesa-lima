@@ -1765,54 +1765,121 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
    su->setSrc(2, pred);
 }
 
+static DataType
+getSrcType(const TexInstruction::ImgFormatDesc *t, int c)
+{
+   switch (t->type) {
+   case FLOAT: return t->bits[c] == 16 ? TYPE_F16 : TYPE_F32;
+   case UNORM: return t->bits[c] == 8 ? TYPE_U8 : TYPE_U16;
+   case SNORM: return t->bits[c] == 8 ? TYPE_S8 : TYPE_S16;
+   case UINT:
+      return (t->bits[c] == 8 ? TYPE_U8 :
+              (t->bits[c] == 16 ? TYPE_U16 : TYPE_U32));
+   case SINT:
+      return (t->bits[c] == 8 ? TYPE_S8 :
+              (t->bits[c] == 16 ? TYPE_S16 : TYPE_S32));
+   }
+   return TYPE_NONE;
+}
+
+static DataType
+getDestType(const ImgType type) {
+   switch (type) {
+   case FLOAT:
+   case UNORM:
+   case SNORM:
+      return TYPE_F32;
+   case UINT:
+      return TYPE_U32;
+   case SINT:
+      return TYPE_S32;
+   default:
+      assert(!"Impossible type");
+      return TYPE_NONE;
+   }
+}
+
+void
+NVC0LoweringPass::convertSurfaceFormat(TexInstruction *su)
+{
+   const TexInstruction::ImgFormatDesc *format = su->tex.format;
+   int width = format->bits[0] + format->bits[1] +
+      format->bits[2] + format->bits[3];
+   Value *untypedDst[4] = {};
+   Value *typedDst[4] = {};
+
+   // We must convert this to a generic load.
+   su->op = OP_SULDB;
+
+   su->dType = typeOfSize(width / 8);
+   su->sType = TYPE_U8;
+
+   for (int i = 0; i < width / 32; i++)
+      untypedDst[i] = bld.getSSA();
+   if (width < 32)
+      untypedDst[0] = bld.getSSA();
+
+   for (int i = 0; i < 4; i++) {
+      typedDst[i] = su->getDef(i);
+   }
+
+   // Set the untyped dsts as the su's destinations
+   for (int i = 0; i < 4; i++)
+      su->setDef(i, untypedDst[i]);
+
+   bld.setPosition(su, true);
+
+   // Unpack each component into the typed dsts
+   int bits = 0;
+   for (int i = 0; i < 4; bits += format->bits[i], i++) {
+      if (!typedDst[i])
+         continue;
+      if (i >= format->components) {
+         if (format->type == FLOAT ||
+             format->type == UNORM ||
+             format->type == SNORM)
+            bld.loadImm(typedDst[i], i == 3 ? 1.0f : 0.0f);
+         else
+            bld.loadImm(typedDst[i], i == 3 ? 1 : 0);
+         continue;
+      }
+
+      // Get just that component's data into the relevant place
+      if (format->bits[i] == 32)
+         bld.mkMov(typedDst[i], untypedDst[i]);
+      else if (format->bits[i] == 16)
+         bld.mkCvt(OP_CVT, getDestType(format->type), typedDst[i],
+                   getSrcType(format, i), untypedDst[i / 2])
+         ->subOp = (i & 1) << (format->type == FLOAT ? 0 : 1);
+      else if (format->bits[i] == 8)
+         bld.mkCvt(OP_CVT, getDestType(format->type), typedDst[i],
+                   getSrcType(format, i), untypedDst[0])->subOp = i;
+      else {
+         bld.mkOp2(OP_EXTBF, TYPE_U32, typedDst[i], untypedDst[bits / 32],
+                   bld.mkImm((bits % 32) | (format->bits[i] << 8)));
+         if (format->type == UNORM || format->type == SNORM)
+            bld.mkCvt(OP_CVT, TYPE_F32, typedDst[i], getSrcType(format, i), typedDst[i]);
+      }
+
+      // Normalize / convert as necessary
+      if (format->type == UNORM)
+         bld.mkOp2(OP_MUL, TYPE_F32, typedDst[i], typedDst[i], bld.loadImm(NULL, 1.0f / ((1 << format->bits[i]) - 1)));
+      else if (format->type == SNORM)
+         bld.mkOp2(OP_MUL, TYPE_F32, typedDst[i], typedDst[i], bld.loadImm(NULL, 1.0f / ((1 << (format->bits[i] - 1)) - 1)));
+      else if (format->type == FLOAT && format->bits[i] < 16) {
+         bld.mkOp2(OP_SHL, TYPE_U32, typedDst[i], typedDst[i], bld.loadImm(NULL, 15 - format->bits[i]));
+         bld.mkCvt(OP_CVT, TYPE_F32, typedDst[i], TYPE_F16, typedDst[i]);
+      }
+   }
+}
+
 void
 NVC0LoweringPass::handleSurfaceOpNVE4(TexInstruction *su)
 {
    processSurfaceCoordsNVE4(su);
 
-   // Who do we hate more ? The person who decided that nvc0's SULD doesn't
-   // have to support conversion or the person who decided that, in OpenCL,
-   // you don't have to specify the format here like you do in OpenGL ?
-
-   if (su->op == OP_SULDP) {
-      // We don't patch shaders. Ever.
-      // You get an indirect call to our library blob here.
-      // But at least it's uniform.
-      FlowInstruction *call;
-      LValue *p[3];
-      LValue *r[5];
-      uint16_t base = su->tex.r * NVE4_SU_INFO__STRIDE + NVE4_SU_INFO_CALL;
-
-      for (int i = 0; i < 4; ++i)
-         (r[i] = bld.getScratch(4, FILE_GPR))->reg.data.id = i;
-      for (int i = 0; i < 3; ++i)
-         (p[i] = bld.getScratch(1, FILE_PREDICATE))->reg.data.id = i;
-      (r[4] = bld.getScratch(8, FILE_GPR))->reg.data.id = 4;
-
-      bld.mkMov(p[1], bld.mkImm((su->cache == CACHE_CA) ? 1 : 0), TYPE_U8);
-      bld.mkMov(p[2], bld.mkImm((su->cache == CACHE_CG) ? 1 : 0), TYPE_U8);
-      bld.mkMov(p[0], su->getSrc(2), TYPE_U8);
-      bld.mkMov(r[4], su->getSrc(0), TYPE_U64);
-      bld.mkMov(r[2], su->getSrc(1), TYPE_U32);
-
-      call = bld.mkFlow(OP_CALL, NULL, su->cc, su->getPredicate());
-
-      call->indirect = 1;
-      call->absolute = 1;
-      call->setSrc(0, bld.mkSymbol(FILE_MEMORY_CONST,
-                                   prog->driver->io.auxCBSlot, TYPE_U32,
-                                   prog->driver->io.suInfoBase + base));
-      call->setSrc(1, r[2]);
-      call->setSrc(2, r[4]);
-      for (int i = 0; i < 3; ++i)
-         call->setSrc(3 + i, p[i]);
-      for (int i = 0; i < 4; ++i) {
-         call->setDef(i, r[i]);
-         bld.mkMov(su->getDef(i), r[i]);
-      }
-      call->setDef(4, p[1]);
-      delete_Instruction(bld.getProgram(), su);
-   }
+   if (su->op == OP_SULDP)
+      convertSurfaceFormat(su);
 
    if (su->op == OP_SUREDB || su->op == OP_SUREDP) {
       // FIXME: for out of bounds access, destination value will be undefined !
@@ -1840,9 +1907,10 @@ NVC0LoweringPass::handleSurfaceOpNVE4(TexInstruction *su)
       red->setPredicate(cc, pred);
       delete_Instruction(bld.getProgram(), su);
       handleCasExch(red, true);
-   } else {
-      su->sType = (su->tex.target == TEX_TARGET_BUFFER) ? TYPE_U32 : TYPE_U8;
    }
+
+   if (su->op == OP_SUSTB || su->op == OP_SUSTP)
+      su->sType = (su->tex.target == TEX_TARGET_BUFFER) ? TYPE_U32 : TYPE_U8;
 }
 
 bool

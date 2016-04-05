@@ -137,6 +137,7 @@ private:
 
    void adjustCoordinatesMS(TexInstruction *);
    void processSurfaceCoordsNVE4(TexInstruction *);
+   void convertSurfaceFormat(TexInstruction *);
 
 protected:
    BuildUtil bld;
