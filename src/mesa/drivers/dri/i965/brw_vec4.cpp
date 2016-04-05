@@ -965,10 +965,12 @@ vec4_instruction::can_reswizzle(const struct brw_device_info *devinfo,
                                 int swizzle_mask)
 {
    /* Gen6 MATH instructions can not execute in align16 mode, so swizzles
-    * or writemasking are not allowed.
+    * are not allowed.
     */
-   if (devinfo->gen == 6 && is_math() &&
-       (swizzle != BRW_SWIZZLE_XYZW || dst_writemask != WRITEMASK_XYZW))
+   if (devinfo->gen == 6 && is_math() && swizzle != BRW_SWIZZLE_XYZW)
+      return false;
+
+   if (!can_do_writemask(devinfo) && dst_writemask != WRITEMASK_XYZW)
       return false;
 
    /* If this instruction sets anything not referenced by swizzle, then we'd
