@@ -62,7 +62,7 @@ EXTRA_DIST += glsl/tests glsl/glcpp/tests glsl/README	\
 	glsl/glcpp/glcpp-lex.l				\
 	glsl/glcpp/glcpp-parse.y			\
 	glsl/Makefile.sources				\
-	glsl/SConscript
+	SConscript.glsl
 
 TESTS += glsl/glcpp/tests/glcpp-test			\
 	glsl/glcpp/tests/glcpp-test-cr-lf		\
