@@ -911,7 +911,34 @@ nvc0_update_surface_bindings(struct nvc0_context *nvc0)
 static inline void
 nve4_update_surface_bindings(struct nvc0_context *nvc0)
 {
-   /* TODO */
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_screen *screen = nvc0->screen;
+   int i, j, s;
+
+   for (s = 0; s < 5; s++) {
+      if (!nvc0->images_dirty[s])
+         continue;
+
+      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+      PUSH_DATA (push, 2048);
+      PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
+      PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
+      BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 16 * NVC0_MAX_IMAGES);
+      PUSH_DATA (push, NVC0_CB_AUX_SU_INFO(0));
+
+      for (i = 0; i < NVC0_MAX_IMAGES; ++i) {
+         struct pipe_image_view *view = &nvc0->images[s][i];
+         if (view->resource) {
+            struct nv04_resource *res = nv04_resource(view->resource);
+
+            nve4_set_surface_info(push, view, screen);
+            BCTX_REFN(nvc0->bufctx_3d, 3D_SUF, res, RDWR);
+         } else {
+            for (j = 0; j < 16; j++)
+               PUSH_DATA(push, 0);
+         }
+      }
+   }
 }
 
 void

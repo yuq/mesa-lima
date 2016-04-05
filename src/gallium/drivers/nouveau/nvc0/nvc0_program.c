@@ -561,12 +561,14 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    } else {
       if (chipset >= NVISA_GK104_CHIPSET) {
          info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
+         info->io.suInfoBase = NVC0_CB_AUX_SU_INFO(0);
+      } else {
+         info->io.suInfoBase = 0; /* TODO */
       }
       info->io.sampleInfoBase = NVC0_CB_AUX_SAMPLE_INFO;
       info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
       info->io.msInfoCBSlot = 15;
       info->io.msInfoBase = 0; /* TODO */
-      info->io.suInfoBase = 0; /* TODO */
    }
 
    info->assignSlots = nvc0_program_assign_varying_slots;
