@@ -2019,8 +2019,14 @@ fs_visitor::assign_constant_locations()
       if (!contiguous[u]) {
          unsigned chunk_size = u - chunk_start + 1;
 
-         if (num_push_constants + chunk_size <= max_push_components &&
-             chunk_size <= max_chunk_size) {
+         /* Decide whether we should push or pull this parameter.  In the
+          * Vulkan driver, push constants are explicitly exposed via the API
+          * so we push everything.  In GL, we only push small arrays.
+          */
+         if (stage_prog_data->pull_param == NULL ||
+             (num_push_constants + chunk_size <= max_push_components &&
+              chunk_size <= max_chunk_size)) {
+            assert(num_push_constants + chunk_size <= max_push_components);
             for (unsigned j = chunk_start; j <= u; j++)
                push_constant_loc[j] = num_push_constants++;
          } else {
