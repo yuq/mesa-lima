@@ -28,6 +28,7 @@
 #pragma once
 
 #include <string.h>
+#include <type_traits>
 #include "common/os.h"
 #include "common/simdintrin.h"
 #include "common/swr_assert.h"
@@ -834,3 +835,33 @@ public:
         return T(word & ELEMENT_MASK);
     }
 };
+
+// Recursive template used to auto-nest conditionals.  Converts dynamic boolean function
+// arguments to static template arguments.
+template <typename TermT, typename... ArgsB>
+struct TemplateArgUnroller
+{
+    // Last Arg Terminator
+    static typename TermT::FuncType GetFunc(bool bArg)
+    {
+        if (bArg)
+        {
+            return TermT::template GetFunc<ArgsB..., std::true_type>();
+        }
+
+        return TermT::template GetFunc<ArgsB..., std::false_type>();
+    }
+
+    // Recursively parse args
+    template <typename... TArgsT>
+    static typename TermT::FuncType GetFunc(bool bArg, TArgsT... remainingArgs)
+    {
+        if (bArg)
+        {
+            return TemplateArgUnroller<TermT, ArgsB..., std::true_type>::GetFunc(remainingArgs...);
+        }
+
+        return TemplateArgUnroller<TermT, ArgsB..., std::false_type>::GetFunc(remainingArgs...);
+    }
+};
+

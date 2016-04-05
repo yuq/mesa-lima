@@ -41,6 +41,7 @@
 #include "core/threads.h"
 #include "core/tilemgr.h"
 #include "core/clip.h"
+#include "core/utils.h"
 
 #include "common/simdintrin.h"
 #include "common/os.h"
@@ -1029,42 +1030,6 @@ uint32_t MaxVertsPerDraw(
     return vertsPerDraw;
 }
 
-// Recursive template used to auto-nest conditionals.  Converts dynamic boolean function
-// arguments to static template arguments.
-template <bool... ArgsB>
-struct FEDrawChooser
-{
-    // Last Arg Terminator
-    static PFN_FE_WORK_FUNC GetFunc(bool bArg)
-    {
-        if (bArg)
-        {
-            return ProcessDraw<ArgsB..., true>;
-        }
-
-        return ProcessDraw<ArgsB..., false>;
-    }
-
-    // Recursively parse args
-    template <typename... TArgsT>
-    static PFN_FE_WORK_FUNC GetFunc(bool bArg, TArgsT... remainingArgs)
-    {
-        if (bArg)
-        {
-            return FEDrawChooser<ArgsB..., true>::GetFunc(remainingArgs...);
-        }
-
-        return FEDrawChooser<ArgsB..., false>::GetFunc(remainingArgs...);
-    }
-};
-
-// Selector for correct templated Draw front-end function
-INLINE
-static PFN_FE_WORK_FUNC GetFEDrawFunc(bool IsIndexed, bool HasTessellation, bool HasGeometryShader, bool HasStreamOut, bool RasterizerEnabled)
-{
-    return FEDrawChooser<>::GetFunc(IsIndexed, HasTessellation, HasGeometryShader, HasStreamOut, RasterizerEnabled);
-}
-
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief DrawInstanced
@@ -1119,7 +1084,7 @@ void DrawInstanced(
         InitDraw(pDC, isSplitDraw);
 
         pDC->FeWork.type = DRAW;
-        pDC->FeWork.pfnWork = GetFEDrawFunc(
+        pDC->FeWork.pfnWork = GetProcessDrawFunc(
             false,  // IsIndexed
             pState->tsState.tsEnable,
             pState->gsState.gsEnable,
@@ -1252,7 +1217,7 @@ void DrawIndexedInstance(
         InitDraw(pDC, isSplitDraw);
 
         pDC->FeWork.type = DRAW;
-        pDC->FeWork.pfnWork = GetFEDrawFunc(
+        pDC->FeWork.pfnWork = GetProcessDrawFunc(
             true,   // IsIndexed
             pState->tsState.tsEnable,
             pState->gsState.gsEnable,

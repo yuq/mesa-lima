@@ -1146,14 +1146,14 @@ private:
 
 // Primitive Assembler factory class, responsible for creating and initializing the correct assembler
 // based on state.
-template <bool IsIndexedT>
+template <typename IsIndexedT>
 struct PA_FACTORY
 {
     PA_FACTORY(DRAW_CONTEXT* pDC, PRIMITIVE_TOPOLOGY in_topo, uint32_t numVerts) : topo(in_topo)
     {
 #if KNOB_ENABLE_CUT_AWARE_PA == TRUE
         const API_STATE& state = GetApiState(pDC);
-        if ((IsIndexedT && (
+        if ((IsIndexedT::value && (
             topo == TOP_TRIANGLE_STRIP || topo == TOP_POINT_LIST ||
             topo == TOP_LINE_LIST || topo == TOP_LINE_STRIP ||
             topo == TOP_TRIANGLE_LIST || topo == TOP_LINE_LIST_ADJ ||
@@ -1162,7 +1162,7 @@ struct PA_FACTORY
 
             // non-indexed draws with adjacency topologies must use cut-aware PA until we add support
             // for them in the optimized PA
-            (!IsIndexedT && (
+            (!IsIndexedT::value && (
             topo == TOP_LINE_LIST_ADJ || topo == TOP_LISTSTRIP_ADJ || topo == TOP_TRI_LIST_ADJ || topo == TOP_TRI_STRIP_ADJ)))
         {
             memset(&indexStore, 0, sizeof(indexStore));
