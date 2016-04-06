@@ -1337,7 +1337,7 @@ fs_visitor::emit_sampleid_setup()
    const fs_builder abld = bld.annotate("compute sample id");
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
 
-   if (!key->compute_sample_id) {
+   if (!key->multisample_fbo) {
       /* As per GL_ARB_sample_shading specification:
        * "When rendering to a non-multisample buffer, or if multisample
        *  rasterization is disabled, gl_SampleID will always be zero."

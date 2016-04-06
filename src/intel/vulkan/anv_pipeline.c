@@ -288,7 +288,7 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
        */
       key->persample_shading = info->pMultisampleState->sampleShadingEnable;
       key->compute_pos_offset = info->pMultisampleState->sampleShadingEnable;
-      key->compute_sample_id = info->pMultisampleState->sampleShadingEnable;
+      key->multisample_fbo = true;
    }
 }
 

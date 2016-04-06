@@ -248,7 +248,7 @@ struct brw_wm_prog_key {
    bool render_to_fbo:1;
    bool clamp_fragment_color:1;
    bool compute_pos_offset:1;
-   bool compute_sample_id:1;
+   bool multisample_fbo:1;
    unsigned line_aa:2;
    bool high_quality_derivatives:1;
    bool force_dual_color_blend:1;

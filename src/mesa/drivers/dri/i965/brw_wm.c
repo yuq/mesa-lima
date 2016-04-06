@@ -260,6 +260,8 @@ brw_wm_debug_recompile(struct brw_context *brw,
                       old_key->render_to_fbo, key->render_to_fbo);
    found |= key_debug(brw, "fragment color clamping",
                       old_key->clamp_fragment_color, key->clamp_fragment_color);
+   found |= key_debug(brw, "multisampled FBO",
+                      old_key->multisample_fbo, key->multisample_fbo);
    found |= key_debug(brw, "line smoothing",
                       old_key->line_aa, key->line_aa);
    found |= key_debug(brw, "renderbuffer height",
@@ -404,7 +406,6 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    GLuint lookup = 0;
    GLuint line_aa;
    bool program_uses_dfdy = fp->program.UsesDFdy;
-   const bool multisample_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 
    memset(key, 0, sizeof(*key));
 
@@ -530,10 +531,8 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
       _mesa_get_min_invocations_per_fragment(ctx, &fp->program, false) > 1 &&
       fp->program.Base.SystemValuesRead & SYSTEM_BIT_SAMPLE_POS;
 
-   key->compute_sample_id =
-      multisample_fbo &&
-      ctx->Multisample.Enabled &&
-      (fp->program.Base.SystemValuesRead & SYSTEM_BIT_SAMPLE_ID);
+   key->multisample_fbo = ctx->Multisample.Enabled &&
+                          _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 
    /* BRW_NEW_VUE_MAP_GEOM_OUT */
    if (brw->gen < 6 || _mesa_bitcount_64(fp->program.Base.InputsRead &
