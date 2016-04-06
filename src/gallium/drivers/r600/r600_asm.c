@@ -1470,6 +1470,11 @@ int r600_bytecode_add_gds(struct r600_bytecode *bc, const struct r600_bytecode_g
 		return -ENOMEM;
 	memcpy(ngds, gds, sizeof(struct r600_bytecode_gds));
 
+	if (bc->chip_class >= EVERGREEN) {
+		if (gds->uav_index_mode)
+			egcm_load_index_reg(bc, gds->uav_index_mode - 1, false);
+	}
+
 	if (bc->cf_last == NULL ||
 	    bc->cf_last->op != CF_OP_GDS ||
 	    bc->force_add_cf) {
@@ -2337,6 +2342,11 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 
 			if (gds->op != FETCH_OP_TF_WRITE) {
 				o += fprintf(stderr, ", R%d.", gds->src_gpr2);
+			}
+			if (gds->alloc_consume) {
+				o += fprintf(stderr, " UAV: %d", gds->uav_id);
+				if (gds->uav_index_mode)
+					o += fprintf(stderr, "[%s]", index_mode[gds->uav_index_mode]);
 			}
 			fprintf(stderr, "\n");
 			id += 4;

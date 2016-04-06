@@ -121,7 +121,6 @@ struct r600_bytecode_vtx {
 struct r600_bytecode_gds {
 	struct list_head		list;
 	unsigned			op;
-	unsigned                        gds_op;
 	unsigned			src_gpr;
 	unsigned			src_rel;
 	unsigned			src_sel_x;
@@ -134,6 +133,10 @@ struct r600_bytecode_gds {
 	unsigned			dst_sel_y;
 	unsigned			dst_sel_z;
 	unsigned			dst_sel_w;
+	unsigned			uav_index_mode;
+	unsigned                        uav_id;
+	unsigned                        alloc_consume;
+	unsigned                        bcast_first_req;
 };
 
 struct r600_bytecode_output {
