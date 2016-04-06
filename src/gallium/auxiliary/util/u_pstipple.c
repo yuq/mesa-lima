@@ -204,7 +204,7 @@ pstip_transform_decl(struct tgsi_transform_context *ctx,
    if (decl->Declaration.File == TGSI_FILE_SAMPLER) {
       uint i;
       for (i = decl->Range.First; i <= decl->Range.Last; i++) {
-         pctx->samplersUsed |= 1 << i;
+         pctx->samplersUsed |= 1u << i;
       }
    }
    else if (decl->Declaration.File == pctx->wincoordFile) {
@@ -266,9 +266,11 @@ pstip_transform_prolog(struct tgsi_transform_context *ctx)
    int texTemp;
    int sampIdx;
 
+   STATIC_ASSERT(sizeof(pctx->samplersUsed) * 8 >= PIPE_MAX_SAMPLERS);
+
    /* find free texture sampler */
    pctx->freeSampler = free_bit(pctx->samplersUsed);
-   if (pctx->freeSampler >= PIPE_MAX_SAMPLERS)
+   if (pctx->freeSampler < 0 || pctx->freeSampler >= PIPE_MAX_SAMPLERS)
       pctx->freeSampler = PIPE_MAX_SAMPLERS - 1;
 
    if (pctx->wincoordInput < 0)
