@@ -365,11 +365,25 @@ brw_meta_get_buffer_rect(const struct gl_framebuffer *fb,
  * Fast color clear can only clear to color values of 1.0 or 0.0.  At the
  * moment we only support floating point, unorm, and snorm buffers.
  */
-static bool
-is_color_fast_clear_compatible(struct brw_context *brw,
-                               mesa_format format,
-                               const union gl_color_union *color)
+bool
+brw_is_color_fast_clear_compatible(struct brw_context *brw,
+                                   mesa_format format,
+                                   const union gl_color_union *color)
 {
+   /* If we're mapping the render format to a different format than the
+    * format we use for texturing then it is a bit questionable whether it
+    * should be possible to use a fast clear. Although we only actually
+    * render using a renderable format, without the override workaround it
+    * wouldn't be possible to have a non-renderable surface in a fast clear
+    * state so the hardware probably legitimately doesn't need to support
+    * this case. At least on Gen9 this really does seem to cause problems.
+    */
+   if (brw->gen >= 9 &&
+       brw_format_for_mesa_format(format) !=
+       brw->render_target_format[format])
+      return false;
+
+   format = _mesa_get_render_format(&brw->ctx, format);
    if (_mesa_is_format_integer_color(format)) {
       if (brw->gen >= 8) {
          perf_debug("Integer fast clear not enabled for (%s)",
@@ -559,7 +573,6 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                     GLbitfield buffers, bool partial_clear)
 {
    struct gl_context *ctx = &brw->ctx;
-   mesa_format format;
    enum { FAST_CLEAR, REP_CLEAR, PLAIN_CLEAR } clear_type;
    GLbitfield plain_clear_buffers, meta_save, rep_clear_buffers, fast_clear_buffers;
    struct rect fast_clear_rect, clear_rect;
@@ -593,19 +606,6 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       if (brw->gen < 7)
          clear_type = REP_CLEAR;
 
-      /* If we're mapping the render format to a different format than the
-       * format we use for texturing then it is a bit questionable whether it
-       * should be possible to use a fast clear. Although we only actually
-       * render using a renderable format, without the override workaround it
-       * wouldn't be possible to have a non-renderable surface in a fast clear
-       * state so the hardware probably legitimately doesn't need to support
-       * this case. At least on Gen9 this really does seem to cause problems.
-       */
-      if (brw->gen >= 9 &&
-          brw_format_for_mesa_format(irb->mt->format) !=
-          brw->render_target_format[irb->mt->format])
-         clear_type = REP_CLEAR;
-
       /* Gen9 doesn't support fast clear on single-sampled SRGB buffers. When
        * GL_FRAMEBUFFER_SRGB is enabled any color renderbuffers will be
        * resolved in intel_update_state. In that case it's pointless to do a
@@ -629,8 +629,8 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       /* Fast clear is only supported for colors where all components are
        * either 0 or 1.
        */
-      format = _mesa_get_render_format(ctx, irb->mt->format);
-      if (!is_color_fast_clear_compatible(brw, format, &ctx->Color.ClearColor))
+      if (!brw_is_color_fast_clear_compatible(brw, irb->mt->format,
+                                              &ctx->Color.ClearColor))
          clear_type = REP_CLEAR;
 
       /* From the SNB PRM (Vol4_Part1):

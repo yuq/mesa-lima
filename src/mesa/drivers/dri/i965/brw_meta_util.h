@@ -65,6 +65,11 @@ brw_meta_set_fast_clear_color(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
                               const union gl_color_union *color);
 
+bool
+brw_is_color_fast_clear_compatible(struct brw_context *brw,
+                                   mesa_format format,
+                                   const union gl_color_union *color);
+
 #ifdef __cplusplus
 }
 #endif
