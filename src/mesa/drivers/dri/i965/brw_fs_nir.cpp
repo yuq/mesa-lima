@@ -2081,6 +2081,7 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
    assert(stage == MESA_SHADER_FRAGMENT);
    struct brw_wm_prog_data *wm_prog_data =
       (struct brw_wm_prog_data *) prog_data;
+   const struct brw_wm_prog_key *wm_key = (const struct brw_wm_prog_key *) key;
 
    fs_reg dest;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
@@ -2175,6 +2176,20 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
          break;
 
       case nir_intrinsic_interp_var_at_sample: {
+         if (!wm_key->multisample_fbo) {
+            /* From the ARB_gpu_shader5 specification:
+             * "If multisample buffers are not available, the input varying
+             *  will be evaluated at the center of the pixel."
+             */
+            emit_pixel_interpolater_send(bld,
+                                         FS_OPCODE_INTERPOLATE_AT_CENTROID,
+                                         dst_xy,
+                                         fs_reg(), /* src */
+                                         brw_imm_ud(0u),
+                                         interpolation);
+            break;
+         }
+
          nir_const_value *const_sample = nir_src_as_const_value(instr->src[0]);
 
          if (const_sample) {
