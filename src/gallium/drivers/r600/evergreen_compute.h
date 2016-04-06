@@ -44,17 +44,5 @@ void evergreen_emit_cs_shader(struct r600_context *rctx, struct r600_atom * atom
 
 struct r600_resource* r600_compute_buffer_alloc_vram(struct r600_screen *screen, unsigned size);
 struct pipe_resource *r600_compute_global_buffer_create(struct pipe_screen *screen, const struct pipe_resource *templ);
-void r600_compute_global_buffer_destroy(struct pipe_screen *screen, struct pipe_resource *res);
-void *r600_compute_global_transfer_map(
-	struct pipe_context *ctx_,
-	struct pipe_resource *resource,
-	unsigned level,
-	unsigned usage,
-	const struct pipe_box *box,
-	struct pipe_transfer **ptransfer);
-void r600_compute_global_transfer_unmap(struct pipe_context *ctx, struct pipe_transfer* transfer);
-void r600_compute_global_transfer_flush_region( struct pipe_context *, struct pipe_transfer *, const struct pipe_box *);
-void r600_compute_global_transfer_inline_write( struct pipe_context *, struct pipe_resource *, unsigned level,
-                                                unsigned usage, const struct pipe_box *, const void *data, unsigned stride, unsigned layer_stride);
 
 #endif

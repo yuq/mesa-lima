@@ -177,16 +177,6 @@ static void evergreen_cs_set_constant_buffer(struct r600_context *rctx,
 	rctx->b.b.set_constant_buffer(&rctx->b.b, PIPE_SHADER_COMPUTE, cb_index, &cb);
 }
 
-static const struct u_resource_vtbl r600_global_buffer_vtbl =
-{
-	u_default_resource_get_handle, /* get_handle */
-	r600_compute_global_buffer_destroy, /* resource_destroy */
-	r600_compute_global_transfer_map, /* transfer_map */
-	r600_compute_global_transfer_flush_region,/* transfer_flush_region */
-	r600_compute_global_transfer_unmap, /* transfer_unmap */
-	r600_compute_global_transfer_inline_write /* transfer_inline_write */
-};
-
 /* We need to define these R600 registers here, because we can't include
  * evergreend.h and r600d.h.
  */
@@ -904,69 +894,12 @@ void evergreen_init_compute_state_functions(struct r600_context *rctx)
 
 }
 
-struct pipe_resource *r600_compute_global_buffer_create(struct pipe_screen *screen,
-							const struct pipe_resource *templ)
-{
-	struct r600_resource_global* result = NULL;
-	struct r600_screen* rscreen = NULL;
-	int size_in_dw = 0;
-
-	assert(templ->target == PIPE_BUFFER);
-	assert(templ->bind & PIPE_BIND_GLOBAL);
-	assert(templ->array_size == 1 || templ->array_size == 0);
-	assert(templ->depth0 == 1 || templ->depth0 == 0);
-	assert(templ->height0 == 1 || templ->height0 == 0);
-
-	result = (struct r600_resource_global*)
-	CALLOC(sizeof(struct r600_resource_global), 1);
-	rscreen = (struct r600_screen*)screen;
-
-	COMPUTE_DBG(rscreen, "*** r600_compute_global_buffer_create\n");
-	COMPUTE_DBG(rscreen, "width = %u array_size = %u\n", templ->width0,
-			templ->array_size);
-
-	result->base.b.vtbl = &r600_global_buffer_vtbl;
-	result->base.b.b = *templ;
-	result->base.b.b.screen = screen;
-	pipe_reference_init(&result->base.b.b.reference, 1);
-
-	size_in_dw = (templ->width0+3) / 4;
-
-	result->chunk = compute_memory_alloc(rscreen->global_pool, size_in_dw);
-
-	if (result->chunk == NULL)
-	{
-		free(result);
-		return NULL;
-	}
-
-	return &result->base.b.b;
-}
-
-void r600_compute_global_buffer_destroy(struct pipe_screen *screen,
-					struct pipe_resource *res)
-{
-	struct r600_resource_global* buffer = NULL;
-	struct r600_screen* rscreen = NULL;
-
-	assert(res->target == PIPE_BUFFER);
-	assert(res->bind & PIPE_BIND_GLOBAL);
-
-	buffer = (struct r600_resource_global*)res;
-	rscreen = (struct r600_screen*)screen;
-
-	compute_memory_free(rscreen->global_pool, buffer->chunk->id);
-
-	buffer->chunk = NULL;
-	free(res);
-}
-
-void *r600_compute_global_transfer_map(struct pipe_context *ctx,
-				       struct pipe_resource *resource,
-				       unsigned level,
-				       unsigned usage,
-				       const struct pipe_box *box,
-				       struct pipe_transfer **ptransfer)
+static void *r600_compute_global_transfer_map(struct pipe_context *ctx,
+					      struct pipe_resource *resource,
+					      unsigned level,
+					      unsigned usage,
+					      const struct pipe_box *box,
+					      struct pipe_transfer **ptransfer)
 {
 	struct r600_context *rctx = (struct r600_context*)ctx;
 	struct compute_memory_pool *pool = rctx->screen->global_pool;
@@ -1012,8 +945,8 @@ void *r600_compute_global_transfer_map(struct pipe_context *ctx,
 			offset, box->width, usage, ptransfer);
 }
 
-void r600_compute_global_transfer_unmap(struct pipe_context *ctx,
-					struct pipe_transfer *transfer)
+static void r600_compute_global_transfer_unmap(struct pipe_context *ctx,
+					       struct pipe_transfer *transfer)
 {
 	/* struct r600_resource_global are not real resources, they just map
 	 * to an offset within the compute memory pool.  The function
@@ -1028,21 +961,88 @@ void r600_compute_global_transfer_unmap(struct pipe_context *ctx,
 	assert (!"This function should not be called");
 }
 
-void r600_compute_global_transfer_flush_region(struct pipe_context *ctx,
-					       struct pipe_transfer *transfer,
-					       const struct pipe_box *box)
+static void r600_compute_global_transfer_flush_region(struct pipe_context *ctx,
+						      struct pipe_transfer *transfer,
+						      const struct pipe_box *box)
 {
 	assert(0 && "TODO");
 }
 
-void r600_compute_global_transfer_inline_write(struct pipe_context *pipe,
-					       struct pipe_resource *resource,
-					       unsigned level,
-					       unsigned usage,
-					       const struct pipe_box *box,
-					       const void *data,
-					       unsigned stride,
-					       unsigned layer_stride)
+static void r600_compute_global_transfer_inline_write(struct pipe_context *pipe,
+						      struct pipe_resource *resource,
+						      unsigned level,
+						      unsigned usage,
+						      const struct pipe_box *box,
+						      const void *data,
+						      unsigned stride,
+						      unsigned layer_stride)
 {
 	assert(0 && "TODO");
+}
+
+static void r600_compute_global_buffer_destroy(struct pipe_screen *screen,
+					       struct pipe_resource *res)
+{
+	struct r600_resource_global* buffer = NULL;
+	struct r600_screen* rscreen = NULL;
+
+	assert(res->target == PIPE_BUFFER);
+	assert(res->bind & PIPE_BIND_GLOBAL);
+
+	buffer = (struct r600_resource_global*)res;
+	rscreen = (struct r600_screen*)screen;
+
+	compute_memory_free(rscreen->global_pool, buffer->chunk->id);
+
+	buffer->chunk = NULL;
+	free(res);
+}
+
+static const struct u_resource_vtbl r600_global_buffer_vtbl =
+{
+	u_default_resource_get_handle, /* get_handle */
+	r600_compute_global_buffer_destroy, /* resource_destroy */
+	r600_compute_global_transfer_map, /* transfer_map */
+	r600_compute_global_transfer_flush_region,/* transfer_flush_region */
+	r600_compute_global_transfer_unmap, /* transfer_unmap */
+	r600_compute_global_transfer_inline_write /* transfer_inline_write */
+};
+
+struct pipe_resource *r600_compute_global_buffer_create(struct pipe_screen *screen,
+							const struct pipe_resource *templ)
+{
+	struct r600_resource_global* result = NULL;
+	struct r600_screen* rscreen = NULL;
+	int size_in_dw = 0;
+
+	assert(templ->target == PIPE_BUFFER);
+	assert(templ->bind & PIPE_BIND_GLOBAL);
+	assert(templ->array_size == 1 || templ->array_size == 0);
+	assert(templ->depth0 == 1 || templ->depth0 == 0);
+	assert(templ->height0 == 1 || templ->height0 == 0);
+
+	result = (struct r600_resource_global*)
+	CALLOC(sizeof(struct r600_resource_global), 1);
+	rscreen = (struct r600_screen*)screen;
+
+	COMPUTE_DBG(rscreen, "*** r600_compute_global_buffer_create\n");
+	COMPUTE_DBG(rscreen, "width = %u array_size = %u\n", templ->width0,
+			templ->array_size);
+
+	result->base.b.vtbl = &r600_global_buffer_vtbl;
+	result->base.b.b = *templ;
+	result->base.b.b.screen = screen;
+	pipe_reference_init(&result->base.b.b.reference, 1);
+
+	size_in_dw = (templ->width0+3) / 4;
+
+	result->chunk = compute_memory_alloc(rscreen->global_pool, size_in_dw);
+
+	if (result->chunk == NULL)
+	{
+		free(result);
+		return NULL;
+	}
+
+	return &result->base.b.b;
 }
