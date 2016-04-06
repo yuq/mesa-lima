@@ -144,10 +144,10 @@ struct si_shader_data {
 	uint32_t		sh_base[SI_NUM_SHADERS];
 };
 
-/* User sampler views:   0..15
- * Polygon stipple tex:  16
+/* User sampler views:   0..31
+ * Polygon stipple tex:  32
  */
-#define SI_NUM_USER_SAMPLERS            16 /* AKA OpenGL textures units per shader */
+#define SI_NUM_USER_SAMPLERS            32 /* AKA OpenGL textures units per shader */
 #define SI_POLY_STIPPLE_SAMPLER         SI_NUM_USER_SAMPLERS
 #define SI_NUM_SAMPLERS                 (SI_POLY_STIPPLE_SAMPLER + 1)
 
