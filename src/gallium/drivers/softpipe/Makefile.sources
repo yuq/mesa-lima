@@ -11,6 +11,7 @@ C_SOURCES := \
 	sp_fs_exec.c \
 	sp_fs.h \
 	sp_image.c \
+	sp_image.h \
 	sp_limits.h \
 	sp_prim_vbuf.c \
 	sp_prim_vbuf.h \
