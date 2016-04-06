@@ -1694,7 +1694,6 @@ template <SWR_TILE_MODE TileModeT, size_t NumTileModes, size_t ArraySizeT>
 void InitStoreTilesTableStencil(
     PFN_STORE_TILES(&table)[NumTileModes][ArraySizeT])
 {
-    table[TileModeT][R32_UINT]                  = StoreMacroTile<TilingTraits<TileModeT, 32>, R8_UINT, R32_UINT>::Store;
     table[TileModeT][R8_UINT]                   = StoreMacroTile<TilingTraits<TileModeT, 8>, R8_UINT, R8_UINT>::Store;
 }
 

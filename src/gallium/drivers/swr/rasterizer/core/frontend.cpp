@@ -39,6 +39,7 @@
 #include "clip.h"
 #include "tilemgr.h"
 #include "tessellator.h"
+#include <limits>
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Helper macro to generate a bitmask
@@ -1847,7 +1848,7 @@ void BinTriangles(
                 }
             }
         }
-
+nextPrimitive:
         triMask &= ~(1 << triIndex);
     }
 

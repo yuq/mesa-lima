@@ -197,12 +197,6 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch)
         CreateDirectory(SWR_OUTPUT_DIR, NULL);
         CreateDirectory(JITTER_OUTPUT_DIR, NULL);
     }
-
-    ///@todo Figure out a better solution for this.
-    // Redirect stdin, stdout, and stderr to attached console.
-    freopen("CONIN$", "r", stdin);
-    freopen("CONOUT$", "w", stdout);
-    freopen("CONOUT$", "w", stderr);
 #endif
 }
 

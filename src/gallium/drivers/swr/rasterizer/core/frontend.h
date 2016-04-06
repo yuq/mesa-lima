@@ -308,7 +308,7 @@ bool CanUseSimplePoints(DRAW_CONTEXT *pDC)
 }
 
 INLINE
-bool vIsNaN(const __m128& vec)
+bool vHasNaN(const __m128& vec)
 {
     const __m128 result = _mm_cmpunord_ps(vec, vec);
     const int32_t mask = _mm_movemask_ps(result);

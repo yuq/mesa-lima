@@ -34,6 +34,8 @@
 #include "streamout_jit.h"
 #include "blend_jit.h"
 
+#include <stdlib.h>
+
 #if defined(_WIN32)
 #define EXCEPTION_PRINT_STACK(ret) ret
 #endif // _WIN32
@@ -60,6 +62,7 @@ struct JIT_COMPILE_INPUT
 
     bool enableJitSampler;
 };
+
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Create JIT context.

@@ -38,7 +38,8 @@ void SaveImageToPNGFile(
     const WCHAR *pFilename,
     void *pBuffer,
     uint32_t width,
-    uint32_t height);
+    uint32_t height,
+    bool broadcastRed);
 
 void OpenBitmapFromFile(
     const WCHAR *pFilename,

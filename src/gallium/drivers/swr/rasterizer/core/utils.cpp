@@ -74,7 +74,8 @@ void SaveImageToPNGFile(
     const WCHAR *pFilename,
     void *pBuffer,
     uint32_t width,
-    uint32_t height)
+    uint32_t height,
+    bool broadcastRed = false)
 {
     // dump pixels to a png
     // Initialize GDI+.
@@ -84,23 +85,33 @@ void SaveImageToPNGFile(
 
     Bitmap *bitmap = new Bitmap(width, height);
     BYTE *pBytes = (BYTE*)pBuffer;
-    static const uint32_t bytesPerPixel = 4;
+    const uint32_t bytesPerPixel = (broadcastRed ? 1 : 4);
     for (uint32_t y = 0; y < height; ++y)
         for (uint32_t x = 0; x < width; ++x)
         {
-            uint32_t pixel = *(uint32_t*)pBytes;
-            if (pixel == 0xcdcdcdcd)
+            uint32_t pixel = 0;
+            if (broadcastRed)
             {
-                pixel = 0xFFFF00FF;
-            }
-            else if (pixel == 0xdddddddd)
-            {
-                pixel = 0x80FF0000;
+                pixel = *(uint8_t*)pBytes;
+                pixel = pixel | (pixel << 8) | (pixel << 16) | 0xFF000000;
             }
             else
             {
-                pixel |= 0xFF000000;
+                pixel = *(uint32_t*)pBytes;
+                if (pixel == 0xcdcdcdcd)
+                {
+                    pixel = 0xFFFF00FF;
+                }
+                else if (pixel == 0xdddddddd)
+                {
+                    pixel = 0x80FF0000;
+                }
+                else
+                {
+                    pixel |= 0xFF000000;
+                }
             }
+
             Color color(pixel);
             bitmap->SetPixel(x, y, color);
             pBytes += bytesPerPixel;
