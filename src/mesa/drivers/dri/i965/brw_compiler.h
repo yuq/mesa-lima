@@ -243,7 +243,6 @@ struct brw_wm_prog_key {
    bool stats_wm:1;
    bool flat_shade:1;
    bool persample_shading:1;
-   bool persample_2x:1;
    unsigned nr_color_regions:5;
    bool replicate_alpha:1;
    bool render_to_fbo:1;
