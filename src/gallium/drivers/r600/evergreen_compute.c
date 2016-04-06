@@ -322,10 +322,8 @@ static void evergreen_bind_compute_state(struct pipe_context *ctx, void *state)
  *             (x,y,z)
  * DWORDS 9+ : Kernel parameters
  */
-void evergreen_compute_upload_input(struct pipe_context *ctx,
-				    const uint *block_layout,
-				    const uint *grid_layout,
-				    const void *input)
+static void evergreen_compute_upload_input(struct pipe_context *ctx,
+					   const struct pipe_grid_info *info)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct r600_pipe_compute *shader = rctx->cs_shader_state.shader;
@@ -362,18 +360,18 @@ void evergreen_compute_upload_input(struct pipe_context *ctx,
 	kernel_parameters_start = local_size_start + (3 * (sizeof(uint)) / 4);
 
 	/* Copy the work group size */
-	memcpy(num_work_groups_start, grid_layout, 3 * sizeof(uint));
+	memcpy(num_work_groups_start, info->grid, 3 * sizeof(uint));
 
 	/* Copy the global size */
 	for (i = 0; i < 3; i++) {
-		global_size_start[i] = grid_layout[i] * block_layout[i];
+		global_size_start[i] = info->grid[i] * info->block[i];
 	}
 
 	/* Copy the local dimensions */
-	memcpy(local_size_start, block_layout, 3 * sizeof(uint));
+	memcpy(local_size_start, info->block, 3 * sizeof(uint));
 
 	/* Copy the kernel inputs */
-	memcpy(kernel_parameters_start, input, shader->input_size);
+	memcpy(kernel_parameters_start, info->input, shader->input_size);
 
 	for (i = 0; i < (input_size / 4); i++) {
 		COMPUTE_DBG(rctx->screen, "input %i : %u\n", i,
@@ -387,9 +385,8 @@ void evergreen_compute_upload_input(struct pipe_context *ctx,
 			(struct pipe_resource*)shader->kernel_param);
 }
 
-static void evergreen_emit_direct_dispatch(struct r600_context *rctx,
-					   const uint *block_layout,
-					   const uint *grid_layout)
+static void evergreen_emit_dispatch(struct r600_context *rctx,
+				    const struct pipe_grid_info *info)
 {
 	int i;
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
@@ -405,15 +402,15 @@ static void evergreen_emit_direct_dispatch(struct r600_context *rctx,
 
 	/* Calculate group_size/grid_size */
 	for (i = 0; i < 3; i++) {
-		group_size *= block_layout[i];
+		group_size *= info->block[i];
 	}
 
 	for (i = 0; i < 3; i++)	{
-		grid_size *= grid_layout[i];
+		grid_size *= info->grid[i];
 	}
 
 	/* num_waves = ceil((tg_size.x * tg_size.y, tg_size.z) / (16 * num_pipes)) */
-	num_waves = (block_layout[0] * block_layout[1] * block_layout[2] +
+	num_waves = (info->block[0] * info->block[1] * info->block[2] +
 			wave_divisor - 1) / wave_divisor;
 
 	COMPUTE_DBG(rctx->screen, "Using %u pipes, "
@@ -432,9 +429,9 @@ static void evergreen_emit_direct_dispatch(struct r600_context *rctx,
 								group_size);
 
 	radeon_compute_set_context_reg_seq(cs, R_0286EC_SPI_COMPUTE_NUM_THREAD_X, 3);
-	radeon_emit(cs, block_layout[0]); /* R_0286EC_SPI_COMPUTE_NUM_THREAD_X */
-	radeon_emit(cs, block_layout[1]); /* R_0286F0_SPI_COMPUTE_NUM_THREAD_Y */
-	radeon_emit(cs, block_layout[2]); /* R_0286F4_SPI_COMPUTE_NUM_THREAD_Z */
+	radeon_emit(cs, info->block[0]); /* R_0286EC_SPI_COMPUTE_NUM_THREAD_X */
+	radeon_emit(cs, info->block[1]); /* R_0286F0_SPI_COMPUTE_NUM_THREAD_Y */
+	radeon_emit(cs, info->block[2]); /* R_0286F4_SPI_COMPUTE_NUM_THREAD_Z */
 
 	if (rctx->b.chip_class < CAYMAN) {
 		assert(lds_size <= 8192);
@@ -449,16 +446,15 @@ static void evergreen_emit_direct_dispatch(struct r600_context *rctx,
 
 	/* Dispatch packet */
 	radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, 0));
-	radeon_emit(cs, grid_layout[0]);
-	radeon_emit(cs, grid_layout[1]);
-	radeon_emit(cs, grid_layout[2]);
+	radeon_emit(cs, info->grid[0]);
+	radeon_emit(cs, info->grid[1]);
+	radeon_emit(cs, info->grid[2]);
 	/* VGT_DISPATCH_INITIATOR = COMPUTE_SHADER_EN */
 	radeon_emit(cs, 1);
 }
 
 static void compute_emit_cs(struct r600_context *rctx,
-			    const uint *block_layout,
-			    const uint *grid_layout)
+			    const struct pipe_grid_info *info)
 {
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	unsigned i;
@@ -535,7 +531,7 @@ static void compute_emit_cs(struct r600_context *rctx,
 	r600_emit_atom(rctx, &rctx->cs_shader_state.atom);
 
 	/* Emit dispatch state and dispatch packet */
-	evergreen_emit_direct_dispatch(rctx, block_layout, grid_layout);
+	evergreen_emit_dispatch(rctx, info);
 
 	/* XXX evergreen_flush_emit() hardcodes the CP_COHER_SIZE to 0xffffffff
 	 */
@@ -615,8 +611,8 @@ static void evergreen_launch_grid(struct pipe_context *ctx,
 	COMPUTE_DBG(rctx->screen, "*** evergreen_launch_grid: pc = %u\n", info->pc);
 
 
-	evergreen_compute_upload_input(ctx, info->block, info->grid, info->input);
-	compute_emit_cs(rctx, info->block, info->grid);
+	evergreen_compute_upload_input(ctx, info);
+	compute_emit_cs(rctx, info);
 }
 
 static void evergreen_set_compute_resources(struct pipe_context *ctx,

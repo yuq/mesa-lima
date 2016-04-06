@@ -40,7 +40,6 @@ struct r600_resource_global {
 
 void *evergreen_create_compute_state(struct pipe_context *ctx, const struct pipe_compute_state *cso);
 void evergreen_delete_compute_state(struct pipe_context *ctx, void *state);
-void evergreen_compute_upload_input(struct pipe_context *context, const uint *block_layout, const uint *grid_layout, const void *input);
 void evergreen_init_atom_start_compute_cs(struct r600_context *rctx);
 void evergreen_init_compute_state_functions(struct r600_context *rctx);
 void evergreen_emit_cs_shader(struct r600_context *rctx, struct r600_atom * atom);
