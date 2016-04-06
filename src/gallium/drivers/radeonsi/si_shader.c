@@ -4282,6 +4282,14 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 
+	/* The real barrier instruction isn’t needed, because an entire patch
+	 * always fits into a single wave.
+	 */
+	if (ctx->type == TGSI_PROCESSOR_TESS_CTRL) {
+		emit_optimization_barrier(ctx);
+		return;
+	}
+
 	lp_build_intrinsic(gallivm->builder,
 			   HAVE_LLVM >= 0x0309 ? "llvm.amdgcn.s.barrier"
 					       : "llvm.AMDGPU.barrier.local",
