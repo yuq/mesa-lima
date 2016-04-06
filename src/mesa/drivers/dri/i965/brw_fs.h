@@ -189,6 +189,7 @@ public:
    fs_reg *emit_frontfacing_interpolation();
    fs_reg *emit_samplepos_setup();
    fs_reg *emit_sampleid_setup();
+   fs_reg *emit_samplemaskin_setup();
    void emit_general_interpolation(fs_reg *attr, const char *name,
                                    const glsl_type *type,
                                    glsl_interp_qualifier interpolation_mode,

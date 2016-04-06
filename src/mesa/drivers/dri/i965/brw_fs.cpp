@@ -1423,6 +1423,46 @@ fs_visitor::emit_sampleid_setup()
    return reg;
 }
 
+fs_reg *
+fs_visitor::emit_samplemaskin_setup()
+{
+   assert(stage == MESA_SHADER_FRAGMENT);
+   brw_wm_prog_key *key = (brw_wm_prog_key *) this->key;
+   assert(devinfo->gen >= 6);
+
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
+
+   fs_reg coverage_mask(retype(brw_vec8_grf(payload.sample_mask_in_reg, 0),
+                               BRW_REGISTER_TYPE_D));
+
+   if (key->persample_shading) {
+      /* gl_SampleMaskIn[] comes from two sources: the input coverage mask,
+       * and a mask representing which sample is being processed by the
+       * current shader invocation.
+       *
+       * From the OES_sample_variables specification:
+       * "When per-sample shading is active due to the use of a fragment input
+       *  qualified by "sample" or due to the use of the gl_SampleID or
+       *  gl_SamplePosition variables, only the bit for the current sample is
+       *  set in gl_SampleMaskIn."
+       */
+      const fs_builder abld = bld.annotate("compute gl_SampleMaskIn");
+
+      if (nir_system_values[SYSTEM_VALUE_SAMPLE_ID].file == BAD_FILE)
+         nir_system_values[SYSTEM_VALUE_SAMPLE_ID] = *emit_sampleid_setup();
+
+      fs_reg one = vgrf(glsl_type::int_type);
+      fs_reg enabled_mask = vgrf(glsl_type::int_type);
+      abld.MOV(one, brw_imm_d(1));
+      abld.SHL(enabled_mask, one, nir_system_values[SYSTEM_VALUE_SAMPLE_ID]);
+      abld.AND(*reg, enabled_mask, coverage_mask);
+   } else {
+      /* In per-pixel mode, the coverage mask is sufficient. */
+      *reg = coverage_mask;
+   }
+   return reg;
+}
+
 fs_reg
 fs_visitor::resolve_source_modifiers(const fs_reg &src)
 {

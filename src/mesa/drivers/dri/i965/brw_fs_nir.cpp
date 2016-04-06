@@ -262,8 +262,7 @@ emit_system_values_block(nir_block *block, void *void_visitor)
          assert(v->devinfo->gen >= 7);
          reg = &v->nir_system_values[SYSTEM_VALUE_SAMPLE_MASK_IN];
          if (reg->file == BAD_FILE)
-            *reg = fs_reg(retype(brw_vec8_grf(v->payload.sample_mask_in_reg, 0),
-                                 BRW_REGISTER_TYPE_D));
+            *reg = *v->emit_samplemaskin_setup();
          break;
 
       case nir_intrinsic_load_local_invocation_id:
