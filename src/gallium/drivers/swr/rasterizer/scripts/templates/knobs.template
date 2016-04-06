@@ -8,6 +8,20 @@
     def space_knob(knob):
         knob_len = len('KNOB_' + knob)
         return ' '*(max_len - knob_len)
+
+    def calc_max_name_len(choices_array):
+        _max_len = 0
+        for choice in choices_array:
+            if len(choice['name']) > _max_len: _max_len = len(choice['name'])
+
+        if _max_len % 4: _max_len += 4 - (_max_len % 4)
+        return _max_len
+
+    def space_name(name, max_len):
+        name_len = len(name)
+        return ' '*(max_len - name_len)
+
+
 %>/******************************************************************************
 *
 * Copyright 2015-2016
@@ -77,6 +91,15 @@ struct GlobalKnobs
     % for line in knob[1]['desc']:
     // ${line}
     % endfor
+    % if knob[1].get('choices'):
+    <%
+    choices = knob[1].get('choices')
+    _max_len = calc_max_name_len(choices) %>//
+    % for i in range(len(choices)):
+    //     ${choices[i]['name']}${space_name(choices[i]['name'], _max_len)} = ${format(choices[i]['value'], '#010x')}
+    % endfor
+    % endif
+    //
     % if knob[1]['type'] == 'std::string':
     DEFINE_KNOB(${knob[0]}, ${knob[1]['type']}, "${repr(knob[1]['default'])[1:-1]}");
     % else:
@@ -90,7 +113,7 @@ struct GlobalKnobs
 extern GlobalKnobs g_GlobalKnobs;
 
 % for knob in knobs:
-#define KNOB_${knob[0]}${space_knob(knob[0])}GET_KNOB(${knob[0]})
+#define KNOB_${knob[0]}${space_knob(knob[0])} GET_KNOB(${knob[0]})
 % endfor
 
 
