@@ -1343,6 +1343,41 @@ fs_visitor::emit_sampleid_setup()
        *  rasterization is disabled, gl_SampleID will always be zero."
        */
       abld.MOV(*reg, brw_imm_d(0));
+   } else if (devinfo->gen >= 8) {
+      /* Sample ID comes in as 4-bit numbers in g1.0:
+       *
+       *    15:12 Slot 3 SampleID (only used in SIMD16)
+       *     11:8 Slot 2 SampleID (only used in SIMD16)
+       *      7:4 Slot 1 SampleID
+       *      3:0 Slot 0 SampleID
+       *
+       * Each slot corresponds to four channels, so we want to replicate each
+       * half-byte value to 4 channels in a row:
+       *
+       *    dst+0:    .7    .6    .5    .4    .3    .2    .1    .0
+       *             7:4   7:4   7:4   7:4   3:0   3:0   3:0   3:0
+       *
+       *    dst+1:    .7    .6    .5    .4    .3    .2    .1    .0  (if SIMD16)
+       *           15:12 15:12 15:12 15:12  11:8  11:8  11:8  11:8
+       *
+       * First, we read g1.0 with a <1,8,0>UB region, causing the first 8
+       * channels to read the first byte (7:0), and the second group of 8
+       * channels to read the second byte (15:8).  Then, we shift right by
+       * a vector immediate of <4, 4, 4, 4, 0, 0, 0, 0>, moving the slot 1 / 3
+       * values into place.  Finally, we AND with 0xf to keep the low nibble.
+       *
+       *    shr(16) tmp<1>W g1.0<1,8,0>B 0x44440000:V
+       *    and(16) dst<1>D tmp<8,8,1>W  0xf:W
+       *
+       * TODO: These payload bits exist on Gen7 too, but they appear to always
+       *       be zero, so this code fails to work.  We should find out why.
+       */
+      fs_reg tmp(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_W);
+
+      abld.SHR(tmp, fs_reg(stride(retype(brw_vec1_grf(1, 0),
+                                         BRW_REGISTER_TYPE_B), 1, 8, 0)),
+                    brw_imm_v(0x44440000));
+      abld.AND(*reg, tmp, brw_imm_w(0xf));
    } else {
       fs_reg t1(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_D);
       t1.set_smear(0);
@@ -1371,16 +1406,13 @@ fs_visitor::emit_sampleid_setup()
       /* SKL+ has an extra bit for the Starting Sample Pair Index to
        * accomodate 16x MSAA.
        */
-      unsigned sspi_mask = devinfo->gen >= 9 ? 0x1c0 : 0xc0;
-
       abld.exec_all().group(1, 0)
           .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_D)),
-               brw_imm_ud(sspi_mask));
+               brw_imm_ud(0xc0));
       abld.exec_all().group(1, 0).SHR(t1, t1, brw_imm_d(5));
 
       /* This works for both SIMD8 and SIMD16 */
-      abld.exec_all().group(4, 0)
-          .MOV(t2, brw_imm_v(key->persample_2x ? 0x1010 : 0x3210));
+      abld.exec_all().group(4, 0).MOV(t2, brw_imm_v(0x3210));
 
       /* This special instruction takes care of setting vstride=1,
        * width=4, hstride=0 of t2 during an ADD instruction.
