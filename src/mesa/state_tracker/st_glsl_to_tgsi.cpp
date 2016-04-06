@@ -389,7 +389,7 @@ public:
    unsigned num_output_arrays;
 
    int num_address_regs;
-   int samplers_used;
+   uint32_t samplers_used;
    glsl_base_type sampler_types[PIPE_MAX_SAMPLERS];
    int sampler_targets[PIPE_MAX_SAMPLERS];   /**< One of TGSI_TEXTURE_* */
    int buffers_used;
@@ -4290,6 +4290,8 @@ glsl_to_tgsi_visitor::visit(ir_barrier *ir)
 
 glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
 {
+   STATIC_ASSERT(sizeof(samplers_used) * 8 >= PIPE_MAX_SAMPLERS);
+
    result.file = PROGRAM_UNDEFINED;
    next_temp = 1;
    array_sizes = NULL;
@@ -4346,7 +4348,7 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
       if (inst->info->is_tex) {
          for (int i = 0; i < inst->sampler_array_size; i++) {
             unsigned idx = inst->sampler_base + i;
-            v->samplers_used |= 1 << idx;
+            v->samplers_used |= 1u << idx;
 
             debug_assert(idx < (int)ARRAY_SIZE(v->sampler_types));
             v->sampler_types[idx] = inst->tex_type;
@@ -6325,7 +6327,7 @@ st_translate_program(
 
    /* texture samplers */
    for (i = 0; i < frag_const->MaxTextureImageUnits; i++) {
-      if (program->samplers_used & (1 << i)) {
+      if (program->samplers_used & (1u << i)) {
          unsigned type;
 
          t->samplers[i] = ureg_DECL_sampler(ureg, i);
