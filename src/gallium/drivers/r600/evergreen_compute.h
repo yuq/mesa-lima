@@ -38,8 +38,6 @@ struct r600_resource_global {
 	struct compute_memory_item *chunk;
 };
 
-void *evergreen_create_compute_state(struct pipe_context *ctx, const struct pipe_compute_state *cso);
-void evergreen_delete_compute_state(struct pipe_context *ctx, void *state);
 void evergreen_init_atom_start_compute_cs(struct r600_context *rctx);
 void evergreen_init_compute_state_functions(struct r600_context *rctx);
 void evergreen_emit_cs_shader(struct r600_context *rctx, struct r600_atom * atom);
