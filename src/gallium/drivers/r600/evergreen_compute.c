@@ -532,14 +532,14 @@ static void compute_emit_cs(struct r600_context *rctx,
 	rctx->b.flags = 0;
 
 	if (rctx->b.chip_class >= CAYMAN) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_EVENT_WRITE, 0, 0);
-		cs->buf[cs->cdw++] = EVENT_TYPE(EVENT_TYPE_CS_PARTIAL_FLUSH) | EVENT_INDEX(4);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 		/* DEALLOC_STATE prevents the GPU from hanging when a
 		 * SURFACE_SYNC packet is emitted some time after a DISPATCH_DIRECT
 		 * with any of the CB*_DEST_BASE_ENA or DB_DEST_BASE_ENA bits set.
 		 */
-		cs->buf[cs->cdw++] = PKT3C(PKT3_DEALLOC_STATE, 0, 0);
-		cs->buf[cs->cdw++] = 0;
+		radeon_emit(cs, PKT3C(PKT3_DEALLOC_STATE, 0, 0));
+		radeon_emit(cs, 0);
 	}
 
 #if 0
