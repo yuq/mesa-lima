@@ -367,9 +367,11 @@ brw_meta_get_buffer_rect(const struct gl_framebuffer *fb,
  */
 bool
 brw_is_color_fast_clear_compatible(struct brw_context *brw,
-                                   mesa_format format,
+                                   const struct intel_mipmap_tree *mt,
                                    const union gl_color_union *color)
 {
+   const struct gl_context *ctx = &brw->ctx;
+
    /* If we're mapping the render format to a different format than the
     * format we use for texturing then it is a bit questionable whether it
     * should be possible to use a fast clear. Although we only actually
@@ -379,11 +381,22 @@ brw_is_color_fast_clear_compatible(struct brw_context *brw,
     * this case. At least on Gen9 this really does seem to cause problems.
     */
    if (brw->gen >= 9 &&
-       brw_format_for_mesa_format(format) !=
-       brw->render_target_format[format])
+       brw_format_for_mesa_format(mt->format) !=
+       brw->render_target_format[mt->format])
       return false;
 
-   format = _mesa_get_render_format(&brw->ctx, format);
+   /* Gen9 doesn't support fast clear on single-sampled SRGB buffers. When
+    * GL_FRAMEBUFFER_SRGB is enabled any color renderbuffers will be
+    * resolved in intel_update_state. In that case it's pointless to do a
+    * fast clear because it's very likely to be immediately resolved.
+    */
+   if (brw->gen >= 9 &&
+       mt->num_samples <= 1 &&
+       ctx->Color.sRGBEnabled &&
+       _mesa_get_srgb_format_linear(mt->format) != mt->format)
+      return false;
+
+   const mesa_format format = _mesa_get_render_format(ctx, mt->format);
    if (_mesa_is_format_integer_color(format)) {
       if (brw->gen >= 8) {
          perf_debug("Integer fast clear not enabled for (%s)",
@@ -606,17 +619,6 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       if (brw->gen < 7)
          clear_type = REP_CLEAR;
 
-      /* Gen9 doesn't support fast clear on single-sampled SRGB buffers. When
-       * GL_FRAMEBUFFER_SRGB is enabled any color renderbuffers will be
-       * resolved in intel_update_state. In that case it's pointless to do a
-       * fast clear because it's very likely to be immediately resolved.
-       */
-      if (brw->gen >= 9 &&
-          irb->mt->num_samples <= 1 &&
-          brw->ctx.Color.sRGBEnabled &&
-          _mesa_get_srgb_format_linear(irb->mt->format) != irb->mt->format)
-         clear_type = REP_CLEAR;
-
       if (irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_NO_MCS)
          clear_type = REP_CLEAR;
 
@@ -629,7 +631,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       /* Fast clear is only supported for colors where all components are
        * either 0 or 1.
        */
-      if (!brw_is_color_fast_clear_compatible(brw, irb->mt->format,
+      if (!brw_is_color_fast_clear_compatible(brw, irb->mt,
                                               &ctx->Color.ClearColor))
          clear_type = REP_CLEAR;
 
