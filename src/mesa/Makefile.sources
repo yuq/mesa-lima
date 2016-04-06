@@ -396,6 +396,7 @@ VBO_FILES = \
 
 STATETRACKER_FILES = \
 	state_tracker/st_atifs_to_tgsi.c \
+	state_tracker/st_atifs_to_tgsi.h \
 	state_tracker/st_atom_array.c \
 	state_tracker/st_atom_atomicbuf.c \
 	state_tracker/st_atom_blend.c \
