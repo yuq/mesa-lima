@@ -5578,6 +5578,31 @@ brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
    return barycentric_interp_modes;
 }
 
+static void
+brw_compute_flat_inputs(struct brw_wm_prog_data *prog_data,
+                        bool shade_model_flat, const nir_shader *shader)
+{
+   prog_data->flat_inputs = 0;
+
+   nir_foreach_variable(var, &shader->inputs) {
+      enum glsl_interp_qualifier interp_qualifier =
+         (enum glsl_interp_qualifier)var->data.interpolation;
+      bool is_gl_Color = (var->data.location == VARYING_SLOT_COL0) ||
+                         (var->data.location == VARYING_SLOT_COL1);
+
+      int input_index = prog_data->urb_setup[var->data.location];
+
+      if (input_index < 0)
+	 continue;
+
+      /* flat shading */
+      if (interp_qualifier == INTERP_QUALIFIER_FLAT ||
+          (shade_model_flat && is_gl_Color &&
+           interp_qualifier == INTERP_QUALIFIER_NONE))
+         prog_data->flat_inputs |= (1 << input_index);
+   }
+}
+
 static uint8_t
 computed_depth_mode(const nir_shader *shader)
 {
@@ -5661,6 +5686,12 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
          }
       }
    }
+
+   /* We have to compute the flat inputs after the visitor is finished running
+    * because it relies on prog_data->urb_setup which is computed in
+    * fs_visitor::calculate_urb_setup().
+    */
+   brw_compute_flat_inputs(prog_data, key->flat_shade, shader);
 
    cfg_t *simd8_cfg;
    int no_simd8 = (INTEL_DEBUG & DEBUG_NO8) || use_rep_send;

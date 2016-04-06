@@ -403,6 +403,12 @@ struct brw_wm_prog_data {
    uint32_t barycentric_interp_modes;
 
    /**
+    * Mask of which FS inputs are marked flat by the shader source.  This is
+    * needed for setting up 3DSTATE_SF/SBE.
+    */
+   uint32_t flat_inputs;
+
+   /**
     * Map from gl_varying_slot to the position within the FS setup data
     * payload where the varying's attribute vertex deltas should be delivered.
     * For varying slots that are not used by the FS, the value is -1.
