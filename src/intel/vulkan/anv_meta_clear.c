@@ -213,6 +213,7 @@ create_pipeline(struct anv_device *device,
          .color_attachment_count = MAX_RTS,
          .use_repclear = use_repclear,
          .disable_viewport = true,
+         .disable_scissor = true,
          .disable_vs = true,
          .use_rectlist = true
       },
