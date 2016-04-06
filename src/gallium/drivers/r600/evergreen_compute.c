@@ -83,29 +83,26 @@ writable images will consume TEX slots, VTX slots too because of linear indexing
 
 */
 
-struct r600_resource* r600_compute_buffer_alloc_vram(
-       struct r600_screen *screen,
-       unsigned size)
+struct r600_resource *r600_compute_buffer_alloc_vram(struct r600_screen *screen,
+						     unsigned size)
 {
-	struct pipe_resource * buffer = NULL;
+	struct pipe_resource *buffer = NULL;
 	assert(size);
 
-	buffer = pipe_buffer_create(
-		(struct pipe_screen*) screen,
-		PIPE_BIND_CUSTOM,
-		PIPE_USAGE_IMMUTABLE,
-		size);
+	buffer = pipe_buffer_create((struct pipe_screen*) screen,
+				    PIPE_BIND_CUSTOM,
+				    PIPE_USAGE_IMMUTABLE,
+				    size);
 
 	return (struct r600_resource *)buffer;
 }
 
 
-static void evergreen_set_rat(
-	struct r600_pipe_compute *pipe,
-	unsigned id,
-	struct r600_resource* bo,
-	int start,
-	int size)
+static void evergreen_set_rat(struct r600_pipe_compute *pipe,
+			      unsigned id,
+			      struct r600_resource *bo,
+			      int start,
+			      int size)
 {
 	struct pipe_surface rat_templ;
 	struct r600_surface *surf = NULL;
@@ -145,11 +142,10 @@ static void evergreen_set_rat(
 	evergreen_init_color_surface_rat(rctx, surf);
 }
 
-static void evergreen_cs_set_vertex_buffer(
-	struct r600_context * rctx,
-	unsigned vb_index,
-	unsigned offset,
-	struct pipe_resource * buffer)
+static void evergreen_cs_set_vertex_buffer(struct r600_context *rctx,
+					   unsigned vb_index,
+					   unsigned offset,
+					   struct pipe_resource *buffer)
 {
 	struct r600_vertexbuf_state *state = &rctx->cs_vertex_buffer_state;
 	struct pipe_vertex_buffer *vb = &state->vb[vb_index];
@@ -166,12 +162,11 @@ static void evergreen_cs_set_vertex_buffer(
 	r600_mark_atom_dirty(rctx, &state->atom);
 }
 
-static void evergreen_cs_set_constant_buffer(
-	struct r600_context * rctx,
-	unsigned cb_index,
-	unsigned offset,
-	unsigned size,
-	struct pipe_resource * buffer)
+static void evergreen_cs_set_constant_buffer(struct r600_context *rctx,
+					     unsigned cb_index,
+					     unsigned offset,
+					     unsigned size,
+					     struct pipe_resource *buffer)
 {
 	struct pipe_constant_buffer cb;
 	cb.buffer_size = size;
@@ -256,14 +251,13 @@ static void r600_destroy_shader(struct r600_bytecode *bc)
 	FREE(bc->bytecode);
 }
 
-void *evergreen_create_compute_state(
-	struct pipe_context *ctx_,
-	const const struct pipe_compute_state *cso)
+void *evergreen_create_compute_state(struct pipe_context *ctx_,
+				     const const struct pipe_compute_state *cso)
 {
 	struct r600_context *ctx = (struct r600_context *)ctx_;
 	struct r600_pipe_compute *shader = CALLOC_STRUCT(r600_pipe_compute);
 #ifdef HAVE_OPENCL
-	const struct pipe_llvm_program_header * header;
+	const struct pipe_llvm_program_header *header;
 	const char *code;
 	void *p;
 	boolean use_kill;
@@ -290,11 +284,12 @@ void *evergreen_create_compute_state(
 	return shader;
 }
 
-void evergreen_delete_compute_state(struct pipe_context *ctx_, void* state)
+void evergreen_delete_compute_state(struct pipe_context *ctx_, void *state)
 {
 	struct r600_context *ctx = (struct r600_context *)ctx_;
-	COMPUTE_DBG(ctx->screen, "*** evergreen_delete_compute_state\n");
 	struct r600_pipe_compute *shader = state;
+
+	COMPUTE_DBG(ctx->screen, "*** evergreen_delete_compute_state\n");
 
 	if (!shader)
 		return;
@@ -327,11 +322,10 @@ static void evergreen_bind_compute_state(struct pipe_context *ctx_, void *state)
  *             (x,y,z)
  * DWORDS 9+ : Kernel parameters
  */
-void evergreen_compute_upload_input(
-	struct pipe_context *ctx_,
-	const uint *block_layout,
-	const uint *grid_layout,
-	const void *input)
+void evergreen_compute_upload_input(struct pipe_context *ctx_,
+				    const uint *block_layout,
+				    const uint *grid_layout,
+				    const void *input)
 {
 	struct r600_context *ctx = (struct r600_context *)ctx_;
 	struct r600_pipe_compute *shader = ctx->cs_shader_state.shader;
@@ -340,10 +334,10 @@ void evergreen_compute_upload_input(
 	 * parameters.
 	 */
 	unsigned input_size = shader->input_size + 36;
-	uint32_t * num_work_groups_start;
-	uint32_t * global_size_start;
-	uint32_t * local_size_start;
-	uint32_t * kernel_parameters_start;
+	uint32_t *num_work_groups_start;
+	uint32_t *global_size_start;
+	uint32_t *local_size_start;
+	uint32_t *kernel_parameters_start;
 	struct pipe_box box;
 	struct pipe_transfer *transfer = NULL;
 
@@ -393,9 +387,9 @@ void evergreen_compute_upload_input(
 			(struct pipe_resource*)shader->kernel_param);
 }
 
-static void evergreen_emit_direct_dispatch(
-		struct r600_context *rctx,
-		const uint *block_layout, const uint *grid_layout)
+static void evergreen_emit_direct_dispatch(struct r600_context *rctx,
+					   const uint *block_layout,
+					   const uint *grid_layout)
 {
 	int i;
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
@@ -462,8 +456,9 @@ static void evergreen_emit_direct_dispatch(
 	radeon_emit(cs, 1);
 }
 
-static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
-		const uint *grid_layout)
+static void compute_emit_cs(struct r600_context *ctx,
+			    const uint *block_layout,
+			    const uint *grid_layout)
 {
 	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 	unsigned i;
@@ -574,9 +569,8 @@ static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 /**
  * Emit function for r600_cs_shader_state atom
  */
-void evergreen_emit_cs_shader(
-		struct r600_context *rctx,
-		struct r600_atom *atom)
+void evergreen_emit_cs_shader(struct r600_context *rctx,
+			      struct r600_atom *atom)
 {
 	struct r600_cs_shader_state *state =
 					(struct r600_cs_shader_state*)atom;
@@ -604,8 +598,8 @@ void evergreen_emit_cs_shader(
 					      RADEON_PRIO_USER_SHADER));
 }
 
-static void evergreen_launch_grid(
-		struct pipe_context *ctx_, const struct pipe_grid_info *info)
+static void evergreen_launch_grid(struct pipe_context *ctx_,
+				  const struct pipe_grid_info *info)
 {
 	struct r600_context *ctx = (struct r600_context *)ctx_;
 #ifdef HAVE_OPENCL
@@ -625,9 +619,9 @@ static void evergreen_launch_grid(
 	compute_emit_cs(ctx, info->block, info->grid);
 }
 
-static void evergreen_set_compute_resources(struct pipe_context * ctx_,
-		unsigned start, unsigned count,
-		struct pipe_surface ** surfaces)
+static void evergreen_set_compute_resources(struct pipe_context *ctx_,
+					    unsigned start, unsigned count,
+					    struct pipe_surface **surfaces)
 {
 	struct r600_context *ctx = (struct r600_context *)ctx_;
 	struct r600_surface **resources = (struct r600_surface **)surfaces;
@@ -659,10 +653,10 @@ static void evergreen_set_compute_resources(struct pipe_context * ctx_,
 	}
 }
 
-static void evergreen_set_global_binding(
-	struct pipe_context *ctx_, unsigned first, unsigned n,
-	struct pipe_resource **resources,
-	uint32_t **handles)
+static void evergreen_set_global_binding(struct pipe_context *ctx_,
+					 unsigned first, unsigned n,
+					 struct pipe_resource **resources,
+					 uint32_t **handles)
 {
 	struct r600_context *ctx = (struct r600_context *)ctx_;
 	struct compute_memory_pool *pool = ctx->screen->global_pool;
@@ -914,9 +908,8 @@ void evergreen_init_compute_state_functions(struct r600_context *ctx)
 
 }
 
-struct pipe_resource *r600_compute_global_buffer_create(
-	struct pipe_screen *screen,
-	const struct pipe_resource *templ)
+struct pipe_resource *r600_compute_global_buffer_create(struct pipe_screen *screen,
+							const struct pipe_resource *templ)
 {
 	struct r600_resource_global* result = NULL;
 	struct r600_screen* rscreen = NULL;
@@ -954,9 +947,8 @@ struct pipe_resource *r600_compute_global_buffer_create(
 	return &result->base.b.b;
 }
 
-void r600_compute_global_buffer_destroy(
-	struct pipe_screen *screen,
-	struct pipe_resource *res)
+void r600_compute_global_buffer_destroy(struct pipe_screen *screen,
+					struct pipe_resource *res)
 {
 	struct r600_resource_global* buffer = NULL;
 	struct r600_screen* rscreen = NULL;
@@ -973,13 +965,12 @@ void r600_compute_global_buffer_destroy(
 	free(res);
 }
 
-void *r600_compute_global_transfer_map(
-	struct pipe_context *ctx_,
-	struct pipe_resource *resource,
-	unsigned level,
-	unsigned usage,
-	const struct pipe_box *box,
-	struct pipe_transfer **ptransfer)
+void *r600_compute_global_transfer_map(struct pipe_context *ctx_,
+				       struct pipe_resource *resource,
+				       unsigned level,
+				       unsigned usage,
+				       const struct pipe_box *box,
+				       struct pipe_transfer **ptransfer)
 {
 	struct r600_context *rctx = (struct r600_context*)ctx_;
 	struct compute_memory_pool *pool = rctx->screen->global_pool;
@@ -1025,9 +1016,8 @@ void *r600_compute_global_transfer_map(
 			offset, box->width, usage, ptransfer);
 }
 
-void r600_compute_global_transfer_unmap(
-	struct pipe_context *ctx_,
-	struct pipe_transfer* transfer)
+void r600_compute_global_transfer_unmap(struct pipe_context *ctx_,
+					struct pipe_transfer *transfer)
 {
 	/* struct r600_resource_global are not real resources, they just map
 	 * to an offset within the compute memory pool.  The function
@@ -1042,23 +1032,21 @@ void r600_compute_global_transfer_unmap(
 	assert (!"This function should not be called");
 }
 
-void r600_compute_global_transfer_flush_region(
-	struct pipe_context *ctx_,
-	struct pipe_transfer *transfer,
-	const struct pipe_box *box)
+void r600_compute_global_transfer_flush_region(struct pipe_context *ctx_,
+					       struct pipe_transfer *transfer,
+					       const struct pipe_box *box)
 {
 	assert(0 && "TODO");
 }
 
-void r600_compute_global_transfer_inline_write(
-	struct pipe_context *pipe,
-	struct pipe_resource *resource,
-	unsigned level,
-	unsigned usage,
-	const struct pipe_box *box,
-	const void *data,
-	unsigned stride,
-	unsigned layer_stride)
+void r600_compute_global_transfer_inline_write(struct pipe_context *pipe,
+					       struct pipe_resource *resource,
+					       unsigned level,
+					       unsigned usage,
+					       const struct pipe_box *box,
+					       const void *data,
+					       unsigned stride,
+					       unsigned layer_stride)
 {
 	assert(0 && "TODO");
 }
