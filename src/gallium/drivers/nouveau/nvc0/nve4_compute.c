@@ -192,7 +192,44 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
    return 0;
 }
 
+static void
+nve4_compute_validate_surfaces(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   uint64_t address;
+   const int s = 5;
+   int i, j;
 
+   if (!nvc0->images_dirty[s])
+      return;
+
+   address = nvc0->screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s);
+
+   BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+   PUSH_DATAh(push, address + NVC0_CB_AUX_SU_INFO(0));
+   PUSH_DATA (push, address + NVC0_CB_AUX_SU_INFO(0));
+   BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+   PUSH_DATA (push, 16 * NVC0_MAX_IMAGES * 4);
+   PUSH_DATA (push, 0x1);
+   BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 16 * NVC0_MAX_IMAGES);
+   PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
+
+   for (i = 0; i < NVC0_MAX_IMAGES; ++i) {
+      struct pipe_image_view *view = &nvc0->images[s][i];
+      if (view->resource) {
+         struct nv04_resource *res = nv04_resource(view->resource);
+
+         nve4_set_surface_info(push, view, screen);
+         BCTX_REFN(nvc0->bufctx_cp, CP_SUF, res, RDWR);
+      } else {
+         for (j = 0; j < 16; j++)
+            PUSH_DATA(push, 0);
+      }
+   }
+}
+
+/* Will be removed once images are completely done. */
+#if 0
 static void
 nve4_compute_validate_surfaces(struct nvc0_context *nvc0)
 {
@@ -259,7 +296,7 @@ nve4_compute_validate_surfaces(struct nvc0_context *nvc0)
 
    nvc0->surfaces_dirty[t] = 0;
 }
-
+#endif
 
 /* Thankfully, textures with samplers follow the normal rules. */
 static void

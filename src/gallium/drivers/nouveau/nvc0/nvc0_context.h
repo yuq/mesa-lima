@@ -130,6 +130,9 @@
 /* 32 user buffers, at 4 32-bits integers each */
 #define NVC0_CB_AUX_BUF_INFO(i)     0x200 + (i) * 4 * 4
 #define NVC0_CB_AUX_BUF_SIZE        (NVC0_MAX_BUFFERS * 4 * 4)
+/* 8 surfaces, at 16 32-bits integers each */
+#define NVC0_CB_AUX_SU_INFO(i)      0x400 + (i) * 16 * 4
+#define NVC0_CB_AUX_SU_SIZE         (NVC0_MAX_IMAGES * 16 * 4)
 /* 4 32-bits floats for the vertex runout, put at the end */
 #define NVC0_CB_AUX_RUNOUT_INFO     NVC0_CB_USR_SIZE + NVC0_CB_AUX_SIZE
 
@@ -324,7 +327,7 @@ void nvc0_validate_textures(struct nvc0_context *);
 void nvc0_validate_samplers(struct nvc0_context *);
 void nve4_set_tex_handles(struct nvc0_context *);
 void nvc0_validate_surfaces(struct nvc0_context *);
-void nve4_set_surface_info(struct nouveau_pushbuf *, struct pipe_surface *,
+void nve4_set_surface_info(struct nouveau_pushbuf *, struct pipe_image_view *,
                            struct nvc0_screen *);
 
 struct pipe_sampler_view *
