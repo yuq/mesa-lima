@@ -1101,7 +1101,7 @@ intel_detect_sseu(struct intel_screen *intelScreen)
     * and we have to use conservative numbers for GPGPU on many platforms, but
     * otherwise, things will just work.
     */
-   if (intelScreen->subslice_total == -1 || intelScreen->eu_total == -1)
+   if (intelScreen->subslice_total < 1 || intelScreen->eu_total < 1)
       _mesa_warning(NULL,
                     "Kernel 4.1 required to properly query GPU properties.\n");
 
