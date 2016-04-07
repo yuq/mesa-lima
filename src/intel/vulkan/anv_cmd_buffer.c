@@ -123,7 +123,7 @@ anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
    /* 0 isn't a valid config.  This ensures that we always configure L3$. */
    cmd_buffer->state.current_l3_config = 0;
 
-   state->dirty = ~0;
+   state->dirty = 0;
    state->vb_dirty = 0;
    state->descriptors_dirty = 0;
    state->push_constants_dirty = 0;
