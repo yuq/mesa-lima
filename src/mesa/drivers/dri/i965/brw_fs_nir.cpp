@@ -775,24 +775,12 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_fsin:
-      if (!compiler->precise_trig) {
-         inst = bld.emit(SHADER_OPCODE_SIN, result, op[0]);
-      } else {
-         fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_F);
-         inst = bld.emit(SHADER_OPCODE_SIN, tmp, op[0]);
-         inst = bld.MUL(result, tmp, brw_imm_f(0.99997));
-      }
+      inst = bld.emit(SHADER_OPCODE_SIN, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fcos:
-      if (!compiler->precise_trig) {
-         inst = bld.emit(SHADER_OPCODE_COS, result, op[0]);
-      } else {
-         fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_F);
-         inst = bld.emit(SHADER_OPCODE_COS, tmp, op[0]);
-         inst = bld.MUL(result, tmp, brw_imm_f(0.99997));
-      }
+      inst = bld.emit(SHADER_OPCODE_COS, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 

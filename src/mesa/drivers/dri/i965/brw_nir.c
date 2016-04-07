@@ -447,6 +447,9 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    if (nir->stage == MESA_SHADER_GEOMETRY)
       OPT(nir_lower_gs_intrinsics);
 
+   if (compiler->precise_trig)
+      OPT(brw_nir_apply_trig_workarounds);
+
    static const nir_lower_tex_options tex_options = {
       .lower_txp = ~0,
    };
