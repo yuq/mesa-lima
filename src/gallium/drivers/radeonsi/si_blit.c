@@ -52,8 +52,6 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
-	r600_suspend_nontimer_queries(&sctx->b);
-
 	util_blitter_save_vertex_buffer_slot(sctx->blitter, sctx->vertex_buffer);
 	util_blitter_save_vertex_elements(sctx->blitter, sctx->vertex_elements);
 	util_blitter_save_vertex_shader(sctx->blitter, sctx->vs_shader.cso);
@@ -95,7 +93,6 @@ static void si_blitter_end(struct pipe_context *ctx)
 	struct si_context *sctx = (struct si_context *)ctx;
 
 	sctx->b.render_cond_force_off = false;
-	r600_resume_nontimer_queries(&sctx->b);
 }
 
 static unsigned u_max_sample(struct pipe_resource *r)

@@ -1348,6 +1348,26 @@ static void *si_create_db_flush_dsa(struct si_context *sctx)
 
 /* DB RENDER STATE */
 
+static void si_set_active_query_state(struct pipe_context *ctx, boolean enable)
+{
+	struct si_context *sctx = (struct si_context*)ctx;
+
+	/* Pipeline stat & streamout queries. */
+	if (enable) {
+		sctx->b.flags &= ~SI_CONTEXT_STOP_PIPELINE_STATS;
+		sctx->b.flags |= SI_CONTEXT_START_PIPELINE_STATS;
+	} else {
+		sctx->b.flags &= ~SI_CONTEXT_START_PIPELINE_STATS;
+		sctx->b.flags |= SI_CONTEXT_STOP_PIPELINE_STATS;
+	}
+
+	/* Occlusion queries. */
+	if (sctx->occlusion_queries_disabled != !enable) {
+		sctx->occlusion_queries_disabled = !enable;
+		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+	}
+}
+
 static void si_set_occlusion_query_state(struct pipe_context *ctx, bool enable)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
@@ -1382,7 +1402,8 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 	}
 
 	/* DB_COUNT_CONTROL (occlusion queries) */
-	if (sctx->b.num_occlusion_queries > 0) {
+	if (sctx->b.num_occlusion_queries > 0 &&
+	    !sctx->occlusion_queries_disabled) {
 		bool perfect = sctx->b.num_perfect_occlusion_queries > 0;
 
 		if (sctx->b.chip_class >= CIK) {
@@ -3740,6 +3761,7 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.set_min_samples = si_set_min_samples;
 	sctx->b.b.set_tess_state = si_set_tess_state;
 
+	sctx->b.b.set_active_query_state = si_set_active_query_state;
 	sctx->b.set_occlusion_query_state = si_set_occlusion_query_state;
 	sctx->b.need_gfx_cs_space = si_need_gfx_cs_space;
 
@@ -3968,6 +3990,14 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_cmd_begin(pm4, PKT3_CONTEXT_CONTROL);
 	si_pm4_cmd_add(pm4, 0x80000000);
 	si_pm4_cmd_add(pm4, 0x80000000);
+	si_pm4_cmd_end(pm4, false);
+
+	/* This enables pipeline stat & streamout queries.
+	 * They are only disabled by blits.
+	 */
+	si_pm4_cmd_begin(pm4, PKT3_EVENT_WRITE);
+	si_pm4_cmd_add(pm4, EVENT_TYPE(V_028A90_PIPELINESTAT_START) |
+		            EVENT_INDEX(0));
 	si_pm4_cmd_end(pm4, false);
 
 	si_pm4_set_reg(pm4, R_028A18_VGT_HOS_MAX_TESS_LEVEL, fui(64));

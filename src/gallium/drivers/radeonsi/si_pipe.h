@@ -66,6 +66,9 @@
 /* Compute only. */
 #define SI_CONTEXT_FLUSH_WITH_INV_L2	(R600_CONTEXT_PRIVATE_FLAG << 13) /* TODO: merge with TC? */
 #define SI_CONTEXT_FLAG_COMPUTE		(R600_CONTEXT_PRIVATE_FLAG << 14)
+/* Pipeline & streamout query controls. */
+#define SI_CONTEXT_START_PIPELINE_STATS	(R600_CONTEXT_PRIVATE_FLAG << 15)
+#define SI_CONTEXT_STOP_PIPELINE_STATS	(R600_CONTEXT_PRIVATE_FLAG << 16)
 
 #define SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER (SI_CONTEXT_FLUSH_AND_INV_CB | \
 					      SI_CONTEXT_FLUSH_AND_INV_CB_META | \
@@ -289,6 +292,7 @@ struct si_context {
 	bool			db_stencil_clear;
 	bool			db_stencil_disable_expclear;
 	unsigned		ps_db_shader_control;
+	bool			occlusion_queries_disabled;
 
 	/* Emitted draw state. */
 	int			last_base_vertex;

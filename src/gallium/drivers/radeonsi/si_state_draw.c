@@ -722,6 +722,16 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 		}
 	}
 
+	if (sctx->flags & SI_CONTEXT_START_PIPELINE_STATS) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_PIPELINESTAT_START) |
+			        EVENT_INDEX(0));
+	} else if (sctx->flags & SI_CONTEXT_STOP_PIPELINE_STATS) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_PIPELINESTAT_STOP) |
+			        EVENT_INDEX(0));
+	}
+
 	sctx->flags = 0;
 }
 
