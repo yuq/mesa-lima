@@ -42,6 +42,10 @@ dead_control_flow_eliminate(backend_shader *s)
 
    foreach_block_safe (block, s->cfg) {
       bblock_t *prev_block = block->prev();
+
+      if (!prev_block)
+         continue;
+
       backend_instruction *const inst = block->start();
       backend_instruction *const prev_inst = prev_block->end();
 

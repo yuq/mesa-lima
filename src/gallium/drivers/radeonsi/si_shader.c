@@ -1328,8 +1328,9 @@ static LLVMValueRef fetch_constant(
 	if (reg->Register.Dimension && reg->Dimension.Indirect) {
 		LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_CONST_BUFFERS);
 		LLVMValueRef index;
-		index = get_indirect_index(ctx, &reg->DimIndirect,
-						   reg->Dimension.Index);
+		index = get_bounded_indirect_index(ctx, &reg->DimIndirect,
+						   reg->Dimension.Index,
+						   SI_NUM_USER_CONST_BUFFERS);
 		bufp = build_indexed_load_const(ctx, ptr, index);
 	} else
 		bufp = ctx->const_buffers[buf];
@@ -3356,7 +3357,10 @@ static void tex_fetch_ptrs(
 		const struct tgsi_full_src_register *reg = &emit_data->inst->Src[sampler_src];
 		LLVMValueRef ind_index;
 
-		ind_index = get_indirect_index(ctx, &reg->Indirect, reg->Register.Index);
+		ind_index = get_bounded_indirect_index(ctx,
+						       &reg->Indirect,
+						       reg->Register.Index,
+						       SI_NUM_USER_SAMPLERS);
 
 		*res_ptr = get_sampler_desc(ctx, ind_index, DESC_IMAGE);
 
@@ -4277,6 +4281,14 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
+
+	/* The real barrier instruction isn’t needed, because an entire patch
+	 * always fits into a single wave.
+	 */
+	if (ctx->type == TGSI_PROCESSOR_TESS_CTRL) {
+		emit_optimization_barrier(ctx);
+		return;
+	}
 
 	lp_build_intrinsic(gallivm->builder,
 			   HAVE_LLVM >= 0x0309 ? "llvm.amdgcn.s.barrier"

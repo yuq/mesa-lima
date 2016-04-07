@@ -146,7 +146,7 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 		 * clever if we were aware of this during scheduling, but
 		 * this should be a pretty rare case:
 		 */
-		if ((n->flags & IR3_INSTR_SS) && (n->category >= 5)) {
+		if ((n->flags & IR3_INSTR_SS) && (opc_cat(n->opc) >= 5)) {
 			struct ir3_instruction *nop;
 			nop = ir3_NOP(block);
 			nop->flags |= IR3_INSTR_SS;
@@ -154,7 +154,7 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 		}
 
 		/* need to be able to set (ss) on first instruction: */
-		if (list_empty(&block->instr_list) && (n->category >= 5))
+		if (list_empty(&block->instr_list) && (opc_cat(n->opc) >= 5))
 			ir3_NOP(block);
 
 		if (is_nop(n) && !list_empty(&block->instr_list)) {
@@ -209,7 +209,7 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 			struct ir3_instruction *baryf;
 
 			/* (ss)bary.f (ei)r63.x, 0, r0.x */
-			baryf = ir3_instr_create(block, 2, OPC_BARY_F);
+			baryf = ir3_instr_create(block, OPC_BARY_F);
 			baryf->flags |= IR3_INSTR_SS;
 			ir3_reg_create(baryf, regid(63, 0), 0);
 			ir3_reg_create(baryf, 0, IR3_REG_IMMED)->iim_val = 0;

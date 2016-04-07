@@ -161,6 +161,9 @@ svga_create_rasterizer_state(struct pipe_context *pipe,
    struct svga_rasterizer_state *rast = CALLOC_STRUCT( svga_rasterizer_state );
    struct svga_screen *screen = svga_screen(pipe->screen);
 
+   if (!rast)
+      return NULL;
+
    /* need this for draw module. */
    rast->templ = *templ;
 

@@ -1369,6 +1369,11 @@ _mesa_BindRenderbufferEXT(GLenum target, GLuint renderbuffer)
    bind_renderbuffer(target, renderbuffer, true);
 }
 
+/**
+ * ARB_framebuffer_no_attachment - Application passes requested param's
+ * here. NOTE: NumSamples requested need not be _NumSamples which is
+ * what the hw supports.
+ */
 static void
 framebuffer_parameteri(struct gl_context *ctx, struct gl_framebuffer *fb,
                        GLenum pname, GLint param, const char *func)

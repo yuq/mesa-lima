@@ -612,7 +612,7 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 
 	list_for_each_entry (struct ir3_block, block, &shader->block_list, node) {
 		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
-			int ret = emit[instr->category](instr, dwords, info);
+			int ret = emit[opc_cat(instr->opc)](instr, dwords, info);
 			if (ret)
 				goto fail;
 			info->instrs_count += 1 + instr->repeat;
@@ -683,23 +683,21 @@ static struct ir3_instruction *instr_create(struct ir3_block *block, int nreg)
 }
 
 struct ir3_instruction * ir3_instr_create2(struct ir3_block *block,
-		int category, opc_t opc, int nreg)
+		opc_t opc, int nreg)
 {
 	struct ir3_instruction *instr = instr_create(block, nreg);
 	instr->block = block;
-	instr->category = category;
 	instr->opc = opc;
 	insert_instr(block, instr);
 	return instr;
 }
 
-struct ir3_instruction * ir3_instr_create(struct ir3_block *block,
-		int category, opc_t opc)
+struct ir3_instruction * ir3_instr_create(struct ir3_block *block, opc_t opc)
 {
 	/* NOTE: we could be slightly more clever, at least for non-meta,
 	 * and choose # of regs based on category.
 	 */
-	return ir3_instr_create2(block, category, opc, 4);
+	return ir3_instr_create2(block, opc, 4);
 }
 
 struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr)

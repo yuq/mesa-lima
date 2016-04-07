@@ -246,14 +246,14 @@ si_flush_depth_textures(struct si_context *sctx,
 			struct si_textures_info *textures)
 {
 	unsigned i;
-	unsigned mask = textures->depth_texture_mask;
+	uint64_t mask = textures->depth_texture_mask;
 
 	while (mask) {
 		struct pipe_sampler_view *view;
 		struct si_sampler_view *sview;
 		struct r600_texture *tex;
 
-		i = u_bit_scan(&mask);
+		i = u_bit_scan64(&mask);
 
 		view = textures->views.views[i];
 		assert(view);
@@ -329,13 +329,13 @@ si_decompress_sampler_color_textures(struct si_context *sctx,
 				     struct si_textures_info *textures)
 {
 	unsigned i;
-	unsigned mask = textures->compressed_colortex_mask;
+	uint64_t mask = textures->compressed_colortex_mask;
 
 	while (mask) {
 		struct pipe_sampler_view *view;
 		struct r600_texture *tex;
 
-		i = u_bit_scan(&mask);
+		i = u_bit_scan64(&mask);
 
 		view = textures->views.views[i];
 		assert(view);
@@ -355,13 +355,13 @@ si_decompress_image_color_textures(struct si_context *sctx,
 				   struct si_images_info *images)
 {
 	unsigned i;
-	unsigned mask = images->compressed_colortex_mask;
+	uint64_t mask = images->compressed_colortex_mask;
 
 	while (mask) {
 		const struct pipe_image_view *view;
 		struct r600_texture *tex;
 
-		i = u_bit_scan(&mask);
+		i = u_bit_scan64(&mask);
 
 		view = &images->views[i];
 		assert(view->resource->target != PIPE_BUFFER);

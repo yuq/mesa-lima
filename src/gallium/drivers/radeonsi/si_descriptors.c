@@ -264,8 +264,8 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		unsigned slot = start + i;
 
 		if (!views || !views[i]) {
-			samplers->depth_texture_mask &= ~(1 << slot);
-			samplers->compressed_colortex_mask &= ~(1 << slot);
+			samplers->depth_texture_mask &= ~(1llu << slot);
+			samplers->compressed_colortex_mask &= ~(1llu << slot);
 			si_set_sampler_view(sctx, &samplers->views, slot, NULL);
 			continue;
 		}
@@ -277,18 +277,18 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 				(struct r600_texture*)views[i]->texture;
 
 			if (rtex->is_depth && !rtex->is_flushing_texture) {
-				samplers->depth_texture_mask |= 1 << slot;
+				samplers->depth_texture_mask |= 1llu << slot;
 			} else {
-				samplers->depth_texture_mask &= ~(1 << slot);
+				samplers->depth_texture_mask &= ~(1llu << slot);
 			}
 			if (is_compressed_colortex(rtex)) {
-				samplers->compressed_colortex_mask |= 1 << slot;
+				samplers->compressed_colortex_mask |= 1llu << slot;
 			} else {
-				samplers->compressed_colortex_mask &= ~(1 << slot);
+				samplers->compressed_colortex_mask &= ~(1llu << slot);
 			}
 		} else {
-			samplers->depth_texture_mask &= ~(1 << slot);
-			samplers->compressed_colortex_mask &= ~(1 << slot);
+			samplers->depth_texture_mask &= ~(1llu << slot);
+			samplers->compressed_colortex_mask &= ~(1llu << slot);
 		}
 	}
 }
@@ -306,9 +306,9 @@ si_samplers_update_compressed_colortex_mask(struct si_textures_info *samplers)
 			struct r600_texture *rtex = (struct r600_texture *)res;
 
 			if (is_compressed_colortex(rtex)) {
-				samplers->compressed_colortex_mask |= 1 << i;
+				samplers->compressed_colortex_mask |= 1llu << i;
 			} else {
-				samplers->compressed_colortex_mask &= ~(1 << i);
+				samplers->compressed_colortex_mask &= ~(1llu << i);
 			}
 		}
 	}

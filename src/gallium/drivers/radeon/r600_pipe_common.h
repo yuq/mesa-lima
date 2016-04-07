@@ -425,8 +425,9 @@ struct r600_common_context {
 	unsigned flags; /* flush flags */
 
 	/* Queries. */
-	/* The list of active queries. Only one query of each type can be active. */
+	/* The list of active queries. */
 	int				num_occlusion_queries;
+	int				num_perfect_occlusion_queries;
 	/* Keep track of non-timer queries, because they should be suspended
 	 * during context flushing.
 	 * The timer queries (TIME_ELAPSED) shouldn't be suspended for blits,

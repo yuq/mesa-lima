@@ -445,6 +445,18 @@ void st_init_limits(struct pipe_screen *screen,
       extensions->ARB_shader_image_load_store = GL_TRUE;
       extensions->ARB_shader_image_size = GL_TRUE;
    }
+
+   /* ARB_framebuffer_no_attachments */
+   c->MaxFramebufferWidth   = c->MaxViewportWidth;
+   c->MaxFramebufferHeight  = c->MaxViewportHeight;
+   /* NOTE: we cheat here a little by assuming that
+    * PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS has the same
+    * number of layers as we need, although we technically
+    * could have more the generality is not really useful
+    * in practicality.
+    */
+   c->MaxFramebufferLayers =
+      screen->get_param(screen, PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS);
 }
 
 
@@ -956,6 +968,9 @@ void st_init_extensions(struct pipe_screen *screen,
       enum pipe_format int_formats[] = {
          PIPE_FORMAT_R8G8B8A8_SINT
       };
+      enum pipe_format void_formats[] = {
+         PIPE_FORMAT_NONE
+      };
 
       consts->MaxSamples =
          get_max_samples_for_formats(screen, ARRAY_SIZE(color_formats),
@@ -976,6 +991,12 @@ void st_init_extensions(struct pipe_screen *screen,
          get_max_samples_for_formats(screen, ARRAY_SIZE(int_formats),
                                      int_formats, consts->MaxSamples,
                                      PIPE_BIND_SAMPLER_VIEW);
+
+      /* ARB_framebuffer_no_attachments, assume max no. of samples 32 */
+      consts->MaxFramebufferSamples =
+         get_max_samples_for_formats(screen, ARRAY_SIZE(void_formats),
+                                     void_formats, 32,
+                                     PIPE_BIND_RENDER_TARGET);
    }
    if (consts->MaxSamples == 1) {
       /* one sample doesn't really make sense */
@@ -1067,6 +1088,13 @@ void st_init_extensions(struct pipe_screen *screen,
       if (extensions->AMD_vertex_shader_layer)
          extensions->AMD_vertex_shader_viewport_index = GL_TRUE;
    }
+
+   /* ARB_framebuffer_no_attachments */
+   if (screen->get_param(screen, PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT) &&
+       ((consts->MaxSamples >= 4 && consts->MaxFramebufferLayers >= 2048) ||
+        (consts->MaxFramebufferSamples >= consts->MaxSamples &&
+         consts->MaxFramebufferLayers >= consts->MaxArrayTextureLayers)))
+      extensions->ARB_framebuffer_no_attachments = GL_TRUE;
 
    /* GL_ARB_ES3_compatibility.
     *

@@ -286,7 +286,7 @@ create_immed(struct ir3_block *block, uint32_t val)
 {
 	struct ir3_instruction *mov;
 
-	mov = ir3_instr_create(block, 1, 0);
+	mov = ir3_instr_create(block, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
@@ -366,7 +366,7 @@ create_uniform(struct ir3_compile *ctx, unsigned n)
 {
 	struct ir3_instruction *mov;
 
-	mov = ir3_instr_create(ctx->block, 1, 0);
+	mov = ir3_instr_create(ctx->block, OPC_MOV);
 	/* TODO get types right? */
 	mov->cat1.src_type = TYPE_F32;
 	mov->cat1.dst_type = TYPE_F32;
@@ -382,7 +382,7 @@ create_uniform_indirect(struct ir3_compile *ctx, int n,
 {
 	struct ir3_instruction *mov;
 
-	mov = ir3_instr_create(ctx->block, 1, 0);
+	mov = ir3_instr_create(ctx->block, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
@@ -402,7 +402,7 @@ create_collect(struct ir3_block *block, struct ir3_instruction **arr,
 	if (arrsz == 0)
 		return NULL;
 
-	collect = ir3_instr_create2(block, -1, OPC_META_FI, 1 + arrsz);
+	collect = ir3_instr_create2(block, OPC_META_FI, 1 + arrsz);
 	ir3_reg_create(collect, 0, 0);     /* dst */
 	for (unsigned i = 0; i < arrsz; i++)
 		ir3_reg_create(collect, 0, IR3_REG_SSA)->instr = arr[i];
@@ -418,7 +418,7 @@ create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, int n,
 	struct ir3_instruction *mov;
 	struct ir3_register *src;
 
-	mov = ir3_instr_create(block, 1, 0);
+	mov = ir3_instr_create(block, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
@@ -441,7 +441,7 @@ create_var_load(struct ir3_compile *ctx, struct ir3_array *arr, int n,
 	struct ir3_instruction *mov;
 	struct ir3_register *src;
 
-	mov = ir3_instr_create(block, 1, 0);
+	mov = ir3_instr_create(block, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
@@ -469,7 +469,7 @@ create_var_store(struct ir3_compile *ctx, struct ir3_array *arr, int n,
 	struct ir3_instruction *mov;
 	struct ir3_register *dst;
 
-	mov = ir3_instr_create(block, 1, 0);
+	mov = ir3_instr_create(block, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	dst = ir3_reg_create(mov, 0, IR3_REG_ARRAY |
@@ -492,7 +492,7 @@ create_input(struct ir3_block *block, unsigned n)
 {
 	struct ir3_instruction *in;
 
-	in = ir3_instr_create(block, -1, OPC_META_INPUT);
+	in = ir3_instr_create(block, OPC_META_INPUT);
 	in->inout.block = block;
 	ir3_reg_create(in, n, 0);
 
@@ -617,8 +617,7 @@ split_dest(struct ir3_block *block, struct ir3_instruction **dst,
 {
 	struct ir3_instruction *prev = NULL;
 	for (int i = 0, j = 0; i < n; i++) {
-		struct ir3_instruction *split =
-				ir3_instr_create(block, -1, OPC_META_FO);
+		struct ir3_instruction *split = ir3_instr_create(block, OPC_META_FO);
 		ir3_reg_create(split, 0, IR3_REG_SSA);
 		ir3_reg_create(split, 0, IR3_REG_SSA)->instr = src;
 		split->fo.off = i;
@@ -1631,7 +1630,7 @@ emit_phi(struct ir3_compile *ctx, nir_phi_instr *nphi)
 
 	dst = get_dst(ctx, &nphi->dest, 1);
 
-	phi = ir3_instr_create2(ctx->block, -1, OPC_META_PHI,
+	phi = ir3_instr_create2(ctx->block, OPC_META_PHI,
 			1 + exec_list_length(&nphi->srcs));
 	ir3_reg_create(phi, 0, 0);         /* dst */
 	phi->phi.nphi = nphi;
@@ -1651,7 +1650,7 @@ resolve_phis(struct ir3_compile *ctx, struct ir3_block *block)
 		nir_phi_instr *nphi;
 
 		/* phi's only come at start of block: */
-		if (!(is_meta(instr) && (instr->opc == OPC_META_PHI)))
+		if (instr->opc != OPC_META_PHI)
 			break;
 
 		if (!instr->phi.nphi)
@@ -1662,6 +1661,16 @@ resolve_phis(struct ir3_compile *ctx, struct ir3_block *block)
 
 		foreach_list_typed(nir_phi_src, nsrc, node, &nphi->srcs) {
 			struct ir3_instruction *src = get_src(ctx, &nsrc->src)[0];
+
+			/* NOTE: src might not be in the same block as it comes from
+			 * according to the phi.. but in the end the backend assumes
+			 * it will be able to assign the same register to each (which
+			 * only works if it is assigned in the src block), so insert
+			 * an extra mov to make sure the phi src is assigned in the
+			 * block it comes from:
+			 */
+			src = ir3_MOV(get_block(ctx, nsrc->pred), src, TYPE_U32);
+
 			ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = src;
 		}
 	}
@@ -2144,7 +2153,7 @@ emit_instructions(struct ir3_compile *ctx)
 	if (ctx->so->type == SHADER_FRAGMENT) {
 		// TODO maybe a helper for fi since we need it a few places..
 		struct ir3_instruction *instr;
-		instr = ir3_instr_create(ctx->block, -1, OPC_META_FI);
+		instr = ir3_instr_create(ctx->block, OPC_META_FI);
 		ir3_reg_create(instr, 0, 0);
 		ir3_reg_create(instr, 0, IR3_REG_SSA);    /* r0.x */
 		ir3_reg_create(instr, 0, IR3_REG_SSA);    /* r0.y */
@@ -2323,12 +2332,12 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 			 * in which case we need to propagate the half-reg flag
 			 * up to the definer so that RA sees it:
 			 */
-			if (is_meta(out) && (out->opc == OPC_META_FO)) {
+			if (out->opc == OPC_META_FO) {
 				out = out->regs[1]->instr;
 				out->regs[0]->flags |= IR3_REG_HALF;
 			}
 
-			if (out->category == 1) {
+			if (out->opc == OPC_MOV) {
 				out->cat1.dst_type = half_type(out->cat1.dst_type);
 			}
 		}

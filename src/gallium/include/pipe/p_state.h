@@ -57,7 +57,7 @@ extern "C" {
 #define PIPE_MAX_CLIP_PLANES       8
 #define PIPE_MAX_COLOR_BUFS        8
 #define PIPE_MAX_CONSTANT_BUFFERS 32
-#define PIPE_MAX_SAMPLERS         18 /* 16 public + 2 driver internal */
+#define PIPE_MAX_SAMPLERS         32
 #define PIPE_MAX_SHADER_INPUTS    80 /* 32 GENERIC + 32 PATCH + 16 others */
 #define PIPE_MAX_SHADER_OUTPUTS   80 /* 32 GENERIC + 32 PATCH + 16 others */
 #define PIPE_MAX_SHADER_SAMPLER_VIEWS 32
@@ -298,9 +298,17 @@ struct pipe_stencil_ref
 };
 
 
+/**
+ * Note that pipe_surfaces are "texture views for rendering"
+ * and so in the case of ARB_framebuffer_no_attachment there
+ * is no pipe_surface state available such that we may
+ * extract the number of samples and layers.
+ */
 struct pipe_framebuffer_state
 {
    unsigned width, height;
+   unsigned samples; /**< Number of samples in a no-attachment framebuffer */
+   unsigned layers;  /**< Number of layers  in a no-attachment framebuffer */
 
    /** multiple color buffers for multiple render targets */
    unsigned nr_cbufs;

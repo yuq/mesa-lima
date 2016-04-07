@@ -134,6 +134,9 @@ svga_create_depth_stencil_state(struct pipe_context *pipe,
    struct svga_context *svga = svga_context(pipe);
    struct svga_depth_stencil_state *ds = CALLOC_STRUCT( svga_depth_stencil_state );
 
+   if (!ds)
+      return NULL;
+
    /* Don't try to figure out CW/CCW correspondence with
     * stencil[0]/[1] at this point.  Presumably this can change as
     * back/front face are modified.

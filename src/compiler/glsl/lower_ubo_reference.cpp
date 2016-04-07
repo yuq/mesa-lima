@@ -372,8 +372,7 @@ lower_ubo_reference_visitor::ubo_load(void *mem_ctx,
 static bool
 shader_storage_buffer_object(const _mesa_glsl_parse_state *state)
 {
-   return state->ARB_shader_storage_buffer_object_enable ||
-      state->is_version(430, 310);
+   return state->has_shader_storage_buffer_objects();
 }
 
 uint32_t
