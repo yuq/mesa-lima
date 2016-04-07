@@ -464,7 +464,8 @@ scan_declaration(struct tgsi_shader_info *info,
             }
          }
       } else if (file == TGSI_FILE_SAMPLER) {
-         info->samplers_declared |= 1 << reg;
+         STATIC_ASSERT(sizeof(info->samplers_declared) * 8 >= PIPE_MAX_SAMPLERS);
+         info->samplers_declared |= 1u << reg;
       } else if (file == TGSI_FILE_SAMPLER_VIEW) {
          unsigned target = fulldecl->SamplerView.Resource;
          assert(target < TGSI_TEXTURE_UNKNOWN);
