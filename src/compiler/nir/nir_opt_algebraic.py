@@ -274,6 +274,14 @@ optimizations = [
    (('fmul', ('fneg', a), b), ('fneg', ('fmul', a, b))),
    (('imul', ('ineg', a), b), ('ineg', ('imul', a, b))),
 
+   # Reassociate constants in add/mul chains so they can be folded together.
+   # For now, we only handle cases where the constants are separated by
+   # a single non-constant.  We could do better eventually.
+   (('~fmul', '#a', ('fmul', b, '#c')), ('fmul', ('fmul', a, c), b)),
+   (('imul', '#a', ('imul', b, '#c')), ('imul', ('imul', a, c), b)),
+   (('~fadd', '#a', ('fadd', b, '#c')), ('fadd', ('fadd', a, c), b)),
+   (('iadd', '#a', ('iadd', b, '#c')), ('iadd', ('iadd', a, c), b)),
+
    # Misc. lowering
    (('fmod', a, b), ('fsub', a, ('fmul', b, ('ffloor', ('fdiv', a, b)))), 'options->lower_fmod'),
    (('uadd_carry', a, b), ('b2i', ('ult', ('iadd', a, b), a)), 'options->lower_uadd_carry'),
