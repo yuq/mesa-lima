@@ -164,6 +164,11 @@ static boolean virgl_get_query_result(struct pipe_context *ctx,
    return TRUE;
 }
 
+static void
+virgl_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
 void virgl_init_query_functions(struct virgl_context *vctx)
 {
    vctx->base.render_condition = virgl_render_condition;
@@ -172,4 +177,5 @@ void virgl_init_query_functions(struct virgl_context *vctx)
    vctx->base.begin_query = virgl_begin_query;
    vctx->base.end_query = virgl_end_query;
    vctx->base.get_query_result = virgl_get_query_result;
+   vctx->base.set_active_query_state = virgl_set_active_query_state;
 }

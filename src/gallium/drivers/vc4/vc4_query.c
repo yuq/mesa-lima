@@ -72,6 +72,11 @@ vc4_get_query_result(struct pipe_context *ctx, struct pipe_query *query,
         return true;
 }
 
+static void
+vc4_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
 void
 vc4_query_init(struct pipe_context *pctx)
 {
@@ -80,5 +85,6 @@ vc4_query_init(struct pipe_context *pctx)
         pctx->begin_query = vc4_begin_query;
         pctx->end_query = vc4_end_query;
         pctx->get_query_result = vc4_get_query_result;
+	pctx->set_active_query_state = vc4_set_active_query_state;
 }
 

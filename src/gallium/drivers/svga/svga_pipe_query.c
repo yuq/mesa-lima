@@ -1246,6 +1246,12 @@ svga_get_timestamp(struct pipe_context *pipe)
 }
 
 
+static void
+svga_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
+
 void
 svga_init_query_functions(struct svga_context *svga)
 {
@@ -1254,6 +1260,7 @@ svga_init_query_functions(struct svga_context *svga)
    svga->pipe.begin_query = svga_begin_query;
    svga->pipe.end_query = svga_end_query;
    svga->pipe.get_query_result = svga_get_query_result;
+   svga->pipe.set_active_query_state = svga_set_active_query_state;
    svga->pipe.render_condition = svga_render_condition;
    svga->pipe.get_timestamp = svga_get_timestamp;
 }

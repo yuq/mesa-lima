@@ -200,6 +200,11 @@ static void r300_render_condition(struct pipe_context *pipe,
     }
 }
 
+static void
+r300_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
 void r300_init_query_functions(struct r300_context* r300)
 {
     r300->context.create_query = r300_create_query;
@@ -207,5 +212,6 @@ void r300_init_query_functions(struct r300_context* r300)
     r300->context.begin_query = r300_begin_query;
     r300->context.end_query = r300_end_query;
     r300->context.get_query_result = r300_get_query_result;
+    r300->context.set_active_query_state = r300_set_active_query_state;
     r300->context.render_condition = r300_render_condition;
 }

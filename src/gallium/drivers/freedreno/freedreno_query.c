@@ -114,6 +114,11 @@ fd_get_driver_query_info(struct pipe_screen *pscreen,
 	return 1;
 }
 
+static void
+fd_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
 void
 fd_query_screen_init(struct pipe_screen *pscreen)
 {
@@ -128,5 +133,6 @@ fd_query_context_init(struct pipe_context *pctx)
 	pctx->begin_query = fd_begin_query;
 	pctx->end_query = fd_end_query;
 	pctx->get_query_result = fd_get_query_result;
+	pctx->set_active_query_state = fd_set_active_query_state;
 	pctx->render_condition = fd_render_condition;
 }

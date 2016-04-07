@@ -273,6 +273,24 @@ trace_context_get_query_result(struct pipe_context *_pipe,
 }
 
 
+static void
+trace_context_set_active_query_state(struct pipe_context *_pipe,
+                                     boolean enable)
+{
+   struct trace_context *tr_ctx = trace_context(_pipe);
+   struct pipe_context *pipe = tr_ctx->pipe;
+
+   trace_dump_call_begin("pipe_context", "set_active_query_state");
+
+   trace_dump_arg(ptr, pipe);
+   trace_dump_arg(bool, enable);
+
+   pipe->set_active_query_state(pipe, enable);
+
+   trace_dump_call_end();
+}
+
+
 static void *
 trace_context_create_blend_state(struct pipe_context *_pipe,
                                  const struct pipe_blend_state *state)
@@ -1781,6 +1799,7 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(begin_query);
    TR_CTX_INIT(end_query);
    TR_CTX_INIT(get_query_result);
+   TR_CTX_INIT(set_active_query_state);
    TR_CTX_INIT(create_blend_state);
    TR_CTX_INIT(bind_blend_state);
    TR_CTX_INIT(delete_blend_state);

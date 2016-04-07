@@ -1261,6 +1261,11 @@ static int r600_get_driver_query_group_info(struct pipe_screen *screen,
 	return 1;
 }
 
+static void
+r600_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
 void r600_query_init(struct r600_common_context *rctx)
 {
 	rctx->b.create_query = r600_create_query;
@@ -1269,6 +1274,7 @@ void r600_query_init(struct r600_common_context *rctx)
 	rctx->b.begin_query = r600_begin_query;
 	rctx->b.end_query = r600_end_query;
 	rctx->b.get_query_result = r600_get_query_result;
+	rctx->b.set_active_query_state = r600_set_active_query_state;
 	rctx->render_cond_atom.emit = r600_emit_query_predication;
 
 	if (((struct r600_common_screen*)rctx->b.screen)->info.num_render_backends > 0)

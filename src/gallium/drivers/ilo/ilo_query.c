@@ -222,6 +222,11 @@ ilo_get_query_result(struct pipe_context *pipe, struct pipe_query *query,
    return true;
 }
 
+static void
+ilo_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
 /**
  * Initialize query-related functions.
  */
@@ -233,4 +238,5 @@ ilo_init_query_functions(struct ilo_context *ilo)
    ilo->base.begin_query = ilo_begin_query;
    ilo->base.end_query = ilo_end_query;
    ilo->base.get_query_result = ilo_get_query_result;
+   ilo->base.set_active_query_state = ilo_set_active_query_state;
 }
