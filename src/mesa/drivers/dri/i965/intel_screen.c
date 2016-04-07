@@ -1081,13 +1081,21 @@ intelDestroyBuffer(__DRIdrawable * driDrawPriv)
 static void
 intel_detect_sseu(struct intel_screen *intelScreen)
 {
+   assert(intelScreen->devinfo->gen >= 8);
+   int ret;
+
    intelScreen->subslice_total = -1;
    intelScreen->eu_total = -1;
 
-   intel_get_param(intelScreen->driScrnPriv, I915_PARAM_SUBSLICE_TOTAL,
-                   &intelScreen->subslice_total);
-   intel_get_param(intelScreen->driScrnPriv,
-                   I915_PARAM_EU_TOTAL, &intelScreen->eu_total);
+   ret = intel_get_param(intelScreen->driScrnPriv, I915_PARAM_SUBSLICE_TOTAL,
+                         &intelScreen->subslice_total);
+   if (ret != -EINVAL)
+      goto err_out;
+
+   ret = intel_get_param(intelScreen->driScrnPriv,
+                         I915_PARAM_EU_TOTAL, &intelScreen->eu_total);
+   if (ret != -EINVAL)
+      goto err_out;
 
    /* Without this information, we cannot get the right Braswell brandstrings,
     * and we have to use conservative numbers for GPGPU on many platforms, but
@@ -1096,13 +1104,19 @@ intel_detect_sseu(struct intel_screen *intelScreen)
    if (intelScreen->subslice_total == -1 || intelScreen->eu_total == -1)
       _mesa_warning(NULL,
                     "Kernel 4.1 required to properly query GPU properties.\n");
+
+   return;
+
+err_out:
+   intelScreen->subslice_total = -1;
+   intelScreen->eu_total = -1;
+   _mesa_warning(NULL, "Failed to query GPU properties.\n");
 }
 
 static bool
 intel_init_bufmgr(struct intel_screen *intelScreen)
 {
    __DRIscreen *spriv = intelScreen->driScrnPriv;
-   bool devid_override = getenv("INTEL_DEVID_OVERRIDE") != NULL;
 
    intelScreen->no_hw = getenv("INTEL_NO_HW") != NULL;
 
@@ -1119,12 +1133,6 @@ intel_init_bufmgr(struct intel_screen *intelScreen)
       fprintf(stderr, "[%s: %u] Kernel 2.6.39 required.\n", __func__, __LINE__);
       return false;
    }
-
-   /* Everything below this is for real hardware only */
-   if (intelScreen->no_hw || devid_override)
-      return true;
-
-   intel_detect_sseu(intelScreen);
 
    return true;
 }
@@ -1479,6 +1487,10 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
 
    intelScreen->hw_has_swizzling = intel_detect_swizzling(intelScreen);
    intelScreen->hw_has_timestamp = intel_detect_timestamp(intelScreen);
+
+   /* GENs prior to 8 do not support EU/Subslice info */
+   if (intelScreen->devinfo->gen >= 8)
+      intel_detect_sseu(intelScreen);
 
    const char *force_msaa = getenv("INTEL_FORCE_MSAA");
    if (force_msaa) {
