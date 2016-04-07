@@ -848,10 +848,12 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 		view->tex_resource_words[5] |= S_030014_LAST_LEVEL(log_samples);
 		view->tex_resource_words[6] |= S_030018_FMASK_BANK_HEIGHT(fmask_bankh);
 	} else {
+		bool no_mip = first_level == last_level;
+
 		view->tex_resource_words[4] |= S_030010_BASE_LEVEL(first_level);
 		view->tex_resource_words[5] |= S_030014_LAST_LEVEL(last_level);
 		/* aniso max 16 samples */
-		view->tex_resource_words[6] |= S_030018_MAX_ANISO_RATIO(4);
+		view->tex_resource_words[6] |= S_030018_MAX_ANISO_RATIO(no_mip ? 0 : 4);
 	}
 
 	view->tex_resource_words[7] = S_03001C_DATA_FORMAT(format) |
