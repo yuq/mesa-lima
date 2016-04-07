@@ -414,14 +414,22 @@ static void r600_update_occlusion_query_state(struct r600_common_context *rctx,
 	if (type == PIPE_QUERY_OCCLUSION_COUNTER ||
 	    type == PIPE_QUERY_OCCLUSION_PREDICATE) {
 		bool old_enable = rctx->num_occlusion_queries != 0;
-		bool enable;
+		bool old_perfect_enable =
+			rctx->num_perfect_occlusion_queries != 0;
+		bool enable, perfect_enable;
 
 		rctx->num_occlusion_queries += diff;
 		assert(rctx->num_occlusion_queries >= 0);
 
-		enable = rctx->num_occlusion_queries != 0;
+		if (type == PIPE_QUERY_OCCLUSION_COUNTER) {
+			rctx->num_perfect_occlusion_queries += diff;
+			assert(rctx->num_perfect_occlusion_queries >= 0);
+		}
 
-		if (enable != old_enable) {
+		enable = rctx->num_occlusion_queries != 0;
+		perfect_enable = rctx->num_perfect_occlusion_queries != 0;
+
+		if (enable != old_enable || perfect_enable != old_perfect_enable) {
 			rctx->set_occlusion_query_state(&rctx->b, enable);
 		}
 	}

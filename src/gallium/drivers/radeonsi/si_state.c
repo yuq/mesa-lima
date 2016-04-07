@@ -1310,16 +1310,18 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 
 	/* DB_COUNT_CONTROL (occlusion queries) */
 	if (sctx->b.num_occlusion_queries > 0) {
+		bool perfect = sctx->b.num_perfect_occlusion_queries > 0;
+
 		if (sctx->b.chip_class >= CIK) {
 			radeon_emit(cs,
-				    S_028004_PERFECT_ZPASS_COUNTS(1) |
+				    S_028004_PERFECT_ZPASS_COUNTS(perfect) |
 				    S_028004_SAMPLE_RATE(sctx->framebuffer.log_samples) |
 				    S_028004_ZPASS_ENABLE(1) |
 				    S_028004_SLICE_EVEN_ENABLE(1) |
 				    S_028004_SLICE_ODD_ENABLE(1));
 		} else {
 			radeon_emit(cs,
-				    S_028004_PERFECT_ZPASS_COUNTS(1) |
+				    S_028004_PERFECT_ZPASS_COUNTS(perfect) |
 				    S_028004_SAMPLE_RATE(sctx->framebuffer.log_samples));
 		}
 	} else {
