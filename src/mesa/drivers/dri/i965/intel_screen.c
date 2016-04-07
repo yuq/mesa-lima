@@ -1000,14 +1000,18 @@ intelCreateBuffer(__DRIscreen * driScrnPriv,
       fb->Visual.samples = num_samples;
    }
 
-   if (mesaVis->redBits == 5)
-      rgbFormat = MESA_FORMAT_B5G6R5_UNORM;
-   else if (mesaVis->sRGBCapable)
-      rgbFormat = MESA_FORMAT_B8G8R8A8_SRGB;
-   else if (mesaVis->alphaBits == 0)
-      rgbFormat = MESA_FORMAT_B8G8R8X8_UNORM;
-   else {
-      rgbFormat = MESA_FORMAT_B8G8R8A8_SRGB;
+   if (mesaVis->redBits == 5) {
+      rgbFormat = mesaVis->redMask == 0x1f ? MESA_FORMAT_R5G6B5_UNORM
+                                           : MESA_FORMAT_B5G6R5_UNORM;
+   } else if (mesaVis->sRGBCapable) {
+      rgbFormat = mesaVis->redMask == 0xff ? MESA_FORMAT_R8G8B8A8_SRGB
+                                           : MESA_FORMAT_B8G8R8A8_SRGB;
+   } else if (mesaVis->alphaBits == 0) {
+      rgbFormat = mesaVis->redMask == 0xff ? MESA_FORMAT_R8G8B8X8_UNORM
+                                           : MESA_FORMAT_B8G8R8X8_UNORM;
+   } else {
+      rgbFormat = mesaVis->redMask == 0xff ? MESA_FORMAT_R8G8B8A8_SRGB
+                                           : MESA_FORMAT_B8G8R8A8_SRGB;
       fb->Visual.sRGBCapable = true;
    }
 
