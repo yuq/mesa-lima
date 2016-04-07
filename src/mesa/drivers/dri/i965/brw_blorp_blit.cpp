@@ -711,9 +711,9 @@ brw_blorp_blit_program::compile(struct brw_context *brw,
    alloc_regs();
    compute_frag_coords();
 
-   /* Render target and texture hardware don't support W tiling. */
+   /* Render target and texture hardware don't support W tiling until Gen8. */
    const bool rt_tiled_w = false;
-   const bool tex_tiled_w = false;
+   const bool tex_tiled_w = brw->gen >= 8 && key->src_tiled_w;
 
    /* The address that data will be written to is determined by the
     * coordinates supplied to the WM thread and the tiling and sample count of

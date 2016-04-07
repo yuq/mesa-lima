@@ -94,7 +94,8 @@ brw_blorp_surface_info::set(struct brw_context *brw,
        * program swizzle the coordinates.
        */
       this->map_stencil_as_y_tiled = true;
-      this->brw_surfaceformat = BRW_SURFACEFORMAT_R8_UNORM;
+      this->brw_surfaceformat = brw->gen >= 8 ? BRW_SURFACEFORMAT_R8_UINT :
+                                                BRW_SURFACEFORMAT_R8_UNORM;
       break;
    case MESA_FORMAT_Z24_UNORM_X8_UINT:
       /* It would make sense to use BRW_SURFACEFORMAT_R24_UNORM_X8_TYPELESS
