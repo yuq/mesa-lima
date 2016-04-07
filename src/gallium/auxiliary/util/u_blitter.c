@@ -529,6 +529,8 @@ static void blitter_set_running_flag(struct blitter_context_priv *ctx)
                     __LINE__);
    }
    ctx->base.running = TRUE;
+
+   ctx->base.pipe->set_active_query_state(ctx->base.pipe, false);
 }
 
 static void blitter_unset_running_flag(struct blitter_context_priv *ctx)
@@ -538,6 +540,8 @@ static void blitter_unset_running_flag(struct blitter_context_priv *ctx)
                     __LINE__);
    }
    ctx->base.running = FALSE;
+
+   ctx->base.pipe->set_active_query_state(ctx->base.pipe, true);
 }
 
 static void blitter_check_saved_vertex_states(struct blitter_context_priv *ctx)

@@ -477,6 +477,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
                         CSO_BIT_VERTEX_SHADER |
                         CSO_BIT_VERTEX_ELEMENTS |
                         CSO_BIT_AUX_VERTEX_BUFFER_SLOT |
+                        CSO_BIT_PAUSE_QUERIES |
                         CSO_BIT_RENDER_CONDITION));
    cso_save_constant_buffer_slot0(cso, PIPE_SHADER_VERTEX);
 

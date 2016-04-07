@@ -551,6 +551,7 @@ util_blit_pixels_tex(struct blit_state *ctx,
                              CSO_BIT_STREAM_OUTPUTS |
                              CSO_BIT_VIEWPORT |
                              CSO_BIT_FRAMEBUFFER |
+                             CSO_BIT_PAUSE_QUERIES |
                              CSO_BIT_FRAGMENT_SHADER |
                              CSO_BIT_VERTEX_SHADER |
                              CSO_BIT_TESSCTRL_SHADER |

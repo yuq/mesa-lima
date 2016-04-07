@@ -1345,6 +1345,7 @@ try_pbo_upload_common(struct gl_context *ctx,
                         CSO_BIT_DEPTH_STENCIL_ALPHA |
                         CSO_BIT_RASTERIZER |
                         CSO_BIT_STREAM_OUTPUTS |
+                        CSO_BIT_PAUSE_QUERIES |
                         CSO_BITS_ALL_SHADERS));
    cso_save_constant_buffer_slot0(cso, PIPE_SHADER_FRAGMENT);
 

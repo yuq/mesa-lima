@@ -133,6 +133,7 @@ pp_run(struct pp_queue_t *ppq, struct pipe_resource *in,
                         CSO_BIT_VERTEX_SHADER |
                         CSO_BIT_VIEWPORT |
                         CSO_BIT_AUX_VERTEX_BUFFER_SLOT |
+                        CSO_BIT_PAUSE_QUERIES |
                         CSO_BIT_RENDER_CONDITION));
    cso_save_constant_buffer_slot0(cso, PIPE_SHADER_VERTEX);
    cso_save_constant_buffer_slot0(cso, PIPE_SHADER_FRAGMENT);
