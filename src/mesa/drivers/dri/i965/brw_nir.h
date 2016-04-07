@@ -81,7 +81,8 @@ nir_shader *brw_create_nir(struct brw_context *brw,
                            gl_shader_stage stage,
                            bool is_scalar);
 
-nir_shader *brw_preprocess_nir(nir_shader *nir, bool is_scalar);
+nir_shader *brw_preprocess_nir(const struct brw_compiler *compiler,
+                               nir_shader *nir);
 
 void brw_nir_lower_vs_inputs(nir_shader *nir,
                              const struct brw_device_info *devinfo,
