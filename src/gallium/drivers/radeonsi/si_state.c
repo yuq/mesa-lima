@@ -912,8 +912,10 @@ static void si_emit_scissors(struct si_context *sctx, struct r600_atom *atom)
 	bool scissor_enable = sctx->queued.named.rasterizer->scissor_enable;
 
 	/* The simple case: Only 1 viewport is active. */
-	if (mask & 1 &&
-	    !si_get_vs_info(sctx)->writes_viewport_index) {
+	if (!si_get_vs_info(sctx)->writes_viewport_index) {
+		if (!(mask & 1))
+			return;
+
 		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL, 2);
 		si_emit_one_scissor(cs, &sctx->viewports.states[0],
 				    scissor_enable ? &states[0] : NULL);
@@ -960,8 +962,10 @@ static void si_emit_viewports(struct si_context *sctx, struct r600_atom *atom)
 	unsigned mask = sctx->viewports.dirty_mask;
 
 	/* The simple case: Only 1 viewport is active. */
-	if (mask & 1 &&
-	    !si_get_vs_info(sctx)->writes_viewport_index) {
+	if (!si_get_vs_info(sctx)->writes_viewport_index) {
+		if (!(mask & 1))
+			return;
+
 		radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE, 6);
 		radeon_emit(cs, fui(states[0].scale[0]));
 		radeon_emit(cs, fui(states[0].translate[0]));
