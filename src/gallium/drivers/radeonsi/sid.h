@@ -2392,6 +2392,9 @@
 #define   S_008F38_FILTER_PREC_FIX(x)                                 (((x) & 0x1) << 30)
 #define   G_008F38_FILTER_PREC_FIX(x)                                 (((x) >> 30) & 0x1)
 #define   C_008F38_FILTER_PREC_FIX                                    0xBFFFFFFF
+#define   S_008F38_ANISO_OVERRIDE(x)                                  (((x) & 0x1) << 31)
+#define   G_008F38_ANISO_OVERRIDE(x)                                  (((x) >> 31) & 0x1)
+#define   C_008F38_ANISO_OVERRIDE                                     0x7FFFFFFF
 #define R_008F3C_SQ_IMG_SAMP_WORD3                                      0x008F3C
 #define   S_008F3C_BORDER_COLOR_PTR(x)                                (((x) & 0xFFF) << 0)
 #define   G_008F3C_BORDER_COLOR_PTR(x)                                (((x) >> 0) & 0xFFF)

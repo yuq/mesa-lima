@@ -3406,13 +3406,18 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 			  r600_tex_aniso_filter(state->max_anisotropy) << 9 |
 			  S_008F30_DEPTH_COMPARE_FUNC(si_tex_compare(state->compare_func)) |
 			  S_008F30_FORCE_UNNORMALIZED(!state->normalized_coords) |
-			  S_008F30_DISABLE_CUBE_WRAP(!state->seamless_cube_map));
+			  S_008F30_DISABLE_CUBE_WRAP(!state->seamless_cube_map) |
+			  S_008F30_COMPAT_MODE(sctx->b.chip_class >= VI));
 	rstate->val[1] = (S_008F34_MIN_LOD(S_FIXED(CLAMP(state->min_lod, 0, 15), 8)) |
 			  S_008F34_MAX_LOD(S_FIXED(CLAMP(state->max_lod, 0, 15), 8)));
 	rstate->val[2] = (S_008F38_LOD_BIAS(S_FIXED(CLAMP(state->lod_bias, -16, 16), 8)) |
 			  S_008F38_XY_MAG_FILTER(si_tex_filter(state->mag_img_filter) | aniso_flag_offset) |
 			  S_008F38_XY_MIN_FILTER(si_tex_filter(state->min_img_filter) | aniso_flag_offset) |
-			  S_008F38_MIP_FILTER(si_tex_mipfilter(state->min_mip_filter)));
+			  S_008F38_MIP_FILTER(si_tex_mipfilter(state->min_mip_filter)) |
+			  S_008F38_MIP_POINT_PRECLAMP(1) |
+			  S_008F38_DISABLE_LSB_CEIL(1) |
+			  S_008F38_FILTER_PREC_FIX(1) |
+			  S_008F38_ANISO_OVERRIDE(sctx->b.chip_class >= VI));
 	rstate->val[3] = S_008F3C_BORDER_COLOR_PTR(border_color_index) |
 			 S_008F3C_BORDER_COLOR_TYPE(border_color_type);
 	return rstate;
