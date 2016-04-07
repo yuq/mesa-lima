@@ -745,8 +745,7 @@ tiled_to_linear(uint32_t xt1, uint32_t xt2,
  * \return true if the format and type combination are valid
  */
 bool intel_get_memcpy(mesa_format tiledFormat, GLenum format,
-                      GLenum type, mem_copy_fn *mem_copy, uint32_t *cpp,
-                      enum intel_memcpy_direction direction)
+                      GLenum type, mem_copy_fn *mem_copy, uint32_t *cpp)
 {
    if (type == GL_UNSIGNED_INT_8_8_8_8_REV &&
        !(format == GL_RGBA || format == GL_BGRA))
