@@ -3136,6 +3136,16 @@ si_make_texture_descriptor(struct si_screen *screen,
 	} else {
 		state[6] = 0;
 		state[7] = 0;
+
+		/* The last dword is unused by hw. The shader uses it to clear
+		 * bits in the first dword of sampler state.
+		 */
+		if (screen->b.chip_class <= CIK && res->nr_samples <= 1) {
+			if (first_level == last_level)
+				state[7] = C_008F30_MAX_ANISO_RATIO;
+			else
+				state[7] = 0xffffffff;
+		}
 	}
 
 	/* Initialize the sampler view for FMASK. */

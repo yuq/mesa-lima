@@ -3339,6 +3339,35 @@ static LLVMValueRef get_sampler_desc(struct si_shader_context *ctx,
 	return get_sampler_desc_custom(ctx, list, index, type);
 }
 
+/* Disable anisotropic filtering if BASE_LEVEL == LAST_LEVEL.
+ *
+ * SI-CI:
+ *   If BASE_LEVEL == LAST_LEVEL, the shader must disable anisotropic
+ *   filtering manually. The driver sets img7 to a mask clearing
+ *   MAX_ANISO_RATIO if BASE_LEVEL == LAST_LEVEL. The shader must do:
+ *     s_and_b32 samp0, samp0, img7
+ *
+ * VI:
+ *   The ANISO_OVERRIDE sampler field enables this fix in TA.
+ */
+static LLVMValueRef sici_fix_sampler_aniso(struct si_shader_context *ctx,
+					   LLVMValueRef res, LLVMValueRef samp)
+{
+	LLVMBuilderRef builder = ctx->radeon_bld.gallivm.builder;
+	LLVMValueRef img7, samp0;
+
+	if (ctx->screen->b.chip_class >= VI)
+		return samp;
+
+	img7 = LLVMBuildExtractElement(builder, res,
+				       LLVMConstInt(ctx->i32, 7, 0), "");
+	samp0 = LLVMBuildExtractElement(builder, samp,
+					LLVMConstInt(ctx->i32, 0, 0), "");
+	samp0 = LLVMBuildAnd(builder, samp0, img7, "");
+	return LLVMBuildInsertElement(builder, samp, samp0,
+				      LLVMConstInt(ctx->i32, 0, 0), "");
+}
+
 static void tex_fetch_ptrs(
 	struct lp_build_tgsi_context *bld_base,
 	struct lp_build_emit_data *emit_data,
@@ -3370,6 +3399,7 @@ static void tex_fetch_ptrs(
 			*fmask_ptr = get_sampler_desc(ctx, ind_index, DESC_FMASK);
 		} else {
 			*samp_ptr = get_sampler_desc(ctx, ind_index, DESC_SAMPLER);
+			*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
 			*fmask_ptr = NULL;
 		}
 	} else {
@@ -4701,9 +4731,13 @@ static void preload_samplers(struct si_shader_context *ctx)
 		if (info->is_msaa_sampler[i])
 			ctx->fmasks[i] =
 				get_sampler_desc(ctx, offset, DESC_FMASK);
-		else
+		else {
 			ctx->sampler_states[i] =
 				get_sampler_desc(ctx, offset, DESC_SAMPLER);
+			ctx->sampler_states[i] =
+				sici_fix_sampler_aniso(ctx, ctx->sampler_views[i],
+						       ctx->sampler_states[i]);
+		}
 	}
 }
 
