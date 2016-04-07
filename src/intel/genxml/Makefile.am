@@ -20,6 +20,7 @@
 # IN THE SOFTWARE.
 
 BUILT_SOURCES =                                         \
+	gen6_pack.h					\
 	gen7_pack.h					\
 	gen75_pack.h					\
 	gen8_pack.h					\
