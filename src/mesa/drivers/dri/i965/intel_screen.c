@@ -1078,6 +1078,26 @@ intelDestroyBuffer(__DRIdrawable * driDrawPriv)
     _mesa_reference_framebuffer(&fb, NULL);
 }
 
+static void
+intel_detect_sseu(struct intel_screen *intelScreen)
+{
+   intelScreen->subslice_total = -1;
+   intelScreen->eu_total = -1;
+
+   intel_get_param(intelScreen->driScrnPriv, I915_PARAM_SUBSLICE_TOTAL,
+                   &intelScreen->subslice_total);
+   intel_get_param(intelScreen->driScrnPriv,
+                   I915_PARAM_EU_TOTAL, &intelScreen->eu_total);
+
+   /* Without this information, we cannot get the right Braswell brandstrings,
+    * and we have to use conservative numbers for GPGPU on many platforms, but
+    * otherwise, things will just work.
+    */
+   if (intelScreen->subslice_total == -1 || intelScreen->eu_total == -1)
+      _mesa_warning(NULL,
+                    "Kernel 4.1 required to properly query GPU properties.\n");
+}
+
 static bool
 intel_init_bufmgr(struct intel_screen *intelScreen)
 {
@@ -1100,24 +1120,11 @@ intel_init_bufmgr(struct intel_screen *intelScreen)
       return false;
    }
 
-   intelScreen->subslice_total = -1;
-   intelScreen->eu_total = -1;
-
    /* Everything below this is for real hardware only */
    if (intelScreen->no_hw || devid_override)
       return true;
 
-   intel_get_param(spriv, I915_PARAM_SUBSLICE_TOTAL,
-                   &intelScreen->subslice_total);
-   intel_get_param(spriv, I915_PARAM_EU_TOTAL, &intelScreen->eu_total);
-
-   /* Without this information, we cannot get the right Braswell brandstrings,
-    * and we have to use conservative numbers for GPGPU on many platforms, but
-    * otherwise, things will just work.
-    */
-   if (intelScreen->subslice_total == -1 || intelScreen->eu_total == -1)
-      _mesa_warning(NULL,
-                    "Kernel 4.1 required to properly query GPU properties.\n");
+   intel_detect_sseu(intelScreen);
 
    return true;
 }
