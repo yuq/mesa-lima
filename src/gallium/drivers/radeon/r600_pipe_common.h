@@ -644,11 +644,15 @@ static inline bool r600_get_strmout_en(struct r600_common_context *rctx)
 
 static inline unsigned r600_tex_aniso_filter(unsigned filter)
 {
-	if (filter <= 1)   return 0;
-	if (filter <= 2)   return 1;
-	if (filter <= 4)   return 2;
-	if (filter <= 8)   return 3;
-	 /* else */        return 4;
+	if (filter < 2)
+		return 0;
+	if (filter < 4)
+		return 1;
+	if (filter < 8)
+		return 2;
+	if (filter < 16)
+		return 3;
+	return 4;
 }
 
 static inline unsigned r600_wavefront_size(enum radeon_family family)
