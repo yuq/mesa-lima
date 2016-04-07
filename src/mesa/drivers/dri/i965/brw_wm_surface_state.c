@@ -1326,13 +1326,14 @@ update_image_surface(struct brw_context *brw,
             const GLenum target = (obj->Target == GL_TEXTURE_CUBE_MAP ||
                                    obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY ?
                                    GL_TEXTURE_2D_ARRAY : obj->Target);
+            const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
 
             brw->vtbl.emit_texture_surface_state(
                brw, mt, target,
                min_layer, min_layer + num_layers,
                min_level, min_level + 1,
                format, SWIZZLE_XYZW,
-               surf_offset, access != GL_READ_ONLY, false);
+               surf_offset, surf_index, access != GL_READ_ONLY, false);
          }
 
          update_texture_image_param(brw, u, surface_idx, param);

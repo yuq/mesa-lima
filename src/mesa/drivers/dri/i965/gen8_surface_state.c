@@ -228,13 +228,12 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
                                 unsigned min_level, unsigned max_level,
                                 unsigned format,
                                 unsigned swizzle,
-                                uint32_t *surf_offset,
+                                uint32_t *surf_offset, int surf_index,
                                 bool rw, bool for_gather)
 {
    const unsigned depth = max_layer - min_layer;
    struct intel_mipmap_tree *aux_mt = mt->mcs_mt;
    uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
-   int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
    unsigned tiling_mode, pitch;
    const unsigned tr_mode = surface_tiling_resource_mode(mt->tr_mode);
    const uint32_t surf_type = translate_tex_target(target);
@@ -383,12 +382,14 @@ gen8_update_texture_surface(struct gl_context *ctx,
          format = BRW_SURFACEFORMAT_R8_UINT;
       }
 
+      const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
+
       gen8_emit_texture_surface_state(brw, mt, obj->Target,
                                       obj->MinLayer, obj->MinLayer + depth,
                                       obj->MinLevel + obj->BaseLevel,
                                       obj->MinLevel + intel_obj->_MaxLevel + 1,
                                       format, swizzle, surf_offset,
-                                      false, for_gather);
+                                      surf_index, false, for_gather);
    }
 }
 

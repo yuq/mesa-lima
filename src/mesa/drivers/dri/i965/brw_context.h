@@ -738,6 +738,7 @@ struct brw_context
                                          unsigned format,
                                          unsigned swizzle,
                                          uint32_t *surf_offset,
+                                         int surf_index,
                                          bool rw, bool for_gather);
       void (*emit_buffer_surface_state)(struct brw_context *brw,
                                         uint32_t *out_offset,
