@@ -1841,8 +1841,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 			ia_switch_on_eop = true;
 		}
 
-		if (rctx->b.streamout.streamout_enabled ||
-		    rctx->b.streamout.prims_gen_query_enabled)
+		if (r600_get_strmout_en(&rctx->b))
 			partial_vs_wave = true;
 
 		radeon_set_context_reg(cs, CM_R_028AA8_IA_MULTI_VGT_PARAM,
@@ -2018,7 +2017,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	    rctx->b.family == CHIP_RV635) {
 		/* if we have gs shader or streamout
 		   we need to do a wait idle after every draw */
-		if (rctx->gs_shader || rctx->b.streamout.streamout_enabled) {
+		if (rctx->gs_shader || r600_get_strmout_en(&rctx->b)) {
 			radeon_set_config_reg(cs, R_008040_WAIT_UNTIL, S_008040_WAIT_3D_IDLE(1));
 		}
 	}

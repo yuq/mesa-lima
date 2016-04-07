@@ -639,6 +639,12 @@ r600_resource_reference(struct r600_resource **ptr, struct r600_resource *res)
 				(struct pipe_resource *)res);
 }
 
+static inline bool r600_get_strmout_en(struct r600_common_context *rctx)
+{
+	return rctx->streamout.streamout_enabled ||
+	       rctx->streamout.prims_gen_query_enabled;
+}
+
 static inline unsigned r600_tex_aniso_filter(unsigned filter)
 {
 	if (filter <= 1)   return 0;

@@ -892,8 +892,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if ((sctx->b.family == CHIP_HAWAII ||
 	     sctx->b.family == CHIP_TONGA ||
 	     sctx->b.family == CHIP_FIJI) &&
-	    (sctx->b.streamout.streamout_enabled ||
-	     sctx->b.streamout.prims_gen_query_enabled)) {
+	    r600_get_strmout_en(&sctx->b)) {
 		sctx->b.flags |= SI_CONTEXT_VGT_STREAMOUT_SYNC;
 	}
 
