@@ -1332,8 +1332,9 @@ static unsigned r600_bytecode_num_tex_and_vtx_instructions(const struct r600_byt
 static inline boolean last_inst_was_not_vtx_fetch(struct r600_bytecode *bc)
 {
 	return !((r600_isa_cf(bc->cf_last->op)->flags & CF_FETCH) &&
-			(bc->chip_class == CAYMAN ||
-			bc->cf_last->op != CF_OP_TEX));
+		 bc->cf_last->op != CF_OP_GDS &&
+		 (bc->chip_class == CAYMAN ||
+		  bc->cf_last->op != CF_OP_TEX));
 }
 
 static int r600_bytecode_add_vtx_internal(struct r600_bytecode *bc, const struct r600_bytecode_vtx *vtx,
