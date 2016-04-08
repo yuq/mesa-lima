@@ -30,11 +30,6 @@
 #include "main/config.h"
 #include <assert.h>
 
-typedef struct {
-   const struct gl_shader_program *shader_program;
-   nir_shader   *shader;
-} lower_atomic_state;
-
 /*
  * replace atomic counter intrinsics that use a variable with intrinsics
  * that directly store the buffer index and byte offset
@@ -42,7 +37,8 @@ typedef struct {
 
 static void
 lower_instr(nir_intrinsic_instr *instr,
-            lower_atomic_state *state)
+            const struct gl_shader_program *shader_program,
+            nir_shader *shader)
 {
    nir_intrinsic_op op;
    switch (instr->intrinsic) {
@@ -72,7 +68,7 @@ lower_instr(nir_intrinsic_instr *instr,
 
    nir_intrinsic_instr *new_instr = nir_intrinsic_instr_create(mem_ctx, op);
    nir_intrinsic_set_base(new_instr,
-      state->shader_program->UniformStorage[uniform_loc].opaque[state->shader->stage].index);
+      shader_program->UniformStorage[uniform_loc].opaque[shader->stage].index);
 
    nir_load_const_instr *offset_const =
       nir_load_const_instr_create(mem_ctx, 1, 32);
@@ -137,30 +133,20 @@ lower_instr(nir_intrinsic_instr *instr,
    nir_instr_remove(&instr->instr);
 }
 
-static bool
-lower_block(nir_block *block, void *state)
-{
-   nir_foreach_instr_safe(block, instr) {
-      if (instr->type == nir_instr_type_intrinsic)
-         lower_instr(nir_instr_as_intrinsic(instr),
-                     (lower_atomic_state *) state);
-   }
-
-   return true;
-}
-
 void
 nir_lower_atomics(nir_shader *shader,
                   const struct gl_shader_program *shader_program)
 {
-   lower_atomic_state state = {
-      .shader = shader,
-      .shader_program = shader_program,
-   };
-
    nir_foreach_function(shader, function) {
       if (function->impl) {
-         nir_foreach_block_call(function->impl, lower_block, (void *) &state);
+         nir_foreach_block(block, function->impl) {
+            nir_foreach_instr_safe(block, instr) {
+               if (instr->type == nir_instr_type_intrinsic)
+                  lower_instr(nir_instr_as_intrinsic(instr),
+                              shader_program, shader);
+            }
+         }
+
          nir_metadata_preserve(function->impl, nir_metadata_block_index |
                                                nir_metadata_dominance);
       }
