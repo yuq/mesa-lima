@@ -1863,17 +1863,6 @@ static unsigned si_tex_wrap(unsigned wrap)
 	}
 }
 
-static unsigned si_tex_filter(unsigned filter)
-{
-	switch (filter) {
-	default:
-	case PIPE_TEX_FILTER_NEAREST:
-		return V_008F38_SQ_TEX_XY_FILTER_POINT;
-	case PIPE_TEX_FILTER_LINEAR:
-		return V_008F38_SQ_TEX_XY_FILTER_BILINEAR;
-	}
-}
-
 static unsigned si_tex_mipfilter(unsigned filter)
 {
 	switch (filter) {
@@ -3344,7 +3333,6 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_sampler_state *rstate = CALLOC_STRUCT(si_sampler_state);
-	unsigned aniso_flag_offset = state->max_anisotropy > 1 ? 2 : 0;
 	unsigned border_color_type, border_color_index = 0;
 
 	if (!rstate) {
@@ -3403,7 +3391,7 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 	rstate->val[0] = (S_008F30_CLAMP_X(si_tex_wrap(state->wrap_s)) |
 			  S_008F30_CLAMP_Y(si_tex_wrap(state->wrap_t)) |
 			  S_008F30_CLAMP_Z(si_tex_wrap(state->wrap_r)) |
-			  r600_tex_aniso_filter(state->max_anisotropy) << 9 |
+			  S_008F30_MAX_ANISO_RATIO(r600_tex_aniso_filter(state->max_anisotropy)) |
 			  S_008F30_DEPTH_COMPARE_FUNC(si_tex_compare(state->compare_func)) |
 			  S_008F30_FORCE_UNNORMALIZED(!state->normalized_coords) |
 			  S_008F30_DISABLE_CUBE_WRAP(!state->seamless_cube_map) |
@@ -3411,8 +3399,8 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 	rstate->val[1] = (S_008F34_MIN_LOD(S_FIXED(CLAMP(state->min_lod, 0, 15), 8)) |
 			  S_008F34_MAX_LOD(S_FIXED(CLAMP(state->max_lod, 0, 15), 8)));
 	rstate->val[2] = (S_008F38_LOD_BIAS(S_FIXED(CLAMP(state->lod_bias, -16, 16), 8)) |
-			  S_008F38_XY_MAG_FILTER(si_tex_filter(state->mag_img_filter) | aniso_flag_offset) |
-			  S_008F38_XY_MIN_FILTER(si_tex_filter(state->min_img_filter) | aniso_flag_offset) |
+			  S_008F38_XY_MAG_FILTER(eg_tex_filter(state->mag_img_filter, state->max_anisotropy)) |
+			  S_008F38_XY_MIN_FILTER(eg_tex_filter(state->min_img_filter, state->max_anisotropy)) |
 			  S_008F38_MIP_FILTER(si_tex_mipfilter(state->min_mip_filter)) |
 			  S_008F38_MIP_POINT_PRECLAMP(1) |
 			  S_008F38_DISABLE_LSB_CEIL(1) |

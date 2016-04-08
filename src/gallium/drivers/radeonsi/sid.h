@@ -2307,6 +2307,9 @@
 #define     V_008F30_SQ_TEX_MIRROR_ONCE_HALF_BORDER                 0x05
 #define     V_008F30_SQ_TEX_CLAMP_BORDER                            0x06
 #define     V_008F30_SQ_TEX_MIRROR_ONCE_BORDER                      0x07
+#define   S_008F30_MAX_ANISO_RATIO(x)                                 (((x) & 0x07) << 9)
+#define   G_008F30_MAX_ANISO_RATIO(x)                                 (((x) >> 9) & 0x07)
+#define   C_008F30_MAX_ANISO_RATIO                                    0xFFFFF1FF
 #define   S_008F30_DEPTH_COMPARE_FUNC(x)                              (((x) & 0x07) << 12)
 #define   G_008F30_DEPTH_COMPARE_FUNC(x)                              (((x) >> 12) & 0x07)
 #define   C_008F30_DEPTH_COMPARE_FUNC                                 0xFFFF8FFF
@@ -2371,6 +2374,8 @@
 #define   C_008F38_XY_MIN_FILTER                                      0xFF3FFFFF
 #define     V_008F38_SQ_TEX_XY_FILTER_POINT                         0x00
 #define     V_008F38_SQ_TEX_XY_FILTER_BILINEAR                      0x01
+#define     V_008F38_SQ_TEX_XY_FILTER_ANISO_POINT                   0x02
+#define     V_008F38_SQ_TEX_XY_FILTER_ANISO_BILINEAR                0x03
 #define   S_008F38_Z_FILTER(x)                                        (((x) & 0x03) << 24)
 #define   G_008F38_Z_FILTER(x)                                        (((x) >> 24) & 0x03)
 #define   C_008F38_Z_FILTER                                           0xFCFFFFFF

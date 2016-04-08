@@ -642,6 +642,21 @@ static inline bool r600_get_strmout_en(struct r600_common_context *rctx)
 	       rctx->streamout.prims_gen_query_enabled;
 }
 
+#define     SQ_TEX_XY_FILTER_POINT                         0x00
+#define     SQ_TEX_XY_FILTER_BILINEAR                      0x01
+#define     SQ_TEX_XY_FILTER_ANISO_POINT                   0x02
+#define     SQ_TEX_XY_FILTER_ANISO_BILINEAR                0x03
+
+static inline unsigned eg_tex_filter(unsigned filter, unsigned max_aniso)
+{
+	if (filter == PIPE_TEX_FILTER_LINEAR)
+		return max_aniso > 1 ? SQ_TEX_XY_FILTER_ANISO_BILINEAR
+				     : SQ_TEX_XY_FILTER_BILINEAR;
+	else
+		return max_aniso > 1 ? SQ_TEX_XY_FILTER_ANISO_POINT
+				     : SQ_TEX_XY_FILTER_POINT;
+}
+
 static inline unsigned r600_tex_aniso_filter(unsigned filter)
 {
 	if (filter < 2)
