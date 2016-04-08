@@ -196,8 +196,14 @@ struct brw_blorp_wm_push_constants
    float rect_grid_y1;
    brw_blorp_coord_transform_params x_transform;
    brw_blorp_coord_transform_params y_transform;
+
+   /* Minimum layer setting works for all the textures types but texture_3d
+    * for which the setting has no effect. Use the z-coordinate instead.
+    */
+   uint32_t src_z;
+
    /* Pad out to an integral number of registers */
-   uint32_t pad[6];
+   uint32_t pad[5];
 };
 
 /* Every 32 bytes of push constant data constitutes one GEN register. */

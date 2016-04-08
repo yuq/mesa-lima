@@ -386,6 +386,7 @@ enum sampler_message_arg
    SAMPLER_MESSAGE_ARG_V_FLOAT,
    SAMPLER_MESSAGE_ARG_U_INT,
    SAMPLER_MESSAGE_ARG_V_INT,
+   SAMPLER_MESSAGE_ARG_R_INT,
    SAMPLER_MESSAGE_ARG_SI_INT,
    SAMPLER_MESSAGE_ARG_MCS_INT,
    SAMPLER_MESSAGE_ARG_ZERO_INT,
@@ -587,6 +588,7 @@ private:
       struct brw_reg multiplier;
       struct brw_reg offset;
    } x_transform, y_transform;
+   struct brw_reg src_z;
 
    /* Data read from texture (4 vec16's per array element) */
    struct brw_reg texture_data[LOG2_MAX_BLEND_SAMPLES + 1];
@@ -828,6 +830,7 @@ brw_blorp_blit_program::alloc_push_const_regs(int base_reg)
    ALLOC_REG(x_transform.offset, BRW_REGISTER_TYPE_F);
    ALLOC_REG(y_transform.multiplier, BRW_REGISTER_TYPE_F);
    ALLOC_REG(y_transform.offset, BRW_REGISTER_TYPE_F);
+   ALLOC_REG(src_z, BRW_REGISTER_TYPE_UD);
 #undef CONST_LOC
 #undef ALLOC_REG
 }
@@ -1623,10 +1626,11 @@ brw_blorp_blit_program::texel_fetch(struct brw_reg dst)
       SAMPLER_MESSAGE_ARG_ZERO_INT, /* LOD */
       SAMPLER_MESSAGE_ARG_SI_INT
    };
-   static const sampler_message_arg gen7_ld_args[3] = {
+   static const sampler_message_arg gen7_ld_args[] = {
       SAMPLER_MESSAGE_ARG_U_INT,
       SAMPLER_MESSAGE_ARG_ZERO_INT, /* LOD */
-      SAMPLER_MESSAGE_ARG_V_INT
+      SAMPLER_MESSAGE_ARG_V_INT,
+      SAMPLER_MESSAGE_ARG_R_INT
    };
    static const sampler_message_arg gen7_ld2dss_args[3] = {
       SAMPLER_MESSAGE_ARG_SI_INT,
@@ -1639,10 +1643,11 @@ brw_blorp_blit_program::texel_fetch(struct brw_reg dst)
       SAMPLER_MESSAGE_ARG_U_INT,
       SAMPLER_MESSAGE_ARG_V_INT
    };
-   static const sampler_message_arg gen9_ld_args[3] = {
+   static const sampler_message_arg gen9_ld_args[] = {
       SAMPLER_MESSAGE_ARG_U_INT,
       SAMPLER_MESSAGE_ARG_V_INT,
-      SAMPLER_MESSAGE_ARG_ZERO_INT /* LOD */
+      SAMPLER_MESSAGE_ARG_ZERO_INT, /* LOD */
+      SAMPLER_MESSAGE_ARG_R_INT
    };
 
    switch (brw->gen) {
@@ -1729,6 +1734,9 @@ brw_blorp_blit_program::texture_lookup(struct brw_reg dst,
          break;
       case SAMPLER_MESSAGE_ARG_V_INT:
          emit_mov(mrf, Y);
+         break;
+      case SAMPLER_MESSAGE_ARG_R_INT:
+         emit_mov(mrf, src_z);
          break;
       case SAMPLER_MESSAGE_ARG_SI_INT:
          /* Note: on Gen7, this code may be reached with s_is_zero==true
@@ -2049,6 +2057,8 @@ brw_blorp_blit_params::brw_blorp_blit_params(struct brw_context *brw,
 
    wm_push_consts.x_transform.setup(src_x0, src_x1, dst_x0, dst_x1, mirror_x);
    wm_push_consts.y_transform.setup(src_y0, src_y1, dst_y0, dst_y1, mirror_y);
+
+   wm_push_consts.src_z = src.mt->target == GL_TEXTURE_3D ? src.layer : 0;
 
    if (dst.num_samples <= 1 && dst_mt->num_samples > 1) {
       /* We must expand the rectangle we send through the rendering pipeline,
