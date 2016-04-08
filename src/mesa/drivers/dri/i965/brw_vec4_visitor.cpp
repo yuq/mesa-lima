@@ -758,7 +758,7 @@ vec4_visitor::emit_pull_constant_load_reg(dst_reg dst,
       pull->mlen = 2;
       pull->header_size = 1;
    } else if (devinfo->gen >= 7) {
-      dst_reg grf_offset = dst_reg(this, glsl_type::int_type);
+      dst_reg grf_offset = dst_reg(this, glsl_type::uint_type);
 
       grf_offset.type = offset_reg.type;
 
@@ -1594,14 +1594,14 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 
    src_reg offset;
    if (orig_src.reladdr) {
-      offset = src_reg(this, glsl_type::int_type);
+      offset = src_reg(this, glsl_type::uint_type);
 
       emit_before(block, inst, ADD(dst_reg(offset), *orig_src.reladdr,
-                                   brw_imm_d(reg_offset * 16)));
+                                   brw_imm_ud(reg_offset * 16)));
    } else if (devinfo->gen >= 8) {
       /* Store the offset in a GRF so we can send-from-GRF. */
-      offset = src_reg(this, glsl_type::int_type);
-      emit_before(block, inst, MOV(dst_reg(offset), brw_imm_d(reg_offset * 16)));
+      offset = src_reg(this, glsl_type::uint_type);
+      emit_before(block, inst, MOV(dst_reg(offset), brw_imm_ud(reg_offset * 16)));
    } else {
       offset = brw_imm_d(reg_offset * 16);
    }
