@@ -428,18 +428,11 @@ struct r600_common_context {
 	unsigned flags; /* flush flags */
 
 	/* Queries. */
-	/* The list of active queries. */
+	/* Maintain the list of active queries for pausing between IBs. */
 	int				num_occlusion_queries;
 	int				num_perfect_occlusion_queries;
-	/* Keep track of non-timer queries, because they should be suspended
-	 * during context flushing.
-	 * The timer queries (TIME_ELAPSED) shouldn't be suspended for blits,
-	 * but they should be suspended between IBs. */
-	struct list_head		active_nontimer_queries;
-	struct list_head		active_timer_queries;
-	unsigned			num_cs_dw_nontimer_queries_suspend;
-	bool				nontimer_queries_suspended_by_flush;
-	unsigned			num_cs_dw_timer_queries_suspend;
+	struct list_head		active_queries;
+	unsigned			num_cs_dw_queries_suspend;
 	/* Additional hardware info. */
 	unsigned			backend_mask;
 	unsigned			max_db; /* for OQ */
@@ -569,10 +562,8 @@ void r600_perfcounters_destroy(struct r600_common_screen *rscreen);
 /* r600_query.c */
 void r600_init_screen_query_functions(struct r600_common_screen *rscreen);
 void r600_query_init(struct r600_common_context *rctx);
-void r600_suspend_nontimer_queries(struct r600_common_context *ctx);
-void r600_resume_nontimer_queries(struct r600_common_context *ctx);
-void r600_suspend_timer_queries(struct r600_common_context *ctx);
-void r600_resume_timer_queries(struct r600_common_context *ctx);
+void r600_suspend_queries(struct r600_common_context *ctx);
+void r600_resume_queries(struct r600_common_context *ctx);
 void r600_query_init_backend_mask(struct r600_common_context *ctx);
 
 /* r600_streamout.c */
