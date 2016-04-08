@@ -3882,6 +3882,11 @@ static void si_init_config(struct si_context *sctx)
 	if (sctx->b.family == CHIP_STONEY)
 		si_pm4_set_reg(pm4, R_028C40_PA_SC_SHADER_CONTROL, 0);
 
+	if (sctx->b.family >= CHIP_POLARIS10)
+		si_pm4_set_reg(pm4, R_028830_PA_SU_SMALL_PRIM_FILTER_CNTL,
+			       S_028830_SMALL_PRIM_FILTER_ENABLE(1) |
+			       S_028830_LINE_FILTER_DISABLE(1)); /* line bug */
+
 	si_pm4_set_reg(pm4, R_028080_TA_BC_BASE_ADDR, border_color_va >> 8);
 	if (sctx->b.chip_class >= CIK)
 		si_pm4_set_reg(pm4, R_028084_TA_BC_BASE_ADDR_HI, border_color_va >> 40);
