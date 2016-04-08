@@ -62,7 +62,7 @@ ssa_def_dominates_instr(nir_ssa_def *def, nir_instr *instr)
 }
 
 static bool
-move_vec_src_uses_to_dest_block(nir_block *block, void *shader)
+move_vec_src_uses_to_dest_block(nir_block *block)
 {
    nir_foreach_instr(block, instr) {
       if (instr->type != nir_instr_type_alu)
@@ -181,7 +181,10 @@ nir_move_vec_src_uses_to_dest_impl(nir_shader *shader, nir_function_impl *impl)
    nir_metadata_require(impl, nir_metadata_dominance);
 
    nir_index_instrs(impl);
-   nir_foreach_block_call(impl, move_vec_src_uses_to_dest_block, shader);
+
+   nir_foreach_block(block, impl) {
+      move_vec_src_uses_to_dest_block(block);
+   }
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
