@@ -28,17 +28,10 @@
 #include "nir.h"
 #include "nir_builder.h"
 
-struct lower_system_values_state {
-   nir_builder builder;
-   bool progress;
-};
-
 static bool
-convert_block(nir_block *block, void *void_state)
+convert_block(nir_block *block, nir_builder *b)
 {
-   struct lower_system_values_state *state = void_state;
-
-   nir_builder *b = &state->builder;
+   bool progress = false;
 
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
@@ -129,24 +122,26 @@ convert_block(nir_block *block, void *void_state)
       nir_ssa_def_rewrite_uses(&load_var->dest.ssa, nir_src_for_ssa(sysval));
       nir_instr_remove(&load_var->instr);
 
-      state->progress = true;
+      progress = true;
    }
 
-   return true;
+   return progress;
 }
 
 static bool
 convert_impl(nir_function_impl *impl)
 {
-   struct lower_system_values_state state;
+   bool progress = false;
+   nir_builder builder;
+   nir_builder_init(&builder, impl);
 
-   state.progress = false;
-   nir_builder_init(&state.builder, impl);
+   nir_foreach_block(block, impl) {
+      progress |= convert_block(block, &builder);
+   }
 
-   nir_foreach_block_call(impl, convert_block, &state);
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
-   return state.progress;
+   return progress;
 }
 
 bool
