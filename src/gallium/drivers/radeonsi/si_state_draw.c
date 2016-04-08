@@ -291,13 +291,21 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	if (sctx->b.chip_class >= CIK) {
 		/* WD_SWITCH_ON_EOP has no effect on GPUs with less than
 		 * 4 shader engines. Set 1 to pass the assertion below.
-		 * The other cases are hardware requirements. */
+		 * The other cases are hardware requirements.
+		 *
+		 * Polaris supports primitive restart with WD_SWITCH_ON_EOP=0
+		 * for points, line strips, and tri strips.
+		 */
 		if (sctx->b.screen->info.max_se < 4 ||
 		    prim == PIPE_PRIM_POLYGON ||
 		    prim == PIPE_PRIM_LINE_LOOP ||
 		    prim == PIPE_PRIM_TRIANGLE_FAN ||
 		    prim == PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY ||
-		    info->primitive_restart ||
+		    (info->primitive_restart &&
+		     (sctx->b.family < CHIP_POLARIS10 ||
+		      (prim != PIPE_PRIM_POINTS &&
+		       prim != PIPE_PRIM_LINE_STRIP &&
+		       prim != PIPE_PRIM_TRIANGLE_STRIP))) ||
 		    info->count_from_stream_output)
 			wd_switch_on_eop = true;
 
