@@ -54,8 +54,6 @@ static void r600_blitter_begin(struct pipe_context *ctx, enum r600_blitter_op op
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
 
-	r600_suspend_nontimer_queries(&rctx->b);
-
 	util_blitter_save_vertex_buffer_slot(rctx->blitter, rctx->vertex_buffer_state.vb);
 	util_blitter_save_vertex_elements(rctx->blitter, rctx->vertex_fetch_shader.cso);
 	util_blitter_save_vertex_shader(rctx->blitter, rctx->vs_shader);
@@ -98,7 +96,6 @@ static void r600_blitter_end(struct pipe_context *ctx)
 	struct r600_context *rctx = (struct r600_context *)ctx;
 
 	rctx->b.render_cond_force_off = false;
-	r600_resume_nontimer_queries(&rctx->b);
 }
 
 static unsigned u_max_sample(struct pipe_resource *r)
