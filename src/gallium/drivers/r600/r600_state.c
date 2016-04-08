@@ -1644,7 +1644,7 @@ static void r600_emit_db_misc_state(struct r600_context *rctx, struct r600_atom 
 		}
 	}
 
-	if (a->occlusion_query_enabled) {
+	if (rctx->b.num_occlusion_queries > 0) {
 		if (rctx->b.chip_class >= R700) {
 			db_render_control |= S_028D0C_R700_PERFECT_ZPASS_COUNTS(1);
 		}

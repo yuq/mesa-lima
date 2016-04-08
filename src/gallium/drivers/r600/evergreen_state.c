@@ -1802,7 +1802,7 @@ static void evergreen_emit_db_misc_state(struct r600_context *rctx, struct r600_
 		S_02800C_FORCE_HIS_ENABLE0(V_02800C_FORCE_DISABLE) |
 		S_02800C_FORCE_HIS_ENABLE1(V_02800C_FORCE_DISABLE);
 
-	if (a->occlusion_query_enabled) {
+	if (rctx->b.num_occlusion_queries > 0) {
 		db_count_control |= S_028004_PERFECT_ZPASS_COUNTS(1);
 		if (rctx->b.chip_class == CAYMAN) {
 			db_count_control |= S_028004_SAMPLE_RATE(a->log_samples);

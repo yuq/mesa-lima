@@ -2864,10 +2864,7 @@ static void r600_set_occlusion_query_state(struct pipe_context *ctx, bool enable
 {
 	struct r600_context *rctx = (struct r600_context*)ctx;
 
-	if (rctx->db_misc_state.occlusion_query_enabled != enable) {
-		rctx->db_misc_state.occlusion_query_enabled = enable;
-		r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
-	}
+	r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 }
 
 static void r600_need_gfx_cs_space(struct pipe_context *ctx, unsigned num_dw,
