@@ -133,9 +133,9 @@ setup_inputs(lower_2side_state *state)
 }
 
 static bool
-nir_lower_two_sided_color_block(nir_block *block, void *void_state)
+nir_lower_two_sided_color_block(nir_block *block,
+                                lower_2side_state *state)
 {
-   lower_2side_state *state = void_state;
    nir_builder *b = &state->b;
 
    nir_foreach_instr_safe(instr, block) {
@@ -185,7 +185,9 @@ nir_lower_two_sided_color_impl(nir_function_impl *impl,
 
    nir_builder_init(b, impl);
 
-   nir_foreach_block_call(impl, nir_lower_two_sided_color_block, state);
+   nir_foreach_block(block, impl) {
+      nir_lower_two_sided_color_block(block, state);
+   }
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
