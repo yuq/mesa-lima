@@ -780,7 +780,7 @@
 #define   S_028D0C_STENCIL_COMPRESS_DISABLE(x)         (((x) & 0x1) << 5)
 #define   S_028D0C_DEPTH_COMPRESS_DISABLE(x)           (((x) & 0x1) << 6)
 #define   S_028D0C_COPY_CENTROID(x)                    (((x) & 0x1) << 7)
-#define   S_028D0C_COPY_SAMPLE(x)                      (((x) & 0x1) << 8)
+#define   S_028D0C_COPY_SAMPLE(x)                      (((x) & 0x03) << 8)
 #define   S_028D0C_R700_PERFECT_ZPASS_COUNTS(x)        (((x) & 0x1) << 15)
 #define   S_028D0C_CONSERVATIVE_Z_EXPORT(x)            (((x) & 0x03) << 13)
 #define   G_028D0C_CONSERVATIVE_Z_EXPORT(x)            (((x) >> 13) & 0x03)
