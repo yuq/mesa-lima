@@ -56,24 +56,27 @@ static const uint32_t ytile_width = 128;
 static const uint32_t ytile_height = 32;
 static const uint32_t ytile_span = 16;
 
+static inline uint32_t
+ror(uint32_t n, uint32_t d)
+{
+   return (n >> d) | (n << (32 - d));
+}
+
 /**
  * Copy RGBA to BGRA - swap R and B.
  */
 static inline void *
 rgba8_copy(void *dst, const void *src, size_t bytes)
 {
-   uint8_t *d = dst;
-   uint8_t const *s = src;
+   uint32_t *d = dst;
+   uint32_t const *s = src;
 
    assert(bytes % 4 == 0);
 
    while (bytes >= 4) {
-      d[0] = s[2];
-      d[1] = s[1];
-      d[2] = s[0];
-      d[3] = s[3];
-      d += 4;
-      s += 4;
+      *d = ror(__builtin_bswap32(*s), 8);
+      d += 1;
+      s += 1;
       bytes -= 4;
    }
    return dst;
