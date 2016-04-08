@@ -404,10 +404,9 @@ register_copy_instr(nir_intrinsic_instr *copy_instr,
 
 /* Registers all variable uses in the given block. */
 static bool
-register_variable_uses_block(nir_block *block, void *void_state)
+register_variable_uses_block(nir_block *block,
+                             struct lower_variables_state *state)
 {
-   struct lower_variables_state *state = void_state;
-
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -653,7 +652,10 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
 
    /* Build the initial deref structures and direct_deref_nodes table */
    state.add_to_direct_deref_nodes = true;
-   nir_foreach_block_call(impl, register_variable_uses_block, &state);
+
+   nir_foreach_block(block, impl) {
+      register_variable_uses_block(block, &state);
+   }
 
    bool progress = false;
 
@@ -693,7 +695,9 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
     * added load/store instructions are registered.  We need this
     * information for phi node insertion below.
     */
-   nir_foreach_block_call(impl, register_variable_uses_block, &state);
+   nir_foreach_block(block, impl) {
+      register_variable_uses_block(block, &state);
+   }
 
    state.phi_builder = nir_phi_builder_create(state.impl);
 
