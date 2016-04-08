@@ -201,10 +201,9 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
 }
 
 static bool
-lower_locals_to_regs_block(nir_block *block, void *void_state)
+lower_locals_to_regs_block(nir_block *block,
+                           struct locals_to_regs_state *state)
 {
-   struct locals_to_regs_state *state = void_state;
-
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -358,7 +357,9 @@ nir_lower_locals_to_regs_impl(nir_function_impl *impl)
 
    nir_metadata_require(impl, nir_metadata_dominance);
 
-   nir_foreach_block_call(impl, lower_locals_to_regs_block, &state);
+   nir_foreach_block(block, impl) {
+      lower_locals_to_regs_block(block, &state);
+   }
 
    nir_array_foreach(&state.derefs_array, nir_deref_var *, deref_ptr) {
       nir_deref_var *deref = *deref_ptr;
