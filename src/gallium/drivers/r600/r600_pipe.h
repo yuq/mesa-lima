@@ -120,6 +120,7 @@ struct r600_db_state {
 
 struct r600_db_misc_state {
 	struct r600_atom		atom;
+	bool				occlusion_queries_disabled;
 	bool				flush_depthstencil_through_cb;
 	bool				flush_depth_inplace;
 	bool				flush_stencil_inplace;

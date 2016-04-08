@@ -2860,6 +2860,17 @@ static void r600_invalidate_buffer(struct pipe_context *ctx, struct pipe_resourc
 	}
 }
 
+static void r600_set_active_query_state(struct pipe_context *ctx, boolean enable)
+{
+	struct r600_context *rctx = (struct r600_context*)ctx;
+
+	/* Occlusion queries. */
+	if (rctx->db_misc_state.occlusion_queries_disabled != !enable) {
+		rctx->db_misc_state.occlusion_queries_disabled = !enable;
+		r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
+	}
+}
+
 static void r600_set_occlusion_query_state(struct pipe_context *ctx, bool enable)
 {
 	struct r600_context *rctx = (struct r600_context*)ctx;
@@ -2914,6 +2925,7 @@ void r600_init_common_state_functions(struct r600_context *rctx)
 	rctx->b.b.sampler_view_destroy = r600_sampler_view_destroy;
 	rctx->b.b.texture_barrier = r600_texture_barrier;
 	rctx->b.b.set_stream_output_targets = r600_set_streamout_targets;
+	rctx->b.b.set_active_query_state = r600_set_active_query_state;
 	rctx->b.b.draw_vbo = r600_draw_vbo;
 	rctx->b.invalidate_buffer = r600_invalidate_buffer;
 	rctx->b.set_occlusion_query_state = r600_set_occlusion_query_state;

@@ -1644,12 +1644,16 @@ static void r600_emit_db_misc_state(struct r600_context *rctx, struct r600_atom 
 		}
 	}
 
-	if (rctx->b.num_occlusion_queries > 0) {
+	if (rctx->b.num_occlusion_queries > 0 &&
+	    !a->occlusion_queries_disabled) {
 		if (rctx->b.chip_class >= R700) {
 			db_render_control |= S_028D0C_R700_PERFECT_ZPASS_COUNTS(1);
 		}
 		db_render_override |= S_028D10_NOOP_CULL_DISABLE(1);
+	} else {
+		db_render_control |= S_028D0C_ZPASS_INCREMENT_DISABLE(1);
 	}
+
 	if (rctx->db_state.rsurf && rctx->db_state.rsurf->db_htile_surface) {
 		/* FORCE_OFF means HiZ/HiS are determined by DB_SHADER_CONTROL */
 		db_render_override |= S_028D10_FORCE_HIZ_ENABLE(V_028D10_FORCE_OFF);

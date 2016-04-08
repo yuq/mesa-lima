@@ -1735,7 +1735,7 @@
 #define   S_028000_COPY_SAMPLE(x)                      (((x) & 0x7) << 8)
 #define   S_028000_COLOR_DISABLE(x)                    (((x) & 0x1) << 12)
 #define R_028004_DB_COUNT_CONTROL                    0x00028004
-#define   S_028004_ZPASS_INCREMENT_DISABLE        (((x) & 0x1) << 0)
+#define   S_028004_ZPASS_INCREMENT_DISABLE(x)     (((x) & 0x1) << 0)
 #define   S_028004_PERFECT_ZPASS_COUNTS(x)        (((x) & 0x1) << 1)
 #define   S_028004_SAMPLE_RATE(x)                 (((x) & 0x7) << 4) /* cayman only */
 #define R_028008_DB_DEPTH_VIEW                       0x00028008

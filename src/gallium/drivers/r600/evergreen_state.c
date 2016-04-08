@@ -1802,12 +1802,15 @@ static void evergreen_emit_db_misc_state(struct r600_context *rctx, struct r600_
 		S_02800C_FORCE_HIS_ENABLE0(V_02800C_FORCE_DISABLE) |
 		S_02800C_FORCE_HIS_ENABLE1(V_02800C_FORCE_DISABLE);
 
-	if (rctx->b.num_occlusion_queries > 0) {
+	if (rctx->b.num_occlusion_queries > 0 &&
+	    !a->occlusion_queries_disabled) {
 		db_count_control |= S_028004_PERFECT_ZPASS_COUNTS(1);
 		if (rctx->b.chip_class == CAYMAN) {
 			db_count_control |= S_028004_SAMPLE_RATE(a->log_samples);
 		}
 		db_render_override |= S_02800C_NOOP_CULL_DISABLE(1);
+	} else {
+		db_count_control |= S_028004_ZPASS_INCREMENT_DISABLE(1);
 	}
 
 	/* This is to fix a lockup when hyperz and alpha test are enabled at
