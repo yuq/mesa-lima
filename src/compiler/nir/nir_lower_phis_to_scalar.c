@@ -163,10 +163,9 @@ should_lower_phi(nir_phi_instr *phi, struct lower_phis_to_scalar_state *state)
 }
 
 static bool
-lower_phis_to_scalar_block(nir_block *block, void *void_state)
+lower_phis_to_scalar_block(nir_block *block,
+                           struct lower_phis_to_scalar_state *state)
 {
-   struct lower_phis_to_scalar_state *state = void_state;
-
    /* Find the last phi node in the block */
    nir_phi_instr *last_phi = NULL;
    nir_foreach_instr(block, instr) {
@@ -272,7 +271,9 @@ lower_phis_to_scalar_impl(nir_function_impl *impl)
    state.phi_table = _mesa_hash_table_create(state.dead_ctx, _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
 
-   nir_foreach_block_call(impl, lower_phis_to_scalar_block, &state);
+   nir_foreach_block(block, impl) {
+      lower_phis_to_scalar_block(block, &state);
+   }
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
