@@ -211,10 +211,9 @@ atomic_op(nir_intrinsic_op opcode)
 }
 
 static bool
-nir_lower_io_block(nir_block *block, void *void_state)
+nir_lower_io_block(nir_block *block,
+                   struct lower_io_state *state)
 {
-   struct lower_io_state *state = void_state;
-
    nir_builder *b = &state->builder;
 
    nir_foreach_instr_safe(block, instr) {
@@ -403,7 +402,9 @@ nir_lower_io_impl(nir_function_impl *impl,
    state.modes = modes;
    state.type_size = type_size;
 
-   nir_foreach_block_call(impl, nir_lower_io_block, &state);
+   nir_foreach_block(block, impl) {
+      nir_lower_io_block(block, &state);
+   }
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
