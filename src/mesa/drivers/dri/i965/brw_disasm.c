@@ -1517,6 +1517,11 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
                                              : gen5_urb_opcode,
                            opcode, &space);
 
+            if (devinfo->gen >= 7 &&
+                brw_inst_urb_per_slot_offset(devinfo, inst)) {
+               string(file, " per-slot");
+            }
+
             if (opcode == GEN8_URB_OPCODE_SIMD8_WRITE ||
                 opcode == GEN8_URB_OPCODE_SIMD8_READ) {
                if (brw_inst_urb_channel_mask_present(devinfo, inst))
