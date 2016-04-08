@@ -50,7 +50,10 @@
 #define R600_RESOURCE_FLAG_FORCE_TILING		(PIPE_RESOURCE_FLAG_DRV_PRIV << 2)
 
 #define R600_CONTEXT_STREAMOUT_FLUSH		(1u << 0)
-#define R600_CONTEXT_PRIVATE_FLAG		(1u << 1)
+/* Pipeline & streamout query controls. */
+#define R600_CONTEXT_START_PIPELINE_STATS	(1u << 1)
+#define R600_CONTEXT_STOP_PIPELINE_STATS	(1u << 2)
+#define R600_CONTEXT_PRIVATE_FLAG		(1u << 3)
 
 /* special primitive types */
 #define R600_PRIM_RECTANGLE_LIST	PIPE_PRIM_MAX
