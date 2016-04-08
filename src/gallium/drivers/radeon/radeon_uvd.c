@@ -1003,7 +1003,7 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 
 	dec->msg->body.decode.dpb_size = dec->dpb.res->buf->size;
 	dec->msg->body.decode.bsd_size = bs_size;
-	dec->msg->body.decode.db_pitch = dec->base.width;
+	dec->msg->body.decode.db_pitch = align(dec->base.width, 16);
 
 	dt = dec->set_dtb(dec->msg, (struct vl_video_buffer *)target);
 	if (((struct r600_common_screen*)dec->screen)->family >= CHIP_STONEY)
