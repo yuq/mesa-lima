@@ -113,10 +113,8 @@ init_instr(nir_instr *instr, struct exec_list *worklist)
 }
 
 static bool
-init_block_cb(nir_block *block, void *_state)
+init_block(nir_block *block, struct exec_list *worklist)
 {
-   struct exec_list *worklist = (struct exec_list *) _state;
-
    nir_foreach_instr(block, instr)
       init_instr(instr, worklist);
 
@@ -131,27 +129,14 @@ init_block_cb(nir_block *block, void *_state)
 }
 
 static bool
-delete_block_cb(nir_block *block, void *_state)
-{
-   bool *progress = (bool *) _state;
-
-   nir_foreach_instr_safe(block, instr) {
-      if (!instr->pass_flags) {
-         nir_instr_remove(instr);
-         *progress = true;
-      }
-   }
-
-   return true;
-}
-
-static bool
 nir_opt_dce_impl(nir_function_impl *impl)
 {
    struct exec_list *worklist = ralloc(NULL, struct exec_list);
    exec_list_make_empty(worklist);
 
-   nir_foreach_block_call(impl, init_block_cb, worklist);
+   nir_foreach_block(block, impl) {
+      init_block(block, worklist);
+   }
 
    while (!exec_list_is_empty(worklist)) {
       nir_instr *instr = worklist_pop(worklist);
@@ -161,7 +146,15 @@ nir_opt_dce_impl(nir_function_impl *impl)
    ralloc_free(worklist);
 
    bool progress = false;
-   nir_foreach_block_call(impl, delete_block_cb, &progress);
+
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr_safe(block, instr) {
+         if (!instr->pass_flags) {
+            nir_instr_remove(instr);
+            progress = true;
+         }
+      }
+   }
 
    if (progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |
