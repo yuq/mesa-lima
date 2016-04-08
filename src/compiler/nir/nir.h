@@ -1550,6 +1550,12 @@ nir_start_block(nir_function_impl *impl)
    return (nir_block *) exec_list_get_head(&impl->body);
 }
 
+static inline nir_block *
+nir_impl_last_block(nir_function_impl *impl)
+{
+   return (nir_block *) exec_list_get_tail(&impl->body);
+}
+
 static inline nir_cf_node *
 nir_cf_node_next(nir_cf_node *node)
 {
@@ -2121,14 +2127,93 @@ void nir_ssa_def_rewrite_uses_after(nir_ssa_def *def, nir_src new_src,
 
 uint8_t nir_ssa_def_components_read(nir_ssa_def *def);
 
-/* visits basic blocks in source-code order */
+/*
+ * finds the next basic block in source-code order, returns NULL if there is
+ * none
+ */
+
+nir_block *nir_block_cf_tree_next(nir_block *block);
+
+/* Performs the opposite of nir_block_cf_tree_next() */
+
+nir_block *nir_block_cf_tree_prev(nir_block *block);
+
+/* Gets the first block in a CF node in source-code order */
+
+nir_block *nir_cf_node_cf_tree_first(nir_cf_node *node);
+
+/* Gets the last block in a CF node in source-code order */
+
+nir_block *nir_cf_node_cf_tree_last(nir_cf_node *node);
+
+/* Gets the next block after a CF node in source-code order */
+
+nir_block *nir_cf_node_cf_tree_next(nir_cf_node *node);
+
+/* Macros for loops that visit blocks in source-code order */
+
+#define nir_foreach_block(block, impl) \
+   for (nir_block *block = nir_start_block(impl); block != NULL; \
+        block = nir_block_cf_tree_next(block))
+
+#define nir_foreach_block_safe(block, impl) \
+   for (nir_block *block = nir_start_block(impl), \
+        *next = nir_block_cf_tree_next(block); \
+        block != NULL; \
+        block = next, next = nir_block_cf_tree_next(block))
+
+#define nir_foreach_block_reverse(block, impl) \
+   for (nir_block *block = nir_impl_last_block(impl); block != NULL; \
+        block = nir_block_cf_tree_prev(block))
+
+#define nir_foreach_block_reverse_safe(block, impl) \
+   for (nir_block *block = nir_impl_last_block(impl), \
+        *prev = nir_block_cf_tree_prev(block); \
+        block != NULL; \
+        block = prev, prev = nir_block_cf_tree_prev(block))
+
+#define nir_foreach_block_in_cf_node(block, node) \
+   for (nir_block *block = nir_cf_node_cf_tree_first(node); \
+        block != nir_cf_node_cf_tree_next(node); \
+        block = nir_block_cf_tree_next(block))
+
 typedef bool (*nir_foreach_block_cb)(nir_block *block, void *state);
-bool nir_foreach_block_call(nir_function_impl *impl, nir_foreach_block_cb cb,
-                       void *state);
-bool nir_foreach_block_reverse_call(nir_function_impl *impl, nir_foreach_block_cb cb,
-                               void *state);
-bool nir_foreach_block_in_cf_node_call(nir_cf_node *node, nir_foreach_block_cb cb,
-                                  void *state);
+
+static inline bool
+nir_foreach_block_call(nir_function_impl *impl, nir_foreach_block_cb cb,
+                       void *state)
+{
+   nir_foreach_block_safe(block, impl) {
+      if (!cb(block, state))
+         return false;
+   }
+
+   return true;
+}
+
+static inline bool
+nir_foreach_block_reverse_call(nir_function_impl *impl, nir_foreach_block_cb cb,
+                               void *state)
+{
+   nir_foreach_block_reverse_safe(block, impl) {
+      if (!cb(block, state))
+         return false;
+   }
+
+   return true;
+}
+
+static inline bool
+nir_foreach_block_in_cf_node_call(nir_cf_node *node, nir_foreach_block_cb cb,
+                                  void *state)
+{
+   nir_foreach_block_in_cf_node(block, node) {
+      if (!cb(block, state))
+         return false;
+   }
+
+   return true;
+}
 
 /* If the following CF node is an if, this function returns that if.
  * Otherwise, it returns NULL.

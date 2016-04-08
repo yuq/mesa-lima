@@ -1501,109 +1501,143 @@ nir_ssa_def_components_read(nir_ssa_def *def)
    return read_mask;
 }
 
-static bool foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
-                            bool reverse, void *state);
-
-static inline bool
-foreach_if(nir_if *if_stmt, nir_foreach_block_cb cb, bool reverse, void *state)
+nir_block *
+nir_block_cf_tree_next(nir_block *block)
 {
-   if (reverse) {
-      foreach_list_typed_reverse_safe(nir_cf_node, node, node,
-                                      &if_stmt->else_list) {
-         if (!foreach_cf_node(node, cb, reverse, state))
-            return false;
-      }
-
-      foreach_list_typed_reverse_safe(nir_cf_node, node, node,
-                                      &if_stmt->then_list) {
-         if (!foreach_cf_node(node, cb, reverse, state))
-            return false;
-      }
-   } else {
-      foreach_list_typed_safe(nir_cf_node, node, node, &if_stmt->then_list) {
-         if (!foreach_cf_node(node, cb, reverse, state))
-            return false;
-      }
-
-      foreach_list_typed_safe(nir_cf_node, node, node, &if_stmt->else_list) {
-         if (!foreach_cf_node(node, cb, reverse, state))
-            return false;
-      }
+   if (block == NULL) {
+      /* nir_foreach_block_safe() will call this function on a NULL block
+       * after the last iteration, but it won't use the result so just return
+       * NULL here.
+       */
+      return NULL;
    }
 
-   return true;
-}
+   nir_cf_node *cf_next = nir_cf_node_next(&block->cf_node);
+   if (cf_next)
+      return nir_cf_node_cf_tree_first(cf_next);
 
-static inline bool
-foreach_loop(nir_loop *loop, nir_foreach_block_cb cb, bool reverse, void *state)
-{
-   if (reverse) {
-      foreach_list_typed_reverse_safe(nir_cf_node, node, node, &loop->body) {
-         if (!foreach_cf_node(node, cb, reverse, state))
-            return false;
-      }
-   } else {
-      foreach_list_typed_safe(nir_cf_node, node, node, &loop->body) {
-         if (!foreach_cf_node(node, cb, reverse, state))
-            return false;
-      }
+   nir_cf_node *parent = block->cf_node.parent;
+
+   switch (parent->type) {
+   case nir_cf_node_if: {
+      /* Are we at the end of the if? Go to the beginning of the else */
+      nir_if *if_stmt = nir_cf_node_as_if(parent);
+      if (&block->cf_node == nir_if_last_then_node(if_stmt))
+         return nir_cf_node_as_block(nir_if_first_else_node(if_stmt));
+
+      assert(&block->cf_node == nir_if_last_else_node(if_stmt));
+      /* fall through */
    }
 
-   return true;
-}
-
-static bool
-foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
-                bool reverse, void *state)
-{
-   switch (node->type) {
-   case nir_cf_node_block:
-      return cb(nir_cf_node_as_block(node), state);
-   case nir_cf_node_if:
-      return foreach_if(nir_cf_node_as_if(node), cb, reverse, state);
    case nir_cf_node_loop:
-      return foreach_loop(nir_cf_node_as_loop(node), cb, reverse, state);
-      break;
+      return nir_cf_node_as_block(nir_cf_node_next(parent));
+
+   case nir_cf_node_function:
+      return NULL;
 
    default:
-      unreachable("Invalid CFG node type");
-      break;
+      unreachable("unknown cf node type");
    }
-
-   return false;
 }
 
-bool
-nir_foreach_block_in_cf_node_call(nir_cf_node *node, nir_foreach_block_cb cb,
-                             void *state)
+nir_block *
+nir_block_cf_tree_prev(nir_block *block)
 {
-   return foreach_cf_node(node, cb, false, state);
-}
-
-bool
-nir_foreach_block_call(nir_function_impl *impl, nir_foreach_block_cb cb, void *state)
-{
-   foreach_list_typed_safe(nir_cf_node, node, node, &impl->body) {
-      if (!foreach_cf_node(node, cb, false, state))
-         return false;
+   if (block == NULL) {
+      /* do this for consistency with nir_block_cf_tree_next() */
+      return NULL;
    }
 
-   return cb(impl->end_block, state);
-}
+   nir_cf_node *cf_prev = nir_cf_node_prev(&block->cf_node);
+   if (cf_prev)
+      return nir_cf_node_cf_tree_last(cf_prev);
 
-bool
-nir_foreach_block_reverse_call(nir_function_impl *impl, nir_foreach_block_cb cb,
-                          void *state)
-{
-   if (!cb(impl->end_block, state))
-      return false;
+   nir_cf_node *parent = block->cf_node.parent;
 
-   foreach_list_typed_reverse_safe(nir_cf_node, node, node, &impl->body) {
-      if (!foreach_cf_node(node, cb, true, state))
-         return false;
+   switch (parent->type) {
+   case nir_cf_node_if: {
+      /* Are we at the beginning of the else? Go to the end of the if */
+      nir_if *if_stmt = nir_cf_node_as_if(parent);
+      if (&block->cf_node == nir_if_first_else_node(if_stmt))
+         return nir_cf_node_as_block(nir_if_last_then_node(if_stmt));
+
+      assert(&block->cf_node == nir_if_first_then_node(if_stmt));
+      /* fall through */
    }
 
-   return true;
+   case nir_cf_node_loop:
+      return nir_cf_node_as_block(nir_cf_node_prev(parent));
+
+   case nir_cf_node_function:
+      return NULL;
+
+   default:
+      unreachable("unknown cf node type");
+   }
+}
+
+nir_block *nir_cf_node_cf_tree_first(nir_cf_node *node)
+{
+   switch (node->type) {
+   case nir_cf_node_function: {
+      nir_function_impl *impl = nir_cf_node_as_function(node);
+      return nir_start_block(impl);
+   }
+
+   case nir_cf_node_if: {
+      nir_if *if_stmt = nir_cf_node_as_if(node);
+      return nir_cf_node_as_block(nir_if_first_then_node(if_stmt));
+   }
+
+   case nir_cf_node_loop: {
+      nir_loop *loop = nir_cf_node_as_loop(node);
+      return nir_cf_node_as_block(nir_loop_first_cf_node(loop));
+   }
+
+   case nir_cf_node_block: {
+      return nir_cf_node_as_block(node);
+   }
+
+   default:
+      unreachable("unknown node type");
+   }
+}
+
+nir_block *nir_cf_node_cf_tree_last(nir_cf_node *node)
+{
+   switch (node->type) {
+   case nir_cf_node_function: {
+      nir_function_impl *impl = nir_cf_node_as_function(node);
+      return nir_impl_last_block(impl);
+   }
+
+   case nir_cf_node_if: {
+      nir_if *if_stmt = nir_cf_node_as_if(node);
+      return nir_cf_node_as_block(nir_if_last_else_node(if_stmt));
+   }
+
+   case nir_cf_node_loop: {
+      nir_loop *loop = nir_cf_node_as_loop(node);
+      return nir_cf_node_as_block(nir_loop_last_cf_node(loop));
+   }
+
+   case nir_cf_node_block: {
+      return nir_cf_node_as_block(node);
+   }
+
+   default:
+      unreachable("unknown node type");
+   }
+}
+
+nir_block *nir_cf_node_cf_tree_next(nir_cf_node *node)
+{
+   if (node->type == nir_cf_node_block)
+      return nir_cf_node_cf_tree_first(nir_cf_node_next(node));
+   else if (node->type == nir_cf_node_function)
+      return NULL;
+   else
+      return nir_cf_node_as_block(nir_cf_node_next(node));
 }
 
 nir_if *
