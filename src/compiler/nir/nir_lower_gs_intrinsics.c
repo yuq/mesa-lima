@@ -131,10 +131,8 @@ rewrite_end_primitive(nir_intrinsic_instr *intrin, struct state *state)
 }
 
 static bool
-rewrite_intrinsics(nir_block *block, void *closure)
+rewrite_intrinsics(nir_block *block, struct state *state)
 {
-   struct state *state = closure;
-
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -206,7 +204,9 @@ nir_lower_gs_intrinsics(nir_shader *shader)
          nir_builder_init(&b, function->impl);
          state.builder = &b;
 
-         nir_foreach_block_call(function->impl, rewrite_intrinsics, &state);
+         nir_foreach_block_safe(block, function->impl) {
+            rewrite_intrinsics(block, &state);
+         }
 
          /* This only works because we have a single main() function. */
          append_set_vertex_count(function->impl->end_block, &state);
