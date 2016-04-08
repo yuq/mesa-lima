@@ -38,12 +38,6 @@
 #include "nir.h"
 #include "nir_builder.h"
 
-typedef struct {
-   nir_builder b;
-   const nir_lower_tex_options *options;
-   bool progress;
-} lower_tex_state;
-
 static void
 project_src(nir_builder *b, nir_tex_instr *tex)
 {
@@ -315,11 +309,10 @@ linearize_srgb_result(nir_builder *b, nir_tex_instr *tex)
 }
 
 static bool
-nir_lower_tex_block(nir_block *block, void *void_state)
+nir_lower_tex_block(nir_block *block, nir_builder *b,
+                    const nir_lower_tex_options *options)
 {
-   lower_tex_state *state = void_state;
-   const nir_lower_tex_options *options = state->options;
-   nir_builder *b = &state->b;
+   bool progress = false;
 
    nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_tex)
@@ -343,59 +336,63 @@ nir_lower_tex_block(nir_block *block, void *void_state)
        */
       if (lower_txp || sat_mask) {
          project_src(b, tex);
-         state->progress = true;
+         progress = true;
       }
 
       if ((tex->sampler_dim == GLSL_SAMPLER_DIM_RECT) && options->lower_rect) {
          lower_rect(b, tex);
-         state->progress = true;
+         progress = true;
       }
 
       if (sat_mask) {
          saturate_src(b, tex, sat_mask);
-         state->progress = true;
+         progress = true;
       }
 
       if (((1 << tex->texture_index) & options->swizzle_result) &&
           !nir_tex_instr_is_query(tex) &&
           !(tex->is_shadow && tex->is_new_style_shadow)) {
          swizzle_result(b, tex, options->swizzles[tex->texture_index]);
-         state->progress = true;
+         progress = true;
       }
 
       /* should be after swizzle so we know which channels are rgb: */
       if (((1 << tex->texture_index) & options->lower_srgb) &&
           !nir_tex_instr_is_query(tex) && !tex->is_shadow) {
          linearize_srgb_result(b, tex);
-         state->progress = true;
+         progress = true;
       }
    }
 
-   return true;
+   return progress;
 }
 
-static void
-nir_lower_tex_impl(nir_function_impl *impl, lower_tex_state *state)
+static bool
+nir_lower_tex_impl(nir_function_impl *impl,
+                   const nir_lower_tex_options *options)
 {
-   nir_builder_init(&state->b, impl);
+   bool progress = false;
+   nir_builder builder;
+   nir_builder_init(&builder, impl);
 
-   nir_foreach_block_call(impl, nir_lower_tex_block, state);
+   nir_foreach_block(block, impl) {
+      progress |= nir_lower_tex_block(block, &builder, options);
+   }
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
+   return progress;
 }
 
 bool
 nir_lower_tex(nir_shader *shader, const nir_lower_tex_options *options)
 {
-   lower_tex_state state;
-   state.options = options;
-   state.progress = false;
+   bool progress = false;
 
    nir_foreach_function(function, shader) {
       if (function->impl)
-         nir_lower_tex_impl(function->impl, &state);
+         progress |= nir_lower_tex_impl(function->impl, options);
    }
 
-   return state.progress;
+   return progress;
 }
