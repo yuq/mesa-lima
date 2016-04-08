@@ -67,21 +67,15 @@ lower_load_const_instr_scalar(nir_load_const_instr *lower)
    nir_instr_remove(&lower->instr);
 }
 
-static bool
-lower_load_const_to_scalar_block(nir_block *block, void *data)
-{
-   nir_foreach_instr_safe(block, instr) {
-      if (instr->type == nir_instr_type_load_const)
-         lower_load_const_instr_scalar(nir_instr_as_load_const(instr));
-   }
-
-   return true;
-}
-
 static void
 nir_lower_load_const_to_scalar_impl(nir_function_impl *impl)
 {
-   nir_foreach_block_call(impl, lower_load_const_to_scalar_block, NULL);
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr_safe(block, instr) {
+         if (instr->type == nir_instr_type_load_const)
+            lower_load_const_instr_scalar(nir_instr_as_load_const(instr));
+      }
+   }
 }
 
 void
