@@ -3249,12 +3249,12 @@ reserve_subroutine_explicit_locations(struct gl_shader_program *prog,
  * any optimizations happen to handle also inactive uniforms and
  * inactive array elements that may get trimmed away.
  */
-static int
+static unsigned
 check_explicit_uniform_locations(struct gl_context *ctx,
                                  struct gl_shader_program *prog)
 {
    if (!ctx->Extensions.ARB_explicit_uniform_location)
-      return -1;
+      return 0;
 
    /* This map is used to detect if overlapping explicit locations
     * occur with the same uniform (from different stage) or a different one.
@@ -3263,7 +3263,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
 
    if (!uniform_map) {
       linker_error(prog, "Out of memory during linking.\n");
-      return -1;
+      return 0;
    }
 
    unsigned entries_total = 0;
@@ -3292,7 +3292,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
             }
             if (!ret) {
                delete uniform_map;
-               return -1;
+               return 0;
             }
          }
       }
