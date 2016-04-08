@@ -561,7 +561,6 @@ static void *evergreen_create_sampler_state(struct pipe_context *ctx,
 					const struct pipe_sampler_state *state)
 {
 	struct r600_pipe_sampler_state *ss = CALLOC_STRUCT(r600_pipe_sampler_state);
-	unsigned aniso_flag_offset = state->max_anisotropy > 1 ? 2 : 0;
 
 	if (!ss) {
 		return NULL;
@@ -574,10 +573,10 @@ static void *evergreen_create_sampler_state(struct pipe_context *ctx,
 		S_03C000_CLAMP_X(r600_tex_wrap(state->wrap_s)) |
 		S_03C000_CLAMP_Y(r600_tex_wrap(state->wrap_t)) |
 		S_03C000_CLAMP_Z(r600_tex_wrap(state->wrap_r)) |
-		S_03C000_XY_MAG_FILTER(r600_tex_filter(state->mag_img_filter) | aniso_flag_offset) |
-		S_03C000_XY_MIN_FILTER(r600_tex_filter(state->min_img_filter) | aniso_flag_offset) |
+		S_03C000_XY_MAG_FILTER(eg_tex_filter(state->mag_img_filter, state->max_anisotropy)) |
+		S_03C000_XY_MIN_FILTER(eg_tex_filter(state->min_img_filter, state->max_anisotropy)) |
 		S_03C000_MIP_FILTER(r600_tex_mipfilter(state->min_mip_filter)) |
-		S_03C000_MAX_ANISO(r600_tex_aniso_filter(state->max_anisotropy)) |
+		S_03C000_MAX_ANISO_RATIO(r600_tex_aniso_filter(state->max_anisotropy)) |
 		S_03C000_DEPTH_COMPARE_FUNCTION(r600_tex_compare(state->compare_func)) |
 		S_03C000_BORDER_COLOR_TYPE(ss->border_color_use ? V_03C000_SQ_TEX_BORDER_COLOR_REGISTER : 0);
 	/* R_03C004_SQ_TEX_SAMPLER_WORD1_0 */
@@ -852,7 +851,7 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 		view->tex_resource_words[4] |= S_030010_BASE_LEVEL(first_level);
 		view->tex_resource_words[5] |= S_030014_LAST_LEVEL(last_level);
 		/* aniso max 16 samples */
-		view->tex_resource_words[6] |= S_030018_MAX_ANISO(4);
+		view->tex_resource_words[6] |= S_030018_MAX_ANISO_RATIO(4);
 	}
 
 	view->tex_resource_words[7] = S_03001C_DATA_FORMAT(format) |

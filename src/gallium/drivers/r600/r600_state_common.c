@@ -2122,17 +2122,6 @@ unsigned r600_tex_wrap(unsigned wrap)
 	}
 }
 
-unsigned r600_tex_filter(unsigned filter)
-{
-	switch (filter) {
-	default:
-	case PIPE_TEX_FILTER_NEAREST:
-		return V_03C000_SQ_TEX_XY_FILTER_POINT;
-	case PIPE_TEX_FILTER_LINEAR:
-		return V_03C000_SQ_TEX_XY_FILTER_BILINEAR;
-	}
-}
-
 unsigned r600_tex_mipfilter(unsigned filter)
 {
 	switch (filter) {
