@@ -1673,13 +1673,6 @@ nir_block_get_following_loop(nir_block *block)
 
    return nir_cf_node_as_loop(next_node);
 }
-static bool
-index_block(nir_block *block, void *state)
-{
-   unsigned *index = state;
-   block->index = (*index)++;
-   return true;
-}
 
 void
 nir_index_blocks(nir_function_impl *impl)
@@ -1689,7 +1682,9 @@ nir_index_blocks(nir_function_impl *impl)
    if (impl->valid_metadata & nir_metadata_block_index)
       return;
 
-   nir_foreach_block_call(impl, index_block, &index);
+   nir_foreach_block(block, impl) {
+      block->index = index++;
+   }
 
    impl->num_blocks = index;
 }
@@ -1703,15 +1698,6 @@ index_ssa_def_cb(nir_ssa_def *def, void *state)
    return true;
 }
 
-static bool
-index_ssa_block(nir_block *block, void *state)
-{
-   nir_foreach_instr(block, instr)
-      nir_foreach_ssa_def(instr, index_ssa_def_cb, state);
-
-   return true;
-}
-
 /**
  * The indices are applied top-to-bottom which has the very nice property
  * that, if A dominates B, then A->index <= B->index.
@@ -1720,18 +1706,13 @@ void
 nir_index_ssa_defs(nir_function_impl *impl)
 {
    unsigned index = 0;
-   nir_foreach_block_call(impl, index_ssa_block, &index);
+
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr(block, instr)
+         nir_foreach_ssa_def(instr, index_ssa_def_cb, &index);
+   }
+
    impl->ssa_alloc = index;
-}
-
-static bool
-index_instrs_block(nir_block *block, void *state)
-{
-   unsigned *index = state;
-   nir_foreach_instr(block, instr)
-      instr->index = (*index)++;
-
-   return true;
 }
 
 /**
@@ -1742,7 +1723,12 @@ unsigned
 nir_index_instrs(nir_function_impl *impl)
 {
    unsigned index = 0;
-   nir_foreach_block_call(impl, index_instrs_block, &index);
+
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr(block, instr)
+         instr->index = index++;
+   }
+
    return index;
 }
 
