@@ -32,11 +32,6 @@
  * moves with partial writes.
  */
 
-struct vec_to_movs_state {
-   nir_function_impl *impl;
-   bool progress;
-};
-
 static bool
 src_matches_dest_reg(nir_dest *dest, nir_src *src)
 {
@@ -215,10 +210,9 @@ try_coalesce(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
 }
 
 static bool
-lower_vec_to_movs_block(nir_block *block, void *void_state)
+lower_vec_to_movs_block(nir_block *block, nir_function_impl *impl)
 {
-   struct vec_to_movs_state *state = void_state;
-   nir_function_impl *impl = state->impl;
+   bool progress = false;
    nir_shader *shader = impl->function->shader;
 
    nir_foreach_instr_safe(block, instr) {
@@ -278,25 +272,27 @@ lower_vec_to_movs_block(nir_block *block, void *void_state)
 
       nir_instr_remove(&vec->instr);
       ralloc_free(vec);
-      state->progress = true;
+      progress = true;
    }
 
-   return true;
+   return progress;
 }
 
 static bool
 nir_lower_vec_to_movs_impl(nir_function_impl *impl)
 {
-   struct vec_to_movs_state state = { impl, false };
+   bool progress = false;
 
-   nir_foreach_block_call(impl, lower_vec_to_movs_block, &state);
+   nir_foreach_block(block, impl) {
+      progress |= lower_vec_to_movs_block(block, impl);
+   }
 
-   if (state.progress) {
+   if (progress) {
       nir_metadata_preserve(impl, nir_metadata_block_index |
                                   nir_metadata_dominance);
    }
 
-   return state.progress;
+   return progress;
 }
 
 bool
