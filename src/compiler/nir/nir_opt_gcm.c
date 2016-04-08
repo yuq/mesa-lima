@@ -105,10 +105,8 @@ gcm_build_block_info(struct exec_list *cf_list, struct gcm_state *state,
  * to either GCM_INSTR_PINNED or 0.
  */
 static bool
-gcm_pin_instructions_block(nir_block *block, void *void_state)
+gcm_pin_instructions_block(nir_block *block, struct gcm_state *state)
 {
-   struct gcm_state *state = void_state;
-
    nir_foreach_instr_safe(block, instr) {
       switch (instr->type) {
       case nir_instr_type_alu:
@@ -467,7 +465,10 @@ opt_gcm_impl(nir_function_impl *impl)
                               nir_metadata_dominance);
 
    gcm_build_block_info(&impl->body, &state, 0);
-   nir_foreach_block_call(impl, gcm_pin_instructions_block, &state);
+
+   nir_foreach_block(block, impl) {
+      gcm_pin_instructions_block(block, &state);
+   }
 
    foreach_list_typed(nir_instr, instr, node, &state.instrs)
       gcm_schedule_early_instr(instr, &state);
