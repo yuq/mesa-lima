@@ -1572,8 +1572,10 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 break;
 
         case nir_intrinsic_load_user_clip_plane:
-                *dest = qir_uniform(c, QUNIFORM_USER_CLIP_PLANE,
-                                    instr->const_index[0]);
+                for (int i = 0; i < instr->num_components; i++) {
+                        dest[i] = qir_uniform(c, QUNIFORM_USER_CLIP_PLANE,
+                                              instr->const_index[0] * 4 + i);
+                }
                 break;
 
         case nir_intrinsic_load_sample_mask_in:

@@ -380,24 +380,14 @@ vc4_nir_lower_uniform(struct vc4_compile *c, nir_builder *b,
                 intr_comp->num_components = 1;
                 nir_ssa_dest_init(&intr_comp->instr, &intr_comp->dest, 1, 32, NULL);
 
-                /* Convert the uniform (not user_clip_plane) offset to bytes.
-                 * If it happens to be a constant, constant-folding will clean
-                 * up the shift for us.
+                /* Convert the uniform offset to bytes.  If it happens to be a
+                 * constant, constant-folding will clean up the shift for us.
                  */
-                if (intr->intrinsic == nir_intrinsic_load_uniform) {
-                        /* Convert the base offset to bytes and add the
-                         * component
-                         */
-                        intr_comp->const_index[0] = (intr->const_index[0] * 16 + i * 4);
+                intr_comp->const_index[0] = (intr->const_index[0] * 16 + i * 4);
 
-                        intr_comp->src[0] =
-                                nir_src_for_ssa(nir_ishl(b, intr->src[0].ssa,
-                                                         nir_imm_int(b, 4)));
-                } else {
-                        assert(intr->intrinsic ==
-                               nir_intrinsic_load_user_clip_plane);
-                        intr_comp->const_index[0] = intr->const_index[0] * 4 + i;
-                }
+                intr_comp->src[0] =
+                        nir_src_for_ssa(nir_ishl(b, intr->src[0].ssa,
+                                                 nir_imm_int(b, 4)));
 
                 dests[i] = &intr_comp->dest.ssa;
 
@@ -428,10 +418,10 @@ vc4_nir_lower_io_instr(struct vc4_compile *c, nir_builder *b,
                 break;
 
         case nir_intrinsic_load_uniform:
-        case nir_intrinsic_load_user_clip_plane:
                 vc4_nir_lower_uniform(c, b, intr);
                 break;
 
+        case nir_intrinsic_load_user_clip_plane:
         default:
                 break;
         }
