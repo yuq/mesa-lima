@@ -62,23 +62,13 @@ index_ssa_def(nir_ssa_def *def, void *void_state)
    return true;
 }
 
-static bool
-index_ssa_definitions_block(nir_block *block, void *state)
-{
-   nir_foreach_instr(block, instr)
-      nir_foreach_ssa_def(instr, index_ssa_def, state);
-
-   return true;
-}
-
 /* Initialize the liveness data to zero and add the given block to the
  * worklist.
  */
 static bool
-init_liveness_block(nir_block *block, void *void_state)
+init_liveness_block(nir_block *block,
+                    struct live_ssa_defs_state *state)
 {
-   struct live_ssa_defs_state *state = void_state;
-
    block->live_in = reralloc(block, block->live_in, BITSET_WORD,
                              state->bitset_words);
    memset(block->live_in, 0, state->bitset_words * sizeof(BITSET_WORD));
@@ -174,7 +164,10 @@ nir_live_ssa_defs_impl(nir_function_impl *impl)
     * can be compacted into a single bit.
     */
    state.num_ssa_defs = 1;
-   nir_foreach_block_call(impl, index_ssa_definitions_block, &state);
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr(block, instr)
+         nir_foreach_ssa_def(instr, index_ssa_def, &state);
+   }
 
    nir_block_worklist_init(&state.worklist, impl->num_blocks, NULL);
 
@@ -183,7 +176,10 @@ nir_live_ssa_defs_impl(nir_function_impl *impl)
     * blocks to the worklist.
     */
    state.bitset_words = BITSET_WORDS(state.num_ssa_defs);
-   nir_foreach_block_call(impl, init_liveness_block, &state);
+   nir_foreach_block(block, impl) {
+      init_liveness_block(block, &state);
+   }
+
 
    /* We're now ready to work through the worklist and update the liveness
     * sets of each of the blocks.  By the time we get to this point, every
