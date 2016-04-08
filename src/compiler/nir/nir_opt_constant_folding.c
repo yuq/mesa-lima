@@ -173,22 +173,21 @@ constant_fold_tex_instr(nir_tex_instr *instr)
 }
 
 static bool
-constant_fold_block(nir_block *block, void *void_state)
+constant_fold_block(nir_block *block, void *mem_ctx)
 {
-   struct constant_fold_state *state = void_state;
+   bool progress = false;
 
    nir_foreach_instr_safe(block, instr) {
       switch (instr->type) {
       case nir_instr_type_alu:
-         state->progress |= constant_fold_alu_instr(nir_instr_as_alu(instr),
-                                                    state->mem_ctx);
+         progress |= constant_fold_alu_instr(nir_instr_as_alu(instr), mem_ctx);
          break;
       case nir_instr_type_intrinsic:
-         state->progress |=
+         progress |=
             constant_fold_intrinsic_instr(nir_instr_as_intrinsic(instr));
          break;
       case nir_instr_type_tex:
-         state->progress |= constant_fold_tex_instr(nir_instr_as_tex(instr));
+         progress |= constant_fold_tex_instr(nir_instr_as_tex(instr));
          break;
       default:
          /* Don't know how to constant fold */
@@ -196,25 +195,24 @@ constant_fold_block(nir_block *block, void *void_state)
       }
    }
 
-   return true;
+   return progress;
 }
 
 static bool
 nir_opt_constant_folding_impl(nir_function_impl *impl)
 {
-   struct constant_fold_state state;
+   void *mem_ctx = ralloc_parent(impl);
+   bool progress = false;
 
-   state.mem_ctx = ralloc_parent(impl);
-   state.impl = impl;
-   state.progress = false;
+   nir_foreach_block(block, impl) {
+      progress |= constant_fold_block(block, mem_ctx);
+   }
 
-   nir_foreach_block_call(impl, constant_fold_block, &state);
-
-   if (state.progress)
+   if (progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |
                                   nir_metadata_dominance);
 
-   return state.progress;
+   return progress;
 }
 
 bool
