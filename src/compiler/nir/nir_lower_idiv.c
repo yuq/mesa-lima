@@ -117,26 +117,19 @@ convert_instr(nir_builder *bld, nir_alu_instr *alu)
    nir_ssa_def_rewrite_uses(&alu->dest.dest.ssa, nir_src_for_ssa(q));
 }
 
-static bool
-convert_block(nir_block *block, void *state)
-{
-   nir_builder *b = state;
-
-   nir_foreach_instr_safe(block, instr) {
-      if (instr->type == nir_instr_type_alu)
-         convert_instr(b, nir_instr_as_alu(instr));
-   }
-
-   return true;
-}
-
 static void
 convert_impl(nir_function_impl *impl)
 {
    nir_builder b;
    nir_builder_init(&b, impl);
 
-   nir_foreach_block_call(impl, convert_block, &b);
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr_safe(block, instr) {
+         if (instr->type == nir_instr_type_alu)
+            convert_instr(&b, nir_instr_as_alu(instr));
+      }
+   }
+
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
 }
