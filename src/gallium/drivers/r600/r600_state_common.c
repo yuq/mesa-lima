@@ -2864,6 +2864,15 @@ static void r600_set_active_query_state(struct pipe_context *ctx, boolean enable
 {
 	struct r600_context *rctx = (struct r600_context*)ctx;
 
+	/* Pipeline stat & streamout queries. */
+	if (enable) {
+		rctx->b.flags &= ~R600_CONTEXT_STOP_PIPELINE_STATS;
+		rctx->b.flags |= R600_CONTEXT_START_PIPELINE_STATS;
+	} else {
+		rctx->b.flags &= ~R600_CONTEXT_START_PIPELINE_STATS;
+		rctx->b.flags |= R600_CONTEXT_STOP_PIPELINE_STATS;
+	}
+
 	/* Occlusion queries. */
 	if (rctx->db_misc_state.occlusion_queries_disabled != !enable) {
 		rctx->db_misc_state.occlusion_queries_disabled = !enable;

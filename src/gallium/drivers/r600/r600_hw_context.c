@@ -223,6 +223,16 @@ void r600_flush_emit(struct r600_context *rctx)
 		cs->buf[cs->cdw++] = 0x0000000A;      /* POLL_INTERVAL */
 	}
 
+	if (rctx->b.flags & R600_CONTEXT_START_PIPELINE_STATS) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PIPELINESTAT_START) |
+			        EVENT_INDEX(0));
+	} else if (rctx->b.flags & R600_CONTEXT_STOP_PIPELINE_STATS) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PIPELINESTAT_STOP) |
+			        EVENT_INDEX(0));
+	}
+
 	if (wait_until) {
 		/* Use of WAIT_UNTIL is deprecated on Cayman+ */
 		if (rctx->b.family < CHIP_CAYMAN) {

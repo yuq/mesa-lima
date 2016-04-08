@@ -56,7 +56,7 @@
 #define R600_CONTEXT_WAIT_CP_DMA_IDLE		(R600_CONTEXT_PRIVATE_FLAG << 10)
 
 /* the number of CS dwords for flushing and drawing */
-#define R600_MAX_FLUSH_CS_DWORDS	16
+#define R600_MAX_FLUSH_CS_DWORDS	18
 #define R600_MAX_DRAW_CS_DWORDS		58
 
 #define R600_MAX_USER_CONST_BUFFERS 13
