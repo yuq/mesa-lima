@@ -369,13 +369,11 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 		query->result_size = 16;
 		query->num_cs_dw_begin = 8;
 		query->num_cs_dw_end = 8;
-		query->flags = R600_QUERY_HW_FLAG_TIMER;
 		break;
 	case PIPE_QUERY_TIMESTAMP:
 		query->result_size = 8;
 		query->num_cs_dw_end = 8;
-		query->flags = R600_QUERY_HW_FLAG_TIMER |
-			       R600_QUERY_HW_FLAG_NO_START;
+		query->flags = R600_QUERY_HW_FLAG_NO_START;
 		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 	case PIPE_QUERY_PRIMITIVES_GENERATED:

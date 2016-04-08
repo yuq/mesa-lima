@@ -310,7 +310,6 @@ struct pipe_query *r600_create_batch_query(struct pipe_context *ctx,
 
 	query->b.b.ops = &batch_query_ops;
 	query->b.ops = &batch_query_hw_ops;
-	query->b.flags = R600_QUERY_HW_FLAG_TIMER;
 
 	query->num_counters = num_queries;
 

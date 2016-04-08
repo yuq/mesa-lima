@@ -64,7 +64,7 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 		num_dw += R600_MAX_FLUSH_CS_DWORDS + R600_MAX_DRAW_CS_DWORDS;
 	}
 
-	/* Count in queries_suspend. */
+	/* Count in r600_suspend_queries. */
 	num_dw += ctx->b.num_cs_dw_queries_suspend;
 
 	/* Count in streamout_end at the end of CS. */
