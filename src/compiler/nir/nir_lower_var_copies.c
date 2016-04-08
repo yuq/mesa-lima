@@ -154,30 +154,26 @@ nir_lower_var_copy_instr(nir_intrinsic_instr *copy, void *mem_ctx)
                         &copy->variables[1]->deref, mem_ctx);
 }
 
-static bool
-lower_var_copies_block(nir_block *block, void *mem_ctx)
-{
-   nir_foreach_instr_safe(block, instr) {
-      if (instr->type != nir_instr_type_intrinsic)
-         continue;
-
-      nir_intrinsic_instr *copy = nir_instr_as_intrinsic(instr);
-      if (copy->intrinsic != nir_intrinsic_copy_var)
-         continue;
-
-      nir_lower_var_copy_instr(copy, mem_ctx);
-
-      nir_instr_remove(&copy->instr);
-      ralloc_free(copy);
-   }
-
-   return true;
-}
-
 static void
 lower_var_copies_impl(nir_function_impl *impl)
 {
-   nir_foreach_block_call(impl, lower_var_copies_block, ralloc_parent(impl));
+   void *mem_ctx = ralloc_parent(impl);
+
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr_safe(block, instr) {
+         if (instr->type != nir_instr_type_intrinsic)
+            continue;
+
+         nir_intrinsic_instr *copy = nir_instr_as_intrinsic(instr);
+         if (copy->intrinsic != nir_intrinsic_copy_var)
+            continue;
+
+         nir_lower_var_copy_instr(copy, mem_ctx);
+
+         nir_instr_remove(&copy->instr);
+         ralloc_free(copy);
+      }
+   }
 }
 
 /* Lowers every copy_var instruction in the program to a sequence of
