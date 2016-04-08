@@ -25,19 +25,11 @@
 #include "nir_builder.h"
 #include "nir_control_flow.h"
 
-struct inline_functions_state {
-   struct set *inlined;
-   nir_builder builder;
-   bool progress;
-};
-
 static bool inline_function_impl(nir_function_impl *impl, struct set *inlined);
 
 static bool
-rewrite_param_derefs_block(nir_block *block, void *void_state)
+rewrite_param_derefs_block(nir_block *block, nir_call_instr *call)
 {
-   nir_call_instr *call = void_state;
-
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -95,10 +87,8 @@ lower_param_to_local(nir_variable *param, nir_function_impl *impl, bool write)
 }
 
 static bool
-lower_params_to_locals_block(nir_block *block, void *void_state)
+lower_params_to_locals_block(nir_block *block, nir_function_impl *impl)
 {
-   nir_function_impl *impl = void_state;
-
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -134,12 +124,10 @@ lower_params_to_locals_block(nir_block *block, void *void_state)
 }
 
 static bool
-inline_functions_block(nir_block *block, void *void_state)
+inline_functions_block(nir_block *block, nir_builder *b,
+                       struct set *inlined)
 {
-   struct inline_functions_state *state = void_state;
-
-   nir_builder *b = &state->builder;
-
+   bool progress = false;
    /* This is tricky.  We're iterating over instructions in a block but, as
     * we go, the block and its instruction list are being split into
     * pieces.  However, this *should* be safe since foreach_safe always
@@ -151,12 +139,12 @@ inline_functions_block(nir_block *block, void *void_state)
       if (instr->type != nir_instr_type_call)
          continue;
 
-      state->progress = true;
+      progress = true;
 
       nir_call_instr *call = nir_instr_as_call(instr);
       assert(call->callee->impl);
 
-      inline_function_impl(call->callee->impl, state->inlined);
+      inline_function_impl(call->callee->impl, inlined);
 
       nir_function_impl *callee_copy =
          nir_function_impl_clone(call->callee->impl);
@@ -181,7 +169,10 @@ inline_functions_block(nir_block *block, void *void_state)
        */
 
       /* Figure out when we need to lower to a shadow local */
-      nir_foreach_block_call(callee_copy, lower_params_to_locals_block, callee_copy);
+      nir_foreach_block(block, callee_copy) {
+         lower_params_to_locals_block(block, callee_copy);
+      }
+
       for (unsigned i = 0; i < callee_copy->num_params; i++) {
          nir_variable *param = callee_copy->params[i];
 
@@ -192,7 +183,9 @@ inline_functions_block(nir_block *block, void *void_state)
          }
       }
 
-      nir_foreach_block_call(callee_copy, rewrite_param_derefs_block, call);
+      nir_foreach_block(block, callee_copy) {
+         rewrite_param_derefs_block(block, call);
+      }
 
       /* Pluck the body out of the function and place it here */
       nir_cf_list body;
@@ -222,7 +215,7 @@ inline_functions_block(nir_block *block, void *void_state)
       nir_instr_remove(&call->instr);
    }
 
-   return true;
+   return progress;
 }
 
 static bool
@@ -231,15 +224,15 @@ inline_function_impl(nir_function_impl *impl, struct set *inlined)
    if (_mesa_set_search(inlined, impl))
       return false; /* Already inlined */
 
-   struct inline_functions_state state;
+   nir_builder b;
+   nir_builder_init(&b, impl);
 
-   state.inlined = inlined;
-   state.progress = false;
-   nir_builder_init(&state.builder, impl);
+   bool progress = false;
+   nir_foreach_block_safe(block, impl) {
+      progress |= inline_functions_block(block, &b, inlined);
+   }
 
-   nir_foreach_block_call(impl, inline_functions_block, &state);
-
-   if (state.progress) {
+   if (progress) {
       /* SSA and register indices are completely messed up now */
       nir_index_ssa_defs(impl);
       nir_index_local_regs(impl);
@@ -249,7 +242,7 @@ inline_function_impl(nir_function_impl *impl, struct set *inlined)
 
    _mesa_set_add(inlined, impl);
 
-   return state.progress;
+   return progress;
 }
 
 bool
