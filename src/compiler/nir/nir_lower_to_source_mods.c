@@ -34,7 +34,7 @@
  */
 
 static bool
-nir_lower_to_source_mods_block(nir_block *block, void *state)
+nir_lower_to_source_mods_block(nir_block *block)
 {
    nir_foreach_instr(block, instr) {
       if (instr->type != nir_instr_type_alu)
@@ -181,17 +181,14 @@ nir_lower_to_source_mods_block(nir_block *block, void *state)
    return true;
 }
 
-static void
-nir_lower_to_source_mods_impl(nir_function_impl *impl)
-{
-   nir_foreach_block_call(impl, nir_lower_to_source_mods_block, NULL);
-}
-
 void
 nir_lower_to_source_mods(nir_shader *shader)
 {
    nir_foreach_function(shader, function) {
-      if (function->impl)
-         nir_lower_to_source_mods_impl(function->impl);
+      if (function->impl) {
+         nir_foreach_block(block, function->impl) {
+            nir_lower_to_source_mods_block(block);
+         }
+      }
    }
 }
