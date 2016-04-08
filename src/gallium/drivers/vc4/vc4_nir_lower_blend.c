@@ -710,9 +710,9 @@ vc4_nir_lower_blend_block(nir_block *block, void *state)
 }
 
 void
-vc4_nir_lower_blend(struct vc4_compile *c)
+vc4_nir_lower_blend(nir_shader *s, struct vc4_compile *c)
 {
-        nir_foreach_function(c->s, function) {
+        nir_foreach_function(s, function) {
                 if (function->impl) {
                         nir_foreach_block(function->impl,
                                           vc4_nir_lower_blend_block, c);

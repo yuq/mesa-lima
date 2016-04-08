@@ -1370,16 +1370,16 @@ vc4_optimize_nir(struct nir_shader *s)
         do {
                 progress = false;
 
-                nir_lower_vars_to_ssa(s);
-                nir_lower_alu_to_scalar(s);
+                NIR_PASS_V(s, nir_lower_vars_to_ssa);
+                NIR_PASS_V(s, nir_lower_alu_to_scalar);
 
-                progress = nir_copy_prop(s) || progress;
-                progress = nir_opt_dce(s) || progress;
-                progress = nir_opt_cse(s) || progress;
-                progress = nir_opt_peephole_select(s) || progress;
-                progress = nir_opt_algebraic(s) || progress;
-                progress = nir_opt_constant_folding(s) || progress;
-                progress = nir_opt_undef(s) || progress;
+                NIR_PASS(progress, s, nir_copy_prop);
+                NIR_PASS(progress, s, nir_opt_dce);
+                NIR_PASS(progress, s, nir_opt_cse);
+                NIR_PASS(progress, s, nir_opt_peephole_select);
+                NIR_PASS(progress, s, nir_opt_algebraic);
+                NIR_PASS(progress, s, nir_opt_constant_folding);
+                NIR_PASS(progress, s, nir_opt_undef);
         } while (progress);
 }
 
@@ -1835,11 +1835,11 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         }
 
         c->s = tgsi_to_nir(tokens, &nir_options);
-        nir_opt_global_to_local(c->s);
-        nir_convert_to_ssa(c->s);
+        NIR_PASS_V(c->s, nir_opt_global_to_local);
+        NIR_PASS_V(c->s, nir_convert_to_ssa);
 
         if (stage == QSTAGE_FRAG)
-                vc4_nir_lower_blend(c);
+                NIR_PASS_V(c->s, vc4_nir_lower_blend, c);
 
         struct nir_lower_tex_options tex_options = {
                 /* We would need to implement txs, but we don't want the
@@ -1889,26 +1889,25 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                 }
         }
 
-        nir_lower_tex(c->s, &tex_options);
+        NIR_PASS_V(c->s, nir_lower_tex, &tex_options);
 
         if (c->fs_key && c->fs_key->light_twoside)
-                nir_lower_two_sided_color(c->s);
+                NIR_PASS_V(c->s, nir_lower_two_sided_color);
 
         if (stage == QSTAGE_FRAG)
-                nir_lower_clip_fs(c->s, c->key->ucp_enables);
+                NIR_PASS_V(c->s, nir_lower_clip_fs, c->key->ucp_enables);
         else
-                nir_lower_clip_vs(c->s, c->key->ucp_enables);
+                NIR_PASS_V(c->s, nir_lower_clip_vs, c->key->ucp_enables);
 
-        vc4_nir_lower_io(c);
-        vc4_nir_lower_txf_ms(c);
-        nir_lower_idiv(c->s);
-        nir_lower_load_const_to_scalar(c->s);
+        NIR_PASS_V(c->s, vc4_nir_lower_io, c);
+        NIR_PASS_V(c->s, vc4_nir_lower_txf_ms, c);
+        NIR_PASS_V(c->s, nir_lower_idiv);
+        NIR_PASS_V(c->s, nir_lower_load_const_to_scalar);
 
         vc4_optimize_nir(c->s);
 
-        nir_remove_dead_variables(c->s);
-
-        nir_convert_from_ssa(c->s, true);
+        NIR_PASS_V(c->s, nir_remove_dead_variables);
+        NIR_PASS_V(c->s, nir_convert_from_ssa, true);
 
         if (vc4_debug & VC4_DEBUG_SHADERDB) {
                 fprintf(stderr, "SHADER-DB: %s prog %d/%d: %d NIR instructions\n",

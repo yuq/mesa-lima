@@ -484,13 +484,13 @@ bool qir_opt_cse(struct vc4_compile *c);
 bool qir_opt_dead_code(struct vc4_compile *c);
 bool qir_opt_small_immediates(struct vc4_compile *c);
 bool qir_opt_vpm(struct vc4_compile *c);
-void vc4_nir_lower_blend(struct vc4_compile *c);
-void vc4_nir_lower_io(struct vc4_compile *c);
+void vc4_nir_lower_blend(nir_shader *s, struct vc4_compile *c);
+void vc4_nir_lower_io(nir_shader *s, struct vc4_compile *c);
 nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
                                        enum quniform_contents contents);
 nir_ssa_def *vc4_nir_get_swizzled_channel(struct nir_builder *b,
                                           nir_ssa_def **srcs, int swiz);
-void vc4_nir_lower_txf_ms(struct vc4_compile *c);
+void vc4_nir_lower_txf_ms(nir_shader *s, struct vc4_compile *c);
 void qir_lower_uniforms(struct vc4_compile *c);
 
 uint32_t qpu_schedule_instructions(struct vc4_compile *c);
