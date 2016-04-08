@@ -159,16 +159,11 @@ deref_has_indirect(nir_deref_var *deref)
    return false;
 }
 
-struct lower_indirect_state {
-   nir_builder builder;
-   nir_variable_mode modes;
-   bool progress;
-};
-
 static bool
-lower_indirect_block(nir_block *block, void *void_state)
+lower_indirect_block(nir_block *block, nir_builder *b,
+                     nir_variable_mode modes)
 {
-   struct lower_indirect_state *state = void_state;
+   bool progress = false;
 
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
@@ -183,43 +178,43 @@ lower_indirect_block(nir_block *block, void *void_state)
          continue;
 
       /* Only lower variables whose mode is in the mask */
-      if (!(state->modes & intrin->variables[0]->var->data.mode))
+      if (!(modes & intrin->variables[0]->var->data.mode))
          continue;
 
-      state->builder.cursor = nir_before_instr(&intrin->instr);
+      b->cursor = nir_before_instr(&intrin->instr);
 
       if (intrin->intrinsic == nir_intrinsic_load_var) {
          nir_ssa_def *result;
-         emit_load_store(&state->builder, intrin, intrin->variables[0],
+         emit_load_store(b, intrin, intrin->variables[0],
                          &intrin->variables[0]->deref, &result, NULL);
          nir_ssa_def_rewrite_uses(&intrin->dest.ssa, nir_src_for_ssa(result));
       } else {
          assert(intrin->src[0].is_ssa);
-         emit_load_store(&state->builder, intrin, intrin->variables[0],
+         emit_load_store(b, intrin, intrin->variables[0],
                          &intrin->variables[0]->deref, NULL, intrin->src[0].ssa);
       }
       nir_instr_remove(&intrin->instr);
-      state->progress = true;
+      progress = true;
    }
 
-   return true;
+   return progress;
 }
 
 static bool
 lower_indirects_impl(nir_function_impl *impl, nir_variable_mode modes)
 {
-   struct lower_indirect_state state;
+   nir_builder builder;
+   nir_builder_init(&builder, impl);
+   bool progress = false;
 
-   state.progress = false;
-   state.modes = modes;
-   nir_builder_init(&state.builder, impl);
+   nir_foreach_block_safe(block, impl) {
+      progress |= lower_indirect_block(block, &builder, modes);
+   }
 
-   nir_foreach_block_call(impl, lower_indirect_block, &state);
-
-   if (state.progress)
+   if (progress)
       nir_metadata_preserve(impl, nir_metadata_none);
 
-   return state.progress;
+   return progress;
 }
 
 /** Lowers indirect variable loads/stores to direct loads/stores.
