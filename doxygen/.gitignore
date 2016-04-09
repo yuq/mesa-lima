@@ -13,7 +13,6 @@ i965
 main
 math
 math_subset
-miniglx
 radeondrm
 radeonfb
 radeon_subset
