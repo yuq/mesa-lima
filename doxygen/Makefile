@@ -12,7 +12,6 @@ FULL = \
 	vbo.doxy \
 	glapi.doxy \
 	glsl.doxy \
-	shader.doxy \
 	swrast.doxy \
 	swrast_setup.doxy \
 	tnl.doxy \

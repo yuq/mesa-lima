@@ -17,7 +17,6 @@ miniglx
 radeondrm
 radeonfb
 radeon_subset
-shader
 swrast
 swrast_setup
 tnl
