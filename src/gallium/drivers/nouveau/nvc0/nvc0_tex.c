@@ -859,6 +859,10 @@ nve4_set_surface_info(struct nouveau_pushbuf *push,
 #endif
 
    if (res->base.target == PIPE_BUFFER) {
+      unsigned blocksize = util_format_get_blocksize(view->format);
+
+      address += view->u.buf.first_element * blocksize;
+
       info[0]  = address >> 8;
       info[2]  = width - 1;
       info[2] |= (0xff & nve4_su_format_aux_map[view->format]) << 22;
