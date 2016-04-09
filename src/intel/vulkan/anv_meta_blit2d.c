@@ -468,7 +468,8 @@ anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
          },
       };
 
-      anv_state_clflush(vb_state);
+      if (!device->info.has_llc)
+         anv_state_clflush(vb_state);
 
       struct anv_buffer vertex_buffer = {
          .device = device,
@@ -611,7 +612,8 @@ anv_meta_blit2d_w_tiled_dst(struct anv_cmd_buffer *cmd_buffer,
          },
       };
 
-      anv_state_clflush(vb_state);
+      if (!device->info.has_llc)
+         anv_state_clflush(vb_state);
 
       struct anv_buffer vertex_buffer = {
          .device = device,

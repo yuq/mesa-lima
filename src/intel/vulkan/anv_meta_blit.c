@@ -186,7 +186,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       },
    };
 
-   anv_state_clflush(vb_state);
+   if (!device->info.has_llc)
+      anv_state_clflush(vb_state);
 
    struct anv_buffer vertex_buffer = {
       .device = device,
