@@ -17,8 +17,7 @@ FULL = \
 	tnl.doxy \
 	tnl_dd.doxy \
 	gbm.doxy \
-	i965.doxy \
-	nir.doxy
+	i965.doxy
 
 full: $(FULL:.doxy=.tag)
 	$(foreach FILE,$(FULL),doxygen $(FILE);)

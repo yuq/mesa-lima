@@ -10,6 +10,7 @@ i965
 main
 math
 math_subset
+nir
 radeon_subset
 swrast
 swrast_setup
