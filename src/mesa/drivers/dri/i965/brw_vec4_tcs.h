@@ -49,7 +49,6 @@ public:
                     const struct brw_vue_map *input_vue_map);
 
 protected:
-   virtual void emit_nir_code();
    virtual dst_reg *make_reg_for_system_value(int location,
                                               const glsl_type *type);
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);

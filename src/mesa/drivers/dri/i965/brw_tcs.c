@@ -33,6 +33,86 @@
 #include "brw_shader.h"
 #include "brw_state.h"
 #include "program/prog_parameter.h"
+#include "nir_builder.h"
+
+static nir_shader *
+create_passthrough_tcs(const struct brw_compiler *compiler,
+                       const nir_shader_compiler_options *options,
+                       const struct brw_tcs_prog_key *key)
+{
+   nir_builder b;
+   nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_TESS_CTRL, options);
+   nir_shader *nir = b.shader;
+   nir_variable *var;
+   nir_intrinsic_instr *load;
+   nir_intrinsic_instr *store;
+   nir_ssa_def *zero = nir_imm_int(&b, 0);
+   nir_ssa_def *invoc_id =
+      nir_load_system_value(&b, nir_intrinsic_load_invocation_id, 0);
+
+   nir->info.inputs_read = key->outputs_written;
+   nir->info.outputs_written = key->outputs_written;
+   nir->info.tcs.vertices_out = key->input_vertices;
+   nir->info.name = ralloc_strdup(nir, "passthrough");
+   nir->num_uniforms = 8 * sizeof(uint32_t);
+
+   var = nir_variable_create(nir, nir_var_uniform, glsl_vec4_type(), "hdr_0");
+   var->data.location = 0;
+   var = nir_variable_create(nir, nir_var_uniform, glsl_vec4_type(), "hdr_1");
+   var->data.location = 1;
+
+   /* Write the patch URB header. */
+   for (int i = 0; i <= 1; i++) {
+      load = nir_intrinsic_instr_create(nir, nir_intrinsic_load_uniform);
+      load->num_components = 4;
+      load->src[0] = nir_src_for_ssa(zero);
+      nir_ssa_dest_init(&load->instr, &load->dest, 4, 32, NULL);
+      nir_intrinsic_set_base(load, i * 4 * sizeof(uint32_t));
+      nir_builder_instr_insert(&b, &load->instr);
+
+      store = nir_intrinsic_instr_create(nir, nir_intrinsic_store_output);
+      store->num_components = 4;
+      store->src[0] = nir_src_for_ssa(&load->dest.ssa);
+      store->src[1] = nir_src_for_ssa(zero);
+      nir_intrinsic_set_base(store, VARYING_SLOT_TESS_LEVEL_INNER - i);
+      nir_intrinsic_set_write_mask(store, WRITEMASK_XYZW);
+      nir_builder_instr_insert(&b, &store->instr);
+   }
+
+   /* Copy inputs to outputs. */
+   uint64_t varyings = key->outputs_written;
+
+   while (varyings != 0) {
+      const int varying = ffsll(varyings) - 1;
+
+      load = nir_intrinsic_instr_create(nir,
+                                        nir_intrinsic_load_per_vertex_input);
+      load->num_components = 4;
+      load->src[0] = nir_src_for_ssa(invoc_id);
+      load->src[1] = nir_src_for_ssa(zero);
+      nir_ssa_dest_init(&load->instr, &load->dest, 4, 32, NULL);
+      nir_intrinsic_set_base(load, varying);
+      nir_builder_instr_insert(&b, &load->instr);
+
+      store = nir_intrinsic_instr_create(nir,
+                                         nir_intrinsic_store_per_vertex_output);
+      store->num_components = 4;
+      store->src[0] = nir_src_for_ssa(&load->dest.ssa);
+      store->src[1] = nir_src_for_ssa(invoc_id);
+      store->src[2] = nir_src_for_ssa(zero);
+      nir_intrinsic_set_base(store, varying);
+      nir_intrinsic_set_write_mask(store, WRITEMASK_XYZW);
+      nir_builder_instr_insert(&b, &store->instr);
+
+      varyings &= ~BITFIELD64_BIT(varying);
+   }
+
+   nir_validate_shader(nir);
+
+   nir = brw_preprocess_nir(compiler, nir);
+
+   return nir;
+}
 
 static void
 brw_tcs_debug_recompile(struct brw_context *brw,
@@ -103,12 +183,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
        */
       const nir_shader_compiler_options *options =
          ctx->Const.ShaderCompilerOptions[MESA_SHADER_TESS_CTRL].NirOptions;
-      nir = nir_shader_create(NULL, MESA_SHADER_TESS_CTRL, options);
-      nir->num_uniforms = 2; /* both halves of the patch header */
-      nir->info.outputs_written = key->outputs_written;
-      nir->info.inputs_read = key->outputs_written;
-      nir->info.tcs.vertices_out = key->input_vertices;
-      nir->info.name = ralloc_strdup(nir, "passthrough");
+      nir = create_passthrough_tcs(compiler, options, key);
    }
 
    memset(&prog_data, 0, sizeof(prog_data));

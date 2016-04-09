@@ -48,54 +48,6 @@ vec4_tcs_visitor::vec4_tcs_visitor(const struct brw_compiler *compiler,
 
 
 void
-vec4_tcs_visitor::emit_nir_code()
-{
-   if (key->program_string_id != 0) {
-      /* We have a real application-supplied TCS, emit real code. */
-      vec4_visitor::emit_nir_code();
-   } else {
-      /* There is no TCS; automatically generate a passthrough shader
-       * that writes the API-specified default tessellation levels and
-       * copies VS outputs to TES inputs.
-       */
-      uniforms = 2;
-
-      uint64_t varyings = key->outputs_written;
-
-      src_reg vertex_offset(this, glsl_type::uint_type);
-      emit(MUL(dst_reg(vertex_offset), invocation_id,
-               brw_imm_ud(prog_data->vue_map.num_per_vertex_slots)));
-
-      while (varyings != 0) {
-         const int varying = ffsll(varyings) - 1;
-
-         unsigned in_offset = input_vue_map->varying_to_slot[varying];
-         unsigned out_offset = prog_data->vue_map.varying_to_slot[varying];
-         assert(out_offset >= 2);
-
-         dst_reg val(this, glsl_type::vec4_type);
-         emit_input_urb_read(val, invocation_id, in_offset, src_reg());
-         emit_urb_write(src_reg(val), WRITEMASK_XYZW, out_offset,
-                        vertex_offset);
-
-         varyings &= ~BITFIELD64_BIT(varying);
-      }
-
-      /* Only write the tessellation factors from invocation 0.
-       * There's no point in making other threads do redundant work.
-       */
-      emit(CMP(dst_null_d(), invocation_id, brw_imm_ud(0),
-               BRW_CONDITIONAL_EQ));
-      emit(IF(BRW_PREDICATE_NORMAL));
-      emit_urb_write(src_reg(UNIFORM, 0, glsl_type::vec4_type),
-                     WRITEMASK_XYZW, 0, src_reg());
-      emit_urb_write(src_reg(UNIFORM, 1, glsl_type::vec4_type),
-                     WRITEMASK_XYZW, 1, src_reg());
-      emit(BRW_OPCODE_ENDIF);
-   }
-}
-
-void
 vec4_tcs_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
 {
 }
@@ -393,7 +345,10 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       src_reg indirect_offset = get_indirect_offset(instr);
       unsigned imm_offset = instr->const_index[0];
 
-      if (indirect_offset.file == BAD_FILE) {
+      /* The passthrough shader writes the whole patch header as two vec4s;
+       * skip all the gl_TessLevelInner/Outer swizzling.
+       */
+      if (indirect_offset.file == BAD_FILE && key->program_string_id != 0) {
          if (imm_offset == 0) {
             value.type = BRW_REGISTER_TYPE_F;
 
