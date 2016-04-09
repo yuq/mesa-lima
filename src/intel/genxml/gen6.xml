@@ -340,7 +340,8 @@
       <value name="VALIGN_4" value="1"/>
     </field>
     <field name="Y Offset" start="180" end="183" type="offset"/>
-    <field name="Surface Object Control State (MEMORY_OBJECT_CONTROL_STATE)" start="176" end="179" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Surface Object Control State" start="176" end="179" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="MOCS" start="176" end="179" type="uint"/>
   </struct>
 
   <struct name="SAMPLER_STATE" length="4">
