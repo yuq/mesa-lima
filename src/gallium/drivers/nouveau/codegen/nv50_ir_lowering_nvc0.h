@@ -101,7 +101,7 @@ protected:
    bool handleTXQ(TexInstruction *);
    virtual bool handleManualTXD(TexInstruction *);
    bool handleTXLQ(TexInstruction *);
-   bool handleSUQ(Instruction *);
+   bool handleSUQ(TexInstruction *);
    bool handleATOM(Instruction *);
    bool handleCasExch(Instruction *, bool needCctl);
    void handleSurfaceOpNVE4(TexInstruction *);

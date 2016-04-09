@@ -3385,10 +3385,30 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       handleATOM(dst0, dstTy, tgsi::opcodeToSubOp(tgsi.getOpcode()));
       break;
    case TGSI_OPCODE_RESQ:
-      geni = mkOp1(OP_BUFQ, TYPE_U32, dst0[0],
-                   makeSym(TGSI_FILE_BUFFER, tgsi.getSrc(0).getIndex(0), -1, 0, 0));
-      if (tgsi.getSrc(0).isIndirect(0))
-         geni->setIndirect(0, 1, fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));
+      if (tgsi.getSrc(0).getFile() == TGSI_FILE_BUFFER) {
+         geni = mkOp1(OP_BUFQ, TYPE_U32, dst0[0],
+                      makeSym(tgsi.getSrc(0).getFile(),
+                              tgsi.getSrc(0).getIndex(0), -1, 0, 0));
+         if (tgsi.getSrc(0).isIndirect(0))
+            geni->setIndirect(0, 1,
+                              fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));
+      } else {
+         assert(tgsi.getSrc(0).getFile() == TGSI_FILE_IMAGE);
+
+         TexInstruction *texi = new_TexInstruction(func, OP_SUQ);
+         for (int c = 0, d = 0; c < 4; ++c) {
+            if (dst0[c]) {
+               texi->setDef(d++, dst0[c]);
+               texi->tex.mask |= 1 << c;
+            }
+         }
+         texi->tex.r = tgsi.getSrc(0).getIndex(0);
+         texi->tex.target = getImageTarget(code, texi->tex.r);
+         bb->insertTail(texi);
+
+         if (tgsi.getSrc(0).isIndirect(0))
+            texi->setIndirectR(fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, NULL));
+      }
       break;
    case TGSI_OPCODE_IBFE:
    case TGSI_OPCODE_UBFE:
