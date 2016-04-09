@@ -44,6 +44,6 @@ TAGFILES               = tnl_dd.tag=../tnl \
                          main.tag=../core \
                          math.tag=../math \
                          swrast.tag=../swrast \
-                         swrast_setup.tag=swrast_setup \
-                         vbo.tag=vbo
+                         swrast_setup.tag=../swrast_setup \
+                         vbo.tag=../vbo
 GENERATE_TAGFILE       = tnl.tag

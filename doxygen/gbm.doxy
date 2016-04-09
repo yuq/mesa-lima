@@ -44,5 +44,5 @@ TAGFILES               = main.tag=../core \
                          tnl_dd.tag=../tnl_dd \
                          swrast_setup.tag=../gbm_setup \
                          tnl.tag=../tnl \
-                         vbo.tag=vbo
+                         vbo.tag=../vbo
 GENERATE_TAGFILE       = gbm.tag
