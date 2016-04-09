@@ -191,6 +191,7 @@ const char *operationStr[OP_LAST + 1] =
    "cctl",
    "shfl",
    "vote",
+   "bufq",
    "(invalid)"
 };
 

@@ -3385,7 +3385,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       handleATOM(dst0, dstTy, tgsi::opcodeToSubOp(tgsi.getOpcode()));
       break;
    case TGSI_OPCODE_RESQ:
-      geni = mkOp1(OP_SUQ, TYPE_U32, dst0[0],
+      geni = mkOp1(OP_BUFQ, TYPE_U32, dst0[0],
                    makeSym(TGSI_FILE_BUFFER, tgsi.getSrc(0).getIndex(0), -1, 0, 0));
       if (tgsi.getSrc(0).isIndirect(0))
          geni->setIndirect(0, 1, fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));

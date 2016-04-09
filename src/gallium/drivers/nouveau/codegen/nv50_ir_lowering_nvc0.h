@@ -108,6 +108,7 @@ protected:
    void handleSharedATOM(Instruction *);
    void handleSharedATOMNVE4(Instruction *);
    void handleLDST(Instruction *);
+   bool handleBUFQ(Instruction *);
 
    void checkPredicate(Instruction *);
 

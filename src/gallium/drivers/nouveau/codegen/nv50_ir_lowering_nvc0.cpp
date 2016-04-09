@@ -1070,13 +1070,13 @@ NVC0LoweringPass::handleTXLQ(TexInstruction *i)
 }
 
 bool
-NVC0LoweringPass::handleSUQ(Instruction *suq)
+NVC0LoweringPass::handleBUFQ(Instruction *bufq)
 {
-   suq->op = OP_MOV;
-   suq->setSrc(0, loadBufLength32(suq->getIndirect(0, 1),
-                                  suq->getSrc(0)->reg.fileIndex * 16));
-   suq->setIndirect(0, 0, NULL);
-   suq->setIndirect(0, 1, NULL);
+   bufq->op = OP_MOV;
+   bufq->setSrc(0, loadBufLength32(bufq->getIndirect(0, 1),
+                                   bufq->getSrc(0)->reg.fileIndex * 16));
+   bufq->setIndirect(0, 0, NULL);
+   bufq->setIndirect(0, 1, NULL);
    return true;
 }
 
@@ -1507,6 +1507,13 @@ static inline uint16_t getSuClampSubOp(const TexInstruction *su, int c)
       assert(0);
       return 0;
    }
+}
+
+bool
+NVC0LoweringPass::handleSUQ(Instruction *suq)
+{
+   /* TODO: will be updated in the next commit. */
+   return true;
 }
 
 void
@@ -2259,6 +2266,9 @@ NVC0LoweringPass::visit(Instruction *i)
       break;
    case OP_SUQ:
       handleSUQ(i);
+      break;
+   case OP_BUFQ:
+      handleBUFQ(i);
       break;
    default:
       break;

@@ -56,6 +56,7 @@ const uint8_t Target::operationSrcNr[] =
    2, 2, 2, 1,             // VSHR, VSHL, VSEL, CCTL
    3,                      // SHFL
    1,                      // VOTE
+   1,                      // BUFQ
    0
 };
 
@@ -131,6 +132,8 @@ const OpClass Target::operationClass[] =
    // SHFL
    OPCLASS_OTHER,
    // VOTE
+   OPCLASS_OTHER,
+   // BUFQ
    OPCLASS_OTHER,
    OPCLASS_PSEUDO // LAST
 };

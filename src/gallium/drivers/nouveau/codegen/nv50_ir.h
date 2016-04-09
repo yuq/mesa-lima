@@ -162,6 +162,7 @@ enum operation
    OP_CCTL, // cache control
    OP_SHFL, // warp shuffle
    OP_VOTE,
+   OP_BUFQ, // buffer query
    OP_LAST
 };
 
