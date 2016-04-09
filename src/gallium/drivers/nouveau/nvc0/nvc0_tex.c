@@ -782,8 +782,9 @@ nvc0_get_surface_dims(struct pipe_image_view *view, int *width, int *height,
 void
 nve4_set_surface_info(struct nouveau_pushbuf *push,
                       struct pipe_image_view *view,
-                      struct nvc0_screen *screen)
+                      struct nvc0_context *nvc0)
 {
+   struct nvc0_screen *screen = nvc0->screen;
    struct nv04_resource *res;
    uint64_t address;
    uint32_t *const info = push->cur;
@@ -884,7 +885,11 @@ nve4_set_surface_info(struct nouveau_pushbuf *push,
          if (mt->layout_3d) {
             address += nvc0_mt_zslice_offset(mt, view->u.tex.level, z);
             /* doesn't work if z passes z-tile boundary */
-            assert(depth == 1);
+            if (depth > 1) {
+               pipe_debug_message(&nvc0->base.debug, CONFORMANCE,
+                                  "3D images are not really supported!");
+               debug_printf("3D images are not really supported!\n");
+            }
          } else {
             address += mt->layer_stride * z;
          }
@@ -938,7 +943,7 @@ nve4_update_surface_bindings(struct nvc0_context *nvc0)
          if (view->resource) {
             struct nv04_resource *res = nv04_resource(view->resource);
 
-            nve4_set_surface_info(push, view, screen);
+            nve4_set_surface_info(push, view, nvc0);
             BCTX_REFN(nvc0->bufctx_3d, 3D_SUF, res, RDWR);
          } else {
             for (j = 0; j < 16; j++)
