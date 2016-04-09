@@ -598,7 +598,7 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
                                            layer, layer + depth,
                                            surface->level, max_level,
                                            surface->brw_surfaceformat,
-                                           SWIZZLE_XYZW,
+                                           surface->swizzle,
                                            &wm_surf_offset_texture,
                                            -1, false, false);
    }

@@ -43,7 +43,8 @@ brw_blorp_mip_info::brw_blorp_mip_info()
 
 brw_blorp_surface_info::brw_blorp_surface_info()
    : map_stencil_as_y_tiled(false),
-     num_samples(0)
+     num_samples(0),
+     swizzle(SWIZZLE_XYZW)
 {
 }
 

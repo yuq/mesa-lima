@@ -2166,7 +2166,8 @@ intel_miptree_updownsample(struct brw_context *brw,
 {
    if (brw->gen < 8) {
       brw_blorp_blit_miptrees(brw,
-                              src, 0 /* level */, 0 /* layer */, src->format,
+                              src, 0 /* level */, 0 /* layer */,
+                              src->format, SWIZZLE_XYZW,
                               dst, 0 /* level */, 0 /* layer */, dst->format,
                               0, 0,
                               src->logical_width0, src->logical_height0,
@@ -2188,7 +2189,7 @@ intel_miptree_updownsample(struct brw_context *brw,
 
       brw_blorp_blit_miptrees(brw,
                               src->stencil_mt, 0 /* level */, 0 /* layer */,
-                              src->stencil_mt->format,
+                              src->stencil_mt->format, SWIZZLE_XYZW,
                               dst->stencil_mt, 0 /* level */, 0 /* layer */,
                               dst->stencil_mt->format,
                               0, 0,

@@ -56,7 +56,7 @@ void
 brw_blorp_blit_miptrees(struct brw_context *brw,
                         struct intel_mipmap_tree *src_mt,
                         unsigned src_level, unsigned src_layer,
-                        mesa_format src_format,
+                        mesa_format src_format, int src_swizzle,
                         struct intel_mipmap_tree *dst_mt,
                         unsigned dst_level, unsigned dst_layer,
                         mesa_format dst_format,
@@ -105,9 +105,19 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
                                 dst_x0, dst_y0,
                                 dst_x1, dst_y1,
                                 filter, mirror_x, mirror_y);
+   params.src.swizzle = src_swizzle;
+
    brw_blorp_exec(brw, &params);
 
    intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_layer);
+}
+
+static int
+blorp_get_texture_swizzle(const struct intel_renderbuffer *irb)
+{
+   return irb->Base.Base._BaseFormat == GL_RGB ?
+      MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_ONE) :
+      SWIZZLE_XYZW;
 }
 
 static void
@@ -123,11 +133,10 @@ do_blorp_blit(struct brw_context *brw, GLbitfield buffer_bit,
    struct intel_mipmap_tree *dst_mt = find_miptree(buffer_bit, dst_irb);
 
    const bool es3 = _mesa_is_gles3(&brw->ctx);
-
    /* Do the blit */
    brw_blorp_blit_miptrees(brw,
                            src_mt, src_irb->mt_level, src_irb->mt_layer,
-                           src_format,
+                           src_format, blorp_get_texture_swizzle(src_irb),
                            dst_mt, dst_irb->mt_level, dst_irb->mt_layer,
                            dst_format,
                            srcX0, srcY0, srcX1, srcY1,
@@ -295,7 +304,7 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
 
    brw_blorp_blit_miptrees(brw,
                            src_mt, src_irb->mt_level, src_irb->mt_layer,
-                           src_rb->Format,
+                           src_rb->Format, blorp_get_texture_swizzle(src_irb),
                            dst_mt, dst_level, dst_slice,
                            dst_image->TexFormat,
                            srcX0, srcY0, srcX1, srcY1,
@@ -322,6 +331,7 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
          brw_blorp_blit_miptrees(brw,
                                  src_mt, src_irb->mt_level, src_irb->mt_layer,
                                  src_mt->format,
+                                 blorp_get_texture_swizzle(src_irb),
                                  dst_mt, dst_level, dst_slice,
                                  dst_mt->format,
                                  srcX0, srcY0, srcX1, srcY1,

@@ -38,7 +38,7 @@ void
 brw_blorp_blit_miptrees(struct brw_context *brw,
                         struct intel_mipmap_tree *src_mt,
                         unsigned src_level, unsigned src_layer,
-                        mesa_format src_format,
+                        mesa_format src_format, int src_swizzle,
                         struct intel_mipmap_tree *dst_mt,
                         unsigned dst_level, unsigned dst_layer,
                         mesa_format dst_format,
@@ -164,6 +164,14 @@ public:
     * surface state for this surface.
     */
    intel_msaa_layout msaa_layout;
+
+   /**
+    * In order to support cases where RGBA format is backing client requested
+    * RGB, one needs to have means to force alpha channel to one when user
+    * requested RGB surface is used as blit source. This is possible by
+    * setting source swizzle for the texture surface.
+    */
+   int swizzle;
 };
 
 
