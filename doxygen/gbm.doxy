@@ -42,7 +42,7 @@ SKIP_FUNCTION_MACROS   = YES
 TAGFILES               = main.tag=../core \
                          math.tag=../math \
                          tnl_dd.tag=../tnl_dd \
-                         swrast_setup.tag=../gbm_setup \
+                         swrast_setup.tag=../swrast_setup \
                          tnl.tag=../tnl \
                          vbo.tag=../vbo
 GENERATE_TAGFILE       = gbm.tag
