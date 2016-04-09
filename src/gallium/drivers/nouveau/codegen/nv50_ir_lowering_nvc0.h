@@ -79,6 +79,7 @@ private:
 private:
    LValue *rZero;
    LValue *carry;
+   LValue *pOne;
    const bool needTexBar;
 };
 

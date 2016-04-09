@@ -894,6 +894,16 @@ CodeEmitterGM107::emitI2I()
    emitGPR  (0x00, insn->def(0));
 }
 
+static void
+selpFlip(const FixupEntry *entry, uint32_t *code, const FixupData& data)
+{
+   int loc = entry->loc;
+   if (data.force_persample_interp)
+      code[loc + 1] |= 1 << 10;
+   else
+      code[loc + 1] &= ~(1 << 10);
+}
+
 void
 CodeEmitterGM107::emitSEL()
 {
@@ -915,9 +925,14 @@ CodeEmitterGM107::emitSEL()
       break;
    }
 
+   emitINV (0x2a, insn->src(2));
    emitPRED(0x27, insn->src(2));
    emitGPR (0x08, insn->src(0));
    emitGPR (0x00, insn->def(0));
+
+   if (insn->subOp == 1) {
+      addInterp(0, 0, selpFlip);
+   }
 }
 
 void

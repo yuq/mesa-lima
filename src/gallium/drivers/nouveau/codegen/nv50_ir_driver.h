@@ -146,6 +146,8 @@ struct nv50_ir_prog_info
          bool earlyFragTests;
          bool separateFragData;
          bool usesDiscard;
+         bool persampleInvocation;
+         bool usesSampleMaskIn;
       } fp;
       struct {
          uint32_t inputOffset; /* base address for user args */

@@ -153,6 +153,7 @@ NVC0LegalizeSSA::visit(BasicBlock *bb)
 NVC0LegalizePostRA::NVC0LegalizePostRA(const Program *prog)
    : rZero(NULL),
      carry(NULL),
+     pOne(NULL),
      needTexBar(prog->getTarget()->getChipset() >= 0xe0)
 {
 }
@@ -451,10 +452,12 @@ NVC0LegalizePostRA::visit(Function *fn)
       insertTextureBarriers(fn);
 
    rZero = new_LValue(fn, FILE_GPR);
+   pOne = new_LValue(fn, FILE_PREDICATE);
    carry = new_LValue(fn, FILE_FLAGS);
 
    rZero->reg.data.id = prog->getTarget()->getFileSize(FILE_GPR);
    carry->reg.data.id = 0;
+   pOne->reg.data.id = 7;
 
    return true;
 }
@@ -466,8 +469,15 @@ NVC0LegalizePostRA::replaceZero(Instruction *i)
       if (s == 2 && i->op == OP_SUCLAMP)
          continue;
       ImmediateValue *imm = i->getSrc(s)->asImm();
-      if (imm && imm->reg.data.u64 == 0)
-         i->setSrc(s, rZero);
+      if (imm) {
+         if (i->op == OP_SELP && s == 2) {
+            i->setSrc(s, pOne);
+            if (imm->reg.data.u64 == 0)
+               i->src(s).mod = i->src(s).mod ^ Modifier(NV50_IR_MOD_NOT);
+         } else if (imm->reg.data.u64 == 0) {
+            i->setSrc(s, rZero);
+         }
+      }
    }
 }
 
@@ -2204,10 +2214,25 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
                  off);
       break;
    }
-   case SV_SAMPLE_MASK:
+   case SV_SAMPLE_MASK: {
       ld = bld.mkOp1(OP_PIXLD, TYPE_U32, i->getDef(0), bld.mkImm(0));
       ld->subOp = NV50_IR_SUBOP_PIXLD_COVMASK;
+      Instruction *sampleid =
+         bld.mkOp1(OP_PIXLD, TYPE_U32, bld.getSSA(), bld.mkImm(0));
+      sampleid->subOp = NV50_IR_SUBOP_PIXLD_SAMPLEID;
+      Value *masked =
+         bld.mkOp2v(OP_AND, TYPE_U32, bld.getSSA(), ld->getDef(0),
+                    bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
+                               bld.loadImm(NULL, 1), sampleid->getDef(0)));
+      if (prog->driver->prop.fp.persampleInvocation) {
+         bld.mkMov(i->getDef(0), masked);
+      } else {
+         bld.mkOp3(OP_SELP, TYPE_U32, i->getDef(0), ld->getDef(0), masked,
+                   bld.mkImm(0))
+            ->subOp = 1;
+      }
       break;
+   }
    case SV_BASEVERTEX:
    case SV_BASEINSTANCE:
    case SV_DRAWID:

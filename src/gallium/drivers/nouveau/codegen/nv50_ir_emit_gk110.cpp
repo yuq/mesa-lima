@@ -1113,12 +1113,26 @@ CodeEmitterGK110::emitSLCT(const CmpInstruction *i)
    }
 }
 
+static void
+selpFlip(const FixupEntry *entry, uint32_t *code, const FixupData& data)
+{
+   int loc = entry->loc;
+   if (data.force_persample_interp)
+      code[loc + 1] |= 1 << 13;
+   else
+      code[loc + 1] &= ~(1 << 13);
+}
+
 void CodeEmitterGK110::emitSELP(const Instruction *i)
 {
    emitForm_21(i, 0x250, 0x050);
 
    if (i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
       code[1] |= 1 << 13;
+
+   if (i->subOp == 1) {
+      addInterp(0, 0, selpFlip);
+   }
 }
 
 void CodeEmitterGK110::emitTEXBAR(const Instruction *i)

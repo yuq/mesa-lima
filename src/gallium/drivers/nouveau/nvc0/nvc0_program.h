@@ -48,6 +48,7 @@ struct nvc0_program {
       uint8_t early_z;
       uint8_t colors;
       uint8_t color_interp[2];
+      bool sample_mask_in;
       bool force_persample_interp;
       bool flatshade;
    } fp;

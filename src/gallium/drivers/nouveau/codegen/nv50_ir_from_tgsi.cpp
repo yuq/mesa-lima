@@ -1273,6 +1273,13 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       case TGSI_SEMANTIC_DRAWID:
          info->prop.vp.usesDrawParameters = true;
          break;
+      case TGSI_SEMANTIC_SAMPLEID:
+      case TGSI_SEMANTIC_SAMPLEPOS:
+         info->prop.fp.persampleInvocation = true;
+         break;
+      case TGSI_SEMANTIC_SAMPLEMASK:
+         info->prop.fp.usesSampleMaskIn = true;
+         break;
       default:
          break;
       }

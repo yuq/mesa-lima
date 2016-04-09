@@ -1177,12 +1177,26 @@ CodeEmitterNVC0::emitSLCT(const CmpInstruction *i)
       code[0] |= 1 << 5;
 }
 
+static void
+selpFlip(const FixupEntry *entry, uint32_t *code, const FixupData& data)
+{
+   int loc = entry->loc;
+   if (data.force_persample_interp)
+      code[loc + 1] |= 1 << 20;
+   else
+      code[loc + 1] &= ~(1 << 20);
+}
+
 void CodeEmitterNVC0::emitSELP(const Instruction *i)
 {
    emitForm_A(i, HEX64(20000000, 00000004));
 
    if (i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
       code[1] |= 1 << 20;
+
+   if (i->subOp == 1) {
+      addInterp(0, 0, selpFlip);
+   }
 }
 
 void CodeEmitterNVC0::emitTEXBAR(const Instruction *i)

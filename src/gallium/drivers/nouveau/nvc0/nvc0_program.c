@@ -464,6 +464,7 @@ nvc0_fp_gen_header(struct nvc0_program *fp, struct nv50_ir_prog_info *info)
       fp->hdr[18] |= 0xf;
 
    fp->fp.early_z = info->prop.fp.earlyFragTests;
+   fp->fp.sample_mask_in = info->prop.fp.usesSampleMaskIn;
 
    return 0;
 }
