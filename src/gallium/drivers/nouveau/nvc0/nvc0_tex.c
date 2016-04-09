@@ -883,6 +883,7 @@ nve4_set_surface_info(struct nouveau_pushbuf *push,
             address += mt->layer_stride * z;
          }
       }
+      address += lvl->offset;
 
       info[0]  = address >> 8;
       info[2]  = width - 1;
