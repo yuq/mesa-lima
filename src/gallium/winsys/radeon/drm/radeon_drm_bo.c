@@ -40,6 +40,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 static inline struct radeon_bo *radeon_bo(struct pb_buffer *bo)
 {
@@ -297,8 +298,8 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
 				    sizeof(va)) != 0 &&
 		va.operation == RADEON_VA_RESULT_ERROR) {
                 fprintf(stderr, "radeon: Failed to deallocate virtual address for buffer:\n");
-                fprintf(stderr, "radeon:    size      : %d bytes\n", bo->base.size);
-                fprintf(stderr, "radeon:    va        : 0x%016llx\n", (unsigned long long)bo->va);
+                fprintf(stderr, "radeon:    size      : %"PRIu64" bytes\n", bo->base.size);
+                fprintf(stderr, "radeon:    va        : 0x%"PRIx64"\n", bo->va);
             }
 	}
 
