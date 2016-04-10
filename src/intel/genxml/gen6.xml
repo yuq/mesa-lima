@@ -31,6 +31,27 @@
     <field name="Component 3 Control" start="48" end="50" type="uint"/>
   </struct>
 
+  <struct name="SF_OUTPUT_ATTRIBUTE_DETAIL" length="1">
+    <field name="Component Override W" start="15" end="15" type="bool"/>
+    <field name="Component Override Z" start="14" end="14" type="bool"/>
+    <field name="Component Override Y" start="13" end="13" type="bool"/>
+    <field name="Component Override X" start="12" end="12" type="bool"/>
+    <field name="Swizzle Control Mode" start="11" end="11" type="uint"/>
+    <field name="Constant Source" start="9" end="10" type="uint">
+      <value name="CONST_0000" value="0"/>
+      <value name="CONST_0001_FLOAT" value="1"/>
+      <value name="CONST_1111_FLOAT" value="2"/>
+      <value name="PRIM_ID" value="3"/>
+    </field>
+    <field name="Swizzle Select" start="6" end="7" type="uint">
+      <value name="INPUTATTR" value="0"/>
+      <value name="INPUTATTR_FACING" value="1"/>
+      <value name="INPUTATTR_W" value="2"/>
+      <value name="INPUTATTR_FACING_W" value="3"/>
+    </field>
+    <field name="Source Attribute" start="0" end="4" type="uint"/>
+  </struct>
+
   <struct name="CLIP_VIEWPORT" length="4">
     <field name="XMin Clip Guardband" start="0" end="31" type="uint"/>
     <field name="XMax Clip Guardband" start="32" end="63" type="uint"/>
@@ -1212,47 +1233,9 @@
     <field name="Global Depth Offset Constant" start="160" end="191" type="float"/>
     <field name="Global Depth Offset Scale" start="192" end="223" type="float"/>
     <field name="Global Depth Offset Clamp" start="224" end="255" type="float"/>
-    <field name="Attribute 1 Component Override W" start="287" end="287" type="bool"/>
-    <field name="Attribute 1 Component Override Z" start="286" end="286" type="bool"/>
-    <field name="Attribute 1 Component Override Y" start="285" end="285" type="bool"/>
-    <field name="Attribute 1 Component Override X" start="284" end="284" type="bool"/>
-    <field name="Attribute 1 Constant Source" start="281" end="282" type="uint">
-      <value name="CONST_0000" value="0"/>
-      <value name="CONST_0001_FLOAT" value="1"/>
-      <value name="CONST_1111_FLOAT" value="2"/>
-      <value name="PRIM_ID" value="3"/>
-    </field>
-    <field name="Attribute 1 Swizzle Select" start="278" end="279" type="uint">
-      <value name="INPUTATTR" value="0"/>
-      <value name="INPUTATTR_FACING" value="1"/>
-      <value name="INPUTATTR_W" value="2"/>
-      <value name="INPUTATTR_FACING_W" value="3"/>
-    </field>
-    <field name="Attribute 1 Source Attribute" start="272" end="276" type="uint"/>
-    <field name="Attribute 0 Component Override W" start="271" end="271" type="bool"/>
-    <field name="Attribute 0 Component Override Z" start="270" end="270" type="bool"/>
-    <field name="Attribute 0 Component Override Y" start="269" end="269" type="bool"/>
-    <field name="Attribute 0 Component Override X" start="268" end="268" type="bool"/>
-    <field name="Attribute 0 Constant Source" start="265" end="266" type="uint">
-      <value name="CONST_0000" value="0"/>
-      <value name="CONST_0001_FLOAT" value="1"/>
-      <value name="CONST_1111_FLOAT" value="2"/>
-      <value name="PRIM_ID" value="3"/>
-    </field>
-    <field name="Attribute 0 Swizzle Select" start="262" end="263" type="uint">
-      <value name="INPUTATTR" value="0"/>
-      <value name="INPUTATTR_FACING" value="1"/>
-      <value name="INPUTATTR_W" value="2"/>
-      <value name="INPUTATTR_FACING_W" value="3"/>
-    </field>
-    <field name="Attribute 0 Source Attribute" start="256" end="260" type="uint"/>
-    <field name="Attribute Control for Attributes 2,3" start="288" end="319" type="uint"/>
-    <field name="Attribute Control for Attributes 4,5" start="320" end="351" type="uint"/>
-    <field name="Attribute Control for Attributes 6,7" start="352" end="383" type="uint"/>
-    <field name="Attribute Control for Attributes 8,9" start="384" end="415" type="uint"/>
-    <field name="Attribute Control for Attributes 10,11" start="416" end="447" type="uint"/>
-    <field name="Attribute Control for Attributes 12,13" start="448" end="479" type="uint"/>
-    <field name="Attribute Control for Attributes 14,15" start="480" end="511" type="uint"/>
+    <group count="16" start="256" size="16">
+      <field name="Attribute" start="0" end="15" type="SF_OUTPUT_ATTRIBUTE_DETAIL"/>
+    </group>
     <field name="Point Sprite Texture Coordinate Enable" start="512" end="543" type="uint"/>
     <field name="Constant Interpolation Enable[31:0]" start="544" end="575" type="uint"/>
     <field name="Attribute 7 WrapShortest Enables" start="604" end="607" type="uint"/>
