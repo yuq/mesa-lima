@@ -75,7 +75,7 @@ brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
    int namelen = strlen(var->name);
 
    /* The data for our (non-builtin) uniforms is stored in a series of
-    * gl_uniform_driver_storage structs for each subcomponent that
+    * gl_uniform_storage structs for each subcomponent that
     * glGetUniformLocation() could name.  We know it's been set up in the same
     * order we'd walk the type, so walk the list of storage and find anything
     * with our name, or the prefix of a component that starts with our name.
