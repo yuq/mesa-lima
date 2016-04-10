@@ -752,7 +752,7 @@ static void si_emit_blend_color(struct si_context *sctx, struct r600_atom *atom)
 }
 
 /*
- * Clipping, scissors and viewport
+ * Clipping
  */
 
 static void si_set_clip_state(struct pipe_context *ctx,
@@ -817,262 +817,6 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 	/* reuse needs to be set off if we write oViewport */
 	radeon_set_context_reg(cs, R_028AB4_VGT_REUSE_OFF,
 			       S_028AB4_REUSE_OFF(info->writes_viewport_index));
-}
-
-static void si_set_scissor_states(struct pipe_context *ctx,
-                                  unsigned start_slot,
-                                  unsigned num_scissors,
-                                  const struct pipe_scissor_state *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	int i;
-
-	for (i = 0; i < num_scissors; i++)
-		sctx->scissors.states[start_slot + i] = state[i];
-
-	if (!sctx->queued.named.rasterizer ||
-	    !sctx->queued.named.rasterizer->scissor_enable)
-		return;
-
-	sctx->scissors.dirty_mask |= ((1 << num_scissors) - 1) << start_slot;
-	si_mark_atom_dirty(sctx, &sctx->scissors.atom);
-}
-
-static void si_get_scissor_from_viewport(const struct pipe_viewport_state *vp,
-					 struct si_signed_scissor *scissor)
-{
-	int tmp;
-
-	/* Convert (-1, -1) and (1, 1) from clip space into window space. */
-	scissor->minx = -vp->scale[0] + vp->translate[0];
-	scissor->miny = -vp->scale[1] + vp->translate[1];
-	scissor->maxx = vp->scale[0] + vp->translate[0];
-	scissor->maxy = vp->scale[1] + vp->translate[1];
-
-	/* r600_draw_rectangle sets this. Disable the scissor. */
-	if (scissor->minx == -1 && scissor->miny == -1 &&
-	    scissor->maxx == 1 && scissor->maxy == 1) {
-		scissor->minx = scissor->miny = 0;
-		scissor->maxx = scissor->maxy = 16384;
-	}
-
-	/* Handle inverted viewports. */
-	if (scissor->minx > scissor->maxx) {
-		tmp = scissor->minx;
-		scissor->minx = scissor->maxx;
-		scissor->maxx = tmp;
-	}
-	if (scissor->miny > scissor->maxy) {
-		tmp = scissor->miny;
-		scissor->miny = scissor->maxy;
-		scissor->maxy = tmp;
-	}
-}
-
-static void si_clamp_scissor(struct pipe_scissor_state *out,
-			     struct si_signed_scissor *scissor)
-{
-	out->minx = CLAMP(scissor->minx, 0, 16384);
-	out->miny = CLAMP(scissor->miny, 0, 16384);
-	out->maxx = CLAMP(scissor->maxx, 0, 16384);
-	out->maxy = CLAMP(scissor->maxy, 0, 16384);
-}
-
-static void si_clip_scissor(struct pipe_scissor_state *out,
-			    struct pipe_scissor_state *clip)
-{
-	out->minx = MAX2(out->minx, clip->minx);
-	out->miny = MAX2(out->miny, clip->miny);
-	out->maxx = MIN2(out->maxx, clip->maxx);
-	out->maxy = MIN2(out->maxy, clip->maxy);
-}
-
-static void si_scissor_make_union(struct si_signed_scissor *out,
-				  struct si_signed_scissor *in)
-{
-	out->minx = MIN2(out->minx, in->minx);
-	out->miny = MIN2(out->miny, in->miny);
-	out->maxx = MAX2(out->maxx, in->maxx);
-	out->maxy = MAX2(out->maxy, in->maxy);
-}
-
-static void si_emit_one_scissor(struct radeon_winsys_cs *cs,
-				struct si_signed_scissor *vp_scissor,
-				struct pipe_scissor_state *scissor)
-{
-	struct pipe_scissor_state final;
-
-	/* Since the guard band disables clipping, we have to clip per-pixel
-	 * using a scissor.
-	 */
-	si_clamp_scissor(&final, vp_scissor);
-
-	if (scissor)
-		si_clip_scissor(&final, scissor);
-
-	radeon_emit(cs, S_028250_TL_X(final.minx) |
-			S_028250_TL_Y(final.miny) |
-			S_028250_WINDOW_OFFSET_DISABLE(1));
-	radeon_emit(cs, S_028254_BR_X(final.maxx) |
-			S_028254_BR_Y(final.maxy));
-}
-
-/* the range is [-MAX, MAX] */
-#define SI_MAX_VIEWPORT_RANGE 32768
-
-static void si_emit_guardband(struct si_context *sctx,
-			      struct si_signed_scissor *vp_as_scissor)
-{
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	struct pipe_viewport_state vp;
-	float left, top, right, bottom, max_range, guardband_x, guardband_y;
-
-	/* Reconstruct the viewport transformation from the scissor. */
-	vp.translate[0] = (vp_as_scissor->minx + vp_as_scissor->maxx) / 2.0;
-	vp.translate[1] = (vp_as_scissor->miny + vp_as_scissor->maxy) / 2.0;
-	vp.scale[0] = vp_as_scissor->maxx - vp.translate[0];
-	vp.scale[1] = vp_as_scissor->maxy - vp.translate[1];
-
-	/* Treat a 0x0 viewport as 1x1 to prevent division by zero. */
-	if (vp_as_scissor->minx == vp_as_scissor->maxx)
-		vp.scale[0] = 0.5;
-	if (vp_as_scissor->miny == vp_as_scissor->maxy)
-		vp.scale[1] = 0.5;
-
-	/* Find the biggest guard band that is inside the supported viewport
-	 * range. The guard band is specified as a horizontal and vertical
-	 * distance from (0,0) in clip space.
-	 *
-	 * This is done by applying the inverse viewport transformation
-	 * on the viewport limits to get those limits in clip space.
-	 *
-	 * Use a limit one pixel smaller to allow for some precision error.
-	 */
-	max_range = SI_MAX_VIEWPORT_RANGE - 1;
-	left   = (-max_range - vp.translate[0]) / vp.scale[0];
-	right  = ( max_range - vp.translate[0]) / vp.scale[0];
-	top    = (-max_range - vp.translate[1]) / vp.scale[1];
-	bottom = ( max_range - vp.translate[1]) / vp.scale[1];
-
-	assert(left <= -1 && top <= -1 && right >= 1 && bottom >= 1);
-
-	guardband_x = MIN2(-left, right);
-	guardband_y = MIN2(-top, bottom);
-
-	/* If any of the GB registers is updated, all of them must be updated. */
-	radeon_set_context_reg_seq(cs, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, 4);
-	radeon_emit(cs, fui(guardband_y)); /* R_028BE8_PA_CL_GB_VERT_CLIP_ADJ */
-	radeon_emit(cs, fui(1.0));         /* R_028BEC_PA_CL_GB_VERT_DISC_ADJ */
-	radeon_emit(cs, fui(guardband_x)); /* R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ */
-	radeon_emit(cs, fui(1.0));         /* R_028BF4_PA_CL_GB_HORZ_DISC_ADJ */
-}
-
-static void si_emit_scissors(struct si_context *sctx, struct r600_atom *atom)
-{
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	struct pipe_scissor_state *states = sctx->scissors.states;
-	unsigned mask = sctx->scissors.dirty_mask;
-	bool scissor_enable = sctx->queued.named.rasterizer->scissor_enable;
-	struct si_signed_scissor max_vp_scissor;
-	int i;
-
-	/* The simple case: Only 1 viewport is active. */
-	if (!si_get_vs_info(sctx)->writes_viewport_index) {
-		struct si_signed_scissor *vp = &sctx->viewports.as_scissor[0];
-
-		if (!(mask & 1))
-			return;
-
-		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL, 2);
-		si_emit_one_scissor(cs, vp, scissor_enable ? &states[0] : NULL);
-		si_emit_guardband(sctx, vp);
-		sctx->scissors.dirty_mask &= ~1; /* clear one bit */
-		return;
-	}
-
-	/* Shaders can draw to any viewport. Make a union of all viewports. */
-	max_vp_scissor = sctx->viewports.as_scissor[0];
-	for (i = 1; i < SI_MAX_VIEWPORTS; i++)
-		si_scissor_make_union(&max_vp_scissor,
-				      &sctx->viewports.as_scissor[i]);
-
-	while (mask) {
-		int start, count, i;
-
-		u_bit_scan_consecutive_range(&mask, &start, &count);
-
-		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL +
-					       start * 4 * 2, count * 2);
-		for (i = start; i < start+count; i++) {
-			si_emit_one_scissor(cs, &sctx->viewports.as_scissor[i],
-					    scissor_enable ? &states[i] : NULL);
-		}
-	}
-	si_emit_guardband(sctx, &max_vp_scissor);
-	sctx->scissors.dirty_mask = 0;
-}
-
-static void si_set_viewport_states(struct pipe_context *ctx,
-                                   unsigned start_slot,
-                                   unsigned num_viewports,
-                                   const struct pipe_viewport_state *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	int i;
-
-	for (i = 0; i < num_viewports; i++) {
-		unsigned index = start_slot + i;
-
-		sctx->viewports.states[index] = state[i];
-		si_get_scissor_from_viewport(&state[i],
-					     &sctx->viewports.as_scissor[index]);
-	}
-
-	sctx->viewports.dirty_mask |= ((1 << num_viewports) - 1) << start_slot;
-	sctx->scissors.dirty_mask |= ((1 << num_viewports) - 1) << start_slot;
-	si_mark_atom_dirty(sctx, &sctx->viewports.atom);
-	si_mark_atom_dirty(sctx, &sctx->scissors.atom);
-}
-
-static void si_emit_viewports(struct si_context *sctx, struct r600_atom *atom)
-{
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	struct pipe_viewport_state *states = sctx->viewports.states;
-	unsigned mask = sctx->viewports.dirty_mask;
-
-	/* The simple case: Only 1 viewport is active. */
-	if (!si_get_vs_info(sctx)->writes_viewport_index) {
-		if (!(mask & 1))
-			return;
-
-		radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE, 6);
-		radeon_emit(cs, fui(states[0].scale[0]));
-		radeon_emit(cs, fui(states[0].translate[0]));
-		radeon_emit(cs, fui(states[0].scale[1]));
-		radeon_emit(cs, fui(states[0].translate[1]));
-		radeon_emit(cs, fui(states[0].scale[2]));
-		radeon_emit(cs, fui(states[0].translate[2]));
-		sctx->viewports.dirty_mask &= ~1; /* clear one bit */
-		return;
-	}
-
-	while (mask) {
-		int start, count, i;
-
-		u_bit_scan_consecutive_range(&mask, &start, &count);
-
-		radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE +
-					       start * 4 * 6, count * 6);
-		for (i = start; i < start+count; i++) {
-			radeon_emit(cs, fui(states[i].scale[0]));
-			radeon_emit(cs, fui(states[i].translate[0]));
-			radeon_emit(cs, fui(states[i].scale[1]));
-			radeon_emit(cs, fui(states[i].translate[1]));
-			radeon_emit(cs, fui(states[i].scale[2]));
-			radeon_emit(cs, fui(states[i].translate[2]));
-		}
-	}
-	sctx->viewports.dirty_mask = 0;
 }
 
 /*
@@ -1256,10 +1000,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	    (!old_rs || old_rs->multisample_enable != rs->multisample_enable))
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
-	if (!old_rs || old_rs->scissor_enable != rs->scissor_enable) {
-		sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
-		si_mark_atom_dirty(sctx, &sctx->scissors.atom);
-	}
+	r600_set_scissor_enable(&sctx->b, rs->scissor_enable);
 
 	si_pm4_bind_state(sctx, rasterizer, rs);
 	si_update_poly_offset_state(sctx);
@@ -3785,6 +3526,8 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_external_atom(sctx, &sctx->b.render_cond_atom, &sctx->atoms.s.render_cond);
 	si_init_external_atom(sctx, &sctx->b.streamout.begin_atom, &sctx->atoms.s.streamout_begin);
 	si_init_external_atom(sctx, &sctx->b.streamout.enable_atom, &sctx->atoms.s.streamout_enable);
+	si_init_external_atom(sctx, &sctx->b.scissors.atom, &sctx->atoms.s.scissors);
+	si_init_external_atom(sctx, &sctx->b.viewports.atom, &sctx->atoms.s.viewports);
 
 	si_init_atom(sctx, &sctx->cache_flush, &sctx->atoms.s.cache_flush, si_emit_cache_flush);
 	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state);
@@ -3796,8 +3539,6 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_atom(sctx, &sctx->blend_color.atom, &sctx->atoms.s.blend_color, si_emit_blend_color);
 	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs);
 	si_init_atom(sctx, &sctx->clip_state.atom, &sctx->atoms.s.clip_state, si_emit_clip_state);
-	si_init_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors);
-	si_init_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports, si_emit_viewports);
 	si_init_atom(sctx, &sctx->stencil_ref.atom, &sctx->atoms.s.stencil_ref, si_emit_stencil_ref);
 
 	sctx->b.b.create_blend_state = si_create_blend_state;
@@ -3820,8 +3561,6 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->custom_blend_dcc_decompress = si_create_blend_custom(sctx, V_028808_CB_DCC_DECOMPRESS);
 
 	sctx->b.b.set_clip_state = si_set_clip_state;
-	sctx->b.b.set_scissor_states = si_set_scissor_states;
-	sctx->b.b.set_viewport_states = si_set_viewport_states;
 	sctx->b.b.set_stencil_ref = si_set_stencil_ref;
 
 	sctx->b.b.set_framebuffer_state = si_set_framebuffer_state;

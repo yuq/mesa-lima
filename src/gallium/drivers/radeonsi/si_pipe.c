@@ -401,7 +401,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return 8;
 
 	case PIPE_CAP_MAX_VIEWPORTS:
-		return SI_MAX_VIEWPORTS;
+		return R600_MAX_VIEWPORTS;
 
 	/* Timer queries, present when the clock frequency is non zero. */
 	case PIPE_CAP_QUERY_TIMESTAMP:

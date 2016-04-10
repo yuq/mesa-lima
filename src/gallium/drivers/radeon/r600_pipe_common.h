@@ -97,9 +97,11 @@
 #define DBG_MONOLITHIC_SHADERS	(1llu << 47)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
+#define R600_MAX_VIEWPORTS        16
 
 struct r600_common_context;
 struct r600_perfcounters;
+struct tgsi_shader_info;
 
 struct radeon_shader_reloc {
 	char name[32];
@@ -394,6 +396,26 @@ struct r600_streamout {
 	int				num_prims_gen_queries;
 };
 
+struct r600_signed_scissor {
+	int minx;
+	int miny;
+	int maxx;
+	int maxy;
+};
+
+struct r600_scissors {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	struct pipe_scissor_state	states[R600_MAX_VIEWPORTS];
+};
+
+struct r600_viewports {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	struct pipe_viewport_state	states[R600_MAX_VIEWPORTS];
+	struct r600_signed_scissor	as_scissor[R600_MAX_VIEWPORTS];
+};
+
 struct r600_ring {
 	struct radeon_winsys_cs		*cs;
 	void (*flush)(void *ctx, unsigned flags,
@@ -426,6 +448,10 @@ struct r600_common_context {
 
 	/* States. */
 	struct r600_streamout		streamout;
+	struct r600_scissors		scissors;
+	struct r600_viewports		viewports;
+	bool				scissor_enabled;
+	bool				vs_writes_viewport_index;
 
 	/* Additional context states. */
 	unsigned flags; /* flush flags */
@@ -608,6 +634,12 @@ void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
 			      struct r600_texture *rtex);
 void r600_init_screen_texture_functions(struct r600_common_screen *rscreen);
 void r600_init_context_texture_functions(struct r600_common_context *rctx);
+
+/* r600_viewport.c */
+void r600_set_scissor_enable(struct r600_common_context *rctx, bool enable);
+void r600_update_vs_writes_viewport_index(struct r600_common_context *rctx,
+					  struct tgsi_shader_info *info);
+void r600_init_viewport_functions(struct r600_common_context *rctx);
 
 /* cayman_msaa.c */
 extern const uint32_t eg_sample_locs_2x[4];

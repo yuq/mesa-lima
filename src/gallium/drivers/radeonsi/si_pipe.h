@@ -76,7 +76,6 @@
 #define SI_IS_TRACE_POINT(x)		(((x) & 0xcafe0000) == 0xcafe0000)
 #define SI_GET_TRACE_POINT_ID(x)	((x) & 0xffff)
 
-#define SI_MAX_VIEWPORTS	16
 #define SI_MAX_BORDER_COLORS	4096
 
 struct si_compute;
@@ -173,26 +172,6 @@ struct si_sample_mask {
 	uint16_t		sample_mask;
 };
 
-struct si_scissors {
-	struct r600_atom		atom;
-	unsigned			dirty_mask;
-	struct pipe_scissor_state	states[SI_MAX_VIEWPORTS];
-};
-
-struct si_signed_scissor {
-	int minx;
-	int miny;
-	int maxx;
-	int maxy;
-};
-
-struct si_viewports {
-	struct r600_atom		atom;
-	unsigned			dirty_mask;
-	struct pipe_viewport_state	states[SI_MAX_VIEWPORTS];
-	struct si_signed_scissor	as_scissor[SI_MAX_VIEWPORTS];
-};
-
 /* A shader state consists of the shader selector, which is a constant state
  * object shared by multiple contexts and shouldn't be modified, and
  * the current shader variant selected for this context.
@@ -236,8 +215,6 @@ struct si_context {
 	struct r600_atom		clip_regs;
 	struct si_clip_state		clip_state;
 	struct si_shader_data		shader_userdata;
-	struct si_scissors		scissors;
-	struct si_viewports		viewports;
 	struct si_stencil_ref		stencil_ref;
 	struct r600_atom		spi_map;
 

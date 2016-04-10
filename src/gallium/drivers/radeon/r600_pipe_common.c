@@ -286,6 +286,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	LIST_INITHEAD(&rctx->texture_buffers);
 
 	r600_init_context_texture_functions(rctx);
+	r600_init_viewport_functions(rctx);
 	r600_streamout_init(rctx);
 	r600_query_init(rctx);
 	cayman_init_msaa(&rctx->b);
