@@ -239,6 +239,7 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
       .AttributeSwizzleEnable = true,
       .PointSpriteTextureCoordinateOrigin = UPPERLEFT,
       .NumberofSFOutputAttributes = wm_prog_data->num_varying_inputs,
+      .ConstantInterpolationEnable = wm_prog_data->flat_inputs,
 
 #if GEN_GEN >= 9
       .Attribute0ActiveComponentFormat = ACF_XYZW,
