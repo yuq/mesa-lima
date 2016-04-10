@@ -530,10 +530,10 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
     if (drmCommandWriteRead(rws->fd, DRM_RADEON_GEM_CREATE,
                             &args, sizeof(args))) {
         fprintf(stderr, "radeon: Failed to allocate a buffer:\n");
-        fprintf(stderr, "radeon:    size      : %d bytes\n", size);
-        fprintf(stderr, "radeon:    alignment : %d bytes\n", alignment);
-        fprintf(stderr, "radeon:    domains   : %d\n", args.initial_domain);
-        fprintf(stderr, "radeon:    flags     : %d\n", args.flags);
+        fprintf(stderr, "radeon:    size      : %u bytes\n", size);
+        fprintf(stderr, "radeon:    alignment : %u bytes\n", alignment);
+        fprintf(stderr, "radeon:    domains   : %u\n", args.initial_domain);
+        fprintf(stderr, "radeon:    flags     : %u\n", args.flags);
         return NULL;
     }
 
