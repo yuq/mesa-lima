@@ -1549,7 +1549,7 @@
       <field name="Attribute" start="0" end="15" type="SF_OUTPUT_ATTRIBUTE_DETAIL"/>
     </group>
     <field name="Point Sprite Texture Coordinate Enable" start="320" end="351" type="uint"/>
-    <field name="Constant Interpolation Enable[31:0]" start="352" end="383" type="uint"/>
+    <field name="Constant Interpolation Enable" start="352" end="383" type="uint"/>
     <field name="Attribute 7 WrapShortest Enables" start="412" end="415" type="uint"/>
     <field name="Attribute 6 WrapShortest Enables" start="408" end="411" type="uint"/>
     <field name="Attribute 5 WrapShortest Enables" start="404" end="407" type="uint"/>
