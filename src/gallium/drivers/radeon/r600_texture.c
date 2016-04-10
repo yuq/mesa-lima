@@ -943,13 +943,12 @@ static unsigned r600_choose_tiling(struct r600_common_screen *rscreen,
 		force_tiling = true;
 
 	/* Handle common candidates for the linear mode.
-	 * Compressed textures must always be tiled. */
-	if (!force_tiling && !util_format_is_compressed(templ->format)) {
-		/* Not everything can be linear, so we cannot enforce it
-		 * for all textures. */
-		if ((rscreen->debug_flags & DBG_NO_TILING) &&
-		    (!util_format_is_depth_or_stencil(templ->format) ||
-		     !(templ->flags & R600_RESOURCE_FLAG_FLUSHED_DEPTH)))
+	 * Compressed textures and DB surfaces must always be tiled.
+	 */
+	if (!force_tiling && !util_format_is_compressed(templ->format) &&
+	    (!util_format_is_depth_or_stencil(templ->format) ||
+	     templ->flags & R600_RESOURCE_FLAG_FLUSHED_DEPTH)) {
+		if (rscreen->debug_flags & DBG_NO_TILING)
 			return RADEON_SURF_MODE_LINEAR_ALIGNED;
 
 		/* Tiling doesn't work with the 422 (SUBSAMPLED) formats on R600+. */
