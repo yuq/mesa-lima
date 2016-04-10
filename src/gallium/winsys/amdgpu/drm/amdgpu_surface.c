@@ -212,7 +212,7 @@ static int compute_level(struct amdgpu_winsys *ws,
    }
 
    surf_level = is_stencil ? &surf->stencil_level[level] : &surf->level[level];
-   surf_level->offset = align(surf->bo_size, AddrSurfInfoOut->baseAlign);
+   surf_level->offset = align64(surf->bo_size, AddrSurfInfoOut->baseAlign);
    surf_level->slice_size = AddrSurfInfoOut->sliceSize;
    surf_level->pitch_bytes = AddrSurfInfoOut->pitch * (is_stencil ? 1 : surf->bpe);
    surf_level->npix_x = u_minify(surf->npix_x, level);

@@ -718,7 +718,7 @@ static void radeon_bo_set_metadata(struct pb_buffer *_buf,
 
 static struct pb_buffer *
 radeon_winsys_bo_create(struct radeon_winsys *rws,
-                        unsigned size,
+                        uint64_t size,
                         unsigned alignment,
                         boolean use_reusable_pool,
                         enum radeon_bo_domain domain,
@@ -727,6 +727,10 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     struct radeon_drm_winsys *ws = radeon_drm_winsys(rws);
     struct radeon_bo *bo;
     unsigned usage = 0;
+
+    /* Only 32-bit sizes are supported. */
+    if (size > UINT_MAX)
+        return NULL;
 
     /* Align size to page size. This is the minimum alignment for normal
      * BOs. Aligning this here helps the cached bufmgr. Especially small BOs,
@@ -769,7 +773,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
 }
 
 static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
-                                                   void *pointer, unsigned size)
+                                                   void *pointer, uint64_t size)
 {
     struct radeon_drm_winsys *ws = radeon_drm_winsys(rws);
     struct drm_radeon_gem_userptr args;

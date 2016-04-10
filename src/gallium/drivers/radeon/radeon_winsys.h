@@ -449,7 +449,7 @@ struct radeon_winsys {
      * \return          The created buffer object.
      */
     struct pb_buffer *(*buffer_create)(struct radeon_winsys *ws,
-                                       unsigned size,
+                                       uint64_t size,
                                        unsigned alignment,
                                        boolean use_reusable_pool,
                                        enum radeon_bo_domain domain,
@@ -528,7 +528,7 @@ struct radeon_winsys {
      * \param Size      Size in bytes for the new buffer.
      */
     struct pb_buffer *(*buffer_from_ptr)(struct radeon_winsys *ws,
-                                         void *pointer, unsigned size);
+                                         void *pointer, uint64_t size);
 
     /**
      * Whether the buffer was created from a user pointer.
