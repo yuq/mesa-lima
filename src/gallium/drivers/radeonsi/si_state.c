@@ -838,40 +838,44 @@ static void si_set_scissor_states(struct pipe_context *ctx,
 	si_mark_atom_dirty(sctx, &sctx->scissors.atom);
 }
 
-static void si_get_scissor_from_viewport(struct pipe_viewport_state *vp,
-					 struct pipe_scissor_state *scissor)
+static void si_get_scissor_from_viewport(const struct pipe_viewport_state *vp,
+					 struct si_signed_scissor *scissor)
 {
-	/* These must be signed, unlike pipe_scissor_state. */
-	int minx, miny, maxx, maxy, tmp;
+	int tmp;
 
 	/* Convert (-1, -1) and (1, 1) from clip space into window space. */
-	minx = -vp->scale[0] + vp->translate[0];
-	miny = -vp->scale[1] + vp->translate[1];
-	maxx = vp->scale[0] + vp->translate[0];
-	maxy = vp->scale[1] + vp->translate[1];
+	scissor->minx = -vp->scale[0] + vp->translate[0];
+	scissor->miny = -vp->scale[1] + vp->translate[1];
+	scissor->maxx = vp->scale[0] + vp->translate[0];
+	scissor->maxy = vp->scale[1] + vp->translate[1];
 
 	/* r600_draw_rectangle sets this. Disable the scissor. */
-	if (minx == -1 && miny == -1 && maxx == 1 && maxy == 1) {
-		minx = miny = 0;
-		maxx = maxy = 16384;
+	if (scissor->minx == -1 && scissor->miny == -1 &&
+	    scissor->maxx == 1 && scissor->maxy == 1) {
+		scissor->minx = scissor->miny = 0;
+		scissor->maxx = scissor->maxy = 16384;
 	}
 
 	/* Handle inverted viewports. */
-	if (minx > maxx) {
-		tmp = minx;
-		minx = maxx;
-		maxx = tmp;
+	if (scissor->minx > scissor->maxx) {
+		tmp = scissor->minx;
+		scissor->minx = scissor->maxx;
+		scissor->maxx = tmp;
 	}
-	if (miny > maxy) {
-		tmp = miny;
-		miny = maxy;
-		maxy = tmp;
+	if (scissor->miny > scissor->maxy) {
+		tmp = scissor->miny;
+		scissor->miny = scissor->maxy;
+		scissor->maxy = tmp;
 	}
+}
 
-	scissor->minx = CLAMP(minx, 0, 16384);
-	scissor->miny = CLAMP(miny, 0, 16384);
-	scissor->maxx = CLAMP(maxx, 0, 16384);
-	scissor->maxy = CLAMP(maxy, 0, 16384);
+static void si_clamp_scissor(struct pipe_scissor_state *out,
+			     struct si_signed_scissor *scissor)
+{
+	out->minx = CLAMP(scissor->minx, 0, 16384);
+	out->miny = CLAMP(scissor->miny, 0, 16384);
+	out->maxx = CLAMP(scissor->maxx, 0, 16384);
+	out->maxy = CLAMP(scissor->maxy, 0, 16384);
 }
 
 static void si_clip_scissor(struct pipe_scissor_state *out,
@@ -884,7 +888,7 @@ static void si_clip_scissor(struct pipe_scissor_state *out,
 }
 
 static void si_emit_one_scissor(struct radeon_winsys_cs *cs,
-				struct pipe_viewport_state *vp,
+				struct si_signed_scissor *vp_scissor,
 				struct pipe_scissor_state *scissor)
 {
 	struct pipe_scissor_state final;
@@ -892,7 +896,7 @@ static void si_emit_one_scissor(struct radeon_winsys_cs *cs,
 	/* Since the guard band disables clipping, we have to clip per-pixel
 	 * using a scissor.
 	 */
-	si_get_scissor_from_viewport(vp, &final);
+	si_clamp_scissor(&final, vp_scissor);
 
 	if (scissor)
 		si_clip_scissor(&final, scissor);
@@ -913,12 +917,13 @@ static void si_emit_scissors(struct si_context *sctx, struct r600_atom *atom)
 
 	/* The simple case: Only 1 viewport is active. */
 	if (!si_get_vs_info(sctx)->writes_viewport_index) {
+		struct si_signed_scissor *vp = &sctx->viewports.as_scissor[0];
+
 		if (!(mask & 1))
 			return;
 
 		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL, 2);
-		si_emit_one_scissor(cs, &sctx->viewports.states[0],
-				    scissor_enable ? &states[0] : NULL);
+		si_emit_one_scissor(cs, vp, scissor_enable ? &states[0] : NULL);
 		sctx->scissors.dirty_mask &= ~1; /* clear one bit */
 		return;
 	}
@@ -931,7 +936,7 @@ static void si_emit_scissors(struct si_context *sctx, struct r600_atom *atom)
 		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL +
 					       start * 4 * 2, count * 2);
 		for (i = start; i < start+count; i++) {
-			si_emit_one_scissor(cs, &sctx->viewports.states[i],
+			si_emit_one_scissor(cs, &sctx->viewports.as_scissor[i],
 					    scissor_enable ? &states[i] : NULL);
 		}
 	}
@@ -946,8 +951,13 @@ static void si_set_viewport_states(struct pipe_context *ctx,
 	struct si_context *sctx = (struct si_context *)ctx;
 	int i;
 
-	for (i = 0; i < num_viewports; i++)
-		sctx->viewports.states[start_slot + i] = state[i];
+	for (i = 0; i < num_viewports; i++) {
+		unsigned index = start_slot + i;
+
+		sctx->viewports.states[index] = state[i];
+		si_get_scissor_from_viewport(&state[i],
+					     &sctx->viewports.as_scissor[index]);
+	}
 
 	sctx->viewports.dirty_mask |= ((1 << num_viewports) - 1) << start_slot;
 	sctx->scissors.dirty_mask |= ((1 << num_viewports) - 1) << start_slot;

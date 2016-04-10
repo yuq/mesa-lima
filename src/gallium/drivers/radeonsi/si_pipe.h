@@ -179,10 +179,18 @@ struct si_scissors {
 	struct pipe_scissor_state	states[SI_MAX_VIEWPORTS];
 };
 
+struct si_signed_scissor {
+	int minx;
+	int miny;
+	int maxx;
+	int maxy;
+};
+
 struct si_viewports {
 	struct r600_atom		atom;
 	unsigned			dirty_mask;
 	struct pipe_viewport_state	states[SI_MAX_VIEWPORTS];
+	struct si_signed_scissor	as_scissor[SI_MAX_VIEWPORTS];
 };
 
 /* A shader state consists of the shader selector, which is a constant state
