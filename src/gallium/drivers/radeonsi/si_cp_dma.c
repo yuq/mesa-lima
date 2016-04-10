@@ -124,7 +124,7 @@ static unsigned get_tc_l2_flag(struct si_context *sctx, bool is_framebuffer)
 
 static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst,
 			      struct pipe_resource *src, unsigned byte_count,
-			      unsigned remaining_size, unsigned *flags)
+			      uint64_t remaining_size, unsigned *flags)
 {
 	si_need_cs_space(sctx);
 
@@ -158,7 +158,7 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 #define CP_DMA_MAX_BYTE_COUNT	((1 << 21) - CP_DMA_ALIGNMENT)
 
 static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
-			    unsigned offset, unsigned size, unsigned value,
+			    uint64_t offset, uint64_t size, unsigned value,
 			    bool is_framebuffer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
@@ -180,7 +180,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 						      sctx->b.gfx.cs,
 						      PIPE_TRANSFER_WRITE);
 		map += offset;
-		for (unsigned i = 0; i < size; i++) {
+		for (uint64_t i = 0; i < size; i++) {
 			unsigned byte_within_dword = (offset + i) % 4;
 			*map++ = (value >> (byte_within_dword * 8)) & 0xff;
 		}

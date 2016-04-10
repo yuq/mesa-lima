@@ -475,7 +475,7 @@ struct r600_common_context {
 			 const struct pipe_box *src_box);
 
 	void (*clear_buffer)(struct pipe_context *ctx, struct pipe_resource *dst,
-			     unsigned offset, unsigned size, unsigned value,
+			     uint64_t offset, uint64_t size, unsigned value,
 			     bool is_framebuffer);
 
 	void (*blit_decompress_depth)(struct pipe_context *ctx,
@@ -547,7 +547,7 @@ void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resour
 bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 			  unsigned processor);
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
-			      unsigned offset, unsigned size, unsigned value,
+			      uint64_t offset, uint64_t size, unsigned value,
 			      bool is_framebuffer);
 struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 						  const struct pipe_resource *templ);

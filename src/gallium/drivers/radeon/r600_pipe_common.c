@@ -963,7 +963,7 @@ bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 }
 
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
-			      unsigned offset, unsigned size, unsigned value,
+			      uint64_t offset, uint64_t size, unsigned value,
 			      bool is_framebuffer)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)rscreen->aux_context;
