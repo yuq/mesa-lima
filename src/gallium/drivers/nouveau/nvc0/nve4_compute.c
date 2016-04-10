@@ -134,8 +134,11 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
    BEGIN_NVC0(push, NVE4_CP(TEX_CB_INDEX), 1);
    PUSH_DATA (push, 7); /* does not interfere with 3D */
 
+   /* Disabling this UNK command avoid a read fault when using texelFetch()
+    * from a compute shader for weird reasons.
    if (obj_class == NVF0_COMPUTE_CLASS)
       IMMED_NVC0(push, SUBC_CP(0x02c4), 1);
+   */
 
    address = screen->uniform_bo->offset + NVC0_CB_AUX_INFO(5);
 
