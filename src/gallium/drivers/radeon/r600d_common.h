@@ -220,6 +220,7 @@
 /*CIK+*/
 #define R_0300FC_CP_STRMOUT_CNTL		     0x0300FC
 
+#define R600_R_028C0C_PA_CL_GB_VERT_CLIP_ADJ         0x028C0C
 #define CM_R_028BE8_PA_CL_GB_VERT_CLIP_ADJ           0x28be8
 #define R_02843C_PA_CL_VPORT_XSCALE                  0x02843C
 

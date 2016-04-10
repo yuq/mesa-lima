@@ -24,6 +24,8 @@
 #include "r600_cs.h"
 #include "tgsi/tgsi_scan.h"
 
+#define GET_MAX_SCISSOR(rctx) (rctx->chip_class >= EVERGREEN ? 16384 : 8192)
+
 static void r600_set_scissor_states(struct pipe_context *ctx,
 				    unsigned start_slot,
 				    unsigned num_scissors,
@@ -42,7 +44,8 @@ static void r600_set_scissor_states(struct pipe_context *ctx,
 	rctx->set_atom_dirty(rctx, &rctx->scissors.atom, true);
 }
 
-static void r600_get_scissor_from_viewport(const struct pipe_viewport_state *vp,
+static void r600_get_scissor_from_viewport(struct r600_common_context *rctx,
+					   const struct pipe_viewport_state *vp,
 					   struct r600_signed_scissor *scissor)
 {
 	int tmp;
@@ -57,7 +60,7 @@ static void r600_get_scissor_from_viewport(const struct pipe_viewport_state *vp,
 	if (scissor->minx == -1 && scissor->miny == -1 &&
 	    scissor->maxx == 1 && scissor->maxy == 1) {
 		scissor->minx = scissor->miny = 0;
-		scissor->maxx = scissor->maxy = 16384;
+		scissor->maxx = scissor->maxy = GET_MAX_SCISSOR(rctx);
 	}
 
 	/* Handle inverted viewports. */
@@ -73,13 +76,15 @@ static void r600_get_scissor_from_viewport(const struct pipe_viewport_state *vp,
 	}
 }
 
-static void r600_clamp_scissor(struct pipe_scissor_state *out,
+static void r600_clamp_scissor(struct r600_common_context *rctx,
+			       struct pipe_scissor_state *out,
 			       struct r600_signed_scissor *scissor)
 {
-	out->minx = CLAMP(scissor->minx, 0, 16384);
-	out->miny = CLAMP(scissor->miny, 0, 16384);
-	out->maxx = CLAMP(scissor->maxx, 0, 16384);
-	out->maxy = CLAMP(scissor->maxy, 0, 16384);
+	unsigned max_scissor = GET_MAX_SCISSOR(rctx);
+	out->minx = CLAMP(scissor->minx, 0, max_scissor);
+	out->miny = CLAMP(scissor->miny, 0, max_scissor);
+	out->maxx = CLAMP(scissor->maxx, 0, max_scissor);
+	out->maxy = CLAMP(scissor->maxy, 0, max_scissor);
 }
 
 static void r600_clip_scissor(struct pipe_scissor_state *out,
@@ -100,7 +105,23 @@ static void r600_scissor_make_union(struct r600_signed_scissor *out,
 	out->maxy = MAX2(out->maxy, in->maxy);
 }
 
-static void r600_emit_one_scissor(struct radeon_winsys_cs *cs,
+void evergreen_apply_scissor_bug_workaround(struct r600_common_context *rctx,
+					    struct pipe_scissor_state *scissor)
+{
+	if (rctx->chip_class == EVERGREEN || rctx->chip_class == CAYMAN) {
+		if (scissor->maxx == 0)
+			scissor->minx = 1;
+		if (scissor->maxy == 0)
+			scissor->miny = 1;
+
+		if (rctx->chip_class == CAYMAN &&
+		    scissor->maxx == 1 && scissor->maxy == 1)
+			scissor->maxx = 2;
+	}
+}
+
+static void r600_emit_one_scissor(struct r600_common_context *rctx,
+				  struct radeon_winsys_cs *cs,
 				  struct r600_signed_scissor *vp_scissor,
 				  struct pipe_scissor_state *scissor)
 {
@@ -109,10 +130,12 @@ static void r600_emit_one_scissor(struct radeon_winsys_cs *cs,
 	/* Since the guard band disables clipping, we have to clip per-pixel
 	 * using a scissor.
 	 */
-	r600_clamp_scissor(&final, vp_scissor);
+	r600_clamp_scissor(rctx, &final, vp_scissor);
 
 	if (scissor)
 		r600_clip_scissor(&final, scissor);
+
+	evergreen_apply_scissor_bug_workaround(rctx, &final);
 
 	radeon_emit(cs, S_028250_TL_X(final.minx) |
 			S_028250_TL_Y(final.miny) |
@@ -122,7 +145,7 @@ static void r600_emit_one_scissor(struct radeon_winsys_cs *cs,
 }
 
 /* the range is [-MAX, MAX] */
-#define R600_MAX_VIEWPORT_RANGE 32768
+#define GET_MAX_VIEWPORT_RANGE(rctx) (rctx->chip_class >= EVERGREEN ? 32768 : 16384)
 
 static void r600_emit_guardband(struct r600_common_context *rctx,
 				struct r600_signed_scissor *vp_as_scissor)
@@ -152,7 +175,7 @@ static void r600_emit_guardband(struct r600_common_context *rctx,
 	 *
 	 * Use a limit one pixel smaller to allow for some precision error.
 	 */
-	max_range = R600_MAX_VIEWPORT_RANGE - 1;
+	max_range = GET_MAX_VIEWPORT_RANGE(rctx) - 1;
 	left   = (-max_range - vp.translate[0]) / vp.scale[0];
 	right  = ( max_range - vp.translate[0]) / vp.scale[0];
 	top    = (-max_range - vp.translate[1]) / vp.scale[1];
@@ -164,7 +187,11 @@ static void r600_emit_guardband(struct r600_common_context *rctx,
 	guardband_y = MIN2(-top, bottom);
 
 	/* If any of the GB registers is updated, all of them must be updated. */
-	radeon_set_context_reg_seq(cs, CM_R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, 4);
+	if (rctx->chip_class >= CAYMAN)
+		radeon_set_context_reg_seq(cs, CM_R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, 4);
+	else
+		radeon_set_context_reg_seq(cs, R600_R_028C0C_PA_CL_GB_VERT_CLIP_ADJ, 4);
+
 	radeon_emit(cs, fui(guardband_y)); /* R_028BE8_PA_CL_GB_VERT_CLIP_ADJ */
 	radeon_emit(cs, fui(1.0));         /* R_028BEC_PA_CL_GB_VERT_DISC_ADJ */
 	radeon_emit(cs, fui(guardband_x)); /* R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ */
@@ -188,7 +215,7 @@ static void r600_emit_scissors(struct r600_common_context *rctx, struct r600_ato
 			return;
 
 		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL, 2);
-		r600_emit_one_scissor(cs, vp, scissor_enabled ? &states[0] : NULL);
+		r600_emit_one_scissor(rctx, cs, vp, scissor_enabled ? &states[0] : NULL);
 		r600_emit_guardband(rctx, vp);
 		rctx->scissors.dirty_mask &= ~1; /* clear one bit */
 		return;
@@ -208,8 +235,8 @@ static void r600_emit_scissors(struct r600_common_context *rctx, struct r600_ato
 		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL +
 					       start * 4 * 2, count * 2);
 		for (i = start; i < start+count; i++) {
-			r600_emit_one_scissor(cs, &rctx->viewports.as_scissor[i],
-					    scissor_enabled ? &states[i] : NULL);
+			r600_emit_one_scissor(rctx, cs, &rctx->viewports.as_scissor[i],
+					      scissor_enabled ? &states[i] : NULL);
 		}
 	}
 	r600_emit_guardband(rctx, &max_vp_scissor);
@@ -228,8 +255,8 @@ static void r600_set_viewport_states(struct pipe_context *ctx,
 		unsigned index = start_slot + i;
 
 		rctx->viewports.states[index] = state[i];
-		r600_get_scissor_from_viewport(&state[i],
-					     &rctx->viewports.as_scissor[index]);
+		r600_get_scissor_from_viewport(rctx, &state[i],
+					       &rctx->viewports.as_scissor[index]);
 	}
 
 	rctx->viewports.dirty_mask |= ((1 << num_viewports) - 1) << start_slot;
@@ -314,6 +341,9 @@ void r600_init_viewport_functions(struct r600_common_context *rctx)
 {
 	rctx->scissors.atom.emit = r600_emit_scissors;
 	rctx->viewports.atom.emit = r600_emit_viewports;
+
+	rctx->scissors.atom.num_dw = (2 + 16 * 2) + 6;
+	rctx->viewports.atom.num_dw = 2 + 16 * 6;
 
 	rctx->b.set_scissor_states = r600_set_scissor_states;
 	rctx->b.set_viewport_states = r600_set_viewport_states;
