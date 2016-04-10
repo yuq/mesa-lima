@@ -222,10 +222,6 @@ static int r600_setup_surface(struct pipe_screen *screen,
 		rtex->surface.level[0].nblk_x = pitch_in_bytes_override / rtex->surface.bpe;
 		rtex->surface.level[0].pitch_bytes = pitch_in_bytes_override;
 		rtex->surface.level[0].slice_size = pitch_in_bytes_override * rtex->surface.level[0].nblk_y;
-		if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
-			rtex->surface.stencil_offset =
-			rtex->surface.stencil_level[0].offset = rtex->surface.level[0].slice_size;
-		}
 	}
 
 	if (offset) {
