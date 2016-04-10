@@ -102,7 +102,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 
 bool r600_init_resource(struct r600_common_screen *rscreen,
 			struct r600_resource *res,
-			unsigned size, unsigned alignment,
+			uint64_t size, unsigned alignment,
 			bool use_reusable_pool)
 {
 	struct r600_texture *rtex = (struct r600_texture*)res;

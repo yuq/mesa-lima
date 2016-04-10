@@ -140,6 +140,9 @@ struct radeon_shader_binary {
 void radeon_shader_binary_init(struct radeon_shader_binary *b);
 void radeon_shader_binary_clean(struct radeon_shader_binary *b);
 
+/* Only 32-bit buffer allocations are supported, gallium doesn't support more
+ * at the moment.
+ */
 struct r600_resource {
 	struct u_resource		b;
 
@@ -184,8 +187,8 @@ struct r600_transfer {
 };
 
 struct r600_fmask_info {
-	unsigned offset;
-	unsigned size;
+	uint64_t offset;
+	uint64_t size;
 	unsigned alignment;
 	unsigned pitch_in_pixels;
 	unsigned bank_height;
@@ -194,8 +197,8 @@ struct r600_fmask_info {
 };
 
 struct r600_cmask_info {
-	unsigned offset;
-	unsigned size;
+	uint64_t offset;
+	uint64_t size;
 	unsigned alignment;
 	unsigned pitch;
 	unsigned height;
@@ -215,7 +218,7 @@ struct r600_htile_info {
 struct r600_texture {
 	struct r600_resource		resource;
 
-	unsigned			size;
+	uint64_t			size;
 	bool				is_depth;
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
 	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */
@@ -227,7 +230,7 @@ struct r600_texture {
 	struct r600_fmask_info		fmask;
 	struct r600_cmask_info		cmask;
 	struct r600_resource		*cmask_buffer;
-	unsigned			dcc_offset; /* 0 = disabled */
+	uint64_t			dcc_offset; /* 0 = disabled */
 	unsigned			cb_color_info; /* fast clear enable bit */
 	unsigned			color_clear_value[2];
 
@@ -509,7 +512,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
                                       unsigned usage);
 bool r600_init_resource(struct r600_common_screen *rscreen,
 			struct r600_resource *res,
-			unsigned size, unsigned alignment,
+			uint64_t size, unsigned alignment,
 			bool use_reusable_pool);
 struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 					 const struct pipe_resource *templ,
