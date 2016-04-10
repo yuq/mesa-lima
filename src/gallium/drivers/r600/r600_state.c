@@ -457,6 +457,7 @@ static void *r600_create_rs_state(struct pipe_context *ctx,
 
 	r600_init_command_buffer(&rs->buffer, 30);
 
+	rs->scissor_enable = state->scissor;
 	rs->flatshade = state->flatshade;
 	rs->sprite_coord_enable = state->sprite_coord_enable;
 	rs->two_side = state->light_twoside;
@@ -501,10 +502,9 @@ static void *r600_create_rs_state(struct pipe_context *ctx,
 	if (rctx->b.chip_class >= R700) {
 		sc_mode_cntl |= S_028A4C_FORCE_EOV_REZ_ENABLE(1) |
 				S_028A4C_R700_ZMM_LINE_OFFSET(1) |
-				S_028A4C_R700_VPORT_SCISSOR_ENABLE(state->scissor);
+				S_028A4C_R700_VPORT_SCISSOR_ENABLE(1);
 	} else {
 		sc_mode_cntl |= S_028A4C_WALK_ALIGN8_PRIM_FITS_ST(1);
-		rs->scissor_enable = state->scissor;
 	}
 
 	spi_interp = S_0286D4_FLAT_SHADE_ENA(1);
@@ -784,61 +784,6 @@ static void r600_emit_clip_state(struct r600_context *rctx, struct r600_atom *at
 static void r600_set_polygon_stipple(struct pipe_context *ctx,
 					 const struct pipe_poly_stipple *state)
 {
-}
-
-static void r600_emit_scissor_state(struct r600_context *rctx, struct r600_atom *atom)
-{
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
-	struct r600_scissor_state *rstate = &rctx->scissor;
-	struct pipe_scissor_state *state;
-	bool do_disable_workaround = false;
-	uint32_t dirty_mask;
-	unsigned i, offset;
-	uint32_t tl, br;
-
-	if (rctx->b.chip_class == R600 && !rctx->scissor.enable) {
-		tl = S_028240_TL_X(0) | S_028240_TL_Y(0) | S_028240_WINDOW_OFFSET_DISABLE(1);
-		br = S_028244_BR_X(8192) | S_028244_BR_Y(8192);
-		do_disable_workaround = true;
-	}
-
-	dirty_mask = rstate->dirty_mask;
-	while (dirty_mask != 0)
-	{
-		i = u_bit_scan(&dirty_mask);
-		offset = i * 4 * 2;
-		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL + offset, 2);
-		if (!do_disable_workaround) {
-			state = &rstate->scissor[i];
-			tl = S_028240_TL_X(state->minx) | S_028240_TL_Y(state->miny) |
-				S_028240_WINDOW_OFFSET_DISABLE(1);
-			br = S_028244_BR_X(state->maxx) | S_028244_BR_Y(state->maxy);
-		}
-		radeon_emit(cs, tl);
-		radeon_emit(cs, br);
-	}
-	rstate->dirty_mask = 0;
-	rstate->atom.num_dw = 0;
-}
-
-static void r600_set_scissor_states(struct pipe_context *ctx,
-                                    unsigned start_slot,
-                                    unsigned num_scissors,
-                                    const struct pipe_scissor_state *state)
-{
-	struct r600_context *rctx = (struct r600_context *)ctx;
-	struct r600_scissor_state *rstate = &rctx->scissor;
-	int i;
-
-	for (i = start_slot ; i < start_slot + num_scissors; i++)
-		rstate->scissor[i] = state[i - start_slot];
-	rstate->dirty_mask |= ((1 << num_scissors) - 1) << start_slot;
-	rstate->atom.num_dw = util_bitcount(rstate->dirty_mask) * 4;
-
-	if (rctx->b.chip_class == R600 && !rstate->enable)
-		return;
-
-	r600_mark_atom_dirty(rctx, &rstate->atom);
 }
 
 static struct r600_resource *r600_buffer_create_helper(struct r600_screen *rscreen,
@@ -2443,12 +2388,6 @@ void r600_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_context_reg(cb, R_028820_PA_CL_NANINF_CNTL, 0);
 	r600_store_context_reg(cb, R_028A48_PA_SC_MPASS_PS_CNTL, 0);
 
-	r600_store_context_reg_seq(cb, R_028C0C_PA_CL_GB_VERT_CLIP_ADJ, 4);
-	r600_store_value(cb, fui(1.0)); /* R_028C0C_PA_CL_GB_VERT_CLIP_ADJ */
-	r600_store_value(cb, fui(1.0)); /* R_028C10_PA_CL_GB_VERT_DISC_ADJ */
-	r600_store_value(cb, fui(1.0)); /* R_028C14_PA_CL_GB_HORZ_CLIP_ADJ */
-	r600_store_value(cb, fui(1.0)); /* R_028C18_PA_CL_GB_HORZ_DISC_ADJ */
-
 	r600_store_context_reg_seq(cb, R_0282D0_PA_SC_VPORT_ZMIN_0, 2 * R600_MAX_VIEWPORTS);
 	for (tmp = 0; tmp < R600_MAX_VIEWPORTS; tmp++) {
 		r600_store_value(cb, 0); /* R_0282D0_PA_SC_VPORT_ZMIN_0 */
@@ -3151,8 +3090,8 @@ void r600_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->dsa_state.atom, id++, r600_emit_cso_state, 0);
 	r600_init_atom(rctx, &rctx->poly_offset_state.atom, id++, r600_emit_polygon_offset, 6);
 	r600_init_atom(rctx, &rctx->rasterizer_state.atom, id++, r600_emit_cso_state, 0);
-	r600_init_atom(rctx, &rctx->scissor.atom, id++, r600_emit_scissor_state, 0);
-	r600_init_atom(rctx, &rctx->viewport.atom, id++, r600_emit_viewport_state, 0);
+	r600_add_atom(rctx, &rctx->b.scissors.atom, id++);
+	r600_add_atom(rctx, &rctx->b.viewports.atom, id++);
 	r600_init_atom(rctx, &rctx->config_state.atom, id++, r600_emit_config_state, 3);
 	r600_init_atom(rctx, &rctx->stencil_ref.atom, id++, r600_emit_stencil_ref, 4);
 	r600_init_atom(rctx, &rctx->vertex_fetch_shader.atom, id++, r600_emit_vertex_fetch_shader, 5);
@@ -3172,7 +3111,6 @@ void r600_init_state_functions(struct r600_context *rctx)
 	rctx->b.b.set_framebuffer_state = r600_set_framebuffer_state;
 	rctx->b.b.set_polygon_stipple = r600_set_polygon_stipple;
 	rctx->b.b.set_min_samples = r600_set_min_samples;
-	rctx->b.b.set_scissor_states = r600_set_scissor_states;
 	rctx->b.b.get_sample_position = r600_get_sample_position;
 	rctx->b.dma_copy = r600_dma_copy;
 }

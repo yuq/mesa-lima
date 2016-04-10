@@ -472,6 +472,7 @@ static void *evergreen_create_rs_state(struct pipe_context *ctx,
 
 	r600_init_command_buffer(&rs->buffer, 30);
 
+	rs->scissor_enable = state->scissor;
 	rs->flatshade = state->flatshade;
 	rs->sprite_coord_enable = state->sprite_coord_enable;
 	rs->two_side = state->light_twoside;
@@ -528,7 +529,7 @@ static void *evergreen_create_rs_state(struct pipe_context *ctx,
 	r600_store_context_reg(&rs->buffer, R_0286D4_SPI_INTERP_CONTROL_0, spi_interp);
 	r600_store_context_reg(&rs->buffer, R_028A48_PA_SC_MODE_CNTL_0,
 			       S_028A48_MSAA_ENABLE(state->multisample) |
-			       S_028A48_VPORT_SCISSOR_ENABLE(state->scissor) |
+			       S_028A48_VPORT_SCISSOR_ENABLE(1) |
 			       S_028A48_LINE_STIPPLE_ENABLE(state->line_stipple_enable));
 
 	if (rctx->b.chip_class == CAYMAN) {
@@ -920,60 +921,12 @@ static void evergreen_get_scissor_rect(struct r600_context *rctx,
 				       unsigned tl_x, unsigned tl_y, unsigned br_x, unsigned br_y,
 				       uint32_t *tl, uint32_t *br)
 {
-	/* EG hw workaround */
-	if (br_x == 0)
-		tl_x = 1;
-	if (br_y == 0)
-		tl_y = 1;
+	struct pipe_scissor_state scissor = {tl_x, tl_y, br_x, br_y};
 
-	/* cayman hw workaround */
-	if (rctx->b.chip_class == CAYMAN) {
-		if (br_x == 1 && br_y == 1)
-			br_x = 2;
-	}
+	evergreen_apply_scissor_bug_workaround(&rctx->b, &scissor);
 
-	*tl = S_028240_TL_X(tl_x) | S_028240_TL_Y(tl_y);
-	*br = S_028244_BR_X(br_x) | S_028244_BR_Y(br_y);
-}
-
-static void evergreen_set_scissor_states(struct pipe_context *ctx,
-                                         unsigned start_slot,
-                                         unsigned num_scissors,
-					const struct pipe_scissor_state *state)
-{
-	struct r600_context *rctx = (struct r600_context *)ctx;
-	struct r600_scissor_state *rstate = &rctx->scissor;
-	int i;
-
-	for (i = start_slot; i < start_slot + num_scissors; i++)
-		rstate->scissor[i] = state[i - start_slot];
-	rstate->dirty_mask |= ((1 << num_scissors) - 1) << start_slot;
-	rstate->atom.num_dw = util_bitcount(rstate->dirty_mask) * 4;
-	r600_mark_atom_dirty(rctx, &rstate->atom);
-}
-
-static void evergreen_emit_scissor_state(struct r600_context *rctx, struct r600_atom *atom)
-{
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
-	struct r600_scissor_state *rstate = &rctx->scissor;
-	struct pipe_scissor_state *state;
-	uint32_t dirty_mask;
-	unsigned i, offset;
-	uint32_t tl, br;
-
-	dirty_mask = rstate->dirty_mask;
-	while (dirty_mask != 0) {
-		i = u_bit_scan(&dirty_mask);
-		state = &rstate->scissor[i];
-		evergreen_get_scissor_rect(rctx, state->minx, state->miny, state->maxx, state->maxy, &tl, &br);
-
-		offset = i * 4 * 2;
-		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL + offset, 2);
-		radeon_emit(cs, tl);
-		radeon_emit(cs, br);
-	}
-	rstate->dirty_mask = 0;
-	rstate->atom.num_dw = 0;
+	*tl = S_028240_TL_X(scissor.minx) | S_028240_TL_Y(scissor.miny);
+	*br = S_028244_BR_X(scissor.maxx) | S_028244_BR_Y(scissor.maxy);
 }
 
 /**
@@ -2484,12 +2437,6 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_context_reg(cb, R_028230_PA_SC_EDGERULE, 0xAAAAAAAA);
 	r600_store_context_reg(cb, R_028820_PA_CL_NANINF_CNTL, 0);
 
-	r600_store_context_reg_seq(cb, CM_R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, 4);
-	r600_store_value(cb, fui(1.0)); /* CM_R_028BE8_PA_CL_GB_VERT_CLIP_ADJ */
-	r600_store_value(cb, fui(1.0)); /* CM_R_028BEC_PA_CL_GB_VERT_DISC_ADJ */
-	r600_store_value(cb, fui(1.0)); /* CM_R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ */
-	r600_store_value(cb, fui(1.0)); /* CM_R_028BF4_PA_CL_GB_HORZ_DISC_ADJ */
-
 	r600_store_context_reg_seq(cb, R_028240_PA_SC_GENERIC_SCISSOR_TL, 2);
 	r600_store_value(cb, 0); /* R_028240_PA_SC_GENERIC_SCISSOR_TL */
 	r600_store_value(cb, S_028244_BR_X(16384) | S_028244_BR_Y(16384)); /* R_028244_PA_SC_GENERIC_SCISSOR_BR */
@@ -2904,12 +2851,6 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_value(cb, 0); /* R_028AC0_DB_SRESULTS_COMPARE_STATE0 */
 	r600_store_value(cb, 0); /* R_028AC4_DB_SRESULTS_COMPARE_STATE1 */
 	r600_store_value(cb, 0); /* R_028AC8_DB_PRELOAD_CONTROL */
-
-	r600_store_context_reg_seq(cb, R_028C0C_PA_CL_GB_VERT_CLIP_ADJ, 4);
-	r600_store_value(cb, fui(1.0)); /* R_028C0C_PA_CL_GB_VERT_CLIP_ADJ */
-	r600_store_value(cb, fui(1.0)); /* R_028C10_PA_CL_GB_VERT_DISC_ADJ */
-	r600_store_value(cb, fui(1.0)); /* R_028C14_PA_CL_GB_HORZ_CLIP_ADJ */
-	r600_store_value(cb, fui(1.0)); /* R_028C18_PA_CL_GB_HORZ_DISC_ADJ */
 
 	r600_store_context_reg_seq(cb, R_028240_PA_SC_GENERIC_SCISSOR_TL, 2);
 	r600_store_value(cb, 0); /* R_028240_PA_SC_GENERIC_SCISSOR_TL */
@@ -3712,8 +3653,8 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->dsa_state.atom, id++, r600_emit_cso_state, 0);
 	r600_init_atom(rctx, &rctx->poly_offset_state.atom, id++, evergreen_emit_polygon_offset, 6);
 	r600_init_atom(rctx, &rctx->rasterizer_state.atom, id++, r600_emit_cso_state, 0);
-	r600_init_atom(rctx, &rctx->scissor.atom, id++, evergreen_emit_scissor_state, 0);
-	r600_init_atom(rctx, &rctx->viewport.atom, id++, r600_emit_viewport_state, 0);
+	r600_add_atom(rctx, &rctx->b.scissors.atom, id++);
+	r600_add_atom(rctx, &rctx->b.viewports.atom, id++);
 	r600_init_atom(rctx, &rctx->stencil_ref.atom, id++, r600_emit_stencil_ref, 4);
 	r600_init_atom(rctx, &rctx->vertex_fetch_shader.atom, id++, evergreen_emit_vertex_fetch_shader, 5);
 	r600_add_atom(rctx, &rctx->b.render_cond_atom, id++);
@@ -3732,7 +3673,6 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	rctx->b.b.set_framebuffer_state = evergreen_set_framebuffer_state;
 	rctx->b.b.set_polygon_stipple = evergreen_set_polygon_stipple;
 	rctx->b.b.set_min_samples = evergreen_set_min_samples;
-	rctx->b.b.set_scissor_states = evergreen_set_scissor_states;
 	rctx->b.b.set_tess_state = evergreen_set_tess_state;
 	if (rctx->b.chip_class == EVERGREEN)
                 rctx->b.b.get_sample_position = evergreen_get_sample_position;

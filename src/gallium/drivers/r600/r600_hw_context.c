@@ -304,12 +304,10 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	r600_mark_atom_dirty(ctx, &ctx->poly_offset_state.atom);
 	r600_mark_atom_dirty(ctx, &ctx->vgt_state.atom);
 	r600_mark_atom_dirty(ctx, &ctx->sample_mask.atom);
-	ctx->scissor.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
-	ctx->scissor.atom.num_dw = R600_MAX_VIEWPORTS * 4;
-	r600_mark_atom_dirty(ctx, &ctx->scissor.atom);
-	ctx->viewport.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
-	ctx->viewport.atom.num_dw = R600_MAX_VIEWPORTS * 8;
-	r600_mark_atom_dirty(ctx, &ctx->viewport.atom);
+	ctx->b.scissors.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
+	r600_mark_atom_dirty(ctx, &ctx->b.scissors.atom);
+	ctx->b.viewports.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
+	r600_mark_atom_dirty(ctx, &ctx->b.viewports.atom);
 	if (ctx->b.chip_class <= EVERGREEN) {
 		r600_mark_atom_dirty(ctx, &ctx->config_state.atom);
 	}
