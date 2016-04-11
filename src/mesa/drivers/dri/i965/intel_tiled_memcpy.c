@@ -85,6 +85,22 @@ rgba8_copy(void *dst, const void *src, size_t bytes)
 #ifdef __SSSE3__
 static const uint8_t rgba8_permutation[16] =
    { 2,1,0,3, 6,5,4,7, 10,9,8,11, 14,13,12,15 };
+
+static inline void
+rgba8_copy_16_aligned_dst(void *dst, const void *src)
+{
+   _mm_store_si128(dst,
+                   _mm_shuffle_epi8(_mm_loadu_si128(src),
+                                    *(__m128i *)rgba8_permutation));
+}
+
+static inline void
+rgba8_copy_16_aligned_src(void *dst, const void *src)
+{
+   _mm_storeu_si128(dst,
+                    _mm_shuffle_epi8(_mm_load_si128(src),
+                                     *(__m128i *)rgba8_permutation));
+}
 #endif
 
 /**
@@ -93,23 +109,18 @@ static const uint8_t rgba8_permutation[16] =
 static inline void *
 rgba8_copy_aligned_dst(void *dst, const void *src, size_t bytes)
 {
-   uint8_t *d = dst;
-   uint8_t const *s = src;
-
    assert(bytes == 0 || !(((uintptr_t)dst) & 0xf));
 
 #ifdef __SSSE3__
    while (bytes >= 16) {
-      _mm_store_si128((__m128i *)d,
-                      _mm_shuffle_epi8(_mm_loadu_si128((__m128i *)s),
-                                       *(__m128i *) rgba8_permutation));
-      s += 16;
-      d += 16;
+      rgba8_copy_16_aligned_dst(dst, src);
+      src += 16;
+      dst += 16;
       bytes -= 16;
    }
 #endif
 
-   rgba8_copy(d, s, bytes);
+   rgba8_copy(dst, src, bytes);
 
    return dst;
 }
@@ -120,23 +131,18 @@ rgba8_copy_aligned_dst(void *dst, const void *src, size_t bytes)
 static inline void *
 rgba8_copy_aligned_src(void *dst, const void *src, size_t bytes)
 {
-   uint8_t *d = dst;
-   uint8_t const *s = src;
-
    assert(bytes == 0 || !(((uintptr_t)src) & 0xf));
 
 #ifdef __SSSE3__
    while (bytes >= 16) {
-      _mm_storeu_si128((__m128i *)d,
-                       _mm_shuffle_epi8(_mm_load_si128((__m128i *)s),
-                                        *(__m128i *) rgba8_permutation));
-      s += 16;
-      d += 16;
+      rgba8_copy_16_aligned_src(dst, src);
+      src += 16;
+      dst += 16;
       bytes -= 16;
    }
 #endif
 
-   rgba8_copy(d, s, bytes);
+   rgba8_copy(dst, src, bytes);
 
    return dst;
 }
