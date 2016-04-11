@@ -122,7 +122,7 @@ public:
    exec_list *acp;
 
    /**
-    * List of kill_entry: The masks of variables whose values were
+    * Hash table of kill_entry: The masks of variables whose values were
     * killed in this block.
     */
    hash_table *kills;
@@ -454,7 +454,7 @@ ir_constant_propagation_visitor::kill(ir_variable *var, unsigned write_mask)
       }
    }
 
-   /* Add this writemask of the variable to the list of killed
+   /* Add this writemask of the variable to the hash table of killed
     * variables in this block.
     */
    hash_entry *kill_hash_entry = _mesa_hash_table_search(this->kills, var);
@@ -463,7 +463,7 @@ ir_constant_propagation_visitor::kill(ir_variable *var, unsigned write_mask)
       entry->write_mask |= write_mask;
       return;
    }
-   /* Not already in the list.  Make new entry. */
+   /* Not already in the hash table.  Make new entry. */
    _mesa_hash_table_insert(this->kills, var,
                            new(this->mem_ctx) kill_entry(var, write_mask));
 }
