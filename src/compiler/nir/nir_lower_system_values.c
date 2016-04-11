@@ -83,7 +83,7 @@ convert_block(nir_block *block, void *void_state)
       case SYSTEM_VALUE_LOCAL_INVOCATION_INDEX: {
          /* From the GLSL man page for gl_LocalInvocationIndex:
           *
-          *    ?The value of gl_LocalInvocationIndex is equal to
+          *    "The value of gl_LocalInvocationIndex is equal to
           *    gl_LocalInvocationID.z * gl_WorkGroupSize.x *
           *    gl_WorkGroupSize.y + gl_LocalInvocationID.y *
           *    gl_WorkGroupSize.x + gl_LocalInvocationID.x"
@@ -91,15 +91,14 @@ convert_block(nir_block *block, void *void_state)
          nir_ssa_def *local_id =
             nir_load_system_value(b, nir_intrinsic_load_local_invocation_id, 0);
 
-         unsigned stride_y = b->shader->info.cs.local_size[0];
-         unsigned stride_z = b->shader->info.cs.local_size[0] *
-                             b->shader->info.cs.local_size[1];
+         nir_ssa_def *size_x = nir_imm_int(b, b->shader->info.cs.local_size[0]);
+         nir_ssa_def *size_y = nir_imm_int(b, b->shader->info.cs.local_size[1]);
 
-         sysval = nir_iadd(b, nir_imul(b, nir_channel(b, local_id, 2),
-                                          nir_imm_int(b, stride_z)),
-                              nir_iadd(b, nir_imul(b, nir_channel(b, local_id, 1),
-                                                      nir_imm_int(b, stride_y)),
-                                          nir_channel(b, local_id, 0)));
+         sysval = nir_imul(b, nir_channel(b, local_id, 2),
+                              nir_imul(b, size_x, size_y));
+         sysval = nir_iadd(b, sysval,
+                              nir_imul(b, nir_channel(b, local_id, 1), size_x));
+         sysval = nir_iadd(b, sysval, nir_channel(b, local_id, 0));
          break;
       }
 
