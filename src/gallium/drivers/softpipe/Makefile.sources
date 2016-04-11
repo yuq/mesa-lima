@@ -1,4 +1,5 @@
 C_SOURCES := \
+	sp_buffer.c \
 	sp_clear.c \
 	sp_clear.h \
 	sp_context.c \

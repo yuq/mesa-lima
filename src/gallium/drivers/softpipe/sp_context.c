@@ -38,6 +38,7 @@
 #include "util/u_pstipple.h"
 #include "util/u_inlines.h"
 #include "tgsi/tgsi_exec.h"
+#include "sp_buffer.h"
 #include "sp_clear.h"
 #include "sp_context.h"
 #include "sp_flush.h"
@@ -203,6 +204,10 @@ softpipe_create_context(struct pipe_screen *screen,
       softpipe->tgsi.image[i] = sp_create_tgsi_image();
    }
 
+   for (i = 0; i < PIPE_SHADER_TYPES; i++) {
+      softpipe->tgsi.buffer[i] = sp_create_tgsi_buffer();
+   }
+
    softpipe->dump_fs = debug_get_bool_option( "SOFTPIPE_DUMP_FS", FALSE );
    softpipe->dump_gs = debug_get_bool_option( "SOFTPIPE_DUMP_GS", FALSE );
 
@@ -287,6 +292,16 @@ softpipe_create_context(struct pipe_screen *screen,
               PIPE_SHADER_GEOMETRY,
               (struct tgsi_image *)
               softpipe->tgsi.image[PIPE_SHADER_GEOMETRY]);
+
+   draw_buffer(softpipe->draw,
+              PIPE_SHADER_VERTEX,
+              (struct tgsi_buffer *)
+              softpipe->tgsi.buffer[PIPE_SHADER_VERTEX]);
+
+   draw_buffer(softpipe->draw,
+              PIPE_SHADER_GEOMETRY,
+              (struct tgsi_buffer *)
+              softpipe->tgsi.buffer[PIPE_SHADER_GEOMETRY]);
 
    if (debug_get_bool_option( "SOFTPIPE_NO_RAST", FALSE ))
       softpipe->no_rast = TRUE;

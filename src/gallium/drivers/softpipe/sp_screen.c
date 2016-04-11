@@ -259,7 +259,6 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
    case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
    case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
-   case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
    case PIPE_CAP_INVALIDATE_BUFFER:
    case PIPE_CAP_GENERATE_MIPMAP:
    case PIPE_CAP_STRING_MARKER:
@@ -272,6 +271,8 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_PCI_FUNCTION:
    case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
       return 0;
+   case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
+      return 4;
    }
    /* should only get here on unhandled cases */
    debug_printf("Unexpected PIPE_CAP %d query\n", param);
