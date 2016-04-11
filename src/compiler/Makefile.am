@@ -61,7 +61,6 @@ EXTRA_DIST += glsl/tests glsl/glcpp/tests glsl/README	\
 	glsl/glsl_parser.yy				\
 	glsl/glcpp/glcpp-lex.l				\
 	glsl/glcpp/glcpp-parse.y			\
-	glsl/Makefile.sources				\
 	SConscript.glsl
 
 TESTS += glsl/glcpp/tests/glcpp-test			\
@@ -321,5 +320,4 @@ EXTRA_DIST += \
 	nir/nir_opcodes_c.py				\
 	nir/nir_opcodes_h.py				\
 	nir/nir_opt_algebraic.py			\
-	nir/tests					\
-	nir/Makefile.sources
+	nir/tests
