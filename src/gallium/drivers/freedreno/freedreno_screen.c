@@ -354,6 +354,16 @@ fd_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 	switch (param) {
 	case PIPE_CAPF_MAX_LINE_WIDTH:
 	case PIPE_CAPF_MAX_LINE_WIDTH_AA:
+		/* NOTE: actual value is 127.0f, but this is working around a deqp
+		 * bug.. dEQP-GLES3.functional.rasterization.primitives.lines_wide
+		 * uses too small of a render target size, and gets confused when
+		 * the lines start going offscreen.
+		 *
+		 * See: https://code.google.com/p/android/issues/detail?id=206513
+		 */
+		if (fd_mesa_debug & FD_DBG_DEQP)
+			return 63.0f;
+		return 127.0f;
 	case PIPE_CAPF_MAX_POINT_WIDTH:
 	case PIPE_CAPF_MAX_POINT_WIDTH_AA:
 		return 4092.0f;
