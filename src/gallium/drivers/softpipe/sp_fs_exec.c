@@ -70,7 +70,7 @@ exec_prepare( const struct sp_fragment_shader_variant *var,
     */
    tgsi_exec_machine_bind_shader(machine,
                                  var->tokens,
-                                 sampler, image);
+                                 sampler, image, NULL);
 }
 
 
@@ -186,7 +186,7 @@ exec_delete(struct sp_fragment_shader_variant *var,
             struct tgsi_exec_machine *machine)
 {
    if (machine->Tokens == var->tokens) {
-      tgsi_exec_machine_bind_shader(machine, NULL, NULL, NULL);
+      tgsi_exec_machine_bind_shader(machine, NULL, NULL, NULL, NULL);
    }
 
    FREE( (void *) var->tokens );

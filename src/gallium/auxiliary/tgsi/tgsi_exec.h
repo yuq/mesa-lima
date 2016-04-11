@@ -138,6 +138,36 @@ struct tgsi_image {
                     int dims[4]);
 };
 
+struct tgsi_buffer_params {
+   unsigned unit;
+   unsigned execmask;
+   unsigned writemask;
+};
+
+struct tgsi_buffer {
+   /* buffer interfaces */
+   void (*load)(const struct tgsi_buffer *buffer,
+                const struct tgsi_buffer_params *params,
+                const int s[TGSI_QUAD_SIZE],
+                float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
+
+   void (*store)(const struct tgsi_buffer *buffer,
+                 const struct tgsi_buffer_params *params,
+                 const int s[TGSI_QUAD_SIZE],
+                 float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
+
+   void (*op)(const struct tgsi_buffer *buffer,
+              const struct tgsi_buffer_params *params,
+              unsigned opcode,
+              const int s[TGSI_QUAD_SIZE],
+              float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE],
+              float rgba2[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
+
+   void (*get_dims)(const struct tgsi_buffer *buffer,
+                    const struct tgsi_buffer_params *params,
+                    int *dim);
+};
+
 /**
  * Information for sampling textures, which must be implemented
  * by code outside the TGSI executor.
@@ -334,6 +364,7 @@ struct tgsi_exec_machine
    struct tgsi_sampler           *Sampler;
 
    struct tgsi_image             *Image;
+   struct tgsi_buffer            *Buffer;
    unsigned                      ImmLimit;
 
    const void *Consts[PIPE_MAX_CONSTANT_BUFFERS];
@@ -424,7 +455,8 @@ tgsi_exec_machine_bind_shader(
    struct tgsi_exec_machine *mach,
    const struct tgsi_token *tokens,
    struct tgsi_sampler *sampler,
-   struct tgsi_image *image);
+   struct tgsi_image *image,
+   struct tgsi_buffer *buffer);
 
 uint
 tgsi_exec_machine_run(
