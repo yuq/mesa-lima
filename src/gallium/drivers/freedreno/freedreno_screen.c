@@ -71,6 +71,7 @@ static const struct debug_named_value debug_options[] = {
 		{"glsl120",   FD_DBG_GLSL120,"Temporary flag to force GLSL 1.20 (rather than 1.30) on a3xx+"},
 		{"shaderdb",  FD_DBG_SHADERDB, "Enable shaderdb output"},
 		{"flush",     FD_DBG_FLUSH,  "Force flush after every draw"},
+		{"deqp",      FD_DBG_DEQP,   "Enable dEQP hacks"},
 		DEBUG_NAMED_VALUE_END
 };
 
