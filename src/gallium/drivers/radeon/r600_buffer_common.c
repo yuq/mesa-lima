@@ -163,6 +163,14 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 		flags |= RADEON_FLAG_NO_CPU_ACCESS;
 	}
 
+	/* If VRAM is just stolen system memory, allow both VRAM and GTT,
+	 * whichever has free space. If a buffer is evicted from VRAM to GTT,
+	 * it will stay there.
+	 */
+	if (!rscreen->info.has_dedicated_vram &&
+	    res->domains == RADEON_DOMAIN_VRAM)
+		res->domains = RADEON_DOMAIN_VRAM_GTT;
+
 	if (rscreen->debug_flags & DBG_NO_WC)
 		flags &= ~RADEON_FLAG_GTT_WC;
 

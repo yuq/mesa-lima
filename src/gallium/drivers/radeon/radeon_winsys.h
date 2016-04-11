@@ -245,6 +245,7 @@ struct radeon_info {
     enum chip_class             chip_class;
     uint64_t                    gart_size;
     uint64_t                    vram_size;
+    bool                        has_dedicated_vram;
     boolean                     has_virtual_memory;
     bool                        gfx_ib_pad_with_type2;
     boolean                     has_sdma;

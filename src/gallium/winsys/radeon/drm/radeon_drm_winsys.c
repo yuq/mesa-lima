@@ -297,6 +297,30 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
         break;
     }
 
+    /* Set which chips don't have dedicated VRAM. */
+    switch (ws->info.family) {
+    case CHIP_RS400:
+    case CHIP_RC410:
+    case CHIP_RS480:
+    case CHIP_RS600:
+    case CHIP_RS690:
+    case CHIP_RS740:
+    case CHIP_RS780:
+    case CHIP_RS880:
+    case CHIP_PALM:
+    case CHIP_SUMO:
+    case CHIP_SUMO2:
+    case CHIP_ARUBA:
+    case CHIP_KAVERI:
+    case CHIP_KABINI:
+    case CHIP_MULLINS:
+       ws->info.has_dedicated_vram = false;
+       break;
+
+    default:
+       ws->info.has_dedicated_vram = true;
+    }
+
     /* Check for dma */
     ws->info.has_sdma = FALSE;
     /* DMA is disabled on R700. There is IB corruption and hangs. */
