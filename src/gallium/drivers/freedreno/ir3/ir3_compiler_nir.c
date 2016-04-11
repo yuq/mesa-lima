@@ -2419,7 +2419,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 		ir3_print(ir);
 	}
 
-	ir3_cp(ir);
+	ir3_cp(ir, so);
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("BEFORE GROUPING:\n");

@@ -34,6 +34,10 @@
  * Copy Propagate:
  */
 
+struct ir3_cp_ctx {
+	struct ir3_shader_variant *so;
+};
+
 /* is it a type preserving mov, with ok flags? */
 static bool is_eligible_mov(struct ir3_instruction *instr, bool allow_flags)
 {
@@ -237,7 +241,8 @@ static void combine_flags(unsigned *dstflags, struct ir3_instruction *src)
  * instruction).
  */
 static void
-reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
+reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
+		struct ir3_register *reg, unsigned n)
 {
 	struct ir3_instruction *src = ssa(reg);
 
@@ -404,7 +409,7 @@ eliminate_output_mov(struct ir3_instruction *instr)
  * the mov dst with the mov src
  */
 static void
-instr_cp(struct ir3_instruction *instr)
+instr_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr)
 {
 	struct ir3_register *reg;
 
@@ -421,7 +426,7 @@ instr_cp(struct ir3_instruction *instr)
 		if (!src)
 			continue;
 
-		instr_cp(src);
+		instr_cp(ctx, src);
 
 		/* TODO non-indirect access we could figure out which register
 		 * we actually want and allow cp..
@@ -429,17 +434,17 @@ instr_cp(struct ir3_instruction *instr)
 		if (reg->flags & IR3_REG_ARRAY)
 			continue;
 
-		reg_cp(instr, reg, n);
+		reg_cp(ctx, instr, reg, n);
 	}
 
 	if (instr->regs[0]->flags & IR3_REG_ARRAY) {
 		struct ir3_instruction *src = ssa(instr->regs[0]);
 		if (src)
-			instr_cp(src);
+			instr_cp(ctx, src);
 	}
 
 	if (instr->address) {
-		instr_cp(instr->address);
+		instr_cp(ctx, instr->address);
 		ir3_instr_set_address(instr, eliminate_output_mov(instr->address));
 	}
 
@@ -476,25 +481,29 @@ instr_cp(struct ir3_instruction *instr)
 }
 
 void
-ir3_cp(struct ir3 *ir)
+ir3_cp(struct ir3 *ir, struct ir3_shader_variant *so)
 {
+	struct ir3_cp_ctx ctx = {
+			.so = so,
+	};
+
 	ir3_clear_mark(ir);
 
 	for (unsigned i = 0; i < ir->noutputs; i++) {
 		if (ir->outputs[i]) {
-			instr_cp(ir->outputs[i]);
+			instr_cp(&ctx, ir->outputs[i]);
 			ir->outputs[i] = eliminate_output_mov(ir->outputs[i]);
 		}
 	}
 
 	for (unsigned i = 0; i < ir->keeps_count; i++) {
-		instr_cp(ir->keeps[i]);
+		instr_cp(&ctx, ir->keeps[i]);
 		ir->keeps[i] = eliminate_output_mov(ir->keeps[i]);
 	}
 
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		if (block->condition) {
-			instr_cp(block->condition);
+			instr_cp(&ctx, block->condition);
 			block->condition = eliminate_output_mov(block->condition);
 		}
 	}
