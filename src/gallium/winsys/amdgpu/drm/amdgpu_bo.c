@@ -469,16 +469,6 @@ amdgpu_bo_create(struct radeon_winsys *rws,
    struct amdgpu_winsys_bo *bo;
    unsigned usage = 0;
 
-   /* Don't use VRAM if the GPU doesn't have much. This is only the initial
-    * domain. The kernel is free to move the buffer if it wants to.
-    *
-    * 64MB means no VRAM by todays standards.
-    */
-   if (domain & RADEON_DOMAIN_VRAM && ws->info.vram_size <= 64*1024*1024) {
-      domain = RADEON_DOMAIN_GTT;
-      flags = RADEON_FLAG_GTT_WC;
-   }
-
    /* Align size to page size. This is the minimum alignment for normal
     * BOs. Aligning this here helps the cached bufmgr. Especially small BOs,
     * like constant/uniform buffers, can benefit from better and more reuse.
