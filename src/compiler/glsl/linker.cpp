@@ -3575,13 +3575,52 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
                     const char *name, const glsl_type *type,
                     bool use_implicit_location, int location)
 {
-   gl_shader_variable *sha_v =
-      create_shader_variable(shProg, var, name, type,
-                             use_implicit_location, location);
-   if (!sha_v)
-      return false;
+   const bool vertex_input_slots =
+      programInterface == GL_PROGRAM_INPUT &&
+      stage_mask == MESA_SHADER_VERTEX;
 
-   return add_program_resource(shProg, programInterface, sha_v, stage_mask);
+   switch (type->base_type) {
+   case GLSL_TYPE_STRUCT: {
+      /* From the ARB_program_interface_query specification:
+       *
+       *  "For an active variable declared as a structure, a separate entry
+       *   will be generated for each active structure member.  The name of
+       *   each entry is formed by concatenating the name of the structure,
+       *   the "."  character, and the name of the structure member.  If a
+       *   structure member to enumerate is itself a structure or array, these
+       *   enumeration rules are applied recursively."
+       */
+      unsigned field_location = location;
+      for (unsigned i = 0; i < type->length; i++) {
+         const struct glsl_struct_field *field = &type->fields.structure[i];
+         char *field_name = ralloc_asprintf(shProg, "%s.%s", name, field->name);
+         if (!add_shader_variable(shProg, stage_mask, programInterface,
+                                  var, field_name, field->type,
+                                  use_implicit_location, field_location))
+            return false;
+
+         field_location +=
+            field->type->count_attribute_slots(vertex_input_slots);
+      }
+      return true;
+   }
+
+   default: {
+      /* From the ARB_program_interface_query specification:
+       *
+       *  "For an active variable declared as a single instance of a basic
+       *   type, a single entry will be generated, using the variable name
+       *   from the shader source."
+       */
+      gl_shader_variable *sha_v =
+         create_shader_variable(shProg, var, name, type,
+                                use_implicit_location, location);
+      if (!sha_v)
+         return false;
+
+      return add_program_resource(shProg, programInterface, sha_v, stage_mask);
+   }
+   }
 }
 
 static bool
