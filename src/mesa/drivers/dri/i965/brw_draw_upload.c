@@ -242,6 +242,86 @@ double_types(struct brw_context *brw,
            : double_types_float[size]);
 }
 
+static bool
+is_passthru_format(uint32_t format)
+{
+   switch (format) {
+   case BRW_SURFACEFORMAT_R64_PASSTHRU:
+   case BRW_SURFACEFORMAT_R64G64_PASSTHRU:
+   case BRW_SURFACEFORMAT_R64G64B64_PASSTHRU:
+   case BRW_SURFACEFORMAT_R64G64B64A64_PASSTHRU:
+      return true;
+   default:
+      return false;
+   }
+}
+
+static int
+uploads_needed(uint32_t format)
+{
+   if (!is_passthru_format(format))
+      return 1;
+
+   switch (format) {
+   case BRW_SURFACEFORMAT_R64_PASSTHRU:
+   case BRW_SURFACEFORMAT_R64G64_PASSTHRU:
+      return 1;
+   case BRW_SURFACEFORMAT_R64G64B64_PASSTHRU:
+   case BRW_SURFACEFORMAT_R64G64B64A64_PASSTHRU:
+      return 2;
+   default:
+      unreachable("not reached");
+   }
+}
+
+/*
+ * Returns the number of componentes associated with a format that is used on
+ * a 64 to 32 format split. See downsize_format()
+ */
+static int
+upload_format_size(uint32_t upload_format)
+{
+   switch (upload_format) {
+   case BRW_SURFACEFORMAT_R32G32_FLOAT:
+      return 2;
+   case BRW_SURFACEFORMAT_R32G32B32A32_FLOAT:
+      return 4;
+   default:
+      unreachable("not reached");
+   }
+}
+
+/*
+ * Returns the format that we are finally going to use when upload a vertex
+ * element. It will only change if we are using *64*PASSTHRU formats, as for
+ * gen < 8 they need to be splitted on two *32*FLOAT formats.
+ *
+ * @upload points in which upload we are. Valid values are [0,1]
+ */
+static uint32_t
+downsize_format_if_needed(uint32_t format,
+                          int upload)
+{
+   assert(upload == 0 || upload == 1);
+
+   if (!is_passthru_format(format))
+      return format;
+
+   switch (format) {
+   case BRW_SURFACEFORMAT_R64_PASSTHRU:
+      return BRW_SURFACEFORMAT_R32G32_FLOAT;
+   case BRW_SURFACEFORMAT_R64G64_PASSTHRU:
+      return BRW_SURFACEFORMAT_R32G32B32A32_FLOAT;
+   case BRW_SURFACEFORMAT_R64G64B64_PASSTHRU:
+      return !upload ? BRW_SURFACEFORMAT_R32G32B32A32_FLOAT
+                     : BRW_SURFACEFORMAT_R32G32_FLOAT;
+   case BRW_SURFACEFORMAT_R64G64B64A64_PASSTHRU:
+      return BRW_SURFACEFORMAT_R32G32B32A32_FLOAT;
+   default:
+      unreachable("not reached");
+   }
+}
+
 /**
  * Given vertex array type/size/format/normalized info, return
  * the appopriate hardware surface type.
@@ -805,6 +885,18 @@ brw_emit_vertices(struct brw_context *brw)
    if (vs_prog_data->uses_drawid)
       nr_elements++;
 
+   /* If any of the formats of vb.enabled needs more that one upload, we need
+    * to add it to nr_elements */
+   unsigned extra_uploads = 0;
+   for (unsigned i = 0; i < brw->vb.nr_enabled; i++) {
+      struct brw_vertex_element *input = brw->vb.enabled[i];
+      uint32_t format = brw_get_vertex_surface_type(brw, input->glarray);
+
+      if (uploads_needed(format) > 1)
+         extra_uploads++;
+   }
+   nr_elements += extra_uploads;
+
    /* If the VS doesn't read any inputs (calculating vertex position from
     * a state variable for some reason, for example), emit a single pad
     * VERTEX_ELEMENT struct and bail.
@@ -908,6 +1000,10 @@ brw_emit_vertices(struct brw_context *brw)
       uint32_t comp1 = BRW_VE1_COMPONENT_STORE_SRC;
       uint32_t comp2 = BRW_VE1_COMPONENT_STORE_SRC;
       uint32_t comp3 = BRW_VE1_COMPONENT_STORE_SRC;
+      unsigned num_uploads = 1;
+      unsigned c;
+
+      num_uploads = uploads_needed(format);
 
       if (input == &brw->vb.inputs[VERT_ATTRIB_EDGEFLAG]) {
          /* Gen6+ passes edgeflag as sideband along with the vertex, instead
@@ -920,38 +1016,51 @@ brw_emit_vertices(struct brw_context *brw)
          }
       }
 
-      switch (input->glarray->Size) {
-      case 0: comp0 = BRW_VE1_COMPONENT_STORE_0;
-      case 1: comp1 = BRW_VE1_COMPONENT_STORE_0;
-      case 2: comp2 = BRW_VE1_COMPONENT_STORE_0;
-      case 3: comp3 = input->glarray->Integer ? BRW_VE1_COMPONENT_STORE_1_INT
-                                              : BRW_VE1_COMPONENT_STORE_1_FLT;
-	 break;
-      }
+      for (c = 0; c < num_uploads; c++) {
+         uint32_t upload_format = downsize_format_if_needed(format, c);
+         /* If we need more that one upload, the offset stride would be 128
+          * bits (16 bytes), as for previous uploads we are using the full
+          * entry. */
+         unsigned int offset = input->offset + c * 16;
+         int size = input->glarray->Size;
 
-      if (brw->gen >= 6) {
-	 OUT_BATCH((input->buffer << GEN6_VE0_INDEX_SHIFT) |
-		   GEN6_VE0_VALID |
-		   (format << BRW_VE0_FORMAT_SHIFT) |
-		   (input->offset << BRW_VE0_SRC_OFFSET_SHIFT));
-      } else {
-	 OUT_BATCH((input->buffer << BRW_VE0_INDEX_SHIFT) |
-		   BRW_VE0_VALID |
-		   (format << BRW_VE0_FORMAT_SHIFT) |
-		   (input->offset << BRW_VE0_SRC_OFFSET_SHIFT));
-      }
+         if (is_passthru_format(format))
+            size = upload_format_size(upload_format);
 
-      if (brw->gen >= 5)
-          OUT_BATCH((comp0 << BRW_VE1_COMPONENT_0_SHIFT) |
-                    (comp1 << BRW_VE1_COMPONENT_1_SHIFT) |
-                    (comp2 << BRW_VE1_COMPONENT_2_SHIFT) |
-                    (comp3 << BRW_VE1_COMPONENT_3_SHIFT));
-      else
-          OUT_BATCH((comp0 << BRW_VE1_COMPONENT_0_SHIFT) |
-                    (comp1 << BRW_VE1_COMPONENT_1_SHIFT) |
-                    (comp2 << BRW_VE1_COMPONENT_2_SHIFT) |
-                    (comp3 << BRW_VE1_COMPONENT_3_SHIFT) |
-                    ((i * 4) << BRW_VE1_DST_OFFSET_SHIFT));
+         switch (size) {
+         case 0: comp0 = BRW_VE1_COMPONENT_STORE_0;
+         case 1: comp1 = BRW_VE1_COMPONENT_STORE_0;
+         case 2: comp2 = BRW_VE1_COMPONENT_STORE_0;
+         case 3: comp3 = input->glarray->Integer
+                         ? BRW_VE1_COMPONENT_STORE_1_INT
+                         : BRW_VE1_COMPONENT_STORE_1_FLT;
+            break;
+         }
+
+         if (brw->gen >= 6) {
+            OUT_BATCH((input->buffer << GEN6_VE0_INDEX_SHIFT) |
+                      GEN6_VE0_VALID |
+                      (upload_format << BRW_VE0_FORMAT_SHIFT) |
+                      (offset << BRW_VE0_SRC_OFFSET_SHIFT));
+         } else {
+            OUT_BATCH((input->buffer << BRW_VE0_INDEX_SHIFT) |
+                      BRW_VE0_VALID |
+                      (upload_format << BRW_VE0_FORMAT_SHIFT) |
+                      (offset << BRW_VE0_SRC_OFFSET_SHIFT));
+         }
+
+         if (brw->gen >= 5)
+            OUT_BATCH((comp0 << BRW_VE1_COMPONENT_0_SHIFT) |
+                      (comp1 << BRW_VE1_COMPONENT_1_SHIFT) |
+                      (comp2 << BRW_VE1_COMPONENT_2_SHIFT) |
+                      (comp3 << BRW_VE1_COMPONENT_3_SHIFT));
+         else
+            OUT_BATCH((comp0 << BRW_VE1_COMPONENT_0_SHIFT) |
+                      (comp1 << BRW_VE1_COMPONENT_1_SHIFT) |
+                      (comp2 << BRW_VE1_COMPONENT_2_SHIFT) |
+                      (comp3 << BRW_VE1_COMPONENT_3_SHIFT) |
+                      ((i * 4) << BRW_VE1_DST_OFFSET_SHIFT));
+      }
    }
 
    if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid ||
