@@ -5,6 +5,7 @@
 #include "main/bufferobj.h"
 #include "main/context.h"
 #include "main/formats.h"
+#include "main/glformats.h"
 #include "main/image.h"
 #include "main/pbo.h"
 #include "main/renderbuffer.h"
@@ -510,10 +511,96 @@ intel_get_tex_sub_image(struct gl_context *ctx,
    DBG("%s - DONE\n", __func__);
 }
 
+static void
+flush_astc_denorms(struct gl_context *ctx, GLuint dims,
+                   struct gl_texture_image *texImage,
+                   GLint xoffset, GLint yoffset, GLint zoffset,
+                   GLsizei width, GLsizei height, GLsizei depth)
+{
+   struct compressed_pixelstore store;
+   _mesa_compute_compressed_pixelstore(dims, texImage->TexFormat,
+                                       width, height, depth,
+                                       &ctx->Unpack, &store);
+
+   for (int slice = 0; slice < store.CopySlices; slice++) {
+
+      /* Map dest texture buffer */
+      GLubyte *dstMap;
+      GLint dstRowStride;
+      ctx->Driver.MapTextureImage(ctx, texImage, slice + zoffset,
+                                  xoffset, yoffset, width, height,
+                                  GL_MAP_READ_BIT | GL_MAP_WRITE_BIT,
+                                  &dstMap, &dstRowStride);
+      if (!dstMap)
+         continue;
+
+      for (int i = 0; i < store.CopyRowsPerSlice; i++) {
+
+         /* An ASTC block is stored in little endian mode. The byte that
+          * contains bits 0..7 is stored at the lower address in memory.
+          */
+         struct astc_void_extent {
+            uint16_t header : 12;
+            uint16_t dontcare[3];
+            uint16_t R;
+            uint16_t G;
+            uint16_t B;
+            uint16_t A;
+         } *blocks = (struct astc_void_extent*) dstMap;
+
+         /* Iterate over every copied block in the row */
+         for (int j = 0; j < store.CopyBytesPerRow / 16; j++) {
+
+            /* Check if the header matches that of an LDR void-extent block */
+            if (blocks[j].header == 0xDFC) {
+
+               /* Flush UNORM16 values that would be denormalized */
+               if (blocks[j].A < 4) blocks[j].A = 0;
+               if (blocks[j].B < 4) blocks[j].B = 0;
+               if (blocks[j].G < 4) blocks[j].G = 0;
+               if (blocks[j].R < 4) blocks[j].R = 0;
+            }
+         }
+
+         dstMap += dstRowStride;
+      }
+
+      ctx->Driver.UnmapTextureImage(ctx, texImage, slice + zoffset);
+   }
+}
+
+
+static void
+intelCompressedTexSubImage(struct gl_context *ctx, GLuint dims,
+                        struct gl_texture_image *texImage,
+                        GLint xoffset, GLint yoffset, GLint zoffset,
+                        GLsizei width, GLsizei height, GLsizei depth,
+                        GLenum format,
+                        GLsizei imageSize, const GLvoid *data)
+{
+   /* Upload the compressed data blocks */
+   _mesa_store_compressed_texsubimage(ctx, dims, texImage,
+                                      xoffset, yoffset, zoffset,
+                                      width, height, depth,
+                                      format, imageSize, data);
+
+   /* Fix up copied ASTC blocks if necessary */
+   GLenum gl_format = _mesa_compressed_format_to_glenum(ctx,
+                                                        texImage->TexFormat);
+   bool is_linear_astc = _mesa_is_astc_format(gl_format) &&
+                        !_mesa_is_srgb_format(gl_format);
+   struct brw_context *brw = (struct brw_context*) ctx;
+   if (brw->gen == 9 && is_linear_astc)
+      flush_astc_denorms(ctx, dims, texImage,
+                         xoffset, yoffset, zoffset,
+                         width, height, depth);
+}
+
 void
 intelInitTextureImageFuncs(struct dd_function_table *functions)
 {
    functions->TexImage = intelTexImage;
+   functions->CompressedTexSubImage = intelCompressedTexSubImage;
    functions->EGLImageTargetTexture2D = intel_image_target_texture_2d;
    functions->BindRenderbufferTexImage = intel_bind_renderbuffer_tex_image;
    functions->GetTexSubImage = intel_get_tex_sub_image;
