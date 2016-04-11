@@ -379,8 +379,13 @@ gen8_blorp_emit_ps_config(struct brw_context *brw,
 
    dw6 |= GEN7_PS_16_DISPATCH_ENABLE;
 
-   dw3 |= 1 << GEN7_PS_SAMPLER_COUNT_SHIFT; /* Up to 4 samplers */
-   dw3 |= 2 << GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT; /* Two surfaces */
+   if (params->src.mt) {
+      dw3 |= 1 << GEN7_PS_SAMPLER_COUNT_SHIFT; /* Up to 4 samplers */
+      dw3 |= 2 << GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT; /* Two surfaces */
+   } else {
+      dw3 |= 1 << GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT; /* One surface */
+   }
+
    dw6 |= GEN7_PS_PUSH_CONSTANT_ENABLE;
    dw7 |= prog_data->first_curbe_grf << GEN7_PS_DISPATCH_START_GRF_SHIFT_0;
 
@@ -663,9 +668,12 @@ gen8_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
                                          _3DSTATE_BINDING_TABLE_POINTERS_GS);
 
    gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
-   const uint32_t sampler_offset =
-      gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
-   gen7_blorp_emit_sampler_state_pointers_ps(brw, sampler_offset);
+
+   if (params->src.mt) {
+      const uint32_t sampler_offset =
+         gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
+      gen7_blorp_emit_sampler_state_pointers_ps(brw, sampler_offset);
+   }
 
    gen8_emit_3dstate_multisample(brw, params->dst.num_samples);
    gen6_emit_3dstate_sample_mask(brw,

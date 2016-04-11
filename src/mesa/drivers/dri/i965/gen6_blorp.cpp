@@ -692,11 +692,14 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
    dw6 |= 0 << GEN6_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT; /* No interp */
    dw6 |= 0 << GEN6_WM_NUM_SF_OUTPUTS_SHIFT; /* No inputs from SF */
    if (params->use_wm_prog) {
-      dw2 |= 1 << GEN6_WM_SAMPLER_COUNT_SHIFT; /* Up to 4 samplers */
       dw4 |= prog_data->first_curbe_grf << GEN6_WM_DISPATCH_START_GRF_SHIFT_0;
       dw5 |= GEN6_WM_16_DISPATCH_ENABLE;
-      dw5 |= GEN6_WM_KILL_ENABLE; /* TODO: temporarily smash on */
       dw5 |= GEN6_WM_DISPATCH_ENABLE; /* We are rendering */
+   }
+
+   if (params->src.mt) {
+      dw5 |= GEN6_WM_KILL_ENABLE; /* TODO: temporarily smash on */
+      dw2 |= 1 << GEN6_WM_SAMPLER_COUNT_SHIFT; /* Up to 4 samplers */
    }
 
    if (params->dst.num_samples > 1) {
@@ -1044,7 +1047,6 @@ gen6_blorp_exec(struct brw_context *brw,
    if (params->use_wm_prog) {
       uint32_t wm_surf_offset_renderbuffer;
       uint32_t wm_surf_offset_texture = 0;
-      uint32_t sampler_offset;
       wm_push_const_offset = gen6_blorp_emit_wm_constants(brw, params);
       intel_miptree_used_for_rendering(params->dst.mt);
       wm_surf_offset_renderbuffer =
@@ -1060,7 +1062,10 @@ gen6_blorp_exec(struct brw_context *brw,
          gen6_blorp_emit_binding_table(brw,
                                        wm_surf_offset_renderbuffer,
                                        wm_surf_offset_texture);
-      sampler_offset =
+   }
+
+   if (params->src.mt) {
+      const uint32_t sampler_offset =
          gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
       gen6_blorp_emit_sampler_state_pointers(brw, sampler_offset);
    }
