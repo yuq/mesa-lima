@@ -5192,43 +5192,72 @@ struct st_translate {
 };
 
 /** Map Mesa's SYSTEM_VALUE_x to TGSI_SEMANTIC_x */
-const unsigned _mesa_sysval_to_semantic[SYSTEM_VALUE_MAX] = {
-   /* Vertex shader
-    */
-   TGSI_SEMANTIC_VERTEXID,
-   TGSI_SEMANTIC_INSTANCEID,
-   TGSI_SEMANTIC_VERTEXID_NOBASE,
-   TGSI_SEMANTIC_BASEVERTEX,
-   TGSI_SEMANTIC_BASEINSTANCE,
-   TGSI_SEMANTIC_DRAWID,
+unsigned
+_mesa_sysval_to_semantic(unsigned sysval)
+{
+   switch (sysval) {
+   /* Vertex shader */
+   case SYSTEM_VALUE_VERTEX_ID:
+      return TGSI_SEMANTIC_VERTEXID;
+   case SYSTEM_VALUE_INSTANCE_ID:
+      return TGSI_SEMANTIC_INSTANCEID;
+   case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
+      return TGSI_SEMANTIC_VERTEXID_NOBASE;
+   case SYSTEM_VALUE_BASE_VERTEX:
+      return TGSI_SEMANTIC_BASEVERTEX;
+   case SYSTEM_VALUE_BASE_INSTANCE:
+      return TGSI_SEMANTIC_BASEINSTANCE;
+   case SYSTEM_VALUE_DRAW_ID:
+      return TGSI_SEMANTIC_DRAWID;
 
-   /* Geometry shader
-    */
-   TGSI_SEMANTIC_INVOCATIONID,
+   /* Geometry shader */
+   case SYSTEM_VALUE_INVOCATION_ID:
+      return TGSI_SEMANTIC_INVOCATIONID;
 
-   /* Fragment shader
-    */
-   TGSI_SEMANTIC_POSITION,
-   TGSI_SEMANTIC_FACE,
-   TGSI_SEMANTIC_SAMPLEID,
-   TGSI_SEMANTIC_SAMPLEPOS,
-   TGSI_SEMANTIC_SAMPLEMASK,
-   TGSI_SEMANTIC_HELPER_INVOCATION,
+   /* Fragment shader */
+   case SYSTEM_VALUE_FRAG_COORD:
+      return TGSI_SEMANTIC_POSITION;
+   case SYSTEM_VALUE_FRONT_FACE:
+      return TGSI_SEMANTIC_FACE;
+   case SYSTEM_VALUE_SAMPLE_ID:
+      return TGSI_SEMANTIC_SAMPLEID;
+   case SYSTEM_VALUE_SAMPLE_POS:
+      return TGSI_SEMANTIC_SAMPLEPOS;
+   case SYSTEM_VALUE_SAMPLE_MASK_IN:
+      return TGSI_SEMANTIC_SAMPLEMASK;
+   case SYSTEM_VALUE_HELPER_INVOCATION:
+      return TGSI_SEMANTIC_HELPER_INVOCATION;
 
-   /* Tessellation shaders
-    */
-   TGSI_SEMANTIC_TESSCOORD,
-   TGSI_SEMANTIC_VERTICESIN,
-   TGSI_SEMANTIC_PRIMID,
-   TGSI_SEMANTIC_TESSOUTER,
-   TGSI_SEMANTIC_TESSINNER,
+   /* Tessellation shader */
+   case SYSTEM_VALUE_TESS_COORD:
+      return TGSI_SEMANTIC_TESSCOORD;
+   case SYSTEM_VALUE_VERTICES_IN:
+      return TGSI_SEMANTIC_VERTICESIN;
+   case SYSTEM_VALUE_PRIMITIVE_ID:
+      return TGSI_SEMANTIC_PRIMID;
+   case SYSTEM_VALUE_TESS_LEVEL_OUTER:
+      return TGSI_SEMANTIC_TESSOUTER;
+   case SYSTEM_VALUE_TESS_LEVEL_INNER:
+      return TGSI_SEMANTIC_TESSINNER;
 
-   /* Compute shaders
-    */
-   TGSI_SEMANTIC_THREAD_ID,
-   TGSI_SEMANTIC_BLOCK_ID,
-   TGSI_SEMANTIC_GRID_SIZE,
-};
+   /* Compute shader */
+   case SYSTEM_VALUE_LOCAL_INVOCATION_ID:
+      return TGSI_SEMANTIC_THREAD_ID;
+   case SYSTEM_VALUE_WORK_GROUP_ID:
+      return TGSI_SEMANTIC_BLOCK_ID;
+   case SYSTEM_VALUE_NUM_WORK_GROUPS:
+      return TGSI_SEMANTIC_GRID_SIZE;
+
+   /* Unhandled */
+   case SYSTEM_VALUE_LOCAL_INVOCATION_INDEX:
+   case SYSTEM_VALUE_GLOBAL_INVOCATION_ID:
+   case SYSTEM_VALUE_VERTEX_CNT:
+   default:
+      assert(!"Unexpected SYSTEM_VALUE_ enum");
+      return TGSI_SEMANTIC_COUNT;
+   }
+}
+
 
 /**
  * Make note of a branch to a label in the TGSI code.
@@ -6000,35 +6029,6 @@ st_translate_program(
    assert(numInputs <= ARRAY_SIZE(t->inputs));
    assert(numOutputs <= ARRAY_SIZE(t->outputs));
 
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_FRONT_FACE] ==
-          TGSI_SEMANTIC_FACE);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_VERTEX_ID] ==
-          TGSI_SEMANTIC_VERTEXID);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_INSTANCE_ID] ==
-          TGSI_SEMANTIC_INSTANCEID);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_SAMPLE_ID] ==
-          TGSI_SEMANTIC_SAMPLEID);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_SAMPLE_POS] ==
-          TGSI_SEMANTIC_SAMPLEPOS);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_SAMPLE_MASK_IN] ==
-          TGSI_SEMANTIC_SAMPLEMASK);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_INVOCATION_ID] ==
-          TGSI_SEMANTIC_INVOCATIONID);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE] ==
-          TGSI_SEMANTIC_VERTEXID_NOBASE);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_BASE_VERTEX] ==
-          TGSI_SEMANTIC_BASEVERTEX);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_TESS_COORD] ==
-          TGSI_SEMANTIC_TESSCOORD);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_HELPER_INVOCATION] ==
-          TGSI_SEMANTIC_HELPER_INVOCATION);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_LOCAL_INVOCATION_ID] ==
-          TGSI_SEMANTIC_THREAD_ID);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_WORK_GROUP_ID] ==
-          TGSI_SEMANTIC_BLOCK_ID);
-   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_NUM_WORK_GROUPS] ==
-          TGSI_SEMANTIC_GRID_SIZE);
-
    t = CALLOC_STRUCT(st_translate);
    if (!t) {
       ret = PIPE_ERROR_OUT_OF_MEMORY;
@@ -6215,7 +6215,7 @@ st_translate_program(
 
       for (i = 0; sysInputs; i++) {
          if (sysInputs & (1 << i)) {
-            unsigned semName = _mesa_sysval_to_semantic[i];
+            unsigned semName = _mesa_sysval_to_semantic(i);
 
             t->systemValues[i] = ureg_DECL_system_value(ureg, semName, 0);
 
