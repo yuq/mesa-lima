@@ -3162,8 +3162,12 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 				     const struct pipe_sampler_state *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct r600_common_screen *rscreen = sctx->b.screen;
 	struct si_sampler_state *rstate = CALLOC_STRUCT(si_sampler_state);
 	unsigned border_color_type, border_color_index = 0;
+	unsigned max_aniso = rscreen->force_aniso >= 0 ? rscreen->force_aniso
+						       : state->max_anisotropy;
+	unsigned max_aniso_ratio = r600_tex_aniso_filter(max_aniso);
 
 	if (!rstate) {
 		return NULL;
@@ -3221,7 +3225,7 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 	rstate->val[0] = (S_008F30_CLAMP_X(si_tex_wrap(state->wrap_s)) |
 			  S_008F30_CLAMP_Y(si_tex_wrap(state->wrap_t)) |
 			  S_008F30_CLAMP_Z(si_tex_wrap(state->wrap_r)) |
-			  S_008F30_MAX_ANISO_RATIO(r600_tex_aniso_filter(state->max_anisotropy)) |
+			  S_008F30_MAX_ANISO_RATIO(max_aniso_ratio) |
 			  S_008F30_DEPTH_COMPARE_FUNC(si_tex_compare(state->compare_func)) |
 			  S_008F30_FORCE_UNNORMALIZED(!state->normalized_coords) |
 			  S_008F30_DISABLE_CUBE_WRAP(!state->seamless_cube_map) |
@@ -3229,8 +3233,8 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 	rstate->val[1] = (S_008F34_MIN_LOD(S_FIXED(CLAMP(state->min_lod, 0, 15), 8)) |
 			  S_008F34_MAX_LOD(S_FIXED(CLAMP(state->max_lod, 0, 15), 8)));
 	rstate->val[2] = (S_008F38_LOD_BIAS(S_FIXED(CLAMP(state->lod_bias, -16, 16), 8)) |
-			  S_008F38_XY_MAG_FILTER(eg_tex_filter(state->mag_img_filter, state->max_anisotropy)) |
-			  S_008F38_XY_MIN_FILTER(eg_tex_filter(state->min_img_filter, state->max_anisotropy)) |
+			  S_008F38_XY_MAG_FILTER(eg_tex_filter(state->mag_img_filter, max_aniso)) |
+			  S_008F38_XY_MIN_FILTER(eg_tex_filter(state->min_img_filter, max_aniso)) |
 			  S_008F38_MIP_FILTER(si_tex_mipfilter(state->min_mip_filter)) |
 			  S_008F38_MIP_POINT_PRECLAMP(1) |
 			  S_008F38_DISABLE_LSB_CEIL(1) |

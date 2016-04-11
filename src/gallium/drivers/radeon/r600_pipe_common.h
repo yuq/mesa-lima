@@ -306,6 +306,9 @@ struct r600_common_screen {
 	bool				has_cp_dma;
 	bool				has_streamout;
 
+	/* Texture filter settings. */
+	int				force_aniso; /* -1 = disabled */
+
 	/* Auxiliary context. Mainly used to initialize resources.
 	 * It must be locked prior to using and flushed before unlocking. */
 	struct pipe_context		*aux_context;

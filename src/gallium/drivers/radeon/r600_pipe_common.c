@@ -889,6 +889,13 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->chip_class = rscreen->info.chip_class;
 	rscreen->debug_flags = debug_get_flags_option("R600_DEBUG", common_debug_options, 0);
 
+	rscreen->force_aniso = MIN2(16, debug_get_num_option("R600_TEX_ANISO", -1));
+	if (rscreen->force_aniso >= 0) {
+		printf("radeon: Forcing anisotropy filter to %ix\n",
+		       /* round down to a power of two */
+		       1 << util_logbase2(rscreen->force_aniso));
+	}
+
 	util_format_s3tc_init();
 	pipe_mutex_init(rscreen->aux_context_lock);
 	pipe_mutex_init(rscreen->gpu_load_mutex);

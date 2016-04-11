@@ -571,7 +571,11 @@ static unsigned r600_tex_filter(unsigned filter, unsigned max_aniso)
 static void *r600_create_sampler_state(struct pipe_context *ctx,
 					const struct pipe_sampler_state *state)
 {
+	struct r600_common_screen *rscreen = (struct r600_common_screen*)ctx->screen;
 	struct r600_pipe_sampler_state *ss = CALLOC_STRUCT(r600_pipe_sampler_state);
+	unsigned max_aniso = rscreen->force_aniso >= 0 ? rscreen->force_aniso
+						       : state->max_anisotropy;
+	unsigned max_aniso_ratio = r600_tex_aniso_filter(max_aniso);
 
 	if (!ss) {
 		return NULL;
@@ -585,10 +589,10 @@ static void *r600_create_sampler_state(struct pipe_context *ctx,
 		S_03C000_CLAMP_X(r600_tex_wrap(state->wrap_s)) |
 		S_03C000_CLAMP_Y(r600_tex_wrap(state->wrap_t)) |
 		S_03C000_CLAMP_Z(r600_tex_wrap(state->wrap_r)) |
-		S_03C000_XY_MAG_FILTER(r600_tex_filter(state->mag_img_filter, state->max_anisotropy)) |
-		S_03C000_XY_MIN_FILTER(r600_tex_filter(state->min_img_filter, state->max_anisotropy)) |
+		S_03C000_XY_MAG_FILTER(r600_tex_filter(state->mag_img_filter, max_aniso)) |
+		S_03C000_XY_MIN_FILTER(r600_tex_filter(state->min_img_filter, max_aniso)) |
 		S_03C000_MIP_FILTER(r600_tex_mipfilter(state->min_mip_filter)) |
-		S_03C000_MAX_ANISO_RATIO(r600_tex_aniso_filter(state->max_anisotropy)) |
+		S_03C000_MAX_ANISO_RATIO(max_aniso_ratio) |
 		S_03C000_DEPTH_COMPARE_FUNCTION(r600_tex_compare(state->compare_func)) |
 		S_03C000_BORDER_COLOR_TYPE(ss->border_color_use ? V_03C000_SQ_TEX_BORDER_COLOR_REGISTER : 0);
 	/* R_03C004_SQ_TEX_SAMPLER_WORD1_0 */
