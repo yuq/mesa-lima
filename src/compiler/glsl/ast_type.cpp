@@ -581,6 +581,91 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
    return true;
 }
 
+/**
+ * Check if the current type qualifier has any illegal flags.
+ *
+ * If so, print an error message, followed by a list of illegal flags.
+ *
+ * \param message        The error message to print.
+ * \param allowed_flags  A list of valid flags.
+ */
+bool
+ast_type_qualifier::validate_flags(YYLTYPE *loc,
+                                   _mesa_glsl_parse_state *state,
+                                   const char *message,
+                                   const ast_type_qualifier &allowed_flags)
+{
+   ast_type_qualifier bad;
+   bad.flags.i = this->flags.i & ~allowed_flags.flags.i;
+   if (bad.flags.i == 0)
+      return true;
+
+   _mesa_glsl_error(loc, state,
+                    "%s:"
+                    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+                    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+                    "%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+                    message,
+                    bad.flags.q.invariant ? " invariant" : "",
+                    bad.flags.q.precise ? " precise" : "",
+                    bad.flags.q.constant ? " constant" : "",
+                    bad.flags.q.attribute ? " attribute" : "",
+                    bad.flags.q.varying ? " varying" : "",
+                    bad.flags.q.in ? " in" : "",
+                    bad.flags.q.out ? " out" : "",
+                    bad.flags.q.centroid ? " centroid" : "",
+                    bad.flags.q.sample ? " sample" : "",
+                    bad.flags.q.patch ? " patch" : "",
+                    bad.flags.q.uniform ? " uniform" : "",
+                    bad.flags.q.buffer ? " buffer" : "",
+                    bad.flags.q.shared_storage ? " shared_storage" : "",
+                    bad.flags.q.smooth ? " smooth" : "",
+                    bad.flags.q.flat ? " flat" : "",
+                    bad.flags.q.noperspective ? " noperspective" : "",
+                    bad.flags.q.origin_upper_left ? " origin_upper_left" : "",
+                    bad.flags.q.pixel_center_integer ? " pixel_center_integer" : "",
+                    bad.flags.q.explicit_align ? " align" : "",
+                    bad.flags.q.explicit_location ? " location" : "",
+                    bad.flags.q.explicit_index ? " index" : "",
+                    bad.flags.q.explicit_binding ? " binding" : "",
+                    bad.flags.q.explicit_offset ? " offset" : "",
+                    bad.flags.q.depth_any ? " depth_any" : "",
+                    bad.flags.q.depth_greater ? " depth_greater" : "",
+                    bad.flags.q.depth_less ? " depth_less" : "",
+                    bad.flags.q.depth_unchanged ? " depth_unchanged" : "",
+                    bad.flags.q.std140 ? " std140" : "",
+                    bad.flags.q.std430 ? " std430" : "",
+                    bad.flags.q.shared ? " shared" : "",
+                    bad.flags.q.packed ? " packed" : "",
+                    bad.flags.q.column_major ? " column_major" : "",
+                    bad.flags.q.row_major ? " row_major" : "",
+                    bad.flags.q.prim_type ? " prim_type" : "",
+                    bad.flags.q.max_vertices ? " max_vertices" : "",
+                    bad.flags.q.local_size ? " local_size" : "",
+                    bad.flags.q.early_fragment_tests ? " early_fragment_tests" : "",
+                    bad.flags.q.explicit_image_format ? " image_format" : "",
+                    bad.flags.q.coherent ? " coherent" : "",
+                    bad.flags.q._volatile ? " _volatile" : "",
+                    bad.flags.q.restrict_flag ? " restrict_flag" : "",
+                    bad.flags.q.read_only ? " read_only" : "",
+                    bad.flags.q.write_only ? " write_only" : "",
+                    bad.flags.q.invocations ? " invocations" : "",
+                    bad.flags.q.stream ? " stream" : "",
+                    bad.flags.q.explicit_stream ? " stream" : "",
+                    bad.flags.q.explicit_xfb_offset ? " xfb_offset" : "",
+                    bad.flags.q.xfb_buffer ? " xfb_buffer" : "",
+                    bad.flags.q.explicit_xfb_buffer ? " xfb_buffer" : "",
+                    bad.flags.q.xfb_stride ? " xfb_stride" : "",
+                    bad.flags.q.explicit_xfb_stride ? " xfb_stride" : "",
+                    bad.flags.q.vertex_spacing ? " vertex_spacing" : "",
+                    bad.flags.q.ordering ? " ordering" : "",
+                    bad.flags.q.point_mode ? " point_mode" : "",
+                    bad.flags.q.vertices ? " vertices" : "",
+                    bad.flags.q.subroutine ? " subroutine" : "",
+                    bad.flags.q.subroutine_def ? " subroutine_def" : "");
+   return false;
+}
+
 bool
 ast_layout_expression::process_qualifier_constant(struct _mesa_glsl_parse_state *state,
                                                   const char *qual_indentifier,
