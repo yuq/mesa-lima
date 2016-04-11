@@ -179,6 +179,7 @@ clone_register(clone_state *state, const nir_register *reg)
    add_remap(state, nreg, reg);
 
    nreg->num_components = reg->num_components;
+   nreg->bit_size = reg->bit_size;
    nreg->num_array_elems = reg->num_array_elems;
    nreg->index = reg->index;
    nreg->name = ralloc_strdup(nreg, reg->name);
