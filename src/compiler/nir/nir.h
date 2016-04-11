@@ -81,16 +81,16 @@ typedef struct {
 } nir_state_slot;
 
 typedef enum {
-   nir_var_all = -1,
-   nir_var_shader_in,
-   nir_var_shader_out,
-   nir_var_global,
-   nir_var_local,
-   nir_var_uniform,
-   nir_var_shader_storage,
-   nir_var_system_value,
-   nir_var_param,
-   nir_var_shared,
+   nir_var_shader_in       = (1 << 0),
+   nir_var_shader_out      = (1 << 1),
+   nir_var_global          = (1 << 2),
+   nir_var_local           = (1 << 3),
+   nir_var_uniform         = (1 << 4),
+   nir_var_shader_storage  = (1 << 5),
+   nir_var_system_value    = (1 << 6),
+   nir_var_param           = (1 << 7),
+   nir_var_shared          = (1 << 8),
+   nir_var_all             = ~0,
 } nir_variable_mode;
 
 /**
@@ -156,6 +156,12 @@ typedef struct nir_variable {
    char *name;
 
    struct nir_variable_data {
+      /**
+       * Storage class of the variable.
+       *
+       * \sa nir_variable_mode
+       */
+      nir_variable_mode mode;
 
       /**
        * Is the variable read-only?
@@ -168,13 +174,6 @@ typedef struct nir_variable {
       unsigned sample:1;
       unsigned patch:1;
       unsigned invariant:1;
-
-      /**
-       * Storage class of the variable.
-       *
-       * \sa nir_variable_mode
-       */
-      nir_variable_mode mode:5;
 
       /**
        * Interpolation mode for shader inputs / outputs
