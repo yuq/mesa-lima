@@ -70,7 +70,9 @@ vs_exec_prepare( struct draw_vertex_shader *shader,
    if (evs->machine->Tokens != shader->state.tokens) {
       tgsi_exec_machine_bind_shader(evs->machine,
                                     shader->state.tokens,
-                                    draw->vs.tgsi.sampler, draw->vs.tgsi.image, NULL);
+                                    draw->vs.tgsi.sampler,
+                                    draw->vs.tgsi.image,
+                                    draw->vs.tgsi.buffer);
    }
 }
 

@@ -67,6 +67,7 @@ struct vbuf_render;
 struct tgsi_exec_machine;
 struct tgsi_sampler;
 struct tgsi_image;
+struct tgsi_buffer;
 struct draw_pt_front_end;
 struct draw_assembler;
 struct draw_llvm;
@@ -269,6 +270,7 @@ struct draw_context
 
          struct tgsi_sampler *sampler;
          struct tgsi_image *image;
+         struct tgsi_buffer *buffer;
       } tgsi;
 
       struct translate *fetch;
@@ -289,6 +291,7 @@ struct draw_context
 
          struct tgsi_sampler *sampler;
          struct tgsi_image *image;
+         struct tgsi_buffer *buffer;
       } tgsi;
 
    } gs;
