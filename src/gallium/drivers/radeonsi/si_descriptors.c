@@ -883,6 +883,12 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 				 SI_CONTEXT_VS_PARTIAL_FLUSH;
 	}
 
+	/* All readers of the streamout targets need to be finished before we can
+	 * start writing to the targets.
+	 */
+	if (num_targets)
+		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
+
 	/* Streamout buffers must be bound in 2 places:
 	 * 1) in VGT by setting the VGT_STRMOUT registers
 	 * 2) as shader resources
