@@ -2185,7 +2185,7 @@ void nir_lower_var_copies(nir_shader *shader);
 
 bool nir_lower_global_vars_to_local(nir_shader *shader);
 
-bool nir_lower_indirect_derefs(nir_shader *shader, uint32_t mode_mask);
+bool nir_lower_indirect_derefs(nir_shader *shader, nir_variable_mode modes);
 
 bool nir_lower_locals_to_regs(nir_shader *shader);
 
