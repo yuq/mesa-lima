@@ -292,6 +292,10 @@ int type_size_scalar(const struct glsl_type *type);
 int type_size_vec4(const struct glsl_type *type);
 int type_size_vec4_times_4(const struct glsl_type *type);
 
+unsigned tesslevel_outer_components(GLenum tes_primitive_mode);
+unsigned tesslevel_inner_components(GLenum tes_primitive_mode);
+unsigned writemask_for_backwards_vector(unsigned mask);
+
 #ifdef __cplusplus
 }
 #endif

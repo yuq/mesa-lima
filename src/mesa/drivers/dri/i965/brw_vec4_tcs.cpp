@@ -286,53 +286,6 @@ vec4_tcs_visitor::emit_urb_write(const src_reg &value,
    inst->base_mrf = -1;
 }
 
-static unsigned
-tesslevel_outer_components(GLenum tes_primitive_mode)
-{
-   switch (tes_primitive_mode) {
-   case GL_QUADS:
-      return 4;
-   case GL_TRIANGLES:
-      return 3;
-   case GL_ISOLINES:
-      return 2;
-   default:
-      unreachable("Bogus tessellation domain");
-   }
-   return 0;
-}
-
-static unsigned
-tesslevel_inner_components(GLenum tes_primitive_mode)
-{
-   switch (tes_primitive_mode) {
-   case GL_QUADS:
-      return 2;
-   case GL_TRIANGLES:
-      return 1;
-   case GL_ISOLINES:
-      return 0;
-   default:
-      unreachable("Bogus tessellation domain");
-   }
-   return 0;
-}
-
-/**
- * Given a normal .xyzw writemask, convert it to a writemask for a vector
- * that's stored backwards, i.e. .wzyx.
- */
-static unsigned
-writemask_for_backwards_vector(unsigned mask)
-{
-   unsigned new_mask = 0;
-
-   for (int i = 0; i < 4; i++)
-      new_mask |= ((mask >> i) & 1) << (3 - i);
-
-   return new_mask;
-}
-
 void
 vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 {
