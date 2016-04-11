@@ -4300,6 +4300,17 @@ ast_declarator_list::hir(exec_list *instructions,
             state->atomic_counter_offsets[qual_binding] = qual_offset;
          }
       }
+
+      ast_type_qualifier allowed_atomic_qual_mask;
+      allowed_atomic_qual_mask.flags.i = 0;
+      allowed_atomic_qual_mask.flags.q.explicit_binding = 1;
+      allowed_atomic_qual_mask.flags.q.explicit_offset = 1;
+      allowed_atomic_qual_mask.flags.q.uniform = 1;
+
+      type->qualifier.validate_flags(&loc, state,
+                                     "invalid layout qualifier for "
+                                     "atomic_uint",
+                                     allowed_atomic_qual_mask);
    }
 
    if (this->declarations.is_empty()) {
