@@ -3518,8 +3518,9 @@ build_stageref(struct gl_shader_program *shProg, const char *name,
  */
 static gl_shader_variable *
 create_shader_variable(struct gl_shader_program *shProg,
-                       const ir_variable *in, bool use_implicit_location,
-                       int location)
+                       const ir_variable *in,
+                       const char *name, const glsl_type *type,
+                       bool use_implicit_location, int location)
 {
    gl_shader_variable *out = ralloc(shProg, struct gl_shader_variable);
    if (!out)
@@ -3532,7 +3533,7 @@ create_shader_variable(struct gl_shader_program *shProg,
        in->data.location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) {
       out->name = ralloc_strdup(shProg, "gl_VertexID");
    } else {
-      out->name = ralloc_strdup(shProg, in->name);
+      out->name = ralloc_strdup(shProg, name);
    }
 
    if (!out->name)
@@ -3560,7 +3561,7 @@ create_shader_variable(struct gl_shader_program *shProg,
       out->location = location;
    }
 
-   out->type = in->type;
+   out->type = type;
    out->index = in->data.index;
    out->patch = in->data.patch;
    out->mode = in->data.mode;
@@ -3571,10 +3572,12 @@ create_shader_variable(struct gl_shader_program *shProg,
 static bool
 add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
                     GLenum programInterface, ir_variable *var,
+                    const char *name, const glsl_type *type,
                     bool use_implicit_location, int location)
 {
    gl_shader_variable *sha_v =
-      create_shader_variable(shProg, var, use_implicit_location, location);
+      create_shader_variable(shProg, var, name, type,
+                             use_implicit_location, location);
    if (!sha_v)
       return false;
 
@@ -3630,7 +3633,7 @@ add_interface_variables(struct gl_shader_program *shProg,
          (stage == MESA_SHADER_FRAGMENT && var->data.mode == ir_var_shader_out);
 
       if (!add_shader_variable(shProg, 1 << stage, programInterface,
-                               var, vs_input_or_fs_output,
+                               var, var->name, var->type, vs_input_or_fs_output,
                                var->data.location - loc_bias))
          return false;
    }
@@ -3664,7 +3667,7 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
             const int stage_mask =
                build_stageref(shProg, var->name, var->data.mode);
             if (!add_shader_variable(shProg, stage_mask,
-                                     iface, var, false,
+                                     iface, var, var->name, var->type, false,
                                      var->data.location - VARYING_SLOT_VAR0))
                return false;
          }
@@ -3688,8 +3691,8 @@ add_fragdata_arrays(struct gl_shader_program *shProg)
 
          if (!add_shader_variable(shProg,
                                   1 << MESA_SHADER_FRAGMENT,
-                                  GL_PROGRAM_OUTPUT, var, true,
-                                  var->data.location - FRAG_RESULT_DATA0))
+                                  GL_PROGRAM_OUTPUT, var, var->name, var->type,
+                                  true, var->data.location - FRAG_RESULT_DATA0))
             return false;
       }
    }
