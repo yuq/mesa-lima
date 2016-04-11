@@ -2198,7 +2198,7 @@ void nir_assign_var_locations(struct exec_list *var_list,
                               int (*type_size)(const struct glsl_type *));
 
 void nir_lower_io(nir_shader *shader,
-                  nir_variable_mode mode,
+                  nir_variable_mode modes,
                   int (*type_size)(const struct glsl_type *));
 nir_src *nir_get_io_offset_src(nir_intrinsic_instr *instr);
 nir_src *nir_get_io_vertex_index_src(nir_intrinsic_instr *instr);
