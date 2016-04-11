@@ -160,7 +160,8 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 	    rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D) {
 		res->domains = RADEON_DOMAIN_VRAM;
 		flags &= ~RADEON_FLAG_CPU_ACCESS;
-		flags |= RADEON_FLAG_NO_CPU_ACCESS;
+		flags |= RADEON_FLAG_NO_CPU_ACCESS |
+			 RADEON_FLAG_GTT_WC;
 	}
 
 	/* If VRAM is just stolen system memory, allow both VRAM and GTT,
