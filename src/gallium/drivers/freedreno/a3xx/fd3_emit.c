@@ -659,8 +659,11 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		ir3_emit_consts(vp, ring, ctx, emit->info, dirty);
 		if (!emit->key.binning_pass)
 			ir3_emit_consts(fp, ring, ctx, emit->info, dirty);
-		/* mark clean after emitting consts: */
-		ctx->prog.dirty = 0;
+		/* mark clean after emitting consts.. a bit ugly, but since binning
+		 * pass is emitted first, we want to do this only for main draw:
+		 */
+		if (!emit->key.binning_pass)
+			ctx->prog.dirty = 0;
 	}
 
 	if (dirty & (FD_DIRTY_BLEND | FD_DIRTY_FRAMEBUFFER)) {

@@ -29,13 +29,16 @@
 #include "freedreno_util.h"
 
 #include "ir3.h"
+#include "ir3_shader.h"
 
 /*
  * Copy Propagate:
  */
 
 struct ir3_cp_ctx {
+	struct ir3 *shader;
 	struct ir3_shader_variant *so;
+	unsigned immediate_idx;
 };
 
 /* is it a type preserving mov, with ok flags? */
@@ -233,6 +236,62 @@ static void combine_flags(unsigned *dstflags, struct ir3_instruction *src)
 		*dstflags &= ~IR3_REG_SABS;
 }
 
+static struct ir3_register *
+lower_immed(struct ir3_cp_ctx *ctx, struct ir3_register *reg, unsigned new_flags)
+{
+	unsigned swiz, idx, i;
+
+	reg = ir3_reg_clone(ctx->shader, reg);
+
+	/* in some cases, there are restrictions on (abs)/(neg) plus const..
+	 * so just evaluate those and clear the flags:
+	 */
+	if (new_flags & IR3_REG_SABS) {
+		reg->iim_val = abs(reg->iim_val);
+		new_flags &= ~IR3_REG_SABS;
+	}
+
+	if (new_flags & IR3_REG_FABS) {
+		reg->fim_val = fabs(reg->fim_val);
+		new_flags &= ~IR3_REG_FABS;
+	}
+
+	if (new_flags & IR3_REG_SNEG) {
+		reg->iim_val = -reg->iim_val;
+		new_flags &= ~IR3_REG_SNEG;
+	}
+
+	if (new_flags & IR3_REG_FNEG) {
+		reg->fim_val = -reg->fim_val;
+		new_flags &= ~IR3_REG_FNEG;
+	}
+
+	for (i = 0; i < ctx->immediate_idx; i++) {
+		swiz = i % 4;
+		idx  = i / 4;
+
+		if (ctx->so->immediates[idx].val[swiz] == reg->uim_val) {
+			break;
+		}
+	}
+
+	if (i == ctx->immediate_idx) {
+		/* need to generate a new immediate: */
+		swiz = i % 4;
+		idx  = i / 4;
+		ctx->so->immediates[idx].val[swiz] = reg->uim_val;
+		ctx->so->immediates_count = idx + 1;
+		ctx->immediate_idx++;
+	}
+
+	new_flags &= ~IR3_REG_IMMED;
+	new_flags |= IR3_REG_CONST;
+	reg->flags = new_flags;
+	reg->num = i + (4 * ctx->so->first_immediate);
+
+	return reg;
+}
+
 /**
  * Handle cp for a given src register.  This additionally handles
  * the cases of collapsing immedate/const (which replace the src
@@ -281,6 +340,13 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 		combine_flags(&new_flags, src);
 
 		if (!valid_flags(instr, n, new_flags)) {
+			/* See if lowering an immediate to const would help. */
+			if (valid_flags(instr, n, (new_flags & ~IR3_REG_IMMED) | IR3_REG_CONST)) {
+				debug_assert(new_flags & IR3_REG_IMMED);
+				instr->regs[n + 1] = lower_immed(ctx, src_reg, new_flags);
+				return;
+			}
+
 			/* special case for "normal" mad instructions, we can
 			 * try swapping the first two args if that fits better.
 			 *
@@ -378,6 +444,9 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 				src_reg->flags = new_flags;
 				src_reg->iim_val = iim_val;
 				instr->regs[n+1] = src_reg;
+			} else if (valid_flags(instr, n, (new_flags & ~IR3_REG_IMMED) | IR3_REG_CONST)) {
+				/* See if lowering an immediate to const would help. */
+				instr->regs[n+1] = lower_immed(ctx, src_reg, new_flags);
 			}
 
 			return;
@@ -484,6 +553,7 @@ void
 ir3_cp(struct ir3 *ir, struct ir3_shader_variant *so)
 {
 	struct ir3_cp_ctx ctx = {
+			.shader = ir,
 			.so = so,
 	};
 
