@@ -327,7 +327,7 @@ svga_queue_tss( struct ts_queue *q,
 #define EMIT_TS(svga, unit, val, token)                                 \
 do {                                                                    \
    assert(unit < Elements(svga->state.hw_draw.ts));                     \
-   assert(SVGA3D_TS_##token < Elements(svga->state.hw_draw.ts[unit]));  \
+   STATIC_ASSERT(SVGA3D_TS_##token < Elements(svga->state.hw_draw.ts[unit])); \
    if (svga->state.hw_draw.ts[unit][SVGA3D_TS_##token] != val) {        \
       svga_queue_tss( queue, unit, SVGA3D_TS_##token, val );            \
       svga->state.hw_draw.ts[unit][SVGA3D_TS_##token] = val;            \
@@ -338,7 +338,7 @@ do {                                                                    \
 do {                                                                    \
    unsigned val = fui(fvalue);                                          \
    assert(unit < Elements(svga->state.hw_draw.ts));                     \
-   assert(SVGA3D_TS_##token < Elements(svga->state.hw_draw.ts[unit]));  \
+   STATIC_ASSERT(SVGA3D_TS_##token < Elements(svga->state.hw_draw.ts[unit])); \
    if (svga->state.hw_draw.ts[unit][SVGA3D_TS_##token] != val) {        \
       svga_queue_tss( queue, unit, SVGA3D_TS_##token, val );            \
       svga->state.hw_draw.ts[unit][SVGA3D_TS_##token] = val;            \

@@ -86,9 +86,9 @@ define_depth_stencil_state_object(struct svga_context *svga,
    ds->id = util_bitmask_add(svga->ds_object_id_bm);
 
    /* spot check that these comparision tokens are the same */
-   assert(SVGA3D_COMPARISON_NEVER == SVGA3D_CMP_NEVER);
-   assert(SVGA3D_COMPARISON_LESS == SVGA3D_CMP_LESS);
-   assert(SVGA3D_COMPARISON_NOT_EQUAL == SVGA3D_CMP_NOTEQUAL);
+   STATIC_ASSERT(SVGA3D_COMPARISON_NEVER == SVGA3D_CMP_NEVER);
+   STATIC_ASSERT(SVGA3D_COMPARISON_LESS == SVGA3D_CMP_LESS);
+   STATIC_ASSERT(SVGA3D_COMPARISON_NOT_EQUAL == SVGA3D_CMP_NOTEQUAL);
 
    /* Loop in case command buffer is full and we need to flush and retry */
    for (try = 0; try < 2; try++) {
