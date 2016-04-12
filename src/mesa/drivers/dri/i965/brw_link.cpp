@@ -105,7 +105,6 @@ process_glsl_ir(gl_shader_stage stage,
    brw_lower_packing_builtins(brw, shader->Stage, shader->ir);
    do_mat_op_to_vec(shader->ir);
    lower_instructions(shader->ir,
-                      MOD_TO_FLOOR |
                       DIV_TO_MUL_RCP |
                       SUB_TO_ADD_NEG |
                       EXP_TO_EXP2 |
