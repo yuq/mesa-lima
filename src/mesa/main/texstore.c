@@ -1243,11 +1243,11 @@ _mesa_store_compressed_teximage(struct gl_context *ctx, GLuint dims,
       return;
    }
 
-   _mesa_store_compressed_texsubimage(ctx, dims, texImage,
-                                      0, 0, 0,
-                                      texImage->Width, texImage->Height, texImage->Depth,
-                                      texImage->TexFormat,
-                                      imageSize, data);
+   ctx->Driver.CompressedTexSubImage(ctx, dims, texImage,
+                                     0, 0, 0,
+                                     texImage->Width, texImage->Height, texImage->Depth,
+                                     texImage->TexFormat,
+                                     imageSize, data);
 }
 
 
