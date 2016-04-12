@@ -289,6 +289,7 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    case ir_binop_gequal:
    case ir_binop_equal:
    case ir_binop_nequal:
+   case ir_binop_ldexp:
       for (i = 0; i < vector_elements; i++) {
 	 ir_rvalue *op0 = get_element(op_var[0], i);
 	 ir_rvalue *op1 = get_element(op_var[1], i);
@@ -404,7 +405,6 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    case ir_unop_unpack_unorm_2x16:
    case ir_unop_unpack_unorm_4x8:
    case ir_unop_unpack_half_2x16:
-   case ir_binop_ldexp:
    case ir_binop_vector_extract:
    case ir_triop_vector_insert:
    case ir_quadop_vector:
