@@ -497,11 +497,6 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
    if (state & MESA_META_COLOR_MASK) {
       memcpy(save->ColorMask, ctx->Color.ColorMask,
              sizeof(ctx->Color.ColorMask));
-      if (!ctx->Color.ColorMask[0][0] ||
-          !ctx->Color.ColorMask[0][1] ||
-          !ctx->Color.ColorMask[0][2] ||
-          !ctx->Color.ColorMask[0][3])
-         _mesa_ColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
    }
 
    if (state & MESA_META_DEPTH_TEST) {
@@ -2984,6 +2979,7 @@ decompress_texture_image(struct gl_context *ctx,
 
    _mesa_meta_begin(ctx, MESA_META_ALL & ~(MESA_META_PIXEL_STORE |
                                            MESA_META_DRAW_BUFFERS));
+   _mesa_ColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
    _mesa_reference_sampler_object(ctx, &samp_obj_save,
                                   ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler);
@@ -3499,6 +3495,7 @@ cleartexsubimage_using_fbo(struct gl_context *ctx,
                     MESA_META_DITHER |
                     MESA_META_FRAMEBUFFER_SRGB);
 
+   _mesa_ColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
    _mesa_set_enable(ctx, GL_DITHER, GL_FALSE);
 
    _mesa_set_enable(ctx, GL_SCISSOR_TEST, GL_TRUE);

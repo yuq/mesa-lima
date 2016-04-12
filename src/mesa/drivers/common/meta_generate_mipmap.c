@@ -31,6 +31,7 @@
  */
 
 #include "main/arrayobj.h"
+#include "main/blend.h"
 #include "main/buffers.h"
 #include "main/enums.h"
 #include "main/enable.h"
@@ -180,6 +181,7 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
    }
 
    _mesa_meta_begin(ctx, MESA_META_ALL & ~MESA_META_DRAW_BUFFERS);
+   _mesa_ColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
    /* Choose between glsl version and fixed function version of
     * GenerateMipmap function.
