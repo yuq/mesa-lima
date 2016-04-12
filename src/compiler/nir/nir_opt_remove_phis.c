@@ -43,9 +43,9 @@
  */
 
 static bool
-remove_phis_block(nir_block *block, void *state)
+remove_phis_block(nir_block *block)
 {
-   bool *progress = state;
+   bool progress = false;
 
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_phi)
@@ -95,10 +95,10 @@ remove_phis_block(nir_block *block, void *state)
       nir_ssa_def_rewrite_uses(&phi->dest.ssa, nir_src_for_ssa(def));
       nir_instr_remove(instr);
 
-      *progress = true;
+      progress = true;
    }
 
-   return true;
+   return progress;
 }
 
 static bool
@@ -106,7 +106,9 @@ remove_phis_impl(nir_function_impl *impl)
 {
    bool progress = false;
 
-   nir_foreach_block_call(impl, remove_phis_block, &progress);
+   nir_foreach_block(block, impl) {
+      progress |= remove_phis_block(block);
+   }
 
    if (progress) {
       nir_metadata_preserve(impl, nir_metadata_block_index |
