@@ -198,7 +198,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	ctx->draw_vbo(ctx, info);
 
 	for (i = 0; i < ctx->streamout.num_targets; i++)
-		ctx->streamout.offsets[i] += prims;
+		ctx->streamout.offsets[i] += info->count;
 
 	if (fd_mesa_debug & FD_DBG_DDRAW)
 		ctx->dirty = 0xffffffff;
