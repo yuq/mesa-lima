@@ -78,14 +78,6 @@ struct nir_phi_builder_value {
    nir_ssa_def *defs[0];
 };
 
-static bool
-fill_block_array(nir_block *block, void *void_data)
-{
-   nir_block **blocks = void_data;
-   blocks[block->index] = block;
-   return true;
-}
-
 struct nir_phi_builder *
 nir_phi_builder_create(nir_function_impl *impl)
 {
@@ -99,7 +91,9 @@ nir_phi_builder_create(nir_function_impl *impl)
 
    pb->num_blocks = impl->num_blocks;
    pb->blocks = ralloc_array(pb, nir_block *, pb->num_blocks);
-   nir_foreach_block_call(impl, fill_block_array, pb->blocks);
+   nir_foreach_block(block, impl) {
+      pb->blocks[block->index] = block;
+   }
 
    exec_list_make_empty(&pb->values);
 
