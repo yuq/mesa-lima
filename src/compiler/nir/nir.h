@@ -2425,7 +2425,8 @@ typedef enum {
    nir_lower_dfloor = (1 << 4),
    nir_lower_dceil = (1 << 5),
    nir_lower_dfract = (1 << 6),
-   nir_lower_dround_even = (1 << 7)
+   nir_lower_dround_even = (1 << 7),
+   nir_lower_dmod = (1 << 8)
 } nir_lower_doubles_options;
 
 void nir_lower_doubles(nir_shader *shader, nir_lower_doubles_options options);

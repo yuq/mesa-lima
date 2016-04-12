@@ -438,6 +438,24 @@ lower_round_even(nir_builder *b, nir_ssa_def *src)
                                         nir_fsub(b, src, nir_imm_double(b, 0.5)))));
 }
 
+static nir_ssa_def *
+lower_mod(nir_builder *b, nir_ssa_def *src0, nir_ssa_def *src1)
+{
+   /* mod(x,y) = x - y * floor(x/y)
+    *
+    * If the division is lowered, it could add some rounding errors that make
+    * floor() to return the quotient minus one when x = N * y. If this is the
+    * case, we return zero because mod(x, y) output value is [0, y).
+    */
+   nir_ssa_def *floor = nir_ffloor(b, nir_fdiv(b, src0, src1));
+   nir_ssa_def *mod = nir_fsub(b, src0, nir_fmul(b, src1, floor));
+
+   return nir_bcsel(b,
+                    nir_fne(b, mod, src1),
+                    mod,
+                    nir_imm_double(b, 0.0));
+}
+
 static void
 lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
 {
@@ -486,6 +504,11 @@ lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
          return;
       break;
 
+   case nir_op_fmod:
+      if (!(options & nir_lower_dmod))
+         return;
+      break;
+
    default:
       return;
    }
@@ -525,6 +548,12 @@ lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
       result = lower_round_even(&bld, src);
       break;
 
+   case nir_op_fmod: {
+      nir_ssa_def *src1 = nir_fmov_alu(&bld, instr->src[1],
+                                      instr->dest.dest.ssa.num_components);
+      result = lower_mod(&bld, src, src1);
+   }
+      break;
    default:
       unreachable("unhandled opcode");
    }
