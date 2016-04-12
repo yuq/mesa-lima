@@ -180,10 +180,10 @@ rgba8_copy_aligned_src(void *dst, const void *src, size_t bytes)
 
 #if defined(__SSSE3__) || defined(__SSE2__)
    if (bytes == 64) {
-      rgba8_copy_16_aligned_dst(dst +  0, src +  0);
-      rgba8_copy_16_aligned_dst(dst + 16, src + 16);
-      rgba8_copy_16_aligned_dst(dst + 32, src + 32);
-      rgba8_copy_16_aligned_dst(dst + 48, src + 48);
+      rgba8_copy_16_aligned_src(dst +  0, src +  0);
+      rgba8_copy_16_aligned_src(dst + 16, src + 16);
+      rgba8_copy_16_aligned_src(dst + 32, src + 32);
+      rgba8_copy_16_aligned_src(dst + 48, src + 48);
       return dst;
    }
 
