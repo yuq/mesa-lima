@@ -279,6 +279,14 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		     sctx->b.family == CHIP_BONAIRE) &&
 		    sctx->gs_shader.cso)
 			partial_vs_wave = true;
+
+		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
+		if (sctx->b.chip_class >= VI) {
+			if (sctx->gs_shader.cso)
+				partial_es_wave = true;
+			else
+				partial_vs_wave = true;
+		}
 	}
 
 	/* This is a hardware requirement. */

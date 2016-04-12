@@ -8074,6 +8074,9 @@
 #define   S_028B6C_DISTRIBUTION_MODE(x)                               (((unsigned)(x) & 0x03) << 17)
 #define   G_028B6C_DISTRIBUTION_MODE(x)                               (((x) >> 17) & 0x03)
 #define   C_028B6C_DISTRIBUTION_MODE                                  0xFFF9FFFF
+#define     V_028B6C_DISTRIBUTION_MODE_NO_DIST                      0x00
+#define     V_028B6C_DISTRIBUTION_MODE_PATCHES                      0x01
+#define     V_028B6C_DISTRIBUTION_MODE_DONUTS                       0x02
 #define   S_028B6C_MTYPE(x)                                           (((unsigned)(x) & 0x03) << 19)
 #define   G_028B6C_MTYPE(x)                                           (((x) >> 19) & 0x03)
 #define   C_028B6C_MTYPE                                              0xFFE7FFFF

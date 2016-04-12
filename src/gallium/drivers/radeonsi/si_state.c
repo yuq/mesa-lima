@@ -3791,6 +3791,11 @@ static void si_init_config(struct si_context *sctx)
 			       S_028424_OVERWRITE_COMBINER_WATERMARK(4));
 		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
 		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
+		si_pm4_set_reg(pm4, R_028B50_VGT_TESS_DISTRIBUTION,
+		               S_028B50_ACCUM_ISOLINE(32) |
+		               S_028B50_ACCUM_TRI(11) |
+		               S_028B50_ACCUM_QUAD(11) |
+		               S_028B50_DONUT_SPLIT(16));
 	}
 
 	if (sctx->b.family == CHIP_STONEY)
