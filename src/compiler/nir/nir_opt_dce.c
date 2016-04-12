@@ -71,7 +71,7 @@ init_instr(nir_instr *instr, struct exec_list *worklist)
    nir_tex_instr *tex_instr;
 
    /* We use the pass_flags to store the live/dead information.  In DCE, we
-    * just treat it as a zero/non-zerl boolean for whether or not the
+    * just treat it as a zero/non-zero boolean for whether or not the
     * instruction is live.
     */
    instr->pass_flags = 0;
