@@ -1430,7 +1430,7 @@ tgsi_transform_lowering(const struct tgsi_lowering_config *config,
    int newlen, numtmp;
 
    /* sanity check in case limit is ever increased: */
-   assert((sizeof(config->saturate_s) * 8) >= PIPE_MAX_SAMPLERS);
+   STATIC_ASSERT((sizeof(config->saturate_s) * 8) >= PIPE_MAX_SAMPLERS);
 
    memset(&ctx, 0, sizeof(ctx));
    ctx.base.transform_instruction = transform_instr;
