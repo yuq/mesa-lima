@@ -157,7 +157,24 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 	emit.dirty = dirty;
 	emit.vp = NULL;   /* we changed key so need to refetch vp */
 	emit.fp = NULL;
+
+	if (ctx->rasterizer->rasterizer_discard) {
+		fd_wfi(ctx, ctx->ring);
+		OUT_PKT3(ctx->ring, CP_REG_RMW, 3);
+		OUT_RING(ctx->ring, REG_A4XX_RB_RENDER_CONTROL);
+		OUT_RING(ctx->ring, ~A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
+		OUT_RING(ctx->ring, A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
+	}
+
 	draw_impl(ctx, ctx->ring, &emit);
+
+	if (ctx->rasterizer->rasterizer_discard) {
+		fd_wfi(ctx, ctx->ring);
+		OUT_PKT3(ctx->ring, CP_REG_RMW, 3);
+		OUT_RING(ctx->ring, REG_A4XX_RB_RENDER_CONTROL);
+		OUT_RING(ctx->ring, ~A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
+		OUT_RING(ctx->ring, 0);
+	}
 }
 
 /* clear operations ignore viewport state, so we need to reset it
