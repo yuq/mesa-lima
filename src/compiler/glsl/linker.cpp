@@ -2618,7 +2618,7 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
          return false;
       }
 
-      const unsigned slots = var->type->count_attribute_slots(target_index == MESA_SHADER_VERTEX ? true : false);
+      const unsigned slots = var->type->count_attribute_slots(target_index == MESA_SHADER_VERTEX);
 
       /* If the variable is not a built-in and has a location statically
        * assigned in the shader (presumably via a layout qualifier), make sure
@@ -3575,7 +3575,7 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
                     const char *name, const glsl_type *type,
                     bool use_implicit_location, int location)
 {
-   const bool vertex_input_slots =
+   const bool is_vertex_input =
       programInterface == GL_PROGRAM_INPUT &&
       stage_mask == MESA_SHADER_VERTEX;
 
@@ -3600,7 +3600,7 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
             return false;
 
          field_location +=
-            field->type->count_attribute_slots(vertex_input_slots);
+            field->type->count_attribute_slots(is_vertex_input);
       }
       return true;
    }

@@ -344,7 +344,7 @@ struct glsl_type {
     * For vertex shader attributes - doubles only take one slot.
     * For inter-shader varyings - dvec3/dvec4 take two slots.
     */
-   unsigned count_attribute_slots(bool vertex_input_slots) const;
+   unsigned count_attribute_slots(bool is_vertex_input) const;
 
    /**
     * Alignment in bytes of the start of this type in a std140 uniform
