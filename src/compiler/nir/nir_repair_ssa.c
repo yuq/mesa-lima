@@ -101,16 +101,6 @@ repair_ssa_def(nir_ssa_def *def, void *void_state)
    return true;
 }
 
-static bool
-repair_ssa_block(nir_block *block, void *state)
-{
-   nir_foreach_instr_safe(block, instr) {
-      nir_foreach_ssa_def(instr, repair_ssa_def, state);
-   }
-
-   return true;
-}
-
 bool
 nir_repair_ssa_impl(nir_function_impl *impl)
 {
@@ -123,7 +113,11 @@ nir_repair_ssa_impl(nir_function_impl *impl)
    nir_metadata_require(impl, nir_metadata_block_index |
                               nir_metadata_dominance);
 
-   nir_foreach_block_call(impl, repair_ssa_block, &state);
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr_safe(block, instr) {
+         nir_foreach_ssa_def(instr, repair_ssa_def, &state);
+      }
+   }
 
    if (state.progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |
