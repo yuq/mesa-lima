@@ -250,13 +250,9 @@ copy_prop_block(nir_block *block, void *_state)
          *progress = true;
    }
 
-   if (block->cf_node.node.next != NULL && /* check that we aren't the end node */
-       !nir_cf_node_is_last(&block->cf_node) &&
-       nir_cf_node_next(&block->cf_node)->type == nir_cf_node_if) {
-      nir_if *if_stmt = nir_cf_node_as_if(nir_cf_node_next(&block->cf_node));
-      if (copy_prop_if(if_stmt))
-         *progress = true;
-   }
+   nir_if *if_stmt = nir_block_get_following_if(block);
+   if (if_stmt && copy_prop_if(if_stmt))
+      *progress = true;
 
    return true;
 }
