@@ -1786,6 +1786,13 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
    su->setSrc(0, addr);
    su->setSrc(1, v);
    su->setSrc(2, pred);
+
+   // prevent read fault when the image is not actually bound
+   CmpInstruction *pred1 =
+      bld.mkCmp(OP_SET, CC_EQ, TYPE_U32, bld.getSSA(1, FILE_PREDICATE),
+                TYPE_U32, bld.mkImm(0),
+                loadSuInfo32(ind, base + NVE4_SU_INFO_ADDR));
+   su->setPredicate(CC_NOT_P, pred1->getDef(0));
 }
 
 static DataType
@@ -1905,7 +1912,6 @@ NVC0LoweringPass::handleSurfaceOpNVE4(TexInstruction *su)
       convertSurfaceFormat(su);
 
    if (su->op == OP_SUREDB || su->op == OP_SUREDP) {
-      // FIXME: for out of bounds access, destination value will be undefined !
       Value *pred = su->getSrc(2);
       CondCode cc = CC_NOT_P;
       if (su->getPredicate()) {
@@ -1918,7 +1924,7 @@ NVC0LoweringPass::handleSurfaceOpNVE4(TexInstruction *su)
             pred->getInsn()->src(1).mod = Modifier(NV50_IR_MOD_NOT);
          }
       }
-      Instruction *red = bld.mkOp(OP_ATOM, su->dType, su->getDef(0));
+      Instruction *red = bld.mkOp(OP_ATOM, su->dType, bld.getSSA());
       red->subOp = su->subOp;
       if (!gMemBase)
          gMemBase = bld.mkSymbol(FILE_MEMORY_GLOBAL, 0, TYPE_U32, 0);
@@ -1927,7 +1933,18 @@ NVC0LoweringPass::handleSurfaceOpNVE4(TexInstruction *su)
       if (su->subOp == NV50_IR_SUBOP_ATOM_CAS)
          red->setSrc(2, su->getSrc(4));
       red->setIndirect(0, 0, su->getSrc(0));
+
+      // make sure to initialize dst value when the atomic operation is not
+      // performed
+      Instruction *mov = bld.mkMov(bld.getSSA(), bld.loadImm(NULL, 0));
+
+      assert(cc == CC_NOT_P);
       red->setPredicate(cc, pred);
+      mov->setPredicate(CC_P, pred);
+
+      bld.mkOp2(OP_UNION, TYPE_U32, su->getDef(0),
+                red->getDef(0), mov->getDef(0));
+
       delete_Instruction(bld.getProgram(), su);
       handleCasExch(red, true);
    }
