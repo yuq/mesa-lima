@@ -957,15 +957,6 @@ postvalidate_ssa_def(nir_ssa_def *def, void *void_state)
    return true;
 }
 
-static bool
-postvalidate_ssa_defs_block(nir_block *block, void *state)
-{
-   nir_foreach_instr(block, instr)
-      nir_foreach_ssa_def(instr, postvalidate_ssa_def, state);
-
-   return true;
-}
-
 static void
 validate_function_impl(nir_function_impl *impl, validate_state *state)
 {
@@ -1025,7 +1016,10 @@ validate_function_impl(nir_function_impl *impl, validate_state *state)
       postvalidate_reg_decl(reg, state);
    }
 
-   nir_foreach_block_call(impl, postvalidate_ssa_defs_block, state);
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr(block, instr)
+         nir_foreach_ssa_def(instr, postvalidate_ssa_def, state);
+   }
 }
 
 static void
