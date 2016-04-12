@@ -24,7 +24,7 @@
 #pragma once
 
 void LoadHotTile(
-    SWR_SURFACE_STATE *pSrcSurface,
+    const SWR_SURFACE_STATE *pSrcSurface,
     SWR_FORMAT dstFormat,
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
     UINT x, UINT y, uint32_t renderTargetArrayIndex,

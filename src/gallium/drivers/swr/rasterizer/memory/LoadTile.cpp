@@ -33,7 +33,7 @@
 #include "memory/tilingtraits.h"
 #include "memory/Convert.h"
 
-typedef void(*PFN_LOAD_TILES)(SWR_SURFACE_STATE*, uint8_t*, uint32_t, uint32_t, uint32_t);
+typedef void(*PFN_LOAD_TILES)(const SWR_SURFACE_STATE*, uint8_t*, uint32_t, uint32_t, uint32_t);
 
 //////////////////////////////////////////////////////////////////////////
 /// Load Raster Tile Function Tables.
@@ -83,7 +83,7 @@ struct LoadRasterTile
     /// @param pDst - Destination hot tile pointer
     /// @param x, y - Coordinates to raster tile.
     INLINE static void Load(
-        SWR_SURFACE_STATE* pSrcSurface,
+        const SWR_SURFACE_STATE* pSrcSurface,
         uint8_t* pDst,
         uint32_t x, uint32_t y, uint32_t sampleNum, uint32_t renderTargetArrayIndex) // (x, y) pixel coordinate to start of raster tile.
     {
@@ -125,7 +125,7 @@ struct LoadMacroTile
     /// @param pDstSurface - Destination surface state
     /// @param x, y - Coordinates to macro tile
     static void Load(
-        SWR_SURFACE_STATE* pSrcSurface,
+        const SWR_SURFACE_STATE* pSrcSurface,
         uint8_t *pDstHotTile,
         uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex)
     {
@@ -144,6 +144,7 @@ struct LoadMacroTile
         }
     }
 };
+
 
 static void BUCKETS_START(UINT id)
 {
@@ -171,7 +172,7 @@ static std::mutex sBucketMutex;
 /// @param x, y - Coordinates to raster tile.
 /// @param pDstHotTile - Pointer to Hot Tile
 void LoadHotTile(
-    SWR_SURFACE_STATE *pSrcSurface,
+    const SWR_SURFACE_STATE *pSrcSurface,
     SWR_FORMAT dstFormat,
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
     uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex,
@@ -184,7 +185,7 @@ void LoadHotTile(
     {
         return;
     }
-    
+
     // force 0 if requested renderTargetArrayIndex is OOB
     if (renderTargetArrayIndex >= pSrcSurface->depth)
     {
@@ -273,6 +274,7 @@ void LoadHotTile(
     pfnLoadTiles(pSrcSurface, pDstHotTile, x, y, renderTargetArrayIndex);
     BUCKETS_STOP(sBuckets[pSrcSurface->format]);
 }
+
 
 //////////////////////////////////////////////////////////////////////////
 /// INIT_LOAD_TILES_TABLE - Helper macro for setting up the tables.
