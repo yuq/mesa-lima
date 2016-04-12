@@ -3766,6 +3766,7 @@ struct gl_extensions
    GLboolean ARB_pipeline_statistics_query;
    GLboolean ARB_point_sprite;
    GLboolean ARB_query_buffer_object;
+   GLboolean ARB_robust_buffer_access_behavior;
    GLboolean ARB_sample_shading;
    GLboolean ARB_seamless_cube_map;
    GLboolean ARB_shader_atomic_counter_ops;
