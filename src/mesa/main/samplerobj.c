@@ -1171,8 +1171,9 @@ _mesa_SamplerParameterIiv(GLuint sampler, GLenum pname, const GLint *params)
 
    sampObj = _mesa_lookup_samplerobj(ctx, sampler);
    if (!sampObj) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glSamplerParameterIiv(sampler %u)",
-                  sampler);
+      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
+                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+                  "glSamplerParameterIiv(sampler %u)", sampler);
       return;
    }
 
@@ -1257,8 +1258,9 @@ _mesa_SamplerParameterIuiv(GLuint sampler, GLenum pname, const GLuint *params)
 
    sampObj = _mesa_lookup_samplerobj(ctx, sampler);
    if (!sampObj) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glSamplerParameterIuiv(sampler %u)",
-                  sampler);
+      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
+                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+                  "glSamplerParameterIuiv(sampler %u)", sampler);
       return;
    }
 
