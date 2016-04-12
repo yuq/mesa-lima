@@ -215,6 +215,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_QUERY_BUFFER_OBJECT:
         case PIPE_CAP_QUERY_MEMORY_INFO:
         case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
+	case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
             return 0;
 
         /* SWTCL-only features. */
