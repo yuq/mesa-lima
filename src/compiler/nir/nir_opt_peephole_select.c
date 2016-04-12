@@ -47,11 +47,6 @@
  * swizzle.
  */
 
-struct peephole_select_state {
-   void *mem_ctx;
-   bool progress;
-};
-
 static bool
 block_check_for_allowed_instrs(nir_block *block)
 {
@@ -130,23 +125,21 @@ block_check_for_allowed_instrs(nir_block *block)
 }
 
 static bool
-nir_opt_peephole_select_block(nir_block *block, void *void_state)
+nir_opt_peephole_select_block(nir_block *block, void *mem_ctx)
 {
-   struct peephole_select_state *state = void_state;
-
    /* If the block is empty, then it certainly doesn't have any phi nodes,
     * so we can skip it.  This also ensures that we do an early skip on the
     * end block of the function which isn't actually attached to the CFG.
     */
    if (exec_list_is_empty(&block->instr_list))
-      return true;
+      return false;
 
    if (nir_cf_node_is_first(&block->cf_node))
-      return true;
+      return false;
 
    nir_cf_node *prev_node = nir_cf_node_prev(&block->cf_node);
    if (prev_node->type != nir_cf_node_if)
-      return true;
+      return false;
 
    nir_if *if_stmt = nir_cf_node_as_if(prev_node);
    nir_cf_node *then_node = nir_if_first_then_node(if_stmt);
@@ -155,7 +148,7 @@ nir_opt_peephole_select_block(nir_block *block, void *void_state)
    /* We can only have one block in each side ... */
    if (nir_if_last_then_node(if_stmt) != then_node ||
        nir_if_last_else_node(if_stmt) != else_node)
-      return true;
+      return false;
 
    nir_block *then_block = nir_cf_node_as_block(then_node);
    nir_block *else_block = nir_cf_node_as_block(else_node);
@@ -163,7 +156,7 @@ nir_opt_peephole_select_block(nir_block *block, void *void_state)
    /* ... and those blocks must only contain "allowed" instructions. */
    if (!block_check_for_allowed_instrs(then_block) ||
        !block_check_for_allowed_instrs(else_block))
-      return true;
+      return false;
 
    /* At this point, we know that the previous CFG node is an if-then
     * statement containing only moves to phi nodes in this block.  We can
@@ -195,7 +188,7 @@ nir_opt_peephole_select_block(nir_block *block, void *void_state)
          break;
 
       nir_phi_instr *phi = nir_instr_as_phi(instr);
-      nir_alu_instr *sel = nir_alu_instr_create(state->mem_ctx, nir_op_bcsel);
+      nir_alu_instr *sel = nir_alu_instr_create(mem_ctx, nir_op_bcsel);
       nir_src_copy(&sel->src[0].src, &if_stmt->condition, sel);
       /* Splat the condition to all channels */
       memset(sel->src[0].swizzle, 0, sizeof sel->src[0].swizzle);
@@ -222,25 +215,23 @@ nir_opt_peephole_select_block(nir_block *block, void *void_state)
    }
 
    nir_cf_node_remove(&if_stmt->cf_node);
-   state->progress = true;
-
    return true;
 }
 
 static bool
 nir_opt_peephole_select_impl(nir_function_impl *impl)
 {
-   struct peephole_select_state state;
+   void *mem_ctx = ralloc_parent(impl);
+   bool progress = false;
 
-   state.mem_ctx = ralloc_parent(impl);
-   state.progress = false;
+   nir_foreach_block_safe(block, impl) {
+      progress |= nir_opt_peephole_select_block(block, mem_ctx);
+   }
 
-   nir_foreach_block_call(impl, nir_opt_peephole_select_block, &state);
-
-   if (state.progress)
+   if (progress)
       nir_metadata_preserve(impl, nir_metadata_none);
 
-   return state.progress;
+   return progress;
 }
 
 bool
