@@ -206,10 +206,8 @@ split_var_copy_instr(nir_intrinsic_instr *old_copy,
 }
 
 static bool
-split_var_copies_block(nir_block *block, void *void_state)
+split_var_copies_block(nir_block *block, struct split_var_copies_state *state)
 {
-   struct split_var_copies_state *state = void_state;
-
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -261,7 +259,9 @@ split_var_copies_impl(nir_function_impl *impl)
    state.dead_ctx = ralloc_context(NULL);
    state.progress = false;
 
-   nir_foreach_block_call(impl, split_var_copies_block, &state);
+   nir_foreach_block(block, impl) {
+      split_var_copies_block(block, &state);
+   }
 
    ralloc_free(state.dead_ctx);
 
