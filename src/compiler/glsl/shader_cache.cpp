@@ -446,14 +446,28 @@ write_uniform_remap_table_entry(struct blob *metadata,
 }
 
 static void
-write_uniform_remap_table(struct blob *metadata,
-                          struct gl_shader_program *prog)
+write_uniform_remap_tables(struct blob *metadata,
+                           struct gl_shader_program *prog)
 {
    blob_write_uint32(metadata, prog->NumUniformRemapTable);
 
    for (unsigned i = 0; i < prog->NumUniformRemapTable; i++) {
       write_uniform_remap_table_entry(metadata, prog->data->UniformStorage,
                                       prog->UniformRemapTable[i]);
+   }
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      if (sh) {
+         struct gl_program *glprog = sh->Program;
+         blob_write_uint32(metadata, glprog->sh.NumSubroutineUniformRemapTable);
+
+         for (unsigned j = 0; j < glprog->sh.NumSubroutineUniformRemapTable; j++) {
+            write_uniform_remap_table_entry(metadata,
+                                            prog->data->UniformStorage,
+                                            glprog->sh.SubroutineUniformRemapTable[j]);
+         }
+      }
    }
 }
 
@@ -474,8 +488,8 @@ read_uniform_remap_table_entry(struct blob_reader *metadata,
 }
 
 static void
-read_uniform_remap_table(struct blob_reader *metadata,
-                         struct gl_shader_program *prog)
+read_uniform_remap_tables(struct blob_reader *metadata,
+                          struct gl_shader_program *prog)
 {
    prog->NumUniformRemapTable = blob_read_uint32(metadata);
 
@@ -488,6 +502,28 @@ read_uniform_remap_table(struct blob_reader *metadata,
 
       read_uniform_remap_table_entry(metadata, prog->data->UniformStorage,
                                      &prog->UniformRemapTable[i], type);
+   }
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      if (sh) {
+         struct gl_program *glprog = sh->Program;
+         glprog->sh.NumSubroutineUniformRemapTable = blob_read_uint32(metadata);
+
+         glprog->sh.SubroutineUniformRemapTable =
+            rzalloc_array(glprog, struct gl_uniform_storage *,
+                          glprog->sh.NumSubroutineUniformRemapTable);
+
+         for (unsigned j = 0; j < glprog->sh.NumSubroutineUniformRemapTable; j++) {
+            enum uniform_remap_type type =
+               (enum uniform_remap_type) blob_read_uint32(metadata);
+
+            read_uniform_remap_table_entry(metadata,
+                                           prog->data->UniformStorage,
+                                           &glprog->sh.SubroutineUniformRemapTable[j],
+                                           type);
+         }
+      }
    }
 }
 
@@ -918,7 +954,7 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
 
    write_xfb(metadata, prog);
 
-   write_uniform_remap_table(metadata, prog);
+   write_uniform_remap_tables(metadata, prog);
 
    write_subroutines(metadata, prog);
 
@@ -1027,7 +1063,7 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
 
    read_xfb(&metadata, prog);
 
-   read_uniform_remap_table(&metadata, prog);
+   read_uniform_remap_tables(&metadata, prog);
 
    read_subroutines(&metadata, prog);
 
