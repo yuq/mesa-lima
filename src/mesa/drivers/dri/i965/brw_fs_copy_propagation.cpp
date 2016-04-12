@@ -784,7 +784,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
             if (inst->src[i].file == VGRF) {
                acp_entry *entry = ralloc(copy_prop_ctx, acp_entry);
                entry->dst = inst->dst;
-               entry->dst.reg_offset = offset;
+               entry->dst.reg_offset += offset;
                entry->src = inst->src[i];
                entry->regs_written = regs_written;
                entry->regs_read = inst->regs_read(i);
