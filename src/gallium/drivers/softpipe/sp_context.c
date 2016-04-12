@@ -117,6 +117,8 @@ softpipe_destroy( struct pipe_context *pipe )
 
    for (i = 0; i < PIPE_SHADER_TYPES; i++) {
       FREE(softpipe->tgsi.sampler[i]);
+      FREE(softpipe->tgsi.image[i]);
+      FREE(softpipe->tgsi.buffer[i]);
    }
 
    FREE( softpipe );
