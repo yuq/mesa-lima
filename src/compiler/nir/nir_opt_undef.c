@@ -71,20 +71,6 @@ opt_undef_alu(nir_alu_instr *instr)
    return false;
 }
 
-static bool
-opt_undef_block(nir_block *block, void *data)
-{
-   bool *progress = data;
-
-   nir_foreach_instr_safe(block, instr) {
-      if (instr->type == nir_instr_type_alu)
-         if (opt_undef_alu(nir_instr_as_alu(instr)))
-             (*progress) = true;
-   }
-
-   return true;
-}
-
 bool
 nir_opt_undef(nir_shader *shader)
 {
@@ -92,7 +78,14 @@ nir_opt_undef(nir_shader *shader)
 
    nir_foreach_function(shader, function) {
       if (function->impl) {
-         nir_foreach_block_call(function->impl, opt_undef_block, &progress);
+         nir_foreach_block(block, function->impl) {
+            nir_foreach_instr_safe(block, instr) {
+               if (instr->type == nir_instr_type_alu)
+                  if (opt_undef_alu(nir_instr_as_alu(instr)))
+                      progress = true;
+            }
+         }
+
          if (progress)
             nir_metadata_preserve(function->impl,
                                   nir_metadata_block_index |
