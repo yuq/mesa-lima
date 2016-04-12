@@ -98,7 +98,7 @@ static void
 st_bufferobj_subdata(struct gl_context *ctx,
 		     GLintptrARB offset,
 		     GLsizeiptrARB size,
-		     const GLvoid * data, struct gl_buffer_object *obj)
+		     const void * data, struct gl_buffer_object *obj)
 {
    struct st_buffer_object *st_obj = st_buffer_object(obj);
 
@@ -142,7 +142,7 @@ static void
 st_bufferobj_get_subdata(struct gl_context *ctx,
                          GLintptrARB offset,
                          GLsizeiptrARB size,
-                         GLvoid * data, struct gl_buffer_object *obj)
+                         void * data, struct gl_buffer_object *obj)
 {
    struct st_buffer_object *st_obj = st_buffer_object(obj);
 
@@ -175,7 +175,7 @@ static GLboolean
 st_bufferobj_data(struct gl_context *ctx,
 		  GLenum target,
 		  GLsizeiptrARB size,
-		  const GLvoid * data,
+		  const void * data,
 		  GLenum usage,
                   GLbitfield storageFlags,
 		  struct gl_buffer_object *obj)
@@ -513,7 +513,7 @@ st_copy_buffer_subdata(struct gl_context *ctx,
 static void
 st_clear_buffer_subdata(struct gl_context *ctx,
                         GLintptr offset, GLsizeiptr size,
-                        const GLvoid *clearValue,
+                        const void *clearValue,
                         GLsizeiptr clearValueSize,
                         struct gl_buffer_object *bufObj)
 {

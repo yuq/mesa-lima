@@ -379,7 +379,7 @@ static struct pipe_resource *
 make_texture(struct st_context *st,
 	     GLsizei width, GLsizei height, GLenum format, GLenum type,
 	     const struct gl_pixelstore_attrib *unpack,
-	     const GLvoid *pixels)
+	     const void *pixels)
 {
    struct gl_context *ctx = st->ctx;
    struct pipe_context *pipe = st->pipe;
@@ -758,7 +758,7 @@ static void
 draw_stencil_pixels(struct gl_context *ctx, GLint x, GLint y,
                     GLsizei width, GLsizei height, GLenum format, GLenum type,
                     const struct gl_pixelstore_attrib *unpack,
-                    const GLvoid *pixels)
+                    const void *pixels)
 {
    struct st_context *st = st_context(ctx);
    struct pipe_context *pipe = st->pipe;
@@ -812,7 +812,7 @@ draw_stencil_pixels(struct gl_context *ctx, GLint x, GLint y,
       for (row = 0; row < height; row++) {
          GLfloat *zValuesFloat = (GLfloat*)zValues;
          GLenum destType = GL_UNSIGNED_BYTE;
-         const GLvoid *source = _mesa_image_address2d(&clippedUnpack, pixels,
+         const void *source = _mesa_image_address2d(&clippedUnpack, pixels,
                                                       width, height,
                                                       format, type,
                                                       row, 0);
@@ -1055,7 +1055,7 @@ static void
 st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
               GLsizei width, GLsizei height,
               GLenum format, GLenum type,
-              const struct gl_pixelstore_attrib *unpack, const GLvoid *pixels)
+              const struct gl_pixelstore_attrib *unpack, const void *pixels)
 {
    void *driver_vp, *driver_fp;
    struct st_context *st = st_context(ctx);
