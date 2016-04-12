@@ -174,7 +174,16 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	prims = u_reduced_prims_for_vertices(info->mode, info->count);
 
 	ctx->stats.draw_calls++;
-	ctx->stats.prims_emitted += prims;
+
+	/* TODO prims_emitted should be clipped when the stream-out buffer is
+	 * not large enough.  See max_tf_vtx().. probably need to move that
+	 * into common code.  Although a bit more annoying since a2xx doesn't
+	 * use ir3 so no common way to get at the pipe_stream_output_info
+	 * which is needed for this calculation.
+	 */
+	if (ctx->streamout.num_targets > 0)
+		ctx->stats.prims_emitted += prims;
+	ctx->stats.prims_generated += prims;
 
 	/* any buffers that haven't been cleared yet, we need to restore: */
 	ctx->restore |= buffers & (FD_BUFFER_ALL & ~ctx->cleared);
