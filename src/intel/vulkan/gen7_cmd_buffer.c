@@ -546,4 +546,10 @@ void genX(CmdWaitEvents)(
     const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
    stub();
+
+   genX(CmdPipelineBarrier)(commandBuffer, srcStageMask, destStageMask,
+                            false, /* byRegion */
+                            memoryBarrierCount, pMemoryBarriers,
+                            bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                            imageMemoryBarrierCount, pImageMemoryBarriers);
 }
