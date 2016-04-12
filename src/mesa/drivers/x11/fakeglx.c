@@ -794,7 +794,7 @@ destroy_visuals_on_display(Display *dpy)
       if (VisualTable[i]->display == dpy) {
          /* remove this visual */
          int j;
-         free(VisualTable[i]);
+         XMesaDestroyVisual(VisualTable[i]);
          for (j = i; j < NumVisuals - 1; j++)
             VisualTable[j] = VisualTable[j + 1];
          NumVisuals--;
