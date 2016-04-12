@@ -3817,14 +3817,6 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_cmd_add(pm4, 0x80000000);
 	si_pm4_cmd_end(pm4, false);
 
-	/* This enables pipeline stat & streamout queries.
-	 * They are only disabled by blits.
-	 */
-	si_pm4_cmd_begin(pm4, PKT3_EVENT_WRITE);
-	si_pm4_cmd_add(pm4, EVENT_TYPE(V_028A90_PIPELINESTAT_START) |
-		            EVENT_INDEX(0));
-	si_pm4_cmd_end(pm4, false);
-
 	si_pm4_set_reg(pm4, R_028A18_VGT_HOS_MAX_TESS_LEVEL, fui(64));
 	si_pm4_set_reg(pm4, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
 
