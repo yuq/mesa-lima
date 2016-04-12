@@ -503,12 +503,6 @@ struct transform {
    unsigned condition_offset;
 };
 
-struct opt_state {
-   void *mem_ctx;
-   bool progress;
-   const bool *condition_flags;
-};
-
 #endif
 
 % for (opcode, xform_list) in xform_dict.iteritems():
@@ -525,9 +519,10 @@ static const struct transform ${pass_name}_${opcode}_xforms[] = {
 % endfor
 
 static bool
-${pass_name}_block(nir_block *block, void *void_state)
+${pass_name}_block(nir_block *block, const bool *condition_flags,
+                   void *mem_ctx)
 {
-   struct opt_state *state = void_state;
+   bool progress = false;
 
    nir_foreach_instr_reverse_safe(block, instr) {
       if (instr->type != nir_instr_type_alu)
@@ -542,10 +537,10 @@ ${pass_name}_block(nir_block *block, void *void_state)
       case nir_op_${opcode}:
          for (unsigned i = 0; i < ARRAY_SIZE(${pass_name}_${opcode}_xforms); i++) {
             const struct transform *xform = &${pass_name}_${opcode}_xforms[i];
-            if (state->condition_flags[xform->condition_offset] &&
+            if (condition_flags[xform->condition_offset] &&
                 nir_replace_instr(alu, xform->search, xform->replace,
-                                  state->mem_ctx)) {
-               state->progress = true;
+                                  mem_ctx)) {
+               progress = true;
                break;
             }
          }
@@ -556,25 +551,24 @@ ${pass_name}_block(nir_block *block, void *void_state)
       }
    }
 
-   return true;
+   return progress;
 }
 
 static bool
 ${pass_name}_impl(nir_function_impl *impl, const bool *condition_flags)
 {
-   struct opt_state state;
+   void *mem_ctx = ralloc_parent(impl);
+   bool progress = false;
 
-   state.mem_ctx = ralloc_parent(impl);
-   state.progress = false;
-   state.condition_flags = condition_flags;
+   nir_foreach_block_reverse(block, impl) {
+      progress |= ${pass_name}_block(block, condition_flags, mem_ctx);
+   }
 
-   nir_foreach_block_reverse_call(impl, ${pass_name}_block, &state);
-
-   if (state.progress)
+   if (progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |
                                   nir_metadata_dominance);
 
-   return state.progress;
+   return progress;
 }
 
 
