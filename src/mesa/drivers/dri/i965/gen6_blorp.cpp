@@ -32,17 +32,6 @@
 #include "brw_blorp.h"
 
 /**
- * \name Constants for BLORP VBO
- * \{
- */
-#define GEN6_BLORP_NUM_VERTICES 3
-#define GEN6_BLORP_NUM_VUE_ELEMS 8
-#define GEN6_BLORP_VBO_SIZE (GEN6_BLORP_NUM_VERTICES \
-                             * GEN6_BLORP_NUM_VUE_ELEMS \
-                             * sizeof(float))
-/** \} */
-
-/**
  * CMD_STATE_BASE_ADDRESS
  *
  * From the Sandy Bridge PRM, Volume 1, Part 1, Table STATE_BASE_ADDRESS:
@@ -160,21 +149,21 @@ gen6_blorp_emit_vertices(struct brw_context *brw,
    {
       float *vertex_data;
 
-      const float vertices[GEN6_BLORP_VBO_SIZE] = {
-         /* v0 */ 0, 0, 0, 0,     (float) params->x0, (float) params->y1, 0, 1,
-         /* v1 */ 0, 0, 0, 0,     (float) params->x1, (float) params->y1, 0, 1,
-         /* v2 */ 0, 0, 0, 0,     (float) params->x0, (float) params->y0, 0, 1,
+      const float vertices[] = {
+         /* v0 */ 0, 0, 0, 0, (float)params->x0, (float)params->y1, 0, 1,
+         /* v1 */ 0, 0, 0, 0, (float)params->x1, (float)params->y1, 0, 1,
+         /* v2 */ 0, 0, 0, 0, (float)params->x0, (float)params->y0, 0, 1,
       };
 
       vertex_data = (float *) brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
-                                              GEN6_BLORP_VBO_SIZE, 32,
+                                              sizeof(vertices), 32,
                                               &vertex_offset);
-      memcpy(vertex_data, vertices, GEN6_BLORP_VBO_SIZE);
-   }
+      memcpy(vertex_data, vertices, sizeof(vertices));
 
-   gen6_blorp_emit_vertex_buffer_state(brw, GEN6_BLORP_NUM_VUE_ELEMS,
-                                       GEN6_BLORP_VBO_SIZE,
-                                       vertex_offset);
+      const unsigned blorp_num_vue_elems = 8;
+      gen6_blorp_emit_vertex_buffer_state(brw, blorp_num_vue_elems,
+                                          sizeof(vertices), vertex_offset);
+   }
 
    /* 3DSTATE_VERTEX_ELEMENTS
     *
