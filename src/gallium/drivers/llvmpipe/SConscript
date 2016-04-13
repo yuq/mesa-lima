@@ -38,10 +38,6 @@ if not env['embedded']:
             target = testname,
             source = [testname + '.c', 'lp_test_main.c'],
         )
-        env.InstallProgram(target)
-        
-        # http://www.scons.org/wiki/UnitTests
-        alias = env.Alias(testname, [target], target[0].abspath)
-        AlwaysBuild(alias)
+        env.UnitTest(testname, target)
 
 Export('llvmpipe')

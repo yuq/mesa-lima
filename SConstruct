@@ -84,6 +84,11 @@ env.Append(CPPPATH = [
 #print env.Dump()
 
 
+# Add a check target for running tests
+check = env.Alias('check')
+env.AlwaysBuild(check)
+
+
 #######################################################################
 # Invoke host SConscripts 
 # 

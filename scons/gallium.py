@@ -82,11 +82,6 @@ def install_shared_library(env, sources, version = ()):
     return targets
 
 
-def createInstallMethods(env):
-    env.AddMethod(install_program, 'InstallProgram')
-    env.AddMethod(install_shared_library, 'InstallSharedLibrary')
-
-
 def msvc2013_compat(env):
     if env['gcc']:
         env.Append(CCFLAGS = [
@@ -94,8 +89,20 @@ def msvc2013_compat(env):
             '-Werror=pointer-arith',
         ])
 
-def createMSVCCompatMethods(env):
-    env.AddMethod(msvc2013_compat, 'MSVC2013Compat')
+
+def unit_test(env, test_name, program_target, args=None):
+    env.InstallProgram(program_target)
+
+    cmd = [program_target[0].abspath]
+    if args is not None:
+        cmd += args
+    cmd = ' '.join(cmd)
+
+    # http://www.scons.org/wiki/UnitTests
+    action = SCons.Action.Action(cmd, "  Running %s ..." % test_name)
+    alias = env.Alias(test_name, program_target, action)
+    env.AlwaysBuild(alias)
+    env.Depends('check', alias)
 
 
 def num_jobs():
@@ -667,8 +674,10 @@ def generate(env):
     
     # Custom builders and methods
     env.Tool('custom')
-    createInstallMethods(env)
-    createMSVCCompatMethods(env)
+    env.AddMethod(install_program, 'InstallProgram')
+    env.AddMethod(install_shared_library, 'InstallSharedLibrary')
+    env.AddMethod(msvc2013_compat, 'MSVC2013Compat')
+    env.AddMethod(unit_test, 'UnitTest')
 
     env.PkgCheckModules('X11', ['x11', 'xext', 'xdamage', 'xfixes', 'glproto >= 1.4.13'])
     env.PkgCheckModules('XCB', ['x11-xcb', 'xcb-glx >= 1.8.1', 'xcb-dri2 >= 1.8'])
