@@ -445,46 +445,6 @@ ptn_sge(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 }
 
 static void
-ptn_sle(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
-{
-   nir_ssa_def *commuted[] = { src[1], src[0] };
-   ptn_sge(b, dest, commuted);
-}
-
-static void
-ptn_sgt(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
-{
-   nir_ssa_def *commuted[] = { src[1], src[0] };
-   ptn_slt(b, dest, commuted);
-}
-
-/**
- * Emit SEQ.  For platforms with integers, prefer b2f(feq(...)).
- */
-static void
-ptn_seq(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
-{
-   if (b->shader->options->native_integers) {
-      ptn_move_dest(b, dest, nir_b2f(b, nir_feq(b, src[0], src[1])));
-   } else {
-      ptn_move_dest(b, dest, nir_seq(b, src[0], src[1]));
-   }
-}
-
-/**
- * Emit SNE.  For platforms with integers, prefer b2f(fne(...)).
- */
-static void
-ptn_sne(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
-{
-   if (b->shader->options->native_integers) {
-      ptn_move_dest(b, dest, nir_b2f(b, nir_fne(b, src[0], src[1])));
-   } else {
-      ptn_move_dest(b, dest, nir_sne(b, src[0], src[1]));
-   }
-}
-
-static void
 ptn_xpd(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 {
    ptn_move_dest_masked(b, dest,
@@ -716,13 +676,9 @@ static const nir_op op_trans[MAX_OPCODE] = {
 
    [OPCODE_RSQ] = 0,
    [OPCODE_SCS] = 0,
-   [OPCODE_SEQ] = 0,
    [OPCODE_SGE] = 0,
-   [OPCODE_SGT] = 0,
    [OPCODE_SIN] = 0,
-   [OPCODE_SLE] = 0,
    [OPCODE_SLT] = 0,
-   [OPCODE_SNE] = 0,
    [OPCODE_SSG] = nir_op_fsign,
    [OPCODE_SUB] = nir_op_fsub,
    [OPCODE_SWZ] = 0,
@@ -845,24 +801,8 @@ ptn_emit_instruction(struct ptn_compile *c, struct prog_instruction *prog_inst)
       ptn_slt(b, dest, src);
       break;
 
-   case OPCODE_SGT:
-      ptn_sgt(b, dest, src);
-      break;
-
-   case OPCODE_SLE:
-      ptn_sle(b, dest, src);
-      break;
-
    case OPCODE_SGE:
       ptn_sge(b, dest, src);
-      break;
-
-   case OPCODE_SEQ:
-      ptn_seq(b, dest, src);
-      break;
-
-   case OPCODE_SNE:
-      ptn_sne(b, dest, src);
       break;
 
    case OPCODE_TEX:
