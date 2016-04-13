@@ -1690,7 +1690,7 @@ process_record_constructor(exec_list *instructions,
                           constructor_type->fields.structure[i].name,
                           ir->type->name,
                           constructor_type->fields.structure[i].type->name);
-         return ir_rvalue::error_value(ctx);;
+         return ir_rvalue::error_value(ctx);
       }
 
       node = node->next;
