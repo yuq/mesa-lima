@@ -644,10 +644,9 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
    case 0xf0:
    case 0x100:
    case 0x110:
+   case 0x120:
       if (debug_get_bool_option("NVF0_COMPUTE", false))
          return nve4_screen_compute_setup(screen, screen->base.pushbuf);
-   case 0x120:
-      return 0;
    default:
       return -1;
    }
