@@ -285,7 +285,8 @@ bool CheckDependency(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint64_t lastReti
     return (pDC->dependency > lastRetiredDraw);
 }
 
-INLINE int64_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+// inlined-only version
+INLINE int64_t CompleteDrawContextInl(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
     int64_t result = InterlockedDecrement64(&pDC->threadsDone);
     SWR_ASSERT(result >= 0);
@@ -311,6 +312,12 @@ INLINE int64_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
     return result;
 }
 
+// available to other translation modules
+int64_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+{
+    return CompleteDrawContextInl(pContext, pDC);
+}
+
 INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint64_t& curDrawBE, uint64_t& drawEnqueued)
 {
     // increment our current draw id to the first incomplete draw
@@ -329,7 +336,7 @@ INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint64_t& curDrawBE, 
         if (isWorkComplete)
         {
             curDrawBE++;
-            CompleteDrawContext(pContext, pDC);
+            CompleteDrawContextInl(pContext, pDC);
         }
         else
         {
@@ -457,7 +464,7 @@ void WorkOnFifoBE(
                 {
                     // We can increment the current BE and safely move to next draw since we know this draw is complete.
                     curDrawBE++;
-                    CompleteDrawContext(pContext, pDC);
+                    CompleteDrawContextInl(pContext, pDC);
 
                     lastRetiredDraw++;
 
@@ -484,7 +491,7 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE)
         DRAW_CONTEXT *pDC = &pContext->dcRing[dcSlot];
         if (pDC->isCompute || pDC->doneFE || pDC->FeLock)
         {
-            CompleteDrawContext(pContext, pDC);
+            CompleteDrawContextInl(pContext, pDC);
             curDrawFE++;
         }
         else
