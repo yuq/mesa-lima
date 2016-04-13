@@ -366,12 +366,15 @@ vec4_visitor::opt_vector_float()
       int vf = -1;
 
       /* Look for unconditional MOVs from an immediate with a partial
-       * writemask.  See if the immediate can be represented as a VF.
+       * writemask.  Skip type-conversion MOVs other than integer 0,
+       * where the type doesn't matter.  See if the immediate can be
+       * represented as a VF.
        */
       if (inst->opcode == BRW_OPCODE_MOV &&
           inst->src[0].file == IMM &&
           inst->predicate == BRW_PREDICATE_NONE &&
-          inst->dst.writemask != WRITEMASK_XYZW) {
+          inst->dst.writemask != WRITEMASK_XYZW &&
+          (inst->src[0].type == inst->dst.type || inst->src[0].d == 0)) {
          vf = brw_float_to_vf(inst->src[0].f);
       } else {
          last_reg = -1;
