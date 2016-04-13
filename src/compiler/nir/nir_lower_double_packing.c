@@ -46,42 +46,37 @@ lower_unpack_double(nir_builder *b, nir_ssa_def *src)
                       nir_unpack_double_2x32_split_y(b, src));
 }
 
-static bool
-lower_double_pack_block(nir_block *block, void *ctx)
-{
-   nir_builder *b = (nir_builder *) ctx;
-
-   nir_foreach_instr_safe(instr, block) {
-      if (instr->type != nir_instr_type_alu)
-         continue;
-
-      nir_alu_instr *alu_instr = (nir_alu_instr *) instr;
-
-      if (alu_instr->op != nir_op_pack_double_2x32 &&
-          alu_instr->op != nir_op_unpack_double_2x32)
-         continue;
-
-      b->cursor = nir_before_instr(&alu_instr->instr);
-
-      nir_ssa_def *src = nir_ssa_for_alu_src(b, alu_instr, 0);
-      nir_ssa_def *dest =
-         alu_instr->op == nir_op_pack_double_2x32 ?
-         lower_pack_double(b, src) :
-         lower_unpack_double(b, src);
-
-      nir_ssa_def_rewrite_uses(&alu_instr->dest.dest.ssa, nir_src_for_ssa(dest));
-      nir_instr_remove(&alu_instr->instr);
-   }
-
-   return true;
-}
-
 static void
 lower_double_pack_impl(nir_function_impl *impl)
 {
    nir_builder b;
    nir_builder_init(&b, impl);
-   nir_foreach_block_call(impl, lower_double_pack_block, &b);
+
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr_safe(instr, block) {
+         if (instr->type != nir_instr_type_alu)
+            continue;
+
+         nir_alu_instr *alu_instr = (nir_alu_instr *) instr;
+
+         if (alu_instr->op != nir_op_pack_double_2x32 &&
+             alu_instr->op != nir_op_unpack_double_2x32)
+            continue;
+
+         b.cursor = nir_before_instr(&alu_instr->instr);
+
+         nir_ssa_def *src = nir_ssa_for_alu_src(&b, alu_instr, 0);
+         nir_ssa_def *dest =
+            alu_instr->op == nir_op_pack_double_2x32 ?
+            lower_pack_double(&b, src) :
+            lower_unpack_double(&b, src);
+
+         nir_ssa_def_rewrite_uses(&alu_instr->dest.dest.ssa, nir_src_for_ssa(dest));
+         nir_instr_remove(&alu_instr->instr);
+      }
+   }
+
+   return true;
 }
 
 void
