@@ -568,11 +568,13 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
       blob_write_string(metadata, prog->data->UniformStorage[i].name);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].storage -
                                   prog->data->UniformDataSlots);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].builtin);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].remap_location);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].block_index);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].atomic_buffer_index);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].offset);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].array_stride);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].hidden);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].matrix_stride);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].row_major);
       blob_write_uint32(metadata,
@@ -583,6 +585,22 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
                         prog->data->UniformStorage[i].top_level_array_stride);
       blob_write_bytes(metadata, prog->data->UniformStorage[i].opaque,
                        sizeof(prog->data->UniformStorage[i].opaque));
+   }
+
+   /* Here we cache all uniform values. We do this to retain values for
+    * uniforms with initialisers and also hidden uniforms that may be lowered
+    * constant arrays. We could possibly just store the values we need but for
+    * now we just store everything.
+    */
+   blob_write_uint32(metadata, prog->data->NumHiddenUniforms);
+   for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
+      if (!prog->data->UniformStorage[i].builtin) {
+         unsigned vec_size =
+            values_for_type(prog->data->UniformStorage[i].type) *
+            MAX2(prog->data->UniformStorage[i].array_elements, 1);
+         blob_write_bytes(metadata, prog->data->UniformStorage[i].storage,
+                          sizeof(union gl_constant_value) * vec_size);
+      }
    }
 }
 
@@ -611,11 +629,13 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
       uniforms[i].array_elements = blob_read_uint32(metadata);
       uniforms[i].name = ralloc_strdup(prog, blob_read_string (metadata));
       uniforms[i].storage = data + blob_read_uint32(metadata);
+      uniforms[i].builtin = blob_read_uint32(metadata);
       uniforms[i].remap_location = blob_read_uint32(metadata);
       uniforms[i].block_index = blob_read_uint32(metadata);
       uniforms[i].atomic_buffer_index = blob_read_uint32(metadata);
       uniforms[i].offset = blob_read_uint32(metadata);
       uniforms[i].array_stride = blob_read_uint32(metadata);
+      uniforms[i].hidden = blob_read_uint32(metadata);
       uniforms[i].matrix_stride = blob_read_uint32(metadata);
       uniforms[i].row_major = blob_read_uint32(metadata);
       uniforms[i].num_compatible_subroutines = blob_read_uint32(metadata);
@@ -626,6 +646,19 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
       memcpy(uniforms[i].opaque,
              blob_read_bytes(metadata, sizeof(uniforms[i].opaque)),
              sizeof(uniforms[i].opaque));
+   }
+
+   /* Restore uniform values. */
+   prog->data->NumHiddenUniforms = blob_read_uint32(metadata);
+   for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
+      if (!prog->data->UniformStorage[i].builtin) {
+         unsigned vec_size =
+            values_for_type(prog->data->UniformStorage[i].type) *
+            MAX2(prog->data->UniformStorage[i].array_elements, 1);
+         blob_copy_bytes(metadata,
+                         (uint8_t *) prog->data->UniformStorage[i].storage,
+                         sizeof(union gl_constant_value) * vec_size);
+      }
    }
 }
 
