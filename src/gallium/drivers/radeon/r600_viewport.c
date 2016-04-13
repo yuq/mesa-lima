@@ -130,7 +130,12 @@ static void r600_emit_one_scissor(struct r600_common_context *rctx,
 {
 	struct pipe_scissor_state final;
 
-	r600_clamp_scissor(rctx, &final, vp_scissor);
+	if (rctx->vs_disables_clipping_viewport) {
+		final.minx = final.miny = 0;
+		final.maxx = final.maxy = GET_MAX_SCISSOR(rctx);
+	} else {
+		r600_clamp_scissor(rctx, &final, vp_scissor);
+	}
 
 	if (scissor)
 		r600_clip_scissor(&final, scissor);
@@ -324,9 +329,22 @@ void r600_set_scissor_enable(struct r600_common_context *rctx, bool enable)
 void r600_update_vs_writes_viewport_index(struct r600_common_context *rctx,
 					  struct tgsi_shader_info *info)
 {
+	bool vs_window_space;
+
 	if (!info)
 		return;
 
+	/* When the VS disables clipping and viewport transformation. */
+	vs_window_space =
+		info->properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
+
+	if (rctx->vs_disables_clipping_viewport != vs_window_space) {
+		rctx->vs_disables_clipping_viewport = vs_window_space;
+		rctx->scissors.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
+		rctx->set_atom_dirty(rctx, &rctx->scissors.atom, true);
+	}
+
+	/* Viewport index handling. */
 	rctx->vs_writes_viewport_index = info->writes_viewport_index;
 	if (!rctx->vs_writes_viewport_index)
 		return;

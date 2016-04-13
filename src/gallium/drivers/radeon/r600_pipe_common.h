@@ -455,6 +455,7 @@ struct r600_common_context {
 	struct r600_viewports		viewports;
 	bool				scissor_enabled;
 	bool				vs_writes_viewport_index;
+	bool				vs_disables_clipping_viewport;
 
 	/* Additional context states. */
 	unsigned flags; /* flush flags */
