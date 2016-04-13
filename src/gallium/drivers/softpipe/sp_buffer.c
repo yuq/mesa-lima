@@ -59,7 +59,7 @@ sp_tgsi_load(const struct tgsi_buffer *buffer,
    unsigned char *data_ptr;
    const struct util_format_description *format_desc = util_format_description(PIPE_FORMAT_R32_UINT);
 
-   if (params->unit > PIPE_MAX_SHADER_BUFFERS)
+   if (params->unit >= PIPE_MAX_SHADER_BUFFERS)
       goto fail_write_all_zero;
 
    bview = &sp_buf->sp_bview[params->unit];
@@ -117,7 +117,7 @@ sp_tgsi_store(const struct tgsi_buffer *buffer,
    int j, c;
    const struct util_format_description *format_desc = util_format_description(PIPE_FORMAT_R32_UINT);
 
-   if (params->unit > PIPE_MAX_SHADER_BUFFERS)
+   if (params->unit >= PIPE_MAX_SHADER_BUFFERS)
       return;
 
    bview = &sp_buf->sp_bview[params->unit];
@@ -293,7 +293,7 @@ sp_tgsi_op(const struct tgsi_buffer *buffer,
    int j, c;
    unsigned char *data_ptr;
 
-   if (params->unit > PIPE_MAX_SHADER_BUFFERS)
+   if (params->unit >= PIPE_MAX_SHADER_BUFFERS)
       return;
 
    bview = &sp_buf->sp_bview[params->unit];
@@ -345,7 +345,7 @@ sp_tgsi_get_dims(const struct tgsi_buffer *buffer,
    struct pipe_shader_buffer *bview;
    struct softpipe_resource *spr;
 
-   if (params->unit > PIPE_MAX_SHADER_BUFFERS)
+   if (params->unit >= PIPE_MAX_SHADER_BUFFERS)
       return;
 
    bview = &sp_buf->sp_bview[params->unit];
