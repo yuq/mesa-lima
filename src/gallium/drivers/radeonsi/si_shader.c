@@ -6761,6 +6761,16 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	return true;
 }
 
+static void si_fix_num_sgprs(struct si_shader *shader)
+{
+	unsigned min_sgprs = shader->info.num_input_sgprs + 2; /* VCC */
+
+	if (shader->config.scratch_bytes_per_wave)
+		min_sgprs += 1; /* scratch wave offset */
+
+	shader->config.num_sgprs = MAX2(shader->config.num_sgprs, min_sgprs);
+}
+
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug)
@@ -6850,6 +6860,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		}
 	}
 
+	si_fix_num_sgprs(shader);
 	si_shader_dump(sscreen, shader, debug, shader->selector->info.processor,
 		       stderr);
 
