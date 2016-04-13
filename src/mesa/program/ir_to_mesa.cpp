@@ -1212,24 +1212,20 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
       break;
 
    case ir_binop_logic_or: {
-      /* After the addition, the value will be an integer on the
-       * range [0,2].  Zero stays zero, and positive values become 1.0.
-       */
-      ir_to_mesa_instruction *add =
-	 emit(ir, OPCODE_ADD, result_dst, op[0], op[1]);
       if (this->prog->Target == GL_FRAGMENT_PROGRAM_ARB) {
-	 /* The clamping to [0,1] can be done for free in the fragment
-	  * shader with a saturate.
-	  */
+         /* After the addition, the value will be an integer on the
+          * range [0,2].  Zero stays zero, and positive values become 1.0.
+          */
+         ir_to_mesa_instruction *add =
+            emit(ir, OPCODE_ADD, result_dst, op[0], op[1]);
 	 add->saturate = true;
       } else {
-	 /* Negating the result of the addition gives values on the range
-	  * [-2, 0].  Zero stays zero, and negative values become 1.0.  This
-	  * is achieved using SLT.
-	  */
-	 src_reg slt_src = result_src;
-	 slt_src.negate = ~slt_src.negate;
-	 emit(ir, OPCODE_SLT, result_dst, slt_src, src_reg_for_float(0.0));
+         /* The Boolean arguments are stored as float 0.0 and 1.0.  If either
+          * value is 1.0, the result of the logcal-or should be 1.0.  If both
+          * values are 0.0, the result should be 0.0.  This is exactly what
+          * MAX does.
+          */
+         emit(ir, OPCODE_MAX, result_dst, op[0], op[1]);
       }
       break;
    }
