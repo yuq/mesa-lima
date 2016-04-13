@@ -218,7 +218,7 @@ int bc_parser::decode_cf(unsigned &i, bool &eop) {
 			return r;
 	} else if (flags & CF_FETCH) {
 		if ((r = decode_fetch_clause(cf)))
-			return r;;
+			return r;
 	} else if (flags & CF_EXP) {
 		if (cf->bc.rw_rel)
 			gpr_reladdr = true;
