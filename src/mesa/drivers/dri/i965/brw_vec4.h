@@ -359,10 +359,6 @@ protected:
    virtual void gs_end_primitive();
 
 private:
-   bool vectorize_mov(bblock_t *block, vec4_instruction *inst,
-                      uint8_t imm[4], vec4_instruction *imm_inst[4],
-                      int inst_count, unsigned writemask);
-
    /**
     * If true, then register allocation should fail instead of spilling.
     */

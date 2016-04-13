@@ -350,28 +350,6 @@ src_reg::equals(const src_reg &r) const
 }
 
 bool
-vec4_visitor::vectorize_mov(bblock_t *block, vec4_instruction *inst,
-                            uint8_t imm[4], vec4_instruction *imm_inst[4],
-                            int inst_count, unsigned writemask)
-{
-   if (inst_count < 2)
-      return false;
-
-   unsigned vf;
-   memcpy(&vf, imm, sizeof(vf));
-   vec4_instruction *mov = MOV(imm_inst[0]->dst, brw_imm_vf(vf));
-   mov->dst.type = BRW_REGISTER_TYPE_F;
-   mov->dst.writemask = writemask;
-   inst->insert_before(block, mov);
-
-   for (int i = 0; i < inst_count; i++) {
-      imm_inst[i]->remove(block);
-   }
-
-   return true;
-}
-
-bool
 vec4_visitor::opt_vector_float()
 {
    bool progress = false;
@@ -405,8 +383,22 @@ vec4_visitor::opt_vector_float()
       if (last_reg != inst->dst.nr ||
           last_reg_offset != inst->dst.reg_offset ||
           last_reg_file != inst->dst.file) {
-         progress |= vectorize_mov(block, inst, imm, imm_inst, inst_count,
-                                   writemask);
+
+         if (inst_count > 1) {
+            unsigned vf;
+            memcpy(&vf, imm, sizeof(vf));
+            vec4_instruction *mov = MOV(imm_inst[0]->dst, brw_imm_vf(vf));
+            mov->dst.type = BRW_REGISTER_TYPE_F;
+            mov->dst.writemask = writemask;
+            inst->insert_before(block, mov);
+
+            for (int i = 0; i < inst_count; i++) {
+               imm_inst[i]->remove(block);
+            }
+
+            progress = true;
+         }
+
          inst_count = 0;
          last_reg = -1;
          writemask = 0;
