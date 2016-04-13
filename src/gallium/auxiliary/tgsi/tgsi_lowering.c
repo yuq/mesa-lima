@@ -1109,6 +1109,79 @@ transform_flr_ceil(struct tgsi_transform_context *tctx,
    }
 }
 
+/* TRUNC - truncate off fractional part
+ *  dst.x = trunc(src.x)
+ *  dst.y = trunc(src.y)
+ *  dst.z = trunc(src.z)
+ *  dst.w = trunc(src.w)
+ *
+ * ; needs: 1 tmp
+ * if (lower FLR) {
+ *   FRC tmpA, |src|
+ *   SUB tmpA, |src|, tmpA
+ * } else {
+ *   FLR tmpA, |src|
+ * }
+ * CMP dst, src, -tmpA, tmpA
+ */
+#define TRUNC_GROW (NINST(1) + NINST(2) + NINST(3) - OINST(1))
+#define TRUNC_TMP 1
+static void
+transform_trunc(struct tgsi_transform_context *tctx,
+                struct tgsi_full_instruction *inst)
+{
+   struct tgsi_lowering_context *ctx = tgsi_lowering_context(tctx);
+   struct tgsi_full_dst_register *dst  = &inst->Dst[0];
+   struct tgsi_full_src_register *src0 = &inst->Src[0];
+   struct tgsi_full_instruction new_inst;
+
+   if (dst->Register.WriteMask & TGSI_WRITEMASK_XYZW) {
+      if (ctx->config->lower_FLR) {
+         new_inst = tgsi_default_full_instruction();
+         new_inst.Instruction.Opcode = TGSI_OPCODE_FRC;
+         new_inst.Instruction.NumDstRegs = 1;
+         reg_dst(&new_inst.Dst[0], &ctx->tmp[A].dst, TGSI_WRITEMASK_XYZW);
+         new_inst.Instruction.NumSrcRegs = 1;
+         reg_src(&new_inst.Src[0], src0, SWIZ(X, Y, Z, W));
+         new_inst.Src[0].Register.Absolute = true;
+         new_inst.Src[0].Register.Negate = false;
+         tctx->emit_instruction(tctx, &new_inst);
+
+         new_inst = tgsi_default_full_instruction();
+         new_inst.Instruction.Opcode = TGSI_OPCODE_SUB;
+         new_inst.Instruction.NumDstRegs = 1;
+         reg_dst(&new_inst.Dst[0], &ctx->tmp[A].dst, TGSI_WRITEMASK_XYZW);
+         new_inst.Instruction.NumSrcRegs = 2;
+         reg_src(&new_inst.Src[0], src0, SWIZ(X, Y, Z, W));
+         new_inst.Src[0].Register.Absolute = true;
+         new_inst.Src[0].Register.Negate = false;
+         reg_src(&new_inst.Src[1], &ctx->tmp[A].src, SWIZ(X, Y, Z, W));
+         tctx->emit_instruction(tctx, &new_inst);
+      } else {
+         new_inst = tgsi_default_full_instruction();
+         new_inst.Instruction.Opcode = TGSI_OPCODE_FLR;
+         new_inst.Instruction.NumDstRegs = 1;
+         reg_dst(&new_inst.Dst[0], &ctx->tmp[A].dst, TGSI_WRITEMASK_XYZW);
+         new_inst.Instruction.NumSrcRegs = 1;
+         reg_src(&new_inst.Src[0], src0, SWIZ(X, Y, Z, W));
+         new_inst.Src[0].Register.Absolute = true;
+         new_inst.Src[0].Register.Negate = false;
+         tctx->emit_instruction(tctx, &new_inst);
+      }
+
+      new_inst = tgsi_default_full_instruction();
+      new_inst.Instruction.Opcode = TGSI_OPCODE_CMP;
+      new_inst.Instruction.NumDstRegs = 1;
+      reg_dst(&new_inst.Dst[0], dst, TGSI_WRITEMASK_XYZW);
+      new_inst.Instruction.NumSrcRegs = 3;
+      reg_src(&new_inst.Src[0], src0, SWIZ(X, Y, Z, W));
+      reg_src(&new_inst.Src[1], &ctx->tmp[A].src, SWIZ(X, Y, Z, W));
+      new_inst.Src[1].Register.Negate = true;
+      reg_src(&new_inst.Src[2], &ctx->tmp[A].src, SWIZ(X, Y, Z, W));
+      tctx->emit_instruction(tctx, &new_inst);
+   }
+}
+
 /* Inserts a MOV_SAT for the needed components of tex coord.  Note that
  * in the case of TXP, the clamping must happen *after* projection, so
  * we need to lower TXP to TEX.
@@ -1515,6 +1588,11 @@ transform_instr(struct tgsi_transform_context *tctx,
          goto skip;
       transform_flr_ceil(tctx, inst);
       break;
+   case TGSI_OPCODE_TRUNC:
+      if (!ctx->config->lower_TRUNC)
+         goto skip;
+      transform_trunc(tctx, inst);
+      break;
    case TGSI_OPCODE_TEX:
    case TGSI_OPCODE_TXP:
    case TGSI_OPCODE_TXB:
@@ -1548,6 +1626,7 @@ tgsi_transform_lowering(const struct tgsi_lowering_config *config,
 
    /* sanity check the lowering */
    assert(!(config->lower_FRC && (config->lower_FLR || config->lower_CEIL)));
+   assert(!(config->lower_FRC && config->lower_TRUNC));
 
    memset(&ctx, 0, sizeof(ctx));
    ctx.base.transform_instruction = transform_instr;
@@ -1592,6 +1671,7 @@ tgsi_transform_lowering(const struct tgsi_lowering_config *config,
          OPCS(DP2A) ||
          OPCS(FLR) ||
          OPCS(CEIL) ||
+         OPCS(TRUNC) ||
          OPCS(TXP) ||
          ctx.two_side_colors ||
          ctx.saturate))
@@ -1667,6 +1747,10 @@ tgsi_transform_lowering(const struct tgsi_lowering_config *config,
    if (OPCS(CEIL)) {
       newlen += CEIL_GROW * OPCS(CEIL);
       numtmp = MAX2(numtmp, CEIL_TMP);
+   }
+   if (OPCS(TRUNC)) {
+      newlen += TRUNC_GROW * OPCS(TRUNC);
+      numtmp = MAX2(numtmp, TRUNC_TMP);
    }
    if (ctx.saturate || config->lower_TXP) {
       int n = 0;
