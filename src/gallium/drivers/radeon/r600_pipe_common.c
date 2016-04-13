@@ -402,6 +402,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "norbplus", DBG_NO_RB_PLUS, "Disable RB+ on Stoney." },
 	{ "sisched", DBG_SI_SCHED, "Enable LLVM SI Machine Instruction Scheduler." },
 	{ "mono", DBG_MONOLITHIC_SHADERS, "Use old-style monolithic shaders compiled on demand" },
+	{ "noce", DBG_NO_CE, "Disable the constant engine"},
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };

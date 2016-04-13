@@ -26,10 +26,41 @@
 
 #include "si_pipe.h"
 
+static unsigned si_descriptor_list_cs_space(unsigned count, unsigned element_size)
+{
+	/* Ensure we have enough space to start a new range in a hole */
+	assert(element_size >= 3);
+
+	/* 5 dwords for possible load to reinitialize when we have no preamble
+	 * IB + 5 dwords for write to L2 + 3 bytes for every range written to
+	 * CE RAM.
+	 */
+	return 5 + 5 + 3 + count * element_size;
+}
+
+static unsigned si_ce_needed_cs_space(void)
+{
+	unsigned space = 0;
+
+	space += si_descriptor_list_cs_space(SI_NUM_CONST_BUFFERS, 4);
+	space += si_descriptor_list_cs_space(SI_NUM_RW_BUFFERS, 4);
+	space += si_descriptor_list_cs_space(SI_NUM_SHADER_BUFFERS, 4);
+	space += si_descriptor_list_cs_space(SI_NUM_SAMPLERS, 16);
+	space += si_descriptor_list_cs_space(SI_NUM_IMAGES, 8);
+
+	space *= SI_NUM_SHADERS;
+
+	/* Increment CE counter packet */
+	space += 2;
+
+	return space;
+}
+
 /* initialize */
 void si_need_cs_space(struct si_context *ctx)
 {
 	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
+	struct radeon_winsys_cs *ce_ib = ctx->ce_ib;
 	struct radeon_winsys_cs *dma = ctx->b.dma.cs;
 
 	/* Flush the DMA IB if it's not empty. */
@@ -53,7 +84,9 @@ void si_need_cs_space(struct si_context *ctx)
 	/* If the CS is sufficiently large, don't count the space needed
 	 * and just flush if there is not enough space left.
 	 */
-	if (unlikely(cs->cdw > cs->max_dw - 2048))
+	if (unlikely(cs->cdw > cs->max_dw - 2048 ||
+                     (ce_ib && ce_ib->max_dw - ce_ib->cdw <
+                      si_ce_needed_cs_space())))
 		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 }
 
