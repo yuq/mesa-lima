@@ -385,48 +385,55 @@ vec4_visitor::opt_vector_float()
    unsigned writemask = 0;
 
    foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
+      int vf = -1;
+
+      /* Look for unconditional MOVs from an immediate with a partial
+       * writemask.  See if the immediate can be represented as a VF.
+       */
+      if (inst->opcode == BRW_OPCODE_MOV &&
+          inst->src[0].file == IMM &&
+          inst->predicate == BRW_PREDICATE_NONE &&
+          inst->dst.writemask != WRITEMASK_XYZW) {
+         vf = brw_float_to_vf(inst->src[0].f);
+      } else {
+         last_reg = -1;
+      }
+
+      /* If this wasn't a MOV, or the destination register doesn't match,
+       * then this breaks our sequence.  Combine anything we've accumulated.
+       */
       if (last_reg != inst->dst.nr ||
           last_reg_offset != inst->dst.reg_offset ||
           last_reg_file != inst->dst.file) {
          progress |= vectorize_mov(block, inst, imm, imm_inst, inst_count,
                                    writemask);
          inst_count = 0;
+         last_reg = -1;
          writemask = 0;
-         last_reg = inst->dst.nr;
-         last_reg_offset = inst->dst.reg_offset;
-         last_reg_file = inst->dst.file;
 
          for (int i = 0; i < 4; i++) {
             imm[i] = 0;
          }
       }
 
-      if (inst->opcode != BRW_OPCODE_MOV ||
-          inst->dst.writemask == WRITEMASK_XYZW ||
-          inst->src[0].file != IMM ||
-          inst->predicate != BRW_PREDICATE_NONE) {
-         progress |= vectorize_mov(block, inst, imm, imm_inst, inst_count,
-                                   writemask);
-         inst_count = 0;
-         last_reg = -1;
-         continue;
+      /* Record this instruction's value (if it was representable). */
+      if (vf != -1) {
+         if ((inst->dst.writemask & WRITEMASK_X) != 0)
+            imm[0] = vf;
+         if ((inst->dst.writemask & WRITEMASK_Y) != 0)
+            imm[1] = vf;
+         if ((inst->dst.writemask & WRITEMASK_Z) != 0)
+            imm[2] = vf;
+         if ((inst->dst.writemask & WRITEMASK_W) != 0)
+            imm[3] = vf;
+
+         writemask |= inst->dst.writemask;
+         imm_inst[inst_count++] = inst;
+
+         last_reg = inst->dst.nr;
+         last_reg_offset = inst->dst.reg_offset;
+         last_reg_file = inst->dst.file;
       }
-
-      int vf = brw_float_to_vf(inst->src[0].f);
-      if (vf == -1)
-         continue;
-
-      if ((inst->dst.writemask & WRITEMASK_X) != 0)
-         imm[0] = vf;
-      if ((inst->dst.writemask & WRITEMASK_Y) != 0)
-         imm[1] = vf;
-      if ((inst->dst.writemask & WRITEMASK_Z) != 0)
-         imm[2] = vf;
-      if ((inst->dst.writemask & WRITEMASK_W) != 0)
-         imm[3] = vf;
-
-      writemask |= inst->dst.writemask;
-      imm_inst[inst_count++] = inst;
    }
 
    if (progress)
