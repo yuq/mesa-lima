@@ -361,9 +361,11 @@ vec4_visitor::opt_vector_float()
    int inst_count = 0;
    vec4_instruction *imm_inst[4];
    unsigned writemask = 0;
+   enum brw_reg_type dest_type = BRW_REGISTER_TYPE_F;
 
    foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
       int vf = -1;
+      enum brw_reg_type need_type;
 
       /* Look for unconditional MOVs from an immediate with a partial
        * writemask.  Skip type-conversion MOVs other than integer 0,
@@ -375,23 +377,32 @@ vec4_visitor::opt_vector_float()
           inst->predicate == BRW_PREDICATE_NONE &&
           inst->dst.writemask != WRITEMASK_XYZW &&
           (inst->src[0].type == inst->dst.type || inst->src[0].d == 0)) {
-         vf = brw_float_to_vf(inst->src[0].f);
+
+         vf = brw_float_to_vf(inst->src[0].d);
+         need_type = BRW_REGISTER_TYPE_D;
+
+         if (vf == -1) {
+            vf = brw_float_to_vf(inst->src[0].f);
+            need_type = BRW_REGISTER_TYPE_F;
+         }
       } else {
          last_reg = -1;
       }
 
       /* If this wasn't a MOV, or the destination register doesn't match,
-       * then this breaks our sequence.  Combine anything we've accumulated.
+       * or we have to switch destination types, then this breaks our
+       * sequence.  Combine anything we've accumulated so far.
        */
       if (last_reg != inst->dst.nr ||
           last_reg_offset != inst->dst.reg_offset ||
-          last_reg_file != inst->dst.file) {
+          last_reg_file != inst->dst.file ||
+          (vf > 0 && dest_type != need_type)) {
 
          if (inst_count > 1) {
             unsigned vf;
             memcpy(&vf, imm, sizeof(vf));
             vec4_instruction *mov = MOV(imm_inst[0]->dst, brw_imm_vf(vf));
-            mov->dst.type = BRW_REGISTER_TYPE_F;
+            mov->dst.type = dest_type;
             mov->dst.writemask = writemask;
             inst->insert_before(block, mov);
 
@@ -405,6 +416,7 @@ vec4_visitor::opt_vector_float()
          inst_count = 0;
          last_reg = -1;
          writemask = 0;
+         dest_type = BRW_REGISTER_TYPE_F;
 
          for (int i = 0; i < 4; i++) {
             imm[i] = 0;
@@ -428,6 +440,8 @@ vec4_visitor::opt_vector_float()
          last_reg = inst->dst.nr;
          last_reg_offset = inst->dst.reg_offset;
          last_reg_file = inst->dst.file;
+         if (vf > 0)
+            dest_type = need_type;
       }
    }
 
