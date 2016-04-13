@@ -2180,44 +2180,6 @@ nir_block *nir_cf_node_cf_tree_next(nir_cf_node *node);
         block != nir_cf_node_cf_tree_next(node); \
         block = nir_block_cf_tree_next(block))
 
-typedef bool (*nir_foreach_block_cb)(nir_block *block, void *state);
-
-static inline bool
-nir_foreach_block_call(nir_function_impl *impl, nir_foreach_block_cb cb,
-                       void *state)
-{
-   nir_foreach_block_safe(block, impl) {
-      if (!cb(block, state))
-         return false;
-   }
-
-   return true;
-}
-
-static inline bool
-nir_foreach_block_reverse_call(nir_function_impl *impl, nir_foreach_block_cb cb,
-                               void *state)
-{
-   nir_foreach_block_reverse_safe(block, impl) {
-      if (!cb(block, state))
-         return false;
-   }
-
-   return true;
-}
-
-static inline bool
-nir_foreach_block_in_cf_node_call(nir_cf_node *node, nir_foreach_block_cb cb,
-                                  void *state)
-{
-   nir_foreach_block_in_cf_node(block, node) {
-      if (!cb(block, state))
-         return false;
-   }
-
-   return true;
-}
-
 /* If the following CF node is an if, this function returns that if.
  * Otherwise, it returns NULL.
  */
