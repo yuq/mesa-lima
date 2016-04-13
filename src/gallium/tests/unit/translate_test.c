@@ -70,8 +70,9 @@ int main(int argc, char** argv)
 
    util_cpu_detect();
 
-   if(argc <= 1)
-   {}
+   if (argc <= 1 ||
+       !strcmp(argv[1], "default") )
+      create_fn = translate_create;
    else if (!strcmp(argv[1], "generic"))
       create_fn = translate_generic_create;
    else if (!strcmp(argv[1], "x86"))
@@ -129,7 +130,7 @@ int main(int argc, char** argv)
 
    if (!create_fn)
    {
-      printf("Usage: ./translate_test [generic|x86|nosse|sse|sse2|sse3|sse4.1]\n");
+      printf("Usage: ./translate_test [default|generic|x86|nosse|sse|sse2|sse3|sse4.1]\n");
       return 2;
    }
 
