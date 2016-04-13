@@ -1067,10 +1067,20 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
       emit(ir, OPCODE_SLT, result_dst, op[0], op[1]);
       break;
    case ir_binop_greater:
-      emit(ir, OPCODE_SGT, result_dst, op[0], op[1]);
+      /* Negating the operands (as opposed to switching the order of the
+       * operands) produces the correct result when both are +/-Inf.
+       */
+      op[0].negate = ~op[0].negate;
+      op[1].negate = ~op[1].negate;
+      emit(ir, OPCODE_SLT, result_dst, op[0], op[1]);
       break;
    case ir_binop_lequal:
-      emit(ir, OPCODE_SLE, result_dst, op[0], op[1]);
+      /* Negating the operands (as opposed to switching the order of the
+       * operands) produces the correct result when both are +/-Inf.
+       */
+      op[0].negate = ~op[0].negate;
+      op[1].negate = ~op[1].negate;
+      emit(ir, OPCODE_SGE, result_dst, op[0], op[1]);
       break;
    case ir_binop_gequal:
       emit(ir, OPCODE_SGE, result_dst, op[0], op[1]);
