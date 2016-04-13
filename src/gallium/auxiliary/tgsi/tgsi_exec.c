@@ -4011,7 +4011,7 @@ static void
 exec_atomop_buf(struct tgsi_exec_machine *mach,
                 const struct tgsi_full_instruction *inst)
 {
-   union tgsi_exec_channel r[3];
+   union tgsi_exec_channel r[4];
    union tgsi_exec_channel value[4], value2[4];
    float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
    float rgba2[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
