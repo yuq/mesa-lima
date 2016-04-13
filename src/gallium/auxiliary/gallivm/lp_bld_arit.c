@@ -1492,9 +1492,20 @@ lp_build_abs(struct lp_build_context *bld,
       return a;
 
    if(type.floating) {
-      char intrinsic[32];
-      lp_format_intrinsic(intrinsic, sizeof intrinsic, "llvm.fabs", vec_type);
-      return lp_build_intrinsic_unary(builder, intrinsic, vec_type, a);
+      if (0x0306 <= HAVE_LLVM && HAVE_LLVM < 0x0309) {
+         /* Workaround llvm.org/PR27332 */
+         LLVMTypeRef int_vec_type = lp_build_int_vec_type(bld->gallivm, type);
+         unsigned long long absMask = ~(1ULL << (type.width - 1));
+         LLVMValueRef mask = lp_build_const_int_vec(bld->gallivm, type, ((unsigned long long) absMask));
+         a = LLVMBuildBitCast(builder, a, int_vec_type, "");
+         a = LLVMBuildAnd(builder, a, mask, "");
+         a = LLVMBuildBitCast(builder, a, vec_type, "");
+         return a;
+      } else {
+         char intrinsic[32];
+         lp_format_intrinsic(intrinsic, sizeof intrinsic, "llvm.fabs", vec_type);
+         return lp_build_intrinsic_unary(builder, intrinsic, vec_type, a);
+      }
    }
 
    if(type.width*type.length == 128 && util_cpu_caps.has_ssse3) {
