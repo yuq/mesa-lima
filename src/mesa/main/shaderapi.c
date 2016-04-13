@@ -2398,7 +2398,7 @@ _mesa_GetActiveSubroutineUniformiv(GLuint program, GLenum shadertype,
       res = _mesa_program_resource_find_index(shProg, resource_type, index);
       if (res) {
          values[0] = strlen(_mesa_program_resource_name(res)) + 1
-            + ((_mesa_program_resource_array_size(res) != 0) ? 3 : 0);;
+            + ((_mesa_program_resource_array_size(res) != 0) ? 3 : 0);
       }
       break;
    default:

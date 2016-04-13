@@ -626,7 +626,7 @@ _mesa_GetProgramPipelineiv(GLuint pipeline, GLenum pname, GLint *params)
    /* Are geometry shaders available in this context?
     */
    const bool has_gs = _mesa_has_geometry_shaders(ctx);
-   const bool has_tess = _mesa_has_tessellation(ctx);;
+   const bool has_tess = _mesa_has_tessellation(ctx);
 
    if (!pipe) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
