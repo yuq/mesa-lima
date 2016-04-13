@@ -21,3 +21,94 @@
 
 LOADER_SOURCES := \
 	swr_loader.cpp
+
+CXX_SOURCES := \
+	swr_clear.cpp \
+	swr_context.cpp \
+	swr_context.h \
+	swr_context_llvm.h \
+	swr_draw.cpp \
+	swr_public.h \
+	swr_resource.h \
+	swr_screen.cpp \
+	swr_screen.h \
+	swr_state.cpp \
+	swr_state.h \
+	swr_tex_sample.cpp \
+	swr_tex_sample.h \
+	swr_scratch.h \
+	swr_scratch.cpp \
+	swr_shader.cpp \
+	swr_memory.h \
+	swr_fence.h \
+	swr_fence.cpp \
+	swr_query.h \
+	swr_query.cpp
+
+COMMON_CXX_SOURCES := \
+	rasterizer/common/containers.hpp \
+	rasterizer/common/formats.cpp \
+	rasterizer/common/formats.h \
+	rasterizer/common/isa.hpp \
+	rasterizer/common/os.h \
+	rasterizer/common/rdtsc_buckets.cpp \
+	rasterizer/common/rdtsc_buckets.h \
+	rasterizer/common/rdtsc_buckets_shared.h \
+	rasterizer/common/rdtsc_buckets_shared.h \
+	rasterizer/common/simdintrin.h \
+	rasterizer/common/swr_assert.cpp \
+	rasterizer/common/swr_assert.h
+
+CORE_CXX_SOURCES := \
+	rasterizer/core/api.cpp \
+	rasterizer/core/api.h \
+	rasterizer/core/arena.h \
+	rasterizer/core/backend.cpp \
+	rasterizer/core/backend.h \
+	rasterizer/core/blend.h \
+	rasterizer/core/clip.cpp \
+	rasterizer/core/clip.h \
+	rasterizer/core/context.h \
+	rasterizer/core/depthstencil.h \
+	rasterizer/core/fifo.hpp \
+	rasterizer/core/format_traits.h \
+	rasterizer/core/format_types.h \
+	rasterizer/core/frontend.cpp \
+	rasterizer/core/frontend.h \
+	rasterizer/core/knobs.h \
+	rasterizer/core/knobs_init.h \
+	rasterizer/core/multisample.cpp \
+	rasterizer/core/multisample.h \
+	rasterizer/core/pa_avx.cpp \
+	rasterizer/core/pa.h \
+	rasterizer/core/rasterizer.cpp \
+	rasterizer/core/rasterizer.h \
+	rasterizer/core/rdtsc_core.cpp \
+	rasterizer/core/rdtsc_core.h \
+	rasterizer/core/ringbuffer.h \
+	rasterizer/core/state.h \
+	rasterizer/core/threads.cpp \
+	rasterizer/core/threads.h \
+	rasterizer/core/tilemgr.cpp \
+	rasterizer/core/tilemgr.h \
+	rasterizer/core/utils.cpp \
+	rasterizer/core/utils.h
+
+JITTER_CXX_SOURCES := \
+	rasterizer/jitter/blend_jit.cpp \
+	rasterizer/jitter/blend_jit.h \
+	rasterizer/jitter/builder.cpp \
+	rasterizer/jitter/builder.h \
+	rasterizer/jitter/builder_misc.cpp \
+	rasterizer/jitter/builder_misc.h \
+	rasterizer/jitter/fetch_jit.cpp \
+	rasterizer/jitter/fetch_jit.h \
+	rasterizer/jitter/JitManager.cpp \
+	rasterizer/jitter/JitManager.h \
+	rasterizer/jitter/streamout_jit.cpp \
+	rasterizer/jitter/streamout_jit.h
+
+MEMORY_CXX_SOURCES := \
+	rasterizer/memory/ClearTile.cpp \
+	rasterizer/memory/LoadTile.cpp \
+	rasterizer/memory/StoreTile.cpp

@@ -28,4 +28,96 @@ noinst_LTLIBRARIES = libmesaswr.la
 
 libmesaswr_la_SOURCES = $(LOADER_SOURCES)
 
-EXTRA_DIST = Makefile.sources-arch
+COMMON_CXXFLAGS = \
+	$(GALLIUM_DRIVER_CFLAGS) \
+	$(LLVM_CFLAGS) \
+	-I$(builddir)/rasterizer/scripts \
+	-I$(builddir)/rasterizer/jitter \
+	-I$(srcdir)/rasterizer \
+	-I$(srcdir)/rasterizer/core \
+	-I$(srcdir)/rasterizer/jitter
+
+COMMON_SOURCES = \
+	$(CXX_SOURCES) \
+	$(COMMON_CXX_SOURCES) \
+	$(CORE_CXX_SOURCES) \
+	$(JITTER_CXX_SOURCES) \
+	$(MEMORY_CXX_SOURCES) \
+	$(BUILT_SOURCES)
+
+BUILT_SOURCES = \
+	rasterizer/scripts/gen_knobs.cpp \
+	rasterizer/scripts/gen_knobs.h \
+	rasterizer/jitter/state_llvm.h \
+	rasterizer/jitter/builder_gen.h \
+	rasterizer/jitter/builder_gen.cpp \
+	rasterizer/jitter/builder_x86.h \
+	rasterizer/jitter/builder_x86.cpp
+
+rasterizer/scripts/gen_knobs.cpp rasterizer/scripts/gen_knobs.h: rasterizer/scripts/gen_knobs.py rasterizer/scripts/knob_defs.py rasterizer/scripts/templates/knobs.template
+	$(PYTHON2) $(PYTHON_FLAGS) \
+		$(srcdir)/rasterizer/scripts/gen_knobs.py \
+		rasterizer/scripts
+
+rasterizer/jitter/state_llvm.h: rasterizer/jitter/scripts/gen_llvm_types.py rasterizer/core/state.h
+	$(PYTHON2) $(PYTHON_FLAGS) \
+		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_types.py \
+		--input $(srcdir)/rasterizer/core/state.h \
+		--output rasterizer/jitter/state_llvm.h
+
+rasterizer/jitter/builder_gen.h: rasterizer/jitter/scripts/gen_llvm_ir_macros.py $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h
+	$(PYTHON2) $(PYTHON_FLAGS) \
+		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
+		--input $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h \
+		--output rasterizer/jitter/builder_gen.h \
+		--gen_h
+
+rasterizer/jitter/builder_gen.cpp: rasterizer/jitter/scripts/gen_llvm_ir_macros.py $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h
+	$(PYTHON2) $(PYTHON_FLAGS) \
+		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
+		--input $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h \
+		--output rasterizer/jitter/builder_gen.cpp \
+		--gen_cpp
+
+rasterizer/jitter/builder_x86.h: rasterizer/jitter/scripts/gen_llvm_ir_macros.py
+	$(PYTHON2) $(PYTHON_FLAGS) \
+		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
+		--output rasterizer/jitter/builder_x86.h \
+		--gen_x86_h
+
+rasterizer/jitter/builder_x86.cpp: rasterizer/jitter/scripts/gen_llvm_ir_macros.py
+	$(PYTHON2) $(PYTHON_FLAGS) \
+		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
+		--output rasterizer/jitter/builder_x86.cpp \
+		--gen_x86_cpp
+
+
+COMMON_LIBADD = \
+	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
+	$(top_builddir)/src/mesa/libmesagallium.la
+
+lib_LTLIBRARIES = libswrAVX.la libswrAVX2.la
+
+libswrAVX_la_CXXFLAGS = \
+	-march=core-avx-i \
+	-DKNOB_ARCH=KNOB_ARCH_AVX \
+	$(COMMON_CXXFLAGS)
+
+libswrAVX_la_SOURCES = \
+	$(COMMON_SOURCES)
+
+libswrAVX_la_LIBADD = \
+	$(COMMON_LIBADD)
+
+libswrAVX2_la_CXXFLAGS = \
+	-march=core-avx2 \
+	-DKNOB_ARCH=KNOB_ARCH_AVX2 \
+	$(COMMON_CXXFLAGS)
+
+libswrAVX2_la_SOURCES = \
+	$(COMMON_SOURCES)
+
+libswrAVX2_la_LIBADD = \
+	$(COMMON_LIBADD)
+
+include $(top_srcdir)/install-gallium-links.mk
