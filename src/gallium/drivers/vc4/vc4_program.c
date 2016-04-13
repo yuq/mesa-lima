@@ -1737,16 +1737,6 @@ static const nir_shader_compiler_options nir_options = {
         .lower_negate = true,
 };
 
-static bool
-count_nir_instrs_in_block(nir_block *block, void *state)
-{
-        int *count = (int *) state;
-        nir_foreach_instr(instr, block) {
-                *count = *count + 1;
-        }
-        return true;
-}
-
 static int
 count_nir_instrs(nir_shader *nir)
 {
@@ -1754,7 +1744,10 @@ count_nir_instrs(nir_shader *nir)
         nir_foreach_function(function, nir) {
                 if (!function->impl)
                         continue;
-                nir_foreach_block_call(function->impl, count_nir_instrs_in_block, &count);
+                nir_foreach_block(block, function->impl) {
+                        nir_foreach_instr(instr, block)
+                                count++;
+                }
         }
         return count;
 }

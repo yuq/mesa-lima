@@ -428,25 +428,15 @@ vc4_nir_lower_io_instr(struct vc4_compile *c, nir_builder *b,
 }
 
 static bool
-vc4_nir_lower_io_block(nir_block *block, void *arg)
+vc4_nir_lower_io_impl(struct vc4_compile *c, nir_function_impl *impl)
 {
-        struct vc4_compile *c = arg;
-        nir_function_impl *impl =
-                nir_cf_node_get_function(&block->cf_node);
-
         nir_builder b;
         nir_builder_init(&b, impl);
 
-        nir_foreach_instr_safe(instr, block)
-                vc4_nir_lower_io_instr(c, &b, instr);
-
-        return true;
-}
-
-static bool
-vc4_nir_lower_io_impl(struct vc4_compile *c, nir_function_impl *impl)
-{
-        nir_foreach_block_call(impl, vc4_nir_lower_io_block, c);
+        nir_foreach_block(block, impl) {
+                nir_foreach_instr_safe(instr, block)
+                        vc4_nir_lower_io_instr(c, &b, instr);
+        }
 
         nir_metadata_preserve(impl, nir_metadata_block_index |
                               nir_metadata_dominance);

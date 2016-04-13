@@ -130,29 +130,19 @@ vc4_nir_lower_txf_ms_instr(struct vc4_compile *c, nir_builder *b,
 }
 
 static bool
-vc4_nir_lower_txf_ms_block(nir_block *block, void *arg)
+vc4_nir_lower_txf_ms_impl(struct vc4_compile *c, nir_function_impl *impl)
 {
-        struct vc4_compile *c = arg;
-        nir_function_impl *impl =
-                nir_cf_node_get_function(&block->cf_node);
-
         nir_builder b;
         nir_builder_init(&b, impl);
 
-        nir_foreach_instr_safe(instr, block) {
-                if (instr->type == nir_instr_type_tex) {
-                        vc4_nir_lower_txf_ms_instr(c, &b,
-                                                   nir_instr_as_tex(instr));
+        nir_foreach_block(block, impl) {
+                nir_foreach_instr_safe(instr, block) {
+                        if (instr->type == nir_instr_type_tex) {
+                                vc4_nir_lower_txf_ms_instr(c, &b,
+                                                nir_instr_as_tex(instr));
+                        }
                 }
         }
-
-        return true;
-}
-
-static bool
-vc4_nir_lower_txf_ms_impl(struct vc4_compile *c, nir_function_impl *impl)
-{
-        nir_foreach_block_call(impl, vc4_nir_lower_txf_ms_block, c);
 
         nir_metadata_preserve(impl,
                               nir_metadata_block_index |
