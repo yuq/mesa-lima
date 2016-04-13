@@ -54,7 +54,7 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
       .CullMode                                 = vk_to_gen_cullmode[info->cullMode],
 
       /* uint32_t                                     LineEndCapAntialiasingRegionWidth; */
-      .ScissorRectangleEnable                   =  !(extra && extra->disable_scissor),
+      .ScissorRectangleEnable                   =  !(extra && extra->use_rectlist),
 
       /* uint32_t                                     MultisampleRasterizationMode; */
       /* bool                                         LastPixelEnable; */

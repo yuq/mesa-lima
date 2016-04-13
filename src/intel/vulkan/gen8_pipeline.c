@@ -82,7 +82,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .CullMode = vk_to_gen_cullmode[info->cullMode],
       .FrontFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
       .BackFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
-      .ScissorRectangleEnable = !(extra && extra->disable_scissor),
+      .ScissorRectangleEnable = !(extra && extra->use_rectlist),
 #if GEN_GEN == 8
       .ViewportZClipTestEnable = true,
 #else

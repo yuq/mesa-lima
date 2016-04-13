@@ -343,7 +343,6 @@ create_pipeline(struct anv_device *device,
       &(struct anv_graphics_pipeline_create_info) {
          .color_attachment_count = -1,
          .use_repclear = false,
-         .disable_scissor = true,
          .disable_vs = true,
          .use_rectlist = true
       },
