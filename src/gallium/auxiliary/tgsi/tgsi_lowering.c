@@ -388,14 +388,15 @@ transform_scs(struct tgsi_transform_context *tctx,
  *  dst.z = src0.z \times src1.z + (1.0 - src0.z) \times src2.z
  *  dst.w = src0.w \times src1.w + (1.0 - src0.w) \times src2.w
  *
- * ; needs: 2 tmp, imm{1.0}
- * MUL tmpA, src0, src1
- * SUB tmpB, imm{1.0}, src0
- * MUL tmpB, tmpB, src2
- * ADD dst, tmpA, tmpB
+ * This becomes: src0 \times src1 + src2 - src0 \times src2, which
+ * can then become: src0 \times src1 - (src0 \times src2 - src2)
+ *
+ * ; needs: 1 tmp
+ * MAD tmpA, src0, src2, -src2
+ * MAD dst, src0, src1, -tmpA
  */
-#define LRP_GROW (NINST(2) + NINST(2) + NINST(2) + NINST(2) - OINST(3))
-#define LRP_TMP  2
+#define LRP_GROW (NINST(3) + NINST(3) - OINST(3))
+#define LRP_TMP  1
 static void
 transform_lrp(struct tgsi_transform_context *tctx,
               struct tgsi_full_instruction *inst)
@@ -408,44 +409,28 @@ transform_lrp(struct tgsi_transform_context *tctx,
    struct tgsi_full_instruction new_inst;
 
    if (dst->Register.WriteMask & TGSI_WRITEMASK_XYZW) {
-      /* MUL tmpA, src0, src1 */
+      /* MAD tmpA, src0, src2, -src2 */
       new_inst = tgsi_default_full_instruction();
-      new_inst.Instruction.Opcode = TGSI_OPCODE_MUL;
+      new_inst.Instruction.Opcode = TGSI_OPCODE_MAD;
       new_inst.Instruction.NumDstRegs = 1;
       reg_dst(&new_inst.Dst[0], &ctx->tmp[A].dst, TGSI_WRITEMASK_XYZW);
-      new_inst.Instruction.NumSrcRegs = 2;
+      new_inst.Instruction.NumSrcRegs = 3;
       reg_src(&new_inst.Src[0], src0, SWIZ(X, Y, Z, W));
-      reg_src(&new_inst.Src[1], src1, SWIZ(X, Y, Z, W));
-      tctx->emit_instruction(tctx, &new_inst);
-
-      /* SUB tmpB, imm{1.0}, src0 */
-      new_inst = tgsi_default_full_instruction();
-      new_inst.Instruction.Opcode = TGSI_OPCODE_SUB;
-      new_inst.Instruction.NumDstRegs = 1;
-      reg_dst(&new_inst.Dst[0], &ctx->tmp[B].dst, TGSI_WRITEMASK_XYZW);
-      new_inst.Instruction.NumSrcRegs = 2;
-      reg_src(&new_inst.Src[0], &ctx->imm, SWIZ(Y, Y, Y, Y));
-      reg_src(&new_inst.Src[1], src0, SWIZ(X, Y, Z, W));
-      tctx->emit_instruction(tctx, &new_inst);
-
-      /* MUL tmpB, tmpB, src2 */
-      new_inst = tgsi_default_full_instruction();
-      new_inst.Instruction.Opcode = TGSI_OPCODE_MUL;
-      new_inst.Instruction.NumDstRegs = 1;
-      reg_dst(&new_inst.Dst[0], &ctx->tmp[B].dst, TGSI_WRITEMASK_XYZW);
-      new_inst.Instruction.NumSrcRegs = 2;
-      reg_src(&new_inst.Src[0], &ctx->tmp[B].src, SWIZ(X, Y, Z, W));
       reg_src(&new_inst.Src[1], src2, SWIZ(X, Y, Z, W));
+      reg_src(&new_inst.Src[2], src2, SWIZ(X, Y, Z, W));
+      new_inst.Src[2].Register.Negate = !new_inst.Src[2].Register.Negate;
       tctx->emit_instruction(tctx, &new_inst);
 
-      /* ADD dst, tmpA, tmpB */
+      /* MAD dst, src0, src1, -tmpA */
       new_inst = tgsi_default_full_instruction();
-      new_inst.Instruction.Opcode = TGSI_OPCODE_ADD;
+      new_inst.Instruction.Opcode = TGSI_OPCODE_MAD;
       new_inst.Instruction.NumDstRegs = 1;
       reg_dst(&new_inst.Dst[0], dst, TGSI_WRITEMASK_XYZW);
-      new_inst.Instruction.NumSrcRegs = 2;
-      reg_src(&new_inst.Src[0], &ctx->tmp[A].src, SWIZ(X, Y, Z, W));
-      reg_src(&new_inst.Src[1], &ctx->tmp[B].src, SWIZ(X, Y, Z, W));
+      new_inst.Instruction.NumSrcRegs = 3;
+      reg_src(&new_inst.Src[0], src0, SWIZ(X, Y, Z, W));
+      reg_src(&new_inst.Src[1], src1, SWIZ(X, Y, Z, W));
+      reg_src(&new_inst.Src[2], &ctx->tmp[A].src, SWIZ(X, Y, Z, W));
+      new_inst.Src[2].Register.Negate = true;
       tctx->emit_instruction(tctx, &new_inst);
    }
 }
