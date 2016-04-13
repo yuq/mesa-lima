@@ -68,8 +68,8 @@ gather_tex_info(nir_tex_instr *instr, nir_shader *shader)
       shader->info.uses_texture_gather = true;
 }
 
-static bool
-gather_info_block(nir_block *block, void *shader)
+static void
+gather_info_block(nir_block *block, nir_shader *shader)
 {
    nir_foreach_instr(instr, block) {
       switch (instr->type) {
@@ -86,8 +86,6 @@ gather_info_block(nir_block *block, void *shader)
          break;
       }
    }
-
-   return true;
 }
 
 /**
@@ -157,5 +155,7 @@ nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
       }
    }
 
-   nir_foreach_block_call(entrypoint, gather_info_block, shader);
+   nir_foreach_block(block, entrypoint) {
+      gather_info_block(block, shader);
+   }
 }
