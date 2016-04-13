@@ -884,14 +884,14 @@ translate_tex_format(struct brw_context *brw,
       GLuint brw_fmt = brw_format_for_mesa_format(mesa_format);
 
       /**
-       * On Gen9+, it is possible to process these formats using the LDR
-       * Profile or the Full Profile mode of the hardware. Because, it isn't
+       * It is possible to process these formats using the LDR Profile
+       * or the Full Profile mode of the hardware. Because, it isn't
        * possible to determine if an HDR or LDR texture is being rendered, we
        * can't determine which mode to enable in the hardware. Therefore, to
        * handle all cases, always default to Full profile unless we are
        * processing sRGBs, which are incompatible with this mode.
        */
-      if (brw->gen >= 9)
+      if (ctx->Extensions.KHR_texture_compression_astc_hdr)
          brw_fmt |= GEN9_SURFACE_ASTC_HDR_FORMAT_BIT;
 
       return brw_fmt;
