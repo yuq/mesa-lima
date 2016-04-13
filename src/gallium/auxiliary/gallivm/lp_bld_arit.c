@@ -1663,99 +1663,6 @@ enum lp_build_round_mode
    LP_BUILD_ROUND_TRUNCATE = 3
 };
 
-/**
- * Helper for SSE4.1's ROUNDxx instructions.
- *
- * NOTE: In the SSE4.1's nearest mode, if two values are equally close, the
- * result is the even value.  That is, rounding 2.5 will be 2.0, and not 3.0.
- */
-static inline LLVMValueRef
-lp_build_nearest_sse41(struct lp_build_context *bld,
-                       LLVMValueRef a)
-{
-   LLVMBuilderRef builder = bld->gallivm->builder;
-   const struct lp_type type = bld->type;
-   LLVMTypeRef i32t = LLVMInt32TypeInContext(bld->gallivm->context);
-   LLVMValueRef mode = LLVMConstNull(i32t);
-   const char *intrinsic;
-   LLVMValueRef res;
-
-   assert(type.floating);
-
-   assert(lp_check_value(type, a));
-   assert(util_cpu_caps.has_sse4_1);
-
-   if (type.length == 1) {
-      LLVMTypeRef vec_type;
-      LLVMValueRef undef;
-      LLVMValueRef args[3];
-      LLVMValueRef index0 = LLVMConstInt(i32t, 0, 0);
-
-      switch(type.width) {
-      case 32:
-         intrinsic = "llvm.x86.sse41.round.ss";
-         break;
-      case 64:
-         intrinsic = "llvm.x86.sse41.round.sd";
-         break;
-      default:
-         assert(0);
-         return bld->undef;
-      }
-
-      vec_type = LLVMVectorType(bld->elem_type, 4);
-
-      undef = LLVMGetUndef(vec_type);
-
-      args[0] = undef;
-      args[1] = LLVMBuildInsertElement(builder, undef, a, index0, "");
-      args[2] = mode;
-
-      res = lp_build_intrinsic(builder, intrinsic,
-                               vec_type, args, Elements(args), 0);
-
-      res = LLVMBuildExtractElement(builder, res, index0, "");
-   }
-   else {
-      if (type.width * type.length == 128) {
-         switch(type.width) {
-         case 32:
-            intrinsic = "llvm.x86.sse41.round.ps";
-            break;
-         case 64:
-            intrinsic = "llvm.x86.sse41.round.pd";
-            break;
-         default:
-            assert(0);
-            return bld->undef;
-         }
-      }
-      else {
-         assert(type.width * type.length == 256);
-         assert(util_cpu_caps.has_avx);
-
-         switch(type.width) {
-         case 32:
-            intrinsic = "llvm.x86.avx.round.ps.256";
-            break;
-         case 64:
-            intrinsic = "llvm.x86.avx.round.pd.256";
-            break;
-         default:
-            assert(0);
-            return bld->undef;
-         }
-      }
-
-      res = lp_build_intrinsic_binary(builder, intrinsic,
-                                      bld->vec_type, a,
-                                      mode);
-   }
-
-   return res;
-}
-
-
 static inline LLVMValueRef
 lp_build_iround_nearest_sse2(struct lp_build_context *bld,
                              LLVMValueRef a)
@@ -1863,11 +1770,7 @@ lp_build_round_arch(struct lp_build_context *bld,
 
       switch (mode) {
       case LP_BUILD_ROUND_NEAREST:
-         if (HAVE_LLVM >= 0x0304) {
-            intrinsic_root = "llvm.round";
-         } else {
-            return lp_build_nearest_sse41(bld, a);
-         }
+         intrinsic_root = "llvm.nearbyint";
          break;
       case LP_BUILD_ROUND_FLOOR:
          intrinsic_root = "llvm.floor";
