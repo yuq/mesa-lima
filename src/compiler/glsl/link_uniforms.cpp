@@ -45,7 +45,7 @@
 /**
  * Count the backing storage requirements for a type
  */
-static unsigned
+unsigned
 values_for_type(const glsl_type *type)
 {
    if (type->is_sampler()) {
