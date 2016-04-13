@@ -31,6 +31,10 @@
 #include <stdlib.h>
 #include <inttypes.h> /* for PRIx64 macro */
 
+#if defined(_WIN32) && !defined(snprintf)
+#define snprintf _snprintf
+#endif
+
 static void
 print_tabs(unsigned num_tabs, FILE *fp)
 {
