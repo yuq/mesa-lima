@@ -214,7 +214,7 @@ lower_indirects_impl(nir_function_impl *impl, nir_variable_mode modes)
    state.modes = modes;
    nir_builder_init(&state.builder, impl);
 
-   nir_foreach_block(impl, lower_indirect_block, &state);
+   nir_foreach_block_call(impl, lower_indirect_block, &state);
 
    if (state.progress)
       nir_metadata_preserve(impl, nir_metadata_none);

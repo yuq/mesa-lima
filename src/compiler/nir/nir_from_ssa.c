@@ -774,8 +774,8 @@ nir_convert_from_ssa_impl(nir_function_impl *impl, bool phi_webs_only)
    state.merge_node_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                                     _mesa_key_pointer_equal);
 
-   nir_foreach_block(impl, add_parallel_copy_to_end_of_block, &state);
-   nir_foreach_block(impl, isolate_phi_nodes_block, &state);
+   nir_foreach_block_call(impl, add_parallel_copy_to_end_of_block, &state);
+   nir_foreach_block_call(impl, isolate_phi_nodes_block, &state);
 
    /* Mark metadata as dirty before we ask for liveness analysis */
    nir_metadata_preserve(impl, nir_metadata_block_index |
@@ -784,12 +784,12 @@ nir_convert_from_ssa_impl(nir_function_impl *impl, bool phi_webs_only)
    nir_metadata_require(impl, nir_metadata_live_ssa_defs |
                               nir_metadata_dominance);
 
-   nir_foreach_block(impl, coalesce_phi_nodes_block, &state);
-   nir_foreach_block(impl, aggressive_coalesce_block, &state);
+   nir_foreach_block_call(impl, coalesce_phi_nodes_block, &state);
+   nir_foreach_block_call(impl, aggressive_coalesce_block, &state);
 
-   nir_foreach_block(impl, resolve_registers_block, &state);
+   nir_foreach_block_call(impl, resolve_registers_block, &state);
 
-   nir_foreach_block(impl, resolve_parallel_copies_block, &state);
+   nir_foreach_block_call(impl, resolve_parallel_copies_block, &state);
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);

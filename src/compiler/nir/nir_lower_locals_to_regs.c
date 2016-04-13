@@ -358,7 +358,7 @@ nir_lower_locals_to_regs_impl(nir_function_impl *impl)
 
    nir_metadata_require(impl, nir_metadata_dominance);
 
-   nir_foreach_block(impl, lower_locals_to_regs_block, &state);
+   nir_foreach_block_call(impl, lower_locals_to_regs_block, &state);
 
    nir_array_foreach(&state.derefs_array, nir_deref_var *, deref_ptr) {
       nir_deref_var *deref = *deref_ptr;

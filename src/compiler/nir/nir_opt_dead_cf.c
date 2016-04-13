@@ -199,7 +199,7 @@ loop_is_dead(nir_loop *loop)
        nir_block_first_instr(after)->type == nir_instr_type_phi)
       return false;
 
-   if (!nir_foreach_block_in_cf_node(&loop->cf_node, block_has_no_side_effects,
+   if (!nir_foreach_block_in_cf_node_call(&loop->cf_node, block_has_no_side_effects,
                                      NULL))
       return false;
 

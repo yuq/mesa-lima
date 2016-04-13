@@ -289,7 +289,7 @@ nir_lower_vec_to_movs_impl(nir_function_impl *impl)
 {
    struct vec_to_movs_state state = { impl, false };
 
-   nir_foreach_block(impl, lower_vec_to_movs_block, &state);
+   nir_foreach_block_call(impl, lower_vec_to_movs_block, &state);
 
    if (state.progress) {
       nir_metadata_preserve(impl, nir_metadata_block_index |

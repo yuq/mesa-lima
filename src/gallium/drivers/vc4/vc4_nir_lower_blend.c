@@ -714,7 +714,7 @@ vc4_nir_lower_blend(nir_shader *s, struct vc4_compile *c)
 {
         nir_foreach_function(s, function) {
                 if (function->impl) {
-                        nir_foreach_block(function->impl,
+                        nir_foreach_block_call(function->impl,
                                           vc4_nir_lower_blend_block, c);
 
                         nir_metadata_preserve(function->impl,

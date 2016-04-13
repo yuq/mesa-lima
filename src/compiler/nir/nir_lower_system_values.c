@@ -143,7 +143,7 @@ convert_impl(nir_function_impl *impl)
    state.progress = false;
    nir_builder_init(&state.builder, impl);
 
-   nir_foreach_block(impl, convert_block, &state);
+   nir_foreach_block_call(impl, convert_block, &state);
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
    return state.progress;

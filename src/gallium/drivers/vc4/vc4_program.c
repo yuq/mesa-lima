@@ -1794,7 +1794,7 @@ count_nir_instrs(nir_shader *nir)
         nir_foreach_function(nir, function) {
                 if (!function->impl)
                         continue;
-                nir_foreach_block(function->impl, count_nir_instrs_in_block, &count);
+                nir_foreach_block_call(function->impl, count_nir_instrs_in_block, &count);
         }
         return count;
 }

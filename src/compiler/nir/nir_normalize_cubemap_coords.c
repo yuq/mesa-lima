@@ -98,7 +98,7 @@ normalize_cubemap_coords_impl(nir_function_impl *impl)
    nir_builder_init(&state.b, impl);
    state.progress = false;
 
-   nir_foreach_block(impl, normalize_cubemap_coords_block, &state);
+   nir_foreach_block_call(impl, normalize_cubemap_coords_block, &state);
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);

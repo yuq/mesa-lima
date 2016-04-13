@@ -85,7 +85,7 @@ nir_lower_global_vars_to_local(nir_shader *shader)
    nir_foreach_function(shader, function) {
       if (function->impl) {
          state.impl = function->impl;
-         nir_foreach_block(function->impl, mark_global_var_uses_block, &state);
+         nir_foreach_block_call(function->impl, mark_global_var_uses_block, &state);
       }
    }
 

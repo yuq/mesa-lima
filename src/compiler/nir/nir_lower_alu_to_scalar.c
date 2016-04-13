@@ -257,7 +257,7 @@ nir_lower_alu_to_scalar_impl(nir_function_impl *impl)
    nir_builder builder;
    nir_builder_init(&builder, impl);
 
-   nir_foreach_block(impl, lower_alu_to_scalar_block, &builder);
+   nir_foreach_block_call(impl, lower_alu_to_scalar_block, &builder);
 }
 
 void

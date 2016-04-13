@@ -151,7 +151,7 @@ nir_opt_dce_impl(nir_function_impl *impl)
    struct exec_list *worklist = ralloc(NULL, struct exec_list);
    exec_list_make_empty(worklist);
 
-   nir_foreach_block(impl, init_block_cb, worklist);
+   nir_foreach_block_call(impl, init_block_cb, worklist);
 
    while (!exec_list_is_empty(worklist)) {
       nir_instr *instr = worklist_pop(worklist);
@@ -161,7 +161,7 @@ nir_opt_dce_impl(nir_function_impl *impl)
    ralloc_free(worklist);
 
    bool progress = false;
-   nir_foreach_block(impl, delete_block_cb, &progress);
+   nir_foreach_block_call(impl, delete_block_cb, &progress);
 
    if (progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |

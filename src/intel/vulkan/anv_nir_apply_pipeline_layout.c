@@ -275,7 +275,8 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
 
    nir_foreach_function(shader, function) {
       if (function->impl)
-         nir_foreach_block(function->impl, get_used_bindings_block, &state);
+         nir_foreach_block_call(function->impl, get_used_bindings_block,
+                                &state);
    }
 
    for (uint32_t set = 0; set < layout->num_sets; set++) {
@@ -333,7 +334,8 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
    nir_foreach_function(shader, function) {
       if (function->impl) {
          nir_builder_init(&state.builder, function->impl);
-         nir_foreach_block(function->impl, apply_pipeline_layout_block, &state);
+         nir_foreach_block_call(function->impl, apply_pipeline_layout_block,
+                                &state);
          nir_metadata_preserve(function->impl, nir_metadata_block_index |
                                                nir_metadata_dominance);
       }

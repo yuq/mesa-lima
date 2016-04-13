@@ -254,7 +254,7 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
 static void
 analyze_boolean_resolves_impl(nir_function_impl *impl)
 {
-   nir_foreach_block(impl, analyze_boolean_resolves_block, NULL);
+   nir_foreach_block_call(impl, analyze_boolean_resolves_block, NULL);
 }
 
 void

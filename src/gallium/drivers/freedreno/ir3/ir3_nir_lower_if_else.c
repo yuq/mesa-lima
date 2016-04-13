@@ -315,7 +315,7 @@ lower_if_else_impl(nir_function_impl *impl)
 	state.progress = false;
 	nir_builder_init(&state.b, impl);
 
-	nir_foreach_block(impl, lower_if_else_block, &state);
+	nir_foreach_block_call(impl, lower_if_else_block, &state);
 
 	if (state.progress)
 		nir_metadata_preserve(impl, nir_metadata_none);

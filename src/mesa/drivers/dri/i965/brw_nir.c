@@ -95,7 +95,7 @@ add_const_offset_to_base(nir_shader *nir, nir_variable_mode mode)
    nir_foreach_function(nir, f) {
       if (f->impl) {
          nir_builder_init(&params.b, f->impl);
-         nir_foreach_block(f->impl, add_const_offset_to_base_block, &params);
+         nir_foreach_block_call(f->impl, add_const_offset_to_base_block, &params);
       }
    }
 }
@@ -239,7 +239,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
 
       nir_foreach_function(nir, function) {
          if (function->impl) {
-            nir_foreach_block(function->impl, remap_vs_attrs, &inputs_read);
+            nir_foreach_block_call(function->impl, remap_vs_attrs, &inputs_read);
          }
       }
    }
@@ -264,7 +264,7 @@ brw_nir_lower_vue_inputs(nir_shader *nir, bool is_scalar,
 
       nir_foreach_function(nir, function) {
          if (function->impl) {
-            nir_foreach_block(function->impl, remap_inputs_with_vue_map,
+            nir_foreach_block_call(function->impl, remap_inputs_with_vue_map,
                               (void *) vue_map);
          }
       }
@@ -291,7 +291,7 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
    nir_foreach_function(nir, function) {
       if (function->impl) {
          nir_builder_init(&state.b, function->impl);
-         nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
+         nir_foreach_block_call(function->impl, remap_patch_urb_offsets, &state);
       }
    }
 }
@@ -338,7 +338,7 @@ brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue_map)
    nir_foreach_function(nir, function) {
       if (function->impl) {
          nir_builder_init(&state.b, function->impl);
-         nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
+         nir_foreach_block_call(function->impl, remap_patch_urb_offsets, &state);
       }
    }
 }

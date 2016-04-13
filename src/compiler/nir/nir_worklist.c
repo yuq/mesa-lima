@@ -58,7 +58,7 @@ worklist_add_block(nir_block *block, void *w)
 void
 nir_block_worklist_add_all(nir_block_worklist *w, nir_function_impl *impl)
 {
-   nir_foreach_block(impl, worklist_add_block, w);
+   nir_foreach_block_call(impl, worklist_add_block, w);
 }
 
 void

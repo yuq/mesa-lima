@@ -174,7 +174,7 @@ nir_live_ssa_defs_impl(nir_function_impl *impl)
     * can be compacted into a single bit.
     */
    state.num_ssa_defs = 1;
-   nir_foreach_block(impl, index_ssa_definitions_block, &state);
+   nir_foreach_block_call(impl, index_ssa_definitions_block, &state);
 
    nir_block_worklist_init(&state.worklist, impl->num_blocks, NULL);
 
@@ -183,7 +183,7 @@ nir_live_ssa_defs_impl(nir_function_impl *impl)
     * blocks to the worklist.
     */
    state.bitset_words = BITSET_WORDS(state.num_ssa_defs);
-   nir_foreach_block(impl, init_liveness_block, &state);
+   nir_foreach_block_call(impl, init_liveness_block, &state);
 
    /* We're now ready to work through the worklist and update the liveness
     * sets of each of the blocks.  By the time we get to this point, every

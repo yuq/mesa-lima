@@ -123,7 +123,7 @@ nir_repair_ssa_impl(nir_function_impl *impl)
    nir_metadata_require(impl, nir_metadata_block_index |
                               nir_metadata_dominance);
 
-   nir_foreach_block(impl, repair_ssa_block, &state);
+   nir_foreach_block_call(impl, repair_ssa_block, &state);
 
    if (state.progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |

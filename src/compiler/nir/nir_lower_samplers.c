@@ -184,7 +184,7 @@ lower_impl(nir_function_impl *impl, const struct gl_shader_program *shader_progr
    state.shader_program = shader_program;
    state.stage = stage;
 
-   nir_foreach_block(impl, lower_block_cb, &state);
+   nir_foreach_block_call(impl, lower_block_cb, &state);
 }
 
 void

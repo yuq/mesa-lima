@@ -2121,11 +2121,11 @@ void nir_ssa_def_rewrite_uses_after(nir_ssa_def *def, nir_src new_src,
 
 /* visits basic blocks in source-code order */
 typedef bool (*nir_foreach_block_cb)(nir_block *block, void *state);
-bool nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb,
+bool nir_foreach_block_call(nir_function_impl *impl, nir_foreach_block_cb cb,
                        void *state);
-bool nir_foreach_block_reverse(nir_function_impl *impl, nir_foreach_block_cb cb,
+bool nir_foreach_block_reverse_call(nir_function_impl *impl, nir_foreach_block_cb cb,
                                void *state);
-bool nir_foreach_block_in_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
+bool nir_foreach_block_in_cf_node_call(nir_cf_node *node, nir_foreach_block_cb cb,
                                   void *state);
 
 /* If the following CF node is an if, this function returns that if.

@@ -81,7 +81,7 @@ lower_load_const_to_scalar_block(nir_block *block, void *data)
 static void
 nir_lower_load_const_to_scalar_impl(nir_function_impl *impl)
 {
-   nir_foreach_block(impl, lower_load_const_to_scalar_block, NULL);
+   nir_foreach_block_call(impl, lower_load_const_to_scalar_block, NULL);
 }
 
 void

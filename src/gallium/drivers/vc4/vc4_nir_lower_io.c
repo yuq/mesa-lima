@@ -446,7 +446,7 @@ vc4_nir_lower_io_block(nir_block *block, void *arg)
 static bool
 vc4_nir_lower_io_impl(struct vc4_compile *c, nir_function_impl *impl)
 {
-        nir_foreach_block(impl, vc4_nir_lower_io_block, c);
+        nir_foreach_block_call(impl, vc4_nir_lower_io_block, c);
 
         nir_metadata_preserve(impl, nir_metadata_block_index |
                               nir_metadata_dominance);

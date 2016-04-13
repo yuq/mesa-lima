@@ -206,7 +206,7 @@ nir_lower_gs_intrinsics(nir_shader *shader)
          nir_builder_init(&b, function->impl);
          state.builder = &b;
 
-         nir_foreach_block(function->impl, rewrite_intrinsics, &state);
+         nir_foreach_block_call(function->impl, rewrite_intrinsics, &state);
 
          /* This only works because we have a single main() function. */
          append_set_vertex_count(function->impl->end_block, &state);

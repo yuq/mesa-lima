@@ -51,6 +51,6 @@ anv_nir_lower_push_constants(nir_shader *shader)
 {
    nir_foreach_function(shader, function) {
       if (function->impl)
-         nir_foreach_block(function->impl, lower_push_constants_block, NULL);
+         nir_foreach_block_call(function->impl, lower_push_constants_block, NULL);
    }
 }

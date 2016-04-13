@@ -275,7 +275,7 @@ ${pass_name}_impl(nir_function_impl *impl, const bool *condition_flags)
    state.progress = false;
    state.condition_flags = condition_flags;
 
-   nir_foreach_block_reverse(impl, ${pass_name}_block, &state);
+   nir_foreach_block_reverse_call(impl, ${pass_name}_block, &state);
 
    if (state.progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |

@@ -1025,7 +1025,7 @@ validate_function_impl(nir_function_impl *impl, validate_state *state)
       postvalidate_reg_decl(reg, state);
    }
 
-   nir_foreach_block(impl, postvalidate_ssa_defs_block, state);
+   nir_foreach_block_call(impl, postvalidate_ssa_defs_block, state);
 }
 
 static void

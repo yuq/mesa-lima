@@ -177,7 +177,7 @@ lower_var_copies_block(nir_block *block, void *mem_ctx)
 static void
 lower_var_copies_impl(nir_function_impl *impl)
 {
-   nir_foreach_block(impl, lower_var_copies_block, ralloc_parent(impl));
+   nir_foreach_block_call(impl, lower_var_copies_block, ralloc_parent(impl));
 }
 
 /* Lowers every copy_var instruction in the program to a sequence of

@@ -146,7 +146,7 @@ find_output(nir_shader *shader, unsigned drvloc)
 
    nir_foreach_function(shader, function) {
       if (function->impl) {
-         nir_foreach_block_reverse(function->impl,
+         nir_foreach_block_reverse_call(function->impl,
                                    find_output_in_block, &state);
       }
    }

@@ -184,7 +184,7 @@ nir_lower_to_source_mods_block(nir_block *block, void *state)
 static void
 nir_lower_to_source_mods_impl(nir_function_impl *impl)
 {
-   nir_foreach_block(impl, nir_lower_to_source_mods_block, NULL);
+   nir_foreach_block_call(impl, nir_lower_to_source_mods_block, NULL);
 }
 
 void

@@ -157,5 +157,5 @@ nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
       }
    }
 
-   nir_foreach_block(entrypoint, gather_info_block, shader);
+   nir_foreach_block_call(entrypoint, gather_info_block, shader);
 }

@@ -292,7 +292,7 @@ brw_nir_opt_peephole_ffma_impl(nir_function_impl *impl)
    state.impl = impl;
    state.progress = false;
 
-   nir_foreach_block(impl, brw_nir_opt_peephole_ffma_block, &state);
+   nir_foreach_block_call(impl, brw_nir_opt_peephole_ffma_block, &state);
 
    if (state.progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |

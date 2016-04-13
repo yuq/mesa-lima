@@ -92,7 +92,7 @@ nir_opt_undef(nir_shader *shader)
 
    nir_foreach_function(shader, function) {
       if (function->impl) {
-         nir_foreach_block(function->impl, opt_undef_block, &progress);
+         nir_foreach_block_call(function->impl, opt_undef_block, &progress);
          if (progress)
             nir_metadata_preserve(function->impl,
                                   nir_metadata_block_index |

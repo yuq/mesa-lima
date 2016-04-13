@@ -1549,14 +1549,14 @@ foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
 }
 
 bool
-nir_foreach_block_in_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
+nir_foreach_block_in_cf_node_call(nir_cf_node *node, nir_foreach_block_cb cb,
                              void *state)
 {
    return foreach_cf_node(node, cb, false, state);
 }
 
 bool
-nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb, void *state)
+nir_foreach_block_call(nir_function_impl *impl, nir_foreach_block_cb cb, void *state)
 {
    foreach_list_typed_safe(nir_cf_node, node, node, &impl->body) {
       if (!foreach_cf_node(node, cb, false, state))
@@ -1567,7 +1567,7 @@ nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb, void *state)
 }
 
 bool
-nir_foreach_block_reverse(nir_function_impl *impl, nir_foreach_block_cb cb,
+nir_foreach_block_reverse_call(nir_function_impl *impl, nir_foreach_block_cb cb,
                           void *state)
 {
    if (!cb(impl->end_block, state))
@@ -1630,7 +1630,7 @@ nir_index_blocks(nir_function_impl *impl)
    if (impl->valid_metadata & nir_metadata_block_index)
       return;
 
-   nir_foreach_block(impl, index_block, &index);
+   nir_foreach_block_call(impl, index_block, &index);
 
    impl->num_blocks = index;
 }
@@ -1661,7 +1661,7 @@ void
 nir_index_ssa_defs(nir_function_impl *impl)
 {
    unsigned index = 0;
-   nir_foreach_block(impl, index_ssa_block, &index);
+   nir_foreach_block_call(impl, index_ssa_block, &index);
    impl->ssa_alloc = index;
 }
 
@@ -1683,7 +1683,7 @@ unsigned
 nir_index_instrs(nir_function_impl *impl)
 {
    unsigned index = 0;
-   nir_foreach_block(impl, index_instrs_block, &index);
+   nir_foreach_block_call(impl, index_instrs_block, &index);
    return index;
 }
 

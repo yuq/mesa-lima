@@ -266,7 +266,7 @@ nir_copy_prop_impl(nir_function_impl *impl)
 {
    bool progress = false;
 
-   nir_foreach_block(impl, copy_prop_block, &progress);
+   nir_foreach_block_call(impl, copy_prop_block, &progress);
 
    if (progress) {
       nir_metadata_preserve(impl, nir_metadata_block_index |

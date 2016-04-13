@@ -208,7 +208,7 @@ nir_opt_constant_folding_impl(nir_function_impl *impl)
    state.impl = impl;
    state.progress = false;
 
-   nir_foreach_block(impl, constant_fold_block, &state);
+   nir_foreach_block_call(impl, constant_fold_block, &state);
 
    if (state.progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |

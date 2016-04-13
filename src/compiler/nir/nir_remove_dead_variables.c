@@ -97,7 +97,7 @@ add_var_use_shader(nir_shader *shader, struct set *live)
 {
    nir_foreach_function(shader, function) {
       if (function->impl) {
-         nir_foreach_block(function->impl, add_var_use_block, live);
+         nir_foreach_block_call(function->impl, add_var_use_block, live);
       }
    }
 }

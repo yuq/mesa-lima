@@ -81,7 +81,7 @@ lower_double_pack_impl(nir_function_impl *impl)
 {
    nir_builder b;
    nir_builder_init(&b, impl);
-   nir_foreach_block(impl, lower_double_pack_block, &b);
+   nir_foreach_block_call(impl, lower_double_pack_block, &b);
 }
 
 void

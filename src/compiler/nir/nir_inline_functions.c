@@ -181,7 +181,7 @@ inline_functions_block(nir_block *block, void *void_state)
        */
 
       /* Figure out when we need to lower to a shadow local */
-      nir_foreach_block(callee_copy, lower_params_to_locals_block, callee_copy);
+      nir_foreach_block_call(callee_copy, lower_params_to_locals_block, callee_copy);
       for (unsigned i = 0; i < callee_copy->num_params; i++) {
          nir_variable *param = callee_copy->params[i];
 
@@ -192,7 +192,7 @@ inline_functions_block(nir_block *block, void *void_state)
          }
       }
 
-      nir_foreach_block(callee_copy, rewrite_param_derefs_block, call);
+      nir_foreach_block_call(callee_copy, rewrite_param_derefs_block, call);
 
       /* Pluck the body out of the function and place it here */
       nir_cf_list body;
@@ -237,7 +237,7 @@ inline_function_impl(nir_function_impl *impl, struct set *inlined)
    state.progress = false;
    nir_builder_init(&state.builder, impl);
 
-   nir_foreach_block(impl, inline_functions_block, &state);
+   nir_foreach_block_call(impl, inline_functions_block, &state);
 
    if (state.progress) {
       /* SSA and register indices are completely messed up now */

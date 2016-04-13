@@ -124,7 +124,7 @@ vec4_visitor::nir_setup_system_values()
    nir_foreach_function(nir, function) {
       assert(strcmp(function->name, "main") == 0);
       assert(function->impl);
-      nir_foreach_block(function->impl, setup_system_values_block, this);
+      nir_foreach_block_call(function->impl, setup_system_values_block, this);
    }
 }
 

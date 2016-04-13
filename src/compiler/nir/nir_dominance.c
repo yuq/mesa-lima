@@ -176,9 +176,9 @@ calc_dom_children(nir_function_impl* impl)
 {
    void *mem_ctx = ralloc_parent(impl);
 
-   nir_foreach_block(impl, block_count_children, NULL);
-   nir_foreach_block(impl, block_alloc_children, mem_ctx);
-   nir_foreach_block(impl, block_add_child, NULL);
+   nir_foreach_block_call(impl, block_count_children, NULL);
+   nir_foreach_block_call(impl, block_alloc_children, mem_ctx);
+   nir_foreach_block_call(impl, block_add_child, NULL);
 }
 
 static void
@@ -204,14 +204,14 @@ nir_calc_dominance_impl(nir_function_impl *impl)
    state.impl = impl;
    state.progress = true;
 
-   nir_foreach_block(impl, init_block_cb, &state);
+   nir_foreach_block_call(impl, init_block_cb, &state);
 
    while (state.progress) {
       state.progress = false;
-      nir_foreach_block(impl, calc_dominance_cb, &state);
+      nir_foreach_block_call(impl, calc_dominance_cb, &state);
    }
 
-   nir_foreach_block(impl, calc_dom_frontier_cb, &state);
+   nir_foreach_block_call(impl, calc_dom_frontier_cb, &state);
 
    nir_block *start_block = nir_start_block(impl);
    start_block->imm_dom = NULL;
@@ -282,7 +282,7 @@ void
 nir_dump_dom_tree_impl(nir_function_impl *impl, FILE *fp)
 {
    fprintf(fp, "digraph doms_%s {\n", impl->function->name);
-   nir_foreach_block(impl, dump_block_dom, fp);
+   nir_foreach_block_call(impl, dump_block_dom, fp);
    fprintf(fp, "}\n\n");
 }
 
@@ -313,7 +313,7 @@ dump_block_dom_frontier(nir_block *block, void *state)
 void
 nir_dump_dom_frontier_impl(nir_function_impl *impl, FILE *fp)
 {
-   nir_foreach_block(impl, dump_block_dom_frontier, fp);
+   nir_foreach_block_call(impl, dump_block_dom_frontier, fp);
 }
 
 void
@@ -340,7 +340,7 @@ void
 nir_dump_cfg_impl(nir_function_impl *impl, FILE *fp)
 {
    fprintf(fp, "digraph cfg_%s {\n", impl->function->name);
-   nir_foreach_block(impl, dump_block_succs, fp);
+   nir_foreach_block_call(impl, dump_block_succs, fp);
    fprintf(fp, "}\n\n");
 }
 

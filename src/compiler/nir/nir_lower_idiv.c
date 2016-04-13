@@ -136,7 +136,7 @@ convert_impl(nir_function_impl *impl)
    nir_builder b;
    nir_builder_init(&b, impl);
 
-   nir_foreach_block(impl, convert_block, &b);
+   nir_foreach_block_call(impl, convert_block, &b);
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
 }

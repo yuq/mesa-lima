@@ -106,7 +106,7 @@ remove_phis_impl(nir_function_impl *impl)
 {
    bool progress = false;
 
-   nir_foreach_block(impl, remove_phis_block, &progress);
+   nir_foreach_block_call(impl, remove_phis_block, &progress);
 
    if (progress) {
       nir_metadata_preserve(impl, nir_metadata_block_index |

@@ -467,7 +467,7 @@ opt_gcm_impl(nir_function_impl *impl)
                               nir_metadata_dominance);
 
    gcm_build_block_info(&impl->body, &state, 0);
-   nir_foreach_block(impl, gcm_pin_instructions_block, &state);
+   nir_foreach_block_call(impl, gcm_pin_instructions_block, &state);
 
    foreach_list_typed(nir_instr, instr, node, &state.instrs)
       gcm_schedule_early_instr(instr, &state);

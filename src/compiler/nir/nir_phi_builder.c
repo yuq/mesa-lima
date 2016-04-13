@@ -99,7 +99,7 @@ nir_phi_builder_create(nir_function_impl *impl)
 
    pb->num_blocks = impl->num_blocks;
    pb->blocks = ralloc_array(pb, nir_block *, pb->num_blocks);
-   nir_foreach_block(impl, fill_block_array, pb->blocks);
+   nir_foreach_block_call(impl, fill_block_array, pb->blocks);
 
    exec_list_make_empty(&pb->values);
 

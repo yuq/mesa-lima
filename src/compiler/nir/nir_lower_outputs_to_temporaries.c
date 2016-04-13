@@ -116,7 +116,7 @@ nir_lower_outputs_to_temporaries(nir_shader *shader, nir_function *entrypoint)
          /* For geometry shaders, we have to emit the output copies right
           * before each EmitVertex call.
           */
-         nir_foreach_block(function->impl, emit_output_copies_block, &state);
+         nir_foreach_block_call(function->impl, emit_output_copies_block, &state);
       } else if (function == entrypoint) {
          /* For all other shader types, we need to do the copies right before
           * the jumps to the end block.

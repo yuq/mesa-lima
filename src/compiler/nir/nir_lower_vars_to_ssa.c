@@ -653,7 +653,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
 
    /* Build the initial deref structures and direct_deref_nodes table */
    state.add_to_direct_deref_nodes = true;
-   nir_foreach_block(impl, register_variable_uses_block, &state);
+   nir_foreach_block_call(impl, register_variable_uses_block, &state);
 
    bool progress = false;
 
@@ -693,7 +693,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
     * added load/store instructions are registered.  We need this
     * information for phi node insertion below.
     */
-   nir_foreach_block(impl, register_variable_uses_block, &state);
+   nir_foreach_block_call(impl, register_variable_uses_block, &state);
 
    state.phi_builder = nir_phi_builder_create(state.impl);
 

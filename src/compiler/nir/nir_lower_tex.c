@@ -379,7 +379,7 @@ nir_lower_tex_impl(nir_function_impl *impl, lower_tex_state *state)
 {
    nir_builder_init(&state->b, impl);
 
-   nir_foreach_block(impl, nir_lower_tex_block, state);
+   nir_foreach_block_call(impl, nir_lower_tex_block, state);
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);

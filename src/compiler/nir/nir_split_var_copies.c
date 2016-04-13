@@ -261,7 +261,7 @@ split_var_copies_impl(nir_function_impl *impl)
    state.dead_ctx = ralloc_context(NULL);
    state.progress = false;
 
-   nir_foreach_block(impl, split_var_copies_block, &state);
+   nir_foreach_block_call(impl, split_var_copies_block, &state);
 
    ralloc_free(state.dead_ctx);
 
