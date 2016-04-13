@@ -98,10 +98,8 @@ vec4_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
 }
 
 static bool
-setup_system_values_block(nir_block *block, void *void_visitor)
+setup_system_values_block(nir_block *block, vec4_visitor *v)
 {
-   vec4_visitor *v = (vec4_visitor *)void_visitor;
-
    nir_foreach_instr(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -124,7 +122,9 @@ vec4_visitor::nir_setup_system_values()
    nir_foreach_function(nir, function) {
       assert(strcmp(function->name, "main") == 0);
       assert(function->impl);
-      nir_foreach_block_call(function->impl, setup_system_values_block, this);
+      nir_foreach_block(block, function->impl) {
+         setup_system_values_block(block, this);
+      }
    }
 }
 

@@ -167,9 +167,9 @@ any_alu_src_is_a_constant(nir_alu_src srcs[])
 }
 
 static bool
-brw_nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
+brw_nir_opt_peephole_ffma_block(nir_block *block, void *mem_ctx)
 {
-   struct peephole_ffma_state *state = void_state;
+   bool progress = false;
 
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_alu)
@@ -231,8 +231,7 @@ brw_nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
 
       if (abs) {
          for (unsigned i = 0; i < 2; i++) {
-            nir_alu_instr *abs = nir_alu_instr_create(state->mem_ctx,
-                                                      nir_op_fabs);
+            nir_alu_instr *abs = nir_alu_instr_create(mem_ctx, nir_op_fabs);
             abs->src[0].src = nir_src_for_ssa(mul_src[i]);
             nir_ssa_dest_init(&abs->instr, &abs->dest.dest,
                               mul_src[i]->num_components, bit_size, NULL);
@@ -243,8 +242,7 @@ brw_nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
       }
 
       if (negate) {
-         nir_alu_instr *neg = nir_alu_instr_create(state->mem_ctx,
-                                                   nir_op_fneg);
+         nir_alu_instr *neg = nir_alu_instr_create(mem_ctx, nir_op_fneg);
          neg->src[0].src = nir_src_for_ssa(mul_src[0]);
          nir_ssa_dest_init(&neg->instr, &neg->dest.dest,
                            mul_src[0]->num_components, bit_size, NULL);
@@ -253,7 +251,7 @@ brw_nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
          mul_src[0] = &neg->dest.dest.ssa;
       }
 
-      nir_alu_instr *ffma = nir_alu_instr_create(state->mem_ctx, nir_op_ffma);
+      nir_alu_instr *ffma = nir_alu_instr_create(mem_ctx, nir_op_ffma);
       ffma->dest.saturate = add->dest.saturate;
       ffma->dest.write_mask = add->dest.write_mask;
 
@@ -277,28 +275,27 @@ brw_nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
       assert(list_empty(&add->dest.dest.ssa.uses));
       nir_instr_remove(&add->instr);
 
-      state->progress = true;
+      progress = true;
    }
 
-   return true;
+   return progress;
 }
 
 static bool
 brw_nir_opt_peephole_ffma_impl(nir_function_impl *impl)
 {
-   struct peephole_ffma_state state;
+   bool progress = false;
+   void *mem_ctx = ralloc_parent(impl);
 
-   state.mem_ctx = ralloc_parent(impl);
-   state.impl = impl;
-   state.progress = false;
+   nir_foreach_block(block, impl) {
+      progress |= brw_nir_opt_peephole_ffma_block(block, mem_ctx);
+   }
 
-   nir_foreach_block_call(impl, brw_nir_opt_peephole_ffma_block, &state);
-
-   if (state.progress)
+   if (progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |
                                   nir_metadata_dominance);
 
-   return state.progress;
+   return progress;
 }
 
 bool

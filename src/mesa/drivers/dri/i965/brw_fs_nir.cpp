@@ -181,9 +181,8 @@ fs_visitor::nir_setup_uniforms()
 }
 
 static bool
-emit_system_values_block(nir_block *block, void *void_visitor)
+emit_system_values_block(nir_block *block, fs_visitor *v)
 {
-   fs_visitor *v = (fs_visitor *)void_visitor;
    fs_reg *reg;
 
    nir_foreach_instr(block, instr) {
@@ -348,7 +347,9 @@ fs_visitor::nir_emit_system_values()
    nir_foreach_function(nir, function) {
       assert(strcmp(function->name, "main") == 0);
       assert(function->impl);
-      nir_foreach_block_call(function->impl, emit_system_values_block, this);
+      nir_foreach_block(block, function->impl) {
+         emit_system_values_block(block, this);
+      }
    }
 }
 

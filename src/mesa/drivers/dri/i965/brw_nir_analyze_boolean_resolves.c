@@ -84,7 +84,7 @@ src_mark_needs_resolve(nir_src *src, void *void_state)
 }
 
 static bool
-analyze_boolean_resolves_block(nir_block *block, void *void_state)
+analyze_boolean_resolves_block(nir_block *block)
 {
    nir_foreach_instr(block, instr) {
       switch (instr->type) {
@@ -254,7 +254,9 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
 static void
 analyze_boolean_resolves_impl(nir_function_impl *impl)
 {
-   nir_foreach_block_call(impl, analyze_boolean_resolves_block, NULL);
+   nir_foreach_block(block, impl) {
+      analyze_boolean_resolves_block(block);
+   }
 }
 
 void
