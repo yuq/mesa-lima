@@ -44,6 +44,9 @@ static void r600_set_scissor_states(struct pipe_context *ctx,
 	rctx->set_atom_dirty(rctx, &rctx->scissors.atom, true);
 }
 
+/* Since the guard band disables clipping, we have to clip per-pixel
+ * using a scissor.
+ */
 static void r600_get_scissor_from_viewport(struct r600_common_context *rctx,
 					   const struct pipe_viewport_state *vp,
 					   struct r600_signed_scissor *scissor)
@@ -127,9 +130,6 @@ static void r600_emit_one_scissor(struct r600_common_context *rctx,
 {
 	struct pipe_scissor_state final;
 
-	/* Since the guard band disables clipping, we have to clip per-pixel
-	 * using a scissor.
-	 */
 	r600_clamp_scissor(rctx, &final, vp_scissor);
 
 	if (scissor)
