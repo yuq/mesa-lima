@@ -1241,16 +1241,11 @@ Fake_glXChooseVisual( Display *dpy, int screen, int *list )
 
    xmvis = choose_visual(dpy, screen, list, GL_FALSE);
    if (xmvis) {
-#if 0
-      return xmvis->vishandle;
-#else
-      /* create a new vishandle - the cached one may be stale */
-      xmvis->vishandle = malloc(sizeof(XVisualInfo));
-      if (xmvis->vishandle) {
-         memcpy(xmvis->vishandle, xmvis->visinfo, sizeof(XVisualInfo));
+      XVisualInfo* visinfo = malloc(sizeof(XVisualInfo));
+      if (visinfo) {
+         memcpy(visinfo, xmvis->visinfo, sizeof(XVisualInfo));
       }
-      return xmvis->vishandle;
-#endif
+      return visinfo;
    }
    else
       return NULL;
@@ -1974,16 +1969,11 @@ Fake_glXGetVisualFromFBConfig( Display *dpy, GLXFBConfig config )
 {
    if (dpy && config) {
       XMesaVisual xmvis = (XMesaVisual) config;
-#if 0      
-      return xmvis->vishandle;
-#else
-      /* create a new vishandle - the cached one may be stale */
-      xmvis->vishandle = malloc(sizeof(XVisualInfo));
-      if (xmvis->vishandle) {
-         memcpy(xmvis->vishandle, xmvis->visinfo, sizeof(XVisualInfo));
+      XVisualInfo* visinfo = malloc(sizeof(XVisualInfo));
+      if (visinfo) {
+         memcpy(visinfo, xmvis->visinfo, sizeof(XVisualInfo));
       }
-      return xmvis->vishandle;
-#endif
+      return visinfo;
    }
    else {
       return NULL;
