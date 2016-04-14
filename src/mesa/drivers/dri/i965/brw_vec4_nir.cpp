@@ -1647,6 +1647,7 @@ vec4_visitor::nir_emit_jump(nir_jump_instr *instr)
       break;
 
    case nir_jump_return:
+      /* fall through */
    default:
       unreachable("unknown jump");
    }
