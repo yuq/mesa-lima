@@ -235,10 +235,10 @@ NIR_FILES = \
 	nir/nir_worklist.h
 
 SPIRV_FILES = \
-	nir/spirv/nir_spirv.h \
-	nir/spirv/spirv_to_nir.c \
-	nir/spirv/vtn_alu.c \
-	nir/spirv/vtn_cfg.c \
-	nir/spirv/vtn_glsl450.c \
-	nir/spirv/vtn_private.h \
-	nir/spirv/vtn_variables.c
+	spirv/nir_spirv.h \
+	spirv/spirv_to_nir.c \
+	spirv/vtn_alu.c \
+	spirv/vtn_cfg.c \
+	spirv/vtn_glsl450.c \
+	spirv/vtn_private.h \
+	spirv/vtn_variables.c
