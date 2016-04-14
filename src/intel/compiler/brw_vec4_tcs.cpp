@@ -388,6 +388,7 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    const struct gen_device_info *devinfo = compiler->devinfo;
    struct brw_vue_prog_data *vue_prog_data = &prog_data->base;
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_TESS_CTRL];
+   const unsigned *assembly;
 
    nir_shader *nir = nir_shader_clone(mem_ctx, src_shader);
    nir->info.outputs_written = key->outputs_written;
@@ -487,7 +488,7 @@ brw_compile_tcs(const struct brw_compiler *compiler,
 
       g.generate_code(v.cfg, 8);
 
-      return g.get_assembly(final_assembly_size);
+      assembly = g.get_assembly(final_assembly_size);
    } else {
       vec4_tcs_visitor v(compiler, log_data, key, prog_data,
                          nir, mem_ctx, shader_time_index, &input_vue_map);
@@ -501,10 +502,13 @@ brw_compile_tcs(const struct brw_compiler *compiler,
          v.dump_instructions();
 
 
-      return brw_vec4_generate_assembly(compiler, log_data, mem_ctx, nir,
-                                        &prog_data->base, v.cfg,
-                                        final_assembly_size);
+      assembly = brw_vec4_generate_assembly(compiler, log_data, mem_ctx, nir,
+                                            &prog_data->base, v.cfg,
+                                            final_assembly_size);
    }
+
+   prog_data->base.base.program_size = *final_assembly_size;
+   return assembly;
 }
 
 

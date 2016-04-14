@@ -6691,7 +6691,9 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
       prog_data->reg_blocks_0 = brw_register_blocks(simd16_grf_used);
    }
 
-   return g.get_assembly(final_assembly_size);
+   const unsigned *assembly = g.get_assembly(final_assembly_size);
+   prog_data->base.program_size = *final_assembly_size;
+   return assembly;
 }
 
 fs_reg *
@@ -6890,7 +6892,9 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
 
    g.generate_code(cfg, prog_data->simd_size);
 
-   return g.get_assembly(final_assembly_size);
+   const unsigned *assembly = g.get_assembly(final_assembly_size);
+   prog_data->base.program_size = *final_assembly_size;
+   return assembly;
 }
 
 /**

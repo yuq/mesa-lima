@@ -2901,6 +2901,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                                             final_assembly_size);
    }
 
+   prog_data->base.base.program_size = *final_assembly_size;
    return assembly;
 }
 

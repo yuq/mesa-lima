@@ -587,6 +587,8 @@ struct brw_stage_prog_data {
    unsigned total_scratch;
    unsigned total_shared;
 
+   unsigned program_size;
+
    /**
     * Register where the thread expects to find input data from the URB
     * (typically uniforms, followed by vertex or fragment attributes).

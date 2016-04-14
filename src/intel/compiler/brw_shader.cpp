@@ -1162,6 +1162,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
 {
    const struct gen_device_info *devinfo = compiler->devinfo;
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_TESS_EVAL];
+   const unsigned *assembly;
 
    nir_shader *nir = nir_shader_clone(mem_ctx, src_shader);
    nir->info.inputs_read = key->inputs_read;
@@ -1270,7 +1271,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
       g.generate_code(v.cfg, 8);
 
-      return g.get_assembly(final_assembly_size);
+      assembly = g.get_assembly(final_assembly_size);
    } else {
       brw::vec4_tes_visitor v(compiler, log_data, key, prog_data,
 			      nir, mem_ctx, shader_time_index);
@@ -1283,8 +1284,11 @@ brw_compile_tes(const struct brw_compiler *compiler,
       if (unlikely(INTEL_DEBUG & DEBUG_TES))
 	 v.dump_instructions();
 
-      return brw_vec4_generate_assembly(compiler, log_data, mem_ctx, nir,
-					&prog_data->base, v.cfg,
-					final_assembly_size);
+      assembly = brw_vec4_generate_assembly(compiler, log_data, mem_ctx, nir,
+                                            &prog_data->base, v.cfg,
+                                            final_assembly_size);
    }
+
+   prog_data->base.base.program_size = *final_assembly_size;
+   return assembly;
 }
