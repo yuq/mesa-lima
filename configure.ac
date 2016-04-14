@@ -1545,6 +1545,56 @@ if test -n "$with_dri_drivers"; then
     DRI_DIRS=`echo $DRI_DIRS|tr " " "\n"|sort -u|tr "\n" " "`
 fi
 
+
+#
+# Vulkan driver configuration
+#
+
+AC_ARG_WITH([vulkan-drivers],
+    [AS_HELP_STRING([--with-vulkan-drivers@<:@=DIRS...@:>@],
+        [comma delimited Vulkan drivers list, e.g.
+        "intel"
+        @<:@default=no@:>@])],
+    [with_vulkan_drivers="$withval"],
+    [with_vulkan_drivers="no"])
+
+# Doing '--without-vulkan-drivers' will set this variable to 'no'.  Clear it
+# here so that the script doesn't choke on an unknown driver name later.
+case "x$with_vulkan_drivers" in
+    xyes) with_vulkan_drivers="$VULKAN_DRIVERS_DEFAULT" ;;
+    xno) with_vulkan_drivers='' ;;
+esac
+
+AC_ARG_WITH([vulkan-icddir],
+    [AS_HELP_STRING([--with-vulkan-icddir=DIR],
+        [directory for the Vulkan driver icd files @<:@${sysconfdir}/vulkan/icd.d@:>@])],
+    [VULKAN_ICD_INSTALL_DIR="$withval"],
+    [VULKAN_ICD_INSTALL_DIR='${sysconfdir}/vulkan/icd.d'])
+AC_SUBST([VULKAN_ICD_INSTALL_DIR])
+
+if test -n "$with_vulkan_drivers"; then
+    VULKAN_DRIVERS=`IFS=', '; echo $with_vulkan_drivers`
+    for driver in $VULKAN_DRIVERS; do
+        case "x$driver" in
+        xintel)
+            if test "x$HAVE_I965_DRI" != xyes; then
+                AC_MSG_ERROR([Intel Vulkan driver requires the i965 dri driver])
+            fi
+            if test "x$with_sha1" == "x"; then
+                AC_MSG_ERROR([Intel Vulkan driver requires SHA1])
+            fi
+            HAVE_INTEL_VULKAN=yes;
+
+            ;;
+        *)
+            AC_MSG_ERROR([Vulkan driver '$driver' does not exist])
+            ;;
+        esac
+    done
+    VULKAN_DRIVERS=`echo $VULKAN_DRIVERS|tr " " "\n"|sort -u|tr "\n" " "`
+fi
+
+
 AM_CONDITIONAL(NEED_MEGADRIVER, test -n "$DRI_DIRS")
 AM_CONDITIONAL(NEED_LIBMESA, test "x$enable_xlib_glx" = xyes -o \
                                   "x$enable_osmesa" = xyes -o \
@@ -2407,6 +2457,10 @@ AM_CONDITIONAL(HAVE_R200_DRI, test x$HAVE_R200_DRI = xyes)
 AM_CONDITIONAL(HAVE_RADEON_DRI, test x$HAVE_RADEON_DRI = xyes)
 AM_CONDITIONAL(HAVE_SWRAST_DRI, test x$HAVE_SWRAST_DRI = xyes)
 
+AM_CONDITIONAL(HAVE_INTEL_VULKAN, test "x$HAVE_INTEL_VULKAN" = xyes)
+
+AM_CONDITIONAL(HAVE_INTEL_DRIVERS, test "x$HAVE_INTEL_VULKAN" = xyes)
+
 AM_CONDITIONAL(NEED_RADEON_DRM_WINSYS, test "x$HAVE_GALLIUM_R300" = xyes -o \
                                             "x$HAVE_GALLIUM_R600" = xyes -o \
                                             "x$HAVE_GALLIUM_RADEONSI" = xyes)
@@ -2658,6 +2712,15 @@ if test "$enable_egl" = yes; then
     fi
 
     echo "        EGL drivers:    $egl_drivers"
+fi
+
+# Vulkan
+echo ""
+if test "x$VULKAN_DRIVERS" != x; then
+    echo "        Vulkan drivers:  $VULKAN_DRIVERS"
+    echo "        Vulkan ICD dir:  $VULKAN_ICD_INSTALL_DIR"
+else
+    echo "        Vulkan drivers:  no"
 fi
 
 echo ""
