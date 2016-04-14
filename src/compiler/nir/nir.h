@@ -81,16 +81,16 @@ typedef struct {
 } nir_state_slot;
 
 typedef enum {
-   nir_var_all = -1,
-   nir_var_shader_in,
-   nir_var_shader_out,
-   nir_var_global,
-   nir_var_local,
-   nir_var_uniform,
-   nir_var_shader_storage,
-   nir_var_system_value,
-   nir_var_param,
-   nir_var_shared,
+   nir_var_shader_in       = (1 << 0),
+   nir_var_shader_out      = (1 << 1),
+   nir_var_global          = (1 << 2),
+   nir_var_local           = (1 << 3),
+   nir_var_uniform         = (1 << 4),
+   nir_var_shader_storage  = (1 << 5),
+   nir_var_system_value    = (1 << 6),
+   nir_var_param           = (1 << 7),
+   nir_var_shared          = (1 << 8),
+   nir_var_all             = ~0,
 } nir_variable_mode;
 
 /**
@@ -156,6 +156,12 @@ typedef struct nir_variable {
    char *name;
 
    struct nir_variable_data {
+      /**
+       * Storage class of the variable.
+       *
+       * \sa nir_variable_mode
+       */
+      nir_variable_mode mode;
 
       /**
        * Is the variable read-only?
@@ -168,13 +174,6 @@ typedef struct nir_variable {
       unsigned sample:1;
       unsigned patch:1;
       unsigned invariant:1;
-
-      /**
-       * Storage class of the variable.
-       *
-       * \sa nir_variable_mode
-       */
-      nir_variable_mode mode:5;
 
       /**
        * Interpolation mode for shader inputs / outputs
@@ -1857,7 +1856,8 @@ nir_alu_instr *nir_alu_instr_create(nir_shader *shader, nir_op op);
 nir_jump_instr *nir_jump_instr_create(nir_shader *shader, nir_jump_type type);
 
 nir_load_const_instr *nir_load_const_instr_create(nir_shader *shader,
-                                                  unsigned num_components);
+                                                  unsigned num_components,
+                                                  unsigned bit_size);
 
 nir_intrinsic_instr *nir_intrinsic_instr_create(nir_shader *shader,
                                                 nir_intrinsic_op op);
@@ -1872,7 +1872,8 @@ nir_phi_instr *nir_phi_instr_create(nir_shader *shader);
 nir_parallel_copy_instr *nir_parallel_copy_instr_create(nir_shader *shader);
 
 nir_ssa_undef_instr *nir_ssa_undef_instr_create(nir_shader *shader,
-                                                unsigned num_components);
+                                                unsigned num_components,
+                                                unsigned bit_size);
 
 nir_deref_var *nir_deref_var_create(void *mem_ctx, nir_variable *var);
 nir_deref_array *nir_deref_array_create(void *mem_ctx);
@@ -2208,12 +2209,13 @@ void nir_lower_var_copies(nir_shader *shader);
 
 bool nir_lower_global_vars_to_local(nir_shader *shader);
 
-bool nir_lower_indirect_derefs(nir_shader *shader, uint32_t mode_mask);
+bool nir_lower_indirect_derefs(nir_shader *shader, nir_variable_mode modes);
 
 bool nir_lower_locals_to_regs(nir_shader *shader);
 
 void nir_lower_outputs_to_temporaries(nir_shader *shader,
                                       nir_function *entrypoint);
+void nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint);
 
 void nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint);
 
@@ -2222,14 +2224,14 @@ void nir_assign_var_locations(struct exec_list *var_list,
                               int (*type_size)(const struct glsl_type *));
 
 void nir_lower_io(nir_shader *shader,
-                  nir_variable_mode mode,
+                  nir_variable_mode modes,
                   int (*type_size)(const struct glsl_type *));
 nir_src *nir_get_io_offset_src(nir_intrinsic_instr *instr);
 nir_src *nir_get_io_vertex_index_src(nir_intrinsic_instr *instr);
 
 void nir_lower_vars_to_ssa(nir_shader *shader);
 
-bool nir_remove_dead_variables(nir_shader *shader, nir_variable_mode mode);
+bool nir_remove_dead_variables(nir_shader *shader, nir_variable_mode modes);
 
 void nir_move_vec_src_uses_to_dest(nir_shader *shader);
 bool nir_lower_vec_to_movs(nir_shader *shader);
@@ -2304,6 +2306,8 @@ void nir_lower_atomics(nir_shader *shader,
 void nir_lower_to_source_mods(nir_shader *shader);
 
 bool nir_lower_gs_intrinsics(nir_shader *shader);
+
+void nir_lower_double_pack(nir_shader *shader);
 
 bool nir_normalize_cubemap_coords(nir_shader *shader);
 

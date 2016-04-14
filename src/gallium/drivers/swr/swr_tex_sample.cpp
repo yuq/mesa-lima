@@ -72,6 +72,8 @@ struct swr_sampler_dynamic_state {
    struct lp_sampler_dynamic_state base;
 
    const struct swr_sampler_static_state *static_state;
+
+   unsigned shader_type;
 };
 
 
@@ -112,7 +114,18 @@ swr_texture_member(const struct lp_sampler_dynamic_state *base,
    /* context[0] */
    indices[0] = lp_build_const_int32(gallivm, 0);
    /* context[0].textures */
-   indices[1] = lp_build_const_int32(gallivm, swr_draw_context_texturesFS);
+   auto dynamic = (const struct swr_sampler_dynamic_state *)base;
+   switch (dynamic->shader_type) {
+   case PIPE_SHADER_FRAGMENT:
+      indices[1] = lp_build_const_int32(gallivm, swr_draw_context_texturesFS);
+      break;
+   case PIPE_SHADER_VERTEX:
+      indices[1] = lp_build_const_int32(gallivm, swr_draw_context_texturesVS);
+      break;
+   default:
+      assert(0 && "unsupported shader type");
+      break;
+   }
    /* context[0].textures[unit] */
    indices[2] = lp_build_const_int32(gallivm, texture_unit);
    /* context[0].textures[unit].member */
@@ -195,7 +208,18 @@ swr_sampler_member(const struct lp_sampler_dynamic_state *base,
    /* context[0] */
    indices[0] = lp_build_const_int32(gallivm, 0);
    /* context[0].samplers */
-   indices[1] = lp_build_const_int32(gallivm, swr_draw_context_samplersFS);
+   auto dynamic = (const struct swr_sampler_dynamic_state *)base;
+   switch (dynamic->shader_type) {
+   case PIPE_SHADER_FRAGMENT:
+      indices[1] = lp_build_const_int32(gallivm, swr_draw_context_samplersFS);
+      break;
+   case PIPE_SHADER_VERTEX:
+      indices[1] = lp_build_const_int32(gallivm, swr_draw_context_samplersVS);
+      break;
+   default:
+      assert(0 && "unsupported shader type");
+      break;
+   }
    /* context[0].samplers[unit] */
    indices[2] = lp_build_const_int32(gallivm, sampler_unit);
    /* context[0].samplers[unit].member */
@@ -307,7 +331,8 @@ swr_sampler_soa_emit_size_query(const struct lp_build_sampler_soa *base,
 
 
 struct lp_build_sampler_soa *
-swr_sampler_soa_create(const struct swr_sampler_static_state *static_state)
+swr_sampler_soa_create(const struct swr_sampler_static_state *static_state,
+                       unsigned shader_type)
 {
    struct swr_sampler_soa *sampler;
 
@@ -333,6 +358,8 @@ swr_sampler_soa_create(const struct swr_sampler_static_state *static_state)
    sampler->dynamic_state.base.border_color = swr_sampler_border_color;
 
    sampler->dynamic_state.static_state = static_state;
+
+   sampler->dynamic_state.shader_type = shader_type;
 
    return &sampler->base;
 }

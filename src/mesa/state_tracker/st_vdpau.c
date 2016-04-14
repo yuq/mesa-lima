@@ -55,7 +55,7 @@
 #include "state_tracker/drm_driver.h"
 
 static struct pipe_resource *
-st_vdpau_video_surface_gallium(struct gl_context *ctx, const GLvoid *vdpSurface,
+st_vdpau_video_surface_gallium(struct gl_context *ctx, const void *vdpSurface,
                                GLuint index)
 {
    int (*getProcAddr)(uint32_t device, uint32_t id, void **ptr);
@@ -86,7 +86,7 @@ st_vdpau_video_surface_gallium(struct gl_context *ctx, const GLvoid *vdpSurface,
 }
 
 static struct pipe_resource *
-st_vdpau_output_surface_gallium(struct gl_context *ctx, const GLvoid *vdpSurface)
+st_vdpau_output_surface_gallium(struct gl_context *ctx, const void *vdpSurface)
 {
    int (*getProcAddr)(uint32_t device, uint32_t id, void **ptr);
    uint32_t device = (uintptr_t)ctx->vdpDevice;
@@ -135,7 +135,7 @@ st_vdpau_resource_from_description(struct gl_context *ctx,
 }
 
 static struct pipe_resource *
-st_vdpau_output_surface_dma_buf(struct gl_context *ctx, const GLvoid *vdpSurface)
+st_vdpau_output_surface_dma_buf(struct gl_context *ctx, const void *vdpSurface)
 {
    int (*getProcAddr)(uint32_t device, uint32_t id, void **ptr);
    uint32_t device = (uintptr_t)ctx->vdpDevice;
@@ -154,7 +154,7 @@ st_vdpau_output_surface_dma_buf(struct gl_context *ctx, const GLvoid *vdpSurface
 }
 
 static struct pipe_resource *
-st_vdpau_video_surface_dma_buf(struct gl_context *ctx, const GLvoid *vdpSurface,
+st_vdpau_video_surface_dma_buf(struct gl_context *ctx, const void *vdpSurface,
                                GLuint index)
 {
    int (*getProcAddr)(uint32_t device, uint32_t id, void **ptr);
@@ -177,7 +177,7 @@ static void
 st_vdpau_map_surface(struct gl_context *ctx, GLenum target, GLenum access,
                      GLboolean output, struct gl_texture_object *texObj,
                      struct gl_texture_image *texImage,
-                     const GLvoid *vdpSurface, GLuint index)
+                     const void *vdpSurface, GLuint index)
 {
    struct st_context *st = st_context(ctx);
    struct st_texture_object *stObj = st_texture_object(texObj);
@@ -250,7 +250,7 @@ static void
 st_vdpau_unmap_surface(struct gl_context *ctx, GLenum target, GLenum access,
                        GLboolean output, struct gl_texture_object *texObj,
                        struct gl_texture_image *texImage,
-                       const GLvoid *vdpSurface, GLuint index)
+                       const void *vdpSurface, GLuint index)
 {
    struct st_context *st = st_context(ctx);
    struct st_texture_object *stObj = st_texture_object(texObj);

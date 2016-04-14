@@ -29,10 +29,12 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
+#include <new>
 
 #include "core/api.h"
 #include "core/backend.h"
 #include "core/context.h"
+#include "core/depthstencil.h"
 #include "core/frontend.h"
 #include "core/rasterizer.h"
 #include "core/rdtsc_core.h"
@@ -64,11 +66,14 @@ HANDLE SwrCreateContext(
     pContext->dcRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
     pContext->dsRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
 
+    pContext->pMacroTileManagerArray = (MacroTileMgr*)_aligned_malloc(sizeof(MacroTileMgr) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
+    pContext->pDispatchQueueArray = (DispatchQueue*)_aligned_malloc(sizeof(DispatchQueue) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
+
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
         pContext->dcRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
-        pContext->dcRing[dc].pTileMgr = new MacroTileMgr(*(pContext->dcRing[dc].pArena));
-        pContext->dcRing[dc].pDispatch = new DispatchQueue(); /// @todo Could lazily allocate this if Dispatch seen.
+        new (&pContext->pMacroTileManagerArray[dc]) MacroTileMgr(*pContext->dcRing[dc].pArena);
+        new (&pContext->pDispatchQueueArray[dc]) DispatchQueue();
 
         pContext->dsRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
     }
@@ -86,15 +91,26 @@ HANDLE SwrCreateContext(
     // Calling createThreadPool() above can set SINGLE_THREADED
     if (KNOB_SINGLE_THREADED)
     {
+        SET_KNOB(HYPERTHREADED_FE, false);
         pContext->NumWorkerThreads = 1;
+        pContext->NumFEThreads = 1;
+        pContext->NumBEThreads = 1;
     }
 
     // Allocate scratch space for workers.
     ///@note We could lazily allocate this but its rather small amount of memory.
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
     {
-        ///@todo Use numa API for allocations using numa information from thread data (if exists).
-        pContext->pScratch[i] = (uint8_t*)_aligned_malloc((32 * 1024), KNOB_SIMD_WIDTH * 4);
+#if defined(_WIN32)
+        uint32_t numaNode = pContext->threadPool.pThreadData ?
+            pContext->threadPool.pThreadData[i].numaId : 0;
+        pContext->pScratch[i] = (uint8_t*)VirtualAllocExNuma(
+            GetCurrentProcess(), nullptr, 32 * sizeof(KILOBYTE),
+            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE,
+            numaNode);
+#else
+        pContext->pScratch[i] = (uint8_t*)_aligned_malloc(32 * sizeof(KILOBYTE), KNOB_SIMD_WIDTH * 4);
+#endif
     }
 
     // State setup AFTER context is fully initialized
@@ -131,14 +147,21 @@ void SwrDestroyContext(HANDLE hContext)
     {
         delete pContext->dcRing[i].pArena;
         delete pContext->dsRing[i].pArena;
-        delete(pContext->dcRing[i].pTileMgr);
-        delete(pContext->dcRing[i].pDispatch);
+        pContext->pMacroTileManagerArray[i].~MacroTileMgr();
+        pContext->pDispatchQueueArray[i].~DispatchQueue();
     }
+
+    _aligned_free(pContext->pDispatchQueueArray);
+    _aligned_free(pContext->pMacroTileManagerArray);
 
     // Free scratch space.
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
     {
+#if defined(_WIN32)
+        VirtualFree(pContext->pScratch[i], 0, MEM_RELEASE);
+#else
         _aligned_free(pContext->pScratch[i]);
+#endif
     }
 
     delete(pContext->pHotTileMgr);
@@ -160,12 +183,20 @@ void WakeAllThreads(SWR_CONTEXT *pContext)
 template<bool IsDraw>
 void QueueWork(SWR_CONTEXT *pContext)
 {
+    DRAW_CONTEXT* pDC = pContext->pCurDrawContext;
+    uint32_t dcIndex = pDC->drawId % KNOB_MAX_DRAWS_IN_FLIGHT;
+
+    if (IsDraw)
+    {
+        pDC->pTileMgr = &pContext->pMacroTileManagerArray[dcIndex];
+        pDC->pTileMgr->initialize();
+    }
+
     // Each worker thread looks at a DC for both FE and BE work at different times and so we
     // multiply threadDone by 2.  When the threadDone counter has reached 0 then all workers
     // have moved past this DC. (i.e. Each worker has checked this DC for both FE and BE work and
     // then moved on if all work is done.)
-    pContext->pCurDrawContext->threadsDone =
-        pContext->NumWorkerThreads ? pContext->NumWorkerThreads * 2 : 2;
+    pContext->pCurDrawContext->threadsDone = pContext->NumFEThreads + pContext->NumBEThreads;
 
     _ReadWriteBarrier();
     {
@@ -183,7 +214,7 @@ void QueueWork(SWR_CONTEXT *pContext)
         {
             static TileSet lockedTiles;
             uint64_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
-            WorkOnFifoFE(pContext, 0, curDraw[0], 0);
+            WorkOnFifoFE(pContext, 0, curDraw[0]);
             WorkOnFifoBE(pContext, 0, curDraw[1], lockedTiles, 0, 0);
         }
         else
@@ -232,7 +263,20 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
             _mm_pause();
         }
 
-        uint32_t dcIndex = pContext->dcRing.GetHead() % KNOB_MAX_DRAWS_IN_FLIGHT;
+        uint64_t curDraw = pContext->dcRing.GetHead();
+        uint32_t dcIndex = curDraw % KNOB_MAX_DRAWS_IN_FLIGHT;
+
+        static uint64_t lastDrawChecked;
+        static uint32_t lastFrameChecked;
+        if ((pContext->frameCount - lastFrameChecked) > 2 ||
+            (curDraw - lastDrawChecked) > 0x10000)
+        {
+            // Take this opportunity to clean-up old arena allocations
+            pContext->cachingArenaAllocator.FreeOldBlocks();
+
+            lastFrameChecked = pContext->frameCount;
+            lastDrawChecked = curDraw;
+        }
 
         DRAW_CONTEXT* pCurDrawContext = &pContext->dcRing[dcIndex];
         pContext->pCurDrawContext = pCurDrawContext;
@@ -283,8 +327,6 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pCurDrawContext->doneFE = false;
         pCurDrawContext->FeLock = 0;
         pCurDrawContext->threadsDone = 0;
-
-        pCurDrawContext->pTileMgr->initialize();
 
         // Assign unique drawId for this DC
         pCurDrawContext->drawId = pContext->dcRing.GetHead();
@@ -872,6 +914,25 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
                  !pState->state.blendState.renderTarget[rt].writeDisableBlue) ? (1 << rt) : 0;
         }
     }
+
+    // Setup depth quantization function
+    if (pState->state.depthHottileEnable)
+    {
+        switch (pState->state.rastState.depthFormat)
+        {
+        case R32_FLOAT_X8X24_TYPELESS: pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT_X8X24_TYPELESS > ; break;
+        case R32_FLOAT: pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT > ; break;
+        case R24_UNORM_X8_TYPELESS: pState->state.pfnQuantizeDepth = QuantizeDepth < R24_UNORM_X8_TYPELESS > ; break;
+        case R16_UNORM: pState->state.pfnQuantizeDepth = QuantizeDepth < R16_UNORM > ; break;
+        default: SWR_ASSERT(false, "Unsupported depth format for depth quantiztion.");
+            pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT > ;
+        }
+    }
+    else
+    {
+        // set up pass-through quantize if depth isn't enabled
+        pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT > ;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1029,9 +1090,9 @@ void DrawInstanced(
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    int32_t maxVertsPerDraw = MaxVertsPerDraw(pDC, numVertices, topology);
+    uint32_t maxVertsPerDraw = MaxVertsPerDraw(pDC, numVertices, topology);
     uint32_t primsPerDraw = GetNumPrims(topology, maxVertsPerDraw);
-    int32_t remainingVerts = numVertices;
+    uint32_t remainingVerts = numVertices;
 
     API_STATE    *pState = &pDC->pState->state;
     pState->topology = topology;
@@ -1149,9 +1210,9 @@ void DrawIndexedInstance(
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
     API_STATE* pState = &pDC->pState->state;
 
-    int32_t maxIndicesPerDraw = MaxVertsPerDraw(pDC, numIndices, topology);
+    uint32_t maxIndicesPerDraw = MaxVertsPerDraw(pDC, numIndices, topology);
     uint32_t primsPerDraw = GetNumPrims(topology, maxIndicesPerDraw);
-    int32_t remainingIndices = numIndices;
+    uint32_t remainingIndices = numIndices;
 
     uint32_t indexSize = 0;
     switch (pState->indexBuffer.format)
@@ -1334,9 +1395,6 @@ void SwrDispatch(
 
     pDC->isCompute = true;      // This is a compute context.
 
-    // Ensure spill fill pointers are initialized to nullptr.
-    memset(pDC->pSpillFill, 0, sizeof(pDC->pSpillFill));
-
     COMPUTE_DESC* pTaskData = (COMPUTE_DESC*)pDC->pArena->AllocAligned(sizeof(COMPUTE_DESC), 64);
 
     pTaskData->threadGroupCountX = threadGroupCountX;
@@ -1344,6 +1402,8 @@ void SwrDispatch(
     pTaskData->threadGroupCountZ = threadGroupCountZ;
 
     uint32_t totalThreadGroups = threadGroupCountX * threadGroupCountY * threadGroupCountZ;
+    uint32_t dcIndex = pDC->drawId % KNOB_MAX_DRAWS_IN_FLIGHT;
+    pDC->pDispatch = &pContext->pDispatchQueueArray[dcIndex];
     pDC->pDispatch->initialize(totalThreadGroups, pTaskData);
 
     QueueDispatch(pContext);
@@ -1497,4 +1557,6 @@ void SWR_API SwrEndFrame(
     HANDLE hContext)
 {
     RDTSC_ENDFRAME();
+    SWR_CONTEXT *pContext = GetContext(hContext);
+    pContext->frameCount++;
 }

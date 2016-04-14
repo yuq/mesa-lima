@@ -1,4 +1,6 @@
+#
 # Copyright © 2012 Jon TURNEY
+# Copyright (C) 2015 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -19,120 +21,103 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-AM_CPPFLAGS = \
-	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src \
-	-I$(top_srcdir)/src/mapi \
-	-I$(top_srcdir)/src/mesa/ \
-	-I$(top_srcdir)/src/gallium/include \
-	-I$(top_srcdir)/src/gallium/auxiliary \
-	-I$(top_srcdir)/src/glsl/glcpp \
-	-I$(top_srcdir)/src/gtest/include \
-	$(DEFINES)
-AM_CFLAGS = \
-	$(VISIBILITY_CFLAGS) \
-	$(MSVC2013_COMPAT_CFLAGS)
-AM_CXXFLAGS = \
-	$(VISIBILITY_CXXFLAGS) \
-	$(MSVC2013_COMPAT_CXXFLAGS)
+EXTRA_DIST += glsl/tests glsl/glcpp/tests glsl/README	\
+	glsl/TODO glsl/glcpp/README			\
+	glsl/glsl_lexer.ll				\
+	glsl/glsl_parser.yy				\
+	glsl/glcpp/glcpp-lex.l				\
+	glsl/glcpp/glcpp-parse.y			\
+	SConscript.glsl
 
-EXTRA_DIST = tests glcpp/tests README TODO glcpp/README	\
-	glsl_lexer.ll					\
-	glsl_parser.yy					\
-	glcpp/glcpp-lex.l				\
-	glcpp/glcpp-parse.y				\
-	SConscript
-
-include Makefile.sources
-
-TESTS = glcpp/tests/glcpp-test				\
-	glcpp/tests/glcpp-test-cr-lf			\
-	tests/blob-test					\
-	tests/general-ir-test				\
-	tests/optimization-test				\
-	tests/sampler-types-test                        \
-	tests/uniform-initializer-test
+TESTS += glsl/glcpp/tests/glcpp-test			\
+	glsl/glcpp/tests/glcpp-test-cr-lf		\
+	glsl/tests/blob-test				\
+	glsl/tests/general-ir-test			\
+	glsl/tests/optimization-test			\
+	glsl/tests/sampler-types-test			\
+	glsl/tests/uniform-initializer-test
 
 TESTS_ENVIRONMENT= \
 	export PYTHON2=$(PYTHON2); \
 	export PYTHON_FLAGS=$(PYTHON_FLAGS);
 
-noinst_LTLIBRARIES = libglsl.la libglcpp.la
-check_PROGRAMS =					\
-	glcpp/glcpp					\
-	glsl_test					\
-	tests/blob-test					\
-	tests/general-ir-test				\
-	tests/sampler-types-test			\
-	tests/uniform-initializer-test
+check_PROGRAMS +=					\
+	glsl/glcpp/glcpp				\
+	glsl/glsl_test					\
+	glsl/tests/blob-test				\
+	glsl/tests/general-ir-test			\
+	glsl/tests/sampler-types-test			\
+	glsl/tests/uniform-initializer-test
 
 noinst_PROGRAMS = glsl_compiler
 
-tests_blob_test_SOURCES =				\
-	tests/blob_test.c
-tests_blob_test_LDADD =					\
-	$(top_builddir)/src/glsl/libglsl.la
+glsl_tests_blob_test_SOURCES =				\
+	glsl/tests/blob_test.c
+glsl_tests_blob_test_LDADD =				\
+	glsl/libglsl.la
 
-tests_general_ir_test_SOURCES =		\
-	standalone_scaffolding.cpp			\
-	tests/builtin_variable_test.cpp			\
-	tests/invalidate_locations_test.cpp		\
-	tests/general_ir_test.cpp			\
-	tests/varyings_test.cpp
-tests_general_ir_test_CFLAGS =				\
+glsl_tests_general_ir_test_SOURCES =			\
+	glsl/standalone_scaffolding.cpp			\
+	glsl/tests/builtin_variable_test.cpp		\
+	glsl/tests/invalidate_locations_test.cpp	\
+	glsl/tests/general_ir_test.cpp			\
+	glsl/tests/varyings_test.cpp
+glsl_tests_general_ir_test_CFLAGS =			\
 	$(PTHREAD_CFLAGS)
-tests_general_ir_test_LDADD =				\
+glsl_tests_general_ir_test_LDADD =			\
 	$(top_builddir)/src/gtest/libgtest.la		\
-	$(top_builddir)/src/glsl/libglsl.la		\
+	glsl/libglsl.la		\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
-tests_uniform_initializer_test_SOURCES =		\
-	tests/copy_constant_to_storage_tests.cpp	\
-	tests/set_uniform_initializer_tests.cpp		\
-	tests/uniform_initializer_utils.cpp		\
-	tests/uniform_initializer_utils.h
-tests_uniform_initializer_test_CFLAGS =			\
+glsl_tests_uniform_initializer_test_SOURCES =		\
+	glsl/tests/copy_constant_to_storage_tests.cpp	\
+	glsl/tests/set_uniform_initializer_tests.cpp	\
+	glsl/tests/uniform_initializer_utils.cpp	\
+	glsl/tests/uniform_initializer_utils.h
+glsl_tests_uniform_initializer_test_CFLAGS =		\
 	$(PTHREAD_CFLAGS)
-tests_uniform_initializer_test_LDADD =			\
+glsl_tests_uniform_initializer_test_LDADD =		\
 	$(top_builddir)/src/gtest/libgtest.la		\
-	$(top_builddir)/src/glsl/libglsl.la		\
+	glsl/libglsl.la		\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
-tests_sampler_types_test_SOURCES =			\
-	tests/sampler_types_test.cpp
-tests_sampler_types_test_CFLAGS =			\
+glsl_tests_sampler_types_test_SOURCES =			\
+	glsl/tests/sampler_types_test.cpp
+glsl_tests_sampler_types_test_CFLAGS =			\
 	$(PTHREAD_CFLAGS)
-tests_sampler_types_test_LDADD =			\
+glsl_tests_sampler_types_test_LDADD =			\
 	$(top_builddir)/src/gtest/libgtest.la		\
-	$(top_builddir)/src/glsl/libglsl.la		\
+	glsl/libglsl.la					\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
-libglcpp_la_LIBADD =					\
+noinst_LTLIBRARIES += glsl/libglsl.la glsl/libglcpp.la
+
+glsl_libglcpp_la_LIBADD =				\
 	$(top_builddir)/src/util/libmesautil.la
-libglcpp_la_SOURCES =					\
-	glcpp/glcpp-lex.c				\
-	glcpp/glcpp-parse.c				\
-	glcpp/glcpp-parse.h				\
+glsl_libglcpp_la_SOURCES =				\
+	glsl/glcpp/glcpp-lex.c				\
+	glsl/glcpp/glcpp-parse.c			\
+	glsl/glcpp/glcpp-parse.h			\
 	$(LIBGLCPP_FILES)
 
-glcpp_glcpp_SOURCES =					\
-	glcpp/glcpp.c
-glcpp_glcpp_LDADD =					\
-	libglcpp.la					\
+glsl_glcpp_glcpp_SOURCES =				\
+	glsl/glcpp/glcpp.c
+glsl_glcpp_glcpp_LDADD =				\
+	glsl/libglcpp.la	\
 	$(top_builddir)/src/libglsl_util.la		\
 	-lm
 
-libglsl_la_LIBADD = \
-	$(top_builddir)/src/compiler/nir/libnir.la \
-	libglcpp.la
+glsl_libglsl_la_LIBADD = \
+	nir/libnir.la \
+	glsl/libglcpp.la
 
-libglsl_la_SOURCES =					\
-	glsl_lexer.cpp					\
-	glsl_parser.cpp					\
-	glsl_parser.h					\
+glsl_libglsl_la_SOURCES =				\
+	glsl/glsl_lexer.cpp				\
+	glsl/glsl_parser.cpp				\
+	glsl/glsl_parser.h				\
 	$(LIBGLSL_FILES)
 
 
@@ -140,19 +125,19 @@ glsl_compiler_SOURCES = \
 	$(GLSL_COMPILER_CXX_FILES)
 
 glsl_compiler_LDADD =					\
-	libglsl.la					\
+	glsl/libglsl.la					\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(top_builddir)/src/util/libmesautil.la		\
 	$(PTHREAD_LIBS)
 
-glsl_test_SOURCES = \
-	standalone_scaffolding.cpp \
-	test.cpp \
-	test_optpass.cpp \
-	test_optpass.h
+glsl_glsl_test_SOURCES = \
+	glsl/standalone_scaffolding.cpp \
+	glsl/test.cpp \
+	glsl/test_optpass.cpp \
+	glsl/test_optpass.h
 
-glsl_test_LDADD =					\
-	libglsl.la					\
+glsl_glsl_test_LDADD =					\
+	glsl/libglsl.la					\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
@@ -186,23 +171,24 @@ am__v_YACC_ = $(am__v_YACC_$(AM_DEFAULT_VERBOSITY))
 am__v_YACC_0 = @echo "  YACC    " $@;
 am__v_YACC_1 =
 
-MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 YACC_GEN = $(AM_V_YACC)$(YACC) $(YFLAGS)
 LEX_GEN = $(AM_V_LEX)$(LEX) $(LFLAGS)
 
-glsl_parser.cpp glsl_parser.h: glsl_parser.yy
-	$(YACC_GEN) -o $@ -p "_mesa_glsl_" --defines=$(builddir)/glsl_parser.h $(srcdir)/glsl_parser.yy
-
-glsl_lexer.cpp: glsl_lexer.ll
-	$(LEX_GEN) -o $@ $(srcdir)/glsl_lexer.ll
-
-glcpp/glcpp-parse.c glcpp/glcpp-parse.h: glcpp/glcpp-parse.y
+glsl/glsl_parser.cpp glsl/glsl_parser.h: glsl/glsl_parser.yy
 	$(MKDIR_GEN)
-	$(YACC_GEN) -o $@ -p "glcpp_parser_" --defines=$(builddir)/glcpp/glcpp-parse.h $(srcdir)/glcpp/glcpp-parse.y
+	$(YACC_GEN) -o $@ -p "_mesa_glsl_" --defines=$(builddir)/glsl/glsl_parser.h $(srcdir)/glsl/glsl_parser.yy
 
-glcpp/glcpp-lex.c: glcpp/glcpp-lex.l
+glsl/glsl_lexer.cpp: glsl/glsl_lexer.ll
 	$(MKDIR_GEN)
-	$(LEX_GEN) -o $@ $(srcdir)/glcpp/glcpp-lex.l
+	$(LEX_GEN) -o $@ $(srcdir)/glsl/glsl_lexer.ll
+
+glsl/glcpp/glcpp-parse.c glsl/glcpp/glcpp-parse.h: glsl/glcpp/glcpp-parse.y
+	$(MKDIR_GEN)
+	$(YACC_GEN) -o $@ -p "glcpp_parser_" --defines=$(builddir)/glsl/glcpp/glcpp-parse.h $(srcdir)/glsl/glcpp/glcpp-parse.y
+
+glsl/glcpp/glcpp-lex.c: glsl/glcpp/glcpp-lex.l
+	$(MKDIR_GEN)
+	$(LEX_GEN) -o $@ $(srcdir)/glsl/glcpp/glcpp-lex.l
 
 # Only the parsers (specifically the header files generated at the same time)
 # need to be in BUILT_SOURCES. Though if we list the parser headers YACC is
@@ -210,19 +196,22 @@ glcpp/glcpp-lex.c: glcpp/glcpp-lex.l
 # YACC is only executed once for each parser. The rest of the generated code
 # will be created at the appropriate times according to standard automake
 # dependency rules.
-BUILT_SOURCES =						\
-	glsl_parser.cpp					\
-	glsl_lexer.cpp					\
-	glcpp/glcpp-parse.c				\
-	glcpp/glcpp-lex.c
-CLEANFILES =						\
-	glcpp/glcpp-parse.h				\
-	glsl_parser.h					\
-	$(BUILT_SOURCES)
+BUILT_SOURCES +=					\
+	glsl/glsl_parser.cpp				\
+	glsl/glsl_lexer.cpp				\
+	glsl/glcpp/glcpp-parse.c			\
+	glsl/glcpp/glcpp-lex.c
+CLEANFILES +=						\
+	glsl/glcpp/glcpp-parse.h			\
+	glsl/glsl_parser.h				\
+	glsl/glsl_parser.cpp				\
+	glsl/glsl_lexer.cpp				\
+	glsl/glcpp/glcpp-parse.c			\
+	glsl/glcpp/glcpp-lex.c
 
 clean-local:
 	$(RM) -r subtest-cr subtest-cr-lf subtest-lf subtest-lf-cr
 
 dist-hook:
-	$(RM) glcpp/tests/*.out
-	$(RM) glcpp/tests/subtest*/*.out
+	$(RM) glsl/glcpp/tests/*.out
+	$(RM) glsl/glcpp/tests/subtest*/*.out

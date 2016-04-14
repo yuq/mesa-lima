@@ -1505,19 +1505,33 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
             break;
          }
 
-         case BRW_SFID_URB:
+         case BRW_SFID_URB: {
+            unsigned opcode = brw_inst_urb_opcode(devinfo, inst);
+
             format(file, " %ld", brw_inst_urb_global_offset(devinfo, inst));
 
             space = 1;
-            if (devinfo->gen >= 7) {
-               err |= control(file, "urb opcode", gen7_urb_opcode,
-                              brw_inst_urb_opcode(devinfo, inst), &space);
-            } else if (devinfo->gen >= 5) {
-               err |= control(file, "urb opcode", gen5_urb_opcode,
-                              brw_inst_urb_opcode(devinfo, inst), &space);
+
+            err |= control(file, "urb opcode",
+                           devinfo->gen >= 7 ? gen7_urb_opcode
+                                             : gen5_urb_opcode,
+                           opcode, &space);
+
+            if (devinfo->gen >= 7 &&
+                brw_inst_urb_per_slot_offset(devinfo, inst)) {
+               string(file, " per-slot");
             }
-            err |= control(file, "urb swizzle", urb_swizzle,
-                           brw_inst_urb_swizzle_control(devinfo, inst), &space);
+
+            if (opcode == GEN8_URB_OPCODE_SIMD8_WRITE ||
+                opcode == GEN8_URB_OPCODE_SIMD8_READ) {
+               if (brw_inst_urb_channel_mask_present(devinfo, inst))
+                  string(file, " masked");
+            } else {
+               err |= control(file, "urb swizzle", urb_swizzle,
+                              brw_inst_urb_swizzle_control(devinfo, inst),
+                              &space);
+            }
+
             if (devinfo->gen < 7) {
                err |= control(file, "urb allocate", urb_allocate,
                               brw_inst_urb_allocate(devinfo, inst), &space);
@@ -1529,6 +1543,7 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
                               brw_inst_urb_complete(devinfo, inst), &space);
             }
             break;
+         }
          case BRW_SFID_THREAD_SPAWNER:
             break;
 

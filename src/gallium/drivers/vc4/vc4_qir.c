@@ -31,7 +31,6 @@ struct qir_op_info {
         const char *name;
         uint8_t ndst, nsrc;
         bool has_side_effects;
-        bool multi_instruction;
 };
 
 static const struct qir_op_info qir_op_info[] = {
@@ -65,23 +64,16 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_XOR] = { "xor", 1, 2 },
         [QOP_NOT] = { "not", 1, 1 },
 
-        [QOP_RCP] = { "rcp", 1, 1, false, true },
-        [QOP_RSQ] = { "rsq", 1, 1, false, true },
-        [QOP_EXP2] = { "exp2", 1, 2, false, true },
-        [QOP_LOG2] = { "log2", 1, 2, false, true },
-        [QOP_TLB_STENCIL_SETUP] = { "tlb_stencil_setup", 0, 1, true },
-        [QOP_TLB_Z_WRITE] = { "tlb_z", 0, 1, true },
-        [QOP_TLB_COLOR_WRITE] = { "tlb_color", 0, 1, true },
-        [QOP_TLB_COLOR_WRITE_MS] = { "tlb_color_ms", 0, 1, true },
+        [QOP_RCP] = { "rcp", 1, 1 },
+        [QOP_RSQ] = { "rsq", 1, 1 },
+        [QOP_EXP2] = { "exp2", 1, 2 },
+        [QOP_LOG2] = { "log2", 1, 2 },
         [QOP_TLB_COLOR_READ] = { "tlb_color_read", 1, 0 },
         [QOP_MS_MASK] = { "ms_mask", 0, 1, true },
         [QOP_VARY_ADD_C] = { "vary_add_c", 1, 1 },
 
-        [QOP_FRAG_X] = { "frag_x", 1, 0 },
-        [QOP_FRAG_Y] = { "frag_y", 1, 0 },
         [QOP_FRAG_Z] = { "frag_z", 1, 0 },
         [QOP_FRAG_W] = { "frag_w", 1, 0 },
-        [QOP_FRAG_REV_FLAG] = { "frag_rev_flag", 1, 0 },
 
         [QOP_TEX_S] = { "tex_s", 0, 2 },
         [QOP_TEX_T] = { "tex_t", 0, 2 },
@@ -116,6 +108,16 @@ qir_get_op_nsrc(enum qop qop)
 bool
 qir_has_side_effects(struct vc4_compile *c, struct qinst *inst)
 {
+        switch (inst->dst.file) {
+        case QFILE_TLB_Z_WRITE:
+        case QFILE_TLB_COLOR_WRITE:
+        case QFILE_TLB_COLOR_WRITE_MS:
+        case QFILE_TLB_STENCIL_SETUP:
+                return true;
+        default:
+                break;
+        }
+
         return qir_op_info[inst->op].has_side_effects;
 }
 
@@ -141,12 +143,6 @@ qir_has_side_effect_reads(struct vc4_compile *c, struct qinst *inst)
                 return true;
 
         return false;
-}
-
-bool
-qir_is_multi_instruction(struct qinst *inst)
-{
-        return qir_op_info[inst->op].multi_instruction;
 }
 
 bool
@@ -233,24 +229,47 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
                 [QFILE_TEMP] = "t",
                 [QFILE_VARY] = "v",
                 [QFILE_UNIF] = "u",
+                [QFILE_TLB_COLOR_WRITE] = "tlb_c",
+                [QFILE_TLB_COLOR_WRITE_MS] = "tlb_c_ms",
+                [QFILE_TLB_Z_WRITE] = "tlb_z",
+                [QFILE_TLB_STENCIL_SETUP] = "tlb_stencil",
+                [QFILE_FRAG_X] = "frag_x",
+                [QFILE_FRAG_Y] = "frag_y",
+                [QFILE_FRAG_REV_FLAG] = "frag_rev_flag",
         };
 
-        if (reg.file == QFILE_NULL) {
+        switch (reg.file) {
+
+        case QFILE_NULL:
                 fprintf(stderr, "null");
-        } else if (reg.file == QFILE_SMALL_IMM) {
+                break;
+
+        case QFILE_SMALL_IMM:
                 if ((int)reg.index >= -16 && (int)reg.index <= 15)
                         fprintf(stderr, "%d", reg.index);
                 else
                         fprintf(stderr, "%f", uif(reg.index));
-        } else if (reg.file == QFILE_VPM) {
+                break;
+
+        case QFILE_VPM:
                 if (write) {
                         fprintf(stderr, "vpm");
                 } else {
                         fprintf(stderr, "vpm%d.%d",
                                 reg.index / 4, reg.index % 4);
                 }
-        } else {
+                break;
+
+        case QFILE_TLB_COLOR_WRITE:
+        case QFILE_TLB_COLOR_WRITE_MS:
+        case QFILE_TLB_Z_WRITE:
+        case QFILE_TLB_STENCIL_SETUP:
+                fprintf(stderr, "%s", files[reg.file]);
+                break;
+
+        default:
                 fprintf(stderr, "%s%d", files[reg.file], reg.index);
+                break;
         }
 
         if (reg.file == QFILE_UNIF &&
@@ -455,12 +474,11 @@ qir_uniform(struct vc4_compile *c,
         for (int i = 0; i < c->num_uniforms; i++) {
                 if (c->uniform_contents[i] == contents &&
                     c->uniform_data[i] == data) {
-                        return (struct qreg) { QFILE_UNIF, i };
+                        return qir_reg(QFILE_UNIF, i);
                 }
         }
 
         uint32_t uniform = c->num_uniforms++;
-        struct qreg u = { QFILE_UNIF, uniform };
 
         if (uniform >= c->uniform_array_size) {
                 c->uniform_array_size = MAX2(MAX2(16, uniform + 1),
@@ -477,7 +495,7 @@ qir_uniform(struct vc4_compile *c,
         c->uniform_contents[uniform] = contents;
         c->uniform_data[uniform] = data;
 
-        return u;
+        return qir_reg(QFILE_UNIF, uniform);
 }
 
 void
@@ -492,10 +510,8 @@ qir_SF(struct vc4_compile *c, struct qreg src)
 
         if (src.file != QFILE_TEMP ||
             !c->defs[src.index] ||
-            last_inst != c->defs[src.index] ||
-            qir_is_multi_instruction(last_inst)) {
-                struct qreg null = { QFILE_NULL, 0 };
-                last_inst = qir_MOV_dest(c, null, src);
+            last_inst != c->defs[src.index]) {
+                last_inst = qir_MOV_dest(c, qir_reg(QFILE_NULL, 0), src);
                 last_inst = (struct qinst *)c->instructions.prev;
         }
         last_inst->sf = true;

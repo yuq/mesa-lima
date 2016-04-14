@@ -241,6 +241,7 @@ struct fd_context {
 	 */
 	struct {
 		uint64_t prims_emitted;
+		uint64_t prims_generated;
 		uint64_t draw_calls;
 		uint64_t batch_total, batch_sysmem, batch_gmem, batch_restore;
 	} stats;

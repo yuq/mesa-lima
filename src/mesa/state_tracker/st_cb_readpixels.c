@@ -85,7 +85,7 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
               GLsizei width, GLsizei height,
               GLenum format, GLenum type,
               const struct gl_pixelstore_attrib *pack,
-              GLvoid *pixels)
+              void *pixels)
 {
    struct st_context *st = st_context(ctx);
    struct gl_renderbuffer *rb =
@@ -238,7 +238,7 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
       GLuint row;
 
       for (row = 0; row < (unsigned) height; row++) {
-         GLvoid *dest = _mesa_image_address2d(pack, pixels,
+         void *dest = _mesa_image_address2d(pack, pixels,
                                               width, height, format,
                                               type, row, 0);
          memcpy(dest, map, bytesPerRow);

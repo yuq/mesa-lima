@@ -86,7 +86,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
       if (glsl_type_is_vector_or_scalar(type)) {
          unsigned num_components = glsl_get_vector_elements(val->type);
          nir_load_const_instr *load =
-            nir_load_const_instr_create(b->shader, num_components);
+            nir_load_const_instr_create(b->shader, num_components, 32);
 
          for (unsigned i = 0; i < num_components; i++)
             load->value.u32[i] = constant->value.u[i];
@@ -103,7 +103,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
             struct vtn_ssa_value *col_val = rzalloc(b, struct vtn_ssa_value);
             col_val->type = glsl_get_column_type(val->type);
             nir_load_const_instr *load =
-               nir_load_const_instr_create(b->shader, rows);
+               nir_load_const_instr_create(b->shader, rows, 32);
 
             for (unsigned j = 0; j < rows; j++)
                load->value.u32[j] = constant->value.u[rows * i + j];

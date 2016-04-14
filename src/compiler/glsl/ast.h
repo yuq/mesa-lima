@@ -736,6 +736,11 @@ struct ast_type_qualifier {
                            const ast_type_qualifier &q,
                            ast_node* &node, bool create_node);
 
+   bool validate_flags(YYLTYPE *loc,
+                       _mesa_glsl_parse_state *state,
+                       const char *message,
+                       const ast_type_qualifier &allowed_flags);
+
    ast_subroutine_list *subroutine_list;
 };
 

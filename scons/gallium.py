@@ -410,7 +410,7 @@ def generate(env):
         # Work around aliasing bugs - developers should comment this out
         ccflags += ['-fno-strict-aliasing']
         ccflags += ['-g']
-        if env['build'] in ('checked', 'profile'):
+        if env['build'] in ('checked', 'profile') or env['asan']:
             # See http://code.google.com/p/jrfonseca/wiki/Gprof2Dot#Which_options_should_I_pass_to_gcc_when_compiling_for_profiling?
             ccflags += [
                 '-fno-omit-frame-pointer',
@@ -539,6 +539,16 @@ def generate(env):
         if env['clang']:
             # scan-build will produce more comprehensive output
             env.Append(CCFLAGS = ['--analyze'])
+
+    # https://github.com/google/sanitizers/wiki/AddressSanitizer
+    if env['asan']:
+        if gcc_compat:
+            env.Append(CCFLAGS = [
+                '-fsanitize=address',
+            ])
+            env.Append(LINKFLAGS = [
+                '-fsanitize=address',
+            ])
 
     # Assembler options
     if gcc_compat:

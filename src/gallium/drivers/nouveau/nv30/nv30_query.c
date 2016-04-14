@@ -263,6 +263,11 @@ nv40_query_render_condition(struct pipe_context *pipe,
    PUSH_DATA (push, 0x02000000 | q->qo[1]->hw->start);
 }
 
+static void
+nv30_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
 void
 nv30_query_init(struct pipe_context *pipe)
 {
@@ -273,6 +278,7 @@ nv30_query_init(struct pipe_context *pipe)
    pipe->begin_query = nv30_query_begin;
    pipe->end_query = nv30_query_end;
    pipe->get_query_result = nv30_query_result;
+   pipe->set_active_query_state = nv30_set_active_query_state;
    if (eng3d->oclass >= NV40_3D_CLASS)
       pipe->render_condition = nv40_query_render_condition;
 }

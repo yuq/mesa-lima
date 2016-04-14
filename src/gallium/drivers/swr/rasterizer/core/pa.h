@@ -1017,13 +1017,13 @@ struct PA_TESS : PA_STATE
     {
         SWR_ASSERT(numPrims <= KNOB_SIMD_WIDTH);
 #if KNOB_SIMD_WIDTH == 8
-        static const OSALIGN(int32_t, 64) maskGen[KNOB_SIMD_WIDTH * 2] =
+        static const OSALIGNLINE(int32_t) maskGen[KNOB_SIMD_WIDTH * 2] =
         {
             -1, -1, -1, -1, -1, -1, -1, -1,
              0,  0,  0,  0,  0,  0,  0,  0
         };
 #elif KNOB_SIMD_WIDTH == 16
-        static const OSALIGN(int32_t, 128) maskGen[KNOB_SIMD_WIDTH * 2] =
+        static const OSALIGNLINE(int32_t) maskGen[KNOB_SIMD_WIDTH * 2] =
         {
             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
              0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
@@ -1167,8 +1167,14 @@ struct PA_FACTORY
         {
             memset(&indexStore, 0, sizeof(indexStore));
             DWORD numAttribs;
-            _BitScanReverse(&numAttribs, state.feAttribMask);
-            numAttribs++;
+            if (_BitScanReverse(&numAttribs, state.feAttribMask))
+            {
+                numAttribs++;
+            }
+            else
+            {
+                numAttribs = 0;
+            }
             new (&this->paCut) PA_STATE_CUT(pDC, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * KNOB_SIMD_WIDTH, 
                 &this->indexStore[0], numVerts, numAttribs, state.topology, false);
             cutPA = true;

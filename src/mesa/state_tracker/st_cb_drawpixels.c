@@ -379,12 +379,12 @@ static struct pipe_resource *
 make_texture(struct st_context *st,
 	     GLsizei width, GLsizei height, GLenum format, GLenum type,
 	     const struct gl_pixelstore_attrib *unpack,
-	     const GLvoid *pixels)
+	     const void *pixels)
 {
    struct gl_context *ctx = st->ctx;
    struct pipe_context *pipe = st->pipe;
    mesa_format mformat;
-   struct pipe_resource *pt;
+   struct pipe_resource *pt = NULL;
    enum pipe_format pipeFormat;
    GLenum baseInternalFormat;
 
@@ -403,10 +403,18 @@ make_texture(struct st_context *st,
        unpack->SkipRows == 0 &&
        unpack->SwapBytes == GL_FALSE &&
        st->drawpix_cache.image) {
+      assert(st->drawpix_cache.texture);
+
       /* check if the pixel data is the same */
       if (memcmp(pixels, st->drawpix_cache.image, width * height * bpp) == 0) {
          /* OK, re-use the cached texture */
-         return st->drawpix_cache.texture;
+         pipe_resource_reference(&pt, st->drawpix_cache.texture);
+         /* refcount of returned texture should be at least two here.  One
+          * reference for the cache to hold on to, one for the caller (which
+          * it will release), and possibly more held by the driver.
+          */
+         assert(pt->reference.count >= 2);
+         return pt;
       }
    }
 
@@ -525,8 +533,14 @@ make_texture(struct st_context *st,
       st->drawpix_cache.image = malloc(width * height * bpp);
       if (st->drawpix_cache.image) {
          memcpy(st->drawpix_cache.image, pixels, width * height * bpp);
+         pipe_resource_reference(&st->drawpix_cache.texture, pt);
       }
-      st->drawpix_cache.texture = pt;
+      else {
+         /* out of memory, free/disable cached texture */
+         st->drawpix_cache.width = 0;
+         st->drawpix_cache.height = 0;
+         pipe_resource_reference(&st->drawpix_cache.texture, NULL);
+      }
    }
 #endif
 
@@ -744,7 +758,7 @@ static void
 draw_stencil_pixels(struct gl_context *ctx, GLint x, GLint y,
                     GLsizei width, GLsizei height, GLenum format, GLenum type,
                     const struct gl_pixelstore_attrib *unpack,
-                    const GLvoid *pixels)
+                    const void *pixels)
 {
    struct st_context *st = st_context(ctx);
    struct pipe_context *pipe = st->pipe;
@@ -798,7 +812,7 @@ draw_stencil_pixels(struct gl_context *ctx, GLint x, GLint y,
       for (row = 0; row < height; row++) {
          GLfloat *zValuesFloat = (GLfloat*)zValues;
          GLenum destType = GL_UNSIGNED_BYTE;
-         const GLvoid *source = _mesa_image_address2d(&clippedUnpack, pixels,
+         const void *source = _mesa_image_address2d(&clippedUnpack, pixels,
                                                       width, height,
                                                       format, type,
                                                       row, 0);
@@ -1041,7 +1055,7 @@ static void
 st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
               GLsizei width, GLsizei height,
               GLenum format, GLenum type,
-              const struct gl_pixelstore_attrib *unpack, const GLvoid *pixels)
+              const struct gl_pixelstore_attrib *unpack, const void *pixels)
 {
    void *driver_vp, *driver_fp;
    struct st_context *st = st_context(ctx);
@@ -1160,9 +1174,8 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
    if (num_sampler_view > 1)
       pipe_sampler_view_reference(&sv[1], NULL);
 
-#if !USE_DRAWPIXELS_CACHE
+   /* free the texture (but may persist in the cache) */
    pipe_resource_reference(&pt, NULL);
-#endif
 }
 
 

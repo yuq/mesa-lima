@@ -179,6 +179,7 @@ clone_register(clone_state *state, const nir_register *reg)
    add_remap(state, nreg, reg);
 
    nreg->num_components = reg->num_components;
+   nreg->bit_size = reg->bit_size;
    nreg->num_array_elems = reg->num_array_elems;
    nreg->index = reg->index;
    nreg->name = ralloc_strdup(nreg, reg->name);
@@ -359,7 +360,8 @@ static nir_load_const_instr *
 clone_load_const(clone_state *state, const nir_load_const_instr *lc)
 {
    nir_load_const_instr *nlc =
-      nir_load_const_instr_create(state->ns, lc->def.num_components);
+      nir_load_const_instr_create(state->ns, lc->def.num_components,
+                                  lc->def.bit_size);
 
    memcpy(&nlc->value, &lc->value, sizeof(nlc->value));
 
@@ -372,7 +374,8 @@ static nir_ssa_undef_instr *
 clone_ssa_undef(clone_state *state, const nir_ssa_undef_instr *sa)
 {
    nir_ssa_undef_instr *nsa =
-      nir_ssa_undef_instr_create(state->ns, sa->def.num_components);
+      nir_ssa_undef_instr_create(state->ns, sa->def.num_components,
+                                 sa->def.bit_size);
 
    add_remap(state, &nsa->def, &sa->def);
 

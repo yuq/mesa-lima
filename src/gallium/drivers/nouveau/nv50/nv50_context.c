@@ -93,6 +93,30 @@ nv50_memory_barrier(struct pipe_context *pipe, unsigned flags)
    }
 }
 
+static void
+nv50_emit_string_marker(struct pipe_context *pipe, const char *str, int len)
+{
+   struct nouveau_pushbuf *push = nv50_context(pipe)->base.pushbuf;
+   int string_words = len / 4;
+   int data_words;
+
+   if (len <= 0)
+      return;
+   string_words = MIN2(string_words, NV04_PFIFO_MAX_PACKET_LEN);
+   if (string_words == NV04_PFIFO_MAX_PACKET_LEN)
+      data_words = string_words;
+   else
+      data_words = string_words + !!(len & 3);
+   BEGIN_NI04(push, SUBC_3D(NV04_GRAPH_NOP), data_words);
+   if (string_words)
+      PUSH_DATAp(push, str, string_words);
+   if (string_words != data_words) {
+      int data = 0;
+      memcpy(&data, &str[string_words * 4], len & 3);
+      PUSH_DATA (push, data);
+   }
+}
+
 void
 nv50_default_kick_notify(struct nouveau_pushbuf *push)
 {
@@ -309,6 +333,7 @@ nv50_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
    pipe->texture_barrier = nv50_texture_barrier;
    pipe->memory_barrier = nv50_memory_barrier;
    pipe->get_sample_position = nv50_context_get_sample_position;
+   pipe->emit_string_marker = nv50_emit_string_marker;
 
    if (!screen->cur_ctx) {
       /* Restore the last context's state here, normally handled during

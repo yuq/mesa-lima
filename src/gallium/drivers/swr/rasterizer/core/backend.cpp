@@ -70,7 +70,7 @@ static PFN_CLEAR_TILES sClearTilesTable[NUM_SWR_FORMATS];
 /// @param pDC - pointer to draw context (dispatch).
 /// @param workerId - The unique worker ID that is assigned to this thread.
 /// @param threadGroupId - the linear index for the thread group within the dispatch.
-void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroupId)
+void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroupId, void*& pSpillFillBuffer)
 {
     RDTSC_START(BEDispatch);
 
@@ -80,10 +80,10 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     SWR_ASSERT(pTaskData != nullptr);
 
     // Ensure spill fill memory has been allocated.
-    if (pDC->pSpillFill[workerId] == nullptr)
+    if (pSpillFillBuffer == nullptr)
     {
         ///@todo Add state which indicates the spill fill size.
-        pDC->pSpillFill[workerId] = (uint8_t*)pDC->pArena->AllocAlignedSync(4096 * 1024, sizeof(float) * 8);
+        pSpillFillBuffer = pDC->pArena->AllocAlignedSync(4 * sizeof(MEGABYTE), sizeof(float) * 8);
     }
 
     const API_STATE& state = GetApiState(pDC);
@@ -94,7 +94,7 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     csContext.dispatchDims[1] = pTaskData->threadGroupCountY;
     csContext.dispatchDims[2] = pTaskData->threadGroupCountZ;
     csContext.pTGSM = pContext->pScratch[workerId];
-    csContext.pSpillFillBuffer = pDC->pSpillFill[workerId];
+    csContext.pSpillFillBuffer = (uint8_t*)pSpillFillBuffer;
 
     state.pfnCsFunc(GetPrivateState(pDC), &csContext);
 
@@ -772,8 +772,10 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                     psContext.vOneOverW.centroid = psContext.vOneOverW.center;
                 }
 
-                // interpolate z
+                // interpolate and quantize z
                 psContext.vZ = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.center, psContext.vJ.center);
+                psContext.vZ = state.pfnQuantizeDepth(psContext.vZ);
+
                 RDTSC_STOP(BEBarycentric, 0, 0);
 
                 simdmask clipCoverageMask = coverageMask & MASK;
@@ -793,7 +795,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 if(CanEarlyZ(pPSState))
                 {
                     RDTSC_START(BEEarlyDepthTest);
-                    depthPassMask = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                    depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
                                                         psContext.vZ, pDepthBase, vCoverageMask, pStencilBase, &stencilPassMask);
                     RDTSC_STOP(BEEarlyDepthTest, 0, 0);
 
@@ -825,7 +827,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 if(!CanEarlyZ(pPSState))
                 {
                     RDTSC_START(BELateDepthTest);
-                    depthPassMask = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                    depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
                                                         psContext.vZ, pDepthBase, vCoverageMask, pStencilBase, &stencilPassMask);
                     RDTSC_STOP(BELateDepthTest, 0, 0);
 
@@ -977,8 +979,9 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
 
                     backendFuncs.pfnCalcSampleBarycentrics(coeffs, psContext);
 
-                    // interpolate z
+                    // interpolate and quantize z
                     psContext.vZ = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.sample, psContext.vJ.sample);
+                    psContext.vZ = state.pfnQuantizeDepth(psContext.vZ);
 
                     RDTSC_STOP(BEBarycentric, 0, 0);
 
@@ -1000,7 +1003,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     if (CanEarlyZ(pPSState))
                     {
                         RDTSC_START(BEEarlyDepthTest);
-                        depthPassMask = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                        depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
                                               psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
                         RDTSC_STOP(BEEarlyDepthTest, 0, 0);
 
@@ -1033,7 +1036,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     if (!CanEarlyZ(pPSState))
                     {
                         RDTSC_START(BELateDepthTest);
-                        depthPassMask = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                        depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
                                               psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
                         RDTSC_STOP(BELateDepthTest, 0, 0);
 
@@ -1200,8 +1203,9 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 RDTSC_START(BEBarycentric);
                 backendFuncs.pfnCalcPixelBarycentrics(coeffs, psContext);
 
-                // interpolate z
+                // interpolate and quantize z
                 psContext.vZ = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.center, psContext.vJ.center);
+                psContext.vZ = state.pfnQuantizeDepth(psContext.vZ);
                 RDTSC_STOP(BEBarycentric, 0, 0);
 
                 // execute pixel shader
@@ -1263,10 +1267,11 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                     // calc I & J per sample
                     backendFuncs.pfnCalcSampleBarycentrics(coeffs, psContext);
 
-                    // interpolate z
+                    // interpolate and quantize z
                     if (!pPSState->writesODepth)
                     {
                         vZ[sample] = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.sample, psContext.vJ.sample);
+                        vZ[sample] = state.pfnQuantizeDepth(vZ[sample]);
                     }
                     
                     ///@todo: perspective correct vs non-perspective correct clipping?
@@ -1292,7 +1297,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 // ZTest for this sample
                 RDTSC_START(BEEarlyDepthTest);
                 stencilPassMask[sample] = vCoverageMask[sample];
-                depthPassMask[sample] = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                depthPassMask[sample] = DepthStencilTest(&state, work.triFlags.frontFacing,
                                         vZ[sample], pDepthSample, vCoverageMask[sample], pStencilSample, &stencilPassMask[sample]);
                 RDTSC_STOP(BEEarlyDepthTest, 0, 0);
 
@@ -1308,8 +1313,9 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             {
                 RDTSC_START(BEBarycentric);
                 backendFuncs.pfnCalcPixelBarycentrics(coeffs, psContext);
-                // interpolate z
+                // interpolate and quantize z
                 psContext.vZ = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.center, psContext.vJ.center);
+                psContext.vZ = state.pfnQuantizeDepth(psContext.vZ);
                 RDTSC_STOP(BEBarycentric, 0, 0);
 
                 // execute pixel shader
@@ -1463,8 +1469,9 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
 
                     backendFuncs.pfnCalcSampleBarycentrics(coeffs, psContext);
 
-                    // interpolate z
+                    // interpolate and quantize z
                     psContext.vZ = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.sample, psContext.vJ.sample);
+                    psContext.vZ = state.pfnQuantizeDepth(psContext.vZ);
 
                     RDTSC_STOP(BEBarycentric, 0, 0);
 
@@ -1483,7 +1490,7 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
                     uint8_t *pStencilSample = pStencilBase + MultisampleTraits<sampleCount>::RasterTileStencilOffset(sample);
 
                     RDTSC_START(BEEarlyDepthTest);
-                    simdscalar depthPassMask = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                    simdscalar depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
                         psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
                     DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                         pDepthSample, depthPassMask, vCoverageMask, pStencilSample, stencilPassMask);

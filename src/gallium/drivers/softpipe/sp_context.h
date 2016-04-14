@@ -84,6 +84,7 @@ struct softpipe_context {
    struct pipe_sampler_view *sampler_views[PIPE_SHADER_TYPES][PIPE_MAX_SHADER_SAMPLER_VIEWS];
 
    struct pipe_image_view images[PIPE_SHADER_TYPES][PIPE_MAX_SHADER_IMAGES];
+   struct pipe_shader_buffer buffers[PIPE_SHADER_TYPES][PIPE_MAX_SHADER_BUFFERS];
    struct pipe_viewport_state viewports[PIPE_MAX_VIEWPORTS];
    struct pipe_vertex_buffer vertex_buffer[PIPE_MAX_ATTRIBS];
    struct pipe_index_buffer index_buffer;
@@ -174,6 +175,7 @@ struct softpipe_context {
    struct {
       struct sp_tgsi_sampler *sampler[PIPE_SHADER_TYPES];
       struct sp_tgsi_image *image[PIPE_SHADER_TYPES];
+      struct sp_tgsi_buffer *buffer[PIPE_SHADER_TYPES];
    } tgsi;
 
    struct tgsi_exec_machine *fs_machine;

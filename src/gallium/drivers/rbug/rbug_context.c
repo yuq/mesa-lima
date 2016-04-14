@@ -211,6 +211,17 @@ rbug_get_query_result(struct pipe_context *_pipe,
    return ret;
 }
 
+static void
+rbug_set_active_query_state(struct pipe_context *_pipe, boolean enable)
+{
+   struct rbug_context *rb_pipe = rbug_context(_pipe);
+   struct pipe_context *pipe = rb_pipe->pipe;
+
+   pipe_mutex_lock(rb_pipe->call_mutex);
+   pipe->set_active_query_state(pipe, enable);
+   pipe_mutex_unlock(rb_pipe->call_mutex);
+}
+
 static void *
 rbug_create_blend_state(struct pipe_context *_pipe,
                         const struct pipe_blend_state *blend)
@@ -1184,6 +1195,7 @@ rbug_context_create(struct pipe_screen *_screen, struct pipe_context *pipe)
    rb_pipe->base.begin_query = rbug_begin_query;
    rb_pipe->base.end_query = rbug_end_query;
    rb_pipe->base.get_query_result = rbug_get_query_result;
+   rb_pipe->base.set_active_query_state = rbug_set_active_query_state;
    rb_pipe->base.create_blend_state = rbug_create_blend_state;
    rb_pipe->base.bind_blend_state = rbug_bind_blend_state;
    rb_pipe->base.delete_blend_state = rbug_delete_blend_state;

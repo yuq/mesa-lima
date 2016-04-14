@@ -317,8 +317,7 @@ static void *
 swr_create_vs_state(struct pipe_context *pipe,
                     const struct pipe_shader_state *vs)
 {
-   struct swr_vertex_shader *swr_vs =
-      (swr_vertex_shader *)CALLOC_STRUCT(swr_vertex_shader);
+   struct swr_vertex_shader *swr_vs = new swr_vertex_shader;
    if (!swr_vs)
       return NULL;
 
@@ -326,8 +325,6 @@ swr_create_vs_state(struct pipe_context *pipe,
    swr_vs->pipe.stream_output = vs->stream_output;
 
    lp_build_tgsi_info(vs->tokens, &swr_vs->info);
-
-   swr_vs->func = swr_compile_vs(pipe, swr_vs);
 
    swr_vs->soState = {0};
 
@@ -368,7 +365,7 @@ swr_delete_vs_state(struct pipe_context *pipe, void *vs)
 {
    struct swr_vertex_shader *swr_vs = (swr_vertex_shader *)vs;
    FREE((void *)swr_vs->pipe.tokens);
-   FREE(vs);
+   delete swr_vs;
 }
 
 static void *
@@ -675,6 +672,58 @@ swr_update_resource_status(struct pipe_context *pipe,
    }
 }
 
+static void
+swr_update_texture_state(struct swr_context *ctx,
+                         unsigned shader_type,
+                         unsigned num_sampler_views,
+                         swr_jit_texture *textures)
+{
+   for (unsigned i = 0; i < num_sampler_views; i++) {
+      struct pipe_sampler_view *view =
+         ctx->sampler_views[shader_type][i];
+
+      if (view) {
+         struct pipe_resource *res = view->texture;
+         struct swr_resource *swr_res = swr_resource(res);
+         struct swr_jit_texture *jit_tex = &textures[i];
+         memset(jit_tex, 0, sizeof(*jit_tex));
+         jit_tex->width = res->width0;
+         jit_tex->height = res->height0;
+         jit_tex->depth = res->depth0;
+         jit_tex->first_level = view->u.tex.first_level;
+         jit_tex->last_level = view->u.tex.last_level;
+         jit_tex->base_ptr = swr_res->swr.pBaseAddress;
+
+         for (unsigned level = jit_tex->first_level;
+              level <= jit_tex->last_level;
+              level++) {
+            jit_tex->row_stride[level] = swr_res->row_stride[level];
+            jit_tex->img_stride[level] = swr_res->img_stride[level];
+            jit_tex->mip_offsets[level] = swr_res->mip_offsets[level];
+         }
+      }
+   }
+}
+
+static void
+swr_update_sampler_state(struct swr_context *ctx,
+                         unsigned shader_type,
+                         unsigned num_samplers,
+                         swr_jit_sampler *samplers)
+{
+   for (unsigned i = 0; i < num_samplers; i++) {
+      const struct pipe_sampler_state *sampler =
+         ctx->samplers[shader_type][i];
+
+      if (sampler) {
+         samplers[i].min_lod = sampler->min_lod;
+         samplers[i].max_lod = sampler->max_lod;
+         samplers[i].lod_bias = sampler->lod_bias;
+         COPY_4V(samplers[i].border_color, sampler->border_color.f);
+      }
+   }
+}
+
 void
 swr_update_derived(struct pipe_context *pipe,
                    const struct pipe_draw_info *p_draw_info)
@@ -974,14 +1023,43 @@ swr_update_derived(struct pipe_context *pipe,
    }
 
    /* VertexShader */
-   if (ctx->dirty & (SWR_NEW_VS | SWR_NEW_FRAMEBUFFER)) {
-      SwrSetVertexFunc(ctx->swrContext, ctx->vs->func);
+   if (ctx->dirty & (SWR_NEW_VS |
+                     SWR_NEW_SAMPLER |
+                     SWR_NEW_SAMPLER_VIEW |
+                     SWR_NEW_FRAMEBUFFER)) {
+      swr_jit_vs_key key;
+      swr_generate_vs_key(key, ctx, ctx->vs);
+      auto search = ctx->vs->map.find(key);
+      PFN_VERTEX_FUNC func;
+      if (search != ctx->vs->map.end()) {
+         func = search->second;
+      } else {
+         func = swr_compile_vs(ctx, key);
+         ctx->vs->map.insert(std::make_pair(key, func));
+      }
+      SwrSetVertexFunc(ctx->swrContext, func);
+
+      /* JIT sampler state */
+      if (ctx->dirty & SWR_NEW_SAMPLER) {
+         swr_update_sampler_state(ctx,
+                                  PIPE_SHADER_VERTEX,
+                                  key.nr_samplers,
+                                  ctx->swrDC.samplersVS);
+      }
+
+      /* JIT sampler view state */
+      if (ctx->dirty & (SWR_NEW_SAMPLER_VIEW | SWR_NEW_FRAMEBUFFER)) {
+         swr_update_texture_state(ctx,
+                                  PIPE_SHADER_VERTEX,
+                                  key.nr_sampler_views,
+                                  ctx->swrDC.texturesVS);
+      }
    }
 
-   swr_jit_key key;
+   /* FragmentShader */
    if (ctx->dirty & (SWR_NEW_FS | SWR_NEW_SAMPLER | SWR_NEW_SAMPLER_VIEW
                      | SWR_NEW_RASTERIZER | SWR_NEW_FRAMEBUFFER)) {
-      memset(&key, 0, sizeof(key));
+      swr_jit_fs_key key;
       swr_generate_fs_key(key, ctx, ctx->fs);
       auto search = ctx->fs->map.find(key);
       PFN_PIXEL_KERNEL func;
@@ -1031,55 +1109,24 @@ swr_update_derived(struct pipe_context *pipe,
       psState.usesUAV = false; // XXX
       psState.forceEarlyZ = false;
       SwrSetPixelShaderState(ctx->swrContext, &psState);
-   }
 
-   /* JIT sampler state */
-   if (ctx->dirty & SWR_NEW_SAMPLER) {
-      swr_draw_context *pDC = &ctx->swrDC;
+      /* JIT sampler state */
+      if (ctx->dirty & SWR_NEW_SAMPLER) {
+         swr_update_sampler_state(ctx,
+                                  PIPE_SHADER_FRAGMENT,
+                                  key.nr_samplers,
+                                  ctx->swrDC.samplersFS);
+      }
 
-      for (unsigned i = 0; i < key.nr_samplers; i++) {
-         const struct pipe_sampler_state *sampler =
-            ctx->samplers[PIPE_SHADER_FRAGMENT][i];
-
-         if (sampler) {
-            pDC->samplersFS[i].min_lod = sampler->min_lod;
-            pDC->samplersFS[i].max_lod = sampler->max_lod;
-            pDC->samplersFS[i].lod_bias = sampler->lod_bias;
-            COPY_4V(pDC->samplersFS[i].border_color, sampler->border_color.f);
-         }
+      /* JIT sampler view state */
+      if (ctx->dirty & (SWR_NEW_SAMPLER_VIEW | SWR_NEW_FRAMEBUFFER)) {
+         swr_update_texture_state(ctx,
+                                  PIPE_SHADER_FRAGMENT,
+                                  key.nr_sampler_views,
+                                  ctx->swrDC.texturesFS);
       }
    }
 
-   /* JIT sampler view state */
-   if (ctx->dirty & (SWR_NEW_SAMPLER_VIEW | SWR_NEW_FRAMEBUFFER)) {
-      swr_draw_context *pDC = &ctx->swrDC;
-
-      for (unsigned i = 0; i < key.nr_sampler_views; i++) {
-         struct pipe_sampler_view *view =
-            ctx->sampler_views[PIPE_SHADER_FRAGMENT][i];
-
-         if (view) {
-            struct pipe_resource *res = view->texture;
-            struct swr_resource *swr_res = swr_resource(res);
-            struct swr_jit_texture *jit_tex = &pDC->texturesFS[i];
-            memset(jit_tex, 0, sizeof(*jit_tex));
-            jit_tex->width = res->width0;
-            jit_tex->height = res->height0;
-            jit_tex->depth = res->depth0;
-            jit_tex->first_level = view->u.tex.first_level;
-            jit_tex->last_level = view->u.tex.last_level;
-            jit_tex->base_ptr = swr_res->swr.pBaseAddress;
-
-            for (unsigned level = jit_tex->first_level;
-                 level <= jit_tex->last_level;
-                 level++) {
-               jit_tex->row_stride[level] = swr_res->row_stride[level];
-               jit_tex->img_stride[level] = swr_res->img_stride[level];
-               jit_tex->mip_offsets[level] = swr_res->mip_offsets[level];
-            }
-         }
-      }
-   }
 
    /* VertexShader Constants */
    if (ctx->dirty & SWR_NEW_VSCONSTANTS) {

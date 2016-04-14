@@ -504,8 +504,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
              */
             nir_ssa_undef_instr *undef =
                nir_ssa_undef_instr_create(state->shader,
-                                          intrin->num_components);
-            undef->def.bit_size = intrin->dest.ssa.bit_size;
+                                          intrin->num_components,
+                                          intrin->dest.ssa.bit_size);
 
             nir_instr_insert_before(&intrin->instr, &undef->instr);
             nir_instr_remove(&intrin->instr);

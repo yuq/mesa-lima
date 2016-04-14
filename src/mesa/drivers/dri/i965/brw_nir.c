@@ -437,13 +437,18 @@ nir_optimize(nir_shader *nir, bool is_scalar)
  * is_scalar = true to scalarize everything prior to code gen.
  */
 nir_shader *
-brw_preprocess_nir(nir_shader *nir, bool is_scalar)
+brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
 {
    bool progress; /* Written by OPT and OPT_V */
    (void)progress;
 
+   const bool is_scalar = compiler->scalar_stage[nir->stage];
+
    if (nir->stage == MESA_SHADER_GEOMETRY)
       OPT(nir_lower_gs_intrinsics);
+
+   if (compiler->precise_trig)
+      OPT(brw_nir_apply_trig_workarounds);
 
    static const nir_lower_tex_options tex_options = {
       .lower_txp = ~0,
@@ -568,7 +573,7 @@ brw_create_nir(struct brw_context *brw,
 
    (void)progress;
 
-   nir = brw_preprocess_nir(nir, is_scalar);
+   nir = brw_preprocess_nir(brw->intelScreen->compiler, nir);
 
    OPT(nir_lower_system_values);
    OPT_V(brw_nir_lower_uniforms, is_scalar);

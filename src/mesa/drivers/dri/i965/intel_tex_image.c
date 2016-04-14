@@ -404,8 +404,7 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
    if (texImage->_BaseFormat == GL_RGB)
       return false;
 
-   if (!intel_get_memcpy(texImage->TexFormat, format, type, &mem_copy, &cpp,
-                         INTEL_DOWNLOAD))
+   if (!intel_get_memcpy(texImage->TexFormat, format, type, &mem_copy, &cpp))
       return false;
 
    /* If this is a nontrivial texture view, let another path handle it instead. */

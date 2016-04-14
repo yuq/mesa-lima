@@ -57,6 +57,7 @@
 
 struct tgsi_sampler;
 struct tgsi_image;
+struct tgsi_buffer;
 struct tgsi_exec_machine;
 struct vertex_info;
 
@@ -83,7 +84,8 @@ struct sp_fragment_shader_variant
    void (*prepare)(const struct sp_fragment_shader_variant *shader,
 		   struct tgsi_exec_machine *machine,
 		   struct tgsi_sampler *sampler,
-		   struct tgsi_image *image);
+		   struct tgsi_image *image,
+		   struct tgsi_buffer *buffer);
 
    unsigned (*run)(const struct sp_fragment_shader_variant *shader,
 		   struct tgsi_exec_machine *machine,

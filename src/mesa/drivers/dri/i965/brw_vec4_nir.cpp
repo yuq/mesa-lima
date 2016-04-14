@@ -1094,24 +1094,12 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_fsin:
-      if (!compiler->precise_trig) {
-         inst = emit_math(SHADER_OPCODE_SIN, dst, op[0]);
-      } else {
-         src_reg tmp = src_reg(this, glsl_type::vec4_type);
-         inst = emit_math(SHADER_OPCODE_SIN, dst_reg(tmp), op[0]);
-         inst = emit(MUL(dst, tmp, brw_imm_f(0.99997)));
-      }
+      inst = emit_math(SHADER_OPCODE_SIN, dst, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fcos:
-      if (!compiler->precise_trig) {
-         inst = emit_math(SHADER_OPCODE_COS, dst, op[0]);
-      } else {
-         src_reg tmp = src_reg(this, glsl_type::vec4_type);
-         inst = emit_math(SHADER_OPCODE_COS, dst_reg(tmp), op[0]);
-         inst = emit(MUL(dst, tmp, brw_imm_f(0.99997)));
-      }
+      inst = emit_math(SHADER_OPCODE_COS, dst, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
@@ -1141,6 +1129,10 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
        * When we XOR the sources, the top bit is 0 if they are the same and 1
        * if they are different.  We can then use a conditional modifier to
        * turn that into a predicate.  This leads us to an XOR.l instruction.
+       *
+       * Technically, according to the PRM, you're not allowed to use .l on a
+       * XOR instruction.  However, emperical experiments and Curro's reading
+       * of the simulator source both indicate that it's safe.
        */
       src_reg tmp = src_reg(this, glsl_type::ivec4_type);
       inst = emit(XOR(dst_reg(tmp), op[0], op[1]));

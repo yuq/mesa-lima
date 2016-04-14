@@ -36,6 +36,7 @@
 #include <amdgpu_drm.h>
 #include <xf86drm.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 static inline struct amdgpu_winsys_bo *amdgpu_winsys_bo(struct pb_buffer *bo)
 {
@@ -141,9 +142,9 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
       amdgpu_fence_reference(&bo->fence[i], NULL);
 
    if (bo->initial_domain & RADEON_DOMAIN_VRAM)
-      bo->ws->allocated_vram -= align(bo->base.size, bo->ws->gart_page_size);
+      bo->ws->allocated_vram -= align64(bo->base.size, bo->ws->gart_page_size);
    else if (bo->initial_domain & RADEON_DOMAIN_GTT)
-      bo->ws->allocated_gtt -= align(bo->base.size, bo->ws->gart_page_size);
+      bo->ws->allocated_gtt -= align64(bo->base.size, bo->ws->gart_page_size);
    FREE(bo);
 }
 
@@ -265,7 +266,7 @@ static void amdgpu_add_buffer_to_global_list(struct amdgpu_winsys_bo *bo)
 }
 
 static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
-                                                 unsigned size,
+                                                 uint64_t size,
                                                  unsigned alignment,
                                                  unsigned usage,
                                                  enum radeon_bo_domain initial_domain,
@@ -303,9 +304,9 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
    r = amdgpu_bo_alloc(ws->dev, &request, &buf_handle);
    if (r) {
       fprintf(stderr, "amdgpu: Failed to allocate a buffer:\n");
-      fprintf(stderr, "amdgpu:    size      : %d bytes\n", size);
-      fprintf(stderr, "amdgpu:    alignment : %d bytes\n", alignment);
-      fprintf(stderr, "amdgpu:    domains   : %d\n", initial_domain);
+      fprintf(stderr, "amdgpu:    size      : %"PRIu64" bytes\n", size);
+      fprintf(stderr, "amdgpu:    alignment : %u bytes\n", alignment);
+      fprintf(stderr, "amdgpu:    domains   : %u\n", initial_domain);
       goto error_bo_alloc;
    }
 
@@ -331,9 +332,9 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
    bo->unique_id = __sync_fetch_and_add(&ws->next_bo_unique_id, 1);
 
    if (initial_domain & RADEON_DOMAIN_VRAM)
-      ws->allocated_vram += align(size, ws->gart_page_size);
+      ws->allocated_vram += align64(size, ws->gart_page_size);
    else if (initial_domain & RADEON_DOMAIN_GTT)
-      ws->allocated_gtt += align(size, ws->gart_page_size);
+      ws->allocated_gtt += align64(size, ws->gart_page_size);
 
    amdgpu_add_buffer_to_global_list(bo);
 
@@ -458,7 +459,7 @@ static void amdgpu_buffer_set_metadata(struct pb_buffer *_buf,
 
 static struct pb_buffer *
 amdgpu_bo_create(struct radeon_winsys *rws,
-                 unsigned size,
+                 uint64_t size,
                  unsigned alignment,
                  boolean use_reusable_pool,
                  enum radeon_bo_domain domain,
@@ -468,21 +469,11 @@ amdgpu_bo_create(struct radeon_winsys *rws,
    struct amdgpu_winsys_bo *bo;
    unsigned usage = 0;
 
-   /* Don't use VRAM if the GPU doesn't have much. This is only the initial
-    * domain. The kernel is free to move the buffer if it wants to.
-    *
-    * 64MB means no VRAM by todays standards.
-    */
-   if (domain & RADEON_DOMAIN_VRAM && ws->info.vram_size <= 64*1024*1024) {
-      domain = RADEON_DOMAIN_GTT;
-      flags = RADEON_FLAG_GTT_WC;
-   }
-
    /* Align size to page size. This is the minimum alignment for normal
     * BOs. Aligning this here helps the cached bufmgr. Especially small BOs,
     * like constant/uniform buffers, can benefit from better and more reuse.
     */
-   size = align(size, ws->gart_page_size);
+   size = align64(size, ws->gart_page_size);
 
    /* Only set one usage bit each for domains and flags, or the cache manager
     * might consider different sets of domains / flags compatible
@@ -592,9 +583,9 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
       *offset = whandle->offset;
 
    if (bo->initial_domain & RADEON_DOMAIN_VRAM)
-      ws->allocated_vram += align(bo->base.size, ws->gart_page_size);
+      ws->allocated_vram += align64(bo->base.size, ws->gart_page_size);
    else if (bo->initial_domain & RADEON_DOMAIN_GTT)
-      ws->allocated_gtt += align(bo->base.size, ws->gart_page_size);
+      ws->allocated_gtt += align64(bo->base.size, ws->gart_page_size);
 
    amdgpu_add_buffer_to_global_list(bo);
 
@@ -648,7 +639,7 @@ static boolean amdgpu_bo_get_handle(struct pb_buffer *buffer,
 }
 
 static struct pb_buffer *amdgpu_bo_from_ptr(struct radeon_winsys *rws,
-					    void *pointer, unsigned size)
+					    void *pointer, uint64_t size)
 {
     struct amdgpu_winsys *ws = amdgpu_winsys(rws);
     amdgpu_bo_handle buf_handle;
@@ -684,7 +675,7 @@ static struct pb_buffer *amdgpu_bo_from_ptr(struct radeon_winsys *rws,
     bo->initial_domain = RADEON_DOMAIN_GTT;
     bo->unique_id = __sync_fetch_and_add(&ws->next_bo_unique_id, 1);
 
-    ws->allocated_gtt += align(bo->base.size, ws->gart_page_size);
+    ws->allocated_gtt += align64(bo->base.size, ws->gart_page_size);
 
     amdgpu_add_buffer_to_global_list(bo);
 

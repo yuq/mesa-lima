@@ -222,10 +222,6 @@ static int r600_setup_surface(struct pipe_screen *screen,
 		rtex->surface.level[0].nblk_x = pitch_in_bytes_override / rtex->surface.bpe;
 		rtex->surface.level[0].pitch_bytes = pitch_in_bytes_override;
 		rtex->surface.level[0].slice_size = pitch_in_bytes_override * rtex->surface.level[0].nblk_y;
-		if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
-			rtex->surface.stencil_offset =
-			rtex->surface.stencil_level[0].offset = rtex->surface.level[0].slice_size;
-		}
 	}
 
 	if (offset) {
@@ -482,7 +478,7 @@ static void r600_texture_allocate_fmask(struct r600_common_screen *rscreen,
 	r600_texture_get_fmask_info(rscreen, rtex,
 				    rtex->resource.b.b.nr_samples, &rtex->fmask);
 
-	rtex->fmask.offset = align(rtex->size, rtex->fmask.alignment);
+	rtex->fmask.offset = align64(rtex->size, rtex->fmask.alignment);
 	rtex->size = rtex->fmask.offset + rtex->fmask.size;
 }
 
@@ -585,7 +581,7 @@ static void r600_texture_allocate_cmask(struct r600_common_screen *rscreen,
 		r600_texture_get_cmask_info(rscreen, rtex, &rtex->cmask);
 	}
 
-	rtex->cmask.offset = align(rtex->size, rtex->cmask.alignment);
+	rtex->cmask.offset = align64(rtex->size, rtex->cmask.alignment);
 	rtex->size = rtex->cmask.offset + rtex->cmask.size;
 
 	if (rscreen->chip_class >= SI)
@@ -747,14 +743,14 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 		(rtex->surface.flags & RADEON_SURF_SCANOUT) != 0);
 
 	if (rtex->fmask.size)
-		fprintf(f, "  FMask: offset=%u, size=%u, alignment=%u, pitch_in_pixels=%u, "
+		fprintf(f, "  FMask: offset=%"PRIu64", size=%"PRIu64", alignment=%u, pitch_in_pixels=%u, "
 			"bankh=%u, slice_tile_max=%u, tile_mode_index=%u\n",
 			rtex->fmask.offset, rtex->fmask.size, rtex->fmask.alignment,
 			rtex->fmask.pitch_in_pixels, rtex->fmask.bank_height,
 			rtex->fmask.slice_tile_max, rtex->fmask.tile_mode_index);
 
 	if (rtex->cmask.size)
-		fprintf(f, "  CMask: offset=%u, size=%u, alignment=%u, pitch=%u, "
+		fprintf(f, "  CMask: offset=%"PRIu64", size=%"PRIu64", alignment=%u, pitch=%u, "
 			"height=%u, xalign=%u, yalign=%u, slice_tile_max=%u\n",
 			rtex->cmask.offset, rtex->cmask.size, rtex->cmask.alignment,
 			rtex->cmask.pitch, rtex->cmask.height, rtex->cmask.xalign,
@@ -768,7 +764,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->htile.height, rtex->htile.xalign, rtex->htile.yalign);
 
 	if (rtex->dcc_offset) {
-		fprintf(f, "  DCC: offset=%u, size=%"PRIu64", alignment=%"PRIu64"\n",
+		fprintf(f, "  DCC: offset=%"PRIu64", size=%"PRIu64", alignment=%"PRIu64"\n",
 			rtex->dcc_offset, rtex->surface.dcc_size,
 			rtex->surface.dcc_alignment);
 		for (i = 0; i <= rtex->surface.last_level; i++)
@@ -873,7 +869,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 		if (!buf && rtex->surface.dcc_size &&
 		    !(rscreen->debug_flags & DBG_NO_DCC)) {
 			/* Reserve space for the DCC buffer. */
-			rtex->dcc_offset = align(rtex->size, rtex->surface.dcc_alignment);
+			rtex->dcc_offset = align64(rtex->size, rtex->surface.dcc_alignment);
 			rtex->size = rtex->dcc_offset + rtex->surface.dcc_size;
 			rtex->cb_color_info |= VI_S_028C70_DCC_ENABLE(1);
 		}
@@ -947,13 +943,12 @@ static unsigned r600_choose_tiling(struct r600_common_screen *rscreen,
 		force_tiling = true;
 
 	/* Handle common candidates for the linear mode.
-	 * Compressed textures must always be tiled. */
-	if (!force_tiling && !util_format_is_compressed(templ->format)) {
-		/* Not everything can be linear, so we cannot enforce it
-		 * for all textures. */
-		if ((rscreen->debug_flags & DBG_NO_TILING) &&
-		    (!util_format_is_depth_or_stencil(templ->format) ||
-		     !(templ->flags & R600_RESOURCE_FLAG_FLUSHED_DEPTH)))
+	 * Compressed textures and DB surfaces must always be tiled.
+	 */
+	if (!force_tiling && !util_format_is_compressed(templ->format) &&
+	    (!util_format_is_depth_or_stencil(templ->format) ||
+	     templ->flags & R600_RESOURCE_FLAG_FLUSHED_DEPTH)) {
+		if (rscreen->debug_flags & DBG_NO_TILING)
 			return RADEON_SURF_MODE_LINEAR_ALIGNED;
 
 		/* Tiling doesn't work with the 422 (SUBSAMPLED) formats on R600+. */

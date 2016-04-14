@@ -24,6 +24,7 @@
 #include "sp_context.h"
 #include "sp_state.h"
 #include "sp_image.h"
+#include "sp_buffer.h"
 
 static void softpipe_set_shader_images(struct pipe_context *pipe,
                                        unsigned shader,
@@ -51,7 +52,34 @@ static void softpipe_set_shader_images(struct pipe_context *pipe,
    }
 }
 
+static void softpipe_set_shader_buffers(struct pipe_context *pipe,
+                                        unsigned shader,
+                                        unsigned start,
+                                        unsigned num,
+                                        struct pipe_shader_buffer *buffers)
+{
+   struct softpipe_context *softpipe = softpipe_context(pipe);
+   unsigned i;
+   assert(shader < PIPE_SHADER_TYPES);
+   assert(start + num <= Elements(softpipe->buffers[shader]));
+
+   /* set the new images */
+   for (i = 0; i < num; i++) {
+      int idx = start + i;
+
+      if (buffers) {
+         pipe_resource_reference(&softpipe->tgsi.buffer[shader]->sp_bview[idx].buffer, buffers[i].buffer);
+         softpipe->tgsi.buffer[shader]->sp_bview[idx] = buffers[i];
+      }
+      else {
+         pipe_resource_reference(&softpipe->tgsi.buffer[shader]->sp_bview[idx].buffer, NULL);
+         memset(&softpipe->tgsi.buffer[shader]->sp_bview[idx], 0, sizeof(struct pipe_shader_buffer));
+      }
+   }
+}
+
 void softpipe_init_image_funcs(struct pipe_context *pipe)
 {
    pipe->set_shader_images = softpipe_set_shader_images;
+   pipe->set_shader_buffers = softpipe_set_shader_buffers;
 }

@@ -308,8 +308,14 @@ struct ir3_instruction {
 static inline struct ir3_instruction *
 ir3_neighbor_first(struct ir3_instruction *instr)
 {
-	while (instr->cp.left)
+	int cnt = 0;
+	while (instr->cp.left) {
 		instr = instr->cp.left;
+		if (++cnt > 0xffff) {
+			debug_assert(0);
+			break;
+		}
+	}
 	return instr;
 }
 
@@ -322,6 +328,10 @@ static inline int ir3_neighbor_count(struct ir3_instruction *instr)
 	while (instr->cp.right) {
 		num++;
 		instr = instr->cp.right;
+		if (num > 0xffff) {
+			debug_assert(0);
+			break;
+		}
 	}
 
 	return num;

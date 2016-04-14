@@ -1,9 +1,6 @@
 *.db
 *.tag
 *.tmp
-agpgart
-array_cache
-core
 core_subset
 gallium
 gbm
@@ -13,11 +10,8 @@ i965
 main
 math
 math_subset
-miniglx
-radeondrm
-radeonfb
+nir
 radeon_subset
-shader
 swrast
 swrast_setup
 tnl

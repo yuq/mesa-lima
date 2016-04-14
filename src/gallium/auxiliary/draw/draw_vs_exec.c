@@ -70,7 +70,9 @@ vs_exec_prepare( struct draw_vertex_shader *shader,
    if (evs->machine->Tokens != shader->state.tokens) {
       tgsi_exec_machine_bind_shader(evs->machine,
                                     shader->state.tokens,
-                                    draw->vs.tgsi.sampler, draw->vs.tgsi.image);
+                                    draw->vs.tgsi.sampler,
+                                    draw->vs.tgsi.image,
+                                    draw->vs.tgsi.buffer);
    }
 }
 
@@ -159,6 +161,7 @@ vs_exec_run_linear( struct draw_vertex_shader *shader,
          input = (const float (*)[4])((const char *)input + input_stride);
       } 
 
+      machine->NonHelperMask = (1 << max_vertices) - 1;
       /* run interpreter */
       tgsi_exec_machine_run( machine );
 

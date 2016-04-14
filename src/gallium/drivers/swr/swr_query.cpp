@@ -319,6 +319,12 @@ swr_check_render_cond(struct pipe_context *pipe)
       return TRUE;
 }
 
+
+static void
+swr_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
 void
 swr_query_init(struct pipe_context *pipe)
 {
@@ -329,6 +335,7 @@ swr_query_init(struct pipe_context *pipe)
    pipe->begin_query = swr_begin_query;
    pipe->end_query = swr_end_query;
    pipe->get_query_result = swr_get_query_result;
+   pipe->set_active_query_state = swr_set_active_query_state;
 
    ctx->active_queries = 0;
 }

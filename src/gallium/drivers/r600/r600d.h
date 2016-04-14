@@ -780,7 +780,8 @@
 #define   S_028D0C_STENCIL_COMPRESS_DISABLE(x)         (((x) & 0x1) << 5)
 #define   S_028D0C_DEPTH_COMPRESS_DISABLE(x)           (((x) & 0x1) << 6)
 #define   S_028D0C_COPY_CENTROID(x)                    (((x) & 0x1) << 7)
-#define   S_028D0C_COPY_SAMPLE(x)                      (((x) & 0x1) << 8)
+#define   S_028D0C_COPY_SAMPLE(x)                      (((x) & 0x03) << 8)
+#define   S_028D0C_ZPASS_INCREMENT_DISABLE(x)          (((x) & 0x1) << 11)
 #define   S_028D0C_R700_PERFECT_ZPASS_COUNTS(x)        (((x) & 0x1) << 15)
 #define   S_028D0C_CONSERVATIVE_Z_EXPORT(x)            (((x) & 0x03) << 13)
 #define   G_028D0C_CONSERVATIVE_Z_EXPORT(x)            (((x) >> 13) & 0x03)
@@ -1266,6 +1267,8 @@
 #define     V_03C000_SQ_TEX_XY_FILTER_POINT            0x00000000
 #define     V_03C000_SQ_TEX_XY_FILTER_BILINEAR         0x00000001
 #define     V_03C000_SQ_TEX_XY_FILTER_BICUBIC          0x00000002
+#define     V_03C000_SQ_TEX_XY_FILTER_ANISO_POINT      0x00000004
+#define     V_03C000_SQ_TEX_XY_FILTER_ANISO_BILINEAR   0x00000005
 #define   S_03C000_XY_MIN_FILTER(x)                    (((x) & 0x7) << 12)
 #define   G_03C000_XY_MIN_FILTER(x)                    (((x) >> 12) & 0x7)
 #define   C_03C000_XY_MIN_FILTER                       0xFFFF8FFF
@@ -1278,9 +1281,9 @@
 #define   S_03C000_MIP_FILTER(x)                       (((x) & 0x3) << 17)
 #define   G_03C000_MIP_FILTER(x)                       (((x) >> 17) & 0x3)
 #define   C_03C000_MIP_FILTER                          0xFFF9FFFF
-#define   S_03C000_MAX_ANISO(x)                        (((x) & 0x7) << 19)
-#define   G_03C000_MAX_ANISO(x)                        (((x) >> 19) & 0x7)
-#define   C_03C000_MAX_ANISO                           0xFFB7FFFF
+#define   S_03C000_MAX_ANISO_RATIO(x)                  (((x) & 0x7) << 19)
+#define   G_03C000_MAX_ANISO_RATIO(x)                  (((x) >> 19) & 0x7)
+#define   C_03C000_MAX_ANISO_RATIO                     0xFFB7FFFF
 #define   S_03C000_BORDER_COLOR_TYPE(x)                (((x) & 0x3) << 22)
 #define   G_03C000_BORDER_COLOR_TYPE(x)                (((x) >> 22) & 0x3)
 #define   C_03C000_BORDER_COLOR_TYPE                   0xFF3FFFFF

@@ -78,6 +78,11 @@ static boolean noop_get_query_result(struct pipe_context *ctx,
 	return TRUE;
 }
 
+static void
+noop_set_active_query_state(struct pipe_context *pipe, boolean enable)
+{
+}
+
 
 /*
  * resource
@@ -284,6 +289,7 @@ static struct pipe_context *noop_create_context(struct pipe_screen *screen,
 	ctx->begin_query = noop_begin_query;
 	ctx->end_query = noop_end_query;
 	ctx->get_query_result = noop_get_query_result;
+	ctx->set_active_query_state = noop_set_active_query_state;
 	ctx->transfer_map = noop_transfer_map;
 	ctx->transfer_flush_region = noop_transfer_flush_region;
 	ctx->transfer_unmap = noop_transfer_unmap;

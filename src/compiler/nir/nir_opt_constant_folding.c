@@ -98,9 +98,9 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *mem_ctx)
 
    nir_load_const_instr *new_instr =
       nir_load_const_instr_create(mem_ctx,
-                                  instr->dest.dest.ssa.num_components);
+                                  instr->dest.dest.ssa.num_components,
+                                  instr->dest.dest.ssa.bit_size);
 
-   new_instr->def.bit_size = instr->dest.dest.ssa.bit_size;
    new_instr->value = dest;
 
    nir_instr_insert_before(&instr->instr, &new_instr->instr);

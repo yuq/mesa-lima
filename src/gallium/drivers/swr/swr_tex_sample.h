@@ -44,4 +44,4 @@ struct swr_sampler_static_state {
  *
  */
 struct lp_build_sampler_soa *
-swr_sampler_soa_create(const struct swr_sampler_static_state *key);
+swr_sampler_soa_create(const struct swr_sampler_static_state *key, unsigned shader_type);

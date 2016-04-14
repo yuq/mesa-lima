@@ -1270,25 +1270,6 @@ error:
 	return NULL;
 }
 
-/**
- * Normally, we only emit 1 viewport and 1 scissor if no shader is using
- * the VIEWPORT_INDEX output, and emitting the other viewports and scissors
- * is delayed. When a shader with VIEWPORT_INDEX appears, this should be
- * called to emit the rest.
- */
-static void si_update_viewports_and_scissors(struct si_context *sctx)
-{
-	struct tgsi_shader_info *info = si_get_vs_info(sctx);
-
-	if (!info || !info->writes_viewport_index)
-		return;
-
-	if (sctx->scissors.dirty_mask)
-	    si_mark_atom_dirty(sctx, &sctx->scissors.atom);
-	if (sctx->viewports.dirty_mask)
-	    si_mark_atom_dirty(sctx, &sctx->viewports.atom);
-}
-
 static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -1300,7 +1281,7 @@ static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
 	sctx->vs_shader.cso = sel;
 	sctx->vs_shader.current = sel ? sel->first_variant : NULL;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
-	si_update_viewports_and_scissors(sctx);
+	r600_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
 }
 
 static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
@@ -1319,7 +1300,7 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 
 	if (enable_changed)
 		si_shader_change_notify(sctx);
-	si_update_viewports_and_scissors(sctx);
+	r600_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
 }
 
 static void si_bind_tcs_shader(struct pipe_context *ctx, void *state)
@@ -1356,7 +1337,7 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 		si_shader_change_notify(sctx);
 		sctx->last_tes_sh_base = -1; /* invalidate derived tess state */
 	}
-	si_update_viewports_and_scissors(sctx);
+	r600_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
 }
 
 static void si_bind_ps_shader(struct pipe_context *ctx, void *state)

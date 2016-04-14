@@ -74,7 +74,8 @@ lower_instr(nir_intrinsic_instr *instr,
    nir_intrinsic_set_base(new_instr,
       state->shader_program->UniformStorage[uniform_loc].opaque[state->shader->stage].index);
 
-   nir_load_const_instr *offset_const = nir_load_const_instr_create(mem_ctx, 1);
+   nir_load_const_instr *offset_const =
+      nir_load_const_instr_create(mem_ctx, 1, 32);
    offset_const->value.u32[0] = instr->variables[0]->var->data.offset;
 
    nir_instr_insert_before(&instr->instr, &offset_const->instr);
@@ -95,7 +96,7 @@ lower_instr(nir_intrinsic_instr *instr,
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          nir_load_const_instr *atomic_counter_size =
-               nir_load_const_instr_create(mem_ctx, 1);
+            nir_load_const_instr_create(mem_ctx, 1, 32);
          atomic_counter_size->value.u32[0] = child_array_elements * ATOMIC_COUNTER_SIZE;
          nir_instr_insert_before(&instr->instr, &atomic_counter_size->instr);
 

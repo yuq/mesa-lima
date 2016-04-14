@@ -50,7 +50,10 @@
 #define R600_RESOURCE_FLAG_FORCE_TILING		(PIPE_RESOURCE_FLAG_DRV_PRIV << 2)
 
 #define R600_CONTEXT_STREAMOUT_FLUSH		(1u << 0)
-#define R600_CONTEXT_PRIVATE_FLAG		(1u << 1)
+/* Pipeline & streamout query controls. */
+#define R600_CONTEXT_START_PIPELINE_STATS	(1u << 1)
+#define R600_CONTEXT_STOP_PIPELINE_STATS	(1u << 2)
+#define R600_CONTEXT_PRIVATE_FLAG		(1u << 3)
 
 /* special primitive types */
 #define R600_PRIM_RECTANGLE_LIST	PIPE_PRIM_MAX
@@ -94,9 +97,11 @@
 #define DBG_MONOLITHIC_SHADERS	(1llu << 47)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
+#define R600_MAX_VIEWPORTS        16
 
 struct r600_common_context;
 struct r600_perfcounters;
+struct tgsi_shader_info;
 
 struct radeon_shader_reloc {
 	char name[32];
@@ -137,6 +142,9 @@ struct radeon_shader_binary {
 void radeon_shader_binary_init(struct radeon_shader_binary *b);
 void radeon_shader_binary_clean(struct radeon_shader_binary *b);
 
+/* Only 32-bit buffer allocations are supported, gallium doesn't support more
+ * at the moment.
+ */
 struct r600_resource {
 	struct u_resource		b;
 
@@ -181,8 +189,8 @@ struct r600_transfer {
 };
 
 struct r600_fmask_info {
-	unsigned offset;
-	unsigned size;
+	uint64_t offset;
+	uint64_t size;
 	unsigned alignment;
 	unsigned pitch_in_pixels;
 	unsigned bank_height;
@@ -191,8 +199,8 @@ struct r600_fmask_info {
 };
 
 struct r600_cmask_info {
-	unsigned offset;
-	unsigned size;
+	uint64_t offset;
+	uint64_t size;
 	unsigned alignment;
 	unsigned pitch;
 	unsigned height;
@@ -212,7 +220,7 @@ struct r600_htile_info {
 struct r600_texture {
 	struct r600_resource		resource;
 
-	unsigned			size;
+	uint64_t			size;
 	bool				is_depth;
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
 	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */
@@ -224,7 +232,7 @@ struct r600_texture {
 	struct r600_fmask_info		fmask;
 	struct r600_cmask_info		cmask;
 	struct r600_resource		*cmask_buffer;
-	unsigned			dcc_offset; /* 0 = disabled */
+	uint64_t			dcc_offset; /* 0 = disabled */
 	unsigned			cb_color_info; /* fast clear enable bit */
 	unsigned			color_clear_value[2];
 
@@ -297,6 +305,9 @@ struct r600_common_screen {
 	uint64_t			debug_flags;
 	bool				has_cp_dma;
 	bool				has_streamout;
+
+	/* Texture filter settings. */
+	int				force_aniso; /* -1 = disabled */
 
 	/* Auxiliary context. Mainly used to initialize resources.
 	 * It must be locked prior to using and flushed before unlocking. */
@@ -388,6 +399,26 @@ struct r600_streamout {
 	int				num_prims_gen_queries;
 };
 
+struct r600_signed_scissor {
+	int minx;
+	int miny;
+	int maxx;
+	int maxy;
+};
+
+struct r600_scissors {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	struct pipe_scissor_state	states[R600_MAX_VIEWPORTS];
+};
+
+struct r600_viewports {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	struct pipe_viewport_state	states[R600_MAX_VIEWPORTS];
+	struct r600_signed_scissor	as_scissor[R600_MAX_VIEWPORTS];
+};
+
 struct r600_ring {
 	struct radeon_winsys_cs		*cs;
 	void (*flush)(void *ctx, unsigned flags,
@@ -420,23 +451,20 @@ struct r600_common_context {
 
 	/* States. */
 	struct r600_streamout		streamout;
+	struct r600_scissors		scissors;
+	struct r600_viewports		viewports;
+	bool				scissor_enabled;
+	bool				vs_writes_viewport_index;
 
 	/* Additional context states. */
 	unsigned flags; /* flush flags */
 
 	/* Queries. */
-	/* The list of active queries. */
+	/* Maintain the list of active queries for pausing between IBs. */
 	int				num_occlusion_queries;
 	int				num_perfect_occlusion_queries;
-	/* Keep track of non-timer queries, because they should be suspended
-	 * during context flushing.
-	 * The timer queries (TIME_ELAPSED) shouldn't be suspended for blits,
-	 * but they should be suspended between IBs. */
-	struct list_head		active_nontimer_queries;
-	struct list_head		active_timer_queries;
-	unsigned			num_cs_dw_nontimer_queries_suspend;
-	bool				nontimer_queries_suspended_by_flush;
-	unsigned			num_cs_dw_timer_queries_suspend;
+	struct list_head		active_queries;
+	unsigned			num_cs_dw_queries_suspend;
 	/* Additional hardware info. */
 	unsigned			backend_mask;
 	unsigned			max_db; /* for OQ */
@@ -476,7 +504,7 @@ struct r600_common_context {
 			 const struct pipe_box *src_box);
 
 	void (*clear_buffer)(struct pipe_context *ctx, struct pipe_resource *dst,
-			     unsigned offset, unsigned size, unsigned value,
+			     uint64_t offset, uint64_t size, unsigned value,
 			     bool is_framebuffer);
 
 	void (*blit_decompress_depth)(struct pipe_context *ctx,
@@ -513,7 +541,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
                                       unsigned usage);
 bool r600_init_resource(struct r600_common_screen *rscreen,
 			struct r600_resource *res,
-			unsigned size, unsigned alignment,
+			uint64_t size, unsigned alignment,
 			bool use_reusable_pool);
 struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 					 const struct pipe_resource *templ,
@@ -548,7 +576,7 @@ void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resour
 bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 			  unsigned processor);
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
-			      unsigned offset, unsigned size, unsigned value,
+			      uint64_t offset, uint64_t size, unsigned value,
 			      bool is_framebuffer);
 struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 						  const struct pipe_resource *templ);
@@ -566,10 +594,8 @@ void r600_perfcounters_destroy(struct r600_common_screen *rscreen);
 /* r600_query.c */
 void r600_init_screen_query_functions(struct r600_common_screen *rscreen);
 void r600_query_init(struct r600_common_context *rctx);
-void r600_suspend_nontimer_queries(struct r600_common_context *ctx);
-void r600_resume_nontimer_queries(struct r600_common_context *ctx);
-void r600_suspend_timer_queries(struct r600_common_context *ctx);
-void r600_resume_timer_queries(struct r600_common_context *ctx);
+void r600_suspend_queries(struct r600_common_context *ctx);
+void r600_resume_queries(struct r600_common_context *ctx);
 void r600_query_init_backend_mask(struct r600_common_context *ctx);
 
 /* r600_streamout.c */
@@ -612,6 +638,14 @@ void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
 void r600_init_screen_texture_functions(struct r600_common_screen *rscreen);
 void r600_init_context_texture_functions(struct r600_common_context *rctx);
 
+/* r600_viewport.c */
+void evergreen_apply_scissor_bug_workaround(struct r600_common_context *rctx,
+					    struct pipe_scissor_state *scissor);
+void r600_set_scissor_enable(struct r600_common_context *rctx, bool enable);
+void r600_update_vs_writes_viewport_index(struct r600_common_context *rctx,
+					  struct tgsi_shader_info *info);
+void r600_init_viewport_functions(struct r600_common_context *rctx);
+
 /* cayman_msaa.c */
 extern const uint32_t eg_sample_locs_2x[4];
 extern const unsigned eg_max_dist_2x;
@@ -639,13 +673,38 @@ r600_resource_reference(struct r600_resource **ptr, struct r600_resource *res)
 				(struct pipe_resource *)res);
 }
 
+static inline bool r600_get_strmout_en(struct r600_common_context *rctx)
+{
+	return rctx->streamout.streamout_enabled ||
+	       rctx->streamout.prims_gen_query_enabled;
+}
+
+#define     SQ_TEX_XY_FILTER_POINT                         0x00
+#define     SQ_TEX_XY_FILTER_BILINEAR                      0x01
+#define     SQ_TEX_XY_FILTER_ANISO_POINT                   0x02
+#define     SQ_TEX_XY_FILTER_ANISO_BILINEAR                0x03
+
+static inline unsigned eg_tex_filter(unsigned filter, unsigned max_aniso)
+{
+	if (filter == PIPE_TEX_FILTER_LINEAR)
+		return max_aniso > 1 ? SQ_TEX_XY_FILTER_ANISO_BILINEAR
+				     : SQ_TEX_XY_FILTER_BILINEAR;
+	else
+		return max_aniso > 1 ? SQ_TEX_XY_FILTER_ANISO_POINT
+				     : SQ_TEX_XY_FILTER_POINT;
+}
+
 static inline unsigned r600_tex_aniso_filter(unsigned filter)
 {
-	if (filter <= 1)   return 0;
-	if (filter <= 2)   return 1;
-	if (filter <= 4)   return 2;
-	if (filter <= 8)   return 3;
-	 /* else */        return 4;
+	if (filter < 2)
+		return 0;
+	if (filter < 4)
+		return 1;
+	if (filter < 8)
+		return 2;
+	if (filter < 16)
+		return 3;
+	return 4;
 }
 
 static inline unsigned r600_wavefront_size(enum radeon_family family)

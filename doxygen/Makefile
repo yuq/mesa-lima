@@ -12,13 +12,13 @@ FULL = \
 	vbo.doxy \
 	glapi.doxy \
 	glsl.doxy \
-	shader.doxy \
 	swrast.doxy \
 	swrast_setup.doxy \
 	tnl.doxy \
 	tnl_dd.doxy \
 	gbm.doxy \
-	i965.doxy
+	i965.doxy \
+	nir.doxy
 
 full: $(FULL:.doxy=.tag)
 	$(foreach FILE,$(FULL),doxygen $(FILE);)

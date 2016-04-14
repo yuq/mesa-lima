@@ -49,6 +49,17 @@ enum qfile {
         QFILE_VARY,
         QFILE_UNIF,
         QFILE_VPM,
+        QFILE_TLB_COLOR_WRITE,
+        QFILE_TLB_COLOR_WRITE_MS,
+        QFILE_TLB_Z_WRITE,
+        QFILE_TLB_STENCIL_SETUP,
+
+        /* Payload registers that aren't in the physical register file, so we
+         * can just use the corresponding qpu_reg at qpu_emit time.
+         */
+        QFILE_FRAG_X,
+        QFILE_FRAG_Y,
+        QFILE_FRAG_REV_FLAG,
 
         /**
          * Stores an immediate value in the index field that can be turned
@@ -62,6 +73,11 @@ struct qreg {
         uint32_t index;
         int pack;
 };
+
+static inline struct qreg qir_reg(enum qfile file, uint32_t index)
+{
+        return (struct qreg){file, index};
+}
 
 enum qop {
         QOP_UNDEF,
@@ -101,19 +117,12 @@ enum qop {
         QOP_LOG2,
         QOP_VW_SETUP,
         QOP_VR_SETUP,
-        QOP_TLB_STENCIL_SETUP,
-        QOP_TLB_Z_WRITE,
-        QOP_TLB_COLOR_WRITE,
-        QOP_TLB_COLOR_WRITE_MS,
         QOP_TLB_COLOR_READ,
         QOP_MS_MASK,
         QOP_VARY_ADD_C,
 
-        QOP_FRAG_X,
-        QOP_FRAG_Y,
         QOP_FRAG_Z,
         QOP_FRAG_W,
-        QOP_FRAG_REV_FLAG,
 
         /** Texture x coordinate parameter write */
         QOP_TEX_S,
@@ -463,7 +472,6 @@ int qir_get_op_nsrc(enum qop qop);
 bool qir_reg_equals(struct qreg a, struct qreg b);
 bool qir_has_side_effects(struct vc4_compile *c, struct qinst *inst);
 bool qir_has_side_effect_reads(struct vc4_compile *c, struct qinst *inst);
-bool qir_is_multi_instruction(struct qinst *inst);
 bool qir_is_mul(struct qinst *inst);
 bool qir_is_raw_mov(struct qinst *inst);
 bool qir_is_tex(struct qinst *inst);
@@ -484,13 +492,13 @@ bool qir_opt_cse(struct vc4_compile *c);
 bool qir_opt_dead_code(struct vc4_compile *c);
 bool qir_opt_small_immediates(struct vc4_compile *c);
 bool qir_opt_vpm(struct vc4_compile *c);
-void vc4_nir_lower_blend(struct vc4_compile *c);
-void vc4_nir_lower_io(struct vc4_compile *c);
+void vc4_nir_lower_blend(nir_shader *s, struct vc4_compile *c);
+void vc4_nir_lower_io(nir_shader *s, struct vc4_compile *c);
 nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
                                        enum quniform_contents contents);
 nir_ssa_def *vc4_nir_get_swizzled_channel(struct nir_builder *b,
                                           nir_ssa_def **srcs, int swiz);
-void vc4_nir_lower_txf_ms(struct vc4_compile *c);
+void vc4_nir_lower_txf_ms(nir_shader *s, struct vc4_compile *c);
 void qir_lower_uniforms(struct vc4_compile *c);
 
 uint32_t qpu_schedule_instructions(struct vc4_compile *c);
@@ -618,17 +626,10 @@ QIR_NODST_2(TEX_T)
 QIR_NODST_2(TEX_R)
 QIR_NODST_2(TEX_B)
 QIR_NODST_2(TEX_DIRECT)
-QIR_ALU0(FRAG_X)
-QIR_ALU0(FRAG_Y)
 QIR_ALU0(FRAG_Z)
 QIR_ALU0(FRAG_W)
-QIR_ALU0(FRAG_REV_FLAG)
 QIR_ALU0(TEX_RESULT)
 QIR_ALU0(TLB_COLOR_READ)
-QIR_NODST_1(TLB_COLOR_WRITE)
-QIR_NODST_1(TLB_COLOR_WRITE_MS)
-QIR_NODST_1(TLB_Z_WRITE)
-QIR_NODST_1(TLB_STENCIL_SETUP)
 QIR_NODST_1(MS_MASK)
 
 static inline struct qreg
@@ -703,8 +704,7 @@ qir_POW(struct vc4_compile *c, struct qreg x, struct qreg y)
 static inline void
 qir_VPM_WRITE(struct vc4_compile *c, struct qreg val)
 {
-        static const struct qreg vpm = { QFILE_VPM, 0 };
-        qir_emit(c, qir_inst(QOP_MOV, vpm, val, c->undef));
+        qir_MOV_dest(c, qir_reg(QFILE_VPM, 0), val);
 }
 
 #endif /* VC4_QIR_H */

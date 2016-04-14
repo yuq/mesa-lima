@@ -454,7 +454,7 @@ ttn_emit_immediate(struct ttn_compile *c)
    nir_load_const_instr *load_const;
    int i;
 
-   load_const = nir_load_const_instr_create(b->shader, 4);
+   load_const = nir_load_const_instr_create(b->shader, 4, 32);
    c->imm_defs[c->next_imm] = &load_const->def;
    c->next_imm++;
 

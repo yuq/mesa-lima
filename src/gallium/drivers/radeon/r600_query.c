@@ -369,13 +369,11 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 		query->result_size = 16;
 		query->num_cs_dw_begin = 8;
 		query->num_cs_dw_end = 8;
-		query->flags = R600_QUERY_HW_FLAG_TIMER;
 		break;
 	case PIPE_QUERY_TIMESTAMP:
 		query->result_size = 8;
 		query->num_cs_dw_end = 8;
-		query->flags = R600_QUERY_HW_FLAG_TIMER |
-			       R600_QUERY_HW_FLAG_NO_START;
+		query->flags = R600_QUERY_HW_FLAG_NO_START;
 		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
@@ -516,10 +514,7 @@ static void r600_query_hw_emit_start(struct r600_common_context *ctx,
 
 	query->ops->emit_start(ctx, query, query->buffer.buf, va);
 
-	if (query->flags & R600_QUERY_HW_FLAG_TIMER)
-		ctx->num_cs_dw_timer_queries_suspend += query->num_cs_dw_end;
-	else
-		ctx->num_cs_dw_nontimer_queries_suspend += query->num_cs_dw_end;
+	ctx->num_cs_dw_queries_suspend += query->num_cs_dw_end;
 }
 
 static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
@@ -590,12 +585,8 @@ static void r600_query_hw_emit_stop(struct r600_common_context *ctx,
 
 	query->buffer.results_end += query->result_size;
 
-	if (!(query->flags & R600_QUERY_HW_FLAG_NO_START)) {
-		if (query->flags & R600_QUERY_HW_FLAG_TIMER)
-			ctx->num_cs_dw_timer_queries_suspend -= query->num_cs_dw_end;
-		else
-			ctx->num_cs_dw_nontimer_queries_suspend -= query->num_cs_dw_end;
-	}
+	if (!(query->flags & R600_QUERY_HW_FLAG_NO_START))
+		ctx->num_cs_dw_queries_suspend -= query->num_cs_dw_end;
 
 	r600_update_occlusion_query_state(ctx, query->b.type, -1);
 	r600_update_prims_generated_query_state(ctx, query->b.type, -1);
@@ -730,11 +721,8 @@ boolean r600_query_hw_begin(struct r600_common_context *rctx,
 
 	r600_query_hw_emit_start(rctx, query);
 
-	if (query->flags & R600_QUERY_HW_FLAG_TIMER)
-		LIST_ADDTAIL(&query->list, &rctx->active_timer_queries);
-	else
-		LIST_ADDTAIL(&query->list, &rctx->active_nontimer_queries);
-   return true;
+	LIST_ADDTAIL(&query->list, &rctx->active_queries);
+	return true;
 }
 
 static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
@@ -973,28 +961,14 @@ static void r600_render_condition(struct pipe_context *ctx,
 	rctx->set_atom_dirty(rctx, atom, query != NULL);
 }
 
-static void r600_suspend_queries(struct r600_common_context *ctx,
-				 struct list_head *query_list,
-				 unsigned *num_cs_dw_queries_suspend)
+void r600_suspend_queries(struct r600_common_context *ctx)
 {
 	struct r600_query_hw *query;
 
-	LIST_FOR_EACH_ENTRY(query, query_list, list) {
+	LIST_FOR_EACH_ENTRY(query, &ctx->active_queries, list) {
 		r600_query_hw_emit_stop(ctx, query);
 	}
-	assert(*num_cs_dw_queries_suspend == 0);
-}
-
-void r600_suspend_nontimer_queries(struct r600_common_context *ctx)
-{
-	r600_suspend_queries(ctx, &ctx->active_nontimer_queries,
-			     &ctx->num_cs_dw_nontimer_queries_suspend);
-}
-
-void r600_suspend_timer_queries(struct r600_common_context *ctx)
-{
-	r600_suspend_queries(ctx, &ctx->active_timer_queries,
-			     &ctx->num_cs_dw_timer_queries_suspend);
+	assert(ctx->num_cs_dw_queries_suspend == 0);
 }
 
 static unsigned r600_queries_num_cs_dw_for_resuming(struct r600_common_context *ctx,
@@ -1022,33 +996,19 @@ static unsigned r600_queries_num_cs_dw_for_resuming(struct r600_common_context *
 	return num_dw;
 }
 
-static void r600_resume_queries(struct r600_common_context *ctx,
-				struct list_head *query_list,
-				unsigned *num_cs_dw_queries_suspend)
+void r600_resume_queries(struct r600_common_context *ctx)
 {
 	struct r600_query_hw *query;
-	unsigned num_cs_dw = r600_queries_num_cs_dw_for_resuming(ctx, query_list);
+	unsigned num_cs_dw = r600_queries_num_cs_dw_for_resuming(ctx, &ctx->active_queries);
 
-	assert(*num_cs_dw_queries_suspend == 0);
+	assert(ctx->num_cs_dw_queries_suspend == 0);
 
 	/* Check CS space here. Resuming must not be interrupted by flushes. */
 	ctx->need_gfx_cs_space(&ctx->b, num_cs_dw, TRUE);
 
-	LIST_FOR_EACH_ENTRY(query, query_list, list) {
+	LIST_FOR_EACH_ENTRY(query, &ctx->active_queries, list) {
 		r600_query_hw_emit_start(ctx, query);
 	}
-}
-
-void r600_resume_nontimer_queries(struct r600_common_context *ctx)
-{
-	r600_resume_queries(ctx, &ctx->active_nontimer_queries,
-			    &ctx->num_cs_dw_nontimer_queries_suspend);
-}
-
-void r600_resume_timer_queries(struct r600_common_context *ctx)
-{
-	r600_resume_queries(ctx, &ctx->active_timer_queries,
-			    &ctx->num_cs_dw_timer_queries_suspend);
 }
 
 /* Get backends mask */
@@ -1274,8 +1234,7 @@ void r600_query_init(struct r600_common_context *rctx)
 	if (((struct r600_common_screen*)rctx->b.screen)->info.num_render_backends > 0)
 	    rctx->b.render_condition = r600_render_condition;
 
-	LIST_INITHEAD(&rctx->active_nontimer_queries);
-	LIST_INITHEAD(&rctx->active_timer_queries);
+	LIST_INITHEAD(&rctx->active_queries);
 }
 
 void r600_init_screen_query_functions(struct r600_common_screen *rscreen)

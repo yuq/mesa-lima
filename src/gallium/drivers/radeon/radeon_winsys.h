@@ -245,6 +245,7 @@ struct radeon_info {
     enum chip_class             chip_class;
     uint64_t                    gart_size;
     uint64_t                    vram_size;
+    bool                        has_dedicated_vram;
     boolean                     has_virtual_memory;
     bool                        gfx_ib_pad_with_type2;
     boolean                     has_sdma;
@@ -449,7 +450,7 @@ struct radeon_winsys {
      * \return          The created buffer object.
      */
     struct pb_buffer *(*buffer_create)(struct radeon_winsys *ws,
-                                       unsigned size,
+                                       uint64_t size,
                                        unsigned alignment,
                                        boolean use_reusable_pool,
                                        enum radeon_bo_domain domain,
@@ -528,7 +529,7 @@ struct radeon_winsys {
      * \param Size      Size in bytes for the new buffer.
      */
     struct pb_buffer *(*buffer_from_ptr)(struct radeon_winsys *ws,
-                                         void *pointer, unsigned size);
+                                         void *pointer, uint64_t size);
 
     /**
      * Whether the buffer was created from a user pointer.

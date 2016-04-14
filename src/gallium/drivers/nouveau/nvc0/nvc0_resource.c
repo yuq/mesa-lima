@@ -52,6 +52,7 @@ nvc0_init_resource_functions(struct pipe_context *pcontext)
    pcontext->transfer_inline_write = u_transfer_inline_write_vtbl;
    pcontext->create_surface = nvc0_surface_create;
    pcontext->surface_destroy = nv50_surface_destroy;
+   pcontext->invalidate_resource = nv50_invalidate_resource;
 }
 
 void

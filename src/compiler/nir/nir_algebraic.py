@@ -291,6 +291,7 @@ ${pass_name}(nir_shader *shader)
    bool progress = false;
    bool condition_flags[${len(condition_list)}];
    const nir_shader_compiler_options *options = shader->options;
+   (void) options;
 
    % for index, condition in enumerate(condition_list):
    condition_flags[${index}] = ${condition};

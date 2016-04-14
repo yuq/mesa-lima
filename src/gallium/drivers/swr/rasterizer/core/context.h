@@ -308,6 +308,8 @@ OSALIGNLINE(struct) API_STATE
         uint32_t depthHottileEnable: 1;
         uint32_t stencilHottileEnable : 1;
     };
+
+    PFN_QUANTIZE_DEPTH      pfnQuantizeDepth;
 };
 
 class MacroTileMgr;
@@ -380,31 +382,28 @@ struct DRAW_STATE
 //    This draw context maintains all of the state needed for the draw operation.
 struct DRAW_CONTEXT
 {
-    SWR_CONTEXT *pContext;
+    SWR_CONTEXT*    pContext;
+    uint64_t        drawId;
+    union
+    {
+        MacroTileMgr*   pTileMgr;
+        DispatchQueue*  pDispatch;      // Queue for thread groups. (isCompute)
+    };
+    uint64_t        dependency;
+    DRAW_STATE*     pState;
+    CachingArena*   pArena;
 
-    uint64_t drawId;
+    bool            isCompute;      // Is this DC a compute context?
+    bool            cleanupState;   // True if this is the last draw using an entry in the state ring.
+    volatile bool   doneFE;         // Is FE work done for this draw?
 
-    bool isCompute;    // Is this DC a compute context?
+    FE_WORK         FeWork;
 
-    FE_WORK FeWork;
-    volatile OSALIGNLINE(uint32_t) FeLock;
-    volatile OSALIGNLINE(bool) doneFE;    // Is FE work done for this draw?
-    volatile OSALIGNLINE(int64_t) threadsDone;
-
-    uint64_t dependency;
-
-    MacroTileMgr* pTileMgr;
-
-    // The following fields are valid if isCompute is true.
-    DispatchQueue* pDispatch;               // Queue for thread groups. (isCompute)
-
-    DRAW_STATE* pState;
-    CachingArena* pArena;
-
-    uint8_t* pSpillFill[KNOB_MAX_NUM_THREADS];  // Scratch space used for spill fills.
-
-    bool  cleanupState; // True if this is the last draw using an entry in the state ring.
+    volatile OSALIGNLINE(uint32_t)   FeLock;
+    volatile int64_t    threadsDone;
 };
+
+static_assert((sizeof(DRAW_CONTEXT) & 63) == 0, "Invalid size for DRAW_CONTEXT");
 
 INLINE const API_STATE& GetApiState(const DRAW_CONTEXT* pDC)
 {
@@ -447,6 +446,9 @@ struct SWR_CONTEXT
     DRAW_CONTEXT *pCurDrawContext;    // This points to DC entry in ring for an unsubmitted draw.
     DRAW_CONTEXT *pPrevDrawContext;   // This points to DC entry for the previous context submitted that we can copy state from.
 
+    MacroTileMgr* pMacroTileManagerArray;
+    DispatchQueue* pDispatchQueueArray;
+
     // Draw State Ring
     //  When draw are very large (lots of primitives) then the API thread will break these up.
     //  These split draws all have identical state. So instead of storing the state directly
@@ -457,6 +459,8 @@ struct SWR_CONTEXT
     uint32_t curStateId;               // Current index to the next available entry in the DS ring.
 
     uint32_t NumWorkerThreads;
+    uint32_t NumFEThreads;
+    uint32_t NumBEThreads;
 
     THREAD_POOL threadPool; // Thread pool associated with this context
 
@@ -481,6 +485,7 @@ struct SWR_CONTEXT
     uint8_t* pScratch[KNOB_MAX_NUM_THREADS];
 
     CachingAllocator cachingArenaAllocator;
+    uint32_t frameCount;
 };
 
 void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId);

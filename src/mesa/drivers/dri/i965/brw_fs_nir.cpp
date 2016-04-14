@@ -766,24 +766,12 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_fsin:
-      if (!compiler->precise_trig) {
-         inst = bld.emit(SHADER_OPCODE_SIN, result, op[0]);
-      } else {
-         fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_F);
-         inst = bld.emit(SHADER_OPCODE_SIN, tmp, op[0]);
-         inst = bld.MUL(result, tmp, brw_imm_f(0.99997));
-      }
+      inst = bld.emit(SHADER_OPCODE_SIN, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fcos:
-      if (!compiler->precise_trig) {
-         inst = bld.emit(SHADER_OPCODE_COS, result, op[0]);
-      } else {
-         fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_F);
-         inst = bld.emit(SHADER_OPCODE_COS, tmp, op[0]);
-         inst = bld.MUL(result, tmp, brw_imm_f(0.99997));
-      }
+      inst = bld.emit(SHADER_OPCODE_COS, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
@@ -876,6 +864,10 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
        * When we XOR the sources, the top bit is 0 if they are the same and 1
        * if they are different.  We can then use a conditional modifier to
        * turn that into a predicate.  This leads us to an XOR.l instruction.
+       *
+       * Technically, according to the PRM, you're not allowed to use .l on a
+       * XOR instruction.  However, emperical experiments and Curro's reading
+       * of the simulator source both indicate that it's safe.
        */
       fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_D);
       inst = bld.XOR(tmp, op[0], op[1]);

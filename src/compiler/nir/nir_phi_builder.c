@@ -195,7 +195,8 @@ nir_phi_builder_value_get_block_def(struct nir_phi_builder_value *val,
           */
          nir_ssa_undef_instr *undef =
             nir_ssa_undef_instr_create(val->builder->shader,
-                                       val->num_components);
+                                       val->num_components,
+                                       val->bit_size);
          nir_instr_insert(nir_before_cf_list(&val->builder->impl->body),
                           &undef->instr);
          val->defs[block->index] = &undef->def;

@@ -854,7 +854,8 @@ tgsi_exec_machine_bind_shader(
    struct tgsi_exec_machine *mach,
    const struct tgsi_token *tokens,
    struct tgsi_sampler *sampler,
-   struct tgsi_image *image)
+   struct tgsi_image *image,
+   struct tgsi_buffer *buffer)
 {
    uint k;
    struct tgsi_parse_context parse;
@@ -873,6 +874,7 @@ tgsi_exec_machine_bind_shader(
    mach->Tokens = tokens;
    mach->Sampler = sampler;
    mach->Image = image;
+   mach->Buffer = buffer;
 
    if (!tokens) {
       /* unbind and free all */
@@ -3758,8 +3760,8 @@ get_image_coord_sample(unsigned tgsi_tex)
 }
 
 static void
-exec_load(struct tgsi_exec_machine *mach,
-          const struct tgsi_full_instruction *inst)
+exec_load_img(struct tgsi_exec_machine *mach,
+              const struct tgsi_full_instruction *inst)
 {
    union tgsi_exec_channel r[4], sample_r;
    uint unit;
@@ -3805,8 +3807,51 @@ exec_load(struct tgsi_exec_machine *mach,
 }
 
 static void
-exec_store(struct tgsi_exec_machine *mach,
-           const struct tgsi_full_instruction *inst)
+exec_load_buf(struct tgsi_exec_machine *mach,
+              const struct tgsi_full_instruction *inst)
+{
+   union tgsi_exec_channel r[4];
+   uint unit;
+   int j;
+   uint chan;
+   float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
+   struct tgsi_buffer_params params;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+
+   unit = fetch_sampler_unit(mach, inst, 0);
+
+   params.execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+   params.unit = unit;
+   IFETCH(&r[0], 1, TGSI_CHAN_X);
+
+   mach->Buffer->load(mach->Buffer, &params,
+                      r[0].i, rgba);
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      r[0].f[j] = rgba[0][j];
+      r[1].f[j] = rgba[1][j];
+      r[2].f[j] = rgba[2][j];
+      r[3].f[j] = rgba[3][j];
+   }
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         store_dest(mach, &r[chan], &inst->Dst[0], inst, chan, TGSI_EXEC_DATA_FLOAT);
+      }
+   }
+}
+
+static void
+exec_load(struct tgsi_exec_machine *mach,
+          const struct tgsi_full_instruction *inst)
+{
+   if (inst->Src[0].Register.File == TGSI_FILE_IMAGE)
+      exec_load_img(mach, inst);
+   else
+      exec_load_buf(mach, inst);
+}
+
+static void
+exec_store_img(struct tgsi_exec_machine *mach,
+               const struct tgsi_full_instruction *inst)
 {
    union tgsi_exec_channel r[3], sample_r;
    union tgsi_exec_channel value[4];
@@ -3850,8 +3895,53 @@ exec_store(struct tgsi_exec_machine *mach,
 }
 
 static void
-exec_atomop(struct tgsi_exec_machine *mach,
-            const struct tgsi_full_instruction *inst)
+exec_store_buf(struct tgsi_exec_machine *mach,
+               const struct tgsi_full_instruction *inst)
+{
+   union tgsi_exec_channel r[3];
+   union tgsi_exec_channel value[4];
+   float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
+   struct tgsi_buffer_params params;
+   int i, j;
+   uint unit;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+
+   unit = inst->Dst[0].Register.Index;
+
+   params.execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+   params.unit = unit;
+   params.writemask = inst->Dst[0].Register.WriteMask;
+
+   IFETCH(&r[0], 0, TGSI_CHAN_X);
+   for (i = 0; i < 4; i++) {
+      FETCH(&value[i], 1, TGSI_CHAN_X + i);
+   }
+
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      rgba[0][j] = value[0].f[j];
+      rgba[1][j] = value[1].f[j];
+      rgba[2][j] = value[2].f[j];
+      rgba[3][j] = value[3].f[j];
+   }
+
+   mach->Buffer->store(mach->Buffer, &params,
+                      r[0].i,
+                      rgba);
+}
+
+static void
+exec_store(struct tgsi_exec_machine *mach,
+           const struct tgsi_full_instruction *inst)
+{
+   if (inst->Dst[0].Register.File == TGSI_FILE_IMAGE)
+      exec_store_img(mach, inst);
+   else
+      exec_store_buf(mach, inst);
+}
+
+static void
+exec_atomop_img(struct tgsi_exec_machine *mach,
+                const struct tgsi_full_instruction *inst)
 {
    union tgsi_exec_channel r[4], sample_r;
    union tgsi_exec_channel value[4], value2[4];
@@ -3918,8 +4008,77 @@ exec_atomop(struct tgsi_exec_machine *mach,
 }
 
 static void
-exec_resq(struct tgsi_exec_machine *mach,
-          const struct tgsi_full_instruction *inst)
+exec_atomop_buf(struct tgsi_exec_machine *mach,
+                const struct tgsi_full_instruction *inst)
+{
+   union tgsi_exec_channel r[4];
+   union tgsi_exec_channel value[4], value2[4];
+   float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
+   float rgba2[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
+   struct tgsi_buffer_params params;
+   int i, j;
+   uint unit, chan;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+
+   unit = fetch_sampler_unit(mach, inst, 0);
+
+   params.execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+   params.unit = unit;
+   params.writemask = inst->Dst[0].Register.WriteMask;
+
+   IFETCH(&r[0], 1, TGSI_CHAN_X);
+
+   for (i = 0; i < 4; i++) {
+      FETCH(&value[i], 2, TGSI_CHAN_X + i);
+      if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS)
+         FETCH(&value2[i], 3, TGSI_CHAN_X + i);
+   }
+
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      rgba[0][j] = value[0].f[j];
+      rgba[1][j] = value[1].f[j];
+      rgba[2][j] = value[2].f[j];
+      rgba[3][j] = value[3].f[j];
+   }
+   if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS) {
+      for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+         rgba2[0][j] = value2[0].f[j];
+         rgba2[1][j] = value2[1].f[j];
+         rgba2[2][j] = value2[2].f[j];
+         rgba2[3][j] = value2[3].f[j];
+      }
+   }
+
+   mach->Buffer->op(mach->Buffer, &params, inst->Instruction.Opcode,
+                   r[0].i,
+                   rgba, rgba2);
+
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      r[0].f[j] = rgba[0][j];
+      r[1].f[j] = rgba[1][j];
+      r[2].f[j] = rgba[2][j];
+      r[3].f[j] = rgba[3][j];
+   }
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         store_dest(mach, &r[chan], &inst->Dst[0], inst, chan, TGSI_EXEC_DATA_FLOAT);
+      }
+   }
+}
+
+static void
+exec_atomop(struct tgsi_exec_machine *mach,
+            const struct tgsi_full_instruction *inst)
+{
+   if (inst->Src[0].Register.File == TGSI_FILE_IMAGE)
+      exec_atomop_img(mach, inst);
+   else
+      exec_atomop_buf(mach, inst);
+}
+
+static void
+exec_resq_img(struct tgsi_exec_machine *mach,
+              const struct tgsi_full_instruction *inst)
 {
    int result[4];
    union tgsi_exec_channel r[4];
@@ -3949,6 +4108,46 @@ exec_resq(struct tgsi_exec_machine *mach,
                     TGSI_EXEC_DATA_INT);
       }
    }
+}
+
+static void
+exec_resq_buf(struct tgsi_exec_machine *mach,
+              const struct tgsi_full_instruction *inst)
+{
+   int result;
+   union tgsi_exec_channel r[4];
+   uint unit;
+   int i, chan;
+   struct tgsi_buffer_params params;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+
+   unit = fetch_sampler_unit(mach, inst, 0);
+
+   params.execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+   params.unit = unit;
+
+   mach->Buffer->get_dims(mach->Buffer, &params, &result);
+
+   for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+      r[0].i[i] = result;
+   }
+
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         store_dest(mach, &r[chan], &inst->Dst[0], inst, chan,
+                    TGSI_EXEC_DATA_INT);
+      }
+   }
+}
+
+static void
+exec_resq(struct tgsi_exec_machine *mach,
+          const struct tgsi_full_instruction *inst)
+{
+   if (inst->Src[0].Register.File == TGSI_FILE_IMAGE)
+      exec_resq_img(mach, inst);
+   else
+      exec_resq_buf(mach, inst);
 }
 
 static void

@@ -1539,6 +1539,8 @@ cso_save_state(struct cso_context *cso, unsigned state_mask)
       cso_save_vertex_shader(cso);
    if (state_mask & CSO_BIT_VIEWPORT)
       cso_save_viewport(cso);
+   if (state_mask & CSO_BIT_PAUSE_QUERIES)
+      cso->pipe->set_active_query_state(cso->pipe, false);
 }
 
 
@@ -1590,6 +1592,8 @@ cso_restore_state(struct cso_context *cso)
       cso_restore_vertex_shader(cso);
    if (state_mask & CSO_BIT_VIEWPORT)
       cso_restore_viewport(cso);
+   if (state_mask & CSO_BIT_PAUSE_QUERIES)
+      cso->pipe->set_active_query_state(cso->pipe, true);
 
    cso->saved_state = 0;
 }

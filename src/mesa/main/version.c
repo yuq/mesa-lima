@@ -361,7 +361,7 @@ compute_version(const struct gl_extensions *extensions,
                          extensions->ARB_fragment_layer_viewport &&
                          extensions->ARB_framebuffer_no_attachments &&
                          extensions->ARB_internalformat_query2 &&
-                         /* extensions->ARB_robust_buffer_access_behavior */ 0 &&
+                         extensions->ARB_robust_buffer_access_behavior &&
                          extensions->ARB_shader_image_size &&
                          extensions->ARB_shader_storage_buffer_object &&
                          extensions->ARB_stencil_texturing &&

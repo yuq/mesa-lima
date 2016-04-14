@@ -217,7 +217,7 @@ sp_tgsi_load(const struct tgsi_image *image,
    char *data_ptr;
    unsigned offset = 0;
 
-   if (params->unit > PIPE_MAX_SHADER_IMAGES)
+   if (params->unit >= PIPE_MAX_SHADER_IMAGES)
       goto fail_write_all_zero;
    iview = &sp_img->sp_iview[params->unit];
    spr = (struct softpipe_resource *)iview->resource;
@@ -320,7 +320,7 @@ sp_tgsi_store(const struct tgsi_image *image,
    unsigned offset = 0;
    unsigned pformat = params->format;
 
-   if (params->unit > PIPE_MAX_SHADER_IMAGES)
+   if (params->unit >= PIPE_MAX_SHADER_IMAGES)
       return;
    iview = &sp_img->sp_iview[params->unit];
    spr = (struct softpipe_resource *)iview->resource;
@@ -630,7 +630,7 @@ sp_tgsi_op(const struct tgsi_image *image,
    unsigned offset;
    char *data_ptr;
 
-   if (params->unit > PIPE_MAX_SHADER_IMAGES)
+   if (params->unit >= PIPE_MAX_SHADER_IMAGES)
       return;
    iview = &sp_img->sp_iview[params->unit];
    spr = (struct softpipe_resource *)iview->resource;
@@ -704,7 +704,7 @@ sp_tgsi_get_dims(const struct tgsi_image *image,
    struct softpipe_resource *spr;
    int level;
 
-   if (params->unit > PIPE_MAX_SHADER_IMAGES)
+   if (params->unit >= PIPE_MAX_SHADER_IMAGES)
       return;
    iview = &sp_img->sp_iview[params->unit];
    spr = (struct softpipe_resource *)iview->resource;

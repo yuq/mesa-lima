@@ -35,27 +35,6 @@
 
 #define TILE_ID(x,y) ((x << 16 | y))
 
-// override new/delete for alignment
-void *MacroTileMgr::operator new(size_t size)
-{
-    return _aligned_malloc(size, 64);
-}
-
-void MacroTileMgr::operator delete(void *p)
-{
-    _aligned_free(p);
-}
-
-void* DispatchQueue::operator new(size_t size)
-{
-    return _aligned_malloc(size, 64);
-}
-
-void DispatchQueue::operator delete(void *p)
-{
-    _aligned_free(p);
-}
-
 MacroTileMgr::MacroTileMgr(CachingArena& arena) : mArena(arena)
 {
 }
@@ -304,7 +283,6 @@ void HotTileMgr::ClearStencilHotTile(const HOTTILE* pHotTile)
 void HotTileMgr::InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID)
 {
     const API_STATE& state = GetApiState(pDC);
-    HotTileMgr *pHotTileMgr = pContext->pHotTileMgr;
 
     uint32_t x, y;
     MacroTileMgr::getTileIndices(macroID, x, y);

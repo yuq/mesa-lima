@@ -161,6 +161,8 @@ struct si_shader_data {
 
 #define SI_NUM_IMAGES			16
 
+#define SI_NUM_SHADER_BUFFERS		16
+
 /* Read-write buffer slots.
  *
  * Ring buffers:        0..1

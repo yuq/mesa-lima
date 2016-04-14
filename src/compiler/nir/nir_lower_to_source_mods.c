@@ -54,7 +54,7 @@ nir_lower_to_source_mods_block(nir_block *block, void *state)
          if (parent->dest.saturate)
             continue;
 
-         switch (nir_op_infos[alu->op].input_types[i]) {
+         switch (nir_alu_type_get_base_type(nir_op_infos[alu->op].input_types[i])) {
          case nir_type_float:
             if (parent->op != nir_op_fmov)
                continue;
@@ -128,7 +128,8 @@ nir_lower_to_source_mods_block(nir_block *block, void *state)
          continue;
 
       /* We can only saturate float destinations */
-      if (nir_op_infos[alu->op].output_type != nir_type_float)
+      if (nir_alu_type_get_base_type(nir_op_infos[alu->op].output_type) !=
+          nir_type_float)
          continue;
 
       if (!list_empty(&alu->dest.dest.ssa.if_uses))

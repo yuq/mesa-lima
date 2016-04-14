@@ -1345,6 +1345,7 @@ try_pbo_upload_common(struct gl_context *ctx,
                         CSO_BIT_DEPTH_STENCIL_ALPHA |
                         CSO_BIT_RASTERIZER |
                         CSO_BIT_STREAM_OUTPUTS |
+                        CSO_BIT_PAUSE_QUERIES |
                         CSO_BITS_ALL_SHADERS));
    cso_save_constant_buffer_slot0(cso, PIPE_SHADER_FRAGMENT);
 
@@ -1845,7 +1846,7 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
             /* 1D array textures.
              * We need to convert gallium coords to GL coords.
              */
-            GLvoid *src = _mesa_image_address2d(unpack, pixels,
+            void *src = _mesa_image_address2d(unpack, pixels,
                                                 width, depth, format,
                                                 type, slice, 0);
             memcpy(map, src, bytesPerRow);
@@ -1854,7 +1855,7 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
             ubyte *slice_map = map;
 
             for (row = 0; row < (unsigned) height; row++) {
-               GLvoid *src = _mesa_image_address(dims, unpack, pixels,
+               void *src = _mesa_image_address(dims, unpack, pixels,
                                                  width, height, format,
                                                  type, slice, row, 0);
                memcpy(slice_map, src, bytesPerRow);
@@ -1928,7 +1929,7 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
                          struct gl_texture_image *texImage,
                          GLint x, GLint y, GLint z,
                          GLsizei w, GLsizei h, GLsizei d,
-                         GLenum format, GLsizei imageSize, const GLvoid *data)
+                         GLenum format, GLsizei imageSize, const void *data)
 {
    struct st_context *st = st_context(ctx);
    struct st_texture_image *stImage = st_texture_image(texImage);
@@ -2053,7 +2054,7 @@ fallback:
 static void
 st_CompressedTexImage(struct gl_context *ctx, GLuint dims,
                       struct gl_texture_image *texImage,
-                      GLsizei imageSize, const GLvoid *data)
+                      GLsizei imageSize, const void *data)
 {
    prep_teximage(ctx, texImage, GL_NONE, GL_NONE);
 
@@ -2106,7 +2107,7 @@ static void
 st_GetTexSubImage(struct gl_context * ctx,
                   GLint xoffset, GLint yoffset, GLint zoffset,
                   GLsizei width, GLsizei height, GLint depth,
-                  GLenum format, GLenum type, GLvoid * pixels,
+                  GLenum format, GLenum type, void * pixels,
                   struct gl_texture_image *texImage)
 {
    struct st_context *st = st_context(ctx);
@@ -2319,7 +2320,7 @@ st_GetTexSubImage(struct gl_context * ctx,
             /* 1D array textures.
              * We need to convert gallium coords to GL coords.
              */
-            GLvoid *dest = _mesa_image_address3d(&ctx->Pack, pixels,
+            void *dest = _mesa_image_address3d(&ctx->Pack, pixels,
                                                  width, depth, format,
                                                  type, 0, slice, 0);
             memcpy(dest, map, bytesPerRow);
@@ -2328,7 +2329,7 @@ st_GetTexSubImage(struct gl_context * ctx,
             ubyte *slice_map = map;
 
             for (row = 0; row < height; row++) {
-               GLvoid *dest = _mesa_image_address3d(&ctx->Pack, pixels,
+               void *dest = _mesa_image_address3d(&ctx->Pack, pixels,
                                                     width, height, format,
                                                     type, slice, row, 0);
                memcpy(dest, slice_map, bytesPerRow);
@@ -2363,7 +2364,7 @@ st_GetTexSubImage(struct gl_context * ctx,
             /* 1D array textures.
              * We need to convert gallium coords to GL coords.
              */
-            GLvoid *dest = _mesa_image_address3d(&ctx->Pack, pixels,
+            void *dest = _mesa_image_address3d(&ctx->Pack, pixels,
                                                  width, depth, format,
                                                  type, 0, slice, 0);
 
@@ -2377,7 +2378,7 @@ st_GetTexSubImage(struct gl_context * ctx,
          }
          else {
             for (row = 0; row < height; row++) {
-               GLvoid *dest = _mesa_image_address3d(&ctx->Pack, pixels,
+               void *dest = _mesa_image_address3d(&ctx->Pack, pixels,
                                                     width, height, format,
                                                     type, slice, row, 0);
 
@@ -3085,7 +3086,7 @@ st_ClearTexSubImage(struct gl_context *ctx,
                     struct gl_texture_image *texImage,
                     GLint xoffset, GLint yoffset, GLint zoffset,
                     GLsizei width, GLsizei height, GLsizei depth,
-                    const GLvoid *clearValue)
+                    const void *clearValue)
 {
    static const char zeros[16] = {0};
    struct st_texture_image *stImage = st_texture_image(texImage);

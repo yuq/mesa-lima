@@ -752,7 +752,7 @@ static void si_emit_blend_color(struct si_context *sctx, struct r600_atom *atom)
 }
 
 /*
- * Clipping, scissors and viewport
+ * Clipping
  */
 
 static void si_set_clip_state(struct pipe_context *ctx,
@@ -817,179 +817,6 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 	/* reuse needs to be set off if we write oViewport */
 	radeon_set_context_reg(cs, R_028AB4_VGT_REUSE_OFF,
 			       S_028AB4_REUSE_OFF(info->writes_viewport_index));
-}
-
-static void si_set_scissor_states(struct pipe_context *ctx,
-                                  unsigned start_slot,
-                                  unsigned num_scissors,
-                                  const struct pipe_scissor_state *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	int i;
-
-	for (i = 0; i < num_scissors; i++)
-		sctx->scissors.states[start_slot + i] = state[i];
-
-	if (!sctx->queued.named.rasterizer ||
-	    !sctx->queued.named.rasterizer->scissor_enable)
-		return;
-
-	sctx->scissors.dirty_mask |= ((1 << num_scissors) - 1) << start_slot;
-	si_mark_atom_dirty(sctx, &sctx->scissors.atom);
-}
-
-static void si_get_scissor_from_viewport(struct pipe_viewport_state *vp,
-					 struct pipe_scissor_state *scissor)
-{
-	/* These must be signed, unlike pipe_scissor_state. */
-	int minx, miny, maxx, maxy, tmp;
-
-	/* Convert (-1, -1) and (1, 1) from clip space into window space. */
-	minx = -vp->scale[0] + vp->translate[0];
-	miny = -vp->scale[1] + vp->translate[1];
-	maxx = vp->scale[0] + vp->translate[0];
-	maxy = vp->scale[1] + vp->translate[1];
-
-	/* r600_draw_rectangle sets this. Disable the scissor. */
-	if (minx == -1 && miny == -1 && maxx == 1 && maxy == 1) {
-		minx = miny = 0;
-		maxx = maxy = 16384;
-	}
-
-	/* Handle inverted viewports. */
-	if (minx > maxx) {
-		tmp = minx;
-		minx = maxx;
-		maxx = tmp;
-	}
-	if (miny > maxy) {
-		tmp = miny;
-		miny = maxy;
-		maxy = tmp;
-	}
-
-	scissor->minx = CLAMP(minx, 0, 16384);
-	scissor->miny = CLAMP(miny, 0, 16384);
-	scissor->maxx = CLAMP(maxx, 0, 16384);
-	scissor->maxy = CLAMP(maxy, 0, 16384);
-}
-
-static void si_clip_scissor(struct pipe_scissor_state *out,
-			    struct pipe_scissor_state *clip)
-{
-	out->minx = MAX2(out->minx, clip->minx);
-	out->miny = MAX2(out->miny, clip->miny);
-	out->maxx = MIN2(out->maxx, clip->maxx);
-	out->maxy = MIN2(out->maxy, clip->maxy);
-}
-
-static void si_emit_one_scissor(struct radeon_winsys_cs *cs,
-				struct pipe_viewport_state *vp,
-				struct pipe_scissor_state *scissor)
-{
-	struct pipe_scissor_state final;
-
-	/* Since the guard band disables clipping, we have to clip per-pixel
-	 * using a scissor.
-	 */
-	si_get_scissor_from_viewport(vp, &final);
-
-	if (scissor)
-		si_clip_scissor(&final, scissor);
-
-	radeon_emit(cs, S_028250_TL_X(final.minx) |
-			S_028250_TL_Y(final.miny) |
-			S_028250_WINDOW_OFFSET_DISABLE(1));
-	radeon_emit(cs, S_028254_BR_X(final.maxx) |
-			S_028254_BR_Y(final.maxy));
-}
-
-static void si_emit_scissors(struct si_context *sctx, struct r600_atom *atom)
-{
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	struct pipe_scissor_state *states = sctx->scissors.states;
-	unsigned mask = sctx->scissors.dirty_mask;
-	bool scissor_enable = sctx->queued.named.rasterizer->scissor_enable;
-
-	/* The simple case: Only 1 viewport is active. */
-	if (mask & 1 &&
-	    !si_get_vs_info(sctx)->writes_viewport_index) {
-		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL, 2);
-		si_emit_one_scissor(cs, &sctx->viewports.states[0],
-				    scissor_enable ? &states[0] : NULL);
-		sctx->scissors.dirty_mask &= ~1; /* clear one bit */
-		return;
-	}
-
-	while (mask) {
-		int start, count, i;
-
-		u_bit_scan_consecutive_range(&mask, &start, &count);
-
-		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL +
-					       start * 4 * 2, count * 2);
-		for (i = start; i < start+count; i++) {
-			si_emit_one_scissor(cs, &sctx->viewports.states[i],
-					    scissor_enable ? &states[i] : NULL);
-		}
-	}
-	sctx->scissors.dirty_mask = 0;
-}
-
-static void si_set_viewport_states(struct pipe_context *ctx,
-                                   unsigned start_slot,
-                                   unsigned num_viewports,
-                                   const struct pipe_viewport_state *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	int i;
-
-	for (i = 0; i < num_viewports; i++)
-		sctx->viewports.states[start_slot + i] = state[i];
-
-	sctx->viewports.dirty_mask |= ((1 << num_viewports) - 1) << start_slot;
-	sctx->scissors.dirty_mask |= ((1 << num_viewports) - 1) << start_slot;
-	si_mark_atom_dirty(sctx, &sctx->viewports.atom);
-	si_mark_atom_dirty(sctx, &sctx->scissors.atom);
-}
-
-static void si_emit_viewports(struct si_context *sctx, struct r600_atom *atom)
-{
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	struct pipe_viewport_state *states = sctx->viewports.states;
-	unsigned mask = sctx->viewports.dirty_mask;
-
-	/* The simple case: Only 1 viewport is active. */
-	if (mask & 1 &&
-	    !si_get_vs_info(sctx)->writes_viewport_index) {
-		radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE, 6);
-		radeon_emit(cs, fui(states[0].scale[0]));
-		radeon_emit(cs, fui(states[0].translate[0]));
-		radeon_emit(cs, fui(states[0].scale[1]));
-		radeon_emit(cs, fui(states[0].translate[1]));
-		radeon_emit(cs, fui(states[0].scale[2]));
-		radeon_emit(cs, fui(states[0].translate[2]));
-		sctx->viewports.dirty_mask &= ~1; /* clear one bit */
-		return;
-	}
-
-	while (mask) {
-		int start, count, i;
-
-		u_bit_scan_consecutive_range(&mask, &start, &count);
-
-		radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE +
-					       start * 4 * 6, count * 6);
-		for (i = start; i < start+count; i++) {
-			radeon_emit(cs, fui(states[i].scale[0]));
-			radeon_emit(cs, fui(states[i].translate[0]));
-			radeon_emit(cs, fui(states[i].scale[1]));
-			radeon_emit(cs, fui(states[i].translate[1]));
-			radeon_emit(cs, fui(states[i].scale[2]));
-			radeon_emit(cs, fui(states[i].translate[2]));
-		}
-	}
-	sctx->viewports.dirty_mask = 0;
 }
 
 /*
@@ -1173,10 +1000,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	    (!old_rs || old_rs->multisample_enable != rs->multisample_enable))
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
-	if (!old_rs || old_rs->scissor_enable != rs->scissor_enable) {
-		sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
-		si_mark_atom_dirty(sctx, &sctx->scissors.atom);
-	}
+	r600_set_scissor_enable(&sctx->b, rs->scissor_enable);
 
 	si_pm4_bind_state(sctx, rasterizer, rs);
 	si_update_poly_offset_state(sctx);
@@ -1348,6 +1172,26 @@ static void *si_create_db_flush_dsa(struct si_context *sctx)
 
 /* DB RENDER STATE */
 
+static void si_set_active_query_state(struct pipe_context *ctx, boolean enable)
+{
+	struct si_context *sctx = (struct si_context*)ctx;
+
+	/* Pipeline stat & streamout queries. */
+	if (enable) {
+		sctx->b.flags &= ~R600_CONTEXT_STOP_PIPELINE_STATS;
+		sctx->b.flags |= R600_CONTEXT_START_PIPELINE_STATS;
+	} else {
+		sctx->b.flags &= ~R600_CONTEXT_START_PIPELINE_STATS;
+		sctx->b.flags |= R600_CONTEXT_STOP_PIPELINE_STATS;
+	}
+
+	/* Occlusion queries. */
+	if (sctx->occlusion_queries_disabled != !enable) {
+		sctx->occlusion_queries_disabled = !enable;
+		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+	}
+}
+
 static void si_set_occlusion_query_state(struct pipe_context *ctx, bool enable)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
@@ -1382,7 +1226,8 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 	}
 
 	/* DB_COUNT_CONTROL (occlusion queries) */
-	if (sctx->b.num_occlusion_queries > 0) {
+	if (sctx->b.num_occlusion_queries > 0 &&
+	    !sctx->occlusion_queries_disabled) {
 		bool perfect = sctx->b.num_perfect_occlusion_queries > 0;
 
 		if (sctx->b.chip_class >= CIK) {
@@ -1835,17 +1680,6 @@ static unsigned si_tex_wrap(unsigned wrap)
 		return V_008F30_SQ_TEX_MIRROR_ONCE_LAST_TEXEL;
 	case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_BORDER:
 		return V_008F30_SQ_TEX_MIRROR_ONCE_BORDER;
-	}
-}
-
-static unsigned si_tex_filter(unsigned filter)
-{
-	switch (filter) {
-	default:
-	case PIPE_TEX_FILTER_NEAREST:
-		return V_008F38_SQ_TEX_XY_FILTER_POINT;
-	case PIPE_TEX_FILTER_LINEAR:
-		return V_008F38_SQ_TEX_XY_FILTER_BILINEAR;
 	}
 }
 
@@ -3122,6 +2956,16 @@ si_make_texture_descriptor(struct si_screen *screen,
 	} else {
 		state[6] = 0;
 		state[7] = 0;
+
+		/* The last dword is unused by hw. The shader uses it to clear
+		 * bits in the first dword of sampler state.
+		 */
+		if (screen->b.chip_class <= CIK && res->nr_samples <= 1) {
+			if (first_level == last_level)
+				state[7] = C_008F30_MAX_ANISO_RATIO;
+			else
+				state[7] = 0xffffffff;
+		}
 	}
 
 	/* Initialize the sampler view for FMASK. */
@@ -3318,9 +3162,12 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 				     const struct pipe_sampler_state *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct r600_common_screen *rscreen = sctx->b.screen;
 	struct si_sampler_state *rstate = CALLOC_STRUCT(si_sampler_state);
-	unsigned aniso_flag_offset = state->max_anisotropy > 1 ? 2 : 0;
 	unsigned border_color_type, border_color_index = 0;
+	unsigned max_aniso = rscreen->force_aniso >= 0 ? rscreen->force_aniso
+						       : state->max_anisotropy;
+	unsigned max_aniso_ratio = r600_tex_aniso_filter(max_aniso);
 
 	if (!rstate) {
 		return NULL;
@@ -3378,16 +3225,21 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 	rstate->val[0] = (S_008F30_CLAMP_X(si_tex_wrap(state->wrap_s)) |
 			  S_008F30_CLAMP_Y(si_tex_wrap(state->wrap_t)) |
 			  S_008F30_CLAMP_Z(si_tex_wrap(state->wrap_r)) |
-			  r600_tex_aniso_filter(state->max_anisotropy) << 9 |
+			  S_008F30_MAX_ANISO_RATIO(max_aniso_ratio) |
 			  S_008F30_DEPTH_COMPARE_FUNC(si_tex_compare(state->compare_func)) |
 			  S_008F30_FORCE_UNNORMALIZED(!state->normalized_coords) |
-			  S_008F30_DISABLE_CUBE_WRAP(!state->seamless_cube_map));
+			  S_008F30_DISABLE_CUBE_WRAP(!state->seamless_cube_map) |
+			  S_008F30_COMPAT_MODE(sctx->b.chip_class >= VI));
 	rstate->val[1] = (S_008F34_MIN_LOD(S_FIXED(CLAMP(state->min_lod, 0, 15), 8)) |
 			  S_008F34_MAX_LOD(S_FIXED(CLAMP(state->max_lod, 0, 15), 8)));
 	rstate->val[2] = (S_008F38_LOD_BIAS(S_FIXED(CLAMP(state->lod_bias, -16, 16), 8)) |
-			  S_008F38_XY_MAG_FILTER(si_tex_filter(state->mag_img_filter) | aniso_flag_offset) |
-			  S_008F38_XY_MIN_FILTER(si_tex_filter(state->min_img_filter) | aniso_flag_offset) |
-			  S_008F38_MIP_FILTER(si_tex_mipfilter(state->min_mip_filter)));
+			  S_008F38_XY_MAG_FILTER(eg_tex_filter(state->mag_img_filter, max_aniso)) |
+			  S_008F38_XY_MIN_FILTER(eg_tex_filter(state->min_img_filter, max_aniso)) |
+			  S_008F38_MIP_FILTER(si_tex_mipfilter(state->min_mip_filter)) |
+			  S_008F38_MIP_POINT_PRECLAMP(1) |
+			  S_008F38_DISABLE_LSB_CEIL(1) |
+			  S_008F38_FILTER_PREC_FIX(1) |
+			  S_008F38_ANISO_OVERRIDE(sctx->b.chip_class >= VI));
 	rstate->val[3] = S_008F3C_BORDER_COLOR_PTR(border_color_index) |
 			 S_008F3C_BORDER_COLOR_TYPE(border_color_type);
 	return rstate;
@@ -3430,7 +3282,7 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 	struct si_vertex_element *v = CALLOC_STRUCT(si_vertex_element);
 	int i;
 
-	assert(count < SI_MAX_ATTRIBS);
+	assert(count <= SI_MAX_ATTRIBS);
 	if (!v)
 		return NULL;
 
@@ -3678,6 +3530,8 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_external_atom(sctx, &sctx->b.render_cond_atom, &sctx->atoms.s.render_cond);
 	si_init_external_atom(sctx, &sctx->b.streamout.begin_atom, &sctx->atoms.s.streamout_begin);
 	si_init_external_atom(sctx, &sctx->b.streamout.enable_atom, &sctx->atoms.s.streamout_enable);
+	si_init_external_atom(sctx, &sctx->b.scissors.atom, &sctx->atoms.s.scissors);
+	si_init_external_atom(sctx, &sctx->b.viewports.atom, &sctx->atoms.s.viewports);
 
 	si_init_atom(sctx, &sctx->cache_flush, &sctx->atoms.s.cache_flush, si_emit_cache_flush);
 	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state);
@@ -3689,8 +3543,6 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_atom(sctx, &sctx->blend_color.atom, &sctx->atoms.s.blend_color, si_emit_blend_color);
 	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs);
 	si_init_atom(sctx, &sctx->clip_state.atom, &sctx->atoms.s.clip_state, si_emit_clip_state);
-	si_init_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors);
-	si_init_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports, si_emit_viewports);
 	si_init_atom(sctx, &sctx->stencil_ref.atom, &sctx->atoms.s.stencil_ref, si_emit_stencil_ref);
 
 	sctx->b.b.create_blend_state = si_create_blend_state;
@@ -3713,8 +3565,6 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->custom_blend_dcc_decompress = si_create_blend_custom(sctx, V_028808_CB_DCC_DECOMPRESS);
 
 	sctx->b.b.set_clip_state = si_set_clip_state;
-	sctx->b.b.set_scissor_states = si_set_scissor_states;
-	sctx->b.b.set_viewport_states = si_set_viewport_states;
 	sctx->b.b.set_stencil_ref = si_set_stencil_ref;
 
 	sctx->b.b.set_framebuffer_state = si_set_framebuffer_state;
@@ -3740,6 +3590,7 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.set_min_samples = si_set_min_samples;
 	sctx->b.b.set_tess_state = si_set_tess_state;
 
+	sctx->b.b.set_active_query_state = si_set_active_query_state;
 	sctx->b.set_occlusion_query_state = si_set_occlusion_query_state;
 	sctx->b.need_gfx_cs_space = si_need_gfx_cs_space;
 
@@ -4098,10 +3949,6 @@ static void si_init_config(struct si_context *sctx)
 	/* PA_SU_HARDWARE_SCREEN_OFFSET must be 0 due to hw bug on SI */
 	si_pm4_set_reg(pm4, R_028234_PA_SU_HARDWARE_SCREEN_OFFSET, 0);
 	si_pm4_set_reg(pm4, R_028820_PA_CL_NANINF_CNTL, 0);
-	si_pm4_set_reg(pm4, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, fui(1.0));
-	si_pm4_set_reg(pm4, R_028BEC_PA_CL_GB_VERT_DISC_ADJ, fui(1.0));
-	si_pm4_set_reg(pm4, R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ, fui(1.0));
-	si_pm4_set_reg(pm4, R_028BF4_PA_CL_GB_HORZ_DISC_ADJ, fui(1.0));
 	si_pm4_set_reg(pm4, R_028AC0_DB_SRESULTS_COMPARE_STATE0, 0x0);
 	si_pm4_set_reg(pm4, R_028AC4_DB_SRESULTS_COMPARE_STATE1, 0x0);
 	si_pm4_set_reg(pm4, R_028AC8_DB_PRELOAD_CONTROL, 0x0);

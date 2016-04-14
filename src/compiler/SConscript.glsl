@@ -15,14 +15,14 @@ env.Prepend(CPPPATH = [
     '#src/mesa',
     '#src/gallium/include',
     '#src/gallium/auxiliary',
-    '#src/glsl',
-    '#src/glsl/glcpp',
+    '#src/compiler/glsl',
+    '#src/compiler/glsl/glcpp',
 ])
 
 env.Prepend(LIBS = [mesautil])
 
 # Make glcpp-parse.h and glsl_parser.h reachable from the include path.
-env.Append(CPPPATH = [Dir('.').abspath, Dir('glcpp').abspath])
+env.Prepend(CPPPATH = [Dir('.').abspath, Dir('glsl').abspath])
 
 glcpp_env = env.Clone()
 glcpp_env.Append(YACCFLAGS = [
@@ -32,7 +32,7 @@ glcpp_env.Append(YACCFLAGS = [
 
 glsl_env = env.Clone()
 glsl_env.Append(YACCFLAGS = [
-    '--defines=%s' % File('glsl_parser.h').abspath,
+    '--defines=%s' % File('glsl/glsl_parser.h').abspath,
     '-p', '_mesa_glsl_',
 ])
 
@@ -40,10 +40,10 @@ glsl_env.Append(YACCFLAGS = [
 # "glsl_parser.h", causing glsl_parser.cpp to be regenerated every time
 glsl_env['YACCHXXFILESUFFIX'] = '.h'
 
-glcpp_lexer = glcpp_env.CFile('glcpp/glcpp-lex.c', 'glcpp/glcpp-lex.l')
-glcpp_parser = glcpp_env.CFile('glcpp/glcpp-parse.c', 'glcpp/glcpp-parse.y')
-glsl_lexer = glsl_env.CXXFile('glsl_lexer.cpp', 'glsl_lexer.ll')
-glsl_parser = glsl_env.CXXFile('glsl_parser.cpp', 'glsl_parser.yy')
+glcpp_lexer = glcpp_env.CFile('glsl/glcpp/glcpp-lex.c', 'glsl/glcpp/glcpp-lex.l')
+glcpp_parser = glcpp_env.CFile('glsl/glcpp/glcpp-parse.c', 'glsl/glcpp/glcpp-parse.y')
+glsl_lexer = glsl_env.CXXFile('glsl/glsl_lexer.cpp', 'glsl/glsl_lexer.ll')
+glsl_parser = glsl_env.CXXFile('glsl/glsl_parser.cpp', 'glsl/glsl_parser.yy')
 
 # common generated sources
 glsl_sources = [
@@ -66,20 +66,20 @@ if env['msvc']:
 
 # Copy these files to avoid generation object files into src/mesa/program
 env.Prepend(CPPPATH = ['#src/mesa/main'])
-env.Command('imports.c', '#src/mesa/main/imports.c', Copy('$TARGET', '$SOURCE'))
+env.Command('glsl/imports.c', '#src/mesa/main/imports.c', Copy('$TARGET', '$SOURCE'))
 # Copy these files to avoid generation object files into src/mesa/program
 env.Prepend(CPPPATH = ['#src/mesa/program'])
-env.Command('prog_hash_table.c', '#src/mesa/program/prog_hash_table.c', Copy('$TARGET', '$SOURCE'))
-env.Command('symbol_table.c', '#src/mesa/program/symbol_table.c', Copy('$TARGET', '$SOURCE'))
-env.Command('dummy_errors.c', '#src/mesa/program/dummy_errors.c', Copy('$TARGET', '$SOURCE'))
+env.Command('glsl/prog_hash_table.c', '#src/mesa/program/prog_hash_table.c', Copy('$TARGET', '$SOURCE'))
+env.Command('glsl/symbol_table.c', '#src/mesa/program/symbol_table.c', Copy('$TARGET', '$SOURCE'))
+env.Command('glsl/dummy_errors.c', '#src/mesa/program/dummy_errors.c', Copy('$TARGET', '$SOURCE'))
 
 compiler_objs = env.StaticObject(source_lists['GLSL_COMPILER_CXX_FILES'])
 
 mesa_objs = env.StaticObject([
-    'imports.c',
-    'prog_hash_table.c',
-    'symbol_table.c',
-    'dummy_errors.c',
+    'glsl/imports.c',
+    'glsl/prog_hash_table.c',
+    'glsl/symbol_table.c',
+    'glsl/dummy_errors.c',
 ])
 
 compiler_objs += mesa_objs
@@ -116,7 +116,7 @@ glsl_compiler = env.Program(
 env.Alias('glsl_compiler', glsl_compiler)
 
 glcpp = env.Program(
-    target = 'glcpp/glcpp',
-    source = ['glcpp/glcpp.c'] + mesa_objs,
+    target = 'glsl/glcpp/glcpp',
+    source = ['glsl/glcpp/glcpp.c'] + mesa_objs,
 )
 env.Alias('glcpp', glcpp)

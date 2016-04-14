@@ -183,7 +183,13 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 			ctx->has_samp = true;
 			regmask_set(&needs_sy, n->regs[0]);
 		} else if (is_load(n)) {
-			regmask_set(&needs_sy, n->regs[0]);
+			/* seems like ldlv needs (ss) bit instead??  which is odd but
+			 * makes a bunch of flat-varying tests start working on a4xx.
+			 */
+			if (n->opc == OPC_LDLV)
+				regmask_set(&needs_ss, n->regs[0]);
+			else
+				regmask_set(&needs_sy, n->regs[0]);
 		}
 
 		/* both tex/sfu appear to not always immediately consume

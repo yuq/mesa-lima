@@ -47,7 +47,7 @@ LOCAL_STATIC_LIBRARIES := libmesa_compiler
 
 LOCAL_MODULE := libmesa_glsl
 
-include $(LOCAL_PATH)/Android.gen.mk
+include $(LOCAL_PATH)/Android.glsl.gen.mk
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 

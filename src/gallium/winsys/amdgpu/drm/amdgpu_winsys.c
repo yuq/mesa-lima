@@ -256,6 +256,10 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws, int fd)
       goto fail;
    }
 
+   /* Set which chips have dedicated VRAM. */
+   ws->info.has_dedicated_vram =
+      !(ws->amdinfo.ids_flags & AMDGPU_IDS_FLAGS_FUSION);
+
    /* Set hardware information. */
    ws->info.gart_size = gtt.heap_size;
    ws->info.vram_size = vram.heap_size;

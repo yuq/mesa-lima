@@ -138,7 +138,10 @@ optimizations = [
    (('~fmax', ('fmin', a, 1.0), 0.0), ('fsat', a), '!options->lower_fsat'),
    (('fsat', a), ('fmin', ('fmax', a, 0.0), 1.0), 'options->lower_fsat'),
    (('fsat', ('fsat', a)), ('fsat', a)),
-   (('fmin', ('fmax', ('fmin', ('fmax', a, 0.0), 1.0), 0.0), 1.0), ('fmin', ('fmax', a, 0.0), 1.0)),
+   (('fmin', ('fmax', ('fmin', ('fmax', a, b), c), b), c), ('fmin', ('fmax', a, b), c)),
+   (('imin', ('imax', ('imin', ('imax', a, b), c), b), c), ('imin', ('imax', a, b), c)),
+   (('umin', ('umax', ('umin', ('umax', a, b), c), b), c), ('umin', ('umax', a, b), c)),
+   (('extract_u8', ('imin', ('imax', a, 0), 0xff), 0), ('imin', ('imax', a, 0), 0xff)),
    (('~ior', ('flt', a, b), ('flt', a, c)), ('flt', a, ('fmax', b, c))),
    (('~ior', ('flt', a, c), ('flt', b, c)), ('flt', ('fmin', a, b), c)),
    (('~ior', ('fge', a, b), ('fge', a, c)), ('fge', a, ('fmin', b, c))),
@@ -275,6 +278,14 @@ optimizations = [
    (('fmul', ('fneg', a), b), ('fneg', ('fmul', a, b))),
    (('imul', ('ineg', a), b), ('ineg', ('imul', a, b))),
 
+   # Reassociate constants in add/mul chains so they can be folded together.
+   # For now, we only handle cases where the constants are separated by
+   # a single non-constant.  We could do better eventually.
+   (('~fmul', '#a', ('fmul', b, '#c')), ('fmul', ('fmul', a, c), b)),
+   (('imul', '#a', ('imul', b, '#c')), ('imul', ('imul', a, c), b)),
+   (('~fadd', '#a', ('fadd', b, '#c')), ('fadd', ('fadd', a, c), b)),
+   (('iadd', '#a', ('iadd', b, '#c')), ('iadd', ('iadd', a, c), b)),
+
    # Misc. lowering
    (('fmod', a, b), ('fsub', a, ('fmul', b, ('ffloor', ('fdiv', a, b)))), 'options->lower_fmod'),
    (('frem', a, b), ('fsub', a, ('fmul', b, ('ftrunc', ('fdiv', a, b)))), 'options->lower_fmod'),
@@ -362,26 +373,30 @@ optimizations = [
 ]
 
 def fexp2i(exp):
-   # We assume that exp is already in range.
+   # We assume that exp is already in the range [-126, 127].
    return ('ishl', ('iadd', exp, 127), 23)
 
 def ldexp32(f, exp):
-   # First, we clamp exp to a reasonable range.  The maximum range that we
-   # need is the largest range for an exponent, ([-127, 128] if you include
-   # inf and 0) plus the number of mantissa bits in either direction to
-   # account for denormals.  This means that we need at least a range of
-   # [-150, 151].  For our implementation, however, what we really care
-   # about is that neither exp/2 nor exp-exp/2 go out of the regular range
-   # for floating-point exponents.
+   # First, we clamp exp to a reasonable range.  The maximum possible range
+   # for a normal exponent is [-126, 127] and, throwing in denormals, you get
+   # a maximum range of [-149, 127].  This means that we can potentially have
+   # a swing of +-276.  If you start with FLT_MAX, you actually have to do
+   # ldexp(FLT_MAX, -278) to get it to flush all the way to zero.  The GLSL
+   # spec, on the other hand, only requires that we handle an exponent value
+   # in the range [-126, 128].  This implementation is *mostly* correct; it
+   # handles a range on exp of [-252, 254] which allows you to create any
+   # value (including denorms if the hardware supports it) and to adjust the
+   # exponent of any normal value to anything you want.
    exp = ('imin', ('imax', exp, -252), 254)
 
    # Now we compute two powers of 2, one for exp/2 and one for exp-exp/2.
-   # While the spec technically defines ldexp as f * 2.0^exp, simply
-   # multiplying once doesn't work when denormals are involved because
-   # 2.0^exp may not be representable even though ldexp(f, exp) is (see
-   # comments above about range).  Instead, we create two powers of two and
-   # multiply by them each in turn.  That way the effective range of our
-   # exponent is doubled.
+   # (We use ishr which isn't the same for -1, but the -1 case still works
+   # since we use exp-exp/2 as the second exponent.)  While the spec
+   # technically defines ldexp as f * 2.0^exp, simply multiplying once doesn't
+   # work with denormals and doesn't allow for the full swing in exponents
+   # that you can get with normalized values.  Instead, we create two powers
+   # of two and multiply by them each in turn.  That way the effective range
+   # of our exponent is doubled.
    pow2_1 = fexp2i(('ishr', exp, 1))
    pow2_2 = fexp2i(('isub', exp, ('ishr', exp, 1)))
    return ('fmul', ('fmul', f, pow2_1), pow2_2)

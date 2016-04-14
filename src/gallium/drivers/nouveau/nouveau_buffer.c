@@ -843,6 +843,39 @@ nouveau_user_buffer_upload(struct nouveau_context *nv,
    return true;
 }
 
+/* Invalidate underlying buffer storage, reset fences, reallocate to non-busy
+ * buffer.
+ */
+void
+nouveau_buffer_invalidate(struct pipe_context *pipe,
+                          struct pipe_resource *resource)
+{
+   struct nouveau_context *nv = nouveau_context(pipe);
+   struct nv04_resource *buf = nv04_resource(resource);
+   int ref = buf->base.reference.count - 1;
+
+   /* Shared buffers shouldn't get reallocated */
+   if (unlikely(buf->base.bind & PIPE_BIND_SHARED))
+      return;
+
+   /* We can't touch persistent/coherent buffers */
+   if (buf->base.flags & (PIPE_RESOURCE_FLAG_MAP_PERSISTENT |
+                          PIPE_RESOURCE_FLAG_MAP_COHERENT))
+      return;
+
+   /* If the buffer is sub-allocated and not currently being written, just
+    * wipe the valid buffer range. Otherwise we have to create fresh
+    * storage. (We don't keep track of fences for non-sub-allocated BO's.)
+    */
+   if (buf->mm && !nouveau_buffer_busy(buf, PIPE_TRANSFER_WRITE)) {
+      util_range_set_empty(&buf->valid_buffer_range);
+   } else {
+      nouveau_buffer_reallocate(nv->screen, buf, buf->domain);
+      if (ref > 0) /* any references inside context possible ? */
+         nv->invalidate_resource_storage(nv, &buf->base, ref);
+   }
+}
+
 
 /* Scratch data allocation. */
 

@@ -54,8 +54,6 @@ static void r600_blitter_begin(struct pipe_context *ctx, enum r600_blitter_op op
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
 
-	r600_suspend_nontimer_queries(&rctx->b);
-
 	util_blitter_save_vertex_buffer_slot(rctx->blitter, rctx->vertex_buffer_state.vb);
 	util_blitter_save_vertex_elements(rctx->blitter, rctx->vertex_fetch_shader.cso);
 	util_blitter_save_vertex_shader(rctx->blitter, rctx->vs_shader);
@@ -67,8 +65,8 @@ static void r600_blitter_begin(struct pipe_context *ctx, enum r600_blitter_op op
 	util_blitter_save_rasterizer(rctx->blitter, rctx->rasterizer_state.cso);
 
 	if (op & R600_SAVE_FRAGMENT_STATE) {
-		util_blitter_save_viewport(rctx->blitter, &rctx->viewport.state[0]);
-		util_blitter_save_scissor(rctx->blitter, &rctx->scissor.scissor[0]);
+		util_blitter_save_viewport(rctx->blitter, &rctx->b.viewports.states[0]);
+		util_blitter_save_scissor(rctx->blitter, &rctx->b.scissors.states[0]);
 		util_blitter_save_fragment_shader(rctx->blitter, rctx->ps_shader);
 		util_blitter_save_blend(rctx->blitter, rctx->blend_state.cso);
 		util_blitter_save_depth_stencil_alpha(rctx->blitter, rctx->dsa_state.cso);
@@ -98,7 +96,6 @@ static void r600_blitter_end(struct pipe_context *ctx)
 	struct r600_context *rctx = (struct r600_context *)ctx;
 
 	rctx->b.render_cond_force_off = false;
-	r600_resume_nontimer_queries(&rctx->b);
 }
 
 static unsigned u_max_sample(struct pipe_resource *r)
@@ -584,7 +581,7 @@ static void r600_copy_global_buffer(struct pipe_context *ctx,
 }
 
 static void r600_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
-			      unsigned offset, unsigned size, unsigned value,
+			      uint64_t offset, uint64_t size, unsigned value,
 			      bool is_framebuffer)
 {
 	struct r600_context *rctx = (struct r600_context*)ctx;

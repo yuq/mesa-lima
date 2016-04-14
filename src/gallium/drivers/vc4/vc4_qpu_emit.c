@@ -167,6 +167,16 @@ set_last_dst_pack(struct vc4_compile *c, struct qinst *inst)
         }
 }
 
+static void
+handle_r4_qpu_write(struct vc4_compile *c, struct qinst *qinst,
+                    struct qpu_reg dst)
+{
+        if (dst.mux != QPU_MUX_R4)
+                queue(c, qpu_a_MOV(dst, qpu_r4()));
+        else if (qinst->sf)
+                queue(c, qpu_a_MOV(qpu_ra(QPU_W_NOP), qpu_r4()));
+}
+
 void
 vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 {
@@ -290,6 +300,22 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 last_vpm_read_index = qinst->src[i].index;
                                 src[i] = qpu_ra(QPU_R_VPM);
                                 break;
+
+                        case QFILE_FRAG_X:
+                                src[i] = qpu_ra(QPU_R_XY_PIXEL_COORD);
+                                break;
+                        case QFILE_FRAG_Y:
+                                src[i] = qpu_rb(QPU_R_XY_PIXEL_COORD);
+                                break;
+                        case QFILE_FRAG_REV_FLAG:
+                                src[i] = qpu_rb(QPU_R_MS_REV_FLAGS);
+                                break;
+
+                        case QFILE_TLB_COLOR_WRITE:
+                        case QFILE_TLB_COLOR_WRITE_MS:
+                        case QFILE_TLB_Z_WRITE:
+                        case QFILE_TLB_STENCIL_SETUP:
+                                unreachable("bad qir src file");
                         }
                 }
 
@@ -304,9 +330,29 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QFILE_VPM:
                         dst = qpu_ra(QPU_W_VPM);
                         break;
+
+                case QFILE_TLB_COLOR_WRITE:
+                        dst = qpu_tlbc();
+                        break;
+
+                case QFILE_TLB_COLOR_WRITE_MS:
+                        dst = qpu_tlbc_ms();
+                        break;
+
+                case QFILE_TLB_Z_WRITE:
+                        dst = qpu_ra(QPU_W_TLB_Z);
+                        break;
+
+                case QFILE_TLB_STENCIL_SETUP:
+                        dst = qpu_ra(QPU_W_TLB_STENCIL_SETUP);
+                        break;
+
                 case QFILE_VARY:
                 case QFILE_UNIF:
                 case QFILE_SMALL_IMM:
+                case QFILE_FRAG_X:
+                case QFILE_FRAG_Y:
+                case QFILE_FRAG_REV_FLAG:
                         assert(!"not reached");
                         break;
                 }
@@ -339,24 +385,8 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 abort();
                         }
 
-                        if (dst.mux != QPU_MUX_R4)
-                                queue(c, qpu_a_MOV(dst, qpu_r4()));
+                        handle_r4_qpu_write(c, qinst, dst);
 
-                        break;
-
-                case QOP_FRAG_X:
-                        queue(c, qpu_a_ITOF(dst,
-                                            qpu_ra(QPU_R_XY_PIXEL_COORD)));
-                        break;
-
-                case QOP_FRAG_Y:
-                        queue(c, qpu_a_ITOF(dst,
-                                            qpu_rb(QPU_R_XY_PIXEL_COORD)));
-                        break;
-
-                case QOP_FRAG_REV_FLAG:
-                        queue(c, qpu_a_ITOF(dst,
-                                            qpu_rb(QPU_R_MS_REV_FLAGS)));
                         break;
 
                 case QOP_MS_MASK:
@@ -374,38 +404,11 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                          */
                         break;
 
-                case QOP_TLB_STENCIL_SETUP:
-                        assert(!unpack);
-                        queue(c, qpu_a_MOV(qpu_ra(QPU_W_TLB_STENCIL_SETUP),
-                                           src[0]) | unpack);
-                        break;
-
-                case QOP_TLB_Z_WRITE:
-                        queue(c, qpu_a_MOV(qpu_ra(QPU_W_TLB_Z),
-                                           src[0]) | unpack);
-                        set_last_cond_add(c, qinst->cond);
-                        handled_qinst_cond = true;
-                        break;
-
                 case QOP_TLB_COLOR_READ:
                         queue(c, qpu_NOP());
                         *last_inst(c) = qpu_set_sig(*last_inst(c),
                                                     QPU_SIG_COLOR_LOAD);
-
-                        if (dst.mux != QPU_MUX_R4)
-                                queue(c, qpu_a_MOV(dst, qpu_r4()));
-                        break;
-
-                case QOP_TLB_COLOR_WRITE:
-                        queue(c, qpu_a_MOV(qpu_tlbc(), src[0]) | unpack);
-                        set_last_cond_add(c, qinst->cond);
-                        handled_qinst_cond = true;
-                        break;
-
-                case QOP_TLB_COLOR_WRITE_MS:
-                        queue(c, qpu_a_MOV(qpu_tlbc_ms(), src[0]));
-                        set_last_cond_add(c, qinst->cond);
-                        handled_qinst_cond = true;
+                        handle_r4_qpu_write(c, qinst, dst);
                         break;
 
                 case QOP_VARY_ADD_C:
@@ -432,8 +435,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         queue(c, qpu_NOP());
                         *last_inst(c) = qpu_set_sig(*last_inst(c),
                                                     QPU_SIG_LOAD_TMU0);
-                        if (dst.mux != QPU_MUX_R4)
-                                queue(c, qpu_a_MOV(dst, qpu_r4()));
+                        handle_r4_qpu_write(c, qinst, dst);
                         break;
 
                 default:
@@ -476,10 +478,8 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 assert(qinst->cond == QPU_COND_ALWAYS ||
                        handled_qinst_cond);
 
-                if (qinst->sf) {
-                        assert(!qir_is_multi_instruction(qinst));
+                if (qinst->sf)
                         *last_inst(c) |= QPU_SF;
-                }
         }
 
         uint32_t cycles = qpu_schedule_instructions(c);

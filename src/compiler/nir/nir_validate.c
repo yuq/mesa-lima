@@ -903,6 +903,9 @@ validate_var_decl(nir_variable *var, bool is_global, validate_state *state)
 {
    assert(is_global == nir_variable_is_global(var));
 
+   /* Must have exactly one mode set */
+   assert(util_bitcount(var->data.mode) == 1);
+
    /*
     * TODO validate some things ir_validate.cpp does (requires more GLSL type
     * support)

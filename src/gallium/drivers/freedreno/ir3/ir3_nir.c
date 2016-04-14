@@ -45,6 +45,7 @@ ir3_tgsi_to_nir(const struct tgsi_token *tokens)
 			.lower_flrp = true,
 			.lower_ffract = true,
 			.native_integers = true,
+			.vertex_id_zero_based = true,
 			.lower_extract_byte = true,
 			.lower_extract_word = true,
 	};
@@ -141,7 +142,7 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 
 	} while (progress);
 
-	OPT_V(s, nir_remove_dead_variables);
+	OPT_V(s, nir_remove_dead_variables, nir_var_local);
 
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		debug_printf("----------------------\n");

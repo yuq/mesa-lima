@@ -173,6 +173,12 @@ struct pipe_context {
                                      struct pipe_resource *resource,
                                      unsigned offset);
 
+   /**
+    * Set whether all current non-driver queries except TIME_ELAPSED are
+    * active or paused.
+    */
+   void (*set_active_query_state)(struct pipe_context *pipe, boolean enable);
+
    /*@}*/
 
    /**

@@ -469,12 +469,13 @@ nir_jump_instr_create(nir_shader *shader, nir_jump_type type)
 }
 
 nir_load_const_instr *
-nir_load_const_instr_create(nir_shader *shader, unsigned num_components)
+nir_load_const_instr_create(nir_shader *shader, unsigned num_components,
+                            unsigned bit_size)
 {
    nir_load_const_instr *instr = ralloc(shader, nir_load_const_instr);
    instr_init(&instr->instr, nir_instr_type_load_const);
 
-   nir_ssa_def_init(&instr->instr, &instr->def, num_components, 32, NULL);
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, bit_size, NULL);
 
    return instr;
 }
@@ -558,12 +559,14 @@ nir_parallel_copy_instr_create(nir_shader *shader)
 }
 
 nir_ssa_undef_instr *
-nir_ssa_undef_instr_create(nir_shader *shader, unsigned num_components)
+nir_ssa_undef_instr_create(nir_shader *shader,
+                           unsigned num_components,
+                           unsigned bit_size)
 {
    nir_ssa_undef_instr *instr = ralloc(shader, nir_ssa_undef_instr);
    instr_init(&instr->instr, nir_instr_type_ssa_undef);
 
-   nir_ssa_def_init(&instr->instr, &instr->def, num_components, 32, NULL);
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, bit_size, NULL);
 
    return instr;
 }
@@ -691,8 +694,10 @@ nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref)
       tail = tail->child;
    }
 
+   unsigned bit_size = glsl_get_bit_size(glsl_get_base_type(tail->type));
    nir_load_const_instr *load =
-      nir_load_const_instr_create(shader, glsl_get_vector_elements(tail->type));
+      nir_load_const_instr_create(shader, glsl_get_vector_elements(tail->type),
+                                  bit_size);
 
    matrix_offset *= load->def.num_components;
    for (unsigned i = 0; i < load->def.num_components; i++) {
@@ -701,6 +706,9 @@ nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref)
       case GLSL_TYPE_INT:
       case GLSL_TYPE_UINT:
          load->value.u32[i] = constant->value.u[matrix_offset + i];
+         break;
+      case GLSL_TYPE_DOUBLE:
+         load->value.f64[i] = constant->value.d[matrix_offset + i];
          break;
       case GLSL_TYPE_BOOL:
          load->value.u32[i] = constant->value.b[matrix_offset + i] ?

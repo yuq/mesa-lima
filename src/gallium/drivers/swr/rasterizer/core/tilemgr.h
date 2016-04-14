@@ -140,9 +140,6 @@ public:
         x = (tileID >> 16) & 0xffff;
     }
 
-    void *operator new(size_t size);
-    void operator delete (void *p);
-
 private:
     CachingArena& mArena;
     std::unordered_map<uint32_t, MacroTileQueue> mTiles;
@@ -229,9 +226,6 @@ public:
         return mpTaskData;
     }
 
-    void *operator new(size_t size);
-    void operator delete (void *p);
-
     void* mpTaskData{ nullptr };        // The API thread will set this up and the callback task function will interpet this.
 
     OSALIGNLINE(volatile LONG) mTasksAvailable{ 0 };
@@ -272,7 +266,7 @@ class HotTileMgr
 public:
     HotTileMgr()
     {
-        memset(&mHotTiles[0][0], 0, sizeof(mHotTiles));
+        memset(mHotTiles, 0, sizeof(mHotTiles));
 
         // cache hottile size
         for (uint32_t i = SWR_ATTACHMENT_COLOR0; i <= SWR_ATTACHMENT_COLOR7; ++i)

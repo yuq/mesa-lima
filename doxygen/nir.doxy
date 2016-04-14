@@ -5,45 +5,46 @@
 #---------------------------------------------------------------------------
 # General configuration options
 #---------------------------------------------------------------------------
-PROJECT_NAME           = "Mesa Vertex and Fragment Program code"
+PROJECT_NAME           = "Mesa NIR module"
 #---------------------------------------------------------------------------
-# configuration options related to the input files
+# Configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = ../src/mesa/shader/
-FILE_PATTERNS          = *.c *.h
+INPUT                  = ../src/compiler/nir
+FILE_PATTERNS          = *.c *.cpp *.h
 RECURSIVE              = NO
-EXCLUDE                = 
-EXCLUDE_PATTERNS       = 
-EXAMPLE_PATH           = 
-EXAMPLE_PATTERNS       = 
+EXCLUDE                =
+EXCLUDE_PATTERNS       =
+EXAMPLE_PATH           =
+EXAMPLE_PATTERNS       =
 EXAMPLE_RECURSIVE      = NO
-IMAGE_PATH             = 
-INPUT_FILTER           = 
+IMAGE_PATH             =
+INPUT_FILTER           =
 FILTER_SOURCE_FILES    = NO
 #---------------------------------------------------------------------------
-# configuration options related to the HTML output
+# Configuration options related to the HTML output
 #---------------------------------------------------------------------------
-HTML_OUTPUT            = shader
+HTML_OUTPUT            = nir
 #---------------------------------------------------------------------------
-# Configuration options related to the preprocessor   
+# Configuration options related to the preprocessor
 #---------------------------------------------------------------------------
 ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = NO
 EXPAND_ONLY_PREDEF     = NO
 SEARCH_INCLUDES        = YES
 INCLUDE_PATH           = ../include/
-INCLUDE_FILE_PATTERNS  = 
-PREDEFINED             = 
-EXPAND_AS_DEFINED      = 
+INCLUDE_FILE_PATTERNS  =
+PREDEFINED             =
+EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES
 #---------------------------------------------------------------------------
-# Configuration::addtions related to external references   
+# Configuration::additions related to external references
 #---------------------------------------------------------------------------
-TAGFILES               = main.tag=../core \
+TAGFILES               = glsl.tag=../glsl \
+                         main.tag=../main \
                          math.tag=../math \
-                         tnl_dd.tag=../tnl_dd \
                          swrast.tag=../swrast \
                          swrast_setup.tag=../swrast_setup \
                          tnl.tag=../tnl \
-                         vbo.tag=vbo
-GENERATE_TAGFILE       = swrast.tag
+                         tnl_dd.tag=../tnl_dd \
+                         vbo.tag=../vbo
+GENERATE_TAGFILE       = nir.tag

@@ -102,7 +102,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 
 bool r600_init_resource(struct r600_common_screen *rscreen,
 			struct r600_resource *res,
-			unsigned size, unsigned alignment,
+			uint64_t size, unsigned alignment,
 			bool use_reusable_pool)
 {
 	struct r600_texture *rtex = (struct r600_texture*)res;
@@ -160,8 +160,17 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 	    rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D) {
 		res->domains = RADEON_DOMAIN_VRAM;
 		flags &= ~RADEON_FLAG_CPU_ACCESS;
-		flags |= RADEON_FLAG_NO_CPU_ACCESS;
+		flags |= RADEON_FLAG_NO_CPU_ACCESS |
+			 RADEON_FLAG_GTT_WC;
 	}
+
+	/* If VRAM is just stolen system memory, allow both VRAM and GTT,
+	 * whichever has free space. If a buffer is evicted from VRAM to GTT,
+	 * it will stay there.
+	 */
+	if (!rscreen->info.has_dedicated_vram &&
+	    res->domains == RADEON_DOMAIN_VRAM)
+		res->domains = RADEON_DOMAIN_VRAM_GTT;
 
 	if (rscreen->debug_flags & DBG_NO_WC)
 		flags &= ~RADEON_FLAG_GTT_WC;
@@ -192,7 +201,7 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 	res->TC_L2_dirty = false;
 
 	if (rscreen->debug_flags & DBG_VM && res->b.b.target == PIPE_BUFFER) {
-		fprintf(stderr, "VM start=0x%"PRIX64"  end=0x%"PRIX64" | Buffer %u bytes\n",
+		fprintf(stderr, "VM start=0x%"PRIX64"  end=0x%"PRIX64" | Buffer %"PRIu64" bytes\n",
 			res->gpu_address, res->gpu_address + res->buf->size,
 			res->buf->size);
 	}

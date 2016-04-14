@@ -11,6 +11,7 @@ C_SOURCES := \
 	r600_query.h \
 	r600_streamout.c \
 	r600_texture.c \
+	r600_viewport.c \
 	radeon_uvd.c \
 	radeon_uvd.h \
 	radeon_vce_40_2_2.c \

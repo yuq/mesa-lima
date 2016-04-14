@@ -156,14 +156,8 @@ static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
 void r600_preflush_suspend_features(struct r600_common_context *ctx)
 {
 	/* suspend queries */
-	if (ctx->num_cs_dw_nontimer_queries_suspend) {
-		/* Since non-timer queries are suspended during blits,
-		 * we have to guard against double-suspends. */
-		r600_suspend_nontimer_queries(ctx);
-		ctx->nontimer_queries_suspended_by_flush = true;
-	}
-	if (!LIST_IS_EMPTY(&ctx->active_timer_queries))
-		r600_suspend_timer_queries(ctx);
+	if (!LIST_IS_EMPTY(&ctx->active_queries))
+		r600_suspend_queries(ctx);
 
 	ctx->streamout.suspended = false;
 	if (ctx->streamout.begin_emitted) {
@@ -180,12 +174,8 @@ void r600_postflush_resume_features(struct r600_common_context *ctx)
 	}
 
 	/* resume queries */
-	if (!LIST_IS_EMPTY(&ctx->active_timer_queries))
-		r600_resume_timer_queries(ctx);
-	if (ctx->nontimer_queries_suspended_by_flush) {
-		ctx->nontimer_queries_suspended_by_flush = false;
-		r600_resume_nontimer_queries(ctx);
-	}
+	if (!LIST_IS_EMPTY(&ctx->active_queries))
+		r600_resume_queries(ctx);
 }
 
 static void r600_flush_from_st(struct pipe_context *ctx,
@@ -296,6 +286,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	LIST_INITHEAD(&rctx->texture_buffers);
 
 	r600_init_context_texture_functions(rctx);
+	r600_init_viewport_functions(rctx);
 	r600_streamout_init(rctx);
 	r600_query_init(rctx);
 	cayman_init_msaa(&rctx->b);
@@ -898,6 +889,13 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->chip_class = rscreen->info.chip_class;
 	rscreen->debug_flags = debug_get_flags_option("R600_DEBUG", common_debug_options, 0);
 
+	rscreen->force_aniso = MIN2(16, debug_get_num_option("R600_TEX_ANISO", -1));
+	if (rscreen->force_aniso >= 0) {
+		printf("radeon: Forcing anisotropy filter to %ix\n",
+		       /* round down to a power of two */
+		       1 << util_logbase2(rscreen->force_aniso));
+	}
+
 	util_format_s3tc_init();
 	pipe_mutex_init(rscreen->aux_context_lock);
 	pipe_mutex_init(rscreen->gpu_load_mutex);
@@ -973,7 +971,7 @@ bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 }
 
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
-			      unsigned offset, unsigned size, unsigned value,
+			      uint64_t offset, uint64_t size, unsigned value,
 			      bool is_framebuffer)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)rscreen->aux_context;

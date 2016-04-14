@@ -120,7 +120,7 @@ remove_dead_vars(struct exec_list *var_list, struct set *live)
 }
 
 bool
-nir_remove_dead_variables(nir_shader *shader, nir_variable_mode mode)
+nir_remove_dead_variables(nir_shader *shader, nir_variable_mode modes)
 {
    bool progress = false;
    struct set *live =
@@ -128,22 +128,22 @@ nir_remove_dead_variables(nir_shader *shader, nir_variable_mode mode)
 
    add_var_use_shader(shader, live);
 
-   if (mode == nir_var_uniform || mode == nir_var_all)
+   if (modes & nir_var_uniform)
       progress = remove_dead_vars(&shader->uniforms, live) || progress;
 
-   if (mode == nir_var_shader_in || mode == nir_var_all)
+   if (modes & nir_var_shader_in)
       progress = remove_dead_vars(&shader->inputs, live) || progress;
 
-   if (mode == nir_var_shader_out || mode == nir_var_all)
+   if (modes & nir_var_shader_out)
       progress = remove_dead_vars(&shader->outputs, live) || progress;
 
-   if (mode == nir_var_global || mode == nir_var_all)
+   if (modes & nir_var_global)
       progress = remove_dead_vars(&shader->globals, live) || progress;
 
-   if (mode == nir_var_system_value || mode == nir_var_all)
+   if (modes & nir_var_system_value)
       progress = remove_dead_vars(&shader->system_values, live) || progress;
 
-   if (mode == nir_var_local || mode == nir_var_all) {
+   if (modes & nir_var_local) {
       nir_foreach_function(shader, function) {
          if (function->impl) {
             if (remove_dead_vars(&function->impl->locals, live)) {

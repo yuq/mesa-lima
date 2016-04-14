@@ -442,6 +442,37 @@ instr_cp(struct ir3_instruction *instr)
 		instr_cp(instr->address);
 		ir3_instr_set_address(instr, eliminate_output_mov(instr->address));
 	}
+
+	/* we can end up with extra cmps.s from frontend, which uses a
+	 *
+	 *    cmps.s p0.x, cond, 0
+	 *
+	 * as a way to mov into the predicate register.  But frequently 'cond'
+	 * is itself a cmps.s/cmps.f/cmps.u.  So detect this special case and
+	 * just re-write the instruction writing predicate register to get rid
+	 * of the double cmps.
+	 */
+	if ((instr->opc == OPC_CMPS_S) &&
+			(instr->regs[0]->num == regid(REG_P0, 0)) &&
+			ssa(instr->regs[1]) &&
+			(instr->regs[2]->flags & IR3_REG_IMMED) &&
+			(instr->regs[2]->iim_val == 0)) {
+		struct ir3_instruction *cond = ssa(instr->regs[1]);
+		switch (cond->opc) {
+		case OPC_CMPS_S:
+		case OPC_CMPS_F:
+		case OPC_CMPS_U:
+			instr->opc   = cond->opc;
+			instr->flags = cond->flags;
+			instr->cat2  = cond->cat2;
+			instr->address = cond->address;
+			instr->regs[1] = cond->regs[1];
+			instr->regs[2] = cond->regs[2];
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 void

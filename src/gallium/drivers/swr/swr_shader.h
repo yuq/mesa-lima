@@ -25,36 +25,56 @@
 
 class swr_vertex_shader;
 class swr_fragment_shader;
-class swr_jit_key;
+class swr_jit_fs_key;
+class swr_jit_vs_key;
 
 PFN_VERTEX_FUNC
-swr_compile_vs(struct pipe_context *ctx, swr_vertex_shader *swr_vs);
+swr_compile_vs(struct swr_context *ctx, swr_jit_vs_key &key);
 
 PFN_PIXEL_KERNEL
-swr_compile_fs(struct swr_context *ctx, swr_jit_key &key);
+swr_compile_fs(struct swr_context *ctx, swr_jit_fs_key &key);
 
-void swr_generate_fs_key(struct swr_jit_key &key,
+void swr_generate_fs_key(struct swr_jit_fs_key &key,
                          struct swr_context *ctx,
                          swr_fragment_shader *swr_fs);
 
-struct swr_jit_key {
-   unsigned nr_cbufs;
-   unsigned light_twoside;
-   ubyte vs_output_semantic_name[PIPE_MAX_SHADER_OUTPUTS];
-   ubyte vs_output_semantic_idx[PIPE_MAX_SHADER_OUTPUTS];
+void swr_generate_vs_key(struct swr_jit_vs_key &key,
+                         struct swr_context *ctx,
+                         swr_vertex_shader *swr_vs);
+
+struct swr_jit_sampler_key {
    unsigned nr_samplers;
    unsigned nr_sampler_views;
    struct swr_sampler_static_state sampler[PIPE_MAX_SHADER_SAMPLER_VIEWS];
 };
 
+struct swr_jit_fs_key : swr_jit_sampler_key {
+   unsigned nr_cbufs;
+   unsigned light_twoside;
+   unsigned flatshade;
+   ubyte vs_output_semantic_name[PIPE_MAX_SHADER_OUTPUTS];
+   ubyte vs_output_semantic_idx[PIPE_MAX_SHADER_OUTPUTS];
+};
+
+struct swr_jit_vs_key : swr_jit_sampler_key {
+};
+
 namespace std
 {
-template <> struct hash<swr_jit_key> {
-   std::size_t operator()(const swr_jit_key &k) const
+template <> struct hash<swr_jit_fs_key> {
+   std::size_t operator()(const swr_jit_fs_key &k) const
+   {
+      return util_hash_crc32(&k, sizeof(k));
+   }
+};
+
+template <> struct hash<swr_jit_vs_key> {
+   std::size_t operator()(const swr_jit_vs_key &k) const
    {
       return util_hash_crc32(&k, sizeof(k));
    }
 };
 };
 
-bool operator==(const swr_jit_key &lhs, const swr_jit_key &rhs);
+bool operator==(const swr_jit_fs_key &lhs, const swr_jit_fs_key &rhs);
+bool operator==(const swr_jit_vs_key &lhs, const swr_jit_vs_key &rhs);

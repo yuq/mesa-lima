@@ -1,3 +1,4 @@
+brw_nir_trig_workarounds.c
 i965_symbols_test
 test_eu_compact
 test_vec4_copy_propagation

@@ -1202,11 +1202,11 @@
 #define   G_030014_LAST_ARRAY(x)                       (((x) >> 17) & 0x1FFF)
 #define   C_030014_LAST_ARRAY                          0xC001FFFF
 #define R_030018_SQ_TEX_RESOURCE_WORD6_0             0x030018
-/* FMASK_BANK_HEIGHT and MAX_ANISO share the first two bits.
+/* FMASK_BANK_HEIGHT and MAX_ANISO_RATIO share the first two bits.
  * The former is only used with MSAA textures. */
-#define   S_030018_MAX_ANISO(x)                        (((x) & 0x7) << 0)
-#define   G_030018_MAX_ANISO(x)                        (((x) >> 0) & 0x7)
-#define   C_030018_MAX_ANISO                           0xFFFFFFF8
+#define   S_030018_MAX_ANISO_RATIO(x)                  (((x) & 0x7) << 0)
+#define   G_030018_MAX_ANISO_RATIO(x)                  (((x) >> 0) & 0x7)
+#define   C_030018_MAX_ANISO_RATIO                     0xFFFFFFF8
 #define   S_030018_FMASK_BANK_HEIGHT(x)                (((x) & 0x3) << 0)
 #define   S_030018_PERF_MODULATION(x)                  (((x) & 0x7) << 3)
 #define   G_030018_PERF_MODULATION(x)                  (((x) >> 3) & 0x7)
@@ -1344,9 +1344,9 @@
 #define   S_03C000_MIP_FILTER(x)                       (((x) & 0x3) << 15)
 #define   G_03C000_MIP_FILTER(x)                       (((x) >> 15) & 0x3)
 #define   C_03C000_MIP_FILTER                          0xFFFE7FFF
-#define   S_03C000_MAX_ANISO(x)                        (((x) & 0x7) << 17)
-#define   G_03C000_MAX_ANISO(x)                        (((x) >> 17) & 0x7)
-#define   C_03C000_MAX_ANISO                           0xFFF1FFFF
+#define   S_03C000_MAX_ANISO_RATIO(x)                  (((x) & 0x7) << 17)
+#define   G_03C000_MAX_ANISO_RATIO(x)                  (((x) >> 17) & 0x7)
+#define   C_03C000_MAX_ANISO_RATIO                     0xFFF1FFFF
 #define   S_03C000_BORDER_COLOR_TYPE(x)                (((x) & 0x3) << 20)
 #define   G_03C000_BORDER_COLOR_TYPE(x)                (((x) >> 20) & 0x3)
 #define   C_03C000_BORDER_COLOR_TYPE                   0xFFCFFFFF
@@ -1735,7 +1735,7 @@
 #define   S_028000_COPY_SAMPLE(x)                      (((x) & 0x7) << 8)
 #define   S_028000_COLOR_DISABLE(x)                    (((x) & 0x1) << 12)
 #define R_028004_DB_COUNT_CONTROL                    0x00028004
-#define   S_028004_ZPASS_INCREMENT_DISABLE        (((x) & 0x1) << 0)
+#define   S_028004_ZPASS_INCREMENT_DISABLE(x)     (((x) & 0x1) << 0)
 #define   S_028004_PERFECT_ZPASS_COUNTS(x)        (((x) & 0x1) << 1)
 #define   S_028004_SAMPLE_RATE(x)                 (((x) & 0x7) << 4) /* cayman only */
 #define R_028008_DB_DEPTH_VIEW                       0x00028008
