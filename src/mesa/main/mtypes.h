@@ -2662,6 +2662,10 @@ struct gl_shader_program_data
    struct gl_active_atomic_buffer *AtomicBuffers;
    unsigned NumAtomicBuffers;
 
+   /* Shader cache variables used during restore */
+   unsigned NumUniformDataSlots;
+   union gl_constant_value *UniformDataSlots;
+
    /** List of all active resources after linking. */
    struct gl_program_resource *ProgramResourceList;
    unsigned NumProgramResourceList;

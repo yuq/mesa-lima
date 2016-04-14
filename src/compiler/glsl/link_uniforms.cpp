@@ -1265,6 +1265,10 @@ link_assign_uniform_storage(struct gl_context *ctx,
 
    link_setup_uniform_remap_tables(ctx, prog);
 
+   /* Set shader cache fields */
+   prog->data->NumUniformDataSlots = num_data_slots;
+   prog->data->UniformDataSlots = data;
+
    link_set_uniform_initializers(prog, boolean_true);
 }
 
