@@ -22,7 +22,7 @@
 include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
-AM_CXXFLAGS = $(GALLIUM_DRIVER_CFLAGS)
+AM_CXXFLAGS = $(GALLIUM_DRIVER_CFLAGS) -std=c++11
 
 noinst_LTLIBRARIES = libmesaswr.la
 
@@ -30,7 +30,8 @@ libmesaswr_la_SOURCES = $(LOADER_SOURCES)
 
 COMMON_CXXFLAGS = \
 	$(GALLIUM_DRIVER_CFLAGS) \
-	$(LLVM_CFLAGS) \
+	$(LLVM_CXXFLAGS) \
+	-std=c++11 \
 	-I$(builddir)/rasterizer/scripts \
 	-I$(builddir)/rasterizer/jitter \
 	-I$(srcdir)/rasterizer \
