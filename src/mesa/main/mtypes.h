@@ -1927,6 +1927,9 @@ struct gl_program
 
    bool is_arb_asm; /** Is this an ARB assembly-style program */
 
+   /** Is this program written to on disk shader cache */
+   bool program_written_to_cache;
+
    GLbitfield64 SecondaryOutputsWritten; /**< Subset of OutputsWritten outputs written with non-zero index. */
    GLbitfield TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];  /**< TEXTURE_x_BIT bitmask */
    GLbitfield SamplersUsed;   /**< Bitfield of which samplers are used */
@@ -2384,6 +2387,7 @@ struct gl_shader
    GLuint Name;  /**< AKA the handle */
    GLint RefCount;  /**< Reference count */
    GLchar *Label;   /**< GL_KHR_debug */
+   unsigned char sha1[20]; /**< SHA1 hash of pre-processed source */
    GLboolean DeletePending;
    GLboolean CompileStatus;
    bool IsES;              /**< True if this shader uses GLSL ES */
@@ -2648,6 +2652,9 @@ struct gl_program_resource
 struct gl_shader_program_data
 {
    GLint RefCount;  /**< Reference count */
+
+   /** SHA1 hash of linked shader program */
+   unsigned char sha1[20];
 
    unsigned NumUniformStorage;
    unsigned NumHiddenUniforms;
@@ -4645,6 +4652,8 @@ struct gl_context
     * Stores the arguments to glPrimitiveBoundingBox
     */
    GLfloat PrimitiveBoundingBox[8];
+
+   struct disk_cache *Cache;
 };
 
 /**
