@@ -99,7 +99,7 @@ def unit_test(env, test_name, program_target, args=None):
     cmd = ' '.join(cmd)
 
     # http://www.scons.org/wiki/UnitTests
-    action = SCons.Action.Action(cmd, "  Running %s ..." % test_name)
+    action = SCons.Action.Action(cmd, "  Running $SOURCE ...")
     alias = env.Alias(test_name, program_target, action)
     env.AlwaysBuild(alias)
     env.Depends('check', alias)
