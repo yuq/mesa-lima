@@ -1102,6 +1102,32 @@ _mesa_legal_texture_dimensions(struct gl_context *ctx, GLenum target,
    }
 }
 
+static bool
+error_check_subtexture_negative_dimensions(struct gl_context *ctx,
+                                           GLuint dims,
+                                           GLsizei subWidth,
+                                           GLsizei subHeight,
+                                           GLsizei subDepth,
+                                           const char *func)
+{
+   /* Check size */
+   if (subWidth < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(width=%d)", func, subWidth);
+      return true;
+   }
+
+   if (dims > 1 && subHeight < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(height=%d)", func, subHeight);
+      return true;
+   }
+
+   if (dims > 2 && subDepth < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(depth=%d)", func, subDepth);
+      return true;
+   }
+
+   return false;
+}
 
 /**
  * Do error checking of xoffset, yoffset, zoffset, width, height and depth
@@ -1118,25 +1144,6 @@ error_check_subtexture_dimensions(struct gl_context *ctx, GLuint dims,
 {
    const GLenum target = destImage->TexObject->Target;
    GLuint bw, bh, bd;
-
-   /* Check size */
-   if (subWidth < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "%s(width=%d)", func, subWidth);
-      return GL_TRUE;
-   }
-
-   if (dims > 1 && subHeight < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "%s(height=%d)", func, subHeight);
-      return GL_TRUE;
-   }
-
-   if (dims > 2 && subDepth < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "%s(depth=%d)", func, subDepth);
-      return GL_TRUE;
-   }
 
    /* check xoffset and width */
    if (xoffset < - (GLint) destImage->Border) {
@@ -2104,6 +2111,12 @@ texsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
       return GL_TRUE;
    }
 
+   if (error_check_subtexture_negative_dimensions(ctx, dimensions,
+                                                  width, height, depth,
+                                                  callerName)) {
+      return GL_TRUE;
+   }
+
    texImage = _mesa_select_tex_image(texObj, target, level);
    if (!texImage) {
       /* non-existant texture level */
@@ -2494,6 +2507,11 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
       /* destination image does not exist */
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(invalid texture image)", caller);
+      return GL_TRUE;
+   }
+
+   if (error_check_subtexture_negative_dimensions(ctx, dimensions,
+                                                  width, height, 1, caller)) {
       return GL_TRUE;
    }
 
@@ -4384,6 +4402,12 @@ compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(format=%s cannot be updated)",
                   callerName, _mesa_enum_to_string(format));
+      return GL_TRUE;
+   }
+
+   if (error_check_subtexture_negative_dimensions(ctx, dims,
+                                                  width, height, depth,
+                                                  callerName)) {
       return GL_TRUE;
    }
 
