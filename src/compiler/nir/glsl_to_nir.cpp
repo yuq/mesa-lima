@@ -391,7 +391,6 @@ nir_visitor::visit(ir_variable *ir)
    }
 
    var->data.index = ir->data.index;
-   var->data.descriptor_set = 0;
    var->data.binding = ir->data.binding;
    var->data.offset = ir->data.offset;
    var->data.image.read_only = ir->data.image_read_only;
