@@ -49,3 +49,16 @@ const float MultisampleTraits<SWR_MULTISAMPLE_16X>::samplePosX[16]
 {0.5625, 0.4375, 0.3125, 0.7500, 0.1875, 0.6250, 0.8125, 0.6875, 0.3750, 0.5000, 0.2500, 0.1250, 0.0000, 0.9375, 0.8750, 0.0625};
 const float MultisampleTraits<SWR_MULTISAMPLE_16X>::samplePosY[16]
 {0.5625, 0.3125, 0.6250, 0.4375, 0.3750, 0.8125, 0.6875, 0.1875, 0.8750, 0.0625, 0.1250, 0.7500, 0.5000, 0.2500, 0.9375, 0.0000};
+
+const float MultisampleTraits<SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN>::samplePosX{ 0.5f };
+const float MultisampleTraits<SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN>::samplePosY{ 0.5f };
+const float MultisampleTraits<SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>::samplePosX[2]{ 0.5f, 0.5f};
+const float MultisampleTraits<SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>::samplePosY[2]{ 0.5f, 0.5f};
+const float MultisampleTraits<SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>::samplePosX[4]{ 0.5f, 0.5f, 0.5f, 0.5f};
+const float MultisampleTraits<SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>::samplePosY[4]{ 0.5f, 0.5f, 0.5f, 0.5f };
+const float MultisampleTraits<SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>::samplePosX[8]{ 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
+const float MultisampleTraits<SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>::samplePosY[8]{ 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
+const float MultisampleTraits<SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>::samplePosX[16]
+{ 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
+const float MultisampleTraits<SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>::samplePosY[16]
+{ 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };

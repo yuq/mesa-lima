@@ -54,7 +54,7 @@ SWR_MULTISAMPLE_COUNT GetSampleCount(uint32_t numSamples)
 // hardcoded offsets based on Direct3d standard multisample positions
 // 8 x 8 pixel grid ranging from (0, 0) to (15, 15), with (0, 0) = UL pixel corner
 // coords are 0.8 fixed point offsets from (0, 0)
-template<SWR_MULTISAMPLE_COUNT sampleCount>
+template<SWR_MULTISAMPLE_COUNT sampleCount, SWR_MSAA_SAMPLE_PATTERN samplePattern = SWR_MSAA_STANDARD_PATTERN>
 struct MultisampleTraits
 {
     INLINE static __m128i vXi(uint32_t sampleNum) = delete;
@@ -74,7 +74,7 @@ struct MultisampleTraits
 };
 
 template<>
-struct MultisampleTraits<SWR_MULTISAMPLE_1X>
+struct MultisampleTraits<SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN>
 {
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
@@ -143,10 +143,74 @@ struct MultisampleTraits<SWR_MULTISAMPLE_1X>
     static const float samplePosX;
     static const float samplePosY;
     static const uint32_t numSamples = 1;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_1X;
+    static const uint32_t numCoverageSamples = 1; 
 };
 
 template<>
-struct MultisampleTraits<SWR_MULTISAMPLE_2X>
+struct MultisampleTraits<SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN>
+{
+    INLINE static __m128i vXi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i vYi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static simdscalar vX(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static simdscalar vY(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static float X(uint32_t sampleNum) {return 0.5f;};
+    INLINE static float Y(uint32_t sampleNum) {return 0.5f;};
+
+    INLINE static __m128i TileSampleOffsetsX()
+    {
+        // BR,            BL,           UR,            UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i TileSampleOffsetsY()
+    {
+        // BR,             BL,             UR,          UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static uint32_t RasterTileColorOffset(uint32_t sampleNum)
+    {
+        return 0;
+    }
+
+    INLINE static uint32_t RasterTileDepthOffset(uint32_t sampleNum)
+    {
+        return 0;
+    }
+
+    INLINE static uint32_t RasterTileStencilOffset(uint32_t sampleNum)
+    {
+        return 0;
+    }
+
+    INLINE static simdscalari FullSampleMask(){return _simd_set1_epi32(0x1);};
+    
+    static const uint32_t numSamples = 1;
+    static const float samplePosX;
+    static const float samplePosY;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_1X;
+    static const uint32_t numCoverageSamples = 1;
+};
+
+template<>
+struct MultisampleTraits<SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN>
 {
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
@@ -238,10 +302,92 @@ struct MultisampleTraits<SWR_MULTISAMPLE_2X>
     static const float samplePosX[2];
     static const float samplePosY[2];
     static const uint32_t numSamples = 2;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_2X;
+    static const uint32_t numCoverageSamples = 2;
 };
 
 template<>
-struct MultisampleTraits<SWR_MULTISAMPLE_4X>
+struct MultisampleTraits<SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>
+{
+    INLINE static __m128i vXi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i vYi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static simdscalar vX(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static simdscalar vY(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static float X(uint32_t sampleNum) {return 0.5f;};
+    INLINE static float Y(uint32_t sampleNum) {return 0.5f;};
+
+    INLINE static __m128i TileSampleOffsetsX()
+    {
+        // BR,            BL,           UR,            UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i TileSampleOffsetsY()
+    {
+        // BR,             BL,             UR,          UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static uint32_t RasterTileColorOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileColorOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8)
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileColorOffsets[sampleNum];
+    }
+
+    INLINE static uint32_t RasterTileDepthOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileDepthOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8)
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileDepthOffsets[sampleNum];
+    }
+
+    INLINE static uint32_t RasterTileStencilOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileStencilOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8)
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileStencilOffsets[sampleNum];
+    }
+
+    INLINE static simdscalari FullSampleMask()
+    {
+         static const simdscalari mask =_simd_set1_epi32(0x3);
+         return mask;
+    }
+    static const uint32_t numSamples = 2;
+    static const float samplePosX[2];
+    static const float samplePosY[2];
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_2X;
+    static const uint32_t numCoverageSamples = 1;
+};
+
+template<>
+struct MultisampleTraits<SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN>
 {
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
@@ -343,10 +489,98 @@ struct MultisampleTraits<SWR_MULTISAMPLE_4X>
     static const float samplePosX[4];
     static const float samplePosY[4];
     static const uint32_t numSamples = 4;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_4X;
+    static const uint32_t numCoverageSamples = 4;
 };
 
 template<>
-struct MultisampleTraits<SWR_MULTISAMPLE_8X>
+struct MultisampleTraits<SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>
+{
+    INLINE static __m128i vXi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i vYi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static simdscalar vX(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static simdscalar vY(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static float X(uint32_t sampleNum) {return 0.5f;};
+    INLINE static float Y(uint32_t sampleNum) {return 0.5f;};
+
+    INLINE static __m128i TileSampleOffsetsX()
+    {
+        // BR,            BL,           UR,            UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i TileSampleOffsetsY()
+    {
+        // BR,             BL,             UR,          UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static uint32_t RasterTileColorOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileColorOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8),
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 2,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 3,
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileColorOffsets[sampleNum];
+    }
+
+    INLINE static uint32_t RasterTileDepthOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileDepthOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8),
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 2,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 3,
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileDepthOffsets[sampleNum];
+    }
+
+    INLINE static uint32_t RasterTileStencilOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileStencilOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8),
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 2,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 3,
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileStencilOffsets[sampleNum];
+    }
+
+    INLINE static simdscalari FullSampleMask()
+    {
+        static const simdscalari mask = _simd_set1_epi32(0xF);
+        return mask;
+    }
+    static const uint32_t numSamples = 4;
+    static const float samplePosX[4];
+    static const float samplePosY[4];
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_4X;
+    static const uint32_t numCoverageSamples = 1;
+};
+
+template<>
+struct MultisampleTraits<SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN>
 {
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
@@ -464,10 +698,110 @@ struct MultisampleTraits<SWR_MULTISAMPLE_8X>
     static const float samplePosX[8];
     static const float samplePosY[8];
     static const uint32_t numSamples = 8;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_8X;
+    static const uint32_t numCoverageSamples = 8;
 };
 
 template<>
-struct MultisampleTraits<SWR_MULTISAMPLE_16X>
+struct MultisampleTraits<SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>
+{
+    INLINE static __m128i vXi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i vYi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static simdscalar vX(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static simdscalar vY(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static float X(uint32_t sampleNum) {return 0.5f;};
+    INLINE static float Y(uint32_t sampleNum) {return 0.5f;};
+
+    INLINE static __m128i TileSampleOffsetsX()
+    {
+        // BR,            BL,           UR,            UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i TileSampleOffsetsY()
+    {
+        // BR,             BL,             UR,          UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static uint32_t RasterTileColorOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileColorOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8),
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 2,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 3,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 4,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 5,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 6,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 7,
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileColorOffsets[sampleNum];
+    }
+
+    INLINE static uint32_t RasterTileDepthOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileDepthOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8),
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 2,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 3,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 4,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 5,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 6,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 7,
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileDepthOffsets[sampleNum];
+    }
+
+    INLINE static uint32_t RasterTileStencilOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileStencilOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8),
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 2,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 3,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 4,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 5,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 6,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 7,
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileStencilOffsets[sampleNum];
+    }
+
+    INLINE static simdscalari FullSampleMask()
+    {
+        static const simdscalari mask = _simd_set1_epi32(0xFF);
+        return mask;
+    }
+    static const uint32_t numSamples = 8;
+    static const float samplePosX[8];
+    static const float samplePosY[8];
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_8X;
+    static const uint32_t numCoverageSamples = 1;
+};
+
+template<>
+struct MultisampleTraits<SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN>
 {
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
@@ -617,4 +951,128 @@ struct MultisampleTraits<SWR_MULTISAMPLE_16X>
     static const float samplePosX[16];
     static const float samplePosY[16];
     static const uint32_t numSamples = 16;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_16X;
+    static const uint32_t numCoverageSamples = 16;
+};
+
+template<>
+struct MultisampleTraits<SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>
+{
+    INLINE static __m128i vXi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i vYi(uint32_t sampleNum)
+    {
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static simdscalar vX(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static simdscalar vY(uint32_t sampleNum)
+    {
+        return _simd_set1_ps(0.5f);
+    }
+
+    INLINE static float X(uint32_t sampleNum) {return 0.5f;};
+    INLINE static float Y(uint32_t sampleNum) {return 0.5f;};
+
+    INLINE static __m128i TileSampleOffsetsX()
+    {
+        // BR,            BL,           UR,            UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static __m128i TileSampleOffsetsY()
+    {
+        // BR,             BL,             UR,          UL
+        return _mm_set1_epi32(0x80);
+    }
+
+    INLINE static uint32_t RasterTileColorOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileColorOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8),
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 2,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 3,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 4,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 5,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 6,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 7,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 8,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 9,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 10,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 11,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 12,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 13,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 14,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8) * 15,
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileColorOffsets[sampleNum];
+    }
+
+    INLINE static uint32_t RasterTileDepthOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileDepthOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8),
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 2,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 3,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 4,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 5,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 6,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 7,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 8,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 9,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 10,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 11,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 12,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 13,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 14,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8) * 15,
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileDepthOffsets[sampleNum];
+    }
+
+    INLINE static uint32_t RasterTileStencilOffset(uint32_t sampleNum)
+    {
+        static const uint32_t RasterTileStencilOffsets[numSamples]
+        { 0,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8),
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 2,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 3,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 4,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 5,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 6,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 7,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 8,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 9,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 10,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 11,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 12,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 13,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 14,
+          (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8) * 15,
+        };
+        assert(sampleNum < numSamples);
+        return RasterTileStencilOffsets[sampleNum];
+    }
+
+    INLINE static simdscalari FullSampleMask()
+    {
+        static const simdscalari mask = _simd_set1_epi32(0xFFFF);
+        return mask;
+    }
+    static const uint32_t numSamples = 16;
+    static const float samplePosX[16];
+    static const float samplePosY[16];
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_16X;
+    static const uint32_t numCoverageSamples = 1;
 };

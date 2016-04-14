@@ -459,10 +459,10 @@ simdmask ComputeUserClipMask(uint8_t clipMask, float* pUserClipBuffer, simdscala
     return _simd_movemask_ps(vClipMask);
 }
 
-template<bool perspMask>
+template<bool bGenerateBarycentrics>
 INLINE void CalcPixelBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CONTEXT &psContext)
 {
-    if(perspMask)
+    if(bGenerateBarycentrics)
     {
         // evaluate I,J
         psContext.vI.center = vplaneps(coeffs.vIa, coeffs.vIb, coeffs.vIc, psContext.vX.center, psContext.vY.center);
@@ -475,10 +475,10 @@ INLINE void CalcPixelBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CONTEX
     }
 }
 
-template<bool perspMask>
+template<bool bGenerateBarycentrics>
 INLINE void CalcSampleBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CONTEXT &psContext)
 {
-    if(perspMask)
+    if(bGenerateBarycentrics)
     {
         // evaluate I,J
         psContext.vI.sample = vplaneps(coeffs.vIa, coeffs.vIb, coeffs.vIc, psContext.vX.sample, psContext.vY.sample);
@@ -502,13 +502,12 @@ INLINE void CalcSampleBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CONTE
 //     evaluated as follows : If the SampleMask Rasterizer state is a subset of the samples in the pixel, then the first sample covered by the 
 //     SampleMask Rasterizer State is the evaluation point.Otherwise (full SampleMask), the pixel center is the evaluation point.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-template<SWR_MULTISAMPLE_COUNT sampleCount, bool bForcedSampleCount>
+template<typename T>
 INLINE void CalcCentroidPos(SWR_PS_CONTEXT &psContext, const uint64_t *const coverageMask, const uint32_t sampleMask,
                             const simdscalar vXSamplePosUL, const simdscalar vYSamplePosUL)
 {
     uint32_t inputMask[KNOB_SIMD_WIDTH];
-
-    generateInputCoverage<sampleCount, 1, bForcedSampleCount>(coverageMask, inputMask, sampleMask);
+    generateInputCoverage<T>(coverageMask, inputMask, sampleMask);
 
     // Case (2) - partially covered pixel
 
@@ -524,29 +523,29 @@ INLINE void CalcCentroidPos(SWR_PS_CONTEXT &psContext, const uint64_t *const cov
     (inputMask[7] > 0) ? (_BitScanForward(&sampleNum[7], inputMask[7])) : (sampleNum[7] = 0);
 
     // look up and set the sample offsets from UL pixel corner for first covered sample 
-    __m256 vXSample = _mm256_set_ps(MultisampleTraits<sampleCount>::X(sampleNum[7]),
-                                    MultisampleTraits<sampleCount>::X(sampleNum[6]),
-                                    MultisampleTraits<sampleCount>::X(sampleNum[5]),
-                                    MultisampleTraits<sampleCount>::X(sampleNum[4]),
-                                    MultisampleTraits<sampleCount>::X(sampleNum[3]),
-                                    MultisampleTraits<sampleCount>::X(sampleNum[2]),
-                                    MultisampleTraits<sampleCount>::X(sampleNum[1]),
-                                    MultisampleTraits<sampleCount>::X(sampleNum[0]));
+    __m256 vXSample = _mm256_set_ps(T::MultisampleT::X(sampleNum[7]),
+                                    T::MultisampleT::X(sampleNum[6]),
+                                    T::MultisampleT::X(sampleNum[5]),
+                                    T::MultisampleT::X(sampleNum[4]),
+                                    T::MultisampleT::X(sampleNum[3]),
+                                    T::MultisampleT::X(sampleNum[2]),
+                                    T::MultisampleT::X(sampleNum[1]),
+                                    T::MultisampleT::X(sampleNum[0]));
 
-    __m256 vYSample = _mm256_set_ps(MultisampleTraits<sampleCount>::Y(sampleNum[7]),
-                                    MultisampleTraits<sampleCount>::Y(sampleNum[6]),
-                                    MultisampleTraits<sampleCount>::Y(sampleNum[5]),
-                                    MultisampleTraits<sampleCount>::Y(sampleNum[4]),
-                                    MultisampleTraits<sampleCount>::Y(sampleNum[3]),
-                                    MultisampleTraits<sampleCount>::Y(sampleNum[2]),
-                                    MultisampleTraits<sampleCount>::Y(sampleNum[1]),
-                                    MultisampleTraits<sampleCount>::Y(sampleNum[0]));
+    __m256 vYSample = _mm256_set_ps(T::MultisampleT::Y(sampleNum[7]),
+                                    T::MultisampleT::Y(sampleNum[6]),
+                                    T::MultisampleT::Y(sampleNum[5]),
+                                    T::MultisampleT::Y(sampleNum[4]),
+                                    T::MultisampleT::Y(sampleNum[3]),
+                                    T::MultisampleT::Y(sampleNum[2]),
+                                    T::MultisampleT::Y(sampleNum[1]),
+                                    T::MultisampleT::Y(sampleNum[0]));
     // add sample offset to UL pixel corner
     vXSample = _simd_add_ps(vXSamplePosUL, vXSample);
     vYSample = _simd_add_ps(vYSamplePosUL, vYSample);
 
     // Case (1) and case (3b) - All samples covered or not covered with full SampleMask
-    static const __m256i vFullyCoveredMask = MultisampleTraits<sampleCount>::FullSampleMask();
+    static const __m256i vFullyCoveredMask = T::MultisampleT::FullSampleMask();
     __m256i vInputCoveragei =  _mm256_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]);
     __m256i vAllSamplesCovered = _simd_cmpeq_epi32(vInputCoveragei, vFullyCoveredMask);
 
@@ -570,46 +569,38 @@ INLINE void CalcCentroidPos(SWR_PS_CONTEXT &psContext, const uint64_t *const cov
 
     __m256i vCase3a = _simd_and_si(vNoSamplesCovered, vSomeSampleMaskSamples);
 
-    vXSample = _simd_set1_ps(MultisampleTraits<sampleCount>::X(firstCoveredSampleMaskSample));
-    vYSample = _simd_set1_ps(MultisampleTraits<sampleCount>::Y(firstCoveredSampleMaskSample));
+    vXSample = _simd_set1_ps(T::MultisampleT::X(firstCoveredSampleMaskSample));
+    vYSample = _simd_set1_ps(T::MultisampleT::Y(firstCoveredSampleMaskSample));
 
     // blend in case 3a pixel locations
     psContext.vX.centroid = _simd_blendv_ps(psContext.vX.centroid, vXSample, _simd_castsi_ps(vCase3a));
     psContext.vY.centroid = _simd_blendv_ps(psContext.vY.centroid, vYSample, _simd_castsi_ps(vCase3a));
 }
 
-template<uint32_t sampleCount, uint32_t persp, uint32_t standardPattern, uint32_t forcedMultisampleCount>
+template<typename T>
 INLINE void CalcCentroidBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CONTEXT &psContext,
                                      const uint64_t *const coverageMask, const uint32_t sampleMask,
                                      const simdscalar vXSamplePosUL, const simdscalar vYSamplePosUL)
 {
-    static const bool bPersp = (bool)persp;
-    static const bool bIsStandardPattern = (bool)standardPattern;
-    static const bool bForcedMultisampleCount = (bool)forcedMultisampleCount;
-
-    // calculate centroid positions
-    if(bPersp)
+    if(T::bIsStandardPattern)
     {
-        if(bIsStandardPattern)
-        {
-            ///@ todo: don't need to generate input coverage 2x if input coverage and centroid
-            CalcCentroidPos<(SWR_MULTISAMPLE_COUNT)sampleCount, bForcedMultisampleCount>(psContext, coverageMask, sampleMask, vXSamplePosUL, vYSamplePosUL);
-        }
-        else
-        {
-            static const __m256 pixelCenter = _simd_set1_ps(0.5f);
-            psContext.vX.centroid = _simd_add_ps(vXSamplePosUL, pixelCenter);
-            psContext.vY.centroid = _simd_add_ps(vYSamplePosUL, pixelCenter);
-        }
-        // evaluate I,J
-        psContext.vI.centroid = vplaneps(coeffs.vIa, coeffs.vIb, coeffs.vIc, psContext.vX.centroid, psContext.vY.centroid);
-        psContext.vJ.centroid = vplaneps(coeffs.vJa, coeffs.vJb, coeffs.vJc, psContext.vX.centroid, psContext.vY.centroid);
-        psContext.vI.centroid = _simd_mul_ps(psContext.vI.centroid, coeffs.vRecipDet);
-        psContext.vJ.centroid = _simd_mul_ps(psContext.vJ.centroid, coeffs.vRecipDet);
-
-        // interpolate 1/w
-        psContext.vOneOverW.centroid = vplaneps(coeffs.vAOneOverW, coeffs.vBOneOverW, coeffs.vCOneOverW, psContext.vI.centroid, psContext.vJ.centroid);
+        ///@ todo: don't need to generate input coverage 2x if input coverage and centroid
+        CalcCentroidPos<T>(psContext, coverageMask, sampleMask, vXSamplePosUL, vYSamplePosUL);
     }
+    else
+    {
+        static const __m256 pixelCenter = _simd_set1_ps(0.5f);
+        psContext.vX.centroid = _simd_add_ps(vXSamplePosUL, pixelCenter);
+        psContext.vY.centroid = _simd_add_ps(vYSamplePosUL, pixelCenter);
+    }
+    // evaluate I,J
+    psContext.vI.centroid = vplaneps(coeffs.vIa, coeffs.vIb, coeffs.vIc, psContext.vX.centroid, psContext.vY.centroid);
+    psContext.vJ.centroid = vplaneps(coeffs.vJa, coeffs.vJb, coeffs.vJc, psContext.vX.centroid, psContext.vY.centroid);
+    psContext.vI.centroid = _simd_mul_ps(psContext.vI.centroid, coeffs.vRecipDet);
+    psContext.vJ.centroid = _simd_mul_ps(psContext.vJ.centroid, coeffs.vRecipDet);
+
+    // interpolate 1/w
+    psContext.vOneOverW.centroid = vplaneps(coeffs.vAOneOverW, coeffs.vBOneOverW, coeffs.vCOneOverW, psContext.vI.centroid, psContext.vJ.centroid);
 }
 
 template<uint32_t NumRT, uint32_t sampleCountT>
@@ -680,13 +671,10 @@ void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_REND
     }
 }
 
-template<uint32_t sampleCountT, uint32_t samplePattern, uint32_t inputCoverage, uint32_t centroidPos, uint32_t forcedSampleCount>
+template<typename T>
 void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers)
 {
     RDTSC_START(BESetup);
-    // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
-    static const bool bInputCoverage = (bool)inputCoverage;
-    static const bool bCentroidPos = (bool)centroidPos;
 
     SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);
@@ -736,8 +724,8 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
     psContext.J = work.J;
     psContext.recipDet = work.recipDet;
     psContext.pRecipW = work.pRecipW;
-    psContext.pSamplePosX = (const float*)&MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosX;
-    psContext.pSamplePosY = (const float*)&MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosY;
+    psContext.pSamplePosX = (const float*)&T::MultisampleT::samplePosX;
+    psContext.pSamplePosY = (const float*)&T::MultisampleT::samplePosY;
 
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
@@ -748,9 +736,9 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 
         for(uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
-            if(bInputCoverage)
+            if(T::bInputCoverage)
             {
-                generateInputCoverage<SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, false>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
+                generateInputCoverage<T>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
             }
 
             if(coverageMask & MASK)
@@ -762,7 +750,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 
                 backendFuncs.pfnCalcPixelBarycentrics(coeffs, psContext);
 
-                if(bCentroidPos)
+                if(T::bCentroidPos)
                 {
                     // for 1x case, centroid is pixel center
                     psContext.vX.centroid = psContext.vX.center;
@@ -873,14 +861,9 @@ Endtile:
     }
 }
 
-template<uint32_t sampleCountT, uint32_t samplePattern, uint32_t inputCoverage, uint32_t centroidPos, uint32_t forcedSampleCount>
+template<typename T>
 void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers)
 {
-    // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
-    static const SWR_MULTISAMPLE_COUNT sampleCount = (SWR_MULTISAMPLE_COUNT)sampleCountT;
-    static const bool bInputCoverage = (bool)inputCoverage;
-    static const bool bCentroidPos = (bool)centroidPos;
-
     RDTSC_START(BESetup);
 
     SWR_CONTEXT *pContext = pDC->pContext;
@@ -930,9 +913,9 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     psContext.I = work.I;
     psContext.J = work.J;
     psContext.recipDet = work.recipDet;
-    psContext.pSamplePosX = (const float*)&MultisampleTraits<sampleCount>::samplePosX;
-    psContext.pSamplePosY = (const float*)&MultisampleTraits<sampleCount>::samplePosY;
-    const uint32_t numSamples = MultisampleTraits<sampleCount>::numSamples;
+    psContext.pSamplePosX = (const float*)&T::MultisampleT::samplePosX;
+    psContext.pSamplePosY = (const float*)&T::MultisampleT::samplePosY;
+    const uint32_t numSamples = T::MultisampleT::numSamples;
 
     for (uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
@@ -951,16 +934,16 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
             backendFuncs.pfnCalcPixelBarycentrics(coeffs, psContext);
             RDTSC_STOP(BEBarycentric, 0, 0);
 
-            if(bInputCoverage)
+            if(T::bInputCoverage)
             {
-                generateInputCoverage<sampleCount, SWR_MSAA_STANDARD_PATTERN, false>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
+                generateInputCoverage<T>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
             }
 
-            if(bCentroidPos)
+            if(T::bCentroidPos)
             {
                 ///@ todo: don't need to genererate input coverage 2x if input coverage and centroid
                 RDTSC_START(BEBarycentric);
-                backendFuncs.pfnCalcCentroidBarycentrics(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
+                CalcCentroidBarycentrics<T>(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
                 RDTSC_STOP(BEBarycentric, 0, 0);
             }
 
@@ -971,8 +954,8 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     RDTSC_START(BEBarycentric);
 
                     // calculate per sample positions
-                    psContext.vX.sample = _simd_add_ps(psContext.vX.UL, MultisampleTraits<sampleCount>::vX(sample));
-                    psContext.vY.sample = _simd_add_ps(psContext.vY.UL, MultisampleTraits<sampleCount>::vY(sample));
+                    psContext.vX.sample = _simd_add_ps(psContext.vX.UL, T::MultisampleT::vX(sample));
+                    psContext.vY.sample = _simd_add_ps(psContext.vY.UL, T::MultisampleT::vY(sample));
                     
                     simdmask coverageMask = work.coverageMask[sample] & MASK;
                     simdscalar vCoverageMask = vMask(coverageMask);
@@ -996,8 +979,8 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     simdscalar stencilPassMask = vCoverageMask;
 
                     // offset depth/stencil buffers current sample
-                    uint8_t *pDepthSample = pDepthBase + MultisampleTraits<sampleCount>::RasterTileDepthOffset(sample);
-                    uint8_t *pStencilSample = pStencilBase + MultisampleTraits<sampleCount>::RasterTileStencilOffset(sample);
+                    uint8_t *pDepthSample = pDepthBase + T::MultisampleT::RasterTileDepthOffset(sample);
+                    uint8_t *pStencilSample = pStencilBase + T::MultisampleT::RasterTileStencilOffset(sample);
 
                     // Early-Z?
                     if (CanEarlyZ(pPSState))
@@ -1032,7 +1015,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
 
                     vCoverageMask = _simd_castsi_ps(psContext.activeMask);
 
-                    //// late-Z
+                    // late-Z
                     if (!CanEarlyZ(pPSState))
                     {
                         RDTSC_START(BELateDepthTest);
@@ -1083,16 +1066,9 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     }
 }
 
-template<uint32_t sampleCountT, uint32_t samplePattern, uint32_t inputCoverage, uint32_t centroidPos, uint32_t forcedSampleCount>
+template<typename T>
 void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers)
 {
-    // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
-    static const SWR_MULTISAMPLE_COUNT sampleCount = (SWR_MULTISAMPLE_COUNT)sampleCountT;
-    static const bool bIsStandardPattern = (bool)samplePattern;
-    static const bool bInputCoverage = (bool)inputCoverage;
-    static const bool bCentroidPos = (bool)centroidPos;
-    static const bool bForcedSampleCount = (bool)forcedSampleCount;
-
     RDTSC_START(BESetup);
 
     SWR_CONTEXT *pContext = pDC->pContext;
@@ -1141,35 +1117,25 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     psContext.I = work.I;
     psContext.J = work.J;
     psContext.recipDet = work.recipDet;
-    psContext.pSamplePosX = (const float*)&MultisampleTraits<sampleCount>::samplePosX;
-    psContext.pSamplePosY = (const float*)&MultisampleTraits<sampleCount>::samplePosY;
+    psContext.pSamplePosX = (const float*)&T::MultisampleT::samplePosX;
+    psContext.pSamplePosY = (const float*)&T::MultisampleT::samplePosY;
     psContext.sampleIndex = 0;
-
-    uint32_t numCoverageSamples;
-    if(bIsStandardPattern)
-    {
-        numCoverageSamples = MultisampleTraits<sampleCount>::numSamples;
-    }
-    else
-    {
-        numCoverageSamples = 1;
-    }
 
     uint32_t numOMSamples;
     // RT has to be single sample if we're in forcedMSAA mode
-    if(bForcedSampleCount && (sampleCount > SWR_MULTISAMPLE_1X))
+    if(T::bForcedSampleCount && (T::MultisampleT::sampleCount > SWR_MULTISAMPLE_1X))
     {
         numOMSamples = 1;
     }
     // unless we're forced to single sample, in which case we run the OM at the sample count of the RT
-    else if(bForcedSampleCount && (sampleCount == SWR_MULTISAMPLE_1X))
+    else if(T::bForcedSampleCount && (T::MultisampleT::sampleCount == SWR_MULTISAMPLE_1X))
     {
         numOMSamples = GetNumSamples(pBlendState->sampleCount);
     }
     // else we're in normal MSAA mode and rasterizer and OM are running at the same sample count
     else
     {
-        numOMSamples = MultisampleTraits<sampleCount>::numSamples;
+        numOMSamples = T::MultisampleT::numSamples;
     }
     
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
@@ -1178,21 +1144,21 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
         psContext.vY.center = _simd_add_ps(vCenterOffsetsY, _simd_set1_ps((float)yy));
         for(uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
-            simdscalar vZ[MultisampleTraits<sampleCount>::numSamples]{ 0 };
+            simdscalar vZ[T::MultisampleT::numSamples]{ 0 };
             psContext.vX.UL = _simd_add_ps(vULOffsetsX, _simd_set1_ps((float)xx));
             // set pixel center positions
             psContext.vX.center = _simd_add_ps(vCenterOffsetsX, _simd_set1_ps((float)xx));
 
-            if (bInputCoverage)
+            if (T::bInputCoverage)
             {
-                generateInputCoverage<sampleCount, bIsStandardPattern, bForcedSampleCount>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
+                generateInputCoverage<T>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
             }
 
-            if(bCentroidPos)
+            if(T::bCentroidPos)
             {
                 ///@ todo: don't need to genererate input coverage 2x if input coverage and centroid
                 RDTSC_START(BEBarycentric);
-                backendFuncs.pfnCalcCentroidBarycentrics(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
+                CalcCentroidBarycentrics<T>(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
                 RDTSC_STOP(BEBarycentric, 0, 0);
             }
 
@@ -1219,12 +1185,12 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             }
 
             // need to declare enough space for all samples
-            simdscalar vCoverageMask[MultisampleTraits<sampleCount>::numSamples];
-            simdscalar depthPassMask[MultisampleTraits<sampleCount>::numSamples]; 
-            simdscalar stencilPassMask[MultisampleTraits<sampleCount>::numSamples];
+            simdscalar vCoverageMask[T::MultisampleT::numSamples];
+            simdscalar depthPassMask[T::MultisampleT::numSamples]; 
+            simdscalar stencilPassMask[T::MultisampleT::numSamples];
             simdscalar anyDepthSamplePassed = _simd_setzero_ps();
             simdscalar anyStencilSamplePassed = _simd_setzero_ps();
-            for(uint32_t sample = 0; sample < numCoverageSamples; sample++)
+            for(uint32_t sample = 0; sample < T::MultisampleT::numCoverageSamples; sample++)
             {
                 vCoverageMask[sample] = vMask(work.coverageMask[sample] & MASK);
 
@@ -1237,7 +1203,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                     continue;
                 }
 
-                if(bForcedSampleCount)
+                if(T::bForcedSampleCount)
                 {
                     // candidate pixels (that passed coverage) will cause shader invocation if any bits in the samplemask are set
                     const simdscalar vSampleMask = _simd_castsi_ps(_simd_cmpgt_epi32(_simd_set1_epi32(pBlendState->sampleMask), _simd_setzero_si()));
@@ -1252,11 +1218,11 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 if(!pPSState->writesODepth || rastState.clipDistanceMask)
                 {
                     RDTSC_START(BEBarycentric);
-                    if(bIsStandardPattern)
+                    if(T::bIsStandardPattern)
                     {
                         // calculate per sample positions
-                        psContext.vX.sample = _simd_add_ps(psContext.vX.UL, MultisampleTraits<sampleCount>::vX(sample));
-                        psContext.vY.sample = _simd_add_ps(psContext.vY.UL, MultisampleTraits<sampleCount>::vY(sample));
+                        psContext.vX.sample = _simd_add_ps(psContext.vX.UL, T::MultisampleT::vX(sample));
+                        psContext.vY.sample = _simd_add_ps(psContext.vY.UL, T::MultisampleT::vY(sample));
                     }
                     else
                     {
@@ -1291,8 +1257,8 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 }
 
                 // offset depth/stencil buffers current sample
-                uint8_t *pDepthSample = pDepthBase + MultisampleTraits<sampleCount>::RasterTileDepthOffset(sample);
-                uint8_t * pStencilSample = pStencilBase + MultisampleTraits<sampleCount>::RasterTileStencilOffset(sample);
+                uint8_t *pDepthSample = pDepthBase + T::MultisampleT::RasterTileDepthOffset(sample);
+                uint8_t * pStencilSample = pStencilBase + T::MultisampleT::RasterTileStencilOffset(sample);
 
                 // ZTest for this sample
                 RDTSC_START(BEEarlyDepthTest);
@@ -1332,8 +1298,8 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             // loop over all samples, broadcasting the results of the PS to all passing pixels
             for(uint32_t sample = 0; sample < numOMSamples; sample++)
             {
-                uint8_t *pDepthSample = pDepthBase + MultisampleTraits<sampleCount>::RasterTileDepthOffset(sample);
-                uint8_t * pStencilSample = pStencilBase + MultisampleTraits<sampleCount>::RasterTileStencilOffset(sample);
+                uint8_t *pDepthSample = pDepthBase + T::MultisampleT::RasterTileDepthOffset(sample);
+                uint8_t * pStencilSample = pStencilBase + T::MultisampleT::RasterTileStencilOffset(sample);
 
                 // output merger
                 RDTSC_START(BEOutputMerger);
@@ -1346,12 +1312,12 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
 
                 // forcedSampleCount outputs to any pixels with covered samples not masked off by SampleMask
                 // depth test is disabled, so just set the z val to 0.
-                if(bForcedSampleCount)
+                if(T::bForcedSampleCount)
                 {
                     coverageMaskSample = depthMaskSample = anyDepthSamplePassed;
                     vInterpolatedZ = _simd_setzero_ps();
                 }
-                else if(bIsStandardPattern)
+                else if(T::bIsStandardPattern)
                 {
                     if(!_simd_movemask_ps(depthPassMask[sample]))
                     {
@@ -1393,7 +1359,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
 
 Endtile:
             RDTSC_START(BEEndTile);
-            for(uint32_t sample = 0; sample < numCoverageSamples; sample++)
+            for(uint32_t sample = 0; sample < T::MultisampleT::numCoverageSamples; sample++)
             {
                 work.coverageMask[sample] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
             }
@@ -1413,9 +1379,9 @@ Endtile:
 template<uint32_t sampleCountT>
 void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers)
 {
+    ///@todo: handle center multisample pattern
+    typedef SwrBackendTraits<sampleCountT, SWR_MSAA_STANDARD_PATTERN> T;
     RDTSC_START(BESetup);
-
-    static const SWR_MULTISAMPLE_COUNT sampleCount = (SWR_MULTISAMPLE_COUNT)sampleCountT;
 
     SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);
@@ -1464,8 +1430,8 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
                 {
                     RDTSC_START(BEBarycentric);
                     // calculate per sample positions
-                    psContext.vX.sample = _simd_add_ps(vXSamplePosUL, MultisampleTraits<sampleCount>::vX(sample));
-                    psContext.vY.sample = _simd_add_ps(vYSamplePosUL, MultisampleTraits<sampleCount>::vY(sample));
+                    psContext.vX.sample = _simd_add_ps(vXSamplePosUL, T::MultisampleT::vX(sample));
+                    psContext.vY.sample = _simd_add_ps(vYSamplePosUL, T::MultisampleT::vY(sample));
 
                     backendFuncs.pfnCalcSampleBarycentrics(coeffs, psContext);
 
@@ -1486,8 +1452,8 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
                     simdscalar stencilPassMask = vCoverageMask;
 
                     // offset depth/stencil buffers current sample
-                    uint8_t *pDepthSample = pDepthBase + MultisampleTraits<sampleCount>::RasterTileDepthOffset(sample);
-                    uint8_t *pStencilSample = pStencilBase + MultisampleTraits<sampleCount>::RasterTileStencilOffset(sample);
+                    uint8_t *pDepthSample = pDepthBase + T::MultisampleT::RasterTileDepthOffset(sample);
+                    uint8_t *pStencilSample = pStencilBase + T::MultisampleT::RasterTileStencilOffset(sample);
 
                     RDTSC_START(BEEarlyDepthTest);
                     simdscalar depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
@@ -1526,7 +1492,6 @@ PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_MAX][SWR_INPUT_COV
 PFN_OUTPUT_MERGER gBackendOutputMergerTable[SWR_NUM_RENDERTARGETS+1][SWR_MULTISAMPLE_TYPE_MAX] = {};
 PFN_CALC_PIXEL_BARYCENTRICS gPixelBarycentricTable[2] = {};
 PFN_CALC_SAMPLE_BARYCENTRICS gSampleBarycentricTable[2] = {};
-PFN_CALC_CENTROID_BARYCENTRICS gCentroidBarycentricTable[SWR_MULTISAMPLE_TYPE_MAX][2][2][2] = {};
 
 // Recursive template used to auto-nest conditionals.  Converts dynamic enum function
 // arguments to static template arguments.
@@ -1576,55 +1541,6 @@ struct OMChooser
 // Recursive template used to auto-nest conditionals.  Converts dynamic enum function
 // arguments to static template arguments.
 template <uint32_t... ArgsT>
-struct BECentroidBarycentricChooser
-{
-
-    // Last Arg Terminator
-    template <typename... TArgsT>
-    static PFN_CALC_CENTROID_BARYCENTRICS GetFunc(uint32_t tArg)
-    {
-        if(tArg > 0)
-        {
-            return CalcCentroidBarycentrics<ArgsT..., 1>;
-        }
-
-        return CalcCentroidBarycentrics<ArgsT..., 0>;
-    }
-
-    // Recursively parse args
-    template <typename... TArgsT>
-    static PFN_CALC_CENTROID_BARYCENTRICS GetFunc(SWR_MULTISAMPLE_COUNT tArg, TArgsT... remainingArgs)
-    {
-        switch(tArg)
-        {
-        case SWR_MULTISAMPLE_1X: return BECentroidBarycentricChooser<ArgsT..., SWR_MULTISAMPLE_1X>::GetFunc(remainingArgs...); break;
-        case SWR_MULTISAMPLE_2X: return BECentroidBarycentricChooser<ArgsT..., SWR_MULTISAMPLE_2X>::GetFunc(remainingArgs...); break;
-        case SWR_MULTISAMPLE_4X: return BECentroidBarycentricChooser<ArgsT..., SWR_MULTISAMPLE_4X>::GetFunc(remainingArgs...); break;
-        case SWR_MULTISAMPLE_8X: return BECentroidBarycentricChooser<ArgsT..., SWR_MULTISAMPLE_8X>::GetFunc(remainingArgs...); break;
-        case SWR_MULTISAMPLE_16X: return BECentroidBarycentricChooser<ArgsT..., SWR_MULTISAMPLE_16X>::GetFunc(remainingArgs...); break;
-        default:
-            SWR_ASSERT(0 && "Invalid sample count\n");
-            return nullptr;
-            break;
-        }
-    }
-
-    // Recursively parse args
-    template <typename... TArgsT>
-    static PFN_CALC_CENTROID_BARYCENTRICS GetFunc(uint32_t tArg, TArgsT... remainingArgs)
-    {
-        if(tArg > 0)
-        {
-            return BECentroidBarycentricChooser<ArgsT..., 1>::GetFunc(remainingArgs...);
-        }
-
-        return BECentroidBarycentricChooser<ArgsT..., 0>::GetFunc(remainingArgs...);
-    }
-};
-
-// Recursive template used to auto-nest conditionals.  Converts dynamic enum function
-// arguments to static template arguments.
-template <uint32_t... ArgsT>
 struct BEChooser
 {
     // Last Arg Terminator
@@ -1632,9 +1548,9 @@ struct BEChooser
     {
         switch(tArg)
         {
-        case SWR_BACKEND_SINGLE_SAMPLE: return BackendSingleSample<ArgsT...>; break;
-        case SWR_BACKEND_MSAA_PIXEL_RATE: return BackendPixelRate<ArgsT...>; break;
-        case SWR_BACKEND_MSAA_SAMPLE_RATE: return BackendSampleRate<ArgsT...>; break;
+        case SWR_BACKEND_SINGLE_SAMPLE: return BackendSingleSample<SwrBackendTraits<ArgsT...>>; break;
+        case SWR_BACKEND_MSAA_PIXEL_RATE: return BackendPixelRate<SwrBackendTraits<ArgsT...>>; break;
+        case SWR_BACKEND_MSAA_SAMPLE_RATE: return BackendSampleRate<SwrBackendTraits<ArgsT...>>; break;
         default:
             SWR_ASSERT(0 && "Invalid backend func\n");
             return nullptr;
@@ -1642,6 +1558,20 @@ struct BEChooser
         }
     }
 
+    // Recursively parse args
+    template <typename... TArgsT>
+    static PFN_BACKEND_FUNC GetFunc(SWR_MSAA_SAMPLE_PATTERN tArg, TArgsT... remainingArgs)
+    {
+        switch(tArg)
+        {
+        case SWR_MSAA_CENTER_PATTERN: return BEChooser<ArgsT..., SWR_MSAA_CENTER_PATTERN>::GetFunc(remainingArgs...); break;
+        case SWR_MSAA_STANDARD_PATTERN: return BEChooser<ArgsT..., SWR_MSAA_STANDARD_PATTERN>::GetFunc(remainingArgs...); break;
+        default:
+        SWR_ASSERT(0 && "Invalid sample pattern\n");
+        return BEChooser<ArgsT..., SWR_MSAA_STANDARD_PATTERN>::GetFunc(remainingArgs...);
+        break;
+        }
+    }
 
     // Recursively parse args
     template <typename... TArgsT>
@@ -1655,22 +1585,22 @@ struct BEChooser
         case SWR_MULTISAMPLE_8X: return BEChooser<ArgsT..., SWR_MULTISAMPLE_8X>::GetFunc(remainingArgs...); break;
         case SWR_MULTISAMPLE_16X: return BEChooser<ArgsT..., SWR_MULTISAMPLE_16X>::GetFunc(remainingArgs...); break;
         default:
-            SWR_ASSERT(0 && "Invalid sample count\n");
-            return nullptr;
-            break;
+        SWR_ASSERT(0 && "Invalid sample count\n");
+        return BEChooser<ArgsT..., SWR_MULTISAMPLE_1X>::GetFunc(remainingArgs...);
+        break;
         }
     }
 
     // Recursively parse args
     template <typename... TArgsT>
-    static PFN_BACKEND_FUNC GetFunc(uint32_t tArg, TArgsT... remainingArgs)
+    static PFN_BACKEND_FUNC GetFunc(bool tArg, TArgsT... remainingArgs)
     {
-        if(tArg > 0)
+        if(tArg == true)
         {
             return BEChooser<ArgsT..., 1>::GetFunc(remainingArgs...);
         }
 
-         return BEChooser<ArgsT..., 0>::GetFunc(remainingArgs...);
+        return BEChooser<ArgsT..., 0>::GetFunc(remainingArgs...);
     }
 };
 
@@ -1689,37 +1619,21 @@ void InitBackendOMFuncTable(PFN_OUTPUT_MERGER (&table)[numRenderTargets][numSamp
 
 template <SWR_MULTISAMPLE_COUNT numSampleRates>
 void InitBackendBarycentricsTables(PFN_CALC_PIXEL_BARYCENTRICS (&pixelTable)[2], 
-                                   PFN_CALC_SAMPLE_BARYCENTRICS (&sampleTable)[2],
-                                   PFN_CALC_CENTROID_BARYCENTRICS (&centroidTable)[numSampleRates][2][2][2])
+                                   PFN_CALC_SAMPLE_BARYCENTRICS (&sampleTable)[2])
 {
     pixelTable[0] = CalcPixelBarycentrics<0>;
     pixelTable[1] = CalcPixelBarycentrics<1>;
 
     sampleTable[0] = CalcSampleBarycentrics<0>;
     sampleTable[1] = CalcSampleBarycentrics<1>;
-
-    for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < numSampleRates; sampleCount++)
-    {
-        for(uint32_t baryMask = 0; baryMask < 2; baryMask++)
-        {
-            for(uint32_t patternNum = 0; patternNum < 2; patternNum++)
-            {
-                for(uint32_t forcedSampleEnable = 0; forcedSampleEnable < 2; forcedSampleEnable++)
-                {
-                    centroidTable[sampleCount][baryMask][patternNum][forcedSampleEnable]=
-                        BECentroidBarycentricChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, baryMask, patternNum, forcedSampleEnable);
-                }
-            }
-        }
-    }
 }
 
 void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[2][2])
 {
-    gBackendSingleSample[0][0] = BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE, 0, 0, (SWR_BACKEND_FUNCS)SWR_BACKEND_SINGLE_SAMPLE);
-    gBackendSingleSample[0][1] = BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE, 1, 0, (SWR_BACKEND_FUNCS)SWR_BACKEND_SINGLE_SAMPLE);
-    gBackendSingleSample[1][0] = BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL, 0, 0, (SWR_BACKEND_FUNCS)SWR_BACKEND_SINGLE_SAMPLE);
-    gBackendSingleSample[1][1] = BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL, 1, 0, (SWR_BACKEND_FUNCS)SWR_BACKEND_SINGLE_SAMPLE);
+    gBackendSingleSample[0][0] = BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, false, false, false, false, (SWR_BACKEND_FUNCS)SWR_BACKEND_SINGLE_SAMPLE);
+    gBackendSingleSample[0][1] = BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, false, true, false, false, (SWR_BACKEND_FUNCS)SWR_BACKEND_SINGLE_SAMPLE);
+    gBackendSingleSample[1][0] = BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, true, false, false, false, (SWR_BACKEND_FUNCS)SWR_BACKEND_SINGLE_SAMPLE);
+    gBackendSingleSample[1][1] = BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, true, true, false, false,(SWR_BACKEND_FUNCS)SWR_BACKEND_SINGLE_SAMPLE);
 }
 
 template <SWR_MULTISAMPLE_COUNT numSampleRates, SWR_MSAA_SAMPLE_PATTERN numSamplePatterns, SWR_INPUT_COVERAGE numCoverageModes>
@@ -1734,9 +1648,11 @@ void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[numSampleRates][numSamp
                 for(uint32_t isCentroid = 0; isCentroid < 2; isCentroid++)
                 {
                     table[sampleCount][samplePattern][inputCoverage][isCentroid][0] =
-                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, samplePattern, inputCoverage, isCentroid, 0, (SWR_BACKEND_FUNCS)SWR_BACKEND_MSAA_PIXEL_RATE);
+                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, (SWR_MSAA_SAMPLE_PATTERN)samplePattern, (inputCoverage == SWR_INPUT_COVERAGE_NORMAL), (isCentroid > 0),
+                                                     false, false, SWR_BACKEND_MSAA_PIXEL_RATE);
                     table[sampleCount][samplePattern][inputCoverage][isCentroid][1] =
-                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, samplePattern, inputCoverage, isCentroid, 1, (SWR_BACKEND_FUNCS)SWR_BACKEND_MSAA_PIXEL_RATE);
+                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, (SWR_MSAA_SAMPLE_PATTERN)samplePattern, (inputCoverage == SWR_INPUT_COVERAGE_NORMAL), (isCentroid > 0),
+                                             true, false, SWR_BACKEND_MSAA_PIXEL_RATE);
                 }
             }
         }
@@ -1751,9 +1667,9 @@ void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[numSampleRates][numCov
         for(uint32_t inputCoverage = SWR_INPUT_COVERAGE_NONE; inputCoverage < numCoverageModes; inputCoverage++)
         {
             table[sampleCount][inputCoverage][0] =
-                BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN, inputCoverage, 0, 0, (SWR_BACKEND_FUNCS)SWR_BACKEND_MSAA_SAMPLE_RATE);
+                BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN, (inputCoverage == SWR_INPUT_COVERAGE_NORMAL), false, false, false, (SWR_BACKEND_FUNCS)SWR_BACKEND_MSAA_SAMPLE_RATE);
             table[sampleCount][inputCoverage][1] =
-                BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN, inputCoverage, 1, 0, (SWR_BACKEND_FUNCS)SWR_BACKEND_MSAA_SAMPLE_RATE);
+                BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN, (inputCoverage == SWR_INPUT_COVERAGE_NORMAL), true, false, false, (SWR_BACKEND_FUNCS)SWR_BACKEND_MSAA_SAMPLE_RATE);
         }
     }
 }
@@ -1764,7 +1680,7 @@ void InitBackendFuncTables()
     InitBackendPixelFuncTable<(SWR_MULTISAMPLE_COUNT)SWR_MULTISAMPLE_TYPE_MAX, SWR_MSAA_SAMPLE_PATTERN_MAX, SWR_INPUT_COVERAGE_MAX>(gBackendPixelRateTable);
     InitBackendSampleFuncTable<SWR_MULTISAMPLE_TYPE_MAX, SWR_INPUT_COVERAGE_MAX>(gBackendSampleRateTable);
     InitBackendOMFuncTable<SWR_NUM_RENDERTARGETS+1, SWR_MULTISAMPLE_TYPE_MAX>(gBackendOutputMergerTable);
-    InitBackendBarycentricsTables<(SWR_MULTISAMPLE_COUNT)(SWR_MULTISAMPLE_TYPE_MAX)>(gPixelBarycentricTable, gSampleBarycentricTable, gCentroidBarycentricTable);
+    InitBackendBarycentricsTables<(SWR_MULTISAMPLE_COUNT)(SWR_MULTISAMPLE_TYPE_MAX)>(gPixelBarycentricTable, gSampleBarycentricTable);
 
     gBackendNullPs[SWR_MULTISAMPLE_1X] = &BackendNullPS < SWR_MULTISAMPLE_1X > ;
     gBackendNullPs[SWR_MULTISAMPLE_2X] = &BackendNullPS < SWR_MULTISAMPLE_2X > ;

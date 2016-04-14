@@ -763,7 +763,6 @@ extern PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_MAX][SWR_IN
 extern PFN_OUTPUT_MERGER gBackendOutputMergerTable[SWR_NUM_RENDERTARGETS + 1][SWR_MULTISAMPLE_TYPE_MAX];
 extern PFN_CALC_PIXEL_BARYCENTRICS gPixelBarycentricTable[2];
 extern PFN_CALC_SAMPLE_BARYCENTRICS gSampleBarycentricTable[2];
-extern PFN_CALC_CENTROID_BARYCENTRICS gCentroidBarycentricTable[SWR_MULTISAMPLE_TYPE_MAX][2][2][2];
 void SetupPipeline(DRAW_CONTEXT *pDC)
 {
     DRAW_STATE* pState = pDC->pState;
@@ -827,9 +826,6 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
 
         bBarycentrics = (barycentricsMask & SWR_BARYCENTRIC_PER_SAMPLE_MASK) > 0 ? 1 : 0;
         backendFuncs.pfnCalcSampleBarycentrics = gSampleBarycentricTable[bBarycentrics];
-
-        bBarycentrics = (barycentricsMask & SWR_BARYCENTRIC_CENTROID_MASK) > 0 ? 1 : 0;
-        backendFuncs.pfnCalcCentroidBarycentrics = gCentroidBarycentricTable[rastState.sampleCount][bBarycentrics][rastState.samplePattern][forcedSampleCount];
     }
     
     PFN_PROCESS_PRIMS pfnBinner;

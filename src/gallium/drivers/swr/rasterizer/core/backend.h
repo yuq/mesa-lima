@@ -60,7 +60,7 @@ extern const __m256 vULOffsetsY;
 #define MASK 0xff
 #endif
 
-template<SWR_MULTISAMPLE_COUNT sampleCountT, bool bIsStandardPattern, bool bForcedSampleCount>
+template<typename T>
 INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (&inputMask)[KNOB_SIMD_WIDTH], const uint32_t sampleMask)
 {
 
@@ -69,28 +69,28 @@ INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (
 
     __m256i mask[2];
     __m256i sampleCoverage[2];
-    if(bIsStandardPattern)
+    if(T::bIsStandardPattern)
     {
         __m256i src = _mm256_set1_epi32(0);
         __m256i index0 = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0), index1;
 
-        if(MultisampleTraits<sampleCountT>::numSamples == 1)
+        if(T::MultisampleT::numSamples == 1)
         {
             mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, -1);
         }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 2)
+        else if(T::MultisampleT::numSamples == 2)
         {
             mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, -1, -1);
         }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 4)
+        else if(T::MultisampleT::numSamples == 4)
         {
             mask[0] = _mm256_set_epi32(0, 0, 0, 0, -1, -1, -1, -1);
         }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 8)
+        else if(T::MultisampleT::numSamples == 8)
         {
             mask[0] = _mm256_set1_epi32(-1);
         }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 16)
+        else if(T::MultisampleT::numSamples == 16)
         {
             mask[0] = _mm256_set1_epi32(-1);
             mask[1] = _mm256_set1_epi32(-1);
@@ -99,7 +99,7 @@ INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (
 
         // gather coverage for samples 0-7
         sampleCoverage[0] = _mm256_castps_si256(_simd_mask_i32gather_ps(_mm256_castsi256_ps(src), (const float*)coverageMask, index0, _mm256_castsi256_ps(mask[0]), 8));
-        if(MultisampleTraits<sampleCountT>::numSamples > 8)
+        if(T::MultisampleT::numSamples > 8)
         {
             // gather coverage for samples 8-15
             sampleCoverage[1] = _mm256_castps_si256(_simd_mask_i32gather_ps(_mm256_castsi256_ps(src), (const float*)coverageMask, index1, _mm256_castsi256_ps(mask[1]), 8));
@@ -109,23 +109,23 @@ INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (
     {
         // center coverage is the same for all samples; just broadcast to the sample slots
         uint32_t centerCoverage = ((uint32_t)(*coverageMask) & MASK);
-        if(MultisampleTraits<sampleCountT>::numSamples == 1)
+        if(T::MultisampleT::numSamples == 1)
         {
             sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, centerCoverage);
         }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 2)
+        else if(T::MultisampleT::numSamples == 2)
         {
             sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, centerCoverage, centerCoverage);
         }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 4)
+        else if(T::MultisampleT::numSamples == 4)
         {
             sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, centerCoverage, centerCoverage, centerCoverage, centerCoverage);
         }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 8)
+        else if(T::MultisampleT::numSamples == 8)
         {
             sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
         }
-        else if(MultisampleTraits<sampleCountT>::numSamples == 16)
+        else if(T::MultisampleT::numSamples == 16)
         {
             sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
             sampleCoverage[1] = _mm256_set1_epi32(centerCoverage);
@@ -138,7 +138,7 @@ INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (
     __m256i packedCoverage0 = _simd_shuffle_epi8(sampleCoverage[0], mask[0]);
 
     __m256i packedCoverage1;
-    if(MultisampleTraits<sampleCountT>::numSamples > 8)
+    if(T::MultisampleT::numSamples > 8)
     {
         // pull out the the 8bit 4x2 coverage for samples 8-15 into the lower 32 bits of each 128bit lane
         packedCoverage1 = _simd_shuffle_epi8(sampleCoverage[1], mask[0]);
@@ -151,7 +151,7 @@ INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (
     packedCoverage0 = _mm256_castps_si256(_mm256_blend_ps(_mm256_castsi256_ps(packedCoverage0), shufRes, 0xFE));
 
     __m256i packedSampleCoverage;
-    if(MultisampleTraits<sampleCountT>::numSamples > 8)
+    if(T::MultisampleT::numSamples > 8)
     {
         // pack lower 32 bits of each 128 bit lane into upper 64 bits of single 128 bit lane
         hiToLow = _mm256_permute2f128_si256(packedCoverage1, packedCoverage1, 0x83);
@@ -170,7 +170,7 @@ INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (
     packedCoverage0 = _mm256_permutevar8x32_epi32(packedCoverage0, permMask);
 
     __m256i packedSampleCoverage;
-    if(MultisampleTraits<sampleCountT>::numSamples > 8)
+    if(T::MultisampleT::numSamples > 8)
     {
         permMask = _mm256_set_epi32(0x7, 0x7, 0x7, 0x7, 0x4, 0x0, 0x7, 0x7);
         // pack lower 32 bits of each 128 bit lane into upper 64 bits of single 128 bit lane
@@ -190,7 +190,7 @@ INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (
         // convert packed sample coverage masks into single coverage masks for all samples for each pixel in the 4x2
         inputMask[i] = _simd_movemask_epi8(packedSampleCoverage);
 
-        if(!bForcedSampleCount)
+        if(!T::bForcedSampleCount)
         {
             // input coverage has to be anded with sample mask if MSAA isn't forced on
             inputMask[i] &= sampleMask;
@@ -201,10 +201,22 @@ INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (
     }
 }
 
-template<SWR_MULTISAMPLE_COUNT sampleCountT, bool bIsStandardPattern, bool bForcedSampleCount>
+template<typename T>
 INLINE void generateInputCoverage(const uint64_t *const coverageMask, __m256 &inputCoverage, const uint32_t sampleMask)
 {
     uint32_t inputMask[KNOB_SIMD_WIDTH]; 
-    generateInputCoverage<sampleCountT, bIsStandardPattern, bForcedSampleCount>(coverageMask, inputMask, sampleMask);
+    generateInputCoverage<T>(coverageMask, inputMask, sampleMask);
     inputCoverage = _simd_castsi_ps(_mm256_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]));
 }
+
+template<uint32_t sampleCountT = SWR_MULTISAMPLE_1X, uint32_t samplePattern = SWR_MSAA_STANDARD_PATTERN,
+         uint32_t coverage = 0, uint32_t centroid = 0, uint32_t forced = 0, uint32_t odepth = 0>
+struct SwrBackendTraits
+{
+    static const bool bIsStandardPattern = (samplePattern == SWR_MSAA_STANDARD_PATTERN);
+    static const bool bInputCoverage = (coverage == 1);
+    static const bool bCentroidPos = (centroid == 1);
+    static const bool bForcedSampleCount = (forced == 1);
+    static const bool bWritesODepth = (odepth == 1);
+    typedef MultisampleTraits<(SWR_MULTISAMPLE_COUNT)sampleCountT, (bIsStandardPattern) ? SWR_MSAA_STANDARD_PATTERN : SWR_MSAA_CENTER_PATTERN> MultisampleT;
+};
