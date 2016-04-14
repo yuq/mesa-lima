@@ -323,7 +323,7 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_load_output:
    case nir_intrinsic_load_per_vertex_output: {
       src_reg indirect_offset = get_indirect_offset(instr);
-      unsigned imm_offset = instr->const_index[0];;
+      unsigned imm_offset = instr->const_index[0];
 
       dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
       dst.writemask = brw_writemask_for_size(instr->num_components);
