@@ -753,7 +753,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 8>, SrcFormat, DstFormat 
                 ConvertPixelsSOAtoAOS<SrcFormat, DstFormat>::Convert(pSrc, ppRows);
 
                 ppRows[0] += KNOB_SIMD_WIDTH * DST_BYTES_PER_PIXEL / 2;
-                ppRows[1] += KNOB_SIMD_WIDTH * DST_BYTES_PER_PIXEL / 2;;
+                ppRows[1] += KNOB_SIMD_WIDTH * DST_BYTES_PER_PIXEL / 2;
                 pSrc += SRC_BYTES_PER_PIXEL * KNOB_SIMD_WIDTH;
             }
 
@@ -806,7 +806,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 16>, SrcFormat, DstFormat
                 ConvertPixelsSOAtoAOS<SrcFormat, DstFormat>::Convert(pSrc, ppRows);
 
                 ppRows[0] += KNOB_SIMD_WIDTH * DST_BYTES_PER_PIXEL / 2;
-                ppRows[1] += KNOB_SIMD_WIDTH * DST_BYTES_PER_PIXEL / 2;;
+                ppRows[1] += KNOB_SIMD_WIDTH * DST_BYTES_PER_PIXEL / 2;
                 pSrc += SRC_BYTES_PER_PIXEL * KNOB_SIMD_WIDTH;
             }
 
@@ -859,7 +859,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 32>, SrcFormat, DstFormat
                 ConvertPixelsSOAtoAOS<SrcFormat, DstFormat>::Convert(pSrc, ppRows);
 
                 ppRows[0] += KNOB_SIMD_WIDTH * DST_BYTES_PER_PIXEL / 2;
-                ppRows[1] += KNOB_SIMD_WIDTH * DST_BYTES_PER_PIXEL / 2;;
+                ppRows[1] += KNOB_SIMD_WIDTH * DST_BYTES_PER_PIXEL / 2;
                 pSrc += SRC_BYTES_PER_PIXEL * KNOB_SIMD_WIDTH;
             }
 

@@ -1125,7 +1125,7 @@ static void r600_set_sample_mask(struct pipe_context *pipe, unsigned sample_mask
 
 static void r600_update_driver_const_buffers(struct r600_context *rctx)
 {
-	int sh, size;;
+	int sh, size;
 	void *ptr;
 	struct pipe_constant_buffer cb;
 	for (sh = 0; sh < PIPE_SHADER_TYPES; sh++) {

@@ -1061,13 +1061,13 @@ struct ComponentTraits
         switch (comp)
         {
         case 0:
-            return TypeTraits<X, NumBitsX>::convertSrgb(in);;
+            return TypeTraits<X, NumBitsX>::convertSrgb(in);
         case 1:
-            return TypeTraits<Y, NumBitsY>::convertSrgb(in);;
+            return TypeTraits<Y, NumBitsY>::convertSrgb(in);
         case 2:
-            return TypeTraits<Z, NumBitsZ>::convertSrgb(in);;
+            return TypeTraits<Z, NumBitsZ>::convertSrgb(in);
         case 3:
-            return TypeTraits<W, NumBitsW>::convertSrgb(in);;
+            return TypeTraits<W, NumBitsW>::convertSrgb(in);
         }
         SWR_ASSERT(0);
         return TypeTraits<X, NumBitsX>::convertSrgb(in);

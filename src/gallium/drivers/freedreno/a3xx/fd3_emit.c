@@ -217,7 +217,7 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				j = 1;
 			} else {
 				unsigned start = fd_sampler_first_level(&view->base);
-				unsigned end   = fd_sampler_last_level(&view->base);;
+				unsigned end   = fd_sampler_last_level(&view->base);
 
 				for (j = 0; j < (end - start + 1); j++) {
 					struct fd_resource_slice *slice =

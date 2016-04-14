@@ -473,7 +473,7 @@ tex_init_image(struct ilo_texture *tex,
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    const struct pipe_resource *templ = &tex->base;
    struct ilo_image *img = &tex->image;
-   struct intel_bo *imported_bo = NULL;;
+   struct intel_bo *imported_bo = NULL;
    struct ilo_image_info info;
 
    tex->image_format = resource_get_image_format(templ,
