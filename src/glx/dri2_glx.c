@@ -399,7 +399,7 @@ dri2CreateDrawable(struct glx_screen *base, XID xDrawable,
    }
 
    DRI2CreateDrawable(psc->base.dpy, xDrawable);
-   pdp = (struct dri2_display *)dpyPriv->dri2Display;;
+   pdp = (struct dri2_display *)dpyPriv->dri2Display;
    /* Create a new drawable */
    pdraw->driDrawable =
       (*psc->dri2->createNewDrawable) (psc->driScreen,
