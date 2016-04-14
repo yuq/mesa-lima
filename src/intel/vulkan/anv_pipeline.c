@@ -174,11 +174,11 @@ anv_shader_compile_to_nir(struct anv_device *device,
 
    nir_shader_gather_info(nir, entry_point->impl);
 
-   uint32_t indirect_mask = 0;
+   nir_variable_mode indirect_mask = 0;
    if (compiler->glsl_compiler_options[stage].EmitNoIndirectInput)
-      indirect_mask |= (1 << nir_var_shader_in);
+      indirect_mask |= nir_var_shader_in;
    if (compiler->glsl_compiler_options[stage].EmitNoIndirectTemp)
-      indirect_mask |= 1 << nir_var_local;
+      indirect_mask |= nir_var_local;
 
    nir_lower_indirect_derefs(nir, indirect_mask);
 
