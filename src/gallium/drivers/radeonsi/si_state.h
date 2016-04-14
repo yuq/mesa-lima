@@ -191,8 +191,6 @@ struct si_descriptors {
 	unsigned element_dw_size;
 	/* The maximum number of descriptors. */
 	unsigned num_elements;
-	/* Whether the list has been changed and should be re-uploaded. */
-	bool list_dirty;
 
 	/* The buffer where the descriptors have been uploaded. */
 	struct r600_resource *buffer;
@@ -203,6 +201,13 @@ struct si_descriptors {
 
 	/* The i-th bit is set if that element is enabled (non-NULL resource). */
 	uint64_t enabled_mask;
+
+	/* elements of the list that are changed and need to be uploaded */
+	uint64_t dirty_mask;
+
+	/* Whether the CE ram is dirty and needs to be reinitialized entirely
+	 * before we can do partial updates. */
+	bool ce_ram_dirty;
 
 	/* The shader userdata offset within a shader where the 64-bit pointer to the descriptor
 	 * array will be stored. */

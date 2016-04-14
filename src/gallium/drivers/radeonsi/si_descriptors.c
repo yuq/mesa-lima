@@ -109,7 +109,7 @@ static void si_init_descriptors(struct si_descriptors *desc,
 	desc->list = CALLOC(num_elements, element_dw_size * 4);
 	desc->element_dw_size = element_dw_size;
 	desc->num_elements = num_elements;
-	desc->list_dirty = true; /* upload the list before the next draw */
+	desc->dirty_mask = num_elements == 64 ? ~0llu : (1llu << num_elements) - 1;
 	desc->shader_userdata_offset = shader_userdata_index * 4;
 
 	if (ce_offset) {
@@ -162,7 +162,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	unsigned list_size = desc->num_elements * desc->element_dw_size * 4;
 	void *ptr;
 
-	if (!desc->list_dirty)
+	if (!desc->dirty_mask)
 		return true;
 
 	u_upload_alloc(sctx->b.uploader, 0, list_size, 256,
@@ -176,7 +176,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
 			      RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 
-	desc->list_dirty = false;
+	desc->dirty_mask = 0;
 	desc->pointer_dirty = true;
 	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
 	return true;
@@ -218,6 +218,8 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 
 		si_sampler_view_add_buffer(sctx, views->views[i]->texture);
 	}
+
+	views->desc.ce_ram_dirty = true;
 
 	if (!views->desc.buffer)
 		return;
@@ -270,7 +272,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 		views->desc.enabled_mask &= ~(1llu << slot);
 	}
 
-	views->desc.list_dirty = true;
+	views->desc.dirty_mask |= 1llu << slot;
 }
 
 static bool is_compressed_colortex(struct r600_texture *rtex)
@@ -376,6 +378,8 @@ si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *imag
 		si_sampler_view_add_buffer(sctx, view->resource);
 	}
 
+	images->desc.ce_ram_dirty = true;
+
 	if (images->desc.buffer) {
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 					  images->desc.buffer,
@@ -393,7 +397,7 @@ si_disable_shader_image(struct si_images_info *images, unsigned slot)
 
 		memcpy(images->desc.list + slot*8, null_image_descriptor, 8*4);
 		images->desc.enabled_mask &= ~(1llu << slot);
-		images->desc.list_dirty = true;
+		images->desc.dirty_mask |= 1llu << slot;
 	}
 }
 
@@ -474,7 +478,7 @@ si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 		}
 
 		images->desc.enabled_mask |= 1llu << slot;
-		images->desc.list_dirty = true;
+		images->desc.dirty_mask |= 1llu << slot;
 	}
 }
 
@@ -532,7 +536,7 @@ static void si_bind_sampler_states(struct pipe_context *ctx, unsigned shader,
 			continue;
 
 		memcpy(desc->list + slot * 16 + 12, sstates[i]->val, 4*4);
-		desc->list_dirty = true;
+		desc->dirty_mask |= 1llu << slot;
 	}
 }
 
@@ -578,6 +582,8 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 				      (struct r600_resource*)buffers->buffers[i],
 				      buffers->shader_usage, buffers->priority);
 	}
+
+	buffers->desc.ce_ram_dirty = true;
 
 	if (!buffers->desc.buffer)
 		return;
@@ -775,7 +781,7 @@ static void si_set_constant_buffer(struct pipe_context *ctx, uint shader, uint s
 		buffers->desc.enabled_mask &= ~(1llu << slot);
 	}
 
-	buffers->desc.list_dirty = true;
+	buffers->desc.dirty_mask |= 1llu << slot;
 }
 
 /* SHADER BUFFERS */
@@ -822,9 +828,9 @@ static void si_set_shader_buffers(struct pipe_context *ctx, unsigned shader,
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, buf,
 				      buffers->shader_usage, buffers->priority);
 		buffers->desc.enabled_mask |= 1llu << slot;
+		buffers->desc.dirty_mask |= 1llu << slot;
 	}
 
-	buffers->desc.list_dirty = true;
 }
 
 /* RING BUFFERS */
@@ -919,7 +925,7 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 		buffers->desc.enabled_mask &= ~(1llu << slot);
 	}
 
-	buffers->desc.list_dirty = true;
+	buffers->desc.dirty_mask |= 1llu << slot;
 }
 
 /* STREAMOUT BUFFERS */
@@ -1017,6 +1023,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 						NULL);
 			buffers->desc.enabled_mask &= ~(1llu << bufidx);
 		}
+		buffers->desc.dirty_mask |= 1llu << bufidx;
 	}
 	for (; i < old_num_targets; i++) {
 		bufidx = SI_SO_BUF_OFFSET + i;
@@ -1024,9 +1031,9 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		memset(buffers->desc.list + bufidx*4, 0, sizeof(uint32_t) * 4);
 		pipe_resource_reference(&buffers->buffers[bufidx], NULL);
 		buffers->desc.enabled_mask &= ~(1llu << bufidx);
+		buffers->desc.dirty_mask |= 1llu << bufidx;
 	}
 
-	buffers->desc.list_dirty = true;
 }
 
 static void si_desc_reset_buffer_offset(struct pipe_context *ctx,
@@ -1078,7 +1085,7 @@ static void si_reset_buffer_resources(struct si_context *sctx,
 			si_desc_reset_buffer_offset(&sctx->b.b,
 						    buffers->desc.list + i*4,
 						    old_va, buf);
-			buffers->desc.list_dirty = true;
+			buffers->desc.dirty_mask |= 1llu << i;
 
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 						(struct r600_resource *)buf,
@@ -1140,7 +1147,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 			if (buffers->buffers[i] == buf) {
 				si_desc_reset_buffer_offset(ctx, buffers->desc.list + i*4,
 							    old_va, buf);
-				buffers->desc.list_dirty = true;
+				buffers->desc.dirty_mask |= 1llu << i;
 
 				radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 						      rbuffer, buffers->shader_usage,
@@ -1185,7 +1192,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 							    views->desc.list +
 							    i * 16 + 4,
 							    old_va, buf);
-				views->desc.list_dirty = true;
+				views->desc.dirty_mask |= 1llu << i;
 
 				radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 						      rbuffer, RADEON_USAGE_READ,
@@ -1206,7 +1213,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 				si_desc_reset_buffer_offset(
 					ctx, images->desc.list + i * 8 + 4,
 					old_va, buf);
-				images->desc.list_dirty = true;
+				images->desc.dirty_mask |= 1llu << i;
 
 				radeon_add_to_buffer_list(
 					&sctx->b, &sctx->b.gfx, rbuffer,
