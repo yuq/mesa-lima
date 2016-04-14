@@ -514,7 +514,7 @@ droid_get_buffers_with_format(__DRIdrawable * driDrawable,
    if (height)
       *height = dri2_surf->base.Height;
 
-   *out_count = dri2_surf->buffer_count;;
+   *out_count = dri2_surf->buffer_count;
 
    return dri2_surf->buffers;
 }
