@@ -430,7 +430,7 @@ brw_wm_state_dirty(const struct brw_context *brw)
                           BRW_NEW_VUE_MAP_GEOM_OUT);
 }
 
-static void
+void
 brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;

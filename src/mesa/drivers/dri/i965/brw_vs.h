@@ -68,6 +68,10 @@ brw_codegen_vs_prog(struct brw_context *brw,
                     struct brw_vertex_program *vp,
                     struct brw_vs_prog_key *key);
 
+void
+brw_vs_populate_key(struct brw_context *brw,
+                    struct brw_vs_prog_key *key);
+
 #ifdef __cplusplus
 } /* extern "C" */
 

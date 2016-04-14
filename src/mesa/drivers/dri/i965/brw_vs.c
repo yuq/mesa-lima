@@ -303,7 +303,7 @@ brw_vs_state_dirty(const struct brw_context *brw)
                           BRW_NEW_VS_ATTRIB_WORKAROUNDS);
 }
 
-static void
+void
 brw_vs_populate_key(struct brw_context *brw,
                     struct brw_vs_prog_key *key)
 {
