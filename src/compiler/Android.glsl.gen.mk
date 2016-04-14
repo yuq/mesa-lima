@@ -33,6 +33,7 @@ LOCAL_SRC_FILES := $(LOCAL_SRC_FILES)
 
 LOCAL_C_INCLUDES += \
 	$(intermediates)/glsl \
+	$(intermediates)/glsl/glcpp \
 	$(LOCAL_PATH)/glsl \
 	$(LOCAL_PATH)/glsl/glcpp \
 
