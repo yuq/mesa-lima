@@ -1,0 +1,589 @@
+/*
+ * Copyright © 2014 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * \file shader_cache.cpp
+ *
+ * GLSL shader cache implementation
+ *
+ * This uses disk_cache.c to write out a serialization of various
+ * state that's required in order to successfully load and use a
+ * binary written out by a drivers backend, this state is referred to as
+ * "metadata" throughout the implementation.
+ *
+ * The hash key for glsl metadata is a hash of the hashes of each GLSL
+ * source string as well as some API settings that change the final program
+ * such as SSO, attribute bindings, frag data bindings, etc.
+ *
+ * In order to avoid caching any actual IR we use the put_key/get_key support
+ * in the disk_cache to put the SHA-1 hash for each successfully compiled
+ * shader into the cache, and optimisticly return early from glCompileShader
+ * (if the identical shader had been successfully compiled in the past),
+ * in the hope that the final linked shader will be found in the cache.
+ * If anything goes wrong (shader variant not found, backend cache item is
+ * corrupt, etc) we will use a fallback path to compile and link the IR.
+ */
+
+#include "blob.h"
+#include "compiler/shader_info.h"
+#include "glsl_symbol_table.h"
+#include "glsl_parser_extras.h"
+#include "ir.h"
+#include "ir_optimization.h"
+#include "ir_rvalue_visitor.h"
+#include "ir_uniform.h"
+#include "linker.h"
+#include "link_varyings.h"
+#include "main/core.h"
+#include "nir.h"
+#include "program.h"
+#include "util/disk_cache.h"
+#include "util/mesa-sha1.h"
+#include "util/string_to_uint_map.h"
+
+extern "C" {
+#include "main/enums.h"
+#include "main/shaderobj.h"
+#include "program/program.h"
+}
+
+static void
+compile_shaders(struct gl_context *ctx, struct gl_shader_program *prog) {
+   for (unsigned i = 0; i < prog->NumShaders; i++) {
+      _mesa_glsl_compile_shader(ctx, prog->Shaders[i], false, false, true);
+   }
+}
+
+static void
+encode_type_to_blob(struct blob *blob, const glsl_type *type)
+{
+   uint32_t encoding;
+
+   switch (type->base_type) {
+   case GLSL_TYPE_UINT:
+   case GLSL_TYPE_INT:
+   case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_DOUBLE:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
+      encoding = (type->base_type << 24) |
+         (type->vector_elements << 4) |
+         (type->matrix_columns);
+      break;
+   case GLSL_TYPE_SAMPLER:
+      encoding = (type->base_type) << 24 |
+         (type->sampler_dimensionality << 4) |
+         (type->sampler_shadow << 3) |
+         (type->sampler_array << 2) |
+         (type->sampled_type);
+      break;
+   case GLSL_TYPE_SUBROUTINE:
+      encoding = type->base_type << 24;
+      blob_write_uint32(blob, encoding);
+      blob_write_string(blob, type->name);
+      return;
+   case GLSL_TYPE_IMAGE:
+      encoding = (type->base_type) << 24 |
+         (type->sampler_dimensionality << 3) |
+         (type->sampler_array << 2) |
+         (type->sampled_type);
+      break;
+   case GLSL_TYPE_ATOMIC_UINT:
+      encoding = (type->base_type << 24);
+      break;
+   case GLSL_TYPE_ARRAY:
+      blob_write_uint32(blob, (type->base_type) << 24);
+      blob_write_uint32(blob, type->length);
+      encode_type_to_blob(blob, type->fields.array);
+      return;
+   case GLSL_TYPE_STRUCT:
+   case GLSL_TYPE_INTERFACE:
+      blob_write_uint32(blob, (type->base_type) << 24);
+      blob_write_string(blob, type->name);
+      blob_write_uint32(blob, type->length);
+      blob_write_bytes(blob, type->fields.structure,
+                       sizeof(glsl_struct_field) * type->length);
+      for (unsigned i = 0; i < type->length; i++) {
+         encode_type_to_blob(blob, type->fields.structure[i].type);
+         blob_write_string(blob, type->fields.structure[i].name);
+      }
+
+      if (type->base_type == GLSL_TYPE_INTERFACE) {
+         blob_write_uint32(blob, type->interface_packing);
+         blob_write_uint32(blob, type->interface_row_major);
+      }
+      return;
+   case GLSL_TYPE_VOID:
+   case GLSL_TYPE_ERROR:
+   default:
+      assert(!"Cannot encode type!");
+      encoding = 0;
+      break;
+   }
+
+   blob_write_uint32(blob, encoding);
+}
+
+static const glsl_type *
+decode_type_from_blob(struct blob_reader *blob)
+{
+   uint32_t u = blob_read_uint32(blob);
+   glsl_base_type base_type = (glsl_base_type) (u >> 24);
+
+   switch (base_type) {
+   case GLSL_TYPE_UINT:
+   case GLSL_TYPE_INT:
+   case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_DOUBLE:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
+      return glsl_type::get_instance(base_type, (u >> 4) & 0x0f, u & 0x0f);
+   case GLSL_TYPE_SAMPLER:
+      return glsl_type::get_sampler_instance((enum glsl_sampler_dim) ((u >> 4) & 0x07),
+                                             (u >> 3) & 0x01,
+                                             (u >> 2) & 0x01,
+                                             (glsl_base_type) ((u >> 0) & 0x03));
+   case GLSL_TYPE_SUBROUTINE:
+      return glsl_type::get_subroutine_instance(blob_read_string(blob));
+   case GLSL_TYPE_IMAGE:
+      return glsl_type::get_image_instance((enum glsl_sampler_dim) ((u >> 3) & 0x07),
+                                             (u >> 2) & 0x01,
+                                             (glsl_base_type) ((u >> 0) & 0x03));
+   case GLSL_TYPE_ATOMIC_UINT:
+      return glsl_type::atomic_uint_type;
+   case GLSL_TYPE_ARRAY: {
+      unsigned length = blob_read_uint32(blob);
+      return glsl_type::get_array_instance(decode_type_from_blob(blob),
+                                           length);
+   }
+   case GLSL_TYPE_STRUCT:
+   case GLSL_TYPE_INTERFACE: {
+      char *name = blob_read_string(blob);
+      unsigned num_fields = blob_read_uint32(blob);
+      glsl_struct_field *fields = (glsl_struct_field *)
+         blob_read_bytes(blob, sizeof(glsl_struct_field) * num_fields);
+      for (unsigned i = 0; i < num_fields; i++) {
+         fields[i].type = decode_type_from_blob(blob);
+         fields[i].name = blob_read_string(blob);
+      }
+
+      if (base_type == GLSL_TYPE_INTERFACE) {
+         enum glsl_interface_packing packing =
+            (glsl_interface_packing) blob_read_uint32(blob);
+         bool row_major = blob_read_uint32(blob);
+         return glsl_type::get_interface_instance(fields, num_fields,
+                                                  packing, row_major, name);
+      } else {
+         return glsl_type::get_record_instance(fields, num_fields, name);
+      }
+   }
+   case GLSL_TYPE_VOID:
+   case GLSL_TYPE_ERROR:
+   default:
+      assert(!"Cannot decode type!");
+      return NULL;
+   }
+}
+
+static void
+write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
+{
+   blob_write_uint32(metadata, prog->SamplersValidated);
+   blob_write_uint32(metadata, prog->data->NumUniformStorage);
+   blob_write_uint32(metadata, prog->data->NumUniformDataSlots);
+
+   for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
+      encode_type_to_blob(metadata, prog->data->UniformStorage[i].type);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].array_elements);
+      blob_write_string(metadata, prog->data->UniformStorage[i].name);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].storage -
+                                  prog->data->UniformDataSlots);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].remap_location);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].block_index);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].atomic_buffer_index);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].offset);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].array_stride);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].matrix_stride);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].row_major);
+      blob_write_uint32(metadata,
+                        prog->data->UniformStorage[i].num_compatible_subroutines);
+      blob_write_uint32(metadata,
+                        prog->data->UniformStorage[i].top_level_array_size);
+      blob_write_uint32(metadata,
+                        prog->data->UniformStorage[i].top_level_array_stride);
+   }
+}
+
+static void
+read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
+{
+   struct gl_uniform_storage *uniforms;
+   union gl_constant_value *data;
+
+   prog->SamplersValidated = blob_read_uint32(metadata);
+   prog->data->NumUniformStorage = blob_read_uint32(metadata);
+   prog->data->NumUniformDataSlots = blob_read_uint32(metadata);
+
+   uniforms = rzalloc_array(prog, struct gl_uniform_storage,
+                            prog->data->NumUniformStorage);
+   prog->data->UniformStorage = uniforms;
+
+   data = rzalloc_array(uniforms, union gl_constant_value,
+                        prog->data->NumUniformDataSlots);
+   prog->data->UniformDataSlots = data;
+
+   prog->UniformHash = new string_to_uint_map;
+
+   for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
+      uniforms[i].type = decode_type_from_blob(metadata);
+      uniforms[i].array_elements = blob_read_uint32(metadata);
+      uniforms[i].name = ralloc_strdup(prog, blob_read_string (metadata));
+      uniforms[i].storage = data + blob_read_uint32(metadata);
+      uniforms[i].remap_location = blob_read_uint32(metadata);
+      uniforms[i].block_index = blob_read_uint32(metadata);
+      uniforms[i].atomic_buffer_index = blob_read_uint32(metadata);
+      uniforms[i].offset = blob_read_uint32(metadata);
+      uniforms[i].array_stride = blob_read_uint32(metadata);
+      uniforms[i].matrix_stride = blob_read_uint32(metadata);
+      uniforms[i].row_major = blob_read_uint32(metadata);
+      uniforms[i].num_compatible_subroutines = blob_read_uint32(metadata);
+      uniforms[i].top_level_array_size = blob_read_uint32(metadata);
+      uniforms[i].top_level_array_stride = blob_read_uint32(metadata);
+      prog->UniformHash->put(i, uniforms[i].name);
+   }
+}
+
+
+static void
+write_uniform_remap_table(struct blob *metadata,
+                          struct gl_shader_program *prog)
+{
+   blob_write_uint32(metadata, prog->NumUniformRemapTable);
+
+   for (unsigned i = 0; i < prog->NumUniformRemapTable; i++) {
+      blob_write_uint32(metadata, prog->UniformRemapTable[i] -
+                           prog->data->UniformStorage);
+   }
+}
+
+static void
+read_uniform_remap_table(struct blob_reader *metadata,
+                         struct gl_shader_program *prog)
+{
+   prog->NumUniformRemapTable = blob_read_uint32(metadata);
+
+   prog->UniformRemapTable =rzalloc_array(prog, struct gl_uniform_storage *,
+                                          prog->NumUniformRemapTable);
+
+   for (unsigned i = 0; i < prog->NumUniformRemapTable; i++) {
+      prog->UniformRemapTable[i] =
+         prog->data->UniformStorage + blob_read_uint32(metadata);
+   }
+}
+
+static void
+write_shader_parameters(struct blob *metadata,
+                        struct gl_program_parameter_list *params)
+{
+   blob_write_uint32(metadata, params->NumParameters);
+   uint32_t i = 0;
+
+   while (i < params->NumParameters) {
+      struct gl_program_parameter *param = &params->Parameters[i];
+
+      blob_write_uint32(metadata, param->Type);
+      blob_write_string(metadata, param->Name);
+      blob_write_uint32(metadata, param->Size);
+      blob_write_uint32(metadata, param->DataType);
+      blob_write_bytes(metadata, param->StateIndexes,
+                       sizeof(param->StateIndexes));
+
+      i += (param->Size + 3) / 4;
+   }
+
+   blob_write_bytes(metadata, params->ParameterValues,
+                    sizeof(gl_constant_value) * 4 * params->NumParameters);
+
+   blob_write_uint32(metadata, params->StateFlags);
+}
+
+static void
+read_shader_parameters(struct blob_reader *metadata,
+                       struct gl_program_parameter_list *params)
+{
+   gl_state_index state_indexes[STATE_LENGTH];
+   uint32_t i = 0;
+   uint32_t num_parameters = blob_read_uint32(metadata);
+
+   while (i < num_parameters) {
+      gl_register_file type = (gl_register_file) blob_read_uint32(metadata);
+      const char *name = blob_read_string(metadata);
+      unsigned size = blob_read_uint32(metadata);
+      unsigned data_type = blob_read_uint32(metadata);
+      blob_copy_bytes(metadata, (uint8_t *) state_indexes,
+                      sizeof(state_indexes));
+
+      _mesa_add_parameter(params, type, name, size, data_type,
+                          NULL, state_indexes);
+
+      i += (size + 3) / 4;
+   }
+
+   blob_copy_bytes(metadata, (uint8_t *) params->ParameterValues,
+                    sizeof(gl_constant_value) * 4 * params->NumParameters);
+
+   params->StateFlags = blob_read_uint32(metadata);
+}
+
+static void
+write_shader_metadata(struct blob *metadata, gl_linked_shader *shader)
+{
+   assert(shader->Program);
+   struct gl_program *glprog = shader->Program;
+
+   blob_write_bytes(metadata, glprog->TexturesUsed,
+                    sizeof(glprog->TexturesUsed));
+   blob_write_uint64(metadata, glprog->SamplersUsed);
+
+   write_shader_parameters(metadata, glprog->Parameters);
+}
+
+static void
+read_shader_metadata(struct blob_reader *metadata,
+                     struct gl_program *glprog,
+                     gl_linked_shader *linked)
+{
+   blob_copy_bytes(metadata, (uint8_t *) glprog->TexturesUsed,
+                   sizeof(glprog->TexturesUsed));
+   glprog->SamplersUsed = blob_read_uint64(metadata);
+
+   glprog->Parameters = _mesa_new_parameter_list();
+   read_shader_parameters(metadata, glprog->Parameters);
+}
+
+static void
+create_binding_str(const char *key, unsigned value, void *closure)
+{
+   char **bindings_str = (char **) closure;
+   ralloc_asprintf_append(bindings_str, "%s:%u,", key, value);
+}
+
+static void
+create_linked_shader_and_program(struct gl_context *ctx,
+                                 gl_shader_stage stage,
+                                 struct gl_shader_program *prog,
+                                 struct blob_reader *metadata)
+{
+   struct gl_program *glprog;
+
+   struct gl_linked_shader *linked = rzalloc(NULL, struct gl_linked_shader);
+   linked->Stage = stage;
+
+   glprog = ctx->Driver.NewProgram(ctx, _mesa_shader_stage_to_program(stage),
+                                   prog->Name, false);
+   glprog->info.stage = stage;
+   linked->Program = glprog;
+
+   read_shader_metadata(metadata, glprog, linked);
+
+   /* Restore shader info */
+   blob_copy_bytes(metadata, (uint8_t *) &glprog->info, sizeof(shader_info));
+   if (glprog->info.name)
+      glprog->info.name = ralloc_strdup(glprog, blob_read_string(metadata));
+   if (glprog->info.label)
+      glprog->info.label = ralloc_strdup(glprog, blob_read_string(metadata));
+
+   _mesa_reference_shader_program_data(ctx, &glprog->sh.data, prog->data);
+   _mesa_reference_program(ctx, &linked->Program, glprog);
+   prog->_LinkedShaders[stage] = linked;
+}
+
+void
+shader_cache_write_program_metadata(struct gl_context *ctx,
+                                    struct gl_shader_program *prog)
+{
+   struct disk_cache *cache = ctx->Cache;
+   if (!cache)
+      return;
+
+   /* Exit early when we are dealing with a ff shader with no source file to
+    * generate a source from.
+    *
+    * TODO: In future we should use another method to generate a key for ff
+    * programs.
+    */
+   if (*prog->data->sha1 == 0)
+      return;
+
+   struct blob *metadata = blob_create(NULL);
+
+   write_uniforms(metadata, prog);
+
+   blob_write_uint32(metadata, prog->data->Version);
+   blob_write_uint32(metadata, prog->data->linked_stages);
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      if (sh) {
+         write_shader_metadata(metadata, sh);
+
+         /* Store nir shader info */
+         blob_write_bytes(metadata, &sh->Program->info, sizeof(shader_info));
+
+         if (sh->Program->info.name)
+            blob_write_string(metadata, sh->Program->info.name);
+
+         if (sh->Program->info.label)
+            blob_write_string(metadata, sh->Program->info.label);
+      }
+   }
+
+   write_uniform_remap_table(metadata, prog);
+
+   char sha1_buf[41];
+   for (unsigned i = 0; i < prog->NumShaders; i++) {
+      disk_cache_put_key(cache, prog->Shaders[i]->sha1);
+      if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
+         fprintf(stderr, "marking shader: %s\n",
+                 _mesa_sha1_format(sha1_buf, prog->Shaders[i]->sha1));
+      }
+   }
+
+   disk_cache_put(cache, prog->data->sha1, metadata->data, metadata->size);
+
+   ralloc_free(metadata);
+
+   if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
+      fprintf(stderr, "putting program metadata in cache: %s\n",
+              _mesa_sha1_format(sha1_buf, prog->data->sha1));
+   }
+}
+
+bool
+shader_cache_read_program_metadata(struct gl_context *ctx,
+                                   struct gl_shader_program *prog)
+{
+   /* Fixed function programs generated by Mesa are not cached. So don't
+    * try to read metadata for them from the cache.
+    */
+   if (prog->Name == 0)
+      return false;
+
+   struct disk_cache *cache = ctx->Cache;
+   if (!cache)
+      return false;
+
+   /* Include bindings when creating sha1. These bindings change the resulting
+    * binary so they are just as important as the shader source.
+    */
+   char *buf = ralloc_strdup(NULL, "vb: ");
+   prog->AttributeBindings->iterate(create_binding_str, &buf);
+   ralloc_strcat(&buf, "fb: ");
+   prog->FragDataBindings->iterate(create_binding_str, &buf);
+   ralloc_strcat(&buf, "fbi: ");
+   prog->FragDataIndexBindings->iterate(create_binding_str, &buf);
+
+   /* SSO has an effect on the linked program so include this when generating
+    * the sha also.
+    */
+   ralloc_asprintf_append(&buf, "sso: %s\n",
+                          prog->SeparateShader ? "T" : "F");
+
+   char sha1buf[41];
+   for (unsigned i = 0; i < prog->NumShaders; i++) {
+      struct gl_shader *sh = prog->Shaders[i];
+      ralloc_asprintf_append(&buf, "%s: %s\n",
+                             _mesa_shader_stage_to_abbrev(sh->Stage),
+                             _mesa_sha1_format(sha1buf, sh->sha1));
+   }
+   _mesa_sha1_compute(buf, strlen(buf), prog->data->sha1);
+   ralloc_free(buf);
+
+   size_t size;
+   uint8_t *buffer = (uint8_t *) disk_cache_get(cache, prog->data->sha1,
+                                                &size);
+   if (buffer == NULL) {
+      /* Cached program not found. We may have seen the individual shaders
+       * before and skipped compiling but they may not have been used together
+       * in this combination before. Fall back to linking shaders but first
+       * re-compile the shaders.
+       *
+       * We could probably only compile the shaders which were skipped here
+       * but we need to be careful because the source may also have been
+       * changed since the last compile so for now we just recompile
+       * everything.
+       */
+      compile_shaders(ctx, prog);
+      return false;
+   }
+
+   if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
+      fprintf(stderr, "loading shader program meta data from cache: %s\n",
+              _mesa_sha1_format(sha1buf, prog->data->sha1));
+   }
+
+   struct blob_reader metadata;
+   blob_reader_init(&metadata, buffer, size);
+
+   assert(prog->data->UniformStorage == NULL);
+
+   read_uniforms(&metadata, prog);
+
+   prog->data->Version = blob_read_uint32(&metadata);
+   prog->data->linked_stages = blob_read_uint32(&metadata);
+
+   unsigned mask = prog->data->linked_stages;
+   while (mask) {
+      const int j = u_bit_scan(&mask);
+      create_linked_shader_and_program(ctx, (gl_shader_stage) j, prog,
+                                       &metadata);
+   }
+
+   read_uniform_remap_table(&metadata, prog);
+
+   if (metadata.current != metadata.end || metadata.overrun) {
+      /* Something has gone wrong discard the item from the cache and rebuild
+       * from source.
+       */
+      assert(!"Invalid GLSL shader disk cache item!");
+
+      if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
+         fprintf(stderr, "Error reading program from cache (invalid GLSL "
+                 "cache item)\n");
+      }
+
+      disk_cache_remove(cache, prog->data->sha1);
+      compile_shaders(ctx, prog);
+      free(buffer);
+      return false;
+   }
+
+   /* This is used to flag a shader retrieved from cache */
+   prog->data->LinkStatus = linking_skipped;
+
+   free (buffer);
+
+   return true;
+}

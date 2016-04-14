@@ -142,6 +142,10 @@ LIBGLSL_FILES = \
 	glsl/s_expression.cpp \
 	glsl/s_expression.h
 
+LIBGLSL_SHADER_CACHE_FILES = \
+	glsl/shader_cache.cpp \
+	glsl/shader_cache.h
+
 # glsl_compiler
 
 GLSL_COMPILER_CXX_FILES = \
