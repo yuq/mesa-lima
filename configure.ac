@@ -2446,6 +2446,27 @@ AC_SUBST([XA_MINOR], $XA_MINOR)
 AC_SUBST([XA_TINY], $XA_TINY)
 AC_SUBST([XA_VERSION], "$XA_MAJOR.$XA_MINOR.$XA_TINY")
 
+AC_ARG_ENABLE(valgrind,
+              [AS_HELP_STRING([--enable-valgrind],
+                             [Build mesa with valgrind support (default: auto)])],
+                             [VALGRIND=$enableval], [VALGRIND=auto])
+if test "x$VALGRIND" != xno; then
+	PKG_CHECK_MODULES(VALGRIND, [valgrind], [have_valgrind=yes], [have_valgrind=no])
+fi
+AC_MSG_CHECKING([whether to enable Valgrind support])
+if test "x$VALGRIND" = xauto; then
+	VALGRIND="$have_valgrind"
+fi
+
+if test "x$VALGRIND" = "xyes"; then
+	if ! test "x$have_valgrind" = xyes; then
+		AC_MSG_ERROR([Valgrind support required but not present])
+	fi
+	AC_DEFINE([HAVE_VALGRIND], 1, [Use valgrind intrinsics to suppress false warnings])
+fi
+
+AC_MSG_RESULT([$VALGRIND])
+
 dnl Restore LDFLAGS and CPPFLAGS
 LDFLAGS="$_SAVE_LDFLAGS"
 CPPFLAGS="$_SAVE_CPPFLAGS"
