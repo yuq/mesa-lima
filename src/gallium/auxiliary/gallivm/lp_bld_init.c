@@ -49,12 +49,9 @@
 #elif defined(PIPE_ARCH_PPC_64) || defined(PIPE_ARCH_S390) || defined(PIPE_ARCH_ARM) || defined(PIPE_ARCH_AARCH64)
 #  define USE_MCJIT 1
 #else
-#  define USE_MCJIT 0
+static bool USE_MCJIT = 0;
 #endif
 
-#if USE_MCJIT
-void LLVMLinkInMCJIT();
-#endif
 
 #ifdef DEBUG
 unsigned gallivm_debug = 0;
@@ -190,13 +187,13 @@ gallivm_free_ir(struct gallivm_state *gallivm)
       LLVMDisposeModule(gallivm->module);
    }
 
-#if !USE_MCJIT
-   /* Don't free the TargetData, it's owned by the exec engine */
-#else
-   if (gallivm->target) {
-      LLVMDisposeTargetData(gallivm->target);
+   if (!USE_MCJIT) {
+      /* Don't free the TargetData, it's owned by the exec engine */
+   } else {
+      if (gallivm->target) {
+         LLVMDisposeTargetData(gallivm->target);
+      }
    }
-#endif
 
    if (gallivm->builder)
       LLVMDisposeBuilder(gallivm->builder);
@@ -256,32 +253,32 @@ init_gallivm_engine(struct gallivm_state *gallivm)
       }
    }
 
-#if !USE_MCJIT
-   gallivm->target = LLVMGetExecutionEngineTargetData(gallivm->engine);
-   if (!gallivm->target)
-      goto fail;
-#else
-   if (0) {
-       /*
-        * Dump the data layout strings.
-        */
+   if (!USE_MCJIT) {
+      gallivm->target = LLVMGetExecutionEngineTargetData(gallivm->engine);
+      if (!gallivm->target)
+         goto fail;
+   } else {
+      if (0) {
+          /*
+           * Dump the data layout strings.
+           */
 
-       LLVMTargetDataRef target = LLVMGetExecutionEngineTargetData(gallivm->engine);
-       char *data_layout;
-       char *engine_data_layout;
+          LLVMTargetDataRef target = LLVMGetExecutionEngineTargetData(gallivm->engine);
+          char *data_layout;
+          char *engine_data_layout;
 
-       data_layout = LLVMCopyStringRepOfTargetData(gallivm->target);
-       engine_data_layout = LLVMCopyStringRepOfTargetData(target);
+          data_layout = LLVMCopyStringRepOfTargetData(gallivm->target);
+          engine_data_layout = LLVMCopyStringRepOfTargetData(target);
 
-       if (1) {
-          debug_printf("module target data = %s\n", data_layout);
-          debug_printf("engine target data = %s\n", engine_data_layout);
-       }
+          if (1) {
+             debug_printf("module target data = %s\n", data_layout);
+             debug_printf("engine target data = %s\n", engine_data_layout);
+          }
 
-       free(data_layout);
-       free(engine_data_layout);
+          free(data_layout);
+          free(engine_data_layout);
+      }
    }
-#endif
 
    return TRUE;
 
@@ -326,46 +323,46 @@ init_gallivm_state(struct gallivm_state *gallivm, const char *name,
     * complete when MC-JIT is created. So defer the MC-JIT engine creation for
     * now.
     */
-#if !USE_MCJIT
-   if (!init_gallivm_engine(gallivm)) {
-      goto fail;
-   }
-#else
-   /*
-    * MC-JIT engine compiles the module immediately on creation, so we can't
-    * obtain the target data from it.  Instead we create a target data layout
-    * from a string.
-    *
-    * The produced layout strings are not precisely the same, but should make
-    * no difference for the kind of optimization passes we run.
-    *
-    * For reference this is the layout string on x64:
-    *
-    *   e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-f128:128:128-n8:16:32:64
-    *
-    * See also:
-    * - http://llvm.org/docs/LangRef.html#datalayout
-    */
+   if (!USE_MCJIT) {
+      if (!init_gallivm_engine(gallivm)) {
+         goto fail;
+      }
+   } else {
+      /*
+       * MC-JIT engine compiles the module immediately on creation, so we can't
+       * obtain the target data from it.  Instead we create a target data layout
+       * from a string.
+       *
+       * The produced layout strings are not precisely the same, but should make
+       * no difference for the kind of optimization passes we run.
+       *
+       * For reference this is the layout string on x64:
+       *
+       *   e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-f128:128:128-n8:16:32:64
+       *
+       * See also:
+       * - http://llvm.org/docs/LangRef.html#datalayout
+       */
 
-   {
-      const unsigned pointer_size = 8 * sizeof(void *);
-      char layout[512];
-      util_snprintf(layout, sizeof layout, "%c-p:%u:%u:%u-i64:64:64-a0:0:%u-s0:%u:%u",
+      {
+         const unsigned pointer_size = 8 * sizeof(void *);
+         char layout[512];
+         util_snprintf(layout, sizeof layout, "%c-p:%u:%u:%u-i64:64:64-a0:0:%u-s0:%u:%u",
 #ifdef PIPE_ARCH_LITTLE_ENDIAN
-                    'e', // little endian
+                       'e', // little endian
 #else
-                    'E', // big endian
+                       'E', // big endian
 #endif
-                    pointer_size, pointer_size, pointer_size, // pointer size, abi alignment, preferred alignment
-                    pointer_size, // aggregate preferred alignment
-                    pointer_size, pointer_size); // stack objects abi alignment, preferred alignment
+                       pointer_size, pointer_size, pointer_size, // pointer size, abi alignment, preferred alignment
+                       pointer_size, // aggregate preferred alignment
+                       pointer_size, pointer_size); // stack objects abi alignment, preferred alignment
 
-      gallivm->target = LLVMCreateTargetData(layout);
-      if (!gallivm->target) {
-         return FALSE;
+         gallivm->target = LLVMCreateTargetData(layout);
+         if (!gallivm->target) {
+            return FALSE;
+         }
       }
    }
-#endif
 
    if (!create_pass_manager(gallivm))
       goto fail;
@@ -385,17 +382,17 @@ lp_build_init(void)
    if (gallivm_initialized)
       return TRUE;
 
+   LLVMLinkInMCJIT();
+#if !defined(USE_MCJIT)
+   USE_MCJIT = debug_get_bool_option("GALLIVM_MCJIT", 0);
+   LLVMLinkInJIT();
+#endif
+
 #ifdef DEBUG
    gallivm_debug = debug_get_option_gallivm_debug();
 #endif
 
    lp_set_target_options();
-
-#if USE_MCJIT
-   LLVMLinkInMCJIT();
-#else
-   LLVMLinkInJIT();
-#endif
 
    util_cpu_detect();
 
@@ -588,12 +585,12 @@ gallivm_compile_module(struct gallivm_state *gallivm)
       debug_printf("Invoke as \"llc -o - llvmpipe.bc\"\n");
    }
 
-#if USE_MCJIT
-   assert(!gallivm->engine);
-   if (!init_gallivm_engine(gallivm)) {
-      assert(0);
+   if (USE_MCJIT) {
+      assert(!gallivm->engine);
+      if (!init_gallivm_engine(gallivm)) {
+         assert(0);
+      }
    }
-#endif
    assert(gallivm->engine);
 
    ++gallivm->compiled;
