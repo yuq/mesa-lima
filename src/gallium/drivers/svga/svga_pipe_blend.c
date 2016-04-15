@@ -333,7 +333,7 @@ svga_create_blend_state(struct pipe_context *pipe,
       define_blend_state_object(svga, blend);
    }
 
-   svga->hud.num_state_objects++;
+   svga->hud.num_blend_objects++;
 
    return blend;
 }
@@ -373,7 +373,7 @@ static void svga_delete_blend_state(struct pipe_context *pipe,
    }
 
    FREE(blend);
-   svga->hud.num_state_objects--;
+   svga->hud.num_blend_objects--;
 }
 
 static void svga_set_blend_color( struct pipe_context *pipe,

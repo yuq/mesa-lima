@@ -1165,7 +1165,12 @@ svga_get_query_result(struct pipe_context *pipe,
       vresult->u64 = svgascreen->hud.num_resources;
       break;
    case SVGA_QUERY_NUM_STATE_OBJECTS:
-      vresult->u64 = svga->hud.num_state_objects;
+      vresult->u64 = (svga->hud.num_blend_objects +
+                      svga->hud.num_depthstencil_objects +
+                      svga->hud.num_rasterizer_objects +
+                      svga->hud.num_sampler_objects +
+                      svga->hud.num_samplerview_objects +
+                      svga->hud.num_vertexelement_objects);
       break;
    case SVGA_QUERY_NUM_SURFACE_VIEWS:
       vresult->u64 = svga->hud.num_surface_views;

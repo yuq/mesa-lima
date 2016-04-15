@@ -273,7 +273,7 @@ svga_create_sampler_state(struct pipe_context *pipe,
             cso->min_lod, cso->view_min_lod, cso->view_max_lod,
             cso->mipfilter == SVGA3D_TEX_FILTER_NONE ? "SVGA3D_TEX_FILTER_NONE" : "SOMETHING");
 
-   svga->hud.num_state_objects++;
+   svga->hud.num_sampler_objects++;
 
    return cso;
 }
@@ -338,7 +338,7 @@ static void svga_delete_sampler_state(struct pipe_context *pipe,
    }
 
    FREE(sampler);
-   svga->hud.num_state_objects--;
+   svga->hud.num_sampler_objects--;
 }
 
 
@@ -347,6 +347,7 @@ svga_create_sampler_view(struct pipe_context *pipe,
                          struct pipe_resource *texture,
                          const struct pipe_sampler_view *templ)
 {
+   struct svga_context *svga = svga_context(pipe);
    struct svga_pipe_sampler_view *sv = CALLOC_STRUCT(svga_pipe_sampler_view);
 
    if (!sv) {
@@ -360,6 +361,8 @@ svga_create_sampler_view(struct pipe_context *pipe,
 
    sv->base.context = pipe;
    sv->id = SVGA3D_INVALID_ID;
+
+   svga->hud.num_samplerview_objects++;
 
    return &sv->base;
 }
@@ -400,6 +403,7 @@ svga_sampler_view_destroy(struct pipe_context *pipe,
    pipe_resource_reference(&sv->base.texture, NULL);
 
    FREE(sv);
+   svga->hud.num_samplerview_objects--;
 }
 
 static void

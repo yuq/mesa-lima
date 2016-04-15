@@ -519,7 +519,15 @@ struct svga_context
       uint64_t num_const_buf_updates;   /**< SVGA_QUERY_NUM_CONST_BUF_UPDATES */
       uint64_t num_const_updates;       /**< SVGA_QUERY_NUM_CONST_UPDATES */
       uint64_t num_shaders;             /**< SVGA_QUERY_NUM_SHADERS */
-      uint64_t num_state_objects;       /**< SVGA_QUERY_NUM_STATE_OBJECTS */
+
+      /** The following are summed for SVGA_QUERY_NUM_STATE_OBJECTS */
+      uint64_t num_blend_objects;
+      uint64_t num_depthstencil_objects;
+      uint64_t num_rasterizer_objects;
+      uint64_t num_sampler_objects;
+      uint64_t num_samplerview_objects;
+      uint64_t num_vertexelement_objects;
+
       uint64_t num_surface_views;       /**< SVGA_QUERY_NUM_SURFACE_VIEWS */
       uint64_t num_bytes_uploaded;      /**< SVGA_QUERY_NUM_BYTES_UPLOADED */
       uint64_t num_generate_mipmap;     /**< SVGA_QUERY_NUM_GENERATE_MIPMAP */

@@ -360,7 +360,7 @@ svga_create_rasterizer_state(struct pipe_context *pipe,
                          "GL_POLYGON_SMOOTH not supported");
    }
 
-   svga->hud.num_state_objects++;
+   svga->hud.num_rasterizer_objects++;
 
    return rast;
 }
@@ -405,7 +405,7 @@ svga_delete_rasterizer_state(struct pipe_context *pipe, void *state)
    }
 
    FREE(state);
-   svga->hud.num_state_objects--;
+   svga->hud.num_rasterizer_objects--;
 }
 
 

@@ -205,7 +205,7 @@ svga_create_depth_stencil_state(struct pipe_context *pipe,
       define_depth_stencil_state_object(svga, ds);
    }
 
-   svga->hud.num_state_objects++;
+   svga->hud.num_depthstencil_objects++;
 
    return ds;
 }
@@ -253,7 +253,7 @@ static void svga_delete_depth_stencil_state(struct pipe_context *pipe,
    }
 
    FREE(depth_stencil);
-   svga->hud.num_state_objects--;
+   svga->hud.num_depthstencil_objects--;
 }
 
 
