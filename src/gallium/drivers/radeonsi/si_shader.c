@@ -1141,8 +1141,23 @@ static void set_range_metadata(LLVMValueRef value, unsigned lo, unsigned hi)
 static LLVMValueRef get_thread_id(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
-	LLVMValueRef tid = lp_build_intrinsic(gallivm->builder, "llvm.SI.tid",
+	LLVMValueRef tid;
+
+	if (HAVE_LLVM < 0x0308) {
+		tid = lp_build_intrinsic(gallivm->builder, "llvm.SI.tid",
 				ctx->i32,   NULL, 0, LLVMReadNoneAttribute);
+	} else {
+		LLVMValueRef tid_args[2];
+		tid_args[0] = lp_build_const_int32(gallivm, 0xffffffff);
+		tid_args[1] = lp_build_const_int32(gallivm, 0);
+		tid_args[1] = lp_build_intrinsic(gallivm->builder,
+					"llvm.amdgcn.mbcnt.lo", ctx->i32,
+					tid_args, 2, LLVMReadNoneAttribute);
+
+		tid = lp_build_intrinsic(gallivm->builder,
+					"llvm.amdgcn.mbcnt.hi", ctx->i32,
+					tid_args, 2, LLVMReadNoneAttribute);
+	}
 	set_range_metadata(tid, 0, 64);
 	return tid;
 }
