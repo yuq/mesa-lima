@@ -51,32 +51,38 @@ static void r600_get_scissor_from_viewport(struct r600_common_context *rctx,
 					   const struct pipe_viewport_state *vp,
 					   struct r600_signed_scissor *scissor)
 {
-	int tmp;
+	float tmp, minx, miny, maxx, maxy;
 
 	/* Convert (-1, -1) and (1, 1) from clip space into window space. */
-	scissor->minx = -vp->scale[0] + vp->translate[0];
-	scissor->miny = -vp->scale[1] + vp->translate[1];
-	scissor->maxx = vp->scale[0] + vp->translate[0];
-	scissor->maxy = vp->scale[1] + vp->translate[1];
+	minx = -vp->scale[0] + vp->translate[0];
+	miny = -vp->scale[1] + vp->translate[1];
+	maxx = vp->scale[0] + vp->translate[0];
+	maxy = vp->scale[1] + vp->translate[1];
 
 	/* r600_draw_rectangle sets this. Disable the scissor. */
-	if (scissor->minx == -1 && scissor->miny == -1 &&
-	    scissor->maxx == 1 && scissor->maxy == 1) {
+	if (minx == -1 && miny == -1 && maxx == 1 && maxy == 1) {
 		scissor->minx = scissor->miny = 0;
 		scissor->maxx = scissor->maxy = GET_MAX_SCISSOR(rctx);
+		return;
 	}
 
 	/* Handle inverted viewports. */
-	if (scissor->minx > scissor->maxx) {
-		tmp = scissor->minx;
-		scissor->minx = scissor->maxx;
-		scissor->maxx = tmp;
+	if (minx > maxx) {
+		tmp = minx;
+		minx = maxx;
+		maxx = tmp;
 	}
-	if (scissor->miny > scissor->maxy) {
-		tmp = scissor->miny;
-		scissor->miny = scissor->maxy;
-		scissor->maxy = tmp;
+	if (miny > maxy) {
+		tmp = miny;
+		miny = maxy;
+		maxy = tmp;
 	}
+
+	/* Convert to integer and round up the max bounds. */
+	scissor->minx = minx;
+	scissor->miny = miny;
+	scissor->maxx = ceilf(maxx);
+	scissor->maxy = ceilf(maxy);
 }
 
 static void r600_clamp_scissor(struct r600_common_context *rctx,
