@@ -1704,6 +1704,8 @@ typedef struct nir_shader_info {
 
    /* Which inputs are actually read */
    uint64_t inputs_read;
+   /* Which inputs are actually read and are double */
+   uint64_t double_inputs_read;
    /* Which outputs are actually written */
    uint64_t outputs_written;
    /* Which system values are actually read */
