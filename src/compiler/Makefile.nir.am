@@ -33,6 +33,7 @@ nir_libnir_la_LIBADD = \
 
 nir_libnir_la_SOURCES =					\
 	$(NIR_FILES)					\
+	$(SPIRV_FILES)					\
 	$(NIR_GENERATED_FILES)
 
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)

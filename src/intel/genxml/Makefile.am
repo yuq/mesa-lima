@@ -1,4 +1,4 @@
-# Copyright © 2013 Intel Corporation
+# Copyright © 2016 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -19,57 +19,14 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-SUBDIRS = . gtest util mapi/glapi/gen mapi
+BUILT_SOURCES =                                         \
+	gen6_pack.h					\
+	gen7_pack.h					\
+	gen75_pack.h					\
+	gen8_pack.h					\
+	gen9_pack.h
 
-# include only conditionally ?
-SUBDIRS += compiler
+%_pack.h : %.xml gen_pack_header.py
+	$(AM_V_GEN) $(srcdir)/gen_pack_header.py $< > $@
 
-if NEED_OPENGL_COMMON
-SUBDIRS += mesa
-endif
-
-SUBDIRS += loader
-
-if HAVE_DRI_GLX
-SUBDIRS += glx
-endif
-
-if HAVE_EGL_PLATFORM_WAYLAND
-SUBDIRS += egl/wayland/wayland-egl egl/wayland/wayland-drm
-endif
-
-if HAVE_GBM
-SUBDIRS += gbm
-endif
-
-if HAVE_EGL
-SUBDIRS += egl
-endif
-
-if HAVE_GALLIUM
-SUBDIRS += gallium
-endif
-
-EXTRA_DIST = \
-	getopt hgl SConscript
-
-AM_CFLAGS = $(VISIBILITY_CFLAGS)
-AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS)
-
-if HAVE_INTEL_DRIVERS
-SUBDIRS += intel
-endif
-
-AM_CPPFLAGS = \
-	-I$(top_srcdir)/include/ \
-	-I$(top_srcdir)/src/mapi/ \
-	-I$(top_srcdir)/src/mesa/ \
-	$(DEFINES)
-
-noinst_LTLIBRARIES = libglsl_util.la
-
-libglsl_util_la_SOURCES = \
-	mesa/main/imports.c \
-	mesa/program/prog_hash_table.c \
-	mesa/program/symbol_table.c \
-	mesa/program/dummy_errors.c
+CLEANFILES = $(BUILT_SOURCES)

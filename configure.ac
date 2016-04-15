@@ -2621,6 +2621,11 @@ AC_CONFIG_FILES([Makefile
 		src/glx/apple/Makefile
 		src/glx/tests/Makefile
 		src/gtest/Makefile
+		src/intel/Makefile
+		src/intel/genxml/Makefile
+		src/intel/isl/Makefile
+		src/intel/vulkan/Makefile
+		src/intel/vulkan/tests/Makefile
 		src/loader/Makefile
 		src/mapi/Makefile
 		src/mapi/es1api/glesv1_cm.pc
