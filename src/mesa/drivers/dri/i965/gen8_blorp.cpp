@@ -635,7 +635,9 @@ gen8_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
 
    uint32_t prog_offset = params->get_wm_prog(brw, &prog_data);
 
-   gen8_upload_state_base_address(brw);
+   if (gen8_state_base_address.dirty.brw & brw->ctx.NewDriverState)
+      gen8_upload_state_base_address(brw);
+
    gen7_blorp_emit_cc_viewport(brw);
    gen7_l3_state.emit(brw);
 
