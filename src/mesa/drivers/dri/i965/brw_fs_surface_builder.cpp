@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "main/shaderimage.h"
 #include "brw_fs_surface_builder.h"
 #include "brw_fs.h"
 
@@ -911,7 +912,7 @@ namespace brw {
       emit_image_load(const fs_builder &bld,
                       const fs_reg &image, const fs_reg &addr,
                       unsigned surf_dims, unsigned arr_dims,
-                      mesa_format format)
+                      unsigned gl_format)
       {
          using namespace image_format_info;
          using namespace image_format_conversion;
@@ -919,6 +920,7 @@ namespace brw {
          using namespace image_coordinates;
          using namespace surface_access;
          const brw_device_info *devinfo = bld.shader->devinfo;
+         const mesa_format format = _mesa_get_shader_image_format(gl_format);
          const mesa_format lower_format =
             brw_lower_mesa_image_format(devinfo, format);
          fs_reg tmp;
@@ -1019,13 +1021,14 @@ namespace brw {
       emit_image_store(const fs_builder &bld, const fs_reg &image,
                        const fs_reg &addr, const fs_reg &src,
                        unsigned surf_dims, unsigned arr_dims,
-                       mesa_format format)
+                       unsigned gl_format)
       {
          using namespace image_format_info;
          using namespace image_format_conversion;
          using namespace image_validity;
          using namespace image_coordinates;
          using namespace surface_access;
+         const mesa_format format = _mesa_get_shader_image_format(gl_format);
          const brw_device_info *devinfo = bld.shader->devinfo;
 
          /* Transform the image coordinates into actual surface coordinates. */

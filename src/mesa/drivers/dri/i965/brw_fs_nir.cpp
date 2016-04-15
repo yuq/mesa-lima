@@ -22,7 +22,6 @@
  */
 
 #include "compiler/glsl/ir.h"
-#include "main/shaderimage.h"
 #include "brw_fs.h"
 #include "brw_fs_surface_builder.h"
 #include "brw_nir.h"
@@ -2559,9 +2558,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
       const unsigned arr_dims = type->sampler_array ? 1 : 0;
       const unsigned surf_dims = type->coordinate_components() - arr_dims;
-      const mesa_format format =
-         (var->data.image.write_only ? MESA_FORMAT_NONE :
-          _mesa_get_shader_image_format(var->data.image.format));
+      const unsigned format = var->data.image.format;
 
       /* Get the arguments of the image intrinsic. */
       const fs_reg image = get_nir_image_deref(instr->variables[0]);
@@ -2580,7 +2577,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          tmp = emit_image_load(bld, image, addr, surf_dims, arr_dims, format);
 
       else if (instr->intrinsic == nir_intrinsic_image_store)
-         emit_image_store(bld, image, addr, src0, surf_dims, arr_dims, format);
+         emit_image_store(bld, image, addr, src0, surf_dims, arr_dims,
+                          var->data.image.write_only ? GL_NONE : format);
 
       else
          tmp = emit_image_atomic(bld, image, addr, src0, src1,
