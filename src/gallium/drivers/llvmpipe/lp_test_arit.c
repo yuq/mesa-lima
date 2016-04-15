@@ -297,14 +297,16 @@ unary_tests[] = {
  */
 static LLVMValueRef
 build_unary_test_func(struct gallivm_state *gallivm,
-                      const struct unary_test_t *test)
+                      const struct unary_test_t *test,
+                      unsigned length,
+                      const char *test_name)
 {
-   struct lp_type type = lp_type_float_vec(32, lp_native_vector_width);
+   struct lp_type type = lp_type_float_vec(32, length * 32);
    LLVMContextRef context = gallivm->context;
    LLVMModuleRef module = gallivm->module;
    LLVMTypeRef vf32t = lp_build_vec_type(gallivm, type);
    LLVMTypeRef args[2] = { LLVMPointerType(vf32t, 0), LLVMPointerType(vf32t, 0) };
-   LLVMValueRef func = LLVMAddFunction(module, test->name,
+   LLVMValueRef func = LLVMAddFunction(module, test_name,
                                        LLVMFunctionType(LLVMVoidTypeInContext(context),
                                                         args, Elements(args), 0));
    LLVMValueRef arg0 = LLVMGetParam(func, 0);
@@ -371,14 +373,15 @@ flush_denorm_to_zero(float val)
  * Test one LLVM unary arithmetic builder function.
  */
 static boolean
-test_unary(unsigned verbose, FILE *fp, const struct unary_test_t *test)
+test_unary(unsigned verbose, FILE *fp, const struct unary_test_t *test, unsigned length)
 {
+   char test_name[128];
+   util_snprintf(test_name, sizeof test_name, "%s.v%u", test->name, length);
    struct gallivm_state *gallivm;
    LLVMValueRef test_func;
    unary_func_t test_func_jit;
    boolean success = TRUE;
    int i, j;
-   int length = lp_native_vector_width / 32;
    float *in, *out;
 
    in = align_malloc(length * 4, length * 4);
@@ -391,7 +394,7 @@ test_unary(unsigned verbose, FILE *fp, const struct unary_test_t *test)
 
    gallivm = gallivm_create("test_module", LLVMGetGlobalContext());
 
-   test_func = build_unary_test_func(gallivm, test);
+   test_func = build_unary_test_func(gallivm, test, length, test_name);
 
    gallivm_compile_module(gallivm);
 
@@ -411,6 +414,7 @@ test_unary(unsigned verbose, FILE *fp, const struct unary_test_t *test)
       for (i = 0; i < num_vals; ++i) {
          float testval, ref;
          double error, precision;
+         boolean expected_pass = TRUE;
          bool pass;
 
          testval = flush_denorm_to_zero(in[i]);
@@ -429,14 +433,23 @@ test_unary(unsigned verbose, FILE *fp, const struct unary_test_t *test)
             continue;
          }
 
-         if (!pass || verbose) {
-            printf("%s(%.9g): ref = %.9g, out = %.9g, precision = %f bits, %s\n",
-                  test->name, in[i], ref, out[i], precision,
-                  pass ? "PASS" : "FAIL");
+         if (test->ref == &nearbyintf && length == 2 && 
+             ref != roundf(testval)) {
+            /* FIXME: The generic (non SSE) path in lp_build_iround, which is
+             * always taken for length==2 regardless of native round support,
+             * does not round to even. */
+            expected_pass = FALSE;
+         }
+
+         if (pass != expected_pass || verbose) {
+            printf("%s(%.9g): ref = %.9g, out = %.9g, precision = %f bits, %s%s\n",
+                  test_name, in[i], ref, out[i], precision,
+                  pass ? "PASS" : "FAIL",
+                  !expected_pass ? (pass ? " (unexpected)" : " (expected)" ): "");
             fflush(stdout);
          }
 
-         if (!pass) {
+         if (pass != expected_pass) {
             success = FALSE;
          }
       }
@@ -458,8 +471,12 @@ test_all(unsigned verbose, FILE *fp)
    int i;
 
    for (i = 0; i < Elements(unary_tests); ++i) {
-      if (!test_unary(verbose, fp, &unary_tests[i])) {
-         success = FALSE;
+      unsigned max_length = lp_native_vector_width / 32;
+      unsigned length;
+      for (length = 1; length <= max_length; length *= 2) {
+         if (!test_unary(verbose, fp, &unary_tests[i], length)) {
+            success = FALSE;
+         }
       }
    }
 
