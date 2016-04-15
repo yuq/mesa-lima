@@ -234,6 +234,7 @@ svga_texture_destroy(struct pipe_screen *screen,
 
    FREE(tex->defined);
    FREE(tex->rendered_to);
+   FREE(tex->dirty);
    FREE(tex);
 
    assert(ss->hud.num_resources > 0);
@@ -436,6 +437,13 @@ svga_texture_transfer_map(struct pipe_context *pipe,
          return NULL;
       }
 
+      /* If this is the first time mapping to the surface in this
+       * command buffer, clear the dirty masks of this surface.
+       */
+      if (sws->surface_is_flushed(sws, surf)) {
+         svga_clear_texture_dirty(tex);
+      }
+
       if (need_tex_readback(transfer)) {
 	 enum pipe_error ret;
 
@@ -464,13 +472,21 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       else {
 	 assert(transfer->usage & PIPE_TRANSFER_WRITE);
 	 if ((transfer->usage & PIPE_TRANSFER_UNSYNCHRONIZED) == 0) {
-            svga_surfaces_flush(svga);
-            if (!sws->surface_is_flushed(sws, surf)) {
-               svga->hud.surface_write_flushes++;
-               svga_context_flush(svga, NULL);
+            if (svga_is_texture_dirty(tex, st->slice, transfer->level)) {
+               /*
+                * do a surface flush if the subresource has been modified
+                * in this command buffer.
+                */
+               svga_surfaces_flush(svga);
+               if (!sws->surface_is_flushed(sws, surf)) {
+                  svga->hud.surface_write_flushes++;
+                  svga_context_flush(svga, NULL);
+               }
             }
 	 }
       }
+      /* mark this texture level as dirty */
+      svga_set_texture_dirty(tex, st->slice, transfer->level);
    }
 
    st->use_direct_map = use_direct_map;
@@ -756,9 +772,13 @@ svga_texture_create(struct pipe_screen *screen,
    tex->rendered_to = CALLOC(template->depth0 * template->array_size,
                              sizeof(tex->rendered_to[0]));
    if (!tex->rendered_to) {
-      FREE(tex->defined);
-      FREE(tex);
-      return NULL;
+      goto fail;
+   }
+
+   tex->dirty = CALLOC(template->depth0 * template->array_size,
+                             sizeof(tex->dirty[0]));
+   if (!tex->dirty) {
+      goto fail;
    }
 
    tex->b.b = *template;
@@ -872,10 +892,7 @@ svga_texture_create(struct pipe_screen *screen,
    tex->key.format = svga_translate_format(svgascreen, template->format,
                                            bindings);
    if (tex->key.format == SVGA3D_FORMAT_INVALID) {
-      FREE(tex->defined);
-      FREE(tex->rendered_to);
-      FREE(tex);
-      return NULL;
+      goto fail;
    }
 
    /* Use typeless formats for sRGB and depth resources.  Typeless
@@ -900,10 +917,7 @@ svga_texture_create(struct pipe_screen *screen,
    tex->handle = svga_screen_surface_create(svgascreen, bindings,
                                             tex->b.b.usage, &tex->key);
    if (!tex->handle) {
-      FREE(tex->defined);
-      FREE(tex->rendered_to);
-      FREE(tex);
-      return NULL;
+      goto fail;
    }
 
    SVGA_DBG(DEBUG_DMA, "  --> got sid %p (texture)\n", tex->handle);
@@ -916,6 +930,16 @@ svga_texture_create(struct pipe_screen *screen,
    svgascreen->hud.num_resources++;
 
    return &tex->b.b;
+
+fail:
+   if (tex->dirty)
+      FREE(tex->dirty);
+   if (tex->rendered_to)
+      FREE(tex->rendered_to);
+   if (tex->defined)
+      FREE(tex->defined);
+   FREE(tex);
+   return NULL;
 }
 
 
@@ -993,11 +1017,28 @@ svga_texture_from_handle(struct pipe_screen *screen,
    tex->handle = srf;
 
    tex->rendered_to = CALLOC(1, sizeof(tex->rendered_to[0]));
+   if (!tex->rendered_to)
+      goto fail;
+
+   tex->dirty = CALLOC(1, sizeof(tex->dirty[0]));
+   if (!tex->dirty)
+      goto fail;
+
    tex->imported = TRUE;
 
    ss->hud.num_resources++;
 
    return &tex->b.b;
+
+fail:
+   if (tex->defined)
+      FREE(tex->defined);
+   if (tex->rendered_to)
+      FREE(tex->rendered_to);
+   if (tex->dirty)
+      FREE(tex->dirty);
+   FREE(tex);
+   return NULL;
 }
 
 boolean
