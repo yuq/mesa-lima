@@ -284,10 +284,12 @@ retry:
    if (unlikely(brw->always_flush_batch))
       intel_batchbuffer_flush(brw);
 
+   const uint64_t do_not_smash_bits = BRW_NEW_URB_SIZE;
+
    /* We've smashed all state compared to what the normal 3D pipeline
     * rendering tracks for GL.
     */
-   brw->ctx.NewDriverState = ~0ull;
+   brw->ctx.NewDriverState |= ~do_not_smash_bits;
    brw->no_depth_or_stencil = false;
    brw->ib.type = -1;
 

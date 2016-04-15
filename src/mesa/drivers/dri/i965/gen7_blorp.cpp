@@ -74,6 +74,8 @@ gen7_blorp_emit_urb_config(struct brw_context *brw)
    if (gen7_blorp_skip_urb_config(brw))
       return;
 
+   brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
+
    gen7_emit_push_constant_state(brw,
                                  urb_size / 2 /* vs_size */,
                                  0 /* hs_size */,
