@@ -256,7 +256,6 @@ save_glx_visual( Display *dpy, XVisualInfo *vinfo,
    GLboolean ximageFlag = GL_TRUE;
    XMesaVisual xmvis;
    GLint i;
-   GLboolean comparePointers;
 
    if (dbFlag) {
       /* Check if the MESA_BACK_BUFFER env var is set */
@@ -279,12 +278,6 @@ save_glx_visual( Display *dpy, XVisualInfo *vinfo,
       return NULL;
    }
 
-   /* Comparing IDs uses less memory but sometimes fails. */
-   /* XXX revisit this after 3.0 is finished. */
-   if (getenv("MESA_GLX_VISUAL_HACK"))
-      comparePointers = GL_TRUE;
-   else
-      comparePointers = GL_FALSE;
 
    /* Force the visual to have an alpha channel */
    if (getenv("MESA_GLX_FORCE_ALPHA"))
@@ -306,9 +299,8 @@ save_glx_visual( Display *dpy, XVisualInfo *vinfo,
           && (v->mesa_visual.accumGreenBits >= accumGreenSize || accumGreenSize == 0)
           && (v->mesa_visual.accumBlueBits >= accumBlueSize || accumBlueSize == 0)
           && (v->mesa_visual.accumAlphaBits >= accumAlphaSize || accumAlphaSize == 0)) {
-         /* now either compare XVisualInfo pointers or visual IDs */
-         if ((!comparePointers && v->visinfo->visualid == vinfo->visualid)
-             || (comparePointers && v->vishandle == vinfo)) {
+         /* now compare visual IDs */
+         if (v->visinfo->visualid == vinfo->visualid) {
             return v;
          }
       }
@@ -323,10 +315,6 @@ save_glx_visual( Display *dpy, XVisualInfo *vinfo,
                               accumBlueSize, accumAlphaSize, 0, level,
                               GLX_NONE_EXT );
    if (xmvis) {
-      /* Save a copy of the pointer now so we can find this visual again
-       * if we need to search for it in find_glx_visual().
-       */
-      xmvis->vishandle = vinfo;
       /* Allocate more space for additional visual */
       VisualTable = realloc(VisualTable, sizeof(XMesaVisual) * (NumVisuals + 1));
       /* add xmvis to the list */
@@ -438,13 +426,6 @@ find_glx_visual( Display *dpy, XVisualInfo *vinfo )
    for (i=0;i<NumVisuals;i++) {
       if (VisualTable[i]->display==dpy
           && VisualTable[i]->visinfo->visualid == vinfo->visualid) {
-         return VisualTable[i];
-      }
-   }
-
-   /* if that fails, try to match pointers */
-   for (i=0;i<NumVisuals;i++) {
-      if (VisualTable[i]->display==dpy && VisualTable[i]->vishandle==vinfo) {
          return VisualTable[i];
       }
    }
@@ -745,27 +726,39 @@ choose_x_overlay_visual( Display *dpy, int scr,
       vislist = XGetVisualInfo( dpy, VisualIDMask | VisualScreenMask,
                                 &vistemplate, &count );
 
+      if (!vislist) {
+         /* no matches */
+         continue;
+      }
+
       if (count!=1) {
          /* something went wrong */
+         free(vislist);
          continue;
       }
       if (preferred_class!=DONT_CARE && preferred_class!=vislist->CLASS) {
          /* wrong visual class */
+         free(vislist);
          continue;
       }
 
       /* Color-index rendering is not supported.  Make sure we have True/DirectColor */
-      if (vislist->CLASS != TrueColor && vislist->CLASS != DirectColor)
+      if (vislist->CLASS != TrueColor && vislist->CLASS != DirectColor) {
+         free(vislist);
          continue;
-
-      if (deepvis==NULL || vislist->depth > deepest) {
-         /* YES!  found a satisfactory visual */
-         free(deepvis);
-         deepest = vislist->depth;
-         deepvis = vislist;
-         /* DEBUG  tt = ov->transparent_type;*/
-         /* DEBUG  tv = ov->value; */
       }
+
+      if (deepvis!=NULL && vislist->depth <= deepest) {
+         free(vislist);
+         continue;
+      }
+
+      /* YES!  found a satisfactory visual */
+      free(deepvis);
+      deepest = vislist->depth;
+      deepvis = vislist;
+      /* DEBUG  tt = ov->transparent_type;*/
+      /* DEBUG  tv = ov->value; */
    }
 
 /*DEBUG
@@ -1225,6 +1218,7 @@ choose_visual( Display *dpy, int screen, const int *list, GLboolean fbConfig )
                                stereo_flag, depth_size, stencil_size,
                                accumRedSize, accumGreenSize,
                                accumBlueSize, accumAlphaSize, level, numAux );
+      free(vis);
    }
 
    return xmvis;
@@ -1241,16 +1235,11 @@ Fake_glXChooseVisual( Display *dpy, int screen, int *list )
 
    xmvis = choose_visual(dpy, screen, list, GL_FALSE);
    if (xmvis) {
-#if 0
-      return xmvis->vishandle;
-#else
-      /* create a new vishandle - the cached one may be stale */
-      xmvis->vishandle = malloc(sizeof(XVisualInfo));
-      if (xmvis->vishandle) {
-         memcpy(xmvis->vishandle, xmvis->visinfo, sizeof(XVisualInfo));
+      XVisualInfo* visinfo = malloc(sizeof(XVisualInfo));
+      if (visinfo) {
+         memcpy(visinfo, xmvis->visinfo, sizeof(XVisualInfo));
       }
-      return xmvis->vishandle;
-#endif
+      return visinfo;
    }
    else
       return NULL;
@@ -1931,6 +1920,7 @@ Fake_glXGetFBConfigs( Display *dpy, int screen, int *nelements )
       for (i = 0; i < *nelements; i++) {
          results[i] = create_glx_visual(dpy, visuals + i);
       }
+      free(visuals);
       return (GLXFBConfig *) results;
    }
    return NULL;
@@ -1974,16 +1964,11 @@ Fake_glXGetVisualFromFBConfig( Display *dpy, GLXFBConfig config )
 {
    if (dpy && config) {
       XMesaVisual xmvis = (XMesaVisual) config;
-#if 0      
-      return xmvis->vishandle;
-#else
-      /* create a new vishandle - the cached one may be stale */
-      xmvis->vishandle = malloc(sizeof(XVisualInfo));
-      if (xmvis->vishandle) {
-         memcpy(xmvis->vishandle, xmvis->visinfo, sizeof(XVisualInfo));
+      XVisualInfo* visinfo = malloc(sizeof(XVisualInfo));
+      if (visinfo) {
+         memcpy(visinfo, xmvis->visinfo, sizeof(XVisualInfo));
       }
-      return xmvis->vishandle;
-#endif
+      return visinfo;
    }
    else {
       return NULL;

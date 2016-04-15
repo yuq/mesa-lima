@@ -315,6 +315,30 @@ print_constant(nir_constant *c, const struct glsl_type *type, print_state *state
    }
 }
 
+static const char *
+get_variable_mode_str(nir_variable_mode mode)
+{
+   switch (mode) {
+   case nir_var_shader_in:
+      return "shader_in";
+   case nir_var_shader_out:
+      return "shader_out";
+   case nir_var_uniform:
+      return "uniform";
+   case nir_var_shader_storage:
+      return "shader_storage";
+   case nir_var_system_value:
+      return "system";
+   case nir_var_shared:
+      return "shared";
+   case nir_var_param:
+   case nir_var_global:
+   case nir_var_local:
+   default:
+      return "";
+   }
+}
+
 static void
 print_var_decl(nir_variable *var, print_state *state)
 {
@@ -326,13 +350,9 @@ print_var_decl(nir_variable *var, print_state *state)
    const char *const samp = (var->data.sample) ? "sample " : "";
    const char *const patch = (var->data.patch) ? "patch " : "";
    const char *const inv = (var->data.invariant) ? "invariant " : "";
-   const char *const mode[] = { "shader_in ", "shader_out ", "", "",
-                                "uniform ", "shader_storage ", "shared ",
-                                "system "};
-
-   fprintf(fp, "%s%s%s%s%s%s ",
-      cent, samp, patch, inv, mode[var->data.mode],
-	  glsl_interp_qualifier_name(var->data.interpolation));
+   fprintf(fp, "%s%s%s%s%s %s ",
+           cent, samp, patch, inv, get_variable_mode_str(var->data.mode),
+           glsl_interp_qualifier_name(var->data.interpolation));
 
    glsl_print_type(var->type, fp);
 

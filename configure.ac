@@ -1550,27 +1550,24 @@ fi
 # Vulkan driver configuration
 #
 
-# Keep this in sync with the --with-vulkan-drivers help string default value
-VULKAN_DRIVERS_DEFAULT="intel"
-
 AC_ARG_WITH([vulkan-drivers],
     [AS_HELP_STRING([--with-vulkan-drivers@<:@=DIRS...@:>@],
         [comma delimited Vulkan drivers list, e.g.
         "intel"
-        @<:@default=intel@:>@])],
+        @<:@default=no@:>@])],
     [with_vulkan_drivers="$withval"],
-    [with_vulkan_drivers="$VULKAN_DRIVERS_DEFAULT"])
+    [with_vulkan_drivers="no"])
 
 # Doing '--without-vulkan-drivers' will set this variable to 'no'.  Clear it
 # here so that the script doesn't choke on an unknown driver name later.
-case "$with_vulkan_drivers" in
-    yes) with_vulkan_drivers="$VULKAN_DRIVERS_DEFAULT" ;;
-    no) with_vulkan_drivers='' ;;
+case "x$with_vulkan_drivers" in
+    xyes) with_vulkan_drivers="$VULKAN_DRIVERS_DEFAULT" ;;
+    xno) with_vulkan_drivers='' ;;
 esac
 
 AC_ARG_WITH([vulkan-icddir],
     [AS_HELP_STRING([--with-vulkan-icddir=DIR],
-        [directory for the Vulkan driver icd files @<:@${libdir}/dri@:>@])],
+        [directory for the Vulkan driver icd files @<:@${sysconfdir}/vulkan/icd.d@:>@])],
     [VULKAN_ICD_INSTALL_DIR="$withval"],
     [VULKAN_ICD_INSTALL_DIR='${sysconfdir}/vulkan/icd.d'])
 AC_SUBST([VULKAN_ICD_INSTALL_DIR])
@@ -2318,14 +2315,19 @@ if test -n "$with_gallium_drivers"; then
             fi
             ;;
         xswr)
-            AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
             swr_llvm_check "swr"
 
-            AC_MSG_CHECKING([whether $CXX supports AVX/AVX2])
+            AC_MSG_CHECKING([whether $CXX supports c++11/AVX/AVX2])
             AVX_CXXFLAGS="-march=core-avx-i"
             AVX2_CXXFLAGS="-march=core-avx2"
 
             AC_LANG_PUSH([C++])
+            save_CXXFLAGS="$CXXFLAGS"
+            CXXFLAGS="-std=c++11 $CXXFLAGS"
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[],
+                              [AC_MSG_ERROR([c++11 compiler support not detected])])
+            CXXFLAGS="$save_CXXFLAGS"
+
             save_CXXFLAGS="$CXXFLAGS"
             CXXFLAGS="$AVX_CXXFLAGS $CXXFLAGS"
             AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[],
@@ -2431,6 +2433,9 @@ AM_CONDITIONAL(HAVE_GALLIUM_FREEDRENO, test "x$HAVE_GALLIUM_FREEDRENO" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_SOFTPIPE, test "x$HAVE_GALLIUM_SOFTPIPE" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_LLVMPIPE, test "x$HAVE_GALLIUM_LLVMPIPE" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_SWR, test "x$HAVE_GALLIUM_SWR" = xyes)
+AM_CONDITIONAL(HAVE_GALLIUM_SWRAST, test "x$HAVE_GALLIUM_SOFTPIPE" = xyes -o \
+                                         "x$HAVE_GALLIUM_LLVMPIPE" = xyes -o \
+                                         "x$HAVE_GALLIUM_SWR" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_VC4, test "x$HAVE_GALLIUM_VC4" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_VIRGL, test "x$HAVE_GALLIUM_VIRGL" = xyes)
 
@@ -2503,12 +2508,26 @@ AC_SUBST([XA_MINOR], $XA_MINOR)
 AC_SUBST([XA_TINY], $XA_TINY)
 AC_SUBST([XA_VERSION], "$XA_MAJOR.$XA_MINOR.$XA_TINY")
 
-PKG_CHECK_MODULES(VALGRIND, [valgrind],
-                  [have_valgrind=yes], [have_valgrind=no])
-if test "x$have_valgrind" = "xyes"; then
-    AC_DEFINE([HAVE_VALGRIND], 1,
-              [Use valgrind intrinsics to suppress false warnings])
+AC_ARG_ENABLE(valgrind,
+              [AS_HELP_STRING([--enable-valgrind],
+                             [Build mesa with valgrind support (default: auto)])],
+                             [VALGRIND=$enableval], [VALGRIND=auto])
+if test "x$VALGRIND" != xno; then
+	PKG_CHECK_MODULES(VALGRIND, [valgrind], [have_valgrind=yes], [have_valgrind=no])
 fi
+AC_MSG_CHECKING([whether to enable Valgrind support])
+if test "x$VALGRIND" = xauto; then
+	VALGRIND="$have_valgrind"
+fi
+
+if test "x$VALGRIND" = "xyes"; then
+	if ! test "x$have_valgrind" = xyes; then
+		AC_MSG_ERROR([Valgrind support required but not present])
+	fi
+	AC_DEFINE([HAVE_VALGRIND], 1, [Use valgrind intrinsics to suppress false warnings])
+fi
+
+AC_MSG_RESULT([$VALGRIND])
 
 dnl Restore LDFLAGS and CPPFLAGS
 LDFLAGS="$_SAVE_LDFLAGS"
