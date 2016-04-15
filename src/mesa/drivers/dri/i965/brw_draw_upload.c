@@ -231,9 +231,13 @@ double_types(struct brw_context *brw,
     * 64-bit components are stored in the URB without any conversion."
     * Also included on BDW PRM, Volume 7, page 470, table "Source Element
     * Formats Supported in VF Unit"
-    * Previous PRMs don't include those references.
+    *
+    * Previous PRMs don't include those references, so for gen7 we can't use
+    * PASSTHRU formats directly. But in any case, we prefer to return passthru
+    * even in that case, because that reflects what we want to achieve, even
+    * if we would need to workaround on gen < 8.
     */
-   return (brw->gen >= 8 && doubles
+   return (doubles
            ? double_types_passthru[size]
            : double_types_float[size]);
 }
