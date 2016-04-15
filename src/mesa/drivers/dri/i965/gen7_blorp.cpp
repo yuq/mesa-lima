@@ -31,6 +31,18 @@
 
 #include "brw_blorp.h"
 
+static bool
+gen7_blorp_skip_urb_config(const struct brw_context *brw)
+{
+   if (brw->ctx.NewDriverState & (BRW_NEW_CONTEXT | BRW_NEW_URB_SIZE))
+      return false;
+
+   /* Vertex elements along with full VUE header take 96 bytes. As the size
+    * is expressed in 64 bytes, one needs at least two times that, otherwise
+    * the setup can be any valid configuration.
+    */
+   return brw->urb.vsize >= 2;
+}
 
 /* 3DSTATE_URB_VS
  * 3DSTATE_URB_HS
@@ -58,6 +70,9 @@ gen7_blorp_emit_urb_config(struct brw_context *brw)
    const unsigned vs_start = push_constant_chunks;
    const unsigned vs_chunks =
       DIV_ROUND_UP(brw->urb.min_vs_entries * vs_size * 64, chunk_size_bytes);
+
+   if (gen7_blorp_skip_urb_config(brw))
+      return;
 
    gen7_emit_push_constant_state(brw,
                                  urb_size / 2 /* vs_size */,
