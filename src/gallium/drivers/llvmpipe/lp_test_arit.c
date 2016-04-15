@@ -108,6 +108,28 @@ static float sgnf(float x)
 }
 
 
+const float sgn_values[] = {
+   -INFINITY,
+   -60,
+   -4,
+   -2,
+   -1,
+   -1e-007,
+   0,
+   1e-007,
+   0.01,
+   0.1,
+   0.9,
+   0.99,
+   1,
+   2,
+   4,
+   60,
+   INFINITY,
+   NAN
+};
+
+
 const float exp2_values[] = {
    -INFINITY,
    -60,
@@ -273,9 +295,10 @@ const float fract_values[] = {
 
 static const struct unary_test_t
 unary_tests[] = {
-   {"abs", &lp_build_abs, &fabsf, exp2_values, Elements(exp2_values), 20.0 },
-   {"neg", &lp_build_negate, &negf, exp2_values, Elements(exp2_values), 20.0 },
-   {"exp2", &lp_build_exp2, &exp2f, exp2_values, Elements(exp2_values), 20.0 },
+   {"abs", &lp_build_abs, &fabsf, sgn_values, Elements(sgn_values), 20.0 },
+   {"neg", &lp_build_negate, &negf, sgn_values, Elements(sgn_values), 20.0 },
+   {"sgn", &lp_build_sgn, &sgnf, sgn_values, Elements(sgn_values), 20.0 },
+   {"exp2", &lp_build_exp2, &exp2f, exp2_values, Elements(exp2_values), 18.0 },
    {"log2", &lp_build_log2_safe, &log2f, log2_values, Elements(log2_values), 20.0 },
    {"exp", &lp_build_exp, &expf, exp2_values, Elements(exp2_values), 18.0 },
    {"log", &lp_build_log_safe, &logf, log2_values, Elements(log2_values), 20.0 },
@@ -283,7 +306,7 @@ unary_tests[] = {
    {"rsqrt", &lp_build_rsqrt, &rsqrtf, rsqrt_values, Elements(rsqrt_values), 20.0 },
    {"sin", &lp_build_sin, &sinf, sincos_values, Elements(sincos_values), 20.0 },
    {"cos", &lp_build_cos, &cosf, sincos_values, Elements(sincos_values), 20.0 },
-   {"sgn", &lp_build_sgn, &sgnf, exp2_values, Elements(exp2_values), 20.0 },
+   {"sgn", &lp_build_sgn, &sgnf, sgn_values, Elements(sgn_values), 20.0 },
    {"round", &lp_build_round, &nearbyintf, round_values, Elements(round_values), 24.0 },
    {"trunc", &lp_build_trunc, &truncf, round_values, Elements(round_values), 24.0 },
    {"floor", &lp_build_floor, &floorf, round_values, Elements(round_values), 24.0 },
@@ -439,6 +462,13 @@ test_unary(unsigned verbose, FILE *fp, const struct unary_test_t *test, unsigned
              * always taken for length==2 regardless of native round support,
              * does not round to even. */
             expected_pass = FALSE;
+         }
+
+         if (test->ref == &expf && util_inf_sign(testval) == -1) {
+            /* XXX: 64bits MSVCRT's expf(-inf) returns -inf instead of 0 */
+#if defined(_MSC_VER) && defined(_WIN64)
+            expected_pass = FALSE;
+#endif
          }
 
          if (pass != expected_pass || verbose) {
