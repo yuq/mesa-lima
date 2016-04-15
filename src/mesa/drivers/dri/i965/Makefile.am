@@ -34,6 +34,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/src/mesa/drivers/dri/intel/server \
 	-I$(top_srcdir)/src/gtest/include \
 	-I$(top_srcdir)/src/compiler/nir \
+	-I$(top_srcdir)/src/intel \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_builddir)/src/mesa/drivers/dri/common \
 	$(DEFINES) \
@@ -48,7 +49,10 @@ brw_nir_trig_workarounds.c: brw_nir_trig_workarounds.py $(top_srcdir)/src/compil
 
 noinst_LTLIBRARIES = libi965_dri.la libi965_compiler.la
 libi965_dri_la_SOURCES = $(i965_FILES)
-libi965_dri_la_LIBADD = libi965_compiler.la $(INTEL_LIBS)
+libi965_dri_la_LIBADD = \
+	$(top_builddir)/src/intel/isl/libisl.la \
+	libi965_compiler.la \
+	$(INTEL_LIBS)
 
 libi965_compiler_la_SOURCES = \
 	$(i965_compiler_FILES) \
@@ -60,6 +64,7 @@ CLEANFILES = $(BUILT_SOURCES)
 TEST_LIBS = \
 	libi965_compiler.la \
         ../../../libmesa.la \
+	$(top_builddir)/src/intel/isl/libisl.la \
 	$(PTHREAD_LIBS) \
 	$(DLOPEN_LIBS) \
 	../common/libdri_test_stubs.la

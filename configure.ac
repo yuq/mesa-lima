@@ -2459,7 +2459,8 @@ AM_CONDITIONAL(HAVE_SWRAST_DRI, test x$HAVE_SWRAST_DRI = xyes)
 
 AM_CONDITIONAL(HAVE_INTEL_VULKAN, test "x$HAVE_INTEL_VULKAN" = xyes)
 
-AM_CONDITIONAL(HAVE_INTEL_DRIVERS, test "x$HAVE_INTEL_VULKAN" = xyes)
+AM_CONDITIONAL(HAVE_INTEL_DRIVERS, test "x$HAVE_INTEL_VULKAN" = xyes -o \
+                                        "x$HAVE_I965_DRI" = xyes)
 
 AM_CONDITIONAL(NEED_RADEON_DRM_WINSYS, test "x$HAVE_GALLIUM_R300" = xyes -o \
                                             "x$HAVE_GALLIUM_R600" = xyes -o \

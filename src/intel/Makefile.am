@@ -20,7 +20,3 @@
 # IN THE SOFTWARE.
 
 SUBDIRS = genxml isl
-
-if HAVE_INTEL_VULKAN
-SUBDIRS += vulkan
-endif
