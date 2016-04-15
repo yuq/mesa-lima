@@ -1272,21 +1272,17 @@ fs_visitor::get_nir_image_deref(const nir_deref_var *deref)
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          fs_reg tmp = vgrf(glsl_type::uint_type);
 
-         if (devinfo->gen == 7 && !devinfo->is_haswell) {
-            /* IVB hangs when trying to access an invalid surface index with
-             * the dataport.  According to the spec "if the index used to
-             * select an individual element is negative or greater than or
-             * equal to the size of the array, the results of the operation
-             * are undefined but may not lead to termination" -- which is one
-             * of the possible outcomes of the hang.  Clamp the index to
-             * prevent access outside of the array bounds.
-             */
-            bld.emit_minmax(tmp, retype(get_nir_src(deref_array->indirect),
-                                        BRW_REGISTER_TYPE_UD),
-                            brw_imm_ud(size - base - 1), BRW_CONDITIONAL_L);
-         } else {
-            bld.MOV(tmp, get_nir_src(deref_array->indirect));
-         }
+         /* Accessing an invalid surface index with the dataport can result
+          * in a hang.  According to the spec "if the index used to
+          * select an individual element is negative or greater than or
+          * equal to the size of the array, the results of the operation
+          * are undefined but may not lead to termination" -- which is one
+          * of the possible outcomes of the hang.  Clamp the index to
+          * prevent access outside of the array bounds.
+          */
+         bld.emit_minmax(tmp, retype(get_nir_src(deref_array->indirect),
+                                     BRW_REGISTER_TYPE_UD),
+                         brw_imm_ud(size - base - 1), BRW_CONDITIONAL_L);
 
          indirect_max += element_size * (tail->type->length - 1);
 
