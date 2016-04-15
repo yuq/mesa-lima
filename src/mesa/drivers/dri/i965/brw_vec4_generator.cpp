@@ -1399,48 +1399,6 @@ generate_set_simd4x2_header_gen9(struct brw_codegen *p,
 }
 
 static void
-generate_mov_indirect(struct brw_codegen *p,
-                      vec4_instruction *inst,
-                      struct brw_reg dst, struct brw_reg reg,
-                      struct brw_reg indirect, struct brw_reg length)
-{
-   assert(indirect.type == BRW_REGISTER_TYPE_UD);
-
-   unsigned imm_byte_offset = reg.nr * REG_SIZE + reg.subnr * (REG_SIZE / 2);
-
-   /* This instruction acts in align1 mode */
-   assert(inst->force_writemask_all || reg.writemask == 0xf);
-
-   brw_push_insn_state(p);
-   brw_set_default_access_mode(p, BRW_ALIGN_1);
-   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-
-   struct brw_reg addr = vec2(brw_address_reg(0));
-
-   /* We need to move the indirect value into the address register.  In order
-    * to make things make some sense, we want to respect at least the X
-    * component of the swizzle.  In order to do that, we need to convert the
-    * subnr (probably 0) to an align1 subnr and add in the swizzle.  We then
-    * use a region of <8,4,0>:uw to pick off the first 2 bytes of the indirect
-    * and splat it out to all four channels of the given half of a0.
-    */
-   assert(brw_is_single_value_swizzle(indirect.swizzle));
-   indirect.subnr = (indirect.subnr * 4 + BRW_GET_SWZ(indirect.swizzle, 0)) * 2;
-   indirect = stride(retype(indirect, BRW_REGISTER_TYPE_UW), 8, 4, 0);
-
-   brw_ADD(p, addr, indirect, brw_imm_uw(imm_byte_offset));
-
-   /* Use a <4,1> region Vx1 region*/
-   struct brw_reg src = brw_VxH_indirect(0, 0);
-   src.width = BRW_WIDTH_4;
-   src.hstride = BRW_HORIZONTAL_STRIDE_1;
-
-   brw_MOV(p, dst, retype(src, reg.type));
-
-   brw_pop_insn_state(p);
-}
-
-static void
 generate_code(struct brw_codegen *p,
               const struct brw_compiler *compiler,
               void *log_data,
@@ -1987,9 +1945,6 @@ generate_code(struct brw_codegen *p,
          brw_barrier(p, src[0]);
          brw_WAIT(p);
          break;
-
-      case SHADER_OPCODE_MOV_INDIRECT:
-         generate_mov_indirect(p, inst, dst, src[0], src[1], src[2]);
 
       default:
          unreachable("Unsupported opcode");
