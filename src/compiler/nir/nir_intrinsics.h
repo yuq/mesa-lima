@@ -179,7 +179,7 @@ INTRINSIC(image_samples, 0, ARR(0), true, 1, 1, 0, xx, xx, xx,
  * Vulkan descriptor set intrinsic
  *
  * The Vulkan API uses a different binding model from GL.  In the Vulkan
- * API, all external resources are represented by a tripple:
+ * API, all external resources are represented by a tuple:
  *
  * (descriptor set, binding, array index)
  *

@@ -518,6 +518,8 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
       [NIR_INTRINSIC_STREAM_ID] = "stream-id",
       [NIR_INTRINSIC_UCP_ID] = "ucp-id",
       [NIR_INTRINSIC_RANGE] = "range",
+      [NIR_INTRINSIC_DESC_SET] = "desc-set",
+      [NIR_INTRINSIC_BINDING] = "binding",
    };
    for (unsigned idx = 1; idx < NIR_INTRINSIC_NUM_INDEX_FLAGS; idx++) {
       if (!info->index_map[idx])

@@ -25,7 +25,6 @@
 #include "brw_context.h"
 #include "brw_state.h"
 #include "brw_defines.h"
-#include "brw_wm.h"
 #include "brw_surface_formats.h"
 
 /* This macro allows us to write the table almost as it appears in the PRM,

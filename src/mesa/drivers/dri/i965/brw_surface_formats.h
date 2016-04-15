@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 struct brw_surface_format_info {
    bool exists;
    int sampling;
