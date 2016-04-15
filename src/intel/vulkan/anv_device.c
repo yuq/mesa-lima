@@ -380,8 +380,9 @@ void anv_GetPhysicalDeviceFeatures(
       .alphaToOne                               = true,
       .multiViewport                            = true,
       .samplerAnisotropy                        = false, /* FINISHME */
-      .textureCompressionETC2                   = true,
-      .textureCompressionASTC_LDR               = true,
+      .textureCompressionETC2                   = pdevice->info->gen >= 8 ||
+                                                  pdevice->info->is_baytrail,
+      .textureCompressionASTC_LDR               = false, /* FINISHME */
       .textureCompressionBC                     = true,
       .occlusionQueryPrecise                    = true,
       .pipelineStatisticsQuery                  = false,
