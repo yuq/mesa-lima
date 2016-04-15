@@ -678,7 +678,7 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
 
       enum isl_format storage_format =
          has_matching_storage_typed_format(device, view->format) ?
-         isl_lower_storage_image_format(&device->isl_dev, view->format) :
+         isl_lower_storage_image_format(&device->info, view->format) :
          ISL_FORMAT_RAW;
 
       anv_fill_buffer_surface_state(device, view->storage_surface_state,

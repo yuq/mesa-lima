@@ -76,7 +76,7 @@ isl_is_storage_image_format(enum isl_format format)
 }
 
 enum isl_format
-isl_lower_storage_image_format(const struct isl_device *dev,
+isl_lower_storage_image_format(const struct brw_device_info *devinfo,
                                enum isl_format format)
 {
    switch (format) {
@@ -100,8 +100,8 @@ isl_lower_storage_image_format(const struct isl_device *dev,
    case ISL_FORMAT_R32G32_UINT:
    case ISL_FORMAT_R32G32_SINT:
    case ISL_FORMAT_R32G32_FLOAT:
-      return (ISL_DEV_GEN(dev) >= 9 ? format :
-              ISL_DEV_GEN(dev) >= 8 || dev->info->is_haswell ?
+      return (devinfo->gen >= 9 ? format :
+              devinfo->gen >= 8 || devinfo->is_haswell ?
               ISL_FORMAT_R16G16B16A16_UINT :
               ISL_FORMAT_R32G32_UINT);
 
@@ -117,31 +117,31 @@ isl_lower_storage_image_format(const struct isl_device *dev,
     */
    case ISL_FORMAT_R8G8B8A8_UINT:
    case ISL_FORMAT_R8G8B8A8_SINT:
-      return (ISL_DEV_GEN(dev) >= 9 ? format :
-              ISL_DEV_GEN(dev) >= 8 || dev->info->is_haswell ?
+      return (devinfo->gen >= 9 ? format :
+              devinfo->gen >= 8 || devinfo->is_haswell ?
               ISL_FORMAT_R8G8B8A8_UINT : ISL_FORMAT_R32_UINT);
 
    case ISL_FORMAT_R16G16_UINT:
    case ISL_FORMAT_R16G16_SINT:
    case ISL_FORMAT_R16G16_FLOAT:
-      return (ISL_DEV_GEN(dev) >= 9 ? format :
-              ISL_DEV_GEN(dev) >= 8 || dev->info->is_haswell ?
+      return (devinfo->gen >= 9 ? format :
+              devinfo->gen >= 8 || devinfo->is_haswell ?
               ISL_FORMAT_R16G16_UINT : ISL_FORMAT_R32_UINT);
 
    case ISL_FORMAT_R8G8_UINT:
    case ISL_FORMAT_R8G8_SINT:
-      return (ISL_DEV_GEN(dev) >= 9 ? format :
-              ISL_DEV_GEN(dev) >= 8 || dev->info->is_haswell ?
+      return (devinfo->gen >= 9 ? format :
+              devinfo->gen >= 8 || devinfo->is_haswell ?
               ISL_FORMAT_R8G8_UINT : ISL_FORMAT_R16_UINT);
 
    case ISL_FORMAT_R16_UINT:
    case ISL_FORMAT_R16_FLOAT:
    case ISL_FORMAT_R16_SINT:
-      return (ISL_DEV_GEN(dev) >= 9 ? format : ISL_FORMAT_R16_UINT);
+      return (devinfo->gen >= 9 ? format : ISL_FORMAT_R16_UINT);
 
    case ISL_FORMAT_R8_UINT:
    case ISL_FORMAT_R8_SINT:
-      return (ISL_DEV_GEN(dev) >= 9 ? format : ISL_FORMAT_R8_UINT);
+      return (devinfo->gen >= 9 ? format : ISL_FORMAT_R8_UINT);
 
    /* Neither the 2/10/10/10 nor the 11/11/10 packed formats are supported
     * by the hardware.
@@ -154,23 +154,23 @@ isl_lower_storage_image_format(const struct isl_device *dev,
    /* No normalized fixed-point formats are supported by the hardware. */
    case ISL_FORMAT_R16G16B16A16_UNORM:
    case ISL_FORMAT_R16G16B16A16_SNORM:
-      return (ISL_DEV_GEN(dev) >= 8 || dev->info->is_haswell ?
+      return (devinfo->gen >= 8 || devinfo->is_haswell ?
               ISL_FORMAT_R16G16B16A16_UINT :
               ISL_FORMAT_R32G32_UINT);
 
    case ISL_FORMAT_R8G8B8A8_UNORM:
    case ISL_FORMAT_R8G8B8A8_SNORM:
-      return (ISL_DEV_GEN(dev) >= 8 || dev->info->is_haswell ?
+      return (devinfo->gen >= 8 || devinfo->is_haswell ?
               ISL_FORMAT_R8G8B8A8_UINT : ISL_FORMAT_R32_UINT);
 
    case ISL_FORMAT_R16G16_UNORM:
    case ISL_FORMAT_R16G16_SNORM:
-      return (ISL_DEV_GEN(dev) >= 8 || dev->info->is_haswell ?
+      return (devinfo->gen >= 8 || devinfo->is_haswell ?
               ISL_FORMAT_R16G16_UINT : ISL_FORMAT_R32_UINT);
 
    case ISL_FORMAT_R8G8_UNORM:
    case ISL_FORMAT_R8G8_SNORM:
-      return (ISL_DEV_GEN(dev) >= 8 || dev->info->is_haswell ?
+      return (devinfo->gen >= 8 || devinfo->is_haswell ?
               ISL_FORMAT_R8G8_UINT : ISL_FORMAT_R16_UINT);
 
    case ISL_FORMAT_R16_UNORM:

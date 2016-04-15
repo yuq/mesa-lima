@@ -900,7 +900,7 @@ enum isl_format isl_format_rgb_to_rgbx(enum isl_format rgb) ATTRIBUTE_CONST;
 bool isl_is_storage_image_format(enum isl_format fmt);
 
 enum isl_format
-isl_lower_storage_image_format(const struct isl_device *dev,
+isl_lower_storage_image_format(const struct brw_device_info *devinfo,
                                enum isl_format fmt);
 
 static inline bool

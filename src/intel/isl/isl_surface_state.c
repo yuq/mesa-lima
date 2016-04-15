@@ -308,7 +308,8 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    }
 
    if (info->view->usage & ISL_SURF_USAGE_STORAGE_BIT) {
-      s.SurfaceFormat = isl_lower_storage_image_format(dev, info->view->format);
+      s.SurfaceFormat =
+         isl_lower_storage_image_format(dev->info, info->view->format);
    } else {
       s.SurfaceFormat = info->view->format;
    }
