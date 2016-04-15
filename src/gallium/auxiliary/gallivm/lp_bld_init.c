@@ -187,6 +187,8 @@ gallivm_free_ir(struct gallivm_state *gallivm)
       LLVMDisposeModule(gallivm->module);
    }
 
+   FREE(gallivm->module_name);
+
    if (!USE_MCJIT) {
       /* Don't free the TargetData, it's owned by the exec engine */
    } else {
@@ -203,6 +205,7 @@ gallivm_free_ir(struct gallivm_state *gallivm)
    gallivm->engine = NULL;
    gallivm->target = NULL;
    gallivm->module = NULL;
+   gallivm->module_name = NULL;
    gallivm->passmgr = NULL;
    gallivm->context = NULL;
    gallivm->builder = NULL;
@@ -305,6 +308,15 @@ init_gallivm_state(struct gallivm_state *gallivm, const char *name,
 
    if (!gallivm->context)
       goto fail;
+
+   gallivm->module_name = NULL;
+   if (name) {
+      size_t size = strlen(name) + 1;
+      gallivm->module_name = MALLOC(size);
+      if (gallivm->module_name) {
+         memcpy(gallivm->module_name, name, size);
+      }
+   }
 
    gallivm->module = LLVMModuleCreateWithNameInContext(name,
                                                        gallivm->context);
@@ -574,8 +586,9 @@ gallivm_compile_module(struct gallivm_state *gallivm)
    if (gallivm_debug & GALLIVM_DEBUG_PERF) {
       int64_t time_end = os_time_get();
       int time_msec = (int)(time_end - time_begin) / 1000;
+      assert(gallivm->module_name);
       debug_printf("optimizing module %s took %d msec\n",
-                   lp_get_module_id(gallivm->module), time_msec);
+                   gallivm->module_name, time_msec);
    }
 
    /* Dump byte code to a file */

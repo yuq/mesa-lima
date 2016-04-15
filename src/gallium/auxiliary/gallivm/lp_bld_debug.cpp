@@ -65,13 +65,6 @@ lp_check_alignment(const void *ptr, unsigned alignment)
 }
 
 
-extern "C" const char *
-lp_get_module_id(LLVMModuleRef module)
-{
-   return llvm::unwrap(module)->getModuleIdentifier().c_str();
-}
-
-
 /**
  * Same as LLVMDumpValue, but through our debugging channels.
  */

@@ -41,6 +41,7 @@ extern "C" {
 
 struct gallivm_state
 {
+   char *module_name;
    LLVMModuleRef module;
    LLVMExecutionEngineRef engine;
    LLVMTargetDataRef target;
