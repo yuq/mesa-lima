@@ -43,52 +43,55 @@ static inline unsigned
 translate_wrap_mode(unsigned wrap)
 {
    switch (wrap) {
-   case PIPE_TEX_WRAP_REPEAT: 
+   case PIPE_TEX_WRAP_REPEAT:
       return SVGA3D_TEX_ADDRESS_WRAP;
-
-   case PIPE_TEX_WRAP_CLAMP: 
+   case PIPE_TEX_WRAP_CLAMP:
       return SVGA3D_TEX_ADDRESS_CLAMP;
-
-   case PIPE_TEX_WRAP_CLAMP_TO_EDGE: 
+   case PIPE_TEX_WRAP_CLAMP_TO_EDGE:
       /* Unfortunately SVGA3D_TEX_ADDRESS_EDGE not respected by
        * hardware.
        */
       return SVGA3D_TEX_ADDRESS_CLAMP;
-
-   case PIPE_TEX_WRAP_CLAMP_TO_BORDER: 
+   case PIPE_TEX_WRAP_CLAMP_TO_BORDER:
       return SVGA3D_TEX_ADDRESS_BORDER;
-
-   case PIPE_TEX_WRAP_MIRROR_REPEAT: 
+   case PIPE_TEX_WRAP_MIRROR_REPEAT:
       return SVGA3D_TEX_ADDRESS_MIRROR;
-
-   case PIPE_TEX_WRAP_MIRROR_CLAMP:  
-   case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_EDGE:   
-   case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_BORDER: 
+   case PIPE_TEX_WRAP_MIRROR_CLAMP:
+   case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_EDGE:
+   case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_BORDER:
       return SVGA3D_TEX_ADDRESS_MIRRORONCE;
-
    default:
       assert(0);
       return SVGA3D_TEX_ADDRESS_WRAP;
    }
 }
 
-static inline unsigned translate_img_filter( unsigned filter )
+
+static inline unsigned
+translate_img_filter(unsigned filter)
 {
    switch (filter) {
-   case PIPE_TEX_FILTER_NEAREST: return SVGA3D_TEX_FILTER_NEAREST;
-   case PIPE_TEX_FILTER_LINEAR:  return SVGA3D_TEX_FILTER_LINEAR;
+   case PIPE_TEX_FILTER_NEAREST:
+      return SVGA3D_TEX_FILTER_NEAREST;
+   case PIPE_TEX_FILTER_LINEAR:
+      return SVGA3D_TEX_FILTER_LINEAR;
    default:
       assert(0);
       return SVGA3D_TEX_FILTER_NEAREST;
    }
 }
 
-static inline unsigned translate_mip_filter( unsigned filter )
+
+static inline unsigned
+translate_mip_filter(unsigned filter)
 {
    switch (filter) {
-   case PIPE_TEX_MIPFILTER_NONE:    return SVGA3D_TEX_FILTER_NONE;
-   case PIPE_TEX_MIPFILTER_NEAREST: return SVGA3D_TEX_FILTER_NEAREST;
-   case PIPE_TEX_MIPFILTER_LINEAR:  return SVGA3D_TEX_FILTER_LINEAR;
+   case PIPE_TEX_MIPFILTER_NONE:
+      return SVGA3D_TEX_FILTER_NONE;
+   case PIPE_TEX_MIPFILTER_NEAREST:
+      return SVGA3D_TEX_FILTER_NEAREST;
+   case PIPE_TEX_MIPFILTER_LINEAR:
+      return SVGA3D_TEX_FILTER_LINEAR;
    default:
       assert(0);
       return SVGA3D_TEX_FILTER_NONE;
@@ -221,7 +224,7 @@ svga_create_sampler_state(struct pipe_context *pipe,
 {
    struct svga_context *svga = svga_context(pipe);
    struct svga_sampler_state *cso = CALLOC_STRUCT( svga_sampler_state );
-   
+
    if (!cso)
       return NULL;
 
@@ -229,7 +232,7 @@ svga_create_sampler_state(struct pipe_context *pipe,
    cso->magfilter = translate_img_filter( sampler->mag_img_filter );
    cso->minfilter = translate_img_filter( sampler->min_img_filter );
    cso->aniso_level = MAX2( sampler->max_anisotropy, 1 );
-   if(sampler->max_anisotropy)
+   if (sampler->max_anisotropy)
       cso->magfilter = cso->minfilter = SVGA3D_TEX_FILTER_ANISOTROPIC;
    cso->lod_bias = sampler->lod_bias;
    cso->addressu = translate_wrap_mode(sampler->wrap_s);
@@ -278,6 +281,7 @@ svga_create_sampler_state(struct pipe_context *pipe,
    return cso;
 }
 
+
 static void
 svga_bind_sampler_states(struct pipe_context *pipe,
                          unsigned shader,
@@ -318,8 +322,8 @@ svga_bind_sampler_states(struct pipe_context *pipe,
 }
 
 
-static void svga_delete_sampler_state(struct pipe_context *pipe,
-                                      void *sampler)
+static void
+svga_delete_sampler_state(struct pipe_context *pipe, void *sampler)
 {
    struct svga_sampler_state *ss = (struct svga_sampler_state *) sampler;
    struct svga_context *svga = svga_context(pipe);
@@ -406,6 +410,7 @@ svga_sampler_view_destroy(struct pipe_context *pipe,
    svga->hud.num_samplerview_objects--;
 }
 
+
 static void
 svga_set_sampler_views(struct pipe_context *pipe,
                        unsigned shader,
@@ -463,8 +468,7 @@ svga_set_sampler_views(struct pipe_context *pipe,
    svga->dirty |= SVGA_NEW_TEXTURE_BINDING;
 
    if (flag_srgb != svga->curr.tex_flags.flag_srgb ||
-       flag_1d != svga->curr.tex_flags.flag_1d) 
-   {
+       flag_1d != svga->curr.tex_flags.flag_1d) {
       svga->dirty |= SVGA_NEW_TEXTURE_FLAGS;
       svga->curr.tex_flags.flag_1d = flag_1d;
       svga->curr.tex_flags.flag_srgb = flag_srgb;
@@ -496,7 +500,8 @@ svga_set_sampler_views(struct pipe_context *pipe,
 }
 
 
-void svga_init_sampler_functions( struct svga_context *svga )
+void
+svga_init_sampler_functions( struct svga_context *svga )
 {
    svga->pipe.create_sampler_state = svga_create_sampler_state;
    svga->pipe.bind_sampler_states = svga_bind_sampler_states;
@@ -505,6 +510,3 @@ void svga_init_sampler_functions( struct svga_context *svga )
    svga->pipe.create_sampler_view = svga_create_sampler_view;
    svga->pipe.sampler_view_destroy = svga_sampler_view_destroy;
 }
-
-
-
