@@ -2495,11 +2495,6 @@ struct gl_uniform_block
    GLuint Binding;
 
    /**
-    * Vulkan descriptor set qualifier for this block.
-    */
-   GLuint Set;
-
-   /**
     * Minimum size (in bytes) of a buffer object to back this uniform buffer
     * (GL_UNIFORM_BLOCK_DATA_SIZE).
     */
