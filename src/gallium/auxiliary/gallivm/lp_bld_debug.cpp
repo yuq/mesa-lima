@@ -109,13 +109,13 @@ disassemble(const void* func, std::ostream &buffer)
     * Initialize all used objects.
     */
 
-   std::string Triple = llvm::sys::getProcessTriple();
-   LLVMDisasmContextRef D = LLVMCreateDisasm(Triple.c_str(), NULL, 0, NULL, NULL);
+   const char *triple = LLVM_HOST_TRIPLE;
+   LLVMDisasmContextRef D = LLVMCreateDisasm(triple, NULL, 0, NULL, NULL);
    char outline[1024];
 
    if (!D) {
       buffer << "error: could not create disassembler for triple "
-             << Triple.c_str() << '\n';
+             << triple << '\n';
       return 0;
    }
 
