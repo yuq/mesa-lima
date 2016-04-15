@@ -751,7 +751,6 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
                                         dst);
       unspill_inst->offset = spill_offset;
       unspill_inst->regs_written = reg_size;
-      unspill_inst->force_writemask_all = true;
 
       if (!gen7_read) {
          unspill_inst->base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
@@ -765,11 +764,11 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
 
 void
 fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
-                       uint32_t spill_offset, int count, bool we_all)
+                       uint32_t spill_offset, int count)
 {
    int reg_size = 1;
    int spill_base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
-   if (inst->exec_size == 16 && count % 2 == 0) {
+   if (dispatch_width == 16 && count % 2 == 0) {
       spill_base_mrf = FIRST_SPILL_MRF(devinfo->gen);
       reg_size = 2;
    }
@@ -785,8 +784,6 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
       spill_inst->offset = spill_offset + i * reg_size * REG_SIZE;
       spill_inst->mlen = 1 + reg_size; /* header, value */
       spill_inst->base_mrf = spill_base_mrf;
-      spill_inst->force_writemask_all = we_all;
-      spill_inst->force_sechalf = inst->force_sechalf;
    }
 }
 
@@ -941,15 +938,12 @@ fs_visitor::spill_reg(int spill_reg)
           * inst->regs_written(), then we need to unspill the destination
           * since we write back out all of the regs_written().
 	  */
-         bool need_unspill = inst->is_partial_write() ||
-                             type_sz(inst->dst.type) != 4;
-         if (need_unspill)
+	 if (inst->is_partial_write())
             emit_unspill(block, inst, spill_src, subset_spill_offset,
                          inst->regs_written);
 
          emit_spill(block, inst, spill_src, subset_spill_offset,
-                    inst->regs_written,
-                    need_unspill || inst->force_writemask_all);
+                    inst->regs_written);
       }
    }
 
