@@ -296,6 +296,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         vc4_start_draw(vc4, info->count);
         vc4_update_compiled_shaders(vc4, info->mode);
 
+        uint32_t start_draw_calls_queued = vc4->draw_calls_queued;
         vc4_emit_state(pctx);
 
         if ((vc4->dirty & (VC4_DIRTY_VTXBUF |
@@ -424,6 +425,12 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 }
         }
         cl_end(&vc4->bcl, bcl);
+
+        /* No flushes of the job should have happened between when we started
+         * emitting state for our draw and when we just emitted our draw's
+         * primitives.
+         */
+        assert(start_draw_calls_queued == vc4->draw_calls_queued);
 
         if (vc4->zsa && vc4->zsa->base.depth.enabled) {
                 vc4->resolve |= PIPE_CLEAR_DEPTH;
