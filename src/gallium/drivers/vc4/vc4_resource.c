@@ -171,7 +171,12 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                         vc4_flush(pctx);
                 }
         } else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
-                if (vc4_cl_references_bo(pctx, rsc->bo)) {
+                /* If we're writing and the buffer is being used by the CL, we
+                 * have to flush the CL first.  If we're only reading, we need
+                 * to flush if the CL has written our buffer.
+                 */
+                if (vc4_cl_references_bo(pctx, rsc->bo,
+                                         usage & PIPE_TRANSFER_WRITE)) {
                         if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
                             prsc->last_level == 0 &&
                             prsc->width0 == box->width &&
