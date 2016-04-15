@@ -227,6 +227,8 @@ brw_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
     */
    brw_emit_mi_flush(brw);
 
+   brw_select_pipeline(brw, BRW_RENDER_PIPELINE);
+
 retry:
    intel_batchbuffer_require_space(brw, estimated_max_batch_usage, RENDER_RING);
    intel_batchbuffer_save_state(brw);
