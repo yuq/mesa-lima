@@ -529,20 +529,33 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
         struct vc4_resource *rsc = vc4_resource_setup(pscreen, tmpl);
         struct pipe_resource *prsc = &rsc->base.b;
         struct vc4_resource_slice *slice = &rsc->slices[0];
+        uint32_t expected_stride = align(prsc->width0 / rsc->cpp,
+                                         vc4_utile_width(rsc->cpp));
 
         if (!rsc)
                 return NULL;
+
+        if (handle->stride != expected_stride) {
+                static bool warned = false;
+                if (!warned) {
+                        warned = true;
+                        fprintf(stderr,
+                                "Attempting to import %dx%d %s with "
+                                "unsupported stride %d instead of %d\n",
+                                prsc->width0, prsc->height0,
+                                util_format_short_name(prsc->format),
+                                handle->stride,
+                                expected_stride);
+                }
+                return NULL;
+        }
 
         rsc->tiled = false;
         rsc->bo = vc4_screen_bo_from_handle(pscreen, handle);
         if (!rsc->bo)
                 goto fail;
 
-        if (!using_vc4_simulator)
-                slice->stride = handle->stride;
-        else
-                slice->stride = align(prsc->width0 * rsc->cpp, 16);
-
+        slice->stride = handle->stride;
         slice->tiling = VC4_TILING_FORMAT_LINEAR;
 
         rsc->vc4_format = get_resource_texture_format(prsc);
