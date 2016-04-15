@@ -979,25 +979,38 @@ isl_surf_info_is_z32_float(const struct isl_surf_init_info *info)
 static inline struct isl_extent2d
 isl_extent2d(uint32_t width, uint32_t height)
 {
-   return (struct isl_extent2d) { .w = width, .h = height };
+   struct isl_extent2d e = { { 0 } };
+
+   e.width = width;
+   e.height = height;
+
+   return e;
 }
 
 static inline struct isl_extent3d
 isl_extent3d(uint32_t width, uint32_t height, uint32_t depth)
 {
-   return (struct isl_extent3d) { .w = width, .h = height, .d = depth };
+   struct isl_extent3d e = { { 0 } };
+
+   e.width = width;
+   e.height = height;
+   e.depth = depth;
+
+   return e;
 }
 
 static inline struct isl_extent4d
 isl_extent4d(uint32_t width, uint32_t height, uint32_t depth,
              uint32_t array_len)
 {
-   return (struct isl_extent4d) {
-      .w = width,
-      .h = height,
-      .d = depth,
-      .a = array_len,
-   };
+   struct isl_extent4d e = { { 0 } };
+
+   e.width = width;
+   e.height = height;
+   e.depth = depth;
+   e.array_len = array_len;
+
+   return e;
 }
 
 #define isl_surf_init(dev, surf, ...) \
@@ -1061,11 +1074,9 @@ isl_surf_get_image_alignment_sa(const struct isl_surf *surf)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
 
-   return (struct isl_extent3d) {
-      .w = fmtl->bw * surf->image_alignment_el.w,
-      .h = fmtl->bh * surf->image_alignment_el.h,
-      .d = fmtl->bd * surf->image_alignment_el.d,
-   };
+   return isl_extent3d(fmtl->bw * surf->image_alignment_el.w,
+                       fmtl->bh * surf->image_alignment_el.h,
+                       fmtl->bd * surf->image_alignment_el.d);
 }
 
 /**
