@@ -217,6 +217,41 @@ gen8_emit_vertices(struct brw_context *brw)
          break;
       }
 
+      /* From the BDW PRM, Volume 2d, page 586 (VERTEX_ELEMENT_STATE):
+       *
+       *     "When SourceElementFormat is set to one of the *64*_PASSTHRU
+       *     formats, 64-bit components are stored in the URB without any
+       *     conversion. In this case, vertex elements must be written as 128
+       *     or 256 bits, with VFCOMP_STORE_0 being used to pad the output
+       *     as required. E.g., if R64_PASSTHRU is used to copy a 64-bit Red
+       *     component into the URB, Component 1 must be specified as
+       *     VFCOMP_STORE_0 (with Components 2,3 set to VFCOMP_NOSTORE)
+       *     in order to output a 128-bit vertex element, or Components 1-3 must
+       *     be specified as VFCOMP_STORE_0 in order to output a 256-bit vertex
+       *     element. Likewise, use of R64G64B64_PASSTHRU requires Component 3
+       *     to be specified as VFCOMP_STORE_0 in order to output a 256-bit vertex
+       *     element."
+       */
+      if (input->glarray->Doubles) {
+         switch (input->glarray->Size) {
+         case 0:
+         case 1:
+         case 2:
+            /*  Use 128-bits instead of 256-bits to write double and dvec2
+             *  vertex elements.
+             */
+            comp2 = BRW_VE1_COMPONENT_NOSTORE;
+            comp3 = BRW_VE1_COMPONENT_NOSTORE;
+            break;
+         case 3:
+            /* Pad the output using VFCOMP_STORE_0 as suggested
+             * by the BDW PRM.
+             */
+            comp3 = BRW_VE1_COMPONENT_STORE_0;
+            break;
+         }
+      }
+
       OUT_BATCH((input->buffer << GEN6_VE0_INDEX_SHIFT) |
                 GEN6_VE0_VALID |
                 (format << BRW_VE0_FORMAT_SHIFT) |
