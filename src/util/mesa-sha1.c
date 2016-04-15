@@ -180,7 +180,8 @@ _mesa_sha1_final(struct mesa_sha1 *ctx, unsigned char result[20])
 static void _mesa_libgcrypt_init(void)
 {
    if (!gcry_check_version(NULL))
-      return NULL;
+      return;
+
    gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
    gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 }
