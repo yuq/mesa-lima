@@ -583,7 +583,7 @@ unsupported:
       .maxResourceSize = 0,
    };
 
-   return VK_SUCCESS;
+   return VK_ERROR_FORMAT_NOT_SUPPORTED;
 }
 
 void anv_GetPhysicalDeviceSparseImageFormatProperties(
