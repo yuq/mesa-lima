@@ -1,0 +1,7 @@
+rasterizer/jitter/builder_gen.cpp
+rasterizer/jitter/builder_gen.h
+rasterizer/jitter/builder_x86.cpp
+rasterizer/jitter/builder_x86.h
+rasterizer/jitter/state_llvm.h
+rasterizer/scripts/gen_knobs.cpp
+rasterizer/scripts/gen_knobs.h
