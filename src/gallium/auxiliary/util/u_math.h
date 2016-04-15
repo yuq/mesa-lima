@@ -518,9 +518,15 @@ u_bit_scan64(uint64_t *mask)
 static inline void
 u_bit_scan_consecutive_range(unsigned *mask, int *start, int *count)
 {
+   if (*mask == 0xffffffff) {
+      *start = 0;
+      *count = 32;
+      *mask = 0;
+      return;
+   }
    *start = ffs(*mask) - 1;
    *count = ffs(~(*mask >> *start)) - 1;
-   *mask &= ~(((1 << *count) - 1) << *start);
+   *mask &= ~(((1u << *count) - 1) << *start);
 }
 
 /**
