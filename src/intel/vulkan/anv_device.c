@@ -408,8 +408,8 @@ void anv_GetPhysicalDeviceFeatures(
 
    /* We can't do image stores in vec4 shaders */
    pFeatures->vertexPipelineStoresAndAtomics =
-      !pdevice->compiler->scalar_stage[MESA_SHADER_VERTEX] &&
-      !pdevice->compiler->scalar_stage[MESA_SHADER_GEOMETRY];
+      pdevice->compiler->scalar_stage[MESA_SHADER_VERTEX] &&
+      pdevice->compiler->scalar_stage[MESA_SHADER_GEOMETRY];
 }
 
 void
