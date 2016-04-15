@@ -758,7 +758,7 @@ vec4_visitor::emit_pull_constant_load_reg(dst_reg dst,
       pull->mlen = 2;
       pull->header_size = 1;
    } else if (devinfo->gen >= 7) {
-      dst_reg grf_offset = dst_reg(this, glsl_type::int_type);
+      dst_reg grf_offset = dst_reg(this, glsl_type::uint_type);
 
       grf_offset.type = offset_reg.type;
 
@@ -1587,21 +1587,21 @@ vec4_visitor::move_grf_array_access_to_scratch()
 void
 vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 				      dst_reg temp, src_reg orig_src,
-				      int base_offset, src_reg indirect)
+                                      int base_offset, src_reg indirect)
 {
    int reg_offset = base_offset + orig_src.reg_offset;
    const unsigned index = prog_data->base.binding_table.pull_constants_start;
 
    src_reg offset;
    if (indirect.file != BAD_FILE) {
-      offset = src_reg(this, glsl_type::int_type);
+      offset = src_reg(this, glsl_type::uint_type);
 
       emit_before(block, inst, ADD(dst_reg(offset), indirect,
-                                   brw_imm_d(reg_offset * 16)));
+                                   brw_imm_ud(reg_offset * 16)));
    } else if (devinfo->gen >= 8) {
       /* Store the offset in a GRF so we can send-from-GRF. */
-      offset = src_reg(this, glsl_type::int_type);
-      emit_before(block, inst, MOV(dst_reg(offset), brw_imm_d(reg_offset * 16)));
+      offset = src_reg(this, glsl_type::uint_type);
+      emit_before(block, inst, MOV(dst_reg(offset), brw_imm_ud(reg_offset * 16)));
    } else {
       offset = brw_imm_d(reg_offset * 16);
    }
@@ -1629,6 +1629,12 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 void
 vec4_visitor::move_uniform_array_access_to_pull_constants()
 {
+   /* The vulkan dirver doesn't support pull constants other than UBOs so
+    * everything has to be pushed regardless.
+    */
+   if (stage_prog_data->pull_param == NULL)
+      return;
+
    int pull_constant_loc[this->uniforms];
    memset(pull_constant_loc, -1, sizeof(pull_constant_loc));
 

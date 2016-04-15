@@ -27,7 +27,6 @@
 
 #include "nir.h"
 #include <stdlib.h>
-#include <unistd.h>
 
 /*
  * Implements the classic to-SSA algorithm described by Cytron et. al. in

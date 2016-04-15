@@ -54,6 +54,9 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
    case 0x110:
       obj_class = GM107_COMPUTE_CLASS;
       break;
+   case 0x120:
+      obj_class = GM200_COMPUTE_CLASS;
+      break;
    default:
       NOUVEAU_ERR("unsupported chipset: NV%02x\n", dev->chipset);
       return -1;

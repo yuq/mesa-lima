@@ -1988,10 +1988,11 @@ fs_visitor::assign_constant_locations()
     */
    const unsigned int max_push_components = 16 * 8;
 
-   /* For vulkan we don't limit the max_chunk_size. We set it to 32 float =
-    * 128 bytes, which is the maximum vulkan push constant size.
+   /* We push small arrays, but no bigger than 16 floats.  This is big enough
+    * for a vec4 but hopefully not large enough to push out other stuff.  We
+    * should probably use a better heuristic at some point.
     */
-   const unsigned int max_chunk_size = 32;
+   const unsigned int max_chunk_size = 16;
 
    unsigned int num_push_constants = 0;
    unsigned int num_pull_constants = 0;
@@ -2018,8 +2019,14 @@ fs_visitor::assign_constant_locations()
       if (!contiguous[u]) {
          unsigned chunk_size = u - chunk_start + 1;
 
-         if (num_push_constants + chunk_size <= max_push_components &&
-             chunk_size <= max_chunk_size) {
+         /* Decide whether we should push or pull this parameter.  In the
+          * Vulkan driver, push constants are explicitly exposed via the API
+          * so we push everything.  In GL, we only push small arrays.
+          */
+         if (stage_prog_data->pull_param == NULL ||
+             (num_push_constants + chunk_size <= max_push_components &&
+              chunk_size <= max_chunk_size)) {
+            assert(num_push_constants + chunk_size <= max_push_components);
             for (unsigned j = chunk_start; j <= u; j++)
                push_constant_loc[j] = num_push_constants++;
          } else {
@@ -4515,7 +4522,7 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
 
    case SHADER_OPCODE_MOV_INDIRECT:
       /* Prior to Broadwell, we only have 8 address subregisters */
-      return devinfo->gen < 8 ? 8 : inst->exec_size;
+      return devinfo->gen < 8 ? 8 : MIN2(inst->exec_size, 16);
 
    default:
       return inst->exec_size;

@@ -932,7 +932,7 @@ static const __DRIextension *intelRobustScreenExtensions[] = {
     NULL
 };
 
-static bool
+static int
 intel_get_param(__DRIscreen *psp, int param, int *value)
 {
    int ret;
@@ -943,20 +943,17 @@ intel_get_param(__DRIscreen *psp, int param, int *value)
    gp.value = value;
 
    ret = drmCommandWriteRead(psp->fd, DRM_I915_GETPARAM, &gp, sizeof(gp));
-   if (ret) {
-      if (ret != -EINVAL)
+   if (ret < 0 && ret != -EINVAL)
 	 _mesa_warning(NULL, "drm_i915_getparam: %d", ret);
-      return false;
-   }
 
-   return true;
+   return ret;
 }
 
 static bool
 intel_get_boolean(__DRIscreen *psp, int param)
 {
    int value = 0;
-   return intel_get_param(psp, param, &value) && value;
+   return (intel_get_param(psp, param, &value) == 0) && value;
 }
 
 static void
@@ -1093,12 +1090,12 @@ intel_detect_sseu(struct intel_screen *intelScreen)
 
    ret = intel_get_param(intelScreen->driScrnPriv, I915_PARAM_SUBSLICE_TOTAL,
                          &intelScreen->subslice_total);
-   if (ret != -EINVAL)
+   if (ret < 0 && ret != -EINVAL)
       goto err_out;
 
    ret = intel_get_param(intelScreen->driScrnPriv,
                          I915_PARAM_EU_TOTAL, &intelScreen->eu_total);
-   if (ret != -EINVAL)
+   if (ret < 0 && ret != -EINVAL)
       goto err_out;
 
    /* Without this information, we cannot get the right Braswell brandstrings,
@@ -1114,7 +1111,7 @@ intel_detect_sseu(struct intel_screen *intelScreen)
 err_out:
    intelScreen->subslice_total = -1;
    intelScreen->eu_total = -1;
-   _mesa_warning(NULL, "Failed to query GPU properties.\n");
+   _mesa_warning(NULL, "Failed to query GPU properties (%s).\n", strerror(ret));
 }
 
 static bool

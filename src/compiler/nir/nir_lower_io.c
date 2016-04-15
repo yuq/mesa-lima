@@ -278,8 +278,8 @@ nir_lower_io_block(nir_block *block, void *void_state)
             intrin->variables[0]->var->data.driver_location);
 
          if (load->intrinsic == nir_intrinsic_load_uniform) {
-            load->const_index[1] =
-               state->type_size(intrin->variables[0]->var->type);
+            nir_intrinsic_set_range(load,
+               state->type_size(intrin->variables[0]->var->type));
          }
 
          if (per_vertex)

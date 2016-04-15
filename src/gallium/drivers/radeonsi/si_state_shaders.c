@@ -306,7 +306,6 @@ static void si_set_tesseval_regs(struct si_shader *shader,
 static void si_shader_ls(struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
-	unsigned num_sgprs, num_user_sgprs;
 	unsigned vgpr_comp_cnt;
 	uint64_t va;
 
@@ -321,30 +320,21 @@ static void si_shader_ls(struct si_shader *shader)
 	 * VGPR0-3: (VertexID, RelAutoindex, ???, InstanceID). */
 	vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 1;
 
-	num_user_sgprs = SI_LS_NUM_USER_SGPR;
-	num_sgprs = shader->config.num_sgprs;
-	if (num_user_sgprs > num_sgprs) {
-		/* Last 2 reserved SGPRs are used for VCC */
-		num_sgprs = num_user_sgprs + 2;
-	}
-	assert(num_sgprs <= 104);
-
 	si_pm4_set_reg(pm4, R_00B520_SPI_SHADER_PGM_LO_LS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B524_SPI_SHADER_PGM_HI_LS, va >> 40);
 
 	shader->config.rsrc1 = S_00B528_VGPRS((shader->config.num_vgprs - 1) / 4) |
-			   S_00B528_SGPRS((num_sgprs - 1) / 8) |
+			   S_00B528_SGPRS((shader->config.num_sgprs - 1) / 8) |
 		           S_00B528_VGPR_COMP_CNT(vgpr_comp_cnt) |
 			   S_00B528_DX10_CLAMP(1) |
 			   S_00B528_FLOAT_MODE(shader->config.float_mode);
-	shader->config.rsrc2 = S_00B52C_USER_SGPR(num_user_sgprs) |
+	shader->config.rsrc2 = S_00B52C_USER_SGPR(SI_LS_NUM_USER_SGPR) |
 			   S_00B52C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
 }
 
 static void si_shader_hs(struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
-	unsigned num_sgprs, num_user_sgprs;
 	uint64_t va;
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
@@ -354,32 +344,22 @@ static void si_shader_hs(struct si_shader *shader)
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
-	num_user_sgprs = SI_TCS_NUM_USER_SGPR;
-	num_sgprs = shader->config.num_sgprs;
-	/* One SGPR after user SGPRs is pre-loaded with tessellation factor
-	 * buffer offset. */
-	if ((num_user_sgprs + 1) > num_sgprs) {
-		/* Last 2 reserved SGPRs are used for VCC */
-		num_sgprs = num_user_sgprs + 1 + 2;
-	}
-	assert(num_sgprs <= 104);
-
 	si_pm4_set_reg(pm4, R_00B420_SPI_SHADER_PGM_LO_HS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B424_SPI_SHADER_PGM_HI_HS, va >> 40);
 	si_pm4_set_reg(pm4, R_00B428_SPI_SHADER_PGM_RSRC1_HS,
 		       S_00B428_VGPRS((shader->config.num_vgprs - 1) / 4) |
-		       S_00B428_SGPRS((num_sgprs - 1) / 8) |
+		       S_00B428_SGPRS((shader->config.num_sgprs - 1) / 8) |
 		       S_00B428_DX10_CLAMP(1) |
 		       S_00B428_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
-		       S_00B42C_USER_SGPR(num_user_sgprs) |
+		       S_00B42C_USER_SGPR(SI_TCS_NUM_USER_SGPR) |
 		       S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 }
 
 static void si_shader_es(struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
-	unsigned num_sgprs, num_user_sgprs;
+	unsigned num_user_sgprs;
 	unsigned vgpr_comp_cnt;
 	uint64_t va;
 
@@ -400,21 +380,13 @@ static void si_shader_es(struct si_shader *shader)
 	} else
 		unreachable("invalid shader selector type");
 
-	num_sgprs = shader->config.num_sgprs;
-	/* One SGPR after user SGPRs is pre-loaded with es2gs_offset */
-	if ((num_user_sgprs + 1) > num_sgprs) {
-		/* Last 2 reserved SGPRs are used for VCC */
-		num_sgprs = num_user_sgprs + 1 + 2;
-	}
-	assert(num_sgprs <= 104);
-
 	si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
 		       shader->selector->esgs_itemsize / 4);
 	si_pm4_set_reg(pm4, R_00B320_SPI_SHADER_PGM_LO_ES, va >> 8);
 	si_pm4_set_reg(pm4, R_00B324_SPI_SHADER_PGM_HI_ES, va >> 40);
 	si_pm4_set_reg(pm4, R_00B328_SPI_SHADER_PGM_RSRC1_ES,
 		       S_00B328_VGPRS((shader->config.num_vgprs - 1) / 4) |
-		       S_00B328_SGPRS((num_sgprs - 1) / 8) |
+		       S_00B328_SGPRS((shader->config.num_sgprs - 1) / 8) |
 		       S_00B328_VGPR_COMP_CNT(vgpr_comp_cnt) |
 		       S_00B328_DX10_CLAMP(1) |
 		       S_00B328_FLOAT_MODE(shader->config.float_mode));
@@ -458,7 +430,6 @@ static void si_shader_gs(struct si_shader *shader)
 	unsigned gsvs_itemsize = shader->selector->max_gsvs_emit_size >> 2;
 	unsigned gs_num_invocations = shader->selector->gs_num_invocations;
 	struct si_pm4_state *pm4;
-	unsigned num_sgprs, num_user_sgprs;
 	uint64_t va;
 	unsigned max_stream = shader->selector->max_gs_stream;
 
@@ -494,22 +465,13 @@ static void si_shader_gs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B220_SPI_SHADER_PGM_LO_GS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B224_SPI_SHADER_PGM_HI_GS, va >> 40);
 
-	num_user_sgprs = SI_GS_NUM_USER_SGPR;
-	num_sgprs = shader->config.num_sgprs;
-	/* Two SGPRs after user SGPRs are pre-loaded with gs2vs_offset, gs_wave_id */
-	if ((num_user_sgprs + 2) > num_sgprs) {
-		/* Last 2 reserved SGPRs are used for VCC */
-		num_sgprs = num_user_sgprs + 2 + 2;
-	}
-	assert(num_sgprs <= 104);
-
 	si_pm4_set_reg(pm4, R_00B228_SPI_SHADER_PGM_RSRC1_GS,
 		       S_00B228_VGPRS((shader->config.num_vgprs - 1) / 4) |
-		       S_00B228_SGPRS((num_sgprs - 1) / 8) |
+		       S_00B228_SGPRS((shader->config.num_sgprs - 1) / 8) |
 		       S_00B228_DX10_CLAMP(1) |
 		       S_00B228_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B22C_SPI_SHADER_PGM_RSRC2_GS,
-		       S_00B22C_USER_SGPR(num_user_sgprs) |
+		       S_00B22C_USER_SGPR(SI_GS_NUM_USER_SGPR) |
 		       S_00B22C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 }
 
@@ -523,7 +485,7 @@ static void si_shader_gs(struct si_shader *shader)
 static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 {
 	struct si_pm4_state *pm4;
-	unsigned num_sgprs, num_user_sgprs;
+	unsigned num_user_sgprs;
 	unsigned nparams, vgpr_comp_cnt;
 	uint64_t va;
 	unsigned window_space =
@@ -566,13 +528,6 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 	} else
 		unreachable("invalid shader selector type");
 
-	num_sgprs = shader->config.num_sgprs;
-	if (num_user_sgprs > num_sgprs) {
-		/* Last 2 reserved SGPRs are used for VCC */
-		num_sgprs = num_user_sgprs + 2;
-	}
-	assert(num_sgprs <= 104);
-
 	/* VS is required to export at least one param. */
 	nparams = MAX2(shader->info.nr_param_exports, 1);
 	si_pm4_set_reg(pm4, R_0286C4_SPI_VS_OUT_CONFIG,
@@ -594,7 +549,7 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 	si_pm4_set_reg(pm4, R_00B124_SPI_SHADER_PGM_HI_VS, va >> 40);
 	si_pm4_set_reg(pm4, R_00B128_SPI_SHADER_PGM_RSRC1_VS,
 		       S_00B128_VGPRS((shader->config.num_vgprs - 1) / 4) |
-		       S_00B128_SGPRS((num_sgprs - 1) / 8) |
+		       S_00B128_SGPRS((shader->config.num_sgprs - 1) / 8) |
 		       S_00B128_VGPR_COMP_CNT(vgpr_comp_cnt) |
 		       S_00B128_DX10_CLAMP(1) |
 		       S_00B128_FLOAT_MODE(shader->config.float_mode));
@@ -684,7 +639,6 @@ static void si_shader_ps(struct si_shader *shader)
 	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
 	unsigned spi_ps_in_control, spi_shader_col_format, cb_shader_mask;
-	unsigned num_sgprs, num_user_sgprs;
 	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
 	bool has_centroid;
@@ -771,23 +725,14 @@ static void si_shader_ps(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B020_SPI_SHADER_PGM_LO_PS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B024_SPI_SHADER_PGM_HI_PS, va >> 40);
 
-	num_user_sgprs = SI_PS_NUM_USER_SGPR;
-	num_sgprs = shader->config.num_sgprs;
-	/* One SGPR after user SGPRs is pre-loaded with {prim_mask, lds_offset} */
-	if ((num_user_sgprs + 1) > num_sgprs) {
-		/* Last 2 reserved SGPRs are used for VCC */
-		num_sgprs = num_user_sgprs + 1 + 2;
-	}
-	assert(num_sgprs <= 104);
-
 	si_pm4_set_reg(pm4, R_00B028_SPI_SHADER_PGM_RSRC1_PS,
 		       S_00B028_VGPRS((shader->config.num_vgprs - 1) / 4) |
-		       S_00B028_SGPRS((num_sgprs - 1) / 8) |
+		       S_00B028_SGPRS((shader->config.num_sgprs - 1) / 8) |
 		       S_00B028_DX10_CLAMP(1) |
 		       S_00B028_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B02C_SPI_SHADER_PGM_RSRC2_PS,
 		       S_00B02C_EXTRA_LDS_SIZE(shader->config.lds_size) |
-		       S_00B02C_USER_SGPR(num_user_sgprs) |
+		       S_00B02C_USER_SGPR(SI_PS_NUM_USER_SGPR) |
 		       S_00B32C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 
 	/* Prefer RE_Z if the shader is complex enough. The requirement is either:

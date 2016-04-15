@@ -42,9 +42,9 @@
 #define ARR(...) { __VA_ARGS__ }
 
 
-INTRINSIC(load_var, 0, ARR(), true, 0, 1, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(load_var, 0, ARR(0), true, 0, 1, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 INTRINSIC(store_var, 1, ARR(0), false, 0, 1, 1, WRMASK, xx, xx, 0)
-INTRINSIC(copy_var, 0, ARR(), false, 0, 2, 0, xx, xx, xx, 0)
+INTRINSIC(copy_var, 0, ARR(0), false, 0, 2, 0, xx, xx, xx, 0)
 
 /*
  * Interpolation of input.  The interp_var_at* intrinsics are similar to the
@@ -72,7 +72,7 @@ INTRINSIC(get_buffer_size, 1, ARR(1), true, 1, 0, 0, xx, xx, xx,
  * a barrier is an intrinsic with no inputs/outputs but which can't be moved
  * around/optimized in general
  */
-#define BARRIER(name) INTRINSIC(name, 0, ARR(), false, 0, 0, 0, xx, xx, xx, 0)
+#define BARRIER(name) INTRINSIC(name, 0, ARR(0), false, 0, 0, 0, xx, xx, xx, 0)
 
 BARRIER(barrier)
 BARRIER(discard)
@@ -89,7 +89,7 @@ BARRIER(memory_barrier)
  * The latter can be used as code motion barrier, which is currently not
  * feasible with NIR.
  */
-INTRINSIC(shader_clock, 0, ARR(), true, 1, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(shader_clock, 0, ARR(0), true, 1, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 
 /*
  * Memory barrier with semantics analogous to the compute shader
@@ -113,8 +113,8 @@ INTRINSIC(discard_if, 1, ARR(1), false, 0, 0, 0, xx, xx, xx, 0)
  *
  * end_primitive implements GLSL's EndPrimitive() built-in.
  */
-INTRINSIC(emit_vertex,   0, ARR(), false, 0, 0, 1, STREAM_ID, xx, xx, 0)
-INTRINSIC(end_primitive, 0, ARR(), false, 0, 0, 1, STREAM_ID, xx, xx, 0)
+INTRINSIC(emit_vertex,   0, ARR(0), false, 0, 0, 1, STREAM_ID, xx, xx, 0)
+INTRINSIC(end_primitive, 0, ARR(0), false, 0, 0, 1, STREAM_ID, xx, xx, 0)
 
 /**
  * Geometry Shader intrinsics with a vertex count.
@@ -137,7 +137,7 @@ INTRINSIC(set_vertex_count, 1, ARR(1), false, 0, 0, 0, xx, xx, xx, 0)
  */
 
 #define ATOMIC(name, flags) \
-   INTRINSIC(atomic_counter_##name##_var, 0, ARR(), true, 1, 1, 0, xx, xx, xx, flags) \
+   INTRINSIC(atomic_counter_##name##_var, 0, ARR(0), true, 1, 1, 0, xx, xx, xx, flags) \
    INTRINSIC(atomic_counter_##name, 1, ARR(1), true, 1, 0, 1, BASE, xx, xx, flags)
 
 ATOMIC(inc, 0)
@@ -170,9 +170,9 @@ INTRINSIC(image_atomic_or, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
 INTRINSIC(image_atomic_xor, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
 INTRINSIC(image_atomic_exchange, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
 INTRINSIC(image_atomic_comp_swap, 4, ARR(4, 1, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
-INTRINSIC(image_size, 0, ARR(), true, 4, 1, 0, xx, xx, xx,
+INTRINSIC(image_size, 0, ARR(0), true, 4, 1, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-INTRINSIC(image_samples, 0, ARR(), true, 1, 1, 0, xx, xx, xx,
+INTRINSIC(image_samples, 0, ARR(0), true, 1, 1, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 /*
@@ -278,7 +278,7 @@ INTRINSIC(shared_atomic_exchange, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
 INTRINSIC(shared_atomic_comp_swap, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
 
 #define SYSTEM_VALUE(name, components, num_indices, idx0, idx1, idx2) \
-   INTRINSIC(load_##name, 0, ARR(), true, components, 0, num_indices, \
+   INTRINSIC(load_##name, 0, ARR(0), true, components, 0, num_indices, \
    idx0, idx1, idx2, \
    NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
@@ -313,8 +313,9 @@ SYSTEM_VALUE(helper_invocation, 1, 0, xx, xx, xx)
  * of the start of the variable being loaded and and the offset source is a
  * offset into that variable.
  *
- * Uniform load operations have a second index that specifies the size of the
- * variable being loaded.  If const_index[1] == 0, then the size is unknown.
+ * Uniform load operations have a second "range" index that specifies the
+ * range (starting at base) of the data from which we are loading.  If
+ * const_index[1] == 0, then the range is unknown.
  *
  * Some load operations such as UBO/SSBO load and per_vertex loads take an
  * additional source to specify which UBO/SSBO/vertex to load from.
@@ -328,9 +329,8 @@ SYSTEM_VALUE(helper_invocation, 1, 0, xx, xx, xx)
 #define LOAD(name, srcs, num_indices, idx0, idx1, idx2, flags) \
    INTRINSIC(load_##name, srcs, ARR(1, 1, 1, 1), true, 0, 0, num_indices, idx0, idx1, idx2, flags)
 
-/* src[] = { offset }. const_index[] = { base, range } */
-LOAD(uniform, 1, 2, BASE, RANGE, xx,
-     NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+/* src[] = { offset }. const_index[] = { base } */
+LOAD(uniform, 1, 2, BASE, RANGE, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { buffer_index, offset }. No const_index */
 LOAD(ubo, 2, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { offset }. const_index[] = { base } */

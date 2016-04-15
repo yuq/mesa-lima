@@ -5839,6 +5839,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	radeon_llvm_dispose(&ctx.radeon_bld);
 
+	/* Add the scratch offset to input SGPRs. */
+	if (shader->config.scratch_bytes_per_wave)
+		shader->info.num_input_sgprs += 1; /* scratch byte offset */
+
 	/* Calculate the number of fragment input VGPRs. */
 	if (ctx.type == TGSI_PROCESSOR_FRAGMENT) {
 		shader->info.num_input_vgprs = 0;
@@ -6761,6 +6765,13 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	return true;
 }
 
+static void si_fix_num_sgprs(struct si_shader *shader)
+{
+	unsigned min_sgprs = shader->info.num_input_sgprs + 2; /* VCC */
+
+	shader->config.num_sgprs = MAX2(shader->config.num_sgprs, min_sgprs);
+}
+
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug)
@@ -6850,6 +6861,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		}
 	}
 
+	si_fix_num_sgprs(shader);
 	si_shader_dump(sscreen, shader, debug, shader->selector->info.processor,
 		       stderr);
 

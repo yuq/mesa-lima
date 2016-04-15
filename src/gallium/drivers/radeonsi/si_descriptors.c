@@ -1192,7 +1192,9 @@ static void si_mark_shader_pointers_dirty(struct si_context *sctx,
 {
 	sctx->const_buffers[shader].desc.pointer_dirty = true;
 	sctx->rw_buffers[shader].desc.pointer_dirty = true;
+	sctx->shader_buffers[shader].desc.pointer_dirty = true;
 	sctx->samplers[shader].views.desc.pointer_dirty = true;
+	sctx->images[shader].desc.pointer_dirty = true;
 
 	if (shader == PIPE_SHADER_VERTEX)
 		sctx->vertex_buffers.pointer_dirty = true;
