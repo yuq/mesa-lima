@@ -41,6 +41,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "c99_compat.h"
 #include "util/macros.h"
 
 #ifdef __cplusplus
