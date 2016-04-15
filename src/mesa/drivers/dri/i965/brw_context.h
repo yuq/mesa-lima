@@ -1448,6 +1448,8 @@ void brw_load_register_mem64(struct brw_context *brw,
                              drm_intel_bo *bo,
                              uint32_t read_domains, uint32_t write_domain,
                              uint32_t offset);
+void brw_store_register_mem32(struct brw_context *brw,
+                              drm_intel_bo *bo, uint32_t reg, uint32_t offset);
 void brw_store_register_mem64(struct brw_context *brw,
                               drm_intel_bo *bo, uint32_t reg, uint32_t offset);
 

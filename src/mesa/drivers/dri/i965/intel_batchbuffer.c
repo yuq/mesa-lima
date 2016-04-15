@@ -539,6 +539,32 @@ brw_load_register_mem64(struct brw_context *brw,
 }
 
 /*
+ * Write an arbitrary 32-bit register to a buffer via MI_STORE_REGISTER_MEM.
+ */
+void
+brw_store_register_mem32(struct brw_context *brw,
+                         drm_intel_bo *bo, uint32_t reg, uint32_t offset)
+{
+   assert(brw->gen >= 6);
+
+   if (brw->gen >= 8) {
+      BEGIN_BATCH(4);
+      OUT_BATCH(MI_STORE_REGISTER_MEM | (4 - 2));
+      OUT_BATCH(reg);
+      OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  offset);
+      ADVANCE_BATCH();
+   } else {
+      BEGIN_BATCH(3);
+      OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
+      OUT_BATCH(reg);
+      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                offset);
+      ADVANCE_BATCH();
+   }
+}
+
+/*
  * Write an arbitrary 64-bit register to a buffer via MI_STORE_REGISTER_MEM.
  */
 void
