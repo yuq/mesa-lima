@@ -4404,6 +4404,7 @@ static void si_llvm_emit_ddxy(
 	LLVMValueRef indices[2];
 	LLVMValueRef store_ptr, load_ptr0, load_ptr1;
 	LLVMValueRef tl, trbl, result[4];
+	LLVMValueRef tl_tid, trbl_tid;
 	unsigned swizzle[4];
 	unsigned c;
 	int idx;
@@ -4421,20 +4422,24 @@ static void si_llvm_emit_ddxy(
 	else
 		mask = TID_MASK_TOP_LEFT;
 
-	indices[1] = LLVMBuildAnd(gallivm->builder, indices[1],
-				  lp_build_const_int32(gallivm, mask), "");
+	tl_tid = LLVMBuildAnd(gallivm->builder, indices[1],
+				lp_build_const_int32(gallivm, mask), "");
+	indices[1] = tl_tid;
 	load_ptr0 = LLVMBuildGEP(gallivm->builder, ctx->lds,
 				 indices, 2, "");
 
 	/* for DDX we want to next X pixel, DDY next Y pixel. */
 	idx = (opcode == TGSI_OPCODE_DDX || opcode == TGSI_OPCODE_DDX_FINE) ? 1 : 2;
-	indices[1] = LLVMBuildAdd(gallivm->builder, indices[1],
+	trbl_tid = LLVMBuildAdd(gallivm->builder, indices[1],
 				  lp_build_const_int32(gallivm, idx), "");
+	indices[1] = trbl_tid;
 	load_ptr1 = LLVMBuildGEP(gallivm->builder, ctx->lds,
 				 indices, 2, "");
 
 	for (c = 0; c < 4; ++c) {
 		unsigned i;
+		LLVMValueRef val;
+		LLVMValueRef args[2];
 
 		swizzle[c] = tgsi_util_get_full_src_register_swizzle(&inst->Src[0], c);
 		for (i = 0; i < c; ++i) {
@@ -4446,18 +4451,31 @@ static void si_llvm_emit_ddxy(
 		if (i != c)
 			continue;
 
-		LLVMBuildStore(gallivm->builder,
-			       LLVMBuildBitCast(gallivm->builder,
-						lp_build_emit_fetch(bld_base, inst, 0, c),
-						ctx->i32, ""),
-			       store_ptr);
+		val = LLVMBuildBitCast(gallivm->builder,
+				lp_build_emit_fetch(bld_base, inst, 0, c),
+						ctx->i32, "");
 
-		tl = LLVMBuildLoad(gallivm->builder, load_ptr0, "");
+		if ((HAVE_LLVM >= 0x0309) && ctx->screen->b.family >= CHIP_TONGA) {
+
+	                args[0] = LLVMBuildMul(gallivm->builder, tl_tid,
+                                        lp_build_const_int32(gallivm, 4), "");
+			args[1] = val;
+			tl = lp_build_intrinsic(gallivm->builder,
+					"llvm.amdgcn.ds.bpermute", ctx->i32,
+					args, 2, LLVMReadNoneAttribute);
+
+	                args[0] = LLVMBuildMul(gallivm->builder, trbl_tid,
+                                        lp_build_const_int32(gallivm, 4), "");
+			trbl = lp_build_intrinsic(gallivm->builder,
+					"llvm.amdgcn.ds.bpermute", ctx->i32,
+					args, 2, LLVMReadNoneAttribute);
+		} else {
+			LLVMBuildStore(gallivm->builder, val, store_ptr);
+			tl = LLVMBuildLoad(gallivm->builder, load_ptr0, "");
+			trbl = LLVMBuildLoad(gallivm->builder, load_ptr1, "");
+		}
 		tl = LLVMBuildBitCast(gallivm->builder, tl, ctx->f32, "");
-
-		trbl = LLVMBuildLoad(gallivm->builder, load_ptr1, "");
 		trbl = LLVMBuildBitCast(gallivm->builder, trbl,	ctx->f32, "");
-
 		result[c] = LLVMBuildFSub(gallivm->builder, trbl, tl, "");
 	}
 
