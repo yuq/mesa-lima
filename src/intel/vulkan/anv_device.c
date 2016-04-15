@@ -385,7 +385,6 @@ void anv_GetPhysicalDeviceFeatures(
       .textureCompressionBC                     = true,
       .occlusionQueryPrecise                    = true,
       .pipelineStatisticsQuery                  = false,
-      .vertexPipelineStoresAndAtomics           = pdevice->info->gen >= 8,
       .fragmentStoresAndAtomics                 = true,
       .shaderTessellationAndGeometryPointSize   = true,
       .shaderImageGatherExtended                = true,
@@ -406,6 +405,11 @@ void anv_GetPhysicalDeviceFeatures(
       .variableMultisampleRate                  = false,
       .inheritedQueries                         = false,
    };
+
+   /* We can't do image stores in vec4 shaders */
+   pFeatures->vertexPipelineStoresAndAtomics =
+      !pdevice->compiler->scalar_stage[MESA_SHADER_VERTEX] &&
+      !pdevice->compiler->scalar_stage[MESA_SHADER_GEOMETRY];
 }
 
 void
