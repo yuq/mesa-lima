@@ -84,7 +84,7 @@ lp_format_intrinsic(char *name,
       width = 64;
       break;
    default:
-      assert(0);
+      unreachable("unexpected LLVMTypeKind");
    }
 
    if (length) {
