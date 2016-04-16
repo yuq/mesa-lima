@@ -433,7 +433,7 @@ brw_meta_stencil_blit(struct brw_context *brw,
    struct gl_shader_program *prog;
    struct gl_framebuffer *drawFb = NULL;
    struct gl_renderbuffer *rb = NULL;
-   GLenum target;
+   GLenum target = 0;
 
    _mesa_meta_fb_tex_blit_begin(ctx, &blit);
    /* XXX: Pretend to support stencil textures so _mesa_base_tex_format()
