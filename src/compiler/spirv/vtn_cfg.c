@@ -36,7 +36,7 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       list_inithead(&b->func->body);
       b->func->control = w[3];
 
-      const struct glsl_type *result_type =
+      MAYBE_UNUSED const struct glsl_type *result_type =
          vtn_value(b, w[1], vtn_value_type_type)->type->type;
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_function);
       val->func = b->func;
