@@ -40,6 +40,30 @@ isl_format_has_channel_type(enum isl_format fmt, enum isl_base_type type)
 }
 
 bool
+isl_format_has_unorm_channel(enum isl_format fmt)
+{
+   return isl_format_has_channel_type(fmt, ISL_UNORM);
+}
+
+bool
+isl_format_has_snorm_channel(enum isl_format fmt)
+{
+   return isl_format_has_channel_type(fmt, ISL_SNORM);
+}
+
+bool
+isl_format_has_ufloat_channel(enum isl_format fmt)
+{
+   return isl_format_has_channel_type(fmt, ISL_UFLOAT);
+}
+
+bool
+isl_format_has_sfloat_channel(enum isl_format fmt)
+{
+   return isl_format_has_channel_type(fmt, ISL_SFLOAT);
+}
+
+bool
 isl_format_has_uint_channel(enum isl_format fmt)
 {
    return isl_format_has_channel_type(fmt, ISL_UINT);

@@ -826,11 +826,26 @@ isl_format_get_layout(enum isl_format fmt)
    return &isl_format_layouts[fmt];
 }
 
-bool
-isl_format_has_uint_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+bool isl_format_has_unorm_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+bool isl_format_has_snorm_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+bool isl_format_has_ufloat_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+bool isl_format_has_sfloat_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+bool isl_format_has_uint_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+bool isl_format_has_sint_channel(enum isl_format fmt) ATTRIBUTE_CONST;
 
-bool
-isl_format_has_sint_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+static inline bool
+isl_format_has_normalized_channel(enum isl_format fmt)
+{
+   return isl_format_has_unorm_channel(fmt) ||
+          isl_format_has_snorm_channel(fmt);
+}
+
+static inline bool
+isl_format_has_float_channel(enum isl_format fmt)
+{
+   return isl_format_has_ufloat_channel(fmt) ||
+          isl_format_has_sfloat_channel(fmt);
+}
 
 static inline bool
 isl_format_has_int_channel(enum isl_format fmt)
