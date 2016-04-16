@@ -489,7 +489,7 @@ static inline int
 u_bit_scan(unsigned *mask)
 {
    int i = ffs(*mask) - 1;
-   *mask &= ~(1 << i);
+   *mask &= ~(1u << i);
    return i;
 }
 
