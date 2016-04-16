@@ -424,16 +424,6 @@ alloc_surface_state(struct anv_device *device,
       }
 }
 
-static bool
-has_matching_storage_typed_format(const struct anv_device *device,
-                                  enum isl_format format)
-{
-   return (isl_format_get_layout(format)->bs <= 4 ||
-           (isl_format_get_layout(format)->bs <= 8 &&
-            (device->info.gen >= 8 || device->info.is_haswell)) ||
-           device->info.gen >= 9);
-}
-
 static enum isl_channel_select
 remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component,
               struct anv_format_swizzle format_swizzle)
@@ -574,7 +564,7 @@ anv_image_view_init(struct anv_image_view *iview,
    if (image->usage & usage_mask & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      if (has_matching_storage_typed_format(device, format)) {
+      if (isl_has_matching_typed_storage_image_format(&device->info, format)) {
          isl_view.usage = cube_usage | ISL_SURF_USAGE_STORAGE_BIT;
          isl_surf_fill_state(&device->isl_dev,
                              iview->storage_surface_state.map,
@@ -677,7 +667,8 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
       view->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
       enum isl_format storage_format =
-         has_matching_storage_typed_format(device, view->format) ?
+         isl_has_matching_typed_storage_image_format(&device->info,
+                                                     view->format) ?
          isl_lower_storage_image_format(&device->info, view->format) :
          ISL_FORMAT_RAW;
 
