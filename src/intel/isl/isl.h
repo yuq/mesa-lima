@@ -903,6 +903,13 @@ enum isl_format
 isl_lower_storage_image_format(const struct brw_device_info *devinfo,
                                enum isl_format fmt);
 
+/* Returns true if this hardware supports typed load/store on a format with
+ * the same size as the given format.
+ */
+bool
+isl_has_matching_typed_storage_image_format(const struct brw_device_info *devinfo,
+                                            enum isl_format fmt);
+
 static inline bool
 isl_tiling_is_any_y(enum isl_tiling tiling)
 {

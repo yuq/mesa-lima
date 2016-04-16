@@ -187,6 +187,19 @@ isl_lower_storage_image_format(const struct brw_device_info *devinfo,
    }
 }
 
+bool
+isl_has_matching_typed_storage_image_format(const struct brw_device_info *devinfo,
+                                            enum isl_format fmt)
+{
+   if (devinfo->gen >= 9) {
+      return true;
+   } else if (devinfo->gen >= 8 || devinfo->is_haswell) {
+      return isl_format_get_layout(fmt)->bs <= 8;
+   } else {
+      return isl_format_get_layout(fmt)->bs <= 4;
+   }
+}
+
 static const struct brw_image_param image_param_defaults = {
    /* Set the swizzling shifts to all-ones to effectively disable
     * swizzling -- See emit_address_calculation() in
