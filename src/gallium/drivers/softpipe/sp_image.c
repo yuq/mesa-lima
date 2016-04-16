@@ -170,7 +170,7 @@ get_dimensions(const struct pipe_image_view *iview,
       *width = u_minify(spr->base.width0, level);
       *height = u_minify(spr->base.height0, level);
 
-      if (spr->base.target == TGSI_TEXTURE_3D)
+      if (spr->base.target == PIPE_TEXTURE_3D)
          *depth = u_minify(spr->base.depth0, level);
       else
          *depth = spr->base.array_size;
