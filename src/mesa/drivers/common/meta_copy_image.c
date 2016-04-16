@@ -168,7 +168,7 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
    GLuint src_view_texture = 0;
    struct gl_texture_image *src_view_tex_image;
    struct gl_framebuffer *readFb;
-   struct gl_framebuffer *drawFb;
+   struct gl_framebuffer *drawFb = NULL;
    bool success = false;
    GLbitfield mask;
    GLenum status, attachment;
