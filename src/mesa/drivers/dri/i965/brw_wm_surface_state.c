@@ -39,6 +39,8 @@
 #include "program/prog_instruction.h"
 #include "main/framebuffer.h"
 
+#include "isl/isl.h"
+
 #include "intel_mipmap_tree.h"
 #include "intel_batchbuffer.h"
 #include "intel_tex.h"
@@ -1168,20 +1170,21 @@ const struct brw_tracked_state brw_cs_image_surfaces = {
 static uint32_t
 get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
 {
+   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
+   uint32_t hw_format = brw_format_for_mesa_format(format);
    if (access == GL_WRITE_ONLY) {
-      return brw_format_for_mesa_format(format);
-   } else {
+      return hw_format;
+   } else if (isl_has_matching_typed_storage_image_format(devinfo, hw_format)) {
       /* Typed surface reads support a very limited subset of the shader
        * image formats.  Translate it into the closest format the
        * hardware supports.
        */
-      if ((_mesa_get_format_bytes(format) >= 16 && brw->gen <= 8) ||
-          (_mesa_get_format_bytes(format) >= 8 &&
-           (brw->gen == 7 && !brw->is_haswell)))
-         return BRW_SURFACEFORMAT_RAW;
-      else
-         return brw_format_for_mesa_format(
-            brw_lower_mesa_image_format(brw->intelScreen->devinfo, format));
+      return isl_lower_storage_image_format(devinfo, hw_format);
+   } else {
+      /* The hardware doesn't actually support a typed format that we can use
+       * so we have to fall back to untyped read/write messages.
+       */
+      return BRW_SURFACEFORMAT_RAW;
    }
 }
 
