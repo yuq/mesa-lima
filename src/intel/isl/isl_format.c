@@ -25,32 +25,30 @@
 
 #include "isl.h"
 
-bool
-isl_format_has_uint_channel(enum isl_format fmt)
+static inline bool
+isl_format_has_channel_type(enum isl_format fmt, enum isl_base_type type)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(fmt);
 
-   return fmtl->channels.r.type == ISL_UINT ||
-          fmtl->channels.g.type == ISL_UINT ||
-          fmtl->channels.b.type == ISL_UINT ||
-          fmtl->channels.a.type == ISL_UINT ||
-          fmtl->channels.l.type == ISL_UINT ||
-          fmtl->channels.i.type == ISL_UINT ||
-          fmtl->channels.p.type == ISL_UINT;
+   return fmtl->channels.r.type == type ||
+          fmtl->channels.g.type == type ||
+          fmtl->channels.b.type == type ||
+          fmtl->channels.a.type == type ||
+          fmtl->channels.l.type == type ||
+          fmtl->channels.i.type == type ||
+          fmtl->channels.p.type == type;
+}
+
+bool
+isl_format_has_uint_channel(enum isl_format fmt)
+{
+   return isl_format_has_channel_type(fmt, ISL_UINT);
 }
 
 bool
 isl_format_has_sint_channel(enum isl_format fmt)
 {
-   const struct isl_format_layout *fmtl = isl_format_get_layout(fmt);
-
-   return fmtl->channels.r.type == ISL_SINT ||
-          fmtl->channels.g.type == ISL_SINT ||
-          fmtl->channels.b.type == ISL_SINT ||
-          fmtl->channels.a.type == ISL_SINT ||
-          fmtl->channels.l.type == ISL_SINT ||
-          fmtl->channels.i.type == ISL_SINT ||
-          fmtl->channels.p.type == ISL_SINT;
+   return isl_format_has_channel_type(fmt, ISL_SINT);
 }
 
 enum isl_format
