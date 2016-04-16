@@ -695,7 +695,7 @@ isl_calc_phys_slice0_extent_sa_gen9_1d(
       const struct isl_extent4d *phys_level0_sa,
       struct isl_extent2d *phys_slice0_sa)
 {
-   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+   MAYBE_UNUSED const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
 
    assert(phys_level0_sa->height == 1);
    assert(phys_level0_sa->depth == 1);

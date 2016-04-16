@@ -313,7 +313,7 @@ gen7_choose_valign_el(const struct isl_device *dev,
                       const struct isl_surf_init_info *restrict info,
                       enum isl_tiling tiling)
 {
-   bool require_valign2 = false;
+   MAYBE_UNUSED bool require_valign2 = false;
    bool require_valign4 = false;
 
    if (isl_format_is_compressed(info->format))
