@@ -1333,6 +1333,17 @@ static void declare_system_value(
 		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_THREAD_ID);
 		break;
 
+#if HAVE_LLVM >= 0x0309
+	case TGSI_SEMANTIC_HELPER_INVOCATION:
+		value = lp_build_intrinsic(gallivm->builder,
+					   "llvm.amdgcn.ps.live",
+					   ctx->i1, NULL, 0,
+					   LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+		value = LLVMBuildNot(gallivm->builder, value, "");
+		value = LLVMBuildSExt(gallivm->builder, value, ctx->i32, "");
+		break;
+#endif
+
 	default:
 		assert(!"unknown system value");
 		return;

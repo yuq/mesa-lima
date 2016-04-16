@@ -248,7 +248,7 @@ GLES3.1, GLSL ES 3.1
       glMemoryBarrierByRegion                           DONE
       glGetTexLevelParameter[fi]v - needs updates       DONE
       glGetBooleani_v - restrict to GLES enums
-      gl_HelperInvocation support                       DONE (i965, nvc0, r600)
+      gl_HelperInvocation support                       DONE (i965, nvc0, r600, radeonsi)
 
 GLES3.2, GLSL ES 3.2
   GL_EXT_color_buffer_float                             DONE (all drivers)
