@@ -251,9 +251,8 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
    struct intel_mipmap_tree *src_mt = src_irb->mt;
    struct intel_mipmap_tree *dst_mt = intel_image->mt;
 
-   /* There is support only for four and eight samples. */
-   if (src_mt->num_samples == 2 || dst_mt->num_samples == 2 ||
-       src_mt->num_samples > 8 || dst_mt->num_samples > 8)
+   /* There is support for only up to eight samples. */
+   if (src_mt->num_samples > 8 || dst_mt->num_samples > 8)
       return false;
 
    /* BLORP is only supported from Gen6 onwards. */
@@ -362,9 +361,8 @@ brw_blorp_framebuffer(struct brw_context *brw,
    if (brw->gen < 6)
       return mask;
 
-   /* There is support only for four and eight samples. */
-   if (readFb->Visual.samples == 2 || drawFb->Visual.samples == 2 ||
-       readFb->Visual.samples > 8 || drawFb->Visual.samples > 8)
+   /* There is support for only up to eight samples. */
+   if (readFb->Visual.samples > 8 || drawFb->Visual.samples > 8)
       return mask;
 
    static GLbitfield buffer_bits[] = {
@@ -964,6 +962,7 @@ brw_blorp_blit_program::compute_frag_coords()
 
    if (key->persample_msaa_dispatch) {
       switch (key->rt_samples) {
+      case 2:
       case 4: {
          /* The WM will be run in MSDISPMODE_PERSAMPLE with num_samples == 4.
           * Therefore, subspan 0 will represent sample 0, subspan 1 will
@@ -975,7 +974,8 @@ brw_blorp_blit_program::compute_frag_coords()
           * then copy from it using vstride=1, width=4, hstride=0.
           */
          struct brw_reg t1_uw1 = retype(t1, BRW_REGISTER_TYPE_UW);
-         emit_mov(vec16(t1_uw1), brw_imm_v(0x3210));
+         emit_mov(vec16(t1_uw1), key->rt_samples == 4 ?
+                                    brw_imm_v(0x3210) : brw_imm_v(0x1010));
          /* Move to UD sample_index register. */
          emit_mov_8(S, stride(t1_uw1, 1, 4, 0));
          emit_mov_8(offset(S, 1), suboffset(stride(t1_uw1, 1, 4, 0), 2));

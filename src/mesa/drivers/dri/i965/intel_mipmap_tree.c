@@ -2170,9 +2170,8 @@ intel_miptree_updownsample(struct brw_context *brw,
                            struct intel_mipmap_tree *src,
                            struct intel_mipmap_tree *dst)
 {
-   /* There is support only for four and eight samples. */
-   const bool use_blorp = src->num_samples != 2 && dst->num_samples != 2 &&
-                          src->num_samples <= 8 && dst->num_samples <= 8;
+   /* There is support for only up to eight samples. */
+   const bool use_blorp = src->num_samples <= 8 && dst->num_samples <= 8;
 
    if (use_blorp) {
       brw_blorp_blit_miptrees(brw,
