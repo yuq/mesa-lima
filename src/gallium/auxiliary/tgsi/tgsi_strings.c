@@ -34,8 +34,8 @@
 
 const char *tgsi_processor_type_names[6] =
 {
-   "FRAG",
    "VERT",
+   "FRAG",
    "GEOM",
    "TESS_CTRL",
    "TESS_EVAL",

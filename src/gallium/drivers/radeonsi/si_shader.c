@@ -70,7 +70,7 @@ struct si_shader_context
 	struct si_shader *shader;
 	struct si_screen *screen;
 
-	unsigned type; /* TGSI_PROCESSOR_* specifies the type of shader. */
+	unsigned type; /* PIPE_SHADER_* specifies the type of shader. */
 	bool is_gs_copy_shader;
 
 	/* Whether to generate the optimized shader variant compiled as a whole
@@ -240,10 +240,10 @@ static LLVMValueRef unpack_param(struct si_shader_context *ctx,
 static LLVMValueRef get_rel_patch_id(struct si_shader_context *ctx)
 {
 	switch (ctx->type) {
-	case TGSI_PROCESSOR_TESS_CTRL:
+	case PIPE_SHADER_TESS_CTRL:
 		return unpack_param(ctx, SI_PARAM_REL_IDS, 0, 8);
 
-	case TGSI_PROCESSOR_TESS_EVAL:
+	case PIPE_SHADER_TESS_EVAL:
 		return LLVMGetParam(ctx->radeon_bld.main_fn,
 				    ctx->param_tes_rel_patch_id);
 
@@ -277,9 +277,9 @@ static LLVMValueRef get_rel_patch_id(struct si_shader_context *ctx)
 static LLVMValueRef
 get_tcs_in_patch_stride(struct si_shader_context *ctx)
 {
-	if (ctx->type == TGSI_PROCESSOR_VERTEX)
+	if (ctx->type == PIPE_SHADER_VERTEX)
 		return unpack_param(ctx, SI_PARAM_LS_OUT_LAYOUT, 0, 13);
-	else if (ctx->type == TGSI_PROCESSOR_TESS_CTRL)
+	else if (ctx->type == PIPE_SHADER_TESS_CTRL)
 		return unpack_param(ctx, SI_PARAM_TCS_IN_LAYOUT, 0, 13);
 	else {
 		assert(0);
@@ -499,16 +499,16 @@ static LLVMValueRef get_primitive_id(struct lp_build_tgsi_context *bld_base,
 		return bld_base->uint_bld.zero;
 
 	switch (ctx->type) {
-	case TGSI_PROCESSOR_VERTEX:
+	case PIPE_SHADER_VERTEX:
 		return LLVMGetParam(ctx->radeon_bld.main_fn,
 				    ctx->param_vs_prim_id);
-	case TGSI_PROCESSOR_TESS_CTRL:
+	case PIPE_SHADER_TESS_CTRL:
 		return LLVMGetParam(ctx->radeon_bld.main_fn,
 				    SI_PARAM_PATCH_ID);
-	case TGSI_PROCESSOR_TESS_EVAL:
+	case PIPE_SHADER_TESS_EVAL:
 		return LLVMGetParam(ctx->radeon_bld.main_fn,
 				    ctx->param_tes_patch_id);
-	case TGSI_PROCESSOR_GEOMETRY:
+	case PIPE_SHADER_GEOMETRY:
 		return LLVMGetParam(ctx->radeon_bld.main_fn,
 				    SI_PARAM_PRIMITIVE_ID);
 	default:
@@ -1189,9 +1189,9 @@ static void declare_system_value(
 		break;
 
 	case TGSI_SEMANTIC_INVOCATIONID:
-		if (ctx->type == TGSI_PROCESSOR_TESS_CTRL)
+		if (ctx->type == PIPE_SHADER_TESS_CTRL)
 			value = unpack_param(ctx, SI_PARAM_REL_IDS, 8, 5);
-		else if (ctx->type == TGSI_PROCESSOR_GEOMETRY)
+		else if (ctx->type == PIPE_SHADER_GEOMETRY)
 			value = LLVMGetParam(radeon_bld->main_fn,
 					     SI_PARAM_GS_INSTANCE_ID);
 		else
@@ -1490,7 +1490,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	/* Specify the target we are exporting */
 	args[3] = lp_build_const_int32(base->gallivm, target);
 
-	if (ctx->type == TGSI_PROCESSOR_FRAGMENT) {
+	if (ctx->type == PIPE_SHADER_FRAGMENT) {
 		const union si_shader_key *key = &ctx->shader->key;
 		unsigned col_formats = key->ps.epilog.spi_shader_col_format;
 		int cbuf = target - V_008DFC_SQ_EXP_MRT;
@@ -2374,7 +2374,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 	 * an IF statement is added that clamps all colors if the constant
 	 * is true.
 	 */
-	if (ctx->type == TGSI_PROCESSOR_VERTEX) {
+	if (ctx->type == PIPE_SHADER_VERTEX) {
 		struct lp_build_if_state if_ctx;
 		LLVMValueRef cond = NULL;
 		LLVMValueRef addr, val;
@@ -4748,7 +4748,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 	/* The real barrier instruction isn’t needed, because an entire patch
 	 * always fits into a single wave.
 	 */
-	if (ctx->type == TGSI_PROCESSOR_TESS_CTRL) {
+	if (ctx->type == PIPE_SHADER_TESS_CTRL) {
 		emit_optimization_barrier(ctx);
 		return;
 	}
@@ -4887,7 +4887,7 @@ static void create_function(struct si_shader_context *ctx)
 	last_array_pointer = SI_PARAM_SHADER_BUFFERS;
 
 	switch (ctx->type) {
-	case TGSI_PROCESSOR_VERTEX:
+	case PIPE_SHADER_VERTEX:
 		params[SI_PARAM_VERTEX_BUFFERS] = const_array(ctx->v16i8, SI_NUM_VERTEX_BUFFERS);
 		last_array_pointer = SI_PARAM_VERTEX_BUFFERS;
 		params[SI_PARAM_BASE_VERTEX] = ctx->i32;
@@ -4936,7 +4936,7 @@ static void create_function(struct si_shader_context *ctx)
 		}
 		break;
 
-	case TGSI_PROCESSOR_TESS_CTRL:
+	case PIPE_SHADER_TESS_CTRL:
 		params[SI_PARAM_TCS_OUT_OFFSETS] = ctx->i32;
 		params[SI_PARAM_TCS_OUT_LAYOUT] = ctx->i32;
 		params[SI_PARAM_TCS_IN_LAYOUT] = ctx->i32;
@@ -4958,7 +4958,7 @@ static void create_function(struct si_shader_context *ctx)
 		}
 		break;
 
-	case TGSI_PROCESSOR_TESS_EVAL:
+	case PIPE_SHADER_TESS_EVAL:
 		params[SI_PARAM_TCS_OUT_OFFSETS] = ctx->i32;
 		params[SI_PARAM_TCS_OUT_LAYOUT] = ctx->i32;
 		num_params = SI_PARAM_TCS_OUT_LAYOUT+1;
@@ -4983,7 +4983,7 @@ static void create_function(struct si_shader_context *ctx)
 				returns[num_returns++] = ctx->f32;
 		break;
 
-	case TGSI_PROCESSOR_GEOMETRY:
+	case PIPE_SHADER_GEOMETRY:
 		params[SI_PARAM_GS2VS_OFFSET] = ctx->i32;
 		params[SI_PARAM_GS_WAVE_ID] = ctx->i32;
 		last_sgpr = SI_PARAM_GS_WAVE_ID;
@@ -5000,7 +5000,7 @@ static void create_function(struct si_shader_context *ctx)
 		num_params = SI_PARAM_GS_INSTANCE_ID+1;
 		break;
 
-	case TGSI_PROCESSOR_FRAGMENT:
+	case PIPE_SHADER_FRAGMENT:
 		params[SI_PARAM_ALPHA_REF] = ctx->f32;
 		params[SI_PARAM_PRIM_MASK] = ctx->i32;
 		last_sgpr = SI_PARAM_PRIM_MASK;
@@ -5054,7 +5054,7 @@ static void create_function(struct si_shader_context *ctx)
 		}
 		break;
 
-	case TGSI_PROCESSOR_COMPUTE:
+	case PIPE_SHADER_COMPUTE:
 		params[SI_PARAM_GRID_SIZE] = v3i32;
 		params[SI_PARAM_BLOCK_ID] = v3i32;
 		last_sgpr = SI_PARAM_BLOCK_ID;
@@ -5073,7 +5073,7 @@ static void create_function(struct si_shader_context *ctx)
 			   num_params, last_array_pointer, last_sgpr);
 
 	/* Reserve register locations for VGPR inputs the PS prolog may need. */
-	if (ctx->type == TGSI_PROCESSOR_FRAGMENT &&
+	if (ctx->type == PIPE_SHADER_FRAGMENT &&
 	    !ctx->is_monolithic) {
 		radeon_llvm_add_attribute(ctx->radeon_bld.main_fn,
 					  "InitialPSInputAddr",
@@ -5085,7 +5085,7 @@ static void create_function(struct si_shader_context *ctx)
 					  S_0286D0_LINEAR_CENTROID_ENA(1) |
 					  S_0286D0_FRONT_FACE_ENA(1) |
 					  S_0286D0_POS_FIXED_PT_ENA(1));
-	} else if (ctx->type == TGSI_PROCESSOR_COMPUTE) {
+	} else if (ctx->type == PIPE_SHADER_COMPUTE) {
 		const unsigned *properties = shader->selector->info.properties;
 		unsigned max_work_group_size =
 		               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] *
@@ -5108,7 +5108,7 @@ static void create_function(struct si_shader_context *ctx)
 	/* Unused fragment shader inputs are eliminated by the compiler,
 	 * so we don't know yet how many there will be.
 	 */
-	if (ctx->type != TGSI_PROCESSOR_FRAGMENT)
+	if (ctx->type != PIPE_SHADER_FRAGMENT)
 		for (; i < num_params; ++i)
 			shader->info.num_input_vgprs += llvm_get_type_size(params[i]) / 4;
 
@@ -5125,9 +5125,9 @@ static void create_function(struct si_shader_context *ctx)
 						    "ddxy_lds",
 						    LOCAL_ADDR_SPACE);
 
-	if ((ctx->type == TGSI_PROCESSOR_VERTEX && shader->key.vs.as_ls) ||
-	    ctx->type == TGSI_PROCESSOR_TESS_CTRL ||
-	    ctx->type == TGSI_PROCESSOR_TESS_EVAL)
+	if ((ctx->type == PIPE_SHADER_VERTEX && shader->key.vs.as_ls) ||
+	    ctx->type == PIPE_SHADER_TESS_CTRL ||
+	    ctx->type == PIPE_SHADER_TESS_EVAL)
 		declare_tess_lds(ctx);
 }
 
@@ -5246,10 +5246,10 @@ static void preload_streamout_buffers(struct si_shader_context *ctx)
 
 	/* Streamout can only be used if the shader is compiled as VS. */
 	if (!ctx->shader->selector->so.num_outputs ||
-	    (ctx->type == TGSI_PROCESSOR_VERTEX &&
+	    (ctx->type == PIPE_SHADER_VERTEX &&
 	     (ctx->shader->key.vs.as_es ||
 	      ctx->shader->key.vs.as_ls)) ||
-	    (ctx->type == TGSI_PROCESSOR_TESS_EVAL &&
+	    (ctx->type == PIPE_SHADER_TESS_EVAL &&
 	     ctx->shader->key.tes.as_es))
 		return;
 
@@ -5279,13 +5279,13 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 	LLVMValueRef buf_ptr = LLVMGetParam(ctx->radeon_bld.main_fn,
 					    SI_PARAM_RW_BUFFERS);
 
-	if ((ctx->type == TGSI_PROCESSOR_VERTEX &&
+	if ((ctx->type == PIPE_SHADER_VERTEX &&
 	     ctx->shader->key.vs.as_es) ||
-	    (ctx->type == TGSI_PROCESSOR_TESS_EVAL &&
+	    (ctx->type == PIPE_SHADER_TESS_EVAL &&
 	     ctx->shader->key.tes.as_es) ||
-	    ctx->type == TGSI_PROCESSOR_GEOMETRY) {
+	    ctx->type == PIPE_SHADER_GEOMETRY) {
 		unsigned ring =
-			ctx->type == TGSI_PROCESSOR_GEOMETRY ? SI_GS_RING_ESGS
+			ctx->type == PIPE_SHADER_GEOMETRY ? SI_GS_RING_ESGS
 							     : SI_ES_RING_ESGS;
 		LLVMValueRef offset = lp_build_const_int32(gallivm, ring);
 
@@ -5299,7 +5299,7 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 		ctx->gsvs_ring[0] =
 			build_indexed_load_const(ctx, buf_ptr, offset);
 	}
-	if (ctx->type == TGSI_PROCESSOR_GEOMETRY) {
+	if (ctx->type == PIPE_SHADER_GEOMETRY) {
 		int i;
 		for (i = 0; i < 4; i++) {
 			LLVMValueRef offset = lp_build_const_int32(gallivm, SI_GS_RING_GSVS0 + i);
@@ -5545,7 +5545,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	unsigned max_simd_waves = 10;
 
 	/* Compute LDS usage for PS. */
-	if (processor == TGSI_PROCESSOR_FRAGMENT) {
+	if (processor == PIPE_SHADER_FRAGMENT) {
 		/* The minimum usage per wave is (num_inputs * 36). The maximum
 		 * usage is (num_inputs * 36 * 16).
 		 * We can get anything in between and it varies between waves.
@@ -5576,7 +5576,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 
 	if (file != stderr ||
 	    r600_can_dump_shader(&sscreen->b, processor)) {
-		if (processor == TGSI_PROCESSOR_FRAGMENT) {
+		if (processor == PIPE_SHADER_FRAGMENT) {
 			fprintf(file, "*** SHADER CONFIG ***\n"
 				"SPI_PS_INPUT_ADDR = 0x%04x\n"
 				"SPI_PS_INPUT_ENA  = 0x%04x\n",
@@ -5608,28 +5608,28 @@ static const char *si_get_shader_name(struct si_shader *shader,
 				      unsigned processor)
 {
 	switch (processor) {
-	case TGSI_PROCESSOR_VERTEX:
+	case PIPE_SHADER_VERTEX:
 		if (shader->key.vs.as_es)
 			return "Vertex Shader as ES";
 		else if (shader->key.vs.as_ls)
 			return "Vertex Shader as LS";
 		else
 			return "Vertex Shader as VS";
-	case TGSI_PROCESSOR_TESS_CTRL:
+	case PIPE_SHADER_TESS_CTRL:
 		return "Tessellation Control Shader";
-	case TGSI_PROCESSOR_TESS_EVAL:
+	case PIPE_SHADER_TESS_EVAL:
 		if (shader->key.tes.as_es)
 			return "Tessellation Evaluation Shader as ES";
 		else
 			return "Tessellation Evaluation Shader as VS";
-	case TGSI_PROCESSOR_GEOMETRY:
+	case PIPE_SHADER_GEOMETRY:
 		if (shader->gs_copy_shader == NULL)
 			return "GS Copy Shader as VS";
 		else
 			return "Geometry Shader";
-	case TGSI_PROCESSOR_FRAGMENT:
+	case PIPE_SHADER_FRAGMENT:
 		return "Pixel Shader";
-	case TGSI_PROCESSOR_COMPUTE:
+	case PIPE_SHADER_COMPUTE:
 		return "Compute Shader";
 	default:
 		return "Unknown Shader";
@@ -5718,10 +5718,10 @@ int si_compile_llvm(struct si_screen *sscreen,
 	 * concatenated.
 	 */
 	if (binary->rodata_size &&
-	    (processor == TGSI_PROCESSOR_VERTEX ||
-	     processor == TGSI_PROCESSOR_TESS_CTRL ||
-	     processor == TGSI_PROCESSOR_TESS_EVAL ||
-	     processor == TGSI_PROCESSOR_FRAGMENT)) {
+	    (processor == PIPE_SHADER_VERTEX ||
+	     processor == PIPE_SHADER_TESS_CTRL ||
+	     processor == PIPE_SHADER_TESS_EVAL ||
+	     processor == PIPE_SHADER_FRAGMENT)) {
 		fprintf(stderr, "radeonsi: The shader can't have rodata.");
 		return -EINVAL;
 	}
@@ -5746,7 +5746,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	outputs = MALLOC(gsinfo->num_outputs * sizeof(outputs[0]));
 
 	si_init_shader_ctx(ctx, sscreen, ctx->shader, ctx->tm);
-	ctx->type = TGSI_PROCESSOR_VERTEX;
+	ctx->type = PIPE_SHADER_VERTEX;
 	ctx->is_gs_copy_shader = true;
 
 	create_meta_data(ctx);
@@ -5794,7 +5794,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	/* Dump LLVM IR before any optimization passes */
 	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
-	    r600_can_dump_shader(&sscreen->b, TGSI_PROCESSOR_GEOMETRY))
+	    r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
 		LLVMDumpModule(bld_base->base.gallivm->module);
 
 	radeon_llvm_finalize_module(&ctx->radeon_bld);
@@ -5802,13 +5802,13 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	r = si_compile_llvm(sscreen, &ctx->shader->binary,
 			    &ctx->shader->config, ctx->tm,
 			    bld_base->base.gallivm->module,
-			    debug, TGSI_PROCESSOR_GEOMETRY,
+			    debug, PIPE_SHADER_GEOMETRY,
 			    "GS Copy Shader");
 	if (!r) {
-		if (r600_can_dump_shader(&sscreen->b, TGSI_PROCESSOR_GEOMETRY))
+		if (r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
 			fprintf(stderr, "GS Copy Shader:\n");
 		si_shader_dump(sscreen, ctx->shader, debug,
-			       TGSI_PROCESSOR_GEOMETRY, stderr);
+			       PIPE_SHADER_GEOMETRY, stderr);
 		r = si_shader_binary_upload(sscreen, ctx->shader);
 	}
 
@@ -5998,7 +5998,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	ctx.radeon_bld.load_system_value = declare_system_value;
 
 	switch (ctx.type) {
-	case TGSI_PROCESSOR_VERTEX:
+	case PIPE_SHADER_VERTEX:
 		ctx.radeon_bld.load_input = declare_input_vs;
 		if (shader->key.vs.as_ls)
 			bld_base->emit_epilogue = si_llvm_emit_ls_epilogue;
@@ -6007,31 +6007,31 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		else
 			bld_base->emit_epilogue = si_llvm_emit_vs_epilogue;
 		break;
-	case TGSI_PROCESSOR_TESS_CTRL:
+	case PIPE_SHADER_TESS_CTRL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tcs;
 		bld_base->emit_fetch_funcs[TGSI_FILE_OUTPUT] = fetch_output_tcs;
 		bld_base->emit_store = store_output_tcs;
 		bld_base->emit_epilogue = si_llvm_emit_tcs_epilogue;
 		break;
-	case TGSI_PROCESSOR_TESS_EVAL:
+	case PIPE_SHADER_TESS_EVAL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tes;
 		if (shader->key.tes.as_es)
 			bld_base->emit_epilogue = si_llvm_emit_es_epilogue;
 		else
 			bld_base->emit_epilogue = si_llvm_emit_vs_epilogue;
 		break;
-	case TGSI_PROCESSOR_GEOMETRY:
+	case PIPE_SHADER_GEOMETRY:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_gs;
 		bld_base->emit_epilogue = si_llvm_emit_gs_epilogue;
 		break;
-	case TGSI_PROCESSOR_FRAGMENT:
+	case PIPE_SHADER_FRAGMENT:
 		ctx.radeon_bld.load_input = declare_input_fs;
 		if (is_monolithic)
 			bld_base->emit_epilogue = si_llvm_emit_fs_epilogue;
 		else
 			bld_base->emit_epilogue = si_llvm_return_fs_outputs;
 		break;
-	case TGSI_PROCESSOR_COMPUTE:
+	case PIPE_SHADER_COMPUTE:
 		ctx.radeon_bld.declare_memory_region = declare_compute_memory;
 		break;
 	default:
@@ -6056,7 +6056,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 					     SI_PARAM_POS_FIXED_PT);
 	}
 
-	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
+	if (ctx.type == PIPE_SHADER_GEOMETRY) {
 		int i;
 		for (i = 0; i < 4; i++) {
 			ctx.gs_next_vertex[i] =
@@ -6094,7 +6094,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		shader->info.num_input_sgprs += 1; /* scratch byte offset */
 
 	/* Calculate the number of fragment input VGPRs. */
-	if (ctx.type == TGSI_PROCESSOR_FRAGMENT) {
+	if (ctx.type == PIPE_SHADER_FRAGMENT) {
 		shader->info.num_input_vgprs = 0;
 		shader->info.face_vgpr_index = -1;
 
@@ -6134,7 +6134,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			shader->info.num_input_vgprs += 1;
 	}
 
-	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
+	if (ctx.type == PIPE_SHADER_GEOMETRY) {
 		shader->gs_copy_shader = CALLOC_STRUCT(si_shader);
 		shader->gs_copy_shader->selector = shader->selector;
 		ctx.shader = shader->gs_copy_shader;
@@ -6232,7 +6232,7 @@ static bool si_compile_vs_prolog(struct si_screen *sscreen,
 	bool status = true;
 
 	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
-	ctx.type = TGSI_PROCESSOR_VERTEX;
+	ctx.type = PIPE_SHADER_VERTEX;
 	ctx.param_vertex_id = key->vs_prolog.num_input_sgprs;
 	ctx.param_instance_id = key->vs_prolog.num_input_sgprs + 3;
 
@@ -6340,7 +6340,7 @@ static bool si_compile_vs_epilog(struct si_screen *sscreen,
 	bool status = true;
 
 	si_init_shader_ctx(&ctx, sscreen, NULL, tm);
-	ctx.type = TGSI_PROCESSOR_VERTEX;
+	ctx.type = PIPE_SHADER_VERTEX;
 
 	/* Declare input VGPRs. */
 	num_params = key->vs_epilog.states.export_prim_id ?
@@ -6498,7 +6498,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 	bool status = true;
 
 	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
-	ctx.type = TGSI_PROCESSOR_TESS_CTRL;
+	ctx.type = PIPE_SHADER_TESS_CTRL;
 	shader.key.tcs.epilog = key->tcs_epilog.states;
 
 	/* Declare inputs. Only RW_BUFFERS and TESS_FACTOR_OFFSET are used. */
@@ -6588,7 +6588,7 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 	bool status = true;
 
 	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
-	ctx.type = TGSI_PROCESSOR_FRAGMENT;
+	ctx.type = PIPE_SHADER_FRAGMENT;
 	shader.key.ps.prolog = key->ps_prolog.states;
 
 	/* Number of inputs + 8 color elements. */
@@ -6750,7 +6750,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 	bool status = true;
 
 	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
-	ctx.type = TGSI_PROCESSOR_FRAGMENT;
+	ctx.type = PIPE_SHADER_FRAGMENT;
 	shader.key.ps.epilog = key->ps_epilog.states;
 
 	/* Declare input SGPRs. */

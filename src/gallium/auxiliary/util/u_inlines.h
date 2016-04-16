@@ -654,17 +654,17 @@ static inline unsigned
 util_pipe_shader_from_tgsi_processor(unsigned processor)
 {
    switch (processor) {
-   case TGSI_PROCESSOR_VERTEX:
+   case PIPE_SHADER_VERTEX:
       return PIPE_SHADER_VERTEX;
-   case TGSI_PROCESSOR_TESS_CTRL:
+   case PIPE_SHADER_TESS_CTRL:
       return PIPE_SHADER_TESS_CTRL;
-   case TGSI_PROCESSOR_TESS_EVAL:
+   case PIPE_SHADER_TESS_EVAL:
       return PIPE_SHADER_TESS_EVAL;
-   case TGSI_PROCESSOR_GEOMETRY:
+   case PIPE_SHADER_GEOMETRY:
       return PIPE_SHADER_GEOMETRY;
-   case TGSI_PROCESSOR_FRAGMENT:
+   case PIPE_SHADER_FRAGMENT:
       return PIPE_SHADER_FRAGMENT;
-   case TGSI_PROCESSOR_COMPUTE:
+   case PIPE_SHADER_COMPUTE:
       return PIPE_SHADER_COMPUTE;
    default:
       assert(0);

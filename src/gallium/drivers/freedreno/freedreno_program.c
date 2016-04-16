@@ -100,7 +100,7 @@ fd_prog_blit(struct pipe_context *pctx, int rts, bool depth)
 
 	debug_assert(rts <= MAX_RENDER_TARGETS);
 
-	ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+	ureg = ureg_create(PIPE_SHADER_FRAGMENT);
 	if (!ureg)
 		return NULL;
 

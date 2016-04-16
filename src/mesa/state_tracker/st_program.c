@@ -359,7 +359,7 @@ st_translate_vertex_program(struct st_context *st,
    if (!stvp->glsl_to_tgsi)
       _mesa_remove_output_reads(&stvp->Base.Base, PROGRAM_OUTPUT);
 
-   ureg = ureg_create_with_screen(TGSI_PROCESSOR_VERTEX, st->pipe->screen);
+   ureg = ureg_create_with_screen(PIPE_SHADER_VERTEX, st->pipe->screen);
    if (ureg == NULL)
       return false;
 
@@ -375,7 +375,7 @@ st_translate_vertex_program(struct st_context *st,
 
    if (stvp->glsl_to_tgsi) {
       error = st_translate_program(st->ctx,
-                                   TGSI_PROCESSOR_VERTEX,
+                                   PIPE_SHADER_VERTEX,
                                    ureg,
                                    stvp->glsl_to_tgsi,
                                    &stvp->Base.Base,
@@ -402,7 +402,7 @@ st_translate_vertex_program(struct st_context *st,
       stvp->glsl_to_tgsi = NULL;
    } else
       error = st_translate_mesa_program(st->ctx,
-                                        TGSI_PROCESSOR_VERTEX,
+                                        PIPE_SHADER_VERTEX,
                                         ureg,
                                         &stvp->Base.Base,
                                         /* inputs */
@@ -754,7 +754,7 @@ st_translate_fragment_program(struct st_context *st,
       }
    }
 
-   ureg = ureg_create_with_screen(TGSI_PROCESSOR_FRAGMENT, st->pipe->screen);
+   ureg = ureg_create_with_screen(PIPE_SHADER_FRAGMENT, st->pipe->screen);
    if (ureg == NULL)
       return false;
 
@@ -791,7 +791,7 @@ st_translate_fragment_program(struct st_context *st,
 
    if (stfp->glsl_to_tgsi) {
       st_translate_program(st->ctx,
-                           TGSI_PROCESSOR_FRAGMENT,
+                           PIPE_SHADER_FRAGMENT,
                            ureg,
                            stfp->glsl_to_tgsi,
                            &stfp->Base.Base,
@@ -829,7 +829,7 @@ st_translate_fragment_program(struct st_context *st,
                                  fs_output_semantic_index);
    else
       st_translate_mesa_program(st->ctx,
-                                TGSI_PROCESSOR_FRAGMENT,
+                                PIPE_SHADER_FRAGMENT,
                                 ureg,
                                 &stfp->Base.Base,
                                 /* inputs */
@@ -1057,7 +1057,7 @@ st_translate_program_common(struct st_context *st,
 
          switch (attr) {
          case VARYING_SLOT_PRIMITIVE_ID:
-            assert(tgsi_processor == TGSI_PROCESSOR_GEOMETRY);
+            assert(tgsi_processor == PIPE_SHADER_GEOMETRY);
             input_semantic_name[slot] = TGSI_SEMANTIC_PRIMID;
             input_semantic_index[slot] = 0;
             break;
@@ -1299,7 +1299,7 @@ st_translate_geometry_program(struct st_context *st,
 {
    struct ureg_program *ureg;
 
-   ureg = ureg_create_with_screen(TGSI_PROCESSOR_GEOMETRY, st->pipe->screen);
+   ureg = ureg_create_with_screen(PIPE_SHADER_GEOMETRY, st->pipe->screen);
    if (ureg == NULL)
       return false;
 
@@ -1310,7 +1310,7 @@ st_translate_geometry_program(struct st_context *st,
    ureg_property(ureg, TGSI_PROPERTY_GS_INVOCATIONS, stgp->Base.Invocations);
 
    st_translate_program_common(st, &stgp->Base.Base, stgp->glsl_to_tgsi, ureg,
-                               TGSI_PROCESSOR_GEOMETRY, &stgp->tgsi);
+                               PIPE_SHADER_GEOMETRY, &stgp->tgsi);
 
    free_glsl_to_tgsi_visitor(stgp->glsl_to_tgsi);
    stgp->glsl_to_tgsi = NULL;
@@ -1383,7 +1383,7 @@ st_translate_tessctrl_program(struct st_context *st,
 {
    struct ureg_program *ureg;
 
-   ureg = ureg_create_with_screen(TGSI_PROCESSOR_TESS_CTRL, st->pipe->screen);
+   ureg = ureg_create_with_screen(PIPE_SHADER_TESS_CTRL, st->pipe->screen);
    if (ureg == NULL)
       return false;
 
@@ -1391,7 +1391,7 @@ st_translate_tessctrl_program(struct st_context *st,
                  sttcp->Base.VerticesOut);
 
    st_translate_program_common(st, &sttcp->Base.Base, sttcp->glsl_to_tgsi,
-                               ureg, TGSI_PROCESSOR_TESS_CTRL, &sttcp->tgsi);
+                               ureg, PIPE_SHADER_TESS_CTRL, &sttcp->tgsi);
 
    free_glsl_to_tgsi_visitor(sttcp->glsl_to_tgsi);
    sttcp->glsl_to_tgsi = NULL;
@@ -1408,7 +1408,7 @@ st_translate_tesseval_program(struct st_context *st,
 {
    struct ureg_program *ureg;
 
-   ureg = ureg_create_with_screen(TGSI_PROCESSOR_TESS_EVAL, st->pipe->screen);
+   ureg = ureg_create_with_screen(PIPE_SHADER_TESS_EVAL, st->pipe->screen);
    if (ureg == NULL)
       return false;
 
@@ -1438,7 +1438,7 @@ st_translate_tesseval_program(struct st_context *st,
    ureg_property(ureg, TGSI_PROPERTY_TES_POINT_MODE, sttep->Base.PointMode);
 
    st_translate_program_common(st, &sttep->Base.Base, sttep->glsl_to_tgsi,
-                               ureg, TGSI_PROCESSOR_TESS_EVAL, &sttep->tgsi);
+                               ureg, PIPE_SHADER_TESS_EVAL, &sttep->tgsi);
 
    free_glsl_to_tgsi_visitor(sttep->glsl_to_tgsi);
    sttep->glsl_to_tgsi = NULL;
@@ -1456,12 +1456,12 @@ st_translate_compute_program(struct st_context *st,
    struct ureg_program *ureg;
    struct pipe_shader_state prog;
 
-   ureg = ureg_create_with_screen(TGSI_PROCESSOR_COMPUTE, st->pipe->screen);
+   ureg = ureg_create_with_screen(PIPE_SHADER_COMPUTE, st->pipe->screen);
    if (ureg == NULL)
       return false;
 
    st_translate_program_common(st, &stcp->Base.Base, stcp->glsl_to_tgsi, ureg,
-                               TGSI_PROCESSOR_COMPUTE, &prog);
+                               PIPE_SHADER_COMPUTE, &prog);
 
    stcp->tgsi.ir_type = PIPE_SHADER_IR_TGSI;
    stcp->tgsi.prog = prog.tokens;

@@ -91,7 +91,7 @@ struct st_translate {
    unsigned insn_size;
    unsigned insn_count;
 
-   unsigned procType;  /**< TGSI_PROCESSOR_VERTEX/FRAGMENT */
+   unsigned procType;  /**< PIPE_SHADER_VERTEX/FRAGMENT */
 
    boolean error;
 };
@@ -165,9 +165,9 @@ dst_register( struct st_translate *t,
       return t->temps[index];
 
    case PROGRAM_OUTPUT:
-      if (t->procType == TGSI_PROCESSOR_VERTEX)
+      if (t->procType == PIPE_SHADER_VERTEX)
          assert(index < VARYING_SLOT_MAX);
-      else if (t->procType == TGSI_PROCESSOR_FRAGMENT)
+      else if (t->procType == PIPE_SHADER_FRAGMENT)
          assert(index < FRAG_RESULT_MAX);
       else
          assert(index < VARYING_SLOT_MAX);
@@ -980,7 +980,7 @@ st_translate_mesa_program(
    /*
     * Declare input attributes.
     */
-   if (procType == TGSI_PROCESSOR_FRAGMENT) {
+   if (procType == PIPE_SHADER_FRAGMENT) {
       for (i = 0; i < numInputs; i++) {
          t->inputs[i] = ureg_DECL_fs_input(ureg,
                                            inputSemanticName[i],
@@ -1026,7 +1026,7 @@ st_translate_mesa_program(
          }
       }
    }
-   else if (procType == TGSI_PROCESSOR_GEOMETRY) {
+   else if (procType == PIPE_SHADER_GEOMETRY) {
       for (i = 0; i < numInputs; i++) {
          t->inputs[i] = ureg_DECL_input(ureg,
                                         inputSemanticName[i],
@@ -1040,7 +1040,7 @@ st_translate_mesa_program(
       }
    }
    else {
-      assert(procType == TGSI_PROCESSOR_VERTEX);
+      assert(procType == PIPE_SHADER_VERTEX);
 
       for (i = 0; i < numInputs; i++) {
          t->inputs[i] = ureg_DECL_vs_input(ureg, i);
@@ -1089,7 +1089,7 @@ st_translate_mesa_program(
                 */
                struct st_context *st = st_context(ctx);
                struct pipe_screen *pscreen = st->pipe->screen;
-               assert(procType == TGSI_PROCESSOR_VERTEX);
+               assert(procType == PIPE_SHADER_VERTEX);
                assert(pscreen->get_shader_param(pscreen, PIPE_SHADER_VERTEX, PIPE_SHADER_CAP_INTEGERS));
                (void) pscreen;  /* silence non-debug build warnings */
                if (!ctx->Const.NativeIntegers) {
@@ -1099,7 +1099,7 @@ st_translate_mesa_program(
                }
             }
 
-            if (procType == TGSI_PROCESSOR_FRAGMENT &&
+            if (procType == PIPE_SHADER_FRAGMENT &&
                 semName == TGSI_SEMANTIC_POSITION)
                emit_wpos(st_context(ctx), t, program, ureg);
 

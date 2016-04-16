@@ -338,7 +338,7 @@ ttn_emit_declaration(struct ttn_compile *c)
             var->data.mode = nir_var_shader_in;
             var->name = ralloc_asprintf(var, "in_%d", idx);
 
-            if (c->scan->processor == TGSI_PROCESSOR_FRAGMENT) {
+            if (c->scan->processor == PIPE_SHADER_FRAGMENT) {
                var->data.location =
                   tgsi_varying_semantic_to_slot(decl->Semantic.Name,
                                                 decl->Semantic.Index);
@@ -381,7 +381,7 @@ ttn_emit_declaration(struct ttn_compile *c)
             var->name = ralloc_asprintf(var, "out_%d", idx);
             var->data.index = 0;
 
-            if (c->scan->processor == TGSI_PROCESSOR_FRAGMENT) {
+            if (c->scan->processor == PIPE_SHADER_FRAGMENT) {
                switch (semantic_name) {
                case TGSI_SEMANTIC_COLOR: {
                   /* TODO tgsi loses some information, so we cannot
@@ -1920,12 +1920,12 @@ static gl_shader_stage
 tgsi_processor_to_shader_stage(unsigned processor)
 {
    switch (processor) {
-   case TGSI_PROCESSOR_FRAGMENT:  return MESA_SHADER_FRAGMENT;
-   case TGSI_PROCESSOR_VERTEX:    return MESA_SHADER_VERTEX;
-   case TGSI_PROCESSOR_GEOMETRY:  return MESA_SHADER_GEOMETRY;
-   case TGSI_PROCESSOR_TESS_CTRL: return MESA_SHADER_TESS_CTRL;
-   case TGSI_PROCESSOR_TESS_EVAL: return MESA_SHADER_TESS_EVAL;
-   case TGSI_PROCESSOR_COMPUTE:   return MESA_SHADER_COMPUTE;
+   case PIPE_SHADER_FRAGMENT:  return MESA_SHADER_FRAGMENT;
+   case PIPE_SHADER_VERTEX:    return MESA_SHADER_VERTEX;
+   case PIPE_SHADER_GEOMETRY:  return MESA_SHADER_GEOMETRY;
+   case PIPE_SHADER_TESS_CTRL: return MESA_SHADER_TESS_CTRL;
+   case PIPE_SHADER_TESS_EVAL: return MESA_SHADER_TESS_EVAL;
+   case PIPE_SHADER_COMPUTE:   return MESA_SHADER_COMPUTE;
    default:
       unreachable("invalid TGSI processor");
    }

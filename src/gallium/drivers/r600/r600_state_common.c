@@ -1378,7 +1378,7 @@ static void r600_generate_fixed_func_tcs(struct r600_context *rctx)
 {
 	struct ureg_src const0, const1;
 	struct ureg_dst tessouter, tessinner;
-	struct ureg_program *ureg = ureg_create(TGSI_PROCESSOR_TESS_CTRL);
+	struct ureg_program *ureg = ureg_create(PIPE_SHADER_TESS_CTRL);
 
 	if (!ureg)
 		return; /* if we get here, we're screwed */

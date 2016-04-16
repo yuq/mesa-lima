@@ -371,7 +371,7 @@ struct tgsi_exec_machine
    unsigned ConstsSize[PIPE_MAX_CONSTANT_BUFFERS];
 
    const struct tgsi_token       *Tokens;   /**< Declarations, instructions */
-   unsigned                      Processor; /**< TGSI_PROCESSOR_x */
+   unsigned                      Processor; /**< PIPE_SHADER_x */
 
    /* GEOMETRY processor only. */
    unsigned                      *Primitives;

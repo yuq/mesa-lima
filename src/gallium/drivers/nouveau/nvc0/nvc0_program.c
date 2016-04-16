@@ -848,7 +848,7 @@ nvc0_program_init_tcp_empty(struct nvc0_context *nvc0)
 {
    struct ureg_program *ureg;
 
-   ureg = ureg_create(TGSI_PROCESSOR_TESS_CTRL);
+   ureg = ureg_create(PIPE_SHADER_TESS_CTRL);
    if (!ureg)
       return;
 

@@ -900,7 +900,7 @@ nv50_blitter_make_fp(struct pipe_context *pipe,
        mode != NV50_BLIT_MODE_XS)
       cvt_un8 = true;
 
-   ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+   ureg = ureg_create(PIPE_SHADER_FRAGMENT);
    if (!ureg)
       return NULL;
 

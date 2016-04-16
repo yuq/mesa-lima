@@ -965,17 +965,17 @@ bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 			  unsigned processor)
 {
 	switch (processor) {
-	case TGSI_PROCESSOR_VERTEX:
+	case PIPE_SHADER_VERTEX:
 		return (rscreen->debug_flags & DBG_VS) != 0;
-	case TGSI_PROCESSOR_TESS_CTRL:
+	case PIPE_SHADER_TESS_CTRL:
 		return (rscreen->debug_flags & DBG_TCS) != 0;
-	case TGSI_PROCESSOR_TESS_EVAL:
+	case PIPE_SHADER_TESS_EVAL:
 		return (rscreen->debug_flags & DBG_TES) != 0;
-	case TGSI_PROCESSOR_GEOMETRY:
+	case PIPE_SHADER_GEOMETRY:
 		return (rscreen->debug_flags & DBG_GS) != 0;
-	case TGSI_PROCESSOR_FRAGMENT:
+	case PIPE_SHADER_FRAGMENT:
 		return (rscreen->debug_flags & DBG_PS) != 0;
-	case TGSI_PROCESSOR_COMPUTE:
+	case PIPE_SHADER_COMPUTE:
 		return (rscreen->debug_flags & DBG_CS) != 0;
 	default:
 		return false;

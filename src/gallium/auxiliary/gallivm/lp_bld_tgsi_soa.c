@@ -2113,7 +2113,7 @@ lp_build_lod_property(
        reg->Register.File == TGSI_FILE_IMMEDIATE) {
       lod_property = LP_SAMPLER_LOD_SCALAR;
    }
-   else if (bld_base->info->processor == TGSI_PROCESSOR_FRAGMENT) {
+   else if (bld_base->info->processor == PIPE_SHADER_FRAGMENT) {
       if (gallivm_debug & GALLIVM_DEBUG_NO_QUAD_LOD) {
          lod_property = LP_SAMPLER_LOD_PER_ELEMENT;
       }
@@ -2301,7 +2301,7 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
        * could also check all src regs if constant but I doubt such
        * cases exist in practice.
        */
-      if (bld->bld_base.info->processor == TGSI_PROCESSOR_FRAGMENT) {
+      if (bld->bld_base.info->processor == PIPE_SHADER_FRAGMENT) {
          if (gallivm_debug & GALLIVM_DEBUG_NO_QUAD_LOD) {
             lod_property = LP_SAMPLER_LOD_PER_ELEMENT;
          }
@@ -2469,7 +2469,7 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
        * could also check all src regs if constant but I doubt such
        * cases exist in practice.
        */
-      if (bld->bld_base.info->processor == TGSI_PROCESSOR_FRAGMENT) {
+      if (bld->bld_base.info->processor == PIPE_SHADER_FRAGMENT) {
          if (gallivm_debug & GALLIVM_DEBUG_NO_QUAD_LOD) {
             lod_property = LP_SAMPLER_LOD_PER_ELEMENT;
          }

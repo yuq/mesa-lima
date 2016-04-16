@@ -1131,7 +1131,7 @@ create_pbo_upload_vs(struct st_context *st)
    struct ureg_dst out_pos;
    struct ureg_dst out_layer;
 
-   ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
+   ureg = ureg_create(PIPE_SHADER_VERTEX);
    if (!ureg)
       return NULL;
 
@@ -1176,7 +1176,7 @@ create_pbo_upload_gs(struct st_context *st)
    struct ureg_src imm;
    unsigned i;
 
-   ureg = ureg_create(TGSI_PROCESSOR_GEOMETRY);
+   ureg = ureg_create(PIPE_SHADER_GEOMETRY);
    if (!ureg)
       return NULL;
 
@@ -1222,7 +1222,7 @@ create_pbo_upload_fs(struct st_context *st)
    struct ureg_src const0;
    struct ureg_dst temp0;
 
-   ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+   ureg = ureg_create(PIPE_SHADER_FRAGMENT);
    if (!ureg)
       return NULL;
 

@@ -163,7 +163,7 @@ scan_instruction(struct tgsi_shader_info *info,
             info->input_usage_mask[ind] |= usage_mask;
          }
 
-         if (info->processor == TGSI_PROCESSOR_FRAGMENT &&
+         if (info->processor == PIPE_SHADER_FRAGMENT &&
              !src->Register.Indirect) {
             unsigned name =
                info->input_semantic_name[src->Register.Index];
@@ -320,7 +320,7 @@ scan_declaration(struct tgsi_shader_info *info,
          info->input_cylindrical_wrap[reg] = (ubyte)fulldecl->Interp.CylindricalWrap;
 
          /* Vertex shaders can have inputs with holes between them. */
-         if (info->processor == TGSI_PROCESSOR_VERTEX)
+         if (info->processor == PIPE_SHADER_VERTEX)
             info->num_inputs = MAX2(info->num_inputs, reg + 1);
          else {
             info->num_inputs++;
@@ -372,7 +372,7 @@ scan_declaration(struct tgsi_shader_info *info,
 
          if (semName == TGSI_SEMANTIC_PRIMID)
             info->uses_primid = TRUE;
-         else if (procType == TGSI_PROCESSOR_FRAGMENT) {
+         else if (procType == PIPE_SHADER_FRAGMENT) {
             if (semName == TGSI_SEMANTIC_POSITION)
                info->reads_position = TRUE;
             else if (semName == TGSI_SEMANTIC_FACE)
@@ -424,10 +424,10 @@ scan_declaration(struct tgsi_shader_info *info,
          if (semName == TGSI_SEMANTIC_COLOR)
             info->colors_written |= 1 << semIndex;
 
-         if (procType == TGSI_PROCESSOR_VERTEX ||
-             procType == TGSI_PROCESSOR_GEOMETRY ||
-             procType == TGSI_PROCESSOR_TESS_CTRL ||
-             procType == TGSI_PROCESSOR_TESS_EVAL) {
+         if (procType == PIPE_SHADER_VERTEX ||
+             procType == PIPE_SHADER_GEOMETRY ||
+             procType == PIPE_SHADER_TESS_CTRL ||
+             procType == PIPE_SHADER_TESS_EVAL) {
             switch (semName) {
             case TGSI_SEMANTIC_VIEWPORT_INDEX:
                info->writes_viewport_index = TRUE;
@@ -444,7 +444,7 @@ scan_declaration(struct tgsi_shader_info *info,
             }
          }
 
-         if (procType == TGSI_PROCESSOR_FRAGMENT) {
+         if (procType == PIPE_SHADER_FRAGMENT) {
             switch (semName) {
             case TGSI_SEMANTIC_POSITION:
                info->writes_z = TRUE;
@@ -458,7 +458,7 @@ scan_declaration(struct tgsi_shader_info *info,
             }
          }
 
-         if (procType == TGSI_PROCESSOR_VERTEX) {
+         if (procType == PIPE_SHADER_VERTEX) {
             if (semName == TGSI_SEMANTIC_EDGEFLAG) {
                info->writes_edgeflag = TRUE;
             }
@@ -549,12 +549,12 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
       return;
    }
    procType = parse.FullHeader.Processor.Processor;
-   assert(procType == TGSI_PROCESSOR_FRAGMENT ||
-          procType == TGSI_PROCESSOR_VERTEX ||
-          procType == TGSI_PROCESSOR_GEOMETRY ||
-          procType == TGSI_PROCESSOR_TESS_CTRL ||
-          procType == TGSI_PROCESSOR_TESS_EVAL ||
-          procType == TGSI_PROCESSOR_COMPUTE);
+   assert(procType == PIPE_SHADER_FRAGMENT ||
+          procType == PIPE_SHADER_VERTEX ||
+          procType == PIPE_SHADER_GEOMETRY ||
+          procType == PIPE_SHADER_TESS_CTRL ||
+          procType == PIPE_SHADER_TESS_EVAL ||
+          procType == PIPE_SHADER_COMPUTE);
    info->processor = procType;
 
    /**
@@ -590,7 +590,7 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
    /* The dimensions of the IN decleration in geometry shader have
     * to be deduced from the type of the input primitive.
     */
-   if (procType == TGSI_PROCESSOR_GEOMETRY) {
+   if (procType == PIPE_SHADER_GEOMETRY) {
       unsigned input_primitive =
             info->properties[TGSI_PROPERTY_GS_INPUT_PRIM];
       int num_verts = u_vertices_per_prim(input_primitive);

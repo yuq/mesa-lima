@@ -5186,7 +5186,7 @@ struct st_translate {
    unsigned insn_size;
    unsigned insn_count;
 
-   unsigned procType;  /**< TGSI_PROCESSOR_VERTEX/FRAGMENT */
+   unsigned procType;  /**< PIPE_SHADER_VERTEX/FRAGMENT */
 
    boolean error;
 };
@@ -5379,10 +5379,10 @@ dst_register(struct st_translate *t, gl_register_file file, unsigned index,
 
    case PROGRAM_OUTPUT:
       if (!array_id) {
-         if (t->procType == TGSI_PROCESSOR_FRAGMENT)
+         if (t->procType == PIPE_SHADER_FRAGMENT)
             assert(index < FRAG_RESULT_MAX);
-         else if (t->procType == TGSI_PROCESSOR_TESS_CTRL ||
-                  t->procType == TGSI_PROCESSOR_TESS_EVAL)
+         else if (t->procType == PIPE_SHADER_TESS_CTRL ||
+                  t->procType == PIPE_SHADER_TESS_EVAL)
             assert(index < VARYING_SLOT_TESS_MAX);
          else
             assert(index < VARYING_SLOT_MAX);
@@ -6048,7 +6048,7 @@ st_translate_program(
     * Declare input attributes.
     */
    switch (procType) {
-   case TGSI_PROCESSOR_FRAGMENT:
+   case PIPE_SHADER_FRAGMENT:
       for (i = 0; i < numInputs; i++) {
          unsigned array_id = 0;
          unsigned array_size;
@@ -6069,9 +6069,9 @@ st_translate_program(
          }
       }
       break;
-   case TGSI_PROCESSOR_GEOMETRY:
-   case TGSI_PROCESSOR_TESS_EVAL:
-   case TGSI_PROCESSOR_TESS_CTRL:
+   case PIPE_SHADER_GEOMETRY:
+   case PIPE_SHADER_TESS_EVAL:
+   case PIPE_SHADER_TESS_CTRL:
       for (i = 0; i < numInputs; i++) {
          unsigned array_id = 0;
          unsigned array_size;
@@ -6090,12 +6090,12 @@ st_translate_program(
          }
       }
       break;
-   case TGSI_PROCESSOR_VERTEX:
+   case PIPE_SHADER_VERTEX:
       for (i = 0; i < numInputs; i++) {
          t->inputs[i] = ureg_DECL_vs_input(ureg, i);
       }
       break;
-   case TGSI_PROCESSOR_COMPUTE:
+   case PIPE_SHADER_COMPUTE:
       break;
    default:
       assert(0);
@@ -6105,13 +6105,13 @@ st_translate_program(
     * Declare output attributes.
     */
    switch (procType) {
-   case TGSI_PROCESSOR_FRAGMENT:
-   case TGSI_PROCESSOR_COMPUTE:
+   case PIPE_SHADER_FRAGMENT:
+   case PIPE_SHADER_COMPUTE:
       break;
-   case TGSI_PROCESSOR_GEOMETRY:
-   case TGSI_PROCESSOR_TESS_EVAL:
-   case TGSI_PROCESSOR_TESS_CTRL:
-   case TGSI_PROCESSOR_VERTEX:
+   case PIPE_SHADER_GEOMETRY:
+   case PIPE_SHADER_TESS_EVAL:
+   case PIPE_SHADER_TESS_CTRL:
+   case PIPE_SHADER_VERTEX:
       for (i = 0; i < numOutputs; i++) {
          unsigned array_id = 0;
          unsigned array_size;
@@ -6136,7 +6136,7 @@ st_translate_program(
       assert(0);
    }
 
-   if (procType == TGSI_PROCESSOR_FRAGMENT) {
+   if (procType == PIPE_SHADER_FRAGMENT) {
       if (program->shader->EarlyFragmentTests)
          ureg_property(ureg, TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL, 1);
 
@@ -6184,7 +6184,7 @@ st_translate_program(
          }
       }
    }
-   else if (procType == TGSI_PROCESSOR_VERTEX) {
+   else if (procType == PIPE_SHADER_VERTEX) {
       for (i = 0; i < numOutputs; i++) {
          if (outputSemanticName[i] == TGSI_SEMANTIC_FOG) {
             /* force register to contain a fog coordinate in the form (F, 0, 0, 1). */
@@ -6196,7 +6196,7 @@ st_translate_program(
       }
    }
 
-   if (procType == TGSI_PROCESSOR_COMPUTE) {
+   if (procType == PIPE_SHADER_COMPUTE) {
       emit_compute_block_size(proginfo, ureg);
    }
 
@@ -6230,7 +6230,7 @@ st_translate_program(
                 */
                struct st_context *st = st_context(ctx);
                struct pipe_screen *pscreen = st->pipe->screen;
-               assert(procType == TGSI_PROCESSOR_VERTEX);
+               assert(procType == PIPE_SHADER_VERTEX);
                assert(pscreen->get_shader_param(pscreen, PIPE_SHADER_VERTEX, PIPE_SHADER_CAP_INTEGERS));
                (void) pscreen;
                if (!ctx->Const.NativeIntegers) {
@@ -6240,7 +6240,7 @@ st_translate_program(
                }
             }
 
-            if (procType == TGSI_PROCESSOR_FRAGMENT &&
+            if (procType == PIPE_SHADER_FRAGMENT &&
                 semName == TGSI_SEMANTIC_POSITION)
                emit_wpos(st_context(ctx), t, proginfo, ureg,
                          program->wpos_transform_const);
@@ -6392,8 +6392,8 @@ st_translate_program(
 
    /* Set the next shader stage hint for VS and TES. */
    switch (procType) {
-   case TGSI_PROCESSOR_VERTEX:
-   case TGSI_PROCESSOR_TESS_EVAL:
+   case PIPE_SHADER_VERTEX:
+   case PIPE_SHADER_TESS_EVAL:
       if (program->shader_program->SeparateShader)
          break;
 
@@ -6403,16 +6403,16 @@ st_translate_program(
 
             switch (i) {
             case MESA_SHADER_TESS_CTRL:
-               next = TGSI_PROCESSOR_TESS_CTRL;
+               next = PIPE_SHADER_TESS_CTRL;
                break;
             case MESA_SHADER_TESS_EVAL:
-               next = TGSI_PROCESSOR_TESS_EVAL;
+               next = PIPE_SHADER_TESS_EVAL;
                break;
             case MESA_SHADER_GEOMETRY:
-               next = TGSI_PROCESSOR_GEOMETRY;
+               next = PIPE_SHADER_GEOMETRY;
                break;
             case MESA_SHADER_FRAGMENT:
-               next = TGSI_PROCESSOR_FRAGMENT;
+               next = PIPE_SHADER_FRAGMENT;
                break;
             default:
                assert(0);

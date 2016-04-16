@@ -271,7 +271,7 @@ create_vs(struct pipe_context *pipe, unsigned vs_traits)
     boolean is_yuv = (vs_traits & VS_YUV) != 0;
     unsigned input_slot = 0;
 
-    ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
+    ureg = ureg_create(PIPE_SHADER_VERTEX);
     if (ureg == NULL)
 	return 0;
 
@@ -469,7 +469,7 @@ create_fs(struct pipe_context *pipe, unsigned fs_traits)
     (void)print_fs_traits;
 #endif
 
-    ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+    ureg = ureg_create(PIPE_SHADER_FRAGMENT);
     if (ureg == NULL)
 	return 0;
 

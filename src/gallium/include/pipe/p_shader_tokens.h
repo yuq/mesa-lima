@@ -40,18 +40,9 @@ struct tgsi_header
    unsigned BodySize   : 24;
 };
 
-enum {
-   TGSI_PROCESSOR_FRAGMENT,
-   TGSI_PROCESSOR_VERTEX,
-   TGSI_PROCESSOR_GEOMETRY,
-   TGSI_PROCESSOR_TESS_CTRL,
-   TGSI_PROCESSOR_TESS_EVAL,
-   TGSI_PROCESSOR_COMPUTE,
-};
-
 struct tgsi_processor
 {
-   unsigned Processor  : 4;  /* TGSI_PROCESSOR_ */
+   unsigned Processor  : 4;  /* PIPE_SHADER_ */
    unsigned Padding    : 28;
 };
 

@@ -241,13 +241,13 @@ int main(int argc, char **argv)
 
 	tgsi_parse_init(&parse, toks);
 	switch (parse.FullHeader.Processor.Processor) {
-	case TGSI_PROCESSOR_FRAGMENT:
+	case PIPE_SHADER_FRAGMENT:
 		s.type = v.type = SHADER_FRAGMENT;
 		break;
-	case TGSI_PROCESSOR_VERTEX:
+	case PIPE_SHADER_VERTEX:
 		s.type = v.type = SHADER_VERTEX;
 		break;
-	case TGSI_PROCESSOR_COMPUTE:
+	case PIPE_SHADER_COMPUTE:
 		s.type = v.type = SHADER_COMPUTE;
 		break;
 	}

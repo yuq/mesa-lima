@@ -295,17 +295,17 @@ iter_declaration(
     * two dimensional
     */
    if (decl->Declaration.File == TGSI_FILE_INPUT &&
-       (iter->processor.Processor == TGSI_PROCESSOR_GEOMETRY ||
+       (iter->processor.Processor == PIPE_SHADER_GEOMETRY ||
         (!patch &&
-         (iter->processor.Processor == TGSI_PROCESSOR_TESS_CTRL ||
-          iter->processor.Processor == TGSI_PROCESSOR_TESS_EVAL)))) {
+         (iter->processor.Processor == PIPE_SHADER_TESS_CTRL ||
+          iter->processor.Processor == PIPE_SHADER_TESS_EVAL)))) {
       TXT("[]");
    }
 
    /* all non-patch tess ctrl shader outputs are two dimensional */
    if (decl->Declaration.File == TGSI_FILE_OUTPUT &&
        !patch &&
-       iter->processor.Processor == TGSI_PROCESSOR_TESS_CTRL) {
+       iter->processor.Processor == PIPE_SHADER_TESS_CTRL) {
       TXT("[]");
    }
 
@@ -394,7 +394,7 @@ iter_declaration(
    }
 
    if (decl->Declaration.Interpolate) {
-      if (iter->processor.Processor == TGSI_PROCESSOR_FRAGMENT &&
+      if (iter->processor.Processor == PIPE_SHADER_FRAGMENT &&
           decl->Declaration.File == TGSI_FILE_INPUT)
       {
          TXT( ", " );

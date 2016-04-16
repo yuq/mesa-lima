@@ -999,20 +999,20 @@ static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
 	unsigned next_shader = info->properties[TGSI_PROPERTY_NEXT_SHADER];
 
 	switch (info->processor) {
-	case TGSI_PROCESSOR_VERTEX:
+	case PIPE_SHADER_VERTEX:
 		switch (next_shader) {
-		case TGSI_PROCESSOR_GEOMETRY:
+		case PIPE_SHADER_GEOMETRY:
 			key->vs.as_es = 1;
 			break;
-		case TGSI_PROCESSOR_TESS_CTRL:
-		case TGSI_PROCESSOR_TESS_EVAL:
+		case PIPE_SHADER_TESS_CTRL:
+		case PIPE_SHADER_TESS_EVAL:
 			key->vs.as_ls = 1;
 			break;
 		}
 		break;
 
-	case TGSI_PROCESSOR_TESS_EVAL:
-		if (next_shader == TGSI_PROCESSOR_GEOMETRY)
+	case PIPE_SHADER_TESS_EVAL:
+		if (next_shader == PIPE_SHADER_GEOMETRY)
 			key->tes.as_es = 1;
 		break;
 	}
@@ -1805,7 +1805,7 @@ static void si_generate_fixed_func_tcs(struct si_context *sctx)
 {
 	struct ureg_src outer, inner;
 	struct ureg_dst tessouter, tessinner;
-	struct ureg_program *ureg = ureg_create(TGSI_PROCESSOR_TESS_CTRL);
+	struct ureg_program *ureg = ureg_create(PIPE_SHADER_TESS_CTRL);
 
 	if (!ureg)
 		return; /* if we get here, we're screwed */

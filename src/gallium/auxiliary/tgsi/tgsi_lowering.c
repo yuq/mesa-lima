@@ -1615,7 +1615,7 @@ tgsi_transform_lowering(const struct tgsi_lowering_config *config,
     * color, then figure out the number of additional inputs we need
     * to create for BCOLOR's..
     */
-   if ((info->processor == TGSI_PROCESSOR_FRAGMENT) &&
+   if ((info->processor == PIPE_SHADER_FRAGMENT) &&
        config->color_two_side) {
       int i;
       ctx.face_idx = -1;

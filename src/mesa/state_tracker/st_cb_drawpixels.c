@@ -130,7 +130,7 @@ get_drawpix_z_stencil_program(struct st_context *st,
       return st->drawpix.zs_shaders[shaderIndex];
    }
 
-   ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+   ureg = ureg_create(PIPE_SHADER_FRAGMENT);
    if (ureg == NULL)
       return NULL;
 
@@ -197,7 +197,7 @@ make_passthrough_vertex_shader(struct st_context *st,
       TGSI_SEMANTIC_TEXCOORD : TGSI_SEMANTIC_GENERIC;
 
    if (!st->drawpix.vert_shaders[passColor]) {
-      struct ureg_program *ureg = ureg_create( TGSI_PROCESSOR_VERTEX );
+      struct ureg_program *ureg = ureg_create( PIPE_SHADER_VERTEX );
 
       if (ureg == NULL)
          return NULL;
