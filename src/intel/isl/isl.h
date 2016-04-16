@@ -854,6 +854,8 @@ isl_format_has_int_channel(enum isl_format fmt)
           isl_format_has_sint_channel(fmt);
 }
 
+unsigned isl_format_get_num_channels(enum isl_format fmt);
+
 static inline bool
 isl_format_is_compressed(enum isl_format fmt)
 {

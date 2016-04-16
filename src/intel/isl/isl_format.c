@@ -75,6 +75,21 @@ isl_format_has_sint_channel(enum isl_format fmt)
    return isl_format_has_channel_type(fmt, ISL_SINT);
 }
 
+unsigned
+isl_format_get_num_channels(enum isl_format fmt)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(fmt);
+
+   assert(fmtl->channels.p.bits == 0);
+
+   return (fmtl->channels.r.bits > 0) +
+          (fmtl->channels.g.bits > 0) +
+          (fmtl->channels.b.bits > 0) +
+          (fmtl->channels.a.bits > 0) +
+          (fmtl->channels.l.bits > 0) +
+          (fmtl->channels.i.bits > 0);
+}
+
 enum isl_format
 isl_format_rgb_to_rgba(enum isl_format rgb)
 {
