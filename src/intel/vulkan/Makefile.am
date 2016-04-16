@@ -31,8 +31,7 @@ vulkan_include_HEADERS =				\
 # Used when generating entrypoints to filter out unwanted extensions
 VULKAN_ENTRYPOINT_CPPFLAGS = \
    -I$(top_srcdir)/include/vulkan \
-   -DVK_USE_PLATFORM_XCB_KHR \
-   -DVK_USE_PLATFORM_WAYLAND_KHR
+   -DVK_USE_PLATFORM_XCB_KHR
 
 lib_LTLIBRARIES = libvulkan_intel.la
 
@@ -67,7 +66,7 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_builddir)/src/intel
 
-libvulkan_intel_la_CFLAGS = $(CFLAGS) -Wno-override-init -msse2
+libvulkan_intel_la_CFLAGS = $(CFLAGS) -DVK_USE_PLATFORM_XCB_KHR -Wno-override-init -msse2
 
 VULKAN_SOURCES =                                        \
 	anv_allocator.c                                 \
@@ -150,7 +149,9 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/egl/wayland/wayland-drm
 VULKAN_SOURCES += \
 	wayland-drm-protocol.c \
 	anv_wsi_wayland.c
-libvulkan_intel_la_CFLAGS += -DHAVE_WAYLAND_PLATFORM
+libvulkan_intel_la_CFLAGS += -DHAVE_WAYLAND_PLATFORM -DVK_USE_PLATFORM_WAYLAND_KHR
+
+VULKAN_ENTRYPOINT_CPPFLAGS += -DVK_USE_PLATFORM_WAYLAND_KHR
 endif
 
 libvulkan_intel_la_SOURCES =                            \
