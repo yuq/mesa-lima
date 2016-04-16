@@ -1037,7 +1037,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 
 	sel->so = state->stream_output;
 	tgsi_scan_shader(state->tokens, &sel->info);
-	sel->type = util_pipe_shader_from_tgsi_processor(sel->info.processor);
+	sel->type = sel->info.processor;
 	p_atomic_inc(&sscreen->b.num_shaders_created);
 
 	/* Set which opcode uses which (i,j) pair. */

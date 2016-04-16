@@ -3254,17 +3254,6 @@ tx_dtor(struct shader_translator *tx)
     FREE(tx);
 }
 
-static inline unsigned
-tgsi_processor_from_type(unsigned shader_type)
-{
-    switch (shader_type) {
-    case PIPE_SHADER_VERTEX: return PIPE_SHADER_VERTEX;
-    case PIPE_SHADER_FRAGMENT: return PIPE_SHADER_FRAGMENT;
-    default:
-        return ~0;
-    }
-}
-
 static void
 shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
 {
@@ -3326,7 +3315,7 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
 {
     struct shader_translator *tx;
     HRESULT hr = D3D_OK;
-    const unsigned processor = tgsi_processor_from_type(info->type);
+    const unsigned processor = info->type;
     unsigned s, slot_max;
     unsigned max_const_f;
 

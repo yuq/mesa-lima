@@ -650,28 +650,6 @@ util_max_layer(const struct pipe_resource *r, unsigned level)
    }
 }
 
-static inline unsigned
-util_pipe_shader_from_tgsi_processor(unsigned processor)
-{
-   switch (processor) {
-   case PIPE_SHADER_VERTEX:
-      return PIPE_SHADER_VERTEX;
-   case PIPE_SHADER_TESS_CTRL:
-      return PIPE_SHADER_TESS_CTRL;
-   case PIPE_SHADER_TESS_EVAL:
-      return PIPE_SHADER_TESS_EVAL;
-   case PIPE_SHADER_GEOMETRY:
-      return PIPE_SHADER_GEOMETRY;
-   case PIPE_SHADER_FRAGMENT:
-      return PIPE_SHADER_FRAGMENT;
-   case PIPE_SHADER_COMPUTE:
-      return PIPE_SHADER_COMPUTE;
-   default:
-      assert(0);
-      return PIPE_SHADER_VERTEX;
-   }
-}
-
 #ifdef __cplusplus
 }
 #endif
