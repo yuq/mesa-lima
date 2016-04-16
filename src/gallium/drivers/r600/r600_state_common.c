@@ -2191,22 +2191,22 @@ unsigned r600_get_swizzle_combined(const unsigned char *swizzle_format,
 	/* Get swizzle. */
 	for (i = 0; i < 4; i++) {
 		switch (swizzle[i]) {
-		case UTIL_FORMAT_SWIZZLE_Y:
+		case PIPE_SWIZZLE_Y:
 			result |= swizzle_bit[1] << swizzle_shift[i];
 			break;
-		case UTIL_FORMAT_SWIZZLE_Z:
+		case PIPE_SWIZZLE_Z:
 			result |= swizzle_bit[2] << swizzle_shift[i];
 			break;
-		case UTIL_FORMAT_SWIZZLE_W:
+		case PIPE_SWIZZLE_W:
 			result |= swizzle_bit[3] << swizzle_shift[i];
 			break;
-		case UTIL_FORMAT_SWIZZLE_0:
+		case PIPE_SWIZZLE_0:
 			result |= V_038010_SQ_SEL_0 << swizzle_shift[i];
 			break;
-		case UTIL_FORMAT_SWIZZLE_1:
+		case PIPE_SWIZZLE_1:
 			result |= V_038010_SQ_SEL_1 << swizzle_shift[i];
 			break;
-		default: /* UTIL_FORMAT_SWIZZLE_X */
+		default: /* PIPE_SWIZZLE_X */
 			result |= swizzle_bit[0] << swizzle_shift[i];
 		}
 	}

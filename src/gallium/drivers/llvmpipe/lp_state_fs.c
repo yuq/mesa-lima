@@ -3027,7 +3027,7 @@ make_variant_key(struct llvmpipe_context *lp,
           * Also, force rgb/alpha func/factors match, to make AoS blending
           * easier.
           */
-         if (format_desc->swizzle[3] > UTIL_FORMAT_SWIZZLE_W ||
+         if (format_desc->swizzle[3] > PIPE_SWIZZLE_W ||
              format_desc->swizzle[3] == format_desc->swizzle[0]) {
             /* Doesn't cover mixed snorm/unorm but can't render to them anyway */
             boolean clamped_zero = !util_format_is_float(format) &&

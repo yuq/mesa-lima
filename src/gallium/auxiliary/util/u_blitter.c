@@ -1389,10 +1389,10 @@ void util_blitter_default_src_texture(struct pipe_sampler_view *src_templ,
     src_templ->u.tex.last_layer =
         src->target == PIPE_TEXTURE_3D ? u_minify(src->depth0, srclevel) - 1
                                        : src->array_size - 1;
-    src_templ->swizzle_r = PIPE_SWIZZLE_RED;
-    src_templ->swizzle_g = PIPE_SWIZZLE_GREEN;
-    src_templ->swizzle_b = PIPE_SWIZZLE_BLUE;
-    src_templ->swizzle_a = PIPE_SWIZZLE_ALPHA;
+    src_templ->swizzle_r = PIPE_SWIZZLE_X;
+    src_templ->swizzle_g = PIPE_SWIZZLE_Y;
+    src_templ->swizzle_b = PIPE_SWIZZLE_Z;
+    src_templ->swizzle_a = PIPE_SWIZZLE_W;
 }
 
 static boolean is_blit_generic_supported(struct blitter_context *blitter,

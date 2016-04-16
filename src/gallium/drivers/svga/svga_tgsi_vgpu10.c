@@ -5049,20 +5049,20 @@ end_tex_swizzle(struct svga_shader_emitter_v10 *emit,
       /* Swizzle w/out zero/one terms */
       struct tgsi_full_src_register src_swizzled =
          swizzle_src(&swz->tmp_src,
-                     swz_r < PIPE_SWIZZLE_ZERO ? swz_r : PIPE_SWIZZLE_RED,
-                     swz_g < PIPE_SWIZZLE_ZERO ? swz_g : PIPE_SWIZZLE_GREEN,
-                     swz_b < PIPE_SWIZZLE_ZERO ? swz_b : PIPE_SWIZZLE_BLUE,
-                     swz_a < PIPE_SWIZZLE_ZERO ? swz_a : PIPE_SWIZZLE_ALPHA);
+                     swz_r < PIPE_SWIZZLE_0 ? swz_r : PIPE_SWIZZLE_X,
+                     swz_g < PIPE_SWIZZLE_0 ? swz_g : PIPE_SWIZZLE_Y,
+                     swz_b < PIPE_SWIZZLE_0 ? swz_b : PIPE_SWIZZLE_Z,
+                     swz_a < PIPE_SWIZZLE_0 ? swz_a : PIPE_SWIZZLE_W);
 
       /* MOV dst, color(tmp).<swizzle> */
       emit_instruction_op1(emit, VGPU10_OPCODE_MOV,
                            swz->inst_dst, &src_swizzled, FALSE);
 
       /* handle swizzle zero terms */
-      writemask_0 = (((swz_r == PIPE_SWIZZLE_ZERO) << 0) |
-                     ((swz_g == PIPE_SWIZZLE_ZERO) << 1) |
-                     ((swz_b == PIPE_SWIZZLE_ZERO) << 2) |
-                     ((swz_a == PIPE_SWIZZLE_ZERO) << 3));
+      writemask_0 = (((swz_r == PIPE_SWIZZLE_0) << 0) |
+                     ((swz_g == PIPE_SWIZZLE_0) << 1) |
+                     ((swz_b == PIPE_SWIZZLE_0) << 2) |
+                     ((swz_a == PIPE_SWIZZLE_0) << 3));
 
       if (writemask_0) {
          struct tgsi_full_src_register zero = int_tex ?
@@ -5077,10 +5077,10 @@ end_tex_swizzle(struct svga_shader_emitter_v10 *emit,
       }
 
       /* handle swizzle one terms */
-      writemask_1 = (((swz_r == PIPE_SWIZZLE_ONE) << 0) |
-                     ((swz_g == PIPE_SWIZZLE_ONE) << 1) |
-                     ((swz_b == PIPE_SWIZZLE_ONE) << 2) |
-                     ((swz_a == PIPE_SWIZZLE_ONE) << 3));
+      writemask_1 = (((swz_r == PIPE_SWIZZLE_1) << 0) |
+                     ((swz_g == PIPE_SWIZZLE_1) << 1) |
+                     ((swz_b == PIPE_SWIZZLE_1) << 2) |
+                     ((swz_a == PIPE_SWIZZLE_1) << 3));
 
       if (writemask_1) {
          struct tgsi_full_src_register one = int_tex ?

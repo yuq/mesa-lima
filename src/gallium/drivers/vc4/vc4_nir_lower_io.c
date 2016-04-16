@@ -98,7 +98,7 @@ vc4_nir_get_vattr_channel_vpm(struct vc4_compile *c,
                 &desc->channel[swiz];
         nir_ssa_def *temp;
 
-        if (swiz > UTIL_FORMAT_SWIZZLE_W) {
+        if (swiz > PIPE_SWIZZLE_W) {
                 return vc4_nir_get_swizzled_channel(b, vpm_reads, swiz);
         } else if (chan->size == 32 && chan->type == UTIL_FORMAT_TYPE_FLOAT) {
                 return vc4_nir_get_swizzled_channel(b, vpm_reads, swiz);

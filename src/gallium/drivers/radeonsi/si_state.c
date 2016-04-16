@@ -209,17 +209,17 @@ unsigned cik_db_pipe_config(struct si_screen *sscreen, unsigned tile_mode)
 static unsigned si_map_swizzle(unsigned swizzle)
 {
 	switch (swizzle) {
-	case UTIL_FORMAT_SWIZZLE_Y:
+	case PIPE_SWIZZLE_Y:
 		return V_008F0C_SQ_SEL_Y;
-	case UTIL_FORMAT_SWIZZLE_Z:
+	case PIPE_SWIZZLE_Z:
 		return V_008F0C_SQ_SEL_Z;
-	case UTIL_FORMAT_SWIZZLE_W:
+	case PIPE_SWIZZLE_W:
 		return V_008F0C_SQ_SEL_W;
-	case UTIL_FORMAT_SWIZZLE_0:
+	case PIPE_SWIZZLE_0:
 		return V_008F0C_SQ_SEL_0;
-	case UTIL_FORMAT_SWIZZLE_1:
+	case PIPE_SWIZZLE_1:
 		return V_008F0C_SQ_SEL_1;
-	default: /* UTIL_FORMAT_SWIZZLE_X */
+	default: /* PIPE_SWIZZLE_X */
 		return V_008F0C_SQ_SEL_X;
 	}
 }
@@ -2205,7 +2205,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 	/* Intensity is implemented as Red, so treat it that way. */
 	color_attrib = S_028C74_TILE_MODE_INDEX(tile_mode_index) |
-		S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1 ||
+		S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] == PIPE_SWIZZLE_1 ||
 					   util_format_is_intensity(surf->base.format));
 
 	if (rtex->resource.b.b.nr_samples > 1) {
@@ -3562,10 +3562,10 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 	struct si_screen *sscreen = (struct si_screen*)rscreen;
 	struct pipe_resource *res = &rtex->resource.b.b;
 	static const unsigned char swizzle[] = {
-		PIPE_SWIZZLE_RED,
-		PIPE_SWIZZLE_GREEN,
-		PIPE_SWIZZLE_BLUE,
-		PIPE_SWIZZLE_ALPHA
+		PIPE_SWIZZLE_X,
+		PIPE_SWIZZLE_Y,
+		PIPE_SWIZZLE_Z,
+		PIPE_SWIZZLE_W
 	};
 	uint32_t desc[8], i;
 	bool is_array = util_resource_is_array_texture(res);

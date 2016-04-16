@@ -900,10 +900,10 @@ format_is_alpha(enum pipe_format format)
    const struct util_format_description *desc = util_format_description(format);
 
    if (desc->nr_channels == 1 &&
-       desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_0 &&
-       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_0 &&
-       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_0 &&
-       desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_X)
+       desc->swizzle[0] == PIPE_SWIZZLE_0 &&
+       desc->swizzle[1] == PIPE_SWIZZLE_0 &&
+       desc->swizzle[2] == PIPE_SWIZZLE_0 &&
+       desc->swizzle[3] == PIPE_SWIZZLE_X)
       return true;
 
    return false;
@@ -918,10 +918,10 @@ format_is_red(enum pipe_format format)
    const struct util_format_description *desc = util_format_description(format);
 
    if (desc->nr_channels == 1 &&
-       desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_X &&
-       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_0 &&
-       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_0 &&
-       desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1)
+       desc->swizzle[0] == PIPE_SWIZZLE_X &&
+       desc->swizzle[1] == PIPE_SWIZZLE_0 &&
+       desc->swizzle[2] == PIPE_SWIZZLE_0 &&
+       desc->swizzle[3] == PIPE_SWIZZLE_1)
       return true;
 
    return false;
@@ -937,10 +937,10 @@ format_is_luminance(enum pipe_format format)
    const struct util_format_description *desc = util_format_description(format);
 
    if (desc->nr_channels == 1 &&
-       desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_X &&
-       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_X &&
-       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_X &&
-       desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1)
+       desc->swizzle[0] == PIPE_SWIZZLE_X &&
+       desc->swizzle[1] == PIPE_SWIZZLE_X &&
+       desc->swizzle[2] == PIPE_SWIZZLE_X &&
+       desc->swizzle[3] == PIPE_SWIZZLE_1)
       return true;
 
    return false;
@@ -955,10 +955,10 @@ format_is_red_alpha(enum pipe_format format)
    const struct util_format_description *desc = util_format_description(format);
 
    if (desc->nr_channels == 2 &&
-       desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_X &&
-       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_0 &&
-       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_0 &&
-       desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_Y)
+       desc->swizzle[0] == PIPE_SWIZZLE_X &&
+       desc->swizzle[1] == PIPE_SWIZZLE_0 &&
+       desc->swizzle[2] == PIPE_SWIZZLE_0 &&
+       desc->swizzle[3] == PIPE_SWIZZLE_Y)
       return true;
 
    return false;
@@ -969,10 +969,10 @@ format_is_swizzled_rgba(enum pipe_format format)
 {
     const struct util_format_description *desc = util_format_description(format);
 
-    if ((desc->swizzle[0] == TGSI_SWIZZLE_X || desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_0) &&
-        (desc->swizzle[1] == TGSI_SWIZZLE_Y || desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_0) &&
-        (desc->swizzle[2] == TGSI_SWIZZLE_Z || desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_0) &&
-        (desc->swizzle[3] == TGSI_SWIZZLE_W || desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1))
+    if ((desc->swizzle[0] == TGSI_SWIZZLE_X || desc->swizzle[0] == PIPE_SWIZZLE_0) &&
+        (desc->swizzle[1] == TGSI_SWIZZLE_Y || desc->swizzle[1] == PIPE_SWIZZLE_0) &&
+        (desc->swizzle[2] == TGSI_SWIZZLE_Z || desc->swizzle[2] == PIPE_SWIZZLE_0) &&
+        (desc->swizzle[3] == TGSI_SWIZZLE_W || desc->swizzle[3] == PIPE_SWIZZLE_1))
        return false;
 
     return true;
@@ -1101,10 +1101,10 @@ reinterpret_formats(enum pipe_format *src_format, enum pipe_format *dst_format)
       unsigned i;
 
       /* Make sure the format is an RGBA and not an RGBX format */
-      if (src_desc->nr_channels != 4 || src_desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1)
+      if (src_desc->nr_channels != 4 || src_desc->swizzle[3] == PIPE_SWIZZLE_1)
          return false;
 
-      if (dst_desc->nr_channels != 4 || dst_desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1)
+      if (dst_desc->nr_channels != 4 || dst_desc->swizzle[3] == PIPE_SWIZZLE_1)
          return false;
 
       for (i = 0; i < 4; i++)
@@ -1371,10 +1371,10 @@ try_pbo_upload_common(struct gl_context *ctx,
       templ.format = src_format;
       templ.u.buf.first_element = first_element;
       templ.u.buf.last_element = last_element;
-      templ.swizzle_r = PIPE_SWIZZLE_RED;
-      templ.swizzle_g = PIPE_SWIZZLE_GREEN;
-      templ.swizzle_b = PIPE_SWIZZLE_BLUE;
-      templ.swizzle_a = PIPE_SWIZZLE_ALPHA;
+      templ.swizzle_r = PIPE_SWIZZLE_X;
+      templ.swizzle_g = PIPE_SWIZZLE_Y;
+      templ.swizzle_b = PIPE_SWIZZLE_Z;
+      templ.swizzle_a = PIPE_SWIZZLE_W;
 
       sampler_view = pipe->create_sampler_view(pipe, buffer, &templ);
       if (sampler_view == NULL)

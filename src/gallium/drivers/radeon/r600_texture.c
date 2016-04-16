@@ -1396,7 +1396,7 @@ unsigned r600_translate_colorswap(enum pipe_format format)
 {
 	const struct util_format_description *desc = util_format_description(format);
 
-#define HAS_SWIZZLE(chan,swz) (desc->swizzle[chan] == UTIL_FORMAT_SWIZZLE_##swz)
+#define HAS_SWIZZLE(chan,swz) (desc->swizzle[chan] == PIPE_SWIZZLE_##swz)
 
 	if (format == PIPE_FORMAT_R11G11B10_FLOAT) /* isn't plain */
 		return V_0280A0_SWAP_STD;
@@ -1499,10 +1499,10 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 		return;
 
 	for (i = 0; i < 4; ++i) {
-		int index = desc->swizzle[i] - UTIL_FORMAT_SWIZZLE_X;
+		int index = desc->swizzle[i] - PIPE_SWIZZLE_X;
 
-		if (desc->swizzle[i] < UTIL_FORMAT_SWIZZLE_X ||
-		    desc->swizzle[i] > UTIL_FORMAT_SWIZZLE_W)
+		if (desc->swizzle[i] < PIPE_SWIZZLE_X ||
+		    desc->swizzle[i] > PIPE_SWIZZLE_W)
 			continue;
 
 		if (util_format_is_pure_sint(surface_format)) {
@@ -1527,9 +1527,9 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 
 	for (int i = 0; i < 4; ++i)
 		if (values[i] != main_value &&
-		    desc->swizzle[i] - UTIL_FORMAT_SWIZZLE_X != extra_channel &&
-		    desc->swizzle[i] >= UTIL_FORMAT_SWIZZLE_X &&
-		    desc->swizzle[i] <= UTIL_FORMAT_SWIZZLE_W)
+		    desc->swizzle[i] - PIPE_SWIZZLE_X != extra_channel &&
+		    desc->swizzle[i] >= PIPE_SWIZZLE_X &&
+		    desc->swizzle[i] <= PIPE_SWIZZLE_W)
 			return;
 
 	*clear_words_needed = false;

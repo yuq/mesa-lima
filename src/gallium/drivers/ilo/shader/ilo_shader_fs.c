@@ -1143,19 +1143,19 @@ fs_lower_opcode_tgsi_sampling(struct fs_compile_context *fcc,
       swizzles[3] = fcc->variant->sampler_view_swizzles[sampler_index].a;
    }
    else {
-      swizzles[0] = PIPE_SWIZZLE_RED;
-      swizzles[1] = PIPE_SWIZZLE_GREEN;
-      swizzles[2] = PIPE_SWIZZLE_BLUE;
-      swizzles[3] = PIPE_SWIZZLE_ALPHA;
+      swizzles[0] = PIPE_SWIZZLE_X;
+      swizzles[1] = PIPE_SWIZZLE_Y;
+      swizzles[2] = PIPE_SWIZZLE_Z;
+      swizzles[3] = PIPE_SWIZZLE_W;
    }
 
    /* swizzle the results */
    for (i = 0; i < 4; i++) {
       switch (swizzles[i]) {
-      case PIPE_SWIZZLE_ZERO:
+      case PIPE_SWIZZLE_0:
          tc_MOV(tc, dst[i], tsrc_imm_f(0.0f));
          break;
-      case PIPE_SWIZZLE_ONE:
+      case PIPE_SWIZZLE_1:
          tc_MOV(tc, dst[i], tsrc_imm_f(1.0f));
          break;
       default:

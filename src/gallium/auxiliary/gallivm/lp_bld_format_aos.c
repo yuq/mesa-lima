@@ -54,7 +54,7 @@
 
 /**
  * Basic swizzling.  Rearrange the order of the unswizzled array elements
- * according to the format description.  PIPE_SWIZZLE_ZERO/ONE are supported
+ * according to the format description.  PIPE_SWIZZLE_0/ONE are supported
  * too.
  * Ex: if unswizzled[4] = {B, G, R, x}, then swizzled_out[4] = {R, G, B, 1}.
  */
@@ -69,16 +69,16 @@ lp_build_format_swizzle_aos(const struct util_format_description *desc,
    assert(bld->type.length % 4 == 0);
 
    for (chan = 0; chan < 4; ++chan) {
-      enum util_format_swizzle swizzle;
+      enum pipe_swizzle swizzle;
 
       if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS) {
          /*
           * For ZS formats do RGBA = ZZZ1
           */
          if (chan == 3) {
-            swizzle = UTIL_FORMAT_SWIZZLE_1;
-         } else if (desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_NONE) {
-            swizzle = UTIL_FORMAT_SWIZZLE_0;
+            swizzle = PIPE_SWIZZLE_1;
+         } else if (desc->swizzle[0] == PIPE_SWIZZLE_NONE) {
+            swizzle = PIPE_SWIZZLE_0;
          } else {
             swizzle = desc->swizzle[0];
          }

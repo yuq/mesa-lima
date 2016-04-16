@@ -383,10 +383,10 @@ NineDevice9_ctor( struct NineDevice9 *This,
         templ.u.tex.last_layer = 0;
         templ.u.tex.first_level = 0;
         templ.u.tex.last_level = 0;
-        templ.swizzle_r = PIPE_SWIZZLE_ZERO;
-        templ.swizzle_g = PIPE_SWIZZLE_ZERO;
-        templ.swizzle_b = PIPE_SWIZZLE_ZERO;
-        templ.swizzle_a = PIPE_SWIZZLE_ONE;
+        templ.swizzle_r = PIPE_SWIZZLE_0;
+        templ.swizzle_g = PIPE_SWIZZLE_0;
+        templ.swizzle_b = PIPE_SWIZZLE_0;
+        templ.swizzle_a = PIPE_SWIZZLE_1;
         templ.target = This->dummy_texture->target;
 
         This->dummy_sampler_view = This->pipe->create_sampler_view(This->pipe, This->dummy_texture, &templ);

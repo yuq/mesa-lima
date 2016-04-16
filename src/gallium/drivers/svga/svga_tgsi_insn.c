@@ -1826,11 +1826,11 @@ emit_tex_swizzle(struct svga_shader_emitter *emit,
 
    /* build writemasks and srcSwizzle terms */
    for (i = 0; i < 4; i++) {
-      if (swizzleIn[i] == PIPE_SWIZZLE_ZERO) {
+      if (swizzleIn[i] == PIPE_SWIZZLE_0) {
          srcSwizzle[i] = TGSI_SWIZZLE_X + i;
          zeroWritemask |= (1 << i);
       }
-      else if (swizzleIn[i] == PIPE_SWIZZLE_ONE) {
+      else if (swizzleIn[i] == PIPE_SWIZZLE_1) {
          srcSwizzle[i] = TGSI_SWIZZLE_X + i;
          oneWritemask |= (1 << i);
       }
@@ -1897,10 +1897,10 @@ emit_tex(struct svga_shader_emitter *emit,
                       PIPE_TEX_COMPARE_R_TO_TEXTURE);
 
    /* texture swizzle */
-   boolean swizzle = (emit->key.tex[unit].swizzle_r != PIPE_SWIZZLE_RED ||
-                      emit->key.tex[unit].swizzle_g != PIPE_SWIZZLE_GREEN ||
-                      emit->key.tex[unit].swizzle_b != PIPE_SWIZZLE_BLUE ||
-                      emit->key.tex[unit].swizzle_a != PIPE_SWIZZLE_ALPHA);
+   boolean swizzle = (emit->key.tex[unit].swizzle_r != PIPE_SWIZZLE_X ||
+                      emit->key.tex[unit].swizzle_g != PIPE_SWIZZLE_Y ||
+                      emit->key.tex[unit].swizzle_b != PIPE_SWIZZLE_Z ||
+                      emit->key.tex[unit].swizzle_a != PIPE_SWIZZLE_W);
 
    boolean saturate = insn->Instruction.Saturate;
 
@@ -3633,12 +3633,12 @@ needs_to_create_common_immediate(const struct svga_shader_emitter *emit)
       if (emit->inverted_texcoords)
          return TRUE;
 
-      /* look for any PIPE_SWIZZLE_ZERO/ONE terms */
+      /* look for any PIPE_SWIZZLE_0/ONE terms */
       for (i = 0; i < emit->key.num_textures; i++) {
-         if (emit->key.tex[i].swizzle_r > PIPE_SWIZZLE_ALPHA ||
-             emit->key.tex[i].swizzle_g > PIPE_SWIZZLE_ALPHA ||
-             emit->key.tex[i].swizzle_b > PIPE_SWIZZLE_ALPHA ||
-             emit->key.tex[i].swizzle_a > PIPE_SWIZZLE_ALPHA)
+         if (emit->key.tex[i].swizzle_r > PIPE_SWIZZLE_W ||
+             emit->key.tex[i].swizzle_g > PIPE_SWIZZLE_W ||
+             emit->key.tex[i].swizzle_b > PIPE_SWIZZLE_W ||
+             emit->key.tex[i].swizzle_a > PIPE_SWIZZLE_W)
             return TRUE;
       }
 

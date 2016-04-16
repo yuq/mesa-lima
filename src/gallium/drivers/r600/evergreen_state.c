@@ -1072,7 +1072,7 @@ void evergreen_init_color_surface(struct r600_context *rctx,
 
 	if (rctx->b.chip_class == CAYMAN) {
 		color_attrib |=	S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] ==
-							   UTIL_FORMAT_SWIZZLE_1);
+							   PIPE_SWIZZLE_1);
 
 		if (rtex->resource.b.b.nr_samples > 1) {
 			unsigned log_samples = util_logbase2(rtex->resource.b.b.nr_samples);

@@ -282,8 +282,8 @@ fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, unsigned nr_bufs,
 
 			OUT_RING(ring, A4XX_TEX_CONST_0_FMT(fd4_pipe2tex(format)) |
 					A4XX_TEX_CONST_0_TYPE(A4XX_TEX_2D) |
-					fd4_tex_swiz(format,  PIPE_SWIZZLE_RED, PIPE_SWIZZLE_GREEN,
-							PIPE_SWIZZLE_BLUE, PIPE_SWIZZLE_ALPHA));
+					fd4_tex_swiz(format,  PIPE_SWIZZLE_X, PIPE_SWIZZLE_Y,
+							PIPE_SWIZZLE_Z, PIPE_SWIZZLE_W));
 			OUT_RING(ring, A4XX_TEX_CONST_1_WIDTH(bufs[i]->width) |
 					A4XX_TEX_CONST_1_HEIGHT(bufs[i]->height));
 			OUT_RING(ring, A4XX_TEX_CONST_2_PITCH(slice->pitch * rsc->cpp) |

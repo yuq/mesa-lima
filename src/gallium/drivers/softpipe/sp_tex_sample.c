@@ -1500,9 +1500,9 @@ get_gather_value(const struct sp_sampler_view *sp_sview,
 
    /* get correct result using the channel and swizzle */
    switch (swizzle) {
-   case PIPE_SWIZZLE_ZERO:
+   case PIPE_SWIZZLE_0:
       return 0.0;
-   case PIPE_SWIZZLE_ONE:
+   case PIPE_SWIZZLE_1:
       return 1.0;
    default:
       return tx[chan][swizzle];
@@ -2651,7 +2651,7 @@ sample_compare(const struct sp_sampler_view *sp_sview,
       util_format_description(sp_sview->base.format);
    /* not entirely sure we couldn't end up with non-valid swizzle here */
    const unsigned chan_type =
-      format_desc->swizzle[0] <= UTIL_FORMAT_SWIZZLE_W ?
+      format_desc->swizzle[0] <= PIPE_SWIZZLE_W ?
       format_desc->channel[format_desc->swizzle[0]].type :
       UTIL_FORMAT_TYPE_FLOAT;
    const bool is_gather = (control == TGSI_SAMPLER_GATHER);
@@ -2773,11 +2773,11 @@ do_swizzling(const struct pipe_sampler_view *sview,
    const unsigned swizzle_a = sview->swizzle_a;
 
    switch (swizzle_r) {
-   case PIPE_SWIZZLE_ZERO:
+   case PIPE_SWIZZLE_0:
       for (j = 0; j < 4; j++)
          out[0][j] = 0.0f;
       break;
-   case PIPE_SWIZZLE_ONE:
+   case PIPE_SWIZZLE_1:
       for (j = 0; j < 4; j++)
          out[0][j] = 1.0f;
       break;
@@ -2788,11 +2788,11 @@ do_swizzling(const struct pipe_sampler_view *sview,
    }
 
    switch (swizzle_g) {
-   case PIPE_SWIZZLE_ZERO:
+   case PIPE_SWIZZLE_0:
       for (j = 0; j < 4; j++)
          out[1][j] = 0.0f;
       break;
-   case PIPE_SWIZZLE_ONE:
+   case PIPE_SWIZZLE_1:
       for (j = 0; j < 4; j++)
          out[1][j] = 1.0f;
       break;
@@ -2803,11 +2803,11 @@ do_swizzling(const struct pipe_sampler_view *sview,
    }
 
    switch (swizzle_b) {
-   case PIPE_SWIZZLE_ZERO:
+   case PIPE_SWIZZLE_0:
       for (j = 0; j < 4; j++)
          out[2][j] = 0.0f;
       break;
-   case PIPE_SWIZZLE_ONE:
+   case PIPE_SWIZZLE_1:
       for (j = 0; j < 4; j++)
          out[2][j] = 1.0f;
       break;
@@ -2818,11 +2818,11 @@ do_swizzling(const struct pipe_sampler_view *sview,
    }
 
    switch (swizzle_a) {
-   case PIPE_SWIZZLE_ZERO:
+   case PIPE_SWIZZLE_0:
       for (j = 0; j < 4; j++)
          out[3][j] = 0.0f;
       break;
-   case PIPE_SWIZZLE_ONE:
+   case PIPE_SWIZZLE_1:
       for (j = 0; j < 4; j++)
          out[3][j] = 1.0f;
       break;
@@ -2928,10 +2928,10 @@ get_linear_wrap(unsigned mode)
 static inline bool
 any_swizzle(const struct pipe_sampler_view *view)
 {
-   return (view->swizzle_r != PIPE_SWIZZLE_RED ||
-           view->swizzle_g != PIPE_SWIZZLE_GREEN ||
-           view->swizzle_b != PIPE_SWIZZLE_BLUE ||
-           view->swizzle_a != PIPE_SWIZZLE_ALPHA);
+   return (view->swizzle_r != PIPE_SWIZZLE_X ||
+           view->swizzle_g != PIPE_SWIZZLE_Y ||
+           view->swizzle_b != PIPE_SWIZZLE_Z ||
+           view->swizzle_a != PIPE_SWIZZLE_W);
 }
 
 

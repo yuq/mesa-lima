@@ -127,17 +127,17 @@ vc4_nir_get_swizzled_channel(nir_builder *b, nir_ssa_def **srcs, int swiz)
 {
         switch (swiz) {
         default:
-        case UTIL_FORMAT_SWIZZLE_NONE:
+        case PIPE_SWIZZLE_NONE:
                 fprintf(stderr, "warning: unknown swizzle\n");
                 /* FALLTHROUGH */
-        case UTIL_FORMAT_SWIZZLE_0:
+        case PIPE_SWIZZLE_0:
                 return nir_imm_float(b, 0.0);
-        case UTIL_FORMAT_SWIZZLE_1:
+        case PIPE_SWIZZLE_1:
                 return nir_imm_float(b, 1.0);
-        case UTIL_FORMAT_SWIZZLE_X:
-        case UTIL_FORMAT_SWIZZLE_Y:
-        case UTIL_FORMAT_SWIZZLE_Z:
-        case UTIL_FORMAT_SWIZZLE_W:
+        case PIPE_SWIZZLE_X:
+        case PIPE_SWIZZLE_Y:
+        case PIPE_SWIZZLE_Z:
+        case PIPE_SWIZZLE_W:
                 return srcs[swiz];
         }
 }

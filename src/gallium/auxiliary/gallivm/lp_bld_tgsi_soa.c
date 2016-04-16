@@ -2507,10 +2507,10 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
                                  bld->bld_base.base.gallivm,
                                  &params);
 
-   if (inst->Src[1].Register.SwizzleX != PIPE_SWIZZLE_RED ||
-       inst->Src[1].Register.SwizzleY != PIPE_SWIZZLE_GREEN ||
-       inst->Src[1].Register.SwizzleZ != PIPE_SWIZZLE_BLUE ||
-       inst->Src[1].Register.SwizzleW != PIPE_SWIZZLE_ALPHA) {
+   if (inst->Src[1].Register.SwizzleX != PIPE_SWIZZLE_X ||
+       inst->Src[1].Register.SwizzleY != PIPE_SWIZZLE_Y ||
+       inst->Src[1].Register.SwizzleZ != PIPE_SWIZZLE_Z ||
+       inst->Src[1].Register.SwizzleW != PIPE_SWIZZLE_W) {
       unsigned char swizzles[4];
       swizzles[0] = inst->Src[1].Register.SwizzleX;
       swizzles[1] = inst->Src[1].Register.SwizzleY;
@@ -2638,10 +2638,10 @@ emit_fetch_texels( struct lp_build_tgsi_soa_context *bld,
                                  &params);
 
    if (is_samplei &&
-       (inst->Src[1].Register.SwizzleX != PIPE_SWIZZLE_RED ||
-        inst->Src[1].Register.SwizzleY != PIPE_SWIZZLE_GREEN ||
-        inst->Src[1].Register.SwizzleZ != PIPE_SWIZZLE_BLUE ||
-        inst->Src[1].Register.SwizzleW != PIPE_SWIZZLE_ALPHA)) {
+       (inst->Src[1].Register.SwizzleX != PIPE_SWIZZLE_X ||
+        inst->Src[1].Register.SwizzleY != PIPE_SWIZZLE_Y ||
+        inst->Src[1].Register.SwizzleZ != PIPE_SWIZZLE_Z ||
+        inst->Src[1].Register.SwizzleW != PIPE_SWIZZLE_W)) {
       unsigned char swizzles[4];
       swizzles[0] = inst->Src[1].Register.SwizzleX;
       swizzles[1] = inst->Src[1].Register.SwizzleY;

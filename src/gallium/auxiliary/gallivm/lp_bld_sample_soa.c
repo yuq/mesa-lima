@@ -1360,7 +1360,7 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
          if (is_gather) {
             /* more hacks for swizzling, should be X, ONE or ZERO... */
             unsigned chan_swiz = bld->static_texture_state->swizzle_r;
-            if (chan_swiz <= PIPE_SWIZZLE_ALPHA) {
+            if (chan_swiz <= PIPE_SWIZZLE_W) {
                colors0[0] = lp_build_select(texel_bld, cmpval10,
                                             texel_bld->one, texel_bld->zero);
                colors0[1] = lp_build_select(texel_bld, cmpval11,
@@ -1370,7 +1370,7 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
                colors0[3] = lp_build_select(texel_bld, cmpval00,
                                             texel_bld->one, texel_bld->zero);
             }
-            else if (chan_swiz == PIPE_SWIZZLE_ZERO) {
+            else if (chan_swiz == PIPE_SWIZZLE_0) {
                colors0[0] = colors0[1] = colors0[2] = colors0[3] =
                             texel_bld->zero;
             }
@@ -1838,7 +1838,7 @@ lp_build_sample_common(struct lp_build_sample_context *bld,
       const struct util_format_description *format_desc = bld->format_desc;
       unsigned chan_type;
       /* not entirely sure we couldn't end up with non-valid swizzle here */
-      chan_type = format_desc->swizzle[0] <= UTIL_FORMAT_SWIZZLE_W ?
+      chan_type = format_desc->swizzle[0] <= PIPE_SWIZZLE_W ?
                      format_desc->channel[format_desc->swizzle[0]].type :
                      UTIL_FORMAT_TYPE_FLOAT;
       if (chan_type != UTIL_FORMAT_TYPE_FLOAT) {
@@ -1957,7 +1957,7 @@ lp_build_clamp_border_color(struct lp_build_sample_context *bld,
       else {
          chan = util_format_get_first_non_void_channel(format_desc->format);
       }
-      if (chan >= 0 && chan <= UTIL_FORMAT_SWIZZLE_W) {
+      if (chan >= 0 && chan <= PIPE_SWIZZLE_W) {
          unsigned chan_type = format_desc->channel[chan].type;
          unsigned chan_norm = format_desc->channel[chan].normalized;
          unsigned chan_pure = format_desc->channel[chan].pure_integer;

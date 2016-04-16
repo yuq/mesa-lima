@@ -610,10 +610,10 @@ vs_lower_opcode_tgsi_sampling(struct vs_compile_context *vcc,
       swizzles[3] = vcc->variant->sampler_view_swizzles[sampler_index].a;
    }
    else {
-      swizzles[0] = PIPE_SWIZZLE_RED;
-      swizzles[1] = PIPE_SWIZZLE_GREEN;
-      swizzles[2] = PIPE_SWIZZLE_BLUE;
-      swizzles[3] = PIPE_SWIZZLE_ALPHA;
+      swizzles[0] = PIPE_SWIZZLE_X;
+      swizzles[1] = PIPE_SWIZZLE_Y;
+      swizzles[2] = PIPE_SWIZZLE_Z;
+      swizzles[3] = PIPE_SWIZZLE_W;
    }
 
    swizzle_zero_mask = 0;
@@ -621,11 +621,11 @@ vs_lower_opcode_tgsi_sampling(struct vs_compile_context *vcc,
    swizzle_normal_mask = 0;
    for (i = 0; i < 4; i++) {
       switch (swizzles[i]) {
-      case PIPE_SWIZZLE_ZERO:
+      case PIPE_SWIZZLE_0:
          swizzle_zero_mask |= 1 << i;
          swizzles[i] = i;
          break;
-      case PIPE_SWIZZLE_ONE:
+      case PIPE_SWIZZLE_1:
          swizzle_one_mask |= 1 << i;
          swizzles[i] = i;
          break;

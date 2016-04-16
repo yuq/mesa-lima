@@ -475,7 +475,7 @@ llvmpipe_is_format_supported( struct pipe_screen *_screen,
          return FALSE;
 
       /* TODO: Support stencil-only formats */
-      if (format_desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_NONE) {
+      if (format_desc->swizzle[0] == PIPE_SWIZZLE_NONE) {
          return FALSE;
       }
    }

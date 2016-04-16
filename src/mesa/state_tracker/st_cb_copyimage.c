@@ -67,34 +67,34 @@ get_canonical_format(enum pipe_format format)
        desc->channel[1].size == 10 &&
        desc->channel[2].size == 10 &&
        desc->channel[3].size == 2) {
-      if (desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_X &&
-          desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_Y &&
-          desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_Z)
+      if (desc->swizzle[0] == PIPE_SWIZZLE_X &&
+          desc->swizzle[1] == PIPE_SWIZZLE_Y &&
+          desc->swizzle[2] == PIPE_SWIZZLE_Z)
          return get_canonical_format(PIPE_FORMAT_R8G8B8A8_UINT);
 
       return PIPE_FORMAT_NONE;
    }
 
 #define RETURN_FOR_SWIZZLE1(x, format) \
-   if (desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_##x) \
+   if (desc->swizzle[0] == PIPE_SWIZZLE_##x) \
       return format
 
 #define RETURN_FOR_SWIZZLE2(x, y, format) \
-   if (desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_##x && \
-       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_##y) \
+   if (desc->swizzle[0] == PIPE_SWIZZLE_##x && \
+       desc->swizzle[1] == PIPE_SWIZZLE_##y) \
       return format
 
 #define RETURN_FOR_SWIZZLE3(x, y, z, format) \
-   if (desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_##x && \
-       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_##y && \
-       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_##z) \
+   if (desc->swizzle[0] == PIPE_SWIZZLE_##x && \
+       desc->swizzle[1] == PIPE_SWIZZLE_##y && \
+       desc->swizzle[2] == PIPE_SWIZZLE_##z) \
       return format
 
 #define RETURN_FOR_SWIZZLE4(x, y, z, w, format) \
-   if (desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_##x && \
-       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_##y && \
-       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_##z && \
-       desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_##w) \
+   if (desc->swizzle[0] == PIPE_SWIZZLE_##x && \
+       desc->swizzle[1] == PIPE_SWIZZLE_##y && \
+       desc->swizzle[2] == PIPE_SWIZZLE_##z && \
+       desc->swizzle[3] == PIPE_SWIZZLE_##w) \
       return format
 
    /* Array formats. */
@@ -196,7 +196,7 @@ has_identity_swizzle(const struct util_format_description *desc)
    int i;
 
    for (i = 0; i < desc->nr_channels; i++)
-      if (desc->swizzle[i] != UTIL_FORMAT_SWIZZLE_X + i)
+      if (desc->swizzle[i] != PIPE_SWIZZLE_X + i)
          return false;
 
    return true;
@@ -348,8 +348,8 @@ same_size_and_swizzle(const struct util_format_description *d1,
       if (d1->channel[i].size != d2->channel[i].size)
          return false;
 
-      if (d1->swizzle[i] <= UTIL_FORMAT_SWIZZLE_W &&
-          d2->swizzle[i] <= UTIL_FORMAT_SWIZZLE_W &&
+      if (d1->swizzle[i] <= PIPE_SWIZZLE_W &&
+          d2->swizzle[i] <= PIPE_SWIZZLE_W &&
           d1->swizzle[i] != d2->swizzle[i])
          return false;
    }

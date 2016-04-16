@@ -36,13 +36,13 @@ static inline uint32_t
 nv50_tic_swizzle(const struct nvc0_format *fmt, unsigned swz, bool tex_int)
 {
    switch (swz) {
-   case PIPE_SWIZZLE_RED  : return fmt->tic.src_x;
-   case PIPE_SWIZZLE_GREEN: return fmt->tic.src_y;
-   case PIPE_SWIZZLE_BLUE : return fmt->tic.src_z;
-   case PIPE_SWIZZLE_ALPHA: return fmt->tic.src_w;
-   case PIPE_SWIZZLE_ONE:
+   case PIPE_SWIZZLE_X  : return fmt->tic.src_x;
+   case PIPE_SWIZZLE_Y: return fmt->tic.src_y;
+   case PIPE_SWIZZLE_Z : return fmt->tic.src_z;
+   case PIPE_SWIZZLE_W: return fmt->tic.src_w;
+   case PIPE_SWIZZLE_1:
       return tex_int ? G80_TIC_SOURCE_ONE_INT : G80_TIC_SOURCE_ONE_FLOAT;
-   case PIPE_SWIZZLE_ZERO:
+   case PIPE_SWIZZLE_0:
    default:
       return G80_TIC_SOURCE_ZERO;
    }

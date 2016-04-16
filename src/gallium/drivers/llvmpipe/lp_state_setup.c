@@ -135,8 +135,8 @@ emit_facing_coef(struct gallivm_state *gallivm,
    LLVMValueRef a0_0 = args->facing;
    LLVMValueRef a0_0f = LLVMBuildSIToFP(builder, a0_0, float_type, "");
    LLVMValueRef a0, face_val;
-   const unsigned char swizzles[4] = { PIPE_SWIZZLE_RED, PIPE_SWIZZLE_ZERO,
-                                       PIPE_SWIZZLE_ZERO, PIPE_SWIZZLE_ZERO };
+   const unsigned char swizzles[4] = { PIPE_SWIZZLE_X, PIPE_SWIZZLE_0,
+                                       PIPE_SWIZZLE_0, PIPE_SWIZZLE_0 };
    /* Our face val is either 1 or 0 so we do
     * face = (val * 2) - 1
     * to make it 1 or -1

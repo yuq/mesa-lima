@@ -544,15 +544,17 @@ enum pipe_sprite_coord_mode {
 };
 
 /**
- * Texture swizzles
+ * Texture & format swizzles
  */
 enum pipe_swizzle {
-   PIPE_SWIZZLE_RED,
-   PIPE_SWIZZLE_GREEN,
-   PIPE_SWIZZLE_BLUE,
-   PIPE_SWIZZLE_ALPHA,
-   PIPE_SWIZZLE_ZERO,
-   PIPE_SWIZZLE_ONE,
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_Y,
+   PIPE_SWIZZLE_Z,
+   PIPE_SWIZZLE_W,
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_1,
+   PIPE_SWIZZLE_NONE,
+   PIPE_SWIZZLE_MAX, /**< Number of enums counter (must be last) */
 };
 
 #define PIPE_TIMEOUT_INFINITE 0xffffffffffffffffull
