@@ -204,6 +204,8 @@ do {                       \
 #define UNUSED
 #endif
 
+#define MAYBE_UNUSED UNUSED
+
 #ifdef HAVE_FUNC_ATTRIBUTE_WARN_UNUSED_RESULT
 #define MUST_CHECK __attribute__((warn_unused_result))
 #else
