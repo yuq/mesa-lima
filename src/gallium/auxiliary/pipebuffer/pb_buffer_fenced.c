@@ -826,7 +826,7 @@ fenced_buffer_fence(struct pb_buffer *buf,
       assert(fenced_buf->validation_flags);
 
       if (fenced_buf->fence) {
-         boolean destroyed = fenced_buffer_remove_locked(fenced_mgr, fenced_buf);
+         MAYBE_UNUSED boolean destroyed = fenced_buffer_remove_locked(fenced_mgr, fenced_buf);
          assert(!destroyed);
       }
       if (fence) {

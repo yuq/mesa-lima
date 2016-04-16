@@ -199,7 +199,7 @@ prepare_shader_sampling(
 
          if (!sp_tex->dt) {
             /* regular texture - setup array of mipmap level offsets */
-            struct pipe_resource *res = view->texture;
+            MAYBE_UNUSED struct pipe_resource *res = view->texture;
             int j;
 
             if (view->target != PIPE_BUFFER) {
