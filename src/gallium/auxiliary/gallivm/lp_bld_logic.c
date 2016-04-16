@@ -315,14 +315,16 @@ lp_build_select(struct lp_build_context *bld,
       mask = LLVMBuildTrunc(builder, mask, LLVMInt1TypeInContext(lc), "");
       res = LLVMBuildSelect(builder, mask, a, b, "");
    }
-   else if (LLVMIsConstant(mask) ||
-            LLVMGetInstructionOpcode(mask) == LLVMSExt) {
+   else if (!(HAVE_LLVM == 0x0307) &&
+            (LLVMIsConstant(mask) ||
+             LLVMGetInstructionOpcode(mask) == LLVMSExt)) {
       /* Generate a vector select.
        *
        * Using vector selects should avoid emitting intrinsics hence avoid
-       * hidering optimization passes, but vector selects weren't properly
+       * hindering optimization passes, but vector selects weren't properly
        * supported yet for a long time, and LLVM will generate poor code when
        * the mask is not the result of a comparison.
+       * Also, llvm 3.7 may miscompile them (bug 94972).
        */
 
       /* Convert the mask to a vector of booleans.
