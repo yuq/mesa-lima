@@ -343,7 +343,7 @@ anv_validate_CreateImageView(VkDevice _device,
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *subresource;
-   const struct anv_format *view_format_info;
+   MAYBE_UNUSED const struct anv_format *view_format_info;
 
    /* Validate structure type before dereferencing it. */
    assert(pCreateInfo);

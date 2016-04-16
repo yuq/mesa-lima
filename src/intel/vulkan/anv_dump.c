@@ -33,7 +33,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
                       unsigned array_layer, const char *filename)
 {
    VkDevice vk_device = anv_device_to_handle(device);
-   VkResult result;
+   MAYBE_UNUSED VkResult result;
 
    VkExtent2D extent = { image->extent.width, image->extent.height };
    for (unsigned i = 0; i < miplevel; i++) {
