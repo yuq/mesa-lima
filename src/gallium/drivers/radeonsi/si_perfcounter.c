@@ -591,9 +591,12 @@ static void si_pc_emit_stop(struct r600_common_context *ctx,
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 
 	if (ctx->screen->chip_class == CIK) {
-		/* Workaround for cache flush problems: send two EOP events. */
+		/* Two EOP events are required to make all engines go idle
+		 * (and optional cache flushes executed) before the timestamp
+		 * is written.
+		 */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CACHE_FLUSH_AND_INV_TS_EVENT) |
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
 				EVENT_INDEX(5));
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
@@ -602,7 +605,7 @@ static void si_pc_emit_stop(struct r600_common_context *ctx,
 	}
 
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CACHE_FLUSH_AND_INV_TS_EVENT) |
+	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
 			EVENT_INDEX(5));
 	radeon_emit(cs, va);
 	radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
