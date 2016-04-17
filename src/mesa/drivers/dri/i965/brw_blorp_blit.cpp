@@ -1146,6 +1146,11 @@ brw_blorp_blit_program::encode_msaa(unsigned num_samples,
       break;
    case INTEL_MSAA_LAYOUT_IMS:
       switch (num_samples) {
+      case 2:
+         /* encode_msaa(2, IMS, X, Y, S) = (X', Y', 0)
+          *   where X' = (X & ~0b1) << 1 | (S & 0b1) << 1 | (X & 0b1)
+          *         Y' = Y
+          */
       case 4:
          /* encode_msaa(4, IMS, X, Y, S) = (X', Y', 0)
           *   where X' = (X & ~0b1) << 1 | (S & 0b1) << 1 | (X & 0b1)
@@ -1158,6 +1163,11 @@ brw_blorp_blit_program::encode_msaa(unsigned num_samples,
          }
          emit_shl(t1, t1, brw_imm_uw(1)); /* (X & ~0b1) << 1
                                                    | (S & 0b1) << 1 */
+         if (num_samples == 2) {
+            emit_mov(Yp, Y);
+            return;
+         }
+
          emit_and(t2, X, brw_imm_uw(1)); /* X & 0b1 */
          emit_or(Xp, t1, t2);
          emit_and(t1, Y, brw_imm_uw(0xfffe)); /* Y & ~0b1 */
@@ -1233,6 +1243,11 @@ brw_blorp_blit_program::decode_msaa(unsigned num_samples,
    case INTEL_MSAA_LAYOUT_IMS:
       assert(s_is_zero);
       switch (num_samples) {
+      case 2:
+         /* decode_msaa(2, IMS, X, Y, 0) = (X', Y', S)
+          *   where X' = (X & ~0b11) >> 1 | (X & 0b1)
+          *         S = (X & 0b10) >> 1
+          */
       case 4:
          /* decode_msaa(4, IMS, X, Y, 0) = (X', Y', S)
           *   where X' = (X & ~0b11) >> 1 | (X & 0b1)
@@ -1243,14 +1258,21 @@ brw_blorp_blit_program::decode_msaa(unsigned num_samples,
          emit_shr(t1, t1, brw_imm_uw(1)); /* (X & ~0b11) >> 1 */
          emit_and(t2, X, brw_imm_uw(1)); /* X & 0b1 */
          emit_or(Xp, t1, t2);
-         emit_and(t1, Y, brw_imm_uw(0xfffc)); /* Y & ~0b11 */
-         emit_shr(t1, t1, brw_imm_uw(1)); /* (Y & ~0b11) >> 1 */
-         emit_and(t2, Y, brw_imm_uw(1)); /* Y & 0b1 */
-         emit_or(Yp, t1, t2);
-         emit_and(t1, Y, brw_imm_uw(2)); /* Y & 0b10 */
-         emit_and(t2, X, brw_imm_uw(2)); /* X & 0b10 */
-         emit_shr(t2, t2, brw_imm_uw(1)); /* (X & 0b10) >> 1 */
-         emit_or(S, t1, t2);
+        
+         if (num_samples == 2) {
+            emit_mov(Yp, Y);
+            emit_and(t2, X, brw_imm_uw(2)); /* X & 0b10 */
+            emit_shr(S, t2, brw_imm_uw(1)); /* (X & 0b10) >> 1 */
+         } else {
+            emit_and(t1, Y, brw_imm_uw(0xfffc)); /* Y & ~0b11 */
+            emit_shr(t1, t1, brw_imm_uw(1)); /* (Y & ~0b11) >> 1 */
+            emit_and(t2, Y, brw_imm_uw(1)); /* Y & 0b1 */
+            emit_or(Yp, t1, t2);
+            emit_and(t1, Y, brw_imm_uw(2)); /* Y & 0b10 */
+            emit_and(t2, X, brw_imm_uw(2)); /* X & 0b10 */
+            emit_shr(t2, t2, brw_imm_uw(1)); /* (X & 0b10) >> 1 */
+            emit_or(S, t1, t2);
+         }
          break;
       case 8:
          /* decode_msaa(8, IMS, X, Y, 0) = (X', Y', S)
@@ -2082,6 +2104,12 @@ brw_blorp_blit_params::brw_blorp_blit_params(struct brw_context *brw,
        */
       assert(dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS);
       switch (dst_mt->num_samples) {
+      case 2:
+         x0 = ROUND_DOWN_TO(x0 * 2, 4);
+         y0 = ROUND_DOWN_TO(y0, 4);
+         x1 = ALIGN(x1 * 2, 4);
+         y1 = ALIGN(y1, 4);
+         break;
       case 4:
          x0 = ROUND_DOWN_TO(x0 * 2, 4);
          y0 = ROUND_DOWN_TO(y0 * 2, 4);
