@@ -406,7 +406,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
         samp.compare_mode = PIPE_TEX_COMPARE_NONE;
         samp.compare_func = PIPE_FUNC_LEQUAL;
         samp.normalized_coords = 1;
-        samp.seamless_cube_map = 1;
+        samp.seamless_cube_map = 0;
         This->dummy_sampler_state = samp;
     }
 

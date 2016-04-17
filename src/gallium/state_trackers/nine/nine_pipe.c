@@ -231,7 +231,7 @@ nine_convert_sampler_state(struct cso_context *ctx, int idx, const DWORD *ss)
     samp.compare_mode = ss[NINED3DSAMP_SHADOW] ? PIPE_TEX_COMPARE_R_TO_TEXTURE : PIPE_TEX_COMPARE_NONE;
     samp.compare_func = PIPE_FUNC_LEQUAL;
     samp.normalized_coords = 1;
-    samp.seamless_cube_map = 1;
+    samp.seamless_cube_map = 0;
     d3dcolor_to_pipe_color_union(&samp.border_color, ss[D3DSAMP_BORDERCOLOR]);
 
     /* see nine_state.h */
