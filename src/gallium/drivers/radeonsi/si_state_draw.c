@@ -677,23 +677,26 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 				EVENT_WRITE_INV_L2);
         }
 
-	/* FLUSH_AND_INV events must be emitted before PS_PARTIAL_FLUSH.
-	 * Otherwise, clearing CMASK (CB meta) with CP DMA isn't reliable.
-	 *
-	 * I think the reason is that FLUSH_AND_INV is only added to a queue
-	 * and it is PS_PARTIAL_FLUSH that waits for it to complete.
+	/* Wait for shader engines to go idle.
+	 * VS and PS waits are unnecessary if SURFACE_SYNC is going to wait
+	 * for everything including CB/DB cache flushes.
 	 */
-	if (sctx->flags & SI_CONTEXT_PS_PARTIAL_FLUSH) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
-		radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
-	} else if (sctx->flags & SI_CONTEXT_VS_PARTIAL_FLUSH) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
-		radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
+	if (!(sctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
+			     SI_CONTEXT_FLUSH_AND_INV_DB))) {
+		if (sctx->flags & SI_CONTEXT_PS_PARTIAL_FLUSH) {
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
+			radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
+		} else if (sctx->flags & SI_CONTEXT_VS_PARTIAL_FLUSH) {
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
+			radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
+		}
 	}
 	if (sctx->flags & SI_CONTEXT_CS_PARTIAL_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_CS_PARTIAL_FLUSH | EVENT_INDEX(4)));
 	}
+
+	/* VGT state synchronization. */
 	if (sctx->flags & SI_CONTEXT_VGT_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_FLUSH) | EVENT_INDEX(0));
