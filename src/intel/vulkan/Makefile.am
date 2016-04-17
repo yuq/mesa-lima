@@ -210,4 +210,4 @@ libvulkan_test_la_LIBADD = $(libvulkan_intel_la_LIBADD)
 include $(top_srcdir)/install-lib-links.mk
 
 install-data-local:
-	$(INSTALL_DATA) -D $(srcdir)/intel_icd.json $(VULKAN_ICD_INSTALL_DIR)/intel_icd.json
+	$(INSTALL_DATA) -D $(srcdir)/intel_icd.json $(DESTDIR)/$(VULKAN_ICD_INSTALL_DIR)/intel_icd.json
