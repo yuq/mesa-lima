@@ -615,7 +615,7 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 	 * doesn't seem to work reliably. Since the bug doesn't affect
 	 * correctness (it only does more work than necessary) and
 	 * the performance impact is likely negligible, there is no plan
-	 * to fix it.
+	 * to add a workaround for it.
 	 */
 
 	if (sctx->flags & SI_CONTEXT_INV_ICACHE)
@@ -628,7 +628,6 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 	if (sctx->flags & SI_CONTEXT_INV_GLOBAL_L2) {
 		cp_coher_cntl |= S_0085F0_TC_ACTION_ENA(1);
 
-		/* TODO: this might not be needed. */
 		if (sctx->chip_class >= VI)
 			cp_coher_cntl |= S_0301F0_TC_WB_ACTION_ENA(1);
 	}
