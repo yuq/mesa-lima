@@ -699,26 +699,16 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_STREAMOUT_SYNC) | EVENT_INDEX(0));
 	}
 
-	/* SURFACE_SYNC must be emitted after partial flushes.
-	 * It looks like SURFACE_SYNC flushes caches immediately and doesn't
-	 * wait for any engines. This should be last.
+	/* When one of the DEST_BASE flags is set, SURFACE_SYNC waits for idle.
+	 * Therefore, it should be last.
 	 */
 	if (cp_coher_cntl) {
-		if (sctx->chip_class >= CIK) {
-			radeon_emit(cs, PKT3(PKT3_ACQUIRE_MEM, 5, 0) | compute);
-			radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
-			radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
-			radeon_emit(cs, 0xff);            /* CP_COHER_SIZE_HI */
-			radeon_emit(cs, 0);               /* CP_COHER_BASE */
-			radeon_emit(cs, 0);               /* CP_COHER_BASE_HI */
-			radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
-		} else {
-			radeon_emit(cs, PKT3(PKT3_SURFACE_SYNC, 3, 0) | compute);
-			radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
-			radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
-			radeon_emit(cs, 0);               /* CP_COHER_BASE */
-			radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
-		}
+		/* ACQUIRE_MEM is only required on a compute ring. */
+		radeon_emit(cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
+		radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
+		radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
+		radeon_emit(cs, 0);               /* CP_COHER_BASE */
+		radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
 	}
 
 	if (sctx->flags & R600_CONTEXT_START_PIPELINE_STATS) {
