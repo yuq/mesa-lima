@@ -736,7 +736,7 @@ dri2_lookup_egl_image(struct dri_screen *screen, void *handle)
 static __DRIimage *
 dri2_create_image_from_winsys(__DRIscreen *_screen,
                               int width, int height, int format,
-                              struct winsys_handle *whandle, int pitch,
+                              struct winsys_handle *whandle,
                               void *loaderPrivate)
 {
    struct dri_screen *screen = dri_screen(_screen);
@@ -765,7 +765,6 @@ dri2_create_image_from_winsys(__DRIscreen *_screen,
    templ.depth0 = 1;
    templ.array_size = 1;
 
-   whandle->stride = pitch * util_format_get_blocksize(pf);
    whandle->offset = 0;
 
    img->texture = screen->base.screen->resource_from_handle(screen->base.screen,
@@ -790,19 +789,26 @@ dri2_create_image_from_name(__DRIscreen *_screen,
                             int name, int pitch, void *loaderPrivate)
 {
    struct winsys_handle whandle;
+   enum pipe_format pf;
 
    memset(&whandle, 0, sizeof(whandle));
    whandle.type = DRM_API_HANDLE_TYPE_SHARED;
    whandle.handle = name;
 
+   pf = dri2_format_to_pipe_format (format);
+   if (pf == PIPE_FORMAT_NONE)
+      return NULL;
+
+   whandle.stride = pitch * util_format_get_blocksize(pf);
+
    return dri2_create_image_from_winsys(_screen, width, height, format,
-                                        &whandle, pitch, loaderPrivate);
+                                        &whandle, loaderPrivate);
 }
 
 static __DRIimage *
 dri2_create_image_from_fd(__DRIscreen *_screen,
                           int width, int height, int format,
-                          int fd, int pitch, void *loaderPrivate)
+                          int fd, int stride, void *loaderPrivate)
 {
    struct winsys_handle whandle;
 
@@ -812,9 +818,10 @@ dri2_create_image_from_fd(__DRIscreen *_screen,
    memset(&whandle, 0, sizeof(whandle));
    whandle.type = DRM_API_HANDLE_TYPE_FD;
    whandle.handle = (unsigned)fd;
+   whandle.stride = stride;
 
    return dri2_create_image_from_winsys(_screen, width, height, format,
-                                        &whandle, pitch, loaderPrivate);
+                                        &whandle, loaderPrivate);
 }
 
 static __DRIimage *
@@ -992,7 +999,8 @@ dri2_from_names(__DRIscreen *screen, int width, int height, int format,
                 void *loaderPrivate)
 {
    __DRIimage *img;
-   int stride, dri_components;
+   int dri_components;
+   struct winsys_handle whandle;
 
    if (num_names != 1)
       return NULL;
@@ -1003,11 +1011,13 @@ dri2_from_names(__DRIscreen *screen, int width, int height, int format,
    if (format == -1)
       return NULL;
 
-   /* Strides are in bytes not pixels. */
-   stride = strides[0] /4;
+   memset(&whandle, 0, sizeof(whandle));
+   whandle.type = DRM_API_HANDLE_TYPE_SHARED;
+   whandle.handle = names[0];
+   whandle.stride = strides[0];
 
-   img = dri2_create_image_from_name(screen, width, height, format,
-                                     names[0], stride, loaderPrivate);
+   img = dri2_create_image_from_winsys(screen, width, height, format,
+                                       &whandle, loaderPrivate);
    if (img == NULL)
       return NULL;
 
@@ -1107,7 +1117,7 @@ dri2_from_fds(__DRIscreen *screen, int width, int height, int fourcc,
               void *loaderPrivate)
 {
    __DRIimage *img;
-   int format, stride, dri_components;
+   int format, dri_components;
 
    if (num_fds != 1)
       return NULL;
@@ -1118,11 +1128,8 @@ dri2_from_fds(__DRIscreen *screen, int width, int height, int fourcc,
    if (format == -1)
       return NULL;
 
-   /* Strides are in bytes not pixels. */
-   stride = strides[0] /4;
-
    img = dri2_create_image_from_fd(screen, width, height, format,
-                                   fds[0], stride, loaderPrivate);
+                                   fds[0], strides[0], loaderPrivate);
    if (img == NULL)
       return NULL;
 
@@ -1143,7 +1150,7 @@ dri2_from_dma_bufs(__DRIscreen *screen,
                    void *loaderPrivate)
 {
    __DRIimage *img;
-   int format, stride, dri_components;
+   int format, dri_components;
 
    if (num_fds != 1 || offsets[0] != 0) {
       *error = __DRI_IMAGE_ERROR_BAD_MATCH;
@@ -1156,11 +1163,8 @@ dri2_from_dma_bufs(__DRIscreen *screen,
       return NULL;
    }
 
-   /* Strides are in bytes not pixels. */
-   stride = strides[0] /4;
-
    img = dri2_create_image_from_fd(screen, width, height, format,
-                                   fds[0], stride, loaderPrivate);
+                                   fds[0], strides[0], loaderPrivate);
    if (img == NULL) {
       *error = __DRI_IMAGE_ERROR_BAD_ALLOC;
       return NULL;
