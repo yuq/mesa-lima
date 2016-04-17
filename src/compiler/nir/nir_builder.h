@@ -79,7 +79,6 @@ nir_ssa_undef(nir_builder *build, unsigned num_components, unsigned bit_size)
 {
    nir_ssa_undef_instr *undef =
       nir_ssa_undef_instr_create(build->shader, num_components, bit_size);
-   undef->def.bit_size = bit_size;
    if (!undef)
       return NULL;
 
