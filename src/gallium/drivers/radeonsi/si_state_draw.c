@@ -662,10 +662,14 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB_META) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_META) | EVENT_INDEX(0));
+		/* needed for wait for idle in SURFACE_SYNC */
+		assert(sctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB);
 	}
 	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB_META) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_DB_META) | EVENT_INDEX(0));
+		/* needed for wait for idle in SURFACE_SYNC */
+		assert(sctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB);
 	}
 	if (sctx->flags & SI_CONTEXT_FLUSH_WITH_INV_L2) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
