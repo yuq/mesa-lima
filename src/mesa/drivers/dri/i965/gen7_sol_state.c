@@ -370,9 +370,10 @@ gen7_save_primitives_written_counters(struct brw_context *brw,
 
    /* Emit MI_STORE_REGISTER_MEM commands to write the values. */
    for (int i = 0; i < streams; i++) {
+      int offset = (obj->prim_count_buffer_index + i) * sizeof(uint64_t);
       brw_store_register_mem64(brw, obj->prim_count_bo,
                                GEN7_SO_NUM_PRIMS_WRITTEN(i),
-                               obj->prim_count_buffer_index + i);
+                               offset);
    }
 
    /* Update where to write data to. */
