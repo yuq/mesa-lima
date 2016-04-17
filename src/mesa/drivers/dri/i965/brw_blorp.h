@@ -225,7 +225,10 @@ struct brw_blorp_params
    struct brw_blorp_surface_info src;
    struct brw_blorp_surface_info dst;
    enum gen6_hiz_op hiz_op;
-   unsigned fast_clear_op;
+   union {
+      unsigned fast_clear_op;
+      unsigned resolve_type;
+   };
    bool color_write_disable[4];
    struct brw_blorp_wm_push_constants wm_push_consts;
    unsigned num_varyings;

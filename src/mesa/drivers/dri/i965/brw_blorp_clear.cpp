@@ -412,7 +412,10 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
    brw_get_resolve_rect(brw, mt, &params.x0, &params.y0,
                         &params.x1, &params.y1);
 
-   params.fast_clear_op = GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE;
+   if (intel_miptree_is_lossless_compressed(brw, mt))
+      params.resolve_type = GEN9_PS_RENDER_TARGET_RESOLVE_FULL;
+   else
+      params.resolve_type = GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE;
 
    /* Note: there is no need to initialize push constants because it doesn't
     * matter what data gets dispatched to the render target.  However, we must
