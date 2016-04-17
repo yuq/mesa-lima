@@ -724,6 +724,45 @@ lower_packed_varyings_gs_splicer::visit_leave(ir_emit_vertex *ev)
    return visit_continue;
 }
 
+/**
+ * Visitor that splices varying packing code before every return.
+ */
+class lower_packed_varyings_return_splicer : public ir_hierarchical_visitor
+{
+public:
+   explicit lower_packed_varyings_return_splicer(void *mem_ctx,
+                                                 const exec_list *instructions);
+
+   virtual ir_visitor_status visit_leave(ir_return *ret);
+
+private:
+   /**
+    * Memory context used to allocate new instructions for the shader.
+    */
+   void * const mem_ctx;
+
+   /**
+    * Instructions that should be spliced into place before each return.
+    */
+   const exec_list *instructions;
+};
+
+
+lower_packed_varyings_return_splicer::lower_packed_varyings_return_splicer(
+      void *mem_ctx, const exec_list *instructions)
+   : mem_ctx(mem_ctx), instructions(instructions)
+{
+}
+
+
+ir_visitor_status
+lower_packed_varyings_return_splicer::visit_leave(ir_return *ret)
+{
+   foreach_in_list(ir_instruction, ir, this->instructions) {
+      ret->insert_before(ir->clone(this->mem_ctx, NULL));
+   }
+   return visit_continue;
+}
 
 void
 lower_packed_varyings(void *mem_ctx, unsigned locations_used,
@@ -757,11 +796,22 @@ lower_packed_varyings(void *mem_ctx, unsigned locations_used,
          /* Now update all the EmitVertex instances */
          splicer.run(instructions);
       } else {
-         /* For other shader types, outputs need to be lowered at the end of
-          * main()
+         /* For other shader types, outputs need to be lowered before each
+          * return statement and at the end of main()
           */
-         main_func_sig->body.append_list(&new_variables);
-         main_func_sig->body.append_list(&new_instructions);
+
+         lower_packed_varyings_return_splicer splicer(mem_ctx, &new_instructions);
+
+         main_func_sig->body.head->insert_before(&new_variables);
+
+         splicer.run(instructions);
+
+         /* Lower outputs at the end of main() if the last instruction is not
+          * a return statement
+          */
+         if (((ir_instruction*)instructions->get_tail())->ir_type != ir_type_return) {
+            main_func_sig->body.append_list(&new_instructions);
+         }
       }
    } else {
       /* Shader inputs need to be lowered at the beginning of main() */
