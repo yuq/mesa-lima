@@ -89,6 +89,7 @@
 #define EVENT_TYPE_SAMPLE_PIPELINESTAT		30
 #define EVENT_TYPE_SO_VGTSTREAMOUT_FLUSH	0x1f
 #define EVENT_TYPE_SAMPLE_STREAMOUTSTATS	0x20
+#define EVENT_TYPE_BOTTOM_OF_PIPE_TS		40
 #define EVENT_TYPE_FLUSH_AND_INV_DB_META       0x2c /* supported on r700+ */
 #define EVENT_TYPE_FLUSH_AND_INV_CB_META	46 /* supported on r700+ */
 #define		EVENT_TYPE(x)                           ((x) << 0)
