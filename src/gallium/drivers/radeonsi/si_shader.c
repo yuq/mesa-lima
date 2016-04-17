@@ -2891,6 +2891,17 @@ static void emit_optimization_barrier(struct si_shader_context *ctx)
 	LLVMBuildCall(builder, inlineasm, NULL, 0, "");
 }
 
+static void emit_waitcnt(struct si_shader_context *ctx)
+{
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef args[1] = {
+		lp_build_const_int32(gallivm, 0xf70)
+	};
+	lp_build_intrinsic(builder, "llvm.amdgcn.s.waitcnt",
+			   ctx->voidt, args, 1, LLVMNoUnwindAttribute);
+}
+
 static void membar_emit(
 		const struct lp_build_tgsi_action *action,
 		struct lp_build_tgsi_context *bld_base,
@@ -2898,14 +2909,7 @@ static void membar_emit(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
-	/* Since memoryBarrier only makes guarantees about atomics and
-	 * coherent image accesses (which bypass TC L1), we do not need to emit
-	 * any special cache handling here.
-	 *
-	 * We do have to prevent LLVM from re-ordering loads across
-	 * the barrier though.
-	 */
-	emit_optimization_barrier(ctx);
+	emit_waitcnt(ctx);
 }
 
 static LLVMValueRef
@@ -3265,7 +3269,7 @@ static void load_emit(
 	}
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
-		emit_optimization_barrier(ctx);
+		emit_waitcnt(ctx);
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
 		load_emit_buffer(ctx, emit_data);
@@ -3455,6 +3459,7 @@ static void store_emit(
 		struct lp_build_tgsi_context *bld_base,
 		struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
@@ -3462,11 +3467,16 @@ static void store_emit(
 	char intrinsic_name[32];
 	char coords_type[8];
 
-	if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER) {
-		store_emit_buffer(si_shader_context(bld_base), emit_data);
+	if (inst->Dst[0].Register.File == TGSI_FILE_MEMORY) {
+		store_emit_memory(ctx, emit_data);
 		return;
-	} else if (inst->Dst[0].Register.File == TGSI_FILE_MEMORY) {
-		store_emit_memory(si_shader_context(bld_base), emit_data);
+	}
+
+	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
+		emit_waitcnt(ctx);
+
+	if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER) {
+		store_emit_buffer(ctx, emit_data);
 		return;
 	}
 
