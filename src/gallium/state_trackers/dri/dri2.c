@@ -101,6 +101,31 @@ static int convert_to_fourcc(int format)
    return format;
 }
 
+static enum pipe_format dri2_format_to_pipe_format (int format)
+{
+   enum pipe_format pf;
+
+   switch (format) {
+   case __DRI_IMAGE_FORMAT_RGB565:
+      pf = PIPE_FORMAT_B5G6R5_UNORM;
+      break;
+   case __DRI_IMAGE_FORMAT_XRGB8888:
+      pf = PIPE_FORMAT_BGRX8888_UNORM;
+      break;
+   case __DRI_IMAGE_FORMAT_ARGB8888:
+      pf = PIPE_FORMAT_BGRA8888_UNORM;
+      break;
+   case __DRI_IMAGE_FORMAT_ABGR8888:
+      pf = PIPE_FORMAT_RGBA8888_UNORM;
+      break;
+   default:
+      pf = PIPE_FORMAT_NONE;
+      break;
+   }
+
+   return pf;
+}
+
 /**
  * DRI2 flush extension.
  */
@@ -722,23 +747,7 @@ dri2_create_image_from_winsys(__DRIscreen *_screen,
 
    tex_usage = PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW;
 
-   switch (format) {
-   case __DRI_IMAGE_FORMAT_RGB565:
-      pf = PIPE_FORMAT_B5G6R5_UNORM;
-      break;
-   case __DRI_IMAGE_FORMAT_XRGB8888:
-      pf = PIPE_FORMAT_BGRX8888_UNORM;
-      break;
-   case __DRI_IMAGE_FORMAT_ARGB8888:
-      pf = PIPE_FORMAT_BGRA8888_UNORM;
-      break;
-   case __DRI_IMAGE_FORMAT_ABGR8888:
-      pf = PIPE_FORMAT_RGBA8888_UNORM;
-      break;
-   default:
-      pf = PIPE_FORMAT_NONE;
-      break;
-   }
+   pf = dri2_format_to_pipe_format (format);
    if (pf == PIPE_FORMAT_NONE)
       return NULL;
 
@@ -845,23 +854,7 @@ dri2_create_image(__DRIscreen *_screen,
       tex_usage |= PIPE_BIND_CURSOR;
    }
 
-   switch (format) {
-   case __DRI_IMAGE_FORMAT_RGB565:
-      pf = PIPE_FORMAT_B5G6R5_UNORM;
-      break;
-   case __DRI_IMAGE_FORMAT_XRGB8888:
-      pf = PIPE_FORMAT_BGRX8888_UNORM;
-      break;
-   case __DRI_IMAGE_FORMAT_ARGB8888:
-      pf = PIPE_FORMAT_BGRA8888_UNORM;
-      break;
-   case __DRI_IMAGE_FORMAT_ABGR8888:
-      pf = PIPE_FORMAT_RGBA8888_UNORM;
-      break;
-   default:
-      pf = PIPE_FORMAT_NONE;
-      break;
-   }
+   pf = dri2_format_to_pipe_format (format);
    if (pf == PIPE_FORMAT_NONE)
       return NULL;
 
