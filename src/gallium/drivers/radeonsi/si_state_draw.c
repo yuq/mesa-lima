@@ -706,8 +706,16 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_STREAMOUT_SYNC) | EVENT_INDEX(0));
 	}
 
+	/* Make sure ME is idle (it executes most packets) before continuing.
+	 * This prevents read-after-write hazards between PFP and ME.
+	 */
+	if (cp_coher_cntl || (sctx->flags & SI_CONTEXT_CS_PARTIAL_FLUSH)) {
+		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
+		radeon_emit(cs, 0);
+	}
+
 	/* When one of the DEST_BASE flags is set, SURFACE_SYNC waits for idle.
-	 * Therefore, it should be last.
+	 * Therefore, it should be last. Done in PFP.
 	 */
 	if (cp_coher_cntl) {
 		/* ACQUIRE_MEM is only required on a compute ring. */
