@@ -35,6 +35,7 @@
 #define FLUSH_MAP_CACHE				(1 << 0)
 #define INHIBIT_FLUSH_RENDER_CACHE		(1 << 2)
 
+#define MI_STORE_DATA_IMM		(CMD_MI | (0x20 << 23))
 #define MI_LOAD_REGISTER_IMM		(CMD_MI | (0x22 << 23))
 
 #define MI_FLUSH_DW			(CMD_MI | (0x26 << 23) | 2)

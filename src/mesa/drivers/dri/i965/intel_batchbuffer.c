@@ -600,3 +600,48 @@ brw_store_register_mem64(struct brw_context *brw,
       ADVANCE_BATCH();
    }
 }
+
+/*
+ * Write 32-bits of immediate data to a GPU memory buffer.
+ */
+void
+brw_store_data_imm32(struct brw_context *brw, drm_intel_bo *bo,
+                     uint32_t offset, uint32_t imm)
+{
+   const int len = brw->gen >= 8 ? 4 : 3;
+   assert(brw->gen >= 6);
+
+   BEGIN_BATCH(len);
+   OUT_BATCH(MI_STORE_DATA_IMM | (len - 2));
+   if (len > 3)
+      OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  offset);
+   else
+      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                offset);
+   OUT_BATCH(imm);
+   ADVANCE_BATCH();
+}
+
+/*
+ * Write 64-bits of immediate data to a GPU memory buffer.
+ */
+void
+brw_store_data_imm64(struct brw_context *brw, drm_intel_bo *bo,
+                     uint32_t offset, uint64_t imm)
+{
+   const int len = brw->gen >= 8 ? 5 : 4;
+   assert(brw->gen >= 6);
+
+   BEGIN_BATCH(len);
+   OUT_BATCH(MI_STORE_DATA_IMM | (len - 2));
+   if (len > 4)
+      OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  offset);
+   else
+      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                offset);
+   OUT_BATCH(imm & 0xffffffffu);
+   OUT_BATCH(imm >> 32);
+   ADVANCE_BATCH();
+}
