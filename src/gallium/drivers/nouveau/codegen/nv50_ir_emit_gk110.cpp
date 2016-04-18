@@ -54,6 +54,7 @@ private:
    void setCAddress14(const ValueRef&);
    void setShortImmediate(const Instruction *, const int s);
    void setImmediate32(const Instruction *, const int s, Modifier);
+   void setSUConst16(const Instruction *, const int s);
 
    void modNegAbsF32_3b(const Instruction *, const int s);
 
@@ -61,6 +62,8 @@ private:
    void emitInterpMode(const Instruction *);
    void emitLoadStoreType(DataType ty, const int pos);
    void emitCachingMode(CacheMode c, const int pos);
+   void emitSUGType(DataType, const int pos);
+   void emitSUCachingMode(CacheMode c);
 
    inline uint8_t getSRegEncoding(const ValueRef&);
 
@@ -131,6 +134,9 @@ private:
    void emitFlow(const Instruction *);
 
    void emitVOTE(const Instruction *);
+
+   void emitSULDGB(const TexInstruction *);
+   void emitSUSTGx(const TexInstruction *);
 
    inline void defId(const ValueDef&, const int pos);
    inline void srcId(const ValueRef&, const int pos);
@@ -1472,6 +1478,148 @@ CodeEmitterGK110::emitVOTE(const Instruction *i)
 }
 
 void
+CodeEmitterGK110::emitSUGType(DataType ty, const int pos)
+{
+   uint8_t n = 0;
+
+   switch (ty) {
+   case TYPE_S32: n = 1; break;
+   case TYPE_U8:  n = 2; break;
+   case TYPE_S8:  n = 3; break;
+   default:
+      assert(ty == TYPE_U32);
+      break;
+   }
+   code[pos / 32] |= n << (pos % 32);
+}
+
+void
+CodeEmitterGK110::emitSUCachingMode(CacheMode c)
+{
+   uint8_t n = 0;
+
+   switch (c) {
+   case CACHE_CA:
+// case CACHE_WB:
+      n = 0;
+      break;
+   case CACHE_CG:
+      n = 1;
+      break;
+   case CACHE_CS:
+      n = 2;
+      break;
+   case CACHE_CV:
+// case CACHE_WT:
+      n = 3;
+      break;
+   default:
+      assert(!"invalid caching mode");
+      break;
+   }
+   code[0] |= (n & 1) << 31;
+   code[1] |= (n & 2) >> 1;
+}
+
+void
+CodeEmitterGK110::setSUConst16(const Instruction *i, const int s)
+{
+   const uint32_t offset = i->getSrc(s)->reg.data.offset;
+
+   assert(offset == (offset & 0xfffc));
+
+   code[0] |= offset << 21;
+   code[1] |= offset >> 11;
+   code[1] |= i->getSrc(s)->reg.fileIndex << 5;
+}
+
+void
+CodeEmitterGK110::emitSULDGB(const TexInstruction *i)
+{
+   code[0] = 0x00000002;
+   code[1] = 0x30000000 | (i->subOp << 14);
+
+   if (i->src(1).getFile() == FILE_MEMORY_CONST) {
+      emitLoadStoreType(i->dType, 0x38);
+      emitCachingMode(i->cache, 0x36);
+
+      // format
+      setSUConst16(i, 1);
+   } else {
+      assert(i->src(1).getFile() == FILE_GPR);
+      code[1] |= 0x49800000;
+
+      emitLoadStoreType(i->dType, 0x21);
+      emitSUCachingMode(i->cache);
+
+      srcId(i->src(1), 23);
+   }
+
+   emitSUGType(i->sType, 0x34);
+
+   emitPredicate(i);
+   defId(i->def(0), 2); // destination
+   srcId(i->src(0), 10); // address
+
+   // surface predicate
+   if (!i->srcExists(2) || (i->predSrc == 2)) {
+      code[1] |= 0x7 << 10;
+   } else {
+      if (i->src(2).mod == Modifier(NV50_IR_MOD_NOT))
+         code[1] |= 1 << 13;
+      srcId(i->src(2), 32 + 10);
+   }
+}
+
+void
+CodeEmitterGK110::emitSUSTGx(const TexInstruction *i)
+{
+   assert(i->op == OP_SUSTP);
+
+   code[0] = 0x00000002;
+   code[1] = 0x38000000;
+
+   if (i->src(1).getFile() == FILE_MEMORY_CONST) {
+      code[0] |= i->subOp << 2;
+
+      if (i->op == OP_SUSTP)
+         code[0] |= i->tex.mask << 4;
+
+      emitSUGType(i->sType, 0x8);
+      emitCachingMode(i->cache, 0x36);
+
+      // format
+      setSUConst16(i, 1);
+   } else {
+      assert(i->src(1).getFile() == FILE_GPR);
+
+      code[0] |= i->subOp << 23;
+      code[1] |= 0x41c00000;
+
+      if (i->op == OP_SUSTP)
+         code[0] |= i->tex.mask << 25;
+
+      emitSUGType(i->sType, 0x1d);
+      emitSUCachingMode(i->cache);
+
+      srcId(i->src(1), 2);
+   }
+
+   emitPredicate(i);
+   srcId(i->src(0), 10); // address
+   srcId(i->src(3), 42); // values
+
+   // surface predicate
+   if (!i->srcExists(2) || (i->predSrc == 2)) {
+      code[1] |= 0x7 << 18;
+   } else {
+      if (i->src(2).mod == Modifier(NV50_IR_MOD_NOT))
+         code[1] |= 1 << 21;
+      srcId(i->src(2), 32 + 18);
+   }
+}
+
+void
 CodeEmitterGK110::emitAFETCH(const Instruction *i)
 {
    uint32_t offset = i->src(0).get()->reg.data.offset & 0x7ff;
@@ -2196,6 +2344,13 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_VOTE:
       emitVOTE(insn);
+      break;
+   case OP_SULDB:
+      emitSULDGB(insn->asTex());
+      break;
+   case OP_SUSTB:
+   case OP_SUSTP:
+      emitSUSTGx(insn->asTex());
       break;
    case OP_PHI:
    case OP_UNION:
