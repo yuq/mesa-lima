@@ -908,7 +908,7 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			unsigned element_size, unsigned index_stride, uint64_t offset)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_buffer_resources *buffers = &sctx->rw_buffers[shader];
+	struct si_buffer_resources *buffers = &sctx->rw_buffers;
 
 	if (shader >= SI_NUM_SHADERS)
 		return;
@@ -1002,7 +1002,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 				     const unsigned *offsets)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_buffer_resources *buffers = &sctx->rw_buffers[PIPE_SHADER_VERTEX];
+	struct si_buffer_resources *buffers = &sctx->rw_buffers;
 	unsigned old_num_targets = sctx->b.streamout.num_targets;
 	unsigned i, bufidx;
 
@@ -1204,33 +1204,27 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 		}
 	}
 
-	/* Read/Write buffers. */
-	for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
-		struct si_buffer_resources *buffers = &sctx->rw_buffers[shader];
-		uint64_t mask = buffers->desc.enabled_mask;
+	/* Streamout buffers. (other internal buffers can't be invalidated) */
+	for (i = SI_VS_STREAMOUT_BUF0; i <= SI_VS_STREAMOUT_BUF3; i++) {
+		struct si_buffer_resources *buffers = &sctx->rw_buffers;
 
-		while (mask) {
-			i = u_bit_scan64(&mask);
-			if (buffers->buffers[i] == buf) {
-				si_desc_reset_buffer_offset(ctx, buffers->desc.list + i*4,
-							    old_va, buf);
-				buffers->desc.dirty_mask |= 1llu << i;
+		if (buffers->buffers[i] != buf)
+			continue;
 
-				radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-						      rbuffer, buffers->shader_usage,
-						      buffers->priority);
+		si_desc_reset_buffer_offset(ctx, buffers->desc.list + i*4,
+					    old_va, buf);
+		buffers->desc.dirty_mask |= 1u << i;
 
-				if (i >= SI_VS_STREAMOUT_BUF0 && shader == PIPE_SHADER_VERTEX) {
-					/* Update the streamout state. */
-					if (sctx->b.streamout.begin_emitted) {
-						r600_emit_streamout_end(&sctx->b);
-					}
-					sctx->b.streamout.append_bitmask =
-						sctx->b.streamout.enabled_mask;
-					r600_streamout_buffers_dirty(&sctx->b);
-				}
-			}
-		}
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+					  rbuffer, buffers->shader_usage,
+					  buffers->priority);
+
+		/* Update the streamout state. */
+		if (sctx->b.streamout.begin_emitted)
+			r600_emit_streamout_end(&sctx->b);
+		sctx->b.streamout.append_bitmask =
+				sctx->b.streamout.enabled_mask;
+		r600_streamout_buffers_dirty(&sctx->b);
 	}
 
 	/* Constant and shader buffers. */
@@ -1297,7 +1291,6 @@ static void si_mark_shader_pointers_dirty(struct si_context *sctx,
 					  unsigned shader)
 {
 	sctx->const_buffers[shader].desc.pointer_dirty = true;
-	sctx->rw_buffers[shader].desc.pointer_dirty = true;
 	sctx->shader_buffers[shader].desc.pointer_dirty = true;
 	sctx->samplers[shader].views.desc.pointer_dirty = true;
 	sctx->images[shader].desc.pointer_dirty = true;
@@ -1315,6 +1308,7 @@ static void si_shader_userdata_begin_new_cs(struct si_context *sctx)
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		si_mark_shader_pointers_dirty(sctx, i);
 	}
+	sctx->rw_buffers.desc.pointer_dirty = true;
 }
 
 /* Set a base register address for user data constants in the given shader.
@@ -1393,22 +1387,23 @@ void si_emit_graphics_shader_userdata(struct si_context *sctx,
 	uint32_t *sh_base = sctx->shader_userdata.sh_base;
 
 	if (sctx->gs_shader.cso) {
-		/* The VS copy shader needs these for clipping, streamout, and rings. */
+		/* The VS copy shader needs this for clipping. */
 		unsigned vs_base = R_00B130_SPI_SHADER_USER_DATA_VS_0;
 		unsigned i = PIPE_SHADER_VERTEX;
 
 		si_emit_shader_pointer(sctx, &sctx->const_buffers[i].desc, vs_base, true);
-		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc, vs_base, true);
+	}
 
-		if (sctx->tes_shader.cso) {
-			/* The TESSEVAL shader needs this for the ESGS ring buffer. */
-			si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc,
-					       R_00B330_SPI_SHADER_USER_DATA_ES_0, true);
-		}
-	} else if (sctx->tes_shader.cso) {
-		/* The TESSEVAL shader needs this for streamout. */
-		si_emit_shader_pointer(sctx, &sctx->rw_buffers[PIPE_SHADER_VERTEX].desc,
+	if (sctx->rw_buffers.desc.pointer_dirty) {
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers.desc,
 				       R_00B130_SPI_SHADER_USER_DATA_VS_0, true);
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers.desc,
+				       R_00B230_SPI_SHADER_USER_DATA_GS_0, true);
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers.desc,
+				       R_00B330_SPI_SHADER_USER_DATA_ES_0, true);
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers.desc,
+				       R_00B430_SPI_SHADER_USER_DATA_HS_0, true);
+		sctx->rw_buffers.desc.pointer_dirty = false;
 	}
 
 	for (i = 0; i < SI_NUM_GRAPHICS_SHADERS; i++) {
@@ -1416,9 +1411,6 @@ void si_emit_graphics_shader_userdata(struct si_context *sctx,
 
 		if (!base)
 			continue;
-
-		if (i != PIPE_SHADER_TESS_EVAL)
-			si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc, base, false);
 
 		si_emit_shader_pointer(sctx, &sctx->const_buffers[i].desc, base, false);
 		si_emit_shader_pointer(sctx, &sctx->shader_buffers[i].desc, base, false);
@@ -1454,10 +1446,6 @@ void si_init_all_descriptors(struct si_context *sctx)
 					 SI_NUM_CONST_BUFFERS, SI_SGPR_CONST_BUFFERS,
 					 RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER,
 					 &ce_offset);
-		si_init_buffer_resources(&sctx->rw_buffers[i],
-					 SI_NUM_RW_BUFFERS, SI_SGPR_RW_BUFFERS,
-					 RADEON_USAGE_READWRITE, RADEON_PRIO_RINGS_STREAMOUT,
-					 &ce_offset);
 		si_init_buffer_resources(&sctx->shader_buffers[i],
 					 SI_NUM_SHADER_BUFFERS, SI_SGPR_SHADER_BUFFERS,
 					 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RW_BUFFER,
@@ -1472,6 +1460,10 @@ void si_init_all_descriptors(struct si_context *sctx)
 				    null_image_descriptor, &ce_offset);
 	}
 
+	si_init_buffer_resources(&sctx->rw_buffers,
+				 SI_NUM_RW_BUFFERS, SI_SGPR_RW_BUFFERS,
+				 RADEON_USAGE_READWRITE, RADEON_PRIO_RINGS_STREAMOUT,
+				 &ce_offset);
 	si_init_descriptors(&sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFERS,
 			    4, SI_NUM_VERTEX_BUFFERS, NULL, NULL);
 
@@ -1504,8 +1496,6 @@ bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		if (!si_upload_descriptors(sctx, &sctx->const_buffers[i].desc,
 		                           &sctx->shader_userdata.atom) ||
-		    !si_upload_descriptors(sctx, &sctx->rw_buffers[i].desc,
-		                           &sctx->shader_userdata.atom) ||
 		    !si_upload_descriptors(sctx, &sctx->shader_buffers[i].desc,
 		                           &sctx->shader_userdata.atom) ||
 		    !si_upload_descriptors(sctx, &sctx->samplers[i].views.desc,
@@ -1514,7 +1504,9 @@ bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
 		                           &sctx->shader_userdata.atom))
 			return false;
 	}
-	return si_upload_vertex_buffer_descriptors(sctx);
+	return si_upload_descriptors(sctx, &sctx->rw_buffers.desc,
+				     &sctx->shader_userdata.atom) &&
+	       si_upload_vertex_buffer_descriptors(sctx);
 }
 
 bool si_upload_compute_shader_descriptors(struct si_context *sctx)
@@ -1538,11 +1530,11 @@ void si_release_all_descriptors(struct si_context *sctx)
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		si_release_buffer_resources(&sctx->const_buffers[i]);
-		si_release_buffer_resources(&sctx->rw_buffers[i]);
 		si_release_buffer_resources(&sctx->shader_buffers[i]);
 		si_release_sampler_views(&sctx->samplers[i].views);
 		si_release_image_views(&sctx->images[i]);
 	}
+	si_release_buffer_resources(&sctx->rw_buffers);
 	si_release_descriptors(&sctx->vertex_buffers);
 }
 
@@ -1552,11 +1544,11 @@ void si_all_descriptors_begin_new_cs(struct si_context *sctx)
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		si_buffer_resources_begin_new_cs(sctx, &sctx->const_buffers[i]);
-		si_buffer_resources_begin_new_cs(sctx, &sctx->rw_buffers[i]);
 		si_buffer_resources_begin_new_cs(sctx, &sctx->shader_buffers[i]);
 		si_sampler_views_begin_new_cs(sctx, &sctx->samplers[i].views);
 		si_image_views_begin_new_cs(sctx, &sctx->images[i]);
 	}
+	si_buffer_resources_begin_new_cs(sctx, &sctx->rw_buffers);
 	si_vertex_buffers_begin_new_cs(sctx);
 	si_shader_userdata_begin_new_cs(sctx);
 }
