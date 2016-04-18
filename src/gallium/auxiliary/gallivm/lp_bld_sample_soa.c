@@ -3439,14 +3439,7 @@ void
 lp_build_size_query_soa(struct gallivm_state *gallivm,
                         const struct lp_static_texture_state *static_state,
                         struct lp_sampler_dynamic_state *dynamic_state,
-                        struct lp_type int_type,
-                        unsigned texture_unit,
-                        unsigned target,
-                        LLVMValueRef context_ptr,
-                        boolean is_sviewinfo,
-                        enum lp_sampler_lod_property lod_property,
-                        LLVMValueRef explicit_lod,
-                        LLVMValueRef *sizes_out)
+                        const struct lp_sampler_size_query_params *params)
 {
    LLVMValueRef lod, level, size;
    LLVMValueRef first_level = NULL;
@@ -3454,6 +3447,9 @@ lp_build_size_query_soa(struct gallivm_state *gallivm,
    boolean has_array;
    unsigned num_lods = 1;
    struct lp_build_context bld_int_vec4;
+   LLVMValueRef context_ptr = params->context_ptr;
+   unsigned texture_unit = params->texture_unit;
+   unsigned target = params->target;
 
    if (static_state->format == PIPE_FORMAT_NONE) {
       /*
@@ -3461,9 +3457,9 @@ lp_build_size_query_soa(struct gallivm_state *gallivm,
        * all zero as mandated by d3d10 in this case.
        */
       unsigned chan;
-      LLVMValueRef zero = lp_build_const_vec(gallivm, int_type, 0.0F);
+      LLVMValueRef zero = lp_build_const_vec(gallivm, params->int_type, 0.0F);
       for (chan = 0; chan < 4; chan++) {
-         sizes_out[chan] = zero;
+         params->sizes_out[chan] = zero;
       }
       return;
    }
@@ -3508,13 +3504,13 @@ lp_build_size_query_soa(struct gallivm_state *gallivm,
       break;
    }
 
-   assert(!int_type.floating);
+   assert(!params->int_type.floating);
 
    lp_build_context_init(&bld_int_vec4, gallivm, lp_type_int_vec(32, 128));
 
-   if (explicit_lod) {
+   if (params->explicit_lod) {
       /* FIXME: this needs to honor per-element lod */
-      lod = LLVMBuildExtractElement(gallivm->builder, explicit_lod,
+      lod = LLVMBuildExtractElement(gallivm->builder, params->explicit_lod,
                                     lp_build_const_int32(gallivm, 0), "");
       first_level = dynamic_state->first_level(dynamic_state, gallivm,
                                                context_ptr, texture_unit);
@@ -3568,7 +3564,7 @@ lp_build_size_query_soa(struct gallivm_state *gallivm,
     * if level is out of bounds (note this can't cover unbound texture
     * here, which also requires returning zero).
     */
-   if (explicit_lod && is_sviewinfo) {
+   if (params->explicit_lod && params->is_sviewinfo) {
       LLVMValueRef last_level, out, out1;
       struct lp_build_context leveli_bld;
 
@@ -3590,13 +3586,13 @@ lp_build_size_query_soa(struct gallivm_state *gallivm,
       size = lp_build_andnot(&bld_int_vec4, size, out);
    }
    for (i = 0; i < dims + (has_array ? 1 : 0); i++) {
-      sizes_out[i] = lp_build_extract_broadcast(gallivm, bld_int_vec4.type, int_type,
+      params->sizes_out[i] = lp_build_extract_broadcast(gallivm, bld_int_vec4.type, params->int_type,
                                                 size,
                                                 lp_build_const_int32(gallivm, i));
    }
-   if (is_sviewinfo) {
+   if (params->is_sviewinfo) {
       for (; i < 4; i++) {
-         sizes_out[i] = lp_build_const_vec(gallivm, int_type, 0.0);
+         params->sizes_out[i] = lp_build_const_vec(gallivm, params->int_type, 0.0);
       }
    }
 
@@ -3604,7 +3600,7 @@ lp_build_size_query_soa(struct gallivm_state *gallivm,
     * if there's no explicit_lod (buffers, rects) queries requiring nr of
     * mips would be illegal.
     */
-   if (is_sviewinfo && explicit_lod) {
+   if (params->is_sviewinfo && params->explicit_lod) {
       struct lp_build_context bld_int_scalar;
       LLVMValueRef num_levels;
       lp_build_context_init(&bld_int_scalar, gallivm, lp_type_int(32));
@@ -3620,7 +3616,7 @@ lp_build_size_query_soa(struct gallivm_state *gallivm,
          num_levels = lp_build_sub(&bld_int_scalar, last_level, first_level);
          num_levels = lp_build_add(&bld_int_scalar, num_levels, bld_int_scalar.one);
       }
-      sizes_out[3] = lp_build_broadcast(gallivm, lp_build_vec_type(gallivm, int_type),
+      params->sizes_out[3] = lp_build_broadcast(gallivm, lp_build_vec_type(gallivm, params->int_type),
                                         num_levels);
    }
 }

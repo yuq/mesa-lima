@@ -2664,6 +2664,7 @@ emit_size_query( struct lp_build_tgsi_soa_context *bld,
    unsigned i;
    unsigned unit = inst->Src[1].Register.Index;
    unsigned target, pipe_target;
+   struct lp_sampler_size_query_params params;
 
    if (is_sviewinfo) {
       target = bld->sv[unit].Resource;
@@ -2701,15 +2702,18 @@ emit_size_query( struct lp_build_tgsi_soa_context *bld,
 
    pipe_target = tgsi_to_pipe_tex_target(target);
 
+   params.int_type = bld->bld_base.int_bld.type;
+   params.texture_unit = unit;
+   params.target = pipe_target;
+   params.context_ptr = bld->context_ptr;
+   params.is_sviewinfo = TRUE;
+   params.lod_property = lod_property;
+   params.explicit_lod = explicit_lod;
+   params.sizes_out = sizes_out;
+
    bld->sampler->emit_size_query(bld->sampler,
                                  bld->bld_base.base.gallivm,
-                                 bld->bld_base.int_bld.type,
-                                 unit, pipe_target,
-                                 bld->context_ptr,
-                                 TRUE,
-                                 lod_property,
-                                 explicit_lod,
-                                 sizes_out);
+                                 &params);
 }
 
 static boolean
