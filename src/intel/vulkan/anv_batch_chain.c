@@ -455,12 +455,13 @@ emit_batch_buffer_start(struct anv_cmd_buffer *cmd_buffer,
    const uint32_t gen8_length =
       GEN8_MI_BATCH_BUFFER_START_length - GEN8_MI_BATCH_BUFFER_START_length_bias;
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_START,
-      .DWordLength = cmd_buffer->device->info.gen < 8 ?
-                     gen7_length : gen8_length,
-      ._2ndLevelBatchBuffer = _1stlevelbatch,
-      .AddressSpaceIndicator = ASI_PPGTT,
-      .BatchBufferStartAddress = { bo, offset });
+   anv_batch_emit_blk(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_START, bbs) {
+      bbs.DWordLength               = cmd_buffer->device->info.gen < 8 ?
+                                      gen7_length : gen8_length;
+      bbs._2ndLevelBatchBuffer      = _1stlevelbatch;
+      bbs.AddressSpaceIndicator     = ASI_PPGTT;
+      bbs.BatchBufferStartAddress   = (struct anv_address) { bo, offset };
+   }
 }
 
 static void
@@ -711,11 +712,11 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
       cmd_buffer->batch.end += GEN8_MI_BATCH_BUFFER_START_length * 4;
       assert(cmd_buffer->batch.end == batch_bo->bo.map + batch_bo->bo.size);
 
-      anv_batch_emit(&cmd_buffer->batch, GEN7_MI_BATCH_BUFFER_END);
+      anv_batch_emit_blk(&cmd_buffer->batch, GEN7_MI_BATCH_BUFFER_END, bbe);
 
       /* Round batch up to an even number of dwords. */
       if ((cmd_buffer->batch.next - cmd_buffer->batch.start) & 4)
-         anv_batch_emit(&cmd_buffer->batch, GEN7_MI_NOOP);
+         anv_batch_emit_blk(&cmd_buffer->batch, GEN7_MI_NOOP, noop);
 
       cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_PRIMARY;
    }

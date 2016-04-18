@@ -1081,8 +1081,8 @@ VkResult anv_DeviceWaitIdle(
    batch.start = batch.next = cmds;
    batch.end = (void *) cmds + sizeof(cmds);
 
-   anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
-   anv_batch_emit(&batch, GEN7_MI_NOOP);
+   anv_batch_emit_blk(&batch, GEN7_MI_BATCH_BUFFER_END, bbe);
+   anv_batch_emit_blk(&batch, GEN7_MI_NOOP, noop);
 
    return anv_device_submit_simple_batch(device, &batch);
 }
@@ -1423,8 +1423,8 @@ VkResult anv_CreateFence(
    const uint32_t batch_offset = align_u32(sizeof(*fence), CACHELINE_SIZE);
    batch.next = batch.start = fence->bo.map + batch_offset;
    batch.end = fence->bo.map + fence->bo.size;
-   anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
-   anv_batch_emit(&batch, GEN7_MI_NOOP);
+   anv_batch_emit_blk(&batch, GEN7_MI_BATCH_BUFFER_END, bbe);
+   anv_batch_emit_blk(&batch, GEN7_MI_NOOP, noop);
 
    if (!device->info.has_llc) {
       assert(((uintptr_t) batch.start & CACHELINE_MASK) == 0);
