@@ -138,7 +138,7 @@ if HAVE_DRICOMMON
 SUBDIRS += state_trackers/dri targets/dri
 endif
 
-if HAVE_X11_DRIVER
+if HAVE_GALLIUM_XLIB_GLX
 SUBDIRS += state_trackers/glx/xlib targets/libgl-xlib
 endif
 

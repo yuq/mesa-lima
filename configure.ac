@@ -859,8 +859,8 @@ AC_ARG_ENABLE([dri3],
     [enable_dri3="$enableval"],
     [enable_dri3="$dri3_default"])
 AC_ARG_ENABLE([glx],
-    [AS_HELP_STRING([--enable-glx],
-        [enable GLX library @<:@default=enabled@:>@])],
+    [AS_HELP_STRING([--enable-glx@<:@=dri|xlib|gallium-xlib@:>@],
+        [enable the GLX library and choose an implementation @<:@default=auto@:>@])],
     [enable_glx="$enableval"],
     [enable_glx=yes])
 AC_ARG_ENABLE([osmesa],
@@ -926,11 +926,6 @@ AC_ARG_ENABLE([opencl_icd],
            @<:@default=disabled@:>@])],
     [enable_opencl_icd="$enableval"],
     [enable_opencl_icd=no])
-AC_ARG_ENABLE([xlib-glx],
-    [AS_HELP_STRING([--enable-xlib-glx],
-        [make GLX library Xlib-based instead of DRI-based @<:@default=disabled@:>@])],
-    [enable_xlib_glx="$enableval"],
-    [enable_xlib_glx=no])
 
 AC_ARG_ENABLE([gallium-tests],
     [AS_HELP_STRING([--enable-gallium-tests],
@@ -989,35 +984,55 @@ AM_CONDITIONAL(NEED_OPENGL_COMMON, test "x$enable_opengl" = xyes -o \
                                         "x$enable_gles1" = xyes -o \
                                         "x$enable_gles2" = xyes)
 
-if test "x$enable_glx" = xno; then
-    AC_MSG_WARN([GLX disabled, disabling Xlib-GLX])
-    enable_xlib_glx=no
+# Validate GLX options
+if test "x$enable_glx" = xyes; then
+    if test "x$enable_dri" = xyes; then
+        enable_glx=dri
+    elif test -n "$with_gallium_drivers"; then
+        enable_glx=gallium-xlib
+    else
+        enable_glx=xlib
+    fi
 fi
+case "x$enable_glx" in
+xdri | xxlib | xgallium-xlib)
+    # GLX requires OpenGL
+    if test "x$enable_opengl" = xno; then
+        AC_MSG_ERROR([GLX cannot be built without OpenGL])
+    fi
 
-if test "x$enable_dri$enable_xlib_glx" = xyesyes; then
-    AC_MSG_ERROR([DRI and Xlib-GLX cannot be built together])
-fi
+    # Check individual dependencies
+    case "x$enable_glx" in
+    xdri)
+        if test "x$enable_dri" = xno; then
+            AC_MSG_ERROR([DRI-based GLX requires DRI to be enabled])
+        fi
+        ;;
+    xxlib)
+        if test "x$enable_dri" = xyes; then
+            AC_MSG_ERROR([Xlib-based GLX cannot be built with DRI enabled])
+        fi
+        ;;
+    xgallium-xlib )
+        if test "x$enable_dri" = xyes; then
+            AC_MSG_ERROR([Xlib-based (Gallium) GLX cannot be built with DRI enabled])
+        fi
+        if test -z "$with_gallium_drivers"; then
+            AC_MSG_ERROR([Xlib-based (Gallium) GLX cannot be built without Gallium enabled])
+        fi
+        ;;
+    esac
+    ;;
+xno)
+    ;;
+*)
+    AC_MSG_ERROR([Illegal value for --enable-glx: $enable_glx])
+    ;;
+esac
 
-if test "x$enable_opengl$enable_xlib_glx" = xnoyes; then
-    AC_MSG_ERROR([Xlib-GLX cannot be built without OpenGL])
-fi
-
-# Disable GLX if OpenGL is not enabled
-if test "x$enable_glx$enable_opengl" = xyesno; then
-    AC_MSG_WARN([OpenGL not enabled, disabling GLX])
-    enable_glx=no
-fi
-
-# Disable GLX if DRI and Xlib-GLX are not enabled
-if test "x$enable_glx" = xyes -a \
-        "x$enable_dri" = xno -a \
-        "x$enable_xlib_glx" = xno; then
-    AC_MSG_WARN([Neither DRI nor Xlib-GLX enabled, disabling GLX])
-    enable_glx=no
-fi
-
-AM_CONDITIONAL(HAVE_DRI_GLX, test "x$enable_glx" = xyes -a \
-                                  "x$enable_dri" = xyes)
+AM_CONDITIONAL(HAVE_DRI_GLX, test "x$enable_glx" = xdri)
+AM_CONDITIONAL(HAVE_XLIB_GLX, test "x$enable_glx" = xxlib)
+AM_CONDITIONAL(HAVE_GALLIUM_XLIB_GLX, test "x$enable_glx" = xgallium-xlib)
 
 # Check for libdrm
 PKG_CHECK_MODULES([LIBDRM], [libdrm >= $LIBDRM_REQUIRED],
@@ -1072,10 +1087,6 @@ enable_shared_pipe_drivers=no
 dnl
 dnl Driver specific build directories
 dnl
-
-if test -n "$with_gallium_drivers" -a "x$enable_glx$enable_xlib_glx" = xyesyes; then
-    NEED_WINSYS_XLIB="yes"
-fi
 
 if test "x$enable_gallium_osmesa" = xyes; then
     if ! echo "$with_gallium_drivers" | grep -q 'swrast'; then
@@ -1269,8 +1280,8 @@ AC_ARG_ENABLE([driglx-direct],
 dnl
 dnl libGL configuration per driver
 dnl
-case "x$enable_glx$enable_xlib_glx" in
-xyesyes)
+case "x$enable_glx" in
+xxlib | xgallium-xlib)
     # Xlib-based GLX
     dri_modules="x11 xext xcb"
     PKG_CHECK_MODULES([XLIBGL], [$dri_modules])
@@ -1280,7 +1291,7 @@ xyesyes)
     GL_LIB_DEPS="$GL_LIB_DEPS $SELINUX_LIBS -lm $PTHREAD_LIBS $DLOPEN_LIBS"
     GL_PC_LIB_PRIV="$GL_PC_LIB_PRIV $SELINUX_LIBS -lm $PTHREAD_LIBS"
     ;;
-xyesno)
+xdri)
     # DRI-based GLX
     PKG_CHECK_MODULES([GLPROTO], [glproto >= $GLPROTO_REQUIRED])
 
@@ -1369,11 +1380,11 @@ AC_SUBST([HAVE_XF86VIDMODE])
 dnl
 dnl More GLX setup
 dnl
-case "x$enable_glx$enable_xlib_glx" in
-xyesyes)
+case "x$enable_glx" in
+xxlib | xgallium-xlib)
     DEFINES="$DEFINES -DUSE_XSHM"
     ;;
-xyesno)
+xdri)
     DEFINES="$DEFINES -DGLX_INDIRECT_RENDERING"
     if test "x$driglx_direct" = xyes; then
         DEFINES="$DEFINES -DGLX_DIRECT_RENDERING"
@@ -1597,7 +1608,7 @@ fi
 
 
 AM_CONDITIONAL(NEED_MEGADRIVER, test -n "$DRI_DIRS")
-AM_CONDITIONAL(NEED_LIBMESA, test "x$enable_xlib_glx" = xyes -o \
+AM_CONDITIONAL(NEED_LIBMESA, test "x$enable_glx" = xxlib -o \
                                   "x$enable_osmesa" = xyes -o \
                                   -n "$DRI_DIRS")
 
@@ -1612,7 +1623,7 @@ AC_ARG_WITH([osmesa-bits],
     [osmesa_bits="$withval"],
     [osmesa_bits=8])
 if test "x$osmesa_bits" != x8; then
-    if test "x$enable_dri" = xyes -o "x$enable_glx" = xyes; then
+    if test "x$enable_dri" = xyes -o "x$enable_glx" != xno; then
         AC_MSG_WARN([Ignoring OSMesa channel bits because of non-OSMesa driver])
         osmesa_bits=8
     fi
@@ -2466,7 +2477,7 @@ AM_CONDITIONAL(HAVE_INTEL_DRIVERS, test "x$HAVE_INTEL_VULKAN" = xyes -o \
 AM_CONDITIONAL(NEED_RADEON_DRM_WINSYS, test "x$HAVE_GALLIUM_R300" = xyes -o \
                                             "x$HAVE_GALLIUM_R600" = xyes -o \
                                             "x$HAVE_GALLIUM_RADEONSI" = xyes)
-AM_CONDITIONAL(NEED_WINSYS_XLIB, test "x$NEED_WINSYS_XLIB" = xyes)
+AM_CONDITIONAL(NEED_WINSYS_XLIB, test "x$enable_glx" = xgallium-xlib)
 AM_CONDITIONAL(NEED_RADEON_LLVM, test x$NEED_RADEON_LLVM = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_COMPUTE, test x$enable_opencl = xyes)
 AM_CONDITIONAL(HAVE_MESA_LLVM, test x$MESA_LLVM = x1)
@@ -2476,7 +2487,6 @@ if test "x$USE_VC4_SIMULATOR" = xyes -a "x$HAVE_GALLIUM_ILO" = xyes; then
 fi
 
 AM_CONDITIONAL(HAVE_LIBDRM, test "x$have_libdrm" = xyes)
-AM_CONDITIONAL(HAVE_X11_DRIVER, test "x$enable_xlib_glx" = xyes)
 AM_CONDITIONAL(HAVE_OSMESA, test "x$enable_osmesa" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_OSMESA, test "x$enable_gallium_osmesa" = xyes)
 
@@ -2700,12 +2710,15 @@ if test "x$enable_dri" != xno; then
         echo "        DRI driver dir:  $DRI_DRIVER_INSTALL_DIR"
 fi
 
-case "x$enable_glx$enable_xlib_glx" in
-xyesyes)
+case "x$enable_glx" in
+xdri)
+    echo "        GLX:             DRI-based"
+    ;;
+xxlib)
     echo "        GLX:             Xlib-based"
     ;;
-xyesno)
-    echo "        GLX:             DRI-based"
+xgallium-xlib)
+    echo "        GLX:             Xlib-based (Gallium)"
     ;;
 *)
     echo "        GLX:             $enable_glx"

@@ -21,7 +21,7 @@
 
 SUBDIRS = . main/tests
 
-if HAVE_X11_DRIVER
+if HAVE_XLIB_GLX
 SUBDIRS += drivers/x11
 endif
 
