@@ -300,6 +300,21 @@ swr_destroy(struct pipe_context *pipe)
 
    /* Idle core before deleting context */
    SwrWaitForIdle(ctx->swrContext);
+
+   for (unsigned i = 0; i < PIPE_MAX_COLOR_BUFS; i++) {
+      pipe_surface_reference(&ctx->framebuffer.cbufs[i], NULL);
+   }
+
+   pipe_surface_reference(&ctx->framebuffer.zsbuf, NULL);
+
+   for (unsigned i = 0; i < Elements(ctx->sampler_views[0]); i++) {
+      pipe_sampler_view_reference(&ctx->sampler_views[PIPE_SHADER_FRAGMENT][i], NULL);
+   }
+
+   for (unsigned i = 0; i < Elements(ctx->sampler_views[0]); i++) {
+      pipe_sampler_view_reference(&ctx->sampler_views[PIPE_SHADER_VERTEX][i], NULL);
+   }
+
    if (ctx->swrContext)
       SwrDestroyContext(ctx->swrContext);
 
