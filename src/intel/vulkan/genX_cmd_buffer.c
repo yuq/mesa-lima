@@ -1192,20 +1192,23 @@ void genX(CmdWriteTimestamp)(
 
    switch (pipelineStage) {
    case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
-      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
-                     .RegisterAddress = TIMESTAMP,
-                     .MemoryAddress = { &pool->bo, offset });
-      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
-                     .RegisterAddress = TIMESTAMP + 4,
-                     .MemoryAddress = { &pool->bo, offset + 4 });
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+         srm.RegisterAddress  = TIMESTAMP;
+         srm.MemoryAddress    = (struct anv_address) { &pool->bo, offset };
+      }
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+         srm.RegisterAddress  = TIMESTAMP + 4;
+         srm.MemoryAddress    = (struct anv_address) { &pool->bo, offset + 4 };
+      }
       break;
 
    default:
       /* Everything else is bottom-of-pipe */
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                     .DestinationAddressType = DAT_PPGTT,
-                     .PostSyncOperation = WriteTimestamp,
-                     .Address = { &pool->bo, offset });
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+         pc.DestinationAddressType  = DAT_PPGTT,
+         pc.PostSyncOperation       = WriteTimestamp,
+         pc.Address = (struct anv_address) { &pool->bo, offset };
+      }
       break;
    }
 
@@ -1250,26 +1253,31 @@ static void
 emit_load_alu_reg_u64(struct anv_batch *batch, uint32_t reg,
                       struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM),
-                  .RegisterAddress = reg,
-                  .MemoryAddress = { bo, offset });
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM),
-                  .RegisterAddress = reg + 4,
-                  .MemoryAddress = { bo, offset + 4 });
+   anv_batch_emit_blk(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+      lrm.RegisterAddress  = reg,
+      lrm.MemoryAddress    = (struct anv_address) { bo, offset };
+   }
+   anv_batch_emit_blk(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+      lrm.RegisterAddress  = reg + 4;
+      lrm.MemoryAddress    = (struct anv_address) { bo, offset + 4 };
+   }
 }
 
 static void
 store_query_result(struct anv_batch *batch, uint32_t reg,
                    struct anv_bo *bo, uint32_t offset, VkQueryResultFlags flags)
 {
-      anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM),
-                     .RegisterAddress = reg,
-                     .MemoryAddress = { bo, offset });
+   anv_batch_emit_blk(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+      srm.RegisterAddress  = reg;
+      srm.MemoryAddress    = (struct anv_address) { bo, offset };
+   }
 
-      if (flags & VK_QUERY_RESULT_64_BIT)
-         anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM),
-                        .RegisterAddress = reg + 4,
-                        .MemoryAddress = { bo, offset + 4 });
+   if (flags & VK_QUERY_RESULT_64_BIT) {
+      anv_batch_emit_blk(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+         srm.RegisterAddress  = reg + 4;
+         srm.MemoryAddress    = (struct anv_address) { bo, offset + 4 };
+      }
+   }
 }
 
 void genX(CmdCopyQueryPoolResults)(
