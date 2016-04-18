@@ -50,6 +50,10 @@
 #include <strings.h> /* for ffs */
 #endif
 
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -357,8 +361,6 @@ util_half_inf_sign(int16_t x)
 #define FFS_DEFINED 1
 
 #if defined(_MSC_VER) && (_M_IX86 || _M_AMD64 || _M_IA64)
-unsigned char _BitScanForward(unsigned long* Index, unsigned long Mask);
-#pragma intrinsic(_BitScanForward)
 static inline
 unsigned long ffs( unsigned long u )
 {
