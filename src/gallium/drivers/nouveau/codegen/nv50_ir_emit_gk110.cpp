@@ -102,6 +102,7 @@ private:
    void emitINSBF(const Instruction *);
    void emitEXTBF(const Instruction *);
    void emitBFIND(const Instruction *);
+   void emitPERMT(const Instruction *);
    void emitShift(const Instruction *);
 
    void emitSFnOp(const Instruction *, uint8_t subOp);
@@ -830,6 +831,14 @@ CodeEmitterGK110::emitBFIND(const Instruction *i)
       code[1] |= 0x800;
    if (i->subOp == NV50_IR_SUBOP_BFIND_SAMT)
       code[1] |= 0x1000;
+}
+
+void
+CodeEmitterGK110::emitPERMT(const Instruction *i)
+{
+   emitForm_21(i, 0x1e0, 0xb60);
+
+   code[1] |= i->subOp << 19;
 }
 
 void
@@ -2142,6 +2151,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_BFIND:
       emitBFIND(insn);
+      break;
+   case OP_PERMT:
+      emitPERMT(insn);
       break;
    case OP_JOIN:
       emitNOP(insn);
