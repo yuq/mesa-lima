@@ -130,12 +130,13 @@ emit_vertex_input(struct anv_pipeline *pipeline,
        * that controls instancing.  On Haswell and prior, that's part of
        * VERTEX_BUFFER_STATE which we emit later.
        */
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_INSTANCING),
-                     .InstancingEnable = pipeline->instancing_enable[desc->binding],
-                     .VertexElementIndex = slot,
-                     /* Vulkan so far doesn't have an instance divisor, so
-                      * this is always 1 (ignored if not instancing). */
-                     .InstanceDataStepRate = 1);
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_VF_INSTANCING), vfi) {
+         vfi.InstancingEnable = pipeline->instancing_enable[desc->binding],
+         vfi.VertexElementIndex = slot,
+         /* Vulkan so far doesn't have an instance divisor, so
+          * this is always 1 (ignored if not instancing). */
+         vfi.InstanceDataStepRate = 1;
+      }
 #endif
    }
 
@@ -172,13 +173,14 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    }
 
 #if GEN_GEN >= 8
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_SGVS),
-                  .VertexIDEnable = vs_prog_data->uses_vertexid,
-                  .VertexIDComponentNumber = 2,
-                  .VertexIDElementOffset = id_slot,
-                  .InstanceIDEnable = vs_prog_data->uses_instanceid,
-                  .InstanceIDComponentNumber = 3,
-                  .InstanceIDElementOffset = id_slot);
+   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_VF_SGVS), sgvs) {
+      sgvs.VertexIDEnable              = vs_prog_data->uses_vertexid;
+      sgvs.VertexIDComponentNumber     = 2;
+      sgvs.VertexIDElementOffset       = id_slot;
+      sgvs.InstanceIDEnable            = vs_prog_data->uses_instanceid;
+      sgvs.InstanceIDComponentNumber   = 3;
+      sgvs.InstanceIDElementOffset     = id_slot;
+   }
 #endif
 }
 
@@ -196,28 +198,32 @@ emit_urb_setup(struct anv_pipeline *pipeline)
     *    3DSTATE_SAMPLER_STATE_POINTER_VS command.  Only one PIPE_CONTROL
     *    needs to be sent before any combination of VS associated 3DSTATE."
     */
-   anv_batch_emit(&pipeline->batch, GEN7_PIPE_CONTROL,
-                  .DepthStallEnable = true,
-                  .PostSyncOperation = WriteImmediateData,
-                  .Address = { &device->workaround_bo, 0 });
+   anv_batch_emit_blk(&pipeline->batch, GEN7_PIPE_CONTROL, pc) {
+      pc.DepthStallEnable  = true;
+      pc.PostSyncOperation = WriteImmediateData;
+      pc.Address           = (struct anv_address) { &device->workaround_bo, 0 };
+   }
 #endif
 
    unsigned push_start = 0;
    for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_FRAGMENT; i++) {
       unsigned push_size = pipeline->urb.push_size[i];
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PUSH_CONSTANT_ALLOC_VS),
-         ._3DCommandSubOpcode                   = 18 + i,
-         .ConstantBufferOffset                  = (push_size > 0) ? push_start : 0,
-         .ConstantBufferSize                    = push_size);
+      anv_batch_emit_blk(&pipeline->batch,
+                         GENX(3DSTATE_PUSH_CONSTANT_ALLOC_VS), alloc) {
+         alloc._3DCommandSubOpcode  = 18 + i;
+         alloc.ConstantBufferOffset = (push_size > 0) ? push_start : 0;
+         alloc.ConstantBufferSize   = push_size;
+      }
       push_start += pipeline->urb.push_size[i];
    }
 
    for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_VS),
-         ._3DCommandSubOpcode                   = 48 + i,
-         .VSURBStartingAddress                  = pipeline->urb.start[i],
-         .VSURBEntryAllocationSize              = pipeline->urb.size[i] - 1,
-         .VSNumberofURBEntries                  = pipeline->urb.entries[i]);
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_URB_VS), urb) {
+         urb._3DCommandSubOpcode       = 48 + i;
+         urb.VSURBStartingAddress      = pipeline->urb.start[i];
+         urb.VSURBEntryAllocationSize  = pipeline->urb.size[i] - 1;
+         urb.VSNumberofURBEntries      = pipeline->urb.entries[i];
+      }
    }
 }
 

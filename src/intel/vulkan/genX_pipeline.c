@@ -105,23 +105,24 @@ genX(compute_pipeline_create)(
    const uint32_t vfe_curbe_allocation =
       push_constant_regs * pipeline->cs_thread_width_max;
 
-   anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE),
-                  .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_COMPUTE],
-                  .PerThreadScratchSpace = ffs(cs_prog_data->base.total_scratch / 2048),
+   anv_batch_emit_blk(&pipeline->batch, GENX(MEDIA_VFE_STATE), vfe) {
+      vfe.ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_COMPUTE];
+      vfe.PerThreadScratchSpace  = ffs(cs_prog_data->base.total_scratch / 2048);
 #if GEN_GEN > 7
-                  .ScratchSpaceBasePointerHigh = 0,
-                  .StackSize = 0,
+      vfe.ScratchSpaceBasePointerHigh = 0;
+      vfe.StackSize              = 0;
 #else
-                  .GPGPUMode = true,
+      vfe.GPGPUMode              = true;
 #endif
-                  .MaximumNumberofThreads = device->info.max_cs_threads - 1,
-                  .NumberofURBEntries = GEN_GEN <= 7 ? 0 : 2,
-                  .ResetGatewayTimer = true,
+      vfe.MaximumNumberofThreads = device->info.max_cs_threads - 1;
+      vfe.NumberofURBEntries     = GEN_GEN <= 7 ? 0 : 2;
+      vfe.ResetGatewayTimer      = true;
 #if GEN_GEN <= 8
-                  .BypassGatewayControl = true,
+      vfe.BypassGatewayControl   = true;
 #endif
-                  .URBEntryAllocationSize = GEN_GEN <= 7 ? 0 : 2,
-                  .CURBEAllocationSize = vfe_curbe_allocation);
+      vfe.URBEntryAllocationSize = GEN_GEN <= 7 ? 0 : 2;
+      vfe.CURBEAllocationSize    = vfe_curbe_allocation;
+   }
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 
