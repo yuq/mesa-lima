@@ -363,7 +363,13 @@ INLINE float ComputeDepthBias(const SWR_RASTSTATE* pState, const SWR_TRIANGLE_DE
         scale *= ComputeMaxDepthSlope(pTri);
     }
 
-    float bias = pState->depthBias * ComputeBiasFactor(pState, pTri, z) + scale;
+    float bias = pState->depthBias;
+    if (!pState->depthBiasPreAdjusted)
+    {
+        bias *= ComputeBiasFactor(pState, pTri, z);
+    }
+    bias += scale;
+
     if (pState->depthBiasClamp > 0.0f)
     {
         bias = std::min(bias, pState->depthBiasClamp);

@@ -831,7 +831,7 @@ swr_update_derived(struct pipe_context *pipe,
       rastState->msaaRastEnable = false;
       rastState->rastMode = SWR_MSAA_RASTMODE_OFF_PIXEL;
       rastState->sampleCount = SWR_MULTISAMPLE_1X;
-      rastState->bForcedSampleCount = false;
+      rastState->forcedSampleCount = false;
 
       bool do_offset = false;
       switch (rasterizer->fill_front) {
