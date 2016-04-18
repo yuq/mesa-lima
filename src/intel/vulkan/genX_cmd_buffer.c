@@ -572,17 +572,19 @@ static void
 emit_lrm(struct anv_batch *batch,
          uint32_t reg, struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM),
-                  .RegisterAddress = reg,
-                  .MemoryAddress = { bo, offset });
+   anv_batch_emit_blk(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+      lrm.RegisterAddress  = reg;
+      lrm.MemoryAddress    = (struct anv_address) { bo, offset };
+   }
 }
 
 static void
 emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
 {
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM),
-                  .RegisterOffset = reg,
-                  .DataDWord = imm);
+   anv_batch_emit_blk(batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
+      lri.RegisterOffset   = reg;
+      lri.DataDWord        = imm;
+   }
 }
 
 void genX(CmdDrawIndirect)(
@@ -695,18 +697,19 @@ void genX(CmdDispatch)(
 
    genX(cmd_buffer_flush_compute_state)(cmd_buffer);
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(GPGPU_WALKER),
-                  .SIMDSize = prog_data->simd_size / 16,
-                  .ThreadDepthCounterMaximum = 0,
-                  .ThreadHeightCounterMaximum = 0,
-                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max - 1,
-                  .ThreadGroupIDXDimension = x,
-                  .ThreadGroupIDYDimension = y,
-                  .ThreadGroupIDZDimension = z,
-                  .RightExecutionMask = pipeline->cs_right_mask,
-                  .BottomExecutionMask = 0xffffffff);
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(GPGPU_WALKER), ggw) {
+      ggw.SIMDSize                     = prog_data->simd_size / 16;
+      ggw.ThreadDepthCounterMaximum    = 0;
+      ggw.ThreadHeightCounterMaximum   = 0;
+      ggw.ThreadWidthCounterMaximum    = pipeline->cs_thread_width_max - 1;
+      ggw.ThreadGroupIDXDimension      = x;
+      ggw.ThreadGroupIDYDimension      = y;
+      ggw.ThreadGroupIDZDimension      = z;
+      ggw.RightExecutionMask           = pipeline->cs_right_mask;
+      ggw.BottomExecutionMask          = 0xffffffff;
+   }
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH));
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH), msf);
 }
 
 #define GPGPU_DISPATCHDIMX 0x2500
@@ -758,48 +761,53 @@ void genX(CmdDispatchIndirect)(
    emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 0);
 
    /* predicate = (compute_dispatch_indirect_x_size == 0); */
-   anv_batch_emit(batch, GENX(MI_PREDICATE),
-                  .LoadOperation = LOAD_LOAD,
-                  .CombineOperation = COMBINE_SET,
-                  .CompareOperation = COMPARE_SRCS_EQUAL);
+   anv_batch_emit_blk(batch, GENX(MI_PREDICATE), mip) {
+      mip.LoadOperation    = LOAD_LOAD;
+      mip.CombineOperation = COMBINE_SET;
+      mip.CompareOperation = COMPARE_SRCS_EQUAL;
+   }
 
    /* Load compute_dispatch_indirect_y_size into SRC0 */
    emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 4);
 
    /* predicate |= (compute_dispatch_indirect_y_size == 0); */
-   anv_batch_emit(batch, GENX(MI_PREDICATE),
-                  .LoadOperation = LOAD_LOAD,
-                  .CombineOperation = COMBINE_OR,
-                  .CompareOperation = COMPARE_SRCS_EQUAL);
+   anv_batch_emit_blk(batch, GENX(MI_PREDICATE), mip) {
+      mip.LoadOperation    = LOAD_LOAD;
+      mip.CombineOperation = COMBINE_OR;
+      mip.CompareOperation = COMPARE_SRCS_EQUAL;
+   }
 
    /* Load compute_dispatch_indirect_z_size into SRC0 */
    emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 8);
 
    /* predicate |= (compute_dispatch_indirect_z_size == 0); */
-   anv_batch_emit(batch, GENX(MI_PREDICATE),
-                  .LoadOperation = LOAD_LOAD,
-                  .CombineOperation = COMBINE_OR,
-                  .CompareOperation = COMPARE_SRCS_EQUAL);
+   anv_batch_emit_blk(batch, GENX(MI_PREDICATE), mip) {
+      mip.LoadOperation    = LOAD_LOAD;
+      mip.CombineOperation = COMBINE_OR;
+      mip.CompareOperation = COMPARE_SRCS_EQUAL;
+   }
 
    /* predicate = !predicate; */
 #define COMPARE_FALSE                           1
-   anv_batch_emit(batch, GENX(MI_PREDICATE),
-                  .LoadOperation = LOAD_LOADINV,
-                  .CombineOperation = COMBINE_OR,
-                  .CompareOperation = COMPARE_FALSE);
+   anv_batch_emit_blk(batch, GENX(MI_PREDICATE), mip) {
+      mip.LoadOperation    = LOAD_LOADINV;
+      mip.CombineOperation = COMBINE_OR;
+      mip.CompareOperation = COMPARE_FALSE;
+   }
 #endif
 
-   anv_batch_emit(batch, GENX(GPGPU_WALKER),
-                  .IndirectParameterEnable = true,
-                  .PredicateEnable = GEN_GEN <= 7,
-                  .SIMDSize = prog_data->simd_size / 16,
-                  .ThreadDepthCounterMaximum = 0,
-                  .ThreadHeightCounterMaximum = 0,
-                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max - 1,
-                  .RightExecutionMask = pipeline->cs_right_mask,
-                  .BottomExecutionMask = 0xffffffff);
+   anv_batch_emit_blk(batch, GENX(GPGPU_WALKER), ggw) {
+      ggw.IndirectParameterEnable      = true;
+      ggw.PredicateEnable              = GEN_GEN <= 7;
+      ggw.SIMDSize                     = prog_data->simd_size / 16;
+      ggw.ThreadDepthCounterMaximum    = 0;
+      ggw.ThreadHeightCounterMaximum   = 0;
+      ggw.ThreadWidthCounterMaximum    = pipeline->cs_thread_width_max - 1;
+      ggw.RightExecutionMask           = pipeline->cs_right_mask;
+      ggw.BottomExecutionMask          = 0xffffffff;
+   }
 
-   anv_batch_emit(batch, GENX(MEDIA_STATE_FLUSH));
+   anv_batch_emit_blk(batch, GENX(MEDIA_STATE_FLUSH), msf);
 }
 
 static void
@@ -817,7 +825,7 @@ flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
     * hardware too.
     */
    if (pipeline == GPGPU)
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS));
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS), t);
 #elif GEN_GEN <= 7
       /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
        * PIPELINE_SELECT [DevBWR+]":
@@ -853,11 +861,13 @@ genX(flush_pipeline_select_3d)(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.current_pipeline != _3D) {
       flush_pipeline_before_pipeline_select(cmd_buffer, _3D);
 
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPELINE_SELECT), ps) {
 #if GEN_GEN >= 9
-                     .MaskBits = 3,
+         ps.MaskBits = 3;
 #endif
-                     .PipelineSelection = _3D);
+         ps.PipelineSelection = _3D;
+      }
+
       cmd_buffer->state.current_pipeline = _3D;
    }
 }
@@ -868,11 +878,13 @@ genX(flush_pipeline_select_gpgpu)(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.current_pipeline != GPGPU) {
       flush_pipeline_before_pipeline_select(cmd_buffer, GPGPU);
 
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPELINE_SELECT), ps) {
 #if GEN_GEN >= 9
-                     .MaskBits = 3,
+         ps.MaskBits = 3;
 #endif
-                     .PipelineSelection = GPGPU);
+         ps.PipelineSelection = GPGPU;
+      }
+
       cmd_buffer->state.current_pipeline = GPGPU;
    }
 }
