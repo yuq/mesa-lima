@@ -43,7 +43,7 @@ brw_blorp_surface_info_init(struct brw_context *brw,
     */
    if (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
        mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
-      assert(layer % mt->num_samples == 0);
+      assert(mt->num_samples <= 1 || layer % mt->num_samples == 0);
    }
 
    intel_miptree_check_level_layer(mt, level, layer);

@@ -1824,6 +1824,14 @@ compute_msaa_layout_for_pipeline(struct brw_context *brw, unsigned num_samples,
                                  intel_msaa_layout true_layout)
 {
    if (num_samples <= 1) {
+      /* Layout is used to determine if ld2dms is needed for sampling. In
+       * single sampled case normal ld is enough avoiding also the need to
+       * fetch mcs. Therefore simply set the layout to none.
+       */
+      if (brw->gen >= 9 && true_layout == INTEL_MSAA_LAYOUT_CMS) {
+         return INTEL_MSAA_LAYOUT_NONE;
+      }
+
       /* When configuring the GPU for non-MSAA, we can still accommodate IMS
        * format buffers, by transforming coordinates appropriately.
        */
@@ -1870,12 +1878,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     * the destination buffer because we use the standard render path to render
     * to destination color buffers, and the standard render path is
     * fast-color-aware.
-    * Lossless compression is only introduced for gen9 onwards whereas
-    * blorp is not supported even for gen8. Therefore it should be impossible
-    * to end up here with single sampled compressed surfaces.
     */
-   assert(!intel_miptree_is_lossless_compressed(brw, src_mt));
-   assert(!intel_miptree_is_lossless_compressed(brw, dst_mt));
    intel_miptree_resolve_color(brw, src_mt, 0);
    intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_layer);
    intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_layer);
@@ -2059,6 +2062,19 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     */
    wm_prog_key.src_layout = src_mt->msaa_layout;
    wm_prog_key.dst_layout = dst_mt->msaa_layout;
+
+   /* On gen9+ compressed single sampled buffers carry the same layout type as
+    * multisampled. The difference is that they can be sampled using normal
+    * ld message and as render target behave just like non-compressed surface
+    * from compiler point of view. Therefore override the type in the program
+    * key.
+    */
+   if (brw->gen >= 9 && params.src.num_samples <= 1 &&
+       src_mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS)
+      wm_prog_key.src_layout = INTEL_MSAA_LAYOUT_NONE;
+   if (brw->gen >= 9 && params.dst.num_samples <= 1 &&
+       dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS)
+      wm_prog_key.dst_layout = INTEL_MSAA_LAYOUT_NONE;
 
    wm_prog_key.src_tiled_w = params.src.map_stencil_as_y_tiled;
    wm_prog_key.dst_tiled_w = params.dst.map_stencil_as_y_tiled;
