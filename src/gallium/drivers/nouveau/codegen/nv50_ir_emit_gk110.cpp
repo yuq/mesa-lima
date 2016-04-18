@@ -137,6 +137,8 @@ private:
 
    void emitSULDGB(const TexInstruction *);
    void emitSUSTGx(const TexInstruction *);
+   void emitSUCLAMPMode(uint16_t);
+   void emitSUCalc(Instruction *);
 
    inline void defId(const ValueDef&, const int pos);
    inline void srcId(const ValueRef&, const int pos);
@@ -1620,6 +1622,86 @@ CodeEmitterGK110::emitSUSTGx(const TexInstruction *i)
 }
 
 void
+CodeEmitterGK110::emitSUCLAMPMode(uint16_t subOp)
+{
+   uint8_t m;
+   switch (subOp & ~NV50_IR_SUBOP_SUCLAMP_2D) {
+   case NV50_IR_SUBOP_SUCLAMP_SD(0, 1): m = 0; break;
+   case NV50_IR_SUBOP_SUCLAMP_SD(1, 1): m = 1; break;
+   case NV50_IR_SUBOP_SUCLAMP_SD(2, 1): m = 2; break;
+   case NV50_IR_SUBOP_SUCLAMP_SD(3, 1): m = 3; break;
+   case NV50_IR_SUBOP_SUCLAMP_SD(4, 1): m = 4; break;
+   case NV50_IR_SUBOP_SUCLAMP_PL(0, 1): m = 5; break;
+   case NV50_IR_SUBOP_SUCLAMP_PL(1, 1): m = 6; break;
+   case NV50_IR_SUBOP_SUCLAMP_PL(2, 1): m = 7; break;
+   case NV50_IR_SUBOP_SUCLAMP_PL(3, 1): m = 8; break;
+   case NV50_IR_SUBOP_SUCLAMP_PL(4, 1): m = 9; break;
+   case NV50_IR_SUBOP_SUCLAMP_BL(0, 1): m = 10; break;
+   case NV50_IR_SUBOP_SUCLAMP_BL(1, 1): m = 11; break;
+   case NV50_IR_SUBOP_SUCLAMP_BL(2, 1): m = 12; break;
+   case NV50_IR_SUBOP_SUCLAMP_BL(3, 1): m = 13; break;
+   case NV50_IR_SUBOP_SUCLAMP_BL(4, 1): m = 14; break;
+   default:
+      return;
+   }
+   code[1] |= m << 20;
+   if (subOp & NV50_IR_SUBOP_SUCLAMP_2D)
+      code[1] |= 1 << 24;
+}
+
+void
+CodeEmitterGK110::emitSUCalc(Instruction *i)
+{
+   ImmediateValue *imm = NULL;
+   uint64_t opc1, opc2;
+
+   if (i->srcExists(2)) {
+      imm = i->getSrc(2)->asImm();
+      if (imm)
+         i->setSrc(2, NULL); // special case, make emitForm_21 not assert
+   }
+
+   switch (i->op) {
+   case OP_SUCLAMP:  opc1 = 0xb00; opc2 = 0x580; break;
+   case OP_SUBFM:    opc1 = 0xb68; opc2 = 0x1e8; break;
+   case OP_SUEAU:    opc1 = 0xb6c; opc2 = 0x1ec; break;
+   default:
+      assert(0);
+      return;
+   }
+   emitForm_21(i, opc2, opc1);
+
+   if (i->op == OP_SUCLAMP) {
+      if (i->dType == TYPE_S32)
+         code[1] |= 1 << 19;
+      emitSUCLAMPMode(i->subOp);
+   }
+
+   if (i->op == OP_SUBFM && i->subOp == NV50_IR_SUBOP_SUBFM_3D)
+      code[1] |= 1 << 18;
+
+   if (i->op != OP_SUEAU) {
+      const uint8_t pos = i->op == OP_SUBFM ? 19 : 16;
+      if (i->def(0).getFile() == FILE_PREDICATE) { // p, #
+         code[0] |= 255 << 2;
+         code[1] |= i->getDef(1)->reg.data.id << pos;
+      } else
+      if (i->defExists(1)) { // r, p
+         assert(i->def(1).getFile() == FILE_PREDICATE);
+         code[1] |= i->getDef(1)->reg.data.id << pos;
+      } else { // r, #
+         code[1] |= 7 << pos;
+      }
+   }
+
+   if (imm) {
+      assert(i->op == OP_SUCLAMP);
+      i->setSrc(2, imm);
+      code[1] |= (imm->reg.data.u32 & 0x3f) << 10; // sint6
+   }
+}
+
+void
 CodeEmitterGK110::emitAFETCH(const Instruction *i)
 {
    uint32_t offset = i->src(0).get()->reg.data.offset & 0x7ff;
@@ -2351,6 +2433,11 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
    case OP_SUSTB:
    case OP_SUSTP:
       emitSUSTGx(insn->asTex());
+      break;
+   case OP_SUBFM:
+   case OP_SUCLAMP:
+   case OP_SUEAU:
+      emitSUCalc(insn);
       break;
    case OP_PHI:
    case OP_UNION:
