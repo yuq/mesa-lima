@@ -858,6 +858,15 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       VG(VALGRIND_CHECK_MEM_IS_DEFINED(dw, ARRAY_SIZE(dwords0) * 4));\
    } while (0)
 
+#define anv_batch_emit_blk(batch, cmd, name)                            \
+   for (struct cmd name = { __anv_cmd_header(cmd) },                    \
+        *_dst = anv_batch_emit_dwords(batch, __anv_cmd_length(cmd));    \
+        __builtin_expect(_dst != NULL, 1);                              \
+        ({ __anv_cmd_pack(cmd)(batch, _dst, &name);                     \
+           VG(VALGRIND_CHECK_MEM_IS_DEFINED(_dst, __anv_cmd_length(cmd) * 4)); \
+           _dst = NULL;                                                 \
+         }))
+
 #define anv_state_pool_emit(pool, cmd, align, ...) ({                   \
       const uint32_t __size = __anv_cmd_length(cmd) * 4;                \
       struct anv_state __state =                                        \
