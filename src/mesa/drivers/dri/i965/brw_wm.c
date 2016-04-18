@@ -361,8 +361,12 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          struct intel_texture_object *intel_tex =
             intel_texture_object((struct gl_texture_object *)t);
 
+         /* From gen9 onwards some single sampled buffers can also be
+          * compressed. These don't need ld2dms sampling along with mcs fetch.
+          */
          if (brw->gen >= 7 &&
-             intel_tex->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
+             intel_tex->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS &&
+             intel_tex->mt->num_samples > 1) {
             key->compressed_multisample_layout_mask |= 1 << s;
 
             if (intel_tex->mt->num_samples >= 16) {
