@@ -1565,15 +1565,15 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 
 	/* Set ring bindings. */
 	if (sctx->esgs_ring) {
-		si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_VERTEX, SI_RING_ESGS,
+		si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_VERTEX, SI_ES_RING_ESGS,
 				   sctx->esgs_ring, 0, sctx->esgs_ring->width0,
 				   true, true, 4, 64, 0);
-		si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_RING_ESGS,
+		si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_GS_RING_ESGS,
 				   sctx->esgs_ring, 0, sctx->esgs_ring->width0,
 				   false, false, 0, 0, 0);
 	}
 	if (sctx->gsvs_ring)
-		si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_VERTEX, SI_RING_GSVS,
+		si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_VERTEX, SI_VS_RING_GSVS,
 				   sctx->gsvs_ring, 0, sctx->gsvs_ring->width0,
 				   false, false, 0, 0, 0);
 	return true;
@@ -1589,22 +1589,22 @@ static void si_update_gsvs_ring_bindings(struct si_context *sctx)
 
 	sctx->last_gsvs_itemsize = gsvs_itemsize;
 
-	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_RING_GSVS,
+	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_GS_RING_GSVS0,
 			   sctx->gsvs_ring, gsvs_itemsize,
 			   64, true, true, 4, 16, 0);
 
 	offset = gsvs_itemsize * 64;
-	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_RING_GSVS_1,
+	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_GS_RING_GSVS1,
 			   sctx->gsvs_ring, gsvs_itemsize,
 			   64, true, true, 4, 16, offset);
 
 	offset = (gsvs_itemsize * 2) * 64;
-	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_RING_GSVS_2,
+	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_GS_RING_GSVS2,
 			   sctx->gsvs_ring, gsvs_itemsize,
 			   64, true, true, 4, 16, offset);
 
 	offset = (gsvs_itemsize * 3) * 64;
-	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_RING_GSVS_3,
+	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_GS_RING_GSVS3,
 			   sctx->gsvs_ring, gsvs_itemsize,
 			   64, true, true, 4, 16, offset);
 }
@@ -1793,7 +1793,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	si_context_gfx_flush(sctx, RADEON_FLUSH_ASYNC, NULL);
 
 	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_TESS_CTRL,
-			   SI_RING_TESS_FACTOR, sctx->tf_ring, 0,
+			   SI_HS_RING_TESS_FACTOR, sctx->tf_ring, 0,
 			   sctx->tf_ring->width0, false, false, 0, 0, 0);
 }
 

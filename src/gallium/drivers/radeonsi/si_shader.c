@@ -2186,7 +2186,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	rw_buffers = LLVMGetParam(ctx->radeon_bld.main_fn,
 				  SI_PARAM_RW_BUFFERS);
 	buffer = build_indexed_load_const(ctx, rw_buffers,
-			lp_build_const_int32(gallivm, SI_RING_TESS_FACTOR));
+			lp_build_const_int32(gallivm, SI_HS_RING_TESS_FACTOR));
 
 	/* Get the offset. */
 	tf_base = LLVMGetParam(ctx->radeon_bld.main_fn,
@@ -5240,7 +5240,7 @@ static void preload_streamout_buffers(struct si_shader_context *ctx)
 	for (i = 0; i < 4; ++i) {
 		if (ctx->shader->selector->so.stride[i]) {
 			LLVMValueRef offset = lp_build_const_int32(gallivm,
-								   SI_SO_BUF_OFFSET + i);
+								   SI_VS_STREAMOUT_BUF0 + i);
 
 			ctx->so_buffers[i] = build_indexed_load_const(ctx, buf_ptr, offset);
 		}
@@ -5264,14 +5264,17 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 	    (ctx->type == TGSI_PROCESSOR_TESS_EVAL &&
 	     ctx->shader->key.tes.as_es) ||
 	    ctx->type == TGSI_PROCESSOR_GEOMETRY) {
-		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_RING_ESGS);
+		unsigned ring =
+			ctx->type == TGSI_PROCESSOR_GEOMETRY ? SI_GS_RING_ESGS
+							     : SI_ES_RING_ESGS;
+		LLVMValueRef offset = lp_build_const_int32(gallivm, ring);
 
 		ctx->esgs_ring =
 			build_indexed_load_const(ctx, buf_ptr, offset);
 	}
 
 	if (ctx->is_gs_copy_shader) {
-		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_RING_GSVS);
+		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_VS_RING_GSVS);
 
 		ctx->gsvs_ring[0] =
 			build_indexed_load_const(ctx, buf_ptr, offset);
@@ -5279,7 +5282,7 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 	if (ctx->type == TGSI_PROCESSOR_GEOMETRY) {
 		int i;
 		for (i = 0; i < 4; i++) {
-			LLVMValueRef offset = lp_build_const_int32(gallivm, SI_RING_GSVS + i);
+			LLVMValueRef offset = lp_build_const_int32(gallivm, SI_GS_RING_GSVS0 + i);
 
 			ctx->gsvs_ring[i] =
 				build_indexed_load_const(ctx, buf_ptr, offset);

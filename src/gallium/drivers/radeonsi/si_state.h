@@ -164,20 +164,26 @@ struct si_shader_data {
 
 #define SI_NUM_SHADER_BUFFERS		16
 
-/* Read-write buffer slots.
- *
- * Ring buffers:        0..1
- * Streamout buffers:   2..5
- */
-#define SI_RING_TESS_FACTOR	0 /* for HS (TCS)  */
-#define SI_RING_ESGS		0 /* for ES, GS */
-#define SI_RING_GSVS		1 /* for GS, VS */
-#define SI_RING_GSVS_1		2 /* 1, 2, 3 for GS */
-#define SI_RING_GSVS_2		3
-#define SI_RING_GSVS_3		4
-#define SI_NUM_RING_BUFFERS	5
-#define SI_SO_BUF_OFFSET	SI_NUM_RING_BUFFERS
-#define SI_NUM_RW_BUFFERS	(SI_SO_BUF_OFFSET + 4)
+/* Private read-write buffer slots. */
+enum {
+	SI_HS_RING_TESS_FACTOR,
+
+	SI_ES_RING_ESGS,
+	SI_GS_RING_ESGS,
+
+	SI_GS_RING_GSVS0,
+	SI_GS_RING_GSVS1,
+	SI_GS_RING_GSVS2,
+	SI_GS_RING_GSVS3,
+	SI_VS_RING_GSVS,
+
+	SI_VS_STREAMOUT_BUF0,
+	SI_VS_STREAMOUT_BUF1,
+	SI_VS_STREAMOUT_BUF2,
+	SI_VS_STREAMOUT_BUF3,
+
+	SI_NUM_RW_BUFFERS,
+};
 
 #define SI_NUM_VERTEX_BUFFERS	SI_MAX_ATTRIBS
 

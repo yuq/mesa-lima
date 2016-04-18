@@ -1053,7 +1053,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 
 	/* Set the shader resources.*/
 	for (i = 0; i < num_targets; i++) {
-		bufidx = SI_SO_BUF_OFFSET + i;
+		bufidx = SI_VS_STREAMOUT_BUF0 + i;
 
 		if (targets[i]) {
 			struct pipe_resource *buffer = targets[i]->buffer;
@@ -1093,7 +1093,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		buffers->desc.dirty_mask |= 1llu << bufidx;
 	}
 	for (; i < old_num_targets; i++) {
-		bufidx = SI_SO_BUF_OFFSET + i;
+		bufidx = SI_VS_STREAMOUT_BUF0 + i;
 		/* Clear the descriptor and unset the resource. */
 		memset(buffers->desc.list + bufidx*4, 0, sizeof(uint32_t) * 4);
 		pipe_resource_reference(&buffers->buffers[bufidx], NULL);
@@ -1220,7 +1220,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 						      rbuffer, buffers->shader_usage,
 						      buffers->priority);
 
-				if (i >= SI_SO_BUF_OFFSET && shader == PIPE_SHADER_VERTEX) {
+				if (i >= SI_VS_STREAMOUT_BUF0 && shader == PIPE_SHADER_VERTEX) {
 					/* Update the streamout state. */
 					if (sctx->b.streamout.begin_emitted) {
 						r600_emit_streamout_end(&sctx->b);
