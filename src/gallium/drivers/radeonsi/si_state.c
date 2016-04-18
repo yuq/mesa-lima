@@ -3374,60 +3374,6 @@ static void si_set_index_buffer(struct pipe_context *ctx,
 /*
  * Misc
  */
-static void si_set_polygon_stipple(struct pipe_context *ctx,
-				   const struct pipe_poly_stipple *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	struct pipe_resource *tex;
-	struct pipe_sampler_view *view;
-	bool is_zero = true;
-	bool is_one = true;
-	int i;
-
-	/* The hardware obeys 0 and 1 swizzles in the descriptor even if
-	 * the resource is NULL/invalid. Take advantage of this fact and skip
-	 * texture allocation if the stipple pattern is constant.
-	 *
-	 * This is an optimization for the common case when stippling isn't
-	 * used but set_polygon_stipple is still called by st/mesa.
-	 */
-	for (i = 0; i < Elements(state->stipple); i++) {
-		is_zero = is_zero && state->stipple[i] == 0;
-		is_one = is_one && state->stipple[i] == 0xffffffff;
-	}
-
-	if (is_zero || is_one) {
-		struct pipe_sampler_view templ = {{0}};
-
-		templ.swizzle_r = PIPE_SWIZZLE_ZERO;
-		templ.swizzle_g = PIPE_SWIZZLE_ZERO;
-		templ.swizzle_b = PIPE_SWIZZLE_ZERO;
-		/* The pattern should be inverted in the texture. */
-		templ.swizzle_a = is_zero ? PIPE_SWIZZLE_ONE : PIPE_SWIZZLE_ZERO;
-
-		view = ctx->create_sampler_view(ctx, NULL, &templ);
-	} else {
-		/* Create a new texture. */
-		tex = util_pstipple_create_stipple_texture(ctx, state->stipple);
-		if (!tex)
-			return;
-
-		view = util_pstipple_create_sampler_view(ctx, tex);
-		pipe_resource_reference(&tex, NULL);
-	}
-
-	ctx->set_sampler_views(ctx, PIPE_SHADER_FRAGMENT,
-			       SI_POLY_STIPPLE_SAMPLER, 1, &view);
-	pipe_sampler_view_reference(&view, NULL);
-
-	/* Bind the sampler state if needed. */
-	if (!sctx->pstipple_sampler_state) {
-		sctx->pstipple_sampler_state = util_pstipple_create_sampler(ctx);
-		ctx->bind_sampler_states(ctx, PIPE_SHADER_FRAGMENT,
-					 SI_POLY_STIPPLE_SAMPLER, 1,
-					 &sctx->pstipple_sampler_state);
-	}
-}
 
 static void si_set_tess_state(struct pipe_context *ctx,
 			      const float default_outer_level[4],
@@ -3590,7 +3536,6 @@ void si_init_state_functions(struct si_context *sctx)
 
 	sctx->b.b.texture_barrier = si_texture_barrier;
 	sctx->b.b.memory_barrier = si_memory_barrier;
-	sctx->b.b.set_polygon_stipple = si_set_polygon_stipple;
 	sctx->b.b.set_min_samples = si_set_min_samples;
 	sctx->b.b.set_tess_state = si_set_tess_state;
 

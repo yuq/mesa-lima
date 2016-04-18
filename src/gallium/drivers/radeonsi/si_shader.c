@@ -5291,15 +5291,14 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 }
 
 static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
-					 LLVMValueRef param_sampler_views,
+					 LLVMValueRef param_rw_buffers,
 					 unsigned param_pos_fixed_pt)
 {
 	struct lp_build_tgsi_context *bld_base =
 		&ctx->radeon_bld.soa.bld_base;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	struct lp_build_emit_data result = {};
-	struct tgsi_full_instruction inst = {};
-	LLVMValueRef desc, sampler_index, address[2], pix;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef slot, desc, offset, row, bit, address[2];
 
 	/* Use the fixed-point gl_FragCoord input.
 	 * Since the stipple pattern is 32x32 and it repeats, just get 5 bits
@@ -5308,29 +5307,21 @@ static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
 	address[0] = unpack_param(ctx, param_pos_fixed_pt, 0, 5);
 	address[1] = unpack_param(ctx, param_pos_fixed_pt, 16, 5);
 
-	/* Load the sampler view descriptor. */
-	sampler_index = lp_build_const_int32(gallivm, SI_POLY_STIPPLE_SAMPLER);
-	desc = get_sampler_desc_custom(ctx, param_sampler_views,
-				       sampler_index, DESC_IMAGE);
+	/* Load the buffer descriptor. */
+	slot = lp_build_const_int32(gallivm, SI_PS_CONST_POLY_STIPPLE);
+	desc = build_indexed_load_const(ctx, param_rw_buffers, slot);
 
-	/* Load the texel. */
-	inst.Instruction.Opcode = TGSI_OPCODE_TXF;
-	inst.Texture.Texture = TGSI_TEXTURE_2D_MSAA; /* = use load, not load_mip */
-	result.inst = &inst;
-	set_tex_fetch_args(ctx, &result, TGSI_OPCODE_TXF,
-			   inst.Texture.Texture,
-			   desc, NULL, address, ARRAY_SIZE(address), 0xf);
-	build_tex_intrinsic(&tex_action, bld_base, &result);
+	/* The stipple pattern is 32x32, each row has 32 bits. */
+	offset = LLVMBuildMul(builder, address[1],
+			      LLVMConstInt(ctx->i32, 4, 0), "");
+	row = buffer_load_const(builder, desc, offset, ctx->i32);
+	bit = LLVMBuildLShr(builder, row, address[0], "");
+	bit = LLVMBuildTrunc(builder, bit, ctx->i1, "");
 
-	/* Kill the thread accordingly. */
-	pix = LLVMBuildExtractElement(gallivm->builder, result.output[0],
-				      lp_build_const_int32(gallivm, 3), "");
-	pix = bitcast(bld_base, TGSI_TYPE_FLOAT, pix);
-	pix = LLVMBuildFNeg(gallivm->builder, pix, "");
-
-	lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
-			   LLVMVoidTypeInContext(gallivm->context),
-			   &pix, 1, 0);
+	/* The intrinsic kills the thread if arg < 0. */
+	bit = LLVMBuildSelect(builder, bit, LLVMConstReal(ctx->f32, 0),
+			      LLVMConstReal(ctx->f32, -1), "");
+	lp_build_intrinsic(builder, "llvm.AMDGPU.kill", ctx->voidt, &bit, 1, 0);
 }
 
 void si_shader_binary_read_config(struct radeon_shader_binary *binary,
@@ -6039,9 +6030,9 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	if (ctx.is_monolithic && sel->type == PIPE_SHADER_FRAGMENT &&
 	    shader->key.ps.prolog.poly_stipple) {
-		LLVMValueRef views = LLVMGetParam(ctx.radeon_bld.main_fn,
-						  SI_PARAM_SAMPLERS);
-		si_llvm_emit_polygon_stipple(&ctx, views,
+		LLVMValueRef list = LLVMGetParam(ctx.radeon_bld.main_fn,
+						 SI_PARAM_RW_BUFFERS);
+		si_llvm_emit_polygon_stipple(&ctx, list,
 					     SI_PARAM_POS_FIXED_PT);
 	}
 
@@ -6619,17 +6610,17 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 		/* POS_FIXED_PT is always last. */
 		unsigned pos = key->ps_prolog.num_input_sgprs +
 			       key->ps_prolog.num_input_vgprs - 1;
-		LLVMValueRef ptr[2], views;
+		LLVMValueRef ptr[2], list;
 
-		/* Get the pointer to sampler views. */
-		ptr[0] = LLVMGetParam(func, SI_SGPR_SAMPLERS);
-		ptr[1] = LLVMGetParam(func, SI_SGPR_SAMPLERS+1);
-		views = lp_build_gather_values(gallivm, ptr, 2);
-		views = LLVMBuildBitCast(gallivm->builder, views, ctx.i64, "");
-		views = LLVMBuildIntToPtr(gallivm->builder, views,
-					  const_array(ctx.v8i32, SI_NUM_SAMPLERS), "");
+		/* Get the pointer to rw buffers. */
+		ptr[0] = LLVMGetParam(func, SI_SGPR_RW_BUFFERS);
+		ptr[1] = LLVMGetParam(func, SI_SGPR_RW_BUFFERS_HI);
+		list = lp_build_gather_values(gallivm, ptr, 2);
+		list = LLVMBuildBitCast(gallivm->builder, list, ctx.i64, "");
+		list = LLVMBuildIntToPtr(gallivm->builder, list,
+					  const_array(ctx.v16i8, SI_NUM_RW_BUFFERS), "");
 
-		si_llvm_emit_polygon_stipple(&ctx, views, pos);
+		si_llvm_emit_polygon_stipple(&ctx, list, pos);
 	}
 
 	/* Interpolate colors. */

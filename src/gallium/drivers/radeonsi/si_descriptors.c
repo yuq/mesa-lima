@@ -1129,6 +1129,26 @@ static void si_desc_reset_buffer_offset(struct pipe_context *ctx,
 		  S_008F04_BASE_ADDRESS_HI(va >> 32);
 }
 
+/* INTERNAL CONST BUFFERS */
+
+static void si_set_polygon_stipple(struct pipe_context *ctx,
+				   const struct pipe_poly_stipple *state)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct pipe_constant_buffer cb = {};
+	unsigned stipple[32];
+	int i;
+
+	for (i = 0; i < 32; i++)
+		stipple[i] = util_bitreverse(state->stipple[i]);
+
+	cb.user_buffer = stipple;
+	cb.buffer_size = sizeof(stipple);
+
+	si_set_constant_buffer(sctx, &sctx->rw_buffers,
+			       SI_PS_CONST_POLY_STIPPLE, &cb);
+}
+
 /* TEXTURE METADATA ENABLE/DISABLE */
 
 /* CMASK can be enabled (for fast clear) and disabled (for texture export)
@@ -1403,6 +1423,8 @@ void si_emit_graphics_shader_userdata(struct si_context *sctx,
 
 	if (sctx->rw_buffers.desc.pointer_dirty) {
 		si_emit_shader_pointer(sctx, &sctx->rw_buffers.desc,
+				       R_00B030_SPI_SHADER_USER_DATA_PS_0, true);
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers.desc,
 				       R_00B130_SPI_SHADER_USER_DATA_VS_0, true);
 		si_emit_shader_pointer(sctx, &sctx->rw_buffers.desc,
 				       R_00B230_SPI_SHADER_USER_DATA_GS_0, true);
@@ -1480,6 +1502,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->b.b.bind_sampler_states = si_bind_sampler_states;
 	sctx->b.b.set_shader_images = si_set_shader_images;
 	sctx->b.b.set_constant_buffer = si_pipe_set_constant_buffer;
+	sctx->b.b.set_polygon_stipple = si_set_polygon_stipple;
 	sctx->b.b.set_shader_buffers = si_set_shader_buffers;
 	sctx->b.b.set_sampler_views = si_set_sampler_views;
 	sctx->b.b.set_stream_output_targets = si_set_streamout_targets;

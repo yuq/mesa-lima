@@ -146,12 +146,8 @@ struct si_shader_data {
 	uint32_t		sh_base[SI_NUM_SHADERS];
 };
 
-/* User sampler views:   0..31
- * Polygon stipple tex:  32
- */
 #define SI_NUM_USER_SAMPLERS            32 /* AKA OpenGL textures units per shader */
-#define SI_POLY_STIPPLE_SAMPLER         SI_NUM_USER_SAMPLERS
-#define SI_NUM_SAMPLERS                 (SI_POLY_STIPPLE_SAMPLER + 1)
+#define SI_NUM_SAMPLERS                 SI_NUM_USER_SAMPLERS
 
 /* User constant buffers:   0..15
  * Driver state constants:  16
@@ -181,6 +177,8 @@ enum {
 	SI_VS_STREAMOUT_BUF1,
 	SI_VS_STREAMOUT_BUF2,
 	SI_VS_STREAMOUT_BUF3,
+
+	SI_PS_CONST_POLY_STIPPLE,
 
 	SI_NUM_RW_BUFFERS,
 };

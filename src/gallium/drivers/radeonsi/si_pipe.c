@@ -61,8 +61,6 @@ static void si_destroy_context(struct pipe_context *context)
 	for (i = 0; i < Elements(sctx->vgt_shader_config); i++)
 		si_pm4_delete_state(sctx, vgt_shader_config, sctx->vgt_shader_config[i]);
 
-	if (sctx->pstipple_sampler_state)
-		sctx->b.b.delete_sampler_state(&sctx->b.b, sctx->pstipple_sampler_state);
 	if (sctx->fixed_func_tcs_shader.cso)
 		sctx->b.b.delete_tcs_state(&sctx->b.b, sctx->fixed_func_tcs_shader.cso);
 	if (sctx->custom_dsa_flush)
