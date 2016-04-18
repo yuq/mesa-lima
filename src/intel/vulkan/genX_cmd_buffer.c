@@ -513,14 +513,15 @@ void genX(CmdDraw)(
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance(cmd_buffer, firstVertex, firstInstance);
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
-      .VertexAccessType                         = SEQUENTIAL,
-      .PrimitiveTopologyType                    = pipeline->topology,
-      .VertexCountPerInstance                   = vertexCount,
-      .StartVertexLocation                      = firstVertex,
-      .InstanceCount                            = instanceCount,
-      .StartInstanceLocation                    = firstInstance,
-      .BaseVertexLocation                       = 0);
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+      prim.VertexAccessType         = SEQUENTIAL;
+      prim.PrimitiveTopologyType    = pipeline->topology;
+      prim.VertexCountPerInstance   = vertexCount;
+      prim.StartVertexLocation      = firstVertex;
+      prim.InstanceCount            = instanceCount;
+      prim.StartInstanceLocation    = firstInstance;
+      prim.BaseVertexLocation       = 0;
+   }
 }
 
 void genX(CmdDrawIndexed)(
@@ -540,14 +541,15 @@ void genX(CmdDrawIndexed)(
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance(cmd_buffer, vertexOffset, firstInstance);
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
-      .VertexAccessType                         = RANDOM,
-      .PrimitiveTopologyType                    = pipeline->topology,
-      .VertexCountPerInstance                   = indexCount,
-      .StartVertexLocation                      = firstIndex,
-      .InstanceCount                            = instanceCount,
-      .StartInstanceLocation                    = firstInstance,
-      .BaseVertexLocation                       = vertexOffset);
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+      prim.VertexAccessType         = RANDOM;
+      prim.PrimitiveTopologyType    = pipeline->topology;
+      prim.VertexCountPerInstance   = indexCount;
+      prim.StartVertexLocation      = firstIndex;
+      prim.InstanceCount            = instanceCount;
+      prim.StartInstanceLocation    = firstInstance;
+      prim.BaseVertexLocation       = vertexOffset;
+   }
 }
 
 /* Auto-Draw / Indirect Registers */
@@ -600,10 +602,11 @@ void genX(CmdDrawIndirect)(
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 12);
    emit_lri(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, 0);
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
-      .IndirectParameterEnable                  = true,
-      .VertexAccessType                         = SEQUENTIAL,
-      .PrimitiveTopologyType                    = pipeline->topology);
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+      prim.IndirectParameterEnable  = true;
+      prim.VertexAccessType         = SEQUENTIAL;
+      prim.PrimitiveTopologyType    = pipeline->topology;
+   }
 }
 
 void genX(CmdDrawIndexedIndirect)(
@@ -632,10 +635,11 @@ void genX(CmdDrawIndexedIndirect)(
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, bo, bo_offset + 12);
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 16);
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
-      .IndirectParameterEnable                  = true,
-      .VertexAccessType                         = RANDOM,
-      .PrimitiveTopologyType                    = pipeline->topology);
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+      prim.IndirectParameterEnable  = true;
+      prim.VertexAccessType         = RANDOM;
+      prim.PrimitiveTopologyType    = pipeline->topology;
+   }
 }
 
 #if GEN_GEN == 7
