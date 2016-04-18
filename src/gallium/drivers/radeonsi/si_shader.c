@@ -1690,8 +1690,9 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context *bld_base,
 	unsigned chan;
 	unsigned const_chan;
 	LLVMValueRef base_elt;
-	LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_CONST_BUFFERS);
-	LLVMValueRef constbuf_index = lp_build_const_int32(base->gallivm, SI_DRIVER_STATE_CONST_BUF);
+	LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_RW_BUFFERS);
+	LLVMValueRef constbuf_index = lp_build_const_int32(base->gallivm,
+							   SI_VS_CONST_CLIP_PLANES);
 	LLVMValueRef const_resource = build_indexed_load_const(ctx, ptr, constbuf_index);
 
 	for (reg_index = 0; reg_index < 2; reg_index ++) {

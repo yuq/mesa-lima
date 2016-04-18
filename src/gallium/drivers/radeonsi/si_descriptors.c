@@ -783,9 +783,9 @@ void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuf
 		util_memcpy_cpu_to_le32(tmp, ptr, size);
 }
 
-static void si_set_constant_buffer(struct si_context *sctx,
-				   struct si_buffer_resources *buffers,
-				   uint slot, struct pipe_constant_buffer *input)
+void si_set_constant_buffer(struct si_context *sctx,
+			    struct si_buffer_resources *buffers,
+			    uint slot, struct pipe_constant_buffer *input)
 {
 	assert(slot < buffers->desc.num_elements);
 	pipe_resource_reference(&buffers->buffers[slot], NULL);
@@ -1412,14 +1412,6 @@ void si_emit_graphics_shader_userdata(struct si_context *sctx,
 {
 	unsigned i;
 	uint32_t *sh_base = sctx->shader_userdata.sh_base;
-
-	if (sctx->gs_shader.cso) {
-		/* The VS copy shader needs this for clipping. */
-		unsigned vs_base = R_00B130_SPI_SHADER_USER_DATA_VS_0;
-		unsigned i = PIPE_SHADER_VERTEX;
-
-		si_emit_shader_pointer(sctx, &sctx->const_buffers[i].desc, vs_base, true);
-	}
 
 	if (sctx->rw_buffers.desc.pointer_dirty) {
 		si_emit_shader_pointer(sctx, &sctx->rw_buffers.desc,

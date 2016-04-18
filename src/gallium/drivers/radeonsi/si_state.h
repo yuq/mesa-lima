@@ -178,6 +178,7 @@ enum {
 	SI_VS_STREAMOUT_BUF2,
 	SI_VS_STREAMOUT_BUF3,
 
+	SI_VS_CONST_CLIP_PLANES,
 	SI_PS_CONST_POLY_STIPPLE,
 
 	SI_NUM_RW_BUFFERS,
@@ -273,6 +274,9 @@ void si_update_compressed_colortex_masks(struct si_context *sctx);
 void si_emit_graphics_shader_userdata(struct si_context *sctx,
                                       struct r600_atom *atom);
 void si_emit_compute_shader_userdata(struct si_context *sctx);
+void si_set_constant_buffer(struct si_context *sctx,
+			    struct si_buffer_resources *buffers,
+			    uint slot, struct pipe_constant_buffer *input);
 
 /* si_state.c */
 struct si_shader_selector;

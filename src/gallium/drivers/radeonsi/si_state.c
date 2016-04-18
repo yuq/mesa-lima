@@ -771,7 +771,8 @@ static void si_set_clip_state(struct pipe_context *ctx,
 	cb.user_buffer = state->ucp;
 	cb.buffer_offset = 0;
 	cb.buffer_size = 4*4*8;
-	ctx->set_constant_buffer(ctx, PIPE_SHADER_VERTEX, SI_DRIVER_STATE_CONST_BUF, &cb);
+	si_set_constant_buffer(sctx, &sctx->rw_buffers,
+			       SI_VS_CONST_CLIP_PLANES, &cb);
 	pipe_resource_reference(&cb.buffer, NULL);
 }
 
