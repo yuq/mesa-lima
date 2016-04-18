@@ -1116,6 +1116,14 @@ static LLVMValueRef get_sample_id(struct radeon_llvm_context *radeon_bld)
 			    SI_PARAM_ANCILLARY, 8, 4);
 }
 
+static LLVMValueRef get_thread_id(struct si_shader_context *ctx)
+{
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+
+	return lp_build_intrinsic(gallivm->builder, "llvm.SI.tid", ctx->i32,
+					   NULL, 0, LLVMReadNoneAttribute);
+}
+
 /**
  * Load a dword from a constant buffer.
  */
@@ -1863,8 +1871,7 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 	LLVMValueRef so_vtx_count =
 		unpack_param(ctx, ctx->param_streamout_config, 16, 7);
 
-	LLVMValueRef tid = lp_build_intrinsic(builder, "llvm.SI.tid", ctx->i32,
-					   NULL, 0, LLVMReadNoneAttribute);
+	LLVMValueRef tid = get_thread_id(ctx);
 
 	/* can_emit = tid < so_vtx_count; */
 	LLVMValueRef can_emit =
@@ -4365,8 +4372,7 @@ static void si_llvm_emit_ddxy(
 	unsigned mask;
 
 	indices[0] = bld_base->uint_bld.zero;
-	indices[1] = lp_build_intrinsic(gallivm->builder, "llvm.SI.tid", ctx->i32,
-				     NULL, 0, LLVMReadNoneAttribute);
+	indices[1] = get_thread_id(ctx);
 	store_ptr = LLVMBuildGEP(gallivm->builder, ctx->lds,
 				 indices, 2, "");
 
@@ -4437,8 +4443,7 @@ static LLVMValueRef si_llvm_emit_ddxy_interp(
 	unsigned c;
 
 	indices[0] = bld_base->uint_bld.zero;
-	indices[1] = lp_build_intrinsic(gallivm->builder, "llvm.SI.tid", ctx->i32,
-					NULL, 0, LLVMReadNoneAttribute);
+	indices[1] = get_thread_id(ctx);
 	store_ptr = LLVMBuildGEP(gallivm->builder, ctx->lds,
 				 indices, 2, "");
 
