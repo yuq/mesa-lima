@@ -936,8 +936,7 @@ swr_update_derived(struct pipe_context *pipe,
             max_vertex = size / pitch;
             partial_inbounds = size % pitch;
 
-            p_data = (const uint8_t *)swr_resource_data(vb->buffer)
-               + vb->buffer_offset;
+            p_data = swr_resource_data(vb->buffer) + vb->buffer_offset;
          } else {
             /* Client buffer
              * client memory is one-time use, re-trigger SWR_NEW_VERTEX to
@@ -989,8 +988,7 @@ swr_update_derived(struct pipe_context *pipe,
              * size is based on buffer->width0 rather than info.count
              * to prevent having to validate VBO on each draw */
             size = ib->buffer->width0;
-            p_data =
-               (const uint8_t *)swr_resource_data(ib->buffer) + ib->offset;
+            p_data = swr_resource_data(ib->buffer) + ib->offset;
          } else {
             /* Client buffer
              * client memory is one-time use, re-trigger SWR_NEW_VERTEX to
@@ -1138,7 +1136,8 @@ swr_update_derived(struct pipe_context *pipe,
          pDC->num_constantsVS[i] = cb->buffer_size;
          if (cb->buffer)
             pDC->constantVS[i] =
-               (const float *)((const uint8_t *)cb->buffer + cb->buffer_offset);
+               (const float *)(swr_resource_data(cb->buffer) +
+                               cb->buffer_offset);
          else {
             /* Need to copy these constants to scratch space */
             if (cb->user_buffer && cb->buffer_size) {
@@ -1163,7 +1162,8 @@ swr_update_derived(struct pipe_context *pipe,
          pDC->num_constantsFS[i] = cb->buffer_size;
          if (cb->buffer)
             pDC->constantFS[i] =
-               (const float *)((const uint8_t *)cb->buffer + cb->buffer_offset);
+               (const float *)(swr_resource_data(cb->buffer) +
+                               cb->buffer_offset);
          else {
             /* Need to copy these constants to scratch space */
             if (cb->user_buffer && cb->buffer_size) {

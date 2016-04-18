@@ -85,7 +85,7 @@ swr_resource_is_texture(const struct pipe_resource *resource)
 }
 
 
-static INLINE void *
+static INLINE uint8_t *
 swr_resource_data(struct pipe_resource *resource)
 {
    struct swr_resource *swr_r = swr_resource(resource);
