@@ -95,6 +95,7 @@ private:
    void emitISAD(const Instruction *);
    void emitFMAD(const Instruction *);
    void emitDMAD(const Instruction *);
+   void emitMADSP(const Instruction *i);
 
    void emitNOT(const Instruction *);
    void emitLogicOp(const Instruction *, uint8_t subOp);
@@ -514,6 +515,25 @@ CodeEmitterGK110::emitDMAD(const Instruction *i)
    if (neg1) {
       code[1] |= 1 << 19;
    }
+}
+
+void
+CodeEmitterGK110::emitMADSP(const Instruction *i)
+{
+   emitForm_21(i, 0x140, 0xa40);
+
+   if (i->subOp == NV50_IR_SUBOP_MADSP_SD) {
+      code[1] |= 0x00c00000;
+   } else {
+      code[1] |= (i->subOp & 0x00f) << 19; // imadp1
+      code[1] |= (i->subOp & 0x0f0) << 20; // imadp2
+      code[1] |= (i->subOp & 0x100) << 11; // imadp3
+      code[1] |= (i->subOp & 0x200) << 15; // imadp3
+      code[1] |= (i->subOp & 0xc00) << 12; // imadp3
+   }
+
+   if (i->flagsDef >= 0)
+      code[1] |= 1 << 18;
 }
 
 void
@@ -2024,6 +2044,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
          emitFMAD(insn);
       else
          emitIMAD(insn);
+      break;
+   case OP_MADSP:
+      emitMADSP(insn);
       break;
    case OP_SAD:
       emitISAD(insn);
