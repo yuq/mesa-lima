@@ -295,20 +295,21 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
       struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
 
       if (state.offset == 0) {
-         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
-                        ._3DCommandSubOpcode = push_constant_opcodes[stage]);
+         anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c)
+            c._3DCommandSubOpcode = push_constant_opcodes[stage];
       } else {
-         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
-                        ._3DCommandSubOpcode = push_constant_opcodes[stage],
-                        .ConstantBody = {
+         anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c) {
+            c._3DCommandSubOpcode = push_constant_opcodes[stage],
+            c.ConstantBody = (struct GENX(3DSTATE_CONSTANT_BODY)) {
 #if GEN_GEN >= 9
-                           .PointerToConstantBuffer2 = { &cmd_buffer->device->dynamic_state_block_pool.bo, state.offset },
-                           .ConstantBuffer2ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
+               .PointerToConstantBuffer2 = { &cmd_buffer->device->dynamic_state_block_pool.bo, state.offset },
+               .ConstantBuffer2ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
 #else
-                           .PointerToConstantBuffer0 = { .offset = state.offset },
-                           .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
+               .PointerToConstantBuffer0 = { .offset = state.offset },
+               .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
 #endif
-                        });
+            };
+         }
       }
 
       flushed |= mesa_to_vk_shader_stage(stage);
