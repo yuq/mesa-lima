@@ -1116,12 +1116,35 @@ static LLVMValueRef get_sample_id(struct radeon_llvm_context *radeon_bld)
 			    SI_PARAM_ANCILLARY, 8, 4);
 }
 
+/**
+ * Set range metadata on an instruction.  This can only be used on load and
+ * call instructions.  If you know an instruction can only produce the values
+ * 0, 1, 2, you would do set_range_metadata(value, 0, 3);
+ * \p lo is the minimum value inclusive.
+ * \p hi is the maximum value exclusive.
+ */
+static void set_range_metadata(LLVMValueRef value, unsigned lo, unsigned hi)
+{
+	const char *range_md_string = "range";
+	LLVMValueRef range_md, md_args[2];
+	LLVMTypeRef type = LLVMTypeOf(value);
+	LLVMContextRef context = LLVMGetTypeContext(type);
+	unsigned md_range_id = LLVMGetMDKindIDInContext(context,
+				range_md_string, strlen(range_md_string));
+
+	md_args[0] = LLVMConstInt(type, lo, false);
+	md_args[1] = LLVMConstInt(type, hi, false);
+	range_md = LLVMMDNodeInContext(context, md_args, 2);
+	LLVMSetMetadata(value, md_range_id, range_md);
+}
+
 static LLVMValueRef get_thread_id(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
-
-	return lp_build_intrinsic(gallivm->builder, "llvm.SI.tid", ctx->i32,
-					   NULL, 0, LLVMReadNoneAttribute);
+	LLVMValueRef tid = lp_build_intrinsic(gallivm->builder, "llvm.SI.tid",
+				ctx->i32,   NULL, 0, LLVMReadNoneAttribute);
+	set_range_metadata(tid, 0, 64);
+	return tid;
 }
 
 /**
