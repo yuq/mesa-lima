@@ -175,8 +175,10 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
          anv_state_clflush(pipeline->blend_state);
     }
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_BLEND_STATE_POINTERS),
-                  .BlendStatePointer = pipeline->blend_state.offset);
+   anv_batch_emit_blk(&pipeline->batch,
+                      GENX(3DSTATE_BLEND_STATE_POINTERS), bsp) {
+      bsp.BlendStatePointer = pipeline->blend_state.offset;
+   }
 }
 
 VkResult
@@ -193,7 +195,7 @@ genX(graphics_pipeline_create)(
    VkResult result;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
-   
+
    pipeline = anv_alloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
                          VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pipeline == NULL)
@@ -222,19 +224,22 @@ genX(graphics_pipeline_create)(
    const VkPipelineRasterizationStateCreateInfo *rs_info =
       pCreateInfo->pRasterizationState;
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP),
-      .FrontWinding                             = vk_to_gen_front_face[rs_info->frontFace],
-      .CullMode                                 = vk_to_gen_cullmode[rs_info->cullMode],
-      .ClipEnable                               = !(extra && extra->use_rectlist),
-      .APIMode                                  = APIMODE_OGL,
-      .ViewportXYClipTestEnable                 = true,
-      .ClipMode                                 = CLIPMODE_NORMAL,
-      .TriangleStripListProvokingVertexSelect   = 0,
-      .LineStripListProvokingVertexSelect       = 0,
-      .TriangleFanProvokingVertexSelect         = 1,
-      .MinimumPointWidth                        = 0.125,
-      .MaximumPointWidth                        = 255.875,
-      .MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1);
+   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
+      clip.FrontWinding             = vk_to_gen_front_face[rs_info->frontFace],
+      clip.CullMode                 = vk_to_gen_cullmode[rs_info->cullMode],
+      clip.ClipEnable               = !(extra && extra->use_rectlist),
+      clip.APIMode                  = APIMODE_OGL,
+      clip.ViewportXYClipTestEnable = true,
+      clip.ClipMode                 = CLIPMODE_NORMAL,
+
+      clip.TriangleStripListProvokingVertexSelect   = 0,
+      clip.LineStripListProvokingVertexSelect       = 0,
+      clip.TriangleFanProvokingVertexSelect         = 1,
+
+      clip.MinimumPointWidth        = 0.125,
+      clip.MaximumPointWidth        = 255.875,
+      clip.MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1;
+   }
 
    if (pCreateInfo->pMultisampleState &&
        pCreateInfo->pMultisampleState->rasterizationSamples > 1)
@@ -243,12 +248,14 @@ genX(graphics_pipeline_create)(
    uint32_t samples = 1;
    uint32_t log2_samples = __builtin_ffs(samples) - 1;
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE),
-      .PixelLocation                            = PIXLOC_CENTER,
-      .NumberofMultisamples                     = log2_samples);
+   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
+      ms.PixelLocation        = PIXLOC_CENTER;
+      ms.NumberofMultisamples = log2_samples;
+   }
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK),
-      .SampleMask                               = 0xff);
+   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK), sm) {
+      sm.SampleMask = 0xff;
+   }
 
    const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
 
@@ -272,71 +279,76 @@ genX(graphics_pipeline_create)(
 #endif
 
    if (pipeline->vs_vec4 == NO_KERNEL || (extra && extra->disable_vs))
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), .VSFunctionEnable = false);
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_VS), vs);
    else
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS),
-         .KernelStartPointer                    = pipeline->vs_vec4,
-         .ScratchSpaceBaseOffset                = pipeline->scratch_start[MESA_SHADER_VERTEX],
-         .PerThreadScratchSpace                 = scratch_space(&vs_prog_data->base.base),
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_VS), vs) {
+         vs.KernelStartPointer         = pipeline->vs_vec4;
+         vs.ScratchSpaceBaseOffset     = pipeline->scratch_start[MESA_SHADER_VERTEX];
+         vs.PerThreadScratchSpace      = scratch_space(&vs_prog_data->base.base);
 
-         .DispatchGRFStartRegisterforURBData    =
-            vs_prog_data->base.base.dispatch_grf_start_reg,
-         .VertexURBEntryReadLength              = vs_prog_data->base.urb_read_length,
-         .VertexURBEntryReadOffset              = 0,
+         vs.DispatchGRFStartRegisterforURBData    =
+            vs_prog_data->base.base.dispatch_grf_start_reg;
 
-         .MaximumNumberofThreads                = device->info.max_vs_threads - 1,
-         .StatisticsEnable                      = true,
-         .VSFunctionEnable                      = true);
+         vs.VertexURBEntryReadLength   = vs_prog_data->base.urb_read_length;
+         vs.VertexURBEntryReadOffset   = 0;
+         vs.MaximumNumberofThreads     = device->info.max_vs_threads - 1;
+         vs.StatisticsEnable           = true;
+         vs.VSFunctionEnable           = true;
+      }
 
    const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
 
    if (pipeline->gs_kernel == NO_KERNEL || (extra && extra->disable_vs)) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), .GSEnable = false);
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_GS), gs);
    } else {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS),
-         .KernelStartPointer                    = pipeline->gs_kernel,
-         .ScratchSpaceBasePointer               = pipeline->scratch_start[MESA_SHADER_GEOMETRY],
-         .PerThreadScratchSpace                 = scratch_space(&gs_prog_data->base.base),
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_GS), gs) {
+         gs.KernelStartPointer         = pipeline->gs_kernel;
+         gs.ScratchSpaceBasePointer    = pipeline->scratch_start[MESA_SHADER_GEOMETRY];
+         gs.PerThreadScratchSpace      = scratch_space(&gs_prog_data->base.base);
 
-         .OutputVertexSize                      = gs_prog_data->output_vertex_size_hwords * 2 - 1,
-         .OutputTopology                        = gs_prog_data->output_topology,
-         .VertexURBEntryReadLength              = gs_prog_data->base.urb_read_length,
-         .IncludeVertexHandles                  = gs_prog_data->base.include_vue_handles,
-         .DispatchGRFStartRegisterforURBData    =
-            gs_prog_data->base.base.dispatch_grf_start_reg,
+         gs.OutputVertexSize           = gs_prog_data->output_vertex_size_hwords * 2 - 1;
+         gs.OutputTopology             = gs_prog_data->output_topology;
+         gs.VertexURBEntryReadLength   = gs_prog_data->base.urb_read_length;
+         gs.IncludeVertexHandles       = gs_prog_data->base.include_vue_handles;
 
-         .MaximumNumberofThreads                = device->info.max_gs_threads - 1,
+         gs.DispatchGRFStartRegisterforURBData =
+            gs_prog_data->base.base.dispatch_grf_start_reg;
+
+         gs.MaximumNumberofThreads     = device->info.max_gs_threads - 1;
          /* This in the next dword on HSW. */
-         .ControlDataFormat                     = gs_prog_data->control_data_format,
-         .ControlDataHeaderSize                 = gs_prog_data->control_data_header_size_hwords,
-         .InstanceControl                       = MAX2(gs_prog_data->invocations, 1) - 1,
-         .DispatchMode                          = gs_prog_data->base.dispatch_mode,
-         .GSStatisticsEnable                    = true,
-         .IncludePrimitiveID                    = gs_prog_data->include_primitive_id,
+         gs.ControlDataFormat          = gs_prog_data->control_data_format;
+         gs.ControlDataHeaderSize      = gs_prog_data->control_data_header_size_hwords;
+         gs.InstanceControl            = MAX2(gs_prog_data->invocations, 1) - 1;
+         gs.DispatchMode               = gs_prog_data->base.dispatch_mode;
+         gs.GSStatisticsEnable         = true;
+         gs.IncludePrimitiveID         = gs_prog_data->include_primitive_id;
 #     if (GEN_IS_HASWELL)
-         .ReorderMode                           = REORDER_TRAILING,
+         gs.ReorderMode                = REORDER_TRAILING;
 #     else
-         .ReorderEnable                         = true,
+         gs.ReorderEnable              = true;
 #     endif
-         .GSEnable                              = true);
+         gs.GSEnable                   = true;
+      }
    }
 
    if (pipeline->ps_ksp0 == NO_KERNEL) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE));
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_SBE), sbe);
 
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM),
-                     .StatisticsEnable                         = true,
-                     .ThreadDispatchEnable                     = false,
-                     .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */
-                     .LineAntialiasingRegionWidth              = 1, /* 1.0 pixels */
-                     .EarlyDepthStencilControl                 = EDSC_NORMAL,
-                     .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT);
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_WM), wm) {
+         wm.StatisticsEnable                    = true;
+         wm.ThreadDispatchEnable                = false;
+         wm.LineEndCapAntialiasingRegionWidth   = 0; /* 0.5 pixels */
+         wm.LineAntialiasingRegionWidth         = 1; /* 1.0 pixels */
+         wm.EarlyDepthStencilControl            = EDSC_NORMAL;
+         wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
+      }
 
       /* Even if no fragments are ever dispatched, the hardware hangs if we
        * don't at least set the maximum number of threads.
        */
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
-                     .MaximumNumberofThreads                   = device->info.max_wm_threads - 1);
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_PS), ps) {
+         ps.MaximumNumberofThreads = device->info.max_wm_threads - 1;
+      }
    } else {
       const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
       if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
@@ -347,53 +359,52 @@ genX(graphics_pipeline_create)(
 
       emit_3dstate_sbe(pipeline);
 
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
-                     .KernelStartPointer0                      = pipeline->ps_ksp0,
-                     .ScratchSpaceBasePointer                  = pipeline->scratch_start[MESA_SHADER_FRAGMENT],
-                     .PerThreadScratchSpace                    = scratch_space(&wm_prog_data->base),
-                  
-                     .MaximumNumberofThreads                   = device->info.max_wm_threads - 1,
-                     .PushConstantEnable                       = wm_prog_data->base.nr_params > 0,
-                     .AttributeEnable                          = wm_prog_data->num_varying_inputs > 0,
-                     .oMaskPresenttoRenderTarget               = wm_prog_data->uses_omask,
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_PS), ps) {
+         ps.KernelStartPointer0           = pipeline->ps_ksp0;
+         ps.ScratchSpaceBasePointer       = pipeline->scratch_start[MESA_SHADER_FRAGMENT];
+         ps.PerThreadScratchSpace         = scratch_space(&wm_prog_data->base);
+         ps.MaximumNumberofThreads        = device->info.max_wm_threads - 1;
+         ps.PushConstantEnable            = wm_prog_data->base.nr_params > 0;
+         ps.AttributeEnable               = wm_prog_data->num_varying_inputs > 0;
+         ps.oMaskPresenttoRenderTarget    = wm_prog_data->uses_omask;
 
-                     .RenderTargetFastClearEnable              = false,
-                     .DualSourceBlendEnable                    = false,
-                     .RenderTargetResolveEnable                = false,
+         ps.RenderTargetFastClearEnable   = false;
+         ps.DualSourceBlendEnable         = false;
+         ps.RenderTargetResolveEnable     = false;
 
-                     .PositionXYOffsetSelect                   = wm_prog_data->uses_pos_offset ?
-                     POSOFFSET_SAMPLE : POSOFFSET_NONE,
+         ps.PositionXYOffsetSelect        = wm_prog_data->uses_pos_offset ?
+                                            POSOFFSET_SAMPLE : POSOFFSET_NONE;
 
-                     ._32PixelDispatchEnable                   = false,
-                     ._16PixelDispatchEnable                   = pipeline->ps_simd16 != NO_KERNEL,
-                     ._8PixelDispatchEnable                    = pipeline->ps_simd8 != NO_KERNEL,
+         ps._32PixelDispatchEnable        = false;
+         ps._16PixelDispatchEnable        = pipeline->ps_simd16 != NO_KERNEL;
+         ps._8PixelDispatchEnable         = pipeline->ps_simd8 != NO_KERNEL;
 
-                     .DispatchGRFStartRegisterforConstantSetupData0 = pipeline->ps_grf_start0,
-                     .DispatchGRFStartRegisterforConstantSetupData1 = 0,
-                     .DispatchGRFStartRegisterforConstantSetupData2 = pipeline->ps_grf_start2,
+         ps.DispatchGRFStartRegisterforConstantSetupData0 = pipeline->ps_grf_start0,
+         ps.DispatchGRFStartRegisterforConstantSetupData1 = 0,
+         ps.DispatchGRFStartRegisterforConstantSetupData2 = pipeline->ps_grf_start2,
 
-#if 0
-                     /* Haswell requires the sample mask to be set in this packet as well as
-                      * in 3DSTATE_SAMPLE_MASK; the values should match. */
-                     /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
-#endif
+         /* Haswell requires the sample mask to be set in this packet as well as
+          * in 3DSTATE_SAMPLE_MASK; the values should match. */
+         /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
 
-                     .KernelStartPointer1                      = 0,
-                     .KernelStartPointer2                      = pipeline->ps_ksp2);
+         ps.KernelStartPointer1           = 0;
+         ps.KernelStartPointer2           = pipeline->ps_ksp2;
+      }
 
       /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM),
-                     .StatisticsEnable                         = true,
-                     .ThreadDispatchEnable                     = true,
-                     .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */
-                     .LineAntialiasingRegionWidth              = 1, /* 1.0 pixels */
-                     .EarlyDepthStencilControl                 = EDSC_NORMAL,
-                     .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT,
-                     .PixelShaderComputedDepthMode             = wm_prog_data->computed_depth_mode,
-                     .PixelShaderUsesSourceDepth               = wm_prog_data->uses_src_depth,
-                     .PixelShaderUsesSourceW                   = wm_prog_data->uses_src_w,
-                     .PixelShaderUsesInputCoverageMask         = wm_prog_data->uses_sample_mask,
-                     .BarycentricInterpolationMode             = wm_prog_data->barycentric_interp_modes);
+      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_WM), wm) {
+         wm.StatisticsEnable                    = true;
+         wm.ThreadDispatchEnable                = true;
+         wm.LineEndCapAntialiasingRegionWidth   = 0; /* 0.5 pixels */
+         wm.LineAntialiasingRegionWidth         = 1; /* 1.0 pixels */
+         wm.EarlyDepthStencilControl            = EDSC_NORMAL;
+         wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
+         wm.PixelShaderComputedDepthMode        = wm_prog_data->computed_depth_mode;
+         wm.PixelShaderUsesSourceDepth          = wm_prog_data->uses_src_depth;
+         wm.PixelShaderUsesSourceW              = wm_prog_data->uses_src_w;
+         wm.PixelShaderUsesInputCoverageMask    = wm_prog_data->uses_sample_mask;
+         wm.BarycentricInterpolationMode        = wm_prog_data->barycentric_interp_modes;
+      }
    }
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
