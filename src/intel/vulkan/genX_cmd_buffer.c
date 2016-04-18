@@ -49,46 +49,50 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
     * this, we get GPU hangs when using multi-level command buffers which
     * clear depth, reset state base address, and then go render stuff.
     */
-   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                  .RenderTargetCacheFlushEnable = true);
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      pc.RenderTargetCacheFlushEnable = true;
+   }
 #endif
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(STATE_BASE_ADDRESS),
-      .GeneralStateBaseAddress = { scratch_bo, 0 },
-      .GeneralStateMemoryObjectControlState = GENX(MOCS),
-      .GeneralStateBaseAddressModifyEnable = true,
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(STATE_BASE_ADDRESS), sba) {
+      sba.GeneralStateBaseAddress = (struct anv_address) { scratch_bo, 0 };
+      sba.GeneralStateMemoryObjectControlState = GENX(MOCS);
+      sba.GeneralStateBaseAddressModifyEnable = true;
 
-      .SurfaceStateBaseAddress = anv_cmd_buffer_surface_base_address(cmd_buffer),
-      .SurfaceStateMemoryObjectControlState = GENX(MOCS),
-      .SurfaceStateBaseAddressModifyEnable = true,
+      sba.SurfaceStateBaseAddress =
+         anv_cmd_buffer_surface_base_address(cmd_buffer);
+      sba.SurfaceStateMemoryObjectControlState = GENX(MOCS);
+      sba.SurfaceStateBaseAddressModifyEnable = true;
 
-      .DynamicStateBaseAddress = { &device->dynamic_state_block_pool.bo, 0 },
-      .DynamicStateMemoryObjectControlState = GENX(MOCS),
-      .DynamicStateBaseAddressModifyEnable = true,
+      sba.DynamicStateBaseAddress =
+         (struct anv_address) { &device->dynamic_state_block_pool.bo, 0 };
+      sba.DynamicStateMemoryObjectControlState = GENX(MOCS),
+      sba.DynamicStateBaseAddressModifyEnable = true,
 
-      .IndirectObjectBaseAddress = { NULL, 0 },
-      .IndirectObjectMemoryObjectControlState = GENX(MOCS),
-      .IndirectObjectBaseAddressModifyEnable = true,
+      sba.IndirectObjectBaseAddress = (struct anv_address) { NULL, 0 };
+      sba.IndirectObjectMemoryObjectControlState = GENX(MOCS);
+      sba.IndirectObjectBaseAddressModifyEnable = true;
 
-      .InstructionBaseAddress = { &device->instruction_block_pool.bo, 0 },
-      .InstructionMemoryObjectControlState = GENX(MOCS),
-      .InstructionBaseAddressModifyEnable = true,
+      sba.InstructionBaseAddress =
+         (struct anv_address) { &device->instruction_block_pool.bo, 0 };
+      sba.InstructionMemoryObjectControlState = GENX(MOCS);
+      sba.InstructionBaseAddressModifyEnable = true;
 
 #  if (GEN_GEN >= 8)
       /* Broadwell requires that we specify a buffer size for a bunch of
        * these fields.  However, since we will be growing the BO's live, we
        * just set them all to the maximum.
        */
-      .GeneralStateBufferSize = 0xfffff,
-      .GeneralStateBufferSizeModifyEnable = true,
-      .DynamicStateBufferSize = 0xfffff,
-      .DynamicStateBufferSizeModifyEnable = true,
-      .IndirectObjectBufferSize = 0xfffff,
-      .IndirectObjectBufferSizeModifyEnable = true,
-      .InstructionBufferSize = 0xfffff,
-      .InstructionBuffersizeModifyEnable = true,
+      sba.GeneralStateBufferSize                = 0xfffff;
+      sba.GeneralStateBufferSizeModifyEnable    = true;
+      sba.DynamicStateBufferSize                = 0xfffff;
+      sba.DynamicStateBufferSizeModifyEnable    = true;
+      sba.IndirectObjectBufferSize              = 0xfffff;
+      sba.IndirectObjectBufferSizeModifyEnable  = true;
+      sba.InstructionBufferSize                 = 0xfffff;
+      sba.InstructionBuffersizeModifyEnable     = true;
 #  endif
-   );
+   }
 
    /* After re-setting the surface state base address, we have to do some
     * cache flusing so that the sampler engine will pick up the new
@@ -127,8 +131,9 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
     * units cache the binding table in the texture cache.  However, we have
     * yet to be able to actually confirm this.
     */
-   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                  .TextureCacheInvalidationEnable = true);
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      pc.TextureCacheInvalidationEnable = true;
+   }
 }
 
 void genX(CmdPipelineBarrier)(
@@ -414,10 +419,12 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
        *    PIPE_CONTROL needs to be sent before any combination of VS
        *    associated 3DSTATE."
        */
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                     .DepthStallEnable = true,
-                     .PostSyncOperation = WriteImmediateData,
-                     .Address = { &cmd_buffer->device->workaround_bo, 0 });
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+         pc.DepthStallEnable  = true;
+         pc.PostSyncOperation = WriteImmediateData;
+         pc.Address           =
+            (struct anv_address) { &cmd_buffer->device->workaround_bo, 0 };
+      }
    }
 #endif
 
@@ -821,19 +828,21 @@ flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
        *   command to invalidate read only caches prior to programming
        *   MI_PIPELINE_SELECT command to change the Pipeline Select Mode.
        */
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                     .RenderTargetCacheFlushEnable = true,
-                     .DepthCacheFlushEnable = true,
-                     .DCFlushEnable = true,
-                     .PostSyncOperation = NoWrite,
-                     .CommandStreamerStallEnable = true);
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+         pc.RenderTargetCacheFlushEnable  = true;
+         pc.DepthCacheFlushEnable         = true;
+         pc.DCFlushEnable                 = true;
+         pc.PostSyncOperation             = NoWrite;
+         pc.CommandStreamerStallEnable    = true;
+      }
 
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                     .TextureCacheInvalidationEnable = true,
-                     .ConstantCacheInvalidationEnable = true,
-                     .StateCacheInvalidationEnable = true,
-                     .InstructionCacheInvalidateEnable = true,
-                     .PostSyncOperation = NoWrite);
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+         pc.TextureCacheInvalidationEnable   = true;
+         pc.ConstantCacheInvalidationEnable  = true;
+         pc.StateCacheInvalidationEnable     = true;
+         pc.InstructionCacheInvalidateEnable = true;
+         pc.PostSyncOperation                = NoWrite;
+      }
 #endif
 }
 
@@ -1067,22 +1076,24 @@ static void
 emit_ps_depth_count(struct anv_batch *batch,
                     struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit(batch, GENX(PIPE_CONTROL),
-                  .DestinationAddressType = DAT_PPGTT,
-                  .PostSyncOperation = WritePSDepthCount,
-                  .DepthStallEnable = true,
-                  .Address = { bo, offset });
+   anv_batch_emit_blk(batch, GENX(PIPE_CONTROL), pc) {
+      pc.DestinationAddressType  = DAT_PPGTT;
+      pc.PostSyncOperation       = WritePSDepthCount;
+      pc.DepthStallEnable        = true;
+      pc.Address                 = (struct anv_address) { bo, offset };
+   }
 }
 
 static void
 emit_query_availability(struct anv_batch *batch,
                         struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit(batch, GENX(PIPE_CONTROL),
-                  .DestinationAddressType = DAT_PPGTT,
-                  .PostSyncOperation = WriteImmediateData,
-                  .Address = { bo, offset },
-                  .ImmediateData = 1);
+   anv_batch_emit_blk(batch, GENX(PIPE_CONTROL), pc) {
+      pc.DestinationAddressType  = DAT_PPGTT;
+      pc.PostSyncOperation       = WriteImmediateData;
+      pc.Address                 = (struct anv_address) { bo, offset };
+      pc.ImmediateData           = 1;
+   }
 }
 
 void genX(CmdBeginQuery)(
@@ -1102,9 +1113,10 @@ void genX(CmdBeginQuery)(
     */
    if (cmd_buffer->state.need_query_wa) {
       cmd_buffer->state.need_query_wa = false;
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                     .DepthCacheFlushEnable = true,
-                     .DepthStallEnable = true);
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+         pc.DepthCacheFlushEnable   = true;
+         pc.DepthStallEnable        = true;
+      }
    }
 
    switch (pool->type) {
@@ -1253,10 +1265,12 @@ void genX(CmdCopyQueryPoolResults)(
    ANV_FROM_HANDLE(anv_buffer, buffer, destBuffer);
    uint32_t slot_offset, dst_offset;
 
-   if (flags & VK_QUERY_RESULT_WAIT_BIT)
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                     .CommandStreamerStallEnable = true,
-                     .StallAtPixelScoreboard = true);
+   if (flags & VK_QUERY_RESULT_WAIT_BIT) {
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+         pc.CommandStreamerStallEnable = true;
+         pc.StallAtPixelScoreboard     = true;
+      }
+   }
 
    dst_offset = buffer->offset + destOffset;
    for (uint32_t i = 0; i < queryCount; i++) {
