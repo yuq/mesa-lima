@@ -2544,8 +2544,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			assert(0);
 		}
 		constbuf.buffer_size = sctx->framebuffer.nr_samples * 2 * 4;
-		ctx->set_constant_buffer(ctx, PIPE_SHADER_FRAGMENT,
-					 SI_DRIVER_STATE_CONST_BUF, &constbuf);
+		si_set_constant_buffer(sctx, &sctx->rw_buffers,
+				       SI_PS_CONST_SAMPLE_POSITIONS, &constbuf);
 
 		/* Smoothing (only possible with nr_samples == 1) uses the same
 		 * sample locations as the MSAA it simulates.
