@@ -171,16 +171,6 @@ def generate(env):
     # Allow override compiler and specify additional flags from environment
     if os.environ.has_key('CC'):
         env['CC'] = os.environ['CC']
-        # Update CCVERSION to match
-        pipe = SCons.Action._subproc(env, [env['CC'], '--version'],
-                                     stdin = 'devnull',
-                                     stderr = 'devnull',
-                                     stdout = subprocess.PIPE)
-        if pipe.wait() == 0:
-            line = pipe.stdout.readline()
-            match = re.search(r'[0-9]+(\.[0-9]+)+', line)
-            if match:
-                env['CCVERSION'] = match.group(0)
     if os.environ.has_key('CFLAGS'):
         env['CCFLAGS'] += SCons.Util.CLVar(os.environ['CFLAGS'])
     if os.environ.has_key('CXX'):
@@ -299,7 +289,11 @@ def generate(env):
 
     # C preprocessor options
     cppdefines = []
-    cppdefines += ['__STDC_LIMIT_MACROS', '__STDC_CONSTANT_MACROS']
+    cppdefines += [
+        '__STDC_LIMIT_MACROS',
+        '__STDC_CONSTANT_MACROS',
+        'HAVE_NO_AUTOCONF',
+    ]
     if env['build'] in ('debug', 'checked'):
         cppdefines += ['DEBUG']
     else:
@@ -314,8 +308,6 @@ def generate(env):
             '_BSD_SOURCE',
             '_GNU_SOURCE',
             '_DEFAULT_SOURCE',
-            'HAVE_PTHREAD',
-            'HAVE_POSIX_MEMALIGN',
         ]
         if env['platform'] == 'darwin':
             cppdefines += [
@@ -336,11 +328,6 @@ def generate(env):
         if env['platform'] in ('linux', 'darwin'):
             cppdefines += ['HAVE_XLOCALE_H']
 
-    if env['platform'] == 'haiku':
-        cppdefines += [
-            'HAVE_PTHREAD',
-            'HAVE_POSIX_MEMALIGN'
-        ]
     if platform == 'windows':
         cppdefines += [
             'WIN32',
@@ -374,26 +361,6 @@ def generate(env):
         print 'warning: Floating-point textures enabled.'
         print 'warning: Please consult docs/patents.txt with your lawyer before building Mesa.'
         cppdefines += ['TEXTURE_FLOAT_ENABLED']
-    if gcc_compat:
-        ccversion = env['CCVERSION']
-        cppdefines += [
-            'HAVE___BUILTIN_EXPECT',
-            'HAVE___BUILTIN_FFS',
-            'HAVE___BUILTIN_FFSLL',
-            'HAVE_FUNC_ATTRIBUTE_FLATTEN',
-            'HAVE_FUNC_ATTRIBUTE_UNUSED',
-            # GCC 3.0
-            'HAVE_FUNC_ATTRIBUTE_FORMAT',
-            'HAVE_FUNC_ATTRIBUTE_PACKED',
-            # GCC 3.4
-            'HAVE___BUILTIN_CTZ',
-            'HAVE___BUILTIN_POPCOUNT',
-            'HAVE___BUILTIN_POPCOUNTLL',
-            'HAVE___BUILTIN_CLZ',
-            'HAVE___BUILTIN_CLZLL',
-        ]
-        if distutils.version.LooseVersion(ccversion) >= distutils.version.LooseVersion('4.5'):
-            cppdefines += ['HAVE___BUILTIN_UNREACHABLE']
     env.Append(CPPDEFINES = cppdefines)
 
     # C compiler options
@@ -401,12 +368,7 @@ def generate(env):
     cxxflags = [] # C++
     ccflags = [] # C & C++
     if gcc_compat:
-        ccversion = env['CCVERSION']
         if env['build'] == 'debug':
-            ccflags += ['-O0']
-        elif env['gcc'] and ccversion.startswith('4.2.'):
-            # gcc 4.2.x optimizer is broken
-            print "warning: gcc 4.2.x optimizer is broken -- disabling optimizations"
             ccflags += ['-O0']
         else:
             ccflags += ['-O3']

@@ -26,6 +26,8 @@
 
 #include <assert.h>
 
+#include "c99_compat.h"
+
 /* Compute the size of an array */
 #ifndef ARRAY_SIZE
 #  define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
