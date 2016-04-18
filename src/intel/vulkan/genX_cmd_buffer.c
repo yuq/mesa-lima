@@ -924,28 +924,34 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
    /* Emit 3DSTATE_DEPTH_BUFFER */
    if (has_depth) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER),
-         .SurfaceType = SURFTYPE_2D,
-         .DepthWriteEnable = true,
-         .StencilWriteEnable = has_stencil,
-         .HierarchicalDepthBufferEnable = false,
-         .SurfaceFormat = isl_surf_get_depth_format(&device->isl_dev,
-                                                    &image->depth_surface.isl),
-         .SurfacePitch = image->depth_surface.isl.row_pitch - 1,
-         .SurfaceBaseAddress = {
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
+         db.SurfaceType                   = SURFTYPE_2D;
+         db.DepthWriteEnable              = true;
+         db.StencilWriteEnable            = has_stencil;
+         db.HierarchicalDepthBufferEnable = false;
+
+         db.SurfaceFormat = isl_surf_get_depth_format(&device->isl_dev,
+                                                      &image->depth_surface.isl);
+
+         db.SurfaceBaseAddress = (struct anv_address) {
             .bo = image->bo,
             .offset = image->offset + image->depth_surface.offset,
-         },
-         .Height = fb->height - 1,
-         .Width = fb->width - 1,
-         .LOD = 0,
-         .Depth = 1 - 1,
-         .MinimumArrayElement = 0,
-         .DepthBufferObjectControlState = GENX(MOCS),
+         };
+         db.DepthBufferObjectControlState = GENX(MOCS),
+
+         db.SurfacePitch         = image->depth_surface.isl.row_pitch - 1;
+         db.Height               = fb->height - 1;
+         db.Width                = fb->width - 1;
+         db.LOD                  = 0;
+         db.Depth                = 1 - 1;
+         db.MinimumArrayElement  = 0;
+
 #if GEN_GEN >= 8
-         .SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->depth_surface.isl) >> 2,
+         db.SurfaceQPitch =
+            isl_surf_get_array_pitch_el_rows(&image->depth_surface.isl) >> 2,
 #endif
-         .RenderTargetViewExtent = 1 - 1);
+         db.RenderTargetViewExtent = 1 - 1;
+      }
    } else {
       /* Even when no depth buffer is present, the hardware requires that
        * 3DSTATE_DEPTH_BUFFER be programmed correctly. The Broadwell PRM says:
@@ -965,45 +971,47 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
        * nor stencil buffer is present.  Also, D16_UNORM is not allowed to
        * be combined with a stencil buffer so we use D32_FLOAT instead.
        */
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER),
-         .SurfaceType = SURFTYPE_2D,
-         .SurfaceFormat = D32_FLOAT,
-         .Width = fb->width - 1,
-         .Height = fb->height - 1,
-         .StencilWriteEnable = has_stencil);
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
+         db.SurfaceType          = SURFTYPE_2D;
+         db.SurfaceFormat        = D32_FLOAT;
+         db.Width                = fb->width - 1;
+         db.Height               = fb->height - 1;
+         db.StencilWriteEnable   = has_stencil;
+      }
    }
 
    /* Emit 3DSTATE_STENCIL_BUFFER */
    if (has_stencil) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER),
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb) {
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
-         .StencilBufferEnable = true,
+         sb.StencilBufferEnable = true,
 #endif
-         .StencilBufferObjectControlState = GENX(MOCS),
+         sb.StencilBufferObjectControlState = GENX(MOCS),
 
          /* Stencil buffers have strange pitch. The PRM says:
           *
           *    The pitch must be set to 2x the value computed based on width,
           *    as the stencil buffer is stored with two rows interleaved.
           */
-         .SurfacePitch = 2 * image->stencil_surface.isl.row_pitch - 1,
+         sb.SurfacePitch = 2 * image->stencil_surface.isl.row_pitch - 1,
 
 #if GEN_GEN >= 8
-         .SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->stencil_surface.isl) >> 2,
+         sb.SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->stencil_surface.isl) >> 2,
 #endif
-         .SurfaceBaseAddress = {
+         sb.SurfaceBaseAddress = (struct anv_address) {
             .bo = image->bo,
             .offset = image->offset + image->stencil_surface.offset,
-         });
+         };
+      }
    } else {
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER));
+      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb);
    }
 
    /* Disable hierarchial depth buffers. */
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER));
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hz);
 
    /* Clear the clear params. */
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS));
+   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS), cp);
 }
 
 /**
