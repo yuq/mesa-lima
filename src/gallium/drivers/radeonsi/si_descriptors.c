@@ -783,15 +783,10 @@ void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuf
 		util_memcpy_cpu_to_le32(tmp, ptr, size);
 }
 
-static void si_set_constant_buffer(struct pipe_context *ctx, uint shader, uint slot,
-				   struct pipe_constant_buffer *input)
+static void si_set_constant_buffer(struct si_context *sctx,
+				   struct si_buffer_resources *buffers,
+				   uint slot, struct pipe_constant_buffer *input)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_buffer_resources *buffers = &sctx->const_buffers[shader];
-
-	if (shader >= SI_NUM_SHADERS)
-		return;
-
 	assert(slot < buffers->desc.num_elements);
 	pipe_resource_reference(&buffers->buffers[slot], NULL);
 
@@ -814,7 +809,7 @@ static void si_set_constant_buffer(struct pipe_context *ctx, uint shader, uint s
 					       input->buffer_size, &buffer_offset);
 			if (!buffer) {
 				/* Just unbind on failure. */
-				si_set_constant_buffer(ctx, shader, slot, NULL);
+				si_set_constant_buffer(sctx, buffers, slot, NULL);
 				return;
 			}
 			va = r600_resource(buffer)->gpu_address + buffer_offset;
@@ -848,6 +843,18 @@ static void si_set_constant_buffer(struct pipe_context *ctx, uint shader, uint s
 	}
 
 	buffers->desc.dirty_mask |= 1llu << slot;
+}
+
+static void si_pipe_set_constant_buffer(struct pipe_context *ctx,
+					uint shader, uint slot,
+					struct pipe_constant_buffer *input)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+
+	if (shader >= SI_NUM_SHADERS)
+		return;
+
+	si_set_constant_buffer(sctx, &sctx->const_buffers[shader], slot, input);
 }
 
 /* SHADER BUFFERS */
@@ -1472,7 +1479,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 	/* Set pipe_context functions. */
 	sctx->b.b.bind_sampler_states = si_bind_sampler_states;
 	sctx->b.b.set_shader_images = si_set_shader_images;
-	sctx->b.b.set_constant_buffer = si_set_constant_buffer;
+	sctx->b.b.set_constant_buffer = si_pipe_set_constant_buffer;
 	sctx->b.b.set_shader_buffers = si_set_shader_buffers;
 	sctx->b.b.set_sampler_views = si_set_sampler_views;
 	sctx->b.b.set_stream_output_targets = si_set_streamout_targets;
