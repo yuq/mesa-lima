@@ -1327,11 +1327,7 @@ GCRA::simplify()
                bestScore = score;
             }
          }
-#if __cplusplus >= 201103L
-         if (std::isinf(bestScore)) {
-#else
          if (isinf(bestScore)) {
-#endif
             ERROR("no viable spill candidates left\n");
             break;
          }
