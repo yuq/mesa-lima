@@ -2691,17 +2691,24 @@ uint32_t r600_colorformat_endian_swap(uint32_t colorformat, bool do_endian_swap)
 			return ENDIAN_NONE;
 
 		/* 16-bit buffers. */
+		case V_0280A0_COLOR_8_8:
+			/*
+			 * No need to do endian swaps on array formats,
+			 * as mesa<-->pipe formats conversion take into account
+			 * the endianess
+			 */
+			return ENDIAN_NONE;
+
 		case V_0280A0_COLOR_5_6_5:
 		case V_0280A0_COLOR_1_5_5_5:
 		case V_0280A0_COLOR_4_4_4_4:
 		case V_0280A0_COLOR_16:
-		case V_0280A0_COLOR_8_8:
-			return ENDIAN_8IN16;
+			return (do_endian_swap ? ENDIAN_8IN16 : ENDIAN_NONE);
 
 		/* 32-bit buffers. */
 		case V_0280A0_COLOR_8_8_8_8:
 			/*
-			 * No need to do endian swaps on four 8-bits components,
+			 * No need to do endian swaps on array formats,
 			 * as mesa<-->pipe formats conversion take into account
 			 * the endianess
 			 */
@@ -2711,9 +2718,11 @@ uint32_t r600_colorformat_endian_swap(uint32_t colorformat, bool do_endian_swap)
 		case V_0280A0_COLOR_8_24:
 		case V_0280A0_COLOR_24_8:
 		case V_0280A0_COLOR_32_FLOAT:
+			return (do_endian_swap ? ENDIAN_8IN32 : ENDIAN_NONE);
+
 		case V_0280A0_COLOR_16_16_FLOAT:
 		case V_0280A0_COLOR_16_16:
-			return ENDIAN_8IN32;
+			return ENDIAN_8IN16;
 
 		/* 64-bit buffers. */
 		case V_0280A0_COLOR_16_16_16_16:
