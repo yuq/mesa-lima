@@ -1427,11 +1427,16 @@ void brw_init_common_queryobj_functions(struct dd_function_table *functions);
 void gen4_init_queryobj_functions(struct dd_function_table *functions);
 void brw_emit_query_begin(struct brw_context *brw);
 void brw_emit_query_end(struct brw_context *brw);
+void brw_query_counter(struct gl_context *ctx, struct gl_query_object *q);
+bool brw_is_query_pipelined(struct brw_query_object *query);
 
 /** gen6_queryobj.c */
 void gen6_init_queryobj_functions(struct dd_function_table *functions);
 void brw_write_timestamp(struct brw_context *brw, drm_intel_bo *bo, int idx);
 void brw_write_depth_count(struct brw_context *brw, drm_intel_bo *bo, int idx);
+
+/** hsw_queryobj.c */
+void hsw_init_queryobj_functions(struct dd_function_table *functions);
 
 /** brw_conditional_render.c */
 void brw_init_conditional_render_functions(struct dd_function_table *functions);

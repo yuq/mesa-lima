@@ -358,7 +358,9 @@ brw_init_driver_functions(struct brw_context *brw,
 
    brwInitFragProgFuncs( functions );
    brw_init_common_queryobj_functions(functions);
-   if (brw->gen >= 6)
+   if (brw->gen >= 8 || brw->is_haswell)
+      hsw_init_queryobj_functions(functions);
+   else if (brw->gen >= 6)
       gen6_init_queryobj_functions(functions);
    else
       gen4_init_queryobj_functions(functions);

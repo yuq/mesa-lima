@@ -366,6 +366,10 @@ intelInitExtensions(struct gl_context *ctx)
       }
    }
 
+   if (brw->gen >= 8 || brw->is_haswell) {
+      ctx->Extensions.ARB_query_buffer_object = true;
+   }
+
    if (brw->gen >= 8) {
       ctx->Extensions.ARB_stencil_texturing = true;
       ctx->Extensions.ARB_texture_stencil8 = true;

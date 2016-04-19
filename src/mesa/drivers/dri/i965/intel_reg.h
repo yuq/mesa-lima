@@ -43,6 +43,7 @@
 
 #define MI_STORE_REGISTER_MEM		(CMD_MI | (0x24 << 23))
 # define MI_STORE_REGISTER_MEM_USE_GGTT		(1 << 22)
+# define MI_STORE_REGISTER_MEM_PREDICATE	(1 << 21)
 
 /* Load a value from memory into a register.  Only available on Gen7+. */
 #define GEN7_MI_LOAD_REGISTER_MEM	(CMD_MI | (0x29 << 23))

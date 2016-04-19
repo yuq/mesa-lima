@@ -37,7 +37,36 @@
 #include "brw_defines.h"
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
+#include "intel_buffer_objects.h"
 #include "intel_reg.h"
+
+static inline void
+set_query_availability(struct brw_context *brw, struct brw_query_object *query,
+                       bool available)
+{
+   /* For platforms that support ARB_query_buffer_object, we write the
+    * query availability for "pipelined" queries.
+    *
+    * Most counter snapshots are written by the command streamer, by
+    * doing a CS stall and then MI_STORE_REGISTER_MEM.  For these
+    * counters, the CS stall guarantees that the results will be
+    * available when subsequent CS commands run.  So we don't need to
+    * do any additional tracking.
+    *
+    * Other counters (occlusion queries and timestamp) are written by
+    * PIPE_CONTROL, without a CS stall.  This means that we can't be
+    * sure whether the writes have landed yet or not.  Performing a
+    * PIPE_CONTROL with an immediate write will synchronize with
+    * those earlier writes, so we write 1 when the value has landed.
+    */
+   if (brw->ctx.Extensions.ARB_query_buffer_object &&
+       brw_is_query_pipelined(query)) {
+      brw_emit_pipe_control_write(brw,
+                                  PIPE_CONTROL_WRITE_IMMEDIATE,
+                                  query->bo, 2 * sizeof(uint64_t),
+                                  available, 0);
+   }
+}
 
 static void
 write_primitives_generated(struct brw_context *brw,
@@ -243,6 +272,9 @@ gen6_begin_query(struct gl_context *ctx, struct gl_query_object *q)
    drm_intel_bo_unreference(query->bo);
    query->bo = drm_intel_bo_alloc(brw->bufmgr, "query results", 4096, 4096);
 
+   /* For ARB_query_buffer_object: The result is not available */
+   set_query_availability(brw, query, false);
+
    switch (query->Base.Target) {
    case GL_TIME_ELAPSED:
       /* For timestamp queries, we record the starting time right away so that
@@ -356,6 +388,9 @@ gen6_end_query(struct gl_context *ctx, struct gl_query_object *q)
     * but they won't actually execute until it is flushed.
     */
    query->flushed = false;
+
+   /* For ARB_query_buffer_object: The result is now available */
+   set_query_availability(brw, query, true);
 }
 
 /**
@@ -425,6 +460,15 @@ static void gen6_check_query(struct gl_context *ctx, struct gl_query_object *q)
    }
 }
 
+static void
+gen6_query_counter(struct gl_context *ctx, struct gl_query_object *q)
+{
+   struct brw_context *brw = brw_context(ctx);
+   struct brw_query_object *query = (struct brw_query_object *)q;
+   brw_query_counter(ctx, q);
+   set_query_availability(brw, query, true);
+}
+
 /* Initialize Gen6+-specific query object functions. */
 void gen6_init_queryobj_functions(struct dd_function_table *functions)
 {
@@ -432,4 +476,5 @@ void gen6_init_queryobj_functions(struct dd_function_table *functions)
    functions->EndQuery = gen6_end_query;
    functions->CheckQuery = gen6_check_query;
    functions->WaitQuery = gen6_wait_query;
+   functions->QueryCounter = gen6_query_counter;
 }
