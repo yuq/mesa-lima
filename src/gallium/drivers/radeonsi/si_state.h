@@ -32,7 +32,13 @@
 
 #define SI_NUM_GRAPHICS_SHADERS (PIPE_SHADER_TESS_EVAL+1)
 #define SI_NUM_SHADERS (PIPE_SHADER_COMPUTE+1)
-#define SI_MAX_ATTRIBS 16
+
+#define SI_MAX_ATTRIBS			16
+#define SI_NUM_VERTEX_BUFFERS		SI_MAX_ATTRIBS
+#define SI_NUM_SAMPLERS			32 /* OpenGL textures units per shader */
+#define SI_NUM_CONST_BUFFERS		16
+#define SI_NUM_IMAGES			16
+#define SI_NUM_SHADER_BUFFERS		16
 
 struct si_screen;
 struct si_shader;
@@ -146,20 +152,6 @@ struct si_shader_data {
 	uint32_t		sh_base[SI_NUM_SHADERS];
 };
 
-#define SI_NUM_USER_SAMPLERS            32 /* AKA OpenGL textures units per shader */
-#define SI_NUM_SAMPLERS                 SI_NUM_USER_SAMPLERS
-
-/* User constant buffers:   0..15
- * Driver state constants:  16
- */
-#define SI_NUM_USER_CONST_BUFFERS	16
-#define SI_DRIVER_STATE_CONST_BUF	SI_NUM_USER_CONST_BUFFERS
-#define SI_NUM_CONST_BUFFERS		(SI_DRIVER_STATE_CONST_BUF + 1)
-
-#define SI_NUM_IMAGES			16
-
-#define SI_NUM_SHADER_BUFFERS		16
-
 /* Private read-write buffer slots. */
 enum {
 	SI_HS_RING_TESS_FACTOR,
@@ -185,9 +177,6 @@ enum {
 
 	SI_NUM_RW_BUFFERS,
 };
-
-#define SI_NUM_VERTEX_BUFFERS	SI_MAX_ATTRIBS
-
 
 /* This represents descriptors in memory, such as buffer resources,
  * image resources, and sampler states.

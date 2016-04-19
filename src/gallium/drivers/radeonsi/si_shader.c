@@ -101,7 +101,7 @@ struct si_shader_context
 	LLVMValueRef shader_buffers[SI_NUM_SHADER_BUFFERS];
 	LLVMValueRef sampler_views[SI_NUM_SAMPLERS];
 	LLVMValueRef sampler_states[SI_NUM_SAMPLERS];
-	LLVMValueRef fmasks[SI_NUM_USER_SAMPLERS];
+	LLVMValueRef fmasks[SI_NUM_SAMPLERS];
 	LLVMValueRef images[SI_NUM_IMAGES];
 	LLVMValueRef so_buffers[4];
 	LLVMValueRef esgs_ring;
@@ -1406,7 +1406,7 @@ static LLVMValueRef fetch_constant(
 		LLVMValueRef index;
 		index = get_bounded_indirect_index(ctx, &reg->DimIndirect,
 						   reg->Dimension.Index,
-						   SI_NUM_USER_CONST_BUFFERS);
+						   SI_NUM_CONST_BUFFERS);
 		bufp = build_indexed_load_const(ctx, ptr, index);
 	} else
 		bufp = ctx->const_buffers[buf];
@@ -3822,7 +3822,7 @@ static void tex_fetch_ptrs(
 		ind_index = get_bounded_indirect_index(ctx,
 						       &reg->Indirect,
 						       reg->Register.Index,
-						       SI_NUM_USER_SAMPLERS);
+						       SI_NUM_SAMPLERS);
 
 		*res_ptr = get_sampler_desc(ctx, ind_index, DESC_IMAGE);
 
