@@ -708,7 +708,8 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
    consts->MaxComputeWorkGroupSize[0] = 1024;
    consts->MaxComputeWorkGroupSize[1] = 1024;
    consts->MaxComputeWorkGroupSize[2] = 64;
-   consts->MaxComputeWorkGroupInvocations = 1024;
+   /* Enables compute support for GLES 3.1 if >= 128 */
+   consts->MaxComputeWorkGroupInvocations = 0;
 
    /** GL_ARB_gpu_shader5 */
    consts->MinFragmentInterpolationOffset = MIN_FRAGMENT_INTERPOLATION_OFFSET;
