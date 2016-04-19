@@ -2301,6 +2301,13 @@ typedef struct nir_lower_tex_options {
     * while 4 and 5 represent 0 and 1 respectively.
     */
    uint8_t swizzles[32][4];
+
+   /**
+    * Bitmap of textures that need srgb to linear conversion.  If
+    * (lower_srgb & (1 << texture_index)) then the rgb (xyz) components
+    * of the texture are lowered to linear.
+    */
+   unsigned lower_srgb;
 } nir_lower_tex_options;
 
 bool nir_lower_tex(nir_shader *shader,
