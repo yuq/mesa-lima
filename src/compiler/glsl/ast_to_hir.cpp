@@ -1054,6 +1054,11 @@ ast_node::has_sequence_subexpression() const
 }
 
 void
+ast_node::set_is_lhs(bool /* new_value */)
+{
+}
+
+void
 ast_function_expression::hir_no_rvalue(exec_list *instructions,
                                        struct _mesa_glsl_parse_state *state)
 {

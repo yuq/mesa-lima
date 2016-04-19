@@ -126,6 +126,8 @@ public:
 
    exec_node link;
 
+   virtual void set_is_lhs(bool);
+
 protected:
    /**
     * The only constructor is protected so that only derived class objects can
