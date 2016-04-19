@@ -7022,7 +7022,8 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	     (shader->key.vs.as_es != mainp->key.vs.as_es ||
 	      shader->key.vs.as_ls != mainp->key.vs.as_ls)) ||
 	    (shader->selector->type == PIPE_SHADER_TESS_EVAL &&
-	     shader->key.tes.as_es != mainp->key.tes.as_es)) {
+	     shader->key.tes.as_es != mainp->key.tes.as_es) ||
+	    shader->selector->type == PIPE_SHADER_COMPUTE) {
 		/* Monolithic shader (compiled as a whole, has many variants,
 		 * may take a long time to compile).
 		 */

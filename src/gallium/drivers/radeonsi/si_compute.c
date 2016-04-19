@@ -81,13 +81,19 @@ static void *si_create_compute_state(
 
 		program->shader.selector = &sel;
 
-		if (si_compile_tgsi_shader(sscreen, sctx->tm, &program->shader,
-		                           true, &sctx->b.debug)) {
+		if (si_shader_create(sscreen, sctx->tm, &program->shader,
+		                     &sctx->b.debug)) {
 			FREE(sel.tokens);
 			return NULL;
 		}
 
 		scratch_enabled = shader->config.scratch_bytes_per_wave > 0;
+
+		shader->config.rsrc1 =
+			   S_00B848_VGPRS((shader->config.num_vgprs - 1) / 4) |
+			   S_00B848_SGPRS((shader->config.num_sgprs - 1) / 8) |
+			   S_00B848_DX10_CLAMP(1) |
+			   S_00B848_FLOAT_MODE(shader->config.float_mode);
 
 		shader->config.rsrc2 = S_00B84C_USER_SGPR(SI_CS_NUM_USER_SGPR) |
 			   S_00B84C_SCRATCH_EN(scratch_enabled) |
@@ -105,10 +111,10 @@ static void *si_create_compute_state(
 		radeon_elf_read(code, header->num_bytes, &program->shader.binary);
 		si_shader_binary_read_config(&program->shader.binary,
 			     &program->shader.config, 0);
+		si_shader_dump(sctx->screen, &program->shader, &sctx->b.debug,
+			       PIPE_SHADER_COMPUTE, stderr);
+		si_shader_binary_upload(sctx->screen, &program->shader);
 	}
-	si_shader_dump(sctx->screen, &program->shader, &sctx->b.debug,
-		       TGSI_PROCESSOR_COMPUTE, stderr);
-	si_shader_binary_upload(sctx->screen, &program->shader);
 
 	return program;
 }
