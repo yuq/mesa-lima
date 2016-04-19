@@ -602,6 +602,21 @@ brw_store_register_mem64(struct brw_context *brw,
 }
 
 /*
+ * Copies a 32-bit register.
+ */
+void
+brw_load_register_reg(struct brw_context *brw, uint32_t src, uint32_t dest)
+{
+   assert(brw->gen >= 8 || brw->is_haswell);
+
+   BEGIN_BATCH(3);
+   OUT_BATCH(MI_LOAD_REGISTER_REG | (3 - 2));
+   OUT_BATCH(src);
+   OUT_BATCH(dest);
+   ADVANCE_BATCH();
+}
+
+/*
  * Write 32-bits of immediate data to a GPU memory buffer.
  */
 void

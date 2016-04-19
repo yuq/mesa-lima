@@ -37,6 +37,7 @@
 
 #define MI_STORE_DATA_IMM		(CMD_MI | (0x20 << 23))
 #define MI_LOAD_REGISTER_IMM		(CMD_MI | (0x22 << 23))
+#define MI_LOAD_REGISTER_REG		(CMD_MI | (0x2A << 23))
 
 #define MI_FLUSH_DW			(CMD_MI | (0x26 << 23) | 2)
 
