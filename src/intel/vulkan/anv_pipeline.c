@@ -313,16 +313,13 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
                      struct brw_stage_prog_data *prog_data,
                      struct anv_pipeline_bind_map *map)
 {
-   const struct brw_compiler *compiler =
-      pipeline->device->instance->physicalDevice.compiler;
-
    nir_shader *nir = anv_shader_compile_to_nir(pipeline->device,
                                                module, entrypoint, stage,
                                                spec_info);
    if (nir == NULL)
       return NULL;
 
-   anv_nir_lower_push_constants(nir, compiler->scalar_stage[stage]);
+   anv_nir_lower_push_constants(nir);
 
    /* Figure out the number of parameters */
    prog_data->nr_params = 0;

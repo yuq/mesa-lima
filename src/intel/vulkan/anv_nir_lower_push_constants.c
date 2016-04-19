@@ -23,16 +23,9 @@
 
 #include "anv_nir.h"
 
-struct lower_push_constants_state {
-   nir_shader *shader;
-   bool is_scalar;
-};
-
 static bool
 lower_push_constants_block(nir_block *block, void *void_state)
 {
-   struct lower_push_constants_state *state = void_state;
-
    nir_foreach_instr(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -42,9 +35,6 @@ lower_push_constants_block(nir_block *block, void *void_state)
       /* TODO: Handle indirect push constants */
       if (intrin->intrinsic != nir_intrinsic_load_push_constant)
          continue;
-
-      /* This wont work for vec4 stages. */
-      assert(state->is_scalar);
 
       assert(intrin->const_index[0] % 4 == 0);
       assert(intrin->const_index[1] == 128);
@@ -57,21 +47,10 @@ lower_push_constants_block(nir_block *block, void *void_state)
 }
 
 void
-anv_nir_lower_push_constants(nir_shader *shader, bool is_scalar)
+anv_nir_lower_push_constants(nir_shader *shader)
 {
-   struct lower_push_constants_state state = {
-      .shader = shader,
-      .is_scalar = is_scalar,
-   };
-
    nir_foreach_function(shader, function) {
       if (function->impl)
-         nir_foreach_block(function->impl, lower_push_constants_block, &state);
+         nir_foreach_block(function->impl, lower_push_constants_block, NULL);
    }
-
-   assert(shader->num_uniforms % 4 == 0);
-   if (is_scalar)
-      shader->num_uniforms /= 4;
-   else
-      shader->num_uniforms = DIV_ROUND_UP(shader->num_uniforms, 16);
 }
