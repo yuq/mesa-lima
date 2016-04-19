@@ -197,10 +197,10 @@ struct si_descriptors {
 	unsigned ce_offset;
 
 	/* The i-th bit is set if that element is enabled (non-NULL resource). */
-	uint64_t enabled_mask;
+	unsigned enabled_mask;
 
 	/* elements of the list that are changed and need to be uploaded */
-	uint64_t dirty_mask;
+	unsigned dirty_mask;
 
 	/* Whether the CE ram is dirty and needs to be reinitialized entirely
 	 * before we can do partial updates. */
