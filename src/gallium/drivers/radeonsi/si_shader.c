@@ -4901,8 +4901,8 @@ static void create_function(struct si_shader_context *ctx)
 			num_params = SI_PARAM_LS_OUT_LAYOUT+1;
 		} else {
 			if (ctx->is_gs_copy_shader) {
-				last_array_pointer = SI_PARAM_CONST_BUFFERS;
-				num_params = SI_PARAM_CONST_BUFFERS+1;
+				last_array_pointer = SI_PARAM_RW_BUFFERS;
+				num_params = SI_PARAM_RW_BUFFERS+1;
 			} else {
 				params[SI_PARAM_VS_STATE_BITS] = ctx->i32;
 				num_params = SI_PARAM_VS_STATE_BITS+1;
