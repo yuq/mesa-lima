@@ -140,6 +140,9 @@ private:
    void emitSUCLAMPMode(uint16_t);
    void emitSUCalc(Instruction *);
 
+   void emitVSHL(const Instruction *);
+   void emitVectorSubOp(const Instruction *);
+
    inline void defId(const ValueDef&, const int pos);
    inline void srcId(const ValueRef&, const int pos);
    inline void srcId(const ValueRef *, const int pos);
@@ -1701,6 +1704,58 @@ CodeEmitterGK110::emitSUCalc(Instruction *i)
    }
 }
 
+
+void
+CodeEmitterGK110::emitVectorSubOp(const Instruction *i)
+{
+   switch (NV50_IR_SUBOP_Vn(i->subOp)) {
+   case 0:
+      code[1] |= (i->subOp & 0x000f) << 7;  // vsrc1
+      code[1] |= (i->subOp & 0x00e0) >> 6;  // vsrc2
+      code[1] |= (i->subOp & 0x0100) << 13; // vsrc2
+      code[1] |= (i->subOp & 0x3c00) << 12; // vdst
+      break;
+   default:
+      assert(0);
+      break;
+   }
+}
+
+void
+CodeEmitterGK110::emitVSHL(const Instruction *i)
+{
+   code[0] = 0x00000002;
+   code[1] = 0xb8000000;
+
+   assert(NV50_IR_SUBOP_Vn(i->subOp) == 0);
+
+   if (isSignedType(i->dType)) code[1] |= 1 << 25;
+   if (isSignedType(i->sType)) code[1] |= 1 << 19;
+
+   emitVectorSubOp(i);
+
+   emitPredicate(i);
+   defId(i->def(0), 2);
+   srcId(i->src(0), 10);
+
+   if (i->getSrc(1)->reg.file == FILE_IMMEDIATE) {
+      ImmediateValue *imm = i->getSrc(1)->asImm();
+      assert(imm);
+      code[0] |= (imm->reg.data.u32 & 0x01ff) << 23;
+      code[1] |= (imm->reg.data.u32 & 0xfe00) >> 9;
+   } else {
+      assert(i->getSrc(1)->reg.file == FILE_GPR);
+      code[1] |= 1 << 21;
+      srcId(i->src(1), 23);
+   }
+   srcId(i->src(2), 42);
+
+   if (i->saturate)
+      code[0] |= 1 << 22;
+   if (i->flagsDef >= 0)
+      code[1] |= 1 << 18;
+}
+
 void
 CodeEmitterGK110::emitAFETCH(const Instruction *i)
 {
@@ -2438,6 +2493,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
    case OP_SUCLAMP:
    case OP_SUEAU:
       emitSUCalc(insn);
+      break;
+   case OP_VSHL:
+      emitVSHL(insn);
       break;
    case OP_PHI:
    case OP_UNION:
