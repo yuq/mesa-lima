@@ -159,14 +159,21 @@ gen6_blorp_emit_vertices(struct brw_context *brw,
     *
     * For details, see the Sandybridge PRM, Volume 2, Part 1, Section 1.5.1
     * "Vertex URB Entry (VUE) Formats".
+    *
+    * Only vertex position X and Y are going to be variable, Z is fixed to
+    * zero and W to one. Header words dw0-3 are all zero. There is no need to
+    * include the fixed values in the vertex buffer. Vertex fetcher can be
+    * instructed to fill vertex elements with constant values of one and zero
+    * instead of reading them from the buffer. See the vertex element setup
+    * below.
     */
    {
       float *vertex_data;
 
       const float vertices[] = {
-         /* v0 */ 0, 0, 0, 0, (float)params->x0, (float)params->y1, 0, 1,
-         /* v1 */ 0, 0, 0, 0, (float)params->x1, (float)params->y1, 0, 1,
-         /* v2 */ 0, 0, 0, 0, (float)params->x0, (float)params->y0, 0, 1,
+         /* v0 */ (float)params->x0, (float)params->y1,
+         /* v1 */ (float)params->x1, (float)params->y1,
+         /* v2 */ (float)params->x0, (float)params->y0,
       };
 
       vertex_data = (float *) brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
@@ -174,7 +181,7 @@ gen6_blorp_emit_vertices(struct brw_context *brw,
                                               &vertex_offset);
       memcpy(vertex_data, vertices, sizeof(vertices));
 
-      const unsigned blorp_num_vue_elems = 8;
+      const unsigned blorp_num_vue_elems = 2;
       gen6_blorp_emit_vertex_buffer_state(brw, blorp_num_vue_elems,
                                           sizeof(vertices), vertex_offset);
    }
@@ -194,18 +201,18 @@ gen6_blorp_emit_vertices(struct brw_context *brw,
       OUT_BATCH(GEN6_VE0_VALID |
                 BRW_SURFACEFORMAT_R32G32B32A32_FLOAT << BRW_VE0_FORMAT_SHIFT |
                 0 << BRW_VE0_SRC_OFFSET_SHIFT);
-      OUT_BATCH(BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_0_SHIFT |
-                BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_1_SHIFT |
-                BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_2_SHIFT |
-                BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_3_SHIFT);
+      OUT_BATCH(BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_0_SHIFT |
+                BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_1_SHIFT |
+                BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_2_SHIFT |
+                BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_3_SHIFT);
       /* Element 1 */
       OUT_BATCH(GEN6_VE0_VALID |
-                BRW_SURFACEFORMAT_R32G32B32A32_FLOAT << BRW_VE0_FORMAT_SHIFT |
-                16 << BRW_VE0_SRC_OFFSET_SHIFT);
+                BRW_SURFACEFORMAT_R32G32_FLOAT << BRW_VE0_FORMAT_SHIFT |
+                0 << BRW_VE0_SRC_OFFSET_SHIFT);
       OUT_BATCH(BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_0_SHIFT |
                 BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_1_SHIFT |
-                BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_2_SHIFT |
-                BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_3_SHIFT);
+                BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_2_SHIFT |
+                BRW_VE1_COMPONENT_STORE_1_FLT << BRW_VE1_COMPONENT_3_SHIFT);
       ADVANCE_BATCH();
    }
 }
