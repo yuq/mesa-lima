@@ -691,7 +691,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       dest = get_nir_dest(instr->dest);
 
-      src = src_reg(dst_reg(UNIFORM, instr->const_index[0] / 16));
+      src = src_reg(dst_reg(UNIFORM, nir_intrinsic_base(instr) / 16));
       src.type = dest.type;
 
       /* Uniforms don't actually have to be vec4 aligned.  In the case that
