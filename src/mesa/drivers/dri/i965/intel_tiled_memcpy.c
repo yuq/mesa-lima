@@ -64,6 +64,19 @@ ror(uint32_t n, uint32_t d)
    return (n >> d) | (n << (32 - d));
 }
 
+static inline uint32_t
+bswap32(uint32_t n)
+{
+#if defined(HAVE___BUILTIN_BSWAP32)
+   return __builtin_bswap32(n);
+#else
+   return (n >> 24) |
+          ((n >> 8) & 0x0000ff00) |
+          ((n << 8) & 0x00ff0000) |
+          (n << 24);
+#endif
+}
+
 /**
  * Copy RGBA to BGRA - swap R and B.
  */
@@ -76,7 +89,7 @@ rgba8_copy(void *dst, const void *src, size_t bytes)
    assert(bytes % 4 == 0);
 
    while (bytes >= 4) {
-      *d = ror(__builtin_bswap32(*s), 8);
+      *d = ror(bswap32(*s), 8);
       d += 1;
       s += 1;
       bytes -= 4;
