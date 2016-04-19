@@ -535,6 +535,7 @@ gbm_dri_is_format_supported(struct gbm_device *gbm,
 {
    switch (format) {
    case GBM_BO_FORMAT_XRGB8888:
+   case GBM_FORMAT_XBGR8888:
    case GBM_FORMAT_XRGB8888:
       break;
    case GBM_BO_FORMAT_ARGB8888:
@@ -616,6 +617,9 @@ gbm_dri_to_gbm_format(uint32_t dri_format)
       break;
    case __DRI_IMAGE_FORMAT_ARGB8888:
       ret = GBM_FORMAT_ARGB8888;
+      break;
+   case __DRI_IMAGE_FORMAT_XBGR8888:
+      ret = GBM_FORMAT_XBGR8888;
       break;
    case __DRI_IMAGE_FORMAT_ABGR8888:
       ret = GBM_FORMAT_ABGR8888;
@@ -866,6 +870,9 @@ gbm_dri_bo_create(struct gbm_device *gbm,
       break;
    case GBM_FORMAT_ABGR8888:
       dri_format = __DRI_IMAGE_FORMAT_ABGR8888;
+      break;
+   case GBM_FORMAT_XBGR8888:
+      dri_format = __DRI_IMAGE_FORMAT_XBGR8888;
       break;
    case GBM_FORMAT_ARGB2101010:
       dri_format = __DRI_IMAGE_FORMAT_ARGB2101010;
