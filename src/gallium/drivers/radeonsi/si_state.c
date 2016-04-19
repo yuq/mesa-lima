@@ -3395,8 +3395,8 @@ static void si_set_tess_state(struct pipe_context *ctx,
 			       (void*)array, sizeof(array),
 			       &cb.buffer_offset);
 
-	ctx->set_constant_buffer(ctx, PIPE_SHADER_TESS_CTRL,
-				 SI_DRIVER_STATE_CONST_BUF, &cb);
+	si_set_constant_buffer(sctx, &sctx->rw_buffers,
+			       SI_HS_CONST_DEFAULT_TESS_LEVELS, &cb);
 	pipe_resource_reference(&cb.buffer, NULL);
 }
 

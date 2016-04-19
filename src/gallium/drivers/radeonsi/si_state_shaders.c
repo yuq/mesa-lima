@@ -1804,7 +1804,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
  */
 static void si_generate_fixed_func_tcs(struct si_context *sctx)
 {
-	struct ureg_src const0, const1;
+	struct ureg_src outer, inner;
 	struct ureg_dst tessouter, tessinner;
 	struct ureg_program *ureg = ureg_create(TGSI_PROCESSOR_TESS_CTRL);
 
@@ -1813,17 +1813,16 @@ static void si_generate_fixed_func_tcs(struct si_context *sctx)
 
 	assert(!sctx->fixed_func_tcs_shader.cso);
 
-	ureg_DECL_constant2D(ureg, 0, 1, SI_DRIVER_STATE_CONST_BUF);
-	const0 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 0),
-				    SI_DRIVER_STATE_CONST_BUF);
-	const1 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 1),
-				    SI_DRIVER_STATE_CONST_BUF);
+	outer = ureg_DECL_system_value(ureg,
+				       TGSI_SEMANTIC_DEFAULT_TESSOUTER_SI, 0);
+	inner = ureg_DECL_system_value(ureg,
+				       TGSI_SEMANTIC_DEFAULT_TESSINNER_SI, 0);
 
 	tessouter = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSOUTER, 0);
 	tessinner = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSINNER, 0);
 
-	ureg_MOV(ureg, tessouter, const0);
-	ureg_MOV(ureg, tessinner, const1);
+	ureg_MOV(ureg, tessouter, outer);
+	ureg_MOV(ureg, tessinner, inner);
 	ureg_END(ureg);
 
 	sctx->fixed_func_tcs_shader.cso =

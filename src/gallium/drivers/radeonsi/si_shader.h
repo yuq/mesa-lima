@@ -210,6 +210,12 @@ enum {
 	SI_NUM_PARAMS = SI_PARAM_POS_FIXED_PT + 9, /* +8 for COLOR[0..1] */
 };
 
+/* SI-specific system values. */
+enum {
+	TGSI_SEMANTIC_DEFAULT_TESSOUTER_SI = TGSI_SEMANTIC_COUNT,
+	TGSI_SEMANTIC_DEFAULT_TESSINNER_SI,
+};
+
 struct si_shader;
 
 /* A shader selector is a gallium CSO and contains shader variants and

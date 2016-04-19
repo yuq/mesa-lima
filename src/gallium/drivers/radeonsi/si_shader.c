@@ -1280,6 +1280,25 @@ static void declare_system_value(
 		break;
 	}
 
+	case TGSI_SEMANTIC_DEFAULT_TESSOUTER_SI:
+	case TGSI_SEMANTIC_DEFAULT_TESSINNER_SI:
+	{
+		LLVMValueRef buf, slot, val[4];
+		int i, offset;
+
+		slot = lp_build_const_int32(gallivm, SI_HS_CONST_DEFAULT_TESS_LEVELS);
+		buf = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_RW_BUFFERS);
+		buf = build_indexed_load_const(ctx, buf, slot);
+		offset = decl->Semantic.Name == TGSI_SEMANTIC_DEFAULT_TESSINNER_SI ? 4 : 0;
+
+		for (i = 0; i < 4; i++)
+			val[i] = buffer_load_const(gallivm->builder, buf,
+						   lp_build_const_int32(gallivm, (offset + i) * 4),
+						   ctx->f32);
+		value = lp_build_gather_values(gallivm, val, 4);
+		break;
+	}
+
 	case TGSI_SEMANTIC_PRIMID:
 		value = get_primitive_id(&radeon_bld->soa.bld_base, 0);
 		break;
