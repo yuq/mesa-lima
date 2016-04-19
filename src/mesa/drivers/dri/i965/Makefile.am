@@ -50,7 +50,12 @@ noinst_LTLIBRARIES = libi965_dri.la libi965_compiler.la
 libi965_dri_la_SOURCES = $(i965_FILES)
 libi965_dri_la_LIBADD = libi965_compiler.la $(INTEL_LIBS)
 
-libi965_compiler_la_SOURCES = $(i965_compiler_FILES)
+libi965_compiler_la_SOURCES = \
+	$(i965_compiler_FILES) \
+	$(i965_compiler_GENERATED_FILES)
+
+BUILT_SOURCES += $(i965_compiler_GENERATED_FILES)
+CLEANFILES += $(BUILT_SOURCES)
 
 TEST_LIBS = \
 	libi965_compiler.la \

@@ -1,7 +1,5 @@
 #
-# Copyright (C) 2011 Intel Corporation
-# Copyright (C) 2010-2011 Chia-I Wu <olvaffe@gmail.com>
-# Copyright (C) 2010-2011 LunarG
+# Copyright (C) 2016 Linaro, Ltd., Rob Herring <robh@kernel.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -22,47 +20,19 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-LOCAL_PATH := $(call my-dir)
-include $(CLEAR_VARS)
-
-LOCAL_MODULE := i965_dri
-ifeq ($(MESA_LOLLIPOP_BUILD),true)
-LOCAL_MODULE_RELATIVE_PATH := $(MESA_DRI_MODULE_REL_PATH)
-else
-LOCAL_MODULE_PATH := $(MESA_DRI_MODULE_PATH)
-LOCAL_UNSTRIPPED_PATH := $(MESA_DRI_MODULE_UNSTRIPPED_PATH)
+ifeq ($(LOCAL_MODULE_CLASS),)
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 endif
 
-# Import variables i965_FILES.
-include $(LOCAL_PATH)/Makefile.sources
+brw_nir_trig_workarounds_deps := \
+	$(LOCAL_PATH)/brw_nir_trig_workarounds.py \
+	$(MESA_TOP)/src/compiler/nir/nir_algebraic.py
 
-LOCAL_CFLAGS := \
-	$(MESA_DRI_CFLAGS)
+intermediates := $(call local-generated-sources-dir)
 
-ifeq ($(ARCH_X86_HAVE_SSE4_1),true)
-LOCAL_CFLAGS += \
-	-DUSE_SSE41
-endif
+$(intermediates)/brw_nir_trig_workarounds.c: $(brw_nir_trig_workarounds_deps)
+	@mkdir -p $(dir $@)
+	$(hide) PYTHONPATH=$(MESA_TOP)/src/compiler/nir $(MESA_PYTHON2) $< > $@
 
-LOCAL_C_INCLUDES := \
-	$(MESA_DRI_C_INCLUDES)
-
-LOCAL_SRC_FILES := \
-	$(i965_compiler_FILES) \
-	$(i965_FILES)
-
-LOCAL_WHOLE_STATIC_LIBRARIES := \
-	$(MESA_DRI_WHOLE_STATIC_LIBRARIES)
-
-LOCAL_SHARED_LIBRARIES := \
-	$(MESA_DRI_SHARED_LIBRARIES) \
-	libdrm_intel
-
-LOCAL_GENERATED_SOURCES := \
-	$(MESA_DRI_OPTIONS_H) \
-	$(MESA_GEN_NIR_H)
-
-include $(LOCAL_PATH)/Android.gen.mk
-
-include $(MESA_COMMON_MK)
-include $(BUILD_SHARED_LIBRARY)
+LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, \
+	$(i965_compiler_GENERATED_FILES))
