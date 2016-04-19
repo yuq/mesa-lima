@@ -2227,6 +2227,9 @@ uint32_t r600_translate_texformat(struct pipe_screen *screen,
 	bool is_srgb_valid = FALSE;
 	const unsigned char swizzle_xxxx[4] = {0, 0, 0, 0};
 	const unsigned char swizzle_yyyy[4] = {1, 1, 1, 1};
+	const unsigned char swizzle_xxxy[4] = {0, 0, 0, 1};
+	const unsigned char swizzle_zyx1[4] = {2, 1, 0, 5};
+	const unsigned char swizzle_zyxw[4] = {2, 1, 0, 3};
 
 	int i;
 	const uint32_t sign_bit[4] = {
@@ -2235,11 +2238,41 @@ uint32_t r600_translate_texformat(struct pipe_screen *screen,
 		S_038010_FORMAT_COMP_Z(V_038010_SQ_FORMAT_COMP_SIGNED),
 		S_038010_FORMAT_COMP_W(V_038010_SQ_FORMAT_COMP_SIGNED)
 	};
+
+	/* Need to replace the specified texture formats in case of big-endian.
+	 * These formats are formats that have channels with number of bits
+	 * not divisible by 8.
+	 * Mesa conversion functions don't swap bits for those formats, and because
+	 * we transmit this over a serial bus to the GPU (PCIe), the
+	 * bit-endianess is important!!!
+	 * In case we have an "opposite" format, just use that for the swizzling
+	 * information. If we don't have such an "opposite" format, we need
+	 * to use a fixed swizzle info instead (see below)
+	 */
+	if (format == PIPE_FORMAT_R4A4_UNORM && do_endian_swap)
+		format = PIPE_FORMAT_A4R4_UNORM;
+
 	desc = util_format_description(format);
 
 	/* Depth and stencil swizzling is handled separately. */
 	if (desc->colorspace != UTIL_FORMAT_COLORSPACE_ZS) {
-		word4 |= r600_get_swizzle_combined(desc->swizzle, swizzle_view, FALSE);
+		/* Need to check for specific texture formats that don't have
+		 * an "opposite" format we can use. For those formats, we directly
+		 * specify the swizzling, which is the LE swizzling as defined in
+		 * u_format.csv
+		 */
+		if (do_endian_swap) {
+			if (format == PIPE_FORMAT_L4A4_UNORM)
+				word4 |= r600_get_swizzle_combined(swizzle_xxxy, swizzle_view, FALSE);
+			else if (format == PIPE_FORMAT_B4G4R4A4_UNORM)
+				word4 |= r600_get_swizzle_combined(swizzle_zyxw, swizzle_view, FALSE);
+			else if (format == PIPE_FORMAT_B4G4R4X4_UNORM || format == PIPE_FORMAT_B5G6R5_UNORM)
+				word4 |= r600_get_swizzle_combined(swizzle_zyx1, swizzle_view, FALSE);
+			else
+				word4 |= r600_get_swizzle_combined(desc->swizzle, swizzle_view, FALSE);
+		} else {
+			word4 |= r600_get_swizzle_combined(desc->swizzle, swizzle_view, FALSE);
+		}
 	}
 
 	/* Colorspace (return non-RGB formats directly). */
