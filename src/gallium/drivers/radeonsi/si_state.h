@@ -321,6 +321,8 @@ void si_destroy_shader_cache(struct si_screen *sscreen);
 
 /* si_state_draw.c */
 void si_emit_cache_flush(struct si_context *sctx, struct r600_atom *atom);
+void si_ce_pre_draw_synchronization(struct si_context *sctx);
+void si_ce_post_draw_synchronization(struct si_context *sctx);
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *dinfo);
 void si_trace_emit(struct si_context *sctx);
 

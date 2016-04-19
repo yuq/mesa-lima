@@ -750,7 +750,7 @@ static void si_get_draw_start_count(struct si_context *sctx,
 	}
 }
 
-static void si_ce_pre_draw_synchronization(struct si_context *sctx)
+void si_ce_pre_draw_synchronization(struct si_context *sctx)
 {
 	if (sctx->ce_need_synchronization) {
 		radeon_emit(sctx->ce_ib, PKT3(PKT3_INCREMENT_CE_COUNTER, 0, 0));
@@ -761,7 +761,7 @@ static void si_ce_pre_draw_synchronization(struct si_context *sctx)
 	}
 }
 
-static void si_ce_post_draw_synchronization(struct si_context *sctx)
+void si_ce_post_draw_synchronization(struct si_context *sctx)
 {
 	if (sctx->ce_need_synchronization) {
 		radeon_emit(sctx->b.gfx.cs, PKT3(PKT3_INCREMENT_DE_COUNTER, 0, 0));
