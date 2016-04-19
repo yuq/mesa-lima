@@ -34,6 +34,7 @@ struct standalone_options {
    int dump_hir;
    int dump_lir;
    int do_link;
+   int just_log;
 };
 
 struct gl_shader_program;

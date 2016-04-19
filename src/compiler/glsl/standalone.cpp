@@ -381,8 +381,14 @@ standalone_compile_shader(const struct standalone_options *_options,
 
       compile_shader(ctx, shader);
 
-      if (strlen(shader->InfoLog) > 0)
-         printf("Info log for %s:\n%s\n", files[i], shader->InfoLog);
+      if (strlen(shader->InfoLog) > 0) {
+         if (!options->just_log)
+            printf("Info log for %s:\n", files[i]);
+
+         printf("%s", shader->InfoLog);
+         if (!options->just_log)
+            printf("\n");
+      }
 
       if (!shader->CompileStatus) {
          status = EXIT_FAILURE;
@@ -396,8 +402,14 @@ standalone_compile_shader(const struct standalone_options *_options,
       link_shaders(ctx, whole_program);
       status = (whole_program->LinkStatus) ? EXIT_SUCCESS : EXIT_FAILURE;
 
-      if (strlen(whole_program->InfoLog) > 0)
-         printf("Info log for linking:\n%s\n", whole_program->InfoLog);
+      if (strlen(whole_program->InfoLog) > 0) {
+         printf("\n");
+         if (!options->just_log)
+            printf("Info log for linking:\n");
+         printf("%s", whole_program->InfoLog);
+         if (!options->just_log)
+            printf("\n");
+      }
 
       for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
          struct gl_shader *shader = whole_program->_LinkedShaders[i];
