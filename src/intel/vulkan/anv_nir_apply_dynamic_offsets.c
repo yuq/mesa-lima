@@ -77,11 +77,13 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
       /* First, we need to generate the uniform load for the buffer offset */
       uint32_t index = state->layout->set[set].dynamic_offset_start +
                        set_layout->binding[binding].dynamic_offset_index;
+      uint32_t array_size = set_layout->binding[binding].array_size;
 
       nir_intrinsic_instr *offset_load =
          nir_intrinsic_instr_create(state->shader, nir_intrinsic_load_uniform);
       offset_load->num_components = 2;
-      offset_load->const_index[0] = state->indices_start + index * 8;
+      nir_intrinsic_set_base(offset_load, state->indices_start + index * 8);
+      nir_intrinsic_set_range(offset_load, array_size * 8);
       offset_load->src[0] = nir_src_for_ssa(nir_imul(b, res_intrin->src[0].ssa,
                                                      nir_imm_int(b, 8)));
 
