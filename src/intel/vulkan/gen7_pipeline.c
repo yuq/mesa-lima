@@ -175,8 +175,7 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
          anv_state_clflush(pipeline->blend_state);
     }
 
-   anv_batch_emit_blk(&pipeline->batch,
-                      GENX(3DSTATE_BLEND_STATE_POINTERS), bsp) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_BLEND_STATE_POINTERS), bsp) {
       bsp.BlendStatePointer = pipeline->blend_state.offset;
    }
 }
@@ -224,7 +223,7 @@ genX(graphics_pipeline_create)(
    const VkPipelineRasterizationStateCreateInfo *rs_info =
       pCreateInfo->pRasterizationState;
 
-   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
       clip.FrontWinding             = vk_to_gen_front_face[rs_info->frontFace],
       clip.CullMode                 = vk_to_gen_cullmode[rs_info->cullMode],
       clip.ClipEnable               = !(extra && extra->use_rectlist),
@@ -248,12 +247,12 @@ genX(graphics_pipeline_create)(
    uint32_t samples = 1;
    uint32_t log2_samples = __builtin_ffs(samples) - 1;
 
-   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
       ms.PixelLocation        = PIXLOC_CENTER;
       ms.NumberofMultisamples = log2_samples;
    }
 
-   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK), sm) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK), sm) {
       sm.SampleMask = 0xff;
    }
 
@@ -279,9 +278,9 @@ genX(graphics_pipeline_create)(
 #endif
 
    if (pipeline->vs_vec4 == NO_KERNEL || (extra && extra->disable_vs))
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_VS), vs);
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs);
    else
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_VS), vs) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
          vs.KernelStartPointer         = pipeline->vs_vec4;
          vs.ScratchSpaceBaseOffset     = pipeline->scratch_start[MESA_SHADER_VERTEX];
          vs.PerThreadScratchSpace      = scratch_space(&vs_prog_data->base.base);
@@ -299,9 +298,9 @@ genX(graphics_pipeline_create)(
    const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
 
    if (pipeline->gs_kernel == NO_KERNEL || (extra && extra->disable_vs)) {
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_GS), gs);
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
    } else {
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_GS), gs) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
          gs.KernelStartPointer         = pipeline->gs_kernel;
          gs.ScratchSpaceBasePointer    = pipeline->scratch_start[MESA_SHADER_GEOMETRY];
          gs.PerThreadScratchSpace      = scratch_space(&gs_prog_data->base.base);
@@ -332,9 +331,9 @@ genX(graphics_pipeline_create)(
    }
 
    if (pipeline->ps_ksp0 == NO_KERNEL) {
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_SBE), sbe);
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE), sbe);
 
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_WM), wm) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
          wm.StatisticsEnable                    = true;
          wm.ThreadDispatchEnable                = false;
          wm.LineEndCapAntialiasingRegionWidth   = 0; /* 0.5 pixels */
@@ -346,7 +345,7 @@ genX(graphics_pipeline_create)(
       /* Even if no fragments are ever dispatched, the hardware hangs if we
        * don't at least set the maximum number of threads.
        */
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_PS), ps) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
          ps.MaximumNumberofThreads = device->info.max_wm_threads - 1;
       }
    } else {
@@ -359,7 +358,7 @@ genX(graphics_pipeline_create)(
 
       emit_3dstate_sbe(pipeline);
 
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_PS), ps) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
          ps.KernelStartPointer0           = pipeline->ps_ksp0;
          ps.ScratchSpaceBasePointer       = pipeline->scratch_start[MESA_SHADER_FRAGMENT];
          ps.PerThreadScratchSpace         = scratch_space(&wm_prog_data->base);
@@ -392,7 +391,7 @@ genX(graphics_pipeline_create)(
       }
 
       /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_WM), wm) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
          wm.StatisticsEnable                    = true;
          wm.ThreadDispatchEnable                = true;
          wm.LineEndCapAntialiasingRegionWidth   = 0; /* 0.5 pixels */

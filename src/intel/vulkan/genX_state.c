@@ -44,30 +44,30 @@ genX(init_device_state)(struct anv_device *device)
    batch.start = batch.next = cmds;
    batch.end = (void *) cmds + sizeof(cmds);
 
-   anv_batch_emit_blk(&batch, GENX(PIPELINE_SELECT), ps) {
+   anv_batch_emit(&batch, GENX(PIPELINE_SELECT), ps) {
 #if GEN_GEN >= 9
       ps.MaskBits = 3;
 #endif
       ps.PipelineSelection = _3D;
    }
 
-   anv_batch_emit_blk(&batch, GENX(3DSTATE_VF_STATISTICS), vfs)
+   anv_batch_emit(&batch, GENX(3DSTATE_VF_STATISTICS), vfs)
       vfs.StatisticsEnable = true;
 
-   anv_batch_emit_blk(&batch, GENX(3DSTATE_HS), hs);
-   anv_batch_emit_blk(&batch, GENX(3DSTATE_TE), ts);
-   anv_batch_emit_blk(&batch, GENX(3DSTATE_DS), ds);
+   anv_batch_emit(&batch, GENX(3DSTATE_HS), hs);
+   anv_batch_emit(&batch, GENX(3DSTATE_TE), ts);
+   anv_batch_emit(&batch, GENX(3DSTATE_DS), ds);
 
-   anv_batch_emit_blk(&batch, GENX(3DSTATE_STREAMOUT), so);
-   anv_batch_emit_blk(&batch, GENX(3DSTATE_AA_LINE_PARAMETERS), aa);
+   anv_batch_emit(&batch, GENX(3DSTATE_STREAMOUT), so);
+   anv_batch_emit(&batch, GENX(3DSTATE_AA_LINE_PARAMETERS), aa);
 
 #if GEN_GEN >= 8
-   anv_batch_emit_blk(&batch, GENX(3DSTATE_WM_CHROMAKEY), ck);
+   anv_batch_emit(&batch, GENX(3DSTATE_WM_CHROMAKEY), ck);
 
    /* See the Vulkan 1.0 spec Table 24.1 "Standard sample locations" and
     * VkPhysicalDeviceFeatures::standardSampleLocations.
     */
-   anv_batch_emit_blk(&batch, GENX(3DSTATE_SAMPLE_PATTERN), sp) {
+   anv_batch_emit(&batch, GENX(3DSTATE_SAMPLE_PATTERN), sp) {
       sp._1xSample0XOffset    = 0.5;
       sp._1xSample0YOffset    = 0.5;
       sp._2xSample0XOffset    = 0.25;
@@ -135,7 +135,7 @@ genX(init_device_state)(struct anv_device *device)
    }
 #endif
 
-   anv_batch_emit_blk(&batch, GENX(MI_BATCH_BUFFER_END), bbe);
+   anv_batch_emit(&batch, GENX(MI_BATCH_BUFFER_END), bbe);
 
    assert(batch.next <= batch.end);
 

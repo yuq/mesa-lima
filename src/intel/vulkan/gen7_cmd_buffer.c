@@ -57,8 +57,8 @@ gen7_cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
 
    anv_foreach_stage(s, stages) {
       if (cmd_buffer->state.samplers[s].alloc_size > 0) {
-         anv_batch_emit_blk(&cmd_buffer->batch,
-                            GENX(3DSTATE_SAMPLER_STATE_POINTERS_VS), ssp) {
+         anv_batch_emit(&cmd_buffer->batch,
+                        GENX(3DSTATE_SAMPLER_STATE_POINTERS_VS), ssp) {
             ssp._3DCommandSubOpcode = sampler_state_opcodes[s];
             ssp.PointertoVSSamplerState = cmd_buffer->state.samplers[s].offset;
          }
@@ -66,8 +66,8 @@ gen7_cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
 
       /* Always emit binding table pointers if we're asked to, since on SKL
        * this is what flushes push constants. */
-      anv_batch_emit_blk(&cmd_buffer->batch,
-                         GENX(3DSTATE_BINDING_TABLE_POINTERS_VS), btp) {
+      anv_batch_emit(&cmd_buffer->batch,
+                     GENX(3DSTATE_BINDING_TABLE_POINTERS_VS), btp) {
          btp._3DCommandSubOpcode = binding_table_opcodes[s];
          btp.PointertoVSBindingTable = cmd_buffer->state.binding_tables[s].offset;
       }
@@ -175,8 +175,8 @@ gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   anv_batch_emit_blk(&cmd_buffer->batch,
-                      GEN7_3DSTATE_SCISSOR_STATE_POINTERS, ssp) {
+   anv_batch_emit(&cmd_buffer->batch,
+                  GEN7_3DSTATE_SCISSOR_STATE_POINTERS, ssp) {
       ssp.ScissorRectPointer = scissor_state.offset;
    }
 
@@ -241,7 +241,7 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    unsigned push_constant_regs = reg_aligned_constant_size / 32;
 
    if (push_state.alloc_size) {
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD), curbe) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD), curbe) {
          curbe.CURBETotalDataLength    = push_state.alloc_size;
          curbe.CURBEDataStartAddress   = push_state.offset;
       }
@@ -274,8 +274,8 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
                              pipeline->cs_thread_width_max);
 
    const uint32_t size = GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
-   anv_batch_emit_blk(&cmd_buffer->batch,
-                      GENX(MEDIA_INTERFACE_DESCRIPTOR_LOAD), idl) {
+   anv_batch_emit(&cmd_buffer->batch,
+                  GENX(MEDIA_INTERFACE_DESCRIPTOR_LOAD), idl) {
       idl.InterfaceDescriptorTotalLength        = size;
       idl.InterfaceDescriptorDataStartAddress = state.offset;
    }
@@ -312,7 +312,7 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
        * flushed, which involves a first PIPE_CONTROL flush which stalls the
        * pipeline...
        */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.DCFlushEnable              = true;
          pc.CommandStreamerStallEnable = true;
          pc.PostSyncOperation          = NoWrite;
@@ -332,7 +332,7 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
        * previous and subsequent PIPE_CONTROLs already guarantee that there is
        * no concurrent GPGPU kernel execution (see SKL HSD 2132585).
        */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.TextureCacheInvalidationEnable   = true;
          pc.ConstantCacheInvalidationEnable  = true;
          pc.InstructionCacheInvalidateEnable = true;
@@ -343,14 +343,14 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
       /* Now send a third stalling flush to make sure that invalidation is
        * complete when the L3 configuration registers are modified.
        */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.DCFlushEnable              = true;
          pc.CommandStreamerStallEnable = true;
          pc.PostSyncOperation          = NoWrite;
       }
 
       anv_finishme("write GEN7_L3SQCREG1");
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
          lri.RegisterOffset   = GENX(L3CNTLREG2_num);
          lri.DataDWord        = l3cr2_val;
       }
@@ -365,7 +365,7 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
                       .CAllocation = 8,
                       .TAllocation = 8);
       const uint32_t l3cr3_val = enable_slm ? l3cr3_slm : l3cr3_noslm;
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
          lri.RegisterOffset   = GENX(L3CNTLREG3_num);
          lri.DataDWord        = l3cr3_val;
       }
@@ -455,8 +455,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       if (!cmd_buffer->device->info.has_llc)
          anv_state_clflush(cc_state);
 
-      anv_batch_emit_blk(&cmd_buffer->batch,
-                         GENX(3DSTATE_CC_STATE_POINTERS), ccp) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS), ccp) {
          ccp.ColorCalcStatePointer = cc_state.offset;
       }
    }
@@ -482,8 +481,8 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
                                       pipeline->gen7.depth_stencil_state,
                                       GENX(DEPTH_STENCIL_STATE_length), 64);
 
-      anv_batch_emit_blk(&cmd_buffer->batch,
-                         GENX(3DSTATE_DEPTH_STENCIL_STATE_POINTERS), dsp) {
+      anv_batch_emit(&cmd_buffer->batch,
+                     GENX(3DSTATE_DEPTH_STENCIL_STATE_POINTERS), dsp) {
          dsp.PointertoDEPTH_STENCIL_STATE = ds_state.offset;
       }
    }
@@ -495,13 +494,13 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       uint32_t offset = cmd_buffer->state.gen7.index_offset;
 
 #if GEN_IS_HASWELL
-      anv_batch_emit_blk(&cmd_buffer->batch, GEN75_3DSTATE_VF, vf) {
+      anv_batch_emit(&cmd_buffer->batch, GEN75_3DSTATE_VF, vf) {
          vf.IndexedDrawCutIndexEnable  = pipeline->primitive_restart;
          vf.CutIndex                   = cmd_buffer->state.restart_index;
       }
 #endif
 
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_INDEX_BUFFER), ib) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_INDEX_BUFFER), ib) {
 #if !GEN_IS_HASWELL
          ib.CutIndexEnable             = pipeline->primitive_restart;
 #endif

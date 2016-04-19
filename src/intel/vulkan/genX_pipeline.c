@@ -105,7 +105,7 @@ genX(compute_pipeline_create)(
    const uint32_t vfe_curbe_allocation =
       push_constant_regs * pipeline->cs_thread_width_max;
 
-   anv_batch_emit_blk(&pipeline->batch, GENX(MEDIA_VFE_STATE), vfe) {
+   anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE), vfe) {
       vfe.ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_COMPUTE];
       vfe.PerThreadScratchSpace  = ffs(cs_prog_data->base.total_scratch / 2048);
 #if GEN_GEN > 7

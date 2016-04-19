@@ -39,7 +39,7 @@ emit_ia_state(struct anv_pipeline *pipeline,
               const VkPipelineInputAssemblyStateCreateInfo *info,
               const struct anv_graphics_pipeline_create_info *extra)
 {
-   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_VF_TOPOLOGY), vft) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_TOPOLOGY), vft) {
       vft.PrimitiveTopologyType = pipeline->topology;
    }
 }
@@ -192,7 +192,7 @@ emit_cb_state(struct anv_pipeline *pipeline,
 
    struct GENX(BLEND_STATE_ENTRY) *bs0 = &blend_state.Entry[0];
 
-   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_PS_BLEND), blend) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_BLEND), blend) {
       blend.AlphaToCoverageEnable         = blend_state.AlphaToCoverageEnable;
       blend.HasWriteableRT                = has_writeable_rt;
       blend.ColorBufferBlendEnable        = bs0->ColorBufferBlendEnable;
@@ -209,8 +209,7 @@ emit_cb_state(struct anv_pipeline *pipeline,
    if (!device->info.has_llc)
       anv_state_clflush(pipeline->blend_state);
 
-   anv_batch_emit_blk(&pipeline->batch,
-                      GENX(3DSTATE_BLEND_STATE_POINTERS), bsp) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_BLEND_STATE_POINTERS), bsp) {
       bsp.BlendStatePointer      = pipeline->blend_state.offset;
       bsp.BlendStatePointerValid = true;
    }
@@ -291,7 +290,7 @@ emit_ms_state(struct anv_pipeline *pipeline,
    if (info && info->sampleShadingEnable)
       anv_finishme("VkPipelineMultisampleStateCreateInfo::sampleShadingEnable");
 
-   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
       /* The PRM says that this bit is valid only for DX9:
        *
        *    SW can choose to set this bit only for DX9 API. DX10/OGL API's
@@ -303,7 +302,7 @@ emit_ms_state(struct anv_pipeline *pipeline,
       ms.NumberofMultisamples = log2_samples;
    }
 
-   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK), sm) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK), sm) {
       sm.SampleMask = sample_mask;
    }
 }
@@ -351,7 +350,7 @@ genX(graphics_pipeline_create)(
    emit_urb_setup(pipeline);
 
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
-   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
       clip.ClipEnable               = !(extra && extra->use_rectlist);
       clip.EarlyCullEnable          = true;
       clip.APIMode                  = 1; /* D3D */
@@ -373,7 +372,7 @@ genX(graphics_pipeline_create)(
       clip.MaximumVPIndex     = pCreateInfo->pViewportState->viewportCount - 1;
    }
 
-   anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_WM), wm) {
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
       wm.StatisticsEnable                    = true;
       wm.LineEndCapAntialiasingRegionWidth   = _05pixels;
       wm.LineAntialiasingRegionWidth         = _10pixels;
@@ -386,13 +385,13 @@ genX(graphics_pipeline_create)(
    }
 
    if (pipeline->gs_kernel == NO_KERNEL) {
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_GS), gs);
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
    } else {
       const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
       offset = 1;
       length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
 
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_GS), gs) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
          gs.SingleProgramFlow       = false;
          gs.KernelStartPointer      = pipeline->gs_kernel;
          gs.VectorMaskEnable        = false;
@@ -444,7 +443,7 @@ genX(graphics_pipeline_create)(
                                                          pipeline->vs_vec4;
 
    if (vs_start == NO_KERNEL || (extra && extra->disable_vs)) {
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_VS), vs) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
          vs.FunctionEnable = false;
          /* Even if VS is disabled, SBE still gets the amount of
           * vertex data to read from this field. */
@@ -452,7 +451,7 @@ genX(graphics_pipeline_create)(
          vs.VertexURBEntryOutputLength = length;
       }
    } else {
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_VS), vs) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
          vs.KernelStartPointer            = vs_start;
          vs.SingleVertexDispatch          = false;
          vs.VectorMaskEnable              = false;
@@ -493,14 +492,14 @@ genX(graphics_pipeline_create)(
 
    const int num_thread_bias = GEN_GEN == 8 ? 2 : 1;
    if (pipeline->ps_ksp0 == NO_KERNEL) {
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_PS), ps);
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), extra) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps);
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), extra) {
          extra.PixelShaderValid = false;
       }
    } else {
       emit_3dstate_sbe(pipeline);
 
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_PS), ps) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
          ps.KernelStartPointer0     = pipeline->ps_ksp0;
          ps.KernelStartPointer1     = 0;
          ps.KernelStartPointer2     = pipeline->ps_ksp2;
@@ -527,7 +526,7 @@ genX(graphics_pipeline_create)(
       bool per_sample_ps = pCreateInfo->pMultisampleState &&
                            pCreateInfo->pMultisampleState->sampleShadingEnable;
 
-      anv_batch_emit_blk(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), ps) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), ps) {
          ps.PixelShaderValid              = true;
          ps.PixelShaderKillsPixel         = wm_prog_data->uses_kill;
          ps.PixelShaderComputedDepthMode  = wm_prog_data->computed_depth_mode;

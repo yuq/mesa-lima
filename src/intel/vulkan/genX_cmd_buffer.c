@@ -49,12 +49,12 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
     * this, we get GPU hangs when using multi-level command buffers which
     * clear depth, reset state base address, and then go render stuff.
     */
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
       pc.RenderTargetCacheFlushEnable = true;
    }
 #endif
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(STATE_BASE_ADDRESS), sba) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(STATE_BASE_ADDRESS), sba) {
       sba.GeneralStateBaseAddress = (struct anv_address) { scratch_bo, 0 };
       sba.GeneralStateMemoryObjectControlState = GENX(MOCS);
       sba.GeneralStateBaseAddressModifyEnable = true;
@@ -131,7 +131,7 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
     * units cache the binding table in the texture cache.  However, we have
     * yet to be able to actually confirm this.
     */
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
       pc.TextureCacheInvalidationEnable = true;
    }
 }
@@ -295,10 +295,10 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
       struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
 
       if (state.offset == 0) {
-         anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c)
+         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c)
             c._3DCommandSubOpcode = push_constant_opcodes[stage];
       } else {
-         anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c) {
+         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c) {
             c._3DCommandSubOpcode = push_constant_opcodes[stage],
             c.ConstantBody = (struct GENX(3DSTATE_CONSTANT_BODY)) {
 #if GEN_GEN >= 9
@@ -420,7 +420,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
        *    PIPE_CONTROL needs to be sent before any combination of VS
        *    associated 3DSTATE."
        */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.DepthStallEnable  = true;
          pc.PostSyncOperation = WriteImmediateData;
          pc.Address           =
@@ -521,7 +521,7 @@ void genX(CmdDraw)(
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance(cmd_buffer, firstVertex, firstInstance);
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.VertexAccessType         = SEQUENTIAL;
       prim.PrimitiveTopologyType    = pipeline->topology;
       prim.VertexCountPerInstance   = vertexCount;
@@ -549,7 +549,7 @@ void genX(CmdDrawIndexed)(
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance(cmd_buffer, vertexOffset, firstInstance);
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.VertexAccessType         = RANDOM;
       prim.PrimitiveTopologyType    = pipeline->topology;
       prim.VertexCountPerInstance   = indexCount;
@@ -572,7 +572,7 @@ static void
 emit_lrm(struct anv_batch *batch,
          uint32_t reg, struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit_blk(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
       lrm.RegisterAddress  = reg;
       lrm.MemoryAddress    = (struct anv_address) { bo, offset };
    }
@@ -581,7 +581,7 @@ emit_lrm(struct anv_batch *batch,
 static void
 emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
 {
-   anv_batch_emit_blk(batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
       lri.RegisterOffset   = reg;
       lri.DataDWord        = imm;
    }
@@ -612,7 +612,7 @@ void genX(CmdDrawIndirect)(
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 12);
    emit_lri(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, 0);
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.IndirectParameterEnable  = true;
       prim.VertexAccessType         = SEQUENTIAL;
       prim.PrimitiveTopologyType    = pipeline->topology;
@@ -645,7 +645,7 @@ void genX(CmdDrawIndexedIndirect)(
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, bo, bo_offset + 12);
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 16);
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.IndirectParameterEnable  = true;
       prim.VertexAccessType         = RANDOM;
       prim.PrimitiveTopologyType    = pipeline->topology;
@@ -697,7 +697,7 @@ void genX(CmdDispatch)(
 
    genX(cmd_buffer_flush_compute_state)(cmd_buffer);
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(GPGPU_WALKER), ggw) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(GPGPU_WALKER), ggw) {
       ggw.SIMDSize                     = prog_data->simd_size / 16;
       ggw.ThreadDepthCounterMaximum    = 0;
       ggw.ThreadHeightCounterMaximum   = 0;
@@ -709,7 +709,7 @@ void genX(CmdDispatch)(
       ggw.BottomExecutionMask          = 0xffffffff;
    }
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH), msf);
+   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH), msf);
 }
 
 #define GPGPU_DISPATCHDIMX 0x2500
@@ -761,7 +761,7 @@ void genX(CmdDispatchIndirect)(
    emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 0);
 
    /* predicate = (compute_dispatch_indirect_x_size == 0); */
-   anv_batch_emit_blk(batch, GENX(MI_PREDICATE), mip) {
+   anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
       mip.LoadOperation    = LOAD_LOAD;
       mip.CombineOperation = COMBINE_SET;
       mip.CompareOperation = COMPARE_SRCS_EQUAL;
@@ -771,7 +771,7 @@ void genX(CmdDispatchIndirect)(
    emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 4);
 
    /* predicate |= (compute_dispatch_indirect_y_size == 0); */
-   anv_batch_emit_blk(batch, GENX(MI_PREDICATE), mip) {
+   anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
       mip.LoadOperation    = LOAD_LOAD;
       mip.CombineOperation = COMBINE_OR;
       mip.CompareOperation = COMPARE_SRCS_EQUAL;
@@ -781,7 +781,7 @@ void genX(CmdDispatchIndirect)(
    emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 8);
 
    /* predicate |= (compute_dispatch_indirect_z_size == 0); */
-   anv_batch_emit_blk(batch, GENX(MI_PREDICATE), mip) {
+   anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
       mip.LoadOperation    = LOAD_LOAD;
       mip.CombineOperation = COMBINE_OR;
       mip.CompareOperation = COMPARE_SRCS_EQUAL;
@@ -789,14 +789,14 @@ void genX(CmdDispatchIndirect)(
 
    /* predicate = !predicate; */
 #define COMPARE_FALSE                           1
-   anv_batch_emit_blk(batch, GENX(MI_PREDICATE), mip) {
+   anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
       mip.LoadOperation    = LOAD_LOADINV;
       mip.CombineOperation = COMBINE_OR;
       mip.CompareOperation = COMPARE_FALSE;
    }
 #endif
 
-   anv_batch_emit_blk(batch, GENX(GPGPU_WALKER), ggw) {
+   anv_batch_emit(batch, GENX(GPGPU_WALKER), ggw) {
       ggw.IndirectParameterEnable      = true;
       ggw.PredicateEnable              = GEN_GEN <= 7;
       ggw.SIMDSize                     = prog_data->simd_size / 16;
@@ -807,7 +807,7 @@ void genX(CmdDispatchIndirect)(
       ggw.BottomExecutionMask          = 0xffffffff;
    }
 
-   anv_batch_emit_blk(batch, GENX(MEDIA_STATE_FLUSH), msf);
+   anv_batch_emit(batch, GENX(MEDIA_STATE_FLUSH), msf);
 }
 
 static void
@@ -825,7 +825,7 @@ flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
     * hardware too.
     */
    if (pipeline == GPGPU)
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS), t);
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS), t);
 #elif GEN_GEN <= 7
       /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
        * PIPELINE_SELECT [DevBWR+]":
@@ -837,7 +837,7 @@ flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
        *   command to invalidate read only caches prior to programming
        *   MI_PIPELINE_SELECT command to change the Pipeline Select Mode.
        */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.RenderTargetCacheFlushEnable  = true;
          pc.DepthCacheFlushEnable         = true;
          pc.DCFlushEnable                 = true;
@@ -845,7 +845,7 @@ flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
          pc.CommandStreamerStallEnable    = true;
       }
 
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.TextureCacheInvalidationEnable   = true;
          pc.ConstantCacheInvalidationEnable  = true;
          pc.StateCacheInvalidationEnable     = true;
@@ -861,7 +861,7 @@ genX(flush_pipeline_select_3d)(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.current_pipeline != _3D) {
       flush_pipeline_before_pipeline_select(cmd_buffer, _3D);
 
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPELINE_SELECT), ps) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT), ps) {
 #if GEN_GEN >= 9
          ps.MaskBits = 3;
 #endif
@@ -878,7 +878,7 @@ genX(flush_pipeline_select_gpgpu)(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.current_pipeline != GPGPU) {
       flush_pipeline_before_pipeline_select(cmd_buffer, GPGPU);
 
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPELINE_SELECT), ps) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT), ps) {
 #if GEN_GEN >= 9
          ps.MaskBits = 3;
 #endif
@@ -937,7 +937,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
    /* Emit 3DSTATE_DEPTH_BUFFER */
    if (has_depth) {
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
          db.SurfaceType                   = SURFTYPE_2D;
          db.DepthWriteEnable              = true;
          db.StencilWriteEnable            = has_stencil;
@@ -984,7 +984,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
        * nor stencil buffer is present.  Also, D16_UNORM is not allowed to
        * be combined with a stencil buffer so we use D32_FLOAT instead.
        */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
          db.SurfaceType          = SURFTYPE_2D;
          db.SurfaceFormat        = D32_FLOAT;
          db.Width                = fb->width - 1;
@@ -995,7 +995,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
    /* Emit 3DSTATE_STENCIL_BUFFER */
    if (has_stencil) {
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb) {
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
          sb.StencilBufferEnable = true,
 #endif
@@ -1017,14 +1017,14 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          };
       }
    } else {
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb);
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb);
    }
 
    /* Disable hierarchial depth buffers. */
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hz);
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hz);
 
    /* Clear the clear params. */
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS), cp);
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS), cp);
 }
 
 /**
@@ -1058,7 +1058,7 @@ void genX(CmdBeginRenderPass)(
 
    const VkRect2D *render_area = &pRenderPassBegin->renderArea;
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_DRAWING_RECTANGLE), r) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DRAWING_RECTANGLE), r) {
       r.ClippedDrawingRectangleYMin = MAX2(render_area->offset.y, 0);
       r.ClippedDrawingRectangleXMin = MAX2(render_area->offset.x, 0);
       r.ClippedDrawingRectangleYMax =
@@ -1098,7 +1098,7 @@ static void
 emit_ps_depth_count(struct anv_batch *batch,
                     struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit_blk(batch, GENX(PIPE_CONTROL), pc) {
+   anv_batch_emit(batch, GENX(PIPE_CONTROL), pc) {
       pc.DestinationAddressType  = DAT_PPGTT;
       pc.PostSyncOperation       = WritePSDepthCount;
       pc.DepthStallEnable        = true;
@@ -1110,7 +1110,7 @@ static void
 emit_query_availability(struct anv_batch *batch,
                         struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit_blk(batch, GENX(PIPE_CONTROL), pc) {
+   anv_batch_emit(batch, GENX(PIPE_CONTROL), pc) {
       pc.DestinationAddressType  = DAT_PPGTT;
       pc.PostSyncOperation       = WriteImmediateData;
       pc.Address                 = (struct anv_address) { bo, offset };
@@ -1135,7 +1135,7 @@ void genX(CmdBeginQuery)(
     */
    if (cmd_buffer->state.need_query_wa) {
       cmd_buffer->state.need_query_wa = false;
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.DepthCacheFlushEnable   = true;
          pc.DepthStallEnable        = true;
       }
@@ -1192,11 +1192,11 @@ void genX(CmdWriteTimestamp)(
 
    switch (pipelineStage) {
    case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
          srm.RegisterAddress  = TIMESTAMP;
          srm.MemoryAddress    = (struct anv_address) { &pool->bo, offset };
       }
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
          srm.RegisterAddress  = TIMESTAMP + 4;
          srm.MemoryAddress    = (struct anv_address) { &pool->bo, offset + 4 };
       }
@@ -1204,7 +1204,7 @@ void genX(CmdWriteTimestamp)(
 
    default:
       /* Everything else is bottom-of-pipe */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.DestinationAddressType  = DAT_PPGTT,
          pc.PostSyncOperation       = WriteTimestamp,
          pc.Address = (struct anv_address) { &pool->bo, offset };
@@ -1253,11 +1253,11 @@ static void
 emit_load_alu_reg_u64(struct anv_batch *batch, uint32_t reg,
                       struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit_blk(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
       lrm.RegisterAddress  = reg,
       lrm.MemoryAddress    = (struct anv_address) { bo, offset };
    }
-   anv_batch_emit_blk(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
       lrm.RegisterAddress  = reg + 4;
       lrm.MemoryAddress    = (struct anv_address) { bo, offset + 4 };
    }
@@ -1267,13 +1267,13 @@ static void
 store_query_result(struct anv_batch *batch, uint32_t reg,
                    struct anv_bo *bo, uint32_t offset, VkQueryResultFlags flags)
 {
-   anv_batch_emit_blk(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+   anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
       srm.RegisterAddress  = reg;
       srm.MemoryAddress    = (struct anv_address) { bo, offset };
    }
 
    if (flags & VK_QUERY_RESULT_64_BIT) {
-      anv_batch_emit_blk(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+      anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
          srm.RegisterAddress  = reg + 4;
          srm.MemoryAddress    = (struct anv_address) { bo, offset + 4 };
       }
@@ -1296,7 +1296,7 @@ void genX(CmdCopyQueryPoolResults)(
    uint32_t slot_offset, dst_offset;
 
    if (flags & VK_QUERY_RESULT_WAIT_BIT) {
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.CommandStreamerStallEnable = true;
          pc.StallAtPixelScoreboard     = true;
       }

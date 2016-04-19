@@ -80,12 +80,12 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
       anv_state_clflush(cc_state);
    }
 
-   anv_batch_emit_blk(&cmd_buffer->batch,
-                      GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), cc) {
+   anv_batch_emit(&cmd_buffer->batch,
+                  GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), cc) {
       cc.CCViewportPointer = cc_state.offset;
    }
-   anv_batch_emit_blk(&cmd_buffer->batch,
-                      GENX(3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP), clip) {
+   anv_batch_emit(&cmd_buffer->batch,
+                  GENX(3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP), clip) {
       clip.SFClipViewportPointer = sf_clip_state.offset;
    }
 }
@@ -117,7 +117,7 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
        * flushed, which involves a first PIPE_CONTROL flush which stalls the
        * pipeline...
        */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.DCFlushEnable              = true;
          pc.PostSyncOperation          = NoWrite;
          pc.CommandStreamerStallEnable = true;
@@ -137,7 +137,7 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
        * previous and subsequent PIPE_CONTROLs already guarantee that there is
        * no concurrent GPGPU kernel execution (see SKL HSD 2132585).
        */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.TextureCacheInvalidationEnable   = true,
          pc.ConstantCacheInvalidationEnable  = true,
          pc.InstructionCacheInvalidateEnable = true,
@@ -148,13 +148,13 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
       /* Now send a third stalling flush to make sure that invalidation is
        * complete when the L3 configuration registers are modified.
        */
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.DCFlushEnable              = true;
          pc.PostSyncOperation          = NoWrite;
          pc.CommandStreamerStallEnable = true;
       }
 
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
          lri.RegisterOffset   = GENX(L3CNTLREG_num);
          lri.DataDWord        = l3cr_val;
       }
@@ -250,8 +250,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       if (!cmd_buffer->device->info.has_llc)
          anv_state_clflush(cc_state);
 
-      anv_batch_emit_blk(&cmd_buffer->batch,
-                         GENX(3DSTATE_CC_STATE_POINTERS), ccp) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS), ccp) {
          ccp.ColorCalcStatePointer        = cc_state.offset;
          ccp.ColorCalcStatePointerValid   = true;
       }
@@ -295,8 +294,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       if (!cmd_buffer->device->info.has_llc)
          anv_state_clflush(cc_state);
 
-      anv_batch_emit_blk(&cmd_buffer->batch,
-                         GEN9_3DSTATE_CC_STATE_POINTERS, ccp) {
+      anv_batch_emit(&cmd_buffer->batch, GEN9_3DSTATE_CC_STATE_POINTERS, ccp) {
          ccp.ColorCalcStatePointer = cc_state.offset;
          ccp.ColorCalcStatePointerValid = true;
       }
@@ -329,7 +327,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_INDEX_BUFFER)) {
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_VF), vf) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_VF), vf) {
          vf.IndexedDrawCutIndexEnable  = pipeline->primitive_restart;
          vf.CutIndex                   = cmd_buffer->state.restart_index;
       }
@@ -359,7 +357,7 @@ void genX(CmdBindIndexBuffer)(
 
    cmd_buffer->state.restart_index = restart_index_for_type[indexType];
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(3DSTATE_INDEX_BUFFER), ib) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_INDEX_BUFFER), ib) {
       ib.IndexFormat                = vk_to_gen_index_type[indexType];
       ib.MemoryObjectControlState   = GENX(MOCS);
       ib.BufferStartingAddress      =
@@ -399,7 +397,7 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    unsigned push_constant_regs = reg_aligned_constant_size / 32;
 
    if (push_state.alloc_size) {
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD), curbe) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD), curbe) {
          curbe.CURBETotalDataLength    = push_state.alloc_size;
          curbe.CURBEDataStartAddress   = push_state.offset;
       }
@@ -432,8 +430,8 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
                              pipeline->cs_thread_width_max);
 
    uint32_t size = GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
-   anv_batch_emit_blk(&cmd_buffer->batch,
-                      GENX(MEDIA_INTERFACE_DESCRIPTOR_LOAD), mid) {
+   anv_batch_emit(&cmd_buffer->batch,
+                  GENX(MEDIA_INTERFACE_DESCRIPTOR_LOAD), mid) {
       mid.InterfaceDescriptorTotalLength        = size;
       mid.InterfaceDescriptorDataStartAddress   = state.offset;
    }
@@ -476,7 +474,7 @@ void genX(CmdSetEvent)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_event, event, _event);
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
       pc.DestinationAddressType  = DAT_PPGTT,
       pc.PostSyncOperation       = WriteImmediateData,
       pc.Address = (struct anv_address) {
@@ -495,7 +493,7 @@ void genX(CmdResetEvent)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_event, event, _event);
 
-   anv_batch_emit_blk(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
       pc.DestinationAddressType  = DAT_PPGTT;
       pc.PostSyncOperation       = WriteImmediateData;
       pc.Address = (struct anv_address) {
@@ -523,7 +521,7 @@ void genX(CmdWaitEvents)(
    for (uint32_t i = 0; i < eventCount; i++) {
       ANV_FROM_HANDLE(anv_event, event, pEvents[i]);
 
-      anv_batch_emit_blk(&cmd_buffer->batch, GENX(MI_SEMAPHORE_WAIT), sem) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_SEMAPHORE_WAIT), sem) {
          sem.WaitMode            = PollingMode,
          sem.CompareOperation    = COMPARE_SAD_EQUAL_SDD,
          sem.SemaphoreDataDword  = VK_EVENT_SET,
