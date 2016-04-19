@@ -1622,6 +1622,46 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    return mt->mcs_mt;
 }
 
+void
+intel_miptree_prepare_mcs(struct brw_context *brw,
+                          struct intel_mipmap_tree *mt)
+{
+   if (mt->mcs_mt)
+      return;
+
+   if (brw->gen < 9)
+      return;
+
+   /* Single sample compression is represented re-using msaa compression
+    * layout type: "Compressed Multisampled Surfaces".
+    */
+   if (mt->msaa_layout != INTEL_MSAA_LAYOUT_CMS || mt->num_samples > 1)
+      return;
+
+   /* Clients are not currently capable of consuming compressed
+    * single-sampled buffers.
+    */
+   if (mt->is_scanout)
+      return;
+
+   assert(intel_tiling_supports_non_msrt_mcs(brw, mt->tiling) ||
+          intel_miptree_supports_lossless_compressed(brw, mt));
+
+   /* Consider if lossless compression is supported but the needed
+    * auxiliary buffer doesn't exist yet.
+    *
+    * Failing to allocate the auxiliary buffer means running out of
+    * memory. The pointer to the aux miptree is left NULL which should
+    * signal non-compressed behavior.
+    */
+   if (!intel_miptree_alloc_non_msrt_mcs(brw, mt)) {
+      _mesa_warning(NULL,
+                    "Failed to allocated aux buffer for lossless"
+                    " compressed %p %u:%u %s\n",
+                    mt, mt->logical_width0, mt->logical_height0,
+                    _mesa_get_format_name(mt->format));
+   }
+}
 
 /**
  * Helper for intel_miptree_alloc_hiz() that sets

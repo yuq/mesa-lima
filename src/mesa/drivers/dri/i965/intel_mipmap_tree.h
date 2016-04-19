@@ -693,6 +693,10 @@ bool
 intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt);
 
+void
+intel_miptree_prepare_mcs(struct brw_context *brw,
+                          struct intel_mipmap_tree *mt);
+
 enum {
    MIPTREE_LAYOUT_ACCELERATED_UPLOAD       = 1 << 0,
    MIPTREE_LAYOUT_FORCE_ALL_SLICE_AT_LOD   = 1 << 1,

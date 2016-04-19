@@ -1880,6 +1880,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_layer);
    intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_layer);
 
+   intel_miptree_prepare_mcs(brw, dst_mt);
+
    DBG("%s from %dx %s mt %p %d %d (%f,%f) (%f,%f)"
        "to %dx %s mt %p %d %d (%f,%f) (%f,%f) (flip %d,%d)\n",
        __func__,

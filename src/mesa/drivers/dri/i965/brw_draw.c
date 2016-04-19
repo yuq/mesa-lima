@@ -391,6 +391,25 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
    }
 }
 
+static void
+brw_predraw_set_aux_buffers(struct brw_context *brw)
+{
+   if (brw->gen < 9)
+      return;
+
+   struct gl_context *ctx = &brw->ctx;
+   struct gl_framebuffer *fb = ctx->DrawBuffer;
+
+   for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
+      struct intel_renderbuffer *irb =
+         intel_renderbuffer(fb->_ColorDrawBuffers[i]);
+
+      if (irb) {
+         intel_miptree_prepare_mcs(brw, irb->mt);
+      }
+   }
+}
+
 /* May fail if out of video memory for texture or vbo upload, or on
  * fallback conditions.
  */
@@ -438,6 +457,7 @@ brw_try_draw_prims(struct gl_context *ctx,
       _mesa_fls(ctx->VertexProgram._Current->Base.SamplersUsed);
 
    intel_prepare_render(brw);
+   brw_predraw_set_aux_buffers(brw);
 
    /* This workaround has to happen outside of brw_upload_render_state()
     * because it may flush the batchbuffer for a blit, affecting the state
