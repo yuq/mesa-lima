@@ -43,6 +43,12 @@ process_parameters(exec_list *instructions, exec_list *actual_parameters,
    unsigned count = 0;
 
    foreach_list_typed(ast_node, ast, link, parameters) {
+      /* We need to process the parameters first in order to know if we can
+       * raise or not a unitialized warning. Calling set_is_lhs silence the
+       * warning for now. Raising the warning or not will be checked at
+       * verify_parameter_modes.
+       */
+      ast->set_is_lhs(true);
       ir_rvalue *result = ast->hir(instructions, state);
 
       ir_constant *const constant = result->constant_expression_value();
@@ -257,6 +263,16 @@ verify_parameter_modes(_mesa_glsl_parse_state *state,
 	 }
 
 	 ir_variable *var = actual->variable_referenced();
+
+         if (var && formal->data.mode == ir_var_function_inout) {
+            if ((var->data.mode == ir_var_auto || var->data.mode == ir_var_shader_out) &&
+                !var->data.assigned &&
+                !is_gl_identifier(var->name)) {
+               _mesa_glsl_warning(&loc, state, "`%s' used uninitialized",
+                                  var->name);
+            }
+         }
+
 	 if (var)
 	    var->data.assigned = true;
 
@@ -273,6 +289,18 @@ verify_parameter_modes(_mesa_glsl_parse_state *state,
                              mode, formal->name);
             return false;
 	 }
+      } else {
+         assert(formal->data.mode == ir_var_function_in ||
+                formal->data.mode == ir_var_const_in);
+         ir_variable *var = actual->variable_referenced();
+         if (var) {
+            if ((var->data.mode == ir_var_auto || var->data.mode == ir_var_shader_out) &&
+                !var->data.assigned &&
+                !is_gl_identifier(var->name)) {
+               _mesa_glsl_warning(&loc, state, "`%s' used uninitialized",
+                                  var->name);
+            }
+         }
       }
 
       if (formal->type->is_image() &&
