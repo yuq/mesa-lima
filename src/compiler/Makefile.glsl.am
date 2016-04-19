@@ -35,7 +35,8 @@ TESTS += glsl/glcpp/tests/glcpp-test			\
 	glsl/tests/general-ir-test			\
 	glsl/tests/optimization-test			\
 	glsl/tests/sampler-types-test			\
-	glsl/tests/uniform-initializer-test
+	glsl/tests/uniform-initializer-test             \
+	glsl/tests/warnings-test
 
 TESTS_ENVIRONMENT= \
 	export PYTHON2=$(PYTHON2); \
