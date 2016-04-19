@@ -1879,7 +1879,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     * to destination color buffers, and the standard render path is
     * fast-color-aware.
     */
-   intel_miptree_resolve_color(brw, src_mt, 0);
+   intel_miptree_resolve_color(brw, src_mt, INTEL_MIPTREE_IGNORE_CCS_E);
    intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_layer);
    intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_layer);
 
