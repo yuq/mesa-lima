@@ -377,6 +377,12 @@ struct ir3 {
 	unsigned keeps_count, keeps_sz;
 	struct ir3_instruction **keeps;
 
+	/* Track texture sample instructions which need texture state
+	 * patched in (for astc-srgb workaround):
+	 */
+	unsigned astc_srgb_count, astc_srgb_sz;
+	struct ir3_instruction **astc_srgb;
+
 	/* List of blocks: */
 	struct list_head block_list;
 

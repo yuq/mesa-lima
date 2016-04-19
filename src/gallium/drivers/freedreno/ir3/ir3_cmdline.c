@@ -94,6 +94,7 @@ static void print_usage(void)
 	printf("    --saturate-s MASK - bitmask of samplers to saturate S coord\n");
 	printf("    --saturate-t MASK - bitmask of samplers to saturate T coord\n");
 	printf("    --saturate-r MASK - bitmask of samplers to saturate R coord\n");
+	printf("    --astc-srgb MASK  - bitmask of samplers to enable astc-srgb workaround\n");
 	printf("    --stream-out      - enable stream-out (aka transform feedback)\n");
 	printf("    --ucp MASK        - bitmask of enabled user-clip-planes\n");
 	printf("    --gpu GPU_ID      - specify gpu-id (default 320)\n");
@@ -170,6 +171,13 @@ int main(int argc, char **argv)
 		if (!strcmp(argv[n], "--saturate-r")) {
 			debug_printf(" %s %s", argv[n], argv[n+1]);
 			key.vsaturate_r = key.fsaturate_r = strtol(argv[n+1], NULL, 0);
+			n += 2;
+			continue;
+		}
+
+		if (!strcmp(argv[n], "--astc-srgb")) {
+			debug_printf(" %s %s", argv[n], argv[n+1]);
+			key.vastc_srgb = key.fastc_srgb = strtol(argv[n+1], NULL, 0);
 			n += 2;
 			continue;
 		}

@@ -108,8 +108,10 @@ struct ir3_compile {
 	 */
 	bool array_index_add_half;
 
-	/* for looking up which system value is which */
-	unsigned sysval_semantics[8];
+	/* on a4xx, bitmask of samplers which need astc+srgb workaround: */
+	unsigned astc_srgb;
+
+	unsigned max_texture_index;
 
 	/* set if we encounter something we can't handle yet, so we
 	 * can bail cleanly and fallback to TGSI compiler f/e
@@ -134,6 +136,12 @@ compile_init(struct ir3_compiler *compiler,
 		ctx->levels_add_one = false;
 		ctx->unminify_coords = false;
 		ctx->array_index_add_half = true;
+
+		if (so->type == SHADER_VERTEX)
+			ctx->astc_srgb = so->key.vastc_srgb;
+		else if (so->type == SHADER_FRAGMENT)
+			ctx->astc_srgb = so->key.fastc_srgb;
+
 	} else {
 		/* no special handling for "flat" */
 		ctx->flat_bypass = false;
@@ -620,14 +628,14 @@ create_driver_param(struct ir3_compile *ctx, enum ir3_driver_param dp)
  */
 static void
 split_dest(struct ir3_block *block, struct ir3_instruction **dst,
-		struct ir3_instruction *src, unsigned n)
+		struct ir3_instruction *src, unsigned base, unsigned n)
 {
 	struct ir3_instruction *prev = NULL;
 	for (int i = 0, j = 0; i < n; i++) {
 		struct ir3_instruction *split = ir3_instr_create(block, OPC_META_FO);
 		ir3_reg_create(split, 0, IR3_REG_SSA);
 		ir3_reg_create(split, 0, IR3_REG_SSA)->instr = src;
-		split->fo.off = i;
+		split->fo.off = i + base;
 
 		if (prev) {
 			split->cp.left = prev;
@@ -637,7 +645,7 @@ split_dest(struct ir3_block *block, struct ir3_instruction **dst,
 		}
 		prev = split;
 
-		if (src->regs[0]->wrmask & (1 << i))
+		if (src->regs[0]->wrmask & (1 << (i + base)))
 			dst[j++] = split;
 	}
 }
@@ -1543,12 +1551,35 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	if (opc == OPC_GETLOD)
 		type = TYPE_U32;
 
-	sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_XYZW,
-			flags, tex->texture_index, tex->texture_index,
-			create_collect(b, src0, nsrc0),
-			create_collect(b, src1, nsrc1));
+	unsigned tex_idx = tex->texture_index;
 
-	split_dest(b, dst, sam, 4);
+	ctx->max_texture_index = MAX2(ctx->max_texture_index, tex_idx);
+
+	struct ir3_instruction *col0 = create_collect(b, src0, nsrc0);
+	struct ir3_instruction *col1 = create_collect(b, src1, nsrc1);
+
+	sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_XYZW, flags,
+			tex_idx, tex_idx, col0, col1);
+
+	if ((ctx->astc_srgb & (1 << tex_idx)) && !nir_tex_instr_is_query(tex)) {
+		/* only need first 3 components: */
+		sam->regs[0]->wrmask = 0x7;
+		split_dest(b, dst, sam, 0, 3);
+
+		/* we need to sample the alpha separately with a non-ASTC
+		 * texture state:
+		 */
+		sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_W, flags,
+				tex_idx, tex_idx, col0, col1);
+
+		array_insert(ctx->ir->astc_srgb, sam);
+
+		/* fixup .w component: */
+		split_dest(b, &dst[3], sam, 3, 1);
+	} else {
+		/* normal (non-workaround) case: */
+		split_dest(b, dst, sam, 0, 4);
+	}
 
 	/* GETLOD returns results in 4.8 fixed point */
 	if (opc == OPC_GETLOD) {
@@ -1576,7 +1607,7 @@ emit_tex_query_levels(struct ir3_compile *ctx, nir_tex_instr *tex)
 	/* even though there is only one component, since it ends
 	 * up in .z rather than .x, we need a split_dest()
 	 */
-	split_dest(b, dst, sam, 3);
+	split_dest(b, dst, sam, 0, 3);
 
 	/* The # of levels comes from getinfo.z. We need to add 1 to it, since
 	 * the value in TEX_CONST_0 is zero-based.
@@ -1610,7 +1641,7 @@ emit_tex_txs(struct ir3_compile *ctx, nir_tex_instr *tex)
 	sam = ir3_SAM(b, OPC_GETSIZE, TYPE_U32, TGSI_WRITEMASK_XYZW, flags,
 			tex->texture_index, tex->texture_index, lod, NULL);
 
-	split_dest(b, dst, sam, 4);
+	split_dest(b, dst, sam, 0, 4);
 
 	/* Array size actually ends up in .w rather than .z. This doesn't
 	 * matter for miplevel 0, but for higher mips the value in z is
@@ -2268,6 +2299,40 @@ fixup_frag_inputs(struct ir3_compile *ctx)
 	ir->inputs = inputs;
 }
 
+/* Fixup tex sampler state for astc/srgb workaround instructions.  We
+ * need to assign the tex state indexes for these after we know the
+ * max tex index.
+ */
+static void
+fixup_astc_srgb(struct ir3_compile *ctx)
+{
+	struct ir3_shader_variant *so = ctx->so;
+	/* indexed by original tex idx, value is newly assigned alpha sampler
+	 * state tex idx.  Zero is invalid since there is at least one sampler
+	 * if we get here.
+	 */
+	unsigned alt_tex_state[16] = {0};
+	unsigned tex_idx = ctx->max_texture_index + 1;
+	unsigned idx = 0;
+
+	so->astc_srgb.base = tex_idx;
+
+	for (unsigned i = 0; i < ctx->ir->astc_srgb_count; i++) {
+		struct ir3_instruction *sam = ctx->ir->astc_srgb[i];
+
+		compile_assert(ctx, sam->cat5.tex < ARRAY_SIZE(alt_tex_state));
+
+		if (alt_tex_state[sam->cat5.tex] == 0) {
+			/* assign new alternate/alpha tex state slot: */
+			alt_tex_state[sam->cat5.tex] = tex_idx++;
+			so->astc_srgb.orig_idx[idx++] = sam->cat5.tex;
+			so->astc_srgb.count++;
+		}
+
+		sam->cat5.tex = alt_tex_state[sam->cat5.tex];
+	}
+}
+
 int
 ir3_compile_shader_nir(struct ir3_compiler *compiler,
 		struct ir3_shader_variant *so)
@@ -2432,6 +2497,9 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 		so->inputs[i].regid = regid;
 		so->inputs[i].compmask = compmask;
 	}
+
+	if (ctx->astc_srgb)
+		fixup_astc_srgb(ctx);
 
 	/* We need to do legalize after (for frag shader's) the "bary.f"
 	 * offsets (inloc) have been assigned.

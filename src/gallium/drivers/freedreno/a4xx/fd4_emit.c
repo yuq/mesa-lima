@@ -123,7 +123,8 @@ fd4_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
 
 static void
 emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
-		enum adreno_state_block sb, struct fd_texture_stateobj *tex)
+		enum adreno_state_block sb, struct fd_texture_stateobj *tex,
+		const struct ir3_shader_variant *v)
 {
 	static const uint32_t bcolor_reg[] = {
 			[SB_VERT_TEX] = REG_A4XX_TPL1_TP_VS_BORDER_COLOR_BASE_ADDR,
@@ -174,12 +175,14 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (tex->num_textures > 0) {
+		unsigned num_textures = tex->num_textures + v->astc_srgb.count;
+
 		/* emit texture state: */
-		OUT_PKT3(ring, CP_LOAD_STATE, 2 + (8 * tex->num_textures));
+		OUT_PKT3(ring, CP_LOAD_STATE, 2 + (8 * num_textures));
 		OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(0) |
 				CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
 				CP_LOAD_STATE_0_STATE_BLOCK(sb) |
-				CP_LOAD_STATE_0_NUM_UNIT(tex->num_textures));
+				CP_LOAD_STATE_0_NUM_UNIT(num_textures));
 		OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS) |
 				CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
 		for (i = 0; i < tex->num_textures; i++) {
@@ -202,6 +205,34 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_RING(ring, 0x00000000);
 			OUT_RING(ring, 0x00000000);
 		}
+
+		for (i = 0; i < v->astc_srgb.count; i++) {
+			static const struct fd4_pipe_sampler_view dummy_view = {};
+			const struct fd4_pipe_sampler_view *view;
+			unsigned idx = v->astc_srgb.orig_idx[i];
+
+			view = tex->textures[idx] ?
+					fd4_pipe_sampler_view(tex->textures[idx]) :
+					&dummy_view;
+
+			debug_assert(view->texconst0 & A4XX_TEX_CONST_0_SRGB);
+
+			OUT_RING(ring, view->texconst0 & ~A4XX_TEX_CONST_0_SRGB);
+			OUT_RING(ring, view->texconst1);
+			OUT_RING(ring, view->texconst2);
+			OUT_RING(ring, view->texconst3);
+			if (view->base.texture) {
+				struct fd_resource *rsc = fd_resource(view->base.texture);
+				OUT_RELOC(ring, rsc->bo, view->offset, view->texconst4, 0);
+			} else {
+				OUT_RING(ring, 0x00000000);
+			}
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);
+		}
+	} else {
+		debug_assert(v->astc_srgb.count == 0);
 	}
 
 	OUT_PKT0(ring, bcolor_reg[sb], 1);
@@ -681,14 +712,14 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & FD_DIRTY_VERTTEX) {
 		if (vp->has_samp)
-			emit_textures(ctx, ring, SB_VERT_TEX, &ctx->verttex);
+			emit_textures(ctx, ring, SB_VERT_TEX, &ctx->verttex, vp);
 		else
 			dirty &= ~FD_DIRTY_VERTTEX;
 	}
 
 	if (dirty & FD_DIRTY_FRAGTEX) {
 		if (fp->has_samp)
-			emit_textures(ctx, ring, SB_FRAG_TEX, &ctx->fragtex);
+			emit_textures(ctx, ring, SB_FRAG_TEX, &ctx->fragtex, fp);
 		else
 			dirty &= ~FD_DIRTY_FRAGTEX;
 	}

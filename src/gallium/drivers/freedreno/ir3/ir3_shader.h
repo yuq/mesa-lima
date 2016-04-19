@@ -104,6 +104,9 @@ struct ir3_shader_key {
 	 * shader:
 	 */
 	uint16_t fsaturate_s, fsaturate_t, fsaturate_r;
+
+	/* bitmask of samplers which need astc srgb workaround: */
+	uint16_t vastc_srgb, fastc_srgb;
 };
 
 static inline bool
@@ -221,6 +224,14 @@ struct ir3_shader_variant {
 	struct {
 		uint32_t val[4];
 	} immediates[64];
+
+	/* for astc srgb workaround, the number/base of additional
+	 * alpha tex states we need, and index of original tex states
+	 */
+	struct {
+		unsigned base, count;
+		unsigned orig_idx[16];
+	} astc_srgb;
 
 	/* shader variants form a linked list: */
 	struct ir3_shader_variant *next;
