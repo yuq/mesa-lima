@@ -1337,7 +1337,13 @@ fs_visitor::emit_sampleid_setup()
    const fs_builder abld = bld.annotate("compute sample id");
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
 
-   if (key->compute_sample_id) {
+   if (!key->compute_sample_id) {
+      /* As per GL_ARB_sample_shading specification:
+       * "When rendering to a non-multisample buffer, or if multisample
+       *  rasterization is disabled, gl_SampleID will always be zero."
+       */
+      abld.MOV(*reg, brw_imm_d(0));
+   } else {
       fs_reg t1(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_D);
       t1.set_smear(0);
       fs_reg t2(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_W);
@@ -1380,12 +1386,6 @@ fs_visitor::emit_sampleid_setup()
        * width=4, hstride=0 of t2 during an ADD instruction.
        */
       abld.emit(FS_OPCODE_SET_SAMPLE_ID, *reg, t1, t2);
-   } else {
-      /* As per GL_ARB_sample_shading specification:
-       * "When rendering to a non-multisample buffer, or if multisample
-       *  rasterization is disabled, gl_SampleID will always be zero."
-       */
-      abld.MOV(*reg, brw_imm_d(0));
    }
 
    return reg;
