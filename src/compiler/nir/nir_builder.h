@@ -306,7 +306,7 @@ nir_imov_alu(nir_builder *build, nir_alu_src src, unsigned num_components)
  * Construct an fmov or imov that reswizzles the source's components.
  */
 static inline nir_ssa_def *
-nir_swizzle(nir_builder *build, nir_ssa_def *src, unsigned swiz[4],
+nir_swizzle(nir_builder *build, nir_ssa_def *src, const unsigned swiz[4],
             unsigned num_components, bool use_fmov)
 {
    nir_alu_src alu_src = { NIR_SRC_INIT };
