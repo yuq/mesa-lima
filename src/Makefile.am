@@ -38,12 +38,19 @@ if HAVE_DRI_GLX
 SUBDIRS += glx
 endif
 
+## Optionally required by GBM and EGL
 if HAVE_PLATFORM_WAYLAND
-SUBDIRS += egl/wayland/wayland-egl egl/wayland/wayland-drm
+SUBDIRS += egl/wayland/wayland-drm
 endif
 
+## Optionally required by EGL (aka PLATFORM_GBM)
 if HAVE_GBM
 SUBDIRS += gbm
+endif
+
+## Optionally required by EGL
+if HAVE_PLATFORM_WAYLAND
+SUBDIRS += egl/wayland/wayland-egl
 endif
 
 if HAVE_EGL
