@@ -110,9 +110,10 @@ AM_CFLAGS += -DHAVE_WAYLAND_PLATFORM -DVK_USE_PLATFORM_WAYLAND_KHR
 VULKAN_ENTRYPOINT_CPPFLAGS += -DVK_USE_PLATFORM_WAYLAND_KHR
 endif
 
-libvulkan_intel_la_SOURCES =                            \
-	$(VULKAN_SOURCES)                               \
-	$(VULKAN_GEM_FILES)
+noinst_LTLIBRARIES += libvulkan_common.la
+libvulkan_common_la_SOURCES = $(VULKAN_SOURCES)
+
+libvulkan_intel_la_SOURCES = $(VULKAN_GEM_FILES)
 
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) - | $(PYTHON2) $< header > $@
@@ -123,6 +124,7 @@ anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 CLEANFILES = $(BUILT_SOURCES)
 
 libvulkan_intel_la_LIBADD = $(WAYLAND_LIBS) \
+	libvulkan_common.la \
 	-lxcb -lxcb-dri3 -lxcb-present -lxcb-sync -lxshmfence \
 	$(top_builddir)/src/intel/isl/libisl.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
@@ -152,11 +154,7 @@ dev_icd.json : dev_icd.json.in
 		< $(srcdir)/dev_icd.json.in > $@
 
 # Libvulkan with dummy gem. Used for unit tests.
-
-libvulkan_test_la_SOURCES =                             \
-	$(VULKAN_SOURCES)                               \
-	$(VULKAN_GEM_STUB_FILES)
-
+libvulkan_test_la_SOURCES = $(VULKAN_GEM_STUB_FILES)
 libvulkan_test_la_LIBADD = $(libvulkan_intel_la_LIBADD)
 
 include $(top_srcdir)/install-lib-links.mk
