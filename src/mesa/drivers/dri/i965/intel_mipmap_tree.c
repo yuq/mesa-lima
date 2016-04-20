@@ -226,30 +226,53 @@ intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
 
    if (mt->cpp != 4 && mt->cpp != 8 && mt->cpp != 16)
       return false;
-   if (mt->first_level != 0 || mt->last_level != 0) {
-      if (brw->gen >= 8) {
-         perf_debug("Multi-LOD fast clear - giving up (%dx%dx%d).\n",
-                    mt->logical_width0, mt->logical_height0, mt->last_level);
-      }
 
-      return false;
-   }
+   const bool mip_mapped = mt->first_level != 0 || mt->last_level != 0;
+   const bool arrayed = mt->physical_depth0 != 1;
 
-   /* Check for layered surfaces. */
-   if (mt->physical_depth0 != 1) {
+   if (arrayed) {
        /* Multisample surfaces with the CMS layout are not layered surfaces,
         * yet still have physical_depth0 > 1. Assert that we don't
         * accidentally reject a multisampled surface here. We should have
         * rejected it earlier by explicitly checking the sample count.
         */
       assert(mt->num_samples <= 1);
+   }
 
-      if (brw->gen >= 8) {
-         perf_debug("Layered fast clear - giving up. (%dx%d%d)\n",
-                    mt->logical_width0, mt->logical_height0,
-                    mt->physical_depth0);
-      }
+   /* Handle the hardware restrictions...
+    *
+    * All GENs have the following restriction: "MCS buffer for non-MSRT is
+    * supported only for RT formats 32bpp, 64bpp, and 128bpp."
+    *
+    * From the HSW PRM Volume 7: 3D-Media-GPGPU, page 652: (Color Clear of
+    * Non-MultiSampler Render Target Restrictions) Support is for
+    * non-mip-mapped and non-array surface types only.
+    *
+    * From the BDW PRM Volume 7: 3D-Media-GPGPU, page 649: (Color Clear of
+    * Non-MultiSampler Render Target Restriction). Mip-mapped and arrayed
+    * surfaces are supported with MCS buffer layout with these alignments in
+    * the RT space: Horizontal Alignment = 256 and Vertical Alignment = 128.
+    *
+    * From the SKL PRM Volume 7: 3D-Media-GPGPU, page 632: (Color Clear of
+    * Non-MultiSampler Render Target Restriction). Mip-mapped and arrayed
+    * surfaces are supported with MCS buffer layout with these alignments in
+    * the RT space: Horizontal Alignment = 128 and Vertical Alignment = 64.
+    */
+   if (brw->gen < 8 && (mip_mapped || arrayed))
+      return false;
 
+   /* Not implemented yet. */
+   if (mip_mapped) {
+      perf_debug("Multi-LOD fast clear - giving up (%dx%dx%d).\n",
+                 mt->logical_width0, mt->logical_height0, mt->last_level);
+      return false;
+   }
+
+   /* Not implemented yet. */
+   if (arrayed) {
+      perf_debug("Layered fast clear - giving up. (%dx%d%d)\n",
+                 mt->logical_width0, mt->logical_height0,
+                 mt->physical_depth0);
       return false;
    }
 
