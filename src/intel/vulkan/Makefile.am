@@ -176,7 +176,12 @@ libvulkan_intel_la_LIBADD = $(WAYLAND_LIBS) \
         $(PER_GEN_LIBS)
 
 libvulkan_intel_la_LDFLAGS = \
-        -module -avoid-version -shared -shrext .so
+	-shared \
+	-module \
+	-no-undefined \
+	-avoid-version \
+	$(GC_SECTIONS) \
+	$(LD_NO_UNDEFINED)
 
 
 # Generate icd files. It would be nice to just be able to add these to
