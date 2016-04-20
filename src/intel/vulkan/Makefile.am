@@ -190,11 +190,10 @@ icdconf_DATA = intel_icd.json
 # The following is used for development purposes, by setting VK_ICD_FILENAMES.
 noinst_DATA = dev_icd.json
 
-%.json : %.json.in
+dev_icd.json : dev_icd.json.in
 	$(AM_V_GEN) $(SED) \
-		-e "s#@build_libdir@#${abs_top_builddir}/${LIB_DIR}#" \
-		-e "s#@install_libdir@#${libdir}#" < $< > $@
-
+		-e "s#@build_libdir@#${abs_top_builddir}/${LIB_DIR}#"
+		< $(srcdir)/dev_icd.json.in > $@
 
 # Libvulkan with dummy gem. Used for unit tests.
 
