@@ -91,7 +91,7 @@ enum {
 };
 
 struct r600_query_hw_ops {
-	void (*prepare_buffer)(struct r600_common_context *,
+	bool (*prepare_buffer)(struct r600_common_context *,
 			       struct r600_query_hw *,
 			       struct r600_resource *);
 	void (*emit_start)(struct r600_common_context *,

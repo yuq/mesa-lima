@@ -271,14 +271,20 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 	struct r600_resource *buf = (struct r600_resource*)
 		pipe_buffer_create(ctx->b.screen, PIPE_BIND_CUSTOM,
 				   PIPE_USAGE_STAGING, buf_size);
+	if (!buf)
+		return NULL;
 
-	if (query->flags & R600_QUERY_HW_FLAG_PREDICATE)
-		query->ops->prepare_buffer(ctx, query, buf);
+	if (query->flags & R600_QUERY_HW_FLAG_PREDICATE) {
+		if (!query->ops->prepare_buffer(ctx, query, buf)) {
+			pipe_resource_reference((struct pipe_resource **)&buf, NULL);
+			return NULL;
+		}
+	}
 
 	return buf;
 }
 
-static void r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
+static bool r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 					 struct r600_query_hw *query,
 					 struct r600_resource *buffer)
 {
@@ -286,6 +292,8 @@ static void r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 	uint32_t *results = ctx->ws->buffer_map(buffer->buf, NULL,
 						PIPE_TRANSFER_WRITE |
 						PIPE_TRANSFER_UNSYNCHRONIZED);
+	if (!results)
+		return false;
 
 	memset(results, 0, buffer->b.b.width0);
 
@@ -306,6 +314,8 @@ static void r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 			results += 4 * ctx->max_db;
 		}
 	}
+
+	return true;
 }
 
 static struct r600_query_ops query_hw_ops = {
@@ -496,6 +506,9 @@ static void r600_query_hw_emit_start(struct r600_common_context *ctx,
 {
 	uint64_t va;
 
+	if (!query->buffer.buf)
+		return; // previous buffer allocation failure
+
 	r600_update_occlusion_query_state(ctx, query->b.type, 1);
 	r600_update_prims_generated_query_state(ctx, query->b.type, 1);
 
@@ -506,9 +519,11 @@ static void r600_query_hw_emit_start(struct r600_common_context *ctx,
 	if (query->buffer.results_end + query->result_size > query->buffer.buf->b.b.width0) {
 		struct r600_query_buffer *qbuf = MALLOC_STRUCT(r600_query_buffer);
 		*qbuf = query->buffer;
-		query->buffer.buf = r600_new_query_buffer(ctx, query);
 		query->buffer.results_end = 0;
 		query->buffer.previous = qbuf;
+		query->buffer.buf = r600_new_query_buffer(ctx, query);
+		if (!query->buffer.buf)
+			return;
 	}
 
 	/* emit begin query */
@@ -574,6 +589,9 @@ static void r600_query_hw_emit_stop(struct r600_common_context *ctx,
 				    struct r600_query_hw *query)
 {
 	uint64_t va;
+
+	if (!query->buffer.buf)
+		return; // previous buffer allocation failure
 
 	/* The queries which need begin already called this in begin_query. */
 	if (query->flags & R600_QUERY_HW_FLAG_NO_START) {
@@ -694,6 +712,9 @@ static void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
 		FREE(qbuf);
 	}
 
+	query->buffer.results_end = 0;
+	query->buffer.previous = NULL;
+
 	if (query->flags & R600_QUERY_HW_FLAG_PREDICATE) {
 		/* Obtain a new buffer if the current one can't be mapped without a stall. */
 		if (r600_rings_is_buffer_referenced(rctx, query->buffer.buf->buf, RADEON_USAGE_READWRITE) ||
@@ -701,12 +722,10 @@ static void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
 			pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
 			query->buffer.buf = r600_new_query_buffer(rctx, query);
 		} else {
-			query->ops->prepare_buffer(rctx, query, query->buffer.buf);
+			if (!query->ops->prepare_buffer(rctx, query, query->buffer.buf))
+				pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
 		}
 	}
-
-	query->buffer.results_end = 0;
-	query->buffer.previous = NULL;
 }
 
 boolean r600_query_hw_begin(struct r600_common_context *rctx,
@@ -722,6 +741,8 @@ boolean r600_query_hw_begin(struct r600_common_context *rctx,
 	r600_query_hw_reset_buffers(rctx, query);
 
 	r600_query_hw_emit_start(rctx, query);
+	if (!query->buffer.buf)
+		return false;
 
 	LIST_ADDTAIL(&query->list, &rctx->active_queries);
 	return true;
@@ -747,6 +768,9 @@ bool r600_query_hw_end(struct r600_common_context *rctx,
 
 	if (!(query->flags & R600_QUERY_HW_FLAG_NO_START))
 		LIST_DELINIT(&query->list);
+
+	if (!query->buffer.buf)
+		return false;
 
 	return true;
 }
