@@ -1808,6 +1808,9 @@ uses64bitAddress(const Instruction *ldst)
 void
 CodeEmitterGK110::emitATOM(const Instruction *i)
 {
+   const bool hasDst = i->defExists(0);
+   const bool exch = i->subOp == NV50_IR_SUBOP_ATOM_EXCH;
+
    code[0] = 0x00000002;
    if (i->subOp == NV50_IR_SUBOP_ATOM_CAS)
       code[1] = 0x77800000;
@@ -1836,15 +1839,21 @@ CodeEmitterGK110::emitATOM(const Instruction *i)
    /* TODO: cas: flip bits if $r255 is used */
    srcId(i->src(1), 23);
 
-   if (i->defExists(0))
+   if (hasDst) {
       defId(i->def(0), 2);
-   else
+   } else
+   if (!exch) {
       code[0] |= 255 << 2;
+   }
 
-   const int32_t offset = SDATA(i->src(0)).offset;
-   assert(offset < 0x80000 && offset >= -0x80000);
-   code[0] |= (offset & 1) << 31;
-   code[1] |= (offset & 0xffffe) >> 1;
+   if (hasDst || !exch) {
+      const int32_t offset = SDATA(i->src(0)).offset;
+      assert(offset < 0x80000 && offset >= -0x80000);
+      code[0] |= (offset & 1) << 31;
+      code[1] |= (offset & 0xffffe) >> 1;
+   } else {
+      srcAddr32(i->src(0), 31);
+   }
 
    if (i->getIndirect(0, 0)) {
       srcId(i->getIndirect(0, 0), 10);
