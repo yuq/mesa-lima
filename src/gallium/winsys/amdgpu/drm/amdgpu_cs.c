@@ -211,6 +211,7 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_ib *ib,
    case IB_CONST_PREAMBLE:
       buffer_size = 4 * 1024 * 4;
       ib_size = 1024 * 4;
+      break;
    case IB_CONST:
       buffer_size = 512 * 1024 * 4;
       ib_size = 128 * 1024 * 4;
