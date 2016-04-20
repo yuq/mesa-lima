@@ -23,34 +23,30 @@
 
 #include "anv_nir.h"
 
-static bool
-lower_push_constants_block(nir_block *block, void *void_state)
-{
-   nir_foreach_instr(block, instr) {
-      if (instr->type != nir_instr_type_intrinsic)
-         continue;
-
-      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-
-      /* TODO: Handle indirect push constants */
-      if (intrin->intrinsic != nir_intrinsic_load_push_constant)
-         continue;
-
-      assert(intrin->const_index[0] % 4 == 0);
-      assert(intrin->const_index[1] == 128);
-
-      /* We just turn them into uniform loads with the appropreate offset */
-      intrin->intrinsic = nir_intrinsic_load_uniform;
-   }
-
-   return true;
-}
-
 void
 anv_nir_lower_push_constants(nir_shader *shader)
 {
    nir_foreach_function(shader, function) {
-      if (function->impl)
-         nir_foreach_block_call(function->impl, lower_push_constants_block, NULL);
+      if (!function->impl)
+         continue;
+
+      nir_foreach_block(block, function->impl) {
+         nir_foreach_instr(block, instr) {
+            if (instr->type != nir_instr_type_intrinsic)
+               continue;
+
+            nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+            /* TODO: Handle indirect push constants */
+            if (intrin->intrinsic != nir_intrinsic_load_push_constant)
+               continue;
+
+            assert(intrin->const_index[0] % 4 == 0);
+            assert(intrin->const_index[1] == 128);
+
+            /* We just turn them into uniform loads */
+            intrin->intrinsic = nir_intrinsic_load_uniform;
+         }
+      }
    }
 }
