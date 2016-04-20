@@ -895,6 +895,9 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
 
    /* Handle decorations that apply to a vtn_variable as a whole */
    switch (dec->decoration) {
+   case SpvDecorationNonWritable:
+      /* Do nothing with this for now */
+      return;
    case SpvDecorationBinding:
       vtn_var->binding = dec->literals[0];
       return;

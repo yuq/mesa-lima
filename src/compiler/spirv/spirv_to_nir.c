@@ -454,6 +454,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
    assert(member < ctx->num_fields);
 
    switch (dec->decoration) {
+   case SpvDecorationNonWritable:
    case SpvDecorationRelaxedPrecision:
       break; /* FIXME: Do nothing with this for now. */
    case SpvDecorationNoPerspective:
