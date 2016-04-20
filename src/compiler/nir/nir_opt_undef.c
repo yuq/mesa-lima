@@ -100,6 +100,33 @@ opt_undef_vecN(nir_builder *b, nir_alu_instr *alu)
    return true;
 }
 
+/**
+ * Remove any store intrinsics whose value is undefined (the existing
+ * value is a fine representation of "undefined").
+ */
+static bool
+opt_undef_store(nir_intrinsic_instr *intrin)
+{
+   switch (intrin->intrinsic) {
+   case nir_intrinsic_store_var:
+   case nir_intrinsic_store_output:
+   case nir_intrinsic_store_per_vertex_output:
+   case nir_intrinsic_store_ssbo:
+   case nir_intrinsic_store_shared:
+      break;
+   default:
+      return false;
+   }
+
+   if (!intrin->src[0].is_ssa ||
+       intrin->src[0].ssa->parent_instr->type != nir_instr_type_ssa_undef)
+      return false;
+
+   nir_instr_remove(&intrin->instr);
+
+   return true;
+}
+
 bool
 nir_opt_undef(nir_shader *shader)
 {
@@ -116,6 +143,9 @@ nir_opt_undef(nir_shader *shader)
 
                   progress = opt_undef_csel(alu) || progress;
                   progress = opt_undef_vecN(&b, alu) || progress;
+               } else if (instr->type == nir_instr_type_intrinsic) {
+                  nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+                  progress = opt_undef_store(intrin) || progress;
                }
             }
          }
