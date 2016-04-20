@@ -19,6 +19,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+include Makefile.sources
+
 SUBDIRS = . tests
 
 vulkan_includedir = $(includedir)/vulkan
@@ -68,71 +70,25 @@ AM_CPPFLAGS = \
 
 libvulkan_intel_la_CFLAGS = $(CFLAGS) -DVK_USE_PLATFORM_XCB_KHR -Wno-override-init -msse2
 
-VULKAN_SOURCES =                                        \
-	anv_allocator.c                                 \
-	anv_cmd_buffer.c                                \
-	anv_batch_chain.c                               \
-	anv_descriptor_set.c                            \
-	anv_device.c                                    \
-        anv_dump.c                                      \
-	anv_entrypoints.c                               \
-	anv_entrypoints.h                               \
-	anv_formats.c                                   \
-	anv_image.c                                     \
-	anv_intel.c                                     \
-	anv_meta.c                                      \
-	anv_meta_blit.c                                 \
-	anv_meta_blit2d.c                               \
-	anv_meta_clear.c                                \
-	anv_meta_copy.c                                 \
-	anv_meta_resolve.c                              \
-	anv_nir_apply_dynamic_offsets.c                 \
-	anv_nir_apply_pipeline_layout.c                 \
-	anv_nir_lower_push_constants.c                  \
-	anv_pass.c					\
-	anv_pipeline.c                                  \
-	anv_pipeline_cache.c                            \
-	anv_private.h                                   \
-	anv_query.c                                     \
-	anv_util.c                                      \
-	anv_wsi.c					\
-	anv_wsi_x11.c
+VULKAN_SOURCES = \
+	$(VULKAN_FILES) \
+	$(VULKAN_WSI_X11_FILES)
 
-BUILT_SOURCES =                                         \
-	anv_entrypoints.h                               \
-	anv_entrypoints.c
+BUILT_SOURCES = \
+	$(VULKAN_GENERATED_FILES)
 
-libanv_gen7_la_SOURCES =                                \
-	genX_cmd_buffer.c				\
-	genX_pipeline.c					\
-	gen7_cmd_buffer.c				\
-	gen7_pipeline.c                                 \
-	genX_state.c
+
 libanv_gen7_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DGEN_VERSIONx10=70
+libanv_gen7_la_SOURCES = $(GEN7_FILES)
 
-libanv_gen75_la_SOURCES =                               \
-	genX_cmd_buffer.c				\
-	genX_pipeline.c					\
-	gen7_cmd_buffer.c				\
-	gen7_pipeline.c                                 \
-	genX_state.c
 libanv_gen75_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DGEN_VERSIONx10=75
+libanv_gen75_la_SOURCES = $(GEN75_FILES)
 
-libanv_gen8_la_SOURCES =                               	\
-	genX_cmd_buffer.c				\
-	genX_pipeline.c					\
-	gen8_cmd_buffer.c				\
-	gen8_pipeline.c					\
-	genX_state.c
 libanv_gen8_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DGEN_VERSIONx10=80
+libanv_gen8_la_SOURCES = $(GEN8_FILES)
 
-libanv_gen9_la_SOURCES =                               	\
-	genX_cmd_buffer.c				\
-	genX_pipeline.c					\
-	gen8_cmd_buffer.c				\
-	gen8_pipeline.c					\
-	genX_state.c
 libanv_gen9_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DGEN_VERSIONx10=90
+libanv_gen9_la_SOURCES = $(GEN9_FILES)
 
 if HAVE_EGL_PLATFORM_WAYLAND
 BUILT_SOURCES += \
@@ -148,7 +104,7 @@ BUILT_SOURCES += \
 AM_CPPFLAGS += -I$(top_srcdir)/src/egl/wayland/wayland-drm
 VULKAN_SOURCES += \
 	wayland-drm-protocol.c \
-	anv_wsi_wayland.c
+	$(VULKAN_WSI_WAYLAND_FILES)
 libvulkan_intel_la_CFLAGS += -DHAVE_WAYLAND_PLATFORM -DVK_USE_PLATFORM_WAYLAND_KHR
 
 VULKAN_ENTRYPOINT_CPPFLAGS += -DVK_USE_PLATFORM_WAYLAND_KHR
@@ -156,7 +112,7 @@ endif
 
 libvulkan_intel_la_SOURCES =                            \
 	$(VULKAN_SOURCES)                               \
-	anv_gem.c
+	$(VULKAN_GEM_FILES)
 
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) - | $(PYTHON2) $< header > $@
@@ -198,7 +154,7 @@ dev_icd.json : dev_icd.json.in
 
 libvulkan_test_la_SOURCES =                             \
 	$(VULKAN_SOURCES)                               \
-	anv_gem_stubs.c
+	$(VULKAN_GEM_STUB_FILES)
 
 libvulkan_test_la_CFLAGS =                              \
 	-I$(top_srcdir)/src/intel/vulkan                \
