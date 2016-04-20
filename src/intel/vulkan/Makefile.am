@@ -129,7 +129,8 @@ libvulkan_intel_la_LIBADD = $(WAYLAND_LIBS) \
 	$(top_builddir)/src/mesa/libmesa.la \
 	$(top_builddir)/src/mesa/drivers/dri/common/libdri_test_stubs.la \
 	-lpthread -ldl -lstdc++ \
-        $(PER_GEN_LIBS)
+	$(PER_GEN_LIBS) \
+	-lm
 
 libvulkan_intel_la_LDFLAGS = \
 	-shared \
