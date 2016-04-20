@@ -32,3 +32,14 @@ PYTHON3_GEN = $(AM_V_GEN)$(PYTHON3) $(PYTHON_FLAGS)
 	$(PYTHON3_GEN) $(srcdir)/gen_pack_header.py $< > $@
 
 CLEANFILES = $(BUILT_SOURCES)
+
+EXTRA_DIST = \
+	gen6.xml \
+	gen7.xml \
+	gen75.xml \
+	gen8.xml \
+	gen9.xml \
+	genX_pack.h \
+	gen_macros.h \
+	gen_pack_header.py \
+	README
