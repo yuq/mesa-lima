@@ -56,6 +56,7 @@ Builder::Builder(JitManager *pJitMgr)
     mInt64Ty = Type::getInt64Ty(pJitMgr->mContext);
     mV4FP32Ty = StructType::get(pJitMgr->mContext, std::vector<Type*>(4, mFP32Ty), false); // vector4 float type (represented as structure)
     mV4Int32Ty = StructType::get(pJitMgr->mContext, std::vector<Type*>(4, mInt32Ty), false); // vector4 int type
+    mSimdInt1Ty = VectorType::get(mInt1Ty, mVWidth);
     mSimdInt16Ty = VectorType::get(mInt16Ty, mVWidth);
     mSimdInt32Ty = VectorType::get(mInt32Ty, mVWidth);
     mSimdInt64Ty = VectorType::get(mInt64Ty, mVWidth);

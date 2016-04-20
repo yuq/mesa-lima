@@ -61,6 +61,7 @@ struct Builder
     Type*                mInt32PtrTy;
     Type*                mSimdFP16Ty;
     Type*                mSimdFP32Ty;
+    Type*                mSimdInt1Ty;
     Type*                mSimdInt16Ty;
     Type*                mSimdInt32Ty;
     Type*                mSimdInt64Ty;
