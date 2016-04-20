@@ -73,6 +73,8 @@ VULKAN_SOURCES = \
 	$(VULKAN_FILES) \
 	$(VULKAN_WSI_X11_FILES)
 
+VULKAN_LIB_DEPS =
+
 BUILT_SOURCES = \
 	$(VULKAN_GENERATED_FILES)
 
@@ -112,6 +114,17 @@ endif
 noinst_LTLIBRARIES += libvulkan_common.la
 libvulkan_common_la_SOURCES = $(VULKAN_SOURCES)
 
+VULKAN_LIB_DEPS += $(WAYLAND_LIBS) \
+	libvulkan_common.la \
+	-lxcb -lxcb-dri3 -lxcb-present -lxcb-sync -lxshmfence \
+	$(top_builddir)/src/intel/isl/libisl.la \
+	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
+	$(top_builddir)/src/mesa/libmesa.la \
+	$(top_builddir)/src/mesa/drivers/dri/common/libdri_test_stubs.la \
+	-lpthread -ldl -lstdc++ \
+	$(PER_GEN_LIBS) \
+	-lm
+
 libvulkan_intel_la_SOURCES = $(VULKAN_GEM_FILES)
 
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
@@ -122,16 +135,7 @@ anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 
 CLEANFILES = $(BUILT_SOURCES)
 
-libvulkan_intel_la_LIBADD = $(WAYLAND_LIBS) \
-	libvulkan_common.la \
-	-lxcb -lxcb-dri3 -lxcb-present -lxcb-sync -lxshmfence \
-	$(top_builddir)/src/intel/isl/libisl.la \
-	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
-	$(top_builddir)/src/mesa/libmesa.la \
-	$(top_builddir)/src/mesa/drivers/dri/common/libdri_test_stubs.la \
-	-lpthread -ldl -lstdc++ \
-	$(PER_GEN_LIBS) \
-	-lm
+libvulkan_intel_la_LIBADD = $(VULKAN_LIB_DEPS)
 
 libvulkan_intel_la_LDFLAGS = \
 	-shared \
@@ -154,7 +158,7 @@ dev_icd.json : dev_icd.json.in
 
 # Libvulkan with dummy gem. Used for unit tests.
 libvulkan_test_la_SOURCES = $(VULKAN_GEM_STUB_FILES)
-libvulkan_test_la_LIBADD = $(libvulkan_intel_la_LIBADD)
+libvulkan_test_la_LIBADD = $(VULKAN_LIB_DEPS)
 
 include $(top_srcdir)/install-lib-links.mk
 
