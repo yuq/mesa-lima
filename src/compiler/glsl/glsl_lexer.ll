@@ -476,8 +476,8 @@ layout		{
 			    char suffix = yytext[strlen(yytext) - 1];
 			    if (!state->is_version(120, 300) &&
 			        (suffix == 'f' || suffix == 'F')) {
-			        _mesa_glsl_error(yylloc, state,
-			                         "Float suffixes are invalid in GLSL 1.10");
+			        _mesa_glsl_warning(yylloc, state,
+			                           "Float suffixes are invalid in GLSL 1.10");
 			    }
 			    yylval->real = _mesa_strtof(yytext, NULL);
 			    return FLOATCONSTANT;
