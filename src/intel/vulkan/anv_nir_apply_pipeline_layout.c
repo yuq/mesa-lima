@@ -50,11 +50,10 @@ add_var_binding(struct apply_pipeline_layout_state *state, nir_variable *var)
    add_binding(state, var->data.descriptor_set, var->data.binding);
 }
 
-static bool
-get_used_bindings_block(nir_block *block, void *void_state)
+static void
+get_used_bindings_block(nir_block *block,
+                        struct apply_pipeline_layout_state *state)
 {
-   struct apply_pipeline_layout_state *state = void_state;
-
    nir_foreach_instr_safe(block, instr) {
       switch (instr->type) {
       case nir_instr_type_intrinsic: {
@@ -97,8 +96,6 @@ get_used_bindings_block(nir_block *block, void *void_state)
          continue;
       }
    }
-
-   return true;
 }
 
 static void
@@ -211,11 +208,10 @@ lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
    tex->sampler = NULL;
 }
 
-static bool
-apply_pipeline_layout_block(nir_block *block, void *void_state)
+static void
+apply_pipeline_layout_block(nir_block *block,
+                            struct apply_pipeline_layout_state *state)
 {
-   struct apply_pipeline_layout_state *state = void_state;
-
    nir_foreach_instr_safe(block, instr) {
       switch (instr->type) {
       case nir_instr_type_intrinsic: {
@@ -232,8 +228,6 @@ apply_pipeline_layout_block(nir_block *block, void *void_state)
          continue;
       }
    }
-
-   return true;
 }
 
 static void
@@ -274,9 +268,11 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
    }
 
    nir_foreach_function(shader, function) {
-      if (function->impl)
-         nir_foreach_block_call(function->impl, get_used_bindings_block,
-                                &state);
+      if (!function->impl)
+         continue;
+
+      nir_foreach_block(block, function->impl)
+         get_used_bindings_block(block, &state);
    }
 
    for (uint32_t set = 0; set < layout->num_sets; set++) {
@@ -332,13 +328,14 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
    }
 
    nir_foreach_function(shader, function) {
-      if (function->impl) {
-         nir_builder_init(&state.builder, function->impl);
-         nir_foreach_block_call(function->impl, apply_pipeline_layout_block,
-                                &state);
-         nir_metadata_preserve(function->impl, nir_metadata_block_index |
-                                               nir_metadata_dominance);
-      }
+      if (!function->impl)
+         continue;
+
+      nir_builder_init(&state.builder, function->impl);
+      nir_foreach_block(block, function->impl)
+         apply_pipeline_layout_block(block, &state);
+      nir_metadata_preserve(function->impl, nir_metadata_block_index |
+                                            nir_metadata_dominance);
    }
 
    if (map->image_count > 0) {
