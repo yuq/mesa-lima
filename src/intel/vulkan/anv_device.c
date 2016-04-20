@@ -174,7 +174,7 @@ static const VkExtensionProperties global_extensions[] = {
       .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
       .specVersion = 5,
    },
-#ifdef HAVE_WAYLAND_PLATFORM
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
    {
       .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
       .specVersion = 4,

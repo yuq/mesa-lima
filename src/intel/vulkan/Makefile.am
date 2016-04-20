@@ -98,8 +98,7 @@ AM_CPPFLAGS += \
 	-I$(top_builddir)/src/egl/wayland/wayland-drm \
 	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
 	$(WAYLAND_CFLAGS) \
-	-DVK_USE_PLATFORM_WAYLAND_KHR \
-	-DHAVE_WAYLAND_PLATFORM
+	-DVK_USE_PLATFORM_WAYLAND_KHR
 
 VULKAN_SOURCES += $(VULKAN_WSI_WAYLAND_FILES)
 
