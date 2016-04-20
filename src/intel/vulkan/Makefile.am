@@ -68,7 +68,7 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_builddir)/src/intel
 
-libvulkan_intel_la_CFLAGS = $(CFLAGS) -DVK_USE_PLATFORM_XCB_KHR -Wno-override-init -msse2
+AM_CFLAGS = -DVK_USE_PLATFORM_XCB_KHR -Wno-override-init -msse2
 
 VULKAN_SOURCES = \
 	$(VULKAN_FILES) \
@@ -78,16 +78,16 @@ BUILT_SOURCES = \
 	$(VULKAN_GENERATED_FILES)
 
 
-libanv_gen7_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DGEN_VERSIONx10=70
+libanv_gen7_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=70
 libanv_gen7_la_SOURCES = $(GEN7_FILES)
 
-libanv_gen75_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DGEN_VERSIONx10=75
+libanv_gen75_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=75
 libanv_gen75_la_SOURCES = $(GEN75_FILES)
 
-libanv_gen8_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DGEN_VERSIONx10=80
+libanv_gen8_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=80
 libanv_gen8_la_SOURCES = $(GEN8_FILES)
 
-libanv_gen9_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DGEN_VERSIONx10=90
+libanv_gen9_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=90
 libanv_gen9_la_SOURCES = $(GEN9_FILES)
 
 if HAVE_EGL_PLATFORM_WAYLAND
@@ -105,7 +105,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/egl/wayland/wayland-drm
 VULKAN_SOURCES += \
 	wayland-drm-protocol.c \
 	$(VULKAN_WSI_WAYLAND_FILES)
-libvulkan_intel_la_CFLAGS += -DHAVE_WAYLAND_PLATFORM -DVK_USE_PLATFORM_WAYLAND_KHR
+AM_CFLAGS += -DHAVE_WAYLAND_PLATFORM -DVK_USE_PLATFORM_WAYLAND_KHR
 
 VULKAN_ENTRYPOINT_CPPFLAGS += -DVK_USE_PLATFORM_WAYLAND_KHR
 endif
@@ -156,10 +156,6 @@ dev_icd.json : dev_icd.json.in
 libvulkan_test_la_SOURCES =                             \
 	$(VULKAN_SOURCES)                               \
 	$(VULKAN_GEM_STUB_FILES)
-
-libvulkan_test_la_CFLAGS =                              \
-	-I$(top_srcdir)/src/intel/vulkan                \
-	$(libvulkan_intel_la_CFLAGS)
 
 libvulkan_test_la_LIBADD = $(libvulkan_intel_la_LIBADD)
 
