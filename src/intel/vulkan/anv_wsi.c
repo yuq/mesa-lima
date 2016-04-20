@@ -28,9 +28,11 @@ anv_init_wsi(struct anv_instance *instance)
 {
    VkResult result;
 
+#ifdef VK_USE_PLATFORM_XCB_KHR
    result = anv_x11_init_wsi(instance);
    if (result != VK_SUCCESS)
       return result;
+#endif
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
    result = anv_wl_init_wsi(instance);
@@ -49,7 +51,9 @@ anv_finish_wsi(struct anv_instance *instance)
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
    anv_wl_finish_wsi(instance);
 #endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
    anv_x11_finish_wsi(instance);
+#endif
 }
 
 void anv_DestroySurfaceKHR(

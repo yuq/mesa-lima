@@ -30,8 +30,7 @@ vulkan_include_HEADERS =				\
 
 # Used when generating entrypoints to filter out unwanted extensions
 VULKAN_ENTRYPOINT_CPPFLAGS = \
-   -I$(top_srcdir)/include/vulkan \
-   -DVK_USE_PLATFORM_XCB_KHR
+   -I$(top_srcdir)/include/vulkan
 
 lib_LTLIBRARIES = libvulkan_intel.la
 
@@ -66,12 +65,11 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_builddir)/src/intel
 
-AM_CFLAGS = -DVK_USE_PLATFORM_XCB_KHR -Wno-override-init -msse2
+AM_CFLAGS = -Wno-override-init -msse2
 
 VULKAN_SOURCES = \
 	$(VULKAN_GENERATED_FILES) \
-	$(VULKAN_FILES) \
-	$(VULKAN_WSI_X11_FILES)
+	$(VULKAN_FILES)
 
 VULKAN_LIB_DEPS =
 
@@ -90,6 +88,20 @@ libanv_gen8_la_SOURCES = $(GEN8_FILES)
 
 libanv_gen9_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=90
 libanv_gen9_la_SOURCES = $(GEN9_FILES)
+
+
+if HAVE_EGL_PLATFORM_X11
+VULKAN_ENTRYPOINT_CPPFLAGS += \
+	-DVK_USE_PLATFORM_XCB_KHR
+
+AM_CPPFLAGS += \
+	$(XCB_DRI3_CFLAGS) \
+	-DVK_USE_PLATFORM_XCB_KHR
+
+VULKAN_SOURCES += $(VULKAN_WSI_X11_FILES)
+VULKAN_LIB_DEPS += $(XCB_DRI3_LIBS)
+endif
+
 
 if HAVE_EGL_PLATFORM_WAYLAND
 VULKAN_ENTRYPOINT_CPPFLAGS += -DVK_USE_PLATFORM_WAYLAND_KHR
@@ -112,7 +124,6 @@ libvulkan_common_la_SOURCES = $(VULKAN_SOURCES)
 
 VULKAN_LIB_DEPS += \
 	libvulkan_common.la \
-	-lxcb -lxcb-dri3 -lxcb-present -lxcb-sync -lxshmfence \
 	$(top_builddir)/src/intel/isl/libisl.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	$(top_builddir)/src/mesa/libmesa.la \

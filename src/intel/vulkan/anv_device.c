@@ -170,10 +170,12 @@ static const VkExtensionProperties global_extensions[] = {
       .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
       .specVersion = 25,
    },
+#ifdef VK_USE_PLATFORM_XCB_KHR
    {
       .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
       .specVersion = 5,
    },
+#endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
    {
       .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
