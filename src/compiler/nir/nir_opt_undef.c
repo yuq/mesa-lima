@@ -22,6 +22,7 @@
  */
 
 #include "nir.h"
+#include "nir_builder.h"
 
 /** @file nir_opt_undef.c
  *
@@ -70,19 +71,51 @@ opt_undef_csel(nir_alu_instr *instr)
    return false;
 }
 
+/**
+ * Replace vecN(undef, undef, ...) with a single undef.
+ */
+static bool
+opt_undef_vecN(nir_builder *b, nir_alu_instr *alu)
+{
+   if (alu->op != nir_op_vec2 &&
+       alu->op != nir_op_vec3 &&
+       alu->op != nir_op_vec4)
+      return false;
+
+   assert(alu->dest.dest.is_ssa);
+
+   unsigned num_components = nir_op_infos[alu->op].num_inputs;
+
+   for (unsigned i = 0; i < num_components; i++) {
+      if (!alu->src[i].src.is_ssa ||
+          alu->src[i].src.ssa->parent_instr->type != nir_instr_type_ssa_undef)
+         return false;
+   }
+
+   b->cursor = nir_before_instr(&alu->instr);
+   nir_ssa_def *undef =
+      nir_ssa_undef(b, num_components, nir_dest_bit_size(alu->dest.dest));
+   nir_ssa_def_rewrite_uses(&alu->dest.dest.ssa, nir_src_for_ssa(undef));
+
+   return true;
+}
+
 bool
 nir_opt_undef(nir_shader *shader)
 {
+   nir_builder b;
    bool progress = false;
 
    nir_foreach_function(function, shader) {
       if (function->impl) {
+         nir_builder_init(&b, function->impl);
          nir_foreach_block(block, function->impl) {
             nir_foreach_instr_safe(instr, block) {
                if (instr->type == nir_instr_type_alu) {
                   nir_alu_instr *alu = nir_instr_as_alu(instr);
 
                   progress = opt_undef_csel(alu) || progress;
+                  progress = opt_undef_vecN(&b, alu) || progress;
                }
             }
          }
