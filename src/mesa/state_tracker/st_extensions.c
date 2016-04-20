@@ -1152,6 +1152,7 @@ void st_init_extensions(struct pipe_screen *screen,
                                   PIPE_SHADER_CAP_SUPPORTED_IRS);
       if (compute_supported_irs & (1 << PIPE_SHADER_IR_TGSI)) {
          uint64_t grid_size[3], block_size[3];
+         uint64_t max_local_size, max_threads_per_block;
 
          screen->get_compute_param(screen, PIPE_SHADER_IR_TGSI,
                                    PIPE_COMPUTE_CAP_MAX_GRID_SIZE, grid_size);
@@ -1159,10 +1160,13 @@ void st_init_extensions(struct pipe_screen *screen,
                                    PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE, block_size);
          screen->get_compute_param(screen, PIPE_SHADER_IR_TGSI,
                                    PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK,
-                                   &consts->MaxComputeWorkGroupInvocations);
+                                   &max_threads_per_block);
          screen->get_compute_param(screen, PIPE_SHADER_IR_TGSI,
                                    PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE,
-                                   &consts->MaxComputeSharedMemorySize);
+                                   &max_local_size);
+
+         consts->MaxComputeWorkGroupInvocations = max_threads_per_block;
+         consts->MaxComputeSharedMemorySize = max_local_size;
 
          for (i = 0; i < 3; i++) {
             consts->MaxComputeWorkGroupCount[i] = grid_size[i];
