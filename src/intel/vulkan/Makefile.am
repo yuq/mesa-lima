@@ -187,6 +187,7 @@ libvulkan_intel_la_LDFLAGS = \
 
 icdconfdir=$(sysconfdir)/vulkan/icd.d
 icdconf_DATA = intel_icd.json
+# The following is used for development purposes, by setting VK_ICD_FILENAMES.
 noinst_DATA = dev_icd.json
 
 %.json : %.json.in
