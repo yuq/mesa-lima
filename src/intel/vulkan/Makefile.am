@@ -97,7 +97,7 @@ VULKAN_LIB_DEPS += $(XCB_DRI3_LIBS)
 endif
 
 
-if HAVE_EGL_PLATFORM_WAYLAND
+if HAVE_PLATFORM_WAYLAND
 AM_CPPFLAGS += \
 	-I$(top_builddir)/src/egl/wayland/wayland-drm \
 	-I$(top_srcdir)/src/egl/wayland/wayland-drm \

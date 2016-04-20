@@ -64,7 +64,7 @@ libEGL_la_LIBADD += $(top_builddir)/src/loader/libloader_dri3_helper.la
 endif
 endif
 
-if HAVE_EGL_PLATFORM_WAYLAND
+if HAVE_PLATFORM_WAYLAND
 AM_CFLAGS += -DHAVE_WAYLAND_PLATFORM
 AM_CFLAGS += $(WAYLAND_CFLAGS)
 libEGL_la_LIBADD += $(WAYLAND_LIBS)

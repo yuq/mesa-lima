@@ -38,7 +38,7 @@ if HAVE_DRI_GLX
 SUBDIRS += glx
 endif
 
-if HAVE_EGL_PLATFORM_WAYLAND
+if HAVE_PLATFORM_WAYLAND
 SUBDIRS += egl/wayland/wayland-egl egl/wayland/wayland-drm
 endif
 
