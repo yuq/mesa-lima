@@ -24,22 +24,12 @@
 #include "anv_nir.h"
 #include "nir/nir_builder.h"
 
-struct apply_dynamic_offsets_state {
-   nir_shader *shader;
-   nir_builder builder;
-
-   const struct anv_pipeline_layout *layout;
-
-   uint32_t indices_start;
-};
-
-static bool
-apply_dynamic_offsets_block(nir_block *block, void *void_state)
+static void
+apply_dynamic_offsets_block(nir_block *block, nir_builder *b,
+                            const struct anv_pipeline_layout *layout,
+                            uint32_t indices_start)
 {
-   struct apply_dynamic_offsets_state *state = void_state;
    struct anv_descriptor_set_layout *set_layout;
-
-   nir_builder *b = &state->builder;
 
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
@@ -68,21 +58,21 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
       unsigned set = res_intrin->const_index[0];
       unsigned binding = res_intrin->const_index[1];
 
-      set_layout = state->layout->set[set].layout;
+      set_layout = layout->set[set].layout;
       if (set_layout->binding[binding].dynamic_offset_index < 0)
          continue;
 
       b->cursor = nir_before_instr(&intrin->instr);
 
       /* First, we need to generate the uniform load for the buffer offset */
-      uint32_t index = state->layout->set[set].dynamic_offset_start +
+      uint32_t index = layout->set[set].dynamic_offset_start +
                        set_layout->binding[binding].dynamic_offset_index;
       uint32_t array_size = set_layout->binding[binding].array_size;
 
       nir_intrinsic_instr *offset_load =
-         nir_intrinsic_instr_create(state->shader, nir_intrinsic_load_uniform);
+         nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_uniform);
       offset_load->num_components = 2;
-      nir_intrinsic_set_base(offset_load, state->indices_start + index * 8);
+      nir_intrinsic_set_base(offset_load, indices_start + index * 8);
       nir_intrinsic_set_range(offset_load, array_size * 8);
       offset_load->src[0] = nir_src_for_ssa(nir_imul(b, res_intrin->src[0].ssa,
                                                      nir_imm_int(b, 8)));
@@ -136,8 +126,6 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
          nir_instr_insert_after_cf(&if_stmt->cf_node, &phi->instr);
       }
    }
-
-   return true;
 }
 
 void
@@ -145,23 +133,24 @@ anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
                               nir_shader *shader,
                               struct brw_stage_prog_data *prog_data)
 {
-   struct apply_dynamic_offsets_state state = {
-      .shader = shader,
-      .layout = pipeline->layout,
-      .indices_start = shader->num_uniforms,
-   };
-
-   if (!state.layout || !state.layout->stage[shader->stage].has_dynamic_offsets)
+   const struct anv_pipeline_layout *layout = pipeline->layout;
+   if (!layout || !layout->stage[shader->stage].has_dynamic_offsets)
       return;
 
    nir_foreach_function(shader, function) {
-      if (function->impl) {
-         nir_builder_init(&state.builder, function->impl);
-         nir_foreach_block_call(function->impl, apply_dynamic_offsets_block,
-                                &state);
-         nir_metadata_preserve(function->impl, nir_metadata_block_index |
-                                               nir_metadata_dominance);
+      if (!function->impl)
+         continue;
+
+      nir_builder builder;
+      nir_builder_init(&builder, function->impl);
+
+      nir_foreach_block(block, function->impl) {
+         apply_dynamic_offsets_block(block, &builder, pipeline->layout,
+                                     shader->num_uniforms);
       }
+
+      nir_metadata_preserve(function->impl, nir_metadata_block_index |
+                                            nir_metadata_dominance);
    }
 
    struct anv_push_constants *null_data = NULL;
