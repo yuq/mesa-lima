@@ -128,7 +128,7 @@ ilo_begin_query(struct pipe_context *pipe, struct pipe_query *query)
    return true;
 }
 
-static void
+static bool
 ilo_end_query(struct pipe_context *pipe, struct pipe_query *query)
 {
    struct ilo_query *q = ilo_query(query);
@@ -136,7 +136,7 @@ ilo_end_query(struct pipe_context *pipe, struct pipe_query *query)
    if (!q->active) {
       /* require ilo_begin_query() first */
       if (q->in_pairs)
-         return;
+         return false;
 
       ilo_begin_query(pipe, query);
    }
@@ -144,6 +144,8 @@ ilo_end_query(struct pipe_context *pipe, struct pipe_query *query)
    q->active = false;
 
    ilo_query_table[q->type].end(ilo_context(pipe), q);
+
+   return true;
 }
 
 /**

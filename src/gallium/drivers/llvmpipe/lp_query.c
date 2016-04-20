@@ -239,7 +239,7 @@ llvmpipe_begin_query(struct pipe_context *pipe, struct pipe_query *q)
 }
 
 
-static void
+static bool
 llvmpipe_end_query(struct pipe_context *pipe, struct pipe_query *q)
 {
    struct llvmpipe_context *llvmpipe = llvmpipe_context( pipe );
@@ -298,6 +298,8 @@ llvmpipe_end_query(struct pipe_context *pipe, struct pipe_query *q)
    default:
       break;
    }
+
+   return true;
 }
 
 boolean

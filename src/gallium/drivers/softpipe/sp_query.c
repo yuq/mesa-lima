@@ -134,7 +134,7 @@ softpipe_begin_query(struct pipe_context *pipe, struct pipe_query *q)
 }
 
 
-static void
+static bool
 softpipe_end_query(struct pipe_context *pipe, struct pipe_query *q)
 {
    struct softpipe_context *softpipe = softpipe_context( pipe );
@@ -201,6 +201,7 @@ softpipe_end_query(struct pipe_context *pipe, struct pipe_query *q)
       break;
    }
    softpipe->dirty |= SP_NEW_QUERY;
+   return true;
 }
 
 

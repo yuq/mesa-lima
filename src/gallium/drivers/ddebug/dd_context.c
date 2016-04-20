@@ -104,13 +104,13 @@ dd_context_begin_query(struct pipe_context *_pipe, struct pipe_query *query)
    return pipe->begin_query(pipe, dd_query_unwrap(query));
 }
 
-static void
+static bool
 dd_context_end_query(struct pipe_context *_pipe, struct pipe_query *query)
 {
    struct dd_context *dctx = dd_context(_pipe);
    struct pipe_context *pipe = dctx->pipe;
 
-   pipe->end_query(pipe, dd_query_unwrap(query));
+   return pipe->end_query(pipe, dd_query_unwrap(query));
 }
 
 static boolean

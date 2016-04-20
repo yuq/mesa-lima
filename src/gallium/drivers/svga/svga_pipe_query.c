@@ -945,7 +945,7 @@ svga_begin_query(struct pipe_context *pipe, struct pipe_query *q)
 }
 
 
-static void
+static bool
 svga_end_query(struct pipe_context *pipe, struct pipe_query *q)
 {
    struct svga_context *svga = svga_context(pipe);
@@ -1057,6 +1057,7 @@ svga_end_query(struct pipe_context *pipe, struct pipe_query *q)
       assert(!"unexpected query type in svga_end_query()");
    }
    svga->sq[sq->type] = NULL;
+   return true;
 }
 
 

@@ -175,7 +175,7 @@ nv30_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
    return true;
 }
 
-static void
+static bool
 nv30_query_end(struct pipe_context *pipe, struct pipe_query *pq)
 {
    struct nv30_context *nv30 = nv30_context(pipe);
@@ -194,6 +194,7 @@ nv30_query_end(struct pipe_context *pipe, struct pipe_query *pq)
       PUSH_DATA (push, 0);
    }
    PUSH_KICK (push);
+   return true;
 }
 
 static boolean

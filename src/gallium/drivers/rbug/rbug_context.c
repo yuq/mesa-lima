@@ -178,17 +178,20 @@ rbug_begin_query(struct pipe_context *_pipe,
    return ret;
 }
 
-static void
+static bool
 rbug_end_query(struct pipe_context *_pipe,
                struct pipe_query *query)
 {
    struct rbug_context *rb_pipe = rbug_context(_pipe);
    struct pipe_context *pipe = rb_pipe->pipe;
+   bool ret;
 
    pipe_mutex_lock(rb_pipe->call_mutex);
-   pipe->end_query(pipe,
-                   query);
+   ret = pipe->end_query(pipe,
+                         query);
    pipe_mutex_unlock(rb_pipe->call_mutex);
+
+   return ret;
 }
 
 static boolean

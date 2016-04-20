@@ -66,11 +66,12 @@ fd_begin_query(struct pipe_context *pctx, struct pipe_query *pq)
 	return q->funcs->begin_query(fd_context(pctx), q);
 }
 
-static void
+static bool
 fd_end_query(struct pipe_context *pctx, struct pipe_query *pq)
 {
 	struct fd_query *q = fd_query(pq);
 	q->funcs->end_query(fd_context(pctx), q);
+	return true;
 }
 
 static boolean

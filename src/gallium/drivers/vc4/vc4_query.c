@@ -56,9 +56,10 @@ vc4_begin_query(struct pipe_context *ctx, struct pipe_query *query)
         return true;
 }
 
-static void
+static bool
 vc4_end_query(struct pipe_context *ctx, struct pipe_query *query)
 {
+        return true;
 }
 
 static boolean

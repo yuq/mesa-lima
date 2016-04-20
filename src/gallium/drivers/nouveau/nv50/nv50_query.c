@@ -54,11 +54,12 @@ nv50_begin_query(struct pipe_context *pipe, struct pipe_query *pq)
    return q->funcs->begin_query(nv50_context(pipe), q);
 }
 
-static void
+static bool
 nv50_end_query(struct pipe_context *pipe, struct pipe_query *pq)
 {
    struct nv50_query *q = nv50_query(pq);
    q->funcs->end_query(nv50_context(pipe), q);
+   return true;
 }
 
 static boolean

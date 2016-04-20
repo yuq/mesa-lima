@@ -725,12 +725,13 @@ boolean r600_query_hw_begin(struct r600_common_context *rctx,
 	return true;
 }
 
-static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
+static bool r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_query *rquery = (struct r600_query *)query;
 
 	rquery->ops->end(rctx, rquery);
+	return true;
 }
 
 void r600_query_hw_end(struct r600_common_context *rctx,

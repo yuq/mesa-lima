@@ -140,7 +140,7 @@ struct pipe_context {
                          struct pipe_query *q);
 
    boolean (*begin_query)(struct pipe_context *pipe, struct pipe_query *q);
-   void (*end_query)(struct pipe_context *pipe, struct pipe_query *q);
+   bool (*end_query)(struct pipe_context *pipe, struct pipe_query *q);
 
    /**
     * Get results of a query.

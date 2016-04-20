@@ -107,7 +107,7 @@ static boolean virgl_begin_query(struct pipe_context *ctx,
    return true;
 }
 
-static void virgl_end_query(struct pipe_context *ctx,
+static bool virgl_end_query(struct pipe_context *ctx,
                            struct pipe_query *q)
 {
    struct virgl_context *vctx = virgl_context(ctx);
@@ -121,6 +121,7 @@ static void virgl_end_query(struct pipe_context *ctx,
 
 
    virgl_encoder_end_query(vctx, query->handle);
+   return true;
 }
 
 static boolean virgl_get_query_result(struct pipe_context *ctx,

@@ -218,12 +218,13 @@ trace_context_begin_query(struct pipe_context *_pipe,
 }
 
 
-static void
+static bool
 trace_context_end_query(struct pipe_context *_pipe,
                         struct pipe_query *query)
 {
    struct trace_context *tr_ctx = trace_context(_pipe);
    struct pipe_context *pipe = tr_ctx->pipe;
+   bool ret;
 
    query = trace_query_unwrap(query);
 
@@ -232,9 +233,10 @@ trace_context_end_query(struct pipe_context *_pipe,
    trace_dump_arg(ptr, pipe);
    trace_dump_arg(ptr, query);
 
-   pipe->end_query(pipe, query);
+   ret = pipe->end_query(pipe, query);
 
    trace_dump_call_end();
+   return ret;
 }
 
 

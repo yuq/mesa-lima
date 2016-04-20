@@ -281,7 +281,7 @@ swr_begin_query(struct pipe_context *pipe, struct pipe_query *q)
    return true;
 }
 
-static void
+static bool
 swr_end_query(struct pipe_context *pipe, struct pipe_query *q)
 {
    struct swr_context *ctx = swr_context(pipe);
@@ -295,6 +295,7 @@ swr_end_query(struct pipe_context *pipe, struct pipe_query *q)
    pq->result = &pq->end;
    pq->enable_stats = FALSE;
    swr_gather_stats(pipe, pq);
+   return true;
 }
 
 

@@ -110,7 +110,7 @@ void r300_stop_query(struct r300_context *r300)
     r300->query_current = NULL;
 }
 
-static void r300_end_query(struct pipe_context* pipe,
+static bool r300_end_query(struct pipe_context* pipe,
 	                   struct pipe_query* query)
 {
     struct r300_context* r300 = r300_context(pipe);
@@ -120,16 +120,18 @@ static void r300_end_query(struct pipe_context* pipe,
         pb_reference(&q->buf, NULL);
         r300_flush(pipe, RADEON_FLUSH_ASYNC,
                    (struct pipe_fence_handle**)&q->buf);
-        return;
+        return true;
     }
 
     if (q != r300->query_current) {
         fprintf(stderr, "r300: end_query: Got invalid query.\n");
         assert(0);
-        return;
+        return false;
     }
 
     r300_stop_query(r300);
+
+    return true;
 }
 
 static boolean r300_get_query_result(struct pipe_context* pipe,
