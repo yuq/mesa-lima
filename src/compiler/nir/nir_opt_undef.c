@@ -25,18 +25,17 @@
 
 /** @file nir_opt_undef.c
  *
- * Handles optimization of operations involving ssa_undef.  For now, we just
- * make sure that csels between undef and some other value just give the other
- * value (on the assumption that the condition's going to be choosing the
- * defined value).  This reduces work after if flattening when each side of
- * the if is defining a variable.
- *
- * Some day, we may find some use for making other operations consuming an
- * undef arg output undef, but I don't know of any cases currently.
+ * Handles optimization of operations involving ssa_undef.
  */
 
+/**
+ * Turn conditional selects between an undef and some other value into a move
+ * of that other value (on the assumption that the condition's going to be
+ * choosing the defined value).  This reduces work after if flattening when
+ * each side of the if is defining a variable.
+ */
 static bool
-opt_undef_alu(nir_alu_instr *instr)
+opt_undef_csel(nir_alu_instr *instr)
 {
    if (instr->op != nir_op_bcsel && instr->op != nir_op_fcsel)
       return false;
@@ -80,9 +79,11 @@ nir_opt_undef(nir_shader *shader)
       if (function->impl) {
          nir_foreach_block(block, function->impl) {
             nir_foreach_instr_safe(instr, block) {
-               if (instr->type == nir_instr_type_alu)
-                  if (opt_undef_alu(nir_instr_as_alu(instr)))
-                      progress = true;
+               if (instr->type == nir_instr_type_alu) {
+                  nir_alu_instr *alu = nir_instr_as_alu(instr);
+
+                  progress = opt_undef_csel(alu) || progress;
+               }
             }
          }
 
