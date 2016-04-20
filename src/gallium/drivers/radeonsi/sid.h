@@ -88,6 +88,9 @@
 #define PKT3_INDEX_BASE                        0x26
 #define PKT3_DRAW_INDEX_2                      0x27
 #define PKT3_CONTEXT_CONTROL                   0x28
+#define     CONTEXT_CONTROL_LOAD_ENABLE(x)     (((x) & 0x1) << 31)
+#define     CONTEXT_CONTROL_LOAD_CE_RAM(x)     (((x) & 0x1) << 28)
+#define     CONTEXT_CONTROL_SHADOW_ENABLE(x)   (((x) & 0x1) << 31)
 #define PKT3_INDEX_TYPE                        0x2A
 #define PKT3_DRAW_INDIRECT_MULTI               0x2C
 #define PKT3_DRAW_INDEX_AUTO                   0x2D
