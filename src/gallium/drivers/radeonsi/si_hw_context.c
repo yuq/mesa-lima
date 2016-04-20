@@ -202,6 +202,11 @@ void si_begin_new_cs(struct si_context *ctx)
 	if (ctx->init_config_gs_rings)
 		si_pm4_emit(ctx, ctx->init_config_gs_rings);
 
+	if (ctx->ce_preamble_ib)
+		si_ce_enable_loads(ctx->ce_preamble_ib);
+	else if (ctx->ce_ib)
+		si_ce_enable_loads(ctx->ce_ib);
+
 	ctx->framebuffer.dirty_cbufs = (1 << 8) - 1;
 	ctx->framebuffer.dirty_zsbuf = true;
 	si_mark_atom_dirty(ctx, &ctx->framebuffer.atom);

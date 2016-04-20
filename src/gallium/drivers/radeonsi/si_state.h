@@ -251,6 +251,7 @@ struct si_buffer_resources {
 	} while(0)
 
 /* si_descriptors.c */
+void si_ce_enable_loads(struct radeon_winsys_cs *ib);
 void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			struct pipe_resource *buffer,
 			unsigned stride, unsigned num_records,

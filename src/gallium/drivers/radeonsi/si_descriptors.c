@@ -185,6 +185,14 @@ static void si_reinitialize_ce_ram(struct si_context *sctx,
 	desc->ce_ram_dirty = false;
 }
 
+void si_ce_enable_loads(struct radeon_winsys_cs *ib)
+{
+	radeon_emit(ib, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
+	radeon_emit(ib, CONTEXT_CONTROL_LOAD_ENABLE(1) |
+	                CONTEXT_CONTROL_LOAD_CE_RAM(1));
+	radeon_emit(ib, CONTEXT_CONTROL_SHADOW_ENABLE(1));
+}
+
 static bool si_upload_descriptors(struct si_context *sctx,
 				  struct si_descriptors *desc,
 				  struct r600_atom * atom)
