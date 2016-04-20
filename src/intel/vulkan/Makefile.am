@@ -92,29 +92,26 @@ libanv_gen9_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=90
 libanv_gen9_la_SOURCES = $(GEN9_FILES)
 
 if HAVE_EGL_PLATFORM_WAYLAND
-BUILT_SOURCES += \
-	wayland-drm-protocol.c \
-	wayland-drm-client-protocol.h
-
-%-protocol.c : $(top_srcdir)/src/egl/wayland/wayland-drm/%.xml
-	$(AM_V_GEN)$(WAYLAND_SCANNER) code < $< > $@
-
-%-client-protocol.h : $(top_srcdir)/src/egl/wayland/wayland-drm/%.xml
-	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
-
-AM_CPPFLAGS += -I$(top_srcdir)/src/egl/wayland/wayland-drm
-VULKAN_SOURCES += \
-	wayland-drm-protocol.c \
-	$(VULKAN_WSI_WAYLAND_FILES)
-AM_CFLAGS += -DHAVE_WAYLAND_PLATFORM -DVK_USE_PLATFORM_WAYLAND_KHR
-
 VULKAN_ENTRYPOINT_CPPFLAGS += -DVK_USE_PLATFORM_WAYLAND_KHR
+
+AM_CPPFLAGS += \
+	-I$(top_builddir)/src/egl/wayland/wayland-drm \
+	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
+	$(WAYLAND_CFLAGS) \
+	-DVK_USE_PLATFORM_WAYLAND_KHR \
+	-DHAVE_WAYLAND_PLATFORM
+
+VULKAN_SOURCES += $(VULKAN_WSI_WAYLAND_FILES)
+
+VULKAN_LIB_DEPS += \
+	$(top_builddir)/src/egl/wayland/wayland-drm/libwayland-drm.la \
+	$(WAYLAND_LIBS)
 endif
 
 noinst_LTLIBRARIES += libvulkan_common.la
 libvulkan_common_la_SOURCES = $(VULKAN_SOURCES)
 
-VULKAN_LIB_DEPS += $(WAYLAND_LIBS) \
+VULKAN_LIB_DEPS += \
 	libvulkan_common.la \
 	-lxcb -lxcb-dri3 -lxcb-present -lxcb-sync -lxshmfence \
 	$(top_builddir)/src/intel/isl/libisl.la \
