@@ -581,7 +581,7 @@ CodeEmitterGK110::emitIMUL(const Instruction *i)
    assert(!i->src(0).mod.neg() && !i->src(1).mod.neg());
    assert(!i->src(0).mod.abs() && !i->src(1).mod.abs());
 
-   if (isLIMM(i->src(1), TYPE_S32)) {
+   if (i->src(1).getFile() == FILE_IMMEDIATE) {
       emitForm_L(i, 0x280, 2, Modifier(0));
 
       if (i->subOp == NV50_IR_SUBOP_MUL_HIGH)
