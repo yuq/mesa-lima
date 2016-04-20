@@ -93,20 +93,23 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
          * destination surface) to determine the stride.  This may be wrong
          * when reading from texture miplevels > 0, which are stored in
          * POT-sized areas.  For MSAA, the tile addresses are computed
-         * explicitly by the RCL.
+         * explicitly by the RCL, but still use the destination width to
+         * determine the stride (which could be fixed by explicitly supplying
+         * it in the ABI).
          */
-        if (info->src.resource->nr_samples <= 1) {
-                struct vc4_resource *rsc = vc4_resource(info->src.resource);
+        struct vc4_resource *rsc = vc4_resource(info->src.resource);
 
-                uint32_t stride = dst_surface_width * rsc->cpp;
-                if (rsc->slices[info->src.level].tiling == VC4_TILING_FORMAT_T)
-                        stride = align(stride, 128);
-                else
-                        stride = align(stride, 16);
+        uint32_t stride;
 
-                if (stride != rsc->slices[info->src.level].stride)
-                        return false;
-        }
+        if (info->src.resource->nr_samples > 1)
+                stride = align(dst_surface_width, 32) * 4 * rsc->cpp;
+        else if (rsc->slices[info->src.level].tiling == VC4_TILING_FORMAT_T)
+                stride = align(dst_surface_width * rsc->cpp, 128);
+        else
+                stride = align(dst_surface_width * rsc->cpp, 16);
+
+        if (stride != rsc->slices[info->src.level].stride)
+                return false;
 
         if (info->dst.resource->format != info->src.resource->format)
                 return false;
