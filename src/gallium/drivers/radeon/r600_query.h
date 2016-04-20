@@ -72,7 +72,7 @@ enum {
 struct r600_query_ops {
 	void (*destroy)(struct r600_common_context *, struct r600_query *);
 	boolean (*begin)(struct r600_common_context *, struct r600_query *);
-	void (*end)(struct r600_common_context *, struct r600_query *);
+	bool (*end)(struct r600_common_context *, struct r600_query *);
 	boolean (*get_result)(struct r600_common_context *,
 			      struct r600_query *, boolean wait,
 			      union pipe_query_result *result);
@@ -142,7 +142,7 @@ void r600_query_hw_destroy(struct r600_common_context *rctx,
 			   struct r600_query *rquery);
 boolean r600_query_hw_begin(struct r600_common_context *rctx,
 			    struct r600_query *rquery);
-void r600_query_hw_end(struct r600_common_context *rctx,
+bool r600_query_hw_end(struct r600_common_context *rctx,
 		       struct r600_query *rquery);
 boolean r600_query_hw_get_result(struct r600_common_context *rctx,
 				 struct r600_query *rquery,

@@ -113,7 +113,7 @@ static boolean r600_query_sw_begin(struct r600_common_context *rctx,
 	return TRUE;
 }
 
-static void r600_query_sw_end(struct r600_common_context *rctx,
+static bool r600_query_sw_end(struct r600_common_context *rctx,
 			      struct r600_query *rquery)
 {
 	struct r600_query_sw *query = (struct r600_query_sw *)rquery;
@@ -161,6 +161,8 @@ static void r600_query_sw_end(struct r600_common_context *rctx,
 	default:
 		unreachable("r600_query_sw_end: bad query type");
 	}
+
+	return true;
 }
 
 static boolean r600_query_sw_get_result(struct r600_common_context *rctx,
@@ -730,12 +732,11 @@ static bool r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_query *rquery = (struct r600_query *)query;
 
-	rquery->ops->end(rctx, rquery);
-	return true;
+	return rquery->ops->end(rctx, rquery);
 }
 
-void r600_query_hw_end(struct r600_common_context *rctx,
-			      struct r600_query *rquery)
+bool r600_query_hw_end(struct r600_common_context *rctx,
+		       struct r600_query *rquery)
 {
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
 
@@ -746,6 +747,8 @@ void r600_query_hw_end(struct r600_common_context *rctx,
 
 	if (!(query->flags & R600_QUERY_HW_FLAG_NO_START))
 		LIST_DELINIT(&query->list);
+
+	return true;
 }
 
 static unsigned r600_query_read_result(void *map, unsigned start_index, unsigned end_index,
