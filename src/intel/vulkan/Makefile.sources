@@ -26,8 +26,6 @@ VULKAN_FILES := \
 	anv_descriptor_set.c \
 	anv_device.c \
 	anv_dump.c \
-	anv_entrypoints.c \
-	anv_entrypoints.h \
 	anv_formats.c \
 	anv_image.c \
 	anv_intel.c \
