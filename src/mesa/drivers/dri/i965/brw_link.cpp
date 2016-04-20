@@ -146,7 +146,9 @@ process_glsl_ir(gl_shader_stage stage,
       progress = false;
 
       if (compiler->scalar_stage[shader->Stage]) {
-         brw_do_channel_expressions(shader->ir);
+         if (shader->Stage == MESA_SHADER_VERTEX ||
+             shader->Stage == MESA_SHADER_FRAGMENT)
+            brw_do_channel_expressions(shader->ir);
          brw_do_vector_splitting(shader->ir);
       }
 
