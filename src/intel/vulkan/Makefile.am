@@ -21,8 +21,6 @@
 
 include Makefile.sources
 
-SUBDIRS = . tests
-
 vulkan_includedir = $(includedir)/vulkan
 
 vulkan_include_HEADERS =				\
@@ -158,3 +156,18 @@ libvulkan_test_la_SOURCES = $(VULKAN_GEM_STUB_FILES)
 libvulkan_test_la_LIBADD = $(libvulkan_intel_la_LIBADD)
 
 include $(top_srcdir)/install-lib-links.mk
+
+noinst_HEADERS = \
+	tests/state_pool_test_helper.h
+
+LDADD = \
+	libvulkan-test.la \
+	$(PTHREAD_LIBS) -lm -lstdc++
+
+check_PROGRAMS = \
+	tests/block_pool_no_free \
+	tests/state_pool_no_free \
+	tests/state_pool_free_list_only \
+	tests/state_pool
+
+TESTS = $(check_PROGRAMS)
