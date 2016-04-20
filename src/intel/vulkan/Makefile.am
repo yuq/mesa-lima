@@ -28,10 +28,6 @@ vulkan_include_HEADERS =				\
 	$(top_srcdir)/include/vulkan/vulkan.h		\
 	$(top_srcdir)/include/vulkan/vulkan_intel.h
 
-# Used when generating entrypoints to filter out unwanted extensions
-VULKAN_ENTRYPOINT_CPPFLAGS = \
-   -I$(top_srcdir)/include/vulkan
-
 lib_LTLIBRARIES = libvulkan_intel.la
 
 check_LTLIBRARIES = libvulkan-test.la
@@ -51,6 +47,7 @@ AM_CPPFLAGS = \
 	$(VALGRIND_CFLAGS) \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/include/vulkan \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/compiler \
 	-I$(top_srcdir)/src/mapi \
@@ -91,9 +88,6 @@ libanv_gen9_la_SOURCES = $(GEN9_FILES)
 
 
 if HAVE_EGL_PLATFORM_X11
-VULKAN_ENTRYPOINT_CPPFLAGS += \
-	-DVK_USE_PLATFORM_XCB_KHR
-
 AM_CPPFLAGS += \
 	$(XCB_DRI3_CFLAGS) \
 	-DVK_USE_PLATFORM_XCB_KHR
@@ -104,8 +98,6 @@ endif
 
 
 if HAVE_EGL_PLATFORM_WAYLAND
-VULKAN_ENTRYPOINT_CPPFLAGS += -DVK_USE_PLATFORM_WAYLAND_KHR
-
 AM_CPPFLAGS += \
 	-I$(top_builddir)/src/egl/wayland/wayland-drm \
 	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
@@ -135,10 +127,10 @@ VULKAN_LIB_DEPS += \
 libvulkan_intel_la_SOURCES = $(VULKAN_GEM_FILES)
 
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
-	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) - | $(PYTHON2) $< header > $@
+	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(AM_CPPFLAGS) - | $(PYTHON2) $< header > $@
 
 anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
-	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) - | $(PYTHON2) $< code > $@
+	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(AM_CPPFLAGS) - | $(PYTHON2) $< code > $@
 
 CLEANFILES = $(BUILT_SOURCES)
 
