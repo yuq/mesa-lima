@@ -201,21 +201,6 @@ intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
    if (brw->gen < 8 && (mip_mapped || arrayed))
       return false;
 
-   /* Not implemented yet. */
-   if (mip_mapped) {
-      perf_debug("Multi-LOD fast clear - giving up (%dx%dx%d).\n",
-                 mt->logical_width0, mt->logical_height0, mt->last_level);
-      return false;
-   }
-
-   /* Not implemented yet. */
-   if (arrayed) {
-      perf_debug("Layered fast clear - giving up. (%dx%d%d)\n",
-                 mt->logical_width0, mt->logical_height0,
-                 mt->physical_depth0);
-      return false;
-   }
-
    /* There's no point in using an MCS buffer if the surface isn't in a
     * renderable format.
     */
