@@ -2203,6 +2203,9 @@ MemoryOpt::combineLd(Record *rec, Instruction *ld)
    if (((size == 0x8) && (MIN2(offLd, offRc) & 0x7)) ||
        ((size == 0xc) && (MIN2(offLd, offRc) & 0xf)))
       return false;
+   // for compute indirect loads are not guaranteed to be aligned
+   if (prog->getType() == Program::TYPE_COMPUTE && rec->rel[0])
+      return false;
 
    assert(sizeRc + sizeLd <= 16 && offRc != offLd);
 
@@ -2255,7 +2258,11 @@ MemoryOpt::combineSt(Record *rec, Instruction *st)
    if (!prog->getTarget()->
        isAccessSupported(st->getSrc(0)->reg.file, typeOfSize(size)))
       return false;
+   // no unaligned stores
    if (size == 8 && MIN2(offRc, offSt) & 0x7)
+      return false;
+   // for compute indirect stores are not guaranteed to be aligned
+   if (prog->getType() == Program::TYPE_COMPUTE && rec->rel[0])
       return false;
 
    st->takeExtraSources(0, extra); // save predicate and indirect address
