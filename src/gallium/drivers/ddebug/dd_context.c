@@ -250,22 +250,7 @@ DD_CSO_DELETE(vertex_elements)
  * shaders
  */
 
-#define DD_SHADER(NAME, name) \
-   static void * \
-   dd_context_create_##name##_state(struct pipe_context *_pipe, \
-                                    const struct pipe_shader_state *state) \
-   { \
-      struct pipe_context *pipe = dd_context(_pipe)->pipe; \
-      struct dd_state *hstate = CALLOC_STRUCT(dd_state); \
- \
-      if (!hstate) \
-         return NULL; \
-      hstate->cso = pipe->create_##name##_state(pipe, state); \
-      hstate->state.shader = *state; \
-      hstate->state.shader.tokens = tgsi_dup_tokens(state->tokens); \
-      return hstate; \
-   } \
-    \
+#define DD_SHADER_NOCREATE(NAME, name) \
    static void \
    dd_context_bind_##name##_state(struct pipe_context *_pipe, void *state) \
    { \
@@ -289,12 +274,48 @@ DD_CSO_DELETE(vertex_elements)
       FREE(hstate); \
    }
 
+#define DD_SHADER(NAME, name) \
+   static void * \
+   dd_context_create_##name##_state(struct pipe_context *_pipe, \
+                                    const struct pipe_shader_state *state) \
+   { \
+      struct pipe_context *pipe = dd_context(_pipe)->pipe; \
+      struct dd_state *hstate = CALLOC_STRUCT(dd_state); \
+ \
+      if (!hstate) \
+         return NULL; \
+      hstate->cso = pipe->create_##name##_state(pipe, state); \
+      hstate->state.shader = *state; \
+      hstate->state.shader.tokens = tgsi_dup_tokens(state->tokens); \
+      return hstate; \
+   } \
+    \
+   DD_SHADER_NOCREATE(NAME, name)
+
 DD_SHADER(FRAGMENT, fs)
 DD_SHADER(VERTEX, vs)
 DD_SHADER(GEOMETRY, gs)
 DD_SHADER(TESS_CTRL, tcs)
 DD_SHADER(TESS_EVAL, tes)
 
+static void * \
+dd_context_create_compute_state(struct pipe_context *_pipe,
+                                 const struct pipe_compute_state *state)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+   struct dd_state *hstate = CALLOC_STRUCT(dd_state);
+
+   if (!hstate)
+      return NULL;
+   hstate->cso = pipe->create_compute_state(pipe, state);
+
+   if (state->ir_type == PIPE_SHADER_IR_TGSI)
+      hstate->state.shader.tokens = tgsi_dup_tokens(state->prog);
+
+   return hstate;
+}
+
+DD_SHADER_NOCREATE(COMPUTE, compute)
 
 /********************************************************************
  * immediate states
@@ -703,6 +724,9 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
    CTX_INIT(create_tes_state);
    CTX_INIT(bind_tes_state);
    CTX_INIT(delete_tes_state);
+   CTX_INIT(create_compute_state);
+   CTX_INIT(bind_compute_state);
+   CTX_INIT(delete_compute_state);
    CTX_INIT(create_vertex_elements_state);
    CTX_INIT(bind_vertex_elements_state);
    CTX_INIT(delete_vertex_elements_state);
