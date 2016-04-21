@@ -226,19 +226,9 @@ void cik_sdma_copy(struct pipe_context *ctx,
 	 */
 	goto fallback;
 
-	if (src->format != dst->format ||
-	    rdst->surface.nsamples > 1 || rsrc->surface.nsamples > 1 ||
-	    (rdst->dirty_level_mask | rdst->stencil_dirty_level_mask) & (1 << dst_level) ||
-	    rdst->dcc_offset || rsrc->dcc_offset) {
+	if (!r600_prepare_for_dma_blit(&sctx->b, rdst, dst_level, dstx, dsty,
+					dstz, rsrc, src_level, src_box))
 		goto fallback;
-	}
-
-	if (rsrc->dirty_level_mask & (1 << src_level)) {
-		if (rsrc->htile_buffer)
-			goto fallback;
-
-		ctx->flush_resource(ctx, src);
-	}
 
 	src_x = util_format_get_nblocksx(src->format, src_box->x);
 	dst_x = util_format_get_nblocksx(src->format, dst_x);

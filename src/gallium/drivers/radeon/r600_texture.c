@@ -32,6 +32,61 @@
 #include <errno.h>
 #include <inttypes.h>
 
+bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
+			       struct r600_texture *rdst,
+			       unsigned dst_level, unsigned dstx,
+			       unsigned dsty, unsigned dstz,
+			       struct r600_texture *rsrc,
+			       unsigned src_level,
+			       const struct pipe_box *src_box)
+{
+	if (!rctx->dma.cs)
+		return false;
+
+	if (util_format_get_blocksizebits(rdst->resource.b.b.format) !=
+	    util_format_get_blocksizebits(rsrc->resource.b.b.format))
+		return false;
+
+	/* MSAA: Blits don't exist in the real world. */
+	if (rsrc->resource.b.b.nr_samples > 1 ||
+	    rdst->resource.b.b.nr_samples > 1)
+		return false;
+
+	/* Depth-stencil surfaces:
+	 *   When dst is linear, the DB->CB copy preserves HTILE.
+	 *   When dst is tiled, the 3D path must be used to update HTILE.
+	 */
+	if (rsrc->is_depth || rdst->is_depth)
+		return false;
+
+	/* DCC as:
+	 *   src: Use the 3D path. DCC decompression is expensive.
+	 *   dst: If overwriting the whole texture, disable DCC and use SDMA.
+	 *        Otherwise, use the 3D path.
+	 * TODO: handle the case when the dst box covers the whole texture
+	 */
+	if (rsrc->dcc_offset || rdst->dcc_offset)
+		return false;
+
+	/* CMASK as:
+	 *   src: Both texture and SDMA paths need decompression. Use SDMA.
+	 *   dst: If overwriting the whole texture, deallocate CMASK and use
+	 *        SDMA. Otherwise, use the 3D path.
+	 * TODO: handle the case when the dst box covers the whole texture
+	 */
+	if (rdst->cmask.size && rdst->dirty_level_mask & (1 << dst_level))
+		return false;
+
+	/* All requirements are met. Prepare textures for SDMA. */
+	if (rsrc->cmask.size && rsrc->dirty_level_mask & (1 << src_level))
+		rctx->b.flush_resource(&rctx->b, &rsrc->resource.b.b);
+
+	assert(!(rsrc->dirty_level_mask & (1 << src_level)));
+	assert(!(rdst->dirty_level_mask & (1 << dst_level)));
+
+	return true;
+}
+
 /* Same as resource_copy_region, except that both upsampling and downsampling are allowed. */
 static void r600_copy_region_with_blit(struct pipe_context *pipe,
 				       struct pipe_resource *dst,

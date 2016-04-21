@@ -623,6 +623,13 @@ void r600_update_prims_generated_query_state(struct r600_common_context *rctx,
 void r600_streamout_init(struct r600_common_context *rctx);
 
 /* r600_texture.c */
+bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
+				struct r600_texture *rdst,
+				unsigned dst_level, unsigned dstx,
+				unsigned dsty, unsigned dstz,
+				struct r600_texture *rsrc,
+				unsigned src_level,
+				const struct pipe_box *src_box);
 void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 				 struct r600_texture *rtex,
 				 unsigned nr_samples,
