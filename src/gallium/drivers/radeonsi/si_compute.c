@@ -70,6 +70,7 @@ static void *si_create_compute_state(
 
 		sel.tokens = tgsi_dup_tokens(cso->prog);
 		if (!sel.tokens) {
+			FREE(program);
 			return NULL;
 		}
 
@@ -84,6 +85,7 @@ static void *si_create_compute_state(
 		if (si_shader_create(sscreen, sctx->tm, &program->shader,
 		                     &sctx->b.debug)) {
 			FREE(sel.tokens);
+			FREE(program);
 			return NULL;
 		}
 
