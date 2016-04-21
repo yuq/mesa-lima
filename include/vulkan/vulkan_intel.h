@@ -44,7 +44,7 @@ typedef struct VkDmaBufImageCreateInfo_
 
 typedef VkResult (VKAPI_PTR *PFN_vkCreateDmaBufImageINTEL)(VkDevice device, const VkDmaBufImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMem, VkImage* pImage);
 
-#ifdef VK_PROTOTYPES
+#ifndef VK_NO_PROTOTYPES
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDmaBufImageINTEL(
     VkDevice                                    _device,

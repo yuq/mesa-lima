@@ -54,7 +54,6 @@ typedef uint32_t xcb_window_t;
 
 struct anv_l3_config;
 
-#define VK_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_intel.h>
 #include <vulkan/vk_icd.h>
