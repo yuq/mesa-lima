@@ -1152,6 +1152,7 @@ static OMX_ERRORTYPE vid_enc_EncodeFrame(omx_base_PortType *port, OMX_BUFFERHEAD
       /* ------- load input image into video buffer ---- */
       err = enc_LoadImage(port, buf, task->buf);
       if (err != OMX_ErrorNone)
+         FREE(task);
          return err;
    }
 
