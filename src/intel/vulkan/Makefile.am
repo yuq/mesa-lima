@@ -23,9 +23,9 @@ include Makefile.sources
 
 vulkan_includedir = $(includedir)/vulkan
 
-vulkan_include_HEADERS =				\
-	$(top_srcdir)/include/vulkan/vk_platform.h	\
-	$(top_srcdir)/include/vulkan/vulkan.h		\
+vulkan_include_HEADERS = \
+	$(top_srcdir)/include/vulkan/vk_platform.h \
+	$(top_srcdir)/include/vulkan/vulkan.h \
 	$(top_srcdir)/include/vulkan/vulkan_intel.h
 
 lib_LTLIBRARIES = libvulkan_intel.la
@@ -64,16 +64,6 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = -Wno-override-init -msse2
 
-VULKAN_SOURCES = \
-	$(VULKAN_GENERATED_FILES) \
-	$(VULKAN_FILES)
-
-VULKAN_LIB_DEPS =
-
-BUILT_SOURCES = \
-	$(VULKAN_GENERATED_FILES)
-
-
 libanv_gen7_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=70
 libanv_gen7_la_SOURCES = $(GEN7_FILES)
 
@@ -85,6 +75,13 @@ libanv_gen8_la_SOURCES = $(GEN8_FILES)
 
 libanv_gen9_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=90
 libanv_gen9_la_SOURCES = $(GEN9_FILES)
+
+
+VULKAN_SOURCES = \
+	$(VULKAN_GENERATED_FILES) \
+	$(VULKAN_FILES)
+
+VULKAN_LIB_DEPS =
 
 
 if HAVE_PLATFORM_X11
@@ -132,6 +129,7 @@ anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(AM_CPPFLAGS) - | $(PYTHON2) $< code > $@
 
+BUILT_SOURCES = $(VULKAN_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)
 
 libvulkan_intel_la_LIBADD = $(VULKAN_LIB_DEPS)
