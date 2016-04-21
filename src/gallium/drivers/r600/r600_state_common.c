@@ -2639,7 +2639,7 @@ uint32_t r600_translate_colorformat(enum chip_class chip, enum pipe_format forma
 					return V_0280A0_COLOR_32_32;
 			}
 		} else if (HAS_SIZE(8,24,0,0)) {
-			return V_0280A0_COLOR_24_8;
+			return (do_endian_swap ? V_0280A0_COLOR_8_24 : V_0280A0_COLOR_24_8);
 		} else if (HAS_SIZE(24,8,0,0)) {
 			return V_0280A0_COLOR_8_24;
 		}
