@@ -1480,8 +1480,6 @@ dri2_interop_query_device_info(__DRIcontext *_ctx,
    out->vendor_id = screen->get_param(screen, PIPE_CAP_VENDOR_ID);
    out->device_id = screen->get_param(screen, PIPE_CAP_DEVICE_ID);
 
-   out->interop_version = 1;
-
    return MESA_GLINTEROP_SUCCESS;
 }
 

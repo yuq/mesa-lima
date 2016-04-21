@@ -107,15 +107,6 @@ typedef struct _mesa_glinterop_device_info {
    uint32_t vendor_id;
    uint32_t device_id;
 
-   /* The interop version determines what behavior the caller should expect
-    * out of all functions.
-    *
-    * Interop version 1:
-    * - mesa_glinterop_export_in is not read beyond "out_driver_data"
-    * - mesa_glinterop_export_out is not written beyond "out_driver_data_written"
-    * - mesa_glinterop_device_info is not written beyond "interop_version"
-    */
-   uint32_t interop_version;
    /* Structure version 1 ends here. */
 } mesa_glinterop_device_info;
 
