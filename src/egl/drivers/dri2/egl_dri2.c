@@ -2703,7 +2703,7 @@ dri2_interop_query_device_info(_EGLDisplay *dpy, _EGLContext *ctx,
 
 static int
 dri2_interop_export_object(_EGLDisplay *dpy, _EGLContext *ctx,
-                           const mesa_glinterop_export_in *in,
+                           mesa_glinterop_export_in *in,
                            mesa_glinterop_export_out *out)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);

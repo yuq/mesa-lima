@@ -2721,7 +2721,7 @@ MesaGLInteropGLXQueryDeviceInfo(Display *dpy, GLXContext context,
 
 int
 MesaGLInteropGLXExportObject(Display *dpy, GLXContext context,
-                             const mesa_glinterop_export_in *in,
+                             mesa_glinterop_export_in *in,
                              mesa_glinterop_export_out *out)
 {
    struct glx_context *gc = (struct glx_context*)context;

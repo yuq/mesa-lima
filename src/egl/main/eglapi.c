@@ -1961,7 +1961,7 @@ MesaGLInteropEGLQueryDeviceInfo(EGLDisplay dpy, EGLContext context,
 
 int
 MesaGLInteropEGLExportObject(EGLDisplay dpy, EGLContext context,
-                             const mesa_glinterop_export_in *in,
+                             mesa_glinterop_export_in *in,
                              mesa_glinterop_export_out *out)
 {
    _EGLDisplay *disp;

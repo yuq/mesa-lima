@@ -1480,12 +1480,15 @@ dri2_interop_query_device_info(__DRIcontext *_ctx,
    out->vendor_id = screen->get_param(screen, PIPE_CAP_VENDOR_ID);
    out->device_id = screen->get_param(screen, PIPE_CAP_DEVICE_ID);
 
+   /* Instruct the caller that we support up-to version one of the interface */
+   out->version = 1;
+
    return MESA_GLINTEROP_SUCCESS;
 }
 
 static int
 dri2_interop_export_object(__DRIcontext *_ctx,
-                           const mesa_glinterop_export_in *in,
+                           mesa_glinterop_export_in *in,
                            mesa_glinterop_export_out *out)
 {
    struct st_context_iface *st = dri_context(_ctx)->st;
@@ -1703,6 +1706,10 @@ dri2_interop_export_object(__DRIcontext *_ctx,
 
    if (res->target == PIPE_BUFFER)
       out->buf_offset += whandle.offset;
+
+   /* Instruct the caller that we support up-to version one of the interface */
+   in->version = 1;
+   out->version = 1;
 
    return MESA_GLINTEROP_SUCCESS;
 }

@@ -234,7 +234,7 @@ struct glx_context_vtable {
    int (*interop_query_device_info)(struct glx_context *ctx,
                                     mesa_glinterop_device_info *out);
    int (*interop_export_object)(struct glx_context *ctx,
-                                const mesa_glinterop_export_in *in,
+                                mesa_glinterop_export_in *in,
                                 mesa_glinterop_export_out *out);
 };
 

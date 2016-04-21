@@ -414,7 +414,7 @@ struct __DRI2interopExtensionRec {
 
    /** Same as MesaGLInterop*ExportObject. */
    int (*export_object)(__DRIcontext *ctx,
-                        const mesa_glinterop_export_in *in,
+                        mesa_glinterop_export_in *in,
                         mesa_glinterop_export_out *out);
 };
 

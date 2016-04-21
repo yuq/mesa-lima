@@ -139,5 +139,5 @@ dri3_interop_query_device_info(struct glx_context *ctx,
 
 _X_HIDDEN int
 dri3_interop_export_object(struct glx_context *ctx,
-                           const mesa_glinterop_export_in *in,
+                           mesa_glinterop_export_in *in,
                            mesa_glinterop_export_out *out);

@@ -195,7 +195,7 @@ struct _egl_api
    int (*GLInteropQueryDeviceInfo)(_EGLDisplay *dpy, _EGLContext *ctx,
                                    mesa_glinterop_device_info *out);
    int (*GLInteropExportObject)(_EGLDisplay *dpy, _EGLContext *ctx,
-                                const mesa_glinterop_export_in *in,
+                                mesa_glinterop_export_in *in,
                                 mesa_glinterop_export_out *out);
 };
 
