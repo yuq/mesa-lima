@@ -907,7 +907,7 @@ static void si_set_shader_buffers(struct pipe_context *ctx, unsigned shader,
 
 /* RING BUFFERS */
 
-void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
+void si_set_ring_buffer(struct pipe_context *ctx, uint slot,
 			struct pipe_resource *buffer,
 			unsigned stride, unsigned num_records,
 			bool add_tid, bool swizzle,
@@ -915,9 +915,6 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_buffer_resources *buffers = &sctx->rw_buffers;
-
-	if (shader >= SI_NUM_SHADERS)
-		return;
 
 	/* The stride field in the resource descriptor has 14 bits */
 	assert(stride < (1 << 14));
