@@ -2256,8 +2256,8 @@ lp_build_sample_general(struct lp_build_sample_context *bld,
              * All pixels require just nearest filtering, which is way
              * cheaper than linear, hence do a separate path for that.
              */
-            lp_build_sample_mipmap(bld, PIPE_TEX_FILTER_NEAREST, FALSE,
-                                   mip_filter_for_nearest,
+            lp_build_sample_mipmap(bld, PIPE_TEX_FILTER_NEAREST,
+                                   mip_filter_for_nearest, FALSE,
                                    coords, offsets,
                                    ilevel0, ilevel1, lod_fpart,
                                    texels);
