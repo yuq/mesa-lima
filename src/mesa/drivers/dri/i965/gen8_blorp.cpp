@@ -710,5 +710,7 @@ gen8_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
    gen8_blorp_emit_vf_instancing_state(brw, 2);
    gen8_blorp_emit_vf_state(brw);
    gen7_blorp_emit_primitive(brw, params);
-   gen8_write_pma_stall_bits(brw, 0);
+
+   if (brw->gen < 9)
+      gen8_write_pma_stall_bits(brw, 0);
 }
