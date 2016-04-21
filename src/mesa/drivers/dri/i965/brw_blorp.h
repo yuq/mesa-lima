@@ -69,14 +69,17 @@ enum {
    BRW_BLORP_NUM_BINDING_TABLE_ENTRIES
 };
 
-
-class brw_blorp_mip_info
+class brw_blorp_surface_info
 {
 public:
-   brw_blorp_mip_info();
+   brw_blorp_surface_info();
 
-   void set(struct intel_mipmap_tree *mt,
-            unsigned int level, unsigned int layer);
+   void set(struct brw_context *brw,
+            struct intel_mipmap_tree *mt,
+            unsigned int level, unsigned int layer,
+            mesa_format format, bool is_render_target);
+
+   uint32_t compute_tile_offsets(uint32_t *tile_x, uint32_t *tile_y) const;
 
    struct intel_mipmap_tree *mt;
 
@@ -121,19 +124,6 @@ public:
     * pixels.
     */
    uint32_t y_offset;
-};
-
-class brw_blorp_surface_info : public brw_blorp_mip_info
-{
-public:
-   brw_blorp_surface_info();
-
-   void set(struct brw_context *brw,
-            struct intel_mipmap_tree *mt,
-            unsigned int level, unsigned int layer,
-            mesa_format format, bool is_render_target);
-
-   uint32_t compute_tile_offsets(uint32_t *tile_x, uint32_t *tile_y) const;
 
    /* Setting this flag indicates that the buffer's contents are W-tiled
     * stencil data, but the surface state should be set up for Y tiled
@@ -238,7 +228,7 @@ public:
    uint32_t y0;
    uint32_t x1;
    uint32_t y1;
-   brw_blorp_mip_info depth;
+   brw_blorp_surface_info depth;
    uint32_t depth_format;
    brw_blorp_surface_info src;
    brw_blorp_surface_info dst;

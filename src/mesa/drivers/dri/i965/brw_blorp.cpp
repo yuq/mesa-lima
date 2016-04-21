@@ -30,27 +30,25 @@
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
-brw_blorp_mip_info::brw_blorp_mip_info()
+brw_blorp_surface_info::brw_blorp_surface_info()
    : mt(NULL),
      level(0),
      layer(0),
      width(0),
      height(0),
      x_offset(0),
-     y_offset(0)
-{
-}
-
-brw_blorp_surface_info::brw_blorp_surface_info()
-   : map_stencil_as_y_tiled(false),
+     y_offset(0),
+     map_stencil_as_y_tiled(false),
      num_samples(0),
      swizzle(SWIZZLE_XYZW)
 {
 }
 
 void
-brw_blorp_mip_info::set(struct intel_mipmap_tree *mt,
-                        unsigned int level, unsigned int layer)
+brw_blorp_surface_info::set(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt,
+                            unsigned int level, unsigned int layer,
+                            mesa_format format, bool is_render_target)
 {
    /* Layer is a physical layer, so if this is a 2D multisample array texture
     * using INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, then it had better
@@ -70,15 +68,7 @@ brw_blorp_mip_info::set(struct intel_mipmap_tree *mt,
    this->height = minify(mt->physical_height0, level - mt->first_level);
 
    intel_miptree_get_image_offset(mt, level, layer, &x_offset, &y_offset);
-}
 
-void
-brw_blorp_surface_info::set(struct brw_context *brw,
-                            struct intel_mipmap_tree *mt,
-                            unsigned int level, unsigned int layer,
-                            mesa_format format, bool is_render_target)
-{
-   brw_blorp_mip_info::set(mt, level, layer);
    this->num_samples = mt->num_samples;
    this->array_layout = mt->array_layout;
    this->map_stencil_as_y_tiled = false;
@@ -312,7 +302,7 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 
    params.hiz_op = op;
 
-   params.depth.set(mt, level, layer);
+   params.depth.set(brw, mt, level, layer, mt->format, true);
 
    /* Align the rectangle primitive to 8x4 pixels.
     *
