@@ -357,12 +357,7 @@ typedef void(*PFN_CALC_CENTROID_BARYCENTRICS)(const BarycentricCoeffs&, SWR_PS_C
 struct BACKEND_FUNCS
 {
     PFN_BACKEND_FUNC pfnBackend;
-    PFN_CALC_PIXEL_BARYCENTRICS pfnCalcPixelBarycentrics;
-    PFN_CALC_SAMPLE_BARYCENTRICS pfnCalcSampleBarycentrics;
-    PFN_CALC_CENTROID_BARYCENTRICS pfnCalcCentroidBarycentrics;
-    PFN_OUTPUT_MERGER pfnOutputMerger;
 };
-
 
 // Draw State
 struct DRAW_STATE

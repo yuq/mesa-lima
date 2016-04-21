@@ -80,7 +80,9 @@ void BucketManager::PrintBucket(FILE* f, UINT level, uint64_t threadCycles, uint
         "        |-> ",
         "            |-> ",
         "                |-> ",
-        "                    |-> "
+        "                    |-> ",
+        "                        |-> ",
+        "                            |-> ",
     };
 
     // compute percent of total cycles used by this bucket
