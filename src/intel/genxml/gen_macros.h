@@ -28,20 +28,6 @@
  * The prefixing macros GENX() and genX() automatically prefix whatever you
  * give them by GENX_ or genX_  where X is the gen number.
  *
- * You can declare a function to be used on some range of gens like this:
- *
- * GENX_FUNC(GEN7, GEN75) void
- * genX(my_function_name)(args...)
- * {
- *    // Do stuff
- * }
- *
- * If the file is compiled for any set of gens containing gen7 and gen75,
- * the function will effectively only get compiled twice as
- * gen7_my_function_nmae and gen75_my_function_name.  The function has to
- * be compilable on all gens, but it will become a static inline that gets
- * discarded by the compiler on all gens not in range.
- *
  * You can do pseudo-runtime checks in your function such as
  *
  * if (GEN_GEN > 8 || GEN_IS_HASWELL) {
