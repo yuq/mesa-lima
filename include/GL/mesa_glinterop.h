@@ -141,16 +141,16 @@ typedef struct _mesa_glinterop_export_in {
     * - GL_RENDERBUFFER
     * - GL_ARRAY_BUFFER
     */
-   GLenum target;
+   unsigned target;
 
    /* If target is GL_ARRAY_BUFFER, it's a buffer object.
     * If target is GL_RENDERBUFFER, it's a renderbuffer object.
     * If target is GL_TEXTURE_*, it's a texture object.
     */
-   GLuint obj;
+   unsigned obj;
 
    /* Mipmap level. Ignored for non-texture objects. */
-   GLuint miplevel;
+   unsigned miplevel;
 
    /* One of MESA_GLINTEROP_ACCESS_* flags. This describes how the exported
     * object is going to be used.
@@ -193,7 +193,7 @@ typedef struct _mesa_glinterop_export_out {
     * format specified by glTexStorage, glTexImage, or glRenderbufferStorage
     * will be returned.
     */
-   GLenum internal_format;
+   unsigned internal_format;
 
    /* Buffer offset and size for GL_ARRAY_BUFFER and GL_TEXTURE_BUFFER.
     * This allows interop with suballocations (a buffer allocated within
@@ -208,10 +208,10 @@ typedef struct _mesa_glinterop_export_out {
    /* Parameters specified by glTextureView. If the object is not a texture
     * view, default parameters covering the whole texture will be returned.
     */
-   GLuint view_minlevel;
-   GLuint view_numlevels;
-   GLuint view_minlayer;
-   GLuint view_numlayers;
+   unsigned view_minlevel;
+   unsigned view_numlevels;
+   unsigned view_minlayer;
+   unsigned view_numlayers;
 
    /* The number of bytes written to out_driver_data. */
    uint32_t out_driver_data_written;
