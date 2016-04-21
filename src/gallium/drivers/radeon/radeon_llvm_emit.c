@@ -100,7 +100,7 @@ void radeon_llvm_shader_type(LLVMValueRef F, unsigned type)
 		calling_conv = RADEON_LLVM_AMDGPU_CS;
 		break;
 	default:
-		assert(0);
+		unreachable("Unhandle shader type");
 	}
 
 	if (HAVE_LLVM >= 0x309)
