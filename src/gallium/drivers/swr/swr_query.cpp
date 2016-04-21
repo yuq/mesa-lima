@@ -315,7 +315,7 @@ swr_check_render_cond(struct pipe_context *pipe)
    b = pipe->get_query_result(
       pipe, ctx->render_cond_query, wait, (union pipe_query_result *)&result);
    if (b)
-      return (!result == ctx->render_cond_cond);
+      return ((!result) == ctx->render_cond_cond);
    else
       return TRUE;
 }

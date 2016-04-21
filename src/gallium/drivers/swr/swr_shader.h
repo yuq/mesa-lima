@@ -23,10 +23,10 @@
 
 #pragma once
 
-class swr_vertex_shader;
-class swr_fragment_shader;
-class swr_jit_fs_key;
-class swr_jit_vs_key;
+struct swr_vertex_shader;
+struct swr_fragment_shader;
+struct swr_jit_fs_key;
+struct swr_jit_vs_key;
 
 PFN_VERTEX_FUNC
 swr_compile_vs(struct swr_context *ctx, swr_jit_vs_key &key);
