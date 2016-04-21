@@ -5394,13 +5394,14 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 
 void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			struct si_shader *shader,
+			struct si_shader_config *config,
 			uint64_t scratch_va)
 {
 	unsigned i;
 	uint32_t scratch_rsrc_dword0 = scratch_va;
 	uint32_t scratch_rsrc_dword1 =
 		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32)
-		|  S_008F04_STRIDE(shader->config.scratch_bytes_per_wave / 64);
+		|  S_008F04_STRIDE(config->scratch_bytes_per_wave / 64);
 
 	for (i = 0 ; i < shader->binary.reloc_count; i++) {
 		const struct radeon_shader_reloc *reloc =

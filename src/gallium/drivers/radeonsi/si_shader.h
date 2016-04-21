@@ -478,6 +478,7 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		    FILE *f);
 void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			struct si_shader *shader,
+			struct si_shader_config *config,
 			uint64_t scratch_va);
 void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 				  struct si_shader_config *conf,
