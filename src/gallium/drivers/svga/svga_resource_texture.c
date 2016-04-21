@@ -485,8 +485,10 @@ svga_texture_transfer_map(struct pipe_context *pipe,
             }
 	 }
       }
-      /* mark this texture level as dirty */
-      svga_set_texture_dirty(tex, st->slice, transfer->level);
+      if (transfer->usage & PIPE_TRANSFER_WRITE) {
+         /* mark this texture level as dirty */
+         svga_set_texture_dirty(tex, st->slice, transfer->level);
+      }
    }
 
    st->use_direct_map = use_direct_map;
