@@ -319,8 +319,8 @@ pma_fix_enable(const struct brw_context *brw)
            (kill_pixel && (depth_writes_enabled || stencil_writes_enabled)));
 }
 
-static void
-write_pma_stall_bits(struct brw_context *brw, uint32_t pma_stall_bits)
+void
+gen8_write_pma_stall_bits(struct brw_context *brw, uint32_t pma_stall_bits)
 {
    struct gl_context *ctx = &brw->ctx;
 
@@ -373,7 +373,7 @@ gen8_emit_pma_stall_workaround(struct brw_context *brw)
    if (pma_fix_enable(brw))
       bits |= GEN8_HIZ_NP_PMA_FIX_ENABLE | GEN8_HIZ_NP_EARLY_Z_FAILS_DISABLE;
 
-   write_pma_stall_bits(brw, bits);
+   gen8_write_pma_stall_bits(brw, bits);
 }
 
 const struct brw_tracked_state gen8_pma_fix = {
@@ -403,7 +403,7 @@ gen8_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 
    /* Disable the PMA stall fix since we're about to do a HiZ operation. */
    if (brw->gen == 8)
-      write_pma_stall_bits(brw, 0);
+      gen8_write_pma_stall_bits(brw, 0);
 
    assert(mt->first_level == 0);
    assert(mt->logical_depth0 >= 1);
