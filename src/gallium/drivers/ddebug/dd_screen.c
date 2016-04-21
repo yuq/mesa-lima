@@ -74,6 +74,17 @@ dd_screen_get_paramf(struct pipe_screen *_screen,
 }
 
 static int
+dd_screen_get_compute_param(struct pipe_screen *_screen,
+                            enum pipe_shader_ir ir_type,
+                            enum pipe_compute_cap param,
+                            void *ret)
+{
+   struct pipe_screen *screen = dd_screen(_screen)->screen;
+
+   return screen->get_compute_param(screen, ir_type, param, ret);
+}
+
+static int
 dd_screen_get_shader_param(struct pipe_screen *_screen, unsigned shader,
                            enum pipe_shader_cap param)
 {
@@ -319,6 +330,7 @@ ddebug_screen_create(struct pipe_screen *screen)
    dscreen->base.get_device_vendor = dd_screen_get_device_vendor;
    dscreen->base.get_param = dd_screen_get_param;
    dscreen->base.get_paramf = dd_screen_get_paramf;
+   dscreen->base.get_compute_param = dd_screen_get_compute_param;
    dscreen->base.get_shader_param = dd_screen_get_shader_param;
    /* get_video_param */
    /* get_compute_param */
