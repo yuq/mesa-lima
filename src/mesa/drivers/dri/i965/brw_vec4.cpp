@@ -1757,7 +1757,7 @@ vec4_vs_visitor::setup_attributes(int payload_reg)
 
    lower_attributes_to_hw_regs(attribute_map, false /* interleaved */);
 
-   return payload_reg + vs_prog_data->nr_attributes;
+   return payload_reg + vs_prog_data->nr_attribute_slots;
 }
 
 int
