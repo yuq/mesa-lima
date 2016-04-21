@@ -54,8 +54,8 @@ libi965_compiler_la_SOURCES = \
 	$(i965_compiler_FILES) \
 	$(i965_compiler_GENERATED_FILES)
 
-BUILT_SOURCES += $(i965_compiler_GENERATED_FILES)
-CLEANFILES += $(BUILT_SOURCES)
+BUILT_SOURCES = $(i965_compiler_GENERATED_FILES)
+CLEANFILES = $(BUILT_SOURCES)
 
 TEST_LIBS = \
 	libi965_compiler.la \
