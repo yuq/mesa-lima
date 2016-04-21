@@ -237,7 +237,8 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    if (!encode_srgb && _mesa_get_format_color_encoding(format) == GL_SRGB)
       format = _mesa_get_srgb_format_linear(format);
 
-   params.dst.set(brw, irb->mt, irb->mt_level, layer, format, true);
+   brw_blorp_surface_info_init(brw, &params.dst, irb->mt, irb->mt_level,
+                               layer, format, true);
 
    /* Override the surface format according to the context's sRGB rules. */
    params.dst.brw_surfaceformat = brw->render_target_format[format];
@@ -401,7 +402,8 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
 
    brw_blorp_params params;
 
-   params.dst.set(brw, mt, 0 /* level */, 0 /* layer */, format, true);
+   brw_blorp_surface_info_init(brw, &params.dst, mt,
+                               0 /* level */, 0 /* layer */, format, true);
 
    brw_get_resolve_rect(brw, mt, &params.x0, &params.y0,
                         &params.x1, &params.y1);

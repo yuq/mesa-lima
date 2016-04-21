@@ -160,7 +160,7 @@ gen7_blorp_emit_depth_stencil_state_pointers(struct brw_context *brw,
  */
 static uint32_t
 gen7_blorp_emit_surface_state(struct brw_context *brw,
-                              const brw_blorp_surface_info *surface,
+                              const struct brw_blorp_surface_info *surface,
                               uint32_t read_domains, uint32_t write_domain,
                               bool is_render_target)
 {
@@ -198,8 +198,8 @@ gen7_blorp_emit_surface_state(struct brw_context *brw,
       surf[0] |= GEN7_SURFACE_ARYSPC_FULL;
 
    /* reloc */
-   surf[1] =
-      surface->compute_tile_offsets(&tile_x, &tile_y) + mt->bo->offset64;
+   surf[1] = brw_blorp_compute_tile_offsets(surface, &tile_x, &tile_y) +
+             mt->bo->offset64;
 
    /* Note that the low bits of these fields are missing, so
     * there's the possibility of getting in trouble.

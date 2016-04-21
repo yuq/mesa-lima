@@ -69,18 +69,8 @@ enum {
    BRW_BLORP_NUM_BINDING_TABLE_ENTRIES
 };
 
-class brw_blorp_surface_info
+struct brw_blorp_surface_info
 {
-public:
-   brw_blorp_surface_info();
-
-   void set(struct brw_context *brw,
-            struct intel_mipmap_tree *mt,
-            unsigned int level, unsigned int layer,
-            mesa_format format, bool is_render_target);
-
-   uint32_t compute_tile_offsets(uint32_t *tile_x, uint32_t *tile_y) const;
-
    struct intel_mipmap_tree *mt;
 
    /**
@@ -161,7 +151,7 @@ public:
     * For MSAA surfaces, MSAA layout that should be used when setting up the
     * surface state for this surface.
     */
-   intel_msaa_layout msaa_layout;
+   enum intel_msaa_layout msaa_layout;
 
    /**
     * In order to support cases where RGBA format is backing client requested
@@ -171,6 +161,18 @@ public:
     */
    int swizzle;
 };
+
+void
+brw_blorp_surface_info_init(struct brw_context *brw,
+                            struct brw_blorp_surface_info *info,
+                            struct intel_mipmap_tree *mt,
+                            unsigned int level, unsigned int layer,
+                            mesa_format format, bool is_render_target);
+
+uint32_t
+brw_blorp_compute_tile_offsets(const struct brw_blorp_surface_info *info,
+                               uint32_t *tile_x, uint32_t *tile_y);
+
 
 
 struct brw_blorp_coord_transform_params
@@ -228,10 +230,10 @@ public:
    uint32_t y0;
    uint32_t x1;
    uint32_t y1;
-   brw_blorp_surface_info depth;
+   struct brw_blorp_surface_info depth;
    uint32_t depth_format;
-   brw_blorp_surface_info src;
-   brw_blorp_surface_info dst;
+   struct brw_blorp_surface_info src;
+   struct brw_blorp_surface_info dst;
    enum gen6_hiz_op hiz_op;
    unsigned fast_clear_op;
    bool color_write_disable[4];

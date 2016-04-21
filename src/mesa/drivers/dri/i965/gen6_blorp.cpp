@@ -324,7 +324,7 @@ gen6_blorp_emit_wm_constants(struct brw_context *brw,
 static uint32_t
 gen6_blorp_emit_surface_state(struct brw_context *brw,
                               const brw_blorp_params *params,
-                              const brw_blorp_surface_info *surface,
+                              const struct brw_blorp_surface_info *surface,
                               uint32_t read_domains, uint32_t write_domain)
 {
    uint32_t wm_surf_offset;
@@ -351,7 +351,7 @@ gen6_blorp_emit_surface_state(struct brw_context *brw,
               surface->brw_surfaceformat << BRW_SURFACE_FORMAT_SHIFT);
 
    /* reloc */
-   surf[1] = (surface->compute_tile_offsets(&tile_x, &tile_y) +
+   surf[1] = (brw_blorp_compute_tile_offsets(surface, &tile_x, &tile_y) +
               mt->bo->offset64);
 
    surf[2] = (0 << BRW_SURFACE_LOD_SHIFT |

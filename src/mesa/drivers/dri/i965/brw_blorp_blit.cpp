@@ -1897,8 +1897,10 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
 
    brw_blorp_params params;
 
-   params.src.set(brw, src_mt, src_level, src_layer, src_format, false);
-   params.dst.set(brw, dst_mt, dst_level, dst_layer, dst_format, true);
+   brw_blorp_surface_info_init(brw, &params.src, src_mt, src_level,
+                               src_layer, src_format, false);
+   brw_blorp_surface_info_init(brw, &params.dst, dst_mt, dst_level,
+                               dst_layer, dst_format, true);
 
    /* Even though we do multisample resolves at the time of the blit, OpenGL
     * specification defines them as if they happen at the time of rendering,

@@ -30,22 +30,9 @@
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
-brw_blorp_surface_info::brw_blorp_surface_info()
-   : mt(NULL),
-     level(0),
-     layer(0),
-     width(0),
-     height(0),
-     x_offset(0),
-     y_offset(0),
-     map_stencil_as_y_tiled(false),
-     num_samples(0),
-     swizzle(SWIZZLE_XYZW)
-{
-}
-
 void
-brw_blorp_surface_info::set(struct brw_context *brw,
+brw_blorp_surface_info_init(struct brw_context *brw,
+                            struct brw_blorp_surface_info *info,
                             struct intel_mipmap_tree *mt,
                             unsigned int level, unsigned int layer,
                             mesa_format format, bool is_render_target)
@@ -61,18 +48,20 @@ brw_blorp_surface_info::set(struct brw_context *brw,
 
    intel_miptree_check_level_layer(mt, level, layer);
 
-   this->mt = mt;
-   this->level = level;
-   this->layer = layer;
-   this->width = minify(mt->physical_width0, level - mt->first_level);
-   this->height = minify(mt->physical_height0, level - mt->first_level);
+   info->mt = mt;
+   info->level = level;
+   info->layer = layer;
+   info->width = minify(mt->physical_width0, level - mt->first_level);
+   info->height = minify(mt->physical_height0, level - mt->first_level);
 
-   intel_miptree_get_image_offset(mt, level, layer, &x_offset, &y_offset);
+   intel_miptree_get_image_offset(mt, level, layer,
+                                  &info->x_offset, &info->y_offset);
 
-   this->num_samples = mt->num_samples;
-   this->array_layout = mt->array_layout;
-   this->map_stencil_as_y_tiled = false;
-   this->msaa_layout = mt->msaa_layout;
+   info->num_samples = mt->num_samples;
+   info->array_layout = mt->array_layout;
+   info->map_stencil_as_y_tiled = false;
+   info->msaa_layout = mt->msaa_layout;
+   info->swizzle = SWIZZLE_XYZW;
 
    if (format == MESA_FORMAT_NONE)
       format = mt->format;
@@ -83,8 +72,8 @@ brw_blorp_surface_info::set(struct brw_context *brw,
        * up for W tiling, so we'll need to use Y tiling and have the WM
        * program swizzle the coordinates.
        */
-      this->map_stencil_as_y_tiled = true;
-      this->brw_surfaceformat = brw->gen >= 8 ? BRW_SURFACEFORMAT_R8_UINT :
+      info->map_stencil_as_y_tiled = true;
+      info->brw_surfaceformat = brw->gen >= 8 ? BRW_SURFACEFORMAT_R8_UINT :
                                                 BRW_SURFACEFORMAT_R8_UNORM;
       break;
    case MESA_FORMAT_Z24_UNORM_X8_UINT:
@@ -98,20 +87,20 @@ brw_blorp_surface_info::set(struct brw_context *brw,
        * pattern as long as we copy the right amount of data, so just map it
        * as 8-bit BGRA.
        */
-      this->brw_surfaceformat = BRW_SURFACEFORMAT_B8G8R8A8_UNORM;
+      info->brw_surfaceformat = BRW_SURFACEFORMAT_B8G8R8A8_UNORM;
       break;
    case MESA_FORMAT_Z_FLOAT32:
-      this->brw_surfaceformat = BRW_SURFACEFORMAT_R32_FLOAT;
+      info->brw_surfaceformat = BRW_SURFACEFORMAT_R32_FLOAT;
       break;
    case MESA_FORMAT_Z_UNORM16:
-      this->brw_surfaceformat = BRW_SURFACEFORMAT_R16_UNORM;
+      info->brw_surfaceformat = BRW_SURFACEFORMAT_R16_UNORM;
       break;
    default: {
       if (is_render_target) {
          assert(brw->format_supported_as_render_target[format]);
-         this->brw_surfaceformat = brw->render_target_format[format];
+         info->brw_surfaceformat = brw->render_target_format[format];
       } else {
-         this->brw_surfaceformat = brw_format_for_mesa_format(format);
+         info->brw_surfaceformat = brw_format_for_mesa_format(format);
       }
       break;
    }
@@ -127,21 +116,21 @@ brw_blorp_surface_info::set(struct brw_context *brw,
  * directly from the adjusted offsets.
  */
 uint32_t
-brw_blorp_surface_info::compute_tile_offsets(uint32_t *tile_x,
-                                             uint32_t *tile_y) const
+brw_blorp_compute_tile_offsets(const struct brw_blorp_surface_info *info,
+                               uint32_t *tile_x, uint32_t *tile_y)
 {
    uint32_t mask_x, mask_y;
 
-   intel_get_tile_masks(mt->tiling, mt->tr_mode, mt->cpp,
-                        map_stencil_as_y_tiled,
+   intel_get_tile_masks(info->mt->tiling, info->mt->tr_mode, info->mt->cpp,
+                        info->map_stencil_as_y_tiled,
                         &mask_x, &mask_y);
 
-   *tile_x = x_offset & mask_x;
-   *tile_y = y_offset & mask_y;
+   *tile_x = info->x_offset & mask_x;
+   *tile_y = info->y_offset & mask_y;
 
-   return intel_miptree_get_aligned_offset(mt, x_offset & ~mask_x,
-                                           y_offset & ~mask_y,
-                                           map_stencil_as_y_tiled);
+   return intel_miptree_get_aligned_offset(info->mt, info->x_offset & ~mask_x,
+                                           info->y_offset & ~mask_y,
+                                           info->map_stencil_as_y_tiled);
 }
 
 
@@ -159,6 +148,9 @@ brw_blorp_params::brw_blorp_params()
      wm_prog_kernel(0),
      wm_prog_data(NULL)
 {
+   memset(&src, 0, sizeof(src));
+   memset(&dst, 0, sizeof(dst));
+   memset(&depth, 0, sizeof(depth));
    color_write_disable[0] = false;
    color_write_disable[1] = false;
    color_write_disable[2] = false;
@@ -302,7 +294,8 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 
    params.hiz_op = op;
 
-   params.depth.set(brw, mt, level, layer, mt->format, true);
+   brw_blorp_surface_info_init(brw, &params.depth, mt, level, layer,
+                               mt->format, true);
 
    /* Align the rectangle primitive to 8x4 pixels.
     *

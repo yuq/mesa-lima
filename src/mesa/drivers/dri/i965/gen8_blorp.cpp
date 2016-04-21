@@ -39,7 +39,7 @@
  */
 static uint32_t
 gen8_blorp_emit_surface_state(struct brw_context *brw,
-                              const brw_blorp_surface_info *surface,
+                              const struct brw_blorp_surface_info *surface,
                               uint32_t read_domains, uint32_t write_domain,
                               bool is_render_target)
 {
@@ -90,7 +90,8 @@ gen8_blorp_emit_surface_state(struct brw_context *brw,
 
     /* reloc */
    *((uint64_t *)&surf[8]) =
-      surface->compute_tile_offsets(&tile_x, &tile_y) + mt->bo->offset64;
+      brw_blorp_compute_tile_offsets(surface, &tile_x, &tile_y) +
+      mt->bo->offset64;
 
    /* Note that the low bits of these fields are missing, so there's the
     * possibility of getting in trouble.
@@ -597,7 +598,7 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
                                     I915_GEM_DOMAIN_RENDER,
                                     true /* is_render_target */);
    if (params->src.mt) {
-      const brw_blorp_surface_info *surface = &params->src;
+      const struct brw_blorp_surface_info *surface = &params->src;
       intel_mipmap_tree *mt = surface->mt;
 
       /* Textures are always sampled as 2D. */
