@@ -124,12 +124,19 @@ swr_generate_vs_key(struct swr_jit_vs_key &key,
 }
 
 struct BuilderSWR : public Builder {
-   BuilderSWR(JitManager *pJitMgr)
+   BuilderSWR(JitManager *pJitMgr, const char *pName)
       : Builder(pJitMgr)
    {
       pJitMgr->SetupNewModule();
+      gallivm = gallivm_create(pName, wrap(&JM()->mContext));
+      pJitMgr->mpCurrentModule = unwrap(gallivm->module);
    }
 
+   ~BuilderSWR() {
+      gallivm_free_ir(gallivm);
+   }
+
+   struct gallivm_state *gallivm;
    PFN_VERTEX_FUNC CompileVS(struct swr_context *ctx, swr_jit_vs_key &key);
    PFN_PIXEL_KERNEL CompileFS(struct swr_context *ctx, swr_jit_fs_key &key);
 };
@@ -150,12 +157,6 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
          break;
       }
    }
-
-   //   tgsi_dump(swr_vs->pipe.tokens, 0);
-
-   struct gallivm_state *gallivm =
-      gallivm_create("VS", wrap(&JM()->mContext));
-   gallivm->module = wrap(JM()->mpCurrentModule);
 
    LLVMValueRef inputs[PIPE_MAX_SHADER_INPUTS][TGSI_NUM_CHANNELS];
    LLVMValueRef outputs[PIPE_MAX_SHADER_OUTPUTS][TGSI_NUM_CHANNELS];
@@ -231,6 +232,8 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
                      &swr_vs->info.base,
                      NULL); // geometry shader face
 
+   sampler->destroy(sampler);
+
    IRB()->SetInsertPoint(unwrap(LLVMGetInsertBlock(gallivm->builder)));
 
    Value *vtxOutput = LOAD(pVsCtx, {0, SWR_VS_CONTEXT_pVout});
@@ -273,8 +276,12 @@ PFN_VERTEX_FUNC
 swr_compile_vs(struct swr_context *ctx, swr_jit_vs_key &key)
 {
    BuilderSWR builder(
-      reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr));
-   return builder.CompileVS(ctx, key);
+      reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr),
+      "VS");
+   PFN_VERTEX_FUNC func = builder.CompileVS(ctx, key);
+
+   ctx->vs->map.insert(std::make_pair(key, make_unique<VariantVS>(builder.gallivm, func)));
+   return func;
 }
 
 static unsigned
@@ -303,12 +310,6 @@ PFN_PIXEL_KERNEL
 BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 {
    struct swr_fragment_shader *swr_fs = ctx->fs;
-
-   //   tgsi_dump(swr_fs->pipe.tokens, 0);
-
-   struct gallivm_state *gallivm =
-      gallivm_create("FS", wrap(&JM()->mContext));
-   gallivm->module = wrap(JM()->mpCurrentModule);
 
    LLVMValueRef inputs[PIPE_MAX_SHADER_INPUTS][TGSI_NUM_CHANNELS];
    LLVMValueRef outputs[PIPE_MAX_SHADER_OUTPUTS][TGSI_NUM_CHANNELS];
@@ -540,6 +541,8 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
                      &swr_fs->info.base,
                      NULL); // geometry shader face
 
+   sampler->destroy(sampler);
+
    IRB()->SetInsertPoint(unwrap(LLVMGetInsertBlock(gallivm->builder)));
 
    for (uint32_t attrib = 0; attrib < swr_fs->info.base.num_outputs;
@@ -620,6 +623,10 @@ PFN_PIXEL_KERNEL
 swr_compile_fs(struct swr_context *ctx, swr_jit_fs_key &key)
 {
    BuilderSWR builder(
-      reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr));
-   return builder.CompileFS(ctx, key);
+      reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr),
+      "FS");
+   PFN_PIXEL_KERNEL func = builder.CompileFS(ctx, key);
+
+   ctx->fs->map.insert(std::make_pair(key, make_unique<VariantFS>(builder.gallivm, func)));
+   return func;
 }

@@ -1030,10 +1030,9 @@ swr_update_derived(struct pipe_context *pipe,
       auto search = ctx->vs->map.find(key);
       PFN_VERTEX_FUNC func;
       if (search != ctx->vs->map.end()) {
-         func = search->second;
+         func = search->second->shader;
       } else {
          func = swr_compile_vs(ctx, key);
-         ctx->vs->map.insert(std::make_pair(key, func));
       }
       SwrSetVertexFunc(ctx->swrContext, func);
 
@@ -1062,10 +1061,9 @@ swr_update_derived(struct pipe_context *pipe,
       auto search = ctx->fs->map.find(key);
       PFN_PIXEL_KERNEL func;
       if (search != ctx->fs->map.end()) {
-         func = search->second;
+         func = search->second->shader;
       } else {
          func = swr_compile_fs(ctx, key);
-         ctx->fs->map.insert(std::make_pair(key, func));
       }
       SWR_PS_STATE psState = {0};
       psState.pfnPixelShader = func;

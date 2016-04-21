@@ -28,6 +28,7 @@
 #include "tgsi/tgsi_scan.h"
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_dump.h"
+#include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_tgsi.h"
 #include "util/u_hash.h"
 #include "api.h"
@@ -35,12 +36,24 @@
 #include "swr_shader.h"
 #include <unordered_map>
 
+template <typename T>
+struct ShaderVariant {
+   struct gallivm_state *gallivm;
+   T shader;
+
+   ShaderVariant(struct gallivm_state *gs, T code) : gallivm(gs), shader(code) {}
+   ~ShaderVariant() { gallivm_destroy(gallivm); }
+};
+
+typedef ShaderVariant<PFN_VERTEX_FUNC> VariantVS;
+typedef ShaderVariant<PFN_PIXEL_KERNEL> VariantFS;
+
 /* skeleton */
 struct swr_vertex_shader {
    struct pipe_shader_state pipe;
    struct lp_tgsi_info info;
    unsigned linkageMask;
-   std::unordered_map<swr_jit_vs_key, PFN_VERTEX_FUNC> map;
+   std::unordered_map<swr_jit_vs_key, std::unique_ptr<VariantVS>> map;
    SWR_STREAMOUT_STATE soState;
    PFN_SO_FUNC soFunc[PIPE_PRIM_MAX] {0};
 };
@@ -50,7 +63,7 @@ struct swr_fragment_shader {
    struct lp_tgsi_info info;
    uint32_t constantMask;
    uint32_t pointSpriteMask;
-   std::unordered_map<swr_jit_fs_key, PFN_PIXEL_KERNEL> map;
+   std::unordered_map<swr_jit_fs_key, std::unique_ptr<VariantFS>> map;
 };
 
 /* Vertex element state */
