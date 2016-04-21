@@ -2383,7 +2383,8 @@ Converter::handleLOAD(Value *dst0[4])
          if (!dst0[c])
             continue;
 
-         Value *off = fetchSrc(1, c);
+         // yzw are ignored for buffers
+         Value *off = fetchSrc(1, 0);
          Symbol *sym;
          if (tgsi.getSrc(1).getFile() == TGSI_FILE_IMMEDIATE) {
             off = NULL;
@@ -2522,6 +2523,7 @@ Converter::handleSTORE()
             sym = makeSym(tgsi.getDst(0).getFile(), r, -1, c,
                           tgsi.getSrc(0).getValueU32(0, info) + 4 * c);
          } else {
+            // yzw are ignored for buffers
             off = fetchSrc(0, 0);
             sym = makeSym(tgsi.getDst(0).getFile(), r, -1, c, 4 * c);
          }
