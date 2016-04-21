@@ -95,7 +95,7 @@ enum {
 typedef struct _mesa_glinterop_device_info {
    /* The caller should set this to the version of the struct they support */
    /* NOTE: Do not use the MESA_GLINTEROP_DEVICE_INFO_VERSION macro */
-   uint32_t struct_version;
+   uint32_t version;
 
    /* PCI location */
    uint32_t pci_segment_group;
@@ -127,7 +127,7 @@ typedef struct _mesa_glinterop_device_info {
 typedef struct _mesa_glinterop_export_in {
    /* The caller should set this to the version of the struct they support */
    /* NOTE: Do not use the MESA_GLINTEROP_EXPORT_IN_VERSION macro */
-   uint32_t struct_version;
+   uint32_t version;
 
    /* One of the following:
     * - GL_TEXTURE_BUFFER
@@ -187,7 +187,7 @@ typedef struct _mesa_glinterop_export_in {
 typedef struct _mesa_glinterop_export_out {
    /* The caller should set this to the version of the struct they support */
    /* NOTE: Do not use the MESA_GLINTEROP_EXPORT_OUT_VERSION macro */
-   uint32_t struct_version;
+   uint32_t version;
 
    /* The DMABUF handle. It must be closed by the caller using the POSIX
     * close() function when it's not needed anymore. Mesa is not responsible
