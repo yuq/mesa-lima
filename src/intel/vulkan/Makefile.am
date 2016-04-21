@@ -117,10 +117,12 @@ VULKAN_LIB_DEPS += \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	$(top_builddir)/src/mesa/libmesa.la \
 	$(top_builddir)/src/mesa/drivers/dri/common/libdri_test_stubs.la \
-	-lpthread -ldl -lstdc++ \
 	$(PER_GEN_LIBS) \
+	$(PTHREAD_LIBS) \
+	$(DLOPEN_LIBS) \
 	-lm
 
+nodist_EXTRA_libvulkan_intel_la_SOURCES = dummy.cpp
 libvulkan_intel_la_SOURCES = $(VULKAN_GEM_FILES)
 
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
