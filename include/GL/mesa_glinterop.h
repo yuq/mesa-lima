@@ -193,7 +193,7 @@ typedef struct _mesa_glinterop_export_out {
     * format specified by glTexStorage, glTexImage, or glRenderbufferStorage
     * will be returned.
     */
-   GLenum internalformat;
+   GLenum internal_format;
 
    /* Buffer offset and size for GL_ARRAY_BUFFER and GL_TEXTURE_BUFFER.
     * This allows interop with suballocations (a buffer allocated within

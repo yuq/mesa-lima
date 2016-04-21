@@ -1603,7 +1603,7 @@ dri2_interop_export_object(__DRIcontext *_ctx,
          return MESA_GLINTEROP_OUT_OF_RESOURCES;
       }
 
-      out->internalformat = rb->InternalFormat;
+      out->internal_format = rb->InternalFormat;
       out->view_minlevel = 0;
       out->view_numlevels = 1;
       out->view_minlayer = 0;
@@ -1659,14 +1659,14 @@ dri2_interop_export_object(__DRIcontext *_ctx,
       }
 
       if (target == GL_TEXTURE_BUFFER) {
-         out->internalformat = obj->BufferObjectFormat;
+         out->internal_format = obj->BufferObjectFormat;
          out->buf_offset = obj->BufferOffset;
          out->buf_size = obj->BufferSize == -1 ? obj->BufferObject->Size :
                                                  obj->BufferSize;
 
          obj->BufferObject->UsageHistory |= USAGE_DISABLE_MINMAX_CACHE;
       } else {
-         out->internalformat = obj->Image[0][0]->InternalFormat;
+         out->internal_format = obj->Image[0][0]->InternalFormat;
          out->view_minlevel = obj->MinLevel;
          out->view_numlevels = obj->NumLevels;
          out->view_minlayer = obj->MinLayer;
