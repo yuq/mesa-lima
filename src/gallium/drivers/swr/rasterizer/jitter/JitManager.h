@@ -184,5 +184,6 @@ struct JitManager
     void SetupNewModule();
     bool SetupModuleFromIR(const uint8_t *pIR);
 
+    void DumpAsm(Function* pFunction, const char* fileName);
     static void DumpToFile(Function *f, const char *fileName);
 };

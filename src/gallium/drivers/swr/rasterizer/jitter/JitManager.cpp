@@ -46,6 +46,8 @@
 
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/FormattedStream.h"
 
 #if LLVM_USE_INTEL_JITEVENTS
 #include "llvm/ExecutionEngine/JITEventListener.h"
@@ -248,6 +250,53 @@ bool JitManager::SetupModuleFromIR(const uint8_t *pIR)
     mIsModuleFinalized = false;
 
     return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Dump function x86 assembly to file.
+/// @note This should only be called after the module has been jitted to x86 and the
+///       module will not be further accessed.
+void JitManager::DumpAsm(Function* pFunction, const char* fileName)
+{
+    if (KNOB_DUMP_SHADER_IR)
+    {
+
+#if defined(_WIN32)
+        DWORD pid = GetCurrentProcessId();
+        TCHAR procname[MAX_PATH];
+        GetModuleFileName(NULL, procname, MAX_PATH);
+        const char* pBaseName = strrchr(procname, '\\');
+        std::stringstream outDir;
+        outDir << JITTER_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
+        CreateDirectory(outDir.str().c_str(), NULL);
+#endif
+
+        std::error_code EC;
+        Module* pModule = pFunction->getParent();
+        const char *funcName = pFunction->getName().data();
+        char fName[256];
+#if defined(_WIN32)
+        sprintf(fName, "%s\\%s.%s.asm", outDir.str().c_str(), funcName, fileName);
+#else
+        sprintf(fName, "%s.%s.asm", funcName, fileName);
+#endif
+
+#if HAVE_LLVM == 0x306
+        raw_fd_ostream fd(fName, EC, llvm::sys::fs::F_None);
+        formatted_raw_ostream filestream(fd);
+#else
+        raw_fd_ostream filestream(fName, EC, llvm::sys::fs::F_None);
+#endif
+
+        legacy::PassManager* pMPasses = new legacy::PassManager();
+        auto* pTarget = mpExec->getTargetMachine();
+        pTarget->Options.MCOptions.AsmVerbose = true;
+        pTarget->addPassesToEmitFile(*pMPasses, filestream, TargetMachine::CGFT_AssemblyFile);
+        pMPasses->run(*pModule);
+        delete pMPasses;
+        pTarget->Options.MCOptions.AsmVerbose = false;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
