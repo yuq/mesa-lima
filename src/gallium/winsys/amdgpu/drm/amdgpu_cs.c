@@ -219,6 +219,9 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_ib *ib,
    case IB_MAIN:
       buffer_size = 128 * 1024 * 4;
       ib_size = 20 * 1024 * 4;
+      break;
+   default:
+      unreachable("unhandled IB type");
    }
 
    ib->base.cdw = 0;
