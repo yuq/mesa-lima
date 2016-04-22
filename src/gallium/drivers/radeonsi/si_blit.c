@@ -135,7 +135,7 @@ static void si_blit_decompress_depth(struct pipe_context *ctx,
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
 		max_layer = util_max_layer(&texture->resource.b.b, level);
-		checked_last_layer = last_layer < max_layer ? last_layer : max_layer;
+		checked_last_layer = MIN2(last_layer, max_layer);
 
 		for (layer = first_layer; layer <= checked_last_layer; layer++) {
 			for (sample = first_sample; sample <= last_sample; sample++) {
@@ -209,7 +209,7 @@ static void si_blit_decompress_depth_in_place(struct si_context *sctx,
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
 		max_layer = util_max_layer(&texture->resource.b.b, level);
-		checked_last_layer = last_layer < max_layer ? last_layer : max_layer;
+		checked_last_layer = MIN2(last_layer, max_layer);
 
 		for (layer = first_layer; layer <= checked_last_layer; layer++) {
 			surf_tmpl.u.tex.first_layer = layer;
@@ -295,7 +295,7 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
 		max_layer = util_max_layer(&rtex->resource.b.b, level);
-		checked_last_layer = last_layer < max_layer ? last_layer : max_layer;
+		checked_last_layer = MIN2(last_layer, max_layer);
 
 		for (layer = first_layer; layer <= checked_last_layer; layer++) {
 			struct pipe_surface *cbsurf, surf_tmpl;
