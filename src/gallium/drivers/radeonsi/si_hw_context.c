@@ -114,12 +114,13 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	r600_preflush_suspend_features(&ctx->b);
 
-	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
-			SI_CONTEXT_INV_VMEM_L1 |
-			SI_CONTEXT_INV_GLOBAL_L2 |
-			SI_CONTEXT_CS_PARTIAL_FLUSH |
-			/* this is probably not needed anymore */
+	ctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH |
 			SI_CONTEXT_PS_PARTIAL_FLUSH;
+	/* The kernel doesn't flush TC for VI correctly (need TC_WB_ACTION_ENA). */
+	if (ctx->b.chip_class == VI)
+		ctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2 |
+				SI_CONTEXT_INV_VMEM_L1;
+
 	si_emit_cache_flush(ctx, NULL);
 
 	/* force to keep tiling flags */
@@ -184,13 +185,12 @@ void si_begin_new_cs(struct si_context *ctx)
 	if (ctx->trace_buf)
 		si_trace_emit(ctx);
 
-	/* Flush read caches at the beginning of CS. */
-	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
-			SI_CONTEXT_INV_VMEM_L1 |
-			SI_CONTEXT_INV_GLOBAL_L2 |
-			SI_CONTEXT_INV_SMEM_L1 |
-			SI_CONTEXT_INV_ICACHE |
-			R600_CONTEXT_START_PIPELINE_STATS;
+	/* Flush read caches at the beginning of CS not flushed by the kernel. */
+	if (ctx->b.chip_class >= CIK)
+		ctx->b.flags |= SI_CONTEXT_INV_SMEM_L1 |
+				SI_CONTEXT_INV_ICACHE;
+
+	ctx->b.flags |= R600_CONTEXT_START_PIPELINE_STATS;
 
 	/* set all valid group as dirty so they get reemited on
 	 * next draw command
