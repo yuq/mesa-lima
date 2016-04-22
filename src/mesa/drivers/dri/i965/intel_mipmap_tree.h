@@ -663,7 +663,8 @@ struct intel_mipmap_tree
 };
 
 void
-intel_get_non_msrt_mcs_alignment(const struct intel_mipmap_tree *mt,
+intel_get_non_msrt_mcs_alignment(const struct brw_context *brw,
+                                 const struct intel_mipmap_tree *mt,
                                  unsigned *width_px, unsigned *height);
 
 bool
