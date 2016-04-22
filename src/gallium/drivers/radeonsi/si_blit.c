@@ -179,31 +179,24 @@ static void si_blit_decompress_depth(struct pipe_context *ctx,
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 }
 
-static void si_blit_decompress_depth_in_place(struct si_context *sctx,
-                                              struct r600_texture *texture,
-					      bool is_stencil_sampler,
-                                              unsigned first_level, unsigned last_level,
-                                              unsigned first_layer, unsigned last_layer)
+/* Helper function for si_blit_decompress_zs_in_place.
+ */
+static void
+si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
+				      struct r600_texture *texture,
+				      unsigned planes, unsigned level_mask,
+				      unsigned first_layer, unsigned last_layer)
 {
 	struct pipe_surface *zsurf, surf_tmpl = {{0}};
 	unsigned layer, max_layer, checked_last_layer;
-	unsigned *dirty_level_mask;
-	unsigned level_mask =
-		u_bit_consecutive(first_level, last_level - first_level + 1);
+	unsigned fully_decompressed_mask = 0;
 
-	if (is_stencil_sampler) {
-		dirty_level_mask = &texture->stencil_dirty_level_mask;
-	} else {
-		dirty_level_mask = &texture->dirty_level_mask;
-	}
-
-	level_mask &= *dirty_level_mask;
 	if (!level_mask)
 		return;
 
-	if (is_stencil_sampler)
+	if (planes & PIPE_MASK_S)
 		sctx->db_flush_stencil_inplace = true;
-	else
+	if (planes & PIPE_MASK_Z)
 		sctx->db_flush_depth_inplace = true;
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
@@ -237,13 +230,63 @@ static void si_blit_decompress_depth_in_place(struct si_context *sctx,
 		/* The texture will always be dirty if some layers aren't flushed.
 		 * I don't think this case occurs often though. */
 		if (first_layer == 0 && last_layer == max_layer) {
-			*dirty_level_mask &= ~(1 << level);
+			fully_decompressed_mask |= 1u << level;
 		}
 	}
+
+	if (planes & PIPE_MASK_Z)
+		texture->dirty_level_mask &= ~fully_decompressed_mask;
+	if (planes & PIPE_MASK_S)
+		texture->stencil_dirty_level_mask &= ~fully_decompressed_mask;
 
 	sctx->db_flush_depth_inplace = false;
 	sctx->db_flush_stencil_inplace = false;
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+}
+
+/* Decompress Z and/or S planes in place, depending on mask.
+ */
+static void
+si_blit_decompress_zs_in_place(struct si_context *sctx,
+			       struct r600_texture *texture,
+			       unsigned planes,
+			       unsigned first_level, unsigned last_level,
+			       unsigned first_layer, unsigned last_layer)
+{
+	unsigned level_mask =
+		u_bit_consecutive(first_level, last_level - first_level + 1);
+	unsigned cur_level_mask;
+
+	/* First, do combined Z & S decompresses for levels that need it. */
+	if (planes == (PIPE_MASK_Z | PIPE_MASK_S)) {
+		cur_level_mask =
+			level_mask &
+			texture->dirty_level_mask &
+			texture->stencil_dirty_level_mask;
+		si_blit_decompress_zs_planes_in_place(
+				sctx, texture, PIPE_MASK_Z | PIPE_MASK_S,
+				cur_level_mask,
+				first_layer, last_layer);
+		level_mask &= ~cur_level_mask;
+	}
+
+	/* Now do separate Z and S decompresses. */
+	if (planes & PIPE_MASK_Z) {
+		cur_level_mask = level_mask & texture->dirty_level_mask;
+		si_blit_decompress_zs_planes_in_place(
+				sctx, texture, PIPE_MASK_Z,
+				cur_level_mask,
+				first_layer, last_layer);
+		level_mask &= ~cur_level_mask;
+	}
+
+	if (planes & PIPE_MASK_S) {
+		cur_level_mask = level_mask & texture->stencil_dirty_level_mask;
+		si_blit_decompress_zs_planes_in_place(
+				sctx, texture, PIPE_MASK_S,
+				cur_level_mask,
+				first_layer, last_layer);
+	}
 }
 
 static void
@@ -267,10 +310,11 @@ si_flush_depth_textures(struct si_context *sctx,
 		tex = (struct r600_texture *)view->texture;
 		assert(tex->is_depth && !tex->is_flushing_texture);
 
-		si_blit_decompress_depth_in_place(sctx, tex,
-						  sview->is_stencil_sampler,
-						  view->u.tex.first_level, view->u.tex.last_level,
-						  0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
+		si_blit_decompress_zs_in_place(sctx, tex,
+					       sview->is_stencil_sampler ? PIPE_MASK_S
+									 : PIPE_MASK_Z,
+					       view->u.tex.first_level, view->u.tex.last_level,
+					       0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
 	}
 }
 
@@ -559,13 +603,14 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 	struct r600_texture *rtex = (struct r600_texture*)tex;
 
 	if (rtex->is_depth && !rtex->is_flushing_texture) {
-		si_blit_decompress_depth_in_place(sctx, rtex, false,
-						  level, level,
-						  first_layer, last_layer);
+		unsigned planes = PIPE_MASK_Z;
+
 		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
-			si_blit_decompress_depth_in_place(sctx, rtex, true,
-							  level, level,
-							  first_layer, last_layer);
+			planes |= PIPE_MASK_S;
+
+		si_blit_decompress_zs_in_place(sctx, rtex, planes,
+					       level, level,
+					       first_layer, last_layer);
 	} else if (rtex->fmask.size || rtex->cmask.size || rtex->dcc_offset) {
 		si_blit_decompress_color(ctx, rtex, level, level,
 					 first_layer, last_layer, false);
