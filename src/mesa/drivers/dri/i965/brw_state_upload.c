@@ -667,6 +667,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_CS_WORK_GROUPS),
    DEFINE_BIT(BRW_NEW_URB_SIZE),
    DEFINE_BIT(BRW_NEW_CC_STATE),
+   DEFINE_BIT(BRW_NEW_BLORP),
    {0, 0, 0}
 };
 
