@@ -403,11 +403,13 @@ static void si_decompress_textures(struct si_context *sctx, int shader_start,
 	}
 }
 
-void si_decompress_graphics_textures(struct si_context *sctx) {
+void si_decompress_graphics_textures(struct si_context *sctx)
+{
 	si_decompress_textures(sctx, 0, SI_NUM_GRAPHICS_SHADERS);
 }
 
-void si_decompress_compute_textures(struct si_context *sctx) {
+void si_decompress_compute_textures(struct si_context *sctx)
+{
 	si_decompress_textures(sctx, SI_NUM_GRAPHICS_SHADERS, SI_NUM_SHADERS);
 }
 
