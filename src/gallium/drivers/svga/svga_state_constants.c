@@ -788,7 +788,7 @@ struct svga_tracked_state svga_hw_fs_constants =
    "hw fs params",
    (SVGA_NEW_FS_CONST_BUFFER |
     SVGA_NEW_FS_VARIANT |
-    SVGA_NEW_TEXTURE_BINDING),
+    SVGA_NEW_TEXTURE_CONSTS),
    emit_fs_consts
 };
 

@@ -291,6 +291,8 @@ struct svga_state
    struct {
       unsigned flag_1d;
       unsigned flag_srgb;
+      unsigned flag_rect;  /* sampler views with rectangular texture target */
+      unsigned flag_buf;   /* sampler views with texture buffer target */
    } tex_flags;
 
    unsigned sample_mask;
@@ -586,6 +588,7 @@ struct svga_context
 #define SVGA_NEW_GS                  0x10000000
 #define SVGA_NEW_GS_CONST_BUFFER     0x20000000
 #define SVGA_NEW_GS_VARIANT          0x40000000
+#define SVGA_NEW_TEXTURE_CONSTS      0x80000000
 
 
 
