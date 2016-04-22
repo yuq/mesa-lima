@@ -134,27 +134,15 @@ brw_blorp_compute_tile_offsets(const struct brw_blorp_surface_info *info,
 }
 
 
-brw_blorp_params::brw_blorp_params()
-   : x0(0),
-     y0(0),
-     x1(0),
-     y1(0),
-     depth_format(0),
-     hiz_op(GEN6_HIZ_OP_NONE),
-     fast_clear_op(0),
-     num_varyings(0),
-     num_draw_buffers(1),
-     num_layers(1),
-     wm_prog_kernel(0),
-     wm_prog_data(NULL)
+void
+brw_blorp_params_init(struct brw_blorp_params *params)
 {
-   memset(&src, 0, sizeof(src));
-   memset(&dst, 0, sizeof(dst));
-   memset(&depth, 0, sizeof(depth));
-   color_write_disable[0] = false;
-   color_write_disable[1] = false;
-   color_write_disable[2] = false;
-   color_write_disable[3] = false;
+   memset(params, 0, sizeof(*params));
+   params->hiz_op = GEN6_HIZ_OP_NONE;
+   params->fast_clear_op = 0;
+   params->num_varyings = 0;
+   params->num_draw_buffers = 1;
+   params->num_layers = 1;
 }
 
 extern "C" {
@@ -201,7 +189,7 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 } /* extern "C" */
 
 void
-brw_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
+brw_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
 {
    struct gl_context *ctx = &brw->ctx;
    const uint32_t estimated_max_batch_usage = brw->gen >= 8 ? 1800 : 1500;
@@ -290,7 +278,8 @@ void
 gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
                     unsigned int level, unsigned int layer, enum gen6_hiz_op op)
 {
-   brw_blorp_params params;
+   struct brw_blorp_params params;
+   brw_blorp_params_init(&params);
 
    params.hiz_op = op;
 

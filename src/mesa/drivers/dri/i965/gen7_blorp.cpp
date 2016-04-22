@@ -407,7 +407,7 @@ gen7_blorp_emit_streamout_disable(struct brw_context *brw)
 
 static void
 gen7_blorp_emit_sf_config(struct brw_context *brw,
-                          const brw_blorp_params *params)
+                          const struct brw_blorp_params *params)
 {
    /* 3DSTATE_SF
     *
@@ -461,7 +461,7 @@ gen7_blorp_emit_sf_config(struct brw_context *brw,
  */
 static void
 gen7_blorp_emit_wm_config(struct brw_context *brw,
-                          const brw_blorp_params *params)
+                          const struct brw_blorp_params *params)
 {
    const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
    uint32_t dw1 = 0, dw2 = 0;
@@ -523,7 +523,7 @@ gen7_blorp_emit_wm_config(struct brw_context *brw,
  */
 static void
 gen7_blorp_emit_ps_config(struct brw_context *brw,
-                          const brw_blorp_params *params)
+                          const struct brw_blorp_params *params)
 {
    const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
    uint32_t dw2, dw4, dw5;
@@ -631,7 +631,7 @@ gen7_blorp_emit_constant_ps_disable(struct brw_context *brw)
 
 static void
 gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
-                                     const brw_blorp_params *params)
+                                     const struct brw_blorp_params *params)
 {
    const uint8_t mocs = GEN7_MOCS_L3;
    uint32_t surfwidth, surfheight;
@@ -766,7 +766,7 @@ gen7_blorp_emit_depth_disable(struct brw_context *brw)
  */
 void
 gen7_blorp_emit_clear_params(struct brw_context *brw,
-                             const brw_blorp_params *params)
+                             const struct brw_blorp_params *params)
 {
    BEGIN_BATCH(3);
    OUT_BATCH(GEN7_3DSTATE_CLEAR_PARAMS << 16 | (3 - 2));
@@ -779,7 +779,7 @@ gen7_blorp_emit_clear_params(struct brw_context *brw,
 /* 3DPRIMITIVE */
 void
 gen7_blorp_emit_primitive(struct brw_context *brw,
-                          const brw_blorp_params *params)
+                          const struct brw_blorp_params *params)
 {
    BEGIN_BATCH(7);
    OUT_BATCH(CMD_3D_PRIM << 16 | (7 - 2));
@@ -799,7 +799,7 @@ gen7_blorp_emit_primitive(struct brw_context *brw,
  */
 void
 gen7_blorp_exec(struct brw_context *brw,
-                const brw_blorp_params *params)
+                const struct brw_blorp_params *params)
 {
    if (brw->gen >= 8)
       return;

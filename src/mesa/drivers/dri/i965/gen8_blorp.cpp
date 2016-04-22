@@ -126,7 +126,7 @@ gen8_blorp_emit_surface_state(struct brw_context *brw,
 
 static uint32_t
 gen8_blorp_emit_blend_state(struct brw_context *brw,
-                            const brw_blorp_params *params)
+                            const struct brw_blorp_params *params)
 {
    uint32_t blend_state_offset;
 
@@ -292,7 +292,7 @@ gen8_blorp_emit_raster_state(struct brw_context *brw)
 
 static void
 gen8_blorp_emit_sbe_state(struct brw_context *brw,
-                          const brw_blorp_params *params)
+                          const struct brw_blorp_params *params)
 {
    /* 3DSTATE_SBE */
    {
@@ -369,7 +369,7 @@ gen8_blorp_emit_wm_state(struct brw_context *brw)
  */
 static void
 gen8_blorp_emit_ps_config(struct brw_context *brw,
-                          const brw_blorp_params *params)
+                          const struct brw_blorp_params *params)
 {
    const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
    uint32_t dw3, dw5, dw6, dw7;
@@ -429,7 +429,7 @@ gen8_blorp_emit_ps_blend(struct brw_context *brw)
 
 static void
 gen8_blorp_emit_ps_extra(struct brw_context *brw,
-                         const brw_blorp_params *params)
+                         const struct brw_blorp_params *params)
 {
    const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
    uint32_t dw1 = 0;
@@ -530,7 +530,7 @@ gen8_blorp_emit_vf_state(struct brw_context *brw)
 
 static void
 gen8_blorp_emit_depth_stencil_state(struct brw_context *brw,
-                                    const brw_blorp_params *params)
+                                    const struct brw_blorp_params *params)
 {
    const unsigned pkt_len = brw->gen >= 9 ? 4 : 3;
 
@@ -585,7 +585,7 @@ gen8_blorp_emit_constant_ps(struct brw_context *brw,
 
 static uint32_t
 gen8_blorp_emit_surface_states(struct brw_context *brw,
-                               const brw_blorp_params *params)
+                               const struct brw_blorp_params *params)
 {
    uint32_t wm_surf_offset_renderbuffer;
    uint32_t wm_surf_offset_texture = 0;
@@ -628,7 +628,7 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
  * \copydoc gen6_blorp_exec()
  */
 void
-gen8_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
+gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
 {
    uint32_t wm_bind_bo_offset = 0;
 

@@ -1896,7 +1896,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    if (!encode_srgb && _mesa_get_format_color_encoding(dst_format) == GL_SRGB)
       dst_format = _mesa_get_srgb_format_linear(dst_format);
 
-   brw_blorp_params params;
+   struct brw_blorp_params params;
+   brw_blorp_params_init(&params);
 
    brw_blorp_surface_info_init(brw, &params.src, src_mt, src_level,
                                src_layer, src_format, false);
