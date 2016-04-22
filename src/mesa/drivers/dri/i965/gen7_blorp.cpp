@@ -597,7 +597,7 @@ gen7_blorp_emit_constant_ps(struct brw_context *brw,
    /* Make sure the push constants fill an exact integer number of
     * registers.
     */
-   assert(sizeof(brw_blorp_wm_push_constants) % 32 == 0);
+   assert(sizeof(struct brw_blorp_wm_push_constants) % 32 == 0);
 
    /* There must be at least one register worth of push constant data. */
    assert(BRW_BLORP_NUM_PUSH_CONST_REGS > 0);

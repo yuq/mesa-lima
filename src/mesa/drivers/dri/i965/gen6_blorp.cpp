@@ -693,7 +693,7 @@ gen6_blorp_emit_constant_ps(struct brw_context *brw,
    /* Make sure the push constants fill an exact integer number of
     * registers.
     */
-   assert(sizeof(brw_blorp_wm_push_constants) % 32 == 0);
+   assert(sizeof(struct brw_blorp_wm_push_constants) % 32 == 0);
 
    /* There must be at least one register worth of push constant data. */
    assert(BRW_BLORP_NUM_PUSH_CONST_REGS > 0);
@@ -922,7 +922,7 @@ gen6_blorp_emit_drawing_rectangle(struct brw_context *brw,
 }
 
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
-void
+static void
 gen6_blorp_emit_viewport_state(struct brw_context *brw,
 			       const struct brw_blorp_params *params)
 {

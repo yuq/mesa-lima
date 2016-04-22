@@ -599,7 +599,7 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
                                     true /* is_render_target */);
    if (params->src.mt) {
       const struct brw_blorp_surface_info *surface = &params->src;
-      intel_mipmap_tree *mt = surface->mt;
+      struct intel_mipmap_tree *mt = surface->mt;
 
       /* Textures are always sampled as 2D. */
       const bool is_cube = mt->target == GL_TEXTURE_CUBE_MAP_ARRAY ||
