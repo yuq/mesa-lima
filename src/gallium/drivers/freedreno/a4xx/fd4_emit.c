@@ -657,11 +657,8 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A4XX_RB_FS_OUTPUT_SAMPLE_MASK(0xffff));
 	}
 
-	if (dirty & (FD_DIRTY_BLEND_COLOR | FD_DIRTY_FRAMEBUFFER)) {
+	if (dirty & FD_DIRTY_BLEND_COLOR) {
 		struct pipe_blend_color *bcolor = &ctx->blend_color;
-		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
-
-		/* TODO make this a state obj? */
 
 		OUT_PKT0(ring, REG_A4XX_RB_BLEND_RED, 8);
 		OUT_RING(ring, A4XX_RB_BLEND_RED_FLOAT(bcolor->color[0]) |
