@@ -521,6 +521,7 @@ construct_value(const nir_search_value *value,
          default:
             unreachable("unknown bit size");
          }
+         break;
 
       case nir_type_bool32:
          load->value.u32[0] = c->data.u;
