@@ -309,6 +309,7 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 		bool need_dcc_decompress)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	void* custom_blend;
 	unsigned layer, checked_last_layer, max_layer;
 	unsigned level_mask =
 		u_bit_consecutive(first_level, last_level - first_level + 1);
@@ -318,17 +319,16 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 	if (!level_mask)
 		return;
 
+	if (rtex->dcc_offset && need_dcc_decompress) {
+		custom_blend = sctx->custom_blend_dcc_decompress;
+	} else if (rtex->fmask.size) {
+		custom_blend = sctx->custom_blend_decompress;
+	} else {
+		custom_blend = sctx->custom_blend_fastclear;
+	}
+
 	while (level_mask) {
 		unsigned level = u_bit_scan(&level_mask);
-		void* custom_blend;
-
-		if (rtex->dcc_offset && need_dcc_decompress) {
-			custom_blend = sctx->custom_blend_dcc_decompress;
-		} else if (rtex->fmask.size) {
-			custom_blend = sctx->custom_blend_decompress;
-		} else {
-			custom_blend = sctx->custom_blend_fastclear;
-		}
 
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
