@@ -226,9 +226,6 @@ static int compute_level(struct amdgpu_winsys *ws,
       surf_level->nblk_z = 1;
 
    switch (AddrSurfInfoOut->tileMode) {
-   case ADDR_TM_LINEAR_GENERAL:
-      surf_level->mode = RADEON_SURF_MODE_LINEAR;
-      break;
    case ADDR_TM_LINEAR_ALIGNED:
       surf_level->mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
       break;
@@ -316,9 +313,6 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
 
    /* Set the requested tiling mode. */
    switch (mode) {
-   case RADEON_SURF_MODE_LINEAR:
-      AddrSurfInfoIn.tileMode = ADDR_TM_LINEAR_GENERAL;
-      break;
    case RADEON_SURF_MODE_LINEAR_ALIGNED:
       AddrSurfInfoIn.tileMode = ADDR_TM_LINEAR_ALIGNED;
       break;

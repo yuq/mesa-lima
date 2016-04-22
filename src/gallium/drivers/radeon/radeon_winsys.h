@@ -326,7 +326,6 @@ enum radeon_feature_id {
 #define     RADEON_SURF_TYPE_2D_ARRAY               5
 #define RADEON_SURF_MODE_MASK                   0xFF
 #define RADEON_SURF_MODE_SHIFT                  8
-#define     RADEON_SURF_MODE_LINEAR                 0
 #define     RADEON_SURF_MODE_LINEAR_ALIGNED         1
 #define     RADEON_SURF_MODE_1D                     2
 #define     RADEON_SURF_MODE_2D                     3

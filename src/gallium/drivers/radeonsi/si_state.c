@@ -58,15 +58,13 @@ void si_init_atom(struct si_context *sctx, struct r600_atom *atom,
 unsigned si_array_mode(unsigned mode)
 {
 	switch (mode) {
+	default:
 	case RADEON_SURF_MODE_LINEAR_ALIGNED:
 		return V_009910_ARRAY_LINEAR_ALIGNED;
 	case RADEON_SURF_MODE_1D:
 		return V_009910_ARRAY_1D_TILED_THIN1;
 	case RADEON_SURF_MODE_2D:
 		return V_009910_ARRAY_2D_TILED_THIN1;
-	default:
-	case RADEON_SURF_MODE_LINEAR:
-		return V_009910_ARRAY_LINEAR_GENERAL;
 	}
 }
 
@@ -2119,17 +2117,8 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	int i;
 	unsigned blend_clamp = 0, blend_bypass = 0;
 
-	/* Layered rendering doesn't work with LINEAR_GENERAL.
-	 * (LINEAR_ALIGNED and others work) */
-	if (rtex->surface.level[level].mode == RADEON_SURF_MODE_LINEAR) {
-		assert(surf->base.u.tex.first_layer == surf->base.u.tex.last_layer);
-		offset += rtex->surface.level[level].slice_size *
-			  surf->base.u.tex.first_layer;
-		color_view = 0;
-	} else {
-		color_view = S_028C6C_SLICE_START(surf->base.u.tex.first_layer) |
-			     S_028C6C_SLICE_MAX(surf->base.u.tex.last_layer);
-	}
+	color_view = S_028C6C_SLICE_START(surf->base.u.tex.first_layer) |
+		     S_028C6C_SLICE_MAX(surf->base.u.tex.last_layer);
 
 	pitch = (rtex->surface.level[level].nblk_x) / 8 - 1;
 	slice = (rtex->surface.level[level].nblk_x * rtex->surface.level[level].nblk_y) / 64;
@@ -2346,7 +2335,6 @@ static void si_init_depth_surface(struct si_context *sctx,
 			break;
 		case RADEON_SURF_MODE_1D:
 		case RADEON_SURF_MODE_LINEAR_ALIGNED:
-		case RADEON_SURF_MODE_LINEAR:
 		default:
 			array_mode = V_02803C_ARRAY_1D_TILED_THIN1;
 			break;

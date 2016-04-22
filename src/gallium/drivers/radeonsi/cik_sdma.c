@@ -126,17 +126,14 @@ static void cik_sdma_copy_tile(struct si_context *ctx,
 
 	dst_mode = rdst->surface.level[dst_level].mode;
 	src_mode = rsrc->surface.level[src_level].mode;
-	/* downcast linear aligned to linear to simplify test */
-	src_mode = src_mode == RADEON_SURF_MODE_LINEAR_ALIGNED ? RADEON_SURF_MODE_LINEAR : src_mode;
-	dst_mode = dst_mode == RADEON_SURF_MODE_LINEAR_ALIGNED ? RADEON_SURF_MODE_LINEAR : dst_mode;
 	assert(dst_mode != src_mode);
-	assert(src_mode == RADEON_SURF_MODE_LINEAR || dst_mode == RADEON_SURF_MODE_LINEAR);
+	assert(src_mode == RADEON_SURF_MODE_LINEAR_ALIGNED || dst_mode == RADEON_SURF_MODE_LINEAR_ALIGNED);
 
 	sub_op = CIK_SDMA_COPY_SUB_OPCODE_TILED;
 	lbpe = util_logbase2(bpe);
 	pitch_tile_max = ((pitch / bpe) / 8) - 1;
 
-	detile = dst_mode == RADEON_SURF_MODE_LINEAR;
+	detile = dst_mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
 	rlinear = detile ? rdst : rsrc;
 	rtiled = detile ? rsrc : rdst;
 	linear_lvl = detile ? dst_level : src_level;
@@ -276,12 +273,9 @@ void cik_sdma_copy(struct pipe_context *ctx,
 	copy_height = src_box->height / rsrc->surface.blk_h;
 	dst_mode = rdst->surface.level[dst_level].mode;
 	src_mode = rsrc->surface.level[src_level].mode;
-	/* downcast linear aligned to linear to simplify test */
-	src_mode = src_mode == RADEON_SURF_MODE_LINEAR_ALIGNED ? RADEON_SURF_MODE_LINEAR : src_mode;
-	dst_mode = dst_mode == RADEON_SURF_MODE_LINEAR_ALIGNED ? RADEON_SURF_MODE_LINEAR : dst_mode;
 
 	/* Dimensions must be aligned to (macro)tiles */
-	switch (src_mode == RADEON_SURF_MODE_LINEAR ? dst_mode : src_mode) {
+	switch (src_mode == RADEON_SURF_MODE_LINEAR_ALIGNED ? dst_mode : src_mode) {
 	case RADEON_SURF_MODE_1D:
 		if ((src_x % 8) || (src_y % 8) || (dst_x % 8) || (dst_y % 8) ||
 		    (copy_height % 8))
