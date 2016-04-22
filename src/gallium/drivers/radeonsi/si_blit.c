@@ -596,17 +596,17 @@ static void si_clear_depth_stencil(struct pipe_context *ctx,
  * rendering. */
 static void si_decompress_subresource(struct pipe_context *ctx,
 				      struct pipe_resource *tex,
-				      unsigned level,
+				      unsigned planes, unsigned level,
 				      unsigned first_layer, unsigned last_layer)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct r600_texture *rtex = (struct r600_texture*)tex;
 
 	if (rtex->is_depth && !rtex->is_flushing_texture) {
-		unsigned planes = PIPE_MASK_Z;
+		planes &= PIPE_MASK_Z | PIPE_MASK_S;
 
-		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
-			planes |= PIPE_MASK_S;
+		if (!(rtex->surface.flags & RADEON_SURF_SBUFFER))
+			planes &= ~PIPE_MASK_S;
 
 		si_blit_decompress_zs_in_place(sctx, rtex, planes,
 					       level, level,
@@ -652,7 +652,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 
 	/* The driver doesn't decompress resources automatically while
 	 * u_blitter is rendering. */
-	si_decompress_subresource(ctx, src, src_level,
+	si_decompress_subresource(ctx, src, PIPE_MASK_RGBAZS, src_level,
 				  src_box->z, src_box->z + src_box->depth - 1);
 
 	dst_width = u_minify(dst->width0, dst_level);
@@ -868,7 +868,8 @@ static void si_blit(struct pipe_context *ctx,
 
 	/* The driver doesn't decompress resources automatically while
 	 * u_blitter is rendering. */
-	si_decompress_subresource(ctx, info->src.resource, info->src.level,
+	si_decompress_subresource(ctx, info->src.resource, info->mask,
+				  info->src.level,
 				  info->src.box.z,
 				  info->src.box.z + info->src.box.depth - 1);
 
