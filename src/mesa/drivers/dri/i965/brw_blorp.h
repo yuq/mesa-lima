@@ -232,9 +232,7 @@ struct brw_blorp_prog_data
 class brw_blorp_params
 {
 public:
-   brw_blorp_params(unsigned num_varyings = 0,
-                    unsigned num_draw_buffers = 1,
-                    unsigned num_layers = 1);
+   brw_blorp_params();
 
    uint32_t x0;
    uint32_t y0;
