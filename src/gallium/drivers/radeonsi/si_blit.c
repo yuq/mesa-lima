@@ -108,18 +108,13 @@ static void si_blit_decompress_depth(struct pipe_context *ctx,
 				     unsigned first_sample, unsigned last_sample)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	unsigned layer, level, sample, checked_last_layer, max_layer, max_sample;
+	unsigned layer, level, sample, checked_last_layer, max_layer;
 	float depth = 1.0f;
 	const struct util_format_description *desc;
-	struct r600_texture *flushed_depth_texture = staging ?
-			staging : texture->flushed_depth_texture;
 
-	if (!staging && !texture->dirty_level_mask)
-		return;
+	assert(staging != NULL && "use si_blit_decompress_zs_in_place instead");
 
-	max_sample = u_max_sample(&texture->resource.b.b);
-
-	desc = util_format_description(flushed_depth_texture->resource.b.b.format);
+	desc = util_format_description(staging->resource.b.b.format);
 
 	if (util_format_has_depth(desc))
 		sctx->dbcb_depth_copy_enabled = true;
@@ -129,9 +124,6 @@ static void si_blit_decompress_depth(struct pipe_context *ctx,
 	assert(sctx->dbcb_depth_copy_enabled || sctx->dbcb_stencil_copy_enabled);
 
 	for (level = first_level; level <= last_level; level++) {
-		if (!staging && !(texture->dirty_level_mask & (1 << level)))
-			continue;
-
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
 		max_layer = util_max_layer(&texture->resource.b.b, level);
@@ -151,9 +143,9 @@ static void si_blit_decompress_depth(struct pipe_context *ctx,
 
 				zsurf = ctx->create_surface(ctx, &texture->resource.b.b, &surf_tmpl);
 
-				surf_tmpl.format = flushed_depth_texture->resource.b.b.format;
+				surf_tmpl.format = staging->resource.b.b.format;
 				cbsurf = ctx->create_surface(ctx,
-						(struct pipe_resource*)flushed_depth_texture, &surf_tmpl);
+						(struct pipe_resource*)staging, &surf_tmpl);
 
 				si_blitter_begin(ctx, SI_DECOMPRESS);
 				util_blitter_custom_depth_stencil(sctx->blitter, zsurf, cbsurf, 1 << sample,
@@ -163,14 +155,6 @@ static void si_blit_decompress_depth(struct pipe_context *ctx,
 				pipe_surface_reference(&zsurf, NULL);
 				pipe_surface_reference(&cbsurf, NULL);
 			}
-		}
-
-		/* The texture will always be dirty if some layers aren't flushed.
-		 * I don't think this case can occur though. */
-		if (!staging &&
-		    first_layer == 0 && last_layer == max_layer &&
-		    first_sample == 0 && last_sample == max_sample) {
-			texture->dirty_level_mask &= ~(1 << level);
 		}
 	}
 
