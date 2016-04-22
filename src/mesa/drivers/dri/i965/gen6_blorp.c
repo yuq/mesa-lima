@@ -1047,4 +1047,3 @@ gen6_blorp_exec(struct brw_context *brw,
    gen6_blorp_emit_drawing_rectangle(brw, params);
    gen6_blorp_emit_primitive(brw, params);
 }
-

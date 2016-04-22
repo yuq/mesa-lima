@@ -2657,6 +2657,9 @@ AC_OUTPUT
 # Fix up dependencies in *.Plo files, where we changed the extension of a
 # source file
 $SED -i -e 's/brw_blorp.cpp/brw_blorp.c/' src/mesa/drivers/dri/i965/.deps/brw_blorp.Plo
+$SED -i -e 's/gen6_blorp.cpp/gen6_blorp.c/' src/mesa/drivers/dri/i965/.deps/gen6_blorp.Plo
+$SED -i -e 's/gen7_blorp.cpp/gen7_blorp.c/' src/mesa/drivers/dri/i965/.deps/gen7_blorp.Plo
+$SED -i -e 's/gen8_blorp.cpp/gen8_blorp.c/' src/mesa/drivers/dri/i965/.deps/gen8_blorp.Plo
 
 
 dnl
