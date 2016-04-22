@@ -660,46 +660,25 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	if (dirty & (FD_DIRTY_BLEND_COLOR | FD_DIRTY_FRAMEBUFFER)) {
 		struct pipe_blend_color *bcolor = &ctx->blend_color;
 		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
-		float factor = 65535.0;
-		int i;
 
-		for (i = 0; i < pfb->nr_cbufs; i++) {
-			enum pipe_format format = pipe_surface_format(pfb->cbufs[i]);
-			const struct util_format_description *desc =
-				util_format_description(format);
-			int j;
-
-			if (desc->is_mixed)
-				continue;
-
-			j = util_format_get_first_non_void_channel(format);
-			if (j == -1)
-				continue;
-
-			if (desc->channel[j].size > 8 || !desc->channel[j].normalized ||
-				desc->channel[j].pure_integer)
-				continue;
-
-			/* Just use the first unorm8/snorm8 render buffer. Can't keep
-			 * everyone happy.
-			 */
-			if (desc->channel[j].type == UTIL_FORMAT_TYPE_SIGNED)
-				factor = 32767.0;
-			break;
-		}
+		/* TODO make this a state obj? */
 
 		OUT_PKT0(ring, REG_A4XX_RB_BLEND_RED, 8);
-		OUT_RING(ring, A4XX_RB_BLEND_RED_UINT(bcolor->color[0] * factor) |
-				A4XX_RB_BLEND_RED_FLOAT(bcolor->color[0]));
+		OUT_RING(ring, A4XX_RB_BLEND_RED_FLOAT(bcolor->color[0]) |
+				A4XX_RB_BLEND_RED_UINT(bcolor->color[0] * 0xff) |
+				A4XX_RB_BLEND_RED_SINT(bcolor->color[0] * 0x7f));
 		OUT_RING(ring, A4XX_RB_BLEND_RED_F32(bcolor->color[0]));
-		OUT_RING(ring, A4XX_RB_BLEND_GREEN_UINT(bcolor->color[1] * factor) |
-				A4XX_RB_BLEND_GREEN_FLOAT(bcolor->color[1]));
-		OUT_RING(ring, A4XX_RB_BLEND_GREEN_F32(bcolor->color[1]));
-		OUT_RING(ring, A4XX_RB_BLEND_BLUE_UINT(bcolor->color[2] * factor) |
-				A4XX_RB_BLEND_BLUE_FLOAT(bcolor->color[2]));
+		OUT_RING(ring, A4XX_RB_BLEND_GREEN_FLOAT(bcolor->color[1]) |
+				A4XX_RB_BLEND_GREEN_UINT(bcolor->color[1] * 0xff) |
+				A4XX_RB_BLEND_GREEN_SINT(bcolor->color[1] * 0x7f));
+		OUT_RING(ring, A4XX_RB_BLEND_RED_F32(bcolor->color[1]));
+		OUT_RING(ring, A4XX_RB_BLEND_BLUE_FLOAT(bcolor->color[2]) |
+				A4XX_RB_BLEND_BLUE_UINT(bcolor->color[2] * 0xff) |
+				A4XX_RB_BLEND_BLUE_SINT(bcolor->color[2] * 0x7f));
 		OUT_RING(ring, A4XX_RB_BLEND_BLUE_F32(bcolor->color[2]));
-		OUT_RING(ring, A4XX_RB_BLEND_ALPHA_UINT(bcolor->color[3] * factor) |
-				A4XX_RB_BLEND_ALPHA_FLOAT(bcolor->color[3]));
+		OUT_RING(ring, A4XX_RB_BLEND_ALPHA_FLOAT(bcolor->color[3]) |
+				A4XX_RB_BLEND_ALPHA_UINT(bcolor->color[3] * 0xff) |
+				A4XX_RB_BLEND_ALPHA_SINT(bcolor->color[3] * 0x7f));
 		OUT_RING(ring, A4XX_RB_BLEND_ALPHA_F32(bcolor->color[3]));
 	}
 
