@@ -25,6 +25,7 @@
 #include "main/blend.h"
 #include "main/fbobject.h"
 #include "main/renderbuffer.h"
+#include "main/glformats.h"
 
 #include "util/ralloc.h"
 
@@ -135,6 +136,29 @@ brw_blorp_const_color_program::~brw_blorp_const_color_program()
    ralloc_free(mem_ctx);
 }
 
+static bool
+set_write_disables(const struct intel_renderbuffer *irb, 
+                   const GLubyte *color_mask, bool *color_write_disable)
+{
+   /* Format information in the renderbuffer represents the requirements
+    * given by the client. There are cases where the backing miptree uses,
+    * for example, RGBA to represent RGBX. Since the client is only expecting
+    * RGB we can treat alpha as not used and write whatever we like into it.
+    */
+   const GLenum base_format = irb->Base.Base._BaseFormat;
+   const int components = _mesa_base_format_component_count(base_format);
+   bool disables = false;
+
+   assert(components > 0);
+
+   for (int i = 0; i < components; i++) {
+      color_write_disable[i] = !color_mask[i];
+      disables = disables || !color_mask[i];
+   }
+
+   return disables;
+}
+
 brw_blorp_clear_params::brw_blorp_clear_params(struct brw_context *brw,
                                                struct gl_framebuffer *fb,
                                                struct gl_renderbuffer *rb,
@@ -185,13 +209,8 @@ brw_blorp_clear_params::brw_blorp_clear_params(struct brw_context *brw,
    /* Constant color writes ignore everyting in blend and color calculator
     * state.  This is not documented.
     */
-   for (int i = 0; i < 4; i++) {
-      if (_mesa_format_has_color_component(irb->mt->format, i) &&
-          !color_mask[i]) {
-         color_write_disable[i] = true;
-         wm_prog_key.use_simd16_replicated_data = false;
-      }
-   }
+   if (set_write_disables(irb, color_mask, color_write_disable))
+      wm_prog_key.use_simd16_replicated_data = false;
 
    if (irb->mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS &&
        !partial_clear && wm_prog_key.use_simd16_replicated_data &&
