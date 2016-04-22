@@ -14,7 +14,7 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  11518 bytes, from 2016-02-10 21:03:25)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  16185 bytes, from 2016-03-05 03:08:05)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83967 bytes, from 2016-02-10 17:07:21)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110342 bytes, from 2016-03-07 11:20:29)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110558 bytes, from 2016-04-22 18:36:21)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -1074,11 +1074,17 @@ static inline uint32_t A4XX_RB_MRT_BLEND_CONTROL_ALPHA_DEST_FACTOR(enum adreno_r
 }
 
 #define REG_A4XX_RB_BLEND_RED					0x000020f0
-#define A4XX_RB_BLEND_RED_UINT__MASK				0x0000ffff
+#define A4XX_RB_BLEND_RED_UINT__MASK				0x000000ff
 #define A4XX_RB_BLEND_RED_UINT__SHIFT				0
 static inline uint32_t A4XX_RB_BLEND_RED_UINT(uint32_t val)
 {
 	return ((val) << A4XX_RB_BLEND_RED_UINT__SHIFT) & A4XX_RB_BLEND_RED_UINT__MASK;
+}
+#define A4XX_RB_BLEND_RED_SINT__MASK				0x0000ff00
+#define A4XX_RB_BLEND_RED_SINT__SHIFT				8
+static inline uint32_t A4XX_RB_BLEND_RED_SINT(uint32_t val)
+{
+	return ((val) << A4XX_RB_BLEND_RED_SINT__SHIFT) & A4XX_RB_BLEND_RED_SINT__MASK;
 }
 #define A4XX_RB_BLEND_RED_FLOAT__MASK				0xffff0000
 #define A4XX_RB_BLEND_RED_FLOAT__SHIFT				16
@@ -1096,11 +1102,17 @@ static inline uint32_t A4XX_RB_BLEND_RED_F32(float val)
 }
 
 #define REG_A4XX_RB_BLEND_GREEN					0x000020f2
-#define A4XX_RB_BLEND_GREEN_UINT__MASK				0x0000ffff
+#define A4XX_RB_BLEND_GREEN_UINT__MASK				0x000000ff
 #define A4XX_RB_BLEND_GREEN_UINT__SHIFT				0
 static inline uint32_t A4XX_RB_BLEND_GREEN_UINT(uint32_t val)
 {
 	return ((val) << A4XX_RB_BLEND_GREEN_UINT__SHIFT) & A4XX_RB_BLEND_GREEN_UINT__MASK;
+}
+#define A4XX_RB_BLEND_GREEN_SINT__MASK				0x0000ff00
+#define A4XX_RB_BLEND_GREEN_SINT__SHIFT				8
+static inline uint32_t A4XX_RB_BLEND_GREEN_SINT(uint32_t val)
+{
+	return ((val) << A4XX_RB_BLEND_GREEN_SINT__SHIFT) & A4XX_RB_BLEND_GREEN_SINT__MASK;
 }
 #define A4XX_RB_BLEND_GREEN_FLOAT__MASK				0xffff0000
 #define A4XX_RB_BLEND_GREEN_FLOAT__SHIFT			16
@@ -1118,11 +1130,17 @@ static inline uint32_t A4XX_RB_BLEND_GREEN_F32(float val)
 }
 
 #define REG_A4XX_RB_BLEND_BLUE					0x000020f4
-#define A4XX_RB_BLEND_BLUE_UINT__MASK				0x0000ffff
+#define A4XX_RB_BLEND_BLUE_UINT__MASK				0x000000ff
 #define A4XX_RB_BLEND_BLUE_UINT__SHIFT				0
 static inline uint32_t A4XX_RB_BLEND_BLUE_UINT(uint32_t val)
 {
 	return ((val) << A4XX_RB_BLEND_BLUE_UINT__SHIFT) & A4XX_RB_BLEND_BLUE_UINT__MASK;
+}
+#define A4XX_RB_BLEND_BLUE_SINT__MASK				0x0000ff00
+#define A4XX_RB_BLEND_BLUE_SINT__SHIFT				8
+static inline uint32_t A4XX_RB_BLEND_BLUE_SINT(uint32_t val)
+{
+	return ((val) << A4XX_RB_BLEND_BLUE_SINT__SHIFT) & A4XX_RB_BLEND_BLUE_SINT__MASK;
 }
 #define A4XX_RB_BLEND_BLUE_FLOAT__MASK				0xffff0000
 #define A4XX_RB_BLEND_BLUE_FLOAT__SHIFT				16
@@ -1140,11 +1158,17 @@ static inline uint32_t A4XX_RB_BLEND_BLUE_F32(float val)
 }
 
 #define REG_A4XX_RB_BLEND_ALPHA					0x000020f6
-#define A4XX_RB_BLEND_ALPHA_UINT__MASK				0x0000ffff
+#define A4XX_RB_BLEND_ALPHA_UINT__MASK				0x000000ff
 #define A4XX_RB_BLEND_ALPHA_UINT__SHIFT				0
 static inline uint32_t A4XX_RB_BLEND_ALPHA_UINT(uint32_t val)
 {
 	return ((val) << A4XX_RB_BLEND_ALPHA_UINT__SHIFT) & A4XX_RB_BLEND_ALPHA_UINT__MASK;
+}
+#define A4XX_RB_BLEND_ALPHA_SINT__MASK				0x0000ff00
+#define A4XX_RB_BLEND_ALPHA_SINT__SHIFT				8
+static inline uint32_t A4XX_RB_BLEND_ALPHA_SINT(uint32_t val)
+{
+	return ((val) << A4XX_RB_BLEND_ALPHA_SINT__SHIFT) & A4XX_RB_BLEND_ALPHA_SINT__MASK;
 }
 #define A4XX_RB_BLEND_ALPHA_FLOAT__MASK				0xffff0000
 #define A4XX_RB_BLEND_ALPHA_FLOAT__SHIFT			16
