@@ -31,54 +31,6 @@
 
 #include "brw_blorp.h"
 
-/**
- * CMD_STATE_BASE_ADDRESS
- *
- * From the Sandy Bridge PRM, Volume 1, Part 1, Table STATE_BASE_ADDRESS:
- *     The following commands must be reissued following any change to the
- *     base addresses:
- *         3DSTATE_CC_POINTERS
- *         3DSTATE_BINDING_TABLE_POINTERS
- *         3DSTATE_SAMPLER_STATE_POINTERS
- *         3DSTATE_VIEWPORT_STATE_POINTERS
- *         MEDIA_STATE_POINTERS
- */
-void
-gen6_blorp_emit_state_base_address(struct brw_context *brw,
-                                   const brw_blorp_params *params)
-{
-   uint8_t mocs = brw->gen == 7 ? GEN7_MOCS_L3 : 0;
-
-   BEGIN_BATCH(10);
-   OUT_BATCH(CMD_STATE_BASE_ADDRESS << 16 | (10 - 2));
-   OUT_BATCH(mocs << 8 | /* GeneralStateMemoryObjectControlState */
-             mocs << 4 | /* StatelessDataPortAccessMemoryObjectControlState */
-             1); /* GeneralStateBaseAddressModifyEnable */
-
-   /* SurfaceStateBaseAddress */
-   OUT_RELOC(brw->batch.bo, I915_GEM_DOMAIN_SAMPLER, 0, 1);
-   /* DynamicStateBaseAddress */
-   OUT_RELOC(brw->batch.bo, (I915_GEM_DOMAIN_RENDER |
-                               I915_GEM_DOMAIN_INSTRUCTION), 0, 1);
-   OUT_BATCH(1); /* IndirectObjectBaseAddress */
-   if (params->use_wm_prog) {
-      OUT_RELOC(brw->cache.bo, I915_GEM_DOMAIN_INSTRUCTION, 0,
-                1); /* Instruction base address: shader kernels */
-   } else {
-      OUT_BATCH(1); /* InstructionBaseAddress */
-   }
-   OUT_BATCH(1); /* GeneralStateUpperBound */
-   /* Dynamic state upper bound.  Although the documentation says that
-    * programming it to zero will cause it to be ignored, that is a lie.
-    * If this isn't programmed to a real bound, the sampler border color
-    * pointer is rejected, causing border color to mysteriously fail.
-    */
-   OUT_BATCH(0xfffff001);
-   OUT_BATCH(1); /* IndirectObjectUpperBound*/
-   OUT_BATCH(1); /* InstructionAccessUpperBound */
-   ADVANCE_BATCH();
-}
-
 static void
 gen6_blorp_emit_vertex_buffer_state(struct brw_context *brw,
                                     unsigned num_elems,
@@ -1037,11 +989,12 @@ gen6_blorp_exec(struct brw_context *brw,
    /* Emit workaround flushes when we switch from drawing to blorping. */
    brw_emit_post_sync_nonzero_flush(brw);
 
+   brw_state_base_address.emit(brw);
+
    gen6_emit_3dstate_multisample(brw, params->dst.num_samples);
    gen6_emit_3dstate_sample_mask(brw,
                                  params->dst.num_samples > 1 ?
                                  (1 << params->dst.num_samples) - 1 : 1);
-   gen6_blorp_emit_state_base_address(brw, params);
    gen6_blorp_emit_vertices(brw, params);
    gen6_blorp_emit_urb_config(brw, params);
    if (params->use_wm_prog) {

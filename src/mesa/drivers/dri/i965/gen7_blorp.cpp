@@ -813,11 +813,13 @@ gen7_blorp_exec(struct brw_context *brw,
    uint32_t wm_bind_bo_offset = 0;
 
    uint32_t prog_offset = params->get_wm_prog(brw, &prog_data);
+
+   brw_state_base_address.emit(brw);
+
    gen6_emit_3dstate_multisample(brw, params->dst.num_samples);
    gen6_emit_3dstate_sample_mask(brw,
                                  params->dst.num_samples > 1 ?
                                  (1 << params->dst.num_samples) - 1 : 1);
-   gen6_blorp_emit_state_base_address(brw, params);
    gen6_blorp_emit_vertices(brw, params);
    gen7_blorp_emit_urb_config(brw);
    if (params->use_wm_prog) {

@@ -406,10 +406,6 @@ void
 gen6_blorp_init(struct brw_context *brw);
 
 void
-gen6_blorp_emit_state_base_address(struct brw_context *brw,
-                                   const brw_blorp_params *params);
-
-void
 gen6_blorp_emit_vertices(struct brw_context *brw,
                          const brw_blorp_params *params);
 
