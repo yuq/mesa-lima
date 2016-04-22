@@ -241,22 +241,6 @@ ntq_rsq(struct vc4_compile *c, struct qreg x)
 }
 
 static struct qreg
-qir_srgb_decode(struct vc4_compile *c, struct qreg srgb)
-{
-        struct qreg low = qir_FMUL(c, srgb, qir_uniform_f(c, 1.0 / 12.92));
-        struct qreg high = qir_POW(c,
-                                   qir_FMUL(c,
-                                            qir_FADD(c,
-                                                     srgb,
-                                                     qir_uniform_f(c, 0.055)),
-                                            qir_uniform_f(c, 1.0 / 1.055)),
-                                   qir_uniform_f(c, 2.4));
-
-        qir_SF(c, qir_FSUB(c, srgb, qir_uniform_f(c, 0.04045)));
-        return qir_SEL(c, QPU_COND_NS, low, high);
-}
-
-static struct qreg
 ntq_umul(struct vc4_compile *c, struct qreg src0, struct qreg src1)
 {
         struct qreg src0_hi = qir_SHR(c, src0,
@@ -325,11 +309,6 @@ ntq_emit_txf(struct vc4_compile *c, nir_tex_instr *instr)
         } else {
                 for (int i = 0; i < 4; i++)
                         dest[i] = qir_UNPACK_8_F(c, tex, i);
-        }
-
-        for (int i = 0; i < 4; i++) {
-                if (c->tex_srgb_decode[unit] & (1 << i))
-                        dest[i] = qir_srgb_decode(c, dest[i]);
         }
 }
 
@@ -475,11 +454,6 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
         } else {
                 for (int i = 0; i < 4; i++)
                         dest[i] = qir_UNPACK_8_F(c, tex, i);
-        }
-
-        for (int i = 0; i < 4; i++) {
-                if (c->tex_srgb_decode[unit] & (1 << i))
-                        dest[i] = qir_srgb_decode(c, dest[i]);
         }
 }
 
@@ -1864,16 +1838,10 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                         } else {
                                 tex_options.swizzles[i][j] = arb_swiz;
                         }
-
-                        /* If ARB_texture_swizzle is reading from the R, G, or
-                         * B channels of an sRGB texture, then we need to
-                         * apply sRGB decode to this channel at sample time.
-                         */
-                        if (arb_swiz < 3 && util_format_is_srgb(format)) {
-                                c->tex_srgb_decode[i] |= (1 << j);
-                        }
-
                 }
+
+                if (util_format_is_srgb(format))
+                        tex_options.lower_srgb |= (1 << i);
         }
 
         NIR_PASS_V(c->s, nir_normalize_cubemap_coords);

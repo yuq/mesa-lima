@@ -379,11 +379,6 @@ struct vc4_compile {
 
         uint8_t vattr_sizes[8];
 
-        /* Bitfield for whether a given channel of a sampler needs sRGB
-         * decode.
-         */
-        uint8_t tex_srgb_decode[VC4_MAX_TEXTURE_SAMPLERS];
-
         /**
          * Array of the VARYING_SLOT_* of all FS QFILE_VARY reads.
          *
