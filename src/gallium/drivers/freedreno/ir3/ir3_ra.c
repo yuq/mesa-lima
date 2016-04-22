@@ -469,7 +469,8 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 
 		*sz = MAX2(*sz, dsz);
 
-		/* Fanout's are grouped, so *off should already valid */
+		debug_assert(instr->opc == OPC_META_FO);
+		*off = MAX2(*off, instr->fo.off);
 
 		d = dd;
 	}
