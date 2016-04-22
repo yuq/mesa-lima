@@ -756,6 +756,13 @@ struct pipe_grid_info
    void *input;
 
    /**
+    * Grid number of dimensions, 1-3, e.g. the work_dim parameter passed to
+    * clEnqueueNDRangeKernel. Note block[] and grid[] must be padded with
+    * 1 for non-used dimensions.
+    */
+   uint work_dim;
+
+   /**
     * Determine the layout of the working block (in thread units) to be used.
     */
    uint block[3];

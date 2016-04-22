@@ -76,6 +76,7 @@ kernel::launch(command_queue &q,
                               exec.g_buffers.data(), g_handles.data());
 
    // Fill information for the launch_grid() call.
+   info.work_dim = grid_size.size();
    copy(pad_vector(q, block_size, 1), info.block);
    copy(pad_vector(q, reduced_grid_size, 1), info.grid);
    info.pc = find(name_equals(_name), m.syms).offset;
