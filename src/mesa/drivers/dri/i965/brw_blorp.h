@@ -57,9 +57,6 @@ void
 brw_blorp_resolve_color(struct brw_context *brw,
                         struct intel_mipmap_tree *mt);
 
-#ifdef __cplusplus
-} /* end extern "C" */
-
 /**
  * Binding table indices used by BLORP.
  */
@@ -203,8 +200,8 @@ struct brw_blorp_wm_push_constants
 };
 
 /* Every 32 bytes of push constant data constitutes one GEN register. */
-const unsigned int BRW_BLORP_NUM_PUSH_CONST_REGS =
-   sizeof(brw_blorp_wm_push_constants) / 32;
+static const unsigned int BRW_BLORP_NUM_PUSH_CONST_REGS =
+   sizeof(struct brw_blorp_wm_push_constants) / 32;
 
 struct brw_blorp_prog_data
 {
@@ -269,13 +266,13 @@ struct brw_blorp_blit_prog_key
    /* MSAA layout that has been configured in the surface state for texturing
     * from.
     */
-   intel_msaa_layout tex_layout;
+   enum intel_msaa_layout tex_layout;
 
    /* Actual number of samples per pixel in the source image. */
    unsigned src_samples;
 
    /* Actual MSAA layout used by the source image. */
-   intel_msaa_layout src_layout;
+   enum intel_msaa_layout src_layout;
 
    /* Number of samples per pixel that have been configured in the render
     * target.
@@ -283,13 +280,13 @@ struct brw_blorp_blit_prog_key
    unsigned rt_samples;
 
    /* MSAA layout that has been configured in the render target. */
-   intel_msaa_layout rt_layout;
+   enum intel_msaa_layout rt_layout;
 
    /* Actual number of samples per pixel in the destination image. */
    unsigned dst_samples;
 
    /* Actual MSAA layout used by the destination image. */
-   intel_msaa_layout dst_layout;
+   enum intel_msaa_layout dst_layout;
 
    /* Type of the data to be read from the texture (one of
     * BRW_REGISTER_TYPE_{UD,D,F}).
@@ -433,4 +430,6 @@ gen7_blorp_emit_primitive(struct brw_context *brw,
 
 /** \} */
 
+#ifdef __cplusplus
+} /* end extern "C" */
 #endif /* __cplusplus */
