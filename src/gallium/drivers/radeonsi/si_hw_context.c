@@ -43,12 +43,12 @@ static unsigned si_ce_needed_cs_space(void)
 	unsigned space = 0;
 
 	space += si_descriptor_list_cs_space(SI_NUM_CONST_BUFFERS, 4);
-	space += si_descriptor_list_cs_space(SI_NUM_RW_BUFFERS, 4);
 	space += si_descriptor_list_cs_space(SI_NUM_SHADER_BUFFERS, 4);
 	space += si_descriptor_list_cs_space(SI_NUM_SAMPLERS, 16);
 	space += si_descriptor_list_cs_space(SI_NUM_IMAGES, 8);
-
 	space *= SI_NUM_SHADERS;
+
+	space += si_descriptor_list_cs_space(SI_NUM_RW_BUFFERS, 4);
 
 	/* Increment CE counter packet */
 	space += 2;
