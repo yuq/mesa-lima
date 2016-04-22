@@ -45,43 +45,6 @@ struct brw_blorp_const_color_prog_key
    bool pad[3];
 };
 
-/**
- * Parameters for a blorp operation where the fragment shader outputs a
- * constant color.  This is used for both fast color clears and color
- * resolves.
- */
-class brw_blorp_const_color_params : public brw_blorp_params
-{
-public:
-   brw_blorp_const_color_prog_key wm_prog_key;
-};
-
-class brw_blorp_clear_params : public brw_blorp_const_color_params
-{
-public:
-   brw_blorp_clear_params(struct brw_context *brw,
-                          struct gl_framebuffer *fb,
-                          struct gl_renderbuffer *rb,
-                          GLubyte *color_mask,
-                          bool partial_clear,
-                          bool encode_srgb,
-                          unsigned layer);
-};
-
-
-/**
- * Parameters for a blorp operation that performs a "render target resolve".
- * This is used to resolve pending fast clear pixels before a color buffer is
- * used for texturing, ReadPixels, or scanout.
- */
-class brw_blorp_rt_resolve_params : public brw_blorp_const_color_params
-{
-public:
-   brw_blorp_rt_resolve_params(struct brw_context *brw,
-                               struct intel_mipmap_tree *mt);
-};
-
-
 class brw_blorp_const_color_program
 {
 public:
@@ -175,97 +138,6 @@ set_write_disables(const struct intel_renderbuffer *irb,
    return disables;
 }
 
-brw_blorp_clear_params::brw_blorp_clear_params(struct brw_context *brw,
-                                               struct gl_framebuffer *fb,
-                                               struct gl_renderbuffer *rb,
-                                               GLubyte *color_mask,
-                                               bool partial_clear,
-                                               bool encode_srgb,
-                                               unsigned layer)
-{
-   struct gl_context *ctx = &brw->ctx;
-   struct intel_renderbuffer *irb = intel_renderbuffer(rb);
-   mesa_format format = irb->mt->format;
-
-   if (!encode_srgb && _mesa_get_format_color_encoding(format) == GL_SRGB)
-      format = _mesa_get_srgb_format_linear(format);
-
-   dst.set(brw, irb->mt, irb->mt_level, layer, format, true);
-
-   /* Override the surface format according to the context's sRGB rules. */
-   dst.brw_surfaceformat = brw->render_target_format[format];
-
-   x0 = fb->_Xmin;
-   x1 = fb->_Xmax;
-   if (rb->Name != 0) {
-      y0 = fb->_Ymin;
-      y1 = fb->_Ymax;
-   } else {
-      y0 = rb->Height - fb->_Ymax;
-      y1 = rb->Height - fb->_Ymin;
-   }
-
-   memcpy(&wm_push_consts.dst_x0, ctx->Color.ClearColor.f, sizeof(float) * 4);
-
-   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
-
-   wm_prog_key.use_simd16_replicated_data = true;
-
-   /* From the SNB PRM (Vol4_Part1):
-    *
-    *     "Replicated data (Message Type = 111) is only supported when
-    *      accessing tiled memory.  Using this Message Type to access linear
-    *      (untiled) memory is UNDEFINED."
-    */
-   if (irb->mt->tiling == I915_TILING_NONE)
-      wm_prog_key.use_simd16_replicated_data = false;
-
-   /* Constant color writes ignore everyting in blend and color calculator
-    * state.  This is not documented.
-    */
-   if (set_write_disables(irb, color_mask, color_write_disable))
-      wm_prog_key.use_simd16_replicated_data = false;
-
-   if (irb->mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS &&
-       !partial_clear && wm_prog_key.use_simd16_replicated_data &&
-       brw_is_color_fast_clear_compatible(brw, irb->mt,
-                                          &ctx->Color.ClearColor)) {
-      memset(&wm_push_consts, 0xff, 4*sizeof(float));
-      fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
-
-      brw_get_fast_clear_rect(brw, fb, irb->mt, &x0, &y0, &x1, &y1);
-   } else {
-      brw_meta_get_buffer_rect(fb, &x0, &y0, &x1, &y1);
-   }
-
-   brw_blorp_params_get_clear_kernel(brw, this, &wm_prog_key);
-}
-
-
-brw_blorp_rt_resolve_params::brw_blorp_rt_resolve_params(
-      struct brw_context *brw,
-      struct intel_mipmap_tree *mt)
-{
-   const mesa_format format = _mesa_get_srgb_format_linear(mt->format);
-
-   dst.set(brw, mt, 0 /* level */, 0 /* layer */, format, true);
-
-   brw_get_resolve_rect(brw, mt, &x0, &y0, &x1, &y1);
-
-   fast_clear_op = GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE;
-
-   /* Note: there is no need to initialize push constants because it doesn't
-    * matter what data gets dispatched to the render target.  However, we must
-    * ensure that the fragment shader delivers the data using the "replicated
-    * color" message.
-    */
-   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
-   wm_prog_key.use_simd16_replicated_data = true;
-
-   brw_blorp_params_get_clear_kernel(brw, this, &wm_prog_key);
-}
-
-
 void
 brw_blorp_const_color_program::alloc_regs()
 {
@@ -358,9 +230,67 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 {
    struct gl_context *ctx = &brw->ctx;
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
+   mesa_format format = irb->mt->format;
 
-   brw_blorp_clear_params params(brw, fb, rb, ctx->Color.ColorMask[buf],
-                                 partial_clear, encode_srgb, layer);
+   brw_blorp_params params;
+
+   if (!encode_srgb && _mesa_get_format_color_encoding(format) == GL_SRGB)
+      format = _mesa_get_srgb_format_linear(format);
+
+   params.dst.set(brw, irb->mt, irb->mt_level, layer, format, true);
+
+   /* Override the surface format according to the context's sRGB rules. */
+   params.dst.brw_surfaceformat = brw->render_target_format[format];
+
+   params.x0 = fb->_Xmin;
+   params.x1 = fb->_Xmax;
+   if (rb->Name != 0) {
+      params.y0 = fb->_Ymin;
+      params.y1 = fb->_Ymax;
+   } else {
+      params.y0 = rb->Height - fb->_Ymax;
+      params.y1 = rb->Height - fb->_Ymin;
+   }
+
+   memcpy(&params.wm_push_consts.dst_x0,
+          ctx->Color.ClearColor.f, sizeof(float) * 4);
+
+   brw_blorp_const_color_prog_key wm_prog_key;
+   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
+
+   wm_prog_key.use_simd16_replicated_data = true;
+
+   /* From the SNB PRM (Vol4_Part1):
+    *
+    *     "Replicated data (Message Type = 111) is only supported when
+    *      accessing tiled memory.  Using this Message Type to access linear
+    *      (untiled) memory is UNDEFINED."
+    */
+   if (irb->mt->tiling == I915_TILING_NONE)
+      wm_prog_key.use_simd16_replicated_data = false;
+
+   /* Constant color writes ignore everyting in blend and color calculator
+    * state.  This is not documented.
+    */
+   if (set_write_disables(irb, ctx->Color.ColorMask[buf],
+                          params.color_write_disable))
+      wm_prog_key.use_simd16_replicated_data = false;
+
+   if (irb->mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS &&
+       !partial_clear && wm_prog_key.use_simd16_replicated_data &&
+       brw_is_color_fast_clear_compatible(brw, irb->mt,
+                                          &ctx->Color.ClearColor)) {
+      memset(&params.wm_push_consts, 0xff, 4*sizeof(float));
+      params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
+
+      brw_get_fast_clear_rect(brw, fb, irb->mt, &params.x0, &params.y0,
+                              &params.x1, &params.y1);
+   } else {
+      brw_meta_get_buffer_rect(fb, &params.x0, &params.y0,
+                               &params.x1, &params.y1);
+   }
+
+   brw_blorp_params_get_clear_kernel(brw, &params, &wm_prog_key);
 
    const bool is_fast_clear =
       params.fast_clear_op == GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
@@ -394,7 +324,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    const char *clear_type;
    if (is_fast_clear)
       clear_type = "fast";
-   else if (params.wm_prog_key.use_simd16_replicated_data)
+   else if (wm_prog_key.use_simd16_replicated_data)
       clear_type = "replicated";
    else
       clear_type = "slow";
@@ -467,7 +397,28 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
 {
    DBG("%s to mt %p\n", __FUNCTION__, mt);
 
-   brw_blorp_rt_resolve_params params(brw, mt);
+   const mesa_format format = _mesa_get_srgb_format_linear(mt->format);
+
+   brw_blorp_params params;
+
+   params.dst.set(brw, mt, 0 /* level */, 0 /* layer */, format, true);
+
+   brw_get_resolve_rect(brw, mt, &params.x0, &params.y0,
+                        &params.x1, &params.y1);
+
+   params.fast_clear_op = GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE;
+
+   /* Note: there is no need to initialize push constants because it doesn't
+    * matter what data gets dispatched to the render target.  However, we must
+    * ensure that the fragment shader delivers the data using the "replicated
+    * color" message.
+    */
+   brw_blorp_const_color_prog_key wm_prog_key;
+   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
+   wm_prog_key.use_simd16_replicated_data = true;
+
+   brw_blorp_params_get_clear_kernel(brw, &params, &wm_prog_key);
+
    brw_blorp_exec(brw, &params);
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
 }
