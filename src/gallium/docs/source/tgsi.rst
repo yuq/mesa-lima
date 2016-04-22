@@ -3046,6 +3046,14 @@ For vertex shaders, the zero-based index of the current draw in a
 component is used.
 
 
+TGSI_SEMANTIC_WORK_DIM
+""""""""""""""""""""""
+
+For compute shaders started via opencl this retrieves the work_dim
+parameter to the clEnqueueNDRangeKernel call with which the shader
+was started.
+
+
 Declaration Interpolate
 ^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -199,6 +199,7 @@ enum tgsi_semantic {
    TGSI_SEMANTIC_HELPER_INVOCATION,  /**< current invocation is helper */
    TGSI_SEMANTIC_BASEINSTANCE,
    TGSI_SEMANTIC_DRAWID,
+   TGSI_SEMANTIC_WORK_DIM,    /**< opencl get_work_dim value */
    TGSI_SEMANTIC_COUNT,       /**< number of semantic values */
 };
 
