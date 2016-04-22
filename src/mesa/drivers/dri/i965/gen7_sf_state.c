@@ -91,7 +91,8 @@ const struct brw_tracked_state gen7_sbe_state = {
                _NEW_LIGHT |
                _NEW_POINT |
                _NEW_PROGRAM,
-      .brw   = BRW_NEW_CONTEXT |
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA |
                BRW_NEW_GEOMETRY_PROGRAM |
@@ -253,7 +254,8 @@ const struct brw_tracked_state gen7_sf_state = {
                _NEW_POLYGON |
                _NEW_PROGRAM |
                _NEW_SCISSOR,
-      .brw   = BRW_NEW_CONTEXT |
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
                BRW_NEW_PRIMITIVE,
    },
    .emit = upload_sf_state,

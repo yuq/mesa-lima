@@ -194,6 +194,7 @@ const struct brw_tracked_state brw_cs_state = {
    .dirty = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_CS_PROG_DATA |
              BRW_NEW_PUSH_CONSTANT_ALLOCATION |
              BRW_NEW_SAMPLER_STATE_TABLE |
@@ -295,6 +296,7 @@ const struct brw_tracked_state gen7_cs_push_constants = {
    .dirty = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_COMPUTE_PROGRAM |
              BRW_NEW_PUSH_CONSTANT_ALLOCATION,
    },
@@ -326,6 +328,7 @@ const struct brw_tracked_state brw_cs_pull_constants = {
    .dirty = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_COMPUTE_PROGRAM |
              BRW_NEW_CS_PROG_DATA,
    },

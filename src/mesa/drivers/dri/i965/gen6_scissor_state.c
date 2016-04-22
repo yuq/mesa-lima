@@ -101,7 +101,8 @@ const struct brw_tracked_state gen6_scissor_state = {
       .mesa = _NEW_BUFFERS |
               _NEW_SCISSOR |
               _NEW_VIEWPORT,
-      .brw = BRW_NEW_BATCH,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP,
    },
    .emit = gen6_upload_scissor_state,
 };

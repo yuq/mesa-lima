@@ -224,7 +224,8 @@ const struct brw_tracked_state brw_sf_prog = {
                _NEW_POLYGON |
                _NEW_PROGRAM |
                _NEW_TRANSFORM,
-      .brw   = BRW_NEW_INTERPOLATION_MAP |
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_INTERPOLATION_MAP |
                BRW_NEW_REDUCED_PRIMITIVE |
                BRW_NEW_VUE_MAP_GEOM_OUT,
    },

@@ -76,6 +76,7 @@ const struct brw_tracked_state gen8_state_base_address = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_PROGRAM_CACHE,
    },
    .emit = gen8_upload_state_base_address

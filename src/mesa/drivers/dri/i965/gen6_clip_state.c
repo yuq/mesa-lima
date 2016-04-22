@@ -195,7 +195,8 @@ const struct brw_tracked_state gen6_clip_state = {
       .mesa  = _NEW_BUFFERS |
                _NEW_LIGHT |
                _NEW_TRANSFORM,
-      .brw   = BRW_NEW_CONTEXT |
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
                BRW_NEW_FS_PROG_DATA |
                BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_META_IN_PROGRESS |
@@ -211,7 +212,8 @@ const struct brw_tracked_state gen7_clip_state = {
                _NEW_LIGHT |
                _NEW_POLYGON |
                _NEW_TRANSFORM,
-      .brw   = BRW_NEW_CONTEXT |
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
                BRW_NEW_FS_PROG_DATA |
                BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_META_IN_PROGRESS |

@@ -185,6 +185,7 @@ const struct brw_tracked_state brw_vs_unit = {
    .dirty = {
       .mesa  = 0,
       .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
                BRW_NEW_CURBE_OFFSETS |
                BRW_NEW_PROGRAM_CACHE |
                BRW_NEW_SAMPLER_STATE_TABLE |

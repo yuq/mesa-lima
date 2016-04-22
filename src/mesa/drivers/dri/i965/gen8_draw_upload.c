@@ -309,6 +309,7 @@ const struct brw_tracked_state gen8_vertices = {
    .dirty = {
       .mesa = _NEW_POLYGON,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_VERTICES |
              BRW_NEW_VS_PROG_DATA,
    },
@@ -336,6 +337,7 @@ const struct brw_tracked_state gen8_index_buffer = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_INDEX_BUFFER,
    },
    .emit = gen8_emit_index_buffer,
@@ -353,7 +355,8 @@ gen8_emit_vf_topology(struct brw_context *brw)
 const struct brw_tracked_state gen8_vf_topology = {
    .dirty = {
       .mesa = 0,
-      .brw = BRW_NEW_PRIMITIVE,
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_PRIMITIVE,
    },
    .emit = gen8_emit_vf_topology,
 };

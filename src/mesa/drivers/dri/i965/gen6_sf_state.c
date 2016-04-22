@@ -445,7 +445,8 @@ const struct brw_tracked_state gen6_sf_state = {
                _NEW_POLYGON |
                _NEW_PROGRAM |
                _NEW_SCISSOR,
-      .brw   = BRW_NEW_CONTEXT |
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA |
                BRW_NEW_GEOMETRY_PROGRAM |

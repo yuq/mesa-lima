@@ -904,6 +904,7 @@ const struct brw_tracked_state brw_vertices = {
    .dirty = {
       .mesa = _NEW_POLYGON,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_VERTICES |
              BRW_NEW_VS_PROG_DATA,
    },
@@ -986,7 +987,8 @@ brw_upload_indices(struct brw_context *brw)
 const struct brw_tracked_state brw_indices = {
    .dirty = {
       .mesa = 0,
-      .brw = BRW_NEW_INDICES,
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_INDICES,
    },
    .emit = brw_upload_indices,
 };
@@ -1024,6 +1026,7 @@ const struct brw_tracked_state brw_index_buffer = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_INDEX_BUFFER,
    },
    .emit = brw_emit_index_buffer,

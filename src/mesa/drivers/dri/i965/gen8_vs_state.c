@@ -86,6 +86,7 @@ const struct brw_tracked_state gen8_vs_state = {
    .dirty = {
       .mesa  = _NEW_TRANSFORM,
       .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_VS_PROG_DATA,
    },

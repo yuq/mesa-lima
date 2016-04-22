@@ -144,7 +144,8 @@ gen7_emit_push_constant_state(struct brw_context *brw, unsigned vs_size,
 const struct brw_tracked_state gen7_push_constant_space = {
    .dirty = {
       .mesa = 0,
-      .brw = BRW_NEW_CONTEXT |
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_CONTEXT |
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_TESS_PROGRAMS,
    },
@@ -417,7 +418,8 @@ gen7_emit_urb_state(struct brw_context *brw,
 const struct brw_tracked_state gen7_urb = {
    .dirty = {
       .mesa = 0,
-      .brw = BRW_NEW_CONTEXT |
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_CONTEXT |
              BRW_NEW_URB_SIZE |
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_TESS_PROGRAMS |

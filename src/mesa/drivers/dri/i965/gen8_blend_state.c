@@ -203,6 +203,7 @@ const struct brw_tracked_state gen8_blend_state = {
               _NEW_COLOR |
               _NEW_MULTISAMPLE,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_STATE_BASE_ADDRESS,
    },
    .emit = gen8_upload_blend_state,
@@ -294,7 +295,8 @@ const struct brw_tracked_state gen8_ps_blend = {
       .mesa = _NEW_BUFFERS |
               _NEW_COLOR |
               _NEW_MULTISAMPLE,
-      .brw = BRW_NEW_CONTEXT |
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_CONTEXT |
              BRW_NEW_FRAGMENT_PROGRAM,
    },
    .emit = gen8_upload_ps_blend

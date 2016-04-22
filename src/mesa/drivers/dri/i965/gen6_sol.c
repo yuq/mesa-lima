@@ -92,6 +92,7 @@ const struct brw_tracked_state gen6_sol_surface = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_VERTEX_PROGRAM |
              BRW_NEW_TRANSFORM_FEEDBACK,
@@ -186,6 +187,7 @@ const struct brw_tracked_state gen6_gs_binding_table = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_VERTEX_PROGRAM |
              BRW_NEW_SURFACES,

@@ -607,6 +607,7 @@ const struct brw_tracked_state brw_fs_samplers = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_FRAGMENT_PROGRAM,
    },
    .emit = brw_upload_fs_samplers,
@@ -625,6 +626,7 @@ const struct brw_tracked_state brw_vs_samplers = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_VERTEX_PROGRAM,
    },
    .emit = brw_upload_vs_samplers,
@@ -647,6 +649,7 @@ const struct brw_tracked_state brw_gs_samplers = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_GEOMETRY_PROGRAM,
    },
    .emit = brw_upload_gs_samplers,
@@ -669,6 +672,7 @@ const struct brw_tracked_state brw_tcs_samplers = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_TESS_PROGRAMS,
    },
    .emit = brw_upload_tcs_samplers,
@@ -691,6 +695,7 @@ const struct brw_tracked_state brw_tes_samplers = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_TESS_PROGRAMS,
    },
    .emit = brw_upload_tes_samplers,
@@ -711,6 +716,7 @@ const struct brw_tracked_state brw_cs_samplers = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_COMPUTE_PROGRAM,
    },
    .emit = brw_upload_cs_samplers,

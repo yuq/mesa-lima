@@ -134,6 +134,7 @@ const struct brw_tracked_state gen8_gs_state = {
    .dirty = {
       .mesa  = _NEW_TRANSFORM,
       .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_GS_PROG_DATA,

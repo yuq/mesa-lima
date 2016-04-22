@@ -133,7 +133,8 @@ const struct brw_tracked_state gen8_sbe_state = {
                _NEW_LIGHT |
                _NEW_POINT |
                _NEW_PROGRAM,
-      .brw   = BRW_NEW_CONTEXT |
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA |
                BRW_NEW_VUE_MAP_GEOM_OUT,
@@ -207,7 +208,8 @@ const struct brw_tracked_state gen8_sf_state = {
                _NEW_LINE |
                _NEW_MULTISAMPLE |
                _NEW_POINT,
-      .brw   = BRW_NEW_CONTEXT,
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT,
    },
    .emit = upload_sf,
 };
@@ -324,7 +326,8 @@ const struct brw_tracked_state gen8_raster_state = {
                _NEW_POLYGON |
                _NEW_SCISSOR |
                _NEW_TRANSFORM,
-      .brw   = BRW_NEW_CONTEXT,
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT,
    },
    .emit = upload_raster,
 };

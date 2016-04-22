@@ -245,6 +245,7 @@ const struct brw_tracked_state gen6_blend_state = {
               _NEW_COLOR |
               _NEW_MULTISAMPLE,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_STATE_BASE_ADDRESS,
    },
    .emit = gen6_upload_blend_state,
@@ -298,6 +299,7 @@ const struct brw_tracked_state gen6_color_calc_state = {
       .mesa = _NEW_COLOR |
               _NEW_STENCIL,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
              BRW_NEW_CC_STATE |
              BRW_NEW_STATE_BASE_ADDRESS,
    },
