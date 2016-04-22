@@ -3387,12 +3387,6 @@ void si_init_state_functions(struct si_context *sctx)
 
 	sctx->b.b.draw_vbo = si_draw_vbo;
 
-	if (sctx->b.chip_class >= CIK) {
-		sctx->b.dma_copy = cik_sdma_copy;
-	} else {
-		sctx->b.dma_copy = si_dma_copy;
-	}
-
 	si_init_config(sctx);
 }
 

@@ -190,13 +190,13 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	}
 }
 
-void si_dma_copy(struct pipe_context *ctx,
-		 struct pipe_resource *dst,
-		 unsigned dst_level,
-		 unsigned dstx, unsigned dsty, unsigned dstz,
-		 struct pipe_resource *src,
-		 unsigned src_level,
-		 const struct pipe_box *src_box)
+static void si_dma_copy(struct pipe_context *ctx,
+			struct pipe_resource *dst,
+			unsigned dst_level,
+			unsigned dstx, unsigned dsty, unsigned dstz,
+			struct pipe_resource *src,
+			unsigned src_level,
+			const struct pipe_box *src_box)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct r600_texture *rsrc = (struct r600_texture*)src;
@@ -292,4 +292,9 @@ void si_dma_copy(struct pipe_context *ctx,
 fallback:
 	si_resource_copy_region(ctx, dst, dst_level, dstx, dsty, dstz,
 				src, src_level, src_box);
+}
+
+void si_init_dma_functions(struct si_context *sctx)
+{
+	sctx->b.dma_copy = si_dma_copy;
 }

@@ -325,13 +325,7 @@ struct si_context {
 };
 
 /* cik_sdma.c */
-void cik_sdma_copy(struct pipe_context *ctx,
-		   struct pipe_resource *dst,
-		   unsigned dst_level,
-		   unsigned dstx, unsigned dsty, unsigned dstz,
-		   struct pipe_resource *src,
-		   unsigned src_level,
-		   const struct pipe_box *src_box);
+void cik_init_sdma_functions(struct si_context *sctx);
 
 /* si_blit.c */
 void si_init_blit_functions(struct si_context *sctx);
@@ -357,13 +351,7 @@ void si_check_vm_faults(struct si_context *sctx);
 bool si_replace_shader(unsigned num, struct radeon_shader_binary *binary);
 
 /* si_dma.c */
-void si_dma_copy(struct pipe_context *ctx,
-		 struct pipe_resource *dst,
-		 unsigned dst_level,
-		 unsigned dstx, unsigned dsty, unsigned dstz,
-		 struct pipe_resource *src,
-		 unsigned src_level,
-		 const struct pipe_box *src_box);
+void si_init_dma_functions(struct si_context *sctx);
 
 /* si_hw_context.c */
 void si_context_gfx_flush(void *context, unsigned flags,

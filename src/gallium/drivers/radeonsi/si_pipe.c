@@ -192,6 +192,11 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	si_init_state_functions(sctx);
 	si_init_shader_functions(sctx);
 
+	if (sctx->b.chip_class >= CIK)
+		cik_init_sdma_functions(sctx);
+	else
+		si_init_dma_functions(sctx);
+
 	if (sscreen->b.debug_flags & DBG_FORCE_DMA)
 		sctx->b.b.resource_copy_region = sctx->b.dma_copy;
 
