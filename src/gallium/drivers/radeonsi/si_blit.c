@@ -497,7 +497,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		if (buffers & PIPE_CLEAR_DEPTH) {
 			/* Need to disable EXPCLEAR temporarily if clearing
 			 * to a new value. */
-			if (zstex->depth_cleared && zstex->depth_clear_value != depth) {
+			if (!zstex->depth_cleared || zstex->depth_clear_value != depth) {
 				sctx->db_depth_disable_expclear = true;
 			}
 
@@ -513,7 +513,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 
 			/* Need to disable EXPCLEAR temporarily if clearing
 			 * to a new value. */
-			if (zstex->stencil_cleared && zstex->stencil_clear_value != stencil) {
+			if (!zstex->stencil_cleared || zstex->stencil_clear_value != stencil) {
 				sctx->db_stencil_disable_expclear = true;
 			}
 
