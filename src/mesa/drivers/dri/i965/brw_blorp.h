@@ -351,26 +351,6 @@ struct brw_blorp_blit_prog_key
    bool bilinear_filter;
 };
 
-class brw_blorp_blit_params : public brw_blorp_params
-{
-public:
-   brw_blorp_blit_params(struct brw_context *brw,
-                         struct intel_mipmap_tree *src_mt,
-                         unsigned src_level, unsigned src_layer,
-                         mesa_format src_format,
-                         struct intel_mipmap_tree *dst_mt,
-                         unsigned dst_level, unsigned dst_layer,
-                         mesa_format dst_format,
-                         GLfloat src_x0, GLfloat src_y0,
-                         GLfloat src_x1, GLfloat src_y1,
-                         GLfloat dst_x0, GLfloat dst_y0,
-                         GLfloat dst_x1, GLfloat dst_y1,
-                         GLenum filter, bool mirror_x, bool mirror_y);
-
-private:
-   brw_blorp_blit_prog_key wm_prog_key;
-};
-
 /**
  * \name BLORP internals
  * \{
