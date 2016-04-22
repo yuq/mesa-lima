@@ -100,7 +100,7 @@ i965_FILES = \
 	brw_blorp_blit_eu.cpp \
 	brw_blorp_blit_eu.h \
 	brw_blorp_clear.cpp \
-	brw_blorp.cpp \
+	brw_blorp.c \
 	brw_blorp.h \
 	brw_cc.c \
 	brw_clear.c \

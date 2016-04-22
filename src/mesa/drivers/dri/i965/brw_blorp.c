@@ -145,7 +145,6 @@ brw_blorp_params_init(struct brw_blorp_params *params)
    params->num_layers = 1;
 }
 
-extern "C" {
 /**
  * Perform a HiZ or depth resolve operation.
  *
@@ -157,7 +156,7 @@ extern "C" {
  */
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-	       unsigned int level, unsigned int layer, gen6_hiz_op op)
+	       unsigned int level, unsigned int layer, enum gen6_hiz_op op)
 {
    const char *opname = NULL;
 
@@ -185,8 +184,6 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
       gen6_blorp_hiz_exec(brw, mt, level, layer, op);
    }
 }
-
-} /* extern "C" */
 
 void
 brw_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
