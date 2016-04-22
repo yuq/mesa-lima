@@ -1569,6 +1569,7 @@ GLint
 _mesa_base_format_component_count(GLenum base_format)
 {
    switch (base_format) {
+   case GL_LUMINANCE:
    case GL_RED:
    case GL_ALPHA:
    case GL_INTENSITY:
