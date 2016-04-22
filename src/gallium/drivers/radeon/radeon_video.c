@@ -122,7 +122,7 @@ void rvid_clear_buffer(struct pipe_context *context, struct rvid_buffer* buffer)
 	struct r600_common_context *rctx = (struct r600_common_context*)context;
 
 	rctx->clear_buffer(context, &buffer->res->b.b, 0, buffer->res->buf->size,
-			   0, false);
+			   0, R600_COHERENCY_NONE);
 	context->flush(context, NULL, 0);
 }
 

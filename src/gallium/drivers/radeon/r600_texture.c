@@ -717,7 +717,7 @@ static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 		R600_ERR("Failed to create buffer object for htile buffer.\n");
 	} else {
 		r600_screen_clear_buffer(rscreen, &rtex->htile_buffer->b.b, 0,
-					 htile_size, 0, true);
+					 htile_size, 0, R600_COHERENCY_NONE);
 	}
 }
 
@@ -892,13 +892,13 @@ r600_texture_create_object(struct pipe_screen *screen,
 		/* Initialize the cmask to 0xCC (= compressed state). */
 		r600_screen_clear_buffer(rscreen, &rtex->cmask_buffer->b.b,
 					 rtex->cmask.offset, rtex->cmask.size,
-					 0xCCCCCCCC, true);
+					 0xCCCCCCCC, R600_COHERENCY_NONE);
 	}
 	if (rtex->dcc_offset) {
 		r600_screen_clear_buffer(rscreen, &rtex->resource.b.b,
 					 rtex->dcc_offset,
 					 rtex->surface.dcc_size,
-					 0xFFFFFFFF, true);
+					 0xFFFFFFFF, R600_COHERENCY_NONE);
 	}
 
 	/* Initialize the CMASK base register value. */
@@ -1623,7 +1623,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 
 			rctx->clear_buffer(&rctx->b, &tex->resource.b.b,
 					   tex->dcc_offset, tex->surface.dcc_size,
-					   reset_value, true);
+					   reset_value, R600_COHERENCY_CB_META);
 
 			if (clear_words_needed)
 				tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
@@ -1640,7 +1640,8 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 
 			/* Do the fast clear. */
 			rctx->clear_buffer(&rctx->b, &tex->cmask_buffer->b.b,
-					tex->cmask.offset, tex->cmask.size, 0, true);
+					   tex->cmask.offset, tex->cmask.size, 0,
+					   R600_COHERENCY_CB_META);
 
 			tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
 		}

@@ -348,8 +348,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 /* si_cp_dma.c */
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
-		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
-		    bool is_framebuffer);
+		    uint64_t dst_offset, uint64_t src_offset, unsigned size);
 void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */

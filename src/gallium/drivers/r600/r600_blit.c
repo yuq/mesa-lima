@@ -582,7 +582,7 @@ static void r600_copy_global_buffer(struct pipe_context *ctx,
 
 static void r600_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 			      uint64_t offset, uint64_t size, unsigned value,
-			      bool is_framebuffer)
+			      enum r600_coherency coher)
 {
 	struct r600_context *rctx = (struct r600_context*)ctx;
 

@@ -630,7 +630,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 
 	/* Handle buffers first. */
 	if (dst->target == PIPE_BUFFER && src->target == PIPE_BUFFER) {
-		si_copy_buffer(sctx, dst, src, dstx, src_box->x, src_box->width, false);
+		si_copy_buffer(sctx, dst, src, dstx, src_box->x, src_box->width);
 		return;
 	}
 
@@ -949,7 +949,8 @@ static void si_pipe_clear_buffer(struct pipe_context *ctx,
 		dword_value = *(uint32_t*)clear_value_ptr;
 	}
 
-	sctx->b.clear_buffer(ctx, dst, offset, size, dword_value, false);
+	sctx->b.clear_buffer(ctx, dst, offset, size, dword_value,
+			     R600_COHERENCY_SHADER);
 }
 
 void si_init_blit_functions(struct si_context *sctx)

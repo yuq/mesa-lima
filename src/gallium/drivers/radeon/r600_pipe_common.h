@@ -100,6 +100,12 @@
 #define R600_MAP_BUFFER_ALIGNMENT 64
 #define R600_MAX_VIEWPORTS        16
 
+enum r600_coherency {
+	R600_COHERENCY_NONE, /* no cache flushes needed */
+	R600_COHERENCY_SHADER,
+	R600_COHERENCY_CB_META,
+};
+
 #ifdef PIPE_ARCH_BIG_ENDIAN
 #define R600_BIG_ENDIAN 1
 #else
@@ -513,7 +519,7 @@ struct r600_common_context {
 
 	void (*clear_buffer)(struct pipe_context *ctx, struct pipe_resource *dst,
 			     uint64_t offset, uint64_t size, unsigned value,
-			     bool is_framebuffer);
+			     enum r600_coherency coher);
 
 	void (*blit_decompress_depth)(struct pipe_context *ctx,
 				      struct r600_texture *texture,
@@ -584,7 +590,7 @@ bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 			  unsigned processor);
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
 			      uint64_t offset, uint64_t size, unsigned value,
-			      bool is_framebuffer);
+			      enum r600_coherency coher);
 struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 						  const struct pipe_resource *templ);
 const char *r600_get_llvm_processor_name(enum radeon_family family);
