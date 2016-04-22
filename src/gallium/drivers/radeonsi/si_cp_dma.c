@@ -206,10 +206,6 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		va += byte_count;
 	}
 
-	/* Flush the caches again in case the 3D engine has been prefetching
-	 * the resource. */
-	sctx->b.flags |= flush_flags;
-
 	if (tc_l2_flag)
 		r600_resource(dst)->TC_L2_dirty = true;
 }
@@ -335,10 +331,6 @@ void si_copy_buffer(struct si_context *sctx,
 	/* Finally, realign the engine if the size wasn't aligned. */
 	if (realign_size)
 		si_cp_dma_realign_engine(sctx, realign_size);
-
-	/* Flush the caches again in case the 3D engine has been prefetching
-	 * the resource. */
-	sctx->b.flags |= flush_flags;
 
 	if (tc_l2_flag)
 		r600_resource(dst)->TC_L2_dirty = true;
