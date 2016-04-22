@@ -309,16 +309,18 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 		bool need_dcc_decompress)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	unsigned layer, level, checked_last_layer, max_layer;
+	unsigned layer, checked_last_layer, max_layer;
+	unsigned level_mask =
+		u_bit_consecutive(first_level, last_level - first_level + 1);
 
-	if (!rtex->dirty_level_mask && !need_dcc_decompress)
+	if (!need_dcc_decompress)
+		level_mask &= rtex->dirty_level_mask;
+	if (!level_mask)
 		return;
 
-	for (level = first_level; level <= last_level; level++) {
+	while (level_mask) {
+		unsigned level = u_bit_scan(&level_mask);
 		void* custom_blend;
-
-		if (!(rtex->dirty_level_mask & (1 << level)) && !need_dcc_decompress)
-			continue;
 
 		if (rtex->dcc_offset && need_dcc_decompress) {
 			custom_blend = sctx->custom_blend_dcc_decompress;
