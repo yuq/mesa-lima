@@ -186,23 +186,31 @@ static void si_blit_decompress_depth_in_place(struct si_context *sctx,
                                               unsigned first_layer, unsigned last_layer)
 {
 	struct pipe_surface *zsurf, surf_tmpl = {{0}};
-	unsigned layer, max_layer, checked_last_layer, level;
+	unsigned layer, max_layer, checked_last_layer;
 	unsigned *dirty_level_mask;
+	unsigned level_mask =
+		u_bit_consecutive(first_level, last_level - first_level + 1);
 
 	if (is_stencil_sampler) {
-		sctx->db_flush_stencil_inplace = true;
 		dirty_level_mask = &texture->stencil_dirty_level_mask;
 	} else {
-		sctx->db_flush_depth_inplace = true;
 		dirty_level_mask = &texture->dirty_level_mask;
 	}
+
+	level_mask &= *dirty_level_mask;
+	if (!level_mask)
+		return;
+
+	if (is_stencil_sampler)
+		sctx->db_flush_stencil_inplace = true;
+	else
+		sctx->db_flush_depth_inplace = true;
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
 	surf_tmpl.format = texture->resource.b.b.format;
 
-	for (level = first_level; level <= last_level; level++) {
-		if (!(*dirty_level_mask & (1 << level)))
-			continue;
+	while (level_mask) {
+		unsigned level = u_bit_scan(&level_mask);
 
 		surf_tmpl.u.tex.level = level;
 
