@@ -2383,9 +2383,21 @@ static void si_init_depth_surface(struct si_context *sctx,
 		z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
 			  S_028040_ALLOW_EXPCLEAR(1);
 
-		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
-			s_info |= S_028044_ALLOW_EXPCLEAR(1);
-		else
+		if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+			/* Workaround: For a not yet understood reason, the
+			 * combination of MSAA, fast stencil clear and stencil
+			 * decompress messes with subsequent stencil buffer
+			 * uses. Problem was reproduced on Verde, Bonaire,
+			 * Tonga, and Carrizo.
+			 *
+			 * Disabling EXPCLEAR works around the problem.
+			 *
+			 * Check piglit's arb_texture_multisample-stencil-clear
+			 * test if you want to try changing this.
+			 */
+			if (rtex->resource.b.b.nr_samples <= 1)
+				s_info |= S_028044_ALLOW_EXPCLEAR(1);
+		} else
 			/* Use all of the htile_buffer for depth if there's no stencil. */
 			s_info |= S_028044_TILE_STENCIL_DISABLE(1);
 
