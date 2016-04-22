@@ -461,9 +461,9 @@ gen7_blorp_emit_sf_config(struct brw_context *brw,
  */
 static void
 gen7_blorp_emit_wm_config(struct brw_context *brw,
-                          const brw_blorp_params *params,
-                          brw_blorp_prog_data *prog_data)
+                          const brw_blorp_params *params)
 {
+   const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
    uint32_t dw1 = 0, dw2 = 0;
 
    switch (params->hiz_op) {
@@ -485,7 +485,7 @@ gen7_blorp_emit_wm_config(struct brw_context *brw,
    dw1 |= GEN7_WM_LINE_END_CAP_AA_WIDTH_0_5;
    dw1 |= 0 << GEN7_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT; /* No interp */
 
-   if (params->use_wm_prog)
+   if (params->wm_prog_data)
       dw1 |= GEN7_WM_DISPATCH_ENABLE; /* We are rendering */
 
    if (params->src.mt)
@@ -523,10 +523,9 @@ gen7_blorp_emit_wm_config(struct brw_context *brw,
  */
 static void
 gen7_blorp_emit_ps_config(struct brw_context *brw,
-                          const brw_blorp_params *params,
-                          uint32_t prog_offset,
-                          brw_blorp_prog_data *prog_data)
+                          const brw_blorp_params *params)
 {
+   const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
    uint32_t dw2, dw4, dw5;
    const int max_threads_shift = brw->is_haswell ?
       HSW_PS_MAX_THREADS_SHIFT : IVB_PS_MAX_THREADS_SHIFT;
@@ -544,7 +543,7 @@ gen7_blorp_emit_ps_config(struct brw_context *brw,
 
    if (brw->is_haswell)
       dw4 |= SET_FIELD(1, HSW_PS_SAMPLE_MASK); /* 1 sample for now */
-   if (params->use_wm_prog) {
+   if (params->wm_prog_data) {
       dw4 |= GEN7_PS_PUSH_CONSTANT_ENABLE;
       dw5 |= prog_data->first_curbe_grf << GEN7_PS_DISPATCH_START_GRF_SHIFT_0;
    }
@@ -556,7 +555,7 @@ gen7_blorp_emit_ps_config(struct brw_context *brw,
 
    BEGIN_BATCH(8);
    OUT_BATCH(_3DSTATE_PS << 16 | (8 - 2));
-   OUT_BATCH(params->use_wm_prog ? prog_offset : 0);
+   OUT_BATCH(params->wm_prog_kernel);
    OUT_BATCH(dw2);
    OUT_BATCH(0);
    OUT_BATCH(dw4);
@@ -805,14 +804,11 @@ gen7_blorp_exec(struct brw_context *brw,
    if (brw->gen >= 8)
       return;
 
-   brw_blorp_prog_data *prog_data = NULL;
    uint32_t cc_blend_state_offset = 0;
    uint32_t cc_state_offset = 0;
    uint32_t depthstencil_offset;
    uint32_t wm_push_const_offset = 0;
    uint32_t wm_bind_bo_offset = 0;
-
-   uint32_t prog_offset = params->get_wm_prog(brw, &prog_data);
 
    if (brw_state_base_address.dirty.brw & brw->ctx.NewDriverState)
       brw_state_base_address.emit(brw);
@@ -823,7 +819,7 @@ gen7_blorp_exec(struct brw_context *brw,
                                  (1 << params->dst.num_samples) - 1 : 1);
    gen6_blorp_emit_vertices(brw, params);
    gen7_blorp_emit_urb_config(brw);
-   if (params->use_wm_prog) {
+   if (params->wm_prog_data) {
       cc_blend_state_offset = gen6_blorp_emit_blend_state(brw, params);
       cc_state_offset = gen6_blorp_emit_cc_state(brw);
       gen7_blorp_emit_blend_state_pointer(brw, cc_blend_state_offset);
@@ -833,7 +829,7 @@ gen7_blorp_exec(struct brw_context *brw,
    gen7_blorp_emit_depth_stencil_state_pointers(brw, depthstencil_offset);
    if (brw->use_resource_streamer)
       gen7_disable_hw_binding_tables(brw);
-   if (params->use_wm_prog) {
+   if (params->wm_prog_data) {
       uint32_t wm_surf_offset_renderbuffer;
       uint32_t wm_surf_offset_texture = 0;
       wm_push_const_offset = gen6_blorp_emit_wm_constants(brw, params);
@@ -862,8 +858,8 @@ gen7_blorp_exec(struct brw_context *brw,
    gen7_blorp_emit_streamout_disable(brw);
    gen6_blorp_emit_clip_disable(brw);
    gen7_blorp_emit_sf_config(brw, params);
-   gen7_blorp_emit_wm_config(brw, params, prog_data);
-   if (params->use_wm_prog) {
+   gen7_blorp_emit_wm_config(brw, params);
+   if (params->wm_prog_data) {
       gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
       gen7_blorp_emit_constant_ps(brw, wm_push_const_offset);
    } else {
@@ -876,7 +872,7 @@ gen7_blorp_exec(struct brw_context *brw,
       gen7_blorp_emit_sampler_state_pointers_ps(brw, sampler_offset);
    }
 
-   gen7_blorp_emit_ps_config(brw, params, prog_offset, prog_data);
+   gen7_blorp_emit_ps_config(brw, params);
    gen7_blorp_emit_cc_viewport(brw);
 
    if (params->depth.mt)

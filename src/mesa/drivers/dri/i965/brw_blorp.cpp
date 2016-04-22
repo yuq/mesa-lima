@@ -165,10 +165,11 @@ brw_blorp_params::brw_blorp_params(unsigned num_varyings,
      depth_format(0),
      hiz_op(GEN6_HIZ_OP_NONE),
      fast_clear_op(0),
-     use_wm_prog(false),
      num_varyings(num_varyings),
      num_draw_buffers(num_draw_buffers),
-     num_layers(num_layers)
+     num_layers(num_layers),
+     wm_prog_kernel(0),
+     wm_prog_data(NULL)
 {
    color_write_disable[0] = false;
    color_write_disable[1] = false;
@@ -351,11 +352,4 @@ brw_hiz_op_params::brw_hiz_op_params(struct intel_mipmap_tree *mt,
    case MESA_FORMAT_Z24_UNORM_X8_UINT:    depth_format = BRW_DEPTHFORMAT_D24_UNORM_X8_UINT; break;
    default:                    unreachable("not reached");
    }
-}
-
-uint32_t
-brw_hiz_op_params::get_wm_prog(struct brw_context *brw,
-                               brw_blorp_prog_data **prog_data) const
-{
-   return 0;
 }

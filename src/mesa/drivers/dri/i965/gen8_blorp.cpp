@@ -368,10 +368,9 @@ gen8_blorp_emit_wm_state(struct brw_context *brw)
  */
 static void
 gen8_blorp_emit_ps_config(struct brw_context *brw,
-                          const brw_blorp_params *params,
-                          uint32_t prog_offset,
-                          brw_blorp_prog_data *prog_data)
+                          const brw_blorp_params *params)
 {
+   const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
    uint32_t dw3, dw5, dw6, dw7;
 
    dw3 = dw5 = dw6 = dw7 = 0;
@@ -404,7 +403,7 @@ gen8_blorp_emit_ps_config(struct brw_context *brw,
 
    BEGIN_BATCH(12);
    OUT_BATCH(_3DSTATE_PS << 16 | (12 - 2));
-   OUT_BATCH(prog_offset);
+   OUT_BATCH(params->wm_prog_kernel);
    OUT_BATCH(0);
    OUT_BATCH(dw3);
    OUT_BATCH(0);
@@ -429,9 +428,9 @@ gen8_blorp_emit_ps_blend(struct brw_context *brw)
 
 static void
 gen8_blorp_emit_ps_extra(struct brw_context *brw,
-                         const brw_blorp_params *params,
-                         const brw_blorp_prog_data *prog_data)
+                         const brw_blorp_params *params)
 {
+   const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
    uint32_t dw1 = 0;
 
    dw1 |= GEN8_PSX_PIXEL_SHADER_VALID;
@@ -630,10 +629,7 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
 void
 gen8_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
 {
-   brw_blorp_prog_data *prog_data = NULL;
    uint32_t wm_bind_bo_offset = 0;
-
-   uint32_t prog_offset = params->get_wm_prog(brw, &prog_data);
 
    if (gen8_state_base_address.dirty.brw & brw->ctx.NewDriverState)
       gen8_upload_state_base_address(brw);
@@ -696,9 +692,9 @@ gen8_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
    gen8_blorp_emit_sf_config(brw);
 
    gen8_blorp_emit_ps_blend(brw);
-   gen8_blorp_emit_ps_extra(brw, params, prog_data);
+   gen8_blorp_emit_ps_extra(brw, params);
 
-   gen8_blorp_emit_ps_config(brw, params, prog_offset, prog_data);
+   gen8_blorp_emit_ps_config(brw, params);
 
    gen8_blorp_emit_depth_stencil_state(brw, params);
    gen8_blorp_emit_wm_state(brw);

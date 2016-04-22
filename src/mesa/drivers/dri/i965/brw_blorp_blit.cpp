@@ -1967,7 +1967,6 @@ brw_blorp_blit_params::brw_blorp_blit_params(struct brw_context *brw,
       src.brw_surfaceformat = dst.brw_surfaceformat;
    }
 
-   use_wm_prog = true;
    memset(&wm_prog_key, 0, sizeof(wm_prog_key));
 
    /* texture_data_type indicates the register type that should be used to
@@ -2203,16 +2202,10 @@ brw_blorp_blit_params::brw_blorp_blit_params(struct brw_context *brw,
       src.x_offset *= 2;
       src.y_offset /= 2;
    }
-}
 
-uint32_t
-brw_blorp_blit_params::get_wm_prog(struct brw_context *brw,
-                                   brw_blorp_prog_data **prog_data) const
-{
-   uint32_t prog_offset = 0;
    if (!brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
                          &this->wm_prog_key, sizeof(this->wm_prog_key),
-                         &prog_offset, prog_data)) {
+                         &this->wm_prog_kernel, &this->wm_prog_data)) {
       brw_blorp_blit_program prog(brw, &this->wm_prog_key);
       GLuint program_size;
       const GLuint *program = prog.compile(brw, INTEL_DEBUG & DEBUG_BLORP,
@@ -2221,7 +2214,6 @@ brw_blorp_blit_params::get_wm_prog(struct brw_context *brw,
                        &this->wm_prog_key, sizeof(this->wm_prog_key),
                        program, program_size,
                        &prog.prog_data, sizeof(prog.prog_data),
-                       &prog_offset, prog_data);
+                       &this->wm_prog_kernel, &this->wm_prog_data);
    }
-   return prog_offset;
 }
