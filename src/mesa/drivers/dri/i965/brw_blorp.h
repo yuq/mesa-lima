@@ -175,15 +175,11 @@ brw_blorp_compute_tile_offsets(const struct brw_blorp_surface_info *info,
 
 
 
-struct brw_blorp_coord_transform_params
+struct brw_blorp_coord_transform
 {
-   void setup(GLfloat src0, GLfloat src1, GLfloat dst0, GLfloat dst1,
-              bool mirror);
-
    float multiplier;
    float offset;
 };
-
 
 struct brw_blorp_wm_push_constants
 {
@@ -194,8 +190,8 @@ struct brw_blorp_wm_push_constants
    /* Top right coordinates of the rectangular grid used for scaled blitting */
    float rect_grid_x1;
    float rect_grid_y1;
-   brw_blorp_coord_transform_params x_transform;
-   brw_blorp_coord_transform_params y_transform;
+   struct brw_blorp_coord_transform x_transform;
+   struct brw_blorp_coord_transform y_transform;
 
    /* Minimum layer setting works for all the textures types but texture_3d
     * for which the setting has no effect. Use the z-coordinate instead.

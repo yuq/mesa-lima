@@ -1783,10 +1783,11 @@ brw_blorp_blit_program::render_target_write()
 }
 
 
-void
-brw_blorp_coord_transform_params::setup(GLfloat src0, GLfloat src1,
-                                        GLfloat dst0, GLfloat dst1,
-                                        bool mirror)
+static void
+brw_blorp_setup_coord_transform(struct brw_blorp_coord_transform *xform,
+                                GLfloat src0, GLfloat src1,
+                                GLfloat dst0, GLfloat dst1,
+                                bool mirror)
 {
    float scale = (src1 - src0) / (dst1 - dst0);
    if (!mirror) {
@@ -1800,16 +1801,16 @@ brw_blorp_coord_transform_params::setup(GLfloat src0, GLfloat src1,
        * whereas the behaviour we actually want is "round to nearest",
        * so 0.5 provides the necessary correction.
        */
-      multiplier = scale;
-      offset = src0 + (-dst0 + 0.5f) * scale;
+      xform->multiplier = scale;
+      xform->offset = src0 + (-dst0 + 0.5f) * scale;
    } else {
       /* When mirroring X we need:
        *   src_x - src_x0 = dst_x1 - dst_x - 0.5
        * Therefore:
        *   src_x = src_x0 + (dst_x1 -dst_x - 0.5) * scale
        */
-      multiplier = -scale;
-      offset = src0 + (dst1 - 0.5f) * scale;
+      xform->multiplier = -scale;
+      xform->offset = src0 + (dst1 - 0.5f) * scale;
    }
 }
 
@@ -2062,8 +2063,10 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    params.wm_push_consts.rect_grid_y1 =
       minify(src_mt->logical_height0, src_level) * wm_prog_key.y_scale - 1.0f;
 
-   params.wm_push_consts.x_transform.setup(src_x0, src_x1, dst_x0, dst_x1, mirror_x);
-   params.wm_push_consts.y_transform.setup(src_y0, src_y1, dst_y0, dst_y1, mirror_y);
+   brw_blorp_setup_coord_transform(&params.wm_push_consts.x_transform,
+                                   src_x0, src_x1, dst_x0, dst_x1, mirror_x);
+   brw_blorp_setup_coord_transform(&params.wm_push_consts.y_transform,
+                                   src_y0, src_y1, dst_y0, dst_y1, mirror_y);
 
    params.wm_push_consts.src_z =
       params.src.mt->target == GL_TEXTURE_3D ? params.src.layer : 0;
