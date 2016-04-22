@@ -176,6 +176,15 @@ brw_blorp_params::brw_blorp_params()
 }
 
 extern "C" {
+/**
+ * Perform a HiZ or depth resolve operation.
+ *
+ * For an overview of HiZ ops, see the following sections of the Sandy Bridge
+ * PRM, Volume 1, Part 2:
+ *   - 7.5.3.1 Depth Buffer Clear
+ *   - 7.5.3.2 Depth Buffer Resolve
+ *   - 7.5.3.3 Hierarchical Depth Buffer Resolve
+ */
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 	       unsigned int level, unsigned int layer, gen6_hiz_op op)
@@ -203,8 +212,7 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    if (brw->gen >= 8) {
       gen8_hiz_exec(brw, mt, level, layer, op);
    } else {
-      brw_hiz_op_params params(mt, level, layer, op);
-      brw_blorp_exec(brw, &params);
+      gen6_blorp_hiz_exec(brw, mt, level, layer, op);
    }
 }
 
@@ -296,14 +304,15 @@ retry:
    brw_emit_mi_flush(brw);
 }
 
-brw_hiz_op_params::brw_hiz_op_params(struct intel_mipmap_tree *mt,
-                                     unsigned int level,
-                                     unsigned int layer,
-                                     gen6_hiz_op op)
+void
+gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
+                    unsigned int level, unsigned int layer, enum gen6_hiz_op op)
 {
-   this->hiz_op = op;
+   brw_blorp_params params;
 
-   depth.set(mt, level, layer);
+   params.hiz_op = op;
+
+   params.depth.set(mt, level, layer);
 
    /* Align the rectangle primitive to 8x4 pixels.
     *
@@ -330,24 +339,33 @@ brw_hiz_op_params::brw_hiz_op_params(struct intel_mipmap_tree *mt,
     * not 8. But commit 1f112cc increased the alignment from 4 to 8, which
     * prevents the clobbering.
     */
-   dst.num_samples = mt->num_samples;
-   if (dst.num_samples > 1) {
-      depth.width = ALIGN(mt->logical_width0, 8);
-      depth.height = ALIGN(mt->logical_height0, 4);
+   params.dst.num_samples = mt->num_samples;
+   if (params.dst.num_samples > 1) {
+      params.depth.width = ALIGN(mt->logical_width0, 8);
+      params.depth.height = ALIGN(mt->logical_height0, 4);
    } else {
-      depth.width = ALIGN(depth.width, 8);
-      depth.height = ALIGN(depth.height, 4);
+      params.depth.width = ALIGN(params.depth.width, 8);
+      params.depth.height = ALIGN(params.depth.height, 4);
    }
 
-   x1 = depth.width;
-   y1 = depth.height;
+   params.x1 = params.depth.width;
+   params.y1 = params.depth.height;
 
    assert(intel_miptree_level_has_hiz(mt, level));
 
    switch (mt->format) {
-   case MESA_FORMAT_Z_UNORM16:       depth_format = BRW_DEPTHFORMAT_D16_UNORM; break;
-   case MESA_FORMAT_Z_FLOAT32: depth_format = BRW_DEPTHFORMAT_D32_FLOAT; break;
-   case MESA_FORMAT_Z24_UNORM_X8_UINT:    depth_format = BRW_DEPTHFORMAT_D24_UNORM_X8_UINT; break;
-   default:                    unreachable("not reached");
+   case MESA_FORMAT_Z_UNORM16:
+      params.depth_format = BRW_DEPTHFORMAT_D16_UNORM;
+      break;
+   case MESA_FORMAT_Z_FLOAT32:
+      params.depth_format = BRW_DEPTHFORMAT_D32_FLOAT;
+      break;
+   case MESA_FORMAT_Z24_UNORM_X8_UINT:
+      params.depth_format = BRW_DEPTHFORMAT_D24_UNORM_X8_UINT;
+      break;
+   default:
+      unreachable("not reached");
    }
+
+   brw_blorp_exec(brw, &params);
 }

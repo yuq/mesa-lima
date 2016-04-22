@@ -258,6 +258,10 @@ void
 brw_blorp_exec(struct brw_context *brw, const brw_blorp_params *params);
 
 void
+gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
+                    unsigned level, unsigned layer, enum gen6_hiz_op op);
+
+void
 gen6_blorp_exec(struct brw_context *brw,
                 const brw_blorp_params *params);
 
@@ -267,23 +271,6 @@ gen7_blorp_exec(struct brw_context *brw,
 
 void
 gen8_blorp_exec(struct brw_context *brw, const brw_blorp_params *params);
-
-/**
- * Parameters for a HiZ or depth resolve operation.
- *
- * For an overview of HiZ ops, see the following sections of the Sandy Bridge
- * PRM, Volume 1, Part 2:
- *   - 7.5.3.1 Depth Buffer Clear
- *   - 7.5.3.2 Depth Buffer Resolve
- *   - 7.5.3.3 Hierarchical Depth Buffer Resolve
- */
-class brw_hiz_op_params : public brw_blorp_params
-{
-public:
-   brw_hiz_op_params(struct intel_mipmap_tree *mt,
-                     unsigned int level, unsigned int layer,
-                     gen6_hiz_op op);
-};
 
 struct brw_blorp_blit_prog_key
 {
