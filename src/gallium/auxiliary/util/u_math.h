@@ -545,6 +545,18 @@ u_bit_scan_consecutive_range64(uint64_t *mask, int *start, int *count)
    *mask &= ~(((1llu << *count) - 1) << *start);
 }
 
+/* Returns a bitfield in which the first count bits starting at start are
+ * set.
+ */
+static inline unsigned
+u_bit_consecutive(unsigned start, unsigned count)
+{
+   assert(start + count <= 32);
+   if (count == 32)
+      return ~0;
+   return ((1u << count) - 1) << start;
+}
+
 /**
  * Return float bits.
  */
