@@ -104,9 +104,6 @@ struct ir3_shader_key {
 	 * shader:
 	 */
 	uint16_t fsaturate_s, fsaturate_t, fsaturate_r;
-
-	/* bitmask of samplers which need srgb->linear lowering: */
-	uint16_t vlower_srgb, flower_srgb;
 };
 
 static inline bool

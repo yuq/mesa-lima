@@ -93,14 +93,12 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 		if (last_key->has_per_samp || key->has_per_samp) {
 			if ((last_key->vsaturate_s != key->vsaturate_s) ||
 					(last_key->vsaturate_t != key->vsaturate_t) ||
-					(last_key->vsaturate_r != key->vsaturate_r) ||
-					(last_key->vlower_srgb != key->vlower_srgb))
+					(last_key->vsaturate_r != key->vsaturate_r))
 				ctx->prog.dirty |= FD_SHADER_DIRTY_VP;
 
 			if ((last_key->fsaturate_s != key->fsaturate_s) ||
 					(last_key->fsaturate_t != key->fsaturate_t) ||
-					(last_key->fsaturate_r != key->fsaturate_r) ||
-					(last_key->flower_srgb != key->flower_srgb))
+					(last_key->fsaturate_r != key->fsaturate_r))
 				ctx->prog.dirty |= FD_SHADER_DIRTY_FP;
 		}
 
@@ -134,16 +132,13 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 			// ie. float16 and smaller use half, float32 use full..
 			.half_precision = !!(fd_mesa_debug & FD_DBG_FRAGHALF),
 			.ucp_enables = ctx->rasterizer->clip_plane_enable,
-			.has_per_samp = (fd4_ctx->fsaturate || fd4_ctx->vsaturate ||
-					fd4_ctx->flower_srgb || fd4_ctx->vlower_srgb),
+			.has_per_samp = (fd4_ctx->fsaturate || fd4_ctx->vsaturate),
 			.vsaturate_s = fd4_ctx->vsaturate_s,
 			.vsaturate_t = fd4_ctx->vsaturate_t,
 			.vsaturate_r = fd4_ctx->vsaturate_r,
 			.fsaturate_s = fd4_ctx->fsaturate_s,
 			.fsaturate_t = fd4_ctx->fsaturate_t,
 			.fsaturate_r = fd4_ctx->fsaturate_r,
-			.vlower_srgb = fd4_ctx->vlower_srgb,
-			.flower_srgb = fd4_ctx->flower_srgb,
 		},
 		.rasterflat = ctx->rasterizer->flatshade,
 		.sprite_coord_enable = ctx->rasterizer->sprite_coord_enable,

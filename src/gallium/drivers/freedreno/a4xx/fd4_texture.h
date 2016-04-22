@@ -53,7 +53,6 @@ struct fd4_pipe_sampler_view {
 	struct pipe_sampler_view base;
 	uint32_t texconst0, texconst1, texconst2, texconst3, texconst4;
 	uint32_t offset;
-	bool lower_srgb;
 };
 
 static inline struct fd4_pipe_sampler_view *

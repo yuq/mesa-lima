@@ -58,7 +58,6 @@ ir3_key_lowers_nir(const struct ir3_shader_key *key)
 {
 	return key->fsaturate_s | key->fsaturate_t | key->fsaturate_r |
 			key->vsaturate_s | key->vsaturate_t | key->vsaturate_r |
-			key->vlower_srgb | key->flower_srgb |
 			key->ucp_enables | key->color_two_side;
 }
 
@@ -86,13 +85,11 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 			tex_options.saturate_s = key->fsaturate_s;
 			tex_options.saturate_t = key->fsaturate_t;
 			tex_options.saturate_r = key->fsaturate_r;
-			tex_options.lower_srgb = key->flower_srgb;
 			break;
 		case SHADER_VERTEX:
 			tex_options.saturate_s = key->vsaturate_s;
 			tex_options.saturate_t = key->vsaturate_t;
 			tex_options.saturate_r = key->vsaturate_r;
-			tex_options.lower_srgb = key->vlower_srgb;
 			break;
 		}
 	}
