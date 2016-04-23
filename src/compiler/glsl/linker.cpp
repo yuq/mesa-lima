@@ -4500,12 +4500,14 @@ link_and_validate_uniforms(struct gl_context *ctx,
    update_array_sizes(prog);
    link_assign_uniform_locations(prog, ctx);
 
-   link_assign_atomic_counter_resources(ctx, prog);
-   link_calculate_subroutine_compat(prog);
-   check_resources(ctx, prog);
-   check_subroutine_resources(prog);
-   check_image_resources(ctx, prog);
-   link_check_atomic_counter_resources(ctx, prog);
+   if (!prog->data->cache_fallback) {
+      link_assign_atomic_counter_resources(ctx, prog);
+      link_calculate_subroutine_compat(prog);
+      check_resources(ctx, prog);
+      check_subroutine_resources(prog);
+      check_image_resources(ctx, prog);
+      link_check_atomic_counter_resources(ctx, prog);
+   }
 }
 
 static bool
@@ -4810,8 +4812,10 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       last = i;
    }
 
-   check_explicit_uniform_locations(ctx, prog);
-   link_assign_subroutine_types(prog);
+   if (!prog->data->cache_fallback) {
+      check_explicit_uniform_locations(ctx, prog);
+      link_assign_subroutine_types(prog);
+   }
 
    if (!prog->data->LinkStatus)
       goto done;

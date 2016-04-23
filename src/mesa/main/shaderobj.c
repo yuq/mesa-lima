@@ -359,9 +359,11 @@ _mesa_clear_shader_program_data(struct gl_context *ctx,
    shProg->data->ShaderStorageBlocks = NULL;
    shProg->data->NumShaderStorageBlocks = 0;
 
-   ralloc_free(shProg->data->AtomicBuffers);
-   shProg->data->AtomicBuffers = NULL;
-   shProg->data->NumAtomicBuffers = 0;
+   if (shProg->data->AtomicBuffers && !shProg->data->cache_fallback) {
+      ralloc_free(shProg->data->AtomicBuffers);
+      shProg->data->AtomicBuffers = NULL;
+      shProg->data->NumAtomicBuffers = 0;
+   }
 
    if (shProg->data->ProgramResourceList) {
       ralloc_free(shProg->data->ProgramResourceList);
