@@ -3224,14 +3224,25 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       unreachable("unknown texture opcode");
    }
 
+   unsigned num_components = nir_tex_instr_dest_size(instr);
+
+   if (instr->dest.is_ssa) {
+      uint8_t write_mask = nir_ssa_def_components_read(&instr->dest.ssa);
+      assert(write_mask != 0); /* dead code should have been eliminated */
+      num_components = _mesa_fls(write_mask);
+   }
+
+   const bool can_reduce_return_length = devinfo->gen >= 9 &&
+      instr->op != nir_texop_tg4 && instr->op != nir_texop_query_levels;
+
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
                 tex_offset, mcs, gather_component, is_cube_array,
-                texture, texture_reg, sampler, sampler_reg);
+                texture, texture_reg, sampler, sampler_reg,
+                can_reduce_return_length ? num_components : 4);
 
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;
-   unsigned num_components = nir_tex_instr_dest_size(instr);
    emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
                              dest, this->result),
                 (1 << num_components) - 1);

@@ -213,7 +213,8 @@ public:
                      uint32_t surface,
                      fs_reg surface_reg,
                      uint32_t sampler,
-                     fs_reg sampler_reg);
+                     fs_reg sampler_reg,
+                     unsigned return_channels);
    fs_reg emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
                          const fs_reg &sampler);
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);

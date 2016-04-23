@@ -4048,6 +4048,16 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
       header_size = 1;
       sources[0] = fs_reg();
       length++;
+
+      /* If we're requesting fewer than four channels worth of response,
+       * and we have an explicit header, we need to set up the sampler
+       * writemask.  It's reversed from normal: 1 means "don't write".
+       */
+      if (inst->regs_written != 4 * reg_width) {
+         assert((inst->regs_written % reg_width) == 0);
+         unsigned mask = ~((1 << (inst->regs_written / reg_width)) - 1) & 0xf;
+         inst->offset |= mask << 12;
+      }
    }
 
    if (shadow_c.file != BAD_FILE) {

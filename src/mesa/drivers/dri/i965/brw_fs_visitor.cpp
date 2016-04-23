@@ -115,7 +115,8 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                          uint32_t surface,
                          fs_reg surface_reg,
                          uint32_t sampler,
-                         fs_reg sampler_reg)
+                         fs_reg sampler_reg,
+                         unsigned return_channels)
 {
    fs_inst *inst = NULL;
 
@@ -204,7 +205,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
    }
 
    inst = bld.emit(opcode, dst, srcs, ARRAY_SIZE(srcs));
-   inst->regs_written = 4 * dispatch_width / 8;
+   inst->regs_written = return_channels * dispatch_width / 8;
 
    if (shadow_c.file != BAD_FILE)
       inst->shadow_compare = true;
