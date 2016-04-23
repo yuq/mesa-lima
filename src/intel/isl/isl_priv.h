@@ -24,6 +24,7 @@
 #pragma once
 
 #include <assert.h>
+#include <strings.h>
 
 #include "brw_device_info.h"
 #include "util/macros.h"
@@ -38,11 +39,6 @@ __isl_finishme(const char *file, int line, const char *fmt, ...);
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-
-static inline uint32_t
-ffs(uint32_t n) {
-   return __builtin_ffs(n);
-}
 
 static inline bool
 isl_is_pow2(uintmax_t n)
