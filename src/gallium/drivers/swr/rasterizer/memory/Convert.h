@@ -37,7 +37,7 @@
 ///        float
 /// @param val - 16-bit float
 /// @todo Maybe move this outside of this file into a header?
-static float ConvertSmallFloatTo32(UINT val)
+static INLINE float ConvertSmallFloatTo32(UINT val)
 {
     UINT result;
     if ((val & 0x7fff) == 0)

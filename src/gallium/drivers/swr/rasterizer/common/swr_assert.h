@@ -59,13 +59,6 @@
 
 #else
 
-#if SWR_ENABLE_ASSERTS
-#if defined(assert)
-#undef assert
-#endif
-#define assert(exp) SWR_ASSERT(exp)
-#endif
-
 bool SwrAssert(
     bool        chkDebugger,
     bool&       enabled,
@@ -87,6 +80,12 @@ bool SwrAssert(
 
 #if SWR_ENABLE_ASSERTS
 #define SWR_ASSERT(e, ...) _SWR_ASSERT(true, e, ##__VA_ARGS__)
+
+#if defined(assert)
+#undef assert
+#endif
+#define assert(exp) SWR_ASSERT(exp)
+
 #endif
 
 #if SWR_ENABLE_REL_ASSERTS
@@ -97,11 +96,11 @@ bool SwrAssert(
 #endif // SWR_ENABLE_ASSERTS || SWR_ENABLE_REL_ASSERTS
 
 #if !SWR_ENABLE_ASSERTS
-#define SWR_ASSERT(e, ...)
+#define SWR_ASSERT(e, ...) (void)(0)
 #endif
 
 #if !SWR_ENABLE_REL_ASSERTS
-#define SWR_REL_ASSERT(e, ...)
+#define SWR_REL_ASSERT(e, ...) (void)(0)
 #endif
 
 #define SWR_NOT_IMPL SWR_ASSERT(0, "%s not implemented", __FUNCTION__)

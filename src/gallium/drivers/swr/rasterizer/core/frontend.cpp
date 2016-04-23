@@ -1125,10 +1125,7 @@ static void TessellationStages(
                 {
                     simdvector prim[3]; // Only deal with triangles, lines, or points
                     RDTSC_START(FEPAAssemble);
-#if SWR_ENABLE_ASSERTS
-                    bool assemble =
-#endif
-                        tessPa.Assemble(VERTEX_POSITION_SLOT, prim);
+                    bool assemble = tessPa.Assemble(VERTEX_POSITION_SLOT, prim);
                     RDTSC_STOP(FEPAAssemble, 1, 0);
                     SWR_ASSERT(assemble);
 
@@ -1848,7 +1845,6 @@ void BinTriangles(
                 }
             }
         }
-nextPrimitive:
         triMask &= ~(1 << triIndex);
     }
 

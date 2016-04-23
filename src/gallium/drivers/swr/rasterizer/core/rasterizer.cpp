@@ -45,25 +45,6 @@ void StepRasterTileY(uint32_t MaxRT, RenderOutputBuffers &buffers, RenderOutputB
                      uint32_t colorRowStep, uint32_t depthRowStep, uint32_t stencilRowStep);
 
 #define MASKTOVEC(i3,i2,i1,i0) {-i0,-i1,-i2,-i3}
-const __m128 gMaskToVec[] = {
-    MASKTOVEC(0,0,0,0),
-    MASKTOVEC(0,0,0,1),
-    MASKTOVEC(0,0,1,0),
-    MASKTOVEC(0,0,1,1),
-    MASKTOVEC(0,1,0,0),
-    MASKTOVEC(0,1,0,1),
-    MASKTOVEC(0,1,1,0),
-    MASKTOVEC(0,1,1,1),
-    MASKTOVEC(1,0,0,0),
-    MASKTOVEC(1,0,0,1),
-    MASKTOVEC(1,0,1,0),
-    MASKTOVEC(1,0,1,1),
-    MASKTOVEC(1,1,0,0),
-    MASKTOVEC(1,1,0,1),
-    MASKTOVEC(1,1,1,0),
-    MASKTOVEC(1,1,1,1),
-};
-
 const __m256d gMaskToVecpd[] =
 {
     MASKTOVEC(0, 0, 0, 0),
@@ -1172,16 +1153,20 @@ void StepRasterTileY(uint32_t NumRT, RenderOutputBuffers &buffers, RenderOutputB
 // initialize rasterizer function table
 PFN_WORK_FUNC gRasterizerTable[2][SWR_MULTISAMPLE_TYPE_MAX] =
 {
-    RasterizeTriangle<false, SWR_MULTISAMPLE_1X>,
-    RasterizeTriangle<false, SWR_MULTISAMPLE_2X>,
-    RasterizeTriangle<false, SWR_MULTISAMPLE_4X>,
-    RasterizeTriangle<false, SWR_MULTISAMPLE_8X>,
-    RasterizeTriangle<false, SWR_MULTISAMPLE_16X>,
-    RasterizeTriangle<true, SWR_MULTISAMPLE_1X>,
-    RasterizeTriangle<true, SWR_MULTISAMPLE_2X>,
-    RasterizeTriangle<true, SWR_MULTISAMPLE_4X>,
-    RasterizeTriangle<true, SWR_MULTISAMPLE_8X>,
-    RasterizeTriangle<true, SWR_MULTISAMPLE_16X>
+    {
+        RasterizeTriangle<false, SWR_MULTISAMPLE_1X>,
+        RasterizeTriangle<false, SWR_MULTISAMPLE_2X>,
+        RasterizeTriangle<false, SWR_MULTISAMPLE_4X>,
+        RasterizeTriangle<false, SWR_MULTISAMPLE_8X>,
+        RasterizeTriangle<false, SWR_MULTISAMPLE_16X>
+    },
+    {
+        RasterizeTriangle<true, SWR_MULTISAMPLE_1X>,
+        RasterizeTriangle<true, SWR_MULTISAMPLE_2X>,
+        RasterizeTriangle<true, SWR_MULTISAMPLE_4X>,
+        RasterizeTriangle<true, SWR_MULTISAMPLE_8X>,
+        RasterizeTriangle<true, SWR_MULTISAMPLE_16X>
+    }
 };
 
 void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)

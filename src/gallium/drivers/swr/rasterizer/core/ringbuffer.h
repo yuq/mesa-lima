@@ -90,8 +90,8 @@ public:
         return (numEnqueued == mNumEntries);
     }
 
-    INLINE volatile uint64_t GetTail() { return mRingTail; }
-    INLINE volatile uint64_t GetHead() { return mRingHead; }
+    INLINE uint64_t GetTail() volatile { return mRingTail; }
+    INLINE uint64_t GetHead() volatile { return mRingHead; }
 
 protected:
     T* mpRingBuffer;

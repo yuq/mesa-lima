@@ -620,7 +620,6 @@ template<> struct TypeTraits<SWR_TYPE_FLOAT, 16> : PackTraits<16>
 
         static const uint32_t HALF_EXP_BITS = 5;
         static const uint32_t HALF_MANTISSA_BITS = 10;
-        static const uint32_t HALF_MANTISSA_MASK = (1U << HALF_MANTISSA_BITS) - 1;
         static const uint32_t HALF_EXP_MASK = ((1U << HALF_EXP_BITS) - 1) << HALF_MANTISSA_BITS;
 
         // minimum exponent required, exponents below this are flushed to 0.

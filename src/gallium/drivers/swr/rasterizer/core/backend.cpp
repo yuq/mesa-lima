@@ -37,30 +37,6 @@
 
 #include <algorithm>
 
-const __m128 vTileOffsetsX = {0.5, KNOB_TILE_X_DIM - 0.5, 0.5, KNOB_TILE_X_DIM - 0.5};
-const __m128 vTileOffsetsY = {0.5, 0.5, KNOB_TILE_Y_DIM - 0.5, KNOB_TILE_Y_DIM - 0.5};
-
-/// @todo move to common lib
-#define MASKTOVEC(i3,i2,i1,i0) {-i0,-i1,-i2,-i3}
-static const __m128 gMaskToVec[] = {
-    MASKTOVEC(0,0,0,0),
-    MASKTOVEC(0,0,0,1),
-    MASKTOVEC(0,0,1,0),
-    MASKTOVEC(0,0,1,1),
-    MASKTOVEC(0,1,0,0),
-    MASKTOVEC(0,1,0,1),
-    MASKTOVEC(0,1,1,0),
-    MASKTOVEC(0,1,1,1),
-    MASKTOVEC(1,0,0,0),
-    MASKTOVEC(1,0,0,1),
-    MASKTOVEC(1,0,1,0),
-    MASKTOVEC(1,0,1,1),
-    MASKTOVEC(1,1,0,0),
-    MASKTOVEC(1,1,0,1),
-    MASKTOVEC(1,1,1,0),
-    MASKTOVEC(1,1,1,1),
-};
-
 typedef void(*PFN_CLEAR_TILES)(DRAW_CONTEXT*, SWR_RENDERTARGET_ATTACHMENT rt, uint32_t, DWORD[4]);
 static PFN_CLEAR_TILES sClearTilesTable[NUM_SWR_FORMATS];
 

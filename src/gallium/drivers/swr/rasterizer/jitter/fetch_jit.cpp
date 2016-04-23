@@ -533,8 +533,6 @@ void FetchJit::CreateGatherOddFormats(SWR_FORMAT format, Value* pBase, Value* of
     // only works if pixel size is <= 32bits
     SWR_ASSERT(info.bpp <= 32);
 
-    uint32_t numComps = info.numComps;
-
     Value* gather = VUNDEF_I();
 
     // assign defaults

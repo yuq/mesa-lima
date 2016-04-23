@@ -1009,7 +1009,7 @@ struct PA_TESS : PA_STATE
     simdvector& GetSimdVector(uint32_t index, uint32_t slot)
     {
         SWR_ASSERT(0, "%s NOT IMPLEMENTED", __FUNCTION__);
-        static simdvector junk = { 0 };
+        static simdvector junk;
         return junk;
     }
 
