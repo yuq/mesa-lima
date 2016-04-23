@@ -720,7 +720,6 @@ static struct pb_buffer *
 radeon_winsys_bo_create(struct radeon_winsys *rws,
                         uint64_t size,
                         unsigned alignment,
-                        boolean use_reusable_pool,
                         enum radeon_bo_domain domain,
                         enum radeon_bo_flag flags)
 {
@@ -748,11 +747,9 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     assert(flags < sizeof(usage) * 8 - 3);
     usage |= 1 << (flags + 3);
 
-    if (use_reusable_pool) {
-        bo = radeon_bo(pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage));
-        if (bo)
-            return &bo->base;
-    }
+    bo = radeon_bo(pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage));
+    if (bo)
+        return &bo->base;
 
     bo = radeon_create_bo(ws, size, alignment, usage, domain, flags);
     if (!bo) {
@@ -763,7 +760,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
             return NULL;
     }
 
-    bo->use_reusable_pool = use_reusable_pool;
+    bo->use_reusable_pool = true;
 
     pipe_mutex_lock(ws->bo_handles_mutex);
     util_hash_table_set(ws->bo_handles, (void*)(uintptr_t)bo->handle, bo);

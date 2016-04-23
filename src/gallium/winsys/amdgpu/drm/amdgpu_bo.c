@@ -456,7 +456,6 @@ static struct pb_buffer *
 amdgpu_bo_create(struct radeon_winsys *rws,
                  uint64_t size,
                  unsigned alignment,
-                 boolean use_reusable_pool,
                  enum radeon_bo_domain domain,
                  enum radeon_bo_flag flags)
 {
@@ -481,13 +480,10 @@ amdgpu_bo_create(struct radeon_winsys *rws,
    usage |= 1 << (flags + 3);
 
    /* Get a buffer from the cache. */
-   if (use_reusable_pool) {
-       bo = (struct amdgpu_winsys_bo*)
-            pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment,
-                                    usage);
-       if (bo)
-          return &bo->base;
-   }
+   bo = (struct amdgpu_winsys_bo*)
+        pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage);
+   if (bo)
+      return &bo->base;
 
    /* Create a new one. */
    bo = amdgpu_create_bo(ws, size, alignment, usage, domain, flags);
@@ -499,7 +495,7 @@ amdgpu_bo_create(struct radeon_winsys *rws,
          return NULL;
    }
 
-   bo->use_reusable_pool = use_reusable_pool;
+   bo->use_reusable_pool = true;
    return &bo->base;
 }
 

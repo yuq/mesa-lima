@@ -176,7 +176,6 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 
 	/* Allocate a new resource. */
 	new_buf = rscreen->ws->buffer_create(rscreen->ws, size, alignment,
-					     true,
 					     res->domains, flags);
 	if (!new_buf) {
 		return false;

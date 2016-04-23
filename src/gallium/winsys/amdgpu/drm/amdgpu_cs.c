@@ -236,7 +236,7 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_ib *ib,
       ib->used_ib_space = 0;
 
       ib->big_ib_buffer = ws->buffer_create(ws, buffer_size,
-                                            4096, true,
+                                            4096,
                                             RADEON_DOMAIN_GTT,
                                             RADEON_FLAG_CPU_ACCESS);
       if (!ib->big_ib_buffer)

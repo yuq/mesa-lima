@@ -185,7 +185,7 @@ void rvid_join_surfaces(struct radeon_winsys* ws,
 	/* TODO: 2D tiling workaround */
 	alignment *= 2;
 
-	pb = ws->buffer_create(ws, size, alignment, TRUE, RADEON_DOMAIN_VRAM, 0);
+	pb = ws->buffer_create(ws, size, alignment, RADEON_DOMAIN_VRAM, 0);
 	if (!pb)
 		return;
 

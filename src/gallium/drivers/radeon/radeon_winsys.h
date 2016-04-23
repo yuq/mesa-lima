@@ -451,7 +451,6 @@ struct radeon_winsys {
     struct pb_buffer *(*buffer_create)(struct radeon_winsys *ws,
                                        uint64_t size,
                                        unsigned alignment,
-                                       boolean use_reusable_pool,
                                        enum radeon_bo_domain domain,
                                        enum radeon_bo_flag flags);
 
