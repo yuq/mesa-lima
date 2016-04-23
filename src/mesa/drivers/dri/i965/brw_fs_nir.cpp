@@ -3132,7 +3132,9 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          nir_const_value *const_offset =
             nir_src_as_const_value(instr->src[i].src);
          if (const_offset) {
-            tex_offset = brw_imm_ud(brw_texture_offset(const_offset->i32, 3));
+            unsigned header_bits = brw_texture_offset(const_offset->i32, 3);
+            if (header_bits != 0)
+               tex_offset = brw_imm_ud(header_bits);
          } else {
             tex_offset = retype(src, BRW_REGISTER_TYPE_D);
          }
