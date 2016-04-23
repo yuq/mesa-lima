@@ -102,8 +102,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 
 bool r600_init_resource(struct r600_common_screen *rscreen,
 			struct r600_resource *res,
-			uint64_t size, unsigned alignment,
-			bool use_reusable_pool)
+			uint64_t size, unsigned alignment)
 {
 	struct r600_texture *rtex = (struct r600_texture*)res;
 	struct pb_buffer *old_buf, *new_buf;
@@ -177,7 +176,7 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 
 	/* Allocate a new resource. */
 	new_buf = rscreen->ws->buffer_create(rscreen->ws, size, alignment,
-					     use_reusable_pool,
+					     true,
 					     res->domains, flags);
 	if (!new_buf) {
 		return false;
@@ -489,7 +488,7 @@ struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct r600_resource *rbuffer = r600_alloc_buffer_struct(screen, templ);
 
-	if (!r600_init_resource(rscreen, rbuffer, templ->width0, alignment, TRUE)) {
+	if (!r600_init_resource(rscreen, rbuffer, templ->width0, alignment)) {
 		FREE(rbuffer);
 		return NULL;
 	}

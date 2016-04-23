@@ -878,7 +878,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 	/* Now create the backing buffer. */
 	if (!buf) {
 		if (!r600_init_resource(rscreen, resource, rtex->size,
-					rtex->surface.bo_alignment, TRUE)) {
+					rtex->surface.bo_alignment)) {
 			FREE(rtex);
 			return NULL;
 		}

@@ -2788,7 +2788,7 @@ static void r600_invalidate_buffer(struct pipe_context *ctx, struct pipe_resourc
 
 	/* Reallocate the buffer in the same pipe_resource. */
 	r600_init_resource(&rctx->screen->b, rbuffer, rbuffer->b.b.width0,
-			   alignment, TRUE);
+			   alignment);
 
 	/* We changed the buffer, now we need to bind it where the old one was bound. */
 	/* Vertex buffers. */
