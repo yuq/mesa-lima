@@ -1,4 +1,5 @@
-# Copyright (C) 2014 Emil Velikov <emil.l.velikov@gmail.com>
+#
+# Copyright (C) 2016 Linaro, Ltd., Rob Herring <robh@kernel.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -17,33 +18,21 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
+#
 
-LOCAL_PATH := $(call my-dir)
+ifeq ($(LOCAL_MODULE_CLASS),)
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+endif
 
-# get C_SOURCES
-include $(LOCAL_PATH)/Makefile.sources
+ir3_nir_trig_deps := \
+	$(LOCAL_PATH)/ir3/ir3_nir_trig.py \
+	$(MESA_TOP)/src/compiler/nir/nir_algebraic.py
 
-include $(CLEAR_VARS)
+intermediates := $(call local-generated-sources-dir)
 
-LOCAL_SRC_FILES := \
-	$(C_SOURCES) \
-	$(a2xx_SOURCES) \
-	$(a3xx_SOURCES)	\
-	$(a4xx_SOURCES) \
-	$(ir3_SOURCES)
+$(intermediates)/ir3/ir3_nir_trig.c: $(ir3_nir_trig_deps)
+	@mkdir -p $(dir $@)
+	$(hide) PYTHONPATH=$(MESA_TOP)/src/compiler/nir $(MESA_PYTHON2) $< > $@
 
-#LOCAL_CFLAGS := \
-#	-Wno-packed-bitfield-compat
-
-LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/ir3
-
-LOCAL_GENERATED_SOURCES := $(MESA_GEN_NIR_H)
-
-LOCAL_SHARED_LIBRARIES := libdrm libdrm_freedreno
-LOCAL_STATIC_LIBRARIES := libmesa_glsl libmesa_nir
-LOCAL_MODULE := libmesa_pipe_freedreno
-
-include $(LOCAL_PATH)/Android.gen.mk
-include $(GALLIUM_COMMON_MK)
-include $(BUILD_STATIC_LIBRARY)
+LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, \
+	$(ir3_GENERATED_FILES))

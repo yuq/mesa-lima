@@ -120,6 +120,11 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 		if (key->color_two_side) {
 			OPT_V(s, nir_lower_two_sided_color);
 		}
+	} else {
+		/* only want to do this the first time (when key is null)
+		 * and not again on any potential 2nd variant lowering pass:
+		 */
+		OPT_V(s, ir3_nir_apply_trig_workarounds);
 	}
 
 	OPT_V(s, nir_lower_tex, &tex_options);
