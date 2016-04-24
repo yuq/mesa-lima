@@ -337,8 +337,6 @@ static inline int ir3_neighbor_count(struct ir3_instruction *instr)
 	return num;
 }
 
-struct ir3_heap_chunk;
-
 struct ir3 {
 	struct ir3_compiler *compiler;
 
@@ -388,9 +386,6 @@ struct ir3 {
 
 	/* List of ir3_array's: */
 	struct list_head array_list;
-
-	unsigned heap_idx;
-	struct ir3_heap_chunk *chunk;
 };
 
 typedef struct nir_variable nir_variable;
