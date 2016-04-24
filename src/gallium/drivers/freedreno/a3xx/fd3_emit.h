@@ -67,7 +67,7 @@ fd3_emit_get_vp(struct fd3_emit *emit)
 {
 	if (!emit->vp) {
 		struct fd3_shader_stateobj *so = emit->prog->vp;
-		emit->vp = ir3_shader_variant(so->shader, emit->key);
+		emit->vp = ir3_shader_variant(so->shader, emit->key, emit->debug);
 	}
 	return emit->vp;
 }
@@ -82,7 +82,7 @@ fd3_emit_get_fp(struct fd3_emit *emit)
 			emit->fp = &binning_fp;
 		} else {
 			struct fd3_shader_stateobj *so = emit->prog->fp;
-			emit->fp = ir3_shader_variant(so->shader, emit->key);
+			emit->fp = ir3_shader_variant(so->shader, emit->key, emit->debug);
 		}
 	}
 	return emit->fp;

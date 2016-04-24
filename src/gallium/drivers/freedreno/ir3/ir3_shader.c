@@ -147,30 +147,35 @@ assemble_variant(struct ir3_shader_variant *v)
 		ir3_shader_disasm(v, bin);
 	}
 
-	if (fd_mesa_debug & FD_DBG_SHADERDB) {
-		/* print generic shader info: */
-		fprintf(stderr, "SHADER-DB: %s prog %d/%d: %u instructions, %u dwords\n",
-				ir3_shader_stage(v->shader),
-				v->shader->id, v->id,
-				v->info.instrs_count,
-				v->info.sizedwords);
-		fprintf(stderr, "SHADER-DB: %s prog %d/%d: %u half, %u full\n",
-				ir3_shader_stage(v->shader),
-				v->shader->id, v->id,
-				v->info.max_half_reg + 1,
-				v->info.max_reg + 1);
-		fprintf(stderr, "SHADER-DB: %s prog %d/%d: %u const, %u constlen\n",
-				ir3_shader_stage(v->shader),
-				v->shader->id, v->id,
-				v->info.max_const + 1,
-				v->constlen);
-	}
-
 	free(bin);
 
 	/* no need to keep the ir around beyond this point: */
 	ir3_destroy(v->ir);
 	v->ir = NULL;
+}
+
+static void
+dump_shader_info(struct ir3_shader_variant *v, struct pipe_debug_callback *debug)
+{
+	if (!unlikely(fd_mesa_debug & FD_DBG_SHADERDB))
+		return;
+
+	pipe_debug_message(debug, SHADER_INFO, "\n"
+			"SHADER-DB: %s prog %d/%d: %u instructions, %u dwords\n"
+			"SHADER-DB: %s prog %d/%d: %u half, %u full\n"
+			"SHADER-DB: %s prog %d/%d: %u const, %u constlen\n",
+			ir3_shader_stage(v->shader),
+			v->shader->id, v->id,
+			v->info.instrs_count,
+			v->info.sizedwords,
+			ir3_shader_stage(v->shader),
+			v->shader->id, v->id,
+			v->info.max_half_reg + 1,
+			v->info.max_reg + 1,
+			ir3_shader_stage(v->shader),
+			v->shader->id, v->id,
+			v->info.max_const + 1,
+			v->constlen);
 }
 
 static struct ir3_shader_variant *
@@ -207,7 +212,8 @@ fail:
 }
 
 struct ir3_shader_variant *
-ir3_shader_variant(struct ir3_shader *shader, struct ir3_shader_key key)
+ir3_shader_variant(struct ir3_shader *shader, struct ir3_shader_key key,
+		struct pipe_debug_callback *debug)
 {
 	struct ir3_shader_variant *v;
 
@@ -248,6 +254,7 @@ ir3_shader_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 	if (v) {
 		v->next = shader->variants;
 		shader->variants = v;
+		dump_shader_info(v, debug);
 	}
 
 	return v;
@@ -269,8 +276,8 @@ ir3_shader_destroy(struct ir3_shader *shader)
 
 struct ir3_shader *
 ir3_shader_create(struct ir3_compiler *compiler,
-		const struct pipe_shader_state *cso,
-		enum shader_t type)
+		const struct pipe_shader_state *cso, enum shader_t type,
+		struct pipe_debug_callback *debug)
 {
 	struct ir3_shader *shader = CALLOC_STRUCT(ir3_shader);
 	shader->compiler = compiler;
@@ -294,7 +301,7 @@ ir3_shader_create(struct ir3_compiler *compiler,
 		 * actually compiled)
 		 */
 		static struct ir3_shader_key key = {0};
-		ir3_shader_variant(shader, key);
+		ir3_shader_variant(shader, key, debug);
 	}
 	return shader;
 }
