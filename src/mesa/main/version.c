@@ -529,8 +529,24 @@ compute_version_es2(const struct gl_extensions *extensions,
                          extensions->ARB_texture_multisample &&
                          extensions->ARB_gpu_shader5 &&
                          extensions->EXT_shader_integer_mix);
+   const bool ver_3_2 = (ver_3_1 &&
+                         /*extensions->KHR_blend_equation_advanced*/ false &&
+                         extensions->KHR_texture_compression_astc_ldr &&
+                         extensions->OES_copy_image &&
+                         extensions->ARB_draw_buffers_blend &&
+                         extensions->ARB_draw_elements_base_vertex &&
+                         extensions->OES_geometry_shader &&
+                         /*extensions->OES_primitive_bounding_box*/ false &&
+                         extensions->OES_sample_variables &&
+                         extensions->ARB_tessellation_shader &&
+                         extensions->ARB_texture_border_clamp &&
+                         extensions->OES_texture_buffer &&
+                         extensions->ARB_texture_cube_map_array &&
+                         extensions->ARB_texture_stencil8);
 
-   if (ver_3_1) {
+   if (ver_3_2) {
+      return 32;
+   } else if (ver_3_1) {
       return 31;
    } else if (ver_3_0) {
       return 30;
