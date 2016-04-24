@@ -47,6 +47,7 @@ void fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring,
 
 /* grouped together emit-state for prog/vertex/state emit: */
 struct fd3_emit {
+	struct pipe_debug_callback *debug;
 	const struct fd_vertex_state *vtx;
 	const struct fd_program_stateobj *prog;
 	const struct pipe_draw_info *info;

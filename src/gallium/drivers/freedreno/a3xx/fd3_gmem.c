@@ -160,6 +160,7 @@ emit_binning_workaround(struct fd_context *ctx)
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct fd3_emit emit = {
+			.debug = &ctx->debug,
 			.vtx = &fd3_ctx->solid_vbuf_state,
 			.prog = &ctx->solid_prog,
 			.key = {
@@ -351,6 +352,7 @@ fd3_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct fd3_emit emit = {
+			.debug = &ctx->debug,
 			.vtx = &fd3_ctx->solid_vbuf_state,
 			.prog = &ctx->solid_prog,
 			.key = {
@@ -532,6 +534,7 @@ fd3_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct fd3_emit emit = {
+			.debug = &ctx->debug,
 			.vtx = &fd3_ctx->blit_vbuf_state,
 			.sprite_coord_enable = 1,
 			/* NOTE: They all use the same VP, this is for vtx bufs. */
