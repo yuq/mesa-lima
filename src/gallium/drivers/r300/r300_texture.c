@@ -38,6 +38,63 @@
 
 #include "pipe/p_screen.h"
 
+/* These formats are supported by swapping their bytes.
+ * The swizzles must be set exactly like their non-swapped counterparts,
+ * because byte-swapping is what reverses the component order, not swizzling.
+ *
+ * This function returns the format that must be used to program CB and TX
+ * swizzles.
+ */
+static enum pipe_format r300_unbyteswap_array_format(enum pipe_format format)
+{
+    /* Only BGRA 8888 array formats are supported for simplicity of
+     * the implementation. */
+    switch (format) {
+    case PIPE_FORMAT_A8R8G8B8_UNORM:
+        return PIPE_FORMAT_B8G8R8A8_UNORM;
+    case PIPE_FORMAT_A8R8G8B8_SRGB:
+        return PIPE_FORMAT_B8G8R8A8_SRGB;
+    case PIPE_FORMAT_X8R8G8B8_UNORM:
+        return PIPE_FORMAT_B8G8R8X8_UNORM;
+    case PIPE_FORMAT_X8R8G8B8_SRGB:
+        return PIPE_FORMAT_B8G8R8X8_SRGB;
+    default:
+        return format;
+    }
+}
+
+static unsigned r300_get_endian_swap(enum pipe_format format)
+{
+    const struct util_format_description *desc;
+    unsigned swap_size;
+
+    if (r300_unbyteswap_array_format(format) != format)
+        return R300_SURF_DWORD_SWAP;
+
+    if (PIPE_ENDIAN_NATIVE != PIPE_ENDIAN_BIG)
+        return R300_SURF_NO_SWAP;
+
+    desc = util_format_description(format);
+    if (!desc)
+        return R300_SURF_NO_SWAP;
+
+    /* Compressed formats should be in the little endian format. */
+    if (desc->block.width != 1 || desc->block.height != 1)
+        return R300_SURF_NO_SWAP;
+
+    swap_size = desc->is_array ? desc->channel[0].size : desc->block.bits;
+
+    switch (swap_size) {
+    default: /* shouldn't happen? */
+    case 8:
+        return R300_SURF_NO_SWAP;
+    case 16:
+        return R300_SURF_WORD_SWAP;
+    case 32:
+        return R300_SURF_DWORD_SWAP;
+    }
+}
+
 unsigned r300_get_swizzle_combined(const unsigned char *swizzle_format,
                                    const unsigned char *swizzle_view,
                                    boolean dxtc_swizzle)
@@ -118,6 +175,7 @@ uint32_t r300_translate_texformat(enum pipe_format format,
         R300_TX_FORMAT_SIGNED_X,
     };
 
+    format = r300_unbyteswap_array_format(format);
     desc = util_format_description(format);
 
     /* Colorspace (return non-RGB formats directly). */
@@ -400,6 +458,8 @@ uint32_t r500_tx_format_msb_bit(enum pipe_format format)
  * output. For the swizzling of the targets, check the shader's format. */
 static uint32_t r300_translate_colorformat(enum pipe_format format)
 {
+    format = r300_unbyteswap_array_format(format);
+
     switch (format) {
         /* 8-bit buffers. */
         case PIPE_FORMAT_A8_UNORM:
@@ -534,6 +594,7 @@ static uint32_t r300_translate_out_fmt(enum pipe_format format)
     const struct util_format_description *desc;
     boolean uniform_sign;
 
+    format = r300_unbyteswap_array_format(format);
     desc = util_format_description(format);
 
     /* Find the first non-VOID channel. */
@@ -730,6 +791,8 @@ static uint32_t r300_translate_out_fmt(enum pipe_format format)
 
 static uint32_t r300_translate_colormask_swizzle(enum pipe_format format)
 {
+    format = r300_unbyteswap_array_format(format);
+
     switch (format) {
     case PIPE_FORMAT_A8_UNORM:
     case PIPE_FORMAT_A8_SNORM:
@@ -918,7 +981,8 @@ void r300_texture_setup_format_state(struct r300_screen *screen,
     }
 
     out->tile_config = R300_TXO_MACRO_TILE(desc->macrotile[level]) |
-                       R300_TXO_MICRO_TILE(desc->microtile);
+                       R300_TXO_MICRO_TILE(desc->microtile) |
+                       R300_TXO_ENDIAN(r300_get_endian_swap(format));
 }
 
 static void r300_texture_setup_fb_state(struct r300_surface *surf)
@@ -933,7 +997,8 @@ static void r300_texture_setup_fb_state(struct r300_surface *surf)
         surf->pitch =
                 stride |
                 R300_DEPTHMACROTILE(tex->tex.macrotile[level]) |
-                R300_DEPTHMICROTILE(tex->tex.microtile);
+                R300_DEPTHMICROTILE(tex->tex.microtile) |
+                R300_DEPTHENDIAN(r300_get_endian_swap(surf->base.format));
         surf->format = r300_translate_zsformat(surf->base.format);
         surf->pitch_zmask = tex->tex.zmask_stride_in_pixels[level];
         surf->pitch_hiz = tex->tex.hiz_stride_in_pixels[level];
@@ -944,7 +1009,8 @@ static void r300_texture_setup_fb_state(struct r300_surface *surf)
                 stride |
                 r300_translate_colorformat(format) |
                 R300_COLOR_TILE(tex->tex.macrotile[level]) |
-                R300_COLOR_MICROTILE(tex->tex.microtile);
+                R300_COLOR_MICROTILE(tex->tex.microtile) |
+                R300_COLOR_ENDIAN(r300_get_endian_swap(format));
         surf->format = r300_translate_out_fmt(format);
         surf->colormask_swizzle =
             r300_translate_colormask_swizzle(format);
