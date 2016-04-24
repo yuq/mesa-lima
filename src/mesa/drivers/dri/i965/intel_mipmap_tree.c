@@ -392,6 +392,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->logical_depth0 = depth0;
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
    mt->disable_aux_buffers = (layout_flags & MIPTREE_LAYOUT_DISABLE_AUX) != 0;
+   mt->is_scanout = (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT) != 0;
    exec_list_make_empty(&mt->hiz_map);
    mt->cpp = _mesa_get_format_bytes(format);
    mt->num_samples = num_samples;
@@ -898,7 +899,7 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
                                                  height,
                                                  1,
                                                  pitch,
-                                                 0);
+                                                 MIPTREE_LAYOUT_FOR_SCANOUT);
    if (!singlesample_mt)
       goto fail;
 
@@ -957,8 +958,8 @@ intel_miptree_create_for_renderbuffer(struct brw_context *brw,
    bool ok;
    GLenum target = num_samples > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
    const uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
-                                 MIPTREE_LAYOUT_TILING_ANY;
-
+                                 MIPTREE_LAYOUT_TILING_ANY |
+                                 MIPTREE_LAYOUT_FOR_SCANOUT;
 
    mt = intel_miptree_create(brw, target, format, 0, 0,
                              width, height, depth, num_samples,
