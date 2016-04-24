@@ -92,8 +92,10 @@ static struct group_ops instr_ops = { instr_get, instr_insert_mov };
 
 /* verify that cur != instr, but cur is also not in instr's neighbor-list: */
 static bool
-in_neighbor_list(struct ir3_instruction *instr, struct ir3_instruction *cur)
+in_neighbor_list(struct ir3_instruction *instr, struct ir3_instruction *cur, int pos)
 {
+	int idx = 0;
+
 	if (!instr)
 		return false;
 
@@ -101,7 +103,7 @@ in_neighbor_list(struct ir3_instruction *instr, struct ir3_instruction *cur)
 		return true;
 
 	for (instr = ir3_neighbor_first(instr); instr; instr = instr->cp.right)
-		if (instr == cur)
+		if ((idx++ != pos) && (instr == cur))
 			return true;
 
 	return false;
@@ -137,7 +139,7 @@ restart:
 
 			/* we also can't have an instr twice in the group: */
 			for (j = i + 1; (j < n) && !conflict; j++)
-				if (in_neighbor_list(ops->get(arr, j), instr))
+				if (in_neighbor_list(ops->get(arr, j), instr, i))
 					conflict = true;
 
 			if (conflict) {
