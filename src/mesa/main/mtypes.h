@@ -3724,6 +3724,7 @@ struct gl_extensions
    GLboolean ARB_ES2_compatibility;
    GLboolean ARB_ES3_compatibility;
    GLboolean ARB_ES3_1_compatibility;
+   GLboolean ARB_ES3_2_compatibility;
    GLboolean ARB_arrays_of_arrays;
    GLboolean ARB_base_instance;
    GLboolean ARB_blend_func_extended;

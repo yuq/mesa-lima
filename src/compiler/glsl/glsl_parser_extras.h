@@ -512,6 +512,8 @@ struct _mesa_glsl_parse_state {
     */
    bool ARB_ES3_1_compatibility_enable;
    bool ARB_ES3_1_compatibility_warn;
+   bool ARB_ES3_2_compatibility_enable;
+   bool ARB_ES3_2_compatibility_warn;
    bool ARB_arrays_of_arrays_enable;
    bool ARB_arrays_of_arrays_warn;
    bool ARB_compute_shader_enable;
