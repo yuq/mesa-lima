@@ -369,6 +369,8 @@ struct fd_context {
 	bool cond_cond; /* inverted rendering condition */
 	uint cond_mode;
 
+	struct pipe_debug_callback debug;
+
 	/* GMEM/tile handling fxns: */
 	void (*emit_tile_init)(struct fd_context *ctx);
 	void (*emit_tile_prep)(struct fd_context *ctx, struct fd_tile *tile);
