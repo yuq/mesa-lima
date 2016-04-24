@@ -132,6 +132,27 @@ dri_fill_in_modes(struct dri_screen *screen)
       MESA_FORMAT_B8G8R8A8_SRGB,
       MESA_FORMAT_B8G8R8X8_SRGB,
       MESA_FORMAT_B5G6R5_UNORM,
+
+      /* The 32-bit RGBA format must not precede the 32-bit BGRA format.
+       * Likewise for RGBX and BGRX.  Otherwise, the GLX client and the GLX
+       * server may disagree on which format the GLXFBConfig represents,
+       * resulting in swapped color channels.
+       *
+       * The problem, as of 2017-05-30:
+       * When matching a GLXFBConfig to a __DRIconfig, GLX ignores the channel
+       * order and chooses the first __DRIconfig with the expected channel
+       * sizes. Specifically, GLX compares the GLXFBConfig's and __DRIconfig's
+       * __DRI_ATTRIB_{CHANNEL}_SIZE but ignores __DRI_ATTRIB_{CHANNEL}_MASK.
+       *
+       * EGL does not suffer from this problem. It correctly compares the
+       * channel masks when matching EGLConfig to __DRIconfig.
+       */
+
+      /* Required by Android, for HAL_PIXEL_FORMAT_RGBA_8888. */
+      MESA_FORMAT_R8G8B8A8_UNORM,
+
+      /* Required by Android, for HAL_PIXEL_FORMAT_RGBX_8888. */
+      MESA_FORMAT_R8G8B8X8_UNORM,
    };
    static const enum pipe_format pipe_formats[] = {
       PIPE_FORMAT_BGRA8888_UNORM,
@@ -139,6 +160,8 @@ dri_fill_in_modes(struct dri_screen *screen)
       PIPE_FORMAT_BGRA8888_SRGB,
       PIPE_FORMAT_BGRX8888_SRGB,
       PIPE_FORMAT_B5G6R5_UNORM,
+      PIPE_FORMAT_RGBA8888_UNORM,
+      PIPE_FORMAT_RGBX8888_UNORM,
    };
    mesa_format format;
    __DRIconfig **configs = NULL;
@@ -275,19 +298,41 @@ dri_fill_st_visual(struct st_visual *stvis, struct dri_screen *screen,
    if (!mode)
       return;
 
-   if (mode->redBits == 8) {
-      if (mode->alphaBits == 8)
-         if (mode->sRGBCapable)
-            stvis->color_format = PIPE_FORMAT_BGRA8888_SRGB;
-         else
-            stvis->color_format = PIPE_FORMAT_BGRA8888_UNORM;
-      else
-         if (mode->sRGBCapable)
-            stvis->color_format = PIPE_FORMAT_BGRX8888_SRGB;
-         else
-            stvis->color_format = PIPE_FORMAT_BGRX8888_UNORM;
-   } else {
+   /* Deduce the color format. */
+   switch (mode->redMask) {
+   case 0x00FF0000:
+      if (mode->alphaMask) {
+         assert(mode->alphaMask == 0xFF000000);
+         stvis->color_format = mode->sRGBCapable ?
+                                  PIPE_FORMAT_BGRA8888_SRGB :
+                                  PIPE_FORMAT_BGRA8888_UNORM;
+      } else {
+         stvis->color_format = mode->sRGBCapable ?
+                                  PIPE_FORMAT_BGRX8888_SRGB :
+                                  PIPE_FORMAT_BGRX8888_UNORM;
+      }
+      break;
+
+   case 0x000000FF:
+      if (mode->alphaMask) {
+         assert(mode->alphaMask == 0xFF000000);
+         stvis->color_format = mode->sRGBCapable ?
+                                  PIPE_FORMAT_RGBA8888_SRGB :
+                                  PIPE_FORMAT_RGBA8888_UNORM;
+      } else {
+         stvis->color_format = mode->sRGBCapable ?
+                                  PIPE_FORMAT_RGBX8888_SRGB :
+                                  PIPE_FORMAT_RGBX8888_UNORM;
+      }
+      break;
+
+   case 0x0000F800:
       stvis->color_format = PIPE_FORMAT_B5G6R5_UNORM;
+      break;
+
+   default:
+      assert(!"unsupported visual: invalid red mask");
+      return;
    }
 
    if (mode->sampleBuffers) {
