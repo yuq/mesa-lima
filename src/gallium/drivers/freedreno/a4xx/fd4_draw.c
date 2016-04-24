@@ -128,6 +128,7 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 {
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
 	struct fd4_emit emit = {
+		.debug = &ctx->debug,
 		.vtx  = &ctx->vtx,
 		.prog = &ctx->prog,
 		.info = info,
@@ -217,6 +218,7 @@ fd4_clear_binning(struct fd_context *ctx, unsigned dirty)
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
 	struct fd_ringbuffer *ring = ctx->binning_ring;
 	struct fd4_emit emit = {
+		.debug = &ctx->debug,
 		.vtx  = &fd4_ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {
@@ -254,6 +256,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 	unsigned dirty = ctx->dirty;
 	unsigned i;
 	struct fd4_emit emit = {
+		.debug = &ctx->debug,
 		.vtx  = &fd4_ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {

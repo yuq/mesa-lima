@@ -191,6 +191,7 @@ fd4_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct fd4_emit emit = {
+			.debug = &ctx->debug,
 			.vtx = &fd4_ctx->solid_vbuf_state,
 			.prog = &ctx->solid_prog,
 			.key = {
@@ -328,6 +329,7 @@ fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct fd4_emit emit = {
+			.debug = &ctx->debug,
 			.vtx = &fd4_ctx->blit_vbuf_state,
 			.sprite_coord_enable = 1,
 			/* NOTE: They all use the same VP, this is for vtx bufs. */
