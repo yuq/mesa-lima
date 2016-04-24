@@ -96,6 +96,8 @@ void ir3_destroy(struct ir3 *shader)
 	free(shader->indirects);
 	free(shader->predicates);
 	free(shader->baryfs);
+	free(shader->keeps);
+	free(shader->astc_srgb);
 	free(shader);
 }
 
