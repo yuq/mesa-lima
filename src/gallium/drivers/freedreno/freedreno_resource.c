@@ -43,6 +43,8 @@
 
 #include <errno.h>
 
+/* XXX this should go away, needed for 'struct winsys_handle' */
+#include "state_tracker/drm_driver.h"
 
 static bool
 pending(struct fd_resource *rsc, enum fd_resource_status status)
@@ -637,8 +639,7 @@ fail:
 static struct pipe_resource *
 fd_resource_from_handle(struct pipe_screen *pscreen,
 		const struct pipe_resource *tmpl,
-		struct winsys_handle *handle,
-                unsigned usage)
+		struct winsys_handle *handle, unsigned usage)
 {
 	struct fd_resource *rsc = CALLOC_STRUCT(fd_resource);
 	struct fd_resource_slice *slice = &rsc->slices[0];
@@ -669,6 +670,7 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 	rsc->base.vtbl = &fd_resource_vtbl;
 	rsc->cpp = util_format_get_blocksize(tmpl->format);
 	slice->pitch /= rsc->cpp;
+	slice->offset = handle->offset;
 
 	assert(rsc->cpp);
 
