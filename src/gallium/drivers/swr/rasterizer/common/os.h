@@ -167,6 +167,7 @@ unsigned char _bittest(const LONG *a, LONG b)
 }
 
 #define GetCurrentProcessId getpid
+#define GetCurrentThreadId gettid
 
 #define CreateDirectory(name, pSecurity) mkdir(name, 0777)
 

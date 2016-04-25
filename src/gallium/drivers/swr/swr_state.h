@@ -35,6 +35,7 @@
 #include "swr_tex_sample.h"
 #include "swr_shader.h"
 #include <unordered_map>
+#include <memory>
 
 template <typename T>
 struct ShaderVariant {

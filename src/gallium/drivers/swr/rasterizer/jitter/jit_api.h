@@ -63,7 +63,6 @@ struct JIT_COMPILE_INPUT
     bool enableJitSampler;
 };
 
-
 //////////////////////////////////////////////////////////////////////////
 /// @brief Create JIT context.
 HANDLE JITCALL JitCreateContext(uint32_t targetSimdWidth, const char* arch);

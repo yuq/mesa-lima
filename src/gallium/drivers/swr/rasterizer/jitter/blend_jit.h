@@ -30,7 +30,6 @@
 #pragma once
 
 #include "common/formats.h"
-#include "core/context.h"
 #include "core/state.h"
 
 struct RENDER_TARGET_BLEND_COMPILE_STATE
