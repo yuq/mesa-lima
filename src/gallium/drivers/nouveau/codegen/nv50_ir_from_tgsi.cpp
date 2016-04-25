@@ -408,6 +408,7 @@ static nv50_ir::SVSemantic translateSysVal(uint sysval)
    case TGSI_SEMANTIC_BASEVERTEX: return nv50_ir::SV_BASEVERTEX;
    case TGSI_SEMANTIC_BASEINSTANCE: return nv50_ir::SV_BASEINSTANCE;
    case TGSI_SEMANTIC_DRAWID:     return nv50_ir::SV_DRAWID;
+   case TGSI_SEMANTIC_WORK_DIM:   return nv50_ir::SV_WORK_DIM;
    default:
       assert(0);
       return nv50_ir::SV_CLOCK;

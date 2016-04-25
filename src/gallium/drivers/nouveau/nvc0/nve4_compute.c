@@ -434,7 +434,7 @@ nve4_compute_upload_input(struct nvc0_context *nvc0,
    PUSH_DATAh(push, address + NVC0_CB_AUX_GRID_INFO(0));
    PUSH_DATA (push, address + NVC0_CB_AUX_GRID_INFO(0));
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
-   PUSH_DATA (push, 7 * 4);
+   PUSH_DATA (push, 8 * 4);
    PUSH_DATA (push, 0x1);
 
    if (unlikely(info->indirect)) {
@@ -444,18 +444,19 @@ nve4_compute_upload_input(struct nvc0_context *nvc0,
       nouveau_pushbuf_space(push, 16, 0, 1);
       PUSH_REFN(push, res->bo, NOUVEAU_BO_RD | res->domain);
 
-      BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 7);
+      BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 8);
       PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
       PUSH_DATAp(push, info->block, 3);
       nouveau_pushbuf_data(push, res->bo, offset,
                            NVC0_IB_ENTRY_1_NO_PREFETCH | 3 * 4);
    } else {
-      BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 7);
+      BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 8);
       PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
       PUSH_DATAp(push, info->block, 3);
       PUSH_DATAp(push, info->grid, 3);
    }
    PUSH_DATA (push, 0);
+   PUSH_DATA (push, info->work_dim);
 
    BEGIN_NVC0(push, NVE4_CP(FLUSH), 1);
    PUSH_DATA (push, NVE4_COMPUTE_FLUSH_CB);

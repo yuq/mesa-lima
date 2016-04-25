@@ -461,6 +461,7 @@ enum SVSemantic
    SV_BASEVERTEX,
    SV_BASEINSTANCE,
    SV_DRAWID,
+   SV_WORK_DIM,
    SV_UNDEFINED,
    SV_LAST
 };

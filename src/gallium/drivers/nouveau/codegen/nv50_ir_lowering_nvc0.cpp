@@ -2388,6 +2388,8 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
          i->setSrc(0, bld.mkImm(sv == SV_GRIDID ? 0 : 1));
          return true;
       }
+      // Fallthrough
+   case SV_WORK_DIM:
       addr += prog->driver->prop.cp.gridInfoBase;
       bld.mkLoad(TYPE_U32, i->getDef(0),
                  bld.mkSymbol(FILE_MEMORY_CONST, prog->driver->io.auxCBSlot,
