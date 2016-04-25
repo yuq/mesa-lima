@@ -96,7 +96,15 @@ dri3_handle_present_event(struct vl_dri3_screen *scrn,
       break;
    }
    case XCB_PRESENT_EVENT_IDLE_NOTIFY: {
-      /* TODO */
+      xcb_present_idle_notify_event_t *ie = (void *) ge;
+      int b;
+      for (b = 0; b < BACK_BUFFER_NUM; b++) {
+         struct vl_dri3_buffer *buf = scrn->back_buffers[b];
+         if (buf && buf->pixmap == ie->pixmap) {
+            buf->busy = false;
+            break;
+         }
+      }
       break;
    }
    }
@@ -310,7 +318,27 @@ vl_dri3_flush_frontbuffer(struct pipe_screen *screen,
                           unsigned level, unsigned layer,
                           void *context_private, struct pipe_box *sub_box)
 {
-   /* TODO */
+   struct vl_dri3_screen *scrn = (struct vl_dri3_screen *)context_private;
+   uint32_t options = XCB_PRESENT_OPTION_NONE;
+   struct vl_dri3_buffer *back;
+
+   back = scrn->back_buffers[scrn->cur_back];
+   if (!back)
+       return;
+
+   xshmfence_reset(back->shm_fence);
+   back->busy = true;
+
+   xcb_present_pixmap(scrn->conn,
+                      scrn->drawable,
+                      back->pixmap,
+                      0, 0, 0, 0, 0,
+                      None, None,
+                      back->sync_fence,
+                      options, 0, 0, 0, 0, NULL);
+
+   xcb_flush(scrn->conn);
+
    return;
 }
 
