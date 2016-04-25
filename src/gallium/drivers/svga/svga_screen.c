@@ -431,6 +431,9 @@ vgpu9_get_shader_param(struct pipe_screen *screen, unsigned shader,
       {
       case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
       case PIPE_SHADER_CAP_MAX_ALU_INSTRUCTIONS:
+         return get_uint_cap(sws,
+                             SVGA3D_DEVCAP_MAX_FRAGMENT_SHADER_INSTRUCTIONS,
+                             512);
       case PIPE_SHADER_CAP_MAX_TEX_INSTRUCTIONS:
       case PIPE_SHADER_CAP_MAX_TEX_INDIRECTIONS:
          return 512;
