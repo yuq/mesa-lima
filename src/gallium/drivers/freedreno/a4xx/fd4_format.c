@@ -79,9 +79,9 @@ struct fd4_format {
 static struct fd4_format formats[PIPE_FORMAT_COUNT] = {
 	/* 8-bit */
 	VT(R8_UNORM,   8_UNORM, R8_UNORM, WZYX),
-	VT(R8_SNORM,   8_SNORM, NONE,     WZYX),
-	VT(R8_UINT,    8_UINT,  NONE,     WZYX),
-	VT(R8_SINT,    8_SINT,  NONE,     WZYX),
+	VT(R8_SNORM,   8_SNORM, R8_SNORM, WZYX),
+	VT(R8_UINT,    8_UINT,  R8_UINT,  WZYX),
+	VT(R8_SINT,    8_SINT,  R8_SINT,  WZYX),
 	V_(R8_USCALED, 8_UINT,  NONE,     WZYX),
 	V_(R8_SSCALED, 8_UINT,  NONE,     WZYX),
 
