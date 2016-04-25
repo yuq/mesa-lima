@@ -104,6 +104,12 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 				ctx->prog.dirty |= FD_SHADER_DIRTY_FP;
 		}
 
+		if (last_key->vclamp_color != key->vclamp_color)
+			ctx->prog.dirty |= FD_SHADER_DIRTY_VP;
+
+		if (last_key->fclamp_color != key->fclamp_color)
+			ctx->prog.dirty |= FD_SHADER_DIRTY_FP;
+
 		if (last_key->color_two_side != key->color_two_side)
 			ctx->prog.dirty |= FD_SHADER_DIRTY_FP;
 
@@ -129,6 +135,8 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 			/* do binning pass first: */
 			.binning_pass = true,
 			.color_two_side = ctx->rasterizer->light_twoside,
+			.vclamp_color = ctx->rasterizer->clamp_vertex_color,
+			.fclamp_color = ctx->rasterizer->clamp_fragment_color,
 			.rasterflat = ctx->rasterizer->flatshade,
 			// TODO set .half_precision based on render target format,
 			// ie. float16 and smaller use half, float32 use full..

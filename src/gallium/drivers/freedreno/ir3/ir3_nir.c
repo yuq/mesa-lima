@@ -58,7 +58,8 @@ ir3_key_lowers_nir(const struct ir3_shader_key *key)
 {
 	return key->fsaturate_s | key->fsaturate_t | key->fsaturate_r |
 			key->vsaturate_s | key->vsaturate_t | key->vsaturate_r |
-			key->ucp_enables | key->color_two_side;
+			key->ucp_enables | key->color_two_side |
+			key->fclamp_color | key->vclamp_color;
 }
 
 #define OPT(nir, pass, ...) ({                             \
@@ -114,8 +115,12 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 	if (key) {
 		if (s->stage == MESA_SHADER_VERTEX) {
 			OPT_V(s, nir_lower_clip_vs, key->ucp_enables);
+			if (key->vclamp_color)
+				OPT_V(s, nir_lower_clamp_color_outputs);
 		} else if (s->stage == MESA_SHADER_FRAGMENT) {
 			OPT_V(s, nir_lower_clip_fs, key->ucp_enables);
+			if (key->fclamp_color)
+				OPT_V(s, nir_lower_clamp_color_outputs);
 		}
 		if (key->color_two_side) {
 			OPT_V(s, nir_lower_two_sided_color);

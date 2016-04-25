@@ -81,6 +81,7 @@ struct ir3_shader_key {
 			 * Vertex shader variant parameters:
 			 */
 			unsigned binning_pass : 1;
+			unsigned vclamp_color : 1;
 
 			/*
 			 * Fragment shader variant parameters:
@@ -91,6 +92,7 @@ struct ir3_shader_key {
 			 * for front/back color inputs to frag shader:
 			 */
 			unsigned rasterflat : 1;
+			unsigned fclamp_color : 1;
 		};
 		uint32_t global;
 	};
