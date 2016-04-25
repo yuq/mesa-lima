@@ -176,7 +176,7 @@ static bool valid_flags(struct ir3_instruction *instr, unsigned n,
 	case 4:
 		/* seems like blob compiler avoids const as src.. */
 		/* TODO double check if this is still the case on a4xx */
-		if (flags & IR3_REG_CONST)
+		if (flags & (IR3_REG_CONST | IR3_REG_IMMED))
 			return false;
 		if (flags & (IR3_REG_SABS | IR3_REG_SNEG))
 			return false;
