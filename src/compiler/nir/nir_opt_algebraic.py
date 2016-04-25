@@ -56,7 +56,10 @@ d = 'd'
 #
 # All expression types can have a bit-size specified.  For opcodes, this
 # looks like "op@32", for variables it is "a@32" or "a@uint32" to specify a
-# type and size, and for literals, you can write "2.0@32".
+# type and size, and for literals, you can write "2.0@32".  In the search half
+# of the expression this indicates that it should only match that particular
+# bit-size.  In the replace half of the expression this indicates that the
+# constructed value should have that bit-size.
 
 optimizations = [
    (('fneg', ('fneg', a)), a),

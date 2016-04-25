@@ -88,6 +88,11 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
    for (unsigned i = 0; i < num_components; ++i)
       new_swizzle[i] = instr->src[src].swizzle[swizzle[i]];
 
+   /* If the value has a specific bit size and it doesn't match, bail */
+   if (value->bit_size &&
+       nir_src_bit_size(instr->src[src].src) != value->bit_size)
+      return false;
+
    switch (value->type) {
    case nir_search_value_expression:
       if (!instr->src[src].src.is_ssa)
@@ -243,6 +248,10 @@ match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
 
    assert(instr->dest.dest.is_ssa);
 
+   if (expr->value.bit_size &&
+       instr->dest.dest.ssa.bit_size != expr->value.bit_size)
+      return false;
+
    state->inexact_match = expr->inexact || state->inexact_match;
    state->has_exact_alu = instr->exact || state->has_exact_alu;
    if (state->inexact_match && state->has_exact_alu)
@@ -351,6 +360,11 @@ build_bitsize_tree(void *mem_ctx, struct match_state *state,
       tree->common_size = 0;
       break;
    }
+   }
+
+   if (value->bit_size) {
+      assert(!tree->is_dest_sized || tree->dest_size == value->bit_size);
+      tree->common_size = value->bit_size;
    }
 
    return tree;
