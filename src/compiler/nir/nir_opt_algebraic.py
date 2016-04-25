@@ -53,6 +53,10 @@ d = 'd'
 # For constants, you have to be careful to make sure that it is the right
 # type because python is unaware of the source and destination types of the
 # opcodes.
+#
+# All expression types can have a bit-size specified.  For opcodes, this
+# looks like "op@32", for variables it is "a@32" or "a@uint32" to specify a
+# type and size, and for literals, you can write "2.0@32".
 
 optimizations = [
    (('fneg', ('fneg', a)), a),

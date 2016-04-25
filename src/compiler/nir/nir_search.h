@@ -40,6 +40,8 @@ typedef enum {
 
 typedef struct {
    nir_search_value_type type;
+
+   unsigned bit_size;
 } nir_search_value;
 
 typedef struct {

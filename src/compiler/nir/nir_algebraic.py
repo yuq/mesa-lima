@@ -25,6 +25,7 @@
 #    Jason Ekstrand (jason@jlekstrand.net)
 
 from __future__ import print_function
+import ast
 import itertools
 import struct
 import sys
@@ -63,7 +64,7 @@ class Value(object):
 
    __template = mako.template.Template("""
 static const ${val.c_type} ${val.name} = {
-   { ${val.type_enum} },
+   { ${val.type_enum}, ${val.bit_size} },
 % if isinstance(val, Constant):
    ${val.type()}, { ${hex(val)} /* ${val.value} */ },
 % elif isinstance(val, Variable):
@@ -99,10 +100,23 @@ static const ${val.c_type} ${val.name} = {
                                     Variable=Variable,
                                     Expression=Expression)
 
+_constant_re = re.compile(r"(?P<value>[^@]+)(?:@(?P<bits>\d+))?")
+
 class Constant(Value):
    def __init__(self, val, name):
       Value.__init__(self, name, "constant")
-      self.value = val
+
+      if isinstance(val, (str)):
+         m = _constant_re.match(val)
+         self.value = ast.literal_eval(m.group('value'))
+         self.bit_size = int(m.group('bits')) if m.group('bits') else 0
+      else:
+         self.value = val
+         self.bit_size = 0
+
+      if isinstance(self.value, bool):
+         assert self.bit_size == 0 or self.bit_size == 32
+         self.bit_size = 32
 
    def __hex__(self):
       if isinstance(self.value, (bool)):
@@ -122,7 +136,8 @@ class Constant(Value):
       elif isinstance(self.value, float):
          return "nir_type_float"
 
-_var_name_re = re.compile(r"(?P<const>#)?(?P<name>\w+)(?:@(?P<type>\w+))?")
+_var_name_re = re.compile(r"(?P<const>#)?(?P<name>\w+)"
+                          r"(?:@(?P<type>int|uint|bool|float)?(?P<bits>\d+)?)?")
 
 class Variable(Value):
    def __init__(self, val, name, varset):
@@ -134,6 +149,11 @@ class Variable(Value):
       self.var_name = m.group('name')
       self.is_constant = m.group('const') is not None
       self.required_type = m.group('type')
+      self.bit_size = int(m.group('bits')) if m.group('bits') else 0
+
+      if self.required_type == 'bool':
+         assert self.bit_size == 0 or self.bit_size == 32
+         self.bit_size = 32
 
       if self.required_type is not None:
          assert self.required_type in ('float', 'bool', 'int', 'uint')
@@ -148,7 +168,7 @@ class Variable(Value):
       elif self.required_type == 'float':
          return "nir_type_float"
 
-_opcode_re = re.compile(r"(?P<inexact>~)?(?P<opcode>\w+)")
+_opcode_re = re.compile(r"(?P<inexact>~)?(?P<opcode>\w+)(?:@(?P<bits>\d+))?")
 
 class Expression(Value):
    def __init__(self, expr, name_base, varset):
@@ -159,6 +179,7 @@ class Expression(Value):
       assert m and m.group('opcode') is not None
 
       self.opcode = m.group('opcode')
+      self.bit_size = int(m.group('bits')) if m.group('bits') else 0
       self.inexact = m.group('inexact') is not None
       self.sources = [ Value.create(src, "{0}_{1}".format(name_base, i), varset)
                        for (i, src) in enumerate(expr[1:]) ]
