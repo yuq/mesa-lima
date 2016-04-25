@@ -858,6 +858,8 @@ _mesa_get_color_read_format(struct gl_context *ctx)
          return GL_BGRA;
       else if (format == MESA_FORMAT_B5G6R5_UNORM)
          return GL_BGR;
+      else if (format == MESA_FORMAT_R_UNORM8)
+         return GL_RED;
 
       switch (data_type) {
       case GL_UNSIGNED_INT:
