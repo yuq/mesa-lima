@@ -2545,6 +2545,7 @@ Converter::handleSTORE()
          mkTex(OP_SUSTP, getImageTarget(code, r), code->images[r].slot,
                0, dummy, src);
       st->tex.mask = tgsi.getDst(0).getMask();
+      st->tex.format = getImageFormat(code, r);
       st->cache = tgsi.getCacheMode();
       if (tgsi.getDst(0).isIndirect(0))
          st->setIndirectR(fetchSrc(tgsi.getDst(0).getIndirect(0), 0, NULL));
@@ -2662,6 +2663,7 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
                                   code->images[r].slot, 0, defv, srcv);
       tex->subOp = subOp;
       tex->tex.mask = 1;
+      tex->tex.format = getImageFormat(code, r);
       tex->setType(ty);
       if (tgsi.getSrc(0).isIndirect(0))
          tex->setIndirectR(fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, NULL));

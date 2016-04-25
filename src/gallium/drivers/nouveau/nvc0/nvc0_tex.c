@@ -836,7 +836,9 @@ nve4_set_surface_info(struct nouveau_pushbuf *push,
    }
    log2cpp = (0xf000 & nve4_su_format_aux_map[view->format]) >> 12;
 
-   info[12] = nve4_suldp_lib_offset[view->format] + screen->lib_code->start;
+   /* Stick the blockwidth (ie. number of bytes per pixel) to check if the
+    * format doesn't mismatch. */
+   info[12] = util_format_get_blocksize(view->format);
 
    /* limit in bytes for raw access */
    info[13] = (0x06 << 22) | ((width << log2cpp) - 1);

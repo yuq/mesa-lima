@@ -1476,7 +1476,7 @@ NVC0LoweringPass::loadMsInfo32(Value *ptr, uint32_t off)
 #define NVE4_SU_INFO_HEIGHT 0x24
 #define NVE4_SU_INFO_DEPTH  0x28
 #define NVE4_SU_INFO_TARGET 0x2c
-#define NVE4_SU_INFO_CALL   0x30
+#define NVE4_SU_INFO_BSIZE  0x30
 #define NVE4_SU_INFO_RAW_X  0x34
 #define NVE4_SU_INFO_MS_X   0x38
 #define NVE4_SU_INFO_MS_Y   0x3c
@@ -1792,7 +1792,26 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
       bld.mkCmp(OP_SET, CC_EQ, TYPE_U32, bld.getSSA(1, FILE_PREDICATE),
                 TYPE_U32, bld.mkImm(0),
                 loadSuInfo32(ind, base + NVE4_SU_INFO_ADDR));
+
+   if (su->tex.format) {
+      const TexInstruction::ImgFormatDesc *format = su->tex.format;
+      int blockwidth = format->bits[0] + format->bits[1] +
+                       format->bits[2] + format->bits[3];
+
+      if (blockwidth >= 8) {
+         // make sure that the format doesn't mismatch
+         bld.mkCmp(OP_SET_OR, CC_NE, TYPE_U32, pred1->getDef(0),
+                   TYPE_U32, bld.loadImm(NULL, blockwidth / 8),
+                   loadSuInfo32(ind, base + NVE4_SU_INFO_BSIZE),
+                   pred1->getDef(0));
+      }
+   }
    su->setPredicate(CC_NOT_P, pred1->getDef(0));
+
+   // TODO: initialize def values to 0 when the surface operation is not
+   // performed (not needed for stores). Also, fix the "address bounds test"
+   // subtests from arb_shader_image_load_store-invalid for buffers, because it
+   // seems like that the predicate is not correctly set by suclamp.
 }
 
 static DataType
