@@ -24,11 +24,13 @@
 # Authors:
 #    Jason Ekstrand (jason@jlekstrand.net)
 
+from __future__ import print_function
 import itertools
 import struct
 import sys
 import mako.template
 import re
+import traceback
 
 # Represents a set of variables, each with a unique id
 class VarSet(object):
@@ -311,14 +313,27 @@ class AlgebraicPass(object):
       self.xform_dict = {}
       self.pass_name = pass_name
 
+      error = False
+
       for xform in transforms:
          if not isinstance(xform, SearchAndReplace):
-            xform = SearchAndReplace(xform)
+            try:
+               xform = SearchAndReplace(xform)
+            except:
+               print("Failed to parse transformation:", file=sys.stderr)
+               print("  " + str(xform), file=sys.stderr)
+               traceback.print_exc(file=sys.stderr)
+               print('', file=sys.stderr)
+               error = True
+               continue
 
          if xform.search.opcode not in self.xform_dict:
             self.xform_dict[xform.search.opcode] = []
 
          self.xform_dict[xform.search.opcode].append(xform)
+
+      if error:
+         sys.exit(1)
 
    def render(self):
       return _algebraic_pass_template.render(pass_name=self.pass_name,
