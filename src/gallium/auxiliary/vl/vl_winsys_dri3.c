@@ -50,6 +50,38 @@ struct vl_dri3_screen
    xcb_special_event_t *special_event;
 };
 
+static void
+dri3_handle_present_event(struct vl_dri3_screen *scrn,
+                          xcb_present_generic_event_t *ge)
+{
+   switch (ge->evtype) {
+   case XCB_PRESENT_CONFIGURE_NOTIFY: {
+      /* TODO */
+      break;
+   }
+   case XCB_PRESENT_COMPLETE_NOTIFY: {
+      /* TODO */
+      break;
+   }
+   case XCB_PRESENT_EVENT_IDLE_NOTIFY: {
+      /* TODO */
+      break;
+   }
+   }
+   free(ge);
+}
+
+static void
+dri3_flush_present_events(struct vl_dri3_screen *scrn)
+{
+   if (scrn->special_event) {
+      xcb_generic_event_t *ev;
+      while ((ev = xcb_poll_for_special_event(
+                   scrn->conn, scrn->special_event)) != NULL)
+         dri3_handle_present_event(scrn, (xcb_present_generic_event_t *)ev);
+   }
+}
+
 static bool
 dri3_set_drawable(struct vl_dri3_screen *scrn, Drawable drawable)
 {
@@ -95,6 +127,8 @@ dri3_set_drawable(struct vl_dri3_screen *scrn, Drawable drawable)
    } else
       scrn->special_event =
          xcb_register_for_special_xge(scrn->conn, &xcb_present_id, peid, 0);
+
+   dri3_flush_present_events(scrn);
 
    return true;
 }
@@ -156,6 +190,8 @@ vl_dri3_screen_destroy(struct vl_screen *vscreen)
    struct vl_dri3_screen *scrn = (struct vl_dri3_screen *)vscreen;
 
    assert(vscreen);
+
+   dri3_flush_present_events(scrn);
 
    if (scrn->special_event)
       xcb_unregister_for_special_event(scrn->conn, scrn->special_event);
