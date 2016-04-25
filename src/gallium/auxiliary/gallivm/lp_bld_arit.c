@@ -3039,7 +3039,7 @@ lp_build_exp2(struct lp_build_context *bld,
    expipart = LLVMBuildBitCast(builder, expipart, vec_type, "");
 
    expfpart = lp_build_polynomial(bld, fpart, lp_build_exp2_polynomial,
-                                  Elements(lp_build_exp2_polynomial));
+                                  ARRAY_SIZE(lp_build_exp2_polynomial));
 
    res = LLVMBuildFMul(builder, expipart, expfpart, "");
 
@@ -3237,7 +3237,7 @@ lp_build_log2_approx(struct lp_build_context *bld,
 
       /* compute P(z) */
       logmant = lp_build_polynomial(bld, z, lp_build_log2_polynomial,
-                                    Elements(lp_build_log2_polynomial));
+                                    ARRAY_SIZE(lp_build_log2_polynomial));
 
       /* logmant = y * P(z) */
       logmant = lp_build_mul(bld, y, logmant);

@@ -579,7 +579,7 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
          arg_types[2] = i32t;
          arg_types[3] = i32t;
          function_type = LLVMFunctionType(ret_type, arg_types,
-                                          Elements(arg_types), 0);
+                                          ARRAY_SIZE(arg_types), 0);
 
          /* make const pointer for the C fetch_rgba_8unorm function */
          function = lp_build_const_int_pointer(gallivm,
@@ -617,7 +617,7 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
             args[3] = LLVMBuildExtractElement(builder, j, index, "");
          }
 
-         LLVMBuildCall(builder, function, args, Elements(args), "");
+         LLVMBuildCall(builder, function, args, ARRAY_SIZE(args), "");
 
          tmp = LLVMBuildLoad(builder, tmp_ptr, "");
 
@@ -686,7 +686,7 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
          function = lp_build_const_func_pointer(gallivm,
                                                 func_to_pointer((func_pointer) format_desc->fetch_rgba_float),
                                                 ret_type,
-                                                arg_types, Elements(arg_types),
+                                                arg_types, ARRAY_SIZE(arg_types),
                                                 format_desc->short_name);
       }
 
@@ -714,7 +714,7 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
             args[3] = LLVMBuildExtractElement(builder, j, index, "");
          }
 
-         LLVMBuildCall(builder, function, args, Elements(args), "");
+         LLVMBuildCall(builder, function, args, ARRAY_SIZE(args), "");
 
          tmps[k] = LLVMBuildLoad(builder, tmp_ptr, "");
       }
