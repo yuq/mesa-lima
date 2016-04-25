@@ -107,7 +107,7 @@ add_fetch_rgba_test(struct gallivm_state *gallivm, unsigned verbose,
 
    func = LLVMAddFunction(module, name,
                           LLVMFunctionType(LLVMVoidTypeInContext(context),
-                                           args, Elements(args), 0));
+                                           args, ARRAY_SIZE(args), 0));
    LLVMSetFunctionCallConv(func, LLVMCCallConv);
    rgba_ptr = LLVMGetParam(func, 0);
    packed_ptr = LLVMGetParam(func, 1);

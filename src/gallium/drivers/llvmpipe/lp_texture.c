@@ -546,7 +546,7 @@ llvmpipe_transfer_map( struct pipe_context *pipe,
    if ((usage & PIPE_TRANSFER_WRITE) &&
        (resource->bind & PIPE_BIND_CONSTANT_BUFFER)) {
       unsigned i;
-      for (i = 0; i < Elements(llvmpipe->constants[PIPE_SHADER_FRAGMENT]); ++i) {
+      for (i = 0; i < ARRAY_SIZE(llvmpipe->constants[PIPE_SHADER_FRAGMENT]); ++i) {
          if (resource == llvmpipe->constants[PIPE_SHADER_FRAGMENT][i].buffer) {
             /* constants may have changed */
             llvmpipe->dirty |= LP_NEW_CONSTANTS;

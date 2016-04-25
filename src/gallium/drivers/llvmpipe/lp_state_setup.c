@@ -760,7 +760,7 @@ generate_setup_variant(struct lp_setup_variant_key *key,
    arg_types[6] = LLVMPointerType(vec4f_type, 0);	/* dady, aligned */
 
    func_type = LLVMFunctionType(LLVMVoidTypeInContext(gallivm->context),
-                                arg_types, Elements(arg_types), 0);
+                                arg_types, ARRAY_SIZE(arg_types), 0);
 
    variant->function = LLVMAddFunction(gallivm->module, func_name, func_type);
    if (!variant->function)
@@ -791,7 +791,7 @@ generate_setup_variant(struct lp_setup_variant_key *key,
                                          variant->function, "entry");
    LLVMPositionBuilderAtEnd(builder, block);
 
-   set_noalias(builder, variant->function, arg_types, Elements(arg_types));
+   set_noalias(builder, variant->function, arg_types, ARRAY_SIZE(arg_types));
    init_args(gallivm, &variant->key, &args);
    emit_tri_coef(gallivm, &variant->key, &args);
 

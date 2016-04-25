@@ -295,23 +295,23 @@ const float fract_values[] = {
 
 static const struct unary_test_t
 unary_tests[] = {
-   {"abs", &lp_build_abs, &fabsf, sgn_values, Elements(sgn_values), 20.0 },
-   {"neg", &lp_build_negate, &negf, sgn_values, Elements(sgn_values), 20.0 },
-   {"sgn", &lp_build_sgn, &sgnf, sgn_values, Elements(sgn_values), 20.0 },
-   {"exp2", &lp_build_exp2, &exp2f, exp2_values, Elements(exp2_values), 18.0 },
-   {"log2", &lp_build_log2_safe, &log2f, log2_values, Elements(log2_values), 20.0 },
-   {"exp", &lp_build_exp, &expf, exp2_values, Elements(exp2_values), 18.0 },
-   {"log", &lp_build_log_safe, &logf, log2_values, Elements(log2_values), 20.0 },
-   {"rcp", &lp_build_rcp, &rcpf, rcp_values, Elements(rcp_values), 20.0 },
-   {"rsqrt", &lp_build_rsqrt, &rsqrtf, rsqrt_values, Elements(rsqrt_values), 20.0 },
-   {"sin", &lp_build_sin, &sinf, sincos_values, Elements(sincos_values), 20.0 },
-   {"cos", &lp_build_cos, &cosf, sincos_values, Elements(sincos_values), 20.0 },
-   {"sgn", &lp_build_sgn, &sgnf, sgn_values, Elements(sgn_values), 20.0 },
-   {"round", &lp_build_round, &nearbyintf, round_values, Elements(round_values), 24.0 },
-   {"trunc", &lp_build_trunc, &truncf, round_values, Elements(round_values), 24.0 },
-   {"floor", &lp_build_floor, &floorf, round_values, Elements(round_values), 24.0 },
-   {"ceil", &lp_build_ceil, &ceilf, round_values, Elements(round_values), 24.0 },
-   {"fract", &lp_build_fract_safe, &fractf, fract_values, Elements(fract_values), 24.0 },
+   {"abs", &lp_build_abs, &fabsf, sgn_values, ARRAY_SIZE(sgn_values), 20.0 },
+   {"neg", &lp_build_negate, &negf, sgn_values, ARRAY_SIZE(sgn_values), 20.0 },
+   {"sgn", &lp_build_sgn, &sgnf, sgn_values, ARRAY_SIZE(sgn_values), 20.0 },
+   {"exp2", &lp_build_exp2, &exp2f, exp2_values, ARRAY_SIZE(exp2_values), 18.0 },
+   {"log2", &lp_build_log2_safe, &log2f, log2_values, ARRAY_SIZE(log2_values), 20.0 },
+   {"exp", &lp_build_exp, &expf, exp2_values, ARRAY_SIZE(exp2_values), 18.0 },
+   {"log", &lp_build_log_safe, &logf, log2_values, ARRAY_SIZE(log2_values), 20.0 },
+   {"rcp", &lp_build_rcp, &rcpf, rcp_values, ARRAY_SIZE(rcp_values), 20.0 },
+   {"rsqrt", &lp_build_rsqrt, &rsqrtf, rsqrt_values, ARRAY_SIZE(rsqrt_values), 20.0 },
+   {"sin", &lp_build_sin, &sinf, sincos_values, ARRAY_SIZE(sincos_values), 20.0 },
+   {"cos", &lp_build_cos, &cosf, sincos_values, ARRAY_SIZE(sincos_values), 20.0 },
+   {"sgn", &lp_build_sgn, &sgnf, sgn_values, ARRAY_SIZE(sgn_values), 20.0 },
+   {"round", &lp_build_round, &nearbyintf, round_values, ARRAY_SIZE(round_values), 24.0 },
+   {"trunc", &lp_build_trunc, &truncf, round_values, ARRAY_SIZE(round_values), 24.0 },
+   {"floor", &lp_build_floor, &floorf, round_values, ARRAY_SIZE(round_values), 24.0 },
+   {"ceil", &lp_build_ceil, &ceilf, round_values, ARRAY_SIZE(round_values), 24.0 },
+   {"fract", &lp_build_fract_safe, &fractf, fract_values, ARRAY_SIZE(fract_values), 24.0 },
 };
 
 
@@ -331,7 +331,7 @@ build_unary_test_func(struct gallivm_state *gallivm,
    LLVMTypeRef args[2] = { LLVMPointerType(vf32t, 0), LLVMPointerType(vf32t, 0) };
    LLVMValueRef func = LLVMAddFunction(module, test_name,
                                        LLVMFunctionType(LLVMVoidTypeInContext(context),
-                                                        args, Elements(args), 0));
+                                                        args, ARRAY_SIZE(args), 0));
    LLVMValueRef arg0 = LLVMGetParam(func, 0);
    LLVMValueRef arg1 = LLVMGetParam(func, 1);
    LLVMBuilderRef builder = gallivm->builder;
@@ -503,7 +503,7 @@ test_all(unsigned verbose, FILE *fp)
    boolean success = TRUE;
    int i;
 
-   for (i = 0; i < Elements(unary_tests); ++i) {
+   for (i = 0; i < ARRAY_SIZE(unary_tests); ++i) {
       unsigned max_length = lp_native_vector_width / 32;
       unsigned length;
       for (length = 1; length <= max_length; length *= 2) {

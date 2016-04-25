@@ -134,7 +134,7 @@ generate_quad_mask(struct gallivm_state *gallivm,
     * XXX: We'll need a different path for 16 x u8
     */
    assert(fs_type.width == 32);
-   assert(fs_type.length <= Elements(bits));
+   assert(fs_type.length <= ARRAY_SIZE(bits));
    mask_type = lp_int_type(fs_type);
 
    /*
@@ -646,7 +646,7 @@ generate_fs_twiddle(struct gallivm_state *gallivm,
    src_count = num_fs * src_channels;
 
    assert(pixels == 2 || pixels == 1);
-   assert(num_fs * src_channels <= Elements(src));
+   assert(num_fs * src_channels <= ARRAY_SIZE(src));
 
    /*
     * Transpose from SoA -> AoS
@@ -2267,7 +2267,7 @@ generate_fragment(struct llvmpipe_context *lp,
    arg_types[12] = int32_type;                         /* depth_stride */
 
    func_type = LLVMFunctionType(LLVMVoidTypeInContext(gallivm->context),
-                                arg_types, Elements(arg_types), 0);
+                                arg_types, ARRAY_SIZE(arg_types), 0);
 
    function = LLVMAddFunction(gallivm->module, func_name, func_type);
    LLVMSetFunctionCallConv(function, LLVMCCallConv);
@@ -2277,7 +2277,7 @@ generate_fragment(struct llvmpipe_context *lp,
    /* XXX: need to propagate noalias down into color param now we are
     * passing a pointer-to-pointer?
     */
-   for(i = 0; i < Elements(arg_types); ++i)
+   for(i = 0; i < ARRAY_SIZE(arg_types); ++i)
       if(LLVMGetTypeKind(arg_types[i]) == LLVMPointerTypeKind)
          LLVMAddAttribute(LLVMGetParam(function, i), LLVMNoAliasAttribute);
 
@@ -2842,7 +2842,7 @@ llvmpipe_set_constant_buffer(struct pipe_context *pipe,
    struct pipe_resource *constants = cb ? cb->buffer : NULL;
 
    assert(shader < PIPE_SHADER_TYPES);
-   assert(index < Elements(llvmpipe->constants[shader]));
+   assert(index < ARRAY_SIZE(llvmpipe->constants[shader]));
 
    /* note: reference counting */
    util_copy_constant_buffer(&llvmpipe->constants[shader][index], cb);
