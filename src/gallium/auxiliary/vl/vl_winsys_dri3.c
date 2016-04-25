@@ -44,7 +44,35 @@ struct vl_dri3_screen
    struct vl_screen base;
    xcb_connection_t *conn;
    xcb_drawable_t drawable;
+
+   uint32_t width, height, depth;
 };
+
+static bool
+dri3_set_drawable(struct vl_dri3_screen *scrn, Drawable drawable)
+{
+   xcb_get_geometry_cookie_t geom_cookie;
+   xcb_get_geometry_reply_t *geom_reply;
+
+   assert(drawable);
+
+   if (scrn->drawable == drawable)
+      return true;
+
+   scrn->drawable = drawable;
+
+   geom_cookie = xcb_get_geometry(scrn->conn, scrn->drawable);
+   geom_reply = xcb_get_geometry_reply(scrn->conn, geom_cookie, NULL);
+   if (!geom_reply)
+      return false;
+
+   scrn->width = geom_reply->width;
+   scrn->height = geom_reply->height;
+   scrn->depth = geom_reply->depth;
+   free(geom_reply);
+
+   return true;
+}
 
 static void
 vl_dri3_flush_frontbuffer(struct pipe_screen *screen,
@@ -59,6 +87,13 @@ vl_dri3_flush_frontbuffer(struct pipe_screen *screen,
 static struct pipe_resource *
 vl_dri3_screen_texture_from_drawable(struct vl_screen *vscreen, void *drawable)
 {
+   struct vl_dri3_screen *scrn = (struct vl_dri3_screen *)vscreen;
+
+   assert(scrn);
+
+   if (!dri3_set_drawable(scrn, (Drawable)drawable))
+      return NULL;
+
    /* TODO */
    return NULL;
 }
