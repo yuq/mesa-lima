@@ -136,14 +136,14 @@ class Variable(Value):
       self.required_type = m.group('type')
 
       if self.required_type is not None:
-         assert self.required_type in ('float', 'bool', 'int', 'unsigned')
+         assert self.required_type in ('float', 'bool', 'int', 'uint')
 
       self.index = varset[self.var_name]
 
    def type(self):
       if self.required_type == 'bool':
          return "nir_type_bool32"
-      elif self.required_type in ('int', 'unsigned'):
+      elif self.required_type in ('int', 'uint'):
          return "nir_type_int"
       elif self.required_type == 'float':
          return "nir_type_float"
