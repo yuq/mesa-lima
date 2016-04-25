@@ -91,7 +91,9 @@ dri3_handle_present_event(struct vl_dri3_screen *scrn,
 {
    switch (ge->evtype) {
    case XCB_PRESENT_CONFIGURE_NOTIFY: {
-      /* TODO */
+      xcb_present_configure_notify_event_t *ce = (void *) ge;
+      scrn->width = ce->width;
+      scrn->height = ce->height;
       break;
    }
    case XCB_PRESENT_COMPLETE_NOTIFY: {
@@ -249,12 +251,19 @@ dri3_get_back_buffer(struct vl_dri3_screen *scrn)
       return NULL;
    buffer = scrn->back_buffers[scrn->cur_back];
 
-   if (!buffer) {
-      buffer = dri3_alloc_back_buffer(scrn);
-      if (!buffer)
+   if (!buffer || buffer->width != scrn->width ||
+       buffer->height != scrn->height) {
+      struct vl_dri3_buffer *new_buffer;
+
+      new_buffer = dri3_alloc_back_buffer(scrn);
+      if (!new_buffer)
          return NULL;
 
+      if (buffer)
+         dri3_free_back_buffer(scrn, buffer);
+
       vl_compositor_reset_dirty_area(&scrn->dirty_areas[scrn->cur_back]);
+      buffer = new_buffer;
       scrn->back_buffers[scrn->cur_back] = buffer;
    }
 
