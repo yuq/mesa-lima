@@ -29,6 +29,7 @@
 #define DRAW_GS_H
 
 #include "draw_context.h"
+#include "tgsi/tgsi_exec.h"
 #include "draw_private.h"
 
 #define MAX_TGSI_PRIMITIVES 4

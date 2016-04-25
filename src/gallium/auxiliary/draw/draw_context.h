@@ -39,7 +39,6 @@
 
 
 #include "pipe/p_state.h"
-#include "tgsi/tgsi_exec.h"
 
 struct pipe_context;
 struct draw_context;
