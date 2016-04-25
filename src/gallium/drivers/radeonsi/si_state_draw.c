@@ -32,6 +32,7 @@
 #include "util/u_index_modify.h"
 #include "util/u_upload_mgr.h"
 #include "util/u_prim.h"
+#include "util/u_memory.h"
 
 static unsigned si_conv_pipe_prim(unsigned mode)
 {
