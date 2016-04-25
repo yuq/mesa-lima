@@ -460,16 +460,26 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
           * parts of vgrfs so we have to do some reg_offset magic.
           */
 
-         /* Compute the offset of inst->src[arg] relative to inst->dst */
-         assert(entry->dst.subreg_offset == 0);
-         int rel_offset = inst->src[arg].reg_offset - entry->dst.reg_offset;
-         int rel_suboffset = inst->src[arg].subreg_offset;
+         /* Compute the offset of inst->src[arg] relative to entry->dst */
+         const unsigned rel_offset = (inst->src[arg].reg_offset
+                                      - entry->dst.reg_offset) * REG_SIZE +
+                                     inst->src[arg].subreg_offset;
 
-         /* Compute the final register offset (in bytes) */
-         int offset = entry->src.reg_offset * 32 + entry->src.subreg_offset;
-         offset += rel_offset * 32 + rel_suboffset;
-         inst->src[arg].reg_offset = offset / 32;
-         inst->src[arg].subreg_offset = offset % 32;
+         /* Compute the first component of the copy that the instruction is
+          * reading, and the base byte offset within that component.
+          */
+         assert(entry->dst.subreg_offset == 0 && entry->dst.stride == 1);
+         const unsigned component = rel_offset / type_sz(entry->dst.type);
+         const unsigned suboffset = rel_offset % type_sz(entry->dst.type);
+
+         /* Calculate the byte offset at the origin of the copy of the given
+          * component and suboffset.
+          */
+         const unsigned offset = suboffset +
+            component * entry->src.stride * type_sz(entry->src.type) +
+            entry->src.reg_offset * REG_SIZE + entry->src.subreg_offset;
+         inst->src[arg].reg_offset = offset / REG_SIZE;
+         inst->src[arg].subreg_offset = offset % REG_SIZE;
       }
       break;
 
