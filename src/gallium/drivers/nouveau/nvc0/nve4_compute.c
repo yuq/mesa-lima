@@ -69,11 +69,6 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
       return ret;
    }
 
-   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 0, 1 << 12, NULL,
-                        &screen->parm);
-   if (ret)
-      return ret;
-
    BEGIN_NVC0(push, SUBC_CP(NV01_SUBCHAN_OBJECT), 1);
    PUSH_DATA (push, screen->compute->oclass);
 
@@ -477,7 +472,6 @@ nve4_state_validate_cp(struct nvc0_context *nvc0, uint32_t mask)
 
 static void
 nve4_compute_upload_input(struct nvc0_context *nvc0,
-                          struct nve4_cp_launch_desc *desc,
                           const struct pipe_grid_info *info)
 {
    struct nvc0_screen *screen = nvc0->screen;
@@ -489,19 +483,14 @@ nve4_compute_upload_input(struct nvc0_context *nvc0,
 
    if (cp->parm_size) {
       BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
-      PUSH_DATAh(push, screen->parm->offset);
-      PUSH_DATA (push, screen->parm->offset);
+      PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_USR_INFO(5));
+      PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_USR_INFO(5));
       BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
       PUSH_DATA (push, cp->parm_size);
       PUSH_DATA (push, 0x1);
       BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + (cp->parm_size / 4));
       PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
       PUSH_DATAp(push, info->input, cp->parm_size / 4);
-
-      /* Bind user parameters coming from clover. */
-      /* TODO: This should be harmonized with uniform_bo. */
-      assert(!(desc->cb_mask & (1 << 0)));
-      nve4_cp_launch_desc_set_cb(desc, 0, screen->parm, 0, 1 << 12);
    }
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
    PUSH_DATAh(push, address + NVC0_CB_AUX_GRID_INFO);
@@ -572,10 +561,10 @@ nve4_compute_setup_launch_desc(struct nvc0_context *nvc0,
    desc->gpr_alloc = cp->num_gprs;
    desc->bar_alloc = cp->num_barriers;
 
-   // Only bind OpenGL uniforms and the driver constant buffer through the
+   // Only bind user uniforms and the driver constant buffer through the
    // launch descriptor because UBOs are sticked to the driver cb to avoid the
    // limitation of 8 CBs.
-   if (nvc0->constbuf[5][0].user) {
+   if (nvc0->constbuf[5][0].user || cp->parm_size) {
       nve4_cp_launch_desc_set_cb(desc, 0, screen->uniform_bo,
                                  NVC0_CB_USR_INFO(5), 1 << 16);
    }
@@ -622,7 +611,7 @@ nve4_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
 
    nve4_compute_setup_launch_desc(nvc0, desc, info);
 
-   nve4_compute_upload_input(nvc0, desc, info);
+   nve4_compute_upload_input(nvc0, info);
 
 #ifdef DEBUG
    if (debug_get_num_option("NV50_PROG_DEBUG", 0))

@@ -429,7 +429,6 @@ nvc0_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
       BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->text);
       BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->uniform_bo);
       BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->txc);
-      BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->parm);
    }
 
    flags = NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_RDWR;
