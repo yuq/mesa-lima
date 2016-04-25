@@ -33,6 +33,7 @@
 #include "util/u_suballoc.h"
 #include "util/list.h"
 #include "util/u_transfer.h"
+#include "util/u_memory.h"
 
 #include "tgsi/tgsi_scan.h"
 
