@@ -106,7 +106,7 @@ draw_llvm_texture_member(const struct lp_sampler_dynamic_state *base,
    /* context[0].textures[unit].member */
    indices[3] = lp_build_const_int32(gallivm, member_index);
 
-   ptr = LLVMBuildGEP(builder, context_ptr, indices, Elements(indices), "");
+   ptr = LLVMBuildGEP(builder, context_ptr, indices, ARRAY_SIZE(indices), "");
 
    if (emit_load)
       res = LLVMBuildLoad(builder, ptr, "");
@@ -152,7 +152,7 @@ draw_llvm_sampler_member(const struct lp_sampler_dynamic_state *base,
    /* context[0].samplers[unit].member */
    indices[3] = lp_build_const_int32(gallivm, member_index);
 
-   ptr = LLVMBuildGEP(builder, context_ptr, indices, Elements(indices), "");
+   ptr = LLVMBuildGEP(builder, context_ptr, indices, ARRAY_SIZE(indices), "");
 
    if (emit_load)
       res = LLVMBuildLoad(builder, ptr, "");

@@ -556,7 +556,7 @@ draw_alloc_extra_vertex_attrib(struct draw_context *draw,
    num_outputs = draw_current_shader_outputs(draw);
    n = draw->extra_shader_outputs.num;
 
-   assert(n < Elements(draw->extra_shader_outputs.semantic_name));
+   assert(n < ARRAY_SIZE(draw->extra_shader_outputs.semantic_name));
 
    draw->extra_shader_outputs.semantic_name[n] = semantic_name;
    draw->extra_shader_outputs.semantic_index[n] = semantic_index;
