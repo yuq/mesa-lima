@@ -61,7 +61,7 @@ static void svga_destroy( struct pipe_context *pipe )
    unsigned shader, i;
 
    /* free any alternate rasterizer states used for point sprite */
-   for (i = 0; i < Elements(svga->rasterizer_no_cull); i++) {
+   for (i = 0; i < ARRAY_SIZE(svga->rasterizer_no_cull); i++) {
       if (svga->rasterizer_no_cull[i]) {
          pipe->delete_rasterizer_state(pipe, svga->rasterizer_no_cull[i]);
       }
@@ -78,7 +78,7 @@ static void svga_destroy( struct pipe_context *pipe )
    pipe_resource_reference(&svga->polygon_stipple.texture, NULL);
 
    /* free HW constant buffers */
-   for (shader = 0; shader < Elements(svga->state.hw_draw.constbuf); shader++) {
+   for (shader = 0; shader < ARRAY_SIZE(svga->state.hw_draw.constbuf); shader++) {
       pipe_resource_reference(&svga->state.hw_draw.constbuf[shader], NULL);
    }
 
@@ -116,7 +116,7 @@ static void svga_destroy( struct pipe_context *pipe )
 
    /* free user's constant buffers */
    for (shader = 0; shader < PIPE_SHADER_TYPES; ++shader) {
-      for (i = 0; i < Elements(svga->curr.constbufs[shader]); ++i) {
+      for (i = 0; i < ARRAY_SIZE(svga->curr.constbufs[shader]); ++i) {
          pipe_resource_reference(&svga->curr.constbufs[shader][i].buffer, NULL);
       }
    }

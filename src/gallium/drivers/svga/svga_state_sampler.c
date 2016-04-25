@@ -226,7 +226,7 @@ update_sampler_resources(struct svga_context *svga, unsigned dirty)
          surfaces[i] = surface;
       }
 
-      for (; i < Elements(ids); i++) {
+      for (; i < ARRAY_SIZE(ids); i++) {
          ids[i] = SVGA3D_INVALID_ID;
          surfaces[i] = NULL;
       }

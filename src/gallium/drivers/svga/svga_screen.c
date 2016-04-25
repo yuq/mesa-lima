@@ -867,9 +867,9 @@ svga_get_driver_query_info(struct pipe_screen *screen,
 #undef QUERY
 
    if (!info)
-      return Elements(queries);
+      return ARRAY_SIZE(queries);
 
-   if (index >= Elements(queries))
+   if (index >= ARRAY_SIZE(queries))
       return 0;
 
    *info = queries[index];

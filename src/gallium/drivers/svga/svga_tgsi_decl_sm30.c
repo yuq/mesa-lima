@@ -118,7 +118,7 @@ emit_decl(struct svga_shader_emitter *emit,
    dcl.values[0] |= 1<<31;
 
    return (emit_instruction(emit, opcode) &&
-           svga_shader_emit_dwords( emit, dcl.values, Elements(dcl.values)));
+           svga_shader_emit_dwords( emit, dcl.values, ARRAY_SIZE(dcl.values)));
 }
 
 
@@ -410,7 +410,7 @@ vs30_input(struct svga_shader_emitter *emit,
    dcl.values[0] |= 1<<31;
 
    return (emit_instruction(emit, opcode) &&
-           svga_shader_emit_dwords( emit, dcl.values, Elements(dcl.values)));
+           svga_shader_emit_dwords( emit, dcl.values, ARRAY_SIZE(dcl.values)));
 }
 
 
@@ -509,7 +509,7 @@ vs30_output(struct svga_shader_emitter *emit,
    }
 
    return (emit_instruction(emit, opcode) &&
-           svga_shader_emit_dwords( emit, dcl.values, Elements(dcl.values)));
+           svga_shader_emit_dwords( emit, dcl.values, ARRAY_SIZE(dcl.values)));
 }
 
 
@@ -549,7 +549,7 @@ ps30_sampler( struct svga_shader_emitter *emit,
    dcl.values[0] |= 1<<31;
 
    return (emit_instruction(emit, opcode) &&
-           svga_shader_emit_dwords( emit, dcl.values, Elements(dcl.values)));
+           svga_shader_emit_dwords( emit, dcl.values, ARRAY_SIZE(dcl.values)));
 }
 
 boolean

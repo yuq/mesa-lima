@@ -425,7 +425,7 @@ svga_set_sampler_views(struct pipe_context *pipe,
    boolean any_change = FALSE;
 
    assert(shader < PIPE_SHADER_TYPES);
-   assert(start + num <= Elements(svga->curr.sampler_views[shader]));
+   assert(start + num <= ARRAY_SIZE(svga->curr.sampler_views[shader]));
 
    /* Pre-VGPU10 only supports FS textures */
    if (!svga_have_vgpu10(svga) && shader != PIPE_SHADER_FRAGMENT)

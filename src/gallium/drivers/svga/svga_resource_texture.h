@@ -136,7 +136,7 @@ svga_transfer(struct pipe_transfer *transfer)
 static inline void
 svga_age_texture_view(struct svga_texture *tex, unsigned level)
 {
-   assert(level < Elements(tex->view_age));
+   assert(level < ARRAY_SIZE(tex->view_age));
    tex->view_age[level] = ++(tex->age);
 }
 

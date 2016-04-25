@@ -767,7 +767,7 @@ emit_def_const(struct svga_shader_emitter *emit,
    }
 
    if (!emit_instruction(emit, opcode) ||
-       !svga_shader_emit_dwords( emit, def.values, Elements(def.values)))
+       !svga_shader_emit_dwords( emit, def.values, ARRAY_SIZE(def.values)))
       return FALSE;
 
    return TRUE;
@@ -2866,7 +2866,7 @@ emit_call(struct svga_shader_emitter *emit,
          break;
    }
 
-   if (emit->nr_labels == Elements(emit->label))
+   if (emit->nr_labels == ARRAY_SIZE(emit->label))
       return FALSE;
 
    if (i == emit->nr_labels) {
@@ -3487,12 +3487,12 @@ emit_inverted_texcoords(struct svga_shader_emitter *emit)
 
       assert(emit->inverted_texcoords & (1 << unit));
 
-      assert(unit < Elements(emit->ps_true_texcoord));
+      assert(unit < ARRAY_SIZE(emit->ps_true_texcoord));
 
-      assert(unit < Elements(emit->ps_inverted_texcoord_input));
+      assert(unit < ARRAY_SIZE(emit->ps_inverted_texcoord_input));
 
       assert(emit->ps_inverted_texcoord_input[unit]
-             < Elements(emit->input_map));
+             < ARRAY_SIZE(emit->input_map));
 
       /* inverted = coord * (1, -1, 1, 1) + (0, 1, 0, 0) */
       if (!submit_op3(emit,
