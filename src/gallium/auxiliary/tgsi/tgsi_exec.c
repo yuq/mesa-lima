@@ -2071,11 +2071,11 @@ exec_tex(struct tgsi_exec_machine *mach,
 
    assert(dim <= 4);
    if (shadow_ref >= 0)
-      assert(shadow_ref >= dim && shadow_ref < Elements(args));
+      assert(shadow_ref >= dim && shadow_ref < ARRAY_SIZE(args));
 
    /* fetch modifier to the last argument */
    if (modifier != TEX_MODIFIER_NONE) {
-      const int last = Elements(args) - 1;
+      const int last = ARRAY_SIZE(args) - 1;
 
       /* fetch modifier from src0.w or src1.x */
       if (sampler == 1) {
@@ -2107,7 +2107,7 @@ exec_tex(struct tgsi_exec_machine *mach,
          control = TGSI_SAMPLER_GATHER;
    }
    else {
-      for (i = dim; i < Elements(args); i++)
+      for (i = dim; i < ARRAY_SIZE(args); i++)
          args[i] = &ZeroVec;
    }
 
@@ -2162,18 +2162,18 @@ exec_lodq(struct tgsi_exec_machine *mach,
    int dim;
    int i;
    union tgsi_exec_channel coords[4];
-   const union tgsi_exec_channel *args[Elements(coords)];
+   const union tgsi_exec_channel *args[ARRAY_SIZE(coords)];
    union tgsi_exec_channel r[2];
 
    unit = fetch_sampler_unit(mach, inst, 1);
    dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture);
-   assert(dim <= Elements(coords));
+   assert(dim <= ARRAY_SIZE(coords));
    /* fetch coordinates */
    for (i = 0; i < dim; i++) {
       FETCH(&coords[i], 0, TGSI_CHAN_X + i);
       args[i] = &coords[i];
    }
-   for (i = dim; i < Elements(coords); i++) {
+   for (i = dim; i < ARRAY_SIZE(coords); i++) {
       args[i] = &ZeroVec;
    }
    mach->Sampler->query_lod(mach->Sampler, unit, unit,

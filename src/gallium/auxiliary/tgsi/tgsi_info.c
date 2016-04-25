@@ -272,7 +272,7 @@ tgsi_get_opcode_info( uint opcode )
    if (firsttime) {
       unsigned i;
       firsttime = 0;
-      for (i = 0; i < Elements(opcode_info); i++)
+      for (i = 0; i < ARRAY_SIZE(opcode_info); i++)
          assert(opcode_info[i].opcode == i);
    }
    

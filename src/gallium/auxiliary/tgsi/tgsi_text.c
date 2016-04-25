@@ -1539,11 +1539,11 @@ static boolean parse_immediate( struct translate_ctx *ctx )
       report_error( ctx, "Syntax error" );
       return FALSE;
    }
-   for (type = 0; type < Elements(tgsi_immediate_type_names); ++type) {
+   for (type = 0; type < ARRAY_SIZE(tgsi_immediate_type_names); ++type) {
       if (str_match_nocase_whole(&ctx->cur, tgsi_immediate_type_names[type]))
          break;
    }
-   if (type == Elements(tgsi_immediate_type_names)) {
+   if (type == ARRAY_SIZE(tgsi_immediate_type_names)) {
       report_error( ctx, "Expected immediate type" );
       return FALSE;
    }
@@ -1589,7 +1589,7 @@ parse_fs_coord_origin( const char **pcur, uint *fs_coord_origin )
 {
    uint i;
 
-   for (i = 0; i < Elements(tgsi_fs_coord_origin_names); i++) {
+   for (i = 0; i < ARRAY_SIZE(tgsi_fs_coord_origin_names); i++) {
       const char *cur = *pcur;
 
       if (str_match_nocase_whole( &cur, tgsi_fs_coord_origin_names[i])) {
@@ -1606,7 +1606,7 @@ parse_fs_coord_pixel_center( const char **pcur, uint *fs_coord_pixel_center )
 {
    uint i;
 
-   for (i = 0; i < Elements(tgsi_fs_coord_pixel_center_names); i++) {
+   for (i = 0; i < ARRAY_SIZE(tgsi_fs_coord_pixel_center_names); i++) {
       const char *cur = *pcur;
 
       if (str_match_nocase_whole( &cur, tgsi_fs_coord_pixel_center_names[i])) {

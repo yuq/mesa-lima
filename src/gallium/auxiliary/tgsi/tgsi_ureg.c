@@ -202,7 +202,7 @@ static void tokens_error( struct ureg_tokens *tokens )
       FREE(tokens->tokens);
 
    tokens->tokens = error_tokens;
-   tokens->size = Elements(error_tokens);
+   tokens->size = ARRAY_SIZE(error_tokens);
    tokens->count = 0;
 }
 
@@ -264,7 +264,7 @@ static union tgsi_any_token *retrieve_token( struct ureg_program *ureg,
 void
 ureg_property(struct ureg_program *ureg, unsigned name, unsigned value)
 {
-   assert(name < Elements(ureg->properties));
+   assert(name < ARRAY_SIZE(ureg->properties));
    ureg->properties[name] = value;
 }
 
@@ -1729,7 +1729,7 @@ static void emit_decls( struct ureg_program *ureg )
 {
    unsigned i,j;
 
-   for (i = 0; i < Elements(ureg->properties); i++)
+   for (i = 0; i < ARRAY_SIZE(ureg->properties); i++)
       if (ureg->properties[i] != ~0)
          emit_property(ureg, i, ureg->properties[i]);
 
@@ -2094,7 +2094,7 @@ ureg_create_with_screen(unsigned processor, struct pipe_screen *screen)
                                PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE) != 0;
    ureg->next_shader_processor = -1;
 
-   for (i = 0; i < Elements(ureg->properties); i++)
+   for (i = 0; i < ARRAY_SIZE(ureg->properties); i++)
       ureg->properties[i] = ~0;
 
    ureg->free_temps = util_bitmask_create();
@@ -2142,7 +2142,7 @@ void ureg_destroy( struct ureg_program *ureg )
 {
    unsigned i;
 
-   for (i = 0; i < Elements(ureg->domain); i++) {
+   for (i = 0; i < ARRAY_SIZE(ureg->domain); i++) {
       if (ureg->domain[i].tokens && 
           ureg->domain[i].tokens != error_tokens)
          FREE(ureg->domain[i].tokens);

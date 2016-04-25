@@ -200,7 +200,7 @@ scan_instruction(struct tgsi_shader_info *info,
          const unsigned index = src->Register.Index;
 
          assert(fullinst->Instruction.Texture);
-         assert(index < Elements(info->is_msaa_sampler));
+         assert(index < ARRAY_SIZE(info->is_msaa_sampler));
          assert(index < PIPE_MAX_SAMPLERS);
 
          if (is_texture_inst(fullinst->Instruction.Opcode)) {
@@ -503,7 +503,7 @@ scan_property(struct tgsi_shader_info *info,
    unsigned name = fullprop->Property.PropertyName;
    unsigned value = fullprop->u[0].Data;
 
-   assert(name < Elements(info->properties));
+   assert(name < ARRAY_SIZE(info->properties));
    info->properties[name] = value;
 
    switch (name) {
@@ -535,10 +535,10 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
    memset(info, 0, sizeof(*info));
    for (i = 0; i < TGSI_FILE_COUNT; i++)
       info->file_max[i] = -1;
-   for (i = 0; i < Elements(info->const_file_max); i++)
+   for (i = 0; i < ARRAY_SIZE(info->const_file_max); i++)
       info->const_file_max[i] = -1;
    info->properties[TGSI_PROPERTY_GS_INVOCATIONS] = 1;
-   for (i = 0; i < Elements(info->sampler_targets); i++)
+   for (i = 0; i < ARRAY_SIZE(info->sampler_targets); i++)
       info->sampler_targets[i] = TGSI_TEXTURE_UNKNOWN;
 
    /**
