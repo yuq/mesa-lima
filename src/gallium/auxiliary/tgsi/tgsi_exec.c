@@ -1282,7 +1282,7 @@ fetch_src_file_channel(const struct tgsi_exec_machine *mach,
        * gl_FragCoord, for example, in a sys value register.
        */
       for (i = 0; i < TGSI_QUAD_SIZE; i++) {
-         chan->u[i] = mach->SystemValue[index->i[i]].u[i];
+         chan->u[i] = mach->SystemValue[index->i[i]].xyzw[swizzle].u[i];
       }
       break;
 

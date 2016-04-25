@@ -197,7 +197,7 @@ static void tgsi_gs_prepare(struct draw_geometry_shader *shader,
    if (shader->info.uses_invocationid) {
       unsigned i = machine->SysSemanticToIndex[TGSI_SEMANTIC_INVOCATIONID];
       for (j = 0; j < TGSI_QUAD_SIZE; j++)
-         machine->SystemValue[i].i[j] = shader->invocation_id;
+         machine->SystemValue[i].xyzw[0].i[j] = shader->invocation_id;
    }
 }
 
