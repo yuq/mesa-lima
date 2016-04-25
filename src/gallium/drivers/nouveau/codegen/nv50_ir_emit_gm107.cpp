@@ -3031,7 +3031,7 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       case FILE_MEMORY_SHARED: emitSTS(); break;
       case FILE_MEMORY_GLOBAL: emitST(); break;
       default:
-         assert(!"invalid load");
+         assert(!"invalid store");
          emitNOP();
          break;
       }
