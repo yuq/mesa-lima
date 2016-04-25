@@ -362,7 +362,7 @@ fd_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 		 * See: https://code.google.com/p/android/issues/detail?id=206513
 		 */
 		if (fd_mesa_debug & FD_DBG_DEQP)
-			return 63.0f;
+			return 48.0f;
 		return 127.0f;
 	case PIPE_CAPF_MAX_POINT_WIDTH:
 	case PIPE_CAPF_MAX_POINT_WIDTH_AA:
