@@ -120,7 +120,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
       return 128 * 1024 * 1024;
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
-      if (class_3d == NVE4_3D_CLASS || class_3d == NVF0_3D_CLASS)
+      if (class_3d <= NVF0_3D_CLASS)
          return 420;
       return 410;
    case PIPE_CAP_MAX_RENDER_TARGETS:
