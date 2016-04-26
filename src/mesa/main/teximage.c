@@ -2530,6 +2530,15 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
       }
    }
 
+   /* In the ES 3.2 specification's Table 8.13 (Valid CopyTexImage source
+    * framebuffer/destination texture base internal format combinations),
+    * all the entries for stencil are left blank (unsupported).
+    */
+   if (_mesa_is_gles(ctx) && _mesa_is_stencil_format(texImage->_BaseFormat)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(stencil disallowed)", caller);
+      return GL_TRUE;
+   }
+
    /* if we get here, the parameters are OK */
    return GL_FALSE;
 }
