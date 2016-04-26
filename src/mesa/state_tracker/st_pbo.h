@@ -70,6 +70,10 @@ st_pbo_addresses_pixelstore(struct st_context *st,
                             const void *pixels,
                             struct st_pbo_addresses *addr);
 
+void
+st_pbo_addresses_invert_y(struct st_pbo_addresses *addr,
+                          unsigned viewport_height);
+
 bool
 st_pbo_draw(struct st_context *st, const struct st_pbo_addresses *addr,
             unsigned surface_width, unsigned surface_height);

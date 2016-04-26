@@ -34,6 +34,7 @@
 #include "main/framebuffer.h"
 #include "util/u_inlines.h"
 #include "util/u_format.h"
+#include "cso_cache/cso_context.h"
 
 #include "st_cb_fbo.h"
 #include "st_atom.h"
@@ -42,6 +43,7 @@
 #include "st_cb_readpixels.h"
 #include "state_tracker/st_cb_texture.h"
 #include "state_tracker/st_format.h"
+#include "state_tracker/st_pbo.h"
 #include "state_tracker/st_texture.h"
 
 static boolean
@@ -71,11 +73,143 @@ needs_integer_signed_unsigned_conversion(const struct gl_context *ctx,
 
 static bool
 try_pbo_readpixels(struct st_context *st, struct st_renderbuffer *strb,
+                   bool invert_y,
                    GLint x, GLint y, GLsizei width, GLsizei height,
                    enum pipe_format src_format, enum pipe_format dst_format,
                    const struct gl_pixelstore_attrib *pack, void *pixels)
 {
-   return false;
+   struct pipe_context *pipe = st->pipe;
+   struct cso_context *cso = st->cso_context;
+   struct pipe_surface *surface = strb->surface;
+   struct pipe_resource *texture = strb->texture;
+   const struct util_format_description *desc;
+   struct st_pbo_addresses addr;
+   struct pipe_framebuffer_state fb;
+   enum pipe_texture_target view_target;
+   bool success = false;
+
+   if (texture->nr_samples > 1)
+      return false;
+
+   desc = util_format_description(dst_format);
+
+   /* Compute PBO addresses */
+   addr.bytes_per_pixel = desc->block.bits / 8;
+   addr.xoffset = x;
+   addr.yoffset = y;
+   addr.width = width;
+   addr.height = height;
+   addr.depth = 1;
+   if (!st_pbo_addresses_pixelstore(st, GL_TEXTURE_2D, false, pack, pixels, &addr))
+      return false;
+
+   cso_save_state(cso, (CSO_BIT_FRAGMENT_SAMPLER_VIEWS |
+                        CSO_BIT_FRAGMENT_SAMPLERS |
+                        CSO_BIT_FRAGMENT_IMAGE0 |
+                        CSO_BIT_VERTEX_ELEMENTS |
+                        CSO_BIT_AUX_VERTEX_BUFFER_SLOT |
+                        CSO_BIT_FRAMEBUFFER |
+                        CSO_BIT_VIEWPORT |
+                        CSO_BIT_RASTERIZER |
+                        CSO_BIT_DEPTH_STENCIL_ALPHA |
+                        CSO_BIT_STREAM_OUTPUTS |
+                        CSO_BIT_PAUSE_QUERIES |
+                        CSO_BITS_ALL_SHADERS));
+   cso_save_constant_buffer_slot0(cso, PIPE_SHADER_FRAGMENT);
+
+   /* Set up the sampler_view */
+   {
+      struct pipe_sampler_view templ;
+      struct pipe_sampler_view *sampler_view;
+      struct pipe_sampler_state sampler = {0};
+      const struct pipe_sampler_state *samplers[1] = {&sampler};
+
+      u_sampler_view_default_template(&templ, texture, src_format);
+
+      switch (texture->target) {
+      case PIPE_TEXTURE_CUBE:
+      case PIPE_TEXTURE_CUBE_ARRAY:
+         view_target = PIPE_TEXTURE_2D_ARRAY;
+         break;
+      default:
+         view_target = texture->target;
+         break;
+      }
+
+      templ.target = view_target;
+      templ.u.tex.first_level = surface->u.tex.level;
+      templ.u.tex.last_level = templ.u.tex.first_level;
+
+      if (view_target != PIPE_TEXTURE_3D) {
+         templ.u.tex.first_layer = surface->u.tex.first_layer;
+         templ.u.tex.last_layer = templ.u.tex.last_layer;
+      } else {
+         addr.constants.layer_offset = surface->u.tex.first_layer;
+      }
+
+      sampler_view = pipe->create_sampler_view(pipe, texture, &templ);
+      if (sampler_view == NULL)
+         goto fail;
+
+      cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, 1, &sampler_view);
+
+      pipe_sampler_view_reference(&sampler_view, NULL);
+
+      cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, 1, samplers);
+   }
+
+   /* Set up destination image */
+   {
+      struct pipe_image_view image;
+
+      memset(&image, 0, sizeof(image));
+      pipe_resource_reference(&image.resource, addr.buffer);
+      image.format = dst_format;
+      image.access = PIPE_IMAGE_ACCESS_WRITE;
+      image.u.buf.first_element = addr.first_element;
+      image.u.buf.last_element = addr.last_element;
+
+      cso_set_shader_images(cso, PIPE_SHADER_FRAGMENT, 0, 1, &image);
+   }
+
+   /* Set up no-attachment framebuffer */
+   memset(&fb, 0, sizeof(fb));
+   fb.width = surface->width;
+   fb.height = surface->height;
+   fb.samples = 1;
+   fb.layers = 1;
+   cso_set_framebuffer(cso, &fb);
+
+   cso_set_viewport_dims(cso, fb.width, fb.height, invert_y);
+
+   if (invert_y)
+      st_pbo_addresses_invert_y(&addr, fb.height);
+
+   {
+      struct pipe_depth_stencil_alpha_state dsa;
+      memset(&dsa, 0, sizeof(dsa));
+      cso_set_depth_stencil_alpha(cso, &dsa);
+   }
+
+   /* Set up the fragment shader */
+   {
+      void *fs = st_pbo_get_download_fs(st, view_target);
+      if (!fs)
+         goto fail;
+
+      cso_set_fragment_shader_handle(cso, fs);
+   }
+
+   success = st_pbo_draw(st, &addr, fb.width, fb.height);
+
+   /* Buffer written via shader images needs explicit synchronization. */
+   pipe->memory_barrier(pipe, PIPE_BARRIER_ALL);
+
+fail:
+   cso_restore_state(cso);
+   cso_restore_constant_buffer_slot0(cso, PIPE_SHADER_FRAGMENT);
+
+   return success;
 }
 
 /**
@@ -167,8 +301,10 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
       goto fallback;
    }
 
-   if (_mesa_is_bufferobj(pack->BufferObj)) {
-      if (try_pbo_readpixels(st, strb, x, y, width, height,
+   if (st->pbo.download_enabled && _mesa_is_bufferobj(pack->BufferObj)) {
+      if (try_pbo_readpixels(st, strb,
+                             st_fb_orientation(ctx->ReadBuffer) == Y_0_TOP,
+                             x, y, width, height,
                              src_format, dst_format,
                              pack, pixels))
          return;

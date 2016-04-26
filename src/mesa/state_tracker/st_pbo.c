@@ -153,6 +153,22 @@ st_pbo_addresses_pixelstore(struct st_context *st,
    return true;
 }
 
+/* For download from a framebuffer, we may have to invert the Y axis. The
+ * setup is as follows:
+ * - set viewport to inverted, so that the position sysval is correct for
+ *   texel fetches
+ * - this function adjusts the fragment shader's constant buffer to compute
+ *   the correct destination addresses.
+ */
+void
+st_pbo_addresses_invert_y(struct st_pbo_addresses *addr,
+                          unsigned viewport_height)
+{
+   addr->constants.xoffset +=
+      (viewport_height - 1 + 2 * addr->constants.yoffset) * addr->constants.stride;
+   addr->constants.stride = -addr->constants.stride;
+}
+
 /* Setup all vertex pipeline state, rasterizer state, and fragment shader
  * constants, and issue the draw call for PBO upload/download.
  *
@@ -530,6 +546,7 @@ st_init_pbo_helpers(struct st_context *st)
 
    st->pbo.download_enabled =
       st->pbo.upload_enabled &&
+      screen->get_param(screen, PIPE_CAP_SAMPLER_VIEW_TARGET) &&
       screen->get_param(screen, PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT) &&
       screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT,
                                        PIPE_SHADER_CAP_MAX_SHADER_IMAGES) >= 1;
