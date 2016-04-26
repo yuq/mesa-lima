@@ -1070,82 +1070,6 @@ reinterpret_formats(enum pipe_format *src_format, enum pipe_format *dst_format)
    return true;
 }
 
-static void *
-create_pbo_upload_fs(struct st_context *st)
-{
-   struct pipe_context *pipe = st->pipe;
-   struct pipe_screen *screen = pipe->screen;
-   struct ureg_program *ureg;
-   struct ureg_dst out;
-   struct ureg_src sampler;
-   struct ureg_src pos;
-   struct ureg_src layer;
-   struct ureg_src const0;
-   struct ureg_dst temp0;
-
-   ureg = ureg_create(PIPE_SHADER_FRAGMENT);
-   if (!ureg)
-      return NULL;
-
-   out     = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
-   sampler = ureg_DECL_sampler(ureg, 0);
-   if (screen->get_param(screen, PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL)) {
-      pos = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_POSITION, 0);
-   } else {
-      pos = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
-                               TGSI_INTERPOLATE_LINEAR);
-   }
-   if (st->pbo.layers) {
-      layer = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_LAYER, 0,
-                                       TGSI_INTERPOLATE_CONSTANT);
-   }
-   const0  = ureg_DECL_constant(ureg, 0);
-   temp0   = ureg_DECL_temporary(ureg);
-
-   /* Note: const0 = [ -xoffset + skip_pixels, -yoffset, stride, image_height ] */
-
-   /* temp0.xy = f2i(temp0.xy) */
-   ureg_F2I(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_XY),
-                  ureg_swizzle(pos,
-                               TGSI_SWIZZLE_X, TGSI_SWIZZLE_Y,
-                               TGSI_SWIZZLE_Y, TGSI_SWIZZLE_Y));
-
-   /* temp0.xy = temp0.xy + const0.xy */
-   ureg_UADD(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_XY),
-                   ureg_swizzle(ureg_src(temp0),
-                                TGSI_SWIZZLE_X, TGSI_SWIZZLE_Y,
-                                TGSI_SWIZZLE_Y, TGSI_SWIZZLE_Y),
-                   ureg_swizzle(const0,
-                                TGSI_SWIZZLE_X, TGSI_SWIZZLE_Y,
-                                TGSI_SWIZZLE_Y, TGSI_SWIZZLE_Y));
-
-   /* temp0.x = const0.z * temp0.y + temp0.x */
-   ureg_UMAD(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_X),
-                   ureg_scalar(const0, TGSI_SWIZZLE_Z),
-                   ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_Y),
-                   ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X));
-
-   if (st->pbo.layers) {
-      /* temp0.x = const0.w * layer + temp0.x */
-      ureg_UMAD(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_X),
-                      ureg_scalar(const0, TGSI_SWIZZLE_W),
-                      ureg_scalar(layer, TGSI_SWIZZLE_X),
-                      ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X));
-   }
-
-   /* temp0.w = 0 */
-   ureg_MOV(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_W), ureg_imm1u(ureg, 0));
-
-   /* out = txf(sampler, temp0.x) */
-   ureg_TXF(ureg, out, TGSI_TEXTURE_BUFFER, ureg_src(temp0), sampler);
-
-   ureg_release_temporary(ureg, temp0);
-
-   ureg_END(ureg);
-
-   return ureg_create_shader_and_destroy(ureg, pipe);
-}
-
 static bool
 try_pbo_upload_common(struct gl_context *ctx,
                       struct pipe_surface *surface,
@@ -1191,7 +1115,7 @@ try_pbo_upload_common(struct gl_context *ctx,
    }
 
    if (!st->pbo.upload_fs) {
-      st->pbo.upload_fs = create_pbo_upload_fs(st);
+      st->pbo.upload_fs = st_pbo_create_upload_fs(st);
       if (!st->pbo.upload_fs)
          return false;
    }
