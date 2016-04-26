@@ -305,6 +305,26 @@ type_sz(unsigned type)
 }
 
 /**
+ * Return an integer type of the requested size and signedness.
+ */
+static inline enum brw_reg_type
+brw_int_type(unsigned sz, bool is_signed)
+{
+   switch (sz) {
+   case 1:
+      return (is_signed ? BRW_REGISTER_TYPE_B : BRW_REGISTER_TYPE_UB);
+   case 2:
+      return (is_signed ? BRW_REGISTER_TYPE_W : BRW_REGISTER_TYPE_UW);
+   case 4:
+      return (is_signed ? BRW_REGISTER_TYPE_D : BRW_REGISTER_TYPE_UD);
+   case 8:
+      return (is_signed ? BRW_REGISTER_TYPE_Q : BRW_REGISTER_TYPE_UQ);
+   default:
+      unreachable("Not reached.");
+   }
+}
+
+/**
  * Construct a brw_reg.
  * \param file      one of the BRW_x_REGISTER_FILE values
  * \param nr        register number/index
