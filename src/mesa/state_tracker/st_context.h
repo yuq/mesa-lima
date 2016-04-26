@@ -236,15 +236,15 @@ struct st_context
    /* For gl(Compressed)Tex(Sub)Image */
    struct {
       struct pipe_rasterizer_state raster;
-      struct pipe_blend_state blend;
+      struct pipe_blend_state upload_blend;
       void *vs;
       void *gs;
-      void *fs;
-      bool enabled;
+      void *upload_fs;
+      bool upload_enabled;
       bool rgba_only;
-      bool upload_layers;
+      bool layers;
       bool use_gs;
-   } pbo_upload;
+   } pbo;
 
    /** for drawing with st_util_vertex */
    struct pipe_vertex_element util_velems[3];

@@ -1095,7 +1095,7 @@ create_pbo_upload_fs(struct st_context *st)
       pos = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
                                TGSI_INTERPOLATE_LINEAR);
    }
-   if (st->pbo_upload.upload_layers) {
+   if (st->pbo.layers) {
       layer = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_LAYER, 0,
                                        TGSI_INTERPOLATE_CONSTANT);
    }
@@ -1125,7 +1125,7 @@ create_pbo_upload_fs(struct st_context *st)
                    ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_Y),
                    ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X));
 
-   if (st->pbo_upload.upload_layers) {
+   if (st->pbo.layers) {
       /* temp0.x = const0.w * layer + temp0.x */
       ureg_UMAD(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_X),
                       ureg_scalar(const0, TGSI_SWIZZLE_W),
@@ -1178,21 +1178,21 @@ try_pbo_upload_common(struct gl_context *ctx,
    }
 
    /* Create the shaders */
-   if (!st->pbo_upload.vs) {
-      st->pbo_upload.vs = st_pbo_create_vs(st);
-      if (!st->pbo_upload.vs)
+   if (!st->pbo.vs) {
+      st->pbo.vs = st_pbo_create_vs(st);
+      if (!st->pbo.vs)
          return false;
    }
 
-   if (depth != 1 && st->pbo_upload.use_gs && !st->pbo_upload.gs) {
-      st->pbo_upload.gs = st_pbo_create_gs(st);
-      if (!st->pbo_upload.gs)
+   if (depth != 1 && st->pbo.use_gs && !st->pbo.gs) {
+      st->pbo.gs = st_pbo_create_gs(st);
+      if (!st->pbo.gs)
          return false;
    }
 
-   if (!st->pbo_upload.fs) {
-      st->pbo_upload.fs = create_pbo_upload_fs(st);
-      if (!st->pbo_upload.fs)
+   if (!st->pbo.upload_fs) {
+      st->pbo.upload_fs = create_pbo_upload_fs(st);
+      if (!st->pbo.upload_fs)
          return false;
    }
 
@@ -1348,7 +1348,7 @@ try_pbo_upload_common(struct gl_context *ctx,
    cso_set_viewport_dims(cso, surface->width, surface->height, FALSE);
 
    /* Blend state */
-   cso_set_blend(cso, &st->pbo_upload.blend);
+   cso_set_blend(cso, &st->pbo.upload_blend);
 
    /* Depth/stencil/alpha state */
    {
@@ -1358,18 +1358,18 @@ try_pbo_upload_common(struct gl_context *ctx,
    }
 
    /* Rasterizer state */
-   cso_set_rasterizer(cso, &st->pbo_upload.raster);
+   cso_set_rasterizer(cso, &st->pbo.raster);
 
    /* Set up the shaders */
-   cso_set_vertex_shader_handle(cso, st->pbo_upload.vs);
+   cso_set_vertex_shader_handle(cso, st->pbo.vs);
 
-   cso_set_geometry_shader_handle(cso, depth != 1 ? st->pbo_upload.gs : NULL);
+   cso_set_geometry_shader_handle(cso, depth != 1 ? st->pbo.gs : NULL);
 
    cso_set_tessctrl_shader_handle(cso, NULL);
 
    cso_set_tesseval_shader_handle(cso, NULL);
 
-   cso_set_fragment_shader_handle(cso, st->pbo_upload.fs);
+   cso_set_fragment_shader_handle(cso, st->pbo.upload_fs);
 
    /* Disable stream output */
    cso_set_stream_outputs(cso, 0, NULL, 0);
@@ -1415,7 +1415,7 @@ try_pbo_upload(struct gl_context *ctx, GLuint dims,
    unsigned stride, image_height;
    bool success;
 
-   if (!st->pbo_upload.enabled)
+   if (!st->pbo.upload_enabled)
       return false;
 
    /* From now on, we need the gallium representation of dimensions. */
@@ -1429,7 +1429,7 @@ try_pbo_upload(struct gl_context *ctx, GLuint dims,
       image_height = unpack->ImageHeight > 0 ? unpack->ImageHeight : height;
    }
 
-   if (depth != 1 && !st->pbo_upload.upload_layers)
+   if (depth != 1 && !st->pbo.layers)
       return false;
 
    /* Choose the source format. Initially, we do so without checking driver
@@ -1450,7 +1450,7 @@ try_pbo_upload(struct gl_context *ctx, GLuint dims,
    if (desc->colorspace != UTIL_FORMAT_COLORSPACE_RGB)
       return false;
 
-   if (st->pbo_upload.rgba_only) {
+   if (st->pbo.rgba_only) {
       enum pipe_format orig_dst_format = dst_format;
 
       if (!reinterpret_formats(&src_format, &dst_format)) {
@@ -1860,7 +1860,7 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
       goto fallback;
    }
 
-   if (!st->pbo_upload.enabled ||
+   if (!st->pbo.upload_enabled ||
        !screen->get_param(screen, PIPE_CAP_SURFACE_REINTERPRET_BLOCKS)) {
       goto fallback;
    }

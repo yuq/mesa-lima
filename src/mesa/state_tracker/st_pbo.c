@@ -54,18 +54,18 @@ st_pbo_create_vs(struct st_context *st)
 
    out_pos = ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0);
 
-   if (st->pbo_upload.upload_layers) {
+   if (st->pbo.layers) {
       in_instanceid = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_INSTANCEID, 0);
 
-      if (!st->pbo_upload.use_gs)
+      if (!st->pbo.use_gs)
          out_layer = ureg_DECL_output(ureg, TGSI_SEMANTIC_LAYER, 0);
    }
 
    /* out_pos = in_pos */
    ureg_MOV(ureg, out_pos, in_pos);
 
-   if (st->pbo_upload.upload_layers) {
-      if (st->pbo_upload.use_gs) {
+   if (st->pbo.layers) {
+      if (st->pbo.use_gs) {
          /* out_pos.z = i2f(gl_InstanceID) */
          ureg_I2F(ureg, ureg_writemask(out_pos, TGSI_WRITEMASK_Z),
                         ureg_scalar(in_instanceid, TGSI_SWIZZLE_X));
@@ -130,49 +130,49 @@ st_init_pbo_helpers(struct st_context *st)
    struct pipe_context *pipe = st->pipe;
    struct pipe_screen *screen = pipe->screen;
 
-   st->pbo_upload.enabled =
+   st->pbo.upload_enabled =
       screen->get_param(screen, PIPE_CAP_TEXTURE_BUFFER_OBJECTS) &&
       screen->get_param(screen, PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT) >= 1 &&
       screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT, PIPE_SHADER_CAP_INTEGERS);
-   if (!st->pbo_upload.enabled)
+   if (!st->pbo.upload_enabled)
       return;
 
-   st->pbo_upload.rgba_only =
+   st->pbo.rgba_only =
       screen->get_param(screen, PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY);
 
    if (screen->get_param(screen, PIPE_CAP_TGSI_INSTANCEID)) {
       if (screen->get_param(screen, PIPE_CAP_TGSI_VS_LAYER_VIEWPORT)) {
-         st->pbo_upload.upload_layers = true;
+         st->pbo.layers = true;
       } else if (screen->get_param(screen, PIPE_CAP_MAX_GEOMETRY_OUTPUT_VERTICES) >= 3) {
-         st->pbo_upload.upload_layers = true;
-         st->pbo_upload.use_gs = true;
+         st->pbo.layers = true;
+         st->pbo.use_gs = true;
       }
    }
 
    /* Blend state */
-   memset(&st->pbo_upload.blend, 0, sizeof(struct pipe_blend_state));
-   st->pbo_upload.blend.rt[0].colormask = PIPE_MASK_RGBA;
+   memset(&st->pbo.upload_blend, 0, sizeof(struct pipe_blend_state));
+   st->pbo.upload_blend.rt[0].colormask = PIPE_MASK_RGBA;
 
    /* Rasterizer state */
-   memset(&st->pbo_upload.raster, 0, sizeof(struct pipe_rasterizer_state));
-   st->pbo_upload.raster.half_pixel_center = 1;
+   memset(&st->pbo.raster, 0, sizeof(struct pipe_rasterizer_state));
+   st->pbo.raster.half_pixel_center = 1;
 }
 
 void
 st_destroy_pbo_helpers(struct st_context *st)
 {
-   if (st->pbo_upload.fs) {
-      cso_delete_fragment_shader(st->cso_context, st->pbo_upload.fs);
-      st->pbo_upload.fs = NULL;
+   if (st->pbo.upload_fs) {
+      cso_delete_fragment_shader(st->cso_context, st->pbo.upload_fs);
+      st->pbo.upload_fs = NULL;
    }
 
-   if (st->pbo_upload.gs) {
-      cso_delete_geometry_shader(st->cso_context, st->pbo_upload.gs);
-      st->pbo_upload.gs = NULL;
+   if (st->pbo.gs) {
+      cso_delete_geometry_shader(st->cso_context, st->pbo.gs);
+      st->pbo.gs = NULL;
    }
 
-   if (st->pbo_upload.vs) {
-      cso_delete_vertex_shader(st->cso_context, st->pbo_upload.vs);
-      st->pbo_upload.vs = NULL;
+   if (st->pbo.vs) {
+      cso_delete_vertex_shader(st->cso_context, st->pbo.vs);
+      st->pbo.vs = NULL;
    }
 }
