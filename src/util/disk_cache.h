@@ -78,6 +78,12 @@ void
 disk_cache_destroy(struct disk_cache *cache);
 
 /**
+ * Remove the item in the cache under the name \key.
+ */
+void
+disk_cache_remove(struct disk_cache *cache, cache_key key);
+
+/**
  * Store an item in the cache under the name \key.
  *
  * The item can be retrieved later with disk_cache_get(), (unless the item has
@@ -147,6 +153,12 @@ disk_cache_destroy(struct disk_cache *cache) {
 static inline void
 disk_cache_put(struct disk_cache *cache, cache_key key,
           const void *data, size_t size)
+{
+   return;
+}
+
+static inline void
+disk_cache_remove(struct program_cache *cache, cache_key key)
 {
    return;
 }

@@ -538,6 +538,28 @@ evict_random_item(struct disk_cache *cache)
 }
 
 void
+disk_cache_remove(struct disk_cache *cache, cache_key key)
+{
+   struct stat sb;
+
+   char *filename = get_cache_file(cache, key);
+   if (filename == NULL) {
+      return;
+   }
+
+   if (stat(filename, &sb) == -1) {
+      ralloc_free(filename);
+      return;
+   }
+
+   unlink(filename);
+   ralloc_free(filename);
+
+   if (sb.st_size)
+      p_atomic_add(cache->size, - sb.st_size);
+}
+
+void
 disk_cache_put(struct disk_cache *cache,
           cache_key key,
           const void *data,
