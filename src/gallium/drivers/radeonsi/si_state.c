@@ -2949,7 +2949,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 		    S_008F24_LAST_ARRAY(last_layer));
 
 	if (tex->dcc_offset) {
-		unsigned swap = r600_translate_colorswap(pipe_format);
+		unsigned swap = r600_translate_colorswap(pipe_format, FALSE);
 
 		state[6] = S_008F28_COMPRESSION_EN(1) | S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
 		state[7] = (tex->resource.gpu_address +
