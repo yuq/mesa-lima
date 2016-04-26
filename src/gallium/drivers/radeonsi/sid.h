@@ -9021,7 +9021,7 @@
 #define    CIK_SDMA_PACKET_SEMAPHORE               0x7
 #define    CIK_SDMA_PACKET_CONSTANT_FILL           0xb
 #define    CIK_SDMA_PACKET_SRBM_WRITE              0xe
-#define    CIK_SDMA_COPY_MAX_SIZE                  0x1fffff
+#define    CIK_SDMA_COPY_MAX_SIZE                  0x3fffe0
 
 #endif /* _SID_H */
 

@@ -46,7 +46,7 @@ static void cik_sdma_do_copy_buffer(struct si_context *ctx,
 	dst_offset += r600_resource(dst)->gpu_address;
 	src_offset += r600_resource(src)->gpu_address;
 
-	ncopy = (size + CIK_SDMA_COPY_MAX_SIZE - 1) / CIK_SDMA_COPY_MAX_SIZE;
+	ncopy = DIV_ROUND_UP(size, CIK_SDMA_COPY_MAX_SIZE);
 	r600_need_dma_space(&ctx->b, ncopy * 7);
 
 	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, rsrc, RADEON_USAGE_READ,
@@ -55,7 +55,7 @@ static void cik_sdma_do_copy_buffer(struct si_context *ctx,
 			      RADEON_PRIO_SDMA_BUFFER);
 
 	for (i = 0; i < ncopy; i++) {
-		csize = size < CIK_SDMA_COPY_MAX_SIZE ? size : CIK_SDMA_COPY_MAX_SIZE;
+		csize = MIN2(size, CIK_SDMA_COPY_MAX_SIZE);
 		cs->buf[cs->cdw++] = CIK_SDMA_PACKET(CIK_SDMA_OPCODE_COPY,
 						     CIK_SDMA_COPY_SUB_OPCODE_LINEAR,
 						     0);
