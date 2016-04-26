@@ -690,59 +690,6 @@ st_get_blit_mask(GLenum srcFormat, GLenum dstFormat)
    }
 }
 
-void
-st_init_pbo_upload(struct st_context *st)
-{
-   struct pipe_context *pipe = st->pipe;
-   struct pipe_screen *screen = pipe->screen;
-
-   st->pbo_upload.enabled =
-      screen->get_param(screen, PIPE_CAP_TEXTURE_BUFFER_OBJECTS) &&
-      screen->get_param(screen, PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT) >= 1 &&
-      screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT, PIPE_SHADER_CAP_INTEGERS);
-   if (!st->pbo_upload.enabled)
-      return;
-
-   st->pbo_upload.rgba_only =
-      screen->get_param(screen, PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY);
-
-   if (screen->get_param(screen, PIPE_CAP_TGSI_INSTANCEID)) {
-      if (screen->get_param(screen, PIPE_CAP_TGSI_VS_LAYER_VIEWPORT)) {
-         st->pbo_upload.upload_layers = true;
-      } else if (screen->get_param(screen, PIPE_CAP_MAX_GEOMETRY_OUTPUT_VERTICES) >= 3) {
-         st->pbo_upload.upload_layers = true;
-         st->pbo_upload.use_gs = true;
-      }
-   }
-
-   /* Blend state */
-   memset(&st->pbo_upload.blend, 0, sizeof(struct pipe_blend_state));
-   st->pbo_upload.blend.rt[0].colormask = PIPE_MASK_RGBA;
-
-   /* Rasterizer state */
-   memset(&st->pbo_upload.raster, 0, sizeof(struct pipe_rasterizer_state));
-   st->pbo_upload.raster.half_pixel_center = 1;
-}
-
-void
-st_destroy_pbo_upload(struct st_context *st)
-{
-   if (st->pbo_upload.fs) {
-      cso_delete_fragment_shader(st->cso_context, st->pbo_upload.fs);
-      st->pbo_upload.fs = NULL;
-   }
-
-   if (st->pbo_upload.gs) {
-      cso_delete_geometry_shader(st->cso_context, st->pbo_upload.gs);
-      st->pbo_upload.gs = NULL;
-   }
-
-   if (st->pbo_upload.vs) {
-      cso_delete_vertex_shader(st->cso_context, st->pbo_upload.vs);
-      st->pbo_upload.vs = NULL;
-   }
-}
-
 /**
  * Converts format to a format with the same components, types
  * and sizes, but with the components in RGBA order.
