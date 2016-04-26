@@ -964,6 +964,11 @@ tgsi_exec_machine_bind_shader(
                ++mach->NumOutputs;
             }
          }
+         else if (parse.FullToken.FullDeclaration.Declaration.File == TGSI_FILE_SYSTEM_VALUE) {
+            const struct tgsi_full_declaration *decl = &parse.FullToken.FullDeclaration;
+            mach->SysSemanticToIndex[decl->Semantic.Name] = decl->Range.First;
+         }
+
          memcpy(declarations + numDeclarations,
                 &parse.FullToken.FullDeclaration,
                 sizeof(declarations[0]));
@@ -2777,9 +2782,6 @@ exec_declaration(struct tgsi_exec_machine *mach,
       }
    }
 
-   if (decl->Declaration.File == TGSI_FILE_SYSTEM_VALUE) {
-      mach->SysSemanticToIndex[decl->Declaration.Semantic] = decl->Range.First;
-   }
 }
 
 typedef void (* micro_unary_op)(union tgsi_exec_channel *dst,
