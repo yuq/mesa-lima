@@ -87,6 +87,7 @@ static void cik_sdma_copy_buffer(struct si_context *ctx,
 		       dst_offset + size);
 
 	cik_sdma_do_copy_buffer(ctx, dst, src, dst_offset, src_offset, size);
+	r600_dma_emit_wait_idle(&ctx->b);
 }
 
 static void cik_sdma_copy(struct pipe_context *ctx,

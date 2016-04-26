@@ -3470,6 +3470,7 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 		addr += cheight * pitch;
 		y += cheight;
 	}
+	r600_dma_emit_wait_idle(&rctx->b);
 }
 
 static void evergreen_dma_copy(struct pipe_context *ctx,

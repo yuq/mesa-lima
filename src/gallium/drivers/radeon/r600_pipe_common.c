@@ -149,6 +149,30 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw)
 	}
 }
 
+/* This is required to prevent read-after-write hazards. */
+void r600_dma_emit_wait_idle(struct r600_common_context *rctx)
+{
+	struct radeon_winsys_cs *cs = rctx->dma.cs;
+
+	/* done at the end of DMA calls, so increment this. */
+	rctx->num_dma_calls++;
+
+	r600_need_dma_space(rctx, 1);
+
+	if (cs->cdw == 0) /* empty queue */
+		return;
+
+	/* NOP waits for idle on Evergreen and later. */
+	if (rctx->chip_class >= CIK)
+		radeon_emit(cs, 0x00000000); /* NOP */
+	else if (rctx->chip_class >= EVERGREEN)
+		radeon_emit(cs, 0xf0000000); /* NOP */
+	else {
+		/* TODO: R600-R700 should use the FENCE packet.
+		 * CS checker support is required. */
+	}
+}
+
 static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
 {
 }

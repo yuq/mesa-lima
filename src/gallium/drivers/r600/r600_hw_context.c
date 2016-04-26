@@ -484,4 +484,5 @@ void r600_dma_copy_buffer(struct r600_context *rctx,
 		src_offset += csize << 2;
 		size -= csize;
 	}
+	r600_dma_emit_wait_idle(&rctx->b);
 }
