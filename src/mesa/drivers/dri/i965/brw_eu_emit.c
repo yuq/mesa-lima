@@ -3261,6 +3261,11 @@ brw_memory_fence(struct brw_codegen *p,
    const bool commit_enable = devinfo->gen == 7 && !devinfo->is_haswell;
    struct brw_inst *insn;
 
+   brw_push_insn_state(p);
+   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+   brw_set_default_exec_size(p, BRW_EXECUTE_1);
+   dst = vec1(dst);
+
    /* Set dst as destination for dependency tracking, the MEMORY_FENCE
     * message doesn't write anything back.
     */
@@ -3287,12 +3292,10 @@ brw_memory_fence(struct brw_codegen *p,
        * cache messages will be properly ordered with respect to past data and
        * render cache messages.
        */
-      brw_push_insn_state(p);
-      brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-      brw_set_default_mask_control(p, BRW_MASK_DISABLE);
       brw_MOV(p, dst, offset(dst, 1));
-      brw_pop_insn_state(p);
    }
+
+   brw_pop_insn_state(p);
 }
 
 void
