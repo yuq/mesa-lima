@@ -71,6 +71,7 @@ struct softpipe_context {
    struct sp_geometry_shader *gs;
    struct sp_velems_state *velems;
    struct sp_so_state *so;
+   struct sp_compute_shader *cs;
 
    /** Other rendering state */
    struct pipe_blend_color blend_color;
@@ -205,10 +206,11 @@ struct softpipe_context {
     * XXX wouldn't it make more sense for the tile cache to just be part
     * of sp_sampler_view?
     */
-   struct softpipe_tex_tile_cache *tex_cache[PIPE_SHADER_GEOMETRY+1][PIPE_MAX_SHADER_SAMPLER_VIEWS];
+   struct softpipe_tex_tile_cache *tex_cache[PIPE_SHADER_TYPES][PIPE_MAX_SHADER_SAMPLER_VIEWS];
 
    unsigned dump_fs : 1;
    unsigned dump_gs : 1;
+   unsigned dump_cs : 1;
    unsigned no_rast : 1;
 };
 

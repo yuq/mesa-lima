@@ -131,6 +131,13 @@ struct sp_so_state {
    struct pipe_stream_output_info base;
 };
 
+/** Subclass of pipe_compute_state */
+struct sp_compute_shader {
+   struct pipe_compute_state shader;
+   struct tgsi_token *tokens;
+   struct tgsi_shader_info info;
+   int max_sampler;             /* -1 if no samplers */
+};
 
 void
 softpipe_init_blend_funcs(struct pipe_context *pipe);
@@ -213,4 +220,10 @@ void
 softpipe_cleanup_geometry_sampling(struct softpipe_context *ctx);
 
 
+void
+softpipe_launch_grid(struct pipe_context *context,
+                     const struct pipe_grid_info *info);
+
+void
+softpipe_update_compute_samplers(struct softpipe_context *softpipe);
 #endif

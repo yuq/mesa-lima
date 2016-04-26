@@ -157,7 +157,7 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
       return 0;
    case PIPE_CAP_COMPUTE:
-      return 0;
+      return 1;
    case PIPE_CAP_USER_VERTEX_BUFFERS:
    case PIPE_CAP_USER_INDEX_BUFFERS:
    case PIPE_CAP_USER_CONSTANT_BUFFERS:
@@ -288,6 +288,8 @@ softpipe_get_shader_param(struct pipe_screen *screen, unsigned shader, enum pipe
    switch(shader)
    {
    case PIPE_SHADER_FRAGMENT:
+      return tgsi_exec_get_shader_param(param);
+   case PIPE_SHADER_COMPUTE:
       return tgsi_exec_get_shader_param(param);
    case PIPE_SHADER_VERTEX:
    case PIPE_SHADER_GEOMETRY:
@@ -447,6 +449,57 @@ softpipe_get_timestamp(struct pipe_screen *_screen)
    return os_time_get_nano();
 }
 
+static int
+softpipe_get_compute_param(struct pipe_screen *_screen,
+                           enum pipe_shader_ir ir_type,
+                           enum pipe_compute_cap param,
+                           void *ret)
+{
+   switch (param) {
+   case PIPE_COMPUTE_CAP_IR_TARGET:
+      return 0;
+   case PIPE_COMPUTE_CAP_MAX_GRID_SIZE:
+      if (ret) {
+         uint64_t *grid_size = ret;
+         grid_size[0] = 65535;
+         grid_size[1] = 65535;
+         grid_size[2] = 65535;
+      }
+      return 3 * sizeof(uint64_t) ;
+   case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
+      if (ret) {
+         uint64_t *block_size = ret;
+         block_size[0] = 1024;
+         block_size[1] = 1024;
+         block_size[2] = 1024;
+      }
+      return 3 * sizeof(uint64_t);
+   case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
+      if (ret) {
+         uint64_t *max_threads_per_block = ret;
+         *max_threads_per_block = 1024;
+      }
+      return sizeof(uint64_t);
+   case PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE:
+      if (ret) {
+         uint64_t *max_local_size = ret;
+         *max_local_size = 32768;
+      }
+      return sizeof(uint64_t);
+   case PIPE_COMPUTE_CAP_GRID_DIMENSION:
+   case PIPE_COMPUTE_CAP_MAX_GLOBAL_SIZE:
+   case PIPE_COMPUTE_CAP_MAX_PRIVATE_SIZE:
+   case PIPE_COMPUTE_CAP_MAX_INPUT_SIZE:
+   case PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE:
+   case PIPE_COMPUTE_CAP_MAX_CLOCK_FREQUENCY:
+   case PIPE_COMPUTE_CAP_MAX_COMPUTE_UNITS:
+   case PIPE_COMPUTE_CAP_IMAGES_SUPPORTED:
+   case PIPE_COMPUTE_CAP_SUBGROUP_SIZE:
+      break;
+   }
+   return 0;
+}
+
 /**
  * Create a new pipe_screen object
  * Note: we're not presently subclassing pipe_screen (no softpipe_screen).
@@ -473,7 +526,7 @@ softpipe_create_screen(struct sw_winsys *winsys)
    screen->base.is_format_supported = softpipe_is_format_supported;
    screen->base.context_create = softpipe_create_context;
    screen->base.flush_frontbuffer = softpipe_flush_frontbuffer;
-
+   screen->base.get_compute_param = softpipe_get_compute_param;
    screen->use_llvm = debug_get_option_use_llvm();
 
    util_format_s3tc_init();

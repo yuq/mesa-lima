@@ -4,6 +4,7 @@ C_SOURCES := \
 	sp_clear.h \
 	sp_context.c \
 	sp_context.h \
+	sp_compute.c \
 	sp_draw_arrays.c \
 	sp_fence.c \
 	sp_fence.h \

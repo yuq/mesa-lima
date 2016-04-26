@@ -212,6 +212,7 @@ softpipe_create_context(struct pipe_screen *screen,
 
    softpipe->dump_fs = debug_get_bool_option( "SOFTPIPE_DUMP_FS", FALSE );
    softpipe->dump_gs = debug_get_bool_option( "SOFTPIPE_DUMP_GS", FALSE );
+   softpipe->dump_cs = debug_get_bool_option( "SOFTPIPE_DUMP_CS", FALSE );
 
    softpipe->pipe.screen = screen;
    softpipe->pipe.destroy = softpipe_destroy;
@@ -232,6 +233,8 @@ softpipe_create_context(struct pipe_screen *screen,
    softpipe->pipe.set_framebuffer_state = softpipe_set_framebuffer_state;
 
    softpipe->pipe.draw_vbo = softpipe_draw_vbo;
+
+   softpipe->pipe.launch_grid = softpipe_launch_grid;
 
    softpipe->pipe.clear = softpipe_clear;
    softpipe->pipe.flush = softpipe_flush_wrapped;
