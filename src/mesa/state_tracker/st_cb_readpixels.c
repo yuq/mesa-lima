@@ -25,6 +25,7 @@
  * 
  **************************************************************************/
 
+#include "main/bufferobj.h"
 #include "main/image.h"
 #include "main/pbo.h"
 #include "main/imports.h"
@@ -66,6 +67,15 @@ needs_integer_signed_unsigned_conversion(const struct gl_context *ctx,
    }
 
    return FALSE;
+}
+
+static bool
+try_pbo_readpixels(struct st_context *st, struct st_renderbuffer *strb,
+                   GLint x, GLint y, GLsizei width, GLsizei height,
+                   enum pipe_format src_format, enum pipe_format dst_format,
+                   const struct gl_pixelstore_attrib *pack, void *pixels)
+{
+   return false;
 }
 
 /**
@@ -120,14 +130,6 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
       goto fallback;
    }
 
-   /* We are creating a texture of the size of the region being read back.
-    * Need to check for NPOT texture support. */
-   if (!screen->get_param(screen, PIPE_CAP_NPOT_TEXTURES) &&
-       (!util_is_power_of_two(width) ||
-        !util_is_power_of_two(height))) {
-      goto fallback;
-   }
-
    /* If the base internal format and the texture format don't match, we have
     * to use the slow path. */
    if (rb->_BaseFormat !=
@@ -135,19 +137,7 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
       goto fallback;
    }
 
-   /* See if the texture format already matches the format and type,
-    * in which case the memcpy-based fast path will likely be used and
-    * we don't have to blit. */
-   if (_mesa_format_matches_format_and_type(rb->Format, format,
-                                            type, pack->SwapBytes, NULL)) {
-      goto fallback;
-   }
-
    if (_mesa_readpixels_needs_slow_path(ctx, format, type, GL_TRUE)) {
-      goto fallback;
-   }
-
-   if (needs_integer_signed_unsigned_conversion(ctx, format, type)) {
       goto fallback;
    }
 
@@ -174,6 +164,33 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
    dst_format = st_choose_matching_format(st, bind, format, type,
                                           pack->SwapBytes);
    if (dst_format == PIPE_FORMAT_NONE) {
+      goto fallback;
+   }
+
+   if (_mesa_is_bufferobj(pack->BufferObj)) {
+      if (try_pbo_readpixels(st, strb, x, y, width, height,
+                             src_format, dst_format,
+                             pack, pixels))
+         return;
+   }
+
+   /* We are creating a texture of the size of the region being read back.
+    * Need to check for NPOT texture support. */
+   if (!screen->get_param(screen, PIPE_CAP_NPOT_TEXTURES) &&
+       (!util_is_power_of_two(width) ||
+        !util_is_power_of_two(height))) {
+      goto fallback;
+   }
+
+   /* See if the texture format already matches the format and type,
+    * in which case the memcpy-based fast path will likely be used and
+    * we don't have to blit. */
+   if (_mesa_format_matches_format_and_type(rb->Format, format,
+                                            type, pack->SwapBytes, NULL)) {
+      goto fallback;
+   }
+
+   if (needs_integer_signed_unsigned_conversion(ctx, format, type)) {
       goto fallback;
    }
 
