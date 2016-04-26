@@ -696,7 +696,7 @@ valid_draw_indirect(struct gl_context *ctx,
                     GLenum mode, const GLvoid *indirect,
                     GLsizei size, const char *name)
 {
-   const GLsizeiptr end = (GLsizeiptr)indirect + size;
+   const uint64_t end = (uint64_t) (uintptr_t) indirect + size;
 
    /* OpenGL ES 3.1 spec. section 10.5:
     *
