@@ -709,18 +709,10 @@ static void
 brw_initialize_cs_context_constants(struct brw_context *brw, unsigned max_threads)
 {
    struct gl_context *ctx = &brw->ctx;
-
-   /* For ES, we set these constants based on SIMD8.
-    *
-    * TODO: Once we can always generate SIMD16, we should update this.
-    *
-    * For GL, we assume we can generate a SIMD16 program, but this currently
-    * is not always true. This allows us to run more test cases, and will be
-    * required based on desktop GL compute shader requirements.
+   /* Maximum number of scalar compute shader invocations that can be run in
+    * parallel in the same subslice assuming SIMD32 dispatch.
     */
-   const int simd_size = ctx->API == API_OPENGL_CORE ? 16 : 8;
-
-   const uint32_t max_invocations = simd_size * max_threads;
+   const uint32_t max_invocations = 32 * max_threads;
    ctx->Const.MaxComputeWorkGroupSize[0] = max_invocations;
    ctx->Const.MaxComputeWorkGroupSize[1] = max_invocations;
    ctx->Const.MaxComputeWorkGroupSize[2] = max_invocations;
