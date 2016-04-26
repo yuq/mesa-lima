@@ -359,12 +359,13 @@ st_pbo_create_gs(struct st_context *st)
    return ureg_create_shader_and_destroy(ureg, st->pipe);
 }
 
-void *
-st_pbo_create_upload_fs(struct st_context *st)
+static void *
+create_fs(struct st_context *st, bool download, enum pipe_texture_target target)
 {
    struct pipe_context *pipe = st->pipe;
    struct pipe_screen *screen = pipe->screen;
    struct ureg_program *ureg;
+   bool have_layer;
    struct ureg_dst out;
    struct ureg_src sampler;
    struct ureg_src pos;
@@ -372,11 +373,29 @@ st_pbo_create_upload_fs(struct st_context *st)
    struct ureg_src const0;
    struct ureg_dst temp0;
 
+   have_layer =
+      st->pbo.layers &&
+      (!download || target == PIPE_TEXTURE_1D_ARRAY
+                 || target == PIPE_TEXTURE_2D_ARRAY
+                 || target == PIPE_TEXTURE_3D
+                 || target == PIPE_TEXTURE_CUBE
+                 || target == PIPE_TEXTURE_CUBE_ARRAY);
+
    ureg = ureg_create(PIPE_SHADER_FRAGMENT);
    if (!ureg)
       return NULL;
 
-   out     = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
+   if (!download) {
+      out = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
+   } else {
+      struct ureg_src image;
+
+      /* writeonly images do not require an explicitly given format. */
+      image = ureg_DECL_image(ureg, 0, TGSI_TEXTURE_BUFFER, PIPE_FORMAT_NONE,
+                                    true, false);
+      out = ureg_dst(image);
+   }
+
    sampler = ureg_DECL_sampler(ureg, 0);
    if (screen->get_param(screen, PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL)) {
       pos = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_POSITION, 0);
@@ -384,7 +403,7 @@ st_pbo_create_upload_fs(struct st_context *st)
       pos = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
                                TGSI_INTERPOLATE_LINEAR);
    }
-   if (st->pbo.layers) {
+   if (have_layer) {
       layer = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_LAYER, 0,
                                        TGSI_INTERPOLATE_CONSTANT);
    }
@@ -414,7 +433,7 @@ st_pbo_create_upload_fs(struct st_context *st)
                    ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_Y),
                    ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X));
 
-   if (st->pbo.layers) {
+   if (have_layer) {
       /* temp0.x = const0.w * layer + temp0.x */
       ureg_UMAD(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_X),
                       ureg_scalar(const0, TGSI_SWIZZLE_W),
@@ -425,14 +444,64 @@ st_pbo_create_upload_fs(struct st_context *st)
    /* temp0.w = 0 */
    ureg_MOV(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_W), ureg_imm1u(ureg, 0));
 
-   /* out = txf(sampler, temp0.x) */
-   ureg_TXF(ureg, out, TGSI_TEXTURE_BUFFER, ureg_src(temp0), sampler);
+   if (download) {
+      struct ureg_dst temp1;
+      struct ureg_src op[2];
+
+      temp1 = ureg_DECL_temporary(ureg);
+
+      /* temp1.xy = pos.xy */
+      ureg_F2I(ureg, ureg_writemask(temp1, TGSI_WRITEMASK_XY), pos);
+
+      /* temp1.zw = 0 */
+      ureg_MOV(ureg, ureg_writemask(temp1, TGSI_WRITEMASK_ZW), ureg_imm1u(ureg, 0));
+
+      if (have_layer) {
+         /* temp1.y/z = layer */
+         ureg_MOV(ureg, ureg_writemask(temp1,
+                                       target == PIPE_TEXTURE_1D_ARRAY ? TGSI_WRITEMASK_Y
+                                                                       : TGSI_WRITEMASK_Z),
+                        ureg_scalar(layer, TGSI_SWIZZLE_X));
+      }
+
+      /* temp1 = txf(sampler, temp1) */
+      ureg_TXF(ureg, temp1, util_pipe_tex_to_tgsi_tex(target, 1),
+                     ureg_src(temp1), sampler);
+
+      /* store(out, temp0, temp1) */
+      op[0] = ureg_src(temp0);
+      op[1] = ureg_src(temp1);
+      ureg_memory_insn(ureg, TGSI_OPCODE_STORE, &out, 1, op, 2, 0,
+                             TGSI_TEXTURE_BUFFER, PIPE_FORMAT_NONE);
+
+      ureg_release_temporary(ureg, temp1);
+   } else {
+      /* out = txf(sampler, temp0.x) */
+      ureg_TXF(ureg, out, TGSI_TEXTURE_BUFFER, ureg_src(temp0), sampler);
+   }
 
    ureg_release_temporary(ureg, temp0);
 
    ureg_END(ureg);
 
    return ureg_create_shader_and_destroy(ureg, pipe);
+}
+
+void *
+st_pbo_create_upload_fs(struct st_context *st)
+{
+   return create_fs(st, false, 0);
+}
+
+void *
+st_pbo_get_download_fs(struct st_context *st, enum pipe_texture_target target)
+{
+   assert(target < PIPE_MAX_TEXTURE_TYPES);
+
+   if (!st->pbo.download_fs[target])
+      st->pbo.download_fs[target] = create_fs(st, true, target);
+
+   return st->pbo.download_fs[target];
 }
 
 void
