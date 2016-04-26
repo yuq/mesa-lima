@@ -422,6 +422,9 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
             surf->mtilea = AddrSurfInfoOut.pTileInfo->macroAspectRatio;
             surf->tile_split = AddrSurfInfoOut.pTileInfo->tileSplitBytes;
             surf->num_banks = AddrSurfInfoOut.pTileInfo->banks;
+            surf->macro_tile_index = AddrSurfInfoOut.macroModeIndex;
+         } else {
+            surf->macro_tile_index = 0;
          }
       }
    }

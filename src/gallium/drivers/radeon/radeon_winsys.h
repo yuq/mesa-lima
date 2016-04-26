@@ -388,6 +388,7 @@ struct radeon_surf {
     uint32_t                    stencil_tiling_index[RADEON_SURF_MAX_LEVEL];
     uint32_t                    pipe_config;
     uint32_t                    num_banks;
+    uint32_t                    macro_tile_index;
 
     uint64_t                    dcc_size;
     uint64_t                    dcc_alignment;
