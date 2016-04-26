@@ -53,6 +53,7 @@
 #include "state_tracker/st_cb_texture.h"
 #include "state_tracker/st_cb_bufferobjects.h"
 #include "state_tracker/st_format.h"
+#include "state_tracker/st_pbo.h"
 #include "state_tracker/st_texture.h"
 #include "state_tracker/st_gen_mipmap.h"
 #include "state_tracker/st_atom.h"
@@ -1070,93 +1071,6 @@ reinterpret_formats(enum pipe_format *src_format, enum pipe_format *dst_format)
 }
 
 static void *
-create_pbo_upload_vs(struct st_context *st)
-{
-   struct ureg_program *ureg;
-   struct ureg_src in_pos;
-   struct ureg_src in_instanceid;
-   struct ureg_dst out_pos;
-   struct ureg_dst out_layer;
-
-   ureg = ureg_create(PIPE_SHADER_VERTEX);
-   if (!ureg)
-      return NULL;
-
-   in_pos = ureg_DECL_vs_input(ureg, TGSI_SEMANTIC_POSITION);
-
-   out_pos = ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0);
-
-   if (st->pbo_upload.upload_layers) {
-      in_instanceid = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_INSTANCEID, 0);
-
-      if (!st->pbo_upload.use_gs)
-         out_layer = ureg_DECL_output(ureg, TGSI_SEMANTIC_LAYER, 0);
-   }
-
-   /* out_pos = in_pos */
-   ureg_MOV(ureg, out_pos, in_pos);
-
-   if (st->pbo_upload.upload_layers) {
-      if (st->pbo_upload.use_gs) {
-         /* out_pos.z = i2f(gl_InstanceID) */
-         ureg_I2F(ureg, ureg_writemask(out_pos, TGSI_WRITEMASK_Z),
-                        ureg_scalar(in_instanceid, TGSI_SWIZZLE_X));
-      } else {
-         /* out_layer = gl_InstanceID */
-         ureg_MOV(ureg, out_layer, in_instanceid);
-      }
-   }
-
-   ureg_END(ureg);
-
-   return ureg_create_shader_and_destroy(ureg, st->pipe);
-}
-
-static void *
-create_pbo_upload_gs(struct st_context *st)
-{
-   static const int zero = 0;
-   struct ureg_program *ureg;
-   struct ureg_dst out_pos;
-   struct ureg_dst out_layer;
-   struct ureg_src in_pos;
-   struct ureg_src imm;
-   unsigned i;
-
-   ureg = ureg_create(PIPE_SHADER_GEOMETRY);
-   if (!ureg)
-      return NULL;
-
-   ureg_property(ureg, TGSI_PROPERTY_GS_INPUT_PRIM, PIPE_PRIM_TRIANGLES);
-   ureg_property(ureg, TGSI_PROPERTY_GS_OUTPUT_PRIM, PIPE_PRIM_TRIANGLE_STRIP);
-   ureg_property(ureg, TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES, 3);
-
-   out_pos = ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0);
-   out_layer = ureg_DECL_output(ureg, TGSI_SEMANTIC_LAYER, 0);
-
-   in_pos = ureg_DECL_input(ureg, TGSI_SEMANTIC_POSITION, 0, 0, 1);
-
-   imm = ureg_DECL_immediate_int(ureg, &zero, 1);
-
-   for (i = 0; i < 3; ++i) {
-      struct ureg_src in_pos_vertex = ureg_src_dimension(in_pos, i);
-
-      /* out_pos = in_pos[i] */
-      ureg_MOV(ureg, out_pos, in_pos_vertex);
-
-      /* out_layer.x = f2i(in_pos[i].z) */
-      ureg_F2I(ureg, ureg_writemask(out_layer, TGSI_WRITEMASK_X),
-                     ureg_scalar(in_pos_vertex, TGSI_SWIZZLE_Z));
-
-      ureg_EMIT(ureg, ureg_scalar(imm, TGSI_SWIZZLE_X));
-   }
-
-   ureg_END(ureg);
-
-   return ureg_create_shader_and_destroy(ureg, st->pipe);
-}
-
-static void *
 create_pbo_upload_fs(struct st_context *st)
 {
    struct pipe_context *pipe = st->pipe;
@@ -1265,13 +1179,13 @@ try_pbo_upload_common(struct gl_context *ctx,
 
    /* Create the shaders */
    if (!st->pbo_upload.vs) {
-      st->pbo_upload.vs = create_pbo_upload_vs(st);
+      st->pbo_upload.vs = st_pbo_create_vs(st);
       if (!st->pbo_upload.vs)
          return false;
    }
 
    if (depth != 1 && st->pbo_upload.use_gs && !st->pbo_upload.gs) {
-      st->pbo_upload.gs = create_pbo_upload_gs(st);
+      st->pbo_upload.gs = st_pbo_create_gs(st);
       if (!st->pbo_upload.gs)
          return false;
    }

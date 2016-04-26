@@ -26,6 +26,12 @@
 
 struct st_context;
 
+void *
+st_pbo_create_vs(struct st_context *st);
+
+void *
+st_pbo_create_gs(struct st_context *st);
+
 extern void
 st_init_pbo_helpers(struct st_context *st);
 
