@@ -43,6 +43,47 @@
 
 #include "util/ralloc.h"
 
+GLbitfield64
+brw_vs_outputs_written(struct brw_context *brw, struct brw_vs_prog_key *key,
+                       GLbitfield64 user_varyings)
+{
+   GLbitfield64 outputs_written = user_varyings;
+
+   if (key->copy_edgeflag) {
+      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_EDGE);
+   }
+
+   if (brw->gen < 6) {
+      /* Put dummy slots into the VUE for the SF to put the replaced
+       * point sprite coords in.  We shouldn't need these dummy slots,
+       * which take up precious URB space, but it would mean that the SF
+       * doesn't get nice aligned pairs of input coords into output
+       * coords, which would be a pain to handle.
+       */
+      for (unsigned i = 0; i < 8; i++) {
+         if (key->point_coord_replace & (1 << i))
+            outputs_written |= BITFIELD64_BIT(VARYING_SLOT_TEX0 + i);
+      }
+
+      /* if back colors are written, allocate slots for front colors too */
+      if (outputs_written & BITFIELD64_BIT(VARYING_SLOT_BFC0))
+         outputs_written |= BITFIELD64_BIT(VARYING_SLOT_COL0);
+      if (outputs_written & BITFIELD64_BIT(VARYING_SLOT_BFC1))
+         outputs_written |= BITFIELD64_BIT(VARYING_SLOT_COL1);
+   }
+
+   /* In order for legacy clipping to work, we need to populate the clip
+    * distance varying slots whenever clipping is enabled, even if the vertex
+    * shader doesn't write to gl_ClipDistance.
+    */
+   if (key->nr_userclip_plane_consts > 0) {
+      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0);
+      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1);
+   }
+
+   return outputs_written;
+}
+
 bool
 brw_codegen_vs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
@@ -55,7 +96,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
    struct brw_vs_prog_data prog_data;
    struct brw_stage_prog_data *stage_prog_data = &prog_data.base.base;
    void *mem_ctx;
-   int i;
    struct brw_shader *vs = NULL;
    bool start_busy = false;
    double start_time = 0;
@@ -108,45 +148,17 @@ brw_codegen_vs_prog(struct brw_context *brw,
                                  &prog_data.base.base);
    }
 
-   GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
+   GLbitfield64 outputs_written =
+      brw_vs_outputs_written(brw, key, vp->program.Base.OutputsWritten);
    prog_data.inputs_read = vp->program.Base.InputsRead;
 
    if (key->copy_edgeflag) {
-      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_EDGE);
       prog_data.inputs_read |= VERT_BIT_EDGEFLAG;
    }
 
    prog_data.base.cull_distance_mask =
       ((1 << vp->program.Base.CullDistanceArraySize) - 1) <<
       vp->program.Base.ClipDistanceArraySize;
-
-   if (brw->gen < 6) {
-      /* Put dummy slots into the VUE for the SF to put the replaced
-       * point sprite coords in.  We shouldn't need these dummy slots,
-       * which take up precious URB space, but it would mean that the SF
-       * doesn't get nice aligned pairs of input coords into output
-       * coords, which would be a pain to handle.
-       */
-      for (i = 0; i < 8; i++) {
-         if (key->point_coord_replace & (1 << i))
-            outputs_written |= BITFIELD64_BIT(VARYING_SLOT_TEX0 + i);
-      }
-
-      /* if back colors are written, allocate slots for front colors too */
-      if (outputs_written & BITFIELD64_BIT(VARYING_SLOT_BFC0))
-         outputs_written |= BITFIELD64_BIT(VARYING_SLOT_COL0);
-      if (outputs_written & BITFIELD64_BIT(VARYING_SLOT_BFC1))
-         outputs_written |= BITFIELD64_BIT(VARYING_SLOT_COL1);
-   }
-
-   /* In order for legacy clipping to work, we need to populate the clip
-    * distance varying slots whenever clipping is enabled, even if the vertex
-    * shader doesn't write to gl_ClipDistance.
-    */
-   if (key->nr_userclip_plane_consts > 0) {
-      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0);
-      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1);
-   }
 
    brw_compute_vue_map(brw->intelScreen->devinfo,
                        &prog_data.base.vue_map, outputs_written,

@@ -51,6 +51,10 @@
 extern "C" {
 #endif
 
+GLbitfield64
+brw_vs_outputs_written(struct brw_context *brw, struct brw_vs_prog_key *key,
+                       GLbitfield64 outputs_written);
+
 void brw_vs_debug_recompile(struct brw_context *brw,
                             struct gl_shader_program *prog,
                             const struct brw_vs_prog_key *key);
