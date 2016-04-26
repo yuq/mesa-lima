@@ -240,7 +240,9 @@ struct st_context
       void *vs;
       void *gs;
       void *upload_fs;
+      void *download_fs[PIPE_MAX_TEXTURE_TYPES];
       bool upload_enabled;
+      bool download_enabled;
       bool rgba_only;
       bool layers;
       bool use_gs;

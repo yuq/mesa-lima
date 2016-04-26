@@ -448,6 +448,12 @@ st_init_pbo_helpers(struct st_context *st)
    if (!st->pbo.upload_enabled)
       return;
 
+   st->pbo.download_enabled =
+      st->pbo.upload_enabled &&
+      screen->get_param(screen, PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT) &&
+      screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT,
+                                       PIPE_SHADER_CAP_MAX_SHADER_IMAGES) >= 1;
+
    st->pbo.rgba_only =
       screen->get_param(screen, PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY);
 
@@ -472,9 +478,18 @@ st_init_pbo_helpers(struct st_context *st)
 void
 st_destroy_pbo_helpers(struct st_context *st)
 {
+   unsigned i;
+
    if (st->pbo.upload_fs) {
       cso_delete_fragment_shader(st->cso_context, st->pbo.upload_fs);
       st->pbo.upload_fs = NULL;
+   }
+
+   for (i = 0; i < ARRAY_SIZE(st->pbo.download_fs); ++i) {
+      if (st->pbo.download_fs[i]) {
+         cso_delete_fragment_shader(st->cso_context, st->pbo.download_fs[i]);
+         st->pbo.download_fs[i] = NULL;
+      }
    }
 
    if (st->pbo.gs) {
