@@ -5650,16 +5650,9 @@ exec_instruction(
    }
 }
 
-
-/**
- * Run TGSI interpreter.
- * \return bitmask of "alive" quad components
- */
-uint
-tgsi_exec_machine_run( struct tgsi_exec_machine *mach, int start_pc )
+static void
+tgsi_exec_machine_setup_masks(struct tgsi_exec_machine *mach)
 {
-   uint i;
-   int pc = 0;
    uint default_mask = 0xf;
 
    mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0] = 0;
@@ -5688,7 +5681,19 @@ tgsi_exec_machine_run( struct tgsi_exec_machine *mach, int start_pc )
    assert(mach->SwitchStackTop == 0);
    assert(mach->BreakStackTop == 0);
    assert(mach->CallStackTop == 0);
+}
 
+/**
+ * Run TGSI interpreter.
+ * \return bitmask of "alive" quad components
+ */
+uint
+tgsi_exec_machine_run( struct tgsi_exec_machine *mach, int start_pc )
+{
+   uint i;
+   int pc = 0;
+
+   tgsi_exec_machine_setup_masks(mach);
 
    /* execute declarations (interpolants) */
    for (i = 0; i < mach->NumDeclarations; i++) {
