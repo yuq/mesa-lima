@@ -752,6 +752,32 @@ CodeEmitterGK110::emitNOT(const Instruction *i)
 void
 CodeEmitterGK110::emitLogicOp(const Instruction *i, uint8_t subOp)
 {
+   if (i->def(0).getFile() == FILE_PREDICATE) {
+      code[0] = 0x00000002 | (subOp << 27);
+      code[1] = 0x84800000;
+
+      emitPredicate(i);
+
+      defId(i->def(0), 5);
+      srcId(i->src(0), 14);
+      if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT)) code[0] |= 1 << 17;
+      srcId(i->src(1), 32);
+      if (i->src(1).mod == Modifier(NV50_IR_MOD_NOT)) code[1] |= 1 << 3;
+
+      if (i->defExists(1)) {
+         defId(i->def(1), 2);
+      } else {
+         code[0] |= 7 << 2;
+      }
+      // (a OP b) OP c
+      if (i->predSrc != 2 && i->srcExists(2)) {
+         code[1] |= subOp << 16;
+         srcId(i->src(2), 42);
+         if (i->src(2).mod == Modifier(NV50_IR_MOD_NOT)) code[1] |= 1 << 13;
+      } else {
+         code[1] |= 7 << 10;
+      }
+   } else
    if (isLIMM(i->src(1), TYPE_S32)) {
       emitForm_L(i, 0x200, 0, i->src(1).mod);
       code[1] |= subOp << 24;
