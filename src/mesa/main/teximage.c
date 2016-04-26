@@ -3434,8 +3434,9 @@ get_copy_tex_image_source(struct gl_context *ctx, mesa_format texFormat)
    if (_mesa_get_format_bits(texFormat, GL_DEPTH_BITS) > 0) {
       /* reading from depth/stencil buffer */
       return ctx->ReadBuffer->Attachment[BUFFER_DEPTH].Renderbuffer;
-   }
-   else {
+   } else if (_mesa_get_format_bits(texFormat, GL_STENCIL_BITS) > 0) {
+      return ctx->ReadBuffer->Attachment[BUFFER_STENCIL].Renderbuffer;
+   } else {
       /* copying from color buffer */
       return ctx->ReadBuffer->_ColorReadBuffer;
    }
