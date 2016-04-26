@@ -5656,7 +5656,7 @@ exec_instruction(
  * \return bitmask of "alive" quad components
  */
 uint
-tgsi_exec_machine_run( struct tgsi_exec_machine *mach )
+tgsi_exec_machine_run( struct tgsi_exec_machine *mach, int start_pc )
 {
    uint i;
    int pc = 0;

@@ -207,7 +207,7 @@ static unsigned tgsi_gs_run(struct draw_geometry_shader *shader,
    struct tgsi_exec_machine *machine = shader->machine;
 
    /* run interpreter */
-   tgsi_exec_machine_run(machine);
+   tgsi_exec_machine_run(machine, 0);
 
    return
       machine->Temps[TGSI_EXEC_TEMP_PRIMITIVE_I].xyzw[TGSI_EXEC_TEMP_PRIMITIVE_C].u[0];

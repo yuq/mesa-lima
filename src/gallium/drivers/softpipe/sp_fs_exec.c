@@ -130,7 +130,7 @@ exec_run( const struct sp_fragment_shader_variant *var,
    machine->Face = (float) (quad->input.facing * -2 + 1);
 
    machine->NonHelperMask = quad->inout.mask;
-   quad->inout.mask &= tgsi_exec_machine_run( machine );
+   quad->inout.mask &= tgsi_exec_machine_run( machine, 0 );
    if (quad->inout.mask == 0)
       return FALSE;
 

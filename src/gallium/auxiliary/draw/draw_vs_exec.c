@@ -163,7 +163,7 @@ vs_exec_run_linear( struct draw_vertex_shader *shader,
 
       machine->NonHelperMask = (1 << max_vertices) - 1;
       /* run interpreter */
-      tgsi_exec_machine_run( machine );
+      tgsi_exec_machine_run( machine, 0 );
 
       /* Unswizzle all output results.  
        */

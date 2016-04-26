@@ -460,7 +460,7 @@ tgsi_exec_machine_bind_shader(
 
 uint
 tgsi_exec_machine_run(
-   struct tgsi_exec_machine *mach );
+   struct tgsi_exec_machine *mach, int start_pc );
 
 
 void
