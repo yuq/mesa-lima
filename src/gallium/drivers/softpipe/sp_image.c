@@ -607,6 +607,42 @@ handle_op_int(const struct pipe_image_view *iview,
                         s, t, 1, 1);
 }
 
+/* GLES OES_shader_image_atomic.txt allows XCHG on R32F */
+static void
+handle_op_r32f_xchg(const struct pipe_image_view *iview,
+                    const struct tgsi_image_params *params,
+                    bool just_read,
+                    char *data_ptr,
+                    uint qi,
+                    unsigned stride,
+                    unsigned opcode,
+                    int s,
+                    int t,
+                    float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
+{
+   float sdata[4];
+   uint c;
+   int nc = 1;
+   util_format_read_4f(params->format,
+                       sdata, 0,
+                       data_ptr, stride,
+                       s, t, 1, 1);
+   if (just_read) {
+      for (c = 0; c < nc; c++) {
+         ((int32_t *)rgba[c])[qi] = sdata[c];
+      }
+      return;
+   }
+
+   for (c = 0; c < nc; c++) {
+      int temp = sdata[c];
+      sdata[c] = ((float *)rgba[c])[qi];
+      ((float *)rgba[c])[qi] = temp;
+   }
+   util_format_write_4f(params->format, sdata, 0, data_ptr, stride,
+                        s, t, 1, 1);
+}
+
 /*
  * Implement atomic image operations.
  */
@@ -682,6 +718,10 @@ sp_tgsi_op(const struct tgsi_image *image,
       else if (util_format_is_pure_sint(params->format))
          handle_op_int(iview, params, just_read, data_ptr, j, stride,
                        opcode, s_coord, t_coord, rgba, rgba2);
+      else if (params->format == PIPE_FORMAT_R32_FLOAT &&
+               opcode == TGSI_OPCODE_ATOMXCHG)
+         handle_op_r32f_xchg(iview, params, just_read, data_ptr, j, stride,
+                             opcode, s_coord, t_coord, rgba);
       else
          assert(0);
    }
