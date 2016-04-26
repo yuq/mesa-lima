@@ -4821,7 +4821,12 @@ micro_umsb(union tgsi_exec_channel *dst,
    dst->i[3] = util_last_bit(src->u[3]) - 1;
 }
 
-static void
+/**
+ * Execute a TGSI instruction.
+ * Returns TRUE if a barrier instruction is hit,
+ * otherwise FALSE.
+ */
+static boolean
 exec_instruction(
    struct tgsi_exec_machine *mach,
    const struct tgsi_full_instruction *inst,
@@ -5140,7 +5145,7 @@ exec_instruction(
             mach->CondStackTop = 0;
             mach->LoopStackTop = 0;
             *pc = -1;
-            return;
+            return FALSE;
          }
 
          assert(mach->CallStackTop > 0);
@@ -5789,10 +5794,12 @@ exec_instruction(
       break;
    case TGSI_OPCODE_BARRIER:
    case TGSI_OPCODE_MEMBAR:
+      return TRUE;
       break;
    default:
       assert( 0 );
    }
+   return FALSE;
 }
 
 static void
@@ -5836,13 +5843,16 @@ uint
 tgsi_exec_machine_run( struct tgsi_exec_machine *mach, int start_pc )
 {
    uint i;
-   int pc = 0;
 
-   tgsi_exec_machine_setup_masks(mach);
+   mach->pc = start_pc;
 
-   /* execute declarations (interpolants) */
-   for (i = 0; i < mach->NumDeclarations; i++) {
-      exec_declaration( mach, mach->Declarations+i );
+   if (!start_pc) {
+      tgsi_exec_machine_setup_masks(mach);
+
+      /* execute declarations (interpolants) */
+      for (i = 0; i < mach->NumDeclarations; i++) {
+         exec_declaration( mach, mach->Declarations+i );
+      }
    }
 
    {
@@ -5851,24 +5861,30 @@ tgsi_exec_machine_run( struct tgsi_exec_machine *mach, int start_pc )
       struct tgsi_exec_vector outputs[PIPE_MAX_ATTRIBS];
       uint inst = 1;
 
-      memset(mach->Temps, 0, sizeof(temps));
-      if (mach->Outputs)
-         memset(mach->Outputs, 0, sizeof(outputs));
-      memset(temps, 0, sizeof(temps));
-      memset(outputs, 0, sizeof(outputs));
+      if (!start_pc) {
+         memset(mach->Temps, 0, sizeof(temps));
+         if (mach->Outputs)
+            memset(mach->Outputs, 0, sizeof(outputs));
+         memset(temps, 0, sizeof(temps));
+         memset(outputs, 0, sizeof(outputs));
+      }
 #endif
 
       /* execute instructions, until pc is set to -1 */
-      while (pc != -1) {
-
+      while (mach->pc != -1) {
+         boolean barrier_hit;
 #if DEBUG_EXECUTION
          uint i;
 
-         tgsi_dump_instruction(&mach->Instructions[pc], inst++);
+         tgsi_dump_instruction(&mach->Instructions[mach->pc], inst++);
 #endif
 
-         assert(pc < (int) mach->NumInstructions);
-         exec_instruction(mach, mach->Instructions + pc, &pc);
+         assert(mach->pc < (int) mach->NumInstructions);
+         barrier_hit = exec_instruction(mach, mach->Instructions + mach->pc, &mach->pc);
+
+         /* for compute shaders if we hit a barrier return now for later rescheduling */
+         if (barrier_hit && mach->ShaderType == PIPE_SHADER_COMPUTE)
+            return 0;
 
 #if DEBUG_EXECUTION
          for (i = 0; i < TGSI_EXEC_NUM_TEMPS + TGSI_EXEC_NUM_TEMP_EXTRAS; i++) {
