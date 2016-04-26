@@ -1081,19 +1081,7 @@ try_pbo_upload_common(struct gl_context *ctx,
    struct pipe_context *pipe = st->pipe;
    bool success = false;
 
-   /* Create the shaders */
-   if (!st->pbo.vs) {
-      st->pbo.vs = st_pbo_create_vs(st);
-      if (!st->pbo.vs)
-         return false;
-   }
-
-   if (addr->depth != 1 && st->pbo.use_gs && !st->pbo.gs) {
-      st->pbo.gs = st_pbo_create_gs(st);
-      if (!st->pbo.gs)
-         return false;
-   }
-
+   /* Create fragment shader */
    if (!st->pbo.upload_fs) {
       st->pbo.upload_fs = st_pbo_create_upload_fs(st);
       if (!st->pbo.upload_fs)
@@ -1143,76 +1131,6 @@ try_pbo_upload_common(struct gl_context *ctx,
       cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, 1, samplers);
    }
 
-   /* Upload vertices */
-   {
-      struct pipe_vertex_buffer vbo;
-      struct pipe_vertex_element velem;
-
-      float x0 = (float) addr->xoffset / surface->width * 2.0f - 1.0f;
-      float y0 = (float) addr->yoffset / surface->height * 2.0f - 1.0f;
-      float x1 = (float) (addr->xoffset + addr->width) / surface->width * 2.0f - 1.0f;
-      float y1 = (float) (addr->yoffset + addr->height) / surface->height * 2.0f - 1.0f;
-
-      float *verts = NULL;
-
-      vbo.user_buffer = NULL;
-      vbo.buffer = NULL;
-      vbo.stride = 2 * sizeof(float);
-
-      u_upload_alloc(st->uploader, 0, 8 * sizeof(float), 4,
-                     &vbo.buffer_offset, &vbo.buffer, (void **) &verts);
-      if (!verts)
-         goto fail;
-
-      verts[0] = x0;
-      verts[1] = y0;
-      verts[2] = x0;
-      verts[3] = y1;
-      verts[4] = x1;
-      verts[5] = y0;
-      verts[6] = x1;
-      verts[7] = y1;
-
-      u_upload_unmap(st->uploader);
-
-      velem.src_offset = 0;
-      velem.instance_divisor = 0;
-      velem.vertex_buffer_index = cso_get_aux_vertex_buffer_slot(cso);
-      velem.src_format = PIPE_FORMAT_R32G32_FLOAT;
-
-      cso_set_vertex_elements(cso, 1, &velem);
-
-      cso_set_vertex_buffers(cso, velem.vertex_buffer_index, 1, &vbo);
-
-      pipe_resource_reference(&vbo.buffer, NULL);
-   }
-
-   /* Upload constants */
-   {
-      struct pipe_constant_buffer cb;
-
-      if (st->constbuf_uploader) {
-         cb.buffer = NULL;
-         cb.user_buffer = NULL;
-         u_upload_data(st->constbuf_uploader, 0, sizeof(addr->constants),
-                       ctx->Const.UniformBufferOffsetAlignment,
-                       &addr->constants, &cb.buffer_offset, &cb.buffer);
-         if (!cb.buffer)
-            goto fail;
-
-         u_upload_unmap(st->constbuf_uploader);
-      } else {
-         cb.buffer = NULL;
-         cb.user_buffer = &addr->constants;
-         cb.buffer_offset = 0;
-      }
-      cb.buffer_size = sizeof(addr->constants);
-
-      cso_set_constant_buffer(cso, PIPE_SHADER_FRAGMENT, 0, &cb);
-
-      pipe_resource_reference(&cb.buffer, NULL);
-   }
-
    /* Framebuffer_state */
    {
       struct pipe_framebuffer_state fb;
@@ -1239,31 +1157,10 @@ try_pbo_upload_common(struct gl_context *ctx,
       cso_set_depth_stencil_alpha(cso, &dsa);
    }
 
-   /* Rasterizer state */
-   cso_set_rasterizer(cso, &st->pbo.raster);
-
-   /* Set up the shaders */
-   cso_set_vertex_shader_handle(cso, st->pbo.vs);
-
-   cso_set_geometry_shader_handle(cso, addr->depth != 1 ? st->pbo.gs : NULL);
-
-   cso_set_tessctrl_shader_handle(cso, NULL);
-
-   cso_set_tesseval_shader_handle(cso, NULL);
-
+   /* Set up the fragment shader */
    cso_set_fragment_shader_handle(cso, st->pbo.upload_fs);
 
-   /* Disable stream output */
-   cso_set_stream_outputs(cso, 0, NULL, 0);
-
-   if (addr->depth == 1) {
-      cso_draw_arrays(cso, PIPE_PRIM_TRIANGLE_STRIP, 0, 4);
-   } else {
-      cso_draw_arrays_instanced(cso, PIPE_PRIM_TRIANGLE_STRIP,
-                                0, 4, 0, addr->depth);
-   }
-
-   success = true;
+   success = st_pbo_draw(st, addr, surface->width, surface->height);
 
 fail:
    cso_restore_state(cso);
