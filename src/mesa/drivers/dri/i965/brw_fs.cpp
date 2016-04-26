@@ -3058,7 +3058,7 @@ fs_visitor::remove_duplicate_mrf_writes()
    bool progress = false;
 
    /* Need to update the MRF tracking for compressed instructions. */
-   if (dispatch_width == 16)
+   if (dispatch_width >= 16)
       return false;
 
    memset(last_mrf_move, 0, sizeof(last_mrf_move));
