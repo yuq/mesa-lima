@@ -3068,7 +3068,7 @@ brw_set_dp_typed_atomic_message(struct brw_codegen *p,
 
    if (devinfo->gen >= 8 || devinfo->is_haswell) {
       if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
-         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+         if (brw_inst_qtr_control(devinfo, p->current) % 2 == 1)
             msg_control |= 1 << 4; /* Use high 8 slots of the sample mask */
 
          brw_inst_set_dp_msg_type(devinfo, insn,
@@ -3082,7 +3082,7 @@ brw_set_dp_typed_atomic_message(struct brw_codegen *p,
       brw_inst_set_dp_msg_type(devinfo, insn,
                                GEN7_DATAPORT_RC_TYPED_ATOMIC_OP);
 
-      if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+      if (brw_inst_qtr_control(devinfo, p->current) % 2 == 1)
          msg_control |= 1 << 4; /* Use high 8 slots of the sample mask */
    }
 
@@ -3125,7 +3125,7 @@ brw_set_dp_typed_surface_read_message(struct brw_codegen *p,
 
    if (devinfo->gen >= 8 || devinfo->is_haswell) {
       if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
-         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+         if (brw_inst_qtr_control(devinfo, p->current) % 2 == 1)
             msg_control |= 2 << 4; /* Use high 8 slots of the sample mask */
          else
             msg_control |= 1 << 4; /* Use low 8 slots of the sample mask */
@@ -3135,7 +3135,7 @@ brw_set_dp_typed_surface_read_message(struct brw_codegen *p,
                                HSW_DATAPORT_DC_PORT1_TYPED_SURFACE_READ);
    } else {
       if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
-         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+         if (brw_inst_qtr_control(devinfo, p->current) % 2 == 1)
             msg_control |= 1 << 5; /* Use high 8 slots of the sample mask */
       }
 
@@ -3179,7 +3179,7 @@ brw_set_dp_typed_surface_write_message(struct brw_codegen *p,
 
    if (devinfo->gen >= 8 || devinfo->is_haswell) {
       if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
-         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+         if (brw_inst_qtr_control(devinfo, p->current) % 2 == 1)
             msg_control |= 2 << 4; /* Use high 8 slots of the sample mask */
          else
             msg_control |= 1 << 4; /* Use low 8 slots of the sample mask */
@@ -3190,7 +3190,7 @@ brw_set_dp_typed_surface_write_message(struct brw_codegen *p,
 
    } else {
       if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
-         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+         if (brw_inst_qtr_control(devinfo, p->current) % 2 == 1)
             msg_control |= 1 << 5; /* Use high 8 slots of the sample mask */
       }
 
