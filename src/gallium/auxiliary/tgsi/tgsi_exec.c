@@ -1049,10 +1049,12 @@ tgsi_exec_machine_create(enum pipe_shader_type shader_type)
    mach->MaxGeometryShaderOutputs = TGSI_MAX_TOTAL_VERTICES;
    mach->Predicates = &mach->Temps[TGSI_EXEC_TEMP_P0];
 
-   mach->Inputs = align_malloc(sizeof(struct tgsi_exec_vector) * PIPE_MAX_SHADER_INPUTS, 16);
-   mach->Outputs = align_malloc(sizeof(struct tgsi_exec_vector) * PIPE_MAX_SHADER_OUTPUTS, 16);
-   if (!mach->Inputs || !mach->Outputs)
-      goto fail;
+   if (shader_type != PIPE_SHADER_COMPUTE) {
+      mach->Inputs = align_malloc(sizeof(struct tgsi_exec_vector) * PIPE_MAX_SHADER_INPUTS, 16);
+      mach->Outputs = align_malloc(sizeof(struct tgsi_exec_vector) * PIPE_MAX_SHADER_OUTPUTS, 16);
+      if (!mach->Inputs || !mach->Outputs)
+         goto fail;
+   }
 
    /* Setup constants needed by the SSE2 executor. */
    for( i = 0; i < 4; i++ ) {
@@ -5850,7 +5852,8 @@ tgsi_exec_machine_run( struct tgsi_exec_machine *mach, int start_pc )
       uint inst = 1;
 
       memset(mach->Temps, 0, sizeof(temps));
-      memset(mach->Outputs, 0, sizeof(outputs));
+      if (mach->Outputs)
+         memset(mach->Outputs, 0, sizeof(outputs));
       memset(temps, 0, sizeof(temps));
       memset(outputs, 0, sizeof(outputs));
 #endif
@@ -5886,21 +5889,23 @@ tgsi_exec_machine_run( struct tgsi_exec_machine *mach, int start_pc )
                }
             }
          }
-         for (i = 0; i < PIPE_MAX_ATTRIBS; i++) {
-            if (memcmp(&outputs[i], &mach->Outputs[i], sizeof(outputs[i]))) {
-               uint j;
+         if (mach->Outputs) {
+            for (i = 0; i < PIPE_MAX_ATTRIBS; i++) {
+               if (memcmp(&outputs[i], &mach->Outputs[i], sizeof(outputs[i]))) {
+                  uint j;
 
-               memcpy(&outputs[i], &mach->Outputs[i], sizeof(outputs[i]));
-               debug_printf("OUT[%2u] =  ", i);
-               for (j = 0; j < 4; j++) {
-                  if (j > 0) {
-                     debug_printf("           ");
+                  memcpy(&outputs[i], &mach->Outputs[i], sizeof(outputs[i]));
+                  debug_printf("OUT[%2u] =  ", i);
+                  for (j = 0; j < 4; j++) {
+                     if (j > 0) {
+                        debug_printf("           ");
+                     }
+                     debug_printf("(%6f %u, %6f %u, %6f %u, %6f %u)\n",
+                                  outputs[i].xyzw[0].f[j], outputs[i].xyzw[0].u[j],
+                                  outputs[i].xyzw[1].f[j], outputs[i].xyzw[1].u[j],
+                                  outputs[i].xyzw[2].f[j], outputs[i].xyzw[2].u[j],
+                                  outputs[i].xyzw[3].f[j], outputs[i].xyzw[3].u[j]);
                   }
-                  debug_printf("(%6f %u, %6f %u, %6f %u, %6f %u)\n",
-                               outputs[i].xyzw[0].f[j], outputs[i].xyzw[0].u[j],
-                               outputs[i].xyzw[1].f[j], outputs[i].xyzw[1].u[j],
-                               outputs[i].xyzw[2].f[j], outputs[i].xyzw[2].u[j],
-                               outputs[i].xyzw[3].f[j], outputs[i].xyzw[3].u[j]);
                }
             }
          }
