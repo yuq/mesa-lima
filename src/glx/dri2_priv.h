@@ -30,6 +30,10 @@
  *   Kristian Høgsberg (krh@redhat.com)
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct dri2_screen {
    struct glx_screen base;
 
@@ -74,3 +78,7 @@ _X_HIDDEN int
 dri2_interop_export_object(struct glx_context *ctx,
                            const mesa_glinterop_export_in *in,
                            mesa_glinterop_export_out *out);
+
+#ifdef __cplusplus
+}
+#endif

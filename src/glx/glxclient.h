@@ -57,6 +57,11 @@
 #include "glxextensions.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #define GLX_MAJOR_VERSION 1       /* current version numbers */
 #define GLX_MINOR_VERSION 4
 
@@ -823,5 +828,9 @@ indirect_create_context_attribs(struct glx_screen *base,
                                 unsigned num_attribs,
                                 const uint32_t *attribs,
                                 unsigned *error);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__GLX_client_h__ */
