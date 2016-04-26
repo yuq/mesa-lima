@@ -154,7 +154,7 @@ draw_vs_init( struct draw_context *draw )
    draw->dump_vs = debug_get_option_gallium_dump_vs();
 
    if (!draw->llvm) {
-      draw->vs.tgsi.machine = tgsi_exec_machine_create();
+      draw->vs.tgsi.machine = tgsi_exec_machine_create(PIPE_SHADER_VERTEX);
       if (!draw->vs.tgsi.machine)
          return FALSE;
    }

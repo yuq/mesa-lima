@@ -692,7 +692,7 @@ boolean
 draw_gs_init( struct draw_context *draw )
 {
    if (!draw->llvm) {
-      draw->gs.tgsi.machine = tgsi_exec_machine_create();
+      draw->gs.tgsi.machine = tgsi_exec_machine_create(PIPE_SHADER_GEOMETRY);
       if (!draw->gs.tgsi.machine)
          return FALSE;
 

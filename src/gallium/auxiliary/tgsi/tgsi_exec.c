@@ -895,11 +895,10 @@ tgsi_exec_machine_bind_shader(
       return;
    }
 
-   mach->Processor = parse.FullHeader.Processor.Processor;
    mach->ImmLimit = 0;
    mach->NumOutputs = 0;
 
-   if (mach->Processor == PIPE_SHADER_GEOMETRY &&
+   if (mach->ShaderType == PIPE_SHADER_GEOMETRY &&
        !mach->UsedGeometryShader) {
       struct tgsi_exec_vector *inputs;
       struct tgsi_exec_vector *outputs;
@@ -1005,7 +1004,7 @@ tgsi_exec_machine_bind_shader(
          break;
 
       case TGSI_TOKEN_TYPE_PROPERTY:
-         if (mach->Processor == PIPE_SHADER_GEOMETRY) {
+         if (mach->ShaderType == PIPE_SHADER_GEOMETRY) {
             if (parse.FullToken.FullProperty.Property.PropertyName == TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES) {
                mach->MaxOutputVertices = parse.FullToken.FullProperty.u[0].Data;
             }
@@ -1029,7 +1028,7 @@ tgsi_exec_machine_bind_shader(
 
 
 struct tgsi_exec_machine *
-tgsi_exec_machine_create( void )
+tgsi_exec_machine_create(enum pipe_shader_type shader_type)
 {
    struct tgsi_exec_machine *mach;
    uint i;
@@ -1040,6 +1039,7 @@ tgsi_exec_machine_create( void )
 
    memset(mach, 0, sizeof(*mach));
 
+   mach->ShaderType = shader_type;
    mach->Addrs = &mach->Temps[TGSI_EXEC_TEMP_ADDR];
    mach->MaxGeometryShaderOutputs = TGSI_MAX_TOTAL_VERTICES;
    mach->Predicates = &mach->Temps[TGSI_EXEC_TEMP_P0];
@@ -1260,7 +1260,7 @@ fetch_src_file_channel(const struct tgsi_exec_machine *mach,
    case TGSI_FILE_INPUT:
       for (i = 0; i < TGSI_QUAD_SIZE; i++) {
          /*
-         if (PIPE_SHADER_GEOMETRY == mach->Processor) {
+         if (PIPE_SHADER_GEOMETRY == mach->ShaderType) {
             debug_printf("Fetching Input[%d] (2d=%d, 1d=%d)\n",
                          index2D->i[i] * TGSI_EXEC_MAX_INPUT_ATTRIBS + index->i[i],
                          index2D->i[i], index->i[i]);
@@ -1654,7 +1654,7 @@ store_dest_dstret(struct tgsi_exec_machine *mach,
       debug_printf("NumOutputs = %d, TEMP_O_C/I = %d, redindex = %d\n",
                    mach->NumOutputs, mach->Temps[TEMP_OUTPUT_I].xyzw[TEMP_OUTPUT_C].u[0],
                    reg->Register.Index);
-      if (PIPE_SHADER_GEOMETRY == mach->Processor) {
+      if (PIPE_SHADER_GEOMETRY == mach->ShaderType) {
          debug_printf("STORING OUT[%d] mask(%d), = (", offset + index, execmask);
          for (i = 0; i < TGSI_QUAD_SIZE; i++)
             if (execmask & (1 << i))
@@ -1888,7 +1888,7 @@ emit_primitive(struct tgsi_exec_machine *mach)
 static void
 conditional_emit_primitive(struct tgsi_exec_machine *mach)
 {
-   if (PIPE_SHADER_GEOMETRY == mach->Processor) {
+   if (PIPE_SHADER_GEOMETRY == mach->ShaderType) {
       int emitted_verts =
          mach->Primitives[mach->Temps[TEMP_PRIMITIVE_I].xyzw[TEMP_PRIMITIVE_C].u[0]];
       if (emitted_verts) {
@@ -2699,7 +2699,7 @@ exec_declaration(struct tgsi_exec_machine *mach,
       return;
    }
 
-   if (mach->Processor == PIPE_SHADER_FRAGMENT) {
+   if (mach->ShaderType == PIPE_SHADER_FRAGMENT) {
       if (decl->Declaration.File == TGSI_FILE_INPUT) {
          uint first, last, mask;
 
@@ -5663,7 +5663,7 @@ tgsi_exec_machine_run( struct tgsi_exec_machine *mach )
    mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0] = 0;
    mach->Temps[TEMP_OUTPUT_I].xyzw[TEMP_OUTPUT_C].u[0] = 0;
 
-   if( mach->Processor == PIPE_SHADER_GEOMETRY ) {
+   if (mach->ShaderType == PIPE_SHADER_GEOMETRY) {
       mach->Temps[TEMP_PRIMITIVE_I].xyzw[TEMP_PRIMITIVE_C].u[0] = 0;
       mach->Primitives[0] = 0;
       /* GS runs on a single primitive for now */
@@ -5760,7 +5760,7 @@ tgsi_exec_machine_run( struct tgsi_exec_machine *mach )
 
 #if 0
    /* we scale from floats in [0,1] to Zbuffer ints in sp_quad_depth_test.c */
-   if (mach->Processor == PIPE_SHADER_FRAGMENT) {
+   if (mach->ShaderType == PIPE_SHADER_FRAGMENT) {
       /*
        * Scale back depth component.
        */

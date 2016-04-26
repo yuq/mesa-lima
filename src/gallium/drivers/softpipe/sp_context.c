@@ -256,7 +256,7 @@ softpipe_create_context(struct pipe_screen *screen,
       }
    }
 
-   softpipe->fs_machine = tgsi_exec_machine_create();
+   softpipe->fs_machine = tgsi_exec_machine_create(PIPE_SHADER_FRAGMENT);
 
    /* setup quad rendering stages */
    softpipe->quad.shade = sp_quad_shade_stage(softpipe);

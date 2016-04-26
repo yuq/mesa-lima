@@ -371,7 +371,7 @@ struct tgsi_exec_machine
    unsigned ConstsSize[PIPE_MAX_CONSTANT_BUFFERS];
 
    const struct tgsi_token       *Tokens;   /**< Declarations, instructions */
-   unsigned                      Processor; /**< PIPE_SHADER_x */
+   enum pipe_shader_type         ShaderType; /**< PIPE_SHADER_x */
 
    /* GEOMETRY processor only. */
    unsigned                      *Primitives;
@@ -444,7 +444,7 @@ struct tgsi_exec_machine
 };
 
 struct tgsi_exec_machine *
-tgsi_exec_machine_create( void );
+tgsi_exec_machine_create(enum pipe_shader_type shader_type);
 
 void
 tgsi_exec_machine_destroy(struct tgsi_exec_machine *mach);
