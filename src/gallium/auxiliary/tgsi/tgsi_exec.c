@@ -898,6 +898,9 @@ tgsi_exec_machine_bind_shader(
    mach->ImmLimit = 0;
    mach->NumOutputs = 0;
 
+   for (k = 0; k < TGSI_SEMANTIC_COUNT; k++)
+      mach->SysSemanticToIndex[k] = -1;
+
    if (mach->ShaderType == PIPE_SHADER_GEOMETRY &&
        !mach->UsedGeometryShader) {
       struct tgsi_exec_vector *inputs;
