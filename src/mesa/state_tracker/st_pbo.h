@@ -24,7 +24,50 @@
 #ifndef ST_PBO_H
 #define ST_PBO_H
 
+struct gl_pixelstore_attrib;
+
 struct st_context;
+
+struct st_pbo_addresses {
+   int xoffset;
+   int yoffset;
+   unsigned width;
+   unsigned height;
+   unsigned depth;
+
+   unsigned bytes_per_pixel;
+
+   /* Everything below is filled in by st_pbo_from_pixelstore */
+   unsigned pixels_per_row;
+   unsigned image_height;
+
+   /* Everything below is filled in by st_pbo_setup_buffer */
+
+   /* Buffer and view. */
+   struct pipe_resource *buffer; /* non-owning pointer */
+   unsigned first_element;
+   unsigned last_element;
+
+   /* Constant buffer for the fragment shader. */
+   struct {
+      int32_t xoffset;
+      int32_t yoffset;
+      int32_t stride;
+      int32_t image_size;
+   } constants;
+};
+
+bool
+st_pbo_addresses_setup(struct st_context *st,
+                       struct pipe_resource *buf, intptr_t buf_offset,
+                       struct st_pbo_addresses *addr);
+
+bool
+st_pbo_addresses_pixelstore(struct st_context *st,
+                            GLenum gl_target, bool skip_images,
+                            const struct gl_pixelstore_attrib *store,
+                            const void *pixels,
+                            struct st_pbo_addresses *addr);
 
 void *
 st_pbo_create_vs(struct st_context *st);

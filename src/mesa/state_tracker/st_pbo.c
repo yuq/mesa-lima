@@ -30,12 +30,125 @@
 
 #include "state_tracker/st_context.h"
 #include "state_tracker/st_pbo.h"
+#include "state_tracker/st_cb_bufferobjects.h"
 
 #include "pipe/p_context.h"
 #include "pipe/p_defines.h"
 #include "pipe/p_screen.h"
 #include "cso_cache/cso_context.h"
 #include "tgsi/tgsi_ureg.h"
+
+/* Final setup of buffer addressing information.
+ *
+ * buf_offset is in pixels.
+ *
+ * Returns false if something (e.g. alignment) prevents PBO upload/download.
+ */
+bool
+st_pbo_addresses_setup(struct st_context *st,
+                       struct pipe_resource *buf, intptr_t buf_offset,
+                       struct st_pbo_addresses *addr)
+{
+   unsigned skip_pixels;
+
+   /* Check alignment against texture buffer requirements. */
+   {
+      unsigned ofs = (buf_offset * addr->bytes_per_pixel) % st->ctx->Const.TextureBufferOffsetAlignment;
+      if (ofs != 0) {
+         if (ofs % addr->bytes_per_pixel != 0)
+            return false;
+
+         skip_pixels = ofs / addr->bytes_per_pixel;
+         buf_offset -= skip_pixels;
+      } else {
+         skip_pixels = 0;
+      }
+   }
+
+   assert(buf_offset >= 0);
+
+   addr->buffer = buf;
+   addr->first_element = buf_offset;
+   addr->last_element = buf_offset + skip_pixels + addr->width - 1
+         + (addr->height - 1 + (addr->depth - 1) * addr->image_height) * addr->pixels_per_row;
+
+   if (addr->last_element - addr->first_element > st->ctx->Const.MaxTextureBufferSize - 1)
+      return false;
+
+   /* This should be ensured by Mesa before calling our callbacks */
+   assert((addr->last_element + 1) * addr->bytes_per_pixel <= buf->width0);
+
+   addr->constants.xoffset = -addr->xoffset + skip_pixels;
+   addr->constants.yoffset = -addr->yoffset;
+   addr->constants.stride = addr->pixels_per_row;
+   addr->constants.image_size = addr->pixels_per_row * addr->image_height;
+
+   return true;
+}
+
+/* Validate and fill buffer addressing information based on GL pixelstore
+ * attributes.
+ *
+ * Returns false if some aspect of the addressing (e.g. alignment) prevents
+ * PBO upload/download.
+ */
+bool
+st_pbo_addresses_pixelstore(struct st_context *st,
+                            GLenum gl_target, bool skip_images,
+                            const struct gl_pixelstore_attrib *store,
+                            const void *pixels,
+                            struct st_pbo_addresses *addr)
+{
+   struct pipe_resource *buf = st_buffer_object(store->BufferObj)->buffer;
+   intptr_t buf_offset = (intptr_t) pixels;
+
+   if (buf_offset % addr->bytes_per_pixel)
+      return false;
+
+   /* Convert to texels */
+   buf_offset = buf_offset / addr->bytes_per_pixel;
+
+   /* Determine image height */
+   if (gl_target == GL_TEXTURE_1D_ARRAY) {
+      addr->image_height = 1;
+   } else {
+      addr->image_height = store->ImageHeight > 0 ? store->ImageHeight : addr->height;
+   }
+
+   /* Compute the stride, taking store->Alignment into account */
+   {
+       unsigned pixels_per_row = store->RowLength > 0 ?
+                           store->RowLength : addr->width;
+       unsigned bytes_per_row = pixels_per_row * addr->bytes_per_pixel;
+       unsigned remainder = bytes_per_row % store->Alignment;
+       unsigned offset_rows;
+
+       if (remainder > 0)
+          bytes_per_row += store->Alignment - remainder;
+
+       if (bytes_per_row % addr->bytes_per_pixel)
+          return false;
+
+       addr->pixels_per_row = bytes_per_row / addr->bytes_per_pixel;
+
+       offset_rows = store->SkipRows;
+       if (skip_images)
+          offset_rows += addr->image_height * store->SkipImages;
+
+       buf_offset += store->SkipPixels + addr->pixels_per_row * offset_rows;
+   }
+
+   if (!st_pbo_addresses_setup(st, buf, buf_offset, addr))
+      return false;
+
+   /* Support GL_PACK_INVERT_MESA */
+   if (store->Invert) {
+      addr->constants.xoffset += (addr->height - 1) * addr->constants.stride;
+      addr->constants.stride = -addr->constants.stride;
+   }
+
+   return true;
+}
 
 void *
 st_pbo_create_vs(struct st_context *st)

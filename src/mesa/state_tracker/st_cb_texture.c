@@ -1073,33 +1073,13 @@ reinterpret_formats(enum pipe_format *src_format, enum pipe_format *dst_format)
 static bool
 try_pbo_upload_common(struct gl_context *ctx,
                       struct pipe_surface *surface,
-                      int xoffset, int yoffset,
-                      unsigned upload_width, unsigned upload_height,
-                      struct pipe_resource *buffer,
-                      enum pipe_format src_format,
-                      intptr_t buf_offset,
-                      unsigned bytes_per_pixel,
-                      unsigned stride,
-                      unsigned image_height)
+                      const struct st_pbo_addresses *addr,
+                      enum pipe_format src_format)
 {
    struct st_context *st = st_context(ctx);
    struct cso_context *cso = st->cso_context;
    struct pipe_context *pipe = st->pipe;
-   unsigned depth = surface->u.tex.last_layer - surface->u.tex.first_layer + 1;
-   unsigned skip_pixels = 0;
    bool success = false;
-
-   /* Check alignment. */
-   {
-      unsigned ofs = (buf_offset * bytes_per_pixel) % ctx->Const.TextureBufferOffsetAlignment;
-      if (ofs != 0) {
-         if (ofs % bytes_per_pixel != 0)
-            return false;
-
-         skip_pixels = ofs / bytes_per_pixel;
-         buf_offset -= skip_pixels;
-      }
-   }
 
    /* Create the shaders */
    if (!st->pbo.vs) {
@@ -1108,7 +1088,7 @@ try_pbo_upload_common(struct gl_context *ctx,
          return false;
    }
 
-   if (depth != 1 && st->pbo.use_gs && !st->pbo.gs) {
+   if (addr->depth != 1 && st->pbo.use_gs && !st->pbo.gs) {
       st->pbo.gs = st_pbo_create_gs(st);
       if (!st->pbo.gs)
          return false;
@@ -1137,31 +1117,22 @@ try_pbo_upload_common(struct gl_context *ctx,
 
    /* Set up the sampler_view */
    {
-      unsigned first_element = buf_offset;
-      unsigned last_element = buf_offset + skip_pixels + upload_width - 1
-         + (upload_height - 1 + (depth - 1) * image_height) * stride;
       struct pipe_sampler_view templ;
       struct pipe_sampler_view *sampler_view;
       struct pipe_sampler_state sampler = {0};
       const struct pipe_sampler_state *samplers[1] = {&sampler};
 
-      /* This should be ensured by Mesa before calling our callbacks */
-      assert((last_element + 1) * bytes_per_pixel <= buffer->width0);
-
-      if (last_element - first_element > ctx->Const.MaxTextureBufferSize - 1)
-         goto fail;
-
       memset(&templ, 0, sizeof(templ));
       templ.target = PIPE_BUFFER;
       templ.format = src_format;
-      templ.u.buf.first_element = first_element;
-      templ.u.buf.last_element = last_element;
+      templ.u.buf.first_element = addr->first_element;
+      templ.u.buf.last_element = addr->last_element;
       templ.swizzle_r = PIPE_SWIZZLE_X;
       templ.swizzle_g = PIPE_SWIZZLE_Y;
       templ.swizzle_b = PIPE_SWIZZLE_Z;
       templ.swizzle_a = PIPE_SWIZZLE_W;
 
-      sampler_view = pipe->create_sampler_view(pipe, buffer, &templ);
+      sampler_view = pipe->create_sampler_view(pipe, addr->buffer, &templ);
       if (sampler_view == NULL)
          goto fail;
 
@@ -1177,10 +1148,10 @@ try_pbo_upload_common(struct gl_context *ctx,
       struct pipe_vertex_buffer vbo;
       struct pipe_vertex_element velem;
 
-      float x0 = (float) xoffset / surface->width * 2.0f - 1.0f;
-      float y0 = (float) yoffset / surface->height * 2.0f - 1.0f;
-      float x1 = (float) (xoffset + upload_width) / surface->width * 2.0f - 1.0f;
-      float y1 = (float) (yoffset + upload_height) / surface->height * 2.0f - 1.0f;
+      float x0 = (float) addr->xoffset / surface->width * 2.0f - 1.0f;
+      float y0 = (float) addr->yoffset / surface->height * 2.0f - 1.0f;
+      float x1 = (float) (addr->xoffset + addr->width) / surface->width * 2.0f - 1.0f;
+      float y1 = (float) (addr->yoffset + addr->height) / surface->height * 2.0f - 1.0f;
 
       float *verts = NULL;
 
@@ -1217,38 +1188,25 @@ try_pbo_upload_common(struct gl_context *ctx,
    }
 
    /* Upload constants */
-   /* Note: the user buffer must be valid until draw time */
-   struct {
-      int32_t xoffset;
-      int32_t yoffset;
-      int32_t stride;
-      int32_t image_size;
-   } constants;
-
    {
       struct pipe_constant_buffer cb;
-
-      constants.xoffset = -xoffset + skip_pixels;
-      constants.yoffset = -yoffset;
-      constants.stride = stride;
-      constants.image_size = stride * image_height;
 
       if (st->constbuf_uploader) {
          cb.buffer = NULL;
          cb.user_buffer = NULL;
-         u_upload_data(st->constbuf_uploader, 0, sizeof(constants),
+         u_upload_data(st->constbuf_uploader, 0, sizeof(addr->constants),
                        ctx->Const.UniformBufferOffsetAlignment,
-                       &constants, &cb.buffer_offset, &cb.buffer);
+                       &addr->constants, &cb.buffer_offset, &cb.buffer);
          if (!cb.buffer)
             goto fail;
 
          u_upload_unmap(st->constbuf_uploader);
       } else {
          cb.buffer = NULL;
-         cb.user_buffer = &constants;
+         cb.user_buffer = &addr->constants;
          cb.buffer_offset = 0;
       }
-      cb.buffer_size = sizeof(constants);
+      cb.buffer_size = sizeof(addr->constants);
 
       cso_set_constant_buffer(cso, PIPE_SHADER_FRAGMENT, 0, &cb);
 
@@ -1287,7 +1245,7 @@ try_pbo_upload_common(struct gl_context *ctx,
    /* Set up the shaders */
    cso_set_vertex_shader_handle(cso, st->pbo.vs);
 
-   cso_set_geometry_shader_handle(cso, depth != 1 ? st->pbo.gs : NULL);
+   cso_set_geometry_shader_handle(cso, addr->depth != 1 ? st->pbo.gs : NULL);
 
    cso_set_tessctrl_shader_handle(cso, NULL);
 
@@ -1298,11 +1256,11 @@ try_pbo_upload_common(struct gl_context *ctx,
    /* Disable stream output */
    cso_set_stream_outputs(cso, 0, NULL, 0);
 
-   if (depth == 1) {
+   if (addr->depth == 1) {
       cso_draw_arrays(cso, PIPE_PRIM_TRIANGLE_STRIP, 0, 4);
    } else {
       cso_draw_arrays_instanced(cso, PIPE_PRIM_TRIANGLE_STRIP,
-                                0, 4, 0, depth);
+                                0, 4, 0, addr->depth);
    }
 
    success = true;
@@ -1331,12 +1289,10 @@ try_pbo_upload(struct gl_context *ctx, GLuint dims,
    struct pipe_context *pipe = st->pipe;
    struct pipe_screen *screen = pipe->screen;
    struct pipe_surface *surface = NULL;
+   struct st_pbo_addresses addr;
    enum pipe_format src_format;
    const struct util_format_description *desc;
    GLenum gl_target = texImage->TexObject->Target;
-   intptr_t buf_offset;
-   unsigned bytes_per_pixel;
-   unsigned stride, image_height;
    bool success;
 
    if (!st->pbo.upload_enabled)
@@ -1348,9 +1304,6 @@ try_pbo_upload(struct gl_context *ctx, GLuint dims,
       height = 1;
       zoffset = yoffset;
       yoffset = 0;
-      image_height = 1;
-   } else {
-      image_height = unpack->ImageHeight > 0 ? unpack->ImageHeight : height;
    }
 
    if (depth != 1 && !st->pbo.layers)
@@ -1394,40 +1347,17 @@ try_pbo_upload(struct gl_context *ctx, GLuint dims,
       return false;
    }
 
-   /* Check if the offset satisfies the alignment requirements */
-   buf_offset = (intptr_t) pixels;
-   bytes_per_pixel = desc->block.bits / 8;
+   /* Compute buffer addresses */
+   addr.xoffset = xoffset;
+   addr.yoffset = yoffset;
+   addr.width = width;
+   addr.height = height;
+   addr.depth = depth;
+   addr.bytes_per_pixel = desc->block.bits / 8;
 
-   if (buf_offset % bytes_per_pixel) {
+   if (!st_pbo_addresses_pixelstore(st, gl_target, dims == 3, unpack, pixels,
+                                    &addr))
       return false;
-   }
-
-   /* Convert to texels */
-   buf_offset = buf_offset / bytes_per_pixel;
-
-   /* Compute the stride, taking unpack->Alignment into account */
-   {
-       unsigned pixels_per_row = unpack->RowLength > 0 ?
-                           unpack->RowLength : width;
-       unsigned bytes_per_row = pixels_per_row * bytes_per_pixel;
-       unsigned remainder = bytes_per_row % unpack->Alignment;
-       unsigned offset_rows;
-
-       if (remainder > 0)
-          bytes_per_row += (unpack->Alignment - remainder);
-
-       if (bytes_per_row % bytes_per_pixel) {
-          return false;
-       }
-
-       stride = bytes_per_row / bytes_per_pixel;
-
-       offset_rows = unpack->SkipRows;
-       if (dims == 3)
-          offset_rows += image_height * unpack->SkipImages;
-
-       buf_offset += unpack->SkipPixels + stride * offset_rows;
-   }
 
    /* Set up the surface */
    {
@@ -1448,12 +1378,7 @@ try_pbo_upload(struct gl_context *ctx, GLuint dims,
          return false;
    }
 
-   success = try_pbo_upload_common(ctx,  surface,
-                                   xoffset, yoffset, width, height,
-                                   st_buffer_object(unpack->BufferObj)->buffer,
-                                   src_format,
-                                   buf_offset,
-                                   bytes_per_pixel, stride, image_height);
+   success = try_pbo_upload_common(ctx, surface, &addr, src_format);
 
    pipe_surface_reference(&surface, NULL);
 
@@ -1760,8 +1685,8 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
    struct pipe_resource *dst = stImage->pt;
    struct pipe_surface *surface = NULL;
    struct compressed_pixelstore store;
+   struct st_pbo_addresses addr;
    enum pipe_format copy_format;
-   unsigned bytes_per_block;
    unsigned bw, bh;
    intptr_t buf_offset;
    bool success = false;
@@ -1790,11 +1715,11 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
    }
 
    /* Choose the pipe format for the upload. */
-   bytes_per_block = util_format_get_blocksize(dst->format);
+   addr.bytes_per_pixel = util_format_get_blocksize(dst->format);
    bw = util_format_get_blockwidth(dst->format);
    bh = util_format_get_blockheight(dst->format);
 
-   switch (bytes_per_block) {
+   switch (addr.bytes_per_pixel) {
    case 8:
       copy_format = PIPE_FORMAT_R16G16B16A16_UINT;
       break;
@@ -1818,17 +1743,29 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
    /* Interpret the pixelstore settings. */
    _mesa_compute_compressed_pixelstore(dims, texImage->TexFormat, w, h, d,
                                        &ctx->Unpack, &store);
-   assert(store.CopyBytesPerRow % bytes_per_block == 0);
-   assert(store.SkipBytes % bytes_per_block == 0);
+   assert(store.CopyBytesPerRow % addr.bytes_per_pixel == 0);
+   assert(store.SkipBytes % addr.bytes_per_pixel == 0);
 
    /* Compute the offset into the buffer */
    buf_offset = (intptr_t)data + store.SkipBytes;
 
-   if (buf_offset % bytes_per_block) {
+   if (buf_offset % addr.bytes_per_pixel) {
       goto fallback;
    }
 
-   buf_offset = buf_offset / bytes_per_block;
+   buf_offset = buf_offset / addr.bytes_per_pixel;
+
+   addr.xoffset = x / bw;
+   addr.yoffset = y / bh;
+   addr.width = store.CopyBytesPerRow / addr.bytes_per_pixel;
+   addr.height = store.CopyRowsPerSlice;
+   addr.depth = d;
+   addr.pixels_per_row = store.TotalBytesPerRow / addr.bytes_per_pixel;
+   addr.image_height = store.TotalRowsPerSlice;
+
+   if (!st_pbo_addresses_setup(st, st_buffer_object(ctx->Unpack.BufferObj)->buffer,
+                               buf_offset, &addr))
+      goto fallback;
 
    /* Set up the surface. */
    {
@@ -1849,16 +1786,7 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
          goto fallback;
    }
 
-   success = try_pbo_upload_common(ctx, surface,
-                                   x / bw, y / bh,
-                                   store.CopyBytesPerRow / bytes_per_block,
-                                   store.CopyRowsPerSlice,
-                                   st_buffer_object(ctx->Unpack.BufferObj)->buffer,
-                                   copy_format,
-                                   buf_offset,
-                                   bytes_per_block,
-                                   store.TotalBytesPerRow / bytes_per_block,
-                                   store.TotalRowsPerSlice);
+   success = try_pbo_upload_common(ctx, surface, &addr, copy_format);
 
    pipe_surface_reference(&surface, NULL);
 
