@@ -949,7 +949,6 @@ shader_source(struct gl_shader *sh, const GLchar *source)
    /* free old shader source string and install new one */
    free((void *)sh->Source);
    sh->Source = source;
-   sh->CompileStatus = GL_FALSE;
 #ifdef DEBUG
    sh->SourceChecksum = _mesa_str_checksum(sh->Source);
 #endif
