@@ -2498,8 +2498,8 @@ intel_miptree_unmap_s8(struct brw_context *brw,
       for (uint32_t y = 0; y < map->h; y++) {
 	 for (uint32_t x = 0; x < map->w; x++) {
 	    ptrdiff_t offset = intel_offset_S8(mt->pitch,
-	                                       x + map->x,
-	                                       y + map->y,
+	                                       image_x + x + map->x,
+	                                       image_y + y + map->y,
 					       brw->has_swizzling);
 	    tiled_s8_map[offset] = untiled_s8_map[y * map->w + x];
 	 }
