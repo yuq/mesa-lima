@@ -385,6 +385,10 @@ struct tgsi_exec_machine
    float                         Face;    /**< +1 if front facing, -1 if back facing */
    bool                          flatshade_color;
 
+   /* Compute Only */
+   void                          *LocalMem;
+   unsigned                      LocalMemSize;
+
    /* See GLSL 4.50 specification for definition of helper invocations */
    uint NonHelperMask;  /**< non-helpers */
    /* Conditional execution masks */

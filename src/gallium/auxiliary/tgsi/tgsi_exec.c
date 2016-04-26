@@ -3842,13 +3842,47 @@ exec_load_buf(struct tgsi_exec_machine *mach,
 }
 
 static void
+exec_load_mem(struct tgsi_exec_machine *mach,
+              const struct tgsi_full_instruction *inst)
+{
+   union tgsi_exec_channel r[3];
+   uint chan;
+   char *ptr = mach->LocalMem;
+   uint32_t offset;
+   int j;
+
+   IFETCH(&r[0], 1, TGSI_CHAN_X);
+   if (r[0].u[0] >= mach->LocalMemSize)
+      return;
+
+   offset = r[0].u[0];
+   ptr += offset;
+
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+         if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+            memcpy(&r[chan].u[j], ptr + (4 * chan), 4);
+         }
+      }
+   }
+
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         store_dest(mach, &r[chan], &inst->Dst[0], inst, chan, TGSI_EXEC_DATA_FLOAT);
+      }
+   }
+}
+
+static void
 exec_load(struct tgsi_exec_machine *mach,
           const struct tgsi_full_instruction *inst)
 {
    if (inst->Src[0].Register.File == TGSI_FILE_IMAGE)
       exec_load_img(mach, inst);
-   else
+   else if (inst->Src[0].Register.File == TGSI_FILE_BUFFER)
       exec_load_buf(mach, inst);
+   else if (inst->Src[0].Register.File == TGSI_FILE_MEMORY)
+      exec_load_mem(mach, inst);
 }
 
 static void
@@ -3932,13 +3966,47 @@ exec_store_buf(struct tgsi_exec_machine *mach,
 }
 
 static void
+exec_store_mem(struct tgsi_exec_machine *mach,
+               const struct tgsi_full_instruction *inst)
+{
+   union tgsi_exec_channel r[3];
+   union tgsi_exec_channel value[4];
+   uint i, chan;
+   char *ptr = mach->LocalMem;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+   int execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+
+   IFETCH(&r[0], 0, TGSI_CHAN_X);
+
+   for (i = 0; i < 4; i++) {
+      FETCH(&value[i], 1, TGSI_CHAN_X + i);
+   }
+
+   if (r[0].u[0] >= mach->LocalMemSize)
+      return;
+   ptr += r[0].u[0];
+
+   for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+      if (execmask & (1 << i)) {
+         for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+            if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+               memcpy(ptr + (chan * 4), &value[chan].u[0], 4);
+            }
+         }
+      }
+   }
+}
+
+static void
 exec_store(struct tgsi_exec_machine *mach,
            const struct tgsi_full_instruction *inst)
 {
    if (inst->Dst[0].Register.File == TGSI_FILE_IMAGE)
       exec_store_img(mach, inst);
-   else
+   else if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER)
       exec_store_buf(mach, inst);
+   else if (inst->Dst[0].Register.File == TGSI_FILE_MEMORY)
+      exec_store_mem(mach, inst);
 }
 
 static void
@@ -4069,13 +4137,88 @@ exec_atomop_buf(struct tgsi_exec_machine *mach,
 }
 
 static void
+exec_atomop_mem(struct tgsi_exec_machine *mach,
+                const struct tgsi_full_instruction *inst)
+{
+   union tgsi_exec_channel r[4];
+   union tgsi_exec_channel value[4], value2[4];
+   char *ptr = mach->LocalMem;
+   uint32_t val;
+   uint chan, i;
+   uint32_t offset;
+   int kilmask = mach->Temps[TEMP_KILMASK_I].xyzw[TEMP_KILMASK_C].u[0];
+   int execmask = mach->ExecMask & mach->NonHelperMask & ~kilmask;
+   IFETCH(&r[0], 1, TGSI_CHAN_X);
+
+   if (r[0].u[0] >= mach->LocalMemSize)
+      return;
+
+   offset = r[0].u[0];
+   ptr += offset;
+   for (i = 0; i < 4; i++) {
+      FETCH(&value[i], 2, TGSI_CHAN_X + i);
+      if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS)
+         FETCH(&value2[i], 3, TGSI_CHAN_X + i);
+   }
+
+   memcpy(&r[0].u[0], ptr, 4);
+   val = r[0].u[0];
+   switch (inst->Instruction.Opcode) {
+   case TGSI_OPCODE_ATOMUADD:
+      val += value[0].u[0];
+      break;
+   case TGSI_OPCODE_ATOMXOR:
+      val ^= value[0].u[0];
+      break;
+   case TGSI_OPCODE_ATOMOR:
+      val |= value[0].u[0];
+      break;
+   case TGSI_OPCODE_ATOMAND:
+      val &= value[0].u[0];
+      break;
+   case TGSI_OPCODE_ATOMUMIN:
+      val = MIN2(val, value[0].u[0]);
+      break;
+   case TGSI_OPCODE_ATOMUMAX:
+      val = MAX2(val, value[0].u[0]);
+      break;
+   case TGSI_OPCODE_ATOMIMIN:
+      val = MIN2(r[0].i[0], value[0].i[0]);
+      break;
+   case TGSI_OPCODE_ATOMIMAX:
+      val = MAX2(r[0].i[0], value[0].i[0]);
+      break;
+   case TGSI_OPCODE_ATOMXCHG:
+      val = value[0].i[0];
+      break;
+   case TGSI_OPCODE_ATOMCAS:
+      if (val == value[0].u[0])
+         val = value2[0].u[0];
+      break;
+   default:
+      break;
+   }
+   for (i = 0; i < TGSI_QUAD_SIZE; i++)
+      if (execmask & (1 << i))
+         memcpy(ptr, &val, 4);
+
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         store_dest(mach, &r[chan], &inst->Dst[0], inst, chan, TGSI_EXEC_DATA_FLOAT);
+      }
+   }
+}
+
+static void
 exec_atomop(struct tgsi_exec_machine *mach,
             const struct tgsi_full_instruction *inst)
 {
    if (inst->Src[0].Register.File == TGSI_FILE_IMAGE)
       exec_atomop_img(mach, inst);
-   else
+   else if (inst->Src[0].Register.File == TGSI_FILE_BUFFER)
       exec_atomop_buf(mach, inst);
+   else if (inst->Src[0].Register.File == TGSI_FILE_MEMORY)
+      exec_atomop_mem(mach, inst);
 }
 
 static void
