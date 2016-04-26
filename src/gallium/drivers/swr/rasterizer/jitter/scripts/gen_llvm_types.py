@@ -135,6 +135,9 @@ def gen_llvm_types(input_file, output_file):
     for idx in range(len(lines)):
         line = lines[idx].rstrip()
 
+        if "gen_llvm_types FINI" in line:
+            break
+
         match = re.match(r"(\s*)struct(\s*)(\w+)", line)
         if match:
             llvm_args = []

@@ -65,7 +65,7 @@ struct swr_jit_texture {
    uint32_t depth; // doubles as array size
    uint32_t first_level;
    uint32_t last_level;
-   const void *base_ptr;
+   const uint8_t *base_ptr;
    uint32_t row_stride[PIPE_MAX_TEXTURE_LEVELS];
    uint32_t img_stride[PIPE_MAX_TEXTURE_LEVELS];
    uint32_t mip_offsets[PIPE_MAX_TEXTURE_LEVELS];
@@ -80,9 +80,9 @@ struct swr_jit_sampler {
 
 struct swr_draw_context {
    const float *constantVS[PIPE_MAX_CONSTANT_BUFFERS];
-   unsigned num_constantsVS[PIPE_MAX_CONSTANT_BUFFERS];
+   uint32_t num_constantsVS[PIPE_MAX_CONSTANT_BUFFERS];
    const float *constantFS[PIPE_MAX_CONSTANT_BUFFERS];
-   unsigned num_constantsFS[PIPE_MAX_CONSTANT_BUFFERS];
+   uint32_t num_constantsFS[PIPE_MAX_CONSTANT_BUFFERS];
 
    swr_jit_texture texturesVS[PIPE_MAX_SHADER_SAMPLER_VIEWS];
    swr_jit_sampler samplersVS[PIPE_MAX_SAMPLERS];
@@ -91,6 +91,8 @@ struct swr_draw_context {
 
    SWR_SURFACE_STATE renderTargets[SWR_NUM_ATTACHMENTS];
 };
+
+/* gen_llvm_types FINI */
 
 struct swr_context {
    struct pipe_context pipe; /**< base class */

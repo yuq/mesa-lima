@@ -26,7 +26,6 @@ CXX_SOURCES := \
 	swr_clear.cpp \
 	swr_context.cpp \
 	swr_context.h \
-	swr_context_llvm.h \
 	swr_draw.cpp \
 	swr_public.h \
 	swr_resource.h \

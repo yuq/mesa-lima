@@ -1,3 +1,4 @@
+swr_context_llvm.h
 rasterizer/jitter/builder_gen.cpp
 rasterizer/jitter/builder_gen.h
 rasterizer/jitter/builder_x86.cpp

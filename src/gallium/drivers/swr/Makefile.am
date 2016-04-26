@@ -47,6 +47,7 @@ COMMON_SOURCES = \
 	$(BUILT_SOURCES)
 
 BUILT_SOURCES = \
+	swr_context_llvm.h \
 	rasterizer/scripts/gen_knobs.cpp \
 	rasterizer/scripts/gen_knobs.h \
 	rasterizer/jitter/state_llvm.h \
@@ -54,6 +55,12 @@ BUILT_SOURCES = \
 	rasterizer/jitter/builder_gen.cpp \
 	rasterizer/jitter/builder_x86.h \
 	rasterizer/jitter/builder_x86.cpp
+
+swr_context_llvm.h: rasterizer/jitter/scripts/gen_llvm_types.py swr_context.h
+	$(PYTHON2) $(PYTHON_FLAGS) \
+		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_types.py \
+		--input $(srcdir)/swr_context.h \
+		--output swr_context_llvm.h
 
 rasterizer/scripts/gen_knobs.cpp rasterizer/scripts/gen_knobs.h: rasterizer/scripts/gen_knobs.py rasterizer/scripts/knob_defs.py rasterizer/scripts/templates/knobs.template
 	$(PYTHON2) $(PYTHON_FLAGS) \
