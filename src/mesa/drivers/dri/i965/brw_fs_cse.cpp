@@ -191,7 +191,8 @@ create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
       DIV_ROUND_UP(inst->dst.component_size(inst->exec_size), REG_SIZE);
    fs_inst *copy;
 
-   if (written > dst_width) {
+   if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD ||
+       written != dst_width) {
       fs_reg *payload;
       int sources, header_size;
       if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD) {
