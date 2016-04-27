@@ -252,6 +252,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
         Value*    elements[4] = {0};
         const INPUT_ELEMENT_DESC& ied = fetchState.layout[nelt];
         const SWR_FORMAT_INFO &info = GetFormatInfo((SWR_FORMAT)ied.Format);
+        SWR_ASSERT((info.bpp != 0), "Unsupported format in JitLoadVertices.");
         uint32_t    numComponents = info.numComps;
         uint32_t bpc = info.bpp / info.numComps;  ///@todo Code below assumes all components are same size. Need to fix.
 
@@ -658,6 +659,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
     {
         const INPUT_ELEMENT_DESC& ied = fetchState.layout[nInputElt];
         const SWR_FORMAT_INFO &info = GetFormatInfo((SWR_FORMAT)ied.Format);
+        SWR_ASSERT((info.bpp != 0), "Unsupported format in JitGatherVertices.");
         uint32_t bpc = info.bpp / info.numComps;  ///@todo Code below assumes all components are same size. Need to fix.
 
         Value *stream = LOAD(streams, {ied.StreamIndex, SWR_VERTEX_BUFFER_STATE_pData});
