@@ -381,7 +381,7 @@ rewrite_instr_forward(nir_instr *instr, rewrite_state *state)
 static void
 rewrite_phi_sources(nir_block *block, nir_block *pred, rewrite_state *state)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_phi)
          break;
 
@@ -434,7 +434,7 @@ rewrite_block(nir_block *block, rewrite_state *state)
     * what we want because those instructions (vector gather, conditional
     * select) will already be in SSA form.
     */
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       rewrite_instr_forward(instr, state);
    }
 
@@ -455,7 +455,7 @@ rewrite_block(nir_block *block, rewrite_state *state)
    for (unsigned i = 0; i < block->num_dom_children; i++)
       rewrite_block(block->dom_children[i], state);
 
-   nir_foreach_instr_reverse(block, instr) {
+   nir_foreach_instr_reverse(instr, block) {
       rewrite_instr_backwards(instr, state);
    }
 }

@@ -538,7 +538,7 @@ lower_doubles_block(nir_block *block, void *ctx)
 {
    nir_lower_doubles_options options = *((nir_lower_doubles_options *) ctx);
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_alu)
          continue;
 

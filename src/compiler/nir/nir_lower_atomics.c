@@ -140,7 +140,7 @@ nir_lower_atomics(nir_shader *shader,
    nir_foreach_function(shader, function) {
       if (function->impl) {
          nir_foreach_block(block, function->impl) {
-            nir_foreach_instr_safe(block, instr) {
+            nir_foreach_instr_safe(instr, block) {
                if (instr->type == nir_instr_type_intrinsic)
                   lower_instr(nir_instr_as_intrinsic(instr),
                               shader_program, shader);

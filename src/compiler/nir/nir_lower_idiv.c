@@ -124,7 +124,7 @@ convert_impl(nir_function_impl *impl)
    nir_builder_init(&b, impl);
 
    nir_foreach_block(block, impl) {
-      nir_foreach_instr_safe(block, instr) {
+      nir_foreach_instr_safe(instr, block) {
          if (instr->type == nir_instr_type_alu)
             convert_instr(&b, nir_instr_as_alu(instr));
       }

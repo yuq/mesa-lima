@@ -36,7 +36,7 @@ static bool
 mark_global_var_uses_block(nir_block *block, nir_function_impl *impl,
                            struct hash_table *var_func_table)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

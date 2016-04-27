@@ -215,7 +215,7 @@ lower_vec_to_movs_block(nir_block *block, nir_function_impl *impl)
    bool progress = false;
    nir_shader *shader = impl->function->shader;
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_alu)
          continue;
 

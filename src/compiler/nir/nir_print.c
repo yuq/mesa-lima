@@ -908,7 +908,7 @@ print_block(nir_block *block, print_state *state, unsigned tabs)
 
    free(preds);
 
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       print_instr(instr, state, tabs);
       fprintf(fp, "\n");
    }

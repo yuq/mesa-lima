@@ -107,7 +107,7 @@ gcm_build_block_info(struct exec_list *cf_list, struct gcm_state *state,
 static bool
 gcm_pin_instructions_block(nir_block *block, struct gcm_state *state)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       switch (instr->type) {
       case nir_instr_type_alu:
          switch (nir_instr_as_alu(instr)->op) {

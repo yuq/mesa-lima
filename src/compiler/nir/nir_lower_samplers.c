@@ -160,7 +160,7 @@ lower_impl(nir_function_impl *impl, const struct gl_shader_program *shader_progr
    nir_builder_init(&b, impl);
 
    nir_foreach_block(block, impl) {
-      nir_foreach_instr(block, instr) {
+      nir_foreach_instr(instr, block) {
          if (instr->type == nir_instr_type_tex)
             lower_sampler(nir_instr_as_tex(instr), shader_program, stage, &b);
       }

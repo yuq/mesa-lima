@@ -86,7 +86,7 @@ src_mark_needs_resolve(nir_src *src, void *void_state)
 static bool
 analyze_boolean_resolves_block(nir_block *block)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       switch (instr->type) {
       case nir_instr_type_alu: {
          /* For ALU instructions, the resolve status is handled in a

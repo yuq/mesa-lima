@@ -50,7 +50,7 @@
 static bool
 block_check_for_allowed_instrs(nir_block *block)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       switch (instr->type) {
       case nir_instr_type_intrinsic: {
          nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
@@ -171,19 +171,19 @@ nir_opt_peephole_select_block(nir_block *block, void *mem_ctx)
     * block before.  We have already guaranteed that this is safe by
     * calling block_check_for_allowed_instrs()
     */
-   nir_foreach_instr_safe(then_block, instr) {
+   nir_foreach_instr_safe(instr, then_block) {
       exec_node_remove(&instr->node);
       instr->block = prev_block;
       exec_list_push_tail(&prev_block->instr_list, &instr->node);
    }
 
-   nir_foreach_instr_safe(else_block, instr) {
+   nir_foreach_instr_safe(instr, else_block) {
       exec_node_remove(&instr->node);
       instr->block = prev_block;
       exec_list_push_tail(&prev_block->instr_list, &instr->node);
    }
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_phi)
          break;
 

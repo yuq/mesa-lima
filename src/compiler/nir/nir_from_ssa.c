@@ -305,7 +305,7 @@ static bool
 isolate_phi_nodes_block(nir_block *block, void *dead_ctx)
 {
    nir_instr *last_phi_instr = NULL;
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       /* Phi nodes only ever come at the start of a block */
       if (instr->type != nir_instr_type_phi)
          break;
@@ -324,7 +324,7 @@ isolate_phi_nodes_block(nir_block *block, void *dead_ctx)
       nir_parallel_copy_instr_create(dead_ctx);
    nir_instr_insert_after(last_phi_instr, &block_pcopy->instr);
 
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       /* Phi nodes only ever come at the start of a block */
       if (instr->type != nir_instr_type_phi)
          break;
@@ -370,7 +370,7 @@ isolate_phi_nodes_block(nir_block *block, void *dead_ctx)
 static bool
 coalesce_phi_nodes_block(nir_block *block, struct from_ssa_state *state)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       /* Phi nodes only ever come at the start of a block */
       if (instr->type != nir_instr_type_phi)
          break;
@@ -424,7 +424,7 @@ static bool
 aggressive_coalesce_block(nir_block *block, struct from_ssa_state *state)
 {
    nir_parallel_copy_instr *start_pcopy = NULL;
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       /* Phi nodes only ever come at the start of a block */
       if (instr->type != nir_instr_type_phi) {
          if (instr->type != nir_instr_type_parallel_copy)
@@ -520,7 +520,7 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
 static bool
 resolve_registers_block(nir_block *block, struct from_ssa_state *state)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       state->instr = instr;
       nir_foreach_ssa_def(instr, rewrite_ssa_def, state);
 

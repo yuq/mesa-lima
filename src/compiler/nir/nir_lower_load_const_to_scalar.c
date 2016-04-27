@@ -71,7 +71,7 @@ static void
 nir_lower_load_const_to_scalar_impl(nir_function_impl *impl)
 {
    nir_foreach_block(block, impl) {
-      nir_foreach_instr_safe(block, instr) {
+      nir_foreach_instr_safe(instr, block) {
          if (instr->type == nir_instr_type_load_const)
             lower_load_const_instr_scalar(nir_instr_as_load_const(instr));
       }

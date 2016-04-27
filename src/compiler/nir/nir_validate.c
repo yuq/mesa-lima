@@ -606,7 +606,7 @@ validate_phi_src(nir_phi_instr *instr, nir_block *pred, validate_state *state)
 static void
 validate_phi_srcs(nir_block *block, nir_block *succ, validate_state *state)
 {
-   nir_foreach_instr(succ, instr) {
+   nir_foreach_instr(instr, succ) {
       if (instr->type != nir_instr_type_phi)
          break;
 
@@ -624,7 +624,7 @@ validate_block(nir_block *block, validate_state *state)
    state->block = block;
 
    exec_list_validate(&block->instr_list);
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type == nir_instr_type_phi) {
          assert(instr == nir_block_first_instr(block) ||
                 nir_instr_prev(instr)->type == nir_instr_type_phi);
@@ -1017,7 +1017,7 @@ validate_function_impl(nir_function_impl *impl, validate_state *state)
    }
 
    nir_foreach_block(block, impl) {
-      nir_foreach_instr(block, instr)
+      nir_foreach_instr(instr, block)
          nir_foreach_ssa_def(instr, postvalidate_ssa_def, state);
    }
 }

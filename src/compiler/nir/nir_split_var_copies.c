@@ -208,7 +208,7 @@ split_var_copy_instr(nir_intrinsic_instr *old_copy,
 static bool
 split_var_copies_block(nir_block *block, struct split_var_copies_state *state)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

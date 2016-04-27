@@ -71,7 +71,7 @@ gather_tex_info(nir_tex_instr *instr, nir_shader *shader)
 static bool
 gather_info_block(nir_block *block, void *shader)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       switch (instr->type) {
       case nir_instr_type_intrinsic:
          gather_intrinsic_info(nir_instr_as_intrinsic(instr), shader);

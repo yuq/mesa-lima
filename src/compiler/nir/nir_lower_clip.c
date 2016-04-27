@@ -100,7 +100,7 @@ load_clipdist_input(nir_builder *b, nir_variable *in, nir_ssa_def **val)
 static nir_ssa_def *
 find_output_in_block(nir_block *block, unsigned drvloc)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
 
       if (instr->type == nir_instr_type_intrinsic) {
          nir_intrinsic_instr *intr = nir_instr_as_intrinsic(instr);

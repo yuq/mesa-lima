@@ -678,7 +678,7 @@ vc4_nir_lower_blend_block(nir_block *block, void *state)
 {
         struct vc4_compile *c = state;
 
-        nir_foreach_instr_safe(block, instr) {
+        nir_foreach_instr_safe(instr, block) {
                 if (instr->type != nir_instr_type_intrinsic)
                         continue;
                 nir_intrinsic_instr *intr = nir_instr_as_intrinsic(instr);

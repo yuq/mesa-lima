@@ -100,7 +100,7 @@ vec4_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
 static bool
 setup_system_values_block(nir_block *block, vec4_visitor *v)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 
@@ -213,7 +213,7 @@ vec4_visitor::nir_emit_loop(nir_loop *loop)
 void
 vec4_visitor::nir_emit_block(nir_block *block)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       nir_emit_instr(instr);
    }
 }

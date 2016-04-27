@@ -51,7 +51,7 @@ lower_double_pack_block(nir_block *block, void *ctx)
 {
    nir_builder *b = (nir_builder *) ctx;
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_alu)
          continue;
 

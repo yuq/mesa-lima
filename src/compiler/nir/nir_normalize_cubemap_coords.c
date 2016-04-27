@@ -38,7 +38,7 @@ normalize_cubemap_coords_block(nir_block *block, nir_builder *b)
 {
    bool progress = false;
 
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_tex)
          continue;
 

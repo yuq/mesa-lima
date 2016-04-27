@@ -185,7 +185,7 @@ emit_system_values_block(nir_block *block, fs_visitor *v)
 {
    fs_reg *reg;
 
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 
@@ -432,7 +432,7 @@ fs_visitor::nir_emit_loop(nir_loop *loop)
 void
 fs_visitor::nir_emit_block(nir_block *block)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       nir_emit_instr(instr);
    }
 }

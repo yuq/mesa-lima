@@ -59,7 +59,7 @@ static bool
 add_const_offset_to_base_block(nir_block *block, nir_builder *b,
                                nir_variable_mode mode)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 
@@ -98,7 +98,7 @@ add_const_offset_to_base(nir_shader *nir, nir_variable_mode mode)
 static bool
 remap_vs_attrs(nir_block *block, GLbitfield64 inputs_read)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 
@@ -122,7 +122,7 @@ remap_vs_attrs(nir_block *block, GLbitfield64 inputs_read)
 static bool
 remap_inputs_with_vue_map(nir_block *block, const struct brw_vue_map *vue_map)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 
@@ -142,7 +142,7 @@ static bool
 remap_patch_urb_offsets(nir_block *block, nir_builder *b,
                         const struct brw_vue_map *vue_map)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

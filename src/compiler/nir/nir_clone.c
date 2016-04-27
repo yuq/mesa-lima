@@ -523,7 +523,7 @@ clone_block(clone_state *state, struct exec_list *cf_list, const nir_block *blk)
    /* We need this for phi sources */
    add_remap(state, nblk, blk);
 
-   nir_foreach_instr(blk, instr) {
+   nir_foreach_instr(instr, blk) {
       if (instr->type == nir_instr_type_phi) {
          /* Phi instructions are a bit of a special case when cloning because
           * we don't want inserting the instruction to automatically handle

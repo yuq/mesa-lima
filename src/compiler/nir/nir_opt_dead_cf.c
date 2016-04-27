@@ -91,7 +91,7 @@ opt_constant_if(nir_if *if_stmt, bool condition)
       nir_cf_node_as_block(condition ? nir_if_last_then_node(if_stmt)
                                      : nir_if_last_else_node(if_stmt));
 
-   nir_foreach_instr_safe(after, instr) {
+   nir_foreach_instr_safe(instr, after) {
       if (instr->type != nir_instr_type_phi)
          break;
 
@@ -138,7 +138,7 @@ static bool
 cf_node_has_side_effects(nir_cf_node *node)
 {
    nir_foreach_block_in_cf_node(block, node) {
-      nir_foreach_instr(block, instr) {
+      nir_foreach_instr(instr, block) {
          if (instr->type == nir_instr_type_call)
             return true;
 
@@ -207,7 +207,7 @@ loop_is_dead(nir_loop *loop)
                               nir_metadata_dominance);
 
    for (nir_block *cur = after->imm_dom; cur != before; cur = cur->imm_dom) {
-      nir_foreach_instr(cur, instr) {
+      nir_foreach_instr(instr, cur) {
          if (!nir_foreach_ssa_def(instr, def_not_live_out, after))
             return false;
       }

@@ -31,7 +31,7 @@ anv_nir_lower_push_constants(nir_shader *shader)
          continue;
 
       nir_foreach_block(block, function->impl) {
-         nir_foreach_instr(block, instr) {
+         nir_foreach_instr(instr, block) {
             if (instr->type != nir_instr_type_intrinsic)
                continue;
 

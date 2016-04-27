@@ -139,7 +139,7 @@ vc4_nir_lower_txf_ms_block(nir_block *block, void *arg)
         nir_builder b;
         nir_builder_init(&b, impl);
 
-        nir_foreach_instr_safe(block, instr) {
+        nir_foreach_instr_safe(instr, block) {
                 if (instr->type == nir_instr_type_tex) {
                         vc4_nir_lower_txf_ms_instr(c, &b,
                                                    nir_instr_as_tex(instr));

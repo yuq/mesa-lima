@@ -204,7 +204,7 @@ static bool
 lower_locals_to_regs_block(nir_block *block,
                            struct locals_to_regs_state *state)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

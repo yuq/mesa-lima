@@ -79,7 +79,7 @@ nir_opt_undef(nir_shader *shader)
    nir_foreach_function(shader, function) {
       if (function->impl) {
          nir_foreach_block(block, function->impl) {
-            nir_foreach_instr_safe(block, instr) {
+            nir_foreach_instr_safe(instr, block) {
                if (instr->type == nir_instr_type_alu)
                   if (opt_undef_alu(nir_instr_as_alu(instr)))
                       progress = true;

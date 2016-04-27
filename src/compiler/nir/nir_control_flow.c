@@ -241,7 +241,7 @@ split_block_beginning(nir_block *block)
     * sourcse will be messed up. This will reverse the order of the phi's, but
     * order shouldn't matter.
     */
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_phi)
          break;
 
@@ -256,7 +256,7 @@ split_block_beginning(nir_block *block)
 static void
 rewrite_phi_preds(nir_block *block, nir_block *old_pred, nir_block *new_pred)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_phi)
          break;
 
@@ -274,7 +274,7 @@ static void
 insert_phi_undef(nir_block *block, nir_block *pred)
 {
    nir_function_impl *impl = nir_cf_node_get_function(&block->cf_node);
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_phi)
          break;
 
@@ -404,7 +404,7 @@ split_block_before_instr(nir_instr *instr)
    assert(instr->type != nir_instr_type_phi);
    nir_block *new_block = split_block_beginning(instr->block);
 
-   nir_foreach_instr_safe(instr->block, cur_instr) {
+   nir_foreach_instr_safe(cur_instr, instr->block) {
       if (cur_instr == instr)
          break;
 
@@ -537,7 +537,7 @@ nir_handle_add_jump(nir_block *block)
 static void
 remove_phi_src(nir_block *block, nir_block *pred)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_phi)
          break;
 
@@ -706,7 +706,7 @@ cleanup_cf_node(nir_cf_node *node, nir_function_impl *impl)
    case nir_cf_node_block: {
       nir_block *block = nir_cf_node_as_block(node);
       /* We need to walk the instructions and clean up defs/uses */
-      nir_foreach_instr_safe(block, instr) {
+      nir_foreach_instr_safe(instr, block) {
          if (instr->type == nir_instr_type_jump) {
             nir_jump_type jump_type = nir_instr_as_jump(instr)->type;
             unlink_jump(block, jump_type, false);

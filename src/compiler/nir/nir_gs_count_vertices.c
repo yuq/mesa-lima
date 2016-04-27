@@ -66,7 +66,7 @@ nir_gs_count_vertices(const nir_shader *shader)
       set_foreach(function->impl->end_block->predecessors, entry) {
          nir_block *block = (nir_block *) entry->key;
 
-         nir_foreach_instr_reverse(block, instr) {
+         nir_foreach_instr_reverse(instr, block) {
             nir_intrinsic_instr *intrin = as_set_vertex_count(instr);
             if (!intrin)
                continue;

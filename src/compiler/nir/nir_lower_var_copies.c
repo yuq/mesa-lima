@@ -160,7 +160,7 @@ lower_var_copies_impl(nir_function_impl *impl)
    void *mem_ctx = ralloc_parent(impl);
 
    nir_foreach_block(block, impl) {
-      nir_foreach_instr_safe(block, instr) {
+      nir_foreach_instr_safe(instr, block) {
          if (instr->type != nir_instr_type_intrinsic)
             continue;
 

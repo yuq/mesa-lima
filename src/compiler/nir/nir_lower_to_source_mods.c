@@ -36,7 +36,7 @@
 static bool
 nir_lower_to_source_mods_block(nir_block *block)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_alu)
          continue;
 

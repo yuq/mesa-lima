@@ -43,7 +43,7 @@ apply_attr_wa_block(nir_block *block, struct attr_wa_state *state)
 {
    nir_builder *b = &state->builder;
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

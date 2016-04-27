@@ -1708,7 +1708,7 @@ nir_index_ssa_defs(nir_function_impl *impl)
    unsigned index = 0;
 
    nir_foreach_block(block, impl) {
-      nir_foreach_instr(block, instr)
+      nir_foreach_instr(instr, block)
          nir_foreach_ssa_def(instr, index_ssa_def_cb, &index);
    }
 
@@ -1725,7 +1725,7 @@ nir_index_instrs(nir_function_impl *impl)
    unsigned index = 0;
 
    nir_foreach_block(block, impl) {
-      nir_foreach_instr(block, instr)
+      nir_foreach_instr(instr, block)
          instr->index = index++;
    }
 

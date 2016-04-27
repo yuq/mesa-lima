@@ -321,7 +321,7 @@ nir_lower_tex_block(nir_block *block, void *void_state)
    const nir_lower_tex_options *options = state->options;
    nir_builder *b = &state->b;
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_tex)
          continue;
 

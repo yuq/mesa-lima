@@ -96,7 +96,7 @@ valid_dest(nir_block *block, nir_dest *dest)
 static bool
 block_check_for_allowed_instrs(nir_block *block)
 {
-	nir_foreach_instr(block, instr) {
+	nir_foreach_instr(instr, block) {
 		switch (instr->type) {
 		case nir_instr_type_intrinsic: {
 			nir_intrinsic_instr *intr = nir_instr_as_intrinsic(instr);
@@ -165,7 +165,7 @@ static void
 flatten_block(nir_builder *bld, nir_block *if_block, nir_block *prev_block,
 		nir_ssa_def *condition, bool invert)
 {
-	nir_foreach_instr_safe(if_block, instr) {
+	nir_foreach_instr_safe(instr, if_block) {
 		if (instr->type == nir_instr_type_intrinsic) {
 			nir_intrinsic_instr *intr = nir_instr_as_intrinsic(instr);
 			if ((intr->intrinsic == nir_intrinsic_discard) ||
@@ -270,7 +270,7 @@ lower_if_else_block(nir_block *block, void *void_state)
 	flatten_block(&state->b, else_block, prev_block,
 			if_stmt->condition.ssa, true);
 
-	nir_foreach_instr_safe(block, instr) {
+	nir_foreach_instr_safe(instr, block) {
 		if (instr->type != nir_instr_type_phi)
 			break;
 

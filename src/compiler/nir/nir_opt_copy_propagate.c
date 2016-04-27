@@ -246,7 +246,7 @@ nir_copy_prop_impl(nir_function_impl *impl)
    bool progress = false;
 
    nir_foreach_block(block, impl) {
-      nir_foreach_instr(block, instr) {
+      nir_foreach_instr(instr, block) {
          if (copy_prop_instr(instr))
             progress = true;
       }

@@ -54,7 +54,7 @@ static void
 get_used_bindings_block(nir_block *block,
                         struct apply_pipeline_layout_state *state)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       switch (instr->type) {
       case nir_instr_type_intrinsic: {
          nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
@@ -212,7 +212,7 @@ static void
 apply_pipeline_layout_block(nir_block *block,
                             struct apply_pipeline_layout_state *state)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       switch (instr->type) {
       case nir_instr_type_intrinsic: {
          nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);

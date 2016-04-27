@@ -524,7 +524,7 @@ ${pass_name}_block(nir_block *block, const bool *condition_flags,
 {
    bool progress = false;
 
-   nir_foreach_instr_reverse_safe(block, instr) {
+   nir_foreach_instr_reverse_safe(instr, block) {
       if (instr->type != nir_instr_type_alu)
          continue;
 

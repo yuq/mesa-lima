@@ -1434,13 +1434,13 @@ nir_block_last_instr(nir_block *block)
    return exec_node_data(nir_instr, tail, node);
 }
 
-#define nir_foreach_instr(block, instr) \
+#define nir_foreach_instr(instr, block) \
    foreach_list_typed(nir_instr, instr, node, &(block)->instr_list)
-#define nir_foreach_instr_reverse(block, instr) \
+#define nir_foreach_instr_reverse(instr, block) \
    foreach_list_typed_reverse(nir_instr, instr, node, &(block)->instr_list)
-#define nir_foreach_instr_safe(block, instr) \
+#define nir_foreach_instr_safe(instr, block) \
    foreach_list_typed_safe(nir_instr, instr, node, &(block)->instr_list)
-#define nir_foreach_instr_reverse_safe(block, instr) \
+#define nir_foreach_instr_reverse_safe(instr, block) \
    foreach_list_typed_reverse_safe(nir_instr, instr, node, &(block)->instr_list)
 
 typedef struct nir_if {
@@ -2018,7 +2018,7 @@ nir_after_cf_node_and_phis(nir_cf_node *node)
    nir_block *block = nir_cf_node_as_block(nir_cf_node_next(node));
    assert(block->cf_node.type == nir_cf_node_block);
 
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_phi)
          return nir_before_instr(instr);
    }

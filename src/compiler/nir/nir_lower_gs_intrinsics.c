@@ -133,7 +133,7 @@ rewrite_end_primitive(nir_intrinsic_instr *intrin, struct state *state)
 static bool
 rewrite_intrinsics(nir_block *block, struct state *state)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

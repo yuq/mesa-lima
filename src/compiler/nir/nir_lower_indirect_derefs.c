@@ -165,7 +165,7 @@ lower_indirect_block(nir_block *block, nir_builder *b,
 {
    bool progress = false;
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

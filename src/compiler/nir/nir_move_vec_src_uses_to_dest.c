@@ -64,7 +64,7 @@ ssa_def_dominates_instr(nir_ssa_def *def, nir_instr *instr)
 static bool
 move_vec_src_uses_to_dest_block(nir_block *block)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_alu)
          continue;
 

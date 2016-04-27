@@ -168,7 +168,7 @@ lower_phis_to_scalar_block(nir_block *block,
 {
    /* Find the last phi node in the block */
    nir_phi_instr *last_phi = NULL;
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_phi)
          break;
 
@@ -178,7 +178,7 @@ lower_phis_to_scalar_block(nir_block *block,
    /* We have to handle the phi nodes in their own pass due to the way
     * we're modifying the linked list of instructions.
     */
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_phi)
          break;
 

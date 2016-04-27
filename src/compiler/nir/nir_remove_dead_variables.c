@@ -71,7 +71,7 @@ add_var_use_shader(nir_shader *shader, struct set *live)
    nir_foreach_function(shader, function) {
       if (function->impl) {
          nir_foreach_block(block, function->impl) {
-            nir_foreach_instr(block, instr) {
+            nir_foreach_instr(instr, block) {
                switch(instr->type) {
                case nir_instr_type_intrinsic:
                   add_var_use_intrinsic(nir_instr_as_intrinsic(instr), live);

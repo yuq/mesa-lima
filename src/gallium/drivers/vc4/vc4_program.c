@@ -1694,7 +1694,7 @@ ntq_emit_instr(struct vc4_compile *c, nir_instr *instr)
 static void
 ntq_emit_block(struct vc4_compile *c, nir_block *block)
 {
-        nir_foreach_instr(block, instr) {
+        nir_foreach_instr(instr, block) {
                 ntq_emit_instr(c, instr);
         }
 }
@@ -1781,7 +1781,7 @@ static bool
 count_nir_instrs_in_block(nir_block *block, void *state)
 {
         int *count = (int *) state;
-        nir_foreach_instr(block, instr) {
+        nir_foreach_instr(instr, block) {
                 *count = *count + 1;
         }
         return true;

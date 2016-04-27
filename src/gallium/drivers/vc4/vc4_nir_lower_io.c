@@ -437,7 +437,7 @@ vc4_nir_lower_io_block(nir_block *block, void *arg)
         nir_builder b;
         nir_builder_init(&b, impl);
 
-        nir_foreach_instr_safe(block, instr)
+        nir_foreach_instr_safe(instr, block)
                 vc4_nir_lower_io_instr(c, &b, instr);
 
         return true;

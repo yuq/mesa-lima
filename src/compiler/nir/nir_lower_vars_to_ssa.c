@@ -407,7 +407,7 @@ static bool
 register_variable_uses_block(nir_block *block,
                              struct lower_variables_state *state)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 
@@ -484,7 +484,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
    nir_builder b;
    nir_builder_init(&b, state->impl);
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

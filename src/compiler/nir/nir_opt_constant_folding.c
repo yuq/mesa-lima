@@ -177,7 +177,7 @@ constant_fold_block(nir_block *block, void *mem_ctx)
 {
    bool progress = false;
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       switch (instr->type) {
       case nir_instr_type_alu:
          progress |= constant_fold_alu_instr(nir_instr_as_alu(instr), mem_ctx);

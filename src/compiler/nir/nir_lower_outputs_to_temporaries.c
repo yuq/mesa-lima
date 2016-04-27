@@ -61,7 +61,7 @@ emit_output_copies(nir_cursor cursor, struct lower_outputs_state *state)
 static bool
 emit_output_copies_block(nir_block *block, void *state)
 {
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

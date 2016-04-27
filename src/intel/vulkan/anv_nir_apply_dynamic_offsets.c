@@ -31,7 +31,7 @@ apply_dynamic_offsets_block(nir_block *block, nir_builder *b,
 {
    struct anv_descriptor_set_layout *set_layout;
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 

@@ -1811,7 +1811,7 @@ emit_block(struct ir3_compile *ctx, nir_block *nblock)
 	_mesa_hash_table_destroy(ctx->addr_ht, NULL);
 	ctx->addr_ht = NULL;
 
-	nir_foreach_instr(nblock, instr) {
+	nir_foreach_instr(instr, nblock) {
 		emit_instr(ctx, instr);
 		if (ctx->error)
 			return;

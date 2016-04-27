@@ -115,7 +115,7 @@ init_instr(nir_instr *instr, struct exec_list *worklist)
 static bool
 init_block(nir_block *block, struct exec_list *worklist)
 {
-   nir_foreach_instr(block, instr)
+   nir_foreach_instr(instr, block)
       init_instr(instr, worklist);
 
    nir_if *following_if = nir_block_get_following_if(block);
@@ -148,7 +148,7 @@ nir_opt_dce_impl(nir_function_impl *impl)
    bool progress = false;
 
    nir_foreach_block(block, impl) {
-      nir_foreach_instr_safe(block, instr) {
+      nir_foreach_instr_safe(instr, block) {
          if (!instr->pass_flags) {
             nir_instr_remove(instr);
             progress = true;

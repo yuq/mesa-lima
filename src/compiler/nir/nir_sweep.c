@@ -63,7 +63,7 @@ sweep_block(nir_shader *nir, nir_block *block)
 {
    ralloc_steal(nir, block);
 
-   nir_foreach_instr(block, instr) {
+   nir_foreach_instr(instr, block) {
       ralloc_steal(nir, instr);
 
       nir_foreach_src(instr, sweep_src_indirect, nir);

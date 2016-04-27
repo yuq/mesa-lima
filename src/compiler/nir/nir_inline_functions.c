@@ -30,7 +30,7 @@ static bool inline_function_impl(nir_function_impl *impl, struct set *inlined);
 static bool
 rewrite_param_derefs_block(nir_block *block, nir_call_instr *call)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 
@@ -89,7 +89,7 @@ lower_param_to_local(nir_variable *param, nir_function_impl *impl, bool write)
 static bool
 lower_params_to_locals_block(nir_block *block, nir_function_impl *impl)
 {
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 
@@ -135,7 +135,7 @@ inline_functions_block(nir_block *block, nir_builder *b,
     * properly get moved to the next block when it gets split, and we
     * continue iterating there.
     */
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_call)
          continue;
 
