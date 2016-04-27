@@ -806,7 +806,7 @@ static void
 print_parallel_copy_instr(nir_parallel_copy_instr *instr, print_state *state)
 {
    FILE *fp = state->fp;
-   nir_foreach_parallel_copy_entry(instr, entry) {
+   nir_foreach_parallel_copy_entry(entry, instr) {
       if (&entry->node != exec_list_get_head(&instr->entries))
          fprintf(fp, "; ");
 

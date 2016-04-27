@@ -395,7 +395,7 @@ static void
 aggressive_coalesce_parallel_copy(nir_parallel_copy_instr *pcopy,
                                  struct from_ssa_state *state)
 {
-   nir_foreach_parallel_copy_entry(pcopy, entry) {
+   nir_foreach_parallel_copy_entry(entry, pcopy) {
       if (!entry->src.is_ssa)
          continue;
 
@@ -582,7 +582,7 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
                       struct from_ssa_state *state)
 {
    unsigned num_copies = 0;
-   nir_foreach_parallel_copy_entry(pcopy, entry) {
+   nir_foreach_parallel_copy_entry(entry, pcopy) {
       /* Sources may be SSA */
       if (!entry->src.is_ssa && entry->src.reg.reg == entry->dest.reg.reg)
          continue;
@@ -615,7 +615,7 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
     *  - Predicessors are recorded from sources and destinations
     */
    int num_vals = 0;
-   nir_foreach_parallel_copy_entry(pcopy, entry) {
+   nir_foreach_parallel_copy_entry(entry, pcopy) {
       /* Sources may be SSA */
       if (!entry->src.is_ssa && entry->src.reg.reg == entry->dest.reg.reg)
          continue;

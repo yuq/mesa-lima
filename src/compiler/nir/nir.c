@@ -981,7 +981,7 @@ static bool
 visit_parallel_copy_dest(nir_parallel_copy_instr *instr,
                          nir_foreach_dest_cb cb, void *state)
 {
-   nir_foreach_parallel_copy_entry(instr, entry) {
+   nir_foreach_parallel_copy_entry(entry, instr) {
       if (!cb(&entry->dest, state))
          return false;
    }
@@ -1174,7 +1174,7 @@ static bool
 visit_parallel_copy_src(nir_parallel_copy_instr *instr,
                         nir_foreach_src_cb cb, void *state)
 {
-   nir_foreach_parallel_copy_entry(instr, entry) {
+   nir_foreach_parallel_copy_entry(entry, instr) {
       if (!visit_src(&entry->src, cb, state))
          return false;
    }

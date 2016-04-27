@@ -1323,7 +1323,7 @@ typedef struct {
    nir_dest dest;
 } nir_parallel_copy_entry;
 
-#define nir_foreach_parallel_copy_entry(pcopy, entry) \
+#define nir_foreach_parallel_copy_entry(entry, pcopy) \
    foreach_list_typed(nir_parallel_copy_entry, entry, node, &(pcopy)->entries)
 
 typedef struct {
