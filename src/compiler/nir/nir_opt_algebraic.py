@@ -381,11 +381,16 @@ optimizations = [
      'options->lower_unpack_snorm_4x8'),
 ]
 
-def fexp2i(exp):
-   # We assume that exp is already in the range [-126, 127].
-   return ('ishl', ('iadd', exp, 127), 23)
+def fexp2i(exp, bits):
+   # We assume that exp is already in the right range.
+   if bits == 32:
+      return ('ishl', ('iadd', exp, 127), 23)
+   elif bits == 64:
+      return ('pack_double_2x32_split', 0, ('ishl', ('iadd', exp, 1023), 20))
+   else:
+      assert False
 
-def ldexp32(f, exp):
+def ldexp(f, exp, bits):
    # First, we clamp exp to a reasonable range.  The maximum possible range
    # for a normal exponent is [-126, 127] and, throwing in denormals, you get
    # a maximum range of [-149, 127].  This means that we can potentially have
@@ -396,7 +401,12 @@ def ldexp32(f, exp):
    # handles a range on exp of [-252, 254] which allows you to create any
    # value (including denorms if the hardware supports it) and to adjust the
    # exponent of any normal value to anything you want.
-   exp = ('imin', ('imax', exp, -252), 254)
+   if bits == 32:
+      exp = ('imin', ('imax', exp, -252), 254)
+   elif bits == 64:
+      exp = ('imin', ('imax', exp, -2044), 2046)
+   else:
+      assert False
 
    # Now we compute two powers of 2, one for exp/2 and one for exp-exp/2.
    # (We use ishr which isn't the same for -1, but the -1 case still works
@@ -406,11 +416,14 @@ def ldexp32(f, exp):
    # that you can get with normalized values.  Instead, we create two powers
    # of two and multiply by them each in turn.  That way the effective range
    # of our exponent is doubled.
-   pow2_1 = fexp2i(('ishr', exp, 1))
-   pow2_2 = fexp2i(('isub', exp, ('ishr', exp, 1)))
+   pow2_1 = fexp2i(('ishr', exp, 1), bits)
+   pow2_2 = fexp2i(('isub', exp, ('ishr', exp, 1)), bits)
    return ('fmul', ('fmul', f, pow2_1), pow2_2)
 
-optimizations += [(('ldexp@32', 'x', 'exp'), ldexp32('x', 'exp'))]
+optimizations += [
+   (('ldexp@32', 'x', 'exp'), ldexp('x', 'exp', 32)),
+   (('ldexp@64', 'x', 'exp'), ldexp('x', 'exp', 64)),
+]
 
 # Unreal Engine 4 demo applications open-codes bitfieldReverse()
 def bitfield_reverse(u):
