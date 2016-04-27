@@ -362,6 +362,17 @@ struct qblock {
 
         int index;
 
+        /* Instruction IPs for the first and last instruction of the block.
+         * Set by vc4_qpu_schedule.c.
+         */
+        uint32_t start_qpu_ip;
+        uint32_t end_qpu_ip;
+
+        /* Instruction IP for the branch instruction of the block.  Set by
+         * vc4_qpu_schedule.c.
+         */
+        uint32_t branch_qpu_ip;
+
         /** @{ used by vc4_qir_live_variables.c */
         BITSET_WORD *def;
         BITSET_WORD *use;
