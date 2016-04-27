@@ -179,7 +179,8 @@ extern const struct brw_tracked_state gen8_vs_state;
 extern const struct brw_tracked_state brw_cs_work_groups_surface;
 
 static inline bool
-brw_state_dirty(struct brw_context *brw, GLuint mesa_flags, uint64_t brw_flags)
+brw_state_dirty(const struct brw_context *brw,
+                GLuint mesa_flags, uint64_t brw_flags)
 {
    return ((brw->NewGLState & mesa_flags) |
            (brw->ctx.NewDriverState & brw_flags)) != 0;

@@ -281,7 +281,7 @@ brw_vs_debug_recompile(struct brw_context *brw,
 }
 
 static bool
-brw_vs_state_dirty(struct brw_context *brw)
+brw_vs_state_dirty(const struct brw_context *brw)
 {
    return brw_state_dirty(brw,
                           _NEW_BUFFERS |

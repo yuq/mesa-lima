@@ -379,7 +379,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
 }
 
 static bool
-brw_wm_state_dirty (struct brw_context *brw)
+brw_wm_state_dirty(const struct brw_context *brw)
 {
    return brw_state_dirty(brw,
                           _NEW_BUFFERS |
