@@ -138,7 +138,7 @@ propagate_across_edge(nir_block *pred, nir_block *succ,
          break;
       nir_phi_instr *phi = nir_instr_as_phi(instr);
 
-      nir_foreach_phi_src(phi, src) {
+      nir_foreach_phi_src(src, phi) {
          if (src->pred == pred) {
             set_src_live(&src->src, live);
             break;

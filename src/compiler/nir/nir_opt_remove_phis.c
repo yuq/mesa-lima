@@ -56,7 +56,7 @@ remove_phis_block(nir_block *block)
       nir_ssa_def *def = NULL;
       bool srcs_same = true;
 
-      nir_foreach_phi_src(phi, src) {
+      nir_foreach_phi_src(src, phi) {
          assert(src->src.is_ssa);
 
          /* For phi nodes at the beginning of loops, we may encounter some

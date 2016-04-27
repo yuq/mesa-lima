@@ -261,7 +261,7 @@ rewrite_phi_preds(nir_block *block, nir_block *old_pred, nir_block *new_pred)
          break;
 
       nir_phi_instr *phi = nir_instr_as_phi(instr);
-      nir_foreach_phi_src(phi, src) {
+      nir_foreach_phi_src(src, phi) {
          if (src->pred == old_pred) {
             src->pred = new_pred;
             break;
@@ -542,7 +542,7 @@ remove_phi_src(nir_block *block, nir_block *pred)
          break;
 
       nir_phi_instr *phi = nir_instr_as_phi(instr);
-      nir_foreach_phi_src_safe(phi, src) {
+      nir_foreach_phi_src_safe(src, phi) {
          if (src->pred == pred) {
             list_del(&src->src.use_link);
             exec_node_remove(&src->node);

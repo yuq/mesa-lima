@@ -793,7 +793,7 @@ print_phi_instr(nir_phi_instr *instr, print_state *state)
    FILE *fp = state->fp;
    print_dest(&instr->dest, state);
    fprintf(fp, " = phi ");
-   nir_foreach_phi_src(instr, src) {
+   nir_foreach_phi_src(src, instr) {
       if (&src->node != exec_list_get_head(&instr->srcs))
          fprintf(fp, ", ");
 

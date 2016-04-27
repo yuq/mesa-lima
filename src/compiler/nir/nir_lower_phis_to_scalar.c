@@ -146,7 +146,7 @@ should_lower_phi(nir_phi_instr *phi, struct lower_phis_to_scalar_state *state)
 
    bool scalarizable = true;
 
-   nir_foreach_phi_src(phi, src) {
+   nir_foreach_phi_src(src, phi) {
       scalarizable = is_phi_src_scalarizable(src, state);
       if (!scalarizable)
          break;
@@ -214,7 +214,7 @@ lower_phis_to_scalar_block(nir_block *block,
 
          vec->src[i].src = nir_src_for_ssa(&new_phi->dest.ssa);
 
-         nir_foreach_phi_src(phi, src) {
+         nir_foreach_phi_src(src, phi) {
             /* We need to insert a mov to grab the i'th component of src */
             nir_alu_instr *mov = nir_alu_instr_create(state->mem_ctx,
                                                       nir_op_imov);

@@ -97,7 +97,7 @@ opt_constant_if(nir_if *if_stmt, bool condition)
 
       nir_phi_instr *phi = nir_instr_as_phi(instr);
       nir_ssa_def *def = NULL;
-      nir_foreach_phi_src(phi, phi_src) {
+      nir_foreach_phi_src(phi_src, phi) {
          if (phi_src->pred != last_block)
             continue;
 

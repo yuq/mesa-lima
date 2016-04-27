@@ -588,7 +588,7 @@ validate_phi_src(nir_phi_instr *instr, nir_block *pred, validate_state *state)
    assert(instr->dest.is_ssa);
 
    exec_list_validate(&instr->srcs);
-   nir_foreach_phi_src(instr, src) {
+   nir_foreach_phi_src(src, instr) {
       if (src->pred == pred) {
          assert(src->src.is_ssa);
          assert(src->src.ssa->num_components ==

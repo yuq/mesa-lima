@@ -389,7 +389,7 @@ rewrite_phi_sources(nir_block *block, nir_block *pred, rewrite_state *state)
 
       state->parent_instr = instr;
 
-      nir_foreach_phi_src(phi_instr, src) {
+      nir_foreach_phi_src(src, phi_instr) {
          if (src->pred == pred) {
             rewrite_use(&src->src, state);
             break;

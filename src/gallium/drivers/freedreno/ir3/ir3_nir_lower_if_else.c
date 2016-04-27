@@ -281,7 +281,7 @@ lower_if_else_block(nir_block *block, void *void_state)
 		memset(sel->src[0].swizzle, 0, sizeof sel->src[0].swizzle);
 
 		assert(exec_list_length(&phi->srcs) == 2);
-		nir_foreach_phi_src(phi, src) {
+		nir_foreach_phi_src(src, phi) {
 			assert(src->pred == then_block || src->pred == else_block);
 			assert(src->src.is_ssa);
 

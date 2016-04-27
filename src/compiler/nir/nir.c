@@ -1162,7 +1162,7 @@ visit_load_const_src(nir_load_const_instr *instr, nir_foreach_src_cb cb,
 static bool
 visit_phi_src(nir_phi_instr *instr, nir_foreach_src_cb cb, void *state)
 {
-   nir_foreach_phi_src(instr, src) {
+   nir_foreach_phi_src(src, instr) {
       if (!visit_src(&src->src, cb, state))
          return false;
    }

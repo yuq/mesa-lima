@@ -292,7 +292,7 @@ gcm_schedule_late_def(nir_ssa_def *def, void *void_state)
       if (use_instr->type == nir_instr_type_phi) {
          nir_phi_instr *phi = nir_instr_as_phi(use_instr);
 
-         nir_foreach_phi_src(phi, phi_src) {
+         nir_foreach_phi_src(phi_src, phi) {
             if (phi_src->src.ssa == def)
                lca = nir_dominance_lca(lca, phi_src->pred);
          }
