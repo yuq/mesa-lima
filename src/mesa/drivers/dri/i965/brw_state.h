@@ -66,7 +66,6 @@ extern const struct brw_tracked_state brw_polygon_stipple;
 extern const struct brw_tracked_state brw_recalculate_urb_fence;
 extern const struct brw_tracked_state brw_sf_unit;
 extern const struct brw_tracked_state brw_sf_vp;
-extern const struct brw_tracked_state brw_state_base_address;
 extern const struct brw_tracked_state brw_vs_samplers;
 extern const struct brw_tracked_state brw_tcs_samplers;
 extern const struct brw_tracked_state brw_tes_samplers;
@@ -194,7 +193,6 @@ uint32_t
 brw_depthbuffer_format(struct brw_context *brw);
 
 void brw_upload_state_base_address(struct brw_context *brw);
-
 
 /* gen8_depth_state.c */
 void gen8_write_pma_stall_bits(struct brw_context *brw,

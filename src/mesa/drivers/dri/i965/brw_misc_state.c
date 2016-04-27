@@ -1066,6 +1066,9 @@ const struct brw_tracked_state brw_invariant_state = {
 void
 brw_upload_state_base_address(struct brw_context *brw)
 {
+   if (brw->batch.state_base_address_emitted)
+      return;
+
    /* FINISHME: According to section 3.6.1 "STATE_BASE_ADDRESS" of
     * vol1a of the G45 PRM, MI_FLUSH with the ISC invalidate should be
     * programmed prior to STATE_BASE_ADDRESS.
@@ -1201,13 +1204,5 @@ brw_upload_state_base_address(struct brw_context *brw)
     */
 
    brw->ctx.NewDriverState |= BRW_NEW_STATE_BASE_ADDRESS;
+   brw->batch.state_base_address_emitted = true;
 }
-
-const struct brw_tracked_state brw_state_base_address = {
-   .dirty = {
-      .mesa = 0,
-      .brw = BRW_NEW_BATCH |
-             BRW_NEW_PROGRAM_CACHE,
-   },
-   .emit = brw_upload_state_base_address
-};

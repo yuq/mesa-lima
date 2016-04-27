@@ -73,6 +73,7 @@ intel_batchbuffer_reset(struct brw_context *brw)
    brw->batch.reserved_space = BATCH_RESERVED;
    brw->batch.state_batch_offset = brw->batch.bo->size;
    brw->batch.needs_sol_reset = false;
+   brw->batch.state_base_address_emitted = false;
 
    /* We don't know what ring the new batch will be sent to until we see the
     * first BEGIN_BATCH or BEGIN_BATCH_BLT.  Mark it as unknown.
