@@ -723,6 +723,47 @@ fs_visitor::assign_regs(bool allow_spilling, bool spill_all)
    return true;
 }
 
+namespace {
+   /**
+    * Maximum spill block size we expect to encounter in 32B units.
+    *
+    * This is somewhat arbitrary and doesn't necessarily limit the maximum
+    * variable size that can be spilled -- A higher value will allow a
+    * variable of a given size to be spilled more efficiently with a smaller
+    * number of scratch messages, but will increase the likelihood of a
+    * collision between the MRFs reserved for spilling and other MRFs used by
+    * the program (and possibly increase GRF register pressure on platforms
+    * without hardware MRFs), what could cause register allocation to fail.
+    *
+    * For the moment reserve just enough space so a register of 32 bit
+    * component type and natural region width can be spilled without splitting
+    * into multiple (force_writemask_all) scratch messages.
+    */
+   unsigned
+   spill_max_size(const backend_shader *s)
+   {
+      /* FINISHME - On Gen7+ it should be possible to avoid this limit
+       *            altogether by spilling directly from the temporary GRF
+       *            allocated to hold the result of the instruction (and the
+       *            scratch write header).
+       */
+      /* FINISHME - The shader's dispatch width probably belongs in
+       *            backend_shader (or some nonexistent fs_shader class?)
+       *            rather than in the visitor class.
+       */
+      return static_cast<const fs_visitor *>(s)->dispatch_width / 8;
+   }
+
+   /**
+    * First MRF register available for spilling.
+    */
+   unsigned
+   spill_base_mrf(const backend_shader *s)
+   {
+      return BRW_MAX_MRF(s->devinfo->gen) - spill_max_size(s) - 1;
+   }
+}
+
 void
 fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
                          uint32_t spill_offset, int count)
@@ -753,7 +794,7 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
       unspill_inst->regs_written = reg_size;
 
       if (!gen7_read) {
-         unspill_inst->base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
+         unspill_inst->base_mrf = spill_base_mrf(this);
          unspill_inst->mlen = 1; /* header contains offset */
       }
 
@@ -767,11 +808,8 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
                        uint32_t spill_offset, int count)
 {
    int reg_size = 1;
-   int spill_base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
-   if (dispatch_width == 16 && count % 2 == 0) {
-      spill_base_mrf = FIRST_SPILL_MRF(devinfo->gen);
+   if (dispatch_width == 16 && count % 2 == 0)
       reg_size = 2;
-   }
 
    const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
                               .group(reg_size * 8, 0)
@@ -783,7 +821,7 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
       src.reg_offset += reg_size;
       spill_inst->offset = spill_offset + i * reg_size * REG_SIZE;
       spill_inst->mlen = 1 + reg_size; /* header, value */
-      spill_inst->base_mrf = spill_base_mrf;
+      spill_inst->base_mrf = spill_base_mrf(this);
    }
 }
 
@@ -869,8 +907,6 @@ fs_visitor::spill_reg(int spill_reg)
    int size = alloc.sizes[spill_reg];
    unsigned int spill_offset = last_scratch;
    assert(ALIGN(spill_offset, 16) == spill_offset); /* oword read/write req. */
-   int spill_base_mrf = dispatch_width > 8 ? FIRST_SPILL_MRF(devinfo->gen) :
-                                             FIRST_SPILL_MRF(devinfo->gen) + 1;
 
    /* Spills may use MRFs 13-15 in the SIMD16 case.  Our texturing is done
     * using up to 11 MRFs starting from either m1 or m2, and fb writes can use
@@ -883,7 +919,7 @@ fs_visitor::spill_reg(int spill_reg)
       bool mrf_used[BRW_MAX_MRF(devinfo->gen)];
       get_used_mrfs(this, mrf_used);
 
-      for (int i = spill_base_mrf; i < BRW_MAX_MRF(devinfo->gen); i++) {
+      for (int i = spill_base_mrf(this); i < BRW_MAX_MRF(devinfo->gen); i++) {
          if (mrf_used[i]) {
             fail("Register spilling not supported with m%d used", i);
           return;
