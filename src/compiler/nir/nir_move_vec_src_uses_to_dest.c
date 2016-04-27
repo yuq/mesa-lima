@@ -121,7 +121,7 @@ move_vec_src_uses_to_dest_block(nir_block *block)
             swizzle[vec->src[j].swizzle[0]] = j;
          }
 
-         nir_foreach_use_safe(vec->src[i].src.ssa, use) {
+         nir_foreach_use_safe(use, vec->src[i].src.ssa) {
             if (use->parent_instr == &vec->instr)
                continue;
 

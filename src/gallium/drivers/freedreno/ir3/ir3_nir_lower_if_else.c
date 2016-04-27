@@ -80,7 +80,7 @@ valid_dest(nir_block *block, nir_dest *dest)
 	/* The only uses of this definition must be phi's in the
 	 * successor or in the current block
 	 */
-	nir_foreach_use(&dest->ssa, use) {
+	nir_foreach_use(use, &dest->ssa) {
 		nir_instr *dest_instr = use->parent_instr;
 		if (dest_instr->block == block)
 			continue;

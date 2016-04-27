@@ -131,7 +131,7 @@ try_coalesce(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
    /* If we are going to do a reswizzle, then the vecN operation must be the
     * only use of the source value.  We also can't have any source modifiers.
     */
-   nir_foreach_use(vec->src[start_idx].src.ssa, src) {
+   nir_foreach_use(src, vec->src[start_idx].src.ssa) {
       if (src->parent_instr != &vec->instr)
          return 0;
 

@@ -1419,10 +1419,10 @@ nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src)
 {
    assert(!new_src.is_ssa || def != new_src.ssa);
 
-   nir_foreach_use_safe(def, use_src)
+   nir_foreach_use_safe(use_src, def)
       nir_instr_rewrite_src(use_src->parent_instr, use_src, new_src);
 
-   nir_foreach_if_use_safe(def, use_src)
+   nir_foreach_if_use_safe(use_src, def)
       nir_if_rewrite_condition(use_src->parent_if, new_src);
 }
 
@@ -1462,7 +1462,7 @@ nir_ssa_def_rewrite_uses_after(nir_ssa_def *def, nir_src new_src,
 {
    assert(!new_src.is_ssa || def != new_src.ssa);
 
-   nir_foreach_use_safe(def, use_src) {
+   nir_foreach_use_safe(use_src, def) {
       assert(use_src->parent_instr != def->parent_instr);
       /* Since def already dominates all of its uses, the only way a use can
        * not be dominated by after_me is if it is between def and after_me in
@@ -1472,7 +1472,7 @@ nir_ssa_def_rewrite_uses_after(nir_ssa_def *def, nir_src new_src,
          nir_instr_rewrite_src(use_src->parent_instr, use_src, new_src);
    }
 
-   nir_foreach_if_use_safe(def, use_src)
+   nir_foreach_if_use_safe(use_src, def)
       nir_if_rewrite_condition(use_src->parent_if, new_src);
 }
 
@@ -1480,7 +1480,7 @@ uint8_t
 nir_ssa_def_components_read(nir_ssa_def *def)
 {
    uint8_t read_mask = 0;
-   nir_foreach_use(def, use) {
+   nir_foreach_use(use, def) {
       if (use->parent_instr->type == nir_instr_type_alu) {
          nir_alu_instr *alu = nir_instr_as_alu(use->parent_instr);
          nir_alu_src *alu_src = exec_node_data(nir_alu_src, use, src);

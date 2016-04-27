@@ -516,16 +516,16 @@ nir_src_init(void)
 
 #define NIR_SRC_INIT nir_src_init()
 
-#define nir_foreach_use(reg_or_ssa_def, src) \
+#define nir_foreach_use(src, reg_or_ssa_def) \
    list_for_each_entry(nir_src, src, &(reg_or_ssa_def)->uses, use_link)
 
-#define nir_foreach_use_safe(reg_or_ssa_def, src) \
+#define nir_foreach_use_safe(src, reg_or_ssa_def) \
    list_for_each_entry_safe(nir_src, src, &(reg_or_ssa_def)->uses, use_link)
 
-#define nir_foreach_if_use(reg_or_ssa_def, src) \
+#define nir_foreach_if_use(src, reg_or_ssa_def) \
    list_for_each_entry(nir_src, src, &(reg_or_ssa_def)->if_uses, use_link)
 
-#define nir_foreach_if_use_safe(reg_or_ssa_def, src) \
+#define nir_foreach_if_use_safe(src, reg_or_ssa_def) \
    list_for_each_entry_safe(nir_src, src, &(reg_or_ssa_def)->if_uses, use_link)
 
 typedef struct {

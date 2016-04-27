@@ -44,7 +44,7 @@ are_all_uses_fadd(nir_ssa_def *def)
    if (!list_empty(&def->if_uses))
       return false;
 
-   nir_foreach_use(def, use_src) {
+   nir_foreach_use(use_src, def) {
       nir_instr *use_instr = use_src->parent_instr;
 
       if (use_instr->type != nir_instr_type_alu)

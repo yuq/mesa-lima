@@ -852,7 +852,7 @@ postvalidate_reg_decl(nir_register *reg, validate_state *state)
 
    reg_validate_state *reg_state = (reg_validate_state *) entry->data;
 
-   nir_foreach_use(reg, src) {
+   nir_foreach_use(src, reg) {
       struct set_entry *entry = _mesa_set_search(reg_state->uses, src);
       assert(entry);
       _mesa_set_remove(reg_state->uses, entry);
@@ -867,7 +867,7 @@ postvalidate_reg_decl(nir_register *reg, validate_state *state)
       abort();
    }
 
-   nir_foreach_if_use(reg, src) {
+   nir_foreach_if_use(src, reg) {
       struct set_entry *entry = _mesa_set_search(reg_state->if_uses, src);
       assert(entry);
       _mesa_set_remove(reg_state->if_uses, entry);
@@ -924,7 +924,7 @@ postvalidate_ssa_def(nir_ssa_def *def, void *void_state)
    struct hash_entry *entry = _mesa_hash_table_search(state->ssa_defs, def);
    ssa_def_validate_state *def_state = (ssa_def_validate_state *)entry->data;
 
-   nir_foreach_use(def, src) {
+   nir_foreach_use(src, def) {
       struct set_entry *entry = _mesa_set_search(def_state->uses, src);
       assert(entry);
       _mesa_set_remove(def_state->uses, entry);
@@ -939,7 +939,7 @@ postvalidate_ssa_def(nir_ssa_def *def, void *void_state)
       abort();
    }
 
-   nir_foreach_if_use(def, src) {
+   nir_foreach_if_use(src, def) {
       struct set_entry *entry = _mesa_set_search(def_state->if_uses, src);
       assert(entry);
       _mesa_set_remove(def_state->if_uses, entry);

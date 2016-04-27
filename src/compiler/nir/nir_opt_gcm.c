@@ -277,7 +277,7 @@ gcm_schedule_late_def(nir_ssa_def *def, void *void_state)
 
    nir_block *lca = NULL;
 
-   nir_foreach_use(def, use_src) {
+   nir_foreach_use(use_src, def) {
       nir_instr *use_instr = use_src->parent_instr;
 
       gcm_schedule_late_instr(use_instr, state);
@@ -301,7 +301,7 @@ gcm_schedule_late_def(nir_ssa_def *def, void *void_state)
       }
    }
 
-   nir_foreach_if_use(def, use_src) {
+   nir_foreach_if_use(use_src, def) {
       nir_if *if_stmt = use_src->parent_if;
 
       /* For if statements, we consider the block to be the one immediately
@@ -374,7 +374,7 @@ gcm_place_instr(nir_instr *instr, struct gcm_state *state);
 static bool
 gcm_place_instr_def(nir_ssa_def *def, void *state)
 {
-   nir_foreach_use(def, use_src)
+   nir_foreach_use(use_src, def)
       gcm_place_instr(use_src->parent_instr, state);
 
    return false;

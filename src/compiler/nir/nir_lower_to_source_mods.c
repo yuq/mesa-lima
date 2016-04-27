@@ -136,7 +136,7 @@ nir_lower_to_source_mods_block(nir_block *block)
          continue;
 
       bool all_children_are_sat = true;
-      nir_foreach_use(&alu->dest.dest.ssa, child_src) {
+      nir_foreach_use(child_src, &alu->dest.dest.ssa) {
          assert(child_src->is_ssa);
          nir_instr *child = child_src->parent_instr;
          if (child->type != nir_instr_type_alu) {
@@ -162,7 +162,7 @@ nir_lower_to_source_mods_block(nir_block *block)
 
       alu->dest.saturate = true;
 
-      nir_foreach_use(&alu->dest.dest.ssa, child_src) {
+      nir_foreach_use(child_src, &alu->dest.dest.ssa) {
          assert(child_src->is_ssa);
          nir_instr *child = child_src->parent_instr;
          assert(child->type == nir_instr_type_alu);

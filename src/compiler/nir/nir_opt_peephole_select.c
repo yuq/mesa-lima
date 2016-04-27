@@ -108,7 +108,7 @@ block_check_for_allowed_instrs(nir_block *block)
             return false;
 
          /* The only uses of this definition must be phi's in the successor */
-         nir_foreach_use(&mov->dest.dest.ssa, use) {
+         nir_foreach_use(use, &mov->dest.dest.ssa) {
             if (use->parent_instr->type != nir_instr_type_phi ||
                 use->parent_instr->block != block->successors[0])
                return false;

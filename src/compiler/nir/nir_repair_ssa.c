@@ -70,7 +70,7 @@ repair_ssa_def(nir_ssa_def *def, void *void_state)
    struct repair_ssa_state *state = void_state;
 
    bool is_valid = true;
-   nir_foreach_use(def, src) {
+   nir_foreach_use(src, def) {
       if (!nir_block_dominates(def->parent_instr->block, get_src_block(src))) {
          is_valid = false;
          break;
@@ -90,7 +90,7 @@ repair_ssa_def(nir_ssa_def *def, void *void_state)
 
    nir_phi_builder_value_set_block_def(val, def->parent_instr->block, def);
 
-   nir_foreach_use_safe(def, src) {
+   nir_foreach_use_safe(src, def) {
       nir_block *src_block = get_src_block(src);
       if (!nir_block_dominates(def->parent_instr->block, src_block)) {
          nir_instr_rewrite_src(src->parent_instr, src, nir_src_for_ssa(
