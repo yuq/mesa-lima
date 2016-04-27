@@ -139,6 +139,8 @@ private:
    void emitSULDGB(const TexInstruction *);
    void emitSUSTGx(const TexInstruction *);
 
+   void emitSULDB(const TexInstruction *);
+   void emitSUSTx(const TexInstruction *);
    void emitSULEA(const TexInstruction *);
 
    void emitVSHL(const Instruction *);
@@ -2340,6 +2342,46 @@ CodeEmitterNVC0::emitSULEA(const TexInstruction *i)
 }
 
 void
+CodeEmitterNVC0::emitSULDB(const TexInstruction *i)
+{
+   assert(targ->getChipset() < NVISA_GK104_CHIPSET);
+
+   code[0] = 0x5;
+   code[1] = 0xd4000000 | (i->subOp << 15);
+
+   emitPredicate(i);
+   emitLoadStoreType(i->dType);
+
+   defId(i->def(0), 14);
+
+   emitCachingMode(i->cache);
+   emitSUAddr(i);
+   emitSUDim(i);
+}
+
+void
+CodeEmitterNVC0::emitSUSTx(const TexInstruction *i)
+{
+   assert(targ->getChipset() < NVISA_GK104_CHIPSET);
+
+   code[0] = 0x5;
+   code[1] = 0xdc000000 | (i->subOp << 15);
+
+   if (i->op == OP_SUSTP)
+      code[1] |= i->tex.mask << 17;
+   else
+      emitLoadStoreType(i->dType);
+
+   emitPredicate(i);
+
+   srcId(i->src(1), 14);
+
+   emitCachingMode(i->cache);
+   emitSUAddr(i);
+   emitSUDim(i);
+}
+
+void
 CodeEmitterNVC0::emitVectorSubOp(const Instruction *i)
 {
    switch (NV50_IR_SUBOP_Vn(i->subOp)) {
@@ -2625,14 +2667,14 @@ CodeEmitterNVC0::emitInstruction(Instruction *insn)
       if (targ->getChipset() >= NVISA_GK104_CHIPSET)
          emitSULDGB(insn->asTex());
       else
-         ERROR("SULDB not yet supported on < nve4\n");
+         emitSULDB(insn->asTex());
       break;
    case OP_SUSTB:
    case OP_SUSTP:
       if (targ->getChipset() >= NVISA_GK104_CHIPSET)
          emitSUSTGx(insn->asTex());
       else
-         ERROR("SUSTx not yet supported on < nve4\n");
+         emitSUSTx(insn->asTex());
       break;
    case OP_SULEA:
       emitSULEA(insn->asTex());
