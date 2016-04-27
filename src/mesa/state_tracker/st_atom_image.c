@@ -34,6 +34,7 @@
 #include "pipe/p_defines.h"
 #include "util/u_inlines.h"
 #include "util/u_surface.h"
+#include "cso_cache/cso_context.h"
 
 #include "st_cb_texture.h"
 #include "st_debug.h"
@@ -122,12 +123,12 @@ st_bind_images(struct st_context *st, struct gl_shader *shader,
          }
       }
    }
-   st->pipe->set_shader_images(st->pipe, shader_type, 0, shader->NumImages,
-                               images);
+   cso_set_shader_images(st->cso_context, shader_type, 0, shader->NumImages,
+                         images);
    /* clear out any stale shader images */
    if (shader->NumImages < c->MaxImageUniforms)
-      st->pipe->set_shader_images(
-            st->pipe, shader_type,
+      cso_set_shader_images(
+            st->cso_context, shader_type,
             shader->NumImages,
             c->MaxImageUniforms - shader->NumImages,
             NULL);

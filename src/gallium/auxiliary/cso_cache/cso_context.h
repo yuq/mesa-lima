@@ -171,6 +171,7 @@ void cso_set_render_condition(struct cso_context *cso,
 #define CSO_BIT_VERTEX_SHADER         0x20000
 #define CSO_BIT_VIEWPORT              0x40000
 #define CSO_BIT_PAUSE_QUERIES         0x80000
+#define CSO_BIT_FRAGMENT_IMAGE0      0x100000
 
 #define CSO_BITS_ALL_SHADERS (CSO_BIT_VERTEX_SHADER | \
                               CSO_BIT_FRAGMENT_SHADER | \
@@ -189,6 +190,14 @@ cso_set_sampler_views(struct cso_context *cso,
                       unsigned shader_stage,
                       unsigned count,
                       struct pipe_sampler_view **views);
+
+
+/* shader images */
+
+void
+cso_set_shader_images(struct cso_context *cso, unsigned shader_stage,
+                      unsigned start, unsigned count,
+                      struct pipe_image_view *views);
 
 
 /* constant buffers */
