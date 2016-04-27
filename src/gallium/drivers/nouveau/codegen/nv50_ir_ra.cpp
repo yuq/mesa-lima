@@ -2152,6 +2152,12 @@ RegAlloc::InsertConstraintsPass::texConstraintNVC0(TexInstruction *tex)
    if (tex->op == OP_TXQ) {
       s = tex->srcCount(0xff);
       n = 0;
+   } else if (isSurfaceOp(tex->op)) {
+      s = tex->tex.target.getDim() + (tex->tex.target.isArray() || tex->tex.target.isCube());
+      if (tex->op == OP_SUSTB || tex->op == OP_SUSTP)
+         n = 4;
+      else
+         n = 0;
    } else {
       s = tex->tex.target.getArgCount() - tex->tex.target.isMS();
       if (!tex->tex.target.isArray() &&
