@@ -63,6 +63,8 @@ private:
    void emitInterpMode(const Instruction *);
    void emitLoadStoreType(DataType ty);
    void emitSUGType(DataType);
+   void emitSUAddr(const TexInstruction *);
+   void emitSUDim(const TexInstruction *);
    void emitCachingMode(CacheMode c);
 
    void emitShortSrc2(const ValueRef&);
@@ -136,6 +138,8 @@ private:
    void emitSUCalc(Instruction *);
    void emitSULDGB(const TexInstruction *);
    void emitSUSTGx(const TexInstruction *);
+
+   void emitSULEA(const TexInstruction *);
 
    void emitVSHL(const Instruction *);
    void emitVectorSubOp(const Instruction *);
@@ -2285,6 +2289,57 @@ CodeEmitterNVC0::emitSUSTGx(const TexInstruction *i)
 }
 
 void
+CodeEmitterNVC0::emitSUAddr(const TexInstruction *i)
+{
+   assert(targ->getChipset() < NVISA_GK104_CHIPSET);
+
+   if (i->tex.rIndirectSrc < 0) {
+      code[1] |= 0x00004000;
+      code[0] |= i->tex.r << 26;
+   } else {
+      srcId(i, i->tex.rIndirectSrc, 26);
+   }
+}
+
+void
+CodeEmitterNVC0::emitSUDim(const TexInstruction *i)
+{
+   assert(targ->getChipset() < NVISA_GK104_CHIPSET);
+
+   code[1] |= (i->tex.target.getDim() - 1) << 12;
+   if (i->tex.target.isArray() || i->tex.target.isCube() ||
+       i->tex.target.getDim() == 3) {
+      // use e2d mode for 3-dim images, arrays and cubes.
+      code[1] |= 3 << 12;
+   }
+
+   srcId(i->src(0), 20);
+}
+
+void
+CodeEmitterNVC0::emitSULEA(const TexInstruction *i)
+{
+   assert(targ->getChipset() < NVISA_GK104_CHIPSET);
+
+   code[0] = 0x5;
+   code[1] = 0xf0000000;
+
+   emitPredicate(i);
+   emitLoadStoreType(i->sType);
+
+   defId(i->def(0), 14);
+
+   if (i->defExists(1)) {
+      defId(i->def(1), 32 + 22);
+   } else {
+      code[1] |= 7 << 22;
+   }
+
+   emitSUAddr(i);
+   emitSUDim(i);
+}
+
+void
 CodeEmitterNVC0::emitVectorSubOp(const Instruction *i)
 {
    switch (NV50_IR_SUBOP_Vn(i->subOp)) {
@@ -2578,6 +2633,9 @@ CodeEmitterNVC0::emitInstruction(Instruction *insn)
          emitSUSTGx(insn->asTex());
       else
          ERROR("SUSTx not yet supported on < nve4\n");
+      break;
+   case OP_SULEA:
+      emitSULEA(insn->asTex());
       break;
    case OP_ATOM:
       emitATOM(insn);
