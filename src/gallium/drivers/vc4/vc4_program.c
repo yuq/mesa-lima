@@ -1943,6 +1943,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                         qir_get_stage_name(c->stage),
                         c->program_id, c->variant_id);
                 qir_dump(c);
+                fprintf(stderr, "\n");
         }
 
         qir_optimize(c);
@@ -1955,6 +1956,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                         qir_get_stage_name(c->stage),
                         c->program_id, c->variant_id);
                 qir_dump(c);
+                fprintf(stderr, "\n");
         }
 
         qir_reorder_uniforms(c);

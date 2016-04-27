@@ -40,6 +40,7 @@ vc4_dump_program(struct vc4_compile *c)
                 vc4_qpu_disasm(&c->qpu_insts[i], 1);
                 fprintf(stderr, "\n");
         }
+        fprintf(stderr, "\n");
 }
 
 static void
