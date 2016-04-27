@@ -239,7 +239,7 @@ swr_bind_sampler_states(struct pipe_context *pipe,
    unsigned i;
 
    assert(shader < PIPE_SHADER_TYPES);
-   assert(start + num <= Elements(ctx->samplers[shader]));
+   assert(start + num <= ARRAY_SIZE(ctx->samplers[shader]));
 
    /* set the new samplers */
    ctx->num_samplers[shader] = num;
@@ -288,7 +288,7 @@ swr_set_sampler_views(struct pipe_context *pipe,
    assert(num <= PIPE_MAX_SHADER_SAMPLER_VIEWS);
 
    assert(shader < PIPE_SHADER_TYPES);
-   assert(start + num <= Elements(ctx->sampler_views[shader]));
+   assert(start + num <= ARRAY_SIZE(ctx->sampler_views[shader]));
 
    /* set the new sampler views */
    ctx->num_sampler_views[shader] = num;
@@ -415,7 +415,7 @@ swr_set_constant_buffer(struct pipe_context *pipe,
    struct pipe_resource *constants = cb ? cb->buffer : NULL;
 
    assert(shader < PIPE_SHADER_TYPES);
-   assert(index < Elements(ctx->constants[shader]));
+   assert(index < ARRAY_SIZE(ctx->constants[shader]));
 
    /* note: reference counting */
    util_copy_constant_buffer(&ctx->constants[shader][index], cb);

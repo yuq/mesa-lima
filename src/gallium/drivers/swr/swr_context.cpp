@@ -307,11 +307,11 @@ swr_destroy(struct pipe_context *pipe)
 
    pipe_surface_reference(&ctx->framebuffer.zsbuf, NULL);
 
-   for (unsigned i = 0; i < Elements(ctx->sampler_views[0]); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(ctx->sampler_views[0]); i++) {
       pipe_sampler_view_reference(&ctx->sampler_views[PIPE_SHADER_FRAGMENT][i], NULL);
    }
 
-   for (unsigned i = 0; i < Elements(ctx->sampler_views[0]); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(ctx->sampler_views[0]); i++) {
       pipe_sampler_view_reference(&ctx->sampler_views[PIPE_SHADER_VERTEX][i], NULL);
    }
 
