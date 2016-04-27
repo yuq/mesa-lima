@@ -55,7 +55,7 @@ nir_gs_count_vertices(const nir_shader *shader)
 {
    int count = -1;
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (!function->impl)
          continue;
 

@@ -204,7 +204,7 @@ nir_lower_two_sided_color(nir_shader *shader)
    if (setup_inputs(&state) != 0)
       return;
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          nir_lower_two_sided_color_impl(function->impl, &state);
    }

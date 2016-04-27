@@ -42,7 +42,7 @@ fs_visitor::emit_nir_code()
    nir_emit_system_values();
 
    /* get the main function and emit it */
-   nir_foreach_function(nir, function) {
+   nir_foreach_function(function, nir) {
       assert(strcmp(function->name, "main") == 0);
       assert(function->impl);
       nir_emit_impl(function->impl);
@@ -344,7 +344,7 @@ fs_visitor::nir_emit_system_values()
       nir_system_values[i] = fs_reg();
    }
 
-   nir_foreach_function(nir, function) {
+   nir_foreach_function(function, nir) {
       assert(strcmp(function->name, "main") == 0);
       assert(function->impl);
       nir_foreach_block(block, function->impl) {

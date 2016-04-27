@@ -84,7 +84,7 @@ add_const_offset_to_base_block(nir_block *block, nir_builder *b,
 static void
 add_const_offset_to_base(nir_shader *nir, nir_variable_mode mode)
 {
-   nir_foreach_function(nir, f) {
+   nir_foreach_function(f, nir) {
       if (f->impl) {
          nir_builder b;
          nir_builder_init(&b, f->impl);
@@ -222,7 +222,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
        */
       GLbitfield64 inputs_read = nir->info.inputs_read;
 
-      nir_foreach_function(nir, function) {
+      nir_foreach_function(function, nir) {
          if (function->impl) {
             nir_foreach_block(block, function->impl) {
                remap_vs_attrs(block, inputs_read);
@@ -249,7 +249,7 @@ brw_nir_lower_vue_inputs(nir_shader *nir, bool is_scalar,
 
       add_const_offset_to_base(nir, nir_var_shader_in);
 
-      nir_foreach_function(nir, function) {
+      nir_foreach_function(function, nir) {
          if (function->impl) {
             nir_foreach_block(block, function->impl) {
                remap_inputs_with_vue_map(block, vue_map);
@@ -273,7 +273,7 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
 
    add_const_offset_to_base(nir, nir_var_shader_in);
 
-   nir_foreach_function(nir, function) {
+   nir_foreach_function(function, nir) {
       if (function->impl) {
          nir_builder b;
          nir_builder_init(&b, function->impl);
@@ -320,7 +320,7 @@ brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue_map)
 
    add_const_offset_to_base(nir, nir_var_shader_out);
 
-   nir_foreach_function(nir, function) {
+   nir_foreach_function(function, nir) {
       if (function->impl) {
          nir_builder b;
          nir_builder_init(&b, function->impl);
@@ -501,7 +501,7 @@ brw_postprocess_nir(nir_shader *nir,
 
    if (unlikely(debug_enabled)) {
       /* Re-index SSA defs so we print more sensible numbers. */
-      nir_foreach_function(nir, function) {
+      nir_foreach_function(function, nir) {
          if (function->impl)
             nir_index_ssa_defs(function->impl);
       }

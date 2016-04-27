@@ -108,7 +108,7 @@ nir_lower_outputs_to_temporaries(nir_shader *shader, nir_function *entrypoint)
       exec_list_push_tail(&shader->outputs, &output->node);
    }
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl == NULL)
          continue;
 

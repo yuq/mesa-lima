@@ -414,7 +414,7 @@ void
 nir_lower_io(nir_shader *shader, nir_variable_mode modes,
              int (*type_size)(const struct glsl_type *))
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          nir_lower_io_impl(function->impl, modes, type_size);
    }

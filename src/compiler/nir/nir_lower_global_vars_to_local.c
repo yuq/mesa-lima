@@ -76,7 +76,7 @@ nir_lower_global_vars_to_local(nir_shader *shader)
       _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                               _mesa_key_pointer_equal);
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl) {
          nir_foreach_block(block, function->impl)
             mark_global_var_uses_block(block, function->impl, var_func_table);

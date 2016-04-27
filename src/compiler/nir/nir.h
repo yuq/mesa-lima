@@ -1820,7 +1820,7 @@ nir_shader_get_entrypoint(nir_shader *shader)
    return func;
 }
 
-#define nir_foreach_function(shader, func) \
+#define nir_foreach_function(func, shader) \
    foreach_list_typed(nir_function, func, node, &(shader)->functions)
 
 nir_shader *nir_shader_create(void *mem_ctx,

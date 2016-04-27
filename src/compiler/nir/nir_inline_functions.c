@@ -252,7 +252,7 @@ nir_inline_functions(nir_shader *shader)
                                           _mesa_key_pointer_equal);
    bool progress = false;
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          progress = inline_function_impl(function->impl, inlined) || progress;
    }

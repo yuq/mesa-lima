@@ -303,7 +303,7 @@ brw_nir_opt_peephole_ffma(nir_shader *shader)
 {
    bool progress = false;
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          progress |= brw_nir_opt_peephole_ffma_impl(function->impl);
    }

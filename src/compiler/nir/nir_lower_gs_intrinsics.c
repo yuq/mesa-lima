@@ -198,7 +198,7 @@ nir_lower_gs_intrinsics(nir_shader *shader)
    exec_list_push_tail(&shader->globals, &var->node);
    state.vertex_count_var = var;
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl) {
          nir_builder b;
          nir_builder_init(&b, function->impl);

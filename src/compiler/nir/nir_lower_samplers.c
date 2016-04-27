@@ -171,7 +171,7 @@ void
 nir_lower_samplers(nir_shader *shader,
                    const struct gl_shader_program *shader_program)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          lower_impl(function->impl, shader_program, shader->stage);
    }

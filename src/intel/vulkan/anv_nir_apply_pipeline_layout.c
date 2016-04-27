@@ -267,7 +267,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       state.set[s].image_offsets = rzalloc_array(mem_ctx, uint8_t, count);
    }
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (!function->impl)
          continue;
 
@@ -327,7 +327,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       }
    }
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (!function->impl)
          continue;
 

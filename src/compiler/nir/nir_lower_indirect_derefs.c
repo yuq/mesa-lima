@@ -227,7 +227,7 @@ nir_lower_indirect_derefs(nir_shader *shader, nir_variable_mode modes)
 {
    bool progress = false;
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          progress = lower_indirects_impl(function->impl, modes) || progress;
    }

@@ -198,7 +198,7 @@ nir_calc_dominance_impl(nir_function_impl *impl)
 void
 nir_calc_dominance(nir_shader *shader)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          nir_calc_dominance_impl(function->impl);
    }
@@ -258,7 +258,7 @@ nir_dump_dom_tree_impl(nir_function_impl *impl, FILE *fp)
 void
 nir_dump_dom_tree(nir_shader *shader, FILE *fp)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          nir_dump_dom_tree_impl(function->impl, fp);
    }
@@ -281,7 +281,7 @@ nir_dump_dom_frontier_impl(nir_function_impl *impl, FILE *fp)
 void
 nir_dump_dom_frontier(nir_shader *shader, FILE *fp)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          nir_dump_dom_frontier_impl(function->impl, fp);
    }
@@ -305,7 +305,7 @@ nir_dump_cfg_impl(nir_function_impl *impl, FILE *fp)
 void
 nir_dump_cfg(nir_shader *shader, FILE *fp)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          nir_dump_cfg_impl(function->impl, fp);
    }

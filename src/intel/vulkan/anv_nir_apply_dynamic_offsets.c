@@ -137,7 +137,7 @@ anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
    if (!layout || !layout->stage[shader->stage].has_dynamic_offsets)
       return;
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (!function->impl)
          continue;
 

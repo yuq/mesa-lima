@@ -155,7 +155,7 @@ brw_nir_apply_attribute_workarounds(nir_shader *shader,
       .wa_flags = attrib_wa_flags,
    };
 
-   nir_foreach_function(shader, func) {
+   nir_foreach_function(func, shader) {
       if (!func->impl)
          continue;
 

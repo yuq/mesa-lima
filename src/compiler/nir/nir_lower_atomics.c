@@ -137,7 +137,7 @@ void
 nir_lower_atomics(nir_shader *shader,
                   const struct gl_shader_program *shader_program)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl) {
          nir_foreach_block(block, function->impl) {
             nir_foreach_instr_safe(instr, block) {

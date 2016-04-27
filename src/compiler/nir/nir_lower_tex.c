@@ -392,7 +392,7 @@ nir_lower_tex(nir_shader *shader, const nir_lower_tex_options *options)
    state.options = options;
    state.progress = false;
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          nir_lower_tex_impl(function->impl, &state);
    }

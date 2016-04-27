@@ -182,7 +182,7 @@ lower_var_copies_impl(nir_function_impl *impl)
 void
 nir_lower_var_copies(nir_shader *shader)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          lower_var_copies_impl(function->impl);
    }

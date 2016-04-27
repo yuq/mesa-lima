@@ -1759,7 +1759,7 @@ nir_to_qir(struct vc4_compile *c)
         ntq_setup_registers(c, &c->s->registers);
 
         /* Find the main function and emit the body. */
-        nir_foreach_function(c->s, function) {
+        nir_foreach_function(function, c->s) {
                 assert(strcmp(function->name, "main") == 0);
                 assert(function->impl);
                 ntq_emit_impl(c, function->impl);
@@ -1791,7 +1791,7 @@ static int
 count_nir_instrs(nir_shader *nir)
 {
         int count = 0;
-        nir_foreach_function(nir, function) {
+        nir_foreach_function(function, nir) {
                 if (!function->impl)
                         continue;
                 nir_foreach_block_call(function->impl, count_nir_instrs_in_block, &count);

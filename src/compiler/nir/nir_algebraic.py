@@ -584,7 +584,7 @@ ${pass_name}(nir_shader *shader)
    condition_flags[${index}] = ${condition};
    % endfor
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          progress |= ${pass_name}_impl(function->impl, condition_flags);
    }

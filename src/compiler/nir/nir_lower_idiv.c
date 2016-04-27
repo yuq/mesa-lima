@@ -137,7 +137,7 @@ convert_impl(nir_function_impl *impl)
 void
 nir_lower_idiv(nir_shader *shader)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          convert_impl(function->impl);
    }

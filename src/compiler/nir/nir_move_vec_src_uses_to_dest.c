@@ -193,7 +193,7 @@ nir_move_vec_src_uses_to_dest_impl(nir_shader *shader, nir_function_impl *impl)
 void
 nir_move_vec_src_uses_to_dest(nir_shader *shader)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          nir_move_vec_src_uses_to_dest_impl(shader, function->impl);
    }

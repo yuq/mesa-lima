@@ -26,7 +26,7 @@
 void
 anv_nir_lower_push_constants(nir_shader *shader)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (!function->impl)
          continue;
 

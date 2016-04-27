@@ -184,7 +184,7 @@ nir_lower_to_source_mods_block(nir_block *block)
 void
 nir_lower_to_source_mods(nir_shader *shader)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl) {
          nir_foreach_block(block, function->impl) {
             nir_lower_to_source_mods_block(block);

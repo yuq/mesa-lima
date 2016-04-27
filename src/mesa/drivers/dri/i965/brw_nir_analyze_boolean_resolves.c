@@ -262,7 +262,7 @@ analyze_boolean_resolves_impl(nir_function_impl *impl)
 void
 brw_nir_analyze_boolean_resolves(nir_shader *shader)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          analyze_boolean_resolves_impl(function->impl);
    }

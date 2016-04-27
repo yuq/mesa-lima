@@ -557,7 +557,7 @@ lower_doubles_impl(nir_function_impl *impl, nir_lower_doubles_options options)
 void
 nir_lower_doubles(nir_shader *shader, nir_lower_doubles_options options)
 {
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          lower_doubles_impl(function->impl, options);
    }

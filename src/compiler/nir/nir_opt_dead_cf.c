@@ -349,7 +349,7 @@ nir_opt_dead_cf(nir_shader *shader)
 {
    bool progress = false;
 
-   nir_foreach_function(shader, function)
+   nir_foreach_function(function, shader)
       if (function->impl)
          progress |= opt_dead_cf_impl(function->impl);
 

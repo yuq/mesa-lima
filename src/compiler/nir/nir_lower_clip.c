@@ -124,7 +124,7 @@ static nir_ssa_def *
 find_output(nir_shader *shader, unsigned drvloc)
 {
    nir_ssa_def *def = NULL;
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl) {
          nir_foreach_block_reverse(block, function->impl) {
             nir_ssa_def *new_def = find_output_in_block(block, drvloc);
@@ -250,7 +250,7 @@ nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables)
       out[1] =
          create_clipdist_var(shader, ++maxloc, true, VARYING_SLOT_CLIP_DIST1);
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (!strcmp(function->name, "main"))
          lower_clip_vs(function->impl, ucp_enables, cv, out);
    }
@@ -324,7 +324,7 @@ nir_lower_clip_fs(nir_shader *shader, unsigned ucp_enables)
          create_clipdist_var(shader, ++maxloc, false,
                              VARYING_SLOT_CLIP_DIST1);
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (!strcmp(function->name, "main"))
          lower_clip_fs(function->impl, ucp_enables, in);
    }

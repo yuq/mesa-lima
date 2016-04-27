@@ -300,7 +300,7 @@ nir_lower_vec_to_movs(nir_shader *shader)
 {
    bool progress = false;
 
-   nir_foreach_function(shader, function) {
+   nir_foreach_function(function, shader) {
       if (function->impl)
          progress = nir_lower_vec_to_movs_impl(function->impl) || progress;
    }

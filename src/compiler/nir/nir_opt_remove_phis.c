@@ -123,7 +123,7 @@ nir_opt_remove_phis(nir_shader *shader)
 {
    bool progress = false;
 
-   nir_foreach_function(shader, function)
+   nir_foreach_function(function, shader)
       if (function->impl)
          progress = remove_phis_impl(function->impl) || progress;
 
