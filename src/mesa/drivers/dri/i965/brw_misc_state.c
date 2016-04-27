@@ -1063,8 +1063,8 @@ const struct brw_tracked_state brw_invariant_state = {
  * surface state objects, but not the surfaces that the surface state
  * objects point to.
  */
-static void
-upload_state_base_address(struct brw_context *brw)
+void
+brw_upload_state_base_address(struct brw_context *brw)
 {
    /* FINISHME: According to section 3.6.1 "STATE_BASE_ADDRESS" of
     * vol1a of the G45 PRM, MI_FLUSH with the ISC invalidate should be
@@ -1075,7 +1075,45 @@ upload_state_base_address(struct brw_context *brw)
     * maybe this isn't required for us in particular.
     */
 
-   if (brw->gen >= 6) {
+   if (brw->gen >= 8) {
+      uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
+      int pkt_len = brw->gen >= 9 ? 19 : 16;
+
+      BEGIN_BATCH(pkt_len);
+      OUT_BATCH(CMD_STATE_BASE_ADDRESS << 16 | (pkt_len - 2));
+      /* General state base address: stateless DP read/write requests */
+      OUT_BATCH(mocs_wb << 4 | 1);
+      OUT_BATCH(0);
+      OUT_BATCH(mocs_wb << 16);
+      /* Surface state base address: */
+      OUT_RELOC64(brw->batch.bo, I915_GEM_DOMAIN_SAMPLER, 0,
+                  mocs_wb << 4 | 1);
+      /* Dynamic state base address: */
+      OUT_RELOC64(brw->batch.bo,
+                  I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_INSTRUCTION, 0,
+                  mocs_wb << 4 | 1);
+      /* Indirect object base address: MEDIA_OBJECT data */
+      OUT_BATCH(mocs_wb << 4 | 1);
+      OUT_BATCH(0);
+      /* Instruction base address: shader kernels (incl. SIP) */
+      OUT_RELOC64(brw->cache.bo, I915_GEM_DOMAIN_INSTRUCTION, 0,
+                  mocs_wb << 4 | 1);
+
+      /* General state buffer size */
+      OUT_BATCH(0xfffff001);
+      /* Dynamic state buffer size */
+      OUT_BATCH(ALIGN(brw->batch.bo->size, 4096) | 1);
+      /* Indirect object upper bound */
+      OUT_BATCH(0xfffff001);
+      /* Instruction access upper bound */
+      OUT_BATCH(ALIGN(brw->cache.bo->size, 4096) | 1);
+      if (brw->gen >= 9) {
+         OUT_BATCH(1);
+         OUT_BATCH(0);
+         OUT_BATCH(0);
+      }
+      ADVANCE_BATCH();
+   } else if (brw->gen >= 6) {
       uint8_t mocs = brw->gen == 7 ? GEN7_MOCS_L3 : 0;
 
        BEGIN_BATCH(10);
@@ -1171,5 +1209,5 @@ const struct brw_tracked_state brw_state_base_address = {
       .brw = BRW_NEW_BATCH |
              BRW_NEW_PROGRAM_CACHE,
    },
-   .emit = upload_state_base_address
+   .emit = brw_upload_state_base_address
 };

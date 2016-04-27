@@ -997,7 +997,7 @@ gen6_blorp_exec(struct brw_context *brw,
    brw_emit_post_sync_nonzero_flush(brw);
 
    if (brw_state_base_address.dirty.brw & brw->ctx.NewDriverState)
-      brw_state_base_address.emit(brw);
+      brw_upload_state_base_address(brw);
 
    gen6_emit_3dstate_multisample(brw, params->dst.num_samples);
    gen6_emit_3dstate_sample_mask(brw,

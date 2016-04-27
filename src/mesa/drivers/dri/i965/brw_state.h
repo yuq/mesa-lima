@@ -167,7 +167,6 @@ extern const struct brw_tracked_state gen8_wm_state;
 extern const struct brw_tracked_state gen8_raster_state;
 extern const struct brw_tracked_state gen8_sbe_state;
 extern const struct brw_tracked_state gen8_sf_state;
-extern const struct brw_tracked_state gen8_state_base_address;
 extern const struct brw_tracked_state gen8_sol_state;
 extern const struct brw_tracked_state gen8_sf_clip_viewport;
 extern const struct brw_tracked_state gen8_vertices;
@@ -194,12 +193,12 @@ void brw_upload_invariant_state(struct brw_context *brw);
 uint32_t
 brw_depthbuffer_format(struct brw_context *brw);
 
+void brw_upload_state_base_address(struct brw_context *brw);
+
+
 /* gen8_depth_state.c */
 void gen8_write_pma_stall_bits(struct brw_context *brw,
                                uint32_t pma_stall_bits);
-
-/* gen8_misc_state.c */
-void gen8_upload_state_base_address(struct brw_context *brw);
 
 /***********************************************************************
  * brw_state.c
