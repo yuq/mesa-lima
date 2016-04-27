@@ -882,7 +882,7 @@ postvalidate_reg_decl(nir_register *reg, validate_state *state)
       abort();
    }
 
-   nir_foreach_def(reg, src) {
+   nir_foreach_def(src, reg) {
       struct set_entry *entry = _mesa_set_search(reg_state->defs, src);
       assert(entry);
       _mesa_set_remove(reg_state->defs, entry);

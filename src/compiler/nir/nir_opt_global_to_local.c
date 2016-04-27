@@ -34,7 +34,7 @@ global_to_local(nir_register *reg)
 
    assert(reg->is_global);
 
-   nir_foreach_def(reg, def_dest) {
+   nir_foreach_def(def_dest, reg) {
       nir_instr *instr = def_dest->reg.parent_instr;
       nir_function_impl *instr_impl =
          nir_cf_node_get_function(&instr->block->cf_node);

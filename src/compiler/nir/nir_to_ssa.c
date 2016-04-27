@@ -88,7 +88,7 @@ insert_phi_nodes(nir_function_impl *impl)
       w_start = w_end = 0;
       iter_count++;
 
-      nir_foreach_def(reg, dest) {
+      nir_foreach_def(dest, reg) {
          nir_instr *def = dest->reg.parent_instr;
          if (work[def->block->index] < iter_count)
             W[w_end++] = def->block;
