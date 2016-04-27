@@ -50,7 +50,11 @@
 #ifndef MESA_GLINTEROP_H
 #define MESA_GLINTEROP_H
 
+#if defined(MESA_EGL_NO_X11_HEADERS)
+#include <GL/gl.h>
+#else
 #include <GL/glx.h>
+#endif
 #include <EGL/egl.h>
 
 #ifdef __cplusplus
@@ -219,6 +223,7 @@ typedef struct _mesa_glinterop_export_out {
 } mesa_glinterop_export_out;
 
 
+#if !defined(MESA_EGL_NO_X11_HEADERS)
 /**
  * Query device information.
  *
@@ -228,9 +233,11 @@ typedef struct _mesa_glinterop_export_out {
  *
  * \return MESA_GLINTEROP_SUCCESS or MESA_GLINTEROP_* != 0 on error
  */
+
 GLAPI int GLAPIENTRY
 MesaGLInteropGLXQueryDeviceInfo(Display *dpy, GLXContext context,
                                 mesa_glinterop_device_info *out);
+#endif
 
 
 /**
@@ -242,6 +249,7 @@ MesaGLInteropEGLQueryDeviceInfo(EGLDisplay dpy, EGLContext context,
                                 mesa_glinterop_device_info *out);
 
 
+#if !defined(MESA_EGL_NO_X11_HEADERS)
 /**
  * Create and return a DMABUF handle corresponding to the given OpenGL
  * object, and return other parameters about the OpenGL object.
@@ -253,10 +261,12 @@ MesaGLInteropEGLQueryDeviceInfo(EGLDisplay dpy, EGLContext context,
  *
  * \return MESA_GLINTEROP_SUCCESS or MESA_GLINTEROP_* != 0 on error
  */
+
 GLAPI int GLAPIENTRY
 MesaGLInteropGLXExportObject(Display *dpy, GLXContext context,
                              const mesa_glinterop_export_in *in,
                              mesa_glinterop_export_out *out);
+#endif
 
 
 /**
@@ -268,14 +278,17 @@ MesaGLInteropEGLExportObject(EGLDisplay dpy, EGLContext context,
                              const mesa_glinterop_export_in *in,
                              mesa_glinterop_export_out *out);
 
-
+#if !defined(MESA_EGL_NO_X11_HEADERS)
 typedef int (APIENTRYP PFNMESAGLINTEROPGLXQUERYDEVICEINFOPROC)(Display *dpy, GLXContext context,
                                                                mesa_glinterop_device_info *out);
+#endif
 typedef int (APIENTRYP PFNMESAGLINTEROPEGLQUERYDEVICEINFOPROC)(EGLDisplay dpy, EGLContext context,
                                                                mesa_glinterop_device_info *out);
+#if !defined(MESA_EGL_NO_X11_HEADERS)
 typedef int (APIENTRYP PFNMESAGLINTEROPGLXEXPORTOBJECTPROC)(Display *dpy, GLXContext context,
                                                             const mesa_glinterop_export_in *in,
                                                             mesa_glinterop_export_out *out);
+#endif
 typedef int (APIENTRYP PFNMESAGLINTEROPEGLEXPORTOBJECTPROC)(EGLDisplay dpy, EGLContext context,
                                                             const mesa_glinterop_export_in *in,
                                                             mesa_glinterop_export_out *out);
