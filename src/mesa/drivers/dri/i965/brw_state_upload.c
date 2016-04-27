@@ -45,11 +45,6 @@
 
 static const struct brw_tracked_state *gen4_atoms[] =
 {
-   &brw_interpolation_map,
-
-   &brw_clip_prog, /* must do before state base address */
-   &brw_sf_prog, /* must do before state base address */
-
    /* Once all the programs are done, we know how large urb entry
     * sizes need to be and can decide if we need to change the urb
     * layout.
@@ -748,6 +743,12 @@ brw_upload_programs(struct brw_context *brw,
       if (old_slots != brw->vue_map_geom_out.slots_valid ||
           old_separate != brw->vue_map_geom_out.separate)
          brw->ctx.NewDriverState |= BRW_NEW_VUE_MAP_GEOM_OUT;
+
+      if (brw->gen < 6) {
+         brw_setup_vue_interpolation(brw);
+         brw_upload_clip_prog(brw);
+         brw_upload_sf_prog(brw);
+      }
 
       brw_upload_wm_prog(brw);
    } else if (pipeline == BRW_COMPUTE_PIPELINE) {

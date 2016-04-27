@@ -45,7 +45,6 @@ enum intel_msaa_layout;
 extern const struct brw_tracked_state brw_blend_constant_color;
 extern const struct brw_tracked_state brw_cc_vp;
 extern const struct brw_tracked_state brw_cc_unit;
-extern const struct brw_tracked_state brw_clip_prog;
 extern const struct brw_tracked_state brw_clip_unit;
 extern const struct brw_tracked_state brw_vs_pull_constants;
 extern const struct brw_tracked_state brw_tcs_pull_constants;
@@ -65,7 +64,6 @@ extern const struct brw_tracked_state brw_depthbuffer;
 extern const struct brw_tracked_state brw_polygon_stipple_offset;
 extern const struct brw_tracked_state brw_polygon_stipple;
 extern const struct brw_tracked_state brw_recalculate_urb_fence;
-extern const struct brw_tracked_state brw_sf_prog;
 extern const struct brw_tracked_state brw_sf_unit;
 extern const struct brw_tracked_state brw_sf_vp;
 extern const struct brw_tracked_state brw_state_base_address;
@@ -102,7 +100,6 @@ extern const struct brw_tracked_state brw_cs_ubo_surfaces;
 extern const struct brw_tracked_state brw_cs_abo_surfaces;
 extern const struct brw_tracked_state brw_cs_image_surfaces;
 extern const struct brw_tracked_state brw_wm_unit;
-extern const struct brw_tracked_state brw_interpolation_map;
 
 extern const struct brw_tracked_state brw_psp_urb_cbs;
 
@@ -414,6 +411,15 @@ void gen7_update_binding_table_from_array(struct brw_context *brw,
 void gen7_enable_hw_binding_tables(struct brw_context *brw);
 void gen7_disable_hw_binding_tables(struct brw_context *brw);
 void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);
+
+/* brw_interpolation_map.c */
+void brw_setup_vue_interpolation(struct brw_context *brw);
+
+/* brw_clip.c */
+void brw_upload_clip_prog(struct brw_context *brw);
+
+/* brw_sf.c */
+void brw_upload_sf_prog(struct brw_context *brw);
 
 /* gen7_l3_state.c */
 void
