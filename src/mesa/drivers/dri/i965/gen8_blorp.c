@@ -601,14 +601,28 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
       const struct brw_blorp_surface_info *surface = &params->src;
       struct intel_mipmap_tree *mt = surface->mt;
 
-      /* Textures are always sampled as 2D. */
+      /* If src is a 2D multisample array texture on Gen7+ using
+       * INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, src layer is the
+       * physical layer holding sample 0.  So, for example, if mt->num_samples
+       * == 4, then logical layer n corresponds to layer == 4*n.
+       *
+       * Multisampled depth and stencil surfaces have the samples interleaved
+       * (INTEL_MSAA_LAYOUT_IMS) and therefore the layer doesn't need
+       * adjustment.
+       */
+      const unsigned layer_divider =
+         (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
+          mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
+         MAX2(mt->num_samples, 1) : 1;
+
+      /* Cube textures are sampled as 2D array. */
       const bool is_cube = mt->target == GL_TEXTURE_CUBE_MAP_ARRAY ||
                            mt->target == GL_TEXTURE_CUBE_MAP;
       const unsigned depth = (is_cube ? 6 : 1) * mt->logical_depth0;
       const GLenum target = is_cube ? GL_TEXTURE_2D_ARRAY : mt->target;
       const unsigned max_level = surface->level + mt->last_level + 1;
       const unsigned layer = mt->target != GL_TEXTURE_3D ?
-                                surface->layer / MAX2(mt->num_samples, 1) : 0;
+                                surface->layer / layer_divider : 0;
 
       brw->vtbl.emit_texture_surface_state(brw, mt, target,
                                            layer, layer + depth,
