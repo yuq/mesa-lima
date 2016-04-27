@@ -327,7 +327,7 @@ _mesa_clear_shader_program_data(struct gl_context *ctx,
 
    shProg->data->linked_stages = 0;
 
-   if (shProg->data->UniformStorage) {
+   if (shProg->data->UniformStorage && !shProg->data->cache_fallback) {
       for (unsigned i = 0; i < shProg->data->NumUniformStorage; ++i)
          _mesa_uniform_detach_all_driver_storage(&shProg->data->
                                                     UniformStorage[i]);
@@ -336,7 +336,7 @@ _mesa_clear_shader_program_data(struct gl_context *ctx,
       shProg->data->UniformStorage = NULL;
    }
 
-   if (shProg->UniformRemapTable) {
+   if (shProg->UniformRemapTable && !shProg->data->cache_fallback) {
       ralloc_free(shProg->UniformRemapTable);
       shProg->NumUniformRemapTable = 0;
       shProg->UniformRemapTable = NULL;
