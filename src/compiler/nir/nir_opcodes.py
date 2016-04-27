@@ -571,7 +571,7 @@ else
    dst = ((1u << bits) - 1) << offset;
 """)
 
-opcode("ldexp", 0, tfloat, [0, 0], [tfloat, tint], "", """
+opcode("ldexp", 0, tfloat, [0, 0], [tfloat, tint32], "", """
 dst = (bit_size == 64) ? ldexp(src0, src1) : ldexpf(src0, src1);
 /* flush denormals to zero. */
 if (!isnormal(dst))

@@ -410,7 +410,7 @@ def ldexp32(f, exp):
    pow2_2 = fexp2i(('isub', exp, ('ishr', exp, 1)))
    return ('fmul', ('fmul', f, pow2_1), pow2_2)
 
-optimizations += [(('ldexp', 'x', 'exp'), ldexp32('x', 'exp'))]
+optimizations += [(('ldexp@32', 'x', 'exp'), ldexp32('x', 'exp'))]
 
 # Unreal Engine 4 demo applications open-codes bitfieldReverse()
 def bitfield_reverse(u):
