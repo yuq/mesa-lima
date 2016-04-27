@@ -392,6 +392,7 @@ enum pipe_flush_flags
 #define PIPE_BARRIER_FRAMEBUFFER       (1 << 9)
 #define PIPE_BARRIER_STREAMOUT_BUFFER  (1 << 10)
 #define PIPE_BARRIER_GLOBAL_BUFFER     (1 << 11)
+#define PIPE_BARRIER_ALL               ((1 << 12) - 1)
 
 /**
  * Resource binding flags -- state tracker must specify in advance all
