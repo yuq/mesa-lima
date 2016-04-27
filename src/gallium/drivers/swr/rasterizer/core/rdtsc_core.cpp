@@ -90,6 +90,6 @@ BUCKET_DESC gCoreBuckets[] = {
 
 /// @todo bucketmanager and mapping should probably be a part of the SWR context
 std::vector<uint32_t> gBucketMap;
-BucketManager gBucketMgr(KNOB_BUCKETS_ENABLE_THREADVIZ);
+BucketManager gBucketMgr;
 
 uint32_t gCurrentFrame = 0;

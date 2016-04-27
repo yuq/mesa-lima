@@ -47,17 +47,7 @@ extern THREAD UINT tlsThreadId;
 class BucketManager
 {
 public:
-    BucketManager(bool enableThreadViz) : mThreadViz(enableThreadViz)
-    {
-        if (mThreadViz)
-        {
-            uint32_t pid = GetCurrentProcessId();
-            std::stringstream str;
-            str << "threadviz." << pid;
-            mThreadVizDir = str.str();
-            CreateDirectory(mThreadVizDir.c_str(), NULL);
-        }
-    }
+    BucketManager() { }
 
     // removes all registered thread data
     void ClearThreads()

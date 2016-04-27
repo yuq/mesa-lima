@@ -34,6 +34,18 @@ THREAD UINT tlsThreadId = 0;
 
 void BucketManager::RegisterThread(const std::string& name)
 {
+    // lazy evaluate threadviz knob
+    if (!mThreadViz && KNOB_BUCKETS_ENABLE_THREADVIZ)
+    {
+        uint32_t pid = GetCurrentProcessId();
+        std::stringstream str;
+        str << "threadviz." << pid;
+        mThreadVizDir = str.str();
+        CreateDirectory(mThreadVizDir.c_str(), NULL);
+
+        mThreadViz = true;
+    }
+
     BUCKET_THREAD newThread;
     newThread.name = name;
     newThread.root.children.reserve(mBuckets.size());
