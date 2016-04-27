@@ -875,59 +875,6 @@ public:
 };
 
 /**
- * Merges a uniform block into an array of uniform blocks that may or
- * may not already contain a copy of it.
- *
- * Returns the index of the new block in the array.
- */
-int
-link_cross_validate_uniform_block(void *mem_ctx,
-                                  struct gl_uniform_block **linked_blocks,
-                                  unsigned int *num_linked_blocks,
-                                  struct gl_uniform_block *new_block)
-{
-   for (unsigned int i = 0; i < *num_linked_blocks; i++) {
-      struct gl_uniform_block *old_block = &(*linked_blocks)[i];
-
-      if (strcmp(old_block->Name, new_block->Name) == 0)
-         return link_uniform_blocks_are_compatible(old_block, new_block)
-            ? i : -1;
-   }
-
-   *linked_blocks = reralloc(mem_ctx, *linked_blocks,
-                             struct gl_uniform_block,
-                             *num_linked_blocks + 1);
-   int linked_block_index = (*num_linked_blocks)++;
-   struct gl_uniform_block *linked_block = &(*linked_blocks)[linked_block_index];
-
-   memcpy(linked_block, new_block, sizeof(*new_block));
-   linked_block->Uniforms = ralloc_array(*linked_blocks,
-                                         struct gl_uniform_buffer_variable,
-                                         linked_block->NumUniforms);
-
-   memcpy(linked_block->Uniforms,
-          new_block->Uniforms,
-          sizeof(*linked_block->Uniforms) * linked_block->NumUniforms);
-
-   linked_block->Name = ralloc_strdup(*linked_blocks, linked_block->Name);
-
-   for (unsigned int i = 0; i < linked_block->NumUniforms; i++) {
-      struct gl_uniform_buffer_variable *ubo_var =
-         &linked_block->Uniforms[i];
-
-      if (ubo_var->Name == ubo_var->IndexName) {
-         ubo_var->Name = ralloc_strdup(*linked_blocks, ubo_var->Name);
-         ubo_var->IndexName = ubo_var->Name;
-      } else {
-         ubo_var->Name = ralloc_strdup(*linked_blocks, ubo_var->Name);
-         ubo_var->IndexName = ralloc_strdup(*linked_blocks, ubo_var->IndexName);
-      }
-   }
-
-   return linked_block_index;
-}
-
-/**
  * Walks the IR and update the references to uniform blocks in the
  * ir_variables to point at linked shader's list (previously, they
  * would point at the uniform block list in one of the pre-linked
