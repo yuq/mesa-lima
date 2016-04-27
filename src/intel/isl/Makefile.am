@@ -110,9 +110,9 @@ check_PROGRAMS = $(TESTS)
 
 # Link tests to lib965_compiler.la for brw_get_device_info().
 tests_ldadd =						\
-	-lm						\
 	libisl.la					\
-	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la
+	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
+	-lm
 
 tests_isl_surf_get_image_offset_test_SOURCES =		\
 	tests/isl_surf_get_image_offset_test.c
