@@ -408,6 +408,11 @@ struct vc4_compile {
         uint32_t num_ubo_ranges;
         uint32_t next_ubo_dst_offset;
 
+        /* State for whether we're executing on each channel currently.  0 if
+         * yes, otherwise a block number + 1 that the channel jumped to.
+         */
+        struct qreg execute;
+
         struct qreg line_x, point_x, point_y;
         struct qreg discard;
         struct qreg payload_FRAG_Z;
@@ -758,6 +763,13 @@ qir_LOAD_IMM(struct vc4_compile *c, uint32_t val)
 {
         return qir_emit_def(c, qir_inst(QOP_LOAD_IMM, c->undef,
                                         qir_reg(QFILE_LOAD_IMM, val), c->undef));
+}
+
+static inline void
+qir_MOV_cond(struct vc4_compile *c, uint8_t cond,
+             struct qreg dest, struct qreg src)
+{
+        qir_MOV_dest(c, dest, src)->cond = cond;
 }
 
 static inline struct qinst *
