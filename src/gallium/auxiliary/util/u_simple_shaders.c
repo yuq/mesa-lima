@@ -123,7 +123,7 @@ void *util_make_layered_clear_vertex_shader(struct pipe_context *pipe)
    struct tgsi_token tokens[1000];
    struct pipe_shader_state state = {tokens};
 
-   if (!tgsi_text_translate(text, tokens, Elements(tokens))) {
+   if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       assert(0);
       return NULL;
    }
@@ -151,7 +151,7 @@ void *util_make_layered_clear_helper_vertex_shader(struct pipe_context *pipe)
    struct tgsi_token tokens[1000];
    struct pipe_shader_state state = {tokens};
 
-   if (!tgsi_text_translate(text, tokens, Elements(tokens))) {
+   if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       assert(0);
       return NULL;
    }
@@ -194,7 +194,7 @@ void *util_make_layered_clear_geometry_shader(struct pipe_context *pipe)
    struct tgsi_token tokens[1000];
    struct pipe_shader_state state = {tokens};
 
-   if (!tgsi_text_translate(text, tokens, Elements(tokens))) {
+   if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       assert(0);
       return NULL;
    }
@@ -478,7 +478,7 @@ util_make_fragment_passthrough_shader(struct pipe_context *pipe,
            tgsi_semantic_names[input_semantic],
            tgsi_interpolate_names[input_interpolate]);
 
-   if (!tgsi_text_translate(text, tokens, Elements(tokens))) {
+   if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       assert(0);
       return NULL;
    }
@@ -566,7 +566,7 @@ util_make_fs_blit_msaa_gen(struct pipe_context *pipe,
    sprintf(text, shader_templ, type, samp_type,
            output_semantic, output_mask, type);
 
-   if (!tgsi_text_translate(text, tokens, Elements(tokens))) {
+   if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       puts(text);
       assert(0);
       return NULL;
@@ -666,7 +666,7 @@ util_make_fs_blit_msaa_depthstencil(struct pipe_context *pipe,
 
    sprintf(text, shader_templ, type, type, type);
 
-   if (!tgsi_text_translate(text, tokens, Elements(tokens))) {
+   if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       assert(0);
       return NULL;
    }

@@ -428,7 +428,7 @@ void util_blitter_destroy(struct blitter_context *blitter)
       for (j = 0; j < 2; j++)
          pipe->delete_blend_state(pipe, ctx->blend[i][j]);
 
-   for (i = 0; i < Elements(ctx->blend_clear); i++) {
+   for (i = 0; i < ARRAY_SIZE(ctx->blend_clear); i++) {
       if (ctx->blend_clear[i])
          pipe->delete_blend_state(pipe, ctx->blend_clear[i]);
    }
@@ -483,17 +483,17 @@ void util_blitter_destroy(struct blitter_context *blitter)
       if (ctx->fs_texfetch_stencil_msaa[i])
          ctx->delete_fs_state(pipe, ctx->fs_texfetch_stencil_msaa[i]);
 
-      for (j = 0; j< Elements(ctx->fs_resolve[i]); j++)
+      for (j = 0; j< ARRAY_SIZE(ctx->fs_resolve[i]); j++)
          for (f = 0; f < 2; f++)
             if (ctx->fs_resolve[i][j][f])
                ctx->delete_fs_state(pipe, ctx->fs_resolve[i][j][f]);
 
-      for (j = 0; j< Elements(ctx->fs_resolve_sint[i]); j++)
+      for (j = 0; j< ARRAY_SIZE(ctx->fs_resolve_sint[i]); j++)
          for (f = 0; f < 2; f++)
             if (ctx->fs_resolve_sint[i][j][f])
                ctx->delete_fs_state(pipe, ctx->fs_resolve_sint[i][j][f]);
 
-      for (j = 0; j< Elements(ctx->fs_resolve_uint[i]); j++)
+      for (j = 0; j< ARRAY_SIZE(ctx->fs_resolve_uint[i]); j++)
          for (f = 0; f < 2; f++)
             if (ctx->fs_resolve_uint[i][j][f])
                ctx->delete_fs_state(pipe, ctx->fs_resolve_uint[i][j][f]);

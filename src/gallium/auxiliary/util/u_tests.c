@@ -424,7 +424,7 @@ null_constant_buffer(struct pipe_context *ctx)
       struct tgsi_token tokens[1000];
       struct pipe_shader_state state = {tokens};
 
-      if (!tgsi_text_translate(text, tokens, Elements(tokens))) {
+      if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
          puts("Can't compile a fragment shader.");
          util_report_result(FAIL);
          return;

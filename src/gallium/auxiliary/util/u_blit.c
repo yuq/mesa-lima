@@ -140,9 +140,9 @@ util_destroy_blit(struct blit_state *ctx)
    if (ctx->vs)
       pipe->delete_vs_state(pipe, ctx->vs);
 
-   for (i = 0; i < Elements(ctx->fs); i++) {
-      for (j = 0; j < Elements(ctx->fs[i]); j++) {
-         for (k = 0; k < Elements(ctx->fs[i][j]); k++) {
+   for (i = 0; i < ARRAY_SIZE(ctx->fs); i++) {
+      for (j = 0; j < ARRAY_SIZE(ctx->fs[i]); j++) {
+         for (k = 0; k < ARRAY_SIZE(ctx->fs[i][j]); k++) {
             if (ctx->fs[i][j][k])
                pipe->delete_fs_state(pipe, ctx->fs[i][j][k]);
          }
