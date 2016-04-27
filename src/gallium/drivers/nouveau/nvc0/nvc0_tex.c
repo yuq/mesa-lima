@@ -915,9 +915,158 @@ nve4_set_surface_info(struct nouveau_pushbuf *push,
 }
 
 static inline void
+nvc0_set_surface_info(struct nouveau_pushbuf *push,
+                      struct pipe_image_view *view, uint64_t address,
+                      int width, int height, int depth)
+{
+   struct nv04_resource *res;
+   uint32_t *const info = push->cur;
+
+   push->cur += 16;
+
+   /* Make sure to always initialize the surface information area because it's
+    * used to check if the given image is bound or not. */
+   memset(info, 0, 16 * sizeof(*info));
+
+   if (!view || !view->resource)
+      return;
+   res = nv04_resource(view->resource);
+
+   /* Stick the image dimensions for the imageSize() builtin. */
+   info[8] = width;
+   info[9] = height;
+   info[10] = depth;
+
+   /* Stick the blockwidth (ie. number of bytes per pixel) to calculate pixel
+    * offset and to check if the format doesn't mismatch. */
+   info[12] = util_format_get_blocksize(view->format);
+
+   if (res->base.target == PIPE_BUFFER) {
+      info[0]  = address >> 8;
+      info[2]  = width;
+   } else {
+      struct nv50_miptree *mt = nv50_miptree(&res->base);
+
+      info[0]  = address >> 8;
+      info[2]  = width;
+      info[4]  = height;
+      info[5]  = mt->layer_stride >> 8;
+      info[6]  = depth;
+      info[14] = mt->ms_x;
+      info[15] = mt->ms_y;
+   }
+}
+
+void
+nvc0_validate_suf(struct nvc0_context *nvc0, int s)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_screen *screen = nvc0->screen;
+
+   if (s == 5)
+      nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_SUF);
+   else
+      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_SUF);
+
+   for (int i = 0; i < NVC0_MAX_IMAGES; ++i) {
+      struct pipe_image_view *view = &nvc0->images[s][i];
+      int width, height, depth;
+      uint64_t address = 0;
+
+      if (s == 5)
+         BEGIN_NVC0(push, NVC0_CP(IMAGE(i)), 6);
+      else
+         BEGIN_NVC0(push, NVC0_3D(IMAGE(i)), 6);
+
+      if (view->resource) {
+         struct nv04_resource *res = nv04_resource(view->resource);
+         unsigned rt = nvc0_format_table[view->format].rt;
+
+         if (util_format_is_depth_or_stencil(view->format))
+            rt = rt << 12;
+         else
+            rt = (rt << 4) | (0x14 << 12);
+
+         /* get surface dimensions based on the target. */
+         nvc0_get_surface_dims(view, &width, &height, &depth);
+
+         address = res->address;
+         if (res->base.target == PIPE_BUFFER) {
+            unsigned blocksize = util_format_get_blocksize(view->format);
+
+            address += view->u.buf.first_element * blocksize;
+            assert(!(address & 0xff));
+
+            PUSH_DATAh(push, address);
+            PUSH_DATA (push, address);
+            PUSH_DATA (push, align(width * blocksize, 0x100));
+            PUSH_DATA (push, NVC0_3D_IMAGE_HEIGHT_LINEAR | 1);
+            PUSH_DATA (push, rt);
+            PUSH_DATA (push, 0);
+         } else {
+            struct nv50_miptree *mt = nv50_miptree(view->resource);
+            struct nv50_miptree_level *lvl = &mt->level[view->u.tex.level];
+            const unsigned z = view->u.tex.first_layer;
+
+            if (mt->layout_3d) {
+               address += nvc0_mt_zslice_offset(mt, view->u.tex.level, z);
+               if (depth >= 1) {
+                  pipe_debug_message(&nvc0->base.debug, CONFORMANCE,
+                                     "3D images are not supported!");
+                  debug_printf("3D images are not supported!\n");
+               }
+            } else {
+               address += mt->layer_stride * z;
+            }
+            address += lvl->offset;
+
+            PUSH_DATAh(push, address);
+            PUSH_DATA (push, address);
+            PUSH_DATA (push, width);
+            PUSH_DATA (push, height);
+            PUSH_DATA (push, rt);
+            PUSH_DATA (push, lvl->tile_mode & 0xff); /* mask out z-tiling */
+         }
+
+         if (s == 5)
+            BCTX_REFN(nvc0->bufctx_cp, CP_SUF, res, RDWR);
+         else
+            BCTX_REFN(nvc0->bufctx_3d, 3D_SUF, res, RDWR);
+      } else {
+         PUSH_DATA(push, 0);
+         PUSH_DATA(push, 0);
+         PUSH_DATA(push, 0);
+         PUSH_DATA(push, 0);
+         PUSH_DATA(push, 0x14000);
+         PUSH_DATA(push, 0);
+      }
+
+      /* stick surface information into the driver constant buffer */
+      if (s == 5)
+         BEGIN_NVC0(push, NVC0_CP(CB_SIZE), 3);
+      else
+         BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+      PUSH_DATA (push, 2048);
+      PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
+      PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
+      if (s == 5)
+         BEGIN_1IC0(push, NVC0_CP(CB_POS), 1 + 16);
+      else
+         BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 16);
+      PUSH_DATA (push, NVC0_CB_AUX_SU_INFO(i));
+
+      nvc0_set_surface_info(push, view, address, width, height, depth);
+   }
+}
+
+static inline void
 nvc0_update_surface_bindings(struct nvc0_context *nvc0)
 {
-   /* TODO */
+   nvc0_validate_suf(nvc0, 4);
+
+   /* Invalidate all COMPUTE images because they are aliased with FRAGMENT. */
+   nvc0->dirty_cp |= NVC0_NEW_CP_SURFACES;
+   nvc0->images_dirty[5] |= nvc0->images_valid[5];
 }
 
 static inline void

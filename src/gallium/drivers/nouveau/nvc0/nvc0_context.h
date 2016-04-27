@@ -323,6 +323,7 @@ extern void nvc0_init_surface_functions(struct nvc0_context *);
 bool nvc0_validate_tic(struct nvc0_context *nvc0, int s);
 bool nvc0_validate_tsc(struct nvc0_context *nvc0, int s);
 bool nve4_validate_tsc(struct nvc0_context *nvc0, int s);
+void nvc0_validate_suf(struct nvc0_context *nvc0, int s);
 void nvc0_validate_textures(struct nvc0_context *);
 void nvc0_validate_samplers(struct nvc0_context *);
 void nve4_set_tex_handles(struct nvc0_context *);

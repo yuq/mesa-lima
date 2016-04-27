@@ -258,6 +258,45 @@ nvc0_compute_validate_globals(struct nvc0_context *nvc0)
    }
 }
 
+static inline void
+nvc0_compute_invalidate_surfaces(struct nvc0_context *nvc0, const int s)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   int i;
+
+   for (i = 0; i < NVC0_MAX_IMAGES; ++i) {
+      if (s == 5)
+         BEGIN_NVC0(push, NVC0_CP(IMAGE(i)), 6);
+      else
+         BEGIN_NVC0(push, NVC0_3D(IMAGE(i)), 6);
+      PUSH_DATA(push, 0);
+      PUSH_DATA(push, 0);
+      PUSH_DATA(push, 0);
+      PUSH_DATA(push, 0);
+      PUSH_DATA(push, 0x14000);
+      PUSH_DATA(push, 0);
+   }
+}
+
+static void
+nvc0_compute_validate_surfaces(struct nvc0_context *nvc0)
+{
+   /* TODO: Invalidating both 3D and CP surfaces before validating surfaces for
+    * compute is probably not really necessary, but we didn't find any better
+    * solutions for now. This fixes some invalidation issues when compute and
+    * fragment shaders are used inside the same context. Anyway, we definitely
+    * have invalidation issues between 3D and CP for other resources like SSBO
+    * and atomic counters. */
+   nvc0_compute_invalidate_surfaces(nvc0, 4);
+   nvc0_compute_invalidate_surfaces(nvc0, 5);
+
+   nvc0_validate_suf(nvc0, 5);
+
+   /* Invalidate all FRAGMENT images because they are aliased with COMPUTE. */
+   nvc0->dirty_3d |= NVC0_NEW_3D_SURFACES;
+   nvc0->images_dirty[4] |= nvc0->images_valid[4];
+}
+
 static struct nvc0_state_validate
 validate_list_cp[] = {
    { nvc0_compprog_validate,              NVC0_NEW_CP_PROGRAM     },
@@ -267,6 +306,7 @@ validate_list_cp[] = {
    { nvc0_compute_validate_textures,      NVC0_NEW_CP_TEXTURES    },
    { nvc0_compute_validate_samplers,      NVC0_NEW_CP_SAMPLERS    },
    { nvc0_compute_validate_globals,       NVC0_NEW_CP_GLOBALS     },
+   { nvc0_compute_validate_surfaces,      NVC0_NEW_CP_SURFACES    },
 };
 
 static bool
@@ -383,6 +423,9 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
       BEGIN_NVC0(push, SUBC_CP(0x0360), 1);
       PUSH_DATA (push, 0x1);
    }
+
+   /* TODO: Not sure if this is really necessary. */
+   nvc0_compute_invalidate_surfaces(nvc0, 5);
 
    /* Invalidate all 3D constbufs because they are aliased with COMPUTE. */
    nvc0->dirty_3d |= NVC0_NEW_3D_CONSTBUF;
