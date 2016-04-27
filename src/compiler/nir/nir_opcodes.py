@@ -262,33 +262,11 @@ dst.x = (src0.x <<  0) |
         (src0.w << 24);
 """)
 
-unop_horiz("pack_double_2x32", 1, tuint64, 2, tuint32, """
-union {
-    uint64_t u64;
-    struct {
-        uint32_t i1;
-        uint32_t i2;
-    };
-} di;
+unop_horiz("pack_double_2x32", 1, tuint64, 2, tuint32,
+           "dst.x = src0.x | ((uint64_t)src0.y << 32);")
 
-di.i1 = src0.x;
-di.i2 = src0.y;
-dst.x = di.u64;
-""")
-
-unop_horiz("unpack_double_2x32", 2, tuint32, 1, tuint64, """
-union {
-    uint64_t u64;
-    struct {
-        uint32_t i1;
-        uint32_t i2;
-    };
-} di;
-
-di.u64 = src0.x;
-dst.x = di.i1;
-dst.y = di.i2;
-""")
+unop_horiz("unpack_double_2x32", 2, tuint32, 1, tuint64,
+           "dst.x = src0.x; dst.y = src0.x >> 32;")
 
 # Lowered floating point unpacking operations.
 
@@ -298,29 +276,8 @@ unop_horiz("unpack_half_2x16_split_x", 1, tfloat32, 1, tuint32,
 unop_horiz("unpack_half_2x16_split_y", 1, tfloat32, 1, tuint32,
            "unpack_half_1x16((uint16_t)(src0.x >> 16))")
 
-unop_convert("unpack_double_2x32_split_x", tuint32, tuint64, """
-union {
-    uint64_t u64;
-    struct {
-        uint32_t x;
-        uint32_t y;
-    };
-} di;
-di.u64 = src0;
-dst = di.x;
-""")
-
-unop_convert("unpack_double_2x32_split_y", tuint32, tuint64, """
-union {
-    uint64_t u64;
-    struct {
-        uint32_t x;
-        uint32_t y;
-    };
-} di;
-di.u64 = src0;
-dst = di.y;
-""")
+unop_convert("unpack_double_2x32_split_x", tuint32, tuint64, "src0")
+unop_convert("unpack_double_2x32_split_y", tuint32, tuint64, "src0 >> 32")
 
 # Bit operations, part of ARB_gpu_shader5.
 
@@ -600,18 +557,8 @@ binop("fpow", tfloat, "", "bit_size == 64 ? powf(src0, src1) : pow(src0, src1)")
 binop_horiz("pack_half_2x16_split", 1, tuint32, 1, tfloat32, 1, tfloat32,
             "pack_half_1x16(src0.x) | (pack_half_1x16(src1.x) << 16)")
 
-binop_convert("pack_double_2x32_split", tuint64, tuint32, "", """
-union {
-    uint64_t u64;
-    struct {
-        uint32_t x;
-        uint32_t y;
-    };
-} di;
-di.x = src0;
-di.y = src1;
-dst = di.u64;
-""")
+binop_convert("pack_double_2x32_split", tuint64, tuint32, "",
+              "src0 | ((uint64_t)src1 << 32)")
 
 # bfm implements the behavior of the first operation of the SM5 "bfi" assembly
 # and that of the "bfi1" i965 instruction. That is, it has undefined behavior
