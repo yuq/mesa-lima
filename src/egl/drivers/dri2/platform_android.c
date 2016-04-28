@@ -312,6 +312,27 @@ droid_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
    return EGL_TRUE;
 }
 
+static int
+update_buffers(struct dri2_egl_surface *dri2_surf)
+{
+   if (dri2_surf->base.Type != EGL_WINDOW_BIT)
+      return 0;
+
+   /* try to dequeue the next back buffer */
+   if (!dri2_surf->buffer && !droid_window_dequeue_buffer(dri2_surf))
+      return -1;
+
+   /* free outdated buffers and update the surface size */
+   if (dri2_surf->base.Width != dri2_surf->buffer->width ||
+       dri2_surf->base.Height != dri2_surf->buffer->height) {
+      droid_free_local_buffers(dri2_surf);
+      dri2_surf->base.Width = dri2_surf->buffer->width;
+      dri2_surf->base.Height = dri2_surf->buffer->height;
+   }
+
+   return 0;
+}
+
 static EGLBoolean
 droid_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
 {
@@ -484,19 +505,8 @@ droid_get_buffers_with_format(__DRIdrawable * driDrawable,
       dri2_egl_display(dri2_surf->base.Resource.Display);
    int i;
 
-   if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
-      /* try to dequeue the next back buffer */
-      if (!dri2_surf->buffer && !droid_window_dequeue_buffer(dri2_surf))
-         return NULL;
-
-      /* free outdated buffers and update the surface size */
-      if (dri2_surf->base.Width != dri2_surf->buffer->width ||
-          dri2_surf->base.Height != dri2_surf->buffer->height) {
-         droid_free_local_buffers(dri2_surf);
-         dri2_surf->base.Width = dri2_surf->buffer->width;
-         dri2_surf->base.Height = dri2_surf->buffer->height;
-      }
-   }
+   if (update_buffers(dri2_surf) < 0)
+      return NULL;
 
    dri2_surf->buffer_count =
       droid_get_buffers_parse_attachments(dri2_surf, attachments, count);
