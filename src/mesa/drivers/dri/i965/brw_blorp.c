@@ -135,6 +135,14 @@ brw_blorp_compute_tile_offsets(const struct brw_blorp_surface_info *info,
 
 
 void
+brw_blorp_prog_data_init(struct brw_blorp_prog_data *prog_data)
+{
+   prog_data->first_curbe_grf = 0;
+   prog_data->persample_msaa_dispatch = false;
+}
+
+
+void
 brw_blorp_params_init(struct brw_blorp_params *params)
 {
    memset(params, 0, sizeof(*params));

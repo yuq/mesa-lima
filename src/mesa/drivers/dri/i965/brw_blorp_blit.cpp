@@ -632,7 +632,7 @@ brw_blorp_blit_program::compile(struct brw_context *brw, bool debug_flag,
           (key->dst_samples == 0));
 
    /* Set up prog_data */
-   memset(&prog_data, 0, sizeof(prog_data));
+   brw_blorp_prog_data_init(&prog_data);
    prog_data.persample_msaa_dispatch = key->persample_msaa_dispatch;
 
    alloc_regs();

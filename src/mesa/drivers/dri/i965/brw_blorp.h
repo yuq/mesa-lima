@@ -214,6 +214,8 @@ struct brw_blorp_prog_data
    bool persample_msaa_dispatch;
 };
 
+void brw_blorp_prog_data_init(struct brw_blorp_prog_data *prog_data);
+
 struct brw_blorp_params
 {
    uint32_t x0;

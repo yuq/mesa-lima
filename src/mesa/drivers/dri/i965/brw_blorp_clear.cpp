@@ -160,7 +160,7 @@ brw_blorp_const_color_program::compile(struct brw_context *brw,
                                        GLuint *program_size)
 {
    /* Set up prog_data */
-   memset(&prog_data, 0, sizeof(prog_data));
+   brw_blorp_prog_data_init(&prog_data);
    prog_data.persample_msaa_dispatch = false;
 
    alloc_regs();
