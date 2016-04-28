@@ -166,6 +166,20 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 		assert((num_dw + ctx->dma.cs->cdw) <= ctx->dma.cs->max_dw);
 	}
+
+	/* If GPUVM is not supported, the CS checker needs 2 entries
+	 * in the buffer list per packet, which has to be done manually.
+	 */
+	if (ctx->screen->info.has_virtual_memory) {
+		if (dst)
+			radeon_add_to_buffer_list(ctx, &ctx->dma, dst,
+						  RADEON_USAGE_WRITE,
+						  RADEON_PRIO_SDMA_BUFFER);
+		if (src)
+			radeon_add_to_buffer_list(ctx, &ctx->dma, src,
+						  RADEON_USAGE_READ,
+						  RADEON_PRIO_SDMA_BUFFER);
+	}
 }
 
 /* This is required to prevent read-after-write hazards. */

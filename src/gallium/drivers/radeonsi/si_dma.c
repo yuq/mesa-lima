@@ -66,11 +66,6 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 
 	r600_need_dma_space(&ctx->b, ncopy * 5, rdst, rsrc);
 
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, rsrc, RADEON_USAGE_READ,
-			      RADEON_PRIO_SDMA_BUFFER);
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, rdst, RADEON_USAGE_WRITE,
-			      RADEON_PRIO_SDMA_BUFFER);
-
 	for (i = 0; i < ncopy; i++) {
 		csize = size < max_csize ? size : max_csize;
 		cs->buf[cs->cdw++] = SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd, csize);
@@ -162,11 +157,6 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	size = (copy_height * pitch) / 4;
 	ncopy = (size / SI_DMA_COPY_MAX_SIZE_DW) + !!(size % SI_DMA_COPY_MAX_SIZE_DW);
 	r600_need_dma_space(&ctx->b, ncopy * 9, &rdst->resource, &rsrc->resource);
-
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, &rsrc->resource,
-			      RADEON_USAGE_READ, RADEON_PRIO_SDMA_TEXTURE);
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, &rdst->resource,
-			      RADEON_USAGE_WRITE, RADEON_PRIO_SDMA_TEXTURE);
 
 	for (i = 0; i < ncopy; i++) {
 		cheight = copy_height;
