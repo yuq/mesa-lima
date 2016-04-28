@@ -336,8 +336,8 @@ ntq_emit_txf(struct vc4_compile *c, nir_tex_instr *instr)
 static void
 ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
 {
-        struct qreg s, t, r, lod, proj, compare;
-        bool is_txb = false, is_txl = false, has_proj = false;
+        struct qreg s, t, r, lod, compare;
+        bool is_txb = false, is_txl = false;
         unsigned unit = instr->texture_index;
 
         if (instr->op == nir_texop_txf) {
@@ -366,12 +366,6 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                         break;
                 case nir_tex_src_comparitor:
                         compare = ntq_get_src(c, instr->src[i].src, 0);
-                        break;
-                case nir_tex_src_projector:
-                        proj = qir_RCP(c, ntq_get_src(c, instr->src[i].src, 0));
-                        s = qir_FMUL(c, s, proj);
-                        t = qir_FMUL(c, t, proj);
-                        has_proj = true;
                         break;
                 default:
                         unreachable("unknown texture source");
@@ -440,9 +434,6 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 struct qreg u0 = qir_uniform_f(c, 0.0f);
                 struct qreg u1 = qir_uniform_f(c, 1.0f);
                 if (c->key->tex[unit].compare_mode) {
-                        if (has_proj)
-                                compare = qir_FMUL(c, compare, proj);
-
                         switch (c->key->tex[unit].compare_func) {
                         case PIPE_FUNC_NEVER:
                                 depth_output = qir_uniform_f(c, 0.0f);
@@ -1846,10 +1837,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                  */
                 .lower_rect = false,
 
-                /* We want to use this, but we don't want to newton-raphson
-                 * its rcp.
-                 */
-                .lower_txp = false,
+                .lower_txp = ~0,
 
                 /* Apply swizzles to all samplers. */
                 .swizzle_result = ~0,
