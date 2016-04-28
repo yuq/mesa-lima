@@ -6017,33 +6017,47 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                                            key->persample_interp,
                                            shader);
 
-   fs_visitor v(compiler, log_data, mem_ctx, key,
-                &prog_data->base, prog, shader, 8,
-                shader_time_index8);
-   if (!v.run_fs(false /* do_rep_send */)) {
+   cfg_t *simd8_cfg = NULL, *simd16_cfg = NULL;
+
+   fs_visitor v8(compiler, log_data, mem_ctx, key,
+                 &prog_data->base, prog, shader, 8,
+                 shader_time_index8);
+   if (!v8.run_fs(false /* do_rep_send */)) {
       if (error_str)
-         *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
+         *error_str = ralloc_strdup(mem_ctx, v8.fail_msg);
 
       return NULL;
+   } else if (likely(!(INTEL_DEBUG & DEBUG_NO8))) {
+      simd8_cfg = v8.cfg;
    }
 
-   cfg_t *simd16_cfg = NULL;
-   fs_visitor v2(compiler, log_data, mem_ctx, key,
-                 &prog_data->base, prog, shader, 16,
-                 shader_time_index16);
-   if (likely(!(INTEL_DEBUG & DEBUG_NO16) || use_rep_send)) {
-      if (!v.simd16_unsupported) {
-         /* Try a SIMD16 compile */
-         v2.import_uniforms(&v);
-         if (!v2.run_fs(use_rep_send)) {
-            compiler->shader_perf_log(log_data,
-                                      "SIMD16 shader failed to compile: %s",
-                                      v2.fail_msg);
-         } else {
-            simd16_cfg = v2.cfg;
-         }
+   if (!v8.simd16_unsupported &&
+       likely(!(INTEL_DEBUG & DEBUG_NO16) || use_rep_send)) {
+      /* Try a SIMD16 compile */
+      fs_visitor v16(compiler, log_data, mem_ctx, key,
+                     &prog_data->base, prog, shader, 16,
+                     shader_time_index16);
+      v16.import_uniforms(&v8);
+      if (!v16.run_fs(use_rep_send)) {
+         compiler->shader_perf_log(log_data,
+                                   "SIMD16 shader failed to compile: %s",
+                                   v16.fail_msg);
+      } else {
+         simd16_cfg = v16.cfg;
       }
    }
+
+   /* When the caller requests a repclear shader, they want SIMD16-only */
+   if (use_rep_send)
+      simd8_cfg = NULL;
+
+   /* Prior to Iron Lake, the PS had a single shader offset with a jump table
+    * at the top to select the shader.  We've never implemented that.
+    * Instead, we just give them exactly one shader and we pick the widest one
+    * available.
+    */
+   if (compiler->devinfo->gen < 5 && simd16_cfg)
+      simd8_cfg = NULL;
 
    /* We have to compute the flat inputs after the visitor is finished running
     * because it relies on prog_data->urb_setup which is computed in
@@ -6051,18 +6065,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
     */
    brw_compute_flat_inputs(prog_data, key->flat_shade, shader);
 
-   cfg_t *simd8_cfg;
-   int no_simd8 = (INTEL_DEBUG & DEBUG_NO8) || use_rep_send;
-   if ((no_simd8 || compiler->devinfo->gen < 5) && simd16_cfg) {
-      simd8_cfg = NULL;
-      prog_data->no_8 = true;
-   } else {
-      simd8_cfg = v.cfg;
-      prog_data->no_8 = false;
-   }
-
    fs_generator g(compiler, log_data, mem_ctx, (void *) key, &prog_data->base,
-                  v.promoted_constants, v.runtime_check_aads_emit,
+                  v8.promoted_constants, v8.runtime_check_aads_emit,
                   MESA_SHADER_FRAGMENT);
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM)) {
@@ -6072,8 +6076,13 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                                      shader->info.name));
    }
 
-   if (simd8_cfg)
+   if (simd8_cfg) {
       g.generate_code(simd8_cfg, 8);
+      prog_data->no_8 = false;
+   } else {
+      prog_data->no_8 = true;
+   }
+
    if (simd16_cfg)
       prog_data->prog_offset_16 = g.generate_code(simd16_cfg, 16);
 
