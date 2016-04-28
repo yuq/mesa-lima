@@ -3442,7 +3442,7 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 
 	size = (copy_height * pitch) / 4;
 	ncopy = (size / EG_DMA_COPY_MAX_SIZE) + !!(size % EG_DMA_COPY_MAX_SIZE);
-	r600_need_dma_space(&rctx->b, ncopy * 9);
+	r600_need_dma_space(&rctx->b, ncopy * 9, &rdst->resource, &rsrc->resource);
 
 	for (i = 0; i < ncopy; i++) {
 		cheight = copy_height;

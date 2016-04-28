@@ -47,7 +47,7 @@ static void cik_sdma_do_copy_buffer(struct si_context *ctx,
 	src_offset += r600_resource(src)->gpu_address;
 
 	ncopy = DIV_ROUND_UP(size, CIK_SDMA_COPY_MAX_SIZE);
-	r600_need_dma_space(&ctx->b, ncopy * 7);
+	r600_need_dma_space(&ctx->b, ncopy * 7, rdst, rsrc);
 
 	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, rsrc, RADEON_USAGE_READ,
 			      RADEON_PRIO_SDMA_BUFFER);
@@ -212,7 +212,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 	      srcy + copy_height != (1 << 14)))) {
 		struct radeon_winsys_cs *cs = sctx->b.dma.cs;
 
-		r600_need_dma_space(&sctx->b, 13);
+		r600_need_dma_space(&sctx->b, 13, &rdst->resource, &rsrc->resource);
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.dma, &rsrc->resource,
 					  RADEON_USAGE_READ,
 					  RADEON_PRIO_SDMA_TEXTURE);
@@ -382,7 +382,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 		    copy_depth <= (1 << 11)) {
 			struct radeon_winsys_cs *cs = sctx->b.dma.cs;
 
-			r600_need_dma_space(&sctx->b, 14);
+			r600_need_dma_space(&sctx->b, 14, &rdst->resource, &rsrc->resource);
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.dma, &rsrc->resource,
 						  RADEON_USAGE_READ,
 						  RADEON_PRIO_SDMA_TEXTURE);
@@ -484,7 +484,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 		      dstx + copy_width != (1 << 14)))) {
 			struct radeon_winsys_cs *cs = sctx->b.dma.cs;
 
-			r600_need_dma_space(&sctx->b, 15);
+			r600_need_dma_space(&sctx->b, 15, &rdst->resource, &rsrc->resource);
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.dma, &rsrc->resource,
 						  RADEON_USAGE_READ,
 						  RADEON_PRIO_SDMA_TEXTURE);

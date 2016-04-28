@@ -2918,7 +2918,7 @@ static boolean r600_dma_copy_tile(struct r600_context *rctx,
 	 */
 	cheight = ((R600_DMA_COPY_MAX_SIZE_DW * 4) / pitch) & 0xfffffff8;
 	ncopy = (copy_height / cheight) + !!(copy_height % cheight);
-	r600_need_dma_space(&rctx->b, ncopy * 7);
+	r600_need_dma_space(&rctx->b, ncopy * 7, &rdst->resource, &rsrc->resource);
 
 	for (i = 0; i < ncopy; i++) {
 		cheight = cheight > copy_height ? copy_height : cheight;

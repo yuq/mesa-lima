@@ -136,14 +136,33 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	pipe_resource_reference(&buf, NULL);
 }
 
-void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw)
+void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
+                         struct r600_resource *dst, struct r600_resource *src)
 {
+	uint64_t vram = 0, gtt = 0;
+
+	if (dst) {
+		if (dst->domains & RADEON_DOMAIN_VRAM)
+			vram += dst->buf->size;
+		else if (dst->domains & RADEON_DOMAIN_GTT)
+			gtt += dst->buf->size;
+	}
+	if (src) {
+		if (src->domains & RADEON_DOMAIN_VRAM)
+			vram += src->buf->size;
+		else if (src->domains & RADEON_DOMAIN_GTT)
+			gtt += src->buf->size;
+	}
+
 	/* Flush the GFX IB if it's not empty. */
 	if (ctx->gfx.cs->cdw > ctx->initial_gfx_cs_size)
 		ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 
-	/* Flush if there's not enough space. */
-	if ((num_dw + ctx->dma.cs->cdw) > ctx->dma.cs->max_dw) {
+	/* Flush if there's not enough space, or if the memory usage per IB
+	 * is too large.
+	 */
+	if ((num_dw + ctx->dma.cs->cdw) > ctx->dma.cs->max_dw ||
+	    !ctx->ws->cs_memory_below_limit(ctx->dma.cs, vram, gtt)) {
 		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 		assert((num_dw + ctx->dma.cs->cdw) <= ctx->dma.cs->max_dw);
 	}
@@ -157,7 +176,7 @@ void r600_dma_emit_wait_idle(struct r600_common_context *rctx)
 	/* done at the end of DMA calls, so increment this. */
 	rctx->num_dma_calls++;
 
-	r600_need_dma_space(rctx, 1);
+	r600_need_dma_space(rctx, 1, NULL, NULL);
 
 	if (cs->cdw == 0) /* empty queue */
 		return;

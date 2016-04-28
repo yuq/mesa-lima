@@ -467,7 +467,7 @@ void r600_dma_copy_buffer(struct r600_context *rctx,
 	size >>= 2; /* convert to dwords */
 	ncopy = (size / R600_DMA_COPY_MAX_SIZE_DW) + !!(size % R600_DMA_COPY_MAX_SIZE_DW);
 
-	r600_need_dma_space(&rctx->b, ncopy * 5);
+	r600_need_dma_space(&rctx->b, ncopy * 5, rdst, rsrc);
 	for (i = 0; i < ncopy; i++) {
 		csize = size < R600_DMA_COPY_MAX_SIZE_DW ? size : R600_DMA_COPY_MAX_SIZE_DW;
 		/* emit reloc before writing cs so that cs is always in consistent state */

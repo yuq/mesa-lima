@@ -60,7 +60,7 @@ void evergreen_dma_copy_buffer(struct r600_context *rctx,
 	}
 	ncopy = (size / EG_DMA_COPY_MAX_SIZE) + !!(size % EG_DMA_COPY_MAX_SIZE);
 
-	r600_need_dma_space(&rctx->b, ncopy * 5);
+	r600_need_dma_space(&rctx->b, ncopy * 5, rdst, rsrc);
 	for (i = 0; i < ncopy; i++) {
 		csize = size < EG_DMA_COPY_MAX_SIZE ? size : EG_DMA_COPY_MAX_SIZE;
 		/* emit reloc before writing cs so that cs is always in consistent state */

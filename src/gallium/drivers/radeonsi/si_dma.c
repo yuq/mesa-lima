@@ -64,7 +64,7 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 	}
 	ncopy = (size / max_csize) + !!(size % max_csize);
 
-	r600_need_dma_space(&ctx->b, ncopy * 5);
+	r600_need_dma_space(&ctx->b, ncopy * 5, rdst, rsrc);
 
 	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, rsrc, RADEON_USAGE_READ,
 			      RADEON_PRIO_SDMA_BUFFER);
@@ -161,7 +161,7 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	mt = G_009910_MICRO_TILE_MODE(tile_mode);
 	size = (copy_height * pitch) / 4;
 	ncopy = (size / SI_DMA_COPY_MAX_SIZE_DW) + !!(size % SI_DMA_COPY_MAX_SIZE_DW);
-	r600_need_dma_space(&ctx->b, ncopy * 9);
+	r600_need_dma_space(&ctx->b, ncopy * 9, &rdst->resource, &rsrc->resource);
 
 	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, &rsrc->resource,
 			      RADEON_USAGE_READ, RADEON_PRIO_SDMA_TEXTURE);
