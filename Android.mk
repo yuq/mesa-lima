@@ -96,10 +96,12 @@ SUBDIRS := \
 	src/egl \
 	src/mesa/drivers/dri
 
+INC_DIRS := $(call all-named-subdir-makefiles,$(SUBDIRS))
+
 ifeq ($(strip $(MESA_BUILD_GALLIUM)),true)
-SUBDIRS += src/gallium
+INC_DIRS += $(call all-named-subdir-makefiles,src/gallium)
 endif
 
-include $(call all-named-subdir-makefiles,$(SUBDIRS))
+include $(INC_DIRS)
 
 endif
