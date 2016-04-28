@@ -1134,23 +1134,37 @@ parse_instruction(
 
    cur = ctx->cur;
    eat_opt_white(&cur);
-   for (i = 0; inst.Instruction.Memory && *cur == ','; i++) {
-      uint j;
+
+   for (; inst.Instruction.Memory && *cur == ',';
+        ctx->cur = cur, eat_opt_white(&cur)) {
+      int j;
+
       cur++;
       eat_opt_white(&cur);
+
+      j = str_match_name_from_array(&cur, tgsi_memory_names,
+                                    ARRAY_SIZE(tgsi_memory_names));
+      if (j >= 0) {
+         inst.Memory.Qualifier |= 1U << j;
+         continue;
+      }
+
+      j = str_match_name_from_array(&cur, tgsi_texture_names,
+                                    ARRAY_SIZE(tgsi_texture_names));
+      if (j >= 0) {
+         inst.Memory.Texture = j;
+         continue;
+      }
+
+      j = str_match_format(&cur);
+      if (j >= 0) {
+         inst.Memory.Format = j;
+         continue;
+      }
+
       ctx->cur = cur;
-      for (j = 0; j < 3; j++) {
-         if (str_match_nocase_whole(&ctx->cur, tgsi_memory_names[j])) {
-            inst.Memory.Qualifier |= 1U << j;
-            break;
-         }
-      }
-      if (j == 3) {
-         report_error(ctx, "Expected memory qualifier");
-         return FALSE;
-      }
-      cur = ctx->cur;
-      eat_opt_white(&cur);
+      report_error(ctx, "Expected memory qualifier, texture target, or format\n");
+      return FALSE;
    }
 
    cur = ctx->cur;
