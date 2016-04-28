@@ -540,7 +540,6 @@ qir_optimize(struct vc4_compile *c)
                 bool progress = false;
 
                 OPTPASS(qir_opt_algebraic);
-                OPTPASS(qir_opt_cse);
                 OPTPASS(qir_opt_constant_folding);
                 OPTPASS(qir_opt_copy_propagation);
                 OPTPASS(qir_opt_dead_code);

@@ -25,7 +25,6 @@ C_SOURCES := \
 	vc4_opt_algebraic.c \
 	vc4_opt_constant_folding.c \
 	vc4_opt_copy_propagation.c \
-	vc4_opt_cse.c \
 	vc4_opt_dead_code.c \
 	vc4_opt_small_immediates.c \
 	vc4_opt_vpm.c \

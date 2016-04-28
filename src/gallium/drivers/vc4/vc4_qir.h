@@ -489,7 +489,6 @@ void qir_optimize(struct vc4_compile *c);
 bool qir_opt_algebraic(struct vc4_compile *c);
 bool qir_opt_constant_folding(struct vc4_compile *c);
 bool qir_opt_copy_propagation(struct vc4_compile *c);
-bool qir_opt_cse(struct vc4_compile *c);
 bool qir_opt_dead_code(struct vc4_compile *c);
 bool qir_opt_small_immediates(struct vc4_compile *c);
 bool qir_opt_vpm(struct vc4_compile *c);
