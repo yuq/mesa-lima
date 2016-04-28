@@ -154,8 +154,14 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 			gtt += src->buf->size;
 	}
 
-	/* Flush the GFX IB if it's not empty. */
-	if (ctx->gfx.cs->cdw > ctx->initial_gfx_cs_size)
+	/* Flush the GFX IB if DMA depends on it. */
+	if (ctx->gfx.cs->cdw > ctx->initial_gfx_cs_size &&
+	    ((dst &&
+	      ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, dst->buf,
+					       RADEON_USAGE_READWRITE)) ||
+	     (src &&
+	      ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, src->buf,
+					       RADEON_USAGE_WRITE))))
 		ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 
 	/* Flush if there's not enough space, or if the memory usage per IB
