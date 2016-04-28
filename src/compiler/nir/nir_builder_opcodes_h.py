@@ -27,7 +27,7 @@ template = """\
 #define _NIR_BUILDER_OPCODES_
 
 % for name, opcode in sorted(opcodes.iteritems()):
-ALU${opcode.num_inputs}(${name});
+ALU${opcode.num_inputs}(${name})
 % endfor
 
 #endif /* _NIR_BUILDER_OPCODES_ */"""
