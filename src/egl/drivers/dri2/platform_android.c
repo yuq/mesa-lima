@@ -65,6 +65,20 @@ get_format_bpp(int native)
    return bpp;
 }
 
+static int get_format(int format)
+{
+   switch (format) {
+   case HAL_PIXEL_FORMAT_BGRA_8888: return __DRI_IMAGE_FORMAT_ARGB8888;
+   case HAL_PIXEL_FORMAT_RGB_565:   return __DRI_IMAGE_FORMAT_RGB565;
+   case HAL_PIXEL_FORMAT_RGBA_8888: return __DRI_IMAGE_FORMAT_ABGR8888;
+   case HAL_PIXEL_FORMAT_RGBX_8888: return __DRI_IMAGE_FORMAT_XBGR8888;
+   case HAL_PIXEL_FORMAT_RGB_888:
+      /* unsupported */
+   default:
+      _eglLog(_EGL_WARNING, "unsupported native buffer format 0x%x", format);
+   }
+   return -1;
+}
 static int
 get_native_buffer_name(struct ANativeWindowBuffer *buf)
 {
@@ -332,7 +346,6 @@ dri2_create_image_android_native_buffer(_EGLDisplay *disp, _EGLContext *ctx,
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_image *dri2_img;
    int name;
-   EGLint format;
 
    if (ctx != NULL) {
       /* From the EGL_ANDROID_image_native_buffer spec:
@@ -358,28 +371,6 @@ dri2_create_image_android_native_buffer(_EGLDisplay *disp, _EGLContext *ctx,
       return NULL;
    }
 
-   /* see the table in droid_add_configs_for_visuals */
-   switch (buf->format) {
-   case HAL_PIXEL_FORMAT_BGRA_8888:
-      format = __DRI_IMAGE_FORMAT_ARGB8888;
-      break;
-   case HAL_PIXEL_FORMAT_RGB_565:
-      format = __DRI_IMAGE_FORMAT_RGB565;
-      break;
-   case HAL_PIXEL_FORMAT_RGBA_8888:
-      format = __DRI_IMAGE_FORMAT_ABGR8888;
-      break;
-   case HAL_PIXEL_FORMAT_RGBX_8888:
-      format = __DRI_IMAGE_FORMAT_XBGR8888;
-      break;
-   case HAL_PIXEL_FORMAT_RGB_888:
-      /* unsupported */
-   default:
-      _eglLog(_EGL_WARNING, "unsupported native buffer format 0x%x", buf->format);
-      return NULL;
-      break;
-   }
-
    dri2_img = calloc(1, sizeof(*dri2_img));
    if (!dri2_img) {
       _eglError(EGL_BAD_ALLOC, "droid_create_image_mesa_drm");
@@ -395,7 +386,7 @@ dri2_create_image_android_native_buffer(_EGLDisplay *disp, _EGLContext *ctx,
       dri2_dpy->image->createImageFromName(dri2_dpy->dri_screen,
 					   buf->width,
 					   buf->height,
-					   format,
+					   get_format(buf->format),
 					   name,
 					   buf->stride,
 					   dri2_img);
