@@ -37,6 +37,8 @@
 #include "brw_eu.h"
 #include "brw_state.h"
 
+#include "nir_builder.h"
+
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
 struct brw_blorp_const_color_prog_key
@@ -44,57 +46,6 @@ struct brw_blorp_const_color_prog_key
    bool use_simd16_replicated_data;
    bool pad[3];
 };
-
-class brw_blorp_const_color_program
-{
-public:
-   brw_blorp_const_color_program(struct brw_context *brw,
-                                 const brw_blorp_const_color_prog_key *key);
-   ~brw_blorp_const_color_program();
-
-   const GLuint *compile(struct brw_context *brw, GLuint *program_size);
-
-   brw_blorp_prog_data prog_data;
-
-private:
-   void alloc_regs();
-
-   void *mem_ctx;
-   const brw_blorp_const_color_prog_key *key;
-   struct brw_codegen func;
-
-   /* Thread dispatch header */
-   struct brw_reg R0;
-
-   /* Pixel X/Y coordinates (always in R1). */
-   struct brw_reg R1;
-
-   /* Register with push constants (a single vec4) */
-   struct brw_reg clear_rgba;
-
-   /* MRF used for render target writes */
-   GLuint base_mrf;
-};
-
-brw_blorp_const_color_program::brw_blorp_const_color_program(
-      struct brw_context *brw,
-      const brw_blorp_const_color_prog_key *key)
-   : mem_ctx(ralloc_context(NULL)),
-     key(key),
-     R0(),
-     R1(),
-     clear_rgba(),
-     base_mrf(0)
-{
-   prog_data.first_curbe_grf_0 = 0;
-   prog_data.persample_msaa_dispatch = false;
-   brw_init_codegen(brw->intelScreen->devinfo, &func, mem_ctx);
-}
-
-brw_blorp_const_color_program::~brw_blorp_const_color_program()
-{
-   ralloc_free(mem_ctx);
-}
 
 static void
 brw_blorp_params_get_clear_kernel(struct brw_context *brw,
@@ -105,18 +56,46 @@ brw_blorp_params_get_clear_kernel(struct brw_context *brw,
    memset(&blorp_key, 0, sizeof(blorp_key));
    blorp_key.use_simd16_replicated_data = use_replicated_data;
 
-   if (!brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                         &blorp_key, sizeof(blorp_key),
-                         &params->wm_prog_kernel, &params->wm_prog_data)) {
-      brw_blorp_const_color_program prog(brw, &blorp_key);
-      GLuint program_size;
-      const GLuint *program = prog.compile(brw, &program_size);
-      brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                       &blorp_key, sizeof(blorp_key),
-                       program, program_size,
-                       &prog.prog_data, sizeof(prog.prog_data),
-                       &params->wm_prog_kernel, &params->wm_prog_data);
-   }
+   if (brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
+                        &blorp_key, sizeof(blorp_key),
+                        &params->wm_prog_kernel, &params->wm_prog_data))
+      return;
+
+   void *mem_ctx = ralloc_context(NULL);
+
+   nir_builder b;
+   nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
+   b.shader->info.name = ralloc_strdup(b.shader, "BLORP-clear");
+
+   nir_variable *u_color = nir_variable_create(b.shader, nir_var_uniform,
+                                               glsl_vec4_type(), "u_color");
+   u_color->data.location = 0;
+
+   nir_variable *frag_color = nir_variable_create(b.shader, nir_var_shader_out,
+                                                  glsl_vec4_type(),
+                                                  "gl_FragColor");
+   frag_color->data.location = FRAG_RESULT_COLOR;
+
+   nir_copy_var(&b, frag_color, u_color);
+
+   struct brw_wm_prog_key wm_key;
+   brw_blorp_init_wm_prog_key(&wm_key);
+
+   struct brw_blorp_prog_data prog_data;
+   brw_blorp_prog_data_init(&prog_data);
+
+   unsigned program_size;
+   const unsigned *program =
+      brw_blorp_compile_nir_shader(brw, b.shader, &wm_key, use_replicated_data,
+                                   &prog_data, &program_size);
+
+   brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
+                    &blorp_key, sizeof(blorp_key),
+                    program, program_size,
+                    &prog_data, sizeof(prog_data),
+                    &params->wm_prog_kernel, &params->wm_prog_data);
+
+   ralloc_free(mem_ctx);
 }
 
 static bool
@@ -141,91 +120,6 @@ set_write_disables(const struct intel_renderbuffer *irb,
 
    return disables;
 }
-
-void
-brw_blorp_const_color_program::alloc_regs()
-{
-   int reg = 0;
-   this->R0 = retype(brw_vec8_grf(reg++, 0), BRW_REGISTER_TYPE_UW);
-   this->R1 = retype(brw_vec8_grf(reg++, 0), BRW_REGISTER_TYPE_UW);
-
-   prog_data.first_curbe_grf_0 = reg;
-   clear_rgba = retype(brw_vec4_grf(reg++, 0), BRW_REGISTER_TYPE_F);
-   reg += BRW_BLORP_NUM_PUSH_CONST_REGS;
-
-   /* Make sure we didn't run out of registers */
-   assert(reg <= GEN7_MRF_HACK_START);
-
-   this->base_mrf = 2;
-}
-
-const GLuint *
-brw_blorp_const_color_program::compile(struct brw_context *brw,
-                                       GLuint *program_size)
-{
-   /* Set up prog_data */
-   brw_blorp_prog_data_init(&prog_data);
-   prog_data.persample_msaa_dispatch = false;
-
-   alloc_regs();
-
-   brw_set_default_compression_control(&func, BRW_COMPRESSION_COMPRESSED);
-
-   struct brw_reg mrf_rt_write =
-      retype(vec16(brw_message_reg(base_mrf)), BRW_REGISTER_TYPE_F);
-
-   uint32_t mlen, msg_type;
-   if (key->use_simd16_replicated_data) {
-      /* The message payload is a single register with the low 4 floats/ints
-       * filled with the constant clear color.
-       */
-      brw_set_default_exec_size(&func, BRW_EXECUTE_4);
-      brw_set_default_mask_control(&func, BRW_MASK_DISABLE);
-      brw_MOV(&func, vec4(brw_message_reg(base_mrf)), clear_rgba);
-      brw_set_default_mask_control(&func, BRW_MASK_ENABLE);
-      brw_set_default_exec_size(&func, BRW_EXECUTE_16);
-
-      msg_type = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE_REPLICATED;
-      mlen = 1;
-   } else {
-      brw_set_default_exec_size(&func, BRW_EXECUTE_16);
-      for (int i = 0; i < 4; i++) {
-         /* The message payload is pairs of registers for 16 pixels each of r,
-          * g, b, and a.
-          */
-         brw_MOV(&func,
-                 brw_message_reg(base_mrf + i * 2),
-                 brw_vec1_grf(clear_rgba.nr, i));
-      }
-
-      msg_type = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE;
-      mlen = 8;
-   }
-
-   /* Now write to the render target and terminate the thread */
-   brw_fb_WRITE(&func,
-                16 /* dispatch_width */,
-                base_mrf >= 0 ? brw_message_reg(base_mrf) : mrf_rt_write,
-                brw_null_reg() /* header */,
-                msg_type,
-                BRW_BLORP_RENDERBUFFER_BINDING_TABLE_INDEX,
-                mlen,
-                0 /* response_length */,
-                true /* eot */,
-                true /* last render target */,
-                false /* header present */);
-
-   if (unlikely(INTEL_DEBUG & DEBUG_BLORP)) {
-      fprintf(stderr, "Native code for BLORP clear:\n");
-      brw_disassemble(brw->intelScreen->devinfo,
-                      func.store, 0, func.next_insn_offset, stderr);
-      fprintf(stderr, "\n");
-   }
-
-   brw_compact_instructions(&func, 0, 0, NULL);
-   return brw_get_program(&func, program_size);
-}
-
 
 static bool
 do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
