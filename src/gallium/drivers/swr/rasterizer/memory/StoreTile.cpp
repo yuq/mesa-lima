@@ -1523,7 +1523,7 @@ void StoreHotTile(
 
     PFN_STORE_TILES pfnStoreTiles = nullptr;
 
-    if ((renderTargetIndex <= SWR_ATTACHMENT_COLOR7) && (pDstSurface->tileMode != SWR_TILE_MODE_WMAJOR))
+    if (renderTargetIndex <= SWR_ATTACHMENT_COLOR7)
     {
         pfnStoreTiles = sStoreTilesTableColor[pDstSurface->tileMode][pDstSurface->format];
     }
@@ -1713,4 +1713,7 @@ void InitSimStoreTilesTable()
 
     InitStoreTilesTableDepth<SWR_TILE_MODE_YMAJOR>(sStoreTilesTableDepth);
     InitStoreTilesTableStencil<SWR_TILE_MODE_WMAJOR>(sStoreTilesTableStencil);
+
+    // special color hot tile -> 8-bit WMAJOR
+    sStoreTilesTableColor[SWR_TILE_MODE_WMAJOR][R8_UINT] = StoreMacroTile<TilingTraits<SWR_TILE_MODE_WMAJOR, 8>, R32G32B32A32_FLOAT, R8_UINT>::Store;
 }
