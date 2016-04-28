@@ -331,10 +331,10 @@ static unsigned radeon_drm_cs_add_buffer(struct radeon_winsys_cs *rcs,
     unsigned index = radeon_add_buffer(cs, bo, usage, domains, priority,
                                        &added_domains);
 
-    if (added_domains & RADEON_DOMAIN_GTT)
-        cs->csc->used_gart += bo->base.size;
     if (added_domains & RADEON_DOMAIN_VRAM)
         cs->csc->used_vram += bo->base.size;
+    else if (added_domains & RADEON_DOMAIN_GTT)
+        cs->csc->used_gart += bo->base.size;
 
     return index;
 }
