@@ -374,6 +374,8 @@ struct vc4_compile {
 
         struct qreg line_x, point_x, point_y;
         struct qreg discard;
+        struct qreg payload_FRAG_Z;
+        struct qreg payload_FRAG_W;
 
         uint8_t vattr_sizes[8];
 
@@ -584,6 +586,21 @@ qir_##name(struct vc4_compile *c, struct qreg dest, struct qreg a)       \
         return dest;                                                     \
 }
 
+#define QIR_PAYLOAD(name)                                                \
+static inline struct qreg                                                \
+qir_##name(struct vc4_compile *c)                                        \
+{                                                                        \
+        struct qreg *payload = &c->payload_##name;                       \
+        if (payload->file != QFILE_NULL)                                 \
+                return *payload;                                         \
+        *payload = qir_get_temp(c);                                      \
+        struct qinst *inst = qir_inst(QOP_##name, *payload,              \
+                                      c->undef, c->undef);               \
+        list_add(&inst->link, &c->instructions);                         \
+        c->defs[payload->index] = inst;                                  \
+        return *payload;                                                 \
+}
+
 QIR_ALU1(MOV)
 QIR_ALU1(FMOV)
 QIR_ALU1(MMOV)
@@ -625,8 +642,8 @@ QIR_NODST_2(TEX_T)
 QIR_NODST_2(TEX_R)
 QIR_NODST_2(TEX_B)
 QIR_NODST_2(TEX_DIRECT)
-QIR_ALU0(FRAG_Z)
-QIR_ALU0(FRAG_W)
+QIR_PAYLOAD(FRAG_Z)
+QIR_PAYLOAD(FRAG_W)
 QIR_ALU0(TEX_RESULT)
 QIR_ALU0(TLB_COLOR_READ)
 QIR_NODST_1(MS_MASK)
