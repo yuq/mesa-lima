@@ -109,7 +109,7 @@ static const struct nir_shader_compiler_options vector_nir_options = {
    .fdot_replicates = true,
 
    /* Prior to Gen6, there are no three source operations for SIMD4x2. */
-   .lower_flrp = true,
+   .lower_flrp32 = true,
 
    .lower_pack_snorm_2x16 = true,
    .lower_pack_unorm_2x16 = true,
