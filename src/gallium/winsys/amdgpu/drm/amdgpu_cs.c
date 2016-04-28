@@ -549,11 +549,17 @@ static boolean amdgpu_cs_validate(struct radeon_winsys_cs *rcs)
 static boolean amdgpu_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint64_t vram, uint64_t gtt)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
-   boolean status =
-         (cs->used_gart + gtt) < cs->ctx->ws->info.gart_size * 0.7 &&
-         (cs->used_vram + vram) < cs->ctx->ws->info.vram_size * 0.7;
+   struct amdgpu_winsys *ws = cs->ctx->ws;
 
-   return status;
+   vram += cs->used_vram;
+   gtt += cs->used_gart;
+
+   /* Anything that goes above the VRAM size should go to GTT. */
+   if (vram > ws->info.vram_size)
+       gtt += vram - ws->info.vram_size;
+
+   /* Now we just need to check if we have enough GTT. */
+   return gtt < ws->info.gart_size * 0.7;
 }
 
 static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
