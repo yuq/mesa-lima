@@ -105,12 +105,6 @@ swr_fence_reference(struct pipe_screen *screen,
       swr_fence_destroy(old);
 }
 
-static INLINE boolean
-swr_is_fence_done(struct pipe_fence_handle *fence_handle)
-{
-   struct swr_fence *fence = swr_fence(fence_handle);
-   return (fence->read == fence->write);
-}
 
 /*
  * Wait for the fence to finish.

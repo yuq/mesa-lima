@@ -27,13 +27,18 @@
 
 #include <limits.h>
 
+struct swr_query_result {
+   SWR_STATS core;
+   uint64_t timestamp;
+};
+
 struct swr_query {
    unsigned type; /* PIPE_QUERY_* */
    unsigned index;
 
-   union pipe_query_result *result;
-   union pipe_query_result start;
-   union pipe_query_result end;
+   struct swr_query_result *result;
+   struct swr_query_result start;
+   struct swr_query_result end;
 
    struct pipe_fence_handle *fence;
 
