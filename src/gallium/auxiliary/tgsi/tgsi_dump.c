@@ -753,7 +753,7 @@ str_dump_ctx_printf(struct dump_ctx *ctx, const char *format, ...)
 {
    struct str_dump_ctx *sctx = (struct str_dump_ctx *)ctx;
    
-   if(sctx->left > 1) {
+   if (!sctx->nospace) {
       int written;
       va_list ap;
       va_start(ap, format);
@@ -764,12 +764,14 @@ str_dump_ctx_printf(struct dump_ctx *ctx, const char *format, ...)
        * vsnprintf:
        */
       if (written > 0) {
-         written = MIN2(sctx->left, written);
+         if (written >= sctx->left) {
+            sctx->nospace = true;
+            written = sctx->left;
+         }
          sctx->ptr += written;
          sctx->left -= written;
       }
-   } else
-      sctx->nospace = true;
+   }
 }
 
 bool
