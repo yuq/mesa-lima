@@ -545,10 +545,14 @@ next_offset(const struct brw_device_info *devinfo, void *store, int offset)
       return offset + 16;
 }
 
+const struct opcode_desc *
+brw_opcode_desc(const struct brw_device_info *devinfo, enum opcode opcode);
+
 static inline bool
 is_3src(const struct brw_device_info *devinfo, enum opcode opcode)
 {
-   return opcode_descs[opcode].nsrc == 3;
+   const struct opcode_desc *desc = brw_opcode_desc(devinfo, opcode);
+   return desc && desc->nsrc == 3;
 }
 
 /** Maximum SEND message length */

@@ -167,8 +167,8 @@ brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
 {
    switch (op) {
    case BRW_OPCODE_ILLEGAL ... BRW_OPCODE_NOP:
-      assert(opcode_descs[op].name);
-      return opcode_descs[op].name;
+      assert(brw_opcode_desc(devinfo, op)->name);
+      return brw_opcode_desc(devinfo, op)->name;
    case FS_OPCODE_FB_WRITE:
       return "fb_write";
    case FS_OPCODE_FB_WRITE_LOGICAL:

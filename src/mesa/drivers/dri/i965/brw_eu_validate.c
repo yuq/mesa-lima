@@ -300,6 +300,8 @@ static unsigned
 num_sources_from_inst(const struct brw_device_info *devinfo,
                       const brw_inst *inst)
 {
+   const struct opcode_desc *desc =
+      brw_opcode_desc(devinfo, brw_inst_opcode(devinfo, inst));
    unsigned math_function;
 
    if (brw_inst_opcode(devinfo, inst) == BRW_OPCODE_MATH) {
@@ -314,8 +316,10 @@ num_sources_from_inst(const struct brw_device_info *devinfo,
           */
          return 0;
       }
+   } else if (desc) {
+      return desc->nsrc;
    } else {
-      return opcode_descs[brw_inst_opcode(devinfo, inst)].nsrc;
+      return 0;
    }
 
    switch (math_function) {

@@ -28,6 +28,7 @@
 #include "brw_defines.h"
 #include "brw_reg.h"
 #include "brw_inst.h"
+#include "brw_eu.h"
 
 const struct opcode_desc opcode_descs[128] = {
    [BRW_OPCODE_MOV]      = { .name = "mov",     .nsrc = 1, .ndst = 1 },
@@ -705,13 +706,15 @@ control(FILE *file, const char *name, const char *const ctrl[],
 }
 
 static int
-print_opcode(FILE *file, int id)
+print_opcode(FILE *file, const struct brw_device_info *devinfo,
+             enum opcode id)
 {
-   if (!opcode_descs[id].name) {
+   const struct opcode_desc *desc = brw_opcode_desc(devinfo, id);
+   if (!desc) {
       format(file, "*** invalid opcode value %d ", id);
       return 1;
    }
-   string(file, opcode_descs[id].name);
+   string(file, desc->name);
    return 0;
 }
 
@@ -1277,6 +1280,7 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
    int space = 0;
 
    const enum opcode opcode = brw_inst_opcode(devinfo, inst);
+   const struct opcode_desc *desc = brw_opcode_desc(devinfo, opcode);
 
    if (brw_inst_pred_control(devinfo, inst)) {
       string(file, "(");
@@ -1295,7 +1299,7 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
       string(file, ") ");
    }
 
-   err |= print_opcode(file, opcode);
+   err |= print_opcode(file, devinfo, opcode);
    err |= control(file, "saturate", saturate, brw_inst_saturate(devinfo, inst),
                   NULL);
 
@@ -1366,7 +1370,7 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
    } else if (opcode == BRW_OPCODE_JMPI) {
       pad(file, 16);
       err |= src1(file, devinfo, inst);
-   } else if (opcode_descs[opcode].nsrc == 3) {
+   } else if (desc && desc->nsrc == 3) {
       pad(file, 16);
       err |= dest_3src(file, devinfo, inst);
 
@@ -1378,18 +1382,18 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
 
       pad(file, 64);
       err |= src2_3src(file, devinfo, inst);
-   } else {
-      if (opcode_descs[opcode].ndst > 0) {
+   } else if (desc) {
+      if (desc->ndst > 0) {
          pad(file, 16);
          err |= dest(file, devinfo, inst);
       }
 
-      if (opcode_descs[opcode].nsrc > 0) {
+      if (desc->nsrc > 0) {
          pad(file, 32);
          err |= src0(file, devinfo, inst);
       }
 
-      if (opcode_descs[opcode].nsrc > 1) {
+      if (desc->nsrc > 1) {
          pad(file, 48);
          err |= src1(file, devinfo, inst);
       }
@@ -1659,7 +1663,7 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
          err |= qtr_ctrl(file, devinfo, inst);
       else {
          if (brw_inst_qtr_control(devinfo, inst) == BRW_COMPRESSION_COMPRESSED &&
-             opcode_descs[opcode].ndst > 0 &&
+             desc && desc->ndst > 0 &&
              brw_inst_dst_reg_file(devinfo, inst) == BRW_MESSAGE_REGISTER_FILE &&
              brw_inst_dst_da_reg_nr(devinfo, inst) & BRW_MRF_COMPR4) {
             format(file, " compr4");
