@@ -127,7 +127,7 @@ private:
    nir_visitor *visitor;
 };
 
-}; /* end of anonymous namespace */
+} /* end of anonymous namespace */
 
 nir_shader *
 glsl_to_nir(const struct gl_shader_program *shader_prog,
