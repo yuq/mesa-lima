@@ -724,6 +724,51 @@ swr_update_sampler_state(struct swr_context *ctx,
    }
 }
 
+static void
+swr_update_constants(struct swr_context *ctx, enum pipe_shader_type shaderType)
+{
+   swr_draw_context *pDC = &ctx->swrDC;
+
+   const float **constant;
+   uint32_t *num_constants;
+   struct swr_scratch_space *scratch;
+
+   switch (shaderType) {
+   case PIPE_SHADER_VERTEX:
+      constant = pDC->constantVS;
+      num_constants = pDC->num_constantsVS;
+      scratch = &ctx->scratch->vs_constants;
+      break;
+   case PIPE_SHADER_FRAGMENT:
+      constant = pDC->constantFS;
+      num_constants = pDC->num_constantsFS;
+      scratch = &ctx->scratch->fs_constants;
+      break;
+   default:
+      debug_printf("Unsupported shader type constants\n");
+      return;
+   }
+
+   for (UINT i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
+      const pipe_constant_buffer *cb = &ctx->constants[shaderType][i];
+      num_constants[i] = cb->buffer_size;
+      if (cb->buffer) {
+         constant[i] =
+            (const float *)(swr_resource_data(cb->buffer) +
+                            cb->buffer_offset);
+      } else {
+         /* Need to copy these constants to scratch space */
+         if (cb->user_buffer && cb->buffer_size) {
+            const void *ptr =
+               ((const uint8_t *)cb->user_buffer + cb->buffer_offset);
+            uint32_t size = AlignUp(cb->buffer_size, 4);
+            ptr = swr_copy_to_scratch_space(ctx, scratch, ptr, size);
+            constant[i] = (const float *)ptr;
+         }
+      }
+   }
+}
+
 void
 swr_update_derived(struct pipe_context *pipe,
                    const struct pipe_draw_info *p_draw_info)
@@ -1126,54 +1171,12 @@ swr_update_derived(struct pipe_context *pipe,
 
    /* VertexShader Constants */
    if (ctx->dirty & SWR_NEW_VSCONSTANTS) {
-      swr_draw_context *pDC = &ctx->swrDC;
-
-      for (UINT i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
-         const pipe_constant_buffer *cb =
-            &ctx->constants[PIPE_SHADER_VERTEX][i];
-         pDC->num_constantsVS[i] = cb->buffer_size;
-         if (cb->buffer)
-            pDC->constantVS[i] =
-               (const float *)(swr_resource_data(cb->buffer) +
-                               cb->buffer_offset);
-         else {
-            /* Need to copy these constants to scratch space */
-            if (cb->user_buffer && cb->buffer_size) {
-               const void *ptr =
-                  ((const uint8_t *)cb->user_buffer + cb->buffer_offset);
-               uint32_t size = AlignUp(cb->buffer_size, 4);
-               ptr = swr_copy_to_scratch_space(
-                  ctx, &ctx->scratch->vs_constants, ptr, size);
-               pDC->constantVS[i] = (const float *)ptr;
-            }
-         }
-      }
+      swr_update_constants(ctx, PIPE_SHADER_VERTEX);
    }
 
    /* FragmentShader Constants */
    if (ctx->dirty & SWR_NEW_FSCONSTANTS) {
-      swr_draw_context *pDC = &ctx->swrDC;
-
-      for (UINT i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
-         const pipe_constant_buffer *cb =
-            &ctx->constants[PIPE_SHADER_FRAGMENT][i];
-         pDC->num_constantsFS[i] = cb->buffer_size;
-         if (cb->buffer)
-            pDC->constantFS[i] =
-               (const float *)(swr_resource_data(cb->buffer) +
-                               cb->buffer_offset);
-         else {
-            /* Need to copy these constants to scratch space */
-            if (cb->user_buffer && cb->buffer_size) {
-               const void *ptr =
-                  ((const uint8_t *)cb->user_buffer + cb->buffer_offset);
-               uint32_t size = AlignUp(cb->buffer_size, 4);
-               ptr = swr_copy_to_scratch_space(
-                  ctx, &ctx->scratch->fs_constants, ptr, size);
-               pDC->constantFS[i] = (const float *)ptr;
-            }
-         }
-      }
+      swr_update_constants(ctx, PIPE_SHADER_FRAGMENT);
    }
 
    /* Depth/stencil state */
