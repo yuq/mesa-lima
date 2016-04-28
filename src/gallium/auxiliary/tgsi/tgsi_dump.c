@@ -705,29 +705,30 @@ prolog(
    return TRUE;
 }
 
+static void
+init_dump_ctx(struct dump_ctx *ctx, uint flags)
+{
+   memset(ctx, 0, sizeof(*ctx));
+
+   ctx->iter.prolog = prolog;
+   ctx->iter.iterate_instruction = iter_instruction;
+   ctx->iter.iterate_declaration = iter_declaration;
+   ctx->iter.iterate_immediate = iter_immediate;
+   ctx->iter.iterate_property = iter_property;
+
+   if (flags & TGSI_DUMP_FLOAT_AS_HEX)
+      ctx->dump_float_as_hex = TRUE;
+}
+
 void
 tgsi_dump_to_file(const struct tgsi_token *tokens, uint flags, FILE *file)
 {
    struct dump_ctx ctx;
 
-   ctx.iter.prolog = prolog;
-   ctx.iter.iterate_instruction = iter_instruction;
-   ctx.iter.iterate_declaration = iter_declaration;
-   ctx.iter.iterate_immediate = iter_immediate;
-   ctx.iter.iterate_property = iter_property;
-   ctx.iter.epilog = NULL;
+   init_dump_ctx(&ctx, flags);
 
-   ctx.instno = 0;
-   ctx.immno = 0;
-   ctx.indent = 0;
    ctx.dump_printf = dump_ctx_printf;
-   ctx.indentation = 0;
    ctx.file = file;
-
-   if (flags & TGSI_DUMP_FLOAT_AS_HEX)
-      ctx.dump_float_as_hex = TRUE;
-   else
-      ctx.dump_float_as_hex = FALSE;
 
    tgsi_iterate_shader( tokens, &ctx.iter );
 }
@@ -780,30 +781,15 @@ tgsi_dump_str(
 {
    struct str_dump_ctx ctx;
 
-   ctx.base.iter.prolog = prolog;
-   ctx.base.iter.iterate_instruction = iter_instruction;
-   ctx.base.iter.iterate_declaration = iter_declaration;
-   ctx.base.iter.iterate_immediate = iter_immediate;
-   ctx.base.iter.iterate_property = iter_property;
-   ctx.base.iter.epilog = NULL;
+   init_dump_ctx(&ctx.base, flags);
 
-   ctx.base.instno = 0;
-   ctx.base.immno = 0;
-   ctx.base.indent = 0;
    ctx.base.dump_printf = &str_dump_ctx_printf;
-   ctx.base.indentation = 0;
-   ctx.base.file = NULL;
 
    ctx.str = str;
    ctx.str[0] = 0;
    ctx.ptr = str;
    ctx.left = (int)size;
    ctx.nospace = false;
-
-   if (flags & TGSI_DUMP_FLOAT_AS_HEX)
-      ctx.base.dump_float_as_hex = TRUE;
-   else
-      ctx.base.dump_float_as_hex = FALSE;
 
    tgsi_iterate_shader( tokens, &ctx.base.iter );
 
