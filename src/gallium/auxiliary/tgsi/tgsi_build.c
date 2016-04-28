@@ -791,6 +791,8 @@ tgsi_default_instruction_memory( void )
 static struct tgsi_instruction_memory
 tgsi_build_instruction_memory(
    unsigned qualifier,
+   unsigned texture,
+   unsigned format,
    struct tgsi_token *prev_token,
    struct tgsi_instruction *instruction,
    struct tgsi_header *header )
@@ -798,8 +800,8 @@ tgsi_build_instruction_memory(
    struct tgsi_instruction_memory instruction_memory;
 
    instruction_memory.Qualifier = qualifier;
-   instruction_memory.Texture = 0;
-   instruction_memory.Format = 0;
+   instruction_memory.Texture = texture;
+   instruction_memory.Format = format;
    instruction_memory.Padding = 0;
    instruction->Memory = 1;
 
@@ -1177,6 +1179,8 @@ tgsi_build_full_instruction(
 
       *instruction_memory = tgsi_build_instruction_memory(
          full_inst->Memory.Qualifier,
+         full_inst->Memory.Texture,
+         full_inst->Memory.Format,
          prev_token,
          instruction,
          header );
