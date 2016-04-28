@@ -119,6 +119,24 @@ static boolean str_match_nocase_whole( const char **pcur, const char *str )
    return FALSE;
 }
 
+/* Return the format corresponding to the name at *pcur.
+ * Returns -1 if there is no format name.
+ *
+ * On success, the pointer to the string is moved to the end of the read format
+ * name.
+ */
+static int str_match_format(const char **pcur)
+{
+   for (unsigned i = 0; i < PIPE_FORMAT_COUNT; i++) {
+      const struct util_format_description *desc =
+         util_format_description(i);
+      if (desc && str_match_nocase_whole(pcur, desc->name)) {
+         return i;
+      }
+   }
+   return -1;
+}
+
 /* Eat zero or more whitespaces.
  */
 static void eat_opt_white( const char **pcur )
@@ -1302,16 +1320,11 @@ static boolean parse_declaration( struct translate_ctx *ctx )
                decl.Image.Writable = 1;
 
             } else {
-               for (i = 0; i < PIPE_FORMAT_COUNT; i++) {
-                  const struct util_format_description *desc =
-                     util_format_description(i);
-                  if (desc && str_match_nocase_whole(&cur2, desc->name)) {
-                     decl.Image.Format = i;
-                     break;
-                  }
-               }
-               if (i == PIPE_FORMAT_COUNT)
+               int format = str_match_format(&cur2);
+               if (format < 0)
                   break;
+
+               decl.Image.Format = format;
             }
             cur = cur2;
             eat_opt_white(&cur2);
