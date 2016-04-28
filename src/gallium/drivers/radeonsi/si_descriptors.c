@@ -261,15 +261,15 @@ static void si_release_sampler_views(struct si_sampler_views *views)
 }
 
 static void si_sampler_view_add_buffer(struct si_context *sctx,
-				       struct pipe_resource *resource)
+				       struct pipe_resource *resource,
+				       enum radeon_bo_usage usage)
 {
 	struct r600_resource *rres = (struct r600_resource*)resource;
 
 	if (!resource)
 		return;
 
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, rres,
-				  RADEON_USAGE_READ,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, rres, usage,
 				  r600_get_sampler_view_priority(rres));
 }
 
@@ -282,7 +282,8 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 	while (mask) {
 		int i = u_bit_scan(&mask);
 
-		si_sampler_view_add_buffer(sctx, views->views[i]->texture);
+		si_sampler_view_add_buffer(sctx, views->views[i]->texture,
+					   RADEON_USAGE_READ);
 	}
 
 	views->desc.ce_ram_dirty = true;
@@ -310,7 +311,8 @@ static void si_set_sampler_view(struct si_context *sctx,
 	if (view) {
 		struct r600_texture *rtex = (struct r600_texture *)view->texture;
 
-		si_sampler_view_add_buffer(sctx, view->texture);
+		si_sampler_view_add_buffer(sctx, view->texture,
+					   RADEON_USAGE_READ);
 
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(views->desc.list + slot * 16, rview->state, 8*4);
@@ -441,7 +443,8 @@ si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *imag
 
 		assert(view->resource);
 
-		si_sampler_view_add_buffer(sctx, view->resource);
+		si_sampler_view_add_buffer(sctx, view->resource,
+					   RADEON_USAGE_READWRITE);
 	}
 
 	images->desc.ce_ram_dirty = true;
@@ -495,7 +498,8 @@ si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 		res = (struct r600_resource *)views[i].resource;
 		util_copy_image_view(&images->views[slot], &views[i]);
 
-		si_sampler_view_add_buffer(ctx, &res->b.b);
+		si_sampler_view_add_buffer(ctx, &res->b.b,
+					   RADEON_USAGE_READWRITE);
 
 		if (res->b.b.target == PIPE_BUFFER) {
 			si_make_buffer_descriptor(screen, res,
