@@ -268,7 +268,7 @@ static void r600_eliminate_fast_color_clear(struct r600_common_screen *rscreen,
 	pipe_mutex_unlock(rscreen->aux_context_lock);
 }
 
-static void r600_texture_disable_cmask(struct r600_common_screen *rscreen,
+static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 				       struct r600_texture *rtex)
 {
 	if (!rtex->cmask.size)
@@ -352,7 +352,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 			/* Disable CMASK if flush_resource isn't going
 			 * to be called.
 			 */
-			r600_texture_disable_cmask(rscreen, rtex);
+			r600_texture_discard_cmask(rscreen, rtex);
 			update_metadata = true;
 		}
 
