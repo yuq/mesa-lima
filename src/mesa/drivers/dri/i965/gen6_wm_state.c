@@ -129,29 +129,19 @@ gen6_upload_wm_state(struct brw_context *brw,
 
    dw5 |= (brw->max_wm_threads - 1) << GEN6_WM_MAX_THREADS_SHIFT;
 
-   if (prog_data->prog_offset_16 || prog_data->no_8) {
+   if (prog_data->dispatch_8)
+      dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
+
+   if (prog_data->dispatch_16)
       dw5 |= GEN6_WM_16_DISPATCH_ENABLE;
 
-      if (!prog_data->no_8 && !prog_data->persample_dispatch) {
-         dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
-         dw4 |= (prog_data->base.dispatch_grf_start_reg <<
-                 GEN6_WM_DISPATCH_START_GRF_SHIFT_0);
-         dw4 |= (prog_data->dispatch_grf_start_reg_16 <<
-                 GEN6_WM_DISPATCH_START_GRF_SHIFT_2);
-         ksp0 = stage_state->prog_offset;
-         ksp2 = stage_state->prog_offset + prog_data->prog_offset_16;
-      } else {
-         dw4 |= (prog_data->dispatch_grf_start_reg_16 <<
-                GEN6_WM_DISPATCH_START_GRF_SHIFT_0);
-         ksp0 = stage_state->prog_offset + prog_data->prog_offset_16;
-      }
-   }
-   else {
-      dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
-      dw4 |= (prog_data->base.dispatch_grf_start_reg <<
-              GEN6_WM_DISPATCH_START_GRF_SHIFT_0);
-      ksp0 = stage_state->prog_offset;
-   }
+   dw4 |= prog_data->base.dispatch_grf_start_reg <<
+          GEN6_WM_DISPATCH_START_GRF_SHIFT_0;
+   dw4 |= prog_data->dispatch_grf_start_reg_2 <<
+          GEN6_WM_DISPATCH_START_GRF_SHIFT_2;
+
+   ksp0 = stage_state->prog_offset;
+   ksp2 = stage_state->prog_offset + prog_data->prog_offset_2;
 
    if (dual_source_blend_enable)
       dw5 |= GEN6_WM_DUAL_SOURCE_BLEND_ENABLE;
@@ -200,37 +190,6 @@ gen6_upload_wm_state(struct brw_context *brw,
          dw6 |= GEN6_WM_MSDISPMODE_PERSAMPLE;
       else {
          dw6 |= GEN6_WM_MSDISPMODE_PERPIXEL;
-
-         /* From the Sandy Bridge PRM, Vol 2 part 1, 7.7.1 ("Pixel Grouping
-          * (Dispatch Size) Control"), p.334:
-          *
-          *     Note: in the table below, the Valid column indicates which
-          *     products that combination is supported on. Combinations of
-          *     dispatch enables not listed in the table are not available on
-          *     any product.
-          *
-          *     A: Valid on all products
-          *
-          *     B: Not valid on [DevSNB] if 4x PERPIXEL mode with pixel shader
-          *     computed depth.
-          *
-          *     D: Valid on all products, except when in non-1x PERSAMPLE mode
-          *     (applies to [DevSNB+] only). Not valid on [DevSNB] if 4x
-          *     PERPIXEL mode with pixel shader computed depth.
-          *
-          *     E: Not valid on [DevSNB] if 4x PERPIXEL mode with pixel shader
-          *     computed depth.
-          *
-          *     F: Valid on all products, except not valid on [DevSNB] if 4x
-          *     PERPIXEL mode with pixel shader computed depth.
-          *
-          * In the table that follows, the only entry with "A" in the Valid
-          * column is the entry where only 8 pixel dispatch is enabled.
-          * Therefore, when we are in PERPIXEL mode with pixel shader computed
-          * depth, we need to disable SIMD16 dispatch.
-          */
-         if (dw5 & GEN6_WM_COMPUTED_DEPTH)
-            dw5 &= ~GEN6_WM_16_DISPATCH_ENABLE;
       }
    } else {
       dw6 |= GEN6_WM_MSRAST_OFF_PIXEL;

@@ -216,34 +216,19 @@ gen7_upload_ps_state(struct brw_context *brw,
 
    dw4 |= fast_clear_op;
 
-   if (prog_data->prog_offset_16 || prog_data->no_8) {
+   if (prog_data->dispatch_16)
       dw4 |= GEN7_PS_16_DISPATCH_ENABLE;
 
-      /* In case of non 1x per sample shading, only one of SIMD8 and SIMD16
-       * should be enabled. We do 'SIMD16 only' dispatch if a SIMD16 shader
-       * is successfully compiled. In majority of the cases that bring us
-       * better performance than 'SIMD8 only' dispatch.
-       */
-      if (!prog_data->no_8 && !prog_data->persample_dispatch) {
-         dw4 |= GEN7_PS_8_DISPATCH_ENABLE;
-         dw5 |= (prog_data->base.dispatch_grf_start_reg <<
-                 GEN7_PS_DISPATCH_START_GRF_SHIFT_0);
-         dw5 |= (prog_data->dispatch_grf_start_reg_16 <<
-                 GEN7_PS_DISPATCH_START_GRF_SHIFT_2);
-         ksp0 = stage_state->prog_offset;
-         ksp2 = stage_state->prog_offset + prog_data->prog_offset_16;
-      } else {
-         dw5 |= (prog_data->dispatch_grf_start_reg_16 <<
-                 GEN7_PS_DISPATCH_START_GRF_SHIFT_0);
-         ksp0 = stage_state->prog_offset + prog_data->prog_offset_16;
-      }
-   }
-   else {
+   if (prog_data->dispatch_8)
       dw4 |= GEN7_PS_8_DISPATCH_ENABLE;
-      dw5 |= (prog_data->base.dispatch_grf_start_reg <<
-              GEN7_PS_DISPATCH_START_GRF_SHIFT_0);
-      ksp0 = stage_state->prog_offset;
-   }
+
+   dw5 |= prog_data->base.dispatch_grf_start_reg <<
+          GEN7_PS_DISPATCH_START_GRF_SHIFT_0;
+   dw5 |= prog_data->dispatch_grf_start_reg_2 <<
+          GEN7_PS_DISPATCH_START_GRF_SHIFT_2;
+
+   ksp0 = stage_state->prog_offset;
+   ksp2 = stage_state->prog_offset + prog_data->prog_offset_2;
 
    BEGIN_BATCH(8);
    OUT_BATCH(_3DSTATE_PS << 16 | (8 - 2));

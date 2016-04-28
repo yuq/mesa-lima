@@ -502,9 +502,9 @@ genX(graphics_pipeline_create)(
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
          ps.KernelStartPointer0     = pipeline->ps_ksp0;
          ps.KernelStartPointer1     = 0;
-         ps.KernelStartPointer2     = pipeline->ps_ksp2;
-         ps._8PixelDispatchEnable   = pipeline->ps_simd8 != NO_KERNEL;
-         ps._16PixelDispatchEnable  = pipeline->ps_simd16 != NO_KERNEL;
+         ps.KernelStartPointer2     = pipeline->ps_ksp0 + wm_prog_data->prog_offset_2;
+         ps._8PixelDispatchEnable   = wm_prog_data->dispatch_8;
+         ps._16PixelDispatchEnable  = wm_prog_data->dispatch_16;
          ps._32PixelDispatchEnable  = false;
          ps.SingleProgramFlow       = false;
          ps.VectorMaskEnable        = true;
@@ -518,9 +518,11 @@ genX(graphics_pipeline_create)(
          ps.ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_FRAGMENT];
          ps.PerThreadScratchSpace   = scratch_space(&wm_prog_data->base);
 
-         ps.DispatchGRFStartRegisterForConstantSetupData0 = pipeline->ps_grf_start0;
+         ps.DispatchGRFStartRegisterForConstantSetupData0 =
+            wm_prog_data->base.dispatch_grf_start_reg;
          ps.DispatchGRFStartRegisterForConstantSetupData1 = 0;
-         ps.DispatchGRFStartRegisterForConstantSetupData2 = pipeline->ps_grf_start2;
+         ps.DispatchGRFStartRegisterForConstantSetupData2 =
+            wm_prog_data->dispatch_grf_start_reg_2;
       }
 
       bool per_sample_ps = pCreateInfo->pMultisampleState &&

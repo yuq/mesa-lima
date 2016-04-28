@@ -585,17 +585,17 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    const struct brw_stage_prog_data *stage_prog_data;
    struct anv_pipeline_bind_map map;
    struct brw_wm_prog_key key;
-   uint32_t kernel = NO_KERNEL;
    unsigned char sha1[20];
 
    populate_wm_prog_key(&pipeline->device->info, info, extra, &key);
 
    if (module->size > 0) {
       anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
-      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data, &map);
+      pipeline->ps_ksp0 =
+         anv_pipeline_cache_search(cache, sha1, &stage_prog_data, &map);
    }
 
-   if (kernel == NO_KERNEL) {
+   if (pipeline->ps_ksp0 == NO_KERNEL) {
       struct brw_wm_prog_data prog_data = { 0, };
       struct anv_pipeline_binding surface_to_descriptor[256];
       struct anv_pipeline_binding sampler_to_descriptor[256];
@@ -682,41 +682,14 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       }
 
       stage_prog_data = &prog_data.base;
-      kernel = anv_pipeline_cache_upload_kernel(cache,
-                                                module->size > 0 ? sha1 : NULL,
-                                                shader_code, code_size,
+      pipeline->ps_ksp0 =
+         anv_pipeline_cache_upload_kernel(cache,
+                                          module->size > 0 ? sha1 : NULL,
+                                          shader_code, code_size,
                                                 &stage_prog_data, sizeof(prog_data),
                                                 &map);
 
       ralloc_free(mem_ctx);
-   }
-
-   const struct brw_wm_prog_data *wm_prog_data =
-      (const struct brw_wm_prog_data *) stage_prog_data;
-
-   if (wm_prog_data->no_8)
-      pipeline->ps_simd8 = NO_KERNEL;
-   else
-      pipeline->ps_simd8 = kernel;
-
-   if (wm_prog_data->no_8 || wm_prog_data->prog_offset_16) {
-      pipeline->ps_simd16 = kernel + wm_prog_data->prog_offset_16;
-   } else {
-      pipeline->ps_simd16 = NO_KERNEL;
-   }
-
-   pipeline->ps_ksp2 = 0;
-   pipeline->ps_grf_start2 = 0;
-   if (pipeline->ps_simd8 != NO_KERNEL) {
-      pipeline->ps_ksp0 = pipeline->ps_simd8;
-      pipeline->ps_grf_start0 = wm_prog_data->base.dispatch_grf_start_reg;
-      if (pipeline->ps_simd16 != NO_KERNEL) {
-         pipeline->ps_ksp2 = pipeline->ps_simd16;
-         pipeline->ps_grf_start2 = wm_prog_data->dispatch_grf_start_reg_16;
-      }
-   } else if (pipeline->ps_simd16 != NO_KERNEL) {
-      pipeline->ps_ksp0 = pipeline->ps_simd16;
-      pipeline->ps_grf_start0 = wm_prog_data->dispatch_grf_start_reg_16;
    }
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_FRAGMENT,

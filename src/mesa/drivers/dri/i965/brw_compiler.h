@@ -367,9 +367,11 @@ struct brw_wm_prog_data {
 
    GLuint num_varying_inputs;
 
-   GLuint dispatch_grf_start_reg_16;
-   GLuint reg_blocks;
-   GLuint reg_blocks_16;
+   uint8_t reg_blocks_0;
+   uint8_t reg_blocks_2;
+
+   uint8_t dispatch_grf_start_reg_2;
+   uint32_t prog_offset_2;
 
    struct {
       /** @{
@@ -383,7 +385,8 @@ struct brw_wm_prog_data {
    bool computed_stencil;
 
    bool early_fragment_tests;
-   bool no_8;
+   bool dispatch_8;
+   bool dispatch_16;
    bool dual_src_blend;
    bool persample_dispatch;
    bool uses_pos_offset;
@@ -393,7 +396,6 @@ struct brw_wm_prog_data {
    bool uses_src_w;
    bool uses_sample_mask;
    bool pulls_bary;
-   uint32_t prog_offset_16;
 
    /**
     * Mask of which interpolation modes are required by the fragment shader.

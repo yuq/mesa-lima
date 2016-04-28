@@ -375,19 +375,21 @@ genX(graphics_pipeline_create)(
                                             POSOFFSET_SAMPLE : POSOFFSET_NONE;
 
          ps._32PixelDispatchEnable        = false;
-         ps._16PixelDispatchEnable        = pipeline->ps_simd16 != NO_KERNEL;
-         ps._8PixelDispatchEnable         = pipeline->ps_simd8 != NO_KERNEL;
+         ps._16PixelDispatchEnable        = wm_prog_data->dispatch_16;
+         ps._8PixelDispatchEnable         = wm_prog_data->dispatch_8;
 
-         ps.DispatchGRFStartRegisterforConstantSetupData0 = pipeline->ps_grf_start0,
+         ps.DispatchGRFStartRegisterforConstantSetupData0 =
+            wm_prog_data->base.dispatch_grf_start_reg,
          ps.DispatchGRFStartRegisterforConstantSetupData1 = 0,
-         ps.DispatchGRFStartRegisterforConstantSetupData2 = pipeline->ps_grf_start2,
+         ps.DispatchGRFStartRegisterforConstantSetupData2 =
+            wm_prog_data->dispatch_grf_start_reg_2,
 
          /* Haswell requires the sample mask to be set in this packet as well as
           * in 3DSTATE_SAMPLE_MASK; the values should match. */
          /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
 
          ps.KernelStartPointer1           = 0;
-         ps.KernelStartPointer2           = pipeline->ps_ksp2;
+         ps.KernelStartPointer2           = pipeline->ps_ksp0 + wm_prog_data->prog_offset_2;
       }
 
       /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */

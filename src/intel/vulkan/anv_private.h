@@ -1418,12 +1418,7 @@ struct anv_pipeline {
    struct anv_state                             blend_state;
    uint32_t                                     vs_simd8;
    uint32_t                                     vs_vec4;
-   uint32_t                                     ps_simd8;
-   uint32_t                                     ps_simd16;
    uint32_t                                     ps_ksp0;
-   uint32_t                                     ps_ksp2;
-   uint32_t                                     ps_grf_start0;
-   uint32_t                                     ps_grf_start2;
    uint32_t                                     gs_kernel;
    uint32_t                                     cs_simd;
 
