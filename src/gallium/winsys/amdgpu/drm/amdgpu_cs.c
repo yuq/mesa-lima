@@ -525,10 +525,10 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
    unsigned index = amdgpu_add_buffer(cs, bo, usage, bo->initial_domain,
                                      priority, &added_domains);
 
-   if (added_domains & RADEON_DOMAIN_GTT)
-      cs->used_gart += bo->base.size;
    if (added_domains & RADEON_DOMAIN_VRAM)
       cs->used_vram += bo->base.size;
+   else if (added_domains & RADEON_DOMAIN_GTT)
+      cs->used_gart += bo->base.size;
 
    return index;
 }
