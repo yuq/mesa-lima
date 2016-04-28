@@ -1549,20 +1549,6 @@ fs_visitor::emit_gs_thread_end()
 void
 fs_visitor::assign_curb_setup()
 {
-   if (dispatch_width == 8) {
-      prog_data->dispatch_grf_start_reg = payload.num_regs;
-   } else {
-      if (stage == MESA_SHADER_FRAGMENT) {
-         brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-         prog_data->dispatch_grf_start_reg_16 = payload.num_regs;
-      } else if (stage == MESA_SHADER_COMPUTE) {
-         brw_cs_prog_data *prog_data = (brw_cs_prog_data*) this->prog_data;
-         prog_data->dispatch_grf_start_reg_16 = payload.num_regs;
-      } else {
-         unreachable("Unsupported shader type!");
-      }
-   }
-
    prog_data->curb_read_length = ALIGN(stage_prog_data->nr_params, 8) / 8;
 
    /* Map the offsets in the UNIFORM file to fixed HW regs. */
@@ -6029,6 +6015,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
       return NULL;
    } else if (likely(!(INTEL_DEBUG & DEBUG_NO8))) {
       simd8_cfg = v8.cfg;
+      prog_data->base.dispatch_grf_start_reg = v8.payload.num_regs;
    }
 
    if (!v8.simd16_unsupported &&
@@ -6044,6 +6031,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                                    v16.fail_msg);
       } else {
          simd16_cfg = v16.cfg;
+         prog_data->dispatch_grf_start_reg_16 = v16.payload.num_regs;
       }
    }
 
@@ -6167,6 +6155,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       } else {
          cfg = v8.cfg;
          prog_data->simd_size = 8;
+         prog_data->base.dispatch_grf_start_reg = v8.payload.num_regs;
       }
    }
 
@@ -6191,6 +6180,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       } else {
          cfg = v16.cfg;
          prog_data->simd_size = 16;
+         prog_data->dispatch_grf_start_reg_16 = v16.payload.num_regs;
       }
    }
 

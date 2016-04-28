@@ -2140,6 +2140,8 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
          return NULL;
       }
 
+      prog_data->base.base.dispatch_grf_start_reg = v.payload.num_regs;
+
       fs_generator g(compiler, log_data, mem_ctx, (void *) key,
                      &prog_data->base.base, v.promoted_constants,
                      v.runtime_check_aads_emit, MESA_SHADER_VERTEX);
