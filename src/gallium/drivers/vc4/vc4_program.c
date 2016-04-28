@@ -403,12 +403,6 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
         }
 
         if (instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE) {
-                struct qreg ma = qir_FMAXABS(c, qir_FMAXABS(c, s, t), r);
-                struct qreg rcp_ma = qir_RCP(c, ma);
-                s = qir_FMUL(c, s, rcp_ma);
-                t = qir_FMUL(c, t, rcp_ma);
-                r = qir_FMUL(c, r, rcp_ma);
-
                 qir_TEX_R(c, r, texture_u[next_texture_u++]);
         } else if (c->key->tex[unit].wrap_s == PIPE_TEX_WRAP_CLAMP_TO_BORDER ||
                    c->key->tex[unit].wrap_s == PIPE_TEX_WRAP_CLAMP ||
@@ -1893,6 +1887,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                 }
         }
 
+        NIR_PASS_V(c->s, nir_normalize_cubemap_coords);
         NIR_PASS_V(c->s, nir_lower_tex, &tex_options);
 
         if (c->fs_key && c->fs_key->light_twoside)
