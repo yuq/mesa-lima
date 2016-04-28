@@ -119,6 +119,24 @@ static boolean str_match_nocase_whole( const char **pcur, const char *str )
    return FALSE;
 }
 
+/* Return the array index that matches starting at *pcur, where the string at
+ * *pcur is terminated by a non-digit non-letter non-underscore.
+ * Returns -1 if no match is found.
+ *
+ * On success, the pointer to the first string is moved to the end of the read
+ * word.
+ */
+static int str_match_name_from_array(const char **pcur,
+                                     const char * const *array,
+                                     unsigned array_size)
+{
+   for (unsigned j = 0; j < array_size; ++j) {
+      if (str_match_nocase_whole(pcur, array[j]))
+         return j;
+   }
+   return -1;
+}
+
 /* Return the format corresponding to the name at *pcur.
  * Returns -1 if there is no format name.
  *
