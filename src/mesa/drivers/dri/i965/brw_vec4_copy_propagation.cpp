@@ -324,7 +324,7 @@ try_copy_propagate(const struct brw_device_info *devinfo,
 
    unsigned composed_swizzle = brw_compose_swizzle(inst->src[arg].swizzle,
                                                    value.swizzle);
-   if (inst->is_3src() &&
+   if (inst->is_3src(devinfo) &&
        (value.file == UNIFORM ||
         (value.file == ATTR && attributes_per_reg != 1)) &&
        !brw_is_single_value_swizzle(composed_swizzle))

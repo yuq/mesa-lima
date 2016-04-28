@@ -293,7 +293,7 @@ can_take_stride(fs_inst *inst, unsigned arg, unsigned stride,
     *    This is applicable to 32b datatypes and 16b datatype. 64b datatypes
     *    cannot use the replicate control.
     */
-   if (inst->is_3src()) {
+   if (inst->is_3src(devinfo)) {
       if (type_sz(inst->src[arg].type) > 4)
          return stride == 1;
       else

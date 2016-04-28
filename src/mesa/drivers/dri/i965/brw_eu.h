@@ -546,7 +546,7 @@ next_offset(const struct brw_device_info *devinfo, void *store, int offset)
 }
 
 static inline bool
-is_3src(enum opcode opcode)
+is_3src(const struct brw_device_info *devinfo, enum opcode opcode)
 {
    return opcode_descs[opcode].nsrc == 3;
 }

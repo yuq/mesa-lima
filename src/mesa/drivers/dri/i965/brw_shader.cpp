@@ -737,9 +737,9 @@ backend_instruction::is_commutative() const
 }
 
 bool
-backend_instruction::is_3src() const
+backend_instruction::is_3src(const struct brw_device_info *devinfo) const
 {
-   return ::is_3src(opcode);
+   return ::is_3src(devinfo, opcode);
 }
 
 bool

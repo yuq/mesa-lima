@@ -101,7 +101,7 @@ struct bblock_t;
 
 #ifdef __cplusplus
 struct backend_instruction : public exec_node {
-   bool is_3src() const;
+   bool is_3src(const struct brw_device_info *devinfo) const;
    bool is_tex() const;
    bool is_math() const;
    bool is_control_flow() const;

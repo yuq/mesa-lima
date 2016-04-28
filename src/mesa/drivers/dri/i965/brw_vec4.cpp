@@ -1868,7 +1868,7 @@ vec4_visitor::convert_to_hw_regs()
          src = reg;
       }
 
-      if (inst->is_3src()) {
+      if (inst->is_3src(devinfo)) {
          /* 3-src instructions with scalar sources support arbitrary subnr,
           * but don't actually use swizzles.  Convert swizzle into subnr.
           */
