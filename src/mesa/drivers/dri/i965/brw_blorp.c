@@ -139,6 +139,10 @@ brw_blorp_prog_data_init(struct brw_blorp_prog_data *prog_data)
 {
    prog_data->first_curbe_grf = 0;
    prog_data->persample_msaa_dispatch = false;
+
+   prog_data->nr_params = BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS;
+   for (unsigned i = 0; i < BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS; i++)
+      prog_data->param[i] = i;
 }
 
 

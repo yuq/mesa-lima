@@ -308,11 +308,13 @@ gen6_blorp_emit_wm_constants(struct brw_context *brw,
 {
    uint32_t wm_push_const_offset;
 
-   void *constants = brw_state_batch(brw, AUB_TRACE_WM_CONSTANTS,
-                                     sizeof(params->wm_push_consts),
-                                     32, &wm_push_const_offset);
-   memcpy(constants, &params->wm_push_consts,
-          sizeof(params->wm_push_consts));
+   uint32_t *constants = brw_state_batch(brw, AUB_TRACE_WM_CONSTANTS,
+                                         sizeof(params->wm_push_consts),
+                                         32, &wm_push_const_offset);
+
+   const uint32_t *push_consts = (const uint32_t *)&params->wm_push_consts;
+   for (unsigned i = 0; i < params->wm_prog_data->nr_params; i++)
+      constants[i] = push_consts[params->wm_prog_data->param[i]];
 
    return wm_push_const_offset;
 }

@@ -199,6 +199,9 @@ struct brw_blorp_wm_push_constants
    uint32_t pad[5];
 };
 
+#define BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS \
+   (sizeof(struct brw_blorp_wm_push_constants) / 4)
+
 /* Every 32 bytes of push constant data constitutes one GEN register. */
 static const unsigned int BRW_BLORP_NUM_PUSH_CONST_REGS =
    sizeof(struct brw_blorp_wm_push_constants) / 32;
@@ -212,6 +215,14 @@ struct brw_blorp_prog_data
     * than one sample per pixel.
     */
    bool persample_msaa_dispatch;
+
+   /* The compiler will re-arrange push constants and store the upload order
+    * here. Given an index 'i' in the final upload buffer, param[i] gives the
+    * index in the uniform store. In other words, the value to be uploaded can
+    * be found by brw_blorp_params::wm_push_consts[param[i]].
+    */
+   uint8_t nr_params;
+   uint8_t param[BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS];
 };
 
 void brw_blorp_prog_data_init(struct brw_blorp_prog_data *prog_data);
