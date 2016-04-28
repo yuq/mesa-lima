@@ -99,16 +99,20 @@ brw_blorp_const_color_program::~brw_blorp_const_color_program()
 static void
 brw_blorp_params_get_clear_kernel(struct brw_context *brw,
                                   struct brw_blorp_params *params,
-                                  brw_blorp_const_color_prog_key *wm_prog_key)
+                                  bool use_replicated_data)
 {
+   struct brw_blorp_const_color_prog_key blorp_key;
+   memset(&blorp_key, 0, sizeof(blorp_key));
+   blorp_key.use_simd16_replicated_data = use_replicated_data;
+
    if (!brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                         wm_prog_key, sizeof(*wm_prog_key),
+                         &blorp_key, sizeof(blorp_key),
                          &params->wm_prog_kernel, &params->wm_prog_data)) {
-      brw_blorp_const_color_program prog(brw, wm_prog_key);
+      brw_blorp_const_color_program prog(brw, &blorp_key);
       GLuint program_size;
       const GLuint *program = prog.compile(brw, &program_size);
       brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                       wm_prog_key, sizeof(*wm_prog_key),
+                       &blorp_key, sizeof(blorp_key),
                        program, program_size,
                        &prog.prog_data, sizeof(prog.prog_data),
                        &params->wm_prog_kernel, &params->wm_prog_data);
@@ -257,10 +261,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    memcpy(&params.wm_push_consts.dst_x0,
           ctx->Color.ClearColor.f, sizeof(float) * 4);
 
-   brw_blorp_const_color_prog_key wm_prog_key;
-   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
-
-   wm_prog_key.use_simd16_replicated_data = true;
+   bool use_simd16_replicated_data = true;
 
    /* From the SNB PRM (Vol4_Part1):
     *
@@ -269,17 +270,17 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
     *      (untiled) memory is UNDEFINED."
     */
    if (irb->mt->tiling == I915_TILING_NONE)
-      wm_prog_key.use_simd16_replicated_data = false;
+      use_simd16_replicated_data = false;
 
    /* Constant color writes ignore everyting in blend and color calculator
     * state.  This is not documented.
     */
    if (set_write_disables(irb, ctx->Color.ColorMask[buf],
                           params.color_write_disable))
-      wm_prog_key.use_simd16_replicated_data = false;
+      use_simd16_replicated_data = false;
 
    if (irb->mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS &&
-       !partial_clear && wm_prog_key.use_simd16_replicated_data &&
+       !partial_clear && use_simd16_replicated_data &&
        brw_is_color_fast_clear_compatible(brw, irb->mt,
                                           &ctx->Color.ClearColor)) {
       memset(&params.wm_push_consts, 0xff, 4*sizeof(float));
@@ -292,7 +293,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                                &params.x1, &params.y1);
    }
 
-   brw_blorp_params_get_clear_kernel(brw, &params, &wm_prog_key);
+   brw_blorp_params_get_clear_kernel(brw, &params, use_simd16_replicated_data);
 
    const bool is_fast_clear =
       params.fast_clear_op == GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
@@ -328,7 +329,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    const char *clear_type;
    if (is_fast_clear)
       clear_type = "fast";
-   else if (wm_prog_key.use_simd16_replicated_data)
+   else if (use_simd16_replicated_data)
       clear_type = "replicated";
    else
       clear_type = "slow";
@@ -429,11 +430,8 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
     * ensure that the fragment shader delivers the data using the "replicated
     * color" message.
     */
-   brw_blorp_const_color_prog_key wm_prog_key;
-   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
-   wm_prog_key.use_simd16_replicated_data = true;
 
-   brw_blorp_params_get_clear_kernel(brw, &params, &wm_prog_key);
+   brw_blorp_params_get_clear_kernel(brw, &params, true);
 
    brw_blorp_exec(brw, &params);
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
