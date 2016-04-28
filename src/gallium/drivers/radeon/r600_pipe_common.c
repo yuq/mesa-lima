@@ -353,12 +353,10 @@ void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resour
 	 * In practice this gave very good estimate (+/- 10% of the target
 	 * memory limit).
 	 */
-	if (rr->domains & RADEON_DOMAIN_GTT) {
-		rctx->gtt += rr->buf->size;
-	}
-	if (rr->domains & RADEON_DOMAIN_VRAM) {
+	if (rr->domains & RADEON_DOMAIN_VRAM)
 		rctx->vram += rr->buf->size;
-	}
+	else if (rr->domains & RADEON_DOMAIN_GTT)
+		rctx->gtt += rr->buf->size;
 }
 
 /*
