@@ -87,7 +87,7 @@ rbug_draw_block_locked(struct rbug_context *rb_pipe, int flag)
             if (rb_pipe->draw_rule.surf == rb_pipe->curr.cbufs[k])
                block = TRUE;
       if (rb_pipe->draw_rule.texture) {
-         for (sh = 0; sh < Elements(rb_pipe->curr.num_views); sh++) {
+         for (sh = 0; sh < ARRAY_SIZE(rb_pipe->curr.num_views); sh++) {
             for (k = 0; k < rb_pipe->curr.num_views[sh]; k++) {
                if (rb_pipe->draw_rule.texture == rb_pipe->curr.texs[sh][k]) {
                   block = TRUE;
