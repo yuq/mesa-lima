@@ -293,6 +293,17 @@ static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 	p_atomic_inc(&rscreen->compressed_colortex_counter);
 }
 
+static void r600_texture_discard_dcc(struct r600_common_screen *rscreen,
+				     struct r600_texture *rtex)
+{
+	/* Disable DCC. */
+	rtex->dcc_offset = 0;
+	rtex->cb_color_info &= ~VI_S_028C70_DCC_ENABLE(1);
+
+	/* Notify all contexts about the change. */
+	r600_dirty_all_framebuffer_states(rscreen);
+}
+
 void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
 			      struct r600_texture *rtex)
 {
@@ -308,12 +319,7 @@ void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
 	rctx->b.flush(&rctx->b, NULL, 0);
 	pipe_mutex_unlock(rscreen->aux_context_lock);
 
-	/* Disable DCC. */
-	rtex->dcc_offset = 0;
-	rtex->cb_color_info &= ~VI_S_028C70_DCC_ENABLE(1);
-
-	/* Notify all contexts about the change. */
-	r600_dirty_all_framebuffer_states(rscreen);
+	r600_texture_discard_dcc(rscreen, rtex);
 }
 
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
