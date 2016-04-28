@@ -214,6 +214,8 @@ gen7_upload_ps_state(struct brw_context *brw,
    if (prog_data->num_varying_inputs != 0)
       dw4 |= GEN7_PS_ATTRIBUTE_ENABLE;
 
+   dw4 |= fast_clear_op;
+
    if (prog_data->prog_offset_16 || prog_data->no_8) {
       dw4 |= GEN7_PS_16_DISPATCH_ENABLE;
 
@@ -242,8 +244,6 @@ gen7_upload_ps_state(struct brw_context *brw,
               GEN7_PS_DISPATCH_START_GRF_SHIFT_0);
       ksp0 = stage_state->prog_offset;
    }
-
-   dw4 |= fast_clear_op;
 
    BEGIN_BATCH(8);
    OUT_BATCH(_3DSTATE_PS << 16 | (8 - 2));
