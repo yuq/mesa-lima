@@ -562,32 +562,18 @@ lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
    nir_instr_remove(&instr->instr);
 }
 
-static bool
-lower_doubles_block(nir_block *block, void *ctx)
-{
-   nir_lower_doubles_options options = *((nir_lower_doubles_options *) ctx);
-
-   nir_foreach_instr_safe(instr, block) {
-      if (instr->type != nir_instr_type_alu)
-         continue;
-
-      lower_doubles_instr(nir_instr_as_alu(instr), options);
-   }
-
-   return true;
-}
-
-static void
-lower_doubles_impl(nir_function_impl *impl, nir_lower_doubles_options options)
-{
-   nir_foreach_block_call(impl, lower_doubles_block, &options);
-}
-
 void
 nir_lower_doubles(nir_shader *shader, nir_lower_doubles_options options)
 {
    nir_foreach_function(function, shader) {
-      if (function->impl)
-         lower_doubles_impl(function->impl, options);
+      if (!function->impl)
+         continue;
+
+      nir_foreach_block(block, function->impl) {
+         nir_foreach_instr_safe(instr, block) {
+            if (instr->type == nir_instr_type_alu)
+               lower_doubles_instr(nir_instr_as_alu(instr), options);
+         }
+      }
    }
 }
