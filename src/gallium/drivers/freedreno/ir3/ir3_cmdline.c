@@ -234,7 +234,7 @@ int main(int argc, char **argv)
 	if (fd_mesa_debug & FD_DBG_OPTMSGS)
 		debug_printf("%s\n", (char *)ptr);
 
-	if (!tgsi_text_translate(ptr, toks, Elements(toks)))
+	if (!tgsi_text_translate(ptr, toks, ARRAY_SIZE(toks)))
 		errx(1, "could not parse `%s'", filename);
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS)
