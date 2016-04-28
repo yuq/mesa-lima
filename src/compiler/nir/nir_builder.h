@@ -117,9 +117,12 @@ nir_imm_float(nir_builder *build, float x)
 static inline nir_ssa_def *
 nir_imm_double(nir_builder *build, double x)
 {
-   nir_const_value v = { { .f64 = {x, 0, 0, 0} } };
-   nir_ssa_def *def = nir_build_imm(build, 1, 64, v);
-   return def;
+   nir_const_value v;
+
+   memset(&v, 0, sizeof(v));
+   v.f64[0] = x;
+
+   return nir_build_imm(build, 1, 64, v);
 }
 
 static inline nir_ssa_def *
