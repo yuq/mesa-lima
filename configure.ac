@@ -255,7 +255,11 @@ _SAVE_CPPFLAGS="$CPPFLAGS"
 dnl Compiler macros
 DEFINES="-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS"
 AC_SUBST([DEFINES])
+android=no
 case "$host_os" in
+*-android)
+    android=yes
+    ;;
 linux*|*-gnu*|gnu*)
     DEFINES="$DEFINES -D_GNU_SOURCE"
     ;;
@@ -266,6 +270,8 @@ cygwin*)
     DEFINES="$DEFINES -D_XOPEN_SOURCE=700"
     ;;
 esac
+
+AM_CONDITIONAL(HAVE_ANDROID, test "x$android" = xyes)
 
 dnl Add flags for gcc and g++
 if test "x$GCC" = xyes; then
@@ -1986,6 +1992,9 @@ for plat in $egl_platforms; do
 			AC_MSG_ERROR([EGL platform surfaceless requires libdrm >= $LIBDRM_REQUIRED])
 		;;
 
+	android)
+		;;
+
 	*)
 		AC_MSG_ERROR([EGL platform '$plat' does not exist])
 		;;
@@ -2010,6 +2019,7 @@ AM_CONDITIONAL(HAVE_PLATFORM_X11, echo "$egl_platforms" | grep -q 'x11')
 AM_CONDITIONAL(HAVE_PLATFORM_WAYLAND, echo "$egl_platforms" | grep -q 'wayland')
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_DRM, echo "$egl_platforms" | grep -q 'drm')
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_SURFACELESS, echo "$egl_platforms" | grep -q 'surfaceless')
+AM_CONDITIONAL(HAVE_EGL_PLATFORM_ANDROID, echo "$egl_platforms" | grep -q 'android')
 
 AM_CONDITIONAL(HAVE_EGL_DRIVER_DRI2, test "x$HAVE_EGL_DRIVER_DRI2" != "x")
 

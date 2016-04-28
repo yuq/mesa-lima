@@ -84,6 +84,11 @@ AM_CFLAGS += -DHAVE_SURFACELESS_PLATFORM
 dri2_backend_FILES += drivers/dri2/platform_surfaceless.c
 endif
 
+if HAVE_EGL_PLATFORM_ANDROID
+AM_CFLAGS += -DHAVE_ANDROID_PLATFORM
+dri2_backend_FILES += drivers/dri2/platform_android.c
+endif
+
 if HAVE_EGL_DRIVER_DRI2
 AM_CFLAGS += \
 	-I$(top_srcdir)/src/loader \
