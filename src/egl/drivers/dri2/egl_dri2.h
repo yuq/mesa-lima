@@ -213,9 +213,9 @@ struct dri2_egl_display
    int			     authenticated;
    int			     formats;
    uint32_t                  capabilities;
-   int			     is_render_node;
 #endif
 
+   int              is_render_node;
    int			     is_different_gpu;
 };
 
@@ -286,6 +286,7 @@ struct dri2_egl_surface
 #ifdef HAVE_ANDROID_PLATFORM
    struct ANativeWindow *window;
    struct ANativeWindowBuffer *buffer;
+   __DRIimage *dri_image;
 
    /* EGL-owned buffers */
    __DRIbuffer           *local_buffers[__DRI_BUFFER_COUNT];

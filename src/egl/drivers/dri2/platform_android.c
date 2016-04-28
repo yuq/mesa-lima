@@ -29,6 +29,7 @@
 
 #include <errno.h>
 #include <dlfcn.h>
+#include <xf86drm.h>
 
 #if ANDROID_VERSION >= 0x402
 #include <sync/sync.h>
@@ -694,17 +695,25 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
       goto cleanup_driver_name;
    }
 
-   dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
-   dri2_dpy->dri2_loader_extension.base.version = 3;
-   dri2_dpy->dri2_loader_extension.getBuffers = NULL;
-   dri2_dpy->dri2_loader_extension.flushFrontBuffer = droid_flush_front_buffer;
-   dri2_dpy->dri2_loader_extension.getBuffersWithFormat =
-      droid_get_buffers_with_format;
+   dri2_dpy->is_render_node = drmGetNodeTypeFromFd(dri2_dpy->fd) == DRM_NODE_RENDER;
 
-   dri2_dpy->extensions[0] = &dri2_dpy->dri2_loader_extension.base;
-   dri2_dpy->extensions[1] = &image_lookup_extension.base;
-   dri2_dpy->extensions[2] = &use_invalidate.base;
-   dri2_dpy->extensions[3] = NULL;
+   dri2_dpy->extensions[0] = &image_lookup_extension.base;
+   dri2_dpy->extensions[1] = &use_invalidate.base;
+
+   /* render nodes cannot use Gem names, and thus do not support
+    * the __DRI_DRI2_LOADER extension */
+   if (!dri2_dpy->is_render_node) {
+      dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
+      dri2_dpy->dri2_loader_extension.base.version = 3;
+      dri2_dpy->dri2_loader_extension.getBuffers = NULL;
+      dri2_dpy->dri2_loader_extension.flushFrontBuffer = droid_flush_front_buffer;
+      dri2_dpy->dri2_loader_extension.getBuffersWithFormat =
+        droid_get_buffers_with_format;
+      dri2_dpy->extensions[2] = &dri2_dpy->dri2_loader_extension.base;
+      dri2_dpy->extensions[3] = NULL;
+   } else
+      dri2_dpy->extensions[2] = NULL;
+
 
    if (!dri2_create_screen(dpy)) {
       err = "DRI2: failed to create screen";
