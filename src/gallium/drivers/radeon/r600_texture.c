@@ -32,6 +32,23 @@
 #include <errno.h>
 #include <inttypes.h>
 
+static void r600_texture_discard_dcc(struct r600_common_screen *rscreen,
+				     struct r600_texture *rtex);
+static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
+				       struct r600_texture *rtex);
+
+
+static bool range_covers_whole_texture(struct pipe_resource *tex,
+				       unsigned level, unsigned x, unsigned y,
+				       unsigned z, unsigned width,
+				       unsigned height, unsigned depth)
+{
+	return x == 0 && y == 0 && z == 0 &&
+	       width == u_minify(tex->width0, level) &&
+	       height == u_minify(tex->height0, level) &&
+	       depth == util_max_layer(tex, level) + 1;
+}
+
 bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
 			       struct r600_texture *rdst,
 			       unsigned dst_level, unsigned dstx,
@@ -61,21 +78,36 @@ bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
 
 	/* DCC as:
 	 *   src: Use the 3D path. DCC decompression is expensive.
-	 *   dst: If overwriting the whole texture, disable DCC and use SDMA.
+	 *   dst: If overwriting the whole texture, discard DCC and use SDMA.
 	 *        Otherwise, use the 3D path.
-	 * TODO: handle the case when the dst box covers the whole texture
 	 */
-	if (rsrc->dcc_offset || rdst->dcc_offset)
+	if (rsrc->dcc_offset)
 		return false;
+
+	if (rdst->dcc_offset) {
+		/* We can't discard DCC if the texture has been exported. */
+		if (rdst->resource.is_shared ||
+		    !range_covers_whole_texture(&rdst->resource.b.b, dst_level,
+						dstx, dsty, dstz, src_box->width,
+						src_box->height, src_box->depth))
+			return false;
+
+		r600_texture_discard_dcc(rctx->screen, rdst);
+	}
 
 	/* CMASK as:
 	 *   src: Both texture and SDMA paths need decompression. Use SDMA.
-	 *   dst: If overwriting the whole texture, deallocate CMASK and use
+	 *   dst: If overwriting the whole texture, discard CMASK and use
 	 *        SDMA. Otherwise, use the 3D path.
-	 * TODO: handle the case when the dst box covers the whole texture
 	 */
-	if (rdst->cmask.size && rdst->dirty_level_mask & (1 << dst_level))
-		return false;
+	if (rdst->cmask.size && rdst->dirty_level_mask & (1 << dst_level)) {
+		if (!range_covers_whole_texture(&rdst->resource.b.b, dst_level,
+						dstx, dsty, dstz, src_box->width,
+						src_box->height, src_box->depth))
+			return false;
+
+		r600_texture_discard_cmask(rctx->screen, rdst);
+	}
 
 	/* All requirements are met. Prepare textures for SDMA. */
 	if (rsrc->cmask.size && rsrc->dirty_level_mask & (1 << src_level))
