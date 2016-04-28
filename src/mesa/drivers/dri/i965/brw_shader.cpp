@@ -163,7 +163,7 @@ brw_texture_offset(int *offsets, unsigned num_components)
 }
 
 const char *
-brw_instruction_name(enum opcode op)
+brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
 {
    switch (op) {
    case BRW_OPCODE_ILLEGAL ... BRW_OPCODE_NOP:

@@ -4809,7 +4809,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
              inst->flag_subreg);
    }
 
-   fprintf(file, "%s", brw_instruction_name(inst->opcode));
+   fprintf(file, "%s", brw_instruction_name(devinfo, inst->opcode));
    if (inst->saturate)
       fprintf(file, ".sat");
    if (inst->conditional_mod) {

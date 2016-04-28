@@ -1393,7 +1393,7 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
               pred_ctrl_align16[inst->predicate]);
    }
 
-   fprintf(file, "%s", brw_instruction_name(inst->opcode));
+   fprintf(file, "%s", brw_instruction_name(devinfo, inst->opcode));
    if (inst->saturate)
       fprintf(file, ".sat");
    if (inst->conditional_mod) {
