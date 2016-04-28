@@ -1168,8 +1168,8 @@ ilo_shader_select_kernel_sbe(struct ilo_shader_state *shader,
    routing->sprite_coord_enable = sprite_coord_enable;
    routing->sprite_coord_mode = sprite_coord_mode;
 
-   assert(kernel->in.count <= Elements(swizzles));
-   dst_len = MIN2(kernel->in.count, Elements(swizzles));
+   assert(kernel->in.count <= ARRAY_SIZE(swizzles));
+   dst_len = MIN2(kernel->in.count, ARRAY_SIZE(swizzles));
 
    memset(&swizzles, 0, sizeof(swizzles));
    memset(&info, 0, sizeof(info));

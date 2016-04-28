@@ -211,7 +211,7 @@ ilo_get_compute_param(struct pipe_screen *screen,
       size = strlen(val.ir_target) + 1;
       break;
    case PIPE_COMPUTE_CAP_GRID_DIMENSION:
-      val.grid_dimension = Elements(val.max_grid_size);
+      val.grid_dimension = ARRAY_SIZE(val.max_grid_size);
 
       ptr = &val.grid_dimension;
       size = sizeof(val.grid_dimension);

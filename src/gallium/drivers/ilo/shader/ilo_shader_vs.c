@@ -329,7 +329,7 @@ vs_add_sampler_params(struct toy_compiler *tc, int msg_type, int base_mrf,
    assert(num_coords <= 4);
    assert(num_derivs <= 3 && num_derivs <= num_coords);
 
-   for (i = 0; i < Elements(m); i++)
+   for (i = 0; i < ARRAY_SIZE(m); i++)
       m[i] = tdst(TOY_FILE_MRF, base_mrf + i, 0);
 
    switch (msg_type) {
