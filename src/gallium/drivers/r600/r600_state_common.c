@@ -2802,7 +2802,8 @@ static void r600_invalidate_buffer(struct pipe_context *ctx, struct pipe_resourc
 	}
 	/* Streamout buffers. */
 	for (i = 0; i < rctx->b.streamout.num_targets; i++) {
-		if (rctx->b.streamout.targets[i]->b.buffer == &rbuffer->b.b) {
+		if (rctx->b.streamout.targets[i] &&
+		    rctx->b.streamout.targets[i]->b.buffer == &rbuffer->b.b) {
 			if (rctx->b.streamout.begin_emitted) {
 				r600_emit_streamout_end(&rctx->b);
 			}
