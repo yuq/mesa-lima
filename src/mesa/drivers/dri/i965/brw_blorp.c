@@ -26,6 +26,8 @@
 #include "intel_fbo.h"
 
 #include "brw_blorp.h"
+#include "brw_compiler.h"
+#include "brw_nir.h"
 #include "brw_state.h"
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
@@ -159,6 +161,99 @@ brw_blorp_params_init(struct brw_blorp_params *params)
    params->num_varyings = 0;
    params->num_draw_buffers = 1;
    params->num_layers = 1;
+}
+
+void
+brw_blorp_init_wm_prog_key(struct brw_wm_prog_key *wm_key)
+{
+   memset(wm_key, 0, sizeof(*wm_key));
+   wm_key->nr_color_regions = 1;
+   for (int i = 0; i < MAX_SAMPLERS; i++)
+      wm_key->tex.swizzles[i] = SWIZZLE_XYZW;
+}
+
+static int
+nir_uniform_type_size(const struct glsl_type *type)
+{
+   /* Only very basic types are allowed */
+   assert(glsl_type_is_vector_or_scalar(type));
+   assert(glsl_get_bit_size(type) == 32);
+
+   return glsl_get_vector_elements(type) * 4;
+}
+
+const unsigned *
+brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
+                             const struct brw_wm_prog_key *wm_key,
+                             bool use_repclear,
+                             struct brw_blorp_prog_data *prog_data,
+                             unsigned *program_size)
+{
+   const struct brw_compiler *compiler = brw->intelScreen->compiler;
+
+   void *mem_ctx = ralloc_context(NULL);
+
+   /* Calling brw_preprocess_nir and friends is destructive and, if cloning is
+    * enabled, may end up completely replacing the nir_shader.  Therefore, we
+    * own it and might as well put it in our context for easy cleanup.
+    */
+   ralloc_steal(mem_ctx, nir);
+   nir->options =
+      compiler->glsl_compiler_options[MESA_SHADER_FRAGMENT].NirOptions;
+
+   struct brw_wm_prog_data wm_prog_data;
+   memset(&wm_prog_data, 0, sizeof(wm_prog_data));
+
+   /* We set up the params array but instead of making them point at actual
+    * GL constant values, they just store an index.  This is just fine as the
+    * backend compiler never looks at the contents of the pointers, it just
+    * re-arranges them for us.
+    */
+   const union gl_constant_value *param[BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS];
+   for (unsigned i = 0; i < ARRAY_SIZE(param); i++)
+      param[i] = (const union gl_constant_value *)(intptr_t)i;
+
+   wm_prog_data.base.nr_params = BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS;
+   wm_prog_data.base.param = param;
+
+   /* BLORP always just uses the first two binding table entries */
+   wm_prog_data.binding_table.render_target_start = 0;
+   wm_prog_data.base.binding_table.texture_start = 1;
+
+   nir = brw_preprocess_nir(compiler, nir);
+   nir_remove_dead_variables(nir, nir_var_shader_in);
+   nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir)->impl);
+
+   /* Uniforms are required to be lowered before going into compile_fs.  For
+    * BLORP, we'll assume that whoever builds the shader sets the location
+    * they want so we just need to lower them and figure out how many we have
+    * in total.
+    */
+   nir->num_uniforms = 0;
+   nir_foreach_variable(var, &nir->uniforms) {
+      var->data.driver_location = var->data.location;
+      unsigned end = var->data.location + nir_uniform_type_size(var->type);
+      nir->num_uniforms = MAX2(nir->num_uniforms, end);
+   }
+   nir_lower_io(nir, nir_var_uniform, nir_uniform_type_size);
+
+   const unsigned *program =
+      brw_compile_fs(compiler, brw, mem_ctx, wm_key, &wm_prog_data, nir,
+                     NULL, -1, -1, use_repclear, program_size, NULL);
+
+   /* Copy the relavent bits of wm_prog_data over into the blorp prog data */
+   prog_data->dispatch_8 = wm_prog_data.dispatch_8;
+   prog_data->dispatch_16 = wm_prog_data.dispatch_16;
+   prog_data->first_curbe_grf_0 = wm_prog_data.base.dispatch_grf_start_reg;
+   prog_data->first_curbe_grf_2 = wm_prog_data.dispatch_grf_start_reg_2;
+   prog_data->ksp_offset_2 = wm_prog_data.prog_offset_2;
+   prog_data->persample_msaa_dispatch = wm_prog_data.persample_dispatch;
+
+   prog_data->nr_params = wm_prog_data.base.nr_params;
+   for (unsigned i = 0; i < ARRAY_SIZE(param); i++)
+      prog_data->param[i] = (uintptr_t)wm_prog_data.base.param[i];
+
+   return program;
 }
 
 /**
