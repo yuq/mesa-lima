@@ -5360,7 +5360,7 @@ dst_register(struct st_translate *t, gl_register_file file, unsigned index,
    case PROGRAM_TEMPORARY:
       /* Allocate space for temporaries on demand. */
       if (index >= t->temps_size) {
-         const int inc = 4096;
+         const int inc = align(index - t->temps_size + 1, 4096);
 
          t->temps = (struct ureg_dst*)
                     realloc(t->temps,
