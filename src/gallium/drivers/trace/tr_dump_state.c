@@ -178,7 +178,7 @@ void trace_dump_poly_stipple(const struct pipe_poly_stipple *state)
    trace_dump_member_begin("stipple");
    trace_dump_array(uint,
                     state->stipple,
-                    Elements(state->stipple));
+                    ARRAY_SIZE(state->stipple));
    trace_dump_member_end();
 
    trace_dump_struct_end();
@@ -361,7 +361,7 @@ void trace_dump_depth_stencil_alpha_state(const struct pipe_depth_stencil_alpha_
 
    trace_dump_member_begin("stencil");
    trace_dump_array_begin();
-   for(i = 0; i < Elements(state->stencil); ++i) {
+   for(i = 0; i < ARRAY_SIZE(state->stencil); ++i) {
       trace_dump_elem_begin();
       trace_dump_struct_begin("pipe_stencil_state");
       trace_dump_member(bool, &state->stencil[i], enabled);
@@ -955,11 +955,11 @@ void trace_dump_grid_info(const struct pipe_grid_info *state)
    trace_dump_member(ptr, state, input);
 
    trace_dump_member_begin("block");
-   trace_dump_array(uint, state->block, Elements(state->block));
+   trace_dump_array(uint, state->block, ARRAY_SIZE(state->block));
    trace_dump_member_end();
 
    trace_dump_member_begin("grid");
-   trace_dump_array(uint, state->grid, Elements(state->grid));
+   trace_dump_array(uint, state->grid, ARRAY_SIZE(state->grid));
    trace_dump_member_end();
 
    trace_dump_member(ptr, state, indirect);
