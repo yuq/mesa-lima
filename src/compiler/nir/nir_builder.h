@@ -233,36 +233,6 @@ nir_build_alu(nir_builder *build, nir_op op, nir_ssa_def *src0,
    return &instr->dest.dest.ssa;
 }
 
-#define ALU1(op)                                                          \
-static inline nir_ssa_def *                                               \
-nir_##op(nir_builder *build, nir_ssa_def *src0)                           \
-{                                                                         \
-   return nir_build_alu(build, nir_op_##op, src0, NULL, NULL, NULL);      \
-}
-
-#define ALU2(op)                                                          \
-static inline nir_ssa_def *                                               \
-nir_##op(nir_builder *build, nir_ssa_def *src0, nir_ssa_def *src1)        \
-{                                                                         \
-   return nir_build_alu(build, nir_op_##op, src0, src1, NULL, NULL);      \
-}
-
-#define ALU3(op)                                                          \
-static inline nir_ssa_def *                                               \
-nir_##op(nir_builder *build, nir_ssa_def *src0,                           \
-         nir_ssa_def *src1, nir_ssa_def *src2)                            \
-{                                                                         \
-   return nir_build_alu(build, nir_op_##op, src0, src1, src2, NULL);      \
-}
-
-#define ALU4(op)                                                          \
-static inline nir_ssa_def *                                               \
-nir_##op(nir_builder *build, nir_ssa_def *src0,                           \
-         nir_ssa_def *src1, nir_ssa_def *src2, nir_ssa_def *src3)         \
-{                                                                         \
-   return nir_build_alu(build, nir_op_##op, src0, src1, src2, src3);      \
-}
-
 #include "nir_builder_opcodes.h"
 
 static inline nir_ssa_def *
