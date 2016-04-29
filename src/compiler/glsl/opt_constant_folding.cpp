@@ -91,6 +91,15 @@ ir_constant_fold(ir_rvalue **rvalue)
                      !array_ref->array_index->as_constant()))
       return false;
 
+   /* No constant folding can be performed on variable dereferences.  We need
+    * to explicitly avoid them, as calling constant_expression_value() on a
+    * variable dereference will return a clone of var->constant_value.  This
+    * would make us propagate the value into the tree, which isn't our job.
+    */
+   ir_dereference_variable *var_ref = (*rvalue)->as_dereference_variable();
+   if (var_ref)
+      return false;
+
    ir_constant *constant = (*rvalue)->constant_expression_value();
    if (constant) {
       *rvalue = constant;

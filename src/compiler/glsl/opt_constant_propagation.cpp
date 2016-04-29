@@ -138,8 +138,20 @@ public:
 void
 ir_constant_propagation_visitor::constant_folding(ir_rvalue **rvalue)
 {
+   if (*rvalue == NULL)
+      return;
+
    if (ir_constant_fold(rvalue))
       this->progress = true;
+
+   ir_dereference_variable *var_ref = (*rvalue)->as_dereference_variable();
+   if (var_ref) {
+      ir_constant *constant = var_ref->constant_expression_value();
+      if (constant) {
+         *rvalue = constant;
+         this->progress = true;
+      }
+   }
 }
 
 void
