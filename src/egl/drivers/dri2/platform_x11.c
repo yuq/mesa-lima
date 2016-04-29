@@ -543,7 +543,7 @@ dri2_x11_flush_front_buffer(__DRIdrawable * driDrawable, void *loaderPrivate)
 }
 
 static int
-dri2_x11_authenticate(struct dri2_egl_display *dri2_dpy, uint32_t id)
+dri2_x11_do_authenticate(struct dri2_egl_display *dri2_dpy, uint32_t id)
 {
    xcb_dri2_authenticate_reply_t *authenticate;
    xcb_dri2_authenticate_cookie_t authenticate_cookie;
@@ -583,7 +583,7 @@ dri2_x11_local_authenticate(struct dri2_egl_display *dri2_dpy)
       return EGL_FALSE;
    }
 
-   if (dri2_x11_authenticate(dri2_dpy, magic) < 0) {
+   if (dri2_x11_do_authenticate(dri2_dpy, magic) < 0) {
       _eglLog(_EGL_WARNING, "DRI2: failed to authenticate");
       return EGL_FALSE;
    }
@@ -710,6 +710,14 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
    free(connect);
 
    return EGL_TRUE;
+}
+
+static int
+dri2_x11_authenticate(_EGLDisplay *disp, uint32_t id)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+
+   return dri2_x11_do_authenticate(dri2_dpy, id);
 }
 
 static EGLBoolean
