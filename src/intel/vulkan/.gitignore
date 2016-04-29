@@ -1,8 +1,4 @@
 # Generated source files
-/*_spirv_autogen.h
 /anv_entrypoints.c
 /anv_entrypoints.h
-/wayland-drm-protocol.c
-/wayland-drm-client-protocol.h
 /dev_icd.json
-/gen*_pack.h
