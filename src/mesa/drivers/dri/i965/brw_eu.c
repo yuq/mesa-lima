@@ -583,7 +583,6 @@ gen_from_devinfo(const struct brw_device_info *devinfo)
 
 /* Return the matching opcode_desc for the specified opcode number and
  * hardware generation, or NULL if the opcode is not supported by the device.
- * XXX -- Actually check whether the opcode is supported.
  */
 const struct opcode_desc *
 brw_opcode_desc(const struct brw_device_info *devinfo, enum opcode opcode)
@@ -591,7 +590,8 @@ brw_opcode_desc(const struct brw_device_info *devinfo, enum opcode opcode)
    if (opcode >= ARRAY_SIZE(opcode_descs))
       return NULL;
 
-   if (opcode_descs[opcode].name)
+   enum gen gen = gen_from_devinfo(devinfo);
+   if ((opcode_descs[opcode].gens & gen) != 0)
       return &opcode_descs[opcode];
    else
       return NULL;
