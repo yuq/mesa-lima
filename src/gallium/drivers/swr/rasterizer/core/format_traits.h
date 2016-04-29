@@ -1237,6 +1237,28 @@ template<> struct FormatTraits<R24_UNORM_X8_TYPELESS> :
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatTraits<X24_TYPELESS_G8_UINT> - Format traits specialization for X24_TYPELESS_G8_UINT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<X24_TYPELESS_G8_UINT> :
+    ComponentTraits<SWR_TYPE_UINT, 32>,
+    FormatSwizzle<1>,
+    Defaults<0, 0, 0, 0x1>
+{
+    static const uint32_t bpp{ 32 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 3 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<32> TransposeT;
+    typedef Format1<32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// FormatTraits<R24_UNORM_X8_TYPELESS_LD> - Format traits specialization for R24_UNORM_X8_TYPELESS_LD
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<R24_UNORM_X8_TYPELESS_LD> :
