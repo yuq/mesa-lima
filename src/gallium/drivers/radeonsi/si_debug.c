@@ -697,6 +697,9 @@ static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)
 	while (fgets(line, sizeof(line), p)) {
 		char *msg, len;
 
+		if (!line[0] || line[0] == '\n')
+			continue;
+
 		/* Get the timestamp. */
 		if (sscanf(line, "[%u.%u]", &sec, &usec) != 2) {
 			assert(0);
