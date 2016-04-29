@@ -61,6 +61,9 @@ libi965_compiler_la_SOURCES = \
 BUILT_SOURCES = $(i965_compiler_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)
 
+EXTRA_DIST = \
+	brw_nir_trig_workarounds.py
+
 TEST_LIBS = \
 	libi965_compiler.la \
         ../../../libmesa.la \
