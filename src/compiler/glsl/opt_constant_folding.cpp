@@ -89,8 +89,6 @@ ir_constant_folding_visitor::handle_rvalue(ir_rvalue **rvalue)
    if (constant) {
       *rvalue = constant;
       this->progress = true;
-   } else {
-      (*rvalue)->accept(this);
    }
 }
 
