@@ -1737,6 +1737,27 @@ brw_blorp_blit_program::texture_lookup(struct brw_reg dst,
 #undef S
 #undef SWAP_XY_AND_XPYP
 
+static void
+brw_blorp_get_blit_kernel(struct brw_context *brw,
+                          struct brw_blorp_params *params,
+                          const struct brw_blorp_blit_prog_key *prog_key)
+{
+   if (brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
+                        prog_key, sizeof(*prog_key),
+                        &params->wm_prog_kernel, &params->wm_prog_data))
+      return;
+
+   brw_blorp_blit_program prog(brw, prog_key);
+   GLuint program_size;
+   const GLuint *program = prog.compile(brw, INTEL_DEBUG & DEBUG_BLORP,
+                                        &program_size);
+   brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
+                    prog_key, sizeof(*prog_key),
+                    program, program_size,
+                    &prog.prog_data, sizeof(prog.prog_data),
+                    &params->wm_prog_kernel, &params->wm_prog_data);
+}
+
 void
 brw_blorp_blit_program::render_target_write()
 {
@@ -2203,19 +2224,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       params.src.y_offset /= 2;
    }
 
-   if (!brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                         &wm_prog_key, sizeof(wm_prog_key),
-                         &params.wm_prog_kernel, &params.wm_prog_data)) {
-      brw_blorp_blit_program prog(brw, &wm_prog_key);
-      GLuint program_size;
-      const GLuint *program = prog.compile(brw, INTEL_DEBUG & DEBUG_BLORP,
-                                           &program_size);
-      brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                       &wm_prog_key, sizeof(wm_prog_key),
-                       program, program_size,
-                       &prog.prog_data, sizeof(prog.prog_data),
-                       &params.wm_prog_kernel, &params.wm_prog_data);
-   }
+   brw_blorp_get_blit_kernel(brw, &params, &wm_prog_key);
 
    params.src.swizzle = src_swizzle;
 
