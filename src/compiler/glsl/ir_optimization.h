@@ -73,6 +73,8 @@ bool do_common_optimization(exec_list *ir, bool linked,
                             const struct gl_shader_compiler_options *options,
                             bool native_integers);
 
+bool ir_constant_fold(ir_rvalue **rvalue);
+
 bool do_rebalance_tree(exec_list *instructions);
 bool do_algebraic(exec_list *instructions, bool native_integers,
                   const struct gl_shader_compiler_options *options);
