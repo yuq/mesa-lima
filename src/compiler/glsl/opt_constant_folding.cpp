@@ -85,6 +85,12 @@ ir_constant_fold(ir_rvalue **rvalue)
    if (swiz && !swiz->val->as_constant())
       return false;
 
+   /* Ditto for array dereferences */
+   ir_dereference_array *array_ref = (*rvalue)->as_dereference_array();
+   if (array_ref && (!array_ref->array->as_constant() ||
+                     !array_ref->array_index->as_constant()))
+      return false;
+
    ir_constant *constant = (*rvalue)->constant_expression_value();
    if (constant) {
       *rvalue = constant;
