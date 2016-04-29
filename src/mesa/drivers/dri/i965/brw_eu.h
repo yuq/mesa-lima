@@ -552,10 +552,6 @@ struct opcode_desc {
    int      gens;
 };
 
-extern const struct opcode_desc opcode_descs[128];
-
-int gen_from_devinfo(const struct brw_device_info *devinfo);
-
 const struct opcode_desc *
 brw_opcode_desc(const struct brw_device_info *devinfo, enum opcode opcode);
 

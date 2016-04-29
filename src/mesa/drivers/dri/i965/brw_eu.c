@@ -355,7 +355,7 @@ enum gen {
 #define GEN_GE(gen) (~((gen) - 1) | gen)
 #define GEN_LE(gen) (((gen) - 1) | gen)
 
-const struct opcode_desc opcode_descs[128] = {
+static const struct opcode_desc opcode_descs[128] = {
    [BRW_OPCODE_ILLEGAL] = {
       .name = "illegal", .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
@@ -566,7 +566,7 @@ const struct opcode_desc opcode_descs[128] = {
    },
 };
 
-int
+static enum gen
 gen_from_devinfo(const struct brw_device_info *devinfo)
 {
    switch (devinfo->gen) {
