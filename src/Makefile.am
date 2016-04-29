@@ -32,11 +32,6 @@ if NEED_OPENGL_COMMON
 SUBDIRS += mesa
 endif
 
-# This explicitly comes after mesa because it depends on the i965 compiler
-if HAVE_INTEL_VULKAN
-SUBDIRS += intel/vulkan
-endif
-
 SUBDIRS += loader
 
 if HAVE_DRI_GLX
@@ -53,6 +48,11 @@ endif
 
 if HAVE_EGL
 SUBDIRS += egl
+endif
+
+## Requires the i965 compiler (part of mesa) and wayland-drm
+if HAVE_INTEL_VULKAN
+SUBDIRS += intel/vulkan
 endif
 
 if HAVE_GALLIUM
