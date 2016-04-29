@@ -1760,17 +1760,17 @@ static uint32_t si_translate_buffer_dataformat(struct pipe_screen *screen,
 					       const struct util_format_description *desc,
 					       int first_non_void)
 {
-	if (first_non_void < 0)
-		return V_008F0C_BUF_DATA_FORMAT_INVALID;
-
-	unsigned type = desc->channel[first_non_void].type;
+	unsigned type;
 	int i;
-
-	if (type == UTIL_FORMAT_TYPE_FIXED)
-		return V_008F0C_BUF_DATA_FORMAT_INVALID;
 
 	if (desc->format == PIPE_FORMAT_R11G11B10_FLOAT)
 		return V_008F0C_BUF_DATA_FORMAT_10_11_11;
+
+	assert(first_non_void >= 0);
+	type = desc->channel[first_non_void].type;
+
+	if (type == UTIL_FORMAT_TYPE_FIXED)
+		return V_008F0C_BUF_DATA_FORMAT_INVALID;
 
 	if (desc->nr_channels == 4 &&
 	    desc->channel[0].size == 10 &&
@@ -1837,8 +1837,10 @@ static uint32_t si_translate_buffer_numformat(struct pipe_screen *screen,
 					      const struct util_format_description *desc,
 					      int first_non_void)
 {
-	if (desc->format == PIPE_FORMAT_R11G11B10_FLOAT || first_non_void < 0)
+	if (desc->format == PIPE_FORMAT_R11G11B10_FLOAT)
 		return V_008F0C_BUF_NUM_FORMAT_FLOAT;
+
+	assert(first_non_void >= 0);
 
 	switch (desc->channel[first_non_void].type) {
 	case UTIL_FORMAT_TYPE_SIGNED:
