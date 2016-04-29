@@ -155,8 +155,8 @@ cf_node_has_side_effects(nir_cf_node *node)
             continue;
 
          nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-         if (!nir_intrinsic_infos[intrin->intrinsic].flags &
-             NIR_INTRINSIC_CAN_ELIMINATE)
+         if (!(nir_intrinsic_infos[intrin->intrinsic].flags &
+             NIR_INTRINSIC_CAN_ELIMINATE))
             return true;
       }
    }
