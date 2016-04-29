@@ -340,6 +340,245 @@ brw_disassemble(const struct brw_device_info *devinfo,
    }
 }
 
+enum gen {
+   GEN4  = (1 << 0),
+   GEN45 = (1 << 1),
+   GEN5  = (1 << 2),
+   GEN6  = (1 << 3),
+   GEN7  = (1 << 4),
+   GEN75 = (1 << 5),
+   GEN8  = (1 << 6),
+   GEN9  = (1 << 7),
+   GEN_ALL = ~0
+};
+
+#define GEN_GE(gen) (~((gen) - 1) | gen)
+#define GEN_LE(gen) (((gen) - 1) | gen)
+
+const struct inst_info inst_info[128] = {
+   [BRW_OPCODE_ILLEGAL] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_MOV] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_SEL] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_MOVI] = {
+      .gens = GEN_GE(GEN45),
+   },
+   [BRW_OPCODE_NOT] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_AND] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_OR] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_XOR] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_SHR] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_SHL] = {
+      .gens = GEN_ALL,
+   },
+   /* BRW_OPCODE_DIM / BRW_OPCODE_SMOV */
+   /* Reserved - 11 */
+   [BRW_OPCODE_ASR] = {
+      .gens = GEN_ALL,
+   },
+   /* Reserved - 13-15 */
+   [BRW_OPCODE_CMP] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_CMPN] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_CSEL] = {
+      .gens = GEN_GE(GEN8),
+   },
+   [BRW_OPCODE_F32TO16] = {
+      .gens = GEN7 | GEN75,
+   },
+   [BRW_OPCODE_F16TO32] = {
+      .gens = GEN7 | GEN75,
+   },
+   /* Reserved - 21-22 */
+   [BRW_OPCODE_BFREV] = {
+      .gens = GEN_GE(GEN7),
+   },
+   [BRW_OPCODE_BFE] = {
+      .gens = GEN_GE(GEN7),
+   },
+   [BRW_OPCODE_BFI1] = {
+      .gens = GEN_GE(GEN7),
+   },
+   [BRW_OPCODE_BFI2] = {
+      .gens = GEN_GE(GEN7),
+   },
+   /* Reserved - 27-31 */
+   [BRW_OPCODE_JMPI] = {
+      .gens = GEN_ALL,
+   },
+   /* BRW_OPCODE_BRD */
+   [BRW_OPCODE_IF] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_IFF] = { /* also BRW_OPCODE_BRC */
+      .gens = GEN_LE(GEN5),
+   },
+   [BRW_OPCODE_ELSE] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_ENDIF] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_DO] = { /* also BRW_OPCODE_CASE */
+      .gens = GEN_LE(GEN5),
+   },
+   [BRW_OPCODE_WHILE] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_BREAK] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_CONTINUE] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_HALT] = {
+      .gens = GEN_ALL,
+   },
+   /* BRW_OPCODE_CALLA */
+   /* BRW_OPCODE_MSAVE / BRW_OPCODE_CALL */
+   /* BRW_OPCODE_MREST / BRW_OPCODE_RET */
+   /* BRW_OPCODE_PUSH / BRW_OPCODE_FORK / BRW_OPCODE_GOTO */
+   /* BRW_OPCODE_POP */
+   [BRW_OPCODE_WAIT] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_SEND] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_SENDC] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_SENDS] = {
+      .gens = GEN_GE(GEN9),
+   },
+   [BRW_OPCODE_SENDSC] = {
+      .gens = GEN_GE(GEN9),
+   },
+   /* Reserved 53-55 */
+   [BRW_OPCODE_MATH] = {
+      .gens = GEN_GE(GEN6),
+   },
+   /* Reserved 57-63 */
+   [BRW_OPCODE_ADD] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_MUL] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_AVG] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_FRC] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_RNDU] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_RNDD] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_RNDE] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_RNDZ] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_MAC] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_MACH] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_LZD] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_FBH] = {
+      .gens = GEN_GE(GEN7),
+   },
+   [BRW_OPCODE_FBL] = {
+      .gens = GEN_GE(GEN7),
+   },
+   [BRW_OPCODE_CBIT] = {
+      .gens = GEN_GE(GEN7),
+   },
+   [BRW_OPCODE_ADDC] = {
+      .gens = GEN_GE(GEN7),
+   },
+   [BRW_OPCODE_SUBB] = {
+      .gens = GEN_GE(GEN7),
+   },
+   [BRW_OPCODE_SAD2] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_SADA2] = {
+      .gens = GEN_ALL,
+   },
+   /* Reserved 82-83 */
+   [BRW_OPCODE_DP4] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_DPH] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_DP3] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_DP2] = {
+      .gens = GEN_ALL,
+   },
+   /* Reserved 88 */
+   [BRW_OPCODE_LINE] = {
+      .gens = GEN_ALL,
+   },
+   [BRW_OPCODE_PLN] = {
+      .gens = GEN_GE(GEN45),
+   },
+   [BRW_OPCODE_MAD] = {
+      .gens = GEN_GE(GEN6),
+   },
+   [BRW_OPCODE_LRP] = {
+      .gens = GEN_GE(GEN6),
+   },
+   /* Reserved 93-124 */
+   /* BRW_OPCODE_NENOP */
+   [BRW_OPCODE_NOP] = {
+      .gens = GEN_ALL,
+   },
+};
+
+int
+gen_from_devinfo(const struct brw_device_info *devinfo)
+{
+   switch (devinfo->gen) {
+   case 4: return devinfo->is_g4x ? GEN45 : GEN4;
+   case 5: return GEN5;
+   case 6: return GEN6;
+   case 7: return devinfo->is_haswell ? GEN75 : GEN7;
+   case 8: return GEN8;
+   case 9: return GEN9;
+   default:
+      unreachable("not reached");
+   }
+}
+
 /* Return the matching opcode_desc for the specified opcode number and
  * hardware generation, or NULL if the opcode is not supported by the device.
  * XXX -- Actually check whether the opcode is supported.

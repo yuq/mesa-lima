@@ -545,6 +545,14 @@ next_offset(const struct brw_device_info *devinfo, void *store, int offset)
       return offset + 16;
 }
 
+struct inst_info {
+   int      gens;
+};
+
+extern const struct inst_info inst_info[128];
+
+int gen_from_devinfo(const struct brw_device_info *devinfo);
+
 const struct opcode_desc *
 brw_opcode_desc(const struct brw_device_info *devinfo, enum opcode opcode);
 
