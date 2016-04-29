@@ -134,6 +134,9 @@ anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 
 BUILT_SOURCES = $(VULKAN_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)
+EXTRA_DIST = \
+	$(top_srcdir)/include/vulkan/vk_icd.h \
+	anv_entrypoints_gen.py
 
 libvulkan_intel_la_LIBADD = $(VULKAN_LIB_DEPS)
 

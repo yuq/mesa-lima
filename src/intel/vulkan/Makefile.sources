@@ -21,20 +21,23 @@
 
 VULKAN_FILES := \
 	anv_allocator.c \
-	anv_cmd_buffer.c \
 	anv_batch_chain.c \
+	anv_cmd_buffer.c \
 	anv_descriptor_set.c \
 	anv_device.c \
 	anv_dump.c \
 	anv_formats.c \
+	anv_genX.h \
 	anv_image.c \
 	anv_intel.c \
 	anv_meta.c \
+	anv_meta.h \
 	anv_meta_blit.c \
 	anv_meta_blit2d.c \
 	anv_meta_clear.c \
 	anv_meta_copy.c \
 	anv_meta_resolve.c \
+	anv_nir.h \
 	anv_nir_apply_dynamic_offsets.c \
 	anv_nir_apply_pipeline_layout.c \
 	anv_nir_lower_push_constants.c \
@@ -44,7 +47,9 @@ VULKAN_FILES := \
 	anv_private.h \
 	anv_query.c \
 	anv_util.c \
-	anv_wsi.c
+	anv_wsi.c \
+	anv_wsi.h \
+	genX_pipeline_util.h
 
 VULKAN_WSI_WAYLAND_FILES := \
 	anv_wsi_wayland.c
