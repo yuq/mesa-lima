@@ -221,11 +221,11 @@ dead_cf_block(nir_block *block)
 {
    nir_if *following_if = nir_block_get_following_if(block);
    if (following_if) {
-     nir_const_value *const_value =
-        nir_src_as_const_value(following_if->condition);
+      nir_const_value *const_value =
+         nir_src_as_const_value(following_if->condition);
 
-     if (!const_value)
-        return false;
+      if (!const_value)
+         return false;
 
       opt_constant_if(following_if, const_value->u32[0] != 0);
       return true;
