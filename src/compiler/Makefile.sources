@@ -237,7 +237,9 @@ NIR_FILES = \
 	nir/nir_worklist.h
 
 SPIRV_FILES = \
+	spirv/GLSL.std.450.h \
 	spirv/nir_spirv.h \
+	spirv/spirv.h \
 	spirv/spirv_to_nir.c \
 	spirv/vtn_alu.c \
 	spirv/vtn_cfg.c \
