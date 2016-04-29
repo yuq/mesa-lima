@@ -176,6 +176,20 @@ void r600_dma_emit_wait_idle(struct r600_common_context *rctx)
 	/* done at the end of DMA calls, so increment this. */
 	rctx->num_dma_calls++;
 
+	/* IBs using too little memory are limited by the IB submission overhead.
+	 * IBs using too much memory are limited by the kernel/TTM overhead.
+	 * Too long IBs create CPU-GPU pipeline bubbles and add latency.
+	 *
+	 * This heuristic makes sure that DMA requests are executed
+	 * very soon after the call is made and lowers memory usage.
+	 * It improves texture upload performance by keeping the DMA
+	 * engine busy while uploads are being submitted.
+	 */
+	if (rctx->ws->cs_query_memory_usage(rctx->dma.cs) > 64 * 1024 * 1024) {
+		rctx->dma.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
+		return;
+	}
+
 	r600_need_dma_space(rctx, 1, NULL, NULL);
 
 	if (cs->cdw == 0) /* empty queue */

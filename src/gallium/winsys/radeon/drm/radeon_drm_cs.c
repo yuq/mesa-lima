@@ -398,6 +398,13 @@ static boolean radeon_drm_cs_memory_below_limit(struct radeon_winsys_cs *rcs, ui
     return gtt < cs->ws->info.gart_size * 0.7;
 }
 
+static uint64_t radeon_drm_cs_query_memory_usage(struct radeon_winsys_cs *rcs)
+{
+   struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
+
+   return cs->csc->used_vram + cs->csc->used_gart;
+}
+
 static unsigned radeon_drm_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
                                               struct radeon_bo_list_item *list)
 {
@@ -671,6 +678,7 @@ void radeon_drm_cs_init_functions(struct radeon_drm_winsys *ws)
     ws->base.cs_lookup_buffer = radeon_drm_cs_lookup_buffer;
     ws->base.cs_validate = radeon_drm_cs_validate;
     ws->base.cs_memory_below_limit = radeon_drm_cs_memory_below_limit;
+    ws->base.cs_query_memory_usage = radeon_drm_cs_query_memory_usage;
     ws->base.cs_get_buffer_list = radeon_drm_cs_get_buffer_list;
     ws->base.cs_flush = radeon_drm_cs_flush;
     ws->base.cs_is_buffer_referenced = radeon_bo_is_referenced;
