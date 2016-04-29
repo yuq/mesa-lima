@@ -25,6 +25,8 @@
 #include "main/teximage.h"
 #include "main/fbobject.h"
 
+#include "compiler/nir/nir_builder.h"
+
 #include "intel_fbo.h"
 
 #include "brw_blorp.h"
@@ -332,6 +334,230 @@ enum sampler_message_arg
    SAMPLER_MESSAGE_ARG_ZERO_INT,
 };
 
+struct brw_blorp_blit_vars {
+   /* Uniforms values from brw_blorp_wm_push_constants */
+   nir_variable *u_dst_x0;
+   nir_variable *u_dst_x1;
+   nir_variable *u_dst_y0;
+   nir_variable *u_dst_y1;
+   nir_variable *u_rect_grid_x1;
+   nir_variable *u_rect_grid_y1;
+   struct {
+      nir_variable *multiplier;
+      nir_variable *offset;
+   } u_x_transform, u_y_transform;
+   nir_variable *u_src_z;
+
+   /* gl_FragCoord */
+   nir_variable *frag_coord;
+
+   /* gl_FragColor */
+   nir_variable *color_out;
+};
+
+static void
+brw_blorp_blit_vars_init(nir_builder *b, struct brw_blorp_blit_vars *v,
+                         const struct brw_blorp_blit_prog_key *key)
+{
+#define LOAD_UNIFORM(name, type)\
+   v->u_##name = nir_variable_create(b->shader, nir_var_uniform, type, #name); \
+   v->u_##name->data.location = \
+      offsetof(struct brw_blorp_wm_push_constants, name);
+
+   LOAD_UNIFORM(dst_x0, glsl_uint_type())
+   LOAD_UNIFORM(dst_x1, glsl_uint_type())
+   LOAD_UNIFORM(dst_y0, glsl_uint_type())
+   LOAD_UNIFORM(dst_y1, glsl_uint_type())
+   LOAD_UNIFORM(rect_grid_x1, glsl_float_type())
+   LOAD_UNIFORM(rect_grid_y1, glsl_float_type())
+   LOAD_UNIFORM(x_transform.multiplier, glsl_float_type())
+   LOAD_UNIFORM(x_transform.offset, glsl_float_type())
+   LOAD_UNIFORM(y_transform.multiplier, glsl_float_type())
+   LOAD_UNIFORM(y_transform.offset, glsl_float_type())
+   LOAD_UNIFORM(src_z, glsl_uint_type())
+
+#undef DECL_UNIFORM
+
+   v->frag_coord = nir_variable_create(b->shader, nir_var_shader_in,
+                                       glsl_vec4_type(), "gl_FragCoord");
+   v->frag_coord->data.location = VARYING_SLOT_POS;
+   v->frag_coord->data.origin_upper_left = true;
+
+   v->color_out = nir_variable_create(b->shader, nir_var_shader_out,
+                                      glsl_vec4_type(), "gl_FragColor");
+   v->color_out->data.location = FRAG_RESULT_COLOR;
+}
+
+nir_ssa_def *
+blorp_blit_get_frag_coords(nir_builder *b,
+                           const struct brw_blorp_blit_prog_key *key,
+                           struct brw_blorp_blit_vars *v)
+{
+   nir_ssa_def *coord = nir_f2i(b, nir_load_var(b, v->frag_coord));
+
+   if (key->persample_msaa_dispatch) {
+      return nir_vec3(b, nir_channel(b, coord, 0), nir_channel(b, coord, 1),
+         nir_load_system_value(b, nir_intrinsic_load_sample_id, 0));
+   } else {
+      return nir_vec2(b, nir_channel(b, coord, 0), nir_channel(b, coord, 1));
+   }
+}
+
+/**
+ * Emit code to translate from destination (X, Y) coordinates to source (X, Y)
+ * coordinates.
+ */
+nir_ssa_def *
+blorp_blit_apply_transform(nir_builder *b, nir_ssa_def *src_pos,
+                           struct brw_blorp_blit_vars *v)
+{
+   nir_ssa_def *offset = nir_vec2(b, nir_load_var(b, v->u_x_transform.offset),
+                                     nir_load_var(b, v->u_y_transform.offset));
+   nir_ssa_def *mul = nir_vec2(b, nir_load_var(b, v->u_x_transform.multiplier),
+                                  nir_load_var(b, v->u_y_transform.multiplier));
+
+   nir_ssa_def *pos = nir_ffma(b, src_pos, mul, offset);
+
+   if (src_pos->num_components == 3) {
+      /* Leave the sample id alone */
+      pos = nir_vec3(b, nir_channel(b, pos, 0), nir_channel(b, pos, 1),
+                        nir_channel(b, src_pos, 2));
+   }
+
+   return pos;
+}
+
+static nir_tex_instr *
+blorp_create_nir_tex_instr(nir_shader *shader, nir_texop op,
+                           nir_ssa_def *pos, unsigned num_srcs,
+                           enum brw_reg_type dst_type)
+{
+   nir_tex_instr *tex = nir_tex_instr_create(shader, num_srcs);
+
+   tex->op = op;
+
+   switch (dst_type) {
+   case BRW_REGISTER_TYPE_F:
+      tex->dest_type = nir_type_float;
+      break;
+   case BRW_REGISTER_TYPE_D:
+      tex->dest_type = nir_type_int;
+      break;
+   case BRW_REGISTER_TYPE_UD:
+      tex->dest_type = nir_type_uint;
+      break;
+   default:
+      unreachable("Invalid texture return type");
+   }
+
+   tex->is_array = false;
+   tex->is_shadow = false;
+
+   /* Blorp only has one texture and it's bound at unit 0 */
+   tex->texture = NULL;
+   tex->sampler = NULL;
+   tex->texture_index = 0;
+   tex->sampler_index = 0;
+
+   nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, NULL);
+
+   return tex;
+}
+
+static nir_ssa_def *
+blorp_nir_tex(nir_builder *b, nir_ssa_def *pos, enum brw_reg_type dst_type)
+{
+   nir_tex_instr *tex =
+      blorp_create_nir_tex_instr(b->shader, nir_texop_tex, pos, 2, dst_type);
+
+   assert(pos->num_components == 2);
+   tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
+   tex->coord_components = 2;
+   tex->src[0].src_type = nir_tex_src_coord;
+   tex->src[0].src = nir_src_for_ssa(pos);
+   tex->src[1].src_type = nir_tex_src_lod;
+   tex->src[1].src = nir_src_for_ssa(nir_imm_int(b, 0));
+
+   nir_builder_instr_insert(b, &tex->instr);
+
+   return &tex->dest.ssa;
+}
+
+static nir_ssa_def *
+blorp_nir_txf(nir_builder *b, struct brw_blorp_blit_vars *v,
+              nir_ssa_def *pos, enum brw_reg_type dst_type)
+{
+   nir_tex_instr *tex =
+      blorp_create_nir_tex_instr(b->shader, nir_texop_txf, pos, 2, dst_type);
+
+   /* In order to properly handle 3-D textures, we pull the Z component from
+    * a uniform.  TODO: This is a bit magic; we should probably make this
+    * more explicit in the future.
+    */
+   assert(pos->num_components == 2);
+   pos = nir_vec3(b, nir_channel(b, pos, 0), nir_channel(b, pos, 1),
+                     nir_load_var(b, v->u_src_z));
+
+   tex->sampler_dim = GLSL_SAMPLER_DIM_3D;
+   tex->coord_components = 3;
+   tex->src[0].src_type = nir_tex_src_coord;
+   tex->src[0].src = nir_src_for_ssa(pos);
+   tex->src[1].src_type = nir_tex_src_lod;
+   tex->src[1].src = nir_src_for_ssa(nir_imm_int(b, 0));
+
+   nir_builder_instr_insert(b, &tex->instr);
+
+   return &tex->dest.ssa;
+}
+
+static nir_ssa_def *
+blorp_nir_txf_ms(nir_builder *b, nir_ssa_def *pos, nir_ssa_def *mcs,
+                 enum brw_reg_type dst_type)
+{
+   nir_tex_instr *tex =
+      blorp_create_nir_tex_instr(b->shader, nir_texop_txf_ms, pos,
+                                 mcs != NULL ? 3 : 2, dst_type);
+
+   tex->sampler_dim = GLSL_SAMPLER_DIM_MS;
+   tex->coord_components = 2;
+   tex->src[0].src_type = nir_tex_src_coord;
+   tex->src[0].src = nir_src_for_ssa(pos);
+
+   tex->src[1].src_type = nir_tex_src_ms_index;
+   if (pos->num_components == 2) {
+      tex->src[1].src = nir_src_for_ssa(nir_imm_int(b, 0));
+   } else {
+      assert(pos->num_components == 3);
+      tex->src[1].src = nir_src_for_ssa(nir_channel(b, pos, 2));
+   }
+
+   if (mcs) {
+      tex->src[2].src_type = nir_tex_src_ms_mcs;
+      tex->src[2].src = nir_src_for_ssa(mcs);
+   }
+
+   nir_builder_instr_insert(b, &tex->instr);
+
+   return &tex->dest.ssa;
+}
+
+static nir_ssa_def *
+blorp_nir_txf_ms_mcs(nir_builder *b, nir_ssa_def *pos)
+{
+   nir_tex_instr *tex =
+      blorp_create_nir_tex_instr(b->shader, nir_texop_txf_ms_mcs,
+                                 pos, 1, BRW_REGISTER_TYPE_D);
+
+   tex->sampler_dim = GLSL_SAMPLER_DIM_MS;
+   tex->coord_components = 2;
+   tex->src[0].src_type = nir_tex_src_coord;
+   tex->src[0].src = nir_src_for_ssa(pos);
+
+   nir_builder_instr_insert(b, &tex->instr);
+
+   return &tex->dest.ssa;
+}
+
 /**
  * Generator for WM programs used in BLORP blits.
  *
@@ -471,6 +697,161 @@ enum sampler_message_arg
  * (In these formulas, pitch is the number of bytes occupied by a single row
  * of samples).
  */
+static nir_shader *
+brw_blorp_build_nir_shader(struct brw_context *brw,
+                           const brw_blorp_blit_prog_key *key,
+                           struct brw_blorp_prog_data *prog_data)
+{
+   nir_ssa_def *src_pos, *dst_pos, *color;
+
+   /* Sanity checks */
+   if (key->dst_tiled_w && key->rt_samples > 0) {
+      /* If the destination image is W tiled and multisampled, then the thread
+       * must be dispatched once per sample, not once per pixel.  This is
+       * necessary because after conversion between W and Y tiling, there's no
+       * guarantee that all samples corresponding to a single pixel will still
+       * be together.
+       */
+      assert(key->persample_msaa_dispatch);
+   }
+
+   if (key->blend) {
+      /* We are blending, which means we won't have an opportunity to
+       * translate the tiling and sample count for the texture surface.  So
+       * the surface state for the texture must be configured with the correct
+       * tiling and sample count.
+       */
+      assert(!key->src_tiled_w);
+      assert(key->tex_samples == key->src_samples);
+      assert(key->tex_layout == key->src_layout);
+      assert(key->tex_samples > 0);
+   }
+
+   if (key->persample_msaa_dispatch) {
+      /* It only makes sense to do persample dispatch if the render target is
+       * configured as multisampled.
+       */
+      assert(key->rt_samples > 0);
+   }
+
+   /* Make sure layout is consistent with sample count */
+   assert((key->tex_layout == INTEL_MSAA_LAYOUT_NONE) ==
+          (key->tex_samples == 0));
+   assert((key->rt_layout == INTEL_MSAA_LAYOUT_NONE) ==
+          (key->rt_samples == 0));
+   assert((key->src_layout == INTEL_MSAA_LAYOUT_NONE) ==
+          (key->src_samples == 0));
+   assert((key->dst_layout == INTEL_MSAA_LAYOUT_NONE) ==
+          (key->dst_samples == 0));
+
+   /* Set up prog_data */
+   brw_blorp_prog_data_init(prog_data);
+
+   nir_builder b;
+   nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
+
+   struct brw_blorp_blit_vars v;
+   brw_blorp_blit_vars_init(&b, &v, key);
+
+   dst_pos = blorp_blit_get_frag_coords(&b, key, &v);
+
+   /* Render target and texture hardware don't support W tiling until Gen8. */
+   const bool rt_tiled_w = false;
+   const bool tex_tiled_w = brw->gen >= 8 && key->src_tiled_w;
+
+   /* The address that data will be written to is determined by the
+    * coordinates supplied to the WM thread and the tiling and sample count of
+    * the render target, according to the formula:
+    *
+    * (X, Y, S) = decode_msaa(rt_samples, detile(rt_tiling, offset))
+    *
+    * If the actual tiling and sample count of the destination surface are not
+    * the same as the configuration of the render target, then these
+    * coordinates are wrong and we have to adjust them to compensate for the
+    * difference.
+    */
+   if (rt_tiled_w != key->dst_tiled_w ||
+       key->rt_samples != key->dst_samples ||
+       key->rt_layout != key->dst_layout) {
+      goto fail;
+   }
+
+   /* Now (X, Y, S) = decode_msaa(dst_samples, detile(dst_tiling, offset)).
+    *
+    * That is: X, Y and S now contain the true coordinates and sample index of
+    * the data that the WM thread should output.
+    *
+    * If we need to kill pixels that are outside the destination rectangle,
+    * now is the time to do it.
+    */
+   if (key->use_kill)
+      goto fail;
+
+   src_pos = blorp_blit_apply_transform(&b, nir_i2f(&b, dst_pos), &v);
+
+   if (key->blit_scaled && key->blend) {
+      goto fail;
+   } else if (!key->bilinear_filter) {
+      /* We're going to use a texelFetch, so we need integers */
+      src_pos = nir_f2i(&b, src_pos);
+   }
+
+   /* X, Y, and S are now the coordinates of the pixel in the source image
+    * that we want to texture from.  Exception: if we are blending, then S is
+    * irrelevant, because we are going to fetch all samples.
+    */
+   if (key->blend && !key->blit_scaled) {
+      goto fail;
+   } else if (key->blend && key->blit_scaled) {
+      goto fail;
+   } else {
+      /* We aren't blending, which means we just want to fetch a single sample
+       * from the source surface.  The address that we want to fetch from is
+       * related to the X, Y and S values according to the formula:
+       *
+       * (X, Y, S) = decode_msaa(src_samples, detile(src_tiling, offset)).
+       *
+       * If the actual tiling and sample count of the source surface are not
+       * the same as the configuration of the texture, then we need to adjust
+       * the coordinates to compensate for the difference.
+       */
+      if ((tex_tiled_w != key->src_tiled_w ||
+           key->tex_samples != key->src_samples ||
+           key->tex_layout != key->src_layout) &&
+          !key->bilinear_filter) {
+         goto fail;
+      }
+
+      if (key->bilinear_filter) {
+         color = blorp_nir_tex(&b, src_pos, key->texture_data_type);
+      } else {
+         /* Now (X, Y, S) = decode_msaa(tex_samples, detile(tex_tiling, offset)).
+          *
+          * In other words: X, Y, and S now contain values which, when passed to
+          * the texturing unit, will cause data to be read from the correct
+          * memory location.  So we can fetch the texel now.
+          */
+         if (key->src_samples == 0) {
+            color = blorp_nir_txf(&b, &v, src_pos, key->texture_data_type);
+         } else {
+            nir_ssa_def *mcs = NULL;
+            if (key->tex_layout == INTEL_MSAA_LAYOUT_CMS)
+               mcs = blorp_nir_txf_ms_mcs(&b, src_pos);
+
+            color = blorp_nir_txf_ms(&b, src_pos, mcs, key->texture_data_type);
+         }
+      }
+   }
+
+   nir_store_var(&b, v.color_out, color, 0xf);
+
+   return b.shader;
+
+fail:
+   ralloc_free(b.shader);
+   return NULL;
+}
+
 class brw_blorp_blit_program : public brw_blorp_eu_emitter
 {
 public:
@@ -1307,25 +1688,6 @@ brw_blorp_blit_program::clamp_tex_coords(struct brw_reg regX,
    emit_min(regY, regY, clampY1);
 }
 
-/**
- * Emit code to transform the X and Y coordinates as needed for blending
- * together the different samples in an MSAA texture.
- */
-void
-brw_blorp_blit_program::single_to_blend()
-{
-   /* When looking up samples in an MSAA texture using the SAMPLE message,
-    * Gen6 requires the texture coordinates to be odd integers (so that they
-    * correspond to the center of a 2x2 block representing the four samples
-    * that maxe up a pixel).  So we need to multiply our X and Y coordinates
-    * each by 2 and then add 1.
-    */
-   emit_shl(t1, X, brw_imm_w(1));
-   emit_shl(t2, Y, brw_imm_w(1));
-   emit_add(Xp, t1, brw_imm_w(1));
-   emit_add(Yp, t2, brw_imm_w(1));
-   SWAP_XY_AND_XPYP();
-}
 
 
 /**
@@ -1747,14 +2109,33 @@ brw_blorp_get_blit_kernel(struct brw_context *brw,
                         &params->wm_prog_kernel, &params->wm_prog_data))
       return;
 
-   brw_blorp_blit_program prog(brw, prog_key);
-   GLuint program_size;
-   const GLuint *program = prog.compile(brw, INTEL_DEBUG & DEBUG_BLORP,
-                                        &program_size);
+   const unsigned *program;
+   unsigned program_size;
+   struct brw_blorp_prog_data prog_data;
+
+   /* Try and compile with NIR first.  If that fails, fall back to the old
+    * method of building shaders manually.
+    */
+   nir_shader *nir = brw_blorp_build_nir_shader(brw, prog_key, &prog_data);
+   if (nir) {
+      struct brw_wm_prog_key wm_key;
+      brw_blorp_init_wm_prog_key(&wm_key);
+      wm_key.tex.compressed_multisample_layout_mask =
+         prog_key->tex_layout == INTEL_MSAA_LAYOUT_CMS;
+      wm_key.multisample_fbo = prog_key->rt_samples > 1;
+
+      program = brw_blorp_compile_nir_shader(brw, nir, &wm_key, false,
+                                             &prog_data, &program_size);
+   } else {
+      brw_blorp_blit_program prog(brw, prog_key);
+      program = prog.compile(brw, INTEL_DEBUG & DEBUG_BLORP, &program_size);
+      prog_data = prog.prog_data;
+   }
+
    brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
                     prog_key, sizeof(*prog_key),
                     program, program_size,
-                    &prog.prog_data, sizeof(prog.prog_data),
+                    &prog_data, sizeof(prog_data),
                     &params->wm_prog_kernel, &params->wm_prog_data);
 }
 
