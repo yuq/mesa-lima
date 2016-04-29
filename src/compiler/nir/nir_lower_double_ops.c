@@ -267,36 +267,36 @@ lower_sqrt_rsq(nir_builder *b, nir_ssa_def *src, bool sqrt)
     * (https://en.wikipedia.org/wiki/Methods_of_computing_square_roots).
     */
 
-    nir_ssa_def *one_half = nir_imm_double(b, 0.5);
-    nir_ssa_def *h_0 = nir_fmul(b, one_half, ra);
-    nir_ssa_def *g_0 = nir_fmul(b, src, ra);
-    nir_ssa_def *r_0 = nir_ffma(b, nir_fneg(b, h_0), g_0, one_half);
-    nir_ssa_def *h_1 = nir_ffma(b, h_0, r_0, h_0);
-    nir_ssa_def *res;
-    if (sqrt) {
-       nir_ssa_def *g_1 = nir_ffma(b, g_0, r_0, g_0);
-       nir_ssa_def *r_1 = nir_ffma(b, nir_fneg(b, g_1), g_1, src);
-       res = nir_ffma(b, h_1, r_1, g_1);
-    } else {
-       nir_ssa_def *y_1 = nir_fmul(b, nir_imm_double(b, 2.0), h_1);
-       nir_ssa_def *r_1 = nir_ffma(b, nir_fneg(b, y_1), nir_fmul(b, h_1, src),
-                                   one_half);
-       res = nir_ffma(b, y_1, r_1, y_1);
-    }
+   nir_ssa_def *one_half = nir_imm_double(b, 0.5);
+   nir_ssa_def *h_0 = nir_fmul(b, one_half, ra);
+   nir_ssa_def *g_0 = nir_fmul(b, src, ra);
+   nir_ssa_def *r_0 = nir_ffma(b, nir_fneg(b, h_0), g_0, one_half);
+   nir_ssa_def *h_1 = nir_ffma(b, h_0, r_0, h_0);
+   nir_ssa_def *res;
+   if (sqrt) {
+      nir_ssa_def *g_1 = nir_ffma(b, g_0, r_0, g_0);
+      nir_ssa_def *r_1 = nir_ffma(b, nir_fneg(b, g_1), g_1, src);
+      res = nir_ffma(b, h_1, r_1, g_1);
+   } else {
+      nir_ssa_def *y_1 = nir_fmul(b, nir_imm_double(b, 2.0), h_1);
+      nir_ssa_def *r_1 = nir_ffma(b, nir_fneg(b, y_1), nir_fmul(b, h_1, src),
+                                  one_half);
+      res = nir_ffma(b, y_1, r_1, y_1);
+   }
 
-    if (sqrt) {
-       /* Here, the special cases we need to handle are
-        * 0 -> 0 and
-        * +inf -> +inf
-        */
-       res = nir_bcsel(b, nir_ior(b, nir_feq(b, src, nir_imm_double(b, 0.0)),
-                                  nir_feq(b, src, nir_imm_double(b, INFINITY))),
-                       src, res);
-    } else {
-       res = fix_inv_result(b, res, src, new_exp);
-    }
+   if (sqrt) {
+      /* Here, the special cases we need to handle are
+       * 0 -> 0 and
+       * +inf -> +inf
+       */
+      res = nir_bcsel(b, nir_ior(b, nir_feq(b, src, nir_imm_double(b, 0.0)),
+                                 nir_feq(b, src, nir_imm_double(b, INFINITY))),
+                                 src, res);
+   } else {
+      res = fix_inv_result(b, res, src, new_exp);
+   }
 
-    return res;
+   return res;
 }
 
 static nir_ssa_def *
