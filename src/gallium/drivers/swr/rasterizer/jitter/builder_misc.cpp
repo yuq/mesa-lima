@@ -385,64 +385,16 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
         Value* pArg = *v;
         Type* pType = pArg->getType();
 
-        if (tempStr[pos + 1] == 't')
+        if (pType->isVectorTy())
         {
-            if (pType->isVectorTy())
-            {
-                Type* pContainedType = pType->getContainedType(0);
+            Type* pContainedType = pType->getContainedType(0);
 
-                std::string vectorFormatStr;
-
-                if (pContainedType->isFloatTy())
-                {
-                    tempStr[pos + 1] = 'f';  // Ensure its %f
-                    printCallArgs.push_back(FP_EXT(VEXTRACT(pArg, C(0)), mDoubleTy));
-
-                    for (uint32_t i = 1; i < pType->getVectorNumElements(); ++i)
-                    {
-                        vectorFormatStr += "%f ";
-                        printCallArgs.push_back(FP_EXT(VEXTRACT(pArg, C(i)), mDoubleTy));
-                    }
-                }
-                else if (pContainedType->isIntegerTy())
-                {
-                    tempStr[pos + 1] = 'd';  // Ensure its %d
-                    printCallArgs.push_back(VEXTRACT(pArg, C(0)));
-
-                    for (uint32_t i = 1; i < pType->getVectorNumElements(); ++i)
-                    {
-                        vectorFormatStr += "%d ";
-                        printCallArgs.push_back(VEXTRACT(pArg, C(i)));
-                    }
-                }
-                else
-                {
-                    SWR_ASSERT(0, "Unsupported tyep");
-                }
-
-                tempStr.insert(pos, vectorFormatStr);
-                pos += vectorFormatStr.size();
-            }
-            else
-            {
-                if (pType->isFloatTy())
-                {
-                    tempStr[pos + 1] = 'f';  // Ensure its %f
-                    printCallArgs.push_back(FP_EXT(pArg, mDoubleTy));
-                }
-                else if (pType->isIntegerTy())
-                {
-                    tempStr[pos + 1] = 'd';  // Ensure its %d
-                    printCallArgs.push_back(pArg);
-                }
-            }
-        }
-        else if (toupper(tempStr[pos + 1]) == 'X')
-        {
-            if (pType->isVectorTy())
+            if (toupper(tempStr[pos + 1]) == 'X')
             {
                 tempStr[pos] = '0';
-                tempStr.insert(pos + 1, "x%08");
+                tempStr[pos + 1] = 'x';
+                tempStr.insert(pos + 2, "%08X ");
+                pos += 7;
 
                 printCallArgs.push_back(VEXTRACT(pArg, C(0)));
 
@@ -456,26 +408,7 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
                 tempStr.insert(pos, vectorFormatStr);
                 pos += vectorFormatStr.size();
             }
-            else
-            {
-                tempStr[pos] = '0';
-                tempStr.insert(pos + 1, "x%08");
-                printCallArgs.push_back(pArg);
-                pos += 3;
-            }
-        }
-        // for %f we need to cast float Values to doubles so that they print out correctly
-        else if ((tempStr[pos + 1] == 'f') && (pType->isFloatTy()))
-        {
-            printCallArgs.push_back(FP_EXT(pArg, Type::getDoubleTy(JM()->mContext)));
-            pos++;
-        }
-        // add special handling for %f and %d format specifiers to make printing llvm vector types easier
-        else if (pType->isVectorTy())
-        {
-            Type* pContainedType = pType->getContainedType(0);
-
-            if ((tempStr[pos + 1] == 'f') && (pContainedType->isFloatTy()))
+            else if ((tempStr[pos + 1] == 'f') && (pContainedType->isFloatTy()))
             {
                 uint32_t i = 0;
                 for (; i < (pArg->getType()->getVectorNumElements()) - 1; i++)
@@ -497,16 +430,26 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
                 }
                 printCallArgs.push_back(VEXTRACT(pArg, C(i)));
             }
-            else
-            {
-                /// not a supported vector to print
-                /// @todo pointer types too
-                SWR_ASSERT(0);
-            }
         }
         else
         {
-            printCallArgs.push_back(pArg);
+            if (toupper(tempStr[pos + 1]) == 'X')
+            {
+                tempStr[pos] = '0';
+                tempStr.insert(pos + 1, "x%08");
+                printCallArgs.push_back(pArg);
+                pos += 3;
+            }
+            // for %f we need to cast float Values to doubles so that they print out correctly
+            else if ((tempStr[pos + 1] == 'f') && (pType->isFloatTy()))
+            {
+                printCallArgs.push_back(FP_EXT(pArg, Type::getDoubleTy(JM()->mContext)));
+                pos++;
+            }
+            else
+            {
+                printCallArgs.push_back(pArg);
+            }
         }
 
         // advance to the next arguement
