@@ -686,7 +686,7 @@ util_make_fs_msaa_resolve(struct pipe_context *pipe,
    struct ureg_program *ureg;
    struct ureg_src sampler, coord;
    struct ureg_dst out, tmp_sum, tmp_coord, tmp;
-   int i;
+   unsigned i;
 
    ureg = ureg_create(PIPE_SHADER_FRAGMENT);
    if (!ureg)
@@ -747,7 +747,7 @@ util_make_fs_msaa_resolve_bilinear(struct pipe_context *pipe,
    struct ureg_src sampler, coord;
    struct ureg_dst out, tmp, top, bottom;
    struct ureg_dst tmp_coord[4], tmp_sum[4];
-   int i, c;
+   unsigned i, c;
 
    ureg = ureg_create(PIPE_SHADER_FRAGMENT);
    if (!ureg)

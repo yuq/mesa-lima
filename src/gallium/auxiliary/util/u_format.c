@@ -45,7 +45,7 @@ boolean
 util_format_is_float(enum pipe_format format)
 {
    const struct util_format_description *desc = util_format_description(format);
-   unsigned i;
+   int i;
 
    assert(desc);
    if (!desc) {
@@ -53,7 +53,7 @@ util_format_is_float(enum pipe_format format)
    }
 
    i = util_format_get_first_non_void_channel(format);
-   if (i == -1) {
+   if (i < 0) {
       return FALSE;
    }
 

@@ -129,7 +129,7 @@ static void
 util_set_interleaved_vertex_elements(struct cso_context *cso,
                                      unsigned num_elements)
 {
-   int i;
+   unsigned i;
    struct pipe_vertex_element *velem =
       calloc(1, num_elements * sizeof(struct pipe_vertex_element));
 
@@ -205,7 +205,7 @@ util_probe_rect_rgba_multi(struct pipe_context *ctx, struct pipe_resource *tex,
    struct pipe_transfer *transfer;
    void *map;
    float *pixels = malloc(w * h * 4 * sizeof(float));
-   int x,y,e,c;
+   unsigned x,y,e,c;
    bool pass = true;
 
    map = pipe_transfer_map(ctx, tex, 0, 0, PIPE_TRANSFER_READ,

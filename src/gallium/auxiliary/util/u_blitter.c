@@ -422,7 +422,7 @@ void util_blitter_destroy(struct blitter_context *blitter)
 {
    struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = blitter->pipe;
-   int i, j, f;
+   unsigned i, j, f;
 
    for (i = 0; i <= PIPE_MASK_RGBA; i++)
       for (j = 0; j < 2; j++)
@@ -551,7 +551,7 @@ static void blitter_check_saved_vertex_states(struct blitter_context_priv *ctx)
    assert(!ctx->has_geometry_shader || ctx->base.saved_gs != INVALID_PTR);
    assert(!ctx->has_tessellation || ctx->base.saved_tcs != INVALID_PTR);
    assert(!ctx->has_tessellation || ctx->base.saved_tes != INVALID_PTR);
-   assert(!ctx->has_stream_out || ctx->base.saved_num_so_targets != ~0);
+   assert(!ctx->has_stream_out || ctx->base.saved_num_so_targets != ~0u);
    assert(ctx->base.saved_rs_state != INVALID_PTR);
 }
 
@@ -644,7 +644,7 @@ static void blitter_restore_fragment_states(struct blitter_context_priv *ctx)
 
 static void blitter_check_saved_fb_state(struct blitter_context_priv *ctx)
 {
-   assert(ctx->base.saved_fb_state.nr_cbufs != ~0);
+   assert(ctx->base.saved_fb_state.nr_cbufs != ~0u);
 }
 
 static void blitter_disable_render_cond(struct blitter_context_priv *ctx)
@@ -678,8 +678,8 @@ static void blitter_restore_fb_state(struct blitter_context_priv *ctx)
 
 static void blitter_check_saved_textures(struct blitter_context_priv *ctx)
 {
-   assert(ctx->base.saved_num_sampler_states != ~0);
-   assert(ctx->base.saved_num_sampler_views != ~0);
+   assert(ctx->base.saved_num_sampler_states != ~0u);
+   assert(ctx->base.saved_num_sampler_views != ~0u);
 }
 
 static void blitter_restore_textures(struct blitter_context_priv *ctx)
