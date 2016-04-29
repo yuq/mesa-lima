@@ -122,7 +122,7 @@ is_unsupported_inst(const struct brw_device_info *devinfo,
                     const brw_inst *inst)
 {
    int gen = gen_from_devinfo(devinfo);
-   return (inst_info[brw_inst_opcode(devinfo, inst)].gens & gen) == 0;
+   return (opcode_descs[brw_inst_opcode(devinfo, inst)].gens & gen) == 0;
 }
 
 bool

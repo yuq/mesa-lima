@@ -1794,13 +1794,6 @@ bool brw_lower_texture_gradients(struct brw_context *brw,
                                  struct exec_list *instructions);
 bool brw_do_lower_unnormalized_offset(struct exec_list *instructions);
 
-struct opcode_desc {
-    char    *name;
-    int	    nsrc;
-    int	    ndst;
-};
-
-extern const struct opcode_desc opcode_descs[128];
 extern const char * const conditional_modifier[16];
 extern const char *const pred_ctrl_align16[16];
 

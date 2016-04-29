@@ -355,102 +355,102 @@ enum gen {
 #define GEN_GE(gen) (~((gen) - 1) | gen)
 #define GEN_LE(gen) (((gen) - 1) | gen)
 
-const struct inst_info inst_info[128] = {
+const struct opcode_desc opcode_descs[128] = {
    [BRW_OPCODE_ILLEGAL] = {
-      .gens = GEN_ALL,
+      .name = "illegal", .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
    [BRW_OPCODE_MOV] = {
-      .gens = GEN_ALL,
+      .name = "mov",     .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_SEL] = {
-      .gens = GEN_ALL,
+      .name = "sel",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_MOVI] = {
-      .gens = GEN_GE(GEN45),
+      .name = "movi",    .nsrc = 2, .ndst = 1, .gens = GEN_GE(GEN45),
    },
    [BRW_OPCODE_NOT] = {
-      .gens = GEN_ALL,
+      .name = "not",     .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_AND] = {
-      .gens = GEN_ALL,
+      .name = "and",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_OR] = {
-      .gens = GEN_ALL,
+      .name = "or",      .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_XOR] = {
-      .gens = GEN_ALL,
+      .name = "xor",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_SHR] = {
-      .gens = GEN_ALL,
+      .name = "shr",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_SHL] = {
-      .gens = GEN_ALL,
+      .name = "shl",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    /* BRW_OPCODE_DIM / BRW_OPCODE_SMOV */
    /* Reserved - 11 */
    [BRW_OPCODE_ASR] = {
-      .gens = GEN_ALL,
+      .name = "asr",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    /* Reserved - 13-15 */
    [BRW_OPCODE_CMP] = {
-      .gens = GEN_ALL,
+      .name = "cmp",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_CMPN] = {
-      .gens = GEN_ALL,
+      .name = "cmpn",    .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_CSEL] = {
-      .gens = GEN_GE(GEN8),
+      .name = "csel",    .nsrc = 3, .ndst = 1, .gens = GEN_GE(GEN8),
    },
    [BRW_OPCODE_F32TO16] = {
-      .gens = GEN7 | GEN75,
+      .name = "f32to16", .nsrc = 1, .ndst = 1, .gens = GEN7 | GEN75,
    },
    [BRW_OPCODE_F16TO32] = {
-      .gens = GEN7 | GEN75,
+      .name = "f16to32", .nsrc = 1, .ndst = 1, .gens = GEN7 | GEN75,
    },
    /* Reserved - 21-22 */
    [BRW_OPCODE_BFREV] = {
-      .gens = GEN_GE(GEN7),
+      .name = "bfrev",   .nsrc = 1, .ndst = 1, .gens = GEN_GE(GEN7),
    },
    [BRW_OPCODE_BFE] = {
-      .gens = GEN_GE(GEN7),
+      .name = "bfe",     .nsrc = 3, .ndst = 1, .gens = GEN_GE(GEN7),
    },
    [BRW_OPCODE_BFI1] = {
-      .gens = GEN_GE(GEN7),
+      .name = "bfi1",    .nsrc = 2, .ndst = 1, .gens = GEN_GE(GEN7),
    },
    [BRW_OPCODE_BFI2] = {
-      .gens = GEN_GE(GEN7),
+      .name = "bfi2",    .nsrc = 3, .ndst = 1, .gens = GEN_GE(GEN7),
    },
    /* Reserved - 27-31 */
    [BRW_OPCODE_JMPI] = {
-      .gens = GEN_ALL,
+      .name = "jmpi",    .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
    /* BRW_OPCODE_BRD */
    [BRW_OPCODE_IF] = {
-      .gens = GEN_ALL,
+      .name = "if",      .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
    [BRW_OPCODE_IFF] = { /* also BRW_OPCODE_BRC */
-      .gens = GEN_LE(GEN5),
+      .name = "iff",     .nsrc = 0, .ndst = 0, .gens = GEN_LE(GEN5),
    },
    [BRW_OPCODE_ELSE] = {
-      .gens = GEN_ALL,
+      .name = "else",    .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
    [BRW_OPCODE_ENDIF] = {
-      .gens = GEN_ALL,
+      .name = "endif",   .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
    [BRW_OPCODE_DO] = { /* also BRW_OPCODE_CASE */
-      .gens = GEN_LE(GEN5),
+      .name = "do",      .nsrc = 0, .ndst = 0, .gens = GEN_LE(GEN5),
    },
    [BRW_OPCODE_WHILE] = {
-      .gens = GEN_ALL,
+      .name = "while",   .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
    [BRW_OPCODE_BREAK] = {
-      .gens = GEN_ALL,
+      .name = "break",   .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
    [BRW_OPCODE_CONTINUE] = {
-      .gens = GEN_ALL,
+      .name = "cont",    .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
    [BRW_OPCODE_HALT] = {
-      .gens = GEN_ALL,
+      .name = "halt",    .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
    /* BRW_OPCODE_CALLA */
    /* BRW_OPCODE_MSAVE / BRW_OPCODE_CALL */
@@ -458,109 +458,111 @@ const struct inst_info inst_info[128] = {
    /* BRW_OPCODE_PUSH / BRW_OPCODE_FORK / BRW_OPCODE_GOTO */
    /* BRW_OPCODE_POP */
    [BRW_OPCODE_WAIT] = {
-      .gens = GEN_ALL,
+      .name = "wait",    .nsrc = 1, .ndst = 0, .gens = GEN_ALL,
    },
    [BRW_OPCODE_SEND] = {
-      .gens = GEN_ALL,
+      .name = "send",    .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_SENDC] = {
-      .gens = GEN_ALL,
+      .name = "sendc",   .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_SENDS] = {
-      .gens = GEN_GE(GEN9),
+      .name = "sends",   .nsrc = 2, .ndst = 1, .gens = GEN_GE(GEN9),
    },
    [BRW_OPCODE_SENDSC] = {
-      .gens = GEN_GE(GEN9),
+      .name = "sendsc",  .nsrc = 2, .ndst = 1, .gens = GEN_GE(GEN9),
    },
    /* Reserved 53-55 */
    [BRW_OPCODE_MATH] = {
-      .gens = GEN_GE(GEN6),
+      .name = "math",    .nsrc = 2, .ndst = 1, .gens = GEN_GE(GEN6),
    },
    /* Reserved 57-63 */
    [BRW_OPCODE_ADD] = {
-      .gens = GEN_ALL,
+      .name = "add",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_MUL] = {
-      .gens = GEN_ALL,
+      .name = "mul",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_AVG] = {
-      .gens = GEN_ALL,
+      .name = "avg",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_FRC] = {
-      .gens = GEN_ALL,
+      .name = "frc",     .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_RNDU] = {
-      .gens = GEN_ALL,
+      .name = "rndu",    .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_RNDD] = {
-      .gens = GEN_ALL,
+      .name = "rndd",    .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_RNDE] = {
-      .gens = GEN_ALL,
+      .name = "rnde",    .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_RNDZ] = {
-      .gens = GEN_ALL,
+      .name = "rndz",    .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_MAC] = {
-      .gens = GEN_ALL,
+      .name = "mac",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_MACH] = {
-      .gens = GEN_ALL,
+      .name = "mach",    .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_LZD] = {
-      .gens = GEN_ALL,
+      .name = "lzd",     .nsrc = 1, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_FBH] = {
-      .gens = GEN_GE(GEN7),
+      .name = "fbh",     .nsrc = 1, .ndst = 1, .gens = GEN_GE(GEN7),
    },
    [BRW_OPCODE_FBL] = {
-      .gens = GEN_GE(GEN7),
+      .name = "fbl",     .nsrc = 1, .ndst = 1, .gens = GEN_GE(GEN7),
    },
    [BRW_OPCODE_CBIT] = {
-      .gens = GEN_GE(GEN7),
+      .name = "cbit",    .nsrc = 1, .ndst = 1, .gens = GEN_GE(GEN7),
    },
    [BRW_OPCODE_ADDC] = {
-      .gens = GEN_GE(GEN7),
+      .name = "addc",    .nsrc = 2, .ndst = 1, .gens = GEN_GE(GEN7),
    },
    [BRW_OPCODE_SUBB] = {
-      .gens = GEN_GE(GEN7),
+      .name = "subb",    .nsrc = 2, .ndst = 1, .gens = GEN_GE(GEN7),
    },
    [BRW_OPCODE_SAD2] = {
-      .gens = GEN_ALL,
+      .name = "sad2",    .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_SADA2] = {
-      .gens = GEN_ALL,
+      .name = "sada2",   .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    /* Reserved 82-83 */
    [BRW_OPCODE_DP4] = {
-      .gens = GEN_ALL,
+      .name = "dp4",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_DPH] = {
-      .gens = GEN_ALL,
+      .name = "dph",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_DP3] = {
-      .gens = GEN_ALL,
+      .name = "dp3",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_DP2] = {
-      .gens = GEN_ALL,
+      .name = "dp2",     .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    /* Reserved 88 */
    [BRW_OPCODE_LINE] = {
-      .gens = GEN_ALL,
+      .name = "line",    .nsrc = 2, .ndst = 1, .gens = GEN_ALL,
    },
    [BRW_OPCODE_PLN] = {
-      .gens = GEN_GE(GEN45),
+      .name = "pln",     .nsrc = 2, .ndst = 1, .gens = GEN_GE(GEN45),
    },
    [BRW_OPCODE_MAD] = {
-      .gens = GEN_GE(GEN6),
+      .name = "mad",     .nsrc = 3, .ndst = 1, .gens = GEN_GE(GEN6),
    },
    [BRW_OPCODE_LRP] = {
-      .gens = GEN_GE(GEN6),
+      .name = "lrp",     .nsrc = 3, .ndst = 1, .gens = GEN_GE(GEN6),
    },
    /* Reserved 93-124 */
-   /* BRW_OPCODE_NENOP */
+   [BRW_OPCODE_NENOP] = {
+      .name = "nenop",   .nsrc = 0, .ndst = 0, .gens = GEN45,
+   },
    [BRW_OPCODE_NOP] = {
-      .gens = GEN_ALL,
+      .name = "nop",     .nsrc = 0, .ndst = 0, .gens = GEN_ALL,
    },
 };
 
