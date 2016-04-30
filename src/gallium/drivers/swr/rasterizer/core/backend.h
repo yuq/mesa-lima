@@ -423,14 +423,15 @@ struct PixelRateZTestLoop
                        clipDistanceMask(ClipDistanceMask), pDepthBase(depthBase), pStencilBase(stencilBase) {};
            
     INLINE
-    uint32_t operator()(simdscalar& anyDepthSamplePassed, SWR_PS_CONTEXT& psContext, 
+    uint32_t operator()(simdscalar& activeLanes, SWR_PS_CONTEXT& psContext, 
                         const CORE_BUCKETS BEDepthBucket, uint32_t currentSimdIn8x8 = 0)
     {
         uint32_t statCount = 0;
+        simdscalar anyDepthSamplePassed = _simd_setzero_ps();
         for(uint32_t sample = 0; sample < T::MultisampleT::numCoverageSamples; sample++)
         {
             const uint8_t *pCoverageMask = (uint8_t*)&work.coverageMask[sample];
-            vCoverageMask[sample] = vMask(pCoverageMask[currentSimdIn8x8] & MASK);
+            vCoverageMask[sample] = _simd_and_ps(activeLanes, vMask(pCoverageMask[currentSimdIn8x8] & MASK));
 
             if(!_simd_movemask_ps(vCoverageMask[sample]))
             {
@@ -494,6 +495,8 @@ struct PixelRateZTestLoop
             uint32_t statMask = _simd_movemask_ps(depthPassMask[sample]);
             statCount += _mm_popcnt_u32(statMask);
         }
+
+        activeLanes = _simd_and_ps(anyDepthSamplePassed, activeLanes);
         // return number of samples that passed depth and coverage
         return statCount;
     }

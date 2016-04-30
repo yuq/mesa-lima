@@ -140,6 +140,12 @@ __m256 _simdemu_permute_ps(__m256 a, __m256i b)
 }
 
 INLINE
+__m256i _simdemu_permute_epi32(__m256i a, __m256i b)
+{
+    return _mm256_castps_si256(_simdemu_permute_ps(_mm256_castsi256_ps(a), b));
+}
+
+INLINE
 __m256i _simdemu_srlv_epi32(__m256i vA, __m256i vCount)
 {
     int32_t aHi, aLow, countHi, countLow;
@@ -277,6 +283,7 @@ __m256i _simdemu_sllv_epi32(__m256i vA, __m256i vCount)
 #define _simd_cmpeq_epi16 _simdemu_cmpeq_epi16
 #define _simd_movemask_epi8 _simdemu_movemask_epi8
 #define _simd_permute_ps _simdemu_permute_ps
+#define _simd_permute_epi32 _simdemu_permute_epi32
 #define _simd_srlv_epi32 _simdemu_srlv_epi32
 #define _simd_sllv_epi32 _simdemu_sllv_epi32
 
@@ -449,11 +456,18 @@ int _simdemu_movemask_epi8(__m256i a)
 #define _simd_permute_ps _mm256_permutevar8x32_ps
 #define _simd_srlv_epi32 _mm256_srlv_epi32
 #define _simd_sllv_epi32 _mm256_sllv_epi32
+
+INLINE
+simdscalari _simd_permute_epi32(simdscalari a, simdscalari index)
+{
+    return _simd_castps_si(_mm256_permutevar8x32_ps(_mm256_castsi256_ps(a), index));
+}
 #endif
 
 #define _simd_shuffleps_epi32(vA, vB, imm) _mm256_castps_si256(_mm256_shuffle_ps(_mm256_castsi256_ps(vA), _mm256_castsi256_ps(vB), imm))
 #define _simd_shuffle_ps _mm256_shuffle_ps
 #define _simd_set1_epi32 _mm256_set1_epi32
+#define _simd_set_epi32 _mm256_set_epi32
 #define _simd_set1_epi8 _mm256_set1_epi8
 #define _simd_setzero_si _mm256_setzero_si256
 #define _simd_cvttps_epi32 _mm256_cvttps_epi32
@@ -471,6 +485,12 @@ INLINE
 simdscalari _simd_blendv_epi32(simdscalari a, simdscalari b, simdscalar mask)
 {
     return _simd_castps_si(_simd_blendv_ps(_simd_castsi_ps(a), _simd_castsi_ps(b), mask));
+}
+
+INLINE
+simdscalari _simd_blendv_epi32(simdscalari a, simdscalari b, simdscalari mask)
+{
+    return _simd_castps_si(_simd_blendv_ps(_simd_castsi_ps(a), _simd_castsi_ps(b), _simd_castsi_ps(mask)));
 }
 
 // convert bitmask to vector mask
