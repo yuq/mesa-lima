@@ -98,7 +98,7 @@ static const unsigned half_class_sizes[] = {
 #define total_class_count (class_count + half_class_count)
 
 /* Below a0.x are normal regs.  RA doesn't need to assign a0.x/p0.x. */
-#define NUM_REGS             (4 * (REG_A0 - 1))
+#define NUM_REGS             (4 * 48)
 /* Number of virtual regs in a given class: */
 #define CLASS_REGS(i)        (NUM_REGS - (class_sizes[i] - 1))
 #define HALF_CLASS_REGS(i)   (NUM_REGS - (half_class_sizes[i] - 1))
