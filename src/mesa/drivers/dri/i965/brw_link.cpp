@@ -130,6 +130,8 @@ process_glsl_ir(gl_shader_stage stage,
    lower_noise(shader->ir);
    lower_quadop_vector(shader->ir, false);
 
+   do_copy_propagation(shader->ir);
+
    bool lowered_variable_indexing =
       lower_variable_index_to_cond_assign((gl_shader_stage)stage,
                                           shader->ir,
