@@ -806,7 +806,8 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    info->dst.resource->nr_samples <= 1 &&
 	    util_max_layer(info->src.resource, 0) == 0 &&
 	    util_max_layer(info->dst.resource, info->dst.level) == 0 &&
-	    info->dst.format == info->src.format &&
+	    util_is_format_compatible(util_format_description(info->src.format),
+				      util_format_description(info->dst.format)) &&
 	    !util_format_is_pure_integer(format) &&
 	    !util_format_is_depth_or_stencil(format) &&
 	    !info->scissor_enable &&
