@@ -546,8 +546,25 @@ next_offset(const struct brw_device_info *devinfo, void *store, int offset)
 }
 
 struct opcode_desc {
-   char    *name;
-   int      nsrc;
+   /* The union is an implementation detail used by brw_opcode_desc() to handle
+    * opcodes that have been reused for different instructions across hardware
+    * generations.
+    *
+    * The gens field acts as a tag. If it is non-zero, name points to a string
+    * containing the instruction mnemonic. If it is zero, the table field is
+    * valid and either points to a secondary opcode_desc table with 'size'
+    * elements or is NULL and no such instruction exists for the opcode.
+    */
+   union {
+      struct {
+         char    *name;
+         int      nsrc;
+      };
+      struct {
+         const struct opcode_desc *table;
+         unsigned size;
+      };
+   };
    int      ndst;
    int      gens;
 };
