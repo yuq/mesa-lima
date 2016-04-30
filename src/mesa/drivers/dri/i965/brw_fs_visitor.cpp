@@ -394,7 +394,8 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
 
    const fs_reg sources[] = {
       color0, color1, src0_alpha, src_depth, dst_depth, src_stencil,
-      sample_mask, brw_imm_ud(components)
+      (prog_data->uses_omask ? sample_mask : fs_reg()),
+      brw_imm_ud(components)
    };
    assert(ARRAY_SIZE(sources) - 1 == FB_WRITE_LOGICAL_SRC_COMPONENTS);
    fs_inst *write = bld.emit(FS_OPCODE_FB_WRITE_LOGICAL, fs_reg(),
