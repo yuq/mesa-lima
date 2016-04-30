@@ -2600,18 +2600,19 @@ fs_visitor::opt_sampler_eot()
    assert(fb_write->eot);
    assert(fb_write->opcode == FS_OPCODE_FB_WRITE);
 
-   fs_inst *tex_inst = (fs_inst *) fb_write->prev;
-
    /* There wasn't one; nothing to do. */
-   if (unlikely(tex_inst->is_head_sentinel()) || !tex_inst->is_tex())
+   if (unlikely(fb_write->prev->is_head_sentinel()))
       return false;
+
+   fs_inst *tex_inst = (fs_inst *) fb_write->prev;
 
    /* 3D Sampler » Messages » Message Format
     *
     * “Response Length of zero is allowed on all SIMD8* and SIMD16* sampler
     *  messages except sample+killpix, resinfo, sampleinfo, LOD, and gather4*”
     */
-   if (tex_inst->opcode == SHADER_OPCODE_TXS ||
+   if (!tex_inst->is_tex() ||
+       tex_inst->opcode == SHADER_OPCODE_TXS ||
        tex_inst->opcode == SHADER_OPCODE_SAMPLEINFO ||
        tex_inst->opcode == SHADER_OPCODE_LOD ||
        tex_inst->opcode == SHADER_OPCODE_TG4 ||
@@ -2621,9 +2622,11 @@ fs_visitor::opt_sampler_eot()
    /* If there's no header present, we need to munge the LOAD_PAYLOAD as well.
     * It's very likely to be the previous instruction.
     */
+   if (tex_inst->prev->is_head_sentinel())
+      return false;
+
    fs_inst *load_payload = (fs_inst *) tex_inst->prev;
-   if (load_payload->is_head_sentinel() ||
-       load_payload->opcode != SHADER_OPCODE_LOAD_PAYLOAD)
+   if (load_payload->opcode != SHADER_OPCODE_LOAD_PAYLOAD)
       return false;
 
    assert(!tex_inst->eot); /* We can't get here twice */
