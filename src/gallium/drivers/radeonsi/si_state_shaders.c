@@ -63,7 +63,9 @@ static void *si_get_tgsi_binary(struct si_shader_selector *sel)
 /** Copy "data" to "ptr" and return the next dword following copied data. */
 static uint32_t *write_data(uint32_t *ptr, const void *data, unsigned size)
 {
-	memcpy(ptr, data, size);
+	/* data may be NULL if size == 0 */
+	if (size)
+		memcpy(ptr, data, size);
 	ptr += DIV_ROUND_UP(size, 4);
 	return ptr;
 }
