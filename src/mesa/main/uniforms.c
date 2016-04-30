@@ -78,7 +78,7 @@ _mesa_update_shader_textures_used(struct gl_shader_program *shProg,
    shProg->SamplersValidated = GL_TRUE;
 
    for (s = 0; s < MAX_SAMPLERS; s++) {
-      if (prog->SamplersUsed & (1 << s)) {
+      if (prog->SamplersUsed & (1u << s)) {
          GLuint unit = shader->SamplerUnits[s];
          GLuint tgt = shader->SamplerTargets[s];
          assert(unit < ARRAY_SIZE(prog->TexturesUsed));
