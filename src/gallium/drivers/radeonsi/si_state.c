@@ -464,7 +464,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 			continue;
 
 		/* cb_render_state will disable unused ones */
-		blend->cb_target_mask |= state->rt[j].colormask << (4 * i);
+		blend->cb_target_mask |= (unsigned)state->rt[j].colormask << (4 * i);
 
 		if (!state->rt[j].blend_enable) {
 			si_pm4_set_reg(pm4, R_028780_CB_BLEND0_CONTROL + i * 4, blend_cntl);
@@ -528,7 +528,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 		}
 		si_pm4_set_reg(pm4, R_028780_CB_BLEND0_CONTROL + i * 4, blend_cntl);
 
-		blend->blend_enable_4bit |= 0xf << (i * 4);
+		blend->blend_enable_4bit |= 0xfu << (i * 4);
 
 		/* This is only important for formats without alpha. */
 		if (srcRGB == PIPE_BLENDFACTOR_SRC_ALPHA ||
@@ -537,7 +537,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 		    dstRGB == PIPE_BLENDFACTOR_SRC_ALPHA_SATURATE ||
 		    srcRGB == PIPE_BLENDFACTOR_INV_SRC_ALPHA ||
 		    dstRGB == PIPE_BLENDFACTOR_INV_SRC_ALPHA)
-			blend->need_src_alpha_4bit |= 0xf << (i * 4);
+			blend->need_src_alpha_4bit |= 0xfu << (i * 4);
 	}
 
 	if (blend->cb_target_mask) {
