@@ -145,7 +145,7 @@ ir_constant_propagation_visitor::constant_folding(ir_rvalue **rvalue)
       this->progress = true;
 
    ir_dereference_variable *var_ref = (*rvalue)->as_dereference_variable();
-   if (var_ref) {
+   if (var_ref && !var_ref->type->is_array()) {
       ir_constant *constant = var_ref->constant_expression_value();
       if (constant) {
          *rvalue = constant;
