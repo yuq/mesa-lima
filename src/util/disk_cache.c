@@ -198,6 +198,10 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
    struct stat sb;
    size_t size;
 
+   /* If running as a users other than the real user disable cache */
+   if (geteuid() != getuid())
+      return NULL;
+
    /* A ralloc context for transient data during this invocation. */
    local = ralloc_context(NULL);
    if (local == NULL)
