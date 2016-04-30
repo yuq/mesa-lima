@@ -869,7 +869,8 @@ ir_constant::ir_constant(const struct glsl_type *type, exec_list *value_list)
    /* Use each component from each entry in the value_list to initialize one
     * component of the constant being constructed.
     */
-   for (unsigned i = 0; i < type->components(); /* empty */) {
+   unsigned i = 0;
+   for (;;) {
       assert(value->as_constant() != NULL);
       assert(!value->is_tail_sentinel());
 
@@ -901,6 +902,8 @@ ir_constant::ir_constant(const struct glsl_type *type, exec_list *value_list)
 	    break;
       }
 
+      if (i >= type->components())
+	 break; /* avoid downcasting a list sentinel */
       value = (ir_constant *) value->next;
    }
 }
