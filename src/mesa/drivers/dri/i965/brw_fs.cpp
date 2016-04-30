@@ -5684,9 +5684,6 @@ fs_visitor::optimize()
 
    OPT(opt_drop_redundant_mov_to_flags);
 
-   OPT(lower_simd_width);
-   OPT(lower_logical_sends);
-
    do {
       progress = false;
       pass_num = 0;
@@ -5705,7 +5702,6 @@ fs_visitor::optimize()
       OPT(opt_register_renaming);
       OPT(opt_redundant_discard_jumps);
       OPT(opt_saturate_propagation);
-      OPT(opt_zero_samples);
       OPT(register_coalesce);
       OPT(compute_to_mrf);
       OPT(eliminate_find_live_channel);
@@ -5713,7 +5709,32 @@ fs_visitor::optimize()
       OPT(compact_virtual_grfs);
    } while (progress);
 
+   progress = false;
    pass_num = 0;
+
+   OPT(lower_simd_width);
+   OPT(lower_logical_sends);
+
+   if (progress) {
+      OPT(opt_copy_propagate);
+      /* Only run after logical send lowering because it's easier to implement
+       * in terms of physical sends.
+       */
+      if (OPT(opt_zero_samples))
+         OPT(opt_copy_propagate);
+      /* Run after logical send lowering to give it a chance to CSE the
+       * LOAD_PAYLOAD instructions created to construct the payloads of
+       * e.g. texturing messages in cases where it wasn't possible to CSE the
+       * whole logical instruction.
+       */
+      OPT(opt_cse);
+      OPT(register_coalesce);
+      OPT(compute_to_mrf);
+      OPT(dead_code_eliminate);
+      OPT(remove_duplicate_mrf_writes);
+      OPT(opt_peephole_sel);
+      OPT(opt_redundant_discard_jumps);
+   }
 
    OPT(opt_sampler_eot);
 
