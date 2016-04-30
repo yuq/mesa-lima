@@ -762,9 +762,9 @@ struct pipe_video_buffer *r600_video_buffer_create(struct pipe_context *pipe,
 #define R600_LOOP_CONST_OFFSET                 0X0003E200
 #define EG_LOOP_CONST_OFFSET               0x0003A200
 
-#define PKT_TYPE_S(x)                   (((x) & 0x3) << 30)
-#define PKT_COUNT_S(x)                  (((x) & 0x3FFF) << 16)
-#define PKT3_IT_OPCODE_S(x)             (((x) & 0xFF) << 8)
+#define PKT_TYPE_S(x)                   (((unsigned)(x) & 0x3) << 30)
+#define PKT_COUNT_S(x)                  (((unsigned)(x) & 0x3FFF) << 16)
+#define PKT3_IT_OPCODE_S(x)             (((unsigned)(x) & 0xFF) << 8)
 #define PKT3_PREDICATE(x)               (((x) >> 0) & 0x1)
 #define PKT3(op, count, predicate) (PKT_TYPE_S(3) | PKT_COUNT_S(count) | PKT3_IT_OPCODE_S(op) | PKT3_PREDICATE(predicate))
 
