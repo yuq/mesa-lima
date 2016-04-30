@@ -63,7 +63,7 @@ util_pstipple_update_stipple_texture(struct pipe_context *pipe,
                                      struct pipe_resource *tex,
                                      const uint32_t pattern[32])
 {
-   static const uint bit31 = 1 << 31;
+   static const uint bit31 = 1u << 31;
    struct pipe_transfer *transfer;
    ubyte *data;
    int i, j;

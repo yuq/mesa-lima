@@ -1159,7 +1159,7 @@ st_translate_mesa_program(
 
    /* texture samplers */
    for (i = 0; i < ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits; i++) {
-      if (program->SamplersUsed & (1 << i)) {
+      if (program->SamplersUsed & (1u << i)) {
          unsigned target =
             translate_texture_index(program->TexturesUsed[i],
                                     !!(program->ShadowSamplers & (1 << i)));

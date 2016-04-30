@@ -1735,7 +1735,7 @@ static void emit_decls( struct ureg_program *ureg )
 
    if (ureg->processor == PIPE_SHADER_VERTEX) {
       for (i = 0; i < PIPE_MAX_ATTRIBS; i++) {
-         if (ureg->vs_inputs[i/32] & (1 << (i%32))) {
+         if (ureg->vs_inputs[i/32] & (1u << (i%32))) {
             emit_decl_range( ureg, TGSI_FILE_INPUT, i, 1 );
          }
       }
