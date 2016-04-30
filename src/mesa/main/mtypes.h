@@ -3953,38 +3953,38 @@ struct gl_matrix_stack
  * \name Bits to indicate what state has changed.  
  */
 /*@{*/
-#define _NEW_MODELVIEW         (1 << 0)   /**< gl_context::ModelView */
-#define _NEW_PROJECTION        (1 << 1)   /**< gl_context::Projection */
-#define _NEW_TEXTURE_MATRIX    (1 << 2)   /**< gl_context::TextureMatrix */
-#define _NEW_COLOR             (1 << 3)   /**< gl_context::Color */
-#define _NEW_DEPTH             (1 << 4)   /**< gl_context::Depth */
-#define _NEW_EVAL              (1 << 5)   /**< gl_context::Eval, EvalMap */
-#define _NEW_FOG               (1 << 6)   /**< gl_context::Fog */
-#define _NEW_HINT              (1 << 7)   /**< gl_context::Hint */
-#define _NEW_LIGHT             (1 << 8)   /**< gl_context::Light */
-#define _NEW_LINE              (1 << 9)   /**< gl_context::Line */
-#define _NEW_PIXEL             (1 << 10)  /**< gl_context::Pixel */
-#define _NEW_POINT             (1 << 11)  /**< gl_context::Point */
-#define _NEW_POLYGON           (1 << 12)  /**< gl_context::Polygon */
-#define _NEW_POLYGONSTIPPLE    (1 << 13)  /**< gl_context::PolygonStipple */
-#define _NEW_SCISSOR           (1 << 14)  /**< gl_context::Scissor */
-#define _NEW_STENCIL           (1 << 15)  /**< gl_context::Stencil */
-#define _NEW_TEXTURE           (1 << 16)  /**< gl_context::Texture */
-#define _NEW_TRANSFORM         (1 << 17)  /**< gl_context::Transform */
-#define _NEW_VIEWPORT          (1 << 18)  /**< gl_context::Viewport */
+#define _NEW_MODELVIEW         (1u << 0)   /**< gl_context::ModelView */
+#define _NEW_PROJECTION        (1u << 1)   /**< gl_context::Projection */
+#define _NEW_TEXTURE_MATRIX    (1u << 2)   /**< gl_context::TextureMatrix */
+#define _NEW_COLOR             (1u << 3)   /**< gl_context::Color */
+#define _NEW_DEPTH             (1u << 4)   /**< gl_context::Depth */
+#define _NEW_EVAL              (1u << 5)   /**< gl_context::Eval, EvalMap */
+#define _NEW_FOG               (1u << 6)   /**< gl_context::Fog */
+#define _NEW_HINT              (1u << 7)   /**< gl_context::Hint */
+#define _NEW_LIGHT             (1u << 8)   /**< gl_context::Light */
+#define _NEW_LINE              (1u << 9)   /**< gl_context::Line */
+#define _NEW_PIXEL             (1u << 10)  /**< gl_context::Pixel */
+#define _NEW_POINT             (1u << 11)  /**< gl_context::Point */
+#define _NEW_POLYGON           (1u << 12)  /**< gl_context::Polygon */
+#define _NEW_POLYGONSTIPPLE    (1u << 13)  /**< gl_context::PolygonStipple */
+#define _NEW_SCISSOR           (1u << 14)  /**< gl_context::Scissor */
+#define _NEW_STENCIL           (1u << 15)  /**< gl_context::Stencil */
+#define _NEW_TEXTURE           (1u << 16)  /**< gl_context::Texture */
+#define _NEW_TRANSFORM         (1u << 17)  /**< gl_context::Transform */
+#define _NEW_VIEWPORT          (1u << 18)  /**< gl_context::Viewport */
 /* gap, re-use for core Mesa state only; use ctx->DriverFlags otherwise */
-#define _NEW_ARRAY             (1 << 20)  /**< gl_context::Array */
-#define _NEW_RENDERMODE        (1 << 21)  /**< gl_context::RenderMode, etc */
-#define _NEW_BUFFERS           (1 << 22)  /**< gl_context::Visual, DrawBuffer, */
-#define _NEW_CURRENT_ATTRIB    (1 << 23)  /**< gl_context::Current */
-#define _NEW_MULTISAMPLE       (1 << 24)  /**< gl_context::Multisample */
-#define _NEW_TRACK_MATRIX      (1 << 25)  /**< gl_context::VertexProgram */
-#define _NEW_PROGRAM           (1 << 26)  /**< New program/shader state */
-#define _NEW_PROGRAM_CONSTANTS (1 << 27)
-#define _NEW_BUFFER_OBJECT     (1 << 28)
-#define _NEW_FRAG_CLAMP        (1 << 29)
+#define _NEW_ARRAY             (1u << 20)  /**< gl_context::Array */
+#define _NEW_RENDERMODE        (1u << 21)  /**< gl_context::RenderMode, etc */
+#define _NEW_BUFFERS           (1u << 22)  /**< gl_context::Visual, DrawBuffer, */
+#define _NEW_CURRENT_ATTRIB    (1u << 23)  /**< gl_context::Current */
+#define _NEW_MULTISAMPLE       (1u << 24)  /**< gl_context::Multisample */
+#define _NEW_TRACK_MATRIX      (1u << 25)  /**< gl_context::VertexProgram */
+#define _NEW_PROGRAM           (1u << 26)  /**< New program/shader state */
+#define _NEW_PROGRAM_CONSTANTS (1u << 27)
+#define _NEW_BUFFER_OBJECT     (1u << 28)
+#define _NEW_FRAG_CLAMP        (1u << 29)
 /* gap, re-use for core Mesa state only; use ctx->DriverFlags otherwise */
-#define _NEW_VARYING_VP_INPUTS (1 << 31) /**< gl_context::varying_vp_inputs */
+#define _NEW_VARYING_VP_INPUTS (1u << 31) /**< gl_context::varying_vp_inputs */
 #define _NEW_ALL ~0
 /*@}*/
 
