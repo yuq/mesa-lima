@@ -2958,7 +2958,7 @@ void
 fs_visitor::emit_repclear_shader()
 {
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   int base_mrf = 1;
+   int base_mrf = 0;
    int color_mrf = base_mrf + 2;
    fs_inst *mov;
 
