@@ -688,6 +688,40 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
          }
          break;
 
+      case FS_OPCODE_FB_WRITE_LOGICAL:
+         /* The stencil and omask sources of FS_OPCODE_FB_WRITE_LOGICAL are
+          * bit-cast using a strided region so they cannot be immediates.
+          */
+         if (i != FB_WRITE_LOGICAL_SRC_SRC_STENCIL &&
+             i != FB_WRITE_LOGICAL_SRC_OMASK) {
+            inst->src[i] = val;
+            progress = true;
+         }
+         break;
+
+      case SHADER_OPCODE_TEX_LOGICAL:
+      case SHADER_OPCODE_TXD_LOGICAL:
+      case SHADER_OPCODE_TXF_LOGICAL:
+      case SHADER_OPCODE_TXL_LOGICAL:
+      case SHADER_OPCODE_TXS_LOGICAL:
+      case FS_OPCODE_TXB_LOGICAL:
+      case SHADER_OPCODE_TXF_CMS_LOGICAL:
+      case SHADER_OPCODE_TXF_CMS_W_LOGICAL:
+      case SHADER_OPCODE_TXF_UMS_LOGICAL:
+      case SHADER_OPCODE_TXF_MCS_LOGICAL:
+      case SHADER_OPCODE_LOD_LOGICAL:
+      case SHADER_OPCODE_TG4_LOGICAL:
+      case SHADER_OPCODE_TG4_OFFSET_LOGICAL:
+      case SHADER_OPCODE_UNTYPED_ATOMIC_LOGICAL:
+      case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
+      case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
+      case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
+      case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
+      case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
+         inst->src[i] = val;
+         progress = true;
+         break;
+
       case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
       case SHADER_OPCODE_BROADCAST:
          inst->src[i] = val;
