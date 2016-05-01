@@ -31,8 +31,6 @@ ISL_GEN_LIBS =                                           \
 
 noinst_LTLIBRARIES = $(ISL_GEN_LIBS) libisl.la
 
-EXTRA_DIST = tests
-
 # The gallium includes are for the util/u_math.h include from main/macros.h
 AM_CPPFLAGS = \
 	$(INTEL_CFLAGS) \
