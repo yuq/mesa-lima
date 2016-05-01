@@ -141,8 +141,10 @@ enum {
 	SI_PARAM_VERTEX_BUFFERS	= SI_NUM_RESOURCE_PARAMS,
 	SI_PARAM_BASE_VERTEX,
 	SI_PARAM_START_INSTANCE,
-	/* [0] = clamp vertex color */
+	/* [0] = clamp vertex color, VS as VS only */
 	SI_PARAM_VS_STATE_BITS,
+	/* same value as TCS_IN_LAYOUT, VS as LS only */
+	SI_PARAM_LS_OUT_LAYOUT = SI_PARAM_START_INSTANCE + 1,
 	/* the other VS parameters are assigned dynamically */
 
 	/* Offsets where TCS outputs and TCS patch outputs live in LDS:
@@ -163,10 +165,9 @@ enum {
 	 *   [13:20] = stride between vertices in dwords = num_inputs * 4, max = 32*4
 	 */
 	SI_PARAM_TCS_IN_LAYOUT,	 /* TCS only */
-	SI_PARAM_LS_OUT_LAYOUT,	 /* same value as TCS_IN_LAYOUT, LS only */
 
 	/* TCS only parameters. */
-	SI_PARAM_TCS_OC_LDS = SI_PARAM_TCS_IN_LAYOUT + 1,
+	SI_PARAM_TCS_OC_LDS,
 	SI_PARAM_TESS_FACTOR_OFFSET,
 	SI_PARAM_PATCH_ID,
 	SI_PARAM_REL_IDS,
