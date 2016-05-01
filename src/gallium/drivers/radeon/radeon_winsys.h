@@ -293,7 +293,6 @@ struct radeon_bo_metadata {
     unsigned                bankw;
     unsigned                bankh;
     unsigned                tile_split;
-    unsigned                stencil_tile_split;
     unsigned                mtilea;
     unsigned                num_banks;
     unsigned                stride;

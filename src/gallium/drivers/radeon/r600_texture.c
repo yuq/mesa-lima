@@ -245,7 +245,6 @@ static void r600_texture_init_metadata(struct r600_texture *rtex,
 	metadata->bankw = surface->bankw;
 	metadata->bankh = surface->bankh;
 	metadata->tile_split = surface->tile_split;
-	metadata->stencil_tile_split = surface->stencil_tile_split;
 	metadata->mtilea = surface->mtilea;
 	metadata->num_banks = surface->num_banks;
 	metadata->stride = surface->level[0].pitch_bytes;
@@ -1035,7 +1034,6 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	surface.bankw = metadata.bankw;
 	surface.bankh = metadata.bankh;
 	surface.tile_split = metadata.tile_split;
-	surface.stencil_tile_split = metadata.stencil_tile_split;
 	surface.mtilea = metadata.mtilea;
 	surface.num_banks = metadata.num_banks;
 
