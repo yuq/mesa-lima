@@ -1138,8 +1138,10 @@ vbo_validated_multidrawelements(struct gl_context *ctx, GLenum mode,
       return;
    }
 
-   if (!vbo_bind_arrays(ctx))
+   if (!vbo_bind_arrays(ctx)) {
+      free(prim);
       return;
+   }
 
    min_index_ptr = (uintptr_t)indices[0];
    max_index_ptr = 0;
