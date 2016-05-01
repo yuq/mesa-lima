@@ -4004,9 +4004,9 @@ lower_sampler_logical_send_gen4(const fs_builder &bld, fs_inst *inst, opcode op,
 
 static void
 lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
-                                fs_reg coordinate,
+                                const fs_reg &coordinate,
                                 const fs_reg &shadow_c,
-                                fs_reg lod, fs_reg lod2,
+                                const fs_reg &lod, const fs_reg &lod2,
                                 const fs_reg &sample_index,
                                 const fs_reg &surface,
                                 const fs_reg &sampler,
@@ -4026,10 +4026,10 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
       message.nr--;
    }
 
-   for (unsigned i = 0; i < coord_components; i++) {
-      bld.MOV(retype(offset(msg_coords, bld, i), coordinate.type), coordinate);
-      coordinate = offset(coordinate, bld, 1);
-   }
+   for (unsigned i = 0; i < coord_components; i++)
+      bld.MOV(retype(offset(msg_coords, bld, i), coordinate.type),
+              offset(coordinate, bld, i));
+
    fs_reg msg_end = offset(msg_coords, bld, coord_components);
    fs_reg msg_lod = offset(msg_coords, bld, 4);
 
@@ -4058,12 +4058,10 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
        */
       msg_end = msg_lod;
       for (unsigned i = 0; i < grad_components; i++) {
-         bld.MOV(msg_end, lod);
-         lod = offset(lod, bld, 1);
+         bld.MOV(msg_end, offset(lod, bld, i));
          msg_end = offset(msg_end, bld, 1);
 
-         bld.MOV(msg_end, lod2);
-         lod2 = offset(lod2, bld, 1);
+         bld.MOV(msg_end, offset(lod2, bld, i));
          msg_end = offset(msg_end, bld, 1);
       }
       break;
@@ -4113,14 +4111,14 @@ is_high_sampler(const struct brw_device_info *devinfo, const fs_reg &sampler)
 
 static void
 lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
-                                fs_reg coordinate,
+                                const fs_reg &coordinate,
                                 const fs_reg &shadow_c,
-                                fs_reg lod, fs_reg lod2,
+                                fs_reg lod, const fs_reg &lod2,
                                 const fs_reg &sample_index,
                                 const fs_reg &mcs,
                                 const fs_reg &surface,
                                 const fs_reg &sampler,
-                                fs_reg offset_value,
+                                const fs_reg &offset_value,
                                 unsigned coord_components,
                                 unsigned grad_components)
 {
@@ -4196,21 +4194,14 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
        * [hdr], [ref], x, dPdx.x, dPdy.x, y, dPdx.y, dPdy.y, z, dPdx.z, dPdy.z
        */
       for (unsigned i = 0; i < coord_components; i++) {
-         bld.MOV(sources[length], coordinate);
-         coordinate = offset(coordinate, bld, 1);
-         length++;
+         bld.MOV(sources[length++], offset(coordinate, bld, i));
 
          /* For cube map array, the coordinate is (u,v,r,ai) but there are
           * only derivatives for (u, v, r).
           */
          if (i < grad_components) {
-            bld.MOV(sources[length], lod);
-            lod = offset(lod, bld, 1);
-            length++;
-
-            bld.MOV(sources[length], lod2);
-            lod2 = offset(lod2, bld, 1);
-            length++;
+            bld.MOV(sources[length++], offset(lod, bld, i));
+            bld.MOV(sources[length++], offset(lod2, bld, i));
          }
       }
 
@@ -4224,14 +4215,12 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
       /* Unfortunately, the parameters for LD are intermixed: u, lod, v, r.
        * On Gen9 they are u, v, lod, r
        */
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
-      coordinate = offset(coordinate, bld, 1);
-      length++;
+      bld.MOV(retype(sources[length++], BRW_REGISTER_TYPE_D), coordinate);
 
       if (devinfo->gen >= 9) {
          if (coord_components >= 2) {
-            bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
-            coordinate = offset(coordinate, bld, 1);
+            bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D),
+                    offset(coordinate, bld, 1));
          }
          length++;
       }
@@ -4243,11 +4232,9 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
          length++;
       }
 
-      for (unsigned i = devinfo->gen >= 9 ? 2 : 1; i < coord_components; i++) {
-         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
-         coordinate = offset(coordinate, bld, 1);
-         length++;
-      }
+      for (unsigned i = devinfo->gen >= 9 ? 2 : 1; i < coord_components; i++)
+         bld.MOV(retype(sources[length++], BRW_REGISTER_TYPE_D),
+                 offset(coordinate, bld, i));
 
       coordinate_done = true;
       break;
@@ -4283,11 +4270,9 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
       /* There is no offsetting for this message; just copy in the integer
        * texture coordinates.
        */
-      for (unsigned i = 0; i < coord_components; i++) {
-         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
-         coordinate = offset(coordinate, bld, 1);
-         length++;
-      }
+      for (unsigned i = 0; i < coord_components; i++)
+         bld.MOV(retype(sources[length++], BRW_REGISTER_TYPE_D),
+                 offset(coordinate, bld, i));
 
       coordinate_done = true;
       break;
@@ -4296,23 +4281,15 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
       assert(bld.dispatch_width() == 8 || shadow_c.file == BAD_FILE);
 
       /* More crazy intermixing */
-      for (unsigned i = 0; i < 2; i++) { /* u, v */
-         bld.MOV(sources[length], coordinate);
-         coordinate = offset(coordinate, bld, 1);
-         length++;
-      }
+      for (unsigned i = 0; i < 2; i++) /* u, v */
+         bld.MOV(sources[length++], offset(coordinate, bld, i));
 
-      for (unsigned i = 0; i < 2; i++) { /* offu, offv */
-         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), offset_value);
-         offset_value = offset(offset_value, bld, 1);
-         length++;
-      }
+      for (unsigned i = 0; i < 2; i++) /* offu, offv */
+         bld.MOV(retype(sources[length++], BRW_REGISTER_TYPE_D),
+                 offset(offset_value, bld, i));
 
-      if (coord_components == 3) { /* r if present */
-         bld.MOV(sources[length], coordinate);
-         coordinate = offset(coordinate, bld, 1);
-         length++;
-      }
+      if (coord_components == 3) /* r if present */
+         bld.MOV(sources[length++], offset(coordinate, bld, 2));
 
       coordinate_done = true;
       break;
@@ -4322,11 +4299,8 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
 
    /* Set up the coordinate (except for cases where it was done above) */
    if (!coordinate_done) {
-      for (unsigned i = 0; i < coord_components; i++) {
-         bld.MOV(sources[length], coordinate);
-         coordinate = offset(coordinate, bld, 1);
-         length++;
-      }
+      for (unsigned i = 0; i < coord_components; i++)
+         bld.MOV(sources[length++], offset(coordinate, bld, i));
    }
 
    int mlen;
