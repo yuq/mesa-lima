@@ -25,7 +25,6 @@
  *    Benjamin Franzke <benjaminfranzke@googlemail.com>
  */
 
-#define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
 #include <stddef.h>
