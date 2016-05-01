@@ -1960,7 +1960,7 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
  *
  * Therefore we must never close or otherwise modify the file descriptors.
  */
-static _EGLImage *
+_EGLImage *
 dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
 			  EGLClientBuffer buffer, const EGLint *attr_list)
 {

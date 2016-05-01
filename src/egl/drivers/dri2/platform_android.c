@@ -494,8 +494,7 @@ dri2_create_image_android_native_buffer(_EGLDriver *drv, _EGLDisplay *disp,
       if (fourcc == -1 || pitch == 0)
          return NULL;
 
-      return dri2_create_image_khr(drv, disp, ctx, EGL_LINUX_DMA_BUF_EXT,
-         NULL, attr_list);
+      return dri2_create_image_dma_buf(disp, ctx, NULL, attr_list);
    }
 
    name = get_native_buffer_name(buf);
