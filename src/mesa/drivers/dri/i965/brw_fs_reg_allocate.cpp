@@ -102,26 +102,11 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int dispatch_width)
     * Additionally, on gen5 we need aligned pairs of registers for the PLN
     * instruction, and on gen4 we need 8 contiguous regs for workaround simd16
     * texturing.
-    *
-    * So we have a need for classes for 1, 2, 4, and 8 registers currently,
-    * and we add in '3' to make indexing the array easier for the common case
-    * (since we'll probably want it for texturing later).
-    *
-    * And, on gen7 and newer, we do texturing SEND messages from GRFs, which
-    * means that we may need any size up to the sampler message size limit (11
-    * regs).
     */
-   int class_count;
+   const int class_count = MAX_VGRF_SIZE;
    int class_sizes[MAX_VGRF_SIZE];
-
-   if (devinfo->gen >= 7) {
-      for (class_count = 0; class_count < MAX_VGRF_SIZE; class_count++)
-         class_sizes[class_count] = class_count + 1;
-   } else {
-      for (class_count = 0; class_count < 4; class_count++)
-         class_sizes[class_count] = class_count + 1;
-      class_sizes[class_count++] = 8;
-   }
+   for (unsigned i = 0; i < MAX_VGRF_SIZE; i++)
+      class_sizes[i] = i + 1;
 
    memset(compiler->fs_reg_sets[index].class_to_ra_reg_range, 0,
           sizeof(compiler->fs_reg_sets[index].class_to_ra_reg_range));
