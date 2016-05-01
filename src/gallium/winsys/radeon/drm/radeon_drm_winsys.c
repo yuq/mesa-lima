@@ -510,7 +510,6 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
             fprintf(stderr, "radeon: Kernel 3.13 is required for CIK support.\n");
             return FALSE;
         }
-        ws->info.cik_macrotile_mode_array_valid = TRUE;
     }
 
     if (ws->info.chip_class >= SI) {
@@ -519,7 +518,6 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
             fprintf(stderr, "radeon: Kernel 3.10 is required for SI support.\n");
             return FALSE;
         }
-        ws->info.si_tile_mode_array_valid = TRUE;
     }
 
     /* Hawaii with old firmware needs type2 nop packet.

@@ -287,12 +287,10 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws, int fd)
 
    memcpy(ws->info.si_tile_mode_array, ws->amdinfo.gb_tile_mode,
           sizeof(ws->amdinfo.gb_tile_mode));
-   ws->info.si_tile_mode_array_valid = TRUE;
    ws->info.enabled_rb_mask = ws->amdinfo.enabled_rb_pipes_mask;
 
    memcpy(ws->info.cik_macrotile_mode_array, ws->amdinfo.gb_macro_tile_mode,
           sizeof(ws->amdinfo.gb_macro_tile_mode));
-   ws->info.cik_macrotile_mode_array_valid = TRUE;
 
    ws->gart_page_size = alignment_info.size_remote;
 
