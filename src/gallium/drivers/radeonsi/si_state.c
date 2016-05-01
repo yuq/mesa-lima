@@ -2278,12 +2278,10 @@ static void si_initialize_color_surface(struct si_context *sctx,
 static void si_init_depth_surface(struct si_context *sctx,
 				  struct r600_surface *surf)
 {
-	struct si_screen *sscreen = sctx->screen;
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
 	unsigned level = surf->base.u.tex.level;
 	struct radeon_surf_level *levelinfo = &rtex->surface.level[level];
-	unsigned format, tile_mode_index, array_mode;
-	unsigned macro_aspect, tile_split, stile_split, bankh, bankw, nbanks, pipe_config;
+	unsigned format;
 	uint32_t z_info, s_info, db_depth_info;
 	uint64_t z_offs, s_offs;
 	uint32_t db_htile_data_base, db_htile_surface, pa_su_poly_offset_db_fmt_cntl = 0;
@@ -2331,40 +2329,25 @@ static void si_init_depth_surface(struct si_context *sctx,
 		s_info = S_028044_FORMAT(V_028044_STENCIL_INVALID);
 
 	if (sctx->b.chip_class >= CIK) {
-		switch (rtex->surface.level[level].mode) {
-		case RADEON_SURF_MODE_2D:
-			array_mode = V_02803C_ARRAY_2D_TILED_THIN1;
-			break;
-		case RADEON_SURF_MODE_1D:
-		case RADEON_SURF_MODE_LINEAR_ALIGNED:
-		default:
-			array_mode = V_02803C_ARRAY_1D_TILED_THIN1;
-			break;
-		}
-		tile_split = rtex->surface.tile_split;
-		stile_split = rtex->surface.stencil_tile_split;
-		macro_aspect = rtex->surface.mtilea;
-		bankw = rtex->surface.bankw;
-		bankh = rtex->surface.bankh;
-		tile_split = cik_tile_split(tile_split);
-		stile_split = cik_tile_split(stile_split);
-		macro_aspect = cik_macro_tile_aspect(macro_aspect);
-		bankw = cik_bank_wh(bankw);
-		bankh = cik_bank_wh(bankh);
-		nbanks = si_num_banks(sscreen, rtex);
-		tile_mode_index = si_tile_mode_index(rtex, level, false);
-		pipe_config = cik_db_pipe_config(sscreen, tile_mode_index);
+		struct radeon_info *info = &sctx->screen->b.info;
+		unsigned index = rtex->surface.tiling_index[level];
+		unsigned stencil_index = rtex->surface.stencil_tiling_index[level];
+		unsigned macro_index = rtex->surface.macro_tile_index;
+		unsigned tile_mode = info->si_tile_mode_array[index];
+		unsigned stencil_tile_mode = info->si_tile_mode_array[stencil_index];
+		unsigned macro_mode = info->cik_macrotile_mode_array[macro_index];
 
-		db_depth_info |= S_02803C_ARRAY_MODE(array_mode) |
-			S_02803C_PIPE_CONFIG(pipe_config) |
-			S_02803C_BANK_WIDTH(bankw) |
-			S_02803C_BANK_HEIGHT(bankh) |
-			S_02803C_MACRO_TILE_ASPECT(macro_aspect) |
-			S_02803C_NUM_BANKS(nbanks);
-		z_info |= S_028040_TILE_SPLIT(tile_split);
-		s_info |= S_028044_TILE_SPLIT(stile_split);
+		db_depth_info |=
+			S_02803C_ARRAY_MODE(G_009910_ARRAY_MODE(tile_mode)) |
+			S_02803C_PIPE_CONFIG(G_009910_PIPE_CONFIG(tile_mode)) |
+			S_02803C_BANK_WIDTH(G_009990_BANK_WIDTH(macro_mode)) |
+			S_02803C_BANK_HEIGHT(G_009990_BANK_HEIGHT(macro_mode)) |
+			S_02803C_MACRO_TILE_ASPECT(G_009990_MACRO_TILE_ASPECT(macro_mode)) |
+			S_02803C_NUM_BANKS(G_009990_NUM_BANKS(macro_mode));
+		z_info |= S_028040_TILE_SPLIT(G_009910_TILE_SPLIT(tile_mode));
+		s_info |= S_028044_TILE_SPLIT(G_009910_TILE_SPLIT(stencil_tile_mode));
 	} else {
-		tile_mode_index = si_tile_mode_index(rtex, level, false);
+		unsigned tile_mode_index = si_tile_mode_index(rtex, level, false);
 		z_info |= S_028040_TILE_MODE_INDEX(tile_mode_index);
 		tile_mode_index = si_tile_mode_index(rtex, level, true);
 		s_info |= S_028044_TILE_MODE_INDEX(tile_mode_index);
