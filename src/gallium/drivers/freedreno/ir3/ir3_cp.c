@@ -438,7 +438,8 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 				iim_val = ~iim_val;
 
 			/* other than category 1 (mov) we can only encode up to 10 bits: */
-			if ((instr->opc == OPC_MOV) || !(iim_val & ~0x3ff)) {
+			if ((instr->opc == OPC_MOV) ||
+					!((iim_val & ~0x3ff) && (-iim_val & ~0x3ff))) {
 				new_flags &= ~(IR3_REG_SABS | IR3_REG_SNEG | IR3_REG_BNOT);
 				src_reg = ir3_reg_clone(instr->block->shader, src_reg);
 				src_reg->flags = new_flags;
