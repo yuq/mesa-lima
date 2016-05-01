@@ -30,18 +30,6 @@
 
 #include "util/u_format.h"
 
-static uint32_t si_micro_tile_mode(struct si_screen *sscreen, unsigned tile_mode)
-{
-	if (sscreen->b.info.si_tile_mode_array_valid) {
-		uint32_t gb_tile_mode = sscreen->b.info.si_tile_mode_array[tile_mode];
-
-		return G_009910_MICRO_TILE_MODE(gb_tile_mode);
-	}
-
-	/* The kernel cannod return the tile mode array. Guess? */
-	return V_009910_ADDR_SURF_THIN_MICRO_TILING;
-}
-
 static void si_dma_copy_buffer(struct si_context *ctx,
 				struct pipe_resource *dst,
 				struct pipe_resource *src,
@@ -112,31 +100,31 @@ static void si_dma_copy_tile(struct si_context *ctx,
 			     unsigned bpp)
 {
 	struct radeon_winsys_cs *cs = ctx->b.dma.cs;
-	struct si_screen *sscreen = ctx->screen;
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
-	struct r600_texture *rlinear, *rtiled;
-	unsigned linear_lvl, tiled_lvl;
+	unsigned dst_mode = rdst->surface.level[dst_level].mode;
+	unsigned src_mode = rsrc->surface.level[src_level].mode;
+	bool detile = dst_mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
+	struct r600_texture *rlinear = detile ? rdst : rsrc;
+	struct r600_texture *rtiled = detile ? rsrc : rdst;
+	unsigned linear_lvl = detile ? dst_level : src_level;
+	unsigned tiled_lvl = detile ? src_level : dst_level;
+	struct radeon_info *info = &ctx->screen->b.info;
+	unsigned index = rtiled->surface.tiling_index[tiled_lvl];
+	unsigned tile_mode = info->si_tile_mode_array[index];
 	unsigned array_mode, lbpp, pitch_tile_max, slice_tile_max, size;
-	unsigned ncopy, height, cheight, detile, i, src_mode, dst_mode;
+	unsigned ncopy, height, cheight, i;
 	unsigned linear_x, linear_y, linear_z,  tiled_x, tiled_y, tiled_z;
 	unsigned sub_cmd, bank_h, bank_w, mt_aspect, nbanks, tile_split, mt;
 	uint64_t base, addr;
-	unsigned pipe_config, tile_mode_index;
+	unsigned pipe_config;
 
-	dst_mode = rdst->surface.level[dst_level].mode;
-	src_mode = rsrc->surface.level[src_level].mode;
 	assert(dst_mode != src_mode);
 
 	sub_cmd = SI_DMA_COPY_TILED;
 	lbpp = util_logbase2(bpp);
 	pitch_tile_max = ((pitch / bpp) / 8) - 1;
 
-	detile = dst_mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
-	rlinear = detile ? rdst : rsrc;
-	rtiled = detile ? rsrc : rdst;
-	linear_lvl = detile ? dst_level : src_level;
-	tiled_lvl = detile ? src_level : dst_level;
 	linear_x = detile ? dst_x : src_x;
 	linear_y = detile ? dst_y : src_y;
 	linear_z = detile ? dst_z : src_z;
@@ -146,7 +134,7 @@ static void si_dma_copy_tile(struct si_context *ctx,
 
 	assert(!util_format_is_depth_and_stencil(rtiled->resource.b.b.format));
 
-	array_mode = si_array_mode(rtiled->surface.level[tiled_lvl].mode);
+	array_mode = G_009910_ARRAY_MODE(tile_mode);
 	slice_tile_max = (rtiled->surface.level[tiled_lvl].nblk_x *
 			  rtiled->surface.level[tiled_lvl].nblk_y) / (8*8) - 1;
 	/* linear height must be the same as the slice tile max height, it's ok even
@@ -159,17 +147,17 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	addr = rlinear->surface.level[linear_lvl].offset;
 	addr += rlinear->surface.level[linear_lvl].slice_size * linear_z;
 	addr += linear_y * pitch + linear_x * bpp;
-	bank_h = cik_bank_wh(rtiled->surface.bankh);
-	bank_w = cik_bank_wh(rtiled->surface.bankw);
-	mt_aspect = cik_macro_tile_aspect(rtiled->surface.mtilea);
-	tile_split = cik_tile_split(rtiled->surface.tile_split);
-	tile_mode_index = si_tile_mode_index(rtiled, tiled_lvl, false);
-	nbanks = si_num_banks(sscreen, rtiled);
+	bank_h = G_009910_BANK_HEIGHT(tile_mode);
+	bank_w = G_009910_BANK_WIDTH(tile_mode);
+	mt_aspect = G_009910_MACRO_TILE_ASPECT(tile_mode);
+	/* Non-depth modes don't have TILE_SPLIT set. */
+	tile_split = util_logbase2(rtiled->surface.tile_split >> 6);
+	nbanks = G_009910_NUM_BANKS(tile_mode);
 	base += rtiled->resource.gpu_address;
 	addr += rlinear->resource.gpu_address;
 
-	pipe_config = cik_db_pipe_config(sscreen, tile_mode_index);
-	mt = si_micro_tile_mode(sscreen, tile_mode_index);
+	pipe_config = G_009910_PIPE_CONFIG(tile_mode);
+	mt = G_009910_MICRO_TILE_MODE(tile_mode);
 	size = (copy_height * pitch) / 4;
 	ncopy = (size / SI_DMA_COPY_MAX_SIZE_DW) + !!(size % SI_DMA_COPY_MAX_SIZE_DW);
 	r600_need_dma_space(&ctx->b, ncopy * 9);
