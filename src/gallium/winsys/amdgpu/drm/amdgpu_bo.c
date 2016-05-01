@@ -408,6 +408,7 @@ static void amdgpu_buffer_get_metadata(struct pb_buffer *_buf,
    else if (AMDGPU_TILING_GET(tiling_flags, ARRAY_MODE) == 2) /* 1D_TILED_THIN1 */
       md->microtile = RADEON_LAYOUT_TILED;
 
+   md->pipe_config = AMDGPU_TILING_GET(tiling_flags, PIPE_CONFIG);
    md->bankw = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_WIDTH);
    md->bankh = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_HEIGHT);
    md->tile_split = eg_tile_split(AMDGPU_TILING_GET(tiling_flags, TILE_SPLIT));

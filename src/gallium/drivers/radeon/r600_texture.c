@@ -1031,6 +1031,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 
 	rscreen->ws->buffer_get_metadata(buf, &metadata);
 
+	surface.pipe_config = metadata.pipe_config;
 	surface.bankw = metadata.bankw;
 	surface.bankh = metadata.bankh;
 	surface.tile_split = metadata.tile_split;

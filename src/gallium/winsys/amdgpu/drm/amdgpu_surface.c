@@ -360,6 +360,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
       AddrTileInfoIn.bankHeight = surf->bankh;
       AddrTileInfoIn.macroAspectRatio = surf->mtilea;
       AddrTileInfoIn.tileSplitBytes = surf->tile_split;
+      AddrTileInfoIn.pipeConfig = surf->pipe_config + 1; /* +1 compared to GB_TILE_MODE */
       AddrSurfInfoIn.flags.degrade4Space = 0;
       AddrSurfInfoIn.pTileInfo = &AddrTileInfoIn;
 
