@@ -449,7 +449,7 @@ droid_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
 }
 
 static _EGLImage *
-dri2_create_image_android_native_buffer(_EGLDriver *drv, _EGLDisplay *disp,
+dri2_create_image_android_native_buffer(_EGLDisplay *disp,
                                         _EGLContext *ctx,
                                         struct ANativeWindowBuffer *buf)
 {
@@ -542,7 +542,7 @@ droid_create_image_khr(_EGLDriver *drv, _EGLDisplay *disp,
 {
    switch (target) {
    case EGL_NATIVE_BUFFER_ANDROID:
-      return dri2_create_image_android_native_buffer(drv, disp, ctx,
+      return dri2_create_image_android_native_buffer(disp, ctx,
             (struct ANativeWindowBuffer *) buffer);
    default:
       return dri2_create_image_khr(drv, disp, ctx, target, buffer, attr_list);
