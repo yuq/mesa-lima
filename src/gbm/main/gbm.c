@@ -25,8 +25,6 @@
  *    Benjamin Franzke <benjaminfranzke@googlemail.com>
  */
 
-#define _DEFAULT_SOURCE
-
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
