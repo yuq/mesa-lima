@@ -63,6 +63,7 @@ libisl_la_SOURCES =                                     \
 	isl_gen4.h                                      \
 	isl_gen6.c                                      \
 	isl_gen6.h                                      \
+	isl_priv.h                                      \
 	isl_storage_image.c                             \
 	$(NULL)
 
@@ -121,3 +122,8 @@ tests_isl_surf_get_image_offset_test_LDADD = $(tests_ldadd)
 # ----------------------------------------------------------------------------
 
 include $(top_srcdir)/install-lib-links.mk
+
+EXTRA_DIST = \
+	isl_format_layout_gen.bash \
+	isl_format_layout.csv \
+	README
