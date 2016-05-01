@@ -363,7 +363,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
 {
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
-   int format, stride;
+   int fourcc, pitch;
    int offset = 0, fd;
 
    if (!dri2_surf->buffer)
@@ -373,19 +373,22 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    if (fd < 0)
       return -1;
 
-   format = get_format(dri2_surf->buffer->format);
+   fourcc = get_fourcc(get_format(dri2_surf->buffer->format));
 
-   stride = dri2_surf->buffer->stride *
+   pitch = dri2_surf->buffer->stride *
       get_format_bpp(dri2_surf->buffer->format);
+
+   if (fourcc == -1 || pitch == 0)
+      return -1;
 
    dri2_surf->dri_image =
       dri2_dpy->image->createImageFromFds(dri2_dpy->dri_screen,
                                           dri2_surf->base.Width,
                                           dri2_surf->base.Height,
-                                          get_fourcc(format),
+                                          fourcc,
                                           &fd,
                                           1,
-                                          &stride,
+                                          &pitch,
                                           &offset,
                                           dri2_surf);
    if (!dri2_surf->dri_image)
@@ -453,6 +456,7 @@ dri2_create_image_android_native_buffer(_EGLDriver *drv, _EGLDisplay *disp,
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_image *dri2_img;
    int name, fd;
+   int format;
 
    if (ctx != NULL) {
       /* From the EGL_ANDROID_image_native_buffer spec:
@@ -474,15 +478,21 @@ dri2_create_image_android_native_buffer(_EGLDriver *drv, _EGLDisplay *disp,
 
    fd = get_native_buffer_fd(buf);
    if (fd >= 0) {
+      const int fourcc = get_fourcc(get_format(buf->format));
+      const int pitch = buf->stride * get_format_bpp(buf->format);
+
       const EGLint attr_list[14] = {
          EGL_WIDTH, buf->width,
          EGL_HEIGHT, buf->height,
-         EGL_LINUX_DRM_FOURCC_EXT, get_fourcc(get_format(buf->format)),
+         EGL_LINUX_DRM_FOURCC_EXT, fourcc,
          EGL_DMA_BUF_PLANE0_FD_EXT, fd,
-         EGL_DMA_BUF_PLANE0_PITCH_EXT, buf->stride * get_format_bpp(buf->format),
+         EGL_DMA_BUF_PLANE0_PITCH_EXT, pitch,
          EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
          EGL_NONE, 0
       };
+
+      if (fourcc == -1 || pitch == 0)
+         return NULL;
 
       return dri2_create_image_khr(drv, disp, ctx, EGL_LINUX_DMA_BUF_EXT,
          NULL, attr_list);
@@ -493,6 +503,10 @@ dri2_create_image_android_native_buffer(_EGLDriver *drv, _EGLDisplay *disp,
       _eglError(EGL_BAD_PARAMETER, "eglCreateEGLImageKHR");
       return NULL;
    }
+
+   format = get_format(buf->format);
+   if (format == -1)
+       return NULL;
 
    dri2_img = calloc(1, sizeof(*dri2_img));
    if (!dri2_img) {
@@ -509,7 +523,7 @@ dri2_create_image_android_native_buffer(_EGLDriver *drv, _EGLDisplay *disp,
       dri2_dpy->image->createImageFromName(dri2_dpy->dri_screen,
 					   buf->width,
 					   buf->height,
-					   get_format(buf->format),
+					   format,
 					   name,
 					   buf->stride,
 					   dri2_img);
