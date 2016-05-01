@@ -191,8 +191,10 @@ softpipe_launch_grid(struct pipe_context *context,
    }
 
    machines = CALLOC(sizeof(struct tgsi_exec_machine *), num_threads_in_group);
-   if (!machines)
+   if (!machines) {
+      FREE(local_mem);
       return;
+   }
 
    /* initialise machines + GRID_SIZE + THREAD_ID  + BLOCK_SIZE */
    for (d = 0; d < bdepth; d++) {
