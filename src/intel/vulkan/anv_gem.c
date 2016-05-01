@@ -21,8 +21,6 @@
  * IN THE SOFTWARE.
  */
 
-#define _DEFAULT_SOURCE
-
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <string.h>

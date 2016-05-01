@@ -21,8 +21,6 @@
  * IN THE SOFTWARE.
  */
 
-#define _DEFAULT_SOURCE
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
