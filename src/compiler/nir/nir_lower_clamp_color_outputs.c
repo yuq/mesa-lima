@@ -62,14 +62,28 @@ is_color_output(lower_state *state, nir_variable *out)
 static void
 lower_intrinsic(lower_state *state, nir_intrinsic_instr *intr)
 {
-   nir_variable *out;
+   nir_variable *out = NULL;
    nir_builder *b = &state->b;
    nir_ssa_def *s;
 
-   if (intr->intrinsic != nir_intrinsic_store_var)
+   switch (intr->intrinsic) {
+   case nir_intrinsic_store_var:
+      out = intr->variables[0]->var;
+      break;
+   case nir_intrinsic_store_output:
+      /* already had i/o lowered.. lookup the matching output var: */
+      nir_foreach_variable(var, &state->shader->outputs) {
+         int drvloc = var->data.driver_location;
+         if (nir_intrinsic_base(intr) == drvloc) {
+            out = var;
+            break;
+         }
+      }
+      assert(out);
+      break;
+   default:
       return;
-
-   out = intr->variables[0]->var;
+   }
 
    if (out->data.mode != nir_var_shader_out)
       return;
