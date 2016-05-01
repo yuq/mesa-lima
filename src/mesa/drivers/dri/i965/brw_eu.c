@@ -352,8 +352,9 @@ enum gen {
    GEN_ALL = ~0
 };
 
-#define GEN_GE(gen) (~((gen) - 1) | gen)
-#define GEN_LE(gen) (((gen) - 1) | gen)
+#define GEN_LT(gen) ((gen) - 1)
+#define GEN_GE(gen) (~GEN_LT(gen))
+#define GEN_LE(gen) (GEN_LT(gen) | (gen))
 
 static const struct opcode_desc opcode_10_descs[] = {
    { .name = "dim",   .nsrc = 0, .ndst = 0, .gens = GEN75 },
