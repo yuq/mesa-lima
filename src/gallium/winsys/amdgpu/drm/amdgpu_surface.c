@@ -108,26 +108,6 @@ static ADDR_E_RETURNCODE ADDR_API freeSysMem(const ADDR_FREESYSMEM_INPUT * pInpu
    return ADDR_OK;
 }
 
-/**
- * This returns the number of banks for the surface.
- * Possible values: 2, 4, 8, 16.
- */
-static uint32_t cik_num_banks(struct amdgpu_winsys *ws,
-                              struct radeon_surf *surf)
-{
-   unsigned index, tileb;
-
-   tileb = 8 * 8 * surf->bpe;
-   tileb = MIN2(surf->tile_split, tileb);
-
-   for (index = 0; tileb > 64; index++) {
-      tileb >>= 1;
-   }
-   assert(index < 16);
-
-   return 2 << ((ws->amdinfo.gb_macro_tile_mode[index] >> 6) & 0x3);
-}
-
 ADDR_HANDLE amdgpu_addr_create(struct amdgpu_winsys *ws)
 {
    ADDR_CREATE_INPUT addrCreateInput = {0};
@@ -375,7 +355,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
        surf->bankw && surf->bankh && surf->mtilea && surf->tile_split) {
       /* If any of these parameters are incorrect, the calculation
        * will fail. */
-      AddrTileInfoIn.banks = cik_num_banks(ws, surf);
+      AddrTileInfoIn.banks = surf->num_banks;
       AddrTileInfoIn.bankWidth = surf->bankw;
       AddrTileInfoIn.bankHeight = surf->bankh;
       AddrTileInfoIn.macroAspectRatio = surf->mtilea;

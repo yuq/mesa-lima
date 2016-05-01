@@ -1036,6 +1036,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	surface.tile_split = metadata.tile_split;
 	surface.stencil_tile_split = metadata.stencil_tile_split;
 	surface.mtilea = metadata.mtilea;
+	surface.num_banks = metadata.num_banks;
 
 	if (metadata.macrotile == RADEON_LAYOUT_TILED)
 		array_mode = RADEON_SURF_MODE_2D;

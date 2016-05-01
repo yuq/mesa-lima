@@ -412,6 +412,7 @@ static void amdgpu_buffer_get_metadata(struct pb_buffer *_buf,
    md->bankh = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_HEIGHT);
    md->tile_split = eg_tile_split(AMDGPU_TILING_GET(tiling_flags, TILE_SPLIT));
    md->mtilea = 1 << AMDGPU_TILING_GET(tiling_flags, MACRO_TILE_ASPECT);
+   md->num_banks = 2 << AMDGPU_TILING_GET(tiling_flags, NUM_BANKS);
    md->scanout = AMDGPU_TILING_GET(tiling_flags, MICRO_TILE_MODE) == 0; /* DISPLAY */
 
    md->size_metadata = info.metadata.size_metadata;
