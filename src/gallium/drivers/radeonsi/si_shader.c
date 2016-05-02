@@ -94,7 +94,9 @@ struct si_shader_context
 
 	LLVMTargetMachineRef tm;
 
+	unsigned uniform_md_kind;
 	LLVMValueRef const_md;
+	LLVMValueRef empty_md;
 	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef lds;
 	LLVMValueRef *constants[SI_NUM_CONST_BUFFERS];
@@ -373,9 +375,12 @@ static void build_indexed_store(struct si_shader_context *ctx,
  *
  * \param base_ptr  Where the array starts.
  * \param index     The element index into the array.
+ * \param uniform   Whether the base_ptr and index can be assumed to be
+ *                  dynamically uniform
  */
 static LLVMValueRef build_indexed_load(struct si_shader_context *ctx,
-				       LLVMValueRef base_ptr, LLVMValueRef index)
+				       LLVMValueRef base_ptr, LLVMValueRef index,
+				       bool uniform)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
@@ -385,18 +390,20 @@ static LLVMValueRef build_indexed_load(struct si_shader_context *ctx,
 	indices[1] = index;
 
 	pointer = LLVMBuildGEP(gallivm->builder, base_ptr, indices, 2, "");
+	if (uniform)
+		LLVMSetMetadata(pointer, ctx->uniform_md_kind, ctx->empty_md);
 	return LLVMBuildLoad(gallivm->builder, pointer, "");
 }
 
 /**
  * Do a load from &base_ptr[index], but also add a flag that it's loading
- * a constant.
+ * a constant from a dynamically uniform index.
  */
 static LLVMValueRef build_indexed_load_const(
 	struct si_shader_context *ctx,
 	LLVMValueRef base_ptr, LLVMValueRef index)
 {
-	LLVMValueRef result = build_indexed_load(ctx, base_ptr, index);
+	LLVMValueRef result = build_indexed_load(ctx, base_ptr, index, true);
 	LLVMSetMetadata(result, 1, ctx->const_md);
 	return result;
 }
@@ -679,12 +686,12 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 			    lp_build_const_int32(gallivm, swizzle));
 
-	value = build_indexed_load(ctx, ctx->lds, dw_addr);
+	value = build_indexed_load(ctx, ctx->lds, dw_addr, false);
 	if (type == TGSI_TYPE_DOUBLE) {
 		LLVMValueRef value2;
 		dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 				       lp_build_const_int32(gallivm, swizzle + 1));
-		value2 = build_indexed_load(ctx, ctx->lds, dw_addr);
+		value2 = build_indexed_load(ctx, ctx->lds, dw_addr, false);
 		return radeon_llvm_emit_fetch_double(bld_base, value, value2);
 	}
 
@@ -4885,6 +4892,11 @@ static void create_meta_data(struct si_shader_context *ctx)
 	args[2] = lp_build_const_int32(gallivm, 1);
 
 	ctx->const_md = LLVMMDNodeInContext(gallivm->context, args, 3);
+
+	ctx->uniform_md_kind = LLVMGetMDKindIDInContext(gallivm->context,
+							"amdgpu.uniform", 14);
+
+	ctx->empty_md = LLVMMDNodeInContext(gallivm->context, NULL, 0);
 }
 
 static void declare_streamout_params(struct si_shader_context *ctx,
