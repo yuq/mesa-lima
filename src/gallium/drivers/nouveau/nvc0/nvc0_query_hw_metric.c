@@ -437,9 +437,9 @@ sm20_hw_metric_calc_result(struct nvc0_hw_query *hq, uint64_t res64[8])
 {
    switch (hq->base.type - NVC0_HW_METRIC_QUERY(0)) {
    case NVC0_HW_METRIC_QUERY_ACHIEVED_OCCUPANCY:
-      /* (active_warps / active_cycles) / max. number of warps on a MP */
+      /* ((active_warps / active_cycles) / max. number of warps on a MP) * 100 */
       if (res64[1])
-         return (res64[0] / (double)res64[1]) / 48;
+         return ((res64[0] / (double)res64[1]) / 48) * 100;
       break;
    case NVC0_HW_METRIC_QUERY_BRANCH_EFFICIENCY:
       /* (branch / (branch + divergent_branch)) * 100 */
@@ -530,9 +530,9 @@ sm30_hw_metric_calc_result(struct nvc0_hw_query *hq, uint64_t res64[8])
 {
    switch (hq->base.type - NVC0_HW_METRIC_QUERY(0)) {
    case NVC0_HW_METRIC_QUERY_ACHIEVED_OCCUPANCY:
-      /* (active_warps / active_cycles) / max. number of warps on a MP */
+      /* ((active_warps / active_cycles) / max. number of warps on a MP) * 100 */
       if (res64[1])
-         return (res64[0] / (double)res64[1]) / 64;
+         return ((res64[0] / (double)res64[1]) / 64) * 100;
       break;
    case NVC0_HW_METRIC_QUERY_BRANCH_EFFICIENCY:
       return sm20_hw_metric_calc_result(hq, res64);
