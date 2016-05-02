@@ -427,6 +427,23 @@ blorp_blit_apply_transform(nir_builder *b, nir_ssa_def *src_pos,
    return pos;
 }
 
+static inline void
+blorp_nir_discard_if_outside_rect(nir_builder *b, nir_ssa_def *pos,
+                                  struct brw_blorp_blit_vars *v)
+{
+   nir_ssa_def *c0, *c1, *c2, *c3;
+   c0 = nir_ult(b, nir_channel(b, pos, 0), nir_load_var(b, v->u_dst_x0));
+   c1 = nir_uge(b, nir_channel(b, pos, 0), nir_load_var(b, v->u_dst_x1));
+   c2 = nir_ult(b, nir_channel(b, pos, 1), nir_load_var(b, v->u_dst_y0));
+   c3 = nir_uge(b, nir_channel(b, pos, 1), nir_load_var(b, v->u_dst_y1));
+   nir_ssa_def *oob = nir_ior(b, nir_ior(b, c0, c1), nir_ior(b, c2, c3));
+
+   nir_intrinsic_instr *discard =
+      nir_intrinsic_instr_create(b->shader, nir_intrinsic_discard_if);
+   discard->src[0] = nir_src_for_ssa(oob);
+   nir_builder_instr_insert(b, &discard->instr);
+}
+
 static nir_tex_instr *
 blorp_create_nir_tex_instr(nir_shader *shader, nir_texop op,
                            nir_ssa_def *pos, unsigned num_srcs,
@@ -785,7 +802,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
     * now is the time to do it.
     */
    if (key->use_kill)
-      goto fail;
+      blorp_nir_discard_if_outside_rect(&b, dst_pos, &v);
 
    src_pos = blorp_blit_apply_transform(&b, nir_i2f(&b, dst_pos), &v);
 
