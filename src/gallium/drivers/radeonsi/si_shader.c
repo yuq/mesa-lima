@@ -671,6 +671,75 @@ static LLVMValueRef get_dw_address(struct si_shader_context *ctx,
 			    lp_build_const_int32(gallivm, param * 4), "");
 }
 
+/* TBUFFER_STORE_FORMAT_{X,XY,XYZ,XYZW} <- the suffix is selected by num_channels=1..4.
+ * The type of vdata must be one of i32 (num_channels=1), v2i32 (num_channels=2),
+ * or v4i32 (num_channels=3,4). */
+static void build_tbuffer_store(struct si_shader_context *ctx,
+				LLVMValueRef rsrc,
+				LLVMValueRef vdata,
+				unsigned num_channels,
+				LLVMValueRef vaddr,
+				LLVMValueRef soffset,
+				unsigned inst_offset,
+				unsigned dfmt,
+				unsigned nfmt,
+				unsigned offen,
+				unsigned idxen,
+				unsigned glc,
+				unsigned slc,
+				unsigned tfe)
+{
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMValueRef args[] = {
+		rsrc,
+		vdata,
+		LLVMConstInt(ctx->i32, num_channels, 0),
+		vaddr,
+		soffset,
+		LLVMConstInt(ctx->i32, inst_offset, 0),
+		LLVMConstInt(ctx->i32, dfmt, 0),
+		LLVMConstInt(ctx->i32, nfmt, 0),
+		LLVMConstInt(ctx->i32, offen, 0),
+		LLVMConstInt(ctx->i32, idxen, 0),
+		LLVMConstInt(ctx->i32, glc, 0),
+		LLVMConstInt(ctx->i32, slc, 0),
+		LLVMConstInt(ctx->i32, tfe, 0)
+	};
+
+	/* The instruction offset field has 12 bits */
+	assert(offen || inst_offset < (1 << 12));
+
+	/* The intrinsic is overloaded, we need to add a type suffix for overloading to work. */
+	unsigned func = CLAMP(num_channels, 1, 3) - 1;
+	const char *types[] = {"i32", "v2i32", "v4i32"};
+	char name[256];
+	snprintf(name, sizeof(name), "llvm.SI.tbuffer.store.%s", types[func]);
+
+	lp_build_intrinsic(gallivm->builder, name, ctx->voidt,
+			   args, ARRAY_SIZE(args), 0);
+}
+
+static void build_tbuffer_store_dwords(struct si_shader_context *ctx,
+				     LLVMValueRef rsrc,
+				     LLVMValueRef vdata,
+				     unsigned num_channels,
+				     LLVMValueRef vaddr,
+				     LLVMValueRef soffset,
+				     unsigned inst_offset)
+{
+	static unsigned dfmt[] = {
+		V_008F0C_BUF_DATA_FORMAT_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32_32_32
+	};
+	assert(num_channels >= 1 && num_channels <= 4);
+
+	build_tbuffer_store(ctx, rsrc, vdata, num_channels, vaddr, soffset,
+			    inst_offset, dfmt[num_channels-1],
+			    V_008F0C_BUF_NUM_FORMAT_UINT, 1, 0, 1, 1, 0);
+}
+
 /**
  * Load from LDS.
  *
@@ -1842,75 +1911,6 @@ static void si_dump_streamout(struct pipe_stream_output_info *so)
 		        mask & 4 ? "z" : "",
 		        mask & 8 ? "w" : "");
 	}
-}
-
-/* TBUFFER_STORE_FORMAT_{X,XY,XYZ,XYZW} <- the suffix is selected by num_channels=1..4.
- * The type of vdata must be one of i32 (num_channels=1), v2i32 (num_channels=2),
- * or v4i32 (num_channels=3,4). */
-static void build_tbuffer_store(struct si_shader_context *ctx,
-				LLVMValueRef rsrc,
-				LLVMValueRef vdata,
-				unsigned num_channels,
-				LLVMValueRef vaddr,
-				LLVMValueRef soffset,
-				unsigned inst_offset,
-				unsigned dfmt,
-				unsigned nfmt,
-				unsigned offen,
-				unsigned idxen,
-				unsigned glc,
-				unsigned slc,
-				unsigned tfe)
-{
-	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
-	LLVMValueRef args[] = {
-		rsrc,
-		vdata,
-		LLVMConstInt(ctx->i32, num_channels, 0),
-		vaddr,
-		soffset,
-		LLVMConstInt(ctx->i32, inst_offset, 0),
-		LLVMConstInt(ctx->i32, dfmt, 0),
-		LLVMConstInt(ctx->i32, nfmt, 0),
-		LLVMConstInt(ctx->i32, offen, 0),
-		LLVMConstInt(ctx->i32, idxen, 0),
-		LLVMConstInt(ctx->i32, glc, 0),
-		LLVMConstInt(ctx->i32, slc, 0),
-		LLVMConstInt(ctx->i32, tfe, 0)
-	};
-
-	/* The instruction offset field has 12 bits */
-	assert(offen || inst_offset < (1 << 12));
-
-	/* The intrinsic is overloaded, we need to add a type suffix for overloading to work. */
-	unsigned func = CLAMP(num_channels, 1, 3) - 1;
-	const char *types[] = {"i32", "v2i32", "v4i32"};
-	char name[256];
-	snprintf(name, sizeof(name), "llvm.SI.tbuffer.store.%s", types[func]);
-
-	lp_build_intrinsic(gallivm->builder, name, ctx->voidt,
-			   args, ARRAY_SIZE(args), 0);
-}
-
-static void build_tbuffer_store_dwords(struct si_shader_context *ctx,
-				     LLVMValueRef rsrc,
-				     LLVMValueRef vdata,
-				     unsigned num_channels,
-				     LLVMValueRef vaddr,
-				     LLVMValueRef soffset,
-				     unsigned inst_offset)
-{
-	static unsigned dfmt[] = {
-		V_008F0C_BUF_DATA_FORMAT_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32_32_32
-	};
-	assert(num_channels >= 1 && num_channels <= 4);
-
-	build_tbuffer_store(ctx, rsrc, vdata, num_channels, vaddr, soffset,
-			    inst_offset, dfmt[num_channels-1],
-			    V_008F0C_BUF_NUM_FORMAT_UINT, 1, 0, 1, 1, 0);
 }
 
 /* On SI, the vertex shader is responsible for writing streamout data
