@@ -1026,6 +1026,9 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
       intel_miptree_release(&(*mt)->mcs_mt);
       intel_resolve_map_clear(&(*mt)->hiz_map);
 
+      intel_miptree_release(&(*mt)->plane[0]);
+      intel_miptree_release(&(*mt)->plane[1]);
+
       for (i = 0; i < MAX_TEXTURE_LEVELS; i++) {
 	 free((*mt)->level[i].slice);
       }

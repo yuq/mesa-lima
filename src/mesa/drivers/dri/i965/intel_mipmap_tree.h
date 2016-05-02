@@ -625,6 +625,11 @@ struct intel_mipmap_tree
    struct intel_mipmap_tree *mcs_mt;
 
    /**
+    * Planes 1 and 2 in case this is a planar surface.
+    */
+   struct intel_mipmap_tree *plane[2];
+
+   /**
     * Fast clear state for this buffer.
     */
    enum intel_fast_clear_state fast_clear_state;

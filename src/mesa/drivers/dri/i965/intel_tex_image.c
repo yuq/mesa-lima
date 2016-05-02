@@ -162,6 +162,47 @@ intel_set_texture_image_mt(struct brw_context *brw,
    intel_miptree_reference(&intel_texobj->mt, mt);
 }
 
+static struct intel_mipmap_tree *
+create_mt_for_planar_dri_image(struct brw_context *brw,
+                               GLenum target, __DRIimage *image)
+{
+   struct intel_image_format *f = image->planar_format;
+   struct intel_mipmap_tree *planar_mt;
+
+   for (int i = 0; i < f->nplanes; i++) {
+      const int index = f->planes[i].buffer_index;
+      const uint32_t dri_format = f->planes[i].dri_format;
+      const mesa_format format = driImageFormatToGLFormat(dri_format);
+      const uint32_t width = image->width >> f->planes[i].width_shift;
+      const uint32_t height = image->height >> f->planes[i].height_shift;
+
+      /* Disable creation of the texture's aux buffers because the driver
+       * exposes no EGL API to manage them. That is, there is no API for
+       * resolving the aux buffer's content to the main buffer nor for
+       * invalidating the aux buffer's content.
+       */
+      struct intel_mipmap_tree *mt =
+         intel_miptree_create_for_bo(brw, image->bo, format,
+                                     image->offsets[index],
+                                     width, height, 1,
+                                     image->strides[index],
+                                     MIPTREE_LAYOUT_DISABLE_AUX);
+      if (mt == NULL)
+         return NULL;
+
+      mt->target = target;
+      mt->total_width = width;
+      mt->total_height = height;
+
+      if (i == 0)
+         planar_mt = mt;
+      else
+         planar_mt->plane[i - 1] = mt;
+   }
+
+   return planar_mt;
+}
+
 /**
  * Binds a BO to a texture image, as if it was uploaded by glTexImage2D().
  *
@@ -348,7 +389,10 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
       return;
    }
 
-   mt = create_mt_for_dri_image(brw, target, image);
+   if (image->planar_format && image->planar_format->nplanes > 0)
+      mt = create_mt_for_planar_dri_image(brw, target, image);
+   else
+      mt = create_mt_for_dri_image(brw, target, image);
    if (mt == NULL)
       return;
 
