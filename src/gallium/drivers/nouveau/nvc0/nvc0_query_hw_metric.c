@@ -24,33 +24,34 @@
 #include "nvc0/nvc0_query_hw_metric.h"
 #include "nvc0/nvc0_query_hw_sm.h"
 
-#define _Q(t,n) { NVC0_HW_METRIC_QUERY_##t, n }
-struct {
-   unsigned type;
+#define _Q(i,n,t) { NVC0_HW_METRIC_QUERY_##i, n, PIPE_DRIVER_QUERY_TYPE_##t }
+struct nvc0_hw_metric_cfg {
+   unsigned id;
    const char *name;
+   enum pipe_driver_query_type type;
 } nvc0_hw_metric_queries[] = {
-   _Q(ACHIEVED_OCCUPANCY,           "metric-achieved_occupancy"               ),
-   _Q(BRANCH_EFFICIENCY,            "metric-branch_efficiency"                ),
-   _Q(INST_ISSUED,                  "metric-inst_issued"                      ),
-   _Q(INST_PER_WRAP,                "metric-inst_per_wrap"                    ),
-   _Q(INST_REPLAY_OVERHEAD,         "metric-inst_replay_overhead"             ),
-   _Q(ISSUED_IPC,                   "metric-issued_ipc"                       ),
-   _Q(ISSUE_SLOTS,                  "metric-issue_slots"                      ),
-   _Q(ISSUE_SLOT_UTILIZATION,       "metric-issue_slot_utilization"           ),
-   _Q(IPC,                          "metric-ipc"                              ),
-   _Q(SHARED_REPLAY_OVERHEAD,       "metric-shared_replay_overhead"           ),
+   _Q(ACHIEVED_OCCUPANCY,        "metric-achieved_occupancy",     UINT64      ),
+   _Q(BRANCH_EFFICIENCY,         "metric-branch_efficiency",      UINT64      ),
+   _Q(INST_ISSUED,               "metric-inst_issued",            UINT64      ),
+   _Q(INST_PER_WRAP,             "metric-inst_per_wrap",          UINT64      ),
+   _Q(INST_REPLAY_OVERHEAD,      "metric-inst_replay_overhead",   UINT64      ),
+   _Q(ISSUED_IPC,                "metric-issued_ipc",             UINT64      ),
+   _Q(ISSUE_SLOTS,               "metric-issue_slots",            UINT64      ),
+   _Q(ISSUE_SLOT_UTILIZATION,    "metric-issue_slot_utilization", UINT64      ),
+   _Q(IPC,                       "metric-ipc",                    UINT64      ),
+   _Q(SHARED_REPLAY_OVERHEAD,    "metric-shared_replay_overhead", UINT64      ),
 };
 
 #undef _Q
 
-static inline const char *
-nvc0_hw_metric_query_get_name(unsigned query_type)
+static inline const struct nvc0_hw_metric_cfg *
+nvc0_hw_metric_get_cfg(unsigned metric_id)
 {
    unsigned i;
 
    for (i = 0; i < ARRAY_SIZE(nvc0_hw_metric_queries); i++) {
-      if (nvc0_hw_metric_queries[i].type == query_type)
-         return nvc0_hw_metric_queries[i].name;
+      if (nvc0_hw_metric_queries[i].id == metric_id)
+         return &nvc0_hw_metric_queries[i];
    }
    assert(0);
    return NULL;
@@ -671,9 +672,12 @@ nvc0_hw_metric_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
          if (screen->base.class_3d <= NVF0_3D_CLASS) {
             const struct nvc0_hw_metric_query_cfg **queries =
                nvc0_hw_metric_get_queries(screen);
+            const struct nvc0_hw_metric_cfg *cfg =
+               nvc0_hw_metric_get_cfg(queries[id]->type);
 
-            info->name = nvc0_hw_metric_query_get_name(queries[id]->type);
+            info->name = cfg->name;
             info->query_type = NVC0_HW_METRIC_QUERY(queries[id]->type);
+            info->type = cfg->type;
             info->group_id = NVC0_HW_METRIC_QUERY_GROUP;
             return 1;
          }
