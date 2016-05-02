@@ -256,6 +256,7 @@ struct si_context {
 	struct pipe_resource		*esgs_ring;
 	struct pipe_resource		*gsvs_ring;
 	struct pipe_resource		*tf_ring;
+	struct pipe_resource		*tess_offchip_ring;
 	union pipe_color_union		*border_color_table; /* in CPU memory, any endian */
 	struct r600_resource		*border_color_buffer;
 	union pipe_color_union		*border_color_map; /* in VRAM (slow access), little endian */

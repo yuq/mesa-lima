@@ -1770,6 +1770,7 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 
 static void si_init_tess_factor_ring(struct si_context *sctx)
 {
+	unsigned offchip_blocks = sctx->b.chip_class >= CIK ? 256 : 64;
 	assert(!sctx->tf_ring);
 
 	sctx->tf_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
@@ -1780,6 +1781,14 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 
 	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
 
+	sctx->tess_offchip_ring = pipe_buffer_create(sctx->b.b.screen,
+	                                             PIPE_BIND_CUSTOM,
+	                                             PIPE_USAGE_DEFAULT,
+	                                             offchip_blocks *
+	                                             SI_TESS_OFFCHIP_BLOCK_SIZE);
+	if (!sctx->tess_offchip_ring)
+		return;
+
 	si_init_config_add_vgt_flush(sctx);
 
 	/* Append these registers to the init config state. */
@@ -1788,11 +1797,16 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 			       S_030938_SIZE(sctx->tf_ring->width0 / 4));
 		si_pm4_set_reg(sctx->init_config, R_030940_VGT_TF_MEMORY_BASE,
 			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
+		si_pm4_set_reg(sctx->init_config, R_03093C_VGT_HS_OFFCHIP_PARAM,
+		             S_03093C_OFFCHIP_BUFFERING(offchip_blocks - 1) |
+		             S_03093C_OFFCHIP_GRANULARITY(V_03093C_X_8K_DWORDS));
 	} else {
 		si_pm4_set_reg(sctx->init_config, R_008988_VGT_TF_RING_SIZE,
 			       S_008988_SIZE(sctx->tf_ring->width0 / 4));
 		si_pm4_set_reg(sctx->init_config, R_0089B8_VGT_TF_MEMORY_BASE,
 			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
+		si_pm4_set_reg(sctx->init_config, R_0089B0_VGT_HS_OFFCHIP_PARAM,
+		               S_0089B0_OFFCHIP_BUFFERING(offchip_blocks - 1));
 	}
 
 	/* Flush the context to re-emit the init_config state.
@@ -1804,6 +1818,10 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 
 	si_set_ring_buffer(&sctx->b.b, SI_HS_RING_TESS_FACTOR, sctx->tf_ring,
 			   0, sctx->tf_ring->width0, false, false, 0, 0, 0);
+
+	si_set_ring_buffer(&sctx->b.b, SI_HS_RING_TESS_OFFCHIP,
+	                   sctx->tess_offchip_ring, 0,
+	                   sctx->tess_offchip_ring->width0, false, false, 0, 0, 0);
 }
 
 /**

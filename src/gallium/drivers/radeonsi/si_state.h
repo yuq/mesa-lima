@@ -40,6 +40,8 @@
 #define SI_NUM_IMAGES			16
 #define SI_NUM_SHADER_BUFFERS		16
 
+#define SI_TESS_OFFCHIP_BLOCK_SIZE	(8192 * 4)
+
 struct si_screen;
 struct si_shader;
 
@@ -155,6 +157,7 @@ struct si_shader_data {
 /* Private read-write buffer slots. */
 enum {
 	SI_HS_RING_TESS_FACTOR,
+	SI_HS_RING_TESS_OFFCHIP,
 
 	SI_ES_RING_ESGS,
 	SI_GS_RING_ESGS,
