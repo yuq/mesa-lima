@@ -676,8 +676,13 @@ intel_create_image_from_fds(__DRIscreen *screen,
    __DRIimage *image;
    int i, index;
 
-   if (fds == NULL || num_fds != 1)
+   if (fds == NULL || num_fds < 1)
       return NULL;
+
+   /* We only support all planes from the same bo */
+   for (i = 0; i < num_fds; i++)
+      if (fds[0] != fds[i])
+         return NULL;
 
    f = intel_image_format_lookup(fourcc);
    if (f == NULL)
@@ -691,22 +696,28 @@ intel_create_image_from_fds(__DRIscreen *screen,
    if (image == NULL)
       return NULL;
 
-   image->bo = drm_intel_bo_gem_create_from_prime(intelScreen->bufmgr,
-                                                  fds[0],
-                                                  height * strides[0]);
-   if (image->bo == NULL) {
-      free(image);
-      return NULL;
-   }
    image->width = width;
    image->height = height;
    image->pitch = strides[0];
 
    image->planar_format = f;
+   int size = 0;
    for (i = 0; i < f->nplanes; i++) {
       index = f->planes[i].buffer_index;
       image->offsets[index] = offsets[index];
       image->strides[index] = strides[index];
+
+      const int height = height >> f->planes[i].height_shift;
+      const int end = offsets[index] + height * strides[index];
+      if (size < end)
+         size = end;
+   }
+
+   image->bo = drm_intel_bo_gem_create_from_prime(intelScreen->bufmgr,
+                                                  fds[0], size);
+   if (image->bo == NULL) {
+      free(image);
+      return NULL;
    }
 
    if (f->nplanes == 1) {
@@ -732,8 +743,7 @@ intel_create_image_from_dma_bufs(__DRIscreen *screen,
    __DRIimage *image;
    struct intel_image_format *f = intel_image_format_lookup(fourcc);
 
-   /* For now only packed formats that have native sampling are supported. */
-   if (!f || f->nplanes != 1) {
+   if (!f) {
       *error = __DRI_IMAGE_ERROR_BAD_MATCH;
       return NULL;
    }
