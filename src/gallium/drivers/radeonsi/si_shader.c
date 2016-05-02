@@ -1082,18 +1082,18 @@ static LLVMValueRef fetch_input_tes(
 	enum tgsi_opcode_type type, unsigned swizzle)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMValueRef dw_addr, stride;
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMValueRef rw_buffers, buffer, base, addr;
 
-	if (reg->Register.Dimension) {
-		stride = unpack_param(ctx, SI_PARAM_TCS_OUT_LAYOUT, 13, 8);
-		dw_addr = get_tcs_out_current_patch_offset(ctx);
-		dw_addr = get_dw_address(ctx, NULL, reg, stride, dw_addr);
-	} else {
-		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
-		dw_addr = get_dw_address(ctx, NULL, reg, NULL, dw_addr);
-	}
+	rw_buffers = LLVMGetParam(ctx->radeon_bld.main_fn,
+				  SI_PARAM_RW_BUFFERS);
+	buffer = build_indexed_load_const(ctx, rw_buffers,
+			lp_build_const_int32(gallivm, SI_HS_RING_TESS_OFFCHIP));
 
-	return lds_load(bld_base, type, swizzle, dw_addr);
+	base = LLVMGetParam(ctx->radeon_bld.main_fn, ctx->param_oc_lds);
+	addr = get_tcs_tes_buffer_address_from_reg(ctx, NULL, reg);
+
+	return buffer_load(bld_base, type, swizzle, buffer, base, addr);
 }
 
 static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
@@ -1102,9 +1102,12 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 			     LLVMValueRef dst[4])
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	const struct tgsi_full_dst_register *reg = &inst->Dst[0];
 	unsigned chan_index;
 	LLVMValueRef dw_addr, stride;
+	LLVMValueRef rw_buffers, buffer, base, buf_addr;
+	LLVMValueRef values[4];
 
 	/* Only handle per-patch and per-vertex outputs here.
 	 * Vectors will be lowered to scalars and this function will be called again.
@@ -1124,6 +1127,15 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		dw_addr = get_dw_address(ctx, reg, NULL, NULL, dw_addr);
 	}
 
+	rw_buffers = LLVMGetParam(ctx->radeon_bld.main_fn,
+				  SI_PARAM_RW_BUFFERS);
+	buffer = build_indexed_load_const(ctx, rw_buffers,
+			lp_build_const_int32(gallivm, SI_HS_RING_TESS_OFFCHIP));
+
+	base = LLVMGetParam(ctx->radeon_bld.main_fn, ctx->param_oc_lds);
+	buf_addr = get_tcs_tes_buffer_address_from_reg(ctx, reg, NULL);
+
+
 	TGSI_FOR_EACH_DST0_ENABLED_CHANNEL(inst, chan_index) {
 		LLVMValueRef value = dst[chan_index];
 
@@ -1131,6 +1143,22 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 			value = radeon_llvm_saturate(bld_base, value);
 
 		lds_store(bld_base, chan_index, dw_addr, value);
+
+		value = LLVMBuildBitCast(gallivm->builder, value, ctx->i32, "");
+		values[chan_index] = value;
+
+		if (inst->Dst[0].Register.WriteMask != 0xF) {
+			build_tbuffer_store_dwords(ctx, buffer, value, 1,
+			                           buf_addr, base,
+			                           4 * chan_index);
+		}
+	}
+
+	if (inst->Dst[0].Register.WriteMask == 0xF) {
+		LLVMValueRef value = lp_build_gather_values(bld_base->base.gallivm,
+		                                            values, 4);
+		build_tbuffer_store_dwords(ctx, buffer, value, 4, buf_addr,
+		                           base, 0);
 	}
 }
 
@@ -1641,15 +1669,21 @@ static void declare_system_value(
 	case TGSI_SEMANTIC_TESSINNER:
 	case TGSI_SEMANTIC_TESSOUTER:
 	{
-		LLVMValueRef dw_addr;
+		LLVMValueRef rw_buffers, buffer, base, addr;
 		int param = si_shader_io_get_unique_index(decl->Semantic.Name, 0);
 
-		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
-		dw_addr = LLVMBuildAdd(gallivm->builder, dw_addr,
-				       lp_build_const_int32(gallivm, param * 4), "");
+		rw_buffers = LLVMGetParam(ctx->radeon_bld.main_fn,
+					SI_PARAM_RW_BUFFERS);
+		buffer = build_indexed_load_const(ctx, rw_buffers,
+		        lp_build_const_int32(gallivm, SI_HS_RING_TESS_OFFCHIP));
 
-		value = lds_load(&radeon_bld->soa.bld_base, TGSI_TYPE_FLOAT,
-				 ~0, dw_addr);
+		base = LLVMGetParam(ctx->radeon_bld.main_fn, ctx->param_oc_lds);
+		addr = get_tcs_tes_buffer_address(ctx, NULL,
+		                          lp_build_const_int32(gallivm, param));
+
+		value = buffer_load(&radeon_bld->soa.bld_base, TGSI_TYPE_FLOAT,
+		                    ~0, buffer, base, addr);
+
 		break;
 	}
 
