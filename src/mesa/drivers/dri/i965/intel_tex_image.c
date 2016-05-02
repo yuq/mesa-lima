@@ -396,6 +396,9 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
    if (mt == NULL)
       return;
 
+   struct intel_texture_object *intel_texobj = intel_texture_object(texObj);
+   intel_texobj->planar_format = image->planar_format;
+
    intel_set_texture_image_mt(brw, texImage, mt);
    intel_miptree_release(&mt);
 }

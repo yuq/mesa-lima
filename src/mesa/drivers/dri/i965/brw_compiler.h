@@ -159,6 +159,13 @@ struct brw_sampler_prog_key_data {
     * For Sandybridge, which shader w/a we need for gather quirks.
     */
    enum gen6_gather_sampler_wa gen6_gather_wa[MAX_SAMPLERS];
+
+   /**
+    * Texture units that have a YUV image bound.
+    */
+   uint32_t y_u_v_image_mask;
+   uint32_t y_uv_image_mask;
+   uint32_t yx_xuxv_image_mask;
 };
 
 

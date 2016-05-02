@@ -627,6 +627,10 @@ brw_nir_apply_sampler_key(nir_shader *nir,
          tex_options.swizzles[s][c] = GET_SWZ(key_tex->swizzles[s], c);
    }
 
+   tex_options.lower_y_uv_external = key_tex->y_uv_image_mask;
+   tex_options.lower_y_u_v_external = key_tex->y_u_v_image_mask;
+   tex_options.lower_yx_xuxv_external = key_tex->yx_xuxv_image_mask;
+
    if (nir_lower_tex(nir, &tex_options)) {
       nir_validate_shader(nir);
       nir = nir_optimize(nir, is_scalar);
