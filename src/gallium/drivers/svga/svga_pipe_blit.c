@@ -47,7 +47,7 @@ svga_surface_copy(struct pipe_context *pipe,
  {
    struct svga_context *svga = svga_context(pipe);
    struct svga_texture *stex, *dtex;
-   unsigned dst_face, dst_z, src_face, src_z;
+   unsigned dst_face_layer, dst_z, src_face_layer, src_z;
 
    /* Emit buffered drawing commands, and any back copies.
     */
@@ -63,38 +63,40 @@ svga_surface_copy(struct pipe_context *pipe,
    stex = svga_texture(src_tex);
    dtex = svga_texture(dst_tex);
 
-   if (src_tex->target == PIPE_TEXTURE_CUBE) {
-      src_face = src_box->z;
+   if (src_tex->target == PIPE_TEXTURE_CUBE ||
+       src_tex->target == PIPE_TEXTURE_1D_ARRAY) {
+      src_face_layer = src_box->z;
       src_z = 0;
       assert(src_box->depth == 1);
    }
    else {
-      src_face = 0;
+      src_face_layer = 0;
       src_z = src_box->z;
    }
 
    /* different src/dst type???*/
-   if (dst_tex->target == PIPE_TEXTURE_CUBE) {
-      dst_face = dstz;
+   if (dst_tex->target == PIPE_TEXTURE_CUBE ||
+       dst_tex->target == PIPE_TEXTURE_1D_ARRAY) {
+      dst_face_layer = dstz;
       dst_z = 0;
       assert(src_box->depth == 1);
    }
    else {
-      dst_face = 0;
+      dst_face_layer = 0;
       dst_z = dstz;
    }
 
    svga_texture_copy_handle(svga,
                             stex->handle,
                             src_box->x, src_box->y, src_z,
-                            src_level, src_face,
+                            src_level, src_face_layer,
                             dtex->handle,
                             dstx, dsty, dst_z,
-                            dst_level, dst_face,
+                            dst_level, dst_face_layer,
                             src_box->width, src_box->height, src_box->depth);
 
    /* Mark the destination image as being defined */
-   svga_define_texture_level(dtex, dst_face, dst_level);
+   svga_define_texture_level(dtex, dst_face_layer, dst_level);
 }
 
 
