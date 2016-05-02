@@ -740,6 +740,120 @@ static void build_tbuffer_store_dwords(struct si_shader_context *ctx,
 			    V_008F0C_BUF_NUM_FORMAT_UINT, 1, 0, 1, 1, 0);
 }
 
+static LLVMValueRef build_buffer_load(struct si_shader_context *ctx,
+                                      LLVMValueRef rsrc,
+                                      int num_channels,
+                                      LLVMValueRef vindex,
+                                      LLVMValueRef voffset,
+                                      LLVMValueRef soffset,
+                                      unsigned inst_offset,
+                                      unsigned glc,
+                                      unsigned slc)
+{
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	unsigned func = CLAMP(num_channels, 1, 3) - 1;
+
+	if (HAVE_LLVM >= 0x309) {
+		LLVMValueRef args[] = {
+			LLVMBuildBitCast(gallivm->builder, rsrc, ctx->v4i32, ""),
+			vindex ? vindex : LLVMConstInt(ctx->i32, 0, 0),
+			LLVMConstInt(ctx->i32, inst_offset, 0),
+			LLVMConstInt(ctx->i1, glc, 0),
+			LLVMConstInt(ctx->i1, slc, 0)
+		};
+
+		LLVMTypeRef types[] = {ctx->f32, LLVMVectorType(ctx->f32, 2),
+		                       ctx->v4f32};
+		const char *type_names[] = {"f32", "v2f32", "v4f32"};
+		char name[256];
+
+		if (voffset) {
+			args[2] = LLVMBuildAdd(gallivm->builder, args[2], voffset,
+			                       "");
+		}
+
+		if (soffset) {
+			args[2] = LLVMBuildAdd(gallivm->builder, args[2], soffset,
+			                       "");
+		}
+
+		snprintf(name, sizeof(name), "llvm.amdgcn.buffer.load.%s",
+		         type_names[func]);
+
+		return lp_build_intrinsic(gallivm->builder, name, types[func], args,
+		                          ARRAY_SIZE(args), LLVMReadOnlyAttribute |
+		                          LLVMNoUnwindAttribute);
+	} else {
+		LLVMValueRef args[] = {
+			LLVMBuildBitCast(gallivm->builder, rsrc, ctx->v16i8, ""),
+			voffset ? voffset : vindex,
+			soffset,
+			LLVMConstInt(ctx->i32, inst_offset, 0),
+			LLVMConstInt(ctx->i32, voffset ? 1 : 0, 0), // offen
+			LLVMConstInt(ctx->i32, vindex ? 1 : 0, 0), //idxen
+			LLVMConstInt(ctx->i32, glc, 0),
+			LLVMConstInt(ctx->i32, slc, 0),
+			LLVMConstInt(ctx->i32, 0, 0), // TFE
+		};
+
+		LLVMTypeRef types[] = {ctx->i32, LLVMVectorType(ctx->i32, 2),
+		                       ctx->v4i32};
+		const char *type_names[] = {"i32", "v2i32", "v4i32"};
+		const char *arg_type = "i32";
+		char name[256];
+
+		if (voffset && vindex) {
+			LLVMValueRef vaddr[] = {vindex, voffset};
+
+			arg_type = "v2i32";
+			args[1] = lp_build_gather_values(gallivm, vaddr, 2);
+		}
+
+		snprintf(name, sizeof(name), "llvm.SI.buffer.load.dword.%s.%s",
+		         type_names[func], arg_type);
+
+		return lp_build_intrinsic(gallivm->builder, name, types[func], args,
+		                          ARRAY_SIZE(args), LLVMReadOnlyAttribute |
+		                          LLVMNoUnwindAttribute);
+	}
+}
+
+static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
+                                enum tgsi_opcode_type type, unsigned swizzle,
+                                LLVMValueRef buffer, LLVMValueRef offset,
+                                LLVMValueRef base)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMValueRef value, value2;
+	LLVMTypeRef llvm_type = tgsi2llvmtype(bld_base, type);
+	LLVMTypeRef vec_type = LLVMVectorType(llvm_type, 4);
+
+	if (swizzle == ~0) {
+		value = build_buffer_load(ctx, buffer, 4, NULL, base, offset,
+		                          0, 1, 0);
+
+		return LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
+	}
+
+	if (type != TGSI_TYPE_DOUBLE) {
+		value = build_buffer_load(ctx, buffer, 4, NULL, base, offset,
+		                          0, 1, 0);
+
+		value = LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
+		return LLVMBuildExtractElement(gallivm->builder, value,
+		                    lp_build_const_int32(gallivm, swizzle), "");
+	}
+
+	value = build_buffer_load(ctx, buffer, 1, NULL, base, offset,
+	                          swizzle * 4, 1, 0);
+
+	value2 = build_buffer_load(ctx, buffer, 1, NULL, base, offset,
+	                           swizzle * 4 + 4, 1, 0);
+
+	return radeon_llvm_emit_fetch_double(bld_base, value, value2);
+}
+
 /**
  * Load from LDS.
  *
