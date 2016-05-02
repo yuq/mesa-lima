@@ -1203,6 +1203,7 @@ void
 cso_single_sampler_done(struct cso_context *ctx, unsigned shader_stage)
 {
    struct sampler_info *info = &ctx->samplers[shader_stage];
+   const unsigned old_nr_samplers = info->nr_samplers;
    unsigned i;
 
    /* find highest non-null sampler */
@@ -1212,7 +1213,8 @@ cso_single_sampler_done(struct cso_context *ctx, unsigned shader_stage)
    }
 
    info->nr_samplers = i;
-   ctx->pipe->bind_sampler_states(ctx->pipe, shader_stage, 0, i,
+   ctx->pipe->bind_sampler_states(ctx->pipe, shader_stage, 0,
+                                  MAX2(old_nr_samplers, info->nr_samplers),
                                   info->samplers);
 }
 
