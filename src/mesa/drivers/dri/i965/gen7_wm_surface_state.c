@@ -353,7 +353,8 @@ static void
 gen7_update_texture_surface(struct gl_context *ctx,
                             unsigned unit,
                             uint32_t *surf_offset,
-                            bool for_gather)
+                            bool for_gather,
+                            uint32_t plane)
 {
    struct brw_context *brw = brw_context(ctx);
    struct gl_texture_object *obj = ctx->Texture.Unit[unit]._Current;

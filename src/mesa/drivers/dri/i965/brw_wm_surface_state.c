@@ -316,7 +316,8 @@ static void
 brw_update_texture_surface(struct gl_context *ctx,
                            unsigned unit,
                            uint32_t *surf_offset,
-                           bool for_gather)
+                           bool for_gather,
+                           uint32_t plane)
 {
    struct brw_context *brw = brw_context(ctx);
    struct gl_texture_object *tObj = ctx->Texture.Unit[unit]._Current;
@@ -827,7 +828,7 @@ static void
 update_stage_texture_surfaces(struct brw_context *brw,
                               const struct gl_program *prog,
                               struct brw_stage_state *stage_state,
-                              bool for_gather)
+                              bool for_gather, uint32_t plane)
 {
    if (!prog)
       return;
@@ -840,7 +841,7 @@ update_stage_texture_surfaces(struct brw_context *brw,
    if (for_gather)
       surf_offset += stage_state->prog_data->binding_table.gather_texture_start;
    else
-      surf_offset += stage_state->prog_data->binding_table.texture_start;
+      surf_offset += stage_state->prog_data->binding_table.plane_start[plane];
 
    unsigned num_samplers = _mesa_fls(prog->SamplersUsed);
    for (unsigned s = 0; s < num_samplers; s++) {
@@ -851,7 +852,7 @@ update_stage_texture_surfaces(struct brw_context *brw,
 
          /* _NEW_TEXTURE */
          if (ctx->Texture.Unit[unit]._Current) {
-            brw->vtbl.update_texture_surface(ctx, unit, surf_offset + s, for_gather);
+            brw->vtbl.update_texture_surface(ctx, unit, surf_offset + s, for_gather, plane);
          }
       }
    }
@@ -878,26 +879,31 @@ brw_update_texture_surfaces(struct brw_context *brw)
    struct gl_program *fs = (struct gl_program *) brw->fragment_program;
 
    /* _NEW_TEXTURE */
-   update_stage_texture_surfaces(brw, vs, &brw->vs.base, false);
-   update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, false);
-   update_stage_texture_surfaces(brw, tes, &brw->tes.base, false);
-   update_stage_texture_surfaces(brw, gs, &brw->gs.base, false);
-   update_stage_texture_surfaces(brw, fs, &brw->wm.base, false);
+   update_stage_texture_surfaces(brw, vs, &brw->vs.base, false, 0);
+   update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, false, 0);
+   update_stage_texture_surfaces(brw, tes, &brw->tes.base, false, 0);
+   update_stage_texture_surfaces(brw, gs, &brw->gs.base, false, 0);
+   update_stage_texture_surfaces(brw, fs, &brw->wm.base, false, 0);
 
    /* emit alternate set of surface state for gather. this
     * allows the surface format to be overriden for only the
     * gather4 messages. */
    if (brw->gen < 8) {
       if (vs && vs->UsesGather)
-         update_stage_texture_surfaces(brw, vs, &brw->vs.base, true);
+         update_stage_texture_surfaces(brw, vs, &brw->vs.base, true, 0);
       if (tcs && tcs->UsesGather)
-         update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, true);
+         update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, true, 0);
       if (tes && tes->UsesGather)
-         update_stage_texture_surfaces(brw, tes, &brw->tes.base, true);
+         update_stage_texture_surfaces(brw, tes, &brw->tes.base, true, 0);
       if (gs && gs->UsesGather)
-         update_stage_texture_surfaces(brw, gs, &brw->gs.base, true);
+         update_stage_texture_surfaces(brw, gs, &brw->gs.base, true, 0);
       if (fs && fs->UsesGather)
-         update_stage_texture_surfaces(brw, fs, &brw->wm.base, true);
+         update_stage_texture_surfaces(brw, fs, &brw->wm.base, true, 0);
+   }
+
+   if (fs) {
+      update_stage_texture_surfaces(brw, fs, &brw->wm.base, false, 1);
+      update_stage_texture_surfaces(brw, fs, &brw->wm.base, false, 2);
    }
 
    brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
@@ -929,7 +935,7 @@ brw_update_cs_texture_surfaces(struct brw_context *brw)
    struct gl_program *cs = (struct gl_program *) brw->compute_program;
 
    /* _NEW_TEXTURE */
-   update_stage_texture_surfaces(brw, cs, &brw->cs.base, false);
+   update_stage_texture_surfaces(brw, cs, &brw->cs.base, false, 0);
 
    /* emit alternate set of surface state for gather. this
     * allows the surface format to be overriden for only the
@@ -937,7 +943,7 @@ brw_update_cs_texture_surfaces(struct brw_context *brw)
     */
    if (brw->gen < 8) {
       if (cs && cs->UsesGather)
-         update_stage_texture_surfaces(brw, cs, &brw->cs.base, true);
+         update_stage_texture_surfaces(brw, cs, &brw->cs.base, true, 0);
    }
 
    brw->ctx.NewDriverState |= BRW_NEW_SURFACES;

@@ -34,6 +34,7 @@
 #include "intel_tex.h"
 #include "intel_fbo.h"
 #include "intel_buffer_objects.h"
+#include "intel_image.h"
 
 #include "brw_context.h"
 #include "brw_state.h"
@@ -349,7 +350,8 @@ static void
 gen8_update_texture_surface(struct gl_context *ctx,
                             unsigned unit,
                             uint32_t *surf_offset,
-                            bool for_gather)
+                            bool for_gather,
+                            uint32_t plane)
 {
    struct brw_context *brw = brw_context(ctx);
    struct gl_texture_object *obj = ctx->Texture.Unit[unit]._Current;
@@ -383,6 +385,14 @@ gen8_update_texture_surface(struct gl_context *ctx,
       if (obj->StencilSampling && firstImage->_BaseFormat == GL_DEPTH_STENCIL) {
          mt = mt->stencil_mt;
          format = BRW_SURFACEFORMAT_R8_UINT;
+      } else if (obj->Target == GL_TEXTURE_EXTERNAL_OES) {
+         if (plane > 0)
+            mt = mt->plane[plane - 1];
+         if (mt == NULL)
+            return;
+
+         format = translate_tex_format(brw, mt->format, sampler->sRGBDecode);
+
       }
 
       const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];

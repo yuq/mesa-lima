@@ -1235,6 +1235,15 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
    stage_prog_data->binding_table.pull_constants_start = next_binding_table_offset;
    next_binding_table_offset++;
 
+   /* Plane 0 is just the regular texture section */
+   stage_prog_data->binding_table.plane_start[0] = stage_prog_data->binding_table.texture_start;
+
+   stage_prog_data->binding_table.plane_start[1] = next_binding_table_offset;
+   next_binding_table_offset += num_textures;
+
+   stage_prog_data->binding_table.plane_start[2] = next_binding_table_offset;
+   next_binding_table_offset += num_textures;
+
    assert(next_binding_table_offset <= BRW_MAX_SURFACES);
 
    /* prog_data->base.binding_table.size will be set by brw_mark_surface_used. */

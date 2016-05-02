@@ -726,7 +726,7 @@ struct brw_context
       void (*update_texture_surface)(struct gl_context *ctx,
                                      unsigned unit,
                                      uint32_t *surf_offset,
-                                     bool for_gather);
+                                     bool for_gather, uint32_t plane);
       uint32_t (*update_renderbuffer_surface)(struct brw_context *brw,
                                               struct gl_renderbuffer *rb,
                                               bool layered, unsigned unit,
