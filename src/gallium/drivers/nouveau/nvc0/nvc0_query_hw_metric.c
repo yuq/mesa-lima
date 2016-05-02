@@ -176,6 +176,17 @@ sm21_issued_ipc =
 };
 
 static const struct nvc0_hw_metric_query_cfg
+sm21_issue_slots =
+{
+   .type        = NVC0_HW_METRIC_QUERY_ISSUE_SLOTS,
+   .queries[0]  = _SM(INST_ISSUED1_0),
+   .queries[1]  = _SM(INST_ISSUED1_1),
+   .queries[2]  = _SM(INST_ISSUED2_0),
+   .queries[3]  = _SM(INST_ISSUED2_1),
+   .num_queries = 4,
+};
+
+static const struct nvc0_hw_metric_query_cfg
 sm21_issue_slot_utilization =
 {
    .type        = NVC0_HW_METRIC_QUERY_ISSUE_SLOT_UTILIZATION,
@@ -195,7 +206,7 @@ static const struct nvc0_hw_metric_query_cfg *sm21_hw_metric_queries[] =
    &sm20_inst_per_wrap,
    &sm21_inst_replay_overhead,
    &sm21_issued_ipc,
-   &sm21_inst_issued,
+   &sm21_issue_slots,
    &sm21_issue_slot_utilization,
    &sm20_ipc,
 };
@@ -258,6 +269,15 @@ sm30_issued_ipc =
 };
 
 static const struct nvc0_hw_metric_query_cfg
+sm30_issue_slots =
+{
+   .type        = NVC0_HW_METRIC_QUERY_ISSUE_SLOTS,
+   .queries[0]  = _SM(INST_ISSUED1),
+   .queries[1]  = _SM(INST_ISSUED2),
+   .num_queries = 2,
+};
+
+static const struct nvc0_hw_metric_query_cfg
 sm30_issue_slot_utilization =
 {
    .type        = NVC0_HW_METRIC_QUERY_ISSUE_SLOT_UTILIZATION,
@@ -294,7 +314,7 @@ static const struct nvc0_hw_metric_query_cfg *sm30_hw_metric_queries[] =
    &sm30_inst_per_wrap,
    &sm30_inst_replay_overhead,
    &sm30_issued_ipc,
-   &sm30_inst_issued,
+   &sm30_issue_slots,
    &sm30_issue_slot_utilization,
    &sm30_ipc,
    &sm30_shared_replay_overhead,
