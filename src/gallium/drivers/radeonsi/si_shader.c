@@ -91,6 +91,12 @@ struct si_shader_context
 	int param_tes_rel_patch_id;
 	int param_tes_patch_id;
 	int param_es2gs_offset;
+	int param_oc_lds;
+
+	/* Sets a bit if the dynamic HS control word was 0x80000000. The bit is
+	 * 0x800000 for VS, 0x1 for ES.
+	 */
+	int param_tess_offchip;
 
 	LLVMTargetMachineRef tm;
 
@@ -2326,14 +2332,14 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 		tf_soffset = LLVMGetParam(ctx->radeon_bld.main_fn,
 					  SI_PARAM_TESS_FACTOR_OFFSET);
 		ret = LLVMBuildInsertValue(builder, ret, tf_soffset,
-					   SI_TCS_NUM_USER_SGPR, "");
+					   SI_TCS_NUM_USER_SGPR + 1, "");
 
 		/* VGPRs */
 		rel_patch_id = bitcast(bld_base, TGSI_TYPE_FLOAT, rel_patch_id);
 		invocation_id = bitcast(bld_base, TGSI_TYPE_FLOAT, invocation_id);
 		tf_lds_offset = bitcast(bld_base, TGSI_TYPE_FLOAT, tf_lds_offset);
 
-		vgpr = SI_TCS_NUM_USER_SGPR + 1;
+		vgpr = SI_TCS_NUM_USER_SGPR + 2;
 		ret = LLVMBuildInsertValue(builder, ret, rel_patch_id, vgpr++, "");
 		ret = LLVMBuildInsertValue(builder, ret, invocation_id, vgpr++, "");
 		ret = LLVMBuildInsertValue(builder, ret, tf_lds_offset, vgpr++, "");
@@ -4945,7 +4951,11 @@ static void declare_streamout_params(struct si_shader_context *ctx,
 
 	/* Streamout SGPRs. */
 	if (so->num_outputs) {
-		params[ctx->param_streamout_config = (*num_params)++] = i32;
+		if (ctx->type != PIPE_SHADER_TESS_EVAL)
+			params[ctx->param_streamout_config = (*num_params)++] = i32;
+		else
+			ctx->param_streamout_config = ctx->param_tess_offchip;
+
 		params[ctx->param_streamout_write_index = (*num_params)++] = i32;
 	}
 	/* A streamout buffer offset is loaded if the stride is non-zero. */
@@ -5065,6 +5075,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_TCS_OUT_OFFSETS] = ctx->i32;
 		params[SI_PARAM_TCS_OUT_LAYOUT] = ctx->i32;
 		params[SI_PARAM_TCS_IN_LAYOUT] = ctx->i32;
+		params[ctx->param_oc_lds = SI_PARAM_TCS_OC_LDS] = ctx->i32;
 		params[SI_PARAM_TESS_FACTOR_OFFSET] = ctx->i32;
 		last_sgpr = SI_PARAM_TESS_FACTOR_OFFSET;
 
@@ -5074,8 +5085,10 @@ static void create_function(struct si_shader_context *ctx)
 		num_params = SI_PARAM_REL_IDS+1;
 
 		if (!ctx->is_monolithic) {
-			/* PARAM_TESS_FACTOR_OFFSET is after user SGPRs. */
-			for (i = 0; i <= SI_TCS_NUM_USER_SGPR; i++)
+			/* SI_PARAM_TCS_OC_LDS and PARAM_TESS_FACTOR_OFFSET are
+			 * placed after the user SGPRs.
+			 */
+			for (i = 0; i < SI_TCS_NUM_USER_SGPR + 2; i++)
 				returns[num_returns++] = ctx->i32; /* SGPRs */
 
 			for (i = 0; i < 3; i++)
@@ -5089,10 +5102,14 @@ static void create_function(struct si_shader_context *ctx)
 		num_params = SI_PARAM_TCS_OUT_LAYOUT+1;
 
 		if (shader->key.tes.as_es) {
+			params[ctx->param_oc_lds = num_params++] = ctx->i32;
+			params[ctx->param_tess_offchip = num_params++] = ctx->i32;
 			params[ctx->param_es2gs_offset = num_params++] = ctx->i32;
 		} else {
+			params[ctx->param_tess_offchip = num_params++] = ctx->i32;
 			declare_streamout_params(ctx, &shader->selector->so,
 						 params, ctx->i32, &num_params);
+			params[ctx->param_oc_lds = num_params++] = ctx->i32;
 		}
 		last_sgpr = num_params - 1;
 
@@ -6640,6 +6657,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 	params[SI_PARAM_TCS_OUT_OFFSETS] = ctx.i32;
 	params[SI_PARAM_TCS_OUT_LAYOUT] = ctx.i32;
 	params[SI_PARAM_TCS_IN_LAYOUT] = ctx.i32;
+	params[ctx.param_oc_lds = SI_PARAM_TCS_OC_LDS] = ctx.i32;
 	params[SI_PARAM_TESS_FACTOR_OFFSET] = ctx.i32;
 	last_sgpr = SI_PARAM_TESS_FACTOR_OFFSET;
 	num_params = last_sgpr + 1;

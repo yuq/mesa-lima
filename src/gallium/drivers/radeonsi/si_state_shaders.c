@@ -355,6 +355,7 @@ static void si_shader_hs(struct si_shader *shader)
 		       S_00B428_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
 		       S_00B42C_USER_SGPR(SI_TCS_NUM_USER_SGPR) |
+		       S_00B42C_OC_LDS_EN(1) |
 		       S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 }
 
@@ -364,6 +365,7 @@ static void si_shader_es(struct si_shader *shader)
 	unsigned num_user_sgprs;
 	unsigned vgpr_comp_cnt;
 	uint64_t va;
+	unsigned oc_lds_en;
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
@@ -382,6 +384,8 @@ static void si_shader_es(struct si_shader *shader)
 	} else
 		unreachable("invalid shader selector type");
 
+	oc_lds_en = shader->selector->type == PIPE_SHADER_TESS_EVAL ? 1 : 0;
+
 	si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
 		       shader->selector->esgs_itemsize / 4);
 	si_pm4_set_reg(pm4, R_00B320_SPI_SHADER_PGM_LO_ES, va >> 8);
@@ -394,6 +398,7 @@ static void si_shader_es(struct si_shader *shader)
 		       S_00B328_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B32C_SPI_SHADER_PGM_RSRC2_ES,
 		       S_00B32C_USER_SGPR(num_user_sgprs) |
+		       S_00B32C_OC_LDS_EN(oc_lds_en) |
 		       S_00B32C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 
 	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
@@ -490,6 +495,7 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 	unsigned num_user_sgprs;
 	unsigned nparams, vgpr_comp_cnt;
 	uint64_t va;
+	unsigned oc_lds_en;
 	unsigned window_space =
 	   shader->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
 	bool enable_prim_id = si_vs_exports_prim_id(shader);
@@ -547,6 +553,8 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 						   V_02870C_SPI_SHADER_4COMP :
 						   V_02870C_SPI_SHADER_NONE));
 
+	oc_lds_en = shader->selector->type == PIPE_SHADER_TESS_EVAL ? 1 : 0;
+
 	si_pm4_set_reg(pm4, R_00B120_SPI_SHADER_PGM_LO_VS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B124_SPI_SHADER_PGM_HI_VS, va >> 40);
 	si_pm4_set_reg(pm4, R_00B128_SPI_SHADER_PGM_RSRC1_VS,
@@ -557,6 +565,7 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 		       S_00B128_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B12C_SPI_SHADER_PGM_RSRC2_VS,
 		       S_00B12C_USER_SGPR(num_user_sgprs) |
+		       S_00B12C_OC_LDS_EN(oc_lds_en) |
 		       S_00B12C_SO_BASE0_EN(!!shader->selector->so.stride[0]) |
 		       S_00B12C_SO_BASE1_EN(!!shader->selector->so.stride[1]) |
 		       S_00B12C_SO_BASE2_EN(!!shader->selector->so.stride[2]) |
