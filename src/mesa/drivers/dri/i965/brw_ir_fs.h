@@ -165,6 +165,34 @@ half(fs_reg reg, unsigned idx)
    return reg;
 }
 
+/**
+ * Reinterpret each channel of register \p reg as a vector of values of the
+ * given smaller type and take the i-th subcomponent from each.
+ */
+static inline fs_reg
+subscript(fs_reg reg, brw_reg_type type, unsigned i)
+{
+   assert((i + 1) * type_sz(type) <= type_sz(reg.type));
+
+   if (reg.file == ARF || reg.file == FIXED_GRF) {
+      /* The stride is encoded inconsistently for fixed GRF and ARF registers
+       * as the log2 of the actual vertical and horizontal strides.
+       */
+      const int delta = _mesa_logbase2(type_sz(reg.type)) -
+                        _mesa_logbase2(type_sz(type));
+      reg.hstride += (reg.hstride ? delta : 0);
+      reg.vstride += (reg.vstride ? delta : 0);
+
+   } else if (reg.file == IMM) {
+      assert(reg.type == type);
+
+   } else {
+      reg.stride *= type_sz(reg.type) / type_sz(type);
+   }
+
+   return byte_offset(retype(reg, type), i * type_sz(type));
+}
+
 static const fs_reg reg_undef;
 
 class fs_inst : public backend_instruction {
