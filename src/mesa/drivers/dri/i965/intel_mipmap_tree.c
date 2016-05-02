@@ -144,8 +144,7 @@ compute_msaa_layout(struct brw_context *brw, mesa_format format,
  *   by half the block width, and Y coordinates by half the block height.
  */
 void
-intel_get_non_msrt_mcs_alignment(const struct brw_context *brw,
-                                 const struct intel_mipmap_tree *mt,
+intel_get_non_msrt_mcs_alignment(const struct intel_mipmap_tree *mt,
                                  unsigned *width_px, unsigned *height)
 {
    switch (mt->tiling) {
@@ -157,11 +156,6 @@ intel_get_non_msrt_mcs_alignment(const struct brw_context *brw,
       *height = 4;
       break;
    case I915_TILING_X:
-      /* The docs are somewhat confusing with the way the tables are displayed.
-       * However, it does clearly state: "MCS and Lossless compression is
-       * supported for TiledY/TileYs/TileYf non-MSRTs only."
-       */
-      assert(brw->gen < 9);
       *width_px = 64 / mt->cpp;
       *height = 2;
    }
@@ -1558,7 +1552,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    const mesa_format format = MESA_FORMAT_R_UINT32;
    unsigned block_width_px;
    unsigned block_height;
-   intel_get_non_msrt_mcs_alignment(brw, mt, &block_width_px, &block_height);
+   intel_get_non_msrt_mcs_alignment(mt, &block_width_px, &block_height);
    unsigned width_divisor = block_width_px * 4;
    unsigned height_divisor = block_height * 8;
 

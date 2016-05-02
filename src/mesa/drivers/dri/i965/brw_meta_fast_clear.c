@@ -244,7 +244,7 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
        * alignment size returned by intel_get_non_msrt_mcs_alignment(), but
        * with X alignment multiplied by 16 and Y alignment multiplied by 32.
        */
-      intel_get_non_msrt_mcs_alignment(brw, mt, &x_align, &y_align);
+      intel_get_non_msrt_mcs_alignment(mt, &x_align, &y_align);
       x_align *= 16;
 
       /* SKL+ line alignment requirement for Y-tiled are half those of the prior
@@ -838,7 +838,7 @@ brw_get_resolve_rect(const struct brw_context *brw,
     * by a factor of 2.
     */
 
-   intel_get_non_msrt_mcs_alignment(brw, mt, &x_align, &y_align);
+   intel_get_non_msrt_mcs_alignment(mt, &x_align, &y_align);
    if (brw->gen >= 9) {
       x_scaledown = x_align * 8;
       y_scaledown = y_align * 8;
