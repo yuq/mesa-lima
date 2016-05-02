@@ -686,6 +686,182 @@ blorp_nir_retile_w_to_y(nir_builder *b, nir_ssa_def *pos)
 }
 
 /**
+ * Emit code to compensate for the difference between MSAA and non-MSAA
+ * surfaces.
+ *
+ * This code modifies the X and Y coordinates according to the formula:
+ *
+ *   (X', Y', S') = encode_msaa(num_samples, IMS, X, Y, S)
+ *
+ * (See brw_blorp_blit_program).
+ */
+static inline nir_ssa_def *
+blorp_nir_encode_msaa(nir_builder *b, nir_ssa_def *pos,
+                      unsigned num_samples, enum intel_msaa_layout layout)
+{
+   assert(pos->num_components == 2 || pos->num_components == 3);
+
+   switch (layout) {
+   case INTEL_MSAA_LAYOUT_NONE:
+      assert(pos->num_components == 2);
+      return pos;
+   case INTEL_MSAA_LAYOUT_CMS:
+      /* We can't compensate for compressed layout since at this point in the
+       * program we haven't read from the MCS buffer.
+       */
+      unreachable("Bad layout in encode_msaa");
+   case INTEL_MSAA_LAYOUT_UMS:
+      /* No translation needed */
+      return pos;
+   case INTEL_MSAA_LAYOUT_IMS: {
+      nir_ssa_def *x_in = nir_channel(b, pos, 0);
+      nir_ssa_def *y_in = nir_channel(b, pos, 1);
+      nir_ssa_def *s_in = pos->num_components == 2 ? nir_imm_int(b, 0) :
+                                                     nir_channel(b, pos, 2);
+
+      nir_ssa_def *x_out = nir_imm_int(b, 0);
+      nir_ssa_def *y_out = nir_imm_int(b, 0);
+      switch (num_samples) {
+      case 2:
+      case 4:
+         /* encode_msaa(2, IMS, X, Y, S) = (X', Y', 0)
+          *   where X' = (X & ~0b1) << 1 | (S & 0b1) << 1 | (X & 0b1)
+          *         Y' = Y
+          *
+          * encode_msaa(4, IMS, X, Y, S) = (X', Y', 0)
+          *   where X' = (X & ~0b1) << 1 | (S & 0b1) << 1 | (X & 0b1)
+          *         Y' = (Y & ~0b1) << 1 | (S & 0b10) | (Y & 0b1)
+          */
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0xfffffffe, 1);
+         x_out = nir_mask_shift_or(b, x_out, s_in, 0x1, 1);
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0x1, 0);
+         if (num_samples == 2) {
+            y_out = y_in;
+         } else {
+            y_out = nir_mask_shift_or(b, y_out, y_in, 0xfffffffe, 1);
+            y_out = nir_mask_shift_or(b, y_out, s_in, 0x2, 0);
+            y_out = nir_mask_shift_or(b, y_out, y_in, 0x1, 0);
+         }
+         break;
+
+      case 8:
+         /* encode_msaa(8, IMS, X, Y, S) = (X', Y', 0)
+          *   where X' = (X & ~0b1) << 2 | (S & 0b100) | (S & 0b1) << 1
+          *              | (X & 0b1)
+          *         Y' = (Y & ~0b1) << 1 | (S & 0b10) | (Y & 0b1)
+          */
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0xfffffffe, 2);
+         x_out = nir_mask_shift_or(b, x_out, s_in, 0x4, 0);
+         x_out = nir_mask_shift_or(b, x_out, s_in, 0x1, 1);
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0x1, 0);
+         y_out = nir_mask_shift_or(b, y_out, y_in, 0xfffffffe, 1);
+         y_out = nir_mask_shift_or(b, y_out, s_in, 0x2, 0);
+         y_out = nir_mask_shift_or(b, y_out, y_in, 0x1, 0);
+         break;
+
+      default:
+         unreachable("Invalid number of samples for IMS layout");
+      }
+
+      return nir_vec2(b, x_out, y_out);
+   }
+
+   default:
+      unreachable("Invalid MSAA layout");
+   }
+}
+
+/**
+ * Emit code to compensate for the difference between MSAA and non-MSAA
+ * surfaces.
+ *
+ * This code modifies the X and Y coordinates according to the formula:
+ *
+ *   (X', Y', S) = decode_msaa(num_samples, IMS, X, Y, S)
+ *
+ * (See brw_blorp_blit_program).
+ */
+static inline nir_ssa_def *
+blorp_nir_decode_msaa(nir_builder *b, nir_ssa_def *pos,
+                      unsigned num_samples, enum intel_msaa_layout layout)
+{
+   assert(pos->num_components == 2 || pos->num_components == 3);
+
+   switch (layout) {
+   case INTEL_MSAA_LAYOUT_NONE:
+      /* No translation necessary, and S should already be zero. */
+      assert(pos->num_components == 2);
+      return pos;
+   case INTEL_MSAA_LAYOUT_CMS:
+      /* We can't compensate for compressed layout since at this point in the
+       * program we don't have access to the MCS buffer.
+       */
+      unreachable("Bad layout in encode_msaa");
+   case INTEL_MSAA_LAYOUT_UMS:
+      /* No translation necessary. */
+      return pos;
+   case INTEL_MSAA_LAYOUT_IMS: {
+      assert(pos->num_components == 2);
+
+      nir_ssa_def *x_in = nir_channel(b, pos, 0);
+      nir_ssa_def *y_in = nir_channel(b, pos, 1);
+
+      nir_ssa_def *x_out = nir_imm_int(b, 0);
+      nir_ssa_def *y_out = nir_imm_int(b, 0);
+      nir_ssa_def *s_out = nir_imm_int(b, 0);
+      switch (num_samples) {
+      case 2:
+      case 4:
+         /* decode_msaa(2, IMS, X, Y, 0) = (X', Y', S)
+          *   where X' = (X & ~0b11) >> 1 | (X & 0b1)
+          *         S = (X & 0b10) >> 1
+          *
+          * decode_msaa(4, IMS, X, Y, 0) = (X', Y', S)
+          *   where X' = (X & ~0b11) >> 1 | (X & 0b1)
+          *         Y' = (Y & ~0b11) >> 1 | (Y & 0b1)
+          *         S = (Y & 0b10) | (X & 0b10) >> 1
+          */
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0xfffffffc, -1);
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0x1, 0);
+         if (num_samples == 2) {
+            y_out = y_in;
+            s_out = nir_mask_shift_or(b, s_out, x_in, 0x2, -1);
+         } else {
+            y_out = nir_mask_shift_or(b, y_out, y_in, 0xfffffffc, -1);
+            y_out = nir_mask_shift_or(b, y_out, y_in, 0x1, 0);
+            s_out = nir_mask_shift_or(b, s_out, x_in, 0x2, -1);
+            s_out = nir_mask_shift_or(b, s_out, y_in, 0x2, 0);
+         }
+         break;
+
+      case 8:
+         /* decode_msaa(8, IMS, X, Y, 0) = (X', Y', S)
+          *   where X' = (X & ~0b111) >> 2 | (X & 0b1)
+          *         Y' = (Y & ~0b11) >> 1 | (Y & 0b1)
+          *         S = (X & 0b100) | (Y & 0b10) | (X & 0b10) >> 1
+          */
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0xfffffff8, -2);
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0x1, 0);
+         y_out = nir_mask_shift_or(b, y_out, y_in, 0xfffffffc, -1);
+         y_out = nir_mask_shift_or(b, y_out, y_in, 0x1, 0);
+         s_out = nir_mask_shift_or(b, s_out, x_in, 0x4, 0);
+         s_out = nir_mask_shift_or(b, s_out, y_in, 0x2, 0);
+         s_out = nir_mask_shift_or(b, s_out, x_in, 0x2, -1);
+         break;
+
+      default:
+         unreachable("Invalid number of samples for IMS layout");
+      }
+
+      return nir_vec3(b, x_out, y_out, s_out);
+   }
+
+   default:
+      unreachable("Invalid MSAA layout");
+   }
+}
+
+/**
  * Generator for WM programs used in BLORP blits.
  *
  * The bulk of the work done by the WM program is to wrap and unwrap the
@@ -900,12 +1076,14 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
    if (rt_tiled_w != key->dst_tiled_w ||
        key->rt_samples != key->dst_samples ||
        key->rt_layout != key->dst_layout) {
-      if (key->rt_samples != key->dst_samples ||
-          key->rt_layout != key->dst_layout ||
-          key->rt_samples != 0)
-         goto fail;
+      dst_pos = blorp_nir_encode_msaa(&b, dst_pos, key->rt_samples,
+                                      key->rt_layout);
+      /* Now (X, Y, S) = detile(rt_tiling, offset) */
       if (rt_tiled_w != key->dst_tiled_w)
          dst_pos = blorp_nir_retile_y_to_w(&b, dst_pos);
+      /* Now (X, Y, S) = detile(rt_tiling, offset) */
+      dst_pos = blorp_nir_decode_msaa(&b, dst_pos, key->dst_samples,
+                                      key->dst_layout);
    }
 
    /* Now (X, Y, S) = decode_msaa(dst_samples, detile(dst_tiling, offset)).
@@ -927,6 +1105,12 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
       /* We're going to use a texelFetch, so we need integers */
       src_pos = nir_f2i(&b, src_pos);
    }
+
+   /* If the source image is not multisampled, then we want to fetch sample
+    * number 0, because that's the only sample there is.
+    */
+   if (key->src_samples == 0)
+      src_pos = nir_channels(&b, src_pos, 0x3);
 
    /* X, Y, and S are now the coordinates of the pixel in the source image
     * that we want to texture from.  Exception: if we are blending, then S is
@@ -951,13 +1135,14 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
            key->tex_samples != key->src_samples ||
            key->tex_layout != key->src_layout) &&
           !key->bilinear_filter) {
-         if (key->tex_samples != key->src_samples ||
-             key->tex_layout != key->src_layout ||
-             key->tex_samples != 0)
-            goto fail;
-
+         src_pos = blorp_nir_encode_msaa(&b, src_pos, key->src_samples,
+                                         key->src_layout);
+         /* Now (X, Y, S) = detile(src_tiling, offset) */
          if (tex_tiled_w != key->src_tiled_w)
             src_pos = blorp_nir_retile_w_to_y(&b, src_pos);
+         /* Now (X, Y, S) = detile(tex_tiling, offset) */
+         src_pos = blorp_nir_decode_msaa(&b, src_pos, key->tex_samples,
+                                         key->tex_layout);
       }
 
       if (key->bilinear_filter) {
