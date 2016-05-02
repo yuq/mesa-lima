@@ -52,7 +52,7 @@ class DefaultAllocator
 public:
     ArenaBlock* AllocateAligned(size_t size, size_t align)
     {
-        SWR_ASSERT(size >= sizeof(ArenaBlock));
+        SWR_ASSUME_ASSERT(size >= sizeof(ArenaBlock));
 
         ArenaBlock* p = new (_aligned_malloc(size, align)) ArenaBlock();
         p->blockSize = size;
@@ -63,7 +63,7 @@ public:
     {
         if (pMem)
         {
-            SWR_ASSERT(pMem->blockSize < size_t(0xdddddddd));
+            SWR_ASSUME_ASSERT(pMem->blockSize < size_t(0xdddddddd));
             _aligned_free(pMem);
         }
     }
@@ -75,8 +75,8 @@ struct CachingAllocatorT : DefaultAllocator
 {
     ArenaBlock* AllocateAligned(size_t size, size_t align)
     {
-        SWR_ASSERT(size >= sizeof(ArenaBlock));
-        SWR_ASSERT(size <= uint32_t(-1));
+        SWR_ASSUME_ASSERT(size >= sizeof(ArenaBlock));
+        SWR_ASSUME_ASSERT(size <= uint32_t(-1));
 
         uint32_t bucket = GetBucketId(size);
 
@@ -111,7 +111,7 @@ struct CachingAllocatorT : DefaultAllocator
 
             if (pBlock)
             {
-                SWR_ASSERT(pPrevBlock && pPrevBlock->pNext == pBlock);
+                SWR_ASSUME_ASSERT(pPrevBlock && pPrevBlock->pNext == pBlock);
                 pPrevBlock->pNext = pBlock->pNext;
                 pBlock->pNext = nullptr;
 
@@ -143,8 +143,6 @@ struct CachingAllocatorT : DefaultAllocator
     {
         if (pMem)
         {
-            SWR_ASSERT(pMem->blockSize >= 0);
-
             std::unique_lock<std::mutex> l(m_mutex);
             InsertCachedBlock(GetBucketId(pMem->blockSize), pMem);
         }
@@ -260,7 +258,7 @@ private:
     template <bool OldBlockT = false>
     void InsertCachedBlock(uint32_t bucketId, ArenaBlock* pNewBlock)
     {
-        SWR_ASSERT(bucketId < CACHE_NUM_BUCKETS);
+        SWR_ASSUME_ASSERT(bucketId < CACHE_NUM_BUCKETS);
 
         ArenaBlock* pPrevBlock = OldBlockT ? &m_oldCachedBlocks[bucketId] : &m_cachedBlocks[bucketId];
         ArenaBlock* pBlock = pPrevBlock->pNext;
@@ -277,7 +275,7 @@ private:
         }
 
         // Insert into list
-        SWR_ASSERT(pPrevBlock);
+        SWR_ASSUME_ASSERT(pPrevBlock);
         pPrevBlock->pNext = pNewBlock;
         pNewBlock->pNext = pBlock;
 
