@@ -1764,6 +1764,27 @@ ntq_emit_if(struct vc4_compile *c, nir_if *if_stmt)
 }
 
 static void
+ntq_emit_jump(struct vc4_compile *c, nir_jump_instr *jump)
+{
+        switch (jump->type) {
+        case nir_jump_break:
+                qir_SF(c, c->execute);
+                qir_MOV_cond(c, QPU_COND_ZS, c->execute,
+                             qir_uniform_ui(c, c->loop_break_block->index));
+                break;
+
+        case nir_jump_continue:
+                qir_SF(c, c->execute);
+                qir_MOV_cond(c, QPU_COND_ZS, c->execute,
+                             qir_uniform_ui(c, c->loop_cont_block->index));
+                break;
+
+        case nir_jump_return:
+                unreachable("All returns shouold be lowered\n");
+        }
+}
+
+static void
 ntq_emit_instr(struct vc4_compile *c, nir_instr *instr)
 {
         switch (instr->type) {
@@ -1787,6 +1808,10 @@ ntq_emit_instr(struct vc4_compile *c, nir_instr *instr)
                 ntq_emit_tex(c, nir_instr_as_tex(instr));
                 break;
 
+        case nir_instr_type_jump:
+                ntq_emit_jump(c, nir_instr_as_jump(instr));
+                break;
+
         default:
                 fprintf(stderr, "Unknown NIR instr type: ");
                 nir_print_instr(instr, stderr);
@@ -1806,10 +1831,59 @@ ntq_emit_block(struct vc4_compile *c, nir_block *block)
 static void ntq_emit_cf_list(struct vc4_compile *c, struct exec_list *list);
 
 static void
-ntq_emit_loop(struct vc4_compile *c, nir_loop *nloop)
+ntq_emit_loop(struct vc4_compile *c, nir_loop *loop)
 {
-        fprintf(stderr, "LOOPS not fully handled. Rendering errors likely.\n");
-        ntq_emit_cf_list(c, &nloop->body);
+        if (!c->vc4->screen->has_control_flow) {
+                fprintf(stderr,
+                        "loop support requires updated kernel.\n");
+                ntq_emit_cf_list(c, &loop->body);
+                return;
+        }
+
+        bool was_top_level = false;
+        if (c->execute.file == QFILE_NULL) {
+                c->execute = qir_MOV(c, qir_uniform_ui(c, 0));
+                was_top_level = true;
+        }
+
+        struct qblock *save_loop_cont_block = c->loop_cont_block;
+        struct qblock *save_loop_break_block = c->loop_break_block;
+
+        c->loop_cont_block = qir_new_block(c);
+        c->loop_break_block = qir_new_block(c);
+
+        qir_link_blocks(c->cur_block, c->loop_cont_block);
+        qir_set_emit_block(c, c->loop_cont_block);
+        ntq_activate_execute_for_block(c);
+
+        ntq_emit_cf_list(c, &loop->body);
+
+        /* If anything had explicitly continued, or is here at the end of the
+         * loop, then we need to loop again.  SF updates are masked by the
+         * instruction's condition, so we can do the OR of the two conditions
+         * within SF.
+         */
+        qir_SF(c, c->execute);
+        struct qinst *cont_check =
+                qir_SUB_dest(c,
+                             c->undef,
+                             c->execute,
+                             qir_uniform_ui(c, c->loop_cont_block->index));
+        cont_check->cond = QPU_COND_ZC;
+        cont_check->sf = true;
+
+        qir_BRANCH(c, QPU_COND_BRANCH_ANY_ZS);
+        qir_link_blocks(c->cur_block, c->loop_cont_block);
+        qir_link_blocks(c->cur_block, c->loop_break_block);
+
+        qir_set_emit_block(c, c->loop_break_block);
+        if (was_top_level)
+                c->execute = c->undef;
+        else
+                ntq_activate_execute_for_block(c);
+
+        c->loop_break_block = save_loop_break_block;
+        c->loop_cont_block = save_loop_cont_block;
 }
 
 static void
