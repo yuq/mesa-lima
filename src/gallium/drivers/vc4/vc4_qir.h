@@ -533,6 +533,8 @@ static inline struct qinst *                                             \
 qir_##name##_dest(struct vc4_compile *c, struct qreg dest,               \
                   struct qreg a)                                         \
 {                                                                        \
+        if (dest.file == QFILE_TEMP)                                     \
+                c->defs[dest.index] = NULL;                              \
         return qir_emit_nodef(c, qir_inst(QOP_##name, dest, a,           \
                                           c->undef));                    \
 }
