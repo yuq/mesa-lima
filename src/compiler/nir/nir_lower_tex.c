@@ -161,6 +161,109 @@ lower_rect(nir_builder *b, nir_tex_instr *tex)
    tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
 }
 
+static nir_ssa_def *
+sample_plane(nir_builder *b, nir_tex_instr *tex, int plane)
+{
+   assert(tex->dest.is_ssa);
+   assert(nir_tex_instr_dest_size(tex) == 4);
+   assert(nir_alu_type_get_base_type(tex->dest_type) == nir_type_float);
+   assert(tex->op == nir_texop_tex);
+   assert(tex->coord_components == 2);
+
+   nir_tex_instr *plane_tex = nir_tex_instr_create(b->shader, 2);
+   nir_src_copy(&plane_tex->src[0].src, &tex->src[0].src, plane_tex);
+   plane_tex->src[0].src_type = nir_tex_src_coord;
+   plane_tex->src[1].src = nir_src_for_ssa(nir_imm_int(b, plane));
+   plane_tex->src[1].src_type = nir_tex_src_plane;
+   plane_tex->op = nir_texop_tex;
+   plane_tex->sampler_dim = 2;
+   plane_tex->dest_type = nir_type_float;
+   plane_tex->coord_components = 2;
+
+   plane_tex->texture_index = tex->texture_index;
+   plane_tex->texture = (nir_deref_var *)
+      nir_copy_deref(plane_tex, &tex->texture->deref);
+   plane_tex->sampler_index = tex->sampler_index;
+   plane_tex->sampler = (nir_deref_var *)
+      nir_copy_deref(plane_tex, &tex->sampler->deref);
+
+   nir_ssa_dest_init(&plane_tex->instr, &plane_tex->dest, 4, 32, NULL);
+
+   nir_builder_instr_insert(b, &plane_tex->instr);
+
+   return &plane_tex->dest.ssa;
+}
+
+static void
+convert_yuv_to_rgb(nir_builder *b, nir_tex_instr *tex,
+                   nir_ssa_def *y, nir_ssa_def *u, nir_ssa_def *v)
+{
+   nir_const_value m[3] = {
+      { .f32 = { 1.0f,  0.0f,         1.59602678f, 0.0f } },
+      { .f32 = { 1.0f, -0.39176229f, -0.81296764f, 0.0f } },
+      { .f32 = { 1.0f,  2.01723214f,  0.0f,        0.0f } }
+   };
+
+   nir_ssa_def *yuv =
+      nir_vec4(b,
+               nir_fmul(b, nir_imm_float(b, 1.16438356f),
+                        nir_fadd(b, y, nir_imm_float(b, -0.0625f))),
+               nir_channel(b, nir_fadd(b, u, nir_imm_float(b, -0.5f)), 0),
+               nir_channel(b, nir_fadd(b, v, nir_imm_float(b, -0.5f)), 0),
+               nir_imm_float(b, 0.0));
+
+   nir_ssa_def *red = nir_fdot4(b, yuv, nir_build_imm(b, 4, 32, m[0]));
+   nir_ssa_def *green = nir_fdot4(b, yuv, nir_build_imm(b, 4, 32, m[1]));
+   nir_ssa_def *blue = nir_fdot4(b, yuv, nir_build_imm(b, 4, 32, m[2]));
+
+   nir_ssa_def *result = nir_vec4(b, red, green, blue, nir_imm_float(b, 1.0f));
+
+   nir_ssa_def_rewrite_uses(&tex->dest.ssa, nir_src_for_ssa(result));
+}
+
+static void
+lower_y_uv_external(nir_builder *b, nir_tex_instr *tex)
+{
+   b->cursor = nir_after_instr(&tex->instr);
+
+   nir_ssa_def *y = sample_plane(b, tex, 0);
+   nir_ssa_def *uv = sample_plane(b, tex, 1);
+
+   convert_yuv_to_rgb(b, tex,
+                      nir_channel(b, y, 0),
+                      nir_channel(b, uv, 0),
+                      nir_channel(b, uv, 1));
+}
+
+static void
+lower_y_u_v_external(nir_builder *b, nir_tex_instr *tex)
+{
+   b->cursor = nir_after_instr(&tex->instr);
+
+   nir_ssa_def *y = sample_plane(b, tex, 0);
+   nir_ssa_def *u = sample_plane(b, tex, 1);
+   nir_ssa_def *v = sample_plane(b, tex, 2);
+
+   convert_yuv_to_rgb(b, tex,
+                      nir_channel(b, y, 0),
+                      nir_channel(b, u, 0),
+                      nir_channel(b, v, 0));
+}
+
+static void
+lower_yx_xuxv_external(nir_builder *b, nir_tex_instr *tex)
+{
+   b->cursor = nir_after_instr(&tex->instr);
+
+   nir_ssa_def *y = sample_plane(b, tex, 0);
+   nir_ssa_def *xuxv = sample_plane(b, tex, 1);
+
+   convert_yuv_to_rgb(b, tex,
+                      nir_channel(b, y, 0),
+                      nir_channel(b, xuxv, 1),
+                      nir_channel(b, xuxv, 3));
+}
+
 static void
 saturate_src(nir_builder *b, nir_tex_instr *tex, unsigned sat_mask)
 {
@@ -345,6 +448,22 @@ nir_lower_tex_block(nir_block *block, nir_builder *b,
          lower_rect(b, tex);
          progress = true;
       }
+
+      if ((1 << tex->texture_index) & options->lower_y_uv_external) {
+         lower_y_uv_external(b, tex);
+         progress = true;
+      }
+
+      if ((1 << tex->texture_index) & options->lower_y_u_v_external) {
+         lower_y_u_v_external(b, tex);
+         progress = true;
+      }
+
+      if ((1 << tex->texture_index) & options->lower_yx_xuxv_external) {
+         lower_yx_xuxv_external(b, tex);
+         progress = true;
+      }
+
 
       if (sat_mask) {
          saturate_src(b, tex, sat_mask);

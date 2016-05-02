@@ -2346,6 +2346,13 @@ typedef struct nir_lower_tex_options {
    bool lower_rect;
 
    /**
+    * If true, convert yuv to rgb.
+    */
+   unsigned lower_y_uv_external;
+   unsigned lower_y_u_v_external;
+   unsigned lower_yx_xuxv_external;
+
+   /**
     * To emulate certain texture wrap modes, this can be used
     * to saturate the specified tex coord to [0.0, 1.0].  The
     * bits are according to sampler #, ie. if, for example:
