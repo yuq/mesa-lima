@@ -717,6 +717,9 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
       case nir_tex_src_sampler_offset:
          fprintf(fp, "(sampler_offset)");
          break;
+      case nir_tex_src_plane:
+         fprintf(fp, "(plane)");
+         break;
 
       default:
          unreachable("Invalid texture source type");
