@@ -2532,7 +2532,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
 	LLVMValueRef out[6], vec0, vec1, rw_buffers, tf_base;
 	unsigned stride, outer_comps, inner_comps, i;
-	struct lp_build_if_state if_ctx;
+	struct lp_build_if_state if_ctx, inner_if_ctx;
 
 	/* Do this only for invocation 0, because the tess levels are per-patch,
 	 * not per-vertex.
@@ -2604,12 +2604,23 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	byteoffset = LLVMBuildMul(gallivm->builder, rel_patch_id,
 				  lp_build_const_int32(gallivm, 4 * stride), "");
 
-	/* Store the outputs. */
+	lp_build_if(&inner_if_ctx, gallivm,
+		    LLVMBuildICmp(gallivm->builder, LLVMIntEQ,
+				  rel_patch_id, bld_base->uint_bld.zero, ""));
+
+	/* Store the dynamic HS control word. */
+	build_tbuffer_store_dwords(ctx, buffer,
+	                           lp_build_const_int32(gallivm, 0x80000000),
+	                           1, lp_build_const_int32(gallivm, 0), tf_base, 0);
+
+	lp_build_endif(&inner_if_ctx);
+
+	/* Store the tessellation factors. */
 	build_tbuffer_store_dwords(ctx, buffer, vec0,
-				   MIN2(stride, 4), byteoffset, tf_base, 0);
+				   MIN2(stride, 4), byteoffset, tf_base, 4);
 	if (vec1)
 		build_tbuffer_store_dwords(ctx, buffer, vec1,
-					   stride - 4, byteoffset, tf_base, 16);
+					   stride - 4, byteoffset, tf_base, 20);
 	lp_build_endif(&if_ctx);
 }
 

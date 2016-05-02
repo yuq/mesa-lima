@@ -1882,7 +1882,7 @@ static void si_update_vgt_shader_config(struct si_context *sctx)
 
 		if (sctx->tes_shader.cso) {
 			stages |= S_028B54_LS_EN(V_028B54_LS_STAGE_ON) |
-				  S_028B54_HS_EN(1);
+				  S_028B54_HS_EN(1) | S_028B54_DYNAMIC_HS(1);
 
 			if (sctx->gs_shader.cso)
 				stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_DS) |
