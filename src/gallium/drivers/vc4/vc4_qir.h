@@ -480,6 +480,8 @@ void qir_dump(struct vc4_compile *c);
 void qir_dump_inst(struct vc4_compile *c, struct qinst *inst);
 const char *qir_get_stage_name(enum qstage stage);
 
+void qir_validate(struct vc4_compile *c);
+
 void qir_optimize(struct vc4_compile *c);
 bool qir_opt_algebraic(struct vc4_compile *c);
 bool qir_opt_constant_folding(struct vc4_compile *c);

@@ -518,6 +518,7 @@ qir_SF(struct vc4_compile *c, struct qreg src)
                                         "QIR opt pass %2d: %s progress\n", \
                                         pass, #func);                   \
                         }                                               \
+                        qir_validate(c);                                \
                 }                                                       \
         } while (0)
 
