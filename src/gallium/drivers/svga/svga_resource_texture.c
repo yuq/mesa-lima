@@ -839,6 +839,17 @@ svga_texture_create(struct pipe_screen *screen,
 
    tex->key.cachable = 1;
 
+   if ((bindings & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_DEPTH_STENCIL)) &&
+       !(bindings & PIPE_BIND_SAMPLER_VIEW)) {
+      /* Also check if the format can be sampled from */
+      if (screen->is_format_supported(screen, template->format,
+                                      template->target,
+                                      template->nr_samples,
+                                      PIPE_BIND_SAMPLER_VIEW)) {
+         bindings |= PIPE_BIND_SAMPLER_VIEW;
+      }
+   }
+
    if (bindings & PIPE_BIND_SAMPLER_VIEW) {
       tex->key.flags |= SVGA3D_SURFACE_HINT_TEXTURE;
       tex->key.flags |= SVGA3D_SURFACE_BIND_SHADER_RESOURCE;
