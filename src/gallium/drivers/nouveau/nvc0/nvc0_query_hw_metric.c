@@ -30,14 +30,14 @@ struct nvc0_hw_metric_cfg {
    const char *name;
    enum pipe_driver_query_type type;
 } nvc0_hw_metric_queries[] = {
-   _Q(ACHIEVED_OCCUPANCY,        "metric-achieved_occupancy",     UINT64      ),
-   _Q(BRANCH_EFFICIENCY,         "metric-branch_efficiency",      UINT64      ),
+   _Q(ACHIEVED_OCCUPANCY,        "metric-achieved_occupancy",     PERCENTAGE  ),
+   _Q(BRANCH_EFFICIENCY,         "metric-branch_efficiency",      PERCENTAGE  ),
    _Q(INST_ISSUED,               "metric-inst_issued",            UINT64      ),
    _Q(INST_PER_WRAP,             "metric-inst_per_wrap",          UINT64      ),
    _Q(INST_REPLAY_OVERHEAD,      "metric-inst_replay_overhead",   UINT64      ),
    _Q(ISSUED_IPC,                "metric-issued_ipc",             UINT64      ),
    _Q(ISSUE_SLOTS,               "metric-issue_slots",            UINT64      ),
-   _Q(ISSUE_SLOT_UTILIZATION,    "metric-issue_slot_utilization", UINT64      ),
+   _Q(ISSUE_SLOT_UTILIZATION,    "metric-issue_slot_utilization", PERCENTAGE  ),
    _Q(IPC,                       "metric-ipc",                    UINT64      ),
    _Q(SHARED_REPLAY_OVERHEAD,    "metric-shared_replay_overhead", UINT64      ),
 };
