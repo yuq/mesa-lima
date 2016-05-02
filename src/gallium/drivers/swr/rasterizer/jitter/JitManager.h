@@ -163,13 +163,6 @@ struct JitManager
     StructType*          mV4FP32Ty;
     StructType*          mV4Int32Ty;
 
-    // helper scalar function types
-    FunctionType* mUnaryFPTy;
-    FunctionType* mBinaryFPTy;
-    FunctionType* mTrinaryFPTy;
-    FunctionType* mUnaryIntTy;
-    FunctionType* mBinaryIntTy;
-
     Type* mSimtFP32Ty;
     Type* mSimtInt32Ty;
 

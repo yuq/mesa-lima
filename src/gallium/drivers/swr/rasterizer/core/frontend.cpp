@@ -1125,7 +1125,10 @@ static void TessellationStages(
                 {
                     simdvector prim[3]; // Only deal with triangles, lines, or points
                     RDTSC_START(FEPAAssemble);
-                    bool assemble = tessPa.Assemble(VERTEX_POSITION_SLOT, prim);
+#if SWR_ENABLE_ASSERTS
+                    bool assemble =
+#endif
+                        tessPa.Assemble(VERTEX_POSITION_SLOT, prim);
                     RDTSC_STOP(FEPAAssemble, 1, 0);
                     SWR_ASSERT(assemble);
 
