@@ -1010,9 +1010,7 @@ build_nir_w_tiled_fragment_shader(struct anv_device *device,
    discard->src[0] = nir_src_for_ssa(oob);
    nir_builder_instr_insert(&b, &discard->instr);
 
-   unsigned swiz[4] = { 0, 1, 0, 0 };
-   nir_ssa_def *tex_off =
-      nir_swizzle(&b, nir_load_var(&b, tex_off_in), swiz, 2, false);
+   nir_ssa_def *tex_off = nir_channels(&b, nir_load_var(&b, tex_off_in), 0x3);
    nir_ssa_def *tex_pos = nir_iadd(&b, nir_vec2(&b, x_W, y_W), tex_off);
    nir_ssa_def *tex_pitch = nir_channel(&b, nir_load_var(&b, tex_off_in), 2);
 
