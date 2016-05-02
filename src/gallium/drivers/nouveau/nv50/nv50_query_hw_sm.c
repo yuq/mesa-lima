@@ -218,6 +218,7 @@ nv50_hw_sm_end_query(struct nv50_context *nv50, struct nv50_hw_query *hq)
    struct pipe_context *pipe = &nv50->base.pipe;
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
    struct nv50_hw_sm_query *hsq = nv50_hw_sm_query(hq);
+   struct nv50_program *old = nv50->compprog;
    struct pipe_grid_info info = {};
    uint32_t mask;
    uint32_t input[3];
@@ -271,6 +272,7 @@ nv50_hw_sm_end_query(struct nv50_context *nv50, struct nv50_hw_query *hq)
    info.pc = 0;
    info.input = input;
    pipe->launch_grid(pipe, &info);
+   pipe->bind_compute_state(pipe, old);
 
    nouveau_bufctx_reset(nv50->bufctx_cp, NV50_BIND_CP_QUERY);
 

@@ -1581,6 +1581,7 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    const bool is_nve4 = screen->base.class_3d >= NVE4_3D_CLASS;
    struct nvc0_hw_sm_query *hsq = nvc0_hw_sm_query(hq);
+   struct nvc0_program *old = nvc0->compprog;
    struct pipe_grid_info info = {};
    uint32_t mask;
    uint32_t input[3];
@@ -1628,6 +1629,7 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    info.pc = 0;
    info.input = input;
    pipe->launch_grid(pipe, &info);
+   pipe->bind_compute_state(pipe, old);
 
    nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_QUERY);
 
