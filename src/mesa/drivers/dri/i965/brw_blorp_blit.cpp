@@ -575,6 +575,116 @@ blorp_nir_txf_ms_mcs(nir_builder *b, nir_ssa_def *pos)
    return &tex->dest.ssa;
 }
 
+static nir_ssa_def *
+nir_mask_shift_or(struct nir_builder *b, nir_ssa_def *dst, nir_ssa_def *src,
+                  uint32_t src_mask, int src_left_shift)
+{
+   nir_ssa_def *masked = nir_iand(b, src, nir_imm_int(b, src_mask));
+
+   nir_ssa_def *shifted;
+   if (src_left_shift > 0) {
+      shifted = nir_ishl(b, masked, nir_imm_int(b, src_left_shift));
+   } else if (src_left_shift < 0) {
+      shifted = nir_ushr(b, masked, nir_imm_int(b, -src_left_shift));
+   } else {
+      assert(src_left_shift == 0);
+      shifted = masked;
+   }
+
+   return nir_ior(b, dst, shifted);
+}
+
+/**
+ * Emit code to compensate for the difference between Y and W tiling.
+ *
+ * This code modifies the X and Y coordinates according to the formula:
+ *
+ *   (X', Y', S') = detile(W-MAJOR, tile(Y-MAJOR, X, Y, S))
+ *
+ * (See brw_blorp_build_nir_shader).
+ */
+static inline nir_ssa_def *
+blorp_nir_retile_y_to_w(nir_builder *b, nir_ssa_def *pos)
+{
+   assert(pos->num_components == 2);
+   nir_ssa_def *x_Y = nir_channel(b, pos, 0);
+   nir_ssa_def *y_Y = nir_channel(b, pos, 1);
+
+   /* Given X and Y coordinates that describe an address using Y tiling,
+    * translate to the X and Y coordinates that describe the same address
+    * using W tiling.
+    *
+    * If we break down the low order bits of X and Y, using a
+    * single letter to represent each low-order bit:
+    *
+    *   X = A << 7 | 0bBCDEFGH
+    *   Y = J << 5 | 0bKLMNP                                       (1)
+    *
+    * Then we can apply the Y tiling formula to see the memory offset being
+    * addressed:
+    *
+    *   offset = (J * tile_pitch + A) << 12 | 0bBCDKLMNPEFGH       (2)
+    *
+    * If we apply the W detiling formula to this memory location, that the
+    * corresponding X' and Y' coordinates are:
+    *
+    *   X' = A << 6 | 0bBCDPFH                                     (3)
+    *   Y' = J << 6 | 0bKLMNEG
+    *
+    * Combining (1) and (3), we see that to transform (X, Y) to (X', Y'),
+    * we need to make the following computation:
+    *
+    *   X' = (X & ~0b1011) >> 1 | (Y & 0b1) << 2 | X & 0b1         (4)
+    *   Y' = (Y & ~0b1) << 1 | (X & 0b1000) >> 2 | (X & 0b10) >> 1
+    */
+   nir_ssa_def *x_W = nir_imm_int(b, 0);
+   x_W = nir_mask_shift_or(b, x_W, x_Y, 0xfffffff4, -1);
+   x_W = nir_mask_shift_or(b, x_W, y_Y, 0x1, 2);
+   x_W = nir_mask_shift_or(b, x_W, x_Y, 0x1, 0);
+
+   nir_ssa_def *y_W = nir_imm_int(b, 0);
+   y_W = nir_mask_shift_or(b, y_W, y_Y, 0xfffffffe, 1);
+   y_W = nir_mask_shift_or(b, y_W, x_Y, 0x8, -2);
+   y_W = nir_mask_shift_or(b, y_W, x_Y, 0x2, -1);
+
+   return nir_vec2(b, x_W, y_W);
+}
+
+/**
+ * Emit code to compensate for the difference between Y and W tiling.
+ *
+ * This code modifies the X and Y coordinates according to the formula:
+ *
+ *   (X', Y', S') = detile(Y-MAJOR, tile(W-MAJOR, X, Y, S))
+ *
+ * (See brw_blorp_build_nir_shader).
+ */
+static inline nir_ssa_def *
+blorp_nir_retile_w_to_y(nir_builder *b, nir_ssa_def *pos)
+{
+   assert(pos->num_components == 2);
+   nir_ssa_def *x_W = nir_channel(b, pos, 0);
+   nir_ssa_def *y_W = nir_channel(b, pos, 1);
+
+   /* Applying the same logic as above, but in reverse, we obtain the
+    * formulas:
+    *
+    * X' = (X & ~0b101) << 1 | (Y & 0b10) << 2 | (Y & 0b1) << 1 | X & 0b1
+    * Y' = (Y & ~0b11) >> 1 | (X & 0b100) >> 2
+    */
+   nir_ssa_def *x_Y = nir_imm_int(b, 0);
+   x_Y = nir_mask_shift_or(b, x_Y, x_W, 0xfffffffa, 1);
+   x_Y = nir_mask_shift_or(b, x_Y, y_W, 0x2, 2);
+   x_Y = nir_mask_shift_or(b, x_Y, y_W, 0x1, 1);
+   x_Y = nir_mask_shift_or(b, x_Y, x_W, 0x1, 0);
+
+   nir_ssa_def *y_Y = nir_imm_int(b, 0);
+   y_Y = nir_mask_shift_or(b, y_Y, y_W, 0xfffffffc, -1);
+   y_Y = nir_mask_shift_or(b, y_Y, x_W, 0x4, -2);
+
+   return nir_vec2(b, x_Y, y_Y);
+}
+
 /**
  * Generator for WM programs used in BLORP blits.
  *
@@ -790,7 +900,12 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
    if (rt_tiled_w != key->dst_tiled_w ||
        key->rt_samples != key->dst_samples ||
        key->rt_layout != key->dst_layout) {
-      goto fail;
+      if (key->rt_samples != key->dst_samples ||
+          key->rt_layout != key->dst_layout ||
+          key->rt_samples != 0)
+         goto fail;
+      if (rt_tiled_w != key->dst_tiled_w)
+         dst_pos = blorp_nir_retile_y_to_w(&b, dst_pos);
    }
 
    /* Now (X, Y, S) = decode_msaa(dst_samples, detile(dst_tiling, offset)).
@@ -836,7 +951,13 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
            key->tex_samples != key->src_samples ||
            key->tex_layout != key->src_layout) &&
           !key->bilinear_filter) {
-         goto fail;
+         if (key->tex_samples != key->src_samples ||
+             key->tex_layout != key->src_layout ||
+             key->tex_samples != 0)
+            goto fail;
+
+         if (tex_tiled_w != key->src_tiled_w)
+            src_pos = blorp_nir_retile_w_to_y(&b, src_pos);
       }
 
       if (key->bilinear_filter) {
