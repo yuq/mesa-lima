@@ -51,12 +51,15 @@
 #define MESA_GLINTEROP_H
 
 #include <stddef.h>
-#include <GL/glx.h>
 #include <EGL/egl.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Forward declarations to avoid inclusion of GL/glx.h */
+typedef struct _XDisplay Display;
+typedef struct __GLXcontextRec *GLXContext;
 
 /** Returned error codes. */
 enum {
