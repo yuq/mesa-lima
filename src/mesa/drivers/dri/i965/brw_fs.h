@@ -202,21 +202,6 @@ public:
    void emit_interpolation_setup_gen4();
    void emit_interpolation_setup_gen6();
    void compute_sample_position(fs_reg dst, fs_reg int_sample_pos);
-   void emit_texture(ir_texture_opcode op,
-                     const glsl_type *dest_type,
-                     fs_reg coordinate, int components,
-                     fs_reg shadow_c,
-                     fs_reg lod, fs_reg dpdy, int grad_components,
-                     fs_reg sample_index,
-                     fs_reg offset,
-                     fs_reg mcs,
-                     int gather_component,
-                     bool is_cube_array,
-                     uint32_t surface,
-                     fs_reg surface_reg,
-                     uint32_t sampler,
-                     fs_reg sampler_reg,
-                     unsigned return_channels);
    fs_reg emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
                          const fs_reg &sampler);
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);
@@ -378,9 +363,6 @@ public:
    char *fail_msg;
    bool simd16_unsupported;
    char *no16_msg;
-
-   /* Result of last visit() method. Still used by emit_texture() */
-   fs_reg result;
 
    /** Register numbers for thread payload fields. */
    struct thread_payload {

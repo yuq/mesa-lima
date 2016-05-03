@@ -3424,65 +3424,61 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 {
    unsigned texture = instr->texture_index;
    unsigned sampler = instr->sampler_index;
-   fs_reg texture_reg(brw_imm_ud(texture));
-   fs_reg sampler_reg(brw_imm_ud(sampler));
 
-   int gather_component = instr->component;
+   fs_reg srcs[TEX_LOGICAL_NUM_SRCS];
 
-   bool is_cube_array = instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
-                        instr->is_array;
+   srcs[TEX_LOGICAL_SRC_SURFACE] = brw_imm_ud(texture);
+   srcs[TEX_LOGICAL_SRC_SAMPLER] = brw_imm_ud(sampler);
 
    int lod_components = 0;
 
-   fs_reg coordinate, shadow_comparitor, lod, lod2, sample_index, mcs, tex_offset;
-
    /* The hardware requires a LOD for buffer textures */
    if (instr->sampler_dim == GLSL_SAMPLER_DIM_BUF)
-      lod = brw_imm_d(0);
+      srcs[TEX_LOGICAL_SRC_LOD] = brw_imm_d(0);
 
    for (unsigned i = 0; i < instr->num_srcs; i++) {
       fs_reg src = get_nir_src(instr->src[i].src);
       switch (instr->src[i].src_type) {
       case nir_tex_src_bias:
-         lod = retype(src, BRW_REGISTER_TYPE_F);
+         srcs[TEX_LOGICAL_SRC_LOD] = retype(src, BRW_REGISTER_TYPE_F);
          break;
       case nir_tex_src_comparitor:
-         shadow_comparitor = retype(src, BRW_REGISTER_TYPE_F);
+         srcs[TEX_LOGICAL_SRC_SHADOW_C] = retype(src, BRW_REGISTER_TYPE_F);
          break;
       case nir_tex_src_coord:
          switch (instr->op) {
          case nir_texop_txf:
          case nir_texop_txf_ms:
          case nir_texop_samples_identical:
-            coordinate = retype(src, BRW_REGISTER_TYPE_D);
+            srcs[TEX_LOGICAL_SRC_COORDINATE] = retype(src, BRW_REGISTER_TYPE_D);
             break;
          default:
-            coordinate = retype(src, BRW_REGISTER_TYPE_F);
+            srcs[TEX_LOGICAL_SRC_COORDINATE] = retype(src, BRW_REGISTER_TYPE_F);
             break;
          }
          break;
       case nir_tex_src_ddx:
-         lod = retype(src, BRW_REGISTER_TYPE_F);
+         srcs[TEX_LOGICAL_SRC_LOD] = retype(src, BRW_REGISTER_TYPE_F);
          lod_components = nir_tex_instr_src_size(instr, i);
          break;
       case nir_tex_src_ddy:
-         lod2 = retype(src, BRW_REGISTER_TYPE_F);
+         srcs[TEX_LOGICAL_SRC_LOD2] = retype(src, BRW_REGISTER_TYPE_F);
          break;
       case nir_tex_src_lod:
          switch (instr->op) {
          case nir_texop_txs:
-            lod = retype(src, BRW_REGISTER_TYPE_UD);
+            srcs[TEX_LOGICAL_SRC_LOD] = retype(src, BRW_REGISTER_TYPE_UD);
             break;
          case nir_texop_txf:
-            lod = retype(src, BRW_REGISTER_TYPE_D);
+            srcs[TEX_LOGICAL_SRC_LOD] = retype(src, BRW_REGISTER_TYPE_D);
             break;
          default:
-            lod = retype(src, BRW_REGISTER_TYPE_F);
+            srcs[TEX_LOGICAL_SRC_LOD] = retype(src, BRW_REGISTER_TYPE_F);
             break;
          }
          break;
       case nir_tex_src_ms_index:
-         sample_index = retype(src, BRW_REGISTER_TYPE_UD);
+         srcs[TEX_LOGICAL_SRC_SAMPLE_INDEX] = retype(src, BRW_REGISTER_TYPE_UD);
          break;
 
       case nir_tex_src_offset: {
@@ -3491,9 +3487,10 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          if (const_offset) {
             unsigned header_bits = brw_texture_offset(const_offset->i32, 3);
             if (header_bits != 0)
-               tex_offset = brw_imm_ud(header_bits);
+               srcs[TEX_LOGICAL_SRC_OFFSET_VALUE] = brw_imm_ud(header_bits);
          } else {
-            tex_offset = retype(src, BRW_REGISTER_TYPE_D);
+            srcs[TEX_LOGICAL_SRC_OFFSET_VALUE] =
+               retype(src, BRW_REGISTER_TYPE_D);
          }
          break;
       }
@@ -3512,17 +3509,17 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          brw_mark_surface_used(prog_data, max_used);
 
          /* Emit code to evaluate the actual indexing expression */
-         texture_reg = vgrf(glsl_type::uint_type);
-         bld.ADD(texture_reg, src, brw_imm_ud(texture));
-         texture_reg = bld.emit_uniformize(texture_reg);
+         fs_reg tmp = vgrf(glsl_type::uint_type);
+         bld.ADD(tmp, src, brw_imm_ud(texture));
+         srcs[TEX_LOGICAL_SRC_SURFACE] = bld.emit_uniformize(tmp);
          break;
       }
 
       case nir_tex_src_sampler_offset: {
          /* Emit code to evaluate the actual indexing expression */
-         sampler_reg = vgrf(glsl_type::uint_type);
-         bld.ADD(sampler_reg, src, brw_imm_ud(sampler));
-         sampler_reg = bld.emit_uniformize(sampler_reg);
+         fs_reg tmp = vgrf(glsl_type::uint_type);
+         bld.ADD(tmp, src, brw_imm_ud(sampler));
+         srcs[TEX_LOGICAL_SRC_SAMPLER] = bld.emit_uniformize(tmp);
          break;
       }
 
@@ -3535,38 +3532,92 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
        instr->op == nir_texop_samples_identical) {
       if (devinfo->gen >= 7 &&
           key_tex->compressed_multisample_layout_mask & (1 << texture)) {
-         mcs = emit_mcs_fetch(coordinate, instr->coord_components, texture_reg);
+         srcs[TEX_LOGICAL_SRC_MCS] =
+            emit_mcs_fetch(srcs[TEX_LOGICAL_SRC_COORDINATE],
+                           instr->coord_components,
+                           srcs[TEX_LOGICAL_SRC_SURFACE]);
       } else {
-         mcs = brw_imm_ud(0u);
+         srcs[TEX_LOGICAL_SRC_MCS] = brw_imm_ud(0u);
       }
    }
 
-   enum glsl_base_type dest_base_type =
-     brw_glsl_base_type_for_nir_type (instr->dest_type);
+   srcs[TEX_LOGICAL_SRC_COORD_COMPONENTS] = brw_imm_d(instr->coord_components);
+   srcs[TEX_LOGICAL_SRC_GRAD_COMPONENTS] = brw_imm_d(lod_components);
 
-   const glsl_type *dest_type =
-      glsl_type::get_instance(dest_base_type, nir_tex_instr_dest_size(instr),
-                              1);
+   if (instr->op == nir_texop_query_levels) {
+      /* textureQueryLevels() is implemented in terms of TXS so we need to
+       * pass a valid LOD argument.
+       */
+      assert(srcs[TEX_LOGICAL_SRC_LOD].file == BAD_FILE);
+      srcs[TEX_LOGICAL_SRC_LOD] = brw_imm_ud(0u);
+   }
 
-   ir_texture_opcode op;
+   if (instr->op == nir_texop_samples_identical) {
+      fs_reg dst = retype(get_nir_dest(instr->dest), BRW_REGISTER_TYPE_D);
+
+      /* If mcs is an immediate value, it means there is no MCS.  In that case
+       * just return false.
+       */
+      if (srcs[TEX_LOGICAL_SRC_MCS].file == BRW_IMMEDIATE_VALUE) {
+         bld.MOV(dst, brw_imm_ud(0u));
+      } else if ((key_tex->msaa_16 & (1 << sampler))) {
+         fs_reg tmp = vgrf(glsl_type::uint_type);
+         bld.OR(tmp, srcs[TEX_LOGICAL_SRC_MCS],
+                offset(srcs[TEX_LOGICAL_SRC_MCS], bld, 1));
+         bld.CMP(dst, tmp, brw_imm_ud(0u), BRW_CONDITIONAL_EQ);
+      } else {
+         bld.CMP(dst, srcs[TEX_LOGICAL_SRC_MCS], brw_imm_ud(0u),
+                 BRW_CONDITIONAL_EQ);
+      }
+
+      return;
+   }
+
+   enum opcode opcode;
    switch (instr->op) {
-   case nir_texop_lod: op = ir_lod; break;
-   case nir_texop_query_levels: op = ir_query_levels; break;
-   case nir_texop_tex: op = ir_tex; break;
-   case nir_texop_tg4: op = ir_tg4; break;
-   case nir_texop_txb: op = ir_txb; break;
-   case nir_texop_txd: op = ir_txd; break;
-   case nir_texop_txf: op = ir_txf; break;
-   case nir_texop_txf_ms: op = ir_txf_ms; break;
-   case nir_texop_txl: op = ir_txl; break;
-   case nir_texop_txs: op = ir_txs; break;
+   case nir_texop_tex:
+      opcode = SHADER_OPCODE_TEX_LOGICAL;
+      break;
+   case nir_texop_txb:
+      opcode = FS_OPCODE_TXB_LOGICAL;
+      break;
+   case nir_texop_txl:
+      opcode = SHADER_OPCODE_TXL_LOGICAL;
+      break;
+   case nir_texop_txd:
+      opcode = SHADER_OPCODE_TXD_LOGICAL;
+      break;
+   case nir_texop_txf:
+      opcode = SHADER_OPCODE_TXF_LOGICAL;
+      break;
+   case nir_texop_txf_ms:
+      if ((key_tex->msaa_16 & (1 << sampler)))
+         opcode = SHADER_OPCODE_TXF_CMS_W_LOGICAL;
+      else
+         opcode = SHADER_OPCODE_TXF_CMS_LOGICAL;
+      break;
+   case nir_texop_query_levels:
+   case nir_texop_txs:
+      opcode = SHADER_OPCODE_TXS_LOGICAL;
+      break;
+   case nir_texop_lod:
+      opcode = SHADER_OPCODE_LOD_LOGICAL;
+      break;
+   case nir_texop_tg4:
+      if (srcs[TEX_LOGICAL_SRC_OFFSET_VALUE].file != BAD_FILE &&
+          srcs[TEX_LOGICAL_SRC_OFFSET_VALUE].file != IMM)
+         opcode = SHADER_OPCODE_TG4_OFFSET_LOGICAL;
+      else
+         opcode = SHADER_OPCODE_TG4_LOGICAL;
+      break;
    case nir_texop_texture_samples: {
       fs_reg dst = retype(get_nir_dest(instr->dest), BRW_REGISTER_TYPE_D);
 
       fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_D, 4);
       fs_inst *inst = bld.emit(SHADER_OPCODE_SAMPLEINFO, tmp,
                                bld.vgrf(BRW_REGISTER_TYPE_D, 1),
-                               texture_reg, texture_reg);
+                               srcs[TEX_LOGICAL_SRC_SURFACE],
+                               srcs[TEX_LOGICAL_SRC_SURFACE]);
       inst->mlen = 1;
       inst->header_size = 1;
       inst->base_mrf = -1;
@@ -3576,33 +3627,83 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       bld.MOV(dst, tmp);
       return;
    }
-   case nir_texop_samples_identical: op = ir_samples_identical; break;
    default:
       unreachable("unknown texture opcode");
    }
 
-   unsigned num_components = nir_tex_instr_dest_size(instr);
+   fs_reg dst = bld.vgrf(brw_type_for_nir_type(instr->dest_type), 4);
+   fs_inst *inst = bld.emit(opcode, dst, srcs, ARRAY_SIZE(srcs));
 
-   if (instr->dest.is_ssa) {
-      uint8_t write_mask = nir_ssa_def_components_read(&instr->dest.ssa);
+   const unsigned dest_size = nir_tex_instr_dest_size(instr);
+   if (devinfo->gen >= 9 &&
+       instr->op != nir_texop_tg4 && instr->op != nir_texop_query_levels) {
+      unsigned write_mask = instr->dest.is_ssa ?
+                            nir_ssa_def_components_read(&instr->dest.ssa):
+                            (1 << dest_size) - 1;
       assert(write_mask != 0); /* dead code should have been eliminated */
-      num_components = _mesa_fls(write_mask);
+      inst->regs_written = _mesa_fls(write_mask) * dispatch_width / 8;
+   } else {
+      inst->regs_written = 4 * dispatch_width / 8;
    }
 
-   const bool can_reduce_return_length = devinfo->gen >= 9 &&
-      instr->op != nir_texop_tg4 && instr->op != nir_texop_query_levels;
+   if (srcs[TEX_LOGICAL_SRC_SHADOW_C].file != BAD_FILE)
+      inst->shadow_compare = true;
 
-   emit_texture(op, dest_type, coordinate, instr->coord_components,
-                shadow_comparitor, lod, lod2, lod_components, sample_index,
-                tex_offset, mcs, gather_component, is_cube_array,
-                texture, texture_reg, sampler, sampler_reg,
-                can_reduce_return_length ? num_components : 4);
+   if (srcs[TEX_LOGICAL_SRC_OFFSET_VALUE].file == IMM)
+      inst->offset = srcs[TEX_LOGICAL_SRC_OFFSET_VALUE].ud;
 
-   fs_reg dest = get_nir_dest(instr->dest);
-   dest.type = this->result.type;
+   if (instr->op == nir_texop_tg4) {
+      if (instr->component == 1 &&
+          key_tex->gather_channel_quirk_mask & (1 << texture)) {
+         /* gather4 sampler is broken for green channel on RG32F --
+          * we must ask for blue instead.
+          */
+         inst->offset |= 2 << 16;
+      } else {
+         inst->offset |= instr->component << 16;
+      }
+
+      if (devinfo->gen == 6)
+         emit_gen6_gather_wa(key_tex->gen6_gather_wa[texture], dst);
+   }
+
+   if (instr->op == nir_texop_query_levels) {
+      /* # levels is in .w */
+      dst = offset(dst, bld, 3);
+   }
+
+   bool is_cube_array = instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
+                        instr->is_array;
+
+   /* fixup #layers for cube map arrays */
+   if (instr->op == nir_texop_txs && (devinfo->gen < 7 || is_cube_array)) {
+      fs_reg depth = offset(dst, bld, 2);
+      fs_reg fixed_depth = vgrf(glsl_type::int_type);
+
+      if (is_cube_array) {
+         bld.emit(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, brw_imm_d(6));
+      } else if (devinfo->gen < 7) {
+         /* Gen4-6 return 0 instead of 1 for single layer surfaces. */
+         bld.emit_minmax(fixed_depth, depth, brw_imm_d(1), BRW_CONDITIONAL_GE);
+      }
+
+      fs_reg *fixed_payload = ralloc_array(mem_ctx, fs_reg, inst->regs_written);
+      int components = inst->regs_written / (inst->exec_size / 8);
+      for (int i = 0; i < components; i++) {
+         if (i == 2) {
+            fixed_payload[i] = fixed_depth;
+         } else {
+            fixed_payload[i] = offset(dst, bld, i);
+         }
+      }
+      bld.LOAD_PAYLOAD(dst, fixed_payload, components, 0);
+   }
+
+   fs_reg nir_dest = get_nir_dest(instr->dest);
+   nir_dest.type = dst.type;
    emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
-                             dest, this->result),
-                (1 << num_components) - 1);
+                             nir_dest, dst),
+                (1 << dest_size) - 1);
 }
 
 void
