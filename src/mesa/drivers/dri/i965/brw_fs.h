@@ -30,7 +30,6 @@
 #include "brw_shader.h"
 #include "brw_ir_fs.h"
 #include "brw_fs_builder.h"
-#include "compiler/glsl/ir.h"
 #include "compiler/nir/nir.h"
 
 struct bblock_t;

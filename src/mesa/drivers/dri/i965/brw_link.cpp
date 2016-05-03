@@ -26,6 +26,7 @@
 #include "brw_fs.h"
 #include "brw_nir.h"
 #include "brw_program.h"
+#include "compiler/glsl/ir.h"
 #include "compiler/glsl/ir_optimization.h"
 #include "compiler/glsl/program.h"
 #include "program/program.h"
