@@ -156,7 +156,7 @@ noinst_DATA = dev_icd.json
 
 dev_icd.json : dev_icd.json.in
 	$(AM_V_GEN) $(SED) \
-		-e "s#@build_libdir@#${abs_top_builddir}/${LIB_DIR}#"
+		-e "s#@build_libdir@#${abs_top_builddir}/${LIB_DIR}#" \
 		< $(srcdir)/dev_icd.json.in > $@
 
 # Libvulkan with dummy gem. Used for unit tests.
