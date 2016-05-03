@@ -349,7 +349,7 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       /* The passthrough shader writes the whole patch header as two vec4s;
        * skip all the gl_TessLevelInner/Outer swizzling.
        */
-      if (indirect_offset.file == BAD_FILE && key->program_string_id != 0) {
+      if (indirect_offset.file == BAD_FILE && !is_passthrough_shader) {
          if (imm_offset == 0) {
             value.type = BRW_REGISTER_TYPE_F;
 

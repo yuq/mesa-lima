@@ -646,6 +646,8 @@ backend_shader::backend_shader(const struct brw_compiler *compiler,
    debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
    stage_name = _mesa_shader_stage_to_string(stage);
    stage_abbrev = _mesa_shader_stage_to_abbrev(stage);
+   is_passthrough_shader =
+      nir->info.name && strcmp(nir->info.name, "passthrough") == 0;
 }
 
 bool

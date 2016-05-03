@@ -208,6 +208,7 @@ public:
    bool debug_enabled;
    const char *stage_name;
    const char *stage_abbrev;
+   bool is_passthrough_shader;
 
    brw::simple_allocator alloc;
 

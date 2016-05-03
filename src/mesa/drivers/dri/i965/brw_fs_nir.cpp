@@ -2164,7 +2164,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
 
       if (indirect_offset.file != BAD_FILE) {
          srcs[header_regs++] = indirect_offset;
-      } else if (tcs_key->program_string_id != 0) {
+      } else if (!is_passthrough_shader) {
          if (imm_offset == 0) {
             value.type = BRW_REGISTER_TYPE_F;
 
