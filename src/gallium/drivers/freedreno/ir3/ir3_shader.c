@@ -647,10 +647,10 @@ ir3_emit_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 
 		if (v->type == SHADER_VERTEX) {
 			constbuf = &ctx->constbuf[PIPE_SHADER_VERTEX];
-			shader_dirty = !!(ctx->prog.dirty & FD_SHADER_DIRTY_VP);
+			shader_dirty = !!(dirty & FD_SHADER_DIRTY_VP);
 		} else if (v->type == SHADER_FRAGMENT) {
 			constbuf = &ctx->constbuf[PIPE_SHADER_FRAGMENT];
-			shader_dirty = !!(ctx->prog.dirty & FD_SHADER_DIRTY_FP);
+			shader_dirty = !!(dirty & FD_SHADER_DIRTY_FP);
 		} else {
 			unreachable("bad shader type");
 			return;
