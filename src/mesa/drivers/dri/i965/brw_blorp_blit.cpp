@@ -862,6 +862,133 @@ blorp_nir_decode_msaa(nir_builder *b, nir_ssa_def *pos,
 }
 
 /**
+ * Count the number of trailing 1 bits in the given value.  For example:
+ *
+ * count_trailing_one_bits(0) == 0
+ * count_trailing_one_bits(7) == 3
+ * count_trailing_one_bits(11) == 2
+ */
+static inline int count_trailing_one_bits(unsigned value)
+{
+#ifdef HAVE___BUILTIN_CTZ
+   return __builtin_ctz(~value);
+#else
+   return _mesa_bitcount(value & ~(value + 1));
+#endif
+}
+
+static nir_ssa_def *
+blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
+                               unsigned tex_samples,
+                               enum intel_msaa_layout tex_layout,
+                               enum brw_reg_type dst_type)
+{
+   /* If non-null, this is the outer-most if statement */
+   nir_if *outer_if = NULL;
+
+   nir_variable *color =
+      nir_local_variable_create(b->impl, glsl_vec4_type(), "color");
+
+   nir_ssa_def *mcs = NULL;
+   if (tex_layout == INTEL_MSAA_LAYOUT_CMS)
+      mcs = blorp_nir_txf_ms_mcs(b, pos);
+
+   /* We add together samples using a binary tree structure, e.g. for 4x MSAA:
+    *
+    *   result = ((sample[0] + sample[1]) + (sample[2] + sample[3])) / 4
+    *
+    * This ensures that when all samples have the same value, no numerical
+    * precision is lost, since each addition operation always adds two equal
+    * values, and summing two equal floating point values does not lose
+    * precision.
+    *
+    * We perform this computation by treating the texture_data array as a
+    * stack and performing the following operations:
+    *
+    * - push sample 0 onto stack
+    * - push sample 1 onto stack
+    * - add top two stack entries
+    * - push sample 2 onto stack
+    * - push sample 3 onto stack
+    * - add top two stack entries
+    * - add top two stack entries
+    * - divide top stack entry by 4
+    *
+    * Note that after pushing sample i onto the stack, the number of add
+    * operations we do is equal to the number of trailing 1 bits in i.  This
+    * works provided the total number of samples is a power of two, which it
+    * always is for i965.
+    *
+    * For integer formats, we replace the add operations with average
+    * operations and skip the final division.
+    */
+   nir_ssa_def *texture_data[4];
+   unsigned stack_depth = 0;
+   for (unsigned i = 0; i < tex_samples; ++i) {
+      assert(stack_depth == _mesa_bitcount(i)); /* Loop invariant */
+
+      /* Push sample i onto the stack */
+      assert(stack_depth < ARRAY_SIZE(texture_data));
+
+      nir_ssa_def *ms_pos = nir_vec3(b, nir_channel(b, pos, 0),
+                                        nir_channel(b, pos, 1),
+                                        nir_imm_int(b, i));
+      texture_data[stack_depth++] = blorp_nir_txf_ms(b, ms_pos, mcs, dst_type);
+
+      if (i == 0 && tex_layout == INTEL_MSAA_LAYOUT_CMS) {
+         /* The Ivy Bridge PRM, Vol4 Part1 p27 (Multisample Control Surface)
+          * suggests an optimization:
+          *
+          *     "A simple optimization with probable large return in
+          *     performance is to compare the MCS value to zero (indicating
+          *     all samples are on sample slice 0), and sample only from
+          *     sample slice 0 using ld2dss if MCS is zero."
+          *
+          * Note that in the case where the MCS value is zero, sampling from
+          * sample slice 0 using ld2dss and sampling from sample 0 using
+          * ld2dms are equivalent (since all samples are on sample slice 0).
+          * Since we have already sampled from sample 0, all we need to do is
+          * skip the remaining fetches and averaging if MCS is zero.
+          */
+         nir_ssa_def *mcs_zero =
+            nir_ieq(b, nir_channel(b, mcs, 0), nir_imm_int(b, 0));
+         nir_if *if_stmt = nir_if_create(b->shader);
+         if_stmt->condition = nir_src_for_ssa(mcs_zero);
+         nir_cf_node_insert(b->cursor, &if_stmt->cf_node);
+
+         b->cursor = nir_after_cf_list(&if_stmt->then_list);
+         nir_store_var(b, color, texture_data[0], 0xf);
+
+         b->cursor = nir_after_cf_list(&if_stmt->else_list);
+         outer_if = if_stmt;
+      }
+
+      for (int j = 0; j < count_trailing_one_bits(i); j++) {
+         assert(stack_depth >= 2);
+         --stack_depth;
+
+         assert(dst_type == BRW_REGISTER_TYPE_F);
+         texture_data[stack_depth - 1] =
+            nir_fadd(b, texture_data[stack_depth - 1],
+                        texture_data[stack_depth]);
+      }
+   }
+
+   /* We should have just 1 sample on the stack now. */
+   assert(stack_depth == 1);
+
+   texture_data[0] = nir_fmul(b, texture_data[0],
+                              nir_imm_float(b, 1.0 / tex_samples));
+
+   nir_store_var(b, color, texture_data[0], 0xf);
+
+   if (outer_if)
+      b->cursor = nir_after_cf_node(&outer_if->cf_node);
+
+   return nir_load_var(b, color);
+}
+
+/**
  * Generator for WM programs used in BLORP blits.
  *
  * The bulk of the work done by the WM program is to wrap and unwrap the
@@ -1117,7 +1244,24 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
     * irrelevant, because we are going to fetch all samples.
     */
    if (key->blend && !key->blit_scaled) {
-      goto fail;
+      if (brw->gen == 6) {
+         /* Because gen6 only supports 4x interleved MSAA, we can do all the
+          * blending we need with a single linear-interpolated texture lookup
+          * at the center of the sample. The texture coordinates to be odd
+          * integers so that they correspond to the center of a 2x2 block
+          * representing the four samples that maxe up a pixel.  So we need
+          * to multiply our X and Y coordinates each by 2 and then add 1.
+          */
+         src_pos = nir_ishl(&b, src_pos, nir_imm_int(&b, 1));
+         src_pos = nir_iadd(&b, src_pos, nir_imm_int(&b, 1));
+         src_pos = nir_i2f(&b, nir_channels(&b, src_pos, 0x3));
+         color = blorp_nir_tex(&b, src_pos, key->texture_data_type);
+      } else {
+         /* Gen7+ hardware doesn't automaticaly blend. */
+         color = blorp_nir_manual_blend_average(&b, src_pos, key->src_samples,
+                                                key->src_layout,
+                                                key->texture_data_type);
+      }
    } else if (key->blend && key->blit_scaled) {
       goto fail;
    } else {
@@ -2011,23 +2155,6 @@ brw_blorp_blit_program::clamp_tex_coords(struct brw_reg regX,
    emit_min(regY, regY, clampY1);
 }
 
-
-
-/**
- * Count the number of trailing 1 bits in the given value.  For example:
- *
- * count_trailing_one_bits(0) == 0
- * count_trailing_one_bits(7) == 3
- * count_trailing_one_bits(11) == 2
- */
-static inline int count_trailing_one_bits(unsigned value)
-{
-#ifdef HAVE___BUILTIN_CTZ
-   return __builtin_ctz(~value);
-#else
-   return _mesa_bitcount(value & ~(value + 1));
-#endif
-}
 
 
 void
