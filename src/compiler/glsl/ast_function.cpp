@@ -1819,6 +1819,12 @@ ast_function_expression::hir(exec_list *instructions,
 	 return ir_rvalue::error_value(ctx);
       }
 
+      if (constructor_type->is_subroutine()) {
+         _mesa_glsl_error(& loc, state, "subroutine name cannot be a constructor `%s'",
+                          constructor_type->name);
+	 return ir_rvalue::error_value(ctx);
+      }
+
       if (constructor_type->is_array()) {
          if (!state->check_version(120, 300, &loc,
                                    "array constructors forbidden")) {
