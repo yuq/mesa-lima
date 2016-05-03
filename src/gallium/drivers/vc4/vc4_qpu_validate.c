@@ -308,4 +308,26 @@ vc4_qpu_validate(uint64_t *insts, uint32_t num_inst)
                 if (qpu_num_sf_accesses(inst) > 1)
                         fail_instr(inst, "Single instruction writes SFU twice");
         }
+
+        /* "The uniform base pointer can be written (from SIMD element 0) by
+         *  the processor to reset the stream, there must be at least two
+         *  nonuniform-accessing instructions following a pointer change
+         *  before uniforms can be accessed once more."
+         */
+        int last_unif_pointer_update = -3;
+        for (int i = 0; i < num_inst; i++) {
+                uint64_t inst = insts[i];
+                uint32_t waddr_add = QPU_GET_FIELD(inst, QPU_WADDR_ADD);
+                uint32_t waddr_mul = QPU_GET_FIELD(inst, QPU_WADDR_MUL);
+
+                if (reads_reg(inst, QPU_R_UNIF) &&
+                    i - last_unif_pointer_update <= 2) {
+                        fail_instr(inst,
+                                   "uniform read too soon after pointer update");
+                }
+
+                if (waddr_add == QPU_W_UNIFORMS_ADDRESS ||
+                    waddr_mul == QPU_W_UNIFORMS_ADDRESS)
+                        last_unif_pointer_update = i;
+        }
 }
