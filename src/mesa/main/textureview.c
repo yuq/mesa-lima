@@ -639,13 +639,38 @@ _mesa_TextureView(GLuint texture, GLenum target, GLuint origtexture,
    case GL_TEXTURE_2D:
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_RECTANGLE:
+      depth = 1;
+      break;
    case GL_TEXTURE_CUBE_MAP:
+      /* If the new texture's target is TEXTURE_CUBE_MAP, the clamped
+       * <numlayers> must be equal to 6.
+       */
+      if (newViewNumLayers != 6) {
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                     "glTextureView(clamped numlayers %d != 6)",
+                     newViewNumLayers);
+         return;
+      }
       depth = 1;
       break;
 
    case GL_TEXTURE_2D_ARRAY:
-   case GL_TEXTURE_CUBE_MAP_ARRAY:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      depth = newViewNumLayers;
+      break;
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+      /* If the new texture's target is TEXTURE_CUBE_MAP_ARRAY,
+       * then <numlayers> counts layer-faces rather than layers,
+       * and the clamped <numlayers> must be a multiple of 6.
+       * Otherwise, the error INVALID_VALUE is generated.
+       */
+      if ((newViewNumLayers % 6) != 0) {
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                     "glTextureView(clamped numlayers %d is not"
+                     " a multiple of 6)",
+                     newViewNumLayers);
+         return;
+      }
       depth = newViewNumLayers;
       break;
    }
@@ -689,32 +714,9 @@ _mesa_TextureView(GLuint texture, GLenum target, GLuint origtexture,
          return;
       }
       break;
-
    case GL_TEXTURE_CUBE_MAP:
-      /* If the new texture's target is TEXTURE_CUBE_MAP, the clamped
-       * <numlayers> must be equal to 6.
-       */
-      if (newViewNumLayers != 6) {
-         _mesa_error(ctx, GL_INVALID_VALUE,
-                     "glTextureView(clamped numlayers %d != 6)",
-                     newViewNumLayers);
-         return;
-      }
       break;
-
    case GL_TEXTURE_CUBE_MAP_ARRAY:
-      /* If the new texture's target is TEXTURE_CUBE_MAP_ARRAY,
-       * then <numlayers> counts layer-faces rather than layers,
-       * and the clamped <numlayers> must be a multiple of 6.
-       * Otherwise, the error INVALID_VALUE is generated.
-       */
-      if ((newViewNumLayers % 6) != 0) {
-         _mesa_error(ctx, GL_INVALID_VALUE,
-                     "glTextureView(clamped numlayers %d is not"
-                     " a multiple of 6)",
-                     newViewNumLayers);
-         return;
-      }
       break;
    }
 
