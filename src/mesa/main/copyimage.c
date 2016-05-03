@@ -552,9 +552,23 @@ _mesa_CopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
                             "dst"))
       return;
 
+   /* Section 18.3.2 (Copying Between Images) of the OpenGL 4.5 Core Profile
+    * spec says:
+    *
+    *    An INVALID_OPERATION error is generated if either object is a texture
+    *    and the texture is not complete, if the source and destination internal
+    *    formats are not compatible, or if the number of samples do not match.
+    */
    if (!copy_format_compatible(ctx, srcIntFormat, dstIntFormat)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glCopyImageSubData(internalFormat mismatch)");
+      return;
+   }
+
+   if (srcTexImage && dstTexImage &&
+       srcTexImage->NumSamples != dstTexImage->NumSamples) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glCopyImageSubData(number of samples mismatch)");
       return;
    }
 
