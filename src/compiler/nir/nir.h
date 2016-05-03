@@ -1068,6 +1068,7 @@ typedef enum {
    nir_tex_src_bias,
    nir_tex_src_lod,
    nir_tex_src_ms_index, /* MSAA sample index */
+   nir_tex_src_ms_mcs, /* MSAA compression value */
    nir_tex_src_ddx,
    nir_tex_src_ddy,
    nir_tex_src_texture_offset, /* < dynamically uniform indirect offset */
@@ -1087,6 +1088,7 @@ typedef enum {
    nir_texop_txd,                /**< Texture look-up with partial derivatvies */
    nir_texop_txf,                /**< Texel fetch with explicit LOD */
    nir_texop_txf_ms,                /**< Multisample texture fetch */
+   nir_texop_txf_ms_mcs,         /**< Multisample compression value fetch */
    nir_texop_txs,                /**< Texture size */
    nir_texop_lod,                /**< Texture lod query */
    nir_texop_tg4,                /**< Texture gather */
@@ -1215,6 +1217,7 @@ nir_tex_instr_is_query(nir_tex_instr *instr)
    case nir_texop_lod:
    case nir_texop_texture_samples:
    case nir_texop_query_levels:
+   case nir_texop_txf_ms_mcs:
       return true;
    case nir_texop_tex:
    case nir_texop_txb:
@@ -1235,6 +1238,9 @@ nir_tex_instr_src_size(nir_tex_instr *instr, unsigned src)
    if (instr->src[src].src_type == nir_tex_src_coord)
       return instr->coord_components;
 
+   /* The MCS value is expected to be a vec4 returned by a txf_ms_mcs */
+   if (instr->src[src].src_type == nir_tex_src_ms_mcs)
+      return 4;
 
    if (instr->src[src].src_type == nir_tex_src_offset ||
        instr->src[src].src_type == nir_tex_src_ddx ||

@@ -626,6 +626,9 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
    case nir_texop_txf_ms:
       fprintf(fp, "txf_ms ");
       break;
+   case nir_texop_txf_ms_mcs:
+      fprintf(fp, "txf_ms_mcs ");
+      break;
    case nir_texop_txs:
       fprintf(fp, "txs ");
       break;
@@ -675,6 +678,9 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
          break;
       case nir_tex_src_ms_index:
          fprintf(fp, "(ms_index)");
+         break;
+      case nir_tex_src_ms_mcs:
+         fprintf(fp, "(ms_mcs)");
          break;
       case nir_tex_src_ddx:
          fprintf(fp, "(ddx)");
