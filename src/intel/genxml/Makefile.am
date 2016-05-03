@@ -28,7 +28,11 @@ BUILT_SOURCES =                                         \
 
 PYTHON3_GEN = $(AM_V_GEN)$(PYTHON3) $(PYTHON_FLAGS)
 
-%_pack.h : %.xml gen_pack_header.py
+SUFFIXES = _pack.h .xml
+
+$(BUILT_SOURCES): gen_pack_header.py
+
+.xml_pack.h:
 	$(PYTHON3_GEN) $(srcdir)/gen_pack_header.py $< > $@
 
 CLEANFILES = $(BUILT_SOURCES)
