@@ -2487,8 +2487,9 @@ _mesa_map_buffer_range(struct gl_context *ctx,
 
    if (offset + length > bufObj->Size) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "%s(offset %td + length %td > buffer_size %td)", func,
-                  offset, length, bufObj->Size);
+                  "%s(offset %lu + length %lu > buffer_size %lu)", func,
+                  (unsigned long) offset, (unsigned long) length,
+                  (unsigned long) bufObj->Size);
       return NULL;
    }
 
@@ -3749,8 +3750,9 @@ _mesa_BindBufferRange(GLenum target, GLuint index,
    struct gl_buffer_object *bufObj;
 
    if (MESA_VERBOSE & VERBOSE_API) {
-      _mesa_debug(ctx, "glBindBufferRange(%s, %u, %u, %ld, %ld)\n",
-                  _mesa_enum_to_string(target), index, buffer, offset, size);
+      _mesa_debug(ctx, "glBindBufferRange(%s, %u, %u, %lu, %lu)\n",
+                  _mesa_enum_to_string(target), index, buffer,
+                  (unsigned long) offset, (unsigned long) size);
    }
 
    if (buffer == 0) {
