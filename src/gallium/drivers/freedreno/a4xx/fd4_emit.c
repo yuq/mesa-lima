@@ -284,10 +284,6 @@ fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, unsigned nr_bufs,
 	for (i = 0; i < nr_bufs; i++) {
 		if (bufs[i]) {
 			struct fd_resource *rsc = fd_resource(bufs[i]->texture);
-			/* note: PIPE_BUFFER disallowed for surfaces */
-			unsigned lvl = bufs[i]->u.tex.level;
-			struct fd_resource_slice *slice = fd_resource_slice(rsc, lvl);
-			uint32_t offset = fd_resource_offset(rsc, lvl, bufs[i]->u.tex.first_layer);
 			enum pipe_format format = fd4_gmem_restore_format(bufs[i]->format);
 
 			/* The restore blit_zs shader expects stencil in sampler 0,
@@ -297,6 +293,11 @@ fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, unsigned nr_bufs,
 				rsc = rsc->stencil;
 				format = fd4_gmem_restore_format(rsc->base.b.format);
 			}
+
+			/* note: PIPE_BUFFER disallowed for surfaces */
+			unsigned lvl = bufs[i]->u.tex.level;
+			struct fd_resource_slice *slice = fd_resource_slice(rsc, lvl);
+			unsigned offset = fd_resource_offset(rsc, lvl, bufs[i]->u.tex.first_layer);
 
 			/* z32 restore is accomplished using depth write.  If there is
 			 * no stencil component (ie. PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
