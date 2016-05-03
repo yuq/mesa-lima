@@ -50,6 +50,7 @@
 #ifndef MESA_GLINTEROP_H
 #define MESA_GLINTEROP_H
 
+#include <stddef.h>
 #include <GL/glx.h>
 #include <EGL/egl.h>
 
@@ -202,8 +203,8 @@ typedef struct _mesa_glinterop_export_out {
     * Parameters specified by glTexBufferRange for GL_TEXTURE_BUFFER are
     * applied to these and can shrink the range further.
     */
-   GLintptr buf_offset;
-   GLsizeiptr buf_size;
+   ptrdiff_t buf_offset;
+   ptrdiff_t buf_size;
 
    /* Parameters specified by glTextureView. If the object is not a texture
     * view, default parameters covering the whole texture will be returned.
