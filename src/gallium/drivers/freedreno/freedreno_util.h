@@ -207,6 +207,7 @@ OUT_RELOC(struct fd_ringbuffer *ring, struct fd_bo *bo,
 		DBG("ring[%p]: OUT_RELOC   %04x:  %p+%u << %d", ring,
 				(uint32_t)(ring->cur - ring->last_start), bo, offset, shift);
 	}
+	debug_assert(offset < fd_bo_size(bo));
 	fd_ringbuffer_reloc(ring, &(struct fd_reloc){
 		.bo = bo,
 		.flags = FD_RELOC_READ,
@@ -224,6 +225,7 @@ OUT_RELOCW(struct fd_ringbuffer *ring, struct fd_bo *bo,
 		DBG("ring[%p]: OUT_RELOCW  %04x:  %p+%u << %d", ring,
 				(uint32_t)(ring->cur - ring->last_start), bo, offset, shift);
 	}
+	debug_assert(offset < fd_bo_size(bo));
 	fd_ringbuffer_reloc(ring, &(struct fd_reloc){
 		.bo = bo,
 		.flags = FD_RELOC_READ | FD_RELOC_WRITE,
