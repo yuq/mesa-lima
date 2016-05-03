@@ -1726,6 +1726,24 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       unsigned int last_insn_offset = p->next_insn_offset;
       bool multiple_instructions_emitted = false;
 
+      /* From the Broadwell PRM, Volume 7, "3D-Media-GPGPU", in the
+       * "Register Region Restrictions" section: for BDW, SKL:
+       *
+       *    "A POW/FDIV operation must not be followed by an instruction
+       *     that requires two destination registers."
+       *
+       * The documentation is often lacking annotations for Atom parts,
+       * and empirically this affects CHV as well.
+       */
+      if (devinfo->gen >= 8 &&
+          p->nr_insn > 1 &&
+          brw_inst_opcode(devinfo, brw_last_inst) == BRW_OPCODE_MATH &&
+          brw_inst_math_function(devinfo, brw_last_inst) == BRW_MATH_FUNCTION_POW &&
+          inst->dst.component_size(inst->exec_size) > REG_SIZE) {
+         brw_NOP(p);
+         last_insn_offset = p->next_insn_offset;
+      }
+
       if (unlikely(debug_flag))
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
