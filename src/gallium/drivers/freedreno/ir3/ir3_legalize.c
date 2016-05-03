@@ -292,7 +292,7 @@ resolve_dest_block(struct ir3_block *block)
 		} else if (list_length(&block->instr_list) == 1) {
 			struct ir3_instruction *instr = list_first_entry(
 					&block->instr_list, struct ir3_instruction, node);
-			if (is_flow(instr) && (instr->opc == OPC_JUMP))
+			if (instr->opc == OPC_JUMP)
 				return block->successors[0];
 		}
 	}

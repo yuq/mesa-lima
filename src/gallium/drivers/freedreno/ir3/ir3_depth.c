@@ -137,7 +137,7 @@ remove_unused_by_block(struct ir3_block *block)
 {
 	list_for_each_entry_safe (struct ir3_instruction, instr, &block->instr_list, node) {
 		if (!ir3_instr_check_mark(instr)) {
-			if (is_flow(instr) && (instr->opc == OPC_END))
+			if (instr->opc == OPC_END)
 				continue;
 			/* mark it, in case it is input, so we can
 			 * remove unused inputs:
