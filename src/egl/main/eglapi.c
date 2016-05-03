@@ -1937,7 +1937,7 @@ _eglLockDisplayInterop(EGLDisplay dpy, EGLContext context,
    return MESA_GLINTEROP_SUCCESS;
 }
 
-GLAPI int GLAPIENTRY
+int
 MesaGLInteropEGLQueryDeviceInfo(EGLDisplay dpy, EGLContext context,
                                 mesa_glinterop_device_info *out)
 {
@@ -1959,7 +1959,7 @@ MesaGLInteropEGLQueryDeviceInfo(EGLDisplay dpy, EGLContext context,
    return ret;
 }
 
-GLAPI int GLAPIENTRY
+int
 MesaGLInteropEGLExportObject(EGLDisplay dpy, EGLContext context,
                              const mesa_glinterop_export_in *in,
                              mesa_glinterop_export_out *out)

@@ -2695,7 +2695,7 @@ __glXGetUST(int64_t * ust)
 
 #if defined(GLX_DIRECT_RENDERING) && !defined(GLX_USE_APPLEGL)
 
-GLAPI int GLAPIENTRY
+int
 MesaGLInteropGLXQueryDeviceInfo(Display *dpy, GLXContext context,
                                 mesa_glinterop_device_info *out)
 {
@@ -2719,7 +2719,7 @@ MesaGLInteropGLXQueryDeviceInfo(Display *dpy, GLXContext context,
    return ret;
 }
 
-GLAPI int GLAPIENTRY
+int
 MesaGLInteropGLXExportObject(Display *dpy, GLXContext context,
                              const mesa_glinterop_export_in *in,
                              mesa_glinterop_export_out *out)

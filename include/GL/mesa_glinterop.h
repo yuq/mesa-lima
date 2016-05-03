@@ -229,7 +229,7 @@ typedef struct _mesa_glinterop_export_out {
  *
  * \return MESA_GLINTEROP_SUCCESS or MESA_GLINTEROP_* != 0 on error
  */
-GLAPI int GLAPIENTRY
+int
 MesaGLInteropGLXQueryDeviceInfo(Display *dpy, GLXContext context,
                                 mesa_glinterop_device_info *out);
 
@@ -238,7 +238,7 @@ MesaGLInteropGLXQueryDeviceInfo(Display *dpy, GLXContext context,
  * Same as MesaGLInteropGLXQueryDeviceInfo except that it accepts EGLDisplay
  * and EGLContext.
  */
-GLAPI int GLAPIENTRY
+int
 MesaGLInteropEGLQueryDeviceInfo(EGLDisplay dpy, EGLContext context,
                                 mesa_glinterop_device_info *out);
 
@@ -254,7 +254,7 @@ MesaGLInteropEGLQueryDeviceInfo(EGLDisplay dpy, EGLContext context,
  *
  * \return MESA_GLINTEROP_SUCCESS or MESA_GLINTEROP_* != 0 on error
  */
-GLAPI int GLAPIENTRY
+int
 MesaGLInteropGLXExportObject(Display *dpy, GLXContext context,
                              const mesa_glinterop_export_in *in,
                              mesa_glinterop_export_out *out);
@@ -264,22 +264,22 @@ MesaGLInteropGLXExportObject(Display *dpy, GLXContext context,
  * Same as MesaGLInteropGLXExportObject except that it accepts
  * EGLDisplay and EGLContext.
  */
-GLAPI int GLAPIENTRY
+int
 MesaGLInteropEGLExportObject(EGLDisplay dpy, EGLContext context,
                              const mesa_glinterop_export_in *in,
                              mesa_glinterop_export_out *out);
 
 
-typedef int (APIENTRYP PFNMESAGLINTEROPGLXQUERYDEVICEINFOPROC)(Display *dpy, GLXContext context,
-                                                               mesa_glinterop_device_info *out);
-typedef int (APIENTRYP PFNMESAGLINTEROPEGLQUERYDEVICEINFOPROC)(EGLDisplay dpy, EGLContext context,
-                                                               mesa_glinterop_device_info *out);
-typedef int (APIENTRYP PFNMESAGLINTEROPGLXEXPORTOBJECTPROC)(Display *dpy, GLXContext context,
-                                                            const mesa_glinterop_export_in *in,
-                                                            mesa_glinterop_export_out *out);
-typedef int (APIENTRYP PFNMESAGLINTEROPEGLEXPORTOBJECTPROC)(EGLDisplay dpy, EGLContext context,
-                                                            const mesa_glinterop_export_in *in,
-                                                            mesa_glinterop_export_out *out);
+typedef int (PFNMESAGLINTEROPGLXQUERYDEVICEINFOPROC)(Display *dpy, GLXContext context,
+                                                     mesa_glinterop_device_info *out);
+typedef int (PFNMESAGLINTEROPEGLQUERYDEVICEINFOPROC)(EGLDisplay dpy, EGLContext context,
+                                                     mesa_glinterop_device_info *out);
+typedef int (PFNMESAGLINTEROPGLXEXPORTOBJECTPROC)(Display *dpy, GLXContext context,
+                                                  const mesa_glinterop_export_in *in,
+                                                  mesa_glinterop_export_out *out);
+typedef int (PFNMESAGLINTEROPEGLEXPORTOBJECTPROC)(EGLDisplay dpy, EGLContext context,
+                                                  const mesa_glinterop_export_in *in,
+                                                  mesa_glinterop_export_out *out);
 
 #ifdef __cplusplus
 }
