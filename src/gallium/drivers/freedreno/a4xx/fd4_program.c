@@ -229,6 +229,13 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 	constmode = 1;
 
 	pos_regid = ir3_find_output_regid(s[VS].v, VARYING_SLOT_POS);
+	if (pos_regid == regid(63, 0)) {
+		/* hw dislikes when there is no position output, which can
+		 * happen for transform-feedback vertex shaders.  Just tell
+		 * the hw to use r0.x, with whatever random value is there:
+		 */
+		pos_regid = regid(0, 0);
+	}
 	posz_regid = ir3_find_output_regid(s[FS].v, FRAG_RESULT_DEPTH);
 	psize_regid = ir3_find_output_regid(s[VS].v, VARYING_SLOT_PSIZ);
 	if (s[FS].v->color0_mrt) {
