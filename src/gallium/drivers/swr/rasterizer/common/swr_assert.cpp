@@ -211,7 +211,7 @@ bool SwrAssert(
                 "\n\n*** NO DEBUGGER DETECTED ***\n\nPressing \"Try Again\" will cause a program crash!");
         }
 
-        retval = MessageBoxA(nullptr, msgBuf, "Assert Failed", MB_CANCELTRYCONTINUE | MB_ICONEXCLAMATION);
+        retval = MessageBoxA(nullptr, msgBuf, "Assert Failed", MB_CANCELTRYCONTINUE | MB_ICONEXCLAMATION | MB_SETFOREGROUND);
 
         switch (retval)
         {
