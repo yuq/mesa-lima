@@ -1637,7 +1637,7 @@ void BinTriangles(
     int maskLo = _simd_movemask_pd(_simd_castsi_pd(_simd_cmpeq_epi64(vDet[0], _simd_setzero_si())));
     int maskHi = _simd_movemask_pd(_simd_castsi_pd(_simd_cmpeq_epi64(vDet[1], _simd_setzero_si())));
 
-    int cullZeroAreaMask = maskLo | ((maskHi << KNOB_SIMD_WIDTH / 2));
+    int cullZeroAreaMask = maskLo | (maskHi << (KNOB_SIMD_WIDTH / 2));
 
     uint32_t origTriMask = triMask;
     triMask &= ~cullZeroAreaMask;
