@@ -846,6 +846,9 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 	case PIPE_SHADER_TESS_CTRL:
 		key->tcs.epilog.prim_mode =
 			sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+
+		if (sel == sctx->fixed_func_tcs_shader.cso)
+			key->tcs.epilog.inputs_to_copy = sctx->vs_shader.cso->outputs_written;
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		if (sctx->gs_shader.cso)

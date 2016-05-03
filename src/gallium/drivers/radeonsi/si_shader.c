@@ -2444,6 +2444,48 @@ handle_semantic:
 	}
 }
 
+static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMValueRef invocation_id, rw_buffers, buffer, buffer_offset;
+	LLVMValueRef lds_vertex_stride, lds_vertex_offset, lds_base;
+	uint64_t inputs;
+
+	invocation_id = unpack_param(ctx, SI_PARAM_REL_IDS, 8, 5);
+
+	rw_buffers = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_RW_BUFFERS);
+	buffer = build_indexed_load_const(ctx, rw_buffers,
+	                lp_build_const_int32(gallivm, SI_HS_RING_TESS_OFFCHIP));
+
+	buffer_offset = LLVMGetParam(ctx->radeon_bld.main_fn, ctx->param_oc_lds);
+
+	lds_vertex_stride = unpack_param(ctx, SI_PARAM_TCS_IN_LAYOUT, 13, 8);
+	lds_vertex_offset = LLVMBuildMul(gallivm->builder, invocation_id,
+	                                 lds_vertex_stride, "");
+	lds_base = get_tcs_in_current_patch_offset(ctx);
+	lds_base = LLVMBuildAdd(gallivm->builder, lds_base, lds_vertex_offset, "");
+
+	inputs = ctx->shader->key.tcs.epilog.inputs_to_copy;
+	while (inputs) {
+		unsigned i = u_bit_scan64(&inputs);
+
+		LLVMValueRef lds_ptr = LLVMBuildAdd(gallivm->builder, lds_base,
+		                            lp_build_const_int32(gallivm, 4 * i),
+		                             "");
+
+		LLVMValueRef buffer_addr = get_tcs_tes_buffer_address(ctx,
+		                              invocation_id,
+		                              lp_build_const_int32(gallivm, i));
+
+		LLVMValueRef value = lds_load(bld_base, TGSI_TYPE_SIGNED, ~0,
+		                              lds_ptr);
+
+		build_tbuffer_store_dwords(ctx, buffer, value, 4, buffer_addr,
+		                           buffer_offset, 0);
+	}
+}
+
 static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 				  LLVMValueRef rel_patch_id,
 				  LLVMValueRef invocation_id,
@@ -2585,6 +2627,7 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 		return;
 	}
 
+	si_copy_tcs_inputs(bld_base);
 	si_write_tess_factors(bld_base, rel_patch_id, invocation_id, tf_lds_offset);
 }
 
@@ -7426,6 +7469,8 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	      shader->key.vs.as_ls != mainp->key.vs.as_ls)) ||
 	    (shader->selector->type == PIPE_SHADER_TESS_EVAL &&
 	     shader->key.tes.as_es != mainp->key.tes.as_es) ||
+	    (shader->selector->type == PIPE_SHADER_TESS_CTRL &&
+	     shader->key.tcs.epilog.inputs_to_copy) ||
 	    shader->selector->type == PIPE_SHADER_COMPUTE) {
 		/* Monolithic shader (compiled as a whole, has many variants,
 		 * may take a long time to compile).

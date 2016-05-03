@@ -304,6 +304,7 @@ struct si_vs_epilog_bits {
 /* Common TCS bits between the shader key and the epilog key. */
 struct si_tcs_epilog_bits {
 	unsigned	prim_mode:3;
+	uint64_t	inputs_to_copy;
 };
 
 /* Common PS bits between the shader key and the prolog key. */
