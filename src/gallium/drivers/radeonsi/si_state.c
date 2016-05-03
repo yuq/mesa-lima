@@ -1104,7 +1104,8 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 	/* DB_RENDER_OVERRIDE2 */
 	radeon_set_context_reg(cs, R_028010_DB_RENDER_OVERRIDE2,
 		S_028010_DISABLE_ZMASK_EXPCLEAR_OPTIMIZATION(sctx->db_depth_disable_expclear) |
-		S_028010_DISABLE_SMEM_EXPCLEAR_OPTIMIZATION(sctx->db_stencil_disable_expclear));
+		S_028010_DISABLE_SMEM_EXPCLEAR_OPTIMIZATION(sctx->db_stencil_disable_expclear) |
+		S_028010_DECOMPRESS_Z_ON_FLUSH(sctx->framebuffer.nr_samples >= 4));
 
 	db_shader_control = S_02880C_ALPHA_TO_MASK_DISABLE(sctx->framebuffer.cb0_is_integer) |
 		            sctx->ps_db_shader_control;
