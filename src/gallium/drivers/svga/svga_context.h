@@ -361,7 +361,7 @@ struct svga_hw_draw_state
    struct svga_winsys_surface *vbuffer_handles[PIPE_MAX_ATTRIBS];
    unsigned num_vbuffers;
 
-   struct svga_winsys_surface *ib;  /**< index buffer for drawing */
+   struct pipe_resource *ib;  /**< index buffer for drawing */
    SVGA3dSurfaceFormat ib_format;
    unsigned ib_offset;
 

@@ -441,6 +441,7 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
    const unsigned vbuf_count = hwtnl->cmd.vbuf_count;
    enum pipe_error ret;
    unsigned i;
+   boolean rebind_ib = FALSE;
 
    assert(svga_have_vgpu10(svga));
    assert(hwtnl->cmd.prim_count == 0);
@@ -465,7 +466,7 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
          return ret;
 
       /* Force rebinding the index buffer when needed */
-      svga->state.hw_draw.ib = NULL;
+      rebind_ib = TRUE;
    }
 
    ret = validate_sampler_resources(svga);
@@ -563,15 +564,19 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
       SVGA3dSurfaceFormat indexFormat = xlate_index_format(range->indexWidth);
 
       /* setup index buffer */
-      if (ib_handle != svga->state.hw_draw.ib ||
+      if (rebind_ib ||
+          ib != svga->state.hw_draw.ib ||
           indexFormat != svga->state.hw_draw.ib_format ||
           range->indexArray.offset != svga->state.hw_draw.ib_offset) {
+
+         assert(indexFormat != SVGA3D_FORMAT_INVALID);
          ret = SVGA3D_vgpu10_SetIndexBuffer(svga->swc, ib_handle,
                                             indexFormat,
                                             range->indexArray.offset);
          if (ret != PIPE_OK)
             return ret;
-         svga->state.hw_draw.ib = ib_handle;
+
+         pipe_resource_reference(&svga->state.hw_draw.ib, ib);
          svga->state.hw_draw.ib_format = indexFormat;
          svga->state.hw_draw.ib_offset = range->indexArray.offset;
       }
@@ -598,15 +603,18 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
    }
    else {
       /* non-indexed drawing */
-      if (svga->state.hw_draw.ib_format != SVGA3D_FORMAT_INVALID) {
+      if (svga->state.hw_draw.ib_format != SVGA3D_FORMAT_INVALID ||
+          svga->state.hw_draw.ib != NULL) {
          /* Unbind previously bound index buffer */
          ret = SVGA3D_vgpu10_SetIndexBuffer(svga->swc, NULL,
                                             SVGA3D_FORMAT_INVALID, 0);
          if (ret != PIPE_OK)
             return ret;
          svga->state.hw_draw.ib_format = SVGA3D_FORMAT_INVALID;
-         svga->state.hw_draw.ib = NULL;
+         pipe_resource_reference(&svga->state.hw_draw.ib, NULL);
       }
+
+      assert(svga->state.hw_draw.ib == NULL);
 
       if (instance_count > 1) {
          ret = SVGA3D_vgpu10_DrawInstanced(svga->swc,
