@@ -3706,6 +3706,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          switch (instr->op) {
          case nir_texop_txf:
          case nir_texop_txf_ms:
+         case nir_texop_txf_ms_mcs:
          case nir_texop_samples_identical:
             srcs[TEX_LOGICAL_SRC_COORDINATE] = retype(src, BRW_REGISTER_TYPE_D);
             break;
@@ -3780,13 +3781,19 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          break;
       }
 
+      case nir_tex_src_ms_mcs:
+         assert(instr->op == nir_texop_txf_ms);
+         srcs[TEX_LOGICAL_SRC_MCS] = retype(src, BRW_REGISTER_TYPE_D);
+         break;
+
       default:
          unreachable("unknown texture source");
       }
    }
 
-   if (instr->op == nir_texop_txf_ms ||
-       instr->op == nir_texop_samples_identical) {
+   if (srcs[TEX_LOGICAL_SRC_MCS].file == BAD_FILE &&
+       (instr->op == nir_texop_txf_ms ||
+        instr->op == nir_texop_samples_identical)) {
       if (devinfo->gen >= 7 &&
           key_tex->compressed_multisample_layout_mask & (1 << texture)) {
          srcs[TEX_LOGICAL_SRC_MCS] =
@@ -3831,6 +3838,9 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          opcode = SHADER_OPCODE_TXF_CMS_W_LOGICAL;
       else
          opcode = SHADER_OPCODE_TXF_CMS_LOGICAL;
+      break;
+   case nir_texop_txf_ms_mcs:
+      opcode = SHADER_OPCODE_TXF_MCS_LOGICAL;
       break;
    case nir_texop_query_levels:
    case nir_texop_txs:
