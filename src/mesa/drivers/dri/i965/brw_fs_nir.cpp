@@ -3667,43 +3667,33 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          emit_gen6_gather_wa(key_tex->gen6_gather_wa[texture], dst);
    }
 
-   if (instr->op == nir_texop_query_levels) {
-      /* # levels is in .w */
-      dst = offset(dst, bld, 3);
-   }
+   fs_reg nir_dest[4];
+   for (unsigned i = 0; i < dest_size; i++)
+      nir_dest[i] = offset(dst, bld, i);
 
    bool is_cube_array = instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
                         instr->is_array;
 
-   /* fixup #layers for cube map arrays */
-   if (instr->op == nir_texop_txs && (devinfo->gen < 7 || is_cube_array)) {
+   if (instr->op == nir_texop_query_levels) {
+      /* # levels is in .w */
+      nir_dest[0] = offset(dst, bld, 3);
+   } else if (instr->op == nir_texop_txs && dest_size >= 3 &&
+              (devinfo->gen < 7 || is_cube_array)) {
       fs_reg depth = offset(dst, bld, 2);
       fs_reg fixed_depth = vgrf(glsl_type::int_type);
 
       if (is_cube_array) {
+         /* fixup #layers for cube map arrays */
          bld.emit(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, brw_imm_d(6));
       } else if (devinfo->gen < 7) {
          /* Gen4-6 return 0 instead of 1 for single layer surfaces. */
          bld.emit_minmax(fixed_depth, depth, brw_imm_d(1), BRW_CONDITIONAL_GE);
       }
 
-      fs_reg *fixed_payload = ralloc_array(mem_ctx, fs_reg, inst->regs_written);
-      int components = inst->regs_written / (inst->exec_size / 8);
-      for (int i = 0; i < components; i++) {
-         if (i == 2) {
-            fixed_payload[i] = fixed_depth;
-         } else {
-            fixed_payload[i] = offset(dst, bld, i);
-         }
-      }
-      bld.LOAD_PAYLOAD(dst, fixed_payload, components, 0);
+      nir_dest[2] = fixed_depth;
    }
 
-   fs_reg nir_dest = get_nir_dest(instr->dest);
-   nir_dest.type = dst.type;
-   emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
-                             nir_dest, dst),
-                (1 << dest_size) - 1);
+   bld.LOAD_PAYLOAD(get_nir_dest(instr->dest), nir_dest, dest_size, 0);
 }
 
 void
