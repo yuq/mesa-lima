@@ -1469,7 +1469,7 @@ dri2_interop_query_device_info(__DRIcontext *_ctx,
    struct pipe_screen *screen = dri_context(_ctx)->st->pipe->screen;
 
    if (!out->version)
-      return MESA_GLINTEROP_INVALID_VALUE;
+      return MESA_GLINTEROP_INVALID_VERSION;
 
    out->pci_segment_group = screen->get_param(screen, PIPE_CAP_PCI_GROUP);
    out->pci_bus = screen->get_param(screen, PIPE_CAP_PCI_BUS);
@@ -1498,7 +1498,7 @@ dri2_interop_export_object(__DRIcontext *_ctx,
    boolean success;
 
    if (!in->version || !out->version)
-      return MESA_GLINTEROP_INVALID_VALUE;
+      return MESA_GLINTEROP_INVALID_VERSION;
 
    /* Validate the target. */
    switch (in->target) {
