@@ -1468,7 +1468,8 @@ dri2_interop_query_device_info(__DRIcontext *_ctx,
 {
    struct pipe_screen *screen = dri_context(_ctx)->st->pipe->screen;
 
-   if (!out->version)
+   /* There is no version 0, thus we do not support it */
+   if (out->version == 0)
       return MESA_GLINTEROP_INVALID_VERSION;
 
    out->pci_segment_group = screen->get_param(screen, PIPE_CAP_PCI_GROUP);
@@ -1497,7 +1498,8 @@ dri2_interop_export_object(__DRIcontext *_ctx,
    unsigned target, usage;
    boolean success;
 
-   if (!in->version || !out->version)
+   /* There is no version 0, thus we do not support it */
+   if (in->version == 0 || out->version == 0)
       return MESA_GLINTEROP_INVALID_VERSION;
 
    /* Validate the target. */
