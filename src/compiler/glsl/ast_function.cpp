@@ -2078,6 +2078,10 @@ ast_function_expression::hir(exec_list *instructions,
          func_name = id->primary_expression.identifier;
       }
 
+      /* an error was emitted earlier */
+      if (!func_name)
+         return ir_rvalue::error_value(ctx);
+
       ir_function_signature *sig =
 	 match_function_by_name(func_name, &actual_parameters, state);
 
