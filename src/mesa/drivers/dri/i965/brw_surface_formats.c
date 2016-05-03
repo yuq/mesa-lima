@@ -125,7 +125,7 @@ const struct brw_surface_format_info surface_formats[] = {
    SF( Y,  Y,  x,  x,  Y,  Y,  Y,  x, 60,    x,   R10G10B10A2_UNORM)
    SF( Y,  Y,  x,  x,  x,  x,  x,  x, 60,    x,   R10G10B10A2_UNORM_SRGB)
    SF( Y,  x,  x,  x,  Y,  x,  Y,  x,  x,    x,   R10G10B10A2_UINT)
-   SF( Y,  Y,  x,  x,  x,  Y,  Y,  x,  x,    x,   R10G10B10_SNORM_A2_UNORM)
+   SF( Y,  Y,  x,  x,  x,  x,  Y,  x,  x,    x,   R10G10B10_SNORM_A2_UNORM)
    SF( Y,  Y,  x,  x,  Y,  Y,  Y,  x, 60,   90,   R8G8B8A8_UNORM)
    SF( Y,  Y,  x,  x,  Y,  Y,  x,  x, 60,    x,   R8G8B8A8_UNORM_SRGB)
    SF( Y,  Y,  x,  x,  Y, 60,  Y,  x,  x,   90,   R8G8B8A8_SNORM)
