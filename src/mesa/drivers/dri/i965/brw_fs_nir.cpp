@@ -3552,27 +3552,6 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       srcs[TEX_LOGICAL_SRC_LOD] = brw_imm_ud(0u);
    }
 
-   if (instr->op == nir_texop_samples_identical) {
-      fs_reg dst = retype(get_nir_dest(instr->dest), BRW_REGISTER_TYPE_D);
-
-      /* If mcs is an immediate value, it means there is no MCS.  In that case
-       * just return false.
-       */
-      if (srcs[TEX_LOGICAL_SRC_MCS].file == BRW_IMMEDIATE_VALUE) {
-         bld.MOV(dst, brw_imm_ud(0u));
-      } else if ((key_tex->msaa_16 & (1 << sampler))) {
-         fs_reg tmp = vgrf(glsl_type::uint_type);
-         bld.OR(tmp, srcs[TEX_LOGICAL_SRC_MCS],
-                offset(srcs[TEX_LOGICAL_SRC_MCS], bld, 1));
-         bld.CMP(dst, tmp, brw_imm_ud(0u), BRW_CONDITIONAL_EQ);
-      } else {
-         bld.CMP(dst, srcs[TEX_LOGICAL_SRC_MCS], brw_imm_ud(0u),
-                 BRW_CONDITIONAL_EQ);
-      }
-
-      return;
-   }
-
    enum opcode opcode;
    switch (instr->op) {
    case nir_texop_tex:
@@ -3625,6 +3604,25 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 
       /* Pick off the one component we care about */
       bld.MOV(dst, tmp);
+      return;
+   }
+   case nir_texop_samples_identical: {
+      fs_reg dst = retype(get_nir_dest(instr->dest), BRW_REGISTER_TYPE_D);
+
+      /* If mcs is an immediate value, it means there is no MCS.  In that case
+       * just return false.
+       */
+      if (srcs[TEX_LOGICAL_SRC_MCS].file == BRW_IMMEDIATE_VALUE) {
+         bld.MOV(dst, brw_imm_ud(0u));
+      } else if ((key_tex->msaa_16 & (1 << sampler))) {
+         fs_reg tmp = vgrf(glsl_type::uint_type);
+         bld.OR(tmp, srcs[TEX_LOGICAL_SRC_MCS],
+                offset(srcs[TEX_LOGICAL_SRC_MCS], bld, 1));
+         bld.CMP(dst, tmp, brw_imm_ud(0u), BRW_CONDITIONAL_EQ);
+      } else {
+         bld.CMP(dst, srcs[TEX_LOGICAL_SRC_MCS], brw_imm_ud(0u),
+                 BRW_CONDITIONAL_EQ);
+      }
       return;
    }
    default:
