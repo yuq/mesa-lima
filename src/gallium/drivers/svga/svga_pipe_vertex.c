@@ -329,6 +329,9 @@ void svga_cleanup_vertex_state( struct svga_context *svga )
       pipe_resource_reference(&svga->curr.vb[i].buffer, NULL);
 
    pipe_resource_reference(&svga->state.hw_draw.ib, NULL);
+
+   for (i = 0; i < svga->state.hw_draw.num_vbuffers; i++)
+      pipe_resource_reference(&svga->state.hw_draw.vbuffers[i], NULL);
 }
 
 

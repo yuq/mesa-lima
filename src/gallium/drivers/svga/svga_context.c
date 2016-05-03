@@ -241,6 +241,8 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
    svga->state.hw_draw.vs = NULL;
    svga->state.hw_draw.gs = NULL;
    svga->state.hw_draw.fs = NULL;
+
+   /* Initialize the currently bound buffer resources */
    memset(svga->state.hw_draw.constbuf, 0,
           sizeof(svga->state.hw_draw.constbuf));
    memset(svga->state.hw_draw.default_constbuf_size, 0,
@@ -248,6 +250,9 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
    memset(svga->state.hw_draw.enabled_constbufs, 0,
           sizeof(svga->state.hw_draw.enabled_constbufs));
    svga->state.hw_draw.ib = NULL;
+   svga->state.hw_draw.num_vbuffers = 0;
+   memset(svga->state.hw_draw.vbuffers, 0,
+          sizeof(svga->state.hw_draw.vbuffers));
 
    /* Create a no-operation blend state which we will bind whenever the
     * requested blend state is impossible (e.g. due to having an integer
