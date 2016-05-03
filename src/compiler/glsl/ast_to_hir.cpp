@@ -2100,7 +2100,7 @@ ast_expression::has_sequence_subexpression() const
       return false;
 
    case ast_aggregate:
-      unreachable("ast_aggregate: Should never get here.");
+      return false;
 
    case ast_function_call:
       unreachable("should be handled by ast_function_expression::hir");
