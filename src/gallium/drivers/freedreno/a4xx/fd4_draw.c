@@ -49,9 +49,6 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	const struct pipe_draw_info *info = emit->info;
 	enum pc_di_primtype primtype = ctx->primtypes[info->mode];
 
-	if (!(fd4_emit_get_vp(emit) && fd4_emit_get_fp(emit)))
-		return;
-
 	fd4_emit_state(ctx, ring, emit);
 
 	if (emit->dirty & (FD_DIRTY_VTXBUF | FD_DIRTY_VTXSTATE))
@@ -121,7 +118,7 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 	}
 }
 
-static void
+static bool
 fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 {
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
@@ -131,8 +128,6 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 		.prog = &ctx->prog,
 		.info = info,
 		.key = {
-			/* do binning pass first: */
-			.binning_pass = true,
 			.color_two_side = ctx->rasterizer->light_twoside,
 			.vclamp_color = ctx->rasterizer->clamp_vertex_color,
 			.fclamp_color = ctx->rasterizer->clamp_fragment_color,
@@ -156,19 +151,18 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 		.sprite_coord_enable = ctx->rasterizer->sprite_coord_enable,
 		.sprite_coord_mode = ctx->rasterizer->sprite_coord_mode,
 	};
-	unsigned dirty;
 
 	fixup_shader_state(ctx, &emit.key);
 
-	dirty = ctx->dirty;
-	emit.dirty = dirty & ~(FD_DIRTY_BLEND);
-	draw_impl(ctx, ctx->binning_ring, &emit);
+	unsigned dirty = ctx->dirty;
 
-	/* and now regular (non-binning) pass: */
+	/* do regular pass first, since that is more likely to fail compiling: */
+
+	if (!(fd4_emit_get_vp(&emit) && fd4_emit_get_fp(&emit)))
+		return false;
+
 	emit.key.binning_pass = false;
 	emit.dirty = dirty;
-	emit.vp = NULL;   /* we changed key so need to refetch vp */
-	emit.fp = NULL;
 
 	if (ctx->rasterizer->rasterizer_discard) {
 		fd_wfi(ctx, ctx->ring);
@@ -187,6 +181,15 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 		OUT_RING(ctx->ring, ~A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
 		OUT_RING(ctx->ring, 0);
 	}
+
+	/* and now binning pass: */
+	emit.key.binning_pass = true;
+	emit.dirty = dirty & ~(FD_DIRTY_BLEND);
+	emit.vp = NULL;   /* we changed key so need to refetch vp */
+	emit.fp = NULL;
+	draw_impl(ctx, ctx->binning_ring, &emit);
+
+	return true;
 }
 
 /* clear operations ignore viewport state, so we need to reset it

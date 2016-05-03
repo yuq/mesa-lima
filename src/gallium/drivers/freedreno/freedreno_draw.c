@@ -102,8 +102,6 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		return;
 	}
 
-	ctx->needs_flush = true;
-
 	/*
 	 * Figure out the buffers/features we need:
 	 */
@@ -195,7 +193,8 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 
 	fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_DRAW);
-	ctx->draw_vbo(ctx, info);
+	if (ctx->draw_vbo(ctx, info))
+		ctx->needs_flush = true;
 
 	for (i = 0; i < ctx->streamout.num_targets; i++)
 		ctx->streamout.offsets[i] += info->count;
