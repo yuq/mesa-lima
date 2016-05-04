@@ -557,8 +557,7 @@ get_tex_rgba_uncompressed(struct gl_context *ctx, GLuint dimensions,
    }
 
 done:
-   if (rgba)
-      free(rgba);
+   free(rgba);
 }
 
 
