@@ -88,6 +88,7 @@ MESA_ENABLE_LLVM := $(if $(filter radeonsi,$(MESA_GPU_DRIVERS)),true,false)
 ifneq ($(strip $(MESA_GPU_DRIVERS)),)
 
 SUBDIRS := \
+	src/gbm \
 	src/loader \
 	src/mapi \
 	src/compiler \
