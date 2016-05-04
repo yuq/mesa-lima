@@ -4189,6 +4189,10 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
    switch (op) {
    case FS_OPCODE_TXB:
    case SHADER_OPCODE_TXL:
+      if (devinfo->gen >= 9 && op == SHADER_OPCODE_TXL && lod.is_zero()) {
+         op = SHADER_OPCODE_TXL_LZ;
+         break;
+      }
       bld.MOV(sources[length], lod);
       length++;
       break;
@@ -4240,8 +4244,12 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
          length++;
       }
 
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), lod);
-      length++;
+      if (devinfo->gen >= 9 && lod.is_zero()) {
+         op = SHADER_OPCODE_TXF_LZ;
+      } else {
+         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), lod);
+         length++;
+      }
 
       for (unsigned i = devinfo->gen >= 9 ? 2 : 1; i < coord_components; i++) {
          bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
