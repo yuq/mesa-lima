@@ -1575,6 +1575,7 @@ void BinTriangles(
     const SWR_RASTSTATE& rastState = state.rastState;
     const SWR_FRONTEND_STATE& feState = state.frontendState;
     const SWR_GS_STATE& gsState = state.gsState;
+    MacroTileMgr *pTileMgr = pDC->pTileMgr;
 
     // Simple wireframe mode for debugging purposes only
 
@@ -1783,6 +1784,7 @@ void BinTriangles(
         _simd_store_si((simdscalari*)aRTAI, _simd_setzero_si());
     }
 
+
     // scan remaining valid triangles and bin each separately
     while (_BitScanForward(&triIndex, triMask))
     {
@@ -1835,7 +1837,6 @@ void BinTriangles(
             ProcessUserClipDist<3>(pa, triIndex, rastState.clipDistanceMask, desc.pUserClipBuffer);
         }
 
-        MacroTileMgr *pTileMgr = pDC->pTileMgr;
         for (uint32_t y = aMTTop[triIndex]; y <= aMTBottom[triIndex]; ++y)
         {
             for (uint32_t x = aMTLeft[triIndex]; x <= aMTRight[triIndex]; ++x)
