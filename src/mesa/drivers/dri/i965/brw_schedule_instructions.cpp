@@ -215,7 +215,9 @@ schedule_node::set_latency_gen7(bool is_haswell)
    case SHADER_OPCODE_TEX:
    case SHADER_OPCODE_TXD:
    case SHADER_OPCODE_TXF:
+   case SHADER_OPCODE_TXF_LZ:
    case SHADER_OPCODE_TXL:
+   case SHADER_OPCODE_TXL_LZ:
       /* 18 cycles:
        * mov(8)  g115<1>F   0F                         { align1 WE_normal 1Q };
        * mov(8)  g114<1>F   0F                         { align1 WE_normal 1Q };

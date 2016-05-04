@@ -781,6 +781,14 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 	    msg_type = GEN5_SAMPLER_MESSAGE_SAMPLE_LOD;
 	 }
 	 break;
+      case SHADER_OPCODE_TXL_LZ:
+         assert(devinfo->gen >= 9);
+	 if (inst->shadow_compare) {
+            msg_type = GEN9_SAMPLER_MESSAGE_SAMPLE_C_LZ;
+         } else {
+            msg_type = GEN9_SAMPLER_MESSAGE_SAMPLE_LZ;
+         }
+         break;
       case SHADER_OPCODE_TXS:
 	 msg_type = GEN5_SAMPLER_MESSAGE_SAMPLE_RESINFO;
 	 break;
@@ -796,6 +804,10 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
       case SHADER_OPCODE_TXF:
 	 msg_type = GEN5_SAMPLER_MESSAGE_SAMPLE_LD;
 	 break;
+      case SHADER_OPCODE_TXF_LZ:
+         assert(devinfo->gen >= 9);
+         msg_type = GEN9_SAMPLER_MESSAGE_SAMPLE_LD_LZ;
+         break;
       case SHADER_OPCODE_TXF_CMS_W:
          assert(devinfo->gen >= 9);
          msg_type = GEN9_SAMPLER_MESSAGE_SAMPLE_LD2DMS_W;
@@ -2122,11 +2134,13 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case FS_OPCODE_TXB:
       case SHADER_OPCODE_TXD:
       case SHADER_OPCODE_TXF:
+      case SHADER_OPCODE_TXF_LZ:
       case SHADER_OPCODE_TXF_CMS:
       case SHADER_OPCODE_TXF_CMS_W:
       case SHADER_OPCODE_TXF_UMS:
       case SHADER_OPCODE_TXF_MCS:
       case SHADER_OPCODE_TXL:
+      case SHADER_OPCODE_TXL_LZ:
       case SHADER_OPCODE_TXS:
       case SHADER_OPCODE_LOD:
       case SHADER_OPCODE_TG4:

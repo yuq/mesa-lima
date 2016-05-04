@@ -218,10 +218,14 @@ brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
       return "txf";
    case SHADER_OPCODE_TXF_LOGICAL:
       return "txf_logical";
+   case SHADER_OPCODE_TXF_LZ:
+      return "txf_lz";
    case SHADER_OPCODE_TXL:
       return "txl";
    case SHADER_OPCODE_TXL_LOGICAL:
       return "txl_logical";
+   case SHADER_OPCODE_TXL_LZ:
+      return "txl_lz";
    case SHADER_OPCODE_TXS:
       return "txs";
    case SHADER_OPCODE_TXS_LOGICAL:
@@ -802,11 +806,13 @@ backend_instruction::is_tex() const
            opcode == FS_OPCODE_TXB ||
            opcode == SHADER_OPCODE_TXD ||
            opcode == SHADER_OPCODE_TXF ||
+           opcode == SHADER_OPCODE_TXF_LZ ||
            opcode == SHADER_OPCODE_TXF_CMS ||
            opcode == SHADER_OPCODE_TXF_CMS_W ||
            opcode == SHADER_OPCODE_TXF_UMS ||
            opcode == SHADER_OPCODE_TXF_MCS ||
            opcode == SHADER_OPCODE_TXL ||
+           opcode == SHADER_OPCODE_TXL_LZ ||
            opcode == SHADER_OPCODE_TXS ||
            opcode == SHADER_OPCODE_LOD ||
            opcode == SHADER_OPCODE_TG4 ||
