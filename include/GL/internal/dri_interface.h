@@ -1094,7 +1094,7 @@ struct __DRIdri2ExtensionRec {
  * extensions.
  */
 #define __DRI_IMAGE "DRI_IMAGE"
-#define __DRI_IMAGE_VERSION 11
+#define __DRI_IMAGE_VERSION 12
 
 /**
  * These formats correspond to the similarly named MESA_FORMAT_*
@@ -1132,6 +1132,11 @@ struct __DRIdri2ExtensionRec {
  */
 #define __DRI_IMAGE_USE_BACKBUFFER      0x0010
 
+
+#define __DRI_IMAGE_TRANSFER_READ            0x1
+#define __DRI_IMAGE_TRANSFER_WRITE           0x2
+#define __DRI_IMAGE_TRANSFER_READ_WRITE      \
+        (__DRI_IMAGE_TRANSFER_READ | __DRI_IMAGE_TRANSFER_WRITE)
 
 /**
  * Four CC formats that matches with WL_DRM_FORMAT_* from wayland_drm.h,
@@ -1381,6 +1386,33 @@ struct __DRIimageExtensionRec {
     * \since 10
     */
    int (*getCapabilities)(__DRIscreen *screen);
+
+   /**
+    * Returns a map of the specified region of a __DRIimage for the specified usage.
+    *
+    * flags may include __DRI_IMAGE_TRANSFER_READ, which will populate the
+    * mapping with the current buffer content. If __DRI_IMAGE_TRANSFER_READ
+    * is not included in the flags, the buffer content at map time is
+    * undefined. Users wanting to modify the mapping must include
+    * __DRI_IMAGE_TRANSFER_WRITE; if __DRI_IMAGE_TRANSFER_WRITE is not
+    * included, behaviour when writing the mapping is undefined.
+    *
+    * Returns the byte stride in *stride, and an opaque pointer to data
+    * tracking the mapping in **data, which must be passed to unmapImage().
+    *
+    * \since 12
+    */
+   void *(*mapImage)(__DRIcontext *context, __DRIimage *image,
+                     int x0, int y0, int width, int height,
+                     unsigned int flags, int *stride, void **data);
+
+   /**
+    * Unmap a previously mapped __DRIimage
+    *
+    * \since 12
+    */
+   void (*unmapImage)(__DRIcontext *context, __DRIimage *image, void *data);
+
 };
 
 
