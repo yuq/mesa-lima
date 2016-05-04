@@ -85,7 +85,7 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
 
    if (src_arr_parent || dest_arr_parent) {
       /* Wildcards had better come in matched pairs */
-      assert(dest_arr_parent && dest_arr_parent);
+      assert(src_arr_parent && dest_arr_parent);
 
       nir_deref_array *src_arr = nir_deref_as_array(src_arr_parent->child);
       nir_deref_array *dest_arr = nir_deref_as_array(dest_arr_parent->child);
