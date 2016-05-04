@@ -142,6 +142,12 @@ else
     fi
 fi
 
+if test -z "$PYTHON3"; then
+    if test ! -f "$srcdir/src/intel/genxml/gen9_pack.h"; then
+        AC_MSG_ERROR([Python3 not found - unable to generate sources])
+    fi
+fi
+
 AC_PROG_INSTALL
 
 dnl We need a POSIX shell for parts of the build. Assume we have one
