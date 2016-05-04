@@ -139,7 +139,8 @@ _mesa_generate_texture_mipmap(struct gl_context *ctx,
                                                               srcImage->InternalFormat)) {
       _mesa_unlock_texture(ctx, texObj);
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glGenerate%sMipmap(invalid internal format)", suffix);
+                  "glGenerate%sMipmap(invalid internal format %s)", suffix,
+                  _mesa_enum_to_string(srcImage->InternalFormat));
       return;
    }
 
