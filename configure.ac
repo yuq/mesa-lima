@@ -800,6 +800,10 @@ dnl to -pthread, which causes problems if we need -lpthread to appear in
 dnl pkgconfig files.
 test -z "$PTHREAD_LIBS" && PTHREAD_LIBS="-lpthread"
 
+PKG_CHECK_MODULES(PTHREADSTUBS, pthread-stubs)
+AC_SUBST(PTHREADSTUBS_CFLAGS)
+AC_SUBST(PTHREADSTUBS_LIBS)
+
 dnl SELinux awareness.
 AC_ARG_ENABLE([selinux],
     [AS_HELP_STRING([--enable-selinux],
