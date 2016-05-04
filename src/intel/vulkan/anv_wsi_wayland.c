@@ -782,12 +782,16 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
 
    chain->display = wsi_wl_get_display(&device->instance->physicalDevice,
                                        surface->display);
-   if (!chain->display)
+   if (!chain->display) {
+      result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
       goto fail;
+   }
 
    chain->queue = wl_display_create_queue(chain->display->display);
-   if (!chain->queue)
+   if (!chain->queue) {
+      result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
       goto fail;
+   }
 
    for (uint32_t i = 0; i < chain->image_count; i++) {
       result = wsi_wl_image_init(chain, &chain->images[i], pAllocator);
