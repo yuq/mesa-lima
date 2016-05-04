@@ -1762,8 +1762,6 @@ fs_visitor::assign_tcs_single_patch_urb_setup()
 {
    assert(stage == MESA_SHADER_TESS_CTRL);
 
-   brw_vue_prog_data *vue_prog_data = (brw_vue_prog_data *) prog_data;
-
    /* Rewrite all ATTR file references to HW_REGs. */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       convert_attr_sources_to_hw_regs(inst);
