@@ -30,6 +30,7 @@
 
 #include <sys/mman.h>
 #include "gbmint.h"
+#include "c11/threads.h"
 
 #include "common_drm.h"
 
@@ -45,6 +46,8 @@ struct gbm_dri_device {
    void *driver;
 
    __DRIscreen *screen;
+   __DRIcontext *context;
+   mtx_t mutex;
 
    const __DRIcoreExtension   *core;
    const __DRIdri2Extension   *dri2;

@@ -32,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <assert.h>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -924,6 +925,60 @@ failed:
    return NULL;
 }
 
+static void *
+gbm_dri_bo_map(struct gbm_bo *_bo,
+              uint32_t x, uint32_t y,
+              uint32_t width, uint32_t height,
+              uint32_t flags, uint32_t *stride, void **map_data)
+{
+   struct gbm_dri_device *dri = gbm_dri_device(_bo->gbm);
+   struct gbm_dri_bo *bo = gbm_dri_bo(_bo);
+
+   /* If it's a dumb buffer, we already have a mapping */
+   if (bo->map) {
+      *map_data = (char *)bo->map + (bo->base.base.stride * y) + (x * 4);
+      *stride = bo->base.base.stride;
+      return *map_data;
+   }
+
+   if (!dri->image || dri->image->base.version < 12) {
+      errno = ENOSYS;
+      return NULL;
+   }
+
+   mtx_lock(&dri->mutex);
+   if (!dri->context)
+      dri->context = dri->dri2->createNewContext(dri->screen, NULL,
+                                                 NULL, NULL);
+   assert(dri->context);
+   mtx_unlock(&dri->mutex);
+
+   /* GBM flags and DRI flags are the same, so just pass them on */
+   return dri->image->mapImage(dri->context, bo->image, x, y,
+                               width, height, flags, (int *)stride,
+                               map_data);
+}
+
+static void
+gbm_dri_bo_unmap(struct gbm_bo *_bo, void *map_data)
+{
+   struct gbm_dri_device *dri = gbm_dri_device(_bo->gbm);
+   struct gbm_dri_bo *bo = gbm_dri_bo(_bo);
+
+   /* Check if it's a dumb buffer and check the pointer is in range */
+   if (bo->map) {
+      assert(map_data >= bo->map);
+      assert(map_data < (bo->map + bo->size));
+      return;
+   }
+
+   if (!dri->context || !dri->image || dri->image->base.version < 12)
+      return;
+
+   dri->image->unmapImage(dri->context, bo->image, map_data);
+}
+
+
 static struct gbm_surface *
 gbm_dri_surface_create(struct gbm_device *gbm,
                        uint32_t width, uint32_t height,
@@ -958,6 +1013,9 @@ dri_destroy(struct gbm_device *gbm)
    struct gbm_dri_device *dri = gbm_dri_device(gbm);
    unsigned i;
 
+   if (dri->context)
+      dri->core->destroyContext(dri->context);
+
    dri->core->destroyScreen(dri->screen);
    for (i = 0; dri->driver_configs[i]; i++)
       free((__DRIconfig *) dri->driver_configs[i]);
@@ -981,6 +1039,8 @@ dri_device_create(int fd)
    dri->base.base.fd = fd;
    dri->base.base.bo_create = gbm_dri_bo_create;
    dri->base.base.bo_import = gbm_dri_bo_import;
+   dri->base.base.bo_map = gbm_dri_bo_map;
+   dri->base.base.bo_unmap = gbm_dri_bo_unmap;
    dri->base.base.is_format_supported = gbm_dri_is_format_supported;
    dri->base.base.bo_write = gbm_dri_bo_write;
    dri->base.base.bo_get_fd = gbm_dri_bo_get_fd;
@@ -991,6 +1051,8 @@ dri_device_create(int fd)
 
    dri->base.type = GBM_DRM_DRIVER_TYPE_DRI;
    dri->base.base.name = "drm";
+
+   mtx_init(&dri->mutex, mtx_plain);
 
    force_sw = getenv("GBM_ALWAYS_SOFTWARE") != NULL;
    if (!force_sw) {

@@ -386,6 +386,59 @@ gbm_bo_import(struct gbm_device *gbm,
 }
 
 /**
+ * Map a region of a gbm buffer object for cpu access
+ *
+ * This function maps a region of a gbm bo for cpu read and/or write
+ * access.
+ *
+ * \param bo The buffer object
+ * \param x The X (top left origin) starting position of the mapped region for
+ * the buffer
+ * \param y The Y (top left origin) starting position of the mapped region for
+ * the buffer
+ * \param width The width of the mapped region for the buffer
+ * \param height The height of the mapped region for the buffer
+ * \param flags The union of the GBM_BO_TRANSFER_* flags for this buffer
+ * \param stride Ptr for returned stride in bytes of the mapped region
+ * \param map_data Returned opaque ptr for the mapped region
+ *
+ * \return Address of the mapped buffer that should be unmapped with
+ * gbm_bo_unmap() when no longer needed. On error, %NULL is returned
+ * and errno is set.
+ *
+ * \sa enum gbm_bo_transfer_flags for the list of flags
+ */
+GBM_EXPORT void *
+gbm_bo_map(struct gbm_bo *bo,
+              uint32_t x, uint32_t y,
+              uint32_t width, uint32_t height,
+              uint32_t flags, uint32_t *stride, void **map_data)
+{
+   if (!bo || width == 0 || height == 0 || !stride || !map_data) {
+      errno = EINVAL;
+      return NULL;
+   }
+
+   return bo->gbm->bo_map(bo, x, y, width, height,
+                          flags, stride, map_data);
+}
+
+/**
+ * Unmap a previously mapped region of a gbm buffer object
+ *
+ * This function unmaps a region of a gbm bo for cpu read and/or write
+ * access.
+ *
+ * \param bo The buffer object
+ * \param map_data opaque ptr returned from prior gbm_bo_map
+ */
+GBM_EXPORT void
+gbm_bo_unmap(struct gbm_bo *bo, void *map_data)
+{
+   bo->gbm->bo_unmap(bo, map_data);
+}
+
+/**
  * Allocate a surface object
  *
  * \param gbm The gbm device returned from gbm_create_device()

@@ -41,10 +41,12 @@ libgbm_la_SOURCES += \
 
 AM_CFLAGS += \
 	-DDEFAULT_DRIVER_DIR='"$(DRI_DRIVER_SEARCH_DIR)"' \
-	$(LIBDRM_CFLAGS)
+	$(LIBDRM_CFLAGS) \
+	$(PTHREADSTUBS_CFLAGS)
 
 libgbm_la_LIBADD += \
-	$(LIBDRM_LIBS)
+	$(LIBDRM_LIBS) \
+	$(PTHREADSTUBS_LIBS)
 endif
 
 TESTS = gbm-symbols-check
