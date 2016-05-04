@@ -262,8 +262,7 @@ fd_resource_transfer_unmap(struct pipe_context *pctx,
 	pipe_resource_reference(&ptrans->resource, NULL);
 	util_slab_free(&ctx->transfer_pool, ptrans);
 
-	if (trans->staging)
-		free(trans->staging);
+	free(trans->staging);
 }
 
 static void *
