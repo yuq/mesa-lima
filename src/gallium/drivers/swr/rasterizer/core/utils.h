@@ -866,3 +866,20 @@ struct TemplateArgUnroller
     }
 };
 
+//////////////////////////////////////////////////////////////////////////
+/// Helper used to get an environment variable
+//////////////////////////////////////////////////////////////////////////
+static INLINE std::string GetEnv(const std::string& variableName)
+{
+    std::string output;
+#if defined(_WIN32)
+    DWORD valueSize = GetEnvironmentVariableA(variableName.c_str(), nullptr, 0);
+    if (!valueSize) return output;
+    output.resize(valueSize - 1); // valueSize includes null, output.resize() does not
+    GetEnvironmentVariableA(variableName.c_str(), &output[0], valueSize);
+#else
+    output = getenv(variableName.c_str());
+#endif
+
+    return output;
+}
