@@ -74,8 +74,6 @@ gen8_upload_3dstate_so_buffers(struct brw_context *brw)
          intel_bufferobj_buffer(brw, bufferobj, start, end - start);
       assert(end <= bo->size);
 
-      perf_debug("Missing MOCS setup for 3DSTATE_SO_BUFFER.");
-
       BEGIN_BATCH(8);
       OUT_BATCH(_3DSTATE_SO_BUFFER << 16 | (8 - 2));
       OUT_BATCH(GEN8_SO_BUFFER_ENABLE | (i << SO_BUFFER_INDEX_SHIFT) |
