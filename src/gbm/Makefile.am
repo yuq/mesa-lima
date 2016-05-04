@@ -1,3 +1,5 @@
+include Makefile.sources
+
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = main/gbm.pc
 
@@ -15,12 +17,7 @@ lib_LTLIBRARIES = libgbm.la
 include_HEADERS = main/gbm.h
 
 libgbm_la_SOURCES = \
-	main/backend.c \
-	main/backend.h \
-	main/common_drm.h \
-	main/gbm.c \
-	main/gbm.h \
-	main/gbmint.h
+	$(gbm_core_FILES)
 
 libgbm_la_LDFLAGS = \
 	-no-undefined \
@@ -40,8 +37,7 @@ endif
 
 if HAVE_DRI2
 libgbm_la_SOURCES += \
-	backends/dri/gbm_dri.c \
-	backends/dri/gbm_driint.h
+	$(gbm_dri_FILES)
 
 AM_CFLAGS += \
 	-DDEFAULT_DRIVER_DIR='"$(DRI_DRIVER_SEARCH_DIR)"' \
