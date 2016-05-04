@@ -901,7 +901,7 @@
     <function name="GetSamplerParameterIuivEXT" es2="3.0" alias="GetSamplerParameterIuiv">
       <param name="sampler" type="GLuint"/>
       <param name="pname" type="GLenum"/>
-      <param name="params" type="GLfloat *"/>
+      <param name="params" type="GLuint *"/>
     </function>
 
 </category>
@@ -1290,7 +1290,7 @@
     <function name="GetSamplerParameterIuivOES" es2="3.0" alias="GetSamplerParameterIuiv">
       <param name="sampler" type="GLuint"/>
       <param name="pname" type="GLenum"/>
-      <param name="params" type="GLfloat *"/>
+      <param name="params" type="GLuint *"/>
     </function>
 
 </category>
