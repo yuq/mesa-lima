@@ -30,6 +30,14 @@
 #include "rdtsc_buckets.h"
 #include <inttypes.h>
 
+#if defined(_WIN32)
+#define PATH_SEPARATOR "\\"
+#elif defined(__unix__)
+#define PATH_SEPARATOR "/"
+#else
+#error "Unsupported platform"
+#endif
+
 THREAD UINT tlsThreadId = 0;
 
 void BucketManager::RegisterThread(const std::string& name)
@@ -64,7 +72,8 @@ void BucketManager::RegisterThread(const std::string& name)
     if (mThreadViz)
     {
         std::stringstream ss;
-        ss << mThreadVizDir << "\\threadviz_thread." << newThread.id << ".dat";
+        ss << mThreadVizDir << PATH_SEPARATOR;
+        ss << "threadviz_thread." << newThread.id << ".dat";
         newThread.vizFile = fopen(ss.str().c_str(), "wb");
     }
 
@@ -171,7 +180,7 @@ void BucketManager::DumpThreadViz()
 
     // dump bucket descriptions
     std::stringstream ss;
-    ss << mThreadVizDir << "\\threadviz_buckets.dat";
+    ss << mThreadVizDir << PATH_SEPARATOR << "threadviz_buckets.dat";
 
     FILE* f = fopen(ss.str().c_str(), "wb");
     for (auto& bucket : mBuckets)
