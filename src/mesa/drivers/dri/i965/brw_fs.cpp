@@ -4681,29 +4681,6 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    }
 }
 
-/**
- * The \p rows array of registers represents a \p num_rows by \p num_columns
- * matrix in row-major order, write it in column-major order into the register
- * passed as destination.  \p stride gives the separation between matrix
- * elements in the input in fs_builder::dispatch_width() units.
- */
-static void
-emit_transpose(const fs_builder &bld,
-               const fs_reg &dst, const fs_reg *rows,
-               unsigned num_rows, unsigned num_columns, unsigned stride)
-{
-   fs_reg *const components = new fs_reg[num_rows * num_columns];
-
-   for (unsigned i = 0; i < num_columns; ++i) {
-      for (unsigned j = 0; j < num_rows; ++j)
-         components[num_rows * i + j] = offset(rows[j], bld, stride * i);
-   }
-
-   bld.LOAD_PAYLOAD(dst, components, num_rows * num_columns, 0);
-
-   delete[] components;
-}
-
 bool
 fs_visitor::lower_simd_width()
 {
@@ -4754,16 +4731,19 @@ fs_visitor::lower_simd_width()
                if (inst->src[j].file != BAD_FILE &&
                    !is_uniform(inst->src[j])) {
                   /* Get the i-th copy_width-wide chunk of the source. */
-                  const fs_reg src = horiz_offset(inst->src[j], copy_width * i);
+                  const fs_builder cbld = lbld.group(copy_width, 0);
+                  const fs_reg src = offset(inst->src[j], cbld, i);
                   const unsigned src_size = inst->components_read(j);
 
-                  /* Use a trivial transposition to copy one every n
-                   * copy_width-wide components of the register into a
-                   * temporary passed as source to the lowered instruction.
+                  /* Copy one every n copy_width-wide components of the
+                   * register into a temporary passed as source to the lowered
+                   * instruction.
                    */
                   split_inst.src[j] = lbld.vgrf(inst->src[j].type, src_size);
-                  emit_transpose(lbld.group(copy_width, 0),
-                                 split_inst.src[j], &src, 1, src_size, n);
+
+                  for (unsigned k = 0; k < src_size; ++k)
+                     cbld.MOV(offset(split_inst.src[j], lbld, k),
+                              offset(src, cbld, n * k));
                }
             }
 
@@ -4782,20 +4762,18 @@ fs_visitor::lower_simd_width()
          }
 
          if (inst->regs_written) {
-            /* Distance between useful channels in the temporaries, skipping
-             * garbage if the lowered instruction is wider than the original.
-             */
-            const unsigned m = lower_width / copy_width;
+            const fs_builder lbld = ibld.group(lower_width, 0);
 
             /* Interleave the components of the result from the lowered
-             * instructions.  We need to set exec_all() when copying more than
-             * one half per component, because LOAD_PAYLOAD (in terms of which
-             * emit_transpose is implemented) can only use the same channel
-             * enable signals for all of its non-header sources.
+             * instructions.
              */
-            emit_transpose(ibld.exec_all(inst->exec_size > copy_width)
-                               .group(copy_width, 0),
-                           inst->dst, dsts, n, dst_size, m);
+            for (unsigned i = 0; i < dst_size; ++i) {
+               for (unsigned j = 0; j < n; ++j) {
+                  const fs_builder cbld = ibld.group(copy_width, j);
+                  cbld.MOV(offset(inst->dst, cbld, n * i + j),
+                           offset(dsts[j], lbld, i));
+               }
+            }
          }
 
          inst->remove(block);
