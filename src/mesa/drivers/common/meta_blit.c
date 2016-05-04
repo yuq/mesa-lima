@@ -458,8 +458,17 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
          int step;
 
          if (src_datatype == GL_INT || src_datatype == GL_UNSIGNED_INT) {
-            merge_function =
-               "gvec4 merge(gvec4 a, gvec4 b) { return (a >> gvec4(1)) + (b >> gvec4(1)) + (a & b & gvec4(1)); }\n";
+            /* From the OpenGL ES 3.2 spec section 16.2.1:
+             *
+             *    "If the source formats are integer types or stencil values,
+             *    a single sample's value is selected for each pixel."
+             *
+             * The OpenGL 4.4 spec contains exactly the same language.
+             *
+             * We can accomplish this by making the merge function return just
+             * one of the two samples.  The compiler should do the rest.
+             */
+            merge_function = "gvec4 merge(gvec4 a, gvec4 b) { return a; }\n";
          } else {
             /* The divide will happen at the end for floats. */
             merge_function =
