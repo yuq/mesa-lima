@@ -183,7 +183,7 @@ class gl_print_base(object):
         The name is also added to the file's undef_list.
         """
         self.undef_list.append("PURE")
-        print """#  if defined(__GNUC__)
+        print """#  if defined(__GNUC__) || (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
 #    define PURE __attribute__((pure))
 #  else
 #    define PURE
