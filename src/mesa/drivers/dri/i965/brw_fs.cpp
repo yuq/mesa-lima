@@ -5700,7 +5700,6 @@ fs_visitor::optimize()
       OPT(opt_peephole_sel);
       OPT(dead_control_flow_eliminate, this);
       OPT(opt_register_renaming);
-      OPT(opt_redundant_discard_jumps);
       OPT(opt_saturate_propagation);
       OPT(register_coalesce);
       OPT(compute_to_mrf);
@@ -5733,9 +5732,9 @@ fs_visitor::optimize()
       OPT(dead_code_eliminate);
       OPT(remove_duplicate_mrf_writes);
       OPT(opt_peephole_sel);
-      OPT(opt_redundant_discard_jumps);
    }
 
+   OPT(opt_redundant_discard_jumps);
    OPT(opt_sampler_eot);
 
    if (OPT(lower_load_payload)) {
