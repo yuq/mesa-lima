@@ -1232,6 +1232,45 @@ dri2_blit_image(__DRIcontext *context, __DRIimage *dst, __DRIimage *src,
    }
 }
 
+static void *
+dri2_map_image(__DRIcontext *context, __DRIimage *image,
+                int x0, int y0, int width, int height,
+                unsigned int flags, int *stride, void **data)
+{
+   struct dri_context *ctx = dri_context(context);
+   struct pipe_context *pipe = ctx->st->pipe;
+   enum pipe_transfer_usage pipe_access = 0;
+   struct pipe_transfer *trans;
+   void *map;
+
+   if (!image || !data || *data)
+      return NULL;
+
+   if (flags & __DRI_IMAGE_TRANSFER_READ)
+         pipe_access |= PIPE_TRANSFER_READ;
+   if (flags & __DRI_IMAGE_TRANSFER_WRITE)
+         pipe_access |= PIPE_TRANSFER_WRITE;
+
+   map = pipe_transfer_map(pipe, image->texture,
+                           0, 0, pipe_access, x0, y0, width, height,
+                           &trans);
+   if (map) {
+      *data = trans;
+      *stride = trans->stride;
+   }
+
+   return map;
+}
+
+static void
+dri2_unmap_image(__DRIcontext *context, __DRIimage *image, void *data)
+{
+   struct dri_context *ctx = dri_context(context);
+   struct pipe_context *pipe = ctx->st->pipe;
+
+   pipe_transfer_unmap(pipe, (struct pipe_transfer *)data);
+}
+
 static void
 dri2_destroy_image(__DRIimage *img)
 {
@@ -1249,7 +1288,7 @@ dri2_get_capabilities(__DRIscreen *_screen)
 
 /* The extension is modified during runtime if DRI_PRIME is detected */
 static __DRIimageExtension dri2ImageExtension = {
-    .base = { __DRI_IMAGE, 11 },
+    .base = { __DRI_IMAGE, 12 },
 
     .createImageFromName          = dri2_create_image_from_name,
     .createImageFromRenderbuffer  = dri2_create_image_from_renderbuffer,
@@ -1265,6 +1304,8 @@ static __DRIimageExtension dri2ImageExtension = {
     .createImageFromDmaBufs       = NULL,
     .blitImage                    = dri2_blit_image,
     .getCapabilities              = dri2_get_capabilities,
+    .mapImage                     = dri2_map_image,
+    .unmapImage                   = dri2_unmap_image,
 };
 
 
