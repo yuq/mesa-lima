@@ -208,6 +208,7 @@ static struct si_pc_block_base cik_PA_SC = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
+/* According to docs, PA_SU counters are only 48 bits wide. */
 static struct si_pc_block_base cik_PA_SU = {
 	.name = "PA_SU",
 	.num_counters = 4,
@@ -651,24 +652,26 @@ static void si_pc_emit_read(struct r600_common_context *ctx,
 
 			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
 			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_PERF) |
-					COPY_DATA_DST_SEL(COPY_DATA_MEM));
+					COPY_DATA_DST_SEL(COPY_DATA_MEM) |
+					COPY_DATA_COUNT_SEL); /* 64 bits */
 			radeon_emit(cs, reg >> 2);
 			radeon_emit(cs, 0); /* unused */
 			radeon_emit(cs, va);
 			radeon_emit(cs, va >> 32);
-			va += 4;
+			va += sizeof(uint64_t);
 			reg += reg_delta;
 		}
 	} else {
 		for (idx = 0; idx < count; ++idx) {
 			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
 			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_IMM) |
-					COPY_DATA_DST_SEL(COPY_DATA_MEM));
+					COPY_DATA_DST_SEL(COPY_DATA_MEM) |
+					COPY_DATA_COUNT_SEL);
 			radeon_emit(cs, 0); /* immediate */
-			radeon_emit(cs, 0); /* unused */
+			radeon_emit(cs, 0);
 			radeon_emit(cs, va);
 			radeon_emit(cs, va >> 32);
-			va += 4;
+			va += sizeof(uint64_t);
 		}
 	}
 }
