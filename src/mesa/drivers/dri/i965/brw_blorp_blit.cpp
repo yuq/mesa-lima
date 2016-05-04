@@ -1351,6 +1351,8 @@ brw_blorp_blit_program::manual_blend_average(unsigned num_samples)
    if (key->tex_layout == INTEL_MSAA_LAYOUT_CMS)
       mcs_fetch();
 
+   assert(key->texture_data_type == BRW_REGISTER_TYPE_F);
+
    /* We add together samples using a binary tree structure, e.g. for 4x MSAA:
     *
     *   result = ((sample[0] + sample[1]) + (sample[2] + sample[3])) / 4
@@ -1419,8 +1421,7 @@ brw_blorp_blit_program::manual_blend_average(unsigned num_samples)
 
          /* TODO: should use a smaller loop bound for non_RGBA formats */
          for (int k = 0; k < 4; ++k) {
-            emit_combine(key->texture_data_type == BRW_REGISTER_TYPE_F ?
-                            BRW_OPCODE_ADD : BRW_OPCODE_AVG,
+            emit_combine(BRW_OPCODE_ADD,
                          offset(texture_data[stack_depth - 1], 2*k),
                          offset(vec8(texture_data[stack_depth - 1]), 2*k),
                          offset(vec8(texture_data[stack_depth]), 2*k));
@@ -1431,14 +1432,12 @@ brw_blorp_blit_program::manual_blend_average(unsigned num_samples)
    /* We should have just 1 sample on the stack now. */
    assert(stack_depth == 1);
 
-   if (key->texture_data_type == BRW_REGISTER_TYPE_F) {
-      /* Scale the result down by a factor of num_samples */
-      /* TODO: should use a smaller loop bound for non-RGBA formats */
-      for (int j = 0; j < 4; ++j) {
-         emit_mul(offset(texture_data[0], 2*j),
-                 offset(vec8(texture_data[0]), 2*j),
-                 brw_imm_f(1.0f / num_samples));
-      }
+   /* Scale the result down by a factor of num_samples */
+   /* TODO: should use a smaller loop bound for non-RGBA formats */
+   for (int j = 0; j < 4; ++j) {
+      emit_mul(offset(texture_data[0], 2*j),
+              offset(vec8(texture_data[0]), 2*j),
+              brw_imm_f(1.0f / num_samples));
    }
 
    if (key->tex_layout == INTEL_MSAA_LAYOUT_CMS)
@@ -2019,8 +2018,17 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    GLenum base_format = _mesa_get_format_base_format(src_mt->format);
    if (base_format != GL_DEPTH_COMPONENT && /* TODO: what about depth/stencil? */
        base_format != GL_STENCIL_INDEX &&
+       !_mesa_is_format_integer(src_mt->format) &&
        src_mt->num_samples > 1 && dst_mt->num_samples <= 1) {
-      /* We are downsampling a color buffer, so blend. */
+      /* We are downsampling a non-integer color buffer, so blend.
+       *
+       * Regarding integer color buffers, the OpenGL ES 3.2 spec says:
+       *
+       *    "If the source formats are integer types or stencil values, a
+       *    single sample's value is selected for each pixel."
+       *
+       * This implies we should not blend in that case.
+       */
       wm_prog_key.blend = true;
    }
 
