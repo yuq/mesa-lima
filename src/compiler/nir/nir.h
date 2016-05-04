@@ -1246,6 +1246,50 @@ nir_tex_instr_is_query(nir_tex_instr *instr)
    }
 }
 
+static inline nir_alu_type
+nir_tex_instr_src_type(nir_tex_instr *instr, unsigned src)
+{
+   switch (instr->src[src].src_type) {
+   case nir_tex_src_coord:
+      switch (instr->op) {
+      case nir_texop_txf:
+      case nir_texop_txf_ms:
+      case nir_texop_txf_ms_mcs:
+      case nir_texop_samples_identical:
+         return nir_type_int;
+
+      default:
+         return nir_type_float;
+      }
+
+   case nir_tex_src_lod:
+      switch (instr->op) {
+      case nir_texop_txs:
+      case nir_texop_txf:
+         return nir_type_int;
+
+      default:
+         return nir_type_float;
+      }
+
+   case nir_tex_src_projector:
+   case nir_tex_src_comparitor:
+   case nir_tex_src_bias:
+   case nir_tex_src_ddx:
+   case nir_tex_src_ddy:
+      return nir_type_float;
+
+   case nir_tex_src_offset:
+   case nir_tex_src_ms_index:
+   case nir_tex_src_texture_offset:
+   case nir_tex_src_sampler_offset:
+      return nir_type_int;
+
+   default:
+      unreachable("Invalid texture source type");
+   }
+}
+
 static inline unsigned
 nir_tex_instr_src_size(nir_tex_instr *instr, unsigned src)
 {
