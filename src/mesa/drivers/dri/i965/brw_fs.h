@@ -257,6 +257,7 @@ public:
    void nir_emit_jump(const brw::fs_builder &bld,
                       nir_jump_instr *instr);
    fs_reg get_nir_src(nir_src src);
+   fs_reg get_nir_src_imm(nir_src src);
    fs_reg get_nir_dest(nir_dest dest);
    fs_reg get_nir_image_deref(const nir_deref_var *deref);
    fs_reg get_indirect_offset(nir_intrinsic_instr *instr);

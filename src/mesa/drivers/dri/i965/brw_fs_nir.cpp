@@ -1470,6 +1470,16 @@ fs_visitor::get_nir_src(nir_src src)
    return retype(reg, BRW_REGISTER_TYPE_D);
 }
 
+/**
+ * Return an IMM for constants; otherwise call get_nir_src() as normal.
+ */
+fs_reg
+fs_visitor::get_nir_src_imm(nir_src src)
+{
+   nir_const_value *val = nir_src_as_const_value(src);
+   return val ? fs_reg(brw_imm_d(val->i32[0])) : get_nir_src(src);
+}
+
 fs_reg
 fs_visitor::get_nir_dest(nir_dest dest)
 {
@@ -4008,7 +4018,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       fs_reg src = get_nir_src(instr->src[i].src);
       switch (instr->src[i].src_type) {
       case nir_tex_src_bias:
-         srcs[TEX_LOGICAL_SRC_LOD] = retype(src, BRW_REGISTER_TYPE_F);
+         srcs[TEX_LOGICAL_SRC_LOD] =
+            retype(get_nir_src_imm(instr->src[i].src), BRW_REGISTER_TYPE_F);
          break;
       case nir_tex_src_comparitor:
          srcs[TEX_LOGICAL_SRC_SHADOW_C] = retype(src, BRW_REGISTER_TYPE_F);
@@ -4036,13 +4047,16 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       case nir_tex_src_lod:
          switch (instr->op) {
          case nir_texop_txs:
-            srcs[TEX_LOGICAL_SRC_LOD] = retype(src, BRW_REGISTER_TYPE_UD);
+            srcs[TEX_LOGICAL_SRC_LOD] =
+               retype(get_nir_src_imm(instr->src[i].src), BRW_REGISTER_TYPE_UD);
             break;
          case nir_texop_txf:
-            srcs[TEX_LOGICAL_SRC_LOD] = retype(src, BRW_REGISTER_TYPE_D);
+            srcs[TEX_LOGICAL_SRC_LOD] =
+               retype(get_nir_src_imm(instr->src[i].src), BRW_REGISTER_TYPE_D);
             break;
          default:
-            srcs[TEX_LOGICAL_SRC_LOD] = retype(src, BRW_REGISTER_TYPE_F);
+            srcs[TEX_LOGICAL_SRC_LOD] =
+               retype(get_nir_src_imm(instr->src[i].src), BRW_REGISTER_TYPE_F);
             break;
          }
          break;
