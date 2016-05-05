@@ -1107,7 +1107,7 @@ valid_dispatch_indirect(struct gl_context *ctx,
                         GLintptr indirect,
                         GLsizei size, const char *name)
 {
-   GLintptr end = indirect + size;
+   const uint64_t end = (uint64_t) indirect + size;
 
    if (!check_valid_to_compute(ctx, name))
       return GL_FALSE;
