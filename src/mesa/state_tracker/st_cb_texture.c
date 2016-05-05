@@ -1698,15 +1698,50 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
    GLenum gl_target = texImage->TexObject->Target;
    unsigned bind;
    GLubyte *map;
+   unsigned dstz = texImage->Face + texImage->TexObject->MinLayer;
+   unsigned dst_level = 0;
+
+   if (stObj->pt == stImage->pt)
+      dst_level = texImage->TexObject->MinLevel + texImage->Level;
 
    assert(!_mesa_is_format_etc2(texImage->TexFormat) &&
           texImage->TexFormat != MESA_FORMAT_ETC1_RGB8);
 
-   if (!st->prefer_blit_based_texture_transfer) {
+   if (!dst)
       goto fallback;
+
+   /* Try transfer_inline_write, which should be the fastest memcpy path. */
+   if (pixels &&
+       !_mesa_is_bufferobj(unpack->BufferObj) &&
+       _mesa_texstore_can_use_memcpy(ctx, texImage->_BaseFormat,
+                                     texImage->TexFormat, format, type,
+                                     unpack)) {
+      struct pipe_box box;
+      unsigned stride, layer_stride;
+      void *data;
+
+      stride = _mesa_image_row_stride(unpack, width, format, type);
+      layer_stride = _mesa_image_image_stride(unpack, width, height, format,
+                                              type);
+      data = _mesa_image_address(dims, unpack, pixels, width, height, format,
+                                 type, 0, 0, 0);
+
+      /* Convert to Gallium coordinates. */
+      if (gl_target == GL_TEXTURE_1D_ARRAY) {
+         zoffset = yoffset;
+         yoffset = 0;
+         depth = height;
+         height = 1;
+         layer_stride = stride;
+      }
+
+      u_box_3d(xoffset, yoffset, zoffset + dstz, width, height, depth, &box);
+      pipe->transfer_inline_write(pipe, dst, dst_level, 0,
+                                  &box, data, stride, layer_stride);
+      return;
    }
 
-   if (!dst) {
+   if (!st->prefer_blit_based_texture_transfer) {
       goto fallback;
    }
 
@@ -1875,12 +1910,12 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
    blit.src.level = 0;
    blit.src.format = src_format;
    blit.dst.resource = dst;
-   blit.dst.level = stObj->pt != stImage->pt ? 0 : texImage->TexObject->MinLevel + texImage->Level;
+   blit.dst.level = dst_level;
    blit.dst.format = dst_format;
    blit.src.box.x = blit.src.box.y = blit.src.box.z = 0;
    blit.dst.box.x = xoffset;
    blit.dst.box.y = yoffset;
-   blit.dst.box.z = zoffset + texImage->Face + texImage->TexObject->MinLayer;
+   blit.dst.box.z = zoffset + dstz;
    blit.src.box.width = blit.dst.box.width = width;
    blit.src.box.height = blit.dst.box.height = height;
    blit.src.box.depth = blit.dst.box.depth = depth;
