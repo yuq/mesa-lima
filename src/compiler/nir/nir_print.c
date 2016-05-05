@@ -354,6 +354,13 @@ print_var_decl(nir_variable *var, print_state *state)
            cent, samp, patch, inv, get_variable_mode_str(var->data.mode),
            glsl_interp_qualifier_name(var->data.interpolation));
 
+   const char *const coher = (var->data.image.coherent) ? "coherent " : "";
+   const char *const volat = (var->data.image._volatile) ? "volatile " : "";
+   const char *const restr = (var->data.image.restrict_flag) ? "restrict " : "";
+   const char *const ronly = (var->data.image.read_only) ? "readonly " : "";
+   const char *const wonly = (var->data.image.write_only) ? "writeonly " : "";
+   fprintf(fp, "%s%s%s%s%s", coher, volat, restr, ronly, wonly);
+
    glsl_print_type(var->type, fp);
 
    fprintf(fp, " %s", get_var_name(var, state));
