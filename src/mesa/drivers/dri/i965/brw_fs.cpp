@@ -4523,7 +4523,8 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case SHADER_OPCODE_INT_QUOTIENT:
    case SHADER_OPCODE_INT_REMAINDER:
    case SHADER_OPCODE_SIN:
-   case SHADER_OPCODE_COS: {
+   case SHADER_OPCODE_COS:
+   case FS_OPCODE_PACK: {
       /* According to the PRMs:
        *  "A. In Direct Addressing mode, a source cannot span more than 2
        *      adjacent GRF registers.

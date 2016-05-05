@@ -81,6 +81,7 @@ is_expression(const fs_visitor *v, const fs_inst *const inst)
    case SHADER_OPCODE_EXTRACT_BYTE:
    case SHADER_OPCODE_EXTRACT_WORD:
    case SHADER_OPCODE_MOV_INDIRECT:
+   case FS_OPCODE_PACK:
       return true;
    case SHADER_OPCODE_RCP:
    case SHADER_OPCODE_RSQ:

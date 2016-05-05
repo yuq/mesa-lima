@@ -1013,6 +1013,15 @@ enum opcode {
     */
    SHADER_OPCODE_LOAD_PAYLOAD,
 
+   /**
+    * Packs a number of sources into a single value. Unlike LOAD_PAYLOAD, this
+    * acts intra-channel, obtaining the final value for each channel by
+    * combining the sources values for the same channel, the first source
+    * occupying the lowest bits and the last source occupying the highest
+    * bits.
+    */
+   FS_OPCODE_PACK,
+
    SHADER_OPCODE_SHADER_TIME_ADD,
 
    /**

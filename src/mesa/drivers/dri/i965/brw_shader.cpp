@@ -289,6 +289,8 @@ brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
 
    case SHADER_OPCODE_LOAD_PAYLOAD:
       return "load_payload";
+   case FS_OPCODE_PACK:
+      return "pack";
 
    case SHADER_OPCODE_GEN4_SCRATCH_READ:
       return "gen4_scratch_read";
