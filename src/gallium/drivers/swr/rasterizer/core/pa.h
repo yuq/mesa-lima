@@ -508,10 +508,10 @@ struct PA_STATE_CUT : public PA_STATE
                 (this->*pfnPa)(this->curVertex, false);
             }
 
-	    this->curVertex++;
-	    if (this->curVertex >= this->numVerts) {
-		this->curVertex = 0;
-	    }
+            this->curVertex++;
+            if (this->curVertex >= this->numVerts) {
+               this->curVertex = 0;
+            }
             this->numRemainingVerts--;
         }
 
