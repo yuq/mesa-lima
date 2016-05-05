@@ -93,8 +93,12 @@ typedef unsigned int    DWORD;
 #endif
 #define DEBUGBREAK asm ("int $3")
 #if !defined(__CYGWIN__)
+#ifndef __cdecl
 #define __cdecl
+#endif
+#ifndef __stdcall
 #define __stdcall
+#endif
 #define __declspec(X)
 #endif
 
