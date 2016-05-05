@@ -1107,7 +1107,7 @@ valid_dispatch_indirect(struct gl_context *ctx,
                         GLintptr indirect,
                         GLsizei size, const char *name)
 {
-   GLintptr end = (GLintptr)indirect + size;
+   GLintptr end = indirect + size;
 
    if (!check_valid_to_compute(ctx, name))
       return GL_FALSE;
@@ -1117,13 +1117,13 @@ valid_dispatch_indirect(struct gl_context *ctx,
     * "An INVALID_VALUE error is generated if indirect is negative or is not a
     *  multiple of four."
     */
-   if ((GLintptr)indirect & (sizeof(GLuint) - 1)) {
+   if (indirect & (sizeof(GLuint) - 1)) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(indirect is not aligned)", name);
       return GL_FALSE;
    }
 
-   if ((GLintptr)indirect < 0) {
+   if (indirect < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(indirect is less than zero)", name);
       return GL_FALSE;
