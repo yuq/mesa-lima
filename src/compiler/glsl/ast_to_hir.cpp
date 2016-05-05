@@ -6963,6 +6963,16 @@ is_unsized_array_last_element(ir_variable *v)
    return false;
 }
 
+static void
+apply_memory_qualifiers(ir_variable *var, glsl_struct_field field)
+{
+   var->data.image_read_only = field.image_read_only;
+   var->data.image_write_only = field.image_write_only;
+   var->data.image_coherent = field.image_coherent;
+   var->data.image_volatile = field.image_volatile;
+   var->data.image_restrict = field.image_restrict;
+}
+
 ir_rvalue *
 ast_interface_block::hir(exec_list *instructions,
                          struct _mesa_glsl_parse_state *state)
@@ -7449,6 +7459,9 @@ ast_interface_block::hir(exec_list *instructions,
                }
             }
          }
+
+         if (var->data.mode == ir_var_shader_storage)
+            apply_memory_qualifiers(var, fields[i]);
       }
 
       if (ir_variable *earlier =
@@ -7523,13 +7536,8 @@ ast_interface_block::hir(exec_list *instructions,
             var->data.matrix_layout = fields[i].matrix_layout;
          }
 
-         if (var->data.mode == ir_var_shader_storage) {
-            var->data.image_read_only = fields[i].image_read_only;
-            var->data.image_write_only = fields[i].image_write_only;
-            var->data.image_coherent = fields[i].image_coherent;
-            var->data.image_volatile = fields[i].image_volatile;
-            var->data.image_restrict = fields[i].image_restrict;
-         }
+         if (var->data.mode == ir_var_shader_storage)
+            apply_memory_qualifiers(var, fields[i]);
 
          /* Examine var name here since var may get deleted in the next call */
          bool var_is_gl_id = is_gl_identifier(var->name);
