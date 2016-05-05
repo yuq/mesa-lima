@@ -902,7 +902,10 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
        *     format for representing resources of the specified <internalformat> is
        *     returned in <params>.
        *
-       * Therefore, we let the driver answer.
+       * Therefore, we let the driver answer. Note that if we reach this
+       * point, it means that the internalformat is supported, so the driver
+       * is called just to try to get a preferred format. If not supported,
+       * GL_NONE was already returned and the driver is not called.
        */
       ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
                                       buffer);
