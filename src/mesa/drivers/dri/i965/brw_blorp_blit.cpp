@@ -1506,6 +1506,9 @@ brw_blorp_blit_program::manual_blend_bilinear(unsigned num_samples)
       *                        ---------                            ---------
       *                        | 6 | 7 |                            | 7 | 1 |
       *                        ---------                            ---------
+      *
+      * Fortunately, this can be done fairly easily as:
+      * S' = (0x17306425 >> (S * 4)) & 0xf
       */
       emit_frc(vec16(t1_f), x_sample_coords);
       emit_frc(vec16(t2_f), y_sample_coords);
@@ -1515,23 +1518,10 @@ brw_blorp_blit_program::manual_blend_bilinear(unsigned num_samples)
       emit_mov(vec16(S), t1_f);
 
       if (num_samples == 8) {
-         /* Map the sample index to a sample number */
-         emit_cmp_if(BRW_CONDITIONAL_L, S, brw_imm_d(4));
-         {
-            emit_mov(vec16(t2), brw_imm_d(5));
-            emit_if_eq_mov(S, 1, vec16(t2), 2);
-            emit_if_eq_mov(S, 2, vec16(t2), 4);
-            emit_if_eq_mov(S, 3, vec16(t2), 6);
-         }
-         emit_else();
-         {
-            emit_mov(vec16(t2), brw_imm_d(0));
-            emit_if_eq_mov(S, 5, vec16(t2), 3);
-            emit_if_eq_mov(S, 6, vec16(t2), 7);
-            emit_if_eq_mov(S, 7, vec16(t2), 1);
-         }
-         emit_endif();
-         emit_mov(vec16(S), t2);
+         emit_mov(vec16(t2), brw_imm_d(0x17306425));
+         emit_shl(vec16(S), S, brw_imm_d(2));
+         emit_shr(vec16(S), t2, S);
+         emit_and(vec16(S), S, brw_imm_d(0xf));
       }
       texel_fetch(texture_data[i]);
    }
