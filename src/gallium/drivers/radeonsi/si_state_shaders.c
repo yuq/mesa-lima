@@ -688,14 +688,19 @@ static void si_shader_ps(struct si_shader *shader)
 	spi_shader_col_format = si_get_spi_shader_col_format(shader);
 	cb_shader_mask = si_get_cb_shader_mask(spi_shader_col_format);
 
-	/* This must be non-zero for alpha-test/kill to work.
-	 * The hardware ignores the EXEC mask if no export memory is allocated.
+	/* Ensure that some export memory is always allocated, for two reasons:
+	 *
+	 * 1) Correctness: The hardware ignores the EXEC mask if no export
+	 *    memory is allocated, so KILL and alpha test do not work correctly
+	 *    without this.
+	 * 2) Performance: Every shader needs at least a NULL export, even when
+	 *    it writes no color/depth output. The NULL export instruction
+	 *    stalls without this setting.
+	 *
 	 * Don't add this to CB_SHADER_MASK.
 	 */
 	if (!spi_shader_col_format &&
-	    !info->writes_z && !info->writes_stencil && !info->writes_samplemask &&
-	    (shader->selector->info.uses_kill ||
-	     shader->key.ps.epilog.alpha_func != PIPE_FUNC_ALWAYS))
+	    !info->writes_z && !info->writes_stencil && !info->writes_samplemask)
 		spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 
 	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, input_ena);
