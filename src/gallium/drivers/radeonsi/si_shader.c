@@ -5640,15 +5640,18 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 
 	/* Compute LDS usage for PS. */
 	if (processor == PIPE_SHADER_FRAGMENT) {
-		/* The minimum usage per wave is (num_inputs * 36). The maximum
-		 * usage is (num_inputs * 36 * 16).
+		/* The minimum usage per wave is (num_inputs * 48). The maximum
+		 * usage is (num_inputs * 48 * 16).
 		 * We can get anything in between and it varies between waves.
+		 *
+		 * The 48 bytes per input for a single primitive is equal to
+		 * 4 bytes/component * 4 components/input * 3 points.
 		 *
 		 * Other stages don't know the size at compile time or don't
 		 * allocate LDS per wave, but instead they do it per thread group.
 		 */
 		lds_per_wave = conf->lds_size * lds_increment +
-			       align(num_inputs * 36, lds_increment);
+			       align(num_inputs * 48, lds_increment);
 	}
 
 	/* Compute the per-SIMD wave counts. */
