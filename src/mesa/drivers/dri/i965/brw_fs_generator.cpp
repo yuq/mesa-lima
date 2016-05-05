@@ -556,23 +556,6 @@ fs_generator::generate_barrier(fs_inst *inst, struct brw_reg src)
 }
 
 void
-fs_generator::generate_blorp_fb_write(fs_inst *inst, struct brw_reg payload)
-{
-   brw_fb_WRITE(p,
-                16 /* dispatch_width */,
-                inst->base_mrf >= 0 ?
-                   brw_message_reg(inst->base_mrf) : payload,
-                brw_null_reg(),
-                BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE,
-                inst->target,
-                inst->mlen,
-                0,
-                true,
-                true,
-                inst->header_size != 0);
-}
-
-void
 fs_generator::generate_linterp(fs_inst *inst,
 			     struct brw_reg dst, struct brw_reg *src)
 {
@@ -2209,10 +2192,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case FS_OPCODE_REP_FB_WRITE:
       case FS_OPCODE_FB_WRITE:
 	 generate_fb_write(inst, src[0]);
-	 break;
-
-      case FS_OPCODE_BLORP_FB_WRITE:
-	 generate_blorp_fb_write(inst, src[0]);
 	 break;
 
       case FS_OPCODE_MOV_DISPATCH_TO_FLAGS:

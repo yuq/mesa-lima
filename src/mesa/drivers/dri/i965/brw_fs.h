@@ -437,7 +437,6 @@ private:
    void generate_stencil_ref_packing(fs_inst *inst, struct brw_reg dst,
                                      struct brw_reg src);
    void generate_barrier(fs_inst *inst, struct brw_reg src);
-   void generate_blorp_fb_write(fs_inst *inst, struct brw_reg payload);
    void generate_linterp(fs_inst *inst, struct brw_reg dst,
 			 struct brw_reg *src);
    void generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src,

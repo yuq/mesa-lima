@@ -99,8 +99,6 @@ i965_compiler_GENERATED_FILES = \
 i965_FILES = \
 	brw_binding_tables.c \
 	brw_blorp_blit.cpp \
-	brw_blorp_blit_eu.cpp \
-	brw_blorp_blit_eu.h \
 	brw_blorp_clear.cpp \
 	brw_blorp.c \
 	brw_blorp.h \
