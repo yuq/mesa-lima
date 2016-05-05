@@ -1144,6 +1144,12 @@ mesa_bufferiv(struct gl_shader_program *shProg, GLenum type,
                                   GL_REFERENCED_BY_FRAGMENT_SHADER, params,
                                   caller);
       return;
+   case GL_UNIFORM_BLOCK_REFERENCED_BY_COMPUTE_SHADER:
+   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_COMPUTE_SHADER:
+      _mesa_program_resource_prop(shProg, res, index,
+                                  GL_REFERENCED_BY_COMPUTE_SHADER, params,
+                                  caller);
+      return;
    default:
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "%s(pname 0x%x (%s))", caller, pname,
