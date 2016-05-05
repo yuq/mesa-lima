@@ -372,13 +372,18 @@ brw_init_driver_functions(struct brw_context *brw,
 
    functions->NewTransformFeedback = brw_new_transform_feedback;
    functions->DeleteTransformFeedback = brw_delete_transform_feedback;
-   functions->GetTransformFeedbackVertexCount =
-      brw_get_transform_feedback_vertex_count;
-   if (brw->gen >= 7) {
+   if (brw->intelScreen->has_mi_math_and_lrr) {
+      functions->BeginTransformFeedback = hsw_begin_transform_feedback;
+      functions->EndTransformFeedback = hsw_end_transform_feedback;
+      functions->PauseTransformFeedback = hsw_pause_transform_feedback;
+      functions->ResumeTransformFeedback = hsw_resume_transform_feedback;
+   } else if (brw->gen >= 7) {
       functions->BeginTransformFeedback = gen7_begin_transform_feedback;
       functions->EndTransformFeedback = gen7_end_transform_feedback;
       functions->PauseTransformFeedback = gen7_pause_transform_feedback;
       functions->ResumeTransformFeedback = gen7_resume_transform_feedback;
+      functions->GetTransformFeedbackVertexCount =
+         brw_get_transform_feedback_vertex_count;
    } else {
       functions->BeginTransformFeedback = brw_begin_transform_feedback;
       functions->EndTransformFeedback = brw_end_transform_feedback;
@@ -494,7 +499,8 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxTransformFeedbackSeparateComponents =
       BRW_MAX_SOL_BINDINGS / BRW_MAX_SOL_BUFFERS;
 
-   ctx->Const.AlwaysUseGetTransformFeedbackVertexCount = true;
+   ctx->Const.AlwaysUseGetTransformFeedbackVertexCount =
+      !brw->intelScreen->has_mi_math_and_lrr;
 
    int max_samples;
    const int *msaa_modes = intel_supported_msaa_modes(brw->intelScreen);

@@ -1656,6 +1656,20 @@ void
 gen7_resume_transform_feedback(struct gl_context *ctx,
                                struct gl_transform_feedback_object *obj);
 
+/* hsw_sol.c */
+void
+hsw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
+                             struct gl_transform_feedback_object *obj);
+void
+hsw_end_transform_feedback(struct gl_context *ctx,
+                           struct gl_transform_feedback_object *obj);
+void
+hsw_pause_transform_feedback(struct gl_context *ctx,
+                             struct gl_transform_feedback_object *obj);
+void
+hsw_resume_transform_feedback(struct gl_context *ctx,
+                              struct gl_transform_feedback_object *obj);
+
 /* brw_blorp_blit.cpp */
 GLbitfield
 brw_blorp_framebuffer(struct brw_context *brw,

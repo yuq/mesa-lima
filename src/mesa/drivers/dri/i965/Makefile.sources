@@ -228,6 +228,7 @@ i965_FILES = \
 	gen8_vs_state.c \
 	gen8_wm_depth_stencil.c \
 	hsw_queryobj.c \
+	hsw_sol.c \
 	intel_batchbuffer.c \
 	intel_batchbuffer.h \
 	intel_blit.c \

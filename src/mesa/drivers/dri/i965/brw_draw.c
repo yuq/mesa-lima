@@ -153,7 +153,9 @@ trim(GLenum prim, GLuint length)
 static void
 brw_emit_prim(struct brw_context *brw,
               const struct _mesa_prim *prim,
-              uint32_t hw_prim)
+              uint32_t hw_prim,
+              struct brw_transform_feedback_object *xfb_obj,
+              unsigned stream)
 {
    int verts_per_instance;
    int vertex_access_type;
@@ -185,7 +187,7 @@ brw_emit_prim(struct brw_context *brw,
       verts_per_instance = prim->count;
 
    /* If nothing to emit, just return. */
-   if (verts_per_instance == 0 && !prim->is_indirect)
+   if (verts_per_instance == 0 && !prim->is_indirect && !xfb_obj)
       return;
 
    /* If we're set to always flush, do it before and after the primitive emit.
@@ -197,7 +199,25 @@ brw_emit_prim(struct brw_context *brw,
       brw_emit_mi_flush(brw);
 
    /* If indirect, emit a bunch of loads from the indirect BO. */
-   if (prim->is_indirect) {
+   if (xfb_obj) {
+      indirect_flag = GEN7_3DPRIM_INDIRECT_PARAMETER_ENABLE;
+
+      brw_load_register_mem(brw, GEN7_3DPRIM_VERTEX_COUNT,
+                            xfb_obj->prim_count_bo,
+                            I915_GEM_DOMAIN_VERTEX, 0,
+                            stream * sizeof(uint32_t));
+      BEGIN_BATCH(9);
+      OUT_BATCH(MI_LOAD_REGISTER_IMM | (9 - 2));
+      OUT_BATCH(GEN7_3DPRIM_INSTANCE_COUNT);
+      OUT_BATCH(prim->num_instances);
+      OUT_BATCH(GEN7_3DPRIM_START_VERTEX);
+      OUT_BATCH(0);
+      OUT_BATCH(GEN7_3DPRIM_BASE_VERTEX);
+      OUT_BATCH(0);
+      OUT_BATCH(GEN7_3DPRIM_START_INSTANCE);
+      OUT_BATCH(0);
+      ADVANCE_BATCH();
+   } else if (prim->is_indirect) {
       struct gl_buffer_object *indirect_buffer = brw->ctx.DrawIndirectBuffer;
       drm_intel_bo *bo = intel_bufferobj_buffer(brw,
             intel_buffer_object(indirect_buffer),
@@ -382,6 +402,8 @@ brw_try_draw_prims(struct gl_context *ctx,
                    const struct _mesa_index_buffer *ib,
                    GLuint min_index,
                    GLuint max_index,
+                   struct brw_transform_feedback_object *xfb_obj,
+                   unsigned stream,
                    struct gl_buffer_object *indirect)
 {
    struct brw_context *brw = brw_context(ctx);
@@ -531,7 +553,7 @@ retry:
 	 brw_upload_render_state(brw);
       }
 
-      brw_emit_prim(brw, &prims[i], brw->primitive);
+      brw_emit_prim(brw, &prims[i], brw->primitive, xfb_obj, stream);
 
       brw->no_batch_wrap = false;
 
@@ -573,14 +595,14 @@ brw_draw_prims(struct gl_context *ctx,
                GLboolean index_bounds_valid,
                GLuint min_index,
                GLuint max_index,
-               struct gl_transform_feedback_object *unused_tfb_object,
+               struct gl_transform_feedback_object *gl_xfb_obj,
                unsigned stream,
                struct gl_buffer_object *indirect)
 {
    struct brw_context *brw = brw_context(ctx);
    const struct gl_client_array **arrays = ctx->Array._DrawArrays;
-
-   assert(unused_tfb_object == NULL);
+   struct brw_transform_feedback_object *xfb_obj =
+      (struct brw_transform_feedback_object *) gl_xfb_obj;
 
    if (!brw_check_conditional_render(brw))
       return;
@@ -619,7 +641,7 @@ brw_draw_prims(struct gl_context *ctx,
     * to it.
     */
    brw_try_draw_prims(ctx, arrays, prims, nr_prims, ib, min_index, max_index,
-                      indirect);
+                      xfb_obj, stream, indirect);
 }
 
 void
