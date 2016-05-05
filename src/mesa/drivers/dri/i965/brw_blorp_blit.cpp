@@ -1339,12 +1339,6 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
 
    src_pos = blorp_blit_apply_transform(&b, nir_i2f(&b, dst_pos), &v);
 
-   if (key->blit_scaled && key->blend) {
-   } else if (!key->bilinear_filter) {
-      /* We're going to use a texelFetch, so we need integers */
-      src_pos = nir_f2i(&b, src_pos);
-   }
-
    /* If the source image is not multisampled, then we want to fetch sample
     * number 0, because that's the only sample there is.
     */
@@ -1356,6 +1350,9 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
     * irrelevant, because we are going to fetch all samples.
     */
    if (key->blend && !key->blit_scaled) {
+      /* Resolves (effecively) use texelFetch, so we need integers */
+      src_pos = nir_f2i(&b, src_pos);
+
       if (brw->gen == 6) {
          /* Because gen6 only supports 4x interleved MSAA, we can do all the
           * blending we need with a single linear-interpolated texture lookup
@@ -1377,33 +1374,35 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
    } else if (key->blend && key->blit_scaled) {
       color = blorp_nir_manual_blend_bilinear(&b, src_pos, key->src_samples, key, &v);
    } else {
-      /* We aren't blending, which means we just want to fetch a single sample
-       * from the source surface.  The address that we want to fetch from is
-       * related to the X, Y and S values according to the formula:
-       *
-       * (X, Y, S) = decode_msaa(src_samples, detile(src_tiling, offset)).
-       *
-       * If the actual tiling and sample count of the source surface are not
-       * the same as the configuration of the texture, then we need to adjust
-       * the coordinates to compensate for the difference.
-       */
-      if ((tex_tiled_w != key->src_tiled_w ||
-           key->tex_samples != key->src_samples ||
-           key->tex_layout != key->src_layout) &&
-          !key->bilinear_filter) {
-         src_pos = blorp_nir_encode_msaa(&b, src_pos, key->src_samples,
-                                         key->src_layout);
-         /* Now (X, Y, S) = detile(src_tiling, offset) */
-         if (tex_tiled_w != key->src_tiled_w)
-            src_pos = blorp_nir_retile_w_to_y(&b, src_pos);
-         /* Now (X, Y, S) = detile(tex_tiling, offset) */
-         src_pos = blorp_nir_decode_msaa(&b, src_pos, key->tex_samples,
-                                         key->tex_layout);
-      }
-
       if (key->bilinear_filter) {
          color = blorp_nir_tex(&b, src_pos, key->texture_data_type);
       } else {
+         /* We're going to use texelFetch, so we need integers */
+         src_pos = nir_f2i(&b, src_pos);
+
+         /* We aren't blending, which means we just want to fetch a single
+          * sample from the source surface.  The address that we want to fetch
+          * from is related to the X, Y and S values according to the formula:
+          *
+          * (X, Y, S) = decode_msaa(src_samples, detile(src_tiling, offset)).
+          *
+          * If the actual tiling and sample count of the source surface are
+          * not the same as the configuration of the texture, then we need to
+          * adjust the coordinates to compensate for the difference.
+          */
+         if (tex_tiled_w != key->src_tiled_w ||
+             key->tex_samples != key->src_samples ||
+             key->tex_layout != key->src_layout) {
+            src_pos = blorp_nir_encode_msaa(&b, src_pos, key->src_samples,
+                                            key->src_layout);
+            /* Now (X, Y, S) = detile(src_tiling, offset) */
+            if (tex_tiled_w != key->src_tiled_w)
+               src_pos = blorp_nir_retile_w_to_y(&b, src_pos);
+            /* Now (X, Y, S) = detile(tex_tiling, offset) */
+            src_pos = blorp_nir_decode_msaa(&b, src_pos, key->tex_samples,
+                                            key->tex_layout);
+         }
+
          /* Now (X, Y, S) = decode_msaa(tex_samples, detile(tex_tiling, offset)).
           *
           * In other words: X, Y, and S now contain values which, when passed to
