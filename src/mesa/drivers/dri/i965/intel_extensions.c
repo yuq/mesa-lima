@@ -366,7 +366,7 @@ intelInitExtensions(struct gl_context *ctx)
       }
    }
 
-   if (brw->gen >= 8 || brw->is_haswell) {
+   if (brw->intelScreen->has_mi_math_and_lrr) {
       ctx->Extensions.ARB_query_buffer_object = true;
    }
 

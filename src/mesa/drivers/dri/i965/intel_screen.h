@@ -56,6 +56,12 @@ struct intel_screen
    bool has_resource_streamer;
 
    /**
+    * Does the current hardware and kernel support MI_MATH and
+    * MI_LOAD_REGISTER_REG?
+    */
+   bool has_mi_math_and_lrr;
+
+   /**
     * Does the kernel support context reset notifications?
     */
    bool has_context_reset_notification;

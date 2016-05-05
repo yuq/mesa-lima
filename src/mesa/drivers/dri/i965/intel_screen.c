@@ -1531,6 +1531,14 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    if (ret == -1)
       intelScreen->cmd_parser_version = 0;
 
+   /* Haswell requires command parser version 6 in order to write to the
+    * MI_MATH GPR registers, and version 7 in order to use
+    * MI_LOAD_REGISTER_REG (which all users of MI_MATH use).
+    */
+   intelScreen->has_mi_math_and_lrr = intelScreen->devinfo->gen >= 8 ||
+                                      (intelScreen->devinfo->is_haswell &&
+                                       intelScreen->cmd_parser_version >= 7);
+
    psp->extensions = !intelScreen->has_context_reset_notification
       ? intelScreenExtensions : intelRobustScreenExtensions;
 
