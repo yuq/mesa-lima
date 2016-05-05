@@ -108,7 +108,7 @@ optimizations = [
    (('~fadd@32', a, ('fmul',         c , ('fadd', b, ('fneg', a)))), ('flrp', a, b, c), '!options->lower_flrp32'),
    (('~fadd@64', a, ('fmul',         c , ('fadd', b, ('fneg', a)))), ('flrp', a, b, c), '!options->lower_flrp64'),
    (('ffma', a, b, c), ('fadd', ('fmul', a, b), c), 'options->lower_ffma'),
-   (('~fadd', ('fmul', a, b), c), ('ffma', a, b, c), '!options->lower_ffma'),
+   (('~fadd', ('fmul', a, b), c), ('ffma', a, b, c), 'options->fuse_ffma'),
    # Comparison simplifications
    (('~inot', ('flt', a, b)), ('fge', a, b)),
    (('~inot', ('fge', a, b)), ('flt', a, b)),
