@@ -39,6 +39,7 @@
 #include "brw_program.h"
 #include "brw_dead_control_flow.h"
 #include "compiler/glsl_types.h"
+#include "program/prog_parameter.h"
 
 using namespace brw;
 
@@ -2004,6 +2005,45 @@ fs_visitor::compact_virtual_grfs()
    return progress;
 }
 
+static void
+set_push_pull_constant_loc(unsigned uniform, int *chunk_start, bool contiguous,
+                           int *push_constant_loc, int *pull_constant_loc,
+                           unsigned *num_push_constants,
+                           unsigned *num_pull_constants,
+                           const unsigned max_push_components,
+                           const unsigned max_chunk_size,
+                           struct brw_stage_prog_data *stage_prog_data)
+{
+   /* This is the first live uniform in the chunk */
+   if (*chunk_start < 0)
+      *chunk_start = uniform;
+
+   /* If this element does not need to be contiguous with the next, we
+    * split at this point and everything between chunk_start and u forms a
+    * single chunk.
+    */
+   if (!contiguous) {
+      unsigned chunk_size = uniform - *chunk_start + 1;
+
+      /* Decide whether we should push or pull this parameter.  In the
+       * Vulkan driver, push constants are explicitly exposed via the API
+       * so we push everything.  In GL, we only push small arrays.
+       */
+      if (stage_prog_data->pull_param == NULL ||
+          (*num_push_constants + chunk_size <= max_push_components &&
+           chunk_size <= max_chunk_size)) {
+         assert(*num_push_constants + chunk_size <= max_push_components);
+         for (unsigned j = *chunk_start; j <= uniform; j++)
+            push_constant_loc[j] = (*num_push_constants)++;
+      } else {
+         for (unsigned j = *chunk_start; j <= uniform; j++)
+            pull_constant_loc[j] = (*num_pull_constants)++;
+      }
+
+      *chunk_start = -1;
+   }
+}
+
 /**
  * Assign UNIFORM file registers to either push constants or pull constants.
  *
@@ -2022,6 +2062,8 @@ fs_visitor::assign_constant_locations()
 
    bool is_live[uniforms];
    memset(is_live, 0, sizeof(is_live));
+   bool is_live_64bit[uniforms];
+   memset(is_live_64bit, 0, sizeof(is_live_64bit));
 
    /* For each uniform slot, a value of true indicates that the given slot and
     * the next slot must remain contiguous.  This is used to keep us from
@@ -2054,14 +2096,21 @@ fs_visitor::assign_constant_locations()
             for (unsigned j = constant_nr; j < last; j++) {
                is_live[j] = true;
                contiguous[j] = true;
+               if (type_sz(inst->src[i].type) == 8) {
+                  is_live_64bit[j] = true;
+               }
             }
             is_live[last] = true;
          } else {
             if (constant_nr >= 0 && constant_nr < (int) uniforms) {
                int regs_read = inst->components_read(i) *
                   type_sz(inst->src[i].type) / 4;
-               for (int j = 0; j < regs_read; j++)
+               for (int j = 0; j < regs_read; j++) {
                   is_live[constant_nr + j] = true;
+                  if (type_sz(inst->src[i].type) == 8) {
+                     is_live_64bit[constant_nr + j] = true;
+                  }
+               }
             }
          }
       }
@@ -2090,43 +2139,45 @@ fs_visitor::assign_constant_locations()
    pull_constant_loc = ralloc_array(mem_ctx, int, uniforms);
 
    int chunk_start = -1;
-   for (unsigned u = 0; u < uniforms; u++) {
-      push_constant_loc[u] = -1;
-      pull_constant_loc[u] = -1;
 
-      if (!is_live[u])
+   /* First push 64-bit uniforms to ensure they are properly aligned */
+   for (unsigned u = 0; u < uniforms; u++) {
+      if (!is_live[u] || !is_live_64bit[u])
          continue;
 
-      /* This is the first live uniform in the chunk */
-      if (chunk_start < 0)
-         chunk_start = u;
+      pull_constant_loc[u] = -1;
+      push_constant_loc[u] = -1;
 
-      /* If this element does not need to be contiguous with the next, we
-       * split at this point and everthing between chunk_start and u forms a
-       * single chunk.
-       */
-      if (!contiguous[u]) {
-         unsigned chunk_size = u - chunk_start + 1;
+      set_push_pull_constant_loc(u, &chunk_start, contiguous[u],
+                                 push_constant_loc, pull_constant_loc,
+                                 &num_push_constants, &num_pull_constants,
+                                 max_push_components, max_chunk_size,
+                                 stage_prog_data);
 
-         /* Decide whether we should push or pull this parameter.  In the
-          * Vulkan driver, push constants are explicitly exposed via the API
-          * so we push everything.  In GL, we only push small arrays.
-          */
-         if (stage_prog_data->pull_param == NULL ||
-             (num_push_constants + chunk_size <= max_push_components &&
-              chunk_size <= max_chunk_size)) {
-            assert(num_push_constants + chunk_size <= max_push_components);
-            for (unsigned j = chunk_start; j <= u; j++)
-               push_constant_loc[j] = num_push_constants++;
-         } else {
-            for (unsigned j = chunk_start; j <= u; j++)
-               pull_constant_loc[j] = num_pull_constants++;
-         }
-
-         chunk_start = -1;
-      }
    }
 
+   /* Then push the rest of uniforms */
+   for (unsigned u = 0; u < uniforms; u++) {
+      if (!is_live[u] || is_live_64bit[u])
+         continue;
+
+      pull_constant_loc[u] = -1;
+      push_constant_loc[u] = -1;
+
+      set_push_pull_constant_loc(u, &chunk_start, contiguous[u],
+                                 push_constant_loc, pull_constant_loc,
+                                 &num_push_constants, &num_pull_constants,
+                                 max_push_components, max_chunk_size,
+                                 stage_prog_data);
+   }
+
+   /* As the uniforms are going to be reordered, take the data from a temporary
+    * copy of the original param[].
+    */
+   gl_constant_value **param = ralloc_array(NULL, gl_constant_value*,
+                                            stage_prog_data->nr_params);
+   memcpy(param, stage_prog_data->param,
+          sizeof(gl_constant_value*) * stage_prog_data->nr_params);
    stage_prog_data->nr_params = num_push_constants;
    stage_prog_data->nr_pull_params = num_pull_constants;
 
@@ -2139,7 +2190,7 @@ fs_visitor::assign_constant_locations()
     * having to make a copy.
     */
    for (unsigned int i = 0; i < uniforms; i++) {
-      const gl_constant_value *value = stage_prog_data->param[i];
+      const gl_constant_value *value = param[i];
 
       if (pull_constant_loc[i] != -1) {
          stage_prog_data->pull_param[pull_constant_loc[i]] = value;
@@ -2147,6 +2198,7 @@ fs_visitor::assign_constant_locations()
          stage_prog_data->param[push_constant_loc[i]] = value;
       }
    }
+   ralloc_free(param);
 }
 
 /**
