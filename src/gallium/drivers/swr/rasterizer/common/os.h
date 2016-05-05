@@ -24,6 +24,7 @@
 #ifndef __SWR_OS_H__
 #define __SWR_OS_H__
 
+#include <cstddef>
 #include "core/knobs.h"
 
 #if (defined(FORCE_WINDOWS) || defined(_WIN32)) && !defined(FORCE_LINUX)
