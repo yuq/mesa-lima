@@ -988,6 +988,119 @@ blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
    return nir_load_var(b, color);
 }
 
+static inline nir_ssa_def *
+nir_imm_vec2(nir_builder *build, float x, float y)
+{
+   nir_const_value v;
+
+   memset(&v, 0, sizeof(v));
+   v.f32[0] = x;
+   v.f32[1] = y;
+
+   return nir_build_imm(build, 4, 32, v);
+}
+
+static nir_ssa_def *
+blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
+                                unsigned tex_samples,
+                                const brw_blorp_blit_prog_key *key,
+                                struct brw_blorp_blit_vars *v)
+{
+   nir_ssa_def *pos_xy = nir_channels(b, pos, 0x3);
+
+   nir_ssa_def *scale = nir_imm_vec2(b, key->x_scale, key->y_scale);
+
+   /* Translate coordinates to lay out the samples in a rectangular  grid
+    * roughly corresponding to sample locations.
+    */
+   pos_xy = nir_fmul(b, pos_xy, scale);
+   /* Adjust coordinates so that integers represent pixel centers rather
+    * than pixel edges.
+    */
+   pos_xy = nir_fadd(b, pos_xy, nir_imm_float(b, -0.5));
+   /* Clamp the X, Y texture coordinates to properly handle the sampling of
+    * texels on texture edges.
+    */
+   pos_xy = nir_fmin(b, nir_fmax(b, pos_xy, nir_imm_float(b, 0.0)),
+                        nir_vec2(b, nir_load_var(b, v->u_rect_grid_x1),
+                                    nir_load_var(b, v->u_rect_grid_y1)));
+
+   /* Store the fractional parts to be used as bilinear interpolation
+    * coefficients.
+    */
+   nir_ssa_def *frac_xy = nir_ffract(b, pos_xy);
+   /* Round the float coordinates down to nearest integer */
+   pos_xy = nir_fdiv(b, nir_ftrunc(b, pos_xy), scale);
+
+   nir_ssa_def *tex_data[4];
+   for (unsigned i = 0; i < 4; ++i) {
+      float sample_off_x = (float)(i & 0x1) / key->x_scale;
+      float sample_off_y = (float)((i >> 1) & 0x1) / key->y_scale;
+      nir_ssa_def *sample_off = nir_imm_vec2(b, sample_off_x, sample_off_y);
+
+      nir_ssa_def *sample_coords = nir_fadd(b, pos_xy, sample_off);
+      nir_ssa_def *sample_coords_int = nir_f2i(b, sample_coords);
+
+      /* The MCS value we fetch has to match up with the pixel that we're
+       * sampling from. Since we sample from different pixels in each
+       * iteration of this "for" loop, the call to mcs_fetch() should be
+       * here inside the loop after computing the pixel coordinates.
+       */
+      nir_ssa_def *mcs = NULL;
+      if (key->tex_layout == INTEL_MSAA_LAYOUT_CMS)
+         mcs = blorp_nir_txf_ms_mcs(b, sample_coords_int);
+
+      /* Compute sample index and map the sample index to a sample number.
+       * Sample index layout shows the numbering of slots in a rectangular
+       * grid of samples with in a pixel. Sample number layout shows the
+       * rectangular grid of samples roughly corresponding to the real sample
+       * locations with in a pixel.
+       * In case of 4x MSAA, layout of sample indices matches the layout of
+       * sample numbers:
+       *           ---------
+       *           | 0 | 1 |
+       *           ---------
+       *           | 2 | 3 |
+       *           ---------
+       *
+       * In case of 8x MSAA the two layouts don't match.
+       * sample index layout :  ---------    sample number layout :  ---------
+       *                        | 0 | 1 |                            | 5 | 2 |
+       *                        ---------                            ---------
+       *                        | 2 | 3 |                            | 4 | 6 |
+       *                        ---------                            ---------
+       *                        | 4 | 5 |                            | 0 | 3 |
+       *                        ---------                            ---------
+       *                        | 6 | 7 |                            | 7 | 1 |
+       *                        ---------                            ---------
+       *
+       * Fortunately, this can be done fairly easily as:
+       * S' = (0x17306425 >> (S * 4)) & 0xf
+       */
+      nir_ssa_def *frac = nir_ffract(b, sample_coords);
+      nir_ssa_def *sample =
+         nir_fdot2(b, frac, nir_imm_vec2(b, key->x_scale,
+                                            key->x_scale * key->y_scale));
+      sample = nir_f2i(b, sample);
+
+      if (tex_samples == 8) {
+         sample = nir_iand(b, nir_ishr(b, nir_imm_int(b, 0x17306425),
+                                       nir_ishl(b, sample, nir_imm_int(b, 2))),
+                           nir_imm_int(b, 0xf));
+      }
+      nir_ssa_def *pos_ms = nir_vec3(b, nir_channel(b, sample_coords_int, 0),
+                                        nir_channel(b, sample_coords_int, 1),
+                                        sample);
+      tex_data[i] = blorp_nir_txf_ms(b, pos_ms, mcs, key->texture_data_type);
+   }
+
+   nir_ssa_def *frac_x = nir_channel(b, frac_xy, 0);
+   nir_ssa_def *frac_y = nir_channel(b, frac_xy, 1);
+   return nir_flrp(b, nir_flrp(b, tex_data[0], tex_data[1], frac_x),
+                      nir_flrp(b, tex_data[2], tex_data[3], frac_x),
+                      frac_y);
+}
+
 /**
  * Generator for WM programs used in BLORP blits.
  *
@@ -1227,7 +1340,6 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
    src_pos = blorp_blit_apply_transform(&b, nir_i2f(&b, dst_pos), &v);
 
    if (key->blit_scaled && key->blend) {
-      goto fail;
    } else if (!key->bilinear_filter) {
       /* We're going to use a texelFetch, so we need integers */
       src_pos = nir_f2i(&b, src_pos);
@@ -1263,7 +1375,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
                                                 key->texture_data_type);
       }
    } else if (key->blend && key->blit_scaled) {
-      goto fail;
+      color = blorp_nir_manual_blend_bilinear(&b, src_pos, key->src_samples, key, &v);
    } else {
       /* We aren't blending, which means we just want to fetch a single sample
        * from the source surface.  The address that we want to fetch from is
@@ -1313,10 +1425,6 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
    nir_store_var(&b, v.color_out, color, 0xf);
 
    return b.shader;
-
-fail:
-   ralloc_free(b.shader);
-   return NULL;
 }
 
 class brw_blorp_blit_program : public brw_blorp_eu_emitter
