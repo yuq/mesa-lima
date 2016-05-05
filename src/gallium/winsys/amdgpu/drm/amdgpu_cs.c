@@ -89,10 +89,17 @@ bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
       abs_timeout = os_time_get_absolute_timeout(timeout);
 
    user_fence_cpu = rfence->user_fence_cpu_address;
-   if (user_fence_cpu && *user_fence_cpu >= rfence->fence.fence) {
-	rfence->signalled = true;
-	return true;
+   if (user_fence_cpu) {
+      if (*user_fence_cpu >= rfence->fence.fence) {
+         rfence->signalled = true;
+         return true;
+      }
+
+      /* No timeout, just query: no need for the ioctl. */
+      if (!absolute && !timeout)
+         return false;
    }
+
    /* Now use the libdrm query. */
    r = amdgpu_cs_query_fence_status(&rfence->fence,
 				    abs_timeout,
