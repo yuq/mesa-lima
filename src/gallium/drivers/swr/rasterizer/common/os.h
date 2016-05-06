@@ -69,7 +69,7 @@ static inline void AlignedFree(void* p)
 #define _mm_popcount_sizeT _mm_popcnt_u32
 #endif
 
-#elif defined(FORCE_LINUX) || defined(__linux__) || defined(__gnu_linux__)
+#elif defined(__APPLE__) || defined(FORCE_LINUX) || defined(__linux__) || defined(__gnu_linux__)
 
 #define SWR_API
 
@@ -81,6 +81,7 @@ static inline void AlignedFree(void* p)
 #include <unistd.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <limits.h>
 
 typedef void            VOID;
 typedef void*           LPVOID;
@@ -95,6 +96,8 @@ typedef unsigned int    DWORD;
 
 #undef TRUE
 #define TRUE 1
+
+#define MAX_PATH PATH_MAX
 
 #define OSALIGN(RWORD, WIDTH) RWORD __attribute__((aligned(WIDTH)))
 #define THREAD __thread
@@ -187,6 +190,10 @@ void AlignedFree(void* p)
     free(p);
 }
 
+#define _countof(a) (sizeof(a)/sizeof(*(a)))
+
+#define sprintf_s sprintf
+#define strcpy_s(dst,size,src) strncpy(dst,src,size)
 #define GetCurrentProcessId getpid
 #define GetCurrentThreadId gettid
 
