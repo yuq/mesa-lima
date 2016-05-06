@@ -427,6 +427,14 @@ vc4_generate_code_block(struct vc4_compile *c,
                         handled_qinst_cond = true;
                         break;
 
+                case QOP_UNIFORMS_RESET:
+                        fixup_raddr_conflict(block, dst, &src[0], &src[1],
+                                             qinst, &unpack);
+
+                        queue(block, qpu_a_ADD(qpu_ra(QPU_W_UNIFORMS_ADDRESS),
+                                               src[0], src[1]));
+                        break;
+
                 default:
                         assert(qinst->op < ARRAY_SIZE(translate));
                         assert(translate[qinst->op].op != 0); /* NOPs */

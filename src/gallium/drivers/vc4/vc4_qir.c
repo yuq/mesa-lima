@@ -85,6 +85,7 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_LOAD_IMM] = { "load_imm", 0, 1 },
 
         [QOP_BRANCH] = { "branch", 0, 0, true },
+        [QOP_UNIFORMS_RESET] = { "uniforms_reset", 0, 2, true },
 };
 
 static const char *

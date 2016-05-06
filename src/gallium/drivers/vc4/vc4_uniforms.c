@@ -324,6 +324,11 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
                 case QUNIFORM_SAMPLE_MASK:
                         cl_aligned_u32(&uniforms, vc4->sample_mask);
                         break;
+
+                case QUNIFORM_UNIFORMS_ADDRESS:
+                        /* This will be filled in by the kernel. */
+                        cl_aligned_u32(&uniforms, 0xd0d0d0d0);
+                        break;
                 }
 #if 0
                 uint32_t written_val = *((uint32_t *)uniforms - 1);
@@ -345,6 +350,7 @@ vc4_set_shader_uniform_dirty_flags(struct vc4_compiled_shader *shader)
         for (int i = 0; i < shader->uniforms.count; i++) {
                 switch (shader->uniforms.contents[i]) {
                 case QUNIFORM_CONSTANT:
+                case QUNIFORM_UNIFORMS_ADDRESS:
                         break;
                 case QUNIFORM_UNIFORM:
                 case QUNIFORM_UBO_ADDR:

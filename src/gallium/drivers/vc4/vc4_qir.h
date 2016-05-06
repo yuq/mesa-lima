@@ -162,6 +162,12 @@ enum qop {
          * that block->successor[1] may be unset if the condition is ALWAYS.
          */
         QOP_BRANCH,
+
+        /* Emits an ADD from src[0] to src[1], where src[0] must be a
+         * QOP_LOAD_IMM result and src[1] is a QUNIFORM_UNIFORMS_ADDRESS,
+         * required by the kernel as part of its branch validation.
+         */
+        QOP_UNIFORMS_RESET,
 };
 
 struct queued_qpu_inst {
@@ -260,6 +266,11 @@ enum quniform_contents {
 
         QUNIFORM_ALPHA_REF,
         QUNIFORM_SAMPLE_MASK,
+
+        /* Placeholder uniform that will be updated by the kernel when used by
+         * an instruction writing to QPU_W_UNIFORMS_ADDRESS.
+         */
+        QUNIFORM_UNIFORMS_ADDRESS,
 };
 
 struct vc4_varying_slot {
@@ -521,6 +532,7 @@ struct qreg qir_uniform(struct vc4_compile *c,
                         uint32_t data);
 void qir_schedule_instructions(struct vc4_compile *c);
 void qir_reorder_uniforms(struct vc4_compile *c);
+void qir_emit_uniform_stream_resets(struct vc4_compile *c);
 
 struct qreg qir_emit_def(struct vc4_compile *c, struct qinst *inst);
 struct qinst *qir_emit_nondef(struct vc4_compile *c, struct qinst *inst);

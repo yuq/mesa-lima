@@ -2114,6 +2114,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         qir_lower_uniforms(c);
 
         qir_schedule_instructions(c);
+        qir_emit_uniform_stream_resets(c);
 
         if (vc4_debug & VC4_DEBUG_QIR) {
                 fprintf(stderr, "%s prog %d/%d QIR:\n",

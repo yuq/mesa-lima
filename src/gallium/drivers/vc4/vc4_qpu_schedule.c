@@ -92,6 +92,7 @@ struct schedule_state {
         struct schedule_node *last_tmu_write;
         struct schedule_node *last_tlb;
         struct schedule_node *last_vpm;
+        struct schedule_node *last_uniforms_reset;
         enum direction dir;
         /* Estimated cycle when the current instruction would start. */
         uint32_t time;
@@ -184,6 +185,9 @@ process_raddr_deps(struct schedule_state *state, struct schedule_node *n,
                 break;
 
         case QPU_R_UNIF:
+                add_read_dep(state, state->last_uniforms_reset, n);
+                break;
+
         case QPU_R_NOP:
         case QPU_R_ELEM_QPU:
         case QPU_R_XY_PIXEL_COORD:
@@ -259,6 +263,7 @@ process_waddr_deps(struct schedule_state *state, struct schedule_node *n,
                 }
         } else if (is_tmu_write(waddr)) {
                 add_write_dep(state, &state->last_tmu_write, n);
+                add_read_dep(state, state->last_uniforms_reset, n);
         } else if (qpu_waddr_is_tlb(waddr) ||
                    waddr == QPU_W_MS_FLAGS) {
                 add_write_dep(state, &state->last_tlb, n);
@@ -303,6 +308,10 @@ process_waddr_deps(struct schedule_state *state, struct schedule_node *n,
 
                 case QPU_W_MS_FLAGS:
                         add_write_dep(state, &state->last_tlb, n);
+                        break;
+
+                case QPU_W_UNIFORMS_ADDRESS:
+                        add_write_dep(state, &state->last_uniforms_reset, n);
                         break;
 
                 case QPU_W_NOP:
@@ -442,6 +451,7 @@ calculate_reverse_deps(struct vc4_compile *c, struct list_head *schedule_list)
 struct choose_scoreboard {
         int tick;
         int last_sfu_write_tick;
+        int last_uniforms_reset_tick;
         uint32_t last_waddr_a, last_waddr_b;
 };
 
@@ -474,6 +484,11 @@ reads_too_soon_after_write(struct choose_scoreboard *scoreboard, uint64_t inst)
                                 return true;
                         }
                 }
+        }
+
+        if (reads_uniform(inst) &&
+            scoreboard->tick - scoreboard->last_uniforms_reset_tick <= 2) {
+                return true;
         }
 
         return false;
@@ -613,6 +628,11 @@ update_scoreboard_for_chosen(struct choose_scoreboard *scoreboard,
         if ((waddr_add >= QPU_W_SFU_RECIP && waddr_add <= QPU_W_SFU_LOG) ||
             (waddr_mul >= QPU_W_SFU_RECIP && waddr_mul <= QPU_W_SFU_LOG)) {
                 scoreboard->last_sfu_write_tick = scoreboard->tick;
+        }
+
+        if (waddr_add == QPU_W_UNIFORMS_ADDRESS ||
+            waddr_mul == QPU_W_UNIFORMS_ADDRESS) {
+                scoreboard->last_uniforms_reset_tick = scoreboard->tick;
         }
 }
 
@@ -971,6 +991,7 @@ qpu_schedule_instructions(struct vc4_compile *c)
         scoreboard.last_waddr_a = ~0;
         scoreboard.last_waddr_b = ~0;
         scoreboard.last_sfu_write_tick = -10;
+        scoreboard.last_uniforms_reset_tick = -10;
 
         if (debug) {
                 fprintf(stderr, "Pre-schedule instructions\n");

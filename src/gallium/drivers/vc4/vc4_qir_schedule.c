@@ -138,6 +138,7 @@ struct schedule_setup_state {
         struct schedule_node *last_tex_coord;
         struct schedule_node *last_tex_result;
         struct schedule_node *last_tlb;
+        struct schedule_node *last_uniforms_reset;
         enum direction dir;
 
 	/**
@@ -280,6 +281,16 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
 
                 calculate_deps(&state, n);
 
+                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                        switch (inst->src[i].file) {
+                        case QFILE_UNIF:
+                                add_dep(state.dir, state.last_uniforms_reset, n);
+                                break;
+                        default:
+                                break;
+                        }
+                }
+
                 switch (inst->op) {
                 case QOP_TEX_S:
                 case QOP_TEX_T:
@@ -324,6 +335,11 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
                         memset(&state.tex_fifo[state.tex_fifo_pos], 0,
                                sizeof(state.tex_fifo[0]));
                         break;
+
+                case QOP_UNIFORMS_RESET:
+                        add_write_dep(state.dir, &state.last_uniforms_reset, n);
+                        break;
+
                 default:
                         assert(!qir_is_tex(inst));
                         break;
