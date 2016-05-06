@@ -196,15 +196,15 @@ radeon_drm_cs_create(struct radeon_winsys_ctx *ctx,
     /* Set the first command buffer as current. */
     cs->csc = &cs->csc1;
     cs->cst = &cs->csc2;
-    cs->base.buf = cs->csc->buf;
-    cs->base.max_dw = ARRAY_SIZE(cs->csc->buf);
+    cs->base.current.buf = cs->csc->buf;
+    cs->base.current.max_dw = ARRAY_SIZE(cs->csc->buf);
     cs->ring_type = ring_type;
 
     p_atomic_inc(&ws->num_cs);
     return &cs->base;
 }
 
-#define OUT_CS(cs, value) (cs)->buf[(cs)->cdw++] = (value)
+#define OUT_CS(cs, value) (cs)->current.buf[(cs)->current.cdw++] = (value)
 
 static inline void update_reloc(struct drm_radeon_cs_reloc *reloc,
                                 enum radeon_bo_domain rd,
@@ -374,8 +374,8 @@ static boolean radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
         } else {
             radeon_cs_context_cleanup(cs->csc);
 
-            assert(cs->base.cdw == 0);
-            if (cs->base.cdw != 0) {
+            assert(cs->base.current.cdw == 0);
+            if (cs->base.current.cdw != 0) {
                 fprintf(stderr, "radeon: Unexpected error in %s.\n", __func__);
             }
         }
@@ -385,8 +385,8 @@ static boolean radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
 
 static bool radeon_drm_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
 {
-   assert(rcs->cdw <= rcs->max_dw);
-   return rcs->max_dw - rcs->cdw >= dw;
+   assert(rcs->current.cdw <= rcs->current.max_dw);
+   return rcs->current.max_dw - rcs->current.cdw >= dw;
 }
 
 static boolean radeon_drm_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint64_t vram, uint64_t gtt)
@@ -483,10 +483,10 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
     case RING_DMA:
         /* pad DMA ring to 8 DWs */
         if (cs->ws->info.chip_class <= SI) {
-            while (rcs->cdw & 7)
+            while (rcs->current.cdw & 7)
                 OUT_CS(&cs->base, 0xf0000000); /* NOP packet */
         } else {
-            while (rcs->cdw & 7)
+            while (rcs->current.cdw & 7)
                 OUT_CS(&cs->base, 0x00000000); /* NOP packet */
         }
         break;
@@ -495,22 +495,22 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
          * r6xx, requires at least 4 dw alignment to avoid a hw bug.
          */
         if (cs->ws->info.gfx_ib_pad_with_type2) {
-            while (rcs->cdw & 7)
+            while (rcs->current.cdw & 7)
                 OUT_CS(&cs->base, 0x80000000); /* type2 nop packet */
         } else {
-            while (rcs->cdw & 7)
+            while (rcs->current.cdw & 7)
                 OUT_CS(&cs->base, 0xffff1000); /* type3 nop packet */
         }
         break;
     case RING_UVD:
-        while (rcs->cdw & 15)
+        while (rcs->current.cdw & 15)
             OUT_CS(&cs->base, 0x80000000); /* type2 nop packet */
         break;
     default:
         break;
     }
 
-    if (rcs->cdw > rcs->max_dw) {
+    if (rcs->current.cdw > rcs->current.max_dw) {
        fprintf(stderr, "radeon: command stream overflowed\n");
     }
 
@@ -527,12 +527,12 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
     cs->cst = tmp;
 
     /* If the CS is not empty or overflowed, emit it in a separate thread. */
-    if (cs->base.cdw && cs->base.cdw <= cs->base.max_dw && !debug_get_option_noop()) {
+    if (cs->base.current.cdw && cs->base.current.cdw <= cs->base.current.max_dw && !debug_get_option_noop()) {
         unsigned i, crelocs;
 
         crelocs = cs->cst->crelocs;
 
-        cs->cst->chunks[0].length_dw = cs->base.cdw;
+        cs->cst->chunks[0].length_dw = cs->base.current.cdw;
 
         for (i = 0; i < crelocs; i++) {
             /* Update the number of active asynchronous CS ioctls for the buffer. */
@@ -599,8 +599,8 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
     }
 
     /* Prepare a new CS. */
-    cs->base.buf = cs->csc->buf;
-    cs->base.cdw = 0;
+    cs->base.current.buf = cs->csc->buf;
+    cs->base.current.cdw = 0;
 
     cs->ws->num_cs_flushes++;
 }

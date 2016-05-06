@@ -518,9 +518,9 @@ struct r600_context {
 static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
 					    struct r600_command_buffer *cb)
 {
-	assert(cs->cdw + cb->num_dw <= cs->max_dw);
-	memcpy(cs->buf + cs->cdw, cb->buf, 4 * cb->num_dw);
-	cs->cdw += cb->num_dw;
+	assert(cs->current.cdw + cb->num_dw <= cs->current.max_dw);
+	memcpy(cs->current.buf + cs->current.cdw, cb->buf, 4 * cb->num_dw);
+	cs->current.cdw += cb->num_dw;
 }
 
 static inline void r600_set_atom_dirty(struct r600_context *rctx,
@@ -874,13 +874,13 @@ static inline void radeon_compute_set_context_reg_seq(struct radeon_winsys_cs *c
 {
 	radeon_set_context_reg_seq(cs, reg, num);
 	/* Set the compute bit on the packet header */
-	cs->buf[cs->cdw - 2] |= RADEON_CP_PACKET3_COMPUTE_MODE;
+	cs->current.buf[cs->current.cdw - 2] |= RADEON_CP_PACKET3_COMPUTE_MODE;
 }
 
 static inline void radeon_set_ctl_const_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	assert(reg >= R600_CTL_CONST_OFFSET);
-	assert(cs->cdw+2+num <= cs->max_dw);
+	assert(cs->current.cdw + 2 + num <= cs->current.max_dw);
 	radeon_emit(cs, PKT3(PKT3_SET_CTL_CONST, num, 0));
 	radeon_emit(cs, (reg - R600_CTL_CONST_OFFSET) >> 2);
 }

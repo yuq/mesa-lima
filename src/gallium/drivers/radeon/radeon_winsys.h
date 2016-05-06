@@ -225,10 +225,18 @@ enum radeon_bo_priority {
 struct winsys_handle;
 struct radeon_winsys_ctx;
 
+struct radeon_winsys_cs_chunk {
+    unsigned cdw;  /* Number of used dwords. */
+    unsigned max_dw; /* Maximum number of dwords. */
+    uint32_t *buf; /* The base pointer of the chunk. */
+};
+
 struct radeon_winsys_cs {
-    unsigned                    cdw;  /* Number of used dwords. */
-    unsigned                    max_dw; /* Maximum number of dwords. */
-    uint32_t                    *buf; /* The command buffer. */
+    struct radeon_winsys_cs_chunk current;
+    struct radeon_winsys_cs_chunk *prev;
+    unsigned                      num_prev; /* Number of previous chunks. */
+    unsigned                      max_prev; /* Space in array pointed to by prev. */
+    unsigned                      prev_dw; /* Total number of dwords in previous chunks. */
 };
 
 struct radeon_info {
@@ -786,19 +794,19 @@ struct radeon_winsys {
 
 static inline bool radeon_emitted(struct radeon_winsys_cs *cs, unsigned num_dw)
 {
-    return cs && cs->cdw > num_dw;
+    return cs && (cs->prev_dw + cs->current.cdw > num_dw);
 }
 
 static inline void radeon_emit(struct radeon_winsys_cs *cs, uint32_t value)
 {
-    cs->buf[cs->cdw++] = value;
+    cs->current.buf[cs->current.cdw++] = value;
 }
 
 static inline void radeon_emit_array(struct radeon_winsys_cs *cs,
 				     const uint32_t *values, unsigned count)
 {
-    memcpy(cs->buf+cs->cdw, values, count * 4);
-    cs->cdw += count;
+    memcpy(cs->current.buf + cs->current.cdw, values, count * 4);
+    cs->current.cdw += count;
 }
 
 #endif

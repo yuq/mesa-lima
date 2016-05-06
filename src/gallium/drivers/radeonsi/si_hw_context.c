@@ -130,13 +130,19 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		si_trace_emit(ctx);
 
 	if (ctx->is_debug) {
+		uint32_t *buf;
 		unsigned i;
 
 		/* Save the IB for debug contexts. */
 		free(ctx->last_ib);
-		ctx->last_ib_dw_size = cs->cdw;
-		ctx->last_ib = malloc(cs->cdw * 4);
-		memcpy(ctx->last_ib, cs->buf, cs->cdw * 4);
+		ctx->last_ib_dw_size = cs->prev_dw + cs->current.cdw;
+		ctx->last_ib = malloc(ctx->last_ib_dw_size * 4);
+		buf = ctx->last_ib;
+		for (i = 0; i < cs->num_prev; ++i) {
+			memcpy(buf, cs->prev[i].buf, cs->prev[i].cdw * 4);
+			buf += cs->prev[i].cdw;
+		}
+		memcpy(buf, cs->current.buf, cs->current.cdw * 4);
 		r600_resource_reference(&ctx->last_trace_buf, ctx->trace_buf);
 		r600_resource_reference(&ctx->trace_buf, NULL);
 
@@ -232,7 +238,8 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	r600_postflush_resume_features(&ctx->b);
 
-	ctx->b.initial_gfx_cs_size = ctx->b.gfx.cs->cdw;
+	assert(!ctx->b.gfx.cs->prev_dw);
+	ctx->b.initial_gfx_cs_size = ctx->b.gfx.cs->current.cdw;
 
 	/* Invalidate various draw states so that they are emitted before
 	 * the first draw call. */

@@ -440,8 +440,10 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
                   4 * MIN2(util_next_power_of_two(ib->max_ib_size),
                            amdgpu_ib_max_submit_dwords(ib_type)));
 
-   ib->base.cdw = 0;
-   ib->base.buf = NULL;
+   ib->base.prev_dw = 0;
+   ib->base.num_prev = 0;
+   ib->base.current.cdw = 0;
+   ib->base.current.buf = NULL;
 
    /* Allocate a new buffer for IBs if the current buffer is all used. */
    if (!ib->big_ib_buffer ||
@@ -455,10 +457,10 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
    amdgpu_cs_add_buffer(&cs->main.base, ib->big_ib_buffer,
                         RADEON_USAGE_READ, 0, RADEON_PRIO_IB1);
 
-   ib->base.buf = (uint32_t*)(ib->ib_mapped + ib->used_ib_space);
+   ib->base.current.buf = (uint32_t*)(ib->ib_mapped + ib->used_ib_space);
 
    ib_size = ib->big_ib_buffer->size - ib->used_ib_space;
-   ib->base.max_dw = ib_size / 4;
+   ib->base.current.max_dw = ib_size / 4;
    return true;
 }
 
@@ -653,7 +655,7 @@ amdgpu_cs_add_const_preamble_ib(struct radeon_winsys_cs *rcs)
    return &cs->const_preamble_ib.base;
 }
 
-#define OUT_CS(cs, value) (cs)->buf[(cs)->cdw++] = (value)
+#define OUT_CS(cs, value) (cs)->current.buf[(cs)->current.cdw++] = (value)
 
 static int amdgpu_cs_lookup_buffer(struct radeon_winsys_cs *rcs,
                                struct pb_buffer *buf)
@@ -672,16 +674,16 @@ static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
 {
    struct amdgpu_ib *ib = amdgpu_ib(rcs);
    struct amdgpu_cs *cs = amdgpu_cs_from_ib(ib);
-   unsigned requested_size = rcs->cdw + dw;
+   unsigned requested_size = rcs->prev_dw + rcs->current.cdw + dw;
 
-   assert(rcs->cdw <= rcs->max_dw);
+   assert(rcs->current.cdw <= rcs->current.max_dw);
 
    if (requested_size > amdgpu_ib_max_submit_dwords(ib->ib_type))
       return false;
 
    ib->max_ib_size = MAX2(ib->max_ib_size, requested_size);
 
-   return rcs->max_dw - rcs->cdw >= dw;
+   return rcs->current.max_dw - rcs->current.cdw >= dw;
 }
 
 static boolean amdgpu_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint64_t vram, uint64_t gtt)
@@ -879,57 +881,60 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    switch (cs->ring_type) {
    case RING_DMA:
       /* pad DMA ring to 8 DWs */
-      while (rcs->cdw & 7)
+      while (rcs->current.cdw & 7)
          OUT_CS(rcs, 0x00000000); /* NOP packet */
       break;
    case RING_GFX:
       /* pad GFX ring to 8 DWs to meet CP fetch alignment requirements */
-      while (rcs->cdw & 7)
+      while (rcs->current.cdw & 7)
          OUT_CS(rcs, 0xffff1000); /* type3 nop packet */
 
       /* Also pad the const IB. */
       if (cs->const_ib.ib_mapped)
-         while (!cs->const_ib.base.cdw || (cs->const_ib.base.cdw & 7))
+         while (!cs->const_ib.base.current.cdw || (cs->const_ib.base.current.cdw & 7))
             OUT_CS(&cs->const_ib.base, 0xffff1000); /* type3 nop packet */
 
       if (cs->const_preamble_ib.ib_mapped)
-         while (!cs->const_preamble_ib.base.cdw || (cs->const_preamble_ib.base.cdw & 7))
+         while (!cs->const_preamble_ib.base.current.cdw || (cs->const_preamble_ib.base.current.cdw & 7))
             OUT_CS(&cs->const_preamble_ib.base, 0xffff1000);
       break;
    case RING_UVD:
-      while (rcs->cdw & 15)
+      while (rcs->current.cdw & 15)
          OUT_CS(rcs, 0x80000000); /* type2 nop packet */
       break;
    default:
       break;
    }
 
-   if (rcs->cdw > rcs->max_dw) {
+   if (rcs->current.cdw > rcs->current.max_dw) {
       fprintf(stderr, "amdgpu: command stream overflowed\n");
    }
 
    /* If the CS is not empty or overflowed.... */
-   if (cs->main.base.cdw && cs->main.base.cdw <= cs->main.base.max_dw &&
+   if (radeon_emitted(&cs->main.base, 0) &&
+       cs->main.base.current.cdw <= cs->main.base.current.max_dw &&
        !debug_get_option_noop()) {
       struct amdgpu_cs_context *cur = cs->csc;
       unsigned i, num_buffers = cur->num_buffers;
 
       /* Set IB sizes. */
-      cur->ib[IB_MAIN].size = cs->main.base.cdw;
-      cs->main.used_ib_space += cs->main.base.cdw * 4;
-      cs->main.max_ib_size = MAX2(cs->main.max_ib_size, cs->main.base.cdw);
+      cur->ib[IB_MAIN].size = cs->main.base.current.cdw;
+      cs->main.used_ib_space += cs->main.base.current.cdw * 4;
+      cs->main.max_ib_size = MAX2(cs->main.max_ib_size, cs->main.base.prev_dw + cs->main.base.current.cdw);
 
       if (cs->const_ib.ib_mapped) {
-         cur->ib[IB_CONST].size = cs->const_ib.base.cdw;
-         cs->const_ib.used_ib_space += cs->const_ib.base.cdw * 4;
-         cs->const_ib.max_ib_size = MAX2(cs->const_ib.max_ib_size, cs->const_ib.base.cdw);
+         cur->ib[IB_CONST].size = cs->const_ib.base.current.cdw;
+         cs->const_ib.used_ib_space += cs->const_ib.base.current.cdw * 4;
+         cs->const_ib.max_ib_size =
+            MAX2(cs->const_ib.max_ib_size, cs->main.base.prev_dw + cs->const_ib.base.current.cdw);
       }
 
       if (cs->const_preamble_ib.ib_mapped) {
-         cur->ib[IB_CONST_PREAMBLE].size = cs->const_preamble_ib.base.cdw;
-         cs->const_preamble_ib.used_ib_space += cs->const_preamble_ib.base.cdw * 4;
+         cur->ib[IB_CONST_PREAMBLE].size = cs->const_preamble_ib.base.current.cdw;
+         cs->const_preamble_ib.used_ib_space += cs->const_preamble_ib.base.current.cdw * 4;
          cs->const_preamble_ib.max_ib_size =
-            MAX2(cs->const_preamble_ib.max_ib_size, cs->const_preamble_ib.base.cdw);
+            MAX2(cs->const_preamble_ib.max_ib_size,
+                 cs->const_preamble_ib.base.prev_dw + cs->const_preamble_ib.base.current.cdw);
       }
 
       /* Create a fence. */
