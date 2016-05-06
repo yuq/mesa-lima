@@ -3094,6 +3094,10 @@ link_calculate_subroutine_compat(struct gl_shader_program *prog)
             continue;
 
          count = 0;
+         if (sh->NumSubroutineFunctions == 0) {
+            linker_error(prog, "subroutine uniform %s defined but no valid functions found\n", uni->type->name);
+            continue;
+         }
          for (unsigned f = 0; f < sh->NumSubroutineFunctions; f++) {
             struct gl_subroutine_function *fn = &sh->SubroutineFunctions[f];
             for (int k = 0; k < fn->num_compat_types; k++) {
