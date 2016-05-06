@@ -666,7 +666,7 @@ static const nir_op op_trans[MAX_OPCODE] = {
    [OPCODE_LIT] = 0,
    [OPCODE_LOG] = 0,
    [OPCODE_LRP] = 0,
-   [OPCODE_MAD] = nir_op_ffma,
+   [OPCODE_MAD] = 0,
    [OPCODE_MAX] = nir_op_fmax,
    [OPCODE_MIN] = nir_op_fmin,
    [OPCODE_MOV] = nir_op_fmov,
@@ -755,6 +755,10 @@ ptn_emit_instruction(struct ptn_compile *c, struct prog_instruction *prog_inst)
 
    case OPCODE_LRP:
       ptn_lrp(b, dest, src);
+      break;
+
+   case OPCODE_MAD:
+      ptn_move_dest(b, dest, nir_fadd(b, nir_fmul(b, src[0], src[1]), src[2]));
       break;
 
    case OPCODE_DST:
