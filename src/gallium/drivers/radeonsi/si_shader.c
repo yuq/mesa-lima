@@ -4944,27 +4944,13 @@ static void declare_tess_lds(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
 	LLVMTypeRef i32 = ctx->radeon_bld.soa.bld_base.uint_bld.elem_type;
-
-	/* This is the upper bound, maximum is 32 inputs times 32 vertices */
-	unsigned vertex_data_dw_size = 32*32*4;
-	unsigned patch_data_dw_size = 32*4;
-	/* The formula is: TCS inputs + TCS outputs + TCS patch outputs. */
-	unsigned patch_dw_size = vertex_data_dw_size*2 + patch_data_dw_size;
-	unsigned lds_dwords = patch_dw_size;
-
-	if (ctx->screen->b.chip_class <= SI) {
-		/* This is a horrible temporary workaround to make tesselation
-		 * not be completely broken on SI now that LLVM checks that
-		 * the declared LDS size fits into the device maximum of 32KB.
-		 */
-		lds_dwords = 8 * 1024;
-	}
+	unsigned lds_size = ctx->screen->b.chip_class >= CIK ? 65536 : 32768;
 
 	/* The actual size is computed outside of the shader to reduce
 	 * the number of shader variants. */
 	ctx->lds =
 		LLVMAddGlobalInAddressSpace(gallivm->module,
-					    LLVMArrayType(i32, lds_dwords),
+					    LLVMArrayType(i32, lds_size / 4),
 					    "tess_lds",
 					    LOCAL_ADDR_SPACE);
 }
