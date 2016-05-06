@@ -81,6 +81,8 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_TEX_B] = { "tex_b", 0, 2 },
         [QOP_TEX_DIRECT] = { "tex_direct", 0, 2 },
         [QOP_TEX_RESULT] = { "tex_result", 1, 0, true },
+
+        [QOP_LOAD_IMM] = { "load_imm", 0, 1 },
 };
 
 static const char *
@@ -242,6 +244,10 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
 
         case QFILE_NULL:
                 fprintf(stderr, "null");
+                break;
+
+        case QFILE_LOAD_IMM:
+                fprintf(stderr, "0x%08x (%f)", reg.index, uif(reg.index));
                 break;
 
         case QFILE_SMALL_IMM:

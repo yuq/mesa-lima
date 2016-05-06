@@ -80,6 +80,7 @@ void qir_validate(struct vc4_compile *c)
                 case QFILE_FRAG_Y:
                 case QFILE_FRAG_REV_FLAG:
                 case QFILE_SMALL_IMM:
+                case QFILE_LOAD_IMM:
                         fail_instr(inst, "Bad dest file");
                         break;
                 }
@@ -96,6 +97,7 @@ void qir_validate(struct vc4_compile *c)
                         case QFILE_VARY:
                         case QFILE_UNIF:
                         case QFILE_VPM:
+                        case QFILE_LOAD_IMM:
                                 break;
 
                         case QFILE_SMALL_IMM:

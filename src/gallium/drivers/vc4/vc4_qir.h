@@ -62,6 +62,12 @@ enum qfile {
         QFILE_FRAG_REV_FLAG,
 
         /**
+         * Stores an immediate value in the index field that will be used
+         * directly by qpu_load_imm().
+         */
+        QFILE_LOAD_IMM,
+
+        /**
          * Stores an immediate value in the index field that can be turned
          * into a small immediate field by qpu_encode_small_immediate().
          */
@@ -147,6 +153,8 @@ enum qop {
          * the destination
          */
         QOP_TEX_RESULT,
+
+        QOP_LOAD_IMM,
 };
 
 struct queued_qpu_inst {
@@ -719,6 +727,15 @@ static inline void
 qir_VPM_WRITE(struct vc4_compile *c, struct qreg val)
 {
         qir_MOV_dest(c, qir_reg(QFILE_VPM, 0), val);
+}
+
+static inline struct qreg
+qir_LOAD_IMM(struct vc4_compile *c, uint32_t val)
+{
+        struct qreg t = qir_get_temp(c);
+        qir_emit(c, qir_inst(QOP_LOAD_IMM, t,
+                             qir_reg(QFILE_LOAD_IMM, val), c->undef));
+        return t;
 }
 
 #endif /* VC4_QIR_H */

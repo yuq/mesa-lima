@@ -267,6 +267,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         int index = qinst->src[i].index;
                         switch (qinst->src[i].file) {
                         case QFILE_NULL:
+                        case QFILE_LOAD_IMM:
                                 src[i] = qpu_rn(0);
                                 break;
                         case QFILE_TEMP:
@@ -351,6 +352,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QFILE_VARY:
                 case QFILE_UNIF:
                 case QFILE_SMALL_IMM:
+                case QFILE_LOAD_IMM:
                 case QFILE_FRAG_X:
                 case QFILE_FRAG_Y:
                 case QFILE_FRAG_REV_FLAG:
@@ -388,6 +390,11 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 
                         handle_r4_qpu_write(c, qinst, dst);
 
+                        break;
+
+                case QOP_LOAD_IMM:
+                        assert(qinst->src[0].file == QFILE_LOAD_IMM);
+                        queue(c, qpu_load_imm_ui(dst, qinst->src[0].index));
                         break;
 
                 case QOP_MS_MASK:
