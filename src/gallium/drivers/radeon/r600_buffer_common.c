@@ -37,7 +37,7 @@ boolean r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
 	if (ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, buf, usage)) {
 		return TRUE;
 	}
-	if (ctx->dma.cs && ctx->dma.cs->cdw &&
+	if (radeon_emitted(ctx->dma.cs, 0) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs, buf, usage)) {
 		return TRUE;
 	}
@@ -60,7 +60,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 		rusage = RADEON_USAGE_WRITE;
 	}
 
-	if (ctx->gfx.cs->cdw != ctx->initial_gfx_cs_size &&
+	if (radeon_emitted(ctx->gfx.cs, ctx->initial_gfx_cs_size) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs,
 					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
@@ -71,8 +71,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 			busy = true;
 		}
 	}
-	if (ctx->dma.cs &&
-	    ctx->dma.cs->cdw &&
+	if (radeon_emitted(ctx->dma.cs, 0) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs,
 					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {

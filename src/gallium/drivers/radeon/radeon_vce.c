@@ -313,7 +313,7 @@ static void rvce_encode_bitstream(struct pipe_video_codec *encoder,
 		RVID_ERR("Can't create feedback buffer.\n");
 		return;
 	}
-	if (!enc->cs->cdw)
+	if (!radeon_emitted(enc->cs, 0))
 		enc->session(enc);
 	enc->encode(enc);
 	enc->feedback(enc);

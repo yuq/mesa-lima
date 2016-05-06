@@ -33,10 +33,8 @@
 void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 			boolean count_draw_in)
 {
-	struct radeon_winsys_cs *dma = ctx->b.dma.cs;
-
 	/* Flush the DMA IB if it's not empty. */
-	if (dma && dma->cdw)
+	if (radeon_emitted(ctx->b.dma.cs, 0))
 		ctx->b.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 
 	if (!ctx->b.ws->cs_memory_below_limit(ctx->b.gfx.cs, ctx->b.vram, ctx->b.gtt)) {
@@ -250,7 +248,7 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 	struct r600_context *ctx = context;
 	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 
-	if (cs->cdw == ctx->b.initial_gfx_cs_size && !fence)
+	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size) && !fence)
 		return;
 
 	r600_preflush_suspend_features(&ctx->b);

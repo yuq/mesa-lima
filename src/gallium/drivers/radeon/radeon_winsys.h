@@ -775,6 +775,10 @@ struct radeon_winsys {
                            unsigned num_registers, uint32_t *out);
 };
 
+static inline bool radeon_emitted(struct radeon_winsys_cs *cs, unsigned num_dw)
+{
+    return cs && cs->cdw > num_dw;
+}
 
 static inline void radeon_emit(struct radeon_winsys_cs *cs, uint32_t value)
 {

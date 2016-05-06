@@ -155,7 +155,7 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	}
 
 	/* Flush the GFX IB if DMA depends on it. */
-	if (ctx->gfx.cs->cdw > ctx->initial_gfx_cs_size &&
+	if (radeon_emitted(ctx->gfx.cs, ctx->initial_gfx_cs_size) &&
 	    ((dst &&
 	      ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, dst->buf,
 					       RADEON_USAGE_READWRITE)) ||
@@ -212,7 +212,7 @@ void r600_dma_emit_wait_idle(struct r600_common_context *rctx)
 
 	r600_need_dma_space(rctx, 1, NULL, NULL);
 
-	if (cs->cdw == 0) /* empty queue */
+	if (!radeon_emitted(cs, 0)) /* empty queue */
 		return;
 
 	/* NOP waits for idle on Evergreen and later. */
@@ -295,7 +295,7 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct radeon_winsys_cs *cs = rctx->dma.cs;
 
-	if (cs->cdw)
+	if (radeon_emitted(cs, 0))
 		rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence);
 	if (fence)
 		rctx->ws->fence_reference(fence, rctx->last_sdma_fence);
