@@ -433,6 +433,18 @@ svga_set_sampler_views(struct pipe_context *pipe,
    if (!svga_have_vgpu10(svga) && shader != PIPE_SHADER_FRAGMENT)
       return;
 
+   /* This bit of code works around a quirk in the CSO module.
+    * If start=num=0 it means all sampler views should be released.
+    * Note that the CSO module treats sampler views for fragment shaders
+    * differently than other shader types.
+    */
+   if (start == 0 && num == 0 && svga->curr.num_sampler_views[shader] > 0) {
+      for (i = 0; i < svga->curr.num_sampler_views[shader]; i++) {
+         pipe_sampler_view_release(pipe, &svga->curr.sampler_views[shader][i]);
+      }
+      any_change = TRUE;
+   }
+
    for (i = 0; i < num; i++) {
       enum pipe_texture_target target;
 
