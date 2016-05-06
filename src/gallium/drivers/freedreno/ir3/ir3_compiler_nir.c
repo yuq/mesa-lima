@@ -2062,11 +2062,14 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 				instr = create_frag_input(ctx, use_ldlv);
 			}
 
+			compile_assert(ctx, idx < ctx->ir->ninputs);
+
 			ctx->ir->inputs[idx] = instr;
 		}
 	} else if (ctx->so->type == SHADER_VERTEX) {
 		for (int i = 0; i < ncomp; i++) {
 			unsigned idx = (n * 4) + i;
+			compile_assert(ctx, idx < ctx->ir->ninputs);
 			ctx->ir->inputs[idx] = create_input(ctx->block, idx);
 		}
 	} else {
@@ -2170,7 +2173,7 @@ emit_instructions(struct ir3_compile *ctx)
 	/* or vtx shaders, we need to leave room for sysvals:
 	 */
 	if (ctx->so->type == SHADER_VERTEX) {
-		ninputs += 8;
+		ninputs += 16;
 	}
 
 	ctx->ir = ir3_create(ctx->compiler, ninputs, noutputs);
@@ -2181,7 +2184,7 @@ emit_instructions(struct ir3_compile *ctx)
 	list_addtail(&ctx->block->node, &ctx->ir->block_list);
 
 	if (ctx->so->type == SHADER_VERTEX) {
-		ctx->ir->ninputs -= 8;
+		ctx->ir->ninputs -= 16;
 	}
 
 	/* for fragment shader, we have a single input register (usually
