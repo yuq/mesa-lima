@@ -220,6 +220,12 @@ amdgpu_ctx_query_reset_status(struct radeon_winsys_ctx *rwctx)
 
 /* COMMAND SUBMISSION */
 
+static bool amdgpu_cs_has_user_fence(struct amdgpu_cs_context *cs)
+{
+   return cs->request.ip_type != AMDGPU_HW_IP_UVD &&
+          cs->request.ip_type != AMDGPU_HW_IP_VCE;
+}
+
 static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_ib *ib,
                               struct amdgpu_cs_ib_info *info, unsigned ib_type)
 {
@@ -690,8 +696,7 @@ void amdgpu_cs_submit_ib(struct amdgpu_cs *acs)
    int i, r;
 
    cs->request.fence_info.handle = NULL;
-   if (cs->request.ip_type != AMDGPU_HW_IP_UVD &&
-       cs->request.ip_type != AMDGPU_HW_IP_VCE) {
+   if (amdgpu_cs_has_user_fence(cs)) {
 	cs->request.fence_info.handle = acs->ctx->user_fence_bo;
 	cs->request.fence_info.offset = acs->ring_type;
    }
@@ -748,8 +753,7 @@ void amdgpu_cs_submit_ib(struct amdgpu_cs *acs)
    } else {
       /* Success. */
       uint64_t *user_fence = NULL;
-      if (cs->request.ip_type != AMDGPU_HW_IP_UVD &&
-          cs->request.ip_type != AMDGPU_HW_IP_VCE)
+      if (amdgpu_cs_has_user_fence(cs))
          user_fence = acs->ctx->user_fence_cpu_address_base +
                       cs->request.fence_info.offset;
       amdgpu_fence_submitted(cs->fence, &cs->request, user_fence);
