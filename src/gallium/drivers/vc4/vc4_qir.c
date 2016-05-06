@@ -66,8 +66,8 @@ static const struct qir_op_info qir_op_info[] = {
 
         [QOP_RCP] = { "rcp", 1, 1 },
         [QOP_RSQ] = { "rsq", 1, 1 },
-        [QOP_EXP2] = { "exp2", 1, 2 },
-        [QOP_LOG2] = { "log2", 1, 2 },
+        [QOP_EXP2] = { "exp2", 1, 1 },
+        [QOP_LOG2] = { "log2", 1, 1 },
         [QOP_TLB_COLOR_READ] = { "tlb_color_read", 1, 0 },
         [QOP_MS_MASK] = { "ms_mask", 0, 1, true },
         [QOP_VARY_ADD_C] = { "vary_add_c", 1, 1 },
