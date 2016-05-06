@@ -57,7 +57,7 @@ HANDLE SwrCreateContext(
     RDTSC_RESET();
     RDTSC_INIT(0);
 
-    void* pContextMem = _aligned_malloc(sizeof(SWR_CONTEXT), KNOB_SIMD_WIDTH * 4);
+    void* pContextMem = AlignedMalloc(sizeof(SWR_CONTEXT), KNOB_SIMD_WIDTH * 4);
     memset(pContextMem, 0, sizeof(SWR_CONTEXT));
     SWR_CONTEXT *pContext = new (pContextMem) SWR_CONTEXT();
 
@@ -67,8 +67,8 @@ HANDLE SwrCreateContext(
     pContext->dcRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
     pContext->dsRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
 
-    pContext->pMacroTileManagerArray = (MacroTileMgr*)_aligned_malloc(sizeof(MacroTileMgr) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
-    pContext->pDispatchQueueArray = (DispatchQueue*)_aligned_malloc(sizeof(DispatchQueue) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
+    pContext->pMacroTileManagerArray = (MacroTileMgr*)AlignedMalloc(sizeof(MacroTileMgr) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
+    pContext->pDispatchQueueArray = (DispatchQueue*)AlignedMalloc(sizeof(DispatchQueue) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
 
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
@@ -110,7 +110,7 @@ HANDLE SwrCreateContext(
             MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE,
             numaNode);
 #else
-        pContext->pScratch[i] = (uint8_t*)_aligned_malloc(32 * sizeof(KILOBYTE), KNOB_SIMD_WIDTH * 4);
+        pContext->pScratch[i] = (uint8_t*)AlignedMalloc(32 * sizeof(KILOBYTE), KNOB_SIMD_WIDTH * 4);
 #endif
     }
 
@@ -152,8 +152,8 @@ void SwrDestroyContext(HANDLE hContext)
         pContext->pDispatchQueueArray[i].~DispatchQueue();
     }
 
-    _aligned_free(pContext->pDispatchQueueArray);
-    _aligned_free(pContext->pMacroTileManagerArray);
+    AlignedFree(pContext->pDispatchQueueArray);
+    AlignedFree(pContext->pMacroTileManagerArray);
 
     // Free scratch space.
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
@@ -161,14 +161,14 @@ void SwrDestroyContext(HANDLE hContext)
 #if defined(_WIN32)
         VirtualFree(pContext->pScratch[i], 0, MEM_RELEASE);
 #else
-        _aligned_free(pContext->pScratch[i]);
+        AlignedFree(pContext->pScratch[i]);
 #endif
     }
 
     delete(pContext->pHotTileMgr);
 
     pContext->~SWR_CONTEXT();
-    _aligned_free((SWR_CONTEXT*)hContext);
+    AlignedFree((SWR_CONTEXT*)hContext);
 }
 
 void CopyState(DRAW_STATE& dst, const DRAW_STATE& src)

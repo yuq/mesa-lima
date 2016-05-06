@@ -54,7 +54,7 @@ public:
     {
         SWR_ASSUME_ASSERT(size >= sizeof(ArenaBlock));
 
-        ArenaBlock* p = new (_aligned_malloc(size, align)) ArenaBlock();
+        ArenaBlock* p = new (AlignedMalloc(size, align)) ArenaBlock();
         p->blockSize = size;
         return p;
     }
@@ -64,7 +64,7 @@ public:
         if (pMem)
         {
             SWR_ASSUME_ASSERT(pMem->blockSize < size_t(0xdddddddd));
-            _aligned_free(pMem);
+            AlignedFree(pMem);
         }
     }
 };

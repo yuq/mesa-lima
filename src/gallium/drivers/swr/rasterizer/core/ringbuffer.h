@@ -47,14 +47,14 @@ public:
     {
         SWR_ASSERT(numEntries > 0);
         mNumEntries = numEntries;
-        mpRingBuffer = (T*)_aligned_malloc(sizeof(T)*numEntries, 64);
+        mpRingBuffer = (T*)AlignedMalloc(sizeof(T)*numEntries, 64);
         SWR_ASSERT(mpRingBuffer != nullptr);
         memset(mpRingBuffer, 0, sizeof(T)*numEntries);
     }
 
     void Destroy()
     {
-        _aligned_free(mpRingBuffer);
+        AlignedFree(mpRingBuffer);
         mpRingBuffer = nullptr;
     }
 

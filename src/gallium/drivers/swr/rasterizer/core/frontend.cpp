@@ -946,7 +946,7 @@ static void AllocateTessellationData(SWR_CONTEXT* pContext)
     if (gt_pTessellationThreadData == nullptr)
     {
         gt_pTessellationThreadData = (TessellationThreadLocalData*)
-            _aligned_malloc(sizeof(TessellationThreadLocalData), 64);
+            AlignedMalloc(sizeof(TessellationThreadLocalData), 64);
         memset(gt_pTessellationThreadData, 0, sizeof(*gt_pTessellationThreadData));
     }
 }
@@ -985,7 +985,7 @@ static void TessellationStages(
         gt_pTessellationThreadData->tsCtxSize);
     if (tsCtx == nullptr)
     {
-        gt_pTessellationThreadData->pTxCtx = _aligned_malloc(gt_pTessellationThreadData->tsCtxSize, 64);
+        gt_pTessellationThreadData->pTxCtx = AlignedMalloc(gt_pTessellationThreadData->tsCtxSize, 64);
         tsCtx = TSInitCtx(
             tsState.domain,
             tsState.partitioning,
@@ -1063,8 +1063,8 @@ static void TessellationStages(
         size_t requiredAllocSize = sizeof(simdvector) * requiredDSOutputVectors;
         if (requiredDSOutputVectors > gt_pTessellationThreadData->numDSOutputVectors)
         {
-            _aligned_free(gt_pTessellationThreadData->pDSOutput);
-            gt_pTessellationThreadData->pDSOutput = (simdscalar*)_aligned_malloc(requiredAllocSize, 64);
+            AlignedFree(gt_pTessellationThreadData->pDSOutput);
+            gt_pTessellationThreadData->pDSOutput = (simdscalar*)AlignedMalloc(requiredAllocSize, 64);
             gt_pTessellationThreadData->numDSOutputVectors = requiredDSOutputVectors;
         }
         SWR_ASSERT(gt_pTessellationThreadData->pDSOutput);

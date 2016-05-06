@@ -49,6 +49,16 @@
 
 #define PRAGMA_WARNING_POP() __pragma(warning(pop))
 
+static inline void *AlignedMalloc(size_t _Size, size_t _Alignment)
+{
+    return _aligned_malloc(_Size, _Alignment);
+}
+
+static inline void AlignedFree(void* p)
+{
+    return _aligned_free(p);
+}
+
 #if defined(_WIN64)
 #define BitScanReverseSizeT BitScanReverse64
 #define BitScanForwardSizeT BitScanForward64
@@ -155,7 +165,7 @@ unsigned char _BitScanReverse(unsigned int *Index, unsigned int Mask)
 }
 
 inline
-void *_aligned_malloc(unsigned int size, unsigned int alignment)
+void *AlignedMalloc(unsigned int size, unsigned int alignment)
 {
     void *ret;
     if (posix_memalign(&ret, alignment, size))
@@ -171,12 +181,17 @@ unsigned char _bittest(const LONG *a, LONG b)
     return ((*(unsigned *)(a) & (1 << b)) != 0);
 }
 
+static inline
+void AlignedFree(void* p)
+{
+    free(p);
+}
+
 #define GetCurrentProcessId getpid
 #define GetCurrentThreadId gettid
 
 #define CreateDirectory(name, pSecurity) mkdir(name, 0777)
 
-#define _aligned_free free
 #define InterlockedCompareExchange(Dest, Exchange, Comparand) __sync_val_compare_and_swap(Dest, Comparand, Exchange)
 #define InterlockedExchangeAdd(Addend, Value) __sync_fetch_and_add(Addend, Value)
 #define InterlockedDecrement(Append) __sync_sub_and_fetch(Append, 1)

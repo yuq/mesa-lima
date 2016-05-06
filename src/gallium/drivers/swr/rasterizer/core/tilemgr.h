@@ -313,7 +313,7 @@ private:
         HANDLE hProcess = GetCurrentProcess();
         p = VirtualAllocExNuma(hProcess, nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE, numaNode);
 #else
-        p = _aligned_malloc(size, align);
+        p = AlignedMalloc(size, align);
 #endif
 
         return p;
@@ -326,7 +326,7 @@ private:
 #if defined(_WIN32)
             VirtualFree(pBuffer, 0, MEM_RELEASE);
 #else
-            _aligned_free(pBuffer);
+            AlignedFree(pBuffer);
 #endif
         }
     }

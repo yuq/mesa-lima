@@ -181,7 +181,7 @@ HOTTILE* HotTileMgr::GetHotTileNoLoad(
         if (create)
         {
             uint32_t size = numSamples * mHotTileSize[attachment];
-            hotTile.pBuffer = (uint8_t*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
+            hotTile.pBuffer = (uint8_t*)AlignedMalloc(size, KNOB_SIMD_WIDTH * 4);
             hotTile.state = HOTTILE_INVALID;
             hotTile.numSamples = numSamples;
             hotTile.renderTargetArrayIndex = 0;
