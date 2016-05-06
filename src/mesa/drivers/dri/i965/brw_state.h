@@ -336,6 +336,8 @@ uint32_t *gen8_allocate_surface_state(struct brw_context *brw,
 void gen8_emit_fast_clear_color(const struct brw_context *brw,
                                 const struct intel_mipmap_tree *mt,
                                 uint32_t *surf);
+uint32_t gen8_get_aux_mode(const struct brw_context *brw,
+                           const struct intel_mipmap_tree *mt);
 
 /* brw_sampler_state.c */
 void brw_emit_sampler_state(struct brw_context *brw,

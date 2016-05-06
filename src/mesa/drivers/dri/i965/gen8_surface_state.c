@@ -198,10 +198,9 @@ gen8_emit_fast_clear_color(const struct brw_context *brw,
       surf[7] |= mt->fast_clear_color_value;
 }
 
-static uint32_t
+uint32_t
 gen8_get_aux_mode(const struct brw_context *brw,
-                  const struct intel_mipmap_tree *mt,
-                  uint32_t surf_type)
+                  const struct intel_mipmap_tree *mt)
 {
    if (mt->mcs_mt == NULL)
       return GEN8_SURFACE_AUX_MODE_NONE;
@@ -237,7 +236,7 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
    unsigned tiling_mode, pitch;
    const unsigned tr_mode = surface_tiling_resource_mode(mt->tr_mode);
    const uint32_t surf_type = translate_tex_target(target);
-   uint32_t aux_mode = gen8_get_aux_mode(brw, mt, surf_type);
+   uint32_t aux_mode = gen8_get_aux_mode(brw, mt);
 
    if (mt->format == MESA_FORMAT_S_UINT8) {
       tiling_mode = GEN8_SURFACE_TILING_W;
@@ -484,7 +483,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    }
 
    struct intel_mipmap_tree *aux_mt = mt->mcs_mt;
-   const uint32_t aux_mode = gen8_get_aux_mode(brw, mt, surf_type);
+   const uint32_t aux_mode = gen8_get_aux_mode(brw, mt);
 
    uint32_t *surf = gen8_allocate_surface_state(brw, &offset, surf_index);
 
