@@ -30,11 +30,10 @@ Custom builders and methods.
 #
 
 
-import os
 import os.path
-import re
 import sys
 import subprocess
+import modulefinder
 
 import SCons.Action
 import SCons.Builder
@@ -93,27 +92,19 @@ def createConvenienceLibBuilder(env):
     return convenience_lib
 
 
-# TODO: handle import statements with multiple modules
-# TODO: handle from import statements
-import_re = re.compile(r'^\s*import\s+(\S+)\s*$', re.M)
-
 def python_scan(node, env, path):
     # http://www.scons.org/doc/0.98.5/HTML/scons-user/c2781.html#AEN2789
+    # https://docs.python.org/2/library/modulefinder.html
     contents = node.get_contents()
     source_dir = node.get_dir()
-    imports = import_re.findall(contents)
+    finder = modulefinder.ModuleFinder()
+    finder.run_script(node.abspath)
     results = []
-    for imp in imports:
-        for dir in path:
-            file = os.path.join(str(dir), imp.replace('.', os.sep) + '.py')
-            if os.path.exists(file):
-                results.append(env.File(file))
-                break
-            file = os.path.join(str(dir), imp.replace('.', os.sep), '__init__.py')
-            if os.path.exists(file):
-                results.append(env.File(file))
-                break
-    #print node, map(str, results)
+    for name, mod in finder.modules.iteritems():
+        if mod.__file__ is None:
+            continue
+        assert os.path.exists(mod.__file__)
+        results.append(env.File(mod.__file__))
     return results
 
 python_scanner = SCons.Scanner.Scanner(function = python_scan, skeys = ['.py'])
