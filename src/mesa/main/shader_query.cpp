@@ -1125,6 +1125,13 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       switch (res->Type) {
       case GL_UNIFORM:
       case GL_BUFFER_VARIABLE:
+      case GL_VERTEX_SUBROUTINE_UNIFORM:
+      case GL_GEOMETRY_SUBROUTINE_UNIFORM:
+      case GL_FRAGMENT_SUBROUTINE_UNIFORM:
+      case GL_COMPUTE_SUBROUTINE_UNIFORM:
+      case GL_TESS_CONTROL_SUBROUTINE_UNIFORM:
+      case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
+
          /* Test if a buffer variable is an array or an unsized array.
           * Unsized arrays return zero as array size.
           */
@@ -1207,6 +1214,12 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    case GL_LOCATION:
       switch (res->Type) {
       case GL_UNIFORM:
+      case GL_VERTEX_SUBROUTINE_UNIFORM:
+      case GL_GEOMETRY_SUBROUTINE_UNIFORM:
+      case GL_FRAGMENT_SUBROUTINE_UNIFORM:
+      case GL_COMPUTE_SUBROUTINE_UNIFORM:
+      case GL_TESS_CONTROL_SUBROUTINE_UNIFORM:
+      case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
       case GL_PROGRAM_INPUT:
       case GL_PROGRAM_OUTPUT:
          *val = program_resource_location(shProg, res,
