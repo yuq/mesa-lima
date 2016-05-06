@@ -71,7 +71,7 @@ inst_aliases = {
     'INSERT_ELEMENT': 'VINSERT',
     'EXTRACT_ELEMENT': 'VEXTRACT',
     'MEM_SET': 'MEMSET',
-    'MEM_CPY': 'MEMCPY',
+    'MEM_CPY': 'MEMCOPY',
     'MEM_MOVE': 'MEMMOVE',
     'L_SHR': 'LSHR',
     'A_SHR': 'ASHR',
