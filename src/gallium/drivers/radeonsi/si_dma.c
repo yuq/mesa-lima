@@ -68,11 +68,11 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 
 	for (i = 0; i < ncopy; i++) {
 		csize = size < max_csize ? size : max_csize;
-		cs->buf[cs->cdw++] = SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd, csize);
-		cs->buf[cs->cdw++] = dst_offset;
-		cs->buf[cs->cdw++] = src_offset;
-		cs->buf[cs->cdw++] = (dst_offset >> 32UL) & 0xff;
-		cs->buf[cs->cdw++] = (src_offset >> 32UL) & 0xff;
+		radeon_emit(cs, SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd, csize));
+		radeon_emit(cs, dst_offset);
+		radeon_emit(cs, src_offset);
+		radeon_emit(cs, (dst_offset >> 32UL) & 0xff);
+		radeon_emit(cs, (src_offset >> 32UL) & 0xff);
 		dst_offset += csize << shift;
 		src_offset += csize << shift;
 		size -= csize;
@@ -164,17 +164,17 @@ static void si_dma_copy_tile(struct si_context *ctx,
 			cheight = (SI_DMA_COPY_MAX_SIZE_DW * 4) / pitch;
 		}
 		size = (cheight * pitch) / 4;
-		cs->buf[cs->cdw++] = SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd, size);
-		cs->buf[cs->cdw++] = base >> 8;
-		cs->buf[cs->cdw++] = (detile << 31) | (array_mode << 27) |
-					(lbpp << 24) | (bank_h << 21) |
-					(bank_w << 18) | (mt_aspect << 16);
-		cs->buf[cs->cdw++] = (pitch_tile_max << 0) | ((height - 1) << 16);
-		cs->buf[cs->cdw++] = (slice_tile_max << 0) | (pipe_config << 26);
-		cs->buf[cs->cdw++] = (tiled_x << 0) | (tiled_z << 18);
-		cs->buf[cs->cdw++] = (tiled_y << 0) | (tile_split << 21) | (nbanks << 25) | (mt << 27);
-		cs->buf[cs->cdw++] = addr & 0xfffffffc;
-		cs->buf[cs->cdw++] = (addr >> 32UL) & 0xff;
+		radeon_emit(cs, SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd, size));
+		radeon_emit(cs, base >> 8);
+		radeon_emit(cs, (detile << 31) | (array_mode << 27) |
+				(lbpp << 24) | (bank_h << 21) |
+				(bank_w << 18) | (mt_aspect << 16));
+		radeon_emit(cs, (pitch_tile_max << 0) | ((height - 1) << 16));
+		radeon_emit(cs, (slice_tile_max << 0) | (pipe_config << 26));
+		radeon_emit(cs, (tiled_x << 0) | (tiled_z << 18));
+		radeon_emit(cs, (tiled_y << 0) | (tile_split << 21) | (nbanks << 25) | (mt << 27));
+		radeon_emit(cs, addr & 0xfffffffc);
+		radeon_emit(cs, (addr >> 32UL) & 0xff);
 		copy_height -= cheight;
 		addr += cheight * pitch;
 		tiled_y += cheight;

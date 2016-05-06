@@ -881,8 +881,8 @@ static inline void radeon_set_ctl_const_seq(struct radeon_winsys_cs *cs, unsigne
 {
 	assert(reg >= R600_CTL_CONST_OFFSET);
 	assert(cs->cdw+2+num <= cs->max_dw);
-	cs->buf[cs->cdw++] = PKT3(PKT3_SET_CTL_CONST, num, 0);
-	cs->buf[cs->cdw++] = (reg - R600_CTL_CONST_OFFSET) >> 2;
+	radeon_emit(cs, PKT3(PKT3_SET_CTL_CONST, num, 0));
+	radeon_emit(cs, (reg - R600_CTL_CONST_OFFSET) >> 2);
 }
 
 static inline void radeon_compute_set_context_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)

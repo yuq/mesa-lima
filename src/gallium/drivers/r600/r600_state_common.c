@@ -1871,8 +1871,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 
 	/* Draw packets. */
 	if (!info.indirect) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_NUM_INSTANCES, 0, 0);
-		cs->buf[cs->cdw++] = info.instance_count;
+		radeon_emit(cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
+		radeon_emit(cs, info.instance_count);
 	}
 
 	if (unlikely(info.indirect)) {
@@ -1883,66 +1883,66 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		rctx->vgt_state.last_draw_was_indirect = true;
 		rctx->last_start_instance = -1;
 
-		cs->buf[cs->cdw++] = PKT3(EG_PKT3_SET_BASE, 2, 0);
-		cs->buf[cs->cdw++] = EG_DRAW_INDEX_INDIRECT_PATCH_TABLE_BASE;
-		cs->buf[cs->cdw++] = va;
-		cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
+		radeon_emit(cs, PKT3(EG_PKT3_SET_BASE, 2, 0));
+		radeon_emit(cs, EG_DRAW_INDEX_INDIRECT_PATCH_TABLE_BASE);
+		radeon_emit(cs, va);
+		radeon_emit(cs, (va >> 32UL) & 0xFF);
 
-		cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
-		cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
-							   (struct r600_resource*)info.indirect,
-							   RADEON_USAGE_READ,
-                                                           RADEON_PRIO_DRAW_INDIRECT);
+		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
+							  (struct r600_resource*)info.indirect,
+							  RADEON_USAGE_READ,
+                                                          RADEON_PRIO_DRAW_INDIRECT));
 	}
 
 	if (info.indexed) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_INDEX_TYPE, 0, 0);
-		cs->buf[cs->cdw++] = ib.index_size == 4 ?
-					(VGT_INDEX_32 | (R600_BIG_ENDIAN ? VGT_DMA_SWAP_32_BIT : 0)) :
-					(VGT_INDEX_16 | (R600_BIG_ENDIAN ? VGT_DMA_SWAP_16_BIT : 0));
+		radeon_emit(cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
+		radeon_emit(cs, ib.index_size == 4 ?
+				(VGT_INDEX_32 | (R600_BIG_ENDIAN ? VGT_DMA_SWAP_32_BIT : 0)) :
+				(VGT_INDEX_16 | (R600_BIG_ENDIAN ? VGT_DMA_SWAP_16_BIT : 0)));
 
 		if (ib.user_buffer) {
 			unsigned size_bytes = info.count*ib.index_size;
 			unsigned size_dw = align(size_bytes, 4) / 4;
-			cs->buf[cs->cdw++] = PKT3(PKT3_DRAW_INDEX_IMMD, 1 + size_dw, render_cond_bit);
-			cs->buf[cs->cdw++] = info.count;
-			cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_IMMEDIATE;
+			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_IMMD, 1 + size_dw, render_cond_bit));
+			radeon_emit(cs, info.count);
+			radeon_emit(cs, V_0287F0_DI_SRC_SEL_IMMEDIATE);
 			memcpy(cs->buf+cs->cdw, ib.user_buffer, size_bytes);
 			cs->cdw += size_dw;
 		} else {
 			uint64_t va = r600_resource(ib.buffer)->gpu_address + ib.offset;
 
 			if (likely(!info.indirect)) {
-				cs->buf[cs->cdw++] = PKT3(PKT3_DRAW_INDEX, 3, render_cond_bit);
-				cs->buf[cs->cdw++] = va;
-				cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
-				cs->buf[cs->cdw++] = info.count;
-				cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_DMA;
-				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
-				cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
-									   (struct r600_resource*)ib.buffer,
-									   RADEON_USAGE_READ,
-                                                                           RADEON_PRIO_INDEX_BUFFER);
+				radeon_emit(cs, PKT3(PKT3_DRAW_INDEX, 3, render_cond_bit));
+				radeon_emit(cs, va);
+				radeon_emit(cs, (va >> 32UL) & 0xFF);
+				radeon_emit(cs, info.count);
+				radeon_emit(cs, V_0287F0_DI_SRC_SEL_DMA);
+				radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+				radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
+									  (struct r600_resource*)ib.buffer,
+									  RADEON_USAGE_READ,
+                                                                          RADEON_PRIO_INDEX_BUFFER));
 			}
 			else {
 				uint32_t max_size = (ib.buffer->width0 - ib.offset) / ib.index_size;
 
-				cs->buf[cs->cdw++] = PKT3(EG_PKT3_INDEX_BASE, 1, 0);
-				cs->buf[cs->cdw++] = va;
-				cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
+				radeon_emit(cs, PKT3(EG_PKT3_INDEX_BASE, 1, 0));
+				radeon_emit(cs, va);
+				radeon_emit(cs, (va >> 32UL) & 0xFF);
 
-				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
-				cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
-									   (struct r600_resource*)ib.buffer,
-									   RADEON_USAGE_READ,
-                                                                           RADEON_PRIO_INDEX_BUFFER);
+				radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+				radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
+									  (struct r600_resource*)ib.buffer,
+									  RADEON_USAGE_READ,
+                                                                          RADEON_PRIO_INDEX_BUFFER));
 
-				cs->buf[cs->cdw++] = PKT3(EG_PKT3_INDEX_BUFFER_SIZE, 0, 0);
-				cs->buf[cs->cdw++] = max_size;
+				radeon_emit(cs, PKT3(EG_PKT3_INDEX_BUFFER_SIZE, 0, 0));
+				radeon_emit(cs, max_size);
 
-				cs->buf[cs->cdw++] = PKT3(EG_PKT3_DRAW_INDEX_INDIRECT, 1, render_cond_bit);
-				cs->buf[cs->cdw++] = info.indirect_offset;
-				cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_DMA;
+				radeon_emit(cs, PKT3(EG_PKT3_DRAW_INDEX_INDIRECT, 1, render_cond_bit));
+				radeon_emit(cs, info.indirect_offset);
+				radeon_emit(cs, V_0287F0_DI_SRC_SEL_DMA);
 			}
 		}
 	} else {
@@ -1952,29 +1952,29 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 
 			radeon_set_context_reg(cs, R_028B30_VGT_STRMOUT_DRAW_OPAQUE_VERTEX_STRIDE, t->stride_in_dw);
 
-			cs->buf[cs->cdw++] = PKT3(PKT3_COPY_DW, 4, 0);
-			cs->buf[cs->cdw++] = COPY_DW_SRC_IS_MEM | COPY_DW_DST_IS_REG;
-			cs->buf[cs->cdw++] = va & 0xFFFFFFFFUL;     /* src address lo */
-			cs->buf[cs->cdw++] = (va >> 32UL) & 0xFFUL; /* src address hi */
-			cs->buf[cs->cdw++] = R_028B2C_VGT_STRMOUT_DRAW_OPAQUE_BUFFER_FILLED_SIZE >> 2; /* dst register */
-			cs->buf[cs->cdw++] = 0; /* unused */
+			radeon_emit(cs, PKT3(PKT3_COPY_DW, 4, 0));
+			radeon_emit(cs, COPY_DW_SRC_IS_MEM | COPY_DW_DST_IS_REG);
+			radeon_emit(cs, va & 0xFFFFFFFFUL);     /* src address lo */
+			radeon_emit(cs, (va >> 32UL) & 0xFFUL); /* src address hi */
+			radeon_emit(cs, R_028B2C_VGT_STRMOUT_DRAW_OPAQUE_BUFFER_FILLED_SIZE >> 2); /* dst register */
+			radeon_emit(cs, 0); /* unused */
 
-			cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
-			cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
-								   t->buf_filled_size, RADEON_USAGE_READ,
-								   RADEON_PRIO_SO_FILLED_SIZE);
+			radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+			radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
+								  t->buf_filled_size, RADEON_USAGE_READ,
+								  RADEON_PRIO_SO_FILLED_SIZE));
 		}
 
 		if (likely(!info.indirect)) {
-			cs->buf[cs->cdw++] = PKT3(PKT3_DRAW_INDEX_AUTO, 1, render_cond_bit);
-			cs->buf[cs->cdw++] = info.count;
+			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_AUTO, 1, render_cond_bit));
+			radeon_emit(cs, info.count);
 		}
 		else {
-			cs->buf[cs->cdw++] = PKT3(EG_PKT3_DRAW_INDIRECT, 1, render_cond_bit);
-			cs->buf[cs->cdw++] = info.indirect_offset;
+			radeon_emit(cs, PKT3(EG_PKT3_DRAW_INDIRECT, 1, render_cond_bit));
+			radeon_emit(cs, info.indirect_offset);
 		}
-		cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_AUTO_INDEX |
-					(info.count_from_stream_output ? S_0287F0_USE_OPAQUE(1) : 0);
+		radeon_emit(cs, V_0287F0_DI_SRC_SEL_AUTO_INDEX |
+				(info.count_from_stream_output ? S_0287F0_USE_OPAQUE(1) : 0));
 	}
 
 	/* SMX returns CONTEXT_DONE too early workaround */
@@ -1991,8 +1991,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 
 	/* ES ring rolling over at EOP - workaround */
 	if (rctx->b.chip_class == R600) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_EVENT_WRITE, 0, 0);
-		cs->buf[cs->cdw++] = EVENT_TYPE(EVENT_TYPE_SQ_NON_EVENT);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SQ_NON_EVENT));
 	}
 
 	/* Set the depth buffer as dirty. */

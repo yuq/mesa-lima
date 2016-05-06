@@ -100,9 +100,8 @@ static void flush(struct ruvd_decoder *dec)
 /* add a new set register command to the IB */
 static void set_reg(struct ruvd_decoder *dec, unsigned reg, uint32_t val)
 {
-	uint32_t *pm4 =	dec->cs->buf;
-	pm4[dec->cs->cdw++] = RUVD_PKT0(reg >> 2, 0);
-	pm4[dec->cs->cdw++] = val;
+	radeon_emit(dec->cs, RUVD_PKT0(reg >> 2, 0));
+	radeon_emit(dec->cs, val);
 }
 
 /* send a command to the VCPU through the GPCOM registers */

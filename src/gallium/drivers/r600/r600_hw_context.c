@@ -115,20 +115,20 @@ void r600_flush_emit(struct r600_context *rctx)
 	}
 
 	if (rctx->b.flags & R600_CONTEXT_PS_PARTIAL_FLUSH) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_EVENT_WRITE, 0, 0);
-		cs->buf[cs->cdw++] = EVENT_TYPE(EVENT_TYPE_PS_PARTIAL_FLUSH) | EVENT_INDEX(4);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 	}
 
 	if (rctx->b.chip_class >= R700 &&
 	    (rctx->b.flags & R600_CONTEXT_FLUSH_AND_INV_CB_META)) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_EVENT_WRITE, 0, 0);
-		cs->buf[cs->cdw++] = EVENT_TYPE(EVENT_TYPE_FLUSH_AND_INV_CB_META) | EVENT_INDEX(0);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_FLUSH_AND_INV_CB_META) | EVENT_INDEX(0));
 	}
 
 	if (rctx->b.chip_class >= R700 &&
 	    (rctx->b.flags & R600_CONTEXT_FLUSH_AND_INV_DB_META)) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_EVENT_WRITE, 0, 0);
-		cs->buf[cs->cdw++] = EVENT_TYPE(EVENT_TYPE_FLUSH_AND_INV_DB_META) | EVENT_INDEX(0);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_FLUSH_AND_INV_DB_META) | EVENT_INDEX(0));
 
 		/* Set FULL_CACHE_ENA for DB META flushes on r7xx and later.
 		 *
@@ -141,8 +141,8 @@ void r600_flush_emit(struct r600_context *rctx)
 
 	if (rctx->b.flags & R600_CONTEXT_FLUSH_AND_INV ||
 	    (rctx->b.chip_class == R600 && rctx->b.flags & R600_CONTEXT_STREAMOUT_FLUSH)) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_EVENT_WRITE, 0, 0);
-		cs->buf[cs->cdw++] = EVENT_TYPE(EVENT_TYPE_CACHE_FLUSH_AND_INV_EVENT) | EVENT_INDEX(0);
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CACHE_FLUSH_AND_INV_EVENT) | EVENT_INDEX(0));
 	}
 
 	if (rctx->b.flags & R600_CONTEXT_INV_CONST_CACHE) {
@@ -215,11 +215,11 @@ void r600_flush_emit(struct r600_context *rctx)
 	}
 
 	if (cp_coher_cntl) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_SURFACE_SYNC, 3, 0);
-		cs->buf[cs->cdw++] = cp_coher_cntl;   /* CP_COHER_CNTL */
-		cs->buf[cs->cdw++] = 0xffffffff;      /* CP_COHER_SIZE */
-		cs->buf[cs->cdw++] = 0;               /* CP_COHER_BASE */
-		cs->buf[cs->cdw++] = 0x0000000A;      /* POLL_INTERVAL */
+		radeon_emit(cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
+		radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
+		radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
+		radeon_emit(cs, 0);               /* CP_COHER_BASE */
+		radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
 	}
 
 	if (rctx->b.flags & R600_CONTEXT_START_PIPELINE_STATS) {
@@ -475,11 +475,11 @@ void r600_dma_copy_buffer(struct r600_context *rctx,
 				      RADEON_PRIO_SDMA_BUFFER);
 		radeon_add_to_buffer_list(&rctx->b, &rctx->b.dma, rdst, RADEON_USAGE_WRITE,
 				      RADEON_PRIO_SDMA_BUFFER);
-		cs->buf[cs->cdw++] = DMA_PACKET(DMA_PACKET_COPY, 0, 0, csize);
-		cs->buf[cs->cdw++] = dst_offset & 0xfffffffc;
-		cs->buf[cs->cdw++] = src_offset & 0xfffffffc;
-		cs->buf[cs->cdw++] = (dst_offset >> 32UL) & 0xff;
-		cs->buf[cs->cdw++] = (src_offset >> 32UL) & 0xff;
+		radeon_emit(cs, DMA_PACKET(DMA_PACKET_COPY, 0, 0, csize));
+		radeon_emit(cs, dst_offset & 0xfffffffc);
+		radeon_emit(cs, src_offset & 0xfffffffc);
+		radeon_emit(cs, (dst_offset >> 32UL) & 0xff);
+		radeon_emit(cs, (src_offset >> 32UL) & 0xff);
 		dst_offset += csize << 2;
 		src_offset += csize << 2;
 		size -= csize;

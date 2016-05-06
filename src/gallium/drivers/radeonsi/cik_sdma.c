@@ -51,15 +51,15 @@ static void cik_sdma_do_copy_buffer(struct si_context *ctx,
 
 	for (i = 0; i < ncopy; i++) {
 		csize = MIN2(size, CIK_SDMA_COPY_MAX_SIZE);
-		cs->buf[cs->cdw++] = CIK_SDMA_PACKET(CIK_SDMA_OPCODE_COPY,
-						     CIK_SDMA_COPY_SUB_OPCODE_LINEAR,
-						     0);
-		cs->buf[cs->cdw++] = csize;
-		cs->buf[cs->cdw++] = 0; /* src/dst endian swap */
-		cs->buf[cs->cdw++] = src_offset;
-		cs->buf[cs->cdw++] = src_offset >> 32;
-		cs->buf[cs->cdw++] = dst_offset;
-		cs->buf[cs->cdw++] = dst_offset >> 32;
+		radeon_emit(cs, CIK_SDMA_PACKET(CIK_SDMA_OPCODE_COPY,
+						CIK_SDMA_COPY_SUB_OPCODE_LINEAR,
+						0));
+		radeon_emit(cs, csize);
+		radeon_emit(cs, 0); /* src/dst endian swap */
+		radeon_emit(cs, src_offset);
+		radeon_emit(cs, src_offset >> 32);
+		radeon_emit(cs, dst_offset);
+		radeon_emit(cs, dst_offset >> 32);
 		dst_offset += csize;
 		src_offset += csize;
 		size -= csize;
