@@ -4952,6 +4952,14 @@ static void declare_tess_lds(struct si_shader_context *ctx)
 	unsigned patch_dw_size = vertex_data_dw_size*2 + patch_data_dw_size;
 	unsigned lds_dwords = patch_dw_size;
 
+	if (ctx->screen->b.chip_class <= SI) {
+		/* This is a horrible temporary workaround to make tesselation
+		 * not be completely broken on SI now that LLVM checks that
+		 * the declared LDS size fits into the device maximum of 32KB.
+		 */
+		lds_dwords = 8 * 1024;
+	}
+
 	/* The actual size is computed outside of the shader to reduce
 	 * the number of shader variants. */
 	ctx->lds =
