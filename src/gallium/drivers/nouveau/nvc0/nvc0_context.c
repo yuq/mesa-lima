@@ -161,6 +161,10 @@ nvc0_context_unreference_resources(struct nvc0_context *nvc0)
       for (i = 0; i < NVC0_MAX_BUFFERS; ++i)
          pipe_resource_reference(&nvc0->buffers[s][i].buffer, NULL);
 
+   for (s = 0; s < 6; ++s)
+      for (i = 0; i < NVC0_MAX_IMAGES; ++i)
+         pipe_resource_reference(&nvc0->images[s][i].resource, NULL);
+
    for (i = 0; i < nvc0->num_tfbbufs; ++i)
       pipe_so_target_reference(&nvc0->tfbbuf[i], NULL);
 
