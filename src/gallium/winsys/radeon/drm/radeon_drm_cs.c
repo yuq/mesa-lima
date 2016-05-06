@@ -383,6 +383,12 @@ static boolean radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
     return status;
 }
 
+static bool radeon_drm_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
+{
+   assert(rcs->cdw <= rcs->max_dw);
+   return rcs->max_dw - rcs->cdw >= dw;
+}
+
 static boolean radeon_drm_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint64_t vram, uint64_t gtt)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
@@ -677,6 +683,7 @@ void radeon_drm_cs_init_functions(struct radeon_drm_winsys *ws)
     ws->base.cs_add_buffer = radeon_drm_cs_add_buffer;
     ws->base.cs_lookup_buffer = radeon_drm_cs_lookup_buffer;
     ws->base.cs_validate = radeon_drm_cs_validate;
+    ws->base.cs_check_space = radeon_drm_cs_check_space;
     ws->base.cs_memory_below_limit = radeon_drm_cs_memory_below_limit;
     ws->base.cs_query_memory_usage = radeon_drm_cs_query_memory_usage;
     ws->base.cs_get_buffer_list = radeon_drm_cs_get_buffer_list;

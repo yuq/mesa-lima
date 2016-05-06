@@ -674,6 +674,15 @@ struct radeon_winsys {
     boolean (*cs_validate)(struct radeon_winsys_cs *cs);
 
     /**
+     * Check whether the given number of dwords is available in the IB.
+     * Optionally chain a new chunk of the IB if necessary and supported.
+     *
+     * \param cs        A command stream.
+     * \param dw        Number of CS dwords requested by the caller.
+     */
+    bool (*cs_check_space)(struct radeon_winsys_cs *cs, unsigned dw);
+
+    /**
      * Return TRUE if there is enough memory in VRAM and GTT for the buffers
      * added so far.
      *
