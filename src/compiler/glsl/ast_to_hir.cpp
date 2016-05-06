@@ -5522,6 +5522,24 @@ ast_function::hir(exec_list *instructions,
          if (!type) {
             _mesa_glsl_error(& loc, state, "unknown type '%s' in subroutine function definition", decl->identifier);
          }
+
+         for (int i = 0; i < state->num_subroutine_types; i++) {
+            ir_function *fn = state->subroutine_types[i];
+            ir_function_signature *tsig = NULL;
+
+            if (strcmp(fn->name, decl->identifier))
+               continue;
+
+            tsig = fn->matching_signature(state, &sig->parameters,
+                                          false);
+            if (!tsig) {
+               _mesa_glsl_error(& loc, state, "subroutine type mismatch '%s' - signatures do not match\n", decl->identifier);
+            } else {
+               if (tsig->return_type != sig->return_type) {
+                  _mesa_glsl_error(& loc, state, "subroutine type mismatch '%s' - return types do not match\n", decl->identifier);
+               }
+            }
+         }
          f->subroutine_types[idx++] = type;
       }
       state->subroutines = (ir_function **)reralloc(state, state->subroutines,
