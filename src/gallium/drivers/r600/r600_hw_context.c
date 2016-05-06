@@ -47,9 +47,7 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 	ctx->b.gtt = 0;
 	ctx->b.vram = 0;
 
-	/* The number of dwords we already used in the CS so far. */
-	num_dw += ctx->b.gfx.cs->cdw;
-
+	/* Check available space in CS. */
 	if (count_draw_in) {
 		uint64_t mask;
 
@@ -82,7 +80,7 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 	num_dw += 10;
 
 	/* Flush if there's not enough space. */
-	if (num_dw > ctx->b.gfx.cs->max_dw) {
+	if (!ctx->b.ws->cs_check_space(ctx->b.gfx.cs, num_dw)) {
 		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 	}
 }

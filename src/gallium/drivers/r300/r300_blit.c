@@ -382,7 +382,7 @@ static void r300_clear(struct pipe_context* pipe,
             r300_get_num_cs_end_dwords(r300);
 
         /* Reserve CS space. */
-        if (dwords > (r300->cs->max_dw - r300->cs->cdw)) {
+        if (!r300->rws->cs_check_space(r300->cs, dwords)) {
             r300_flush(&r300->context, RADEON_FLUSH_ASYNC, NULL);
         }
 

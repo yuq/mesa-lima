@@ -168,7 +168,7 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	/* Flush if there's not enough space, or if the memory usage per IB
 	 * is too large.
 	 */
-	if ((num_dw + ctx->dma.cs->cdw) > ctx->dma.cs->max_dw ||
+	if (!ctx->ws->cs_check_space(ctx->dma.cs, num_dw) ||
 	    !ctx->ws->cs_memory_below_limit(ctx->dma.cs, vram, gtt)) {
 		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 		assert((num_dw + ctx->dma.cs->cdw) <= ctx->dma.cs->max_dw);

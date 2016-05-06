@@ -84,9 +84,8 @@ void si_need_cs_space(struct si_context *ctx)
 	/* If the CS is sufficiently large, don't count the space needed
 	 * and just flush if there is not enough space left.
 	 */
-	if (unlikely(cs->cdw > cs->max_dw - 2048 ||
-                     (ce_ib && ce_ib->max_dw - ce_ib->cdw <
-                      si_ce_needed_cs_space())))
+	if (!ctx->b.ws->cs_check_space(cs, 2048) ||
+	    (ce_ib && !ctx->b.ws->cs_check_space(ce_ib, si_ce_needed_cs_space())))
 		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 }
 
