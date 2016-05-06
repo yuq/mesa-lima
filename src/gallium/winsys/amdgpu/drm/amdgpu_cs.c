@@ -135,14 +135,16 @@ static struct radeon_winsys_ctx *amdgpu_ctx_create(struct radeon_winsys *ws)
    struct amdgpu_bo_alloc_request alloc_buffer = {};
    amdgpu_bo_handle buf_handle;
 
+   if (!ctx)
+      return NULL;
+
    ctx->ws = amdgpu_winsys(ws);
    ctx->refcount = 1;
 
    r = amdgpu_cs_ctx_create(ctx->ws->dev, &ctx->ctx);
    if (r) {
       fprintf(stderr, "amdgpu: amdgpu_cs_ctx_create failed. (%i)\n", r);
-      FREE(ctx);
-      return NULL;
+      goto error_create;
    }
 
    alloc_buffer.alloc_size = ctx->ws->info.gart_page_size;
@@ -152,24 +154,27 @@ static struct radeon_winsys_ctx *amdgpu_ctx_create(struct radeon_winsys *ws)
    r = amdgpu_bo_alloc(ctx->ws->dev, &alloc_buffer, &buf_handle);
    if (r) {
       fprintf(stderr, "amdgpu: amdgpu_bo_alloc failed. (%i)\n", r);
-      amdgpu_cs_ctx_free(ctx->ctx);
-      FREE(ctx);
-      return NULL;
+      goto error_user_fence_alloc;
    }
 
    r = amdgpu_bo_cpu_map(buf_handle, (void**)&ctx->user_fence_cpu_address_base);
    if (r) {
       fprintf(stderr, "amdgpu: amdgpu_bo_cpu_map failed. (%i)\n", r);
-      amdgpu_bo_free(buf_handle);
-      amdgpu_cs_ctx_free(ctx->ctx);
-      FREE(ctx);
-      return NULL;
+      goto error_user_fence_map;
    }
 
    memset(ctx->user_fence_cpu_address_base, 0, alloc_buffer.alloc_size);
    ctx->user_fence_bo = buf_handle;
 
    return (struct radeon_winsys_ctx*)ctx;
+
+error_user_fence_map:
+   amdgpu_bo_free(buf_handle);
+error_user_fence_alloc:
+   amdgpu_cs_ctx_free(ctx->ctx);
+error_create:
+   FREE(ctx);
+   return NULL;
 }
 
 static void amdgpu_ctx_destroy(struct radeon_winsys_ctx *rwctx)
