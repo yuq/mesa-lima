@@ -75,8 +75,6 @@ lower_double_pack_impl(nir_function_impl *impl)
          nir_instr_remove(&alu_instr->instr);
       }
    }
-
-   return true;
 }
 
 void
