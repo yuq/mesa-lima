@@ -226,26 +226,31 @@ static bool amdgpu_cs_has_user_fence(struct amdgpu_cs_context *cs)
           cs->request.ip_type != AMDGPU_HW_IP_VCE;
 }
 
-static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_ib *ib,
-                              struct amdgpu_cs_ib_info *info, unsigned ib_type)
+static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
+                              enum ib_type ib_type)
 {
    struct amdgpu_winsys *aws = (struct amdgpu_winsys*)ws;
    /* Small IBs are better than big IBs, because the GPU goes idle quicker
     * and there is less waiting for buffers and fences. Proof:
     *   http://www.phoronix.com/scan.php?page=article&item=mesa-111-si&num=1
     */
+   struct amdgpu_ib *ib = NULL;
+   struct amdgpu_cs_ib_info *info = &cs->csc->ib[ib_type];
    unsigned buffer_size, ib_size;
 
    switch (ib_type) {
    case IB_CONST_PREAMBLE:
+      ib = &cs->const_preamble_ib;
       buffer_size = 4 * 1024 * 4;
       ib_size = 1024 * 4;
       break;
    case IB_CONST:
+      ib = &cs->const_ib;
       buffer_size = 512 * 1024 * 4;
       ib_size = 128 * 1024 * 4;
       break;
    case IB_MAIN:
+      ib = &cs->main;
       buffer_size = 128 * 1024 * 4;
       ib_size = 20 * 1024 * 4;
       break;
@@ -416,8 +421,7 @@ amdgpu_cs_create(struct radeon_winsys_ctx *rwctx,
    cs->csc = &cs->csc1;
    cs->cst = &cs->csc2;
 
-   if (!amdgpu_get_new_ib(&ctx->ws->base, &cs->main, &cs->csc->ib[IB_MAIN],
-                          IB_MAIN)) {
+   if (!amdgpu_get_new_ib(&ctx->ws->base, cs, IB_MAIN)) {
       amdgpu_destroy_cs_context(&cs->csc2);
       amdgpu_destroy_cs_context(&cs->csc1);
       FREE(cs);
@@ -438,8 +442,7 @@ amdgpu_cs_add_const_ib(struct radeon_winsys_cs *rcs)
    if (cs->ring_type != RING_GFX || cs->const_ib.ib_mapped)
       return NULL;
 
-   if (!amdgpu_get_new_ib(&ws->base, &cs->const_ib, &cs->csc->ib[IB_CONST],
-                          IB_CONST))
+   if (!amdgpu_get_new_ib(&ws->base, cs, IB_CONST))
       return NULL;
 
    cs->csc->request.number_of_ibs = 2;
@@ -463,8 +466,7 @@ amdgpu_cs_add_const_preamble_ib(struct radeon_winsys_cs *rcs)
        cs->const_preamble_ib.ib_mapped)
       return NULL;
 
-   if (!amdgpu_get_new_ib(&ws->base, &cs->const_preamble_ib,
-                          &cs->csc->ib[IB_CONST_PREAMBLE], IB_CONST_PREAMBLE))
+   if (!amdgpu_get_new_ib(&ws->base, cs, IB_CONST_PREAMBLE))
       return NULL;
 
    cs->csc->request.number_of_ibs = 3;
@@ -893,13 +895,11 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       amdgpu_cs_context_cleanup(cs->csc);
    }
 
-   amdgpu_get_new_ib(&ws->base, &cs->main, &cs->csc->ib[IB_MAIN], IB_MAIN);
+   amdgpu_get_new_ib(&ws->base, cs, IB_MAIN);
    if (cs->const_ib.ib_mapped)
-      amdgpu_get_new_ib(&ws->base, &cs->const_ib, &cs->csc->ib[IB_CONST],
-                        IB_CONST);
+      amdgpu_get_new_ib(&ws->base, cs, IB_CONST);
    if (cs->const_preamble_ib.ib_mapped)
-      amdgpu_get_new_ib(&ws->base, &cs->const_preamble_ib,
-                        &cs->csc->ib[IB_CONST_PREAMBLE], IB_CONST_PREAMBLE);
+      amdgpu_get_new_ib(&ws->base, cs, IB_CONST_PREAMBLE);
 
    ws->num_cs_flushes++;
 }

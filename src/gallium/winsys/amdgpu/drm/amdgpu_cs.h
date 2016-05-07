@@ -59,7 +59,7 @@ struct amdgpu_ib {
    unsigned                used_ib_space;
 };
 
-enum {
+enum ib_type {
    IB_CONST_PREAMBLE = 0,
    IB_CONST = 1, /* the const IB must be first */
    IB_MAIN = 2,
