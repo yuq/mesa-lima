@@ -423,6 +423,7 @@ d3dformat_to_string(D3DFORMAT fmt)
     case D3DFMT_NVDB: return "D3DFMT_NVDB";
     case D3DFMT_RESZ: return "D3DFMT_RESZ";
     case D3DFMT_NULL: return "D3DFMT_NULL";
+    case D3DFMT_ATOC: return "D3DFMT_ATOC";
     default:
         break;
     }
