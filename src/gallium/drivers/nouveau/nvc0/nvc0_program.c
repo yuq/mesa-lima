@@ -593,7 +593,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    prog->immd_data = info->immd.buf;
    prog->immd_size = info->immd.bufSize;
    prog->relocs = info->bin.relocData;
-   prog->interps = info->bin.interpData;
+   prog->fixups = info->bin.fixupData;
    prog->num_gprs = MAX2(4, (info->bin.maxGPR + 1));
    prog->num_barriers = info->numBarriers;
 
@@ -740,10 +740,10 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
 
    if (prog->relocs)
       nv50_ir_relocate_code(prog->relocs, prog->code, code_pos, lib_pos, 0);
-   if (prog->interps) {
-      nv50_ir_change_interp(prog->interps, prog->code,
-                            prog->fp.force_persample_interp,
-                            prog->fp.flatshade);
+   if (prog->fixups) {
+      nv50_ir_apply_fixups(prog->fixups, prog->code,
+                           prog->fp.force_persample_interp,
+                           prog->fp.flatshade);
       for (int i = 0; i < 2; i++) {
          unsigned mask = prog->fp.color_interp[i] >> 4;
          unsigned interp = prog->fp.color_interp[i] & 3;
@@ -817,7 +817,7 @@ nvc0_program_destroy(struct nvc0_context *nvc0, struct nvc0_program *prog)
    FREE(prog->code); /* may be 0 for hardcoded shaders */
    FREE(prog->immd_data);
    FREE(prog->relocs);
-   FREE(prog->interps);
+   FREE(prog->fixups);
    if (prog->type == PIPE_SHADER_COMPUTE && prog->cp.syms)
       FREE(prog->cp.syms);
    if (prog->tfb) {

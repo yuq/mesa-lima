@@ -64,7 +64,7 @@ struct nvc0_program {
    uint8_t num_barriers;
 
    void *relocs;
-   void *interps;
+   void *fixups;
 
    struct nvc0_transform_feedback_state *tfb;
 
