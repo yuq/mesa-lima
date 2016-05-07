@@ -113,7 +113,6 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
                        D3DDISPLAYMODEEX *mode )
 {
     struct NineDevice9 *pDevice = This->base.device;
-    struct NineSurface9 **bufs;
     D3DSURFACE_DESC desc;
     HRESULT hr;
     struct pipe_resource *resource, tmplt;
@@ -244,6 +243,8 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     desc.Width = pParams->BackBufferWidth;
     desc.Height = pParams->BackBufferHeight;
 
+    memset(This->tasks, 0, sizeof(This->tasks));
+
     if (This->pool) {
         _mesa_threadpool_destroy(This, This->pool);
         This->pool = NULL;
@@ -254,21 +255,11 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     if (!This->pool)
         This->enable_threadpool = FALSE;
 
-    This->tasks = REALLOC(This->tasks,
-                          oldBufferCount * sizeof(struct threadpool_task *),
-                          newBufferCount * sizeof(struct threadpool_task *));
-    memset(This->tasks, 0, newBufferCount * sizeof(struct threadpool_task *));
-
     for (i = 0; i < oldBufferCount; i++) {
         ID3DPresent_DestroyD3DWindowBuffer(This->present, This->present_handles[i]);
         This->present_handles[i] = NULL;
-        if (This->present_buffers)
+        if (This->present_buffers[i])
             pipe_resource_reference(&(This->present_buffers[i]), NULL);
-    }
-
-    if (!has_present_buffers && This->present_buffers) {
-        FREE(This->present_buffers);
-        This->present_buffers = NULL;
     }
 
     if (newBufferCount != oldBufferCount) {
@@ -276,28 +267,10 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
              ++i)
             NineUnknown_Detach(NineUnknown(This->buffers[i]));
 
-        bufs = REALLOC(This->buffers,
-                       oldBufferCount * sizeof(This->buffers[0]),
-                       newBufferCount * sizeof(This->buffers[0]));
-        if (!bufs)
-            return E_OUTOFMEMORY;
-        This->buffers = bufs;
-        This->present_handles = REALLOC(This->present_handles,
-                                        oldBufferCount * sizeof(D3DWindowBuffer *),
-                                        newBufferCount * sizeof(D3DWindowBuffer *));
         for (i = oldBufferCount; i < newBufferCount; ++i) {
             This->buffers[i] = NULL;
             This->present_handles[i] = NULL;
         }
-    }
-
-    if (has_present_buffers &&
-        (newBufferCount != oldBufferCount || !This->present_buffers)) {
-        This->present_buffers = REALLOC(This->present_buffers,
-                                        This->present_buffers == NULL ? 0 :
-                                        oldBufferCount * sizeof(struct pipe_resource *),
-                                        newBufferCount * sizeof(struct pipe_resource *));
-        memset(This->present_buffers, 0, newBufferCount * sizeof(struct pipe_resource *));
     }
 
     for (i = 0; i < newBufferCount; ++i) {
@@ -509,15 +482,13 @@ NineSwapChain9_dtor( struct NineSwapChain9 *This )
     if (This->pool)
         _mesa_threadpool_destroy(This, This->pool);
 
-    if (This->buffers) {
+    if (This->buffers[0]) {
         for (i = 0; i < This->params.BackBufferCount; i++) {
             NineUnknown_Release(NineUnknown(This->buffers[i]));
             ID3DPresent_DestroyD3DWindowBuffer(This->present, This->present_handles[i]);
-            if (This->present_buffers)
+            if (This->present_buffers[i])
                 pipe_resource_reference(&(This->present_buffers[i]), NULL);
         }
-        FREE(This->buffers);
-        FREE(This->present_buffers);
     }
     if (This->zsbuf)
         NineUnknown_Destroy(NineUnknown(This->zsbuf));
@@ -689,7 +660,7 @@ present( struct NineSwapChain9 *This,
     if (This->params.SwapEffect == D3DSWAPEFFECT_DISCARD)
         handle_draw_cursor_and_hud(This, resource);
 
-    if (This->present_buffers) {
+    if (This->present_buffers[0]) {
         memset(&blit, 0, sizeof(blit));
         blit.src.resource = resource;
         blit.src.level = 0;
@@ -821,7 +792,7 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
                 This->buffers[This->params.BackBufferCount], res);
             pipe_resource_reference(&res, NULL);
 
-            if (This->present_buffers) {
+            if (This->present_buffers[0]) {
                 pipe_resource_reference(&res, This->present_buffers[0]);
                 for (i = 1; i <= This->params.BackBufferCount; i++)
                     pipe_resource_reference(&(This->present_buffers[i-1]), This->present_buffers[i]);
