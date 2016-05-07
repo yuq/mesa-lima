@@ -571,6 +571,18 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
    MAttrs.push_back(util_cpu_caps.has_avx  ? "+avx"  : "-avx");
    MAttrs.push_back(util_cpu_caps.has_f16c ? "+f16c" : "-f16c");
    MAttrs.push_back(util_cpu_caps.has_avx2 ? "+avx2" : "-avx2");
+   /* disable avx512 and all subvariants */
+#if HAVE_LLVM >= 0x0304
+   MAttrs.push_back("-avx512cd");
+   MAttrs.push_back("-avx512er");
+   MAttrs.push_back("-avx512f");
+   MAttrs.push_back("-avx512pf");
+#endif
+#if HAVE_LLVM >= 0x0305
+   MAttrs.push_back("-avx512bw");
+   MAttrs.push_back("-avx512dq");
+   MAttrs.push_back("-avx512vl");
+#endif
 #endif
 
 #if defined(PIPE_ARCH_PPC)
