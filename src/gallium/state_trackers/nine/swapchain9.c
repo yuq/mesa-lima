@@ -243,6 +243,10 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     desc.Width = pParams->BackBufferWidth;
     desc.Height = pParams->BackBufferHeight;
 
+    for (i = 0; i < oldBufferCount; i++) {
+        if (This->tasks[i])
+            _mesa_threadpool_wait_for_task(This->pool, &(This->tasks[i]));
+    }
     memset(This->tasks, 0, sizeof(This->tasks));
 
     if (This->pool) {
