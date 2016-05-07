@@ -226,6 +226,116 @@ static bool amdgpu_cs_has_user_fence(struct amdgpu_cs_context *cs)
           cs->request.ip_type != AMDGPU_HW_IP_VCE;
 }
 
+int amdgpu_lookup_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *bo)
+{
+   unsigned hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
+   int i = cs->buffer_indices_hashlist[hash];
+
+   /* not found or found */
+   if (i == -1 || cs->buffers[i].bo == bo)
+      return i;
+
+   /* Hash collision, look for the BO in the list of buffers linearly. */
+   for (i = cs->num_buffers - 1; i >= 0; i--) {
+      if (cs->buffers[i].bo == bo) {
+         /* Put this buffer in the hash list.
+          * This will prevent additional hash collisions if there are
+          * several consecutive lookup_buffer calls for the same buffer.
+          *
+          * Example: Assuming buffers A,B,C collide in the hash list,
+          * the following sequence of buffers:
+          *         AAAAAAAAAAABBBBBBBBBBBBBBCCCCCCCC
+          * will collide here: ^ and here:   ^,
+          * meaning that we should get very few collisions in the end. */
+         cs->buffer_indices_hashlist[hash] = i;
+         return i;
+      }
+   }
+   return -1;
+}
+
+static unsigned amdgpu_add_buffer(struct amdgpu_cs *acs,
+                                 struct amdgpu_winsys_bo *bo,
+                                 enum radeon_bo_usage usage,
+                                 enum radeon_bo_domain domains,
+                                 unsigned priority,
+                                 enum radeon_bo_domain *added_domains)
+{
+   struct amdgpu_cs_context *cs = acs->csc;
+   struct amdgpu_cs_buffer *buffer;
+   unsigned hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
+   int i = -1;
+
+   assert(priority < 64);
+   *added_domains = 0;
+
+   i = amdgpu_lookup_buffer(cs, bo);
+
+   if (i >= 0) {
+      buffer = &cs->buffers[i];
+      buffer->priority_usage |= 1llu << priority;
+      buffer->usage |= usage;
+      *added_domains = domains & ~buffer->domains;
+      buffer->domains |= domains;
+      cs->flags[i] = MAX2(cs->flags[i], priority / 4);
+      return i;
+   }
+
+   /* New buffer, check if the backing array is large enough. */
+   if (cs->num_buffers >= cs->max_num_buffers) {
+      uint32_t size;
+      cs->max_num_buffers += 10;
+
+      size = cs->max_num_buffers * sizeof(struct amdgpu_cs_buffer);
+      cs->buffers = realloc(cs->buffers, size);
+
+      size = cs->max_num_buffers * sizeof(amdgpu_bo_handle);
+      cs->handles = realloc(cs->handles, size);
+
+      cs->flags = realloc(cs->flags, cs->max_num_buffers);
+   }
+
+   /* Initialize the new buffer. */
+   cs->buffers[cs->num_buffers].bo = NULL;
+   amdgpu_winsys_bo_reference(&cs->buffers[cs->num_buffers].bo, bo);
+   cs->handles[cs->num_buffers] = bo->bo;
+   cs->flags[cs->num_buffers] = priority / 4;
+   p_atomic_inc(&bo->num_cs_references);
+   buffer = &cs->buffers[cs->num_buffers];
+   buffer->bo = bo;
+   buffer->priority_usage = 1llu << priority;
+   buffer->usage = usage;
+   buffer->domains = domains;
+
+   cs->buffer_indices_hashlist[hash] = cs->num_buffers;
+
+   *added_domains = domains;
+   return cs->num_buffers++;
+}
+
+static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
+                                    struct pb_buffer *buf,
+                                    enum radeon_bo_usage usage,
+                                    enum radeon_bo_domain domains,
+                                    enum radeon_bo_priority priority)
+{
+   /* Don't use the "domains" parameter. Amdgpu doesn't support changing
+    * the buffer placement during command submission.
+    */
+   struct amdgpu_cs *cs = amdgpu_cs(rcs);
+   struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)buf;
+   enum radeon_bo_domain added_domains;
+   unsigned index = amdgpu_add_buffer(cs, bo, usage, bo->initial_domain,
+                                     priority, &added_domains);
+
+   if (added_domains & RADEON_DOMAIN_VRAM)
+      cs->csc->used_vram += bo->base.size;
+   else if (added_domains & RADEON_DOMAIN_GTT)
+      cs->csc->used_gart += bo->base.size;
+
+   return index;
+}
+
 static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
                               enum ib_type ib_type)
 {
@@ -286,6 +396,9 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
 
    info->ib_mc_address = amdgpu_winsys_bo(ib->big_ib_buffer)->va +
                          ib->used_ib_space;
+   amdgpu_cs_add_buffer(&cs->main.base, ib->big_ib_buffer,
+                        RADEON_USAGE_READ, 0, RADEON_PRIO_IB1);
+
    ib->base.buf = (uint32_t*)(ib->ib_mapped + ib->used_ib_space);
    ib->base.max_dw = ib_size / 4;
    return true;
@@ -479,116 +592,6 @@ amdgpu_cs_add_const_preamble_ib(struct radeon_winsys_cs *rcs)
 }
 
 #define OUT_CS(cs, value) (cs)->buf[(cs)->cdw++] = (value)
-
-int amdgpu_lookup_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *bo)
-{
-   unsigned hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
-   int i = cs->buffer_indices_hashlist[hash];
-
-   /* not found or found */
-   if (i == -1 || cs->buffers[i].bo == bo)
-      return i;
-
-   /* Hash collision, look for the BO in the list of buffers linearly. */
-   for (i = cs->num_buffers - 1; i >= 0; i--) {
-      if (cs->buffers[i].bo == bo) {
-         /* Put this buffer in the hash list.
-          * This will prevent additional hash collisions if there are
-          * several consecutive lookup_buffer calls for the same buffer.
-          *
-          * Example: Assuming buffers A,B,C collide in the hash list,
-          * the following sequence of buffers:
-          *         AAAAAAAAAAABBBBBBBBBBBBBBCCCCCCCC
-          * will collide here: ^ and here:   ^,
-          * meaning that we should get very few collisions in the end. */
-         cs->buffer_indices_hashlist[hash] = i;
-         return i;
-      }
-   }
-   return -1;
-}
-
-static unsigned amdgpu_add_buffer(struct amdgpu_cs *acs,
-                                 struct amdgpu_winsys_bo *bo,
-                                 enum radeon_bo_usage usage,
-                                 enum radeon_bo_domain domains,
-                                 unsigned priority,
-                                 enum radeon_bo_domain *added_domains)
-{
-   struct amdgpu_cs_context *cs = acs->csc;
-   struct amdgpu_cs_buffer *buffer;
-   unsigned hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
-   int i = -1;
-
-   assert(priority < 64);
-   *added_domains = 0;
-
-   i = amdgpu_lookup_buffer(cs, bo);
-
-   if (i >= 0) {
-      buffer = &cs->buffers[i];
-      buffer->priority_usage |= 1llu << priority;
-      buffer->usage |= usage;
-      *added_domains = domains & ~buffer->domains;
-      buffer->domains |= domains;
-      cs->flags[i] = MAX2(cs->flags[i], priority / 4);
-      return i;
-   }
-
-   /* New buffer, check if the backing array is large enough. */
-   if (cs->num_buffers >= cs->max_num_buffers) {
-      uint32_t size;
-      cs->max_num_buffers += 10;
-
-      size = cs->max_num_buffers * sizeof(struct amdgpu_cs_buffer);
-      cs->buffers = realloc(cs->buffers, size);
-
-      size = cs->max_num_buffers * sizeof(amdgpu_bo_handle);
-      cs->handles = realloc(cs->handles, size);
-
-      cs->flags = realloc(cs->flags, cs->max_num_buffers);
-   }
-
-   /* Initialize the new buffer. */
-   cs->buffers[cs->num_buffers].bo = NULL;
-   amdgpu_winsys_bo_reference(&cs->buffers[cs->num_buffers].bo, bo);
-   cs->handles[cs->num_buffers] = bo->bo;
-   cs->flags[cs->num_buffers] = priority / 4;
-   p_atomic_inc(&bo->num_cs_references);
-   buffer = &cs->buffers[cs->num_buffers];
-   buffer->bo = bo;
-   buffer->priority_usage = 1llu << priority;
-   buffer->usage = usage;
-   buffer->domains = domains;
-
-   cs->buffer_indices_hashlist[hash] = cs->num_buffers;
-
-   *added_domains = domains;
-   return cs->num_buffers++;
-}
-
-static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
-                                    struct pb_buffer *buf,
-                                    enum radeon_bo_usage usage,
-                                    enum radeon_bo_domain domains,
-                                    enum radeon_bo_priority priority)
-{
-   /* Don't use the "domains" parameter. Amdgpu doesn't support changing
-    * the buffer placement during command submission.
-    */
-   struct amdgpu_cs *cs = amdgpu_cs(rcs);
-   struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)buf;
-   enum radeon_bo_domain added_domains;
-   unsigned index = amdgpu_add_buffer(cs, bo, usage, bo->initial_domain,
-                                     priority, &added_domains);
-
-   if (added_domains & RADEON_DOMAIN_VRAM)
-      cs->csc->used_vram += bo->base.size;
-   else if (added_domains & RADEON_DOMAIN_GTT)
-      cs->csc->used_gart += bo->base.size;
-
-   return index;
-}
 
 static int amdgpu_cs_lookup_buffer(struct radeon_winsys_cs *rcs,
                                struct pb_buffer *buf)
@@ -832,17 +835,6 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    if (rcs->cdw > rcs->max_dw) {
       fprintf(stderr, "amdgpu: command stream overflowed\n");
    }
-
-   amdgpu_cs_add_buffer(rcs, cs->main.big_ib_buffer,
-                        RADEON_USAGE_READ, 0, RADEON_PRIO_IB1);
-
-   if (cs->const_ib.ib_mapped)
-      amdgpu_cs_add_buffer(rcs, cs->const_ib.big_ib_buffer,
-                           RADEON_USAGE_READ, 0, RADEON_PRIO_IB1);
-
-   if (cs->const_preamble_ib.ib_mapped)
-      amdgpu_cs_add_buffer(rcs, cs->const_preamble_ib.big_ib_buffer,
-                           RADEON_USAGE_READ, 0, RADEON_PRIO_IB1);
 
    /* If the CS is not empty or overflowed.... */
    if (cs->main.base.cdw && cs->main.base.cdw <= cs->main.base.max_dw &&
