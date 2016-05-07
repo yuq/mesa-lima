@@ -531,6 +531,10 @@ amdgpu_cs_create(struct radeon_winsys_ctx *rwctx,
    cs->flush_data = flush_ctx;
    cs->ring_type = ring_type;
 
+   cs->main.ib_type = IB_MAIN;
+   cs->const_ib.ib_type = IB_CONST;
+   cs->const_preamble_ib.ib_type = IB_CONST_PREAMBLE;
+
    if (!amdgpu_init_cs_context(&cs->csc1, ring_type)) {
       FREE(cs);
       return NULL;

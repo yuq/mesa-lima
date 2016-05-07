@@ -50,6 +50,13 @@ struct amdgpu_cs_buffer {
    enum radeon_bo_domain domains;
 };
 
+enum ib_type {
+   IB_CONST_PREAMBLE = 0,
+   IB_CONST = 1, /* the const IB must be first */
+   IB_MAIN = 2,
+   IB_NUM
+};
+
 struct amdgpu_ib {
    struct radeon_winsys_cs base;
 
@@ -57,13 +64,7 @@ struct amdgpu_ib {
    struct pb_buffer        *big_ib_buffer;
    uint8_t                 *ib_mapped;
    unsigned                used_ib_space;
-};
-
-enum ib_type {
-   IB_CONST_PREAMBLE = 0,
-   IB_CONST = 1, /* the const IB must be first */
-   IB_MAIN = 2,
-   IB_NUM
+   enum ib_type            ib_type;
 };
 
 struct amdgpu_cs_context {
@@ -148,10 +149,35 @@ static inline void amdgpu_fence_reference(struct pipe_fence_handle **dst,
 
 int amdgpu_lookup_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *bo);
 
+static inline struct amdgpu_ib *
+amdgpu_ib(struct radeon_winsys_cs *base)
+{
+   return (struct amdgpu_ib *)base;
+}
+
 static inline struct amdgpu_cs *
 amdgpu_cs(struct radeon_winsys_cs *base)
 {
+   assert(amdgpu_ib(base)->ib_type == IB_MAIN);
    return (struct amdgpu_cs*)base;
+}
+
+#define get_container(member_ptr, container_type, container_member) \
+   (container_type *)((char *)(member_ptr) - offsetof(container_type, container_member))
+
+static inline struct amdgpu_cs *
+amdgpu_cs_from_ib(struct amdgpu_ib *ib)
+{
+   switch (ib->ib_type) {
+   case IB_MAIN:
+      return get_container(ib, struct amdgpu_cs, main);
+   case IB_CONST:
+      return get_container(ib, struct amdgpu_cs, const_ib);
+   case IB_CONST_PREAMBLE:
+      return get_container(ib, struct amdgpu_cs, const_preamble_ib);
+   default:
+      unreachable("bad ib_type");
+   }
 }
 
 static inline boolean
