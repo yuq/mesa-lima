@@ -336,6 +336,34 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
    return index;
 }
 
+static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib,
+                                 unsigned buffer_size)
+{
+   struct pb_buffer *pb;
+   uint8_t *mapped;
+
+   pb = ws->base.buffer_create(&ws->base, buffer_size,
+                               ws->info.gart_page_size,
+                               RADEON_DOMAIN_GTT,
+                               RADEON_FLAG_CPU_ACCESS);
+   if (!pb)
+      return false;
+
+   mapped = ws->base.buffer_map(pb, NULL, PIPE_TRANSFER_WRITE);
+   if (!mapped) {
+      pb_reference(&pb, NULL);
+      return false;
+   }
+
+   pb_reference(&ib->big_ib_buffer, pb);
+   pb_reference(&pb, NULL);
+
+   ib->ib_mapped = mapped;
+   ib->used_ib_space = 0;
+
+   return true;
+}
+
 static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
                               enum ib_type ib_type)
 {
@@ -374,24 +402,8 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
    /* Allocate a new buffer for IBs if the current buffer is all used. */
    if (!ib->big_ib_buffer ||
        ib->used_ib_space + ib_size > ib->big_ib_buffer->size) {
-
-      pb_reference(&ib->big_ib_buffer, NULL);
-      ib->ib_mapped = NULL;
-      ib->used_ib_space = 0;
-
-      ib->big_ib_buffer = ws->buffer_create(ws, buffer_size,
-                                            aws->info.gart_page_size,
-                                            RADEON_DOMAIN_GTT,
-                                            RADEON_FLAG_CPU_ACCESS);
-      if (!ib->big_ib_buffer)
+      if (!amdgpu_ib_new_buffer(aws, ib, buffer_size))
          return false;
-
-      ib->ib_mapped = ws->buffer_map(ib->big_ib_buffer, NULL,
-                                     PIPE_TRANSFER_WRITE);
-      if (!ib->ib_mapped) {
-         pb_reference(&ib->big_ib_buffer, NULL);
-         return false;
-      }
    }
 
    info->ib_mc_address = amdgpu_winsys_bo(ib->big_ib_buffer)->va +
