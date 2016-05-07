@@ -356,6 +356,13 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 		si_dump_reg(f, R_504_DST_ADDR_HI, ib[5], ~0);
 		si_dump_reg(f, R_414_COMMAND, ib[6], ~0);
 		break;
+	case PKT3_INDIRECT_BUFFER_SI:
+	case PKT3_INDIRECT_BUFFER_CONST:
+	case PKT3_INDIRECT_BUFFER_CIK:
+		si_dump_reg(f, R_3F0_IB_BASE_LO, ib[1], ~0);
+		si_dump_reg(f, R_3F1_IB_BASE_HI, ib[2], ~0);
+		si_dump_reg(f, R_3F2_CONTROL, ib[3], ~0);
+		break;
 	case PKT3_NOP:
 		if (ib[0] == 0xffff1000) {
 			count = -1; /* One dword NOP. */
