@@ -68,6 +68,16 @@ typedef struct {
     * never match anything.
     */
    nir_alu_type type;
+
+   /** Optional condition fxn ptr
+    *
+    * This is only allowed in search expressions, and allows additional
+    * constraints to be placed on the match.  Typically used for 'is_constant'
+    * variables to require, for example, power-of-two in order for the search
+    * to match.
+    */
+   bool (*cond)(nir_alu_instr *instr, unsigned src,
+                unsigned num_components, const uint8_t *swizzle);
 } nir_search_variable;
 
 typedef struct {

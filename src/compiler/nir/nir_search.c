@@ -127,6 +127,9 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
              instr->src[src].src.ssa->parent_instr->type != nir_instr_type_load_const)
             return false;
 
+         if (var->cond && !var->cond(instr, src, num_components, new_swizzle))
+            return false;
+
          if (var->type != nir_type_invalid) {
             if (instr->src[src].src.ssa->parent_instr->type != nir_instr_type_alu)
                return false;
