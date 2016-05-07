@@ -64,6 +64,7 @@ struct amdgpu_ib {
    struct pb_buffer        *big_ib_buffer;
    uint8_t                 *ib_mapped;
    unsigned                used_ib_space;
+   unsigned                max_ib_size;
    enum ib_type            ib_type;
 };
 

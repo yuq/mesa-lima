@@ -336,11 +336,33 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
    return index;
 }
 
-static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib,
-                                 unsigned buffer_size)
+static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib)
 {
    struct pb_buffer *pb;
    uint8_t *mapped;
+   unsigned buffer_size;
+
+   /* Always create a buffer that is 4 times larger than the maximum seen IB
+    * size, aligned to a power of two. Limit to 512k dwords, which is the
+    * largest power of two that fits into the size field of the INDIRECT_BUFFER
+    * packet.
+    */
+   buffer_size = 4 * MIN2(util_next_power_of_two(4 * ib->max_ib_size),
+                          512 * 1024);
+
+   switch (ib->ib_type) {
+   case IB_CONST_PREAMBLE:
+      buffer_size = MAX2(buffer_size, 4 * 1024);
+      break;
+   case IB_CONST:
+      buffer_size = MAX2(buffer_size, 16 * 1024 * 4);
+      break;
+   case IB_MAIN:
+      buffer_size = MAX2(buffer_size, 8 * 1024 * 4);
+      break;
+   default:
+      unreachable("unhandled IB type");
+   }
 
    pb = ws->base.buffer_create(&ws->base, buffer_size,
                                ws->info.gart_page_size,
@@ -364,6 +386,27 @@ static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib,
    return true;
 }
 
+static unsigned amdgpu_ib_max_submit_dwords(enum ib_type ib_type)
+{
+   switch (ib_type) {
+   case IB_MAIN:
+      /* Smaller submits means the GPU gets busy sooner and there is less
+       * waiting for buffers and fences. Proof:
+       *   http://www.phoronix.com/scan.php?page=article&item=mesa-111-si&num=1
+       */
+      return 20 * 1024;
+   case IB_CONST_PREAMBLE:
+   case IB_CONST:
+      /* There isn't really any reason to limit CE IB size beyond the natural
+       * limit implied by the main IB, except perhaps GTT size. Just return
+       * an extremely large value that we never get anywhere close to.
+       */
+      return 16 * 1024 * 1024;
+   default:
+      unreachable("bad ib_type");
+   }
+}
+
 static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
                               enum ib_type ib_type)
 {
@@ -374,27 +417,28 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
     */
    struct amdgpu_ib *ib = NULL;
    struct amdgpu_cs_ib_info *info = &cs->csc->ib[ib_type];
-   unsigned buffer_size, ib_size;
+   unsigned ib_size = 0;
 
    switch (ib_type) {
    case IB_CONST_PREAMBLE:
       ib = &cs->const_preamble_ib;
-      buffer_size = 4 * 1024 * 4;
-      ib_size = 1024 * 4;
+      ib_size = 256 * 4;
       break;
    case IB_CONST:
       ib = &cs->const_ib;
-      buffer_size = 512 * 1024 * 4;
-      ib_size = 128 * 1024 * 4;
+      ib_size = 8 * 1024 * 4;
       break;
    case IB_MAIN:
       ib = &cs->main;
-      buffer_size = 128 * 1024 * 4;
-      ib_size = 20 * 1024 * 4;
+      ib_size = 4 * 1024 * 4;
       break;
    default:
       unreachable("unhandled IB type");
    }
+
+   ib_size = MAX2(ib_size,
+                  4 * MIN2(util_next_power_of_two(ib->max_ib_size),
+                           amdgpu_ib_max_submit_dwords(ib_type)));
 
    ib->base.cdw = 0;
    ib->base.buf = NULL;
@@ -402,7 +446,7 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
    /* Allocate a new buffer for IBs if the current buffer is all used. */
    if (!ib->big_ib_buffer ||
        ib->used_ib_space + ib_size > ib->big_ib_buffer->size) {
-      if (!amdgpu_ib_new_buffer(aws, ib, buffer_size))
+      if (!amdgpu_ib_new_buffer(aws, ib))
          return false;
    }
 
@@ -412,6 +456,8 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
                         RADEON_USAGE_READ, 0, RADEON_PRIO_IB1);
 
    ib->base.buf = (uint32_t*)(ib->ib_mapped + ib->used_ib_space);
+
+   ib_size = ib->big_ib_buffer->size - ib->used_ib_space;
    ib->base.max_dw = ib_size / 4;
    return true;
 }
@@ -624,7 +670,17 @@ static boolean amdgpu_cs_validate(struct radeon_winsys_cs *rcs)
 
 static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
 {
+   struct amdgpu_ib *ib = amdgpu_ib(rcs);
+   struct amdgpu_cs *cs = amdgpu_cs_from_ib(ib);
+   unsigned requested_size = rcs->cdw + dw;
+
    assert(rcs->cdw <= rcs->max_dw);
+
+   if (requested_size > amdgpu_ib_max_submit_dwords(ib->ib_type))
+      return false;
+
+   ib->max_ib_size = MAX2(ib->max_ib_size, requested_size);
+
    return rcs->max_dw - rcs->cdw >= dw;
 }
 
@@ -861,15 +917,19 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       /* Set IB sizes. */
       cur->ib[IB_MAIN].size = cs->main.base.cdw;
       cs->main.used_ib_space += cs->main.base.cdw * 4;
+      cs->main.max_ib_size = MAX2(cs->main.max_ib_size, cs->main.base.cdw);
 
       if (cs->const_ib.ib_mapped) {
          cur->ib[IB_CONST].size = cs->const_ib.base.cdw;
          cs->const_ib.used_ib_space += cs->const_ib.base.cdw * 4;
+         cs->const_ib.max_ib_size = MAX2(cs->const_ib.max_ib_size, cs->const_ib.base.cdw);
       }
 
       if (cs->const_preamble_ib.ib_mapped) {
          cur->ib[IB_CONST_PREAMBLE].size = cs->const_preamble_ib.base.cdw;
          cs->const_preamble_ib.used_ib_space += cs->const_preamble_ib.base.cdw * 4;
+         cs->const_preamble_ib.max_ib_size =
+            MAX2(cs->const_preamble_ib.max_ib_size, cs->const_preamble_ib.base.cdw);
       }
 
       /* Create a fence. */
