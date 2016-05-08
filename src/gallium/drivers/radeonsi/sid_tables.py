@@ -139,7 +139,6 @@ class Reg:
         self.r_name = r_name
         self.name = strip_prefix(r_name)
         self.fields = []
-        self.varname_fields = '%s__fields' % self.r_name.lower()
         self.own_fields = True
 
 
@@ -191,7 +190,7 @@ def parse(filename):
             reg0 = reg_dict.get(match_number.sub('0', reg.name))
             if reg0 != None:
                 reg.fields = reg0.fields
-                reg.varname_fields = reg0.varname_fields
+                reg.fields_owner = reg0
                 reg.own_fields = False
 
     return (regs, packets)
@@ -222,7 +221,7 @@ struct si_reg {
         unsigned name_offset;
         unsigned offset;
         unsigned num_fields;
-        const struct si_field *fields;
+        unsigned fields_offset;
 };
 
 struct si_packet3 {
@@ -237,9 +236,15 @@ struct si_packet3 {
     print '};'
     print
 
+    print 'static const struct si_field sid_fields_table[] = {'
+
+    fields_idx = 0
     for reg in regs:
         if len(reg.fields) and reg.own_fields:
-            print 'static const struct si_field %s[] = {' % (reg.varname_fields)
+            print '\t/* %s */' % (fields_idx)
+
+            reg.fields_idx = fields_idx
+
             for field in reg.fields:
                 if len(field.values):
                     values_offsets = []
@@ -252,14 +257,16 @@ struct si_packet3 {
                         len(values_offsets), strings_offsets.add(values_offsets))
                 else:
                     print '\t{%s, %s(~0u)},' % (strings.add(field.name), field.s_name)
-            print '};'
-            print
+                fields_idx += 1
+
+    print '};'
+    print
 
     print 'static const struct si_reg reg_table[] = {'
     for reg in regs:
         if len(reg.fields):
-            print '\t{%s, %s, ARRAY_SIZE(%s), %s},' % (strings.add(reg.name), reg.r_name,
-                reg.varname_fields, reg.varname_fields)
+            print '\t{%s, %s, %s, %s},' % (strings.add(reg.name), reg.r_name,
+                len(reg.fields), reg.fields_idx if reg.own_fields else reg.fields_owner.fields_idx)
         else:
             print '\t{%s, %s},' % (strings.add(reg.name), reg.r_name)
     print '};'

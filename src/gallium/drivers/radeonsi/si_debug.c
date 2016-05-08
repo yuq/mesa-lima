@@ -202,7 +202,7 @@ static void si_dump_reg(FILE *file, unsigned offset, uint32_t value,
 			}
 
 			for (f = 0; f < reg->num_fields; f++) {
-				const struct si_field *field = &reg->fields[f];
+				const struct si_field *field = sid_fields_table + reg->fields_offset + f;
 				const int *values_offsets = sid_strings_offsets + field->values_offset;
 				uint32_t val = (value & field->mask) >>
 					       (ffs(field->mask) - 1);
