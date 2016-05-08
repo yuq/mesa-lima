@@ -29,6 +29,10 @@
 
 #include "util/u_debug.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ALU flags */
 enum alu_op_flags
 {
@@ -1235,5 +1239,9 @@ r600_isa_cf_by_opcode(struct r600_isa* isa, unsigned opcode, unsigned is_alu) {
 	assert(op);
 	return op - 1;
 }
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif /* R600_ISA_H_ */
