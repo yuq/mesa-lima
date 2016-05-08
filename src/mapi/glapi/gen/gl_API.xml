@@ -8269,7 +8269,12 @@
     <enum name="QUERY_BY_REGION_NO_WAIT_INVERTED"         value="0x8E1A"/>
 </category>
 
-<!-- ARB extensions 162 - 163 -->
+<category name="ARB_cull_distance" number="162">
+    <enum name="MAX_CULL_DISTANCES"                      value="0x82F9"/>
+    <enum name="MAX_COMBINED_CLIP_AND_CULL_DISTANCES"    value="0x82FA"/>
+</category>
+
+<!-- ARB extensions 163 -->
 
 <xi:include href="OES_texture_compression_astc.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
