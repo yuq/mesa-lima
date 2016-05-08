@@ -834,7 +834,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     list_inithead(&ws->va_holes);
 
     /* TTM aligns the BO size to the CPU page size */
-    ws->size_align = sysconf(_SC_PAGESIZE);
+    ws->info.gart_page_size = sysconf(_SC_PAGESIZE);
 
     ws->ncs = 0;
     pipe_semaphore_init(&ws->cs_queued, 0);
