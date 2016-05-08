@@ -77,10 +77,10 @@ LIBGLSL_FILES = \
 	glsl/loop_unroll.cpp \
 	glsl/lower_buffer_access.cpp \
 	glsl/lower_buffer_access.h \
-	glsl/lower_clip_distance.cpp \
 	glsl/lower_const_arrays_to_uniforms.cpp \
 	glsl/lower_discard.cpp \
 	glsl/lower_discard_flow.cpp \
+	glsl/lower_distance.cpp \
 	glsl/lower_if_to_cond_assign.cpp \
 	glsl/lower_instructions.cpp \
 	glsl/lower_jumps.cpp \
