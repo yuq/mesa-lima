@@ -3320,7 +3320,7 @@ lp_build_sample_soa_func(struct gallivm_state *gallivm,
       }
 
       LLVMSetFunctionCallConv(function, LLVMFastCallConv);
-      LLVMSetLinkage(function, LLVMPrivateLinkage);
+      LLVMSetLinkage(function, LLVMInternalLinkage);
 
       lp_build_sample_gen_func(gallivm,
                                static_texture_state,
