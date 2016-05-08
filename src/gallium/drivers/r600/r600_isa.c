@@ -140,10 +140,119 @@ static const struct fetch_op_info fetch_op_table[] = {
 		{"GATHER4_C_O",                   {       -1,        -1,  0x00001F,  0x00001F }, FF_TEX | FF_USE_TEXTURE_OFFSETS}
 };
 
+static const struct cf_op_info cf_op_table[] = {
+		{"NOP",                           { 0x00, 0x00, 0x00, 0x00 },  0  },
+
+		{"TEX",                           { 0x01, 0x01, 0x01, 0x01 },  CF_CLAUSE | CF_FETCH | CF_UNCOND }, /* merged with "TC" entry */
+		{"VTX",                           { 0x02, 0x02, 0x02,   -1 },  CF_CLAUSE | CF_FETCH | CF_UNCOND }, /* merged with "VC" entry */
+		{"VTX_TC",                        { 0x03, 0x03,   -1,   -1 },  CF_CLAUSE | CF_FETCH | CF_UNCOND },
+		{"GDS",                           {   -1,   -1, 0x03, 0x03 },  CF_CLAUSE | CF_FETCH | CF_UNCOND },
+
+		{"LOOP_START",                    { 0x04, 0x04, 0x04, 0x04 },  CF_LOOP | CF_LOOP_START },
+		{"LOOP_END",                      { 0x05, 0x05, 0x05, 0x05 },  CF_LOOP  },
+		{"LOOP_START_DX10",               { 0x06, 0x06, 0x06, 0x06 },  CF_LOOP | CF_LOOP_START },
+		{"LOOP_START_NO_AL",              { 0x07, 0x07, 0x07, 0x07 },  CF_LOOP | CF_LOOP_START },
+		{"LOOP_CONTINUE",                 { 0x08, 0x08, 0x08, 0x08 },  CF_LOOP  },
+		{"LOOP_BREAK",                    { 0x09, 0x09, 0x09, 0x09 },  CF_LOOP  },
+		{"JUMP",                          { 0x0A, 0x0A, 0x0A, 0x0A },  CF_BRANCH  },
+		{"PUSH",                          { 0x0B, 0x0B, 0x0B, 0x0B },  CF_BRANCH  },
+		{"PUSH_ELSE",                     { 0x0C, 0x0C,   -1,   -1 },  CF_BRANCH  },
+		{"ELSE",                          { 0x0D, 0x0D, 0x0D, 0x0D },  CF_BRANCH  },
+		{"POP",                           { 0x0E, 0x0E, 0x0E, 0x0E },  CF_BRANCH  },
+		{"POP_JUMP",                      { 0x0F, 0x0F,   -1,   -1 },  CF_BRANCH  },
+		{"POP_PUSH",                      { 0x10, 0x10,   -1,   -1 },  CF_BRANCH  },
+		{"POP_PUSH_ELSE",                 { 0x11, 0x11,   -1,   -1 },  CF_BRANCH  },
+		{"CALL",                          { 0x12, 0x12, 0x12, 0x12 },  CF_CALL  },
+		{"CALL_FS",                       { 0x13, 0x13, 0x13, 0x13 },  CF_CALL  },
+		{"RET",                           { 0x14, 0x14, 0x14, 0x14 },  0 },
+		{"EMIT_VERTEX",                   { 0x15, 0x15, 0x15, 0x15 },  CF_EMIT | CF_UNCOND },
+		{"EMIT_CUT_VERTEX",               { 0x16, 0x16, 0x16, 0x16 },  CF_EMIT | CF_UNCOND  },
+		{"CUT_VERTEX",                    { 0x17, 0x17, 0x17, 0x17 },  CF_EMIT | CF_UNCOND  },
+		{"KILL",                          { 0x18, 0x18, 0x18, 0x18 },  CF_UNCOND  },
+		{"END_PROGRAM",                   { 0x19, 0x19, 0x19, 0x19 },  0  },  /* ??? "reserved" in isa docs */
+		{"WAIT_ACK",                      {   -1, 0x1A, 0x1A, 0x1A },  0  },
+		{"TEX_ACK",                       {   -1, 0x1B, 0x1B, 0x1B },  CF_CLAUSE | CF_FETCH | CF_ACK | CF_UNCOND },
+		{"VTX_ACK",                       {   -1, 0x1C, 0x1C,   -1 },  CF_CLAUSE | CF_FETCH | CF_ACK | CF_UNCOND },
+		{"VTX_TC_ACK",                    {   -1, 0x1D,   -1,   -1 },  CF_CLAUSE | CF_FETCH | CF_ACK | CF_UNCOND },
+		{"JUMPTABLE",                     {   -1,   -1, 0x1D, 0x1D },  CF_BRANCH  },
+		{"WAVE_SYNC",                     {   -1,   -1, 0x1E, 0x1E },  0  },
+		{"HALT",                          {   -1,   -1, 0x1F, 0x1F },  0  },
+		{"CF_END",                        {   -1,   -1,   -1, 0x20 },  0  },
+		{"LDS_DEALLOC",                   {   -1,   -1,   -1, 0x21 },  0  },
+		{"PUSH_WQM",                      {   -1,   -1,   -1, 0x22 },  CF_BRANCH  },
+		{"POP_WQM",                       {   -1,   -1,   -1, 0x23 },  CF_BRANCH  },
+		{"ELSE_WQM",                      {   -1,   -1,   -1, 0x24 },  CF_BRANCH  },
+		{"JUMP_ANY",                      {   -1,   -1,   -1, 0x25 },  CF_BRANCH  },
+
+		/* ??? next 5 added from CAYMAN ISA doc, not in the original table */
+		{"REACTIVATE",                    {   -1,   -1,   -1, 0x26 },  0  },
+		{"REACTIVATE_WQM",                {   -1,   -1,   -1, 0x27 },  0  },
+		{"INTERRUPT",                     {   -1,   -1,   -1, 0x28 },  0  },
+		{"INTERRUPT_AND_SLEEP",           {   -1,   -1,   -1, 0x29 },  0  },
+		{"SET_PRIORITY",                  {   -1,   -1,   -1, 0x2A },  0  },
+
+		{"MEM_STREAM0_BUF0",              {   -1,   -1, 0x40, 0x40 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM0_BUF1",              {   -1,   -1, 0x41, 0x41 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM0_BUF2",              {   -1,   -1, 0x42, 0x42 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM0_BUF3",              {   -1,   -1, 0x43, 0x43 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM1_BUF0",              {   -1,   -1, 0x44, 0x44 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM1_BUF1",              {   -1,   -1, 0x45, 0x45 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM1_BUF2",              {   -1,   -1, 0x46, 0x46 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM1_BUF3",              {   -1,   -1, 0x47, 0x47 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM2_BUF0",              {   -1,   -1, 0x48, 0x48 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM2_BUF1",              {   -1,   -1, 0x49, 0x49 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM2_BUF2",              {   -1,   -1, 0x4A, 0x4A },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM2_BUF3",              {   -1,   -1, 0x4B, 0x4B },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM3_BUF0",              {   -1,   -1, 0x4C, 0x4C },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM3_BUF1",              {   -1,   -1, 0x4D, 0x4D },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM3_BUF2",              {   -1,   -1, 0x4E, 0x4E },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM3_BUF3",              {   -1,   -1, 0x4F, 0x4F },  CF_MEM | CF_STRM  },
+
+		{"MEM_STREAM0",                   { 0x20, 0x20,   -1,   -1 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM1",                   { 0x21, 0x21,   -1,   -1 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM2",                   { 0x22, 0x22,   -1,   -1 },  CF_MEM | CF_STRM  },
+		{"MEM_STREAM3",                   { 0x23, 0x23,   -1,   -1 },  CF_MEM | CF_STRM  },
+
+		{"MEM_SCRATCH",                   { 0x24, 0x24, 0x50, 0x50 },  CF_MEM  },
+		{"MEM_REDUCT",                    { 0x25, 0x25,   -1,   -1 },  CF_MEM  },
+		{"MEM_RING",                      { 0x26, 0x26, 0x52, 0x52 },  CF_MEM | CF_EMIT },
+
+		{"EXPORT",                        { 0x27, 0x27, 0x53, 0x53 },  CF_EXP  },
+		{"EXPORT_DONE",                   { 0x28, 0x28, 0x54, 0x54 },  CF_EXP  },
+
+		{"MEM_EXPORT",                    {   -1, 0x3A, 0x55, 0x55 },  CF_MEM  },
+		{"MEM_RAT",                       {   -1,   -1, 0x56, 0x56 },  CF_MEM | CF_RAT },
+		{"MEM_RAT_NOCACHE",               {   -1,   -1, 0x57, 0x57 },  CF_MEM | CF_RAT },
+		{"MEM_RING1",                     {   -1,   -1, 0x58, 0x58 },  CF_MEM | CF_EMIT },
+		{"MEM_RING2",                     {   -1,   -1, 0x59, 0x59 },  CF_MEM | CF_EMIT },
+		{"MEM_RING3",                     {   -1,   -1, 0x5A, 0x5A },  CF_MEM | CF_EMIT },
+		{"MEM_MEM_COMBINED",              {   -1,   -1, 0x5B, 0x5B },  CF_MEM  },
+		{"MEM_RAT_COMBINED_NOCACHE",      {   -1,   -1, 0x5C, 0x5C },  CF_MEM | CF_RAT },
+		{"MEM_RAT_COMBINED",              {   -1,   -1,   -1, 0x5D },  CF_MEM | CF_RAT }, /* ??? not in cayman isa doc */
+
+		{"EXPORT_DONE_END",               {   -1,   -1,   -1, 0x5E },  CF_EXP  },   /* ??? not in cayman isa doc */
+
+		{"ALU",                           { 0x08, 0x08, 0x08, 0x08 },  CF_CLAUSE | CF_ALU  },
+		{"ALU_PUSH_BEFORE",               { 0x09, 0x09, 0x09, 0x09 },  CF_CLAUSE | CF_ALU  },
+		{"ALU_POP_AFTER",                 { 0x0A, 0x0A, 0x0A, 0x0A },  CF_CLAUSE | CF_ALU  },
+		{"ALU_POP2_AFTER",                { 0x0B, 0x0B, 0x0B, 0x0B },  CF_CLAUSE | CF_ALU  },
+		{"ALU_EXT",                       {   -1,   -1, 0x0C, 0x0C },  CF_CLAUSE | CF_ALU | CF_ALU_EXT  },
+		{"ALU_CONTINUE",                  { 0x0D, 0x0D, 0x0D,   -1 },  CF_CLAUSE | CF_ALU  },
+		{"ALU_BREAK",                     { 0x0E, 0x0E, 0x0E,   -1 },  CF_CLAUSE | CF_ALU  },
+		{"ALU_ELSE_AFTER",                { 0x0F, 0x0F, 0x0F, 0x0F },  CF_CLAUSE | CF_ALU  },
+		{"CF_NATIVE",                     { 0x00, 0x00, 0x00, 0x00 },  0  }
+};
+
 const struct fetch_op_info *
 r600_isa_fetch(unsigned op) {
 	assert (op < ARRAY_SIZE(fetch_op_table));
 	return &fetch_op_table[op];
+}
+
+const struct cf_op_info *
+r600_isa_cf(unsigned op) {
+	assert (op < ARRAY_SIZE(cf_op_table));
+	return &cf_op_table[op];
 }
 
 int r600_isa_init(struct r600_context *ctx, struct r600_isa *isa) {
