@@ -242,6 +242,7 @@ struct radeon_info {
     uint32_t                    pci_id;
     enum radeon_family          family;
     enum chip_class             chip_class;
+    uint32_t                    gart_page_size;
     uint64_t                    gart_size;
     uint64_t                    vram_size;
     bool                        has_dedicated_vram;

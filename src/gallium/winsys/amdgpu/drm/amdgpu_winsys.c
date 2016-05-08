@@ -292,7 +292,7 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws, int fd)
    memcpy(ws->info.cik_macrotile_mode_array, ws->amdinfo.gb_macro_tile_mode,
           sizeof(ws->amdinfo.gb_macro_tile_mode));
 
-   ws->gart_page_size = alignment_info.size_remote;
+   ws->info.gart_page_size = alignment_info.size_remote;
 
    return TRUE;
 

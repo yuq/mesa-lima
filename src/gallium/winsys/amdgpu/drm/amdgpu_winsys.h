@@ -55,7 +55,6 @@ struct amdgpu_winsys {
    uint64_t allocated_gtt;
    uint64_t buffer_wait_time; /* time spent in buffer_wait in ns */
    uint64_t num_cs_flushes;
-   unsigned gart_page_size;
 
    struct radeon_info info;
 
