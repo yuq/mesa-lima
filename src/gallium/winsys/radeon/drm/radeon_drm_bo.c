@@ -732,6 +732,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
      * like constant/uniform buffers, can benefit from better and more reuse.
      */
     size = align(size, ws->info.gart_page_size);
+    alignment = align(alignment, ws->info.gart_page_size);
 
     /* Only set one usage bit each for domains and flags, or the cache manager
      * might consider different sets of domains / flags compatible
