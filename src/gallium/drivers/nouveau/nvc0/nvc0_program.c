@@ -251,8 +251,9 @@ nvc0_vtgp_gen_header(struct nvc0_program *vp, struct nv50_ir_prog_info *info)
       }
    }
 
-   vp->vp.clip_enable =
-      (1 << (info->io.clipDistances + info->io.cullDistances)) - 1;
+   vp->vp.clip_enable = (1 << info->io.clipDistances) - 1;
+   vp->vp.cull_enable =
+      ((1 << info->io.cullDistances) - 1) << info->io.clipDistances;
    for (i = 0; i < info->io.cullDistances; ++i)
       vp->vp.clip_mode |= 1 << ((info->io.clipDistances + i) * 4);
 

@@ -340,7 +340,7 @@ nv50_validate_clip(struct nv50_context *nv50)
 {
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
    struct nv50_program *vp;
-   uint8_t clip_enable;
+   uint8_t clip_enable = nv50->rast->pipe.clip_plane_enable;
 
    if (nv50->dirty_3d & NV50_NEW_3D_CLIP) {
       BEGIN_NV04(push, NV50_3D(CB_ADDR), 1);
@@ -353,13 +353,20 @@ nv50_validate_clip(struct nv50_context *nv50)
    if (likely(!vp))
       vp = nv50->vertprog;
 
-   clip_enable = nv50->rast->pipe.clip_plane_enable;
+   if (clip_enable)
+      nv50_check_program_ucps(nv50, vp, clip_enable);
+
+   clip_enable &= vp->vp.clip_enable;
+   clip_enable |= vp->vp.cull_enable;
 
    BEGIN_NV04(push, NV50_3D(CLIP_DISTANCE_ENABLE), 1);
    PUSH_DATA (push, clip_enable);
 
-   if (clip_enable)
-      nv50_check_program_ucps(nv50, vp, clip_enable);
+   if (nv50->state.clip_mode != vp->vp.clip_mode) {
+      nv50->state.clip_mode = vp->vp.clip_mode;
+      BEGIN_NV04(push, NV50_3D(CLIP_DISTANCE_MODE), 1);
+      PUSH_DATA (push, vp->vp.clip_mode);
+   }
 }
 
 static void

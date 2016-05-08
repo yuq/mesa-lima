@@ -389,6 +389,7 @@ nv50_fp_linkage_validate(struct nv50_context *nv50)
    uint32_t psiz = 0x000;
    uint32_t interp = fp->fp.interp;
    uint32_t colors = fp->fp.colors;
+   uint32_t clpd_nr = util_last_bit(vp->vp.clip_enable | vp->vp.cull_enable);
    uint32_t lin[4];
    uint8_t map[64];
    uint8_t so_map[64];
@@ -415,7 +416,7 @@ nv50_fp_linkage_validate(struct nv50_context *nv50)
    dummy.linear = 0;
    m = nv50_vec4_map(map, 0, lin, &dummy, &vp->out[0]);
 
-   for (c = 0; c < vp->vp.clpd_nr; ++c)
+   for (c = 0; c < clpd_nr; ++c)
       map[m++] = vp->vp.clpd[c / 4] + (c % 4);
 
    colors |= m << 8; /* adjust BFC0 id */
@@ -522,7 +523,7 @@ nv50_fp_linkage_validate(struct nv50_context *nv50)
    BEGIN_NV04(push, NV50_3D(GP_VIEWPORT_ID_ENABLE), 5);
    PUSH_DATA (push, vp->gp.has_viewport);
    PUSH_DATA (push, colors);
-   PUSH_DATA (push, (vp->vp.clpd_nr << 8) | 4);
+   PUSH_DATA (push, (clpd_nr << 8) | 4);
    PUSH_DATA (push, layerid);
    PUSH_DATA (push, psiz);
 

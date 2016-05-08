@@ -389,6 +389,7 @@ nvc0_validate_clip(struct nvc0_context *nvc0)
          nvc0_upload_uclip_planes(nvc0, stage);
 
    clip_enable &= vp->vp.clip_enable;
+   clip_enable |= vp->vp.cull_enable;
 
    if (nvc0->state.clip_enable != clip_enable) {
       nvc0->state.clip_enable = clip_enable;

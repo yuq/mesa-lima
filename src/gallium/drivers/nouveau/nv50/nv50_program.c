@@ -319,7 +319,7 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
                        struct pipe_debug_callback *debug)
 {
    struct nv50_ir_prog_info *info;
-   int ret;
+   int i, ret;
    const uint8_t map_undef = (prog->type == PIPE_SHADER_VERTEX) ? 0x40 : 0x80;
 
    info = CALLOC_STRUCT(nv50_ir_prog_info);
@@ -377,6 +377,13 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
    prog->tls_space = info->bin.tlsSpace;
 
    prog->vp.need_vertex_id = info->io.vertexId < PIPE_MAX_SHADER_INPUTS;
+
+   prog->vp.clip_enable = (1 << info->io.clipDistances) - 1;
+   prog->vp.cull_enable =
+      ((1 << info->io.cullDistances) - 1) << info->io.clipDistances;
+   prog->vp.clip_mode = 0;
+   for (i = 0; i < info->io.cullDistances; ++i)
+      prog->vp.clip_mode |= 1 << ((info->io.clipDistances + i) * 4);
 
    if (prog->type == PIPE_SHADER_FRAGMENT) {
       if (info->prop.fp.writesDepth) {

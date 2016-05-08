@@ -39,6 +39,7 @@ struct nvc0_program {
    struct {
       uint32_t clip_mode; /* clip/cull selection */
       uint8_t clip_enable; /* mask of defined clip planes */
+      uint8_t cull_enable; /* mask of defined cull distances */
       uint8_t num_ucps; /* also set to max if ClipDistance is used */
       uint8_t edgeflag; /* attribute index of edgeflag input */
       bool need_vertex_id;
