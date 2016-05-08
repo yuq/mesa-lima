@@ -641,19 +641,25 @@ link_invalidate_variable_locations(exec_list *ir)
 
 
 /**
- * Set clip_distance_array_size based on the given shader.
+ * Set clip_distance_array_size based and cull_distance_array_size on the given
+ * shader.
  *
  * Also check for errors based on incorrect usage of gl_ClipVertex and
- * gl_ClipDistance.
+ * gl_ClipDistance and gl_CullDistance.
+ * Additionally test whether the arrays gl_ClipDistance and gl_CullDistance
+ * exceed the maximum size defined by gl_MaxCombinedClipAndCullDistances.
  *
  * Return false if an error was reported.
  */
 static void
-analyze_clip_usage(struct gl_shader_program *prog,
-                   struct gl_shader *shader,
-                   GLuint *clip_distance_array_size)
+analyze_clip_cull_usage(struct gl_shader_program *prog,
+                        struct gl_shader *shader,
+                        struct gl_context *ctx,
+                        GLuint *clip_distance_array_size,
+                        GLuint *cull_distance_array_size)
 {
    *clip_distance_array_size = 0;
+   *cull_distance_array_size = 0;
 
    if (!prog->IsES && prog->Version >= 130) {
       /* From section 7.1 (Vertex Shader Special Variables) of the
@@ -667,22 +673,61 @@ analyze_clip_usage(struct gl_shader_program *prog,
        */
       find_assignment_visitor clip_vertex("gl_ClipVertex");
       find_assignment_visitor clip_distance("gl_ClipDistance");
+      find_assignment_visitor cull_distance("gl_CullDistance");
 
       clip_vertex.run(shader->ir);
       clip_distance.run(shader->ir);
+      cull_distance.run(shader->ir);
+
+      /* From the ARB_cull_distance spec:
+       *
+       * It is a compile-time or link-time error for the set of shaders forming
+       * a program to statically read or write both gl_ClipVertex and either
+       * gl_ClipDistance or gl_CullDistance.
+       *
+       * This does not apply to GLSL ES shaders, since GLSL ES defines neither
+       * gl_ClipVertex, gl_ClipDistance or gl_CullDistance.
+       */
       if (clip_vertex.variable_found() && clip_distance.variable_found()) {
          linker_error(prog, "%s shader writes to both `gl_ClipVertex' "
                       "and `gl_ClipDistance'\n",
                       _mesa_shader_stage_to_string(shader->Stage));
          return;
       }
+      if (clip_vertex.variable_found() && cull_distance.variable_found()) {
+         linker_error(prog, "%s shader writes to both `gl_ClipVertex' "
+                      "and `gl_CullDistance'\n",
+                      _mesa_shader_stage_to_string(shader->Stage));
+         return;
+      }
 
       if (clip_distance.variable_found()) {
          ir_variable *clip_distance_var =
-               shader->symbols->get_variable("gl_ClipDistance");
-
+                shader->symbols->get_variable("gl_ClipDistance");
          assert(clip_distance_var);
          *clip_distance_array_size = clip_distance_var->type->length;
+      }
+      if (cull_distance.variable_found()) {
+         ir_variable *cull_distance_var =
+                shader->symbols->get_variable("gl_CullDistance");
+         assert(cull_distance_var);
+         *cull_distance_array_size = cull_distance_var->type->length;
+      }
+      /* From the ARB_cull_distance spec:
+       *
+       * It is a compile-time or link-time error for the set of shaders forming
+       * a program to have the sum of the sizes of the gl_ClipDistance and
+       * gl_CullDistance arrays to be larger than
+       * gl_MaxCombinedClipAndCullDistances.
+       */
+      if ((*clip_distance_array_size + *cull_distance_array_size) >
+          ctx->Const.MaxClipPlanes) {
+          linker_error(prog, "%s shader: the combined size of "
+                       "'gl_ClipDistance' and 'gl_CullDistance' size cannot "
+                       "be larger than "
+                       "gl_MaxCombinedClipAndCullDistances (%u)",
+                       _mesa_shader_stage_to_string(shader->Stage),
+                       ctx->Const.MaxClipPlanes);
       }
    }
 }
@@ -691,13 +736,15 @@ analyze_clip_usage(struct gl_shader_program *prog,
 /**
  * Verify that a vertex shader executable meets all semantic requirements.
  *
- * Also sets prog->Vert.ClipDistanceArraySize as a side effect.
+ * Also sets prog->Vert.ClipDistanceArraySize and
+ * prog->Vert.CullDistanceArraySize as a side effect.
  *
  * \param shader  Vertex shader executable to be verified
  */
 void
 validate_vertex_shader_executable(struct gl_shader_program *prog,
-				  struct gl_shader *shader)
+                                  struct gl_shader *shader,
+                                  struct gl_context *ctx)
 {
    if (shader == NULL)
       return;
@@ -744,17 +791,22 @@ validate_vertex_shader_executable(struct gl_shader_program *prog,
       }
    }
 
-   analyze_clip_usage(prog, shader, &prog->Vert.ClipDistanceArraySize);
+   analyze_clip_cull_usage(prog, shader, ctx,
+                           &prog->Vert.ClipDistanceArraySize,
+                           &prog->Vert.CullDistanceArraySize);
 }
 
 void
 validate_tess_eval_shader_executable(struct gl_shader_program *prog,
-                                     struct gl_shader *shader)
+                                     struct gl_shader *shader,
+                                     struct gl_context *ctx)
 {
    if (shader == NULL)
       return;
 
-   analyze_clip_usage(prog, shader, &prog->TessEval.ClipDistanceArraySize);
+   analyze_clip_cull_usage(prog, shader, ctx,
+                           &prog->TessEval.ClipDistanceArraySize,
+                           &prog->TessEval.CullDistanceArraySize);
 }
 
 
@@ -765,7 +817,7 @@ validate_tess_eval_shader_executable(struct gl_shader_program *prog,
  */
 void
 validate_fragment_shader_executable(struct gl_shader_program *prog,
-				    struct gl_shader *shader)
+                                    struct gl_shader *shader)
 {
    if (shader == NULL)
       return;
@@ -785,14 +837,15 @@ validate_fragment_shader_executable(struct gl_shader_program *prog,
 /**
  * Verify that a geometry shader executable meets all semantic requirements
  *
- * Also sets prog->Geom.VerticesIn, and prog->Geom.ClipDistanceArraySize as
- * a side effect.
+ * Also sets prog->Geom.VerticesIn, and prog->Geom.ClipDistanceArraySize and
+ * prog->Geom.CullDistanceArraySize as a side effect.
  *
  * \param shader Geometry shader executable to be verified
  */
 void
 validate_geometry_shader_executable(struct gl_shader_program *prog,
-				    struct gl_shader *shader)
+                                    struct gl_shader *shader,
+                                    struct gl_context *ctx)
 {
    if (shader == NULL)
       return;
@@ -800,7 +853,9 @@ validate_geometry_shader_executable(struct gl_shader_program *prog,
    unsigned num_vertices = vertices_per_prim(prog->Geom.InputType);
    prog->Geom.VerticesIn = num_vertices;
 
-   analyze_clip_usage(prog, shader, &prog->Geom.ClipDistanceArraySize);
+   analyze_clip_cull_usage(prog, shader, ctx,
+                           &prog->Geom.ClipDistanceArraySize,
+                           &prog->Geom.CullDistanceArraySize);
 }
 
 /**
@@ -4427,16 +4482,16 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
          switch (stage) {
          case MESA_SHADER_VERTEX:
-            validate_vertex_shader_executable(prog, sh);
+            validate_vertex_shader_executable(prog, sh, ctx);
             break;
          case MESA_SHADER_TESS_CTRL:
             /* nothing to be done */
             break;
          case MESA_SHADER_TESS_EVAL:
-            validate_tess_eval_shader_executable(prog, sh);
+            validate_tess_eval_shader_executable(prog, sh, ctx);
             break;
          case MESA_SHADER_GEOMETRY:
-            validate_geometry_shader_executable(prog, sh);
+            validate_geometry_shader_executable(prog, sh, ctx);
             break;
          case MESA_SHADER_FRAGMENT:
             validate_fragment_shader_executable(prog, sh);
@@ -4452,14 +4507,19 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       }
    }
 
-   if (num_shaders[MESA_SHADER_GEOMETRY] > 0)
+   if (num_shaders[MESA_SHADER_GEOMETRY] > 0) {
       prog->LastClipDistanceArraySize = prog->Geom.ClipDistanceArraySize;
-   else if (num_shaders[MESA_SHADER_TESS_EVAL] > 0)
+      prog->LastCullDistanceArraySize = prog->Geom.CullDistanceArraySize;
+   } else if (num_shaders[MESA_SHADER_TESS_EVAL] > 0) {
       prog->LastClipDistanceArraySize = prog->TessEval.ClipDistanceArraySize;
-   else if (num_shaders[MESA_SHADER_VERTEX] > 0)
+      prog->LastCullDistanceArraySize = prog->TessEval.CullDistanceArraySize;
+   } else if (num_shaders[MESA_SHADER_VERTEX] > 0) {
       prog->LastClipDistanceArraySize = prog->Vert.ClipDistanceArraySize;
-   else
+      prog->LastCullDistanceArraySize = prog->Vert.CullDistanceArraySize;
+   } else {
       prog->LastClipDistanceArraySize = 0; /* Not used */
+      prog->LastCullDistanceArraySize = 0; /* Not used */
+   }
 
    /* Here begins the inter-stage linking phase.  Some initial validation is
     * performed, then locations are assigned for uniforms, attributes, and

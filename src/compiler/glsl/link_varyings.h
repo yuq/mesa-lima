@@ -210,6 +210,7 @@ private:
    enum {
       none,
       clip_distance,
+      cull_distance,
       tess_level_outer,
       tess_level_inner,
    } lowered_builtin_array_variable;

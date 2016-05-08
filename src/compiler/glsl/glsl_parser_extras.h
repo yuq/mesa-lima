@@ -520,6 +520,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_compute_shader_warn;
    bool ARB_conservative_depth_enable;
    bool ARB_conservative_depth_warn;
+   bool ARB_cull_distance_enable;
+   bool ARB_cull_distance_warn;
    bool ARB_derivative_control_enable;
    bool ARB_derivative_control_warn;
    bool ARB_draw_buffers_enable;
@@ -702,6 +704,12 @@ struct _mesa_glsl_parse_state {
     * did the parser just parse a dot.
     */
    bool is_field;
+
+   /**
+    * seen values for clip/cull distance sizes
+    * so we can check totals aren't too large.
+    */
+   unsigned clip_dist_size, cull_dist_size;
 };
 
 # define YYLLOC_DEFAULT(Current, Rhs, N)			\

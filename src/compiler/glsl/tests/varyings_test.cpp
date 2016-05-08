@@ -194,6 +194,33 @@ TEST_F(link_varyings, gl_ClipDistance)
    EXPECT_TRUE(is_empty(consumer_interface_inputs));
 }
 
+TEST_F(link_varyings, gl_CullDistance)
+{
+   const glsl_type *const array_8_of_float =
+      glsl_type::get_array_instance(glsl_type::vec(1), 8);
+
+   ir_variable *const culldistance =
+      new(mem_ctx) ir_variable(array_8_of_float,
+                               "gl_CullDistance",
+                               ir_var_shader_in);
+
+   culldistance->data.explicit_location = true;
+   culldistance->data.location = VARYING_SLOT_CULL_DIST0;
+   culldistance->data.explicit_index = 0;
+
+   ir.push_tail(culldistance);
+
+   ASSERT_TRUE(linker::populate_consumer_input_sets(mem_ctx,
+                                                    &ir,
+                                                    consumer_inputs,
+                                                    consumer_interface_inputs,
+                                                    junk));
+
+   EXPECT_EQ(culldistance, junk[VARYING_SLOT_CULL_DIST0]);
+   EXPECT_TRUE(is_empty(consumer_inputs));
+   EXPECT_TRUE(is_empty(consumer_interface_inputs));
+}
+
 TEST_F(link_varyings, single_interface_input)
 {
    ir_variable *const v =

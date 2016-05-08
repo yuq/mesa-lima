@@ -1196,20 +1196,38 @@ check_builtin_array_max_size(const char *name, unsigned size,
       _mesa_glsl_error(&loc, state, "`gl_TexCoord' array size cannot "
                        "be larger than gl_MaxTextureCoords (%u)",
                        state->Const.MaxTextureCoords);
-   } else if (strcmp("gl_ClipDistance", name) == 0
-              && size > state->Const.MaxClipPlanes) {
-      /* From section 7.1 (Vertex Shader Special Variables) of the
-       * GLSL 1.30 spec:
-       *
-       *   "The gl_ClipDistance array is predeclared as unsized and
-       *   must be sized by the shader either redeclaring it with a
-       *   size or indexing it only with integral constant
-       *   expressions. ... The size can be at most
-       *   gl_MaxClipDistances."
-       */
-      _mesa_glsl_error(&loc, state, "`gl_ClipDistance' array size cannot "
-                       "be larger than gl_MaxClipDistances (%u)",
-                       state->Const.MaxClipPlanes);
+   } else if (strcmp("gl_ClipDistance", name) == 0) {
+      state->clip_dist_size = size;
+      if (size + state->cull_dist_size > state->Const.MaxClipPlanes) {
+         /* From section 7.1 (Vertex Shader Special Variables) of the
+          * GLSL 1.30 spec:
+          *
+          *   "The gl_ClipDistance array is predeclared as unsized and
+          *   must be sized by the shader either redeclaring it with a
+          *   size or indexing it only with integral constant
+          *   expressions. ... The size can be at most
+          *   gl_MaxClipDistances."
+          */
+         _mesa_glsl_error(&loc, state, "`gl_ClipDistance' array size cannot "
+                          "be larger than gl_MaxClipDistances (%u)",
+                          state->Const.MaxClipPlanes);
+      }
+   } else if (strcmp("gl_CullDistance", name) == 0) {
+      state->cull_dist_size = size;
+      if (size + state->clip_dist_size > state->Const.MaxClipPlanes) {
+         /* From the ARB_cull_distance spec:
+          *
+          *   "The gl_CullDistance array is predeclared as unsized and
+          *    must be sized by the shader either redeclaring it with
+          *    a size or indexing it only with integral constant
+          *    expressions. The size determines the number and set of
+          *    enabled cull distances and can be at most
+          *    gl_MaxCullDistances."
+          */
+         _mesa_glsl_error(&loc, state, "`gl_CullDistance' array size cannot "
+                          "be larger than gl_MaxCullDistances (%u)",
+                          state->Const.MaxClipPlanes);
+      }
    }
 }
 

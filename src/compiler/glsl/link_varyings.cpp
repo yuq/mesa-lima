@@ -631,6 +631,10 @@ tfeedback_decl::init(struct gl_context *ctx, const void *mem_ctx,
        strcmp(this->var_name, "gl_ClipDistance") == 0) {
       this->lowered_builtin_array_variable = clip_distance;
    }
+   if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].LowerCombinedClipCullDistance &&
+       strcmp(this->var_name, "gl_CullDistance") == 0) {
+      this->lowered_builtin_array_variable = cull_distance;
+   }
 
    if (ctx->Const.LowerTessLevel &&
        (strcmp(this->var_name, "gl_TessLevelOuter") == 0))
@@ -690,6 +694,9 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
       switch (this->lowered_builtin_array_variable) {
       case clip_distance:
          actual_array_size = prog->LastClipDistanceArraySize;
+         break;
+      case cull_distance:
+         actual_array_size = prog->LastCullDistanceArraySize;
          break;
       case tess_level_outer:
          actual_array_size = 4;
@@ -910,6 +917,9 @@ tfeedback_decl::find_candidate(gl_shader_program *prog,
       break;
    case clip_distance:
       name = "gl_ClipDistanceMESA";
+      break;
+   case cull_distance:
+      name = "gl_CullDistanceMESA";
       break;
    case tess_level_outer:
       name = "gl_TessLevelOuterMESA";

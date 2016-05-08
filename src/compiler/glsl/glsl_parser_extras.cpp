@@ -576,6 +576,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(ARB_arrays_of_arrays,             true,  false,     ARB_arrays_of_arrays),
    EXT(ARB_compute_shader,               true,  false,     ARB_compute_shader),
    EXT(ARB_conservative_depth,           true,  false,     ARB_conservative_depth),
+   EXT(ARB_cull_distance,                true,  false,     ARB_cull_distance),
    EXT(ARB_derivative_control,           true,  false,     ARB_derivative_control),
    EXT(ARB_draw_buffers,                 true,  false,     dummy_true),
    EXT(ARB_draw_instanced,               true,  false,     ARB_draw_instanced),
