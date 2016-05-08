@@ -187,13 +187,14 @@ static void si_dump_reg(FILE *file, unsigned offset, uint32_t value,
 
 	for (r = 0; r < ARRAY_SIZE(reg_table); r++) {
 		const struct si_reg *reg = &reg_table[r];
+		const char *reg_name = sid_strings + reg->name_offset;
 
 		if (reg->offset == offset) {
 			bool first_field = true;
 
 			print_spaces(file, INDENT_PKT);
 			fprintf(file, COLOR_YELLOW "%s" COLOR_RESET " <- ",
-				reg->name);
+				reg_name);
 
 			if (!reg->num_fields) {
 				print_value(file, value, 32);
@@ -202,6 +203,7 @@ static void si_dump_reg(FILE *file, unsigned offset, uint32_t value,
 
 			for (f = 0; f < reg->num_fields; f++) {
 				const struct si_field *field = &reg->fields[f];
+				const int *values_offsets = sid_strings_offsets + field->values_offset;
 				uint32_t val = (value & field->mask) >>
 					       (ffs(field->mask) - 1);
 
@@ -211,13 +213,13 @@ static void si_dump_reg(FILE *file, unsigned offset, uint32_t value,
 				/* Indent the field. */
 				if (!first_field)
 					print_spaces(file,
-						     INDENT_PKT + strlen(reg->name) + 4);
+						     INDENT_PKT + strlen(reg_name) + 4);
 
 				/* Print the field. */
-				fprintf(file, "%s = ", field->name);
+				fprintf(file, "%s = ", sid_strings + field->name_offset);
 
-				if (val < field->num_values && field->values[val])
-					fprintf(file, "%s\n", field->values[val]);
+				if (val < field->num_values && values_offsets[val] >= 0)
+					fprintf(file, "%s\n", sid_strings + values_offsets[val]);
 				else
 					print_value(file, val,
 						    util_bitcount(field->mask));
@@ -254,17 +256,19 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 		if (packet3_table[i].op == op)
 			break;
 
-	if (i < ARRAY_SIZE(packet3_table))
+	if (i < ARRAY_SIZE(packet3_table)) {
+		const char *name = sid_strings + packet3_table[i].name_offset;
+
 		if (op == PKT3_SET_CONTEXT_REG ||
 		    op == PKT3_SET_CONFIG_REG ||
 		    op == PKT3_SET_UCONFIG_REG ||
 		    op == PKT3_SET_SH_REG)
 			fprintf(f, COLOR_CYAN "%s%s" COLOR_CYAN ":\n",
-				packet3_table[i].name, predicate);
+				name, predicate);
 		else
 			fprintf(f, COLOR_GREEN "%s%s" COLOR_RESET ":\n",
-				packet3_table[i].name, predicate);
-	else
+				name, predicate);
+	} else
 		fprintf(f, COLOR_RED "PKT3_UNKNOWN 0x%x%s" COLOR_RESET ":\n",
 			op, predicate);
 
