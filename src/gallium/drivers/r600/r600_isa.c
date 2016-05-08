@@ -568,7 +568,7 @@ int r600_isa_init(struct r600_context *ctx, struct r600_isa *isa) {
 			isa->alu_op2_map[opc] = i + 1;
 	}
 
-	for (i = 0; i < TABLE_SIZE(fetch_op_table); ++i) {
+	for (i = 0; i < ARRAY_SIZE(fetch_op_table); ++i) {
 		const struct fetch_op_info *op = &fetch_op_table[i];
 		unsigned opc = op->opcode[isa->hw_class];
 		if ((op->flags & FF_GDS) || ((opc & 0xFF) != opc))
@@ -576,7 +576,7 @@ int r600_isa_init(struct r600_context *ctx, struct r600_isa *isa) {
 		isa->fetch_map[opc] = i + 1;
 	}
 
-	for (i = 0; i < TABLE_SIZE(cf_op_table); ++i) {
+	for (i = 0; i < ARRAY_SIZE(cf_op_table); ++i) {
 		const struct cf_op_info *op = &cf_op_table[i];
 		unsigned opc = op->opcode[isa->hw_class];
 		if (opc == -1)

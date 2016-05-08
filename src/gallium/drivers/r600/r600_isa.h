@@ -675,8 +675,6 @@ struct r600_context;
 int r600_isa_init(struct r600_context *ctx, struct r600_isa *isa);
 int r600_isa_destroy(struct r600_isa *isa);
 
-#define TABLE_SIZE(t) (sizeof(t)/sizeof(t[0]))
-
 extern const struct alu_op_info r600_alu_op_table[];
 
 unsigned
