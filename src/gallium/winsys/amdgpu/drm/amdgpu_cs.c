@@ -461,6 +461,8 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
                               amdgpu_ib_max_submit_dwords(ib_type)));
    }
 
+   ib->max_ib_size = ib->max_ib_size - ib->max_ib_size / 32;
+
    ib->base.prev_dw = 0;
    ib->base.num_prev = 0;
    ib->base.current.cdw = 0;
