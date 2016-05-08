@@ -42,7 +42,7 @@
  *
  * Since some hardware may not internally represent gl_ClipDistance as a pair
  * of vec4's, this lowering pass is optional.  To enable it, set the
- * LowerClipDistance flag in gl_shader_compiler_options to true.
+ * LowerCombinedClipCullDistance flag in gl_shader_compiler_options to true.
  */
 
 #include "glsl_symbol_table.h"

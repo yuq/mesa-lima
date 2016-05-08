@@ -465,6 +465,7 @@ EXTRA_EXT(ARB_shader_storage_buffer_object);
 EXTRA_EXT(ARB_indirect_parameters);
 EXTRA_EXT(ATI_meminfo);
 EXTRA_EXT(NVX_gpu_memory_info);
+EXTRA_EXT(ARB_cull_distance);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {

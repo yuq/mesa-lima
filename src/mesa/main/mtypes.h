@@ -1922,6 +1922,7 @@ struct gl_program
     * gl_ClipDistance output.  Ignored for fragment shaders.
     */
    unsigned ClipDistanceArraySize;
+   unsigned CullDistanceArraySize;
 
 
    /** Named parameters, constants, etc. from program text */
@@ -2703,6 +2704,8 @@ struct gl_shader_program
        */
       GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
                                          0 if not present. */
+      GLuint CullDistanceArraySize; /**< Size of the gl_CullDistance array, or
+                                         0 if not present. */
    } TessEval;
 
    /**
@@ -2725,6 +2728,8 @@ struct gl_shader_program
        */
       GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
                                          0 if not present. */
+      GLuint CullDistanceArraySize; /**< Size of the gl_CullDistance array, or
+                                         0 if not present. */
       bool UsesEndPrimitive;
       bool UsesStreams;
    } Geom;
@@ -2736,6 +2741,8 @@ struct gl_shader_program
        * by _mesa_copy_linked_program_data().
        */
       GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
+                                         0 if not present. */
+      GLuint CullDistanceArraySize; /**< Size of the gl_CullDistance array, or
                                          0 if not present. */
    } Vert;
 
@@ -2780,6 +2787,7 @@ struct gl_shader_program
     * stage before the fragment shader.
     */
    unsigned LastClipDistanceArraySize;
+   unsigned LastCullDistanceArraySize;
 
    unsigned NumUniformBlocks;
    struct gl_uniform_block *UniformBlocks;
@@ -2911,7 +2919,10 @@ struct gl_shader_compiler_options
    GLboolean EmitNoNoise;                 /**< Emit NOISE opcodes? */
    GLboolean EmitNoPow;                   /**< Emit POW opcodes? */
    GLboolean EmitNoSat;                   /**< Emit SAT opcodes? */
-   GLboolean LowerClipDistance; /**< Lower gl_ClipDistance from float[8] to vec4[2]? */
+   GLboolean LowerCombinedClipCullDistance; /** Lower gl_ClipDistance and
+                                              * gl_CullDistance together from
+                                              * float[8] to vec4[2]
+                                              **/
 
    /**
     * \name Forms of indirect addressing the driver cannot do.
@@ -3742,6 +3753,7 @@ struct gl_extensions
    GLboolean ARB_conditional_render_inverted;
    GLboolean ARB_conservative_depth;
    GLboolean ARB_copy_image;
+   GLboolean ARB_cull_distance;
    GLboolean ARB_depth_buffer_float;
    GLboolean ARB_depth_clamp;
    GLboolean ARB_depth_texture;

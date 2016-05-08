@@ -44,6 +44,7 @@ EXT(ARB_conditional_render_inverted         , ARB_conditional_render_inverted   
 EXT(ARB_conservative_depth                  , ARB_conservative_depth                 , GLL, GLC,  x ,  x , 2011)
 EXT(ARB_copy_buffer                         , dummy_true                             , GLL, GLC,  x ,  x , 2008)
 EXT(ARB_copy_image                          , ARB_copy_image                         , GLL, GLC,  x ,  x , 2012)
+EXT(ARB_cull_distance                       , ARB_cull_distance                      , GLL, GLC,  x ,  x , 2014)
 EXT(ARB_debug_output                        , dummy_true                             , GLL, GLC,  x ,  x , 2009)
 EXT(ARB_depth_buffer_float                  , ARB_depth_buffer_float                 , GLL, GLC,  x ,  x , 2008)
 EXT(ARB_depth_clamp                         , ARB_depth_clamp                        , GLL, GLC,  x ,  x , 2003)

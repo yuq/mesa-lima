@@ -878,6 +878,10 @@ descriptor=[
   [ "GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX", "LOC_CUSTOM, TYPE_INT, NO_OFFSET, extra_NVX_gpu_memory_info" ],
   [ "GPU_MEMORY_INFO_EVICTION_COUNT_NVX", "LOC_CUSTOM, TYPE_INT, NO_OFFSET, extra_NVX_gpu_memory_info" ],
   [ "GPU_MEMORY_INFO_EVICTED_MEMORY_NVX", "LOC_CUSTOM, TYPE_INT, NO_OFFSET, extra_NVX_gpu_memory_info" ],
+
+# GL_ARB_cull_distance
+  [ "MAX_CULL_DISTANCES", "CONTEXT_INT(Const.MaxClipPlanes), extra_ARB_cull_distance" ],
+  [ "MAX_COMBINED_CLIP_AND_CULL_DISTANCES", "CONTEXT_INT(Const.MaxClipPlanes), extra_ARB_cull_distance" ],
 ]},
 
 # Enums restricted to OpenGL Core profile

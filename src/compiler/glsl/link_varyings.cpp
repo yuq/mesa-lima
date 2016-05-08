@@ -627,7 +627,7 @@ tfeedback_decl::init(struct gl_context *ctx, const void *mem_ctx,
     * class must behave specially to account for the fact that gl_ClipDistance
     * is converted from a float[8] to a vec4[2].
     */
-   if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].LowerClipDistance &&
+   if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].LowerCombinedClipCullDistance &&
        strcmp(this->var_name, "gl_ClipDistance") == 0) {
       this->lowered_builtin_array_variable = clip_distance;
    }
