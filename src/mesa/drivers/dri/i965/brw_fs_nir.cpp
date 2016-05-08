@@ -1997,13 +1997,16 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
                     fs_reg(ATTR, imm_offset + i, dst.type));
          }
       }
-   } else {
-      /* Resort to the pull model.  Ensure the VUE handles are provided. */
-      gs_prog_data->base.include_vue_handles = true;
+      return;
+   }
 
-      unsigned first_icp_handle = gs_prog_data->include_primitive_id ? 3 : 2;
-      fs_reg icp_handle;
+   /* Resort to the pull model.  Ensure the VUE handles are provided. */
+   gs_prog_data->base.include_vue_handles = true;
 
+   unsigned first_icp_handle = gs_prog_data->include_primitive_id ? 3 : 2;
+   fs_reg icp_handle;
+
+   if (gs_prog_data->invocations == 1) {
       if (vertex_const) {
          /* The vertex index is constant; just select the proper URB handle. */
          icp_handle =
@@ -2046,35 +2049,35 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
                   fs_reg(icp_offset_bytes),
                   brw_imm_ud(nir->info.gs.vertices_in * REG_SIZE));
       }
+   }
 
-      fs_inst *inst;
-      if (offset_const) {
-         /* Constant indexing - use global offset. */
-         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, icp_handle);
-         inst->offset = base_offset + offset_const->u32[0];
-         inst->base_mrf = -1;
-         inst->mlen = 1;
-         inst->regs_written = num_components;
-      } else {
-         /* Indirect indexing - use per-slot offsets as well. */
-         const fs_reg srcs[] = { icp_handle, get_nir_src(offset_src) };
-         fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
-         bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
+   fs_inst *inst;
+   if (offset_const) {
+      /* Constant indexing - use global offset. */
+      inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, icp_handle);
+      inst->offset = base_offset + offset_const->u32[0];
+      inst->base_mrf = -1;
+      inst->mlen = 1;
+      inst->regs_written = num_components;
+   } else {
+      /* Indirect indexing - use per-slot offsets as well. */
+      const fs_reg srcs[] = { icp_handle, get_nir_src(offset_src) };
+      fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+      bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
 
-         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst, payload);
-         inst->offset = base_offset;
-         inst->base_mrf = -1;
-         inst->mlen = 2;
-         inst->regs_written = num_components;
-      }
+      inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst, payload);
+      inst->offset = base_offset;
+      inst->base_mrf = -1;
+      inst->mlen = 2;
+      inst->regs_written = num_components;
+   }
 
-      if (is_point_size) {
-         /* Read the whole VUE header (because of alignment) and read .w. */
-         fs_reg tmp = bld.vgrf(dst.type, 4);
-         inst->dst = tmp;
-         inst->regs_written = 4;
-         bld.MOV(dst, offset(tmp, bld, 3));
-      }
+   if (is_point_size) {
+      /* Read the whole VUE header (because of alignment) and read .w. */
+      fs_reg tmp = bld.vgrf(dst.type, 4);
+      inst->dst = tmp;
+      inst->regs_written = 4;
+      bld.MOV(dst, offset(tmp, bld, 3));
    }
 }
 
