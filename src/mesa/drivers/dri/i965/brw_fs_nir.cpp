@@ -1982,7 +1982,9 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
     */
    const bool is_point_size = (base_offset == 0);
 
-   if (offset_const != NULL && vertex_const != NULL &&
+   /* TODO: figure out push input layout for invocations == 1 */
+   if (gs_prog_data->invocations == 1 &&
+       offset_const != NULL && vertex_const != NULL &&
        4 * (base_offset + offset_const->u32[0]) < push_reg_count) {
       int imm_offset = (base_offset + offset_const->u32[0]) * 4 +
                        vertex_const->u32[0] * push_reg_count;
@@ -2004,7 +2006,7 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
    gs_prog_data->base.include_vue_handles = true;
 
    unsigned first_icp_handle = gs_prog_data->include_primitive_id ? 3 : 2;
-   fs_reg icp_handle;
+   fs_reg icp_handle = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
 
    if (gs_prog_data->invocations == 1) {
       if (vertex_const) {
@@ -2028,7 +2030,6 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
          fs_reg channel_offsets = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
          fs_reg vertex_offset_bytes = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
          fs_reg icp_offset_bytes = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
-         icp_handle = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
 
          /* sequence = <7, 6, 5, 4, 3, 2, 1, 0> */
          bld.MOV(sequence, fs_reg(brw_imm_v(0x76543210)));
@@ -2048,6 +2049,38 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
                   fs_reg(brw_vec8_grf(first_icp_handle, 0)),
                   fs_reg(icp_offset_bytes),
                   brw_imm_ud(nir->info.gs.vertices_in * REG_SIZE));
+      }
+   } else {
+      assert(gs_prog_data->invocations > 1);
+
+      if (vertex_const) {
+         assert(devinfo->gen >= 9 || vertex_const->i32[0] <= 5);
+         bld.MOV(icp_handle,
+                 retype(brw_vec1_grf(first_icp_handle +
+                                     vertex_const->i32[0] / 8,
+                                     vertex_const->i32[0] % 8),
+                        BRW_REGISTER_TYPE_UD));
+      } else {
+         /* The vertex index is non-constant.  We need to use indirect
+          * addressing to fetch the proper URB handle.
+          *
+          */
+         fs_reg icp_offset_bytes = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+
+         /* Convert vertex_index to bytes (multiply by 4) */
+         bld.SHL(icp_offset_bytes,
+                 retype(get_nir_src(vertex_src), BRW_REGISTER_TYPE_UD),
+                 brw_imm_ud(2u));
+
+         /* Use first_icp_handle as the base offset.  There is one DWord
+          * of URB handles per vertex, so inform the register allocator that
+          * we might read up to ceil(nir->info.gs.vertices_in / 8) registers.
+          */
+         bld.emit(SHADER_OPCODE_MOV_INDIRECT, icp_handle,
+                  fs_reg(brw_vec8_grf(first_icp_handle, 0)),
+                  fs_reg(icp_offset_bytes),
+                  brw_imm_ud(DIV_ROUND_UP(nir->info.gs.vertices_in, 8) *
+                             REG_SIZE));
       }
    }
 

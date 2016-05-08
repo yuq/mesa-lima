@@ -811,9 +811,6 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    }
 
    if (is_scalar) {
-      /* TODO: Support instanced GS.  We have basically no tests... */
-      assert(prog_data->invocations == 1);
-
       fs_visitor v(compiler, log_data, mem_ctx, &c, prog_data, shader,
                    shader_time_index);
       if (v.run_gs()) {
