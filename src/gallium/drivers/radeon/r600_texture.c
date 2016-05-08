@@ -169,8 +169,9 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		surface->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_1D_ARRAY, TYPE);
 		surface->array_size = ptex->array_size;
 		break;
-	case PIPE_TEXTURE_2D_ARRAY:
 	case PIPE_TEXTURE_CUBE_ARRAY: /* cube array layout like 2d array */
+		assert(ptex->array_size % 6 == 0);
+	case PIPE_TEXTURE_2D_ARRAY:
 		surface->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_2D_ARRAY, TYPE);
 		surface->array_size = ptex->array_size;
 		break;
@@ -1120,21 +1121,11 @@ static void r600_init_temp_resource_from_box(struct pipe_resource *res,
 	res->flags = flags;
 
 	/* We must set the correct texture target and dimensions for a 3D box. */
-	if (box->depth > 1 && util_max_layer(orig, level) > 0)
-		res->target = orig->target;
-	else
-		res->target = PIPE_TEXTURE_2D;
-
-	switch (res->target) {
-	case PIPE_TEXTURE_1D_ARRAY:
-	case PIPE_TEXTURE_2D_ARRAY:
-	case PIPE_TEXTURE_CUBE_ARRAY:
+	if (box->depth > 1 && util_max_layer(orig, level) > 0) {
+		res->target = PIPE_TEXTURE_2D_ARRAY;
 		res->array_size = box->depth;
-		break;
-	case PIPE_TEXTURE_3D:
-		res->depth0 = box->depth;
-		break;
-	default:;
+	} else {
+		res->target = PIPE_TEXTURE_2D;
 	}
 }
 
