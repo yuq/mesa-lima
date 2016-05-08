@@ -138,8 +138,8 @@ static struct radeon_winsys_ctx *amdgpu_ctx_create(struct radeon_winsys *ws)
       return NULL;
    }
 
-   alloc_buffer.alloc_size = 4 * 1024;
-   alloc_buffer.phys_alignment = 4 *1024;
+   alloc_buffer.alloc_size = ctx->ws->info.gart_page_size;
+   alloc_buffer.phys_alignment = ctx->ws->info.gart_page_size;
    alloc_buffer.preferred_heap = AMDGPU_GEM_DOMAIN_GTT;
 
    r = amdgpu_bo_alloc(ctx->ws->dev, &alloc_buffer, &buf_handle);
@@ -201,6 +201,7 @@ amdgpu_ctx_query_reset_status(struct radeon_winsys_ctx *rwctx)
 static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_ib *ib,
                               struct amdgpu_cs_ib_info *info, unsigned ib_type)
 {
+   struct amdgpu_winsys *aws = (struct amdgpu_winsys*)ws;
    /* Small IBs are better than big IBs, because the GPU goes idle quicker
     * and there is less waiting for buffers and fences. Proof:
     *   http://www.phoronix.com/scan.php?page=article&item=mesa-111-si&num=1
@@ -236,7 +237,7 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_ib *ib,
       ib->used_ib_space = 0;
 
       ib->big_ib_buffer = ws->buffer_create(ws, buffer_size,
-                                            4096,
+                                            aws->info.gart_page_size,
                                             RADEON_DOMAIN_GTT,
                                             RADEON_FLAG_CPU_ACCESS);
       if (!ib->big_ib_buffer)

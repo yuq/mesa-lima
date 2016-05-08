@@ -598,7 +598,7 @@ static void si_dump_last_bo_list(struct si_context *sctx, FILE *f)
 
 	for (i = 0; i < sctx->last_bo_count; i++) {
 		/* Note: Buffer sizes are expected to be aligned to 4k by the winsys. */
-		const unsigned page_size = 4096;
+		const unsigned page_size = sctx->b.screen->info.gart_page_size;
 		uint64_t va = sctx->last_bo_list[i].vm_address;
 		uint64_t size = sctx->last_bo_list[i].buf->size;
 		bool hit = false;

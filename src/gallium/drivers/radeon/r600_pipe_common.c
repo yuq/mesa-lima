@@ -291,8 +291,9 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	r600_query_init(rctx);
 	cayman_init_msaa(&rctx->b);
 
-	rctx->allocator_so_filled_size = u_suballocator_create(&rctx->b, 4096, 4,
-							       0, PIPE_USAGE_DEFAULT, TRUE);
+	rctx->allocator_so_filled_size =
+		u_suballocator_create(&rctx->b, rscreen->info.gart_page_size,
+				      4, 0, PIPE_USAGE_DEFAULT, TRUE);
 	if (!rctx->allocator_so_filled_size)
 		return false;
 
@@ -845,8 +846,11 @@ static void r600_query_memory_info(struct pipe_screen *screen,
 struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 						  const struct pipe_resource *templ)
 {
+	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+
 	if (templ->target == PIPE_BUFFER) {
-		return r600_buffer_create(screen, templ, 4096);
+		return r600_buffer_create(screen, templ,
+					  rscreen->info.gart_page_size);
 	} else {
 		return r600_texture_create(screen, templ);
 	}
