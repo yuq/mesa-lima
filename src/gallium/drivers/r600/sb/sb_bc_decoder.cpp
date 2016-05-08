@@ -330,9 +330,9 @@ int bc_decoder::decode_alu(unsigned & i, bc_alu& bc) {
 			bc.src[2].rel = iw1.get_SRC2_REL();
 			bc.dst_chan = iw1.get_DST_CHAN();
 			// TODO: clean up
-			for (size_t k = 0; k < sizeof(alu_op_table) / sizeof(alu_op_table[0]); k++) {
-				if (((alu_op_table[k].opcode[1] >> 8) & 0xff) == iw1.get_LDS_OP()) {
-					bc.op_ptr = &alu_op_table[k];
+			for (size_t k = 0, e = r600_alu_op_table_size(); k != e; k++) {
+				if (((r600_alu_op_table[k].opcode[1] >> 8) & 0xff) == iw1.get_LDS_OP()) {
+					bc.op_ptr = &r600_alu_op_table[k];
 					bc.op = k;
 					break;
 				}
