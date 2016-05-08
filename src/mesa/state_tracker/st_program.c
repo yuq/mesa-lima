@@ -310,6 +310,11 @@ st_translate_vertex_program(struct st_context *st,
             output_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
             output_semantic_index[slot] = 1;
             break;
+         case VARYING_SLOT_CULL_DIST0:
+         case VARYING_SLOT_CULL_DIST1:
+            /* these should have been lowered by GLSL */
+            assert(0);
+            break;
          case VARYING_SLOT_EDGE:
             assert(0);
             break;
@@ -366,6 +371,9 @@ st_translate_vertex_program(struct st_context *st,
    if (stvp->Base.Base.ClipDistanceArraySize)
       ureg_property(ureg, TGSI_PROPERTY_NUM_CLIPDIST_ENABLED,
                     stvp->Base.Base.ClipDistanceArraySize);
+   if (stvp->Base.Base.CullDistanceArraySize)
+      ureg_property(ureg, TGSI_PROPERTY_NUM_CULLDIST_ENABLED,
+                    stvp->Base.Base.CullDistanceArraySize);
 
    if (ST_DEBUG & DEBUG_MESA) {
       _mesa_print_program(&stvp->Base.Base);
@@ -626,6 +634,11 @@ st_translate_fragment_program(struct st_context *st,
             input_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
             input_semantic_index[slot] = 1;
             interpMode[slot] = TGSI_INTERPOLATE_PERSPECTIVE;
+            break;
+         case VARYING_SLOT_CULL_DIST0:
+         case VARYING_SLOT_CULL_DIST1:
+            /* these should have been lowered by GLSL */
+            assert(0);
             break;
             /* In most cases, there is nothing special about these
              * inputs, so adopt a convention to use the generic
@@ -1044,6 +1057,9 @@ st_translate_program_common(struct st_context *st,
    if (prog->ClipDistanceArraySize)
       ureg_property(ureg, TGSI_PROPERTY_NUM_CLIPDIST_ENABLED,
                     prog->ClipDistanceArraySize);
+   if (prog->CullDistanceArraySize)
+      ureg_property(ureg, TGSI_PROPERTY_NUM_CULLDIST_ENABLED,
+                    prog->CullDistanceArraySize);
 
    /*
     * Convert Mesa program inputs to TGSI input register semantics.
@@ -1088,6 +1104,11 @@ st_translate_program_common(struct st_context *st,
          case VARYING_SLOT_CLIP_DIST1:
             input_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
             input_semantic_index[slot] = 1;
+            break;
+         case VARYING_SLOT_CULL_DIST0:
+         case VARYING_SLOT_CULL_DIST1:
+            /* these should have been lowered by GLSL */
+            assert(0);
             break;
          case VARYING_SLOT_PSIZ:
             input_semantic_name[slot] = TGSI_SEMANTIC_PSIZE;
@@ -1190,6 +1211,11 @@ st_translate_program_common(struct st_context *st,
          case VARYING_SLOT_CLIP_DIST1:
             output_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
             output_semantic_index[slot] = 1;
+            break;
+         case VARYING_SLOT_CULL_DIST0:
+         case VARYING_SLOT_CULL_DIST1:
+            /* these should have been lowered by GLSL */
+            assert(0);
             break;
          case VARYING_SLOT_LAYER:
             output_semantic_name[slot] = TGSI_SEMANTIC_LAYER;
