@@ -1102,6 +1102,11 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
       else
          info->prop.tp.outputPrim = PIPE_PRIM_TRIANGLES; /* anything but points */
       break;
+   case TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH:
+   case TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT:
+   case TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH:
+      // we don't care
+      break;
    case TGSI_PROPERTY_NUM_CLIPDIST_ENABLED:
       info->io.clipDistances = prop->u[0].Data;
       break;
