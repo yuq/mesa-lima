@@ -106,6 +106,7 @@ protected:
    bool handleATOM(Instruction *);
    bool handleCasExch(Instruction *, bool needCctl);
    void handleSurfaceOpNVE4(TexInstruction *);
+   void handleSurfaceOpNVC0(TexInstruction *);
    void handleSharedATOM(Instruction *);
    void handleSharedATOMNVE4(Instruction *);
    void handleLDST(Instruction *);
@@ -138,6 +139,7 @@ private:
 
    void adjustCoordinatesMS(TexInstruction *);
    void processSurfaceCoordsNVE4(TexInstruction *);
+   void processSurfaceCoordsNVC0(TexInstruction *);
    void convertSurfaceFormat(TexInstruction *);
 
 protected:
