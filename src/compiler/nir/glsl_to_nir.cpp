@@ -25,30 +25,9 @@
  *
  */
 
-#include "nir.h"
-
-/*
- * Have GCC/Clang warn when NIR headers use C99 extensions that are not
- * supported in C++, as they are not portable.  In particular MSVC does not
- * support C99 structure field initializers.
- */
-#if defined(__GNUC__)
-#  pragma GCC diagnostic push
-#  if defined(__clang__)
-#    pragma GCC diagnostic warning "-Wc99-extensions"
-#  else
-#    pragma GCC diagnostic warning "-Wpedantic"
-#  endif
-#endif
-
+#include "glsl_to_nir.h"
 #include "nir_control_flow.h"
 #include "nir_builder.h"
-
-#if defined(__GNUC__)
-#  pragma GCC diagnostic pop
-#endif
-
-#include "glsl_to_nir.h"
 #include "compiler/glsl/ir_visitor.h"
 #include "compiler/glsl/ir_hierarchical_visitor.h"
 #include "compiler/glsl/ir.h"
