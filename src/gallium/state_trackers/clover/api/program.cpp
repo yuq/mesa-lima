@@ -240,10 +240,33 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
 CLOVER_API cl_program
 clLinkProgram(cl_context d_ctx, cl_uint num_devs, const cl_device_id *d_devs,
               const char *p_opts, cl_uint num_progs, const cl_program *d_progs,
-              void (*pfn_notify)(cl_program, void *), void *user_data,
-              cl_int *r_errcode) {
-   CLOVER_NOT_SUPPORTED_UNTIL("1.2");
-   ret_error(r_errcode, CL_LINKER_NOT_AVAILABLE);
+              void (*pfn_notify) (cl_program, void *), void *user_data,
+              cl_int *r_errcode) try {
+   auto &ctx = obj(d_ctx);
+   auto devs = (d_devs ? objs(d_devs, num_devs) :
+                ref_vector<device>(ctx.devices()));
+   auto opts = (p_opts ? p_opts : "");
+   auto progs = objs(d_progs, num_progs);
+   auto prog = create<program>(ctx);
+
+   validate_build_common(prog, num_devs, d_devs, pfn_notify, user_data);
+
+   try {
+      prog().link(devs, opts, progs);
+      ret_error(r_errcode, CL_SUCCESS);
+
+   } catch (build_error &e) {
+      ret_error(r_errcode, CL_LINK_PROGRAM_FAILURE);
+   }
+
+   return ret_object(prog);
+
+} catch (invalid_build_options_error &e) {
+   ret_error(r_errcode, CL_INVALID_LINKER_OPTIONS);
+   return NULL;
+
+} catch (error &e) {
+   ret_error(r_errcode, e);
    return NULL;
 }
 
