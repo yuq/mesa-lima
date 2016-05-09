@@ -168,6 +168,12 @@ brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
 {
    switch (op) {
    case BRW_OPCODE_ILLEGAL ... BRW_OPCODE_NOP:
+      /* The DO instruction doesn't exist on Gen6+, but we use it to mark the
+       * start of a loop in the IR.
+       */
+      if (devinfo->gen >= 6 && op == BRW_OPCODE_DO)
+         return "do";
+
       assert(brw_opcode_desc(devinfo, op)->name);
       return brw_opcode_desc(devinfo, op)->name;
    case FS_OPCODE_FB_WRITE:
