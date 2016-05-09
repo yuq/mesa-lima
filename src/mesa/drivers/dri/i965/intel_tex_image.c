@@ -135,6 +135,33 @@ intelTexImage(struct gl_context * ctx,
 }
 
 
+static void
+intel_set_texture_image_mt(struct brw_context *brw,
+                           struct gl_texture_image *image,
+                           struct intel_mipmap_tree *mt)
+
+{
+   const uint32_t internal_format = _mesa_get_format_base_format(mt->format);
+   struct gl_texture_object *texobj = image->TexObject;
+   struct intel_texture_object *intel_texobj = intel_texture_object(texobj);
+   struct intel_texture_image *intel_image = intel_texture_image(image);
+
+   _mesa_init_teximage_fields(&brw->ctx, image,
+			      mt->logical_width0, mt->logical_height0, 1,
+			      0, internal_format, mt->format);
+
+   brw->ctx.Driver.FreeTextureImageBuffer(&brw->ctx, image);
+
+   intel_texobj->needs_validate = true;
+   intel_image->base.RowStride = mt->pitch / mt->cpp;
+   assert(mt->pitch % mt->cpp == 0);
+
+   intel_miptree_reference(&intel_image->mt, mt);
+
+   /* Immediately validate the image to the object. */
+   intel_miptree_reference(&intel_texobj->mt, mt);
+}
+
 /**
  * Binds a BO to a texture image, as if it was uploaded by glTexImage2D().
  *
@@ -154,29 +181,21 @@ intel_set_texture_image_bo(struct gl_context *ctx,
                            uint32_t layout_flags)
 {
    struct brw_context *brw = brw_context(ctx);
-   struct intel_texture_image *intel_image = intel_texture_image(image);
-   struct gl_texture_object *texobj = image->TexObject;
-   struct intel_texture_object *intel_texobj = intel_texture_object(texobj);
    uint32_t draw_x, draw_y;
+   struct intel_mipmap_tree *mt;
 
-   _mesa_init_teximage_fields(&brw->ctx, image,
-			      width, height, 1,
-			      0, internalFormat, format);
-
-   ctx->Driver.FreeTextureImageBuffer(ctx, image);
-
-   intel_image->mt = intel_miptree_create_for_bo(brw, bo, image->TexFormat,
-                                                 0, width, height, 1, pitch,
-                                                 layout_flags);
-   if (intel_image->mt == NULL)
+   mt = intel_miptree_create_for_bo(brw, bo, image->TexFormat,
+                                    0, width, height, 1, pitch,
+                                    layout_flags);
+   if (mt == NULL)
        return;
-   intel_image->mt->target = target;
-   intel_image->mt->total_width = width;
-   intel_image->mt->total_height = height;
-   intel_image->mt->level[0].slice[0].x_offset = tile_x;
-   intel_image->mt->level[0].slice[0].y_offset = tile_y;
+   mt->target = target;
+   mt->total_width = width;
+   mt->total_height = height;
+   mt->level[0].slice[0].x_offset = tile_x;
+   mt->level[0].slice[0].y_offset = tile_y;
 
-   intel_miptree_get_tile_offsets(intel_image->mt, 0, 0, &draw_x, &draw_y);
+   intel_miptree_get_tile_offsets(mt, 0, 0, &draw_x, &draw_y);
 
    /* From "OES_EGL_image" error reporting. We report GL_INVALID_OPERATION
     * for EGL images from non-tile aligned sufaces in gen4 hw and earlier which has
@@ -185,18 +204,14 @@ intel_set_texture_image_bo(struct gl_context *ctx,
    if (!brw->has_surface_tile_offset &&
        (draw_x != 0 || draw_y != 0)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, __func__);
-      intel_miptree_release(&intel_image->mt);
+      intel_miptree_release(&mt);
       return;
    }
 
-   intel_texobj->needs_validate = true;
+   mt->offset = offset;
 
-   intel_image->mt->offset = offset;
-   assert(pitch % intel_image->mt->cpp == 0);
-   intel_image->base.RowStride = pitch / intel_image->mt->cpp;
-
-   /* Immediately validate the image to the object. */
-   intel_miptree_reference(&intel_texobj->mt, intel_image->mt);
+   intel_set_texture_image_mt(brw, image, mt);
+   intel_miptree_release(&mt);
 }
 
 void
