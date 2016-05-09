@@ -665,6 +665,15 @@ _mesa_validate_DrawTransformFeedback(struct gl_context *ctx,
       return GL_FALSE;
    }
 
+   /* From the GL 4.5 specification, page 429:
+    * "An INVALID_VALUE error is generated if id is not the name of a
+    *  transform feedback object."
+    */
+   if (!obj->EverBound) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glDrawTransformFeedback*(name)");
+      return GL_FALSE;
+   }
+
    if (stream >= ctx->Const.MaxVertexStreams) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "glDrawTransformFeedbackStream*(index>=MaxVertexStream)");

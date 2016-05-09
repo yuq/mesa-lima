@@ -176,9 +176,13 @@ get_label_pointer(struct gl_context *ctx, GLenum identifier, GLuint name,
       break;
    case GL_TRANSFORM_FEEDBACK:
       {
+         /* From the GL 4.5 specification, page 536:
+          * "An INVALID_VALUE error is generated if name is not the name of a
+          *  valid object of the type specified by identifier."
+          */
          struct gl_transform_feedback_object *tfo =
             _mesa_lookup_transform_feedback_object(ctx, name);
-         if (tfo)
+         if (tfo && tfo->EverBound)
             labelPtr = &tfo->Label;
       }
       break;
