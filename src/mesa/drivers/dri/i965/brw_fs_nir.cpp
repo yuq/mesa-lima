@@ -2781,8 +2781,8 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
          if (imm_offset < max_push_slots) {
             fs_reg src = fs_reg(ATTR, imm_offset / 2, dest.type);
             for (int i = 0; i < instr->num_components; i++) {
-               bld.MOV(offset(dest, bld, i),
-                       component(src, 4 * (imm_offset % 2) + i));
+               unsigned comp = 16 / type_sz(dest.type) * (imm_offset % 2) + i;
+               bld.MOV(offset(dest, bld, i), component(src, comp));
             }
             tes_prog_data->base.urb_read_length =
                MAX2(tes_prog_data->base.urb_read_length,
