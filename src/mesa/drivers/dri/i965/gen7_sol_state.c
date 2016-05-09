@@ -485,7 +485,8 @@ gen7_end_transform_feedback(struct gl_context *ctx,
       (struct brw_transform_feedback_object *) obj;
 
    /* Store the ending value of the SO_NUM_PRIMS_WRITTEN counters. */
-   gen7_save_primitives_written_counters(brw, brw_obj);
+   if (!obj->Paused)
+      gen7_save_primitives_written_counters(brw, brw_obj);
 
    /* EndTransformFeedback() means that we need to update the number of
     * vertices written.  Since it's only necessary if DrawTransformFeedback()
