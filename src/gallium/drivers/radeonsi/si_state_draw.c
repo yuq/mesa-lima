@@ -201,10 +201,8 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	radeon_emit(cs, tcs_in_layout);
 
 	/* Set them for TES. */
-	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 3);
+	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 1);
 	radeon_emit(cs, offchip_layout);
-	radeon_emit(cs, tcs_out_offsets);
-	radeon_emit(cs, tcs_out_layout | (num_tcs_output_cp << 26));
 }
 
 static unsigned si_num_prims_for_vertices(const struct pipe_draw_info *info)

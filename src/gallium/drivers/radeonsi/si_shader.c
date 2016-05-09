@@ -5414,9 +5414,7 @@ static void create_function(struct si_shader_context *ctx)
 
 	case PIPE_SHADER_TESS_EVAL:
 		params[SI_PARAM_TCS_OFFCHIP_LAYOUT] = ctx->i32;
-		params[SI_PARAM_TCS_OUT_OFFSETS] = ctx->i32;
-		params[SI_PARAM_TCS_OUT_LAYOUT] = ctx->i32;
-		num_params = SI_PARAM_TCS_OUT_LAYOUT+1;
+		num_params = SI_PARAM_TCS_OFFCHIP_LAYOUT+1;
 
 		if (shader->key.tes.as_es) {
 			params[ctx->param_oc_lds = num_params++] = ctx->i32;
