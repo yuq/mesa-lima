@@ -72,7 +72,19 @@ struct vl_dri3_screen
    int cur_back;
 
    struct u_rect dirty_areas[BACK_BUFFER_NUM];
+
+   struct vl_dri3_buffer *front_buffer;
+   bool is_pixmap;
 };
+
+static void
+dri3_free_front_buffer(struct vl_dri3_screen *scrn,
+                        struct vl_dri3_buffer *buffer)
+{
+   xcb_sync_destroy_fence(scrn->conn, buffer->sync_fence);
+   xshmfence_unmap_shm(buffer->shm_fence);
+   FREE(buffer);
+}
 
 static void
 dri3_free_back_buffer(struct vl_dri3_screen *scrn,
@@ -282,6 +294,7 @@ dri3_set_drawable(struct vl_dri3_screen *scrn, Drawable drawable)
    xcb_void_cookie_t cookie;
    xcb_generic_error_t *error;
    xcb_present_event_t peid;
+   bool ret = true;
 
    assert(drawable);
 
@@ -305,6 +318,7 @@ dri3_set_drawable(struct vl_dri3_screen *scrn, Drawable drawable)
       scrn->special_event = NULL;
    }
 
+   scrn->is_pixmap = false;
    peid = xcb_generate_id(scrn->conn);
    cookie =
       xcb_present_select_input_checked(scrn->conn, peid, scrn->drawable,
@@ -314,15 +328,103 @@ dri3_set_drawable(struct vl_dri3_screen *scrn, Drawable drawable)
 
    error = xcb_request_check(scrn->conn, cookie);
    if (error) {
+      if (error->error_code != BadWindow)
+         ret = false;
+      else
+         scrn->is_pixmap = true;
       free(error);
-      return false;
    } else
       scrn->special_event =
          xcb_register_for_special_xge(scrn->conn, &xcb_present_id, peid, 0);
 
    dri3_flush_present_events(scrn);
 
-   return true;
+   return ret;
+}
+
+static struct vl_dri3_buffer *
+dri3_get_front_buffer(struct vl_dri3_screen *scrn)
+{
+   xcb_dri3_buffer_from_pixmap_cookie_t bp_cookie;
+   xcb_dri3_buffer_from_pixmap_reply_t *bp_reply;
+   xcb_sync_fence_t sync_fence;
+   struct xshmfence *shm_fence;
+   int fence_fd, *fds;
+   struct winsys_handle whandle;
+   struct pipe_resource templ, *texture = NULL;
+
+   if (scrn->front_buffer) {
+      pipe_resource_reference(&texture, scrn->front_buffer->texture);
+      return scrn->front_buffer;
+   }
+
+   scrn->front_buffer = CALLOC_STRUCT(vl_dri3_buffer);
+   if (!scrn->front_buffer)
+      return NULL;
+
+   fence_fd = xshmfence_alloc_shm();
+   if (fence_fd < 0)
+      goto free_buffer;
+
+   shm_fence = xshmfence_map_shm(fence_fd);
+   if (!shm_fence)
+      goto close_fd;
+
+   bp_cookie = xcb_dri3_buffer_from_pixmap(scrn->conn, scrn->drawable);
+   bp_reply = xcb_dri3_buffer_from_pixmap_reply(scrn->conn, bp_cookie, NULL);
+   if (!bp_reply)
+      goto unmap_shm;
+
+   fds = xcb_dri3_buffer_from_pixmap_reply_fds(scrn->conn, bp_reply);
+   if (fds[0] < 0)
+      goto free_reply;
+
+   memset(&whandle, 0, sizeof(whandle));
+   whandle.type = DRM_API_HANDLE_TYPE_FD;
+   whandle.handle = (unsigned)fds[0];
+   whandle.stride = bp_reply->stride;
+   memset(&templ, 0, sizeof(templ));
+   templ.bind = PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW;
+   templ.format = PIPE_FORMAT_B8G8R8X8_UNORM;
+   templ.target = PIPE_TEXTURE_2D;
+   templ.last_level = 0;
+   templ.width0 = bp_reply->width;
+   templ.height0 = bp_reply->height;
+   templ.depth0 = 1;
+   templ.array_size = 1;
+   scrn->front_buffer->texture =
+      scrn->base.pscreen->resource_from_handle(scrn->base.pscreen,
+                                               &templ, &whandle,
+                                               PIPE_HANDLE_USAGE_READ_WRITE);
+   close(fds[0]);
+   if (!scrn->front_buffer->texture)
+      goto free_reply;
+
+   xcb_dri3_fence_from_fd(scrn->conn,
+                          scrn->drawable,
+                          (sync_fence = xcb_generate_id(scrn->conn)),
+                          false,
+                          fence_fd);
+
+   pipe_resource_reference(&texture, scrn->front_buffer->texture);
+   scrn->front_buffer->pixmap = scrn->drawable;
+   scrn->front_buffer->width = bp_reply->width;
+   scrn->front_buffer->height = bp_reply->height;
+   scrn->front_buffer->shm_fence = shm_fence;
+   scrn->front_buffer->sync_fence = sync_fence;
+   free(bp_reply);
+
+   return scrn->front_buffer;
+
+free_reply:
+   free(bp_reply);
+unmap_shm:
+   xshmfence_unmap_shm(shm_fence);
+close_fd:
+   close(fence_fd);
+free_buffer:
+   FREE(scrn->front_buffer);
+   return NULL;
 }
 
 static void
@@ -366,7 +468,9 @@ vl_dri3_screen_texture_from_drawable(struct vl_screen *vscreen, void *drawable)
    if (!dri3_set_drawable(scrn, (Drawable)drawable))
       return NULL;
 
-   buffer = dri3_get_back_buffer(scrn);
+   buffer = (scrn->is_pixmap) ?
+            dri3_get_front_buffer(scrn) :
+            dri3_get_back_buffer(scrn);
    if (!buffer)
       return NULL;
 
@@ -412,6 +516,12 @@ vl_dri3_screen_destroy(struct vl_screen *vscreen)
    assert(vscreen);
 
    dri3_flush_present_events(scrn);
+
+   if (scrn->front_buffer) {
+      dri3_free_front_buffer(scrn, scrn->front_buffer);
+      scrn->front_buffer = NULL;
+      return;
+   }
 
    for (i = 0; i < BACK_BUFFER_NUM; ++i) {
       if (scrn->back_buffers[i]) {
