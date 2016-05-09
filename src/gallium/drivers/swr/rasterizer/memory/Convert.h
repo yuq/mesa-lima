@@ -32,6 +32,8 @@
 #pragma warning(disable: 4723)
 #endif
 
+#include <cmath>
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Convert an IEEE 754 16-bit float to an 32-bit single precision
 ///        float
