@@ -464,6 +464,12 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
    return true;
 }
 
+static void amdgpu_ib_finalize(struct amdgpu_ib *ib)
+{
+   ib->used_ib_space += ib->base.current.cdw * 4;
+   ib->max_ib_size = MAX2(ib->max_ib_size, ib->base.prev_dw + ib->base.current.cdw);
+}
+
 static boolean amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
                                       enum ring_type ring_type)
 {
@@ -919,22 +925,16 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
 
       /* Set IB sizes. */
       cur->ib[IB_MAIN].size = cs->main.base.current.cdw;
-      cs->main.used_ib_space += cs->main.base.current.cdw * 4;
-      cs->main.max_ib_size = MAX2(cs->main.max_ib_size, cs->main.base.prev_dw + cs->main.base.current.cdw);
+      amdgpu_ib_finalize(&cs->main);
 
       if (cs->const_ib.ib_mapped) {
          cur->ib[IB_CONST].size = cs->const_ib.base.current.cdw;
-         cs->const_ib.used_ib_space += cs->const_ib.base.current.cdw * 4;
-         cs->const_ib.max_ib_size =
-            MAX2(cs->const_ib.max_ib_size, cs->main.base.prev_dw + cs->const_ib.base.current.cdw);
+         amdgpu_ib_finalize(&cs->const_ib);
       }
 
       if (cs->const_preamble_ib.ib_mapped) {
          cur->ib[IB_CONST_PREAMBLE].size = cs->const_preamble_ib.base.current.cdw;
-         cs->const_preamble_ib.used_ib_space += cs->const_preamble_ib.base.current.cdw * 4;
-         cs->const_preamble_ib.max_ib_size =
-            MAX2(cs->const_preamble_ib.max_ib_size,
-                 cs->const_preamble_ib.base.prev_dw + cs->const_preamble_ib.base.current.cdw);
+         amdgpu_ib_finalize(&cs->const_preamble_ib);
       }
 
       /* Create a fence. */
