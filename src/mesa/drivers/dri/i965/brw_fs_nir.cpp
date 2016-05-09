@@ -3692,7 +3692,20 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       assert(const_offset && "Indirect output stores not allowed");
       new_dest = offset(new_dest, bld, const_offset->u32[0]);
 
-      for (unsigned j = 0; j < instr->num_components; j++) {
+      unsigned num_components = instr->num_components;
+      unsigned bit_size = instr->src[0].is_ssa ?
+         instr->src[0].ssa->bit_size : instr->src[0].reg.reg->bit_size;
+      if (bit_size == 64) {
+         fs_reg tmp =
+            fs_reg(VGRF, alloc.allocate(2 * num_components),
+                   BRW_REGISTER_TYPE_F);
+         shuffle_64bit_data_for_32bit_write(
+            bld, tmp, retype(src, BRW_REGISTER_TYPE_DF), num_components);
+         src = retype(tmp, src.type);
+         num_components *= 2;
+      }
+
+      for (unsigned j = 0; j < num_components; j++) {
          bld.MOV(offset(new_dest, bld, j), offset(src, bld, j));
       }
       break;
