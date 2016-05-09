@@ -95,27 +95,29 @@ tally_prims_written(struct brw_context *brw,
                             I915_GEM_DOMAIN_INSTRUCTION,
                             I915_GEM_DOMAIN_INSTRUCTION,
                             TALLY_OFFSET + i * sizeof(uint32_t));
-      /* GPR1 = Start Snapshot */
-      brw_load_register_mem64(brw, HSW_CS_GPR(1), obj->prim_count_bo,
-                              I915_GEM_DOMAIN_INSTRUCTION,
-                              I915_GEM_DOMAIN_INSTRUCTION,
-                              START_OFFSET + i * sizeof(uint64_t));
-      /* GPR2 = Ending Snapshot */
-      brw_load_register_reg64(brw, GEN7_SO_NUM_PRIMS_WRITTEN(i), HSW_CS_GPR(2));
+      if (!obj->base.Paused) {
+         /* GPR1 = Start Snapshot */
+         brw_load_register_mem64(brw, HSW_CS_GPR(1), obj->prim_count_bo,
+                                 I915_GEM_DOMAIN_INSTRUCTION,
+                                 I915_GEM_DOMAIN_INSTRUCTION,
+                                 START_OFFSET + i * sizeof(uint64_t));
+         /* GPR2 = Ending Snapshot */
+         brw_load_register_reg64(brw, GEN7_SO_NUM_PRIMS_WRITTEN(i), HSW_CS_GPR(2));
 
-      BEGIN_BATCH(9);
-      OUT_BATCH(HSW_MI_MATH | (9 - 2));
-      /* GPR1 = GPR2 (End) - GPR1 (Start) */
-      OUT_BATCH(MI_MATH_ALU2(LOAD, SRCA, R2));
-      OUT_BATCH(MI_MATH_ALU2(LOAD, SRCB, R1));
-      OUT_BATCH(MI_MATH_ALU0(SUB));
-      OUT_BATCH(MI_MATH_ALU2(STORE, R1, ACCU));
-      /* GPR0 = GPR0 (Tally) + GPR1 (Diff) */
-      OUT_BATCH(MI_MATH_ALU2(LOAD, SRCA, R0));
-      OUT_BATCH(MI_MATH_ALU2(LOAD, SRCB, R1));
-      OUT_BATCH(MI_MATH_ALU0(ADD));
-      OUT_BATCH(MI_MATH_ALU2(STORE, R0, ACCU));
-      ADVANCE_BATCH();
+         BEGIN_BATCH(9);
+         OUT_BATCH(HSW_MI_MATH | (9 - 2));
+         /* GPR1 = GPR2 (End) - GPR1 (Start) */
+         OUT_BATCH(MI_MATH_ALU2(LOAD, SRCA, R2));
+         OUT_BATCH(MI_MATH_ALU2(LOAD, SRCB, R1));
+         OUT_BATCH(MI_MATH_ALU0(SUB));
+         OUT_BATCH(MI_MATH_ALU2(STORE, R1, ACCU));
+         /* GPR0 = GPR0 (Tally) + GPR1 (Diff) */
+         OUT_BATCH(MI_MATH_ALU2(LOAD, SRCA, R0));
+         OUT_BATCH(MI_MATH_ALU2(LOAD, SRCB, R1));
+            OUT_BATCH(MI_MATH_ALU0(ADD));
+         OUT_BATCH(MI_MATH_ALU2(STORE, R0, ACCU));
+         ADVANCE_BATCH();
+      }
 
       if (!finalize) {
          /* Write back the new tally */
