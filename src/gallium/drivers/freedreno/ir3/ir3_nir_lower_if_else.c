@@ -304,7 +304,7 @@ lower_if_else_impl(nir_function_impl *impl)
 	nir_builder_init(&b, impl);
 
 	bool progress = false;
-	nir_foreach_block(block, impl) {
+	nir_foreach_block_safe(block, impl) {
 		progress |= lower_if_else_block(block, &b, mem_ctx);
 	}
 
