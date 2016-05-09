@@ -152,6 +152,7 @@ swr_get_query_result(struct pipe_context *pipe,
       break;
    case PIPE_QUERY_PRIMITIVES_GENERATED:
       result->u64 = end->core.IaPrimitives - start->core.IaPrimitives;
+      break;
    case PIPE_QUERY_PRIMITIVES_EMITTED:
       result->u64 = end->core.SoNumPrimsWritten[index]
          - start->core.SoNumPrimsWritten[index];
