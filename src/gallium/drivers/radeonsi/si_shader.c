@@ -5186,6 +5186,7 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
+		params[SI_PARAM_TCS_OFFCHIP_LAYOUT] = ctx->i32;
 		params[SI_PARAM_TCS_OUT_OFFSETS] = ctx->i32;
 		params[SI_PARAM_TCS_OUT_LAYOUT] = ctx->i32;
 		params[SI_PARAM_TCS_IN_LAYOUT] = ctx->i32;
@@ -5211,6 +5212,7 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
+		params[SI_PARAM_TCS_OFFCHIP_LAYOUT] = ctx->i32;
 		params[SI_PARAM_TCS_OUT_OFFSETS] = ctx->i32;
 		params[SI_PARAM_TCS_OUT_LAYOUT] = ctx->i32;
 		num_params = SI_PARAM_TCS_OUT_LAYOUT+1;
@@ -6768,6 +6770,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 	params[SI_PARAM_SAMPLERS] = ctx.i64;
 	params[SI_PARAM_IMAGES] = ctx.i64;
 	params[SI_PARAM_SHADER_BUFFERS] = ctx.i64;
+	params[SI_PARAM_TCS_OFFCHIP_LAYOUT] = ctx.i32;
 	params[SI_PARAM_TCS_OUT_OFFSETS] = ctx.i32;
 	params[SI_PARAM_TCS_OUT_LAYOUT] = ctx.i32;
 	params[SI_PARAM_TCS_IN_LAYOUT] = ctx.i32;

@@ -108,6 +108,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	unsigned input_patch_size, output_patch_size, output_patch0_offset;
 	unsigned perpatch_output_offset, lds_size, ls_rsrc2;
 	unsigned tcs_in_layout, tcs_out_layout, tcs_out_offsets;
+	unsigned offchip_layout;
 
 	*num_patches = 1; /* TODO: calculate this */
 
@@ -183,6 +184,8 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 			 ((output_vertex_size / 4) << 13);
 	tcs_out_offsets = (output_patch0_offset / 16) |
 			  ((perpatch_output_offset / 16) << 16);
+	offchip_layout = (pervertex_output_patch_size * *num_patches << 16) |
+			 (num_tcs_output_cp << 9) | *num_patches;
 
 	/* Set them for LS. */
 	radeon_set_sh_reg(cs,
@@ -191,13 +194,15 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 
 	/* Set them for TCS. */
 	radeon_set_sh_reg_seq(cs,
-		R_00B430_SPI_SHADER_USER_DATA_HS_0 + SI_SGPR_TCS_OUT_OFFSETS * 4, 3);
+		R_00B430_SPI_SHADER_USER_DATA_HS_0 + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 4);
+	radeon_emit(cs, offchip_layout);
 	radeon_emit(cs, tcs_out_offsets);
 	radeon_emit(cs, tcs_out_layout | (num_tcs_input_cp << 26));
 	radeon_emit(cs, tcs_in_layout);
 
 	/* Set them for TES. */
-	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OUT_OFFSETS * 4, 2);
+	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 3);
+	radeon_emit(cs, offchip_layout);
 	radeon_emit(cs, tcs_out_offsets);
 	radeon_emit(cs, tcs_out_layout | (num_tcs_output_cp << 26));
 }
