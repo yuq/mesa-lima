@@ -505,12 +505,12 @@ _mesa_EndTransformFeedback(void)
    FLUSH_VERTICES(ctx, 0);
    ctx->NewDriverState |= ctx->DriverFlags.NewTransformFeedback;
 
+   assert(ctx->Driver.EndTransformFeedback);
+   ctx->Driver.EndTransformFeedback(ctx, obj);
+
    ctx->TransformFeedback.CurrentObject->Active = GL_FALSE;
    ctx->TransformFeedback.CurrentObject->Paused = GL_FALSE;
    ctx->TransformFeedback.CurrentObject->EndedAnytime = GL_TRUE;
-
-   assert(ctx->Driver.EndTransformFeedback);
-   ctx->Driver.EndTransformFeedback(ctx, obj);
 }
 
 
@@ -1173,10 +1173,10 @@ _mesa_PauseTransformFeedback(void)
    FLUSH_VERTICES(ctx, 0);
    ctx->NewDriverState |= ctx->DriverFlags.NewTransformFeedback;
 
-   obj->Paused = GL_TRUE;
-
    assert(ctx->Driver.PauseTransformFeedback);
    ctx->Driver.PauseTransformFeedback(ctx, obj);
+
+   obj->Paused = GL_TRUE;
 }
 
 
