@@ -75,6 +75,10 @@ struct vl_dri3_screen
 
    struct vl_dri3_buffer *front_buffer;
    bool is_pixmap;
+
+   uint32_t send_msc_serial, recv_msc_serial;
+   uint64_t send_sbc, recv_sbc;
+   int64_t last_ust, ns_frame, last_msc, next_msc;
 };
 
 static void
@@ -98,6 +102,19 @@ dri3_free_back_buffer(struct vl_dri3_screen *scrn,
 }
 
 static void
+dri3_handle_stamps(struct vl_dri3_screen *scrn, uint64_t ust, uint64_t msc)
+{
+   int64_t ust_ns =  ust * 1000;
+
+   if (scrn->last_ust && (ust_ns > scrn->last_ust) &&
+       scrn->last_msc && (msc > scrn->last_msc))
+      scrn->ns_frame = (ust_ns - scrn->last_ust) / (msc - scrn->last_msc);
+
+   scrn->last_ust = ust_ns;
+   scrn->last_msc = msc;
+}
+
+static void
 dri3_handle_present_event(struct vl_dri3_screen *scrn,
                           xcb_present_generic_event_t *ge)
 {
@@ -109,7 +126,16 @@ dri3_handle_present_event(struct vl_dri3_screen *scrn,
       break;
    }
    case XCB_PRESENT_COMPLETE_NOTIFY: {
-      /* TODO */
+      xcb_present_complete_notify_event_t *ce = (void *) ge;
+      if (ce->kind == XCB_PRESENT_COMPLETE_KIND_PIXMAP) {
+         scrn->recv_sbc = (scrn->send_sbc & 0xffffffff00000000LL) | ce->serial;
+         if (scrn->recv_sbc > scrn->send_sbc)
+            scrn->recv_sbc -= 0x100000000;
+         dri3_handle_stamps(scrn, ce->ust, ce->msc);
+      } else if (ce->kind == XCB_PRESENT_COMPLETE_KIND_NOTIFY_MSC) {
+         scrn->recv_msc_serial = ce->serial;
+         dri3_handle_stamps(scrn, ce->ust, ce->msc);
+      }
       break;
    }
    case XCB_PRESENT_EVENT_IDLE_NOTIFY: {
