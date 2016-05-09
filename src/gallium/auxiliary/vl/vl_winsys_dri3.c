@@ -41,6 +41,7 @@
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
 
+#include "vl/vl_compositor.h"
 #include "vl/vl_winsys.h"
 
 #define BACK_BUFFER_NUM 3
@@ -69,6 +70,8 @@ struct vl_dri3_screen
 
    struct vl_dri3_buffer *back_buffers[BACK_BUFFER_NUM];
    int cur_back;
+
+   struct u_rect dirty_areas[BACK_BUFFER_NUM];
 };
 
 static void
@@ -251,6 +254,7 @@ dri3_get_back_buffer(struct vl_dri3_screen *scrn)
       if (!buffer)
          return NULL;
 
+      vl_compositor_reset_dirty_area(&scrn->dirty_areas[scrn->cur_back]);
       scrn->back_buffers[scrn->cur_back] = buffer;
    }
 
@@ -363,8 +367,11 @@ vl_dri3_screen_texture_from_drawable(struct vl_screen *vscreen, void *drawable)
 static struct u_rect *
 vl_dri3_screen_get_dirty_area(struct vl_screen *vscreen)
 {
-   /* TODO */
-   return NULL;
+   struct vl_dri3_screen *scrn = (struct vl_dri3_screen *)vscreen;
+
+   assert(scrn);
+
+   return &scrn->dirty_areas[scrn->cur_back];
 }
 
 static uint64_t
