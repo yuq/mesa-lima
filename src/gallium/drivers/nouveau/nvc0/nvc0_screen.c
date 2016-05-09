@@ -231,9 +231,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
       return (class_3d >= NVE4_3D_CLASS) ? 1 : 0;
    case PIPE_CAP_COMPUTE:
-      if (debug_get_bool_option("NVF0_COMPUTE", false))
-         return 1;
-      return (class_3d <= NVE4_3D_CLASS) ? 1 : 0;
+      return 1;
    case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
       return nouveau_screen(pscreen)->vram_domain & NOUVEAU_BO_VRAM ? 1 : 0;
 
@@ -295,16 +293,12 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_VERTEX:
    case PIPE_SHADER_GEOMETRY:
    case PIPE_SHADER_FRAGMENT:
+   case PIPE_SHADER_COMPUTE:
       break;
    case PIPE_SHADER_TESS_CTRL:
    case PIPE_SHADER_TESS_EVAL:
       if (class_3d >= GM107_3D_CLASS)
          return 0;
-      break;
-   case PIPE_SHADER_COMPUTE:
-      if (!debug_get_bool_option("NVF0_COMPUTE", false))
-         if (class_3d > NVE4_3D_CLASS)
-            return 0;
       break;
    default:
       return 0;
@@ -314,9 +308,6 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_CAP_PREFERRED_IR:
       return PIPE_SHADER_IR_TGSI;
    case PIPE_SHADER_CAP_SUPPORTED_IRS:
-      if (class_3d == NVF0_3D_CLASS &&
-          !debug_get_bool_option("NVF0_COMPUTE", false))
-         return 0;
       return 1 << PIPE_SHADER_IR_TGSI;
    case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
    case PIPE_SHADER_CAP_MAX_ALU_INSTRUCTIONS:
@@ -653,14 +644,11 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
    case 0xd0:
       return nvc0_screen_compute_setup(screen, screen->base.pushbuf);
    case 0xe0:
-      return nve4_screen_compute_setup(screen, screen->base.pushbuf);
    case 0xf0:
    case 0x100:
    case 0x110:
    case 0x120:
-      if (debug_get_bool_option("NVF0_COMPUTE", false))
-         return nve4_screen_compute_setup(screen, screen->base.pushbuf);
-      return 0;
+      return nve4_screen_compute_setup(screen, screen->base.pushbuf);
    default:
       return -1;
    }
