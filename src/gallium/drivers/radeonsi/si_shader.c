@@ -671,6 +671,130 @@ static LLVMValueRef get_dw_address(struct si_shader_context *ctx,
 			    lp_build_const_int32(gallivm, param * 4), "");
 }
 
+/* The offchip buffer layout for TCS->TES is
+ *
+ * - attribute 0 of patch 0 vertex 0
+ * - attribute 0 of patch 0 vertex 1
+ * - attribute 0 of patch 0 vertex 2
+ *   ...
+ * - attribute 0 of patch 1 vertex 0
+ * - attribute 0 of patch 1 vertex 1
+ *   ...
+ * - attribute 1 of patch 0 vertex 0
+ * - attribute 1 of patch 0 vertex 1
+ *   ...
+ * - per patch attribute 0 of patch 0
+ * - per patch attribute 0 of patch 1
+ *   ...
+ *
+ * Note that every attribute has 4 components.
+ */
+static LLVMValueRef get_tcs_tes_buffer_address(struct si_shader_context *ctx,
+                                               LLVMValueRef vertex_index,
+                                               LLVMValueRef param_index)
+{
+	struct gallivm_state *gallivm = ctx->radeon_bld.soa.bld_base.base.gallivm;
+	LLVMValueRef base_addr, vertices_per_patch, num_patches, total_vertices;
+	LLVMValueRef param_stride, constant16;
+
+	vertices_per_patch = unpack_param(ctx, SI_PARAM_TCS_OFFCHIP_LAYOUT, 9, 6);
+	num_patches = unpack_param(ctx, SI_PARAM_TCS_OFFCHIP_LAYOUT, 0, 9);
+	total_vertices = LLVMBuildMul(gallivm->builder, vertices_per_patch,
+	                              num_patches, "");
+
+	constant16 = lp_build_const_int32(gallivm, 16);
+	if (vertex_index) {
+		base_addr = LLVMBuildMul(gallivm->builder, get_rel_patch_id(ctx),
+		                         vertices_per_patch, "");
+
+		base_addr = LLVMBuildAdd(gallivm->builder, base_addr,
+		                         vertex_index, "");
+
+		param_stride = total_vertices;
+	} else {
+		base_addr = get_rel_patch_id(ctx);
+		param_stride = num_patches;
+	}
+
+	base_addr = LLVMBuildAdd(gallivm->builder, base_addr,
+	                         LLVMBuildMul(gallivm->builder, param_index,
+	                                      param_stride, ""), "");
+
+	base_addr = LLVMBuildMul(gallivm->builder, base_addr, constant16, "");
+
+	if (!vertex_index) {
+		LLVMValueRef patch_data_offset =
+		           unpack_param(ctx, SI_PARAM_TCS_OFFCHIP_LAYOUT, 16, 16);
+
+		base_addr = LLVMBuildAdd(gallivm->builder, base_addr,
+		                         patch_data_offset, "");
+	}
+	return base_addr;
+}
+
+static LLVMValueRef get_tcs_tes_buffer_address_from_reg(
+                                       struct si_shader_context *ctx,
+                                       const struct tgsi_full_dst_register *dst,
+                                       const struct tgsi_full_src_register *src)
+{
+	struct gallivm_state *gallivm = ctx->radeon_bld.soa.bld_base.base.gallivm;
+	struct tgsi_shader_info *info = &ctx->shader->selector->info;
+	ubyte *name, *index, *array_first;
+	struct tgsi_full_src_register reg;
+	LLVMValueRef vertex_index = NULL;
+	LLVMValueRef param_index = NULL;
+	unsigned param_index_base, param_base;
+
+	reg = src ? *src : tgsi_full_src_register_from_dst(dst);
+
+	if (reg.Register.Dimension) {
+
+		if (reg.Dimension.Indirect)
+			vertex_index = get_indirect_index(ctx, &reg.DimIndirect,
+			                                  reg.Dimension.Index);
+		else
+			vertex_index = lp_build_const_int32(gallivm,
+			                                    reg.Dimension.Index);
+	}
+
+	/* Get information about the register. */
+	if (reg.Register.File == TGSI_FILE_INPUT) {
+		name = info->input_semantic_name;
+		index = info->input_semantic_index;
+		array_first = info->input_array_first;
+	} else if (reg.Register.File == TGSI_FILE_OUTPUT) {
+		name = info->output_semantic_name;
+		index = info->output_semantic_index;
+		array_first = info->output_array_first;
+	} else {
+		assert(0);
+		return NULL;
+	}
+
+	if (reg.Register.Indirect) {
+		if (reg.Indirect.ArrayID)
+			param_base = array_first[reg.Indirect.ArrayID];
+		else
+			param_base = reg.Register.Index;
+
+		param_index = get_indirect_index(ctx, &reg.Indirect,
+		                                 reg.Register.Index - param_base);
+
+	} else {
+		param_base = reg.Register.Index;
+		param_index = lp_build_const_int32(gallivm, 0);
+	}
+
+	param_index_base = si_shader_io_get_unique_index(name[param_base],
+	                                                 index[param_base]);
+
+	param_index = LLVMBuildAdd(gallivm->builder, param_index,
+	                           lp_build_const_int32(gallivm, param_index_base),
+	                           "");
+
+	return get_tcs_tes_buffer_address(ctx, vertex_index, param_index);
+}
+
 /* TBUFFER_STORE_FORMAT_{X,XY,XYZ,XYZW} <- the suffix is selected by num_channels=1..4.
  * The type of vdata must be one of i32 (num_channels=1), v2i32 (num_channels=2),
  * or v4i32 (num_channels=3,4). */
