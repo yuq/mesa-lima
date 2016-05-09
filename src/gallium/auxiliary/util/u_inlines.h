@@ -650,6 +650,18 @@ util_max_layer(const struct pipe_resource *r, unsigned level)
    }
 }
 
+static inline bool
+util_texrange_covers_whole_level(const struct pipe_resource *tex,
+                                 unsigned level, unsigned x, unsigned y,
+                                 unsigned z, unsigned width,
+                                 unsigned height, unsigned depth)
+{
+   return x == 0 && y == 0 && z == 0 &&
+          width == u_minify(tex->width0, level) &&
+          height == u_minify(tex->height0, level) &&
+          depth == util_max_layer(tex, level) + 1;
+}
+
 #ifdef __cplusplus
 }
 #endif
