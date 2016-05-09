@@ -1991,7 +1991,6 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
       /* This input was pushed into registers. */
       if (is_point_size) {
          /* gl_PointSize comes in .w */
-         assert(imm_offset == 0);
          bld.MOV(dst, fs_reg(ATTR, imm_offset + 3, dst.type));
       } else {
          for (unsigned i = 0; i < num_components; i++) {
