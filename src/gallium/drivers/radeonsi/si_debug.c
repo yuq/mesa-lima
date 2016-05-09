@@ -185,8 +185,8 @@ static void si_dump_reg(FILE *file, unsigned offset, uint32_t value,
 {
 	int r, f;
 
-	for (r = 0; r < ARRAY_SIZE(reg_table); r++) {
-		const struct si_reg *reg = &reg_table[r];
+	for (r = 0; r < ARRAY_SIZE(sid_reg_table); r++) {
+		const struct si_reg *reg = &sid_reg_table[r];
 		const char *reg_name = sid_strings + reg->name_offset;
 
 		if (reg->offset == offset) {

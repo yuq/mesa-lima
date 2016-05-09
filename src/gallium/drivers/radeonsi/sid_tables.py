@@ -262,7 +262,7 @@ struct si_packet3 {
     print '};'
     print
 
-    print 'static const struct si_reg reg_table[] = {'
+    print 'static const struct si_reg sid_reg_table[] = {'
     for reg in regs:
         if len(reg.fields):
             print '\t{%s, %s, %s, %s},' % (strings.add(reg.name), reg.r_name,
