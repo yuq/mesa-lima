@@ -128,18 +128,20 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
       const VkOffset3D img_offset_el =
          meta_region_offset_el(image, &pRegions[r].imageOffset);
       const VkExtent3D bufferExtent = {
-         .width = pRegions[r].bufferRowLength,
-         .height = pRegions[r].bufferImageHeight,
+         .width  = pRegions[r].bufferRowLength ?
+                   pRegions[r].bufferRowLength : pRegions[r].imageExtent.width,
+         .height = pRegions[r].bufferImageHeight ?
+                   pRegions[r].bufferImageHeight : pRegions[r].imageExtent.height,
       };
-
-      /* Start creating blit rect */
       const VkExtent3D buf_extent_el =
          meta_region_extent_el(image, &bufferExtent);
+
+      /* Start creating blit rect */
       const VkExtent3D img_extent_el =
          meta_region_extent_el(image, &pRegions[r].imageExtent);
       struct anv_meta_blit2d_rect rect = {
-         .width = MAX2(buf_extent_el.width, img_extent_el.width),
-         .height = MAX2(buf_extent_el.height, img_extent_el.height),
+         .width = img_extent_el.width,
+         .height =  img_extent_el.height,
       };
 
       /* Create blit surfaces */
@@ -153,7 +155,7 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
          .tiling = ISL_TILING_LINEAR,
          .base_offset = buffer->offset + pRegions[r].bufferOffset,
          .bs = forward ? image->format->isl_layout->bs : img_bsurf.bs,
-         .pitch = rect.width * buf_bsurf.bs,
+         .pitch = buf_extent_el.width * buf_bsurf.bs,
       };
 
       /* Set direction-dependent variables */
@@ -188,7 +190,8 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
           * increment the offset directly in the image effectively
           * re-binding it to different backing memory.
           */
-         buf_bsurf.base_offset += rect.width * rect.height * buf_bsurf.bs;
+         buf_bsurf.base_offset += buf_extent_el.width *
+                                  buf_extent_el.height * buf_bsurf.bs;
 
          if (image->type == VK_IMAGE_TYPE_3D)
             slice_3d++;
