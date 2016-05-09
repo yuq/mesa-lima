@@ -79,6 +79,8 @@ struct vl_dri3_screen
    uint32_t send_msc_serial, recv_msc_serial;
    uint64_t send_sbc, recv_sbc;
    int64_t last_ust, ns_frame, last_msc, next_msc;
+
+   bool flushed;
 };
 
 static void
@@ -467,18 +469,29 @@ vl_dri3_flush_frontbuffer(struct pipe_screen *screen,
    if (!back)
        return;
 
+   if (scrn->flushed) {
+      while (scrn->special_event && scrn->recv_sbc < scrn->send_sbc)
+         if (!dri3_wait_present_events(scrn))
+            return;
+   }
+
    xshmfence_reset(back->shm_fence);
    back->busy = true;
 
    xcb_present_pixmap(scrn->conn,
                       scrn->drawable,
                       back->pixmap,
-                      0, 0, 0, 0, 0,
+                      (uint32_t)(++scrn->send_sbc),
+                      0, 0, 0, 0,
                       None, None,
                       back->sync_fence,
-                      options, 0, 0, 0, 0, NULL);
+                      options,
+                      scrn->next_msc,
+                      0, 0, 0, NULL);
 
    xcb_flush(scrn->conn);
+
+   scrn->flushed = true;
 
    return;
 }
@@ -493,6 +506,13 @@ vl_dri3_screen_texture_from_drawable(struct vl_screen *vscreen, void *drawable)
 
    if (!dri3_set_drawable(scrn, (Drawable)drawable))
       return NULL;
+
+   if (scrn->flushed) {
+      while (scrn->special_event && scrn->recv_sbc < scrn->send_sbc)
+         if (!dri3_wait_present_events(scrn))
+            return NULL;
+   }
+   scrn->flushed = false;
 
    buffer = (scrn->is_pixmap) ?
             dri3_get_front_buffer(scrn) :
@@ -516,15 +536,42 @@ vl_dri3_screen_get_dirty_area(struct vl_screen *vscreen)
 static uint64_t
 vl_dri3_screen_get_timestamp(struct vl_screen *vscreen, void *drawable)
 {
-   /* TODO */
-   return 0;
+   struct vl_dri3_screen *scrn = (struct vl_dri3_screen *)vscreen;
+
+   assert(scrn);
+
+   if (!dri3_set_drawable(scrn, (Drawable)drawable))
+      return 0;
+
+   if (!scrn->last_ust) {
+      xcb_present_notify_msc(scrn->conn,
+                             scrn->drawable,
+                             ++scrn->send_msc_serial,
+                             0, 0, 0);
+      xcb_flush(scrn->conn);
+
+      while (scrn->special_event &&
+             scrn->send_msc_serial > scrn->recv_msc_serial) {
+         if (!dri3_wait_present_events(scrn))
+            return 0;
+      }
+   }
+
+   return scrn->last_ust;
 }
 
 static void
 vl_dri3_screen_set_next_timestamp(struct vl_screen *vscreen, uint64_t stamp)
 {
-   /* TODO */
-   return;
+   struct vl_dri3_screen *scrn = (struct vl_dri3_screen *)vscreen;
+
+   assert(scrn);
+
+   if (stamp && scrn->last_ust && scrn->ns_frame && scrn->last_msc)
+      scrn->next_msc = ((int64_t)stamp - scrn->last_ust + scrn->ns_frame/2) /
+                       scrn->ns_frame + scrn->last_msc;
+   else
+      scrn->next_msc = 0;
 }
 
 static void *
