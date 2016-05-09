@@ -237,7 +237,7 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
    }
 
    if (hwtnl->api_fillmode != PIPE_POLYGON_MODE_FILL &&
-       prim >= PIPE_PRIM_TRIANGLES) {
+       u_reduced_prim(prim) == PIPE_PRIM_TRIANGLES) {
       /* Convert unfilled polygons into points, lines, triangles */
       gen_type = u_unfilled_generator(prim,
                                       start,

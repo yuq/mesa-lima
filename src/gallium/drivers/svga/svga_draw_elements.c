@@ -139,7 +139,7 @@ svga_hwtnl_draw_range_elements(struct svga_hwtnl *hwtnl,
    enum pipe_error ret = PIPE_OK;
 
    if (hwtnl->api_fillmode != PIPE_POLYGON_MODE_FILL &&
-       prim >= PIPE_PRIM_TRIANGLES) {
+       u_reduced_prim(prim) == PIPE_PRIM_TRIANGLES) {
       gen_type = u_unfilled_translator(prim,
                                        index_size,
                                        count,
