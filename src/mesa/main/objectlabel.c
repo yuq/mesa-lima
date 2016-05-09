@@ -196,7 +196,7 @@ get_label_pointer(struct gl_context *ctx, GLenum identifier, GLuint name,
    case GL_TEXTURE:
       {
          struct gl_texture_object *texObj = _mesa_lookup_texture(ctx, name);
-         if (texObj)
+         if (texObj && texObj->Target)
             labelPtr = &texObj->Label;
       }
       break;
