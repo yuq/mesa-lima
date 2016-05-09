@@ -2332,34 +2332,82 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
                   brw_imm_ud(4 * REG_SIZE));
       }
 
-      if (indirect_offset.file == BAD_FILE) {
-         /* Constant indexing - use global offset. */
-         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, icp_handle);
-         inst->offset = imm_offset;
-         inst->mlen = 1;
-         inst->base_mrf = -1;
-         inst->regs_written = instr->num_components;
-      } else {
-         /* Indirect indexing - use per-slot offsets as well. */
-         const fs_reg srcs[] = { icp_handle, indirect_offset };
-         fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
-         bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
+      /* We can only read two double components with each URB read, so
+       * we send two read messages in that case, each one loading up to
+       * two double components.
+       */
+      unsigned num_iterations = 1;
+      unsigned num_components = instr->num_components;
+      fs_reg orig_dst = dst;
+      if (type_sz(dst.type) == 8) {
+         if (instr->num_components > 2) {
+            num_iterations = 2;
+            num_components = 2;
+         }
 
-         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst, payload);
-         inst->offset = imm_offset;
-         inst->base_mrf = -1;
-         inst->mlen = 2;
-         inst->regs_written = instr->num_components;
+         fs_reg tmp = fs_reg(VGRF, alloc.allocate(4), dst.type);
+         dst = tmp;
       }
 
-      /* Copy the temporary to the destination to deal with writemasking.
-       *
-       * Also attempt to deal with gl_PointSize being in the .w component.
-       */
-      if (inst->offset == 0 && indirect_offset.file == BAD_FILE) {
-         inst->dst = bld.vgrf(dst.type, 4);
-         inst->regs_written = 4;
-         bld.MOV(dst, offset(inst->dst, bld, 3));
+      for (unsigned iter = 0; iter < num_iterations; iter++) {
+         if (indirect_offset.file == BAD_FILE) {
+            /* Constant indexing - use global offset. */
+            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, icp_handle);
+            inst->offset = imm_offset;
+            inst->mlen = 1;
+            inst->base_mrf = -1;
+         } else {
+            /* Indirect indexing - use per-slot offsets as well. */
+            const fs_reg srcs[] = { icp_handle, indirect_offset };
+            fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+            bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
+
+            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst, payload);
+            inst->offset = imm_offset;
+            inst->base_mrf = -1;
+            inst->mlen = 2;
+         }
+         inst->regs_written = num_components * type_sz(dst.type) / 4;
+
+         /* If we are reading 64-bit data using 32-bit read messages we need
+          * build proper 64-bit data elements by shuffling the low and high
+          * 32-bit components around like we do for other things like UBOs
+          * or SSBOs.
+          */
+         if (type_sz(dst.type) == 8) {
+            shuffle_32bit_load_result_to_64bit_data(
+               bld, dst, retype(dst, BRW_REGISTER_TYPE_F), num_components);
+
+            for (unsigned c = 0; c < num_components; c++) {
+               bld.MOV(offset(orig_dst, bld, iter * 2 + c),
+                       offset(dst, bld, c));
+            }
+         }
+
+         /* Copy the temporary to the destination to deal with writemasking.
+          *
+          * Also attempt to deal with gl_PointSize being in the .w component.
+          */
+         if (inst->offset == 0 && indirect_offset.file == BAD_FILE) {
+            assert(type_sz(dst.type) < 8);
+            inst->dst = bld.vgrf(dst.type, 4);
+            inst->regs_written = 4;
+            bld.MOV(dst, offset(inst->dst, bld, 3));
+         }
+
+         /* If we are loading double data and we need a second read message
+          * adjust the write offset
+          */
+         if (num_iterations > 1) {
+            num_components = instr->num_components - 2;
+            if (indirect_offset.file == BAD_FILE) {
+               imm_offset++;
+            } else {
+               fs_reg new_indirect = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+               bld.ADD(new_indirect, indirect_offset, brw_imm_ud(1u));
+               indirect_offset = new_indirect;
+            }
+         }
       }
       break;
    }
