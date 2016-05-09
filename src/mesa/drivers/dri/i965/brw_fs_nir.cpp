@@ -2526,6 +2526,8 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
    case nir_intrinsic_store_output:
    case nir_intrinsic_store_per_vertex_output: {
       fs_reg value = get_nir_src(instr->src[0]);
+      bool is_64bit = (instr->src[0].is_ssa ?
+         instr->src[0].ssa->bit_size : instr->src[0].reg.reg->bit_size) == 64;
       fs_reg indirect_offset = get_indirect_offset(instr);
       unsigned imm_offset = instr->const_index[0];
       unsigned swiz = BRW_SWIZZLE_XYZW;
@@ -2593,32 +2595,105 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
       unsigned num_components = _mesa_fls(mask);
       enum opcode opcode;
 
-      if (mask != WRITEMASK_XYZW) {
-         srcs[header_regs++] = brw_imm_ud(mask << 16);
-         opcode = indirect_offset.file != BAD_FILE ?
-            SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT :
-            SHADER_OPCODE_URB_WRITE_SIMD8_MASKED;
-      } else {
-         opcode = indirect_offset.file != BAD_FILE ?
-            SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT :
-            SHADER_OPCODE_URB_WRITE_SIMD8;
+      /* We can only pack two 64-bit components in a single message, so send
+       * 2 messages if we have more components
+       */
+      unsigned num_iterations = 1;
+      unsigned iter_components = num_components;
+      if (is_64bit && instr->num_components > 2) {
+         num_iterations = 2;
+         iter_components = 2;
       }
 
-      for (unsigned i = 0; i < num_components; i++) {
-         if (mask & (1 << i))
-            srcs[header_regs + i] = offset(value, bld, BRW_GET_SWZ(swiz, i));
+      /* 64-bit data needs to me shuffled before we can write it to the URB.
+       * We will use this temporary to shuffle the components in each
+       * iteration.
+       */
+      fs_reg tmp =
+         fs_reg(VGRF, alloc.allocate(2 * iter_components), value.type);
+
+      for (unsigned iter = 0; iter < num_iterations; iter++) {
+         if (!is_64bit && mask != WRITEMASK_XYZW) {
+            srcs[header_regs++] = brw_imm_ud(mask << 16);
+            opcode = indirect_offset.file != BAD_FILE ?
+               SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT :
+               SHADER_OPCODE_URB_WRITE_SIMD8_MASKED;
+         } else if (is_64bit && ((mask & WRITEMASK_XY) != WRITEMASK_XY)) {
+            /* Expand the 64-bit mask to 32-bit channels. We only handle
+             * two channels in each iteration, so we only care about X/Y.
+             */
+            unsigned mask32 = 0;
+            if (mask & WRITEMASK_X)
+               mask32 |= WRITEMASK_XY;
+            if (mask & WRITEMASK_Y)
+               mask32 |= WRITEMASK_ZW;
+
+            /* If the mask does not include any of the channels X or Y there
+             * is nothing to do in this iteration. Move on to the next couple
+             * of 64-bit channels.
+             */
+            if (!mask32) {
+               mask >>= 2;
+               imm_offset++;
+               continue;
+            }
+
+            srcs[header_regs++] = brw_imm_ud(mask32 << 16);
+            opcode = indirect_offset.file != BAD_FILE ?
+               SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT :
+               SHADER_OPCODE_URB_WRITE_SIMD8_MASKED;
+         } else {
+            opcode = indirect_offset.file != BAD_FILE ?
+               SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT :
+               SHADER_OPCODE_URB_WRITE_SIMD8;
+         }
+
+         for (unsigned i = 0; i < iter_components; i++) {
+            if (!(mask & (1 << i)))
+               continue;
+
+            if (!is_64bit) {
+               srcs[header_regs + i] = offset(value, bld, BRW_GET_SWZ(swiz, i));
+            } else {
+               /* We need to shuffle the 64-bit data to match the layout
+                * expected by our 32-bit URB write messages. We use a temporary
+                * for that.
+                */
+               unsigned channel = BRW_GET_SWZ(swiz, iter * 2 + i);
+               shuffle_64bit_data_for_32bit_write(bld,
+                  retype(offset(tmp, bld, 2 * i), BRW_REGISTER_TYPE_F),
+                  retype(offset(value, bld, 2 * channel), BRW_REGISTER_TYPE_DF),
+                  1);
+
+               /* Now copy the data to the destination */
+               fs_reg dest = fs_reg(VGRF, alloc.allocate(2), value.type);
+               unsigned idx = 2 * i;
+               bld.MOV(dest, offset(tmp, bld, idx));
+               bld.MOV(offset(dest, bld, 1), offset(tmp, bld, idx + 1));
+               srcs[header_regs + idx] = dest;
+               srcs[header_regs + idx + 1] = offset(dest, bld, 1);
+            }
+         }
+
+         unsigned mlen =
+            header_regs + (is_64bit ? 2 * iter_components : iter_components);
+         fs_reg payload =
+            bld.vgrf(BRW_REGISTER_TYPE_UD, mlen);
+         bld.LOAD_PAYLOAD(payload, srcs, mlen, header_regs);
+
+         fs_inst *inst = bld.emit(opcode, bld.null_reg_ud(), payload);
+         inst->offset = imm_offset;
+         inst->mlen = mlen;
+         inst->base_mrf = -1;
+
+         /* If this is a 64-bit attribute, select the next two 64-bit channels
+          * to be handled in the next iteration.
+          */
+         if (is_64bit) {
+            mask >>= 2;
+            imm_offset++;
+         }
       }
-
-      unsigned mlen = header_regs + num_components;
-
-      fs_reg payload =
-         bld.vgrf(BRW_REGISTER_TYPE_UD, mlen);
-      bld.LOAD_PAYLOAD(payload, srcs, mlen, header_regs);
-
-      fs_inst *inst = bld.emit(opcode, bld.null_reg_ud(), payload);
-      inst->offset = imm_offset;
-      inst->mlen = mlen;
-      inst->base_mrf = -1;
       break;
    }
 
