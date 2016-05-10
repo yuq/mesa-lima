@@ -28,16 +28,34 @@
 #include <fcntl.h>
 
 #include <X11/Xlib-xcb.h>
+#include <X11/xshmfence.h>
 #include <xcb/dri3.h>
 #include <xcb/present.h>
 
 #include "loader.h"
 
 #include "pipe/p_screen.h"
+#include "pipe/p_state.h"
 #include "pipe-loader/pipe_loader.h"
 
 #include "util/u_memory.h"
+#include "util/u_inlines.h"
+
 #include "vl/vl_winsys.h"
+
+#define BACK_BUFFER_NUM 3
+
+struct vl_dri3_buffer
+{
+   struct pipe_resource *texture;
+
+   uint32_t pixmap;
+   uint32_t sync_fence;
+   struct xshmfence *shm_fence;
+
+   bool busy;
+   uint32_t width, height, pitch;
+};
 
 struct vl_dri3_screen
 {
@@ -48,7 +66,21 @@ struct vl_dri3_screen
    uint32_t width, height, depth;
 
    xcb_special_event_t *special_event;
+
+   struct vl_dri3_buffer *back_buffers[BACK_BUFFER_NUM];
+   int cur_back;
 };
+
+static void
+dri3_free_back_buffer(struct vl_dri3_screen *scrn,
+                        struct vl_dri3_buffer *buffer)
+{
+   xcb_free_pixmap(scrn->conn, buffer->pixmap);
+   xcb_sync_destroy_fence(scrn->conn, buffer->sync_fence);
+   xshmfence_unmap_shm(buffer->shm_fence);
+   pipe_resource_reference(&buffer->texture, NULL);
+   FREE(buffer);
+}
 
 static void
 dri3_handle_present_event(struct vl_dri3_screen *scrn,
@@ -80,6 +112,145 @@ dri3_flush_present_events(struct vl_dri3_screen *scrn)
                    scrn->conn, scrn->special_event)) != NULL)
          dri3_handle_present_event(scrn, (xcb_present_generic_event_t *)ev);
    }
+}
+
+static bool
+dri3_wait_present_events(struct vl_dri3_screen *scrn)
+{
+   if (scrn->special_event) {
+      xcb_generic_event_t *ev;
+      ev = xcb_wait_for_special_event(scrn->conn, scrn->special_event);
+      if (!ev)
+         return false;
+      dri3_handle_present_event(scrn, (xcb_present_generic_event_t *)ev);
+      return true;
+   }
+   return false;
+}
+
+static int
+dri3_find_back(struct vl_dri3_screen *scrn)
+{
+   int b;
+
+   for (;;) {
+      for (b = 0; b < BACK_BUFFER_NUM; b++) {
+         int id = (b + scrn->cur_back) % BACK_BUFFER_NUM;
+         struct vl_dri3_buffer *buffer = scrn->back_buffers[id];
+         if (!buffer || !buffer->busy)
+            return id;
+      }
+      xcb_flush(scrn->conn);
+      if (!dri3_wait_present_events(scrn))
+         return -1;
+   }
+}
+
+static struct vl_dri3_buffer *
+dri3_alloc_back_buffer(struct vl_dri3_screen *scrn)
+{
+   struct vl_dri3_buffer *buffer;
+   xcb_pixmap_t pixmap;
+   xcb_sync_fence_t sync_fence;
+   struct xshmfence *shm_fence;
+   int buffer_fd, fence_fd;
+   struct pipe_resource templ;
+   struct winsys_handle whandle;
+   unsigned usage;
+
+   buffer = CALLOC_STRUCT(vl_dri3_buffer);
+   if (!buffer)
+      return NULL;
+
+   fence_fd = xshmfence_alloc_shm();
+   if (fence_fd < 0)
+      goto free_buffer;
+
+   shm_fence = xshmfence_map_shm(fence_fd);
+   if (!shm_fence)
+      goto close_fd;
+
+   memset(&templ, 0, sizeof(templ));
+   templ.bind = PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW |
+                PIPE_BIND_SCANOUT | PIPE_BIND_SHARED;
+   templ.format = PIPE_FORMAT_B8G8R8X8_UNORM;
+   templ.target = PIPE_TEXTURE_2D;
+   templ.last_level = 0;
+   templ.width0 = scrn->width;
+   templ.height0 = scrn->height;
+   templ.depth0 = 1;
+   templ.array_size = 1;
+   buffer->texture = scrn->base.pscreen->resource_create(scrn->base.pscreen,
+                                                         &templ);
+   if (!buffer->texture)
+      goto unmap_shm;
+
+   memset(&whandle, 0, sizeof(whandle));
+   whandle.type= DRM_API_HANDLE_TYPE_FD;
+   usage = PIPE_HANDLE_USAGE_EXPLICIT_FLUSH | PIPE_HANDLE_USAGE_READ;
+   scrn->base.pscreen->resource_get_handle(scrn->base.pscreen,
+                                           buffer->texture, &whandle,
+                                           usage);
+   buffer_fd = whandle.handle;
+   buffer->pitch = whandle.stride;
+   xcb_dri3_pixmap_from_buffer(scrn->conn,
+                               (pixmap = xcb_generate_id(scrn->conn)),
+                               scrn->drawable,
+                               0,
+                               scrn->width, scrn->height, buffer->pitch,
+                               scrn->depth, 32,
+                               buffer_fd);
+   xcb_dri3_fence_from_fd(scrn->conn,
+                          pixmap,
+                          (sync_fence = xcb_generate_id(scrn->conn)),
+                          false,
+                          fence_fd);
+
+   buffer->pixmap = pixmap;
+   buffer->sync_fence = sync_fence;
+   buffer->shm_fence = shm_fence;
+   buffer->width = scrn->width;
+   buffer->height = scrn->height;
+
+   xshmfence_trigger(buffer->shm_fence);
+
+   return buffer;
+
+unmap_shm:
+   xshmfence_unmap_shm(shm_fence);
+close_fd:
+   close(fence_fd);
+free_buffer:
+   FREE(buffer);
+   return NULL;
+}
+
+static struct vl_dri3_buffer *
+dri3_get_back_buffer(struct vl_dri3_screen *scrn)
+{
+   struct vl_dri3_buffer *buffer;
+   struct pipe_resource *texture = NULL;
+
+   assert(scrn);
+
+   scrn->cur_back = dri3_find_back(scrn);
+   if (scrn->cur_back < 0)
+      return NULL;
+   buffer = scrn->back_buffers[scrn->cur_back];
+
+   if (!buffer) {
+      buffer = dri3_alloc_back_buffer(scrn);
+      if (!buffer)
+         return NULL;
+
+      scrn->back_buffers[scrn->cur_back] = buffer;
+   }
+
+   pipe_resource_reference(&texture, buffer->texture);
+   xcb_flush(scrn->conn);
+   xshmfence_await(buffer->shm_fence);
+
+   return buffer;
 }
 
 static bool
@@ -147,14 +318,18 @@ static struct pipe_resource *
 vl_dri3_screen_texture_from_drawable(struct vl_screen *vscreen, void *drawable)
 {
    struct vl_dri3_screen *scrn = (struct vl_dri3_screen *)vscreen;
+   struct vl_dri3_buffer *buffer;
 
    assert(scrn);
 
    if (!dri3_set_drawable(scrn, (Drawable)drawable))
       return NULL;
 
-   /* TODO */
-   return NULL;
+   buffer = dri3_get_back_buffer(scrn);
+   if (!buffer)
+      return NULL;
+
+   return buffer->texture;
 }
 
 static struct u_rect *
@@ -188,10 +363,18 @@ static void
 vl_dri3_screen_destroy(struct vl_screen *vscreen)
 {
    struct vl_dri3_screen *scrn = (struct vl_dri3_screen *)vscreen;
+   int i;
 
    assert(vscreen);
 
    dri3_flush_present_events(scrn);
+
+   for (i = 0; i < BACK_BUFFER_NUM; ++i) {
+      if (scrn->back_buffers[i]) {
+         dri3_free_back_buffer(scrn, scrn->back_buffers[i]);
+         scrn->back_buffers[i] = NULL;
+      }
+   }
 
    if (scrn->special_event)
       xcb_unregister_for_special_event(scrn->conn, scrn->special_event);
