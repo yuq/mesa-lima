@@ -2138,15 +2138,16 @@ fs_visitor::assign_constant_locations()
    push_constant_loc = ralloc_array(mem_ctx, int, uniforms);
    pull_constant_loc = ralloc_array(mem_ctx, int, uniforms);
 
+   /* Default to -1 meaning no location */
+   memset(push_constant_loc, -1, uniforms * sizeof(*push_constant_loc));
+   memset(pull_constant_loc, -1, uniforms * sizeof(*pull_constant_loc));
+
    int chunk_start = -1;
 
    /* First push 64-bit uniforms to ensure they are properly aligned */
    for (unsigned u = 0; u < uniforms; u++) {
       if (!is_live[u] || !is_live_64bit[u])
          continue;
-
-      pull_constant_loc[u] = -1;
-      push_constant_loc[u] = -1;
 
       set_push_pull_constant_loc(u, &chunk_start, contiguous[u],
                                  push_constant_loc, pull_constant_loc,
@@ -2160,9 +2161,6 @@ fs_visitor::assign_constant_locations()
    for (unsigned u = 0; u < uniforms; u++) {
       if (!is_live[u] || is_live_64bit[u])
          continue;
-
-      pull_constant_loc[u] = -1;
-      push_constant_loc[u] = -1;
 
       set_push_pull_constant_loc(u, &chunk_start, contiguous[u],
                                  push_constant_loc, pull_constant_loc,
