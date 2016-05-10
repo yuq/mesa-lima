@@ -2148,9 +2148,19 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 
 	for (int i = 0; i < ncomp; i++) {
 		unsigned idx = (n * 4) + i;
-
+		compile_assert(ctx, idx < ctx->ir->noutputs);
 		ctx->ir->outputs[idx] = create_immed(ctx->block, fui(0.0));
 	}
+}
+
+static int
+max_drvloc(struct exec_list *vars)
+{
+	int drvloc = -1;
+	nir_foreach_variable(var, vars) {
+		drvloc = MAX2(drvloc, (int)var->data.driver_location);
+	}
+	return drvloc;
 }
 
 static void
@@ -2167,8 +2177,9 @@ emit_instructions(struct ir3_compile *ctx)
 		break;
 	}
 
-	ninputs  = exec_list_length(&ctx->s->inputs) * 4;
-	noutputs = exec_list_length(&ctx->s->outputs) * 4;
+
+	ninputs  = (max_drvloc(&ctx->s->inputs) + 1) * 4;
+	noutputs = (max_drvloc(&ctx->s->outputs) + 1) * 4;
 
 	/* or vtx shaders, we need to leave room for sysvals:
 	 */
