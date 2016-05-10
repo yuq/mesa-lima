@@ -63,7 +63,7 @@ struct gl_memory_info;
  * want to provoke the driver to throw away the old storage, we will
  * respect the contents of already referenced data.
  */
-#define MESA_MAP_NOWAIT_BIT       0x0040
+#define MESA_MAP_NOWAIT_BIT       0x4000
 
 
 /**
