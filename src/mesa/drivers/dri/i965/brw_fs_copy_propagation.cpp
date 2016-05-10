@@ -446,32 +446,32 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    inst->src[arg].stride *= entry->src.stride;
    inst->saturate = inst->saturate || entry->saturate;
 
-         /* Compute the offset of inst->src[arg] relative to entry->dst */
-         const unsigned rel_offset = (inst->src[arg].reg_offset
-                                      - entry->dst.reg_offset) * REG_SIZE +
-                                     inst->src[arg].subreg_offset;
+   /* Compute the offset of inst->src[arg] relative to entry->dst */
+   const unsigned rel_offset = (inst->src[arg].reg_offset
+                                - entry->dst.reg_offset) * REG_SIZE +
+                               inst->src[arg].subreg_offset;
 
-         /* Compute the first component of the copy that the instruction is
-          * reading, and the base byte offset within that component.
-          */
-         assert(entry->dst.subreg_offset == 0 && entry->dst.stride == 1);
-         const unsigned component = rel_offset / type_sz(entry->dst.type);
-         const unsigned suboffset = rel_offset % type_sz(entry->dst.type);
+   /* Compute the first component of the copy that the instruction is
+    * reading, and the base byte offset within that component.
+    */
+   assert(entry->dst.subreg_offset == 0 && entry->dst.stride == 1);
+   const unsigned component = rel_offset / type_sz(entry->dst.type);
+   const unsigned suboffset = rel_offset % type_sz(entry->dst.type);
 
-         /* Account for the inconsistent units reg_offset is expressed in.
-          * FINISHME -- Make the units of reg_offset consistent (e.g. bytes?)
-          *             for all register files.
-          */
-         const unsigned reg_size = (entry->src.file == UNIFORM ? 4 : REG_SIZE);
+   /* Account for the inconsistent units reg_offset is expressed in.
+    * FINISHME -- Make the units of reg_offset consistent (e.g. bytes?) for
+    *             all register files.
+    */
+   const unsigned reg_size = (entry->src.file == UNIFORM ? 4 : REG_SIZE);
 
-         /* Calculate the byte offset at the origin of the copy of the given
-          * component and suboffset.
-          */
-         const unsigned offset = suboffset +
-            component * entry->src.stride * type_sz(entry->src.type) +
-            entry->src.reg_offset * reg_size + entry->src.subreg_offset;
-         inst->src[arg].reg_offset = offset / reg_size;
-         inst->src[arg].subreg_offset = offset % reg_size;
+   /* Calculate the byte offset at the origin of the copy of the given
+    * component and suboffset.
+    */
+   const unsigned offset = suboffset +
+      component * entry->src.stride * type_sz(entry->src.type) +
+      entry->src.reg_offset * reg_size + entry->src.subreg_offset;
+   inst->src[arg].reg_offset = offset / reg_size;
+   inst->src[arg].subreg_offset = offset % reg_size;
 
    if (has_source_modifiers) {
       if (entry->dst.type != inst->src[arg].type) {
