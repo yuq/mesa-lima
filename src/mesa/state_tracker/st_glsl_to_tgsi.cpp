@@ -3511,9 +3511,9 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
       st_src_reg res = get_temp(glsl_type::ivec4_type);
       st_dst_reg dstres = st_dst_reg(res);
       dstres.writemask = WRITEMASK_W;
-      emit_asm(ir, TGSI_OPCODE_RESQ, dstres);
+      inst = emit_asm(ir, TGSI_OPCODE_RESQ, dstres);
       res.swizzle = SWIZZLE_WWWW;
-      inst = emit_asm(ir, TGSI_OPCODE_MOV, dst, res);
+      emit_asm(ir, TGSI_OPCODE_MOV, dst, res);
    } else {
       st_src_reg arg1 = undef_src, arg2 = undef_src;
       st_src_reg coord;
