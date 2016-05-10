@@ -171,11 +171,6 @@ st_destroy_context_priv(struct st_context *st)
       }
    }
 
-   if (st->default_texture) {
-      st->ctx->Driver.DeleteTexture(st->ctx, st->default_texture);
-      st->default_texture = NULL;
-   }
-
    u_upload_destroy(st->uploader);
    if (st->indexbuf_uploader) {
       u_upload_destroy(st->indexbuf_uploader);

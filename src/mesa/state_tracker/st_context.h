@@ -194,8 +194,6 @@ struct st_context
    struct st_basic_variant *tep_variant;
    struct st_basic_variant *cp_variant;
 
-   struct gl_texture_object *default_texture;
-
    struct {
       struct pipe_resource *pixelmap_texture;
       struct pipe_sampler_view *pixelmap_sampler_view;
