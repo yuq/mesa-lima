@@ -174,7 +174,7 @@ void vTranspose(__m128i &row0, __m128i &row1, __m128i &row2, __m128i &row3)
                      + __GNUC_MINOR__ * 100 \
                      + __GNUC_PATCHLEVEL__)
 
-#if defined(__GNUC__) && (GCC_VERSION < 40900)
+#if defined(__clang__) || (defined(__GNUC__) && (GCC_VERSION < 40900))
 #define _mm_undefined_ps _mm_setzero_ps
 #define _mm_undefined_si128 _mm_setzero_si128
 #if KNOB_SIMD_WIDTH == 8
