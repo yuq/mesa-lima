@@ -57,20 +57,19 @@
 
 #if defined(PIPE_CC_GCC) && (defined(PIPE_ARCH_X86) || defined(PIPE_ARCH_X86_64))
 
-#include <fpu_control.h>
-
 static void nine_setup_fpu()
 {
-    fpu_control_t c;
+    uint16_t c;
 
-    _FPU_GETCW(c);
+    __asm__ __volatile__ ("fnstcw %0" : "=m" (*&c));
+
     /* clear the control word */
-    c &= _FPU_RESERVED;
+    c &= 0xF0C0;
     /* d3d9 doc/wine tests: mask all exceptions, use single-precision
      * and round to nearest */
-    c |= _FPU_MASK_IM | _FPU_MASK_DM | _FPU_MASK_ZM | _FPU_MASK_OM |
-         _FPU_MASK_UM | _FPU_MASK_PM | _FPU_SINGLE | _FPU_RC_NEAREST;
-    _FPU_SETCW(c);
+    c |= 0x003F;
+
+    __asm__ __volatile__ ("fldcw %0" : : "m" (*&c));
 }
 
 #else

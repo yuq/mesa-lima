@@ -24,6 +24,8 @@
 #ifndef _THREADPOOL_H_
 #define _THREADPOOL_H_
 
+#include <pthread.h>
+
 struct NineSwapChain9;
 
 #define MAXTHREADS 1
