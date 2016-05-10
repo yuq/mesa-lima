@@ -106,6 +106,7 @@ protected:
    bool handleSUQ(TexInstruction *);
    bool handleATOM(Instruction *);
    bool handleCasExch(Instruction *, bool needCctl);
+   void handleSurfaceOpGM107(TexInstruction *);
    void handleSurfaceOpNVE4(TexInstruction *);
    void handleSurfaceOpNVC0(TexInstruction *);
    void handleSharedATOM(Instruction *);
@@ -135,6 +136,7 @@ private:
    Value *loadTexHandle(Value *ptr, unsigned int slot);
 
    void adjustCoordinatesMS(TexInstruction *);
+   void processSurfaceCoordsGM107(TexInstruction *);
    void processSurfaceCoordsNVE4(TexInstruction *);
    void processSurfaceCoordsNVC0(TexInstruction *);
    void convertSurfaceFormat(TexInstruction *);

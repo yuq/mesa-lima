@@ -2112,6 +2112,78 @@ NVC0LoweringPass::handleSurfaceOpNVC0(TexInstruction *su)
    }
 }
 
+void
+NVC0LoweringPass::processSurfaceCoordsGM107(TexInstruction *su)
+{
+   const int slot = su->tex.r;
+   const int dim = su->tex.target.getDim();
+   const int arg = dim + (su->tex.target.isArray() || su->tex.target.isCube());
+   Value *ind = su->getIndirectR();
+   int pos = 0;
+
+   bld.setPosition(su, false);
+
+   // add texture handle
+   switch (su->op) {
+   case OP_SUSTP:
+      pos = 4;
+      break;
+   case OP_SUREDP:
+      pos = (su->subOp == NV50_IR_SUBOP_ATOM_CAS) ? 2 : 1;
+      break;
+   default:
+      assert(pos == 0);
+      break;
+   }
+   su->setSrc(arg + pos, loadTexHandle(ind, slot + 32));
+
+   // prevent read fault when the image is not actually bound
+   CmpInstruction *pred =
+      bld.mkCmp(OP_SET, CC_EQ, TYPE_U32, bld.getSSA(1, FILE_PREDICATE),
+                TYPE_U32, bld.mkImm(0),
+                loadSuInfo32(ind, slot, NVC0_SU_INFO_ADDR));
+   if (su->op != OP_SUSTP && su->tex.format) {
+      const TexInstruction::ImgFormatDesc *format = su->tex.format;
+      int blockwidth = format->bits[0] + format->bits[1] +
+                       format->bits[2] + format->bits[3];
+
+      assert(format->components != 0);
+      // make sure that the format doesn't mismatch when it's not FMT_NONE
+      bld.mkCmp(OP_SET_OR, CC_NE, TYPE_U32, pred->getDef(0),
+                TYPE_U32, bld.loadImm(NULL, blockwidth / 8),
+                loadSuInfo32(ind, slot, NVC0_SU_INFO_BSIZE),
+                pred->getDef(0));
+   }
+   su->setPredicate(CC_NOT_P, pred->getDef(0));
+}
+
+void
+NVC0LoweringPass::handleSurfaceOpGM107(TexInstruction *su)
+{
+   processSurfaceCoordsGM107(su);
+
+   if (su->op == OP_SULDP)
+      convertSurfaceFormat(su);
+
+   if (su->op == OP_SUREDP) {
+      Value *def = su->getDef(0);
+
+      su->op = OP_SUREDB;
+      su->setDef(0, bld.getSSA());
+
+      bld.setPosition(su, true);
+
+      // make sure to initialize dst value when the atomic operation is not
+      // performed
+      Instruction *mov = bld.mkMov(bld.getSSA(), bld.loadImm(NULL, 0));
+
+      assert(su->cc == CC_NOT_P);
+      mov->setPredicate(CC_P, su->getPredicate());
+
+      bld.mkOp2(OP_UNION, TYPE_U32, def, su->getDef(0), mov->getDef(0));
+   }
+}
+
 bool
 NVC0LoweringPass::handleWRSV(Instruction *i)
 {
@@ -2604,7 +2676,9 @@ NVC0LoweringPass::visit(Instruction *i)
    case OP_SUSTP:
    case OP_SUREDB:
    case OP_SUREDP:
-      if (targ->getChipset() >= NVISA_GK104_CHIPSET)
+      if (targ->getChipset() >= NVISA_GM107_CHIPSET)
+         handleSurfaceOpGM107(i->asTex());
+      else if (targ->getChipset() >= NVISA_GK104_CHIPSET)
          handleSurfaceOpNVE4(i->asTex());
       else
          handleSurfaceOpNVC0(i->asTex());
