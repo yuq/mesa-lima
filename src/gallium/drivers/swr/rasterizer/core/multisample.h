@@ -120,8 +120,8 @@ struct MultisampleTraits<SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN>
 
     INLINE static simdscalari FullSampleMask(){return _simd_set1_epi32(0x1);};
 
-    static const uint32_t samplePosXi {0x80};
-    static const uint32_t samplePosYi {0x80};
+    static const uint32_t samplePosXi;
+    static const uint32_t samplePosYi;
     static const float samplePosX;
     static const float samplePosY;
     static const uint32_t numSamples = 1;

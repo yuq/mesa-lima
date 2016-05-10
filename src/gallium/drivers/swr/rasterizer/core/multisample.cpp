@@ -25,7 +25,8 @@
 ******************************************************************************/
 
 #include "multisample.h"
-
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosXi {0x80};
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosYi {0x80};
 const uint32_t MultisampleTraits<SWR_MULTISAMPLE_2X>::samplePosXi[2] {0xC0, 0x40};
 const uint32_t MultisampleTraits<SWR_MULTISAMPLE_2X>::samplePosYi[2] {0xC0, 0x40};
 const uint32_t MultisampleTraits<SWR_MULTISAMPLE_4X>::samplePosXi[4] {0x60, 0xE0, 0x20, 0xA0};
