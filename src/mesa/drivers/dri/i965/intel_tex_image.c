@@ -167,33 +167,30 @@ intel_set_texture_image_mt(struct brw_context *brw,
  *
  * Used for GLX_EXT_texture_from_pixmap and EGL image extensions,
  */
-static void
-intel_set_texture_image_bo(struct gl_context *ctx,
-                           struct gl_texture_image *image,
-                           drm_intel_bo *bo,
-                           GLenum target,
-                           GLenum internalFormat,
-                           mesa_format format,
-                           uint32_t offset,
-                           GLuint width, GLuint height,
-                           GLuint pitch,
-                           GLuint tile_x, GLuint tile_y,
-                           uint32_t layout_flags)
+static struct intel_mipmap_tree *
+create_mt_for_dri_image(struct brw_context *brw,
+                        GLenum target, __DRIimage *image)
 {
-   struct brw_context *brw = brw_context(ctx);
-   uint32_t draw_x, draw_y;
    struct intel_mipmap_tree *mt;
+   uint32_t draw_x, draw_y;
 
-   mt = intel_miptree_create_for_bo(brw, bo, image->TexFormat,
-                                    0, width, height, 1, pitch,
-                                    layout_flags);
+   /* Disable creation of the texture's aux buffers because the driver exposes
+    * no EGL API to manage them. That is, there is no API for resolving the aux
+    * buffer's content to the main buffer nor for invalidating the aux buffer's
+    * content.
+    */
+   mt = intel_miptree_create_for_bo(brw, image->bo, image->format,
+                                    0, image->width, image->height, 1,
+                                    image->pitch,
+                                    MIPTREE_LAYOUT_DISABLE_AUX);
    if (mt == NULL)
-       return;
+      return NULL;
+
    mt->target = target;
-   mt->total_width = width;
-   mt->total_height = height;
-   mt->level[0].slice[0].x_offset = tile_x;
-   mt->level[0].slice[0].y_offset = tile_y;
+   mt->total_width = image->width;
+   mt->total_height = image->height;
+   mt->level[0].slice[0].x_offset = image->tile_x;
+   mt->level[0].slice[0].y_offset = image->tile_y;
 
    intel_miptree_get_tile_offsets(mt, 0, 0, &draw_x, &draw_y);
 
@@ -203,15 +200,14 @@ intel_set_texture_image_bo(struct gl_context *ctx,
     */
    if (!brw->has_surface_tile_offset &&
        (draw_x != 0 || draw_y != 0)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, __func__);
+      _mesa_error(&brw->ctx, GL_INVALID_OPERATION, __func__);
       intel_miptree_release(&mt);
-      return;
+      return NULL;
    }
 
-   mt->offset = offset;
+   mt->offset = image->offset;
 
-   intel_set_texture_image_mt(brw, image, mt);
-   intel_miptree_release(&mt);
+   return mt;
 }
 
 void
@@ -324,6 +320,7 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
 			      GLeglImageOES image_handle)
 {
    struct brw_context *brw = brw_context(ctx);
+   struct intel_mipmap_tree *mt;
    __DRIscreen *screen;
    __DRIimage *image;
 
@@ -351,18 +348,12 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
       return;
    }
 
-   /* Disable creation of the texture's aux buffers because the driver exposes
-    * no EGL API to manage them. That is, there is no API for resolving the aux
-    * buffer's content to the main buffer nor for invalidating the aux buffer's
-    * content.
-    */
-   intel_set_texture_image_bo(ctx, texImage, image->bo,
-                              target, image->internal_format,
-                              image->format, image->offset,
-                              image->width,  image->height,
-                              image->pitch,
-                              image->tile_x, image->tile_y,
-                              MIPTREE_LAYOUT_DISABLE_AUX);
+   mt = create_mt_for_dri_image(brw, target, image);
+   if (mt == NULL)
+      return;
+
+   intel_set_texture_image_mt(brw, texImage, mt);
+   intel_miptree_release(&mt);
 }
 
 /**
