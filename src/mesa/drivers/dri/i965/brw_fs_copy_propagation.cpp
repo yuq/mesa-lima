@@ -446,27 +446,6 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    inst->src[arg].stride *= entry->src.stride;
    inst->saturate = inst->saturate || entry->saturate;
 
-   switch (entry->src.file) {
-   case UNIFORM:
-   case BAD_FILE:
-   case ARF:
-   case FIXED_GRF:
-      inst->src[arg].reg_offset = entry->src.reg_offset;
-      inst->src[arg].subreg_offset = entry->src.subreg_offset;
-      break;
-   case ATTR:
-   case VGRF:
-      {
-         /* In this case, we'll just leave the width alone.  The source
-          * register could have different widths depending on how it is
-          * being used.  For instance, if only half of the register was
-          * used then we want to preserve that and continue to only use
-          * half.
-          *
-          * Also, we have to deal with mapping parts of vgrfs to other
-          * parts of vgrfs so we have to do some reg_offset magic.
-          */
-
          /* Compute the offset of inst->src[arg] relative to entry->dst */
          const unsigned rel_offset = (inst->src[arg].reg_offset
                                       - entry->dst.reg_offset) * REG_SIZE +
@@ -479,21 +458,20 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
          const unsigned component = rel_offset / type_sz(entry->dst.type);
          const unsigned suboffset = rel_offset % type_sz(entry->dst.type);
 
+         /* Account for the inconsistent units reg_offset is expressed in.
+          * FINISHME -- Make the units of reg_offset consistent (e.g. bytes?)
+          *             for all register files.
+          */
+         const unsigned reg_size = (entry->src.file == UNIFORM ? 4 : REG_SIZE);
+
          /* Calculate the byte offset at the origin of the copy of the given
           * component and suboffset.
           */
          const unsigned offset = suboffset +
             component * entry->src.stride * type_sz(entry->src.type) +
-            entry->src.reg_offset * REG_SIZE + entry->src.subreg_offset;
-         inst->src[arg].reg_offset = offset / REG_SIZE;
-         inst->src[arg].subreg_offset = offset % REG_SIZE;
-      }
-      break;
-
-   case MRF:
-   case IMM:
-      unreachable("not reached");
-   }
+            entry->src.reg_offset * reg_size + entry->src.subreg_offset;
+         inst->src[arg].reg_offset = offset / reg_size;
+         inst->src[arg].subreg_offset = offset % reg_size;
 
    if (has_source_modifiers) {
       if (entry->dst.type != inst->src[arg].type) {
