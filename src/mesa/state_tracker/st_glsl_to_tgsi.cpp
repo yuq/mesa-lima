@@ -5582,7 +5582,7 @@ translate_tex_offset(struct st_translate *t,
       offset.Padding = 0;
       break;
    case PROGRAM_INPUT:
-      imm_src = t->inputs[t->inputMapping[imm_src.Index]];
+      imm_src = t->inputs[t->inputMapping[in_offset->index]];
       offset.File = imm_src.File;
       offset.Index = imm_src.Index;
       offset.SwizzleX = GET_SWZ(in_offset->swizzle, 0);
