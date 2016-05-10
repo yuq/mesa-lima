@@ -46,6 +46,8 @@ struct vl_dri3_screen
    xcb_drawable_t drawable;
 
    uint32_t width, height, depth;
+
+   xcb_special_event_t *special_event;
 };
 
 static bool
@@ -53,6 +55,9 @@ dri3_set_drawable(struct vl_dri3_screen *scrn, Drawable drawable)
 {
    xcb_get_geometry_cookie_t geom_cookie;
    xcb_get_geometry_reply_t *geom_reply;
+   xcb_void_cookie_t cookie;
+   xcb_generic_error_t *error;
+   xcb_present_event_t peid;
 
    assert(drawable);
 
@@ -70,6 +75,26 @@ dri3_set_drawable(struct vl_dri3_screen *scrn, Drawable drawable)
    scrn->height = geom_reply->height;
    scrn->depth = geom_reply->depth;
    free(geom_reply);
+
+   if (scrn->special_event) {
+      xcb_unregister_for_special_event(scrn->conn, scrn->special_event);
+      scrn->special_event = NULL;
+   }
+
+   peid = xcb_generate_id(scrn->conn);
+   cookie =
+      xcb_present_select_input_checked(scrn->conn, peid, scrn->drawable,
+                      XCB_PRESENT_EVENT_MASK_CONFIGURE_NOTIFY |
+                      XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY |
+                      XCB_PRESENT_EVENT_MASK_IDLE_NOTIFY);
+
+   error = xcb_request_check(scrn->conn, cookie);
+   if (error) {
+      free(error);
+      return false;
+   } else
+      scrn->special_event =
+         xcb_register_for_special_xge(scrn->conn, &xcb_present_id, peid, 0);
 
    return true;
 }
@@ -132,6 +157,8 @@ vl_dri3_screen_destroy(struct vl_screen *vscreen)
 
    assert(vscreen);
 
+   if (scrn->special_event)
+      xcb_unregister_for_special_event(scrn->conn, scrn->special_event);
    scrn->base.pscreen->destroy(scrn->base.pscreen);
    pipe_loader_release(&scrn->base.dev, 1);
    FREE(scrn);
