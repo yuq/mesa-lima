@@ -154,7 +154,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    compiler->scalar_stage[MESA_SHADER_TESS_EVAL] =
       devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_TES", true);
    compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
-      devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", false);
+      devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", true);
    compiler->scalar_stage[MESA_SHADER_FRAGMENT] = true;
    compiler->scalar_stage[MESA_SHADER_COMPUTE] = true;
 
