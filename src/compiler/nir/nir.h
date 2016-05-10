@@ -1744,6 +1744,11 @@ typedef struct nir_shader_info {
          bool uses_discard;
 
          /**
+          * Whether any inputs are declared with the "sample" qualifier.
+          */
+         bool uses_sample_qualifier;
+
+         /**
           * Whether early fragment tests are enabled as defined by
           * ARB_shader_image_load_store.
           */

@@ -125,9 +125,15 @@ nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
           shader->stage == MESA_SHADER_FRAGMENT ||
           shader->stage == MESA_SHADER_COMPUTE);
 
+   bool uses_sample_qualifier = false;
    shader->info.inputs_read = 0;
-   foreach_list_typed(nir_variable, var, node, &shader->inputs)
+   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
       shader->info.inputs_read |= get_io_mask(var, shader->stage);
+      uses_sample_qualifier |= var->data.sample;
+   }
+
+   if (shader->stage == MESA_SHADER_FRAGMENT)
+      shader->info.fs.uses_sample_qualifier = uses_sample_qualifier;
 
    /* TODO: Some day we may need to add stream support to NIR */
    shader->info.outputs_written = 0;

@@ -182,6 +182,7 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
          (struct gl_fragment_program *)sh->Program;
 
       shader->info.fs.uses_discard = fp->UsesKill;
+      shader->info.fs.uses_sample_qualifier = fp->IsSample != 0;
       shader->info.fs.early_fragment_tests = sh->EarlyFragmentTests;
       shader->info.fs.depth_layout = fp->FragDepthLayout;
       break;
