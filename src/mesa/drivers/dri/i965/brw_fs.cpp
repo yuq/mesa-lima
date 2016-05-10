@@ -5229,8 +5229,8 @@ fs_visitor::setup_gs_payload()
       payload.num_regs++;
    }
 
-   /* Use a maximum of 32 registers for push-model inputs. */
-   const unsigned max_push_components = 32;
+   /* Use a maximum of 24 registers for push-model inputs. */
+   const unsigned max_push_components = 24;
 
    /* If pushing our inputs would take too many registers, reduce the URB read
     * length (which is in HWords, or 8 registers), and resort to pulling.
