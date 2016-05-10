@@ -52,8 +52,7 @@ gen8_upload_ps_extra(struct brw_context *brw,
    if (prog_data->uses_src_w)
       dw1 |= GEN8_PSX_USES_SOURCE_W;
 
-   if (multisampled_fbo &&
-       _mesa_get_min_invocations_per_fragment(ctx, fp, false) > 1)
+   if (prog_data->persample_dispatch)
       dw1 |= GEN8_PSX_SHADER_IS_PER_SAMPLE;
 
    if (prog_data->uses_sample_mask) {
@@ -192,7 +191,6 @@ gen8_upload_ps_state(struct brw_context *brw,
                      const struct brw_wm_prog_data *prog_data,
                      uint32_t fast_clear_op)
 {
-   struct gl_context *ctx = &brw->ctx;
    uint32_t dw3 = 0, dw6 = 0, dw7 = 0, ksp0, ksp2 = 0;
 
    /* Initialize the execution mask with VMask.  Otherwise, derivatives are
@@ -246,19 +244,15 @@ gen8_upload_ps_state(struct brw_context *brw,
 
    dw6 |= fast_clear_op;
 
-   /* _NEW_MULTISAMPLE
-    * In case of non 1x per sample shading, only one of SIMD8 and SIMD16
-    * should be enabled. We do 'SIMD16 only' dispatch if a SIMD16 shader
-    * is successfully compiled. In majority of the cases that bring us
-    * better performance than 'SIMD8 only' dispatch.
-    */
-   int min_invocations_per_fragment =
-      _mesa_get_min_invocations_per_fragment(ctx, fp, false);
-   assert(min_invocations_per_fragment >= 1);
-
    if (prog_data->prog_offset_16 || prog_data->no_8) {
       dw6 |= GEN7_PS_16_DISPATCH_ENABLE;
-      if (!prog_data->no_8 && min_invocations_per_fragment == 1) {
+
+      /* In case of non 1x per sample shading, only one of SIMD8 and SIMD16
+       * should be enabled. We do 'SIMD16 only' dispatch if a SIMD16 shader
+       * is successfully compiled. In majority of the cases that bring us
+       * better performance than 'SIMD8 only' dispatch.
+       */
+      if (!prog_data->no_8 && !prog_data->persample_dispatch) {
          dw6 |= GEN7_PS_8_DISPATCH_ENABLE;
          dw7 |= (prog_data->base.dispatch_grf_start_reg <<
                  GEN7_PS_DISPATCH_START_GRF_SHIFT_0);

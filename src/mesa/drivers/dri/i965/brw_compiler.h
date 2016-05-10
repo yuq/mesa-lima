@@ -242,12 +242,11 @@ struct brw_wm_prog_key {
    uint8_t iz_lookup;
    bool stats_wm:1;
    bool flat_shade:1;
-   bool persample_shading:1;
    unsigned nr_color_regions:5;
    bool replicate_alpha:1;
    bool render_to_fbo:1;
    bool clamp_fragment_color:1;
-   bool compute_pos_offset:1;
+   bool persample_interp:1;
    bool multisample_fbo:1;
    unsigned line_aa:2;
    bool high_quality_derivatives:1;
@@ -386,6 +385,7 @@ struct brw_wm_prog_data {
    bool early_fragment_tests;
    bool no_8;
    bool dual_src_blend;
+   bool persample_dispatch;
    bool uses_pos_offset;
    bool uses_omask;
    bool uses_kill;

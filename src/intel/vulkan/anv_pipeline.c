@@ -286,8 +286,9 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
       /* We should probably pull this out of the shader, but it's fairly
        * harmless to compute it and then let dead-code take care of it.
        */
-      key->persample_shading = info->pMultisampleState->sampleShadingEnable;
-      key->compute_pos_offset = info->pMultisampleState->sampleShadingEnable;
+      key->persample_interp =
+         (info->pMultisampleState->minSampleShading *
+          info->pMultisampleState->rasterizationSamples) > 1;
       key->multisample_fbo = true;
    }
 }

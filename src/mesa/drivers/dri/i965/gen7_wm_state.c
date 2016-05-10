@@ -91,7 +91,7 @@ upload_wm_state(struct brw_context *brw)
       else
          dw1 |= GEN7_WM_MSRAST_OFF_PIXEL;
 
-      if (_mesa_get_min_invocations_per_fragment(ctx, brw->fragment_program, false) > 1)
+      if (prog_data->persample_dispatch)
          dw2 |= GEN7_WM_MSDISPMODE_PERSAMPLE;
       else
          dw2 |= GEN7_WM_MSDISPMODE_PERPIXEL;
@@ -152,7 +152,6 @@ gen7_upload_ps_state(struct brw_context *brw,
                      bool enable_dual_src_blend, unsigned sample_mask,
                      unsigned fast_clear_op)
 {
-   struct gl_context *ctx = &brw->ctx;
    uint32_t dw2, dw4, dw5, ksp0, ksp2;
    const int max_threads_shift = brw->is_haswell ?
       HSW_PS_MAX_THREADS_SHIFT : IVB_PS_MAX_THREADS_SHIFT;
@@ -216,18 +215,15 @@ gen7_upload_ps_state(struct brw_context *brw,
    if (prog_data->num_varying_inputs != 0)
       dw4 |= GEN7_PS_ATTRIBUTE_ENABLE;
 
-   /* In case of non 1x per sample shading, only one of SIMD8 and SIMD16
-    * should be enabled. We do 'SIMD16 only' dispatch if a SIMD16 shader
-    * is successfully compiled. In majority of the cases that bring us
-    * better performance than 'SIMD8 only' dispatch.
-    */
-   int min_inv_per_frag =
-      _mesa_get_min_invocations_per_fragment(ctx, fp, false);
-   assert(min_inv_per_frag >= 1);
-
    if (prog_data->prog_offset_16 || prog_data->no_8) {
       dw4 |= GEN7_PS_16_DISPATCH_ENABLE;
-      if (!prog_data->no_8 && min_inv_per_frag == 1) {
+
+      /* In case of non 1x per sample shading, only one of SIMD8 and SIMD16
+       * should be enabled. We do 'SIMD16 only' dispatch if a SIMD16 shader
+       * is successfully compiled. In majority of the cases that bring us
+       * better performance than 'SIMD8 only' dispatch.
+       */
+      if (!prog_data->no_8 && !prog_data->persample_dispatch) {
          dw4 |= GEN7_PS_8_DISPATCH_ENABLE;
          dw5 |= (prog_data->base.dispatch_grf_start_reg <<
                  GEN7_PS_DISPATCH_START_GRF_SHIFT_0);

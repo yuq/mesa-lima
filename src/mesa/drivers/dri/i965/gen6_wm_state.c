@@ -130,12 +130,10 @@ gen6_upload_wm_state(struct brw_context *brw,
 
    dw5 |= (brw->max_wm_threads - 1) << GEN6_WM_MAX_THREADS_SHIFT;
 
-   assert(min_inv_per_frag >= 1);
-
    if (prog_data->prog_offset_16 || prog_data->no_8) {
       dw5 |= GEN6_WM_16_DISPATCH_ENABLE;
 
-      if (!prog_data->no_8 && min_inv_per_frag == 1) {
+      if (!prog_data->no_8 && !prog_data->persample_dispatch) {
          dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
          dw4 |= (prog_data->base.dispatch_grf_start_reg <<
                  GEN6_WM_DISPATCH_START_GRF_SHIFT_0);
@@ -198,7 +196,7 @@ gen6_upload_wm_state(struct brw_context *brw,
       else
          dw6 |= GEN6_WM_MSRAST_OFF_PIXEL;
 
-      if (min_inv_per_frag > 1)
+      if (prog_data->persample_dispatch)
          dw6 |= GEN6_WM_MSDISPMODE_PERSAMPLE;
       else {
          dw6 |= GEN6_WM_MSDISPMODE_PERPIXEL;

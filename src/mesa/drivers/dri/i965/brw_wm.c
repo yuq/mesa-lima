@@ -250,8 +250,8 @@ brw_wm_debug_recompile(struct brw_context *brw,
                       old_key->stats_wm, key->stats_wm);
    found |= key_debug(brw, "flat shading",
                       old_key->flat_shade, key->flat_shade);
-   found |= key_debug(brw, "per-sample shading",
-                      old_key->persample_shading, key->persample_shading);
+   found |= key_debug(brw, "per-sample interpolation",
+                      old_key->persample_interp, key->persample_interp);
    found |= key_debug(brw, "number of color buffers",
                       old_key->nr_color_regions, key->nr_color_regions);
    found |= key_debug(brw, "MRT alpha test or alpha-to-coverage",
@@ -528,15 +528,14 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 
    /* _NEW_BUFFERS _NEW_MULTISAMPLE */
    /* Ignore sample qualifier while computing this flag. */
-   key->persample_shading =
-      _mesa_get_min_invocations_per_fragment(ctx, &fp->program, true) > 1;
+   if (ctx->Multisample.Enabled) {
+      key->persample_interp =
+         ctx->Multisample.SampleShading &&
+         (ctx->Multisample.MinSampleShadingValue *
+          _mesa_geometric_samples(ctx->DrawBuffer) > 1);
 
-   key->compute_pos_offset =
-      _mesa_get_min_invocations_per_fragment(ctx, &fp->program, false) > 1 &&
-      fp->program.Base.SystemValuesRead & SYSTEM_BIT_SAMPLE_POS;
-
-   key->multisample_fbo = ctx->Multisample.Enabled &&
-                          _mesa_geometric_samples(ctx->DrawBuffer) > 1;
+      key->multisample_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
+   }
 
    /* BRW_NEW_VUE_MAP_GEOM_OUT */
    if (brw->gen < 6 || _mesa_bitcount_64(fp->program.Base.InputsRead &

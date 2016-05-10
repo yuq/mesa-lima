@@ -1195,8 +1195,8 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
                   inst->no_dd_clear = true;
 
                inst = emit_linterp(*attr, fs_reg(interp), interpolation_mode,
-                                   mod_centroid && !key->persample_shading,
-                                   mod_sample || key->persample_shading);
+                                   mod_centroid && !key->persample_interp,
+                                   mod_sample || key->persample_interp);
                inst->predicate = BRW_PREDICATE_NORMAL;
                inst->predicate_inverse = false;
                if (devinfo->has_pln)
@@ -1204,8 +1204,8 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
 
             } else {
                emit_linterp(*attr, fs_reg(interp), interpolation_mode,
-                            mod_centroid && !key->persample_shading,
-                            mod_sample || key->persample_shading);
+                            mod_centroid && !key->persample_interp,
+                            mod_sample || key->persample_interp);
             }
             if (devinfo->gen < 6 && interpolation_mode == INTERP_QUALIFIER_SMOOTH) {
                bld.MUL(*attr, *attr, this->pixel_w);
@@ -1262,10 +1262,10 @@ void
 fs_visitor::compute_sample_position(fs_reg dst, fs_reg int_sample_pos)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
+   brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
    assert(dst.type == BRW_REGISTER_TYPE_F);
 
-   if (key->compute_pos_offset) {
+   if (wm_prog_data->persample_dispatch) {
       /* Convert int_sample_pos to floating point */
       bld.MOV(dst, int_sample_pos);
       /* Scale to the range [0, 1] */
@@ -1430,7 +1430,7 @@ fs_reg *
 fs_visitor::emit_samplemaskin_setup()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_key *key = (brw_wm_prog_key *) this->key;
+   brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
    assert(devinfo->gen >= 6);
 
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
@@ -1438,7 +1438,7 @@ fs_visitor::emit_samplemaskin_setup()
    fs_reg coverage_mask(retype(brw_vec8_grf(payload.sample_mask_in_reg, 0),
                                BRW_REGISTER_TYPE_D));
 
-   if (key->persample_shading) {
+   if (wm_prog_data->persample_dispatch) {
       /* gl_SampleMaskIn[] comes from two sources: the input coverage mask,
        * and a mask representing which sample is being processed by the
        * current shader invocation.
@@ -5098,7 +5098,6 @@ fs_visitor::setup_fs_payload_gen6()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
    unsigned barycentric_interp_modes =
       (stage == MESA_SHADER_FRAGMENT) ?
@@ -5151,9 +5150,19 @@ fs_visitor::setup_fs_payload_gen6()
       }
    }
 
-   prog_data->uses_pos_offset = key->compute_pos_offset;
    /* R31: MSAA position offsets. */
-   if (prog_data->uses_pos_offset) {
+   if (prog_data->persample_dispatch &&
+       (nir->info.system_values_read & SYSTEM_BIT_SAMPLE_POS)) {
+      /* From the Ivy Bridge PRM documentation for 3DSTATE_PS:
+       *
+       *    "MSDISPMODE_PERSAMPLE is required in order to select
+       *    POSOFFSET_SAMPLE"
+       *
+       * So we can only really get sample positions if we are doing real
+       * per-sample dispatch.  If we need gl_SamplePosition and we don't have
+       * persample dispatch, we hard-code it to 0.5.
+       */
+      prog_data->uses_pos_offset = true;
       payload.sample_pos_reg = payload.num_regs;
       payload.num_regs++;
    }
@@ -5993,12 +6002,19 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
    prog_data->computed_stencil =
       shader->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL);
 
+   prog_data->persample_dispatch =
+      key->multisample_fbo &&
+      (key->persample_interp ||
+       (shader->info.system_values_read & (SYSTEM_BIT_SAMPLE_ID |
+                                           SYSTEM_BIT_SAMPLE_POS)) ||
+       shader->info.fs.uses_sample_qualifier);
+
    prog_data->early_fragment_tests = shader->info.fs.early_fragment_tests;
 
    prog_data->barycentric_interp_modes =
       brw_compute_barycentric_interp_modes(compiler->devinfo,
                                            key->flat_shade,
-                                           key->persample_shading,
+                                           key->persample_interp,
                                            shader);
 
    fs_visitor v(compiler, log_data, mem_ctx, key,
