@@ -778,7 +778,7 @@ brw_blorp_blit_program::alloc_regs()
    int reg = 0;
    this->R0 = retype(brw_vec8_grf(reg++, 0), BRW_REGISTER_TYPE_UW);
    this->R1 = retype(brw_vec8_grf(reg++, 0), BRW_REGISTER_TYPE_UW);
-   prog_data.first_curbe_grf = reg;
+   prog_data.first_curbe_grf_0 = reg;
    alloc_push_const_regs(reg);
    reg += BRW_BLORP_NUM_PUSH_CONST_REGS;
    for (unsigned i = 0; i < ARRAY_SIZE(texture_data); ++i) {

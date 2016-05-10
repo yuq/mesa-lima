@@ -619,7 +619,7 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
                           const struct brw_blorp_params *params)
 {
    const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
-   uint32_t dw2, dw4, dw5, dw6;
+   uint32_t dw2, dw4, dw5, dw6, ksp0, ksp2;
 
    /* Even when thread dispatch is disabled, max threads (dw5.25:31) must be
     * nonzero to prevent the GPU from hanging.  While the documentation doesn't
@@ -630,7 +630,7 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
     * configure the WM state whether or not there is a WM program.
     */
 
-   dw2 = dw4 = dw5 = dw6 = 0;
+   dw2 = dw4 = dw5 = dw6 = ksp0 = ksp2 = 0;
    switch (params->hiz_op) {
    case GEN6_HIZ_OP_DEPTH_CLEAR:
       dw4 |= GEN6_WM_DEPTH_CLEAR;
@@ -652,9 +652,18 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
    dw6 |= 0 << GEN6_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT; /* No interp */
    dw6 |= 0 << GEN6_WM_NUM_SF_OUTPUTS_SHIFT; /* No inputs from SF */
    if (params->wm_prog_data) {
-      dw4 |= prog_data->first_curbe_grf << GEN6_WM_DISPATCH_START_GRF_SHIFT_0;
-      dw5 |= GEN6_WM_16_DISPATCH_ENABLE;
       dw5 |= GEN6_WM_DISPATCH_ENABLE; /* We are rendering */
+
+      dw4 |= prog_data->first_curbe_grf_0 << GEN6_WM_DISPATCH_START_GRF_SHIFT_0;
+      dw4 |= prog_data->first_curbe_grf_2 << GEN6_WM_DISPATCH_START_GRF_SHIFT_2;
+
+      ksp0 = params->wm_prog_kernel;
+      ksp2 = params->wm_prog_kernel + params->wm_prog_data->ksp_offset_2;
+
+      if (params->wm_prog_data->dispatch_8)
+         dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
+      if (params->wm_prog_data->dispatch_16)
+         dw5 |= GEN6_WM_16_DISPATCH_ENABLE;
    }
 
    if (params->src.mt) {
@@ -675,14 +684,14 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
 
    BEGIN_BATCH(9);
    OUT_BATCH(_3DSTATE_WM << 16 | (9 - 2));
-   OUT_BATCH(params->wm_prog_kernel);
+   OUT_BATCH(ksp0);
    OUT_BATCH(dw2);
    OUT_BATCH(0); /* No scratch needed */
    OUT_BATCH(dw4);
    OUT_BATCH(dw5);
    OUT_BATCH(dw6);
-   OUT_BATCH(0); /* No other programs */
-   OUT_BATCH(0); /* No other programs */
+   OUT_BATCH(0); /* kernel 1 pointer */
+   OUT_BATCH(ksp2);
    ADVANCE_BATCH();
 }
 

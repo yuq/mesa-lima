@@ -208,7 +208,13 @@ static const unsigned int BRW_BLORP_NUM_PUSH_CONST_REGS =
 
 struct brw_blorp_prog_data
 {
-   unsigned int first_curbe_grf;
+   bool dispatch_8;
+   bool dispatch_16;
+
+   uint8_t first_curbe_grf_0;
+   uint8_t first_curbe_grf_2;
+
+   uint32_t ksp_offset_2;
 
    /**
     * True if the WM program should be run in MSDISPMODE_PERSAMPLE with more

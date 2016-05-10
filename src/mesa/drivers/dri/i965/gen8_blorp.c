@@ -372,12 +372,10 @@ gen8_blorp_emit_ps_config(struct brw_context *brw,
                           const struct brw_blorp_params *params)
 {
    const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
-   uint32_t dw3, dw5, dw6, dw7;
+   uint32_t dw3, dw5, dw6, dw7, ksp0, ksp2;
 
-   dw3 = dw5 = dw6 = dw7 = 0;
+   dw3 = dw5 = dw6 = dw7 = ksp0 = ksp2 = 0;
    dw3 |= GEN7_PS_VECTOR_MASK_ENABLE;
-
-   dw6 |= GEN7_PS_16_DISPATCH_ENABLE;
 
    if (params->src.mt) {
       dw3 |= 1 << GEN7_PS_SAMPLER_COUNT_SHIFT; /* Up to 4 samplers */
@@ -387,7 +385,16 @@ gen8_blorp_emit_ps_config(struct brw_context *brw,
    }
 
    dw6 |= GEN7_PS_PUSH_CONSTANT_ENABLE;
-   dw7 |= prog_data->first_curbe_grf << GEN7_PS_DISPATCH_START_GRF_SHIFT_0;
+   dw7 |= prog_data->first_curbe_grf_0 << GEN7_PS_DISPATCH_START_GRF_SHIFT_0;
+   dw7 |= prog_data->first_curbe_grf_2 << GEN7_PS_DISPATCH_START_GRF_SHIFT_2;
+
+   if (params->wm_prog_data->dispatch_8)
+      dw6 |= GEN7_PS_8_DISPATCH_ENABLE;
+   if (params->wm_prog_data->dispatch_16)
+      dw6 |= GEN7_PS_16_DISPATCH_ENABLE;
+
+   ksp0 = params->wm_prog_kernel;
+   ksp2 = params->wm_prog_kernel + params->wm_prog_data->ksp_offset_2;
 
    /* 3DSTATE_PS expects the number of threads per PSD, which is always 64;
     * it implicitly scales for different GT levels (which have some # of PSDs).
@@ -404,16 +411,16 @@ gen8_blorp_emit_ps_config(struct brw_context *brw,
 
    BEGIN_BATCH(12);
    OUT_BATCH(_3DSTATE_PS << 16 | (12 - 2));
-   OUT_BATCH(params->wm_prog_kernel);
+   OUT_BATCH(ksp0);
    OUT_BATCH(0);
    OUT_BATCH(dw3);
    OUT_BATCH(0);
    OUT_BATCH(0);
    OUT_BATCH(dw6);
    OUT_BATCH(dw7);
+   OUT_BATCH(0); /* kernel 1 pointer */
    OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
+   OUT_BATCH(ksp2);
    OUT_BATCH(0);
    ADVANCE_BATCH();
 }

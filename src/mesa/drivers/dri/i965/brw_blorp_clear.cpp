@@ -86,7 +86,7 @@ brw_blorp_const_color_program::brw_blorp_const_color_program(
      clear_rgba(),
      base_mrf(0)
 {
-   prog_data.first_curbe_grf = 0;
+   prog_data.first_curbe_grf_0 = 0;
    prog_data.persample_msaa_dispatch = false;
    brw_init_codegen(brw->intelScreen->devinfo, &func, mem_ctx);
 }
@@ -145,7 +145,7 @@ brw_blorp_const_color_program::alloc_regs()
    this->R0 = retype(brw_vec8_grf(reg++, 0), BRW_REGISTER_TYPE_UW);
    this->R1 = retype(brw_vec8_grf(reg++, 0), BRW_REGISTER_TYPE_UW);
 
-   prog_data.first_curbe_grf = reg;
+   prog_data.first_curbe_grf_0 = reg;
    clear_rgba = retype(brw_vec4_grf(reg++, 0), BRW_REGISTER_TYPE_F);
    reg += BRW_BLORP_NUM_PUSH_CONST_REGS;
 
