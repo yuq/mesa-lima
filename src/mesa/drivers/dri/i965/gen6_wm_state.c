@@ -69,10 +69,9 @@ const struct brw_tracked_state gen6_wm_push_constants = {
 
 void
 gen6_upload_wm_state(struct brw_context *brw,
-                     const struct brw_fragment_program *fp,
                      const struct brw_wm_prog_data *prog_data,
                      const struct brw_stage_state *stage_state,
-                     bool multisampled_fbo, int min_inv_per_frag,
+                     bool multisampled_fbo,
                      bool dual_source_blend_enable, bool kill_enable,
                      bool color_buffer_write_enable, bool msaa_enabled,
                      bool line_stipple_enable, bool polygon_stipple_enable,
@@ -163,10 +162,11 @@ gen6_upload_wm_state(struct brw_context *brw,
    if (polygon_stipple_enable)
       dw5 |= GEN6_WM_POLYGON_STIPPLE_ENABLE;
 
-   /* BRW_NEW_FRAGMENT_PROGRAM */
-   if (fp->program.Base.InputsRead & VARYING_BIT_POS)
-      dw5 |= GEN6_WM_USES_SOURCE_DEPTH | GEN6_WM_USES_SOURCE_W;
-   if (fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
+   if (prog_data->uses_src_depth)
+      dw5 |= GEN6_WM_USES_SOURCE_DEPTH;
+   if (prog_data->uses_src_w)
+      dw5 |= GEN6_WM_USES_SOURCE_W;
+   if (prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF)
       dw5 |= GEN6_WM_COMPUTED_DEPTH;
    dw6 |= prog_data->barycentric_interp_modes <<
       GEN6_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT;
@@ -277,22 +277,11 @@ static void
 upload_wm_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct brw_fragment_program *fp =
-      brw_fragment_program_const(brw->fragment_program);
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
 
    /* _NEW_BUFFERS */
    const bool multisampled_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
-
-   /* In case of non 1x per sample shading, only one of SIMD8 and SIMD16
-    * should be enabled. We do 'SIMD16 only' dispatch if a SIMD16 shader
-    * is successfully compiled. In majority of the cases that bring us
-    * better performance than 'SIMD8 only' dispatch.
-    */
-   const int min_inv_per_frag = _mesa_get_min_invocations_per_fragment(
-                                   ctx, brw->fragment_program, false);
 
    /* BRW_NEW_FS_PROG_DATA | _NEW_COLOR */
    const bool dual_src_blend_enable = prog_data->dual_src_blend &&
@@ -310,8 +299,8 @@ upload_wm_state(struct brw_context *brw)
    /* _NEW_LINE | _NEW_POLYGON | _NEW_BUFFERS | _NEW_COLOR |
     * _NEW_MULTISAMPLE
     */
-   gen6_upload_wm_state(brw, fp, prog_data, &brw->wm.base,
-                        multisampled_fbo, min_inv_per_frag,
+   gen6_upload_wm_state(brw, prog_data, &brw->wm.base,
+                        multisampled_fbo,
                         dual_src_blend_enable, kill_enable,
                         brw_color_buffer_write_enabled(brw),
                         ctx->Multisample.Enabled,
@@ -329,7 +318,6 @@ const struct brw_tracked_state gen6_wm_state = {
                _NEW_PROGRAM_CONSTANTS,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
-               BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA |
                BRW_NEW_PUSH_CONSTANT_ALLOCATION,
    },

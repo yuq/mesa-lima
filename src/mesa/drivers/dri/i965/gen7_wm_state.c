@@ -146,7 +146,6 @@ const struct brw_tracked_state gen7_wm_state = {
 
 static void
 gen7_upload_ps_state(struct brw_context *brw,
-                     const struct gl_fragment_program *fp,
                      const struct brw_stage_state *stage_state,
                      const struct brw_wm_prog_data *prog_data,
                      bool enable_dual_src_blend, unsigned sample_mask,
@@ -278,7 +277,7 @@ upload_ps_state(struct brw_context *brw)
    const unsigned sample_mask =
       brw->is_haswell ? gen6_determine_sample_mask(brw) : 0;
 
-   gen7_upload_ps_state(brw, brw->fragment_program, &brw->wm.base, prog_data,
+   gen7_upload_ps_state(brw, &brw->wm.base, prog_data,
                         enable_dual_src_blend, sample_mask,
                         brw->wm.fast_clear_op);
 }
@@ -290,7 +289,6 @@ const struct brw_tracked_state gen7_ps_state = {
                _NEW_MULTISAMPLE,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
-               BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_ps_state,

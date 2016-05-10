@@ -305,15 +305,12 @@ void gen7_init_vtable_surface_functions(struct brw_context *brw);
 
 /* gen8_ps_state.c */
 void gen8_upload_ps_state(struct brw_context *brw,
-                          const struct gl_fragment_program *fp,
                           const struct brw_stage_state *stage_state,
                           const struct brw_wm_prog_data *prog_data,
                           uint32_t fast_clear_op);
 
 void gen8_upload_ps_extra(struct brw_context *brw,
-                          const struct gl_fragment_program *fp,
-                          const struct brw_wm_prog_data *prog_data,
-                          bool multisampled_fbo);
+                          const struct brw_wm_prog_data *prog_data);
 
 /* gen7_sol_state.c */
 void gen7_upload_3dstate_so_decl_list(struct brw_context *brw,
@@ -370,10 +367,9 @@ void brw_update_sampler_state(struct brw_context *brw,
 /* gen6_wm_state.c */
 void
 gen6_upload_wm_state(struct brw_context *brw,
-                     const struct brw_fragment_program *fp,
                      const struct brw_wm_prog_data *prog_data,
                      const struct brw_stage_state *stage_state,
-                     bool multisampled_fbo, int min_inv_per_frag,
+                     bool multisampled_fbo,
                      bool dual_source_blend_enable, bool kill_enable,
                      bool color_buffer_write_enable, bool msaa_enabled,
                      bool line_stipple_enable, bool polygon_stipple_enable,

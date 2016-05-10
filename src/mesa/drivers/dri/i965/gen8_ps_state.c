@@ -30,9 +30,7 @@
 
 void
 gen8_upload_ps_extra(struct brw_context *brw,
-                     const struct gl_fragment_program *fp,
-                     const struct brw_wm_prog_data *prog_data,
-                     bool multisampled_fbo)
+                     const struct brw_wm_prog_data *prog_data)
 {
    struct gl_context *ctx = &brw->ctx;
    uint32_t dw1 = 0;
@@ -115,15 +113,10 @@ gen8_upload_ps_extra(struct brw_context *brw,
 static void
 upload_ps_extra(struct brw_context *brw)
 {
-   /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct brw_fragment_program *fp =
-      brw_fragment_program_const(brw->fragment_program);
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
-   /* BRW_NEW_NUM_SAMPLES */
-   const bool multisampled_fbo = brw->num_samples > 1;
 
-   gen8_upload_ps_extra(brw, &fp->program, prog_data, multisampled_fbo);
+   gen8_upload_ps_extra(brw, prog_data);
 }
 
 const struct brw_tracked_state gen8_ps_extra = {
@@ -131,9 +124,7 @@ const struct brw_tracked_state gen8_ps_extra = {
       .mesa  = _NEW_BUFFERS | _NEW_COLOR,
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
-               BRW_NEW_FRAGMENT_PROGRAM |
-               BRW_NEW_FS_PROG_DATA |
-               BRW_NEW_NUM_SAMPLES,
+               BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_ps_extra,
 };
@@ -186,7 +177,6 @@ const struct brw_tracked_state gen8_wm_state = {
 
 void
 gen8_upload_ps_state(struct brw_context *brw,
-                     const struct gl_fragment_program *fp,
                      const struct brw_stage_state *stage_state,
                      const struct brw_wm_prog_data *prog_data,
                      uint32_t fast_clear_op)
@@ -300,8 +290,7 @@ upload_ps_state(struct brw_context *brw)
 {
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
-   gen8_upload_ps_state(brw, brw->fragment_program, &brw->wm.base, prog_data,
-                        brw->wm.fast_clear_op);
+   gen8_upload_ps_state(brw, &brw->wm.base, prog_data, brw->wm.fast_clear_op);
 }
 
 const struct brw_tracked_state gen8_ps_state = {
