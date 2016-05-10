@@ -642,6 +642,9 @@ copy_deref_struct(void *mem_ctx, nir_deref_struct *deref)
 nir_deref *
 nir_copy_deref(void *mem_ctx, nir_deref *deref)
 {
+   if (deref == NULL)
+      return NULL;
+
    switch (deref->deref_type) {
    case nir_deref_type_var:
       return &copy_deref_var(mem_ctx, nir_deref_as_var(deref))->deref;
