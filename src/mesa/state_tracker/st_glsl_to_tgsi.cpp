@@ -5581,6 +5581,15 @@ translate_tex_offset(struct st_translate *t,
       offset.SwizzleZ = imm_src.SwizzleZ;
       offset.Padding = 0;
       break;
+   case PROGRAM_INPUT:
+      imm_src = t->inputs[t->inputMapping[imm_src.Index]];
+      offset.File = imm_src.File;
+      offset.Index = imm_src.Index;
+      offset.SwizzleX = GET_SWZ(in_offset->swizzle, 0);
+      offset.SwizzleY = GET_SWZ(in_offset->swizzle, 1);
+      offset.SwizzleZ = GET_SWZ(in_offset->swizzle, 2);
+      offset.Padding = 0;
+      break;
    case PROGRAM_TEMPORARY:
       imm_src = ureg_src(t->temps[in_offset->index]);
       offset.File = imm_src.File;
