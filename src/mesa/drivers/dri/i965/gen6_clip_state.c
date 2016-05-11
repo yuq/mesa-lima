@@ -165,9 +165,11 @@ upload_clip_state(struct brw_context *brw)
    /* BRW_NEW_RASTERIZER_DISCARD */
    if (ctx->RasterDiscard) {
       dw2 |= GEN6_CLIP_MODE_REJECT_ALL;
-      perf_debug("Rasterizer discard is currently implemented via the clipper; "
-                 "%s be faster.\n", brw->gen >= 7 ? "using the SOL unit may" :
-                 "having the GS not write primitives would likely");
+      if (brw->gen == 6) {
+         perf_debug("Rasterizer discard is currently implemented via the "
+                    "clipper; having the GS not write primitives would "
+                    "likely be faster.\n");
+      }
    }
 
    uint32_t enable;
