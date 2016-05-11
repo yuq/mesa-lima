@@ -191,7 +191,7 @@ _vtn_local_load_store(struct vtn_builder *b, bool load, nir_deref_var *deref,
       if (load) {
          nir_ssa_dest_init(&intrin->instr, &intrin->dest,
                            intrin->num_components,
-                           glsl_get_bit_size(glsl_get_base_type(tail->type)),
+                           glsl_get_bit_size(tail->type),
                            NULL);
          inout->def = &intrin->dest.ssa;
       } else {
@@ -414,7 +414,7 @@ _vtn_load_store_tail(struct vtn_builder *b, nir_intrinsic_op op, bool load,
    if (load) {
       nir_ssa_dest_init(&instr->instr, &instr->dest,
                         instr->num_components,
-                        glsl_get_bit_size(glsl_get_base_type(type)), NULL);
+                        glsl_get_bit_size(type), NULL);
       (*inout)->def = &instr->dest.ssa;
    }
 

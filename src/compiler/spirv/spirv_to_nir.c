@@ -38,7 +38,7 @@ vtn_undef_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
 
    if (glsl_type_is_vector_or_scalar(type)) {
       unsigned num_components = glsl_get_vector_elements(val->type);
-      unsigned bit_size = glsl_get_bit_size(glsl_get_base_type(val->type));
+      unsigned bit_size = glsl_get_bit_size(val->type);
       val->def = nir_ssa_undef(&b->nb, num_components, bit_size);
    } else {
       unsigned elems = glsl_get_length(val->type);
@@ -1034,7 +1034,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 
          unsigned num_components = glsl_get_vector_elements(val->const_type);
          unsigned bit_size =
-            glsl_get_bit_size(glsl_get_base_type(val->const_type));
+            glsl_get_bit_size(val->const_type);
 
          nir_const_value src[3];
          assert(count <= 7);
@@ -1783,7 +1783,7 @@ vtn_ssa_transpose(struct vtn_builder *b, struct vtn_ssa_value *src)
    for (unsigned i = 0; i < glsl_get_matrix_columns(dest->type); i++) {
       nir_alu_instr *vec = create_vec(b->shader,
                                       glsl_get_matrix_columns(src->type),
-                                      glsl_get_bit_size(glsl_get_base_type(src->type)));
+                                      glsl_get_bit_size(src->type));
       if (glsl_type_is_vector_or_scalar(src->type)) {
           vec->src[0].src = nir_src_for_ssa(src->def);
           vec->src[0].swizzle[0] = i;

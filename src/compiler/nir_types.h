@@ -82,9 +82,9 @@ unsigned glsl_get_record_location_offset(const struct glsl_type *type,
                                          unsigned length);
 
 static inline unsigned
-glsl_get_bit_size(enum glsl_base_type type)
+glsl_get_bit_size(const struct glsl_type *type)
 {
-   switch (type) {
+   switch (glsl_get_base_type(type)) {
    case GLSL_TYPE_INT:
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_BOOL:

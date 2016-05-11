@@ -856,7 +856,7 @@ nir_visitor::visit(ir_call *ir)
          instr->num_components = type->vector_elements;
 
          /* Setup destination register */
-         unsigned bit_size = glsl_get_bit_size(type->base_type);
+         unsigned bit_size = glsl_get_bit_size(type);
          nir_ssa_dest_init(&instr->instr, &instr->dest,
                            type->vector_elements, bit_size, NULL);
 
@@ -942,7 +942,7 @@ nir_visitor::visit(ir_call *ir)
          instr->num_components = type->vector_elements;
 
          /* Setup destination register */
-         unsigned bit_size = glsl_get_bit_size(type->base_type);
+         unsigned bit_size = glsl_get_bit_size(type);
          nir_ssa_dest_init(&instr->instr, &instr->dest,
                            type->vector_elements, bit_size, NULL);
 
@@ -1005,7 +1005,7 @@ nir_visitor::visit(ir_call *ir)
 
          /* Atomic result */
          assert(ir->return_deref);
-         unsigned bit_size = glsl_get_bit_size(ir->return_deref->type->base_type);
+         unsigned bit_size = glsl_get_bit_size(ir->return_deref->type);
          nir_ssa_dest_init(&instr->instr, &instr->dest,
                            ir->return_deref->type->vector_elements,
                            bit_size, NULL);
@@ -1186,7 +1186,7 @@ nir_visitor::evaluate_rvalue(ir_rvalue* ir)
       load_instr->num_components = ir->type->vector_elements;
       load_instr->variables[0] = this->deref_head;
       ralloc_steal(load_instr, load_instr->variables[0]);
-      unsigned bit_size = glsl_get_bit_size(ir->type->base_type);
+      unsigned bit_size = glsl_get_bit_size(ir->type);
       add_instr(&load_instr->instr, ir->type->vector_elements, bit_size);
    }
 
@@ -1207,7 +1207,7 @@ nir_visitor::visit(ir_expression *ir)
    case ir_binop_ubo_load: {
       nir_intrinsic_instr *load =
          nir_intrinsic_instr_create(this->shader, nir_intrinsic_load_ubo);
-      unsigned bit_size = glsl_get_bit_size(ir->type->base_type);
+      unsigned bit_size = glsl_get_bit_size(ir->type);
       load->num_components = ir->type->vector_elements;
       load->src[0] = nir_src_for_ssa(evaluate_rvalue(ir->operands[0]));
       load->src[1] = nir_src_for_ssa(evaluate_rvalue(ir->operands[1]));
@@ -1276,7 +1276,7 @@ nir_visitor::visit(ir_expression *ir)
           intrin->intrinsic == nir_intrinsic_interp_var_at_sample)
          intrin->src[0] = nir_src_for_ssa(evaluate_rvalue(ir->operands[1]));
 
-      unsigned bit_size =  glsl_get_bit_size(deref->type->base_type);
+      unsigned bit_size =  glsl_get_bit_size(deref->type);
       add_instr(&intrin->instr, deref->type->vector_elements, bit_size);
 
       if (swizzle) {
@@ -1496,7 +1496,7 @@ nir_visitor::visit(ir_expression *ir)
          nir_intrinsic_get_buffer_size);
       load->num_components = ir->type->vector_elements;
       load->src[0] = nir_src_for_ssa(evaluate_rvalue(ir->operands[0]));
-      unsigned bit_size = glsl_get_bit_size(ir->type->base_type);
+      unsigned bit_size = glsl_get_bit_size(ir->type);
       add_instr(&load->instr, ir->type->vector_elements, bit_size);
       return;
    }
@@ -1934,7 +1934,7 @@ nir_visitor::visit(ir_texture *ir)
 
    assert(src_number == num_srcs);
 
-   unsigned bit_size = glsl_get_bit_size(ir->type->base_type);
+   unsigned bit_size = glsl_get_bit_size(ir->type);
    add_instr(&instr->instr, nir_tex_instr_dest_size(instr), bit_size);
 }
 

@@ -694,7 +694,7 @@ nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref)
       tail = tail->child;
    }
 
-   unsigned bit_size = glsl_get_bit_size(glsl_get_base_type(tail->type));
+   unsigned bit_size = glsl_get_bit_size(tail->type);
    nir_load_const_instr *load =
       nir_load_const_instr_create(shader, glsl_get_vector_elements(tail->type),
                                   bit_size);

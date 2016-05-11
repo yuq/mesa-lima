@@ -725,7 +725,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
       node->pb_value =
          nir_phi_builder_add_value(state.phi_builder,
                                    glsl_get_vector_elements(node->type),
-                                   glsl_get_bit_size(glsl_get_base_type(node->type)),
+                                   glsl_get_bit_size(node->type),
                                    store_blocks);
 
       if (node->deref->var->constant_initializer) {

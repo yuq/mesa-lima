@@ -403,7 +403,7 @@ nir_load_var(nir_builder *build, nir_variable *var)
    load->num_components = num_components;
    load->variables[0] = nir_deref_var_create(load, var);
    nir_ssa_dest_init(&load->instr, &load->dest, num_components,
-                     glsl_get_bit_size(glsl_get_base_type(var->type)), NULL);
+                     glsl_get_bit_size(var->type), NULL);
    nir_builder_instr_insert(build, &load->instr);
    return &load->dest.ssa;
 }
