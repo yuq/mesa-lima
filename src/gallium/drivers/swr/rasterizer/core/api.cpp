@@ -1281,6 +1281,11 @@ void SwrInvalidateTiles(
     HANDLE hContext,
     uint32_t attachmentMask)
 {
+    if (KNOB_TOSS_DRAW)
+    {
+        return;
+    }
+
     SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
@@ -1306,6 +1311,11 @@ void SwrDiscardRect(
     uint32_t attachmentMask,
     SWR_RECT rect)
 {
+    if (KNOB_TOSS_DRAW)
+    {
+        return;
+    }
+
     SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
@@ -1367,6 +1377,11 @@ void SwrStoreTiles(
     SWR_RENDERTARGET_ATTACHMENT attachment,
     SWR_TILE_STATE postStoreTileState)
 {
+    if (KNOB_TOSS_DRAW)
+    {
+        return;
+    }
+
     RDTSC_START(APIStoreTiles);
 
     SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
@@ -1392,6 +1407,11 @@ void SwrClearRenderTarget(
     float z,
     uint8_t stencil)
 {
+    if (KNOB_TOSS_DRAW)
+    {
+        return;
+    }
+
     RDTSC_START(APIClearRenderTarget);
 
     SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
