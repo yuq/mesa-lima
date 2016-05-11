@@ -161,7 +161,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
       nir_remove_dead_variables(nir, nir_var_system_value);
       nir_validate_shader(nir);
 
-      nir_lower_outputs_to_temporaries(entry_point->shader, entry_point);
+      nir_lower_io_to_temporaries(entry_point->shader, entry_point, true, false);
 
       nir_lower_system_values(nir);
       nir_validate_shader(nir);
