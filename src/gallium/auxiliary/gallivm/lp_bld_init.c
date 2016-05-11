@@ -66,6 +66,7 @@ static const struct debug_named_value lp_bld_debug_flags[] = {
    { "no_rho_approx", GALLIVM_DEBUG_NO_RHO_APPROX, NULL },
    { "no_quad_lod", GALLIVM_DEBUG_NO_QUAD_LOD, NULL },
    { "gc",     GALLIVM_DEBUG_GC, NULL },
+   { "dumpbc", GALLIVM_DEBUG_DUMP_BC, NULL },
    DEBUG_NAMED_VALUE_END
 };
 
@@ -592,10 +593,13 @@ gallivm_compile_module(struct gallivm_state *gallivm)
    }
 
    /* Dump byte code to a file */
-   if (0) {
-      LLVMWriteBitcodeToFile(gallivm->module, "llvmpipe.bc");
-      debug_printf("llvmpipe.bc written\n");
-      debug_printf("Invoke as \"llc -o - llvmpipe.bc\"\n");
+   if (gallivm_debug & GALLIVM_DEBUG_DUMP_BC) {
+      char filename[256];
+      assert(gallivm->module_name);
+      util_snprintf(filename, sizeof(filename), "ir_%s.bc", gallivm->module_name);
+      LLVMWriteBitcodeToFile(gallivm->module, filename);
+      debug_printf("%s written\n", filename);
+      debug_printf("Invoke as \"llc -o - %s\"\n", filename);
    }
 
    if (USE_MCJIT) {
