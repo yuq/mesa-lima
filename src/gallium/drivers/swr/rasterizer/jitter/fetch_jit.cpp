@@ -246,6 +246,10 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
     Constant* uwvec = UndefValue::get(VectorType::get(mFP32Ty, 4));
 
     Value* startVertex = LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_StartVertex});
+    Value* startInstance = LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_StartInstance});
+    Value* curInstance = LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_CurInstance});
+    Value* vBaseVertex = VBROADCAST(LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_BaseVertex}));
+    curInstance->setName("curInstance");
 
     for(uint32_t nelt = 0; nelt < fetchState.numAttribs; ++nelt)
     {
@@ -258,24 +262,52 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
 
         vectors.clear();
 
+        Value *vCurIndices;
+        Value *startOffset;
+        if(ied.InstanceEnable)
+        {
+            Value* stepRate = C(ied.InstanceDataStepRate);
+
+            // prevent a div by 0 for 0 step rate
+            Value* isNonZeroStep = ICMP_UGT(stepRate, C(0));
+            stepRate = SELECT(isNonZeroStep, stepRate, C(1));
+
+            // calc the current offset into instanced data buffer
+            Value* calcInstance = UDIV(curInstance, stepRate);
+
+            // if step rate is 0, every instance gets instance 0
+            calcInstance = SELECT(isNonZeroStep, calcInstance, C(0));
+
+            vCurIndices = VBROADCAST(calcInstance);
+
+            startOffset = startInstance;
+        }
+        else
+        {
+            // offset indices by baseVertex
+            vCurIndices = ADD(vIndices, vBaseVertex);
+
+            startOffset = startVertex;
+        }
+
         // load SWR_VERTEX_BUFFER_STATE::pData
-        Value *stream = LOAD(streams, {ied.StreamIndex, 2});
+        Value *stream = LOAD(streams, {ied.StreamIndex, SWR_VERTEX_BUFFER_STATE_pData});
 
         // load SWR_VERTEX_BUFFER_STATE::pitch
-        Value *stride = LOAD(streams, {ied.StreamIndex, 1});
+        Value *stride = LOAD(streams, {ied.StreamIndex, SWR_VERTEX_BUFFER_STATE_pitch});
         stride = Z_EXT(stride, mInt64Ty);
 
         // load SWR_VERTEX_BUFFER_STATE::size
-        Value *size = LOAD(streams, {ied.StreamIndex, 3});
+        Value *size = LOAD(streams, {ied.StreamIndex, SWR_VERTEX_BUFFER_STATE_size});
         size = Z_EXT(size, mInt64Ty);
 
-        Value* startVertexOffset = MUL(Z_EXT(startVertex, mInt64Ty), stride);
+        Value* startVertexOffset = MUL(Z_EXT(startOffset, mInt64Ty), stride);
 
         // Load from the stream.
         for(uint32_t lane = 0; lane < mVWidth; ++lane)
         {
             // Get index
-            Value* index = VEXTRACT(vIndices, C(lane));
+            Value* index = VEXTRACT(vCurIndices, C(lane));
             index = Z_EXT(index, mInt64Ty);
 
             Value*    offset = MUL(index, stride);
