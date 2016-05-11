@@ -1233,8 +1233,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
  */
 static nir_shader *
 brw_blorp_build_nir_shader(struct brw_context *brw,
-                           const brw_blorp_blit_prog_key *key,
-                           struct brw_blorp_prog_data *prog_data)
+                           const brw_blorp_blit_prog_key *key)
 {
    nir_ssa_def *src_pos, *dst_pos, *color;
 
@@ -1277,9 +1276,6 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
           (key->src_samples == 0));
    assert((key->dst_layout == INTEL_MSAA_LAYOUT_NONE) ==
           (key->dst_samples == 0));
-
-   /* Set up prog_data */
-   brw_blorp_prog_data_init(prog_data);
 
    nir_builder b;
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
@@ -1452,7 +1448,7 @@ brw_blorp_get_blit_kernel(struct brw_context *brw,
    /* Try and compile with NIR first.  If that fails, fall back to the old
     * method of building shaders manually.
     */
-   nir_shader *nir = brw_blorp_build_nir_shader(brw, prog_key, &prog_data);
+   nir_shader *nir = brw_blorp_build_nir_shader(brw, prog_key);
    struct brw_wm_prog_key wm_key;
    brw_blorp_init_wm_prog_key(&wm_key);
    wm_key.tex.compressed_multisample_layout_mask =

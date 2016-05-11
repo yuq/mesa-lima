@@ -232,8 +232,6 @@ struct brw_blorp_prog_data
    uint8_t param[BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS];
 };
 
-void brw_blorp_prog_data_init(struct brw_blorp_prog_data *prog_data);
-
 struct brw_blorp_params
 {
    uint32_t x0;
