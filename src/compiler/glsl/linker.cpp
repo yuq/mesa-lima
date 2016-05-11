@@ -1093,21 +1093,11 @@ cross_validate_globals(struct gl_shader_program *prog,
 		     return;
 		  }
 	       } else {
-		  /* If the first-seen instance of a particular uniform did not
-		   * have an initializer but a later instance does, copy the
-		   * initializer to the version stored in the symbol table.
-		   */
-		  /* FINISHME: This is wrong.  The constant_value field should
-		   * FINISHME: not be modified!  Imagine a case where a shader
-		   * FINISHME: without an initializer is linked in two different
-		   * FINISHME: programs with shaders that have differing
-		   * FINISHME: initializers.  Linking with the first will
-		   * FINISHME: modify the shader, and linking with the second
-		   * FINISHME: will fail.
-		   */
-		  existing->constant_initializer =
-		     var->constant_initializer->clone(ralloc_parent(existing),
-						      NULL);
+                  /* If the first-seen instance of a particular uniform did
+                   * not have an initializer but a later instance does,
+                   * replace the former with the later.
+                   */
+                  variables.replace_variable(existing->name, var);
 	       }
 	    }
 
@@ -1121,13 +1111,6 @@ cross_validate_globals(struct gl_shader_program *prog,
 			       var->name);
 		  return;
 	       }
-
-	       /* Some instance had an initializer, so keep track of that.  In
-		* this location, all sorts of initializers (constant or
-		* otherwise) will propagate the existence to the variable
-		* stored in the symbol table.
-		*/
-	       existing->data.has_initializer = true;
 	    }
 
 	    if (existing->data.invariant != var->data.invariant) {
