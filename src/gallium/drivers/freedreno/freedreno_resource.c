@@ -299,7 +299,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	ptrans->usage = usage;
 	ptrans->box = *box;
 	ptrans->stride = util_format_get_nblocksx(format, slice->pitch) * rsc->cpp;
-	ptrans->layer_stride = slice->size0;
+	ptrans->layer_stride = rsc->layer_first ? rsc->layer_size : slice->size0;
 
 	if (usage & PIPE_TRANSFER_READ)
 		op |= DRM_FREEDRENO_PREP_READ;
