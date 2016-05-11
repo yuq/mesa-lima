@@ -749,8 +749,7 @@ const struct brw_tracked_state brw_polygon_stipple = {
    .dirty = {
       .mesa = _NEW_POLYGON |
               _NEW_POLYGONSTIPPLE,
-      .brw = BRW_NEW_BLORP |
-             BRW_NEW_CONTEXT,
+      .brw = BRW_NEW_CONTEXT,
    },
    .emit = upload_polygon_stipple
 };
@@ -789,8 +788,7 @@ const struct brw_tracked_state brw_polygon_stipple_offset = {
    .dirty = {
       .mesa = _NEW_BUFFERS |
               _NEW_POLYGON,
-      .brw = BRW_NEW_BLORP |
-             BRW_NEW_CONTEXT,
+      .brw = BRW_NEW_CONTEXT,
    },
    .emit = upload_polygon_stipple_offset
 };
@@ -821,8 +819,7 @@ upload_aa_line_parameters(struct brw_context *brw)
 const struct brw_tracked_state brw_aa_line_parameters = {
    .dirty = {
       .mesa = _NEW_LINE,
-      .brw = BRW_NEW_BLORP |
-             BRW_NEW_CONTEXT,
+      .brw = BRW_NEW_CONTEXT,
    },
    .emit = upload_aa_line_parameters
 };
@@ -862,8 +859,7 @@ upload_line_stipple(struct brw_context *brw)
 const struct brw_tracked_state brw_line_stipple = {
    .dirty = {
       .mesa = _NEW_LINE,
-      .brw = BRW_NEW_BLORP |
-             BRW_NEW_CONTEXT,
+      .brw = BRW_NEW_CONTEXT,
    },
    .emit = upload_line_stipple
 };
