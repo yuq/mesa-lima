@@ -17,7 +17,7 @@ static void *__glXGLVNDGetProcAddress(const GLubyte *procName)
     return glXGetProcAddressARB(procName);
 }
 
-static int FindGLXFunction(const GLubyte *name)
+static unsigned FindGLXFunction(const GLubyte *name)
 {
     unsigned first = 0;
     unsigned last = DI_FUNCTION_COUNT - 1;
@@ -34,26 +34,23 @@ static int FindGLXFunction(const GLubyte *name)
         else
             return middle;
     }
-    return -1;
+
+    /* Just point to the dummy entry at the end of the respective table */
+    return DI_FUNCTION_COUNT;
 }
 
 static void *__glXGLVNDGetDispatchAddress(const GLubyte *procName)
 {
-    int internalIndex = FindGLXFunction(procName);
+    unsigned internalIndex = FindGLXFunction(procName);
 
-    if (internalIndex >= 0) {
-        return __glXDispatchFunctions[internalIndex];
-    }
-
-    return NULL;
+    return __glXDispatchFunctions[internalIndex];
 }
 
 static void __glXGLVNDSetDispatchIndex(const GLubyte *procName, int index)
 {
-    int internalIndex = FindGLXFunction(procName);
+    unsigned internalIndex = FindGLXFunction(procName);
 
-    if (internalIndex >= 0)
-        __glXDispatchTableIndices[internalIndex] = index;
+    __glXDispatchTableIndices[internalIndex] = index;
 }
 
 _X_EXPORT Bool __glx_Main(uint32_t version, const __GLXapiExports *exports,
