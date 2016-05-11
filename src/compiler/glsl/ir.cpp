@@ -663,12 +663,15 @@ ir_expression::variable_referenced() const
 ir_constant::ir_constant()
    : ir_rvalue(ir_type_constant)
 {
+   this->array_elements = NULL;
 }
 
 ir_constant::ir_constant(const struct glsl_type *type,
 			 const ir_constant_data *data)
    : ir_rvalue(ir_type_constant)
 {
+   this->array_elements = NULL;
+
    assert((type->base_type >= GLSL_TYPE_UINT)
 	  && (type->base_type <= GLSL_TYPE_BOOL));
 
@@ -744,6 +747,7 @@ ir_constant::ir_constant(bool b, unsigned vector_elements)
 ir_constant::ir_constant(const ir_constant *c, unsigned i)
    : ir_rvalue(ir_type_constant)
 {
+   this->array_elements = NULL;
    this->type = c->type->get_base_type();
 
    switch (this->type->base_type) {
@@ -759,6 +763,7 @@ ir_constant::ir_constant(const ir_constant *c, unsigned i)
 ir_constant::ir_constant(const struct glsl_type *type, exec_list *value_list)
    : ir_rvalue(ir_type_constant)
 {
+   this->array_elements = NULL;
    this->type = type;
 
    assert(type->is_scalar() || type->is_vector() || type->is_matrix()
