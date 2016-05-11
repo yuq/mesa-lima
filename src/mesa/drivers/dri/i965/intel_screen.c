@@ -65,6 +65,8 @@ DRI_CONF_BEGIN
    DRI_CONF_SECTION_QUALITY
       DRI_CONF_FORCE_S3TC_ENABLE("false")
 
+      DRI_CONF_PRECISE_TRIG("false")
+
       DRI_CONF_OPT_BEGIN(clamp_max_samples, int, -1)
               DRI_CONF_DESC(en, "Clamp the value of GL_MAX_SAMPLES to the "
                             "given integer. If negative, then do not clamp.")
