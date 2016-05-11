@@ -265,6 +265,13 @@ struct _mesa_glsl_parse_state {
       return ARB_compute_shader_enable || is_version(430, 310);
    }
 
+   bool has_shader_io_blocks() const
+   {
+      return OES_shader_io_blocks_enable ||
+             EXT_shader_io_blocks_enable ||
+             is_version(150, 320);
+   }
+
    bool has_geometry_shader() const
    {
       return OES_geometry_shader_enable || is_version(150, 320);
