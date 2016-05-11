@@ -156,7 +156,7 @@ protected:
     */
    virtual void visit_field(const glsl_type *type, const char *name,
                             bool row_major, const glsl_type *record_type,
-                            const unsigned packing,
+                            const enum glsl_interface_packing packing,
                             bool last_field);
 
    /**
@@ -180,10 +180,10 @@ protected:
    virtual void visit_field(const glsl_struct_field *field);
 
    virtual void enter_record(const glsl_type *type, const char *name,
-                             bool row_major, const unsigned packing);
+                             bool row_major, const enum glsl_interface_packing packing);
 
    virtual void leave_record(const glsl_type *type, const char *name,
-                             bool row_major, const unsigned packing);
+                             bool row_major, const enum glsl_interface_packing packing);
 
    virtual void set_buffer_offset(unsigned offset);
 
@@ -199,7 +199,7 @@ private:
     */
    void recursion(const glsl_type *t, char **name, size_t name_length,
                   bool row_major, const glsl_type *record_type,
-                  const unsigned packing,
+                  const enum glsl_interface_packing packing,
                   bool last_field, unsigned record_array_count,
                   const glsl_struct_field *named_ifc_member);
 };

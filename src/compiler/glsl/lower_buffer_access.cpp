@@ -328,7 +328,7 @@ lower_buffer_access::setup_buffer_access(void *mem_ctx,
                                          bool *row_major,
                                          int *matrix_columns,
                                          const glsl_struct_field **struct_field,
-                                         unsigned packing)
+                                         enum glsl_interface_packing packing)
 {
    *offset = new(mem_ctx) ir_constant(0u);
    *row_major = is_dereferenced_thing_row_major(deref);

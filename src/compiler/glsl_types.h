@@ -745,6 +745,14 @@ struct glsl_type {
     */
    bool record_compare(const glsl_type *b, bool match_locations = true) const;
 
+   /**
+    * Get the type interface packing.
+    */
+   enum glsl_interface_packing get_interface_packing() const
+   {
+      return (enum glsl_interface_packing)interface_packing;
+   }
+
 private:
 
    static mtx_t mutex;

@@ -61,7 +61,7 @@ public:
                                 unsigned *const_offset,
                                 bool *row_major,
                                 int *matrix_columns,
-                                unsigned packing);
+                                enum glsl_interface_packing packing);
    uint32_t ssbo_access_params();
    ir_expression *ubo_load(void *mem_ctx, const struct glsl_type *type,
 			   ir_rvalue *offset);
@@ -99,7 +99,7 @@ public:
    ir_expression *emit_ssbo_get_buffer_size(void *mem_ctx);
 
    unsigned calculate_unsized_array_stride(ir_dereference *deref,
-                                           unsigned packing);
+                                           enum glsl_interface_packing packing);
 
    ir_call *lower_ssbo_atomic_intrinsic(ir_call *ir);
    ir_call *check_for_ssbo_atomic_intrinsic(ir_call *ir);
@@ -273,7 +273,7 @@ lower_ubo_reference_visitor::setup_for_load_or_store(void *mem_ctx,
                                                      unsigned *const_offset,
                                                      bool *row_major,
                                                      int *matrix_columns,
-                                                     unsigned packing)
+                                                     enum glsl_interface_packing packing)
 {
    /* Determine the name of the interface block */
    ir_rvalue *nonconst_block_index;
@@ -344,7 +344,7 @@ lower_ubo_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
    unsigned const_offset;
    bool row_major;
    int matrix_columns;
-   unsigned packing = var->get_interface_type()->interface_packing;
+   enum glsl_interface_packing packing = var->get_interface_type_packing();
 
    this->buffer_access_type =
       var->is_in_shader_storage_block() ?
@@ -557,7 +557,7 @@ lower_ubo_reference_visitor::write_to_memory(void *mem_ctx,
    unsigned const_offset;
    bool row_major;
    int matrix_columns;
-   unsigned packing = var->get_interface_type()->interface_packing;
+   enum glsl_interface_packing packing = var->get_interface_type_packing();
 
    this->buffer_access_type = ssbo_store_access;
    this->variable = var;
@@ -666,7 +666,7 @@ lower_ubo_reference_visitor::emit_ssbo_get_buffer_size(void *mem_ctx)
 
 unsigned
 lower_ubo_reference_visitor::calculate_unsized_array_stride(ir_dereference *deref,
-                                                            unsigned packing)
+                                                            enum glsl_interface_packing packing)
 {
    unsigned array_stride = 0;
 
@@ -736,7 +736,7 @@ lower_ubo_reference_visitor::process_ssbo_unsized_array_length(ir_rvalue **rvalu
    unsigned const_offset;
    bool row_major;
    int matrix_columns;
-   unsigned packing = var->get_interface_type()->interface_packing;
+   enum glsl_interface_packing packing = var->get_interface_type_packing();
    int unsized_array_stride = calculate_unsized_array_stride(deref, packing);
 
    this->buffer_access_type = ssbo_unsized_array_length_access;
@@ -970,7 +970,7 @@ lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
    unsigned const_offset;
    bool row_major;
    int matrix_columns;
-   unsigned packing = var->get_interface_type()->interface_packing;
+   enum glsl_interface_packing packing = var->get_interface_type_packing();
 
    this->buffer_access_type = ssbo_atomic_access;
    this->variable = var;

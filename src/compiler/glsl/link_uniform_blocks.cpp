@@ -70,7 +70,7 @@ private:
    }
 
    virtual void enter_record(const glsl_type *type, const char *,
-                             bool row_major, const unsigned packing) {
+                             bool row_major, const enum glsl_interface_packing packing) {
       assert(type->is_record());
       if (packing == GLSL_INTERFACE_PACKING_STD430)
          this->offset = glsl_align(
@@ -81,7 +81,7 @@ private:
    }
 
    virtual void leave_record(const glsl_type *type, const char *,
-                             bool row_major, const unsigned packing) {
+                             bool row_major, const enum glsl_interface_packing packing) {
       assert(type->is_record());
 
       /* If this is the last field of a structure, apply rule #9.  The
@@ -106,7 +106,7 @@ private:
 
    virtual void visit_field(const glsl_type *type, const char *name,
                             bool row_major, const glsl_type *,
-                            const unsigned packing,
+                            const enum glsl_interface_packing packing,
                             bool last_field)
    {
       assert(this->index < this->num_variables);
