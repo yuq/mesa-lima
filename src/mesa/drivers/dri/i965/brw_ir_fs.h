@@ -128,11 +128,14 @@ horiz_offset(fs_reg reg, unsigned delta)
    return reg;
 }
 
+/**
+ * Get the scalar channel of \p reg given by \p idx and replicate it to all
+ * channels of the result.
+ */
 static inline fs_reg
 component(fs_reg reg, unsigned idx)
 {
-   assert(reg.subreg_offset == 0);
-   reg.subreg_offset = idx * type_sz(reg.type);
+   reg = horiz_offset(reg, idx);
    reg.stride = 0;
    return reg;
 }
