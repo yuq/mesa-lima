@@ -74,8 +74,11 @@ bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
 		return false;
 
 	if (rdst->dcc_offset) {
-		/* We can't discard DCC if the texture has been exported. */
+		/* We can't discard DCC if the texture has been exported.
+		 * We can only discard DCC for the entire texture.
+		 */
 		if (rdst->resource.is_shared ||
+		    rdst->resource.b.b.last_level > 0 ||
 		    !util_texrange_covers_whole_level(&rdst->resource.b.b, dst_level,
 						      dstx, dsty, dstz, src_box->width,
 						      src_box->height, src_box->depth))
@@ -90,6 +93,8 @@ bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
 	 *        SDMA. Otherwise, use the 3D path.
 	 */
 	if (rdst->cmask.size && rdst->dirty_level_mask & (1 << dst_level)) {
+		/* The CMASK clear is only enabled for the first level. */
+		assert(dst_level == 0);
 		if (!util_texrange_covers_whole_level(&rdst->resource.b.b, dst_level,
 						      dstx, dsty, dstz, src_box->width,
 						      src_box->height, src_box->depth))
