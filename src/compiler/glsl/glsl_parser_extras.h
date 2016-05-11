@@ -626,6 +626,8 @@ struct _mesa_glsl_parse_state {
    bool OES_sample_variables_warn;
    bool OES_shader_image_atomic_enable;
    bool OES_shader_image_atomic_warn;
+   bool OES_shader_io_blocks_enable;
+   bool OES_shader_io_blocks_warn;
    bool OES_shader_multisample_interpolation_enable;
    bool OES_shader_multisample_interpolation_warn;
    bool OES_standard_derivatives_enable;
@@ -661,6 +663,8 @@ struct _mesa_glsl_parse_state {
    bool EXT_separate_shader_objects_warn;
    bool EXT_shader_integer_mix_enable;
    bool EXT_shader_integer_mix_warn;
+   bool EXT_shader_io_blocks_enable;
+   bool EXT_shader_io_blocks_warn;
    bool EXT_shader_samples_identical_enable;
    bool EXT_shader_samples_identical_warn;
    bool EXT_texture_array_enable;

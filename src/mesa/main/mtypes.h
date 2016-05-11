@@ -3914,6 +3914,7 @@ struct gl_extensions
    GLboolean EXT_vertex_array_bgra;
    GLboolean OES_copy_image;
    GLboolean OES_sample_variables;
+   GLboolean OES_shader_io_blocks;
    GLboolean OES_standard_derivatives;
    GLboolean OES_texture_buffer;
    /* vendor extensions */

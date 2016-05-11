@@ -2329,6 +2329,11 @@ _glcpp_parser_handle_version_declaration(glcpp_parser_t *parser, intmax_t versio
                add_builtin_define(parser, "GL_EXT_texture_buffer", 1);
                add_builtin_define(parser, "GL_OES_texture_buffer", 1);
             }
+
+            if (extensions->OES_shader_io_blocks) {
+               add_builtin_define(parser, "GL_EXT_shader_io_blocks", 1);
+               add_builtin_define(parser, "GL_OES_shader_io_blocks", 1);
+            }
          }
       }
    } else {
