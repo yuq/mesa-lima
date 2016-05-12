@@ -330,18 +330,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 
    assert((pipeline->active_stages & VK_SHADER_STAGE_COMPUTE_BIT) == 0);
 
-#if GEN_GEN >= 8
-   /* FIXME (jason): Currently, the config_l3 function causes problems on
-    * Haswell and prior if you have a kernel older than 4.4.  In order to
-    * work, it requires a couple of registers be white-listed in the
-    * command parser and they weren't added until 4.4.  What we should do
-    * is check the command parser version and make it a no-op if your
-    * command parser is either off or too old.  Compute won't work 100%,
-    * but at least 3-D will.  In the mean time, I'm going to make this
-    * gen8+ only so that we can get Haswell working again.
-    */
    genX(cmd_buffer_config_l3)(cmd_buffer, pipeline);
-#endif
 
    genX(flush_pipeline_select_3d)(cmd_buffer);
 
