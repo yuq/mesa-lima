@@ -2273,32 +2273,18 @@ intel_miptree_updownsample(struct brw_context *brw,
                            struct intel_mipmap_tree *src,
                            struct intel_mipmap_tree *dst)
 {
-   /* There is support for only up to eight samples. */
-   const bool use_blorp = src->num_samples <= 8 && dst->num_samples <= 8;
-
-   if (use_blorp) {
-      brw_blorp_blit_miptrees(brw,
-                              src, 0 /* level */, 0 /* layer */,
-                              src->format, SWIZZLE_XYZW,
-                              dst, 0 /* level */, 0 /* layer */, dst->format,
-                              0, 0,
-                              src->logical_width0, src->logical_height0,
-                              0, 0,
-                              dst->logical_width0, dst->logical_height0,
-                              GL_NEAREST, false, false /*mirror x, y*/,
-                              false, false);
-   } else if (src->format == MESA_FORMAT_S_UINT8) {
-      brw_meta_stencil_updownsample(brw, src, dst);
-   } else {
-      brw_meta_updownsample(brw, src, dst);
-   }
+   brw_blorp_blit_miptrees(brw,
+                           src, 0 /* level */, 0 /* layer */,
+                           src->format, SWIZZLE_XYZW,
+                           dst, 0 /* level */, 0 /* layer */, dst->format,
+                           0, 0,
+                           src->logical_width0, src->logical_height0,
+                           0, 0,
+                           dst->logical_width0, dst->logical_height0,
+                           GL_NEAREST, false, false /*mirror x, y*/,
+                           false, false);
 
    if (src->stencil_mt) {
-      if (!use_blorp) {
-         brw_meta_stencil_updownsample(brw, src->stencil_mt, dst);
-         return;
-      }
-
       brw_blorp_blit_miptrees(brw,
                               src->stencil_mt, 0 /* level */, 0 /* layer */,
                               src->stencil_mt->format, SWIZZLE_XYZW,

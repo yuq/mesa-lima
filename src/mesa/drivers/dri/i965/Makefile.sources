@@ -138,7 +138,6 @@ i965_FILES = \
 	brw_lower_unnormalized_offset.cpp \
 	brw_meta_fast_clear.c \
 	brw_meta_stencil_blit.c \
-	brw_meta_updownsample.c \
 	brw_meta_util.c \
 	brw_meta_util.h \
 	brw_misc_state.c \
