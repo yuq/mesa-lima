@@ -27,6 +27,7 @@
 #include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_cpu_detect.h"
+#include "util/u_format_s3tc.h"
 
 #include "state_tracker/sw_winsys.h"
 
@@ -126,6 +127,20 @@ swr_is_format_supported(struct pipe_screen *screen,
 
       if (mesa_to_swr_format(format) == (SWR_FORMAT)-1)
          return FALSE;
+   }
+
+   if (format_desc->layout == UTIL_FORMAT_LAYOUT_BPTC ||
+       format_desc->layout == UTIL_FORMAT_LAYOUT_ASTC) {
+      return FALSE;
+   }
+
+   if (format_desc->layout == UTIL_FORMAT_LAYOUT_ETC &&
+       format != PIPE_FORMAT_ETC1_RGB8) {
+      return FALSE;
+   }
+
+   if (format_desc->layout == UTIL_FORMAT_LAYOUT_S3TC) {
+      return util_format_s3tc_enabled;
    }
 
    return TRUE;
@@ -734,6 +749,8 @@ swr_create_screen(struct sw_winsys *winsys)
    screen->hJitMgr = JitCreateContext(KNOB_SIMD_WIDTH, KNOB_ARCH_STR);
 
    swr_fence_init(&screen->base);
+
+   util_format_s3tc_init();
 
    return &screen->base;
 }
