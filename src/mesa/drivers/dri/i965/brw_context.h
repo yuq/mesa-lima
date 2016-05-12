@@ -1372,14 +1372,6 @@ GLboolean brwCreateContext(gl_api api,
 /*======================================================================
  * brw_misc_state.c
  */
-void brw_meta_fbo_stencil_blit(struct brw_context *brw,
-                               struct gl_framebuffer *read_fb,
-                               struct gl_framebuffer *draw_fb,
-                               GLfloat srcX0, GLfloat srcY0,
-                               GLfloat srcX1, GLfloat srcY1,
-                               GLfloat dstX0, GLfloat dstY0,
-                               GLfloat dstX1, GLfloat dstY1);
-
 bool brw_meta_fast_clear(struct brw_context *brw,
                          struct gl_framebuffer *fb,
                          GLbitfield mask,

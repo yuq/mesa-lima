@@ -294,10 +294,6 @@ brw_blorp_framebuffer(struct brw_context *brw,
    if (brw->gen < 6)
       return mask;
 
-   /* There is support for only up to eight samples. */
-   if (readFb->Visual.samples > 8 || drawFb->Visual.samples > 8)
-      return mask;
-
    static GLbitfield buffer_bits[] = {
       GL_COLOR_BUFFER_BIT,
       GL_DEPTH_BUFFER_BIT,
