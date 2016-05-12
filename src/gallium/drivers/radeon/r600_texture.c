@@ -1237,6 +1237,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	unsigned offset = 0;
 	char *map;
 
+	assert(!(texture->flags & R600_RESOURCE_FLAG_TRANSFER));
+
 	/* We cannot map a tiled texture directly because the data is
 	 * in a different order, therefore we do detiling using a blit.
 	 *
@@ -1255,10 +1257,6 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	     !rctx->ws->buffer_wait(rtex->resource.buf, 0, RADEON_USAGE_READWRITE))) {
 		/* Use a staging texture for uploads if the underlying BO is busy. */
 		use_staging_texture = TRUE;
-	}
-
-	if (texture->flags & R600_RESOURCE_FLAG_TRANSFER) {
-		use_staging_texture = FALSE;
 	}
 
 	trans = CALLOC_STRUCT(r600_transfer);
@@ -1327,6 +1325,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		trans->transfer.stride = staging_depth->surface.level[level].pitch_bytes;
 		trans->transfer.layer_stride = staging_depth->surface.level[level].slice_size;
 		trans->staging = (struct r600_resource*)staging_depth;
+		buf = trans->staging;
 	} else if (use_staging_texture) {
 		struct pipe_resource resource;
 		struct r600_texture *staging;
@@ -1346,21 +1345,18 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		trans->staging = &staging->resource;
 		trans->transfer.stride = staging->surface.level[0].pitch_bytes;
 		trans->transfer.layer_stride = staging->surface.level[0].slice_size;
-		if (usage & PIPE_TRANSFER_READ) {
+
+		if (usage & PIPE_TRANSFER_READ)
 			r600_copy_to_staging_texture(ctx, trans);
-		}
+		else
+			usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
+
+		buf = trans->staging;
 	} else {
 		/* the resource is mapped directly */
 		trans->transfer.stride = rtex->surface.level[level].pitch_bytes;
 		trans->transfer.layer_stride = rtex->surface.level[level].slice_size;
 		offset = r600_texture_get_offset(rtex, level, box);
-	}
-
-	if (trans->staging) {
-		buf = trans->staging;
-		if (!rtex->is_depth && !(usage & PIPE_TRANSFER_READ))
-			usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
-	} else {
 		buf = &rtex->resource;
 	}
 
