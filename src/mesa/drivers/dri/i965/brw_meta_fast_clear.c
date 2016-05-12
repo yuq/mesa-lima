@@ -360,65 +360,6 @@ brw_meta_get_buffer_rect(const struct gl_framebuffer *fb,
 }
 
 /**
- * Determine if fast color clear supports the given clear color.
- *
- * Fast color clear can only clear to color values of 1.0 or 0.0.  At the
- * moment we only support floating point, unorm, and snorm buffers.
- */
-bool
-brw_is_color_fast_clear_compatible(struct brw_context *brw,
-                                   const struct intel_mipmap_tree *mt,
-                                   const union gl_color_union *color)
-{
-   const struct gl_context *ctx = &brw->ctx;
-
-   /* If we're mapping the render format to a different format than the
-    * format we use for texturing then it is a bit questionable whether it
-    * should be possible to use a fast clear. Although we only actually
-    * render using a renderable format, without the override workaround it
-    * wouldn't be possible to have a non-renderable surface in a fast clear
-    * state so the hardware probably legitimately doesn't need to support
-    * this case. At least on Gen9 this really does seem to cause problems.
-    */
-   if (brw->gen >= 9 &&
-       brw_format_for_mesa_format(mt->format) !=
-       brw->render_target_format[mt->format])
-      return false;
-
-   /* Gen9 doesn't support fast clear on single-sampled SRGB buffers. When
-    * GL_FRAMEBUFFER_SRGB is enabled any color renderbuffers will be
-    * resolved in intel_update_state. In that case it's pointless to do a
-    * fast clear because it's very likely to be immediately resolved.
-    */
-   if (brw->gen >= 9 &&
-       mt->num_samples <= 1 &&
-       ctx->Color.sRGBEnabled &&
-       _mesa_get_srgb_format_linear(mt->format) != mt->format)
-      return false;
-
-   const mesa_format format = _mesa_get_render_format(ctx, mt->format);
-   if (_mesa_is_format_integer_color(format)) {
-      if (brw->gen >= 8) {
-         perf_debug("Integer fast clear not enabled for (%s)",
-                    _mesa_get_format_name(format));
-      }
-      return false;
-   }
-
-   for (int i = 0; i < 4; i++) {
-      if (!_mesa_format_has_color_component(format, i)) {
-         continue;
-      }
-
-      if (brw->gen < 9 &&
-          color->f[i] != 0.0f && color->f[i] != 1.0f) {
-         return false;
-      }
-   }
-   return true;
-}
-
-/**
  * Convert the given color to a bitfield suitable for ORing into DWORD 7 of
  * SURFACE_STATE (DWORD 12-15 on SKL+).
  *
