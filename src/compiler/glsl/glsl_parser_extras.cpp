@@ -895,10 +895,16 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
                             "required for defining uniform blocks");
       }
    } else {
-      if (state->es_shader || state->language_version < 150) {
-         _mesa_glsl_error(locp, state,
-                          "#version 150 required for using "
-                          "interface blocks");
+      if (!state->has_shader_io_blocks()) {
+         if (state->es_shader) {
+            _mesa_glsl_error(locp, state,
+                             "GL_OES_shader_io_blocks or #version 320 "
+                             "required for using interface blocks");
+         } else {
+            _mesa_glsl_error(locp, state,
+                             "#version 150 required for using "
+                             "interface blocks");
+         }
       }
    }
 
