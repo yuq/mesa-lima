@@ -350,9 +350,14 @@ Value *Builder::MASKLOADD(Value* src,Value* mask)
     }
     else
     {
+        // maskload intrinsic expects integer mask operand in llvm >= 3.8
+#if (LLVM_VERSION_MAJOR > 3) || (LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR >= 8)
+        mask = BITCAST(mask,VectorType::get(mInt32Ty,mVWidth));
+#else
+        mask = BITCAST(mask,VectorType::get(mFP32Ty,mVWidth));
+#endif
         Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule,Intrinsic::x86_avx_maskload_ps_256);
-        Value* fMask = BITCAST(mask,VectorType::get(mInt32Ty,mVWidth));
-        vResult = BITCAST(CALL(func,{src,fMask}), VectorType::get(mInt32Ty,mVWidth));
+        vResult = BITCAST(CALL(func,{src,mask}), VectorType::get(mInt32Ty,mVWidth));
     }
     return vResult;
 }
