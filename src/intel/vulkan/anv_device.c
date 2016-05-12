@@ -390,7 +390,7 @@ void anv_GetPhysicalDeviceFeatures(
       .pipelineStatisticsQuery                  = false,
       .fragmentStoresAndAtomics                 = true,
       .shaderTessellationAndGeometryPointSize   = true,
-      .shaderImageGatherExtended                = true,
+      .shaderImageGatherExtended                = false,
       .shaderStorageImageExtendedFormats        = false,
       .shaderStorageImageMultisample            = false,
       .shaderUniformBufferArrayDynamicIndexing  = true,
