@@ -750,6 +750,23 @@ blorp_nir_encode_msaa(nir_builder *b, nir_ssa_def *pos,
          y_out = nir_mask_shift_or(b, y_out, y_in, 0x1, 0);
          break;
 
+      case 16:
+         /* encode_msaa(16, IMS, X, Y, S) = (X', Y', 0)
+          *   where X' = (X & ~0b1) << 2 | (S & 0b100) | (S & 0b1) << 1
+          *              | (X & 0b1)
+          *         Y' = (Y & ~0b1) << 2 | (S & 0b1000) >> 1 (S & 0b10)
+          *              | (Y & 0b1)
+          */
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0xfffffffe, 2);
+         x_out = nir_mask_shift_or(b, x_out, s_in, 0x4, 0);
+         x_out = nir_mask_shift_or(b, x_out, s_in, 0x1, 1);
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0x1, 0);
+         y_out = nir_mask_shift_or(b, y_out, y_in, 0xfffffffe, 2);
+         y_out = nir_mask_shift_or(b, y_out, s_in, 0x8, -1);
+         y_out = nir_mask_shift_or(b, y_out, s_in, 0x2, 0);
+         y_out = nir_mask_shift_or(b, y_out, y_in, 0x1, 0);
+         break;
+
       default:
          unreachable("Invalid number of samples for IMS layout");
       }
@@ -840,6 +857,23 @@ blorp_nir_decode_msaa(nir_builder *b, nir_ssa_def *pos,
          s_out = nir_mask_shift_or(b, s_out, x_in, 0x2, -1);
          break;
 
+      case 16:
+         /* decode_msaa(16, IMS, X, Y, 0) = (X', Y', S)
+          *   where X' = (X & ~0b111) >> 2 | (X & 0b1)
+          *         Y' = (Y & ~0b111) >> 2 | (Y & 0b1)
+          *         S = (Y & 0b100) << 1 | (X & 0b100) |
+          *             (Y & 0b10) | (X & 0b10) >> 1
+          */
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0xfffffff8, -2);
+         x_out = nir_mask_shift_or(b, x_out, x_in, 0x1, 0);
+         y_out = nir_mask_shift_or(b, y_out, y_in, 0xfffffff8, -2);
+         y_out = nir_mask_shift_or(b, y_out, y_in, 0x1, 0);
+         s_out = nir_mask_shift_or(b, s_out, y_in, 0x4, 1);
+         s_out = nir_mask_shift_or(b, s_out, x_in, 0x4, 0);
+         s_out = nir_mask_shift_or(b, s_out, y_in, 0x2, 0);
+         s_out = nir_mask_shift_or(b, s_out, x_in, 0x2, -1);
+         break;
+
       default:
          unreachable("Invalid number of samples for IMS layout");
       }
@@ -913,7 +947,7 @@ blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
     * For integer formats, we replace the add operations with average
     * operations and skip the final division.
     */
-   nir_ssa_def *texture_data[4];
+   nir_ssa_def *texture_data[5];
    unsigned stack_depth = 0;
    for (unsigned i = 0; i < tex_samples; ++i) {
       assert(stack_depth == _mesa_bitcount(i)); /* Loop invariant */
@@ -943,6 +977,11 @@ blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
           */
          nir_ssa_def *mcs_zero =
             nir_ieq(b, nir_channel(b, mcs, 0), nir_imm_int(b, 0));
+         if (tex_samples == 16) {
+            mcs_zero = nir_iand(b, mcs_zero,
+               nir_ieq(b, nir_channel(b, mcs, 1), nir_imm_int(b, 0)));
+         }
+
          nir_if *if_stmt = nir_if_create(b->shader);
          if_stmt->condition = nir_src_for_ssa(mcs_zero);
          nir_cf_node_insert(b->cursor, &if_stmt->cf_node);
@@ -1067,6 +1106,21 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
        *
        * Fortunately, this can be done fairly easily as:
        * S' = (0x17306425 >> (S * 4)) & 0xf
+       *
+       * In the case of 16x MSAA the two layouts don't match.
+       * Sample index layout:                Sample number layout:
+       * ---------------------               ---------------------
+       * |  0 |  1 |  2 |  3 |               | 15 | 10 |  9 | 13 |
+       * ---------------------               ---------------------
+       * |  4 |  5 |  6 |  7 |               |  4 |  1 |  7 |  3 |
+       * ---------------------               ---------------------
+       * |  8 |  9 | 10 | 11 |               | 12 |  2 |  0 |  6 |
+       * ---------------------               ---------------------
+       * | 12 | 13 | 14 | 15 |               | 11 |  8 |  5 | 14 |
+       * ---------------------               ---------------------
+       *
+       * This is equivalent to
+       * S' = (0xfa9d4173c206b85e >> (S * 4)) & 0xf
        */
       nir_ssa_def *frac = nir_ffract(b, sample_coords);
       nir_ssa_def *sample =
@@ -1078,6 +1132,20 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
          sample = nir_iand(b, nir_ishr(b, nir_imm_int(b, 0x17306425),
                                        nir_ishl(b, sample, nir_imm_int(b, 2))),
                            nir_imm_int(b, 0xf));
+      } else if (tex_samples == 16) {
+         nir_ssa_def *sample_low =
+            nir_iand(b, nir_ishr(b, nir_imm_int(b, 0xc206b85e),
+                                 nir_ishl(b, sample, nir_imm_int(b, 2))),
+                     nir_imm_int(b, 0xf));
+         nir_ssa_def *sample_high =
+            nir_iand(b, nir_ishr(b, nir_imm_int(b, 0xfa9d4173),
+                                 nir_ishl(b, nir_iadd(b, sample,
+                                                      nir_imm_int(b, -8)),
+                                          nir_imm_int(b, 2))),
+                     nir_imm_int(b, 0xf));
+
+         sample = nir_bcsel(b, nir_ilt(b, sample, nir_imm_int(b, 8)),
+                            sample_low, sample_high);
       }
       nir_ssa_def *pos_ms = nir_vec3(b, nir_channel(b, sample_coords_int, 0),
                                         nir_channel(b, sample_coords_int, 1),
@@ -1453,6 +1521,7 @@ brw_blorp_get_blit_kernel(struct brw_context *brw,
    brw_blorp_init_wm_prog_key(&wm_key);
    wm_key.tex.compressed_multisample_layout_mask =
       prog_key->tex_layout == INTEL_MSAA_LAYOUT_CMS;
+   wm_key.tex.msaa_16 = prog_key->tex_samples == 16;
    wm_key.multisample_fbo = prog_key->rt_samples > 1;
 
    program = brw_blorp_compile_nir_shader(brw, nir, &wm_key, false,
@@ -1813,6 +1882,12 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
          params.y0 = ROUND_DOWN_TO(params.y0 * 2, 4);
          params.x1 = ALIGN(params.x1 * 4, 8);
          params.y1 = ALIGN(params.y1 * 2, 4);
+         break;
+      case 16:
+         params.x0 = ROUND_DOWN_TO(params.x0 * 4, 8);
+         params.y0 = ROUND_DOWN_TO(params.y0 * 4, 8);
+         params.x1 = ALIGN(params.x1 * 4, 8);
+         params.y1 = ALIGN(params.y1 * 4, 8);
          break;
       default:
          unreachable("Unrecognized sample count in brw_blorp_blit_params ctor");
