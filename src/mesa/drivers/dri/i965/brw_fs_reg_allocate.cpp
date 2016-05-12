@@ -766,9 +766,9 @@ namespace {
 
 void
 fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
-                         uint32_t spill_offset, int count)
+                         uint32_t spill_offset, unsigned count)
 {
-   int reg_size = 1;
+   unsigned reg_size = 1;
    if (dispatch_width == 16 && count % 2 == 0)
       reg_size = 2;
 
@@ -776,7 +776,7 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
                               .group(reg_size * 8, 0)
                               .at(block, inst);
 
-   for (int i = 0; i < count / reg_size; i++) {
+   for (unsigned i = 0; i < count / reg_size; i++) {
       /* The Gen7 descriptor-based offset is 12 bits of HWORD units.  Because
        * the Gen7-style scratch block read is hardwired to BTI 255, on Gen9+
        * it would cause the DC to do an IA-coherent read, what largely
@@ -805,9 +805,9 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
 
 void
 fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
-                       uint32_t spill_offset, int count)
+                       uint32_t spill_offset, unsigned count)
 {
-   int reg_size = 1;
+   unsigned reg_size = 1;
    if (dispatch_width == 16 && count % 2 == 0)
       reg_size = 2;
 
@@ -815,7 +815,7 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
                               .group(reg_size * 8, 0)
                               .at(block, inst->next);
 
-   for (int i = 0; i < count / reg_size; i++) {
+   for (unsigned i = 0; i < count / reg_size; i++) {
       fs_inst *spill_inst =
          ibld.emit(SHADER_OPCODE_GEN4_SCRATCH_WRITE, ibld.null_reg_f(), src);
       src.reg_offset += reg_size;
