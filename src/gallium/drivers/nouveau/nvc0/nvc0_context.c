@@ -150,20 +150,18 @@ nvc0_context_unreference_resources(struct nvc0_context *nvc0)
       for (i = 0; i < NVC0_MAX_PIPE_CONSTBUFS; ++i)
          if (!nvc0->constbuf[s][i].user)
             pipe_resource_reference(&nvc0->constbuf[s][i].u.buf, NULL);
+
+      for (i = 0; i < NVC0_MAX_BUFFERS; ++i)
+         pipe_resource_reference(&nvc0->buffers[s][i].buffer, NULL);
+
+      for (i = 0; i < NVC0_MAX_IMAGES; ++i)
+         pipe_resource_reference(&nvc0->images[s][i].resource, NULL);
    }
 
    for (s = 0; s < 2; ++s) {
       for (i = 0; i < NVC0_MAX_SURFACE_SLOTS; ++i)
          pipe_surface_reference(&nvc0->surfaces[s][i], NULL);
    }
-
-   for (s = 0; s < 6; ++s)
-      for (i = 0; i < NVC0_MAX_BUFFERS; ++i)
-         pipe_resource_reference(&nvc0->buffers[s][i].buffer, NULL);
-
-   for (s = 0; s < 6; ++s)
-      for (i = 0; i < NVC0_MAX_IMAGES; ++i)
-         pipe_resource_reference(&nvc0->images[s][i].resource, NULL);
 
    for (i = 0; i < nvc0->num_tfbbufs; ++i)
       pipe_so_target_reference(&nvc0->tfbbuf[i], NULL);
