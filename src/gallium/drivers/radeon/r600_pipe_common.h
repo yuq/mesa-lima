@@ -236,6 +236,7 @@ struct r600_texture {
 	struct r600_resource		resource;
 
 	uint64_t			size;
+	unsigned			num_level0_transfers;
 	bool				is_depth;
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
 	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */

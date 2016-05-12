@@ -36,6 +36,8 @@ static void r600_texture_discard_dcc(struct r600_common_screen *rscreen,
 				     struct r600_texture *rtex);
 static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 				       struct r600_texture *rtex);
+static unsigned r600_choose_tiling(struct r600_common_screen *rscreen,
+				   const struct pipe_resource *templ);
 
 
 bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
@@ -401,6 +403,74 @@ void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
 	pipe_mutex_unlock(rscreen->aux_context_lock);
 
 	r600_texture_discard_dcc(rscreen, rtex);
+}
+
+static void r600_degrade_tile_mode_to_linear(struct r600_common_context *rctx,
+					     struct r600_texture *rtex,
+					     bool invalidate_storage)
+{
+	struct pipe_screen *screen = rctx->b.screen;
+	struct r600_texture *new_tex;
+	struct pipe_resource templ = rtex->resource.b.b;
+	unsigned i;
+
+	templ.bind |= PIPE_BIND_LINEAR;
+
+	/* r600g doesn't react to dirty_tex_descriptor_counter */
+	if (rctx->chip_class < SI)
+		return;
+
+	if (rtex->resource.is_shared ||
+	    rtex->surface.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED)
+		return;
+
+	/* This fails with MSAA, depth, and compressed textures. */
+	if (r600_choose_tiling(rctx->screen, &templ) !=
+	    RADEON_SURF_MODE_LINEAR_ALIGNED)
+		return;
+
+	new_tex = (struct r600_texture*)screen->resource_create(screen, &templ);
+	if (!new_tex)
+		return;
+
+	/* Copy the pixels to the new texture. */
+	if (!invalidate_storage) {
+		for (i = 0; i <= templ.last_level; i++) {
+			struct pipe_box box;
+
+			u_box_3d(0, 0, 0,
+				 u_minify(templ.width0, i), u_minify(templ.height0, i),
+				 util_max_layer(&templ, i) + 1, &box);
+
+			rctx->dma_copy(&rctx->b, &new_tex->resource.b.b, i, 0, 0, 0,
+				       &rtex->resource.b.b, i, &box);
+		}
+	}
+
+	r600_texture_discard_cmask(rctx->screen, rtex);
+	r600_texture_discard_dcc(rctx->screen, rtex);
+
+	/* Replace the structure fields of rtex. */
+	rtex->resource.b.b.bind = templ.bind;
+	pb_reference(&rtex->resource.buf, new_tex->resource.buf);
+	rtex->resource.gpu_address = new_tex->resource.gpu_address;
+	rtex->resource.domains = new_tex->resource.domains;
+	rtex->size = new_tex->size;
+	rtex->surface = new_tex->surface;
+	rtex->non_disp_tiling = new_tex->non_disp_tiling;
+	rtex->cb_color_info = new_tex->cb_color_info;
+	rtex->cmask = new_tex->cmask; /* needed even without CMASK */
+
+	assert(!rtex->htile_buffer);
+	assert(!rtex->cmask.size);
+	assert(!rtex->fmask.size);
+	assert(!rtex->dcc_offset);
+	assert(!rtex->is_depth);
+
+	pipe_resource_reference((struct pipe_resource**)&new_tex, NULL);
+
+	r600_dirty_all_framebuffer_states(rctx->screen);
+	p_atomic_inc(&rctx->screen->dirty_tex_descriptor_counter);
 }
 
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
@@ -1216,6 +1286,22 @@ static void r600_init_temp_resource_from_box(struct pipe_resource *res,
 	}
 }
 
+static bool r600_can_invalidate_texture(struct r600_common_screen *rscreen,
+					struct r600_texture *rtex,
+					unsigned transfer_usage,
+					const struct pipe_box *box)
+{
+	/* r600g doesn't react to dirty_tex_descriptor_counter */
+	return rscreen->chip_class >= SI &&
+		!rtex->resource.is_shared &&
+		!(transfer_usage & PIPE_TRANSFER_READ) &&
+		rtex->resource.b.b.last_level == 0 &&
+		util_texrange_covers_whole_level(&rtex->resource.b.b, 0,
+						 box->x, box->y, box->z,
+						 box->width, box->height,
+						 box->depth);
+}
+
 static void *r600_texture_transfer_map(struct pipe_context *ctx,
 				       struct pipe_resource *texture,
 				       unsigned level,
@@ -1235,6 +1321,22 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 
 	/* Depth textures use staging unconditionally. */
 	if (!rtex->is_depth) {
+		/* Degrade the tile mode if we get too many transfers on APUs.
+		 * On dGPUs, the staging texture is always faster.
+		 * Only count uploads that are at least 4x4 pixels large.
+		 */
+		if (!rctx->screen->info.has_dedicated_vram &&
+		    level == 0 &&
+		    box->width >= 4 && box->height >= 4 &&
+		    p_atomic_inc_return(&rtex->num_level0_transfers) == 10) {
+			bool can_invalidate =
+				r600_can_invalidate_texture(rctx->screen, rtex,
+							    usage, box);
+
+			r600_degrade_tile_mode_to_linear(rctx, rtex,
+							 can_invalidate);
+		}
+
 		/* Tiled textures need to be converted into a linear texture for CPU
 		 * access. The staging texture is always linear and is placed in GART.
 		 *
