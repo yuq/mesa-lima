@@ -1182,16 +1182,41 @@ lp_build_lerp_simple(struct lp_build_context *bld,
       res = lp_build_mul(bld, x, delta);
    }
 
-   res = lp_build_add(bld, v0, res);
+   if ((flags & LP_BLD_LERP_WIDE_NORMALIZED) && !bld->type.sign) {
+      /*
+       * At this point both res and v0 only use the lower half of the bits,
+       * the rest is zero. Instead of add / mask, do add with half wide type.
+       */
+      struct lp_type narrow_type;
+      struct lp_build_context narrow_bld;
 
-   if (((flags & LP_BLD_LERP_WIDE_NORMALIZED) && !bld->type.sign) ||
-       bld->type.fixed) {
-      /* We need to mask out the high order bits when lerping 8bit normalized colors stored on 16bits */
-      /* XXX: This step is necessary for lerping 8bit colors stored on 16bits,
-       * but it will be wrong for true fixed point use cases. Basically we need
-       * a more powerful lp_type, capable of further distinguishing the values
-       * interpretation from the value storage. */
-      res = LLVMBuildAnd(builder, res, lp_build_const_int_vec(bld->gallivm, bld->type, (1 << half_width) - 1), "");
+      memset(&narrow_type, 0, sizeof narrow_type);
+      narrow_type.sign   = bld->type.sign;
+      narrow_type.width  = bld->type.width/2;
+      narrow_type.length = bld->type.length*2;
+
+      lp_build_context_init(&narrow_bld, bld->gallivm, narrow_type);
+      res = LLVMBuildBitCast(builder, res, narrow_bld.vec_type, "");
+      v0 = LLVMBuildBitCast(builder, v0, narrow_bld.vec_type, "");
+      res = lp_build_add(&narrow_bld, v0, res);
+      res = LLVMBuildBitCast(builder, res, bld->vec_type, "");
+   } else {
+      res = lp_build_add(bld, v0, res);
+
+      if (bld->type.fixed) {
+         /*
+          * We need to mask out the high order bits when lerping 8bit
+          * normalized colors stored on 16bits
+          */
+         /* XXX: This step is necessary for lerping 8bit colors stored on
+          * 16bits, but it will be wrong for true fixed point use cases.
+          * Basically we need a more powerful lp_type, capable of further
+          * distinguishing the values interpretation from the value storage.
+          */
+         LLVMValueRef low_bits;
+         low_bits = lp_build_const_int_vec(bld->gallivm, bld->type, (1 << half_width) - 1);
+         res = LLVMBuildAnd(builder, res, low_bits, "");
+      }
    }
 
    return res;
