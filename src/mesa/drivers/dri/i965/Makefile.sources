@@ -136,7 +136,6 @@ i965_FILES = \
 	brw_link.cpp \
 	brw_lower_texture_gradients.cpp \
 	brw_lower_unnormalized_offset.cpp \
-	brw_meta_fast_clear.c \
 	brw_meta_util.c \
 	brw_meta_util.h \
 	brw_misc_state.c \

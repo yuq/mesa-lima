@@ -1372,17 +1372,9 @@ GLboolean brwCreateContext(gl_api api,
 /*======================================================================
  * brw_misc_state.c
  */
-bool brw_meta_fast_clear(struct brw_context *brw,
-                         struct gl_framebuffer *fb,
-                         GLbitfield mask,
-                         bool partial_clear);
-
 void
 brw_meta_resolve_color(struct brw_context *brw,
                        struct intel_mipmap_tree *mt);
-void
-brw_meta_fast_clear_free(struct brw_context *brw);
-
 
 /*======================================================================
  * brw_misc_state.c
