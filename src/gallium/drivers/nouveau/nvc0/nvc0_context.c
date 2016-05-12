@@ -262,75 +262,75 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
       }
 
       for (s = 0; s < 6; ++s) {
-      for (i = 0; i < nvc0->num_textures[s]; ++i) {
-         if (nvc0->textures[s][i] &&
-             nvc0->textures[s][i]->texture == res) {
-            nvc0->textures_dirty[s] |= 1 << i;
-            if (unlikely(s == 5)) {
-               nvc0->dirty_cp |= NVC0_NEW_CP_TEXTURES;
-               nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_TEX(i));
-            } else {
-               nvc0->dirty_3d |= NVC0_NEW_3D_TEXTURES;
-               nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(s, i));
+         for (i = 0; i < nvc0->num_textures[s]; ++i) {
+            if (nvc0->textures[s][i] &&
+                nvc0->textures[s][i]->texture == res) {
+               nvc0->textures_dirty[s] |= 1 << i;
+               if (unlikely(s == 5)) {
+                  nvc0->dirty_cp |= NVC0_NEW_CP_TEXTURES;
+                  nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_TEX(i));
+               } else {
+                  nvc0->dirty_3d |= NVC0_NEW_3D_TEXTURES;
+                  nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(s, i));
+               }
+               if (!--ref)
+                  return ref;
+            }
+         }
+      }
+
+      for (s = 0; s < 6; ++s) {
+         for (i = 0; i < NVC0_MAX_PIPE_CONSTBUFS; ++i) {
+            if (!(nvc0->constbuf_valid[s] & (1 << i)))
+               continue;
+            if (!nvc0->constbuf[s][i].user &&
+                nvc0->constbuf[s][i].u.buf == res) {
+               nvc0->constbuf_dirty[s] |= 1 << i;
+               if (unlikely(s == 5)) {
+                  nvc0->dirty_cp |= NVC0_NEW_CP_CONSTBUF;
+                  nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_CB(i));
+               } else {
+                  nvc0->dirty_3d |= NVC0_NEW_3D_CONSTBUF;
+                  nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_CB(s, i));
+               }
+               if (!--ref)
+                  return ref;
+            }
+         }
+      }
+
+      for (s = 0; s < 6; ++s) {
+         for (i = 0; i < NVC0_MAX_BUFFERS; ++i) {
+            if (nvc0->buffers[s][i].buffer == res) {
+               nvc0->buffers_dirty[s] |= 1 << i;
+               if (unlikely(s == 5)) {
+                  nvc0->dirty_cp |= NVC0_NEW_CP_BUFFERS;
+                  nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_BUF);
+               } else {
+                  nvc0->dirty_3d |= NVC0_NEW_3D_BUFFERS;
+                  nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_BUF);
+               }
+               if (!--ref)
+                  return ref;
+            }
+         }
+      }
+
+      for (s = 0; s < 6; ++s) {
+         for (i = 0; i < NVC0_MAX_IMAGES; ++i) {
+            if (nvc0->images[s][i].resource == res) {
+               nvc0->images_dirty[s] |= 1 << i;
+               if (unlikely(s == 5)) {
+                  nvc0->dirty_cp |= NVC0_NEW_CP_SURFACES;
+                  nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_SUF);
+               } else {
+                  nvc0->dirty_3d |= NVC0_NEW_3D_SURFACES;
+                  nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_SUF);
+               }
             }
             if (!--ref)
                return ref;
          }
-      }
-      }
-
-      for (s = 0; s < 6; ++s) {
-      for (i = 0; i < NVC0_MAX_PIPE_CONSTBUFS; ++i) {
-         if (!(nvc0->constbuf_valid[s] & (1 << i)))
-            continue;
-         if (!nvc0->constbuf[s][i].user &&
-             nvc0->constbuf[s][i].u.buf == res) {
-            nvc0->constbuf_dirty[s] |= 1 << i;
-            if (unlikely(s == 5)) {
-               nvc0->dirty_cp |= NVC0_NEW_CP_CONSTBUF;
-               nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_CB(i));
-            } else {
-               nvc0->dirty_3d |= NVC0_NEW_3D_CONSTBUF;
-               nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_CB(s, i));
-            }
-            if (!--ref)
-               return ref;
-         }
-      }
-      }
-
-      for (s = 0; s < 6; ++s) {
-      for (i = 0; i < NVC0_MAX_BUFFERS; ++i) {
-         if (nvc0->buffers[s][i].buffer == res) {
-            nvc0->buffers_dirty[s] |= 1 << i;
-            if (unlikely(s == 5)) {
-               nvc0->dirty_cp |= NVC0_NEW_CP_BUFFERS;
-               nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_BUF);
-            } else {
-               nvc0->dirty_3d |= NVC0_NEW_3D_BUFFERS;
-               nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_BUF);
-            }
-            if (!--ref)
-               return ref;
-         }
-      }
-      }
-
-      for (s = 0; s < 6; ++s) {
-      for (i = 0; i < NVC0_MAX_IMAGES; ++i) {
-         if (nvc0->images[s][i].resource == res) {
-            nvc0->images_dirty[s] |= 1 << i;
-            if (unlikely(s == 5)) {
-               nvc0->dirty_cp |= NVC0_NEW_CP_SURFACES;
-               nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_SUF);
-            } else {
-               nvc0->dirty_3d |= NVC0_NEW_3D_SURFACES;
-               nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_SUF);
-            }
-         }
-         if (!--ref)
-            return ref;
-      }
       }
    }
 
