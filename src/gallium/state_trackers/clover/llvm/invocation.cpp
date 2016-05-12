@@ -893,8 +893,9 @@ clover::compile_program_llvm(const std::string &source,
    module m;
    // Build the clover::module
    switch (ir) {
+      case PIPE_SHADER_IR_NIR:
       case PIPE_SHADER_IR_TGSI:
-         //XXX: Handle TGSI
+         //XXX: Handle TGSI, NIR
          assert(0);
          m = module();
          break;
