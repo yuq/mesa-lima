@@ -4308,6 +4308,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 				struct lp_build_tgsi_context *bld_base,
 				struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_context *base = &bld_base->base;
 	unsigned opcode = emit_data->inst->Instruction.Opcode;
 	unsigned target = emit_data->inst->Texture.Texture;
@@ -4344,9 +4345,12 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	case TGSI_OPCODE_TEX:
 	case TGSI_OPCODE_TEX2:
 	case TGSI_OPCODE_TXP:
+		if (ctx->type != PIPE_SHADER_FRAGMENT)
+			infix = ".lz";
 		break;
 	case TGSI_OPCODE_TXB:
 	case TGSI_OPCODE_TXB2:
+		assert(ctx->type == PIPE_SHADER_FRAGMENT);
 		infix = ".b";
 		break;
 	case TGSI_OPCODE_TXL:
@@ -4358,6 +4362,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 		break;
 	case TGSI_OPCODE_TG4:
 		name = "llvm.SI.gather4";
+		infix = ".lz";
 		break;
 	default:
 		assert(0);
