@@ -431,14 +431,11 @@ _eglCreateAPIsString(_EGLDisplay *dpy)
    if (dpy->ClientAPIs & EGL_OPENGL_BIT)
       strcat(dpy->ClientAPIsString, "OpenGL ");
 
-   if (dpy->ClientAPIs & EGL_OPENGL_ES_BIT)
+   if (dpy->ClientAPIs & EGL_OPENGL_ES_BIT ||
+       dpy->ClientAPIs & EGL_OPENGL_ES2_BIT ||
+       dpy->ClientAPIs & EGL_OPENGL_ES3_BIT_KHR) {
       strcat(dpy->ClientAPIsString, "OpenGL_ES ");
-
-   if (dpy->ClientAPIs & EGL_OPENGL_ES2_BIT)
-      strcat(dpy->ClientAPIsString, "OpenGL_ES2 ");
-
-   if (dpy->ClientAPIs & EGL_OPENGL_ES3_BIT_KHR)
-      strcat(dpy->ClientAPIsString, "OpenGL_ES3 ");
+   }
 
    if (dpy->ClientAPIs & EGL_OPENVG_BIT)
       strcat(dpy->ClientAPIsString, "OpenVG ");
