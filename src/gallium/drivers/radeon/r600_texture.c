@@ -1246,7 +1246,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	 */
 	if (rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D) {
 		use_staging_texture = TRUE;
-	} else if ((usage & PIPE_TRANSFER_READ) && !(usage & PIPE_TRANSFER_MAP_DIRECTLY) &&
+	} else if ((usage & PIPE_TRANSFER_READ) &&
 	    (rtex->resource.domains == RADEON_DOMAIN_VRAM)) {
 		/* Untiled buffers in VRAM, which is slow for CPU reads */
 		use_staging_texture = TRUE;
@@ -1259,10 +1259,6 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 
 	if (texture->flags & R600_RESOURCE_FLAG_TRANSFER) {
 		use_staging_texture = FALSE;
-	}
-
-	if (use_staging_texture && (usage & PIPE_TRANSFER_MAP_DIRECTLY)) {
-		return NULL;
 	}
 
 	trans = CALLOC_STRUCT(r600_transfer);
