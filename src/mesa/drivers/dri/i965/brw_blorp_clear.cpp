@@ -301,12 +301,14 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        * programmed in SURFACE_STATE by later rendering and resolve
        * operations.
        */
-      brw_meta_set_fast_clear_color(brw, irb->mt, &ctx->Color.ClearColor);
+      const bool color_updated = brw_meta_set_fast_clear_color(
+                                    brw, irb->mt, &ctx->Color.ClearColor);
 
       /* If the buffer is already in INTEL_FAST_CLEAR_STATE_CLEAR, the clear
        * is redundant and can be skipped.
        */
-      if (irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_CLEAR)
+      if (!color_updated &&
+          irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_CLEAR)
          return true;
 
       /* If the MCS buffer hasn't been allocated yet, we need to allocate

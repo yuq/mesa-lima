@@ -421,8 +421,10 @@ brw_is_color_fast_clear_compatible(struct brw_context *brw,
 /**
  * Convert the given color to a bitfield suitable for ORing into DWORD 7 of
  * SURFACE_STATE (DWORD 12-15 on SKL+).
+ *
+ * Returned boolean tells if the given color differs from the stored.
  */
-void
+bool
 brw_meta_set_fast_clear_color(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
                               const union gl_color_union *color)
@@ -466,9 +468,14 @@ brw_meta_set_fast_clear_color(struct brw_context *brw,
       }
    }
 
+   bool updated;
    if (brw->gen >= 9) {
+      updated = memcmp(&mt->gen9_fast_clear_color, &override_color,
+                       sizeof(mt->gen9_fast_clear_color));
       mt->gen9_fast_clear_color = override_color;
    } else {
+      const uint32_t old_color_value = mt->fast_clear_color_value;
+
       mt->fast_clear_color_value = 0;
       for (int i = 0; i < 4; i++) {
          /* Testing for non-0 works for integer and float colors */
@@ -477,7 +484,11 @@ brw_meta_set_fast_clear_color(struct brw_context *brw,
                 1 << (GEN7_SURFACE_CLEAR_COLOR_SHIFT + (3 - i));
          }
       }
+
+      updated = (old_color_value != mt->fast_clear_color_value);
    }
+
+   return updated;
 }
 
 static const uint32_t fast_clear_color[4] = { ~0, ~0, ~0, ~0 };
