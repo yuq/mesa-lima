@@ -24,6 +24,7 @@
 
 #include "u_indices.h"
 #include "u_indices_priv.h"
+#include "util/u_prim.h"
 
 
 static void translate_ubyte_ushort( const void *in,
@@ -123,6 +124,8 @@ u_unfilled_translator(unsigned prim,
    unsigned in_idx;
    unsigned out_idx;
 
+   assert(u_reduced_prim(prim) == PIPE_PRIM_TRIANGLES);
+
    u_unfilled_init();
 
    in_idx = in_size_idx(in_index_size);
@@ -179,6 +182,8 @@ u_unfilled_generator(unsigned prim,
                      u_generate_func *out_generate)
 {
    unsigned out_idx;
+
+   assert(u_reduced_prim(prim) == PIPE_PRIM_TRIANGLES);
 
    u_unfilled_init();
 
