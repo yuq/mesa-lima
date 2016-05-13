@@ -34,6 +34,7 @@
 #include "util/ralloc.h"
 #include "util/set.h"
 #include "util/bitset.h"
+#include "util/macros.h"
 #include "compiler/nir_types.h"
 #include "compiler/shader_enums.h"
 #include <stdio.h>
@@ -1550,16 +1551,16 @@ typedef struct {
    nir_metadata valid_metadata;
 } nir_function_impl;
 
-static inline nir_block *
+ATTRIBUTE_RETURNS_NONNULL static inline nir_block *
 nir_start_block(nir_function_impl *impl)
 {
-   return (nir_block *) exec_list_get_head(&impl->body);
+   return (nir_block *) impl->body.head;
 }
 
-static inline nir_block *
+ATTRIBUTE_RETURNS_NONNULL static inline nir_block *
 nir_impl_last_block(nir_function_impl *impl)
 {
-   return (nir_block *) exec_list_get_tail(&impl->body);
+   return (nir_block *) impl->body.tail_pred;
 }
 
 static inline nir_cf_node *
