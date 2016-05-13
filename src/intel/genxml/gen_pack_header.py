@@ -131,7 +131,7 @@ __gen_sfixed(float v, uint32_t start, uint32_t end, uint32_t fract_bits)
    assert(min <= v && v <= max);
 #endif
 
-   const int32_t int_val = roundf(v * factor);
+   const int64_t int_val = llroundf(v * factor);
    const uint64_t mask = ~0ull >> (64 - (end - start + 1));
 
    return (int_val & mask) << start;
@@ -150,7 +150,7 @@ __gen_ufixed(float v, uint32_t start, uint32_t end, uint32_t fract_bits)
    assert(min <= v && v <= max);
 #endif
 
-   const uint32_t uint_val = roundf(v * factor);
+   const uint64_t uint_val = llroundf(v * factor);
 
    return uint_val << start;
 }
