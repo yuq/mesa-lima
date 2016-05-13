@@ -416,15 +416,7 @@ blorp_blit_apply_transform(nir_builder *b, nir_ssa_def *src_pos,
    nir_ssa_def *mul = nir_vec2(b, nir_load_var(b, v->u_x_transform.multiplier),
                                   nir_load_var(b, v->u_y_transform.multiplier));
 
-   nir_ssa_def *pos = nir_ffma(b, src_pos, mul, offset);
-
-   if (src_pos->num_components == 3) {
-      /* Leave the sample id alone */
-      pos = nir_vec3(b, nir_channel(b, pos, 0), nir_channel(b, pos, 1),
-                        nir_channel(b, src_pos, 2));
-   }
-
-   return pos;
+   return nir_ffma(b, src_pos, mul, offset);
 }
 
 static inline void
@@ -1338,6 +1330,15 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
       blorp_nir_discard_if_outside_rect(&b, dst_pos, &v);
 
    src_pos = blorp_blit_apply_transform(&b, nir_i2f(&b, dst_pos), &v);
+   if (dst_pos->num_components == 3) {
+      /* The sample coordinate is an integer that we want left alone but
+       * blorp_blit_apply_transform() blindly applies the transform to all
+       * three coordinates.  Grab the original sample index.
+       */
+      src_pos = nir_vec3(&b, nir_channel(&b, src_pos, 0),
+                             nir_channel(&b, src_pos, 1),
+                             nir_channel(&b, dst_pos, 2));
+   }
 
    /* If the source image is not multisampled, then we want to fetch sample
     * number 0, because that's the only sample there is.
@@ -1350,8 +1351,10 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
     * irrelevant, because we are going to fetch all samples.
     */
    if (key->blend && !key->blit_scaled) {
-      /* Resolves (effecively) use texelFetch, so we need integers */
-      src_pos = nir_f2i(&b, src_pos);
+      /* Resolves (effecively) use texelFetch, so we need integers and we
+       * don't care about the sample index if we got one.
+       */
+      src_pos = nir_f2i(&b, nir_channels(&b, src_pos, 0x3));
 
       if (brw->gen == 6) {
          /* Because gen6 only supports 4x interleved MSAA, we can do all the
@@ -1363,7 +1366,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
           */
          src_pos = nir_ishl(&b, src_pos, nir_imm_int(&b, 1));
          src_pos = nir_iadd(&b, src_pos, nir_imm_int(&b, 1));
-         src_pos = nir_i2f(&b, nir_channels(&b, src_pos, 0x3));
+         src_pos = nir_i2f(&b, src_pos);
          color = blorp_nir_tex(&b, src_pos, key->texture_data_type);
       } else {
          /* Gen7+ hardware doesn't automaticaly blend. */
@@ -1378,7 +1381,14 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
          color = blorp_nir_tex(&b, src_pos, key->texture_data_type);
       } else {
          /* We're going to use texelFetch, so we need integers */
-         src_pos = nir_f2i(&b, src_pos);
+         if (src_pos->num_components == 2) {
+            src_pos = nir_f2i(&b, src_pos);
+         } else {
+            assert(src_pos->num_components == 3);
+            src_pos = nir_vec3(&b, nir_channel(&b, nir_f2i(&b, src_pos), 0),
+                                   nir_channel(&b, nir_f2i(&b, src_pos), 1),
+                                   nir_channel(&b, src_pos, 2));
+         }
 
          /* We aren't blending, which means we just want to fetch a single
           * sample from the source surface.  The address that we want to fetch
