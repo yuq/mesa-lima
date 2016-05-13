@@ -208,17 +208,27 @@ verify_parameter_modes(_mesa_glsl_parse_state *state,
 
       /* Verify that shader_in parameters are shader inputs */
       if (formal->data.must_be_shader_input) {
-         ir_variable *var = actual->variable_referenced();
-         if (!var || var->data.mode != ir_var_shader_in) {
-            _mesa_glsl_error(&loc, state,
-                             "parameter `%s` must be a shader input",
-                             formal->name);
-            return false;
+         const ir_rvalue *val = actual;
+
+         // GLSL 4.40 allows swizzles, while earlier GLSL versions do not.
+         if (val->ir_type == ir_type_swizzle) {
+            if (!state->is_version(440, 0)) {
+               _mesa_glsl_error(&loc, state,
+                                "parameter `%s` must not be swizzled",
+                                formal->name);
+               return false;
+            }
+            val = ((ir_swizzle *)val)->val;
          }
 
-         if (actual->ir_type == ir_type_swizzle) {
+         while (val->ir_type == ir_type_dereference_array) {
+            val = ((ir_dereference_array *)val)->array;
+         }
+
+         if (!val->as_dereference_variable() ||
+             val->variable_referenced()->data.mode != ir_var_shader_in) {
             _mesa_glsl_error(&loc, state,
-                             "parameter `%s` must not be swizzled",
+                             "parameter `%s` must be a shader input",
                              formal->name);
             return false;
          }
