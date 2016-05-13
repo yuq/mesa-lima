@@ -278,14 +278,16 @@ brw_codegen_tcs_prog(struct brw_context *brw,
 
    if (unlikely(brw->perf_debug)) {
       struct brw_shader *btcs = (struct brw_shader *) tcs;
-      if (btcs->compiled_once) {
-         brw_tcs_debug_recompile(brw, shader_prog, key);
+      if (btcs) {
+         if (btcs->compiled_once) {
+            brw_tcs_debug_recompile(brw, shader_prog, key);
+         }
+         btcs->compiled_once = true;
       }
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
          perf_debug("TCS compile took %.03f ms and stalled the GPU\n",
                     (get_time() - start_time) * 1000);
       }
-      btcs->compiled_once = true;
    }
 
    /* Scratch space is used for register spilling */
