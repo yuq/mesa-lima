@@ -646,10 +646,11 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
 {
    ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
 
-   const struct anv_format *format =
-      anv_format_for_vk_format(pCreateInfo->format);
+   /* TODO: Handle the format swizzle? */
 
-   view->format = format->isl_format;
+   view->format = anv_get_isl_format(pCreateInfo->format,
+                                     VK_IMAGE_ASPECT_COLOR_BIT,
+                                     VK_IMAGE_TILING_LINEAR, NULL);
    view->bo = buffer->bo;
    view->offset = buffer->offset + pCreateInfo->offset;
    view->range = pCreateInfo->range == VK_WHOLE_SIZE ?
@@ -661,7 +662,7 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
       anv_fill_buffer_surface_state(device, view->surface_state,
                                     view->format,
                                     view->offset, view->range,
-                                    format->isl_layout->bs);
+                                    isl_format_get_layout(view->format)->bs);
    } else {
       view->surface_state = (struct anv_state){ 0 };
    }
@@ -679,7 +680,7 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
                                     storage_format,
                                     view->offset, view->range,
                                     (storage_format == ISL_FORMAT_RAW ? 1 :
-                                     format->isl_layout->bs));
+                                     isl_format_get_layout(storage_format)->bs));
 
       isl_buffer_fill_image_param(&device->isl_dev,
                                   &view->storage_image_param,
