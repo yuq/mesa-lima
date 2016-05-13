@@ -154,6 +154,12 @@ do {                       \
 #define ATTRIBUTE_PURE
 #endif
 
+#ifdef HAVE_FUNC_ATTRIBUTE_RETURNS_NONNULL
+#define ATTRIBUTE_RETURNS_NONNULL __attribute__((__returns_nonnull__))
+#else
+#define ATTRIBUTE_RETURNS_NONNULL
+#endif
+
 #ifdef __cplusplus
 /**
  * Macro function that evaluates to true if T is a trivially
