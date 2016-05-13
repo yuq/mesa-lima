@@ -927,10 +927,9 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    const struct anv_image_view *iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
    const struct anv_image *image = iview ? iview->image : NULL;
-   const struct anv_format *anv_format =
-      iview ? anv_format_for_vk_format(iview->vk_format) : NULL;
-   const bool has_depth = iview && anv_format->has_depth;
-   const bool has_stencil = iview && anv_format->has_stencil;
+   const bool has_depth = image && (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
+   const bool has_stencil =
+      image && (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT);
 
    /* FIXME: Implement the PMA stall W/A */
    /* FIXME: Width and Height are wrong */

@@ -233,12 +233,14 @@ anv_image_create(VkDevice _device,
    image->tiling = pCreateInfo->tiling;
 
    if (likely(anv_format_is_color(format))) {
+      image->aspects |= VK_IMAGE_ASPECT_COLOR_BIT;
       r = make_surface(device, image, create_info,
                        VK_IMAGE_ASPECT_COLOR_BIT);
       if (r != VK_SUCCESS)
          goto fail;
    } else {
       if (image->format->has_depth) {
+         image->aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
          r = make_surface(device, image, create_info,
                           VK_IMAGE_ASPECT_DEPTH_BIT);
          if (r != VK_SUCCESS)
@@ -246,6 +248,7 @@ anv_image_create(VkDevice _device,
       }
 
       if (image->format->has_stencil) {
+         image->aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
          r = make_surface(device, image, create_info,
                           VK_IMAGE_ASPECT_STENCIL_BIT);
          if (r != VK_SUCCESS)

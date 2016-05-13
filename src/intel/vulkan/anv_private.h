@@ -1561,6 +1561,7 @@ struct anv_image {
     */
    VkFormat vk_format;
    const struct anv_format *format;
+   VkImageAspectFlags aspects;
    VkExtent3D extent;
    uint32_t levels;
    uint32_t array_size;
@@ -1579,7 +1580,7 @@ struct anv_image {
     * Image subsurfaces
     *
     * For each foo, anv_image::foo_surface is valid if and only if
-    * anv_image::format has a foo aspect.
+    * anv_image::aspects has a foo aspect.
     *
     * The hardware requires that the depth buffer and stencil buffer be
     * separate surfaces.  From Vulkan's perspective, though, depth and stencil
