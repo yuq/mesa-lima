@@ -2876,18 +2876,32 @@ annotated with those semantics.
 TGSI_SEMANTIC_CLIPDIST
 """"""""""""""""""""""
 
+Note this covers clipping and culling distances.
+
 When components of vertex elements are identified this way, these
 values are each assumed to be a float32 signed distance to a plane.
+
+For clip distances:
 Primitive setup only invokes rasterization on pixels for which
-the interpolated plane distances are >= 0. Multiple clip planes
-can be implemented simultaneously, by annotating multiple
-components of one or more vertex elements with the above specified
-semantic. The limits on both clip and cull distances are bound
+the interpolated plane distances are >= 0.
+
+For cull distances:
+Primitives will be completely discarded if the plane distance
+for all of the vertices in the primitive are < 0.
+If a vertex has a cull distance of NaN, that vertex counts as "out"
+(as if its < 0);
+
+Multiple clip/cull planes can be implemented simultaneously, by
+annotating multiple components of one or more vertex elements with
+the above specified semantic.
+The limits on both clip and cull distances are bound
 by the PIPE_MAX_CLIP_OR_CULL_DISTANCE_COUNT define which defines
 the maximum number of components that can be used to hold the
 distances and by the PIPE_MAX_CLIP_OR_CULL_DISTANCE_ELEMENT_COUNT
 which specifies the maximum number of registers which can be
 annotated with those semantics.
+The properties NUM_CLIPDIST_ENABLED and NUM_CULLDIST_ENABLED
+are used to divide up the 2 x vec4 space between clipping and culling.
 
 TGSI_SEMANTIC_SAMPLEID
 """"""""""""""""""""""

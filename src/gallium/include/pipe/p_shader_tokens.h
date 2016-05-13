@@ -185,7 +185,6 @@ enum tgsi_semantic {
    TGSI_SEMANTIC_PCOORD,      /**< point sprite coordinate */
    TGSI_SEMANTIC_VIEWPORT_INDEX,  /**< viewport index */
    TGSI_SEMANTIC_LAYER,       /**< layer (rendertarget index) */
-   TGSI_SEMANTIC_CULLDIST,
    TGSI_SEMANTIC_SAMPLEID,
    TGSI_SEMANTIC_SAMPLEPOS,
    TGSI_SEMANTIC_SAMPLEMASK,

@@ -85,7 +85,6 @@ const char *tgsi_semantic_names[TGSI_SEMANTIC_COUNT] =
    "PCOORD",
    "VIEWPORT_INDEX",
    "LAYER",
-   "CULLDIST",
    "SAMPLEID",
    "SAMPLEPOS",
    "SAMPLEMASK",
