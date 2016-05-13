@@ -2871,9 +2871,12 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       case nir_intrinsic_interp_var_at_offset: {
          nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
 
+         const bool flip = !wm_key->render_to_fbo;
+
          if (const_offset) {
             unsigned off_x = MIN2((int)(const_offset->f32[0] * 16), 7) & 0xf;
-            unsigned off_y = MIN2((int)(const_offset->f32[1] * 16), 7) & 0xf;
+            unsigned off_y = MIN2((int)(const_offset->f32[1] * 16 *
+                                        (flip ? -1 : 1)), 7) & 0xf;
 
             emit_pixel_interpolater_send(bld,
                                          FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET,
@@ -2889,7 +2892,8 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
                fs_reg temp = vgrf(glsl_type::float_type);
                bld.MUL(temp, offset(offset_src, bld, i), brw_imm_f(16.0f));
                fs_reg itemp = vgrf(glsl_type::int_type);
-               bld.MOV(itemp, temp);  /* float to int */
+               /* float to int */
+               bld.MOV(itemp, (i == 1 && flip) ? negate(temp) : temp);
 
                /* Clamp the upper end of the range to +7/16.
                 * ARB_gpu_shader5 requires that we support a maximum offset

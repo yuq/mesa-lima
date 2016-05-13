@@ -511,7 +511,8 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
       key->drawable_height = _mesa_geometric_height(ctx->DrawBuffer);
    }
 
-   if ((fp->program.Base.InputsRead & VARYING_BIT_POS) || program_uses_dfdy) {
+   if ((fp->program.Base.InputsRead & VARYING_BIT_POS) ||
+       program_uses_dfdy || prog->nir->info.uses_interp_var_at_offset) {
       key->render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
    }
 
