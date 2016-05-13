@@ -234,14 +234,19 @@ uint32_t brw_swizzle_immediate(enum brw_reg_type type, uint32_t x, unsigned swz)
  * or "structure of array" form:
  */
 struct brw_reg {
-   enum brw_reg_type type:4;
-   enum brw_reg_file file:3;      /* :2 hardware format */
-   unsigned negate:1;             /* source only */
-   unsigned abs:1;                /* source only */
-   unsigned address_mode:1;       /* relative addressing, hopefully! */
-   unsigned pad0:1;
-   unsigned subnr:5;              /* :1 in align16 */
-   unsigned nr:16;
+   union {
+      struct {
+         enum brw_reg_type type:4;
+         enum brw_reg_file file:3;      /* :2 hardware format */
+         unsigned negate:1;             /* source only */
+         unsigned abs:1;                /* source only */
+         unsigned address_mode:1;       /* relative addressing, hopefully! */
+         unsigned pad0:1;
+         unsigned subnr:5;              /* :1 in align16 */
+         unsigned nr:16;
+      };
+      uint32_t bits;
+   };
 
    union {
       struct {
@@ -261,6 +266,12 @@ struct brw_reg {
    };
 };
 
+static inline bool
+brw_regs_equal(const struct brw_reg *a, const struct brw_reg *b)
+{
+   const bool df = a->type == BRW_REGISTER_TYPE_DF && a->file == IMM;
+   return a->bits == b->bits && (df ? a->df == b->df : a->ud == b->ud);
+}
 
 struct brw_indirect {
    unsigned addr_subnr:4;

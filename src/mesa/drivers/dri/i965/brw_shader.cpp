@@ -687,8 +687,7 @@ backend_shader::backend_shader(const struct brw_compiler *compiler,
 bool
 backend_reg::equals(const backend_reg &r) const
 {
-   return memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
-          reg_offset == r.reg_offset;
+   return brw_regs_equal(this, &r) && reg_offset == r.reg_offset;
 }
 
 bool

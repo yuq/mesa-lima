@@ -1010,7 +1010,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
       brw_set_default_access_mode(p, BRW_ALIGN_1);
 
-      if (memcmp(&surface_reg, &sampler_reg, sizeof(surface_reg)) == 0) {
+      if (brw_regs_equal(&surface_reg, &sampler_reg)) {
          brw_MUL(p, addr, sampler_reg, brw_imm_uw(0x101));
       } else {
          brw_SHL(p, addr, sampler_reg, brw_imm_ud(8));
