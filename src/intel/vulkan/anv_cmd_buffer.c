@@ -688,17 +688,17 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
                       state.offset + dword * 4, bo, offset);
 }
 
-const struct anv_format *
-anv_format_for_descriptor_type(VkDescriptorType type)
+enum isl_format
+anv_isl_format_for_descriptor_type(VkDescriptorType type)
 {
    switch (type) {
    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      return anv_format_for_vk_format(VK_FORMAT_R32G32B32A32_SFLOAT);
+      return ISL_FORMAT_R32G32B32A32_FLOAT;
 
    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-      return anv_format_for_vk_format(VK_FORMAT_UNDEFINED);
+      return ISL_FORMAT_RAW;
 
    default:
       unreachable("Invalid descriptor type");
@@ -768,10 +768,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       surface_state =
          anv_cmd_buffer_alloc_surface_state(cmd_buffer);
 
-      const struct anv_format *format =
-         anv_format_for_descriptor_type(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+      const enum isl_format format =
+         anv_isl_format_for_descriptor_type(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
       anv_fill_buffer_surface_state(cmd_buffer->device, surface_state,
-                                    format->isl_format, bo_offset, 12, 1);
+                                    format, bo_offset, 12, 1);
 
       bt_map[0] = surface_state.offset + state_offset;
       add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);

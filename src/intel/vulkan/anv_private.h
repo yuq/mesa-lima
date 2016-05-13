@@ -1675,8 +1675,8 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
                           const VkBufferViewCreateInfo* pCreateInfo,
                           struct anv_cmd_buffer *cmd_buffer);
 
-const struct anv_format *
-anv_format_for_descriptor_type(VkDescriptorType type);
+enum isl_format
+anv_isl_format_for_descriptor_type(VkDescriptorType type);
 
 static inline struct VkExtent3D
 anv_sanitize_image_extent(const VkImageType imageType,

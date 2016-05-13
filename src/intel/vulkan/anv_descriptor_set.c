@@ -599,10 +599,8 @@ void anv_UpdateDescriptorSets(
                &set->buffer_views[bind_layout->buffer_index];
             view += write->dstArrayElement + j;
 
-            const struct anv_format *format =
-               anv_format_for_descriptor_type(write->descriptorType);
-
-            view->format = format->isl_format;
+            view->format =
+               anv_isl_format_for_descriptor_type(write->descriptorType);
             view->bo = buffer->bo;
             view->offset = buffer->offset + write->pBufferInfo[j].offset;
 
