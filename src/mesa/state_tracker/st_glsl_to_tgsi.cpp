@@ -3334,7 +3334,7 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
       inst = (glsl_to_tgsi_instruction *)inst->get_prev();
       if (inst->op == TGSI_OPCODE_UADD)
          inst = (glsl_to_tgsi_instruction *)inst->get_prev();
-   } while (inst && inst->buffer.file == PROGRAM_UNDEFINED && inst->op == op);
+   } while (inst && inst->op == op && inst->buffer.file == PROGRAM_UNDEFINED);
 }
 
 void
