@@ -68,8 +68,7 @@ struct draw_geometry_shader {
    struct tgsi_shader_info info;
    unsigned position_output;
    unsigned viewport_index_output;
-   unsigned clipdistance_output[PIPE_MAX_CLIP_OR_CULL_DISTANCE_ELEMENT_COUNT];
-   unsigned culldistance_output[PIPE_MAX_CLIP_OR_CULL_DISTANCE_ELEMENT_COUNT];
+   unsigned ccdistance_output[PIPE_MAX_CLIP_OR_CULL_DISTANCE_ELEMENT_COUNT];
 
    unsigned max_output_vertices;
    unsigned primitive_boundary;

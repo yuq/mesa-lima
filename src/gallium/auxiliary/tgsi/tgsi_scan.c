@@ -336,8 +336,7 @@ scan_declaration(struct tgsi_shader_info *info,
              semName == TGSI_SEMANTIC_COLOR ||
              semName == TGSI_SEMANTIC_BCOLOR ||
              semName == TGSI_SEMANTIC_FOG ||
-             semName == TGSI_SEMANTIC_CLIPDIST ||
-             semName == TGSI_SEMANTIC_CULLDIST) {
+             semName == TGSI_SEMANTIC_CLIPDIST) {
             switch (fulldecl->Interp.Interpolate) {
             case TGSI_INTERPOLATE_COLOR:
             case TGSI_INTERPOLATE_PERSPECTIVE:

@@ -1164,8 +1164,8 @@ generate_clipmask(struct draw_llvm *llvm,
    unsigned ucp_enable = key->ucp_enable;
    unsigned cd[2];
 
-   cd[0] = llvm->draw->vs.clipdistance_output[0];
-   cd[1] = llvm->draw->vs.clipdistance_output[1];
+   cd[0] = llvm->draw->vs.ccdistance_output[0];
+   cd[1] = llvm->draw->vs.ccdistance_output[1];
 
    if (cd[0] != pos || cd[1] != pos)
       have_cd = true;
