@@ -164,6 +164,10 @@ brw_codegen_tes_prog(struct brw_context *brw,
    prog_data.base.base.nr_params = param_count;
    prog_data.base.base.nr_image_params = tes->NumImages;
 
+   prog_data.base.cull_distance_mask =
+      ((1 << tep->program.Base.CullDistanceArraySize) - 1) <<
+      tep->program.Base.ClipDistanceArraySize;
+
    brw_nir_setup_glsl_uniforms(nir, shader_prog, &tep->program.Base,
                                &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_TESS_EVAL]);

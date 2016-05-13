@@ -50,6 +50,8 @@ upload_clip_state(struct brw_context *brw)
       dw2 |= GEN6_CLIP_NON_PERSPECTIVE_BARYCENTRIC_ENABLE;
    }
 
+   dw1 |= brw->vs.prog_data->base.cull_distance_mask;
+
    if (brw->gen >= 7)
       dw1 |= GEN7_CLIP_EARLY_CULL;
 

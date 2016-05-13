@@ -108,7 +108,8 @@ gen8_upload_gs_state(struct brw_context *brw)
       OUT_BATCH(dw8);
 
       /* DW9 / _NEW_TRANSFORM */
-      OUT_BATCH((ctx->Transform.ClipPlanesEnabled <<
+      OUT_BATCH((prog_data->cull_distance_mask |
+                 ctx->Transform.ClipPlanesEnabled <<
                  GEN8_GS_USER_CLIP_DISTANCE_SHIFT) |
                 (urb_entry_output_length << GEN8_GS_URB_OUTPUT_LENGTH_SHIFT) |
                 (urb_entry_write_offset <<
