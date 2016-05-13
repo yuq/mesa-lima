@@ -161,11 +161,14 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
          &anv_image_get_surface_for_aspect_mask(image, aspect)->isl;
       struct anv_meta_blit2d_surf img_bsurf =
          blit_surf_for_image(image, img_isl_surf);
+      enum isl_format buf_format = anv_get_isl_format(image->vk_format, aspect,
+                                                      VK_IMAGE_TILING_LINEAR,
+                                                      NULL);
       struct anv_meta_blit2d_surf buf_bsurf = {
          .bo = buffer->bo,
          .tiling = ISL_TILING_LINEAR,
          .base_offset = buffer->offset + pRegions[r].bufferOffset,
-         .bs = forward ? image->format->isl_layout->bs : img_bsurf.bs,
+         .bs = isl_format_get_layout(buf_format)->bs,
          .pitch = buf_extent_el.width * buf_bsurf.bs,
       };
 
