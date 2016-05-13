@@ -29,6 +29,7 @@
 ******************************************************************************/
 #pragma once
 #include "common/os.h"
+#include "core/utils.h"
 
 #include "fetch_jit.h"
 #include "streamout_jit.h"

@@ -867,7 +867,7 @@ struct TemplateArgUnroller
 };
 
 //////////////////////////////////////////////////////////////////////////
-/// Helper used to get an environment variable
+/// Helpers used to get / set environment variable
 //////////////////////////////////////////////////////////////////////////
 static INLINE std::string GetEnv(const std::string& variableName)
 {
@@ -883,3 +883,64 @@ static INLINE std::string GetEnv(const std::string& variableName)
 
     return output;
 }
+
+static INLINE void SetEnv(const std::string& variableName, const std::string& value)
+{
+#if defined(_WIN32)
+    SetEnvironmentVariableA(variableName.c_str(), value.c_str());
+#else
+    setenv(variableName.c_str(), value.c_str(), true);
+#endif
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// Abstraction for dynamically loading modules and getting functions
+//////////////////////////////////////////////////////////////////////////
+#if defined(_WIN32)
+typedef HMODULE SWR_MODULE_HANDLE;
+#else
+#include <dlfcn.h>
+typedef void* SWR_MODULE_HANDLE;
+#endif
+
+static inline SWR_MODULE_HANDLE SWR_API LoadModule(const char* szModuleName)
+{
+#if defined(_WIN32)
+    return LoadLibraryA(szModuleName);
+#else
+    return dlopen(szModuleName, RTLD_LAZY | RTLD_LOCAL);
+#endif
+}
+
+static inline void SWR_API FreeModuleHandle(SWR_MODULE_HANDLE hModule)
+{
+    if (hModule)
+    {
+#if defined(_WIN32)
+        FreeLibrary((HMODULE)hModule);
+#else
+        dlclose(hModule);
+#endif
+    }
+}
+
+static inline void* SWR_API GetProcFromModule(SWR_MODULE_HANDLE hModule, const char* szProcName)
+{
+    if (hModule && szProcName)
+    {
+#if defined(_WIN32)
+        return GetProcAddress((HMODULE)hModule, szProcName);
+#else
+        return dlsym(hModule, szProcName);
+#endif
+    }
+
+    return nullptr;
+}
+ 
+template<typename T>
+static inline void GetProcFromModule(SWR_MODULE_HANDLE hModule, const char* szProcName, T& outFunc)
+{
+    outFunc = (T)GetProcFromModule(hModule, szProcName);
+}
+
