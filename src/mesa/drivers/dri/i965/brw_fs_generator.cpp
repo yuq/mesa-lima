@@ -54,7 +54,8 @@ brw_file_from_reg(fs_reg *reg)
 }
 
 static struct brw_reg
-brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
+brw_reg_from_fs_reg(const struct brw_codegen *p,
+                    fs_inst *inst, fs_reg *reg, unsigned gen)
 {
    struct brw_reg brw_reg;
 
@@ -65,7 +66,8 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
    case VGRF:
       if (reg->stride == 0) {
          brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->nr, 0);
-      } else if (inst->exec_size * reg->stride * type_sz(reg->type) <= 32) {
+      } else if (!p->compressed &&
+                 inst->exec_size * reg->stride * type_sz(reg->type) <= 32) {
          brw_reg = brw_vecn_reg(inst->exec_size, brw_file_from_reg(reg),
                                 reg->nr, 0);
          brw_reg = stride(brw_reg, inst->exec_size * reg->stride,
@@ -1763,7 +1765,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       }
 
       for (unsigned int i = 0; i < inst->sources; i++) {
-	 src[i] = brw_reg_from_fs_reg(inst, &inst->src[i], devinfo->gen);
+	 src[i] = brw_reg_from_fs_reg(p, inst, &inst->src[i], devinfo->gen);
 
 	 /* The accumulator result appears to get used for the
 	  * conditional modifier generation.  When negating a UD
@@ -1775,7 +1777,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 		inst->src[i].type != BRW_REGISTER_TYPE_UD ||
 		!inst->src[i].negate);
       }
-      dst = brw_reg_from_fs_reg(inst, &inst->dst, devinfo->gen);
+      dst = brw_reg_from_fs_reg(p, inst, &inst->dst, devinfo->gen);
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
