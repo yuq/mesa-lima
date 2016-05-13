@@ -28,6 +28,7 @@
 
 #include "anv_wsi.h"
 
+#include "vk_format_info.h"
 #include "util/hash_table.h"
 
 struct wsi_x11_connection {
@@ -614,7 +615,7 @@ x11_image_init(struct anv_device *device, struct x11_swapchain *chain,
       return result;
 
    image->image = anv_image_from_handle(image_h);
-   assert(anv_format_is_color(image->image->format));
+   assert(vk_format_is_color(image->image->vk_format));
 
    VkDeviceMemory memory_h;
    result = anv_AllocateMemory(anv_device_to_handle(device),

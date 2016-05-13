@@ -26,6 +26,7 @@
 
 #include "anv_wsi.h"
 
+#include "vk_format_info.h"
 #include <util/hash_table.h>
 
 #define MIN_NUM_IMAGES 2
@@ -642,7 +643,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
       return result;
 
    image->image = anv_image_from_handle(vk_image);
-   assert(anv_format_is_color(image->image->format));
+   assert(vk_format_is_color(image->image->vk_format));
 
    struct anv_surface *surface = &image->image->color_surface;
 
