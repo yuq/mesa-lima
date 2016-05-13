@@ -717,7 +717,7 @@ void anv_CmdResolveImage(
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = src_image_h,
                .viewType = anv_meta_get_view_type(src_image),
-               .format = src_image->format->vk_format,
+               .format = src_image->vk_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = region->srcSubresource.mipLevel,
@@ -734,7 +734,7 @@ void anv_CmdResolveImage(
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = dest_image_h,
                .viewType = anv_meta_get_view_type(dest_image),
-               .format = dest_image->format->vk_format,
+               .format = dest_image->vk_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = region->dstSubresource.mipLevel,
