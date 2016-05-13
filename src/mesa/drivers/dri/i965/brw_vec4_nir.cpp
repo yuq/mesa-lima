@@ -60,36 +60,31 @@ vec4_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_load_vertex_id_zero_base:
       reg = &nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE];
       if (reg->file == BAD_FILE)
-         *reg = *make_reg_for_system_value(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
-                                           glsl_type::int_type);
+         *reg = *make_reg_for_system_value(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE);
       break;
 
    case nir_intrinsic_load_base_vertex:
       reg = &nir_system_values[SYSTEM_VALUE_BASE_VERTEX];
       if (reg->file == BAD_FILE)
-         *reg = *make_reg_for_system_value(SYSTEM_VALUE_BASE_VERTEX,
-                                           glsl_type::int_type);
+         *reg = *make_reg_for_system_value(SYSTEM_VALUE_BASE_VERTEX);
       break;
 
    case nir_intrinsic_load_instance_id:
       reg = &nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
       if (reg->file == BAD_FILE)
-         *reg = *make_reg_for_system_value(SYSTEM_VALUE_INSTANCE_ID,
-                                           glsl_type::int_type);
+         *reg = *make_reg_for_system_value(SYSTEM_VALUE_INSTANCE_ID);
       break;
 
    case nir_intrinsic_load_base_instance:
       reg = &nir_system_values[SYSTEM_VALUE_BASE_INSTANCE];
       if (reg->file == BAD_FILE)
-         *reg = *make_reg_for_system_value(SYSTEM_VALUE_BASE_INSTANCE,
-                                           glsl_type::int_type);
+         *reg = *make_reg_for_system_value(SYSTEM_VALUE_BASE_INSTANCE);
       break;
 
    case nir_intrinsic_load_draw_id:
       reg = &nir_system_values[SYSTEM_VALUE_DRAW_ID];
       if (reg->file == BAD_FILE)
-         *reg = *make_reg_for_system_value(SYSTEM_VALUE_DRAW_ID,
-                                           glsl_type::int_type);
+         *reg = *make_reg_for_system_value(SYSTEM_VALUE_DRAW_ID);
       break;
 
    default:

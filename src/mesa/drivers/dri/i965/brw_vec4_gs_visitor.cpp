@@ -52,10 +52,9 @@ vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
 
 
 dst_reg *
-vec4_gs_visitor::make_reg_for_system_value(int location,
-                                           const glsl_type *type)
+vec4_gs_visitor::make_reg_for_system_value(int location)
 {
-   dst_reg *reg = new(mem_ctx) dst_reg(this, type);
+   dst_reg *reg = new(mem_ctx) dst_reg(this, glsl_type::int_type);
 
    switch (location) {
    case SYSTEM_VALUE_INVOCATION_ID:

@@ -54,7 +54,7 @@ vec4_tcs_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
 }
 
 dst_reg *
-vec4_tcs_visitor::make_reg_for_system_value(int location, const glsl_type *type)
+vec4_tcs_visitor::make_reg_for_system_value(int location)
 {
    return NULL;
 }

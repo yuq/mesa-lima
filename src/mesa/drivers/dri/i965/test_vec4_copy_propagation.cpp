@@ -56,8 +56,7 @@ public:
    }
 
 protected:
-   virtual dst_reg *make_reg_for_system_value(int location,
-                                              const glsl_type *type)
+   virtual dst_reg *make_reg_for_system_value(int location)
    {
       unreachable("Not reached");
    }

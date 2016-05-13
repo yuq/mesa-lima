@@ -43,8 +43,7 @@ vec4_gs_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_load_invocation_id:
       reg = &this->nir_system_values[SYSTEM_VALUE_INVOCATION_ID];
       if (reg->file == BAD_FILE)
-         *reg = *this->make_reg_for_system_value(SYSTEM_VALUE_INVOCATION_ID,
-                                                 glsl_type::int_type);
+         *reg = *this->make_reg_for_system_value(SYSTEM_VALUE_INVOCATION_ID);
       break;
 
    default:
