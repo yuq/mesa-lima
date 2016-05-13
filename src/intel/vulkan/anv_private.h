@@ -1751,7 +1751,7 @@ struct anv_subpass {
 };
 
 struct anv_render_pass_attachment {
-   const struct anv_format                      *format;
+   VkFormat                                     format;
    uint32_t                                     samples;
    VkAttachmentLoadOp                           load_op;
    VkAttachmentLoadOp                           stencil_load_op;

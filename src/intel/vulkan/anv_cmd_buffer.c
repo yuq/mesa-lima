@@ -29,6 +29,8 @@
 
 #include "anv_private.h"
 
+#include "vk_format_info.h"
+
 /** \file anv_cmd_buffer.c
  *
  * This file contains all of the stuff for emitting commands into a command
@@ -168,20 +170,21 @@ anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
 
    for (uint32_t i = 0; i < pass->attachment_count; ++i) {
       struct anv_render_pass_attachment *att = &pass->attachments[i];
+      VkImageAspectFlags att_aspects = vk_format_aspects(att->format);
       VkImageAspectFlags clear_aspects = 0;
 
-      if (anv_format_is_color(att->format)) {
+      if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
          /* color attachment */
          if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
             clear_aspects |= VK_IMAGE_ASPECT_COLOR_BIT;
          }
       } else {
          /* depthstencil attachment */
-         if (att->format->has_depth &&
+         if ((att_aspects & VK_IMAGE_ASPECT_DEPTH_BIT) &&
              att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
             clear_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
          }
-         if (att->format->has_stencil &&
+         if ((att_aspects & VK_IMAGE_ASPECT_STENCIL_BIT) &&
              att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
             clear_aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
          }
