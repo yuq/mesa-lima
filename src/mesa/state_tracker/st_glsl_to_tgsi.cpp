@@ -2151,9 +2151,29 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
    case ir_unop_interpolate_at_centroid:
       emit_asm(ir, TGSI_OPCODE_INTERP_CENTROID, result_dst, op[0]);
       break;
-   case ir_binop_interpolate_at_offset:
-      emit_asm(ir, TGSI_OPCODE_INTERP_OFFSET, result_dst, op[0], op[1]);
+   case ir_binop_interpolate_at_offset: {
+      /* The y coordinate needs to be flipped for the default fb */
+      static const gl_state_index transform_y_state[STATE_LENGTH]
+         = { STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM };
+
+      unsigned transform_y_index =
+         _mesa_add_state_reference(this->prog->Parameters,
+                                   transform_y_state);
+
+      st_src_reg transform_y = st_src_reg(PROGRAM_STATE_VAR,
+                                          transform_y_index,
+                                          glsl_type::vec4_type);
+      transform_y.swizzle = SWIZZLE_XXXX;
+
+      st_src_reg temp = get_temp(glsl_type::vec2_type);
+      st_dst_reg temp_dst = st_dst_reg(temp);
+
+      emit_asm(ir, TGSI_OPCODE_MOV, temp_dst, op[1]);
+      temp_dst.writemask = WRITEMASK_Y;
+      emit_asm(ir, TGSI_OPCODE_MUL, temp_dst, transform_y, op[1]);
+      emit_asm(ir, TGSI_OPCODE_INTERP_OFFSET, result_dst, op[0], temp);
       break;
+   }
    case ir_binop_interpolate_at_sample:
       emit_asm(ir, TGSI_OPCODE_INTERP_SAMPLE, result_dst, op[0], op[1]);
       break;
