@@ -29,6 +29,8 @@
 
 #include "anv_private.h"
 
+#include "vk_format_info.h"
+
 /**
  * Exactly one bit must be set in \a aspect.
  */
@@ -226,34 +228,18 @@ anv_image_create(VkDevice _device,
    image->extent = pCreateInfo->extent;
    image->vk_format = pCreateInfo->format;
    image->format = format;
+   image->aspects = vk_format_aspects(image->vk_format);
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arrayLayers;
    image->samples = pCreateInfo->samples;
    image->usage = anv_image_get_full_usage(pCreateInfo, format);
    image->tiling = pCreateInfo->tiling;
 
-   if (likely(anv_format_is_color(format))) {
-      image->aspects |= VK_IMAGE_ASPECT_COLOR_BIT;
-      r = make_surface(device, image, create_info,
-                       VK_IMAGE_ASPECT_COLOR_BIT);
+   uint32_t b;
+   for_each_bit(b, image->aspects) {
+      r = make_surface(device, image, create_info, (1 << b));
       if (r != VK_SUCCESS)
          goto fail;
-   } else {
-      if (image->format->has_depth) {
-         image->aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
-         r = make_surface(device, image, create_info,
-                          VK_IMAGE_ASPECT_DEPTH_BIT);
-         if (r != VK_SUCCESS)
-            goto fail;
-      }
-
-      if (image->format->has_stencil) {
-         image->aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
-         r = make_surface(device, image, create_info,
-                          VK_IMAGE_ASPECT_STENCIL_BIT);
-         if (r != VK_SUCCESS)
-            goto fail;
-      }
    }
 
    *pImage = anv_image_to_handle(image);
@@ -382,32 +368,33 @@ anv_validate_CreateImageView(VkDevice _device,
    assert(subresource->baseArrayLayer + anv_get_layerCount(image, subresource) <= image->array_size);
    assert(pView);
 
+   MAYBE_UNUSED const VkImageAspectFlags view_format_aspects =
+      vk_format_aspects(pCreateInfo->format);
+
    const VkImageAspectFlags ds_flags = VK_IMAGE_ASPECT_DEPTH_BIT
                                      | VK_IMAGE_ASPECT_STENCIL_BIT;
 
    /* Validate format. */
    if (subresource->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
       assert(subresource->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
-      assert(!image->format->has_depth);
-      assert(!image->format->has_stencil);
-      assert(!view_format_info->has_depth);
-      assert(!view_format_info->has_stencil);
+      assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+      assert(view_format_aspects == VK_IMAGE_ASPECT_COLOR_BIT);
       assert(view_format_info->isl_layout->bs ==
              image->format->isl_layout->bs);
    } else if (subresource->aspectMask & ds_flags) {
       assert((subresource->aspectMask & ~ds_flags) == 0);
 
       if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
-         assert(image->format->has_depth);
-         assert(view_format_info->has_depth);
+         assert(image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
+         assert(view_format_aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
          assert(view_format_info->isl_layout->bs ==
                 image->format->isl_layout->bs);
       }
 
       if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
          /* FINISHME: Is it legal to have an R8 view of S8? */
-         assert(image->format->has_stencil);
-         assert(view_format_info->has_stencil);
+         assert(image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT);
+         assert(view_format_aspects & VK_IMAGE_ASPECT_STENCIL_BIT);
       }
    } else {
       assert(!"bad VkImageSubresourceRange::aspectFlags");
@@ -739,42 +726,39 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
        * Meta attaches all destination surfaces as color render targets. Guess
        * what surface the Meta Dragons really want.
        */
-      if (image->format->has_depth && image->format->has_stencil) {
+      if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
          return &image->depth_surface;
-      } else if (image->format->has_depth) {
-         return &image->depth_surface;
-      } else if (image->format->has_stencil) {
+      } else if (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
          return &image->stencil_surface;
       } else {
+         assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
          return &image->color_surface;
       }
       break;
    case VK_IMAGE_ASPECT_DEPTH_BIT:
-      assert(image->format->has_depth);
+      assert(image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
       return &image->depth_surface;
    case VK_IMAGE_ASPECT_STENCIL_BIT:
-      assert(image->format->has_stencil);
+      assert(image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT);
       return &image->stencil_surface;
    case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
-      if (image->format->has_depth && image->format->has_stencil) {
-         /* FINISHME: The Vulkan spec (git a511ba2) requires support for
-          * combined depth stencil formats. Specifically, it states:
-          *
-          *    At least one of ename:VK_FORMAT_D24_UNORM_S8_UINT or
-          *    ename:VK_FORMAT_D32_SFLOAT_S8_UINT must be supported.
-          *
-          * Image views with both depth and stencil aspects are only valid for
-          * render target attachments, in which case
-          * cmd_buffer_emit_depth_stencil() will pick out both the depth and
-          * stencil surfaces from the underlying surface.
-          */
+      /* FINISHME: The Vulkan spec (git a511ba2) requires support for
+       * combined depth stencil formats. Specifically, it states:
+       *
+       *    At least one of ename:VK_FORMAT_D24_UNORM_S8_UINT or
+       *    ename:VK_FORMAT_D32_SFLOAT_S8_UINT must be supported.
+       *
+       * Image views with both depth and stencil aspects are only valid for
+       * render target attachments, in which case
+       * cmd_buffer_emit_depth_stencil() will pick out both the depth and
+       * stencil surfaces from the underlying surface.
+       */
+      if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
          return &image->depth_surface;
-      } else if (image->format->has_depth) {
-         return &image->depth_surface;
-      } else if (image->format->has_stencil) {
+      } else {
+         assert(image->aspects == VK_IMAGE_ASPECT_STENCIL_BIT);
          return &image->stencil_surface;
       }
-      /* fallthrough */
     default:
        unreachable("image does not have aspect");
        return NULL;
