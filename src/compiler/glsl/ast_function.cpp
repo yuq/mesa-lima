@@ -209,7 +209,7 @@ verify_parameter_modes(_mesa_glsl_parse_state *state,
       /* Verify that shader_in parameters are shader inputs */
       if (formal->data.must_be_shader_input) {
          ir_variable *var = actual->variable_referenced();
-         if (var && var->data.mode != ir_var_shader_in) {
+         if (!var || var->data.mode != ir_var_shader_in) {
             _mesa_glsl_error(&loc, state,
                              "parameter `%s` must be a shader input",
                              formal->name);
