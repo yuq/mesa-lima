@@ -3495,8 +3495,8 @@ void evergreen_update_vs_state(struct pipe_context *ctx, struct r600_pipe_shader
 	/* After that, the NOP relocation packet must be emitted (shader->bo, RADEON_USAGE_READ). */
 
 	shader->pa_cl_vs_out_cntl =
-		S_02881C_VS_OUT_CCDIST0_VEC_ENA((rshader->clip_dist_write & 0x0F) != 0) |
-		S_02881C_VS_OUT_CCDIST1_VEC_ENA((rshader->clip_dist_write & 0xF0) != 0) |
+		S_02881C_VS_OUT_CCDIST0_VEC_ENA((rshader->cc_dist_mask & 0x0F) != 0) |
+		S_02881C_VS_OUT_CCDIST1_VEC_ENA((rshader->cc_dist_mask & 0xF0) != 0) |
 		S_02881C_VS_OUT_MISC_VEC_ENA(rshader->vs_out_misc_write) |
 		S_02881C_USE_VTX_POINT_SIZE(rshader->vs_out_point_size) |
 		S_02881C_USE_VTX_EDGE_FLAG(rshader->vs_out_edgeflag) |

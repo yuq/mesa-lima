@@ -154,7 +154,9 @@ struct r600_clip_misc_state {
 	unsigned pa_cl_clip_cntl;   /* from rasterizer    */
 	unsigned pa_cl_vs_out_cntl; /* from vertex shader */
 	unsigned clip_plane_enable; /* from rasterizer    */
+	unsigned cc_dist_mask;      /* from vertex shader */
 	unsigned clip_dist_write;   /* from vertex shader */
+	unsigned cull_dist_write;   /* from vertex shader */
 	boolean clip_disable;       /* from vertex shader */
 	boolean vs_out_viewport;    /* from vertex shader */
 };

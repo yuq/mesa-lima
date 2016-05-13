@@ -917,8 +917,6 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 				ctx->shader->output[i].spi_sid = r600_spi_sid(&ctx->shader->output[i]);
 				switch (d->Semantic.Name) {
 				case TGSI_SEMANTIC_CLIPDIST:
-					ctx->shader->clip_dist_write |= d->Declaration.UsageMask <<
-									((d->Semantic.Index + j) << 2);
 					break;
 				case TGSI_SEMANTIC_PSIZE:
 					ctx->shader->vs_out_misc_write = 1;
@@ -2372,6 +2370,8 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 			/* spi_sid is 0 for clipdistance outputs that were generated
 			 * for clipvertex - we don't need to pass them to PS */
 			ctx.shader->clip_dist_write = gs->shader.clip_dist_write;
+			ctx.shader->cull_dist_write = gs->shader.cull_dist_write;
+			ctx.shader->cc_dist_mask = gs->shader.cc_dist_mask;
 			if (out->spi_sid) {
 				/* duplicate it as PARAM to pass to the pixel shader */
 				output.array_base = next_param++;
@@ -3238,6 +3238,15 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	shader->vs_position_window_space = ctx.info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
 	shader->ps_conservative_z = (uint8_t)ctx.info.properties[TGSI_PROPERTY_FS_DEPTH_LAYOUT];
 
+	if (ctx.type == PIPE_SHADER_VERTEX ||
+	    ctx.type == PIPE_SHADER_GEOMETRY ||
+	    ctx.type == PIPE_SHADER_TESS_EVAL) {
+		shader->cc_dist_mask = (1 << (ctx.info.properties[TGSI_PROPERTY_NUM_CULLDIST_ENABLED] +
+					      ctx.info.properties[TGSI_PROPERTY_NUM_CLIPDIST_ENABLED])) - 1;
+		shader->clip_dist_write = (1 << ctx.info.properties[TGSI_PROPERTY_NUM_CLIPDIST_ENABLED]) - 1;
+		shader->cull_dist_write = ((1 << ctx.info.properties[TGSI_PROPERTY_NUM_CULLDIST_ENABLED]) - 1) << ctx.info.properties[TGSI_PROPERTY_NUM_CLIPDIST_ENABLED];
+	}
+
 	if (shader->vs_as_gs_a)
 		vs_add_primid_output(&ctx, key.vs.prim_id_out);
 
@@ -3490,6 +3499,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		shader->output[ctx.cv_output].spi_sid = 0;
 
 		shader->clip_dist_write = 0xFF;
+		shader->cc_dist_mask = 0xFF;
 
 		for (i = 0; i < 8; i++) {
 			int oreg = i >> 2;

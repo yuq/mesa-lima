@@ -85,7 +85,9 @@ struct r600_shader {
 	/* Real number of ps color exports compiled in the bytecode */
 	unsigned		nr_ps_color_exports;
 	/* bit n is set if the shader writes gl_ClipDistance[n] */
+	unsigned		cc_dist_mask;
 	unsigned		clip_dist_write;
+	unsigned                cull_dist_write;
 	boolean			vs_position_window_space;
 	/* flag is set if the shader writes VS_OUT_MISC_VEC (e.g. for PSIZE) */
 	boolean			vs_out_misc_write;
