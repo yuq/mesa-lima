@@ -332,7 +332,6 @@ anv_validate_CreateImageView(VkDevice _device,
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *subresource;
-   MAYBE_UNUSED const struct anv_format *view_format_info;
 
    /* Validate structure type before dereferencing it. */
    assert(pCreateInfo);
@@ -346,7 +345,6 @@ anv_validate_CreateImageView(VkDevice _device,
    /* Validate format is in range before using it. */
    assert(pCreateInfo->format >= VK_FORMAT_BEGIN_RANGE);
    assert(pCreateInfo->format <= VK_FORMAT_END_RANGE);
-   view_format_info = anv_format_for_vk_format(pCreateInfo->format);
 
    /* Validate channel swizzles. */
    assert(pCreateInfo->components.r >= VK_COMPONENT_SWIZZLE_BEGIN_RANGE);
@@ -379,16 +377,14 @@ anv_validate_CreateImageView(VkDevice _device,
       assert(subresource->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
       assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
       assert(view_format_aspects == VK_IMAGE_ASPECT_COLOR_BIT);
-      assert(view_format_info->isl_layout->bs ==
-             image->format->isl_layout->bs);
    } else if (subresource->aspectMask & ds_flags) {
       assert((subresource->aspectMask & ~ds_flags) == 0);
+
+      assert(pCreateInfo->format == image->vk_format);
 
       if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
          assert(image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
          assert(view_format_aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
-         assert(view_format_info->isl_layout->bs ==
-                image->format->isl_layout->bs);
       }
 
       if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
