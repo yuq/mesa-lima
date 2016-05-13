@@ -27,6 +27,7 @@
 
 #include "pipe/p_compiler.h"
 
+/* First/last provoking vertex */
 #define PV_FIRST      0
 #define PV_LAST       1
 #define PV_COUNT      2
@@ -35,13 +36,15 @@
 #define PR_DISABLE 0
 #define PR_ENABLE 1
 #define PR_COUNT 2
+
+
 /**
  * Index translator function (for glDrawElements() case)
  *
  * \param in     the input index buffer
  * \param start  the index of the first vertex (pipe_draw_info::start)
  * \param nr     the number of vertices (pipe_draw_info::count)
- * \param out    output buffer big enough or nr vertices (of
+ * \param out    output buffer big enough for nr vertices (of
  *    @out_index_size bytes each)
  */
 typedef void (*u_translate_func)( const void *in,
@@ -56,7 +59,7 @@ typedef void (*u_translate_func)( const void *in,
  *
  * \param start  the index of the first vertex (pipe_draw_info::start)
  * \param nr     the number of vertices (pipe_draw_info::count)
- * \param out    output buffer big enough or nr vertices (of
+ * \param out    output buffer big enough for nr vertices (of
  *    @out_index_size bytes each)
  */
 typedef void (*u_generate_func)( unsigned start,
@@ -78,6 +81,15 @@ enum indices_mode {
 
 void u_index_init( void );
 
+
+/**
+ * For indexed drawing, this function determines what kind of primitive
+ * transformation is needed (if any) for handling:
+ * - unsupported primitive types (such as PIPE_PRIM_POLYGON)
+ * - changing the provoking vertex
+ * - primitive restart
+ * - index size (1 byte, 2 byte or 4 byte indexes)
+ */
 enum indices_mode
 u_index_translator(unsigned hw_mask,
                    unsigned prim,
@@ -91,7 +103,12 @@ u_index_translator(unsigned hw_mask,
                    unsigned *out_nr,
                    u_translate_func *out_translate);
 
-/* Note that even when generating it is necessary to know what the
+
+/**
+ * For non-indexed drawing, this function determines what kind of primitive
+ * transformation is needed (see above).
+ *
+ * Note that even when generating it is necessary to know what the
  * API's PV is, as the indices generated will depend on whether it is
  * the same as hardware or not, and in the case of triangle strips,
  * whether it is first or last.
@@ -111,6 +128,12 @@ u_index_generator(unsigned hw_mask,
 
 void u_unfilled_init( void );
 
+/**
+ * If the driver can't handle "unfilled" primitives (i.e. drawing triangle
+ * primitives as 3 lines or 3 points) this function can be used to translate
+ * an indexed primitive into a new indexed primitive to draw as lines or
+ * points.
+ */
 enum indices_mode
 u_unfilled_translator(unsigned prim,
                       unsigned in_index_size,
@@ -121,6 +144,9 @@ u_unfilled_translator(unsigned prim,
                       unsigned *out_nr,
                       u_translate_func *out_translate);
 
+/**
+ * As above, but for non-indexed (array) primitives.
+ */
 enum indices_mode
 u_unfilled_generator(unsigned prim,
                      unsigned start,
