@@ -53,7 +53,29 @@ typedef struct {
 
    /* an index used to make new non-conflicting names */
    unsigned index;
+
+   /**
+    * Optional table of annotations mapping nir object
+    * (such as instr or var) to message to print.
+    */
+   struct hash_table *annotations;
 } print_state;
+
+static void
+print_annotation(print_state *state, void *obj)
+{
+   if (!state->annotations)
+      return;
+
+   struct hash_entry *entry = _mesa_hash_table_search(state->annotations, obj);
+   if (!entry)
+      return;
+
+   const char *note = entry->data;
+   _mesa_hash_table_remove(state->annotations, entry);
+
+   fprintf(stderr, "%s\n\n", note);
+}
 
 static void
 print_register(nir_register *reg, print_state *state)
@@ -413,6 +435,7 @@ print_var_decl(nir_variable *var, print_state *state)
    }
 
    fprintf(fp, "\n");
+   print_annotation(state, var);
 }
 
 static void
@@ -924,6 +947,7 @@ print_block(nir_block *block, print_state *state, unsigned tabs)
    nir_foreach_instr(instr, block) {
       print_instr(instr, state, tabs);
       fprintf(fp, "\n");
+      print_annotation(state, instr);
    }
 
    print_tabs(tabs, fp);
@@ -1096,10 +1120,13 @@ destroy_print_state(print_state *state)
 }
 
 void
-nir_print_shader(nir_shader *shader, FILE *fp)
+nir_print_shader_annotated(nir_shader *shader, FILE *fp,
+                           struct hash_table *annotations)
 {
    print_state state;
    init_print_state(&state, shader, fp);
+
+   state.annotations = annotations;
 
    fprintf(fp, "shader: %s\n", gl_shader_stage_name(shader->stage));
 
@@ -1147,6 +1174,12 @@ nir_print_shader(nir_shader *shader, FILE *fp)
    }
 
    destroy_print_state(&state);
+}
+
+void
+nir_print_shader(nir_shader *shader, FILE *fp)
+{
+   nir_print_shader_annotated(shader, fp, NULL);
 }
 
 void

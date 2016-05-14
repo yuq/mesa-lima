@@ -2213,6 +2213,7 @@ unsigned nir_index_instrs(nir_function_impl *impl);
 void nir_index_blocks(nir_function_impl *impl);
 
 void nir_print_shader(nir_shader *shader, FILE *fp);
+void nir_print_shader_annotated(nir_shader *shader, FILE *fp, struct hash_table *errors);
 void nir_print_instr(const nir_instr *instr, FILE *fp);
 
 nir_shader *nir_shader_clone(void *mem_ctx, const nir_shader *s);
