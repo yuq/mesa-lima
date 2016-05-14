@@ -27,6 +27,7 @@
 static void
 apply_dynamic_offsets_block(nir_block *block, nir_builder *b,
                             const struct anv_pipeline_layout *layout,
+                            bool add_bounds_checks,
                             uint32_t indices_start)
 {
    struct anv_descriptor_set_layout *set_layout;
@@ -86,6 +87,9 @@ apply_dynamic_offsets_block(nir_block *block, nir_builder *b,
       nir_instr_rewrite_src(&intrin->instr, offset_src,
                             nir_src_for_ssa(new_offset));
 
+      if (!add_bounds_checks)
+         continue;
+
       /* In order to avoid out-of-bounds access, we predicate */
       nir_ssa_def *pred = nir_uge(b, nir_channel(b, &offset_load->dest.ssa, 1),
                                   old_offset);
@@ -138,6 +142,8 @@ anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
    if (!layout || !layout->stage[shader->stage].has_dynamic_offsets)
       return;
 
+   const bool add_bounds_checks = pipeline->device->robust_buffer_access;
+
    nir_foreach_function(function, shader) {
       if (!function->impl)
          continue;
@@ -147,7 +153,7 @@ anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
 
       nir_foreach_block(block, function->impl) {
          apply_dynamic_offsets_block(block, &builder, pipeline->layout,
-                                     shader->num_uniforms);
+                                     add_bounds_checks, shader->num_uniforms);
       }
 
       nir_metadata_preserve(function->impl, nir_metadata_block_index |
