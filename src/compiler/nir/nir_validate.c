@@ -69,6 +69,9 @@ typedef struct {
    /* the current instruction being validated */
    nir_instr *instr;
 
+   /* the current variable being validated */
+   nir_variable *var;
+
    /* the current basic block being validated */
    nir_block *block;
 
@@ -95,9 +98,33 @@ typedef struct {
 
    /* map of local variable -> function implementation where it is defined */
    struct hash_table *var_defs;
+
+   /* map of instruction/var/etc to failed assert string */
+   struct hash_table *errors;
 } validate_state;
 
-#define validate_assert(state, cond) assert(cond)
+static void
+log_error(validate_state *state, const char *cond, const char *file, int line)
+{
+   const void *obj;
+
+   if (state->instr)
+      obj = state->instr;
+   else if (state->var)
+      obj = state->var;
+   else
+      obj = cond;
+
+   char *msg = ralloc_asprintf(state->errors, "error: %s (%s:%d)",
+                               cond, file, line);
+
+   _mesa_hash_table_insert(state->errors, obj, msg);
+}
+
+#define validate_assert(state, cond) do {             \
+      if (!(cond))                                    \
+         log_error(state, #cond, __FILE__, __LINE__); \
+   } while (0)
 
 static void validate_src(nir_src *src, validate_state *state);
 
@@ -903,6 +930,8 @@ postvalidate_reg_decl(nir_register *reg, validate_state *state)
 static void
 validate_var_decl(nir_variable *var, bool is_global, validate_state *state)
 {
+   state->var = var;
+
    validate_assert(state, is_global == nir_variable_is_global(var));
 
    /* Must have exactly one mode set */
@@ -916,6 +945,8 @@ validate_var_decl(nir_variable *var, bool is_global, validate_state *state)
    if (!is_global) {
       _mesa_hash_table_insert(state->var_defs, var, state->impl);
    }
+
+   state->var = NULL;
 }
 
 static bool
@@ -1044,7 +1075,12 @@ init_validate_state(validate_state *state)
    state->regs_found = NULL;
    state->var_defs = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
+   state->errors = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                                           _mesa_key_pointer_equal);
+
    state->loop = NULL;
+   state->instr = NULL;
+   state->var = NULL;
 }
 
 static void
@@ -1055,6 +1091,28 @@ destroy_validate_state(validate_state *state)
    free(state->ssa_defs_found);
    free(state->regs_found);
    _mesa_hash_table_destroy(state->var_defs, NULL);
+   _mesa_hash_table_destroy(state->errors, NULL);
+}
+
+static void
+dump_errors(validate_state *state)
+{
+   struct hash_table *errors = state->errors;
+
+   fprintf(stderr, "%d errors:\n", _mesa_hash_table_num_entries(errors));
+
+   nir_print_shader_annotated(state->shader, stderr, errors);
+
+   if (_mesa_hash_table_num_entries(errors) > 0) {
+      fprintf(stderr, "%d additional errors:\n",
+              _mesa_hash_table_num_entries(errors));
+      struct hash_entry *entry;
+      hash_table_foreach(errors, entry) {
+         fprintf(stderr, "%s\n", (char *)entry->data);
+      }
+   }
+
+   abort();
 }
 
 void
@@ -1113,6 +1171,9 @@ nir_validate_shader(nir_shader *shader)
    foreach_list_typed(nir_register, reg, node, &shader->registers) {
       postvalidate_reg_decl(reg, &state);
    }
+
+   if (_mesa_hash_table_num_entries(state.errors) > 0)
+      dump_errors(&state);
 
    destroy_validate_state(&state);
 }
