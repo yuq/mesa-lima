@@ -37,6 +37,8 @@ ir3_compiler_LDADD = \
 	libfreedreno.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/compiler/nir/libnir.la \
+	$(top_builddir)/src/compiler/glsl/libstandalone.la \
 	$(top_builddir)/src/util/libmesautil.la \
+	$(top_builddir)/src/mesa/libmesagallium.la \
 	$(GALLIUM_COMMON_LIB_DEPS) \
 	$(FREEDRENO_LIBS)
