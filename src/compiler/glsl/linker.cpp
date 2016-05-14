@@ -4621,9 +4621,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 	 goto done;
 
       if (ctx->Const.ShaderCompilerOptions[i].LowerCombinedClipCullDistance) {
-         lower_combined_clip_cull_distance(prog->_LinkedShaders[i], 
-                                           (uint8_t)prog->LastClipDistanceArraySize,
-                                           (uint8_t)prog->LastCullDistanceArraySize);
+         lower_clip_distance(prog->_LinkedShaders[i]);
       }
 
       if (ctx->Const.LowerTessLevel) {

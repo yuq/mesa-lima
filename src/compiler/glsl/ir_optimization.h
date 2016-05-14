@@ -117,9 +117,7 @@ bool lower_variable_index_to_cond_assign(gl_shader_stage stage,
     bool lower_temp, bool lower_uniform);
 bool lower_quadop_vector(exec_list *instructions, bool dont_lower_swz);
 bool lower_const_arrays_to_uniforms(exec_list *instructions);
-bool lower_combined_clip_cull_distance(gl_shader *shader,
-                                       uint8_t clipDistanceArraySize,
-                                       uint8_t cullDistanceArraySize);
+bool lower_clip_distance(gl_shader *shader);
 void lower_output_reads(unsigned stage, exec_list *instructions);
 bool lower_packing_builtins(exec_list *instructions, int op_mask);
 void lower_shared_reference(struct gl_shader *shader, unsigned *shared_size);
