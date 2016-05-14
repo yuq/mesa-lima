@@ -3654,6 +3654,21 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
    }
 
    default: {
+      /* Issue #16 of the ARB_program_interface_query spec says:
+       *
+       * "* If a variable is a member of an interface block without an
+       *    instance name, it is enumerated using just the variable name.
+       *
+       *  * If a variable is a member of an interface block with an instance
+       *    name, it is enumerated as "BlockName.Member", where "BlockName" is
+       *    the name of the interface block (not the instance name) and
+       *    "Member" is the name of the variable."
+       */
+      const char *prefixed_name = var->data.from_named_ifc_block
+         ? ralloc_asprintf(shProg, "%s.%s", var->get_interface_type()->name,
+                           name)
+         : name;
+
       /* The ARB_program_interface_query spec says:
        *
        *     "For an active variable declared as a single instance of a basic
@@ -3661,7 +3676,7 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
        *     from the shader source."
        */
       gl_shader_variable *sha_v =
-         create_shader_variable(shProg, var, name, type,
+         create_shader_variable(shProg, var, prefixed_name, type,
                                 use_implicit_location, location);
       if (!sha_v)
          return false;
