@@ -1514,13 +1514,8 @@ struct anv_format_swizzle {
 };
 
 struct anv_format {
-   const VkFormat vk_format;
-   const char *name;
-   enum isl_format isl_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
-   const struct isl_format_layout *isl_layout;
+   enum isl_format isl_format;
    struct anv_format_swizzle swizzle;
-   bool has_depth;
-   bool has_stencil;
 };
 
 const struct anv_format *
@@ -1529,18 +1524,6 @@ anv_format_for_vk_format(VkFormat format);
 enum isl_format
 anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
                    VkImageTiling tiling, struct anv_format_swizzle *swizzle);
-
-static inline bool
-anv_format_is_color(const struct anv_format *format)
-{
-   return !format->has_depth && !format->has_stencil;
-}
-
-static inline bool
-anv_format_is_depth_or_stencil(const struct anv_format *format)
-{
-   return format->has_depth || format->has_stencil;
-}
 
 /**
  * Subsurface of an anv_image.

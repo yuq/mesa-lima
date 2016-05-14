@@ -23,22 +23,19 @@
 
 #include "anv_private.h"
 #include "brw_surface_formats.h"
+#include "vk_format_info.h"
 
 #define RGBA { 0, 1, 2, 3 }
 #define BGRA { 2, 1, 0, 3 }
 
-#define swiz_fmt(__vk_fmt, __hw_fmt, __swizzle, ...)     \
+#define swiz_fmt(__vk_fmt, __hw_fmt, __swizzle)     \
    [__vk_fmt] = { \
-      .vk_format = __vk_fmt, \
-      .name = #__vk_fmt, \
       .isl_format = __hw_fmt, \
-      .isl_layout = &isl_format_layouts[__hw_fmt], \
       .swizzle = __swizzle, \
-      __VA_ARGS__ \
    }
 
-#define fmt(__vk_fmt, __hw_fmt, ...) \
-   swiz_fmt(__vk_fmt, __hw_fmt, RGBA, __VA_ARGS__)
+#define fmt(__vk_fmt, __hw_fmt) \
+   swiz_fmt(__vk_fmt, __hw_fmt, RGBA)
 
 /* HINT: For array formats, the ISL name should match the VK name.  For
  * packed formats, they should have the channels in reverse order from each
@@ -130,18 +127,18 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_R16G16B16A16_UINT,       ISL_FORMAT_R16G16B16A16_UINT),
    fmt(VK_FORMAT_R16G16B16A16_SINT,       ISL_FORMAT_R16G16B16A16_SINT),
    fmt(VK_FORMAT_R16G16B16A16_SFLOAT,     ISL_FORMAT_R16G16B16A16_FLOAT),
-   fmt(VK_FORMAT_R32_UINT,                ISL_FORMAT_R32_UINT,),
-   fmt(VK_FORMAT_R32_SINT,                ISL_FORMAT_R32_SINT,),
-   fmt(VK_FORMAT_R32_SFLOAT,              ISL_FORMAT_R32_FLOAT,),
-   fmt(VK_FORMAT_R32G32_UINT,             ISL_FORMAT_R32G32_UINT,),
-   fmt(VK_FORMAT_R32G32_SINT,             ISL_FORMAT_R32G32_SINT,),
-   fmt(VK_FORMAT_R32G32_SFLOAT,           ISL_FORMAT_R32G32_FLOAT,),
-   fmt(VK_FORMAT_R32G32B32_UINT,          ISL_FORMAT_R32G32B32_UINT,),
-   fmt(VK_FORMAT_R32G32B32_SINT,          ISL_FORMAT_R32G32B32_SINT,),
-   fmt(VK_FORMAT_R32G32B32_SFLOAT,        ISL_FORMAT_R32G32B32_FLOAT,),
-   fmt(VK_FORMAT_R32G32B32A32_UINT,       ISL_FORMAT_R32G32B32A32_UINT,),
-   fmt(VK_FORMAT_R32G32B32A32_SINT,       ISL_FORMAT_R32G32B32A32_SINT,),
-   fmt(VK_FORMAT_R32G32B32A32_SFLOAT,     ISL_FORMAT_R32G32B32A32_FLOAT,),
+   fmt(VK_FORMAT_R32_UINT,                ISL_FORMAT_R32_UINT),
+   fmt(VK_FORMAT_R32_SINT,                ISL_FORMAT_R32_SINT),
+   fmt(VK_FORMAT_R32_SFLOAT,              ISL_FORMAT_R32_FLOAT),
+   fmt(VK_FORMAT_R32G32_UINT,             ISL_FORMAT_R32G32_UINT),
+   fmt(VK_FORMAT_R32G32_SINT,             ISL_FORMAT_R32G32_SINT),
+   fmt(VK_FORMAT_R32G32_SFLOAT,           ISL_FORMAT_R32G32_FLOAT),
+   fmt(VK_FORMAT_R32G32B32_UINT,          ISL_FORMAT_R32G32B32_UINT),
+   fmt(VK_FORMAT_R32G32B32_SINT,          ISL_FORMAT_R32G32B32_SINT),
+   fmt(VK_FORMAT_R32G32B32_SFLOAT,        ISL_FORMAT_R32G32B32_FLOAT),
+   fmt(VK_FORMAT_R32G32B32A32_UINT,       ISL_FORMAT_R32G32B32A32_UINT),
+   fmt(VK_FORMAT_R32G32B32A32_SINT,       ISL_FORMAT_R32G32B32A32_SINT),
+   fmt(VK_FORMAT_R32G32B32A32_SFLOAT,     ISL_FORMAT_R32G32B32A32_FLOAT),
    fmt(VK_FORMAT_R64_UINT,                ISL_FORMAT_R64_PASSTHRU),
    fmt(VK_FORMAT_R64_SINT,                ISL_FORMAT_R64_PASSTHRU),
    fmt(VK_FORMAT_R64_SFLOAT,              ISL_FORMAT_R64_FLOAT),
@@ -157,13 +154,13 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_B10G11R11_UFLOAT_PACK32, ISL_FORMAT_R11G11B10_FLOAT),
    fmt(VK_FORMAT_E5B9G9R9_UFLOAT_PACK32,  ISL_FORMAT_R9G9B9E5_SHAREDEXP),
 
-   fmt(VK_FORMAT_D16_UNORM,               ISL_FORMAT_R16_UNORM,               .has_depth = true),
-   fmt(VK_FORMAT_X8_D24_UNORM_PACK32,     ISL_FORMAT_R24_UNORM_X8_TYPELESS,   .has_depth = true),
-   fmt(VK_FORMAT_D32_SFLOAT,              ISL_FORMAT_R32_FLOAT,               .has_depth = true),
-   fmt(VK_FORMAT_S8_UINT,                 ISL_FORMAT_R8_UINT,                                      .has_stencil = true),
+   fmt(VK_FORMAT_D16_UNORM,               ISL_FORMAT_R16_UNORM),
+   fmt(VK_FORMAT_X8_D24_UNORM_PACK32,     ISL_FORMAT_R24_UNORM_X8_TYPELESS),
+   fmt(VK_FORMAT_D32_SFLOAT,              ISL_FORMAT_R32_FLOAT),
+   fmt(VK_FORMAT_S8_UINT,                 ISL_FORMAT_R8_UINT),
    fmt(VK_FORMAT_D16_UNORM_S8_UINT,       ISL_FORMAT_UNSUPPORTED),
-   fmt(VK_FORMAT_D24_UNORM_S8_UINT,       ISL_FORMAT_R24_UNORM_X8_TYPELESS,   .has_depth = true,   .has_stencil = true),
-   fmt(VK_FORMAT_D32_SFLOAT_S8_UINT,      ISL_FORMAT_R32_FLOAT,               .has_depth = true,   .has_stencil = true),
+   fmt(VK_FORMAT_D24_UNORM_S8_UINT,       ISL_FORMAT_R24_UNORM_X8_TYPELESS),
+   fmt(VK_FORMAT_D32_SFLOAT_S8_UINT,      ISL_FORMAT_R32_FLOAT),
 
    fmt(VK_FORMAT_BC1_RGB_UNORM_BLOCK,     ISL_FORMAT_DXT1_RGB),
    fmt(VK_FORMAT_BC1_RGB_SRGB_BLOCK,      ISL_FORMAT_DXT1_RGB_SRGB),
@@ -247,41 +244,44 @@ anv_format_for_vk_format(VkFormat format)
  * Exactly one bit must be set in \a aspect.
  */
 enum isl_format
-anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
+anv_get_isl_format(VkFormat vk_format, VkImageAspectFlags aspect,
                    VkImageTiling tiling, struct anv_format_swizzle *swizzle)
 {
-   const struct anv_format *anv_fmt = &anv_formats[format];
+   const enum isl_format isl_format = anv_formats[vk_format].isl_format;
 
    if (swizzle)
-      *swizzle = anv_fmt->swizzle;
+      *swizzle = anv_formats[vk_format].swizzle;
+
+   const struct isl_format_layout *isl_layout =
+      isl_format_get_layout(isl_format);
 
    switch (aspect) {
    case VK_IMAGE_ASPECT_COLOR_BIT:
-      if (anv_fmt->isl_format == ISL_FORMAT_UNSUPPORTED) {
+      if (isl_format == ISL_FORMAT_UNSUPPORTED) {
          return ISL_FORMAT_UNSUPPORTED;
       } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-                 !util_is_power_of_two(anv_fmt->isl_layout->bs)) {
+                 !util_is_power_of_two(isl_layout->bs)) {
          /* Tiled formats *must* be power-of-two because we need up upload
           * them with the render pipeline.  For 3-channel formats, we fix
           * this by switching them over to RGBX or RGBA formats under the
           * hood.
           */
-         enum isl_format rgbx = isl_format_rgb_to_rgbx(anv_fmt->isl_format);
+         enum isl_format rgbx = isl_format_rgb_to_rgbx(isl_format);
          if (rgbx != ISL_FORMAT_UNSUPPORTED)
             return rgbx;
          else
-            return isl_format_rgb_to_rgba(anv_fmt->isl_format);
+            return isl_format_rgb_to_rgba(isl_format);
       } else {
-         return anv_fmt->isl_format;
+         return isl_format;
       }
 
    case VK_IMAGE_ASPECT_DEPTH_BIT:
    case (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT):
-      assert(anv_fmt->has_depth);
-      return anv_fmt->isl_format;
+      assert(vk_format_aspects(vk_format) & VK_IMAGE_ASPECT_DEPTH_BIT);
+      return isl_format;
 
    case VK_IMAGE_ASPECT_STENCIL_BIT:
-      assert(anv_fmt->has_stencil);
+      assert(vk_format_aspects(vk_format) & VK_IMAGE_ASPECT_STENCIL_BIT);
       return ISL_FORMAT_R8_UINT;
 
    default:
@@ -369,7 +369,8 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
       gen += 5;
 
    VkFormatFeatureFlags linear = 0, tiled = 0, buffer = 0;
-   if (anv_format_is_depth_or_stencil(&anv_formats[format])) {
+   if (anv_formats[format].isl_format != ISL_FORMAT_UNSUPPORTED &&
+       vk_format_is_depth_or_stencil(format)) {
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
       if (physical_device->info->gen >= 8)
          tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
