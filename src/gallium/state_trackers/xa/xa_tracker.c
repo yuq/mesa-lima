@@ -152,7 +152,7 @@ xa_tracker_create(int drm_fd)
     struct xa_tracker *xa = calloc(1, sizeof(struct xa_tracker));
     enum xa_surface_type stype;
     unsigned int num_formats;
-    int fd = -1;
+    int fd;
 
     if (!xa)
 	return NULL;
@@ -212,9 +212,9 @@ xa_tracker_create(int drm_fd)
  out_no_screen:
     if (xa->dev)
 	pipe_loader_release(&xa->dev, 1);
-    fd = -1;
+    else
+	close(fd);
  out_no_fd:
-    close(fd);
     free(xa);
     return NULL;
 }
