@@ -161,7 +161,7 @@ make_surface(const struct anv_device *dev,
  */
 static VkImageUsageFlags
 anv_image_get_full_usage(const VkImageCreateInfo *info,
-                         const struct anv_format *format)
+                         VkImageAspectFlags aspects)
 {
    VkImageUsageFlags usage = info->usage;
 
@@ -183,7 +183,7 @@ anv_image_get_full_usage(const VkImageCreateInfo *info,
        */
       usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-      if (anv_format_is_depth_or_stencil(format)) {
+      if (aspects & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
          /* vkCmdClearDepthStencilImage() only requires that
           * VK_IMAGE_USAGE_TRANSFER_SRC_BIT be set. In particular, it does
           * not require VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT. Meta
@@ -206,7 +206,6 @@ anv_image_create(VkDevice _device,
    ANV_FROM_HANDLE(anv_device, device, _device);
    const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
    struct anv_image *image = NULL;
-   const struct anv_format *format = anv_format_for_vk_format(pCreateInfo->format);
    VkResult r;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
@@ -231,7 +230,7 @@ anv_image_create(VkDevice _device,
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arrayLayers;
    image->samples = pCreateInfo->samples;
-   image->usage = anv_image_get_full_usage(pCreateInfo, format);
+   image->usage = anv_image_get_full_usage(pCreateInfo, image->aspects);
    image->tiling = pCreateInfo->tiling;
 
    uint32_t b;
