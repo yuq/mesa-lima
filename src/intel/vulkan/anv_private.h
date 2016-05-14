@@ -678,6 +678,7 @@ struct anv_device {
     int                                         context_id;
     int                                         fd;
     bool                                        can_chain_batches;
+    bool                                        robust_buffer_access;
 
     struct anv_bo_pool                          batch_bo_pool;
 

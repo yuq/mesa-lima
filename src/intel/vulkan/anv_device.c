@@ -848,6 +848,9 @@ VkResult anv_CreateDevice(
     */
    device->can_chain_batches = device->info.gen >= 8;
 
+   device->robust_buffer_access = pCreateInfo->pEnabledFeatures &&
+      pCreateInfo->pEnabledFeatures->robustBufferAccess;
+
    pthread_mutex_init(&device->mutex, NULL);
 
    anv_bo_pool_init(&device->batch_bo_pool, device);
