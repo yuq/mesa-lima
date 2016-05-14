@@ -993,6 +993,20 @@ NVC0LoweringPass::handleTXD(TexInstruction *txd)
       txd->dPdx[c].set(NULL);
       txd->dPdy[c].set(NULL);
    }
+
+   // In this case we have fewer than 4 "real" arguments, which means that
+   // handleTEX didn't apply any padding. However we have to make sure that
+   // the second "group" of arguments still gets padded up to 4.
+   if (chipset >= NVISA_GK104_CHIPSET) {
+      int s = arg + 2 * dim;
+      if (s >= 4 && s < 7) {
+         if (txd->srcExists(s)) // move potential predicate out of the way
+            txd->moveSources(s, 7 - s);
+         while (s < 7)
+            txd->setSrc(s++, bld.loadImm(NULL, 0));
+      }
+   }
+
    return true;
 }
 
