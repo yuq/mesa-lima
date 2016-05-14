@@ -35,7 +35,7 @@
  */
 
 namespace linker {
-bool
+void
 populate_consumer_input_sets(void *mem_ctx, exec_list *ir,
                              hash_table *consumer_inputs,
                              hash_table *consumer_interface_inputs,
@@ -210,11 +210,11 @@ TEST_F(link_varyings, gl_CullDistance)
 
    ir.push_tail(culldistance);
 
-   ASSERT_TRUE(linker::populate_consumer_input_sets(mem_ctx,
-                                                    &ir,
-                                                    consumer_inputs,
-                                                    consumer_interface_inputs,
-                                                    junk));
+   linker::populate_consumer_input_sets(mem_ctx,
+                                        &ir,
+                                        consumer_inputs,
+                                        consumer_interface_inputs,
+                                        junk);
 
    EXPECT_EQ(culldistance, junk[VARYING_SLOT_CULL_DIST0]);
    EXPECT_TRUE(is_empty(consumer_inputs));
