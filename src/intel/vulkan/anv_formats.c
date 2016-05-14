@@ -292,16 +292,6 @@ anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
 
 // Format capabilities
 
-void anv_validate_GetPhysicalDeviceFormatProperties(
-    VkPhysicalDevice                            physicalDevice,
-    VkFormat                                    _format,
-    VkFormatProperties*                         pFormatProperties)
-{
-   const struct anv_format *format = anv_format_for_vk_format(_format);
-   fprintf(stderr, "vkGetFormatProperties(%s)\n", format->name);
-   anv_GetPhysicalDeviceFormatProperties(physicalDevice, _format, pFormatProperties);
-}
-
 static VkFormatFeatureFlags
 get_image_format_properties(int gen, enum isl_format base,
                             enum isl_format actual,
