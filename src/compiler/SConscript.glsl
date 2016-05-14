@@ -109,6 +109,8 @@ if env['platform'] == 'windows':
 
 env.Prepend(LIBS = [compiler, glsl])
 
+compiler_objs += env.StaticObject("glsl/main.cpp")
+
 glsl_compiler = env.Program(
     target = 'glsl_compiler',
     source = compiler_objs,

@@ -57,7 +57,6 @@ glsl_tests_blob_test_LDADD =				\
 	glsl/libglsl.la
 
 glsl_tests_general_ir_test_SOURCES =			\
-	glsl/standalone_scaffolding.cpp			\
 	glsl/tests/builtin_variable_test.cpp		\
 	glsl/tests/invalidate_locations_test.cpp	\
 	glsl/tests/general_ir_test.cpp			\
@@ -67,6 +66,7 @@ glsl_tests_general_ir_test_CFLAGS =			\
 glsl_tests_general_ir_test_LDADD =			\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	glsl/libglsl.la		\
+	glsl/libstandalone.la				\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
@@ -93,7 +93,7 @@ glsl_tests_sampler_types_test_LDADD =			\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
-noinst_LTLIBRARIES += glsl/libglsl.la glsl/libglcpp.la
+noinst_LTLIBRARIES += glsl/libglsl.la glsl/libglcpp.la glsl/libstandalone.la
 
 glsl_libglcpp_la_LIBADD =				\
 	$(top_builddir)/src/util/libmesautil.la
@@ -121,23 +121,29 @@ glsl_libglsl_la_SOURCES =				\
 	$(LIBGLSL_FILES)
 
 
-glsl_compiler_SOURCES = \
+glsl_libstandalone_la_SOURCES = \
 	$(GLSL_COMPILER_CXX_FILES)
 
-glsl_compiler_LDADD =					\
+glsl_libstandalone_la_LIBADD =				\
 	glsl/libglsl.la					\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(top_builddir)/src/util/libmesautil.la		\
 	$(PTHREAD_LIBS)
 
+glsl_compiler_SOURCES = \
+	glsl/main.cpp
+
+glsl_compiler_LDADD = \
+	glsl/libstandalone.la
+
 glsl_glsl_test_SOURCES = \
-	glsl/standalone_scaffolding.cpp \
 	glsl/test.cpp \
 	glsl/test_optpass.cpp \
 	glsl/test_optpass.h
 
 glsl_glsl_test_LDADD =					\
 	glsl/libglsl.la					\
+	glsl/libstandalone.la				\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
