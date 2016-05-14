@@ -3414,12 +3414,12 @@ should_add_buffer_variable(struct gl_shader_program *shProg,
    if (found_interface)
       name = name + block_name_len + 1;
 
-   /* From: ARB_program_interface_query extension:
+   /* The ARB_program_interface_query spec says:
     *
-    *  "For an active shader storage block member declared as an array, an
-    *   entry will be generated only for the first array element, regardless
-    *   of its type.  For arrays of aggregate types, the enumeration rules are
-    *   applied recursively for the single enumerated array element.
+    *     "For an active shader storage block member declared as an array, an
+    *     entry will be generated only for the first array element, regardless
+    *     of its type.  For arrays of aggregate types, the enumeration rules
+    *     are applied recursively for the single enumerated array element."
     */
    const char *struct_first_dot = strchr(name, '.');
    const char *first_square_bracket = strchr(name, '[');
@@ -3585,19 +3585,20 @@ create_shader_variable(struct gl_shader_program *shProg,
    if (!out->name)
       return NULL;
 
-   /* From the ARB_program_interface_query specification:
+   /* The ARB_program_interface_query spec says:
     *
-    * "Not all active variables are assigned valid locations; the
-    *  following variables will have an effective location of -1:
+    *     "Not all active variables are assigned valid locations; the
+    *     following variables will have an effective location of -1:
     *
-    *  * uniforms declared as atomic counters;
+    *      * uniforms declared as atomic counters;
     *
-    *  * members of a uniform block;
+    *      * members of a uniform block;
     *
-    *  * built-in inputs, outputs, and uniforms (starting with "gl_"); and
+    *      * built-in inputs, outputs, and uniforms (starting with "gl_"); and
     *
-    *  * inputs or outputs not declared with a "location" layout qualifier,
-    *    except for vertex shader inputs and fragment shader outputs."
+    *      * inputs or outputs not declared with a "location" layout
+    *        qualifier, except for vertex shader inputs and fragment shader
+    *        outputs."
     */
    if (in->type->base_type == GLSL_TYPE_ATOMIC_UINT ||
        is_gl_identifier(in->name) ||
@@ -3628,14 +3629,14 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
 
    switch (type->base_type) {
    case GLSL_TYPE_STRUCT: {
-      /* From the ARB_program_interface_query specification:
+      /* The ARB_program_interface_query spec says:
        *
-       *  "For an active variable declared as a structure, a separate entry
-       *   will be generated for each active structure member.  The name of
-       *   each entry is formed by concatenating the name of the structure,
-       *   the "."  character, and the name of the structure member.  If a
-       *   structure member to enumerate is itself a structure or array, these
-       *   enumeration rules are applied recursively."
+       *     "For an active variable declared as a structure, a separate entry
+       *     will be generated for each active structure member.  The name of
+       *     each entry is formed by concatenating the name of the structure,
+       *     the "."  character, and the name of the structure member.  If a
+       *     structure member to enumerate is itself a structure or array,
+       *     these enumeration rules are applied recursively."
        */
       unsigned field_location = location;
       for (unsigned i = 0; i < type->length; i++) {
@@ -3653,11 +3654,11 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
    }
 
    default: {
-      /* From the ARB_program_interface_query specification:
+      /* The ARB_program_interface_query spec says:
        *
-       *  "For an active variable declared as a single instance of a basic
-       *   type, a single entry will be generated, using the variable name
-       *   from the shader source."
+       *     "For an active variable declared as a single instance of a basic
+       *     type, a single entry will be generated, using the variable name
+       *     from the shader source."
        */
       gl_shader_variable *sha_v =
          create_shader_variable(shProg, var, name, type,
@@ -3791,14 +3792,16 @@ get_top_level_name(const char *name)
    const char *first_dot = strchr(name, '.');
    const char *first_square_bracket = strchr(name, '[');
    int name_size = 0;
-   /* From ARB_program_interface_query spec:
+
+   /* The ARB_program_interface_query spec says:
     *
-    * "For the property TOP_LEVEL_ARRAY_SIZE, a single integer identifying the
-    *  number of active array elements of the top-level shader storage block
-    *  member containing to the active variable is written to <params>.  If the
-    *  top-level block member is not declared as an array, the value one is
-    *  written to <params>.  If the top-level block member is an array with no
-    *  declared size, the value zero is written to <params>.
+    *     "For the property TOP_LEVEL_ARRAY_SIZE, a single integer identifying
+    *     the number of active array elements of the top-level shader storage
+    *     block member containing to the active variable is written to
+    *     <params>.  If the top-level block member is not declared as an
+    *     array, the value one is written to <params>.  If the top-level block
+    *     member is an array with no declared size, the value zero is written
+    *     to <params>."
     */
 
    /* The buffer variable is on top level.*/
@@ -3868,15 +3871,15 @@ static int
 get_array_size(struct gl_uniform_storage *uni, const glsl_struct_field *field,
                char *interface_name, char *var_name)
 {
-   /* From GL_ARB_program_interface_query spec:
+   /* The ARB_program_interface_query spec says:
     *
-    * "For the property TOP_LEVEL_ARRAY_SIZE, a single integer
-    * identifying the number of active array elements of the top-level
-    * shader storage block member containing to the active variable is
-    * written to <params>.  If the top-level block member is not
-    * declared as an array, the value one is written to <params>.  If
-    * the top-level block member is an array with no declared size,
-    * the value zero is written to <params>.
+    *     "For the property TOP_LEVEL_ARRAY_SIZE, a single integer identifying
+    *     the number of active array elements of the top-level shader storage
+    *     block member containing to the active variable is written to
+    *     <params>.  If the top-level block member is not declared as an
+    *     array, the value one is written to <params>.  If the top-level block
+    *     member is an array with no declared size, the value zero is written
+    *     to <params>."
     */
    if (is_top_level_shader_storage_block_member(uni->name,
                                                 interface_name,
@@ -3895,17 +3898,16 @@ get_array_stride(struct gl_uniform_storage *uni, const glsl_type *interface,
                  const glsl_struct_field *field, char *interface_name,
                  char *var_name)
 {
-   /* From GL_ARB_program_interface_query:
+   /* The ARB_program_interface_query spec says:
     *
-    * "For the property TOP_LEVEL_ARRAY_STRIDE, a single integer
-    *  identifying the stride between array elements of the top-level
-    *  shader storage block member containing the active variable is
-    *  written to <params>.  For top-level block members declared as
-    *  arrays, the value written is the difference, in basic machine
-    *  units, between the offsets of the active variable for
-    *  consecutive elements in the top-level array.  For top-level
-    *  block members not declared as an array, zero is written to
-    *  <params>."
+    *     "For the property TOP_LEVEL_ARRAY_STRIDE, a single integer
+    *     identifying the stride between array elements of the top-level
+    *     shader storage block member containing the active variable is
+    *     written to <params>.  For top-level block members declared as
+    *     arrays, the value written is the difference, in basic machine units,
+    *     between the offsets of the active variable for consecutive elements
+    *     in the top-level array.  For top-level block members not declared as
+    *     an array, zero is written to <params>."
     */
    if (field->type->is_array()) {
       const enum glsl_matrix_layout matrix_layout =
