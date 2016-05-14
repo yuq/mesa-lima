@@ -48,8 +48,7 @@ static void dump_info(struct ir3_shader_variant *so, const char *str)
 {
 	uint32_t *bin;
 	const char *type = ir3_shader_stage(so->shader);
-	// TODO make gpu_id configurable on cmdline
-	bin = ir3_shader_assemble(so, 320);
+	bin = ir3_shader_assemble(so, so->shader->compiler->gpu_id);
 	debug_printf("; %s: %s\n", type, str);
 	ir3_shader_disasm(so, bin);
 	free(bin);
