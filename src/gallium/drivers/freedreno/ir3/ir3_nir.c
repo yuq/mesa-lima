@@ -42,6 +42,7 @@ static const nir_shader_compiler_options options = {
 		.lower_flrp32 = true,
 		.lower_flrp64 = true,
 		.lower_ffract = true,
+		.lower_fdiv = true,
 		.fuse_ffma = true,
 		.native_integers = true,
 		.vertex_id_zero_based = true,
