@@ -1755,7 +1755,7 @@ dri2_init_screen(__DRIscreen * sPriv)
    struct pipe_screen *pscreen = NULL;
    const struct drm_conf_ret *throttle_ret;
    const struct drm_conf_ret *dmabuf_ret;
-   int fd = -1;
+   int fd;
 
    screen = CALLOC_STRUCT(dri_screen);
    if (!screen)
@@ -1768,13 +1768,13 @@ dri2_init_screen(__DRIscreen * sPriv)
    sPriv->driverPrivate = (void *)screen;
 
    if (screen->fd < 0 || (fd = dup(screen->fd)) < 0)
-      goto fail;
+      goto free_screen;
 
    if (pipe_loader_drm_probe_fd(&screen->dev, fd))
       pscreen = pipe_loader_create_screen(screen->dev);
 
    if (!pscreen)
-       goto fail;
+       goto release_pipe;
 
    throttle_ret = pipe_loader_configuration(screen->dev, DRM_CONF_THROTTLE);
    dmabuf_ret = pipe_loader_configuration(screen->dev, DRM_CONF_SHARE_FD);
@@ -1803,7 +1803,7 @@ dri2_init_screen(__DRIscreen * sPriv)
 
    configs = dri_init_screen_helper(screen, pscreen, screen->dev->driver_name);
    if (!configs)
-      goto fail;
+      goto destroy_screen;
 
    screen->can_share_buffer = true;
    screen->auto_fake_front = dri_with_format(sPriv);
@@ -1811,12 +1811,17 @@ dri2_init_screen(__DRIscreen * sPriv)
    screen->lookup_egl_image = dri2_lookup_egl_image;
 
    return configs;
-fail:
+
+destroy_screen:
    dri_destroy_screen_helper(screen);
+
+release_pipe:
    if (screen->dev)
       pipe_loader_release(&screen->dev, 1);
    else
       close(fd);
+
+free_screen:
    FREE(screen);
    return NULL;
 }
@@ -1834,7 +1839,7 @@ dri_kms_init_screen(__DRIscreen * sPriv)
    struct dri_screen *screen;
    struct pipe_screen *pscreen = NULL;
    uint64_t cap;
-   int fd = -1;
+   int fd;
 
    screen = CALLOC_STRUCT(dri_screen);
    if (!screen)
@@ -1846,13 +1851,13 @@ dri_kms_init_screen(__DRIscreen * sPriv)
    sPriv->driverPrivate = (void *)screen;
 
    if (screen->fd < 0 || (fd = dup(screen->fd)) < 0)
-      goto fail;
+      goto free_screen;
 
    if (pipe_loader_sw_probe_kms(&screen->dev, fd))
       pscreen = pipe_loader_create_screen(screen->dev);
 
    if (!pscreen)
-       goto fail;
+       goto release_pipe;
 
    if (drmGetCap(sPriv->fd, DRM_CAP_PRIME, &cap) == 0 &&
           (cap & DRM_PRIME_CAP_IMPORT)) {
@@ -1864,7 +1869,7 @@ dri_kms_init_screen(__DRIscreen * sPriv)
 
    configs = dri_init_screen_helper(screen, pscreen, "swrast");
    if (!configs)
-      goto fail;
+      goto destroy_screen;
 
    screen->can_share_buffer = false;
    screen->auto_fake_front = dri_with_format(sPriv);
@@ -1872,12 +1877,17 @@ dri_kms_init_screen(__DRIscreen * sPriv)
    screen->lookup_egl_image = dri2_lookup_egl_image;
 
    return configs;
-fail:
+
+destroy_screen:
    dri_destroy_screen_helper(screen);
+
+release_pipe:
    if (screen->dev)
       pipe_loader_release(&screen->dev, 1);
    else
       close(fd);
+
+free_screen:
    FREE(screen);
 #endif // GALLIUM_SOFTPIPE
    return NULL;
