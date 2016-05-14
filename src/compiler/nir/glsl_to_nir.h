@@ -26,11 +26,12 @@
  */
 
 #include "nir.h"
-#include "compiler/glsl/glsl_parser_extras.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct gl_shader_program;
 
 nir_shader *glsl_to_nir(const struct gl_shader_program *shader_prog,
                         gl_shader_stage stage,
