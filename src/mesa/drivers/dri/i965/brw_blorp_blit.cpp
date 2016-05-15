@@ -331,10 +331,10 @@ enum sampler_message_arg
 
 struct brw_blorp_blit_vars {
    /* Input values from brw_blorp_wm_inputs */
-   nir_variable *u_discard_rect;
-   nir_variable *u_rect_grid;
-   nir_variable *u_coord_transform;
-   nir_variable *u_src_z;
+   nir_variable *v_discard_rect;
+   nir_variable *v_rect_grid;
+   nir_variable *v_coord_transform;
+   nir_variable *v_src_z;
 
    /* gl_FragCoord */
    nir_variable *frag_coord;
@@ -351,9 +351,11 @@ brw_blorp_blit_vars_init(nir_builder *b, struct brw_blorp_blit_vars *v,
     assert(!key->use_kill || !(key->blend && key->blit_scaled));
 
 #define LOAD_INPUT(name, type)\
-   v->u_##name = nir_variable_create(b->shader, nir_var_uniform, type, #name); \
-   v->u_##name->data.location = \
-      offsetof(struct brw_blorp_wm_inputs, name);
+   v->v_##name = nir_variable_create(b->shader, nir_var_shader_in, \
+                                     type, #name); \
+   v->v_##name->data.interpolation = INTERP_QUALIFIER_FLAT; \
+   v->v_##name->data.location = VARYING_SLOT_VAR0 + \
+      offsetof(struct brw_blorp_wm_inputs, name) / (4 * sizeof(float));
 
    LOAD_INPUT(discard_rect, glsl_vec4_type())
    LOAD_INPUT(rect_grid, glsl_vec4_type())
@@ -395,7 +397,7 @@ nir_ssa_def *
 blorp_blit_apply_transform(nir_builder *b, nir_ssa_def *src_pos,
                            struct brw_blorp_blit_vars *v)
 {
-   nir_ssa_def *coord_transform = nir_load_var(b, v->u_coord_transform);
+   nir_ssa_def *coord_transform = nir_load_var(b, v->v_coord_transform);
 
    nir_ssa_def *offset = nir_vec2(b, nir_channel(b, coord_transform, 1),
                                      nir_channel(b, coord_transform, 3));
@@ -410,7 +412,7 @@ blorp_nir_discard_if_outside_rect(nir_builder *b, nir_ssa_def *pos,
                                   struct brw_blorp_blit_vars *v)
 {
    nir_ssa_def *c0, *c1, *c2, *c3;
-   nir_ssa_def *discard_rect = nir_load_var(b, v->u_discard_rect);
+   nir_ssa_def *discard_rect = nir_load_var(b, v->v_discard_rect);
    nir_ssa_def *dst_x0 = nir_channel(b, discard_rect, 0);
    nir_ssa_def *dst_x1 = nir_channel(b, discard_rect, 1);
    nir_ssa_def *dst_y0 = nir_channel(b, discard_rect, 2);
@@ -498,7 +500,7 @@ blorp_nir_txf(nir_builder *b, struct brw_blorp_blit_vars *v,
     */
    assert(pos->num_components == 2);
    pos = nir_vec3(b, nir_channel(b, pos, 0), nir_channel(b, pos, 1),
-                     nir_load_var(b, v->u_src_z));
+                     nir_load_var(b, v->v_src_z));
 
    tex->sampler_dim = GLSL_SAMPLER_DIM_3D;
    tex->coord_components = 3;
@@ -1031,7 +1033,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
                                 struct brw_blorp_blit_vars *v)
 {
    nir_ssa_def *pos_xy = nir_channels(b, pos, 0x3);
-   nir_ssa_def *rect_grid = nir_load_var(b, v->u_rect_grid);
+   nir_ssa_def *rect_grid = nir_load_var(b, v->v_rect_grid);
    nir_ssa_def *scale = nir_imm_vec2(b, key->x_scale, key->y_scale);
 
    /* Translate coordinates to lay out the samples in a rectangular  grid
