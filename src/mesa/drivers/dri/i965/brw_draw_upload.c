@@ -695,15 +695,15 @@ brw_prepare_shader_draw_parameters(struct brw_context *brw)
 /**
  * Emit a VERTEX_BUFFER_STATE entry (part of 3DSTATE_VERTEX_BUFFERS).
  */
-static uint32_t *
-emit_vertex_buffer_state(struct brw_context *brw,
-                         unsigned buffer_nr,
-                         drm_intel_bo *bo,
-                         unsigned bo_ending_address,
-                         unsigned bo_offset,
-                         unsigned stride,
-                         unsigned step_rate,
-                         uint32_t *__map)
+uint32_t *
+brw_emit_vertex_buffer_state(struct brw_context *brw,
+                             unsigned buffer_nr,
+                             drm_intel_bo *bo,
+                             unsigned start_offset,
+                             unsigned end_offset,
+                             unsigned stride,
+                             unsigned step_rate,
+                             uint32_t *__map)
 {
    struct gl_context *ctx = &brw->ctx;
    uint32_t dw0;
@@ -728,9 +728,17 @@ emit_vertex_buffer_state(struct brw_context *brw,
              "VBO stride %d too large, bad rendering may occur\n",
              stride);
    OUT_BATCH(dw0 | (stride << BRW_VB0_PITCH_SHIFT));
-   OUT_RELOC(bo, I915_GEM_DOMAIN_VERTEX, 0, bo_offset);
+   OUT_RELOC(bo, I915_GEM_DOMAIN_VERTEX, 0, start_offset);
    if (brw->gen >= 5) {
-      OUT_RELOC(bo, I915_GEM_DOMAIN_VERTEX, 0, bo_ending_address);
+      /* From the BSpec: 3D Pipeline Stages - 3D Pipeline Geometry -
+       *                 Vertex Fetch (VF) Stage - State
+       *
+       *  Instead of "VBState.StartingBufferAddress + VBState.MaxIndex x
+       *  VBState.BufferPitch", the address of the byte immediately beyond the
+       *  last valid byte of the buffer is determined by
+       *  "VBState.EndAddress + 1".
+       */
+      OUT_RELOC(bo, I915_GEM_DOMAIN_VERTEX, 0, end_offset - 1);
    } else {
       OUT_BATCH(0);
    }
@@ -738,7 +746,6 @@ emit_vertex_buffer_state(struct brw_context *brw,
 
    return __map;
 }
-#define EMIT_VERTEX_BUFFER_STATE(...) __map = emit_vertex_buffer_state(__VA_ARGS__, __map)
 
 static void
 brw_emit_vertices(struct brw_context *brw)
@@ -813,18 +820,17 @@ brw_emit_vertices(struct brw_context *brw)
           */
          unsigned padding =
             (brw->gen <= 7 && !brw->is_baytrail && !brw->is_haswell) * 2;
-         EMIT_VERTEX_BUFFER_STATE(brw, i, buffer->bo,
-                                  buffer->offset + buffer->size + padding - 1,
-                                  buffer->offset, buffer->stride,
-                                  buffer->step_rate);
+         EMIT_VERTEX_BUFFER_STATE(brw, i, buffer->bo, buffer->offset,
+                                  buffer->offset + buffer->size + padding,
+                                  buffer->stride, buffer->step_rate);
 
       }
 
       if (uses_draw_params) {
          EMIT_VERTEX_BUFFER_STATE(brw, brw->vb.nr_buffers,
                                   brw->draw.draw_params_bo,
-                                  brw->draw.draw_params_bo->size - 1,
                                   brw->draw.draw_params_offset,
+                                  brw->draw.draw_params_bo->size,
                                   0,  /* stride */
                                   0); /* step rate */
       }
@@ -832,8 +838,8 @@ brw_emit_vertices(struct brw_context *brw)
       if (brw->vs.prog_data->uses_drawid) {
          EMIT_VERTEX_BUFFER_STATE(brw, brw->vb.nr_buffers + 1,
                                   brw->draw.draw_id_bo,
-                                  brw->draw.draw_id_bo->size - 1,
                                   brw->draw.draw_id_offset,
+                                  brw->draw.draw_id_bo->size,
                                   0,  /* stride */
                                   0); /* step rate */
       }
