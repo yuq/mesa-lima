@@ -142,7 +142,6 @@ brw_blorp_params_init(struct brw_blorp_params *params)
    memset(params, 0, sizeof(*params));
    params->hiz_op = GEN6_HIZ_OP_NONE;
    params->fast_clear_op = 0;
-   params->num_varyings = 0;
    params->num_draw_buffers = 1;
    params->num_layers = 1;
 }
@@ -232,6 +231,8 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
    prog_data->first_curbe_grf_2 = wm_prog_data.dispatch_grf_start_reg_2;
    prog_data->ksp_offset_2 = wm_prog_data.prog_offset_2;
    prog_data->persample_msaa_dispatch = wm_prog_data.persample_dispatch;
+   prog_data->flat_inputs = wm_prog_data.flat_inputs;
+   prog_data->num_varying_inputs = wm_prog_data.num_varying_inputs;
 
    prog_data->nr_params = wm_prog_data.base.nr_params;
    for (unsigned i = 0; i < ARRAY_SIZE(param); i++)

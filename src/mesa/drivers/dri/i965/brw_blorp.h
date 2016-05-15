@@ -223,6 +223,13 @@ struct brw_blorp_prog_data
     */
    bool persample_msaa_dispatch;
 
+   /**
+    * Mask of which FS inputs are marked flat by the shader source.  This is
+    * needed for setting up 3DSTATE_SF/SBE.
+    */
+   uint32_t flat_inputs;
+   unsigned num_varying_inputs;
+
    /* The compiler will re-arrange push constants and store the upload order
     * here. Given an index 'i' in the final upload buffer, param[i] gives the
     * index in the uniform store. In other words, the value to be uploaded can
@@ -249,7 +256,6 @@ struct brw_blorp_params
    };
    bool color_write_disable[4];
    struct brw_blorp_wm_push_constants wm_push_consts;
-   unsigned num_varyings;
    unsigned num_draw_buffers;
    unsigned num_layers;
    uint32_t wm_prog_kernel;

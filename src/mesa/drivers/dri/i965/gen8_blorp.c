@@ -294,22 +294,31 @@ static void
 gen8_blorp_emit_sbe_state(struct brw_context *brw,
                           const struct brw_blorp_params *params)
 {
+   const unsigned num_varyings = params->wm_prog_data->num_varying_inputs;
+
    /* 3DSTATE_SBE */
    {
       const unsigned sbe_cmd_length = brw->gen == 8 ? 4 : 6;
       BEGIN_BATCH(sbe_cmd_length);
       OUT_BATCH(_3DSTATE_SBE << 16 | (sbe_cmd_length - 2));
       OUT_BATCH(GEN7_SBE_SWIZZLE_ENABLE |
-                params->num_varyings << GEN7_SBE_NUM_OUTPUTS_SHIFT |
+                num_varyings << GEN7_SBE_NUM_OUTPUTS_SHIFT |
                 1 << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT |
                 BRW_SF_URB_ENTRY_READ_OFFSET <<
                    GEN8_SBE_URB_ENTRY_READ_OFFSET_SHIFT |
                 GEN8_SBE_FORCE_URB_ENTRY_READ_LENGTH |
                 GEN8_SBE_FORCE_URB_ENTRY_READ_OFFSET);
       OUT_BATCH(0);
-      OUT_BATCH(0);
+      OUT_BATCH(params->wm_prog_data->flat_inputs);
       if (sbe_cmd_length >= 6) {
-         OUT_BATCH(GEN9_SBE_ACTIVE_COMPONENT_XYZW << (0 << 1));
+         /* Fragment coordinates are always enabled. */
+         uint32_t dw4 = (GEN9_SBE_ACTIVE_COMPONENT_XYZW << (0 << 1));
+
+         for (unsigned i = 0; i < num_varyings; ++i) {
+            dw4 |= (GEN9_SBE_ACTIVE_COMPONENT_XYZW << ((i + 1) << 1));
+         }
+
+         OUT_BATCH(dw4);
          OUT_BATCH(0);
       }
       ADVANCE_BATCH();
