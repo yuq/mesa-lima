@@ -34,10 +34,45 @@
 #include "brw_draw.h"
 
 static void
+gen6_blorp_emit_input_varying_data(struct brw_context *brw,
+                                   const struct brw_blorp_params *params,
+                                   unsigned *offset,
+                                   unsigned *size)
+{
+   const unsigned vec4_size_in_bytes = 4 * sizeof(float);
+   const unsigned max_num_varyings =
+      DIV_ROUND_UP(sizeof(params->wm_inputs), vec4_size_in_bytes);
+   const unsigned num_varyings = params->wm_prog_data->num_varying_inputs;
+
+   *size = num_varyings * vec4_size_in_bytes;
+
+   const float *const inputs_src = (const float *)&params->wm_inputs;
+   float *inputs = (float *)brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
+                                            *size, 32, offset);
+
+   /* Walk over the attribute slots, determine if the attribute is used by
+    * the program and when necessary copy the values from the input storage to
+    * the vertex data buffer.
+    */
+   for (unsigned i = 0; i < max_num_varyings; i++) {
+      const gl_varying_slot attr = VARYING_SLOT_VAR0 + i;
+
+      if (!(params->wm_prog_data->inputs_read & BITFIELD64_BIT(attr)))
+         continue;
+
+      memcpy(inputs, inputs_src + i * 4, vec4_size_in_bytes);
+
+      inputs += 4;
+   }
+}
+
+static void
 gen6_blorp_emit_vertex_data(struct brw_context *brw,
                             const struct brw_blorp_params *params)
 {
    uint32_t vertex_offset;
+   uint32_t const_data_offset = 0;
+   unsigned const_data_size = 0;
 
    /* Setup VBO for the rectangle primitive..
     *
@@ -65,6 +100,11 @@ gen6_blorp_emit_vertex_data(struct brw_context *brw,
     *   dw6: Vertex Position Z.
     *   dw7: Vertex Position W.
     *
+    *   dw8: Flat vertex input 0
+    *   dw9: Flat vertex input 1
+    *   ...
+    *   dwn: Flat vertex input n - 8
+    *
     * For details, see the Sandybridge PRM, Volume 2, Part 1, Section 1.5.1
     * "Vertex URB Entry (VUE) Formats".
     *
@@ -72,8 +112,11 @@ gen6_blorp_emit_vertex_data(struct brw_context *brw,
     * zero and W to one. Header words dw0-3 are all zero. There is no need to
     * include the fixed values in the vertex buffer. Vertex fetcher can be
     * instructed to fill vertex elements with constant values of one and zero
-    * instead of reading them from the buffer. See the vertex element setup
-    * below.
+    * instead of reading them from the buffer.
+    * Flat inputs are program constants that are not interpolated. Moreover
+    * their values will be the same between vertices.
+    *
+    * See the vertex element setup below.
     */
    const float vertices[] = {
       /* v0 */ (float)params->x0, (float)params->y1,
@@ -87,8 +130,13 @@ gen6_blorp_emit_vertex_data(struct brw_context *brw,
                                           &vertex_offset);
    memcpy(vertex_data, vertices, sizeof(vertices));
 
+   if (params->wm_prog_data && params->wm_prog_data->num_varying_inputs)
+      gen6_blorp_emit_input_varying_data(brw, params,
+                                         &const_data_offset,
+                                         &const_data_size);
+
    /* 3DSTATE_VERTEX_BUFFERS */
-   const int num_buffers = 1;
+   const int num_buffers = 1 + (const_data_size > 0);
    const int batch_length = 1 + 4 * num_buffers;
 
    BEGIN_BATCH(batch_length);
@@ -99,6 +147,20 @@ gen6_blorp_emit_vertex_data(struct brw_context *brw,
    EMIT_VERTEX_BUFFER_STATE(brw, 0 /* buffer_nr */, brw->batch.bo,
                             vertex_offset, vertex_offset + sizeof(vertices),
                             stride, 0 /* steprate */);
+
+   if (const_data_size) {
+      /* Tell vertex fetcher not to advance the pointer in the buffer when
+       * moving to the next vertex. This will effectively provide the same
+       * data for all the vertices. For flat inputs only the data provided
+       * for the first provoking vertex actually matters.
+       */
+      const unsigned stride_zero = 0;
+      EMIT_VERTEX_BUFFER_STATE(brw, 1 /* buffer_nr */, brw->batch.bo,
+                               const_data_offset,
+                               const_data_offset + const_data_size,
+                               stride_zero, 0 /* step_rate */);
+   }
+
    ADVANCE_BATCH();
 }
 
