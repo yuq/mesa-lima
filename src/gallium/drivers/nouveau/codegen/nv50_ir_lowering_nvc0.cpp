@@ -1328,6 +1328,25 @@ NVC0LoweringPass::handleATOM(Instruction *atom)
       assert(base->reg.size == 8);
       atom->setIndirect(0, 0, base);
       atom->getSrc(0)->reg.file = FILE_MEMORY_GLOBAL;
+
+      // Harden against out-of-bounds accesses
+      Value *offset = bld.loadImm(NULL, atom->getSrc(0)->reg.data.offset + typeSizeof(atom->sType));
+      Value *length = loadBufLength32(ind, atom->getSrc(0)->reg.fileIndex * 16);
+      Value *pred = new_LValue(func, FILE_PREDICATE);
+      if (ptr)
+         bld.mkOp2(OP_ADD, TYPE_U32, offset, offset, ptr);
+      bld.mkCmp(OP_SET, CC_GT, TYPE_U32, pred, TYPE_U32, offset, length);
+      atom->setPredicate(CC_NOT_P, pred);
+      if (atom->defExists(0)) {
+         Value *zero, *dst = atom->getDef(0);
+         atom->setDef(0, bld.getSSA());
+
+         bld.setPosition(atom, true);
+         bld.mkMov((zero = bld.getSSA()), bld.mkImm(0))
+            ->setPredicate(CC_P, pred);
+         bld.mkOp2(OP_UNION, TYPE_U32, dst, atom->getDef(0), zero);
+      }
+
       return true;
    }
    base =
@@ -2107,7 +2126,13 @@ NVC0LoweringPass::handleLDST(Instruction *i)
       bld.mkCmp(OP_SET, CC_GT, TYPE_U32, pred, TYPE_U32, offset, length);
       i->setPredicate(CC_NOT_P, pred);
       if (i->defExists(0)) {
-         bld.mkMov(i->getDef(0), bld.mkImm(0));
+         Value *zero, *dst = i->getDef(0);
+         i->setDef(0, bld.getSSA());
+
+         bld.setPosition(i, true);
+         bld.mkMov((zero = bld.getSSA()), bld.mkImm(0))
+            ->setPredicate(CC_P, pred);
+         bld.mkOp2(OP_UNION, TYPE_U32, dst, i->getDef(0), zero);
       }
    }
 }
