@@ -772,9 +772,8 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
    if (dispatch_width == 16 && count % 2 == 0)
       reg_size = 2;
 
-   const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
-                              .group(reg_size * 8, 0)
-                              .at(block, inst);
+   const fs_builder ibld = fs_builder(this, block, inst)
+                           .group(reg_size * 8, 0);
 
    for (unsigned i = 0; i < count / reg_size; i++) {
       /* The Gen7 descriptor-based offset is 12 bits of HWORD units.  Because
@@ -811,9 +810,9 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
    if (dispatch_width == 16 && count % 2 == 0)
       reg_size = 2;
 
-   const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
-                              .group(reg_size * 8, 0)
-                              .at(block, inst->next);
+   const fs_builder ibld = fs_builder(this, block, inst)
+                           .at(block, inst->next)
+                           .group(reg_size * 8, 0);
 
    for (unsigned i = 0; i < count / reg_size; i++) {
       fs_inst *spill_inst =
