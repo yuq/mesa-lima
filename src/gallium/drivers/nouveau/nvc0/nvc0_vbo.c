@@ -948,7 +948,8 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
     * if index count is larger and we expect repeated vertices, suggest upload.
     */
    nvc0->vbo_push_hint =
-      info->indexed && (nvc0->vb_elt_limit >= (info->count * 2));
+      !info->indirect && info->indexed &&
+      (nvc0->vb_elt_limit >= (info->count * 2));
 
    /* Check whether we want to switch vertex-submission mode. */
    if (nvc0->vbo_user && !(nvc0->dirty_3d & (NVC0_NEW_3D_ARRAYS | NVC0_NEW_3D_VERTEX))) {
