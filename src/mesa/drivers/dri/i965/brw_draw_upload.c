@@ -708,7 +708,9 @@ brw_emit_vertex_buffer_state(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    uint32_t dw0;
 
-   if (brw->gen >= 6) {
+   if (brw->gen >= 8) {
+      dw0 = buffer_nr << GEN6_VB0_INDEX_SHIFT;
+   } else if (brw->gen >= 6) {
       dw0 = (buffer_nr << GEN6_VB0_INDEX_SHIFT) |
             (step_rate ? GEN6_VB0_ACCESS_INSTANCEDATA
                        : GEN6_VB0_ACCESS_VERTEXDATA);
@@ -721,15 +723,35 @@ brw_emit_vertex_buffer_state(struct brw_context *brw,
    if (brw->gen >= 7)
       dw0 |= GEN7_VB0_ADDRESS_MODIFYENABLE;
 
-   if (brw->gen == 7)
+   switch (brw->gen) {
+   case 7:
       dw0 |= GEN7_MOCS_L3 << 16;
+      break;
+   case 8:
+      dw0 |= BDW_MOCS_WB << 16;
+      break;
+   case 9:
+      dw0 |= SKL_MOCS_WB << 16;
+      break;
+   }
 
    WARN_ONCE(stride >= (brw->gen >= 5 ? 2048 : 2047),
              "VBO stride %d too large, bad rendering may occur\n",
              stride);
    OUT_BATCH(dw0 | (stride << BRW_VB0_PITCH_SHIFT));
-   OUT_RELOC(bo, I915_GEM_DOMAIN_VERTEX, 0, start_offset);
-   if (brw->gen >= 5) {
+   if (brw->gen >= 8) {
+      OUT_RELOC64(bo, I915_GEM_DOMAIN_VERTEX, 0, start_offset);
+      /* From the BSpec: 3D Pipeline Stages - 3D Pipeline Geometry -
+       *                 Vertex Fetch (VF) Stage - State
+       *
+       * Instead of "VBState.StartingBufferAddress + VBState.MaxIndex x
+       * VBState.BufferPitch", the address of the byte immediately beyond the
+       * last valid byte of the buffer is determined by
+       * "VBState.StartingBufferAddress + VBState.BufferSize".
+       */
+      OUT_BATCH(end_offset - start_offset);
+   } else if (brw->gen >= 5) {
+      OUT_RELOC(bo, I915_GEM_DOMAIN_VERTEX, 0, start_offset);
       /* From the BSpec: 3D Pipeline Stages - 3D Pipeline Geometry -
        *                 Vertex Fetch (VF) Stage - State
        *
@@ -739,10 +761,12 @@ brw_emit_vertex_buffer_state(struct brw_context *brw,
        *  "VBState.EndAddress + 1".
        */
       OUT_RELOC(bo, I915_GEM_DOMAIN_VERTEX, 0, end_offset - 1);
+      OUT_BATCH(step_rate);
    } else {
+      OUT_RELOC(bo, I915_GEM_DOMAIN_VERTEX, 0, start_offset);
       OUT_BATCH(0);
+      OUT_BATCH(step_rate);
    }
-   OUT_BATCH(step_rate);
 
    return __map;
 }

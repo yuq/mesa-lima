@@ -52,7 +52,6 @@ static void
 gen8_emit_vertices(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
    bool uses_edge_flag;
 
    brw_prepare_vertices(brw);
@@ -141,35 +140,29 @@ gen8_emit_vertices(struct brw_context *brw)
       BEGIN_BATCH(1 + 4 * nr_buffers);
       OUT_BATCH((_3DSTATE_VERTEX_BUFFERS << 16) | (4 * nr_buffers - 1));
       for (unsigned i = 0; i < brw->vb.nr_buffers; i++) {
-         struct brw_vertex_buffer *buffer = &brw->vb.buffers[i];
-         uint32_t dw0 = 0;
-
-         dw0 |= i << GEN6_VB0_INDEX_SHIFT;
-         dw0 |= GEN7_VB0_ADDRESS_MODIFYENABLE;
-         dw0 |= buffer->stride << BRW_VB0_PITCH_SHIFT;
-         dw0 |= mocs_wb << 16;
-
-         OUT_BATCH(dw0);
-         OUT_RELOC64(buffer->bo, I915_GEM_DOMAIN_VERTEX, 0, buffer->offset);
-         OUT_BATCH(buffer->size);
+         const struct brw_vertex_buffer *buffer = &brw->vb.buffers[i];
+         EMIT_VERTEX_BUFFER_STATE(brw, i, buffer->bo,
+                                  buffer->offset,
+                                  buffer->offset + buffer->size,
+                                  buffer->stride, 0 /* unused */);
       }
 
       if (uses_draw_params) {
-         OUT_BATCH(brw->vb.nr_buffers << GEN6_VB0_INDEX_SHIFT |
-                   GEN7_VB0_ADDRESS_MODIFYENABLE |
-                   mocs_wb << 16);
-         OUT_RELOC64(brw->draw.draw_params_bo, I915_GEM_DOMAIN_VERTEX, 0,
-                     brw->draw.draw_params_offset);
-         OUT_BATCH(brw->draw.draw_params_bo->size);
+         EMIT_VERTEX_BUFFER_STATE(brw, brw->vb.nr_buffers,
+                                  brw->draw.draw_params_bo,
+                                  brw->draw.draw_params_offset,
+                                  brw->draw.draw_params_bo->size,
+                                  0 /* stride */,
+                                  0 /* unused */);
       }
 
       if (brw->vs.prog_data->uses_drawid) {
-         OUT_BATCH((brw->vb.nr_buffers + 1) << GEN6_VB0_INDEX_SHIFT |
-                   GEN7_VB0_ADDRESS_MODIFYENABLE |
-                   mocs_wb << 16);
-         OUT_RELOC64(brw->draw.draw_id_bo, I915_GEM_DOMAIN_VERTEX, 0,
-                     brw->draw.draw_id_offset);
-         OUT_BATCH(brw->draw.draw_id_bo->size);
+         EMIT_VERTEX_BUFFER_STATE(brw, brw->vb.nr_buffers + 1,
+                                  brw->draw.draw_id_bo,
+                                  brw->draw.draw_id_offset,
+                                  brw->draw.draw_id_bo->size,
+                                  0 /* stride */,
+                                  0 /* unused */);
       }
       ADVANCE_BATCH();
    }
