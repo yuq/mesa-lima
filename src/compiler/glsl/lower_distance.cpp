@@ -45,19 +45,41 @@
  * LowerCombinedClipCullDistance flag in gl_shader_compiler_options to true.
  */
 
+#include "main/macros.h"
 #include "glsl_symbol_table.h"
 #include "ir_rvalue_visitor.h"
 #include "ir.h"
 #include "program/prog_instruction.h" /* For WRITEMASK_* */
 
+#define GLSL_CLIP_VAR_NAME "gl_ClipDistanceMESA"
+
 namespace {
 
 class lower_distance_visitor : public ir_rvalue_visitor {
 public:
-   explicit lower_distance_visitor(gl_shader_stage shader_stage)
+   explicit lower_distance_visitor(gl_shader_stage shader_stage,
+                                   const char *in_name, int total_size,
+                                   int offset)
       : progress(false), old_distance_out_var(NULL),
         old_distance_in_var(NULL), new_distance_out_var(NULL),
-        new_distance_in_var(NULL), shader_stage(shader_stage)
+        new_distance_in_var(NULL), shader_stage(shader_stage),
+        in_name(in_name), total_size(total_size), offset(offset)
+   {
+   }
+
+   explicit lower_distance_visitor(gl_shader_stage shader_stage,
+                                   const char *in_name,
+                                   const lower_distance_visitor *orig,
+                                   int offset)
+      : progress(false),
+        old_distance_out_var(NULL),
+        old_distance_in_var(NULL),
+        new_distance_out_var(orig->new_distance_out_var),
+        new_distance_in_var(orig->new_distance_in_var),
+        shader_stage(shader_stage),
+        in_name(in_name),
+        total_size(orig->total_size),
+        offset(offset)
    {
    }
 
@@ -100,12 +122,15 @@ public:
     * Type of shader we are compiling (e.g. MESA_SHADER_VERTEX)
     */
    const gl_shader_stage shader_stage;
+   const char *in_name;
+   int total_size;
+   int offset;
 };
 
 } /* anonymous namespace */
 
 /**
- * Replace any declaration of gl_ClipDistance as an array of floats with a
+ * Replace any declaration of 'in_name' as an array of floats with a
  * declaration of gl_ClipDistanceMESA as an array of vec4's.
  */
 ir_visitor_status
@@ -114,7 +139,7 @@ lower_distance_visitor::visit(ir_variable *ir)
    ir_variable **old_var;
    ir_variable **new_var;
 
-   if (!ir->name || strcmp(ir->name, "gl_ClipDistance") != 0)
+   if (!ir->name || strcmp(ir->name, in_name) != 0)
       return visit_continue;
    assert (ir->type->is_array());
 
@@ -134,56 +159,52 @@ lower_distance_visitor::visit(ir_variable *ir)
 
    this->progress = true;
 
-   if (!ir->type->fields.array->is_array()) {
-      /* gl_ClipDistance (used for vertex, tessellation evaluation and
-       * geometry output, and fragment input).
-       */
-      assert((ir->data.mode == ir_var_shader_in &&
-              this->shader_stage == MESA_SHADER_FRAGMENT) ||
-             (ir->data.mode == ir_var_shader_out &&
-              (this->shader_stage == MESA_SHADER_VERTEX ||
-               this->shader_stage == MESA_SHADER_TESS_EVAL ||
-               this->shader_stage == MESA_SHADER_GEOMETRY)));
+   *old_var = ir;
 
-      *old_var = ir;
-      assert (ir->type->fields.array == glsl_type::float_type);
-      unsigned new_size = (ir->type->array_size() + 3) / 4;
+   if (!(*new_var)) {
+      unsigned new_size = (total_size + 3) / 4;
 
       /* Clone the old var so that we inherit all of its properties */
       *new_var = ir->clone(ralloc_parent(ir), NULL);
+      (*new_var)->name = ralloc_strdup(*new_var, GLSL_CLIP_VAR_NAME);
+      (*new_var)->data.max_array_access = new_size - 1;
 
-      /* And change the properties that we need to change */
-      (*new_var)->name = ralloc_strdup(*new_var, "gl_ClipDistanceMESA");
-      (*new_var)->type = glsl_type::get_array_instance(glsl_type::vec4_type,
-                                                       new_size);
-      (*new_var)->data.max_array_access = ir->data.max_array_access / 4;
+      if (!ir->type->fields.array->is_array()) {
+         /* gl_ClipDistance (used for vertex, tessellation evaluation and
+          * geometry output, and fragment input).
+          */
+         assert((ir->data.mode == ir_var_shader_in &&
+                 this->shader_stage == MESA_SHADER_FRAGMENT) ||
+                (ir->data.mode == ir_var_shader_out &&
+                 (this->shader_stage == MESA_SHADER_VERTEX ||
+                  this->shader_stage == MESA_SHADER_TESS_EVAL ||
+                  this->shader_stage == MESA_SHADER_GEOMETRY)));
 
+         assert (ir->type->fields.array == glsl_type::float_type);
+
+         /* And change the properties that we need to change */
+         (*new_var)->type = glsl_type::get_array_instance(glsl_type::vec4_type,
+                                                          new_size);
+      } else {
+         /* 2D gl_ClipDistance (used for tessellation control, tessellation
+          * evaluation and geometry input, and tessellation control output).
+          */
+         assert((ir->data.mode == ir_var_shader_in &&
+                 (this->shader_stage == MESA_SHADER_GEOMETRY ||
+                  this->shader_stage == MESA_SHADER_TESS_EVAL)) ||
+                this->shader_stage == MESA_SHADER_TESS_CTRL);
+
+         assert (ir->type->fields.array->fields.array == glsl_type::float_type);
+
+         /* And change the properties that we need to change */
+         (*new_var)->type = glsl_type::get_array_instance(
+                            glsl_type::get_array_instance(glsl_type::vec4_type,
+                                                          new_size),
+                            ir->type->array_size());
+      }
       ir->replace_with(*new_var);
    } else {
-      /* 2D gl_ClipDistance (used for tessellation control, tessellation
-       * evaluation and geometry input, and tessellation control output).
-       */
-      assert((ir->data.mode == ir_var_shader_in &&
-              (this->shader_stage == MESA_SHADER_GEOMETRY ||
-               this->shader_stage == MESA_SHADER_TESS_EVAL)) ||
-             this->shader_stage == MESA_SHADER_TESS_CTRL);
-
-      *old_var = ir;
-      assert (ir->type->fields.array->fields.array == glsl_type::float_type);
-      unsigned new_size = (ir->type->fields.array->array_size() + 3) / 4;
-
-      /* Clone the old var so that we inherit all of its properties */
-      *new_var = ir->clone(ralloc_parent(ir), NULL);
-
-      /* And change the properties that we need to change */
-      (*new_var)->name = ralloc_strdup(*new_var, "gl_ClipDistanceMESA");
-      (*new_var)->type = glsl_type::get_array_instance(
-         glsl_type::get_array_instance(glsl_type::vec4_type,
-            new_size),
-         ir->type->array_size());
-      (*new_var)->data.max_array_access = ir->data.max_array_access / 4;
-
-      ir->replace_with(*new_var);
+      ir->remove();
    }
 
    return visit_continue;
@@ -219,7 +240,7 @@ lower_distance_visitor::create_indices(ir_rvalue *old_index,
        * creating expressions to calculate the lowered indices.  Just create
        * constants.
        */
-      int const_val = old_index_constant->get_int_component(0);
+      int const_val = old_index_constant->get_int_component(0) + offset;
       array_index = new(ctx) ir_constant(const_val / 4);
       swizzle_index = new(ctx) ir_constant(const_val % 4);
    } else {
@@ -236,14 +257,20 @@ lower_distance_visitor::create_indices(ir_rvalue *old_index,
        * shift because that's likely to be more efficient.
        */
       array_index = new(ctx) ir_expression(
-         ir_binop_rshift, new(ctx) ir_dereference_variable(old_index_var),
+         ir_binop_rshift,
+         new(ctx) ir_expression(ir_binop_add,
+                                new(ctx) ir_dereference_variable(old_index_var),
+                                new(ctx) ir_constant(offset)),
          new(ctx) ir_constant(2));
 
       /* Create the expression distance_index % 4.  Do this as a bitwise
        * AND because that's likely to be more efficient.
        */
       swizzle_index = new(ctx) ir_expression(
-         ir_binop_bit_and, new(ctx) ir_dereference_variable(old_index_var),
+         ir_binop_bit_and,
+         new(ctx) ir_expression(ir_binop_add,
+                                new(ctx) ir_dereference_variable(old_index_var),
+                                new(ctx) ir_constant(offset)),
          new(ctx) ir_constant(3));
    }
 }
@@ -382,10 +409,10 @@ lower_distance_visitor::fix_lhs(ir_assignment *ir)
 
       ir_dereference *const new_lhs = (ir_dereference *) expr->operands[0];
       ir->rhs = new(mem_ctx) ir_expression(ir_triop_vector_insert,
-					   glsl_type::vec4_type,
-					   new_lhs->clone(mem_ctx, NULL),
-					   ir->rhs,
-					   expr->operands[1]);
+                                           glsl_type::vec4_type,
+                                           new_lhs->clone(mem_ctx, NULL),
+                                           ir->rhs,
+                                           expr->operands[1]);
       ir->set_lhs(new_lhs);
       ir->write_mask = WRITEMASK_XYZW;
    }
@@ -557,18 +584,98 @@ lower_distance_visitor::visit_leave(ir_call *ir)
    return rvalue_visit(ir);
 }
 
+namespace {
+class lower_distance_visitor_counter : public ir_rvalue_visitor {
+public:
+   explicit lower_distance_visitor_counter(void)
+      : in_clip_size(0), in_cull_size(0),
+        out_clip_size(0), out_cull_size(0)
+   {
+   }
+
+   virtual ir_visitor_status visit(ir_variable *);
+   virtual void handle_rvalue(ir_rvalue **rvalue);
+
+   int in_clip_size;
+   int in_cull_size;
+   int out_clip_size;
+   int out_cull_size;
+};
+
+}
+/**
+ * Count gl_ClipDistance and gl_CullDistance sizes.
+ */
+ir_visitor_status
+lower_distance_visitor_counter::visit(ir_variable *ir)
+{
+   int *clip_size, *cull_size;
+
+   if (!ir->name)
+      return visit_continue;
+
+   if (ir->data.mode == ir_var_shader_out) {
+      clip_size = &out_clip_size;
+      cull_size = &out_cull_size;
+   } else if (ir->data.mode == ir_var_shader_in) {
+      clip_size = &in_clip_size;
+      cull_size = &in_cull_size;
+   } else
+      return visit_continue;
+
+   if (ir->type->is_unsized_array())
+      return visit_continue;
+
+   if (*clip_size == 0) {
+      if (!strcmp(ir->name, "gl_ClipDistance")) {
+         if (!ir->type->fields.array->is_array())
+            *clip_size = ir->type->array_size();
+         else
+            *clip_size = ir->type->fields.array->array_size();
+      }
+   }
+
+   if (*cull_size == 0) {
+      if (!strcmp(ir->name, "gl_CullDistance")) {
+         if (!ir->type->fields.array->is_array())
+            *cull_size = ir->type->array_size();
+         else
+            *cull_size = ir->type->fields.array->array_size();
+      }
+   }
+   return visit_continue;
+}
+
+void
+lower_distance_visitor_counter::handle_rvalue(ir_rvalue **rv)
+{
+   return;
+}
 
 bool
-lower_clip_distance(gl_shader *shader)
+lower_clip_cull_distance(struct gl_shader_program *prog, gl_shader *shader)
 {
-   lower_distance_visitor v(shader->Stage);
+   int clip_size, cull_size;
 
+   lower_distance_visitor_counter count;
+   visit_list_elements(&count, shader->ir);
+
+   clip_size = MAX2(count.in_clip_size, count.out_clip_size);
+   cull_size = MAX2(count.in_cull_size, count.out_cull_size);
+
+   if (clip_size == 0 && cull_size == 0)
+      return false;
+
+   lower_distance_visitor v(shader->Stage, "gl_ClipDistance", clip_size + cull_size, 0);
    visit_list_elements(&v, shader->ir);
 
-   if (v.new_distance_out_var)
-      shader->symbols->add_variable(v.new_distance_out_var);
-   if (v.new_distance_in_var)
-      shader->symbols->add_variable(v.new_distance_in_var);
+   lower_distance_visitor v2(shader->Stage, "gl_CullDistance", &v, clip_size);
+   visit_list_elements(&v2, shader->ir);
 
-   return v.progress;
+   if (v2.new_distance_out_var)
+      shader->symbols->add_variable(v2.new_distance_out_var);
+   if (v2.new_distance_in_var)
+      shader->symbols->add_variable(v2.new_distance_in_var);
+
+   return v2.progress;
 }
