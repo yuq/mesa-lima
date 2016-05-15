@@ -291,7 +291,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_blend_func_extended =
          !driQueryOptionb(&brw->optionCache, "disable_blend_func_extended");
       ctx->Extensions.ARB_conditional_render_inverted = true;
-      ctx->Extensions.ARB_cull_distance = false;
+      ctx->Extensions.ARB_cull_distance = true;
       ctx->Extensions.ARB_draw_buffers_blend = true;
       ctx->Extensions.ARB_ES3_compatibility = true;
       ctx->Extensions.ARB_fragment_layer_viewport = true;
