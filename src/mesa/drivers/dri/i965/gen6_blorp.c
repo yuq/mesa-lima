@@ -170,16 +170,21 @@ gen6_blorp_emit_vertices(struct brw_context *brw,
 {
    gen6_blorp_emit_vertex_data(brw, params);
 
+   const unsigned num_varyings =
+      params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
+   const unsigned num_elements = 2 + num_varyings;
+   const int batch_length = 1 + 2 * num_elements;
+
+   BEGIN_BATCH(batch_length);
+
    /* 3DSTATE_VERTEX_ELEMENTS
     *
     * Fetch dwords 0 - 7 from each VUE. See the comments above where
-    * the vertex_bo is filled with data.
+    * the vertex_bo is filled with data. First element contains dwords
+    * for the VUE header, second the actual position values and the
+    * remaining contain the flat inputs.
     */
    {
-      const int num_elements = 2;
-      const int batch_length = 1 + 2 * num_elements;
-
-      BEGIN_BATCH(batch_length);
       OUT_BATCH((_3DSTATE_VERTEX_ELEMENTS << 16) | (batch_length - 2));
       /* Element 0 */
       OUT_BATCH(GEN6_VE0_VALID |
@@ -197,8 +202,21 @@ gen6_blorp_emit_vertices(struct brw_context *brw,
                 BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_1_SHIFT |
                 BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_2_SHIFT |
                 BRW_VE1_COMPONENT_STORE_1_FLT << BRW_VE1_COMPONENT_3_SHIFT);
-      ADVANCE_BATCH();
    }
+
+   for (unsigned i = 0; i < num_varyings; ++i) {
+      /* Element 2 + i */
+      OUT_BATCH(1 << GEN6_VE0_INDEX_SHIFT |
+                GEN6_VE0_VALID |
+                BRW_SURFACEFORMAT_R32G32B32A32_FLOAT << BRW_VE0_FORMAT_SHIFT |
+                (i * 4 * sizeof(float)) << BRW_VE0_SRC_OFFSET_SHIFT);
+      OUT_BATCH(BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_0_SHIFT |
+                BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_1_SHIFT |
+                BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_2_SHIFT |
+                BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_3_SHIFT);
+   }
+
+   ADVANCE_BATCH();
 }
 
 

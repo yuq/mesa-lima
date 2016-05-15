@@ -534,8 +534,12 @@ gen8_blorp_emit_vf_sys_gen_vals_state(struct brw_context *brw)
 
 static void
 gen8_blorp_emit_vf_instancing_state(struct brw_context *brw,
-                                    unsigned num_elems)
+                                    const struct brw_blorp_params *params)
 {
+   const unsigned num_varyings =
+      params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
+   const unsigned num_elems = 2 + num_varyings;
+
    for (unsigned i = 0; i < num_elems; ++i) {
       BEGIN_BATCH(3);
       OUT_BATCH(_3DSTATE_VF_INSTANCING << 16 | (3 - 2));
@@ -752,7 +756,7 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
    gen8_blorp_emit_vf_topology(brw);
    gen8_blorp_emit_vf_sys_gen_vals_state(brw);
    gen6_blorp_emit_vertices(brw, params);
-   gen8_blorp_emit_vf_instancing_state(brw, 2);
+   gen8_blorp_emit_vf_instancing_state(brw, params);
    gen8_blorp_emit_vf_state(brw);
    gen7_blorp_emit_primitive(brw, params);
 
