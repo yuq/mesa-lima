@@ -2689,8 +2689,13 @@ brw_find_next_block_end(struct brw_codegen *p, int start_offset)
             return offset;
          depth--;
          break;
-      case BRW_OPCODE_ELSE:
       case BRW_OPCODE_WHILE:
+         /* If the while doesn't jump before our instruction, it's the end
+          * of a sibling do...while loop.  Ignore it.
+          */
+         if (!while_jumps_before_offset(devinfo, insn, offset, start_offset))
+            continue;
+      case BRW_OPCODE_ELSE:
       case BRW_OPCODE_HALT:
          if (depth == 0)
             return offset;
