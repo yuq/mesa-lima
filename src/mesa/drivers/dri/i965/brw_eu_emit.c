@@ -2655,6 +2655,17 @@ brw_send_indirect_surface_message(struct brw_codegen *p,
    return insn;
 }
 
+static bool
+while_jumps_before_offset(const struct brw_device_info *devinfo,
+                          brw_inst *insn, int while_offset, int start_offset)
+{
+   int scale = 16 / brw_jump_scale(devinfo);
+   int jip = devinfo->gen == 6 ? brw_inst_gen6_jump_count(devinfo, insn)
+                               : brw_inst_jip(devinfo, insn);
+   return while_offset + jip * scale <= start_offset;
+}
+
+
 static int
 brw_find_next_block_end(struct brw_codegen *p, int start_offset)
 {
@@ -2698,7 +2709,6 @@ brw_find_loop_end(struct brw_codegen *p, int start_offset)
 {
    const struct brw_device_info *devinfo = p->devinfo;
    int offset;
-   int scale = 16 / brw_jump_scale(devinfo);
    void *store = p->store;
 
    assert(devinfo->gen >= 6);
@@ -2712,9 +2722,7 @@ brw_find_loop_end(struct brw_codegen *p, int start_offset)
       brw_inst *insn = store + offset;
 
       if (brw_inst_opcode(devinfo, insn) == BRW_OPCODE_WHILE) {
-         int jip = devinfo->gen == 6 ? brw_inst_gen6_jump_count(devinfo, insn)
-                                     : brw_inst_jip(devinfo, insn);
-	 if (offset + jip * scale <= start_offset)
+	 if (while_jumps_before_offset(devinfo, insn, offset, start_offset))
 	    return offset;
       }
    }
