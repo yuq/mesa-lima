@@ -25,8 +25,15 @@
 #include "brw_surface_formats.h"
 #include "vk_format_info.h"
 
-#define RGBA { 0, 1, 2, 3 }
-#define BGRA { 2, 1, 0, 3 }
+#define ISL_SWIZZLE(r, g, b, a) { \
+   ISL_CHANNEL_SELECT_##r, \
+   ISL_CHANNEL_SELECT_##g, \
+   ISL_CHANNEL_SELECT_##b, \
+   ISL_CHANNEL_SELECT_##a, \
+}
+
+#define RGBA ISL_SWIZZLE(RED, GREEN, BLUE, ALPHA)
+#define BGRA ISL_SWIZZLE(BLUE, GREEN, RED, ALPHA)
 
 #define swiz_fmt(__vk_fmt, __hw_fmt, __swizzle)     \
    [__vk_fmt] = { \
@@ -308,13 +315,16 @@ get_image_format_properties(int gen, enum isl_format base,
     * moved, then blending won't work correctly.  The PRM tells us
     * straight-up not to render to such a surface.
     */
-   if (info->render_target <= gen && format.swizzle.a == 3) {
+   if (info->render_target <= gen &&
+       format.swizzle.a == ISL_CHANNEL_SELECT_ALPHA) {
       flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
                VK_FORMAT_FEATURE_BLIT_DST_BIT;
    }
 
-   if (info->alpha_blend <= gen && format.swizzle.a == 3)
+   if (info->alpha_blend <= gen &&
+       format.swizzle.a == ISL_CHANNEL_SELECT_ALPHA) {
       flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+   }
 
    /* Load/store is determined based on base format.  This prevents RGB
     * formats from showing up as load/store capable.

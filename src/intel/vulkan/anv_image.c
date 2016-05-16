@@ -415,18 +415,12 @@ remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component,
       swizzle = component;
 
    switch (swizzle) {
-   case VK_COMPONENT_SWIZZLE_ZERO:
-      return ISL_CHANNEL_SELECT_ZERO;
-   case VK_COMPONENT_SWIZZLE_ONE:
-      return ISL_CHANNEL_SELECT_ONE;
-   case VK_COMPONENT_SWIZZLE_R:
-      return ISL_CHANNEL_SELECT_RED + format_swizzle.r;
-   case VK_COMPONENT_SWIZZLE_G:
-      return ISL_CHANNEL_SELECT_RED + format_swizzle.g;
-   case VK_COMPONENT_SWIZZLE_B:
-      return ISL_CHANNEL_SELECT_RED + format_swizzle.b;
-   case VK_COMPONENT_SWIZZLE_A:
-      return ISL_CHANNEL_SELECT_RED + format_swizzle.a;
+   case VK_COMPONENT_SWIZZLE_ZERO:  return ISL_CHANNEL_SELECT_ZERO;
+   case VK_COMPONENT_SWIZZLE_ONE:   return ISL_CHANNEL_SELECT_ONE;
+   case VK_COMPONENT_SWIZZLE_R:     return format_swizzle.r;
+   case VK_COMPONENT_SWIZZLE_G:     return format_swizzle.g;
+   case VK_COMPONENT_SWIZZLE_B:     return format_swizzle.b;
+   case VK_COMPONENT_SWIZZLE_A:     return format_swizzle.a;
    default:
       unreachable("Invalid swizzle");
    }
