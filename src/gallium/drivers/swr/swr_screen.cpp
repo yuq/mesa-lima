@@ -358,6 +358,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_PCI_DEVICE:
    case PIPE_CAP_PCI_FUNCTION:
    case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
+   case PIPE_CAP_CULL_DISTANCE:
       return 0;
    }
 
