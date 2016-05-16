@@ -162,8 +162,7 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
       struct anv_meta_blit2d_surf img_bsurf =
          blit_surf_for_image(image, img_isl_surf);
       enum isl_format buf_format = anv_get_isl_format(image->vk_format, aspect,
-                                                      VK_IMAGE_TILING_LINEAR,
-                                                      NULL);
+                                                      VK_IMAGE_TILING_LINEAR);
       struct anv_meta_blit2d_surf buf_bsurf = {
          .bo = buffer->bo,
          .tiling = ISL_TILING_LINEAR,

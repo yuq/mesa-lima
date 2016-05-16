@@ -1518,12 +1518,16 @@ struct anv_format {
    struct anv_format_swizzle swizzle;
 };
 
-const struct anv_format *
-anv_format_for_vk_format(VkFormat format);
+struct anv_format
+anv_get_format(VkFormat format, VkImageAspectFlags aspect,
+               VkImageTiling tiling);
 
-enum isl_format
-anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
-                   VkImageTiling tiling, struct anv_format_swizzle *swizzle);
+static inline enum isl_format
+anv_get_isl_format(VkFormat vk_format, VkImageAspectFlags aspect,
+                   VkImageTiling tiling)
+{
+   return anv_get_format(vk_format, aspect, tiling).isl_format;
+}
 
 /**
  * Subsurface of an anv_image.

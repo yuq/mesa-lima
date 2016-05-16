@@ -131,8 +131,7 @@ make_surface(const struct anv_device *dev,
 
    ok = isl_surf_init(&dev->isl_dev, &anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
-      .format = anv_get_isl_format(vk_info->format, aspect,
-                                   vk_info->tiling, NULL),
+      .format = anv_get_isl_format(vk_info->format, aspect, vk_info->tiling),
       .width = image->extent.width,
       .height = image->extent.height,
       .depth = image->extent.depth,
@@ -473,29 +472,27 @@ anv_image_view_init(struct anv_image_view *iview,
    iview->aspect_mask = pCreateInfo->subresourceRange.aspectMask;
    iview->vk_format = pCreateInfo->format;
 
-   struct anv_format_swizzle swizzle;
-   enum isl_format format = anv_get_isl_format(pCreateInfo->format,
-                                               range->aspectMask,
-                                               image->tiling, &swizzle);
+   struct anv_format format =
+      anv_get_format(pCreateInfo->format, range->aspectMask, image->tiling);
 
    iview->base_layer = range->baseArrayLayer;
    iview->base_mip = range->baseMipLevel;
 
    struct isl_view isl_view = {
-      .format = format,
+      .format = format.isl_format,
       .base_level = range->baseMipLevel,
       .levels = anv_get_levelCount(image, range),
       .base_array_layer = range->baseArrayLayer,
       .array_len = anv_get_layerCount(image, range),
       .channel_select = {
          remap_swizzle(pCreateInfo->components.r,
-                       VK_COMPONENT_SWIZZLE_R, swizzle),
+                       VK_COMPONENT_SWIZZLE_R, format.swizzle),
          remap_swizzle(pCreateInfo->components.g,
-                       VK_COMPONENT_SWIZZLE_G, swizzle),
+                       VK_COMPONENT_SWIZZLE_G, format.swizzle),
          remap_swizzle(pCreateInfo->components.b,
-                       VK_COMPONENT_SWIZZLE_B, swizzle),
+                       VK_COMPONENT_SWIZZLE_B, format.swizzle),
          remap_swizzle(pCreateInfo->components.a,
-                       VK_COMPONENT_SWIZZLE_A, swizzle),
+                       VK_COMPONENT_SWIZZLE_A, format.swizzle),
       },
    };
 
@@ -548,7 +545,8 @@ anv_image_view_init(struct anv_image_view *iview,
    if (image->usage & usage_mask & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      if (isl_has_matching_typed_storage_image_format(&device->info, format)) {
+      if (isl_has_matching_typed_storage_image_format(&device->info,
+                                                      format.isl_format)) {
          isl_view.usage = cube_usage | ISL_SURF_USAGE_STORAGE_BIT;
          isl_surf_fill_state(&device->isl_dev,
                              iview->storage_surface_state.map,
@@ -631,7 +629,7 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
 
    view->format = anv_get_isl_format(pCreateInfo->format,
                                      VK_IMAGE_ASPECT_COLOR_BIT,
-                                     VK_IMAGE_TILING_LINEAR, NULL);
+                                     VK_IMAGE_TILING_LINEAR);
    view->bo = buffer->bo;
    view->offset = buffer->offset + pCreateInfo->offset;
    view->range = pCreateInfo->range == VK_WHOLE_SIZE ?
