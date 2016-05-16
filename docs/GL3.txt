@@ -136,17 +136,17 @@ GL 4.0, GLSL 4.00 --- all DONE: i965/gen8+, nvc0, r600, radeonsi
   GL_ARB_transform_feedback3                            DONE (i965/gen7+, nv50, llvmpipe, softpipe, swr)
 
 
-GL 4.1, GLSL 4.10 --- all DONE: nvc0, r600, radeonsi
+GL 4.1, GLSL 4.10 --- all DONE: i965/gen8+, nvc0, r600, radeonsi
 
   GL_ARB_ES2_compatibility                              DONE (i965, nv50, llvmpipe, softpipe, swr)
   GL_ARB_get_program_binary                             DONE (0 binary formats)
   GL_ARB_separate_shader_objects                        DONE (all drivers)
   GL_ARB_shader_precision                               DONE (all drivers that support GLSL 4.10)
-  GL_ARB_vertex_attrib_64bit                            DONE (i965/gen8+, llvmpipe, softpipe)
+  GL_ARB_vertex_attrib_64bit                            DONE (llvmpipe, softpipe)
   GL_ARB_viewport_array                                 DONE (i965, nv50, llvmpipe, softpipe)
 
 
-GL 4.2, GLSL 4.20 -- all DONE: nvc0, radeonsi
+GL 4.2, GLSL 4.20 -- all DONE: i965/gen8+, nvc0, radeonsi
 
   GL_ARB_texture_compression_bptc                       DONE (i965, r600)
   GL_ARB_compressed_texture_pixel_storage               DONE (all drivers)
@@ -162,7 +162,7 @@ GL 4.2, GLSL 4.20 -- all DONE: nvc0, radeonsi
   GL_ARB_map_buffer_alignment                           DONE (all drivers)
 
 
-GL 4.3, GLSL 4.30 -- all DONE: nvc0, radeonsi
+GL 4.3, GLSL 4.30 -- all DONE: i965/gen8+, nvc0, radeonsi
 
   GL_ARB_arrays_of_arrays                               DONE (all drivers that support GLSL 1.30)
   GL_ARB_ES3_compatibility                              DONE (all drivers that support GLSL 3.30)
@@ -188,7 +188,7 @@ GL 4.3, GLSL 4.30 -- all DONE: nvc0, radeonsi
   GL_ARB_vertex_attrib_binding                          DONE (all drivers)
 
 
-GL 4.4, GLSL 4.40:
+GL 4.4, GLSL 4.40 -- all DONE: i965/gen8+
 
   GL_MAX_VERTEX_ATTRIB_STRIDE                           DONE (all drivers)
   GL_ARB_buffer_storage                                 DONE (i965, nv50, nvc0, r600, radeonsi)
@@ -253,7 +253,7 @@ GLES3.1, GLSL ES 3.1 -- all DONE: i965/hsw+, nvc0, radeonsi
 GLES3.2, GLSL ES 3.2:
 
   GL_EXT_color_buffer_float                             DONE (all drivers)
-  GL_KHR_blend_equation_advanced                        not started
+  GL_KHR_blend_equation_advanced                        DONE (i965)
   GL_KHR_debug                                          DONE (all drivers)
   GL_KHR_robustness                                     DONE (i965)
   GL_KHR_texture_compression_astc_ldr                   DONE (i965/gen9+)
@@ -303,7 +303,7 @@ Khronos, ARB, and OES extensions that are not part of any OpenGL or OpenGL ES ve
   GL_ARB_sparse_texture_clamp                           not started
   GL_ARB_texture_filter_minmax                          not started
   GL_ARB_transform_feedback_overflow_query              not started
-  GL_KHR_blend_equation_advanced_coherent               not started
+  GL_KHR_blend_equation_advanced_coherent               DONE (i965/gen9+)
   GL_KHR_no_error                                       not started
   GL_KHR_texture_compression_astc_hdr                   DONE (core only)
   GL_KHR_texture_compression_astc_sliced_3d             not started
