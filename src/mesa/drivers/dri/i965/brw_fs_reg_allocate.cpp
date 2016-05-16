@@ -977,14 +977,27 @@ fs_visitor::spill_reg(int spill_reg)
          const unsigned width =
             dispatch_width == 16 && inst->regs_written % 2 == 0 ? 16 : 8;
 
+         /* Spills should only write data initialized by the instruction for
+          * whichever channels are enabled in the excution mask.  If that's
+          * not possible we'll have to emit a matching unspill before the
+          * instruction and set force_writemask_all on the spill.
+          */
+         const bool per_channel =
+            inst->dst.is_contiguous() && type_sz(inst->dst.type) == 4 &&
+            inst->exec_size == width;
+
          /* Builder used to emit the scratch messages. */
-         const fs_builder ubld = ibld.group(width, 0);
+         const fs_builder ubld = ibld.exec_all(!per_channel).group(width, 0);
 
 	 /* If our write is going to affect just part of the
           * inst->regs_written(), then we need to unspill the destination
-          * since we write back out all of the regs_written().
+          * since we write back out all of the regs_written().  If the
+          * original instruction had force_writemask_all set and is not a
+          * partial write, there should be no need for the unspill since the
+          * instruction will be overwriting the whole destination in any case.
 	  */
-	 if (inst->is_partial_write())
+         if (inst->is_partial_write() ||
+             (!inst->force_writemask_all && !per_channel))
             emit_unspill(ubld, spill_src, subset_spill_offset,
                          inst->regs_written);
 
