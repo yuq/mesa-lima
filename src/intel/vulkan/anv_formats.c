@@ -34,6 +34,7 @@
 
 #define RGBA ISL_SWIZZLE(RED, GREEN, BLUE, ALPHA)
 #define BGRA ISL_SWIZZLE(BLUE, GREEN, RED, ALPHA)
+#define RGB1 ISL_SWIZZLE(RED, GREEN, BLUE, ONE)
 
 #define swiz_fmt(__vk_fmt, __hw_fmt, __swizzle)     \
    [__vk_fmt] = { \
@@ -278,10 +279,12 @@ anv_get_format(VkFormat vk_format, VkImageAspectFlags aspect,
        * hood.
        */
       enum isl_format rgbx = isl_format_rgb_to_rgbx(format.isl_format);
-      if (rgbx != ISL_FORMAT_UNSUPPORTED)
+      if (rgbx != ISL_FORMAT_UNSUPPORTED) {
          format.isl_format = rgbx;
-      else
+      } else {
          format.isl_format = isl_format_rgb_to_rgba(format.isl_format);
+         format.swizzle = (struct anv_format_swizzle) RGB1;
+      }
    }
 
    return format;
