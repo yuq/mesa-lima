@@ -942,8 +942,14 @@ fs_visitor::spill_reg(int spill_reg)
             inst->src[i].nr = unspill_dst.nr;
             inst->src[i].reg_offset = 0;
 
+            /* We read the largest power-of-two divisor of the register count
+             * (because only POT scratch read blocks are allowed by the
+             * hardware) up to the maximum supported block size.
+             * XXX - Bump the limit when the generator code is ready for
+             *       32-wide spills.
+             */
             const unsigned width =
-               dispatch_width == 16 && regs_read % 2 == 0 ? 16 : 8;
+               MIN2(16, 1u << (ffs(MAX2(1, regs_read) * 8) - 1));
 
             /* Set exec_all() on unspill messages under the (rather
              * pessimistic) assumption that there is no one-to-one
@@ -974,8 +980,16 @@ fs_visitor::spill_reg(int spill_reg)
          inst->no_dd_clear = false;
          inst->no_dd_check = false;
 
-         const unsigned width =
-            dispatch_width == 16 && inst->regs_written % 2 == 0 ? 16 : 8;
+         /* Calculate the execution width of the scratch messages (which work
+          * in terms of 32 bit components so we have a fixed number of eight
+          * channels per spilled register).  We attempt to write one
+          * exec_size-wide component of the variable at a time without
+          * exceeding the maximum number of (fake) MRF registers reserved for
+          * spills.
+          */
+         const unsigned width = 8 * MIN2(
+            DIV_ROUND_UP(inst->dst.component_size(inst->exec_size), REG_SIZE),
+            spill_max_size(this));
 
          /* Spills should only write data initialized by the instruction for
           * whichever channels are enabled in the excution mask.  If that's
