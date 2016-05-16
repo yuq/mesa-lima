@@ -131,7 +131,8 @@ make_surface(const struct anv_device *dev,
 
    ok = isl_surf_init(&dev->isl_dev, &anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
-      .format = anv_get_isl_format(vk_info->format, aspect, vk_info->tiling),
+      .format = anv_get_isl_format(&dev->info, vk_info->format,
+                                   aspect, vk_info->tiling),
       .width = image->extent.width,
       .height = image->extent.height,
       .depth = image->extent.depth,
@@ -466,8 +467,8 @@ anv_image_view_init(struct anv_image_view *iview,
    iview->aspect_mask = pCreateInfo->subresourceRange.aspectMask;
    iview->vk_format = pCreateInfo->format;
 
-   struct anv_format format =
-      anv_get_format(pCreateInfo->format, range->aspectMask, image->tiling);
+   struct anv_format format = anv_get_format(&device->info, pCreateInfo->format,
+                                             range->aspectMask, image->tiling);
 
    iview->base_layer = range->baseArrayLayer;
    iview->base_mip = range->baseMipLevel;
@@ -621,7 +622,7 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
 
    /* TODO: Handle the format swizzle? */
 
-   view->format = anv_get_isl_format(pCreateInfo->format,
+   view->format = anv_get_isl_format(&device->info, pCreateInfo->format,
                                      VK_IMAGE_ASPECT_COLOR_BIT,
                                      VK_IMAGE_TILING_LINEAR);
    view->bo = buffer->bo;

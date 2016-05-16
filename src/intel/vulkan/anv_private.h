@@ -1519,14 +1519,14 @@ struct anv_format {
 };
 
 struct anv_format
-anv_get_format(VkFormat format, VkImageAspectFlags aspect,
-               VkImageTiling tiling);
+anv_get_format(const struct brw_device_info *devinfo, VkFormat format,
+               VkImageAspectFlags aspect, VkImageTiling tiling);
 
 static inline enum isl_format
-anv_get_isl_format(VkFormat vk_format, VkImageAspectFlags aspect,
-                   VkImageTiling tiling)
+anv_get_isl_format(const struct brw_device_info *devinfo, VkFormat vk_format,
+                   VkImageAspectFlags aspect, VkImageTiling tiling)
 {
-   return anv_get_format(vk_format, aspect, tiling).isl_format;
+   return anv_get_format(devinfo, vk_format, aspect, tiling).isl_format;
 }
 
 /**

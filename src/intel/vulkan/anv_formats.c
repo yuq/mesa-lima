@@ -246,8 +246,8 @@ static const struct anv_format anv_formats[] = {
  * Exactly one bit must be set in \a aspect.
  */
 struct anv_format
-anv_get_format(VkFormat vk_format, VkImageAspectFlags aspect,
-               VkImageTiling tiling)
+anv_get_format(const struct brw_device_info *devinfo, VkFormat vk_format,
+               VkImageAspectFlags aspect, VkImageTiling tiling)
 {
    struct anv_format format = anv_formats[vk_format];
 
@@ -382,9 +382,11 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                VK_FORMAT_FEATURE_BLIT_DST_BIT;
    } else {
       struct anv_format linear_fmt, tiled_fmt;
-      linear_fmt = anv_get_format(format, VK_IMAGE_ASPECT_COLOR_BIT,
+      linear_fmt = anv_get_format(physical_device->info, format,
+                                  VK_IMAGE_ASPECT_COLOR_BIT,
                                   VK_IMAGE_TILING_LINEAR);
-      tiled_fmt = anv_get_format(format, VK_IMAGE_ASPECT_COLOR_BIT,
+      tiled_fmt = anv_get_format(physical_device->info, format,
+                                 VK_IMAGE_ASPECT_COLOR_BIT,
                                  VK_IMAGE_TILING_OPTIMAL);
 
       linear = get_image_format_properties(gen, linear_fmt.isl_format,

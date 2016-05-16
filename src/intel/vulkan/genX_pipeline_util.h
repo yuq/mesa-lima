@@ -100,7 +100,8 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++) {
       const VkVertexInputAttributeDescription *desc =
          &info->pVertexAttributeDescriptions[i];
-      enum isl_format format = anv_get_isl_format(desc->format,
+      enum isl_format format = anv_get_isl_format(&pipeline->device->info,
+                                                  desc->format,
                                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                                   VK_IMAGE_TILING_LINEAR);
 
