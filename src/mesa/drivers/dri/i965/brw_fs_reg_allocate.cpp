@@ -944,8 +944,16 @@ fs_visitor::spill_reg(int spill_reg)
 
             const unsigned width =
                dispatch_width == 16 && regs_read % 2 == 0 ? 16 : 8;
-            emit_unspill(ibld.group(width, 0), unspill_dst,
-                         subset_spill_offset, regs_read);
+
+            /* Set exec_all() on unspill messages under the (rather
+             * pessimistic) assumption that there is no one-to-one
+             * correspondence between channels of the spilled variable in
+             * scratch space and the scratch read message, which operates on
+             * 32 bit channels.  It shouldn't hurt in any case because the
+             * unspill destination is a block-local temporary.
+             */
+            emit_unspill(ibld.exec_all().group(width, 0),
+                         unspill_dst, subset_spill_offset, regs_read);
 	 }
       }
 
