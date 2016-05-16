@@ -291,8 +291,13 @@ struct dri2_egl_surface
    /* EGL-owned buffers */
    __DRIbuffer           *local_buffers[__DRI_BUFFER_COUNT];
 #endif
-};
 
+#if defined(HAVE_SURFACELESS_PLATFORM)
+      __DRIimage           *front;
+      unsigned int         visual;
+#endif
+
+};
 
 struct dri2_egl_config
 {
