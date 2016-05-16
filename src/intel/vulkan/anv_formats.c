@@ -250,44 +250,41 @@ anv_get_format(VkFormat vk_format, VkImageAspectFlags aspect,
 {
    struct anv_format format = anv_formats[vk_format];
 
-   const struct isl_format_layout *isl_layout =
-      isl_format_get_layout(format.isl_format);
-
-   switch (aspect) {
-   case VK_IMAGE_ASPECT_COLOR_BIT:
-      if (format.isl_format == ISL_FORMAT_UNSUPPORTED) {
-         return format;
-      } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-                 !util_is_power_of_two(isl_layout->bs)) {
-         /* Tiled formats *must* be power-of-two because we need up upload
-          * them with the render pipeline.  For 3-channel formats, we fix
-          * this by switching them over to RGBX or RGBA formats under the
-          * hood.
-          */
-         enum isl_format rgbx = isl_format_rgb_to_rgbx(format.isl_format);
-         if (rgbx != ISL_FORMAT_UNSUPPORTED)
-            format.isl_format = rgbx;
-         else
-            format.isl_format = isl_format_rgb_to_rgba(format.isl_format);
-         return format;
-      } else {
-         return format;
-      }
-
-   case VK_IMAGE_ASPECT_DEPTH_BIT:
-   case (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT):
-      assert(vk_format_aspects(vk_format) & VK_IMAGE_ASPECT_DEPTH_BIT);
+   if (format.isl_format == ISL_FORMAT_UNSUPPORTED)
       return format;
 
-   case VK_IMAGE_ASPECT_STENCIL_BIT:
+   if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
       assert(vk_format_aspects(vk_format) & VK_IMAGE_ASPECT_STENCIL_BIT);
       format.isl_format = ISL_FORMAT_R8_UINT;
       return format;
+   }
 
-   default:
-      unreachable("bad VkImageAspect");
+   if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) {
+      assert(vk_format_aspects(vk_format) & VK_IMAGE_ASPECT_DEPTH_BIT);
       return format;
    }
+
+   assert(aspect == VK_IMAGE_ASPECT_COLOR_BIT);
+   assert(vk_format_aspects(vk_format) == VK_IMAGE_ASPECT_COLOR_BIT);
+
+   const struct isl_format_layout *isl_layout =
+      isl_format_get_layout(format.isl_format);
+
+   if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+       !util_is_power_of_two(isl_layout->bs)) {
+      /* Tiled formats *must* be power-of-two because we need up upload
+       * them with the render pipeline.  For 3-channel formats, we fix
+       * this by switching them over to RGBX or RGBA formats under the
+       * hood.
+       */
+      enum isl_format rgbx = isl_format_rgb_to_rgbx(format.isl_format);
+      if (rgbx != ISL_FORMAT_UNSUPPORTED)
+         format.isl_format = rgbx;
+      else
+         format.isl_format = isl_format_rgb_to_rgba(format.isl_format);
+   }
+
+   return format;
 }
 
 // Format capabilities
