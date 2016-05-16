@@ -532,6 +532,10 @@ anv_free2(const VkAllocationCallbacks *parent_alloc,
       anv_free(parent_alloc, data);
 }
 
+struct anv_wsi_interaface;
+
+#define VK_ICD_WSI_PLATFORM_MAX 5
+
 struct anv_physical_device {
     VK_LOADER_DATA                              _loader_data;
 
@@ -544,11 +548,9 @@ struct anv_physical_device {
     struct brw_compiler *                       compiler;
     struct isl_device                           isl_dev;
     int                                         cmd_parser_version;
+
+    struct anv_wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
 };
-
-struct anv_wsi_interaface;
-
-#define VK_ICD_WSI_PLATFORM_MAX 5
 
 struct anv_instance {
     VK_LOADER_DATA                              _loader_data;
@@ -558,12 +560,10 @@ struct anv_instance {
     uint32_t                                    apiVersion;
     int                                         physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
-
-    struct anv_wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
 };
 
-VkResult anv_init_wsi(struct anv_instance *instance);
-void anv_finish_wsi(struct anv_instance *instance);
+VkResult anv_init_wsi(struct anv_physical_device *physical_device);
+void anv_finish_wsi(struct anv_physical_device *physical_device);
 
 struct anv_meta_state {
    VkAllocationCallbacks alloc;

@@ -149,6 +149,8 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->compiler->shader_debug_log = compiler_debug_log;
    device->compiler->shader_perf_log = compiler_perf_log;
 
+   anv_init_wsi(device);
+
    /* XXX: Actually detect bit6 swizzling */
    isl_device_init(&device->isl_dev, device->info, swizzled);
 
@@ -162,6 +164,7 @@ fail:
 static void
 anv_physical_device_finish(struct anv_physical_device *device)
 {
+   anv_finish_wsi(device);
    ralloc_free(device->compiler);
 }
 
@@ -272,13 +275,9 @@ VkResult anv_CreateInstance(
    instance->apiVersion = client_version;
    instance->physicalDeviceCount = -1;
 
-   memset(instance->wsi, 0, sizeof(instance->wsi));
-
    _mesa_locale_init();
 
    VG(VALGRIND_CREATE_MEMPOOL(instance, 0, false));
-
-   anv_init_wsi(instance);
 
    *pInstance = anv_instance_to_handle(instance);
 
@@ -296,8 +295,6 @@ void anv_DestroyInstance(
       assert(instance->physicalDeviceCount == 1);
       anv_physical_device_finish(&instance->physicalDevice);
    }
-
-   anv_finish_wsi(instance);
 
    VG(VALGRIND_DESTROY_MEMPOOL(instance));
 

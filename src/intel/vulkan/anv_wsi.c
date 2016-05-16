@@ -24,20 +24,22 @@
 #include "anv_wsi.h"
 
 VkResult
-anv_init_wsi(struct anv_instance *instance)
+anv_init_wsi(struct anv_physical_device *physical_device)
 {
    VkResult result;
 
+   memset(physical_device->wsi, 0, sizeof(physical_device->wsi));
+
 #ifdef VK_USE_PLATFORM_XCB_KHR
-   result = anv_x11_init_wsi(instance);
+   result = anv_x11_init_wsi(physical_device);
    if (result != VK_SUCCESS)
       return result;
 #endif
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-   result = anv_wl_init_wsi(instance);
+   result = anv_wl_init_wsi(physical_device);
    if (result != VK_SUCCESS) {
-      anv_x11_finish_wsi(instance);
+      anv_x11_finish_wsi(physical_device);
       return result;
    }
 #endif
@@ -46,13 +48,13 @@ anv_init_wsi(struct anv_instance *instance)
 }
 
 void
-anv_finish_wsi(struct anv_instance *instance)
+anv_finish_wsi(struct anv_physical_device *physical_device)
 {
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-   anv_wl_finish_wsi(instance);
+   anv_wl_finish_wsi(physical_device);
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-   anv_x11_finish_wsi(instance);
+   anv_x11_finish_wsi(physical_device);
 #endif
 }
 
@@ -75,7 +77,7 @@ VkResult anv_GetPhysicalDeviceSurfaceSupportKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
-   struct anv_wsi_interface *iface = device->instance->wsi[surface->platform];
+   struct anv_wsi_interface *iface = device->wsi[surface->platform];
 
    return iface->get_support(surface, device, queueFamilyIndex, pSupported);
 }
@@ -87,7 +89,7 @@ VkResult anv_GetPhysicalDeviceSurfaceCapabilitiesKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
-   struct anv_wsi_interface *iface = device->instance->wsi[surface->platform];
+   struct anv_wsi_interface *iface = device->wsi[surface->platform];
 
    return iface->get_capabilities(surface, device, pSurfaceCapabilities);
 }
@@ -100,7 +102,7 @@ VkResult anv_GetPhysicalDeviceSurfaceFormatsKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
-   struct anv_wsi_interface *iface = device->instance->wsi[surface->platform];
+   struct anv_wsi_interface *iface = device->wsi[surface->platform];
 
    return iface->get_formats(surface, device, pSurfaceFormatCount,
                              pSurfaceFormats);
@@ -114,7 +116,7 @@ VkResult anv_GetPhysicalDeviceSurfacePresentModesKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
-   struct anv_wsi_interface *iface = device->instance->wsi[surface->platform];
+   struct anv_wsi_interface *iface = device->wsi[surface->platform];
 
    return iface->get_present_modes(surface, device, pPresentModeCount,
                                    pPresentModes);
@@ -128,7 +130,8 @@ VkResult anv_CreateSwapchainKHR(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, pCreateInfo->surface);
-   struct anv_wsi_interface *iface = device->instance->wsi[surface->platform];
+   struct anv_wsi_interface *iface =
+      device->instance->physicalDevice.wsi[surface->platform];
    struct anv_swapchain *swapchain;
 
    VkResult result = iface->create_swapchain(surface, device, pCreateInfo,
