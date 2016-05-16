@@ -1036,7 +1036,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          unsigned bit_size =
             glsl_get_bit_size(val->const_type);
 
-         nir_const_value src[3];
+         nir_const_value src[4];
          assert(count <= 7);
          for (unsigned i = 0; i < count - 4; i++) {
             nir_constant *c =
