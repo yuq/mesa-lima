@@ -179,7 +179,7 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
          break;
       }
       case module::argument::grid_offset: {
-         for (cl_uint x : pad_vector(*q, grid_offset, 1)) {
+         for (cl_uint x : pad_vector(*q, grid_offset, 0)) {
             auto arg = argument::create(marg);
 
             arg->set(sizeof(x), &x);
