@@ -382,7 +382,7 @@ compute_version(const struct gl_extensions *extensions,
                          extensions->ARB_ES3_1_compatibility &&
                          extensions->ARB_clip_control &&
                          extensions->ARB_conditional_render_inverted &&
-                         /* extensions->ARB_cull_distance */ 0 &&
+                         extensions->ARB_cull_distance &&
                          extensions->ARB_derivative_control &&
                          extensions->ARB_shader_texture_image_samples &&
                          extensions->NV_texture_barrier);
