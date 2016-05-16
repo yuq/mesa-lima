@@ -1448,6 +1448,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	case nir_texop_query_levels:
 	case nir_texop_texture_samples:
 	case nir_texop_samples_identical:
+	case nir_texop_txf_ms_mcs:
 		compile_error(ctx, "Unhandled NIR tex type: %d\n", tex->op);
 		return;
 	}
