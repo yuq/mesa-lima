@@ -583,7 +583,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    } else if (brw->gen >= 9 && num_samples > 1) {
       layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
    } else {
-      const bool is_lossless_compressed_aux =
+      const UNUSED bool is_lossless_compressed_aux =
          brw->gen >= 9 && num_samples == 1 &&
          mt->format == MESA_FORMAT_R_UINT32;
 
