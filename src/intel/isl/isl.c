@@ -151,6 +151,9 @@ isl_tiling_get_info(const struct isl_device *dev,
       height = 1 << (6 - (ffs(bs) / 2) + (2 * is_Ys));
       break;
    }
+
+   default:
+      unreachable("not reached");
    } /* end switch */
 
    *tile_info = (struct isl_tile_info) {
@@ -1387,6 +1390,9 @@ get_image_offset_sa(const struct isl_surf *surf,
       get_image_offset_sa_gen4_3d(surf, level, logical_z_offset_px,
                                   x_offset_sa, y_offset_sa);
       break;
+
+   default:
+      unreachable("not reached");
    }
 }
 
