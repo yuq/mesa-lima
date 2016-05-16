@@ -1514,7 +1514,7 @@ struct anv_format_swizzle {
 };
 
 struct anv_format {
-   enum isl_format isl_format;
+   enum isl_format isl_format:16;
    struct anv_format_swizzle swizzle;
 };
 
