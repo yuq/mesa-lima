@@ -362,15 +362,6 @@ intelInitExtensions(struct gl_context *ctx)
          if (brw->intelScreen->cmd_parser_version >= 2)
             brw->predicate.supported = true;
       }
-
-      /* Only enable this in core profile because other parts of Mesa behave
-       * slightly differently when the extension is enabled.
-       */
-      if (ctx->API == API_OPENGL_CORE) {
-         ctx->Extensions.ARB_viewport_array = true;
-         ctx->Extensions.AMD_vertex_shader_viewport_index = true;
-         ctx->Extensions.ARB_shader_subroutine = true;
-      }
    }
 
    if (brw->gen >= 8 || brw->is_haswell || brw->is_baytrail) {
