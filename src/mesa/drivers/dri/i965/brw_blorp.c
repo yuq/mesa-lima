@@ -223,7 +223,7 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
 
    const unsigned *program =
       brw_compile_fs(compiler, brw, mem_ctx, wm_key, &wm_prog_data, nir,
-                     NULL, -1, -1, use_repclear, program_size, NULL);
+                     NULL, -1, -1, false, use_repclear, program_size, NULL);
 
    /* Copy the relavent bits of wm_prog_data over into the blorp prog data */
    prog_data->dispatch_8 = wm_prog_data.dispatch_8;

@@ -542,7 +542,7 @@ setup_mrf_hack_interference(fs_visitor *v, struct ra_graph *g,
 }
 
 bool
-fs_visitor::assign_regs(bool allow_spilling)
+fs_visitor::assign_regs(bool allow_spilling, bool spill_all)
 {
    /* Most of this allocation was written for a reg_width of 1
     * (dispatch_width == 8).  In extending to SIMD16, the code was
@@ -668,7 +668,7 @@ fs_visitor::assign_regs(bool allow_spilling)
    }
 
    /* Debug of register spilling: Go spill everything. */
-   if (unlikely(INTEL_DEBUG & DEBUG_SPILL_FS)) {
+   if (unlikely(spill_all)) {
       int reg = choose_spill_reg(g);
 
       if (reg != -1) {

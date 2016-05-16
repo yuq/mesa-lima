@@ -105,14 +105,14 @@ public:
                                    uint32_t const_offset);
    void DEP_RESOLVE_MOV(const brw::fs_builder &bld, int grf);
 
-   bool run_fs(bool do_rep_send);
+   bool run_fs(bool allow_spilling, bool do_rep_send);
    bool run_vs(gl_clip_plane *clip_planes);
    bool run_tcs_single_patch();
    bool run_tes();
    bool run_gs();
    bool run_cs();
    void optimize();
-   void allocate_registers();
+   void allocate_registers(bool allow_spilling);
    void setup_fs_payload_gen4();
    void setup_fs_payload_gen6();
    void setup_vs_payload();
@@ -127,7 +127,7 @@ public:
    void assign_tcs_single_patch_urb_setup();
    void assign_tes_urb_setup();
    void assign_gs_urb_setup();
-   bool assign_regs(bool allow_spilling);
+   bool assign_regs(bool allow_spilling, bool spill_all);
    void assign_regs_trivial();
    void calculate_payload_ranges(int payload_node_count,
                                  int *payload_last_use_ip);

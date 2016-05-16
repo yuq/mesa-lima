@@ -137,7 +137,8 @@ brw_codegen_wm_prog(struct brw_context *brw,
    program = brw_compile_fs(brw->intelScreen->compiler, brw, mem_ctx,
                             key, &prog_data, fp->program.Base.nir,
                             &fp->program.Base, st_index8, st_index16,
-                            brw->use_rep_send, &program_size, &error_str);
+                            true, brw->use_rep_send,
+                            &program_size, &error_str);
    if (program == NULL) {
       if (prog) {
          prog->LinkStatus = false;

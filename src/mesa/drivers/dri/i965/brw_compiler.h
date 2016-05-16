@@ -790,6 +790,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                struct gl_program *prog,
                int shader_time_index8,
                int shader_time_index16,
+               bool allow_spilling,
                bool use_rep_send,
                unsigned *final_assembly_size,
                char **error_str);

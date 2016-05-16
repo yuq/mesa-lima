@@ -5486,7 +5486,7 @@ fs_visitor::fixup_3src_null_dest()
 }
 
 void
-fs_visitor::allocate_registers()
+fs_visitor::allocate_registers(bool allow_spilling)
 {
    bool allocated_without_spills;
 
@@ -5495,6 +5495,8 @@ fs_visitor::allocate_registers()
       SCHEDULE_PRE_NON_LIFO,
       SCHEDULE_PRE_LIFO,
    };
+
+   bool spill_all = allow_spilling && (INTEL_DEBUG & DEBUG_SPILL_FS);
 
    /* Try each scheduling heuristic to see if it can successfully register
     * allocate without spilling.  They should be ordered by decreasing
@@ -5507,7 +5509,7 @@ fs_visitor::allocate_registers()
          assign_regs_trivial();
          allocated_without_spills = true;
       } else {
-         allocated_without_spills = assign_regs(false);
+         allocated_without_spills = assign_regs(false, spill_all);
       }
       if (allocated_without_spills)
          break;
@@ -5532,11 +5534,13 @@ fs_visitor::allocate_registers()
       /* Since we're out of heuristics, just go spill registers until we
        * get an allocation.
        */
-      while (!assign_regs(true)) {
+      while (!assign_regs(true, spill_all)) {
          if (failed)
             break;
       }
    }
+
+   assert(last_scratch == 0 || allow_spilling);
 
    /* This must come after all optimization and register allocation, since
     * it inserts dead code that happens to have side effects, and it does
@@ -5583,7 +5587,7 @@ fs_visitor::run_vs(gl_clip_plane *clip_planes)
    assign_vs_urb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers();
+   allocate_registers(true);
 
    return !failed;
 }
@@ -5665,7 +5669,7 @@ fs_visitor::run_tcs_single_patch()
    assign_tcs_single_patch_urb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers();
+   allocate_registers(true);
 
    return !failed;
 }
@@ -5699,7 +5703,7 @@ fs_visitor::run_tes()
    assign_tes_urb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers();
+   allocate_registers(true);
 
    return !failed;
 }
@@ -5748,13 +5752,13 @@ fs_visitor::run_gs()
    assign_gs_urb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers();
+   allocate_registers(true);
 
    return !failed;
 }
 
 bool
-fs_visitor::run_fs(bool do_rep_send)
+fs_visitor::run_fs(bool allow_spilling, bool do_rep_send)
 {
    brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
    brw_wm_prog_key *wm_key = (brw_wm_prog_key *) this->key;
@@ -5818,7 +5822,7 @@ fs_visitor::run_fs(bool do_rep_send)
       assign_urb_setup();
 
       fixup_3src_null_dest();
-      allocate_registers();
+      allocate_registers(allow_spilling);
 
       if (failed)
          return false;
@@ -5861,7 +5865,7 @@ fs_visitor::run_cs()
    assign_curb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers();
+   allocate_registers(true);
 
    if (failed)
       return false;
@@ -5986,6 +5990,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                const nir_shader *src_shader,
                struct gl_program *prog,
                int shader_time_index8, int shader_time_index16,
+               bool allow_spilling,
                bool use_rep_send,
                unsigned *final_assembly_size,
                char **error_str)
@@ -6029,7 +6034,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
    fs_visitor v8(compiler, log_data, mem_ctx, key,
                  &prog_data->base, prog, shader, 8,
                  shader_time_index8);
-   if (!v8.run_fs(false /* do_rep_send */)) {
+   if (!v8.run_fs(allow_spilling, false /* do_rep_send */)) {
       if (error_str)
          *error_str = ralloc_strdup(mem_ctx, v8.fail_msg);
 
@@ -6047,7 +6052,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                      &prog_data->base, prog, shader, 16,
                      shader_time_index16);
       v16.import_uniforms(&v8);
-      if (!v16.run_fs(use_rep_send)) {
+      if (!v16.run_fs(allow_spilling, use_rep_send)) {
          compiler->shader_perf_log(log_data,
                                    "SIMD16 shader failed to compile: %s",
                                    v16.fail_msg);
