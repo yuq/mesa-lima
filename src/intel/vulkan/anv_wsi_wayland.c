@@ -31,6 +31,7 @@
 #define MIN_NUM_IMAGES 2
 
 struct wsi_wl_display {
+   struct anv_physical_device                  *physical_device;
    struct wl_display *                          display;
    struct wl_drm *                              drm;
 
@@ -59,11 +60,12 @@ wsi_wl_display_add_vk_format(struct wsi_wl_display *display, VkFormat format)
       if (*f == format)
          return;
 
-   /* Don't add formats which aren't supported by the driver */
-   if (anv_format_for_vk_format(format)->isl_format ==
-       ISL_FORMAT_UNSUPPORTED) {
+   /* Don't add formats that aren't renderable. */
+   VkFormatProperties props;
+   anv_GetPhysicalDeviceFormatProperties(
+      anv_physical_device_to_handle(display->physical_device), format, &props);
+   if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
       return;
-   }
 
    f = anv_vector_add(&display->formats);
    if (f)
@@ -241,6 +243,7 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
    memset(display, 0, sizeof(*display));
 
    display->display = wl_display;
+   display->physical_device = wsi->physical_device;
 
    if (!anv_vector_init(&display->formats, sizeof(VkFormat), 8))
       goto fail;
