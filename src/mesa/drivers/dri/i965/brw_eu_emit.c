@@ -817,13 +817,16 @@ gen7_set_dp_scratch_message(struct brw_codegen *p,
    const struct brw_device_info *devinfo = p->devinfo;
    assert(num_regs == 1 || num_regs == 2 || num_regs == 4 ||
           (devinfo->gen >= 8 && num_regs == 8));
+   const unsigned block_size = (devinfo->gen >= 8 ? _mesa_logbase2(num_regs) :
+                                num_regs - 1);
+
    brw_set_message_descriptor(p, inst, GEN7_SFID_DATAPORT_DATA_CACHE,
                               mlen, rlen, header_present, false);
    brw_inst_set_dp_category(devinfo, inst, 1); /* Scratch Block Read/Write msgs */
    brw_inst_set_scratch_read_write(devinfo, inst, write);
    brw_inst_set_scratch_type(devinfo, inst, dword);
    brw_inst_set_scratch_invalidate_after_read(devinfo, inst, invalidate_after_read);
-   brw_inst_set_scratch_block_size(devinfo, inst, ffs(num_regs) - 1);
+   brw_inst_set_scratch_block_size(devinfo, inst, block_size);
    brw_inst_set_scratch_addr_offset(devinfo, inst, addr_offset);
 }
 
