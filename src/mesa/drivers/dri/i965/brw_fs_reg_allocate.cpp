@@ -769,12 +769,9 @@ emit_unspill(const fs_builder &bld, fs_reg dst,
              uint32_t spill_offset, unsigned count)
 {
    const brw_device_info *devinfo = bld.shader->devinfo;
-   const fs_visitor *v = static_cast<const fs_visitor *>(bld.shader);
-   unsigned reg_size = 1;
-   if (v->dispatch_width == 16 && count % 2 == 0)
-      reg_size = 2;
-
-   const fs_builder ibld = bld.group(reg_size * 8, 0);
+   const unsigned reg_size = dst.component_size(bld.dispatch_width()) /
+                             REG_SIZE;
+   assert(count % reg_size == 0);
 
    for (unsigned i = 0; i < count / reg_size; i++) {
       /* The Gen7 descriptor-based offset is 12 bits of HWORD units.  Because
@@ -786,12 +783,11 @@ emit_unspill(const fs_builder &bld, fs_reg dst,
        */
       bool gen7_read = (devinfo->gen >= 7 && devinfo->gen < 9 &&
                         spill_offset < (1 << 12) * REG_SIZE);
-      fs_inst *unspill_inst = ibld.emit(gen7_read ?
-                                        SHADER_OPCODE_GEN7_SCRATCH_READ :
-                                        SHADER_OPCODE_GEN4_SCRATCH_READ,
-                                        dst);
+      fs_inst *unspill_inst = bld.emit(gen7_read ?
+                                       SHADER_OPCODE_GEN7_SCRATCH_READ :
+                                       SHADER_OPCODE_GEN4_SCRATCH_READ,
+                                       dst);
       unspill_inst->offset = spill_offset;
-      unspill_inst->regs_written = reg_size;
 
       if (!gen7_read) {
          unspill_inst->base_mrf = spill_base_mrf(bld.shader);
@@ -807,16 +803,13 @@ static void
 emit_spill(const fs_builder &bld, fs_reg src,
            uint32_t spill_offset, unsigned count)
 {
-   const fs_visitor *v = static_cast<const fs_visitor *>(bld.shader);
-   unsigned reg_size = 1;
-   if (v->dispatch_width == 16 && count % 2 == 0)
-      reg_size = 2;
-
-   const fs_builder ibld = bld.group(reg_size * 8, 0);
+   const unsigned reg_size = src.component_size(bld.dispatch_width()) /
+                             REG_SIZE;
+   assert(count % reg_size == 0);
 
    for (unsigned i = 0; i < count / reg_size; i++) {
       fs_inst *spill_inst =
-         ibld.emit(SHADER_OPCODE_GEN4_SCRATCH_WRITE, ibld.null_reg_f(), src);
+         bld.emit(SHADER_OPCODE_GEN4_SCRATCH_WRITE, bld.null_reg_f(), src);
       src.reg_offset += reg_size;
       spill_inst->offset = spill_offset + i * reg_size * REG_SIZE;
       spill_inst->mlen = 1 + reg_size; /* header, value */
@@ -949,7 +942,10 @@ fs_visitor::spill_reg(int spill_reg)
             inst->src[i].nr = unspill_dst.nr;
             inst->src[i].reg_offset = 0;
 
-            emit_unspill(ibld, unspill_dst, subset_spill_offset, regs_read);
+            const unsigned width =
+               dispatch_width == 16 && regs_read % 2 == 0 ? 16 : 8;
+            emit_unspill(ibld.group(width, 0), unspill_dst,
+                         subset_spill_offset, regs_read);
 	 }
       }
 
@@ -970,15 +966,21 @@ fs_visitor::spill_reg(int spill_reg)
          inst->no_dd_clear = false;
          inst->no_dd_check = false;
 
+         const unsigned width =
+            dispatch_width == 16 && inst->regs_written % 2 == 0 ? 16 : 8;
+
+         /* Builder used to emit the scratch messages. */
+         const fs_builder ubld = ibld.group(width, 0);
+
 	 /* If our write is going to affect just part of the
           * inst->regs_written(), then we need to unspill the destination
           * since we write back out all of the regs_written().
 	  */
 	 if (inst->is_partial_write())
-            emit_unspill(ibld, spill_src, subset_spill_offset,
+            emit_unspill(ubld, spill_src, subset_spill_offset,
                          inst->regs_written);
 
-         emit_spill(ibld.at(block, inst->next), spill_src,
+         emit_spill(ubld.at(block, inst->next), spill_src,
                     subset_spill_offset, inst->regs_written);
       }
    }
