@@ -928,11 +928,9 @@ fs_visitor::spill_reg(int spill_reg)
             /* We read the largest power-of-two divisor of the register count
              * (because only POT scratch read blocks are allowed by the
              * hardware) up to the maximum supported block size.
-             * XXX - Bump the limit when the generator code is ready for
-             *       32-wide spills.
              */
             const unsigned width =
-               MIN2(16, 1u << (ffs(MAX2(1, regs_read) * 8) - 1));
+               MIN2(32, 1u << (ffs(MAX2(1, regs_read) * 8) - 1));
 
             /* Set exec_all() on unspill messages under the (rather
              * pessimistic) assumption that there is no one-to-one

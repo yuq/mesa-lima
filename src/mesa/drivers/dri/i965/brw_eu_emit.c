@@ -2065,21 +2065,19 @@ void brw_oword_block_write_scratch(struct brw_codegen *p,
 				   unsigned offset)
 {
    const struct brw_device_info *devinfo = p->devinfo;
-   uint32_t msg_control, msg_type;
-   int mlen;
+   uint32_t msg_type;
 
    if (devinfo->gen >= 6)
       offset /= 16;
 
    mrf = retype(mrf, BRW_REGISTER_TYPE_UD);
 
-   if (num_regs == 1) {
-      msg_control = BRW_DATAPORT_OWORD_BLOCK_2_OWORDS;
-      mlen = 2;
-   } else {
-      msg_control = BRW_DATAPORT_OWORD_BLOCK_4_OWORDS;
-      mlen = 3;
-   }
+   const unsigned mlen = 1 + num_regs;
+   const unsigned msg_control =
+      (num_regs == 1 ? BRW_DATAPORT_OWORD_BLOCK_2_OWORDS :
+       num_regs == 2 ? BRW_DATAPORT_OWORD_BLOCK_4_OWORDS :
+       num_regs == 4 ? BRW_DATAPORT_OWORD_BLOCK_8_OWORDS : 0);
+   assert(msg_control);
 
    /* Set up the message header.  This is g0, with g0.2 filled with
     * the offset.  We don't want to leave our offset around in g0 or
@@ -2180,8 +2178,6 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
 			     unsigned offset)
 {
    const struct brw_device_info *devinfo = p->devinfo;
-   uint32_t msg_control;
-   int rlen;
 
    if (devinfo->gen >= 6)
       offset /= 16;
@@ -2200,13 +2196,12 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
    }
    dest = retype(dest, BRW_REGISTER_TYPE_UW);
 
-   if (num_regs == 1) {
-      msg_control = BRW_DATAPORT_OWORD_BLOCK_2_OWORDS;
-      rlen = 1;
-   } else {
-      msg_control = BRW_DATAPORT_OWORD_BLOCK_4_OWORDS;
-      rlen = 2;
-   }
+   const unsigned rlen = num_regs;
+   const unsigned msg_control =
+      (num_regs == 1 ? BRW_DATAPORT_OWORD_BLOCK_2_OWORDS :
+       num_regs == 2 ? BRW_DATAPORT_OWORD_BLOCK_4_OWORDS :
+       num_regs == 4 ? BRW_DATAPORT_OWORD_BLOCK_8_OWORDS : 0);
+   assert(msg_control);
 
    {
       brw_push_insn_state(p);

@@ -1061,6 +1061,7 @@ fs_generator::generate_discard_jump(fs_inst *inst)
 void
 fs_generator::generate_scratch_write(fs_inst *inst, struct brw_reg src)
 {
+   assert(inst->exec_size <= 16 || inst->force_writemask_all);
    assert(inst->mlen != 0);
 
    brw_MOV(p,
@@ -1073,6 +1074,7 @@ fs_generator::generate_scratch_write(fs_inst *inst, struct brw_reg src)
 void
 fs_generator::generate_scratch_read(fs_inst *inst, struct brw_reg dst)
 {
+   assert(inst->exec_size <= 16 || inst->force_writemask_all);
    assert(inst->mlen != 0);
 
    brw_oword_block_read_scratch(p, dst, brw_message_reg(inst->base_mrf),
@@ -1082,6 +1084,8 @@ fs_generator::generate_scratch_read(fs_inst *inst, struct brw_reg dst)
 void
 fs_generator::generate_scratch_read_gen7(fs_inst *inst, struct brw_reg dst)
 {
+   assert(inst->exec_size <= 16 || inst->force_writemask_all);
+
    gen7_block_read_scratch(p, dst, inst->exec_size / 8, inst->offset);
 }
 
