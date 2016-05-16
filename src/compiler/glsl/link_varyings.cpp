@@ -1149,7 +1149,7 @@ public:
    ~varying_matches();
    void record(ir_variable *producer_var, ir_variable *consumer_var);
    unsigned assign_locations(struct gl_shader_program *prog,
-                             uint64_t reserved_slots, bool separate_shader);
+                             uint64_t reserved_slots);
    void store_locations() const;
 
 private:
@@ -1397,8 +1397,7 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
  */
 unsigned
 varying_matches::assign_locations(struct gl_shader_program *prog,
-                                  uint64_t reserved_slots,
-                                  bool separate_shader)
+                                  uint64_t reserved_slots)
 {
    /* If packing has been disabled then we cannot safely sort the varyings by
     * class as it may mean we are using a version of OpenGL where
@@ -2144,8 +2143,7 @@ assign_varying_locations(struct gl_context *ctx,
       reserved_varying_slot(producer, ir_var_shader_out) |
       reserved_varying_slot(consumer, ir_var_shader_in);
 
-   const unsigned slots_used = matches.assign_locations(prog, reserved_slots,
-                                                        prog->SeparateShader);
+   const unsigned slots_used = matches.assign_locations(prog, reserved_slots);
    matches.store_locations();
 
    for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
