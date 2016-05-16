@@ -210,10 +210,6 @@ public:
    bool opt_saturate_propagation();
    bool opt_cmod_propagation();
    bool opt_zero_samples();
-   void emit_unspill(bblock_t *block, fs_inst *inst, fs_reg reg,
-                     uint32_t spill_offset, unsigned count);
-   void emit_spill(bblock_t *block, fs_inst *inst, fs_reg reg,
-                   uint32_t spill_offset, unsigned count);
 
    void emit_nir_code();
    void nir_setup_inputs();

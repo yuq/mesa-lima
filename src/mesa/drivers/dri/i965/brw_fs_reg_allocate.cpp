@@ -764,16 +764,17 @@ namespace {
    }
 }
 
-void
-fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
-                         uint32_t spill_offset, unsigned count)
+static void
+emit_unspill(const fs_builder &bld, fs_reg dst,
+             uint32_t spill_offset, unsigned count)
 {
+   const brw_device_info *devinfo = bld.shader->devinfo;
+   const fs_visitor *v = static_cast<const fs_visitor *>(bld.shader);
    unsigned reg_size = 1;
-   if (dispatch_width == 16 && count % 2 == 0)
+   if (v->dispatch_width == 16 && count % 2 == 0)
       reg_size = 2;
 
-   const fs_builder ibld = fs_builder(this, block, inst)
-                           .group(reg_size * 8, 0);
+   const fs_builder ibld = bld.group(reg_size * 8, 0);
 
    for (unsigned i = 0; i < count / reg_size; i++) {
       /* The Gen7 descriptor-based offset is 12 bits of HWORD units.  Because
@@ -793,7 +794,7 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
       unspill_inst->regs_written = reg_size;
 
       if (!gen7_read) {
-         unspill_inst->base_mrf = spill_base_mrf(this);
+         unspill_inst->base_mrf = spill_base_mrf(bld.shader);
          unspill_inst->mlen = 1; /* header contains offset */
       }
 
@@ -802,17 +803,16 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
    }
 }
 
-void
-fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
-                       uint32_t spill_offset, unsigned count)
+static void
+emit_spill(const fs_builder &bld, fs_reg src,
+           uint32_t spill_offset, unsigned count)
 {
+   const fs_visitor *v = static_cast<const fs_visitor *>(bld.shader);
    unsigned reg_size = 1;
-   if (dispatch_width == 16 && count % 2 == 0)
+   if (v->dispatch_width == 16 && count % 2 == 0)
       reg_size = 2;
 
-   const fs_builder ibld = fs_builder(this, block, inst)
-                           .at(block, inst->next)
-                           .group(reg_size * 8, 0);
+   const fs_builder ibld = bld.group(reg_size * 8, 0);
 
    for (unsigned i = 0; i < count / reg_size; i++) {
       fs_inst *spill_inst =
@@ -820,7 +820,7 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
       src.reg_offset += reg_size;
       spill_inst->offset = spill_offset + i * reg_size * REG_SIZE;
       spill_inst->mlen = 1 + reg_size; /* header, value */
-      spill_inst->base_mrf = spill_base_mrf(this);
+      spill_inst->base_mrf = spill_base_mrf(bld.shader);
    }
 }
 
@@ -936,6 +936,8 @@ fs_visitor::spill_reg(int spill_reg)
     * could just spill/unspill the GRF being accessed.
     */
    foreach_block_and_inst (block, fs_inst, inst, cfg) {
+      const fs_builder ibld = fs_builder(this, block, inst);
+
       for (unsigned int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file == VGRF &&
              inst->src[i].nr == spill_reg) {
@@ -947,8 +949,7 @@ fs_visitor::spill_reg(int spill_reg)
             inst->src[i].nr = unspill_dst.nr;
             inst->src[i].reg_offset = 0;
 
-            emit_unspill(block, inst, unspill_dst, subset_spill_offset,
-                         regs_read);
+            emit_unspill(ibld, unspill_dst, subset_spill_offset, regs_read);
 	 }
       }
 
@@ -974,11 +975,11 @@ fs_visitor::spill_reg(int spill_reg)
           * since we write back out all of the regs_written().
 	  */
 	 if (inst->is_partial_write())
-            emit_unspill(block, inst, spill_src, subset_spill_offset,
+            emit_unspill(ibld, spill_src, subset_spill_offset,
                          inst->regs_written);
 
-         emit_spill(block, inst, spill_src, subset_spill_offset,
-                    inst->regs_written);
+         emit_spill(ibld.at(block, inst->next), spill_src,
+                    subset_spill_offset, inst->regs_written);
       }
    }
 
