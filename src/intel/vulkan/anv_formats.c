@@ -287,6 +287,16 @@ anv_get_format(const struct brw_device_info *devinfo, VkFormat vk_format,
       }
    }
 
+   /* The B4G4R4A4 format isn't available prior to Sky Lake so we have to fall
+    * back to a format with a more complex swizzle.
+    */
+   if (vk_format == VK_FORMAT_B4G4R4A4_UNORM_PACK16 && devinfo->gen < 9) {
+      return (struct anv_format) {
+         .isl_format = ISL_FORMAT_B4G4R4A4_UNORM,
+         .swizzle = ISL_SWIZZLE(GREEN, RED, ALPHA, BLUE),
+      };
+   }
+
    return format;
 }
 
