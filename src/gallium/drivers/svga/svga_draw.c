@@ -577,6 +577,17 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
             }
          }
       }
+      else {
+         /* Even though we can avoid emitting the redundant SetVertexBuffers
+          * command, we still need to reference the vertex buffers surfaces.
+          */
+         for (i = 0; i < vbuf_count; i++) {
+            ret = svga->swc->resource_rebind(svga->swc, vbuffer_handles[i],
+                                             NULL, SVGA_RELOC_READ);
+            if (ret != PIPE_OK)
+               return ret;
+         }
+      }
    }
 
    /* Set primitive type (line, tri, etc) */
@@ -608,6 +619,15 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
          pipe_resource_reference(&svga->state.hw_draw.ib, ib);
          svga->state.hw_draw.ib_format = indexFormat;
          svga->state.hw_draw.ib_offset = range->indexArray.offset;
+      }
+      else {
+         /* Even though we can avoid emitting the redundant SetIndexBuffer
+          * command, we still need to reference the index buffer surface.
+          */
+         ret = svga->swc->resource_rebind(svga->swc, ib_handle,
+                                          NULL, SVGA_RELOC_READ);
+         if (ret != PIPE_OK)
+            return ret;
       }
 
       if (instance_count > 1) {
