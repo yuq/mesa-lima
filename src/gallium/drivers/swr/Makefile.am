@@ -102,7 +102,10 @@ rasterizer/jitter/builder_x86.cpp: rasterizer/jitter/scripts/gen_llvm_ir_macros.
 
 COMMON_LIBADD = \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
-	$(top_builddir)/src/mesa/libmesagallium.la
+	$(top_builddir)/src/mesa/libmesagallium.la \
+	$(LLVM_LIBS)
+
+COMMON_LDFLAGS = $(LLVM_LDFLAGS)
 
 lib_LTLIBRARIES = libswrAVX.la libswrAVX2.la
 
@@ -117,6 +120,9 @@ libswrAVX_la_SOURCES = \
 libswrAVX_la_LIBADD = \
 	$(COMMON_LIBADD)
 
+libswrAVX_la_LDFLAGS = \
+	$(COMMON_LDFLAGS)
+
 libswrAVX2_la_CXXFLAGS = \
 	-march=core-avx2 \
 	-DKNOB_ARCH=KNOB_ARCH_AVX2 \
@@ -127,5 +133,8 @@ libswrAVX2_la_SOURCES = \
 
 libswrAVX2_la_LIBADD = \
 	$(COMMON_LIBADD)
+
+libswrAVX2_la_LDFLAGS = \
+	$(COMMON_LDFLAGS)
 
 include $(top_srcdir)/install-gallium-links.mk
