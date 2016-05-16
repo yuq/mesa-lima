@@ -1384,6 +1384,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_extract_u8:
    case nir_op_extract_i8: {
       nir_const_value *byte = nir_src_as_const_value(instr->src[1].src);
+      assert(byte != NULL);
       bld.emit(SHADER_OPCODE_EXTRACT_BYTE,
                result, op[0], brw_imm_ud(byte->u32[0]));
       break;
@@ -1392,6 +1393,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_extract_u16:
    case nir_op_extract_i16: {
       nir_const_value *word = nir_src_as_const_value(instr->src[1].src);
+      assert(word != NULL);
       bld.emit(SHADER_OPCODE_EXTRACT_WORD,
                result, op[0], brw_imm_ud(word->u32[0]));
       break;
