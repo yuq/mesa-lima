@@ -10054,8 +10054,12 @@ print_list(struct gl_context *ctx, GLuint list, const char *fname)
    }
 
    dlist = _mesa_lookup_list(ctx, list);
-   if (!dlist)
+   if (!dlist) {
+      if (fname) {
+         fclose(f);
+      }
       return;
+   }
 
    n = dlist->Head;
 
