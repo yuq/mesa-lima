@@ -292,25 +292,11 @@ gen7_upload_urb(struct brw_context *brw)
    if (remaining_space > total_wants)
       remaining_space = total_wants;
    if (remaining_space > 0) {
-      unsigned vs_additional = (unsigned)
-         roundf(vs_wants * (((float) remaining_space) / total_wants));
-      vs_chunks += vs_additional;
-      remaining_space -= vs_additional;
-      total_wants -= vs_wants;
-
-      unsigned hs_additional = (unsigned)
-         round(hs_wants * (((double) remaining_space) / total_wants));
-      hs_chunks += hs_additional;
-      remaining_space -= hs_additional;
-      total_wants -= hs_wants;
-
-      unsigned ds_additional = (unsigned)
-         round(ds_wants * (((double) remaining_space) / total_wants));
-      ds_chunks += ds_additional;
-      remaining_space -= ds_additional;
-      total_wants -= ds_wants;
-
-      gs_chunks += remaining_space;
+      float ratio = ((float) remaining_space) / total_wants;
+      vs_chunks += lroundf(vs_wants * ratio);
+      hs_chunks += lroundf(hs_wants * ratio);
+      ds_chunks += lroundf(ds_wants * ratio);
+      gs_chunks += lroundf(gs_wants * ratio);
    }
 
    /* Sanity check that we haven't over-allocated. */
