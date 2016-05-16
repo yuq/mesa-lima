@@ -1734,32 +1734,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       if (unlikely(debug_flag))
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
-      for (unsigned int i = 0; i < inst->sources; i++) {
-	 src[i] = brw_reg_from_fs_reg(inst, &inst->src[i], devinfo->gen);
-
-	 /* The accumulator result appears to get used for the
-	  * conditional modifier generation.  When negating a UD
-	  * value, there is a 33rd bit generated for the sign in the
-	  * accumulator value, so now you can't check, for example,
-	  * equality with a 32-bit value.  See piglit fs-op-neg-uvec4.
-	  */
-	 assert(!inst->conditional_mod ||
-		inst->src[i].type != BRW_REGISTER_TYPE_UD ||
-		!inst->src[i].negate);
-      }
-      dst = brw_reg_from_fs_reg(inst, &inst->dst, devinfo->gen);
-
-      brw_set_default_predicate_control(p, inst->predicate);
-      brw_set_default_predicate_inverse(p, inst->predicate_inverse);
-      brw_set_default_flag_reg(p, 0, inst->flag_subreg);
-      brw_set_default_saturate(p, inst->saturate);
-      brw_set_default_mask_control(p, inst->force_writemask_all);
-      brw_set_default_acc_write_control(p, inst->writes_accumulator);
-      brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
-
-      assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF(devinfo->gen));
-      assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
-
       switch (inst->exec_size) {
       case 1:
       case 2:
@@ -1787,6 +1761,32 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       default:
          unreachable("Invalid instruction width");
       }
+
+      for (unsigned int i = 0; i < inst->sources; i++) {
+	 src[i] = brw_reg_from_fs_reg(inst, &inst->src[i], devinfo->gen);
+
+	 /* The accumulator result appears to get used for the
+	  * conditional modifier generation.  When negating a UD
+	  * value, there is a 33rd bit generated for the sign in the
+	  * accumulator value, so now you can't check, for example,
+	  * equality with a 32-bit value.  See piglit fs-op-neg-uvec4.
+	  */
+	 assert(!inst->conditional_mod ||
+		inst->src[i].type != BRW_REGISTER_TYPE_UD ||
+		!inst->src[i].negate);
+      }
+      dst = brw_reg_from_fs_reg(inst, &inst->dst, devinfo->gen);
+
+      brw_set_default_predicate_control(p, inst->predicate);
+      brw_set_default_predicate_inverse(p, inst->predicate_inverse);
+      brw_set_default_flag_reg(p, 0, inst->flag_subreg);
+      brw_set_default_saturate(p, inst->saturate);
+      brw_set_default_mask_control(p, inst->force_writemask_all);
+      brw_set_default_acc_write_control(p, inst->writes_accumulator);
+      brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
+
+      assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF(devinfo->gen));
+      assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
       switch (inst->opcode) {
       case BRW_OPCODE_MOV:
