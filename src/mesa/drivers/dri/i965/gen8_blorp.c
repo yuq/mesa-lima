@@ -393,7 +393,9 @@ gen8_blorp_emit_ps_config(struct brw_context *brw,
       dw3 |= 1 << GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT; /* One surface */
    }
 
-   dw6 |= GEN7_PS_PUSH_CONSTANT_ENABLE;
+   if (prog_data->nr_params)
+      dw6 |= GEN7_PS_PUSH_CONSTANT_ENABLE;
+
    dw7 |= prog_data->first_curbe_grf_0 << GEN7_PS_DISPATCH_START_GRF_SHIFT_0;
    dw7 |= prog_data->first_curbe_grf_2 << GEN7_PS_DISPATCH_START_GRF_SHIFT_2;
 
@@ -563,6 +565,7 @@ gen8_blorp_emit_depth_stencil_state(struct brw_context *brw,
 
 static void
 gen8_blorp_emit_constant_ps(struct brw_context *brw,
+                            const struct brw_blorp_params *params,
                             uint32_t wm_push_const_offset)
 {
    const int dwords = brw->gen >= 8 ? 11 : 7;
@@ -571,9 +574,9 @@ gen8_blorp_emit_constant_ps(struct brw_context *brw,
 
    if (brw->gen >= 9) {
       OUT_BATCH(0);
-      OUT_BATCH(BRW_BLORP_NUM_PUSH_CONST_REGS);
+      OUT_BATCH(params->wm_prog_data->nr_params);
    } else {
-      OUT_BATCH(BRW_BLORP_NUM_PUSH_CONST_REGS);
+      OUT_BATCH(params->wm_prog_data->nr_params);
       OUT_BATCH(0);
    }
 
@@ -582,8 +585,15 @@ gen8_blorp_emit_constant_ps(struct brw_context *brw,
       OUT_BATCH(0);
       OUT_BATCH(0);
       OUT_BATCH(0);
-      OUT_RELOC64(brw->batch.bo, I915_GEM_DOMAIN_RENDER, 0,
-                  wm_push_const_offset);
+
+      if (params->wm_prog_data->nr_params) {
+         OUT_RELOC64(brw->batch.bo, I915_GEM_DOMAIN_RENDER, 0,
+                     wm_push_const_offset);
+      } else {
+         OUT_BATCH(0);
+         OUT_BATCH(0);
+      }
+
       OUT_BATCH(0);
       OUT_BATCH(0);
    } else {
@@ -681,9 +691,9 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
    gen8_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_DS);
    gen8_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_GS);
 
-   const uint32_t wm_push_const_offset =
-      gen6_blorp_emit_wm_constants(brw, params);
-   gen8_blorp_emit_constant_ps(brw, wm_push_const_offset);
+   const uint32_t wm_push_const_offset = params->wm_prog_data->nr_params ?
+      gen6_blorp_emit_wm_constants(brw, params) : 0;
+   gen8_blorp_emit_constant_ps(brw, params, wm_push_const_offset);
    wm_bind_bo_offset = gen8_blorp_emit_surface_states(brw, params);
 
    gen8_blorp_emit_disable_binding_table(brw,
