@@ -6818,7 +6818,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
           * the structure may contain a structure that contains ... a matrix
           * that need the proper layout.
           */
-         if (is_interface &&
+         if (is_interface && layout &&
              (layout->flags.q.uniform || layout->flags.q.buffer) &&
              (field_type->without_array()->is_matrix()
               || field_type->without_array()->is_record())) {
