@@ -2585,10 +2585,7 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
 
          ret = cnd_wait(&dri2_sync->cond, &dri2_sync->mutex);
 
-         if (mtx_unlock(&dri2_sync->mutex)) {
-            ret = EGL_FALSE;
-            goto cleanup;
-         }
+         mtx_unlock(&dri2_sync->mutex);
 
          if (ret) {
             _eglError(EGL_BAD_PARAMETER, "eglClientWaitSyncKHR");
@@ -2619,10 +2616,7 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
 
             ret = cnd_timedwait(&dri2_sync->cond, &dri2_sync->mutex, &expire);
 
-            if (mtx_unlock(&dri2_sync->mutex)) {
-               ret = EGL_FALSE;
-               goto cleanup;
-            }
+            mtx_unlock(&dri2_sync->mutex);
 
             if (ret)
                if (ret == thrd_busy) {
