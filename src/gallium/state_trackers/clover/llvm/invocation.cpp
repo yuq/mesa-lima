@@ -278,10 +278,10 @@ namespace {
    }
 
    void
-   optimize(llvm::Module *mod, unsigned optimization_level) {
-      compat::pass_manager PM;
+   optimize(Module &mod, unsigned optimization_level) {
+      compat::pass_manager pm;
 
-      compat::add_data_layout_pass(PM);
+      compat::add_data_layout_pass(pm);
 
       // By default, the function internalizer pass will look for a function
       // called "main" and then mark all other functions as internal.  Marking
@@ -295,15 +295,15 @@ namespace {
       // list of kernel functions to the internalizer.  The internalizer will
       // treat the functions in the list as "main" functions and internalize
       // all of the other functions.
-      compat::add_internalize_pass(PM, map(std::mem_fn(&Function::getName),
-                                           find_kernels(mod)));
+      compat::add_internalize_pass(pm, map(std::mem_fn(&Function::getName),
+                                           find_kernels(&mod)));
 
-      llvm::PassManagerBuilder PMB;
-      PMB.OptLevel = optimization_level;
-      PMB.LibraryInfo = new compat::target_library_info(
-         llvm::Triple(mod->getTargetTriple()));
-      PMB.populateModulePassManager(PM);
-      PM.run(*mod);
+      ::llvm::PassManagerBuilder pmb;
+      pmb.OptLevel = optimization_level;
+      pmb.LibraryInfo = new compat::target_library_info(
+         ::llvm::Triple(mod.getTargetTriple()));
+      pmb.populateModulePassManager(pm);
+      pm.run(mod);
    }
 
    // Kernel metadata
@@ -790,7 +790,7 @@ clover::compile_program_llvm(const std::string &source,
                                            r_log);
    auto mod = compile(*ctx, *c, "input.cl", source, headers, target, opts, r_log);
 
-   optimize(&*mod, c->getCodeGenOpts().OptimizationLevel);
+   optimize(*mod, c->getCodeGenOpts().OptimizationLevel);
 
    if (get_debug_flags() & DBG_LLVM) {
       std::string log;
