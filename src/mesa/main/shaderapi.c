@@ -2368,7 +2368,7 @@ _mesa_GetActiveSubroutineUniformiv(GLuint program, GLenum shadertype,
       return;
    }
 
-   if (index >= sh->NumSubroutineUniformTypes) {
+   if (index >= sh->NumSubroutineUniforms) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s: invalid index greater than GL_ACTIVE_SUBROUTINE_UNIFORMS", api_name);
       return;
    }
@@ -2672,7 +2672,7 @@ _mesa_GetProgramStageiv(GLuint program, GLenum shadertype,
       values[0] = sh->NumSubroutineUniformRemapTable;
       break;
    case GL_ACTIVE_SUBROUTINE_UNIFORMS:
-      values[0] = sh->NumSubroutineUniformTypes;
+      values[0] = sh->NumSubroutineUniforms;
       break;
    case GL_ACTIVE_SUBROUTINE_MAX_LENGTH:
    {

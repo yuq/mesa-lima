@@ -2436,6 +2436,7 @@ struct gl_shader
      * Subroutine uniform remap table
      * based on the program level uniform remap table.
      */
+   GLuint NumSubroutineUniforms; /* non-sparse total */
    GLuint NumSubroutineUniformRemapTable;
    struct gl_uniform_storage **SubroutineUniformRemapTable;
 
