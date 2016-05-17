@@ -372,7 +372,6 @@ void
 genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
-   const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
    MAYBE_UNUSED VkResult result;
 
    assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
