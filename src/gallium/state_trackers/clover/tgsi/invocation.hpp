@@ -29,6 +29,8 @@ namespace clover {
    namespace tgsi {
       module compile_program(const std::string &source,
                              std::string &r_log);
+
+      module link_program(const std::vector<module> &modules);
    }
 }
 

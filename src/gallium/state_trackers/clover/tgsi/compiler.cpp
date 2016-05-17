@@ -111,3 +111,10 @@ clover::tgsi::compile_program(const std::string &source, std::string &r_log) {
 
    return m;
 }
+
+module
+clover::tgsi::link_program(const std::vector<module> &modules)
+{
+   assert(modules.size() == 1 && "Not implemented");
+   return modules[0];
+}
