@@ -150,7 +150,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       params.y1 = rb->Height - fb->_Ymin;
    }
 
-   memcpy(&params.wm_push_consts.dst_x0,
+   memcpy(&params.wm_inputs.dst_x0,
           ctx->Color.ClearColor.f, sizeof(float) * 4);
 
    bool use_simd16_replicated_data = true;
@@ -175,7 +175,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        !partial_clear && use_simd16_replicated_data &&
        brw_is_color_fast_clear_compatible(brw, irb->mt,
                                           &ctx->Color.ClearColor)) {
-      memset(&params.wm_push_consts, 0xff, 4*sizeof(float));
+      memset(&params.wm_inputs, 0xff, 4*sizeof(float));
       params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
 
       brw_get_fast_clear_rect(brw, fb, irb->mt, &params.x0, &params.y0,

@@ -179,7 +179,7 @@ struct brw_blorp_coord_transform
    float offset;
 };
 
-struct brw_blorp_wm_push_constants
+struct brw_blorp_wm_inputs
 {
    uint32_t dst_x0;
    uint32_t dst_x1;
@@ -201,11 +201,11 @@ struct brw_blorp_wm_push_constants
 };
 
 #define BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS \
-   (sizeof(struct brw_blorp_wm_push_constants) / 4)
+   (sizeof(struct brw_blorp_wm_inputs) / 4)
 
 /* Every 32 bytes of push constant data constitutes one GEN register. */
 static const unsigned int BRW_BLORP_NUM_PUSH_CONST_REGS =
-   sizeof(struct brw_blorp_wm_push_constants) / 32;
+   sizeof(struct brw_blorp_wm_inputs) / 32;
 
 struct brw_blorp_prog_data
 {
@@ -255,7 +255,7 @@ struct brw_blorp_params
       unsigned resolve_type;
    };
    bool color_write_disable[4];
-   struct brw_blorp_wm_push_constants wm_push_consts;
+   struct brw_blorp_wm_inputs wm_inputs;
    unsigned num_draw_buffers;
    unsigned num_layers;
    uint32_t wm_prog_kernel;

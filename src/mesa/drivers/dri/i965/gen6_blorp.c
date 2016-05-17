@@ -279,10 +279,10 @@ gen6_blorp_emit_wm_constants(struct brw_context *brw,
    uint32_t wm_push_const_offset;
 
    uint32_t *constants = brw_state_batch(brw, AUB_TRACE_WM_CONSTANTS,
-                                         sizeof(params->wm_push_consts),
+                                         sizeof(params->wm_inputs),
                                          32, &wm_push_const_offset);
 
-   const uint32_t *push_consts = (const uint32_t *)&params->wm_push_consts;
+   const uint32_t *push_consts = (const uint32_t *)&params->wm_inputs;
    for (unsigned i = 0; i < params->wm_prog_data->nr_params; i++)
       constants[i] = push_consts[params->wm_prog_data->param[i]];
 
@@ -682,7 +682,7 @@ gen6_blorp_emit_constant_ps(struct brw_context *brw,
    /* Make sure the push constants fill an exact integer number of
     * registers.
     */
-   assert(sizeof(struct brw_blorp_wm_push_constants) % 32 == 0);
+   STATIC_ASSERT(sizeof(struct brw_blorp_wm_inputs) % 32 == 0);
 
    /* There must be at least one register worth of push constant data. */
    assert(BRW_BLORP_NUM_PUSH_CONST_REGS > 0);

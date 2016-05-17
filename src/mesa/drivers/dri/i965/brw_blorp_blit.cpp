@@ -330,7 +330,7 @@ enum sampler_message_arg
 };
 
 struct brw_blorp_blit_vars {
-   /* Uniforms values from brw_blorp_wm_push_constants */
+   /* Input values from brw_blorp_wm_inputs */
    nir_variable *u_dst_x0;
    nir_variable *u_dst_x1;
    nir_variable *u_dst_y0;
@@ -357,7 +357,7 @@ brw_blorp_blit_vars_init(nir_builder *b, struct brw_blorp_blit_vars *v,
 #define LOAD_UNIFORM(name, type)\
    v->u_##name = nir_variable_create(b->shader, nir_var_uniform, type, #name); \
    v->u_##name->data.location = \
-      offsetof(struct brw_blorp_wm_push_constants, name);
+      offsetof(struct brw_blorp_wm_inputs, name);
 
    LOAD_UNIFORM(dst_x0, glsl_uint_type())
    LOAD_UNIFORM(dst_x1, glsl_uint_type())
@@ -1832,28 +1832,28 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    /* Round floating point values to nearest integer to avoid "off by one texel"
     * kind of errors when blitting.
     */
-   params.x0 = params.wm_push_consts.dst_x0 = roundf(dst_x0);
-   params.y0 = params.wm_push_consts.dst_y0 = roundf(dst_y0);
-   params.x1 = params.wm_push_consts.dst_x1 = roundf(dst_x1);
-   params.y1 = params.wm_push_consts.dst_y1 = roundf(dst_y1);
-   params.wm_push_consts.rect_grid_x1 =
+   params.x0 = params.wm_inputs.dst_x0 = roundf(dst_x0);
+   params.y0 = params.wm_inputs.dst_y0 = roundf(dst_y0);
+   params.x1 = params.wm_inputs.dst_x1 = roundf(dst_x1);
+   params.y1 = params.wm_inputs.dst_y1 = roundf(dst_y1);
+   params.wm_inputs.rect_grid_x1 =
       minify(src_mt->logical_width0, src_level) * wm_prog_key.x_scale - 1.0f;
-   params.wm_push_consts.rect_grid_y1 =
+   params.wm_inputs.rect_grid_y1 =
       minify(src_mt->logical_height0, src_level) * wm_prog_key.y_scale - 1.0f;
 
-   brw_blorp_setup_coord_transform(&params.wm_push_consts.x_transform,
+   brw_blorp_setup_coord_transform(&params.wm_inputs.x_transform,
                                    src_x0, src_x1, dst_x0, dst_x1, mirror_x);
-   brw_blorp_setup_coord_transform(&params.wm_push_consts.y_transform,
+   brw_blorp_setup_coord_transform(&params.wm_inputs.y_transform,
                                    src_y0, src_y1, dst_y0, dst_y1, mirror_y);
 
    if (brw->gen >= 8 && params.src.mt->target == GL_TEXTURE_3D) {
       /* On gen8+ we use actual 3-D textures so we need to pass the layer
        * through to the sampler.
        */
-      params.wm_push_consts.src_z = params.src.layer;
+      params.wm_inputs.src_z = params.src.layer;
    } else {
       /* On gen7 and earlier, we fake everything with 2-D textures */
-      params.wm_push_consts.src_z = 0;
+      params.wm_inputs.src_z = 0;
    }
 
    if (params.dst.num_samples <= 1 && dst_mt->num_samples > 1) {
