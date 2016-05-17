@@ -4229,6 +4229,10 @@ link_assign_subroutine_types(struct gl_shader_program *prog)
          if (!fn->num_subroutine_types)
             continue;
 
+         if (sh->NumSubroutineFunctions + 1 > MAX_SUBROUTINES) {
+            linker_error(prog, "Too many subroutine functions declared.\n");
+            return;
+         }
          sh->SubroutineFunctions = reralloc(sh, sh->SubroutineFunctions,
                                             struct gl_subroutine_function,
                                             sh->NumSubroutineFunctions + 1);
