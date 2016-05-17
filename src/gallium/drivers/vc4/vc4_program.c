@@ -1788,16 +1788,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                 break;
         }
 
-        const struct tgsi_token *tokens = key->shader_state->base.tokens;
-
-        if (vc4_debug & VC4_DEBUG_TGSI) {
-                fprintf(stderr, "%s prog %d/%d TGSI:\n",
-                        qir_get_stage_name(c->stage),
-                        c->program_id, c->variant_id);
-                tgsi_dump(tokens, 0);
-        }
-
-        c->s = tgsi_to_nir(tokens, &nir_options);
+        c->s = nir_shader_clone(c, key->shader_state->base.ir.nir);
         NIR_PASS_V(c->s, nir_opt_global_to_local);
         NIR_PASS_V(c->s, nir_convert_to_ssa);
 
@@ -1943,8 +1934,20 @@ vc4_shader_state_create(struct pipe_context *pctx,
         if (!so)
                 return NULL;
 
-        so->base.tokens = tgsi_dup_tokens(cso->tokens);
         so->program_id = vc4->next_uncompiled_program_id++;
+
+        nir_shader *s = tgsi_to_nir(cso->tokens, &nir_options);
+
+        if (vc4_debug & VC4_DEBUG_TGSI) {
+                fprintf(stderr, "%s prog %d TGSI:\n",
+                        gl_shader_stage_name(s->stage),
+                        so->program_id);
+                tgsi_dump(cso->tokens, 0);
+                fprintf(stderr, "\n");
+        }
+
+        so->base.type = PIPE_SHADER_IR_NIR;
+        so->base.ir.nir = s;
 
         return so;
 }
@@ -2293,7 +2296,7 @@ vc4_shader_state_delete(struct pipe_context *pctx, void *hwcso)
         hash_table_foreach(vc4->vs_cache, entry)
                 delete_from_cache_if_matches(vc4->vs_cache, entry, so);
 
-        free((void *)so->base.tokens);
+        ralloc_free(so->base.ir.nir);
         free(so);
 }
 
