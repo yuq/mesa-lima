@@ -160,6 +160,43 @@ emit_array_fetch(
 	return result;
 }
 
+static LLVMValueRef
+load_value_from_array(
+	struct lp_build_tgsi_context *bld_base,
+	unsigned file,
+	enum tgsi_opcode_type type,
+	unsigned swizzle,
+	unsigned reg_index,
+	const struct tgsi_ind_register *reg_indirect)
+{
+	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_indirect);
+
+	return LLVMBuildExtractElement(builder,
+			emit_array_fetch(bld_base, file, type, range, swizzle),
+			emit_array_index(bld, reg_indirect, reg_index - range.First), "");
+
+}
+
+static LLVMValueRef store_value_to_array(
+	struct lp_build_tgsi_context *bld_base,
+	LLVMValueRef value,
+	unsigned file,
+	unsigned chan_index,
+	unsigned reg_index,
+	const struct tgsi_ind_register *reg_indirect)
+{
+	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_indirect);
+
+	return LLVMBuildInsertElement(builder,
+				emit_array_fetch(bld_base, file, TGSI_TYPE_FLOAT, range, chan_index),
+				value,  emit_array_index(bld, reg_indirect, reg_index - range.First), "");
+	return NULL;
+}
+
 LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 				    const struct tgsi_full_src_register *reg,
 				    enum tgsi_opcode_type type,
@@ -181,12 +218,8 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 	}
 
 	if (reg->Register.Indirect) {
-		struct tgsi_declaration_range range = get_array_range(bld_base,
-			reg->Register.File, &reg->Indirect);
-		return LLVMBuildExtractElement(builder,
-			emit_array_fetch(bld_base, reg->Register.File, type, range, swizzle),
-			emit_array_index(bld, &reg->Indirect, reg->Register.Index - range.First),
-			"");
+		return load_value_from_array(bld_base, reg->Register.File, type,
+				swizzle, reg->Register.Index, &reg->Indirect);
 	}
 
 	switch(reg->Register.File) {
@@ -430,10 +463,8 @@ void radeon_llvm_emit_store(
 				reg->Register.File, &reg->Indirect);
 
         		unsigned i, size = range.Last - range.First + 1;
-			LLVMValueRef array = LLVMBuildInsertElement(builder,
-				emit_array_fetch(bld_base, reg->Register.File, TGSI_TYPE_FLOAT, range, chan_index),
-				value,  emit_array_index(bld, &reg->Indirect, reg->Register.Index - range.First), "");
-
+			LLVMValueRef array = store_value_to_array(bld_base, value, reg->Register.File, chan_index,
+			                                          reg->Register.Index, &reg->Indirect);
         		for (i = 0; i < size; ++i) {
 				switch(reg->Register.File) {
 				case TGSI_FILE_OUTPUT:
