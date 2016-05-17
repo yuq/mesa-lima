@@ -2888,7 +2888,8 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
                                  gl_shader *consumer)
 {
    glsl_symbol_table parameters;
-   ir_variable *explicit_locations[MAX_VARYING][4] = { {NULL, NULL} };
+   ir_variable *explicit_locations[MAX_VARYINGS_INCL_PATCH][4] =
+      { {NULL, NULL} };
 
    /* Find all shader outputs in the "producer" stage.
     */
