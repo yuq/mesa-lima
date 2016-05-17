@@ -26,9 +26,9 @@
 
 #include "llvm/codegen.hpp"
 #include "llvm/compat.hpp"
+#include "llvm/invocation.hpp"
 #include "llvm/metadata.hpp"
 #include "llvm/util.hpp"
-#include "core/compiler.hpp"
 #include "util/algorithm.hpp"
 
 #include <llvm/IR/DiagnosticPrinter.h>
@@ -177,7 +177,30 @@ namespace {
 
       return act.takeModule();
    }
+}
 
+module
+clover::llvm::compile_program(const std::string &source,
+                              const header_map &headers,
+                              const std::string &target,
+                              const std::string &opts,
+                              std::string &r_log) {
+   if (has_flag(debug::clc))
+      debug::log(".cl", "// Options: " + opts + '\n' + source);
+
+   auto ctx = create_context(r_log);
+   auto c = create_compiler_instance(target, tokenize(opts + " input.cl"),
+                                     r_log);
+   auto mod = compile(*ctx, *c, "input.cl", source, headers, target, opts,
+                      r_log);
+
+   if (has_flag(debug::llvm))
+      debug::log(".ll", print_module_bitcode(*mod));
+
+   return build_module_library(*mod);
+}
+
+namespace {
    void
    optimize(Module &mod, unsigned optimization_level) {
       compat::pass_manager pm;
@@ -209,21 +232,15 @@ namespace {
 }
 
 module
-clover::compile_program_llvm(const std::string &source,
-                             const header_map &headers,
-                             enum pipe_shader_ir ir,
-                             const std::string &target,
-                             const std::string &opts,
-                             std::string &r_log) {
-   if (has_flag(debug::clc))
-      debug::log(".cl", "// Build options: " + opts + '\n' + source);
-
+clover::llvm::link_program(const std::vector<module> &modules,
+                           enum pipe_shader_ir ir, const std::string &target,
+                           const std::string &opts, std::string &r_log) {
+   std::vector<std::string> options = tokenize(opts + " input.cl");
    auto ctx = create_context(r_log);
-   // The input file name must have the .cl extension in order for the
-   // CompilerInvocation class to recognize it as an OpenCL source file.
-   const auto c = create_compiler_instance(target, tokenize(opts + " input.cl"),
-                                           r_log);
-   auto mod = compile(*ctx, *c, "input.cl", source, headers, target, opts, r_log);
+   auto c = create_compiler_instance(target, options, r_log);
+   // XXX - Implement linkage of multiple clover modules.
+   assert(modules.size() == 1);
+   auto mod = parse_module_library(modules[0], *ctx, r_log);
 
    optimize(*mod, c->getCodeGenOpts().OptimizationLevel);
 
@@ -251,4 +268,15 @@ clover::compile_program_llvm(const std::string &source,
    }
 
    return m;
+}
+
+module
+clover::compile_program_llvm(const std::string &source,
+                             const header_map &headers,
+                             enum pipe_shader_ir ir,
+                             const std::string &target,
+                             const std::string &opts,
+                             std::string &r_log) {
+   const auto mod = compile_program(source, headers, target, opts, r_log);
+   return link_program({ mod }, ir, target, opts, r_log);
 }

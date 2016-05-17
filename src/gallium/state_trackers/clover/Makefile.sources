@@ -60,6 +60,7 @@ LLVM_SOURCES := \
 	llvm/codegen.hpp \
 	llvm/compat.hpp \
 	llvm/invocation.cpp \
+	llvm/invocation.hpp \
 	llvm/metadata.hpp \
 	llvm/util.hpp
 
