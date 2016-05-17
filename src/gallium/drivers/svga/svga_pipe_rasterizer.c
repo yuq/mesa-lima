@@ -105,6 +105,7 @@ static void
 define_rasterizer_object(struct svga_context *svga,
                          struct svga_rasterizer_state *rast)
 {
+   struct svga_screen *svgascreen = svga_screen(svga->pipe.screen);
    unsigned fill_mode = translate_fill_mode(rast->templ.fill_front);
    unsigned cull_mode = translate_cull_mode(rast->templ.cull_face);
    int depth_bias = rast->templ.offset_units;
@@ -129,6 +130,8 @@ define_rasterizer_object(struct svga_context *svga,
    }
 
    for (try = 0; try < 2; try++) {
+      const uint8 pv_last = !rast->templ.flatshade_first &&
+         svgascreen->haveProvokingVertex;
       enum pipe_error ret =
          SVGA3D_vgpu10_DefineRasterizerState(svga->swc,
                                              rast->id,
@@ -146,7 +149,7 @@ define_rasterizer_object(struct svga_context *svga,
                                              rast->templ.line_stipple_enable,
                                              line_factor,
                                              line_pattern,
-                                             !rast->templ.flatshade_first);
+                                             pv_last);
       if (ret == PIPE_OK)
          return;
       svga_context_flush(svga, NULL);
