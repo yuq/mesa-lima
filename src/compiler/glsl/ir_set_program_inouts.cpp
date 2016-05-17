@@ -94,6 +94,8 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
     */
 
    for (int i = 0; i < len; i++) {
+      assert(var->data.location != -1);
+
       int idx = var->data.location + var->data.index + offset + i;
       bool is_patch_generic = var->data.patch &&
                               idx != VARYING_SLOT_TESS_LEVEL_INNER &&
