@@ -236,8 +236,10 @@ namespace brw {
       src_reg
       sample_mask_reg() const
       {
+         assert(shader->stage != MESA_SHADER_FRAGMENT ||
+                group() + dispatch_width() <= 16);
          if (shader->stage != MESA_SHADER_FRAGMENT) {
-            return brw_imm_d(0xffff);
+            return brw_imm_d(0xffffffff);
          } else if (((brw_wm_prog_data *)shader->stage_prog_data)->uses_kill) {
             return brw_flag_reg(0, 1);
          } else {
