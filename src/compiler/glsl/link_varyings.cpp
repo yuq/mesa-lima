@@ -1898,7 +1898,7 @@ canonicalize_shader_io(exec_list *ir, enum ir_variable_mode io_mode)
  * 64 bit map. Per-vertex and per-patch both have separate location domains
  * with a max of MAX_VARYING.
  */
-uint64_t
+static uint64_t
 reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode)
 {
    assert(io_mode == ir_var_shader_in || io_mode == ir_var_shader_out);
