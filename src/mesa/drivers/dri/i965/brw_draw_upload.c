@@ -411,6 +411,7 @@ copy_array_to_vbo_array(struct brw_context *brw,
 			&buffer->bo, &buffer->offset);
 
       buffer->stride = 0;
+      buffer->size = element->glarray->_ElementSize;
       return;
    }
 
@@ -430,6 +431,7 @@ copy_array_to_vbo_array(struct brw_context *brw,
       }
    }
    buffer->stride = dst_stride;
+   buffer->size = size;
 }
 
 void
@@ -606,6 +608,8 @@ brw_prepare_vertices(struct brw_context *brw)
 
       buffer->bo = intel_bufferobj_buffer(brw, enabled_buffer[i], start, range);
       drm_intel_bo_reference(buffer->bo);
+
+      buffer->size = start + range;
    }
 
    /* If we need to upload all the arrays, then we can trim those arrays to
@@ -629,6 +633,7 @@ brw_prepare_vertices(struct brw_context *brw)
 	 copy_array_to_vbo_array(brw, upload[0], min_index, max_index,
 				 buffer, interleaved);
 	 buffer->offset -= delta * interleaved;
+         buffer->size += delta * interleaved;
 
 	 for (i = 0; i < nr_uploads; i++) {
 	    /* Then, just point upload[i] at upload[0]'s buffer. */
@@ -658,6 +663,7 @@ brw_prepare_vertices(struct brw_context *brw)
                                  buffer, upload[i]->glarray->_ElementSize);
       }
       buffer->offset -= delta * buffer->stride;
+      buffer->size += delta * buffer->stride;
       buffer->step_rate = upload[i]->glarray->InstanceDivisor;
       upload[i]->buffer = j++;
       upload[i]->offset = 0;
@@ -799,7 +805,15 @@ brw_emit_vertices(struct brw_context *brw)
       OUT_BATCH((_3DSTATE_VERTEX_BUFFERS << 16) | (4 * nr_buffers - 1));
       for (i = 0; i < brw->vb.nr_buffers; i++) {
 	 struct brw_vertex_buffer *buffer = &brw->vb.buffers[i];
-         EMIT_VERTEX_BUFFER_STATE(brw, i, buffer->bo, buffer->bo->size - 1,
+         /* Prior to Haswell and Bay Trail we have to use 4-component formats
+          * to fake 3-component ones.  In particular, we do this for
+          * half-float and 8 and 16-bit integer formats.  This means that the
+          * vertex element may poke over the end of the buffer by 2 bytes.
+          */
+         unsigned padding =
+            (brw->gen <= 7 && !brw->is_baytrail && !brw->is_haswell) * 2;
+         EMIT_VERTEX_BUFFER_STATE(brw, i, buffer->bo,
+                                  buffer->offset + buffer->size + padding - 1,
                                   buffer->offset, buffer->stride,
                                   buffer->step_rate);
 

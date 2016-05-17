@@ -569,6 +569,7 @@ struct brw_vertex_buffer {
    /** Buffer object containing the uploaded vertex data */
    drm_intel_bo *bo;
    uint32_t offset;
+   uint32_t size;
    /** Byte stride between elements in the uploaded array */
    GLuint stride;
    GLuint step_rate;

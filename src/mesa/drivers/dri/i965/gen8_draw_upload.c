@@ -151,7 +151,7 @@ gen8_emit_vertices(struct brw_context *brw)
 
          OUT_BATCH(dw0);
          OUT_RELOC64(buffer->bo, I915_GEM_DOMAIN_VERTEX, 0, buffer->offset);
-         OUT_BATCH(buffer->bo->size);
+         OUT_BATCH(buffer->size);
       }
 
       if (uses_draw_params) {
