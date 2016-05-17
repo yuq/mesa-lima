@@ -80,29 +80,35 @@ retype(fs_reg reg, enum brw_reg_type type)
 static inline fs_reg
 byte_offset(fs_reg reg, unsigned delta)
 {
-   reg.subreg_offset += delta;
-
    switch (reg.file) {
    case BAD_FILE:
       break;
    case VGRF:
    case ATTR:
-      reg.reg_offset += reg.subreg_offset / 32;
+   case UNIFORM: {
+      const unsigned reg_size = (reg.file == UNIFORM ? 4 : REG_SIZE);
+      const unsigned suboffset = reg.subreg_offset + delta;
+      reg.reg_offset += suboffset / reg_size;
+      reg.subreg_offset = suboffset % reg_size;
       break;
-   case MRF:
-      reg.nr += delta / 32;
+   }
+   case MRF: {
+      const unsigned suboffset = reg.subreg_offset + delta;
+      reg.nr += suboffset / REG_SIZE;
+      reg.subreg_offset = suboffset % REG_SIZE;
       break;
-   case UNIFORM:
-      reg.reg_offset += reg.subreg_offset / 4;
-      reg.subreg_offset %= 4;
-      return reg;
+   }
    case ARF:
-   case FIXED_GRF:
+   case FIXED_GRF: {
+      const unsigned suboffset = reg.subnr + delta;
+      reg.nr += suboffset / REG_SIZE;
+      reg.subnr = suboffset % REG_SIZE;
+      break;
+   }
    case IMM:
    default:
       assert(delta == 0);
    }
-   reg.subreg_offset %= 32;
    return reg;
 }
 
