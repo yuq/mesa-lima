@@ -2445,6 +2445,7 @@ struct gl_shader
     * and storage for them.
     */
    GLuint NumSubroutineFunctions;
+   GLuint MaxSubroutineFunctionIndex;
    struct gl_subroutine_function *SubroutineFunctions;
 };
 

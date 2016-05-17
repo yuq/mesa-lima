@@ -1755,6 +1755,27 @@ set_shader_inout_layout(struct gl_shader *shader,
 
 extern "C" {
 
+static void
+assign_subroutine_indexes(struct gl_shader *sh,
+			  struct _mesa_glsl_parse_state *state)
+{
+   int j, k;
+   int index = 0;
+
+   for (j = 0; j < state->num_subroutines; j++) {
+      while (state->subroutines[j]->subroutine_index == -1) {
+         for (k = 0; k < state->num_subroutines; k++) {
+            if (state->subroutines[k]->subroutine_index == index)
+               break;
+            else if (k == state->num_subroutines - 1) {
+               state->subroutines[j]->subroutine_index = index;
+            }
+         }
+         index++;
+      }
+   }
+}
+
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                           bool dump_ast, bool dump_hir)
@@ -1802,6 +1823,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
       struct gl_shader_compiler_options *options =
          &ctx->Const.ShaderCompilerOptions[shader->Stage];
 
+      assign_subroutine_indexes(shader, state);
       lower_subroutine(shader->ir, state);
       /* Do some optimization at compile time to reduce shader IR size
        * and reduce later work if the same shader is linked multiple times

@@ -2546,16 +2546,24 @@ _mesa_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
       }
 
       int uni_count = uni->array_elements ? uni->array_elements : 1;
-      int j, k;
+      int j, k, f;
 
       for (j = i; j < i + uni_count; j++) {
-         struct gl_subroutine_function *subfn;
-         if (indices[j] >= sh->NumSubroutineFunctions) {
+         struct gl_subroutine_function *subfn = NULL;
+         if (indices[j] > sh->MaxSubroutineFunctionIndex) {
             _mesa_error(ctx, GL_INVALID_VALUE, "%s", api_name);
             return;
          }
 
-         subfn = &sh->SubroutineFunctions[indices[j]];
+         for (f = 0; f < sh->NumSubroutineFunctions; f++) {
+            if (sh->SubroutineFunctions[f].index == indices[j])
+               subfn = &sh->SubroutineFunctions[f];
+         }
+
+         if (!subfn) {
+            continue;
+         }
+
          for (k = 0; k < subfn->num_compat_types; k++) {
             if (subfn->types[k] == uni->type)
                break;

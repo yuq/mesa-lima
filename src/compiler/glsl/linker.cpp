@@ -4222,6 +4222,7 @@ link_assign_subroutine_types(struct gl_shader_program *prog)
       if (sh == NULL)
          continue;
 
+      sh->MaxSubroutineFunctionIndex = 0;
       foreach_in_list(ir_instruction, node, sh->ir) {
          ir_function *fn = node->as_function();
          if (!fn)
@@ -4233,6 +4234,8 @@ link_assign_subroutine_types(struct gl_shader_program *prog)
          if (!fn->num_subroutine_types)
             continue;
 
+	 /* these should have been calculated earlier. */
+	 assert(fn->subroutine_index != -1);
          if (sh->NumSubroutineFunctions + 1 > MAX_SUBROUTINES) {
             linker_error(prog, "Too many subroutine functions declared.\n");
             return;
@@ -4264,23 +4267,12 @@ link_assign_subroutine_types(struct gl_shader_program *prog)
          sh->SubroutineFunctions[sh->NumSubroutineFunctions].index =
             fn->subroutine_index;
 
+         if (fn->subroutine_index > (int)sh->MaxSubroutineFunctionIndex)
+            sh->MaxSubroutineFunctionIndex = fn->subroutine_index;
+
          for (int j = 0; j < fn->num_subroutine_types; j++)
             sh->SubroutineFunctions[sh->NumSubroutineFunctions].types[j] = fn->subroutine_types[j];
          sh->NumSubroutineFunctions++;
-      }
-
-      /* Assign index for subroutines without an explicit index*/
-      int index = 0;
-      for (unsigned j = 0; j < sh->NumSubroutineFunctions; j++) {
-         while (sh->SubroutineFunctions[j].index == -1) {
-            for (unsigned k = 0; k < sh->NumSubroutineFunctions; k++) {
-               if (sh->SubroutineFunctions[k].index == index)
-                  break;
-               else if (k == sh->NumSubroutineFunctions - 1)
-                  sh->SubroutineFunctions[j].index = index;
-            }
-            index++;
-         }
       }
    }
 }
