@@ -556,6 +556,13 @@ static LLVMValueRef get_bounded_indirect_index(struct si_shader_context *ctx,
 	LLVMValueRef c_max = LLVMConstInt(ctx->i32, num - 1, 0);
 	LLVMValueRef cc;
 
+	/* LLVM 3.8: If indirect resource indexing is used:
+	 * - SI & CIK hang
+	 * - VI crashes
+	 */
+	if (HAVE_LLVM <= 0x0308)
+		return LLVMGetUndef(ctx->i32);
+
 	if (util_is_power_of_two(num)) {
 		result = LLVMBuildAnd(builder, result, c_max, "");
 	} else {
