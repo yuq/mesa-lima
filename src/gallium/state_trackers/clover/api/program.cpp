@@ -183,9 +183,8 @@ clBuildProgram(cl_program d_prog, cl_uint num_devs,
 
    prog.build(devs, opts);
    return CL_SUCCESS;
+
 } catch (error &e) {
-   if (e.get() == CL_INVALID_COMPILER_OPTIONS)
-      return CL_INVALID_BUILD_OPTIONS;
    return e.get();
 }
 
@@ -224,6 +223,9 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
 
    prog.build(devs, opts, headers);
    return CL_SUCCESS;
+
+} catch (invalid_build_options_error &e) {
+   return CL_INVALID_COMPILER_OPTIONS;
 
 } catch (build_error &e) {
    return CL_COMPILE_PROGRAM_FAILURE;

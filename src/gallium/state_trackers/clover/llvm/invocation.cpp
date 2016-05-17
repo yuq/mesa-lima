@@ -98,7 +98,7 @@ namespace {
 
       if (!clang::CompilerInvocation::CreateFromArgs(
              c->getInvocation(), copts.data(), copts.data() + copts.size(), diag))
-         throw error(CL_INVALID_COMPILER_OPTIONS);
+         throw invalid_build_options_error();
 
       c->getTargetOpts().CPU = target.cpu;
       c->getTargetOpts().Triple = target.triple;
