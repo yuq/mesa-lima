@@ -4739,7 +4739,6 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case BRW_OPCODE_SHR:
    case BRW_OPCODE_SHL:
    case BRW_OPCODE_ASR:
-   case BRW_OPCODE_CMP:
    case BRW_OPCODE_CMPN:
    case BRW_OPCODE_CSEL:
    case BRW_OPCODE_F32TO16:
@@ -4765,6 +4764,23 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case BRW_OPCODE_LRP:
    case FS_OPCODE_PACK:
       return get_fpu_lowered_simd_width(devinfo, inst);
+
+   case BRW_OPCODE_CMP: {
+      /* The Ivybridge/BayTrail WaCMPInstFlagDepClearedEarly workaround says that
+       * when the destination is a GRF the dependency-clear bit on the flag
+       * register is cleared early.
+       *
+       * Suggested workarounds are to disable coissuing CMP instructions
+       * or to split CMP(16) instructions into two CMP(8) instructions.
+       *
+       * We choose to split into CMP(8) instructions since disabling
+       * coissuing would affect CMP instructions not otherwise affected by
+       * the errata.
+       */
+      const unsigned max_width = (devinfo->gen == 7 && !devinfo->is_haswell &&
+                                  !inst->dst.is_null() ? 8 : ~0);
+      return MIN2(max_width, get_fpu_lowered_simd_width(devinfo, inst));
+   }
 
    case SHADER_OPCODE_RCP:
    case SHADER_OPCODE_RSQ:
