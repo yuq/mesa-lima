@@ -7962,9 +7962,12 @@
 #define   S_028B50_ACCUM_QUAD(x)                                      (((unsigned)(x) & 0xFF) << 16)
 #define   G_028B50_ACCUM_QUAD(x)                                      (((x) >> 16) & 0xFF)
 #define   C_028B50_ACCUM_QUAD                                         0xFF00FFFF
-#define   S_028B50_DONUT_SPLIT(x)                                     (((unsigned)(x) & 0xFF) << 24)
-#define   G_028B50_DONUT_SPLIT(x)                                     (((x) >> 24) & 0xFF)
-#define   C_028B50_DONUT_SPLIT                                        0x00FFFFFF
+#define   S_028B50_DONUT_SPLIT(x)                                     (((unsigned)(x) & 0x1F) << 24)
+#define   G_028B50_DONUT_SPLIT(x)                                     (((x) >> 24) & 0x1F)
+#define   C_028B50_DONUT_SPLIT                                        0xE0FFFFFF
+#define   S_028B50_TRAP_SPLIT(x)                                      (((unsigned)(x) & 0x7) << 29) /* Fiji+ */
+#define   G_028B50_TRAP_SPLIT(x)                                      (((x) >> 29) & 0x7)
+#define   C_028B50_TRAP_SPLIT                                         0x1FFFFFFF
 /*    */
 #define R_028B54_VGT_SHADER_STAGES_EN                                   0x028B54
 #define   S_028B54_LS_EN(x)                                           (((unsigned)(x) & 0x03) << 0)
@@ -8085,6 +8088,7 @@
 #define     V_028B6C_DISTRIBUTION_MODE_NO_DIST                      0x00
 #define     V_028B6C_DISTRIBUTION_MODE_PATCHES                      0x01
 #define     V_028B6C_DISTRIBUTION_MODE_DONUTS                       0x02
+#define     V_028B6C_DISTRIBUTION_MODE_TRAPEZOIDS                   0x03 /* Fiji+ */
 #define   S_028B6C_MTYPE(x)                                           (((unsigned)(x) & 0x03) << 19)
 #define   G_028B6C_MTYPE(x)                                           (((x) >> 19) & 0x03)
 #define   C_028B6C_MTYPE                                              0xFFE7FFFF
