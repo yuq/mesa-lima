@@ -1,5 +1,5 @@
 //
-// Copyright 2012 Francisco Jerez
+// Copyright 2016 Francisco Jerez
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -20,22 +20,16 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#ifndef CLOVER_CORE_COMPILER_HPP
-#define CLOVER_CORE_COMPILER_HPP
+#ifndef CLOVER_TGSI_INVOCATION_HPP
+#define CLOVER_TGSI_INVOCATION_HPP
 
-#include "core/error.hpp"
 #include "core/module.hpp"
-#include "pipe/p_defines.h"
 
 namespace clover {
-   typedef std::vector<std::pair<std::string, std::string> > header_map;
-
-   module compile_program_llvm(const std::string &source,
-                               const header_map &headers,
-                               pipe_shader_ir ir,
-                               const std::string &target,
-                               const std::string &opts,
-                               std::string &r_log);
+   namespace tgsi {
+      module compile_program(const std::string &source,
+                             std::string &r_log);
+   }
 }
 
 #endif

@@ -22,7 +22,8 @@
 
 #include <sstream>
 
-#include "core/compiler.hpp"
+#include "tgsi/invocation.hpp"
+#include "core/error.hpp"
 
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_text.h"
@@ -95,7 +96,7 @@ namespace {
 }
 
 module
-clover::compile_program_tgsi(const std::string &source, std::string &r_log) {
+clover::tgsi::compile_program(const std::string &source, std::string &r_log) {
    const size_t body_pos = source.find("COMP\n");
    if (body_pos == std::string::npos) {
       r_log = "invalid source";

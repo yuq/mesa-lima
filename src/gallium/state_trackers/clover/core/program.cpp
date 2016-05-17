@@ -21,6 +21,7 @@
 //
 
 #include "core/program.hpp"
+#include "tgsi/invocation.hpp"
 
 using namespace clover;
 
@@ -56,7 +57,7 @@ program::build(const ref_vector<device> &devs, const char *opts,
 
          try {
             auto module = (dev.ir_format() == PIPE_SHADER_IR_TGSI ?
-                           compile_program_tgsi(_source, log) :
+                           tgsi::compile_program(_source, log) :
                            compile_program_llvm(_source, headers,
                                                 dev.ir_format(),
                                                 dev.ir_target(), build_opts(dev),

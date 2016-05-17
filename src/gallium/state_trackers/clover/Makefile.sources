@@ -65,4 +65,5 @@ LLVM_SOURCES := \
 	llvm/util.hpp
 
 TGSI_SOURCES := \
-	tgsi/compiler.cpp
+	tgsi/compiler.cpp \
+	tgsi/invocation.hpp
