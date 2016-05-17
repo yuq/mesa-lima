@@ -2183,7 +2183,7 @@ if test "x$enable_gallium_llvm" = xyes; then
         LLVM_COMPONENTS="engine bitwriter mcjit mcdisassembler"
 
         if test "x$enable_opencl" = xyes; then
-            llvm_check_version_for "3" "5" "0" "opencl"
+            llvm_check_version_for "3" "6" "0" "opencl"
 
             LLVM_COMPONENTS="${LLVM_COMPONENTS} all-targets ipo linker instrumentation"
             LLVM_COMPONENTS="${LLVM_COMPONENTS} irreader option objcarcopts profiledata"
