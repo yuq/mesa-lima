@@ -84,46 +84,6 @@
 using namespace clover;
 
 namespace {
-#if 0
-   void
-   build_binary(const std::string &source, const std::string &target,
-                const std::string &name) {
-      clang::CompilerInstance c;
-      clang::EmitObjAction act(&llvm::getGlobalContext());
-      std::string log;
-      llvm::raw_string_ostream s_log(log);
-
-      LLVMInitializeTGSITarget();
-      LLVMInitializeTGSITargetInfo();
-      LLVMInitializeTGSITargetMC();
-      LLVMInitializeTGSIAsmPrinter();
-
-      c.getFrontendOpts().Inputs.push_back(
-         std::make_pair(clang::IK_OpenCL, name));
-      c.getHeaderSearchOpts().UseBuiltinIncludes = false;
-      c.getHeaderSearchOpts().UseStandardIncludes = false;
-      c.getLangOpts().NoBuiltin = true;
-      c.getTargetOpts().Triple = target;
-      c.getInvocation().setLangDefaults(clang::IK_OpenCL);
-      c.createDiagnostics(0, NULL, new clang::TextDiagnosticPrinter(
-                             s_log, c.getDiagnosticOpts()));
-
-      c.getPreprocessorOpts().addRemappedFile(
-         name, llvm::MemoryBuffer::getMemBuffer(source));
-
-      if (!c.ExecuteAction(act))
-         throw compile_error(log);
-   }
-
-   module
-   load_binary(const char *name) {
-      std::ifstream fs((name));
-      std::vector<unsigned char> str((std::istreambuf_iterator<char>(fs)),
-                                     (std::istreambuf_iterator<char>()));
-      compat::istream cs(str);
-      return module::deserialize(cs);
-   }
-#endif
    void debug_log(const std::string &msg, const std::string &suffix) {
       const char *dbg_file = debug_get_option("CLOVER_DEBUG_FILE", "stderr");
       if (!strcmp("stderr", dbg_file)) {
