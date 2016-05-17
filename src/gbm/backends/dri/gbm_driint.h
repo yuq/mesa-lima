@@ -130,7 +130,7 @@ gbm_dri_surface(struct gbm_surface *surface)
 }
 
 static inline void *
-gbm_dri_bo_map(struct gbm_dri_bo *bo)
+gbm_dri_bo_map_dumb(struct gbm_dri_bo *bo)
 {
    struct drm_mode_map_dumb map_arg;
    int ret;
@@ -159,7 +159,7 @@ gbm_dri_bo_map(struct gbm_dri_bo *bo)
 }
 
 static inline void
-gbm_dri_bo_unmap(struct gbm_dri_bo *bo)
+gbm_dri_bo_unmap_dumb(struct gbm_dri_bo *bo)
 {
    munmap(bo->map, bo->size);
    bo->map = NULL;

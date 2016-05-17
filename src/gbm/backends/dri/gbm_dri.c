@@ -603,7 +603,7 @@ gbm_dri_bo_destroy(struct gbm_bo *_bo)
    if (bo->image != NULL) {
       dri->image->destroyImage(bo->image);
    } else {
-      gbm_dri_bo_unmap(bo);
+      gbm_dri_bo_unmap_dumb(bo);
       memset(&arg, 0, sizeof(arg));
       arg.handle = bo->handle;
       drmIoctl(dri->base.base.fd, DRM_IOCTL_MODE_DESTROY_DUMB, &arg);
@@ -828,7 +828,7 @@ create_dumb(struct gbm_device *gbm,
    bo->handle = create_arg.handle;
    bo->size = create_arg.size;
 
-   if (gbm_dri_bo_map(bo) == NULL)
+   if (gbm_dri_bo_map_dumb(bo) == NULL)
       goto destroy_dumb;
 
    return &bo->base.base;
