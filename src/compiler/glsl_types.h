@@ -740,8 +740,10 @@ struct glsl_type {
     * Compare a record type against another record type.
     *
     * This is useful for matching record types declared across shader stages.
+    * The option to not match locations is to deal with places where the
+    * same struct is defined in a block which has a location set on it.
     */
-   bool record_compare(const glsl_type *b) const;
+   bool record_compare(const glsl_type *b, bool match_locations = true) const;
 
 private:
 

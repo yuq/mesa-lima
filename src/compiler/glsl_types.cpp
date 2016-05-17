@@ -856,7 +856,7 @@ glsl_type::get_array_instance(const glsl_type *base, unsigned array_size)
 
 
 bool
-glsl_type::record_compare(const glsl_type *b) const
+glsl_type::record_compare(const glsl_type *b, bool match_locations) const
 {
    if (this->length != b->length)
       return false;
@@ -887,7 +887,7 @@ glsl_type::record_compare(const glsl_type *b) const
       if (this->fields.structure[i].matrix_layout
          != b->fields.structure[i].matrix_layout)
         return false;
-      if (this->fields.structure[i].location
+      if (match_locations && this->fields.structure[i].location
           != b->fields.structure[i].location)
          return false;
       if (this->fields.structure[i].offset
