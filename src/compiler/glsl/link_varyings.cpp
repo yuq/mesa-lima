@@ -358,7 +358,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
    foreach_in_list(ir_instruction, node, producer->ir) {
       ir_variable *const var = node->as_variable();
 
-      if ((var == NULL) || (var->data.mode != ir_var_shader_out))
+      if (var == NULL || var->data.mode != ir_var_shader_out)
          continue;
 
       if (!var->data.explicit_location
@@ -442,7 +442,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
    foreach_in_list(ir_instruction, node, consumer->ir) {
       ir_variable *const input = node->as_variable();
 
-      if ((input == NULL) || (input->data.mode != ir_var_shader_in))
+      if (input == NULL || input->data.mode != ir_var_shader_in)
          continue;
 
       if (strcmp(input->name, "gl_Color") == 0 && input->data.used) {
@@ -540,7 +540,7 @@ remove_unused_shader_inputs_and_outputs(bool is_separate_shader_object,
    foreach_in_list(ir_instruction, node, sh->ir) {
       ir_variable *const var = node->as_variable();
 
-      if ((var == NULL) || (var->data.mode != int(mode)))
+      if (var == NULL || var->data.mode != int(mode))
          continue;
 
       /* A shader 'in' or 'out' variable is only really an input or output if
@@ -1756,7 +1756,7 @@ populate_consumer_input_sets(void *mem_ctx, exec_list *ir,
    foreach_in_list(ir_instruction, node, ir) {
       ir_variable *const input_var = node->as_variable();
 
-      if ((input_var != NULL) && (input_var->data.mode == ir_var_shader_in)) {
+      if (input_var != NULL && input_var->data.mode == ir_var_shader_in) {
          /* All interface blocks should have been lowered by this point */
          assert(!input_var->type->is_interface());
 
@@ -2062,8 +2062,7 @@ assign_varying_locations(struct gl_context *ctx,
       foreach_in_list(ir_instruction, node, producer->ir) {
          ir_variable *const output_var = node->as_variable();
 
-         if ((output_var == NULL) ||
-             (output_var->data.mode != ir_var_shader_out))
+         if (output_var == NULL || output_var->data.mode != ir_var_shader_out)
             continue;
 
          /* Only geometry shaders can use non-zero streams */
@@ -2111,8 +2110,7 @@ assign_varying_locations(struct gl_context *ctx,
       foreach_in_list(ir_instruction, node, consumer->ir) {
          ir_variable *const input_var = node->as_variable();
 
-         if ((input_var == NULL) ||
-             (input_var->data.mode != ir_var_shader_in))
+         if (input_var == NULL || input_var->data.mode != ir_var_shader_in)
             continue;
 
          matches.record(NULL, input_var);
