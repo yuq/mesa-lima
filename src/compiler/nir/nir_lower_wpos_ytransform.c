@@ -257,6 +257,25 @@ lower_fddy(lower_wpos_ytransform_state *state, nir_alu_instr *fddy)
       fddy->src[0].swizzle[i] = MIN2(i, pt->num_components - 1);
 }
 
+/* Multiply interp_var_at_offset's offset by transform.x to flip it. */
+static void
+lower_interp_var_at_offset(lower_wpos_ytransform_state *state,
+                           nir_intrinsic_instr *interp)
+{
+   nir_builder *b = &state->b;
+   nir_ssa_def *offset;
+   nir_ssa_def *flip_y;
+
+   b->cursor = nir_before_instr(&interp->instr);
+
+   offset = nir_ssa_for_src(b, interp->src[0], 2);
+   flip_y = nir_fmul(b, nir_channel(b, offset, 1),
+                        nir_channel(b, get_transform(state), 0));
+   nir_instr_rewrite_src(&interp->instr, &interp->src[0],
+                         nir_src_for_ssa(nir_vec2(b, nir_channel(b, offset, 0),
+                                                     flip_y)));
+}
+
 static bool
 lower_wpos_ytransform_block(lower_wpos_ytransform_state *state, nir_block *block)
 {
@@ -272,6 +291,8 @@ lower_wpos_ytransform_block(lower_wpos_ytransform_state *state, nir_block *block
                assert(dvar->deref.child == NULL);
                lower_fragcoord(state, intr);
             }
+         } else if (intr->intrinsic == nir_intrinsic_interp_var_at_offset) {
+            lower_interp_var_at_offset(state, intr);
          }
       } else if (instr->type == nir_instr_type_alu) {
          nir_alu_instr *alu = nir_instr_as_alu(instr);
