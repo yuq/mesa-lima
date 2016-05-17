@@ -24,7 +24,11 @@
 ///
 /// \file
 /// Trivial codegen back-end that simply passes through the existing LLVM IR
-/// and formats it so it can be consumed by pipe drivers.
+/// and either formats it so it can be consumed by pipe drivers (if
+/// build_module_bitcode() is used) or serializes so it can be deserialized at
+/// a later point and passed to the actual codegen back-end (if
+/// build_module_library() / parse_module_library() is used), potentially
+/// after linking against other bitcode object files.
 ///
 
 #include "llvm/codegen.hpp"
@@ -73,4 +77,23 @@ clover::llvm::print_module_bitcode(const ::llvm::Module &mod) {
    ::llvm::raw_string_ostream os { s };
    mod.print(os, NULL);
    return os.str();
+}
+
+module
+clover::llvm::build_module_library(const ::llvm::Module &mod) {
+   module m;
+   const auto code = emit_code(mod);
+   m.secs.emplace_back(0, module::section::text, code.size(), code);
+   return m;
+}
+
+std::unique_ptr<::llvm::Module>
+clover::llvm::parse_module_library(const module &m, ::llvm::LLVMContext &ctx,
+                                   std::string &r_log) {
+   auto mod = ::llvm::parseBitcodeFile(::llvm::MemoryBufferRef(
+                                        as_string(m.secs[0].data), " "), ctx);
+   if (!mod)
+      fail(r_log, error(CL_INVALID_PROGRAM), mod.getError().message());
+
+   return std::unique_ptr<::llvm::Module>(std::move(*mod));
 }

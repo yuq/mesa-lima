@@ -46,6 +46,13 @@ namespace clover {
       print_module_bitcode(const ::llvm::Module &mod);
 
       module
+      build_module_library(const ::llvm::Module &mod);
+
+      std::unique_ptr<::llvm::Module>
+      parse_module_library(const module &m, ::llvm::LLVMContext &ctx,
+                           std::string &r_log);
+
+      module
       build_module_native(::llvm::Module &mod, const target &target,
                           const clang::CompilerInstance &c,
                           std::string &r_log);
