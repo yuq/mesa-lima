@@ -386,7 +386,7 @@ vc4_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
         case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
                 return VC4_MAX_TEXTURE_SAMPLERS;
         case PIPE_SHADER_CAP_PREFERRED_IR:
-                return PIPE_SHADER_IR_TGSI;
+                return PIPE_SHADER_IR_NIR;
         case PIPE_SHADER_CAP_SUPPORTED_IRS:
                 return 0;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
@@ -633,6 +633,7 @@ vc4_screen_create(int fd)
         pscreen->get_name = vc4_screen_get_name;
         pscreen->get_vendor = vc4_screen_get_vendor;
         pscreen->get_device_vendor = vc4_screen_get_vendor;
+        pscreen->get_compiler_options = vc4_screen_get_compiler_options;
 
         return pscreen;
 

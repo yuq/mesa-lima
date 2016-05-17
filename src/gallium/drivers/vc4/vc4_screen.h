@@ -100,6 +100,10 @@ struct vc4_bo *
 vc4_screen_bo_from_handle(struct pipe_screen *pscreen,
                           struct winsys_handle *whandle);
 
+const void *
+vc4_screen_get_compiler_options(struct pipe_screen *pscreen,
+                                enum pipe_shader_ir ir, unsigned shader);
+
 extern uint32_t vc4_debug;
 
 void
