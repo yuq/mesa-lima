@@ -1657,7 +1657,7 @@ glXGetFBConfigs(Display * dpy, int screen, int *nelements)
 
    *nelements = 0;
    if (priv && (priv->screens != NULL)
-       && (screen >= 0) && (screen <= ScreenCount(dpy))
+       && (screen >= 0) && (screen < ScreenCount(dpy))
        && (priv->screens[screen]->configs != NULL)
        && (priv->screens[screen]->configs->fbconfigID
 	   != (int) GLX_DONT_CARE)) {
