@@ -28,9 +28,10 @@
 #include "core/object.hpp"
 #include "core/context.hpp"
 #include "core/module.hpp"
-#include "core/compiler.hpp"
 
 namespace clover {
+   typedef std::vector<std::pair<std::string, std::string>> header_map;
+
    class program : public ref_counter, public _cl_program {
    private:
       typedef adaptor_range<

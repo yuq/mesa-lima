@@ -23,9 +23,9 @@
 #ifndef CLOVER_LLVM_INVOCATION_HPP
 #define CLOVER_LLVM_INVOCATION_HPP
 
-#include "core/compiler.hpp"
 #include "core/error.hpp"
 #include "core/module.hpp"
+#include "core/program.hpp"
 #include "pipe/p_defines.h"
 
 namespace clover {
