@@ -257,16 +257,12 @@ brw_wm_debug_recompile(struct brw_context *brw,
                       old_key->nr_color_regions, key->nr_color_regions);
    found |= key_debug(brw, "MRT alpha test or alpha-to-coverage",
                       old_key->replicate_alpha, key->replicate_alpha);
-   found |= key_debug(brw, "rendering to FBO",
-                      old_key->render_to_fbo, key->render_to_fbo);
    found |= key_debug(brw, "fragment color clamping",
                       old_key->clamp_fragment_color, key->clamp_fragment_color);
    found |= key_debug(brw, "multisampled FBO",
                       old_key->multisample_fbo, key->multisample_fbo);
    found |= key_debug(brw, "line smoothing",
                       old_key->line_aa, key->line_aa);
-   found |= key_debug(brw, "renderbuffer height",
-                      old_key->drawable_height, key->drawable_height);
    found |= key_debug(brw, "input slots valid",
                       old_key->input_slots_valid, key->input_slots_valid);
    found |= key_debug(brw, "mrt alpha test function",
@@ -410,7 +406,6 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    const struct gl_program *prog = (struct gl_program *) brw->fragment_program;
    GLuint lookup = 0;
    GLuint line_aa;
-   bool program_uses_dfdy = fp->program.UsesDFdy;
 
    memset(key, 0, sizeof(*key));
 
@@ -486,36 +481,6 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, brw->wm.base.sampler_count,
                                       &key->tex);
-
-   /* _NEW_BUFFERS */
-   /*
-    * Include the draw buffer origin and height so that we can calculate
-    * fragment position values relative to the bottom left of the drawable,
-    * from the incoming screen origin relative position we get as part of our
-    * payload.
-    *
-    * This is only needed for the WM_WPOSXY opcode when the fragment program
-    * uses the gl_FragCoord input.
-    *
-    * We could avoid recompiling by including this as a constant referenced by
-    * our program, but if we were to do that it would also be nice to handle
-    * getting that constant updated at batchbuffer submit time (when we
-    * hold the lock and know where the buffer really is) rather than at emit
-    * time when we don't hold the lock and are just guessing.  We could also
-    * just avoid using this as key data if the program doesn't use
-    * fragment.position.
-    *
-    * For DRI2 the origin_x/y will always be (0,0) but we still need the
-    * drawable height in order to invert the Y axis.
-    */
-   if (fp->program.Base.InputsRead & VARYING_BIT_POS) {
-      key->drawable_height = _mesa_geometric_height(ctx->DrawBuffer);
-   }
-
-   if ((fp->program.Base.InputsRead & VARYING_BIT_POS) ||
-       program_uses_dfdy || prog->nir->info.uses_interp_var_at_offset) {
-      key->render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
-   }
 
    /* _NEW_BUFFERS */
    key->nr_color_regions = ctx->DrawBuffer->_NumColorDrawBuffers;
@@ -595,7 +560,6 @@ brw_fs_precompile(struct gl_context *ctx,
 
    struct gl_fragment_program *fp = (struct gl_fragment_program *) prog;
    struct brw_fragment_program *bfp = brw_fragment_program(fp);
-   bool program_uses_dfdy = fp->UsesDFdy;
 
    memset(&key, 0, sizeof(key));
 
@@ -617,18 +581,9 @@ brw_fs_precompile(struct gl_context *ctx,
 
    brw_setup_tex_for_precompile(brw, &key.tex, &fp->Base);
 
-   if (fp->Base.InputsRead & VARYING_BIT_POS) {
-      key.drawable_height = ctx->DrawBuffer->Height;
-   }
-
    key.nr_color_regions = _mesa_bitcount_64(fp->Base.OutputsWritten &
          ~(BITFIELD64_BIT(FRAG_RESULT_DEPTH) |
          BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
-
-   if ((fp->Base.InputsRead & VARYING_BIT_POS) || program_uses_dfdy) {
-      key.render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer) ||
-                          key.nr_color_regions > 1;
-   }
 
    key.program_string_id = bfp->id;
 

@@ -272,10 +272,6 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
    /* XXX Vulkan doesn't appear to specify */
    key->clamp_fragment_color = false;
 
-   /* Vulkan always specifies upper-left coordinates */
-   key->drawable_height = 0;
-   key->render_to_fbo = false;
-
    if (extra && extra->color_attachment_count >= 0) {
       key->nr_color_regions = extra->color_attachment_count;
    } else {
