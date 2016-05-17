@@ -1132,6 +1132,9 @@ use_shader_program(struct gl_context *ctx, gl_shader_stage stage,
    if ((shProg != NULL) && (shProg->_LinkedShaders[stage] == NULL))
       shProg = NULL;
 
+   if (shProg)
+      _mesa_shader_program_init_subroutine_defaults(shProg);
+
    if (*target != shProg) {
       /* Program is current, flush it */
       if (shTarget == ctx->_Shader) {
@@ -1176,7 +1179,6 @@ _mesa_use_program(struct gl_context *ctx, struct gl_shader_program *shProg)
       use_shader_program(ctx, i, shProg, &ctx->Shader);
    _mesa_active_program(ctx, shProg, "glUseProgram");
 
-   _mesa_shader_program_init_subroutine_defaults(shProg);
    if (ctx->Driver.UseProgram)
       ctx->Driver.UseProgram(ctx, shProg);
 }
