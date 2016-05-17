@@ -4790,7 +4790,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
           */
          int next = last;
          for (int i = next - 1; i >= 0; i--) {
-            if (prog->_LinkedShaders[i] == NULL)
+            if (prog->_LinkedShaders[i] == NULL && i != 0)
                continue;
 
             gl_shader *const sh_i = prog->_LinkedShaders[i];
@@ -4806,8 +4806,11 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                       tfeedback_decls);
 
             /* This must be done after all dead varyings are eliminated. */
-            if (!check_against_output_limit(ctx, prog, sh_i))
-               goto done;
+            if (sh_i != NULL) {
+               if (!check_against_output_limit(ctx, prog, sh_i)) {
+                  goto done;
+               }
+            }
             if (!check_against_input_limit(ctx, prog, sh_next))
                goto done;
 
