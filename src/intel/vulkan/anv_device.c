@@ -502,7 +502,7 @@ void anv_GetPhysicalDeviceProperties(
       .maxSamplerAnisotropy                     = 16,
       .maxViewports                             = MAX_VIEWPORTS,
       .maxViewportDimensions                    = { (1 << 14), (1 << 14) },
-      .viewportBoundsRange                      = { -16384.0, 16384.0 },
+      .viewportBoundsRange                      = { INT16_MIN, INT16_MAX },
       .viewportSubPixelBits                     = 13, /* We take a float? */
       .minMemoryMapAlignment                    = 4096, /* A page */
       .minTexelBufferOffsetAlignment            = 1,
