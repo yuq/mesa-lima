@@ -4745,8 +4745,6 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case BRW_OPCODE_F16TO32:
    case BRW_OPCODE_BFREV:
    case BRW_OPCODE_BFE:
-   case BRW_OPCODE_BFI1:
-   case BRW_OPCODE_BFI2:
    case BRW_OPCODE_ADD:
    case BRW_OPCODE_MUL:
    case BRW_OPCODE_AVG:
@@ -4781,6 +4779,14 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
                                   !inst->dst.is_null() ? 8 : ~0);
       return MIN2(max_width, get_fpu_lowered_simd_width(devinfo, inst));
    }
+   case BRW_OPCODE_BFI1:
+   case BRW_OPCODE_BFI2:
+      /* The Haswell WaForceSIMD8ForBFIInstruction workaround says that we
+       * should
+       *  "Force BFI instructions to be executed always in SIMD8."
+       */
+      return MIN2(devinfo->is_haswell ? 8 : ~0u,
+                  get_fpu_lowered_simd_width(devinfo, inst));
 
    case SHADER_OPCODE_RCP:
    case SHADER_OPCODE_RSQ:
