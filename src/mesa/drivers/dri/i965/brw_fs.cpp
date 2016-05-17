@@ -4825,6 +4825,35 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
        */
       return (devinfo->gen == 4 ? 16 : MIN2(16, inst->exec_size));
 
+   case FS_OPCODE_DDY_FINE:
+      /* The implementation of this virtual opcode may require emitting
+       * compressed Align16 instructions, which are severely limited on some
+       * generations.
+       *
+       * From the Ivy Bridge PRM, volume 4 part 3, section 3.3.9 (Register
+       * Region Restrictions):
+       *
+       *  "In Align16 access mode, SIMD16 is not allowed for DW operations
+       *   and SIMD8 is not allowed for DF operations."
+       *
+       * In this context, "DW operations" means "operations acting on 32-bit
+       * values", so it includes operations on floats.
+       *
+       * Gen4 has a similar restriction.  From the i965 PRM, section 11.5.3
+       * (Instruction Compression -> Rules and Restrictions):
+       *
+       *  "A compressed instruction must be in Align1 access mode. Align16
+       *   mode instructions cannot be compressed."
+       *
+       * Similar text exists in the g45 PRM.
+       *
+       * Empirically, compressed align16 instructions using odd register
+       * numbers don't appear to work on Sandybridge either.
+       */
+      return (devinfo->gen == 4 || devinfo->gen == 6 ||
+              (devinfo->gen == 7 && !devinfo->is_haswell) ?
+              MIN2(8, inst->exec_size) : MIN2(16, inst->exec_size));
+
    case SHADER_OPCODE_MULH:
       /* MULH is lowered to the MUL/MACH sequence using the accumulator, which
        * is 8-wide on Gen7+.
