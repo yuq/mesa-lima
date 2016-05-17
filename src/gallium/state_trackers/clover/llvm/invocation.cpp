@@ -1,5 +1,9 @@
 //
-// Copyright 2012 Francisco Jerez
+// Copyright 2012-2016 Francisco Jerez
+// Copyright 2012-2016 Advanced Micro Devices, Inc.
+// Copyright 2014-2016 Jan Vesely
+// Copyright 2014-2015 Serge Martin
+// Copyright 2015 Zoltan Gilian
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
