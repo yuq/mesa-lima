@@ -41,6 +41,7 @@
 #include "sb_bc.h"
 #include "sb_shader.h"
 #include "sb_pass.h"
+#include "util/macros.h"
 
 namespace r600_sb {
 

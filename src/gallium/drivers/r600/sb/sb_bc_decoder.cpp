@@ -260,7 +260,7 @@ int bc_decoder::decode_cf_mem(unsigned & i, bc_cf& bc) {
 		bc.end_of_program = w1.get_END_OF_PROGRAM();
 		bc.valid_pixel_mode = w1.get_VALID_PIXEL_MODE();
 		bc.mark = w1.get_MARK();
-		bc.array_size = w1.get_ARRAY_SIZE();
+		bc.array_size = w1.get_ARR_SIZE();
 		bc.comp_mask = w1.get_COMP_MASK();
 
 	} else if (ctx.is_cayman()) {
@@ -269,7 +269,7 @@ int bc_decoder::decode_cf_mem(unsigned & i, bc_cf& bc) {
 		bc.burst_count = w1.get_BURST_COUNT();
 		bc.mark = w1.get_MARK();
 		bc.valid_pixel_mode = w1.get_VALID_PIXEL_MODE();
-		bc.array_size = w1.get_ARRAY_SIZE();
+		bc.array_size = w1.get_ARR_SIZE();
 		bc.comp_mask = w1.get_COMP_MASK();
 
 	} else { // r67
@@ -279,7 +279,7 @@ int bc_decoder::decode_cf_mem(unsigned & i, bc_cf& bc) {
 		bc.end_of_program = w1.get_END_OF_PROGRAM();
 		bc.valid_pixel_mode = w1.get_VALID_PIXEL_MODE();
 		bc.whole_quad_mode = w1.get_WHOLE_QUAD_MODE();
-		bc.array_size = w1.get_ARRAY_SIZE();
+		bc.array_size = w1.get_ARR_SIZE();
 		bc.comp_mask = w1.get_COMP_MASK();
 		bc.whole_quad_mode = w1.get_WHOLE_QUAD_MODE();
 	}
