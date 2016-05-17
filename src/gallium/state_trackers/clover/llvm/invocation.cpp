@@ -195,13 +195,11 @@ namespace {
       return c;
    }
 
-   llvm::Module *
-   compile_llvm(LLVMContext &ctx, clang::CompilerInstance &c,
-                const std::string &source, const header_map &headers,
-                const std::string &name, const std::string &target,
-                const std::string &opts, std::string &r_log) {
-      clang::EmitLLVMOnlyAction act(&ctx);
-
+   std::unique_ptr<Module>
+   compile(LLVMContext &ctx, clang::CompilerInstance &c,
+           const std::string &name, const std::string &source,
+           const header_map &headers, const std::string &target,
+           const std::string &opts, std::string &r_log) {
       c.getFrontendOpts().ProgramAction = clang::frontend::EmitLLVMOnly;
       c.getHeaderSearchOpts().UseBuiltinIncludes = true;
       c.getHeaderSearchOpts().UseStandardSystemIncludes = true;
@@ -210,32 +208,27 @@ namespace {
       // Add libclc generic search path
       c.getHeaderSearchOpts().AddPath(LIBCLC_INCLUDEDIR,
                                       clang::frontend::Angled,
-                                      false, false
-                                      );
+                                      false, false);
 
       // Add libclc include
       c.getPreprocessorOpts().Includes.push_back("clc/clc.h");
 
       // clc.h requires that this macro be defined:
       c.getPreprocessorOpts().addMacroDef("cl_clang_storage_class_specifiers");
-
-      c.getPreprocessorOpts().addRemappedFile(name,
-                                              llvm::MemoryBuffer::getMemBuffer(source).release());
+      c.getPreprocessorOpts().addRemappedFile(
+              name, ::llvm::MemoryBuffer::getMemBuffer(source).release());
 
       if (headers.size()) {
          const std::string tmp_header_path = "/tmp/clover/";
 
          c.getHeaderSearchOpts().AddPath(tmp_header_path,
                                          clang::frontend::Angled,
-                                         false, false
-                                         );
+                                         false, false);
 
-         for (header_map::const_iterator it = headers.begin();
-              it != headers.end(); ++it) {
-            const std::string path = tmp_header_path + std::string(it->first);
-            c.getPreprocessorOpts().addRemappedFile(path,
-                    llvm::MemoryBuffer::getMemBuffer(it->second.c_str()).release());
-         }
+         for (const auto &header : headers)
+            c.getPreprocessorOpts().addRemappedFile(
+               tmp_header_path + header.first,
+               ::llvm::MemoryBuffer::getMemBuffer(header.second).release());
       }
 
       // Tell clang to link this file before performing any
@@ -249,10 +242,11 @@ namespace {
                                     LIBCLC_LIBEXECDIR + target + ".bc");
 
       // Compile the code
+      clang::EmitLLVMOnlyAction act(&ctx);
       if (!c.ExecuteAction(act))
          throw compile_error();
 
-      return act.takeModule().release();
+      return act.takeModule();
    }
 
    std::vector<llvm::Function *>
@@ -794,10 +788,9 @@ clover::compile_program_llvm(const std::string &source,
    // CompilerInvocation class to recognize it as an OpenCL source file.
    const auto c = create_compiler_instance(target, tokenize(opts + " input.cl"),
                                            r_log);
-   Module *mod = compile_llvm(*ctx, *c, source, headers, "input.cl",
-                              target, opts, r_log);
+   auto mod = compile(*ctx, *c, "input.cl", source, headers, target, opts, r_log);
 
-   optimize(mod, c->getCodeGenOpts().OptimizationLevel);
+   optimize(&*mod, c->getCodeGenOpts().OptimizationLevel);
 
    if (get_debug_flags() & DBG_LLVM) {
       std::string log;
@@ -817,17 +810,16 @@ clover::compile_program_llvm(const std::string &source,
          m = module();
          break;
       case PIPE_SHADER_IR_LLVM:
-         m = build_module_llvm(mod, *c);
+         m = build_module_llvm(&*mod, *c);
          break;
       case PIPE_SHADER_IR_NATIVE: {
-         std::vector<char> code = compile_native(mod, target,
+         std::vector<char> code = compile_native(&*mod, target,
                                                  get_debug_flags() & DBG_ASM,
                                                  r_log);
-         m = build_module_native(code, mod, *c, r_log);
+         m = build_module_native(code, &*mod, *c, r_log);
          break;
       }
    }
-   // The user takes ownership of the module.
-   delete mod;
+
    return m;
 }
