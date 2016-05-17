@@ -212,8 +212,7 @@ struct brw_blorp_wm_inputs
 {
    struct brw_blorp_discard_rect discard_rect;
    struct brw_blorp_rect_grid rect_grid;
-   struct brw_blorp_coord_transform x_transform;
-   struct brw_blorp_coord_transform y_transform;
+   struct brw_blorp_coord_transform coord_transform[2];
 
    /* Minimum layer setting works for all the textures types but texture_3d
     * for which the setting has no effect. Use the z-coordinate instead.

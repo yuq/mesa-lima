@@ -333,10 +333,7 @@ struct brw_blorp_blit_vars {
    /* Input values from brw_blorp_wm_inputs */
    nir_variable *u_discard_rect;
    nir_variable *u_rect_grid;
-   struct {
-      nir_variable *multiplier;
-      nir_variable *offset;
-   } u_x_transform, u_y_transform;
+   nir_variable *u_coord_transform;
    nir_variable *u_src_z;
 
    /* gl_FragCoord */
@@ -360,10 +357,7 @@ brw_blorp_blit_vars_init(nir_builder *b, struct brw_blorp_blit_vars *v,
 
    LOAD_INPUT(discard_rect, glsl_vec4_type())
    LOAD_INPUT(rect_grid, glsl_vec4_type())
-   LOAD_INPUT(x_transform.multiplier, glsl_float_type())
-   LOAD_INPUT(x_transform.offset, glsl_float_type())
-   LOAD_INPUT(y_transform.multiplier, glsl_float_type())
-   LOAD_INPUT(y_transform.offset, glsl_float_type())
+   LOAD_INPUT(coord_transform, glsl_vec4_type())
    LOAD_INPUT(src_z, glsl_uint_type())
 
 #undef LOAD_INPUT
@@ -401,10 +395,12 @@ nir_ssa_def *
 blorp_blit_apply_transform(nir_builder *b, nir_ssa_def *src_pos,
                            struct brw_blorp_blit_vars *v)
 {
-   nir_ssa_def *offset = nir_vec2(b, nir_load_var(b, v->u_x_transform.offset),
-                                     nir_load_var(b, v->u_y_transform.offset));
-   nir_ssa_def *mul = nir_vec2(b, nir_load_var(b, v->u_x_transform.multiplier),
-                                  nir_load_var(b, v->u_y_transform.multiplier));
+   nir_ssa_def *coord_transform = nir_load_var(b, v->u_coord_transform);
+
+   nir_ssa_def *offset = nir_vec2(b, nir_channel(b, coord_transform, 1),
+                                     nir_channel(b, coord_transform, 3));
+   nir_ssa_def *mul = nir_vec2(b, nir_channel(b, coord_transform, 0),
+                                  nir_channel(b, coord_transform, 2));
 
    return nir_ffma(b, src_pos, mul, offset);
 }
@@ -1847,9 +1843,9 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    params.wm_inputs.rect_grid.y1 =
       minify(src_mt->logical_height0, src_level) * wm_prog_key.y_scale - 1.0f;
 
-   brw_blorp_setup_coord_transform(&params.wm_inputs.x_transform,
+   brw_blorp_setup_coord_transform(&params.wm_inputs.coord_transform[0],
                                    src_x0, src_x1, dst_x0, dst_x1, mirror_x);
-   brw_blorp_setup_coord_transform(&params.wm_inputs.y_transform,
+   brw_blorp_setup_coord_transform(&params.wm_inputs.coord_transform[1],
                                    src_y0, src_y1, dst_y0, dst_y1, mirror_y);
 
    if (brw->gen >= 8 && params.src.mt->target == GL_TEXTURE_3D) {
