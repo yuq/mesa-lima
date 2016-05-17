@@ -4741,9 +4741,9 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    /* If there is no fragment shader we need to set transform feedback.
     *
-    * For SSO we need also need to assign output locations, we assign them
-    * here because we need to do it for both single stage programs and multi
-    * stage programs.
+    * For SSO we also need to assign output locations.  We assign them here
+    * because we need to do it for both single stage programs and multi stage
+    * programs.
     */
    if (last < MESA_SHADER_FRAGMENT &&
        (num_tfeedback_decls != 0 || prog->SeparateShader)) {

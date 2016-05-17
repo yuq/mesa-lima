@@ -1278,8 +1278,8 @@ varying_matches::~varying_matches()
 
 
 /**
- * Packing is always safe on individual arrays, structure and matices. It is
- * also safe if the varying is only used for transform feedback.
+ * Packing is always safe on individual arrays, structures, and matrices. It
+ * is also safe if the varying is only used for transform feedback.
  */
 bool
 varying_matches::is_varying_packing_safe(const glsl_type *type,
@@ -1980,10 +1980,10 @@ assign_varying_locations(struct gl_context *ctx,
 
    /* Disable varying packing for GL 4.4+ as there is no guarantee
     * that interpolation qualifiers will match between shaders in these
-    * versions. We also disable packing on outerward facing interfaces for
+    * versions. We also disable packing on outward facing interfaces for
     * SSO because in ES we need to retain the unpacked varying information
     * for draw time validation. For desktop GL we could allow packing for
-    * versions < 4.4 but its just safer not to do packing.
+    * versions < 4.4 but it's just safer not to do packing.
     *
     * Packing is still enabled on individual arrays, structs, and matrices as
     * these are required by the transform feedback code and it is still safe
@@ -2080,7 +2080,7 @@ assign_varying_locations(struct gl_context *ctx,
                                        consumer_interface_inputs,
                                        consumer_inputs_with_locations);
 
-         /* If a matching input variable was found, add this ouptut (and the
+         /* If a matching input variable was found, add this output (and the
           * input) to the set.  If this is a separable program and there is no
           * consumer stage, add the output.
           *
