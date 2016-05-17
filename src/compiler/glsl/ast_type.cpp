@@ -175,9 +175,12 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    /* Geometry shaders can have several layout qualifiers
     * assigning different stream values.
     */
-   if (state->stage == MESA_SHADER_GEOMETRY)
+   if (state->stage == MESA_SHADER_GEOMETRY) {
       allowed_duplicates_mask.flags.i |=
          stream_layout_mask.flags.i;
+      input_layout_mask.flags.i |=
+         stream_layout_mask.flags.i;
+   }
 
    if (is_single_layout_merge && !state->has_enhanced_layouts() &&
        (this->flags.i & q.flags.i & ~allowed_duplicates_mask.flags.i) != 0) {
