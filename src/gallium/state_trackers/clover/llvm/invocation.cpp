@@ -25,6 +25,7 @@
 //
 
 #include "llvm/compat.hpp"
+#include "llvm/util.hpp"
 #include "core/compiler.hpp"
 #include "util/algorithm.hpp"
 
@@ -86,66 +87,6 @@ namespace {
    //       get rid of this later.
    namespace llvm {
       using namespace ::llvm;
-   }
-
-   template<typename E> void
-   fail(std::string &r_log, E &&e, const std::string &s) {
-      r_log += s;
-      throw e;
-   }
-
-   inline std::vector<std::string>
-   tokenize(const std::string &s) {
-      std::vector<std::string> ss;
-      std::istringstream iss(s);
-      std::string t;
-
-      while (getline(iss, t, ' '))
-         ss.push_back(t);
-
-      return ss;
-   }
-
-   struct target {
-      target(const std::string &s) :
-         cpu(s.begin(), s.begin() + s.find_first_of("-")),
-         triple(s.begin() + s.find_first_of("-") + 1, s.end()) {}
-
-      std::string cpu;
-      std::string triple;
-   };
-
-   namespace debug {
-      enum flag {
-         clc = 1 << 0,
-         llvm = 1 << 1,
-         native = 1 << 2
-      };
-
-      inline bool
-      has_flag(flag f) {
-         static const struct debug_named_value debug_options[] = {
-            { "clc", clc, "Dump the OpenCL C code for all kernels." },
-            { "llvm", llvm, "Dump the generated LLVM IR for all kernels." },
-            { "native", native, "Dump kernel assembly code for targets "
-              "specifying PIPE_SHADER_IR_NATIVE" },
-            DEBUG_NAMED_VALUE_END
-         };
-         static const unsigned flags =
-            debug_get_flags_option("CLOVER_DEBUG", debug_options, 0);
-
-         return flags & f;
-      }
-
-      inline void
-      log(const std::string &suffix, const std::string &s) {
-         const std::string path = debug_get_option("CLOVER_DEBUG_FILE",
-                                                   "stderr");
-         if (path == "stderr")
-            std::cerr << s;
-         else
-            std::ofstream(path + suffix, std::ios::app) << s;
-      }
    }
 
    void

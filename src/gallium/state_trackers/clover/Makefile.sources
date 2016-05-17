@@ -55,7 +55,8 @@ CPP_SOURCES := \
 
 LLVM_SOURCES := \
 	llvm/compat.hpp \
-	llvm/invocation.cpp
+	llvm/invocation.cpp \
+	llvm/util.hpp
 
 TGSI_SOURCES := \
 	tgsi/compiler.cpp
