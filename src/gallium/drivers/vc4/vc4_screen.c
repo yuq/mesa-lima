@@ -91,6 +91,7 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 {
         switch (param) {
                 /* Supported features (boolean caps). */
+        case PIPE_CAP_VERTEX_COLOR_CLAMPED:
         case PIPE_CAP_VERTEX_COLOR_UNCLAMPED:
         case PIPE_CAP_FRAGMENT_COLOR_CLAMPED:
         case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
@@ -157,7 +158,6 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
         case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER:
         case PIPE_CAP_TGSI_CAN_COMPACT_CONSTANTS:
-        case PIPE_CAP_VERTEX_COLOR_CLAMPED:
         case PIPE_CAP_USER_VERTEX_BUFFERS:
         case PIPE_CAP_QUERY_PIPELINE_STATISTICS:
         case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:

@@ -1840,6 +1840,9 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         if (c->fs_key && c->fs_key->light_twoside)
                 NIR_PASS_V(c->s, nir_lower_two_sided_color);
 
+        if (c->vs_key && c->vs_key->clamp_color)
+                NIR_PASS_V(c->s, nir_lower_clamp_color_outputs);
+
         if (stage == QSTAGE_FRAG)
                 NIR_PASS_V(c->s, nir_lower_clip_fs, c->key->ucp_enables);
         else
@@ -2214,6 +2217,7 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
         vc4_setup_shared_key(vc4, &key->base, &vc4->verttex);
         key->base.shader_state = vc4->prog.bind_vs;
         key->compiled_fs_id = vc4->prog.fs->program_id;
+        key->clamp_color = vc4->rasterizer->base.clamp_vertex_color;
 
         for (int i = 0; i < ARRAY_SIZE(key->attr_formats); i++)
                 key->attr_formats[i] = vc4->vtx->pipe[i].src_format;
