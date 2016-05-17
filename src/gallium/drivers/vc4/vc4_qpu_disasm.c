@@ -346,7 +346,7 @@ print_add_op(uint64_t inst)
         if (is_mov)
                 fprintf(stderr, "mov");
         else
-                fprintf(stderr, DESC(qpu_add_opcodes, op_add));
+                fprintf(stderr, "%s", DESC(qpu_add_opcodes, op_add));
 
         if ((inst & QPU_SF) && op_add != QPU_A_NOP)
                 fprintf(stderr, ".sf");
