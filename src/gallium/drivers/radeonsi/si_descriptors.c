@@ -505,13 +505,89 @@ si_disable_shader_image(struct si_images_info *images, unsigned slot)
 	}
 }
 
+static void si_set_shader_image(struct si_context *ctx,
+				struct si_images_info *images,
+				unsigned slot, struct pipe_image_view *view)
+{
+	struct si_screen *screen = ctx->screen;
+	struct r600_resource *res;
+
+	if (!view || !view->resource) {
+		si_disable_shader_image(images, slot);
+		return;
+	}
+
+	res = (struct r600_resource *)view->resource;
+	util_copy_image_view(&images->views[slot], view);
+
+	si_sampler_view_add_buffer(ctx, &res->b.b,
+				   RADEON_USAGE_READWRITE);
+
+	if (res->b.b.target == PIPE_BUFFER) {
+		si_make_buffer_descriptor(screen, res,
+					  view->format,
+					  view->u.buf.first_element,
+					  view->u.buf.last_element,
+					  images->desc.list + slot * 8);
+		images->compressed_colortex_mask &= ~(1 << slot);
+	} else {
+		static const unsigned char swizzle[4] = { 0, 1, 2, 3 };
+		struct r600_texture *tex = (struct r600_texture *)res;
+		unsigned level;
+		unsigned width, height, depth;
+		uint32_t *desc = images->desc.list + slot * 8;
+
+		assert(!tex->is_depth);
+		assert(tex->fmask.size == 0);
+
+		if (tex->dcc_offset &&
+		    view->access & PIPE_IMAGE_ACCESS_WRITE)
+			r600_texture_disable_dcc(&screen->b, tex);
+
+		if (is_compressed_colortex(tex)) {
+			images->compressed_colortex_mask |= 1 << slot;
+		} else {
+			images->compressed_colortex_mask &= ~(1 << slot);
+		}
+
+		if (tex->dcc_offset &&
+		    p_atomic_read(&tex->framebuffers_bound))
+			ctx->need_check_render_feedback = true;
+
+		/* Always force the base level to the selected level.
+		 *
+		 * This is required for 3D textures, where otherwise
+		 * selecting a single slice for non-layered bindings
+		 * fails. It doesn't hurt the other targets.
+		 */
+		level = view->u.tex.level;
+		width = u_minify(res->b.b.width0, level);
+		height = u_minify(res->b.b.height0, level);
+		depth = u_minify(res->b.b.depth0, level);
+
+		si_make_texture_descriptor(screen, tex,
+					   false, res->b.b.target,
+					   view->format, swizzle,
+					   0, 0,
+					   view->u.tex.first_layer,
+					   view->u.tex.last_layer,
+					   width, height, depth,
+					   desc, NULL);
+		si_set_mutable_tex_desc_fields(tex, tex->surface.level, level,
+					       util_format_get_blockwidth(view->format),
+					       false, desc);
+	}
+
+	images->desc.enabled_mask |= 1u << slot;
+	images->desc.dirty_mask |= 1u << slot;
+}
+
 static void
 si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 		     unsigned start_slot, unsigned count,
 		     struct pipe_image_view *views)
 {
 	struct si_context *ctx = (struct si_context *)pipe;
-	struct si_screen *screen = ctx->screen;
 	struct si_images_info *images = &ctx->images[shader];
 	unsigned i, slot;
 
@@ -522,77 +598,12 @@ si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 
 	assert(start_slot + count <= SI_NUM_IMAGES);
 
-	for (i = 0, slot = start_slot; i < count; ++i, ++slot) {
-		struct r600_resource *res;
-
-		if (!views || !views[i].resource) {
-			si_disable_shader_image(images, slot);
-			continue;
-		}
-
-		res = (struct r600_resource *)views[i].resource;
-		util_copy_image_view(&images->views[slot], &views[i]);
-
-		si_sampler_view_add_buffer(ctx, &res->b.b,
-					   RADEON_USAGE_READWRITE);
-
-		if (res->b.b.target == PIPE_BUFFER) {
-			si_make_buffer_descriptor(screen, res,
-						  views[i].format,
-						  views[i].u.buf.first_element,
-						  views[i].u.buf.last_element,
-						  images->desc.list + slot * 8);
-			images->compressed_colortex_mask &= ~(1 << slot);
-		} else {
-			static const unsigned char swizzle[4] = { 0, 1, 2, 3 };
-			struct r600_texture *tex = (struct r600_texture *)res;
-			unsigned level;
-			unsigned width, height, depth;
-			uint32_t *desc = images->desc.list + slot * 8;
-
-			assert(!tex->is_depth);
-			assert(tex->fmask.size == 0);
-
-			if (tex->dcc_offset &&
-			    views[i].access & PIPE_IMAGE_ACCESS_WRITE)
-				r600_texture_disable_dcc(&screen->b, tex);
-
-			if (is_compressed_colortex(tex)) {
-				images->compressed_colortex_mask |= 1 << slot;
-			} else {
-				images->compressed_colortex_mask &= ~(1 << slot);
-			}
-
-			if (tex->dcc_offset &&
-			    p_atomic_read(&tex->framebuffers_bound))
-				ctx->need_check_render_feedback = true;
-
-			/* Always force the base level to the selected level.
-			 *
-			 * This is required for 3D textures, where otherwise
-			 * selecting a single slice for non-layered bindings
-			 * fails. It doesn't hurt the other targets.
-			 */
-			level = views[i].u.tex.level;
-			width = u_minify(res->b.b.width0, level);
-			height = u_minify(res->b.b.height0, level);
-			depth = u_minify(res->b.b.depth0, level);
-
-			si_make_texture_descriptor(screen, tex,
-						   false, res->b.b.target,
-						   views[i].format, swizzle,
-						   0, 0,
-						   views[i].u.tex.first_layer, views[i].u.tex.last_layer,
-						   width, height, depth,
-						   desc, NULL);
-			si_set_mutable_tex_desc_fields(tex, tex->surface.level,
-						       level,
-						       util_format_get_blockwidth(views[i].format),
-						       false, desc);
-		}
-
-		images->desc.enabled_mask |= 1u << slot;
-		images->desc.dirty_mask |= 1u << slot;
+	if (views) {
+		for (i = 0, slot = start_slot; i < count; ++i, ++slot)
+			si_set_shader_image(ctx, images, slot, &views[i]);
+	} else {
+		for (i = 0, slot = start_slot; i < count; ++i, ++slot)
+			si_set_shader_image(ctx, images, slot, NULL);
 	}
 }
 
