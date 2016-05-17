@@ -703,7 +703,16 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
             {
                 ///@ todo: don't need to genererate input coverage 2x if input coverage and centroid
                 RDTSC_START(BEBarycentric);
-                CalcCentroidBarycentrics<T>(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
+                if(T::bIsStandardPattern)
+                {
+                    CalcCentroidPos<T>(psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
+                }
+                else
+                {
+                    psContext.vX.centroid = _simd_add_ps(psContext.vX.UL, _simd_set1_ps(0.5f));
+                    psContext.vY.centroid = _simd_add_ps(psContext.vY.UL, _simd_set1_ps(0.5f));
+                }
+                CalcCentroidBarycentrics(coeffs, psContext, psContext.vX.UL, psContext.vY.UL);
                 RDTSC_STOP(BEBarycentric, 0, 0);
             }
 
@@ -907,7 +916,16 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             {
                 ///@ todo: don't need to genererate input coverage 2x if input coverage and centroid
                 RDTSC_START(BEBarycentric);
-                CalcCentroidBarycentrics<T>(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
+                if(T::bIsStandardPattern)
+                {
+                    CalcCentroidPos<T>(psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
+                }
+                else
+                {
+                    psContext.vX.centroid = _simd_add_ps(psContext.vX.UL, _simd_set1_ps(0.5f));
+                    psContext.vY.centroid = _simd_add_ps(psContext.vY.UL, _simd_set1_ps(0.5f));
+                }
+                CalcCentroidBarycentrics(coeffs, psContext, psContext.vX.UL, psContext.vY.UL);
                 RDTSC_STOP(BEBarycentric, 0, 0);
             }
 
