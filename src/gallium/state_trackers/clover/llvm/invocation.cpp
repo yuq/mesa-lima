@@ -96,6 +96,18 @@ namespace {
        }
    }
 
+   inline std::vector<std::string>
+   tokenize(const std::string &s) {
+      std::vector<std::string> ss;
+      std::istringstream iss(s);
+      std::string t;
+
+      while (getline(iss, t, ' '))
+         ss.push_back(t);
+
+      return ss;
+   }
+
    struct target {
       target(const std::string &s) :
          cpu(s.begin(), s.begin() + s.find_first_of("-")),
@@ -117,18 +129,7 @@ namespace {
       std::string log;
       llvm::raw_string_ostream s_log(log);
 
-      // Parse the compiler options:
-      std::vector<std::string> opts_array;
-      std::istringstream ss(opts);
-
-      while (!ss.eof()) {
-         std::string opt;
-         getline(ss, opt, ' ');
-         opts_array.push_back(opt);
-      }
-
-      opts_array.push_back(name);
-
+      const std::vector<std::string> opts_array = tokenize(opts + " " + name);
       std::vector<const char *> opts_carray;
       for (unsigned i = 0; i < opts_array.size(); i++) {
          opts_carray.push_back(opts_array.at(i).c_str());
