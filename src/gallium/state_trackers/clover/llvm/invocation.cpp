@@ -433,6 +433,14 @@ namespace {
                                  c);
    }
 
+   std::string
+   print_module_bitcode(const ::llvm::Module &mod) {
+      std::string s;
+      ::llvm::raw_string_ostream os { s };
+      mod.print(os, NULL);
+      return os.str();
+   }
+
    std::vector<char>
    emit_code(::llvm::Module &mod, const target &target,
              TargetMachine::CodeGenFileType ft,
@@ -572,13 +580,8 @@ clover::compile_program_llvm(const std::string &source,
 
    optimize(*mod, c->getCodeGenOpts().OptimizationLevel);
 
-   if (has_flag(debug::llvm)) {
-      std::string log;
-      raw_string_ostream s_log(log);
-      mod->print(s_log, NULL);
-      s_log.flush();
-      debug::log(".ll", log);
-    }
+   if (has_flag(debug::llvm))
+      debug::log(".ll", print_module_bitcode(*mod));
 
    module m;
    // Build the clover::module
