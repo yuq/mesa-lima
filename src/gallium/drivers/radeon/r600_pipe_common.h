@@ -368,6 +368,12 @@ struct r600_common_screen {
 	 */
 	unsigned			compressed_colortex_counter;
 
+	/* Atomically increment this counter when an existing texture's
+	 * backing buffer or tile mode parameters have changed that requires
+	 * recomputation of shader descriptors.
+	 */
+	unsigned			dirty_tex_descriptor_counter;
+
 	void (*query_opaque_metadata)(struct r600_common_screen *rscreen,
 				      struct r600_texture *rtex,
 				      struct radeon_bo_metadata *md);
@@ -460,6 +466,7 @@ struct r600_common_context {
 	unsigned			gpu_reset_counter;
 	unsigned			last_dirty_fb_counter;
 	unsigned			last_compressed_colortex_counter;
+	unsigned			last_dirty_tex_descriptor_counter;
 
 	struct u_upload_mgr		*uploader;
 	struct u_suballocator		*allocator_so_filled_size;

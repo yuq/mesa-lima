@@ -324,11 +324,12 @@ void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 
 static void si_set_sampler_view(struct si_context *sctx,
 				struct si_sampler_views *views,
-				unsigned slot, struct pipe_sampler_view *view)
+				unsigned slot, struct pipe_sampler_view *view,
+				bool disallow_early_out)
 {
 	struct si_sampler_view *rview = (struct si_sampler_view*)view;
 
-	if (views->views[slot] == view)
+	if (views->views[slot] == view && !disallow_early_out)
 		return;
 
 	if (view) {
@@ -398,11 +399,11 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		if (!views || !views[i]) {
 			samplers->depth_texture_mask &= ~(1u << slot);
 			samplers->compressed_colortex_mask &= ~(1u << slot);
-			si_set_sampler_view(sctx, &samplers->views, slot, NULL);
+			si_set_sampler_view(sctx, &samplers->views, slot, NULL, false);
 			continue;
 		}
 
-		si_set_sampler_view(sctx, &samplers->views, slot, views[i]);
+		si_set_sampler_view(sctx, &samplers->views, slot, views[i], false);
 
 		if (views[i]->texture && views[i]->texture->target != PIPE_BUFFER) {
 			struct r600_texture *rtex =
@@ -518,7 +519,9 @@ static void si_set_shader_image(struct si_context *ctx,
 	}
 
 	res = (struct r600_resource *)view->resource;
-	util_copy_image_view(&images->views[slot], view);
+
+	if (&images->views[slot] != view)
+		util_copy_image_view(&images->views[slot], view);
 
 	si_sampler_view_add_buffer(ctx, &res->b.b,
 				   RADEON_USAGE_READWRITE);
@@ -1362,6 +1365,46 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 					RADEON_USAGE_READWRITE,
 					RADEON_PRIO_SAMPLER_BUFFER);
 			}
+		}
+	}
+}
+
+/* Update mutable image descriptor fields of all bound textures. */
+void si_update_all_texture_descriptors(struct si_context *sctx)
+{
+	unsigned shader;
+
+	for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
+		struct si_sampler_views *samplers = &sctx->samplers[shader].views;
+		struct si_images_info *images = &sctx->images[shader];
+		unsigned mask;
+
+		/* Images. */
+		mask = images->desc.enabled_mask;
+		while (mask) {
+			unsigned i = u_bit_scan(&mask);
+			struct pipe_image_view *view = &images->views[i];
+
+			if (!view->resource ||
+			    view->resource->target == PIPE_BUFFER)
+				continue;
+
+			si_set_shader_image(sctx, images, i, view);
+		}
+
+		/* Sampler views. */
+		mask = samplers->desc.enabled_mask;
+		while (mask) {
+			unsigned i = u_bit_scan(&mask);
+			struct pipe_sampler_view *view = samplers->views[i];
+
+			if (!view ||
+			    !view->texture ||
+			    view->texture->target == PIPE_BUFFER)
+				continue;
+
+			si_set_sampler_view(sctx, samplers, i,
+					    samplers->views[i], true);
 		}
 	}
 }
