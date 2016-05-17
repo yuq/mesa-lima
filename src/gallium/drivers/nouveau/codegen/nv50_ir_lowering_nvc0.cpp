@@ -1129,8 +1129,8 @@ NVC0LoweringPass::handleSharedATOMNVE4(Instruction *atom)
    bld.setPosition(tryLockBB, true);
 
    Instruction *ld =
-      bld.mkLoad(TYPE_U32, atom->getDef(0),
-                 bld.mkSymbol(FILE_MEMORY_SHARED, 0, TYPE_U32, 0), NULL);
+      bld.mkLoad(TYPE_U32, atom->getDef(0), atom->getSrc(0)->asSym(),
+                 atom->getIndirect(0, 0));
    ld->setDef(1, bld.getSSA(1, FILE_PREDICATE));
    ld->subOp = NV50_IR_SUBOP_LOAD_LOCKED;
 
@@ -1186,9 +1186,8 @@ NVC0LoweringPass::handleSharedATOMNVE4(Instruction *atom)
    }
 
    Instruction *st =
-      bld.mkStore(OP_STORE, TYPE_U32,
-                  bld.mkSymbol(FILE_MEMORY_SHARED, 0, TYPE_U32, 0),
-                  NULL, stVal);
+      bld.mkStore(OP_STORE, TYPE_U32, atom->getSrc(0)->asSym(),
+                  atom->getIndirect(0, 0), stVal);
    st->setDef(0, pred->getDef(0));
    st->subOp = NV50_IR_SUBOP_STORE_UNLOCKED;
 
@@ -1225,8 +1224,8 @@ NVC0LoweringPass::handleSharedATOM(Instruction *atom)
    bld.setPosition(tryLockAndSetBB, true);
 
    Instruction *ld =
-      bld.mkLoad(TYPE_U32, atom->getDef(0),
-                 bld.mkSymbol(FILE_MEMORY_SHARED, 0, TYPE_U32, 0), NULL);
+      bld.mkLoad(TYPE_U32, atom->getDef(0), atom->getSrc(0)->asSym(),
+                 atom->getIndirect(0, 0));
    ld->setDef(1, bld.getSSA(1, FILE_PREDICATE));
    ld->subOp = NV50_IR_SUBOP_LOAD_LOCKED;
 
@@ -1283,9 +1282,8 @@ NVC0LoweringPass::handleSharedATOM(Instruction *atom)
    }
 
    Instruction *st =
-      bld.mkStore(OP_STORE, TYPE_U32,
-                  bld.mkSymbol(FILE_MEMORY_SHARED, 0, TYPE_U32, 0),
-                  NULL, stVal);
+      bld.mkStore(OP_STORE, TYPE_U32, atom->getSrc(0)->asSym(),
+                  atom->getIndirect(0, 0), stVal);
    st->setPredicate(CC_P, ld->getDef(1));
    st->subOp = NV50_IR_SUBOP_STORE_UNLOCKED;
 
