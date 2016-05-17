@@ -618,67 +618,64 @@ namespace {
       return code;
    }
 
+   namespace elf {
+      std::unique_ptr<Elf, int (*)(Elf *)>
+      get(const std::vector<char> &code) {
+         // One of the libelf implementations
+         // (http://www.mr511.de/software/english.htm) requires calling
+         // elf_version() before elf_memory().
+         elf_version(EV_CURRENT);
+         return { elf_memory(const_cast<char *>(code.data()), code.size()),
+                  elf_end };
+      }
+
+      Elf_Scn *
+      get_symbol_table(Elf *elf) {
+         size_t section_str_index;
+         elf_getshdrstrndx(elf, &section_str_index);
+
+         for (Elf_Scn *s = elf_nextscn(elf, NULL); s; s = elf_nextscn(elf, s)) {
+            GElf_Shdr header;
+            if (gelf_getshdr(s, &header) != &header)
+               return nullptr;
+
+            if (!std::strcmp(elf_strptr(elf, section_str_index, header.sh_name),
+                             ".symtab"))
+               return s;
+         }
+
+         return nullptr;
+      }
+
+      std::map<std::string, unsigned>
+      get_symbol_offsets(Elf *elf, Elf_Scn *symtab) {
+         Elf_Data *const symtab_data = elf_getdata(symtab, NULL);
+         GElf_Shdr header;
+         if (gelf_getshdr(symtab, &header) != &header)
+            return {};
+
+         std::map<std::string, unsigned> symbol_offsets;
+         GElf_Sym symbol;
+         unsigned i = 0;
+
+         while (GElf_Sym *s = gelf_getsym(symtab_data, i++, &symbol)) {
+            const char *name = elf_strptr(elf, header.sh_link, s->st_name);
+            symbol_offsets[name] = s->st_value;
+         }
+
+         return symbol_offsets;
+      }
+   }
+
    std::map<std::string, unsigned>
-   get_kernel_offsets(std::vector<char> &code,
-                      const std::vector<llvm::Function *> &kernels,
+   get_symbol_offsets(const std::vector<char> &code,
                       std::string &r_log) {
+      const auto elf = elf::get(code);
+      const auto symtab = elf::get_symbol_table(elf.get());
+      if (!symtab)
+         fail(r_log, compile_error(), "Unable to find symbol table.");
 
-      // One of the libelf implementations
-      // (http://www.mr511.de/software/english.htm) requires calling
-      // elf_version() before elf_memory().
-      //
-      elf_version(EV_CURRENT);
-
-      Elf *elf = elf_memory(&code[0], code.size());
-      size_t section_str_index;
-      elf_getshdrstrndx(elf, &section_str_index);
-      Elf_Scn *section = NULL;
-      Elf_Scn *symtab = NULL;
-      GElf_Shdr symtab_header;
-
-      // Find the symbol table
-      try {
-         while ((section = elf_nextscn(elf, section))) {
-            const char *name;
-            if (gelf_getshdr(section, &symtab_header) != &symtab_header)
-               fail(r_log, compile_error(),
-                    "Failed to read ELF section header.");
-
-            name = elf_strptr(elf, section_str_index, symtab_header.sh_name);
-           if (!strcmp(name, ".symtab")) {
-               symtab = section;
-               break;
-           }
-         }
-         if (!symtab)
-            fail(r_log, compile_error(), "Unable to find symbol table.");
-
-      } catch (compile_error &e) {
-         elf_end(elf);
-         throw e;
-      }
-
-
-      // Extract symbol information from the table
-      Elf_Data *symtab_data = NULL;
-      GElf_Sym *symbol;
-      GElf_Sym s;
-
-      std::map<std::string, unsigned> kernel_offsets;
-      symtab_data = elf_getdata(symtab, symtab_data);
-
-      // Determine the offsets for each kernel
-      for (int i = 0; (symbol = gelf_getsym(symtab_data, i, &s)); i++) {
-         char *name = elf_strptr(elf, symtab_header.sh_link, symbol->st_name);
-         for (std::vector<llvm::Function*>::const_iterator it = kernels.begin(),
-              e = kernels.end(); it != e; ++it) {
-            llvm::Function *f = *it;
-            if (f->getName() == std::string(name))
-               kernel_offsets[f->getName()] = symbol->st_value;
-         }
-      }
-      elf_end(elf);
-      return kernel_offsets;
+      return elf::get_symbol_offsets(elf.get(), symtab);
    }
 
    module
@@ -688,9 +685,7 @@ namespace {
                        std::string &r_log) {
 
       const std::vector<llvm::Function *> kernels = find_kernels(mod);
-
-      std::map<std::string, unsigned> kernel_offsets =
-            get_kernel_offsets(code, kernels, r_log);
+      auto kernel_offsets = get_symbol_offsets(code, r_log);
 
       // Begin building the clover module
       module m;
@@ -707,8 +702,10 @@ namespace {
 
       for (std::map<std::string, unsigned>::iterator i = kernel_offsets.begin(),
            e = kernel_offsets.end(); i != e; ++i) {
-         std::vector<module::argument> args = get_kernel_args(mod, i->first, c);
-         m.syms.push_back(module::symbol(i->first, 0, i->second, args ));
+         if (count(i->first, map(std::mem_fn(&llvm::Function::getName), kernels))) {
+            std::vector<module::argument> args = get_kernel_args(mod, i->first, c);
+            m.syms.push_back(module::symbol(i->first, 0, i->second, args));
+         }
       }
 
       return m;
