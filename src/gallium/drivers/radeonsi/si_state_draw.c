@@ -54,7 +54,7 @@ static unsigned si_conv_pipe_prim(unsigned mode)
 		[PIPE_PRIM_PATCHES]			= V_008958_DI_PT_PATCH,
 		[R600_PRIM_RECTANGLE_LIST]		= V_008958_DI_PT_RECTLIST
         };
-	assert(mode < Elements(prim_conv));
+	assert(mode < ARRAY_SIZE(prim_conv));
 	return prim_conv[mode];
 }
 
@@ -78,7 +78,7 @@ static unsigned si_conv_prim_to_gs_out(unsigned mode)
 		[PIPE_PRIM_PATCHES]			= V_028A6C_OUTPRIM_TYPE_POINTLIST,
 		[R600_PRIM_RECTANGLE_LIST]		= V_028A6C_OUTPRIM_TYPE_TRISTRIP
 	};
-	assert(mode < Elements(prim_conv));
+	assert(mode < ARRAY_SIZE(prim_conv));
 
 	return prim_conv[mode];
 }

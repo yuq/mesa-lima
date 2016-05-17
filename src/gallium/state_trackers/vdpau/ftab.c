@@ -121,17 +121,17 @@ boolean vlGetFuncFTAB(VdpFuncId function_id, void **func)
    *func = NULL;
 
    if (function_id < VDP_FUNC_ID_BASE_WINSYS) {
-      if (function_id < Elements(ftab))
+      if (function_id < ARRAY_SIZE(ftab))
          *func = ftab[function_id];
 
    } else if (function_id < VDP_FUNC_ID_BASE_DRIVER) {
       function_id -= VDP_FUNC_ID_BASE_WINSYS;
-      if (function_id < Elements(ftab_winsys))
+      if (function_id < ARRAY_SIZE(ftab_winsys))
          *func = ftab_winsys[function_id];
 
    } else {
       function_id -= VDP_FUNC_ID_BASE_DRIVER;
-      if (function_id < Elements(ftab_driver))
+      if (function_id < ARRAY_SIZE(ftab_driver))
          *func = ftab_driver[function_id];
    }
 

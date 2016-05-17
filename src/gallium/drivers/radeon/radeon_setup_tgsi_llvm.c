@@ -1341,7 +1341,7 @@ static void emit_lsb(const struct lp_build_tgsi_action * action,
 
 	emit_data->output[emit_data->chan] =
 		lp_build_intrinsic(gallivm->builder, "llvm.cttz.i32",
-				emit_data->dst_type, args, Elements(args),
+				emit_data->dst_type, args, ARRAY_SIZE(args),
 				LLVMReadNoneAttribute);
 }
 
@@ -1360,7 +1360,7 @@ static void emit_umsb(const struct lp_build_tgsi_action * action,
 
 	LLVMValueRef msb =
 		lp_build_intrinsic(builder, "llvm.ctlz.i32",
-				emit_data->dst_type, args, Elements(args),
+				emit_data->dst_type, args, ARRAY_SIZE(args),
 				LLVMReadNoneAttribute);
 
 	/* The HW returns the last bit index from MSB, but TGSI wants

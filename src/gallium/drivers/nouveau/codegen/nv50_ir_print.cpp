@@ -547,16 +547,16 @@ void Instruction::print() const
       switch (op) {
       case OP_SUREDP:
       case OP_ATOM:
-         if (subOp < Elements(atomSubOpStr))
+         if (subOp < ARRAY_SIZE(atomSubOpStr))
             PRINT("%s ", atomSubOpStr[subOp]);
          break;
       case OP_LOAD:
       case OP_STORE:
-         if (subOp < Elements(ldstSubOpStr))
+         if (subOp < ARRAY_SIZE(ldstSubOpStr))
             PRINT("%s ", ldstSubOpStr[subOp]);
          break;
       case OP_SUBFM:
-         if (subOp < Elements(subfmOpStr))
+         if (subOp < ARRAY_SIZE(subfmOpStr))
             PRINT("%s ", subfmOpStr[subOp]);
          break;
       default:

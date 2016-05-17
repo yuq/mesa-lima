@@ -165,7 +165,7 @@ void rvid_join_surfaces(struct radeon_winsys* ws,
 
 		/* adjust the texture layer offsets */
 		off = align(off, surfaces[i]->bo_alignment);
-		for (j = 0; j < Elements(surfaces[i]->level); ++j)
+		for (j = 0; j < ARRAY_SIZE(surfaces[i]->level); ++j)
 			surfaces[i]->level[j].offset += off;
 		off += surfaces[i]->bo_size;
 	}

@@ -126,7 +126,7 @@ static unsigned nine_ff_vs_key_hash(void *key)
     struct nine_ff_vs_key *vs = key;
     unsigned i;
     uint32_t hash = vs->value32[0];
-    for (i = 1; i < Elements(vs->value32); ++i)
+    for (i = 1; i < ARRAY_SIZE(vs->value32); ++i)
         hash ^= vs->value32[i];
     return hash;
 }
@@ -142,7 +142,7 @@ static unsigned nine_ff_ps_key_hash(void *key)
     struct nine_ff_ps_key *ps = key;
     unsigned i;
     uint32_t hash = ps->value32[0];
-    for (i = 1; i < Elements(ps->value32); ++i)
+    for (i = 1; i < ARRAY_SIZE(ps->value32); ++i)
         hash ^= ps->value32[i];
     return hash;
 }
@@ -1225,7 +1225,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
     ps.vC[0] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 0, TGSI_INTERPOLATE_COLOR);
 
     /* Declare all TEMPs we might need, serious drivers have a register allocator. */
-    for (i = 0; i < Elements(ps.r); ++i)
+    for (i = 0; i < ARRAY_SIZE(ps.r); ++i)
         ps.r[i] = ureg_DECL_local_temporary(ureg);
     ps.rCur = ps.r[0];
     ps.rTmp = ps.r[1];

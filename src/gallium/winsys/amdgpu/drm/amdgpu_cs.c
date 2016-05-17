@@ -306,7 +306,7 @@ static boolean amdgpu_init_cs_context(struct amdgpu_cs *cs,
       return FALSE;
    }
 
-   for (i = 0; i < Elements(cs->buffer_indices_hashlist); i++) {
+   for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
       cs->buffer_indices_hashlist[i] = -1;
    }
    return TRUE;
@@ -327,7 +327,7 @@ static void amdgpu_cs_context_cleanup(struct amdgpu_cs *cs)
    cs->used_gart = 0;
    cs->used_vram = 0;
 
-   for (i = 0; i < Elements(cs->buffer_indices_hashlist); i++) {
+   for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
       cs->buffer_indices_hashlist[i] = -1;
    }
 }
@@ -427,7 +427,7 @@ amdgpu_cs_add_const_preamble_ib(struct radeon_winsys_cs *rcs)
 
 int amdgpu_lookup_buffer(struct amdgpu_cs *cs, struct amdgpu_winsys_bo *bo)
 {
-   unsigned hash = bo->unique_id & (Elements(cs->buffer_indices_hashlist)-1);
+   unsigned hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
    int i = cs->buffer_indices_hashlist[hash];
 
    /* not found or found */
@@ -461,7 +461,7 @@ static unsigned amdgpu_add_buffer(struct amdgpu_cs *cs,
                                  enum radeon_bo_domain *added_domains)
 {
    struct amdgpu_cs_buffer *buffer;
-   unsigned hash = bo->unique_id & (Elements(cs->buffer_indices_hashlist)-1);
+   unsigned hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
    int i = -1;
 
    assert(priority < 64);

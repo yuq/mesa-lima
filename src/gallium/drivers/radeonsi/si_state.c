@@ -3179,7 +3179,7 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 	struct pipe_vertex_buffer *dst = sctx->vertex_buffer + start_slot;
 	int i;
 
-	assert(start_slot + count <= Elements(sctx->vertex_buffer));
+	assert(start_slot + count <= ARRAY_SIZE(sctx->vertex_buffer));
 
 	if (buffers) {
 		for (i = 0; i < count; i++) {

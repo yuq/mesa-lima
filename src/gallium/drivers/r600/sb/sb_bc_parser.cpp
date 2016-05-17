@@ -176,7 +176,7 @@ int bc_parser::parse_decls() {
 	if (ps_interp) {
 		/* add the egcm ij interpolators to live inputs */
 		unsigned num_ij = 0;
-		for (unsigned i = 0; i < Elements(ij_interpolators); i++) {
+		for (unsigned i = 0; i < ARRAY_SIZE(ij_interpolators); i++) {
 			num_ij += ij_interpolators[i];
 		}
 

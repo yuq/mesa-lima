@@ -449,6 +449,6 @@ void nv50_upload_ms_info(struct nouveau_pushbuf *push)
 {
    BEGIN_NV04(push, NV50_3D(CB_ADDR), 1);
    PUSH_DATA (push, (NV50_CB_AUX_MS_OFFSET << (8 - 2)) | NV50_CB_AUX);
-   BEGIN_NI04(push, NV50_3D(CB_DATA(0)), Elements(msaa_sample_xy_offsets));
-   PUSH_DATAp(push, msaa_sample_xy_offsets, Elements(msaa_sample_xy_offsets));
+   BEGIN_NI04(push, NV50_3D(CB_DATA(0)), ARRAY_SIZE(msaa_sample_xy_offsets));
+   PUSH_DATAp(push, msaa_sample_xy_offsets, ARRAY_SIZE(msaa_sample_xy_offsets));
 }

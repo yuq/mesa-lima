@@ -82,7 +82,7 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
     This->position_t = info.position_t;
     This->point_size = info.point_size;
 
-    for (i = 0; i < info.num_inputs && i < Elements(This->input_map); ++i)
+    for (i = 0; i < info.num_inputs && i < ARRAY_SIZE(This->input_map); ++i)
         This->input_map[i].ndecl = info.input_map[i];
     This->num_inputs = i;
 

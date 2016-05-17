@@ -145,8 +145,8 @@ extern Target *getTargetNV50(unsigned int chipset);
 
 Target *Target::create(unsigned int chipset)
 {
-   STATIC_ASSERT(Elements(operationSrcNr) == OP_LAST + 1);
-   STATIC_ASSERT(Elements(operationClass) == OP_LAST + 1);
+   STATIC_ASSERT(ARRAY_SIZE(operationSrcNr) == OP_LAST + 1);
+   STATIC_ASSERT(ARRAY_SIZE(operationClass) == OP_LAST + 1);
    switch (chipset & ~0xf) {
    case 0x110:
    case 0x120:

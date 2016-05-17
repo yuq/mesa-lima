@@ -155,7 +155,7 @@ static void init_prog(struct context *ctx, unsigned local_sz,
         char *psrc = preprocess_prog(ctx, src, defs);
         int ret;
 
-        ret = tgsi_text_translate(psrc, prog, Elements(prog));
+        ret = tgsi_text_translate(psrc, prog, ARRAY_SIZE(prog));
         assert(ret);
         free(psrc);
 
@@ -1125,7 +1125,7 @@ static void test_surface_ld(struct context *ctx)
 
         init_prog(ctx, 0, 0, 0, src, NULL);
 
-        for (i = 0; i < Elements(surface_fmts); i++) {
+        for (i = 0; i < ARRAY_SIZE(surface_fmts); i++) {
                 bool is_int = util_format_is_pure_integer(surface_fmts[i]);
 
                 printf("   - %s\n", util_format_name(surface_fmts[i]));
@@ -1243,7 +1243,7 @@ static void test_surface_st(struct context *ctx)
 
         init_prog(ctx, 0, 0, 0, src, NULL);
 
-        for (i = 0; i < Elements(surface_fmts); i++) {
+        for (i = 0; i < ARRAY_SIZE(surface_fmts); i++) {
                 bool is_signed = (util_format_description(surface_fmts[i])
                                   ->channel[0].type == UTIL_FORMAT_TYPE_SIGNED);
                 bool is_int = util_format_is_pure_integer(surface_fmts[i]);

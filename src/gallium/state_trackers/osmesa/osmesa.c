@@ -324,7 +324,7 @@ osmesa_st_framebuffer_flush_front(struct st_context_iface *stctx,
       unsigned i;
 
       /* Find the z/stencil buffer if there is one */
-      for (i = 0; i < Elements(osbuffer->textures); i++) {
+      for (i = 0; i < ARRAY_SIZE(osbuffer->textures); i++) {
          struct pipe_resource *res = osbuffer->textures[i];
          if (res) {
             const struct util_format_description *desc =
@@ -791,7 +791,7 @@ OSMesaMakeCurrent(OSMesaContext osmesa, void *buffer, GLenum type,
       boolean any_pp_enabled = FALSE;
       unsigned i;
 
-      for (i = 0; i < Elements(osmesa->pp_enabled); i++) {
+      for (i = 0; i < ARRAY_SIZE(osmesa->pp_enabled); i++) {
          if (osmesa->pp_enabled[i]) {
             any_pp_enabled = TRUE;
             break;

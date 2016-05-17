@@ -2659,8 +2659,8 @@ NineDevice9_GetTextureStageState( struct NineDevice9 *This,
 {
     const struct nine_state *state = &This->state;
 
-    user_assert(Stage < Elements(state->ff.tex_stage), D3DERR_INVALIDCALL);
-    user_assert(Type < Elements(state->ff.tex_stage[0]), D3DERR_INVALIDCALL);
+    user_assert(Stage < ARRAY_SIZE(state->ff.tex_stage), D3DERR_INVALIDCALL);
+    user_assert(Type < ARRAY_SIZE(state->ff.tex_stage[0]), D3DERR_INVALIDCALL);
 
     *pValue = state->ff.tex_stage[Stage][Type];
 
@@ -2679,8 +2679,8 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
     DBG("Stage=%u Type=%u Value=%08x\n", Stage, Type, Value);
     nine_dump_D3DTSS_value(DBG_FF, Type, Value);
 
-    user_assert(Stage < Elements(state->ff.tex_stage), D3DERR_INVALIDCALL);
-    user_assert(Type < Elements(state->ff.tex_stage[0]), D3DERR_INVALIDCALL);
+    user_assert(Stage < ARRAY_SIZE(state->ff.tex_stage), D3DERR_INVALIDCALL);
+    user_assert(Type < ARRAY_SIZE(state->ff.tex_stage[0]), D3DERR_INVALIDCALL);
 
     state->ff.tex_stage[Stage][Type] = Value;
     switch (Type) {
@@ -2776,7 +2776,7 @@ NineDevice9_ValidateDevice( struct NineDevice9 *This,
 
     DBG("This=%p pNumPasses=%p\n", This, pNumPasses);
 
-    for (i = 0; i < Elements(state->samp); ++i) {
+    for (i = 0; i < ARRAY_SIZE(state->samp); ++i) {
         if (state->samp[i][D3DSAMP_MINFILTER] == D3DTEXF_NONE ||
             state->samp[i][D3DSAMP_MAGFILTER] == D3DTEXF_NONE)
             return D3DERR_UNSUPPORTEDTEXTUREFILTER;

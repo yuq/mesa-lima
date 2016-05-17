@@ -1504,18 +1504,18 @@ static void evergreen_emit_msaa_state(struct r600_context *rctx, int nr_samples,
 		nr_samples = 0;
 		break;
 	case 2:
-		radeon_set_context_reg_seq(cs, R_028C1C_PA_SC_AA_SAMPLE_LOCS_0, Elements(eg_sample_locs_2x));
-		radeon_emit_array(cs, eg_sample_locs_2x, Elements(eg_sample_locs_2x));
+		radeon_set_context_reg_seq(cs, R_028C1C_PA_SC_AA_SAMPLE_LOCS_0, ARRAY_SIZE(eg_sample_locs_2x));
+		radeon_emit_array(cs, eg_sample_locs_2x, ARRAY_SIZE(eg_sample_locs_2x));
 		max_dist = eg_max_dist_2x;
 		break;
 	case 4:
-		radeon_set_context_reg_seq(cs, R_028C1C_PA_SC_AA_SAMPLE_LOCS_0, Elements(eg_sample_locs_4x));
-		radeon_emit_array(cs, eg_sample_locs_4x, Elements(eg_sample_locs_4x));
+		radeon_set_context_reg_seq(cs, R_028C1C_PA_SC_AA_SAMPLE_LOCS_0, ARRAY_SIZE(eg_sample_locs_4x));
+		radeon_emit_array(cs, eg_sample_locs_4x, ARRAY_SIZE(eg_sample_locs_4x));
 		max_dist = eg_max_dist_4x;
 		break;
 	case 8:
-		radeon_set_context_reg_seq(cs, R_028C1C_PA_SC_AA_SAMPLE_LOCS_0, Elements(sample_locs_8x));
-		radeon_emit_array(cs, sample_locs_8x, Elements(sample_locs_8x));
+		radeon_set_context_reg_seq(cs, R_028C1C_PA_SC_AA_SAMPLE_LOCS_0, ARRAY_SIZE(sample_locs_8x));
+		radeon_emit_array(cs, sample_locs_8x, ARRAY_SIZE(sample_locs_8x));
 		max_dist = max_dist_8x;
 		break;
 	}

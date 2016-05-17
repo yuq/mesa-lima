@@ -121,7 +121,7 @@ static unsigned r600_conv_pipe_prim(unsigned prim)
 		[PIPE_PRIM_PATCHES]                     = V_008958_DI_PT_PATCH,
 		[R600_PRIM_RECTANGLE_LIST]		= V_008958_DI_PT_RECTLIST
 	};
-	assert(prim < Elements(prim_conv));
+	assert(prim < ARRAY_SIZE(prim_conv));
 	return prim_conv[prim];
 }
 
@@ -145,7 +145,7 @@ unsigned r600_conv_prim_to_gs_out(unsigned mode)
 		[PIPE_PRIM_PATCHES]			= V_028A6C_OUTPRIM_TYPE_POINTLIST,
 		[R600_PRIM_RECTANGLE_LIST]		= V_028A6C_OUTPRIM_TYPE_TRISTRIP
 	};
-	assert(mode < Elements(prim_conv));
+	assert(mode < ARRAY_SIZE(prim_conv));
 
 	return prim_conv[mode];
 }
@@ -1283,7 +1283,7 @@ void r600_set_sample_locations_constant_buffer(struct r600_context *rctx)
 	struct pipe_context *ctx = &rctx->b.b;
 
 	assert(rctx->framebuffer.nr_samples < R600_UCP_SIZE);
-	assert(rctx->framebuffer.nr_samples <= Elements(rctx->sample_positions)/4);
+	assert(rctx->framebuffer.nr_samples <= ARRAY_SIZE(rctx->sample_positions)/4);
 
 	memset(rctx->sample_positions, 0, 4 * 4 * 16);
 	for (i = 0; i < rctx->framebuffer.nr_samples; i++) {

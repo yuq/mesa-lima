@@ -254,7 +254,7 @@ static void si_release_sampler_views(struct si_sampler_views *views)
 {
 	int i;
 
-	for (i = 0; i < Elements(views->views); i++) {
+	for (i = 0; i < ARRAY_SIZE(views->views); i++) {
 		pipe_sampler_view_reference(&views->views[i], NULL);
 	}
 	si_release_descriptors(&views->desc);
@@ -673,7 +673,7 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 	for (i = 0; i < count; i++) {
 		int vb = sctx->vertex_elements->elements[i].vertex_buffer_index;
 
-		if (vb >= Elements(sctx->vertex_buffer))
+		if (vb >= ARRAY_SIZE(sctx->vertex_buffer))
 			continue;
 		if (!sctx->vertex_buffer[vb].buffer)
 			continue;
@@ -725,7 +725,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		unsigned offset;
 		uint32_t *desc = &ptr[i*4];
 
-		if (ve->vertex_buffer_index >= Elements(sctx->vertex_buffer)) {
+		if (ve->vertex_buffer_index >= ARRAY_SIZE(sctx->vertex_buffer)) {
 			memset(desc, 0, 16);
 			continue;
 		}
@@ -1219,7 +1219,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	for (i = 0; i < num_elems; i++) {
 		int vb = sctx->vertex_elements->elements[i].vertex_buffer_index;
 
-		if (vb >= Elements(sctx->vertex_buffer))
+		if (vb >= ARRAY_SIZE(sctx->vertex_buffer))
 			continue;
 		if (!sctx->vertex_buffer[vb].buffer)
 			continue;

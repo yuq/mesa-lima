@@ -197,7 +197,7 @@ main(int argc, char *argv[])
       return 1;
    }
 
-   if (!tgsi_text_translate(text, tokens, Elements(tokens))) {
+   if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       _debug_printf("Failed to parse TGSI shader\n");
       return 1;
    }

@@ -1250,7 +1250,7 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
      */
     memcpy(state->rs, nine_render_state_defaults, sizeof(state->rs));
 
-    for (s = 0; s < Elements(state->ff.tex_stage); ++s) {
+    for (s = 0; s < ARRAY_SIZE(state->ff.tex_stage); ++s) {
         memcpy(&state->ff.tex_stage[s], nine_tex_stage_state_defaults,
                sizeof(state->ff.tex_stage[s]));
         state->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] = s;
@@ -1259,7 +1259,7 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     state->ff.tex_stage[0][D3DTSS_ALPHAOP] = D3DTOP_SELECTARG1;
     memset(&state->bumpmap_vars, 0, sizeof(state->bumpmap_vars));
 
-    for (s = 0; s < Elements(state->samp); ++s) {
+    for (s = 0; s < ARRAY_SIZE(state->samp); ++s) {
         memcpy(&state->samp[s], nine_samp_state_defaults,
                sizeof(state->samp[s]));
     }
@@ -1290,7 +1290,7 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
         state->viewport.MaxZ = 1.0f;
     }
 
-    for (s = 0; s < Elements(state->changed.sampler); ++s)
+    for (s = 0; s < ARRAY_SIZE(state->changed.sampler); ++s)
         state->changed.sampler[s] = ~0;
 
     if (!is_reset) {
@@ -1321,7 +1321,7 @@ nine_state_clear(struct nine_state *state, const boolean device)
 {
     unsigned i;
 
-    for (i = 0; i < Elements(state->rt); ++i)
+    for (i = 0; i < ARRAY_SIZE(state->rt); ++i)
        nine_bind(&state->rt[i], NULL);
     nine_bind(&state->ds, NULL);
     nine_bind(&state->vs, NULL);

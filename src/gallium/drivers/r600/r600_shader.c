@@ -858,7 +858,7 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 	case TGSI_FILE_INPUT:
 		for (j = 0; j < count; j++) {
 			i = ctx->shader->ninput + j;
-			assert(i < Elements(ctx->shader->input));
+			assert(i < ARRAY_SIZE(ctx->shader->input));
 			ctx->shader->input[i].name = d->Semantic.Name;
 			ctx->shader->input[i].sid = d->Semantic.Index + j;
 			ctx->shader->input[i].interpolate = d->Interp.Interpolate;
@@ -902,7 +902,7 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 	case TGSI_FILE_OUTPUT:
 		for (j = 0; j < count; j++) {
 			i = ctx->shader->noutput + j;
-			assert(i < Elements(ctx->shader->output));
+			assert(i < ARRAY_SIZE(ctx->shader->output));
 			ctx->shader->output[i].name = d->Semantic.Name;
 			ctx->shader->output[i].sid = d->Semantic.Index + j;
 			ctx->shader->output[i].gpr = ctx->file_offset[TGSI_FILE_OUTPUT] + d->Range.First + j;
@@ -1117,7 +1117,7 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 		} else if (parse.FullToken.Token.Type == TGSI_TOKEN_TYPE_DECLARATION) {
 			struct tgsi_full_declaration *d = &parse.FullToken.FullDeclaration;
 			if (d->Declaration.File == TGSI_FILE_SYSTEM_VALUE) {
-				for (k = 0; k < Elements(inputs); k++) {
+				for (k = 0; k < ARRAY_SIZE(inputs); k++) {
 					if (d->Semantic.Name == inputs[k].name ||
 						d->Semantic.Name == inputs[k].alternate_name) {
 						inputs[k].enabled = true;
@@ -1129,7 +1129,7 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 
 	tgsi_parse_free(&parse);
 
-	for (i = 0; i < Elements(inputs); i++) {
+	for (i = 0; i < ARRAY_SIZE(inputs); i++) {
 		boolean enabled = inputs[i].enabled;
 		int *reg = inputs[i].reg;
 		unsigned name = inputs[i].name;
@@ -1217,7 +1217,7 @@ static int evergreen_gpr_count(struct r600_shader_ctx *ctx)
 
 	/* assign gpr to each interpolator according to priority */
 	num_baryc = 0;
-	for (i = 0; i < Elements(ctx->eg_interpolators); i++) {
+	for (i = 0; i < ARRAY_SIZE(ctx->eg_interpolators); i++) {
 		if (ctx->eg_interpolators[i].enabled) {
 			ctx->eg_interpolators[i].ij_index = num_baryc;
 			num_baryc ++;

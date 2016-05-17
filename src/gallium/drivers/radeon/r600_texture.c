@@ -313,7 +313,7 @@ static int r600_setup_surface(struct pipe_screen *screen,
 	}
 
 	if (offset) {
-		for (i = 0; i < Elements(rtex->surface.level); ++i)
+		for (i = 0; i < ARRAY_SIZE(rtex->surface.level); ++i)
 			rtex->surface.level[i].offset += offset;
 	}
 	return 0;

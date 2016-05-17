@@ -1876,7 +1876,7 @@ static void build_tbuffer_store(struct si_shader_context *ctx,
 	snprintf(name, sizeof(name), "llvm.SI.tbuffer.store.%s", types[func]);
 
 	lp_build_intrinsic(gallivm->builder, name, ctx->voidt,
-			   args, Elements(args), 0);
+			   args, ARRAY_SIZE(args), 0);
 }
 
 static void build_tbuffer_store_dwords(struct si_shader_context *ctx,
@@ -5155,7 +5155,7 @@ static void create_function(struct si_shader_context *ctx)
 		return;
 	}
 
-	assert(num_params <= Elements(params));
+	assert(num_params <= ARRAY_SIZE(params));
 
 	si_create_function(ctx, returns, num_returns, params,
 			   num_params, last_array_pointer, last_sgpr);
@@ -5918,7 +5918,7 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 	switch (shader) {
 	case PIPE_SHADER_VERTEX:
 		fprintf(f, "  instance_divisors = {");
-		for (i = 0; i < Elements(key->vs.prolog.instance_divisors); i++)
+		for (i = 0; i < ARRAY_SIZE(key->vs.prolog.instance_divisors); i++)
 			fprintf(f, !i ? "%u" : ", %u",
 				key->vs.prolog.instance_divisors[i]);
 		fprintf(f, "}\n");

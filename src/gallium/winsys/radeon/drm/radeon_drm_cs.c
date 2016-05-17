@@ -128,7 +128,7 @@ static boolean radeon_init_cs_context(struct radeon_cs_context *csc,
 
     csc->cs.chunks = (uint64_t)(uintptr_t)csc->chunk_array;
 
-    for (i = 0; i < Elements(csc->reloc_indices_hashlist); i++) {
+    for (i = 0; i < ARRAY_SIZE(csc->reloc_indices_hashlist); i++) {
         csc->reloc_indices_hashlist[i] = -1;
     }
     return TRUE;
@@ -150,7 +150,7 @@ static void radeon_cs_context_cleanup(struct radeon_cs_context *csc)
     csc->used_gart = 0;
     csc->used_vram = 0;
 
-    for (i = 0; i < Elements(csc->reloc_indices_hashlist); i++) {
+    for (i = 0; i < ARRAY_SIZE(csc->reloc_indices_hashlist); i++) {
         csc->reloc_indices_hashlist[i] = -1;
     }
 }
@@ -221,7 +221,7 @@ static inline void update_reloc(struct drm_radeon_cs_reloc *reloc,
 
 int radeon_lookup_buffer(struct radeon_cs_context *csc, struct radeon_bo *bo)
 {
-    unsigned hash = bo->handle & (Elements(csc->reloc_indices_hashlist)-1);
+    unsigned hash = bo->handle & (ARRAY_SIZE(csc->reloc_indices_hashlist)-1);
     int i = csc->reloc_indices_hashlist[hash];
 
     /* not found or found */
@@ -256,7 +256,7 @@ static unsigned radeon_add_buffer(struct radeon_drm_cs *cs,
 {
     struct radeon_cs_context *csc = cs->csc;
     struct drm_radeon_cs_reloc *reloc;
-    unsigned hash = bo->handle & (Elements(csc->reloc_indices_hashlist)-1);
+    unsigned hash = bo->handle & (ARRAY_SIZE(csc->reloc_indices_hashlist)-1);
     enum radeon_bo_domain rd = usage & RADEON_USAGE_READ ? domains : 0;
     enum radeon_bo_domain wd = usage & RADEON_USAGE_WRITE ? domains : 0;
     int i = -1;

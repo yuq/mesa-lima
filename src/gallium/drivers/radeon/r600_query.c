@@ -1174,11 +1174,11 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 static unsigned r600_get_num_queries(struct r600_common_screen *rscreen)
 {
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
-		return Elements(r600_driver_query_list);
+		return ARRAY_SIZE(r600_driver_query_list);
 	else if (rscreen->info.drm_major == 3)
-		return Elements(r600_driver_query_list) - 3;
+		return ARRAY_SIZE(r600_driver_query_list) - 3;
 	else
-		return Elements(r600_driver_query_list) - 4;
+		return ARRAY_SIZE(r600_driver_query_list) - 4;
 }
 
 static int r600_get_driver_query_info(struct pipe_screen *screen,

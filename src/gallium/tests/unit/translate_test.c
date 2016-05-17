@@ -134,7 +134,7 @@ int main(int argc, char** argv)
       return 2;
    }
 
-   for (i = 1; i < Elements(buffer); ++i)
+   for (i = 1; i < ARRAY_SIZE(buffer); ++i)
       buffer[i] = align_malloc(buffer_size, 4096);
 
    byte_buffer = align_malloc(buffer_size, 4096);
@@ -294,7 +294,7 @@ int main(int argc, char** argv)
 
          if (1)
          {
-            for (i = 0; i < Elements(buffer); ++i)
+            for (i = 0; i < ARRAY_SIZE(buffer); ++i)
             {
                unsigned format_size = (i & 1) ? output_format_size : input_format_size;
                printf("%c ", (i == 2 || i == 4) ? '*' : ' ');
