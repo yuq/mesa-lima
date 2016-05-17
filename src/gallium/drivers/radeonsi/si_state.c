@@ -1834,19 +1834,6 @@ boolean si_is_format_supported(struct pipe_screen *screen,
 	return retval == usage;
 }
 
-static unsigned si_tile_mode_index(struct r600_texture *rtex, unsigned level,
-				   bool stencil)
-{
-	unsigned tile_mode_index = 0;
-
-	if (stencil) {
-		tile_mode_index = rtex->surface.stencil_tiling_index[level];
-	} else {
-		tile_mode_index = rtex->surface.tiling_index[level];
-	}
-	return tile_mode_index;
-}
-
 /*
  * framebuffer handling
  */
@@ -2639,41 +2626,18 @@ si_make_texture_descriptor(struct si_screen *screen,
 			   enum pipe_texture_target target,
 			   enum pipe_format pipe_format,
 			   const unsigned char state_swizzle[4],
-			   unsigned base_level, unsigned first_level, unsigned last_level,
+			   unsigned first_level, unsigned last_level,
 			   unsigned first_layer, unsigned last_layer,
 			   unsigned width, unsigned height, unsigned depth,
 			   uint32_t *state,
 			   uint32_t *fmask_state)
 {
 	struct pipe_resource *res = &tex->resource.b.b;
-	const struct radeon_surf_level *surflevel = tex->surface.level;
 	const struct util_format_description *desc;
 	unsigned char swizzle[4];
 	int first_non_void;
 	unsigned num_format, data_format, type;
-	uint32_t pitch;
 	uint64_t va;
-
-	/* Texturing with separate depth and stencil. */
-	if (tex->is_depth && !tex->is_flushing_texture) {
-		switch (pipe_format) {
-		case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-			pipe_format = PIPE_FORMAT_Z32_FLOAT;
-			break;
-		case PIPE_FORMAT_X8Z24_UNORM:
-		case PIPE_FORMAT_S8_UINT_Z24_UNORM:
-			/* Z24 is always stored like this. */
-			pipe_format = PIPE_FORMAT_Z24X8_UNORM;
-			break;
-		case PIPE_FORMAT_X24S8_UINT:
-		case PIPE_FORMAT_S8X24_UINT:
-		case PIPE_FORMAT_X32_S8X24_UINT:
-			pipe_format = PIPE_FORMAT_S8_UINT;
-			surflevel = tex->surface.stencil_level;
-			break;
-		default:;
-		}
-	}
 
 	desc = util_format_description(pipe_format);
 
@@ -2794,12 +2758,8 @@ si_make_texture_descriptor(struct si_screen *screen,
 	} else if (type == V_008F1C_SQ_RSRC_IMG_CUBE)
 		depth = res->array_size / 6;
 
-	pitch = surflevel[base_level].nblk_x * util_format_get_blockwidth(pipe_format);
-	va = tex->resource.gpu_address + surflevel[base_level].offset;
-
-	state[0] = va >> 8;
-	state[1] = (S_008F14_BASE_ADDRESS_HI(va >> 40) |
-		    S_008F14_DATA_FORMAT(data_format) |
+	state[0] = 0;
+	state[1] = (S_008F14_DATA_FORMAT(data_format) |
 		    S_008F14_NUM_FORMAT(num_format));
 	state[2] = (S_008F18_WIDTH(width - 1) |
 		    S_008F18_HEIGHT(height - 1));
@@ -2812,24 +2772,19 @@ si_make_texture_descriptor(struct si_screen *screen,
 		    S_008F1C_LAST_LEVEL(res->nr_samples > 1 ?
 					util_logbase2(res->nr_samples) :
 					last_level) |
-		    S_008F1C_TILING_INDEX(si_tile_mode_index(tex, base_level, false)) |
 		    S_008F1C_POW2_PAD(res->last_level > 0) |
 		    S_008F1C_TYPE(type));
-	state[4] = (S_008F20_DEPTH(depth - 1) | S_008F20_PITCH(pitch - 1));
+	state[4] = S_008F20_DEPTH(depth - 1);
 	state[5] = (S_008F24_BASE_ARRAY(first_layer) |
 		    S_008F24_LAST_ARRAY(last_layer));
+	state[6] = 0;
+	state[7] = 0;
 
 	if (tex->dcc_offset) {
 		unsigned swap = r600_translate_colorswap(pipe_format, FALSE);
 
-		state[6] = S_008F28_COMPRESSION_EN(1) | S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
-		state[7] = (tex->resource.gpu_address +
-			    tex->dcc_offset +
-			    surflevel[base_level].dcc_offset) >> 8;
+		state[6] = S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
 	} else {
-		state[6] = 0;
-		state[7] = 0;
-
 		/* The last dword is unused by hw. The shader uses it to clear
 		 * bits in the first dword of sampler state.
 		 */
@@ -2907,6 +2862,8 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	unsigned char state_swizzle[4];
 	unsigned height, depth, width;
 	unsigned last_layer = state->u.tex.last_layer;
+	enum pipe_format pipe_format;
+	const struct radeon_surf_level *surflevel;
 
 	if (!view)
 		return NULL;
@@ -2978,13 +2935,40 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	    state->target == PIPE_TEXTURE_CUBE)
 		last_layer = state->u.tex.first_layer;
 
-	si_make_texture_descriptor(sctx->screen, tmp, true, state->target,
-				   state->format, state_swizzle,
-				   base_level, first_level, last_level,
+	/* Texturing with separate depth and stencil. */
+	pipe_format = state->format;
+	surflevel = tmp->surface.level;
+
+	if (tmp->is_depth && !tmp->is_flushing_texture) {
+		switch (pipe_format) {
+		case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+			pipe_format = PIPE_FORMAT_Z32_FLOAT;
+			break;
+		case PIPE_FORMAT_X8Z24_UNORM:
+		case PIPE_FORMAT_S8_UINT_Z24_UNORM:
+			/* Z24 is always stored like this. */
+			pipe_format = PIPE_FORMAT_Z24X8_UNORM;
+			break;
+		case PIPE_FORMAT_X24S8_UINT:
+		case PIPE_FORMAT_S8X24_UINT:
+		case PIPE_FORMAT_X32_S8X24_UINT:
+			pipe_format = PIPE_FORMAT_S8_UINT;
+			surflevel = tmp->surface.stencil_level;
+			break;
+		default:;
+		}
+	}
+
+	si_make_texture_descriptor(sctx->screen, tmp, true,
+				   state->target, pipe_format, state_swizzle,
+				   first_level, last_level,
 				   state->u.tex.first_layer, last_layer,
 				   width, height, depth,
 				   view->state, view->fmask_state);
 
+	view->base_level_info = &surflevel[base_level];
+	view->base_level = base_level;
+	view->block_width = util_format_get_blockwidth(pipe_format);
 	return &view->base;
 }
 
@@ -3458,10 +3442,13 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 
 	si_make_texture_descriptor(sscreen, rtex, true,
 				   res->target, res->format,
-				   swizzle, 0, 0, res->last_level, 0,
+				   swizzle, 0, res->last_level, 0,
 				   is_array ? res->array_size - 1 : 0,
 				   res->width0, res->height0, res->depth0,
 				   desc, NULL);
+
+	si_set_mutable_tex_desc_fields(rtex, &rtex->surface.level[0], 0,
+				       rtex->surface.blk_w, false, desc);
 
 	/* Clear the base address and set the relative DCC offset. */
 	desc[0] = 0;

@@ -60,6 +60,7 @@
 #include "si_shader.h"
 #include "sid.h"
 
+#include "util/u_format.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
 #include "util/u_suballoc.h"
@@ -294,40 +295,70 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_DESCRIPTORS);
 }
 
+void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
+				    const struct radeon_surf_level *base_level_info,
+				    unsigned base_level, unsigned block_width,
+				    bool is_stencil, uint32_t *state)
+{
+	uint64_t va = tex->resource.gpu_address + base_level_info->offset;
+	unsigned pitch = base_level_info->nblk_x * block_width;
+
+	state[1] &= C_008F14_BASE_ADDRESS_HI;
+	state[3] &= C_008F1C_TILING_INDEX;
+	state[4] &= C_008F20_PITCH;
+	state[6] &= C_008F28_COMPRESSION_EN;
+
+	state[0] = va >> 8;
+	state[1] |= S_008F14_BASE_ADDRESS_HI(va >> 40);
+	state[3] |= S_008F1C_TILING_INDEX(si_tile_mode_index(tex, base_level,
+							     is_stencil));
+	state[4] |= S_008F20_PITCH(pitch - 1);
+
+	if (tex->dcc_offset) {
+		state[6] |= S_008F28_COMPRESSION_EN(1);
+		state[7] = (tex->resource.gpu_address +
+			    tex->dcc_offset +
+			    base_level_info->dcc_offset) >> 8;
+	}
+}
+
 static void si_set_sampler_view(struct si_context *sctx,
 				struct si_sampler_views *views,
 				unsigned slot, struct pipe_sampler_view *view)
 {
 	struct si_sampler_view *rview = (struct si_sampler_view*)view;
 
-	if (view && view->texture && view->texture->target != PIPE_BUFFER &&
-	    G_008F28_COMPRESSION_EN(rview->state[6]) &&
-	    ((struct r600_texture*)view->texture)->dcc_offset == 0) {
-		rview->state[6] &= C_008F28_COMPRESSION_EN &
-		                   C_008F28_ALPHA_IS_ON_MSB;
-	} else if (views->views[slot] == view)
+	if (views->views[slot] == view)
 		return;
 
 	if (view) {
 		struct r600_texture *rtex = (struct r600_texture *)view->texture;
+		uint32_t *desc = views->desc.list + slot * 16;
 
 		si_sampler_view_add_buffer(sctx, view->texture,
 					   RADEON_USAGE_READ);
 
 		pipe_sampler_view_reference(&views->views[slot], view);
-		memcpy(views->desc.list + slot * 16, rview->state, 8*4);
+		memcpy(desc, rview->state, 8*4);
+
+		if (view->texture && view->texture->target != PIPE_BUFFER)
+			si_set_mutable_tex_desc_fields(rtex,
+						       rview->base_level_info,
+						       rview->base_level,
+						       rview->block_width,
+						       false, desc);
 
 		if (view->texture && view->texture->target != PIPE_BUFFER &&
 		    rtex->fmask.size) {
-			memcpy(views->desc.list + slot*16 + 8,
+			memcpy(desc + 8,
 			       rview->fmask_state, 8*4);
 		} else {
 			/* Disable FMASK and bind sampler state in [12:15]. */
-			memcpy(views->desc.list + slot*16 + 8,
+			memcpy(desc + 8,
 			       null_texture_descriptor, 4*4);
 
 			if (views->sampler_states[slot])
-				memcpy(views->desc.list + slot*16 + 12,
+				memcpy(desc + 12,
 				       views->sampler_states[slot], 4*4);
 		}
 
@@ -517,6 +548,7 @@ si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 			struct r600_texture *tex = (struct r600_texture *)res;
 			unsigned level;
 			unsigned width, height, depth;
+			uint32_t *desc = images->desc.list + slot * 8;
 
 			assert(!tex->is_depth);
 			assert(tex->fmask.size == 0);
@@ -546,13 +578,17 @@ si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 			height = u_minify(res->b.b.height0, level);
 			depth = u_minify(res->b.b.depth0, level);
 
-			si_make_texture_descriptor(screen, tex, false, res->b.b.target,
+			si_make_texture_descriptor(screen, tex,
+						   false, res->b.b.target,
 						   views[i].format, swizzle,
-						   level, 0, 0,
+						   0, 0,
 						   views[i].u.tex.first_layer, views[i].u.tex.last_layer,
 						   width, height, depth,
-						   images->desc.list + slot * 8,
-						   NULL);
+						   desc, NULL);
+			si_set_mutable_tex_desc_fields(tex, tex->surface.level,
+						       level,
+						       util_format_get_blockwidth(views[i].format),
+						       false, desc);
 		}
 
 		images->desc.enabled_mask |= 1u << slot;

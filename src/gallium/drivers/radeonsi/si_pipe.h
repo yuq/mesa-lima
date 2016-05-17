@@ -121,6 +121,9 @@ struct si_sampler_view {
          * [4..7] = buffer descriptor */
 	uint32_t			state[8];
 	uint32_t			fmask_state[8];
+	const struct radeon_surf_level	*base_level_info;
+	unsigned			base_level;
+	unsigned			block_width;
 	bool is_stencil_sampler;
 };
 

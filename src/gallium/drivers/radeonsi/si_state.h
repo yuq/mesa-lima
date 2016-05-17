@@ -251,6 +251,10 @@ struct si_buffer_resources {
 
 /* si_descriptors.c */
 void si_ce_enable_loads(struct radeon_winsys_cs *ib);
+void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
+				    const struct radeon_surf_level *base_level_info,
+				    unsigned base_level, unsigned block_width,
+				    bool is_stencil, uint32_t *state);
 void si_set_ring_buffer(struct pipe_context *ctx, uint slot,
 			struct pipe_resource *buffer,
 			unsigned stride, unsigned num_records,
@@ -297,7 +301,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 			   enum pipe_texture_target target,
 			   enum pipe_format pipe_format,
 			   const unsigned char state_swizzle[4],
-			   unsigned base_level, unsigned first_level, unsigned last_level,
+			   unsigned first_level, unsigned last_level,
 			   unsigned first_layer, unsigned last_layer,
 			   unsigned width, unsigned height, unsigned depth,
 			   uint32_t *state,
@@ -322,5 +326,15 @@ void si_ce_pre_draw_synchronization(struct si_context *sctx);
 void si_ce_post_draw_synchronization(struct si_context *sctx);
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *dinfo);
 void si_trace_emit(struct si_context *sctx);
+
+
+static inline unsigned
+si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool stencil)
+{
+	if (stencil)
+		return rtex->surface.stencil_tiling_index[level];
+	else
+		return rtex->surface.tiling_index[level];
+}
 
 #endif
