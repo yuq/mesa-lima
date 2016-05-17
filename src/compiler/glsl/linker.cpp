@@ -2606,7 +2606,12 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
    } to_assign[32];
    assert(max_index <= 32);
 
+   /* Temporary array for the set of attributes that have locations assigned.
+    */
+   ir_variable *assigned[16];
+
    unsigned num_attr = 0;
+   unsigned assigned_attr = 0;
 
    foreach_in_list(ir_instruction, node, sh->ir) {
       ir_variable *const var = node->as_variable();
@@ -2768,18 +2773,62 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
 	     * attribute overlaps any previously allocated bits.
 	     */
 	    if ((~(use_mask << attr) & used_locations) != used_locations) {
-               if (target_index == MESA_SHADER_FRAGMENT ||
-                   (prog->IsES && prog->Version >= 300)) {
-                  linker_error(prog,
-                               "overlapping location is assigned "
-                               "to %s `%s' %d %d %d\n", string,
-                               var->name, used_locations, use_mask, attr);
+               if (target_index == MESA_SHADER_FRAGMENT && !prog->IsES) {
+                  /* From section 4.4.2 (Output Layout Qualifiers) of the GLSL
+                   * 4.40 spec:
+                   *
+                   *    "Additionally, for fragment shader outputs, if two
+                   *    variables are placed within the same location, they
+                   *    must have the same underlying type (floating-point or
+                   *    integer). No component aliasing of output variables or
+                   *    members is allowed.
+                   */
+                  for (unsigned i = 0; i < assigned_attr; i++) {
+                     unsigned assigned_slots =
+                        assigned[i]->type->count_attribute_slots(false);
+	             unsigned assig_attr =
+                        assigned[i]->data.location - generic_base;
+	             unsigned assigned_use_mask = (1 << assigned_slots) - 1;
+
+                     if ((assigned_use_mask << assig_attr) &
+                         (use_mask << attr)) {
+
+                        const glsl_type *assigned_type =
+                           assigned[i]->type->without_array();
+                        const glsl_type *type = var->type->without_array();
+                        if (assigned_type->base_type != type->base_type) {
+                           linker_error(prog, "types do not match for aliased"
+                                        " %ss %s and %s\n", string,
+                                        assigned[i]->name, var->name);
+                           return false;
+                        }
+
+                        unsigned assigned_component_mask =
+                           ((1 << assigned_type->vector_elements) - 1) <<
+                           assigned[i]->data.location_frac;
+                        unsigned component_mask =
+                           ((1 << type->vector_elements) - 1) <<
+                           var->data.location_frac;
+                        if (assigned_component_mask & component_mask) {
+                           linker_error(prog, "overlapping component is "
+                                        "assigned to %ss %s and %s "
+                                        "(component=%d)\n",
+                                        string, assigned[i]->name, var->name,
+                                        var->data.location_frac);
+                           return false;
+                        }
+                     }
+                  }
+               } else if (target_index == MESA_SHADER_FRAGMENT ||
+                          (prog->IsES && prog->Version >= 300)) {
+                  linker_error(prog, "overlapping location is assigned "
+                               "to %s `%s' %d %d %d\n", string, var->name,
+                               used_locations, use_mask, attr);
                   return false;
                } else {
-                  linker_warning(prog,
-                                 "overlapping location is assigned "
-                                 "to %s `%s' %d %d %d\n", string,
-                                 var->name, used_locations, use_mask, attr);
+                  linker_warning(prog, "overlapping location is assigned "
+                                 "to %s `%s' %d %d %d\n", string, var->name,
+                                 used_locations, use_mask, attr);
                }
 	    }
 
@@ -2808,6 +2857,9 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
             if (var->type->without_array()->is_dual_slot_double())
                double_storage_locations |= (use_mask << attr);
 	 }
+
+         assigned[assigned_attr] = var;
+         assigned_attr++;
 
 	 continue;
       }
