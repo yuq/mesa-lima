@@ -94,16 +94,6 @@ namespace {
       throw e;
    }
 
-   void debug_log(const std::string &msg, const std::string &suffix) {
-      const char *dbg_file = debug_get_option("CLOVER_DEBUG_FILE", "stderr");
-      if (!strcmp("stderr", dbg_file)) {
-         std::cerr << msg;
-       } else {
-        std::ofstream file(dbg_file + suffix, std::ios::app);
-        file << msg;
-       }
-   }
-
    inline std::vector<std::string>
    tokenize(const std::string &s) {
       std::vector<std::string> ss;
@@ -124,6 +114,39 @@ namespace {
       std::string cpu;
       std::string triple;
    };
+
+   namespace debug {
+      enum flag {
+         clc = 1 << 0,
+         llvm = 1 << 1,
+         native = 1 << 2
+      };
+
+      inline bool
+      has_flag(flag f) {
+         static const struct debug_named_value debug_options[] = {
+            { "clc", clc, "Dump the OpenCL C code for all kernels." },
+            { "llvm", llvm, "Dump the generated LLVM IR for all kernels." },
+            { "native", native, "Dump kernel assembly code for targets "
+              "specifying PIPE_SHADER_IR_NATIVE" },
+            DEBUG_NAMED_VALUE_END
+         };
+         static const unsigned flags =
+            debug_get_flags_option("CLOVER_DEBUG", debug_options, 0);
+
+         return flags & f;
+      }
+
+      inline void
+      log(const std::string &suffix, const std::string &s) {
+         const std::string path = debug_get_option("CLOVER_DEBUG_FILE",
+                                                   "stderr");
+         if (path == "stderr")
+            std::cerr << s;
+         else
+            std::ofstream(path + suffix, std::ios::app) << s;
+      }
+   }
 
    void
    init_targets() {
@@ -597,7 +620,7 @@ namespace {
    }
 
    std::vector<char>
-   compile_native(const llvm::Module *mod, const target &t, bool dump_asm,
+   compile_native(const llvm::Module *mod, const target &t,
                   std::string &r_log) {
 
       std::string log;
@@ -624,7 +647,7 @@ namespace {
          fail(r_log, compile_error(),
               "Could not create TargetMachine: " + t.triple);
 
-      if (dump_asm) {
+      if (has_flag(debug::native)) {
          LLVMSetTargetMachineAsmVerbosity(tm, true);
 #if HAVE_LLVM >= 0x0308
          LLVMModuleRef debug_mod = wrap(llvm::CloneModule(mod).release());
@@ -634,7 +657,7 @@ namespace {
          emit_code(tm, debug_mod, LLVMAssemblyFile, &out_buffer, r_log);
          buffer_size = LLVMGetBufferSize(out_buffer);
          buffer_data = LLVMGetBufferStart(out_buffer);
-         debug_log(std::string(buffer_data, buffer_size), ".asm");
+         debug::log(".asm", std::string(buffer_data, buffer_size));
 
          LLVMSetTargetMachineAsmVerbosity(tm, false);
          LLVMDisposeMemoryBuffer(out_buffer);
@@ -749,26 +772,6 @@ namespace {
 
       return m;
    }
-
-#define DBG_CLC  (1 << 0)
-#define DBG_LLVM (1 << 1)
-#define DBG_ASM  (1 << 2)
-
-   unsigned
-   get_debug_flags() {
-      static const struct debug_named_value debug_options[] = {
-         {"clc", DBG_CLC, "Dump the OpenCL C code for all kernels."},
-         {"llvm", DBG_LLVM, "Dump the generated LLVM IR for all kernels."},
-         {"asm", DBG_ASM, "Dump kernel assembly code for targets specifying "
-          "PIPE_SHADER_IR_NATIVE"},
-         DEBUG_NAMED_VALUE_END // must be last
-      };
-      static const unsigned debug_flags =
-         debug_get_flags_option("CLOVER_DEBUG", debug_options, 0);
-
-      return debug_flags;
-   }
-
 } // End anonymous namespace
 
 module
@@ -778,8 +781,8 @@ clover::compile_program_llvm(const std::string &source,
                              const std::string &target,
                              const std::string &opts,
                              std::string &r_log) {
-   if (get_debug_flags() & DBG_CLC)
-      debug_log("// Build options: " + opts + '\n' + source, ".cl");
+   if (has_flag(debug::clc))
+      debug::log(".cl", "// Build options: " + opts + '\n' + source);
 
    auto ctx = create_context(r_log);
    // The input file name must have the .cl extension in order for the
@@ -790,12 +793,12 @@ clover::compile_program_llvm(const std::string &source,
 
    optimize(*mod, c->getCodeGenOpts().OptimizationLevel);
 
-   if (get_debug_flags() & DBG_LLVM) {
+   if (has_flag(debug::llvm)) {
       std::string log;
       raw_string_ostream s_log(log);
       mod->print(s_log, NULL);
       s_log.flush();
-      debug_log(log, ".ll");
+      debug::log(".ll", log);
     }
 
    module m;
@@ -811,9 +814,7 @@ clover::compile_program_llvm(const std::string &source,
          m = build_module_llvm(&*mod, *c);
          break;
       case PIPE_SHADER_IR_NATIVE: {
-         std::vector<char> code = compile_native(&*mod, target,
-                                                 get_debug_flags() & DBG_ASM,
-                                                 r_log);
+         std::vector<char> code = compile_native(&*mod, target, r_log);
          m = build_module_native(code, &*mod, *c, r_log);
          break;
       }
