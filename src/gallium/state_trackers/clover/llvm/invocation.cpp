@@ -507,13 +507,40 @@ namespace {
       return args;
    }
 
+   module::section
+   make_text_section(const std::vector<char> &code) {
+      const pipe_llvm_program_header header { uint32_t(code.size()) };
+      module::section text { 0, module::section::text, header.num_bytes, {} };
+
+      text.data.insert(text.data.end(), reinterpret_cast<const char *>(&header),
+                       reinterpret_cast<const char *>(&header) + sizeof(header));
+      text.data.insert(text.data.end(), code.begin(), code.end());
+
+      return text;
+   }
+
+   module
+   build_module_common(const Module &mod,
+                       const std::vector<char> &code,
+                       const std::map<std::string,
+                                      unsigned> &offsets,
+                       const clang::CompilerInstance &c) {
+      module m;
+
+      for (const auto &name : map(std::mem_fn(&Function::getName),
+                                  find_kernels(const_cast<Module *>(&mod)))) {
+         if (offsets.count(name))
+            m.syms.emplace_back(name, 0, offsets.at(name),
+                                get_kernel_args(&mod, name, c));
+      }
+
+      m.secs.push_back(make_text_section(code));
+      return m;
+   }
+
    module
    build_module_llvm(llvm::Module *mod,
                      const clang::CompilerInstance &c) {
-
-      module m;
-      struct pipe_llvm_program_header header;
-
       llvm::SmallVector<char, 1024> llvm_bitcode;
       llvm::raw_svector_ostream bitcode_ostream(llvm_bitcode);
       llvm::BitstreamWriter writer(llvm_bitcode);
@@ -522,25 +549,16 @@ namespace {
       bitcode_ostream.flush();
 #endif
 
-      const std::vector<llvm::Function *> kernels = find_kernels(mod);
-      for (unsigned i = 0; i < kernels.size(); ++i) {
-         std::string kernel_name = kernels[i]->getName();
-         std::vector<module::argument> args =
-               get_kernel_args(mod, kernel_name, c);
+      std::map<std::string, unsigned> offsets;
+      unsigned i = 0;
 
-         m.syms.push_back(module::symbol(kernel_name, 0, i, args ));
-      }
+      for (const auto &name : map(std::mem_fn(&::llvm::Function::getName),
+                                  find_kernels(mod)))
+         offsets[name] = i++;
 
-      header.num_bytes = llvm_bitcode.size();
-      std::vector<char> data;
-      data.insert(data.end(), (char*)(&header),
-                              (char*)(&header) + sizeof(header));
-      data.insert(data.end(), llvm_bitcode.begin(),
-                                  llvm_bitcode.end());
-      m.secs.push_back(module::section(0, module::section::text,
-                                       header.num_bytes, data));
-
-      return m;
+      return build_module_common(*mod, { llvm_bitcode.begin(),
+                                         llvm_bitcode.end() },
+                                 offsets, c);
    }
 
    std::vector<char>
@@ -659,32 +677,8 @@ namespace {
                        llvm::Module *mod,
                        const clang::CompilerInstance &c,
                        std::string &r_log) {
-
-      const std::vector<llvm::Function *> kernels = find_kernels(mod);
-      auto kernel_offsets = get_symbol_offsets(code, r_log);
-
-      // Begin building the clover module
-      module m;
-      struct pipe_llvm_program_header header;
-
-      // Store the generated ELF binary in the module's text section.
-      header.num_bytes = code.size();
-      std::vector<char> data;
-      data.insert(data.end(), (char*)(&header),
-                              (char*)(&header) + sizeof(header));
-      data.insert(data.end(), code.begin(), code.end());
-      m.secs.push_back(module::section(0, module::section::text,
-                                       header.num_bytes, data));
-
-      for (std::map<std::string, unsigned>::iterator i = kernel_offsets.begin(),
-           e = kernel_offsets.end(); i != e; ++i) {
-         if (count(i->first, map(std::mem_fn(&llvm::Function::getName), kernels))) {
-            std::vector<module::argument> args = get_kernel_args(mod, i->first, c);
-            m.syms.push_back(module::symbol(i->first, 0, i->second, args));
-         }
-      }
-
-      return m;
+      return build_module_common(*mod, code,
+                                 get_symbol_offsets(code, r_log), c);
    }
 } // End anonymous namespace
 
