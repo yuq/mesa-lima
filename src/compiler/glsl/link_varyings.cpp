@@ -359,7 +359,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
       ir_variable *const var = node->as_variable();
 
       if ((var == NULL) || (var->data.mode != ir_var_shader_out))
-	 continue;
+         continue;
 
       if (!var->data.explicit_location
           || var->data.location < VARYING_SLOT_VAR0)
@@ -443,7 +443,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
       ir_variable *const input = node->as_variable();
 
       if ((input == NULL) || (input->data.mode != ir_var_shader_in))
-	 continue;
+         continue;
 
       if (strcmp(input->name, "gl_Color") == 0 && input->data.used) {
          const ir_variable *const front_color =
