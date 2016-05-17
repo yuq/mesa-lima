@@ -6524,6 +6524,32 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       }
    }
 
+   fs_visitor v32(compiler, log_data, mem_ctx, key, &prog_data->base,
+                 NULL, /* Never used in core profile */
+                 shader, 32, shader_time_index);
+   if (!fail_msg && v8.max_dispatch_width >= 32 &&
+       simd_required > 16) {
+      /* Try a SIMD32 compile */
+      if (simd_required <= 8)
+         v32.import_uniforms(&v8);
+      else if (simd_required <= 16)
+         v32.import_uniforms(&v16);
+
+      if (!v32.run_cs()) {
+         compiler->shader_perf_log(log_data,
+                                   "SIMD32 shader failed to compile: %s",
+                                   v16.fail_msg);
+         if (!cfg) {
+            fail_msg =
+               "Couldn't generate SIMD32 program and not "
+               "enough threads for SIMD16";
+         }
+      } else {
+         cfg = v32.cfg;
+         prog_data->simd_size = 32;
+      }
+   }
+
    if (unlikely(cfg == NULL)) {
       assert(fail_msg);
       if (error_str)
