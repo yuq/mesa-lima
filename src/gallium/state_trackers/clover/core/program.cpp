@@ -21,6 +21,7 @@
 //
 
 #include "core/program.hpp"
+#include "llvm/invocation.hpp"
 #include "tgsi/invocation.hpp"
 
 using namespace clover;
@@ -41,8 +42,8 @@ program::program(clover::context &ctx,
 }
 
 void
-program::build(const ref_vector<device> &devs, const std::string &opts,
-               const header_map &headers) {
+program::compile(const ref_vector<device> &devs, const std::string &opts,
+                 const header_map &headers) {
    if (has_source) {
       _devices = devs;
 
@@ -52,14 +53,37 @@ program::build(const ref_vector<device> &devs, const std::string &opts,
          try {
             const module m = (dev.ir_format() == PIPE_SHADER_IR_TGSI ?
                               tgsi::compile_program(_source, log) :
-                              compile_program_llvm(_source, headers,
-                                                   dev.ir_format(),
-                                                   dev.ir_target(), opts, log));
+                              llvm::compile_program(_source, headers,
+                                                    dev.ir_target(), opts, log));
             _builds[&dev] = { m, opts, log };
          } catch (...) {
             _builds[&dev] = { module(), opts, log };
             throw;
          }
+      }
+   }
+}
+
+void
+program::link(const ref_vector<device> &devs, const std::string &opts,
+              const ref_vector<program> &progs) {
+   _devices = devs;
+
+   for (auto &dev : devs) {
+      const std::vector<module> ms = map([&](const program &prog) {
+         return prog.build(dev).binary;
+         }, progs);
+      std::string log = _builds[&dev].log;
+
+      try {
+         const module m = (dev.ir_format() == PIPE_SHADER_IR_TGSI ?
+                           tgsi::link_program(ms) :
+                           llvm::link_program(ms, dev.ir_format(),
+                                              dev.ir_target(), opts, log));
+         _builds[&dev] = { m, opts, log };
+      } catch (...) {
+         _builds[&dev] = { module(), opts, log };
+         throw;
       }
    }
 }

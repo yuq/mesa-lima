@@ -181,7 +181,11 @@ clBuildProgram(cl_program d_prog, cl_uint num_devs,
 
    validate_build_program_common(prog, num_devs, d_devs, pfn_notify, user_data);
 
-   prog.build(devs, opts);
+   if (prog.has_source) {
+      prog.compile(devs, opts);
+      prog.link(devs, opts, { prog });
+   }
+
    return CL_SUCCESS;
 
 } catch (error &e) {
@@ -221,7 +225,7 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
       range(header_names, num_headers),
       objs<allow_empty_tag>(d_header_progs, num_headers));
 
-   prog.build(devs, opts, headers);
+   prog.compile(devs, opts, headers);
    return CL_SUCCESS;
 
 } catch (invalid_build_options_error &e) {

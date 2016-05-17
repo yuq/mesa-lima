@@ -40,15 +40,17 @@ namespace clover {
       program(clover::context &ctx,
               const std::string &source);
       program(clover::context &ctx,
-              const ref_vector<device> &devs,
-              const std::vector<module> &binaries);
+              const ref_vector<device> &devs = {},
+              const std::vector<module> &binaries = {});
 
       program(const program &prog) = delete;
       program &
       operator=(const program &prog) = delete;
 
-      void build(const ref_vector<device> &devs, const std::string &opts,
-                 const header_map &headers = {});
+      void compile(const ref_vector<device> &devs, const std::string &opts,
+                   const header_map &headers = {});
+      void link(const ref_vector<device> &devs, const std::string &opts,
+                const ref_vector<program> &progs);
 
       const bool has_source;
       const std::string &source() const;
@@ -66,7 +68,7 @@ namespace clover {
          std::string log;
       };
 
-      const struct build &build(const device &dev) const;
+      const build &build(const device &dev) const;
 
       const std::vector<module::symbol> &symbols() const;
 
