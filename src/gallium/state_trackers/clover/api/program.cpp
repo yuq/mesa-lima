@@ -287,7 +287,7 @@ clGetProgramInfo(cl_program d_prog, cl_program_info param,
 
    case CL_PROGRAM_BINARY_SIZES:
       buf.as_vector<size_t>() = map([&](const device &dev) {
-            return prog.binary(dev).size();
+            return prog.build(dev).binary.size();
          },
          prog.devices());
       break;
@@ -296,7 +296,7 @@ clGetProgramInfo(cl_program d_prog, cl_program_info param,
       buf.as_matrix<unsigned char>() = map([&](const device &dev) {
             std::stringbuf bin;
             std::ostream s(&bin);
-            prog.binary(dev).serialize(s);
+            prog.build(dev).binary.serialize(s);
             return bin.str();
          },
          prog.devices());
@@ -335,15 +335,15 @@ clGetProgramBuildInfo(cl_program d_prog, cl_device_id d_dev,
 
    switch (param) {
    case CL_PROGRAM_BUILD_STATUS:
-      buf.as_scalar<cl_build_status>() = prog.build_status(dev);
+      buf.as_scalar<cl_build_status>() = prog.build(dev).status();
       break;
 
    case CL_PROGRAM_BUILD_OPTIONS:
-      buf.as_string() = prog.build_opts(dev);
+      buf.as_string() = prog.build(dev).opts;
       break;
 
    case CL_PROGRAM_BUILD_LOG:
-      buf.as_string() = prog.build_log(dev);
+      buf.as_string() = prog.build(dev).log;
       break;
 
    default:

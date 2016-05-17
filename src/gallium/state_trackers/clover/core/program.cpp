@@ -35,7 +35,7 @@ program::program(clover::context &ctx,
    has_source(false), context(ctx),
    _devices(devs), _kernel_ref_counter(0) {
    for_each([&](device &dev, const module &bin) {
-         _binaries.insert({ &dev, bin });
+         _builds[&dev] = { bin };
       },
       devs, binaries);
 }
@@ -47,25 +47,17 @@ program::build(const ref_vector<device> &devs, const std::string &opts,
       _devices = devs;
 
       for (auto &dev : devs) {
-         _binaries.erase(&dev);
-         _logs.erase(&dev);
-         _opts.erase(&dev);
-
-         _opts.insert({ &dev, opts });
-
          std::string log;
 
          try {
-            auto module = (dev.ir_format() == PIPE_SHADER_IR_TGSI ?
-                           tgsi::compile_program(_source, log) :
-                           compile_program_llvm(_source, headers,
-                                                dev.ir_format(),
-                                                dev.ir_target(), opts,
-                                                log));
-            _binaries.insert({ &dev, module });
-            _logs.insert({ &dev, log });
-         } catch (const error &) {
-            _logs.insert({ &dev, log });
+            const module m = (dev.ir_format() == PIPE_SHADER_IR_TGSI ?
+                              tgsi::compile_program(_source, log) :
+                              compile_program_llvm(_source, headers,
+                                                   dev.ir_format(),
+                                                   dev.ir_target(), opts, log));
+            _builds[&dev] = { m, opts, log };
+         } catch (...) {
+            _builds[&dev] = { module(), opts, log };
             throw;
          }
       }
@@ -82,37 +74,28 @@ program::devices() const {
    return map(evals(), _devices);
 }
 
-const module &
-program::binary(const device &dev) const {
-   return _binaries.find(&dev)->second;
-}
-
 cl_build_status
-program::build_status(const device &dev) const {
-   if (_binaries.count(&dev))
+program::build::status() const {
+   if (!binary.secs.empty())
       return CL_BUILD_SUCCESS;
-   else if (_logs.count(&dev))
+   else if (log.size())
       return CL_BUILD_ERROR;
    else
       return CL_BUILD_NONE;
 }
 
-std::string
-program::build_opts(const device &dev) const {
-   return _opts.count(&dev) ? _opts.find(&dev)->second : "";
-}
-
-std::string
-program::build_log(const device &dev) const {
-   return _logs.count(&dev) ? _logs.find(&dev)->second : "";
+const struct program::build &
+program::build(const device &dev) const {
+   static const struct build null;
+   return _builds.count(&dev) ? _builds.find(&dev)->second : null;
 }
 
 const std::vector<module::symbol> &
 program::symbols() const {
-   if (_binaries.empty())
+   if (_builds.empty())
       throw error(CL_INVALID_PROGRAM_EXECUTABLE);
 
-   return _binaries.begin()->second.syms;
+   return _builds.begin()->second.binary.syms;
 }
 
 unsigned

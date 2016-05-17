@@ -55,10 +55,18 @@ namespace clover {
 
       device_range devices() const;
 
-      const module &binary(const device &dev) const;
-      cl_build_status build_status(const device &dev) const;
-      std::string build_opts(const device &dev) const;
-      std::string build_log(const device &dev) const;
+      struct build {
+         build(const module &m = {}, const std::string &opts = {},
+               const std::string &log = {}) : binary(m), opts(opts), log(log) {}
+
+         cl_build_status status() const;
+
+         module binary;
+         std::string opts;
+         std::string log;
+      };
+
+      const struct build &build(const device &dev) const;
 
       const std::vector<module::symbol> &symbols() const;
 
@@ -70,9 +78,7 @@ namespace clover {
 
    private:
       std::vector<intrusive_ref<device>> _devices;
-      std::map<const device *, module> _binaries;
-      std::map<const device *, std::string> _logs;
-      std::map<const device *, std::string> _opts;
+      std::map<const device *, struct build> _builds;
       std::string _source;
       ref_counter _kernel_ref_counter;
    };
