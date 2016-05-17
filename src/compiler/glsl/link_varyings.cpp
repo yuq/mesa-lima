@@ -226,15 +226,21 @@ cross_validate_types_and_qualifiers(struct gl_shader_program *prog,
        *     fragment language."
        */
       if (!output->type->is_array() || !is_gl_identifier(output->name)) {
-         linker_error(prog,
-                      "%s shader output `%s' declared as type `%s', "
-                      "but %s shader input declared as type `%s'\n",
-                      _mesa_shader_stage_to_string(producer_stage),
-                      output->name,
-                      output->type->name,
-                      _mesa_shader_stage_to_string(consumer_stage),
-                      input->type->name);
-         return;
+         bool anon_matches = output->type->is_anonymous() &&
+            type_to_match->is_anonymous() &&
+            type_to_match->record_compare(output->type);
+
+         if (!anon_matches) {
+            linker_error(prog,
+                         "%s shader output `%s' declared as type `%s', "
+                         "but %s shader input declared as type `%s'\n",
+                         _mesa_shader_stage_to_string(producer_stage),
+                         output->name,
+                         output->type->name,
+                         _mesa_shader_stage_to_string(consumer_stage),
+                         input->type->name);
+            return;
+         }
       }
    }
 
