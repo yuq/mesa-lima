@@ -274,11 +274,15 @@ vc4_nir_lower_fs_input(struct vc4_compile *c, nir_builder *b,
         }
 
         if (input_var->data.location == VARYING_SLOT_FACE) {
-                dests[0] = nir_fsub(b,
-                                    nir_imm_float(b, 1.0),
-                                    nir_fmul(b,
-                                             nir_i2f(b, dests[0]),
-                                             nir_imm_float(b, 2.0)));
+                /* TGSI-to-NIR's front face.  Convert to using the system
+                 * value boolean instead.
+                 */
+                nir_ssa_def *face =
+                        nir_load_system_value(b,
+                                              nir_intrinsic_load_front_face,
+                                              0);
+                dests[0] = nir_bcsel(b, face, nir_imm_float(b, 1.0),
+                                     nir_imm_float(b, -1.0));
                 dests[1] = nir_imm_float(b, 0.0);
                 dests[2] = nir_imm_float(b, 0.0);
                 dests[3] = nir_imm_float(b, 1.0);

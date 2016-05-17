@@ -1387,10 +1387,6 @@ ntq_setup_inputs(struct vc4_compile *c)
                 if (c->stage == QSTAGE_FRAG) {
                         if (var->data.location == VARYING_SLOT_POS) {
                                 emit_fragcoord_input(c, loc);
-                        } else if (var->data.location == VARYING_SLOT_FACE) {
-                                c->inputs[loc * 4 + 0] =
-                                        qir_ITOF(c, qir_reg(QFILE_FRAG_REV_FLAG,
-                                                            0));
                         } else if (var->data.location >= VARYING_SLOT_VAR0 &&
                                    (c->fs_key->point_sprite_mask &
                                     (1 << (var->data.location -
@@ -1544,6 +1540,15 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
 
         case nir_intrinsic_load_sample_mask_in:
                 *dest = qir_uniform(c, QUNIFORM_SAMPLE_MASK, 0);
+                break;
+
+        case nir_intrinsic_load_front_face:
+                /* The register contains 0 (front) or 1 (back), and we need to
+                 * turn it into a NIR bool where true means front.
+                 */
+                *dest = qir_ADD(c,
+                                qir_uniform_ui(c, -1),
+                                qir_reg(QFILE_FRAG_REV_FLAG, 0));
                 break;
 
         case nir_intrinsic_load_input:
