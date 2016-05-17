@@ -77,6 +77,7 @@ using namespace clover;
 using namespace clover::llvm;
 
 using ::llvm::Function;
+using ::llvm::LLVMContext;
 using ::llvm::Module;
 using ::llvm::raw_string_ostream;
 
@@ -117,6 +118,40 @@ namespace {
       std::string cpu;
       std::string triple;
    };
+
+   void
+   init_targets() {
+      static bool targets_initialized = false;
+      if (!targets_initialized) {
+         LLVMInitializeAllTargets();
+         LLVMInitializeAllTargetInfos();
+         LLVMInitializeAllTargetMCs();
+         LLVMInitializeAllAsmPrinters();
+         targets_initialized = true;
+      }
+   }
+
+   void
+   diagnostic_handler(const llvm::DiagnosticInfo &di, void *data) {
+      if (di.getSeverity() == llvm::DS_Error) {
+         std::string message = *(std::string*)data;
+         llvm::raw_string_ostream stream(message);
+         llvm::DiagnosticPrinterRawOStream dp(stream);
+         di.print(dp);
+         stream.flush();
+         *(std::string*)data = message;
+
+         throw compile_error();
+      }
+   }
+
+   std::unique_ptr<LLVMContext>
+   create_context(std::string &r_log) {
+      init_targets();
+      std::unique_ptr<LLVMContext> ctx { new LLVMContext };
+      ctx->setDiagnosticHandler(diagnostic_handler, &r_log);
+      return ctx;
+   }
 
    std::unique_ptr<clang::CompilerInstance>
    create_compiler_instance(const target &target,
@@ -161,12 +196,12 @@ namespace {
    }
 
    llvm::Module *
-   compile_llvm(clang::CompilerInstance &c,
-                llvm::LLVMContext &llvm_ctx, const std::string &source,
-                const header_map &headers, const std::string &name,
-                const std::string &target, const std::string &opts,
-                std::string &r_log) {
-      clang::EmitLLVMOnlyAction act(&llvm_ctx);
+   compile_llvm(LLVMContext &ctx, clang::CompilerInstance &c,
+                const std::string &source, const header_map &headers,
+                const std::string &name, const std::string &target,
+                const std::string &opts, std::string &r_log) {
+      clang::EmitLLVMOnlyAction act(&ctx);
+
       c.getFrontendOpts().ProgramAction = clang::frontend::EmitLLVMOnly;
       c.getHeaderSearchOpts().UseBuiltinIncludes = true;
       c.getHeaderSearchOpts().UseStandardSystemIncludes = true;
@@ -723,32 +758,6 @@ namespace {
       return m;
    }
 
-   void
-   diagnostic_handler(const llvm::DiagnosticInfo &di, void *data) {
-      if (di.getSeverity() == llvm::DS_Error) {
-         std::string message = *(std::string*)data;
-         llvm::raw_string_ostream stream(message);
-         llvm::DiagnosticPrinterRawOStream dp(stream);
-         di.print(dp);
-         stream.flush();
-         *(std::string*)data = message;
-
-         throw compile_error();
-      }
-   }
-
-   void
-   init_targets() {
-      static bool targets_initialized = false;
-      if (!targets_initialized) {
-         LLVMInitializeAllTargets();
-         LLVMInitializeAllTargetInfos();
-         LLVMInitializeAllTargetMCs();
-         LLVMInitializeAllAsmPrinters();
-         targets_initialized = true;
-      }
-   }
-
 #define DBG_CLC  (1 << 0)
 #define DBG_LLVM (1 << 1)
 #define DBG_ASM  (1 << 2)
@@ -777,21 +786,15 @@ clover::compile_program_llvm(const std::string &source,
                              const std::string &target,
                              const std::string &opts,
                              std::string &r_log) {
-
-   init_targets();
-
-   ::llvm::LLVMContext llvm_ctx;
-
-   llvm_ctx.setDiagnosticHandler(diagnostic_handler, &r_log);
-
    if (get_debug_flags() & DBG_CLC)
       debug_log("// Build options: " + opts + '\n' + source, ".cl");
 
+   auto ctx = create_context(r_log);
    // The input file name must have the .cl extension in order for the
    // CompilerInvocation class to recognize it as an OpenCL source file.
    const auto c = create_compiler_instance(target, tokenize(opts + " input.cl"),
                                            r_log);
-   Module *mod = compile_llvm(*c, llvm_ctx, source, headers, "input.cl",
+   Module *mod = compile_llvm(*ctx, *c, source, headers, "input.cl",
                               target, opts, r_log);
 
    optimize(mod, c->getCodeGenOpts().OptimizationLevel);
