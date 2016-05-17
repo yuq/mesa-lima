@@ -281,14 +281,3 @@ clover::llvm::link_program(const std::vector<module> &modules,
       unreachable("Unsupported IR.");
    }
 }
-
-module
-clover::compile_program_llvm(const std::string &source,
-                             const header_map &headers,
-                             enum pipe_shader_ir ir,
-                             const std::string &target,
-                             const std::string &opts,
-                             std::string &r_log) {
-   const auto mod = compile_program(source, headers, target, opts, r_log);
-   return link_program({ mod }, ir, target, opts, r_log);
-}

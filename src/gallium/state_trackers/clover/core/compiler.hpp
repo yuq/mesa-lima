@@ -29,13 +29,6 @@
 
 namespace clover {
    typedef std::vector<std::pair<std::string, std::string> > header_map;
-
-   module compile_program_llvm(const std::string &source,
-                               const header_map &headers,
-                               pipe_shader_ir ir,
-                               const std::string &target,
-                               const std::string &opts,
-                               std::string &r_log);
 }
 
 #endif
