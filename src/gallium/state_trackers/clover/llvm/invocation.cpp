@@ -406,27 +406,31 @@ namespace {
       return m;
    }
 
-   module
-   build_module_llvm(llvm::Module *mod,
-                     const clang::CompilerInstance &c) {
-      llvm::SmallVector<char, 1024> llvm_bitcode;
-      llvm::raw_svector_ostream bitcode_ostream(llvm_bitcode);
-      llvm::BitstreamWriter writer(llvm_bitcode);
-      llvm::WriteBitcodeToFile(mod, bitcode_ostream);
-#if HAVE_LLVM < 0x0308
-      bitcode_ostream.flush();
-#endif
-
+   std::map<std::string, unsigned>
+   get_symbol_offsets(const ::llvm::Module &mod) {
       std::map<std::string, unsigned> offsets;
       unsigned i = 0;
 
       for (const auto &name : map(std::mem_fn(&::llvm::Function::getName),
-                                  get_kernels(*mod)))
+                                  get_kernels(mod)))
          offsets[name] = i++;
 
-      return build_module_common(*mod, { llvm_bitcode.begin(),
-                                         llvm_bitcode.end() },
-                                 offsets, c);
+      return offsets;
+   }
+
+   std::vector<char>
+   emit_code(const ::llvm::Module &mod) {
+      ::llvm::SmallVector<char, 1024> data;
+      ::llvm::raw_svector_ostream os { data };
+      WriteBitcodeToFile(&mod, os);
+      return { os.str().begin(), os.str().end() };
+   }
+
+   module
+   build_module_bitcode(const ::llvm::Module &mod,
+                        const clang::CompilerInstance &c) {
+      return build_module_common(mod, emit_code(mod), get_symbol_offsets(mod),
+                                 c);
    }
 
    std::vector<char>
@@ -587,7 +591,7 @@ clover::compile_program_llvm(const std::string &source,
          m = module();
          break;
       case PIPE_SHADER_IR_LLVM:
-         m = build_module_llvm(&*mod, *c);
+         m = build_module_bitcode(*mod, *c);
          break;
       case PIPE_SHADER_IR_NATIVE:
          m = build_module_native(&*mod, target, *c, r_log);
