@@ -471,19 +471,6 @@ namespace {
       return { data.begin(), data.end() };
    }
 
-   std::vector<char>
-   compile_native(llvm::Module *mod, const target &target,
-                  std::string &r_log) {
-      if (has_flag(debug::native)) {
-         std::unique_ptr<llvm::Module> cmod { CloneModule(mod) };
-         debug::log(".asm", as_string(
-                       emit_code(*cmod, target,
-                                 TargetMachine::CGFT_AssemblyFile, r_log)));
-      }
-
-      return emit_code(*mod, target, TargetMachine::CGFT_ObjectFile, r_log);
-   }
-
    namespace elf {
       std::unique_ptr<Elf, int (*)(Elf *)>
       get(const std::vector<char> &code) {
@@ -545,12 +532,24 @@ namespace {
    }
 
    module
-   build_module_native(llvm::Module *mod, const target &target,
+   build_module_native(::llvm::Module &mod, const target &target,
                        const clang::CompilerInstance &c,
                        std::string &r_log) {
-      const auto code = compile_native(mod, target, r_log);
-      return build_module_common(*mod, code,
-                                 get_symbol_offsets(code, r_log), c);
+      const auto code = emit_code(mod, target,
+                                  TargetMachine::CGFT_ObjectFile, r_log);
+      return build_module_common(mod, code, get_symbol_offsets(code, r_log), c);
+   }
+
+   std::string
+   print_module_native(const ::llvm::Module &mod, const target &target) {
+      std::string log;
+      try {
+         std::unique_ptr<llvm::Module> cmod { CloneModule(&mod) };
+         return as_string(emit_code(*cmod, target,
+                                    TargetMachine::CGFT_AssemblyFile, log));
+      } catch (...) {
+         return "Couldn't output native disassembly: " + log;
+      }
    }
 } // End anonymous namespace
 
@@ -594,7 +593,10 @@ clover::compile_program_llvm(const std::string &source,
          m = build_module_bitcode(*mod, *c);
          break;
       case PIPE_SHADER_IR_NATIVE:
-         m = build_module_native(&*mod, target, *c, r_log);
+         if (has_flag(debug::native))
+            debug::log(".asm", print_module_native(*mod, target));
+
+         m = build_module_native(*mod, target, *c, r_log);
          break;
    }
 
