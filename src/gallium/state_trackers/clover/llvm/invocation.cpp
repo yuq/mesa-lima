@@ -250,41 +250,6 @@ namespace {
       pm.run(mod);
    }
 
-   std::map<std::string, unsigned>
-   get_symbol_offsets(const ::llvm::Module &mod) {
-      std::map<std::string, unsigned> offsets;
-      unsigned i = 0;
-
-      for (const auto &name : map(std::mem_fn(&::llvm::Function::getName),
-                                  get_kernels(mod)))
-         offsets[name] = i++;
-
-      return offsets;
-   }
-
-   std::vector<char>
-   emit_code(const ::llvm::Module &mod) {
-      ::llvm::SmallVector<char, 1024> data;
-      ::llvm::raw_svector_ostream os { data };
-      WriteBitcodeToFile(&mod, os);
-      return { os.str().begin(), os.str().end() };
-   }
-
-   module
-   build_module_bitcode(const ::llvm::Module &mod,
-                        const clang::CompilerInstance &c) {
-      return build_module_common(mod, emit_code(mod), get_symbol_offsets(mod),
-                                 c);
-   }
-
-   std::string
-   print_module_bitcode(const ::llvm::Module &mod) {
-      std::string s;
-      ::llvm::raw_string_ostream os { s };
-      mod.print(os, NULL);
-      return os.str();
-   }
-
    std::vector<char>
    emit_code(::llvm::Module &mod, const target &target,
              TargetMachine::CodeGenFileType ft,

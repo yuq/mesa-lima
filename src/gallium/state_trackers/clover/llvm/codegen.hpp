@@ -38,6 +38,13 @@
 namespace clover {
    namespace llvm {
       module
+      build_module_bitcode(const ::llvm::Module &mod,
+                           const clang::CompilerInstance &c);
+
+      std::string
+      print_module_bitcode(const ::llvm::Module &mod);
+
+      module
       build_module_common(const ::llvm::Module &mod,
                           const std::vector<char> &code,
                           const std::map<std::string, unsigned> &offsets,
