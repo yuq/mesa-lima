@@ -132,15 +132,11 @@ namespace {
    }
 
    void
-   diagnostic_handler(const llvm::DiagnosticInfo &di, void *data) {
-      if (di.getSeverity() == llvm::DS_Error) {
-         std::string message = *(std::string*)data;
-         llvm::raw_string_ostream stream(message);
-         llvm::DiagnosticPrinterRawOStream dp(stream);
-         di.print(dp);
-         stream.flush();
-         *(std::string*)data = message;
-
+   diagnostic_handler(const ::llvm::DiagnosticInfo &di, void *data) {
+      if (di.getSeverity() == ::llvm::DS_Error) {
+         raw_string_ostream os { *reinterpret_cast<std::string *>(data) };
+         ::llvm::DiagnosticPrinterRawOStream printer { os };
+         di.print(printer);
          throw compile_error();
       }
    }
