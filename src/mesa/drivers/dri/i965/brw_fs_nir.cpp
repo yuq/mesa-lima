@@ -62,8 +62,7 @@ fs_visitor::nir_setup_inputs()
 
       fs_reg reg;
       if (var->data.location == VARYING_SLOT_POS) {
-         reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
-                                             var->data.origin_upper_left);
+         reg = *emit_fragcoord_interpolation();
          emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
                                    input, reg), 0xF);
       } else if (var->data.location == VARYING_SLOT_LAYER) {
@@ -879,22 +878,18 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
    case nir_op_fddy:
       if (fs_key->high_quality_derivatives) {
-         inst = bld.emit(FS_OPCODE_DDY_FINE, result, op[0],
-                         brw_imm_d(fs_key->render_to_fbo));
+         inst = bld.emit(FS_OPCODE_DDY_FINE, result, op[0]);
       } else {
-         inst = bld.emit(FS_OPCODE_DDY_COARSE, result, op[0],
-                         brw_imm_d(fs_key->render_to_fbo));
+         inst = bld.emit(FS_OPCODE_DDY_COARSE, result, op[0]);
       }
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_fddy_fine:
-      inst = bld.emit(FS_OPCODE_DDY_FINE, result, op[0],
-                      brw_imm_d(fs_key->render_to_fbo));
+      inst = bld.emit(FS_OPCODE_DDY_FINE, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_fddy_coarse:
-      inst = bld.emit(FS_OPCODE_DDY_COARSE, result, op[0],
-                      brw_imm_d(fs_key->render_to_fbo));
+      inst = bld.emit(FS_OPCODE_DDY_COARSE, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
@@ -3074,12 +3069,9 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       case nir_intrinsic_interp_var_at_offset: {
          nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
 
-         const bool flip = !wm_key->render_to_fbo;
-
          if (const_offset) {
             unsigned off_x = MIN2((int)(const_offset->f32[0] * 16), 7) & 0xf;
-            unsigned off_y = MIN2((int)(const_offset->f32[1] * 16 *
-                                        (flip ? -1 : 1)), 7) & 0xf;
+            unsigned off_y = MIN2((int)(const_offset->f32[1] * 16), 7) & 0xf;
 
             emit_pixel_interpolater_send(bld,
                                          FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET,
@@ -3096,7 +3088,7 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
                bld.MUL(temp, offset(offset_src, bld, i), brw_imm_f(16.0f));
                fs_reg itemp = vgrf(glsl_type::int_type);
                /* float to int */
-               bld.MOV(itemp, (i == 1 && flip) ? negate(temp) : temp);
+               bld.MOV(itemp, temp);
 
                /* Clamp the upper end of the range to +7/16.
                 * ARB_gpu_shader5 requires that we support a maximum offset

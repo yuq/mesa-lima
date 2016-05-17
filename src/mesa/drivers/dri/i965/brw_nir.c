@@ -27,6 +27,7 @@
 #include "compiler/nir/glsl_to_nir.h"
 #include "compiler/nir/nir_builder.h"
 #include "program/prog_to_nir.h"
+#include "program/prog_parameter.h"
 
 static bool
 is_input(nir_intrinsic_instr *intrin)
@@ -572,6 +573,18 @@ brw_create_nir(struct brw_context *brw,
    (void)progress;
 
    nir = brw_preprocess_nir(brw->intelScreen->compiler, nir);
+
+   if (stage == MESA_SHADER_FRAGMENT) {
+      static const struct nir_lower_wpos_ytransform_options wpos_options = {
+         .state_tokens = {STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM, 0, 0, 0},
+         .fs_coord_pixel_center_integer = 1,
+         .fs_coord_origin_upper_left = 1,
+      };
+      _mesa_add_state_reference(prog->Parameters,
+                                (gl_state_index *) wpos_options.state_tokens);
+
+      OPT(nir_lower_wpos_ytransform, &wpos_options);
+   }
 
    OPT(nir_lower_system_values);
    OPT_V(brw_nir_lower_uniforms, is_scalar);

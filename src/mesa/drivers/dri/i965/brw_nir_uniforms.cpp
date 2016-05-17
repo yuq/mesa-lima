@@ -157,17 +157,11 @@ brw_nir_setup_arb_uniforms(nir_shader *shader, struct gl_program *prog,
 {
    struct gl_program_parameter_list *plist = prog->Parameters;
 
-#ifndef NDEBUG
-   if (!shader->uniforms.is_empty()) {
-      /* For ARB programs, only a single "parameters" variable is generated to
-       * support uniform data.
-       */
-      assert(shader->uniforms.length() == 1);
-      nir_variable *var = (nir_variable *) shader->uniforms.get_head();
-      assert(strcmp(var->name, "parameters") == 0);
-      assert(var->type->array_size() == (int)plist->NumParameters);
-   }
-#endif
+   /* For ARB programs, prog_to_nir generates a single "parameters" variable
+    * for all uniform data.  nir_lower_wpos_ytransform may also create an
+    * additional variable.
+    */
+   assert(shader->uniforms.length() <= 2);
 
    for (unsigned p = 0; p < plist->NumParameters; p++) {
       /* Parameters should be either vec4 uniforms or single component

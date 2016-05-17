@@ -1111,9 +1111,10 @@ fs_generator::generate_ddx(enum opcode opcode,
  */
 void
 fs_generator::generate_ddy(enum opcode opcode,
-                           struct brw_reg dst, struct brw_reg src,
-                           bool negate_value)
+                           struct brw_reg dst, struct brw_reg src)
 {
+   bool negate_value = true;
+
    if (opcode == FS_OPCODE_DDY_FINE) {
       /* From the Ivy Bridge PRM, volume 4 part 3, section 3.3.9 (Register
        * Region Restrictions):
@@ -2154,8 +2155,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          break;
       case FS_OPCODE_DDY_COARSE:
       case FS_OPCODE_DDY_FINE:
-         assert(src[1].file == BRW_IMMEDIATE_VALUE);
-         generate_ddy(inst->opcode, dst, src[0], src[1].ud);
+         generate_ddy(inst->opcode, dst, src[0]);
 	 break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:

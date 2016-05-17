@@ -1060,37 +1060,18 @@ fs_visitor::import_uniforms(fs_visitor *v)
 }
 
 fs_reg *
-fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
-                                         bool origin_upper_left)
+fs_visitor::emit_fragcoord_interpolation()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::vec4_type));
    fs_reg wpos = *reg;
-   bool flip = !origin_upper_left ^ key->render_to_fbo;
 
    /* gl_FragCoord.x */
-   if (pixel_center_integer) {
-      bld.MOV(wpos, this->pixel_x);
-   } else {
-      bld.ADD(wpos, this->pixel_x, brw_imm_f(0.5f));
-   }
+   bld.MOV(wpos, this->pixel_x);
    wpos = offset(wpos, bld, 1);
 
    /* gl_FragCoord.y */
-   if (!flip && pixel_center_integer) {
-      bld.MOV(wpos, this->pixel_y);
-   } else {
-      fs_reg pixel_y = this->pixel_y;
-      float offset = (pixel_center_integer ? 0.0f : 0.5f);
-
-      if (flip) {
-	 pixel_y.negate = true;
-	 offset += key->drawable_height - 1.0f;
-      }
-
-      bld.ADD(wpos, pixel_y, brw_imm_f(offset));
-   }
+   bld.MOV(wpos, this->pixel_y);
    wpos = offset(wpos, bld, 1);
 
    /* gl_FragCoord.z */

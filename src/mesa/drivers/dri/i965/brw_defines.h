@@ -1105,7 +1105,6 @@ enum opcode {
    FS_OPCODE_DDX_FINE,
    /**
     * Compute dFdy(), dFdyCoarse(), or dFdyFine().
-    * src1 is an immediate storing the key->render_to_fbo boolean.
     */
    FS_OPCODE_DDY_COARSE,
    FS_OPCODE_DDY_FINE,

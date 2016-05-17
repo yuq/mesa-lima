@@ -183,8 +183,7 @@ public:
 
    void emit_dummy_fs();
    void emit_repclear_shader();
-   fs_reg *emit_fragcoord_interpolation(bool pixel_center_integer,
-                                        bool origin_upper_left);
+   fs_reg *emit_fragcoord_interpolation();
    fs_inst *emit_linterp(const fs_reg &attr, const fs_reg &interp,
                          glsl_interp_qualifier interpolation_mode,
                          bool is_centroid, bool is_sample);
@@ -457,8 +456,7 @@ private:
 			  struct brw_reg dst,
 			  struct brw_reg src);
    void generate_ddx(enum opcode op, struct brw_reg dst, struct brw_reg src);
-   void generate_ddy(enum opcode op, struct brw_reg dst, struct brw_reg src,
-                     bool negate_value);
+   void generate_ddy(enum opcode op, struct brw_reg dst, struct brw_reg src);
    void generate_scratch_write(fs_inst *inst, struct brw_reg src);
    void generate_scratch_read(fs_inst *inst, struct brw_reg dst);
    void generate_scratch_read_gen7(fs_inst *inst, struct brw_reg dst);
