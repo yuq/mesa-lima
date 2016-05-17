@@ -6028,8 +6028,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                                            shader);
 
    cfg_t *simd8_cfg = NULL, *simd16_cfg = NULL;
-   uint8_t simd8_grf_start, simd16_grf_start;
-   unsigned simd8_grf_used, simd16_grf_used;
+   uint8_t simd8_grf_start = 0, simd16_grf_start = 0;
+   unsigned simd8_grf_used = 0, simd16_grf_used = 0;
 
    fs_visitor v8(compiler, log_data, mem_ctx, key,
                  &prog_data->base, prog, shader, 8,
