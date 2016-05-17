@@ -3664,7 +3664,8 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
        *    the name of the interface block (not the instance name) and
        *    "Member" is the name of the variable."
        */
-      const char *prefixed_name = var->data.from_named_ifc_block
+      const char *prefixed_name = (var->data.from_named_ifc_block &&
+                                   !is_gl_identifier(var->name))
          ? ralloc_asprintf(shProg, "%s.%s", var->get_interface_type()->name,
                            name)
          : name;
