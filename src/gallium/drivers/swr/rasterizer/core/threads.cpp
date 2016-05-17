@@ -248,46 +248,48 @@ void bindThread(uint32_t threadId, uint32_t procGroupId = 0, bool bindProcGroup=
     }
 
 #if defined(_WIN32)
-    {
-        GROUP_AFFINITY affinity = {};
-        affinity.Group = procGroupId;
+
+    GROUP_AFFINITY affinity = {};
+    affinity.Group = procGroupId;
 
 #if !defined(_WIN64)
-        if (threadId >= 32)
-        {
-            // Hopefully we don't get here.  Logic in CreateThreadPool should prevent this.
-            SWR_REL_ASSERT(false, "Shouldn't get here");
+    if (threadId >= 32)
+    {
+        // Hopefully we don't get here.  Logic in CreateThreadPool should prevent this.
+        SWR_REL_ASSERT(false, "Shouldn't get here");
 
-            // In a 32-bit process on Windows it is impossible to bind
-            // to logical processors 32-63 within a processor group.
-            // In this case set the mask to 0 and let the system assign
-            // the processor.  Hopefully it will make smart choices.
-            affinity.Mask = 0;
-        }
-        else
-#endif
-        {
-            // If KNOB_MAX_WORKER_THREADS is set, only bind to the proc group,
-            // Not the individual HW thread.
-            if (!KNOB_MAX_WORKER_THREADS)
-            {
-                affinity.Mask = KAFFINITY(1) << threadId;
-            }
-        }
-
-        SetThreadGroupAffinity(GetCurrentThread(), &affinity, nullptr);
+        // In a 32-bit process on Windows it is impossible to bind
+        // to logical processors 32-63 within a processor group.
+        // In this case set the mask to 0 and let the system assign
+        // the processor.  Hopefully it will make smart choices.
+        affinity.Mask = 0;
     }
+    else
+#endif
+    {
+        // If KNOB_MAX_WORKER_THREADS is set, only bind to the proc group,
+        // Not the individual HW thread.
+        if (!KNOB_MAX_WORKER_THREADS)
+        {
+            affinity.Mask = KAFFINITY(1) << threadId;
+        }
+    }
+
+    SetThreadGroupAffinity(GetCurrentThread(), &affinity, nullptr);
+
 #elif defined(__CYGWIN__)
 
     // do nothing
 
 #else
+
     cpu_set_t cpuset;
     pthread_t thread = pthread_self();
     CPU_ZERO(&cpuset);
     CPU_SET(threadId, &cpuset);
 
     pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+
 #endif
 }
 
