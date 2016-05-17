@@ -2883,8 +2883,7 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
  * unmatch flag if found so we don't optimise them away.
  */
 static void
-match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
-                                 gl_shader *producer,
+match_explicit_outputs_to_inputs(gl_shader *producer,
                                  gl_shader *consumer)
 {
    glsl_symbol_table parameters;
@@ -4679,7 +4678,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       if (prog->_LinkedShaders[i] == NULL)
          continue;
 
-      match_explicit_outputs_to_inputs(prog, prog->_LinkedShaders[prev],
+      match_explicit_outputs_to_inputs(prog->_LinkedShaders[prev],
                                        prog->_LinkedShaders[i]);
       prev = i;
    }
