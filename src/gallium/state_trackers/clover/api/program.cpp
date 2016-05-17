@@ -28,12 +28,12 @@
 using namespace clover;
 
 namespace {
-   void validate_build_program_common(const program &prog, cl_uint num_devs,
-                                      const cl_device_id *d_devs,
-                                      void (*pfn_notify)(cl_program, void *),
-                                      void *user_data) {
-
-      if ((!pfn_notify && user_data))
+   void
+   validate_build_common(const program &prog, cl_uint num_devs,
+                         const cl_device_id *d_devs,
+                         void (*pfn_notify)(cl_program, void *),
+                         void *user_data) {
+      if (!pfn_notify && user_data)
          throw error(CL_INVALID_VALUE);
 
       if (prog.kernel_ref_count())
@@ -179,7 +179,7 @@ clBuildProgram(cl_program d_prog, cl_uint num_devs,
                 ref_vector<device>(prog.context().devices()));
    auto opts = (p_opts ? p_opts : "");
 
-   validate_build_program_common(prog, num_devs, d_devs, pfn_notify, user_data);
+   validate_build_common(prog, num_devs, d_devs, pfn_notify, user_data);
 
    if (prog.has_source) {
       prog.compile(devs, opts);
@@ -205,14 +205,13 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
    auto opts = (p_opts ? p_opts : "");
    header_map headers;
 
-   validate_build_program_common(prog, num_devs, d_devs, pfn_notify, user_data);
+   validate_build_common(prog, num_devs, d_devs, pfn_notify, user_data);
 
    if (bool(num_headers) != bool(header_names))
       throw error(CL_INVALID_VALUE);
 
    if (!prog.has_source)
       throw error(CL_INVALID_OPERATION);
-
 
    for_each([&](const char *name, const program &header) {
          if (!header.has_source)
