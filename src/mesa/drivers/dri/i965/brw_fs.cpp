@@ -4788,6 +4788,10 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       return MIN2(devinfo->is_haswell ? 8 : ~0u,
                   get_fpu_lowered_simd_width(devinfo, inst));
 
+   case BRW_OPCODE_IF:
+      assert(inst->src[0].file == BAD_FILE || inst->exec_size <= 16);
+      return inst->exec_size;
+
    case SHADER_OPCODE_RCP:
    case SHADER_OPCODE_RSQ:
    case SHADER_OPCODE_SQRT:
