@@ -4764,12 +4764,12 @@ fs_visitor::lower_simd_width()
              * instruction.
              */
             const fs_builder lbld = ibld.group(lower_width, i);
+            const fs_builder cbld = lbld.group(copy_width, 0);
 
             for (unsigned j = 0; j < inst->sources; j++) {
                if (inst->src[j].file != BAD_FILE &&
                    !is_periodic(inst->src[j], lower_width)) {
                   /* Get the i-th copy_width-wide chunk of the source. */
-                  const fs_builder cbld = lbld.group(copy_width, 0);
                   const fs_reg src = offset(inst->src[j], cbld, i);
                   const unsigned src_size = inst->components_read(j);
 
@@ -4794,6 +4794,16 @@ fs_visitor::lower_simd_width()
                split_inst.regs_written =
                   DIV_ROUND_UP(type_sz(inst->dst.type) * dst_size * lower_width,
                                REG_SIZE);
+
+               if (inst->predicate) {
+                  /* Handle predication by copying the original contents of
+                   * the destination into the temporary before emitting the
+                   * lowered instruction.
+                   */
+                  for (unsigned k = 0; k < dst_size; ++k)
+                     cbld.MOV(offset(split_inst.dst, lbld, k),
+                              offset(inst->dst, cbld, n * k + i));
+               }
             }
 
             lbld.emit(split_inst);
