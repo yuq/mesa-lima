@@ -31,70 +31,27 @@
 #include "core/compiler.hpp"
 #include "util/algorithm.hpp"
 
-#include <clang/Frontend/CompilerInstance.h>
+#include <llvm/IR/DiagnosticPrinter.h>
+#include <llvm/IR/DiagnosticInfo.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm-c/Target.h>
+
+#include <clang/CodeGen/CodeGenAction.h>
 #include <clang/Frontend/TextDiagnosticBuffer.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
-#include <clang/CodeGen/CodeGenAction.h>
 #include <clang/Basic/TargetInfo.h>
-#include <llvm/Bitcode/BitstreamWriter.h>
-#include <llvm/Bitcode/ReaderWriter.h>
-#include <llvm/Linker/Linker.h>
-#include <llvm/IR/DiagnosticInfo.h>
-#include <llvm/IR/DiagnosticPrinter.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Support/SourceMgr.h>
-#include <llvm/IRReader/IRReader.h>
-#include <llvm/Support/CodeGen.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/FormattedStream.h>
-#include <llvm/Support/TargetRegistry.h>
-#include <llvm/Transforms/IPO.h>
-#include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#include <llvm/Transforms/Utils/Cloning.h>
-
-
-#include <llvm/IR/DataLayout.h>
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetOptions.h>
-
-#include <llvm-c/Target.h>
-#include <llvm-c/TargetMachine.h>
-#include <llvm-c/Core.h>
-
-#include "pipe/p_state.h"
-#include "util/u_memory.h"
-#include "util/u_math.h"
-
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <cstdio>
-#include <sstream>
-#include <libelf.h>
-#include <gelf.h>
 
 using namespace clover;
 using namespace clover::llvm;
 
-using ::llvm::cast;
-using ::llvm::dyn_cast;
 using ::llvm::Function;
-using ::llvm::isa;
 using ::llvm::LLVMContext;
 using ::llvm::Module;
 using ::llvm::raw_string_ostream;
-using ::llvm::TargetMachine;
 
 namespace {
-   // XXX - Temporary hack to avoid breaking the build for the moment, will
-   //       get rid of this later.
-   namespace llvm {
-      using namespace ::llvm;
-   }
-
    void
    init_targets() {
       static bool targets_initialized = false;
@@ -249,7 +206,7 @@ namespace {
       pmb.populateModulePassManager(pm);
       pm.run(mod);
    }
-} // End anonymous namespace
+}
 
 module
 clover::compile_program_llvm(const std::string &source,
