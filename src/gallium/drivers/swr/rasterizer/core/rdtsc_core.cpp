@@ -93,3 +93,4 @@ std::vector<uint32_t> gBucketMap;
 BucketManager gBucketMgr;
 
 uint32_t gCurrentFrame = 0;
+bool gBucketsInitialized = false;

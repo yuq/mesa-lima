@@ -175,6 +175,7 @@ void BucketManager::DumpThreadViz()
     {
         fflush(thread.vizFile);
         fclose(thread.vizFile);
+        thread.vizFile = nullptr;
     }
     mThreadMutex.unlock();
 

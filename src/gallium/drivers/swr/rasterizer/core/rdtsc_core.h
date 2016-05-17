@@ -122,24 +122,25 @@ extern std::vector<uint32_t> gBucketMap;
 extern BucketManager gBucketMgr;
 extern BUCKET_DESC gCoreBuckets[];
 extern uint32_t gCurrentFrame;
+extern bool gBucketsInitialized;
 
 INLINE void rdtscReset()
 {
     gCurrentFrame = 0;
     gBucketMgr.ClearThreads();
-    gBucketMgr.ClearBuckets();
 }
 
 INLINE void rdtscInit(int threadId)
 {
     // register all the buckets once
-    if (threadId == 0)
+    if (!gBucketsInitialized && (threadId == 0))
     {
         gBucketMap.resize(NumBuckets);
         for (uint32_t i = 0; i < NumBuckets; ++i)
         {
             gBucketMap[i] = gBucketMgr.RegisterBucket(gCoreBuckets[i]);
         }
+        gBucketsInitialized = true;
     }
 
     std::string name = threadId == 0 ? "API" : "WORKER";

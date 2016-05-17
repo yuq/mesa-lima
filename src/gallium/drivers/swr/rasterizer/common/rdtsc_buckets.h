@@ -53,6 +53,17 @@ public:
     void ClearThreads()
     {
         mThreadMutex.lock();
+        // close out the threadviz files if threadviz is enabled
+        if (KNOB_BUCKETS_ENABLE_THREADVIZ)
+        {
+            for (auto& thread : mThreads)
+            {
+                if (thread.vizFile != nullptr)
+                {
+                    fclose(thread.vizFile);
+                }
+            }
+        }
         mThreads.clear();
         mThreadMutex.unlock();
     }
@@ -99,7 +110,7 @@ public:
             stillCapturing = false;
             for (const BUCKET_THREAD& t : mThreads)
             {
-                if (t.pCurrent != &t.root)
+                if (t.level > 0)
                 {
                     stillCapturing = true;
                     continue;

@@ -1459,35 +1459,45 @@ Value *Builder::VINSERTI128(Value* a, Value* b, Constant* imm8)
 // rdtsc buckets macros
 void Builder::RDTSC_START(Value* pBucketMgr, Value* pId)
 {
-    std::vector<Type*> args{
-        PointerType::get(mInt32Ty, 0),   // pBucketMgr
-        mInt32Ty                        // id
-    };
-
-    FunctionType* pFuncTy = FunctionType::get(Type::getVoidTy(JM()->mContext), args, false);
-    Function* pFunc = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("BucketManager_StartBucket", pFuncTy));
-    if (sys::DynamicLibrary::SearchForAddressOfSymbol("BucketManager_StartBucket") == nullptr)
+    // @todo due to an issue with thread local storage propagation in llvm, we can only safely call into
+    // buckets framework when single threaded
+    if (KNOB_SINGLE_THREADED)
     {
-        sys::DynamicLibrary::AddSymbol("BucketManager_StartBucket", (void*)&BucketManager_StartBucket);
-    }
+        std::vector<Type*> args{
+            PointerType::get(mInt32Ty, 0),   // pBucketMgr
+            mInt32Ty                        // id
+        };
 
-    CALL(pFunc, { pBucketMgr, pId });
+        FunctionType* pFuncTy = FunctionType::get(Type::getVoidTy(JM()->mContext), args, false);
+        Function* pFunc = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("BucketManager_StartBucket", pFuncTy));
+        if (sys::DynamicLibrary::SearchForAddressOfSymbol("BucketManager_StartBucket") == nullptr)
+        {
+            sys::DynamicLibrary::AddSymbol("BucketManager_StartBucket", (void*)&BucketManager_StartBucket);
+        }
+
+        CALL(pFunc, { pBucketMgr, pId });
+    }
 }
 
 void Builder::RDTSC_STOP(Value* pBucketMgr, Value* pId)
 {
-    std::vector<Type*> args{
-        PointerType::get(mInt32Ty, 0),   // pBucketMgr
-        mInt32Ty                        // id
-    };
-
-    FunctionType* pFuncTy = FunctionType::get(Type::getVoidTy(JM()->mContext), args, false);
-    Function* pFunc = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("BucketManager_StopBucket", pFuncTy));
-    if (sys::DynamicLibrary::SearchForAddressOfSymbol("BucketManager_StopBucket") == nullptr)
+    // @todo due to an issue with thread local storage propagation in llvm, we can only safely call into
+    // buckets framework when single threaded
+    if (KNOB_SINGLE_THREADED)
     {
-        sys::DynamicLibrary::AddSymbol("BucketManager_StopBucket", (void*)&BucketManager_StopBucket);
-    }
+        std::vector<Type*> args{
+            PointerType::get(mInt32Ty, 0),   // pBucketMgr
+            mInt32Ty                        // id
+        };
 
-    CALL(pFunc, { pBucketMgr, pId });
+        FunctionType* pFuncTy = FunctionType::get(Type::getVoidTy(JM()->mContext), args, false);
+        Function* pFunc = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("BucketManager_StopBucket", pFuncTy));
+        if (sys::DynamicLibrary::SearchForAddressOfSymbol("BucketManager_StopBucket") == nullptr)
+        {
+            sys::DynamicLibrary::AddSymbol("BucketManager_StopBucket", (void*)&BucketManager_StopBucket);
+        }
+
+        CALL(pFunc, { pBucketMgr, pId });
+    }
 }
 
