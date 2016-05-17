@@ -51,6 +51,11 @@ namespace clover {
          return ss;
       }
 
+      inline std::string
+      as_string(const std::vector<char> &v) {
+         return { v.begin(), v.end() };
+      }
+
       struct target {
          target(const std::string &s) :
             cpu(s.begin(), s.begin() + s.find_first_of("-")),

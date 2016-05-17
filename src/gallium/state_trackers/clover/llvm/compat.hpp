@@ -38,6 +38,7 @@
 
 #include <llvm/Linker/Linker.h>
 #include <llvm/Transforms/IPO.h>
+#include <llvm/Target/TargetMachine.h>
 
 #if HAVE_LLVM >= 0x0307
 #include <llvm/IR/LegacyPassManager.h>
@@ -45,6 +46,8 @@
 #else
 #include <llvm/PassManager.h>
 #include <llvm/Target/TargetLibraryInfo.h>
+#include <llvm/Target/TargetSubtargetInfo.h>
+#include <llvm/Support/FormattedStream.h>
 #endif
 
 #include <clang/Frontend/CodeGenOptions.h>
@@ -109,6 +112,33 @@ namespace clover {
                       map(std::mem_fn(&std::string::data), names))));
 #endif
          }
+
+#if HAVE_LLVM >= 0x0307
+         typedef ::llvm::raw_svector_ostream &raw_ostream_to_emit_file;
+#else
+         typedef ::llvm::formatted_raw_ostream raw_ostream_to_emit_file;
+#endif
+
+#if HAVE_LLVM >= 0x0307
+         typedef ::llvm::DataLayout data_layout;
+#else
+         typedef const ::llvm::DataLayout *data_layout;
+#endif
+
+         inline data_layout
+         get_data_layout(::llvm::TargetMachine &tm) {
+#if HAVE_LLVM >= 0x0307
+            return tm.createDataLayout();
+#else
+            return tm.getSubtargetImpl()->getDataLayout();
+#endif
+         }
+
+#if HAVE_LLVM >= 0x0309
+         const auto default_reloc_model = ::llvm::None;
+#else
+         const auto default_reloc_model = ::llvm::Reloc::Default;
+#endif
       }
    }
 }

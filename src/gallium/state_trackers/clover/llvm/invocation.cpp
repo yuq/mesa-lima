@@ -81,6 +81,7 @@ using ::llvm::Function;
 using ::llvm::LLVMContext;
 using ::llvm::Module;
 using ::llvm::raw_string_ostream;
+using ::llvm::TargetMachine;
 
 namespace {
    // XXX - Temporary hack to avoid breaking the build for the moment, will
@@ -542,80 +543,55 @@ namespace {
       return m;
    }
 
-   void
-   emit_code(LLVMTargetMachineRef tm, LLVMModuleRef mod,
-             LLVMCodeGenFileType file_type,
-             LLVMMemoryBufferRef *out_buffer,
+   std::vector<char>
+   emit_code(::llvm::Module &mod, const target &target,
+             TargetMachine::CodeGenFileType ft,
              std::string &r_log) {
-      char *err_message = NULL;
+      std::string err;
+      auto t = ::llvm::TargetRegistry::lookupTarget(target.triple, err);
+      if (!t)
+         fail(r_log, compile_error(), err);
 
-      try {
-         if (LLVMTargetMachineEmitToMemoryBuffer(tm, mod, file_type,
-                                                 &err_message, out_buffer))
-            fail(r_log, compile_error(), err_message);
+      std::unique_ptr<TargetMachine> tm {
+         t->createTargetMachine(target.triple, target.cpu, "", {},
+                                compat::default_reloc_model,
+                                ::llvm::CodeModel::Default,
+                                ::llvm::CodeGenOpt::Default) };
+      if (!tm)
+         fail(r_log, compile_error(),
+              "Could not create TargetMachine: " + target.triple);
 
-      } catch (...) {
-         LLVMDisposeMessage(err_message);
-         throw;
+      ::llvm::SmallVector<char, 1024> data;
+
+      {
+         compat::pass_manager pm;
+         ::llvm::raw_svector_ostream os { data };
+         compat::raw_ostream_to_emit_file fos { os };
+
+         mod.setDataLayout(compat::get_data_layout(*tm));
+         tm->Options.MCOptions.AsmVerbose =
+            (ft == TargetMachine::CGFT_AssemblyFile);
+
+         if (tm->addPassesToEmitFile(pm, fos, ft))
+            fail(r_log, compile_error(), "TargetMachine can't emit this file");
+
+         pm.run(mod);
       }
+
+      return { data.begin(), data.end() };
    }
 
    std::vector<char>
-   compile_native(const llvm::Module *mod, const target &t,
+   compile_native(llvm::Module *mod, const target &target,
                   std::string &r_log) {
-
-      std::string log;
-      LLVMTargetRef target;
-      char *error_message;
-      LLVMMemoryBufferRef out_buffer;
-      unsigned buffer_size;
-      const char *buffer_data;
-      LLVMModuleRef mod_ref = wrap(mod);
-
-      try {
-         if (LLVMGetTargetFromTriple(t.triple.c_str(), &target, &error_message))
-            fail(r_log, compile_error(), error_message);
-
-      } catch (...) {
-         LLVMDisposeMessage(error_message);
-         throw;
-      }
-
-      LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
-            target, t.triple.c_str(), t.cpu.c_str(), "",
-            LLVMCodeGenLevelDefault, LLVMRelocDefault, LLVMCodeModelDefault);
-      if (!tm)
-         fail(r_log, compile_error(),
-              "Could not create TargetMachine: " + t.triple);
-
       if (has_flag(debug::native)) {
-         LLVMSetTargetMachineAsmVerbosity(tm, true);
-#if HAVE_LLVM >= 0x0308
-         LLVMModuleRef debug_mod = wrap(llvm::CloneModule(mod).release());
-#else
-         LLVMModuleRef debug_mod = wrap(llvm::CloneModule(mod));
-#endif
-         emit_code(tm, debug_mod, LLVMAssemblyFile, &out_buffer, r_log);
-         buffer_size = LLVMGetBufferSize(out_buffer);
-         buffer_data = LLVMGetBufferStart(out_buffer);
-         debug::log(".asm", std::string(buffer_data, buffer_size));
-
-         LLVMSetTargetMachineAsmVerbosity(tm, false);
-         LLVMDisposeMemoryBuffer(out_buffer);
-         LLVMDisposeModule(debug_mod);
+         std::unique_ptr<llvm::Module> cmod { CloneModule(mod) };
+         debug::log(".asm", as_string(
+                       emit_code(*cmod, target,
+                                 TargetMachine::CGFT_AssemblyFile, r_log)));
       }
 
-      emit_code(tm, mod_ref, LLVMObjectFile, &out_buffer, r_log);
-
-      buffer_size = LLVMGetBufferSize(out_buffer);
-      buffer_data = LLVMGetBufferStart(out_buffer);
-
-      std::vector<char> code(buffer_data, buffer_data + buffer_size);
-
-      LLVMDisposeMemoryBuffer(out_buffer);
-      LLVMDisposeTargetMachine(tm);
-
-      return code;
+      return emit_code(*mod, target, TargetMachine::CGFT_ObjectFile, r_log);
    }
 
    namespace elf {
