@@ -1766,7 +1766,8 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         c->stage = stage;
         c->shader_state = &key->shader_state->base;
         c->program_id = key->shader_state->program_id;
-        c->variant_id = key->shader_state->compiled_variant_count++;
+        c->variant_id =
+                p_atomic_inc_return(&key->shader_state->compiled_variant_count);
 
         c->key = key;
         switch (stage) {
