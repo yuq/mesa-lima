@@ -88,6 +88,12 @@ namespace {
       using namespace ::llvm;
    }
 
+   template<typename E> void
+   fail(std::string &r_log, E &&e, const std::string &s) {
+      r_log += s;
+      throw e;
+   }
+
    void debug_log(const std::string &msg, const std::string &suffix) {
       const char *dbg_file = debug_get_option("CLOVER_DEBUG_FILE", "stderr");
       if (!strcmp("stderr", dbg_file)) {
@@ -577,20 +583,16 @@ namespace {
              LLVMCodeGenFileType file_type,
              LLVMMemoryBufferRef *out_buffer,
              std::string &r_log) {
-      LLVMBool err;
       char *err_message = NULL;
 
-      err = LLVMTargetMachineEmitToMemoryBuffer(tm, mod, file_type,
-                                                &err_message, out_buffer);
+      try {
+         if (LLVMTargetMachineEmitToMemoryBuffer(tm, mod, file_type,
+                                                 &err_message, out_buffer))
+            fail(r_log, compile_error(), err_message);
 
-      if (err) {
-         r_log = std::string(err_message);
-      }
-
-      LLVMDisposeMessage(err_message);
-
-      if (err) {
-         throw compile_error();
+      } catch (...) {
+         LLVMDisposeMessage(err_message);
+         throw;
       }
    }
 
@@ -606,20 +608,21 @@ namespace {
       const char *buffer_data;
       LLVMModuleRef mod_ref = wrap(mod);
 
-      if (LLVMGetTargetFromTriple(t.triple.c_str(), &target, &error_message)) {
-         r_log = std::string(error_message);
+      try {
+         if (LLVMGetTargetFromTriple(t.triple.c_str(), &target, &error_message))
+            fail(r_log, compile_error(), error_message);
+
+      } catch (...) {
          LLVMDisposeMessage(error_message);
-         throw compile_error();
+         throw;
       }
 
       LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
             target, t.triple.c_str(), t.cpu.c_str(), "",
             LLVMCodeGenLevelDefault, LLVMRelocDefault, LLVMCodeModelDefault);
-
-      if (!tm) {
-         r_log = "Could not create TargetMachine: " + t.triple;
-         throw compile_error();
-      }
+      if (!tm)
+         fail(r_log, compile_error(),
+              "Could not create TargetMachine: " + t.triple);
 
       if (dump_asm) {
          LLVMSetTargetMachineAsmVerbosity(tm, true);
@@ -673,20 +676,19 @@ namespace {
       try {
          while ((section = elf_nextscn(elf, section))) {
             const char *name;
-            if (gelf_getshdr(section, &symtab_header) != &symtab_header) {
-               r_log = "Failed to read ELF section header.";
-               throw compile_error();
-            }
+            if (gelf_getshdr(section, &symtab_header) != &symtab_header)
+               fail(r_log, compile_error(),
+                    "Failed to read ELF section header.");
+
             name = elf_strptr(elf, section_str_index, symtab_header.sh_name);
            if (!strcmp(name, ".symtab")) {
                symtab = section;
                break;
            }
          }
-         if (!symtab) {
-            r_log = "Unable to find symbol table.";
-            throw compile_error();
-         }
+         if (!symtab)
+            fail(r_log, compile_error(), "Unable to find symbol table.");
+
       } catch (compile_error &e) {
          elf_end(elf);
          throw e;
