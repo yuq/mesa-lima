@@ -4767,7 +4767,7 @@ fs_visitor::lower_simd_width()
 
             for (unsigned j = 0; j < inst->sources; j++) {
                if (inst->src[j].file != BAD_FILE &&
-                   !is_uniform(inst->src[j])) {
+                   !is_periodic(inst->src[j], lower_width)) {
                   /* Get the i-th copy_width-wide chunk of the source. */
                   const fs_builder cbld = lbld.group(copy_width, 0);
                   const fs_reg src = offset(inst->src[j], cbld, i);
