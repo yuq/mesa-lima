@@ -1917,6 +1917,14 @@ ast_expression::do_hir(exec_list *instructions,
       ir_variable *var =
          state->symbols->get_variable(this->primary_expression.identifier);
 
+      if (var == NULL) {
+         /* the identifier might be a subroutine name */
+         char *sub_name;
+         sub_name = ralloc_asprintf(ctx, "%s_%s", _mesa_shader_stage_to_subroutine_prefix(state->stage), this->primary_expression.identifier);
+         var = state->symbols->get_variable(sub_name);
+         ralloc_free(sub_name);
+      }
+
       if (var != NULL) {
          var->data.used = true;
          result = new(ctx) ir_dereference_variable(var);
