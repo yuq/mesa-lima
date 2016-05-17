@@ -160,13 +160,6 @@ emit_array_fetch(
 	return result;
 }
 
-static bool uses_temp_indirect_addressing(
-	struct lp_build_tgsi_context *bld_base)
-{
-	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
-	return (bld->indirect_files & (1 << TGSI_FILE_TEMPORARY));
-}
-
 LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 				    const struct tgsi_full_src_register *reg,
 				    enum tgsi_opcode_type type,
@@ -225,10 +218,6 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 	case TGSI_FILE_TEMPORARY:
 		if (reg->Register.Index >= ctx->temps_count)
 			return LLVMGetUndef(tgsi2llvmtype(bld_base, type));
-		if (uses_temp_indirect_addressing(bld_base)) {
-			ptr = lp_get_temp_ptr_soa(bld, reg->Register.Index, swizzle);
-			break;
-		}
 		ptr = ctx->temps[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle];
 		if (tgsi_type_is_64bit(type)) {
 			ptr2 = ctx->temps[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle + 1];
@@ -312,10 +301,6 @@ static void emit_declaration(
 			}
 
 			ctx->arrays[decl->Array.ArrayID - 1] = decl->Range;
-		}
-		if (uses_temp_indirect_addressing(bld_base)) {
-			lp_emit_declaration_soa(bld_base, decl);
-			break;
 		}
 		first = decl->Range.First;
 		last = decl->Range.Last;
@@ -458,10 +443,7 @@ void radeon_llvm_emit_store(
 				case TGSI_FILE_TEMPORARY:
 					if (range.First + i >= ctx->temps_count)
 						continue;
-					if (uses_temp_indirect_addressing(bld_base))
-						temp_ptr = lp_get_temp_ptr_soa(bld, i + range.First, chan_index);
-					else
-						temp_ptr = ctx->temps[(i + range.First) * TGSI_NUM_CHANNELS + chan_index];
+					temp_ptr = ctx->temps[(i + range.First) * TGSI_NUM_CHANNELS + chan_index];
 					break;
 
 				default:
@@ -483,10 +465,6 @@ void radeon_llvm_emit_store(
 			case TGSI_FILE_TEMPORARY:
 				if (reg->Register.Index >= ctx->temps_count)
 					continue;
-				if (uses_temp_indirect_addressing(bld_base)) {
-					temp_ptr = NULL;
-					break;
-				}
 				temp_ptr = ctx->temps[ TGSI_NUM_CHANNELS * reg->Register.Index + chan_index];
 				if (tgsi_type_is_64bit(dtype))
 					temp_ptr2 = ctx->temps[ TGSI_NUM_CHANNELS * reg->Register.Index + chan_index + 1];
