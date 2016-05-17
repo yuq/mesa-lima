@@ -370,6 +370,11 @@ intelInitExtensions(struct gl_context *ctx)
       }
    }
 
+   if (brw->gen >= 8 || brw->is_haswell || brw->is_baytrail) {
+      ctx->Extensions.ARB_robust_buffer_access_behavior = true;
+      ctx->Extensions.KHR_robust_buffer_access_behavior = true;
+   }
+
    if (brw->intelScreen->has_mi_math_and_lrr) {
       ctx->Extensions.ARB_query_buffer_object = true;
    }
