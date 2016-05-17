@@ -41,7 +41,7 @@ program::program(clover::context &ctx,
 }
 
 void
-program::build(const ref_vector<device> &devs, const char *opts,
+program::build(const ref_vector<device> &devs, const std::string &opts,
                const header_map &headers) {
    if (has_source) {
       _devices = devs;
@@ -60,7 +60,7 @@ program::build(const ref_vector<device> &devs, const char *opts,
                            tgsi::compile_program(_source, log) :
                            compile_program_llvm(_source, headers,
                                                 dev.ir_format(),
-                                                dev.ir_target(), build_opts(dev),
+                                                dev.ir_target(), opts,
                                                 log));
             _binaries.insert({ &dev, module });
             _logs.insert({ &dev, log });

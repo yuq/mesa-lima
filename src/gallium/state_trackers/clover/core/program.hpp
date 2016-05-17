@@ -47,7 +47,7 @@ namespace clover {
       program &
       operator=(const program &prog) = delete;
 
-      void build(const ref_vector<device> &devs, const char *opts,
+      void build(const ref_vector<device> &devs, const std::string &opts,
                  const header_map &headers = {});
 
       const bool has_source;
