@@ -260,6 +260,7 @@ struct brw_reg {
       };
 
       double df;
+      uint64_t u64;
       float f;
       int   d;
       unsigned ud;
@@ -270,7 +271,7 @@ static inline bool
 brw_regs_equal(const struct brw_reg *a, const struct brw_reg *b)
 {
    const bool df = a->type == BRW_REGISTER_TYPE_DF && a->file == IMM;
-   return a->bits == b->bits && (df ? a->df == b->df : a->ud == b->ud);
+   return a->bits == b->bits && (df ? a->u64 == b->u64 : a->ud == b->ud);
 }
 
 struct brw_indirect {
