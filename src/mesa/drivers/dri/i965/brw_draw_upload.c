@@ -1018,7 +1018,8 @@ brw_upload_indices(struct brw_context *brw)
       return;
 
    ib_type_size = _mesa_sizeof_type(index_buffer->type);
-   ib_size = ib_type_size * index_buffer->count;
+   ib_size = index_buffer->count ? ib_type_size * index_buffer->count :
+                                   index_buffer->obj->Size;
    bufferobj = index_buffer->obj;
 
    /* Turn into a proper VBO:
@@ -1028,6 +1029,7 @@ brw_upload_indices(struct brw_context *brw)
        */
       intel_upload_data(brw, index_buffer->ptr, ib_size, ib_type_size,
 			&brw->ib.bo, &offset);
+      brw->ib.size = brw->ib.bo->size;
    } else {
       offset = (GLuint) (unsigned long) index_buffer->ptr;
 
@@ -1047,6 +1049,7 @@ brw_upload_indices(struct brw_context *brw)
 
          intel_upload_data(brw, map, ib_size, ib_type_size,
                            &brw->ib.bo, &offset);
+         brw->ib.size = brw->ib.bo->size;
 
          ctx->Driver.UnmapBuffer(ctx, bufferobj, MAP_INTERNAL);
       } else {
@@ -1056,6 +1059,7 @@ brw_upload_indices(struct brw_context *brw)
          if (bo != brw->ib.bo) {
             drm_intel_bo_unreference(brw->ib.bo);
             brw->ib.bo = bo;
+            brw->ib.size = bufferobj->Size;
             drm_intel_bo_reference(bo);
          }
       }
@@ -1110,7 +1114,7 @@ brw_emit_index_buffer(struct brw_context *brw)
              0);
    OUT_RELOC(brw->ib.bo,
              I915_GEM_DOMAIN_VERTEX, 0,
-	     brw->ib.bo->size - 1);
+	     brw->ib.size - 1);
    ADVANCE_BATCH();
 }
 

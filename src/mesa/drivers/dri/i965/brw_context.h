@@ -991,6 +991,7 @@ struct brw_context
 
       /* Updates are signaled by BRW_NEW_INDEX_BUFFER. */
       drm_intel_bo *bo;
+      uint32_t size;
       GLuint type;
 
       /* Offset to index buffer index to use in CMD_3D_PRIM so that we can
