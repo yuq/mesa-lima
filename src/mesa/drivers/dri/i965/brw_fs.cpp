@@ -4829,7 +4829,8 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       /* MULH is lowered to the MUL/MACH sequence using the accumulator, which
        * is 8-wide on Gen7+.
        */
-      return (devinfo->gen >= 7 ? 8 : inst->exec_size);
+      return (devinfo->gen >= 7 ? 8 :
+              get_fpu_lowered_simd_width(devinfo, inst));
 
    case FS_OPCODE_FB_WRITE_LOGICAL:
       /* Gen6 doesn't support SIMD16 depth writes but we cannot handle them
