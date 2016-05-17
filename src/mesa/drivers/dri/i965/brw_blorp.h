@@ -179,15 +179,39 @@ struct brw_blorp_coord_transform
    float offset;
 };
 
+/**
+ * Bounding rectangle telling pixel discard which pixels are not to be
+ * touched. This is needed in when surfaces are configured as something else
+ * what they really are:
+ *
+ *    - writing W-tiled stencil as Y-tiled
+ *    - writing interleaved multisampled as single sampled.
+ *
+ * See blorp_nir_discard_if_outside_rect().
+ */
+struct brw_blorp_discard_rect
+{
+   uint32_t x0;
+   uint32_t x1;
+   uint32_t y0;
+   uint32_t y1;
+};
+
+/**
+ * Grid needed for blended and scaled blits of integer formats, see
+ * blorp_nir_manual_blend_bilinear().
+ */
+struct brw_blorp_rect_grid
+{
+   float x1;
+   float y1;
+   float pad[2];
+};
+
 struct brw_blorp_wm_inputs
 {
-   uint32_t dst_x0;
-   uint32_t dst_x1;
-   uint32_t dst_y0;
-   uint32_t dst_y1;
-   /* Top right coordinates of the rectangular grid used for scaled blitting */
-   float rect_grid_x1;
-   float rect_grid_y1;
+   struct brw_blorp_discard_rect discard_rect;
+   struct brw_blorp_rect_grid rect_grid;
    struct brw_blorp_coord_transform x_transform;
    struct brw_blorp_coord_transform y_transform;
 
@@ -197,7 +221,7 @@ struct brw_blorp_wm_inputs
    uint32_t src_z;
 
    /* Pad out to an integral number of registers */
-   uint32_t pad[5];
+   uint32_t pad[3];
 };
 
 #define BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS \

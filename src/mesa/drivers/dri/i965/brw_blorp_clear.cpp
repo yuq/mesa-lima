@@ -150,8 +150,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       params.y1 = rb->Height - fb->_Ymin;
    }
 
-   memcpy(&params.wm_inputs.dst_x0,
-          ctx->Color.ClearColor.f, sizeof(float) * 4);
+   memcpy(&params.wm_inputs, ctx->Color.ClearColor.f, sizeof(float) * 4);
 
    bool use_simd16_replicated_data = true;
 
