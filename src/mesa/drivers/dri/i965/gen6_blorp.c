@@ -649,11 +649,13 @@ gen6_blorp_emit_sf_config(struct brw_context *brw,
 {
    const unsigned num_varyings =
       params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
+   const unsigned urb_read_length =
+      brw_blorp_get_urb_length(params->wm_prog_data);
 
    BEGIN_BATCH(20);
    OUT_BATCH(_3DSTATE_SF << 16 | (20 - 2));
    OUT_BATCH(num_varyings << GEN6_SF_NUM_OUTPUTS_SHIFT |
-             1 << GEN6_SF_URB_ENTRY_READ_LENGTH_SHIFT |
+             urb_read_length << GEN6_SF_URB_ENTRY_READ_LENGTH_SHIFT |
              BRW_SF_URB_ENTRY_READ_OFFSET <<
                 GEN6_SF_URB_ENTRY_READ_OFFSET_SHIFT);
    OUT_BATCH(0); /* dw2 */

@@ -240,6 +240,19 @@ struct brw_blorp_prog_data
    uint8_t param[BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS];
 };
 
+inline unsigned
+brw_blorp_get_urb_length(const struct brw_blorp_prog_data *prog_data)
+{
+   if (prog_data == NULL)
+      return 1;
+
+   /* From the BSpec: 3D Pipeline - Strips and Fans - 3DSTATE_SBE 
+    *
+    * read_length = ceiling((max_source_attr+1)/2)
+    */
+   return MAX2((prog_data->num_varying_inputs + 1) / 2, 1);
+}
+
 struct brw_blorp_params
 {
    uint32_t x0;

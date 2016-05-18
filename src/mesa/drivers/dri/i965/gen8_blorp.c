@@ -295,6 +295,8 @@ gen8_blorp_emit_sbe_state(struct brw_context *brw,
                           const struct brw_blorp_params *params)
 {
    const unsigned num_varyings = params->wm_prog_data->num_varying_inputs;
+   const unsigned urb_read_length =
+      brw_blorp_get_urb_length(params->wm_prog_data);
 
    /* 3DSTATE_SBE */
    {
@@ -310,7 +312,7 @@ gen8_blorp_emit_sbe_state(struct brw_context *brw,
        * than one vec4 worth of vertex attributes are needed.
        */
       OUT_BATCH(num_varyings << GEN7_SBE_NUM_OUTPUTS_SHIFT |
-                1 << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT |
+                urb_read_length << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT |
                 BRW_SF_URB_ENTRY_READ_OFFSET <<
                    GEN8_SBE_URB_ENTRY_READ_OFFSET_SHIFT |
                 GEN8_SBE_FORCE_URB_ENTRY_READ_LENGTH |

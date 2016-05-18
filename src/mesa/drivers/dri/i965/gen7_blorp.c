@@ -445,6 +445,8 @@ gen7_blorp_emit_sf_config(struct brw_context *brw,
    {
       const unsigned num_varyings =
          params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
+      const unsigned urb_read_length =
+         brw_blorp_get_urb_length(params->wm_prog_data);
 
       BEGIN_BATCH(14);
       OUT_BATCH(_3DSTATE_SBE << 16 | (14 - 2));
@@ -457,7 +459,7 @@ gen7_blorp_emit_sf_config(struct brw_context *brw,
        * than one vec4 worth of vertex attributes are needed.
        */
       OUT_BATCH(num_varyings << GEN7_SBE_NUM_OUTPUTS_SHIFT |
-                1 << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT |
+                urb_read_length << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT |
                 BRW_SF_URB_ENTRY_READ_OFFSET <<
                    GEN7_SBE_URB_ENTRY_READ_OFFSET_SHIFT);
       for (int i = 0; i < 9; ++i)
