@@ -281,9 +281,8 @@ namespace brw {
          case SHADER_OPCODE_LOG2:
          case SHADER_OPCODE_SIN:
          case SHADER_OPCODE_COS:
-            return fix_math_instruction(
-               emit(instruction(opcode, dispatch_width(), dst,
-                                fix_math_operand(src0))));
+            return emit(instruction(opcode, dispatch_width(), dst,
+                                    fix_math_operand(src0)));
 
          default:
             return emit(instruction(opcode, dispatch_width(), dst, src0));
@@ -301,10 +300,9 @@ namespace brw {
          case SHADER_OPCODE_POW:
          case SHADER_OPCODE_INT_QUOTIENT:
          case SHADER_OPCODE_INT_REMAINDER:
-            return fix_math_instruction(
-               emit(instruction(opcode, dispatch_width(), dst,
-                                fix_math_operand(src0),
-                                fix_math_operand(src1))));
+            return emit(instruction(opcode, dispatch_width(), dst,
+                                    fix_math_operand(src0),
+                                    fix_math_operand(src1)));
 
          default:
             return emit(instruction(opcode, dispatch_width(), dst, src0, src1));
@@ -638,41 +636,6 @@ namespace brw {
          } else {
             return src;
          }
-      }
-
-      /**
-       * Workaround other weirdness of the math instruction.
-       */
-      instruction *
-      fix_math_instruction(instruction *inst) const
-      {
-         if (shader->devinfo->gen < 6) {
-            inst->base_mrf = 2;
-            inst->mlen = inst->sources * dispatch_width() / 8;
-
-            if (inst->sources > 1) {
-               /* From the Ironlake PRM, Volume 4, Part 1, Section 6.1.13
-                * "Message Payload":
-                *
-                * "Operand0[7].  For the INT DIV functions, this operand is the
-                *  denominator."
-                *  ...
-                * "Operand1[7].  For the INT DIV functions, this operand is the
-                *  numerator."
-                */
-               const bool is_int_div = inst->opcode != SHADER_OPCODE_POW;
-               const fs_reg src0 = is_int_div ? inst->src[1] : inst->src[0];
-               const fs_reg src1 = is_int_div ? inst->src[0] : inst->src[1];
-
-               inst->resize_sources(1);
-               inst->src[0] = src0;
-
-               at(block, inst).MOV(fs_reg(MRF, inst->base_mrf + 1, src1.type),
-                                   src1);
-            }
-         }
-
-         return inst;
       }
 
       bblock_t *block;

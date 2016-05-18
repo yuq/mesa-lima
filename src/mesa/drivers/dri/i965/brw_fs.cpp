@@ -4434,6 +4434,36 @@ lower_varying_pull_constant_logical_send(const fs_builder &bld, fs_inst *inst)
    }
 }
 
+static void
+lower_math_logical_send(const fs_builder &bld, fs_inst *inst)
+{
+   assert(bld.shader->devinfo->gen < 6);
+
+   inst->base_mrf = 2;
+   inst->mlen = inst->sources * inst->exec_size / 8;
+
+   if (inst->sources > 1) {
+      /* From the Ironlake PRM, Volume 4, Part 1, Section 6.1.13
+       * "Message Payload":
+       *
+       * "Operand0[7].  For the INT DIV functions, this operand is the
+       *  denominator."
+       *  ...
+       * "Operand1[7].  For the INT DIV functions, this operand is the
+       *  numerator."
+       */
+      const bool is_int_div = inst->opcode != SHADER_OPCODE_POW;
+      const fs_reg src0 = is_int_div ? inst->src[1] : inst->src[0];
+      const fs_reg src1 = is_int_div ? inst->src[0] : inst->src[1];
+
+      inst->resize_sources(1);
+      inst->src[0] = src0;
+
+      assert(inst->exec_size == 8);
+      bld.MOV(fs_reg(MRF, inst->base_mrf + 1, src1.type), src1);
+   }
+}
+
 bool
 fs_visitor::lower_logical_sends()
 {
@@ -4542,6 +4572,31 @@ fs_visitor::lower_logical_sends()
       case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL:
          lower_varying_pull_constant_logical_send(ibld, inst);
          break;
+
+      case SHADER_OPCODE_RCP:
+      case SHADER_OPCODE_RSQ:
+      case SHADER_OPCODE_SQRT:
+      case SHADER_OPCODE_EXP2:
+      case SHADER_OPCODE_LOG2:
+      case SHADER_OPCODE_SIN:
+      case SHADER_OPCODE_COS:
+      case SHADER_OPCODE_POW:
+      case SHADER_OPCODE_INT_QUOTIENT:
+      case SHADER_OPCODE_INT_REMAINDER:
+         /* The math opcodes are overloaded for the send-like and
+          * expression-like instructions which seems kind of icky.  Gen6+ has
+          * a native (but rather quirky) MATH instruction so we don't need to
+          * do anything here.  On Gen4-5 we'll have to lower the Gen6-like
+          * logical instructions (which we can easily recognize because they
+          * have mlen = 0) into send-like virtual instructions.
+          */
+         if (devinfo->gen < 6 && inst->mlen == 0) {
+            lower_math_logical_send(ibld, inst);
+            break;
+
+         } else {
+            continue;
+         }
 
       default:
          continue;
