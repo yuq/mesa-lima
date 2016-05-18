@@ -468,17 +468,18 @@ brw_prepare_vertices(struct brw_context *brw)
 
          const uint32_t offset = (uintptr_t)glarray->Ptr;
 
-         uint32_t start, range;
+         /* Start with the worst case */
+         uint32_t start = 0;
+         uint32_t range = intel_buffer->Base.Size;
          if (glarray->InstanceDivisor) {
-            start = offset;
-            range = (glarray->StrideB * ((brw->num_instances /
-                                         glarray->InstanceDivisor) - 1) +
-                     glarray->_ElementSize);
+            if (brw->num_instances) {
+               start = offset;
+               range = (glarray->StrideB * ((brw->num_instances /
+                                             glarray->InstanceDivisor) - 1) +
+                        glarray->_ElementSize);
+            }
          } else {
-            if (!brw->vb.index_bounds_valid) {
-               start = 0;
-               range = intel_buffer->Base.Size;
-            } else {
+            if (brw->vb.index_bounds_valid) {
                start = offset + min_index * glarray->StrideB;
                range = (glarray->StrideB * (max_index - min_index) +
                         glarray->_ElementSize);
