@@ -1733,45 +1733,13 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case BRW_OPCODE_MAD:
          assert(devinfo->gen >= 6);
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
-         if (dispatch_width == 16 && !devinfo->supports_simd16_3src) {
-            brw_set_default_exec_size(p, BRW_EXECUTE_8);
-	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-            brw_inst *f = brw_MAD(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
-	    brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-            brw_inst *s = brw_MAD(p, sechalf(dst), sechalf(src[0]), sechalf(src[1]), sechalf(src[2]));
-	    brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-
-            if (inst->conditional_mod) {
-               brw_inst_set_cond_modifier(p->devinfo, f, inst->conditional_mod);
-               brw_inst_set_cond_modifier(p->devinfo, s, inst->conditional_mod);
-               multiple_instructions_emitted = true;
-            }
-	 } else {
-	    brw_MAD(p, dst, src[0], src[1], src[2]);
-	 }
-	 brw_set_default_access_mode(p, BRW_ALIGN_1);
+         brw_MAD(p, dst, src[0], src[1], src[2]);
 	 break;
 
       case BRW_OPCODE_LRP:
          assert(devinfo->gen >= 6);
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
-         if (dispatch_width == 16 && !devinfo->supports_simd16_3src) {
-            brw_set_default_exec_size(p, BRW_EXECUTE_8);
-	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-            brw_inst *f = brw_LRP(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
-	    brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-            brw_inst *s = brw_LRP(p, sechalf(dst), sechalf(src[0]), sechalf(src[1]), sechalf(src[2]));
-	    brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-
-            if (inst->conditional_mod) {
-               brw_inst_set_cond_modifier(p->devinfo, f, inst->conditional_mod);
-               brw_inst_set_cond_modifier(p->devinfo, s, inst->conditional_mod);
-               multiple_instructions_emitted = true;
-            }
-	 } else {
-	    brw_LRP(p, dst, src[0], src[1], src[2]);
-	 }
-	 brw_set_default_access_mode(p, BRW_ALIGN_1);
+         brw_LRP(p, dst, src[0], src[1], src[2]);
 	 break;
 
       case BRW_OPCODE_FRC:
@@ -1894,17 +1862,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case BRW_OPCODE_BFE:
          assert(devinfo->gen >= 7);
          brw_set_default_access_mode(p, BRW_ALIGN_16);
-         if (dispatch_width == 16 && !devinfo->supports_simd16_3src) {
-            brw_set_default_exec_size(p, BRW_EXECUTE_8);
-            brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-            brw_BFE(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
-            brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-            brw_BFE(p, sechalf(dst), sechalf(src[0]), sechalf(src[1]), sechalf(src[2]));
-            brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-         } else {
-            brw_BFE(p, dst, src[0], src[1], src[2]);
-         }
-         brw_set_default_access_mode(p, BRW_ALIGN_1);
+         brw_BFE(p, dst, src[0], src[1], src[2]);
          break;
 
       case BRW_OPCODE_BFI1:
@@ -1936,8 +1894,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
           * Otherwise we would be able to emit compressed instructions like we
           * do for the other three-source instructions.
           */
-         if (dispatch_width == 16 &&
-             (devinfo->is_haswell || !devinfo->supports_simd16_3src)) {
+         if (dispatch_width == 16 && devinfo->is_haswell) {
             brw_set_default_exec_size(p, BRW_EXECUTE_8);
             brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_BFI2(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
