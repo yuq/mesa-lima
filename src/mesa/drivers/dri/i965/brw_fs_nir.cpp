@@ -3871,7 +3871,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       inst->header_size = 0;
       inst->mlen = mlen;
       inst->regs_written = regs_written;
-      bld.emit(inst);
       bld.MOV(retype(dest, buffer_size.type), buffer_size);
 
       brw_mark_surface_used(prog_data, index);
