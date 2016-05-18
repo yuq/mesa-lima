@@ -1541,8 +1541,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_NOP(p);
 
    this->dispatch_width = dispatch_width;
-   if (dispatch_width == 16)
-      brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
 
    int start_offset = p->next_insn_offset;
    int spill_count = 0, fill_count = 0;
