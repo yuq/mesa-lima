@@ -113,7 +113,7 @@ byte_offset(fs_reg reg, unsigned delta)
 }
 
 static inline fs_reg
-horiz_offset(fs_reg reg, unsigned delta)
+horiz_offset(const fs_reg &reg, unsigned delta)
 {
    switch (reg.file) {
    case BAD_FILE:
@@ -121,17 +121,23 @@ horiz_offset(fs_reg reg, unsigned delta)
    case IMM:
       /* These only have a single component that is implicitly splatted.  A
        * horizontal offset should be a harmless no-op.
+       * XXX - Handle vector immediates correctly.
        */
-      break;
+      return reg;
    case VGRF:
    case MRF:
    case ATTR:
       return byte_offset(reg, delta * reg.stride * type_sz(reg.type));
    case ARF:
    case FIXED_GRF:
-      assert(delta == 0);
+      if (reg.is_null()) {
+         return reg;
+      } else {
+         const unsigned stride = reg.hstride ? 1 << (reg.hstride - 1) : 0;
+         return byte_offset(reg, delta * stride * type_sz(reg.type));
+      }
    }
-   return reg;
+   unreachable("Invalid register file");
 }
 
 /**
