@@ -334,7 +334,7 @@ nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
          return false;
 
       return memcmp(load1->value.f32, load2->value.f32,
-                    load1->def.num_components * (load1->def.bit_size / 8)) == 0;
+                    load1->def.num_components * (load1->def.bit_size / 8u)) == 0;
    }
    case nir_instr_type_phi: {
       nir_phi_instr *phi1 = nir_instr_as_phi(instr1);
