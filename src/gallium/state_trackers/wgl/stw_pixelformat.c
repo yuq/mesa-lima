@@ -208,8 +208,8 @@ stw_pixelformat_add(
    /* WGL_ARB_render_texture */
    if (color->bits.alpha)
       pfi->bindToTextureRGBA = TRUE;
-   else
-      pfi->bindToTextureRGB = TRUE;
+
+   pfi->bindToTextureRGB = TRUE;
 
    ++stw_dev->pixelformat_extended_count;
    
