@@ -3088,6 +3088,9 @@ link_calculate_subroutine_compat(struct gl_shader_program *prog)
          continue;
 
       for (unsigned j = 0; j < sh->NumSubroutineUniformRemapTable; j++) {
+         if (sh->SubroutineUniformRemapTable[j] == INACTIVE_UNIFORM_EXPLICIT_LOCATION)
+            continue;
+
          struct gl_uniform_storage *uni = sh->SubroutineUniformRemapTable[j];
 
          if (!uni)
