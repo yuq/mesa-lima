@@ -120,7 +120,7 @@ anv_reloc_list_grow(struct anv_reloc_list *list,
    struct anv_bo **new_reloc_bos =
       anv_alloc(alloc, new_length * sizeof(*list->reloc_bos), 8,
                 VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (new_relocs == NULL) {
+   if (new_reloc_bos == NULL) {
       anv_free(alloc, new_relocs);
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
@@ -891,7 +891,7 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
          struct anv_bo **new_bos =
             anv_alloc(&cmd_buffer->pool->alloc, new_len * sizeof(*new_bos),
                       8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-         if (new_objects == NULL) {
+         if (new_bos == NULL) {
             anv_free(&cmd_buffer->pool->alloc, new_objects);
             return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
          }
