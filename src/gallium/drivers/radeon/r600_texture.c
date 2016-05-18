@@ -1226,31 +1226,35 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	struct r600_texture *rtex = (struct r600_texture*)texture;
 	struct r600_transfer *trans;
-	boolean use_staging_texture = FALSE;
 	struct r600_resource *buf;
 	unsigned offset = 0;
 	char *map;
+	bool use_staging_texture = false;
 
 	assert(!(texture->flags & R600_RESOURCE_FLAG_TRANSFER));
 
-	/* We cannot map a tiled texture directly because the data is
-	 * in a different order, therefore we do detiling using a blit.
-	 *
-	 * Also, use a temporary in GTT memory for read transfers, as
-	 * the CPU is much happier reading out of cached system memory
-	 * than uncached VRAM.
-	 */
-	if (rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D) {
-		use_staging_texture = TRUE;
-	} else if ((usage & PIPE_TRANSFER_READ) &&
-		   rtex->resource.domains & RADEON_DOMAIN_VRAM) {
-		/* Untiled buffers in VRAM, which is slow for CPU reads */
-		use_staging_texture = TRUE;
-	} else if (!(usage & PIPE_TRANSFER_READ) &&
-	    (r600_rings_is_buffer_referenced(rctx, rtex->resource.buf, RADEON_USAGE_READWRITE) ||
-	     !rctx->ws->buffer_wait(rtex->resource.buf, 0, RADEON_USAGE_READWRITE))) {
-		/* Use a staging texture for uploads if the underlying BO is busy. */
-		use_staging_texture = TRUE;
+	/* Depth textures use staging unconditionally. */
+	if (!rtex->is_depth) {
+		/* Tiled textures need to be converted into a linear texture for CPU
+		 * access. The staging texture is always linear and is placed in GART.
+		 *
+		 * Reading from VRAM is slow, always use the staging texture in
+		 * this case.
+		 *
+		 * Use the staging texture for uploads if the underlying BO
+		 * is busy.
+		 */
+		if (rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D)
+			use_staging_texture = true;
+		else if (usage & PIPE_TRANSFER_READ)
+			use_staging_texture = (rtex->resource.domains &
+					       RADEON_DOMAIN_VRAM) != 0;
+		/* Write & linear only: */
+		else if (r600_rings_is_buffer_referenced(rctx, rtex->resource.buf,
+							 RADEON_USAGE_READWRITE) ||
+			 !rctx->ws->buffer_wait(rtex->resource.buf, 0,
+						RADEON_USAGE_READWRITE))
+			use_staging_texture = true;
 	}
 
 	trans = CALLOC_STRUCT(r600_transfer);
