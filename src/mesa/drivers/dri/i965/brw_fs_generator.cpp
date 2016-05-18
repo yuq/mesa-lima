@@ -1785,43 +1785,17 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          brw_F16TO32(p, dst, src[0]);
          break;
       case BRW_OPCODE_CMP:
-         /* The Ivybridge/BayTrail WaCMPInstFlagDepClearedEarly workaround says
-          * that when the destination is a GRF that the dependency-clear bit on
-          * the flag register is cleared early.
-          *
-          * Suggested workarounds are to disable coissuing CMP instructions
-          * or to split CMP(16) instructions into two CMP(8) instructions.
-          *
-          * We choose to split into CMP(8) instructions since disabling
-          * coissuing would affect CMP instructions not otherwise affected by
-          * the errata.
-          */
-         if (dispatch_width == 16 && devinfo->gen == 7 && !devinfo->is_haswell) {
-            if (dst.file == BRW_GENERAL_REGISTER_FILE) {
-               brw_set_default_exec_size(p, BRW_EXECUTE_8);
-               brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-               brw_CMP(p, firsthalf(dst), inst->conditional_mod,
-                          firsthalf(src[0]), firsthalf(src[1]));
-               brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-               brw_CMP(p, sechalf(dst), inst->conditional_mod,
-                          sechalf(src[0]), sechalf(src[1]));
-               brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-
-               multiple_instructions_emitted = true;
-            } else if (dst.file == BRW_ARCHITECTURE_REGISTER_FILE) {
-               /* For unknown reasons, the aforementioned workaround is not
-                * sufficient. Overriding the type when the destination is the
-                * null register is necessary but not sufficient by itself.
-                */
-               assert(dst.nr == BRW_ARF_NULL);
-               dst.type = BRW_REGISTER_TYPE_D;
-               brw_CMP(p, dst, inst->conditional_mod, src[0], src[1]);
-            } else {
-               unreachable("not reached");
-            }
-         } else {
-            brw_CMP(p, dst, inst->conditional_mod, src[0], src[1]);
+         if (inst->exec_size >= 16 && devinfo->gen == 7 && !devinfo->is_haswell &&
+             dst.file == BRW_ARCHITECTURE_REGISTER_FILE) {
+            /* For unknown reasons the WaCMPInstFlagDepClearedEarly workaround
+             * implemented in the compiler is not sufficient. Overriding the
+             * type when the destination is the null register is necessary but
+             * not sufficient by itself.
+             */
+            assert(dst.nr == BRW_ARF_NULL);
+            dst.type = BRW_REGISTER_TYPE_D;
          }
+         brw_CMP(p, dst, inst->conditional_mod, src[0], src[1]);
 	 break;
       case BRW_OPCODE_SEL:
 	 brw_SEL(p, dst, src[0], src[1]);
