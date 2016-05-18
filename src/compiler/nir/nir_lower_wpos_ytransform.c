@@ -123,19 +123,15 @@ emit_wpos_adjustment(lower_wpos_ytransform_state *state,
     * inversion/identity, or the other way around if we're drawing to an FBO.
     */
    if (invert) {
-      /* MAD wpos_temp.y, wpos_input, wpostrans.xxxx, wpostrans.yyyy
-       */
-      wpos_temp_y = nir_ffma(b,
-                             nir_channel(b, wpos_temp, 1),
-                             nir_channel(b, wpostrans, 0),
-                             nir_channel(b, wpostrans, 1));
+      /* wpos_temp.y = wpos_input * wpostrans.xxxx + wpostrans.yyyy */
+      wpos_temp_y = nir_fadd(b, nir_fmul(b, nir_channel(b, wpos_temp, 1),
+                                            nir_channel(b, wpostrans, 0)),
+                                nir_channel(b, wpostrans, 1));
    } else {
-      /* MAD wpos_temp.y, wpos_input, wpostrans.zzzz, wpostrans.wwww
-       */
-      wpos_temp_y = nir_ffma(b,
-                             nir_channel(b, wpos_temp, 1),
-                             nir_channel(b, wpostrans, 2),
-                             nir_channel(b, wpostrans, 3));
+      /* wpos_temp.y = wpos_input * wpostrans.zzzz + wpostrans.wwww */
+      wpos_temp_y = nir_fadd(b, nir_fmul(b, nir_channel(b, wpos_temp, 1),
+                                            nir_channel(b, wpostrans, 2)),
+                                nir_channel(b, wpostrans, 3));
    }
 
    wpos_temp = nir_vec4(b,
