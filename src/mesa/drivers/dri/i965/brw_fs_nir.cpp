@@ -3845,34 +3845,30 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_get_buffer_size: {
       nir_const_value *const_uniform_block = nir_src_as_const_value(instr->src[0]);
       unsigned ssbo_index = const_uniform_block ? const_uniform_block->u32[0] : 0;
-      int reg_width = dispatch_width / 8;
+
+      /* A resinfo's sampler message is used to get the buffer size.  The
+       * SIMD8's writeback message consists of four registers and SIMD16's
+       * writeback message consists of 8 destination registers (two per each
+       * component).  Because we are only interested on the first channel of
+       * the first returned component, where resinfo returns the buffer size
+       * for SURFTYPE_BUFFER, we can just use the SIMD8 variant regardless of
+       * the dispatch width.
+       */
+      const fs_builder ubld = bld.exec_all().group(8, 0);
+      fs_reg src_payload = ubld.vgrf(BRW_REGISTER_TYPE_UD);
+      fs_reg ret_payload = ubld.vgrf(BRW_REGISTER_TYPE_UD, 4);
 
       /* Set LOD = 0 */
-      fs_reg source = brw_imm_d(0);
+      ubld.MOV(src_payload, brw_imm_d(0));
 
-      int mlen = 1 * reg_width;
-
-      /* A resinfo's sampler message is used to get the buffer size.
-       * The SIMD8's writeback message consists of four registers and
-       * SIMD16's writeback message consists of 8 destination registers
-       * (two per each component), although we are only interested on the
-       * first component, where resinfo returns the buffer size for
-       * SURFTYPE_BUFFER.
-       */
-      int regs_written = 4 * mlen;
-      fs_reg src_payload = fs_reg(VGRF, alloc.allocate(mlen),
-                                  BRW_REGISTER_TYPE_UD);
-      bld.LOAD_PAYLOAD(src_payload, &source, 1, 0);
-      fs_reg buffer_size = fs_reg(VGRF, alloc.allocate(regs_written),
-                                  BRW_REGISTER_TYPE_UD);
       const unsigned index = prog_data->binding_table.ssbo_start + ssbo_index;
-      fs_inst *inst = bld.emit(FS_OPCODE_GET_BUFFER_SIZE, buffer_size,
-                               src_payload, brw_imm_ud(index));
+      fs_inst *inst = ubld.emit(FS_OPCODE_GET_BUFFER_SIZE, ret_payload,
+                                src_payload, brw_imm_ud(index));
       inst->header_size = 0;
-      inst->mlen = mlen;
-      inst->regs_written = regs_written;
-      bld.MOV(retype(dest, buffer_size.type), buffer_size);
+      inst->mlen = 1;
+      inst->regs_written = 4;
 
+      bld.MOV(retype(dest, ret_payload.type), component(ret_payload, 0));
       brw_mark_surface_used(prog_data, index);
       break;
    }
