@@ -1113,8 +1113,6 @@ void
 fs_generator::generate_ddy(enum opcode opcode,
                            struct brw_reg dst, struct brw_reg src)
 {
-   bool negate_value = true;
-
    if (opcode == FS_OPCODE_DDY_FINE) {
       /* From the Ivy Bridge PRM, volume 4 part 3, section 3.3.9 (Register
        * Region Restrictions):
@@ -1164,20 +1162,11 @@ fs_generator::generate_ddy(enum opcode opcode,
       if (unroll_to_simd8) {
          brw_set_default_exec_size(p, BRW_EXECUTE_8);
          brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-         if (negate_value) {
-            brw_ADD(p, firsthalf(dst), firsthalf(src1), negate(firsthalf(src0)));
-            brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-            brw_ADD(p, sechalf(dst), sechalf(src1), negate(sechalf(src0)));
-         } else {
-            brw_ADD(p, firsthalf(dst), firsthalf(src0), negate(firsthalf(src1)));
-            brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-            brw_ADD(p, sechalf(dst), sechalf(src0), negate(sechalf(src1)));
-         }
+         brw_ADD(p, firsthalf(dst), negate(firsthalf(src0)), firsthalf(src1));
+         brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
+         brw_ADD(p, sechalf(dst), negate(sechalf(src0)), sechalf(src1));
       } else {
-         if (negate_value)
-            brw_ADD(p, dst, src1, negate(src0));
-         else
-            brw_ADD(p, dst, src0, negate(src1));
+         brw_ADD(p, dst, negate(src0), src1);
       }
       brw_pop_insn_state(p);
    } else {
@@ -1196,10 +1185,7 @@ fs_generator::generate_ddy(enum opcode opcode,
                                     BRW_WIDTH_4,
                                     BRW_HORIZONTAL_STRIDE_0,
                                     BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
-      if (negate_value)
-         brw_ADD(p, dst, src1, negate(src0));
-      else
-         brw_ADD(p, dst, src0, negate(src1));
+      brw_ADD(p, dst, negate(src0), src1);
    }
 }
 
