@@ -350,26 +350,6 @@ gen6_blorp_emit_cc_state_pointers(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
-
-/* WM push constants */
-uint32_t
-gen6_blorp_emit_wm_constants(struct brw_context *brw,
-                             const struct brw_blorp_params *params)
-{
-   uint32_t wm_push_const_offset;
-
-   uint32_t *constants = brw_state_batch(brw, AUB_TRACE_WM_CONSTANTS,
-                                         sizeof(params->wm_inputs),
-                                         32, &wm_push_const_offset);
-
-   const uint32_t *push_consts = (const uint32_t *)&params->wm_inputs;
-   for (unsigned i = 0; i < params->wm_prog_data->nr_params; i++)
-      constants[i] = push_consts[params->wm_prog_data->param[i]];
-
-   return wm_push_const_offset;
-}
-
-
 /* SURFACE_STATE for renderbuffer or texture surface (see
  * brw_update_renderbuffer_surface and brw_update_texture_surface)
  */
@@ -755,32 +735,6 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
-
-static void
-gen6_blorp_emit_constant_ps(struct brw_context *brw,
-                            const struct brw_blorp_params *params,
-                            uint32_t wm_push_const_offset)
-{
-   /* Make sure the push constants fill an exact integer number of
-    * registers.
-    */
-   STATIC_ASSERT(sizeof(struct brw_blorp_wm_inputs) % 32 == 0);
-
-   /* There must be at least one register worth of push constant data. */
-   assert(BRW_BLORP_NUM_PUSH_CONST_REGS > 0);
-
-   /* Enable push constant buffer 0. */
-   BEGIN_BATCH(5);
-   OUT_BATCH(_3DSTATE_CONSTANT_PS << 16 |
-             GEN6_CONSTANT_BUFFER_0_ENABLE |
-             (5 - 2));
-   OUT_BATCH(wm_push_const_offset + (BRW_BLORP_NUM_PUSH_CONST_REGS - 1));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
 static void
 gen6_blorp_emit_constant_ps_disable(struct brw_context *brw,
                                     const struct brw_blorp_params *params)
@@ -1050,7 +1004,6 @@ gen6_blorp_exec(struct brw_context *brw,
    uint32_t cc_blend_state_offset = 0;
    uint32_t cc_state_offset = 0;
    uint32_t depthstencil_offset;
-   uint32_t wm_push_const_offset = 0;
    uint32_t wm_bind_bo_offset = 0;
 
    /* Emit workaround flushes when we switch from drawing to blorping. */
@@ -1074,10 +1027,6 @@ gen6_blorp_exec(struct brw_context *brw,
    if (params->wm_prog_data) {
       uint32_t wm_surf_offset_renderbuffer;
       uint32_t wm_surf_offset_texture = 0;
-
-      if (params->wm_prog_data->nr_params) {
-         wm_push_const_offset = gen6_blorp_emit_wm_constants(brw, params);
-      }
 
       intel_miptree_used_for_rendering(params->dst.mt);
       wm_surf_offset_renderbuffer =
@@ -1104,10 +1053,7 @@ gen6_blorp_exec(struct brw_context *brw,
    gen6_blorp_emit_gs_disable(brw, params);
    gen6_blorp_emit_clip_disable(brw);
    gen6_blorp_emit_sf_config(brw, params);
-   if (params->wm_prog_data && params->wm_prog_data->nr_params)
-      gen6_blorp_emit_constant_ps(brw, params, wm_push_const_offset);
-   else
-      gen6_blorp_emit_constant_ps_disable(brw, params);
+   gen6_blorp_emit_constant_ps_disable(brw, params);
    gen6_blorp_emit_wm_config(brw, params);
    if (params->wm_prog_data)
       gen6_blorp_emit_binding_table_pointers(brw, wm_bind_bo_offset);

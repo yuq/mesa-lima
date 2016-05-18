@@ -564,9 +564,6 @@ gen7_blorp_emit_ps_config(struct brw_context *brw,
    if (brw->is_haswell)
       dw4 |= SET_FIELD(1, HSW_PS_SAMPLE_MASK); /* 1 sample for now */
    if (params->wm_prog_data) {
-      if (params->wm_prog_data->nr_params)
-         dw4 |= GEN7_PS_PUSH_CONSTANT_ENABLE;
-
       dw5 |= prog_data->first_curbe_grf_0 << GEN7_PS_DISPATCH_START_GRF_SHIFT_0;
       dw5 |= prog_data->first_curbe_grf_2 << GEN7_PS_DISPATCH_START_GRF_SHIFT_2;
 
@@ -622,34 +619,6 @@ gen7_blorp_emit_sampler_state_pointers_ps(struct brw_context *brw,
    BEGIN_BATCH(2);
    OUT_BATCH(_3DSTATE_SAMPLER_STATE_POINTERS_PS << 16 | (2 - 2));
    OUT_BATCH(sampler_offset);
-   ADVANCE_BATCH();
-}
-
-
-void
-gen7_blorp_emit_constant_ps(struct brw_context *brw,
-                            uint32_t wm_push_const_offset)
-{
-   const uint8_t mocs = GEN7_MOCS_L3;
-
-   /* Make sure the push constants fill an exact integer number of
-    * registers.
-    */
-   STATIC_ASSERT(sizeof(struct brw_blorp_wm_inputs) % 32 == 0);
-
-   /* There must be at least one register worth of push constant data. */
-   assert(BRW_BLORP_NUM_PUSH_CONST_REGS > 0);
-
-   /* Enable push constant buffer 0. */
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_CONSTANT_PS << 16 |
-             (7 - 2));
-   OUT_BATCH(BRW_BLORP_NUM_PUSH_CONST_REGS);
-   OUT_BATCH(0);
-   OUT_BATCH(wm_push_const_offset | mocs);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
    ADVANCE_BATCH();
 }
 
@@ -845,7 +814,6 @@ gen7_blorp_exec(struct brw_context *brw,
    uint32_t cc_blend_state_offset = 0;
    uint32_t cc_state_offset = 0;
    uint32_t depthstencil_offset;
-   uint32_t wm_push_const_offset = 0;
    uint32_t wm_bind_bo_offset = 0;
 
    brw_upload_state_base_address(brw);
@@ -869,10 +837,6 @@ gen7_blorp_exec(struct brw_context *brw,
    if (params->wm_prog_data) {
       uint32_t wm_surf_offset_renderbuffer;
       uint32_t wm_surf_offset_texture = 0;
-
-      if (params->wm_prog_data->nr_params) {
-          wm_push_const_offset = gen6_blorp_emit_wm_constants(brw, params);
-      }
 
       intel_miptree_used_for_rendering(params->dst.mt);
       wm_surf_offset_renderbuffer =
@@ -903,10 +867,7 @@ gen7_blorp_exec(struct brw_context *brw,
    if (params->wm_prog_data)
       gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
 
-   if (params->wm_prog_data && params->wm_prog_data->nr_params)
-      gen7_blorp_emit_constant_ps(brw, wm_push_const_offset);
-   else
-      gen7_blorp_emit_constant_ps_disable(brw);
+   gen7_blorp_emit_constant_ps_disable(brw);
 
    if (params->src.mt) {
       const uint32_t sampler_offset =

@@ -187,17 +187,8 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
    struct brw_wm_prog_data wm_prog_data;
    memset(&wm_prog_data, 0, sizeof(wm_prog_data));
 
-   /* We set up the params array but instead of making them point at actual
-    * GL constant values, they just store an index.  This is just fine as the
-    * backend compiler never looks at the contents of the pointers, it just
-    * re-arranges them for us.
-    */
-   const union gl_constant_value *param[BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS];
-   for (unsigned i = 0; i < ARRAY_SIZE(param); i++)
-      param[i] = (const union gl_constant_value *)(intptr_t)i;
-
-   wm_prog_data.base.nr_params = BRW_BLORP_NUM_PUSH_CONSTANT_DWORDS;
-   wm_prog_data.base.param = param;
+   wm_prog_data.base.nr_params = 0;
+   wm_prog_data.base.param = NULL;
 
    /* BLORP always just uses the first two binding table entries */
    wm_prog_data.binding_table.render_target_start = 0;
@@ -235,9 +226,7 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
    prog_data->num_varying_inputs = wm_prog_data.num_varying_inputs;
    prog_data->inputs_read = nir->info.inputs_read;
 
-   prog_data->nr_params = wm_prog_data.base.nr_params;
-   for (unsigned i = 0; i < ARRAY_SIZE(param); i++)
-      prog_data->param[i] = (uintptr_t)wm_prog_data.base.param[i];
+   assert(wm_prog_data.base.nr_params == 0);
 
    return program;
 }
