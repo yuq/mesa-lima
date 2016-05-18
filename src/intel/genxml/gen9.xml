@@ -261,8 +261,7 @@
       <value name="SURFTYPE_NULL" value="7"/>
     </field>
     <field name="Surface Array" start="28" end="28" type="bool"/>
-    <field name="ASTC_Enable" start="27" end="27" type="bool"/>
-    <field name="Surface Format" start="18" end="26" type="uint"/>
+    <field name="Surface Format" start="18" end="27" type="uint"/>
     <field name="Surface Vertical Alignment" start="16" end="17" type="uint">
       <value name="VALIGN 4" value="1"/>
       <value name="VALIGN 8" value="2"/>
