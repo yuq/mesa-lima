@@ -1744,10 +1744,10 @@ gen6_HALT(struct brw_codegen *p)
       brw_set_src1(p, insn, brw_imm_d(0x0)); /* UIP and JIP, updated later. */
    }
 
+   brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
    if (p->compressed) {
       brw_inst_set_exec_size(devinfo, insn, BRW_EXECUTE_16);
    } else {
-      brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
       brw_inst_set_exec_size(devinfo, insn, BRW_EXECUTE_8);
    }
    return insn;
@@ -2110,10 +2110,11 @@ void brw_oword_block_write_scratch(struct brw_codegen *p,
       struct brw_reg src_header = retype(brw_vec8_grf(0, 0),
 					 BRW_REGISTER_TYPE_UW);
 
-      if (brw_inst_qtr_control(devinfo, insn) != BRW_COMPRESSION_NONE) {
-         brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
+      brw_inst_set_compression(devinfo, insn, false);
+
+      if (brw_inst_exec_size(devinfo, insn) >= 16)
 	 src_header = vec16(src_header);
-      }
+
       assert(brw_inst_pred_control(devinfo, insn) == BRW_PREDICATE_NONE);
       if (devinfo->gen < 6)
          brw_inst_set_base_mrf(devinfo, insn, mrf.nr);
@@ -2224,7 +2225,7 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
       brw_inst *insn = next_insn(p, BRW_OPCODE_SEND);
 
       assert(brw_inst_pred_control(devinfo, insn) == 0);
-      brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
+      brw_inst_set_compression(devinfo, insn, false);
 
       brw_set_dest(p, insn, dest);	/* UW? */
       if (devinfo->gen >= 6) {
@@ -2256,7 +2257,6 @@ gen7_block_read_scratch(struct brw_codegen *p,
    brw_inst *insn = next_insn(p, BRW_OPCODE_SEND);
    assert(brw_inst_pred_control(devinfo, insn) == BRW_PREDICATE_NONE);
 
-   brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
    brw_set_dest(p, insn, retype(dest, BRW_REGISTER_TYPE_UW));
 
    /* The HW requires that the header is present; this is to get the g0.5
@@ -2370,7 +2370,7 @@ void brw_fb_WRITE(struct brw_codegen *p,
    } else {
       insn = next_insn(p, BRW_OPCODE_SEND);
    }
-   brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
+   brw_inst_set_compression(devinfo, insn, false);
 
    if (devinfo->gen >= 6) {
       /* headerless version, just submit color payload */
@@ -2440,8 +2440,7 @@ void brw_SAMPLE(struct brw_codegen *p,
     * are allowed in SIMD16 mode and they could not work without SecHalf.  For
     * these reasons, we allow BRW_COMPRESSION_2NDHALF here.
     */
-   if (brw_inst_qtr_control(devinfo, insn) != BRW_COMPRESSION_2NDHALF)
-      brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
+   brw_inst_set_compression(devinfo, insn, false);
 
    if (devinfo->gen < 6)
       brw_inst_set_base_mrf(devinfo, insn, msg_reg_nr);

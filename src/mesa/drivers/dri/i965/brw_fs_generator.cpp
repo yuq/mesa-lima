@@ -1230,7 +1230,7 @@ fs_generator::generate_varying_pull_constant_load_gen4(fs_inst *inst,
    gen6_resolve_implied_move(p, &header, inst->base_mrf);
 
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
-   brw_inst_set_qtr_control(p->devinfo, send, BRW_COMPRESSION_NONE);
+   brw_inst_set_compression(devinfo, send, false);
    brw_set_dest(p, send, retype(dst, BRW_REGISTER_TYPE_UW));
    brw_set_src0(p, send, header);
    if (devinfo->gen < 6)
