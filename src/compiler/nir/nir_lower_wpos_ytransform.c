@@ -276,7 +276,7 @@ lower_interp_var_at_offset(lower_wpos_ytransform_state *state,
                                                      flip_y)));
 }
 
-static bool
+static void
 lower_wpos_ytransform_block(lower_wpos_ytransform_state *state, nir_block *block)
 {
    nir_foreach_instr_safe(instr, block) {
@@ -301,8 +301,6 @@ lower_wpos_ytransform_block(lower_wpos_ytransform_state *state, nir_block *block
             lower_fddy(state, alu);
       }
    }
-
-   return true;
 }
 
 static void
