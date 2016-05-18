@@ -1347,8 +1347,7 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
 void
 fs_generator::generate_varying_pull_constant_load(fs_inst *inst,
                                                   struct brw_reg dst,
-                                                  struct brw_reg index,
-                                                  struct brw_reg offset)
+                                                  struct brw_reg index)
 {
    assert(devinfo->gen < 7); /* Should use the gen7 variant. */
    assert(inst->header_size != 0);
@@ -1379,10 +1378,6 @@ fs_generator::generate_varying_pull_constant_load(fs_inst *inst,
       rlen = 8;
       simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD16;
    }
-
-   struct brw_reg offset_mrf = retype(brw_message_reg(inst->base_mrf + 1),
-                                      BRW_REGISTER_TYPE_D);
-   brw_MOV(p, offset_mrf, offset);
 
    struct brw_reg header = brw_vec8_grf(0, 0);
    gen6_resolve_implied_move(p, &header, inst->base_mrf);
@@ -2186,7 +2181,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 break;
 
       case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD:
-	 generate_varying_pull_constant_load(inst, dst, src[0], src[1]);
+	 generate_varying_pull_constant_load(inst, dst, src[0]);
 	 break;
 
       case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN7:

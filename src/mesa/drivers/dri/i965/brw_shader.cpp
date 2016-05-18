@@ -348,6 +348,8 @@ brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
       return "varying_pull_const";
    case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN7:
       return "varying_pull_const_gen7";
+   case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL:
+      return "varying_pull_const_logical";
 
    case FS_OPCODE_MOV_DISPATCH_TO_FLAGS:
       return "mov_dispatch_to_flags";

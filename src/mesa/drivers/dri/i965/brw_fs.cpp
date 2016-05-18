@@ -188,32 +188,16 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
       scale = 2;
    }
 
-   enum opcode op;
-   if (devinfo->gen >= 7)
-      op = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN7;
-   else
-      op = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD;
-
    /* The pull load message will load a vec4 (16 bytes). If we are loading
     * a double this means we are only loading 2 elements worth of data.
     * We also want to use a 32-bit data type for the dst of the load operation
     * so other parts of the driver don't get confused about the size of the
     * result.
     */
-   int regs_written = 4 * (bld.dispatch_width() / 8) * scale;
-   fs_reg vec4_result = fs_reg(VGRF, alloc.allocate(regs_written),
-                               BRW_REGISTER_TYPE_F);
-   fs_inst *inst = bld.emit(op, vec4_result, surf_index, vec4_offset);
-   inst->regs_written = regs_written;
-
-   if (devinfo->gen < 7) {
-      inst->base_mrf = FIRST_PULL_LOAD_MRF(devinfo->gen);
-      inst->header_size = 1;
-      if (devinfo->gen == 4)
-         inst->mlen = 3;
-      else
-         inst->mlen = 1 + bld.dispatch_width() / 8;
-   }
+   fs_reg vec4_result = bld.vgrf(BRW_REGISTER_TYPE_F, 4 * scale);
+   fs_inst *inst = bld.emit(FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL,
+                            vec4_result, surf_index, vec4_offset);
+   inst->regs_written = 4 * (bld.dispatch_width() / 8) * scale;
 
    if (type_sz(dst.type) == 8) {
       assert(scale == 1);
@@ -4439,6 +4423,28 @@ lower_surface_logical_send(const fs_builder &bld, fs_inst *inst, opcode op,
    delete[] components;
 }
 
+static void
+lower_varying_pull_constant_logical_send(const fs_builder &bld, fs_inst *inst)
+{
+   const brw_device_info *devinfo = bld.shader->devinfo;
+
+   if (devinfo->gen >= 7) {
+      inst->opcode = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN7;
+
+   } else {
+      const fs_reg payload(MRF, FIRST_PULL_LOAD_MRF(devinfo->gen),
+                           BRW_REGISTER_TYPE_UD);
+
+      bld.MOV(byte_offset(payload, REG_SIZE), inst->src[1]);
+
+      inst->opcode = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD;
+      inst->resize_sources(1);
+      inst->base_mrf = payload.nr;
+      inst->header_size = 1;
+      inst->mlen = 1 + inst->exec_size / 8;
+   }
+}
+
 bool
 fs_visitor::lower_logical_sends()
 {
@@ -4542,6 +4548,10 @@ fs_visitor::lower_logical_sends()
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_TYPED_ATOMIC,
                                     ibld.sample_mask_reg());
+         break;
+
+      case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL:
+         lower_varying_pull_constant_logical_send(ibld, inst);
          break;
 
       default:
