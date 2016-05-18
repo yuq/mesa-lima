@@ -1960,10 +1960,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 {
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
 	unsigned level = surf->base.u.tex.level;
-	uint64_t offset = rtex->surface.level[level].offset;
-	unsigned pitch, slice;
-	unsigned color_info, color_attrib, color_pitch, color_view;
-	unsigned tile_mode_index;
+	unsigned color_info, color_attrib, color_view;
 	unsigned format, swap, ntype, endian;
 	const struct util_format_description *desc;
 	int i;
@@ -1971,14 +1968,6 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 	color_view = S_028C6C_SLICE_START(surf->base.u.tex.first_layer) |
 		     S_028C6C_SLICE_MAX(surf->base.u.tex.last_layer);
-
-	pitch = (rtex->surface.level[level].nblk_x) / 8 - 1;
-	slice = (rtex->surface.level[level].nblk_x * rtex->surface.level[level].nblk_y) / 64;
-	if (slice) {
-		slice = slice - 1;
-	}
-
-	tile_mode_index = si_tile_mode_index(rtex, level, false);
 
 	desc = util_format_description(surf->base.format);
 	for (i = 0; i < 4; i++) {
@@ -2045,12 +2034,9 @@ static void si_initialize_color_surface(struct si_context *sctx,
 		S_028C70_NUMBER_TYPE(ntype) |
 		S_028C70_ENDIAN(endian);
 
-	color_pitch = S_028C64_TILE_MAX(pitch);
-
 	/* Intensity is implemented as Red, so treat it that way. */
-	color_attrib = S_028C74_TILE_MODE_INDEX(tile_mode_index) |
-		S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] == PIPE_SWIZZLE_1 ||
-					   util_format_is_intensity(surf->base.format));
+	color_attrib = S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] == PIPE_SWIZZLE_1 ||
+						  util_format_is_intensity(surf->base.format));
 
 	if (rtex->resource.b.b.nr_samples > 1) {
 		unsigned log_samples = util_logbase2(rtex->resource.b.b.nr_samples);
@@ -2062,23 +2048,13 @@ static void si_initialize_color_surface(struct si_context *sctx,
 			color_info |= S_028C70_COMPRESSION(1);
 			unsigned fmask_bankh = util_logbase2(rtex->fmask.bank_height);
 
-			color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(rtex->fmask.tile_mode_index);
-
 			if (sctx->b.chip_class == SI) {
 				/* due to a hw bug, FMASK_BANK_HEIGHT must be set on SI too */
 				color_attrib |= S_028C74_FMASK_BANK_HEIGHT(fmask_bankh);
 			}
-			if (sctx->b.chip_class >= CIK) {
-				color_pitch |= S_028C64_FMASK_TILE_MAX(rtex->fmask.pitch_in_pixels / 8 - 1);
-			}
 		}
 	}
 
-	offset += rtex->resource.gpu_address;
-
-	surf->cb_color_base = offset >> 8;
-	surf->cb_color_pitch = color_pitch;
-	surf->cb_color_slice = S_028C68_TILE_MAX(slice);
 	surf->cb_color_view = color_view;
 	surf->cb_color_info = color_info;
 	surf->cb_color_attrib = color_attrib;
@@ -2100,23 +2076,10 @@ static void si_initialize_color_surface(struct si_context *sctx,
 				     rtex->surface.level[level].dcc_offset) >> 8;
 	}
 
-	if (rtex->fmask.size) {
-		surf->cb_color_fmask = (offset + rtex->fmask.offset) >> 8;
-		surf->cb_color_fmask_slice = S_028C88_TILE_MAX(rtex->fmask.slice_tile_max);
-	} else {
-		/* This must be set for fast clear to work without FMASK. */
-		surf->cb_color_fmask = surf->cb_color_base;
-		surf->cb_color_fmask_slice = surf->cb_color_slice;
-		surf->cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(tile_mode_index);
-
-		if (sctx->b.chip_class == SI) {
-			unsigned bankh = util_logbase2(rtex->surface.bankh);
-			surf->cb_color_attrib |= S_028C74_FMASK_BANK_HEIGHT(bankh);
-		}
-
-		if (sctx->b.chip_class >= CIK) {
-			surf->cb_color_pitch |= S_028C64_FMASK_TILE_MAX(pitch);
-		}
+	/* This must be set for fast clear to work without FMASK. */
+	if (!rtex->fmask.size && sctx->b.chip_class == SI) {
+		unsigned bankh = util_logbase2(rtex->surface.bankh);
+		surf->cb_color_attrib |= S_028C74_FMASK_BANK_HEIGHT(bankh);
 	}
 
 	/* Determine pixel shader export format */
@@ -2430,6 +2393,10 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 	/* Colorbuffers. */
 	for (i = 0; i < nr_cbufs; i++) {
+		unsigned pitch_tile_max, slice_tile_max, tile_mode_index;
+		unsigned cb_color_base, cb_color_fmask, cb_color_attrib;
+		unsigned cb_color_pitch, cb_color_slice, cb_color_fmask_slice;
+
 		if (!(sctx->framebuffer.dirty_cbufs & (1 << i)))
 			continue;
 
@@ -2453,19 +2420,46 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 				RADEON_PRIO_CMASK);
 		}
 
+		/* Compute mutable surface parameters. */
+		pitch_tile_max = cb->level_info->nblk_x / 8 - 1;
+		slice_tile_max = cb->level_info->nblk_x *
+				 cb->level_info->nblk_y / 64 - 1;
+		tile_mode_index = si_tile_mode_index(tex, cb->base.u.tex.level, false);
+
+		cb_color_base = (tex->resource.gpu_address + cb->level_info->offset) >> 8;
+		cb_color_pitch = S_028C64_TILE_MAX(pitch_tile_max);
+		cb_color_slice = S_028C68_TILE_MAX(slice_tile_max);
+		cb_color_attrib = cb->cb_color_attrib |
+				  S_028C74_TILE_MODE_INDEX(tile_mode_index);
+
+		if (tex->fmask.size) {
+			if (sctx->b.chip_class >= CIK)
+				cb_color_pitch |= S_028C64_FMASK_TILE_MAX(tex->fmask.pitch_in_pixels / 8 - 1);
+			cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(tex->fmask.tile_mode_index);
+			cb_color_fmask = (tex->resource.gpu_address + tex->fmask.offset) >> 8;
+			cb_color_fmask_slice = S_028C88_TILE_MAX(tex->fmask.slice_tile_max);
+		} else {
+			/* This must be set for fast clear to work without FMASK. */
+			if (sctx->b.chip_class >= CIK)
+				cb_color_pitch |= S_028C64_FMASK_TILE_MAX(pitch_tile_max);
+			cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(tile_mode_index);
+			cb_color_fmask = cb_color_base;
+			cb_color_fmask_slice = S_028C88_TILE_MAX(slice_tile_max);
+		}
+
 		radeon_set_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C,
 					   sctx->b.chip_class >= VI ? 14 : 13);
-		radeon_emit(cs, cb->cb_color_base);	/* R_028C60_CB_COLOR0_BASE */
-		radeon_emit(cs, cb->cb_color_pitch);	/* R_028C64_CB_COLOR0_PITCH */
-		radeon_emit(cs, cb->cb_color_slice);	/* R_028C68_CB_COLOR0_SLICE */
+		radeon_emit(cs, cb_color_base);		/* R_028C60_CB_COLOR0_BASE */
+		radeon_emit(cs, cb_color_pitch);	/* R_028C64_CB_COLOR0_PITCH */
+		radeon_emit(cs, cb_color_slice);	/* R_028C68_CB_COLOR0_SLICE */
 		radeon_emit(cs, cb->cb_color_view);	/* R_028C6C_CB_COLOR0_VIEW */
 		radeon_emit(cs, cb->cb_color_info | tex->cb_color_info); /* R_028C70_CB_COLOR0_INFO */
-		radeon_emit(cs, cb->cb_color_attrib);	/* R_028C74_CB_COLOR0_ATTRIB */
+		radeon_emit(cs, cb_color_attrib);	/* R_028C74_CB_COLOR0_ATTRIB */
 		radeon_emit(cs, cb->cb_dcc_control);	/* R_028C78_CB_COLOR0_DCC_CONTROL */
 		radeon_emit(cs, tex->cmask.base_address_reg);	/* R_028C7C_CB_COLOR0_CMASK */
 		radeon_emit(cs, tex->cmask.slice_tile_max);	/* R_028C80_CB_COLOR0_CMASK_SLICE */
-		radeon_emit(cs, cb->cb_color_fmask);		/* R_028C84_CB_COLOR0_FMASK */
-		radeon_emit(cs, cb->cb_color_fmask_slice);	/* R_028C88_CB_COLOR0_FMASK_SLICE */
+		radeon_emit(cs, cb_color_fmask);		/* R_028C84_CB_COLOR0_FMASK */
+		radeon_emit(cs, cb_color_fmask_slice);		/* R_028C88_CB_COLOR0_FMASK_SLICE */
 		radeon_emit(cs, tex->color_clear_value[0]);	/* R_028C8C_CB_COLOR0_CLEAR_WORD0 */
 		radeon_emit(cs, tex->color_clear_value[1]);	/* R_028C90_CB_COLOR0_CLEAR_WORD1 */
 

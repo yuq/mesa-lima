@@ -269,6 +269,7 @@ struct r600_texture {
 
 struct r600_surface {
 	struct pipe_surface		base;
+	const struct radeon_surf_level	*level_info;
 
 	bool color_initialized;
 	bool depth_initialized;
