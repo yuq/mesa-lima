@@ -1168,7 +1168,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       si = decl->Semantic.Index;
    }
 
-   if (decl->Declaration.Local) {
+   if (decl->Declaration.Local || decl->Declaration.File == TGSI_FILE_ADDRESS) {
       for (i = first; i <= last; ++i) {
          for (c = 0; c < 4; ++c) {
             locals.insert(
