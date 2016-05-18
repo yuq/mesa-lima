@@ -381,7 +381,7 @@ void anv_GetPhysicalDeviceFeatures(
       .samplerAnisotropy                        = false, /* FINISHME */
       .textureCompressionETC2                   = pdevice->info->gen >= 8 ||
                                                   pdevice->info->is_baytrail,
-      .textureCompressionASTC_LDR               = false, /* FINISHME */
+      .textureCompressionASTC_LDR               = pdevice->info->gen >= 9, /* FINISHME CHV */
       .textureCompressionBC                     = true,
       .occlusionQueryPrecise                    = true,
       .pipelineStatisticsQuery                  = false,
