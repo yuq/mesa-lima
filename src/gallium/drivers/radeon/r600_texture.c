@@ -1302,9 +1302,11 @@ static bool r600_can_invalidate_texture(struct r600_common_screen *rscreen,
 						 box->depth);
 }
 
-static void r600_texture_invalidate_storage(struct r600_common_screen *rscreen,
+static void r600_texture_invalidate_storage(struct r600_common_context *rctx,
 					    struct r600_texture *rtex)
 {
+	struct r600_common_screen *rscreen = rctx->screen;
+
 	/* There is no point in discarding depth and tiled buffers. */
 	assert(!rtex->is_depth);
 	assert(rtex->surface.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED);
@@ -1319,6 +1321,8 @@ static void r600_texture_invalidate_storage(struct r600_common_screen *rscreen,
 
 	r600_dirty_all_framebuffer_states(rscreen);
 	p_atomic_inc(&rscreen->dirty_tex_descriptor_counter);
+
+	rctx->num_alloc_tex_transfer_bytes += rtex->size;
 }
 
 static void *r600_texture_transfer_map(struct pipe_context *ctx,
@@ -1378,8 +1382,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 			/* It's busy. */
 			if (r600_can_invalidate_texture(rctx->screen, rtex,
 							usage, box))
-				r600_texture_invalidate_storage(rctx->screen,
-								rtex);
+				r600_texture_invalidate_storage(rctx, rtex);
 			else
 				use_staging_texture = true;
 		}
@@ -1499,6 +1502,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 static void r600_texture_transfer_unmap(struct pipe_context *ctx,
 					struct pipe_transfer* transfer)
 {
+	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
 	struct pipe_resource *texture = transfer->resource;
 	struct r600_texture *rtex = (struct r600_texture*)texture;
@@ -1514,8 +1518,28 @@ static void r600_texture_transfer_unmap(struct pipe_context *ctx,
 		}
 	}
 
-	if (rtransfer->staging)
+	if (rtransfer->staging) {
+		rctx->num_alloc_tex_transfer_bytes += rtransfer->staging->buf->size;
 		pipe_resource_reference((struct pipe_resource**)&rtransfer->staging, NULL);
+	}
+
+	/* Heuristic for {upload, draw, upload, draw, ..}:
+	 *
+	 * Flush the gfx IB if we've allocated too much texture storage.
+	 *
+	 * The idea is that we don't want to build IBs that use too much
+	 * memory and put pressure on the kernel memory manager and we also
+	 * want to make temporary and invalidated buffers go idle ASAP to
+	 * decrease the total memory usage or make them reusable. The memory
+	 * usage will be slightly higher than given here because of the buffer
+	 * cache in the winsys.
+	 *
+	 * The result is that the kernel memory manager is never a bottleneck.
+	 */
+	if (rctx->num_alloc_tex_transfer_bytes > rctx->screen->info.gart_size / 4) {
+		rctx->gfx.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
+		rctx->num_alloc_tex_transfer_bytes = 0;
+	}
 
 	FREE(transfer);
 }
