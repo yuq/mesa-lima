@@ -1068,6 +1068,7 @@ svga_screen_create(struct svga_winsys_screen *sws)
                    svgascreen->haveLineStipple, svgascreen->haveLineSmooth,
                    svgascreen->maxLineWidth);
       debug_printf("svga: maxPointSize %g\n", svgascreen->maxPointSize);
+      debug_printf("svga: msaa samples mask: 0x%x\n", svgascreen->ms_samples);
    }
 
    pipe_mutex_init(svgascreen->tex_mutex);
