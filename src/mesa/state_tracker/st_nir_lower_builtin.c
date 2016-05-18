@@ -128,9 +128,12 @@ get_variable(lower_builtin_state *state, nir_deref_var *deref,
 
    char *name = _mesa_program_state_string((gl_state_index *)tokens);
 
-   nir_foreach_variable(var, &shader->uniforms)
-      if (strcmp(var->name, name) == 0)
+   nir_foreach_variable(var, &shader->uniforms) {
+      if (strcmp(var->name, name) == 0) {
+         free(name);
          return var;
+      }
+   }
 
    /* variable doesn't exist yet, so create it: */
    nir_variable *var =
