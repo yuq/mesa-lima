@@ -5803,7 +5803,7 @@ fs_visitor::allocate_registers(bool allow_spilling)
        * SIMD8.  There's probably actually some intermediate point where
        * SIMD16 with a couple of spills is still better.
        */
-      if (dispatch_width == 16 && min_dispatch_width <= 8) {
+      if (dispatch_width > min_dispatch_width) {
          fail("Failure to register allocate.  Reduce number of "
               "live scalar values to avoid this.");
       } else {

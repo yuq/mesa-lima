@@ -77,7 +77,7 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int dispatch_width)
 {
    const struct brw_device_info *devinfo = compiler->devinfo;
    int base_reg_count = BRW_MAX_GRF;
-   int index = (dispatch_width / 8) - 1;
+   const int index = _mesa_logbase2(dispatch_width / 8);
 
    if (dispatch_width > 8 && devinfo->gen >= 7) {
       /* For IVB+, we don't need the PLN hacks or the even-reg alignment in
@@ -115,7 +115,7 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int dispatch_width)
    /* Compute the total number of registers across all classes. */
    int ra_reg_count = 0;
    for (int i = 0; i < class_count; i++) {
-      if (devinfo->gen <= 5 && dispatch_width == 16) {
+      if (devinfo->gen <= 5 && dispatch_width >= 16) {
          /* From the G45 PRM:
           *
           * In order to reduce the hardware complexity, the following
@@ -162,7 +162,7 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int dispatch_width)
    int pairs_reg_count = 0;
    for (int i = 0; i < class_count; i++) {
       int class_reg_count;
-      if (devinfo->gen <= 5 && dispatch_width == 16) {
+      if (devinfo->gen <= 5 && dispatch_width >= 16) {
          class_reg_count = (base_reg_count - (class_sizes[i] - 1)) / 2;
 
          /* See comment below.  The only difference here is that we are
@@ -208,7 +208,7 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int dispatch_width)
          pairs_reg_count = class_reg_count;
       }
 
-      if (devinfo->gen <= 5 && dispatch_width == 16) {
+      if (devinfo->gen <= 5 && dispatch_width >= 16) {
          for (int j = 0; j < class_reg_count; j++) {
             ra_class_add_reg(regs, classes[i], reg);
 
@@ -289,6 +289,7 @@ brw_fs_alloc_reg_sets(struct brw_compiler *compiler)
 {
    brw_alloc_reg_set(compiler, 8);
    brw_alloc_reg_set(compiler, 16);
+   brw_alloc_reg_set(compiler, 32);
 }
 
 static int
@@ -443,7 +444,7 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
        * The alternative would be to have per-physical-register classes, which
        * would just be silly.
        */
-      if (devinfo->gen <= 5 && dispatch_width == 16) {
+      if (devinfo->gen <= 5 && dispatch_width >= 16) {
          /* We have to divide by 2 here because we only have even numbered
           * registers.  Some of the payload registers will be odd, but
           * that's ok because their physical register numbers have already
@@ -538,7 +539,7 @@ fs_visitor::assign_regs(bool allow_spilling, bool spill_all)
    int reg_width = dispatch_width / 8;
    unsigned hw_reg_mapping[this->alloc.count];
    int payload_node_count = ALIGN(this->first_non_payload_grf, reg_width);
-   int rsi = reg_width - 1; /* Which compiler->fs_reg_sets[] to use */
+   int rsi = _mesa_logbase2(reg_width); /* Which compiler->fs_reg_sets[] to use */
    calculate_live_intervals();
 
    int node_count = this->alloc.count;
