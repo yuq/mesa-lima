@@ -1302,6 +1302,25 @@ static bool r600_can_invalidate_texture(struct r600_common_screen *rscreen,
 						 box->depth);
 }
 
+static void r600_texture_invalidate_storage(struct r600_common_screen *rscreen,
+					    struct r600_texture *rtex)
+{
+	/* There is no point in discarding depth and tiled buffers. */
+	assert(!rtex->is_depth);
+	assert(rtex->surface.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED);
+
+	/* Reallocate the buffer in the same pipe_resource. */
+	r600_init_resource(rscreen, &rtex->resource, rtex->size,
+			   rtex->surface.bo_alignment);
+
+	/* Initialize the CMASK base address (needed even without CMASK). */
+	rtex->cmask.base_address_reg =
+		(rtex->resource.gpu_address + rtex->cmask.offset) >> 8;
+
+	r600_dirty_all_framebuffer_states(rscreen);
+	p_atomic_inc(&rscreen->dirty_tex_descriptor_counter);
+}
+
 static void *r600_texture_transfer_map(struct pipe_context *ctx,
 				       struct pipe_resource *texture,
 				       unsigned level,
@@ -1355,8 +1374,15 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		else if (r600_rings_is_buffer_referenced(rctx, rtex->resource.buf,
 							 RADEON_USAGE_READWRITE) ||
 			 !rctx->ws->buffer_wait(rtex->resource.buf, 0,
-						RADEON_USAGE_READWRITE))
-			use_staging_texture = true;
+						RADEON_USAGE_READWRITE)) {
+			/* It's busy. */
+			if (r600_can_invalidate_texture(rctx->screen, rtex,
+							usage, box))
+				r600_texture_invalidate_storage(rctx->screen,
+								rtex);
+			else
+				use_staging_texture = true;
+		}
 	}
 
 	trans = CALLOC_STRUCT(r600_transfer);
