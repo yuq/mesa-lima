@@ -307,6 +307,34 @@ enum isl_format {
    ISL_FORMAT_R8G8B8_UINT =                                    456,
    ISL_FORMAT_R8G8B8_SINT =                                    457,
    ISL_FORMAT_RAW =                                            511,
+   ISL_FORMAT_ASTC_LDR_2D_4X4_U8SRGB =                         512,
+   ISL_FORMAT_ASTC_LDR_2D_5X4_U8SRGB =                         520,
+   ISL_FORMAT_ASTC_LDR_2D_5X5_U8SRGB =                         521,
+   ISL_FORMAT_ASTC_LDR_2D_6X5_U8SRGB =                         529,
+   ISL_FORMAT_ASTC_LDR_2D_6X6_U8SRGB =                         530,
+   ISL_FORMAT_ASTC_LDR_2D_8X5_U8SRGB =                         545,
+   ISL_FORMAT_ASTC_LDR_2D_8X6_U8SRGB =                         546,
+   ISL_FORMAT_ASTC_LDR_2D_8X8_U8SRGB =                         548,
+   ISL_FORMAT_ASTC_LDR_2D_10X5_U8SRGB =                        561,
+   ISL_FORMAT_ASTC_LDR_2D_10X6_U8SRGB =                        562,
+   ISL_FORMAT_ASTC_LDR_2D_10X8_U8SRGB =                        564,
+   ISL_FORMAT_ASTC_LDR_2D_10X10_U8SRGB =                       566,
+   ISL_FORMAT_ASTC_LDR_2D_12X10_U8SRGB =                       574,
+   ISL_FORMAT_ASTC_LDR_2D_12X12_U8SRGB =                       575,
+   ISL_FORMAT_ASTC_LDR_2D_4X4_FLT16 =                          576,
+   ISL_FORMAT_ASTC_LDR_2D_5X4_FLT16 =                          584,
+   ISL_FORMAT_ASTC_LDR_2D_5X5_FLT16 =                          585,
+   ISL_FORMAT_ASTC_LDR_2D_6X5_FLT16 =                          593,
+   ISL_FORMAT_ASTC_LDR_2D_6X6_FLT16 =                          594,
+   ISL_FORMAT_ASTC_LDR_2D_8X5_FLT16 =                          609,
+   ISL_FORMAT_ASTC_LDR_2D_8X6_FLT16 =                          610,
+   ISL_FORMAT_ASTC_LDR_2D_8X8_FLT16 =                          612,
+   ISL_FORMAT_ASTC_LDR_2D_10X5_FLT16 =                         625,
+   ISL_FORMAT_ASTC_LDR_2D_10X6_FLT16 =                         626,
+   ISL_FORMAT_ASTC_LDR_2D_10X8_FLT16 =                         628,
+   ISL_FORMAT_ASTC_LDR_2D_10X10_FLT16 =                        630,
+   ISL_FORMAT_ASTC_LDR_2D_12X10_FLT16 =                        638,
+   ISL_FORMAT_ASTC_LDR_2D_12X12_FLT16 =                        639,
 
    /* Hardware doesn't understand this out-of-band value */
    ISL_FORMAT_UNSUPPORTED =                             UINT16_MAX,
@@ -354,6 +382,7 @@ enum isl_txc {
    ISL_TXC_BPTC,
    ISL_TXC_ETC1,
    ISL_TXC_ETC2,
+   ISL_TXC_ASTC,
 };
 
 /**
@@ -879,6 +908,7 @@ isl_format_has_bc_compression(enum isl_format fmt)
    case ISL_TXC_BPTC:
    case ISL_TXC_ETC1:
    case ISL_TXC_ETC2:
+   case ISL_TXC_ASTC:
       return false;
    }
 
