@@ -181,7 +181,7 @@ fs_visitor::nir_setup_outputs()
 void
 fs_visitor::nir_setup_uniforms()
 {
-   if (dispatch_width != 8)
+   if (dispatch_width != min_dispatch_width)
       return;
 
    uniforms = nir->num_uniforms / 4;
