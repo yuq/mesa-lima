@@ -213,6 +213,12 @@ nir_visitor::nir_visitor(nir_shader *shader)
                                              _mesa_key_pointer_equal);
    this->overload_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                                   _mesa_key_pointer_equal);
+   this->result = NULL;
+   this->impl = NULL;
+   this->var = NULL;
+   this->deref_head = NULL;
+   this->deref_tail = NULL;
+   memset(&this->b, 0, sizeof(this->b));
 }
 
 nir_visitor::~nir_visitor()
