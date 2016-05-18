@@ -294,9 +294,9 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                 ptrans->box.height = align(ptrans->box.height, utile_h);
 
                 ptrans->stride = ptrans->box.width * rsc->cpp;
-                ptrans->layer_stride = ptrans->stride;
+                ptrans->layer_stride = ptrans->stride * ptrans->box.height;
 
-                trans->map = malloc(ptrans->stride * ptrans->box.height);
+                trans->map = malloc(ptrans->layer_stride * ptrans->box.depth);
                 if (usage & PIPE_TRANSFER_READ ||
                     ptrans->box.width != orig_width ||
                     ptrans->box.height != orig_height) {
