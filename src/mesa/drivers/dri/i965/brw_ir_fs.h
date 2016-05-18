@@ -146,10 +146,39 @@ component(fs_reg reg, unsigned idx)
    return reg;
 }
 
+/**
+ * Return whether the given register region is n-periodic, i.e. whether the
+ * original region remains invariant after shifting it by \p n scalar
+ * channels.
+ */
+static inline bool
+is_periodic(const fs_reg &reg, unsigned n)
+{
+   if (reg.file == BAD_FILE || reg.is_null()) {
+      return true;
+
+   } else if (reg.file == IMM) {
+      const unsigned period = (reg.type == BRW_REGISTER_TYPE_UV ||
+                               reg.type == BRW_REGISTER_TYPE_V ? 8 :
+                               reg.type == BRW_REGISTER_TYPE_VF ? 4 :
+                               1);
+      return n % period == 0;
+
+   } else if (reg.file == ARF || reg.file == FIXED_GRF) {
+      const unsigned period = (reg.hstride == 0 && reg.vstride == 0 ? 1 :
+                               reg.vstride == 0 ? 1 << reg.width :
+                               ~0);
+      return n % period == 0;
+
+   } else {
+      return reg.stride == 0;
+   }
+}
+
 static inline bool
 is_uniform(const fs_reg &reg)
 {
-   return (reg.stride == 0 || reg.is_null());
+   return is_periodic(reg, 1);
 }
 
 /**
