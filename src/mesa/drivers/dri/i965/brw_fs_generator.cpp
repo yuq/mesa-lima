@@ -1841,44 +1841,12 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       case BRW_OPCODE_BFI1:
          assert(devinfo->gen >= 7);
-         /* The Haswell WaForceSIMD8ForBFIInstruction workaround says that we
-          * should
-          *
-          *    "Force BFI instructions to be executed always in SIMD8."
-          */
-         if (dispatch_width == 16 && devinfo->is_haswell) {
-            brw_set_default_exec_size(p, BRW_EXECUTE_8);
-            brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-            brw_BFI1(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]));
-            brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-            brw_BFI1(p, sechalf(dst), sechalf(src[0]), sechalf(src[1]));
-            brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-         } else {
-            brw_BFI1(p, dst, src[0], src[1]);
-         }
+         brw_BFI1(p, dst, src[0], src[1]);
          break;
       case BRW_OPCODE_BFI2:
          assert(devinfo->gen >= 7);
          brw_set_default_access_mode(p, BRW_ALIGN_16);
-         /* The Haswell WaForceSIMD8ForBFIInstruction workaround says that we
-          * should
-          *
-          *    "Force BFI instructions to be executed always in SIMD8."
-          *
-          * Otherwise we would be able to emit compressed instructions like we
-          * do for the other three-source instructions.
-          */
-         if (dispatch_width == 16 && devinfo->is_haswell) {
-            brw_set_default_exec_size(p, BRW_EXECUTE_8);
-            brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-            brw_BFI2(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
-            brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-            brw_BFI2(p, sechalf(dst), sechalf(src[0]), sechalf(src[1]), sechalf(src[2]));
-            brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-         } else {
-            brw_BFI2(p, dst, src[0], src[1], src[2]);
-         }
-         brw_set_default_access_mode(p, BRW_ALIGN_1);
+         brw_BFI2(p, dst, src[0], src[1], src[2]);
          break;
 
       case BRW_OPCODE_IF:
