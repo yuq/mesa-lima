@@ -297,7 +297,9 @@ lower_wpos_ytransform_block(lower_wpos_ytransform_state *state, nir_block *block
          }
       } else if (instr->type == nir_instr_type_alu) {
          nir_alu_instr *alu = nir_instr_as_alu(instr);
-         if (alu->op == nir_op_fddy)
+         if (alu->op == nir_op_fddy ||
+             alu->op == nir_op_fddy_fine ||
+             alu->op == nir_op_fddy_coarse)
             lower_fddy(state, alu);
       }
    }
