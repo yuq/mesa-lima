@@ -282,7 +282,8 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
 void
 brw_nir_lower_fs_inputs(nir_shader *nir)
 {
-   nir_assign_var_locations(&nir->inputs, &nir->num_inputs, type_size_scalar);
+   nir_assign_var_locations(&nir->inputs, &nir->num_inputs, VARYING_SLOT_VAR0,
+                            type_size_scalar);
    nir_lower_io(nir, nir_var_shader_in, type_size_scalar);
 }
 
@@ -292,6 +293,7 @@ brw_nir_lower_vue_outputs(nir_shader *nir,
 {
    if (is_scalar) {
       nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
+                               VARYING_SLOT_VAR0,
                                type_size_scalar);
       nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
    } else {
@@ -330,14 +332,14 @@ void
 brw_nir_lower_fs_outputs(nir_shader *nir)
 {
    nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
-                            type_size_scalar);
+                            FRAG_RESULT_DATA0, type_size_scalar);
    nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
 }
 
 void
 brw_nir_lower_cs_shared(nir_shader *nir)
 {
-   nir_assign_var_locations(&nir->shared, &nir->num_shared,
+   nir_assign_var_locations(&nir->shared, &nir->num_shared, 0,
                             type_size_scalar_bytes);
    nir_lower_io(nir, nir_var_shared, type_size_scalar_bytes);
 }

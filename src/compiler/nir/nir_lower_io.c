@@ -43,9 +43,17 @@ struct lower_io_state {
 
 void
 nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
+                         unsigned base_offset,
                          int (*type_size)(const struct glsl_type *))
 {
    unsigned location = 0;
+
+   /* There are 32 regular and 32 patch varyings allowed */
+   int locations[64][2];
+   for (unsigned i = 0; i < 64; i++) {
+      for (unsigned j = 0; j < 2; j++)
+         locations[i][j] = -1;
+   }
 
    nir_foreach_variable(var, var_list) {
       /*
@@ -56,8 +64,24 @@ nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
           var->interface_type != NULL)
          continue;
 
-      var->data.driver_location = location;
-      location += type_size(var->type);
+      /* Make sure we give the same location to varyings packed with
+       * ARB_enhanced_layouts.
+       */
+      int idx = var->data.location - base_offset;
+      if (base_offset && idx >= 0) {
+         assert(idx < ARRAY_SIZE(locations));
+
+         if (locations[idx][var->data.index] == -1) {
+            var->data.driver_location = location;
+            locations[idx][var->data.index] = location;
+            location += type_size(var->type);
+         } else {
+            var->data.driver_location = locations[idx][var->data.index];
+         }
+      } else {
+         var->data.driver_location = location;
+         location += type_size(var->type);
+      }
    }
 
    *size = location;
