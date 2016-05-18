@@ -452,10 +452,11 @@ gen8_blorp_emit_ps_extra(struct brw_context *brw,
 
    dw1 |= GEN8_PSX_PIXEL_SHADER_VALID;
 
-   if (params->src.mt) {
+   if (params->src.mt)
       dw1 |= GEN8_PSX_KILL_ENABLE;
+
+   if (params->wm_prog_data->num_varying_inputs)
       dw1 |= GEN8_PSX_ATTRIBUTE_ENABLE;
-   }
 
    if (params->dst.num_samples > 1 && prog_data &&
        prog_data->persample_msaa_dispatch)

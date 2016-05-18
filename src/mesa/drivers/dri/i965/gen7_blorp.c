@@ -555,6 +555,8 @@ gen7_blorp_emit_ps_config(struct brw_context *brw,
          dw4 |= GEN7_PS_8_DISPATCH_ENABLE;
       if (params->wm_prog_data->dispatch_16)
          dw4 |= GEN7_PS_16_DISPATCH_ENABLE;
+      if (params->wm_prog_data->num_varying_inputs)
+         dw4 |= GEN7_PS_ATTRIBUTE_ENABLE;
    } else {
       /* The hardware gets angry if we don't enable at least one dispatch
        * mode, so just enable 16-pixel dispatch if we don't have a program.

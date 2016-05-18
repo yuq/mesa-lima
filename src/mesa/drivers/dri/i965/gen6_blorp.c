@@ -656,7 +656,9 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
    dw5 |= GEN6_WM_LINE_END_CAP_AA_WIDTH_0_5;
    dw5 |= (brw->max_wm_threads - 1) << GEN6_WM_MAX_THREADS_SHIFT;
    dw6 |= 0 << GEN6_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT; /* No interp */
-   dw6 |= 0 << GEN6_WM_NUM_SF_OUTPUTS_SHIFT; /* No inputs from SF */
+   dw6 |= (params->wm_prog_data ? prog_data->num_varying_inputs : 0) <<
+          GEN6_WM_NUM_SF_OUTPUTS_SHIFT;
+
    if (params->wm_prog_data) {
       dw5 |= GEN6_WM_DISPATCH_ENABLE; /* We are rendering */
 
