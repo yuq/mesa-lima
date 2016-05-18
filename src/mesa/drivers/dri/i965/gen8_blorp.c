@@ -690,7 +690,7 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
    gen7_blorp_emit_cc_viewport(brw);
    gen7_l3_state.emit(brw);
 
-   gen7_blorp_emit_urb_config(brw);
+   gen7_blorp_emit_urb_config(brw, params);
 
    const uint32_t cc_blend_state_offset =
       gen8_blorp_emit_blend_state(brw, params);

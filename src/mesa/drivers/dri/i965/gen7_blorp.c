@@ -31,16 +31,26 @@
 
 #include "brw_blorp.h"
 
-static bool
-gen7_blorp_skip_urb_config(const struct brw_context *brw)
+/* Once vertex fetcher has written full VUE entries with complete
+ * header the space requirement is as follows per vertex (in bytes):
+ *
+ *     Header    Position    Program constants
+ *   +--------+------------+-------------------+
+ *   |   16   |     16     |      n x 16       |
+ *   +--------+------------+-------------------+
+ *
+ * where 'n' stands for number of varying inputs expressed as vec4s.
+ *
+ * The URB size is in turn expressed in 64 bytes (512 bits).
+ */
+static unsigned
+gen7_blorp_get_vs_entry_size(const struct brw_blorp_params *params)
 {
-   if (brw->ctx.NewDriverState & (BRW_NEW_CONTEXT | BRW_NEW_URB_SIZE))
-      return false;
+    const unsigned num_varyings =
+       params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
+    const unsigned total_needed = 16 + 16 + num_varyings * 16;
 
-   /* Vertex buffer takes 24 bytes. As the size is expressed in 64 bytes,
-    * one will suffice, otherwise the setup can be any valid configuration.
-    */
-   return brw->urb.vsize > 0;
+   return DIV_ROUND_UP(total_needed, 64);
 }
 
 /* 3DSTATE_URB_VS
@@ -56,7 +66,8 @@ gen7_blorp_skip_urb_config(const struct brw_context *brw)
  *     valid.
  */
 void
-gen7_blorp_emit_urb_config(struct brw_context *brw)
+gen7_blorp_emit_urb_config(struct brw_context *brw,
+                           const struct brw_blorp_params *params)
 {
    /* URB allocations must be done in 8k chunks. */
    const unsigned chunk_size_bytes = 8192;
@@ -65,13 +76,14 @@ gen7_blorp_emit_urb_config(struct brw_context *brw)
    const unsigned push_constant_bytes = 1024 * urb_size;
    const unsigned push_constant_chunks =
       push_constant_bytes / chunk_size_bytes;
-   const unsigned vs_size = 1;
+   const unsigned vs_entry_size = gen7_blorp_get_vs_entry_size(params);
    const unsigned vs_start = push_constant_chunks;
    const unsigned min_vs_entries = ALIGN(brw->urb.min_vs_entries, 8);
    const unsigned vs_chunks =
-      DIV_ROUND_UP(min_vs_entries * vs_size * 64, chunk_size_bytes);
+      DIV_ROUND_UP(min_vs_entries * vs_entry_size * 64, chunk_size_bytes);
 
-   if (gen7_blorp_skip_urb_config(brw))
+   if (!(brw->ctx.NewDriverState & (BRW_NEW_CONTEXT | BRW_NEW_URB_SIZE)) &&
+       brw->urb.vsize >= vs_entry_size)
       return;
 
    brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
@@ -85,7 +97,7 @@ gen7_blorp_emit_urb_config(struct brw_context *brw)
 
    gen7_emit_urb_state(brw,
                        min_vs_entries /* num_vs_entries */,
-                       vs_size,
+                       vs_entry_size,
                        vs_start,
                        0 /* num_hs_entries */,
                        1 /* hs_size */,
@@ -843,7 +855,7 @@ gen7_blorp_exec(struct brw_context *brw,
                                  params->dst.num_samples > 1 ?
                                  (1 << params->dst.num_samples) - 1 : 1);
    gen6_blorp_emit_vertices(brw, params);
-   gen7_blorp_emit_urb_config(brw);
+   gen7_blorp_emit_urb_config(brw, params);
    if (params->wm_prog_data) {
       cc_blend_state_offset = gen6_blorp_emit_blend_state(brw, params);
       cc_state_offset = gen6_blorp_emit_cc_state(brw);

@@ -462,7 +462,8 @@ gen6_blorp_emit_sampler_state(struct brw_context *brw,
                               unsigned tex_filter, unsigned max_lod,
                               bool non_normalized_coords);
 void
-gen7_blorp_emit_urb_config(struct brw_context *brw);
+gen7_blorp_emit_urb_config(struct brw_context *brw,
+                           const struct brw_blorp_params *params);
 
 void
 gen7_blorp_emit_blend_state_pointer(struct brw_context *brw,
