@@ -453,6 +453,11 @@ brw_prepare_vertices(struct brw_context *brw)
    if (brw->vb.nr_buffers)
       return;
 
+   /* The range of data in a given buffer represented as [min, max) */
+   struct intel_buffer_object *enabled_buffer[VERT_ATTRIB_MAX];
+   uint32_t buffer_range_start[VERT_ATTRIB_MAX];
+   uint32_t buffer_range_end[VERT_ATTRIB_MAX];
+
    for (i = j = 0; i < brw->vb.nr_enabled; i++) {
       struct brw_vertex_element *input = brw->vb.enabled[i];
       const struct gl_client_array *glarray = input->glarray;
@@ -460,12 +465,31 @@ brw_prepare_vertices(struct brw_context *brw)
       if (_mesa_is_bufferobj(glarray->BufferObj)) {
 	 struct intel_buffer_object *intel_buffer =
 	    intel_buffer_object(glarray->BufferObj);
-	 unsigned k;
+
+         const uint32_t offset = (uintptr_t)glarray->Ptr;
+
+         uint32_t start, range;
+         if (glarray->InstanceDivisor) {
+            start = offset;
+            range = (glarray->StrideB * ((brw->num_instances /
+                                         glarray->InstanceDivisor) - 1) +
+                     glarray->_ElementSize);
+         } else {
+            if (!brw->vb.index_bounds_valid) {
+               start = 0;
+               range = intel_buffer->Base.Size;
+            } else {
+               start = offset + min_index * glarray->StrideB;
+               range = (glarray->StrideB * (max_index - min_index) +
+                        glarray->_ElementSize);
+            }
+         }
 
 	 /* If we have a VB set to be uploaded for this buffer object
 	  * already, reuse that VB state so that we emit fewer
 	  * relocations.
 	  */
+	 unsigned k;
 	 for (k = 0; k < i; k++) {
 	    const struct gl_client_array *other = brw->vb.enabled[k]->glarray;
 	    if (glarray->BufferObj == other->BufferObj &&
@@ -475,6 +499,9 @@ brw_prepare_vertices(struct brw_context *brw)
 	    {
 	       input->buffer = brw->vb.enabled[k]->buffer;
 	       input->offset = glarray->Ptr - other->Ptr;
+
+               buffer_range_start[k] = MIN2(buffer_range_start[k], start);
+               buffer_range_end[k] = MAX2(buffer_range_end[k], start + range);
 	       break;
 	    }
 	 }
@@ -482,29 +509,13 @@ brw_prepare_vertices(struct brw_context *brw)
 	    struct brw_vertex_buffer *buffer = &brw->vb.buffers[j];
 
 	    /* Named buffer object: Just reference its contents directly. */
-	    buffer->offset = (uintptr_t)glarray->Ptr;
+	    buffer->offset = offset;
 	    buffer->stride = glarray->StrideB;
 	    buffer->step_rate = glarray->InstanceDivisor;
 
-            uint32_t offset, size;
-            if (glarray->InstanceDivisor) {
-               offset = buffer->offset;
-               size = (buffer->stride * ((brw->num_instances /
-                                          glarray->InstanceDivisor) - 1) +
-                       glarray->_ElementSize);
-            } else {
-               if (!brw->vb.index_bounds_valid) {
-                  offset = 0;
-                  size = intel_buffer->Base.Size;
-               } else {
-                  offset = buffer->offset + min_index * buffer->stride;
-                  size = (buffer->stride * (max_index - min_index) +
-                          glarray->_ElementSize);
-               }
-            }
-            buffer->bo = intel_bufferobj_buffer(brw, intel_buffer,
-                                                offset, size);
-            drm_intel_bo_reference(buffer->bo);
+            enabled_buffer[j] = intel_buffer;
+            buffer_range_start[j] = start;
+            buffer_range_end[j] = start + range;
 
 	    input->buffer = j++;
 	    input->offset = 0;
@@ -519,7 +530,7 @@ brw_prepare_vertices(struct brw_context *brw)
 	  * probably a service to the poor programmer to do so rather than
 	  * trying to just not render.
 	  */
-	 assert(input->offset < brw->vb.buffers[input->buffer].bo->size);
+	 assert(input->offset < intel_buffer->Base.Size);
       } else {
 	 /* Queue the buffer object up to be uploaded in the next pass,
 	  * when we've decided if we're doing interleaved or not.
@@ -552,6 +563,22 @@ brw_prepare_vertices(struct brw_context *brw)
 
 	 upload[nr_uploads++] = input;
       }
+   }
+
+   /* Now that we've set up all of the buffers, we walk through and reference
+    * each of them.  We do this late so that we get the right size in each
+    * buffer and don't reference too little data.
+    */
+   for (i = 0; i < j; i++) {
+      struct brw_vertex_buffer *buffer = &brw->vb.buffers[i];
+      if (buffer->bo)
+         continue;
+
+      const uint32_t start = buffer_range_start[i];
+      const uint32_t range = buffer_range_end[i] - buffer_range_start[i];
+
+      buffer->bo = intel_bufferobj_buffer(brw, enabled_buffer[i], start, range);
+      drm_intel_bo_reference(buffer->bo);
    }
 
    /* If we need to upload all the arrays, then we can trim those arrays to
