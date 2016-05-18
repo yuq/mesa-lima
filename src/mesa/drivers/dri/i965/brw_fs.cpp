@@ -668,24 +668,26 @@ fs_visitor::fail(const char *format, ...)
 }
 
 /**
- * Mark this program as impossible to compile in SIMD16 mode.
+ * Mark this program as impossible to compile with dispatch width greater
+ * than n.
  *
  * During the SIMD8 compile (which happens first), we can detect and flag
- * things that are unsupported in SIMD16 mode, so the compiler can skip
- * the SIMD16 compile altogether.
+ * things that are unsupported in SIMD16+ mode, so the compiler can skip the
+ * SIMD16+ compile altogether.
  *
- * During a SIMD16 compile (if one happens anyway), this just calls fail().
+ * During a compile of dispatch width greater than n (if one happens anyway),
+ * this just calls fail().
  */
 void
-fs_visitor::no16(const char *msg)
+fs_visitor::limit_dispatch_width(unsigned n, const char *msg)
 {
-   if (dispatch_width == 16) {
+   if (dispatch_width > n) {
       fail("%s", msg);
    } else {
-      simd16_unsupported = true;
-
+      max_dispatch_width = n;
       compiler->shader_perf_log(log_data,
-                                "SIMD16 shader failed to compile: %s", msg);
+                                "Shader dispatch width limited to SIMD%d: %s",
+                                n, msg);
    }
 }
 
@@ -6328,7 +6330,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
       simd8_grf_used = v8.grf_used;
    }
 
-   if (!v8.simd16_unsupported &&
+   if (v8.max_dispatch_width >= 16 &&
        likely(!(INTEL_DEBUG & DEBUG_NO16) || use_rep_send)) {
       /* Try a SIMD16 compile */
       fs_visitor v16(compiler, log_data, mem_ctx, key,
@@ -6501,8 +6503,8 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                  NULL, /* Never used in core profile */
                  shader, 16, shader_time_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
-       !fail_msg && !v8.simd16_unsupported &&
-       local_workgroup_size <= 16 * max_cs_threads) {
+       !fail_msg && v8.max_dispatch_width >= 16 &&
+       simd_required <= 16) {
       /* Try a SIMD16 compile */
       if (simd_required <= 8)
          v16.import_uniforms(&v8);

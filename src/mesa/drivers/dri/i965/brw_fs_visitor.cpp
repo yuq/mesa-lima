@@ -424,17 +424,16 @@ fs_visitor::emit_fb_writes()
        * sounds because the SIMD8 single-source message lacks channel selects
        * for the second and third subspans.
        */
-      no16("Missing support for simd16 depth writes on gen6\n");
+      limit_dispatch_width(8, "Depth writes unsupported in SIMD16+ mode.\n");
    }
 
    if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL)) {
       /* From the 'Render Target Write message' section of the docs:
        * "Output Stencil is not supported with SIMD16 Render Target Write
        * Messages."
-       *
-       * FINISHME: split 16 into 2 8s
        */
-      no16("FINISHME: support 2 simd8 writes for gl_FragStencilRefARB\n");
+      limit_dispatch_width(8, "gl_FragStencilRefARB unsupported "
+                           "in SIMD16+ mode.\n");
    }
 
    if (do_dual_src) {
@@ -885,11 +884,10 @@ fs_visitor::init()
       min_dispatch_width = 8;
    }
 
+   this->max_dispatch_width = 32;
    this->prog_data = this->stage_prog_data;
 
    this->failed = false;
-   this->simd16_unsupported = false;
-   this->no16_msg = NULL;
 
    this->nir_locals = NULL;
    this->nir_ssa_values = NULL;

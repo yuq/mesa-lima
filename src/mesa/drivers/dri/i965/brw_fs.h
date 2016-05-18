@@ -170,7 +170,7 @@ public:
                                                      fs_inst *inst);
    void vfail(const char *msg, va_list args);
    void fail(const char *msg, ...);
-   void no16(const char *msg);
+   void limit_dispatch_width(unsigned n, const char *msg);
    void lower_uniform_pull_constant_loads();
    bool lower_load_payload();
    bool lower_pack();
@@ -356,8 +356,6 @@ public:
 
    bool failed;
    char *fail_msg;
-   bool simd16_unsupported;
-   char *no16_msg;
 
    /** Register numbers for thread payload fields. */
    struct thread_payload {
@@ -391,8 +389,9 @@ public:
    unsigned grf_used;
    bool spilled_any_registers;
 
-   const unsigned dispatch_width; /**< 8 or 16 */
+   const unsigned dispatch_width; /**< 8, 16 or 32 */
    unsigned min_dispatch_width;
+   unsigned max_dispatch_width;
 
    int shader_time_index;
 
@@ -505,7 +504,7 @@ private:
    const void * const key;
    struct brw_stage_prog_data * const prog_data;
 
-   unsigned dispatch_width; /**< 8 or 16 */
+   unsigned dispatch_width; /**< 8, 16 or 32 */
 
    exec_list discard_halt_patches;
    unsigned promoted_constants;
