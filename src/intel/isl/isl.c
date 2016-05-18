@@ -481,8 +481,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
          assert(info->samples == 1);
 
          *phys_level0_sa = (struct isl_extent4d) {
-            .w = isl_align(info->width, fmtl->bw),
-            .h = isl_align(info->height, fmtl->bh),
+            .w = isl_align_npot(info->width, fmtl->bw),
+            .h = isl_align_npot(info->height, fmtl->bh),
             .d = 1,
             .a = info->array_len,
          };
@@ -537,8 +537,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
          assert(ISL_DEV_GEN(dev) >= 9);
 
          *phys_level0_sa = (struct isl_extent4d) {
-            .w = isl_align(info->width, fmtl->bw),
-            .h = isl_align(info->height, fmtl->bh),
+            .w = isl_align_npot(info->width, fmtl->bw),
+            .h = isl_align_npot(info->height, fmtl->bh),
             .d = 1,
             .a = info->depth,
          };
