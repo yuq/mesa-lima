@@ -252,6 +252,9 @@ lower_fddy(lower_wpos_ytransform_state *state, nir_alu_instr *fddy)
    nir_instr_rewrite_src(&fddy->instr,
                          &fddy->src[0].src,
                          nir_src_for_ssa(pt));
+
+   for (unsigned i = 0; i < 4; i++)
+      fddy->src[0].swizzle[i] = MIN2(i, pt->num_components - 1);
 }
 
 static bool
