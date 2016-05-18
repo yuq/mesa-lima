@@ -89,7 +89,7 @@ calc_sampler_offsets(nir_deref *tail, nir_tex_instr *instr,
 
 static void
 lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_program,
-              gl_shader_stage stage, nir_builder *builder)
+              gl_shader_stage stage, nir_builder *b)
 {
    if (instr->texture == NULL)
       return;
@@ -102,11 +102,14 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
    unsigned array_elements = 1;
    nir_ssa_def *indirect = NULL;
 
-   builder->cursor = nir_before_instr(&instr->instr);
+   b->cursor = nir_before_instr(&instr->instr);
    calc_sampler_offsets(&instr->texture->deref, instr, &array_elements,
-                        &indirect, builder, &location);
+                        &indirect, b, &location);
 
    if (indirect) {
+      assert(array_elements >= 1);
+      indirect = nir_umin(b, indirect, nir_imm_int(b, array_elements - 1));
+
       /* First, we have to resize the array of texture sources */
       nir_tex_src *new_srcs = rzalloc_array(instr, nir_tex_src,
                                             instr->num_srcs + 2);
