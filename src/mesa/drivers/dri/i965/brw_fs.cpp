@@ -178,36 +178,25 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
    fs_reg vec4_offset = vgrf(glsl_type::uint_type);
    bld.ADD(vec4_offset, varying_offset, brw_imm_ud(const_offset & ~0xf));
 
-   int scale = 1;
-   if (devinfo->gen == 4 && bld.dispatch_width() == 8) {
-      /* Pre-gen5, we can either use a SIMD8 message that requires (header,
-       * u, v, r) as parameters, or we can just use the SIMD16 message
-       * consisting of (header, u).  We choose the second, at the cost of a
-       * longer return length.
-       */
-      scale = 2;
-   }
-
    /* The pull load message will load a vec4 (16 bytes). If we are loading
     * a double this means we are only loading 2 elements worth of data.
     * We also want to use a 32-bit data type for the dst of the load operation
     * so other parts of the driver don't get confused about the size of the
     * result.
     */
-   fs_reg vec4_result = bld.vgrf(BRW_REGISTER_TYPE_F, 4 * scale);
+   fs_reg vec4_result = bld.vgrf(BRW_REGISTER_TYPE_F, 4);
    fs_inst *inst = bld.emit(FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL,
                             vec4_result, surf_index, vec4_offset);
-   inst->regs_written = 4 * (bld.dispatch_width() / 8) * scale;
+   inst->regs_written = 4 * bld.dispatch_width() / 8;
 
    if (type_sz(dst.type) == 8) {
-      assert(scale == 1);
       shuffle_32bit_load_result_to_64bit_data(
          bld, retype(vec4_result, dst.type), vec4_result, 2);
    }
 
    vec4_result.type = dst.type;
    bld.MOV(dst, offset(vec4_result, bld,
-                       (const_offset & 0xf) / type_sz(vec4_result.type) * scale));
+                       (const_offset & 0xf) / type_sz(vec4_result.type)));
 }
 
 /**
@@ -4641,6 +4630,16 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
        */
       return inst->exec_size / DIV_ROUND_UP(reg_count, 2);
    }
+
+   case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL:
+      /* Pre-ILK hardware doesn't have a SIMD8 variant of the texel fetch
+       * message used to implement varying pull constant loads, so expand it
+       * to SIMD16.  An alternative with longer message payload length but
+       * shorter return payload would be to use the SIMD8 sampler message that
+       * takes (header, u, v, r) as parameters instead of (header, u).
+       */
+      return (devinfo->gen == 4 ? 16 : MIN2(16, inst->exec_size));
+
    case SHADER_OPCODE_MULH:
       /* MULH is lowered to the MUL/MACH sequence using the accumulator, which
        * is 8-wide on Gen7+.
