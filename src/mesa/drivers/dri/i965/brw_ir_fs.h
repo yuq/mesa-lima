@@ -188,31 +188,14 @@ is_uniform(const fs_reg &reg)
 }
 
 /**
- * Get either of the 8-component halves of a 16-component register.
- *
- * Note: this also works if \c reg represents a SIMD16 pair of registers.
+ * Get the specified 8-component quarter of a register.
+ * XXX - Maybe come up with a less misleading name for this (e.g. quarter())?
  */
 static inline fs_reg
-half(fs_reg reg, unsigned idx)
+half(const fs_reg &reg, unsigned idx)
 {
    assert(idx < 2);
-
-   switch (reg.file) {
-   case BAD_FILE:
-   case UNIFORM:
-   case IMM:
-      return reg;
-
-   case VGRF:
-   case MRF:
-      return horiz_offset(reg, 8 * idx);
-
-   case ARF:
-   case FIXED_GRF:
-   case ATTR:
-      unreachable("Cannot take half of this register type");
-   }
-   return reg;
+   return horiz_offset(reg, 8 * idx);
 }
 
 /**
