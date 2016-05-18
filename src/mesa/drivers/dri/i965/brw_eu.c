@@ -218,6 +218,75 @@ brw_set_default_compression_control(struct brw_codegen *p,
    }
 }
 
+/**
+ * Enable or disable instruction compression on the given instruction leaving
+ * the currently selected channel enable group untouched.
+ */
+void
+brw_inst_set_compression(const struct brw_device_info *devinfo,
+                         brw_inst *inst, bool on)
+{
+   if (devinfo->gen >= 6) {
+      /* No-op, the EU will figure out for us whether the instruction needs to
+       * be compressed.
+       */
+   } else {
+      /* The channel group and compression controls are non-orthogonal, there
+       * are two possible representations for uncompressed instructions and we
+       * may need to preserve the current one to avoid changing the selected
+       * channel group inadvertently.
+       */
+      if (on)
+         brw_inst_set_qtr_control(devinfo, inst, BRW_COMPRESSION_COMPRESSED);
+      else if (brw_inst_qtr_control(devinfo, inst)
+               == BRW_COMPRESSION_COMPRESSED)
+         brw_inst_set_qtr_control(devinfo, inst, BRW_COMPRESSION_NONE);
+   }
+}
+
+void
+brw_set_default_compression(struct brw_codegen *p, bool on)
+{
+   brw_inst_set_compression(p->devinfo, p->current, on);
+}
+
+/**
+ * Apply the range of channel enable signals given by
+ * [group, group + exec_size) to the instruction passed as argument.
+ */
+void
+brw_inst_set_group(const struct brw_device_info *devinfo,
+                   brw_inst *inst, unsigned group)
+{
+   if (devinfo->gen >= 7) {
+      assert(group % 4 == 0 && group < 32);
+      brw_inst_set_qtr_control(devinfo, inst, group / 8);
+      brw_inst_set_nib_control(devinfo, inst, (group / 4) % 2);
+
+   } else if (devinfo->gen == 6) {
+      assert(group % 8 == 0 && group < 32);
+      brw_inst_set_qtr_control(devinfo, inst, group / 8);
+
+   } else {
+      assert(group % 8 == 0 && group < 16);
+      /* The channel group and compression controls are non-orthogonal, there
+       * are two possible representations for group zero and we may need to
+       * preserve the current one to avoid changing the selected compression
+       * enable inadvertently.
+       */
+      if (group == 8)
+         brw_inst_set_qtr_control(devinfo, inst, BRW_COMPRESSION_2NDHALF);
+      else if (brw_inst_qtr_control(devinfo, inst) == BRW_COMPRESSION_2NDHALF)
+         brw_inst_set_qtr_control(devinfo, inst, BRW_COMPRESSION_NONE);
+   }
+}
+
+void
+brw_set_default_group(struct brw_codegen *p, unsigned group)
+{
+   brw_inst_set_group(p->devinfo, p->current, group);
+}
+
 void brw_set_default_mask_control( struct brw_codegen *p, unsigned value )
 {
    brw_inst_set_mask_control(p->devinfo, p->current, value);
