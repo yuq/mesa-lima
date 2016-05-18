@@ -595,82 +595,6 @@ fs_generator::generate_linterp(fs_inst *inst,
 }
 
 void
-fs_generator::generate_math_gen6(fs_inst *inst,
-                                 struct brw_reg dst,
-                                 struct brw_reg src0,
-                                 struct brw_reg src1)
-{
-   int op = brw_math_function(inst->opcode);
-   bool binop = src1.file != BRW_ARCHITECTURE_REGISTER_FILE;
-
-   if (dispatch_width == 8) {
-      gen6_math(p, dst, op, src0, src1);
-   } else if (dispatch_width == 16) {
-      brw_push_insn_state(p);
-      brw_set_default_exec_size(p, BRW_EXECUTE_8);
-      brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-      gen6_math(p, firsthalf(dst), op, firsthalf(src0), firsthalf(src1));
-      brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-      gen6_math(p, sechalf(dst), op, sechalf(src0),
-                binop ? sechalf(src1) : brw_null_reg());
-      brw_pop_insn_state(p);
-   }
-}
-
-void
-fs_generator::generate_math_gen4(fs_inst *inst,
-			       struct brw_reg dst,
-			       struct brw_reg src)
-{
-   int op = brw_math_function(inst->opcode);
-
-   assert(inst->mlen >= 1);
-
-   if (dispatch_width == 8) {
-      gen4_math(p, dst,
-                op,
-                inst->base_mrf, src,
-                BRW_MATH_PRECISION_FULL);
-   } else if (dispatch_width == 16) {
-      brw_set_default_exec_size(p, BRW_EXECUTE_8);
-      brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-      gen4_math(p, firsthalf(dst),
-	        op,
-	        inst->base_mrf, firsthalf(src),
-	        BRW_MATH_PRECISION_FULL);
-      brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-      gen4_math(p, sechalf(dst),
-	        op,
-	        inst->base_mrf + 1, sechalf(src),
-	        BRW_MATH_PRECISION_FULL);
-
-      brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-   }
-}
-
-void
-fs_generator::generate_math_g45(fs_inst *inst,
-                                struct brw_reg dst,
-                                struct brw_reg src)
-{
-   if (inst->opcode == SHADER_OPCODE_POW ||
-       inst->opcode == SHADER_OPCODE_INT_QUOTIENT ||
-       inst->opcode == SHADER_OPCODE_INT_REMAINDER) {
-      generate_math_gen4(inst, dst, src);
-      return;
-   }
-
-   int op = brw_math_function(inst->opcode);
-
-   assert(inst->mlen >= 1);
-
-   gen4_math(p, dst,
-             op,
-             inst->base_mrf, src,
-             BRW_MATH_PRECISION_FULL);
-}
-
-void
 fs_generator::generate_get_buffer_size(fs_inst *inst,
                                        struct brw_reg dst,
                                        struct brw_reg src,
@@ -2067,30 +1991,36 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_LOG2:
       case SHADER_OPCODE_SIN:
       case SHADER_OPCODE_COS:
-         assert(devinfo->gen < 6 || inst->mlen == 0);
          assert(inst->conditional_mod == BRW_CONDITIONAL_NONE);
-	 if (devinfo->gen >= 7) {
-            gen6_math(p, dst, brw_math_function(inst->opcode), src[0],
-                      brw_null_reg());
-	 } else if (devinfo->gen == 6) {
-	    generate_math_gen6(inst, dst, src[0], brw_null_reg());
-	 } else if (devinfo->gen == 5 || devinfo->is_g4x) {
-	    generate_math_g45(inst, dst, src[0]);
+	 if (devinfo->gen >= 6) {
+            assert(inst->mlen == 0);
+            assert(devinfo->gen >= 7 || inst->exec_size == 8);
+            gen6_math(p, dst, brw_math_function(inst->opcode),
+                      src[0], brw_null_reg());
 	 } else {
-	    generate_math_gen4(inst, dst, src[0]);
+            assert(inst->mlen >= 1);
+            assert(devinfo->gen == 5 || devinfo->is_g4x || inst->exec_size == 8);
+            gen4_math(p, dst,
+                      brw_math_function(inst->opcode),
+                      inst->base_mrf, src[0],
+                      BRW_MATH_PRECISION_FULL);
 	 }
 	 break;
       case SHADER_OPCODE_INT_QUOTIENT:
       case SHADER_OPCODE_INT_REMAINDER:
       case SHADER_OPCODE_POW:
-         assert(devinfo->gen < 6 || inst->mlen == 0);
          assert(inst->conditional_mod == BRW_CONDITIONAL_NONE);
-	 if (devinfo->gen >= 7 && inst->opcode == SHADER_OPCODE_POW) {
+         if (devinfo->gen >= 6) {
+            assert(inst->mlen == 0);
+            assert((devinfo->gen >= 7 && inst->opcode == SHADER_OPCODE_POW) ||
+                   inst->exec_size == 8);
             gen6_math(p, dst, brw_math_function(inst->opcode), src[0], src[1]);
-	 } else if (devinfo->gen >= 6) {
-	    generate_math_gen6(inst, dst, src[0], src[1]);
-	 } else {
-	    generate_math_gen4(inst, dst, src[0]);
+         } else {
+            assert(inst->mlen >= 1);
+            assert(inst->exec_size == 8);
+            gen4_math(p, dst, brw_math_function(inst->opcode),
+                      inst->base_mrf, src[0],
+                      BRW_MATH_PRECISION_FULL);
 	 }
 	 break;
       case FS_OPCODE_CINTERP:

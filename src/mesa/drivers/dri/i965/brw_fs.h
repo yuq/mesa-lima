@@ -441,16 +441,6 @@ private:
    void generate_get_buffer_size(fs_inst *inst, struct brw_reg dst,
                                  struct brw_reg src,
                                  struct brw_reg surf_index);
-   void generate_math_gen6(fs_inst *inst,
-                           struct brw_reg dst,
-                           struct brw_reg src0,
-                           struct brw_reg src1);
-   void generate_math_gen4(fs_inst *inst,
-			   struct brw_reg dst,
-			   struct brw_reg src);
-   void generate_math_g45(fs_inst *inst,
-			  struct brw_reg dst,
-			  struct brw_reg src);
    void generate_ddx(enum opcode op, struct brw_reg dst, struct brw_reg src);
    void generate_ddy(enum opcode op, struct brw_reg dst, struct brw_reg src);
    void generate_scratch_write(fs_inst *inst, struct brw_reg src);
