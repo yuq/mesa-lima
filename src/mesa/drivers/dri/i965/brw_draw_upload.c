@@ -474,8 +474,8 @@ brw_prepare_vertices(struct brw_context *brw)
          if (glarray->InstanceDivisor) {
             if (brw->num_instances) {
                start = offset + glarray->StrideB * brw->baseinstance;
-               range = (glarray->StrideB * ((brw->num_instances /
-                                             glarray->InstanceDivisor) - 1) +
+               range = (glarray->StrideB * ((brw->num_instances - 1) /
+                                            glarray->InstanceDivisor) +
                         glarray->_ElementSize);
             }
          } else {
