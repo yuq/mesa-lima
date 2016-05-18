@@ -448,8 +448,15 @@ gen7_blorp_emit_sf_config(struct brw_context *brw,
 
       BEGIN_BATCH(14);
       OUT_BATCH(_3DSTATE_SBE << 16 | (14 - 2));
-      OUT_BATCH(GEN7_SBE_SWIZZLE_ENABLE |
-                num_varyings << GEN7_SBE_NUM_OUTPUTS_SHIFT |
+
+      /* There is no need for swizzling (GEN7_SBE_SWIZZLE_ENABLE). All the
+       * vertex data coming from vertex fetcher is taken as unmodified
+       * (i.e., passed through). Vertex shader state is disabled and vertex
+       * fetcher builds complete vertex entries including VUE header.
+       * This is for unknown reason really needed to be disabled when more
+       * than one vec4 worth of vertex attributes are needed.
+       */
+      OUT_BATCH(num_varyings << GEN7_SBE_NUM_OUTPUTS_SHIFT |
                 1 << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT |
                 BRW_SF_URB_ENTRY_READ_OFFSET <<
                    GEN7_SBE_URB_ENTRY_READ_OFFSET_SHIFT);
