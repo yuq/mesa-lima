@@ -963,6 +963,7 @@ struct brw_context
       /* Summary of size and varying of active arrays, so we can check
        * for changes to this state:
        */
+      bool index_bounds_valid;
       unsigned int min_index, max_index;
 
       /* Offset from start of vertex buffer so we can avoid redefining

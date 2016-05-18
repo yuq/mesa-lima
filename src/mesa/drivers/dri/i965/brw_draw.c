@@ -424,6 +424,7 @@ brw_try_draw_prims(struct gl_context *ctx,
                    const struct _mesa_prim *prims,
                    GLuint nr_prims,
                    const struct _mesa_index_buffer *ib,
+                   bool index_bounds_valid,
                    GLuint min_index,
                    GLuint max_index,
                    struct brw_transform_feedback_object *xfb_obj,
@@ -477,6 +478,7 @@ brw_try_draw_prims(struct gl_context *ctx,
    brw->ib.ib = ib;
    brw->ctx.NewDriverState |= BRW_NEW_INDICES;
 
+   brw->vb.index_bounds_valid = index_bounds_valid;
    brw->vb.min_index = min_index;
    brw->vb.max_index = max_index;
    brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
@@ -659,14 +661,15 @@ brw_draw_prims(struct gl_context *ctx,
       perf_debug("Scanning index buffer to compute index buffer bounds.  "
                  "Use glDrawRangeElements() to avoid this.\n");
       vbo_get_minmax_indices(ctx, prims, ib, &min_index, &max_index, nr_prims);
+      index_bounds_valid = true;
    }
 
    /* Try drawing with the hardware, but don't do anything else if we can't
     * manage it.  swrast doesn't support our featureset, so we can't fall back
     * to it.
     */
-   brw_try_draw_prims(ctx, arrays, prims, nr_prims, ib, min_index, max_index,
-                      xfb_obj, stream, indirect);
+   brw_try_draw_prims(ctx, arrays, prims, nr_prims, ib, index_bounds_valid,
+                      min_index, max_index, xfb_obj, stream, indirect);
 }
 
 void

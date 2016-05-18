@@ -493,7 +493,7 @@ brw_prepare_vertices(struct brw_context *brw)
                                           glarray->InstanceDivisor) - 1) +
                        glarray->_ElementSize);
             } else {
-               if (min_index == -1) {
+               if (!brw->vb.index_bounds_valid) {
                   offset = 0;
                   size = intel_buffer->Base.Size;
                } else {
