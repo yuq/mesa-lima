@@ -1413,6 +1413,8 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       /* These don't */
       instr->sampler = NULL;
       break;
+   case nir_texop_txf_ms_mcs:
+      unreachable("unexpected nir_texop_txf_ms_mcs");
    }
 
    nir_ssa_dest_init(&instr->instr, &instr->dest,
