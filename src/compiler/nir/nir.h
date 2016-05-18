@@ -2407,6 +2407,7 @@ typedef struct nir_lower_wpos_ytransform_options {
 
 bool nir_lower_wpos_ytransform(nir_shader *shader,
                                const nir_lower_wpos_ytransform_options *options);
+bool nir_lower_wpos_center(nir_shader *shader);
 
 typedef struct nir_lower_drawpixels_options {
    int texcoord_state_tokens[5];
