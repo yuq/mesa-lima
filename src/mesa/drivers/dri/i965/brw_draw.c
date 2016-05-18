@@ -502,9 +502,11 @@ brw_try_draw_prims(struct gl_context *ctx,
       intel_batchbuffer_save_state(brw);
 
       if (brw->num_instances != prims[i].num_instances ||
-          brw->basevertex != prims[i].basevertex) {
+          brw->basevertex != prims[i].basevertex ||
+          brw->baseinstance != prims[i].base_instance) {
          brw->num_instances = prims[i].num_instances;
          brw->basevertex = prims[i].basevertex;
+         brw->baseinstance = prims[i].base_instance;
          if (i > 0) { /* For i == 0 we just did this before the loop */
             brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
             brw_merge_inputs(brw, arrays);

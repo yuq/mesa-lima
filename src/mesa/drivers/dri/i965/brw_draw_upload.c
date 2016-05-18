@@ -473,7 +473,7 @@ brw_prepare_vertices(struct brw_context *brw)
          uint32_t range = intel_buffer->Base.Size;
          if (glarray->InstanceDivisor) {
             if (brw->num_instances) {
-               start = offset;
+               start = offset + glarray->StrideB * brw->baseinstance;
                range = (glarray->StrideB * ((brw->num_instances /
                                              glarray->InstanceDivisor) - 1) +
                         glarray->_ElementSize);

@@ -1311,6 +1311,7 @@ struct brw_context
 
    uint32_t num_instances;
    int basevertex;
+   int baseinstance;
 
    struct {
       const struct brw_l3_config *config;
