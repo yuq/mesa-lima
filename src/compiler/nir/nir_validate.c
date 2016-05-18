@@ -879,6 +879,7 @@ postvalidate_reg_decl(nir_register *reg, validate_state *state)
 {
    struct hash_entry *entry = _mesa_hash_table_search(state->regs, reg);
 
+   assume(entry);
    reg_validate_state *reg_state = (reg_validate_state *) entry->data;
 
    nir_foreach_use(src, reg) {
@@ -955,6 +956,8 @@ postvalidate_ssa_def(nir_ssa_def *def, void *void_state)
    validate_state *state = void_state;
 
    struct hash_entry *entry = _mesa_hash_table_search(state->ssa_defs, def);
+
+   assume(entry);
    ssa_def_validate_state *def_state = (ssa_def_validate_state *)entry->data;
 
    nir_foreach_use(src, def) {
