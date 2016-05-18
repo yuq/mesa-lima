@@ -84,6 +84,7 @@ st_pbo_addresses_setup(struct st_context *st,
    addr->constants.yoffset = -addr->yoffset;
    addr->constants.stride = addr->pixels_per_row;
    addr->constants.image_size = addr->pixels_per_row * addr->image_height;
+   addr->constants.layer_offset = 0;
 
    return true;
 }
@@ -371,6 +372,7 @@ create_fs(struct st_context *st, bool download, enum pipe_texture_target target)
    struct ureg_src pos;
    struct ureg_src layer;
    struct ureg_src const0;
+   struct ureg_src const1;
    struct ureg_dst temp0;
 
    have_layer =
@@ -408,6 +410,7 @@ create_fs(struct st_context *st, bool download, enum pipe_texture_target target)
                                        TGSI_INTERPOLATE_CONSTANT);
    }
    const0  = ureg_DECL_constant(ureg, 0);
+   const1  = ureg_DECL_constant(ureg, 1);
    temp0   = ureg_DECL_temporary(ureg);
 
    /* Note: const0 = [ -xoffset + skip_pixels, -yoffset, stride, image_height ] */
@@ -457,11 +460,19 @@ create_fs(struct st_context *st, bool download, enum pipe_texture_target target)
       ureg_MOV(ureg, ureg_writemask(temp1, TGSI_WRITEMASK_ZW), ureg_imm1u(ureg, 0));
 
       if (have_layer) {
+         struct ureg_dst temp1_layer =
+            ureg_writemask(temp1, target == PIPE_TEXTURE_1D_ARRAY ? TGSI_WRITEMASK_Y
+                                                                  : TGSI_WRITEMASK_Z);
+
          /* temp1.y/z = layer */
-         ureg_MOV(ureg, ureg_writemask(temp1,
-                                       target == PIPE_TEXTURE_1D_ARRAY ? TGSI_WRITEMASK_Y
-                                                                       : TGSI_WRITEMASK_Z),
-                        ureg_scalar(layer, TGSI_SWIZZLE_X));
+         ureg_MOV(ureg, temp1_layer, ureg_scalar(layer, TGSI_SWIZZLE_X));
+
+         if (target == PIPE_TEXTURE_3D) {
+            /* temp1.z += layer_offset */
+            ureg_UADD(ureg, temp1_layer,
+                            ureg_scalar(ureg_src(temp1), TGSI_SWIZZLE_Z),
+                            ureg_scalar(const1, TGSI_SWIZZLE_X));
+         }
       }
 
       /* temp1 = txf(sampler, temp1) */

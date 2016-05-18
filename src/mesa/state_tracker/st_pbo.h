@@ -54,6 +54,7 @@ struct st_pbo_addresses {
       int32_t yoffset;
       int32_t stride;
       int32_t image_size;
+      int32_t layer_offset;
    } constants;
 };
 
