@@ -1016,6 +1016,9 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
 
       if (builtin == SpvBuiltInFragCoord || builtin == SpvBuiltInSamplePosition)
          nir_var->data.origin_upper_left = b->origin_upper_left;
+
+      if (builtin == SpvBuiltInFragCoord)
+         nir_var->data.pixel_center_integer = b->pixel_center_integer;
       break;
    }
    case SpvDecorationRowMajor:

@@ -2330,6 +2330,9 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
       break;
 
    case SpvExecutionModePixelCenterInteger:
+      b->pixel_center_integer = true;
+      break;
+
    case SpvExecutionModeXfb:
       assert(!"Unhandled execution mode");
       break;
