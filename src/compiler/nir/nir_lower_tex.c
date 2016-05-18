@@ -177,6 +177,8 @@ saturate_src(nir_builder *b, nir_tex_instr *tex, unsigned sat_mask)
       /* split src into components: */
       nir_ssa_def *comp[4];
 
+      assume(tex->coord_components >= 1);
+
       for (unsigned j = 0; j < tex->coord_components; j++)
          comp[j] = nir_channel(b, src, j);
 
