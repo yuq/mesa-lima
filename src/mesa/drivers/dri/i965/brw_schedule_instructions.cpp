@@ -914,7 +914,7 @@ fs_instruction_scheduler::calculate_deps()
     */
    schedule_node *last_grf_write[grf_count * 16];
    schedule_node *last_mrf_write[BRW_MAX_MRF(v->devinfo->gen)];
-   schedule_node *last_conditional_mod[2] = { NULL, NULL };
+   schedule_node *last_conditional_mod[4] = {};
    schedule_node *last_accumulator_write = NULL;
    /* Fixed HW registers are assumed to be separate from the virtual
     * GRFs, so they can be tracked separately.  We don't really write
@@ -968,8 +968,13 @@ fs_instruction_scheduler::calculate_deps()
          }
       }
 
-      if (inst->reads_flag()) {
-         add_dep(last_conditional_mod[inst->flag_subreg], n);
+      if (const unsigned mask = inst->flags_read(v->devinfo)) {
+         assert(mask < (1 << ARRAY_SIZE(last_conditional_mod)));
+
+         for (unsigned i = 0; i < ARRAY_SIZE(last_conditional_mod); i++) {
+            if (mask & (1 << i))
+               add_dep(last_conditional_mod[i], n);
+         }
       }
 
       if (inst->reads_accumulator_implicitly()) {
@@ -1023,9 +1028,15 @@ fs_instruction_scheduler::calculate_deps()
          }
       }
 
-      if (inst->writes_flag()) {
-         add_dep(last_conditional_mod[inst->flag_subreg], n, 0);
-         last_conditional_mod[inst->flag_subreg] = n;
+      if (const unsigned mask = inst->flags_written()) {
+         assert(mask < (1 << ARRAY_SIZE(last_conditional_mod)));
+
+         for (unsigned i = 0; i < ARRAY_SIZE(last_conditional_mod); i++) {
+            if (mask & (1 << i)) {
+               add_dep(last_conditional_mod[i], n, 0);
+               last_conditional_mod[i] = n;
+            }
+         }
       }
 
       if (inst->writes_accumulator_implicitly(v->devinfo) &&
@@ -1080,8 +1091,13 @@ fs_instruction_scheduler::calculate_deps()
          }
       }
 
-      if (inst->reads_flag()) {
-         add_dep(n, last_conditional_mod[inst->flag_subreg]);
+      if (const unsigned mask = inst->flags_read(v->devinfo)) {
+         assert(mask < (1 << ARRAY_SIZE(last_conditional_mod)));
+
+         for (unsigned i = 0; i < ARRAY_SIZE(last_conditional_mod); i++) {
+            if (mask & (1 << i))
+               add_dep(n, last_conditional_mod[i]);
+         }
       }
 
       if (inst->reads_accumulator_implicitly()) {
@@ -1132,8 +1148,13 @@ fs_instruction_scheduler::calculate_deps()
          }
       }
 
-      if (inst->writes_flag()) {
-         last_conditional_mod[inst->flag_subreg] = n;
+      if (const unsigned mask = inst->flags_written()) {
+         assert(mask < (1 << ARRAY_SIZE(last_conditional_mod)));
+
+         for (unsigned i = 0; i < ARRAY_SIZE(last_conditional_mod); i++) {
+            if (mask & (1 << i))
+               last_conditional_mod[i] = n;
+         }
       }
 
       if (inst->writes_accumulator_implicitly(v->devinfo)) {
