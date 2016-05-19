@@ -2951,6 +2951,9 @@ struct gl_shader_compiler_options
 
    GLboolean LowerBufferInterfaceBlocks; /**< Lower UBO and SSBO access to intrinsics. */
 
+   /** Clamp UBO and SSBO block indices so they don't go out-of-bounds. */
+   GLboolean ClampBlockIndicesToArrayBounds;
+
    GLboolean LowerShaderSharedVariables; /**< Lower compute shader shared
                                           *   variable access to intrinsics. */
 

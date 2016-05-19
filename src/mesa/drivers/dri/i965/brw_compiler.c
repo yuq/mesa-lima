@@ -188,6 +188,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       }
 
       compiler->glsl_compiler_options[i].LowerBufferInterfaceBlocks = true;
+      compiler->glsl_compiler_options[i].ClampBlockIndicesToArrayBounds = true;
    }
 
    compiler->glsl_compiler_options[MESA_SHADER_TESS_CTRL].EmitNoIndirectInput = false;

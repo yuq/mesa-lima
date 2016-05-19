@@ -4906,7 +4906,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          &ctx->Const.ShaderCompilerOptions[i];
 
       if (options->LowerBufferInterfaceBlocks)
-         lower_ubo_reference(prog->_LinkedShaders[i]);
+         lower_ubo_reference(prog->_LinkedShaders[i],
+                             options->ClampBlockIndicesToArrayBounds);
 
       if (options->LowerShaderSharedVariables)
          lower_shared_reference(prog->_LinkedShaders[i],

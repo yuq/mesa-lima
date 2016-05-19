@@ -123,7 +123,7 @@ bool lower_clip_cull_distance(struct gl_shader_program *prog, gl_shader *shader)
 void lower_output_reads(unsigned stage, exec_list *instructions);
 bool lower_packing_builtins(exec_list *instructions, int op_mask);
 void lower_shared_reference(struct gl_shader *shader, unsigned *shared_size);
-void lower_ubo_reference(struct gl_shader *shader);
+void lower_ubo_reference(struct gl_shader *shader, bool clamp_block_indices);
 void lower_packed_varyings(void *mem_ctx,
                            unsigned locations_used, ir_variable_mode mode,
                            unsigned gs_input_vertices, gl_shader *shader,
