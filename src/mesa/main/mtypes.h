@@ -2547,6 +2547,17 @@ struct gl_shader_variable
    const struct glsl_type *type;
 
    /**
+    * If the variable is in an interface block, this is the type of the block.
+    */
+   const struct glsl_type *interface_type;
+
+   /**
+    * For variables inside structs (possibly recursively), this is the
+    * outermost struct type.
+    */
+   const struct glsl_type *outermost_struct_type;
+
+   /**
     * Declared name of the variable
     */
    char *name;
@@ -2600,6 +2611,27 @@ struct gl_shader_variable
     * \sa (n)ir_variable_mode
     */
    unsigned mode:4;
+
+   /**
+    * Interpolation mode for shader inputs / outputs
+    *
+    * \sa ir_variable_interpolation
+    */
+   unsigned interpolation:2;
+
+   /**
+    * Was the location explicitly set in the shader?
+    *
+    * If the location is explicitly set in the shader, it \b cannot be changed
+    * by the linker or by the API (e.g., calls to \c glBindAttribLocation have
+    * no effect).
+    */
+   unsigned explicit_location:1;
+
+   /**
+    * Precision qualifier.
+    */
+   unsigned precision:2;
 };
 
 /**

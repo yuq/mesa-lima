@@ -3660,7 +3660,8 @@ static gl_shader_variable *
 create_shader_variable(struct gl_shader_program *shProg,
                        const ir_variable *in,
                        const char *name, const glsl_type *type,
-                       bool use_implicit_location, int location)
+                       bool use_implicit_location, int location,
+                       const glsl_type *outermost_struct_type)
 {
    gl_shader_variable *out = ralloc(shProg, struct gl_shader_variable);
    if (!out)
@@ -3703,10 +3704,15 @@ create_shader_variable(struct gl_shader_program *shProg,
    }
 
    out->type = type;
+   out->outermost_struct_type = outermost_struct_type;
+   out->interface_type = in->get_interface_type();
    out->component = in->data.location_frac;
    out->index = in->data.index;
    out->patch = in->data.patch;
    out->mode = in->data.mode;
+   out->interpolation = in->data.interpolation;
+   out->explicit_location = in->data.explicit_location;
+   out->precision = in->data.precision;
 
    return out;
 }
@@ -3715,7 +3721,8 @@ static bool
 add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
                     GLenum programInterface, ir_variable *var,
                     const char *name, const glsl_type *type,
-                    bool use_implicit_location, int location)
+                    bool use_implicit_location, int location,
+                    const glsl_type *outermost_struct_type = NULL)
 {
    const bool is_vertex_input =
       programInterface == GL_PROGRAM_INPUT &&
@@ -3732,13 +3739,17 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
        *     structure member to enumerate is itself a structure or array,
        *     these enumeration rules are applied recursively."
        */
+      if (outermost_struct_type == NULL)
+         outermost_struct_type = type;
+
       unsigned field_location = location;
       for (unsigned i = 0; i < type->length; i++) {
          const struct glsl_struct_field *field = &type->fields.structure[i];
          char *field_name = ralloc_asprintf(shProg, "%s.%s", name, field->name);
          if (!add_shader_variable(shProg, stage_mask, programInterface,
                                   var, field_name, field->type,
-                                  use_implicit_location, field_location))
+                                  use_implicit_location, field_location,
+                                  outermost_struct_type))
             return false;
 
          field_location +=
@@ -3772,7 +3783,8 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
        */
       gl_shader_variable *sha_v =
          create_shader_variable(shProg, var, prefixed_name, type,
-                                use_implicit_location, location);
+                                use_implicit_location, location,
+                                outermost_struct_type);
       if (!sha_v)
          return false;
 
