@@ -1886,6 +1886,7 @@ generate_code(struct brw_codegen *p,
          break;
 
       case SHADER_OPCODE_BROADCAST:
+         assert(inst->force_writemask_all);
          brw_broadcast(p, dst, src[0], src[1]);
          break;
 

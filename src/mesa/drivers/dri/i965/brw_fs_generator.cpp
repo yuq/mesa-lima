@@ -2023,6 +2023,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          break;
 
       case SHADER_OPCODE_BROADCAST:
+         assert(inst->force_writemask_all);
          brw_broadcast(p, dst, src[0], src[1]);
          break;
 

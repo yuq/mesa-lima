@@ -1082,6 +1082,12 @@ enum opcode {
    /**
     * Pick the channel from its first source register given by the index
     * specified as second source.  Useful for variable indexing of surfaces.
+    *
+    * Note that because the result of this instruction is by definition
+    * uniform and it can always be splatted to multiple channels using a
+    * scalar regioning mode, only the first channel of the destination region
+    * is guaranteed to be updated, which implies that BROADCAST instructions
+    * should usually be marked force_writemask_all.
     */
    SHADER_OPCODE_BROADCAST,
 

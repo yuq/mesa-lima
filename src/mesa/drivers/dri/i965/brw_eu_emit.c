@@ -3426,6 +3426,10 @@ brw_broadcast(struct brw_codegen *p,
    const bool align1 = brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1;
    brw_inst *inst;
 
+   brw_push_insn_state(p);
+   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+   brw_set_default_exec_size(p, align1 ? BRW_EXECUTE_1 : BRW_EXECUTE_4);
+
    assert(src.file == BRW_GENERAL_REGISTER_FILE &&
           src.address_mode == BRW_ADDRESS_DIRECT);
 
@@ -3476,19 +3480,21 @@ brw_broadcast(struct brw_codegen *p,
           */
          inst = brw_MOV(p,
                         brw_null_reg(),
-                        stride(brw_swizzle(idx, BRW_SWIZZLE_XXXX), 0, 4, 1));
+                        stride(brw_swizzle(idx, BRW_SWIZZLE_XXXX), 4, 4, 1));
          brw_inst_set_pred_control(devinfo, inst, BRW_PREDICATE_NONE);
          brw_inst_set_cond_modifier(devinfo, inst, BRW_CONDITIONAL_NZ);
          brw_inst_set_flag_reg_nr(devinfo, inst, 1);
 
          /* and use predicated SEL to pick the right channel. */
          inst = brw_SEL(p, dst,
-                        stride(suboffset(src, 4), 0, 4, 1),
-                        stride(src, 0, 4, 1));
+                        stride(suboffset(src, 4), 4, 4, 1),
+                        stride(src, 4, 4, 1));
          brw_inst_set_pred_control(devinfo, inst, BRW_PREDICATE_NORMAL);
          brw_inst_set_flag_reg_nr(devinfo, inst, 1);
       }
    }
+
+   brw_pop_insn_state(p);
 }
 
 /**
