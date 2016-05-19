@@ -61,6 +61,7 @@
 #include "util/u_half.h"
 #include "util/u_memory.h"
 #include "util/u_math.h"
+#include "util/rounding.h"
 
 
 #define DEBUG_EXECUTION 0
@@ -543,10 +544,10 @@ static void
 micro_rnd(union tgsi_exec_channel *dst,
           const union tgsi_exec_channel *src)
 {
-   dst->f[0] = floorf(src->f[0] + 0.5f);
-   dst->f[1] = floorf(src->f[1] + 0.5f);
-   dst->f[2] = floorf(src->f[2] + 0.5f);
-   dst->f[3] = floorf(src->f[3] + 0.5f);
+   dst->f[0] = _mesa_roundevenf(src->f[0]);
+   dst->f[1] = _mesa_roundevenf(src->f[1]);
+   dst->f[2] = _mesa_roundevenf(src->f[2]);
+   dst->f[3] = _mesa_roundevenf(src->f[3]);
 }
 
 static void
