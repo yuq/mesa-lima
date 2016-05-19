@@ -276,8 +276,29 @@ public:
    bool has_side_effects() const;
    bool has_source_and_destination_hazard() const;
 
-   bool reads_flag() const;
-   bool writes_flag() const;
+   /**
+    * Return the subset of flag registers read by the instruction as a bitset
+    * with byte granularity.
+    */
+   unsigned flags_read(const brw_device_info *devinfo) const;
+
+   /**
+    * Return the subset of flag registers updated by the instruction (either
+    * partially or fully) as a bitset with byte granularity.
+    */
+   unsigned flags_written() const;
+
+   bool reads_flag() const
+   {
+      /* XXX - Will get rid of this hack shortly. */
+      const brw_device_info devinfo = {};
+      return flags_read(&devinfo);
+   }
+
+   bool writes_flag() const
+   {
+      return flags_written();
+   }
 
    fs_reg dst;
    fs_reg *src;

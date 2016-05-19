@@ -907,19 +907,54 @@ fs_inst::regs_read(int arg) const
    return 0;
 }
 
-bool
-fs_inst::reads_flag() const
-{
-   return predicate;
+namespace {
+   /* Return the subset of flag registers that an instruction could
+    * potentially read or write based on the execution controls and flag
+    * subregister number of the instruction.
+    */
+   unsigned
+   flag_mask(const fs_inst *inst)
+   {
+      const unsigned start = inst->flag_subreg * 16 + inst->group;
+      const unsigned end = start + inst->exec_size;
+      return ((1 << DIV_ROUND_UP(end, 8)) - 1) & ~((1 << (start / 8)) - 1);
+   }
 }
 
-bool
-fs_inst::writes_flag() const
+unsigned
+fs_inst::flags_read(const brw_device_info *devinfo) const
 {
-   return (conditional_mod && (opcode != BRW_OPCODE_SEL &&
-                               opcode != BRW_OPCODE_IF &&
-                               opcode != BRW_OPCODE_WHILE)) ||
-          opcode == FS_OPCODE_MOV_DISPATCH_TO_FLAGS;
+   /* XXX - This doesn't consider explicit uses of the flag register as source
+    *       region.
+    */
+   if (predicate == BRW_PREDICATE_ALIGN1_ANYV ||
+       predicate == BRW_PREDICATE_ALIGN1_ALLV) {
+      /* The vertical predication modes combine corresponding bits from
+       * f0.0 and f1.0 on Gen7+, and f0.0 and f0.1 on older hardware.
+       */
+      const unsigned shift = devinfo->gen >= 7 ? 4 : 2;
+      return flag_mask(this) << shift | flag_mask(this);
+   } else if (predicate) {
+      return flag_mask(this);
+   } else {
+      return 0;
+   }
+}
+
+unsigned
+fs_inst::flags_written() const
+{
+   /* XXX - This doesn't consider explicit uses of the flag register as
+    *       destination region.
+    */
+   if ((conditional_mod && (opcode != BRW_OPCODE_SEL &&
+                            opcode != BRW_OPCODE_IF &&
+                            opcode != BRW_OPCODE_WHILE)) ||
+       opcode == FS_OPCODE_MOV_DISPATCH_TO_FLAGS) {
+      return flag_mask(this);
+   } else {
+      return 0;
+   }
 }
 
 /**
