@@ -1791,11 +1791,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       case BRW_OPCODE_BREAK:
 	 brw_BREAK(p);
-	 brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
 	 break;
       case BRW_OPCODE_CONTINUE:
          brw_CONT(p);
-	 brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
 	 break;
 
       case BRW_OPCODE_WHILE:
