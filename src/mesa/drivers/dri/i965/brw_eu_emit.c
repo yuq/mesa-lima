@@ -1411,8 +1411,8 @@ gen6_IF(struct brw_codegen *p, enum brw_conditional_mod conditional,
    insn = next_insn(p, BRW_OPCODE_IF);
 
    brw_set_dest(p, insn, brw_imm_w(0));
-   brw_inst_set_exec_size(devinfo, insn, p->compressed ? BRW_EXECUTE_16
-                                                   : BRW_EXECUTE_8);
+   brw_inst_set_exec_size(devinfo, insn,
+                          brw_inst_exec_size(devinfo, p->current));
    brw_inst_set_gen6_jump_count(devinfo, insn, 0);
    brw_set_src0(p, insn, src0);
    brw_set_src1(p, insn, src1);
@@ -1698,8 +1698,8 @@ brw_BREAK(struct brw_codegen *p)
                                   p->if_depth_in_loop[p->loop_stack_depth]);
    }
    brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
-   brw_inst_set_exec_size(devinfo, insn, p->compressed ? BRW_EXECUTE_16
-                                                   : BRW_EXECUTE_8);
+   brw_inst_set_exec_size(devinfo, insn,
+                          brw_inst_exec_size(devinfo, p->current));
 
    return insn;
 }
@@ -1724,8 +1724,8 @@ brw_CONT(struct brw_codegen *p)
                                   p->if_depth_in_loop[p->loop_stack_depth]);
    }
    brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
-   brw_inst_set_exec_size(devinfo, insn, p->compressed ? BRW_EXECUTE_16
-                                                   : BRW_EXECUTE_8);
+   brw_inst_set_exec_size(devinfo, insn,
+                          brw_inst_exec_size(devinfo, p->current));
    return insn;
 }
 
@@ -1745,11 +1745,8 @@ gen6_HALT(struct brw_codegen *p)
    }
 
    brw_inst_set_qtr_control(devinfo, insn, BRW_COMPRESSION_NONE);
-   if (p->compressed) {
-      brw_inst_set_exec_size(devinfo, insn, BRW_EXECUTE_16);
-   } else {
-      brw_inst_set_exec_size(devinfo, insn, BRW_EXECUTE_8);
-   }
+   brw_inst_set_exec_size(devinfo, insn,
+                          brw_inst_exec_size(devinfo, p->current));
    return insn;
 }
 
@@ -1855,8 +1852,9 @@ brw_WHILE(struct brw_codegen *p)
          brw_set_src1(p, insn, retype(brw_null_reg(), BRW_REGISTER_TYPE_D));
       }
 
-      brw_inst_set_exec_size(devinfo, insn, p->compressed ? BRW_EXECUTE_16
-                                                      : BRW_EXECUTE_8);
+      brw_inst_set_exec_size(devinfo, insn,
+                             brw_inst_exec_size(devinfo, p->current));
+
    } else {
       if (p->single_program_flow) {
 	 insn = next_insn(p, BRW_OPCODE_ADD);
