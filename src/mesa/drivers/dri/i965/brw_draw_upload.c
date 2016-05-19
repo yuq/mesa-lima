@@ -65,7 +65,7 @@ static const GLuint half_float_types[5] = {
    0,
    BRW_SURFACEFORMAT_R16_FLOAT,
    BRW_SURFACEFORMAT_R16G16_FLOAT,
-   BRW_SURFACEFORMAT_R16G16B16A16_FLOAT,
+   BRW_SURFACEFORMAT_R16G16B16_FLOAT,
    BRW_SURFACEFORMAT_R16G16B16A16_FLOAT
 };
 
@@ -129,7 +129,7 @@ static const GLuint ushort_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R16_UINT,
    BRW_SURFACEFORMAT_R16G16_UINT,
-   BRW_SURFACEFORMAT_R16G16B16A16_UINT,
+   BRW_SURFACEFORMAT_R16G16B16_UINT,
    BRW_SURFACEFORMAT_R16G16B16A16_UINT
 };
 
@@ -153,7 +153,7 @@ static const GLuint short_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R16_SINT,
    BRW_SURFACEFORMAT_R16G16_SINT,
-   BRW_SURFACEFORMAT_R16G16B16A16_SINT,
+   BRW_SURFACEFORMAT_R16G16B16_SINT,
    BRW_SURFACEFORMAT_R16G16B16A16_SINT
 };
 
@@ -177,7 +177,7 @@ static const GLuint ubyte_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R8_UINT,
    BRW_SURFACEFORMAT_R8G8_UINT,
-   BRW_SURFACEFORMAT_R8G8B8A8_UINT,
+   BRW_SURFACEFORMAT_R8G8B8_UINT,
    BRW_SURFACEFORMAT_R8G8B8A8_UINT
 };
 
@@ -201,7 +201,7 @@ static const GLuint byte_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R8_SINT,
    BRW_SURFACEFORMAT_R8G8_SINT,
-   BRW_SURFACEFORMAT_R8G8B8A8_SINT,
+   BRW_SURFACEFORMAT_R8G8B8_SINT,
    BRW_SURFACEFORMAT_R8G8B8A8_SINT
 };
 
@@ -248,6 +248,8 @@ brw_get_vertex_surface_type(struct brw_context *brw,
                             const struct gl_client_array *glarray)
 {
    int size = glarray->Size;
+   const bool is_ivybridge_or_older =
+      brw->gen <= 7 && !brw->is_baytrail && !brw->is_haswell;
 
    if (unlikely(INTEL_DEBUG & DEBUG_VERTS))
       fprintf(stderr, "type %s size %d normalized %d\n",
@@ -258,11 +260,27 @@ brw_get_vertex_surface_type(struct brw_context *brw,
       assert(glarray->Format == GL_RGBA); /* sanity check */
       switch (glarray->Type) {
       case GL_INT: return int_types_direct[size];
-      case GL_SHORT: return short_types_direct[size];
-      case GL_BYTE: return byte_types_direct[size];
+      case GL_SHORT:
+         if (is_ivybridge_or_older && size == 3)
+            return short_types_direct[4];
+         else
+            return short_types_direct[size];
+      case GL_BYTE:
+         if (is_ivybridge_or_older && size == 3)
+            return byte_types_direct[4];
+         else
+            return byte_types_direct[size];
       case GL_UNSIGNED_INT: return uint_types_direct[size];
-      case GL_UNSIGNED_SHORT: return ushort_types_direct[size];
-      case GL_UNSIGNED_BYTE: return ubyte_types_direct[size];
+      case GL_UNSIGNED_SHORT:
+         if (is_ivybridge_or_older && size == 3)
+            return ushort_types_direct[4];
+         else
+            return ushort_types_direct[size];
+      case GL_UNSIGNED_BYTE:
+         if (is_ivybridge_or_older && size == 3)
+            return ubyte_types_direct[4];
+         else
+            return ubyte_types_direct[size];
       default: unreachable("not reached");
       }
    } else if (glarray->Type == GL_UNSIGNED_INT_10F_11F_11F_REV) {
@@ -271,7 +289,11 @@ brw_get_vertex_surface_type(struct brw_context *brw,
       switch (glarray->Type) {
       case GL_DOUBLE: return double_types(brw, size, glarray->Doubles);
       case GL_FLOAT: return float_types[size];
-      case GL_HALF_FLOAT: return half_float_types[size];
+      case GL_HALF_FLOAT:
+         if (brw->gen < 6 && size == 3)
+            return half_float_types[4];
+         else
+            return half_float_types[size];
       case GL_INT: return int_types_norm[size];
       case GL_SHORT: return short_types_norm[size];
       case GL_BYTE: return byte_types_norm[size];
@@ -345,7 +367,11 @@ brw_get_vertex_surface_type(struct brw_context *brw,
       switch (glarray->Type) {
       case GL_DOUBLE: return double_types(brw, size, glarray->Doubles);
       case GL_FLOAT: return float_types[size];
-      case GL_HALF_FLOAT: return half_float_types[size];
+      case GL_HALF_FLOAT:
+         if (brw->gen < 6 && size == 3)
+            return half_float_types[4];
+         else
+            return half_float_types[size];
       case GL_INT: return int_types_scale[size];
       case GL_SHORT: return short_types_scale[size];
       case GL_BYTE: return byte_types_scale[size];
