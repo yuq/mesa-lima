@@ -1377,9 +1377,6 @@ validate_io(struct gl_shader_program *producer,
    if (producer == consumer)
       return true;
 
-   if (!producer->IsES && !consumer->IsES)
-      return true;
-
    bool valid = true;
 
    gl_shader_variable const **outputs =
