@@ -1474,6 +1474,178 @@ validate_io(const struct gl_shader *producer,
    return inputs == outputs;
 }
 
+static bool
+validate_io(struct gl_shader_program *producer,
+            struct gl_shader_program *consumer)
+{
+   if (producer == consumer)
+      return true;
+
+   if (!producer->IsES && !consumer->IsES)
+      return true;
+
+   bool valid = true;
+
+   gl_shader_variable const **outputs =
+      (gl_shader_variable const **) calloc(producer->NumProgramResourceList,
+                                           sizeof(gl_shader_variable *));
+   if (outputs == NULL)
+      return false;
+
+   /* Section 7.4.1 (Shader Interface Matching) of the OpenGL ES 3.1 spec
+    * says:
+    *
+    *    At an interface between program objects, the set of inputs and
+    *    outputs are considered to match exactly if and only if:
+    *
+    *    - Every declared input variable has a matching output, as described
+    *      above.
+    *    - There are no user-defined output variables declared without a
+    *      matching input variable declaration.
+    *
+    * Every input has an output, and every output has an input.  Scan the list
+    * of producer resources once, and generate the list of outputs.  As inputs
+    * and outputs are matched, remove the matched outputs from the set.  At
+    * the end, the set must be empty.  If the set is not empty, then there is
+    * some output that did not have an input.
+    */
+   unsigned num_outputs = 0;
+   for (unsigned i = 0; i < producer->NumProgramResourceList; i++) {
+      struct gl_program_resource *res = &producer->ProgramResourceList[i];
+
+      if (res->Type != GL_PROGRAM_OUTPUT)
+         continue;
+
+      gl_shader_variable const *const var = RESOURCE_VAR(res);
+
+      /* Section 7.4.1 (Shader Interface Matching) of the OpenGL ES 3.1 spec
+       * says:
+       *
+       *    Built-in inputs or outputs do not affect interface matching.
+       */
+      if (is_gl_identifier(var->name))
+         continue;
+
+      outputs[num_outputs++] = var;
+   }
+
+   unsigned match_index = 0;
+   for (unsigned i = 0; i < consumer->NumProgramResourceList; i++) {
+      struct gl_program_resource *res = &consumer->ProgramResourceList[i];
+
+      if (res->Type != GL_PROGRAM_INPUT)
+         continue;
+
+      gl_shader_variable const *const consumer_var = RESOURCE_VAR(res);
+      gl_shader_variable const *producer_var = NULL;
+
+      if (is_gl_identifier(consumer_var->name))
+         continue;
+
+      /* Inputs with explicit locations match other outputs with explicit
+       * locations by location instead of by name.
+       */
+      if (consumer_var->explicit_location) {
+         for (unsigned j = 0; j < num_outputs; j++) {
+            const gl_shader_variable *const var = outputs[j];
+
+            if (var->explicit_location &&
+                consumer_var->location == var->location) {
+               producer_var = var;
+               match_index = j;
+               break;
+            }
+         }
+      } else {
+         for (unsigned j = 0; j < num_outputs; j++) {
+            const gl_shader_variable *const var = outputs[j];
+
+            if (!var->explicit_location &&
+                strcmp(consumer_var->name, var->name) == 0) {
+               producer_var = var;
+               match_index = j;
+               break;
+            }
+         }
+      }
+
+      /* Section 7.4.1 (Shader Interface Matching) of the OpenGL ES 3.1 spec
+       * says:
+       *
+       *    - An output variable is considered to match an input variable in
+       *      the subsequent shader if:
+       *
+       *      - the two variables match in name, type, and qualification; or
+       *
+       *      - the two variables are declared with the same location
+       *        qualifier and match in type and qualification.
+       */
+      if (producer_var == NULL) {
+         valid = false;
+         goto out;
+      }
+
+      /* An output cannot match more than one input, so remove the output from
+       * the set of possible outputs.
+       */
+      outputs[match_index] = NULL;
+      num_outputs--;
+      if (match_index < num_outputs)
+         outputs[match_index] = outputs[num_outputs];
+
+      /* Section 9.2.2 (Separable Programs) of the GLSL ES spec says:
+       *
+       *    Qualifier Class|  Qualifier  |in/out
+       *    ---------------+-------------+------
+       *    Storage        |     in      |
+       *                   |     out     |  N/A
+       *                   |   uniform   |
+       *    ---------------+-------------+------
+       *    Auxiliary      |   centroid  |   No
+       *    ---------------+-------------+------
+       *                   |   location  |  Yes
+       *                   | Block layout|  N/A
+       *                   |   binding   |  N/A
+       *                   |   offset    |  N/A
+       *                   |   format    |  N/A
+       *    ---------------+-------------+------
+       *    Interpolation  |   smooth    |
+       *                   |    flat     |  Yes
+       *    ---------------+-------------+------
+       *                   |    lowp     |
+       *    Precision      |   mediump   |  Yes
+       *                   |    highp    |
+       *    ---------------+-------------+------
+       *    Variance       |  invariant  |   No
+       *    ---------------+-------------+------
+       *    Memory         |     all     |  N/A
+       *
+       * Note that location mismatches are detected by the loops above that
+       * find the producer variable that goes with the consumer variable.
+       */
+      if (producer_var->type != consumer_var->type ||
+          producer_var->interpolation != consumer_var->interpolation ||
+          producer_var->precision != consumer_var->precision) {
+         valid = false;
+         goto out;
+      }
+
+      if (producer_var->outermost_struct_type != consumer_var->outermost_struct_type) {
+         valid = false;
+         goto out;
+      }
+
+      if (producer_var->interface_type != consumer_var->interface_type) {
+         valid = false;
+         goto out;
+      }
+   }
+
+ out:
+   free(outputs);
+   return valid && num_outputs == 0;
+}
+
 /**
  * Validate inputs against outputs in a program pipeline.
  */
@@ -1505,6 +1677,10 @@ _mesa_validate_pipeline_io(struct gl_pipeline_object *pipeline)
                           shProg[idx]->_LinkedShaders[idx],
                           shProg[prev]->IsES || shProg[idx]->IsES))
             return false;
+
+         if (!validate_io(shProg[prev], shProg[idx]))
+            return false;
+
          prev = idx;
       }
    }
