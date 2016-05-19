@@ -2420,10 +2420,21 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
          dst = tmp;
       }
 
+      unsigned first_component = nir_intrinsic_component(instr);
       for (unsigned iter = 0; iter < num_iterations; iter++) {
          if (indirect_offset.file == BAD_FILE) {
             /* Constant indexing - use global offset. */
-            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, icp_handle);
+            if (first_component != 0) {
+               unsigned read_components = num_components + first_component;
+               fs_reg tmp = bld.vgrf(dst.type, read_components);
+               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp, icp_handle);
+               for (unsigned i = 0; i < num_components; i++) {
+                  bld.MOV(offset(dst, bld, i),
+                          offset(tmp, bld, i + first_component));
+               }
+            } else {
+               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, icp_handle);
+            }
             inst->offset = imm_offset;
             inst->mlen = 1;
          } else {
@@ -2436,7 +2447,8 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
             inst->offset = imm_offset;
             inst->mlen = 2;
          }
-         inst->regs_written = num_components * type_sz(dst.type) / 4;
+         inst->regs_written =
+            (num_components * type_sz(dst.type) / 4) + first_component;
 
          /* If we are reading 64-bit data using 32-bit read messages we need
           * build proper 64-bit data elements by shuffling the low and high
@@ -2834,6 +2846,7 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
    case nir_intrinsic_load_per_vertex_input: {
       fs_reg indirect_offset = get_indirect_offset(instr);
       unsigned imm_offset = instr->const_index[0];
+      unsigned first_component = nir_intrinsic_component(instr);
 
       fs_inst *inst;
       if (indirect_offset.file == BAD_FILE) {
@@ -2844,7 +2857,8 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
          if (imm_offset < max_push_slots) {
             fs_reg src = fs_reg(ATTR, imm_offset / 2, dest.type);
             for (int i = 0; i < instr->num_components; i++) {
-               unsigned comp = 16 / type_sz(dest.type) * (imm_offset % 2) + i;
+               unsigned comp = 16 / type_sz(dest.type) * (imm_offset % 2) +
+                  i + first_component;
                bld.MOV(offset(dest, bld, i), component(src, comp));
             }
             tes_prog_data->base.urb_read_length =
@@ -2858,10 +2872,24 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
             fs_reg patch_handle = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
             bld.LOAD_PAYLOAD(patch_handle, srcs, ARRAY_SIZE(srcs), 0);
 
-            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dest, patch_handle);
+            if (first_component != 0) {
+               unsigned read_components =
+                  instr->num_components + first_component;
+               fs_reg tmp = bld.vgrf(dest.type, read_components);
+               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp,
+                               patch_handle);
+               inst->regs_written = read_components;
+               for (unsigned i = 0; i < instr->num_components; i++) {
+                  bld.MOV(offset(dest, bld, i),
+                          offset(tmp, bld, i + first_component));
+               }
+            } else {
+               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dest,
+                               patch_handle);
+               inst->regs_written = instr->num_components;
+            }
             inst->mlen = 1;
             inst->offset = imm_offset;
-            inst->regs_written = instr->num_components;
          }
       } else {
          /* Indirect indexing - use per-slot offsets as well. */
