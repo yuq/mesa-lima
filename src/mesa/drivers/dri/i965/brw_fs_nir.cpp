@@ -1997,7 +1997,8 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
                                const nir_src &vertex_src,
                                unsigned base_offset,
                                const nir_src &offset_src,
-                               unsigned num_components)
+                               unsigned num_components,
+                               unsigned first_component)
 {
    struct brw_gs_prog_data *gs_prog_data = (struct brw_gs_prog_data *) prog_data;
 
@@ -2131,10 +2132,22 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
    for (unsigned iter = 0; iter < num_iterations; iter++) {
       if (offset_const) {
          /* Constant indexing - use global offset. */
-         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp_dst, icp_handle);
+         if (first_component != 0) {
+            unsigned read_components = num_components + first_component;
+            fs_reg tmp = bld.vgrf(dst.type, read_components);
+            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp, icp_handle);
+            inst->regs_written = read_components;
+            for (unsigned i = 0; i < num_components; i++) {
+               bld.MOV(offset(tmp_dst, bld, i),
+                       offset(tmp, bld, i + first_component));
+            }
+         } else {
+            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp_dst,
+                            icp_handle);
+            inst->regs_written = num_components * type_sz(tmp_dst.type) / 4;
+         }
          inst->offset = base_offset + offset_const->u32[0];
          inst->mlen = 1;
-         inst->regs_written = num_components * type_sz(tmp_dst.type) / 4;
       } else {
          /* Indirect indexing - use per-slot offsets as well. */
          const fs_reg srcs[] = { icp_handle, indirect_offset };
@@ -2896,7 +2909,8 @@ fs_visitor::nir_emit_gs_intrinsic(const fs_builder &bld,
 
    case nir_intrinsic_load_per_vertex_input:
       emit_gs_input_load(dest, instr->src[0], instr->const_index[0],
-                         instr->src[1], instr->num_components);
+                         instr->src[1], instr->num_components,
+                         nir_intrinsic_component(instr));
       break;
 
    case nir_intrinsic_emit_vertex_with_counter:
