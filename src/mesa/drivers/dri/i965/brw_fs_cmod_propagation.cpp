@@ -49,7 +49,7 @@
  */
 
 static bool
-opt_cmod_propagation_local(bblock_t *block)
+opt_cmod_propagation_local(const brw_device_info *devinfo, bblock_t *block)
 {
    bool progress = false;
    int ip = block->end_ip + 1;
@@ -123,7 +123,7 @@ opt_cmod_propagation_local(bblock_t *block)
              */
             if (inst->conditional_mod == BRW_CONDITIONAL_NZ &&
                 !inst->src[0].negate &&
-                scan_inst->writes_flag()) {
+                scan_inst->flags_written()) {
                inst->remove(block);
                progress = true;
                break;
@@ -144,10 +144,10 @@ opt_cmod_propagation_local(bblock_t *block)
             break;
          }
 
-         if (scan_inst->writes_flag())
+         if (scan_inst->flags_written())
             break;
 
-         read_flag = read_flag || scan_inst->reads_flag();
+         read_flag = read_flag || scan_inst->flags_read(devinfo);
       }
    }
 
@@ -160,7 +160,7 @@ fs_visitor::opt_cmod_propagation()
    bool progress = false;
 
    foreach_block_reverse(block, cfg) {
-      progress = opt_cmod_propagation_local(block) || progress;
+      progress = opt_cmod_propagation_local(devinfo, block) || progress;
    }
 
    if (progress)

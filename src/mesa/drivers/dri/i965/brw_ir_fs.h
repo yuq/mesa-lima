@@ -288,18 +288,6 @@ public:
     */
    unsigned flags_written() const;
 
-   bool reads_flag() const
-   {
-      /* XXX - Will get rid of this hack shortly. */
-      const brw_device_info devinfo = {};
-      return flags_read(&devinfo);
-   }
-
-   bool writes_flag() const
-   {
-      return flags_written();
-   }
-
    fs_reg dst;
    fs_reg *src;
 

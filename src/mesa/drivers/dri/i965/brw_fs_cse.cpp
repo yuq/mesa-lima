@@ -303,10 +303,10 @@ fs_visitor::opt_cse_local(bblock_t *block)
          /* Kill all AEB entries that write a different value to or read from
           * the flag register if we just wrote it.
           */
-         if (inst->writes_flag()) {
+         if (inst->flags_written()) {
             bool negate; /* dummy */
-            if (entry->generator->reads_flag() ||
-                (entry->generator->writes_flag() &&
+            if (entry->generator->flags_read(devinfo) ||
+                (entry->generator->flags_written() &&
                  !instructions_match(inst, entry->generator, &negate))) {
                entry->remove();
                ralloc_free(entry);

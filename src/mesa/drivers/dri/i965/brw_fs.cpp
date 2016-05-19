@@ -5640,7 +5640,7 @@ fs_visitor::opt_drop_redundant_mov_to_flags()
             inst->remove(block);
             progress = true;
          }
-      } else if (inst->writes_flag()) {
+      } else if (inst->flags_written()) {
          flag_mov_found[inst->flag_subreg] = false;
       }
    }
