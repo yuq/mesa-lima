@@ -57,6 +57,8 @@
 #define HIGH_WORD(X) ((X & 0xFFFF0000) >> 16)
 
 
+#if defined(PIPE_CC_GCC)
+
 /**
  * Hypervisor-specific bi-directional communication channel.  Should never
  * execute on bare metal hardware.  The caller must make sure to check for
@@ -98,6 +100,7 @@
 })
 
 
+
 /**
  * Hypervisor-specific bi-directional communication channel.  Should never
  * execute on bare metal hardware.  The caller must make sure to check for
@@ -117,7 +120,7 @@
  * @si:  [OUT]
  * @di:  [OUT]
  */
-#ifdef __x86_64__
+#if defined(PIPE_ARCH_X86_64)
 
 typedef uint64_t VMW_REG;
 
@@ -224,7 +227,31 @@ typedef uint32_t VMW_REG;
       "m"(bp) :                                   \
       "memory", "cc");                            \
 })
-#endif /* #if __x86_64__ */
+
+#endif
+
+#else
+
+#define MSG_NOT_IMPLEMENTED 1
+
+/* not implemented */
+
+typedef uint32_t VMW_REG;
+
+
+#define VMW_PORT(cmd, in_bx, in_si, in_di, \
+         port_num, magic,                  \
+         ax, bx, cx, dx, si, di)
+
+#define VMW_PORT_HB_OUT(cmd, in_cx, in_si, in_di, \
+         port_num, magic, bp,                     \
+         ax, bx, cx, dx, si, di)
+
+#define VMW_PORT_HB_IN(cmd, in_cx, in_si, in_di,  \
+         port_num, magic, bp,                     \
+         ax, bx, cx, dx, si, di)
+
+#endif /* #if PIPE_CC_GCC */
 
 
 enum rpc_msg_type {
@@ -383,6 +410,9 @@ svga_host_log(const char *log)
    int msg_len;
    enum pipe_error ret = PIPE_OK;
 
+#ifdef MSG_NOT_IMPLEMENTED
+   return ret;
+#endif
 
    if (!log)
       return ret;
