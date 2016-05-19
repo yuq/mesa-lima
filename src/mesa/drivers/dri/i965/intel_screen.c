@@ -1111,7 +1111,7 @@ intel_detect_sseu(struct intel_screen *intelScreen)
 err_out:
    intelScreen->subslice_total = -1;
    intelScreen->eu_total = -1;
-   _mesa_warning(NULL, "Failed to query GPU properties (%s).\n", strerror(ret));
+   _mesa_warning(NULL, "Failed to query GPU properties (%s).\n", strerror(-ret));
 }
 
 static bool
