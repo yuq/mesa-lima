@@ -3585,9 +3585,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                                nir->info.num_ubos - 1);
       }
 
-      /* Number of 32-bit slots in the type */
-      unsigned type_slots = MAX2(1, type_sz(dest.type) / 4);
-
       nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
       if (const_offset == NULL) {
          fs_reg base_offset = retype(get_nir_src(instr->src[1]),
@@ -3605,55 +3602,25 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
           * we let CSE deal with duplicate loads. Here we see a vector access
           * and we have to split it if necessary.
           */
-         fs_reg packed_consts = vgrf(glsl_type::float_type);
-         packed_consts.type = dest.type;
+         const unsigned type_size = type_sz(dest.type);
+         const fs_reg packed_consts = bld.vgrf(BRW_REGISTER_TYPE_F);
+         for (unsigned c = 0; c < instr->num_components;) {
+            const unsigned base = const_offset->u32[0] + c * type_size;
 
-         unsigned const_offset_aligned = const_offset->u32[0] & ~15;
+            /* Number of usable components in the next 16B-aligned load */
+            const unsigned count = MIN2(instr->num_components - c,
+                                        (16 - base % 16) / type_size);
 
-         /* A vec4 only contains half of a dvec4, if we need more than 2
-          * components of a dvec4 we will have to issue another load for
-          * components z and w.
-          */
-         int num_components;
-         if (type_slots == 1)
-            num_components = instr->num_components;
-         else
-            num_components = MIN2(2, instr->num_components);
-
-         /* The computation of num_components doesn't take into account
-          * misalignment, which should be okay according to std140 vector
-          * alignment rules.
-          */
-         assert(const_offset->u32[0] % 16 +
-                type_sz(dest.type) * num_components <= 16);
-
-         int remaining_components = instr->num_components;
-         while (remaining_components > 0) {
-            /* Read the vec4 from a 16-byte aligned offset */
-            struct brw_reg const_offset_reg = brw_imm_ud(const_offset_aligned);
             bld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
-                     retype(packed_consts, BRW_REGISTER_TYPE_F),
-                     surf_index, const_offset_reg);
+                     packed_consts, surf_index, brw_imm_ud(base & ~15));
 
-            const fs_reg consts = byte_offset(packed_consts, (const_offset->u32[0] % 16));
-            unsigned dest_offset = instr->num_components - remaining_components;
+            const fs_reg consts =
+               retype(byte_offset(packed_consts, base & 15), dest.type);
 
-            /* XXX: This doesn't update the sub-16B offset across iterations of
-             * the loop, which should work for std140 vector alignment rules.
-             */
-            assert(dest_offset == 0 || const_offset->u32[0] % 16 == 0);
+            for (unsigned d = 0; d < count; d++)
+               bld.MOV(offset(dest, bld, c + d), component(consts, d));
 
-            for (int i = 0; i < num_components; i++)
-               bld.MOV(offset(dest, bld, i + dest_offset), component(consts, i));
-
-            /* If this is a large enough 64-bit load, we will need to emit
-             * another message
-             */
-            remaining_components -= num_components;
-            assert(remaining_components == 0 ||
-                   (remaining_components <= 2 && type_slots == 2));
-            num_components = remaining_components;
-            const_offset_aligned += 16;
+            c += count;
          }
       }
       break;
