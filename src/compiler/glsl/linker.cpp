@@ -4902,10 +4902,13 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       if (prog->_LinkedShaders[i] == NULL)
 	 continue;
 
-      if (ctx->Const.ShaderCompilerOptions[i].LowerBufferInterfaceBlocks)
+      const struct gl_shader_compiler_options *options =
+         &ctx->Const.ShaderCompilerOptions[i];
+
+      if (options->LowerBufferInterfaceBlocks)
          lower_ubo_reference(prog->_LinkedShaders[i]);
 
-      if (ctx->Const.ShaderCompilerOptions[i].LowerShaderSharedVariables)
+      if (options->LowerShaderSharedVariables)
          lower_shared_reference(prog->_LinkedShaders[i],
                                 &prog->Comp.SharedSize);
 
