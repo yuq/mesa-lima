@@ -1774,7 +1774,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	    assert(devinfo->gen == 6);
 	    gen6_IF(p, inst->conditional_mod, src[0], src[1]);
 	 } else {
-	    brw_IF(p, dispatch_width == 16 ? BRW_EXECUTE_16 : BRW_EXECUTE_8);
+	    brw_IF(p, brw_inst_exec_size(devinfo, p->current));
 	 }
 	 break;
 
@@ -1786,7 +1786,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 break;
 
       case BRW_OPCODE_DO:
-	 brw_DO(p, dispatch_width == 16 ? BRW_EXECUTE_16 : BRW_EXECUTE_8);
+	 brw_DO(p, brw_inst_exec_size(devinfo, p->current));
 	 break;
 
       case BRW_OPCODE_BREAK:
