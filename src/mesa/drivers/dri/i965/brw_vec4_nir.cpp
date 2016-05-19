@@ -267,7 +267,7 @@ dst_reg_for_nir_reg(vec4_visitor *v, nir_register *nir_reg,
 }
 
 dst_reg
-vec4_visitor::get_nir_dest(nir_dest dest)
+vec4_visitor::get_nir_dest(const nir_dest &dest)
 {
    if (dest.is_ssa) {
       dst_reg dst = dst_reg(VGRF, alloc.allocate(1));
@@ -280,19 +280,19 @@ vec4_visitor::get_nir_dest(nir_dest dest)
 }
 
 dst_reg
-vec4_visitor::get_nir_dest(nir_dest dest, enum brw_reg_type type)
+vec4_visitor::get_nir_dest(const nir_dest &dest, enum brw_reg_type type)
 {
    return retype(get_nir_dest(dest), type);
 }
 
 dst_reg
-vec4_visitor::get_nir_dest(nir_dest dest, nir_alu_type type)
+vec4_visitor::get_nir_dest(const nir_dest &dest, nir_alu_type type)
 {
    return get_nir_dest(dest, brw_type_for_nir_type(type));
 }
 
 src_reg
-vec4_visitor::get_nir_src(nir_src src, enum brw_reg_type type,
+vec4_visitor::get_nir_src(const nir_src &src, enum brw_reg_type type,
                           unsigned num_components)
 {
    dst_reg reg;
@@ -314,14 +314,14 @@ vec4_visitor::get_nir_src(nir_src src, enum brw_reg_type type,
 }
 
 src_reg
-vec4_visitor::get_nir_src(nir_src src, nir_alu_type type,
+vec4_visitor::get_nir_src(const nir_src &src, nir_alu_type type,
                           unsigned num_components)
 {
    return get_nir_src(src, brw_type_for_nir_type(type), num_components);
 }
 
 src_reg
-vec4_visitor::get_nir_src(nir_src src, unsigned num_components)
+vec4_visitor::get_nir_src(const nir_src &src, unsigned num_components)
 {
    /* if type is not specified, default to signed int */
    return get_nir_src(src, nir_type_int, num_components);

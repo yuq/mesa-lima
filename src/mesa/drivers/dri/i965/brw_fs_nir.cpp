@@ -1451,7 +1451,7 @@ fs_visitor::nir_emit_undef(const fs_builder &bld, nir_ssa_undef_instr *instr)
 }
 
 fs_reg
-fs_visitor::get_nir_src(nir_src src)
+fs_visitor::get_nir_src(const nir_src &src)
 {
    fs_reg reg;
    if (src.is_ssa) {
@@ -1474,14 +1474,14 @@ fs_visitor::get_nir_src(nir_src src)
  * Return an IMM for constants; otherwise call get_nir_src() as normal.
  */
 fs_reg
-fs_visitor::get_nir_src_imm(nir_src src)
+fs_visitor::get_nir_src_imm(const nir_src &src)
 {
    nir_const_value *val = nir_src_as_const_value(src);
    return val ? fs_reg(brw_imm_d(val->i32[0])) : get_nir_src(src);
 }
 
 fs_reg
-fs_visitor::get_nir_dest(nir_dest dest)
+fs_visitor::get_nir_dest(const nir_dest &dest)
 {
    if (dest.is_ssa) {
       const brw_reg_type reg_type =
