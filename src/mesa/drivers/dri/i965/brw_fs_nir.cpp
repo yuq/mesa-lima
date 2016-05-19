@@ -529,14 +529,10 @@ fs_visitor::optimize_extract_to_float(nir_alu_instr *instr,
    nir_const_value *element = nir_src_as_const_value(src0->src[1].src);
    assert(element != NULL);
 
-   enum opcode extract_op;
-   if (src0->op == nir_op_extract_u16 || src0->op == nir_op_extract_i16) {
-      assert(element->u32[0] <= 1);
-      extract_op = SHADER_OPCODE_EXTRACT_WORD;
-   } else {
-      assert(element->u32[0] <= 3);
-      extract_op = SHADER_OPCODE_EXTRACT_BYTE;
-   }
+   /* Element type to extract.*/
+   const brw_reg_type type = brw_int_type(
+      src0->op == nir_op_extract_u16 || src0->op == nir_op_extract_i16 ? 2 : 1,
+      src0->op == nir_op_extract_i16 || src0->op == nir_op_extract_i8);
 
    fs_reg op0 = get_nir_src(src0->src[0].src);
    op0.type = brw_type_for_nir_type(
@@ -545,7 +541,7 @@ fs_visitor::optimize_extract_to_float(nir_alu_instr *instr,
    op0 = offset(op0, bld, src0->src[0].swizzle[0]);
 
    set_saturate(instr->dest.saturate,
-                bld.emit(extract_op, result, op0, brw_imm_ud(element->u32[0])));
+                bld.MOV(result, subscript(op0, type, element->u32[0])));
    return true;
 }
 
@@ -1378,19 +1374,19 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_extract_u8:
    case nir_op_extract_i8: {
+      const brw_reg_type type = brw_int_type(1, instr->op == nir_op_extract_i8);
       nir_const_value *byte = nir_src_as_const_value(instr->src[1].src);
       assert(byte != NULL);
-      bld.emit(SHADER_OPCODE_EXTRACT_BYTE,
-               result, op[0], brw_imm_ud(byte->u32[0]));
+      bld.MOV(result, subscript(op[0], type, byte->u32[0]));
       break;
    }
 
    case nir_op_extract_u16:
    case nir_op_extract_i16: {
+      const brw_reg_type type = brw_int_type(2, instr->op == nir_op_extract_i16);
       nir_const_value *word = nir_src_as_const_value(instr->src[1].src);
       assert(word != NULL);
-      bld.emit(SHADER_OPCODE_EXTRACT_WORD,
-               result, op[0], brw_imm_ud(word->u32[0]));
+      bld.MOV(result, subscript(op[0], type, word->u32[0]));
       break;
    }
 

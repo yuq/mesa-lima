@@ -309,10 +309,6 @@ brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
    case SHADER_OPCODE_BROADCAST:
       return "broadcast";
 
-   case SHADER_OPCODE_EXTRACT_BYTE:
-      return "extract_byte";
-   case SHADER_OPCODE_EXTRACT_WORD:
-      return "extract_word";
    case VEC4_OPCODE_MOV_BYTES:
       return "mov_bytes";
    case VEC4_OPCODE_PACK_BYTES:

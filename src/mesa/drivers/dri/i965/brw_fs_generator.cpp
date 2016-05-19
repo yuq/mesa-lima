@@ -2050,28 +2050,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          brw_broadcast(p, dst, src[0], src[1]);
          break;
 
-      case SHADER_OPCODE_EXTRACT_BYTE: {
-         assert(src[0].type == BRW_REGISTER_TYPE_D ||
-                src[0].type == BRW_REGISTER_TYPE_UD);
-
-         enum brw_reg_type type =
-            src[0].type == BRW_REGISTER_TYPE_D ? BRW_REGISTER_TYPE_B
-                                               : BRW_REGISTER_TYPE_UB;
-         brw_MOV(p, dst, spread(suboffset(retype(src[0], type), src[1].ud), 4));
-         break;
-      }
-
-      case SHADER_OPCODE_EXTRACT_WORD: {
-         assert(src[0].type == BRW_REGISTER_TYPE_D ||
-                src[0].type == BRW_REGISTER_TYPE_UD);
-
-         enum brw_reg_type type =
-            src[0].type == BRW_REGISTER_TYPE_D ? BRW_REGISTER_TYPE_W
-                                               : BRW_REGISTER_TYPE_UW;
-         brw_MOV(p, dst, spread(suboffset(retype(src[0], type), src[1].ud), 2));
-         break;
-      }
-
       case FS_OPCODE_SET_SAMPLE_ID:
          generate_set_sample_id(inst, dst, src[0], src[1]);
          break;

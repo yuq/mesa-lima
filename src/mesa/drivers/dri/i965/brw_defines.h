@@ -1086,18 +1086,6 @@ enum opcode {
     */
    SHADER_OPCODE_BROADCAST,
 
-   /**
-    * Pick the byte from its first source register given by the index
-    * specified as second source.
-    */
-   SHADER_OPCODE_EXTRACT_BYTE,
-
-   /**
-    * Pick the word from its first source register given by the index
-    * specified as second source.
-    */
-   SHADER_OPCODE_EXTRACT_WORD,
-
    VEC4_OPCODE_MOV_BYTES,
    VEC4_OPCODE_PACK_BYTES,
    VEC4_OPCODE_UNPACK_UNIFORM,
