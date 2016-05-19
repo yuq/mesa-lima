@@ -2093,8 +2093,29 @@ RegAlloc::InsertConstraintsPass::texConstraintGM107(TexInstruction *tex)
       textureMask(tex);
    condenseDefs(tex);
 
-   if (tex->op == OP_SUSTB || tex->op == OP_SUSTP) {
-      condenseSrcs(tex, 3, (3 + typeSizeof(tex->dType) / 4) - 1);
+   if (isSurfaceOp(tex->op)) {
+      int s = tex->tex.target.getDim() +
+         (tex->tex.target.isArray() || tex->tex.target.isCube());
+      int n = 0;
+
+      switch (tex->op) {
+      case OP_SUSTB:
+      case OP_SUSTP:
+         n = 4;
+         break;
+      case OP_SUREDB:
+      case OP_SUREDP:
+         if (tex->subOp == NV50_IR_SUBOP_ATOM_CAS)
+            n = 2;
+         break;
+      default:
+         break;
+      }
+
+      if (s > 1)
+         condenseSrcs(tex, 0, s - 1);
+      if (n > 1)
+         condenseSrcs(tex, 1, n); // do not condense the tex handle
    } else
    if (isTextureOp(tex->op)) {
       if (tex->op != OP_TXQ) {
