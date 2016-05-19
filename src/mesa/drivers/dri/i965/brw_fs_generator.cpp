@@ -1575,33 +1575,22 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       if (unlikely(debug_flag))
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
-      switch (inst->exec_size) {
-      case 1:
-      case 2:
-      case 4:
-         assert(inst->force_writemask_all);
-         brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-         break;
-      case 8:
-         if (inst->force_sechalf) {
-            brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-         } else {
-            brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-         }
-         break;
-      case 16:
-      case 32:
-         /* If the instruction writes to more than one register, it needs to
-          * be a "compressed" instruction on Gen <= 5.
-          */
-         if (inst->dst.component_size(inst->exec_size) > REG_SIZE)
-            brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-         else
-            brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-         break;
-      default:
-         unreachable("Invalid instruction width");
-      }
+      /* If the instruction writes to more than one register, it needs to be
+       * explicitly marked as compressed on Gen <= 5.  On Gen >= 6 the
+       * hardware figures out by itself what the right compression mode is,
+       * but we still need to know whether the instruction is compressed to
+       * set up the source register regions appropriately.
+       *
+       * XXX - This is wrong for instructions that write a single register but
+       *       read more than one which should strictly speaking be treated as
+       *       compressed.  For instructions that don't write any registers it
+       *       relies on the destination being a null register of the correct
+       *       type and regioning so the instruction is considered compressed
+       *       or not accordingly.
+       */
+      p->compressed = inst->dst.component_size(inst->exec_size) > REG_SIZE;
+      brw_set_default_compression(p, p->compressed);
+      brw_set_default_group(p, inst->force_sechalf ? 8 : 0);
 
       for (unsigned int i = 0; i < inst->sources; i++) {
 	 src[i] = brw_reg_from_fs_reg(p, inst, &inst->src[i], devinfo->gen);
@@ -1627,6 +1616,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
       brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
 
+      assert(inst->force_writemask_all || inst->exec_size >= 8);
       assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF(devinfo->gen));
       assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
