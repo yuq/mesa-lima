@@ -101,7 +101,7 @@ libEGL_la_SOURCES += \
 	$(dri3_backend_FILES)
 
 libEGL_la_LIBADD += $(top_builddir)/src/loader/libloader.la
-libEGL_la_LIBADD += $(DLOPEN_LIBS) $(LIBDRM_LIBS)
+libEGL_la_LIBADD += $(DLOPEN_LIBS) $(LIBDRM_LIBS) $(CLOCK_LIB)
 endif
 
 include $(top_srcdir)/install-lib-links.mk
