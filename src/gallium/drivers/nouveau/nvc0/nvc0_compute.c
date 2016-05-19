@@ -331,7 +331,7 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    PUSH_DATA (push, nvc0_program_symbol_offset(cp, info->pc));
 
    BEGIN_NVC0(push, NVC0_CP(LOCAL_POS_ALLOC), 3);
-   PUSH_DATA (push, align(cp->cp.lmem_size, 0x10));
+   PUSH_DATA (push, (cp->hdr[1] & 0xfffff0) + align(cp->cp.lmem_size, 0x10));
    PUSH_DATA (push, 0);
    PUSH_DATA (push, 0x800); /* WARP_CSTACK_SIZE */
 
