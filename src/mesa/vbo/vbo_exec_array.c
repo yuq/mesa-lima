@@ -1323,7 +1323,7 @@ vbo_draw_transform_feedback(struct gl_context *ctx, GLenum mode,
     * will be rendered. */
 
    vbo->draw_prims(ctx, prim, 1, NULL,
-                   GL_TRUE, 0, 0, obj, stream, NULL);
+                   GL_FALSE, ~0, ~0, obj, stream, NULL);
 
    if (MESA_DEBUG_FLAGS & DEBUG_ALWAYS_FLUSH) {
       _mesa_flush(ctx);
