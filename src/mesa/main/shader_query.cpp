@@ -42,8 +42,7 @@
 
 
 static GLint
-program_resource_location(struct gl_shader_program *shProg,
-                          struct gl_program_resource *res, const char *name,
+program_resource_location(struct gl_program_resource *res,
                           unsigned array_index);
 
 /**
@@ -187,7 +186,7 @@ _mesa_GetAttribLocation(GLuint program, const GLchar * name)
    if (!res)
       return -1;
 
-   return program_resource_location(shProg, res, name, array_index);
+   return program_resource_location(res, array_index);
 }
 
 unsigned
@@ -360,7 +359,7 @@ _mesa_GetFragDataLocation(GLuint program, const GLchar *name)
    if (!res)
       return -1;
 
-   return program_resource_location(shProg, res, name, array_index);
+   return program_resource_location(res, array_index);
 }
 
 const char*
@@ -776,9 +775,7 @@ _mesa_get_program_resource_name(struct gl_shader_program *shProg,
 }
 
 static GLint
-program_resource_location(struct gl_shader_program *shProg,
-                          struct gl_program_resource *res, const char *name,
-                          unsigned array_index)
+program_resource_location(struct gl_program_resource *res, unsigned array_index)
 {
    switch (res->Type) {
    case GL_PROGRAM_INPUT: {
@@ -866,7 +863,7 @@ _mesa_program_resource_location(struct gl_shader_program *shProg,
    if (!res)
       return -1;
 
-   return program_resource_location(shProg, res, name, array_index);
+   return program_resource_location(res, array_index);
 }
 
 /**
@@ -1222,9 +1219,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
       case GL_PROGRAM_INPUT:
       case GL_PROGRAM_OUTPUT:
-         *val = program_resource_location(shProg, res,
-                                          _mesa_program_resource_name(res),
-                                          0);
+         *val = program_resource_location(res, 0);
          return 1;
       default:
          goto invalid_operation;
