@@ -33,21 +33,6 @@
 #include "common/simdintrin.h"
 #include "common/swr_assert.h"
 
-#if defined(_WIN32)
-void SaveImageToPNGFile(
-    const WCHAR *pFilename,
-    void *pBuffer,
-    uint32_t width,
-    uint32_t height,
-    bool broadcastRed);
-
-void OpenBitmapFromFile(
-    const WCHAR *pFilename,
-    void **pBuffer,
-    uint32_t *width,
-    uint32_t *height);
-#endif
-
 #if defined(_WIN64) || defined(__x86_64__)
 #define _MM_INSERT_EPI64 _mm_insert_epi64
 #define _MM_EXTRACT_EPI64 _mm_extract_epi64
@@ -866,81 +851,4 @@ struct TemplateArgUnroller
     }
 };
 
-//////////////////////////////////////////////////////////////////////////
-/// Helpers used to get / set environment variable
-//////////////////////////////////////////////////////////////////////////
-static INLINE std::string GetEnv(const std::string& variableName)
-{
-    std::string output;
-#if defined(_WIN32)
-    DWORD valueSize = GetEnvironmentVariableA(variableName.c_str(), nullptr, 0);
-    if (!valueSize) return output;
-    output.resize(valueSize - 1); // valueSize includes null, output.resize() does not
-    GetEnvironmentVariableA(variableName.c_str(), &output[0], valueSize);
-#else
-    output = getenv(variableName.c_str());
-#endif
-
-    return output;
-}
-
-static INLINE void SetEnv(const std::string& variableName, const std::string& value)
-{
-#if defined(_WIN32)
-    SetEnvironmentVariableA(variableName.c_str(), value.c_str());
-#else
-    setenv(variableName.c_str(), value.c_str(), true);
-#endif
-}
-
-//////////////////////////////////////////////////////////////////////////
-/// Abstraction for dynamically loading modules and getting functions
-//////////////////////////////////////////////////////////////////////////
-#if defined(_WIN32)
-typedef HMODULE SWR_MODULE_HANDLE;
-#else
-#include <dlfcn.h>
-typedef void* SWR_MODULE_HANDLE;
-#endif
-
-static inline SWR_MODULE_HANDLE SWR_API LoadModule(const char* szModuleName)
-{
-#if defined(_WIN32)
-    return LoadLibraryA(szModuleName);
-#else
-    return dlopen(szModuleName, RTLD_LAZY | RTLD_LOCAL);
-#endif
-}
-
-static inline void SWR_API FreeModuleHandle(SWR_MODULE_HANDLE hModule)
-{
-    if (hModule)
-    {
-#if defined(_WIN32)
-        FreeLibrary((HMODULE)hModule);
-#else
-        dlclose(hModule);
-#endif
-    }
-}
-
-static inline void* SWR_API GetProcFromModule(SWR_MODULE_HANDLE hModule, const char* szProcName)
-{
-    if (hModule && szProcName)
-    {
-#if defined(_WIN32)
-        return GetProcAddress((HMODULE)hModule, szProcName);
-#else
-        return dlsym(hModule, szProcName);
-#endif
-    }
-
-    return nullptr;
-}
- 
-template<typename T>
-static inline void GetProcFromModule(SWR_MODULE_HANDLE hModule, const char* szProcName, T& outFunc)
-{
-    outFunc = (T)GetProcFromModule(hModule, szProcName);
-}
 
