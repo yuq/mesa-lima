@@ -105,7 +105,13 @@ COMMON_LIBADD = \
 	$(top_builddir)/src/mesa/libmesagallium.la \
 	$(LLVM_LIBS)
 
-COMMON_LDFLAGS = $(LLVM_LDFLAGS)
+COMMON_LDFLAGS = \
+	-shared \
+	-module \
+	-no-undefined \
+	$(GC_SECTIONS) \
+	$(NO_UNDEFINED) \
+	$(LLVM_LDFLAGS)
 
 lib_LTLIBRARIES = libswrAVX.la libswrAVX2.la
 
