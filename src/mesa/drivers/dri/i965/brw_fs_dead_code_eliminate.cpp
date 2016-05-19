@@ -77,7 +77,7 @@ fs_visitor::dead_code_eliminate()
          }
 
          if (inst->dst.is_null() && inst->writes_flag()) {
-            if (!BITSET_TEST(flag_live, inst->flag_subreg)) {
+            if (!(flag_live[0] & inst->flags_written())) {
                inst->opcode = BRW_OPCODE_NOP;
                progress = true;
             }
@@ -102,9 +102,8 @@ fs_visitor::dead_code_eliminate()
             }
          }
 
-         if (inst->writes_flag() && !inst->predicate) {
-            BITSET_CLEAR(flag_live, inst->flag_subreg);
-         }
+         if (!inst->predicate && inst->exec_size >= 8)
+            flag_live[0] &= ~inst->flags_written();
 
          if (inst->opcode == BRW_OPCODE_NOP) {
             inst->remove(block);
@@ -121,9 +120,7 @@ fs_visitor::dead_code_eliminate()
             }
          }
 
-         if (inst->reads_flag()) {
-            BITSET_SET(flag_live, inst->flag_subreg);
-         }
+         flag_live[0] |= inst->flags_read(devinfo);
       }
    }
 
