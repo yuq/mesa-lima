@@ -3331,6 +3331,7 @@ void
 brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
 {
    const struct brw_device_info *devinfo = p->devinfo;
+   const unsigned exec_size = 1 << brw_inst_exec_size(devinfo, p->current);
    brw_inst *inst;
 
    assert(devinfo->gen >= 7);
@@ -3360,15 +3361,23 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
 
          brw_MOV(p, flag, brw_imm_ud(0));
 
-         /* Run a 16-wide instruction returning zero with execution masking
-          * and a conditional modifier enabled in order to get the current
-          * execution mask in f1.0.
+         /* Run enough instructions returning zero with execution masking and
+          * a conditional modifier enabled in order to get the full execution
+          * mask in f1.0.  We could use a single 32-wide move here if it
+          * weren't because of the hardware bug that causes channel enables to
+          * be applied incorrectly to the second half of 32-wide instructions
+          * on Gen7.
           */
-         inst = brw_MOV(p, brw_null_reg(), brw_imm_ud(0));
-         brw_inst_set_exec_size(devinfo, inst, BRW_EXECUTE_16);
-         brw_inst_set_mask_control(devinfo, inst, BRW_MASK_ENABLE);
-         brw_inst_set_cond_modifier(devinfo, inst, BRW_CONDITIONAL_Z);
-         brw_inst_set_flag_reg_nr(devinfo, inst, 1);
+         const unsigned lower_size = MIN2(16, exec_size);
+         for (unsigned i = 0; i < exec_size / lower_size; i++) {
+            inst = brw_MOV(p, retype(brw_null_reg(), BRW_REGISTER_TYPE_UW),
+                           brw_imm_uw(0));
+            brw_inst_set_mask_control(devinfo, inst, BRW_MASK_ENABLE);
+            brw_inst_set_group(devinfo, inst, lower_size * i);
+            brw_inst_set_cond_modifier(devinfo, inst, BRW_CONDITIONAL_Z);
+            brw_inst_set_flag_reg_nr(devinfo, inst, 1);
+            brw_inst_set_exec_size(devinfo, inst, cvt(lower_size) - 1);
+         }
 
          brw_FBL(p, vec1(dst), flag);
       }
