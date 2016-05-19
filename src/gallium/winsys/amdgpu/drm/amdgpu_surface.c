@@ -337,7 +337,6 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
 
    AddrSurfInfoIn.flags.color = !(surf->flags & RADEON_SURF_Z_OR_SBUFFER);
    AddrSurfInfoIn.flags.depth = (surf->flags & RADEON_SURF_ZBUFFER) != 0;
-   AddrSurfInfoIn.flags.stencil = (surf->flags & RADEON_SURF_SBUFFER) != 0;
    AddrSurfInfoIn.flags.cube = type == RADEON_SURF_TYPE_CUBEMAP;
    AddrSurfInfoIn.flags.display = (surf->flags & RADEON_SURF_SCANOUT) != 0;
    AddrSurfInfoIn.flags.pow2Pad = surf->last_level > 0;
@@ -346,7 +345,12 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
                                         !(surf->flags & RADEON_SURF_SCANOUT) &&
                                         !compressed && AddrDccIn.numSamples <= 1;
 
-   /* This disables incorrect calculations (hacks) in addrlib. */
+   AddrSurfInfoIn.flags.noStencil = (surf->flags & RADEON_SURF_SBUFFER) == 0;
+   AddrSurfInfoIn.flags.compressZ = AddrSurfInfoIn.flags.depth;
+
+   /* TODO: update addrlib to a newer version, remove this, and
+    * set flags.matchStencilTileCfg = 1 to fix stencil texturing.
+    */
    AddrSurfInfoIn.flags.noStencil = 1;
 
    /* Set preferred macrotile parameters. This is usually required
@@ -413,6 +417,8 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    /* Calculate texture layout information for stencil. */
    if (surf->flags & RADEON_SURF_SBUFFER) {
       AddrSurfInfoIn.bpp = 8;
+      AddrSurfInfoIn.flags.depth = 0;
+      AddrSurfInfoIn.flags.stencil = 1;
       /* This will be ignored if AddrSurfInfoIn.pTileInfo is NULL. */
       AddrTileInfoIn.tileSplitBytes = surf->stencil_tile_split;
 
