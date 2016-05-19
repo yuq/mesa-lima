@@ -686,7 +686,7 @@ private:
    }
 
    virtual void visit_field(const glsl_type *type, const char *name,
-                            bool row_major, const glsl_type *record_type,
+                            bool row_major, const glsl_type * /* record_type */,
                             const unsigned packing,
                             bool /* last_field */)
    {
