@@ -342,12 +342,18 @@ static void si_set_sampler_view(struct si_context *sctx,
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(desc, rview->state, 8*4);
 
-		if (view->texture && view->texture->target != PIPE_BUFFER)
+		if (view->texture && view->texture->target != PIPE_BUFFER) {
+			bool is_separate_stencil =
+				rtex->is_depth && !rtex->is_flushing_texture &&
+				rview->is_stencil_sampler;
+
 			si_set_mutable_tex_desc_fields(rtex,
 						       rview->base_level_info,
 						       rview->base_level,
 						       rview->block_width,
-						       false, desc);
+						       is_separate_stencil,
+						       desc);
+		}
 
 		if (view->texture && view->texture->target != PIPE_BUFFER &&
 		    rtex->fmask.size) {
