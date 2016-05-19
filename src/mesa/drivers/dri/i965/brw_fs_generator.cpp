@@ -1697,6 +1697,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       }
       dst = brw_reg_from_fs_reg(p, inst, &inst->dst, devinfo->gen);
 
+      brw_set_default_access_mode(p, BRW_ALIGN_1);
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
       brw_set_default_flag_reg(p, 0, inst->flag_subreg);
