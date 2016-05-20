@@ -1390,9 +1390,7 @@ layout_qualifier_id:
             }
          }
 
-         if ($$.flags.i &&
-             !state->ARB_tessellation_shader_enable &&
-             !state->is_version(400, 0)) {
+         if ($$.flags.i && !state->has_tessellation_shader()) {
             _mesa_glsl_error(& @1, state,
                              "primitive mode qualifier `%s' requires "
                              "GLSL 4.00 or ARB_tessellation_shader", $1);
@@ -1415,9 +1413,7 @@ layout_qualifier_id:
             }
          }
 
-         if ($$.flags.i &&
-             !state->ARB_tessellation_shader_enable &&
-             !state->is_version(400, 0)) {
+         if ($$.flags.i && !state->has_tessellation_shader()) {
             _mesa_glsl_error(& @1, state,
                              "vertex spacing qualifier `%s' requires "
                              "GLSL 4.00 or ARB_tessellation_shader", $1);
@@ -1432,9 +1428,7 @@ layout_qualifier_id:
             $$.ordering = GL_CCW;
          }
 
-         if ($$.flags.i &&
-             !state->ARB_tessellation_shader_enable &&
-             !state->is_version(400, 0)) {
+         if ($$.flags.i && !state->has_tessellation_shader()) {
             _mesa_glsl_error(& @1, state,
                              "ordering qualifier `%s' requires "
                              "GLSL 4.00 or ARB_tessellation_shader", $1);
@@ -1446,9 +1440,7 @@ layout_qualifier_id:
             $$.point_mode = true;
          }
 
-         if ($$.flags.i &&
-             !state->ARB_tessellation_shader_enable &&
-             !state->is_version(400, 0)) {
+         if ($$.flags.i && !state->has_tessellation_shader()) {
             _mesa_glsl_error(& @1, state,
                              "qualifier `point_mode' requires "
                              "GLSL 4.00 or ARB_tessellation_shader");
@@ -1608,8 +1600,7 @@ layout_qualifier_id:
       if (match_layout_qualifier("vertices", $1, state) == 0) {
          $$.flags.q.vertices = 1;
          $$.vertices = new(ctx) ast_layout_expression(@1, $3);
-         if (!state->ARB_tessellation_shader_enable &&
-             !state->is_version(400, 0)) {
+         if (!state->has_tessellation_shader()) {
             _mesa_glsl_error(& @1, state,
                              "vertices qualifier requires GLSL 4.00 or "
                              "ARB_tessellation_shader");

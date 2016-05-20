@@ -277,6 +277,11 @@ struct _mesa_glsl_parse_state {
       return OES_geometry_shader_enable || is_version(150, 320);
    }
 
+   bool has_tessellation_shader() const
+   {
+      return ARB_tessellation_shader_enable || is_version(400, 0);
+   }
+
    bool has_clip_distance() const
    {
       return EXT_clip_cull_distance_enable || is_version(130, 0);
