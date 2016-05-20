@@ -628,6 +628,7 @@ struct isl_channel_layout {
  */
 struct isl_format_layout {
    enum isl_format format;
+   const char *name;
 
    uint8_t bs; /**< Block size, in bytes, rounded towards 0 */
    uint8_t bw; /**< Block width, in pixels */
@@ -853,6 +854,12 @@ static inline const struct isl_format_layout * ATTRIBUTE_CONST
 isl_format_get_layout(enum isl_format fmt)
 {
    return &isl_format_layouts[fmt];
+}
+
+static inline const char * ATTRIBUTE_CONST
+isl_format_get_name(enum isl_format fmt)
+{
+   return isl_format_layouts[fmt].name;
 }
 
 bool isl_format_has_unorm_channel(enum isl_format fmt) ATTRIBUTE_CONST;

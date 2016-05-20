@@ -98,7 +98,8 @@ do
 
     cat <<EOF
    [$format] = {
-      $format,
+      .format = $format,
+      .name = "$format",
       .bs = $((bpb/8)),
       .bw = $bw, .bh = $bh, .bd = $bd,
       .channels = {
