@@ -128,6 +128,7 @@ enum isl_format {
    ISL_FORMAT_R16G16B16A16_USCALED =                           148,
    ISL_FORMAT_R32G32_SSCALED =                                 149,
    ISL_FORMAT_R32G32_USCALED =                                 150,
+   ISL_FORMAT_R32G32_FLOAT_LD =                                151,
    ISL_FORMAT_R32G32_SFIXED =                                  160,
    ISL_FORMAT_R64_PASSTHRU =                                   161,
    ISL_FORMAT_B8G8R8A8_UNORM =                                 192,
