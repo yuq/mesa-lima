@@ -3824,8 +3824,8 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
 
       sources[length] = bld.vgrf(BRW_REGISTER_TYPE_UD);
       bld.exec_all().annotate("FB write OS")
-         .emit(FS_OPCODE_PACK_STENCIL_REF, sources[length],
-               retype(src_stencil, BRW_REGISTER_TYPE_UB));
+         .MOV(retype(sources[length], BRW_REGISTER_TYPE_UB),
+              subscript(src_stencil, BRW_REGISTER_TYPE_UB, 0));
       length++;
    }
 

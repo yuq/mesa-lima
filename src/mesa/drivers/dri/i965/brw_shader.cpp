@@ -163,8 +163,6 @@ brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
       return "fb_write";
    case FS_OPCODE_FB_WRITE_LOGICAL:
       return "fb_write_logical";
-   case FS_OPCODE_PACK_STENCIL_REF:
-      return "pack_stencil_ref";
    case FS_OPCODE_REP_FB_WRITE:
       return "rep_fb_write";
 
