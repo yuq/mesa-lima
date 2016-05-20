@@ -65,27 +65,34 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen, bool compressed)
    case VGRF:
       if (reg->stride == 0) {
          brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->nr, 0);
-      } else if (!compressed &&
-                 inst->exec_size * reg->stride * type_sz(reg->type) <= 32) {
-         brw_reg = brw_vecn_reg(inst->exec_size, brw_file_from_reg(reg),
-                                reg->nr, 0);
-         brw_reg = stride(brw_reg, inst->exec_size * reg->stride,
-                          inst->exec_size, reg->stride);
       } else {
          /* From the Haswell PRM:
           *
-          * VertStride must be used to cross GRF register boundaries. This
-          * rule implies that elements within a 'Width' cannot cross GRF
-          * boundaries.
+          *  "VertStride must be used to cross GRF register boundaries. This
+          *   rule implies that elements within a 'Width' cannot cross GRF
+          *   boundaries."
           *
-          * So, for registers that are large enough, we have to split the exec
-          * size in two and trust the compression state to sort it out.
+          * The maximum width value that could satisfy this restriction is:
           */
-         assert(inst->exec_size / 2 * reg->stride * type_sz(reg->type) <= 32);
-         brw_reg = brw_vecn_reg(inst->exec_size / 2, brw_file_from_reg(reg),
-                                reg->nr, 0);
-         brw_reg = stride(brw_reg, inst->exec_size / 2 * reg->stride,
-                          inst->exec_size / 2, reg->stride);
+         const unsigned reg_width = REG_SIZE / (reg->stride * type_sz(reg->type));
+
+         /* Because the hardware can only split source regions at a whole
+          * multiple of width during decompression (i.e. vertically), clamp
+          * the value obtained above to the physical execution size of a
+          * single decompressed chunk of the instruction:
+          */
+         const unsigned phys_width = compressed ? inst->exec_size / 2 :
+                                     inst->exec_size;
+
+         /* XXX - The equation above is strictly speaking not correct on
+          *       hardware that supports unbalanced GRF writes -- On Gen9+
+          *       each decompressed chunk of the instruction may have a
+          *       different execution size when the number of components
+          *       written to each destination GRF is not the same.
+          */
+         const unsigned width = MIN2(reg_width, phys_width);
+         brw_reg = brw_vecn_reg(width, brw_file_from_reg(reg), reg->nr, 0);
+         brw_reg = stride(brw_reg, width * reg->stride, width, reg->stride);
       }
 
       brw_reg = retype(brw_reg, reg->type);
