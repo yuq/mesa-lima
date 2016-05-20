@@ -4618,6 +4618,108 @@ fs_visitor::lower_logical_sends()
 }
 
 /**
+ * Get the closest allowed SIMD width for instruction \p inst accounting for
+ * some common regioning and execution control restrictions that apply to FPU
+ * instructions.  These restrictions don't necessarily have any relevance to
+ * instructions not executed by the FPU pipeline like extended math, control
+ * flow or send message instructions.
+ *
+ * For virtual opcodes it's really up to the instruction -- In some cases
+ * (e.g. where a virtual instruction unrolls into a simple sequence of FPU
+ * instructions) it may simplify virtual instruction lowering if we can
+ * enforce FPU-like regioning restrictions already on the virtual instruction,
+ * in other cases (e.g. virtual send-like instructions) this may be
+ * excessively restrictive.
+ */
+static unsigned
+get_fpu_lowered_simd_width(const struct brw_device_info *devinfo,
+                           const fs_inst *inst)
+{
+   /* Maximum execution size representable in the instruction controls. */
+   unsigned max_width = MIN2(32, inst->exec_size);
+
+   /* According to the PRMs:
+    *  "A. In Direct Addressing mode, a source cannot span more than 2
+    *      adjacent GRF registers.
+    *   B. A destination cannot span more than 2 adjacent GRF registers."
+    *
+    * Look for the source or destination with the largest register region
+    * which is the one that is going to limit the overall execution size of
+    * the instruction due to this rule.
+    */
+   unsigned reg_count = inst->regs_written;
+
+   for (unsigned i = 0; i < inst->sources; i++)
+      reg_count = MAX2(reg_count, (unsigned)inst->regs_read(i));
+
+   /* Calculate the maximum execution size of the instruction based on the
+    * factor by which it goes over the hardware limit of 2 GRFs.
+    */
+   if (reg_count > 2)
+      max_width = MIN2(max_width, inst->exec_size / DIV_ROUND_UP(reg_count, 2));
+
+   /* According to the IVB PRMs:
+    *  "When destination spans two registers, the source MUST span two
+    *   registers. The exception to the above rule:
+    *
+    *    - When source is scalar, the source registers are not incremented.
+    *    - When source is packed integer Word and destination is packed
+    *      integer DWord, the source register is not incremented but the
+    *      source sub register is incremented."
+    *
+    * The hardware specs from Gen4 to Gen7.5 mention similar regioning
+    * restrictions.  The code below intentionally doesn't check whether the
+    * destination type is integer because empirically the hardware doesn't
+    * seem to care what the actual type is as long as it's dword-aligned.
+    */
+   if (devinfo->gen < 8) {
+      for (unsigned i = 0; i < inst->sources; i++) {
+         if (inst->regs_written == 2 &&
+             inst->regs_read(i) != 0 && inst->regs_read(i) != 2 &&
+             !is_uniform(inst->src[i]) &&
+             !(type_sz(inst->dst.type) == 4 && inst->dst.stride == 1 &&
+               type_sz(inst->src[i].type) == 2 && inst->src[i].stride == 1))
+            max_width = MIN2(max_width, inst->exec_size /
+                             inst->regs_written);
+      }
+   }
+
+   /* From the IVB PRMs:
+    *  "When an instruction is SIMD32, the low 16 bits of the execution mask
+    *   are applied for both halves of the SIMD32 instruction. If different
+    *   execution mask channels are required, split the instruction into two
+    *   SIMD16 instructions."
+    *
+    * There is similar text in the HSW PRMs.  Gen4-6 don't even implement
+    * 32-wide control flow support in hardware and will behave similarly.
+    */
+   if (devinfo->gen < 8 && !inst->force_writemask_all)
+      max_width = MIN2(max_width, 16);
+
+   /* From the IVB PRMs (applies to HSW too):
+    *  "Instructions with condition modifiers must not use SIMD32."
+    *
+    * From the BDW PRMs (applies to later hardware too):
+    *  "Ternary instruction with condition modifiers must not use SIMD32."
+    */
+   if (inst->conditional_mod && (devinfo->gen < 8 || inst->is_3src(devinfo)))
+      max_width = MIN2(max_width, 16);
+
+   /* From the IVB PRMs (applies to other devices that don't have the
+    * brw_device_info::supports_simd16_3src flag set):
+    *  "In Align16 access mode, SIMD16 is not allowed for DW operations and
+    *   SIMD8 is not allowed for DF operations."
+    */
+   if (inst->is_3src(devinfo) && !devinfo->supports_simd16_3src)
+      max_width = MIN2(max_width, inst->exec_size / reg_count);
+
+   /* Only power-of-two execution sizes are representable in the instruction
+    * control fields.
+    */
+   return 1 << _mesa_logbase2(max_width);
+}
+
+/**
  * Get the closest native SIMD width supported by the hardware for instruction
  * \p inst.  The instruction will be left untouched by
  * fs_visitor::lower_simd_width() if the returned value is equal to the
@@ -4661,26 +4763,8 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case BRW_OPCODE_SAD2:
    case BRW_OPCODE_MAD:
    case BRW_OPCODE_LRP:
-   case FS_OPCODE_PACK: {
-      /* According to the PRMs:
-       *  "A. In Direct Addressing mode, a source cannot span more than 2
-       *      adjacent GRF registers.
-       *   B. A destination cannot span more than 2 adjacent GRF registers."
-       *
-       * Look for the source or destination with the largest register region
-       * which is the one that is going to limit the overal execution size of
-       * the instruction due to this rule.
-       */
-      unsigned reg_count = inst->regs_written;
-
-      for (unsigned i = 0; i < inst->sources; i++)
-         reg_count = MAX2(reg_count, (unsigned)inst->regs_read(i));
-
-      /* Calculate the maximum execution size of the instruction based on the
-       * factor by which it goes over the hardware limit of 2 GRFs.
-       */
-      return inst->exec_size / DIV_ROUND_UP(reg_count, 2);
-   }
+   case FS_OPCODE_PACK:
+      return get_fpu_lowered_simd_width(devinfo, inst);
 
    case SHADER_OPCODE_RCP:
    case SHADER_OPCODE_RSQ:
