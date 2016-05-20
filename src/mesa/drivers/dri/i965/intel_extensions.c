@@ -379,6 +379,14 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_query_buffer_object = true;
    }
 
+   if (brw->gen >= 8 || brw->is_baytrail) {
+      /* For now, we only enable OES_copy_image on platforms that support
+       * ETC2 natively in hardware.  We would need more hacks to support it
+       * elsewhere.
+       */
+      ctx->Extensions.OES_copy_image = true;
+   }
+
    if (brw->gen >= 8) {
       ctx->Extensions.ARB_shader_precision = true;
       ctx->Extensions.ARB_stencil_texturing = true;
