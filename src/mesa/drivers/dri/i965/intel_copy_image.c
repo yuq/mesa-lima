@@ -225,26 +225,6 @@ intel_copy_image_sub_data(struct gl_context *ctx,
 
    if (src_image) {
       src_mt = intel_texture_image(src_image)->mt;
-   } else {
-      assert(src_renderbuffer);
-      src_mt = intel_renderbuffer(src_renderbuffer)->mt;
-      src_image = src_renderbuffer->TexImage;
-   }
-
-   if (dst_image) {
-      dst_mt = intel_texture_image(dst_image)->mt;
-   } else {
-      assert(dst_renderbuffer);
-      dst_mt = intel_renderbuffer(dst_renderbuffer)->mt;
-      dst_image = dst_renderbuffer->TexImage;
-   }
-
-   if (src_mt->num_samples > 0 || dst_mt->num_samples > 0) {
-      _mesa_problem(ctx, "Failed to copy multisampled texture with meta path\n");
-      return;
-   }
-
-   if (src_image) {
       src_level = src_image->Level + src_image->TexObject->MinLevel;
 
       /* Cube maps actually have different images per face */
@@ -253,10 +233,15 @@ intel_copy_image_sub_data(struct gl_context *ctx,
 
       src_z += src_image->TexObject->MinLayer;
    } else {
+      assert(src_renderbuffer);
+      src_mt = intel_renderbuffer(src_renderbuffer)->mt;
+      src_image = src_renderbuffer->TexImage;
       src_level = 0;
    }
 
    if (dst_image) {
+      dst_mt = intel_texture_image(dst_image)->mt;
+
       dst_level = dst_image->Level + dst_image->TexObject->MinLevel;
 
       /* Cube maps actually have different images per face */
@@ -265,7 +250,15 @@ intel_copy_image_sub_data(struct gl_context *ctx,
 
       dst_z += dst_image->TexObject->MinLayer;
    } else {
+      assert(dst_renderbuffer);
+      dst_mt = intel_renderbuffer(dst_renderbuffer)->mt;
+      dst_image = dst_renderbuffer->TexImage;
       dst_level = 0;
+   }
+
+   if (src_mt->num_samples > 0 || dst_mt->num_samples > 0) {
+      _mesa_problem(ctx, "Failed to copy multisampled texture with BLORP\n");
+      return;
    }
 
    /* We are now going to try and copy the texture using the blitter.  If
