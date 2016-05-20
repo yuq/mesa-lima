@@ -281,7 +281,6 @@ void brw_svb_write(struct brw_codegen *p,
                    bool   send_commit_msg);
 
 void brw_fb_WRITE(struct brw_codegen *p,
-		  int dispatch_width,
 		   struct brw_reg payload,
 		   struct brw_reg implied_header,
 		   unsigned msg_control,

@@ -2342,7 +2342,6 @@ void brw_oword_block_read(struct brw_codegen *p,
 
 
 void brw_fb_WRITE(struct brw_codegen *p,
-		  int dispatch_width,
                   struct brw_reg payload,
                   struct brw_reg implied_header,
                   unsigned msg_control,
@@ -2358,7 +2357,7 @@ void brw_fb_WRITE(struct brw_codegen *p,
    unsigned msg_type;
    struct brw_reg dest, src0;
 
-   if (dispatch_width == 16)
+   if (brw_inst_exec_size(devinfo, p->current) >= BRW_EXECUTE_16)
       dest = retype(vec16(brw_null_reg()), BRW_REGISTER_TYPE_UW);
    else
       dest = retype(vec8(brw_null_reg()), BRW_REGISTER_TYPE_UW);

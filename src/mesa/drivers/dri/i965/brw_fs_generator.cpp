@@ -229,7 +229,6 @@ fs_generator::fire_fb_write(fs_inst *inst,
 
 
    brw_fb_WRITE(p,
-                dispatch_width,
                 payload,
                 implied_header,
                 msg_control,
@@ -547,7 +546,7 @@ fs_generator::generate_linterp(fs_inst *inst,
     * See also: emit_interpolation_setup_gen4().
     */
    struct brw_reg delta_x = src[0];
-   struct brw_reg delta_y = offset(src[0], dispatch_width / 8);
+   struct brw_reg delta_y = offset(src[0], inst->exec_size / 8);
    struct brw_reg interp = src[1];
 
    if (devinfo->has_pln &&
@@ -1211,10 +1210,11 @@ fs_generator::generate_varying_pull_constant_load_gen4(fs_inst *inst,
    uint32_t surf_index = index.ud;
 
    uint32_t simd_mode, rlen, msg_type;
-   if (dispatch_width == 16) {
+   if (inst->exec_size == 16) {
       simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD16;
       rlen = 8;
    } else {
+      assert(inst->exec_size == 8);
       simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD8;
       rlen = 4;
    }
@@ -1272,11 +1272,12 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
    assert(index.type == BRW_REGISTER_TYPE_UD);
 
    uint32_t simd_mode, rlen, mlen;
-   if (dispatch_width == 16) {
+   if (inst->exec_size == 16) {
       mlen = 2;
       rlen = 8;
       simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD16;
    } else {
+      assert(inst->exec_size == 8);
       mlen = 1;
       rlen = 4;
       simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD8;
@@ -1412,9 +1413,9 @@ fs_generator::generate_set_sample_id(fs_inst *inst,
           src0.type == BRW_REGISTER_TYPE_UD);
 
    struct brw_reg reg = stride(src1, 1, 4, 0);
-   if (devinfo->gen >= 8 || dispatch_width == 8) {
+   if (devinfo->gen >= 8 || inst->exec_size == 8) {
       brw_ADD(p, dst, src0, reg);
-   } else if (dispatch_width == 16) {
+   } else if (inst->exec_size == 16) {
       brw_push_insn_state(p);
       brw_set_default_exec_size(p, BRW_EXECUTE_8);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
