@@ -22,7 +22,6 @@
  */
 
 #include "anv_private.h"
-#include "brw_surface_formats.h"
 #include "vk_format_info.h"
 
 #define ISL_SWIZZLE(r, g, b, a) { \
@@ -303,21 +302,18 @@ anv_get_format(const struct brw_device_info *devinfo, VkFormat vk_format,
 // Format capabilities
 
 static VkFormatFeatureFlags
-get_image_format_properties(int gen, enum isl_format base,
-                            struct anv_format format)
+get_image_format_properties(const struct brw_device_info *devinfo,
+                            enum isl_format base, struct anv_format format)
 {
-   const struct brw_surface_format_info *info =
-      &surface_formats[format.isl_format];
-
-   if (format.isl_format == ISL_FORMAT_UNSUPPORTED || !info->exists)
+   if (format.isl_format == ISL_FORMAT_UNSUPPORTED)
       return 0;
 
    VkFormatFeatureFlags flags = 0;
-   if (info->sampling <= gen) {
+   if (isl_format_supports_sampling(devinfo, format.isl_format)) {
       flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
                VK_FORMAT_FEATURE_BLIT_SRC_BIT;
 
-      if (info->filtering <= gen)
+      if (isl_format_supports_filtering(devinfo, format.isl_format))
          flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
    }
 
@@ -325,12 +321,12 @@ get_image_format_properties(int gen, enum isl_format base,
     * moved, then blending won't work correctly.  The PRM tells us
     * straight-up not to render to such a surface.
     */
-   if (info->render_target <= gen &&
+   if (isl_format_supports_rendering(devinfo, format.isl_format) &&
        format.swizzle.a == ISL_CHANNEL_SELECT_ALPHA) {
       flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
                VK_FORMAT_FEATURE_BLIT_DST_BIT;
 
-      if (info->alpha_blend <= gen)
+      if (isl_format_supports_alpha_blending(devinfo, format.isl_format))
          flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
    }
 
@@ -347,18 +343,18 @@ get_image_format_properties(int gen, enum isl_format base,
 }
 
 static VkFormatFeatureFlags
-get_buffer_format_properties(int gen, enum isl_format format)
+get_buffer_format_properties(const struct brw_device_info *devinfo,
+                             enum isl_format format)
 {
-   const struct brw_surface_format_info *info = &surface_formats[format];
-
-   if (format == ISL_FORMAT_UNSUPPORTED || !info->exists)
+   if (format == ISL_FORMAT_UNSUPPORTED)
       return 0;
 
    VkFormatFeatureFlags flags = 0;
-   if (info->sampling <= gen && !isl_format_is_compressed(format))
+   if (isl_format_supports_sampling(devinfo, format) &&
+       !isl_format_is_compressed(format))
       flags |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
 
-   if (info->input_vb <= gen)
+   if (isl_format_supports_vertex_fetch(devinfo, format))
       flags |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
 
    if (isl_is_storage_image_format(format))
@@ -397,11 +393,12 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                                  VK_IMAGE_ASPECT_COLOR_BIT,
                                  VK_IMAGE_TILING_OPTIMAL);
 
-      linear = get_image_format_properties(gen, linear_fmt.isl_format,
-                                           linear_fmt);
-      tiled = get_image_format_properties(gen, linear_fmt.isl_format,
-                                          tiled_fmt);
-      buffer = get_buffer_format_properties(gen, linear_fmt.isl_format);
+      linear = get_image_format_properties(physical_device->info,
+                                           linear_fmt.isl_format, linear_fmt);
+      tiled = get_image_format_properties(physical_device->info,
+                                          linear_fmt.isl_format, tiled_fmt);
+      buffer = get_buffer_format_properties(physical_device->info,
+                                            linear_fmt.isl_format);
 
       /* XXX: We handle 3-channel formats by switching them out for RGBX or
        * RGBA formats behind-the-scenes.  This works fine for textures
