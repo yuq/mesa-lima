@@ -552,7 +552,7 @@ extern "C" int
 type_size_vs_input(const struct glsl_type *type)
 {
    if (type->is_double()) {
-      return type_size_vec4(type) / 2;
+      return type_size_dvec4(type);
    } else {
       return type_size_vec4(type);
    }

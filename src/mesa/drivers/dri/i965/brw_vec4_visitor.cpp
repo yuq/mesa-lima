@@ -566,18 +566,12 @@ vec4_visitor::emit_pack_snorm_4x8(const dst_reg &dst, const src_reg &src0)
    emit(VEC4_OPCODE_PACK_BYTES, dst, bytes);
 }
 
-/**
- * Returns the minimum number of vec4 elements needed to pack a type.
- *
- * For simple types, it will return 1 (a single vec4); for matrices, the
- * number of columns; for array and struct, the sum of the vec4_size of
- * each of its elements; and for sampler and atomic, zero.
- *
- * This method is useful to calculate how much register space is needed to
- * store a particular type.
+/*
+ * Returns the minimum number of vec4 (as_vec4 == true) or dvec4 (as_vec4 ==
+ * false) elements needed to pack a type.
  */
-extern "C" int
-type_size_vec4(const struct glsl_type *type)
+static int
+type_size_xvec4(const struct glsl_type *type, bool as_vec4)
 {
    unsigned int i;
    int size;
@@ -590,7 +584,8 @@ type_size_vec4(const struct glsl_type *type)
    case GLSL_TYPE_DOUBLE:
       if (type->is_matrix()) {
          const glsl_type *col_type = type->column_type();
-         unsigned col_slots = col_type->is_dual_slot_double() ? 2 : 1;
+         unsigned col_slots =
+            (as_vec4 && col_type->is_dual_slot_double()) ? 2 : 1;
          return type->matrix_columns * col_slots;
       } else {
          /* Regardless of size of vector, it gets a vec4. This is bad
@@ -598,15 +593,15 @@ type_size_vec4(const struct glsl_type *type)
           * mess.  Hopefully a later pass over the code can pack scalars
           * down if appropriate.
           */
-         return type->is_dual_slot_double() ? 2 : 1;
+         return (as_vec4 && type->is_dual_slot_double()) ? 2 : 1;
       }
    case GLSL_TYPE_ARRAY:
       assert(type->length > 0);
-      return type_size_vec4(type->fields.array) * type->length;
+      return type_size_xvec4(type->fields.array, as_vec4) * type->length;
    case GLSL_TYPE_STRUCT:
       size = 0;
       for (i = 0; i < type->length; i++) {
-	 size += type_size_vec4(type->fields.structure[i].type);
+	 size += type_size_xvec4(type->fields.structure[i].type, as_vec4);
       }
       return size;
    case GLSL_TYPE_SUBROUTINE:
@@ -629,6 +624,47 @@ type_size_vec4(const struct glsl_type *type)
    }
 
    return 0;
+}
+
+/**
+ * Returns the minimum number of vec4 elements needed to pack a type.
+ *
+ * For simple types, it will return 1 (a single vec4); for matrices, the
+ * number of columns; for array and struct, the sum of the vec4_size of
+ * each of its elements; and for sampler and atomic, zero.
+ *
+ * This method is useful to calculate how much register space is needed to
+ * store a particular type.
+ */
+extern "C" int
+type_size_vec4(const struct glsl_type *type)
+{
+   return type_size_xvec4(type, true);
+}
+
+/**
+ * Returns the minimum number of dvec4 elements needed to pack a type.
+ *
+ * For simple types, it will return 1 (a single dvec4); for matrices, the
+ * number of columns; for array and struct, the sum of the dvec4_size of
+ * each of its elements; and for sampler and atomic, zero.
+ *
+ * This method is useful to calculate how much register space is needed to
+ * store a particular type.
+ *
+ * Measuring double-precision vertex inputs as dvec4 is required because
+ * ARB_vertex_attrib_64bit states that these uses the same number of locations
+ * than the single-precision version. That is, two consecutives dvec4 would be
+ * located in location "x" and location "x+1", not "x+2".
+ *
+ * In order to map vec4/dvec4 vertex inputs in the proper ATTRs,
+ * remap_vs_attrs() will take in account both the location and also if the
+ * type fits in one or two vec4 slots.
+ */
+extern "C" int
+type_size_dvec4(const struct glsl_type *type)
+{
+   return type_size_xvec4(type, false);
 }
 
 src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type)

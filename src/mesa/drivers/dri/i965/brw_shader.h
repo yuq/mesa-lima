@@ -293,6 +293,7 @@ struct gl_shader *brw_new_shader(struct gl_context *ctx, GLuint name, GLuint typ
 
 int type_size_scalar(const struct glsl_type *type);
 int type_size_vec4(const struct glsl_type *type);
+int type_size_dvec4(const struct glsl_type *type);
 int type_size_vec4_times_4(const struct glsl_type *type);
 int type_size_vs_input(const struct glsl_type *type);
 
