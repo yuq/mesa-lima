@@ -149,13 +149,18 @@ unop("imov", tint, "src0")
 unop("ineg", tint, "-src0")
 unop("fneg", tfloat, "-src0")
 unop("inot", tint, "~src0") # invert every bit of the integer
-unop("fnot", tfloat, "(src0 == 0.0f) ? 1.0f : 0.0f")
-unop("fsign", tfloat, "(src0 == 0.0f) ? 0.0f : ((src0 > 0.0f) ? 1.0f : -1.0f)")
+unop("fnot", tfloat, ("bit_size == 64 ? ((src0 == 0.0) ? 1.0 : 0.0f) : " +
+                      "((src0 == 0.0f) ? 1.0f : 0.0f)"))
+unop("fsign", tfloat, ("bit_size == 64 ? " +
+                       "((src0 == 0.0) ? 0.0 : ((src0 > 0.0) ? 1.0 : -1.0)) : " +
+                       "((src0 == 0.0f) ? 0.0f : ((src0 > 0.0f) ? 1.0f : -1.0f))"))
 unop("isign", tint, "(src0 == 0) ? 0 : ((src0 > 0) ? 1 : -1)")
 unop("iabs", tint, "(src0 < 0) ? -src0 : src0")
 unop("fabs", tfloat, "bit_size == 64 ? fabs(src0) : fabsf(src0)")
-unop("fsat", tfloat, "(src0 > 1.0f) ? 1.0f : ((src0 <= 0.0f) ? 0.0f : src0)")
-unop("frcp", tfloat, "1.0f / src0")
+unop("fsat", tfloat, ("bit_size == 64 ? " +
+                      "((src0 > 1.0) ? 1.0 : ((src0 <= 0.0) ? 0.0 : src0)) : " +
+                      "((src0 > 1.0f) ? 1.0f : ((src0 <= 0.0f) ? 0.0f : src0))"))
+unop("frcp", tfloat, "bit_size == 64 ? 1.0 / src0 : 1.0f / src0")
 unop("frsq", tfloat, "bit_size == 64 ? 1.0 / sqrt(src0) : 1.0f / sqrtf(src0)")
 unop("fsqrt", tfloat, "bit_size == 64 ? sqrt(src0) : sqrtf(src0)")
 unop("fexp2", tfloat, "exp2f(src0)")
