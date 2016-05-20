@@ -97,13 +97,20 @@ struct FETCH_COMPILE_STATE
     SWR_FORMAT indexType;
     uint32_t cutIndex{ 0xffffffff };
 
+    bool                InstanceIdEnable;
+    uint32_t            InstanceIdElementOffset;
+    uint32_t            InstanceIdComponentNumber;
+    bool                VertexIdEnable;
+    uint32_t            VertexIdElementOffset;
+    uint32_t            VertexIdComponentNumber;
+
     // Options that effect the JIT'd code
     bool bDisableVGATHER;           // if enabled, FetchJit will generate loads/shuffles instead of VGATHERs
     bool bDisableIndexOOBCheck;     // if enabled, FetchJit will exclude index OOB check
     bool bEnableCutIndex{ false };  // compares indices with the cut index and returns a cut mask
 
-    FETCH_COMPILE_STATE(bool useVGATHER = false, bool indexOOBCheck = false) :
-        bDisableVGATHER(useVGATHER), bDisableIndexOOBCheck(indexOOBCheck){};
+    FETCH_COMPILE_STATE(bool disableVGATHER = false, bool diableIndexOOBCheck = false):
+        bDisableVGATHER(disableVGATHER), bDisableIndexOOBCheck(diableIndexOOBCheck){ };
 
     bool operator==(const FETCH_COMPILE_STATE &other) const
     {
@@ -113,6 +120,19 @@ struct FETCH_COMPILE_STATE
         if (bDisableIndexOOBCheck != other.bDisableIndexOOBCheck) return false;
         if (bEnableCutIndex != other.bEnableCutIndex) return false;
         if (cutIndex != other.cutIndex) return false;
+
+        if (InstanceIdEnable != other.InstanceIdEnable) return false;
+        if (InstanceIdEnable)
+        {
+            if (InstanceIdComponentNumber != other.InstanceIdComponentNumber) return false;
+            if (InstanceIdElementOffset != other.InstanceIdElementOffset) return false;
+        }
+        if (VertexIdEnable != other.VertexIdEnable) return false;
+        if (VertexIdEnable)
+        {
+            if (VertexIdComponentNumber != other.VertexIdComponentNumber) return false;
+            if (VertexIdElementOffset != other.VertexIdElementOffset) return false;
+        }
 
         for(uint32_t i = 0; i < numAttribs; ++i)
         {

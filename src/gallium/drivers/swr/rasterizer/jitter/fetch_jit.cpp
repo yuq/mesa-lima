@@ -61,13 +61,14 @@ struct FetchJit : public Builder
     Value* GetSimdValid8bitIndices(Value* vIndices, Value* pLastIndex);
 
     // package up Shuffle*bpcGatherd args into a tuple for convenience
-    typedef std::tuple<Value*&, Value*, const Instruction::CastOps, const ConversionType, 
-                       uint32_t&, uint32_t&, const ComponentEnable, const ComponentControl(&)[4], Value*(&)[4],
-                       const uint32_t (&)[4]> Shuffle8bpcArgs;
+    typedef std::tuple<Value*&, Value*, const Instruction::CastOps, const ConversionType,
+        uint32_t&, uint32_t&, const ComponentEnable, const ComponentControl(&)[4], Value*(&)[4],
+        const uint32_t(&)[4], Value*, bool, uint32_t, bool, uint32_t> Shuffle8bpcArgs;
     void Shuffle8bpcGatherd(Shuffle8bpcArgs &args);
 
     typedef std::tuple<Value*(&)[2], Value*, const Instruction::CastOps, const ConversionType,
-                       uint32_t&, uint32_t&, const ComponentEnable, const ComponentControl(&)[4], Value*(&)[4]> Shuffle16bpcArgs;
+        uint32_t&, uint32_t&, const ComponentEnable, const ComponentControl(&)[4], Value*(&)[4],
+        Value*, bool, uint32_t, bool, uint32_t> Shuffle16bpcArgs;
     void Shuffle16bpcGather(Shuffle16bpcArgs &args);
 
     void StoreVertexElements(Value* pVtxOut, const uint32_t outputElt, const uint32_t numEltsToStore, Value* (&vVertexElements)[4]);
@@ -226,7 +227,7 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 /// @brief Loads attributes from memory using LOADs, shuffling the 
 /// components into SOA form. 
 /// *Note* currently does not support component control,
-/// component packing, or instancing
+/// component packing, instancing, InstanceID SGVs, or VertexID SGVs
 /// @param fetchState - info about attributes to be fetched from memory
 /// @param streams - value pointer to the current vertex stream
 /// @param vIndices - vector value of indices to load
@@ -786,6 +787,23 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
             CreateGatherOddFormats((SWR_FORMAT)ied.Format, pStreamBase, vOffsets, pResults);
             ConvertFormat((SWR_FORMAT)ied.Format, pResults);
 
+            // check for InstanceID SGV
+            if (fetchState.InstanceIdEnable && (fetchState.InstanceIdElementOffset == nInputElt))
+            {
+                SWR_ASSERT(fetchState.InstanceIdComponentNumber < (sizeof(pResults) / sizeof(pResults[0])));
+
+                // Load a SIMD of InstanceIDs
+                pResults[fetchState.InstanceIdComponentNumber] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));    // InstanceID
+            }
+            // check for VertexID SGV
+            else if (fetchState.VertexIdEnable && (fetchState.VertexIdElementOffset == nInputElt))
+            {
+                SWR_ASSERT(fetchState.VertexIdComponentNumber < (sizeof(pResults) / sizeof(pResults[0])));
+
+                // Load a SIMD of VertexIDs
+                pResults[fetchState.VertexIdComponentNumber] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
+            }
+
             StoreVertexElements(pVtxOut, outputElt++, 4, pResults);
             currentVertexElement = 0;
         }
@@ -832,8 +850,13 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
 
                     // if we have at least one component to shuffle into place
                     if(compMask){
+                        const bool instanceIdEnable = (fetchState.InstanceIdEnable) && (fetchState.InstanceIdElementOffset == nInputElt);
+                        const bool vertexIdEnable = (fetchState.VertexIdEnable) && (fetchState.VertexIdElementOffset == nInputElt);
+
                         Shuffle16bpcArgs args = std::forward_as_tuple(vGatherResult, pVtxOut, Instruction::CastOps::FPExt, CONVERT_NONE,
-                                                                      currentVertexElement, outputElt, compMask, compCtrl, vVertexElements);
+                            currentVertexElement, outputElt, compMask, compCtrl, vVertexElements, fetchInfo, instanceIdEnable,
+                            fetchState.InstanceIdComponentNumber, vertexIdEnable, fetchState.VertexIdComponentNumber);
+
                         // Shuffle gathered components into place in simdvertex struct
                         Shuffle16bpcGather(args);  // outputs to vVertexElements ref
                     }
@@ -841,30 +864,43 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
                     break;
                 case 32:
                 {
-                    for(uint32_t i = 0; i < 4; i++)
+                    for (uint32_t i = 0; i < 4; i++)
                     {
-                        if(!isComponentEnabled(compMask, i)){
-                            // offset base to the next component in the vertex to gather
-                            pStreamBase = GEP(pStreamBase, C((char)4));
-                            continue;
-                        }
+                        if (isComponentEnabled(compMask, i))
+                        {
+                            // check for InstanceID SGV
+                            if ((fetchState.InstanceIdEnable) && (fetchState.InstanceIdElementOffset == nInputElt) && (fetchState.InstanceIdComponentNumber == currentVertexElement))
+                            {
+                                // Load a SIMD of InstanceIDs
+                                vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
+                            }
+                            // check for VertexID SGV
+                            else if ((fetchState.VertexIdEnable) && (fetchState.VertexIdElementOffset == nInputElt) && (fetchState.VertexIdComponentNumber == currentVertexElement))
+                            {
+                                // Load a SIMD of VertexIDs
+                                vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
+                            }
+                            // if we need to gather the component
+                            else if (compCtrl[i] == StoreSrc)
+                            {
+                                // save mask as it is zero'd out after each gather
+                                Value *vMask = vGatherMask;
 
-                        // if we need to gather the component
-                        if(compCtrl[i] == StoreSrc){
-                            // save mask as it is zero'd out after each gather
-                            Value *vMask = vGatherMask;
+                                // Gather a SIMD of vertices
+                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vMask, C((char)1));
+                            }
+                            else
+                            {
+                                vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
+                            }
 
-                            // Gather a SIMD of vertices
-                            vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vMask, C((char)1));
-                        }
-                        else{
-                            vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
-                        }
+                            if (currentVertexElement > 3)
+                            {
+                                StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
+                                // reset to the next vVertexElement to output
+                                currentVertexElement = 0;
+                            }
 
-                        if(currentVertexElement > 3){
-                            StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
-                            // reset to the next vVertexElement to output
-                            currentVertexElement = 0;
                         }
 
                         // offset base to the next component in the vertex to gather
@@ -918,14 +954,20 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
                 case 8:
                 {
                     // if we have at least one component to fetch
-                    if(compMask){
+                    if(compMask)
+                    {
                         Value* vGatherResult = GATHERDD(gatherSrc, pStreamBase, vOffsets, vGatherMask, C((char)1));
                         // e.g. result of an 8x32bit integer gather for 8bit components
                         // 256i - 0    1    2    3    4    5    6    7
                         //        xyzw xyzw xyzw xyzw xyzw xyzw xyzw xyzw 
 
+                        const bool instanceIdEnable = fetchState.InstanceIdEnable && (fetchState.InstanceIdElementOffset == nInputElt);
+                        const bool vertexIdEnable = fetchState.VertexIdEnable && (fetchState.VertexIdElementOffset == nInputElt);
+
                         Shuffle8bpcArgs args = std::forward_as_tuple(vGatherResult, pVtxOut, extendCastType, conversionType,
-                                                                     currentVertexElement, outputElt, compMask, compCtrl, vVertexElements, info.swizzle);
+                            currentVertexElement, outputElt, compMask, compCtrl, vVertexElements, info.swizzle, fetchInfo,
+                            instanceIdEnable, fetchState.InstanceIdComponentNumber, vertexIdEnable, fetchState.VertexIdComponentNumber);
+
                         // Shuffle gathered components into place in simdvertex struct
                         Shuffle8bpcGatherd(args); // outputs to vVertexElements ref
                     }
@@ -963,8 +1005,13 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
 
                     // if we have at least one component to shuffle into place
                     if(compMask){
+                        const bool instanceIdEnable = fetchState.InstanceIdEnable && (fetchState.InstanceIdElementOffset == nInputElt);
+                        const bool vertexIdEnable = fetchState.VertexIdEnable && (fetchState.VertexIdElementOffset == nInputElt);
+
                         Shuffle16bpcArgs args = std::forward_as_tuple(vGatherResult, pVtxOut, extendCastType, conversionType,
-                                                                      currentVertexElement, outputElt, compMask, compCtrl, vVertexElements);
+                            currentVertexElement, outputElt, compMask, compCtrl, vVertexElements, fetchInfo, instanceIdEnable,
+                            fetchState.InstanceIdComponentNumber, vertexIdEnable, fetchState.VertexIdComponentNumber);
+
                         // Shuffle gathered components into place in simdvertex struct
                         Shuffle16bpcGather(args);  // outputs to vVertexElements ref
                     }
@@ -975,33 +1022,46 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
                     SWR_ASSERT(conversionType == CONVERT_NONE);
 
                     // Gathered components into place in simdvertex struct
-                    for(uint32_t i = 0; i < 4; i++)
+                    for (uint32_t i = 0; i < 4; i++)
                     {
-                        if(!isComponentEnabled(compMask, i)){
-                            // offset base to the next component in the vertex to gather
-                            pStreamBase = GEP(pStreamBase, C((char)4));
-                            continue;
-                        }
+                        if (isComponentEnabled(compMask, i))
+                        {
+                            // check for InstanceID SGV
+                            if (fetchState.InstanceIdEnable && (fetchState.InstanceIdElementOffset == nInputElt) && (fetchState.InstanceIdComponentNumber == currentVertexElement))
+                            {
+                                // Load a SIMD of InstanceIDs
+                                vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
+                            }
+                            // check for VertexID SGV
+                            else if (fetchState.VertexIdEnable && (fetchState.VertexIdElementOffset == nInputElt) && (fetchState.VertexIdComponentNumber == currentVertexElement))
+                            {
+                                // Load a SIMD of VertexIDs
+                                vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
+                            }
+                            // if we need to gather the component
+                            else if (compCtrl[i] == StoreSrc)
+                            {
+                                // save mask as it is zero'd out after each gather
+                                Value *vMask = vGatherMask;
 
-                        // if we need to gather the component
-                        if(compCtrl[i] == StoreSrc){
-                            // save mask as it is zero'd out after each gather
-                            Value *vMask = vGatherMask;
+                                vVertexElements[currentVertexElement++] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask, C((char)1));
 
-                            vVertexElements[currentVertexElement++] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask, C((char)1));
+                                // e.g. result of a single 8x32bit integer gather for 32bit components
+                                // 256i - 0    1    2    3    4    5    6    7
+                                //        xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx 
+                            }
+                            else
+                            {
+                                vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
+                            }
 
-                            // e.g. result of a single 8x32bit integer gather for 32bit components
-                            // 256i - 0    1    2    3    4    5    6    7
-                            //        xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx 
-                        }
-                        else{
-                            vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
-                        }
+                            if (currentVertexElement > 3)
+                            {
+                                StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
+                                // reset to the next vVertexElement to output
+                                currentVertexElement = 0;
+                            }
 
-                        if(currentVertexElement > 3){
-                            StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
-                            // reset to the next vVertexElement to output
-                            currentVertexElement = 0;
                         }
 
                         // offset base to the next component  in the vertex to gather
@@ -1140,6 +1200,11 @@ Value* FetchJit::GetSimdValid32bitIndices(Value* pIndices, Value* pLastIndex)
 ///   @param compCtrl - component control val
 ///   @param vVertexElements[4] - vertex components to output
 ///   @param swizzle[4] - component swizzle location
+///   @param fetchInfo - fetch shader info
+///   @param instanceIdEnable - InstanceID enabled?
+///   @param instanceIdComponentNumber - InstanceID component override
+///   @param vertexIdEnable - VertexID enabled?
+///   @param vertexIdComponentNumber - VertexID component override
 void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
 {
     // Unpack tuple args
@@ -1153,6 +1218,11 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
     const ComponentControl (&compCtrl)[4] = std::get<7>(args);
     Value* (&vVertexElements)[4] = std::get<8>(args);
     const uint32_t (&swizzle)[4] = std::get<9>(args);
+    Value *fetchInfo = std::get<10>(args);
+    const bool instanceIdEnable = std::get<11>(args);
+    const uint32_t instanceIdComponentNumber = std::get<12>(args);
+    const bool vertexIdEnable = std::get<13>(args);
+    const uint32_t vertexIdComponentNumber = std::get<14>(args);
 
     // cast types
     Type* vGatherTy = mSimdInt32Ty;
@@ -1219,34 +1289,50 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
         }
 
         // sign extend all enabled components. If we have a fill vVertexElements, output to current simdvertex
-        for(uint32_t i = 0; i < 4; i++){
-            if(!isComponentEnabled(compMask, i)){
-                continue;
-            }
-
-            if(compCtrl[i] == ComponentControl::StoreSrc){
-                // if x or z, extract 128bits from lane 0, else for y or w, extract from lane 1
-                uint32_t lane = ((i == 0) || (i == 2)) ? 0 : 1; 
-                // if x or y, use vi128XY permute result, else use vi128ZW
-                Value* selectedPermute = (i < 2) ? vi128XY : vi128ZW;
-            
-                // sign extend
-                vVertexElements[currentVertexElement] = PMOVSXBD(BITCAST(VEXTRACT(selectedPermute, C(lane)), v16x8Ty));
-
-                // denormalize if needed
-                if(conversionType != CONVERT_NONE){
-                    vVertexElements[currentVertexElement] = FMUL(CAST(fpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
+        for (uint32_t i = 0; i < 4; i++)
+        {
+            if (isComponentEnabled(compMask, i))
+            {
+                // check for InstanceID SGV
+                if (instanceIdEnable && (instanceIdComponentNumber == currentVertexElement))
+                {
+                    // Load a SIMD of InstanceIDs
+                    vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
                 }
-                currentVertexElement++;
-            }
-            else{
-                vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
-            }
+                // check for VertexID SGV
+                else if (vertexIdEnable && (vertexIdComponentNumber == currentVertexElement))
+                {
+                    // Load a SIMD of VertexIDs
+                    vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
+                }
+                else if (compCtrl[i] == ComponentControl::StoreSrc)
+                {
+                    // if x or z, extract 128bits from lane 0, else for y or w, extract from lane 1
+                    uint32_t lane = ((i == 0) || (i == 2)) ? 0 : 1;
+                    // if x or y, use vi128XY permute result, else use vi128ZW
+                    Value* selectedPermute = (i < 2) ? vi128XY : vi128ZW;
 
-            if(currentVertexElement > 3){
-                StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
-                // reset to the next vVertexElement to output
-                currentVertexElement = 0;
+                    // sign extend
+                    vVertexElements[currentVertexElement] = PMOVSXBD(BITCAST(VEXTRACT(selectedPermute, C(lane)), v16x8Ty));
+
+                    // denormalize if needed
+                    if (conversionType != CONVERT_NONE)
+                    {
+                        vVertexElements[currentVertexElement] = FMUL(CAST(fpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
+                    }
+                    currentVertexElement++;
+                }
+                else
+                {
+                    vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
+                }
+
+                if (currentVertexElement > 3)
+                {
+                    StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
+                    // reset to the next vVertexElement to output
+                    currentVertexElement = 0;
+                }
             }
         }
     }
@@ -1278,59 +1364,76 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
         }
 
         // shuffle enabled components into lower byte of each 32bit lane, 0 extending to 32 bits
-        for(uint32_t i = 0; i < 4; i++){
-            if(!isComponentEnabled(compMask, i)){
-                continue;
-            }
-
-            if(compCtrl[i] == ComponentControl::StoreSrc){
-                // pshufb masks for each component
-                Value* vConstMask;
-                switch(swizzle[i]){
+        for (uint32_t i = 0; i < 4; i++)
+        {
+            if (isComponentEnabled(compMask, i))
+            {
+                // check for InstanceID SGV
+                if (instanceIdEnable && (instanceIdComponentNumber == currentVertexElement))
+                {
+                    // Load a SIMD of InstanceIDs
+                    vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
+                }
+                // check for VertexID SGV
+                else if (vertexIdEnable && (vertexIdComponentNumber == currentVertexElement))
+                {
+                    // Load a SIMD of VertexIDs
+                    vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
+                }
+                else if (compCtrl[i] == ComponentControl::StoreSrc)
+                {
+                    // pshufb masks for each component
+                    Value* vConstMask;
+                    switch (swizzle[i])
+                    {
                     case 0:
                         // x shuffle mask
-                        vConstMask = C<char>({0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1,
-                                              0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1});
+                        vConstMask = C<char>({ 0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1,
+                                               0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1 });
                         break;
                     case 1:
                         // y shuffle mask
-                        vConstMask = C<char>({1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1,
-                                              1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1});
+                        vConstMask = C<char>({ 1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1,
+                                               1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1 });
                         break;
                     case 2:
                         // z shuffle mask
-                        vConstMask = C<char>({2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1,
-                                              2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1});
+                        vConstMask = C<char>({ 2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1,
+                                               2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1 });
                         break;
                     case 3:
                         // w shuffle mask
-                        vConstMask = C<char>({3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1,
-                                              3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1});
+                        vConstMask = C<char>({ 3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1,
+                                               3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1 });
                         break;
                     default:
                         vConstMask = nullptr;
                         break;
+                    }
+
+                    vVertexElements[currentVertexElement] = BITCAST(PSHUFB(BITCAST(vGatherResult, v32x8Ty), vConstMask), vGatherTy);
+                    // after pshufb for x channel
+                    // 256i - 0    1    2    3    4    5    6    7
+                    //        x000 x000 x000 x000 x000 x000 x000 x000 
+
+                    // denormalize if needed
+                    if (conversionType != CONVERT_NONE)
+                    {
+                        vVertexElements[currentVertexElement] = FMUL(CAST(fpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
+                    }
+                    currentVertexElement++;
+                }
+                else
+                {
+                    vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
                 }
 
-                vVertexElements[currentVertexElement] = BITCAST(PSHUFB(BITCAST(vGatherResult, v32x8Ty), vConstMask), vGatherTy);
-                // after pshufb for x channel
-                // 256i - 0    1    2    3    4    5    6    7
-                //        x000 x000 x000 x000 x000 x000 x000 x000 
-
-                // denormalize if needed
-                if (conversionType != CONVERT_NONE){
-                    vVertexElements[currentVertexElement] = FMUL(CAST(fpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
+                if (currentVertexElement > 3)
+                {
+                    StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
+                    // reset to the next vVertexElement to output
+                    currentVertexElement = 0;
                 }
-                currentVertexElement++;
-            }
-            else{
-                vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
-            }
-
-            if(currentVertexElement > 3){
-                StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
-                // reset to the next vVertexElement to output
-                currentVertexElement = 0;
             }
         }
     }
@@ -1354,6 +1457,11 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
 ///   @param compMask - component packing mask
 ///   @param compCtrl - component control val
 ///   @param vVertexElements[4] - vertex components to output
+///   @param fetchInfo - fetch shader info
+///   @param instanceIdEnable - InstanceID enabled?
+///   @param instanceIdComponentNumber - InstanceID component override
+///   @param vertexIdEnable - VertexID enabled?
+///   @param vertexIdComponentNumber - VertexID component override
 void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
 {
     // Unpack tuple args
@@ -1366,6 +1474,11 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
     const ComponentEnable compMask = std::get<6>(args);
     const ComponentControl(&compCtrl)[4] = std::get<7>(args);
     Value* (&vVertexElements)[4] = std::get<8>(args);
+    Value *fetchInfo = std::get<9>(args);
+    const bool instanceIdEnable = std::get<10>(args);
+    const uint32_t instanceIdComponentNumber = std::get<11>(args);
+    const bool vertexIdEnable = std::get<12>(args);
+    const uint32_t vertexIdComponentNumber = std::get<13>(args);
 
     // cast types
     Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), mVWidth);
@@ -1429,43 +1542,57 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
         }
 
         // sign extend all enabled components. If we have a fill vVertexElements, output to current simdvertex
-        for(uint32_t i = 0; i < 4; i++){
-            if(!isComponentEnabled(compMask, i)){
-                continue;
-            }
-
-            if(compCtrl[i] == ComponentControl::StoreSrc){
-                // if x or z, extract 128bits from lane 0, else for y or w, extract from lane 1
-                uint32_t lane = ((i == 0) || (i == 2)) ? 0 : 1;
-                // if x or y, use vi128XY permute result, else use vi128ZW
-                Value* selectedPermute = (i < 2) ? vi128XY : vi128ZW;
-                
-                if(bFP) {
-                    // extract 128 bit lanes to sign extend each component
-                    vVertexElements[currentVertexElement] = CVTPH2PS(BITCAST(VEXTRACT(selectedPermute, C(lane)), v8x16Ty));
+        for (uint32_t i = 0; i < 4; i++)
+        {
+            if (isComponentEnabled(compMask, i))
+            {
+                // check for InstanceID SGV
+                if (instanceIdEnable && (instanceIdComponentNumber == currentVertexElement))
+                {
+                    // Load a SIMD of InstanceIDs
+                    vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
                 }
-                else {
-                    // extract 128 bit lanes to sign extend each component
-                    vVertexElements[currentVertexElement] = PMOVSXWD(BITCAST(VEXTRACT(selectedPermute, C(lane)), v8x16Ty));
+                // check for VertexID SGV
+                else if (vertexIdEnable && (vertexIdComponentNumber == currentVertexElement))
+                {
+                    // Load a SIMD of VertexIDs
+                    vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
+                }
+                else if (compCtrl[i] == ComponentControl::StoreSrc)
+                {
+                    // if x or z, extract 128bits from lane 0, else for y or w, extract from lane 1
+                    uint32_t lane = ((i == 0) || (i == 2)) ? 0 : 1;
+                    // if x or y, use vi128XY permute result, else use vi128ZW
+                    Value* selectedPermute = (i < 2) ? vi128XY : vi128ZW;
 
-                    // denormalize if needed
-                    if(conversionType != CONVERT_NONE){
-                        vVertexElements[currentVertexElement] = FMUL(CAST(IntToFpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
+                    if (bFP) {
+                        // extract 128 bit lanes to sign extend each component
+                        vVertexElements[currentVertexElement] = CVTPH2PS(BITCAST(VEXTRACT(selectedPermute, C(lane)), v8x16Ty));
                     }
-                }
-                currentVertexElement++;
-            }
-            else{
-                vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
-            }
+                    else {
+                        // extract 128 bit lanes to sign extend each component
+                        vVertexElements[currentVertexElement] = PMOVSXWD(BITCAST(VEXTRACT(selectedPermute, C(lane)), v8x16Ty));
 
-            if(currentVertexElement > 3){
-                StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
-                // reset to the next vVertexElement to output
-                currentVertexElement = 0;
+                        // denormalize if needed
+                        if (conversionType != CONVERT_NONE) {
+                            vVertexElements[currentVertexElement] = FMUL(CAST(IntToFpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
+                        }
+                    }
+                    currentVertexElement++;
+                }
+                else
+                {
+                    vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
+                }
+
+                if (currentVertexElement > 3)
+                {
+                    StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
+                    // reset to the next vVertexElement to output
+                    currentVertexElement = 0;
+                }
             }
         }
-
     }
     // else zero extend
     else if ((extendType == Instruction::CastOps::ZExt) || (extendType == Instruction::CastOps::UIToFP))
@@ -1509,36 +1636,52 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
         }
 
         // shuffle enabled components into lower word of each 32bit lane, 0 extending to 32 bits
-        for(uint32_t i = 0; i < 4; i++){
-            if(!isComponentEnabled(compMask, i)){
-                continue;
-            }
-
-            if(compCtrl[i] == ComponentControl::StoreSrc){
-                // select correct constMask for x/z or y/w pshufb
-                uint32_t selectedMask = ((i == 0) || (i == 2)) ? 0 : 1;
-                // if x or y, use vi128XY permute result, else use vi128ZW
-                uint32_t selectedGather = (i < 2) ? 0 : 1;
-
-                vVertexElements[currentVertexElement] = BITCAST(PSHUFB(BITCAST(vGatherResult[selectedGather], v32x8Ty), vConstMask[selectedMask]), vGatherTy);
-                // after pshufb mask for x channel; z uses the same shuffle from the second gather
-                // 256i - 0    1    2    3    4    5    6    7
-                //        xx00 xx00 xx00 xx00 xx00 xx00 xx00 xx00 
-
-                // denormalize if needed
-                if(conversionType != CONVERT_NONE){
-                    vVertexElements[currentVertexElement] = FMUL(CAST(fpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
+        for (uint32_t i = 0; i < 4; i++)
+        {
+            if (isComponentEnabled(compMask, i))
+            {
+                // check for InstanceID SGV
+                if (instanceIdEnable && (instanceIdComponentNumber == currentVertexElement))
+                {
+                    // Load a SIMD of InstanceIDs
+                    vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
                 }
-                currentVertexElement++;
-            }
-            else{
-                vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
-            }
+                // check for VertexID SGV
+                else if (vertexIdEnable && (vertexIdComponentNumber == currentVertexElement))
+                {
+                    // Load a SIMD of VertexIDs
+                    vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
+                }
+                else if (compCtrl[i] == ComponentControl::StoreSrc)
+                {
+                    // select correct constMask for x/z or y/w pshufb
+                    uint32_t selectedMask = ((i == 0) || (i == 2)) ? 0 : 1;
+                    // if x or y, use vi128XY permute result, else use vi128ZW
+                    uint32_t selectedGather = (i < 2) ? 0 : 1;
 
-            if(currentVertexElement > 3){
-                StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
-                // reset to the next vVertexElement to output
-                currentVertexElement = 0;
+                    vVertexElements[currentVertexElement] = BITCAST(PSHUFB(BITCAST(vGatherResult[selectedGather], v32x8Ty), vConstMask[selectedMask]), vGatherTy);
+                    // after pshufb mask for x channel; z uses the same shuffle from the second gather
+                    // 256i - 0    1    2    3    4    5    6    7
+                    //        xx00 xx00 xx00 xx00 xx00 xx00 xx00 xx00 
+
+                    // denormalize if needed
+                    if (conversionType != CONVERT_NONE)
+                    {
+                        vVertexElements[currentVertexElement] = FMUL(CAST(fpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
+                    }
+                    currentVertexElement++;
+                }
+                else
+                {
+                    vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
+                }
+
+                if (currentVertexElement > 3)
+                {
+                    StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
+                    // reset to the next vVertexElement to output
+                    currentVertexElement = 0;
+                }
             }
         }
     }
