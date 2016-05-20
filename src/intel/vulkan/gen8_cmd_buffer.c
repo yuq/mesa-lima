@@ -391,6 +391,8 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
    }
 
    cmd_buffer->state.compute_dirty = 0;
+
+   genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
 }
 
 void genX(CmdSetEvent)(

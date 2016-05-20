@@ -127,6 +127,7 @@ anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
 
    state->dirty = 0;
    state->vb_dirty = 0;
+   state->pending_pipe_bits = 0;
    state->descriptors_dirty = 0;
    state->push_constants_dirty = 0;
    state->pipeline = NULL;

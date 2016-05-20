@@ -1066,6 +1066,45 @@ enum anv_cmd_dirty_bits {
 };
 typedef uint32_t anv_cmd_dirty_mask_t;
 
+enum anv_pipe_bits {
+   ANV_PIPE_DEPTH_CACHE_FLUSH_BIT            = (1 << 0),
+   ANV_PIPE_STALL_AT_SCOREBOARD_BIT          = (1 << 1),
+   ANV_PIPE_STATE_CACHE_INVALIDATE_BIT       = (1 << 2),
+   ANV_PIPE_CONSTANT_CACHE_INVALIDATE_BIT    = (1 << 3),
+   ANV_PIPE_VF_CACHE_INVALIDATE_BIT          = (1 << 4),
+   ANV_PIPE_DATA_CACHE_FLUSH_BIT             = (1 << 5),
+   ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT     = (1 << 10),
+   ANV_PIPE_INSTRUCTION_CACHE_INVALIDATE_BIT = (1 << 11),
+   ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT    = (1 << 12),
+   ANV_PIPE_DEPTH_STALL_BIT                  = (1 << 13),
+   ANV_PIPE_CS_STALL_BIT                     = (1 << 20),
+
+   /* This bit does not exist directly in PIPE_CONTROL.  Instead it means that
+    * a flush has happened but not a CS stall.  The next time we do any sort
+    * of invalidation we need to insert a CS stall at that time.  Otherwise,
+    * we would have to CS stall on every flush which could be bad.
+    */
+   ANV_PIPE_NEEDS_CS_STALL_BIT               = (1 << 21),
+};
+
+#define ANV_PIPE_FLUSH_BITS ( \
+   ANV_PIPE_DEPTH_CACHE_FLUSH_BIT | \
+   ANV_PIPE_DATA_CACHE_FLUSH_BIT | \
+   ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT)
+
+#define ANV_PIPE_STALL_BITS ( \
+   ANV_PIPE_STALL_AT_SCOREBOARD_BIT | \
+   ANV_PIPE_DEPTH_STALL_BIT | \
+   ANV_PIPE_CS_STALL_BIT)
+
+#define ANV_PIPE_INVALIDATE_BITS ( \
+   ANV_PIPE_STATE_CACHE_INVALIDATE_BIT | \
+   ANV_PIPE_CONSTANT_CACHE_INVALIDATE_BIT | \
+   ANV_PIPE_VF_CACHE_INVALIDATE_BIT | \
+   ANV_PIPE_DATA_CACHE_FLUSH_BIT | \
+   ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT | \
+   ANV_PIPE_INSTRUCTION_CACHE_INVALIDATE_BIT)
+
 struct anv_vertex_binding {
    struct anv_buffer *                          buffer;
    VkDeviceSize                                 offset;
@@ -1164,6 +1203,7 @@ struct anv_cmd_state {
    uint32_t                                     vb_dirty;
    anv_cmd_dirty_mask_t                         dirty;
    anv_cmd_dirty_mask_t                         compute_dirty;
+   enum anv_pipe_bits                           pending_pipe_bits;
    uint32_t                                     num_workgroups_offset;
    struct anv_bo                                *num_workgroups_bo;
    VkShaderStageFlags                           descriptors_dirty;
