@@ -198,6 +198,57 @@ copy_image_with_memcpy(struct brw_context *brw,
    }
 }
 
+static void
+copy_miptrees(struct brw_context *brw,
+              struct intel_mipmap_tree *src_mt,
+              int src_x, int src_y, int src_z, unsigned src_level,
+              struct intel_mipmap_tree *dst_mt,
+              int dst_x, int dst_y, int dst_z, unsigned dst_level,
+              int src_width, int src_height)
+{
+   unsigned bw, bh;
+
+   /* We are now going to try and copy the texture using the blitter.  If
+    * that fails, we will fall back mapping the texture and using memcpy.
+    * In either case, we need to do a full resolve.
+    */
+   intel_miptree_all_slices_resolve_hiz(brw, src_mt);
+   intel_miptree_all_slices_resolve_depth(brw, src_mt);
+   intel_miptree_resolve_color(brw, src_mt, 0);
+
+   intel_miptree_all_slices_resolve_hiz(brw, dst_mt);
+   intel_miptree_all_slices_resolve_depth(brw, dst_mt);
+   intel_miptree_resolve_color(brw, dst_mt, 0);
+
+   _mesa_get_format_block_size(src_mt->format, &bw, &bh);
+
+   /* It's legal to have a WxH that's smaller than a compressed block. This
+    * happens for example when you are using a higher level LOD. For this case,
+    * we still want to copy the entire block, or else the decompression will be
+    * incorrect.
+    */
+   if (src_width < bw)
+      src_width = ALIGN_NPOT(src_width, bw);
+
+   if (src_height < bh)
+      src_height = ALIGN_NPOT(src_height, bh);
+
+   if (copy_image_with_blitter(brw, src_mt, src_level,
+                               src_x, src_y, src_z,
+                               dst_mt, dst_level,
+                               dst_x, dst_y, dst_z,
+                               src_width, src_height))
+      return;
+
+   /* This is a worst-case scenario software fallback that maps the two
+    * textures and does a memcpy between them.
+    */
+   copy_image_with_memcpy(brw, src_mt, src_level,
+                          src_x, src_y, src_z,
+                          dst_mt, dst_level,
+                          dst_x, dst_y, dst_z,
+                          src_width, src_height);
+}
 
 static void
 intel_copy_image_sub_data(struct gl_context *ctx,
@@ -212,7 +263,6 @@ intel_copy_image_sub_data(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct intel_mipmap_tree *src_mt, *dst_mt;
    unsigned src_level, dst_level;
-   GLuint bw, bh;
 
    if (_mesa_meta_CopyImageSubData_uncompressed(ctx,
                                                 src_image, src_renderbuffer,
@@ -261,46 +311,9 @@ intel_copy_image_sub_data(struct gl_context *ctx,
       return;
    }
 
-   /* We are now going to try and copy the texture using the blitter.  If
-    * that fails, we will fall back mapping the texture and using memcpy.
-    * In either case, we need to do a full resolve.
-    */
-   intel_miptree_all_slices_resolve_hiz(brw, src_mt);
-   intel_miptree_all_slices_resolve_depth(brw, src_mt);
-   intel_miptree_resolve_color(brw, src_mt, 0);
-
-   intel_miptree_all_slices_resolve_hiz(brw, dst_mt);
-   intel_miptree_all_slices_resolve_depth(brw, dst_mt);
-   intel_miptree_resolve_color(brw, dst_mt, 0);
-
-   _mesa_get_format_block_size(src_mt->format, &bw, &bh);
-
-   /* It's legal to have a WxH that's smaller than a compressed block. This
-    * happens for example when you are using a higher level LOD. For this case,
-    * we still want to copy the entire block, or else the decompression will be
-    * incorrect.
-    */
-   if (src_width < bw)
-      src_width = ALIGN_NPOT(src_width, bw);
-
-   if (src_height < bh)
-      src_height = ALIGN_NPOT(src_height, bh);
-
-   if (copy_image_with_blitter(brw, src_mt, src_level,
-                               src_x, src_y, src_z,
-                               dst_mt, dst_level,
-                               dst_x, dst_y, dst_z,
-                               src_width, src_height))
-      return;
-
-   /* This is a worst-case scenario software fallback that maps the two
-    * textures and does a memcpy between them.
-    */
-   copy_image_with_memcpy(brw, src_mt, src_level,
-                          src_x, src_y, src_z,
-                          dst_mt, dst_level,
-                          dst_x, dst_y, dst_z,
-                          src_width, src_height);
+   copy_miptrees(brw, src_mt, src_x, src_y, src_z, src_level,
+                 dst_mt, dst_x, dst_y, dst_z, dst_level,
+                 src_width, src_height);
 }
 
 void
