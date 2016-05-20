@@ -561,6 +561,7 @@ brw_create_nir(struct brw_context *brw,
    /* First, lower the GLSL IR or Mesa IR to NIR */
    if (shader_prog) {
       nir = glsl_to_nir(shader_prog, stage, options);
+      nir_remove_dead_variables(nir, nir_var_shader_in | nir_var_shader_out);
       OPT_V(nir_lower_io_to_temporaries,
             nir_shader_get_entrypoint(nir),
             true, false);
