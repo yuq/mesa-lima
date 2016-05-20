@@ -202,15 +202,13 @@ namespace brw {
       dst_reg
       null_reg_f() const
       {
-         return dst_reg(retype(brw_null_vec(dispatch_width()),
-                               BRW_REGISTER_TYPE_F));
+         return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_F));
       }
 
       dst_reg
       null_reg_df() const
       {
-         return dst_reg(retype(brw_null_vec(dispatch_width()),
-                               BRW_REGISTER_TYPE_DF));
+         return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_DF));
       }
 
       /**
@@ -219,8 +217,7 @@ namespace brw {
       dst_reg
       null_reg_d() const
       {
-         return dst_reg(retype(brw_null_vec(dispatch_width()),
-                               BRW_REGISTER_TYPE_D));
+         return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_D));
       }
 
       /**
@@ -229,8 +226,7 @@ namespace brw {
       dst_reg
       null_reg_ud() const
       {
-         return dst_reg(retype(brw_null_vec(dispatch_width()),
-                               BRW_REGISTER_TYPE_UD));
+         return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_UD));
       }
 
       /**
