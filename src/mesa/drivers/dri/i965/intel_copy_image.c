@@ -48,6 +48,9 @@ copy_image_with_blitter(struct brw_context *brw,
    if (src_mt->num_samples > 0 || dst_mt->num_samples > 0)
       return false;
 
+   if (src_mt->format == MESA_FORMAT_S_UINT8)
+      return false;
+
    /* According to the Ivy Bridge PRM, Vol1 Part4, section 1.2.1.2 (Graphics
     * Data Size Limitations):
     *
