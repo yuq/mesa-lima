@@ -66,7 +66,6 @@ struct brw_codegen {
    brw_inst *current;
 
    bool single_program_flow;
-   bool compressed;
    const struct brw_device_info *devinfo;
 
    /* Control flow stacks:

@@ -187,8 +187,6 @@ void
 brw_set_default_compression_control(struct brw_codegen *p,
 			    enum brw_compression compression_control)
 {
-   p->compressed = (compression_control == BRW_COMPRESSION_COMPRESSED);
-
    if (p->devinfo->gen >= 6) {
       /* Since we don't use the SIMD32 support in gen6, we translate
        * the pre-gen6 compression control here.
@@ -307,7 +305,6 @@ void brw_push_insn_state( struct brw_codegen *p )
 {
    assert(p->current != &p->stack[BRW_EU_MAX_INSN_STACK-1]);
    memcpy(p->current + 1, p->current, sizeof(brw_inst));
-   p->compressed_stack[p->current - p->stack] = p->compressed;
    p->current++;
 }
 
@@ -315,7 +312,6 @@ void brw_pop_insn_state( struct brw_codegen *p )
 {
    assert(p->current != p->stack);
    p->current--;
-   p->compressed = p->compressed_stack[p->current - p->stack];
 }
 
 
@@ -337,7 +333,6 @@ brw_init_codegen(const struct brw_device_info *devinfo,
    p->store = rzalloc_array(mem_ctx, brw_inst, p->store_size);
    p->nr_insn = 0;
    p->current = p->stack;
-   p->compressed = false;
    memset(p->current, 0, sizeof(p->current[0]));
 
    p->mem_ctx = mem_ctx;

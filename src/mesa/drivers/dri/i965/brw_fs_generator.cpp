@@ -1594,13 +1594,14 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
        *       type and regioning so the instruction is considered compressed
        *       or not accordingly.
        */
-      p->compressed = inst->dst.component_size(inst->exec_size) > REG_SIZE;
-      brw_set_default_compression(p, p->compressed);
+      const bool compressed =
+           inst->dst.component_size(inst->exec_size) > REG_SIZE;
+      brw_set_default_compression(p, compressed);
       brw_set_default_group(p, inst->force_sechalf ? 8 : 0);
 
       for (unsigned int i = 0; i < inst->sources; i++) {
          src[i] = brw_reg_from_fs_reg(inst, &inst->src[i], devinfo->gen,
-                                      p->compressed);
+                                      compressed);
 
 	 /* The accumulator result appears to get used for the
 	  * conditional modifier generation.  When negating a UD
@@ -1612,8 +1613,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 		inst->src[i].type != BRW_REGISTER_TYPE_UD ||
 		!inst->src[i].negate);
       }
-      dst = brw_reg_from_fs_reg(inst, &inst->dst, devinfo->gen,
-                                p->compressed);
+      dst = brw_reg_from_fs_reg(inst, &inst->dst, devinfo->gen, compressed);
 
       brw_set_default_access_mode(p, BRW_ALIGN_1);
       brw_set_default_predicate_control(p, inst->predicate);
