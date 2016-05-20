@@ -2866,6 +2866,7 @@ fs_visitor::compute_to_mrf()
 	       /* Found the creator of our MRF's source value. */
 	       scan_inst->dst.file = MRF;
                scan_inst->dst.nr = inst->dst.nr;
+               scan_inst->dst.reg_offset = 0;
 	       scan_inst->saturate |= inst->saturate;
 	       inst->remove(block);
 	       progress = true;
