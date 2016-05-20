@@ -336,6 +336,8 @@ fd2_emit_tile_init(struct fd_context *ctx)
 	enum pipe_format format = pipe_surface_format(pfb->cbufs[0]);
 	uint32_t reg;
 
+	fd2_emit_restore(ctx, ctx->ring);
+
 	OUT_PKT3(ring, CP_SET_CONSTANT, 4);
 	OUT_RING(ring, CP_REG(REG_A2XX_RB_SURFACE_INFO));
 	OUT_RING(ring, gmem->bin_w);                 /* RB_SURFACE_INFO */

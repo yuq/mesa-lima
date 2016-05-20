@@ -316,10 +316,8 @@ fd2_emit_state(struct fd_context *ctx, uint32_t dirty)
 /* emit per-context initialization:
  */
 void
-fd2_emit_setup(struct fd_context *ctx)
+fd2_emit_restore(struct fd_context *ctx, struct fd_ringbuffer *ring)
 {
-	struct fd_ringbuffer *ring = ctx->ring;
-
 	OUT_PKT0(ring, REG_A2XX_TP0_CHICKEN, 1);
 	OUT_RING(ring, 0x00000002);
 
@@ -442,9 +440,6 @@ fd2_emit_setup(struct fd_context *ctx)
 	OUT_RING(ring, 0x00000000);        /* RB_BLEND_GREEN */
 	OUT_RING(ring, 0x00000000);        /* RB_BLEND_BLUE */
 	OUT_RING(ring, 0x000000ff);        /* RB_BLEND_ALPHA */
-
-	fd_ringbuffer_flush(ring);
-	fd_ringmarker_mark(ctx->draw_start);
 }
 
 static void
