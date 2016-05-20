@@ -67,6 +67,10 @@ struct stw_device
    CRITICAL_SECTION ctx_mutex;
    struct handle_table *ctx_table;
    
+   /* TODO: use an atomic counter to track the number of locked
+    * stw_framebuffer objects.  Assert that the counter is zero when
+    * trying to lock this mutex.
+    */
    CRITICAL_SECTION fb_mutex;
    struct stw_framebuffer *fb_head;
    
