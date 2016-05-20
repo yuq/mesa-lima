@@ -47,7 +47,7 @@
  * If a stw_framebuffer is found, lock it and return the pointer.
  * Else, return NULL.
  */
-static inline struct stw_framebuffer *
+static struct stw_framebuffer *
 stw_framebuffer_from_hwnd_locked(HWND hwnd)
 {
    struct stw_framebuffer *fb;
@@ -367,7 +367,7 @@ stw_framebuffer_cleanup(void)
  * Given an hdc, return the corresponding stw_framebuffer.
  * The returned stw_framebuffer will have its mutex locked.
  */
-static inline struct stw_framebuffer *
+static struct stw_framebuffer *
 stw_framebuffer_from_hdc_locked(HDC hdc)
 {
    HWND hwnd;
