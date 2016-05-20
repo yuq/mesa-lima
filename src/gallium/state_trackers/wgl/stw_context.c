@@ -388,7 +388,7 @@ stw_get_current_dc( void )
 BOOL
 stw_make_current(HDC hdc, DHGLRC dhglrc)
 {
-   struct stw_context *curctx = NULL;
+   struct stw_context *old_ctx = NULL;
    struct stw_context *ctx = NULL;
    struct stw_framebuffer *fb = NULL;
    BOOL ret = FALSE;
@@ -396,15 +396,15 @@ stw_make_current(HDC hdc, DHGLRC dhglrc)
    if (!stw_dev)
       return FALSE;
 
-   curctx = stw_current_context();
-   if (curctx != NULL) {
-      if (curctx->dhglrc == dhglrc) {
-         if (curctx->hdc == hdc) {
+   old_ctx = stw_current_context();
+   if (old_ctx != NULL) {
+      if (old_ctx->dhglrc == dhglrc) {
+         if (old_ctx->hdc == hdc) {
             /* Return if already current. */
             return TRUE;
          }
       } else {
-         curctx->st->flush(curctx->st, ST_FLUSH_FRONT, NULL);
+         old_ctx->st->flush(old_ctx->st, ST_FLUSH_FRONT, NULL);
       }
    }
 
@@ -469,8 +469,8 @@ fail:
    /* Unreference the previous framebuffer if any. It must be done after
     * make_current, as it can be referenced inside.
     */
-   if (curctx && curctx != ctx) {
-      stw_framebuffer_reference(&curctx->current_framebuffer, NULL);
+   if (old_ctx && old_ctx != ctx) {
+      stw_framebuffer_reference(&old_ctx->current_framebuffer, NULL);
    }
 
    return ret;
