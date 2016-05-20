@@ -162,7 +162,7 @@ instructions_match(fs_inst *a, fs_inst *b, bool *negate)
    return a->opcode == b->opcode &&
           a->force_writemask_all == b->force_writemask_all &&
           a->exec_size == b->exec_size &&
-          a->force_sechalf == b->force_sechalf &&
+          a->group == b->group &&
           a->saturate == b->saturate &&
           a->predicate == b->predicate &&
           a->predicate_inverse == b->predicate_inverse &&
@@ -215,7 +215,7 @@ create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
       copy = bld.LOAD_PAYLOAD(inst->dst, payload, sources, header_size);
    } else {
       copy = bld.MOV(inst->dst, src);
-      copy->force_sechalf = inst->force_sechalf;
+      copy->group = inst->group;
       copy->force_writemask_all = inst->force_writemask_all;
       copy->src[0].negate = negate;
    }

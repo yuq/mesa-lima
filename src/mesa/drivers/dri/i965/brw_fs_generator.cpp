@@ -212,7 +212,7 @@ fs_generator::fire_fb_write(fs_inst *inst,
    if (inst->opcode == FS_OPCODE_REP_FB_WRITE)
       msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE_REPLICATED;
    else if (prog_data->dual_src_blend) {
-      if (!inst->force_sechalf)
+      if (!inst->group)
          msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_DUAL_SOURCE_SUBSPAN01;
       else
          msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_DUAL_SOURCE_SUBSPAN23;
@@ -1076,7 +1076,7 @@ fs_generator::generate_scratch_write(fs_inst *inst, struct brw_reg src)
    brw_set_default_compression(p, lower_size > 8);
 
    for (unsigned i = 0; i < inst->exec_size / lower_size; i++) {
-      brw_set_default_group(p, (inst->force_sechalf ? 8 : 0) + lower_size * i);
+      brw_set_default_group(p, inst->group + lower_size * i);
 
       brw_MOV(p, brw_uvec_mrf(lower_size, inst->base_mrf + 1, 0),
               retype(offset(src, block_size * i), BRW_REGISTER_TYPE_UD));
@@ -1620,7 +1620,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       const bool compressed =
            inst->dst.component_size(inst->exec_size) > REG_SIZE;
       brw_set_default_compression(p, compressed);
-      brw_set_default_group(p, inst->force_sechalf ? 8 : 0);
+      brw_set_default_group(p, inst->group);
 
       for (unsigned int i = 0; i < inst->sources; i++) {
          src[i] = brw_reg_from_fs_reg(inst, &inst->src[i], devinfo->gen,
@@ -1648,6 +1648,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
 
       assert(inst->force_writemask_all || inst->exec_size >= 8);
+      assert(inst->force_writemask_all || inst->group % inst->exec_size == 0);
       assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF(devinfo->gen));
       assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 

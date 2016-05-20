@@ -3621,7 +3621,7 @@ fs_visitor::lower_integer_multiplication()
             mul->src[1].stride *= 2;
 
          } else if (devinfo->gen == 7 && !devinfo->is_haswell &&
-                    inst->force_sechalf) {
+                    inst->group > 0) {
             /* Among other things the quarter control bits influence which
              * accumulator register is used by the hardware for instructions
              * that access the accumulator implicitly (e.g. MACH).  A
@@ -3638,7 +3638,7 @@ fs_visitor::lower_integer_multiplication()
              * to get the result masked correctly according to the current
              * channel enables.
              */
-            mach->force_sechalf = false;
+            mach->group = 0;
             mach->force_writemask_all = true;
             mach->dst = ibld.vgrf(inst->dst.type);
             ibld.MOV(inst->dst, mach->dst);
@@ -3774,8 +3774,8 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
       sample_mask.stride *= 2;
 
       bld.exec_all().annotate("FB write oMask")
-         .MOV(half(retype(sources[length], BRW_REGISTER_TYPE_UW),
-                   inst->force_sechalf),
+         .MOV(horiz_offset(retype(sources[length], BRW_REGISTER_TYPE_UW),
+                           inst->group),
               sample_mask);
       length++;
    }
@@ -5008,10 +5008,10 @@ fs_visitor::lower_simd_width()
           * execution size of the builder to the highest of both for now so
           * we're sure that both cases can be handled.
           */
+         const unsigned max_width = MAX2(inst->exec_size, lower_width);
          const fs_builder ibld = bld.at(block, inst)
                                     .exec_all(inst->force_writemask_all)
-                                    .group(MAX2(inst->exec_size, lower_width),
-                                           inst->force_sechalf);
+                                    .group(max_width, inst->group / max_width);
 
          /* Split the copies in chunks of the execution width of either the
           * original or the lowered instruction, whichever is lower.
@@ -5343,12 +5343,8 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    if (inst->force_writemask_all)
       fprintf(file, "NoMask ");
 
-   if (dispatch_width == 16 && inst->exec_size == 8) {
-      if (inst->force_sechalf)
-         fprintf(file, "2ndhalf ");
-      else
-         fprintf(file, "1sthalf ");
-   }
+   if (inst->exec_size != dispatch_width)
+      fprintf(file, "group%d ", inst->group);
 
    fprintf(file, "\n");
 }

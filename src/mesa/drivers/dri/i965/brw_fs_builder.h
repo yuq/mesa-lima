@@ -72,7 +72,7 @@ namespace brw {
       fs_builder(backend_shader *shader, bblock_t *block, fs_inst *inst) :
          shader(shader), block(block), cursor(inst),
          _dispatch_width(inst->exec_size),
-         _group(inst->force_sechalf ? 8 : 0),
+         _group(inst->group),
          force_writemask_all(inst->force_writemask_all)
       {
          annotation.str = inst->annotation;
@@ -165,6 +165,15 @@ namespace brw {
       dispatch_width() const
       {
          return _dispatch_width;
+      }
+
+      /**
+       * Get the channel group in use.
+       */
+      unsigned
+      group() const
+      {
+         return _group;
       }
 
       /**
@@ -353,9 +362,8 @@ namespace brw {
          assert(inst->exec_size <= 32);
          assert(inst->exec_size == dispatch_width() ||
                 force_writemask_all);
-         assert(_group == 0 || _group == 8);
 
-         inst->force_sechalf = (_group == 8);
+         inst->group = _group;
          inst->force_writemask_all = force_writemask_all;
          inst->annotation = annotation.str;
          inst->ir = annotation.ir;

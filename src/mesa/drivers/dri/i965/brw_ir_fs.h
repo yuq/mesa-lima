@@ -291,20 +291,18 @@ public:
     */
    uint8_t exec_size;
 
+   /**
+    * Channel group from the hardware execution and predication mask that
+    * should be applied to the instruction.  The subset of channel enable
+    * signals (calculated from the EU control flow and predication state)
+    * given by [group, group + exec_size) will be used to mask GRF writes and
+    * any other side effects of the instruction.
+    */
+   uint8_t group;
+
    bool eot:1;
-   bool force_sechalf:1;
    bool pi_noperspective:1;   /**< Pixel interpolator noperspective flag */
 };
-
-/**
- * Set second-half quarter control on \p inst.
- */
-static inline fs_inst *
-set_sechalf(fs_inst *inst)
-{
-   inst->force_sechalf = true;
-   return inst;
-}
 
 /**
  * Make the execution of \p inst dependent on the evaluation of a possibly
