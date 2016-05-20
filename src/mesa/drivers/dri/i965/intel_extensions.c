@@ -297,6 +297,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_conditional_render_inverted = true;
       ctx->Extensions.ARB_cull_distance = true;
       ctx->Extensions.ARB_draw_buffers_blend = true;
+      ctx->Extensions.ARB_enhanced_layouts = true;
       ctx->Extensions.ARB_ES3_compatibility = true;
       ctx->Extensions.ARB_fragment_layer_viewport = true;
       ctx->Extensions.ARB_sample_shading = true;
@@ -383,7 +384,6 @@ intelInitExtensions(struct gl_context *ctx)
    }
 
    if (brw->gen >= 8) {
-      ctx->Extensions.ARB_enhanced_layouts = true;
       ctx->Extensions.ARB_shader_precision = true;
       ctx->Extensions.ARB_stencil_texturing = true;
       ctx->Extensions.ARB_texture_stencil8 = true;
