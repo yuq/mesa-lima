@@ -88,13 +88,6 @@ gen7_blorp_emit_urb_config(struct brw_context *brw,
 
    brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
 
-   gen7_emit_push_constant_state(brw,
-                                 urb_size / 2 /* vs_size */,
-                                 0 /* hs_size */,
-                                 0 /* ds_size */,
-                                 0 /* gs_size */,
-                                 urb_size / 2 /* fs_size */);
-
    gen7_emit_urb_state(brw,
                        min_vs_entries /* num_vs_entries */,
                        vs_entry_size,
@@ -266,16 +259,6 @@ gen7_blorp_emit_surface_state(struct brw_context *brw,
 static void
 gen7_blorp_emit_vs_disable(struct brw_context *brw)
 {
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_CONSTANT_VS << 16 | (7 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
    BEGIN_BATCH(6);
    OUT_BATCH(_3DSTATE_VS << 16 | (6 - 2));
    OUT_BATCH(0);
@@ -294,16 +277,6 @@ gen7_blorp_emit_vs_disable(struct brw_context *brw)
 static void
 gen7_blorp_emit_hs_disable(struct brw_context *brw)
 {
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_CONSTANT_HS << 16 | (7 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
    BEGIN_BATCH(7);
    OUT_BATCH(_3DSTATE_HS << 16 | (7 - 2));
    OUT_BATCH(0);
@@ -339,16 +312,6 @@ gen7_blorp_emit_te_disable(struct brw_context *brw)
 static void
 gen7_blorp_emit_ds_disable(struct brw_context *brw)
 {
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_CONSTANT_DS << 16 | (7 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
    BEGIN_BATCH(6);
    OUT_BATCH(_3DSTATE_DS << 16 | (6 - 2));
    OUT_BATCH(0);
@@ -366,16 +329,6 @@ gen7_blorp_emit_ds_disable(struct brw_context *brw)
 static void
 gen7_blorp_emit_gs_disable(struct brw_context *brw)
 {
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_CONSTANT_GS << 16 | (7 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
    /**
     * From Graphics BSpec: 3D-Media-GPGPU Engine > 3D Pipeline Stages >
     * Geometry > Geometry Shader > State:
@@ -867,7 +820,7 @@ gen7_blorp_exec(struct brw_context *brw,
    if (params->wm_prog_data)
       gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
 
-   gen7_blorp_emit_constant_ps_disable(brw);
+      gen7_blorp_emit_constant_ps_disable(brw);
 
    if (params->src.mt) {
       const uint32_t sampler_offset =

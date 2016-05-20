@@ -156,36 +156,6 @@ gen8_blorp_emit_blend_state(struct brw_context *brw,
    return blend_state_offset;
 }
 
-static void
-gen8_blorp_emit_disable_constant_state(struct brw_context *brw,
-                                       unsigned opcode)
-{
-   BEGIN_BATCH(11);
-   OUT_BATCH(opcode << 16 | (11 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
-static void
-gen8_blorp_emit_disable_binding_table(struct brw_context *brw,
-                                      unsigned opcode)
-{
-
-   BEGIN_BATCH(2);
-   OUT_BATCH(opcode << 16 | (2 - 2));
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
 /* 3DSTATE_VS
  *
  * Disable vertex shader.
@@ -687,22 +657,8 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
    const uint32_t cc_state_offset = gen6_blorp_emit_cc_state(brw);
    gen7_blorp_emit_cc_state_pointer(brw, cc_state_offset);
 
-   gen8_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_VS);
-   gen8_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_HS);
-   gen8_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_DS);
-   gen8_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_GS);
-
    gen8_blorp_emit_disable_constant_ps(brw);
    wm_bind_bo_offset = gen8_blorp_emit_surface_states(brw, params);
-
-   gen8_blorp_emit_disable_binding_table(brw,
-                                         _3DSTATE_BINDING_TABLE_POINTERS_VS);
-   gen8_blorp_emit_disable_binding_table(brw,
-                                         _3DSTATE_BINDING_TABLE_POINTERS_HS);
-   gen8_blorp_emit_disable_binding_table(brw,
-                                         _3DSTATE_BINDING_TABLE_POINTERS_DS);
-   gen8_blorp_emit_disable_binding_table(brw,
-                                         _3DSTATE_BINDING_TABLE_POINTERS_GS);
 
    gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
 
