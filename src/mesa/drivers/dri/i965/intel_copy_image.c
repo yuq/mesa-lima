@@ -250,6 +250,8 @@ intel_copy_image_sub_data(struct gl_context *ctx,
       /* Cube maps actually have different images per face */
       if (src_image->TexObject->Target == GL_TEXTURE_CUBE_MAP)
          src_z = src_image->Face;
+
+      src_z += src_image->TexObject->MinLayer;
    } else {
       src_level = 0;
    }
@@ -260,6 +262,8 @@ intel_copy_image_sub_data(struct gl_context *ctx,
       /* Cube maps actually have different images per face */
       if (dst_image->TexObject->Target == GL_TEXTURE_CUBE_MAP)
          dst_z = dst_image->Face;
+
+      dst_z += dst_image->TexObject->MinLayer;
    } else {
       dst_level = 0;
    }
