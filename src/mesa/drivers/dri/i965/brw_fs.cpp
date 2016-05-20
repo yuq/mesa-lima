@@ -4661,16 +4661,6 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case BRW_OPCODE_SAD2:
    case BRW_OPCODE_MAD:
    case BRW_OPCODE_LRP:
-   case SHADER_OPCODE_RCP:
-   case SHADER_OPCODE_RSQ:
-   case SHADER_OPCODE_SQRT:
-   case SHADER_OPCODE_EXP2:
-   case SHADER_OPCODE_LOG2:
-   case SHADER_OPCODE_POW:
-   case SHADER_OPCODE_INT_QUOTIENT:
-   case SHADER_OPCODE_INT_REMAINDER:
-   case SHADER_OPCODE_SIN:
-   case SHADER_OPCODE_COS:
    case FS_OPCODE_PACK: {
       /* According to the PRMs:
        *  "A. In Direct Addressing mode, a source cannot span more than 2
@@ -4691,6 +4681,30 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
        */
       return inst->exec_size / DIV_ROUND_UP(reg_count, 2);
    }
+
+   case SHADER_OPCODE_RCP:
+   case SHADER_OPCODE_RSQ:
+   case SHADER_OPCODE_SQRT:
+   case SHADER_OPCODE_EXP2:
+   case SHADER_OPCODE_LOG2:
+   case SHADER_OPCODE_SIN:
+   case SHADER_OPCODE_COS:
+      /* Unary extended math instructions are limited to SIMD8 on Gen4 and
+       * Gen6.
+       */
+      return (devinfo->gen >= 7 ? MIN2(16, inst->exec_size) :
+              devinfo->gen == 5 || devinfo->is_g4x ? MIN2(16, inst->exec_size) :
+              MIN2(8, inst->exec_size));
+
+   case SHADER_OPCODE_POW:
+      /* SIMD16 is only allowed on Gen7+. */
+      return (devinfo->gen >= 7 ? MIN2(16, inst->exec_size) :
+              MIN2(8, inst->exec_size));
+
+   case SHADER_OPCODE_INT_QUOTIENT:
+   case SHADER_OPCODE_INT_REMAINDER:
+      /* Integer division is limited to SIMD8 on all generations. */
+      return MIN2(8, inst->exec_size);
 
    case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL:
       /* Pre-ILK hardware doesn't have a SIMD8 variant of the texel fetch
