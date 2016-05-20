@@ -525,7 +525,7 @@ emit_ubos(struct fd_context *ctx, const struct ir3_shader_variant *v,
 	if (v->constlen > offset) {
 		uint32_t params = MIN2(4, v->constlen - offset) * 4;
 		uint32_t offsets[params];
-		struct fd_bo *bos[params];
+		struct pipe_resource *prscs[params];
 
 		for (uint32_t i = 0; i < params; i++) {
 			const uint32_t index = i + 1;   /* UBOs start at index 1 */
@@ -534,15 +534,15 @@ emit_ubos(struct fd_context *ctx, const struct ir3_shader_variant *v,
 
 			if ((constbuf->enabled_mask & (1 << index)) && cb->buffer) {
 				offsets[i] = cb->buffer_offset;
-				bos[i] = fd_resource(cb->buffer)->bo;
+				prscs[i] = cb->buffer;
 			} else {
 				offsets[i] = 0;
-				bos[i] = NULL;
+				prscs[i] = NULL;
 			}
 		}
 
 		fd_wfi(ctx, ring);
-		ctx->emit_const_bo(ring, v->type, false, offset * 4, params, bos, offsets);
+		ctx->emit_const_bo(ring, v->type, false, offset * 4, params, prscs, offsets);
 	}
 }
 
@@ -581,7 +581,7 @@ emit_tfbos(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		struct pipe_stream_output_info *info = &v->shader->stream_output;
 		uint32_t params = 4;
 		uint32_t offsets[params];
-		struct fd_bo *bos[params];
+		struct pipe_resource *prscs[params];
 
 		for (uint32_t i = 0; i < params; i++) {
 			struct pipe_stream_output_target *target = so->targets[i];
@@ -589,15 +589,15 @@ emit_tfbos(struct fd_context *ctx, const struct ir3_shader_variant *v,
 			if (target) {
 				offsets[i] = (so->offsets[i] * info->stride[i] * 4) +
 						target->buffer_offset;
-				bos[i] = fd_resource(target->buffer)->bo;
+				prscs[i] = target->buffer;
 			} else {
 				offsets[i] = 0;
-				bos[i] = NULL;
+				prscs[i] = NULL;
 			}
 		}
 
 		fd_wfi(ctx, ring);
-		ctx->emit_const_bo(ring, v->type, true, offset * 4, params, bos, offsets);
+		ctx->emit_const_bo(ring, v->type, true, offset * 4, params, prscs, offsets);
 	}
 }
 

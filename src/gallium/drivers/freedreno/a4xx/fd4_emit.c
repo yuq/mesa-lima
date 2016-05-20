@@ -93,7 +93,7 @@ fd4_emit_const(struct fd_ringbuffer *ring, enum shader_t type,
 
 static void
 fd4_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
-		uint32_t regid, uint32_t num, struct fd_bo **bos, uint32_t *offsets)
+		uint32_t regid, uint32_t num, struct pipe_resource **prscs, uint32_t *offsets)
 {
 	uint32_t i;
 
@@ -109,11 +109,11 @@ fd4_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
 			CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS));
 
 	for (i = 0; i < num; i++) {
-		if (bos[i]) {
+		if (prscs[i]) {
 			if (write) {
-				OUT_RELOCW(ring, bos[i], offsets[i], 0, 0);
+				OUT_RELOCW(ring, fd_resource(prscs[i])->bo, offsets[i], 0, 0);
 			} else {
-				OUT_RELOC(ring, bos[i], offsets[i], 0, 0);
+				OUT_RELOC(ring, fd_resource(prscs[i])->bo, offsets[i], 0, 0);
 			}
 		} else {
 			OUT_RING(ring, 0xbad00000 | (i << 16));
