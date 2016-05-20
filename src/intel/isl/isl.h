@@ -863,6 +863,19 @@ isl_format_get_name(enum isl_format fmt)
    return isl_format_layouts[fmt].name;
 }
 
+bool isl_format_supports_rendering(const struct brw_device_info *devinfo,
+                                   enum isl_format format);
+bool isl_format_supports_alpha_blending(const struct brw_device_info *devinfo,
+                                        enum isl_format format);
+bool isl_format_supports_sampling(const struct brw_device_info *devinfo,
+                                  enum isl_format format);
+bool isl_format_supports_filtering(const struct brw_device_info *devinfo,
+                                   enum isl_format format);
+bool isl_format_supports_vertex_fetch(const struct brw_device_info *devinfo,
+                                      enum isl_format format);
+bool isl_format_supports_lossless_compression(const struct brw_device_info *devinfo,
+                                              enum isl_format format);
+
 bool isl_format_has_unorm_channel(enum isl_format fmt) ATTRIBUTE_CONST;
 bool isl_format_has_snorm_channel(enum isl_format fmt) ATTRIBUTE_CONST;
 bool isl_format_has_ufloat_channel(enum isl_format fmt) ATTRIBUTE_CONST;
