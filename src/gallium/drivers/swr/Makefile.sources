@@ -45,7 +45,6 @@ CXX_SOURCES := \
 	swr_query.cpp
 
 COMMON_CXX_SOURCES := \
-	rasterizer/common/containers.hpp \
 	rasterizer/common/formats.cpp \
 	rasterizer/common/formats.h \
 	rasterizer/common/isa.hpp \

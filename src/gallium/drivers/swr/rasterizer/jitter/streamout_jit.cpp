@@ -31,7 +31,6 @@
 #include "streamout_jit.h"
 #include "builder.h"
 #include "state_llvm.h"
-#include "common/containers.hpp"
 #include "llvm/IR/DataLayout.h"
 
 #include <sstream>

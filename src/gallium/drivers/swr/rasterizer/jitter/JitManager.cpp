@@ -54,7 +54,6 @@
 #endif
 
 #include "core/state.h"
-#include "common/containers.hpp"
 
 #include "state_llvm.h"
 

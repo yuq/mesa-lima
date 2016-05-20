@@ -31,7 +31,6 @@
 #include "fetch_jit.h"
 #include "builder.h"
 #include "state_llvm.h"
-#include "common/containers.hpp"
 #include "llvm/IR/DataLayout.h"
 #include <sstream>
 #include <tuple>
@@ -236,8 +235,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
 {
     // Zack shuffles; a variant of the Charleston.
 
-    SWRL::UncheckedFixedVector<Value*, 16>    vectors;
-
+    std::vector<Value*> vectors(16);
     std::vector<Constant*>    pMask(mVWidth);
     for(uint32_t i = 0; i < mVWidth; ++i)
     {
