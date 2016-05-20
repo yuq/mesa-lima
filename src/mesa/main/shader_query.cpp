@@ -1371,110 +1371,6 @@ _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
 }
 
 static bool
-validate_io(const struct gl_shader *producer,
-            const struct gl_shader *consumer, bool isES)
-{
-   assert(producer && consumer);
-   unsigned inputs = 0, outputs = 0;
-
-   /* From OpenGL ES 3.1 spec (Interface matching):
-    *
-    *    "An output variable is considered to match an input variable in the
-    *    subsequent shader if:
-    *
-    *    - the two variables match in name, type, and qualification; or
-    *    - the two variables are declared with the same location qualifier and
-    *      match in type and qualification.
-    *
-    *    ...
-    *
-    *    At an interface between program objects, the set of inputs and outputs
-    *    are considered to match exactly if and only if:
-    *
-    *    - Every declared input variable has a matching output, as described
-    *    above.
-    *
-    *    - There are no user-defined output variables declared without a
-    *    matching input variable declaration.
-    *
-    *    - All matched input and output variables have identical precision
-    *    qualification.
-    *
-    *    When the set of inputs and outputs on an interface between programs
-    *    matches exactly, all inputs are well-defined except when the
-    *    corresponding outputs were not written in the previous shader. However,
-    *    any mismatch between inputs and outputs will result in a validation
-    *    failure."
-    *
-    * OpenGL Core 4.5 spec includes same paragraph as above but without check
-    * for precision and the last 'validation failure' clause. Therefore
-    * behaviour is more relaxed, input and output amount is not required by the
-    * spec to be validated.
-    *
-    * FIXME: Update once Khronos spec bug #15331 is resolved.
-    * FIXME: Add validation by type, currently information loss during varying
-    * packing makes this challenging.
-    */
-
-   /* Currently no matching done for desktop. */
-   if (!isES)
-      return true;
-
-   /* For each output in a, find input in b and do any required checks. */
-   foreach_in_list(ir_instruction, out, producer->ir) {
-      ir_variable *out_var = out->as_variable();
-      if (!out_var || out_var->data.mode != ir_var_shader_out ||
-          is_gl_identifier(out_var->name))
-         continue;
-
-      outputs++;
-
-      inputs = 0;
-      foreach_in_list(ir_instruction, in, consumer->ir) {
-         ir_variable *in_var = in->as_variable();
-         if (!in_var || in_var->data.mode != ir_var_shader_in ||
-             is_gl_identifier(in_var->name))
-            continue;
-
-         inputs++;
-
-         /* Match by location qualifier and precision.
-          *
-          * FIXME: Add explicit location matching validation here. Be careful
-          * not to match varyings with explicit locations to varyings without
-          * explicit locations.
-          */
-         if ((in_var->data.explicit_location &&
-             out_var->data.explicit_location) &&
-             in_var->data.location == out_var->data.location &&
-             in_var->data.precision == out_var->data.precision)
-            continue;
-
-         unsigned len = strlen(in_var->name);
-
-         /* Handle input swizzle in variable name. */
-         const char *dot = strchr(in_var->name, '.');
-         if (dot)
-            len = dot - in_var->name;
-
-         /* Match by name and precision. */
-         if (strncmp(in_var->name, out_var->name, len) == 0) {
-            /* From OpenGL ES 3.1 spec:
-             *     "When both shaders are in separate programs, mismatched
-             *     precision qualifiers will result in a program interface
-             *     mismatch that will result in program pipeline validation
-             *     failures, as described in section 7.4.1 (“Shader Interface
-             *     Matching”) of the OpenGL ES 3.1 Specification."
-             */
-            if (in_var->data.precision != out_var->data.precision)
-               return false;
-         }
-      }
-   }
-   return inputs == outputs;
-}
-
-static bool
 validate_io(struct gl_shader_program *producer,
             struct gl_shader_program *consumer)
 {
@@ -1672,11 +1568,6 @@ _mesa_validate_pipeline_io(struct gl_pipeline_object *pipeline)
           */
          if (shProg[idx]->_LinkedShaders[idx]->Stage == MESA_SHADER_COMPUTE)
             break;
-
-         if (!validate_io(shProg[prev]->_LinkedShaders[prev],
-                          shProg[idx]->_LinkedShaders[idx],
-                          shProg[prev]->IsES || shProg[idx]->IsES))
-            return false;
 
          if (!validate_io(shProg[prev], shProg[idx]))
             return false;
