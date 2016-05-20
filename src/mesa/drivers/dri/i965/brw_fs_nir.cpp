@@ -2688,6 +2688,9 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
       fs_reg tmp =
          fs_reg(VGRF, alloc.allocate(2 * iter_components), value.type);
 
+      unsigned first_component = nir_intrinsic_component(instr);
+      mask = mask << first_component;
+
       for (unsigned iter = 0; iter < num_iterations; iter++) {
          if (!is_64bit && mask != WRITEMASK_XYZW) {
             srcs[header_regs++] = brw_imm_ud(mask << 16);
@@ -2725,11 +2728,12 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
          }
 
          for (unsigned i = 0; i < iter_components; i++) {
-            if (!(mask & (1 << i)))
+            if (!(mask & (1 << (i + first_component))))
                continue;
 
             if (!is_64bit) {
-               srcs[header_regs + i] = offset(value, bld, BRW_GET_SWZ(swiz, i));
+               srcs[header_regs + i + first_component] =
+                  offset(value, bld, BRW_GET_SWZ(swiz, i));
             } else {
                /* We need to shuffle the 64-bit data to match the layout
                 * expected by our 32-bit URB write messages. We use a temporary
@@ -2752,7 +2756,8 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
          }
 
          unsigned mlen =
-            header_regs + (is_64bit ? 2 * iter_components : iter_components);
+            header_regs + (is_64bit ? 2 * iter_components : iter_components) +
+            first_component;
          fs_reg payload =
             bld.vgrf(BRW_REGISTER_TYPE_UD, mlen);
          bld.LOAD_PAYLOAD(payload, srcs, mlen, header_regs);
