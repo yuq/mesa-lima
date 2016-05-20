@@ -314,6 +314,21 @@ intel_copy_image_sub_data(struct gl_context *ctx,
    copy_miptrees(brw, src_mt, src_x, src_y, src_z, src_level,
                  dst_mt, dst_x, dst_y, dst_z, dst_level,
                  src_width, src_height);
+
+   /* CopyImage only works for equal formats, texture view equivalence
+    * classes, and a couple special cases for compressed textures.
+    *
+    * Notably, GL_DEPTH_STENCIL does not appear in any equivalence
+    * classes, so we know the formats must be the same, and thus both
+    * will either have stencil, or not.  They can't be mismatched.
+    */
+   assert((src_mt->stencil_mt != NULL) == (dst_mt->stencil_mt != NULL));
+
+   if (dst_mt->stencil_mt) {
+      copy_miptrees(brw, src_mt->stencil_mt, src_x, src_y, src_z, src_level,
+                    dst_mt->stencil_mt, dst_x, dst_y, dst_z, dst_level,
+                    src_width, src_height);
+   }
 }
 
 void
