@@ -1345,9 +1345,9 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
 }
 
 void
-fs_generator::generate_varying_pull_constant_load(fs_inst *inst,
-                                                  struct brw_reg dst,
-                                                  struct brw_reg index)
+fs_generator::generate_varying_pull_constant_load_gen4(fs_inst *inst,
+                                                       struct brw_reg dst,
+                                                       struct brw_reg index)
 {
    assert(devinfo->gen < 7); /* Should use the gen7 variant. */
    assert(inst->header_size != 0);
@@ -2180,8 +2180,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 generate_uniform_pull_constant_load_gen7(inst, dst, src[0], src[1]);
 	 break;
 
-      case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD:
-	 generate_varying_pull_constant_load(inst, dst, src[0]);
+      case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN4:
+	 generate_varying_pull_constant_load_gen4(inst, dst, src[0]);
 	 break;
 
       case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN7:

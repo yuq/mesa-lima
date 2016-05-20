@@ -971,7 +971,7 @@ fs_visitor::implied_mrf_writes(fs_inst *inst)
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
    case SHADER_OPCODE_GEN4_SCRATCH_READ:
       return 1;
-   case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD:
+   case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN4:
       return inst->mlen;
    case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
       return inst->mlen;
@@ -4426,7 +4426,7 @@ lower_varying_pull_constant_logical_send(const fs_builder &bld, fs_inst *inst)
 
       bld.MOV(byte_offset(payload, REG_SIZE), inst->src[1]);
 
-      inst->opcode = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD;
+      inst->opcode = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN4;
       inst->resize_sources(1);
       inst->base_mrf = payload.nr;
       inst->header_size = 1;
