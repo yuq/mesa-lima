@@ -2416,7 +2416,7 @@
       <value name="MMIO Write Immediate Data" value="1"/>
     </field>
     <field name="Store Data Index" start="53" end="53" type="uint"/>
-    <field name="Command Streamer Stall Enable" start="52" end="52" type="uint"/>
+    <field name="Command Streamer Stall Enable" start="52" end="52" type="bool"/>
     <field name="Global Snapshot Count Reset" start="51" end="51" type="uint">
       <value name="Don't Reset" value="0"/>
       <value name="Reset" value="1"/>
