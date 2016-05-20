@@ -1000,6 +1000,7 @@ enum opcode {
    SHADER_OPCODE_TG4_OFFSET,
    SHADER_OPCODE_TG4_OFFSET_LOGICAL,
    SHADER_OPCODE_SAMPLEINFO,
+   SHADER_OPCODE_SAMPLEINFO_LOGICAL,
 
    /**
     * Combines multiple sources of size 1 into a larger virtual GRF.

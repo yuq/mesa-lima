@@ -742,6 +742,7 @@ fs_inst::components_read(unsigned i) const
    case SHADER_OPCODE_LOD_LOGICAL:
    case SHADER_OPCODE_TG4_LOGICAL:
    case SHADER_OPCODE_TG4_OFFSET_LOGICAL:
+   case SHADER_OPCODE_SAMPLEINFO_LOGICAL:
       assert(src[TEX_LOGICAL_SRC_COORD_COMPONENTS].file == IMM &&
              src[TEX_LOGICAL_SRC_GRAD_COMPONENTS].file == IMM);
       /* Texture coordinates. */
@@ -4096,6 +4097,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
 
    if (op == SHADER_OPCODE_TG4 || op == SHADER_OPCODE_TG4_OFFSET ||
        offset_value.file != BAD_FILE ||
+       op == SHADER_OPCODE_SAMPLEINFO ||
        is_high_sampler(devinfo, sampler)) {
       /* For general texture offsets (no txf workaround), we need a header to
        * put them in.  Note that we're only reserving space for it in the
@@ -4533,6 +4535,10 @@ fs_visitor::lower_logical_sends()
          lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TG4_OFFSET);
          break;
 
+      case SHADER_OPCODE_SAMPLEINFO_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_SAMPLEINFO);
+         break;
+
       case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_UNTYPED_SURFACE_READ,
@@ -4711,6 +4717,9 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       /* Dual-source FB writes are unsupported in SIMD16 mode. */
       return (inst->src[FB_WRITE_LOGICAL_SRC_COLOR1].file != BAD_FILE ?
               8 : inst->exec_size);
+
+   case SHADER_OPCODE_SAMPLEINFO_LOGICAL:
+      return MIN2(16, inst->exec_size);
 
    case SHADER_OPCODE_TXD_LOGICAL:
       /* TXD is unsupported in SIMD16 mode. */
