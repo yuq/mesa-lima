@@ -3332,6 +3332,7 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
 {
    const struct brw_device_info *devinfo = p->devinfo;
    const unsigned exec_size = 1 << brw_inst_exec_size(devinfo, p->current);
+   const unsigned qtr_control = brw_inst_qtr_control(devinfo, p->current);
    brw_inst *inst;
 
    assert(devinfo->gen >= 7);
@@ -3352,14 +3353,13 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
                         retype(brw_mask_reg(0), BRW_REGISTER_TYPE_UD));
 
          /* Quarter control has the effect of magically shifting the value of
-          * this register.  Make sure it's set to zero.
+          * this register so you'll get the first active channel relative to
+          * the specified quarter control as result.
           */
-         brw_inst_set_qtr_control(devinfo, inst, GEN6_COMPRESSION_1Q);
       } else {
-         const struct brw_reg flag = retype(brw_flag_reg(1, 0),
-                                            BRW_REGISTER_TYPE_UD);
+         const struct brw_reg flag = brw_flag_reg(1, 0);
 
-         brw_MOV(p, flag, brw_imm_ud(0));
+         brw_MOV(p, retype(flag, BRW_REGISTER_TYPE_UD), brw_imm_ud(0));
 
          /* Run enough instructions returning zero with execution masking and
           * a conditional modifier enabled in order to get the full execution
@@ -3373,13 +3373,18 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
             inst = brw_MOV(p, retype(brw_null_reg(), BRW_REGISTER_TYPE_UW),
                            brw_imm_uw(0));
             brw_inst_set_mask_control(devinfo, inst, BRW_MASK_ENABLE);
-            brw_inst_set_group(devinfo, inst, lower_size * i);
+            brw_inst_set_group(devinfo, inst, lower_size * i + 8 * qtr_control);
             brw_inst_set_cond_modifier(devinfo, inst, BRW_CONDITIONAL_Z);
             brw_inst_set_flag_reg_nr(devinfo, inst, 1);
             brw_inst_set_exec_size(devinfo, inst, cvt(lower_size) - 1);
          }
 
-         brw_FBL(p, vec1(dst), flag);
+         /* Find the first bit set in the exec_size-wide portion of the flag
+          * register that was updated by the last sequence of MOV
+          * instructions.
+          */
+         const enum brw_reg_type type = brw_int_type(exec_size / 8, false);
+         brw_FBL(p, vec1(dst), byte_offset(retype(flag, type), qtr_control));
       }
    } else {
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
