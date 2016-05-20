@@ -38,55 +38,6 @@
 #include "freedreno_query_hw.h"
 #include "freedreno_util.h"
 
-static struct fd_ringbuffer *next_rb(struct fd_context *ctx)
-{
-	struct fd_ringbuffer *ring;
-	uint32_t ts;
-
-	/* grab next ringbuffer: */
-	ring = ctx->rings[(ctx->rings_idx++) % ARRAY_SIZE(ctx->rings)];
-
-	/* wait for new rb to be idle: */
-	ts = fd_ringbuffer_timestamp(ring);
-	if (ts) {
-		DBG("wait: %u", ts);
-		fd_pipe_wait(ctx->screen->pipe, ts);
-	}
-
-	fd_ringbuffer_reset(ring);
-
-	return ring;
-}
-
-static void
-fd_context_next_rb(struct pipe_context *pctx)
-{
-	struct fd_context *ctx = fd_context(pctx);
-	struct fd_ringbuffer *ring;
-
-	fd_ringmarker_del(ctx->draw_start);
-	fd_ringmarker_del(ctx->draw_end);
-
-	ring = next_rb(ctx);
-
-	ctx->draw_start = fd_ringmarker_new(ring);
-	ctx->draw_end = fd_ringmarker_new(ring);
-
-	fd_ringbuffer_set_parent(ring, NULL);
-	ctx->ring = ring;
-
-	fd_ringmarker_del(ctx->binning_start);
-	fd_ringmarker_del(ctx->binning_end);
-
-	ring = next_rb(ctx);
-
-	ctx->binning_start = fd_ringmarker_new(ring);
-	ctx->binning_end = fd_ringmarker_new(ring);
-
-	fd_ringbuffer_set_parent(ring, ctx->ring);
-	ctx->binning_ring = ring;
-}
-
 /* emit accumulated render cmds, needed for example if render target has
  * changed, or for flush()
  */
@@ -101,15 +52,10 @@ fd_context_render(struct pipe_context *pctx)
 	if (!ctx->needs_flush)
 		return;
 
-	fd_gmem_render_tiles(ctx);
+	fd_batch_flush(ctx->batch);
 
-	DBG("%p/%p/%p", ctx->ring->start, ctx->ring->cur, ctx->ring->end);
-
-	/* if size in dwords is more than half the buffer size, then wait and
-	 * wrap around:
-	 */
-	if ((ctx->ring->cur - ctx->ring->start) > ctx->ring->size/8)
-		fd_context_next_rb(pctx);
+	fd_batch_reference(&ctx->batch, NULL);
+	ctx->batch = fd_batch_create(ctx);
 
 	ctx->needs_flush = false;
 	ctx->cleared = ctx->partial_cleared = ctx->restore = ctx->resolve = 0;
@@ -131,14 +77,18 @@ static void
 fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 		unsigned flags)
 {
-	struct fd_ringbuffer *ring = fd_context(pctx)->ring;
+	struct fd_batch *batch = NULL;
+
+	fd_batch_reference(&batch, fd_context(pctx)->batch);
 
 	fd_context_render(pctx);
 
 	if (fence) {
 		fd_screen_fence_ref(pctx->screen, fence, NULL);
-		*fence = fd_fence_create(pctx, fd_ringbuffer_timestamp(ring));
+		*fence = fd_fence_create(pctx, fd_ringbuffer_timestamp(batch->gmem));
 	}
+
+	fd_batch_reference(&batch, NULL);
 }
 
 /**
@@ -149,7 +99,7 @@ static void
 fd_emit_string_marker(struct pipe_context *pctx, const char *string, int len)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	struct fd_ringbuffer *ring = ctx->ring;
+	struct fd_ringbuffer *ring = ctx->batch->draw;
 	const uint32_t *buf = (const void *)string;
 
 	/* max packet size is 0x3fff dwords: */
@@ -191,13 +141,7 @@ fd_context_destroy(struct pipe_context *pctx)
 
 	util_slab_destroy(&ctx->transfer_pool);
 
-	fd_ringmarker_del(ctx->draw_start);
-	fd_ringmarker_del(ctx->draw_end);
-	fd_ringmarker_del(ctx->binning_start);
-	fd_ringmarker_del(ctx->binning_end);
-
-	for (i = 0; i < ARRAY_SIZE(ctx->rings); i++)
-		fd_ringbuffer_del(ctx->rings[i]);
+	fd_batch_reference(&ctx->batch, NULL);  /* unref current batch */
 
 	for (i = 0; i < ARRAY_SIZE(ctx->pipe); i++) {
 		struct fd_vsc_pipe *pipe = &ctx->pipe[i];
@@ -253,13 +197,8 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	pctx->emit_string_marker = fd_emit_string_marker;
 	pctx->set_debug_callback = fd_set_debug_callback;
 
-	for (i = 0; i < ARRAY_SIZE(ctx->rings); i++) {
-		ctx->rings[i] = fd_ringbuffer_new(screen->pipe, 0x100000);
-		if (!ctx->rings[i])
-			goto fail;
-	}
+	ctx->batch = fd_batch_create(ctx);
 
-	fd_context_next_rb(pctx);
 	fd_reset_wfi(ctx);
 
 	util_dynarray_init(&ctx->draw_patches);

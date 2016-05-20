@@ -169,14 +169,14 @@ fd3_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 
 	emit.key.binning_pass = false;
 	emit.dirty = dirty;
-	draw_impl(ctx, ctx->ring, &emit);
+	draw_impl(ctx, ctx->batch->draw, &emit);
 
 	/* and now binning pass: */
 	emit.key.binning_pass = true;
 	emit.dirty = dirty & ~(FD_DIRTY_BLEND);
 	emit.vp = NULL;   /* we changed key so need to refetch vp */
 	emit.fp = NULL;
-	draw_impl(ctx, ctx->binning_ring, &emit);
+	draw_impl(ctx, ctx->batch->binning, &emit);
 
 	return true;
 }
@@ -209,7 +209,7 @@ static void
 fd3_clear_binning(struct fd_context *ctx, unsigned dirty)
 {
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
-	struct fd_ringbuffer *ring = ctx->binning_ring;
+	struct fd_ringbuffer *ring = ctx->batch->binning;
 	struct fd3_emit emit = {
 		.debug = &ctx->debug,
 		.vtx  = &fd3_ctx->solid_vbuf_state,
@@ -250,7 +250,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 {
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
-	struct fd_ringbuffer *ring = ctx->ring;
+	struct fd_ringbuffer *ring = ctx->batch->draw;
 	unsigned dirty = ctx->dirty;
 	unsigned i;
 	struct fd3_emit emit = {

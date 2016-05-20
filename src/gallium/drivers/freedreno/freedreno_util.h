@@ -182,7 +182,7 @@ OUT_RING(struct fd_ringbuffer *ring, uint32_t data)
 		DBG("ring[%p]: OUT_RING   %04x:  %08x", ring,
 				(uint32_t)(ring->cur - ring->last_start), data);
 	}
-	*(ring->cur++) = data;
+	fd_ringbuffer_emit(ring, data);
 }
 
 /* like OUT_RING() but appends a cmdstream patch point to 'buf' */
@@ -269,10 +269,9 @@ OUT_WFI(struct fd_ringbuffer *ring)
 }
 
 static inline void
-__OUT_IB(struct fd_ringbuffer *ring, bool prefetch,
-		struct fd_ringmarker *start, struct fd_ringmarker *end)
+__OUT_IB(struct fd_ringbuffer *ring, bool prefetch, struct fd_ringbuffer *target)
 {
-	uint32_t dwords = fd_ringmarker_dwords(start, end);
+	uint32_t dwords = target->cur - target->start;
 
 	assert(dwords > 0);
 
@@ -285,7 +284,7 @@ __OUT_IB(struct fd_ringbuffer *ring, bool prefetch,
 	emit_marker(ring, 6);
 
 	OUT_PKT3(ring, prefetch ? CP_INDIRECT_BUFFER_PFE : CP_INDIRECT_BUFFER_PFD, 2);
-	fd_ringbuffer_emit_reloc_ring(ring, start, end);
+	fd_ringbuffer_emit_reloc_ring_full(ring, target, 0);
 	OUT_RING(ring, dwords);
 
 	emit_marker(ring, 6);

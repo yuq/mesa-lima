@@ -756,10 +756,9 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
  * state, there could have been a context switch between ioctls):
  */
 void
-fd3_emit_restore(struct fd_context *ctx)
+fd3_emit_restore(struct fd_context *ctx, struct fd_ringbuffer *ring)
 {
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
-	struct fd_ringbuffer *ring = ctx->ring;
 	int i;
 
 	if (ctx->screen->gpu_id == 320) {
@@ -900,10 +899,9 @@ fd3_emit_restore(struct fd_context *ctx)
 }
 
 static void
-fd3_emit_ib(struct fd_ringbuffer *ring, struct fd_ringmarker *start,
-		struct fd_ringmarker *end)
+fd3_emit_ib(struct fd_ringbuffer *ring, struct fd_ringbuffer *target)
 {
-	__OUT_IB(ring, true, start, end);
+	__OUT_IB(ring, true, target);
 }
 
 void

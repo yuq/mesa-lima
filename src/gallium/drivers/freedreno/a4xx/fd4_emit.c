@@ -736,10 +736,9 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
  * state, there could have been a context switch between ioctls):
  */
 void
-fd4_emit_restore(struct fd_context *ctx)
+fd4_emit_restore(struct fd_context *ctx, struct fd_ringbuffer *ring)
 {
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
-	struct fd_ringbuffer *ring = ctx->ring;
 
 	OUT_PKT0(ring, REG_A4XX_RBBM_PERFCTR_CTL, 1);
 	OUT_RING(ring, 0x00000001);
@@ -892,10 +891,9 @@ fd4_emit_restore(struct fd_context *ctx)
 }
 
 static void
-fd4_emit_ib(struct fd_ringbuffer *ring, struct fd_ringmarker *start,
-		struct fd_ringmarker *end)
+fd4_emit_ib(struct fd_ringbuffer *ring, struct fd_ringbuffer *target)
 {
-	__OUT_IB(ring, true, start, end);
+	__OUT_IB(ring, true, target);
 }
 
 void

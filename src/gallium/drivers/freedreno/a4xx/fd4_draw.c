@@ -164,22 +164,24 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 	emit.key.binning_pass = false;
 	emit.dirty = dirty;
 
+	struct fd_ringbuffer *ring = ctx->batch->draw;
+
 	if (ctx->rasterizer->rasterizer_discard) {
-		fd_wfi(ctx, ctx->ring);
-		OUT_PKT3(ctx->ring, CP_REG_RMW, 3);
-		OUT_RING(ctx->ring, REG_A4XX_RB_RENDER_CONTROL);
-		OUT_RING(ctx->ring, ~A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
-		OUT_RING(ctx->ring, A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
+		fd_wfi(ctx, ring);
+		OUT_PKT3(ring, CP_REG_RMW, 3);
+		OUT_RING(ring, REG_A4XX_RB_RENDER_CONTROL);
+		OUT_RING(ring, ~A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
+		OUT_RING(ring, A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
 	}
 
-	draw_impl(ctx, ctx->ring, &emit);
+	draw_impl(ctx, ctx->batch->draw, &emit);
 
 	if (ctx->rasterizer->rasterizer_discard) {
-		fd_wfi(ctx, ctx->ring);
-		OUT_PKT3(ctx->ring, CP_REG_RMW, 3);
-		OUT_RING(ctx->ring, REG_A4XX_RB_RENDER_CONTROL);
-		OUT_RING(ctx->ring, ~A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
-		OUT_RING(ctx->ring, 0);
+		fd_wfi(ctx, ring);
+		OUT_PKT3(ring, CP_REG_RMW, 3);
+		OUT_RING(ring, REG_A4XX_RB_RENDER_CONTROL);
+		OUT_RING(ring, ~A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
+		OUT_RING(ring, 0);
 	}
 
 	/* and now binning pass: */
@@ -187,7 +189,7 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 	emit.dirty = dirty & ~(FD_DIRTY_BLEND);
 	emit.vp = NULL;   /* we changed key so need to refetch vp */
 	emit.fp = NULL;
-	draw_impl(ctx, ctx->binning_ring, &emit);
+	draw_impl(ctx, ctx->batch->binning, &emit);
 
 	return true;
 }
@@ -217,7 +219,7 @@ static void
 fd4_clear_binning(struct fd_context *ctx, unsigned dirty)
 {
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
-	struct fd_ringbuffer *ring = ctx->binning_ring;
+	struct fd_ringbuffer *ring = ctx->batch->binning;
 	struct fd4_emit emit = {
 		.debug = &ctx->debug,
 		.vtx  = &fd4_ctx->solid_vbuf_state,
@@ -251,7 +253,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
 {
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
-	struct fd_ringbuffer *ring = ctx->ring;
+	struct fd_ringbuffer *ring = ctx->batch->draw;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	unsigned char mrt_comp[A4XX_MAX_RENDER_TARGETS] = {0};
 	unsigned dirty = ctx->dirty;

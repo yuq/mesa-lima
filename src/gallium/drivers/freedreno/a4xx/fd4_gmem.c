@@ -525,7 +525,7 @@ fd4_emit_sysmem_prep(struct fd_context *ctx)
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct fd_ringbuffer *ring = ctx->ring;
 
-	fd4_emit_restore(ctx);
+	fd4_emit_restore(ctx, ring);
 
 	OUT_PKT0(ring, REG_A4XX_RB_FRAME_BUFFER_DIMENSION, 1);
 	OUT_RING(ring, A4XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
@@ -596,6 +596,7 @@ emit_binning_pass(struct fd_context *ctx)
 {
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct fd_batch *batch = ctx->batch;
 	struct fd_ringbuffer *ring = ctx->ring;
 	int i;
 
@@ -635,7 +636,7 @@ emit_binning_pass(struct fd_context *ctx)
 	}
 
 	/* emit IB to binning drawcmds: */
-	ctx->emit_ib(ring, ctx->binning_start, ctx->binning_end);
+	ctx->emit_ib(ring, batch->binning);
 
 	fd_reset_wfi(ctx);
 	fd_wfi(ctx, ring);
@@ -662,7 +663,7 @@ fd4_emit_tile_init(struct fd_context *ctx)
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 
-	fd4_emit_restore(ctx);
+	fd4_emit_restore(ctx, ring);
 
 	OUT_PKT0(ring, REG_A4XX_VSC_BIN_SIZE, 1);
 	OUT_RING(ring, A4XX_VSC_BIN_SIZE_WIDTH(gmem->bin_w) |

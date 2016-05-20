@@ -158,7 +158,7 @@ fd_hw_begin_query(struct fd_context *ctx, struct fd_query *q)
 	destroy_periods(ctx, &hq->periods);
 
 	if (is_active(hq, ctx->stage))
-		resume_query(ctx, hq, ctx->ring);
+		resume_query(ctx, hq, ctx->batch->draw);
 
 	q->active = true;
 
@@ -181,7 +181,7 @@ fd_hw_end_query(struct fd_context *ctx, struct fd_query *q)
 	if (!q->active)
 		return;
 	if (is_active(hq, ctx->stage))
-		pause_query(ctx, hq, ctx->ring);
+		pause_query(ctx, hq, ctx->batch->draw);
 	q->active = false;
 	/* move to current list: */
 	list_del(&hq->list);

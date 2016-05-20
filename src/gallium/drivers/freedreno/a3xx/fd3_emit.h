@@ -93,7 +93,7 @@ void fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit);
 void fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct fd3_emit *emit);
 
-void fd3_emit_restore(struct fd_context *ctx);
+void fd3_emit_restore(struct fd_context *ctx, struct fd_ringbuffer *ring);
 
 void fd3_emit_init(struct pipe_context *pctx);
 

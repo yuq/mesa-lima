@@ -36,6 +36,7 @@
 #include "util/u_slab.h"
 #include "util/u_string.h"
 
+#include "freedreno_batch.h"
 #include "freedreno_screen.h"
 #include "freedreno_gmem.h"
 #include "freedreno_util.h"
@@ -246,33 +247,19 @@ struct fd_context {
 		uint64_t batch_total, batch_sysmem, batch_gmem, batch_restore;
 	} stats;
 
-	/* we can't really sanely deal with wraparound point in ringbuffer
-	 * and because of the way tiling works we can't really flush at
-	 * arbitrary points (without a big performance hit).  When we get
-	 * too close to the end of the current ringbuffer, cycle to the next
-	 * one (and wait for pending rendering from next rb to complete).
-	 * We want the # of ringbuffers to be high enough that we don't
-	 * normally have to wait before resetting to the start of the next
-	 * rb.
+	/* TODO get rid of this.. only used in gmem/tiling code paths (and
+	 * NULL the rest of the time).  Just leaving for now to reduce some
+	 * churn..
 	 */
-	struct fd_ringbuffer *rings[8];
-	unsigned rings_idx;
-
-	/* NOTE: currently using a single ringbuffer for both draw and
-	 * tiling commands, we need to make sure we need to leave enough
-	 * room at the end to append the tiling commands when we flush.
-	 * 0x7000 dwords should be a couple times more than we ever need
-	 * so should be a nice conservative threshold.
-	 */
-#define FD_TILING_COMMANDS_DWORDS 0x7000
-
-	/* normal draw/clear cmds: */
 	struct fd_ringbuffer *ring;
-	struct fd_ringmarker *draw_start, *draw_end;
 
-	/* binning pass draw/clear cmds: */
-	struct fd_ringbuffer *binning_ring;
-	struct fd_ringmarker *binning_start, *binning_end;
+	/* Current batch.. the rule here is that you can deref ctx->batch
+	 * in codepaths from pipe_context entrypoints.  But not in code-
+	 * paths from fd_batch_flush() (basically, the stuff that gets
+	 * called from GMEM code), since in those code-paths the batch
+	 * you care about is not necessarily the same as ctx->batch.
+	 */
+	struct fd_batch *batch;
 
 	/* Keep track if WAIT_FOR_IDLE is needed for registers we need
 	 * to update via RMW:
@@ -400,8 +387,7 @@ struct fd_context {
 			uint32_t regid, uint32_t num, struct pipe_resource **prscs, uint32_t *offsets);
 
 	/* indirect-branch emit: */
-	void (*emit_ib)(struct fd_ringbuffer *ring, struct fd_ringmarker *start,
-			struct fd_ringmarker *end);
+	void (*emit_ib)(struct fd_ringbuffer *ring, struct fd_ringbuffer *target);
 };
 
 static inline struct fd_context *

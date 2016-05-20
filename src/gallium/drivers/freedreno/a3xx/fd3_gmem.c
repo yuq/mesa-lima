@@ -732,7 +732,7 @@ fd3_emit_sysmem_prep(struct fd_context *ctx)
 		pitch = fd_resource(psurf->texture)->slices[psurf->u.tex.level].pitch;
 	}
 
-	fd3_emit_restore(ctx);
+	fd3_emit_restore(ctx, ring);
 
 	OUT_PKT0(ring, REG_A3XX_RB_FRAME_BUFFER_DIMENSION, 1);
 	OUT_RING(ring, A3XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
@@ -794,6 +794,7 @@ emit_binning_pass(struct fd_context *ctx)
 {
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct fd_batch *batch = ctx->batch;
 	struct fd_ringbuffer *ring = ctx->ring;
 	int i;
 
@@ -857,7 +858,7 @@ emit_binning_pass(struct fd_context *ctx)
 			A3XX_PC_VSTREAM_CONTROL_N(0));
 
 	/* emit IB to binning drawcmds: */
-	ctx->emit_ib(ring, ctx->binning_start, ctx->binning_end);
+	ctx->emit_ib(ring, batch->binning);
 	fd_reset_wfi(ctx);
 
 	fd_wfi(ctx, ring);
@@ -923,7 +924,7 @@ fd3_emit_tile_init(struct fd_context *ctx)
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	uint32_t rb_render_control;
 
-	fd3_emit_restore(ctx);
+	fd3_emit_restore(ctx, ring);
 
 	/* note: use gmem->bin_w/h, the bin_w/h parameters may be truncated
 	 * at the right and bottom edge tiles

@@ -830,13 +830,13 @@ fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond)
 		util_blitter_save_render_condition(ctx->blitter,
 			ctx->cond_query, ctx->cond_cond, ctx->cond_mode);
 
-	fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_BLIT);
+	fd_hw_query_set_stage(ctx, ctx->batch->draw, FD_STAGE_BLIT);
 }
 
 static void
 fd_blitter_pipe_end(struct fd_context *ctx)
 {
-	fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_NULL);
+	fd_hw_query_set_stage(ctx, ctx->batch->draw, FD_STAGE_NULL);
 }
 
 static void

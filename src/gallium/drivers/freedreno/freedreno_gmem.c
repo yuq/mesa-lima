@@ -331,7 +331,7 @@ render_tiles(struct fd_context *ctx)
 		fd_hw_query_prepare_tile(ctx, i, ctx->ring);
 
 		/* emit IB to drawcmds: */
-		ctx->emit_ib(ctx->ring, ctx->draw_start, ctx->draw_end);
+		ctx->emit_ib(ctx->ring, ctx->batch->draw);
 		fd_reset_wfi(ctx);
 
 		/* emit gmem2mem to transfer tile back to system memory: */
@@ -349,7 +349,7 @@ render_sysmem(struct fd_context *ctx)
 	fd_hw_query_prepare_tile(ctx, 0, ctx->ring);
 
 	/* emit IB to drawcmds: */
-	ctx->emit_ib(ctx->ring, ctx->draw_start, ctx->draw_end);
+	ctx->emit_ib(ctx->ring, ctx->batch->draw);
 	fd_reset_wfi(ctx);
 }
 
@@ -357,6 +357,7 @@ void
 fd_gmem_render_tiles(struct fd_context *ctx)
 {
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct fd_batch *batch = ctx->batch;
 	bool sysmem = false;
 
 	if (ctx->emit_sysmem_prep) {
@@ -371,15 +372,13 @@ fd_gmem_render_tiles(struct fd_context *ctx)
 	/* close out the draw cmds by making sure any active queries are
 	 * paused:
 	 */
-	fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_NULL);
-
-	/* mark the end of the clear/draw cmds before emitting per-tile cmds: */
-	fd_ringmarker_mark(ctx->draw_end);
-	fd_ringmarker_mark(ctx->binning_end);
+	fd_hw_query_set_stage(ctx, batch->draw, FD_STAGE_NULL);
 
 	fd_reset_wfi(ctx);
 
 	ctx->stats.batch_total++;
+
+	ctx->ring = batch->gmem;
 
 	if (sysmem) {
 		DBG("rendering sysmem (%s/%s)",
@@ -399,12 +398,9 @@ fd_gmem_render_tiles(struct fd_context *ctx)
 		ctx->stats.batch_gmem++;
 	}
 
-	/* GPU executes starting from tile cmds, which IB back to draw cmds: */
-	fd_ringmarker_flush(ctx->draw_end);
+	fd_ringbuffer_flush(batch->gmem);
 
-	/* mark start for next draw/binning cmds: */
-	fd_ringmarker_mark(ctx->draw_start);
-	fd_ringmarker_mark(ctx->binning_start);
+	ctx->ring = NULL;
 
 	fd_reset_wfi(ctx);
 

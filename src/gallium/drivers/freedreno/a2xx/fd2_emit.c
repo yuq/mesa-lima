@@ -184,7 +184,7 @@ fd2_emit_state(struct fd_context *ctx, uint32_t dirty)
 {
 	struct fd2_blend_stateobj *blend = fd2_blend_stateobj(ctx->blend);
 	struct fd2_zsa_stateobj *zsa = fd2_zsa_stateobj(ctx->zsa);
-	struct fd_ringbuffer *ring = ctx->ring;
+	struct fd_ringbuffer *ring = ctx->batch->draw;
 
 	/* NOTE: we probably want to eventually refactor this so each state
 	 * object handles emitting it's own state..  although the mapping of
@@ -443,10 +443,9 @@ fd2_emit_restore(struct fd_context *ctx, struct fd_ringbuffer *ring)
 }
 
 static void
-fd2_emit_ib(struct fd_ringbuffer *ring, struct fd_ringmarker *start,
-		struct fd_ringmarker *end)
+fd2_emit_ib(struct fd_ringbuffer *ring, struct fd_ringbuffer *target)
 {
-	__OUT_IB(ring, false, start, end);
+	__OUT_IB(ring, false, target);
 }
 
 void
