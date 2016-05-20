@@ -2594,11 +2594,18 @@ fs_visitor::opt_sampler_eot()
    if (key->nr_color_regions != 1)
       return false;
 
+   /* Requires emitting a bunch of saturating MOV instructions during logical
+    * send lowering to clamp the color payload, which the sampler unit isn't
+    * going to do for us.
+    */
+   if (key->clamp_fragment_color)
+      return false;
+
    /* Look for a texturing instruction immediately before the final FB_WRITE. */
    bblock_t *block = cfg->blocks[cfg->num_blocks - 1];
    fs_inst *fb_write = (fs_inst *)block->end();
    assert(fb_write->eot);
-   assert(fb_write->opcode == FS_OPCODE_FB_WRITE);
+   assert(fb_write->opcode == FS_OPCODE_FB_WRITE_LOGICAL);
 
    /* There wasn't one; nothing to do. */
    if (unlikely(fb_write->prev->is_head_sentinel()))
@@ -2611,23 +2618,33 @@ fs_visitor::opt_sampler_eot()
     * “Response Length of zero is allowed on all SIMD8* and SIMD16* sampler
     *  messages except sample+killpix, resinfo, sampleinfo, LOD, and gather4*”
     */
-   if (!tex_inst->is_tex() ||
-       tex_inst->opcode == SHADER_OPCODE_TXS ||
-       tex_inst->opcode == SHADER_OPCODE_SAMPLEINFO ||
-       tex_inst->opcode == SHADER_OPCODE_LOD ||
-       tex_inst->opcode == SHADER_OPCODE_TG4 ||
-       tex_inst->opcode == SHADER_OPCODE_TG4_OFFSET)
+   if (tex_inst->opcode != SHADER_OPCODE_TEX_LOGICAL &&
+       tex_inst->opcode != SHADER_OPCODE_TXD_LOGICAL &&
+       tex_inst->opcode != SHADER_OPCODE_TXF_LOGICAL &&
+       tex_inst->opcode != SHADER_OPCODE_TXL_LOGICAL &&
+       tex_inst->opcode != FS_OPCODE_TXB_LOGICAL &&
+       tex_inst->opcode != SHADER_OPCODE_TXF_CMS_LOGICAL &&
+       tex_inst->opcode != SHADER_OPCODE_TXF_CMS_W_LOGICAL &&
+       tex_inst->opcode != SHADER_OPCODE_TXF_UMS_LOGICAL)
       return false;
 
-   /* If there's no header present, we need to munge the LOAD_PAYLOAD as well.
-    * It's very likely to be the previous instruction.
-    */
+   /* XXX - This shouldn't be necessary. */
    if (tex_inst->prev->is_head_sentinel())
       return false;
 
-   fs_inst *load_payload = (fs_inst *) tex_inst->prev;
-   if (load_payload->opcode != SHADER_OPCODE_LOAD_PAYLOAD)
-      return false;
+   /* Check that the FB write sources are fully initialized by the single
+    * texturing instruction.
+    */
+   for (unsigned i = 0; i < FB_WRITE_LOGICAL_NUM_SRCS; i++) {
+      if (i == FB_WRITE_LOGICAL_SRC_COLOR0) {
+         if (!fb_write->src[i].equals(tex_inst->dst) ||
+             fb_write->regs_read(i) != tex_inst->regs_written)
+         return false;
+      } else if (i != FB_WRITE_LOGICAL_SRC_COMPONENTS) {
+         if (fb_write->src[i].file != BAD_FILE)
+            return false;
+      }
+   }
 
    assert(!tex_inst->eot); /* We can't get here twice */
    assert((tex_inst->offset & (0xff << 24)) == 0);
@@ -2640,46 +2657,10 @@ fs_visitor::opt_sampler_eot()
    tex_inst->regs_written = 0;
    fb_write->remove(cfg->blocks[cfg->num_blocks - 1]);
 
-   /* If a header is present, marking the eot is sufficient. Otherwise, we need
-    * to create a new LOAD_PAYLOAD command with the same sources and a space
-    * saved for the header. Using a new destination register not only makes sure
-    * we have enough space, but it will make sure the dead code eliminator kills
-    * the instruction that this will replace.
+   /* Marking EOT is sufficient, lower_logical_sends() will notice the EOT
+    * flag and submit a header together with the sampler message as required
+    * by the hardware.
     */
-   if (tex_inst->header_size != 0) {
-      invalidate_live_intervals();
-      return true;
-   }
-
-   fs_reg send_header = ibld.vgrf(BRW_REGISTER_TYPE_F,
-                                  load_payload->sources + 1);
-   fs_reg *new_sources =
-      ralloc_array(mem_ctx, fs_reg, load_payload->sources + 1);
-
-   new_sources[0] = fs_reg();
-   for (int i = 0; i < load_payload->sources; i++)
-      new_sources[i+1] = load_payload->src[i];
-
-   /* The LOAD_PAYLOAD helper seems like the obvious choice here. However, it
-    * requires a lot of information about the sources to appropriately figure
-    * out the number of registers needed to be used. Given this stage in our
-    * optimization, we may not have the appropriate GRFs required by
-    * LOAD_PAYLOAD at this point (copy propagation). Therefore, we need to
-    * manually emit the instruction.
-    */
-   fs_inst *new_load_payload = new(mem_ctx) fs_inst(SHADER_OPCODE_LOAD_PAYLOAD,
-                                                    load_payload->exec_size,
-                                                    send_header,
-                                                    new_sources,
-                                                    load_payload->sources + 1);
-
-   new_load_payload->regs_written = load_payload->regs_written + 1;
-   new_load_payload->header_size = 1;
-   tex_inst->mlen++;
-   tex_inst->header_size = 1;
-   tex_inst->insert_before(cfg->blocks[cfg->num_blocks - 1], new_load_payload);
-   tex_inst->src[0] = send_header;
-
    invalidate_live_intervals();
    return true;
 }
@@ -4135,7 +4116,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
       sources[i] = bld.vgrf(BRW_REGISTER_TYPE_F);
 
    if (op == SHADER_OPCODE_TG4 || op == SHADER_OPCODE_TG4_OFFSET ||
-       offset_value.file != BAD_FILE ||
+       offset_value.file != BAD_FILE || inst->eot ||
        op == SHADER_OPCODE_SAMPLEINFO ||
        is_high_sampler(devinfo, sampler)) {
       /* For general texture offsets (no txf workaround), we need a header to
@@ -4156,7 +4137,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
        * and we have an explicit header, we need to set up the sampler
        * writemask.  It's reversed from normal: 1 means "don't write".
        */
-      if (inst->regs_written != 4 * reg_width) {
+      if (!inst->eot && inst->regs_written != 4 * reg_width) {
          assert((inst->regs_written % reg_width) == 0);
          unsigned mask = ~((1 << (inst->regs_written / reg_width)) - 1) & 0xf;
          inst->offset |= mask << 12;
@@ -5715,6 +5696,10 @@ fs_visitor::optimize()
    pass_num = 0;
 
    OPT(lower_simd_width);
+
+   /* After SIMD lowering just in case we had to unroll the EOT send. */
+   OPT(opt_sampler_eot);
+
    OPT(lower_logical_sends);
 
    if (progress) {
@@ -5738,7 +5723,6 @@ fs_visitor::optimize()
    }
 
    OPT(opt_redundant_discard_jumps);
-   OPT(opt_sampler_eot);
 
    if (OPT(lower_load_payload)) {
       split_virtual_grfs();
