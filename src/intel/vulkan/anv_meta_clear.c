@@ -709,10 +709,7 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
       anv_finishme("clearing multi-layer framebuffer");
 
    VkClearRect clear_rect = {
-      .rect = {
-         .offset = { 0, 0 },
-         .extent = { fb->width, fb->height },
-      },
+      .rect = cmd_state->render_area,
       .baseArrayLayer = 0,
       .layerCount = 1, /* FINISHME: clear multi-layer framebuffer */
    };

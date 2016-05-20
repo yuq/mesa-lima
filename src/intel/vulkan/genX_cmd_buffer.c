@@ -1100,6 +1100,7 @@ void genX(CmdBeginRenderPass)(
 
    cmd_buffer->state.framebuffer = framebuffer;
    cmd_buffer->state.pass = pass;
+   cmd_buffer->state.render_area = pRenderPassBegin->renderArea;
    anv_cmd_state_setup_attachments(cmd_buffer, pRenderPassBegin);
 
    genX(flush_pipeline_select_3d)(cmd_buffer);
