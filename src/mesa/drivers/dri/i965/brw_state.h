@@ -270,7 +270,6 @@ void brw_configure_w_tiled(const struct intel_mipmap_tree *mt,
                            unsigned *pitch, uint32_t *tiling,
                            unsigned *format);
 
-const char *brw_surface_format_name(unsigned format);
 uint32_t brw_format_for_mesa_format(mesa_format mesa_format);
 
 GLuint translate_tex_target(GLenum target);

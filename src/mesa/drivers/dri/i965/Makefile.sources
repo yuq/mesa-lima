@@ -54,8 +54,6 @@ i965_compiler_FILES = \
 	brw_schedule_instructions.cpp \
 	brw_shader.cpp \
 	brw_shader.h \
-	brw_surface_formats.c \
-	brw_surface_formats.h \
 	brw_util.c \
 	brw_util.h \
 	brw_vec4_builder.h \
@@ -159,6 +157,7 @@ i965_FILES = \
 	brw_state.h \
 	brw_state_upload.c \
 	brw_structs.h \
+	brw_surface_formats.c \
 	brw_tcs.c \
 	brw_tcs_surface_state.c \
 	brw_tes.c \

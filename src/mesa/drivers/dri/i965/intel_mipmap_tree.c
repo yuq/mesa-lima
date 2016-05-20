@@ -26,6 +26,8 @@
 #include <GL/gl.h>
 #include <GL/internal/dri_interface.h>
 
+#include "isl/isl.h"
+
 #include "intel_batchbuffer.h"
 #include "intel_mipmap_tree.h"
 #include "intel_resolve_map.h"
@@ -262,7 +264,8 @@ intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
    if (brw->gen >= 9) {
       mesa_format linear_format = _mesa_get_srgb_format_linear(mt->format);
       const uint32_t brw_format = brw_format_for_mesa_format(linear_format);
-      return brw_losslessly_compressible_format(brw, brw_format);
+      return isl_format_supports_lossless_compression(brw->intelScreen->devinfo,
+                                                      brw_format);
    } else
       return true;
 }
