@@ -3901,6 +3901,7 @@ struct gl_extensions
    GLboolean INTEL_performance_query;
    GLboolean KHR_texture_compression_astc_hdr;
    GLboolean KHR_texture_compression_astc_ldr;
+   GLboolean KHR_robust_buffer_access_behavior;
    GLboolean MESA_pack_invert;
    GLboolean MESA_ycbcr_texture;
    GLboolean NV_conditional_render;
