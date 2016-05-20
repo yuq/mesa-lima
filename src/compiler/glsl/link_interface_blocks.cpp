@@ -154,12 +154,6 @@ static bool
 interstage_match(struct gl_shader_program *prog, ir_variable *producer,
                  ir_variable *consumer, bool extra_array_level)
 {
-   /* Unsized arrays should not occur during interstage linking.  They
-    * should have all been assigned a size by link_intrastage_shaders.
-    */
-   assert(!consumer->type->is_unsized_array());
-   assert(!producer->type->is_unsized_array());
-
    /* Types must match. */
    if (consumer->get_interface_type() != producer->get_interface_type()) {
       /* Exception: if both the interface blocks are implicitly declared,

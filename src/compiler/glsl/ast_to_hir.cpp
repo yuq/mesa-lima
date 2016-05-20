@@ -976,7 +976,7 @@ do_assignment(exec_list *instructions, struct _mesa_glsl_parse_state *state,
 
          assert(var != NULL);
 
-         if (var->data.max_array_access >= unsigned(rhs->type->array_size())) {
+         if (var->data.max_array_access >= rhs->type->array_size()) {
             /* FINISHME: This should actually log the location of the RHS. */
             _mesa_glsl_error(& lhs_loc, state, "array size must be > %u due to "
                              "previous access",
@@ -3866,7 +3866,7 @@ get_variable_being_redeclared(ir_variable *var, YYLTYPE loc,
        * FINISHME: required or not.
        */
 
-      const unsigned size = unsigned(var->type->array_size());
+      const int size = var->type->array_size();
       check_builtin_array_max_size(var->name, size, loc, state);
       if ((size > 0) && (size <= earlier->data.max_array_access)) {
          _mesa_glsl_error(& loc, state, "array size must be > %u due to "
@@ -7737,7 +7737,7 @@ ast_tcs_output_layout::hir(exec_list *instructions,
       if (!var->type->is_unsized_array() || var->data.patch)
          continue;
 
-      if (var->data.max_array_access >= num_vertices) {
+      if (var->data.max_array_access >= (int)num_vertices) {
 	 _mesa_glsl_error(&loc, state,
 			  "this tessellation control shader output layout "
 			  "specifies %u vertices, but an access to element "
@@ -7798,7 +7798,7 @@ ast_gs_input_layout::hir(exec_list *instructions,
        */
 
       if (var->type->is_unsized_array()) {
-         if (var->data.max_array_access >= num_vertices) {
+         if (var->data.max_array_access >= (int)num_vertices) {
             _mesa_glsl_error(&loc, state,
                              "this geometry shader input layout implies %u"
                              " vertices, but an access to element %u of input"

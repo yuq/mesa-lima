@@ -484,7 +484,10 @@ public:
       this->interface_type = type;
       if (this->is_interface_instance()) {
          this->u.max_ifc_array_access =
-            rzalloc_array(this, unsigned, type->length);
+            ralloc_array(this, int, type->length);
+         for (unsigned i = 0; i < type->length; i++) {
+            this->u.max_ifc_array_access[i] = -1;
+         }
       }
    }
 
@@ -520,7 +523,7 @@ public:
           * zero.
           */
          for (unsigned i = 0; i < this->interface_type->length; i++)
-            assert(this->u.max_ifc_array_access[i] == 0);
+            assert(this->u.max_ifc_array_access[i] == -1);
 #endif
          ralloc_free(this->u.max_ifc_array_access);
          this->u.max_ifc_array_access = NULL;
@@ -540,7 +543,7 @@ public:
     * A "set" function is not needed because the array is dynmically allocated
     * as necessary.
     */
-   inline unsigned *get_max_ifc_array_access()
+   inline int *get_max_ifc_array_access()
    {
       assert(this->data._num_state_slots == 0);
       return this->u.max_ifc_array_access;
@@ -888,9 +891,9 @@ public:
       /**
        * Highest element accessed with a constant expression array index
        *
-       * Not used for non-array variables.
+       * Not used for non-array variables. -1 is never accessed.
        */
-      unsigned max_array_access;
+      int max_array_access;
 
       /**
        * Transform feedback buffer.
@@ -938,7 +941,7 @@ private:
        * For variables whose type is not an interface block, this pointer is
        * NULL.
        */
-      unsigned *max_ifc_array_access;
+      int *max_ifc_array_access;
 
       /**
        * Built-in state that backs this uniform

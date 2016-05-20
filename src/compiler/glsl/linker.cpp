@@ -216,7 +216,7 @@ public:
        * array using an index too large for its actual size assigned at link
        * time.
        */
-      if (var->data.max_array_access >= this->num_vertices) {
+      if (var->data.max_array_access >= (int)this->num_vertices) {
          linker_error(this->prog, "geometry shader accesses element %i of "
                       "%s, but only %i input vertices\n",
                       var->data.max_array_access, var->name, this->num_vertices);
@@ -924,7 +924,7 @@ validate_intrastage_arrays(struct gl_shader_program *prog,
       if ((var->type->fields.array == existing->type->fields.array) &&
           ((var->type->length == 0)|| (existing->type->length == 0))) {
          if (var->type->length != 0) {
-            if (var->type->length <= existing->data.max_array_access) {
+            if ((int)var->type->length <= existing->data.max_array_access) {
                linker_error(prog, "%s `%s' declared as type "
                            "`%s' but outermost dimension has an index"
                            " of `%i'\n",
@@ -935,7 +935,7 @@ validate_intrastage_arrays(struct gl_shader_program *prog,
             existing->type = var->type;
             return true;
          } else if (existing->type->length != 0) {
-            if(existing->type->length <= var->data.max_array_access &&
+            if((int)existing->type->length <= var->data.max_array_access &&
                !existing->data.from_ssbo_unsized_array) {
                linker_error(prog, "%s `%s' declared as type "
                            "`%s' but outermost dimension has an index"
@@ -1593,7 +1593,7 @@ private:
     */
    static const glsl_type *
    resize_interface_members(const glsl_type *type,
-                            const unsigned *max_ifc_array_access,
+                            const int *max_ifc_array_access,
                             bool is_ssbo)
    {
       unsigned num_fields = type->length;
@@ -2399,10 +2399,10 @@ update_array_sizes(struct gl_shader_program *prog)
           * Subroutine uniforms are not removed.
 	  */
 	 if (var->is_in_buffer_block() || var->type->contains_atomic() ||
-	     var->type->contains_subroutine())
+	     var->type->contains_subroutine() || var->constant_initializer)
 	    continue;
 
-	 unsigned int size = var->data.max_array_access;
+	 int size = var->data.max_array_access;
 	 for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
 	       if (prog->_LinkedShaders[j] == NULL)
 		  continue;
@@ -2419,7 +2419,7 @@ update_array_sizes(struct gl_shader_program *prog)
 	    }
 	 }
 
-	 if (size + 1 != var->type->length) {
+	 if (size + 1 != (int)var->type->length) {
 	    /* If this is a built-in uniform (i.e., it's backed by some
 	     * fixed-function state), adjust the number of state slots to
 	     * match the new array size.  The number of slots per array entry
