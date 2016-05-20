@@ -455,6 +455,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
 
    switch (dec->decoration) {
    case SpvDecorationNonWritable:
+   case SpvDecorationNonReadable:
    case SpvDecorationRelaxedPrecision:
       break; /* FIXME: Do nothing with this for now. */
    case SpvDecorationNoPerspective:
