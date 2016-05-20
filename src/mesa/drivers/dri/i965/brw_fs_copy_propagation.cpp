@@ -538,6 +538,14 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
                                entry->dst, entry->regs_written))
          continue;
 
+      /* If the type sizes don't match each channel of the instruction is
+       * either extracting a portion of the constant (which could be handled
+       * with some effort but the code below doesn't) or reading multiple
+       * channels of the source at once.
+       */
+      if (type_sz(inst->src[i].type) != type_sz(entry->dst.type))
+         continue;
+
       fs_reg val = entry->src;
       val.type = inst->src[i].type;
 
