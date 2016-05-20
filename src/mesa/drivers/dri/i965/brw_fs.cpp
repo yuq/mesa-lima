@@ -4816,6 +4816,22 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       /* Integer division is limited to SIMD8 on all generations. */
       return MIN2(8, inst->exec_size);
 
+   case FS_OPCODE_LINTERP:
+   case FS_OPCODE_GET_BUFFER_SIZE:
+   case FS_OPCODE_DDX_COARSE:
+   case FS_OPCODE_DDX_FINE:
+   case FS_OPCODE_DDY_COARSE:
+   case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
+   case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN7:
+   case FS_OPCODE_PACK_HALF_2x16_SPLIT:
+   case FS_OPCODE_UNPACK_HALF_2x16_SPLIT_X:
+   case FS_OPCODE_UNPACK_HALF_2x16_SPLIT_Y:
+   case FS_OPCODE_INTERPOLATE_AT_CENTROID:
+   case FS_OPCODE_INTERPOLATE_AT_SAMPLE:
+   case FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET:
+   case FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET:
+      return MIN2(16, inst->exec_size);
+
    case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL:
       /* Pre-ILK hardware doesn't have a SIMD8 variant of the texel fetch
        * message used to implement varying pull constant loads, so expand it
@@ -4870,8 +4886,14 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
              inst->exec_size == 8);
       /* Dual-source FB writes are unsupported in SIMD16 mode. */
       return (inst->src[FB_WRITE_LOGICAL_SRC_COLOR1].file != BAD_FILE ?
-              8 : inst->exec_size);
+              8 : MIN2(16, inst->exec_size));
 
+   case SHADER_OPCODE_TEX_LOGICAL:
+   case SHADER_OPCODE_TXF_CMS_LOGICAL:
+   case SHADER_OPCODE_TXF_UMS_LOGICAL:
+   case SHADER_OPCODE_TXF_MCS_LOGICAL:
+   case SHADER_OPCODE_LOD_LOGICAL:
+   case SHADER_OPCODE_TG4_LOGICAL:
    case SHADER_OPCODE_SAMPLEINFO_LOGICAL:
       return MIN2(16, inst->exec_size);
 
@@ -4882,7 +4904,7 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case SHADER_OPCODE_TG4_OFFSET_LOGICAL: {
       /* gather4_po_c is unsupported in SIMD16 mode. */
       const fs_reg &shadow_c = inst->src[TEX_LOGICAL_SRC_SHADOW_C];
-      return (shadow_c.file != BAD_FILE ? 8 : inst->exec_size);
+      return (shadow_c.file != BAD_FILE ? 8 : MIN2(16, inst->exec_size));
    }
    case SHADER_OPCODE_TXL_LOGICAL:
    case FS_OPCODE_TXB_LOGICAL: {
@@ -4896,7 +4918,7 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       else if (devinfo->gen < 7 && shadow_c.file != BAD_FILE)
          return 8;
       else
-         return inst->exec_size;
+         return MIN2(16, inst->exec_size);
    }
    case SHADER_OPCODE_TXF_LOGICAL:
    case SHADER_OPCODE_TXS_LOGICAL:
@@ -4906,7 +4928,7 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       if (devinfo->gen == 4)
          return 16;
       else
-         return inst->exec_size;
+         return MIN2(16, inst->exec_size);
 
    case SHADER_OPCODE_TXF_CMS_W_LOGICAL: {
       /* This opcode can take up to 6 arguments which means that in some
@@ -4921,13 +4943,26 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       if ((coord_components + 3) * 2 > MAX_SAMPLER_MESSAGE_SIZE)
          return 8;
       else
-         return inst->exec_size;
+         return MIN2(16, inst->exec_size);
    }
 
    case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
    case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
       return 8;
+
+   case SHADER_OPCODE_UNTYPED_ATOMIC_LOGICAL:
+   case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
+   case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
+      return MIN2(16, inst->exec_size);
+
+   case SHADER_OPCODE_URB_READ_SIMD8:
+   case SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT:
+   case SHADER_OPCODE_URB_WRITE_SIMD8:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
+      return MIN2(8, inst->exec_size);
 
    case SHADER_OPCODE_MOV_INDIRECT:
       /* Prior to Broadwell, we only have 8 address subregisters */
