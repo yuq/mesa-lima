@@ -4935,6 +4935,25 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
                   2 * REG_SIZE / (inst->dst.stride * type_sz(inst->dst.type)),
                   inst->exec_size);
 
+   case SHADER_OPCODE_LOAD_PAYLOAD: {
+      const unsigned reg_count =
+         DIV_ROUND_UP(inst->dst.component_size(inst->exec_size), REG_SIZE);
+
+      if (reg_count > 2) {
+         /* Only LOAD_PAYLOAD instructions with per-channel destination region
+          * can be easily lowered (which excludes headers and heterogeneous
+          * types).
+          */
+         assert(!inst->header_size);
+         for (unsigned i = 0; i < inst->sources; i++)
+            assert(type_sz(inst->dst.type) == type_sz(inst->src[i].type) ||
+                   inst->src[i].file == BAD_FILE);
+
+         return inst->exec_size / DIV_ROUND_UP(reg_count, 2);
+      } else {
+         return inst->exec_size;
+      }
+   }
    default:
       return inst->exec_size;
    }
