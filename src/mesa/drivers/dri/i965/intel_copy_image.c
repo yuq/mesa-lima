@@ -25,6 +25,7 @@
  *    Jason Ekstrand <jason.ekstrand@intel.com>
  */
 
+#include "brw_blorp.h"
 #include "intel_fbo.h"
 #include "intel_tex.h"
 #include "intel_blit.h"
@@ -209,7 +210,32 @@ copy_miptrees(struct brw_context *brw,
               int dst_x, int dst_y, int dst_z, unsigned dst_level,
               int src_width, int src_height)
 {
+   struct gl_context *ctx = &brw->ctx;
    unsigned bw, bh;
+
+   if (brw->gen >= 6 &&
+       brw->format_supported_as_render_target[dst_mt->format] &&
+       !_mesa_is_format_compressed(src_mt->format)) {
+
+      /* We'll use the destination format for both images */
+      mesa_format format = dst_mt->format;
+
+      brw_blorp_blit_miptrees(brw,
+                              src_mt, src_level, src_z, format, SWIZZLE_XYZW,
+                              dst_mt, dst_level, dst_z, format,
+                              src_x, src_y,
+                              src_x + src_width, src_y + src_height,
+                              dst_x, dst_y,
+                              dst_x + src_width, dst_y + src_height,
+                              GL_NEAREST, false, false, /* mirror */
+                              false, false);
+      return;
+   }
+
+   if (src_mt->num_samples > 0 || dst_mt->num_samples > 0) {
+      _mesa_problem(ctx, "Failed to copy multisampled texture with BLORP\n");
+      return;
+   }
 
    /* We are now going to try and copy the texture using the blitter.  If
     * that fails, we will fall back mapping the texture and using memcpy.
@@ -267,7 +293,8 @@ intel_copy_image_sub_data(struct gl_context *ctx,
    struct intel_mipmap_tree *src_mt, *dst_mt;
    unsigned src_level, dst_level;
 
-   if (_mesa_meta_CopyImageSubData_uncompressed(ctx,
+   if (brw->gen < 6 &&
+       _mesa_meta_CopyImageSubData_uncompressed(ctx,
                                                 src_image, src_renderbuffer,
                                                 src_x, src_y, src_z,
                                                 dst_image, dst_renderbuffer,
@@ -307,11 +334,6 @@ intel_copy_image_sub_data(struct gl_context *ctx,
       dst_mt = intel_renderbuffer(dst_renderbuffer)->mt;
       dst_image = dst_renderbuffer->TexImage;
       dst_level = 0;
-   }
-
-   if (src_mt->num_samples > 0 || dst_mt->num_samples > 0) {
-      _mesa_problem(ctx, "Failed to copy multisampled texture with BLORP\n");
-      return;
    }
 
    copy_miptrees(brw, src_mt, src_x, src_y, src_z, src_level,
