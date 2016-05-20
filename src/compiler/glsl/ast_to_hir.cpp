@@ -6920,7 +6920,7 @@ ast_struct_specifier::hir(exec_list *instructions,
    if (!state->symbols->add_type(name, t)) {
       const glsl_type *match = state->symbols->get_type(name);
       /* allow struct matching for desktop GL - older UE4 does this */
-      if (state->is_version(130, 0) && match->record_compare(t, false))
+      if (match != NULL && state->is_version(130, 0) && match->record_compare(t, false))
          _mesa_glsl_warning(& loc, state, "struct `%s' previously defined", name);
       else
          _mesa_glsl_error(& loc, state, "struct `%s' previously defined", name);
