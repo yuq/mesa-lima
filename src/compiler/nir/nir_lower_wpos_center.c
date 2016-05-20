@@ -54,7 +54,7 @@ add_half_to_fragcoord(nir_builder *b, nir_intrinsic_instr *intr)
    wpos = nir_fadd(b, wpos, nir_imm_vec4(b, 0.5f, 0.5f, 0.0f, 0.0f));
 
    nir_ssa_def_rewrite_uses_after(&intr->dest.ssa, nir_src_for_ssa(wpos),
-                                  &intr->instr);
+                                  wpos->parent_instr);
 }
 
 static bool
