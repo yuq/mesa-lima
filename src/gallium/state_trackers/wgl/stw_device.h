@@ -77,6 +77,8 @@ struct stw_device
 #ifdef DEBUG
    unsigned long memdbg_no;
 #endif
+
+   bool initialized;
 };
 
 
