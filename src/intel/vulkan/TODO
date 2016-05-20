@@ -1,0 +1,23 @@
+Intel Vulkan ToDo
+=================
+
+Missing Features:
+ - FP64
+ - Tessellation
+ - Cull and Clip Distance
+ - Sampler anisotropy (Is there anything to do here?)
+ - Image Gather Extended
+ - Storage Image Without Format
+ - Investigate CTS failures on HSW
+
+Code sharing with GL:
+ - Add surface capability introspection to ISL (pull the surface format
+   table from brw_surface_formats.c)
+ - Generalize blorp to use ISL and be sharable between the two drivers
+
+Performance:
+ - HiZ (Nanley)
+ - Fast color clears (after HiZ?)
+ - Compressed multisample support
+ - Renderbuffer compression (SKL+)
+ - Pushing pieces of UBOs?
