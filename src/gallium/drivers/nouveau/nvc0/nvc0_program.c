@@ -294,11 +294,21 @@ nvc0_tp_get_tess_mode(struct nvc0_program *tp, struct nv50_ir_prog_info *info)
       return;
    }
 
-   if (info->prop.tp.winding > 0)
-      tp->tp.tess_mode |= NVC0_3D_TESS_MODE_CW;
+   /* It seems like lines want the "CW" bit to indicate they're connected, and
+    * spit out errors in dmesg when the "CONNECTED" bit is set.
+    */
+   if (info->prop.tp.outputPrim != PIPE_PRIM_POINTS) {
+      if (info->prop.tp.domain == PIPE_PRIM_LINES)
+         tp->tp.tess_mode |= NVC0_3D_TESS_MODE_CW;
+      else
+         tp->tp.tess_mode |= NVC0_3D_TESS_MODE_CONNECTED;
+   }
 
-   if (info->prop.tp.outputPrim != PIPE_PRIM_POINTS)
-      tp->tp.tess_mode |= NVC0_3D_TESS_MODE_CONNECTED;
+   /* Winding only matters for triangles/quads, not lines. */
+   if (info->prop.tp.domain != PIPE_PRIM_LINES &&
+       info->prop.tp.outputPrim != PIPE_PRIM_POINTS &&
+       info->prop.tp.winding > 0)
+      tp->tp.tess_mode |= NVC0_3D_TESS_MODE_CW;
 
    switch (info->prop.tp.partitioning) {
    case PIPE_TESS_SPACING_EQUAL:
