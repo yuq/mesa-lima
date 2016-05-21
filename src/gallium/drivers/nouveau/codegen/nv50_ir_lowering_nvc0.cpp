@@ -1834,18 +1834,17 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
                 TYPE_U32, bld.mkImm(0),
                 loadSuInfo32(ind, base + NVE4_SU_INFO_ADDR));
 
-   if (su->tex.format) {
+   if (su->op != OP_SUSTP && su->tex.format) {
       const TexInstruction::ImgFormatDesc *format = su->tex.format;
       int blockwidth = format->bits[0] + format->bits[1] +
                        format->bits[2] + format->bits[3];
 
-      if (blockwidth >= 8) {
-         // make sure that the format doesn't mismatch
-         bld.mkCmp(OP_SET_OR, CC_NE, TYPE_U32, pred1->getDef(0),
-                   TYPE_U32, bld.loadImm(NULL, blockwidth / 8),
-                   loadSuInfo32(ind, base + NVE4_SU_INFO_BSIZE),
-                   pred1->getDef(0));
-      }
+      // make sure that the format doesn't mismatch
+      assert(format->components != 0);
+      bld.mkCmp(OP_SET_OR, CC_NE, TYPE_U32, pred1->getDef(0),
+                TYPE_U32, bld.loadImm(NULL, blockwidth / 8),
+                loadSuInfo32(ind, base + NVE4_SU_INFO_BSIZE),
+                pred1->getDef(0));
    }
    su->setPredicate(CC_NOT_P, pred1->getDef(0));
 
