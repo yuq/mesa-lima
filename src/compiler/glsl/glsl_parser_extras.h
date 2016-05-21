@@ -267,8 +267,19 @@ struct _mesa_glsl_parse_state {
 
    bool has_shader_io_blocks() const
    {
+      /* The OES_geometry_shader_specification says:
+       *
+       *    "If the OES_geometry_shader extension is enabled, the
+       *     OES_shader_io_blocks extension is also implicitly enabled."
+       *
+       * The OES_tessellation_shader extension has similar wording.
+       */
       return OES_shader_io_blocks_enable ||
              EXT_shader_io_blocks_enable ||
+             OES_geometry_shader_enable ||
+             OES_tessellation_shader_enable ||
+             EXT_tessellation_shader_enable ||
+
              is_version(150, 320);
    }
 
