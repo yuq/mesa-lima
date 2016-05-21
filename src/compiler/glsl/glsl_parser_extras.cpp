@@ -1907,7 +1907,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
       }
    }
 
-   _mesa_glsl_initialize_derived_variables(shader);
+   _mesa_glsl_initialize_derived_variables(ctx, shader);
 
    delete state->symbols;
    ralloc_free(state);

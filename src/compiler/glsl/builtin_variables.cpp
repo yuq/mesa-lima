@@ -1201,8 +1201,15 @@ builtin_variable_generator::generate_cs_special_vars()
                     "gl_LocalInvocationID");
    add_system_value(SYSTEM_VALUE_WORK_GROUP_ID, uvec3_t, "gl_WorkGroupID");
    add_system_value(SYSTEM_VALUE_NUM_WORK_GROUPS, uvec3_t, "gl_NumWorkGroups");
-   add_variable("gl_GlobalInvocationID", uvec3_t, ir_var_auto, 0);
-   add_variable("gl_LocalInvocationIndex", uint_t, ir_var_auto, 0);
+   if (state->ctx->Const.LowerCsDerivedVariables) {
+      add_variable("gl_GlobalInvocationID", uvec3_t, ir_var_auto, 0);
+      add_variable("gl_LocalInvocationIndex", uint_t, ir_var_auto, 0);
+   } else {
+      add_system_value(SYSTEM_VALUE_GLOBAL_INVOCATION_ID,
+                       uvec3_t, "gl_GlobalInvocationID");
+      add_system_value(SYSTEM_VALUE_LOCAL_INVOCATION_INDEX,
+                       uint_t, "gl_LocalInvocationIndex");
+   }
 }
 
 
@@ -1431,16 +1438,16 @@ initialize_cs_derived_variables(gl_shader *shader,
  * These are initialized in the main function.
  */
 void
-_mesa_glsl_initialize_derived_variables(gl_shader *shader)
+_mesa_glsl_initialize_derived_variables(struct gl_context *ctx,
+                                        gl_shader *shader)
 {
    /* We only need to set CS variables currently. */
-   if (shader->Stage != MESA_SHADER_COMPUTE)
-      return;
+   if (shader->Stage == MESA_SHADER_COMPUTE &&
+       ctx->Const.LowerCsDerivedVariables) {
+      ir_function_signature *const main_sig =
+         _mesa_get_main_function_signature(shader);
 
-   ir_function_signature *const main_sig =
-      _mesa_get_main_function_signature(shader);
-   if (main_sig == NULL)
-      return;
-
-   initialize_cs_derived_variables(shader, main_sig);
+      if (main_sig != NULL)
+         initialize_cs_derived_variables(shader, main_sig);
+   }
 }
