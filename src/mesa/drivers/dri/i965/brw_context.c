@@ -565,6 +565,7 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.MaxClipPlanes = 8;
 
    ctx->Const.LowerTessLevel = true;
+   ctx->Const.PrimitiveRestartForPatches = true;
 
    ctx->Const.Program[MESA_SHADER_VERTEX].MaxNativeInstructions = 16 * 1024;
    ctx->Const.Program[MESA_SHADER_VERTEX].MaxAluInstructions = 0;

@@ -314,6 +314,8 @@ void st_init_limits(struct pipe_screen *screen,
    }
 
    c->LowerTessLevel = true;
+   c->PrimitiveRestartForPatches =
+      screen->get_param(screen, PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES);
 
    c->MaxCombinedTextureImageUnits =
          _min(c->Program[MESA_SHADER_VERTEX].MaxTextureImageUnits +

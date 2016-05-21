@@ -725,6 +725,7 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
    consts->Program[MESA_SHADER_TESS_EVAL].MaxTextureImageUnits = MAX_TEXTURE_IMAGE_UNITS;
    consts->MaxTessPatchComponents = MAX_TESS_PATCH_COMPONENTS;
    consts->MaxTessControlTotalOutputComponents = MAX_TESS_CONTROL_TOTAL_OUTPUT_COMPONENTS;
+   consts->PrimitiveRestartForPatches = false;
 }
 
 
