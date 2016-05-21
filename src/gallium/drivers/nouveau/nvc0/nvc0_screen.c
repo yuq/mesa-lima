@@ -369,9 +369,9 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
       return NVC0_MAX_BUFFERS;
    case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
-      return 16; /* would be 32 in linked (OpenGL-style) mode */
+      return (class_3d >= NVE4_3D_CLASS) ? 32 : 16;
    case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
-      return 16; /* XXX not sure if more are really safe */
+      return (class_3d >= NVE4_3D_CLASS) ? 32 : 16;
    case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
       return 32;
    case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
