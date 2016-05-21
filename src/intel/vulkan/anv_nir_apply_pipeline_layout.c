@@ -163,7 +163,7 @@ lower_tex_deref(nir_tex_instr *tex, nir_deref_var *deref,
           * first-class texture source.
           */
          tex->src[tex->num_srcs].src_type = src_type;
-         nir_instr_rewrite_src(&tex->instr, &tex->src[tex->num_srcs],
+         nir_instr_rewrite_src(&tex->instr, &tex->src[tex->num_srcs].src,
                                nir_src_for_ssa(index));
          tex->num_srcs++;
       } else {
