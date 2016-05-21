@@ -625,7 +625,7 @@ bool TargetNVC0::canDualIssue(const Instruction *a, const Instruction *b) const
       // nothing with TEXBAR
       if (a->op == OP_TEXBAR || b->op == OP_TEXBAR)
          return false;
-      // no loads and stores accessing the the same space
+      // no loads and stores accessing the same space
       if ((clA == OPCLASS_LOAD && clB == OPCLASS_STORE) ||
           (clB == OPCLASS_LOAD && clA == OPCLASS_STORE))
          if (a->src(0).getFile() == b->src(0).getFile())
