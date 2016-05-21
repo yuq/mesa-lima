@@ -391,7 +391,8 @@ validate_DrawElements_common(struct gl_context *ctx,
     *   DrawElementsInstanced, and DrawRangeElements while transform feedback
     *   is active and not paused, regardless of mode.
     */
-   if (_mesa_is_gles3(ctx) && _mesa_is_xfb_active_and_unpaused(ctx)) {
+   if (_mesa_is_gles3(ctx) && !ctx->Extensions.OES_geometry_shader &&
+       _mesa_is_xfb_active_and_unpaused(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(transform feedback active)", caller);
       return false;
@@ -741,7 +742,8 @@ valid_draw_indirect(struct gl_context *ctx,
     *      "An INVALID_OPERATION error is generated if
     *      transform feedback is active and not paused."
     */
-   if (_mesa_is_gles31(ctx) && _mesa_is_xfb_active_and_unpaused(ctx)) {
+   if (_mesa_is_gles31(ctx) && !ctx->Extensions.OES_geometry_shader &&
+       _mesa_is_xfb_active_and_unpaused(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(TransformFeedback is active and not paused)", name);
    }
