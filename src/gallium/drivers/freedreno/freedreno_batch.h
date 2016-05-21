@@ -32,6 +32,8 @@
 #include "freedreno_util.h"
 
 struct fd_context;
+struct fd_resource;
+enum fd_resource_status;
 
 /* A batch tracks everything about a cmdstream batch/submit, including the
  * ringbuffers used for binning, draw, and gmem cmds, list of associated
@@ -48,11 +50,16 @@ struct fd_batch {
 	struct fd_ringbuffer *binning;
 	/** tiling/gmem (IB0) cmdstream: */
 	struct fd_ringbuffer *gmem;
+
+	/** list of resources used by currently-unsubmitted batch */
+	struct list_head used_resources;
 };
 
 struct fd_batch * fd_batch_create(struct fd_context *ctx);
 
 void fd_batch_flush(struct fd_batch *batch);
+void fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc,
+		enum fd_resource_status status);
 void fd_batch_check_size(struct fd_batch *batch);
 
 /* not called directly: */

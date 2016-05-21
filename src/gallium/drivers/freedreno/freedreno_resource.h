@@ -33,6 +33,7 @@
 #include "util/u_range.h"
 #include "util/u_transfer.h"
 
+#include "freedreno_batch.h"
 #include "freedreno_util.h"
 
 /* Texture Layout on a3xx:
@@ -91,7 +92,7 @@ struct fd_resource {
 	 * in the used_resources list.
 	 */
 	struct list_head list;
-	struct fd_context *pending_ctx;
+	struct fd_batch *pending_batch;
 };
 
 static inline struct fd_resource *

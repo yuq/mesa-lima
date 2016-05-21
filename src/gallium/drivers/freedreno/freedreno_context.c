@@ -45,7 +45,6 @@ void
 fd_context_render(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	struct fd_resource *rsc, *rsc_tmp;
 
 	DBG("needs_flush: %d", ctx->needs_flush);
 
@@ -61,16 +60,6 @@ fd_context_render(struct pipe_context *pctx)
 	ctx->cleared = ctx->partial_cleared = ctx->restore = ctx->resolve = 0;
 	ctx->gmem_reason = 0;
 	ctx->num_draws = 0;
-
-	/* go through all the used resources and clear their reading flag */
-	LIST_FOR_EACH_ENTRY_SAFE(rsc, rsc_tmp, &ctx->used_resources, list) {
-		debug_assert(rsc->status != 0);
-		rsc->status = 0;
-		rsc->pending_ctx = NULL;
-		list_delinit(&rsc->list);
-	}
-
-	assert(LIST_IS_EMPTY(&ctx->used_resources));
 }
 
 static void

@@ -24,10 +24,12 @@
  *    Rob Clark <robclark@freedesktop.org>
  */
 
+#include "util/list.h"
 #include "util/u_string.h"
 
 #include "freedreno_batch.h"
 #include "freedreno_context.h"
+#include "freedreno_resource.h"
 
 struct fd_batch *
 fd_batch_create(struct fd_context *ctx)
@@ -54,6 +56,8 @@ fd_batch_create(struct fd_context *ctx)
 	fd_ringbuffer_set_parent(batch->draw, batch->gmem);
 	fd_ringbuffer_set_parent(batch->binning, batch->gmem);
 
+	list_inithead(&batch->used_resources);
+
 	return batch;
 }
 
@@ -76,7 +80,38 @@ __fd_batch_describe(char* buf, const struct fd_batch *batch)
 void
 fd_batch_flush(struct fd_batch *batch)
 {
+	struct fd_resource *rsc, *rsc_tmp;
+
 	fd_gmem_render_tiles(batch->ctx);
+
+	/* go through all the used resources and clear their reading flag */
+	LIST_FOR_EACH_ENTRY_SAFE(rsc, rsc_tmp, &batch->used_resources, list) {
+		debug_assert(rsc->pending_batch == batch);
+		debug_assert(rsc->status != 0);
+		rsc->status = 0;
+		fd_batch_reference(&rsc->pending_batch, NULL);
+		list_delinit(&rsc->list);
+	}
+
+	assert(LIST_IS_EMPTY(&batch->used_resources));
+}
+
+void
+fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc,
+		enum fd_resource_status status)
+{
+	rsc->status |= status;
+
+	if (rsc->stencil)
+		rsc->stencil->status |= status;
+
+	/* TODO resources can actually be shared across contexts,
+	 * so I'm not sure a single list-head will do the trick?
+	 */
+	debug_assert((rsc->pending_batch == batch) || !rsc->pending_batch);
+	list_delinit(&rsc->list);
+	list_addtail(&rsc->list, &batch->used_resources);
+	fd_batch_reference(&rsc->pending_batch, batch);
 }
 
 void

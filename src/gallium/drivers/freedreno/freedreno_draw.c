@@ -40,38 +40,19 @@
 #include "freedreno_util.h"
 
 static void
-resource_used(struct fd_context *ctx, struct pipe_resource *prsc,
-		enum fd_resource_status status)
-{
-	struct fd_resource *rsc;
-
-	if (!prsc)
-		return;
-
-	rsc = fd_resource(prsc);
-	rsc->status |= status;
-	if (rsc->stencil)
-		rsc->stencil->status |= status;
-
-	/* TODO resources can actually be shared across contexts,
-	 * so I'm not sure a single list-head will do the trick?
-	 */
-	debug_assert((rsc->pending_ctx == ctx) || !rsc->pending_ctx);
-	list_delinit(&rsc->list);
-	list_addtail(&rsc->list, &ctx->used_resources);
-	rsc->pending_ctx = ctx;
-}
-
-static void
 resource_read(struct fd_context *ctx, struct pipe_resource *prsc)
 {
-	resource_used(ctx, prsc, FD_PENDING_READ);
+	if (!prsc)
+		return;
+	fd_batch_resource_used(ctx->batch, fd_resource(prsc), FD_PENDING_READ);
 }
 
 static void
 resource_written(struct fd_context *ctx, struct pipe_resource *prsc)
 {
-	resource_used(ctx, prsc, FD_PENDING_WRITE);
+	if (!prsc)
+		return;
+	fd_batch_resource_used(ctx->batch, fd_resource(prsc), FD_PENDING_WRITE);
 }
 
 static void
@@ -300,8 +281,6 @@ fd_clear_depth_stencil(struct pipe_context *pctx, struct pipe_surface *ps,
 void
 fd_draw_init(struct pipe_context *pctx)
 {
-	list_inithead(&fd_context(pctx)->used_resources);
-
 	pctx->draw_vbo = fd_draw_vbo;
 	pctx->clear = fd_clear;
 	pctx->clear_render_target = fd_clear_render_target;

@@ -109,7 +109,7 @@ realloc_bo(struct fd_resource *rsc, uint32_t size)
 	rsc->bo = fd_bo_new(screen->dev, size, flags);
 	rsc->timestamp = 0;
 	rsc->status = 0;
-	rsc->pending_ctx = NULL;
+	fd_batch_reference(&rsc->pending_batch, NULL);
 	list_delinit(&rsc->list);
 	util_range_set_empty(&rsc->valid_buffer_range);
 }
@@ -453,6 +453,7 @@ fd_resource_destroy(struct pipe_screen *pscreen,
 	struct fd_resource *rsc = fd_resource(prsc);
 	if (rsc->bo)
 		fd_bo_del(rsc->bo);
+	fd_batch_reference(&rsc->pending_batch, NULL);
 	list_delinit(&rsc->list);
 	util_range_destroy(&rsc->valid_buffer_range);
 	FREE(rsc);
