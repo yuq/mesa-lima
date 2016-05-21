@@ -2264,6 +2264,10 @@ NVC0LoweringPass::readTessCoord(LValue *dst, int c)
       y = dst;
    } else {
       assert(c == 2);
+      if (prog->driver->prop.tp.domain != PIPE_PRIM_TRIANGLES) {
+         bld.mkMov(dst, bld.loadImm(NULL, 0));
+         return;
+      }
       x = bld.getSSA();
       y = bld.getSSA();
    }
