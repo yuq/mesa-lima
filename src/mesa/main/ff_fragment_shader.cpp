@@ -49,6 +49,7 @@
 #include "program/prog_parameter.h"
 #include "program/prog_print.h"
 #include "program/prog_statevars.h"
+#include "util/bitscan.h"
 
 using namespace ir_builder;
 
@@ -398,22 +399,25 @@ static GLbitfield get_fp_input_mask( struct gl_context *ctx )
  */
 static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
 {
-   GLuint i, j;
+   GLuint j;
    GLbitfield inputs_referenced = VARYING_BIT_COL0;
    const GLbitfield inputs_available = get_fp_input_mask( ctx );
+   GLbitfield mask;
    GLuint keySize;
 
    memset(key, 0, sizeof(*key));
 
    /* _NEW_TEXTURE */
-   for (i = 0; i < ctx->Const.MaxTextureUnits; i++) {
+   mask = ctx->Texture._EnabledCoordUnits;
+   while (mask) {
+      const int i = u_bit_scan(&mask);
       const struct gl_texture_unit *texUnit = &ctx->Texture.Unit[i];
       const struct gl_texture_object *texObj = texUnit->_Current;
       const struct gl_tex_env_combine_state *comb = texUnit->_CurrentCombine;
       const struct gl_sampler_object *samp;
       GLenum format;
 
-      if (!texUnit->_Current || !texUnit->Enabled)
+      if (!texObj)
          continue;
 
       samp = _mesa_get_samplerobj(ctx, i);
