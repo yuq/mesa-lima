@@ -37,7 +37,7 @@
 #include "state.h"
 #include "main/dispatch.h"
 #include "main/viewport.h"
-#include "util/simple_list.h"
+#include "util/bitscan.h"
 
 
 
@@ -125,7 +125,7 @@ shade_rastpos(struct gl_context *ctx,
               GLfloat Rspec[4])
 {
    /*const*/ GLfloat (*base)[3] = ctx->Light._BaseColor;
-   const struct gl_light *light;
+   GLbitfield mask;
    GLfloat diffuseColor[4], specularColor[4];  /* for RGB mode only */
 
    COPY_3V(diffuseColor, base[0]);
@@ -133,7 +133,10 @@ shade_rastpos(struct gl_context *ctx,
       ctx->Light.Material.Attrib[MAT_ATTRIB_FRONT_DIFFUSE][3], 0.0F, 1.0F );
    ASSIGN_4V(specularColor, 0.0, 0.0, 0.0, 1.0);
 
-   foreach (light, &ctx->Light.EnabledList) {
+   mask = ctx->Light._EnabledLights;
+   while (mask) {
+      const int i = u_bit_scan(&mask);
+      struct gl_light *light = &ctx->Light.Light[i];
       GLfloat attenuation = 1.0;
       GLfloat VP[3]; /* vector from vertex to light pos */
       GLfloat n_dot_VP;

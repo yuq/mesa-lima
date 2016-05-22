@@ -34,6 +34,7 @@
 #include "util/simple_list.h"
 #include "mtypes.h"
 #include "math/m_matrix.h"
+#include "util/bitscan.h"
 
 
 void GLAPIENTRY
@@ -612,7 +613,6 @@ _mesa_material_bitmask( struct gl_context *ctx, GLenum face, GLenum pname,
 void
 _mesa_update_material( struct gl_context *ctx, GLuint bitmask )
 {
-   struct gl_light *light, *list = &ctx->Light.EnabledList;
    GLfloat (*mat)[4] = ctx->Light.Material.Attrib;
 
    if (MESA_VERBOSE & VERBOSE_MATERIAL) 
@@ -623,14 +623,20 @@ _mesa_update_material( struct gl_context *ctx, GLuint bitmask )
 
    /* update material ambience */
    if (bitmask & MAT_BIT_FRONT_AMBIENT) {
-      foreach (light, list) {
+      GLbitfield mask = ctx->Light._EnabledLights;
+      while (mask) {
+         const int i = u_bit_scan(&mask);
+         struct gl_light *light = &ctx->Light.Light[i];
          SCALE_3V( light->_MatAmbient[0], light->Ambient, 
 		   mat[MAT_ATTRIB_FRONT_AMBIENT]);
       }
    }
 
    if (bitmask & MAT_BIT_BACK_AMBIENT) {
-      foreach (light, list) {
+      GLbitfield mask = ctx->Light._EnabledLights;
+      while (mask) {
+         const int i = u_bit_scan(&mask);
+         struct gl_light *light = &ctx->Light.Light[i];
          SCALE_3V( light->_MatAmbient[1], light->Ambient, 
 		   mat[MAT_ATTRIB_BACK_AMBIENT]);
       }
@@ -651,14 +657,20 @@ _mesa_update_material( struct gl_context *ctx, GLuint bitmask )
 
    /* update material diffuse values */
    if (bitmask & MAT_BIT_FRONT_DIFFUSE) {
-      foreach (light, list) {
+      GLbitfield mask = ctx->Light._EnabledLights;
+      while (mask) {
+         const int i = u_bit_scan(&mask);
+         struct gl_light *light = &ctx->Light.Light[i];
 	 SCALE_3V( light->_MatDiffuse[0], light->Diffuse, 
 		   mat[MAT_ATTRIB_FRONT_DIFFUSE] );
       }
    }
 
    if (bitmask & MAT_BIT_BACK_DIFFUSE) {
-      foreach (light, list) {
+      GLbitfield mask = ctx->Light._EnabledLights;
+      while (mask) {
+         const int i = u_bit_scan(&mask);
+         struct gl_light *light = &ctx->Light.Light[i];
 	 SCALE_3V( light->_MatDiffuse[1], light->Diffuse, 
 		   mat[MAT_ATTRIB_BACK_DIFFUSE] );
       }
@@ -666,14 +678,20 @@ _mesa_update_material( struct gl_context *ctx, GLuint bitmask )
 
    /* update material specular values */
    if (bitmask & MAT_BIT_FRONT_SPECULAR) {
-      foreach (light, list) {
+      GLbitfield mask = ctx->Light._EnabledLights;
+      while (mask) {
+         const int i = u_bit_scan(&mask);
+         struct gl_light *light = &ctx->Light.Light[i];
 	 SCALE_3V( light->_MatSpecular[0], light->Specular, 
 		   mat[MAT_ATTRIB_FRONT_SPECULAR]);
       }
    }
 
    if (bitmask & MAT_BIT_BACK_SPECULAR) {
-      foreach (light, list) {
+      GLbitfield mask = ctx->Light._EnabledLights;
+      while (mask) {
+         const int i = u_bit_scan(&mask);
+         struct gl_light *light = &ctx->Light.Light[i];
 	 SCALE_3V( light->_MatSpecular[1], light->Specular,
 		   mat[MAT_ATTRIB_BACK_SPECULAR]);
       }
@@ -864,13 +882,15 @@ void
 _mesa_update_lighting( struct gl_context *ctx )
 {
    GLbitfield flags = 0;
-   struct gl_light *light;
    ctx->Light._NeedEyeCoords = GL_FALSE;
 
    if (!ctx->Light.Enabled)
       return;
 
-   foreach(light, &ctx->Light.EnabledList) {
+   GLbitfield mask = ctx->Light._EnabledLights;
+   while (mask) {
+      const int i = u_bit_scan(&mask);
+      struct gl_light *light = &ctx->Light.Light[i];
       flags |= light->_Flags;
    }
 
@@ -926,7 +946,6 @@ _mesa_update_lighting( struct gl_context *ctx )
 static void
 compute_light_positions( struct gl_context *ctx )
 {
-   struct gl_light *light;
    static const GLfloat eye_z[3] = { 0, 0, 1 };
 
    if (!ctx->Light.Enabled)
@@ -939,7 +958,10 @@ compute_light_positions( struct gl_context *ctx )
       TRANSFORM_NORMAL( ctx->_EyeZDir, eye_z, ctx->ModelviewMatrixStack.Top->m );
    }
 
-   foreach (light, &ctx->Light.EnabledList) {
+   GLbitfield mask = ctx->Light._EnabledLights;
+   while (mask) {
+      const int i = u_bit_scan(&mask);
+      struct gl_light *light = &ctx->Light.Light[i];
 
       if (ctx->_NeedEyeCoords) {
          /* _Position is in eye coordinate space */
