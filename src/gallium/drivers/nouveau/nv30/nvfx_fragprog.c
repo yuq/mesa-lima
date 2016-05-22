@@ -51,7 +51,6 @@ temp(struct nvfx_fpc *fpc)
 
    if (idx >= fpc->max_temps) {
       NOUVEAU_ERR("out of temps!!\n");
-      assert(0);
       return nvfx_reg(NVFXSR_TEMP, 0);
    }
 
