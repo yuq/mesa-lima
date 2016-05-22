@@ -233,10 +233,12 @@ prepare_materials(struct gl_context *ctx,
     * with the color pointer for each one.
     */
    if (ctx->Light.ColorMaterialEnabled) {
-      const GLuint bitmask = ctx->Light._ColorMaterialBitmask;
-      for (i = 0 ; i < MAT_ATTRIB_MAX ; i++)
-	 if (bitmask & (1<<i))
-	    VB->AttribPtr[_TNL_ATTRIB_MAT_FRONT_AMBIENT + i] = VB->AttribPtr[_TNL_ATTRIB_COLOR0];
+      GLbitfield bitmask = ctx->Light._ColorMaterialBitmask;
+      while (bitmask) {
+         const int i = u_bit_scan(&bitmask);
+         VB->AttribPtr[_TNL_ATTRIB_MAT_FRONT_AMBIENT + i] =
+            VB->AttribPtr[_TNL_ATTRIB_COLOR0];
+      }
    }
 
    /* Now, for each material attribute that's tracking vertex color, save

@@ -706,13 +706,14 @@ _mesa_update_material( struct gl_context *ctx, GLuint bitmask )
 void
 _mesa_update_color_material( struct gl_context *ctx, const GLfloat color[4] )
 {
-   const GLbitfield bitmask = ctx->Light._ColorMaterialBitmask;
+   GLbitfield bitmask = ctx->Light._ColorMaterialBitmask;
    struct gl_material *mat = &ctx->Light.Material;
-   int i;
 
-   for (i = 0 ; i < MAT_ATTRIB_MAX ; i++) 
-      if (bitmask & (1<<i))
-	 COPY_4FV( mat->Attrib[i], color );
+   while (bitmask) {
+      const int i = u_bit_scan(&bitmask);
+
+      COPY_4FV( mat->Attrib[i], color );
+   }
 
    _mesa_update_material( ctx, bitmask );
 }
