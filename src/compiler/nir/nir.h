@@ -1682,6 +1682,8 @@ typedef struct nir_shader_compiler_options {
 
    /* Indicates that the driver only has zero-based vertex id */
    bool vertex_id_zero_based;
+
+   bool lower_cs_local_index_from_id;
 } nir_shader_compiler_options;
 
 typedef struct nir_shader_info {

@@ -48,7 +48,7 @@ convert_block(nir_block *block, nir_builder *b)
 
       b->cursor = nir_after_instr(&load_var->instr);
 
-      nir_ssa_def *sysval;
+      nir_ssa_def *sysval = NULL;
       switch (var->data.location) {
       case SYSTEM_VALUE_GLOBAL_INVOCATION_ID: {
          /* From the GLSL man page for gl_GlobalInvocationID:
@@ -74,6 +74,12 @@ convert_block(nir_block *block, nir_builder *b)
       }
 
       case SYSTEM_VALUE_LOCAL_INVOCATION_INDEX: {
+         /* If lower_cs_local_index_from_id is true, then we derive the local
+          * index from the local id.
+          */
+         if (!b->shader->options->lower_cs_local_index_from_id)
+            break;
+
          /* From the GLSL man page for gl_LocalInvocationIndex:
           *
           *    "The value of gl_LocalInvocationIndex is equal to
@@ -111,12 +117,14 @@ convert_block(nir_block *block, nir_builder *b)
             nir_load_system_value(b, nir_intrinsic_load_base_instance, 0));
          break;
 
-      default: {
+      default:
+         break;
+      }
+
+      if (sysval == NULL) {
          nir_intrinsic_op sysval_op =
             nir_intrinsic_from_system_value(var->data.location);
          sysval = nir_load_system_value(b, sysval_op, 0);
-         break;
-      } /* default */
       }
 
       nir_ssa_def_rewrite_uses(&load_var->dest.ssa, nir_src_for_ssa(sysval));

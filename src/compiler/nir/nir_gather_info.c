@@ -44,6 +44,7 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, nir_shader *shader)
    case nir_intrinsic_load_primitive_id:
    case nir_intrinsic_load_invocation_id:
    case nir_intrinsic_load_local_invocation_id:
+   case nir_intrinsic_load_local_invocation_index:
    case nir_intrinsic_load_work_group_id:
    case nir_intrinsic_load_num_work_groups:
       shader->info.system_values_read |=

@@ -40,7 +40,8 @@
    .lower_fdiv = true,                                                        \
    .lower_flrp64 = true,                                                      \
    .native_integers = true,                                                   \
-   .vertex_id_zero_based = true
+   .vertex_id_zero_based = true,                                              \
+   .lower_cs_local_index_from_id = true
 
 static const struct nir_shader_compiler_options scalar_nir_options = {
    COMMON_OPTIONS,
