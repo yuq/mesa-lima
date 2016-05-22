@@ -486,10 +486,12 @@ nvc0_constbufs_validate(struct nvc0_context *nvc0)
       }
    }
 
-   /* Invalidate all COMPUTE constbufs because they are aliased with 3D. */
-   nvc0->dirty_cp |= NVC0_NEW_CP_CONSTBUF;
-   nvc0->constbuf_dirty[5] |= nvc0->constbuf_valid[5];
-   nvc0->state.uniform_buffer_bound[5] = 0;
+   if (nvc0->screen->base.class_3d < NVE4_3D_CLASS) {
+      /* Invalidate all COMPUTE constbufs because they are aliased with 3D. */
+      nvc0->dirty_cp |= NVC0_NEW_CP_CONSTBUF;
+      nvc0->constbuf_dirty[5] |= nvc0->constbuf_valid[5];
+      nvc0->state.uniform_buffer_bound[5] = 0;
+   }
 }
 
 static void
