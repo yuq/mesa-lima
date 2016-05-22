@@ -2151,13 +2151,25 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
       } else {
          /* Indirect indexing - use per-slot offsets as well. */
          const fs_reg srcs[] = { icp_handle, indirect_offset };
+         unsigned read_components = num_components + first_component;
+         fs_reg tmp = bld.vgrf(dst.type, read_components);
          fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
          bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
-
-         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp_dst, payload);
+         if (first_component != 0) {
+            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp,
+                            payload);
+            inst->regs_written = read_components;
+            for (unsigned i = 0; i < num_components; i++) {
+               bld.MOV(offset(tmp_dst, bld, i),
+                       offset(tmp, bld, i + first_component));
+            }
+         } else {
+            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp_dst,
+                         payload);
+            inst->regs_written = num_components * type_sz(tmp_dst.type) / 4;
+         }
          inst->offset = base_offset;
          inst->mlen = 2;
-         inst->regs_written = num_components * type_sz(tmp_dst.type) / 4;
       }
 
       if (type_sz(dst.type) == 8) {
