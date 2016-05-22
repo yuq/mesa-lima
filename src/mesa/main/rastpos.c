@@ -91,17 +91,16 @@ viewclip_point_z( const GLfloat v[] )
 static GLuint
 userclip_point( struct gl_context *ctx, const GLfloat v[] )
 {
-   GLuint p;
+   GLbitfield mask = ctx->Transform.ClipPlanesEnabled;
+   while (mask) {
+      const int p = u_bit_scan(&mask);
+      GLfloat dot = v[0] * ctx->Transform._ClipUserPlane[p][0]
+         + v[1] * ctx->Transform._ClipUserPlane[p][1]
+         + v[2] * ctx->Transform._ClipUserPlane[p][2]
+         + v[3] * ctx->Transform._ClipUserPlane[p][3];
 
-   for (p = 0; p < ctx->Const.MaxClipPlanes; p++) {
-      if (ctx->Transform.ClipPlanesEnabled & (1 << p)) {
-	 GLfloat dot = v[0] * ctx->Transform._ClipUserPlane[p][0]
-		     + v[1] * ctx->Transform._ClipUserPlane[p][1]
-		     + v[2] * ctx->Transform._ClipUserPlane[p][2]
-		     + v[3] * ctx->Transform._ClipUserPlane[p][3];
-         if (dot < 0.0F) {
-            return 0;
-         }
+      if (dot < 0.0F) {
+         return 0;
       }
    }
 

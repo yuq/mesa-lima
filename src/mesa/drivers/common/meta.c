@@ -85,6 +85,7 @@
 #include "drivers/common/meta.h"
 #include "main/enums.h"
 #include "main/glformats.h"
+#include "util/bitscan.h"
 #include "util/ralloc.h"
 
 /** Return offset in bytes of the field within a vertex struct */
@@ -682,12 +683,12 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
    }
 
    if (state & MESA_META_CLIP) {
+      GLbitfield mask;
       save->ClipPlanesEnabled = ctx->Transform.ClipPlanesEnabled;
-      if (ctx->Transform.ClipPlanesEnabled) {
-         GLuint i;
-         for (i = 0; i < ctx->Const.MaxClipPlanes; i++) {
-            _mesa_set_enable(ctx, GL_CLIP_PLANE0 + i, GL_FALSE);
-         }
+      mask = ctx->Transform.ClipPlanesEnabled;
+      while (mask) {
+         const int i = u_bit_scan(&mask);
+         _mesa_set_enable(ctx, GL_CLIP_PLANE0 + i, GL_FALSE);
       }
    }
 
@@ -1090,13 +1091,10 @@ _mesa_meta_end(struct gl_context *ctx)
    }
 
    if (state & MESA_META_CLIP) {
-      if (save->ClipPlanesEnabled) {
-         GLuint i;
-         for (i = 0; i < ctx->Const.MaxClipPlanes; i++) {
-            if (save->ClipPlanesEnabled & (1 << i)) {
-               _mesa_set_enable(ctx, GL_CLIP_PLANE0 + i, GL_TRUE);
-            }
-         }
+      GLbitfield mask = save->ClipPlanesEnabled;
+      while (mask) {
+         const int i = u_bit_scan(&mask);
+         _mesa_set_enable(ctx, GL_CLIP_PLANE0 + i, GL_TRUE);
       }
    }
 
