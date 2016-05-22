@@ -72,40 +72,45 @@
  * For example, given base format GL_RGBA, type GL_Float return GL_RGBA32F_ARB.
  */
 static GLenum
-adjust_for_oes_float_texture(GLenum format, GLenum type)
+adjust_for_oes_float_texture(const struct gl_context *ctx,
+                             GLenum format, GLenum type)
 {
    switch (type) {
    case GL_FLOAT:
-      switch (format) {
-      case GL_RGBA:
-         return GL_RGBA32F;
-      case GL_RGB:
-         return GL_RGB32F;
-      case GL_ALPHA:
-         return GL_ALPHA32F_ARB;
-      case GL_LUMINANCE:
-         return GL_LUMINANCE32F_ARB;
-      case GL_LUMINANCE_ALPHA:
-         return GL_LUMINANCE_ALPHA32F_ARB;
-      default:
-         break;
+      if (ctx->Extensions.OES_texture_float) {
+         switch (format) {
+         case GL_RGBA:
+            return GL_RGBA32F;
+         case GL_RGB:
+            return GL_RGB32F;
+         case GL_ALPHA:
+            return GL_ALPHA32F_ARB;
+         case GL_LUMINANCE:
+            return GL_LUMINANCE32F_ARB;
+         case GL_LUMINANCE_ALPHA:
+            return GL_LUMINANCE_ALPHA32F_ARB;
+         default:
+            break;
+         }
       }
       break;
 
    case GL_HALF_FLOAT_OES:
-      switch (format) {
-      case GL_RGBA:
-         return GL_RGBA16F;
-      case GL_RGB:
-         return GL_RGB16F;
-      case GL_ALPHA:
-         return GL_ALPHA16F_ARB;
-      case GL_LUMINANCE:
-         return GL_LUMINANCE16F_ARB;
-      case GL_LUMINANCE_ALPHA:
-         return GL_LUMINANCE_ALPHA16F_ARB;
-      default:
-         break;
+      if (ctx->Extensions.OES_texture_half_float) {
+         switch (format) {
+         case GL_RGBA:
+            return GL_RGBA16F;
+         case GL_RGB:
+            return GL_RGB16F;
+         case GL_ALPHA:
+            return GL_ALPHA16F_ARB;
+         case GL_LUMINANCE:
+            return GL_LUMINANCE16F_ARB;
+         case GL_LUMINANCE_ALPHA:
+            return GL_LUMINANCE_ALPHA16F_ARB;
+         default:
+            break;
+         }
       }
       break;
 
@@ -2904,7 +2909,7 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
             texObj->_IsHalfFloat = GL_TRUE;
          }
 
-         internalFormat = adjust_for_oes_float_texture(format, type);
+         internalFormat = adjust_for_oes_float_texture(ctx, format, type);
       }
 
       texFormat = _mesa_choose_texture_format(ctx, texObj, target, level,
