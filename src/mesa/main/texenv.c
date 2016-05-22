@@ -467,12 +467,10 @@ _mesa_TexEnvfv( GLenum target, GLenum pname, const GLfloat *param )
             if (ctx->Point.CoordReplaceBits & (1u << ctx->Texture.CurrentUnit))
                return;
             ctx->Point.CoordReplaceBits |= (1u << ctx->Texture.CurrentUnit);
-            ctx->Point.CoordReplace[ctx->Texture.CurrentUnit] = GL_TRUE;
          } else if (iparam0 == GL_FALSE) {
             if (~(ctx->Point.CoordReplaceBits) & (1u << ctx->Texture.CurrentUnit))
                return;
             ctx->Point.CoordReplaceBits &= ~(1u << ctx->Texture.CurrentUnit);
-            ctx->Point.CoordReplace[ctx->Texture.CurrentUnit] = GL_FALSE;
          } else {
             _mesa_error( ctx, GL_INVALID_VALUE, "glTexEnv(param=0x%x)", iparam0);
             return;
