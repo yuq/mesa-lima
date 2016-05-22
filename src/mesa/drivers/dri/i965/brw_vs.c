@@ -299,7 +299,6 @@ brw_vs_populate_key(struct brw_context *brw,
    struct brw_vertex_program *vp =
       (struct brw_vertex_program *)brw->vertex_program;
    struct gl_program *prog = (struct gl_program *) brw->vertex_program;
-   int i;
 
    memset(key, 0, sizeof(*key));
 
@@ -330,10 +329,7 @@ brw_vs_populate_key(struct brw_context *brw,
 
    /* _NEW_POINT */
    if (brw->gen < 6 && ctx->Point.PointSprite) {
-      for (i = 0; i < 8; i++) {
-	 if (ctx->Point.CoordReplace[i])
-            key->point_coord_replace |= (1 << i);
-      }
+      key->point_coord_replace = ctx->Point.CoordReplaceBits & 0xff;
    }
 
    /* _NEW_TEXTURE */

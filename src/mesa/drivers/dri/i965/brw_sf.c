@@ -190,12 +190,7 @@ brw_upload_sf_prog(struct brw_context *brw)
    /* _NEW_POINT */
    key.do_point_sprite = ctx->Point.PointSprite;
    if (key.do_point_sprite) {
-      int i;
-
-      for (i = 0; i < 8; i++) {
-	 if (ctx->Point.CoordReplace[i])
-	    key.point_sprite_coord_replace |= (1 << i);
-      }
+      key.point_sprite_coord_replace = ctx->Point.CoordReplaceBits & 0xff;
    }
    if (brw->fragment_program->Base.InputsRead & BITFIELD64_BIT(VARYING_SLOT_PNTC))
       key.do_point_coord = 1;
