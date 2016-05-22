@@ -33,6 +33,8 @@
 
 #include "math/m_translate.h"
 
+#include "util/bitscan.h"
+
 #include "t_context.h"
 #include "t_pipeline.h"
 #include "tnl.h"
@@ -394,7 +396,8 @@ static void validate_lighting( struct gl_context *ctx,
 	 tab = _tnl_light_tab;
    }
    else {
-      if (ctx->Light.EnabledList.next == ctx->Light.EnabledList.prev)
+      /* Power of two means only a single active light. */
+      if (_mesa_is_pow_two(ctx->Light._EnabledLights))
 	 tab = _tnl_light_fast_single_tab;
       else
 	 tab = _tnl_light_fast_tab;
