@@ -38,6 +38,7 @@
 #include "swrast/swrast.h"
 #include "swrast_setup/swrast_setup.h"
 #include "drivers/common/meta.h"
+#include "util/bitscan.h"
 
 #include "brw_blorp.h"
 #include "brw_draw.h"
@@ -301,15 +302,14 @@ brw_merge_inputs(struct brw_context *brw,
    }
 
    if (brw->gen < 8 && !brw->is_haswell) {
-      struct gl_program *vp = &ctx->VertexProgram._Current->Base;
+      GLbitfield64 mask = ctx->VertexProgram._Current->Base.InputsRead;
       /* Prior to Haswell, the hardware can't natively support GL_FIXED or
        * 2_10_10_10_REV vertex formats.  Set appropriate workaround flags.
        */
-      for (i = 0; i < VERT_ATTRIB_MAX; i++) {
-         if (!(vp->InputsRead & BITFIELD64_BIT(i)))
-            continue;
-
+      while (mask) {
          uint8_t wa_flags = 0;
+
+         i = u_bit_scan64(&mask);
 
          switch (brw->vb.inputs[i].glarray->Type) {
 
