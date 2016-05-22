@@ -612,6 +612,7 @@ update_ff_texture_state(struct gl_context *ctx,
    for (unit = 0; unit < ctx->Const.MaxTextureUnits; unit++) {
       struct gl_texture_unit *texUnit = &ctx->Texture.Unit[unit];
       GLuint texIndex;
+      bool complete;
 
       if (texUnit->Enabled == 0x0)
          continue;
@@ -649,6 +650,7 @@ update_ff_texture_state(struct gl_context *ctx,
        *      another unit, then the results of texture blending are
        *      undefined."
        */
+      complete = false;
       for (texIndex = 0; texIndex < NUM_TEXTURE_TARGETS; texIndex++) {
          if (texUnit->Enabled & (1 << texIndex)) {
             struct gl_texture_object *texObj = texUnit->CurrentTex[texIndex];
@@ -660,12 +662,13 @@ update_ff_texture_state(struct gl_context *ctx,
             }
             if (_mesa_is_texture_complete(texObj, sampler)) {
                _mesa_reference_texobj(&texUnit->_Current, texObj);
+               complete = true;
                break;
             }
          }
       }
 
-      if (texIndex == NUM_TEXTURE_TARGETS)
+      if (!complete)
          continue;
 
       /* if we get here, we know this texture unit is enabled */
