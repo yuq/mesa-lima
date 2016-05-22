@@ -685,10 +685,7 @@ nouveau_buffer_create(struct pipe_screen *pscreen,
       if (buffer->base.bind & screen->sysmem_bindings)
          buffer->domain = NOUVEAU_BO_GART;
    }
-   /* There can be very special situations where we want non-gpu-mapped
-    * buffers, but never through this interface.
-    */
-   assert(buffer->domain);
+
    ret = nouveau_buffer_allocate(screen, buffer, buffer->domain);
 
    if (ret == false)
