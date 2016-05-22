@@ -64,7 +64,6 @@ static void update_raster_state( struct st_context *st )
    struct pipe_rasterizer_state *raster = &st->state.rasterizer;
    const struct gl_vertex_program *vertProg = ctx->VertexProgram._Current;
    const struct gl_fragment_program *fragProg = ctx->FragmentProgram._Current;
-   uint i;
 
    memset(raster, 0, sizeof(*raster));
 
@@ -181,11 +180,8 @@ static void update_raster_state( struct st_context *st )
        * that we need to replace GENERIC[k] attrib with an automatically
        * computed texture coord.
        */
-      for (i = 0; i < MAX_TEXTURE_COORD_UNITS; i++) {
-         if (ctx->Point.CoordReplace[i]) {
-            raster->sprite_coord_enable |= 1 << i;
-         }
-      }
+      raster->sprite_coord_enable = ctx->Point.CoordReplaceBits &
+         ((1u << MAX_TEXTURE_COORD_UNITS) - 1);
       if (!st->needs_texcoord_semantic &&
           fragProg->Base.InputsRead & VARYING_BIT_PNTC) {
          raster->sprite_coord_enable |=
