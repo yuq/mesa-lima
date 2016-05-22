@@ -4459,6 +4459,7 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
           && inst->dst[0].writemask == get_src_arg_mask(inst->dst[0], inst->src[2])) {
 
          inst->op = TGSI_OPCODE_MOV;
+         inst->info = tgsi_get_opcode_info(inst->op);
          inst->src[0] = inst->src[1];
       }
    }
