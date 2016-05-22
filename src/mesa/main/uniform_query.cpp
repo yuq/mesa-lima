@@ -36,6 +36,7 @@
 #include "compiler/glsl/glsl_parser_extras.h"
 #include "compiler/glsl/program.h"
 #include "program/hash_table.h"
+#include "util/bitscan.h"
 
 
 extern "C" void GLAPIENTRY
@@ -843,9 +844,10 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
 	  * been modified.
 	  */
 	 bool changed = false;
-	 for (unsigned j = 0; j < ARRAY_SIZE(prog->SamplerUnits); j++) {
-	    if ((sh->active_samplers & (1U << j)) != 0
-		&& (prog->SamplerUnits[j] != sh->SamplerUnits[j])) {
+	 GLbitfield mask = sh->active_samplers;
+	 while (mask) {
+	    const int j = u_bit_scan(&mask);
+	    if (prog->SamplerUnits[j] != sh->SamplerUnits[j]) {
 	       changed = true;
 	       break;
 	    }
