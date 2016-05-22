@@ -630,6 +630,8 @@ struct gl_light_attrib
     * Derived state for optimizations: 
     */
    /*@{*/
+   GLbitfield _EnabledLights;	/**< bitmask containing enabled lights */
+
    GLboolean _NeedEyeCoords;		
    GLboolean _NeedVertices;		/**< Use fast shader? */
    struct gl_light EnabledList;         /**< List sentinel */

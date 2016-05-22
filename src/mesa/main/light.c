@@ -1171,6 +1171,7 @@ _mesa_init_lighting( struct gl_context *ctx )
    GLuint i;
 
    /* Lighting group */
+   ctx->Light._EnabledLights = 0;
    for (i = 0; i < MAX_LIGHTS; i++) {
       init_light( &ctx->Light.Light[i], i );
    }
