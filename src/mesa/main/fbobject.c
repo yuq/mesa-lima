@@ -2699,6 +2699,7 @@ create_framebuffers(GLsizei n, GLuint *framebuffers, bool dsa)
       if (dsa) {
          fb = ctx->Driver.NewFramebuffer(ctx, framebuffers[i]);
          if (!fb) {
+            _mesa_HashUnlockMutex(ctx->Shared->FrameBuffers);
             _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
             return;
          }
