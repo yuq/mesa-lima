@@ -1397,7 +1397,7 @@ framebuffer_parameteri(struct gl_context *ctx, struct gl_framebuffer *fb,
       * According to the OpenGL ES 3.1 specification section 9.2.1, the
       * GL_FRAMEBUFFER_DEFAULT_LAYERS parameter name is not supported.
       */
-      if (_mesa_is_gles31(ctx)) {
+      if (_mesa_is_gles31(ctx) && !ctx->Extensions.OES_geometry_shader) {
          _mesa_error(ctx, GL_INVALID_ENUM, "%s(pname=0x%x)", func, pname);
          break;
       }
@@ -1470,7 +1470,7 @@ get_framebuffer_parameteriv(struct gl_context *ctx, struct gl_framebuffer *fb,
        * According to the OpenGL ES 3.1 specification section 9.2.3, the
        * GL_FRAMEBUFFER_LAYERS parameter name is not supported.
        */
-      if (_mesa_is_gles31(ctx)) {
+      if (_mesa_is_gles31(ctx) && !ctx->Extensions.OES_geometry_shader) {
          _mesa_error(ctx, GL_INVALID_ENUM, "%s(pname=0x%x)", func, pname);
          break;
       }
