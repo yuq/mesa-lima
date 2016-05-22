@@ -243,7 +243,7 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
 	 key->unit[i].texunit_really_enabled = 1;
 
       if (ctx->Point.PointSprite)
-	 if (ctx->Point.CoordReplaceBits & (1u << i))
+	 if (ctx->Point.CoordReplace & (1u << i))
 	    key->unit[i].coord_replace = 1;
 
       if (ctx->Texture._TexMatEnabled & ENABLE_TEXMAT(i))

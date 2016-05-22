@@ -214,7 +214,7 @@ calculate_attr_overrides(const struct brw_context *brw,
       if (drawing_points) {
          if (brw->ctx.Point.PointSprite &&
              (attr >= VARYING_SLOT_TEX0 && attr <= VARYING_SLOT_TEX7) &&
-             (brw->ctx.Point.CoordReplaceBits & (1u << (attr - VARYING_SLOT_TEX0)))) {
+             (brw->ctx.Point.CoordReplace & (1u << (attr - VARYING_SLOT_TEX0)))) {
             point_sprite = true;
          }
 

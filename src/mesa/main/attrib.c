@@ -1247,7 +1247,7 @@ _mesa_PopAttrib(void)
                   GLuint u;
                   for (u = 0; u < ctx->Const.MaxTextureUnits; u++) {
                      _mesa_TexEnvi(GL_POINT_SPRITE_NV, GL_COORD_REPLACE_NV,
-                                   !!(point->CoordReplaceBits & (1u << u)));
+                                   !!(point->CoordReplace & (1u << u)));
                   }
                   _mesa_set_enable(ctx, GL_POINT_SPRITE_NV,point->PointSprite);
                   if (ctx->Extensions.NV_point_sprite)

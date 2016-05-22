@@ -756,7 +756,7 @@ struct gl_point_attrib
    GLboolean SmoothFlag;	/**< True if GL_POINT_SMOOTH is enabled */
    GLboolean _Attenuated;	/**< True if Params != [1, 0, 0] */
    GLboolean PointSprite;	/**< GL_NV/ARB_point_sprite */
-   GLbitfield CoordReplaceBits; /**< GL_ARB_point_sprite*/
+   GLbitfield CoordReplace;     /**< GL_ARB_point_sprite*/
    GLenum SpriteRMode;		/**< GL_NV_point_sprite (only!) */
    GLenum SpriteOrigin;		/**< GL_ARB_point_sprite */
 };

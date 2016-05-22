@@ -251,5 +251,5 @@ _mesa_init_point(struct gl_context *ctx)
 
    ctx->Point.SpriteRMode = GL_ZERO; /* GL_NV_point_sprite (only!) */
    ctx->Point.SpriteOrigin = GL_UPPER_LEFT; /* GL_ARB_point_sprite */
-   ctx->Point.CoordReplaceBits = 0; /* GL_ARB/NV_point_sprite */
+   ctx->Point.CoordReplace = 0; /* GL_ARB/NV_point_sprite */
 }

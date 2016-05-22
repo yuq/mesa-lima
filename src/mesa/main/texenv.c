@@ -464,13 +464,13 @@ _mesa_TexEnvfv( GLenum target, GLenum pname, const GLfloat *param )
           * but that's what the spec calls for.
           */
          if (iparam0 == GL_TRUE) {
-            if (ctx->Point.CoordReplaceBits & (1u << ctx->Texture.CurrentUnit))
+            if (ctx->Point.CoordReplace & (1u << ctx->Texture.CurrentUnit))
                return;
-            ctx->Point.CoordReplaceBits |= (1u << ctx->Texture.CurrentUnit);
+            ctx->Point.CoordReplace |= (1u << ctx->Texture.CurrentUnit);
          } else if (iparam0 == GL_FALSE) {
-            if (~(ctx->Point.CoordReplaceBits) & (1u << ctx->Texture.CurrentUnit))
+            if (~(ctx->Point.CoordReplace) & (1u << ctx->Texture.CurrentUnit))
                return;
-            ctx->Point.CoordReplaceBits &= ~(1u << ctx->Texture.CurrentUnit);
+            ctx->Point.CoordReplace &= ~(1u << ctx->Texture.CurrentUnit);
          } else {
             _mesa_error( ctx, GL_INVALID_VALUE, "glTexEnv(param=0x%x)", iparam0);
             return;
@@ -677,7 +677,7 @@ _mesa_GetTexEnvfv( GLenum target, GLenum pname, GLfloat *params )
          return;
       }
       if (pname == GL_COORD_REPLACE_NV) {
-         if (ctx->Point.CoordReplaceBits & (1u << ctx->Texture.CurrentUnit))
+         if (ctx->Point.CoordReplace & (1u << ctx->Texture.CurrentUnit))
             *params = 1.0f;
          else
             *params = 0.0f;
@@ -741,7 +741,7 @@ _mesa_GetTexEnviv( GLenum target, GLenum pname, GLint *params )
          return;
       }
       if (pname == GL_COORD_REPLACE_NV) {
-         if (ctx->Point.CoordReplaceBits & (1u << ctx->Texture.CurrentUnit))
+         if (ctx->Point.CoordReplace & (1u << ctx->Texture.CurrentUnit))
             *params = GL_TRUE;
          else
             *params = GL_FALSE;

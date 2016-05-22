@@ -329,7 +329,7 @@ brw_vs_populate_key(struct brw_context *brw,
 
    /* _NEW_POINT */
    if (brw->gen < 6 && ctx->Point.PointSprite) {
-      key->point_coord_replace = ctx->Point.CoordReplaceBits & 0xff;
+      key->point_coord_replace = ctx->Point.CoordReplace & 0xff;
    }
 
    /* _NEW_TEXTURE */

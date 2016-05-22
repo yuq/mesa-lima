@@ -657,7 +657,7 @@ i915_update_sprite_point_enable(struct gl_context *ctx)
 
    /* _NEW_POINT */
    if (ctx->Point.PointSprite)
-      coord_replace_bits = ctx->Point.CoordReplaceBits;
+      coord_replace_bits = ctx->Point.CoordReplace;
 
    GLuint tex_coord_unit_bits =
       (GLuint)((inputsRead & VARYING_BITS_TEX_ANY) >> VARYING_SLOT_TEX0);

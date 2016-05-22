@@ -180,7 +180,7 @@ static void update_raster_state( struct st_context *st )
        * that we need to replace GENERIC[k] attrib with an automatically
        * computed texture coord.
        */
-      raster->sprite_coord_enable = ctx->Point.CoordReplaceBits &
+      raster->sprite_coord_enable = ctx->Point.CoordReplace &
          ((1u << MAX_TEXTURE_COORD_UNITS) - 1);
       if (!st->needs_texcoord_semantic &&
           fragProg->Base.InputsRead & VARYING_BIT_PNTC) {

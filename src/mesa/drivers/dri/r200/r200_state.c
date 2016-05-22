@@ -1852,7 +1852,7 @@ static void r200Enable( struct gl_context *ctx, GLenum cap, GLboolean state )
       R200_STATECHANGE( rmesa, spr );
       if ( state ) {
 	 rmesa->hw.spr.cmd[SPR_POINT_SPRITE_CNTL] |= R200_PS_GEN_TEX_MASK &
-            (ctx->Point.CoordReplaceBits << R200_PS_GEN_TEX_0_SHIFT);
+            (ctx->Point.CoordReplace << R200_PS_GEN_TEX_0_SHIFT);
       } else {
 	 rmesa->hw.spr.cmd[SPR_POINT_SPRITE_CNTL] &= ~R200_PS_GEN_TEX_MASK;
       }
