@@ -1851,11 +1851,8 @@ static void r200Enable( struct gl_context *ctx, GLenum cap, GLboolean state )
    case GL_POINT_SPRITE_ARB:
       R200_STATECHANGE( rmesa, spr );
       if ( state ) {
-	 int i;
-	 for (i = 0; i < 6; i++) {
-	    rmesa->hw.spr.cmd[SPR_POINT_SPRITE_CNTL] |=
-		ctx->Point.CoordReplace[i] << (R200_PS_GEN_TEX_0_SHIFT + i);
-	 }
+	 rmesa->hw.spr.cmd[SPR_POINT_SPRITE_CNTL] |= R200_PS_GEN_TEX_MASK &
+            (ctx->Point.CoordReplaceBits << R200_PS_GEN_TEX_0_SHIFT);
       } else {
 	 rmesa->hw.spr.cmd[SPR_POINT_SPRITE_CNTL] &= ~R200_PS_GEN_TEX_MASK;
       }
