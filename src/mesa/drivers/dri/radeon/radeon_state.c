@@ -1134,18 +1134,17 @@ static void radeonClipPlane( struct gl_context *ctx, GLenum plane, const GLfloat
 static void radeonUpdateClipPlanes( struct gl_context *ctx )
 {
    r100ContextPtr rmesa = R100_CONTEXT(ctx);
-   GLuint p;
+   GLbitfield mask = ctx->Transform.ClipPlanesEnabled;
 
-   for (p = 0; p < ctx->Const.MaxClipPlanes; p++) {
-      if (ctx->Transform.ClipPlanesEnabled & (1 << p)) {
-	 GLint *ip = (GLint *)ctx->Transform._ClipUserPlane[p];
+   while (mask) {
+      const int p = u_bit_scan(&mask);
+      GLint *ip = (GLint *)ctx->Transform._ClipUserPlane[p];
 
-	 RADEON_STATECHANGE( rmesa, ucp[p] );
-	 rmesa->hw.ucp[p].cmd[UCP_X] = ip[0];
-	 rmesa->hw.ucp[p].cmd[UCP_Y] = ip[1];
-	 rmesa->hw.ucp[p].cmd[UCP_Z] = ip[2];
-	 rmesa->hw.ucp[p].cmd[UCP_W] = ip[3];
-      }
+      RADEON_STATECHANGE( rmesa, ucp[p] );
+      rmesa->hw.ucp[p].cmd[UCP_X] = ip[0];
+      rmesa->hw.ucp[p].cmd[UCP_Y] = ip[1];
+      rmesa->hw.ucp[p].cmd[UCP_Z] = ip[2];
+      rmesa->hw.ucp[p].cmd[UCP_W] = ip[3];
    }
 }
 
