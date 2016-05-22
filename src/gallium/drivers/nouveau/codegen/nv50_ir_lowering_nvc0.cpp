@@ -1677,10 +1677,13 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
    adjustCoordinatesMS(su);
 
    if (su->tex.rIndirectSrc >= 0) {
-      // FIXME: out of bounds
-      assert(su->tex.r == 0);
-      ind = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
-                       su->getIndirectR(), bld.mkImm(6));
+      ind = su->getIndirectR();
+      if (su->tex.r > 0) {
+         ind = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(), ind,
+                          bld.loadImm(NULL, su->tex.r));
+      }
+      ind = bld.mkOp2v(OP_AND, TYPE_U32, bld.getSSA(), ind, bld.mkImm(7));
+      ind = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(), ind, bld.mkImm(6));
    }
 
    // calculate clamped coordinates
@@ -2026,10 +2029,13 @@ NVC0LoweringPass::processSurfaceCoordsNVC0(TexInstruction *su)
    Value *ind = NULL;
 
    if (su->tex.rIndirectSrc >= 0) {
-      // FIXME: out of bounds
-      assert(su->tex.r == 0);
-      ind = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
-                       su->getIndirectR(), bld.mkImm(6));
+      ind = su->getIndirectR();
+      if (su->tex.r > 0) {
+         ind = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(), ind,
+                          bld.loadImm(NULL, su->tex.r));
+      }
+      ind = bld.mkOp2v(OP_AND, TYPE_U32, bld.getSSA(), ind, bld.mkImm(7));
+      ind = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(), ind, bld.mkImm(6));
    }
 
    // get surface coordinates
