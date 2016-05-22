@@ -304,6 +304,7 @@ SYSTEM_VALUE(work_group_id, 3, 0, xx, xx, xx)
 SYSTEM_VALUE(user_clip_plane, 4, 1, UCP_ID, xx, xx)
 SYSTEM_VALUE(num_work_groups, 3, 0, xx, xx, xx)
 SYSTEM_VALUE(helper_invocation, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(channel_num, 1, 0, xx, xx, xx)
 
 /*
  * Load operations pull data from some piece of GPU memory.  All load

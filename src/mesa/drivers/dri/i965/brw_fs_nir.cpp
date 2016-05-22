@@ -3876,6 +3876,21 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_load_channel_num: {
+      fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UW);
+      dest = retype(dest, BRW_REGISTER_TYPE_UD);
+      const fs_builder allbld8 = bld.group(8, 0).exec_all();
+      allbld8.MOV(tmp, brw_imm_v(0x76543210));
+      if (dispatch_width > 8)
+         allbld8.ADD(byte_offset(tmp, 16), tmp, brw_imm_uw(8u));
+      if (dispatch_width > 16) {
+         const fs_builder allbld16 = bld.group(16, 0).exec_all();
+         allbld16.ADD(byte_offset(tmp, 32), tmp, brw_imm_uw(16u));
+      }
+      bld.MOV(dest, tmp);
+      break;
+   }
+
    default:
       unreachable("unknown intrinsic");
    }
