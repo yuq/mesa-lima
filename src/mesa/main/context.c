@@ -120,7 +120,6 @@
 #include "shared.h"
 #include "shaderobj.h"
 #include "shaderimage.h"
-#include "util/simple_list.h"
 #include "util/strtod.h"
 #include "state.h"
 #include "stencil.h"
@@ -1413,16 +1412,8 @@ _mesa_copy_context( const struct gl_context *src, struct gl_context *dst,
       dst->Hint = src->Hint;
    }
    if (mask & GL_LIGHTING_BIT) {
-      GLuint i;
-      /* begin with memcpy */
+      /* OK to memcpy */
       dst->Light = src->Light;
-      /* fixup linked lists to prevent pointer insanity */
-      make_empty_list( &(dst->Light.EnabledList) );
-      for (i = 0; i < MAX_LIGHTS; i++) {
-         if (dst->Light.Light[i].Enabled) {
-            insert_at_tail(&(dst->Light.EnabledList), &(dst->Light.Light[i]));
-         }
-      }
    }
    if (mask & GL_LINE_BIT) {
       /* OK to memcpy */

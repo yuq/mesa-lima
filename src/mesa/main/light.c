@@ -31,7 +31,6 @@
 #include "enums.h"
 #include "light.h"
 #include "macros.h"
-#include "util/simple_list.h"
 #include "mtypes.h"
 #include "math/m_matrix.h"
 #include "util/bitscan.h"
@@ -1122,8 +1121,6 @@ _mesa_allow_light_in_model( struct gl_context *ctx, GLboolean flag )
 static void
 init_light( struct gl_light *l, GLuint n )
 {
-   make_empty_list( l );
-
    ASSIGN_4V( l->Ambient, 0.0, 0.0, 0.0, 1.0 );
    if (n==0) {
       ASSIGN_4V( l->Diffuse, 1.0, 1.0, 1.0, 1.0 );
@@ -1197,7 +1194,6 @@ _mesa_init_lighting( struct gl_context *ctx )
    for (i = 0; i < MAX_LIGHTS; i++) {
       init_light( &ctx->Light.Light[i], i );
    }
-   make_empty_list( &ctx->Light.EnabledList );
 
    init_lightmodel( &ctx->Light.Model );
    init_material( &ctx->Light.Material );

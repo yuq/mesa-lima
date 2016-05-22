@@ -333,9 +333,6 @@ struct gl_material
  */
 struct gl_light
 {
-   struct gl_light *next;	/**< double linked list with sentinel */
-   struct gl_light *prev;
-
    GLfloat Ambient[4];		/**< ambient color */
    GLfloat Diffuse[4];		/**< diffuse color */
    GLfloat Specular[4];		/**< specular color */
@@ -634,7 +631,6 @@ struct gl_light_attrib
 
    GLboolean _NeedEyeCoords;		
    GLboolean _NeedVertices;		/**< Use fast shader? */
-   struct gl_light EnabledList;         /**< List sentinel */
 
    GLfloat _BaseColor[2][3];
    /*@}*/
