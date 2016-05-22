@@ -256,4 +256,5 @@ _mesa_init_point(struct gl_context *ctx)
    for (i = 0; i < ARRAY_SIZE(ctx->Point.CoordReplace); i++) {
       ctx->Point.CoordReplace[i] = GL_FALSE; /* GL_ARB/NV_point_sprite */
    }
+   ctx->Point.CoordReplaceBits = 0; /* GL_ARB/NV_point_sprite */
 }
