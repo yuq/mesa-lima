@@ -44,6 +44,7 @@
 #include "program/prog_parameter.h"
 #include "program/prog_print.h"
 #include "program/prog_statevars.h"
+#include "util/bitscan.h"
 
 
 /** Max of number of lights and texture coord units */
@@ -148,6 +149,7 @@ static GLboolean check_active_shininess( struct gl_context *ctx,
 static void make_state_key( struct gl_context *ctx, struct state_key *key )
 {
    const struct gl_fragment_program *fp;
+   GLbitfield mask;
    GLuint i;
 
    memset(key, 0, sizeof(struct state_key));
@@ -183,23 +185,23 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
 	 key->light_color_material_mask = ctx->Light._ColorMaterialBitmask;
       }
 
-      for (i = 0; i < MAX_LIGHTS; i++) {
-	 struct gl_light *light = &ctx->Light.Light[i];
+      mask = ctx->Light._EnabledLights;
+      while (mask) {
+         const int i = u_bit_scan(&mask);
+         struct gl_light *light = &ctx->Light.Light[i];
 
-	 if (light->Enabled) {
-	    key->unit[i].light_enabled = 1;
+         key->unit[i].light_enabled = 1;
 
-	    if (light->EyePosition[3] == 0.0F)
-	       key->unit[i].light_eyepos3_is_zero = 1;
+         if (light->EyePosition[3] == 0.0F)
+            key->unit[i].light_eyepos3_is_zero = 1;
 
-	    if (light->SpotCutoff == 180.0F)
-	       key->unit[i].light_spotcutoff_is_180 = 1;
+         if (light->SpotCutoff == 180.0F)
+            key->unit[i].light_spotcutoff_is_180 = 1;
 
-	    if (light->ConstantAttenuation != 1.0F ||
-		light->LinearAttenuation != 0.0F ||
-		light->QuadraticAttenuation != 0.0F)
-	       key->unit[i].light_attenuated = 1;
-	 }
+         if (light->ConstantAttenuation != 1.0F ||
+             light->LinearAttenuation != 0.0F ||
+             light->QuadraticAttenuation != 0.0F)
+            key->unit[i].light_attenuated = 1;
       }
 
       if (check_active_shininess(ctx, key, 0)) {
