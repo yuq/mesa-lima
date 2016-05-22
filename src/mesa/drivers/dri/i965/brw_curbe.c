@@ -56,6 +56,7 @@
 #include "program/prog_parameter.h"
 #include "program/prog_print.h"
 #include "program/prog_statevars.h"
+#include "util/bitscan.h"
 #include "intel_batchbuffer.h"
 #include "intel_buffer_objects.h"
 #include "brw_context.h"
@@ -84,7 +85,7 @@ static void calculate_curbe_offsets( struct brw_context *brw )
 
    /* _NEW_TRANSFORM */
    if (ctx->Transform.ClipPlanesEnabled) {
-      GLuint nr_planes = 6 + _mesa_bitcount_64(ctx->Transform.ClipPlanesEnabled);
+      GLuint nr_planes = 6 + _mesa_bitcount(ctx->Transform.ClipPlanesEnabled);
       nr_clip_regs = (nr_planes * 4 + 15) / 16;
    }
 
@@ -226,7 +227,7 @@ brw_upload_constant_buffer(struct brw_context *brw)
    /* clipper constants */
    if (brw->curbe.clip_size) {
       GLuint offset = brw->curbe.clip_start * 16;
-      GLuint j;
+      GLbitfield mask;
 
       /* If any planes are going this way, send them all this way:
        */
@@ -241,14 +242,14 @@ brw_upload_constant_buffer(struct brw_context *brw)
        * clip-space:
        */
       clip_planes = brw_select_clip_planes(ctx);
-      for (j = 0; j < MAX_CLIP_PLANES; j++) {
-	 if (ctx->Transform.ClipPlanesEnabled & (1<<j)) {
-	    buf[offset + i * 4 + 0].f = clip_planes[j][0];
-	    buf[offset + i * 4 + 1].f = clip_planes[j][1];
-	    buf[offset + i * 4 + 2].f = clip_planes[j][2];
-	    buf[offset + i * 4 + 3].f = clip_planes[j][3];
-	    i++;
-	 }
+      mask = ctx->Transform.ClipPlanesEnabled;
+      while (mask) {
+         const int j = u_bit_scan(&mask);
+         buf[offset + i * 4 + 0].f = clip_planes[j][0];
+         buf[offset + i * 4 + 1].f = clip_planes[j][1];
+         buf[offset + i * 4 + 2].f = clip_planes[j][2];
+         buf[offset + i * 4 + 3].f = clip_planes[j][3];
+         i++;
       }
    }
 
