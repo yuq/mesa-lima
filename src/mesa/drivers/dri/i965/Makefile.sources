@@ -46,6 +46,7 @@ i965_compiler_FILES = \
 	brw_nir.c \
 	brw_nir_analyze_boolean_resolves.c \
 	brw_nir_attribute_workarounds.c \
+	brw_nir_intrinsics.c \
 	brw_nir_opt_peephole_ffma.c \
 	brw_packed_float.c \
 	brw_predicated_break.cpp \

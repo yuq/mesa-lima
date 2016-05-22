@@ -91,6 +91,8 @@ void brw_nir_analyze_boolean_resolves(nir_shader *nir);
 nir_shader *brw_preprocess_nir(const struct brw_compiler *compiler,
                                nir_shader *nir);
 
+bool brw_nir_lower_intrinsics(nir_shader *nir,
+                              struct brw_stage_prog_data *prog_data);
 void brw_nir_lower_vs_inputs(nir_shader *nir,
                              const struct brw_device_info *devinfo,
                              bool is_scalar,

@@ -6599,6 +6599,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
               (unsigned)4 * (prog_data->thread_local_id_index + 1));
    }
 
+   brw_nir_lower_intrinsics(shader, &prog_data->base);
    shader = brw_postprocess_nir(shader, compiler->devinfo, true);
 
    prog_data->local_size[0] = shader->info.cs.local_size[0];
