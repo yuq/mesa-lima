@@ -145,6 +145,8 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
                     storage->opaque[sh].active) {
                for (unsigned i = 0; i < elements; i++) {
                   const unsigned index = storage->opaque[sh].index + i;
+                  if (index >= ARRAY_SIZE(shader->ImageUnits))
+                     break;
                   shader->ImageUnits[index] = storage->storage[i].i;
                }
             }
