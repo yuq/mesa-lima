@@ -392,7 +392,8 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
          }
 
          while (idx < slot_limit) {
-            for (unsigned i = var->data.location_frac; i < last_comp; i++) {
+            unsigned i = var->data.location_frac;
+            while (i < last_comp) {
                if (explicit_locations[idx][i] != NULL) {
                   linker_error(prog,
                                "%s shader has multiple outputs explicitly "
@@ -418,6 +419,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
                }
 
                explicit_locations[idx][i] = var;
+               i++;
 
                /* We need to do some special handling for doubles as dvec3 and
                 * dvec4 consume two consecutive locations. We don't need to
