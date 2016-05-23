@@ -3712,7 +3712,10 @@ static void si_init_config(struct si_context *sctx)
 		raster_config_1 = 0x0000002a;
 		break;
 	case CHIP_ICELAND:
-		raster_config = 0x00000002;
+		if (num_rb == 1)
+			raster_config = 0x00000000;
+		else
+			raster_config = 0x00000002;
 		raster_config_1 = 0x00000000;
 		break;
 	case CHIP_CARRIZO:
