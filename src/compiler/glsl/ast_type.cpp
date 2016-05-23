@@ -711,7 +711,12 @@ ast_layout_expression::process_qualifier_constant(struct _mesa_glsl_parse_state 
          return false;
       }
 
-      if (!first_pass && *value != const_int->value.u[0]) {
+      /* From section 4.4 "Layout Qualifiers" of the GLSL 4.50 spec:
+       * "When the same layout-qualifier-name occurs multiple times,
+       *  in a single declaration, the last occurrence overrides the
+       *  former occurrence(s)."
+       */
+      if (!state->has_420pack() && !first_pass && *value != const_int->value.u[0]) {
          YYLTYPE loc = const_expression->get_location();
          _mesa_glsl_error(&loc, state, "%s layout qualifier does not "
 		          "match previous declaration (%d vs %d)",
