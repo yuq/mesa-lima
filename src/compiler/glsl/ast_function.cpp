@@ -1543,7 +1543,7 @@ emit_inline_matrix_constructor(const glsl_type *type,
       for (unsigned i = 1; i < last_row; i++)
          swiz[i] = i;
 
-         const unsigned write_mask = (1U << last_row) - 1;
+      const unsigned write_mask = (1U << last_row) - 1;
 
       for (unsigned i = 0; i < last_col; i++) {
          ir_dereference *const lhs =
