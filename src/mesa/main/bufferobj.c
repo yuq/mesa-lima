@@ -1020,7 +1020,8 @@ bind_buffer_object(struct gl_context *ctx, GLenum target, GLuint buffer)
 
    bindTarget = get_buffer_target(ctx, target);
    if (!bindTarget) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBindBufferARB(target 0x%x)", target);
+      _mesa_error(ctx, GL_INVALID_ENUM, "glBindBufferARB(target %s)",
+                  _mesa_enum_to_string(target));
       return;
    }
 
