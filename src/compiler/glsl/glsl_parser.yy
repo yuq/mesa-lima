@@ -2859,6 +2859,7 @@ layout_in_defaults:
                 merge_in_qualifier(& @1, state, $1, $$, false)) {
             YYERROR;
          }
+         $$ = $2;
       }
    }
    | layout_qualifier IN_TOK ';'
@@ -2883,6 +2884,7 @@ layout_out_defaults:
                 merge_out_qualifier(& @1, state, $1, $$, false)) {
             YYERROR;
          }
+         $$ = $2;
       }
    }
    | layout_qualifier OUT_TOK ';'
