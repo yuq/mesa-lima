@@ -2176,10 +2176,12 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 break;
 
       case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
+         assert(inst->force_writemask_all);
 	 generate_uniform_pull_constant_load(inst, dst, src[0], src[1]);
 	 break;
 
       case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD_GEN7:
+         assert(inst->force_writemask_all);
 	 generate_uniform_pull_constant_load_gen7(inst, dst, src[0], src[1]);
 	 break;
 

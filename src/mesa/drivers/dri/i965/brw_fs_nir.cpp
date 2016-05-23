@@ -3611,7 +3611,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
             const unsigned count = MIN2(instr->num_components - c,
                                         (16 - base % 16) / type_size);
 
-            bld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
+            bld.exec_all()
+               .emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
                      packed_consts, surf_index, brw_imm_ud(base & ~15));
 
             const fs_reg consts =
