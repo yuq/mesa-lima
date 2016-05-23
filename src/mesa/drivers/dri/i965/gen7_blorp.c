@@ -491,16 +491,16 @@ gen7_blorp_emit_wm_config(struct brw_context *brw,
    if (params->src.mt)
       dw1 |= GEN7_WM_KILL_ENABLE; /* TODO: temporarily smash on */
 
-      if (params->dst.num_samples > 1) {
-         dw1 |= GEN7_WM_MSRAST_ON_PATTERN;
-         if (prog_data && prog_data->persample_msaa_dispatch)
-            dw2 |= GEN7_WM_MSDISPMODE_PERSAMPLE;
-         else
-            dw2 |= GEN7_WM_MSDISPMODE_PERPIXEL;
-      } else {
-         dw1 |= GEN7_WM_MSRAST_OFF_PIXEL;
+   if (params->dst.num_samples > 1) {
+      dw1 |= GEN7_WM_MSRAST_ON_PATTERN;
+      if (prog_data && prog_data->persample_msaa_dispatch)
          dw2 |= GEN7_WM_MSDISPMODE_PERSAMPLE;
-      }
+      else
+         dw2 |= GEN7_WM_MSDISPMODE_PERPIXEL;
+   } else {
+      dw1 |= GEN7_WM_MSRAST_OFF_PIXEL;
+      dw2 |= GEN7_WM_MSDISPMODE_PERSAMPLE;
+   }
 
    BEGIN_BATCH(3);
    OUT_BATCH(_3DSTATE_WM << 16 | (3 - 2));
