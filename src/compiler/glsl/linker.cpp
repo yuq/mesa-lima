@@ -2873,6 +2873,26 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
       to_assign[i].var->data.location = generic_base + location;
       to_assign[i].var->data.is_unmatched_generic_inout = 0;
       used_locations |= (use_mask << location);
+
+      if (to_assign[i].var->type->without_array()->is_dual_slot_double())
+         double_storage_locations |= (use_mask << location);
+   }
+
+   /* Now that we have all the locations, from the GL 4.5 core spec, section
+    * 11.1.1 (Vertex Attributes), dvec3, dvec4, dmat2x3, dmat2x4, dmat3,
+    * dmat3x4, dmat4x3, and dmat4 count as consuming twice as many attributes
+    * as equivalent single-precision types.
+    */
+   if (target_index == MESA_SHADER_VERTEX) {
+      unsigned total_attribs_size =
+         _mesa_bitcount(used_locations & ((1 << max_index) - 1)) +
+         _mesa_bitcount(double_storage_locations);
+      if (total_attribs_size > max_index) {
+	 linker_error(prog,
+		      "attempt to use %d vertex attribute slots only %d available ",
+		      total_attribs_size, max_index);
+	 return false;
+      }
    }
 
    return true;
