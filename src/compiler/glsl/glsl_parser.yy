@@ -1632,8 +1632,10 @@ layout_qualifier_id:
       if (match_layout_qualifier("invocations", $1, state) == 0) {
          $$.flags.q.invocations = 1;
          $$.invocations = new(ctx) ast_layout_expression(@1, $3);
-         if (!state->is_version(400, 0) &&
-             !state->ARB_gpu_shader5_enable) {
+         if (!state->is_version(400, 320) &&
+             !state->ARB_gpu_shader5_enable &&
+             !state->OES_geometry_shader_enable &&
+             !state->EXT_geometry_shader_enable) {
             _mesa_glsl_error(& @3, state,
                              "GL_ARB_gpu_shader5 invocations "
                              "qualifier specified", $3);
