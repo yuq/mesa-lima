@@ -3967,7 +3967,7 @@ _mesa_InvalidateBufferSubData(GLuint buffer, GLintptr offset,
    bufObj = _mesa_lookup_bufferobj(ctx, buffer);
    if (!bufObj || bufObj == &DummyBufferObject) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glInvalidateBufferSubData(name = 0x%x) invalid object",
+                  "glInvalidateBufferSubData(name = %u) invalid object",
                   buffer);
       return;
    }
@@ -4018,7 +4018,7 @@ _mesa_InvalidateBufferData(GLuint buffer)
    bufObj = _mesa_lookup_bufferobj(ctx, buffer);
    if (!bufObj || bufObj == &DummyBufferObject) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glInvalidateBufferData(name = 0x%x) invalid object",
+                  "glInvalidateBufferData(name = %u) invalid object",
                   buffer);
       return;
    }
