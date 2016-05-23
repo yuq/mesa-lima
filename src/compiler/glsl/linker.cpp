@@ -1980,7 +1980,7 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
 				struct gl_shader **shader_list,
 				unsigned num_shaders)
 {
-   linked_shader->Geom.VerticesOut = 0;
+   linked_shader->Geom.VerticesOut = -1;
    linked_shader->Geom.Invocations = 0;
    linked_shader->Geom.InputType = PRIM_UNKNOWN;
    linked_shader->Geom.OutputType = PRIM_UNKNOWN;
@@ -2024,8 +2024,8 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
 	 linked_shader->Geom.OutputType = shader->Geom.OutputType;
       }
 
-      if (shader->Geom.VerticesOut != 0) {
-	 if (linked_shader->Geom.VerticesOut != 0 &&
+      if (shader->Geom.VerticesOut != -1) {
+	 if (linked_shader->Geom.VerticesOut != -1 &&
 	     linked_shader->Geom.VerticesOut != shader->Geom.VerticesOut) {
 	    linker_error(prog, "geometry shader defined with conflicting "
 			 "output vertex count (%d and %d)\n",
@@ -2067,7 +2067,7 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
    }
    prog->Geom.OutputType = linked_shader->Geom.OutputType;
 
-   if (linked_shader->Geom.VerticesOut == 0) {
+   if (linked_shader->Geom.VerticesOut == -1) {
       linker_error(prog,
 		   "geometry shader didn't declare max_vertices\n");
       return;
