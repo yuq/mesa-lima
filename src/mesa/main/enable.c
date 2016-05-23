@@ -741,12 +741,22 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
       case GL_VERTEX_ARRAY:
       case GL_NORMAL_ARRAY:
       case GL_COLOR_ARRAY:
-      case GL_INDEX_ARRAY:
       case GL_TEXTURE_COORD_ARRAY:
+         if (ctx->API != API_OPENGL_COMPAT && ctx->API != API_OPENGLES)
+            goto invalid_enum_error;
+         client_state( ctx, cap, state );
+         return;
+      case GL_INDEX_ARRAY:
       case GL_EDGE_FLAG_ARRAY:
       case GL_FOG_COORDINATE_ARRAY_EXT:
       case GL_SECONDARY_COLOR_ARRAY_EXT:
+         if (ctx->API != API_OPENGL_COMPAT)
+            goto invalid_enum_error;
+         client_state( ctx, cap, state );
+         return;
       case GL_POINT_SIZE_ARRAY_OES:
+         if (ctx->API != API_OPENGLES)
+            goto invalid_enum_error;
          client_state( ctx, cap, state );
          return;
 
