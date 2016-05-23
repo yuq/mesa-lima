@@ -69,18 +69,7 @@ void
 gen7_blorp_emit_urb_config(struct brw_context *brw,
                            const struct brw_blorp_params *params)
 {
-   /* URB allocations must be done in 8k chunks. */
-   const unsigned chunk_size_bytes = 8192;
-   const unsigned urb_size =
-      (brw->gen >= 8 || (brw->is_haswell && brw->gt == 3)) ? 32 : 16;
-   const unsigned push_constant_bytes = 1024 * urb_size;
-   const unsigned push_constant_chunks =
-      push_constant_bytes / chunk_size_bytes;
    const unsigned vs_entry_size = gen7_blorp_get_vs_entry_size(params);
-   const unsigned vs_start = push_constant_chunks;
-   const unsigned min_vs_entries = ALIGN(brw->urb.min_vs_entries, 8);
-   const unsigned vs_chunks =
-      DIV_ROUND_UP(min_vs_entries * vs_entry_size * 64, chunk_size_bytes);
 
    if (!(brw->ctx.NewDriverState & (BRW_NEW_CONTEXT | BRW_NEW_URB_SIZE)) &&
        brw->urb.vsize >= vs_entry_size)
@@ -88,19 +77,7 @@ gen7_blorp_emit_urb_config(struct brw_context *brw,
 
    brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
 
-   gen7_emit_urb_state(brw,
-                       min_vs_entries /* num_vs_entries */,
-                       vs_entry_size,
-                       vs_start,
-                       0 /* num_hs_entries */,
-                       1 /* hs_size */,
-                       vs_start + vs_chunks /* hs_start */,
-                       0 /* num_ds_entries */,
-                       1 /* ds_size */,
-                       vs_start + vs_chunks /* ds_start */,
-                       0 /* num_gs_entries */,
-                       1 /* gs_size */,
-                       vs_start + vs_chunks /* gs_start */);
+   gen7_upload_urb(brw, vs_entry_size, false, false);
 }
 
 

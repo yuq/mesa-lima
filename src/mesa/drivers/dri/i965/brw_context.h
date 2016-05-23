@@ -1713,16 +1713,8 @@ gen7_emit_push_constant_state(struct brw_context *brw, unsigned vs_size,
                               unsigned gs_size, unsigned fs_size);
 
 void
-gen7_emit_urb_state(struct brw_context *brw,
-                    unsigned nr_vs_entries,
-                    unsigned vs_size, unsigned vs_start,
-                    unsigned nr_hs_entries,
-                    unsigned hs_size, unsigned hs_start,
-                    unsigned nr_ds_entries,
-                    unsigned ds_size, unsigned ds_start,
-                    unsigned nr_gs_entries,
-                    unsigned gs_size, unsigned gs_start);
-
+gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
+                bool gs_present, bool tess_present);
 
 /* brw_reset.c */
 extern GLenum

@@ -152,22 +152,66 @@ const struct brw_tracked_state gen7_push_constant_space = {
 };
 
 static void
-gen7_upload_urb(struct brw_context *brw)
+gen7_emit_urb_state(struct brw_context *brw,
+                    unsigned nr_vs_entries,
+                    unsigned vs_size, unsigned vs_start,
+                    unsigned nr_hs_entries,
+                    unsigned hs_size, unsigned hs_start,
+                    unsigned nr_ds_entries,
+                    unsigned ds_size, unsigned ds_start,
+                    unsigned nr_gs_entries,
+                    unsigned gs_size, unsigned gs_start)
+{
+   BEGIN_BATCH(8);
+   OUT_BATCH(_3DSTATE_URB_VS << 16 | (2 - 2));
+   OUT_BATCH(nr_vs_entries |
+             ((vs_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
+             (vs_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
+
+   OUT_BATCH(_3DSTATE_URB_GS << 16 | (2 - 2));
+   OUT_BATCH(nr_gs_entries |
+             ((gs_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
+             (gs_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
+
+   OUT_BATCH(_3DSTATE_URB_HS << 16 | (2 - 2));
+   OUT_BATCH(nr_hs_entries |
+             ((hs_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
+             (hs_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
+
+   OUT_BATCH(_3DSTATE_URB_DS << 16 | (2 - 2));
+   OUT_BATCH(nr_ds_entries |
+             ((ds_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
+             (ds_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
+   ADVANCE_BATCH();
+}
+
+static void
+upload_urb(struct brw_context *brw)
+{
+   /* BRW_NEW_VS_PROG_DATA */
+   const unsigned vs_size = MAX2(brw->vs.prog_data->base.urb_entry_size, 1);
+   /* BRW_NEW_GEOMETRY_PROGRAM, BRW_NEW_GS_PROG_DATA */
+   const bool gs_present = brw->geometry_program;
+   /* BRW_NEW_TESS_PROGRAMS */
+   const bool tess_present = brw->tess_eval_program;
+
+   gen7_upload_urb(brw, vs_size, gs_present, tess_present);
+}
+
+void
+gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
+                bool gs_present, bool tess_present)
 {
    const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    const int push_size_kB =
       (brw->gen >= 8 || (brw->is_haswell && brw->gt == 3)) ? 32 : 16;
 
    /* BRW_NEW_VS_PROG_DATA */
-   unsigned vs_size = MAX2(brw->vs.prog_data->base.urb_entry_size, 1);
    unsigned vs_entry_size_bytes = vs_size * 64;
    /* BRW_NEW_GEOMETRY_PROGRAM, BRW_NEW_GS_PROG_DATA */
-   bool gs_present = brw->geometry_program;
    unsigned gs_size = gs_present ? brw->gs.prog_data->base.urb_entry_size : 1;
    unsigned gs_entry_size_bytes = gs_size * 64;
 
-   /* BRW_NEW_TESS_PROGRAMS */
-   const bool tess_present = brw->tess_eval_program;
    /* BRW_NEW_TCS_PROG_DATA */
    unsigned hs_size = tess_present ? brw->tcs.prog_data->base.urb_entry_size : 1;
    unsigned hs_entry_size_bytes = hs_size * 64;
@@ -386,40 +430,6 @@ gen7_upload_urb(struct brw_context *brw)
                        brw->urb.nr_gs_entries, gs_size, brw->urb.gs_start);
 }
 
-void
-gen7_emit_urb_state(struct brw_context *brw,
-                    unsigned nr_vs_entries,
-                    unsigned vs_size, unsigned vs_start,
-                    unsigned nr_hs_entries,
-                    unsigned hs_size, unsigned hs_start,
-                    unsigned nr_ds_entries,
-                    unsigned ds_size, unsigned ds_start,
-                    unsigned nr_gs_entries,
-                    unsigned gs_size, unsigned gs_start)
-{
-   BEGIN_BATCH(8);
-   OUT_BATCH(_3DSTATE_URB_VS << 16 | (2 - 2));
-   OUT_BATCH(nr_vs_entries |
-             ((vs_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (vs_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
-
-   OUT_BATCH(_3DSTATE_URB_GS << 16 | (2 - 2));
-   OUT_BATCH(nr_gs_entries |
-             ((gs_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (gs_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
-
-   OUT_BATCH(_3DSTATE_URB_HS << 16 | (2 - 2));
-   OUT_BATCH(nr_hs_entries |
-             ((hs_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (hs_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
-
-   OUT_BATCH(_3DSTATE_URB_DS << 16 | (2 - 2));
-   OUT_BATCH(nr_ds_entries |
-             ((ds_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (ds_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
-   ADVANCE_BATCH();
-}
-
 const struct brw_tracked_state gen7_urb = {
    .dirty = {
       .mesa = 0,
@@ -432,5 +442,5 @@ const struct brw_tracked_state gen7_urb = {
              BRW_NEW_TES_PROG_DATA |
              BRW_NEW_VS_PROG_DATA,
    },
-   .emit = gen7_upload_urb,
+   .emit = upload_urb,
 };
