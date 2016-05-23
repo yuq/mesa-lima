@@ -812,15 +812,20 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
                       const unsigned max_outputs, bool *explicit_stride,
                       bool has_xfb_qualifiers) const
 {
-   assert(!this->next_buffer_separator);
-
+   unsigned xfb_offset = 0;
+   unsigned size = this->size;
    /* Handle gl_SkipComponents. */
    if (this->skip_components) {
       info->Buffers[buffer].Stride += this->skip_components;
-      return true;
+      size = this->skip_components;
+      goto store_varying;
    }
 
-   unsigned xfb_offset = 0;
+   if (this->next_buffer_separator) {
+      size = 0;
+      goto store_varying;
+   }
+
    if (has_xfb_qualifiers) {
       xfb_offset = this->offset / 4;
    } else {
@@ -828,37 +833,39 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
    }
    info->Varyings[info->NumVarying].Offset = xfb_offset * 4;
 
-   unsigned location = this->location;
-   unsigned location_frac = this->location_frac;
-   unsigned num_components = this->num_components();
-   while (num_components > 0) {
-      unsigned output_size = MIN2(num_components, 4 - location_frac);
-      assert((info->NumOutputs == 0 && max_outputs == 0) ||
-             info->NumOutputs < max_outputs);
+   {
+      unsigned location = this->location;
+      unsigned location_frac = this->location_frac;
+      unsigned num_components = this->num_components();
+      while (num_components > 0) {
+         unsigned output_size = MIN2(num_components, 4 - location_frac);
+         assert((info->NumOutputs == 0 && max_outputs == 0) ||
+                info->NumOutputs < max_outputs);
 
-      /* From the ARB_enhanced_layouts spec:
-       *
-       *    "If such a block member or variable is not written during a shader
-       *    invocation, the buffer contents at the assigned offset will be
-       *    undefined.  Even if there are no static writes to a variable or
-       *    member that is assigned a transform feedback offset, the space is
-       *    still allocated in the buffer and still affects the stride."
-       */
-      if (this->is_varying_written()) {
-         info->Outputs[info->NumOutputs].ComponentOffset = location_frac;
-         info->Outputs[info->NumOutputs].OutputRegister = location;
-         info->Outputs[info->NumOutputs].NumComponents = output_size;
-         info->Outputs[info->NumOutputs].StreamId = stream_id;
-         info->Outputs[info->NumOutputs].OutputBuffer = buffer;
-         info->Outputs[info->NumOutputs].DstOffset = xfb_offset;
-         ++info->NumOutputs;
+         /* From the ARB_enhanced_layouts spec:
+          *
+          *    "If such a block member or variable is not written during a shader
+          *    invocation, the buffer contents at the assigned offset will be
+          *    undefined.  Even if there are no static writes to a variable or
+          *    member that is assigned a transform feedback offset, the space is
+          *    still allocated in the buffer and still affects the stride."
+          */
+         if (this->is_varying_written()) {
+            info->Outputs[info->NumOutputs].ComponentOffset = location_frac;
+            info->Outputs[info->NumOutputs].OutputRegister = location;
+            info->Outputs[info->NumOutputs].NumComponents = output_size;
+            info->Outputs[info->NumOutputs].StreamId = stream_id;
+            info->Outputs[info->NumOutputs].OutputBuffer = buffer;
+            info->Outputs[info->NumOutputs].DstOffset = xfb_offset;
+            ++info->NumOutputs;
+         }
+         info->Buffers[buffer].Stream = this->stream_id;
+         xfb_offset += output_size;
+
+         num_components -= output_size;
+         location++;
+         location_frac = 0;
       }
-      info->Buffers[buffer].Stream = this->stream_id;
-      xfb_offset += output_size;
-
-      num_components -= output_size;
-      location++;
-      location_frac = 0;
    }
 
    if (explicit_stride && explicit_stride[buffer]) {
@@ -903,10 +910,11 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
       return false;
    }
 
+ store_varying:
    info->Varyings[info->NumVarying].Name = ralloc_strdup(prog,
                                                          this->orig_name);
    info->Varyings[info->NumVarying].Type = this->type;
-   info->Varyings[info->NumVarying].Size = this->size;
+   info->Varyings[info->NumVarying].Size = size;
    info->Varyings[info->NumVarying].BufferIndex = buffer_index;
    info->NumVarying++;
    info->Buffers[buffer].NumVaryings++;
@@ -1101,6 +1109,11 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
          }
 
          if (tfeedback_decls[i].is_next_buffer_separator()) {
+            if (!tfeedback_decls[i].store(ctx, prog,
+                                          &prog->LinkedTransformFeedback,
+                                          buffer, num_buffers, num_outputs,
+                                          explicit_stride, has_xfb_qualifiers))
+               return false;
             num_buffers++;
             buffer_stream_id = -1;
             continue;

@@ -1143,7 +1143,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
          *val = MAX2(_mesa_program_resource_array_size(res), 1);
          return 1;
       case GL_TRANSFORM_FEEDBACK_VARYING:
-         *val = MAX2(RESOURCE_XFV(res)->Size, 1);
+         *val = RESOURCE_XFV(res)->Size;
          return 1;
       default:
          goto invalid_operation;
