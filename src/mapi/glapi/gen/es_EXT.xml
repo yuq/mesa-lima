@@ -881,6 +881,16 @@
 
 </category>
 
+<category name="GL_EXT_geometry_shader" number="177">
+    <!-- The rest of the bits for this are below in OES_geometry_shader. -->
+    <function name="FramebufferTextureEXT" alias="FramebufferTexture" es2="3.1">
+        <param name="target" type="GLenum"/>
+        <param name="attachment" type="GLenum"/>
+        <param name="texture" type="GLuint"/>
+        <param name="level" type="GLint"/>
+    </function>
+</category>
+
 <category name="GL_EXT_texture_border_clamp" number="182">
 
     <!-- The *TexParameter* functions are added in EXT_texture_integer -->

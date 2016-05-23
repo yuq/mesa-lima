@@ -277,6 +277,7 @@ struct _mesa_glsl_parse_state {
       return OES_shader_io_blocks_enable ||
              EXT_shader_io_blocks_enable ||
              OES_geometry_shader_enable ||
+             EXT_geometry_shader_enable ||
              OES_tessellation_shader_enable ||
              EXT_tessellation_shader_enable ||
 
@@ -285,7 +286,8 @@ struct _mesa_glsl_parse_state {
 
    bool has_geometry_shader() const
    {
-      return OES_geometry_shader_enable || is_version(150, 320);
+      return OES_geometry_shader_enable || EXT_geometry_shader_enable ||
+             is_version(150, 320);
    }
 
    bool has_tessellation_shader() const
@@ -701,6 +703,10 @@ struct _mesa_glsl_parse_state {
    bool EXT_clip_cull_distance_warn;
    bool EXT_draw_buffers_enable;
    bool EXT_draw_buffers_warn;
+   bool EXT_geometry_point_size_enable;
+   bool EXT_geometry_point_size_warn;
+   bool EXT_geometry_shader_enable;
+   bool EXT_geometry_shader_warn;
    bool EXT_gpu_shader5_enable;
    bool EXT_gpu_shader5_warn;
    bool EXT_separate_shader_objects_enable;

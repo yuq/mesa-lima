@@ -652,6 +652,8 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(EXT_blend_func_extended),
    EXT(EXT_draw_buffers),
    EXT(EXT_clip_cull_distance),
+   EXT(EXT_geometry_point_size),
+   EXT(EXT_geometry_shader),
    EXT(EXT_gpu_shader5),
    EXT(EXT_separate_shader_objects),
    EXT(EXT_shader_framebuffer_fetch),
