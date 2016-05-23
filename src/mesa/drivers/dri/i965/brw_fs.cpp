@@ -6570,6 +6570,64 @@ fs_visitor::emit_cs_work_group_id_setup()
 }
 
 static void
+fill_push_const_block_info(struct brw_push_const_block *block, unsigned dwords)
+{
+   block->dwords = dwords;
+   block->regs = DIV_ROUND_UP(dwords, 8);
+   block->size = block->regs * 32;
+}
+
+static void
+cs_fill_push_const_info(const struct brw_device_info *devinfo,
+                        struct brw_cs_prog_data *cs_prog_data)
+{
+   const struct brw_stage_prog_data *prog_data =
+      (struct brw_stage_prog_data*) cs_prog_data;
+   bool fill_thread_id =
+      cs_prog_data->thread_local_id_index >= 0 &&
+      cs_prog_data->thread_local_id_index < (int)prog_data->nr_params;
+   bool cross_thread_supported = false; /* Not yet supported by driver. */
+
+   /* The thread ID should be stored in the last param dword */
+   assert(prog_data->nr_params > 0 || !fill_thread_id);
+   assert(!fill_thread_id ||
+          cs_prog_data->thread_local_id_index ==
+             (int)prog_data->nr_params - 1);
+
+   unsigned cross_thread_dwords, per_thread_dwords;
+   if (!cross_thread_supported) {
+      cross_thread_dwords = 0u;
+      per_thread_dwords =
+         8 * cs_prog_data->local_invocation_id_regs +
+         prog_data->nr_params;
+   } else if (fill_thread_id) {
+      /* Fill all but the last register with cross-thread payload */
+      cross_thread_dwords = 8 * (cs_prog_data->thread_local_id_index / 8);
+      per_thread_dwords = prog_data->nr_params - cross_thread_dwords;
+      assert(per_thread_dwords > 0 && per_thread_dwords <= 8);
+   } else {
+      /* Fill all data using cross-thread payload */
+      cross_thread_dwords = prog_data->nr_params;
+      per_thread_dwords = 0u;
+   }
+
+   fill_push_const_block_info(&cs_prog_data->push.cross_thread, cross_thread_dwords);
+   fill_push_const_block_info(&cs_prog_data->push.per_thread, per_thread_dwords);
+
+   unsigned total_dwords =
+      (cs_prog_data->push.per_thread.size * cs_prog_data->threads +
+       cs_prog_data->push.cross_thread.size) / 4;
+   fill_push_const_block_info(&cs_prog_data->push.total, total_dwords);
+
+   assert(cs_prog_data->push.cross_thread.dwords % 8 == 0 ||
+          cs_prog_data->push.per_thread.size == 0);
+   assert(cs_prog_data->push.cross_thread.dwords +
+          cs_prog_data->push.per_thread.dwords ==
+             8 * cs_prog_data->local_invocation_id_regs +
+             prog_data->nr_params);
+}
+
+static void
 cs_set_simd_size(struct brw_cs_prog_data *cs_prog_data, unsigned size)
 {
    cs_prog_data->simd_size = size;
@@ -6635,6 +6693,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       } else {
          cfg = v8.cfg;
          cs_set_simd_size(prog_data, 8);
+         cs_fill_push_const_info(compiler->devinfo, prog_data);
          prog_data->base.dispatch_grf_start_reg = v8.payload.num_regs;
       }
    }
@@ -6660,6 +6719,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       } else {
          cfg = v16.cfg;
          cs_set_simd_size(prog_data, 16);
+         cs_fill_push_const_info(compiler->devinfo, prog_data);
          prog_data->dispatch_grf_start_reg_16 = v16.payload.num_regs;
       }
    }
@@ -6687,6 +6747,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       } else {
          cfg = v32.cfg;
          cs_set_simd_size(prog_data, 32);
+         cs_fill_push_const_info(compiler->devinfo, prog_data);
       }
    }
 

@@ -424,6 +424,12 @@ struct brw_wm_prog_data {
    int urb_setup[VARYING_SLOT_MAX];
 };
 
+struct brw_push_const_block {
+   unsigned dwords;     /* Dword count, not reg aligned */
+   unsigned regs;
+   unsigned size;       /* Bytes, register aligned */
+};
+
 struct brw_cs_prog_data {
    struct brw_stage_prog_data base;
 
@@ -435,6 +441,12 @@ struct brw_cs_prog_data {
    bool uses_num_work_groups;
    unsigned local_invocation_id_regs;
    int thread_local_id_index;
+
+   struct {
+      struct brw_push_const_block cross_thread;
+      struct brw_push_const_block per_thread;
+      struct brw_push_const_block total;
+   } push;
 
    struct {
       /** @{
