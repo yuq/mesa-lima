@@ -2097,6 +2097,10 @@ fs_visitor::assign_constant_locations()
    bool contiguous[uniforms];
    memset(contiguous, 0, sizeof(contiguous));
 
+   int thread_local_id_index =
+      (stage == MESA_SHADER_COMPUTE) ?
+      ((brw_cs_prog_data*)stage_prog_data)->thread_local_id_index : -1;
+
    /* First, we walk through the instructions and do two things:
     *
     *  1) Figure out which uniforms are live.
@@ -2141,6 +2145,9 @@ fs_visitor::assign_constant_locations()
       }
    }
 
+   if (thread_local_id_index >= 0 && !is_live[thread_local_id_index])
+      thread_local_id_index = -1;
+
    /* Only allow 16 registers (128 uniform components) as push constants.
     *
     * Just demote the end of the list.  We could probably do better
@@ -2149,7 +2156,9 @@ fs_visitor::assign_constant_locations()
     * If changing this value, note the limitation about total_regs in
     * brw_curbe.c.
     */
-   const unsigned int max_push_components = 16 * 8;
+   unsigned int max_push_components = 16 * 8;
+   if (thread_local_id_index >= 0)
+      max_push_components--; /* Save a slot for the thread ID */
 
    /* We push small arrays, but no bigger than 16 floats.  This is big enough
     * for a vec4 but hopefully not large enough to push out other stuff.  We
@@ -2187,12 +2196,20 @@ fs_visitor::assign_constant_locations()
       if (!is_live[u] || is_live_64bit[u])
          continue;
 
+      /* Skip thread_local_id_index to put it in the last push register. */
+      if (thread_local_id_index == (int)u)
+         continue;
+
       set_push_pull_constant_loc(u, &chunk_start, contiguous[u],
                                  push_constant_loc, pull_constant_loc,
                                  &num_push_constants, &num_pull_constants,
                                  max_push_components, max_chunk_size,
                                  stage_prog_data);
    }
+
+   /* Add the CS local thread ID uniform at the end of the push constants */
+   if (thread_local_id_index >= 0)
+      push_constant_loc[thread_local_id_index] = num_push_constants++;
 
    /* As the uniforms are going to be reordered, take the data from a temporary
     * copy of the original param[].
@@ -2212,6 +2229,7 @@ fs_visitor::assign_constant_locations()
     * push_constant_loc[i] <= i and we can do it in one smooth loop without
     * having to make a copy.
     */
+   int new_thread_local_id_index = -1;
    for (unsigned int i = 0; i < uniforms; i++) {
       const gl_constant_value *value = param[i];
 
@@ -2219,9 +2237,15 @@ fs_visitor::assign_constant_locations()
          stage_prog_data->pull_param[pull_constant_loc[i]] = value;
       } else if (push_constant_loc[i] != -1) {
          stage_prog_data->param[push_constant_loc[i]] = value;
+         if (thread_local_id_index == (int)i)
+            new_thread_local_id_index = push_constant_loc[i];
       }
    }
    ralloc_free(param);
+
+   if (stage == MESA_SHADER_COMPUTE)
+      ((brw_cs_prog_data*)stage_prog_data)->thread_local_id_index =
+         new_thread_local_id_index;
 }
 
 /**
