@@ -102,6 +102,15 @@ static bool valid_flags(struct ir3_instruction *instr, unsigned n,
 			(flags & IR3_REG_RELATIV))
 		return false;
 
+	/* TODO it seems to *mostly* work to cp RELATIV, except we get some
+	 * intermittent piglit variable-indexing fails.  Newer blob driver
+	 * doesn't seem to cp these.  Possibly this is hw workaround?  Not
+	 * sure, but until that is understood better, lets just switch off
+	 * cp for indirect src's:
+	 */
+	if (flags & IR3_REG_RELATIV)
+		return false;
+
 	/* clear flags that are 'ok' */
 	switch (opc_cat(instr->opc)) {
 	case 1:
