@@ -302,8 +302,8 @@ brw_nir_lower_vue_outputs(nir_shader *nir,
    if (is_scalar) {
       nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
                                VARYING_SLOT_VAR0,
-                               type_size_scalar);
-      nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
+                               type_size_vec4_times_4);
+      nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4);
    } else {
       nir_foreach_variable(var, &nir->outputs)
          var->data.driver_location = var->data.location;
@@ -340,8 +340,8 @@ void
 brw_nir_lower_fs_outputs(nir_shader *nir)
 {
    nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
-                            FRAG_RESULT_DATA0, type_size_scalar);
-   nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
+                            FRAG_RESULT_DATA0, type_size_vec4_times_4);
+   nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4);
 }
 
 void

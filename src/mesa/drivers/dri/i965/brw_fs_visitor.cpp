@@ -459,8 +459,7 @@ fs_visitor::emit_fb_writes()
             src0_alpha = offset(outputs[0], bld, 3);
 
          inst = emit_single_fb_write(abld, this->outputs[target], reg_undef,
-                                     src0_alpha,
-                                     this->output_components[target]);
+                                     src0_alpha, 4);
          inst->target = target;
       }
    }
@@ -545,9 +544,7 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
    const fs_builder abld = bld.annotate("user clip distances");
 
    this->outputs[VARYING_SLOT_CLIP_DIST0] = vgrf(glsl_type::vec4_type);
-   this->output_components[VARYING_SLOT_CLIP_DIST0] = 4;
    this->outputs[VARYING_SLOT_CLIP_DIST1] = vgrf(glsl_type::vec4_type);
-   this->output_components[VARYING_SLOT_CLIP_DIST1] = 4;
 
    for (int i = 0; i < key->nr_userclip_plane_consts; i++) {
       fs_reg u = userplane[i];
@@ -724,10 +721,8 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
                sources[length++] = reg;
             }
          } else {
-            for (unsigned i = 0; i < output_components[varying]; i++)
+            for (unsigned i = 0; i < 4; i++)
                sources[length++] = offset(this->outputs[varying], bld, i);
-            for (unsigned i = output_components[varying]; i < 4; i++)
-               sources[length++] = brw_imm_d(0);
          }
          break;
       }
@@ -901,7 +896,6 @@ fs_visitor::init()
    this->nir_ssa_values = NULL;
 
    memset(&this->payload, 0, sizeof(this->payload));
-   memset(this->output_components, 0, sizeof(this->output_components));
    this->source_depth_to_render_target = false;
    this->runtime_check_aads_emit = false;
    this->first_non_payload_grf = 0;

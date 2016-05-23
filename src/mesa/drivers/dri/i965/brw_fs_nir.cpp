@@ -67,13 +67,12 @@ fs_visitor::nir_setup_single_output_varying(fs_reg *reg,
       }
    } else {
       assert(type->is_scalar() || type->is_vector());
-      unsigned num_elements = type->vector_elements;
+      unsigned num_iter = 1;
       if (type->is_double())
-         num_elements *= 2;
-      for (unsigned count = 0; count < num_elements; count += 4) {
+         num_iter = 2;
+      for (unsigned count = 0; count < num_iter; count++) {
          this->outputs[*location] = *reg;
-         this->output_components[*location] = MIN2(4, num_elements - count);
-         *reg = offset(*reg, bld, this->output_components[*location]);
+         *reg = offset(*reg, bld, 4);
          (*location)++;
       }
    }
@@ -114,7 +113,6 @@ fs_visitor::nir_setup_outputs()
             /* Writing gl_FragColor outputs to all color regions. */
             for (unsigned int i = 0; i < MAX2(key->nr_color_regions, 1); i++) {
                this->outputs[i] = reg;
-               this->output_components[i] = 4;
             }
          } else if (var->data.location == FRAG_RESULT_DEPTH) {
             this->frag_depth = reg;
@@ -123,8 +121,6 @@ fs_visitor::nir_setup_outputs()
          } else if (var->data.location == FRAG_RESULT_SAMPLE_MASK) {
             this->sample_mask = reg;
          } else {
-            int vector_elements = var->type->without_array()->vector_elements;
-
             /* gl_FragData or a user-defined FS output */
             assert(var->data.location >= FRAG_RESULT_DATA0 &&
                    var->data.location < FRAG_RESULT_DATA0+BRW_MAX_DRAW_BUFFERS);
@@ -132,8 +128,7 @@ fs_visitor::nir_setup_outputs()
             /* General color output. */
             for (unsigned int i = 0; i < MAX2(1, var->type->length); i++) {
                int output = var->data.location - FRAG_RESULT_DATA0 + i;
-               this->outputs[output] = offset(reg, bld, vector_elements * i);
-               this->output_components[output] = vector_elements;
+               this->outputs[output] = offset(reg, bld, 4 * i);
             }
          }
          break;
@@ -2360,6 +2355,7 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
 
    case nir_intrinsic_load_input: {
       fs_reg src = fs_reg(ATTR, instr->const_index[0], dest.type);
+      unsigned first_component = nir_intrinsic_component(instr);
       unsigned num_components = instr->num_components;
       enum brw_reg_type type = dest.type;
 
@@ -2368,7 +2364,7 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
       src = offset(src, bld, const_offset->u32[0]);
 
       for (unsigned j = 0; j < num_components; j++) {
-         bld.MOV(offset(dest, bld, j), offset(src, bld, j));
+         bld.MOV(offset(dest, bld, j), offset(src, bld, j + first_component));
       }
 
       if (type == BRW_REGISTER_TYPE_DF) {
@@ -4103,6 +4099,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       new_dest = offset(new_dest, bld, const_offset->u32[0]);
 
       unsigned num_components = instr->num_components;
+      unsigned first_component = nir_intrinsic_component(instr);
       unsigned bit_size = instr->src[0].is_ssa ?
          instr->src[0].ssa->bit_size : instr->src[0].reg.reg->bit_size;
       if (bit_size == 64) {
@@ -4116,7 +4113,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
 
       for (unsigned j = 0; j < num_components; j++) {
-         bld.MOV(offset(new_dest, bld, j), offset(src, bld, j));
+         bld.MOV(offset(new_dest, bld, j + first_component),
+                 offset(src, bld, j));
       }
       break;
    }

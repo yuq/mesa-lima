@@ -317,7 +317,6 @@ public:
    fs_reg frag_stencil;
    fs_reg sample_mask;
    fs_reg outputs[VARYING_SLOT_MAX];
-   unsigned output_components[VARYING_SLOT_MAX];
    fs_reg dual_src_output;
    bool do_dual_src;
    int first_non_payload_grf;
