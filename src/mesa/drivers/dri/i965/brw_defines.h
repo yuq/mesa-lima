@@ -2943,6 +2943,9 @@ enum brw_wm_barycentric_interp_mode {
 # define MEDIA_GPGPU_THREAD_COUNT_MASK          INTEL_MASK(7, 0)
 # define GEN8_MEDIA_GPGPU_THREAD_COUNT_SHIFT    0
 # define GEN8_MEDIA_GPGPU_THREAD_COUNT_MASK     INTEL_MASK(9, 0)
+/* GEN7 DW6, GEN8+ DW7 */
+# define CROSS_THREAD_READ_LENGTH_SHIFT         0
+# define CROSS_THREAD_READ_LENGTH_MASK          INTEL_MASK(7, 0)
 #define MEDIA_STATE_FLUSH                       0x7004
 #define GPGPU_WALKER                            0x7105
 /* GEN7 DW0 */

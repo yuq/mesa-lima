@@ -42,7 +42,6 @@ brw_upload_cs_state(struct brw_context *brw)
    uint32_t offset;
    uint32_t *desc = (uint32_t*) brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
                                                 8 * 4, 64, &offset);
-   struct gl_program *prog = (struct gl_program *) brw->compute_program;
    struct brw_stage_state *stage_state = &brw->cs.base;
    struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
    struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
@@ -58,16 +57,6 @@ brw_upload_cs_state(struct brw_context *brw)
    uint32_t *bind = (uint32_t*) brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
                                             prog_data->binding_table.size_bytes,
                                             32, &stage_state->bind_bo_offset);
-
-   unsigned local_id_dwords = 0;
-
-   if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID)
-      local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
-
-   unsigned push_constant_data_size =
-      (prog_data->nr_params + local_id_dwords) * sizeof(gl_constant_value);
-   unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
-   unsigned push_constant_regs = reg_aligned_constant_size / 32;
 
    uint32_t dwords = brw->gen < 8 ? 8 : 9;
    BEGIN_BATCH(dwords);
@@ -118,7 +107,8 @@ brw_upload_cs_state(struct brw_context *brw)
     * Note: The constant data is built in brw_upload_cs_push_constants below.
     */
    const uint32_t vfe_curbe_allocation =
-      push_constant_regs * cs_prog_data->threads;
+      ALIGN(cs_prog_data->push.per_thread.regs * cs_prog_data->threads +
+            cs_prog_data->push.cross_thread.regs, 2);
    OUT_BATCH(SET_FIELD(vfe_urb_allocation, MEDIA_VFE_STATE_URB_ALLOC) |
              SET_FIELD(vfe_curbe_allocation, MEDIA_VFE_STATE_CURBE_ALLOC));
    OUT_BATCH(0);
@@ -126,11 +116,11 @@ brw_upload_cs_state(struct brw_context *brw)
    OUT_BATCH(0);
    ADVANCE_BATCH();
 
-   if (reg_aligned_constant_size > 0) {
+   if (cs_prog_data->push.total.size > 0) {
       BEGIN_BATCH(4);
       OUT_BATCH(MEDIA_CURBE_LOAD << 16 | (4 - 2));
       OUT_BATCH(0);
-      OUT_BATCH(ALIGN(reg_aligned_constant_size * cs_prog_data->threads, 64));
+      OUT_BATCH(ALIGN(cs_prog_data->push.total.size, 64));
       OUT_BATCH(stage_state->push_const_offset);
       ADVANCE_BATCH();
    }
@@ -149,7 +139,8 @@ brw_upload_cs_state(struct brw_context *brw)
    desc[dw++] = stage_state->sampler_offset |
       ((stage_state->sampler_count + 3) / 4);
    desc[dw++] = stage_state->bind_bo_offset;
-   desc[dw++] = SET_FIELD(push_constant_regs, MEDIA_CURBE_READ_LENGTH);
+   desc[dw++] = SET_FIELD(cs_prog_data->push.per_thread.regs,
+                          MEDIA_CURBE_READ_LENGTH);
    const uint32_t media_threads =
       brw->gen >= 8 ?
       SET_FIELD(cs_prog_data->threads, GEN8_MEDIA_GPGPU_THREAD_COUNT) :
@@ -170,6 +161,9 @@ brw_upload_cs_state(struct brw_context *brw)
       SET_FIELD(cs_prog_data->uses_barrier, MEDIA_BARRIER_ENABLE) |
       SET_FIELD(slm_size, MEDIA_SHARED_LOCAL_MEMORY_SIZE) |
       media_threads;
+
+   desc[dw++] =
+      SET_FIELD(cs_prog_data->push.cross_thread.regs, CROSS_THREAD_READ_LENGTH);
 
    BEGIN_BATCH(4);
    OUT_BATCH(MEDIA_INTERFACE_DESCRIPTOR_LOAD << 16 | (4 - 2));
@@ -213,10 +207,6 @@ brw_upload_cs_push_constants(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    const struct brw_stage_prog_data *prog_data =
       (struct brw_stage_prog_data*) cs_prog_data;
-   unsigned local_id_dwords = 0;
-
-   if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID)
-      local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
 
    /* Updates the ParamaterValues[i] pointers for all parameters of the
     * basic type of PROGRAM_STATE_VAR.
@@ -224,41 +214,55 @@ brw_upload_cs_push_constants(struct brw_context *brw,
    /* XXX: Should this happen somewhere before to get our state flag set? */
    _mesa_load_state_parameters(ctx, prog->Parameters);
 
-   if (prog_data->nr_params == 0 && local_id_dwords == 0) {
+   if (cs_prog_data->push.total.size == 0) {
       stage_state->push_const_size = 0;
-   } else {
-      gl_constant_value *param;
-      unsigned i, t;
+      return;
+   }
 
-      const unsigned push_constant_data_size =
-         (local_id_dwords + prog_data->nr_params) * sizeof(gl_constant_value);
-      const unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
-      const unsigned param_aligned_count =
-         reg_aligned_constant_size / sizeof(*param);
 
-      param = (gl_constant_value*)
-         brw_state_batch(brw, type,
-                         ALIGN(reg_aligned_constant_size *
-                                  cs_prog_data->threads, 64),
-                         64, &stage_state->push_const_offset);
-      assert(param);
+   gl_constant_value *param = (gl_constant_value*)
+      brw_state_batch(brw, type, ALIGN(cs_prog_data->push.total.size, 64),
+                      64, &stage_state->push_const_offset);
+   assert(param);
 
-      STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
+   STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
 
+   if (cs_prog_data->push.cross_thread.size > 0) {
+      gl_constant_value *param_copy = param;
+      assert(cs_prog_data->thread_local_id_index < 0 ||
+             cs_prog_data->thread_local_id_index >=
+                cs_prog_data->push.cross_thread.dwords);
+      for (unsigned i = 0;
+           i < cs_prog_data->push.cross_thread.dwords;
+           i++) {
+         param_copy[i] = *prog_data->param[i];
+      }
+   }
+
+   gl_constant_value thread_id;
+   if (cs_prog_data->push.per_thread.size > 0) {
       brw_cs_fill_local_id_payload(cs_prog_data, param, cs_prog_data->threads,
-                                   reg_aligned_constant_size);
-
-      /* _NEW_PROGRAM_CONSTANTS */
-      for (t = 0; t < cs_prog_data->threads; t++) {
-         gl_constant_value *next_param =
-            &param[t * param_aligned_count + local_id_dwords];
-         for (i = 0; i < prog_data->nr_params; i++) {
-            next_param[i] = *prog_data->param[i];
+                                   cs_prog_data->push.per_thread.size);
+      for (unsigned t = 0; t < cs_prog_data->threads; t++) {
+         unsigned dst =
+            8 * (cs_prog_data->push.per_thread.regs * t +
+                 cs_prog_data->push.cross_thread.regs +
+                 cs_prog_data->local_invocation_id_regs);
+         unsigned src = cs_prog_data->push.cross_thread.dwords;
+         for ( ; src < prog_data->nr_params; src++, dst++) {
+            if (src != cs_prog_data->thread_local_id_index)
+               param[dst] = *prog_data->param[src];
+            else {
+               thread_id.u = t * cs_prog_data->simd_size;
+               param[dst] = thread_id;
+            }
          }
       }
-
-      stage_state->push_const_size = ALIGN(prog_data->nr_params, 8) / 8;
    }
+
+   stage_state->push_const_size =
+      cs_prog_data->push.cross_thread.regs +
+      cs_prog_data->push.per_thread.regs;
 }
 
 
