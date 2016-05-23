@@ -2442,8 +2442,19 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
             const fs_reg srcs[] = { icp_handle, indirect_offset };
             fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
             bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
-
-            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst, payload);
+            if (first_component != 0) {
+               unsigned read_components = num_components + first_component;
+               fs_reg tmp = bld.vgrf(dst.type, read_components);
+               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp,
+                               payload);
+               for (unsigned i = 0; i < num_components; i++) {
+                  bld.MOV(offset(dst, bld, i),
+                          offset(tmp, bld, i + first_component));
+               }
+            } else {
+               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst,
+                               payload);
+            }
             inst->offset = imm_offset;
             inst->mlen = 2;
          }
@@ -2905,10 +2916,24 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
          fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
          bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
 
-         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dest, payload);
+         if (first_component != 0) {
+            unsigned read_components =
+                instr->num_components + first_component;
+            fs_reg tmp = bld.vgrf(dest.type, read_components);
+            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp,
+                            payload);
+            inst->regs_written = read_components;
+            for (unsigned i = 0; i < instr->num_components; i++) {
+               bld.MOV(offset(dest, bld, i),
+                       offset(tmp, bld, i + first_component));
+            }
+         } else {
+            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dest,
+                            payload);
+            inst->regs_written = instr->num_components;
+         }
          inst->mlen = 2;
          inst->offset = imm_offset;
-         inst->regs_written = instr->num_components;
       }
       break;
    }
