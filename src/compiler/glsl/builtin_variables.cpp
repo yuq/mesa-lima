@@ -1078,8 +1078,10 @@ builtin_variable_generator::generate_gs_special_vars()
       var = add_output(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
       var->data.interpolation = INTERP_MODE_FLAT;
    }
-   if (state->is_version(400, 0) || state->ARB_gpu_shader5_enable)
+   if (state->is_version(400, 320) || state->ARB_gpu_shader5_enable ||
+       state->OES_geometry_shader_enable || state->EXT_geometry_shader_enable) {
       add_system_value(SYSTEM_VALUE_INVOCATION_ID, int_t, "gl_InvocationID");
+   }
 
    /* Although gl_PrimitiveID appears in tessellation control and tessellation
     * evaluation shaders, it has a different function there than it has in
@@ -1198,9 +1200,16 @@ builtin_variable_generator::generate_fs_special_vars()
       add_system_value(SYSTEM_VALUE_SAMPLE_MASK_IN, array(int_t, 1), "gl_SampleMaskIn");
    }
 
-   if (state->is_version(430, 0) || state->ARB_fragment_layer_viewport_enable) {
+   if (state->is_version(430, 320) ||
+       state->ARB_fragment_layer_viewport_enable ||
+       state->OES_geometry_shader_enable ||
+       state->EXT_geometry_shader_enable) {
       var = add_input(VARYING_SLOT_LAYER, int_t, "gl_Layer");
       var->data.interpolation = INTERP_MODE_FLAT;
+   }
+
+   if (state->is_version(430, 0) ||
+       state->ARB_fragment_layer_viewport_enable) {
       var = add_input(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
       var->data.interpolation = INTERP_MODE_FLAT;
    }
