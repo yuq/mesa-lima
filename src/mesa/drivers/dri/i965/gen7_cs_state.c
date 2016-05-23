@@ -241,13 +241,10 @@ brw_upload_cs_push_constants(struct brw_context *brw,
 
    gl_constant_value thread_id;
    if (cs_prog_data->push.per_thread.size > 0) {
-      brw_cs_fill_local_id_payload(cs_prog_data, param, cs_prog_data->threads,
-                                   cs_prog_data->push.per_thread.size);
       for (unsigned t = 0; t < cs_prog_data->threads; t++) {
          unsigned dst =
             8 * (cs_prog_data->push.per_thread.regs * t +
-                 cs_prog_data->push.cross_thread.regs +
-                 cs_prog_data->local_invocation_id_regs);
+                 cs_prog_data->push.cross_thread.regs);
          unsigned src = cs_prog_data->push.cross_thread.dwords;
          for ( ; src < prog_data->nr_params; src++, dst++) {
             if (src != cs_prog_data->thread_local_id_index)

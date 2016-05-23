@@ -272,13 +272,6 @@ emit_system_values_block(nir_block *block, fs_visitor *v)
             *reg = *v->emit_samplemaskin_setup();
          break;
 
-      case nir_intrinsic_load_local_invocation_id:
-         assert(v->stage == MESA_SHADER_COMPUTE);
-         reg = &v->nir_system_values[SYSTEM_VALUE_LOCAL_INVOCATION_ID];
-         if (reg->file == BAD_FILE)
-            *reg = *v->emit_cs_local_invocation_id_setup();
-         break;
-
       case nir_intrinsic_load_work_group_id:
          assert(v->stage == MESA_SHADER_COMPUTE);
          reg = &v->nir_system_values[SYSTEM_VALUE_WORK_GROUP_ID];

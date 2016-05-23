@@ -161,13 +161,6 @@ brw_nir_lower_intrinsics(nir_shader *nir, struct brw_stage_prog_data *prog_data)
    state.nir = nir;
    state.prog_data = prog_data;
 
-   /* Currently this pass only lowers intrinsics using the uniform specified
-    * by thread_local_id_index.
-    */
-   if (nir->stage == MESA_SHADER_COMPUTE &&
-       state.cs_prog_data->thread_local_id_index < 0)
-      return false;
-
    do {
       state.progress = false;
       nir_foreach_function(function, nir) {

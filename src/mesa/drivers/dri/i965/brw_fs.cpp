@@ -5581,31 +5581,6 @@ fs_visitor::setup_vs_payload()
    payload.num_regs = 2;
 }
 
-/**
- * We are building the local ID push constant data using the simplest possible
- * method. We simply push the local IDs directly as they should appear in the
- * registers for the uvec3 gl_LocalInvocationID variable.
- *
- * Therefore, for SIMD8, we use 3 full registers, and for SIMD16 we use 6
- * registers worth of push constant space.
- *
- * Note: Any updates to brw_cs_prog_local_id_payload_dwords,
- * fill_local_id_payload or fs_visitor::emit_cs_local_invocation_id_setup need
- * to coordinated.
- *
- * FINISHME: There are a few easy optimizations to consider.
- *
- * 1. If gl_WorkGroupSize x, y or z is 1, we can just use zero, and there is
- *    no need for using push constant space for that dimension.
- *
- * 2. Since GL_MAX_COMPUTE_WORK_GROUP_SIZE is currently 1024 or less, we can
- *    easily use 16-bit words rather than 32-bit dwords in the push constant
- *    data.
- *
- * 3. If gl_WorkGroupSize x, y or z is small, then we can use bytes for
- *    conveying the data, and thereby reduce push constant usage.
- *
- */
 void
 fs_visitor::setup_gs_payload()
 {
@@ -5649,16 +5624,7 @@ void
 fs_visitor::setup_cs_payload()
 {
    assert(devinfo->gen >= 7);
-   brw_cs_prog_data *prog_data = (brw_cs_prog_data*) this->prog_data;
-
    payload.num_regs = 1;
-
-   if (nir->info.system_values_read & SYSTEM_BIT_LOCAL_INVOCATION_ID &&
-       prog_data->thread_local_id_index < 0) {
-      prog_data->local_invocation_id_regs = dispatch_width * 3 / 8;
-      payload.local_invocation_id_reg = payload.num_regs;
-      payload.num_regs += prog_data->local_invocation_id_regs;
-   }
 }
 
 void
@@ -6533,25 +6499,6 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
 }
 
 fs_reg *
-fs_visitor::emit_cs_local_invocation_id_setup()
-{
-   assert(stage == MESA_SHADER_COMPUTE);
-
-   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uvec3_type));
-
-   struct brw_reg src =
-      brw_vec8_grf(payload.local_invocation_id_reg, 0);
-   src = retype(src, BRW_REGISTER_TYPE_UD);
-   bld.MOV(*reg, src);
-   src.nr += dispatch_width / 8;
-   bld.MOV(offset(*reg, bld, 1), src);
-   src.nr += dispatch_width / 8;
-   bld.MOV(offset(*reg, bld, 2), src);
-
-   return reg;
-}
-
-fs_reg *
 fs_visitor::emit_cs_work_group_id_setup()
 {
    assert(stage == MESA_SHADER_COMPUTE);
@@ -6597,9 +6544,7 @@ cs_fill_push_const_info(const struct brw_device_info *devinfo,
    unsigned cross_thread_dwords, per_thread_dwords;
    if (!cross_thread_supported) {
       cross_thread_dwords = 0u;
-      per_thread_dwords =
-         8 * cs_prog_data->local_invocation_id_regs +
-         prog_data->nr_params;
+      per_thread_dwords = prog_data->nr_params;
    } else if (fill_thread_id) {
       /* Fill all but the last register with cross-thread payload */
       cross_thread_dwords = 8 * (cs_prog_data->thread_local_id_index / 8);
@@ -6623,7 +6568,6 @@ cs_fill_push_const_info(const struct brw_device_info *devinfo,
           cs_prog_data->push.per_thread.size == 0);
    assert(cs_prog_data->push.cross_thread.dwords +
           cs_prog_data->push.per_thread.dwords ==
-             8 * cs_prog_data->local_invocation_id_regs +
              prog_data->nr_params);
 }
 
@@ -6767,40 +6711,4 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
    g.generate_code(cfg, prog_data->simd_size);
 
    return g.get_assembly(final_assembly_size);
-}
-
-void
-brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *prog_data,
-                             void *buffer, uint32_t threads, uint32_t stride)
-{
-   if (prog_data->local_invocation_id_regs == 0)
-      return;
-
-   /* 'stride' should be an integer number of registers, that is, a multiple
-    * of 32 bytes.
-    */
-   assert(stride % 32 == 0);
-
-   unsigned x = 0, y = 0, z = 0;
-   for (unsigned t = 0; t < threads; t++) {
-      uint32_t *param = (uint32_t *) buffer + stride * t / 4;
-
-      for (unsigned i = 0; i < prog_data->simd_size; i++) {
-         param[0 * prog_data->simd_size + i] = x;
-         param[1 * prog_data->simd_size + i] = y;
-         param[2 * prog_data->simd_size + i] = z;
-
-         x++;
-         if (x == prog_data->local_size[0]) {
-            x = 0;
-            y++;
-            if (y == prog_data->local_size[1]) {
-               y = 0;
-               z++;
-               if (z == prog_data->local_size[2])
-                  z = 0;
-            }
-         }
-      }
-   }
 }
