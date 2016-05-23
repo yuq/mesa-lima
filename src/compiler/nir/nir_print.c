@@ -570,6 +570,7 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
       [NIR_INTRINSIC_RANGE] = "range",
       [NIR_INTRINSIC_DESC_SET] = "desc-set",
       [NIR_INTRINSIC_BINDING] = "binding",
+      [NIR_INTRINSIC_COMPONENT] = "component",
    };
    for (unsigned idx = 1; idx < NIR_INTRINSIC_NUM_INDEX_FLAGS; idx++) {
       if (!info->index_map[idx])
@@ -614,6 +615,8 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
 
    nir_foreach_variable(var, var_list) {
       if ((var->data.driver_location == nir_intrinsic_base(instr)) &&
+          (instr->intrinsic == nir_intrinsic_load_uniform ||
+           var->data.location_frac == nir_intrinsic_component(instr)) &&
           var->name) {
          fprintf(fp, "\t/* %s */", var->name);
          break;

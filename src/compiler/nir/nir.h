@@ -987,6 +987,11 @@ typedef enum {
     */
    NIR_INTRINSIC_BINDING = 7,
 
+   /**
+    * Component offset.
+    */
+   NIR_INTRINSIC_COMPONENT = 8,
+
    NIR_INTRINSIC_NUM_INDEX_FLAGS,
 
 } nir_intrinsic_index_flag;
@@ -1053,6 +1058,7 @@ INTRINSIC_IDX_ACCESSORS(ucp_id, UCP_ID, unsigned)
 INTRINSIC_IDX_ACCESSORS(range, RANGE, unsigned)
 INTRINSIC_IDX_ACCESSORS(desc_set, DESC_SET, unsigned)
 INTRINSIC_IDX_ACCESSORS(binding, BINDING, unsigned)
+INTRINSIC_IDX_ACCESSORS(component, COMPONENT, unsigned)
 
 /**
  * \group texture information

@@ -274,6 +274,10 @@ nir_lower_io_block(nir_block *block,
 
          nir_intrinsic_set_base(load,
             intrin->variables[0]->var->data.driver_location);
+         if (mode == nir_var_shader_in || mode == nir_var_shader_out) {
+            nir_intrinsic_set_component(load,
+               intrin->variables[0]->var->data.location_frac);
+         }
 
          if (load->intrinsic == nir_intrinsic_load_uniform) {
             nir_intrinsic_set_range(load,
@@ -322,6 +326,10 @@ nir_lower_io_block(nir_block *block,
 
          nir_intrinsic_set_base(store,
             intrin->variables[0]->var->data.driver_location);
+         if (mode == nir_var_shader_out) {
+            nir_intrinsic_set_component(store,
+               intrin->variables[0]->var->data.location_frac);
+         }
          nir_intrinsic_set_write_mask(store, nir_intrinsic_write_mask(intrin));
 
          if (per_vertex)
