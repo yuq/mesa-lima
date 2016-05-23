@@ -5400,6 +5400,15 @@ ast_function::hir(exec_list *instructions,
                        name);
    }
 
+   /**/
+   if (return_type->is_subroutine()) {
+      YYLTYPE loc = this->get_location();
+      _mesa_glsl_error(&loc, state,
+                       "function `%s' return type can't be a subroutine type",
+                       name);
+   }
+
+
    /* Create an ir_function if one doesn't already exist. */
    f = state->symbols->get_function(name);
    if (f == NULL) {
