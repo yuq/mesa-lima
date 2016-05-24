@@ -505,7 +505,7 @@ _mesa_program_resource_find_name(struct gl_shader_program *shProg,
       if (rname_last_square_bracket) {
          baselen_without_array_index -= strlen(rname_last_square_bracket);
          rname_has_array_index_zero =
-            (strncmp(rname_last_square_bracket, "[0]\0", 4) == 0) &&
+            (strcmp(rname_last_square_bracket, "[0]") == 0) &&
             (baselen_without_array_index == strlen(name));
       }
 
