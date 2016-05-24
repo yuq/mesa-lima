@@ -79,7 +79,7 @@ lower_intrinsic(lower_state *state, nir_intrinsic_instr *intr)
             break;
          }
       }
-      assert(out);
+      assume(out);
       break;
    default:
       return;
