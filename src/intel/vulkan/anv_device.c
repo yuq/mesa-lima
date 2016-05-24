@@ -73,8 +73,7 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
    if (!device->chipset_id) {
-      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
-                         "failed to get chipset id: %m");
+      result = VK_ERROR_INITIALIZATION_FAILED;
       goto fail;
    }
 
@@ -314,8 +313,15 @@ VkResult anv_EnumeratePhysicalDevices(
    VkResult result;
 
    if (instance->physicalDeviceCount < 0) {
-      result = anv_physical_device_init(&instance->physicalDevice,
-                                        instance, "/dev/dri/renderD128");
+      char path[20];
+      for (unsigned i = 0; i < 8; i++) {
+         snprintf(path, sizeof(path), "/dev/dri/renderD%d", 128 + i);
+         result = anv_physical_device_init(&instance->physicalDevice,
+                                           instance, path);
+         if (result == VK_SUCCESS)
+            break;
+      }
+
       if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
          instance->physicalDeviceCount = 0;
       } else if (result == VK_SUCCESS) {
