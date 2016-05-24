@@ -1153,6 +1153,13 @@ cross_validate_globals(struct gl_shader_program *prog,
                          mode_string(var), var->name);
             return;
          }
+
+         if (prog->IsES && existing->data.precision != var->data.precision) {
+            linker_error(prog, "declarations for %s `%s` have "
+                         "mismatching precision qualifiers\n",
+                         mode_string(var), var->name);
+            return;
+         }
       } else
          variables->add_variable(var);
    }
