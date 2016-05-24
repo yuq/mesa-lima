@@ -163,6 +163,8 @@ public:
 
    bool lower_simd_width();
    bool scalarize_df();
+   void apply_logical_swizzle(struct brw_reg *hw_reg,
+                              vec4_instruction *inst, int arg);
 
    vec4_instruction *emit(vec4_instruction *inst);
 

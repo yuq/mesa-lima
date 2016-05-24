@@ -1891,7 +1891,6 @@ vec4_visitor::convert_to_hw_regs()
             const unsigned width = REG_SIZE / 2 / MAX2(4, type_size);
             reg = byte_offset(brw_vecn_grf(width, src.nr, 0), src.offset);
             reg.type = src.type;
-            reg.swizzle = src.swizzle;
             reg.abs = src.abs;
             reg.negate = src.negate;
             break;
@@ -1905,7 +1904,6 @@ vec4_visitor::convert_to_hw_regs()
                                      src.offset),
                          0, width, 1);
             reg.type = src.type;
-            reg.swizzle = src.swizzle;
             reg.abs = src.abs;
             reg.negate = src.negate;
 
@@ -1914,8 +1912,13 @@ vec4_visitor::convert_to_hw_regs()
             break;
          }
 
-         case ARF:
          case FIXED_GRF:
+            if (type_sz(src.type) == 8) {
+               reg = src.as_brw_reg();
+               break;
+            }
+            /* fallthrough */
+         case ARF:
          case IMM:
             continue;
 
@@ -1929,6 +1932,7 @@ vec4_visitor::convert_to_hw_regs()
             unreachable("not reached");
          }
 
+         apply_logical_swizzle(&reg, inst, i);
          src = reg;
       }
 
@@ -2227,6 +2231,45 @@ vec4_visitor::scalarize_df()
       invalidate_live_intervals();
 
    return progress;
+}
+
+/* The align16 hardware can only do 32-bit swizzle channels, so we need to
+ * translate the logical 64-bit swizzle channels that we use in the Vec4 IR
+ * to 32-bit swizzle channels in hardware registers.
+ *
+ * @inst and @arg identify the original vec4 IR source operand we need to
+ * translate the swizzle for and @hw_reg is the hardware register where we
+ * will write the hardware swizzle to use.
+ *
+ * This pass assumes that Align16/DF instructions have been fully scalarized
+ * previously so there is just one 64-bit swizzle channel to deal with for any
+ * given Vec4 IR source.
+ */
+void
+vec4_visitor::apply_logical_swizzle(struct brw_reg *hw_reg,
+                                    vec4_instruction *inst, int arg)
+{
+   src_reg reg = inst->src[arg];
+
+   if (reg.file == BAD_FILE || reg.file == BRW_IMMEDIATE_VALUE)
+      return;
+
+   /* If this is not a 64-bit operand or this is a scalar instruction we don't
+    * need to do anything about the swizzles.
+    */
+   if(type_sz(reg.type) < 8 || is_align1_df(inst)) {
+      hw_reg->swizzle = reg.swizzle;
+      return;
+   }
+
+   /* Otherwise we should have scalarized the instruction, so take the single
+    * 64-bit logical swizzle channel and translate it to 32-bit
+    */
+   assert(brw_is_single_value_swizzle(reg.swizzle));
+
+   unsigned swizzle = BRW_GET_SWZ(reg.swizzle, 0);
+   hw_reg->swizzle = BRW_SWIZZLE4(swizzle * 2, swizzle * 2 + 1,
+                                  swizzle * 2, swizzle * 2 + 1);
 }
 
 bool
