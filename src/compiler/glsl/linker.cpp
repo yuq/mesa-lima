@@ -661,7 +661,7 @@ analyze_clip_cull_usage(struct gl_shader_program *prog,
    *clip_distance_array_size = 0;
    *cull_distance_array_size = 0;
 
-   if (!prog->IsES && prog->Version >= 130) {
+   if (prog->Version >= (prog->IsES ? 300 : 130)) {
       /* From section 7.1 (Vertex Shader Special Variables) of the
        * GLSL 1.30 spec:
        *
@@ -669,13 +669,12 @@ analyze_clip_cull_usage(struct gl_shader_program *prog,
        *   gl_ClipVertex and gl_ClipDistance."
        *
        * This does not apply to GLSL ES shaders, since GLSL ES defines neither
-       * gl_ClipVertex nor gl_ClipDistance.
+       * gl_ClipVertex nor gl_ClipDistance. However with
+       * GL_EXT_clip_cull_distance, this functionality is exposed in ES 3.0.
        */
-      find_assignment_visitor clip_vertex("gl_ClipVertex");
       find_assignment_visitor clip_distance("gl_ClipDistance");
       find_assignment_visitor cull_distance("gl_CullDistance");
 
-      clip_vertex.run(shader->ir);
       clip_distance.run(shader->ir);
       cull_distance.run(shader->ir);
 
@@ -685,20 +684,26 @@ analyze_clip_cull_usage(struct gl_shader_program *prog,
        * a program to statically read or write both gl_ClipVertex and either
        * gl_ClipDistance or gl_CullDistance.
        *
-       * This does not apply to GLSL ES shaders, since GLSL ES defines neither
-       * gl_ClipVertex, gl_ClipDistance or gl_CullDistance.
+       * This does not apply to GLSL ES shaders, since GLSL ES doesn't define
+       * gl_ClipVertex.
        */
-      if (clip_vertex.variable_found() && clip_distance.variable_found()) {
-         linker_error(prog, "%s shader writes to both `gl_ClipVertex' "
-                      "and `gl_ClipDistance'\n",
-                      _mesa_shader_stage_to_string(shader->Stage));
-         return;
-      }
-      if (clip_vertex.variable_found() && cull_distance.variable_found()) {
-         linker_error(prog, "%s shader writes to both `gl_ClipVertex' "
-                      "and `gl_CullDistance'\n",
-                      _mesa_shader_stage_to_string(shader->Stage));
-         return;
+      if (!prog->IsES) {
+         find_assignment_visitor clip_vertex("gl_ClipVertex");
+
+         clip_vertex.run(shader->ir);
+
+         if (clip_vertex.variable_found() && clip_distance.variable_found()) {
+            linker_error(prog, "%s shader writes to both `gl_ClipVertex' "
+                         "and `gl_ClipDistance'\n",
+                         _mesa_shader_stage_to_string(shader->Stage));
+            return;
+         }
+         if (clip_vertex.variable_found() && cull_distance.variable_found()) {
+            linker_error(prog, "%s shader writes to both `gl_ClipVertex' "
+                         "and `gl_CullDistance'\n",
+                         _mesa_shader_stage_to_string(shader->Stage));
+            return;
+         }
       }
 
       if (clip_distance.variable_found()) {
