@@ -799,6 +799,7 @@ struct SWR_FRONTEND_STATE
     // skip clip test, perspective divide, and viewport transform
     // intended for verts in screen space
     bool vpTransformDisable;
+    bool bEnableCutIndex;
     union
     {
         struct
@@ -808,7 +809,7 @@ struct SWR_FRONTEND_STATE
             uint32_t triStripList : 2;
         };
         uint32_t bits;
-    }provokingVertex;
+    } provokingVertex;
     uint32_t topologyProvokingVertex; // provoking vertex for the draw topology
 };
 

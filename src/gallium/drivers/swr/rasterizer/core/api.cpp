@@ -1069,6 +1069,7 @@ void DrawInstanced(
         pDC->FeWork.type = DRAW;
         pDC->FeWork.pfnWork = GetProcessDrawFunc(
             false,  // IsIndexed
+            false, // bEnableCutIndex
             pState->tsState.tsEnable,
             pState->gsState.gsEnable,
             pState->soState.soEnable,
@@ -1202,6 +1203,7 @@ void DrawIndexedInstance(
         pDC->FeWork.type = DRAW;
         pDC->FeWork.pfnWork = GetProcessDrawFunc(
             true,   // IsIndexed
+            pState->frontendState.bEnableCutIndex,
             pState->tsState.tsEnable,
             pState->gsState.gsEnable,
             pState->soState.soEnable,

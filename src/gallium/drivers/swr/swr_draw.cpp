@@ -159,6 +159,12 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 
    SwrSetFetchFunc(ctx->swrContext, velems->fsFunc);
 
+   /* Set up frontend state
+    * XXX setup provokingVertex & topologyProvokingVertex */
+   SWR_FRONTEND_STATE feState = {0};
+   feState.bEnableCutIndex = info->primitive_restart;
+   SwrSetFrontendState(ctx->swrContext, &feState);
+
    if (info->indexed)
       SwrDrawIndexedInstanced(ctx->swrContext,
                               swr_convert_prim_topology(info->mode),

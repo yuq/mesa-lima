@@ -322,6 +322,7 @@ uint32_t NumVertsPerPrim(PRIMITIVE_TOPOLOGY topology, bool includeAdjVerts);
 // ProcessDraw front-end function.  All combinations of parameter values are available
 PFN_FE_WORK_FUNC GetProcessDrawFunc(
     bool IsIndexed,
+    bool IsCutIndexEnabled,
     bool HasTessellation,
     bool HasGeometryShader,
     bool HasStreamOut,

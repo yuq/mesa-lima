@@ -1159,6 +1159,7 @@ static void TessellationStages(
 /// @param pUserData - Pointer to DRAW_WORK
 template <
     typename IsIndexedT,
+    typename IsCutIndexEnabledT,
     typename HasTessellationT,
     typename HasGeometryShaderT,
     typename HasStreamOutT,
@@ -1283,7 +1284,7 @@ void ProcessDraw(
     }
 
     // choose primitive assembler
-    PA_FACTORY<IsIndexedT> paFactory(pDC, state.topology, work.numVerts);
+    PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts);
     PA_STATE& pa = paFactory.GetPA();
 
     /// @todo: temporarily move instance loop in the FE to ensure SO ordering
@@ -1434,12 +1435,13 @@ struct FEDrawChooser
 // Selector for correct templated Draw front-end function
 PFN_FE_WORK_FUNC GetProcessDrawFunc(
     bool IsIndexed,
+    bool IsCutIndexEnabled,
     bool HasTessellation,
     bool HasGeometryShader,
     bool HasStreamOut,
     bool HasRasterization)
 {
-    return TemplateArgUnroller<FEDrawChooser>::GetFunc(IsIndexed, HasTessellation, HasGeometryShader, HasStreamOut, HasRasterization);
+    return TemplateArgUnroller<FEDrawChooser>::GetFunc(IsIndexed, IsCutIndexEnabled, HasTessellation, HasGeometryShader, HasStreamOut, HasRasterization);
 }
 
 

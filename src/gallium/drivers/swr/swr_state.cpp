@@ -1347,10 +1347,6 @@ swr_update_derived(struct pipe_context *pipe,
 
    SwrSetLinkage(ctx->swrContext, linkage, NULL);
 
-   // set up frontend state
-   SWR_FRONTEND_STATE feState = {0};
-   SwrSetFrontendState(ctx->swrContext, &feState);
-
    // set up backend state
    SWR_BACKEND_STATE backendState = {0};
    backendState.numAttributes = 1;
