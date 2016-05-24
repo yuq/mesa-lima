@@ -218,7 +218,6 @@ GL 4.5, GLSL 4.50:
   GL_ARB_shader_texture_image_samples                   DONE (i965, nv50, nvc0, r600, radeonsi)
   GL_ARB_texture_barrier                                DONE (i965, nv50, nvc0, r600, radeonsi)
   GL_KHR_context_flush_control                          DONE (all - but needs GLX/EGL extension to be useful)
-  GL_KHR_robust_buffer_access_behavior                  DONE (i965)
   GL_KHR_robustness                                     not started (90% done with the ARB variant)
   GL_EXT_shader_integer_mix                             DONE (all drivers that support GLSL)
 
