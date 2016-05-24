@@ -356,6 +356,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
          case 2:  op = nir_op_bany_inequal2; break;
          case 3:  op = nir_op_bany_inequal3; break;
          case 4:  op = nir_op_bany_inequal4; break;
+         default: unreachable("invalid number of components");
          }
          val->ssa->def = nir_build_alu(&b->nb, op, src[0],
                                        nir_imm_int(&b->nb, NIR_FALSE),
@@ -372,6 +373,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
          case 2:  op = nir_op_ball_iequal2;  break;
          case 3:  op = nir_op_ball_iequal3;  break;
          case 4:  op = nir_op_ball_iequal4;  break;
+         default: unreachable("invalid number of components");
          }
          val->ssa->def = nir_build_alu(&b->nb, op, src[0],
                                        nir_imm_int(&b->nb, NIR_TRUE),
