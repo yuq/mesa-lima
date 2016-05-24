@@ -646,6 +646,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
 
       /* Emit hiz buffer. */
       if (hiz) {
+         assert(depth_mt);
          struct intel_mipmap_tree *hiz_mt = depth_mt->hiz_buf->mt;
 	 BEGIN_BATCH(3);
 	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));

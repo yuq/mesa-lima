@@ -90,6 +90,7 @@ emit_depth_packets(struct brw_context *brw,
       OUT_BATCH(0);
       ADVANCE_BATCH();
    } else {
+      assert(depth_mt);
       BEGIN_BATCH(5);
       OUT_BATCH(GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16 | (5 - 2));
       OUT_BATCH((depth_mt->hiz_buf->pitch - 1) | mocs_wb << 25);
