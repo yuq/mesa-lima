@@ -2140,6 +2140,95 @@ vec4_visitor::lower_simd_width()
    return progress;
 }
 
+static bool
+is_align1_df(vec4_instruction *inst)
+{
+   switch (inst->opcode) {
+   case VEC4_OPCODE_FROM_DOUBLE:
+   case VEC4_OPCODE_TO_DOUBLE:
+   case VEC4_OPCODE_PICK_LOW_32BIT:
+   case VEC4_OPCODE_PICK_HIGH_32BIT:
+   case VEC4_OPCODE_SET_LOW_32BIT:
+   case VEC4_OPCODE_SET_HIGH_32BIT:
+      return true;
+   default:
+      return false;
+   }
+}
+
+static brw_predicate
+scalarize_predicate(brw_predicate predicate, unsigned writemask)
+{
+   if (predicate != BRW_PREDICATE_NORMAL)
+      return predicate;
+
+   switch (writemask) {
+   case WRITEMASK_X:
+      return BRW_PREDICATE_ALIGN16_REPLICATE_X;
+   case WRITEMASK_Y:
+      return BRW_PREDICATE_ALIGN16_REPLICATE_Y;
+   case WRITEMASK_Z:
+      return BRW_PREDICATE_ALIGN16_REPLICATE_Z;
+   case WRITEMASK_W:
+      return BRW_PREDICATE_ALIGN16_REPLICATE_W;
+   default:
+      unreachable("invalid writemask");
+   }
+}
+
+bool
+vec4_visitor::scalarize_df()
+{
+   bool progress = false;
+
+   foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
+      /* Skip DF instructions that operate in Align1 mode */
+      if (is_align1_df(inst))
+         continue;
+
+      /* Check if this is a double-precision instruction */
+      bool is_double = type_sz(inst->dst.type) == 8;
+      for (int arg = 0; !is_double && arg < 3; arg++) {
+         is_double = inst->src[arg].file != BAD_FILE &&
+                     type_sz(inst->src[arg].type) == 8;
+      }
+
+      if (!is_double)
+         continue;
+
+      /* Generate scalar instructions for each enabled channel */
+      for (unsigned chan = 0; chan < 4; chan++) {
+         unsigned chan_mask = 1 << chan;
+         if (!(inst->dst.writemask & chan_mask))
+            continue;
+
+         vec4_instruction *scalar_inst = new(mem_ctx) vec4_instruction(*inst);
+
+         for (unsigned i = 0; i < 3; i++) {
+            unsigned swz = BRW_GET_SWZ(inst->src[i].swizzle, chan);
+            scalar_inst->src[i].swizzle = BRW_SWIZZLE4(swz, swz, swz, swz);
+         }
+
+         scalar_inst->dst.writemask = chan_mask;
+
+         if (inst->predicate != BRW_PREDICATE_NONE) {
+            scalar_inst->predicate =
+               scalarize_predicate(inst->predicate, chan_mask);
+         }
+
+         inst->insert_before(block, scalar_inst);
+      }
+
+      inst->remove(block);
+      progress = true;
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 bool
 vec4_visitor::run()
 {
@@ -2238,6 +2327,8 @@ vec4_visitor::run()
 
    if (failed)
       return false;
+
+   OPT(scalarize_df);
 
    setup_payload();
 

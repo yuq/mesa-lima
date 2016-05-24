@@ -162,6 +162,7 @@ public:
    void convert_to_hw_regs();
 
    bool lower_simd_width();
+   bool scalarize_df();
 
    vec4_instruction *emit(vec4_instruction *inst);
 
