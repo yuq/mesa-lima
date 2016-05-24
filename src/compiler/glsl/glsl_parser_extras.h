@@ -270,6 +270,18 @@ struct _mesa_glsl_parse_state {
       return OES_geometry_shader_enable || is_version(150, 320);
    }
 
+   bool has_clip_distance() const
+   {
+      return EXT_clip_cull_distance_enable || is_version(130, 0);
+   }
+
+   bool has_cull_distance() const
+   {
+      return EXT_clip_cull_distance_enable ||
+             ARB_cull_distance_enable ||
+             is_version(450, 0);
+   }
+
    void process_version_directive(YYLTYPE *locp, int version,
                                   const char *ident);
 

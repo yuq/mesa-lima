@@ -2310,6 +2310,8 @@ _glcpp_parser_handle_version_declaration(glcpp_parser_t *parser, intmax_t versio
             add_builtin_define(parser, "GL_OES_texture_storage_multisample_2d_array", 1);
          if (extensions->ARB_blend_func_extended)
             add_builtin_define(parser, "GL_EXT_blend_func_extended", 1);
+         if (extensions->ARB_cull_distance)
+            add_builtin_define(parser, "GL_EXT_clip_cull_distance", 1);
 
          if (version >= 310) {
             if (extensions->ARB_shader_image_load_store)

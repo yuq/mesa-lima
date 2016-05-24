@@ -674,14 +674,13 @@ builtin_variable_generator::generate_constants()
                 state->Const.MaxProgramTexelOffset);
    }
 
-   if (state->is_version(130, 0) || state->EXT_clip_cull_distance_enable) {
+   if (state->has_clip_distance()) {
       add_const("gl_MaxClipDistances", state->Const.MaxClipPlanes);
    }
    if (state->is_version(130, 0)) {
       add_const("gl_MaxVaryingComponents", state->ctx->Const.MaxVarying * 4);
    }
-   if (state->is_version(450, 0) || state->ARB_cull_distance_enable ||
-       state->EXT_clip_cull_distance_enable) {
+   if (state->has_cull_distance()) {
       add_const("gl_MaxCullDistances", state->Const.MaxClipPlanes);
       add_const("gl_MaxCombinedClipAndCullDistances",
                 state->Const.MaxClipPlanes);
@@ -1253,12 +1252,11 @@ builtin_variable_generator::generate_varyings()
       }
    }
 
-   if (state->is_version(130, 0) || state->EXT_clip_cull_distance_enable) {
+   if (state->has_clip_distance()) {
        add_varying(VARYING_SLOT_CLIP_DIST0, array(float_t, 0),
                    "gl_ClipDistance");
    }
-   if (state->is_version(450, 0) || state->ARB_cull_distance_enable ||
-       state->EXT_clip_cull_distance_enable) {
+   if (state->has_cull_distance()) {
       add_varying(VARYING_SLOT_CULL_DIST0, array(float_t, 0),
                    "gl_CullDistance");
    }
