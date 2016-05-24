@@ -470,6 +470,9 @@ iter_property(
       case TGSI_PROPERTY_FS_COORD_PIXEL_CENTER:
          ENM(prop->u[i].Data, tgsi_fs_coord_pixel_center_names);
          break;
+      case TGSI_PROPERTY_NEXT_SHADER:
+         ENM(prop->u[i].Data, tgsi_processor_type_names);
+         break;
       default:
          SID( prop->u[i].Data );
          break;
