@@ -208,7 +208,7 @@ GL 4.4, GLSL 4.40:
 
 GL 4.5, GLSL 4.50:
 
-  GL_ARB_ES3_1_compatibility                            not started
+  GL_ARB_ES3_1_compatibility                            DONE (nvc0, radeonsi)
   GL_ARB_clip_control                                   DONE (i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe, swr)
   GL_ARB_conditional_render_inverted                    DONE (i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe, swr)
   GL_ARB_cull_distance                                  DONE (i965, nv50, nvc0, llvmpipe, softpipe)

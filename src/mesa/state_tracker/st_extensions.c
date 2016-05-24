@@ -1181,4 +1181,26 @@ void st_init_extensions(struct pipe_screen *screen,
                                       extensions->ARB_shader_atomic_counters;
       }
    }
+
+   /* If we support ES 3.1, we support the ES3_1_compatibility ext. However
+    * there's no clean way of telling whether we would support ES 3.1 from
+    * here, so copy the condition from compute_version_es2 here. A lot of
+    * these are redunant, but simpler to just have a (near-)exact copy here.
+    */
+   extensions->ARB_ES3_1_compatibility =
+      extensions->ARB_ES3_compatibility &&
+      extensions->ARB_arrays_of_arrays &&
+      extensions->ARB_compute_shader &&
+      extensions->ARB_draw_indirect &&
+      extensions->ARB_explicit_uniform_location &&
+      extensions->ARB_framebuffer_no_attachments &&
+      extensions->ARB_shader_atomic_counters &&
+      extensions->ARB_shader_image_load_store &&
+      extensions->ARB_shader_image_size &&
+      extensions->ARB_shader_storage_buffer_object &&
+      extensions->ARB_shading_language_packing &&
+      extensions->ARB_stencil_texturing &&
+      extensions->ARB_texture_multisample &&
+      extensions->ARB_gpu_shader5 &&
+      extensions->EXT_shader_integer_mix;
 }
