@@ -529,8 +529,10 @@ brw_prepare_vertices(struct brw_context *brw)
 	       input->buffer = brw->vb.enabled[k]->buffer;
 	       input->offset = glarray->Ptr - other->Ptr;
 
-               buffer_range_start[k] = MIN2(buffer_range_start[k], start);
-               buffer_range_end[k] = MAX2(buffer_range_end[k], start + range);
+               buffer_range_start[input->buffer] =
+                  MIN2(buffer_range_start[input->buffer], start);
+               buffer_range_end[input->buffer] =
+                  MAX2(buffer_range_end[input->buffer], start + range);
 	       break;
 	    }
 	 }
