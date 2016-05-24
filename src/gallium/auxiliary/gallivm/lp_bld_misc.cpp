@@ -570,6 +570,15 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
     */
    MAttrs.push_back(util_cpu_caps.has_avx  ? "+avx"  : "-avx");
    MAttrs.push_back(util_cpu_caps.has_f16c ? "+f16c" : "-f16c");
+   if (HAVE_LLVM >= 0x0304 || useMCJIT) {
+      MAttrs.push_back(util_cpu_caps.has_fma  ? "+fma"  : "-fma");
+   } else {
+      /*
+       * The old JIT in LLVM 3.3 has a bug encoding llvm.fmuladd.f32 and
+       * llvm.fmuladd.v2f32 intrinsics when FMA is available.
+       */
+      MAttrs.push_back("-fma");
+   }
    MAttrs.push_back(util_cpu_caps.has_avx2 ? "+avx2" : "-avx2");
    /* disable avx512 and all subvariants */
 #if HAVE_LLVM >= 0x0304
