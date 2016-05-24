@@ -901,8 +901,27 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationDescriptorSet:
       vtn_var->descriptor_set = dec->literals[0];
       return;
+   default:
+      break;
+   }
 
-   case SpvDecorationLocation: {
+   /* Now we handle decorations that apply to a particular nir_variable */
+   nir_variable *nir_var = vtn_var->var;
+   if (val->value_type == vtn_value_type_access_chain) {
+      assert(val->access_chain->length == 0);
+      assert(val->access_chain->var == void_var);
+      assert(member == -1);
+   } else {
+      assert(val->value_type == vtn_value_type_type);
+      if (member != -1)
+         nir_var = vtn_var->members[member];
+   }
+
+   /* Location is odd in that it can apply in three different cases: To a
+    * non-split variable, to a whole split variable, or to one structure
+    * member of a split variable.
+    */
+   if (dec->decoration == SpvDecorationLocation) {
       unsigned location = dec->literals[0];
       bool is_vertex_input;
       if (b->shader->stage == MESA_SHADER_FRAGMENT &&
@@ -921,10 +940,12 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          assert(!"Location must be on input or output variable");
       }
 
-      if (vtn_var->var) {
-         vtn_var->var->data.location = location;
-         vtn_var->var->data.explicit_location = true;
+      if (nir_var) {
+         /* This handles the member and lone variable cases */
+         nir_var->data.location = location;
+         nir_var->data.explicit_location = true;
       } else {
+         /* This handles the structure member case */
          assert(vtn_var->members);
          unsigned length =
             glsl_get_length(glsl_without_array(vtn_var->type->type));
@@ -937,22 +958,6 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          }
       }
       return;
-   }
-
-   default:
-      break;
-   }
-
-   /* Now we handle decorations that apply to a particular nir_variable */
-   nir_variable *nir_var = vtn_var->var;
-   if (val->value_type == vtn_value_type_access_chain) {
-      assert(val->access_chain->length == 0);
-      assert(val->access_chain->var == void_var);
-      assert(member == -1);
-   } else {
-      assert(val->value_type == vtn_value_type_type);
-      if (member != -1)
-         nir_var = vtn_var->members[member];
    }
 
    if (nir_var == NULL)
@@ -1036,6 +1041,9 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
 
    case SpvDecorationPatch:
       unreachable("Tessellation not yet supported");
+
+   case SpvDecorationLocation:
+      unreachable("Handled above");
 
    case SpvDecorationBlock:
    case SpvDecorationBufferBlock:
