@@ -90,7 +90,7 @@ static const uint32_t isl_to_gen_multisample_layout[] = {
 };
 #endif
 
-static const uint8_t
+static uint8_t
 get_surftype(enum isl_surf_dim dim, isl_surf_usage_flags_t usage)
 {
    switch (dim) {
