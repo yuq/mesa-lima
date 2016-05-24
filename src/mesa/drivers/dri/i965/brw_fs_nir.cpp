@@ -309,7 +309,7 @@ emit_system_values_block(nir_block *block, fs_visitor *v)
                      stride(byte_offset(retype(brw_vec1_grf(1, 0),
                                                BRW_REGISTER_TYPE_UB), 28),
                             1, 8, 0),
-                     brw_imm_uv(0x76543210));
+                     brw_imm_v(0x76543210));
 
             /* A set bit in the pixel mask means the channel is enabled, but
              * that is the opposite of gl_HelperInvocation so we need to invert
