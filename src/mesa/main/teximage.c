@@ -69,7 +69,7 @@
  * format needs to be a 32 bit component and in case of GL_HALF_FLOAT_OES it
  * needs to be a 16 bit component.
  *
- * For example, given base format GL_RGBA, type GL_Float return GL_RGBA32F_ARB.
+ * For example, given base format GL_RGBA, type GL_FLOAT return GL_RGBA32F_ARB.
  */
 static GLenum
 adjust_for_oes_float_texture(const struct gl_context *ctx,
