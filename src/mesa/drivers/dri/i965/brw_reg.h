@@ -292,15 +292,19 @@ type_sz(unsigned type)
    case BRW_REGISTER_TYPE_UD:
    case BRW_REGISTER_TYPE_D:
    case BRW_REGISTER_TYPE_F:
+   case BRW_REGISTER_TYPE_VF:
       return 4;
    case BRW_REGISTER_TYPE_UW:
    case BRW_REGISTER_TYPE_W:
+   case BRW_REGISTER_TYPE_UV:
+   case BRW_REGISTER_TYPE_V:
+   case BRW_REGISTER_TYPE_HF:
       return 2;
    case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_B:
       return 1;
    default:
-      return 0;
+      unreachable("not reached");
    }
 }
 
