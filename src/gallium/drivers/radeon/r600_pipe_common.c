@@ -37,6 +37,7 @@
 #include "vl/vl_video_buffer.h"
 #include "radeon/radeon_video.h"
 #include <inttypes.h>
+#include <sys/utsname.h>
 
 #ifndef HAVE_LLVM
 #define HAVE_LLVM 0
@@ -938,9 +939,14 @@ struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 bool r600_common_screen_init(struct r600_common_screen *rscreen,
 			     struct radeon_winsys *ws)
 {
-	char llvm_string[32] = {};
+	char llvm_string[32] = {}, kernel_version[128] = {};
+	struct utsname uname_data;
 
 	ws->query_info(ws, &rscreen->info);
+
+	if (uname(&uname_data) == 0)
+		snprintf(kernel_version, sizeof(kernel_version),
+			 " / %s", uname_data.release);
 
 #if HAVE_LLVM
 	snprintf(llvm_string, sizeof(llvm_string),
@@ -949,10 +955,10 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 #endif
 
 	snprintf(rscreen->renderer_string, sizeof(rscreen->renderer_string),
-		 "%s (DRM %i.%i.%i%s)",
+		 "%s (DRM %i.%i.%i%s%s)",
 		 r600_get_chip_name(rscreen), rscreen->info.drm_major,
 		 rscreen->info.drm_minor, rscreen->info.drm_patchlevel,
-		 llvm_string);
+		 kernel_version, llvm_string);
 
 	rscreen->b.get_name = r600_get_name;
 	rscreen->b.get_vendor = r600_get_vendor;
