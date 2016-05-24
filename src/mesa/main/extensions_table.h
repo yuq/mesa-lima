@@ -190,7 +190,7 @@ EXT(EXT_blend_minmax                        , EXT_blend_minmax                  
 EXT(EXT_blend_subtract                      , dummy_true                             , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_buffer_storage                      , ARB_buffer_storage                     ,  x ,  x ,  x ,  31, 2015)
 EXT(EXT_clip_cull_distance                  , ARB_cull_distance                      ,  x ,  x ,  x ,  30, 2016)
-EXT(EXT_color_buffer_float                  , dummy_true                             ,  x ,  x , ES1,  30, 2013)
+EXT(EXT_color_buffer_float                  , dummy_true                             ,  x ,  x ,  x ,  30, 2013)
 EXT(EXT_compiled_vertex_array               , dummy_true                             , GLL,  x ,  x ,  x , 1996)
 EXT(EXT_copy_image                          , OES_copy_image                         ,  x ,  x ,  x ,  30, 2014)
 EXT(EXT_copy_texture                        , dummy_true                             , GLL,  x ,  x ,  x , 1995)
@@ -368,7 +368,7 @@ EXT(OES_texture_half_float_linear           , OES_texture_half_float_linear     
 EXT(OES_texture_mirrored_repeat             , dummy_true                             ,  x ,  x , ES1,  x , 2005)
 EXT(OES_texture_npot                        , ARB_texture_non_power_of_two           ,  x ,  x , ES1, ES2, 2005)
 EXT(OES_texture_stencil8                    , ARB_texture_stencil8                   ,  x ,  x ,  x ,  30, 2014)
-EXT(OES_texture_storage_multisample_2d_array, ARB_texture_multisample                ,  x ,  x , ES1,  31, 2014)
+EXT(OES_texture_storage_multisample_2d_array, ARB_texture_multisample                ,  x ,  x ,  x ,  31, 2014)
 EXT(OES_vertex_array_object                 , dummy_true                             ,  x ,  x , ES1, ES2, 2010)
 
 EXT(S3_s3tc                                 , ANGLE_texture_compression_dxt          , GLL, GLC,  x ,  x , 1999)
