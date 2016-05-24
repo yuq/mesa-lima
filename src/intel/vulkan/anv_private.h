@@ -542,7 +542,7 @@ struct anv_physical_device {
 
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
-    const char *                                path;
+    char                                        path[20];
     const char *                                name;
     const struct brw_device_info *              info;
     uint64_t                                    aperture_size;

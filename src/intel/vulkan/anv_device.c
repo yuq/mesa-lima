@@ -67,7 +67,9 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = instance;
-   device->path = path;
+
+   assert(strlen(path) < ARRAY_SIZE(device->path));
+   strncpy(device->path, path, ARRAY_SIZE(device->path));
 
    device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
    if (!device->chipset_id) {
