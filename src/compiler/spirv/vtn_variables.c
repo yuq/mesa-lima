@@ -895,9 +895,6 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
 
    /* Handle decorations that apply to a vtn_variable as a whole */
    switch (dec->decoration) {
-   case SpvDecorationNonWritable:
-      /* Do nothing with this for now */
-      return;
    case SpvDecorationBinding:
       vtn_var->binding = dec->literals[0];
       return;
@@ -1021,30 +1018,47 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          nir_var->data.pixel_center_integer = b->pixel_center_integer;
       break;
    }
+
+   case SpvDecorationSpecId:
    case SpvDecorationRowMajor:
    case SpvDecorationColMajor:
-   case SpvDecorationGLSLShared:
-   case SpvDecorationPatch:
+   case SpvDecorationMatrixStride:
    case SpvDecorationRestrict:
    case SpvDecorationAliased:
    case SpvDecorationVolatile:
    case SpvDecorationCoherent:
    case SpvDecorationNonReadable:
    case SpvDecorationUniform:
-      /* This is really nice but we have no use for it right now. */
-   case SpvDecorationCPacked:
-   case SpvDecorationSaturatedConversion:
    case SpvDecorationStream:
    case SpvDecorationOffset:
+   case SpvDecorationLinkageAttributes:
+      break; /* Do nothing with these here */
+
+   case SpvDecorationPatch:
+      unreachable("Tessellation not yet supported");
+
+   case SpvDecorationBlock:
+   case SpvDecorationBufferBlock:
+   case SpvDecorationArrayStride:
+   case SpvDecorationGLSLShared:
+   case SpvDecorationGLSLPacked:
+   case SpvDecorationBinding:
+   case SpvDecorationDescriptorSet:
+   case SpvDecorationNoContraction:
+   case SpvDecorationInputAttachmentIndex:
+      unreachable("Decoration not allowed for variable or structure member");
+
    case SpvDecorationXfbBuffer:
+   case SpvDecorationXfbStride:
+      unreachable("Vulkan does not have transform feedback");
+
+   case SpvDecorationCPacked:
+   case SpvDecorationSaturatedConversion:
    case SpvDecorationFuncParamAttr:
    case SpvDecorationFPRoundingMode:
    case SpvDecorationFPFastMathMode:
-   case SpvDecorationLinkageAttributes:
-   case SpvDecorationSpecId:
-      break;
-   default:
-      unreachable("Unhandled variable decoration");
+   case SpvDecorationAlignment:
+      unreachable("Decoraiton only allowed for CL-style kernels");
    }
 }
 

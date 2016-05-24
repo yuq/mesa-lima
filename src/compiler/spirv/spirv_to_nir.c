@@ -457,6 +457,9 @@ struct_member_decoration_cb(struct vtn_builder *b,
    case SpvDecorationNonWritable:
    case SpvDecorationNonReadable:
    case SpvDecorationRelaxedPrecision:
+   case SpvDecorationVolatile:
+   case SpvDecorationCoherent:
+   case SpvDecorationUniform:
       break; /* FIXME: Do nothing with this for now. */
    case SpvDecorationNoPerspective:
       ctx->fields[member].interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
@@ -470,9 +473,15 @@ struct_member_decoration_cb(struct vtn_builder *b,
    case SpvDecorationSample:
       ctx->fields[member].sample = true;
       break;
+   case SpvDecorationStream:
+      /* Vulkan only allows one GS stream */
+      assert(dec->literals[0] == 0);
+      break;
    case SpvDecorationLocation:
       ctx->fields[member].location = dec->literals[0];
       break;
+   case SpvDecorationComponent:
+      break; /* FIXME: What should we do with these? */
    case SpvDecorationBuiltIn:
       ctx->type->members[member] = vtn_type_copy(b, ctx->type->members[member]);
       ctx->type->members[member]->is_builtin = true;
@@ -490,6 +499,39 @@ struct_member_decoration_cb(struct vtn_builder *b,
    case SpvDecorationRowMajor:
       mutable_matrix_member(b, ctx->type, member)->row_major = true;
       break;
+
+   case SpvDecorationPatch:
+      unreachable("Tessellation not yet supported");
+
+   case SpvDecorationSpecId:
+   case SpvDecorationBlock:
+   case SpvDecorationBufferBlock:
+   case SpvDecorationArrayStride:
+   case SpvDecorationGLSLShared:
+   case SpvDecorationGLSLPacked:
+   case SpvDecorationInvariant:
+   case SpvDecorationRestrict:
+   case SpvDecorationAliased:
+   case SpvDecorationConstant:
+   case SpvDecorationIndex:
+   case SpvDecorationBinding:
+   case SpvDecorationDescriptorSet:
+   case SpvDecorationNoContraction:
+   case SpvDecorationInputAttachmentIndex:
+      unreachable("Decoration not allowed on struct members");
+
+   case SpvDecorationXfbBuffer:
+   case SpvDecorationXfbStride:
+      unreachable("Vulkan does not have transform feedback");
+
+   case SpvDecorationCPacked:
+   case SpvDecorationSaturatedConversion:
+   case SpvDecorationFuncParamAttr:
+   case SpvDecorationFPRoundingMode:
+   case SpvDecorationFPFastMathMode:
+   case SpvDecorationAlignment:
+      unreachable("Decoraiton only allowed for CL-style kernels");
+
    default:
       unreachable("Unhandled member decoration");
    }
@@ -520,12 +562,49 @@ type_decoration_cb(struct vtn_builder *b,
       /* Ignore these, since we get explicit offsets anyways */
       break;
 
+   case SpvDecorationRowMajor:
+   case SpvDecorationColMajor:
+   case SpvDecorationMatrixStride:
+   case SpvDecorationBuiltIn:
+   case SpvDecorationNoPerspective:
+   case SpvDecorationFlat:
+   case SpvDecorationPatch:
+   case SpvDecorationCentroid:
+   case SpvDecorationSample:
+   case SpvDecorationVolatile:
+   case SpvDecorationCoherent:
+   case SpvDecorationNonWritable:
+   case SpvDecorationNonReadable:
+   case SpvDecorationUniform:
    case SpvDecorationStream:
-      assert(dec->literals[0] == 0);
-      break;
+   case SpvDecorationLocation:
+   case SpvDecorationComponent:
+   case SpvDecorationOffset:
+   case SpvDecorationXfbBuffer:
+   case SpvDecorationXfbStride:
+      unreachable("Decoraiton only allowed for struct members");
 
-   default:
-      unreachable("Unhandled type decoration");
+   case SpvDecorationRelaxedPrecision:
+   case SpvDecorationSpecId:
+   case SpvDecorationInvariant:
+   case SpvDecorationRestrict:
+   case SpvDecorationAliased:
+   case SpvDecorationConstant:
+   case SpvDecorationIndex:
+   case SpvDecorationBinding:
+   case SpvDecorationDescriptorSet:
+   case SpvDecorationLinkageAttributes:
+   case SpvDecorationNoContraction:
+   case SpvDecorationInputAttachmentIndex:
+      unreachable("Decoraiton not allowed on types");
+
+   case SpvDecorationCPacked:
+   case SpvDecorationSaturatedConversion:
+   case SpvDecorationFuncParamAttr:
+   case SpvDecorationFPRoundingMode:
+   case SpvDecorationFPFastMathMode:
+   case SpvDecorationAlignment:
+      unreachable("Decoraiton only allowed for CL-style kernels");
    }
 }
 
