@@ -719,8 +719,8 @@ inline bool
 regions_overlap(const fs_reg &r, unsigned n, const fs_reg &s, unsigned m)
 {
    return r.file == s.file && r.nr == s.nr &&
-      !(r.reg_offset + n < s.reg_offset ||
-        s.reg_offset + m < r.reg_offset);
+      !(r.reg_offset + n <= s.reg_offset ||
+        s.reg_offset + m <= r.reg_offset);
 }
 
 /* Walks a basic block and does copy propagation on it using the acp
