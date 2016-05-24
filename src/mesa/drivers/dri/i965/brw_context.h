@@ -1704,6 +1704,8 @@ gen7_emit_urb_state(struct brw_context *brw,
 /* brw_reset.c */
 extern GLenum
 brw_get_graphics_reset_status(struct gl_context *ctx);
+void
+brw_check_for_reset(struct brw_context *brw);
 
 /* brw_compute.c */
 extern void

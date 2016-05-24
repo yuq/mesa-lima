@@ -192,6 +192,8 @@ API_XML = \
 	INTEL_performance_query.xml \
 	KHR_debug.xml \
 	KHR_context_flush_control.xml \
+	KHR_robustness.xml \
+	KHR_robustness_es.xml \
 	KHR_texture_compression_astc.xml \
 	NV_conditional_render.xml \
 	NV_primitive_restart.xml \

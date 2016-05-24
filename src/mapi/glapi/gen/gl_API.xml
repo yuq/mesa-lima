@@ -8288,6 +8288,9 @@
 
 <xi:include href="KHR_context_flush_control.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
+<!-- ARB extension 170 -->
+<xi:include href="KHR_robustness.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+
 <!-- ARB extension 171 -->
 <xi:include href="ARB_pipeline_statistics_query.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 

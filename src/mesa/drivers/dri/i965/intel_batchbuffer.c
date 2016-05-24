@@ -368,6 +368,9 @@ do_flush_locked(struct brw_context *brw)
    if (unlikely(INTEL_DEBUG & DEBUG_BATCH))
       do_batch_dump(brw);
 
+   if (brw->ctx.Const.ResetStrategy == GL_LOSE_CONTEXT_ON_RESET_ARB)
+      brw_check_for_reset(brw);
+
    if (ret != 0) {
       fprintf(stderr, "intel_do_flush_locked failed: %s\n", strerror(-ret));
       exit(1);

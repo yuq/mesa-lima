@@ -1367,6 +1367,7 @@ _mesa_free_context_data( struct gl_context *ctx )
    free(ctx->BeginEnd);
    free(ctx->OutsideBeginEnd);
    free(ctx->Save);
+   free(ctx->ContextLost);
 
    /* Shared context state (display lists, textures, etc) */
    _mesa_reference_shared_state(ctx, &ctx->Shared, NULL);

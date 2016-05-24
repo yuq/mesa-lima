@@ -31,7 +31,8 @@
 #include "enums.h"
 #include "extensions.h"
 #include "mtypes.h"
-
+#include "macros.h"
+#include "main/dispatch.h" /* for _gloffset_COUNT */
 
 /**
  * Return the string for a glGetString(GL_SHADING_LANGUAGE_VERSION) query.
@@ -310,6 +311,82 @@ _mesa_GetError( void )
    return e;
 }
 
+static void
+_context_lost_GetSynciv(GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length,
+                        GLint *values)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   if (ctx)
+      _mesa_error(ctx, GL_CONTEXT_LOST, "GetSynciv(invalid call)");
+
+   if (pname == GL_SYNC_STATUS && bufSize >= 1)
+      *values = GL_SIGNALED;
+}
+
+static void
+_context_lost_GetQueryObjectuiv(GLuint id, GLenum pname, GLuint *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   if (ctx)
+      _mesa_error(ctx, GL_CONTEXT_LOST, "GetQueryObjectuiv(context lost)");
+
+   if (pname == GL_QUERY_RESULT_AVAILABLE)
+      *params = GL_TRUE;
+}
+
+static int
+context_lost_nop_handler(void)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   if (ctx)
+      _mesa_error(ctx, GL_CONTEXT_LOST, "context lost");
+
+   return 0;
+}
+
+void
+_mesa_set_context_lost_dispatch(struct gl_context *ctx)
+{
+   if (ctx->ContextLost == NULL) {
+      int numEntries = MAX2(_glapi_get_dispatch_table_size(), _gloffset_COUNT);
+
+      ctx->ContextLost = malloc(numEntries * sizeof(_glapi_proc));
+      if (!ctx->ContextLost)
+         return;
+
+      _glapi_proc *entry = (_glapi_proc *) ctx->ContextLost;
+      unsigned i;
+      for (i = 0; i < numEntries; i++)
+         entry[i] = (_glapi_proc) context_lost_nop_handler;
+
+      /* The ARB_robustness specification says:
+       *
+       *    "* GetError and GetGraphicsResetStatus behave normally following a
+       *       graphics reset, so that the application can determine a reset
+       *       has occurred, and when it is safe to destroy and recreate the
+       *       context.
+       *
+       *     * Any commands which might cause a polling application to block
+       *       indefinitely will generate a CONTEXT_LOST error, but will also
+       *       return a value indicating completion to the application. Such
+       *       commands include:
+       *
+       *        + GetSynciv with <pname> SYNC_STATUS ignores the other
+       *          parameters and returns SIGNALED in <values>.
+       *
+       *        + GetQueryObjectuiv with <pname> QUERY_RESULT_AVAILABLE
+       *          ignores the other parameters and returns TRUE in <params>."
+       */
+      SET_GetError(ctx->ContextLost, _mesa_GetError);
+      SET_GetGraphicsResetStatusARB(ctx->ContextLost, _mesa_GetGraphicsResetStatusARB);
+      SET_GetSynciv(ctx->ContextLost, _context_lost_GetSynciv);
+      SET_GetQueryObjectuiv(ctx->ContextLost, _context_lost_GetQueryObjectuiv);
+   }
+
+   ctx->CurrentDispatch = ctx->ContextLost;
+   _glapi_set_dispatch(ctx->CurrentDispatch);
+}
+
 /**
  * Returns an error code specified by GL_ARB_robustness, or GL_NO_ERROR.
  * \return current context status
@@ -357,6 +434,9 @@ _mesa_GetGraphicsResetStatusARB( void )
       ctx->ShareGroupReset = ctx->Shared->ShareGroupReset;
       mtx_unlock(&ctx->Shared->Mutex);
    }
+
+   if (status != GL_NO_ERROR)
+      _mesa_set_context_lost_dispatch(ctx);
 
    if (!ctx->Driver.GetGraphicsResetStatus && (MESA_VERBOSE & VERBOSE_API))
       _mesa_debug(ctx,

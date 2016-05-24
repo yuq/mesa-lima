@@ -924,6 +924,8 @@
 
 </category>
 
+<xi:include href="KHR_robustness_es.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+
 <category name="GL_EXT_base_instance" number="203">
 
   <function name="DrawArraysInstancedBaseInstanceEXT" es2="3.0"

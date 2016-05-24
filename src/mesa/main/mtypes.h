@@ -3899,6 +3899,7 @@ struct gl_extensions
    GLboolean ATI_separate_stencil;
    GLboolean GREMEDY_string_marker;
    GLboolean INTEL_performance_query;
+   GLboolean KHR_robustness;
    GLboolean KHR_texture_compression_astc_hdr;
    GLboolean KHR_texture_compression_astc_ldr;
    GLboolean MESA_pack_invert;
@@ -4302,7 +4303,11 @@ struct gl_context
     */
    struct _glapi_table *BeginEnd;
    /**
-    * Tracks the current dispatch table out of the 3 above, so that it can be
+    * Dispatch table for when a graphics reset has happened.
+    */
+   struct _glapi_table *ContextLost;
+   /**
+    * Tracks the current dispatch table out of the 4 above, so that it can be
     * re-set on glXMakeCurrent().
     */
    struct _glapi_table *CurrentDispatch;
