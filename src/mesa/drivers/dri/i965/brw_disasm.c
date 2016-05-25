@@ -942,7 +942,10 @@ src_da16(FILE *file,
       format(file, ".%d", 16 / reg_type_size[_reg_type]);
    string(file, "<");
    err |= control(file, "vert stride", vert_stride, _vert_stride, NULL);
-   string(file, ",4,1>");
+   if (reg_type_size[_reg_type] == 8)
+      string(file, ",2,1>");
+   else
+      string(file, ",4,1>");
    err |= src_swizzle(file, BRW_SWIZZLE4(swz_x, swz_y, swz_z, swz_w));
    err |= control(file, "src da16 reg type", reg_encoding, _reg_type, NULL);
    return err;
