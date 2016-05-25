@@ -51,7 +51,7 @@ glsl_sources = [
     glcpp_parser[0],
     glsl_lexer,
     glsl_parser[0],
-] 
+]
 
 # parse Makefile.sources
 source_lists = env.ParseSourceList('Makefile.sources')

@@ -11,7 +11,7 @@ if env['suncc']:
 env.Append(CPPDEFINES = [
        'HAVE_STDINT_H',
 ])
-	
+
 env.Prepend(CPPPATH = [
 	'include',
 ])
