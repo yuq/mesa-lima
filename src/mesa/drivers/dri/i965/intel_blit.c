@@ -340,7 +340,8 @@ can_fast_copy_blit(struct brw_context *brw,
                    int16_t dst_x, int16_t dst_y,
                    uintptr_t dst_offset, uint32_t dst_pitch,
                    uint32_t dst_tiling, uint32_t dst_tr_mode,
-                   int16_t w, int16_t h, uint32_t cpp)
+                   int16_t w, int16_t h, uint32_t cpp,
+                   GLenum logic_op)
 {
    const bool dst_tiling_none = dst_tiling == I915_TILING_NONE;
    const bool src_tiling_none = src_tiling == I915_TILING_NONE;
@@ -354,6 +355,8 @@ can_fast_copy_blit(struct brw_context *brw,
     */
    if (src_tr_mode == INTEL_MIPTREE_TRMODE_NONE &&
        dst_tr_mode == INTEL_MIPTREE_TRMODE_NONE)
+
+   if (logic_op != GL_COPY)
       return false;
 
    /* The start pixel for Fast Copy blit should be on an OWord boundary. */
@@ -498,13 +501,15 @@ intelEmitCopyBlit(struct brw_context *brw,
                                            dst_x, dst_y,
                                            dst_offset, dst_pitch,
                                            dst_tiling, dst_tr_mode,
-                                           w, h, cpp);
+                                           w, h, cpp, logic_op);
    if (!use_fast_copy_blit &&
        (src_tr_mode != INTEL_MIPTREE_TRMODE_NONE ||
         dst_tr_mode != INTEL_MIPTREE_TRMODE_NONE))
       return false;
 
    if (use_fast_copy_blit) {
+      assert(logic_op == GL_COPY);
+
       /* When two sequential fast copy blits have different source surfaces,
        * but their destinations refer to the same destination surfaces and
        * therefore destinations overlap it is imperative that a flush be
