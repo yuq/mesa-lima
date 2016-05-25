@@ -3112,18 +3112,18 @@ fs_visitor::remove_duplicate_mrf_writes()
       }
 
       /* Clear out any MRF move records whose sources got overwritten. */
-      if (inst->dst.file == VGRF) {
-	 for (unsigned int i = 0; i < ARRAY_SIZE(last_mrf_move); i++) {
-	    if (last_mrf_move[i] &&
-                last_mrf_move[i]->src[0].nr == inst->dst.nr) {
-	       last_mrf_move[i] = NULL;
-	    }
-	 }
+      for (unsigned i = 0; i < ARRAY_SIZE(last_mrf_move); i++) {
+         if (last_mrf_move[i] &&
+             regions_overlap(inst->dst, inst->regs_written * REG_SIZE,
+                             last_mrf_move[i]->src[0],
+                             last_mrf_move[i]->regs_read(0) * REG_SIZE)) {
+            last_mrf_move[i] = NULL;
+         }
       }
 
       if (inst->opcode == BRW_OPCODE_MOV &&
 	  inst->dst.file == MRF &&
-	  inst->src[0].file == VGRF &&
+	  inst->src[0].file != ARF &&
 	  !inst->is_partial_write()) {
          last_mrf_move[inst->dst.nr] = inst;
       }
