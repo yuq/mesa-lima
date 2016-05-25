@@ -171,6 +171,7 @@ MAIN_FILES = \
 	main/remap.h \
 	main/renderbuffer.c \
 	main/renderbuffer.h \
+	main/robustness.c \
 	main/samplerobj.c \
 	main/samplerobj.h \
 	main/scissor.c \
