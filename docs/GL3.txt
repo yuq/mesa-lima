@@ -253,7 +253,7 @@ GLES3.2, GLSL ES 3.2
   GL_EXT_color_buffer_float                             DONE (all drivers)
   GL_KHR_blend_equation_advanced                        not started
   GL_KHR_debug                                          DONE (all drivers)
-  GL_KHR_robustness                                     not started (90% done with the ARB variant)
+  GL_KHR_robustness                                     DONE (i965)
   GL_KHR_texture_compression_astc_ldr                   DONE (i965/gen9+)
   GL_OES_copy_image                                     DONE (i965)
   GL_OES_draw_buffers_indexed                           DONE (all drivers that support GL_ARB_draw_buffers_blend)
