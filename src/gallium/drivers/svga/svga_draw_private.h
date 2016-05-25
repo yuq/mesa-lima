@@ -157,13 +157,17 @@ struct svga_hwtnl {
     * This is compensated for in the offset associated with all
     * vertex buffers.
     */
-
    int index_bias;
    
-   /* Flatshade information:
+   /* Provoking vertex information (for flat shading). */
+   unsigned api_pv;  /**< app-requested PV mode (PV_FIRST or PV_LAST) */
+   unsigned hw_pv;   /**< device-supported PV mode (PV_FIRST or PV_LAST) */
+
+   /* The triangle fillmode for the device (one of PIPE_POLYGON_MODE_{FILL,
+    * LINE,POINT}).  If the polygon front mode matches the back mode,
+    * api_fillmode will be that mode.  Otherwise, api_fillmode will be
+    * PIPE_POLYGON_MODE_FILL.
     */
-   unsigned api_pv;
-   unsigned hw_pv;
    unsigned api_fillmode;
 
    /* Cache the results of running a particular generate func on each
