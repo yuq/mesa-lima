@@ -230,12 +230,12 @@ pipe_surface_equal(struct pipe_surface *s1, struct pipe_surface *s2)
 /**
  * Create a new resource.
  * \param bind  bitmask of PIPE_BIND_x flags
- * \param usage  bitmask of PIPE_USAGE_x flags
+ * \param usage  a PIPE_USAGE_x value
  */
 static inline struct pipe_resource *
 pipe_buffer_create( struct pipe_screen *screen,
 		    unsigned bind,
-		    unsigned usage,
+		    enum pipe_resource_usage usage,
 		    unsigned size )
 {
    struct pipe_resource buffer;
@@ -395,7 +395,7 @@ pipe_buffer_write_nooverlap(struct pipe_context *pipe,
 static inline struct pipe_resource *
 pipe_buffer_create_with_data(struct pipe_context *pipe,
                              unsigned bind,
-                             unsigned usage,
+                             enum pipe_resource_usage usage,
                              unsigned size,
                              const void *ptr)
 {

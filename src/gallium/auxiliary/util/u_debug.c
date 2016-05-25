@@ -550,7 +550,7 @@ debug_print_bind_flags(const char *msg, unsigned usage)
  * Print PIPE_USAGE_x enum values with a message.
  */
 void
-debug_print_usage_enum(const char *msg, unsigned usage)
+debug_print_usage_enum(const char *msg, enum pipe_resource_usage usage)
 {
    static const struct debug_named_value names[] = {
       DEBUG_NAMED_VALUE(PIPE_USAGE_DEFAULT),
