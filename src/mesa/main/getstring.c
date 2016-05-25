@@ -312,8 +312,8 @@ _mesa_GetError( void )
 }
 
 static void GLAPIENTRY
-_context_lost_GetSynciv(GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length,
-                        GLint *values)
+_context_lost_GetSynciv(GLsync sync, GLenum pname, GLsizei bufSize,
+                        GLsizei *length, GLint *values)
 {
    GET_CURRENT_CONTEXT(ctx);
    if (ctx)
