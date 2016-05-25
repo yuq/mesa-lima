@@ -343,7 +343,7 @@ _mesa_has_geometry_shaders(const struct gl_context *ctx)
 static inline bool
 _mesa_has_compute_shaders(const struct gl_context *ctx)
 {
-   return (ctx->API == API_OPENGL_CORE && ctx->Extensions.ARB_compute_shader) ||
+   return _mesa_has_ARB_compute_shader(ctx) ||
       (ctx->API == API_OPENGLES2 && ctx->Version >= 31);
 }
 
