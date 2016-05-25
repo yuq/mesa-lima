@@ -51,25 +51,3 @@ include $(LOCAL_PATH)/Android.glsl.gen.mk
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
-# ---------------------------------------
-# Build glsl_compiler
-# ---------------------------------------
-
-include $(CLEAR_VARS)
-
-LOCAL_SRC_FILES := \
-	$(GLSL_COMPILER_CXX_FILES)
-
-LOCAL_C_INCLUDES := \
-	$(MESA_TOP)/src/mapi \
-	$(MESA_TOP)/src/mesa \
-	$(MESA_TOP)/src/gallium/include \
-	$(MESA_TOP)/src/gallium/auxiliary
-
-LOCAL_STATIC_LIBRARIES := libmesa_glsl libmesa_glsl_utils libmesa_util libmesa_compiler
-
-LOCAL_MODULE_TAGS := eng
-LOCAL_MODULE := glsl_compiler
-
-include $(MESA_COMMON_MK)
-include $(BUILD_EXECUTABLE)
