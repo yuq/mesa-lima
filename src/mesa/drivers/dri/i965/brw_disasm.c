@@ -772,7 +772,7 @@ dest(FILE *file, const struct gen_device_info *devinfo, brw_inst *inst)
          if (err == -1)
             return 0;
          if (brw_inst_dst_da16_subreg_nr(devinfo, inst))
-            format(file, ".%"PRIu64, brw_inst_dst_da16_subreg_nr(devinfo, inst) /
+            format(file, ".%u", 16 /
                    reg_type_size[brw_inst_dst_reg_type(devinfo, inst)]);
          string(file, "<1>");
          err |= control(file, "writemask", writemask,
