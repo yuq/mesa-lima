@@ -133,6 +133,9 @@
 /* 8 surfaces, at 16 32-bits integers each */
 #define NVC0_CB_AUX_SU_INFO(i)      0x400 + (i) * 16 * 4
 #define NVC0_CB_AUX_SU_SIZE         (NVC0_MAX_IMAGES * 16 * 4)
+/* 1 64-bits address and 1 32-bits sequence */
+#define NVC0_CB_AUX_MP_INFO         0x600
+#define NVC0_CB_AUX_MP_SIZE         3 * 4
 /* 4 32-bits floats for the vertex runout, put at the end */
 #define NVC0_CB_AUX_RUNOUT_INFO     NVC0_CB_USR_SIZE + NVC0_CB_AUX_SIZE
 
