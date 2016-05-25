@@ -22,6 +22,12 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+
+/*
+ * NOTE: This file is not compiled by itself.  It's actually #included
+ * by the generated u_unfilled_gen.c file!
+ */
+
 #include "u_indices.h"
 #include "u_indices_priv.h"
 #include "util/u_prim.h"
@@ -104,6 +110,14 @@ nr_lines(unsigned prim, unsigned nr)
       return (nr - 2) / 2 * 8;
    case PIPE_PRIM_POLYGON:
       return 2 * nr; /* a line (two verts) for each polygon edge */
+   /* Note: these cases can't really be handled since drawing lines instead
+    * of triangles would also require changing the GS.  But if there's no GS,
+    * this should work.
+    */
+   case PIPE_PRIM_TRIANGLES_ADJACENCY:
+      return (nr / 6) * 6;
+   case PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY:
+      return ((nr - 4) / 2) * 6;
    default:
       assert(0);
       return 0;
