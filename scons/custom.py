@@ -43,6 +43,13 @@ import fixes
 
 import source_list
 
+# the get_implicit_deps() method changed between 2.4 and 2.5: now it expects
+# a callable that takes a scanner as argument and returns a path, rather than
+# a path directly. We want to support both, so we need to detect the SCons version,
+# for which no API is provided by SCons 8-P
+
+scons_version = tuple(map(int, SCons.__version__.split('.')))
+
 def quietCommandLines(env):
     # Quiet command lines
     # See also http://www.scons.org/wiki/HidingCommandLinesInOutput
@@ -129,7 +136,7 @@ def code_generate(env, script, target, source, command):
 
     # Explicitly mark that the generated code depends on the generator,
     # and on implicitly imported python modules
-    path = (script_src.get_dir(),)
+    path = (script_src.get_dir(),) if scons_version < (2, 5, 0) else lambda x: script_src
     deps = [script_src]
     deps += script_src.get_implicit_deps(env, python_scanner, path)
     env.Depends(code, deps)
