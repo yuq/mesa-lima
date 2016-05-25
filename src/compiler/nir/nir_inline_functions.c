@@ -59,14 +59,28 @@ convert_deref_to_param_deref(nir_instr *instr, nir_deref_var **deref,
 static void
 rewrite_param_derefs(nir_instr *instr, nir_call_instr *call)
 {
-   if (instr->type != nir_instr_type_intrinsic)
-      return;
+   switch (instr->type) {
+   case nir_instr_type_intrinsic: {
+      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
-   nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+      for (unsigned i = 0;
+           i < nir_intrinsic_infos[intrin->intrinsic].num_variables; i++) {
+         convert_deref_to_param_deref(instr, &intrin->variables[i], call);
+      }
+      break;
+   }
 
-   for (unsigned i = 0;
-        i < nir_intrinsic_infos[intrin->intrinsic].num_variables; i++) {
-      convert_deref_to_param_deref(instr, &intrin->variables[i], call);
+   case nir_instr_type_tex: {
+      nir_tex_instr *tex = nir_instr_as_tex(instr);
+      if (tex->texture)
+         convert_deref_to_param_deref(&tex->instr, &tex->texture, call);
+      if (tex->sampler)
+         convert_deref_to_param_deref(&tex->instr, &tex->sampler, call);
+      break;
+   }
+
+   default:
+      break; /* Nothing else has derefs */
    }
 }
 
