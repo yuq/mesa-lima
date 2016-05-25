@@ -6656,7 +6656,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          xfb_buffer = (int) qual_xfb_buffer;
       } else {
          if (layout)
-            explicit_xfb_buffer = layout->flags.q.xfb_buffer;
+            explicit_xfb_buffer = layout->flags.q.explicit_xfb_buffer;
          xfb_buffer = (int) block_xfb_buffer;
       }
 
