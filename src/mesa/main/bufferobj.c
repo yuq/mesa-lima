@@ -1765,7 +1765,7 @@ _mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
                       const char *func)
 {
    if (!buffer_object_subdata_range_good(ctx, bufObj, offset, size,
-                                         false, func)) {
+                                         true, func)) {
       /* error already recorded */
       return;
    }
