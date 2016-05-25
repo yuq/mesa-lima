@@ -732,8 +732,8 @@ intel_create_image_from_fds(__DRIscreen *screen,
       image->offsets[index] = offsets[index];
       image->strides[index] = strides[index];
 
-      const int height = height >> f->planes[i].height_shift;
-      const int end = offsets[index] + height * strides[index];
+      const int plane_height = height >> f->planes[i].height_shift;
+      const int end = offsets[index] + plane_height * strides[index];
       if (size < end)
          size = end;
    }
