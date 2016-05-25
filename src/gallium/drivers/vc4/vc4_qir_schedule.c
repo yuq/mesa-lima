@@ -80,8 +80,8 @@ struct schedule_state {
 enum direction { F, R };
 
 /**
- * Marks a dependency between two intructions, that @after must appear after
- * @before.
+ * Marks a dependency between two intructions, that \p after must appear after
+ * \p before.
  *
  * Our dependencies are tracked as a DAG.  Since we're scheduling bottom-up,
  * the latest instructions with nothing left to schedule are the DAG heads,
