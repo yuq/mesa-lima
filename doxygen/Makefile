@@ -25,7 +25,8 @@ full: $(FULL:.doxy=.tag)
 
 SUBSET = \
 	main.doxy \
-	math.doxy
+	math.doxy \
+	gallium.doxy
 
 subset: $(SUBSET:.doxy=.tag)
 	$(foreach FILE,$(SUBSET),doxygen $(FILE);)
