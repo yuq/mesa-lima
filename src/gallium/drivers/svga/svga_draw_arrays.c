@@ -212,6 +212,11 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
    unsigned api_pv = hwtnl->api_pv;
    struct svga_context *svga = hwtnl->svga;
 
+   if (svga->curr.rast->templ.fill_front !=
+       svga->curr.rast->templ.fill_back) {
+      assert(hwtnl->api_fillmode == PIPE_POLYGON_MODE_FILL);
+   }
+
    if (svga->curr.rast->templ.flatshade &&
        svga->state.hw_draw.fs->constant_color_output) {
       /* The fragment color is a constant, not per-vertex so the whole
@@ -236,8 +241,7 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
       }
    }
 
-   if (hwtnl->api_fillmode != PIPE_POLYGON_MODE_FILL &&
-       u_reduced_prim(prim) == PIPE_PRIM_TRIANGLES) {
+   if (svga_need_unfilled_fallback(hwtnl, prim)) {
       /* Convert unfilled polygons into points, lines, triangles */
       gen_type = u_unfilled_generator(prim,
                                       start,
