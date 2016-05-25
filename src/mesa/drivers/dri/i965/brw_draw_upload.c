@@ -543,6 +543,7 @@ brw_prepare_vertices(struct brw_context *brw)
 	    buffer->offset = offset;
 	    buffer->stride = glarray->StrideB;
 	    buffer->step_rate = glarray->InstanceDivisor;
+            buffer->size = glarray->BufferObj->Size - offset;
 
             enabled_buffer[j] = intel_buffer;
             buffer_range_start[j] = start;
@@ -610,8 +611,6 @@ brw_prepare_vertices(struct brw_context *brw)
 
       buffer->bo = intel_bufferobj_buffer(brw, enabled_buffer[i], start, range);
       drm_intel_bo_reference(buffer->bo);
-
-      buffer->size = start + range;
    }
 
    /* If we need to upload all the arrays, then we can trim those arrays to
