@@ -409,7 +409,7 @@ validate_interstage_uniform_blocks(struct gl_shader_program *prog,
              * shaders are in the same shader stage).
              */
             if (!intrastage_match(old_def, var, prog)) {
-               linker_error(prog, "definitions of interface block `%s' do not "
+               linker_error(prog, "definitions of uniform block `%s' do not "
                             "match\n", var->get_interface_type()->name);
                return;
             }
