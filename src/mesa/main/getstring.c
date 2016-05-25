@@ -311,7 +311,7 @@ _mesa_GetError( void )
    return e;
 }
 
-static void
+static void GLAPIENTRY
 _context_lost_GetSynciv(GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length,
                         GLint *values)
 {
@@ -323,7 +323,7 @@ _context_lost_GetSynciv(GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *len
       *values = GL_SIGNALED;
 }
 
-static void
+static void GLAPIENTRY
 _context_lost_GetQueryObjectuiv(GLuint id, GLenum pname, GLuint *params)
 {
    GET_CURRENT_CONTEXT(ctx);
