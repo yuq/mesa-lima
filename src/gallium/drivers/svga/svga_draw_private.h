@@ -189,7 +189,8 @@ struct svga_hwtnl {
  * triangles?
  */
 static inline boolean
-svga_need_unfilled_fallback(const struct svga_hwtnl *hwtnl, unsigned prim)
+svga_need_unfilled_fallback(const struct svga_hwtnl *hwtnl,
+                            enum pipe_prim_type prim)
 {
    const struct svga_context *svga = hwtnl->svga;
 
@@ -235,7 +236,7 @@ svga_hwtnl_simple_draw_range_elements( struct svga_hwtnl *hwtnl,
                                        int index_bias,
                                        unsigned min_index,
                                        unsigned max_index,
-                                       unsigned prim, 
+                                       enum pipe_prim_type prim,
                                        unsigned start,
                                        unsigned count,
                                        unsigned start_instance,

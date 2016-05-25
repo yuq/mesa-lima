@@ -90,7 +90,7 @@ compare(unsigned cached_nr, unsigned nr, unsigned type)
 
 static enum pipe_error
 retrieve_or_generate_indices(struct svga_hwtnl *hwtnl,
-                             unsigned prim,
+                             enum pipe_prim_type prim,
                              unsigned gen_type,
                              unsigned gen_nr,
                              unsigned gen_size,
@@ -170,7 +170,7 @@ retrieve_or_generate_indices(struct svga_hwtnl *hwtnl,
 
 static enum pipe_error
 simple_draw_arrays(struct svga_hwtnl *hwtnl,
-                   unsigned prim, unsigned start, unsigned count,
+                   enum pipe_prim_type prim, unsigned start, unsigned count,
                    unsigned start_instance, unsigned instance_count)
 {
    SVGA3dPrimitiveRange range;
@@ -202,7 +202,7 @@ simple_draw_arrays(struct svga_hwtnl *hwtnl,
 
 enum pipe_error
 svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
-                       unsigned prim, unsigned start, unsigned count,
+                       enum pipe_prim_type prim, unsigned start, unsigned count,
                        unsigned start_instance, unsigned instance_count)
 {
    unsigned gen_prim, gen_size, gen_nr;
