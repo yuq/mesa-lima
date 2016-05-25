@@ -3163,7 +3163,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
       /* If we hit control flow, assume that there *are* outstanding
        * dependencies, and force their cleanup before our instruction.
        */
-      if (block->start() == scan_inst) {
+      if (block->start() == scan_inst && block->num != 0) {
          for (int i = 0; i < write_len; i++) {
             if (needs_dep[i])
                DEP_RESOLVE_MOV(fs_builder(this, block, inst),
@@ -3227,7 +3227,7 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
     */
    foreach_inst_in_block_starting_from(fs_inst, scan_inst, inst) {
       /* If we hit control flow, force resolve all remaining dependencies. */
-      if (block->end() == scan_inst) {
+      if (block->end() == scan_inst && block->num != cfg->num_blocks - 1) {
          for (int i = 0; i < write_len; i++) {
             if (needs_dep[i])
                DEP_RESOLVE_MOV(fs_builder(this, block, scan_inst),
