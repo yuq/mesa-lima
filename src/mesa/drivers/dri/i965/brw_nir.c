@@ -24,7 +24,7 @@
 #include "brw_nir.h"
 #include "brw_shader.h"
 #include "compiler/glsl_types.h"
-#include "compiler/nir/glsl_to_nir.h"
+#include "compiler/glsl/glsl_to_nir.h"
 #include "compiler/nir/nir_builder.h"
 #include "program/prog_to_nir.h"
 #include "program/prog_parameter.h"

@@ -45,7 +45,7 @@
 #include "ir3.h"
 
 #include "compiler/glsl/standalone.h"
-#include "compiler/nir/glsl_to_nir.h"
+#include "compiler/glsl/glsl_to_nir.h"
 
 static void dump_info(struct ir3_shader_variant *so, const char *str)
 {

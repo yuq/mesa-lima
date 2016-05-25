@@ -25,7 +25,7 @@
  *
  */
 
-#include "nir.h"
+#include "compiler/nir/nir.h"
 
 #ifdef __cplusplus
 extern "C" {

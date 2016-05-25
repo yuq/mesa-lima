@@ -42,8 +42,8 @@
 #include "st_glsl_types.h"
 
 #include "compiler/nir/nir.h"
-#include "compiler/nir/glsl_to_nir.h"
 #include "compiler/glsl_types.h"
+#include "compiler/glsl/glsl_to_nir.h"
 #include "compiler/glsl/ir.h"
 
 
