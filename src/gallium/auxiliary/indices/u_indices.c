@@ -55,6 +55,8 @@ static void translate_memcpy_uint( const void *in,
  * - Translate from first provoking vertex to last provoking vertex and
  *   vice versa.
  *
+ * Note that this function is used for indexed primitives.
+ *
  * \param hw_mask  mask of (1 << PIPE_PRIM_x) flags indicating which types
  *                 of primitives are supported by the hardware.
  * \param prim  incoming PIPE_PRIM_x
@@ -172,6 +174,30 @@ u_index_translator(unsigned hw_mask,
          *out_nr = (nr - 2) * 3;
          break;
 
+      case PIPE_PRIM_LINES_ADJACENCY:
+         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
+         *out_prim = PIPE_PRIM_LINES_ADJACENCY;
+         *out_nr = nr;
+         break;
+
+      case PIPE_PRIM_LINE_STRIP_ADJACENCY:
+         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
+         *out_prim = PIPE_PRIM_LINES_ADJACENCY;
+         *out_nr = (nr - 3) * 4;
+         break;
+
+      case PIPE_PRIM_TRIANGLES_ADJACENCY:
+         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
+         *out_prim = PIPE_PRIM_TRIANGLES_ADJACENCY;
+         *out_nr = nr;
+         break;
+
+      case PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY:
+         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
+         *out_prim = PIPE_PRIM_TRIANGLES_ADJACENCY;
+         *out_nr = ((nr - 4) / 2) * 6;
+         break;
+
       default:
          assert(0);
          *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
@@ -192,6 +218,8 @@ u_index_translator(unsigned hw_mask,
  *
  * The generator functions generates a number of ushort or uint indexes
  * for drawing the new type of primitive.
+ *
+ * Note that this function is used for non-indexed primitives.
  *
  * \param hw_mask  a bitmask of (1 << PIPE_PRIM_x) values that indicates
  *                 kind of primitives are supported by the driver.
@@ -292,6 +320,30 @@ u_index_generator(unsigned hw_mask,
          *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr - 2) * 3;
+         return U_GENERATE_REUSABLE;
+
+      case PIPE_PRIM_LINES_ADJACENCY:
+         *out_generate = generate[out_idx][in_pv][out_pv][prim];
+         *out_prim = PIPE_PRIM_LINES_ADJACENCY;
+         *out_nr = nr;
+         return U_GENERATE_REUSABLE;
+
+      case PIPE_PRIM_LINE_STRIP_ADJACENCY:
+         *out_generate = generate[out_idx][in_pv][out_pv][prim];
+         *out_prim = PIPE_PRIM_LINES_ADJACENCY;
+         *out_nr = (nr - 3) * 4;
+         return U_GENERATE_REUSABLE;
+
+      case PIPE_PRIM_TRIANGLES_ADJACENCY:
+         *out_generate = generate[out_idx][in_pv][out_pv][prim];
+         *out_prim = PIPE_PRIM_TRIANGLES_ADJACENCY;
+         *out_nr = nr;
+         return U_GENERATE_REUSABLE;
+
+      case PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY:
+         *out_generate = generate[out_idx][in_pv][out_pv][prim];
+         *out_prim = PIPE_PRIM_TRIANGLES_ADJACENCY;
+         *out_nr = ((nr - 4) / 2) * 6;
          return U_GENERATE_REUSABLE;
 
       default:
