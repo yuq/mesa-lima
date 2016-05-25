@@ -743,7 +743,8 @@ ir_validate::visit(ir_variable *ir)
       const glsl_struct_field *fields =
          ir->get_interface_type()->fields.structure;
       for (unsigned i = 0; i < ir->get_interface_type()->length; i++) {
-         if (fields[i].type->array_size() > 0) {
+         if (fields[i].type->array_size() > 0 &&
+             !fields[i].implicit_sized_array) {
             const int *const max_ifc_array_access =
                ir->get_max_ifc_array_access();
 

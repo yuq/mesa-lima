@@ -34,9 +34,10 @@ namespace {
 class ubo_visitor : public program_resource_visitor {
 public:
    ubo_visitor(void *mem_ctx, gl_uniform_buffer_variable *variables,
-               unsigned num_variables)
+               unsigned num_variables, struct gl_shader_program *prog)
       : index(0), offset(0), buffer_size(0), variables(variables),
-        num_variables(num_variables), mem_ctx(mem_ctx), is_array_instance(false)
+        num_variables(num_variables), mem_ctx(mem_ctx), is_array_instance(false),
+        prog(prog)
    {
       /* empty */
    }
@@ -56,6 +57,7 @@ public:
    unsigned num_variables;
    void *mem_ctx;
    bool is_array_instance;
+   struct gl_shader_program *prog;
 
 private:
    virtual void visit_field(const glsl_type *type, const char *name,
@@ -148,7 +150,13 @@ private:
        */
       const glsl_type *type_for_size = type;
       if (type->is_unsized_array()) {
-         assert(last_field);
+         if (!last_field) {
+            linker_error(prog, "unsized array `%s' definition: "
+                         "only last member of a shader storage block "
+                         "can be defined as unsized array",
+                         name);
+         }
+
          type_for_size = type->without_array();
       }
 
@@ -314,7 +322,7 @@ create_buffer_blocks(void *mem_ctx, struct gl_context *ctx,
    /* Add each variable from each uniform block to the API tracking
     * structures.
     */
-   ubo_visitor parcel(blocks, variables, num_variables);
+   ubo_visitor parcel(blocks, variables, num_variables, prog);
 
    STATIC_ASSERT(unsigned(GLSL_INTERFACE_PACKING_STD140)
                  == unsigned(ubo_packing_std140));

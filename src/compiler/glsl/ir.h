@@ -819,6 +819,7 @@ public:
        */
       unsigned from_ssbo_unsized_array:1; /**< unsized array buffer variable. */
 
+      unsigned implicit_sized_array:1;
       /**
        * Emit a warning if this variable is accessed.
        */

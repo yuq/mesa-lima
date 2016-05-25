@@ -916,6 +916,7 @@ struct glsl_struct_field {
     */
    unsigned explicit_xfb_buffer:1;
 
+   unsigned implicit_sized_array:1;
 #ifdef __cplusplus
    glsl_struct_field(const struct glsl_type *_type, const char *_name)
       : type(_type), name(_name), location(-1), interpolation(0), centroid(0),

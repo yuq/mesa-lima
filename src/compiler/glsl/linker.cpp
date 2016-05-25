@@ -205,7 +205,8 @@ public:
       /* Generate a link error if the shader has declared this array with an
        * incorrect size.
        */
-      if (size && size != this->num_vertices) {
+      if (!var->data.implicit_sized_array &&
+          size && size != this->num_vertices) {
          linker_error(this->prog, "size of array %s declared as %u, "
                       "but number of input vertices is %u\n",
                       var->name, size, this->num_vertices);
@@ -1494,8 +1495,11 @@ public:
    virtual ir_visitor_status visit(ir_variable *var)
    {
       const glsl_type *type_without_array;
+      bool implicit_sized_array = var->data.implicit_sized_array;
       fixup_type(&var->type, var->data.max_array_access,
-                 var->data.from_ssbo_unsized_array);
+                 var->data.from_ssbo_unsized_array,
+                 &implicit_sized_array);
+      var->data.implicit_sized_array = implicit_sized_array;
       type_without_array = var->type->without_array();
       if (var->type->is_interface()) {
          if (interface_contains_unsized_arrays(var->type)) {
@@ -1553,11 +1557,12 @@ private:
     * it with a sized array whose size is determined by max_array_access.
     */
    static void fixup_type(const glsl_type **type, unsigned max_array_access,
-                          bool from_ssbo_unsized_array)
+                          bool from_ssbo_unsized_array, bool *implicit_sized)
    {
       if (!from_ssbo_unsized_array && (*type)->is_unsized_array()) {
          *type = glsl_type::get_array_instance((*type)->fields.array,
                                                max_array_access + 1);
+         *implicit_sized = true;
          assert(*type != NULL);
       }
    }
@@ -1606,15 +1611,17 @@ private:
       memcpy(fields, type->fields.structure,
              num_fields * sizeof(*fields));
       for (unsigned i = 0; i < num_fields; i++) {
+         bool implicit_sized_array = fields[i].implicit_sized_array;
          /* If SSBO last member is unsized array, we don't replace it by a sized
           * array.
           */
          if (is_ssbo && i == (num_fields - 1))
             fixup_type(&fields[i].type, max_ifc_array_access[i],
-                       true);
+                       true, &implicit_sized_array);
          else
             fixup_type(&fields[i].type, max_ifc_array_access[i],
-                       false);
+                       false, &implicit_sized_array);
+         fields[i].implicit_sized_array = implicit_sized_array;
       }
       glsl_interface_packing packing =
          (glsl_interface_packing) type->interface_packing;
@@ -2168,14 +2175,6 @@ link_intrastage_shaders(void *mem_ctx,
    if (!prog->LinkStatus)
       return NULL;
 
-   /* Link up uniform blocks defined within this stage. */
-   link_uniform_blocks(mem_ctx, ctx, prog, shader_list, num_shaders,
-                       &ubo_blocks, &num_ubo_blocks, &ssbo_blocks,
-                       &num_ssbo_blocks);
-
-   if (!prog->LinkStatus)
-      return NULL;
-
    /* Check that there is only a single definition of each function signature
     * across all shaders.
     */
@@ -2238,24 +2237,6 @@ link_intrastage_shaders(void *mem_ctx,
    gl_shader *linked = ctx->Driver.NewShader(NULL, 0, main->Type);
    linked->ir = new(linked) exec_list;
    clone_ir_list(mem_ctx, linked->ir, main->ir);
-
-   /* Copy ubo blocks to linked shader list */
-   linked->UniformBlocks =
-      ralloc_array(linked, gl_uniform_block *, num_ubo_blocks);
-   ralloc_steal(linked, ubo_blocks);
-   for (unsigned i = 0; i < num_ubo_blocks; i++) {
-      linked->UniformBlocks[i] = &ubo_blocks[i];
-   }
-   linked->NumUniformBlocks = num_ubo_blocks;
-
-   /* Copy ssbo blocks to linked shader list */
-   linked->ShaderStorageBlocks =
-      ralloc_array(linked, gl_uniform_block *, num_ssbo_blocks);
-   ralloc_steal(linked, ssbo_blocks);
-   for (unsigned i = 0; i < num_ssbo_blocks; i++) {
-      linked->ShaderStorageBlocks[i] = &ssbo_blocks[i];
-   }
-   linked->NumShaderStorageBlocks = num_ssbo_blocks;
 
    link_fs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_tcs_out_layout_qualifiers(prog, linked, shader_list, num_shaders);
@@ -2328,6 +2309,42 @@ link_intrastage_shaders(void *mem_ctx,
       return NULL;
    }
 
+   /* Make a pass over all variable declarations to ensure that arrays with
+    * unspecified sizes have a size specified.  The size is inferred from the
+    * max_array_access field.
+    */
+   array_sizing_visitor v;
+   v.run(linked->ir);
+   v.fixup_unnamed_interface_types();
+
+   /* Link up uniform blocks defined within this stage. */
+   link_uniform_blocks(mem_ctx, ctx, prog, shader_list, num_shaders,
+                       &ubo_blocks, &num_ubo_blocks, &ssbo_blocks,
+                       &num_ssbo_blocks);
+
+   if (!prog->LinkStatus) {
+      _mesa_delete_shader(ctx, linked);
+      return NULL;
+   }
+
+   /* Copy ubo blocks to linked shader list */
+   linked->UniformBlocks =
+      ralloc_array(linked, gl_uniform_block *, num_ubo_blocks);
+   ralloc_steal(linked, ubo_blocks);
+   for (unsigned i = 0; i < num_ubo_blocks; i++) {
+      linked->UniformBlocks[i] = &ubo_blocks[i];
+   }
+   linked->NumUniformBlocks = num_ubo_blocks;
+
+   /* Copy ssbo blocks to linked shader list */
+   linked->ShaderStorageBlocks =
+      ralloc_array(linked, gl_uniform_block *, num_ssbo_blocks);
+   ralloc_steal(linked, ssbo_blocks);
+   for (unsigned i = 0; i < num_ssbo_blocks; i++) {
+      linked->ShaderStorageBlocks[i] = &ssbo_blocks[i];
+   }
+   linked->NumShaderStorageBlocks = num_ssbo_blocks;
+
    /* At this point linked should contain all of the linked IR, so
     * validate it to make sure nothing went wrong.
     */
@@ -2352,14 +2369,6 @@ link_intrastage_shaders(void *mem_ctx,
          ir->accept(&visitor);
       }
    }
-
-   /* Make a pass over all variable declarations to ensure that arrays with
-    * unspecified sizes have a size specified.  The size is inferred from the
-    * max_array_access field.
-    */
-   array_sizing_visitor v;
-   v.run(linked->ir);
-   v.fixup_unnamed_interface_types();
 
    return linked;
 }
