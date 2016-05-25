@@ -28,6 +28,35 @@
 static bool inline_function_impl(nir_function_impl *impl, struct set *inlined);
 
 static void
+convert_deref_to_param_deref(nir_instr *instr, nir_deref_var **deref,
+                             nir_call_instr *call)
+{
+   /* This isn't a parameter, just return the deref */
+   if ((*deref)->var->data.mode != nir_var_param)
+      return;
+
+   int param_idx = (*deref)->var->data.location;
+
+   nir_deref_var *call_deref;
+   if (param_idx >= 0) {
+      assert(param_idx < call->callee->num_params);
+      call_deref = call->params[param_idx];
+   } else {
+      call_deref = call->return_deref;
+   }
+   assert(call_deref);
+
+   /* Now we make a new deref by concatenating the deref in the call's
+    * parameter with the deref we were given.
+    */
+   nir_deref_var *new_deref = nir_deref_as_var(nir_copy_deref(instr, &call_deref->deref));
+   nir_deref *new_tail = nir_deref_tail(&new_deref->deref);
+   new_tail->child = (*deref)->deref.child;
+   ralloc_steal(new_tail, new_tail->child);
+   *deref = new_deref;
+}
+
+static void
 rewrite_param_derefs(nir_instr *instr, nir_call_instr *call)
 {
    if (instr->type != nir_instr_type_intrinsic)
@@ -37,25 +66,7 @@ rewrite_param_derefs(nir_instr *instr, nir_call_instr *call)
 
    for (unsigned i = 0;
         i < nir_intrinsic_infos[intrin->intrinsic].num_variables; i++) {
-      if (intrin->variables[i]->var->data.mode != nir_var_param)
-         continue;
-
-      int param_idx = intrin->variables[i]->var->data.location;
-
-      nir_deref_var *call_deref;
-      if (param_idx >= 0) {
-         assert(param_idx < call->callee->num_params);
-         call_deref = call->params[param_idx];
-      } else {
-         call_deref = call->return_deref;
-      }
-      assert(call_deref);
-
-      nir_deref_var *new_deref = nir_deref_as_var(nir_copy_deref(intrin, &call_deref->deref));
-      nir_deref *new_tail = nir_deref_tail(&new_deref->deref);
-      new_tail->child = intrin->variables[i]->deref.child;
-      ralloc_steal(new_tail, new_tail->child);
-      intrin->variables[i] = new_deref;
+      convert_deref_to_param_deref(instr, &intrin->variables[i], call);
    }
 }
 
