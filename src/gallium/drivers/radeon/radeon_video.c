@@ -298,7 +298,7 @@ int rvid_get_video_param(struct pipe_screen *screen,
 		case PIPE_VIDEO_PROFILE_MPEG4_AVC_BASELINE:
 		case PIPE_VIDEO_PROFILE_MPEG4_AVC_MAIN:
 		case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH:
-			return 41;
+			return (rscreen->family < CHIP_TONGA) ? 41 : 52;
 		case PIPE_VIDEO_PROFILE_HEVC_MAIN:
 		case PIPE_VIDEO_PROFILE_HEVC_MAIN_10:
 			return 186;
