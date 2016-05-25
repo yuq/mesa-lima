@@ -56,6 +56,7 @@ struct swr_jit_fs_key : swr_jit_sampler_key {
 };
 
 struct swr_jit_vs_key : swr_jit_sampler_key {
+   unsigned clip_plane_mask; // from rasterizer state & vs_info
 };
 
 namespace std

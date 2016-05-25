@@ -40,6 +40,9 @@
 #include "swr_state.h"
 #include "swr_screen.h"
 
+static unsigned
+locate_linkage(ubyte name, ubyte index, struct tgsi_shader_info *info);
+
 bool operator==(const swr_jit_fs_key &lhs, const swr_jit_fs_key &rhs)
 {
    return !memcmp(&lhs, &rhs, sizeof(lhs));
@@ -118,6 +121,11 @@ swr_generate_vs_key(struct swr_jit_vs_key &key,
                     swr_vertex_shader *swr_vs)
 {
    memset(&key, 0, sizeof(key));
+
+   key.clip_plane_mask =
+      swr_vs->info.base.clipdist_writemask ?
+      swr_vs->info.base.clipdist_writemask & ctx->rasterizer->clip_plane_enable :
+      ctx->rasterizer->clip_plane_enable;
 
    swr_generate_sampler_key(swr_vs->info, ctx, PIPE_SHADER_VERTEX, key);
 }
@@ -248,6 +256,63 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
          if (swr_vs->info.base.output_semantic_name[attrib] == TGSI_SEMANTIC_PSIZE)
             outSlot = VERTEX_POINT_SIZE_SLOT;
          STORE(val, vtxOutput, {0, 0, outSlot, channel});
+      }
+   }
+
+   if (ctx->rasterizer->clip_plane_enable ||
+       swr_vs->info.base.culldist_writemask) {
+      unsigned clip_mask = ctx->rasterizer->clip_plane_enable;
+
+      unsigned cv = 0;
+      if (swr_vs->info.base.writes_clipvertex) {
+         cv = 1 + locate_linkage(TGSI_SEMANTIC_CLIPVERTEX, 0,
+                                 &swr_vs->info.base);
+      } else {
+         for (int i = 0; i < PIPE_MAX_SHADER_OUTPUTS; i++) {
+            if (swr_vs->info.base.output_semantic_name[i] == TGSI_SEMANTIC_POSITION &&
+                swr_vs->info.base.output_semantic_index[i] == 0) {
+               cv = i;
+               break;
+            }
+         }
+      }
+      LLVMValueRef cx = LLVMBuildLoad(gallivm->builder, outputs[cv][0], "");
+      LLVMValueRef cy = LLVMBuildLoad(gallivm->builder, outputs[cv][1], "");
+      LLVMValueRef cz = LLVMBuildLoad(gallivm->builder, outputs[cv][2], "");
+      LLVMValueRef cw = LLVMBuildLoad(gallivm->builder, outputs[cv][3], "");
+
+      for (unsigned val = 0; val < PIPE_MAX_CLIP_PLANES; val++) {
+         // clip distance overrides user clip planes
+         if ((swr_vs->info.base.clipdist_writemask & clip_mask & (1 << val)) ||
+             ((swr_vs->info.base.culldist_writemask << swr_vs->info.base.num_written_clipdistance) & (1 << val))) {
+            unsigned cv = 1 + locate_linkage(TGSI_SEMANTIC_CLIPDIST, val < 4 ? 0 : 1,
+                                             &swr_vs->info.base);
+            if (val < 4) {
+               LLVMValueRef dist = LLVMBuildLoad(gallivm->builder, outputs[cv][val], "");
+               STORE(unwrap(dist), vtxOutput, {0, 0, VERTEX_CLIPCULL_DIST_LO_SLOT, val});
+            } else {
+               LLVMValueRef dist = LLVMBuildLoad(gallivm->builder, outputs[cv][val - 4], "");
+               STORE(unwrap(dist), vtxOutput, {0, 0, VERTEX_CLIPCULL_DIST_HI_SLOT, val - 4});
+            }
+            continue;
+         }
+
+         if (!(clip_mask & (1 << val)))
+            continue;
+
+         Value *px = LOAD(GEP(hPrivateData, {0, swr_draw_context_userClipPlanes, val, 0}));
+         Value *py = LOAD(GEP(hPrivateData, {0, swr_draw_context_userClipPlanes, val, 1}));
+         Value *pz = LOAD(GEP(hPrivateData, {0, swr_draw_context_userClipPlanes, val, 2}));
+         Value *pw = LOAD(GEP(hPrivateData, {0, swr_draw_context_userClipPlanes, val, 3}));
+         Value *dist = FADD(FMUL(unwrap(cx), VBROADCAST(px)),
+                            FADD(FMUL(unwrap(cy), VBROADCAST(py)),
+                                 FADD(FMUL(unwrap(cz), VBROADCAST(pz)),
+                                      FMUL(unwrap(cw), VBROADCAST(pw)))));
+
+         if (val < 4)
+            STORE(dist, vtxOutput, {0, 0, VERTEX_CLIPCULL_DIST_LO_SLOT, val});
+         else
+            STORE(dist, vtxOutput, {0, 0, VERTEX_CLIPCULL_DIST_HI_SLOT, val - 4});
       }
    }
 

@@ -89,6 +89,8 @@ struct swr_draw_context {
    swr_jit_texture texturesFS[PIPE_MAX_SHADER_SAMPLER_VIEWS];
    swr_jit_sampler samplersFS[PIPE_MAX_SAMPLERS];
 
+   float userClipPlanes[PIPE_MAX_CLIP_PLANES][4];
+
    SWR_SURFACE_STATE renderTargets[SWR_NUM_ATTACHMENTS];
 };
 
