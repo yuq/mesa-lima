@@ -24,22 +24,65 @@
 #include "nvc0/nvc0_query_hw_metric.h"
 #include "nvc0/nvc0_query_hw_sm.h"
 
-#define _Q(i,n,t) { NVC0_HW_METRIC_QUERY_##i, n, PIPE_DRIVER_QUERY_TYPE_##t }
-struct nvc0_hw_metric_cfg {
+#define _Q(i,n,t,d) { NVC0_HW_METRIC_QUERY_##i, n, PIPE_DRIVER_QUERY_TYPE_##t, d }
+static const struct nvc0_hw_metric_cfg {
    unsigned id;
    const char *name;
    enum pipe_driver_query_type type;
+   const char *desc;
 } nvc0_hw_metric_queries[] = {
-   _Q(ACHIEVED_OCCUPANCY,        "metric-achieved_occupancy",     PERCENTAGE  ),
-   _Q(BRANCH_EFFICIENCY,         "metric-branch_efficiency",      PERCENTAGE  ),
-   _Q(INST_ISSUED,               "metric-inst_issued",            UINT64      ),
-   _Q(INST_PER_WRAP,             "metric-inst_per_wrap",          UINT64      ),
-   _Q(INST_REPLAY_OVERHEAD,      "metric-inst_replay_overhead",   UINT64      ),
-   _Q(ISSUED_IPC,                "metric-issued_ipc",             UINT64      ),
-   _Q(ISSUE_SLOTS,               "metric-issue_slots",            UINT64      ),
-   _Q(ISSUE_SLOT_UTILIZATION,    "metric-issue_slot_utilization", PERCENTAGE  ),
-   _Q(IPC,                       "metric-ipc",                    UINT64      ),
-   _Q(SHARED_REPLAY_OVERHEAD,    "metric-shared_replay_overhead", UINT64      ),
+   _Q(ACHIEVED_OCCUPANCY,
+      "metric-achieved_occupancy",
+      PERCENTAGE,
+      "Ratio of the average active warps per active cycle to the maximum number "
+      "of warps supported on a multiprocessor"),
+
+   _Q(BRANCH_EFFICIENCY,
+      "metric-branch_efficiency",
+      PERCENTAGE,
+      "Ratio of non-divergent branches to total branches"),
+
+   _Q(INST_ISSUED,
+      "metric-inst_issued",
+      UINT64,
+      "The number of instructions issued"),
+
+   _Q(INST_PER_WRAP,
+      "metric-inst_per_wrap",
+      UINT64,
+      "Average number of instructions executed by each warp"),
+
+   _Q(INST_REPLAY_OVERHEAD,
+      "metric-inst_replay_overhead",
+      UINT64,
+      "Average number of replays for each instruction executed"),
+
+   _Q(ISSUED_IPC,
+      "metric-issued_ipc",
+      UINT64,
+      "Instructions issued per cycle"),
+
+   _Q(ISSUE_SLOTS,
+      "metric-issue_slots",
+      UINT64,
+      "The number of issue slots used"),
+
+   _Q(ISSUE_SLOT_UTILIZATION,
+      "metric-issue_slot_utilization",
+      PERCENTAGE,
+      "Percentage of issue slots that issued at least one instruction, averaged "
+      "across all cycles"),
+
+   _Q(IPC,
+      "metric-ipc",
+      UINT64,
+      "Instructions executed per cycle"),
+
+   _Q(SHARED_REPLAY_OVERHEAD,
+      "metric-shared_replay_overhead",
+      UINT64,
+      "Average number of replays due to shared memory conflicts for each "
+      "instruction executed"),
 };
 
 #undef _Q

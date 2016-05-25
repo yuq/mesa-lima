@@ -31,67 +31,307 @@
 #include "nvc0/nvc0_compute.xml.h"
 
 /* NOTE: intentionally using the same names as NV */
-#define _Q(t, n) { NVC0_HW_SM_QUERY_##t, n }
-struct {
+#define _Q(t, n, d) { NVC0_HW_SM_QUERY_##t, n, d }
+static const struct {
    unsigned type;
    const char *name;
+   const char *desc;
 } nvc0_hw_sm_queries[] = {
-   _Q(ACTIVE_CYCLES,                "active_cycles"                           ),
-   _Q(ACTIVE_WARPS,                 "active_warps"                            ),
-   _Q(ATOM_CAS_COUNT,               "atom_cas_count"                          ),
-   _Q(ATOM_COUNT,                   "atom_count"                              ),
-   _Q(BRANCH,                       "branch"                                  ),
-   _Q(DIVERGENT_BRANCH,             "divergent_branch"                        ),
-   _Q(GLD_REQUEST,                  "gld_request"                             ),
-   _Q(GLD_MEM_DIV_REPLAY,           "global_ld_mem_divergence_replays"        ),
-   _Q(GST_TRANSACTIONS,             "global_store_transaction"                ),
-   _Q(GST_MEM_DIV_REPLAY,           "global_st_mem_divergence_replays"        ),
-   _Q(GRED_COUNT,                   "gred_count"                              ),
-   _Q(GST_REQUEST,                  "gst_request"                             ),
-   _Q(INST_EXECUTED,                "inst_executed"                           ),
-   _Q(INST_ISSUED,                  "inst_issued"                             ),
-   _Q(INST_ISSUED1,                 "inst_issued1"                            ),
-   _Q(INST_ISSUED2,                 "inst_issued2"                            ),
-   _Q(INST_ISSUED1_0,               "inst_issued1_0"                          ),
-   _Q(INST_ISSUED1_1,               "inst_issued1_1"                          ),
-   _Q(INST_ISSUED2_0,               "inst_issued2_0"                          ),
-   _Q(INST_ISSUED2_1,               "inst_issued2_1"                          ),
-   _Q(L1_GLD_HIT,                   "l1_global_load_hit"                      ),
-   _Q(L1_GLD_MISS,                  "l1_global_load_miss"                     ),
-   _Q(L1_GLD_TRANSACTIONS,          "__l1_global_load_transactions"           ),
-   _Q(L1_GST_TRANSACTIONS,          "__l1_global_store_transactions"          ),
-   _Q(L1_LOCAL_LD_HIT,              "l1_local_load_hit"                       ),
-   _Q(L1_LOCAL_LD_MISS,             "l1_local_load_miss"                      ),
-   _Q(L1_LOCAL_ST_HIT,              "l1_local_store_hit"                      ),
-   _Q(L1_LOCAL_ST_MISS,             "l1_local_store_miss"                     ),
-   _Q(L1_SHARED_LD_TRANSACTIONS,    "l1_shared_load_transactions"             ),
-   _Q(L1_SHARED_ST_TRANSACTIONS,    "l1_shared_store_transactions"            ),
-   _Q(LOCAL_LD,                     "local_load"                              ),
-   _Q(LOCAL_LD_TRANSACTIONS,        "local_load_transactions"                 ),
-   _Q(LOCAL_ST,                     "local_store"                             ),
-   _Q(LOCAL_ST_TRANSACTIONS,        "local_store_transactions"                ),
-   _Q(NOT_PRED_OFF_INST_EXECUTED,   "not_predicated_off_thread_inst_executed" ),
-   _Q(PROF_TRIGGER_0,               "prof_trigger_00"                         ),
-   _Q(PROF_TRIGGER_1,               "prof_trigger_01"                         ),
-   _Q(PROF_TRIGGER_2,               "prof_trigger_02"                         ),
-   _Q(PROF_TRIGGER_3,               "prof_trigger_03"                         ),
-   _Q(PROF_TRIGGER_4,               "prof_trigger_04"                         ),
-   _Q(PROF_TRIGGER_5,               "prof_trigger_05"                         ),
-   _Q(PROF_TRIGGER_6,               "prof_trigger_06"                         ),
-   _Q(PROF_TRIGGER_7,               "prof_trigger_07"                         ),
-   _Q(SHARED_LD,                    "shared_load"                             ),
-   _Q(SHARED_LD_REPLAY,             "shared_load_replay"                      ),
-   _Q(SHARED_ST,                    "shared_store"                            ),
-   _Q(SHARED_ST_REPLAY,             "shared_store_replay"                     ),
-   _Q(SM_CTA_LAUNCHED,              "sm_cta_launched"                         ),
-   _Q(THREADS_LAUNCHED,             "threads_launched"                        ),
-   _Q(TH_INST_EXECUTED,             "thread_inst_executed"                    ),
-   _Q(TH_INST_EXECUTED_0,           "thread_inst_executed_0"                  ),
-   _Q(TH_INST_EXECUTED_1,           "thread_inst_executed_1"                  ),
-   _Q(TH_INST_EXECUTED_2,           "thread_inst_executed_2"                  ),
-   _Q(TH_INST_EXECUTED_3,           "thread_inst_executed_3"                  ),
-   _Q(UNCACHED_GLD_TRANSACTIONS,    "uncached_global_load_transaction"        ),
-   _Q(WARPS_LAUNCHED,               "warps_launched"                          ),
+   _Q(ACTIVE_CYCLES,
+      "active_cycles",
+      "Number of cycles a multiprocessor has at least one active warp"),
+
+   _Q(ACTIVE_WARPS,
+      "active_warps",
+      "Accumulated number of active warps per cycle. For every cycle it "
+      "increments by the number of active warps in the cycle which can be in "
+      "the range 0 to 64"),
+
+   _Q(ATOM_CAS_COUNT,
+      "atom_cas_count",
+      "Number of warps executing atomic compare and swap operations. Increments "
+      "by one if at least one thread in a warp executes the instruction."),
+
+   _Q(ATOM_COUNT,
+      "atom_count",
+      "Number of warps executing atomic reduction operations. Increments by one "
+      "if at least one thread in a warp executes the instruction"),
+
+   _Q(BRANCH,
+      "branch",
+      "Number of branch instructions executed per warp on a multiprocessor"),
+
+   _Q(DIVERGENT_BRANCH,
+      "divergent_branch",
+      "Number of divergent branches within a warp. This counter will be "
+      "incremented by one if at least one thread in a warp diverges (that is, "
+      "follows a different execution path) via a conditional branch"),
+
+   _Q(GLD_REQUEST,
+      "gld_request",
+      "Number of executed load instructions where the state space is not "
+      "specified and hence generic addressing is used, increments per warp on a "
+      "multiprocessor. It can include the load operations from global,local and "
+      "shared state space"),
+
+   _Q(GLD_MEM_DIV_REPLAY,
+      "global_ld_mem_divergence_replays",
+      "Number of instruction replays for global memory loads. Instruction is "
+      "replayed if the instruction is accessing more than one cache line of "
+      "128 bytes. For each extra cache line access the counter is incremented "
+      "by 1"),
+
+   _Q(GST_TRANSACTIONS,
+      "global_store_transaction",
+      "Number of global store transactions. Increments by 1 per transaction. "
+      "Transaction can be 32/64/96/128B"),
+
+   _Q(GST_MEM_DIV_REPLAY,
+      "global_st_mem_divergence_replays",
+      "Number of instruction replays for global memory stores. Instruction is "
+      "replayed if the instruction is accessing more than one cache line of "
+      "128 bytes. For each extra cache line access the counter is incremented "
+      "by 1"),
+
+   _Q(GRED_COUNT,
+      "gred_count",
+      "Number of warps executing reduction operations on global memory. "
+      "Increments by one if at least one thread in a warp executes the "
+      "instruction"),
+
+   _Q(GST_REQUEST,
+      "gst_request",
+      "Number of executed store instructions where the state space is not "
+      "specified and hence generic addressing is used, increments per warp on a "
+      "multiprocessor. It can include the store operations to global,local and "
+      "shared state space"),
+
+   _Q(INST_EXECUTED,
+      "inst_executed",
+      "Number of instructions executed, do not include replays"),
+
+   _Q(INST_ISSUED,
+      "inst_issued",
+      "Number of instructions issued including replays"),
+
+   _Q(INST_ISSUED1,
+      "inst_issued1",
+      "Number of single instruction issued per cycle"),
+
+   _Q(INST_ISSUED2,
+      "inst_issued2",
+      "Number of dual instructions issued per cycle"),
+
+   _Q(INST_ISSUED1_0,
+      "inst_issued1_0",
+      "Number of single instruction issued per cycle in pipeline 0"),
+
+   _Q(INST_ISSUED1_1,
+      "inst_issued1_1",
+      "Number of single instruction issued per cycle in pipeline 1"),
+
+   _Q(INST_ISSUED2_0,
+      "inst_issued2_0",
+      "Number of dual instructions issued per cycle in pipeline 0"),
+
+   _Q(INST_ISSUED2_1,
+      "inst_issued2_1",
+      "Number of dual instructions issued per cycle in pipeline 1"),
+
+   _Q(L1_GLD_HIT,
+      "l1_global_load_hit",
+      "Number of cache lines that hit in L1 cache for global memory load "
+      "accesses. In case of perfect coalescing this increments by 1,2, and 4 for "
+      "32, 64 and 128 bit accesses by a warp respectively"),
+
+   _Q(L1_GLD_MISS,
+      "l1_global_load_miss",
+      "Number of cache lines that miss in L1 cache for global memory load "
+      "accesses. In case of perfect coalescing this increments by 1,2, and 4 for "
+      "32, 64 and 128 bit accesses by a warp respectively"),
+
+   _Q(L1_GLD_TRANSACTIONS,
+      "__l1_global_load_transactions",
+      "Number of global load transactions from L1 cache. Increments by 1 per "
+      "transaction. Transaction can be 32/64/96/128B"),
+
+   _Q(L1_GST_TRANSACTIONS,
+      "__l1_global_store_transactions",
+      "Number of global store transactions from L1 cache. Increments by 1 per "
+      "transaction. Transaction can be 32/64/96/128B"),
+
+   _Q(L1_LOCAL_LD_HIT,
+      "l1_local_load_hit",
+      "Number of cache lines that hit in L1 cache for local memory load "
+      "accesses. In case of perfect coalescing this increments by 1,2, and 4 for "
+      "32, 64 and 128 bit accesses by a warp respectively"),
+
+   _Q(L1_LOCAL_LD_MISS,
+      "l1_local_load_miss",
+      "Number of cache lines that miss in L1 cache for local memory load "
+      "accesses. In case of perfect coalescing this increments by 1,2, and 4 for "
+      "32, 64 and 128 bit accesses by a warp respectively"),
+
+   _Q(L1_LOCAL_ST_HIT,
+      "l1_local_store_hit",
+      "Number of cache lines that hit in L1 cache for local memory store "
+      "accesses. In case of perfect coalescing this increments by 1,2, and 4 for "
+      "32, 64 and 128 bit accesses by a warp respectively"),
+
+   _Q(L1_LOCAL_ST_MISS,
+      "l1_local_store_miss",
+      "Number of cache lines that miss in L1 cache for local memory store "
+      "accesses. In case of perfect coalescing this increments by 1,2, and 4 for "
+      "32,64 and 128 bit accesses by a warp respectively"),
+
+   _Q(L1_SHARED_LD_TRANSACTIONS,
+      "l1_shared_load_transactions",
+      "Number of shared load transactions. Increments by 1 per transaction. "
+      "Transaction can be 32/64/96/128B"),
+
+   _Q(L1_SHARED_ST_TRANSACTIONS,
+      "l1_shared_store_transactions",
+      "Number of shared store transactions. Increments by 1 per transaction. "
+      "Transaction can be 32/64/96/128B"),
+
+   _Q(LOCAL_LD,
+      "local_load",
+      "Number of executed load instructions where state space is specified as "
+      "local, increments per warp on a multiprocessor"),
+
+   _Q(LOCAL_LD_TRANSACTIONS,
+      "local_load_transactions",
+      "Number of local load transactions from L1 cache. Increments by 1 per "
+      "transaction. Transaction can be 32/64/96/128B"),
+
+   _Q(LOCAL_ST,
+      "local_store",
+      "Number of executed store instructions where state space is specified as "
+      "local, increments per warp on a multiprocessor"),
+
+   _Q(LOCAL_ST_TRANSACTIONS,
+      "local_store_transactions",
+      "Number of local store transactions to L1 cache. Increments by 1 per "
+      "transaction. Transaction can be 32/64/96/128B."),
+
+   _Q(NOT_PRED_OFF_INST_EXECUTED,
+      "not_predicated_off_thread_inst_executed",
+      "Number of not predicated off instructions executed by all threads, does "
+      "not include replays. For each instruction it increments by the number of "
+      "threads that execute this instruction"),
+
+   _Q(PROF_TRIGGER_0,
+      "prof_trigger_00",
+      "User profiled generic trigger that can be inserted in any place of the "
+      "code to collect the related information. Increments per warp."),
+
+   _Q(PROF_TRIGGER_1,
+      "prof_trigger_01",
+      "User profiled generic trigger that can be inserted in any place of the "
+      "code to collect the related information. Increments per warp."),
+
+   _Q(PROF_TRIGGER_2,
+      "prof_trigger_02",
+      "User profiled generic trigger that can be inserted in any place of the "
+      "code to collect the related information. Increments per warp."),
+
+   _Q(PROF_TRIGGER_3,
+      "prof_trigger_03",
+      "User profiled generic trigger that can be inserted in any place of the "
+      "code to collect the related information. Increments per warp."),
+
+   _Q(PROF_TRIGGER_4,
+      "prof_trigger_04",
+      "User profiled generic trigger that can be inserted in any place of the "
+      "code to collect the related information. Increments per warp."),
+
+   _Q(PROF_TRIGGER_5,
+      "prof_trigger_05",
+      "User profiled generic trigger that can be inserted in any place of the "
+      "code to collect the related information. Increments per warp."),
+
+   _Q(PROF_TRIGGER_6,
+      "prof_trigger_06",
+      "User profiled generic trigger that can be inserted in any place of the "
+      "code to collect the related information. Increments per warp."),
+
+   _Q(PROF_TRIGGER_7,
+      "prof_trigger_07",
+      "User profiled generic trigger that can be inserted in any place of the "
+      "code to collect the related information. Increments per warp."),
+
+   _Q(SHARED_LD,
+      "shared_load",
+      "Number of executed load instructions where state space is specified as "
+      "shared, increments per warp on a multiprocessor"),
+
+   _Q(SHARED_LD_REPLAY,
+      "shared_load_replay",
+      "Replays caused due to shared load bank conflict (when the addresses for "
+      "two or more shared memory load requests fall in the same memory bank) or "
+      "when there is no conflict but the total number of words accessed by all "
+      "threads in the warp executing that instruction exceed the number of words "
+      "that can be loaded in one cycle (256 bytes)"),
+
+   _Q(SHARED_ST,
+      "shared_store",
+      "Number of executed store instructions where state space is specified as "
+      "shared, increments per warp on a multiprocessor"),
+
+   _Q(SHARED_ST_REPLAY,
+      "shared_store_replay",
+      "Replays caused due to shared store bank conflict (when the addresses for "
+      "two or more shared memory store requests fall in the same memory bank) or "
+      "when there is no conflict but the total number of words accessed by all "
+      "threads in the warp executing that instruction exceed the number of words "
+      "that can be stored in one cycle"),
+
+   _Q(SM_CTA_LAUNCHED,
+      "sm_cta_launched",
+      "Number of thread blocks launched on a multiprocessor"),
+
+   _Q(THREADS_LAUNCHED,
+      "threads_launched",
+      "Number of threads launched on a multiprocessor"),
+
+   _Q(TH_INST_EXECUTED,
+      "thread_inst_executed",
+      "Number of instructions executed by all threads, does not include "
+      "replays. For each instruction it increments by the number of threads in "
+      "the warp that execute the instruction"),
+
+   _Q(TH_INST_EXECUTED_0,
+      "thread_inst_executed_0",
+      "Number of instructions executed by all threads, does not include "
+      "replays. For each instruction it increments by the number of threads in "
+      "the warp that execute the instruction in pipeline 0"),
+
+   _Q(TH_INST_EXECUTED_1,
+      "thread_inst_executed_1",
+      "Number of instructions executed by all threads, does not include "
+      "replays. For each instruction it increments by the number of threads in "
+      "the warp that execute the instruction in pipeline 1"),
+
+   _Q(TH_INST_EXECUTED_2,
+      "thread_inst_executed_2",
+      "Number of instructions executed by all threads, does not include "
+      "replays. For each instruction it increments by the number of threads in "
+      "the warp that execute the instruction in pipeline 2"),
+
+   _Q(TH_INST_EXECUTED_3,
+      "thread_inst_executed_3",
+      "Number of instructions executed by all threads, does not include "
+      "replays. For each instruction it increments by the number of threads in "
+      "the warp that execute the instruction in pipeline 3"),
+
+   _Q(UNCACHED_GLD_TRANSACTIONS,
+      "uncached_global_load_transaction",
+      "Number of uncached global load transactions. Increments by 1 per "
+      "transaction. Transaction can be 32/64/96/128B."),
+
+   _Q(WARPS_LAUNCHED,
+      "warps_launched",
+      "Number of warps launched on a multiprocessor"),
 };
 
 #undef _Q
