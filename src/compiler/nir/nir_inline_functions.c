@@ -27,40 +27,36 @@
 
 static bool inline_function_impl(nir_function_impl *impl, struct set *inlined);
 
-static bool
-rewrite_param_derefs_block(nir_block *block, nir_call_instr *call)
+static void
+rewrite_param_derefs(nir_instr *instr, nir_call_instr *call)
 {
-   nir_foreach_instr(instr, block) {
-      if (instr->type != nir_instr_type_intrinsic)
+   if (instr->type != nir_instr_type_intrinsic)
+      return;
+
+   nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+   for (unsigned i = 0;
+        i < nir_intrinsic_infos[intrin->intrinsic].num_variables; i++) {
+      if (intrin->variables[i]->var->data.mode != nir_var_param)
          continue;
 
-      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+      int param_idx = intrin->variables[i]->var->data.location;
 
-      for (unsigned i = 0;
-           i < nir_intrinsic_infos[intrin->intrinsic].num_variables; i++) {
-         if (intrin->variables[i]->var->data.mode != nir_var_param)
-            continue;
-
-         int param_idx = intrin->variables[i]->var->data.location;
-
-         nir_deref_var *call_deref;
-         if (param_idx >= 0) {
-            assert(param_idx < call->callee->num_params);
-            call_deref = call->params[param_idx];
-         } else {
-            call_deref = call->return_deref;
-         }
-         assert(call_deref);
-
-         nir_deref_var *new_deref = nir_deref_as_var(nir_copy_deref(intrin, &call_deref->deref));
-         nir_deref *new_tail = nir_deref_tail(&new_deref->deref);
-         new_tail->child = intrin->variables[i]->deref.child;
-         ralloc_steal(new_tail, new_tail->child);
-         intrin->variables[i] = new_deref;
+      nir_deref_var *call_deref;
+      if (param_idx >= 0) {
+         assert(param_idx < call->callee->num_params);
+         call_deref = call->params[param_idx];
+      } else {
+         call_deref = call->return_deref;
       }
-   }
+      assert(call_deref);
 
-   return true;
+      nir_deref_var *new_deref = nir_deref_as_var(nir_copy_deref(intrin, &call_deref->deref));
+      nir_deref *new_tail = nir_deref_tail(&new_deref->deref);
+      new_tail->child = intrin->variables[i]->deref.child;
+      ralloc_steal(new_tail, new_tail->child);
+      intrin->variables[i] = new_deref;
+   }
 }
 
 static void
@@ -184,7 +180,8 @@ inline_functions_block(nir_block *block, nir_builder *b,
       }
 
       nir_foreach_block(block, callee_copy) {
-         rewrite_param_derefs_block(block, call);
+         nir_foreach_instr(instr, block)
+            rewrite_param_derefs(instr, call);
       }
 
       /* Pluck the body out of the function and place it here */
