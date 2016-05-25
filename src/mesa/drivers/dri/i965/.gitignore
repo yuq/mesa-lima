@@ -4,3 +4,6 @@ test_eu_compact
 test_vec4_copy_propagation
 test_vec4_register_coalesce
 test_vf_float_conversions
+test_fs_cmod_propagation
+test_fs_saturate_propagation
+test_vec4_cmod_propagation
