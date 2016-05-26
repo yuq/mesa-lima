@@ -116,8 +116,9 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	ctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH |
 			SI_CONTEXT_PS_PARTIAL_FLUSH;
-	/* The kernel doesn't flush TC for VI correctly (need TC_WB_ACTION_ENA). */
-	if (ctx->b.chip_class == VI)
+
+	/* DRM 3.1.0 doesn't flush TC for VI correctly. */
+	if (ctx->b.chip_class == VI && ctx->b.screen->info.drm_minor <= 1)
 		ctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2 |
 				SI_CONTEXT_INV_VMEM_L1;
 
