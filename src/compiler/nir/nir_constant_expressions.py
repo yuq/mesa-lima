@@ -270,7 +270,7 @@ static nir_const_value
 evaluate_${name}(unsigned num_components, unsigned bit_size,
                  nir_const_value *_src)
 {
-   nir_const_value _dst_val = { { {0, 0, 0, 0} } };
+   nir_const_value _dst_val = { {0, } };
 
    switch (bit_size) {
    % for bit_size in [32, 64]:
