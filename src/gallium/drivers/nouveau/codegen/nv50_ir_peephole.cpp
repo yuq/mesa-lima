@@ -3265,14 +3265,20 @@ DeadCodeElim::visit(BasicBlock *bb)
          ++deadCount;
          delete_Instruction(prog, i);
       } else
-      if (i->defExists(1) && (i->op == OP_VFETCH || i->op == OP_LOAD)) {
+      if (i->defExists(1) &&
+          i->subOp == 0 &&
+          (i->op == OP_VFETCH || i->op == OP_LOAD)) {
          checkSplitLoad(i);
       } else
       if (i->defExists(0) && !i->getDef(0)->refCount()) {
          if (i->op == OP_ATOM ||
              i->op == OP_SUREDP ||
-             i->op == OP_SUREDB)
+             i->op == OP_SUREDB) {
             i->setDef(0, NULL);
+         } else if (i->op == OP_LOAD && i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
+            i->setDef(0, i->getDef(1));
+            i->setDef(1, NULL);
+         }
       }
    }
    return true;

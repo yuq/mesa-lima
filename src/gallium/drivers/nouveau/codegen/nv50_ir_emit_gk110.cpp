@@ -2080,15 +2080,29 @@ CodeEmitterGK110::emitLOAD(const Instruction *i)
    code[1] |= offset >> 9;
 
    // Locked store on shared memory can fail.
+   int r = 0, p = -1;
    if (i->src(0).getFile() == FILE_MEMORY_SHARED &&
        i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
-      assert(i->defExists(1));
-      defId(i->def(1), 32 + 16);
+      if (i->def(0).getFile() == FILE_PREDICATE) { // p, #
+         r = -1;
+         p = 0;
+      } else if (i->defExists(1)) { // r, p
+         p = 1;
+      } else {
+         assert(!"Expected predicate dest for load locked");
+      }
    }
 
    emitPredicate(i);
 
-   defId(i->def(0), 2);
+   if (r >= 0)
+      defId(i->def(r), 2);
+   else
+      code[0] |= 255 << 2;
+
+   if (p >= 0)
+      defId(i->def(p), 32 + 16);
+
    if (i->getIndirect(0, 0)) {
       srcId(i->src(0).getIndirect(0), 10);
       if (i->getIndirect(0, 0)->reg.size == 8)
