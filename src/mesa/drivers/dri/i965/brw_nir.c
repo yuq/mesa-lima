@@ -337,18 +337,6 @@ brw_nir_lower_fs_outputs(nir_shader *nir)
    nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
 }
 
-static int
-type_size_scalar_bytes(const struct glsl_type *type)
-{
-   return type_size_scalar(type) * 4;
-}
-
-static int
-type_size_vec4_bytes(const struct glsl_type *type)
-{
-   return type_size_vec4(type) * 16;
-}
-
 static void
 brw_nir_lower_uniforms(nir_shader *nir, bool is_scalar)
 {

@@ -25,11 +25,24 @@
 
 #include "brw_context.h"
 #include "brw_reg.h"
+#include "brw_shader.h"
 #include "compiler/nir/nir.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+static inline int
+type_size_scalar_bytes(const struct glsl_type *type)
+{
+   return type_size_scalar(type) * 4;
+}
+
+static inline int
+type_size_vec4_bytes(const struct glsl_type *type)
+{
+   return type_size_vec4(type) * 16;
+}
 
 /* Flags set in the instr->pass_flags field by i965 analysis passes */
 enum {
