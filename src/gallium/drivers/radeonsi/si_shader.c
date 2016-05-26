@@ -144,6 +144,10 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 			       struct si_shader *shader,
 			       LLVMTargetMachineRef tm);
 
+static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
+				 struct lp_build_tgsi_context *bld_base,
+				 struct lp_build_emit_data *emit_data);
+
 /* Ideally pass the sample mask input to the PS epilog as v13, which
  * is its usual location, so that the shader doesn't have to add v_mov.
  */
@@ -2533,6 +2537,8 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	LLVMValueRef out[6], vec0, vec1, rw_buffers, tf_base;
 	unsigned stride, outer_comps, inner_comps, i;
 	struct lp_build_if_state if_ctx, inner_if_ctx;
+
+	si_llvm_emit_barrier(NULL, bld_base, NULL);
 
 	/* Do this only for invocation 0, because the tess levels are per-patch,
 	 * not per-vertex.
