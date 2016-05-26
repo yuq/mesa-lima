@@ -300,9 +300,6 @@ if test "x$GCC" = xyes; then
     # Restore CFLAGS; VISIBILITY_CFLAGS are added to it where needed.
     CFLAGS=$save_CFLAGS
 
-    # Work around aliasing bugs - developers should comment this out
-    CFLAGS="$CFLAGS -fno-strict-aliasing"
-
     # We don't want floating-point math functions to set errno or trap
     CFLAGS="$CFLAGS -fno-math-errno -fno-trapping-math"
 
@@ -341,9 +338,6 @@ if test "x$GXX" = xyes; then
 
     # Restore CXXFLAGS; VISIBILITY_CXXFLAGS are added to it where needed.
     CXXFLAGS=$save_CXXFLAGS
-
-    # Work around aliasing bugs - developers should comment this out
-    CXXFLAGS="$CXXFLAGS -fno-strict-aliasing"
 
     # We don't want floating-point math functions to set errno or trap
     CXXFLAGS="$CXXFLAGS -fno-math-errno -fno-trapping-math"
