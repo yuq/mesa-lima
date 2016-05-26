@@ -790,8 +790,6 @@ dri2_create_image_from_winsys(__DRIscreen *_screen,
    templ.depth0 = 1;
    templ.array_size = 1;
 
-   whandle->offset = 0;
-
    img->texture = screen->base.screen->resource_from_handle(screen->base.screen,
          &templ, whandle, PIPE_HANDLE_USAGE_READ_WRITE);
    if (!img->texture) {
@@ -842,7 +840,7 @@ dri2_create_image_from_fd(__DRIscreen *_screen,
    __DRIimage *img = NULL;
    unsigned err = __DRI_IMAGE_ERROR_SUCCESS;
 
-   if (num_fds != 1 || offsets[0] != 0) {
+   if (num_fds != 1) {
       err = __DRI_IMAGE_ERROR_BAD_MATCH;
       goto exit;
    }
@@ -1056,8 +1054,6 @@ dri2_from_names(__DRIscreen *screen, int width, int height, int format,
 
    if (num_names != 1)
       return NULL;
-   if (offsets[0] != 0)
-      return NULL;
 
    format = convert_fourcc(format, &dri_components);
    if (format == -1)
@@ -1067,6 +1063,7 @@ dri2_from_names(__DRIscreen *screen, int width, int height, int format,
    whandle.type = DRM_API_HANDLE_TYPE_SHARED;
    whandle.handle = names[0];
    whandle.stride = strides[0];
+   whandle.offset = offsets[0];
 
    img = dri2_create_image_from_winsys(screen, width, height, format,
                                        &whandle, loaderPrivate);

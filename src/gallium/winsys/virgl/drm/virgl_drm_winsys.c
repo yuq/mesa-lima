@@ -380,6 +380,12 @@ virgl_drm_winsys_resource_create_handle(struct virgl_winsys *qws,
    struct virgl_hw_res *res;
    uint32_t handle = whandle->handle;
 
+   if (whandle->offset != 0) {
+      fprintf(stderr, "attempt to import unsupported winsys offset %u\n",
+              whandle->offset);
+      return NULL;
+   }
+
    pipe_mutex_lock(qdws->bo_handles_mutex);
 
    if (whandle->type == DRM_API_HANDLE_TYPE_SHARED) {

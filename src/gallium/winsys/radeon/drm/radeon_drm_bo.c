@@ -858,6 +858,12 @@ static struct pb_buffer *radeon_winsys_bo_from_handle(struct radeon_winsys *rws,
     unsigned handle;
     uint64_t size = 0;
 
+    if (!offset && whandle->offset != 0) {
+        fprintf(stderr, "attempt to import unsupported winsys offset %u\n",
+                whandle->offset);
+        return NULL;
+    }
+
     /* We must maintain a list of pairs <handle, bo>, so that we always return
      * the same BO for one particular handle. If we didn't do that and created
      * more than one BO for the same handle and then relocated them in a CS,

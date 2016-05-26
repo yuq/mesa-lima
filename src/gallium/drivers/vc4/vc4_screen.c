@@ -559,6 +559,13 @@ vc4_screen_bo_from_handle(struct pipe_screen *pscreen,
 {
         struct vc4_screen *screen = vc4_screen(pscreen);
 
+        if (whandle->offset != 0) {
+                fprintf(stderr,
+                        "Attempt to import unsupported winsys offset %u\n",
+                        whandle->offset);
+                return NULL;
+        }
+
         switch (whandle->type) {
         case DRM_API_HANDLE_TYPE_SHARED:
                 return vc4_bo_open_name(screen, whandle->handle, whandle->stride);

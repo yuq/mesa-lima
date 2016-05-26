@@ -266,6 +266,12 @@ kms_sw_displaytarget_from_handle(struct sw_winsys *ws,
    assert(whandle->type == DRM_API_HANDLE_TYPE_KMS ||
           whandle->type == DRM_API_HANDLE_TYPE_FD);
 
+   if (whandle->offset != 0) {
+      DEBUG_PRINT("KMS-DEBUG: attempt to import unsupported winsys offset %d\n",
+                  whandle->offset);
+      return NULL;
+   }
+
    switch(whandle->type) {
    case DRM_API_HANDLE_TYPE_FD:
       kms_sw_dt = kms_sw_displaytarget_add_from_prime(kms_sw, whandle->handle);
