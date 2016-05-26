@@ -73,12 +73,23 @@ static void si_emit_cp_dma_copy_buffer(struct si_context *sctx,
 		radeon_emit(cs, (dst_va >> 32) & 0xffff);	/* DST_ADDR_HI [15:0] */
 		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
 	}
+
+	/* CP DMA is executed in ME, but index buffers are read by PFP.
+	 * This ensures that ME (CP DMA) is idle before PFP starts fetching
+	 * indices. If we wanted to execute CP DMA in PFP, this packet
+	 * should precede it.
+	 */
+	if (sync_flag) {
+		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
+		radeon_emit(cs, 0);
+	}
 }
 
 /* Emit a CP DMA packet to clear a buffer. The size must fit in bits [20:0]. */
 static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 					uint64_t dst_va, unsigned size,
-					uint32_t clear_value, unsigned flags)
+					uint32_t clear_value, unsigned flags,
+					enum r600_coherency coher)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? S_411_CP_SYNC(1) : 0;
@@ -104,6 +115,12 @@ static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 		radeon_emit(cs, dst_va);			/* DST_ADDR_LO [31:0] */
 		radeon_emit(cs, (dst_va >> 32) & 0xffff);	/* DST_ADDR_HI [15:0] */
 		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
+	}
+
+	/* See "copy_buffer" for explanation. */
+	if (coher == R600_COHERENCY_SHADER && sync_flag) {
+		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
+		radeon_emit(cs, 0);
 	}
 }
 
@@ -207,7 +224,8 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		si_cp_dma_prepare(sctx, dst, NULL, byte_count, size, &dma_flags);
 
 		/* Emit the clear packet. */
-		si_emit_cp_dma_clear_buffer(sctx, va, byte_count, value, dma_flags);
+		si_emit_cp_dma_clear_buffer(sctx, va, byte_count, value,
+					    dma_flags, coher);
 
 		size -= byte_count;
 		va += byte_count;
