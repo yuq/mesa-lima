@@ -932,6 +932,23 @@ static inline bool r600_can_read_depth(struct r600_texture *rtex)
 		rtex->resource.b.b.format == PIPE_FORMAT_Z32_FLOAT);
 }
 
+static inline unsigned r600_get_flush_flags(enum r600_coherency coher)
+{
+	switch (coher) {
+	default:
+	case R600_COHERENCY_NONE:
+		return 0;
+	case R600_COHERENCY_SHADER:
+		return R600_CONTEXT_INV_CONST_CACHE |
+		       R600_CONTEXT_INV_VERTEX_CACHE |
+		       R600_CONTEXT_INV_TEX_CACHE |
+		       R600_CONTEXT_STREAMOUT_FLUSH;
+	case R600_COHERENCY_CB_META:
+		return R600_CONTEXT_FLUSH_AND_INV_CB |
+		       R600_CONTEXT_FLUSH_AND_INV_CB_META;
+	}
+}
+
 #define     V_028A6C_OUTPRIM_TYPE_POINTLIST            0
 #define     V_028A6C_OUTPRIM_TYPE_LINESTRIP            1
 #define     V_028A6C_OUTPRIM_TYPE_TRISTRIP             2

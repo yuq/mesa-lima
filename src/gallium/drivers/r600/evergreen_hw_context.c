@@ -102,15 +102,7 @@ void evergreen_cp_dma_clear_buffer(struct r600_context *rctx,
 	offset += r600_resource(dst)->gpu_address;
 
 	/* Flush the cache where the resource is bound. */
-	rctx->b.flags |= R600_CONTEXT_INV_CONST_CACHE |
-			 R600_CONTEXT_INV_VERTEX_CACHE |
-			 R600_CONTEXT_INV_TEX_CACHE |
-			 R600_CONTEXT_FLUSH_AND_INV |
-			 R600_CONTEXT_FLUSH_AND_INV_CB |
-			 R600_CONTEXT_FLUSH_AND_INV_DB |
-			 R600_CONTEXT_FLUSH_AND_INV_CB_META |
-			 R600_CONTEXT_FLUSH_AND_INV_DB_META |
-			 R600_CONTEXT_STREAMOUT_FLUSH |
+	rctx->b.flags |= r600_get_flush_flags(coher) |
 			 R600_CONTEXT_WAIT_3D_IDLE;
 
 	while (size) {
@@ -158,9 +150,4 @@ void evergreen_cp_dma_clear_buffer(struct r600_context *rctx,
 	 */
 	if (coher == R600_COHERENCY_SHADER)
 		r600_emit_pfp_sync_me(rctx);
-
-	/* Invalidate the read caches. */
-	rctx->b.flags |= R600_CONTEXT_INV_CONST_CACHE |
-			 R600_CONTEXT_INV_VERTEX_CACHE |
-			 R600_CONTEXT_INV_TEX_CACHE;
 }
