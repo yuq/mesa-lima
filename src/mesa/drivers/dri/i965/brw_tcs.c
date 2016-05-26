@@ -225,19 +225,24 @@ brw_codegen_tcs_prog(struct brw_context *brw,
        */
       const float **param = (const float **) prog_data.base.base.param;
       static float zero = 0.0f;
-      for (int i = 0; i < 4; i++) {
-         param[7 - i] = &ctx->TessCtrlProgram.patch_default_outer_level[i];
-      }
+      for (int i = 0; i < 8; i++)
+         param[i] = &zero;
 
       if (key->tes_primitive_mode == GL_QUADS) {
+         for (int i = 0; i < 4; i++)
+            param[7 - i] = &ctx->TessCtrlProgram.patch_default_outer_level[i];
+
          param[3] = &ctx->TessCtrlProgram.patch_default_inner_level[0];
          param[2] = &ctx->TessCtrlProgram.patch_default_inner_level[1];
-         param[1] = &zero;
-         param[0] = &zero;
       } else if (key->tes_primitive_mode == GL_TRIANGLES) {
+         for (int i = 0; i < 3; i++)
+            param[7 - i] = &ctx->TessCtrlProgram.patch_default_outer_level[i];
+
          param[4] = &ctx->TessCtrlProgram.patch_default_inner_level[0];
-         for (int i = 0; i < 4; i++)
-            param[i] = &zero;
+      } else {
+         assert(key->tes_primitive_mode == GL_ISOLINES);
+         param[7] = &ctx->TessCtrlProgram.patch_default_outer_level[1];
+         param[6] = &ctx->TessCtrlProgram.patch_default_outer_level[0];
       }
    }
 
