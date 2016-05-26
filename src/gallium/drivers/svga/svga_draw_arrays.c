@@ -205,7 +205,8 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
                        enum pipe_prim_type prim, unsigned start, unsigned count,
                        unsigned start_instance, unsigned instance_count)
 {
-   unsigned gen_prim, gen_size, gen_nr;
+   enum pipe_prim_type gen_prim;
+   unsigned gen_size, gen_nr;
    enum indices_mode gen_type;
    u_generate_func gen_func;
    enum pipe_error ret = PIPE_OK;

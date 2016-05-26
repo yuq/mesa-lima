@@ -26,6 +26,7 @@
 #define U_INDICES_H
 
 #include "pipe/p_compiler.h"
+#include "pipe/p_defines.h"
 
 /* First/last provoking vertex */
 #define PV_FIRST      0
@@ -92,13 +93,13 @@ void u_index_init( void );
  */
 enum indices_mode
 u_index_translator(unsigned hw_mask,
-                   unsigned prim,
+                   enum pipe_prim_type prim,
                    unsigned in_index_size,
                    unsigned nr,
                    unsigned in_pv,   /* API */
                    unsigned out_pv,  /* hardware */
                    unsigned prim_restart,
-                   unsigned *out_prim,
+                   enum pipe_prim_type *out_prim,
                    unsigned *out_index_size,
                    unsigned *out_nr,
                    u_translate_func *out_translate);
@@ -115,12 +116,12 @@ u_index_translator(unsigned hw_mask,
  */
 enum indices_mode
 u_index_generator(unsigned hw_mask,
-                  unsigned prim,
+                  enum pipe_prim_type prim,
                   unsigned start,
                   unsigned nr,
                   unsigned in_pv,   /* API */
                   unsigned out_pv,  /* hardware */
-                  unsigned *out_prim,
+                  enum pipe_prim_type *out_prim,
                   unsigned *out_index_size,
                   unsigned *out_nr,
                   u_generate_func *out_generate);
@@ -135,11 +136,11 @@ void u_unfilled_init( void );
  * points.
  */
 enum indices_mode
-u_unfilled_translator(unsigned prim,
+u_unfilled_translator(enum pipe_prim_type prim,
                       unsigned in_index_size,
                       unsigned nr,
                       unsigned unfilled_mode,
-                      unsigned *out_prim,
+                      enum pipe_prim_type *out_prim,
                       unsigned *out_index_size,
                       unsigned *out_nr,
                       u_translate_func *out_translate);
@@ -148,11 +149,11 @@ u_unfilled_translator(unsigned prim,
  * As above, but for non-indexed (array) primitives.
  */
 enum indices_mode
-u_unfilled_generator(unsigned prim,
+u_unfilled_generator(enum pipe_prim_type prim,
                      unsigned start,
                      unsigned nr,
                      unsigned unfilled_mode,
-                     unsigned *out_prim,
+                     enum pipe_prim_type *out_prim,
                      unsigned *out_index_size,
                      unsigned *out_nr,
                      u_generate_func *out_generate);

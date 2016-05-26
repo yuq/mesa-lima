@@ -95,7 +95,7 @@ static void generate_linear_uint( unsigned start,
  * separate lines (PIPE_PRIM_LINES).
  */
 static unsigned
-nr_lines(unsigned prim, unsigned nr)
+nr_lines(enum pipe_prim_type prim, unsigned nr)
 {
    switch (prim) {
    case PIPE_PRIM_TRIANGLES:
@@ -126,11 +126,11 @@ nr_lines(unsigned prim, unsigned nr)
 
 
 enum indices_mode
-u_unfilled_translator(unsigned prim,
+u_unfilled_translator(enum pipe_prim_type prim,
                       unsigned in_index_size,
                       unsigned nr,
                       unsigned unfilled_mode,
-                      unsigned *out_prim,
+                      enum pipe_prim_type *out_prim,
                       unsigned *out_index_size,
                       unsigned *out_nr,
                       u_translate_func *out_translate)
@@ -186,11 +186,11 @@ u_unfilled_translator(unsigned prim,
  * 'draw' module.
  */
 enum indices_mode
-u_unfilled_generator(unsigned prim,
+u_unfilled_generator(enum pipe_prim_type prim,
                      unsigned start,
                      unsigned nr,
                      unsigned unfilled_mode,
-                     unsigned *out_prim,
+                     enum pipe_prim_type *out_prim,
                      unsigned *out_index_size,
                      unsigned *out_nr,
                      u_generate_func *out_generate)

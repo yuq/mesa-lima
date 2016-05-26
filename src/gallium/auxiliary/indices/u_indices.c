@@ -72,7 +72,7 @@ static void translate_memcpy_uint( const void *in,
  */
 enum indices_mode
 u_index_translator(unsigned hw_mask,
-                   unsigned prim,
+                   enum pipe_prim_type prim,
                    unsigned in_index_size,
                    unsigned nr,
                    unsigned in_pv,
@@ -235,12 +235,12 @@ u_index_translator(unsigned hw_mask,
  */
 enum indices_mode
 u_index_generator(unsigned hw_mask,
-                  unsigned prim,
+                  enum pipe_prim_type prim,
                   unsigned start,
                   unsigned nr,
                   unsigned in_pv,
                   unsigned out_pv,
-                  unsigned *out_prim,
+                  enum pipe_prim_type *out_prim,
                   unsigned *out_index_size,
                   unsigned *out_nr,
                   u_generate_func *out_generate)
