@@ -113,94 +113,81 @@ u_index_translator(unsigned hw_mask,
       return U_TRANSLATE_MEMCPY;
    }
    else {
+      *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
+
       switch (prim) {
       case PIPE_PRIM_POINTS:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_POINTS;
          *out_nr = nr;
          break;
 
       case PIPE_PRIM_LINES:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_LINES;
          *out_nr = nr;
          break;
 
       case PIPE_PRIM_LINE_STRIP:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_LINES;
          *out_nr = (nr - 1) * 2;
          break;
 
       case PIPE_PRIM_LINE_LOOP:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_LINES;
          *out_nr = nr * 2;
          break;
 
       case PIPE_PRIM_TRIANGLES:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = nr;
          break;
 
       case PIPE_PRIM_TRIANGLE_STRIP:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr - 2) * 3;
          break;
 
       case PIPE_PRIM_TRIANGLE_FAN:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr - 2) * 3;
          break;
 
       case PIPE_PRIM_QUADS:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr / 4) * 6;
          break;
 
       case PIPE_PRIM_QUAD_STRIP:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr - 2) * 3;
          break;
 
       case PIPE_PRIM_POLYGON:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr - 2) * 3;
          break;
 
       case PIPE_PRIM_LINES_ADJACENCY:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_LINES_ADJACENCY;
          *out_nr = nr;
          break;
 
       case PIPE_PRIM_LINE_STRIP_ADJACENCY:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_LINES_ADJACENCY;
          *out_nr = (nr - 3) * 4;
          break;
 
       case PIPE_PRIM_TRIANGLES_ADJACENCY:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_TRIANGLES_ADJACENCY;
          *out_nr = nr;
          break;
 
       case PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY:
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_TRIANGLES_ADJACENCY;
          *out_nr = ((nr - 4) / 2) * 6;
          break;
 
       default:
          assert(0);
-         *out_translate = translate[in_idx][out_idx][in_pv][out_pv][prim_restart][prim];
          *out_prim = PIPE_PRIM_POINTS;
          *out_nr = nr;
          return U_TRANSLATE_ERROR;
@@ -261,87 +248,75 @@ u_index_generator(unsigned hw_mask,
       return U_GENERATE_LINEAR;
    }
    else {
+      *out_generate = generate[out_idx][in_pv][out_pv][prim];
+
       switch (prim) {
       case PIPE_PRIM_POINTS:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_POINTS;
          *out_nr = nr;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_LINES:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_LINES;
          *out_nr = nr;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_LINE_STRIP:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_LINES;
          *out_nr = (nr - 1) * 2;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_LINE_LOOP:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_LINES;
          *out_nr = nr * 2;
          return U_GENERATE_ONE_OFF;
 
       case PIPE_PRIM_TRIANGLES:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = nr;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_TRIANGLE_STRIP:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr - 2) * 3;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_TRIANGLE_FAN:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr - 2) * 3;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_QUADS:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr / 4) * 6;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_QUAD_STRIP:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr - 2) * 3;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_POLYGON:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_TRIANGLES;
          *out_nr = (nr - 2) * 3;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_LINES_ADJACENCY:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_LINES_ADJACENCY;
          *out_nr = nr;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_LINE_STRIP_ADJACENCY:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_LINES_ADJACENCY;
          *out_nr = (nr - 3) * 4;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_TRIANGLES_ADJACENCY:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_TRIANGLES_ADJACENCY;
          *out_nr = nr;
          return U_GENERATE_REUSABLE;
 
       case PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY:
-         *out_generate = generate[out_idx][in_pv][out_pv][prim];
          *out_prim = PIPE_PRIM_TRIANGLES_ADJACENCY;
          *out_nr = ((nr - 4) / 2) * 6;
          return U_GENERATE_REUSABLE;
