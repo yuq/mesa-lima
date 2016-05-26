@@ -1573,18 +1573,13 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          data.f[c] = CLAMP(op[0]->value.f[c], 0.0f, 1.0f);
       }
       break;
-   case ir_unop_pack_double_2x32: {
+   case ir_unop_pack_double_2x32:
       /* XXX needs to be checked on big-endian */
-      uint64_t temp;
-      temp = (uint64_t)op[0]->value.u[0] | ((uint64_t)op[0]->value.u[1] << 32);
-      data.d[0] = *(double *)&temp;
-
+      memcpy(&data.d[0], &op[0]->value.u[0], sizeof(double));
       break;
-   }
    case ir_unop_unpack_double_2x32:
       /* XXX needs to be checked on big-endian */
-      data.u[0] = *(uint32_t *)&op[0]->value.d[0];
-      data.u[1] = *((uint32_t *)&op[0]->value.d[0] + 1);
+      memcpy(&data.u[0], &op[0]->value.d[0], sizeof(double));
       break;
 
    case ir_triop_bitfield_extract: {

@@ -65,8 +65,7 @@ copy_constant_to_storage(union gl_constant_value *storage,
 	 break;
       case GLSL_TYPE_DOUBLE:
          /* XXX need to check on big-endian */
-         storage[i * 2].u = *(uint32_t *)&val->value.d[i];
-         storage[i * 2 + 1].u = *(((uint32_t *)&val->value.d[i]) + 1);
+         memcpy(&storage[i * 2].u, &val->value.d[i], sizeof(double));
          break;
       case GLSL_TYPE_BOOL:
 	 storage[i].b = val->value.b[i] ? boolean_true : 0;
