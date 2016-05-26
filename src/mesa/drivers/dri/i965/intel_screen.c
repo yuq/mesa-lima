@@ -1467,6 +1467,46 @@ brw_get_revision(int fd)
 #define I915_PARAM_HAS_RESOURCE_STREAMER 36
 #endif
 
+static void
+shader_debug_log_mesa(void *data, const char *fmt, ...)
+{
+   struct brw_context *brw = (struct brw_context *)data;
+   va_list args;
+
+   va_start(args, fmt);
+   GLuint msg_id = 0;
+   _mesa_gl_vdebug(&brw->ctx, &msg_id,
+                   MESA_DEBUG_SOURCE_SHADER_COMPILER,
+                   MESA_DEBUG_TYPE_OTHER,
+                   MESA_DEBUG_SEVERITY_NOTIFICATION, fmt, args);
+   va_end(args);
+}
+
+static void
+shader_perf_log_mesa(void *data, const char *fmt, ...)
+{
+   struct brw_context *brw = (struct brw_context *)data;
+
+   va_list args;
+   va_start(args, fmt);
+
+   if (unlikely(INTEL_DEBUG & DEBUG_PERF)) {
+      va_list args_copy;
+      va_copy(args_copy, args);
+      vfprintf(stderr, fmt, args_copy);
+      va_end(args_copy);
+   }
+
+   if (brw->perf_debug) {
+      GLuint msg_id = 0;
+      _mesa_gl_vdebug(&brw->ctx, &msg_id,
+                      MESA_DEBUG_SOURCE_SHADER_COMPILER,
+                      MESA_DEBUG_TYPE_PERFORMANCE,
+                      MESA_DEBUG_SEVERITY_MEDIUM, fmt, args);
+   }
+   va_end(args);
+}
+
 /**
  * This is the driver specific part of the createNewScreen entry point.
  * Called when using DRI2.
@@ -1579,6 +1619,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
 
    intelScreen->compiler = brw_compiler_create(intelScreen,
                                                intelScreen->devinfo);
+   intelScreen->compiler->shader_debug_log = shader_debug_log_mesa;
+   intelScreen->compiler->shader_perf_log = shader_perf_log_mesa;
    intelScreen->program_id = 1;
 
    if (intelScreen->devinfo->has_resource_streamer) {

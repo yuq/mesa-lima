@@ -27,46 +27,6 @@
 #include "main/errors.h"
 #include "util/debug.h"
 
-static void
-shader_debug_log_mesa(void *data, const char *fmt, ...)
-{
-   struct brw_context *brw = (struct brw_context *)data;
-   va_list args;
-
-   va_start(args, fmt);
-   GLuint msg_id = 0;
-   _mesa_gl_vdebug(&brw->ctx, &msg_id,
-                   MESA_DEBUG_SOURCE_SHADER_COMPILER,
-                   MESA_DEBUG_TYPE_OTHER,
-                   MESA_DEBUG_SEVERITY_NOTIFICATION, fmt, args);
-   va_end(args);
-}
-
-static void
-shader_perf_log_mesa(void *data, const char *fmt, ...)
-{
-   struct brw_context *brw = (struct brw_context *)data;
-
-   va_list args;
-   va_start(args, fmt);
-
-   if (unlikely(INTEL_DEBUG & DEBUG_PERF)) {
-      va_list args_copy;
-      va_copy(args_copy, args);
-      vfprintf(stderr, fmt, args_copy);
-      va_end(args_copy);
-   }
-
-   if (brw->perf_debug) {
-      GLuint msg_id = 0;
-      _mesa_gl_vdebug(&brw->ctx, &msg_id,
-                      MESA_DEBUG_SOURCE_SHADER_COMPILER,
-                      MESA_DEBUG_TYPE_PERFORMANCE,
-                      MESA_DEBUG_SEVERITY_MEDIUM, fmt, args);
-   }
-   va_end(args);
-}
-
 #define COMMON_OPTIONS                                                        \
    .lower_sub = true,                                                         \
    .lower_fdiv = true,                                                        \
@@ -139,8 +99,6 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    struct brw_compiler *compiler = rzalloc(mem_ctx, struct brw_compiler);
 
    compiler->devinfo = devinfo;
-   compiler->shader_debug_log = shader_debug_log_mesa;
-   compiler->shader_perf_log = shader_perf_log_mesa;
 
    brw_fs_alloc_reg_sets(compiler);
    brw_vec4_alloc_reg_set(compiler);
