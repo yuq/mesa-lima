@@ -31,6 +31,7 @@
 #include "compiler/glsl/program.h"
 #include "program/program.h"
 #include "main/shaderapi.h"
+#include "main/shaderobj.h"
 #include "main/uniforms.h"
 
 /**
@@ -181,6 +182,22 @@ process_glsl_ir(gl_shader_stage stage,
       _mesa_print_ir(stderr, shader->ir, NULL);
       fprintf(stderr, "\n");
    }
+}
+
+extern "C" struct gl_shader *
+brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
+{
+   struct brw_shader *shader;
+
+   shader = rzalloc(NULL, struct brw_shader);
+   if (shader) {
+      shader->base.Type = type;
+      shader->base.Stage = _mesa_shader_enum_to_shader_stage(type);
+      shader->base.Name = name;
+      _mesa_init_shader(ctx, &shader->base);
+   }
+
+   return &shader->base;
 }
 
 extern "C" GLboolean

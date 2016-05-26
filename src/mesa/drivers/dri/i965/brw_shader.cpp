@@ -27,24 +27,7 @@
 #include "brw_fs.h"
 #include "brw_nir.h"
 #include "brw_vec4_tes.h"
-#include "main/shaderobj.h"
 #include "main/uniforms.h"
-
-extern "C" struct gl_shader *
-brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
-{
-   struct brw_shader *shader;
-
-   shader = rzalloc(NULL, struct brw_shader);
-   if (shader) {
-      shader->base.Type = type;
-      shader->base.Stage = _mesa_shader_enum_to_shader_stage(type);
-      shader->base.Name = name;
-      _mesa_init_shader(ctx, &shader->base);
-   }
-
-   return &shader->base;
-}
 
 extern "C" void
 brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
