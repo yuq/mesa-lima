@@ -676,10 +676,10 @@ static void
 micro_trunc(union tgsi_exec_channel *dst,
             const union tgsi_exec_channel *src)
 {
-   dst->f[0] = (float)(int)src->f[0];
-   dst->f[1] = (float)(int)src->f[1];
-   dst->f[2] = (float)(int)src->f[2];
-   dst->f[3] = (float)(int)src->f[3];
+   dst->f[0] = truncf(src->f[0]);
+   dst->f[1] = truncf(src->f[1]);
+   dst->f[2] = truncf(src->f[2]);
+   dst->f[3] = truncf(src->f[3]);
 }
 
 static void
