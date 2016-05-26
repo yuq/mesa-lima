@@ -368,9 +368,9 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 				box->width + (box->x % R600_MAP_BUFFER_ALIGNMENT));
 		if (staging) {
 			/* Copy the VRAM buffer to the staging buffer. */
-			rctx->dma_copy(ctx, &staging->b.b, 0,
-				       box->x % R600_MAP_BUFFER_ALIGNMENT,
-				       0, 0, resource, level, box);
+			ctx->resource_copy_region(ctx, &staging->b.b, 0,
+						  box->x % R600_MAP_BUFFER_ALIGNMENT,
+						  0, 0, resource, level, box);
 
 			data = r600_buffer_map_sync_with_rings(rctx, staging, PIPE_TRANSFER_READ);
 			if (!data) {
@@ -398,7 +398,6 @@ static void r600_buffer_do_flush_region(struct pipe_context *ctx,
 					struct pipe_transfer *transfer,
 				        const struct pipe_box *box)
 {
-	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
 	struct r600_resource *rbuffer = r600_resource(transfer->resource);
 
@@ -414,7 +413,7 @@ static void r600_buffer_do_flush_region(struct pipe_context *ctx,
 		u_box_1d(soffset, box->width, &dma_box);
 
 		/* Copy the staging buffer into the original one. */
-		rctx->dma_copy(ctx, dst, 0, box->x, 0, 0, src, 0, &dma_box);
+		ctx->resource_copy_region(ctx, dst, 0, box->x, 0, 0, src, 0, &dma_box);
 	}
 
 	util_range_add(&rbuffer->valid_buffer_range, box->x,
