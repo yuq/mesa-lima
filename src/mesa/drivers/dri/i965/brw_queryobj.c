@@ -56,7 +56,12 @@ brw_write_timestamp(struct brw_context *brw, drm_intel_bo *query_bo, int idx)
                                   PIPE_CONTROL_STALL_AT_SCOREBOARD);
    }
 
-   brw_emit_pipe_control_write(brw, PIPE_CONTROL_WRITE_TIMESTAMP,
+   uint32_t flags = PIPE_CONTROL_WRITE_TIMESTAMP;
+
+   if (brw->gen == 9 && brw->gt == 4)
+      flags |= PIPE_CONTROL_CS_STALL;
+
+   brw_emit_pipe_control_write(brw, flags,
                                query_bo, idx * sizeof(uint64_t), 0, 0);
 }
 
@@ -66,9 +71,12 @@ brw_write_timestamp(struct brw_context *brw, drm_intel_bo *query_bo, int idx)
 void
 brw_write_depth_count(struct brw_context *brw, drm_intel_bo *query_bo, int idx)
 {
-   brw_emit_pipe_control_write(brw,
-                               PIPE_CONTROL_WRITE_DEPTH_COUNT |
-                               PIPE_CONTROL_DEPTH_STALL,
+   uint32_t flags = PIPE_CONTROL_WRITE_DEPTH_COUNT | PIPE_CONTROL_DEPTH_STALL;
+
+   if (brw->gen == 9 && brw->gt == 4)
+      flags |= PIPE_CONTROL_CS_STALL;
+
+   brw_emit_pipe_control_write(brw, flags,
                                query_bo, idx * sizeof(uint64_t),
                                0, 0);
 }
