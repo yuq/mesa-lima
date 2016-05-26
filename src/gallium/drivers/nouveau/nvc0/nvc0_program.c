@@ -80,6 +80,7 @@ nvc0_shader_output_address(unsigned sn, unsigned si)
    case TGSI_SEMANTIC_CLIPDIST:      return 0x2c0 + si * 0x10;
    case TGSI_SEMANTIC_CLIPVERTEX:    return 0x270;
    case TGSI_SEMANTIC_TEXCOORD:      return 0x300 + si * 0x10;
+   /* case TGSI_SEMANTIC_VIEWPORT_MASK: return 0x3a0; */
    case TGSI_SEMANTIC_EDGEFLAG:      return ~0;
    default:
       assert(!"invalid TGSI output semantic");
