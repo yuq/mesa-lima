@@ -334,9 +334,8 @@ struct cfg_t {
 
 #define foreach_inst_in_block_safe(__type, __inst, __block)    \
    for (__type *__inst = (__type *)__block->instructions.head, \
-               *__next = (__type *)__inst->next,               \
-               *__end = (__type *)__block->instructions.tail;  \
-        __next != __end;                                       \
+               *__next = (__type *)__inst->next;               \
+        __next != NULL;                                        \
         __inst = __next,                                       \
         __next = (__type *)__next->next)
 
