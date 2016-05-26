@@ -25,11 +25,11 @@
          defines entry points for GL. -->
 
     <!-- GL definitions -->
-    <function name="GetGraphicsResetStatus" alias="GetGraphicsResetStatusARB">
+    <function name="GetGraphicsResetStatus" es2="3.2" alias="GetGraphicsResetStatusARB">
         <return type="GLenum"/>
     </function>
 
-    <function name="ReadnPixels" alias="ReadnPixelsARB">
+    <function name="ReadnPixels" es2="3.2" alias="ReadnPixelsARB">
         <param name="x" type="GLint"/>
         <param name="y" type="GLint"/>
         <param name="width" type="GLsizei"/>
@@ -40,21 +40,21 @@
         <param name="data" type="GLvoid *" output="true"/>
     </function>
 
-    <function name="GetnUniformfv" alias="GetnUniformfvARB">
+    <function name="GetnUniformfv" es2="3.2" alias="GetnUniformfvARB">
         <param name="program" type="GLuint"/>
         <param name="location" type="GLint"/>
         <param name="bufSize" type="GLsizei"/>
         <param name="params" type="GLfloat *" output="true"/>
     </function>
 
-    <function name="GetnUniformiv" alias="GetnUniformivARB">
+    <function name="GetnUniformiv" es2="3.2" alias="GetnUniformivARB">
         <param name="program" type="GLuint"/>
         <param name="location" type="GLint"/>
         <param name="bufSize" type="GLsizei"/>
         <param name="params" type="GLint *" output="true"/>
     </function>
 
-    <function name="GetnUniformuiv" alias="GetnUniformuivARB">
+    <function name="GetnUniformuiv" es2="3.2" alias="GetnUniformuivARB">
         <param name="program" type="GLuint"/>
         <param name="location" type="GLint"/>
         <param name="bufSize" type="GLsizei"/>
