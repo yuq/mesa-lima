@@ -33,17 +33,6 @@
 #include "program/prog_statevars.h"
 #include "compiler/glsl/ir_uniform.h"
 
-static unsigned
-get_cs_thread_count(const struct brw_cs_prog_data *cs_prog_data)
-{
-   const unsigned simd_size = cs_prog_data->simd_size;
-   unsigned group_size = cs_prog_data->local_size[0] *
-      cs_prog_data->local_size[1] * cs_prog_data->local_size[2];
-
-   return (group_size + simd_size - 1) / simd_size;
-}
-
-
 static void
 brw_upload_cs_state(struct brw_context *brw)
 {
@@ -79,7 +68,6 @@ brw_upload_cs_state(struct brw_context *brw)
       (prog_data->nr_params + local_id_dwords) * sizeof(gl_constant_value);
    unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
    unsigned push_constant_regs = reg_aligned_constant_size / 32;
-   unsigned threads = get_cs_thread_count(cs_prog_data);
 
    uint32_t dwords = brw->gen < 8 ? 8 : 9;
    BEGIN_BATCH(dwords);
@@ -129,7 +117,8 @@ brw_upload_cs_state(struct brw_context *brw)
     *
     * Note: The constant data is built in brw_upload_cs_push_constants below.
     */
-   const uint32_t vfe_curbe_allocation = push_constant_regs * threads;
+   const uint32_t vfe_curbe_allocation =
+      push_constant_regs * cs_prog_data->threads;
    OUT_BATCH(SET_FIELD(vfe_urb_allocation, MEDIA_VFE_STATE_URB_ALLOC) |
              SET_FIELD(vfe_curbe_allocation, MEDIA_VFE_STATE_CURBE_ALLOC));
    OUT_BATCH(0);
@@ -141,7 +130,7 @@ brw_upload_cs_state(struct brw_context *brw)
       BEGIN_BATCH(4);
       OUT_BATCH(MEDIA_CURBE_LOAD << 16 | (4 - 2));
       OUT_BATCH(0);
-      OUT_BATCH(ALIGN(reg_aligned_constant_size * threads, 64));
+      OUT_BATCH(ALIGN(reg_aligned_constant_size * cs_prog_data->threads, 64));
       OUT_BATCH(stage_state->push_const_offset);
       ADVANCE_BATCH();
    }
@@ -163,9 +152,9 @@ brw_upload_cs_state(struct brw_context *brw)
    desc[dw++] = SET_FIELD(push_constant_regs, MEDIA_CURBE_READ_LENGTH);
    const uint32_t media_threads =
       brw->gen >= 8 ?
-      SET_FIELD(threads, GEN8_MEDIA_GPGPU_THREAD_COUNT) :
-      SET_FIELD(threads, MEDIA_GPGPU_THREAD_COUNT);
-   assert(threads <= brw->max_cs_threads);
+      SET_FIELD(cs_prog_data->threads, GEN8_MEDIA_GPGPU_THREAD_COUNT) :
+      SET_FIELD(cs_prog_data->threads, MEDIA_GPGPU_THREAD_COUNT);
+   assert(cs_prog_data->threads <= brw->max_cs_threads);
 
    assert(prog_data->total_shared <= 64 * 1024);
    uint32_t slm_size = 0;
@@ -247,21 +236,20 @@ brw_upload_cs_push_constants(struct brw_context *brw,
       const unsigned param_aligned_count =
          reg_aligned_constant_size / sizeof(*param);
 
-      unsigned threads = get_cs_thread_count(cs_prog_data);
-
       param = (gl_constant_value*)
          brw_state_batch(brw, type,
-                         ALIGN(reg_aligned_constant_size * threads, 64),
+                         ALIGN(reg_aligned_constant_size *
+                                  cs_prog_data->threads, 64),
                          64, &stage_state->push_const_offset);
       assert(param);
 
       STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
 
-      brw_cs_fill_local_id_payload(cs_prog_data, param, threads,
+      brw_cs_fill_local_id_payload(cs_prog_data, param, cs_prog_data->threads,
                                    reg_aligned_constant_size);
 
       /* _NEW_PROGRAM_CONSTANTS */
-      for (t = 0; t < threads; t++) {
+      for (t = 0; t < cs_prog_data->threads; t++) {
          gl_constant_value *next_param =
             &param[t * param_aligned_count + local_id_dwords];
          for (i = 0; i < prog_data->nr_params; i++) {

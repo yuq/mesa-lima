@@ -1076,9 +1076,8 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
    if (reg_aligned_constant_size == 0)
       return (struct anv_state) { .offset = 0 };
 
-   const unsigned threads = pipeline->cs_thread_width_max;
    const unsigned total_push_constants_size =
-      reg_aligned_constant_size * threads;
+      reg_aligned_constant_size * cs_prog_data->threads;
    const unsigned push_constant_alignment =
       cmd_buffer->device->info.gen < 8 ? 32 : 64;
    const unsigned aligned_total_push_constants_size =
@@ -1091,7 +1090,7 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
    /* Walk through the param array and fill the buffer with data */
    uint32_t *u32_map = state.map;
 
-   brw_cs_fill_local_id_payload(cs_prog_data, u32_map, threads,
+   brw_cs_fill_local_id_payload(cs_prog_data, u32_map, cs_prog_data->threads,
                                 reg_aligned_constant_size);
 
    /* Setup uniform data for the first thread */
@@ -1102,7 +1101,7 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
 
    /* Copy uniform data from the first thread to every other thread */
    const size_t uniform_data_size = prog_data->nr_params * sizeof(uint32_t);
-   for (unsigned t = 1; t < threads; t++) {
+   for (unsigned t = 1; t < cs_prog_data->threads; t++) {
       memcpy(&u32_map[t * param_aligned_count + local_id_dwords],
              &u32_map[local_id_dwords],
              uniform_data_size);

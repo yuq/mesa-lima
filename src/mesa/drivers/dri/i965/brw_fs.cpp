@@ -6569,6 +6569,15 @@ fs_visitor::emit_cs_work_group_id_setup()
    return reg;
 }
 
+static void
+cs_set_simd_size(struct brw_cs_prog_data *cs_prog_data, unsigned size)
+{
+   cs_prog_data->simd_size = size;
+   unsigned group_size = cs_prog_data->local_size[0] *
+      cs_prog_data->local_size[1] * cs_prog_data->local_size[2];
+   cs_prog_data->threads = (group_size + size - 1) / size;
+}
+
 const unsigned *
 brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
@@ -6625,7 +6634,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
          fail_msg = v8.fail_msg;
       } else {
          cfg = v8.cfg;
-         prog_data->simd_size = 8;
+         cs_set_simd_size(prog_data, 8);
          prog_data->base.dispatch_grf_start_reg = v8.payload.num_regs;
       }
    }
@@ -6650,7 +6659,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
          }
       } else {
          cfg = v16.cfg;
-         prog_data->simd_size = 16;
+         cs_set_simd_size(prog_data, 16);
          prog_data->dispatch_grf_start_reg_16 = v16.payload.num_regs;
       }
    }
@@ -6677,7 +6686,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
          }
       } else {
          cfg = v32.cfg;
-         prog_data->simd_size = 32;
+         cs_set_simd_size(prog_data, 32);
       }
    }
 

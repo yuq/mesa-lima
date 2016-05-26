@@ -97,8 +97,6 @@ genX(compute_pipeline_create)(
 
    uint32_t group_size = cs_prog_data->local_size[0] *
       cs_prog_data->local_size[1] * cs_prog_data->local_size[2];
-   pipeline->cs_thread_width_max =
-      DIV_ROUND_UP(group_size, cs_prog_data->simd_size);
    uint32_t remainder = group_size & (cs_prog_data->simd_size - 1);
 
    if (remainder > 0)
@@ -107,7 +105,7 @@ genX(compute_pipeline_create)(
       pipeline->cs_right_mask = ~0u >> (32 - cs_prog_data->simd_size);
 
    const uint32_t vfe_curbe_allocation =
-      push_constant_regs * pipeline->cs_thread_width_max;
+      push_constant_regs * cs_prog_data->threads;
 
    anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE), vfe) {
       vfe.ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_COMPUTE];

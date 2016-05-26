@@ -1474,7 +1474,6 @@ struct anv_pipeline {
    bool                                         primitive_restart;
    uint32_t                                     topology;
 
-   uint32_t                                     cs_thread_width_max;
    uint32_t                                     cs_right_mask;
 
    struct {

@@ -271,7 +271,7 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
                           .BarrierEnable = cs_prog_data->uses_barrier,
                           .SharedLocalMemorySize = slm_size,
                           .NumberofThreadsinGPGPUThreadGroup =
-                             pipeline->cs_thread_width_max);
+                             cs_prog_data->threads);
 
    const uint32_t size = GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
    anv_batch_emit(&cmd_buffer->batch,
