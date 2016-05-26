@@ -66,11 +66,11 @@ EXTRA_DIST = \
 
 TEST_LIBS = \
 	libi965_compiler.la \
-        ../../../libmesa.la \
+	$(top_builddir)/src/compiler/nir/libnir.la \
+	$(top_builddir)/src/util/libmesautil.la \
 	$(top_builddir)/src/intel/isl/libisl.la \
 	$(PTHREAD_LIBS) \
-	$(DLOPEN_LIBS) \
-	../common/libdri_test_stubs.la
+	$(DLOPEN_LIBS)
 
 TESTS = \
 	test_fs_cmod_propagation \
