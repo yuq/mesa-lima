@@ -588,6 +588,14 @@ void nvc0_validate_textures(struct nvc0_context *nvc0)
       BEGIN_NVC0(nvc0->base.pushbuf, NVC0_3D(TIC_FLUSH), 1);
       PUSH_DATA (nvc0->base.pushbuf, 0);
    }
+
+   if (nvc0->screen->base.class_3d < NVE4_3D_CLASS) {
+      /* Invalidate all CP textures because they are aliased. */
+      for (int i = 0; i < nvc0->num_textures[5]; i++)
+         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_CP_TEX(i));
+      nvc0->textures_dirty[5] = ~0;
+      nvc0->dirty_cp |= NVC0_NEW_CP_TEXTURES;
+   }
 }
 
 bool
@@ -699,6 +707,12 @@ void nvc0_validate_samplers(struct nvc0_context *nvc0)
    if (need_flush) {
       BEGIN_NVC0(nvc0->base.pushbuf, NVC0_3D(TSC_FLUSH), 1);
       PUSH_DATA (nvc0->base.pushbuf, 0);
+   }
+
+   if (nvc0->screen->base.class_3d < NVE4_3D_CLASS) {
+      /* Invalidate all CP samplers because they are aliased. */
+      nvc0->samplers_dirty[5] = ~0;
+      nvc0->dirty_cp |= NVC0_NEW_CP_SAMPLERS;
    }
 }
 

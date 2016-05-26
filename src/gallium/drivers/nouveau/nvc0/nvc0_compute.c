@@ -124,6 +124,11 @@ nvc0_compute_validate_samplers(struct nvc0_context *nvc0)
       BEGIN_NVC0(nvc0->base.pushbuf, NVC0_CP(TSC_FLUSH), 1);
       PUSH_DATA (nvc0->base.pushbuf, 0);
    }
+
+   /* Invalidate all 3D samplers because they are aliased. */
+   for (int s = 0; s < 5; s++)
+      nvc0->samplers_dirty[s] = ~0;
+   nvc0->dirty_3d |= NVC0_NEW_3D_SAMPLERS;
 }
 
 static void
@@ -134,6 +139,14 @@ nvc0_compute_validate_textures(struct nvc0_context *nvc0)
       BEGIN_NVC0(nvc0->base.pushbuf, NVC0_CP(TIC_FLUSH), 1);
       PUSH_DATA (nvc0->base.pushbuf, 0);
    }
+
+   /* Invalidate all 3D textures because they are aliased. */
+   for (int s = 0; s < 5; s++) {
+      for (int i = 0; i < nvc0->num_textures[s]; i++)
+         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(s, i));
+      nvc0->textures_dirty[s] = ~0;
+   }
+   nvc0->dirty_3d |= NVC0_NEW_3D_TEXTURES;
 }
 
 static void
