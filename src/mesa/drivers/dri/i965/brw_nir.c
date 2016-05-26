@@ -24,10 +24,7 @@
 #include "brw_nir.h"
 #include "brw_shader.h"
 #include "compiler/glsl_types.h"
-#include "compiler/glsl/glsl_to_nir.h"
 #include "compiler/nir/nir_builder.h"
-#include "program/prog_to_nir.h"
-#include "program/prog_parameter.h"
 
 static bool
 is_input(nir_intrinsic_instr *intrin)
@@ -337,20 +334,6 @@ brw_nir_lower_fs_outputs(nir_shader *nir)
    nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
 }
 
-static void
-brw_nir_lower_uniforms(nir_shader *nir, bool is_scalar)
-{
-   if (is_scalar) {
-      nir_assign_var_locations(&nir->uniforms, &nir->num_uniforms,
-                               type_size_scalar_bytes);
-      nir_lower_io(nir, nir_var_uniform, type_size_scalar_bytes);
-   } else {
-      nir_assign_var_locations(&nir->uniforms, &nir->num_uniforms,
-                               type_size_vec4_bytes);
-      nir_lower_io(nir, nir_var_uniform, type_size_vec4_bytes);
-   }
-}
-
 void
 brw_nir_lower_cs_shared(nir_shader *nir)
 {
@@ -528,59 +511,6 @@ brw_postprocess_nir(nir_shader *nir,
       fprintf(stderr, "NIR (final form) for %s shader:\n",
               _mesa_shader_stage_to_string(nir->stage));
       nir_print_shader(nir, stderr);
-   }
-
-   return nir;
-}
-
-nir_shader *
-brw_create_nir(struct brw_context *brw,
-               const struct gl_shader_program *shader_prog,
-               const struct gl_program *prog,
-               gl_shader_stage stage,
-               bool is_scalar)
-{
-   struct gl_context *ctx = &brw->ctx;
-   const nir_shader_compiler_options *options =
-      ctx->Const.ShaderCompilerOptions[stage].NirOptions;
-   bool progress;
-   nir_shader *nir;
-
-   /* First, lower the GLSL IR or Mesa IR to NIR */
-   if (shader_prog) {
-      nir = glsl_to_nir(shader_prog, stage, options);
-      nir_remove_dead_variables(nir, nir_var_shader_in | nir_var_shader_out);
-      OPT_V(nir_lower_io_to_temporaries,
-            nir_shader_get_entrypoint(nir),
-            true, false);
-   } else {
-      nir = prog_to_nir(prog, options);
-      OPT_V(nir_convert_to_ssa); /* turn registers into SSA */
-   }
-   nir_validate_shader(nir);
-
-   (void)progress;
-
-   nir = brw_preprocess_nir(brw->intelScreen->compiler, nir);
-
-   if (stage == MESA_SHADER_FRAGMENT) {
-      static const struct nir_lower_wpos_ytransform_options wpos_options = {
-         .state_tokens = {STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM, 0, 0, 0},
-         .fs_coord_pixel_center_integer = 1,
-         .fs_coord_origin_upper_left = 1,
-      };
-      _mesa_add_state_reference(prog->Parameters,
-                                (gl_state_index *) wpos_options.state_tokens);
-
-      OPT(nir_lower_wpos_ytransform, &wpos_options);
-   }
-
-   OPT(nir_lower_system_values);
-   OPT_V(brw_nir_lower_uniforms, is_scalar);
-
-   if (shader_prog) {
-      OPT_V(nir_lower_samplers, shader_prog);
-      OPT_V(nir_lower_atomics, shader_prog);
    }
 
    return nir;

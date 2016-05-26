@@ -88,12 +88,6 @@ enum {
 
 void brw_nir_analyze_boolean_resolves(nir_shader *nir);
 
-nir_shader *brw_create_nir(struct brw_context *brw,
-                           const struct gl_shader_program *shader_prog,
-                           const struct gl_program *prog,
-                           gl_shader_stage stage,
-                           bool is_scalar);
-
 nir_shader *brw_preprocess_nir(const struct brw_compiler *compiler,
                                nir_shader *nir);
 
