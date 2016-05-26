@@ -2180,11 +2180,11 @@ NVC0LoweringPass::handleLDST(Instruction *i)
          // memory.
          int8_t fileIndex = i->getSrc(0)->reg.fileIndex - 1;
          Value *ind = i->getIndirect(0, 1);
-         Value *ptr = loadUboInfo64(ind, fileIndex * 16);
 
          // TODO: clamp the offset to the maximum number of const buf.
          if (i->src(0).isIndirect(1)) {
             Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType));
+            Value *ptr = loadUboInfo64(ind, fileIndex * 16);
             Value *length = loadUboLength32(ind, fileIndex * 16);
             Value *pred = new_LValue(func, FILE_PREDICATE);
             if (i->src(0).isIndirect(0)) {
@@ -2200,6 +2200,7 @@ NVC0LoweringPass::handleLDST(Instruction *i)
                bld.mkMov(i->getDef(0), bld.mkImm(0));
             }
          } else if (fileIndex >= 0) {
+            Value *ptr = loadUboInfo64(ind, fileIndex * 16);
             if (i->src(0).isIndirect(0)) {
                bld.mkOp2(OP_ADD, TYPE_U64, ptr, ptr, i->getIndirect(0, 0));
             }
