@@ -832,21 +832,48 @@ dri2_create_image_from_name(__DRIscreen *_screen,
 
 static __DRIimage *
 dri2_create_image_from_fd(__DRIscreen *_screen,
-                          int width, int height, int format,
-                          int fd, int stride, void *loaderPrivate)
+                          int width, int height, int fourcc,
+                          int *fds, int num_fds, int *strides,
+                          int *offsets, unsigned *error,
+                          int *dri_components, void *loaderPrivate)
 {
    struct winsys_handle whandle;
+   int format;
+   __DRIimage *img = NULL;
+   unsigned err = __DRI_IMAGE_ERROR_SUCCESS;
 
-   if (fd < 0)
-      return NULL;
+   if (num_fds != 1 || offsets[0] != 0) {
+      err = __DRI_IMAGE_ERROR_BAD_MATCH;
+      goto exit;
+   }
+
+   format = convert_fourcc(fourcc, dri_components);
+   if (format == -1) {
+      err = __DRI_IMAGE_ERROR_BAD_MATCH;
+      goto exit;
+   }
+
+   if (fds[0] < 0) {
+      err = __DRI_IMAGE_ERROR_BAD_ALLOC;
+      goto exit;
+   }
 
    memset(&whandle, 0, sizeof(whandle));
    whandle.type = DRM_API_HANDLE_TYPE_FD;
-   whandle.handle = (unsigned)fd;
-   whandle.stride = stride;
+   whandle.handle = (unsigned)fds[0];
+   whandle.stride = (unsigned)strides[0];
+   whandle.offset = (unsigned)offsets[0];
 
-   return dri2_create_image_from_winsys(_screen, width, height, format,
-                                        &whandle, loaderPrivate);
+   img = dri2_create_image_from_winsys(_screen, width, height, format,
+                                       &whandle, loaderPrivate);
+   if(img == NULL)
+      err = __DRI_IMAGE_ERROR_BAD_ALLOC;
+
+exit:
+   if (error)
+      *error = err;
+
+   return img;
 }
 
 static __DRIimage *
@@ -1142,19 +1169,11 @@ dri2_from_fds(__DRIscreen *screen, int width, int height, int fourcc,
               void *loaderPrivate)
 {
    __DRIimage *img;
-   int format, dri_components;
+   int dri_components;
 
-   if (num_fds != 1)
-      return NULL;
-   if (offsets[0] != 0)
-      return NULL;
-
-   format = convert_fourcc(fourcc, &dri_components);
-   if (format == -1)
-      return NULL;
-
-   img = dri2_create_image_from_fd(screen, width, height, format,
-                                   fds[0], strides[0], loaderPrivate);
+   img = dri2_create_image_from_fd(screen, width, height, fourcc,
+                                   fds, num_fds, strides, offsets, NULL,
+                                   &dri_components, loaderPrivate);
    if (img == NULL)
       return NULL;
 
@@ -1175,25 +1194,13 @@ dri2_from_dma_bufs(__DRIscreen *screen,
                    void *loaderPrivate)
 {
    __DRIimage *img;
-   int format, dri_components;
+   int dri_components;
 
-   if (num_fds != 1 || offsets[0] != 0) {
-      *error = __DRI_IMAGE_ERROR_BAD_MATCH;
+   img = dri2_create_image_from_fd(screen, width, height, fourcc,
+                                   fds, num_fds, strides, offsets, error,
+                                   &dri_components, loaderPrivate);
+   if (img == NULL)
       return NULL;
-   }
-
-   format = convert_fourcc(fourcc, &dri_components);
-   if (format == -1) {
-      *error = __DRI_IMAGE_ERROR_BAD_MATCH;
-      return NULL;
-   }
-
-   img = dri2_create_image_from_fd(screen, width, height, format,
-                                   fds[0], strides[0], loaderPrivate);
-   if (img == NULL) {
-      *error = __DRI_IMAGE_ERROR_BAD_ALLOC;
-      return NULL;
-   }
 
    img->yuv_color_space = yuv_color_space;
    img->sample_range = sample_range;
