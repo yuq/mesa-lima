@@ -1081,6 +1081,9 @@ parse_instruction(
       inst.Memory.Qualifier = 0;
    }
 
+   assume(info->num_dst <= TGSI_FULL_MAX_DST_REGISTERS);
+   assume(info->num_src <= TGSI_FULL_MAX_SRC_REGISTERS);
+
    /* Parse instruction operands.
     */
    for (i = 0; i < info->num_dst + info->num_src + info->is_tex; i++) {
