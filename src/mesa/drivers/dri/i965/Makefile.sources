@@ -47,7 +47,6 @@ i965_compiler_FILES = \
 	brw_nir_analyze_boolean_resolves.c \
 	brw_nir_attribute_workarounds.c \
 	brw_nir_opt_peephole_ffma.c \
-	brw_nir_uniforms.cpp \
 	brw_packed_float.c \
 	brw_predicated_break.cpp \
 	brw_reg.h \
@@ -138,6 +137,7 @@ i965_FILES = \
 	brw_meta_util.h \
 	brw_misc_state.c \
 	brw_multisample_state.h \
+	brw_nir_uniforms.cpp \
 	brw_object_purgeable.c \
 	brw_performance_monitor.c \
 	brw_pipe_control.c \
