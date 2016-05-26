@@ -80,6 +80,8 @@ shading_language_version(struct gl_context *ctx)
          return (const GLubyte *) "OpenGL ES GLSL ES 3.00";
       case 31:
          return (const GLubyte *) "OpenGL ES GLSL ES 3.10";
+      case 32:
+         return (const GLubyte *) "OpenGL ES GLSL ES 3.20";
       default:
          _mesa_problem(ctx,
                        "Invalid OpenGL ES version in shading_language_version()");
