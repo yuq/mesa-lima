@@ -353,13 +353,11 @@ void
 pp_jimenezmlaa_free(struct pp_queue_t *ppq, unsigned int n)
 {
    if (ppq->areamaptex) {
-      ppq->p->screen->resource_destroy(ppq->p->screen, ppq->areamaptex);
-      ppq->areamaptex = NULL;
+      pipe_resource_reference(&ppq->areamaptex, NULL);
    }
 
    if (ppq->constbuf) {
-      ppq->p->screen->resource_destroy(ppq->p->screen, ppq->constbuf);
-      ppq->constbuf = NULL;
+      pipe_resource_reference(&ppq->constbuf, NULL);
    }
 }
 
