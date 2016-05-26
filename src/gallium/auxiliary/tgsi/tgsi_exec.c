@@ -3851,7 +3851,7 @@ static void
 exec_load_mem(struct tgsi_exec_machine *mach,
               const struct tgsi_full_instruction *inst)
 {
-   union tgsi_exec_channel r[3];
+   union tgsi_exec_channel r[4];
    uint chan;
    char *ptr = mach->LocalMem;
    uint32_t offset;
