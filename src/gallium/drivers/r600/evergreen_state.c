@@ -1287,20 +1287,17 @@ static void evergreen_set_framebuffer_state(struct pipe_context *ctx,
 	struct r600_texture *rtex;
 	uint32_t i, log_samples;
 
-	if (rctx->framebuffer.state.nr_cbufs) {
-		rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE | R600_CONTEXT_FLUSH_AND_INV;
-		rctx->b.flags |= R600_CONTEXT_FLUSH_AND_INV_CB |
-				 R600_CONTEXT_FLUSH_AND_INV_CB_META;
-	}
-	if (rctx->framebuffer.state.zsbuf) {
-		rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE | R600_CONTEXT_FLUSH_AND_INV;
-		rctx->b.flags |= R600_CONTEXT_FLUSH_AND_INV_DB;
-
-		rtex = (struct r600_texture*)rctx->framebuffer.state.zsbuf->texture;
-		if (rtex->htile_buffer) {
-			rctx->b.flags |= R600_CONTEXT_FLUSH_AND_INV_DB_META;
-		}
-	}
+	/* Flush TC when changing the framebuffer state, because the only
+	 * client not using TC that can change textures is the framebuffer.
+	 * Other places don't typically have to flush TC.
+	 */
+	rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE |
+			 R600_CONTEXT_FLUSH_AND_INV |
+			 R600_CONTEXT_FLUSH_AND_INV_CB |
+			 R600_CONTEXT_FLUSH_AND_INV_CB_META |
+			 R600_CONTEXT_FLUSH_AND_INV_DB |
+			 R600_CONTEXT_FLUSH_AND_INV_DB_META |
+			 R600_CONTEXT_INV_TEX_CACHE;
 
 	util_copy_framebuffer_state(&rctx->framebuffer.state, state);
 

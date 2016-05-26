@@ -533,7 +533,6 @@ static void r600_set_index_buffer(struct pipe_context *ctx,
 void r600_vertex_buffers_dirty(struct r600_context *rctx)
 {
 	if (rctx->vertex_buffer_state.dirty_mask) {
-		rctx->b.flags |= R600_CONTEXT_INV_VERTEX_CACHE;
 		rctx->vertex_buffer_state.atom.num_dw = (rctx->b.chip_class >= EVERGREEN ? 12 : 11) *
 					       util_bitcount(rctx->vertex_buffer_state.dirty_mask);
 		r600_mark_atom_dirty(rctx, &rctx->vertex_buffer_state.atom);
@@ -590,7 +589,6 @@ void r600_sampler_views_dirty(struct r600_context *rctx,
 			      struct r600_samplerview_state *state)
 {
 	if (state->dirty_mask) {
-		rctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE;
 		state->atom.num_dw = (rctx->b.chip_class >= EVERGREEN ? 14 : 13) *
 				     util_bitcount(state->dirty_mask);
 		r600_mark_atom_dirty(rctx, &state->atom);
@@ -1048,7 +1046,6 @@ static void r600_delete_tes_state(struct pipe_context *ctx, void *state)
 void r600_constant_buffers_dirty(struct r600_context *rctx, struct r600_constbuf_state *state)
 {
 	if (state->dirty_mask) {
-		rctx->b.flags |= R600_CONTEXT_INV_CONST_CACHE;
 		state->atom.num_dw = rctx->b.chip_class >= EVERGREEN ? util_bitcount(state->dirty_mask)*20
 								   : util_bitcount(state->dirty_mask)*19;
 		r600_mark_atom_dirty(rctx, &state->atom);

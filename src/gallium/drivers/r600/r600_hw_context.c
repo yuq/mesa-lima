@@ -95,6 +95,10 @@ void r600_flush_emit(struct r600_context *rctx)
 		return;
 	}
 
+	/* Ensure coherency between streamout and shaders. */
+	if (rctx->b.flags & R600_CONTEXT_STREAMOUT_FLUSH)
+		rctx->b.flags |= r600_get_flush_flags(R600_COHERENCY_SHADER);
+
 	if (rctx->b.flags & R600_CONTEXT_WAIT_3D_IDLE) {
 		wait_until |= S_008040_WAIT_3D_IDLE(1);
 	}
