@@ -1189,7 +1189,18 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
           * handed us defined values in only the constant offset
           * field of the setup reg.
           */
-         for (unsigned int i = 0; i < type->vector_elements; i++) {
+         unsigned vector_elements = type->vector_elements;
+
+         /* Data starts at suboffet 3 in 32-bit units (12 bytes), so it is not
+          * 64-bit aligned and the current implementation fails to read the
+          * data properly. Instead, when there is is a double input varying,
+          * read it as vector of floats with twice the number of components.
+          */
+         if (attr->type == BRW_REGISTER_TYPE_DF) {
+            vector_elements *= 2;
+            attr->type = BRW_REGISTER_TYPE_F;
+         }
+         for (unsigned int i = 0; i < vector_elements; i++) {
             struct brw_reg interp = interp_reg(*location, i);
             interp = suboffset(interp, 3);
             interp.type = attr->type;
