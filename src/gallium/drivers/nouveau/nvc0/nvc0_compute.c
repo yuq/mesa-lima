@@ -149,6 +149,19 @@ nvc0_compute_validate_textures(struct nvc0_context *nvc0)
    nvc0->dirty_3d |= NVC0_NEW_3D_TEXTURES;
 }
 
+static inline void
+nvc0_compute_invalidate_constbufs(struct nvc0_context *nvc0)
+{
+   int s;
+
+   /* Invalidate all 3D constbufs because they are aliased with COMPUTE. */
+   for (s = 0; s < 5; s++) {
+      nvc0->constbuf_dirty[s] |= nvc0->constbuf_valid[s];
+      nvc0->state.uniform_buffer_bound[s] = 0;
+   }
+   nvc0->dirty_3d |= NVC0_NEW_3D_CONSTBUF;
+}
+
 static void
 nvc0_compute_validate_constbufs(struct nvc0_context *nvc0)
 {
@@ -202,6 +215,8 @@ nvc0_compute_validate_constbufs(struct nvc0_context *nvc0)
             nvc0->state.uniform_buffer_bound[s] = 0;
       }
    }
+
+   nvc0_compute_invalidate_constbufs(nvc0);
 
    BEGIN_NVC0(push, NVC0_CP(FLUSH), 1);
    PUSH_DATA (push, NVC0_COMPUTE_FLUSH_CB);
@@ -358,6 +373,8 @@ nvc0_compute_upload_input(struct nvc0_context *nvc0, const void *input)
       PUSH_DATA (push, 0);
       PUSH_DATAp(push, input, cp->parm_size / 4);
 
+      nvc0_compute_invalidate_constbufs(nvc0);
+
       BEGIN_NVC0(push, NVC0_CP(FLUSH), 1);
       PUSH_DATA (push, NVC0_COMPUTE_FLUSH_CB);
    }
@@ -369,7 +386,6 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct nvc0_program *cp = nvc0->compprog;
-   unsigned s;
    int ret;
 
    ret = !nvc0_state_validate_cp(nvc0, ~0);
@@ -439,11 +455,4 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
 
    /* TODO: Not sure if this is really necessary. */
    nvc0_compute_invalidate_surfaces(nvc0, 5);
-
-   /* Invalidate all 3D constbufs because they are aliased with COMPUTE. */
-   nvc0->dirty_3d |= NVC0_NEW_3D_CONSTBUF;
-   for (s = 0; s < 5; s++) {
-      nvc0->constbuf_dirty[s] |= nvc0->constbuf_valid[s];
-      nvc0->state.uniform_buffer_bound[s] = 0;
-   }
 }
