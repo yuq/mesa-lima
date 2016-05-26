@@ -57,6 +57,7 @@
 /* the number of CS dwords for flushing and drawing */
 #define R600_MAX_FLUSH_CS_DWORDS	18
 #define R600_MAX_DRAW_CS_DWORDS		58
+#define R600_MAX_PFP_SYNC_ME_DWORDS	16
 
 #define R600_MAX_USER_CONST_BUFFERS 13
 #define R600_MAX_DRIVER_CONST_BUFFERS 3
@@ -663,13 +664,15 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 void r600_begin_new_cs(struct r600_context *ctx);
 void r600_flush_emit(struct r600_context *ctx);
 void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw, boolean count_draw_in);
+void r600_emit_pfp_sync_me(struct r600_context *rctx);
 void r600_cp_dma_copy_buffer(struct r600_context *rctx,
 			     struct pipe_resource *dst, uint64_t dst_offset,
 			     struct pipe_resource *src, uint64_t src_offset,
 			     unsigned size);
 void evergreen_cp_dma_clear_buffer(struct r600_context *rctx,
 				   struct pipe_resource *dst, uint64_t offset,
-				   unsigned size, uint32_t clear_value);
+				   unsigned size, uint32_t clear_value,
+				   enum r600_coherency coher);
 void r600_dma_copy_buffer(struct r600_context *rctx,
 			  struct pipe_resource *dst,
 			  struct pipe_resource *src,

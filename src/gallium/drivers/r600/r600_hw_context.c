@@ -364,6 +364,66 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	ctx->b.initial_gfx_cs_size = ctx->b.gfx.cs->current.cdw;
 }
 
+void r600_emit_pfp_sync_me(struct r600_context *rctx)
+{
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+
+	if (rctx->b.chip_class >= EVERGREEN &&
+	    rctx->b.screen->info.drm_minor >= 46) {
+		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
+		radeon_emit(cs, 0);
+	} else {
+		/* Emulate PFP_SYNC_ME by writing a value to memory in ME and
+		 * waiting for it in PFP.
+		 */
+		struct r600_resource *buf = NULL;
+		unsigned offset, reloc;
+		uint64_t va;
+
+		/* 16-byte address alignment is required by WAIT_REG_MEM. */
+		u_suballocator_alloc(rctx->b.allocator_zeroed_memory, 4, 16,
+				     &offset, (struct pipe_resource**)&buf);
+		if (!buf) {
+			/* This is too heavyweight, but will work. */
+			rctx->b.gfx.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
+			return;
+		}
+
+		reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, buf,
+						  RADEON_USAGE_READWRITE,
+						  RADEON_PRIO_FENCE);
+
+		va = buf->gpu_address + offset;
+		assert(va % 16 == 0);
+
+		/* Write 1 to memory in ME. */
+		radeon_emit(cs, PKT3(PKT3_MEM_WRITE, 3, 0));
+		radeon_emit(cs, va);
+		radeon_emit(cs, ((va >> 32) & 0xff) | MEM_WRITE_32_BITS);
+		radeon_emit(cs, 1);
+		radeon_emit(cs, 0);
+
+		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+		radeon_emit(cs, reloc);
+
+		/* Wait in PFP (PFP can only do GEQUAL against memory). */
+		radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
+		radeon_emit(cs, WAIT_REG_MEM_GEQUAL |
+			        WAIT_REG_MEM_MEMORY |
+			        WAIT_REG_MEM_PFP);
+		radeon_emit(cs, va);
+		radeon_emit(cs, va >> 32);
+		radeon_emit(cs, 1); /* reference value */
+		radeon_emit(cs, 0xffffffff); /* mask */
+		radeon_emit(cs, 4); /* poll interval */
+
+		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+		radeon_emit(cs, reloc);
+
+		r600_resource_reference(&buf, NULL);
+	}
+}
+
 /* The max number of bytes to copy per packet. */
 #define CP_DMA_MAX_BYTE_COUNT ((1 << 21) - 8)
 
@@ -407,7 +467,7 @@ void r600_cp_dma_copy_buffer(struct r600_context *rctx,
 
 		r600_need_cs_space(rctx,
 				   10 + (rctx->b.flags ? R600_MAX_FLUSH_CS_DWORDS : 0) +
-				   3, FALSE);
+				   3 + R600_MAX_PFP_SYNC_ME_DWORDS, FALSE);
 
 		/* Flush the caches for the first copy only. */
 		if (rctx->b.flags) {
@@ -446,6 +506,13 @@ void r600_cp_dma_copy_buffer(struct r600_context *rctx,
 	if (rctx->b.chip_class == R600)
 		radeon_set_config_reg(cs, R_008040_WAIT_UNTIL,
 				      S_008040_WAIT_CP_DMA_IDLE(1));
+
+	/* CP DMA is executed in ME, but index buffers are read by PFP.
+	 * This ensures that ME (CP DMA) is idle before PFP starts fetching
+	 * indices. If we wanted to execute CP DMA in PFP, this packet
+	 * should precede it.
+	 */
+	r600_emit_pfp_sync_me(rctx);
 
 	/* Invalidate the read caches. */
 	rctx->b.flags |= R600_CONTEXT_INV_CONST_CACHE |

@@ -589,7 +589,7 @@ static void r600_clear_buffer(struct pipe_context *ctx, struct pipe_resource *ds
 	if (rctx->screen->b.has_cp_dma &&
 	    rctx->b.chip_class >= EVERGREEN &&
 	    offset % 4 == 0 && size % 4 == 0) {
-		evergreen_cp_dma_clear_buffer(rctx, dst, offset, size, value);
+		evergreen_cp_dma_clear_buffer(rctx, dst, offset, size, value, coher);
 	} else if (rctx->screen->b.has_streamout && offset % 4 == 0 && size % 4 == 0) {
 		union pipe_color_union clear_value;
 		clear_value.ui[0] = value;

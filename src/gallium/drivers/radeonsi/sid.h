@@ -143,7 +143,7 @@
 #define		COPY_DATA_DST_SEL(x)		(((unsigned)(x) & 0xf) << 8)
 #define		COPY_DATA_COUNT_SEL		(1 << 16)
 #define		COPY_DATA_WR_CONFIRM		(1 << 20)
-#define PKT3_PFP_SYNC_ME		       0x42 /* r7xx+ */
+#define PKT3_PFP_SYNC_ME		       0x42
 #define PKT3_SURFACE_SYNC                      0x43 /* deprecated on CIK, use ACQUIRE_MEM */
 #define PKT3_ME_INITIALIZE                     0x44 /* not on CIK */
 #define PKT3_COND_WRITE                        0x45
