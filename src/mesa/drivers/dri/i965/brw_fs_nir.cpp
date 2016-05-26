@@ -3670,9 +3670,21 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
    case nir_intrinsic_load_input: {
       fs_reg src;
+      unsigned num_components = instr->num_components;
+      enum brw_reg_type type = dest.type;
+
       if (stage == MESA_SHADER_VERTEX) {
          src = fs_reg(ATTR, instr->const_index[0], dest.type);
       } else {
+         assert(type_sz(type) >= 4);
+         if (type == BRW_REGISTER_TYPE_DF) {
+            /* const_index is in 32-bit type size units that could not be aligned
+             * with DF. We need to read the double vector as if it was a float
+             * vector of twice the number of components to fetch the right data.
+             */
+            dest = retype(dest, BRW_REGISTER_TYPE_F);
+            num_components *= 2;
+         }
          src = offset(retype(nir_inputs, dest.type), bld,
                       instr->const_index[0]);
       }
@@ -3681,8 +3693,16 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       assert(const_offset && "Indirect input loads not allowed");
       src = offset(src, bld, const_offset->u32[0]);
 
-      for (unsigned j = 0; j < instr->num_components; j++) {
+      for (unsigned j = 0; j < num_components; j++) {
          bld.MOV(offset(dest, bld, j), offset(src, bld, j));
+      }
+
+      if (type == BRW_REGISTER_TYPE_DF) {
+         /* Once the double vector is read, set again its original register
+          * type to continue with normal execution.
+          */
+         src = retype(src, type);
+         dest = retype(dest, type);
       }
 
       if (type_sz(src.type) == 8) {
