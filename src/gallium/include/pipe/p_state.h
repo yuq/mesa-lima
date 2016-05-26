@@ -617,7 +617,7 @@ struct pipe_draw_info
 {
    boolean indexed;  /**< use index buffer */
 
-   unsigned mode;  /**< the mode of the primitive */
+   enum pipe_prim_type mode;  /**< the mode of the primitive */
    unsigned start;  /**< the index of the first vertex */
    unsigned count;  /**< number of vertices */
 
