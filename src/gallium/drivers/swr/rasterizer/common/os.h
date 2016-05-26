@@ -129,7 +129,7 @@ uint64_t __rdtsc()
 }
 #endif
 
-#ifndef __clang__
+#if !defined( __clang__) && !defined(__INTEL_COMPILER)
 // Intrinsic not defined in gcc
 static INLINE
 void _mm256_storeu2_m128i(__m128i *hi, __m128i *lo, __m256i a)
