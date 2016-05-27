@@ -3762,6 +3762,7 @@ struct gl_constants
    GLuint MaxTessPatchComponents;
    GLuint MaxTessControlTotalOutputComponents;
    bool LowerTessLevel; /**< Lower gl_TessLevel* from float[n] to vecn? */
+   bool LowerTCSPatchVerticesIn; /**< Lower gl_PatchVerticesIn to a uniform */
    bool LowerTESPatchVerticesIn; /**< Lower gl_PatchVerticesIn to a uniform */
    bool PrimitiveRestartForPatches;
    bool LowerCsDerivedVariables;    /**< Lower gl_GlobalInvocationID and
