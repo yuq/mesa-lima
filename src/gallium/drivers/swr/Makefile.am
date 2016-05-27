@@ -73,14 +73,14 @@ rasterizer/jitter/state_llvm.h: rasterizer/jitter/scripts/gen_llvm_types.py rast
 		--input $(srcdir)/rasterizer/core/state.h \
 		--output rasterizer/jitter/state_llvm.h
 
-rasterizer/jitter/builder_gen.h: rasterizer/jitter/scripts/gen_llvm_ir_macros.py $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h
+rasterizer/jitter/builder_gen.h: rasterizer/jitter/scripts/gen_llvm_ir_macros.py
 	$(PYTHON2) $(PYTHON_FLAGS) \
 		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
 		--input $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h \
 		--output rasterizer/jitter/builder_gen.h \
 		--gen_h
 
-rasterizer/jitter/builder_gen.cpp: rasterizer/jitter/scripts/gen_llvm_ir_macros.py $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h
+rasterizer/jitter/builder_gen.cpp: rasterizer/jitter/scripts/gen_llvm_ir_macros.py
 	$(PYTHON2) $(PYTHON_FLAGS) \
 		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
 		--input $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h \
