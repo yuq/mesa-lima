@@ -19,9 +19,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-SUBDIRS = .
-
-
 ISL_GEN_LIBS =                                           \
 	libisl-gen7.la                                   \
 	libisl-gen75.la                                  \
