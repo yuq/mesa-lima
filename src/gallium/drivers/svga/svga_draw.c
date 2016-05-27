@@ -769,17 +769,14 @@ check_draw_params(struct svga_hwtnl *hwtnl,
    assert(range->indexWidth == range->indexArray.stride);
 
    if (ib) {
-      unsigned size = ib->width0;
-      unsigned offset = range->indexArray.offset;
-      unsigned stride = range->indexArray.stride;
-      unsigned count;
+      MAYBE_UNUSED unsigned size = ib->width0;
+      MAYBE_UNUSED unsigned offset = range->indexArray.offset;
+      MAYBE_UNUSED unsigned stride = range->indexArray.stride;
+      MAYBE_UNUSED unsigned count;
 
       assert(size);
       assert(offset < size);
       assert(stride);
-      (void) size;
-      (void) offset;
-      (void) stride;
 
       switch (range->primType) {
       case SVGA3D_PRIMITIVE_POINTLIST:
