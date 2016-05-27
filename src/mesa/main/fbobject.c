@@ -3240,10 +3240,10 @@ framebuffer_texture_with_dims(int dims, GLenum target,
 
       if ((dims == 3) && !check_layer(ctx, texObj->Target, layer, caller))
          return;
-   }
 
-   if (!check_level(ctx, textarget, level, caller))
-      return;
+      if (!check_level(ctx, textarget, level, caller))
+         return;
+   }
 
    _mesa_framebuffer_texture(ctx, fb, attachment, texObj, textarget, level,
                              layer, GL_FALSE, caller);
