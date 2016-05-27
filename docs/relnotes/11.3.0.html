@@ -22,11 +22,11 @@ People who are concerned with stability and reliability should stick
 with a previous release or wait for Mesa 11.3.1.
 </p>
 <p>
-Mesa 11.3.0 implements the OpenGL 4.2 API, but the version reported by
+Mesa 11.3.0 implements the OpenGL 4.3 API, but the version reported by
 glGetString(GL_VERSION) or glGetIntegerv(GL_MAJOR_VERSION) /
 glGetIntegerv(GL_MINOR_VERSION) depends on the particular driver being used.
-Some drivers don't support all the features required in OpenGL 4.2.  OpenGL
-4.2 is <strong>only</strong> available if requested at context creation
+Some drivers don't support all the features required in OpenGL 4.3.  OpenGL
+4.3 is <strong>only</strong> available if requested at context creation
 because compatibility contexts are not supported.
 </p>
 
@@ -44,7 +44,9 @@ Note: some of the new features are only available with certain drivers.
 </p>
 
 <ul>
-<li>OpenGL 4.2 on nvc0, radeonsi, i965 (Gen8+)</li>
+<li>OpenGL 4.2 on i965 (Gen8+)</li>
+<li>OpenGL 4.3 on nvc0, radeonsi</li>
+<li>OpenGL ES 3.1 on nvc0, radeonsi</li>
 <li>GL_ARB_ES3_1_compatibility on nvc0, radeonsi</li>
 <li>GL_ARB_compute_shader on nvc0, radeonsi, softpipe</li>
 <li>GL_ARB_cull_distance on i965/gen6+, nv50, nvc0, llvmpipe, softpipe</li>
