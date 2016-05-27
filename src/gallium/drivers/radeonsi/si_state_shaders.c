@@ -1104,8 +1104,13 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			u_vertices_per_prim(sel->info.properties[TGSI_PROPERTY_GS_INPUT_PRIM]);
 		break;
 
-	case PIPE_SHADER_VERTEX:
 	case PIPE_SHADER_TESS_CTRL:
+		/* Always reserve space for these. */
+		sel->patch_outputs_written |=
+			(1llu << si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSINNER, 0)) |
+			(1llu << si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSOUTER, 0));
+		/* fall through */
+	case PIPE_SHADER_VERTEX:
 	case PIPE_SHADER_TESS_EVAL:
 		for (i = 0; i < sel->info.num_outputs; i++) {
 			unsigned name = sel->info.output_semantic_name[i];
