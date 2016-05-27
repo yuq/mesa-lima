@@ -100,19 +100,14 @@ isl_format_layout.c: isl_format_layout_gen.bash \
 #  Tests
 # ----------------------------------------------------------------------------
 
-TESTS = tests/isl_surf_get_image_offset_test
+check_PROGRAMS = tests/isl_surf_get_image_offset_test
 
-check_PROGRAMS = $(TESTS)
+TESTS = $(check_PROGRAMS)
 
-# Link tests to lib965_compiler.la for brw_get_device_info().
-tests_ldadd =						\
-	libisl.la					\
+tests_isl_surf_get_image_offset_test_LDADD = \
+	libisl.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	-lm
-
-tests_isl_surf_get_image_offset_test_SOURCES =		\
-	tests/isl_surf_get_image_offset_test.c
-tests_isl_surf_get_image_offset_test_LDADD = $(tests_ldadd)
 
 # ----------------------------------------------------------------------------
 
