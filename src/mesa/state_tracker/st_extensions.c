@@ -1203,4 +1203,10 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->ARB_texture_multisample &&
       extensions->ARB_gpu_shader5 &&
       extensions->EXT_shader_integer_mix;
+
+   /* And if we have enough for ES 3.1, we can also expose
+    * OES_shader_io_blocks, which is only hidden due to the compiler not being
+    * able to version-restrict things.
+    */
+   extensions->OES_shader_io_blocks = extensions->ARB_ES3_1_compatibility;
 }

@@ -264,7 +264,7 @@ GLES3.2, GLSL ES 3.2
   GL_OES_sample_shading                                 DONE (i965, nvc0, r600, radeonsi)
   GL_OES_sample_variables                               DONE (i965, nvc0, r600, radeonsi)
   GL_OES_shader_image_atomic                            DONE (all drivers that support GL_ARB_shader_image_load_store)
-  GL_OES_shader_io_blocks                               DONE (i965/gen8+)
+  GL_OES_shader_io_blocks                               DONE (i965/gen8+, nvc0, radeonsi)
   GL_OES_shader_multisample_interpolation               DONE (i965, nvc0, r600, radeonsi)
   GL_OES_tessellation_shader                            started (Ken)
   GL_OES_texture_border_clamp                           DONE (all drivers)
