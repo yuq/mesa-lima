@@ -1384,10 +1384,10 @@ update_buffer_image_param(struct brw_context *brw,
                           struct brw_image_param *param)
 {
    struct gl_buffer_object *obj = u->TexObj->BufferObject;
-
+   const uint32_t size = MIN2((uint32_t)u->TexObj->BufferSize, obj->Size);
    update_default_image_param(brw, u, surface_idx, param);
 
-   param->size[0] = obj->Size / _mesa_get_format_bytes(u->_ActualFormat);
+   param->size[0] = size / _mesa_get_format_bytes(u->_ActualFormat);
    param->stride[0] = _mesa_get_format_bytes(u->_ActualFormat);
 }
 
