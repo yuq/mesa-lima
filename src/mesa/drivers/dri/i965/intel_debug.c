@@ -79,6 +79,7 @@ static const struct debug_control debug_control[] = {
    { "ds",          DEBUG_TES },
    { "tes",         DEBUG_TES },
    { "l3",          DEBUG_L3 },
+   { "do32",        DEBUG_DO32 },
    { NULL,    0 }
 };
 

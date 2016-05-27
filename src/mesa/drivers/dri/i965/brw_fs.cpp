@@ -6528,7 +6528,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                  NULL, /* Never used in core profile */
                  shader, 32, shader_time_index);
    if (!fail_msg && v8.max_dispatch_width >= 32 &&
-       simd_required > 16) {
+       (simd_required > 16 || (INTEL_DEBUG & DEBUG_DO32))) {
       /* Try a SIMD32 compile */
       if (simd_required <= 8)
          v32.import_uniforms(&v8);
