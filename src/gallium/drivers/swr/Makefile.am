@@ -144,3 +144,27 @@ libswrAVX2_la_LDFLAGS = \
 	$(COMMON_LDFLAGS)
 
 include $(top_srcdir)/install-gallium-links.mk
+
+EXTRA_DIST = \
+	rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
+	rasterizer/jitter/scripts/gen_llvm_types.py \
+	rasterizer/scripts/gen_knobs.py \
+	rasterizer/scripts/knob_defs.py \
+	rasterizer/scripts/mako/ast.py \
+	rasterizer/scripts/mako/_ast_util.py \
+	rasterizer/scripts/mako/cache.py \
+	rasterizer/scripts/mako/cmd.py \
+	rasterizer/scripts/mako/codegen.py \
+	rasterizer/scripts/mako/compat.py \
+	rasterizer/scripts/mako/exceptions.py \
+	rasterizer/scripts/mako/filters.py \
+	rasterizer/scripts/mako/__init__.py \
+	rasterizer/scripts/mako/lexer.py \
+	rasterizer/scripts/mako/lookup.py \
+	rasterizer/scripts/mako/parsetree.py \
+	rasterizer/scripts/mako/pygen.py \
+	rasterizer/scripts/mako/pyparser.py \
+	rasterizer/scripts/mako/runtime.py \
+	rasterizer/scripts/mako/template.py \
+	rasterizer/scripts/mako/util.py \
+	rasterizer/scripts/templates/knobs.template
