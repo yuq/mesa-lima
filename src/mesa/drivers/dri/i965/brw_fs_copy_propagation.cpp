@@ -758,10 +758,8 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
       if (inst->dst.file == VGRF) {
          foreach_in_list_safe(acp_entry, entry, &acp[inst->dst.nr % ACP_HASH_SIZE]) {
             if (regions_overlap(entry->dst, entry->regs_written,
-                                inst->dst, inst->regs_written)) {
+                                inst->dst, inst->regs_written))
                entry->remove();
-               break;
-            }
          }
 
          /* Oops, we only have the chaining hash based on the destination, not
@@ -773,10 +771,8 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                 * _any_ of the registers that it reads
                 */
                if (regions_overlap(entry->src, entry->regs_read,
-                                   inst->dst, inst->regs_written)) {
+                                   inst->dst, inst->regs_written))
                   entry->remove();
-                  continue;
-               }
             }
 	 }
       }
