@@ -124,12 +124,16 @@ VULKAN_LIB_DEPS += \
 nodist_EXTRA_libvulkan_intel_la_SOURCES = dummy.cpp
 libvulkan_intel_la_SOURCES = $(VULKAN_GEM_FILES)
 
+VULKAN_ENTRYPOINT_CPPFLAGS = \
+	-DVK_USE_PLATFORM_XCB_KHR \
+	-DVK_USE_PLATFORM_WAYLAND_KHR
+
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
-	$(AM_V_GEN)$(CPP) $(AM_CPPFLAGS) $(top_srcdir)/include/vulkan/vulkan_intel.h |\
+	$(AM_V_GEN)$(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) $(top_srcdir)/include/vulkan/vulkan_intel.h |\
 	$(PYTHON2) $(srcdir)/anv_entrypoints_gen.py header > $@
 
 anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
-	$(AM_V_GEN)$(CPP) $(AM_CPPFLAGS) $(top_srcdir)/include/vulkan/vulkan_intel.h |\
+	$(AM_V_GEN)$(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) $(top_srcdir)/include/vulkan/vulkan_intel.h |\
 	$(PYTHON2) $(srcdir)/anv_entrypoints_gen.py code > $@
 
 BUILT_SOURCES = $(VULKAN_GENERATED_FILES)
