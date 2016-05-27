@@ -2318,7 +2318,7 @@ link_intrastage_shaders(void *mem_ctx,
    v.fixup_unnamed_interface_types();
 
    /* Link up uniform blocks defined within this stage. */
-   link_uniform_blocks(mem_ctx, ctx, prog, shader_list, num_shaders,
+   link_uniform_blocks(mem_ctx, ctx, prog, &linked, 1,
                        &ubo_blocks, &num_ubo_blocks, &ssbo_blocks,
                        &num_ssbo_blocks);
 
