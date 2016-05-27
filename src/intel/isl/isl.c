@@ -59,8 +59,8 @@ isl_device_init(struct isl_device *dev,
     * device properties at buildtime. Verify that the macros with the device
     * properties chosen during runtime.
     */
-   assert(ISL_DEV_GEN(dev) == dev->info->gen);
-   assert(ISL_DEV_USE_SEPARATE_STENCIL(dev) == dev->use_separate_stencil);
+   ISL_DEV_GEN_SANITIZE(dev);
+   ISL_DEV_USE_SEPARATE_STENCIL_SANITIZE(dev);
 
    /* Did we break hiz or stencil? */
    if (ISL_DEV_USE_SEPARATE_STENCIL(dev))
