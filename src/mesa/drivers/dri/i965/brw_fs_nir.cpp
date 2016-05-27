@@ -2088,24 +2088,60 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
    }
 
    fs_inst *inst;
-   if (offset_const) {
-      /* Constant indexing - use global offset. */
-      inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, icp_handle);
-      inst->offset = base_offset + offset_const->u32[0];
-      inst->base_mrf = -1;
-      inst->mlen = 1;
-      inst->regs_written = num_components;
-   } else {
-      /* Indirect indexing - use per-slot offsets as well. */
-      const fs_reg srcs[] = { icp_handle, get_nir_src(offset_src) };
-      fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
-      bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
 
-      inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst, payload);
-      inst->offset = base_offset;
-      inst->base_mrf = -1;
-      inst->mlen = 2;
-      inst->regs_written = num_components;
+   fs_reg tmp_dst = dst;
+   fs_reg indirect_offset = get_nir_src(offset_src);
+   unsigned num_iterations = 1;
+   unsigned orig_num_components = num_components;
+
+   if (type_sz(dst.type) == 8) {
+      if (num_components > 2) {
+         num_iterations = 2;
+         num_components = 2;
+      }
+      fs_reg tmp = fs_reg(VGRF, alloc.allocate(4), dst.type);
+      tmp_dst = tmp;
+   }
+
+   for (unsigned iter = 0; iter < num_iterations; iter++) {
+      if (offset_const) {
+         /* Constant indexing - use global offset. */
+         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp_dst, icp_handle);
+         inst->offset = base_offset + offset_const->u32[0];
+         inst->base_mrf = -1;
+         inst->mlen = 1;
+         inst->regs_written = num_components * type_sz(tmp_dst.type) / 4;
+      } else {
+         /* Indirect indexing - use per-slot offsets as well. */
+         const fs_reg srcs[] = { icp_handle, indirect_offset };
+         fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+         bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
+
+         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp_dst, payload);
+         inst->offset = base_offset;
+         inst->base_mrf = -1;
+         inst->mlen = 2;
+         inst->regs_written = num_components * type_sz(tmp_dst.type) / 4;
+      }
+
+      if (type_sz(dst.type) == 8) {
+         shuffle_32bit_load_result_to_64bit_data(
+            bld, tmp_dst, retype(tmp_dst, BRW_REGISTER_TYPE_F), num_components);
+
+         for (unsigned c = 0; c < num_components; c++)
+            bld.MOV(offset(dst, bld, iter * 2 + c), offset(tmp_dst, bld, c));
+      }
+
+      if (num_iterations > 1) {
+         num_components = orig_num_components - 2;
+         if(offset_const) {
+            base_offset++;
+         } else {
+            fs_reg new_indirect = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+            bld.ADD(new_indirect, indirect_offset, brw_imm_ud(1u));
+            indirect_offset = new_indirect;
+         }
+      }
    }
 
    if (is_point_size) {
