@@ -757,14 +757,6 @@ can_propagate_from(fs_inst *inst)
            !inst->is_partial_write());
 }
 
-inline bool
-regions_overlap(const fs_reg &r, unsigned n, const fs_reg &s, unsigned m)
-{
-   return r.file == s.file && r.nr == s.nr &&
-      !(r.reg_offset + n <= s.reg_offset ||
-        s.reg_offset + m <= r.reg_offset);
-}
-
 /* Walks a basic block and does copy propagation on it using the acp
  * list.
  */
@@ -791,8 +783,8 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
       /* kill the destination from the ACP */
       if (inst->dst.file == VGRF) {
          foreach_in_list_safe(acp_entry, entry, &acp[inst->dst.nr % ACP_HASH_SIZE]) {
-            if (regions_overlap(entry->dst, entry->regs_written,
-                                inst->dst, inst->regs_written))
+            if (regions_overlap(entry->dst, entry->regs_written * REG_SIZE,
+                                inst->dst, inst->regs_written * REG_SIZE))
                entry->remove();
          }
 
@@ -804,8 +796,8 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                /* Make sure we kill the entry if this instruction overwrites
                 * _any_ of the registers that it reads
                 */
-               if (regions_overlap(entry->src, entry->regs_read,
-                                   inst->dst, inst->regs_written))
+               if (regions_overlap(entry->src, entry->regs_read * REG_SIZE,
+                                   inst->dst, inst->regs_written * REG_SIZE))
                   entry->remove();
             }
 	 }

@@ -172,6 +172,44 @@ component(fs_reg reg, unsigned idx)
 }
 
 /**
+ * Return an integer identifying the discrete address space a register is
+ * contained in.  A register is by definition fully contained in the single
+ * reg_space it belongs to, so two registers with different reg_space ids are
+ * guaranteed not to overlap.  Most register files are a single reg_space of
+ * its own, only the VGRF file is composed of multiple discrete address
+ * spaces, one for each VGRF allocation.
+ */
+static inline uint32_t
+reg_space(const fs_reg &r)
+{
+   return r.file << 16 | (r.file == VGRF ? r.nr : 0);
+}
+
+/**
+ * Return the base offset in bytes of a register relative to the start of its
+ * reg_space().
+ */
+static inline unsigned
+reg_offset(const fs_reg &r)
+{
+   return ((r.file == VGRF || r.file == IMM ? 0 : r.nr) + r.reg_offset) *
+          (r.file == UNIFORM ? 4 : REG_SIZE) + r.subreg_offset;
+}
+
+/**
+ * Return whether the register region starting at \p r and spanning \p dr
+ * bytes could potentially overlap the register region starting at \p s and
+ * spanning \p ds bytes.
+ */
+static inline bool
+regions_overlap(const fs_reg &r, unsigned dr, const fs_reg &s, unsigned ds)
+{
+   return reg_space(r) == reg_space(s) &&
+          !(reg_offset(r) + dr <= reg_offset(s) ||
+            reg_offset(s) + ds <= reg_offset(r));
+}
+
+/**
  * Return whether the given register region is n-periodic, i.e. whether the
  * original region remains invariant after shifting it by \p n scalar
  * channels.
