@@ -5177,23 +5177,23 @@ emit_zip(const fs_builder &lbld, bblock_t *block, fs_inst *inst)
             inst->dst.component_size(inst->exec_size);
 
    if (needs_dst_copy(lbld, inst)) {
-   const fs_reg tmp = lbld.vgrf(inst->dst.type, dst_size);
+      const fs_reg tmp = lbld.vgrf(inst->dst.type, dst_size);
 
-   if (inst->predicate) {
-      /* Handle predication by copying the original contents of the
-       * destination into the temporary before emitting the lowered
-       * instruction.
-       */
+      if (inst->predicate) {
+         /* Handle predication by copying the original contents of
+          * the destination into the temporary before emitting the
+          * lowered instruction.
+          */
+         for (unsigned k = 0; k < dst_size; ++k)
+            cbld.at(block, inst)
+                .MOV(offset(tmp, lbld, k), offset(dst, inst->exec_size, k));
+      }
+
       for (unsigned k = 0; k < dst_size; ++k)
-         cbld.at(block, inst)
-             .MOV(offset(tmp, lbld, k), offset(dst, inst->exec_size, k));
-   }
+         cbld.at(block, inst->next)
+             .MOV(offset(dst, inst->exec_size, k), offset(tmp, lbld, k));
 
-   for (unsigned k = 0; k < dst_size; ++k)
-      cbld.at(block, inst->next)
-          .MOV(offset(dst, inst->exec_size, k), offset(tmp, lbld, k));
-
-   return tmp;
+      return tmp;
 
    } else {
       /* No need to allocate a temporary for the lowered instruction, just
