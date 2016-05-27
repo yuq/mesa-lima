@@ -1263,7 +1263,11 @@ builtin_variable_generator::generate_varyings()
       if (!state->es_shader ||
           state->stage == MESA_SHADER_VERTEX ||
           (state->stage == MESA_SHADER_GEOMETRY &&
-           state->OES_geometry_point_size_enable)) {
+           state->OES_geometry_point_size_enable) ||
+          ((state->stage == MESA_SHADER_TESS_CTRL ||
+            state->stage == MESA_SHADER_TESS_EVAL) &&
+           (state->OES_tessellation_point_size_enable ||
+            state->EXT_tessellation_point_size_enable))) {
          add_varying(VARYING_SLOT_PSIZ, float_t, "gl_PointSize");
       }
    }
