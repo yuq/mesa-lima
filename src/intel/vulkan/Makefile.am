@@ -136,7 +136,9 @@ BUILT_SOURCES = $(VULKAN_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)
 EXTRA_DIST = \
 	$(top_srcdir)/include/vulkan/vk_icd.h \
-	anv_entrypoints_gen.py
+	anv_entrypoints_gen.py \
+	dev_icd.json.in \
+	intel_icd.json
 
 libvulkan_intel_la_LIBADD = $(VULKAN_LIB_DEPS)
 
