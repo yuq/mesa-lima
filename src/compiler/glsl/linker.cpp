@@ -72,6 +72,7 @@
 #include "ir.h"
 #include "program.h"
 #include "program/hash_table.h"
+#include "program/prog_instruction.h"
 #include "linker.h"
 #include "link_varyings.h"
 #include "ir_optimization.h"
@@ -2485,7 +2486,7 @@ resize_tes_inputs(struct gl_context *ctx,
       ir->accept(&input_resize_visitor);
    }
 
-   if (tcs) {
+   if (tcs || ctx->Const.LowerTESPatchVerticesIn) {
       /* Convert the gl_PatchVerticesIn system value into a constant, since
        * the value is known at this point.
        */
@@ -2494,9 +2495,22 @@ resize_tes_inputs(struct gl_context *ctx,
          if (var && var->data.mode == ir_var_system_value &&
              var->data.location == SYSTEM_VALUE_VERTICES_IN) {
             void *mem_ctx = ralloc_parent(var);
-            var->data.mode = ir_var_auto;
             var->data.location = 0;
-            var->constant_value = new(mem_ctx) ir_constant(num_vertices);
+            var->data.explicit_location = false;
+            if (tcs) {
+               var->data.mode = ir_var_auto;
+               var->constant_value = new(mem_ctx) ir_constant(num_vertices);
+            } else {
+               var->data.mode = ir_var_uniform;
+               var->data.how_declared = ir_var_hidden;
+               var->allocate_state_slots(1);
+               ir_state_slot *slot0 = &var->get_state_slots()[0];
+               slot0->swizzle = SWIZZLE_XXXX;
+               slot0->tokens[0] = STATE_INTERNAL;
+               slot0->tokens[1] = STATE_TES_PATCH_VERTICES_IN;
+               for (int i = 2; i < STATE_LENGTH; i++)
+                  slot0->tokens[i] = 0;
+            }
          }
       }
    }

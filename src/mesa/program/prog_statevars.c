@@ -598,6 +598,13 @@ _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
          }
          return;
 
+      case STATE_TES_PATCH_VERTICES_IN:
+         if (ctx->TessCtrlProgram._Current)
+            val[0].i = ctx->TessCtrlProgram._Current->VerticesOut;
+         else
+            val[0].i = ctx->TessCtrlProgram.patch_vertices;
+         return;
+
       /* XXX: make sure new tokens added here are also handled in the 
        * _mesa_program_state_flags() switch, below.
        */
