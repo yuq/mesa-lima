@@ -34,7 +34,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include "Windows.h"
+#include <windows.h>
 #include <intrin.h>
 #include <cstdint>
 
