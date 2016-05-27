@@ -34,16 +34,15 @@ AM_CPPFLAGS = \
 	$(VALGRIND_CFLAGS) \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
+	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
+	-I$(top_builddir)/src/intel \
 	-I$(top_srcdir)/src/intel \
 	-I$(top_srcdir)/src/mapi \
 	-I$(top_srcdir)/src/mesa \
-	-I$(top_srcdir)/src/mesa/drivers/dri/common \
 	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
-	-I$(top_srcdir)/src/gallium/include \
-	-I$(top_builddir)/src \
-	-I$(top_builddir)/src/intel
+	-I$(top_srcdir)/src/gallium/include
 
 libisl_la_CFLAGS = $(CFLAGS) -Wno-override-init
 
