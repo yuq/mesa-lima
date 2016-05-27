@@ -1078,7 +1078,7 @@ svga_get_query_result(struct pipe_context *pipe,
                                        (void *)&occResult, sizeof(occResult));
          *result = (uint64_t)occResult.samplesRendered;
       } else {
-         ret = get_query_result_vgpu9(svga, sq, wait, (uint64_t *)result);
+         ret = get_query_result_vgpu9(svga, sq, wait, result);
       }
       break;
    case PIPE_QUERY_OCCLUSION_PREDICATE: {
@@ -1089,7 +1089,7 @@ svga_get_query_result(struct pipe_context *pipe,
          vresult->b = occResult.anySamplesRendered != 0;
       } else {
          uint64_t count;
-         ret = get_query_result_vgpu9(svga, sq, wait, (uint64_t *)&count);
+         ret = get_query_result_vgpu9(svga, sq, wait, &count);
          vresult->b = count != 0;
       }
       break;
