@@ -2816,10 +2816,13 @@ fs_visitor::compute_to_mrf()
 	    if (scan_inst->is_partial_write())
 	       break;
 
-            /* Things returning more than one register would need us to
-             * understand coalescing out more than one MOV at a time.
+            /* Handling things not fully contained in the source of the copy
+             * would need us to understand coalescing out more than one MOV at
+             * a time.
              */
-            if (scan_inst->regs_written > scan_inst->exec_size / 8)
+            if (scan_inst->dst.reg_offset < inst->src[0].reg_offset ||
+                scan_inst->dst.reg_offset + scan_inst->regs_written >
+                inst->src[0].reg_offset + inst->regs_read(0))
                break;
 
 	    /* SEND instructions can't have MRF as a destination. */
