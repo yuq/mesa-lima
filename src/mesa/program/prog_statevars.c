@@ -55,8 +55,10 @@
  */
 static void
 _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
-                  GLfloat *value)
+                  gl_constant_value *val)
 {
+   GLfloat *value = &val->f;
+
    switch (state[0]) {
    case STATE_MATERIAL:
       {
@@ -353,7 +355,7 @@ _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
       }
       return;
    case STATE_NUM_SAMPLES:
-      ((int *)value)[0] = MAX2(1, _mesa_geometric_samples(ctx->DrawBuffer));
+      val[0].i = MAX2(1, _mesa_geometric_samples(ctx->DrawBuffer));
       return;
    case STATE_DEPTH_RANGE:
       value[0] = ctx->ViewportArray[0].Near;                /* near       */
@@ -1071,7 +1073,7 @@ _mesa_load_state_parameters(struct gl_context *ctx,
       if (paramList->Parameters[i].Type == PROGRAM_STATE_VAR) {
          _mesa_fetch_state(ctx,
 			   paramList->Parameters[i].StateIndexes,
-                           &paramList->ParameterValues[i][0].f);
+                           &paramList->ParameterValues[i][0]);
       }
    }
 }
