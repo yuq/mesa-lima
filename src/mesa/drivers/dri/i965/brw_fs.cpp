@@ -2792,19 +2792,6 @@ fs_visitor::compute_to_mrf()
           inst->src[0].subreg_offset)
 	 continue;
 
-      /* Work out which hardware MRF registers are written by this
-       * instruction.
-       */
-      int mrf_low = inst->dst.nr & ~BRW_MRF_COMPR4;
-      int mrf_high;
-      if (inst->dst.nr & BRW_MRF_COMPR4) {
-	 mrf_high = mrf_low + 4;
-      } else if (inst->exec_size == 16) {
-	 mrf_high = mrf_low + 1;
-      } else {
-	 mrf_high = mrf_low;
-      }
-
       /* Can't compute-to-MRF this GRF if someone else was going to
        * read it later.
        */
@@ -2815,8 +2802,8 @@ fs_visitor::compute_to_mrf()
        * rewrite the thing that made this GRF to write into the MRF.
        */
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
-	 if (scan_inst->dst.file == VGRF &&
-            scan_inst->dst.nr == inst->src[0].nr) {
+         if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
+                             inst->src[0], inst->regs_read(0) * REG_SIZE)) {
 	    /* Found the last thing to write our reg we want to turn
 	     * into a compute-to-MRF.
 	     */
@@ -2872,53 +2859,32 @@ fs_visitor::compute_to_mrf()
 	  */
 	 bool interfered = false;
 	 for (int i = 0; i < scan_inst->sources; i++) {
-	    if (scan_inst->src[i].file == VGRF &&
-                scan_inst->src[i].nr == inst->src[0].nr &&
-		scan_inst->src[i].reg_offset == inst->src[0].reg_offset) {
+            if (regions_overlap(scan_inst->src[i], scan_inst->regs_read(i) * REG_SIZE,
+                                inst->src[0], inst->regs_read(0) * REG_SIZE)) {
 	       interfered = true;
 	    }
 	 }
 	 if (interfered)
 	    break;
 
-	 if (scan_inst->dst.file == MRF) {
+         if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
+                             inst->dst, inst->regs_written * REG_SIZE)) {
 	    /* If somebody else writes our MRF here, we can't
 	     * compute-to-MRF before that.
 	     */
-            int scan_mrf_low = scan_inst->dst.nr & ~BRW_MRF_COMPR4;
-	    int scan_mrf_high;
+            break;
+         }
 
-            if (scan_inst->dst.nr & BRW_MRF_COMPR4) {
-	       scan_mrf_high = scan_mrf_low + 4;
-	    } else if (scan_inst->exec_size == 16) {
-	       scan_mrf_high = scan_mrf_low + 1;
-	    } else {
-	       scan_mrf_high = scan_mrf_low;
-	    }
-
-	    if (mrf_low == scan_mrf_low ||
-		mrf_low == scan_mrf_high ||
-		mrf_high == scan_mrf_low ||
-		mrf_high == scan_mrf_high) {
-	       break;
-	    }
-	 }
-
-	 if (scan_inst->mlen > 0 && scan_inst->base_mrf != -1) {
+         if (scan_inst->mlen > 0 && scan_inst->base_mrf != -1 &&
+             regions_overlap(fs_reg(MRF, scan_inst->base_mrf), scan_inst->mlen * REG_SIZE,
+                             inst->dst, inst->regs_written * REG_SIZE)) {
 	    /* Found a SEND instruction, which means that there are
 	     * live values in MRFs from base_mrf to base_mrf +
 	     * scan_inst->mlen - 1.  Don't go pushing our MRF write up
 	     * above it.
 	     */
-	    if (mrf_low >= scan_inst->base_mrf &&
-		mrf_low < scan_inst->base_mrf + scan_inst->mlen) {
-	       break;
-	    }
-	    if (mrf_high >= scan_inst->base_mrf &&
-		mrf_high < scan_inst->base_mrf + scan_inst->mlen) {
-	       break;
-	    }
-	 }
+            break;
+         }
       }
    }
 
