@@ -4990,6 +4990,81 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    }
 }
 
+/**
+ * Extract the data that would be consumed by the channel group given by
+ * lbld.group() from the i-th source region of instruction \p inst and return
+ * it as result in packed form.  If any copy instructions are required they
+ * will be emitted before the given \p inst in \p block.
+ */
+static fs_reg
+emit_unzip(const fs_builder &lbld, bblock_t *block, fs_inst *inst,
+           unsigned i)
+{
+   /* Specified channel group from the source region. */
+   const fs_reg src = horiz_offset(inst->src[i], lbld.group());
+
+   if (!is_periodic(inst->src[i], lbld.dispatch_width())) {
+      /* Builder of the right width to perform the copy avoiding uninitialized
+       * data if the lowered execution size is greater than the original
+       * execution size of the instruction.
+       */
+      const fs_builder cbld = lbld.group(MIN2(lbld.dispatch_width(),
+                                              inst->exec_size), 0);
+      const fs_reg tmp = lbld.vgrf(inst->src[i].type, inst->components_read(i));
+
+      for (unsigned k = 0; k < inst->components_read(i); ++k)
+         cbld.at(block, inst)
+             .MOV(offset(tmp, lbld, k), offset(src, inst->exec_size, k));
+
+      return tmp;
+
+   } else {
+      /* The source is invariant for all dispatch_width-wide groups of the
+       * original region.
+       */
+      return inst->src[i];
+   }
+}
+
+/**
+ * Insert data from a packed temporary into the channel group given by
+ * lbld.group() of the destination region of instruction \p inst and return
+ * the temporary as result.  If any copy instructions are required they will
+ * be emitted around the given \p inst in \p block.
+ */
+static fs_reg
+emit_zip(const fs_builder &lbld, bblock_t *block, fs_inst *inst)
+{
+   /* Builder of the right width to perform the copy avoiding uninitialized
+    * data if the lowered execution size is greater than the original
+    * execution size of the instruction.
+    */
+   const fs_builder cbld = lbld.group(MIN2(lbld.dispatch_width(),
+                                           inst->exec_size), 0);
+
+   /* Specified channel group from the destination region. */
+   const fs_reg dst = horiz_offset(inst->dst, lbld.group());
+   const unsigned dst_size = inst->regs_written * REG_SIZE /
+            inst->dst.component_size(inst->exec_size);
+   const fs_reg tmp = lbld.vgrf(inst->dst.type, dst_size);
+
+   if (inst->predicate) {
+      /* Handle predication by copying the original contents of the
+       * destination into the temporary before emitting the lowered
+       * instruction.
+       */
+      for (unsigned k = 0; k < dst_size; ++k)
+         cbld.at(block, inst)
+             .MOV(offset(tmp, lbld, k), offset(dst, inst->exec_size, k));
+   }
+
+   for (unsigned k = 0; k < dst_size; ++k)
+      cbld.at(block, inst->next)
+          .MOV(offset(dst, inst->exec_size, k), offset(tmp, lbld, k));
+
+   return tmp;
+}
+
 bool
 fs_visitor::lower_simd_width()
 {
@@ -5012,14 +5087,11 @@ fs_visitor::lower_simd_width()
          /* Split the copies in chunks of the execution width of either the
           * original or the lowered instruction, whichever is lower.
           */
-         const unsigned copy_width = MIN2(lower_width, inst->exec_size);
-         const unsigned n = inst->exec_size / copy_width;
+         const unsigned n = DIV_ROUND_UP(inst->exec_size, lower_width);
          const unsigned dst_size = inst->regs_written * REG_SIZE /
             inst->dst.component_size(inst->exec_size);
-         fs_reg dsts[4];
 
-         assert(n > 0 && n <= ARRAY_SIZE(dsts) &&
-                !inst->writes_accumulator && !inst->mlen);
+         assert(!inst->writes_accumulator && !inst->mlen);
 
          for (unsigned i = 0; i < n; i++) {
             /* Emit a copy of the original instruction with the lowered width.
@@ -5035,64 +5107,16 @@ fs_visitor::lower_simd_width()
              * instruction.
              */
             const fs_builder lbld = ibld.group(lower_width, i);
-            const fs_builder cbld = lbld.group(copy_width, 0);
 
-            for (unsigned j = 0; j < inst->sources; j++) {
-               if (inst->src[j].file != BAD_FILE &&
-                   !is_periodic(inst->src[j], lower_width)) {
-                  /* Get the i-th copy_width-wide chunk of the source. */
-                  const fs_reg src = offset(inst->src[j], cbld, i);
-                  const unsigned src_size = inst->components_read(j);
+            for (unsigned j = 0; j < inst->sources; j++)
+               split_inst.src[j] = emit_unzip(lbld, block, inst, j);
 
-                  /* Copy one every n copy_width-wide components of the
-                   * register into a temporary passed as source to the lowered
-                   * instruction.
-                   */
-                  split_inst.src[j] = lbld.vgrf(inst->src[j].type, src_size);
-
-                  for (unsigned k = 0; k < src_size; ++k)
-                     cbld.MOV(offset(split_inst.src[j], lbld, k),
-                              offset(src, cbld, n * k));
-               }
-            }
-
-            if (inst->regs_written) {
-               /* Allocate enough space to hold the result of the lowered
-                * instruction and fix up the number of registers written.
-                */
-               split_inst.dst = dsts[i] =
-                  lbld.vgrf(inst->dst.type, dst_size);
-               split_inst.regs_written =
-                  DIV_ROUND_UP(type_sz(inst->dst.type) * dst_size * lower_width,
-                               REG_SIZE);
-
-               if (inst->predicate) {
-                  /* Handle predication by copying the original contents of
-                   * the destination into the temporary before emitting the
-                   * lowered instruction.
-                   */
-                  for (unsigned k = 0; k < dst_size; ++k)
-                     cbld.MOV(offset(split_inst.dst, lbld, k),
-                              offset(inst->dst, cbld, n * k + i));
-               }
-            }
+            split_inst.dst = emit_zip(lbld, block, inst);
+            split_inst.regs_written =
+               DIV_ROUND_UP(type_sz(inst->dst.type) * dst_size * lower_width,
+                            REG_SIZE);
 
             lbld.emit(split_inst);
-         }
-
-         if (inst->regs_written) {
-            const fs_builder lbld = ibld.group(lower_width, 0);
-
-            /* Interleave the components of the result from the lowered
-             * instructions.
-             */
-            for (unsigned i = 0; i < dst_size; ++i) {
-               for (unsigned j = 0; j < n; ++j) {
-                  const fs_builder cbld = ibld.group(copy_width, j);
-                  cbld.MOV(offset(inst->dst, cbld, n * i + j),
-                           offset(dsts[j], lbld, i));
-               }
-            }
          }
 
          inst->remove(block);
