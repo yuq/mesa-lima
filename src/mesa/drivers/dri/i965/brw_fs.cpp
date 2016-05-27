@@ -2767,6 +2767,20 @@ fs_visitor::opt_redundant_discard_jumps()
    return progress;
 }
 
+/**
+ * Compute a bitmask with GRF granularity with a bit set for each GRF starting
+ * from \p r which overlaps the region starting at \p r and spanning \p n GRF
+ * units.
+ */
+static inline unsigned
+mask_relative_to(const fs_reg &r, const fs_reg &s, unsigned n)
+{
+   const int rel_offset = (reg_offset(s) - reg_offset(r)) / REG_SIZE;
+   assert(reg_space(r) == reg_space(s) &&
+          rel_offset >= 0 && rel_offset < int(8 * sizeof(unsigned)));
+   return ((1 << n) - 1) << rel_offset;
+}
+
 bool
 fs_visitor::compute_to_mrf()
 {
@@ -2798,10 +2812,12 @@ fs_visitor::compute_to_mrf()
       if (this->virtual_grf_end[inst->src[0].nr] > ip)
 	 continue;
 
-      /* Found a move of a GRF to a MRF.  Let's see if we can go
-       * rewrite the thing that made this GRF to write into the MRF.
+      /* Found a move of a GRF to a MRF.  Let's see if we can go rewrite the
+       * things that computed the value of all GRFs of the source region.  The
+       * regs_left bitset keeps track of the registers we haven't yet found a
+       * generating instruction for.
        */
-      bool found = false;
+      unsigned regs_left = (1 << inst->regs_read(0)) - 1;
 
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
@@ -2840,10 +2856,11 @@ fs_visitor::compute_to_mrf()
 	       }
 	    }
 
-	    if (scan_inst->dst.reg_offset == inst->src[0].reg_offset)
-               found = true;
-
-	    break;
+            /* Clear the bits for any registers this instruction overwrites. */
+            regs_left &= ~mask_relative_to(
+               inst->src[0], scan_inst->dst, scan_inst->regs_written);
+            if (!regs_left)
+               break;
 	 }
 
 	 /* We don't handle control flow here.  Most computation of
@@ -2886,14 +2903,21 @@ fs_visitor::compute_to_mrf()
          }
       }
 
-      if (!found)
+      if (regs_left)
          continue;
 
-      /* Found all generating instructions of our MRF's source value.
+      /* Found all generating instructions of our MRF's source value, so it
+       * should be safe to rewrite them to point to the MRF directly.
        */
+      regs_left = (1 << inst->regs_read(0)) - 1;
+
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
                              inst->src[0], inst->regs_read(0) * REG_SIZE)) {
+            /* Clear the bits for any registers this instruction overwrites. */
+            regs_left &= ~mask_relative_to(
+               inst->src[0], scan_inst->dst, scan_inst->regs_written);
+
             const unsigned rel_offset = (reg_offset(scan_inst->dst) -
                                          reg_offset(inst->src[0])) / REG_SIZE;
 
@@ -2920,10 +2944,12 @@ fs_visitor::compute_to_mrf()
             scan_inst->dst.file = MRF;
             scan_inst->dst.reg_offset = 0;
             scan_inst->saturate |= inst->saturate;
-            break;
+            if (!regs_left)
+               break;
          }
       }
 
+      assert(!regs_left);
       inst->remove(block);
       progress = true;
    }
