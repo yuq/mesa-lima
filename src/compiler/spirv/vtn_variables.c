@@ -1050,6 +1050,8 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationArrayStride:
    case SpvDecorationGLSLShared:
    case SpvDecorationGLSLPacked:
+      break; /* These can apply to a type but we don't care about them */
+
    case SpvDecorationBinding:
    case SpvDecorationDescriptorSet:
    case SpvDecorationNoContraction:
