@@ -25,6 +25,7 @@ libfreedreno_la_SOURCES = \
 
 BUILT_SOURCES := $(ir3_GENERATED_FILES)
 CLEANFILES := $(BUILT_SOURCES)
+EXTRA_DIST = ir3/ir3_nir_trig.py
 
 noinst_PROGRAMS = ir3_compiler
 
