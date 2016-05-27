@@ -204,9 +204,23 @@ reg_offset(const fs_reg &r)
 static inline bool
 regions_overlap(const fs_reg &r, unsigned dr, const fs_reg &s, unsigned ds)
 {
-   return reg_space(r) == reg_space(s) &&
-          !(reg_offset(r) + dr <= reg_offset(s) ||
-            reg_offset(s) + ds <= reg_offset(r));
+   if (r.file == MRF && (r.nr & BRW_MRF_COMPR4)) {
+      fs_reg t = r;
+      t.nr &= ~BRW_MRF_COMPR4;
+      /* COMPR4 regions are translated by the hardware during decompression
+       * into two separate half-regions 4 MRFs apart from each other.
+       */
+      return regions_overlap(t, dr / 2, s, ds) ||
+             regions_overlap(byte_offset(t, 4 * REG_SIZE), dr / 2, s, ds);
+
+   } else if (s.file == MRF && (s.nr & BRW_MRF_COMPR4)) {
+      return regions_overlap(s, ds, r, dr);
+
+   } else {
+      return reg_space(r) == reg_space(s) &&
+             !(reg_offset(r) + dr <= reg_offset(s) ||
+               reg_offset(s) + ds <= reg_offset(r));
+   }
 }
 
 /**
