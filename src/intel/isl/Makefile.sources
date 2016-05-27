@@ -7,6 +7,7 @@ ISL_FILES = \
 	isl_gen4.h \
 	isl_gen6.c \
 	isl_gen6.h \
+	isl_priv.h \
 	isl_storage_image.c
 
 ISL_GEN7_FILES = \
