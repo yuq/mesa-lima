@@ -2801,6 +2801,8 @@ fs_visitor::compute_to_mrf()
       /* Found a move of a GRF to a MRF.  Let's see if we can go
        * rewrite the thing that made this GRF to write into the MRF.
        */
+      bool found = false;
+
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
                              inst->src[0], inst->regs_read(0) * REG_SIZE)) {
@@ -2811,7 +2813,7 @@ fs_visitor::compute_to_mrf()
 	    /* If this one instruction didn't populate all the
 	     * channels, bail.  We might be able to rewrite everything
 	     * that writes that reg, but it would require smarter
-	     * tracking to delay the rewriting until complete success.
+	     * tracking.
 	     */
 	    if (scan_inst->is_partial_write())
 	       break;
@@ -2838,15 +2840,9 @@ fs_visitor::compute_to_mrf()
 	       }
 	    }
 
-	    if (scan_inst->dst.reg_offset == inst->src[0].reg_offset) {
-	       /* Found the creator of our MRF's source value. */
-	       scan_inst->dst.file = MRF;
-               scan_inst->dst.nr = inst->dst.nr;
-               scan_inst->dst.reg_offset = 0;
-	       scan_inst->saturate |= inst->saturate;
-	       inst->remove(block);
-	       progress = true;
-	    }
+	    if (scan_inst->dst.reg_offset == inst->src[0].reg_offset)
+               found = true;
+
 	    break;
 	 }
 
@@ -2889,6 +2885,25 @@ fs_visitor::compute_to_mrf()
             break;
          }
       }
+
+      if (!found)
+         continue;
+
+      /* Found all generating instructions of our MRF's source value.
+       */
+      foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
+         if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
+                             inst->src[0], inst->regs_read(0) * REG_SIZE)) {
+            scan_inst->dst.file = MRF;
+            scan_inst->dst.nr = inst->dst.nr;
+            scan_inst->dst.reg_offset = 0;
+            scan_inst->saturate |= inst->saturate;
+            break;
+         }
+      }
+
+      inst->remove(block);
+      progress = true;
    }
 
    if (progress)
