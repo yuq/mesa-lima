@@ -2894,8 +2894,30 @@ fs_visitor::compute_to_mrf()
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
                              inst->src[0], inst->regs_read(0) * REG_SIZE)) {
+            const unsigned rel_offset = (reg_offset(scan_inst->dst) -
+                                         reg_offset(inst->src[0])) / REG_SIZE;
+
+            if (inst->dst.nr & BRW_MRF_COMPR4) {
+               /* Apply the same address transformation done by the hardware
+                * for COMPR4 MRF writes.
+                */
+               assert(rel_offset < 2);
+               scan_inst->dst.nr = inst->dst.nr + rel_offset * 4;
+
+               /* Clear the COMPR4 bit if the generating instruction is not
+                * compressed.
+                */
+               if (scan_inst->regs_written < 2)
+                  scan_inst->dst.nr &= ~BRW_MRF_COMPR4;
+
+            } else {
+               /* Calculate the MRF number the result of this instruction is
+                * ultimately written to.
+                */
+               scan_inst->dst.nr = inst->dst.nr + rel_offset;
+            }
+
             scan_inst->dst.file = MRF;
-            scan_inst->dst.nr = inst->dst.nr;
             scan_inst->dst.reg_offset = 0;
             scan_inst->saturate |= inst->saturate;
             break;
