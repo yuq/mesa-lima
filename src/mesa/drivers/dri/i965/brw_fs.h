@@ -44,23 +44,9 @@ namespace brw {
 struct brw_gs_compile;
 
 static inline fs_reg
-offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
+offset(const fs_reg &reg, const brw::fs_builder &bld, unsigned delta)
 {
-   switch (reg.file) {
-   case BAD_FILE:
-      break;
-   case ARF:
-   case FIXED_GRF:
-   case MRF:
-   case VGRF:
-   case ATTR:
-   case UNIFORM:
-      return byte_offset(reg,
-                         delta * reg.component_size(bld.dispatch_width()));
-   case IMM:
-      assert(delta == 0);
-   }
-   return reg;
+   return offset(reg, bld.dispatch_width(), delta);
 }
 
 /**

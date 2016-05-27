@@ -140,6 +140,25 @@ horiz_offset(const fs_reg &reg, unsigned delta)
    unreachable("Invalid register file");
 }
 
+static inline fs_reg
+offset(fs_reg reg, unsigned width, unsigned delta)
+{
+   switch (reg.file) {
+   case BAD_FILE:
+      break;
+   case ARF:
+   case FIXED_GRF:
+   case MRF:
+   case VGRF:
+   case ATTR:
+   case UNIFORM:
+      return byte_offset(reg, delta * reg.component_size(width));
+   case IMM:
+      assert(delta == 0);
+   }
+   return reg;
+}
+
 /**
  * Get the scalar channel of \p reg given by \p idx and replicate it to all
  * channels of the result.
