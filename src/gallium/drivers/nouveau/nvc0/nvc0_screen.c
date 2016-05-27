@@ -121,7 +121,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return 128 * 1024 * 1024;
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
       if (class_3d <= NVF0_3D_CLASS)
-         return 420;
+         return 430;
       return 410;
    case PIPE_CAP_MAX_RENDER_TARGETS:
       return 8;
