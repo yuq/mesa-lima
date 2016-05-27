@@ -56,6 +56,7 @@ BUILT_SOURCES = \
 	rasterizer/jitter/builder_x86.h \
 	rasterizer/jitter/builder_x86.cpp
 
+MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 swr_context_llvm.h: rasterizer/jitter/scripts/gen_llvm_types.py swr_context.h
 	$(PYTHON2) $(PYTHON_FLAGS) \
 		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_types.py \
@@ -63,17 +64,20 @@ swr_context_llvm.h: rasterizer/jitter/scripts/gen_llvm_types.py swr_context.h
 		--output swr_context_llvm.h
 
 rasterizer/scripts/gen_knobs.cpp rasterizer/scripts/gen_knobs.h: rasterizer/scripts/gen_knobs.py rasterizer/scripts/knob_defs.py rasterizer/scripts/templates/knobs.template
+	$(MKDIR_GEN)
 	$(PYTHON2) $(PYTHON_FLAGS) \
 		$(srcdir)/rasterizer/scripts/gen_knobs.py \
 		rasterizer/scripts
 
 rasterizer/jitter/state_llvm.h: rasterizer/jitter/scripts/gen_llvm_types.py rasterizer/core/state.h
+	$(MKDIR_GEN)
 	$(PYTHON2) $(PYTHON_FLAGS) \
 		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_types.py \
 		--input $(srcdir)/rasterizer/core/state.h \
 		--output rasterizer/jitter/state_llvm.h
 
 rasterizer/jitter/builder_gen.h: rasterizer/jitter/scripts/gen_llvm_ir_macros.py
+	$(MKDIR_GEN)
 	$(PYTHON2) $(PYTHON_FLAGS) \
 		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
 		--input $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h \
@@ -81,6 +85,7 @@ rasterizer/jitter/builder_gen.h: rasterizer/jitter/scripts/gen_llvm_ir_macros.py
 		--gen_h
 
 rasterizer/jitter/builder_gen.cpp: rasterizer/jitter/scripts/gen_llvm_ir_macros.py
+	$(MKDIR_GEN)
 	$(PYTHON2) $(PYTHON_FLAGS) \
 		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
 		--input $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h \
@@ -88,12 +93,14 @@ rasterizer/jitter/builder_gen.cpp: rasterizer/jitter/scripts/gen_llvm_ir_macros.
 		--gen_cpp
 
 rasterizer/jitter/builder_x86.h: rasterizer/jitter/scripts/gen_llvm_ir_macros.py
+	$(MKDIR_GEN)
 	$(PYTHON2) $(PYTHON_FLAGS) \
 		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
 		--output rasterizer/jitter/builder_x86.h \
 		--gen_x86_h
 
 rasterizer/jitter/builder_x86.cpp: rasterizer/jitter/scripts/gen_llvm_ir_macros.py
+	$(MKDIR_GEN)
 	$(PYTHON2) $(PYTHON_FLAGS) \
 		$(srcdir)/rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
 		--output rasterizer/jitter/builder_x86.cpp \
