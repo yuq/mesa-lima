@@ -423,7 +423,7 @@ debug_print_format(const char *msg, unsigned fmt )
 
 /** Return string name of given primitive type */
 const char *
-u_prim_name(unsigned prim)
+u_prim_name(enum pipe_prim_type prim)
 {
    static const struct debug_named_value names[] = {
       DEBUG_NAMED_VALUE(PIPE_PRIM_POINTS),
