@@ -5110,6 +5110,52 @@ emit_unzip(const fs_builder &lbld, bblock_t *block, fs_inst *inst,
 }
 
 /**
+ * Return true if splitting out the group of channels of instruction \p inst
+ * given by lbld.group() requires allocating a temporary for the destination
+ * of the lowered instruction and copying the data back to the original
+ * destination region.
+ */
+static inline bool
+needs_dst_copy(const fs_builder &lbld, const fs_inst *inst)
+{
+   /* If the instruction writes more than one component we'll have to shuffle
+    * the results of multiple lowered instructions in order to make sure that
+    * they end up arranged correctly in the original destination region.
+    */
+   if (inst->regs_written * REG_SIZE >
+       inst->dst.component_size(inst->exec_size))
+      return true;
+
+   /* If the lowered execution size is larger than the original the result of
+    * the instruction won't fit in the original destination, so we'll have to
+    * allocate a temporary in any case.
+    */
+   if (lbld.dispatch_width() > inst->exec_size)
+      return true;
+
+   for (unsigned i = 0; i < inst->sources; i++) {
+      /* If we already made a copy of the source for other reasons there won't
+       * be any overlap with the destination.
+       */
+      if (needs_src_copy(lbld, inst, i))
+         continue;
+
+      /* In order to keep the logic simple we emit a copy whenever the
+       * destination region doesn't exactly match an overlapping source, which
+       * may point at the source and destination not being aligned group by
+       * group which could cause one of the lowered instructions to overwrite
+       * the data read from the same source by other lowered instructions.
+       */
+      if (regions_overlap(inst->dst, inst->regs_written * REG_SIZE,
+                          inst->src[i], inst->regs_read(i) * REG_SIZE) &&
+          !inst->dst.equals(inst->src[i]))
+        return true;
+   }
+
+   return false;
+}
+
+/**
  * Insert data from a packed temporary into the channel group given by
  * lbld.group() of the destination region of instruction \p inst and return
  * the temporary as result.  If any copy instructions are required they will
@@ -5129,6 +5175,8 @@ emit_zip(const fs_builder &lbld, bblock_t *block, fs_inst *inst)
    const fs_reg dst = horiz_offset(inst->dst, lbld.group());
    const unsigned dst_size = inst->regs_written * REG_SIZE /
             inst->dst.component_size(inst->exec_size);
+
+   if (needs_dst_copy(lbld, inst)) {
    const fs_reg tmp = lbld.vgrf(inst->dst.type, dst_size);
 
    if (inst->predicate) {
@@ -5146,6 +5194,13 @@ emit_zip(const fs_builder &lbld, bblock_t *block, fs_inst *inst)
           .MOV(offset(dst, inst->exec_size, k), offset(tmp, lbld, k));
 
    return tmp;
+
+   } else {
+      /* No need to allocate a temporary for the lowered instruction, just
+       * take the right group of channels from the original region.
+       */
+      return dst;
+   }
 }
 
 bool
