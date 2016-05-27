@@ -116,8 +116,6 @@ tests_isl_surf_get_image_offset_test_LDADD = $(tests_ldadd)
 
 # ----------------------------------------------------------------------------
 
-include $(top_srcdir)/install-lib-links.mk
-
 EXTRA_DIST = \
 	isl_format_layout_gen.bash \
 	isl_format_layout.csv \
