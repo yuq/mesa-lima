@@ -87,13 +87,6 @@ genX(compute_pipeline_create)(
    anv_setup_pipeline_l3_config(pipeline);
 
    const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
-   const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
-
-   unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
-   unsigned push_constant_data_size =
-      (prog_data->nr_params + local_id_dwords) * 4;
-   unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
-   unsigned push_constant_regs = reg_aligned_constant_size / 32;
 
    uint32_t group_size = cs_prog_data->local_size[0] *
       cs_prog_data->local_size[1] * cs_prog_data->local_size[2];
@@ -105,7 +98,8 @@ genX(compute_pipeline_create)(
       pipeline->cs_right_mask = ~0u >> (32 - cs_prog_data->simd_size);
 
    const uint32_t vfe_curbe_allocation =
-      push_constant_regs * cs_prog_data->threads;
+      ALIGN(cs_prog_data->push.per_thread.regs * cs_prog_data->threads +
+            cs_prog_data->push.cross_thread.regs, 2);
 
    anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE), vfe) {
       vfe.ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_COMPUTE];

@@ -319,12 +319,6 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
    const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
 
-   unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
-   unsigned push_constant_data_size =
-      (prog_data->nr_params + local_id_dwords) * 4;
-   unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
-   unsigned push_constant_regs = reg_aligned_constant_size / 32;
-
    if (push_state.alloc_size) {
       anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD), curbe) {
          curbe.CURBETotalDataLength    = push_state.alloc_size;
@@ -351,12 +345,15 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
                           .BindingTableEntryCount = 0,
                           .SamplerStatePointer = samplers.offset,
                           .SamplerCount = 0,
-                          .ConstantIndirectURBEntryReadLength = push_constant_regs,
+                          .ConstantIndirectURBEntryReadLength =
+                             cs_prog_data->push.per_thread.regs,
                           .ConstantURBEntryReadOffset = 0,
                           .BarrierEnable = cs_prog_data->uses_barrier,
                           .SharedLocalMemorySize = slm_size,
                           .NumberofThreadsinGPGPUThreadGroup =
-                             cs_prog_data->threads);
+                             cs_prog_data->threads,
+                          .CrossThreadConstantDataReadLength =
+                             cs_prog_data->push.cross_thread.regs);
 
    uint32_t size = GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
    anv_batch_emit(&cmd_buffer->batch,

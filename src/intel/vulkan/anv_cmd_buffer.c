@@ -1065,23 +1065,14 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
    const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
    const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
 
-   const unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
-   const unsigned push_constant_data_size =
-      (local_id_dwords + prog_data->nr_params) * 4;
-   const unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
-   const unsigned param_aligned_count =
-      reg_aligned_constant_size / sizeof(uint32_t);
-
    /* If we don't actually have any push constants, bail. */
-   if (reg_aligned_constant_size == 0)
+   if (cs_prog_data->push.total.size == 0)
       return (struct anv_state) { .offset = 0 };
 
-   const unsigned total_push_constants_size =
-      reg_aligned_constant_size * cs_prog_data->threads;
    const unsigned push_constant_alignment =
       cmd_buffer->device->info.gen < 8 ? 32 : 64;
    const unsigned aligned_total_push_constants_size =
-      ALIGN(total_push_constants_size, push_constant_alignment);
+      ALIGN(cs_prog_data->push.total.size, push_constant_alignment);
    struct anv_state state =
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
                                          aligned_total_push_constants_size,
@@ -1090,21 +1081,36 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
    /* Walk through the param array and fill the buffer with data */
    uint32_t *u32_map = state.map;
 
-   brw_cs_fill_local_id_payload(cs_prog_data, u32_map, cs_prog_data->threads,
-                                reg_aligned_constant_size);
-
-   /* Setup uniform data for the first thread */
-   for (unsigned i = 0; i < prog_data->nr_params; i++) {
-      uint32_t offset = (uintptr_t)prog_data->param[i];
-      u32_map[local_id_dwords + i] = *(uint32_t *)((uint8_t *)data + offset);
+   if (cs_prog_data->push.cross_thread.size > 0) {
+      assert(cs_prog_data->thread_local_id_index < 0 ||
+             cs_prog_data->thread_local_id_index >=
+                cs_prog_data->push.cross_thread.dwords);
+      for (unsigned i = 0;
+           i < cs_prog_data->push.cross_thread.dwords;
+           i++) {
+         uint32_t offset = (uintptr_t)prog_data->param[i];
+         u32_map[i] = *(uint32_t *)((uint8_t *)data + offset);
+      }
    }
 
-   /* Copy uniform data from the first thread to every other thread */
-   const size_t uniform_data_size = prog_data->nr_params * sizeof(uint32_t);
-   for (unsigned t = 1; t < cs_prog_data->threads; t++) {
-      memcpy(&u32_map[t * param_aligned_count + local_id_dwords],
-             &u32_map[local_id_dwords],
-             uniform_data_size);
+   if (cs_prog_data->push.per_thread.size > 0) {
+      brw_cs_fill_local_id_payload(cs_prog_data, u32_map, cs_prog_data->threads,
+                                   cs_prog_data->push.per_thread.size);
+      for (unsigned t = 0; t < cs_prog_data->threads; t++) {
+         unsigned dst =
+            8 * (cs_prog_data->push.per_thread.regs * t +
+                 cs_prog_data->push.cross_thread.regs +
+                 cs_prog_data->local_invocation_id_regs);
+         unsigned src = cs_prog_data->push.cross_thread.dwords;
+         for ( ; src < prog_data->nr_params; src++, dst++) {
+            if (src != cs_prog_data->thread_local_id_index) {
+               uint32_t offset = (uintptr_t)prog_data->param[src];
+               u32_map[dst] = *(uint32_t *)((uint8_t *)data + offset);
+            } else {
+               u32_map[dst] = t * cs_prog_data->simd_size;
+            }
+         }
+      }
    }
 
    if (!cmd_buffer->device->info.has_llc)
