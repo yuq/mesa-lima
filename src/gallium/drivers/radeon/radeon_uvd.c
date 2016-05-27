@@ -1233,7 +1233,7 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 
 	dec->fb_size = (info.family == CHIP_TONGA) ? FB_BUFFER_SIZE_TONGA :
 			FB_BUFFER_SIZE;
-	bs_buf_size = width * height * 512 / (16 * 16);
+	bs_buf_size = width * height * (512 / (16 * 16));
 	for (i = 0; i < NUM_BUFFERS; ++i) {
 		unsigned msg_fb_it_size = FB_BUFFER_OFFSET + dec->fb_size;
 		STATIC_ASSERT(sizeof(struct ruvd_msg) <= FB_BUFFER_OFFSET);
