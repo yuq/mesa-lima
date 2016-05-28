@@ -455,7 +455,7 @@ NVC0LegalizePostRA::visit(Function *fn)
    pOne = new_LValue(fn, FILE_PREDICATE);
    carry = new_LValue(fn, FILE_FLAGS);
 
-   rZero->reg.data.id = prog->getTarget()->getFileSize(FILE_GPR);
+   rZero->reg.data.id = (prog->getTarget()->getChipset() >= NVISA_GK20A_CHIPSET) ? 255 : 63;
    carry->reg.data.id = 0;
    pOne->reg.data.id = 7;
 
