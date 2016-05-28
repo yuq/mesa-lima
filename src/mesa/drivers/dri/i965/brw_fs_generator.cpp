@@ -1061,14 +1061,32 @@ fs_generator::generate_discard_jump(fs_inst *inst)
 void
 fs_generator::generate_scratch_write(fs_inst *inst, struct brw_reg src)
 {
-   assert(inst->exec_size <= 16 || inst->force_writemask_all);
+   /* The 32-wide messages only respect the first 16-wide half of the channel
+    * enable signals which are replicated identically for the second group of
+    * 16 channels, so we cannot use them unless the write is marked
+    * force_writemask_all.
+    */
+   const unsigned lower_size = inst->force_writemask_all ? inst->exec_size :
+                               MIN2(16, inst->exec_size);
+   const unsigned block_size = 4 * lower_size / REG_SIZE;
    assert(inst->mlen != 0);
 
-   brw_MOV(p,
-	   brw_uvec_mrf(inst->exec_size, (inst->base_mrf + 1), 0),
-	   retype(src, BRW_REGISTER_TYPE_UD));
-   brw_oword_block_write_scratch(p, brw_message_reg(inst->base_mrf),
-                                 inst->exec_size / 8, inst->offset);
+   brw_push_insn_state(p);
+   brw_set_default_exec_size(p, cvt(lower_size) - 1);
+   brw_set_default_compression(p, lower_size > 8);
+
+   for (unsigned i = 0; i < inst->exec_size / lower_size; i++) {
+      brw_set_default_group(p, (inst->force_sechalf ? 8 : 0) + lower_size * i);
+
+      brw_MOV(p, brw_uvec_mrf(lower_size, inst->base_mrf + 1, 0),
+              retype(offset(src, block_size * i), BRW_REGISTER_TYPE_UD));
+
+      brw_oword_block_write_scratch(p, brw_message_reg(inst->base_mrf),
+                                    block_size,
+                                    inst->offset + block_size * REG_SIZE * i);
+   }
+
+   brw_pop_insn_state(p);
 }
 
 void
