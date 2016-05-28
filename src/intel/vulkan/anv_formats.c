@@ -50,7 +50,7 @@
  * bspec) names are in LSB -> MSB order while VK formats are MSB -> LSB.
  */
 static const struct anv_format anv_formats[] = {
-   fmt(VK_FORMAT_UNDEFINED,               ISL_FORMAT_RAW),
+   fmt(VK_FORMAT_UNDEFINED,               ISL_FORMAT_UNSUPPORTED),
    fmt(VK_FORMAT_R4G4_UNORM_PACK8,        ISL_FORMAT_UNSUPPORTED),
    fmt(VK_FORMAT_R4G4B4A4_UNORM_PACK16,   ISL_FORMAT_A4B4G4R4_UNORM),
    swiz_fmt(VK_FORMAT_B4G4R4A4_UNORM_PACK16,   ISL_FORMAT_A4B4G4R4_UNORM,  BGRA),
