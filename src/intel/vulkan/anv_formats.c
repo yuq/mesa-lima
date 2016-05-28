@@ -376,8 +376,9 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
       gen += 5;
 
    VkFormatFeatureFlags linear = 0, tiled = 0, buffer = 0;
-   if (anv_formats[format].isl_format != ISL_FORMAT_UNSUPPORTED &&
-       vk_format_is_depth_or_stencil(format)) {
+   if (anv_formats[format].isl_format == ISL_FORMAT_UNSUPPORTED) {
+      /* Nothing to do here */
+   } else if (vk_format_is_depth_or_stencil(format)) {
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
       if (physical_device->info->gen >= 8)
          tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
