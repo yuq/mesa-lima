@@ -6811,9 +6811,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                fields[i].offset = glsl_align(offset, expl_align);
                next_offset = glsl_align(fields[i].offset + size, align);
             }
-         }
-
-         if (!qual->flags.q.explicit_offset) {
+         } else if (!qual->flags.q.explicit_offset) {
             if (align != 0 && size != 0)
                next_offset = glsl_align(next_offset + size, align);
          }
