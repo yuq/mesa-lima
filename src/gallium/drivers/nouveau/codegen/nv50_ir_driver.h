@@ -153,6 +153,7 @@ struct nv50_ir_prog_info
          uint32_t inputOffset; /* base address for user args */
          uint32_t sharedOffset; /* reserved space in s[] */
          uint32_t gridInfoBase;  /* base address for NTID,NCTAID */
+         uint32_t numThreads; /* max number of threads */
       } cp;
    } prop;
 

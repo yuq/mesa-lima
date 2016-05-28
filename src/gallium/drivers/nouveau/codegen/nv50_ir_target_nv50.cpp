@@ -592,6 +592,8 @@ TargetNV50::parseDriverInfo(const struct nv50_ir_prog_info *info)
       wposMask = 0x8;
       sysvalLocation[SV_POSITION] = 0;
    }
+
+   Target::parseDriverInfo(info);
 }
 
 } // namespace nv50_ir

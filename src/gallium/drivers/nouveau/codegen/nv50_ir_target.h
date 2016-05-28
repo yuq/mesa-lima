@@ -172,7 +172,9 @@ public:
    // The address chosen is supplied to the relocation routine.
    virtual void getBuiltinCode(const uint32_t **code, uint32_t *size) const = 0;
 
-   virtual void parseDriverInfo(const struct nv50_ir_prog_info *info) { }
+   virtual void parseDriverInfo(const struct nv50_ir_prog_info *info) {
+      threads = info->prop.cp.numThreads;
+   }
 
    virtual bool runLegalizePass(Program *, CGStage stage) const = 0;
 
@@ -248,6 +250,7 @@ public:
 
 protected:
    uint32_t chipset;
+   uint32_t threads;
 
    DataFile nativeFileMap[DATA_FILE_COUNT];
 

@@ -1178,6 +1178,7 @@ nv50_ir_init_prog_info(struct nv50_ir_prog_info *info)
       info->prop.gp.instanceCount = 1;
       info->prop.gp.maxVertices = 1;
    }
+   info->prop.cp.numThreads = 1;
    info->io.pointSize = 0xff;
    info->io.instanceId = 0xff;
    info->io.vertexId = 0xff;
