@@ -2887,9 +2887,11 @@ brw_surface_payload_size(struct brw_codegen *p,
                          bool has_simd4x2,
                          bool has_simd16)
 {
-   if (has_simd4x2 && brw_inst_access_mode(p->devinfo, p->current) == BRW_ALIGN_16)
+   if (has_simd4x2 &&
+       brw_inst_access_mode(p->devinfo, p->current) == BRW_ALIGN_16)
       return 1;
-   else if (has_simd16 && p->compressed)
+   else if (has_simd16 &&
+            brw_inst_exec_size(p->devinfo, p->current) == BRW_EXECUTE_16)
       return 2 * num_channels;
    else
       return num_channels;
@@ -2908,7 +2910,7 @@ brw_set_dp_untyped_atomic_message(struct brw_codegen *p,
 
    if (devinfo->gen >= 8 || devinfo->is_haswell) {
       if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
-         if (!p->compressed)
+         if (brw_inst_exec_size(devinfo, p->current) == BRW_EXECUTE_8)
             msg_control |= 1 << 4; /* SIMD8 mode */
 
          brw_inst_set_dp_msg_type(devinfo, insn,
@@ -2921,7 +2923,7 @@ brw_set_dp_untyped_atomic_message(struct brw_codegen *p,
       brw_inst_set_dp_msg_type(devinfo, insn,
                                GEN7_DATAPORT_DC_UNTYPED_ATOMIC_OP);
 
-      if (!p->compressed)
+      if (brw_inst_exec_size(devinfo, p->current) == BRW_EXECUTE_8)
          msg_control |= 1 << 4; /* SIMD8 mode */
    }
 
@@ -2969,7 +2971,7 @@ brw_set_dp_untyped_surface_read_message(struct brw_codegen *p,
    unsigned msg_control = 0xf & (0xf << num_channels);
 
    if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
-      if (p->compressed)
+      if (brw_inst_exec_size(devinfo, p->current) == BRW_EXECUTE_16)
          msg_control |= 1 << 4; /* SIMD16 mode */
       else
          msg_control |= 2 << 4; /* SIMD8 mode */
@@ -3013,7 +3015,7 @@ brw_set_dp_untyped_surface_write_message(struct brw_codegen *p,
    unsigned msg_control = 0xf & (0xf << num_channels);
 
    if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
-      if (p->compressed)
+      if (brw_inst_exec_size(devinfo, p->current) == BRW_EXECUTE_16)
          msg_control |= 1 << 4; /* SIMD16 mode */
       else
          msg_control |= 2 << 4; /* SIMD8 mode */
