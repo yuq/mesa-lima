@@ -78,7 +78,7 @@ u_index_translator(unsigned hw_mask,
                    unsigned in_pv,
                    unsigned out_pv,
                    unsigned prim_restart,
-                   unsigned *out_prim,
+                   enum pipe_prim_type *out_prim,
                    unsigned *out_index_size,
                    unsigned *out_nr,
                    u_translate_func *out_translate)
