@@ -2139,6 +2139,34 @@ CodeEmitterGK110::getSRegEncoding(const ValueRef& ref)
 void
 CodeEmitterGK110::emitMOV(const Instruction *i)
 {
+   if (i->def(0).getFile() == FILE_PREDICATE) {
+      if (i->src(0).getFile() == FILE_GPR) {
+         // Use ISETP.NE.AND dst, PT, src, RZ, PT
+         code[0] = 0x00000002;
+         code[1] = 0xdb500000;
+
+         code[0] |= 0x7 << 2;
+         code[0] |= 0xff << 23;
+         code[1] |= 0x7 << 10;
+         srcId(i->src(0), 10);
+      } else
+      if (i->src(0).getFile() == FILE_PREDICATE) {
+         // Use PSETP.AND.AND dst, PT, src, PT, PT
+         code[0] = 0x00000002;
+         code[1] = 0x84800000;
+
+         code[0] |= 0x7 << 2;
+         code[1] |= 0x7 << 0;
+         code[1] |= 0x7 << 10;
+
+         srcId(i->src(0), 14);
+      } else {
+         assert(!"Unexpected source for predicate destination");
+         emitNOP(i);
+      }
+      emitPredicate(i);
+      defId(i->def(0), 5);
+   } else
    if (i->src(0).getFile() == FILE_SYSTEM_VALUE) {
       code[0] = 0x00000002 | (getSRegEncoding(i->src(0)) << 23);
       code[1] = 0x86400000;
