@@ -327,12 +327,9 @@ void anv_FreeCommandBuffers(
    }
 }
 
-VkResult anv_ResetCommandBuffer(
-    VkCommandBuffer                             commandBuffer,
-    VkCommandBufferResetFlags                   flags)
+static VkResult
+anv_cmd_buffer_reset(struct anv_cmd_buffer *cmd_buffer)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
-
    cmd_buffer->usage_flags = 0;
    cmd_buffer->state.current_pipeline = UINT32_MAX;
    anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
@@ -345,8 +342,15 @@ VkResult anv_ResetCommandBuffer(
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
    anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
                          &cmd_buffer->device->dynamic_state_block_pool);
-
    return VK_SUCCESS;
+}
+
+VkResult anv_ResetCommandBuffer(
+    VkCommandBuffer                             commandBuffer,
+    VkCommandBufferResetFlags                   flags)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   return anv_cmd_buffer_reset(cmd_buffer);
 }
 
 void
@@ -387,7 +391,7 @@ VkResult anv_BeginCommandBuffer(
     *    VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT not set. It then puts
     *    the command buffer in the recording state.
     */
-   anv_ResetCommandBuffer(commandBuffer, /*flags*/ 0);
+   anv_cmd_buffer_reset(cmd_buffer);
 
    cmd_buffer->usage_flags = pBeginInfo->flags;
 
@@ -1182,7 +1186,10 @@ void anv_DestroyCommandPool(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_cmd_pool, pool, commandPool);
 
-   anv_ResetCommandPool(_device, commandPool, 0);
+   list_for_each_entry_safe(struct anv_cmd_buffer, cmd_buffer,
+                            &pool->cmd_buffers, pool_link) {
+      anv_cmd_buffer_destroy(cmd_buffer);
+   }
 
    anv_free2(&device->alloc, pAllocator, pool);
 }
@@ -1194,17 +1201,9 @@ VkResult anv_ResetCommandPool(
 {
    ANV_FROM_HANDLE(anv_cmd_pool, pool, commandPool);
 
-   /* FIXME: vkResetCommandPool must not destroy its command buffers. The
-    * Vulkan 1.0 spec requires that it only reset them:
-    *
-    *    Resetting a command pool recycles all of the resources from all of
-    *    the command buffers allocated from the command pool back to the
-    *    command pool. All command buffers that have been allocated from the
-    *    command pool are put in the initial state.
-    */
-   list_for_each_entry_safe(struct anv_cmd_buffer, cmd_buffer,
-                            &pool->cmd_buffers, pool_link) {
-      anv_cmd_buffer_destroy(cmd_buffer);
+   list_for_each_entry(struct anv_cmd_buffer, cmd_buffer,
+                       &pool->cmd_buffers, pool_link) {
+      anv_cmd_buffer_reset(cmd_buffer);
    }
 
    return VK_SUCCESS;
