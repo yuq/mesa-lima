@@ -355,6 +355,7 @@ can_fast_copy_blit(struct brw_context *brw,
     */
    if (src_tr_mode == INTEL_MIPTREE_TRMODE_NONE &&
        dst_tr_mode == INTEL_MIPTREE_TRMODE_NONE)
+      return false;
 
    if (logic_op != GL_COPY)
       return false;
