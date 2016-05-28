@@ -1038,34 +1038,6 @@ fs_generator::generate_ddy(enum opcode opcode,
                            struct brw_reg dst, struct brw_reg src)
 {
    if (opcode == FS_OPCODE_DDY_FINE) {
-      /* From the Ivy Bridge PRM, volume 4 part 3, section 3.3.9 (Register
-       * Region Restrictions):
-       *
-       *     In Align16 access mode, SIMD16 is not allowed for DW operations
-       *     and SIMD8 is not allowed for DF operations.
-       *
-       * In this context, "DW operations" means "operations acting on 32-bit
-       * values", so it includes operations on floats.
-       *
-       * Gen4 has a similar restriction.  From the i965 PRM, section 11.5.3
-       * (Instruction Compression -> Rules and Restrictions):
-       *
-       *     A compressed instruction must be in Align1 access mode. Align16
-       *     mode instructions cannot be compressed.
-       *
-       * Similar text exists in the g45 PRM.
-       *
-       * Empirically, compressed align16 instructions using odd register
-       * numbers don't appear to work on Sandybridge either.
-       *
-       * On these platforms, if we're building a SIMD16 shader, we need to
-       * manually unroll to a pair of SIMD8 instructions.
-       */
-      bool unroll_to_simd8 =
-         (dispatch_width == 16 &&
-          (devinfo->gen == 4 || devinfo->gen == 6 ||
-           (devinfo->gen == 7 && !devinfo->is_haswell)));
-
       /* produce accurate derivatives */
       struct brw_reg src0 = brw_reg(src.file, src.nr, 0,
                                     src.negate, src.abs,
@@ -1083,15 +1055,7 @@ fs_generator::generate_ddy(enum opcode opcode,
                                     BRW_SWIZZLE_ZWZW, WRITEMASK_XYZW);
       brw_push_insn_state(p);
       brw_set_default_access_mode(p, BRW_ALIGN_16);
-      if (unroll_to_simd8) {
-         brw_set_default_exec_size(p, BRW_EXECUTE_8);
-         brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-         brw_ADD(p, firsthalf(dst), negate(firsthalf(src0)), firsthalf(src1));
-         brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-         brw_ADD(p, sechalf(dst), negate(sechalf(src0)), sechalf(src1));
-      } else {
-         brw_ADD(p, dst, negate(src0), src1);
-      }
+      brw_ADD(p, dst, negate(src0), src1);
       brw_pop_insn_state(p);
    } else {
       /* replicate the derivative at the top-left pixel to other pixels */
