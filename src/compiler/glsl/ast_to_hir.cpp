@@ -2967,8 +2967,7 @@ validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
     *
     * The 'double' type does not exist in GLSL ES so far.
     */
-   if ((state->ARB_gpu_shader_fp64_enable
-        || state->is_version(400, 0))
+   if (state->has_double()
        && var_type->contains_double()
        && interpolation != INTERP_QUALIFIER_FLAT
        && state->stage == MESA_SHADER_FRAGMENT
