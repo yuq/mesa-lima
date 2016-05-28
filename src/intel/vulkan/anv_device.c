@@ -150,7 +150,9 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->compiler->shader_debug_log = compiler_debug_log;
    device->compiler->shader_perf_log = compiler_perf_log;
 
-   anv_init_wsi(device);
+   result = anv_init_wsi(device);
+   if (result != VK_SUCCESS)
+       goto fail;
 
    /* XXX: Actually detect bit6 swizzling */
    isl_device_init(&device->isl_dev, device->info, swizzled);
