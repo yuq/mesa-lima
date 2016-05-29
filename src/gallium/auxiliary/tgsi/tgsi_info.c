@@ -262,6 +262,9 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 1, 0, 0, 0, 0, 0, COMP, "DFLR", TGSI_OPCODE_DFLR },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "DROUND", TGSI_OPCODE_DROUND },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "DSSG", TGSI_OPCODE_DSSG },
+   { 1, 1, 0, 0, 0, 0, 0, COMP, "VOTE_ANY", TGSI_OPCODE_VOTE_ANY },
+   { 1, 1, 0, 0, 0, 0, 0, COMP, "VOTE_ALL", TGSI_OPCODE_VOTE_ALL },
+   { 1, 1, 0, 0, 0, 0, 0, COMP, "VOTE_EQ", TGSI_OPCODE_VOTE_EQ },
 };
 
 const struct tgsi_opcode_info *

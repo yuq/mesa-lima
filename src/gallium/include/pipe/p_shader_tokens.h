@@ -561,7 +561,12 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_DFLR                220 /* nvc0 */
 #define TGSI_OPCODE_DROUND              221 /* nvc0 */
 #define TGSI_OPCODE_DSSG                222
-#define TGSI_OPCODE_LAST                223
+
+#define TGSI_OPCODE_VOTE_ANY            223
+#define TGSI_OPCODE_VOTE_ALL            224
+#define TGSI_OPCODE_VOTE_EQ             225
+
+#define TGSI_OPCODE_LAST                226
 
 /**
  * Opcode is the operation code to execute. A given operation defines the
