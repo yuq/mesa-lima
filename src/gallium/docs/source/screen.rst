@@ -340,6 +340,7 @@ The integer capabilities:
   extension and thus implements proper support for culling planes.
 * ``PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES``: Whether primitive restart is
   supported for patch primitives.
+* ``PIPE_CAP_TGSI_VOTE``: Whether the ``VOTE_*`` ops can be used in shaders.
 
 
 .. _pipe_capf:
