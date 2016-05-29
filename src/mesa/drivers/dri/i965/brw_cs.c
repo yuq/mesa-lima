@@ -93,6 +93,9 @@ brw_codegen_cs_prog(struct brw_context *brw,
     */
    int param_count = cp->program.Base.nir->num_uniforms / 4;
 
+   /* The backend also sometimes add a param for the thread local id. */
+   prog_data.thread_local_id_index = param_count++;
+
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
    prog_data.base.param =

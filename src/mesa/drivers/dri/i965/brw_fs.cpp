@@ -5629,7 +5629,8 @@ fs_visitor::setup_cs_payload()
 
    payload.num_regs = 1;
 
-   if (nir->info.system_values_read & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
+   if (nir->info.system_values_read & SYSTEM_BIT_LOCAL_INVOCATION_ID &&
+       prog_data->thread_local_id_index < 0) {
       prog_data->local_invocation_id_regs = dispatch_width * 3 / 8;
       payload.local_invocation_id_reg = payload.num_regs;
       payload.num_regs += prog_data->local_invocation_id_regs;
@@ -6559,6 +6560,21 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                                       true);
    brw_nir_lower_cs_shared(shader);
    prog_data->base.total_shared += shader->num_shared;
+
+   /* The driver isn't yet ready to support thread_local_id_index, so we force
+    * it to disabled for now.
+    */
+   prog_data->thread_local_id_index = -1;
+
+   /* Now that we cloned the nir_shader, we can update num_uniforms based on
+    * the thread_local_id_index.
+    */
+   if (prog_data->thread_local_id_index >= 0) {
+      shader->num_uniforms =
+         MAX2(shader->num_uniforms,
+              (unsigned)4 * (prog_data->thread_local_id_index + 1));
+   }
+
    shader = brw_postprocess_nir(shader, compiler->devinfo, true);
 
    prog_data->local_size[0] = shader->info.cs.local_size[0];

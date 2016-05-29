@@ -433,6 +433,7 @@ struct brw_cs_prog_data {
    bool uses_barrier;
    bool uses_num_work_groups;
    unsigned local_invocation_id_regs;
+   int thread_local_id_index;
 
    struct {
       /** @{

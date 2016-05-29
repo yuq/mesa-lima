@@ -338,6 +338,10 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       pipeline->needs_data_cache = true;
    }
 
+   if (stage == MESA_SHADER_COMPUTE)
+      ((struct brw_cs_prog_data *)prog_data)->thread_local_id_index =
+         prog_data->nr_params++; /* The CS Thread ID uniform */
+
    if (nir->info.num_ssbos > 0)
       pipeline->needs_data_cache = true;
 
