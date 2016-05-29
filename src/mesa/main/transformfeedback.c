@@ -1291,12 +1291,13 @@ _mesa_GetTransformFeedbacki64_v(GLuint xfb, GLenum pname, GLuint index,
       return;
    }
 
+   compute_transform_feedback_buffer_sizes(obj);
    switch(pname) {
    case GL_TRANSFORM_FEEDBACK_BUFFER_START:
       *param = obj->Offset[index];
       break;
    case GL_TRANSFORM_FEEDBACK_BUFFER_SIZE:
-      *param = obj->RequestedSize[index];
+      *param = obj->Size[index];
       break;
    default:
       _mesa_error(ctx, GL_INVALID_ENUM,
