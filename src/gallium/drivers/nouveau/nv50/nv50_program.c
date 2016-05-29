@@ -407,7 +407,7 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
          prog->gp.prim_type = NV50_3D_GP_OUTPUT_PRIMITIVE_TYPE_POINTS;
          break;
       }
-      prog->gp.vert_count = info->prop.gp.maxVertices;
+      prog->gp.vert_count = CLAMP(info->prop.gp.maxVertices, 1, 1024);
    }
 
    if (prog->type == PIPE_SHADER_COMPUTE) {

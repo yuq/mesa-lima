@@ -3290,6 +3290,8 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       unsigned int stream = tgsi.getSrc(0).getValueU32(0, info);
       if (stream && op == OP_RESTART)
          break;
+      if (info->prop.gp.maxVertices == 0)
+         break;
       src0 = mkImm(stream);
       mkOp1(op, TYPE_U32, NULL, src0)->fixed = 1;
       break;

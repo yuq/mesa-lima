@@ -393,7 +393,7 @@ nvc0_gp_gen_header(struct nvc0_program *gp, struct nv50_ir_prog_info *info)
       break;
    }
 
-   gp->hdr[4] = MIN2(info->prop.gp.maxVertices, 1024);
+   gp->hdr[4] = CLAMP(info->prop.gp.maxVertices, 1, 1024);
 
    return nvc0_vtgp_gen_header(gp, info);
 }
