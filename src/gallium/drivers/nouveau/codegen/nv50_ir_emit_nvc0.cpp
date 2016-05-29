@@ -2472,16 +2472,31 @@ CodeEmitterNVC0::emitPIXLD(const Instruction *i)
 void
 CodeEmitterNVC0::emitVOTE(const Instruction *i)
 {
-   assert(i->src(0).getFile() == FILE_PREDICATE &&
-          i->def(1).getFile() == FILE_PREDICATE);
+   assert(i->src(0).getFile() == FILE_PREDICATE);
 
    code[0] = 0x00000004 | (i->subOp << 5);
    code[1] = 0x48000000;
 
    emitPredicate(i);
 
-   defId(i->def(0), 14);
-   defId(i->def(1), 32 + 22);
+   unsigned rp = 0;
+   for (int d = 0; i->defExists(d); d++) {
+      if (i->def(d).getFile() == FILE_PREDICATE) {
+         assert(!(rp & 2));
+         rp |= 2;
+         defId(i->def(d), 32 + 22);
+      } else if (i->def(d).getFile() == FILE_GPR) {
+         assert(!(rp & 1));
+         rp |= 1;
+         defId(i->def(d), 14);
+      } else {
+         assert(!"Unhandled def");
+      }
+   }
+   if (!(rp & 1))
+      code[0] |= 63 << 14;
+   if (!(rp & 2))
+      code[1] |= 7 << 22;
    if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
       code[0] |= 1 << 23;
    srcId(i->src(0), 20);

@@ -548,6 +548,9 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_UBFE:
    case TGSI_OPCODE_UMSB:
    case TGSI_OPCODE_UP2H:
+   case TGSI_OPCODE_VOTE_ALL:
+   case TGSI_OPCODE_VOTE_ANY:
+   case TGSI_OPCODE_VOTE_EQ:
       return nv50_ir::TYPE_U32;
    case TGSI_OPCODE_I2F:
    case TGSI_OPCODE_I2D:
@@ -835,6 +838,10 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(IMSB, BFIND);
    NV50_IR_OPCODE_CASE(UMSB, BFIND);
 
+   NV50_IR_OPCODE_CASE(VOTE_ALL, VOTE);
+   NV50_IR_OPCODE_CASE(VOTE_ANY, VOTE);
+   NV50_IR_OPCODE_CASE(VOTE_EQ, VOTE);
+
    NV50_IR_OPCODE_CASE(END, EXIT);
 
    default:
@@ -861,6 +868,9 @@ static uint16_t opcodeToSubOp(uint opcode)
    case TGSI_OPCODE_IMUL_HI:
    case TGSI_OPCODE_UMUL_HI:
       return NV50_IR_SUBOP_MUL_HIGH;
+   case TGSI_OPCODE_VOTE_ALL: return NV50_IR_SUBOP_VOTE_ALL;
+   case TGSI_OPCODE_VOTE_ANY: return NV50_IR_SUBOP_VOTE_ANY;
+   case TGSI_OPCODE_VOTE_EQ: return NV50_IR_SUBOP_VOTE_UNI;
    default:
       return 0;
    }
@@ -3185,6 +3195,17 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          src0 = fetchSrc(0, c);
          src1 = fetchSrc(1, c);
          mkCmp(op, tgsi.getSetCond(), dstTy, dst0[c], srcTy, src0, src1);
+      }
+      break;
+   case TGSI_OPCODE_VOTE_ALL:
+   case TGSI_OPCODE_VOTE_ANY:
+   case TGSI_OPCODE_VOTE_EQ:
+      val0 = new_LValue(func, FILE_PREDICATE);
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         mkCmp(OP_SET, CC_NE, TYPE_U32, val0, TYPE_U32, fetchSrc(0, c), zero);
+         mkOp1(op, dstTy, val0, val0)
+            ->subOp = tgsi::opcodeToSubOp(tgsi.getOpcode());
+         mkCvt(OP_CVT, TYPE_U32, dst0[c], TYPE_U8, val0);
       }
       break;
    case TGSI_OPCODE_KILL_IF:

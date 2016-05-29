@@ -1481,16 +1481,31 @@ CodeEmitterGK110::emitFlow(const Instruction *i)
 void
 CodeEmitterGK110::emitVOTE(const Instruction *i)
 {
-   assert(i->src(0).getFile() == FILE_PREDICATE &&
-          i->def(1).getFile() == FILE_PREDICATE);
+   assert(i->src(0).getFile() == FILE_PREDICATE);
 
    code[0] = 0x00000002;
    code[1] = 0x86c00000 | (i->subOp << 19);
 
    emitPredicate(i);
 
-   defId(i->def(0), 2);
-   defId(i->def(1), 48);
+   unsigned rp = 0;
+   for (int d = 0; i->defExists(d); d++) {
+      if (i->def(d).getFile() == FILE_PREDICATE) {
+         assert(!(rp & 2));
+         rp |= 2;
+         defId(i->def(d), 48);
+      } else if (i->def(d).getFile() == FILE_GPR) {
+         assert(!(rp & 1));
+         rp |= 1;
+         defId(i->def(d), 2);
+      } else {
+         assert(!"Unhandled def");
+      }
+   }
+   if (!(rp & 1))
+      code[0] |= 255 << 2;
+   if (!(rp & 2))
+      code[1] |= 7 << 16;
    if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
       code[1] |= 1 << 13;
    srcId(i->src(0), 42);
