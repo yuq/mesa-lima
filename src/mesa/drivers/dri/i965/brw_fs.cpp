@@ -4991,6 +4991,19 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
 }
 
 /**
+ * Return true if splitting out the group of channels of instruction \p inst
+ * given by lbld.group() requires allocating a temporary for the i-th source
+ * of the lowered instruction.
+ */
+static inline bool
+needs_src_copy(const fs_builder &lbld, const fs_inst *inst, unsigned i)
+{
+   return !(is_periodic(inst->src[i], lbld.dispatch_width()) ||
+            (inst->components_read(i) == 1 &&
+             lbld.dispatch_width() <= inst->exec_size));
+}
+
+/**
  * Extract the data that would be consumed by the channel group given by
  * lbld.group() from the i-th source region of instruction \p inst and return
  * it as result in packed form.  If any copy instructions are required they
@@ -5003,7 +5016,7 @@ emit_unzip(const fs_builder &lbld, bblock_t *block, fs_inst *inst,
    /* Specified channel group from the source region. */
    const fs_reg src = horiz_offset(inst->src[i], lbld.group());
 
-   if (!is_periodic(inst->src[i], lbld.dispatch_width())) {
+   if (needs_src_copy(lbld, inst, i)) {
       /* Builder of the right width to perform the copy avoiding uninitialized
        * data if the lowered execution size is greater than the original
        * execution size of the instruction.
@@ -5018,11 +5031,17 @@ emit_unzip(const fs_builder &lbld, bblock_t *block, fs_inst *inst,
 
       return tmp;
 
-   } else {
+   } else if (is_periodic(inst->src[i], lbld.dispatch_width())) {
       /* The source is invariant for all dispatch_width-wide groups of the
        * original region.
        */
       return inst->src[i];
+
+   } else {
+      /* We can just point the lowered instruction at the right channel group
+       * from the original region.
+       */
+      return src;
    }
 }
 
