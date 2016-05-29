@@ -1819,12 +1819,16 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 
 	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
+		unsigned offchip_buffering = offchip_blocks;
+		if(sctx->b.chip_class >= VI)
+			--offchip_buffering;
+
 		si_pm4_set_reg(sctx->init_config, R_030938_VGT_TF_RING_SIZE,
 			       S_030938_SIZE(sctx->tf_ring->width0 / 4));
 		si_pm4_set_reg(sctx->init_config, R_030940_VGT_TF_MEMORY_BASE,
 			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
 		si_pm4_set_reg(sctx->init_config, R_03093C_VGT_HS_OFFCHIP_PARAM,
-		             S_03093C_OFFCHIP_BUFFERING(offchip_blocks - 1) |
+		             S_03093C_OFFCHIP_BUFFERING(offchip_buffering) |
 		             S_03093C_OFFCHIP_GRANULARITY(V_03093C_X_8K_DWORDS));
 	} else {
 		si_pm4_set_reg(sctx->init_config, R_008988_VGT_TF_RING_SIZE,
@@ -1832,7 +1836,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 		si_pm4_set_reg(sctx->init_config, R_0089B8_VGT_TF_MEMORY_BASE,
 			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
 		si_pm4_set_reg(sctx->init_config, R_0089B0_VGT_HS_OFFCHIP_PARAM,
-		               S_0089B0_OFFCHIP_BUFFERING(offchip_blocks - 1));
+		               S_0089B0_OFFCHIP_BUFFERING(offchip_blocks));
 	}
 
 	/* Flush the context to re-emit the init_config state.
