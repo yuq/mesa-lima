@@ -80,9 +80,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count = vp->program.Base.nir->num_uniforms;
-   if (!compiler->scalar_stage[MESA_SHADER_VERTEX])
-      param_count *= 4;
+   int param_count = vp->program.Base.nir->num_uniforms / 4;
 
    if (vs)
       prog_data.base.base.nr_image_params = vs->base.NumImages;

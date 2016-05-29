@@ -97,7 +97,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count = fp->program.Base.nir->num_uniforms;
+   int param_count = fp->program.Base.nir->num_uniforms / 4;
    if (fs)
       prog_data.base.nr_image_params = fs->base.NumImages;
    /* The backend also sometimes adds params for texture size. */

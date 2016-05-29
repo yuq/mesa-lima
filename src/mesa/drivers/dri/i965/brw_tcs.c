@@ -199,9 +199,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
     */
    struct gl_shader *tcs = shader_prog ?
       shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL] : NULL;
-   int param_count = nir->num_uniforms;
-   if (!compiler->scalar_stage[MESA_SHADER_TESS_CTRL])
-      param_count *= 4;
+   int param_count = nir->num_uniforms / 4;
 
    prog_data.base.base.param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);

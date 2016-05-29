@@ -151,9 +151,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
     * every uniform is a float which gets padded to the size of a vec4.
     */
    struct gl_shader *tes = shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
-   int param_count = nir->num_uniforms;
-   if (!compiler->scalar_stage[MESA_SHADER_TESS_EVAL])
-      param_count *= 4;
+   int param_count = nir->num_uniforms / 4;
 
    prog_data.base.base.param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
