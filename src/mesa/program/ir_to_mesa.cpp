@@ -1375,6 +1375,9 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
    case ir_unop_dFdy_fine:
    case ir_unop_subroutine_to_int:
    case ir_unop_get_buffer_size:
+   case ir_unop_vote_any:
+   case ir_unop_vote_all:
+   case ir_unop_vote_eq:
       assert(!"not supported");
       break;
 

@@ -528,6 +528,12 @@ barrier_supported(const _mesa_glsl_parse_state *state)
           state->stage == MESA_SHADER_TESS_CTRL;
 }
 
+static bool
+vote(const _mesa_glsl_parse_state *state)
+{
+   return state->ARB_shader_group_vote_enable;
+}
+
 /** @} */
 
 /******************************************************************************/
@@ -852,6 +858,8 @@ private:
                                                   const glsl_type *type);
    ir_function_signature *_shader_clock(builtin_available_predicate avail,
                                         const glsl_type *type);
+
+   ir_function_signature *_vote(enum ir_expression_operation opcode);
 
 #undef B0
 #undef B1
@@ -2934,6 +2942,10 @@ builtin_builder::create_builtins()
                 _shader_clock(shader_clock,
                               glsl_type::uvec2_type),
                 NULL);
+
+   add_function("anyInvocationARB", _vote(ir_unop_vote_any), NULL);
+   add_function("allInvocationsARB", _vote(ir_unop_vote_all), NULL);
+   add_function("allInvocationsEqualARB", _vote(ir_unop_vote_eq), NULL);
 
 #undef F
 #undef FI
@@ -5573,6 +5585,16 @@ builtin_builder::_shader_clock(builtin_available_predicate avail,
    body.emit(call(shader->symbols->get_function("__intrinsic_shader_clock"),
                   retval, sig->parameters));
    body.emit(ret(retval));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_vote(enum ir_expression_operation opcode)
+{
+   ir_variable *value = in_var(glsl_type::bool_type, "value");
+
+   MAKE_SIG(glsl_type::bool_type, vote, 1, value);
+   body.emit(ret(expr(opcode, value)));
    return sig;
 }
 

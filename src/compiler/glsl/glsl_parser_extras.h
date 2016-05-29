@@ -575,6 +575,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_shader_clock_warn;
    bool ARB_shader_draw_parameters_enable;
    bool ARB_shader_draw_parameters_warn;
+   bool ARB_shader_group_vote_enable;
+   bool ARB_shader_group_vote_warn;
    bool ARB_shader_image_load_store_enable;
    bool ARB_shader_image_load_store_warn;
    bool ARB_shader_image_size_enable;

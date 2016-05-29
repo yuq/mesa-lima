@@ -341,6 +341,12 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
       this->type = glsl_type::int_type;
       break;
 
+   case ir_unop_vote_any:
+   case ir_unop_vote_all:
+   case ir_unop_vote_eq:
+      this->type = glsl_type::bool_type;
+      break;
+
    default:
       assert(!"not reached: missing automatic type setup for ir_expression");
       this->type = op0->type;
@@ -563,6 +569,9 @@ static const char *const operator_strs[] = {
    "interpolate_at_centroid",
    "get_buffer_size",
    "ssbo_unsized_array_length",
+   "vote_any",
+   "vote_all",
+   "vote_eq",
    "+",
    "-",
    "*",

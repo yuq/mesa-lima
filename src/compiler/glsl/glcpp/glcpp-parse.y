@@ -2467,6 +2467,9 @@ _glcpp_parser_handle_version_declaration(glcpp_parser_t *parser, intmax_t versio
 
          if (extensions->ARB_cull_distance)
             add_builtin_define(parser, "GL_ARB_cull_distance", 1);
+
+         if (extensions->ARB_shader_group_vote)
+            add_builtin_define(parser, "GL_ARB_shader_group_vote", 1);
       }
    }
 

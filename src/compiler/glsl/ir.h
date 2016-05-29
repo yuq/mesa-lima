@@ -1482,9 +1482,16 @@ enum ir_expression_operation {
    ir_unop_ssbo_unsized_array_length,
 
    /**
+    * Vote among threads on the value of the boolean argument.
+    */
+   ir_unop_vote_any,
+   ir_unop_vote_all,
+   ir_unop_vote_eq,
+
+   /**
     * A sentinel marking the last of the unary operations.
     */
-   ir_last_unop = ir_unop_ssbo_unsized_array_length,
+   ir_last_unop = ir_unop_vote_eq,
 
    ir_binop_add,
    ir_binop_sub,
