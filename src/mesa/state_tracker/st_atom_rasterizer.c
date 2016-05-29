@@ -204,9 +204,23 @@ static void update_raster_state( struct st_context *st )
             raster->point_size_per_vertex = TRUE;
          }
       }
-      else if (ctx->VertexProgram.PointSizeEnabled) {
-         /* user-defined program and GL_VERTEX_PROGRAM_POINT_SIZE set */
+      else if (ctx->API != API_OPENGLES2) {
+         /* PointSizeEnabled is always set in ES2 contexts */
          raster->point_size_per_vertex = ctx->VertexProgram.PointSizeEnabled;
+      }
+      else {
+         /* ST_NEW_TESSEVAL_PROGRAM | ST_NEW_GEOMETRY_PROGRAM */
+         /* We have to check the last bound stage and see if it writes psize */
+         struct gl_program *last = NULL;
+         if (ctx->GeometryProgram._Current)
+            last = &ctx->GeometryProgram._Current->Base;
+         else if (ctx->TessEvalProgram._Current)
+            last = &ctx->TessEvalProgram._Current->Base;
+         else if (ctx->VertexProgram._Current)
+            last = &ctx->VertexProgram._Current->Base;
+         if (last)
+            raster->point_size_per_vertex =
+               !!(last->OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_PSIZ));
       }
    }
    if (!raster->point_size_per_vertex) {
@@ -293,6 +307,8 @@ const struct st_tracked_state st_update_rasterizer = {
        _NEW_FRAG_CLAMP |
        _NEW_TRANSFORM),     /* mesa state dependencies*/
       (ST_NEW_VERTEX_PROGRAM |
+       ST_NEW_TESSEVAL_PROGRAM |
+       ST_NEW_GEOMETRY_PROGRAM |
        ST_NEW_RASTERIZER),  /* state tracker dependencies */
    },
    update_raster_state     /* update function */
