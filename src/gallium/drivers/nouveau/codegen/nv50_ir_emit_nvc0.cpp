@@ -1981,7 +1981,8 @@ CodeEmitterNVC0::emitMOV(const Instruction *i)
       else
          opc = HEX64(28000000, 00000004);
 
-      opc |= i->lanes << 5;
+      if (i->src(0).getFile() != FILE_PREDICATE)
+         opc |= i->lanes << 5;
 
       emitForm_B(i, opc);
    } else {
