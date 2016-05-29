@@ -2235,6 +2235,16 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       break;
    }
 
+   case ir_unop_vote_any:
+      emit_asm(ir, TGSI_OPCODE_VOTE_ANY, result_dst, op[0]);
+      break;
+   case ir_unop_vote_all:
+      emit_asm(ir, TGSI_OPCODE_VOTE_ALL, result_dst, op[0]);
+      break;
+   case ir_unop_vote_eq:
+      emit_asm(ir, TGSI_OPCODE_VOTE_EQ, result_dst, op[0]);
+      break;
+
    case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_unorm_2x16:
    case ir_unop_pack_snorm_4x8:
@@ -2251,10 +2261,6 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
    case ir_binop_carry:
    case ir_binop_borrow:
    case ir_unop_ssbo_unsized_array_length:
-
-   case ir_unop_vote_any:
-   case ir_unop_vote_all:
-   case ir_unop_vote_eq:
       /* This operation is not supported, or should have already been handled.
        */
       assert(!"Invalid ir opcode in glsl_to_tgsi_visitor::visit()");
