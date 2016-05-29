@@ -288,8 +288,6 @@ C_SOURCES := \
 	util/u_slab.h \
 	util/u_split_prim.h \
 	util/u_sse.h \
-	util/u_staging.c \
-	util/u_staging.h \
 	util/u_string.h \
 	util/u_suballoc.c \
 	util/u_suballoc.h \
