@@ -115,7 +115,7 @@ static LLVMEnsureMultithreaded lLVMEnsureMultithreaded;
 
 }
 
-static once_flag init_native_targets_once_flag;
+static once_flag init_native_targets_once_flag = ONCE_FLAG_INIT;
 
 static void init_native_targets()
 {
