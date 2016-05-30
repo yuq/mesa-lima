@@ -28,7 +28,7 @@
 #include <fcntl.h>
 
 #include "anv_private.h"
-#include "mesa/main/git_sha1.h"
+#include "git_sha1.h"
 #include "util/strtod.h"
 #include "util/debug.h"
 
