@@ -26,6 +26,8 @@ MAIN_FILES = \
 	main/attrib.h \
 	main/barrier.c \
 	main/barrier.h \
+	main/bbox.c \
+	main/bbox.h \
 	main/blend.c \
 	main/blend.h \
 	main/blit.c \

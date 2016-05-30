@@ -56,6 +56,7 @@ header = """/**
 #include "main/blit.h"
 #include "main/bufferobj.h"
 #include "main/arrayobj.h"
+#include "main/bbox.h"
 #include "main/buffers.h"
 #include "main/clear.h"
 #include "main/clip.h"

@@ -536,7 +536,7 @@ compute_version_es2(const struct gl_extensions *extensions,
                          extensions->ARB_draw_buffers_blend &&
                          extensions->ARB_draw_elements_base_vertex &&
                          extensions->OES_geometry_shader &&
-                         /*extensions->OES_primitive_bounding_box*/ false &&
+                         extensions->OES_primitive_bounding_box &&
                          extensions->OES_sample_variables &&
                          extensions->ARB_tessellation_shader &&
                          extensions->ARB_texture_border_clamp &&

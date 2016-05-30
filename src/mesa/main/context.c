@@ -83,6 +83,7 @@
 #include "api_loopback.h"
 #include "arrayobj.h"
 #include "attrib.h"
+#include "bbox.h"
 #include "blend.h"
 #include "buffers.h"
 #include "bufferobj.h"
@@ -809,6 +810,7 @@ init_attrib_groups(struct gl_context *ctx)
    /* Attribute Groups */
    _mesa_init_accum( ctx );
    _mesa_init_attrib( ctx );
+   _mesa_init_bbox( ctx );
    _mesa_init_buffer_objects( ctx );
    _mesa_init_color( ctx );
    _mesa_init_current( ctx );

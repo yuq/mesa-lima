@@ -2607,5 +2607,8 @@ const struct function gles31_functions_possible[] = {
    /* GL_OES_tessellation_shader */
    { "glPatchParameteriOES", 31, -1 },
 
+   /* GL_OES_primitive_bound_box */
+   { "glPrimitiveBoundingBoxOES", 31, -1 },
+
    { NULL, 0, -1 },
  };

@@ -672,6 +672,8 @@ struct _mesa_glsl_parse_state {
    bool OES_geometry_shader_warn;
    bool OES_gpu_shader5_enable;
    bool OES_gpu_shader5_warn;
+   bool OES_primitive_bounding_box_enable;
+   bool OES_primitive_bounding_box_warn;
    bool OES_sample_variables_enable;
    bool OES_sample_variables_warn;
    bool OES_shader_image_atomic_enable;
@@ -719,6 +721,8 @@ struct _mesa_glsl_parse_state {
    bool EXT_geometry_shader_warn;
    bool EXT_gpu_shader5_enable;
    bool EXT_gpu_shader5_warn;
+   bool EXT_primitive_bounding_box_enable;
+   bool EXT_primitive_bounding_box_warn;
    bool EXT_separate_shader_objects_enable;
    bool EXT_separate_shader_objects_warn;
    bool EXT_shader_framebuffer_fetch_enable;

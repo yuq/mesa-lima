@@ -3941,6 +3941,7 @@ struct gl_extensions
    GLboolean EXT_vertex_array_bgra;
    GLboolean EXT_window_rectangles;
    GLboolean OES_copy_image;
+   GLboolean OES_primitive_bounding_box;
    GLboolean OES_sample_variables;
    GLboolean OES_standard_derivatives;
    GLboolean OES_texture_buffer;
