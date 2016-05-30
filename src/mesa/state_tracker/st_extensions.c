@@ -1210,4 +1210,7 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->ARB_texture_multisample &&
       extensions->ARB_gpu_shader5 &&
       extensions->EXT_shader_integer_mix;
+
+   extensions->OES_primitive_bounding_box = extensions->ARB_ES3_1_compatibility;
+   consts->NoPrimitiveBoundingBoxOutput = true;
 }
