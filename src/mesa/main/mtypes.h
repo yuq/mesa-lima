@@ -110,6 +110,8 @@ _mesa_varying_slot_in_fs(gl_varying_slot slot)
    case VARYING_SLOT_LAYER:
    case VARYING_SLOT_TESS_LEVEL_OUTER:
    case VARYING_SLOT_TESS_LEVEL_INNER:
+   case VARYING_SLOT_BOUNDING_BOX0:
+   case VARYING_SLOT_BOUNDING_BOX1:
       return GL_FALSE;
    default:
       return GL_TRUE;
@@ -3789,6 +3791,9 @@ struct gl_constants
    bool LowerCsDerivedVariables;    /**< Lower gl_GlobalInvocationID and
                                      *   gl_LocalInvocationIndex based on
                                      *   other builtin variables. */
+
+   /** GL_OES_primitive_bounding_box */
+   bool NoPrimitiveBoundingBoxOutput;
 };
 
 

@@ -99,7 +99,9 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
       int idx = var->data.location + offset + i;
       bool is_patch_generic = var->data.patch &&
                               idx != VARYING_SLOT_TESS_LEVEL_INNER &&
-                              idx != VARYING_SLOT_TESS_LEVEL_OUTER;
+                              idx != VARYING_SLOT_TESS_LEVEL_OUTER &&
+                              idx != VARYING_SLOT_BOUNDING_BOX0 &&
+                              idx != VARYING_SLOT_BOUNDING_BOX1;
       GLbitfield64 bitfield;
 
       if (is_patch_generic) {

@@ -1045,6 +1045,18 @@ builtin_variable_generator::generate_tcs_special_vars()
               "gl_TessLevelOuter")->data.patch = 1;
    add_output(VARYING_SLOT_TESS_LEVEL_INNER, array(float_t, 2),
               "gl_TessLevelInner")->data.patch = 1;
+   /* XXX What to do if multiple are flipped on? */
+   int bbox_slot = state->ctx->Const.NoPrimitiveBoundingBoxOutput ? -1 :
+      VARYING_SLOT_BOUNDING_BOX0;
+   if (state->EXT_primitive_bounding_box_enable)
+      add_output(bbox_slot, array(vec4_t, 2), "gl_BoundingBoxEXT")
+         ->data.patch = 1;
+   if (state->OES_primitive_bounding_box_enable)
+      add_output(bbox_slot, array(vec4_t, 2), "gl_BoundingBoxOES")
+         ->data.patch = 1;
+   if (state->is_version(0, 320) || state->ARB_ES3_2_compatibility_enable)
+      add_output(bbox_slot, array(vec4_t, 2), "gl_BoundingBox")
+         ->data.patch = 1;
 }
 
 
