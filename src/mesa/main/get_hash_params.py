@@ -607,6 +607,9 @@ descriptor=[
 
 # GL_ARB_texture_buffer_range
   [ "TEXTURE_BUFFER_OFFSET_ALIGNMENT", "CONTEXT_INT(Const.TextureBufferOffsetAlignment), extra_ARB_texture_buffer_range" ],
+
+# GL_OES_primitive_bounding_box
+  [ "PRIMITIVE_BOUNDING_BOX_ARB", "CONTEXT_FLOAT8(PrimitiveBoundingBox), extra_OES_primitive_bounding_box" ],
 ]},
 
 # Remaining enums are only in OpenGL

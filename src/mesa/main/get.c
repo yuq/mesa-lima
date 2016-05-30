@@ -111,6 +111,7 @@ enum value_type {
    TYPE_FLOAT_2,
    TYPE_FLOAT_3,
    TYPE_FLOAT_4,
+   TYPE_FLOAT_8,
    TYPE_FLOATN,
    TYPE_FLOATN_2,
    TYPE_FLOATN_3,
@@ -218,6 +219,7 @@ union value {
 #define CONTEXT_FLOAT2(field) CONTEXT_FIELD(field, TYPE_FLOAT_2)
 #define CONTEXT_FLOAT3(field) CONTEXT_FIELD(field, TYPE_FLOAT_3)
 #define CONTEXT_FLOAT4(field) CONTEXT_FIELD(field, TYPE_FLOAT_4)
+#define CONTEXT_FLOAT8(field) CONTEXT_FIELD(field, TYPE_FLOAT_8)
 #define CONTEXT_MATRIX(field) CONTEXT_FIELD(field, TYPE_MATRIX)
 #define CONTEXT_MATRIX_T(field) CONTEXT_FIELD(field, TYPE_MATRIX_T)
 
@@ -467,6 +469,7 @@ EXTRA_EXT(NVX_gpu_memory_info);
 EXTRA_EXT(ARB_cull_distance);
 EXTRA_EXT(EXT_window_rectangles);
 EXTRA_EXT(KHR_blend_equation_advanced_coherent);
+EXTRA_EXT(OES_primitive_bounding_box);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {
@@ -1391,6 +1394,11 @@ _mesa_GetBooleanv(GLenum pname, GLboolean *params)
       params[0] = INT_TO_BOOLEAN(d->offset);
       break;
 
+   case TYPE_FLOAT_8:
+      params[7] = FLOAT_TO_BOOLEAN(((GLfloat *) p)[7]);
+      params[6] = FLOAT_TO_BOOLEAN(((GLfloat *) p)[6]);
+      params[5] = FLOAT_TO_BOOLEAN(((GLfloat *) p)[5]);
+      params[4] = FLOAT_TO_BOOLEAN(((GLfloat *) p)[4]);
    case TYPE_FLOAT_4:
    case TYPE_FLOATN_4:
       params[3] = FLOAT_TO_BOOLEAN(((GLfloat *) p)[3]);
@@ -1479,6 +1487,11 @@ _mesa_GetFloatv(GLenum pname, GLfloat *params)
       params[0] = (GLfloat) d->offset;
       break;
 
+   case TYPE_FLOAT_8:
+      params[7] = ((GLfloat *) p)[7];
+      params[6] = ((GLfloat *) p)[6];
+      params[5] = ((GLfloat *) p)[5];
+      params[4] = ((GLfloat *) p)[4];
    case TYPE_FLOAT_4:
    case TYPE_FLOATN_4:
       params[3] = ((GLfloat *) p)[3];
@@ -1567,6 +1580,11 @@ _mesa_GetIntegerv(GLenum pname, GLint *params)
       params[0] = d->offset;
       break;
 
+   case TYPE_FLOAT_8:
+      params[7] = IROUND(((GLfloat *) p)[7]);
+      params[6] = IROUND(((GLfloat *) p)[6]);
+      params[5] = IROUND(((GLfloat *) p)[5]);
+      params[4] = IROUND(((GLfloat *) p)[4]);
    case TYPE_FLOAT_4:
       params[3] = IROUND(((GLfloat *) p)[3]);
    case TYPE_FLOAT_3:
@@ -1661,6 +1679,11 @@ _mesa_GetInteger64v(GLenum pname, GLint64 *params)
       params[0] = d->offset;
       break;
 
+   case TYPE_FLOAT_8:
+      params[7] = IROUND64(((GLfloat *) p)[7]);
+      params[6] = IROUND64(((GLfloat *) p)[6]);
+      params[5] = IROUND64(((GLfloat *) p)[5]);
+      params[4] = IROUND64(((GLfloat *) p)[4]);
    case TYPE_FLOAT_4:
       params[3] = IROUND64(((GLfloat *) p)[3]);
    case TYPE_FLOAT_3:
@@ -1755,6 +1778,11 @@ _mesa_GetDoublev(GLenum pname, GLdouble *params)
       params[0] = d->offset;
       break;
 
+   case TYPE_FLOAT_8:
+      params[7] = ((GLfloat *) p)[7];
+      params[6] = ((GLfloat *) p)[6];
+      params[5] = ((GLfloat *) p)[5];
+      params[4] = ((GLfloat *) p)[4];
    case TYPE_FLOAT_4:
    case TYPE_FLOATN_4:
       params[3] = ((GLfloat *) p)[3];

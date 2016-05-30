@@ -4673,6 +4673,13 @@ struct gl_context
     * Once this field becomes true, it is never reset to false.
     */
    GLboolean ShareGroupReset;
+
+   /**
+    * \name OES_primitive_bounding_box
+    *
+    * Stores the arguments to glPrimitiveBoundingBox
+    */
+   GLfloat PrimitiveBoundingBox[8];
 };
 
 /**
