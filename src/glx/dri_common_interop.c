@@ -34,7 +34,7 @@
 
 _X_HIDDEN int
 dri2_interop_query_device_info(struct glx_context *ctx,
-                               mesa_glinterop_device_info *out)
+                               struct mesa_glinterop_device_info *out)
 {
    struct dri2_screen *psc = (struct dri2_screen*)ctx->psc;
    struct dri2_context *drictx = (struct dri2_context*)ctx;
@@ -47,8 +47,8 @@ dri2_interop_query_device_info(struct glx_context *ctx,
 
 _X_HIDDEN int
 dri2_interop_export_object(struct glx_context *ctx,
-                           mesa_glinterop_export_in *in,
-                           mesa_glinterop_export_out *out)
+                           struct mesa_glinterop_export_in *in,
+                           struct mesa_glinterop_export_out *out)
 {
    struct dri2_screen *psc = (struct dri2_screen*)ctx->psc;
    struct dri2_context *drictx = (struct dri2_context*)ctx;
@@ -63,7 +63,7 @@ dri2_interop_export_object(struct glx_context *ctx,
 
 _X_HIDDEN int
 dri3_interop_query_device_info(struct glx_context *ctx,
-                               mesa_glinterop_device_info *out)
+                               struct mesa_glinterop_device_info *out)
 {
    struct dri3_screen *psc = (struct dri3_screen*)ctx->psc;
    struct dri3_context *drictx = (struct dri3_context*)ctx;
@@ -76,8 +76,8 @@ dri3_interop_query_device_info(struct glx_context *ctx,
 
 _X_HIDDEN int
 dri3_interop_export_object(struct glx_context *ctx,
-                           mesa_glinterop_export_in *in,
-                           mesa_glinterop_export_out *out)
+                           struct mesa_glinterop_export_in *in,
+                           struct mesa_glinterop_export_out *out)
 {
    struct dri3_screen *psc = (struct dri3_screen*)ctx->psc;
    struct dri3_context *drictx = (struct dri3_context*)ctx;

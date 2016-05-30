@@ -1488,7 +1488,7 @@ static const __DRIrobustnessExtension dri2Robustness = {
 
 static int
 dri2_interop_query_device_info(__DRIcontext *_ctx,
-                               mesa_glinterop_device_info *out)
+                               struct mesa_glinterop_device_info *out)
 {
    struct pipe_screen *screen = dri_context(_ctx)->st->pipe->screen;
 
@@ -1512,8 +1512,8 @@ dri2_interop_query_device_info(__DRIcontext *_ctx,
 
 static int
 dri2_interop_export_object(__DRIcontext *_ctx,
-                           mesa_glinterop_export_in *in,
-                           mesa_glinterop_export_out *out)
+                           struct mesa_glinterop_export_in *in,
+                           struct mesa_glinterop_export_out *out)
 {
    struct st_context_iface *st = dri_context(_ctx)->st;
    struct pipe_screen *screen = st->pipe->screen;

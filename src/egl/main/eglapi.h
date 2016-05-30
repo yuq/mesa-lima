@@ -42,9 +42,9 @@ extern "C" {
 typedef void (*_EGLProc)(void);
 
 struct wl_display;
-typedef struct _mesa_glinterop_device_info mesa_glinterop_device_info;
-typedef struct _mesa_glinterop_export_in mesa_glinterop_export_in;
-typedef struct _mesa_glinterop_export_out mesa_glinterop_export_out;
+struct mesa_glinterop_device_info;
+struct mesa_glinterop_export_in;
+struct mesa_glinterop_export_out;
 
 /**
  * The API dispatcher jumps through these functions
@@ -193,10 +193,10 @@ struct _egl_api
                                        EGLint *strides, EGLint *offsets);
 
    int (*GLInteropQueryDeviceInfo)(_EGLDisplay *dpy, _EGLContext *ctx,
-                                   mesa_glinterop_device_info *out);
+                                   struct mesa_glinterop_device_info *out);
    int (*GLInteropExportObject)(_EGLDisplay *dpy, _EGLContext *ctx,
-                                mesa_glinterop_export_in *in,
-                                mesa_glinterop_export_out *out);
+                                struct mesa_glinterop_export_in *in,
+                                struct mesa_glinterop_export_out *out);
 };
 
 

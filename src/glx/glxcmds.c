@@ -2697,7 +2697,7 @@ __glXGetUST(int64_t * ust)
 
 int
 MesaGLInteropGLXQueryDeviceInfo(Display *dpy, GLXContext context,
-                                mesa_glinterop_device_info *out)
+                                struct mesa_glinterop_device_info *out)
 {
    struct glx_context *gc = (struct glx_context*)context;
    int ret;
@@ -2721,8 +2721,8 @@ MesaGLInteropGLXQueryDeviceInfo(Display *dpy, GLXContext context,
 
 int
 MesaGLInteropGLXExportObject(Display *dpy, GLXContext context,
-                             mesa_glinterop_export_in *in,
-                             mesa_glinterop_export_out *out)
+                             struct mesa_glinterop_export_in *in,
+                             struct mesa_glinterop_export_out *out)
 {
    struct glx_context *gc = (struct glx_context*)context;
    int ret;

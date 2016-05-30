@@ -2690,7 +2690,7 @@ dri2_server_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync)
 
 static int
 dri2_interop_query_device_info(_EGLDisplay *dpy, _EGLContext *ctx,
-                               mesa_glinterop_device_info *out)
+                               struct mesa_glinterop_device_info *out)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
    struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
@@ -2703,8 +2703,8 @@ dri2_interop_query_device_info(_EGLDisplay *dpy, _EGLContext *ctx,
 
 static int
 dri2_interop_export_object(_EGLDisplay *dpy, _EGLContext *ctx,
-                           mesa_glinterop_export_in *in,
-                           mesa_glinterop_export_out *out)
+                           struct mesa_glinterop_export_in *in,
+                           struct mesa_glinterop_export_out *out)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
    struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);

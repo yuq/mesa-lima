@@ -401,21 +401,21 @@ struct __DRI2fenceExtensionRec {
 #define __DRI2_INTEROP "DRI2_Interop"
 #define __DRI2_INTEROP_VERSION 1
 
-typedef struct _mesa_glinterop_device_info mesa_glinterop_device_info;
-typedef struct _mesa_glinterop_export_in mesa_glinterop_export_in;
-typedef struct _mesa_glinterop_export_out mesa_glinterop_export_out;
+struct mesa_glinterop_device_info;
+struct mesa_glinterop_export_in;
+struct mesa_glinterop_export_out;
 
 struct __DRI2interopExtensionRec {
    __DRIextension base;
 
    /** Same as MesaGLInterop*QueryDeviceInfo. */
    int (*query_device_info)(__DRIcontext *ctx,
-                            mesa_glinterop_device_info *out);
+                            struct mesa_glinterop_device_info *out);
 
    /** Same as MesaGLInterop*ExportObject. */
    int (*export_object)(__DRIcontext *ctx,
-                        mesa_glinterop_export_in *in,
-                        mesa_glinterop_export_out *out);
+                        struct mesa_glinterop_export_in *in,
+                        struct mesa_glinterop_export_out *out);
 };
 
 /*@}*/
