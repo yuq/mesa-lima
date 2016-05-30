@@ -941,20 +941,14 @@ const void * const __glXDispatchFunctions[DI_LAST_INDEX + 1] = {
     __ATTRIB(GetFBConfigAttribSGIX),
     __ATTRIB(GetFBConfigFromVisualSGIX),
     __ATTRIB(GetSelectedEventSGIX),
-#if defined(GLX_SGI_video_sync)
     __ATTRIB(GetVideoSyncSGI),
-#endif // defined(GLX_SGI_video_sync)
     __ATTRIB(GetVisualFromFBConfigSGIX),
     __ATTRIB(QueryContextInfoEXT),
     __ATTRIB(QueryGLXPbufferSGIX),
     __ATTRIB(ReleaseTexImageEXT),
     __ATTRIB(SelectEventSGIX),
-#if defined(GLX_SGI_swap_control)
     __ATTRIB(SwapIntervalSGI),
-#endif // defined(GLX_SGI_swap_control)
-#if defined(GLX_SGI_video_sync)
     __ATTRIB(WaitVideoSyncSGI),
-#endif // defined(GLX_SGI_video_sync)
     __ATTRIB(glXBindSwapBarrierSGIX),
     __ATTRIB(glXCopySubBufferMESA),
     __ATTRIB(glXCreateGLXPixmapMESA),
