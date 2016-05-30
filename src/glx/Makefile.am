@@ -151,8 +151,11 @@ AM_CFLAGS += \
 	$(GLVND_CFLAGS)
 
 libglx_la_SOURCES += \
-          glxglvnd.c \
-          g_glxglvnddispatchfuncs.c
+	g_glxglvnddispatchfuncs.c \
+	g_glxglvnddispatchindices.h \
+	glxglvnd.c \
+	glxglvnd.h \
+	glxglvnddispatchfuncs.h
 
 GL_LIB_VERSION=0
 else
