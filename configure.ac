@@ -531,32 +531,6 @@ fi
 DEFAULT_GL_LIB_NAME=GL
 
 dnl
-dnl Libglvnd configuration
-dnl
-AC_ARG_ENABLE([libglvnd],
-    [AS_HELP_STRING([--enable-libglvnd],
-        [Build for libglvnd @<:@default=disabled@:>@])],
-    [enable_libglvnd="$enableval"],
-    [enable_libglvnd=no])
-AM_CONDITIONAL(USE_LIBGLVND_GLX, test "x$enable_libglvnd" = xyes)
-if test "x$enable_libglvnd" = xyes ; then
-    dnl XXX: update once we can handle more than libGL/glx.
-    dnl Namely: we should error out if neither of the glvnd enabled libraries
-    dnl are built
-    if test "x$enable_glx" = xno; then
-        AC_MSG_ERROR([cannot build libglvnd without GLX])
-    fi
-
-    if test "x$enable_xlib_glx" = xyes; then
-        AC_MSG_ERROR([cannot build libgvnd when Xlib-GLX is enabled])
-    fi
-
-    PKG_CHECK_MODULES([GLVND], libglvnd >= 0.1.0)
-    DEFINES="${DEFINES} -DUSE_LIBGLVND_GLX=1"
-    DEFAULT_GL_LIB_NAME=GLX_mesa
-fi
-
-dnl
 dnl Check if linker supports -Bsymbolic
 dnl
 save_LDFLAGS=$LDFLAGS
@@ -1096,6 +1070,35 @@ esac
 AM_CONDITIONAL(HAVE_DRI_GLX, test "x$enable_glx" = xdri)
 AM_CONDITIONAL(HAVE_XLIB_GLX, test "x$enable_glx" = xxlib)
 AM_CONDITIONAL(HAVE_GALLIUM_XLIB_GLX, test "x$enable_glx" = xgallium-xlib)
+
+dnl
+dnl Libglvnd configuration
+dnl
+AC_ARG_ENABLE([libglvnd],
+    [AS_HELP_STRING([--enable-libglvnd],
+        [Build for libglvnd @<:@default=disabled@:>@])],
+    [enable_libglvnd="$enableval"],
+    [enable_libglvnd=no])
+AM_CONDITIONAL(USE_LIBGLVND_GLX, test "x$enable_libglvnd" = xyes)
+if test "x$enable_libglvnd" = xyes ; then
+    dnl XXX: update once we can handle more than libGL/glx.
+    dnl Namely: we should error out if neither of the glvnd enabled libraries
+    dnl are built
+    case "x$enable_glx" in
+    xno)
+        AC_MSG_ERROR([cannot build libglvnd without GLX])
+        ;;
+    xxlib | xgallium-xlib )
+        AC_MSG_ERROR([cannot build libgvnd when Xlib-GLX or Gallium-Xlib-GLX is enabled])
+        ;;
+    xdri)
+        ;;
+    esac
+
+    PKG_CHECK_MODULES([GLVND], libglvnd >= 0.1.0)
+    DEFINES="${DEFINES} -DUSE_LIBGLVND_GLX=1"
+    DEFAULT_GL_LIB_NAME=GLX_mesa
+fi
 
 # Check for libdrm
 PKG_CHECK_MODULES([LIBDRM], [libdrm >= $LIBDRM_REQUIRED],
