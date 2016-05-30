@@ -1985,6 +1985,10 @@ CodeEmitterNVC0::emitMOV(const Instruction *i)
          opc |= i->lanes << 5;
 
       emitForm_B(i, opc);
+
+      // Explicitly emit the predicate source as emitForm_B skips it.
+      if (i->src(0).getFile() == FILE_PREDICATE)
+         srcId(i->src(0), 20);
    } else {
       uint32_t imm;
 
