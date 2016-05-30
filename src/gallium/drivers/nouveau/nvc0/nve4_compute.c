@@ -632,6 +632,7 @@ nve4_compute_validate_textures(struct nvc0_context *nvc0)
          continue;
       }
       res = nv04_resource(tic->pipe.texture);
+      nvc0_update_tic(nvc0, tic, res);
 
       if (tic->id < 0) {
          tic->id = nvc0_screen_tic_alloc(nvc0->screen, tic);
@@ -662,8 +663,10 @@ nve4_compute_validate_textures(struct nvc0_context *nvc0)
       if (dirty)
          BCTX_REFN(nvc0->bufctx_cp, CP_TEX(i), res, RD);
    }
-   for (; i < nvc0->state.num_textures[s]; ++i)
+   for (; i < nvc0->state.num_textures[s]; ++i) {
       nvc0->tex_handles[s][i] |= NVE4_TIC_ENTRY_INVALID;
+      nvc0->textures_dirty[s] |= 1 << i;
+   }
 
    if (n[0]) {
       BEGIN_NIC0(push, NVE4_CP(TIC_FLUSH), n[0]);

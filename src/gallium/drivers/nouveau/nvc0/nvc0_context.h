@@ -333,6 +333,8 @@ void nve4_set_tex_handles(struct nvc0_context *);
 void nvc0_validate_surfaces(struct nvc0_context *);
 void nve4_set_surface_info(struct nouveau_pushbuf *, struct pipe_image_view *,
                            struct nvc0_context *);
+void nvc0_update_tic(struct nvc0_context *, struct nv50_tic_entry *,
+                     struct nv04_resource *);
 
 struct pipe_sampler_view *
 nvc0_create_texture_view(struct pipe_context *,

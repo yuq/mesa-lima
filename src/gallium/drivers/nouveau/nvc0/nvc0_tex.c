@@ -413,7 +413,7 @@ nvc0_create_texture_view(struct pipe_context *pipe,
    return gf100_create_texture_view(pipe, texture, templ, flags, target);
 }
 
-static void
+void
 nvc0_update_tic(struct nvc0_context *nvc0, struct nv50_tic_entry *tic,
                 struct nv04_resource *res)
 {
