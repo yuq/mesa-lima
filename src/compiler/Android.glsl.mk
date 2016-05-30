@@ -38,13 +38,14 @@ LOCAL_SRC_FILES := \
 	$(LIBGLSL_FILES) \
 
 LOCAL_C_INCLUDES := \
-	$(MESA_TOP)/src/compiler/nir \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/mesa \
 	$(MESA_TOP)/src/gallium/include \
 	$(MESA_TOP)/src/gallium/auxiliary
 
-LOCAL_STATIC_LIBRARIES := libmesa_compiler
+LOCAL_STATIC_LIBRARIES := \
+	libmesa_compiler \
+	libmesa_nir
 
 LOCAL_MODULE := libmesa_glsl
 
