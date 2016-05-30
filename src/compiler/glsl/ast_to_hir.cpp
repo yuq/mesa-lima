@@ -822,7 +822,7 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
     */
    if (state->stage == MESA_SHADER_TESS_CTRL && !lhs->type->is_error()) {
       ir_variable *var = lhs->variable_referenced();
-      if (var->data.mode == ir_var_shader_out && !var->data.patch) {
+      if (var && var->data.mode == ir_var_shader_out && !var->data.patch) {
          ir_rvalue *index = find_innermost_array_index(lhs);
          ir_variable *index_var = index ? index->variable_referenced() : NULL;
          if (!index_var || strcmp(index_var->name, "gl_InvocationID") != 0) {
