@@ -228,8 +228,8 @@ vec4_instruction::size_read(unsigned arg) const
    case UNIFORM:
       return 4 * type_sz(src[arg].type);
    default:
-      /* XXX - Represent actual execution size and vertical stride. */
-      return 8 * type_sz(src[arg].type);
+      /* XXX - Represent actual vertical stride. */
+      return exec_size * type_sz(src[arg].type);
    }
 }
 
