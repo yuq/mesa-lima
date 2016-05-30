@@ -1901,13 +1901,15 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       if (have_sqrt) {
          emit_scalar(ir, TGSI_OPCODE_SQRT, result_dst, op[0]);
       } else {
-         /* sqrt(x) = x * rsq(x). */
-         emit_scalar(ir, TGSI_OPCODE_RSQ, result_dst, op[0]);
-         emit_asm(ir, TGSI_OPCODE_MUL, result_dst, result_src, op[0]);
-         /* For incoming channels <= 0, set the result to 0. */
-         op[0].negate = ~op[0].negate;
-         emit_asm(ir, TGSI_OPCODE_CMP, result_dst,
-              op[0], result_src, st_src_reg_for_float(0.0));
+         /* This is the only instruction sequence that makes the game "Risen"
+          * render correctly. ABS is not required for the game, but since GLSL
+          * declares negative values as "undefined", allowing us to do whatever
+          * we want, I choose to use ABS to match DX9 and pre-GLSL RSQ
+          * behavior.
+          */
+         emit_scalar(ir, TGSI_OPCODE_ABS, result_dst, op[0]);
+         emit_scalar(ir, TGSI_OPCODE_RSQ, result_dst, result_src);
+         emit_scalar(ir, TGSI_OPCODE_RCP, result_dst, result_src);
       }
       break;
    case ir_unop_rsq:
