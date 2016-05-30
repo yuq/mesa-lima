@@ -389,7 +389,8 @@ driver_RenderTexture_is_safe(const struct gl_renderbuffer_attachment *att)
    const struct gl_texture_image *const texImage =
       att->Texture->Image[att->CubeMapFace][att->TextureLevel];
 
-   if (texImage->Width == 0 || texImage->Height == 0 || texImage->Depth == 0)
+   if (!texImage ||
+       texImage->Width == 0 || texImage->Height == 0 || texImage->Depth == 0)
       return false;
 
    if ((texImage->TexObject->Target == GL_TEXTURE_1D_ARRAY
