@@ -51,7 +51,9 @@ static void
 svga_transfer_dma_band(struct svga_context *svga,
                        struct svga_transfer *st,
                        SVGA3dTransferType transfer,
-                       unsigned y, unsigned h, unsigned srcy,
+                       unsigned x, unsigned y, unsigned z,
+                       unsigned w, unsigned h, unsigned d,
+                       unsigned srcx, unsigned srcy, unsigned srcz,
                        SVGA3dSurfaceDMAFlags flags)
 {
    struct svga_texture *texture = svga_texture(st->base.resource);
@@ -60,27 +62,27 @@ svga_transfer_dma_band(struct svga_context *svga,
 
    assert(!st->use_direct_map);
 
-   box.x = st->base.box.x;
+   box.x = x;
    box.y = y;
-   box.z = st->base.box.z;
-   box.w = st->base.box.width;
+   box.z = z;
+   box.w = w;
    box.h = h;
-   box.d = 1;
-   box.srcx = 0;
+   box.d = d;
+   box.srcx = srcx;
    box.srcy = srcy;
-   box.srcz = 0;
+   box.srcz = srcz;
 
    SVGA_DBG(DEBUG_DMA, "dma %s sid %p, face %u, (%u, %u, %u) - "
             "(%u, %u, %u), %ubpp\n",
             transfer == SVGA3D_WRITE_HOST_VRAM ? "to" : "from",
             texture->handle,
             st->slice,
-            st->base.box.x,
+            x,
             y,
-            box.z,
-            st->base.box.x + st->base.box.width,
+            z,
+            x + w,
             y + h,
-            box.z + 1,
+            z + 1,
             util_format_get_blocksize(texture->b.b.format) * 8 /
             (util_format_get_blockwidth(texture->b.b.format)
              * util_format_get_blockheight(texture->b.b.format)));
@@ -119,7 +121,9 @@ svga_transfer_dma(struct svga_context *svga,
    if (!st->swbuf) {
       /* Do the DMA transfer in a single go */
       svga_transfer_dma_band(svga, st, transfer,
-                             st->base.box.y, st->base.box.height, 0,
+                             st->base.box.x, st->base.box.y, st->base.box.z,
+                             st->base.box.width, st->base.box.height, st->base.box.depth,
+                             0, 0, 0,
                              flags);
 
       if (transfer == SVGA3D_READ_HOST_VRAM) {
@@ -170,7 +174,10 @@ svga_transfer_dma(struct svga_context *svga,
             }
          }
 
-         svga_transfer_dma_band(svga, st, transfer, y, h, srcy, flags);
+         svga_transfer_dma_band(svga, st, transfer,
+                                st->base.box.x, y, st->base.box.z,
+                                st->base.box.width, h, st->base.box.depth,
+                                0, srcy, 0, flags);
 
          /*
           * Prevent the texture contents to be discarded on the next band
