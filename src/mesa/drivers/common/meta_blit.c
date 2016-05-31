@@ -223,8 +223,8 @@ setup_glsl_msaa_blit_scaled_shader(struct gl_context *ctx,
                                "#undef TEXEL_FETCH\n"
                                "\n"
                                "   /* Do bilinear filtering on sample colors. */\n"
-                               "   x_0_color =  mix(s_0_color, s_1_color, interp.x);\n"
-                               "   x_1_color =  mix(s_2_color, s_3_color, interp.x);\n"
+                               "   x_0_color = mix(s_0_color, s_1_color, interp.x);\n"
+                               "   x_1_color = mix(s_2_color, s_3_color, interp.x);\n"
                                "   out_color = mix(x_0_color, x_1_color, interp.y);\n"
                                "}\n",
                                sampler_array_suffix,
