@@ -99,7 +99,6 @@ AM_PROG_CC_C_O
 AM_PROG_AS
 AX_CHECK_GNU_MAKE
 AC_CHECK_PROGS([PYTHON2], [python2.7 python2 python])
-AC_CHECK_PROGS([PYTHON3], [python3.5 python3.4 python3])
 AC_PROG_SED
 AC_PROG_MKDIR_P
 
@@ -139,12 +138,6 @@ else
         if test ! -f "$srcdir/src/mesa/main/format_unpack.c"; then
             AC_MSG_ERROR([Python mako module v$PYTHON_MAKO_REQUIRED or higher not found])
         fi
-    fi
-fi
-
-if test -z "$PYTHON3"; then
-    if test ! -f "$srcdir/src/intel/genxml/gen9_pack.h"; then
-        AC_MSG_ERROR([Python3 not found - unable to generate sources])
     fi
 fi
 
@@ -2874,7 +2867,6 @@ if test "x$MESA_LLVM" = x1; then
     echo ""
 fi
 echo "        PYTHON2:         $PYTHON2"
-echo "        PYTHON3:         $PYTHON3"
 
 echo ""
 echo "        Run '${MAKE-make}' to build Mesa"

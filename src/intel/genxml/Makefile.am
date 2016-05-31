@@ -23,14 +23,14 @@ include Makefile.sources
 
 BUILT_SOURCES = $(GENXML_GENERATED_FILES)
 
-PYTHON3_GEN = $(AM_V_GEN)$(PYTHON3) $(PYTHON_FLAGS)
+PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
 
 SUFFIXES = _pack.h .xml
 
 $(BUILT_SOURCES): gen_pack_header.py
 
 .xml_pack.h:
-	$(PYTHON3_GEN) $(srcdir)/gen_pack_header.py $< > $@
+	$(PYTHON_GEN) $(srcdir)/gen_pack_header.py $< > $@
 
 CLEANFILES = $(BUILT_SOURCES)
 
