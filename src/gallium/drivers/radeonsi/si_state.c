@@ -2429,6 +2429,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		     old_nr_samples != 1))
 			si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs);
 	}
+
+	sctx->need_check_render_feedback = true;
 }
 
 static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom *atom)

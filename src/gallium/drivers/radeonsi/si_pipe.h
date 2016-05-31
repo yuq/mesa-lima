@@ -323,6 +323,9 @@ struct si_context {
 	uint64_t		dmesg_timestamp;
 	unsigned		last_bo_count;
 	struct radeon_bo_list_item *last_bo_list;
+
+	/* Other state */
+	bool need_check_render_feedback;
 };
 
 /* cik_sdma.c */

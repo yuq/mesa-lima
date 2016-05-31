@@ -387,6 +387,10 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 			} else {
 				samplers->compressed_colortex_mask &= ~(1u << slot);
 			}
+
+			if (rtex->dcc_offset &&
+			    p_atomic_read(&rtex->framebuffers_bound))
+				sctx->need_check_render_feedback = true;
 		} else {
 			samplers->depth_texture_mask &= ~(1u << slot);
 			samplers->compressed_colortex_mask &= ~(1u << slot);
@@ -526,6 +530,10 @@ si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 			} else {
 				images->compressed_colortex_mask &= ~(1 << slot);
 			}
+
+			if (tex->dcc_offset &&
+			    p_atomic_read(&tex->framebuffers_bound))
+				ctx->need_check_render_feedback = true;
 
 			/* Always force the base level to the selected level.
 			 *

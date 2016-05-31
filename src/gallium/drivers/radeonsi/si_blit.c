@@ -412,6 +412,104 @@ si_decompress_image_color_textures(struct si_context *sctx,
 	}
 }
 
+static void si_check_render_feedback_textures(struct si_context *sctx,
+                                              struct si_textures_info *textures)
+{
+	uint32_t mask = textures->views.desc.enabled_mask;
+
+	while (mask) {
+		const struct pipe_sampler_view *view;
+		struct r600_texture *tex;
+		bool render_feedback = false;
+
+		unsigned i = u_bit_scan(&mask);
+
+		view = textures->views.views[i];
+		if(view->texture->target == PIPE_BUFFER)
+			continue;
+
+		tex = (struct r600_texture *)view->texture;
+		if (!tex->dcc_offset)
+			continue;
+
+		for (unsigned j = 0; j < sctx->framebuffer.state.nr_cbufs; ++j) {
+			struct r600_surface * surf;
+
+			if (!sctx->framebuffer.state.cbufs[j])
+				continue;
+
+			surf = (struct r600_surface*)sctx->framebuffer.state.cbufs[j];
+
+			if (tex == (struct r600_texture*)surf->base.texture &&
+			    surf->base.u.tex.level >= view->u.tex.first_level &&
+			    surf->base.u.tex.level <= view->u.tex.last_level &&
+			    surf->base.u.tex.first_layer <= view->u.tex.last_layer &&
+			    surf->base.u.tex.last_layer >= view->u.tex.first_layer)
+				render_feedback = true;
+		}
+
+		if (render_feedback) {
+			struct si_screen *screen = sctx->screen;
+			r600_texture_disable_dcc(&screen->b, tex);
+		}
+	}
+}
+
+static void si_check_render_feedback_images(struct si_context *sctx,
+                                            struct si_images_info *images)
+{
+	uint32_t mask = images->desc.enabled_mask;
+
+	while (mask) {
+		const struct pipe_image_view *view;
+		struct r600_texture *tex;
+		bool render_feedback = false;
+
+		unsigned i = u_bit_scan(&mask);
+
+		view = &images->views[i];
+		if (view->resource->target == PIPE_BUFFER)
+			continue;
+
+		tex = (struct r600_texture *)view->resource;
+		if (!tex->dcc_offset)
+			continue;
+
+		for (unsigned j = 0; j < sctx->framebuffer.state.nr_cbufs; ++j) {
+			struct r600_surface * surf;
+
+			if (!sctx->framebuffer.state.cbufs[j])
+				continue;
+
+			surf = (struct r600_surface*)sctx->framebuffer.state.cbufs[j];
+
+			if (tex == (struct r600_texture*)surf->base.texture &&
+			    surf->base.u.tex.level == view->u.tex.level &&
+			    surf->base.u.tex.first_layer <= view->u.tex.last_layer &&
+			    surf->base.u.tex.last_layer >= view->u.tex.first_layer)
+				render_feedback = true;
+		}
+
+		if (render_feedback) {
+			struct si_screen *screen = sctx->screen;
+			r600_texture_disable_dcc(&screen->b, tex);
+		}
+	}
+}
+
+static void si_check_render_feedback(struct si_context *sctx)
+{
+
+	if (!sctx->need_check_render_feedback)
+		return;
+
+	for (int i = 0; i < SI_NUM_SHADERS; ++i) {
+		si_check_render_feedback_images(sctx, &sctx->images[i]);
+		si_check_render_feedback_textures(sctx, &sctx->samplers[i]);
+	}
+	sctx->need_check_render_feedback = false;
+}
+
 static void si_decompress_textures(struct si_context *sctx, int shader_start,
                                    int shader_end)
 {
@@ -439,6 +537,8 @@ static void si_decompress_textures(struct si_context *sctx, int shader_start,
 			si_decompress_image_color_textures(sctx, &sctx->images[i]);
 		}
 	}
+
+	si_check_render_feedback(sctx);
 }
 
 void si_decompress_graphics_textures(struct si_context *sctx)
