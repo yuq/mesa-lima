@@ -211,8 +211,8 @@ def num_from_str(num_str):
         return int(num_str)
 
 class Field(object):
-    ufixed_pattern = re.compile("u(\d+)\.(\d+)")
-    sfixed_pattern = re.compile("s(\d+)\.(\d+)")
+    ufixed_pattern = re.compile(r"u(\d+)\.(\d+)")
+    sfixed_pattern = re.compile(r"s(\d+)\.(\d+)")
 
     def __init__(self, parser, attrs):
         self.parser = parser
