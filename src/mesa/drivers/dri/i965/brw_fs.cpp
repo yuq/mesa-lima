@@ -6586,7 +6586,7 @@ cs_fill_push_const_info(const struct brw_device_info *devinfo,
    bool fill_thread_id =
       cs_prog_data->thread_local_id_index >= 0 &&
       cs_prog_data->thread_local_id_index < (int)prog_data->nr_params;
-   bool cross_thread_supported = false; /* Not yet supported by driver. */
+   bool cross_thread_supported = devinfo->gen > 7 || devinfo->is_haswell;
 
    /* The thread ID should be stored in the last param dword */
    assert(prog_data->nr_params > 0 || !fill_thread_id);
@@ -6652,19 +6652,13 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
    brw_nir_lower_cs_shared(shader);
    prog_data->base.total_shared += shader->num_shared;
 
-   /* The driver isn't yet ready to support thread_local_id_index, so we force
-    * it to disabled for now.
-    */
-   prog_data->thread_local_id_index = -1;
-
    /* Now that we cloned the nir_shader, we can update num_uniforms based on
     * the thread_local_id_index.
     */
-   if (prog_data->thread_local_id_index >= 0) {
-      shader->num_uniforms =
-         MAX2(shader->num_uniforms,
-              (unsigned)4 * (prog_data->thread_local_id_index + 1));
-   }
+   assert(prog_data->thread_local_id_index >= 0);
+   shader->num_uniforms =
+      MAX2(shader->num_uniforms,
+           (unsigned)4 * (prog_data->thread_local_id_index + 1));
 
    brw_nir_lower_intrinsics(shader, &prog_data->base);
    shader = brw_postprocess_nir(shader, compiler->devinfo, true);
