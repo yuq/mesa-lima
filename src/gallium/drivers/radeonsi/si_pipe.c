@@ -40,6 +40,8 @@ static void si_destroy_context(struct pipe_context *context)
 	struct si_context *sctx = (struct si_context *)context;
 	int i;
 
+	si_dec_framebuffer_counters(&sctx->framebuffer.state);
+
 	si_release_all_descriptors(sctx);
 
 	if (sctx->ce_suballocator)

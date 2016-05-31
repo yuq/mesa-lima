@@ -2268,6 +2268,21 @@ static void si_init_depth_surface(struct si_context *sctx,
 	surf->depth_initialized = true;
 }
 
+void si_dec_framebuffer_counters(const struct pipe_framebuffer_state *state)
+{
+	for (int i = 0; i < state->nr_cbufs; ++i) {
+		struct r600_surface *surf = NULL;
+		struct r600_texture *rtex;
+
+		if (!state->cbufs[i])
+			continue;
+		surf = (struct r600_surface*)state->cbufs[i];
+		rtex = (struct r600_texture*)surf->base.texture;
+
+		p_atomic_dec(&rtex->framebuffers_bound);
+	}
+}
+
 static void si_set_framebuffer_state(struct pipe_context *ctx,
 				     const struct pipe_framebuffer_state *state)
 {
@@ -2298,6 +2313,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		(1 << MAX2(sctx->framebuffer.state.nr_cbufs, state->nr_cbufs)) - 1;
 	sctx->framebuffer.dirty_zsbuf |= sctx->framebuffer.state.zsbuf != state->zsbuf;
 
+	si_dec_framebuffer_counters(&sctx->framebuffer.state);
 	util_copy_framebuffer_state(&sctx->framebuffer.state, state);
 
 	sctx->framebuffer.spi_shader_col_format = 0;
@@ -2342,6 +2358,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			sctx->framebuffer.compressed_cb_mask |= 1 << i;
 		}
 		r600_context_add_resource_size(ctx, surf->base.texture);
+
+		p_atomic_inc(&rtex->framebuffers_bound);
 	}
 	/* Set the second SPI format for possible dual-src blending. */
 	if (i == 1 && surf) {

@@ -260,6 +260,11 @@ struct r600_texture {
 	uint8_t				stencil_clear_value;
 
 	bool				non_disp_tiling; /* R600-Cayman only */
+
+	/* Counter that should be non-zero if the texture is bound to a
+	 * framebuffer. Implemented in radeonsi only.
+	 */
+	uint32_t			framebuffers_bound;
 };
 
 struct r600_surface {
