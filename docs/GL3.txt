@@ -275,5 +275,61 @@ GLES3.2, GLSL ES 3.2:
   GL_OES_texture_stencil8                               DONE (all drivers that support GL_ARB_texture_stencil8)
   GL_OES_texture_storage_multisample_2d_array           DONE (all drivers that support GL_ARB_texture_multisample)
 
+Khronos, ARB, and OES extensions that are not part of any OpenGL or OpenGL ES version:
+
+  GL_ARB_bindless_texture                               started (airlied)
+  GL_ARB_cl_event                                       not started
+  GL_ARB_compute_variable_group_size                    not started
+  GL_ARB_ES3_2_compatibility                            not started
+  GL_ARB_fragment_shader_interlock                      not started
+  GL_ARB_gpu_shader_int64                               started (airlied for core and Gallium, idr for i965)
+  GL_ARB_indirect_parameters                            DONE (nvc0)
+  GL_ARB_parallel_shader_compile                        not started, but Chia-I Wu did some related work in 2014
+  GL_ARB_pipeline_statistics_query                      DONE (i965, nvc0, radeonsi, softpipe, swr)
+  GL_ARB_post_depth_coverage                            not started
+  GL_ARB_robustness_isolation                           not started
+  GL_ARB_sample_locations                               not started
+  GL_ARB_seamless_cubemap_per_texture                   DONE (i965, nvc0, radeonsi, r600, softpipe, swr)
+  GL_ARB_shader_atomic_counter_ops                      DONE (nvc0, radeonsi, softpipe)
+  GL_ARB_shader_ballot                                  not started
+  GL_ARB_shader_clock                                   DONE (i965/gen7+)
+  GL_ARB_shader_draw_parameters                         DONE (i965, nvc0)
+  GL_ARB_shader_group_vote                              DONE (nvc0)
+  GL_ARB_shader_stencil_export                          DONE (i965/gen9+, radeonsi, softpipe, llvmpipe, swr)
+  GL_ARB_shader_viewport_layer_array                    not started
+  GL_ARB_sparse_buffer                                  not started
+  GL_ARB_sparse_texture                                 not started
+  GL_ARB_sparse_texture2                                not started
+  GL_ARB_sparse_texture_clamp                           not started
+  GL_ARB_texture_filter_minmax                          not started
+  GL_ARB_transform_feedback_overflow_query              not started
+  GL_KHR_blend_equation_advanced_coherent               not started
+  GL_KHR_no_error                                       not started
+  GL_KHR_texture_compression_astc_hdr                   DONE (core only)
+  GL_KHR_texture_compression_astc_sliced_3d             not started
+  GL_OES_depth_texture_cube_map                         DONE (all drivers that support GLSL 1.30+)
+  GL_OES_EGL_image                                      DONE (all drivers)
+  GL_OES_EGL_image_external_essl3                       not started
+  GL_OES_required_internalformat                        not started - GLES2 extension based on OpenGL ES 3.0 feature
+  GL_OES_surfaceless_context                            DONE (all drivers)
+  GL_OES_texture_compression_astc                       DONE (core only)
+  GL_OES_texture_float                                  DONE (i965, r300, r600, radeonsi, nv30, nv50, nvc0, softpipe, llvmpipe)
+  GL_OES_texture_float_linear                           DONE (i965, r300, r600, radeonsi, nv30, nv50, nvc0, softpipe, llvmpipe)
+  GL_OES_texture_half_float                             DONE (i965, r300, r600, radeonsi, nv30, nv50, nvc0, softpipe, llvmpipe)
+  GL_OES_texture_half_float_linear                      DONE (i965, r300, r600, radeonsi, nv30, nv50, nvc0, softpipe, llvmpipe)
+  GL_OES_texture_view                                   not started - based on GL_ARB_texture_view
+  GLX_ARB_context_flush_control                         not started
+  GLX_ARB_robustness_application_isolation              not started
+  GLX_ARB_robustness_share_group_isolation              not started
+
+The following extensions are not part of any OpenGL or OpenGL ES version, and
+we DO NOT WANT implementations of these extensions for Mesa.
+
+  GL_ARB_geometry_shader4                               Superseded by GL 3.2 geometry shaders
+  GL_ARB_matrix_palette                                 Superseded by GL_ARB_vertex_program
+  GL_ARB_shading_language_include                       Not interesting
+  GL_ARB_shadow_ambient                                 Superseded by GL_ARB_fragment_program
+  GL_ARB_vertex_blend                                   Superseded by GL_ARB_vertex_program
+
 More info about these features and the work involved can be found at
 http://dri.freedesktop.org/wiki/MissingFunctionality
