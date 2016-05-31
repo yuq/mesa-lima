@@ -70,6 +70,7 @@
 #include "tnl/t_pipeline.h"
 #include "util/ralloc.h"
 #include "util/debug.h"
+#include "isl/isl.h"
 
 /***************************************
  * Mesa's Driver Functions
@@ -166,6 +167,38 @@ intel_update_framebuffer(struct gl_context *ctx,
                                  fb->DefaultGeometry.NumSamples);
 }
 
+/* On Gen9 color buffers may be compressed by the hardware (lossless
+ * compression). There are, however, format restrictions and care needs to be
+ * taken that the sampler engine is capable for re-interpreting a buffer with
+ * format different the buffer was originally written with.
+ *
+ * For example, SRGB formats are not compressible and the sampler engine isn't
+ * capable of treating RGBA_UNORM as SRGB_ALPHA. In such a case the underlying
+ * color buffer needs to be resolved so that the sampling surface can be
+ * sampled as non-compressed (i.e., without the auxiliary MCS buffer being
+ * set).
+ */
+static bool
+intel_texture_view_requires_resolve(struct brw_context *brw,
+                                    struct intel_texture_object *intel_tex)
+{
+   if (brw->gen < 9 ||
+       !intel_miptree_is_lossless_compressed(brw, intel_tex->mt))
+     return false;
+
+   const uint32_t brw_format = brw_format_for_mesa_format(intel_tex->_Format);
+
+   if (isl_format_supports_lossless_compression(brw->intelScreen->devinfo,
+                                                brw_format))
+      return false;
+
+   perf_debug("Incompatible sampling format (%s) for rbc (%s)\n",
+              _mesa_get_format_name(intel_tex->_Format),
+              _mesa_get_format_name(intel_tex->mt->format));
+
+   return true;
+}
+
 static void
 intel_update_state(struct gl_context * ctx, GLuint new_state)
 {
@@ -198,8 +231,9 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       /* Sampling engine understands lossless compression and resolving
        * those surfaces should be skipped for performance reasons.
        */
-      intel_miptree_resolve_color(brw, tex_obj->mt,
-                                  INTEL_MIPTREE_IGNORE_CCS_E);
+      const int flags = intel_texture_view_requires_resolve(brw, tex_obj) ?
+                           0 : INTEL_MIPTREE_IGNORE_CCS_E;
+      intel_miptree_resolve_color(brw, tex_obj->mt, flags);
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
    }
 

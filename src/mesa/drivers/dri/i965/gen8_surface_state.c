@@ -40,6 +40,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 #include "brw_wm.h"
+#include "isl/isl.h"
 
 /**
  * Convert an swizzle enumeration (i.e. SWIZZLE_X) to one of the Gen7.5+
@@ -254,8 +255,18 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
     * the color buffer should always have been resolved before it is used as
     * a texture so there is no need for it. On Gen9 it will be uploaded when
     * the surface is losslessly compressed (CCS_E).
+    * However, sampling engine is not capable of re-interpreting the
+    * underlying color buffer in non-compressible formats when the surface
+    * is configured as compressed. Therefore state upload has made sure the
+    * buffer is in resolved state allowing the surface to be configured as
+    * non-compressed.
     */
-   if (mt->num_samples <= 1 && aux_mode != GEN9_SURFACE_AUX_MODE_CCS_E) {
+   if (mt->num_samples <= 1 &&
+       (aux_mode != GEN9_SURFACE_AUX_MODE_CCS_E ||
+        !isl_format_supports_lossless_compression(
+            brw->intelScreen->devinfo, format))) {
+      assert(!mt->mcs_mt ||
+             mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED);
       aux_mt = NULL;
       aux_mode = GEN8_SURFACE_AUX_MODE_NONE;
    }
