@@ -201,7 +201,7 @@ def to_alphanum(name):
 
 def safe_name(name):
     name = to_alphanum(name)
-    if not str.isalpha(name[0]):
+    if not name[0].isalpha():
         name = '_' + name
 
     return name
