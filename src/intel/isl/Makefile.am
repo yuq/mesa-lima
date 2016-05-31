@@ -50,7 +50,7 @@ libisl_la_CFLAGS = $(CFLAGS) -Wno-override-init
 
 libisl_la_LIBADD = $(ISL_GEN_LIBS)
 
-libisl_la_SOURCES = $(ISL_FILES)
+libisl_la_SOURCES = $(ISL_FILES) $(ISL_GENERATED_FILES)
 
 libisl_gen7_la_SOURCES = $(ISL_GEN7_FILES)
 libisl_gen7_la_CFLAGS = $(libisl_la_CFLAGS) -DGEN_VERSIONx10=70

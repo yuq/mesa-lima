@@ -2,7 +2,6 @@ ISL_FILES = \
 	isl.c \
 	isl.h \
 	isl_format.c \
-	isl_format_layout.c \
 	isl_gen4.c \
 	isl_gen4.h \
 	isl_gen6.c \
