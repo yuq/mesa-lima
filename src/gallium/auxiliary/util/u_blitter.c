@@ -100,8 +100,6 @@ struct blitter_context_priv
 
    /* FS which outputs an average of all samples. */
    void *fs_resolve[PIPE_MAX_TEXTURE_TYPES][NUM_RESOLVE_FRAG_SHADERS][2];
-   void *fs_resolve_sint[PIPE_MAX_TEXTURE_TYPES][NUM_RESOLVE_FRAG_SHADERS][2];
-   void *fs_resolve_uint[PIPE_MAX_TEXTURE_TYPES][NUM_RESOLVE_FRAG_SHADERS][2];
 
    /* Blend state. */
    void *blend[PIPE_MASK_RGBA+1][2]; /**< blend state with writemask */
@@ -487,16 +485,6 @@ void util_blitter_destroy(struct blitter_context *blitter)
          for (f = 0; f < 2; f++)
             if (ctx->fs_resolve[i][j][f])
                ctx->delete_fs_state(pipe, ctx->fs_resolve[i][j][f]);
-
-      for (j = 0; j< ARRAY_SIZE(ctx->fs_resolve_sint[i]); j++)
-         for (f = 0; f < 2; f++)
-            if (ctx->fs_resolve_sint[i][j][f])
-               ctx->delete_fs_state(pipe, ctx->fs_resolve_sint[i][j][f]);
-
-      for (j = 0; j< ARRAY_SIZE(ctx->fs_resolve_uint[i]); j++)
-         for (f = 0; f < 2; f++)
-            if (ctx->fs_resolve_uint[i][j][f])
-               ctx->delete_fs_state(pipe, ctx->fs_resolve_uint[i][j][f]);
    }
 
    if (ctx->fs_empty)
@@ -891,18 +879,18 @@ static void *blitter_get_fs_texfetch_col(struct blitter_context_priv *ctx,
    if (src_nr_samples > 1) {
       void **shader;
 
-      if (dst_nr_samples <= 1) {
+      /* OpenGL requires that integer textures just copy 1 sample instead
+       * of averaging.
+       */
+      if (dst_nr_samples <= 1 &&
+          stype != TGSI_RETURN_TYPE_UINT &&
+          stype != TGSI_RETURN_TYPE_SINT) {
          /* The destination has one sample, so we'll do color resolve. */
          unsigned index = GET_MSAA_RESOLVE_FS_IDX(src_nr_samples);
 
          assert(filter < 2);
 
-         if (stype == TGSI_RETURN_TYPE_UINT)
-            shader = &ctx->fs_resolve_uint[target][index][filter];
-         else if (stype == TGSI_RETURN_TYPE_SINT)
-            shader = &ctx->fs_resolve_sint[target][index][filter];
-         else
-            shader = &ctx->fs_resolve[target][index][filter];
+         shader = &ctx->fs_resolve[target][index][filter];
 
          if (!*shader) {
             assert(!ctx->cached_all_shaders);
