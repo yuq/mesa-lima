@@ -1117,21 +1117,23 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
             num_buffers++;
             buffer_stream_id = -1;
             continue;
-         } else if (buffer_stream_id == -1)  {
-            /* First varying writing to this buffer: remember its stream */
-            buffer_stream_id = (int) tfeedback_decls[i].get_stream_id();
-         } else if (buffer_stream_id !=
-                    (int) tfeedback_decls[i].get_stream_id()) {
-            /* Varying writes to the same buffer from a different stream */
-            linker_error(prog,
-                         "Transform feedback can't capture varyings belonging "
-                         "to different vertex streams in a single buffer. "
-                         "Varying %s writes to buffer from stream %u, other "
-                         "varyings in the same buffer write from stream %u.",
-                         tfeedback_decls[i].name(),
-                         tfeedback_decls[i].get_stream_id(),
-                         buffer_stream_id);
-            return false;
+         } else if (tfeedback_decls[i].is_varying()) {
+            if (buffer_stream_id == -1)  {
+               /* First varying writing to this buffer: remember its stream */
+               buffer_stream_id = (int) tfeedback_decls[i].get_stream_id();
+            } else if (buffer_stream_id !=
+                       (int) tfeedback_decls[i].get_stream_id()) {
+               /* Varying writes to the same buffer from a different stream */
+               linker_error(prog,
+                            "Transform feedback can't capture varyings belonging "
+                            "to different vertex streams in a single buffer. "
+                            "Varying %s writes to buffer from stream %u, other "
+                            "varyings in the same buffer write from stream %u.",
+                            tfeedback_decls[i].name(),
+                            tfeedback_decls[i].get_stream_id(),
+                            buffer_stream_id);
+               return false;
+            }
          }
 
          if (has_xfb_qualifiers) {
