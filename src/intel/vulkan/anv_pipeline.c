@@ -123,13 +123,12 @@ anv_shader_compile_to_nir(struct anv_device *device,
          num_spec_entries = spec_info->mapEntryCount;
          spec_entries = malloc(num_spec_entries * sizeof(*spec_entries));
          for (uint32_t i = 0; i < num_spec_entries; i++) {
-            const uint32_t *data =
-               spec_info->pData + spec_info->pMapEntries[i].offset;
-            assert((const void *)(data + 1) <=
-                   spec_info->pData + spec_info->dataSize);
+            VkSpecializationMapEntry entry = spec_info->pMapEntries[i];
+            const void *data = spec_info->pData + entry.offset;
+            assert(data + entry.size <= spec_info->pData + spec_info->dataSize);
 
             spec_entries[i].id = spec_info->pMapEntries[i].constantID;
-            spec_entries[i].data = *data;
+            spec_entries[i].data = *(const uint32_t *)data;
          }
       }
 
