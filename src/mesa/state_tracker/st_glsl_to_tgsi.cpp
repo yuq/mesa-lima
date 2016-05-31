@@ -2447,7 +2447,8 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
                           GLbitfield64 double_usage_mask,
                           GLbitfield patch_usage_mask)
 {
-   unsigned i, j;
+   unsigned i;
+   int j;
 
    /* Fix array declarations by removing unused array elements at both ends
     * of the arrays. For example, mat4[3] where only mat[1] is used.
@@ -2456,7 +2457,7 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
       struct array_decl *decl = &arrays[i];
 
       /* Shrink the beginning. */
-      for (j = 0; j < decl->array_size; j++) {
+      for (j = 0; j < (int)decl->array_size; j++) {
          if (decl->mesa_index >= VARYING_SLOT_PATCH0) {
             if (patch_usage_mask &
                 BITFIELD64_BIT(decl->mesa_index - VARYING_SLOT_PATCH0 + j))
