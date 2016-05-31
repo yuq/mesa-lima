@@ -331,7 +331,9 @@ validate_alu_dest(nir_alu_instr *instr, validate_state *state)
     * destinations of type float
     */
    nir_alu_instr *alu = nir_instr_as_alu(state->instr);
-   validate_assert(state, nir_op_infos[alu->op].output_type == nir_type_float ||
+   validate_assert(state,
+          (nir_alu_type_get_base_type(nir_op_infos[alu->op].output_type) ==
+           nir_type_float) ||
           !dest->saturate);
 
    unsigned bit_size = dest->dest.is_ssa ? dest->dest.ssa.bit_size
