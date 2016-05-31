@@ -56,21 +56,12 @@ extern "C" {
  */
 struct _egl_thread_info
 {
+   _EGLThreadInfo *Next; /* used to link threads */
    EGLint LastError;
    _EGLContext *CurrentContexts[_EGL_API_NUM_APIS];
    /* use index for fast access to current context */
    EGLint CurrentAPIIndex;
 };
-
-
-/**
- * Return true if a client API enum is recognized.
- */
-static inline EGLBoolean
-_eglIsApiValid(EGLenum api)
-{
-   return (api >= _EGL_API_FIRST_API && api <= _EGL_API_LAST_API);
-}
 
 
 /**
