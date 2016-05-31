@@ -210,7 +210,7 @@ def num_from_str(num_str):
         assert(not num_str.startswith('0') and 'octals numbers not allowed')
         return int(num_str)
 
-class Field:
+class Field(object):
     ufixed_pattern = re.compile("u(\d+)\.(\d+)")
     sfixed_pattern = re.compile("s(\d+)\.(\d+)")
 
@@ -279,7 +279,7 @@ class Field:
         for value in self.values:
             print("#define %-40s %d" % (prefix + value.name, value.value))
 
-class Group:
+class Group(object):
     def __init__(self, parser, parent, start, count, size):
         self.parser = parser
         self.parent = parent
@@ -467,12 +467,12 @@ class Group:
             print("   dw[%d] = %s;" % (index, v))
             print("   dw[%d] = %s >> 32;" % (index + 1, v))
 
-class Value:
+class Value(object):
     def __init__(self, attrs):
         self.name = safe_name(attrs["name"])
         self.value = int(attrs["value"])
 
-class Parser:
+class Parser(object):
     def __init__(self):
         self.parser = xml.parsers.expat.ParserCreate()
         self.parser.StartElementHandler = self.start_element
