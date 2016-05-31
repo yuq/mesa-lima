@@ -877,7 +877,6 @@ OSMesaGetIntegerv(GLint pname, GLint *value)
          int maxLevels = screen->get_param(screen,
                                            PIPE_CAP_MAX_TEXTURE_2D_LEVELS);
          *value = 1 << (maxLevels - 1);
-         *value = 8 * 1024;
       }
       return;
    default:
