@@ -101,7 +101,7 @@ public:
       return (size < 4) ? u : ((u << unit[f]) / 4);
    }
 
-   void print() const;
+   void print(DataFile f) const;
 
    const bool restrictedGPR16Range;
 
@@ -156,10 +156,10 @@ RegisterSet::intersect(DataFile f, const RegisterSet *set)
 }
 
 void
-RegisterSet::print() const
+RegisterSet::print(DataFile f) const
 {
    INFO("GPR:");
-   bits[FILE_GPR].print();
+   bits[f].print();
    INFO("\n");
 }
 
@@ -1424,7 +1424,7 @@ GCRA::selectRegisters()
          continue;
       LValue *lval = node->getValue();
       if (prog->dbgFlags & NV50_IR_DEBUG_REG_ALLOC)
-         regs.print();
+         regs.print(node->f);
       bool ret = regs.assign(node->reg, node->f, node->colors);
       if (ret) {
          INFO_DBG(prog->dbgFlags, REG_ALLOC, "assigned reg %i\n", node->reg);
