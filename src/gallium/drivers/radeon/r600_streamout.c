@@ -46,7 +46,7 @@ r600_create_so_target(struct pipe_context *ctx,
 		return NULL;
 	}
 
-	u_suballocator_alloc(rctx->allocator_so_filled_size, 4, 4,
+	u_suballocator_alloc(rctx->allocator_zeroed_memory, 4, 4,
 			     &t->buf_filled_size_offset,
 			     (struct pipe_resource**)&t->buf_filled_size);
 	if (!t->buf_filled_size) {

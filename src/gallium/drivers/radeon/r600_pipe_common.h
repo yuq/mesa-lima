@@ -471,7 +471,7 @@ struct r600_common_context {
 	unsigned			last_dirty_tex_descriptor_counter;
 
 	struct u_upload_mgr		*uploader;
-	struct u_suballocator		*allocator_so_filled_size;
+	struct u_suballocator		*allocator_zeroed_memory;
 	struct util_slab_mempool	pool_transfers;
 
 	/* Current unaccounted memory usage. */
