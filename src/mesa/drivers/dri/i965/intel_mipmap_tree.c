@@ -1620,7 +1620,9 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
     * single-sampled buffers. Disabling compression allows us to skip
     * resolves.
     */
+   const bool lossless_compression_disabled = INTEL_DEBUG & DEBUG_NO_RBC;
    const bool is_lossless_compressed =
+      unlikely(!lossless_compression_disabled) &&
       brw->gen >= 9 && !mt->is_scanout &&
       intel_miptree_supports_lossless_compressed(brw, mt);
 
