@@ -110,9 +110,20 @@ void r600_flush_emit(struct r600_context *rctx)
 		}
 	}
 
+	/* Wait packets must be executed first, because SURFACE_SYNC doesn't
+	 * wait for shaders if it's not flushing CB or DB.
+	 */
 	if (rctx->b.flags & R600_CONTEXT_PS_PARTIAL_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
+	}
+
+	if (wait_until) {
+		/* Use of WAIT_UNTIL is deprecated on Cayman+ */
+		if (rctx->b.family < CHIP_CAYMAN) {
+			/* wait for things to settle */
+			radeon_set_config_reg(cs, R_008040_WAIT_UNTIL, wait_until);
+		}
 	}
 
 	if (rctx->b.chip_class >= R700 &&
@@ -226,14 +237,6 @@ void r600_flush_emit(struct r600_context *rctx)
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PIPELINESTAT_STOP) |
 			        EVENT_INDEX(0));
-	}
-
-	if (wait_until) {
-		/* Use of WAIT_UNTIL is deprecated on Cayman+ */
-		if (rctx->b.family < CHIP_CAYMAN) {
-			/* wait for things to settle */
-			radeon_set_config_reg(cs, R_008040_WAIT_UNTIL, wait_until);
-		}
 	}
 
 	/* everything is properly flushed */
