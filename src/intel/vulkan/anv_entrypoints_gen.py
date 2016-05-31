@@ -51,6 +51,20 @@ def hash(name):
 
     return h
 
+def print_guard_start(name):
+    if "Wayland" in name:
+        print "#ifdef VK_USE_PLATFORM_WAYLAND_KHR"
+    if "Xcb" in name:
+        print "#ifdef VK_USE_PLATFORM_XCB_KHR"
+    return
+
+def print_guard_end(name):
+    if "Wayland" in name:
+        print "#endif // VK_USE_PLATFORM_WAYLAND_KHR"
+    if "Xcb" in name:
+        print "#endif // VK_USE_PLATFORM_XCB_KHR"
+    return
+
 opt_header = False
 opt_code = False
 
@@ -86,7 +100,9 @@ if opt_header:
     print "      struct {"
 
     for type, name, args, num, h in entrypoints:
+        print_guard_start(name)
         print "         %s (*%s)%s;" % (type, name, args)
+        print_guard_end(name)
     print "      };\n"
     print "   };\n"
     print "};\n"
@@ -94,12 +110,14 @@ if opt_header:
     print "void anv_set_dispatch_devinfo(const struct brw_device_info *info);\n"
 
     for type, name, args, num, h in entrypoints:
+        print_guard_start(name)
         print "%s anv_%s%s;" % (type, name, args)
         print "%s gen7_%s%s;" % (type, name, args)
         print "%s gen75_%s%s;" % (type, name, args)
         print "%s gen8_%s%s;" % (type, name, args)
         print "%s gen9_%s%s;" % (type, name, args)
         print "%s anv_validate_%s%s;" % (type, name, args)
+        print_guard_end(name)
     exit()
 
 
@@ -146,9 +164,11 @@ static const char strings[] ="""
 offsets = []
 i = 0;
 for type, name, args, num, h in entrypoints:
+    print_guard_start(name)
     print "   \"vk%s\\0\"" % name
     offsets.append(i)
     i += 2 + len(name) + 1
+    print_guard_end(name)
 print """   ;
 
 /* Weak aliases for all potential validate functions. These will resolve to
@@ -162,15 +182,21 @@ print """   ;
 
 print "\nstatic const struct anv_entrypoint entrypoints[] = {"
 for type, name, args, num, h in entrypoints:
+    print_guard_start(name)
     print "   { %5d, 0x%08x }," % (offsets[num], h)
+    print_guard_end(name)
 print "};\n"
 
 for layer in [ "anv", "validate", "gen7", "gen75", "gen8", "gen9" ]:
     for type, name, args, num, h in entrypoints:
+        print_guard_start(name)
         print "%s %s_%s%s __attribute__ ((weak));" % (type, layer, name, args)
+        print_guard_end(name)
     print "\nconst struct anv_dispatch_table %s_layer = {" % layer
     for type, name, args, num, h in entrypoints:
+        print_guard_start(name)
         print "   .%s = %s_%s," % (name, layer, name)
+        print_guard_end(name)
     print "};\n"
 
 print """
@@ -242,8 +268,10 @@ anv_resolve_entrypoint(uint32_t index)
 # lets the resolver look it up in the table.
 
 for type, name, args, num, h in entrypoints:
+    print_guard_start(name)
     print "static void *resolve_%s(void) { return anv_resolve_entrypoint(%d); }" % (name, num)
     print "%s vk%s%s\n   __attribute__ ((ifunc (\"resolve_%s\"), visibility (\"default\")));\n" % (type, name, args, name)
+    print_guard_end(name)
 
 
 # Now generate the hash table used for entry point look up.  This is a
