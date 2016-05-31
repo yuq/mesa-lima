@@ -140,7 +140,7 @@ static bool si_ce_upload(struct si_context *sctx, unsigned ce_offset, unsigned s
 			 unsigned *out_offset, struct r600_resource **out_buf) {
 	uint64_t va;
 
-	u_suballocator_alloc(sctx->ce_suballocator, size, out_offset,
+	u_suballocator_alloc(sctx->ce_suballocator, size, 64, out_offset,
 			     (struct pipe_resource**)out_buf);
 	if (!out_buf)
 			return false;

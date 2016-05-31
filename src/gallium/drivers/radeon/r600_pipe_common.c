@@ -371,7 +371,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 
 	rctx->allocator_so_filled_size =
 		u_suballocator_create(&rctx->b, rscreen->info.gart_page_size,
-				      4, 0, PIPE_USAGE_DEFAULT, TRUE);
+				      0, PIPE_USAGE_DEFAULT, TRUE);
 	if (!rctx->allocator_so_filled_size)
 		return false;
 

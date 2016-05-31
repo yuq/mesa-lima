@@ -187,7 +187,7 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 				       r600_context_gfx_flush, rctx);
 	rctx->b.gfx.flush = r600_context_gfx_flush;
 
-	rctx->allocator_fetch_shader = u_suballocator_create(&rctx->b.b, 64 * 1024, 256,
+	rctx->allocator_fetch_shader = u_suballocator_create(&rctx->b.b, 64 * 1024,
 							     0, PIPE_USAGE_DEFAULT, FALSE);
 	if (!rctx->allocator_fetch_shader)
 		goto fail;
