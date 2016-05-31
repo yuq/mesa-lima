@@ -3442,11 +3442,11 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
    if (qual->flags.q.explicit_xfb_offset) {
       unsigned qual_xfb_offset;
       unsigned component_size = var->type->contains_double() ? 8 : 4;
-      const glsl_type *t = get_varying_type(var, state->stage);
+
       if (process_qualifier_constant(state, loc, "xfb_offset",
                                      qual->offset, &qual_xfb_offset) &&
           validate_xfb_offset_qualifier(loc, state, (int) qual_xfb_offset,
-                                        t, component_size)) {
+                                        var->type, component_size)) {
          var->data.offset = qual_xfb_offset;
          var->data.explicit_xfb_offset = true;
       }
@@ -7336,6 +7336,12 @@ ast_interface_block::hir(exec_list *instructions,
                                         packing,
                                         this->block_name);
 
+   unsigned component_size = block_type->contains_double() ? 8 : 4;
+   int xfb_offset =
+      layout.flags.q.explicit_xfb_offset ? (int) qual_xfb_offset : -1;
+   validate_xfb_offset_qualifier(&loc, state, xfb_offset, block_type,
+                                 component_size);
+
    if (!state->symbols->add_interface(block_type->name, block_type, var_mode)) {
       YYLTYPE loc = this->get_location();
       _mesa_glsl_error(&loc, state, "interface block `%s' with type `%s' "
@@ -7474,13 +7480,6 @@ ast_interface_block::hir(exec_list *instructions,
                                       var_mode);
       }
 
-      unsigned component_size = block_type->contains_double() ? 8 : 4;
-      int xfb_offset =
-         layout.flags.q.explicit_xfb_offset ? (int) qual_xfb_offset : -1;
-      const glsl_type *t = get_varying_type(var, state->stage);
-      validate_xfb_offset_qualifier(&loc, state, xfb_offset, t,
-                                    component_size);
-
       var->data.matrix_layout = matrix_layout == GLSL_MATRIX_LAYOUT_INHERITED
          ? GLSL_MATRIX_LAYOUT_COLUMN_MAJOR : matrix_layout;
 
@@ -7530,12 +7529,6 @@ ast_interface_block::hir(exec_list *instructions,
        * an instance name.
        */
       assert(this->array_specifier == NULL);
-
-      unsigned component_size = block_type->contains_double() ? 8 : 4;
-      int xfb_offset =
-         layout.flags.q.explicit_xfb_offset ? (int) qual_xfb_offset : -1;
-      validate_xfb_offset_qualifier(&loc, state, xfb_offset, block_type,
-                                    component_size);
 
       for (unsigned i = 0; i < num_variables; i++) {
          ir_variable *var =

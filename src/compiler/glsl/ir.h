@@ -2621,9 +2621,6 @@ is_gl_identifier(const char *s)
    return s && s[0] == 'g' && s[1] == 'l' && s[2] == '_';
 }
 
-const glsl_type *
-get_varying_type(const ir_variable *var, gl_shader_stage stage);
-
 extern "C" {
 #endif /* __cplusplus */
 
