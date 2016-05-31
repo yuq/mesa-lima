@@ -50,7 +50,7 @@ emit_indirect_load_store(nir_builder *b, nir_intrinsic_instr *orig_instr,
       direct.indirect = NIR_SRC_INIT;
 
       arr_parent->child = &direct.deref;
-      emit_load_store(b, orig_instr, deref, &arr->deref, dest, src);
+      emit_load_store(b, orig_instr, deref, &direct.deref, dest, src);
       arr_parent->child = &arr->deref;
    } else {
       int mid = start + (end - start) / 2;
