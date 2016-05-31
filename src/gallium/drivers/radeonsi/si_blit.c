@@ -748,42 +748,6 @@ void si_resource_copy_region(struct pipe_context *ctx,
 	pipe_sampler_view_reference(&src_view, NULL);
 }
 
-/* For MSAA integer resolving to work, we change the format to NORM using this function. */
-static enum pipe_format int_to_norm_format(enum pipe_format format)
-{
-	switch (format) {
-#define REPLACE_FORMAT_SIGN(format,sign) \
-	case PIPE_FORMAT_##format##_##sign##INT: \
-		return PIPE_FORMAT_##format##_##sign##NORM
-#define REPLACE_FORMAT(format) \
-		REPLACE_FORMAT_SIGN(format, U); \
-		REPLACE_FORMAT_SIGN(format, S)
-
-	REPLACE_FORMAT_SIGN(B10G10R10A2, U);
-	REPLACE_FORMAT(R8);
-	REPLACE_FORMAT(R8G8);
-	REPLACE_FORMAT(R8G8B8X8);
-	REPLACE_FORMAT(R8G8B8A8);
-	REPLACE_FORMAT(A8);
-	REPLACE_FORMAT(I8);
-	REPLACE_FORMAT(L8);
-	REPLACE_FORMAT(L8A8);
-	REPLACE_FORMAT(R16);
-	REPLACE_FORMAT(R16G16);
-	REPLACE_FORMAT(R16G16B16X16);
-	REPLACE_FORMAT(R16G16B16A16);
-	REPLACE_FORMAT(A16);
-	REPLACE_FORMAT(I16);
-	REPLACE_FORMAT(L16);
-	REPLACE_FORMAT(L16A16);
-
-#undef REPLACE_FORMAT
-#undef REPLACE_FORMAT_SIGN
-	default:
-		return format;
-	}
-}
-
 static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 				     const struct pipe_blit_info *info)
 {
@@ -791,7 +755,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	struct r600_texture *dst = (struct r600_texture*)info->dst.resource;
 	unsigned dst_width = u_minify(info->dst.resource->width0, info->dst.level);
 	unsigned dst_height = u_minify(info->dst.resource->height0, info->dst.level);
-	enum pipe_format format = int_to_norm_format(info->dst.format);
+	enum pipe_format format = info->dst.format;
 	unsigned sample_mask = ~0;
 
 	/* Hardware MSAA resolve doesn't work if SPI format = NORM16_ABGR and
