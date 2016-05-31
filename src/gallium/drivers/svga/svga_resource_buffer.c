@@ -69,7 +69,7 @@ static void *
 svga_buffer_transfer_map(struct pipe_context *pipe,
                          struct pipe_resource *resource,
                          unsigned level,
-                         enum pipe_resource_usage usage,
+                         unsigned usage,
                          const struct pipe_box *box,
                          struct pipe_transfer **ptransfer)
 {
