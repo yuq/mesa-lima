@@ -337,7 +337,8 @@ brw_upload_tcs_prog(struct brw_context *brw,
 
    memset(&key, 0, sizeof(key));
 
-   key.input_vertices = ctx->TessCtrlProgram.patch_vertices;
+   if (brw->gen < 8 || !tcp)
+      key.input_vertices = ctx->TessCtrlProgram.patch_vertices;
    key.outputs_written = per_vertex_slots;
    key.patch_outputs_written = per_patch_slots;
 
@@ -389,7 +390,8 @@ brw_tcs_precompile(struct gl_context *ctx,
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
 
    /* Guess that the input and output patches have the same dimensionality. */
-   key.input_vertices = shader_prog->TessCtrl.VerticesOut;
+   if (brw->gen < 8)
+      key.input_vertices = shader_prog->TessCtrl.VerticesOut;
 
    key.tes_primitive_mode =
       shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL] ?

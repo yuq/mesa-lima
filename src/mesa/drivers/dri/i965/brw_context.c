@@ -599,6 +599,7 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.MaxClipPlanes = 8;
 
    ctx->Const.LowerTessLevel = true;
+   ctx->Const.LowerTCSPatchVerticesIn = brw->gen >= 8;
    ctx->Const.LowerTESPatchVerticesIn = true;
    ctx->Const.PrimitiveRestartForPatches = true;
 
