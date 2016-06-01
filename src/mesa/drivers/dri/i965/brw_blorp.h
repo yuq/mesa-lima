@@ -229,6 +229,7 @@ struct brw_blorp_prog_data
     */
    uint32_t flat_inputs;
    unsigned num_varying_inputs;
+   GLbitfield64 inputs_read;
 
    /* The compiler will re-arrange push constants and store the upload order
     * here. Given an index 'i' in the final upload buffer, param[i] gives the
