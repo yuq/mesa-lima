@@ -329,9 +329,16 @@ genX(graphics_pipeline_create)(
       wm.StatisticsEnable                    = true;
       wm.LineEndCapAntialiasingRegionWidth   = _05pixels;
       wm.LineAntialiasingRegionWidth         = _10pixels;
-      wm.EarlyDepthStencilControl            = NORMAL;
       wm.ForceThreadDispatchEnable           = NORMAL;
       wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
+
+      if (wm_prog_data && wm_prog_data->early_fragment_tests) {
+         wm.EarlyDepthStencilControl         = PREPS;
+      } else if (wm_prog_data && wm_prog_data->has_side_effects) {
+         wm.EarlyDepthStencilControl         = PSEXEC;
+      } else {
+         wm.EarlyDepthStencilControl         = NORMAL;
+      }
 
       wm.BarycentricInterpolationMode = pipeline->ps_ksp0 == NO_KERNEL ?
          0 : wm_prog_data->barycentric_interp_modes;

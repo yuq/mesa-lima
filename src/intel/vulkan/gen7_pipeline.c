@@ -365,12 +365,20 @@ genX(graphics_pipeline_create)(
          wm.ThreadDispatchEnable                = true;
          wm.LineEndCapAntialiasingRegionWidth   = 0; /* 0.5 pixels */
          wm.LineAntialiasingRegionWidth         = 1; /* 1.0 pixels */
-         wm.EarlyDepthStencilControl            = EDSC_NORMAL;
          wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
          wm.PixelShaderComputedDepthMode        = wm_prog_data->computed_depth_mode;
          wm.PixelShaderUsesSourceDepth          = wm_prog_data->uses_src_depth;
          wm.PixelShaderUsesSourceW              = wm_prog_data->uses_src_w;
          wm.PixelShaderUsesInputCoverageMask    = wm_prog_data->uses_sample_mask;
+
+         if (wm_prog_data->early_fragment_tests) {
+            wm.EarlyDepthStencilControl         = EDSC_PREPS;
+         } else if (wm_prog_data->has_side_effects) {
+            wm.EarlyDepthStencilControl         = EDSC_PSEXEC;
+         } else {
+            wm.EarlyDepthStencilControl         = EDSC_NORMAL;
+         }
+
          wm.BarycentricInterpolationMode        = wm_prog_data->barycentric_interp_modes;
       }
    }
