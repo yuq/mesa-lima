@@ -216,55 +216,6 @@ emit_cb_state(struct anv_pipeline *pipeline,
 }
 
 static void
-emit_ds_state(struct anv_pipeline *pipeline,
-              const VkPipelineDepthStencilStateCreateInfo *info)
-{
-   uint32_t *dw = GEN_GEN == 8 ?
-      pipeline->gen8.wm_depth_stencil : pipeline->gen9.wm_depth_stencil;
-
-   if (info == NULL) {
-      /* We're going to OR this together with the dynamic state.  We need
-       * to make sure it's initialized to something useful.
-       */
-      memset(pipeline->gen8.wm_depth_stencil, 0,
-             sizeof(pipeline->gen8.wm_depth_stencil));
-      memset(pipeline->gen9.wm_depth_stencil, 0,
-             sizeof(pipeline->gen9.wm_depth_stencil));
-      return;
-   }
-
-   /* VkBool32 depthBoundsTestEnable; // optional (depth_bounds_test) */
-
-   struct GENX(3DSTATE_WM_DEPTH_STENCIL) wm_depth_stencil = {
-      .DepthTestEnable = info->depthTestEnable,
-      .DepthBufferWriteEnable = info->depthWriteEnable,
-      .DepthTestFunction = vk_to_gen_compare_op[info->depthCompareOp],
-      .DoubleSidedStencilEnable = true,
-
-      .StencilTestEnable = info->stencilTestEnable,
-      .StencilBufferWriteEnable = info->stencilTestEnable,
-      .StencilFailOp = vk_to_gen_stencil_op[info->front.failOp],
-      .StencilPassDepthPassOp = vk_to_gen_stencil_op[info->front.passOp],
-      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.depthFailOp],
-      .StencilTestFunction = vk_to_gen_compare_op[info->front.compareOp],
-      .BackfaceStencilFailOp = vk_to_gen_stencil_op[info->back.failOp],
-      .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info->back.passOp],
-      .BackfaceStencilPassDepthFailOp =vk_to_gen_stencil_op[info->back.depthFailOp],
-      .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
-   };
-
-   /* From the Broadwell PRM:
-    *
-    *    "If Depth_Test_Enable = 1 AND Depth_Test_func = EQUAL, the
-    *    Depth_Write_Enable must be set to 0."
-    */
-   if (info->depthTestEnable && info->depthCompareOp == VK_COMPARE_OP_EQUAL)
-      wm_depth_stencil.DepthBufferWriteEnable = false;
-
-   GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, dw, &wm_depth_stencil);
-}
-
-static void
 emit_ms_state(struct anv_pipeline *pipeline,
               const VkPipelineMultisampleStateCreateInfo *info)
 {

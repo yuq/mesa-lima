@@ -425,3 +425,62 @@ static const uint32_t vk_to_gen_stencil_op[] = {
    [VK_STENCIL_OP_INCREMENT_AND_WRAP]           = STENCILOP_INCR,
    [VK_STENCIL_OP_DECREMENT_AND_WRAP]           = STENCILOP_DECR,
 };
+
+static void
+emit_ds_state(struct anv_pipeline *pipeline,
+              const VkPipelineDepthStencilStateCreateInfo *info)
+{
+#if GEN_GEN == 7
+#  define depth_stencil_dw pipeline->gen7.depth_stencil_state
+#elif GEN_GEN == 8
+#  define depth_stencil_dw pipeline->gen8.wm_depth_stencil
+#else
+#  define depth_stencil_dw pipeline->gen9.wm_depth_stencil
+#endif
+
+   if (info == NULL) {
+      /* We're going to OR this together with the dynamic state.  We need
+       * to make sure it's initialized to something useful.
+       */
+      memset(depth_stencil_dw, 0, sizeof(depth_stencil_dw));
+      return;
+   }
+
+   /* VkBool32 depthBoundsTestEnable; // optional (depth_bounds_test) */
+
+#if GEN_GEN <= 7
+   struct GENX(DEPTH_STENCIL_STATE) depth_stencil = {
+#else
+   struct GENX(3DSTATE_WM_DEPTH_STENCIL) depth_stencil = {
+#endif
+      .DepthTestEnable = info->depthTestEnable,
+      .DepthBufferWriteEnable = info->depthWriteEnable,
+      .DepthTestFunction = vk_to_gen_compare_op[info->depthCompareOp],
+      .DoubleSidedStencilEnable = true,
+
+      .StencilTestEnable = info->stencilTestEnable,
+      .StencilBufferWriteEnable = info->stencilTestEnable,
+      .StencilFailOp = vk_to_gen_stencil_op[info->front.failOp],
+      .StencilPassDepthPassOp = vk_to_gen_stencil_op[info->front.passOp],
+      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.depthFailOp],
+      .StencilTestFunction = vk_to_gen_compare_op[info->front.compareOp],
+      .BackfaceStencilFailOp = vk_to_gen_stencil_op[info->back.failOp],
+      .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info->back.passOp],
+      .BackfaceStencilPassDepthFailOp =vk_to_gen_stencil_op[info->back.depthFailOp],
+      .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
+   };
+
+   /* From the Broadwell PRM:
+    *
+    *    "If Depth_Test_Enable = 1 AND Depth_Test_func = EQUAL, the
+    *    Depth_Write_Enable must be set to 0."
+    */
+   if (info->depthTestEnable && info->depthCompareOp == VK_COMPARE_OP_EQUAL)
+      depth_stencil.DepthBufferWriteEnable = false;
+
+#if GEN_GEN <= 7
+   GENX(DEPTH_STENCIL_STATE_pack)(NULL, depth_stencil_dw, &depth_stencil);
+#else
+   GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, depth_stencil_dw, &depth_stencil);
+#endif
+}

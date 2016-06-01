@@ -76,41 +76,6 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
 }
 
 static void
-gen7_emit_ds_state(struct anv_pipeline *pipeline,
-                   const VkPipelineDepthStencilStateCreateInfo *info)
-{
-   if (info == NULL) {
-      /* We're going to OR this together with the dynamic state.  We need
-       * to make sure it's initialized to something useful.
-       */
-      memset(pipeline->gen7.depth_stencil_state, 0,
-             sizeof(pipeline->gen7.depth_stencil_state));
-      return;
-   }
-
-   struct GENX(DEPTH_STENCIL_STATE) state = {
-      .DepthTestEnable = info->depthTestEnable,
-      .DepthBufferWriteEnable = info->depthWriteEnable,
-      .DepthTestFunction = vk_to_gen_compare_op[info->depthCompareOp],
-      .DoubleSidedStencilEnable = true,
-
-      .StencilTestEnable = info->stencilTestEnable,
-      .StencilBufferWriteEnable = info->stencilTestEnable,
-      .StencilFailOp = vk_to_gen_stencil_op[info->front.failOp],
-      .StencilPassDepthPassOp = vk_to_gen_stencil_op[info->front.passOp],
-      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.depthFailOp],
-      .StencilTestFunction = vk_to_gen_compare_op[info->front.compareOp],
-
-      .BackfaceStencilFailOp = vk_to_gen_stencil_op[info->back.failOp],
-      .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info->back.passOp],
-      .BackfaceStencilPassDepthFailOp = vk_to_gen_stencil_op[info->back.depthFailOp],
-      .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
-   };
-
-   GENX(DEPTH_STENCIL_STATE_pack)(NULL, &pipeline->gen7.depth_stencil_state, &state);
-}
-
-static void
 gen7_emit_cb_state(struct anv_pipeline *pipeline,
                    const VkPipelineColorBlendStateCreateInfo *info,
                    const VkPipelineMultisampleStateCreateInfo *ms_info)
@@ -213,7 +178,7 @@ genX(graphics_pipeline_create)(
    assert(pCreateInfo->pRasterizationState);
    gen7_emit_rs_state(pipeline, pCreateInfo->pRasterizationState, extra);
 
-   gen7_emit_ds_state(pipeline, pCreateInfo->pDepthStencilState);
+   emit_ds_state(pipeline, pCreateInfo->pDepthStencilState);
 
    gen7_emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
                                 pCreateInfo->pMultisampleState);
