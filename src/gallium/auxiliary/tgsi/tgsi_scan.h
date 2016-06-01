@@ -115,6 +115,7 @@ struct tgsi_shader_info
    boolean writes_memory; /**< contains stores or atomics to buffers or images */
    boolean is_msaa_sampler[PIPE_MAX_SAMPLERS];
    boolean uses_doubles; /**< uses any of the double instructions */
+   boolean uses_derivatives;
    unsigned clipdist_writemask;
    unsigned culldist_writemask;
    unsigned num_written_culldistance;
