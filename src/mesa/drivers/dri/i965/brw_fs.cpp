@@ -4448,6 +4448,14 @@ lower_varying_pull_constant_logical_send(const fs_builder &bld, fs_inst *inst)
    const brw_device_info *devinfo = bld.shader->devinfo;
 
    if (devinfo->gen >= 7) {
+      /* We are switching the instruction from an ALU-like instruction to a
+       * send-from-grf instruction.  Since sends can't handle strides or
+       * source modifiers, we have to make a copy of the offset source.
+       */
+      fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UD);
+      bld.MOV(tmp, inst->src[1]);
+      inst->src[1] = tmp;
+
       inst->opcode = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN7;
 
    } else {
