@@ -2909,7 +2909,7 @@ brw_set_dp_untyped_atomic_message(struct brw_codegen *p,
 
    if (devinfo->gen >= 8 || devinfo->is_haswell) {
       if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
-         if (brw_inst_exec_size(devinfo, p->current) == BRW_EXECUTE_8)
+         if (brw_inst_exec_size(devinfo, p->current) != BRW_EXECUTE_16)
             msg_control |= 1 << 4; /* SIMD8 mode */
 
          brw_inst_set_dp_msg_type(devinfo, insn,
@@ -2922,7 +2922,7 @@ brw_set_dp_untyped_atomic_message(struct brw_codegen *p,
       brw_inst_set_dp_msg_type(devinfo, insn,
                                GEN7_DATAPORT_DC_UNTYPED_ATOMIC_OP);
 
-      if (brw_inst_exec_size(devinfo, p->current) == BRW_EXECUTE_8)
+      if (brw_inst_exec_size(devinfo, p->current) != BRW_EXECUTE_16)
          msg_control |= 1 << 4; /* SIMD8 mode */
    }
 
