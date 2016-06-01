@@ -98,7 +98,7 @@ struct PackTraits<8, false>
         __m256i result = _mm256_castsi128_si256(resLo);
         result = _mm256_insertf128_si256(result, resHi, 1);
         return _mm256_castsi256_ps(result);
-#elif KNOB_ARCH==KNOB_ARCH_AVX2
+#elif KNOB_ARCH>=KNOB_ARCH_AVX2
         return _mm256_castsi256_ps(_mm256_cvtepu8_epi32(_mm_castps_si128(_mm256_castps256_ps128(in))));
 #endif
 #else
@@ -161,7 +161,7 @@ struct PackTraits<8, true>
         __m256i result = _mm256_castsi128_si256(resLo);
         result = _mm256_insertf128_si256(result, resHi, 1);
         return _mm256_castsi256_ps(result);
-#elif KNOB_ARCH==KNOB_ARCH_AVX2
+#elif KNOB_ARCH>=KNOB_ARCH_AVX2
         return _mm256_castsi256_ps(_mm256_cvtepi8_epi32(_mm_castps_si128(_mm256_castps256_ps128(in))));
 #endif
 #else
@@ -223,7 +223,7 @@ struct PackTraits<16, false>
         __m256i result = _mm256_castsi128_si256(resLo);
         result = _mm256_insertf128_si256(result, resHi, 1);
         return _mm256_castsi256_ps(result);
-#elif KNOB_ARCH==KNOB_ARCH_AVX2
+#elif KNOB_ARCH>=KNOB_ARCH_AVX2
         return _mm256_castsi256_ps(_mm256_cvtepu16_epi32(_mm_castps_si128(_mm256_castps256_ps128(in))));
 #endif
 #else
@@ -285,7 +285,7 @@ struct PackTraits<16, true>
         __m256i result = _mm256_castsi128_si256(resLo);
         result = _mm256_insertf128_si256(result, resHi, 1);
         return _mm256_castsi256_ps(result);
-#elif KNOB_ARCH==KNOB_ARCH_AVX2
+#elif KNOB_ARCH>=KNOB_ARCH_AVX2
         return _mm256_castsi256_ps(_mm256_cvtepi16_epi32(_mm_castps_si128(_mm256_castps256_ps128(in))));
 #endif
 #else

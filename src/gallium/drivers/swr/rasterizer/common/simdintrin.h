@@ -1002,7 +1002,7 @@ static INLINE simdscalar _simd_abs_ps(simdscalar a)
 INLINE
 UINT pdep_u32(UINT a, UINT mask)
 {
-#if KNOB_ARCH==KNOB_ARCH_AVX2
+#if KNOB_ARCH >= KNOB_ARCH_AVX2
     return _pdep_u32(a, mask);
 #else
     UINT result = 0;
@@ -1035,7 +1035,7 @@ UINT pdep_u32(UINT a, UINT mask)
 INLINE
 UINT pext_u32(UINT a, UINT mask)
 {
-#if KNOB_ARCH==KNOB_ARCH_AVX2
+#if KNOB_ARCH >= KNOB_ARCH_AVX2
     return _pext_u32(a, mask);
 #else
     UINT result = 0;

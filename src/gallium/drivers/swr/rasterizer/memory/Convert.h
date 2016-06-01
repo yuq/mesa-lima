@@ -336,7 +336,7 @@ static void ConvertPixelFromFloat(
                 // Convert from 32-bit float to 16-bit float using _mm_cvtps_ph
                 // @todo 16bit float instruction support is orthogonal to avx support.  need to
                 // add check for F16C support instead.
-#if KNOB_ARCH == KNOB_ARCH_AVX2
+#if KNOB_ARCH >= KNOB_ARCH_AVX2
                 __m128 src128 = _mm_set1_ps(src);
                 __m128i srci128 = _mm_cvtps_ph(src128, _MM_FROUND_TRUNC);
                 UINT value = _mm_extract_epi16(srci128, 0);
@@ -519,7 +519,7 @@ INLINE static void ConvertPixelToFloat(
             float dst;
             if (FormatTraits<SrcFormat>::GetBPC(comp) == 16)
             {
-#if KNOB_ARCH == KNOB_ARCH_AVX2
+#if KNOB_ARCH >= KNOB_ARCH_AVX2
                 // Convert from 16-bit float to 32-bit float using _mm_cvtph_ps
                 // @todo 16bit float instruction support is orthogonal to avx support.  need to
                 // add check for F16C support instead.

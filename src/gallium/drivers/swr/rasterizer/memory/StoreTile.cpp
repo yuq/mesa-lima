@@ -454,7 +454,7 @@ INLINE static void FlatConvert(const uint8_t* pSrc, uint8_t* pDst, uint8_t* pDst
     __m256i final = _mm256_castsi128_si256(vRow00);
     final = _mm256_insertf128_si256(final, vRow10, 1);
 
-#elif KNOB_ARCH == KNOB_ARCH_AVX2
+#elif KNOB_ARCH >= KNOB_ARCH_AVX2
 
     // logic is as above, only wider
     src1 = _mm256_slli_si256(src1, 1);
@@ -542,7 +542,7 @@ INLINE static void FlatConvertNoAlpha(const uint8_t* pSrc, uint8_t* pDst, uint8_
     __m256i final = _mm256_castsi128_si256(vRow00);
     final = _mm256_insertf128_si256(final, vRow10, 1);
 
-#elif KNOB_ARCH == KNOB_ARCH_AVX2
+#elif KNOB_ARCH >= KNOB_ARCH_AVX2
 
                                               // logic is as above, only wider
     src1 = _mm256_slli_si256(src1, 1);
