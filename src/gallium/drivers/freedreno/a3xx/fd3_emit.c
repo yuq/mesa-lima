@@ -142,16 +142,8 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			[SB_FRAG_TEX] = REG_A3XX_TPL1_TP_FS_BORDER_COLOR_BASE_ADDR,
 	};
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
-	unsigned i, j, off;
-	void *ptr;
-
-	u_upload_alloc(fd3_ctx->border_color_uploader,
-			0, BORDER_COLOR_UPLOAD_SIZE,
-		       BORDER_COLOR_UPLOAD_SIZE, &off,
-			&fd3_ctx->border_color_buf,
-			&ptr);
-
-	fd_setup_border_colors(tex, ptr, tex_off[sb]);
+	bool needs_border = false;
+	unsigned i, j;
 
 	if (tex->num_samplers > 0) {
 		/* output sampler state: */
@@ -170,6 +162,8 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 			OUT_RING(ring, sampler->texsamp0);
 			OUT_RING(ring, sampler->texsamp1);
+
+			needs_border |= sampler->needs_border;
 		}
 	}
 
@@ -233,10 +227,23 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		}
 	}
 
-	OUT_PKT0(ring, bcolor_reg[sb], 1);
-	OUT_RELOC(ring, fd_resource(fd3_ctx->border_color_buf)->bo, off, 0, 0);
+	if (needs_border) {
+		unsigned off;
+		void *ptr;
 
-	u_upload_unmap(fd3_ctx->border_color_uploader);
+		u_upload_alloc(fd3_ctx->border_color_uploader,
+				0, BORDER_COLOR_UPLOAD_SIZE,
+			       BORDER_COLOR_UPLOAD_SIZE, &off,
+				&fd3_ctx->border_color_buf,
+				&ptr);
+
+		fd_setup_border_colors(tex, ptr, tex_off[sb]);
+
+		OUT_PKT0(ring, bcolor_reg[sb], 1);
+		OUT_RELOC(ring, fd_resource(fd3_ctx->border_color_buf)->bo, off, 0, 0);
+
+		u_upload_unmap(fd3_ctx->border_color_uploader);
+	}
 }
 
 /* emit texture state for mem->gmem restore operation.. eventually it would

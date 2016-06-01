@@ -36,7 +36,7 @@
 #include "fd3_format.h"
 
 static enum a3xx_tex_clamp
-tex_clamp(unsigned wrap, bool clamp_to_edge)
+tex_clamp(unsigned wrap, bool clamp_to_edge, bool *needs_border)
 {
 	/* Hardware does not support _CLAMP, but we emulate it: */
 	if (wrap == PIPE_TEX_WRAP_CLAMP) {
@@ -50,6 +50,7 @@ tex_clamp(unsigned wrap, bool clamp_to_edge)
 	case PIPE_TEX_WRAP_CLAMP_TO_EDGE:
 		return A3XX_TEX_CLAMP_TO_EDGE;
 	case PIPE_TEX_WRAP_CLAMP_TO_BORDER:
+		*needs_border = true;
 		return A3XX_TEX_CLAMP_TO_BORDER;
 	case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_EDGE:
 		/* only works for PoT.. need to emulate otherwise! */
@@ -113,6 +114,7 @@ fd3_sampler_state_create(struct pipe_context *pctx,
 		so->saturate_r = (cso->wrap_r == PIPE_TEX_WRAP_CLAMP);
 	}
 
+	so->needs_border = false;
 	so->texsamp0 =
 			COND(!cso->normalized_coords, A3XX_TEX_SAMP_0_UNNORM_COORDS) |
 			COND(!cso->seamless_cube_map, A3XX_TEX_SAMP_0_CUBEMAPSEAMLESSFILTOFF) |
@@ -120,9 +122,9 @@ fd3_sampler_state_create(struct pipe_context *pctx,
 			A3XX_TEX_SAMP_0_XY_MAG(tex_filter(cso->mag_img_filter, aniso)) |
 			A3XX_TEX_SAMP_0_XY_MIN(tex_filter(cso->min_img_filter, aniso)) |
 			A3XX_TEX_SAMP_0_ANISO(aniso) |
-			A3XX_TEX_SAMP_0_WRAP_S(tex_clamp(cso->wrap_s, clamp_to_edge)) |
-			A3XX_TEX_SAMP_0_WRAP_T(tex_clamp(cso->wrap_t, clamp_to_edge)) |
-			A3XX_TEX_SAMP_0_WRAP_R(tex_clamp(cso->wrap_r, clamp_to_edge));
+			A3XX_TEX_SAMP_0_WRAP_S(tex_clamp(cso->wrap_s, clamp_to_edge, &so->needs_border)) |
+			A3XX_TEX_SAMP_0_WRAP_T(tex_clamp(cso->wrap_t, clamp_to_edge, &so->needs_border)) |
+			A3XX_TEX_SAMP_0_WRAP_R(tex_clamp(cso->wrap_r, clamp_to_edge, &so->needs_border));
 
 	if (cso->compare_mode)
 		so->texsamp0 |= A3XX_TEX_SAMP_0_COMPARE_FUNC(cso->compare_func); /* maps 1:1 */
