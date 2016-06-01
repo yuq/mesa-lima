@@ -1962,9 +1962,12 @@ vec4_visitor::convert_to_hw_regs()
       if (inst->is_3src(devinfo)) {
          /* 3-src instructions with scalar sources support arbitrary subnr,
           * but don't actually use swizzles.  Convert swizzle into subnr.
+          * Skip this for double-precision instructions: RepCtrl=1 is not
+          * allowed for them and needs special handling.
           */
          for (int i = 0; i < 3; i++) {
-            if (inst->src[i].vstride == BRW_VERTICAL_STRIDE_0) {
+            if (inst->src[i].vstride == BRW_VERTICAL_STRIDE_0 &&
+                type_sz(inst->src[i].type) < 8) {
                assert(brw_is_single_value_swizzle(inst->src[i].swizzle));
                inst->src[i].subnr += 4 * BRW_GET_SWZ(inst->src[i].swizzle, 0);
             }
