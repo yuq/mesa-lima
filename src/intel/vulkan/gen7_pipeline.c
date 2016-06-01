@@ -104,7 +104,7 @@ gen7_emit_ds_state(struct anv_pipeline *pipeline,
       .BackfaceStencilFailOp = vk_to_gen_stencil_op[info->back.failOp],
       .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info->back.passOp],
       .BackfaceStencilPassDepthFailOp = vk_to_gen_stencil_op[info->back.depthFailOp],
-      .BackFaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
+      .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
    };
 
    GENX(DEPTH_STENCIL_STATE_pack)(NULL, &pipeline->gen7.depth_stencil_state, &state);

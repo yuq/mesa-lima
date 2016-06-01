@@ -354,7 +354,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
          .BlendConstantColorBlue = cmd_buffer->state.dynamic.blend_constants[2],
          .BlendConstantColorAlpha = cmd_buffer->state.dynamic.blend_constants[3],
          .StencilReferenceValue = d->stencil_reference.front & 0xff,
-         .BackFaceStencilReferenceValue = d->stencil_reference.back & 0xff,
+         .BackfaceStencilReferenceValue = d->stencil_reference.back & 0xff,
       };
       GENX(COLOR_CALC_STATE_pack)(NULL, cc_state.map, &cc);
       if (!cmd_buffer->device->info.has_llc)
