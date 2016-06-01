@@ -123,7 +123,7 @@ gen7_upload_3dstate_so_decl_list(struct brw_context *brw,
       const unsigned components = linked_xfb_info->Outputs[i].NumComponents;
       unsigned component_mask = (1 << components) - 1;
       unsigned stream_id = linked_xfb_info->Outputs[i].StreamId;
-
+      unsigned decl_buffer_slot = buffer << SO_DECL_OUTPUT_BUFFER_SLOT_SHIFT;
       assert(stream_id < MAX_VERTEX_STREAMS);
 
       /* gl_PointSize is stored in VARYING_SLOT_PSIZ.w
@@ -145,7 +145,7 @@ gen7_upload_3dstate_so_decl_list(struct brw_context *brw,
 
       buffer_mask[stream_id] |= 1 << buffer;
 
-      decl |= buffer << SO_DECL_OUTPUT_BUFFER_SLOT_SHIFT;
+      decl |= decl_buffer_slot;
       if (varying == VARYING_SLOT_LAYER || varying == VARYING_SLOT_VIEWPORT) {
          decl |= vue_map->varying_to_slot[VARYING_SLOT_PSIZ] <<
             SO_DECL_REGISTER_INDEX_SHIFT;
@@ -172,12 +172,14 @@ gen7_upload_3dstate_so_decl_list(struct brw_context *brw,
       next_offset[buffer] += skip_components;
 
       while (skip_components >= 4) {
-         so_decl[stream_id][decls[stream_id]++] = SO_DECL_HOLE_FLAG | 0xf;
+         so_decl[stream_id][decls[stream_id]++] =
+            SO_DECL_HOLE_FLAG | 0xf | decl_buffer_slot;
          skip_components -= 4;
       }
       if (skip_components > 0)
          so_decl[stream_id][decls[stream_id]++] =
-            SO_DECL_HOLE_FLAG | ((1 << skip_components) - 1);
+            SO_DECL_HOLE_FLAG | ((1 << skip_components) - 1) |
+            decl_buffer_slot;
 
       assert(linked_xfb_info->Outputs[i].DstOffset == next_offset[buffer]);
 
