@@ -102,7 +102,6 @@ swr_generate_fs_key(struct swr_jit_fs_key &key,
 
    key.nr_cbufs = ctx->framebuffer.nr_cbufs;
    key.light_twoside = ctx->rasterizer->light_twoside;
-   key.flatshade = ctx->rasterizer->flatshade;
    memcpy(&key.vs_output_semantic_name,
           &ctx->vs->info.base.output_semantic_name,
           sizeof(key.vs_output_semantic_name));
@@ -351,15 +350,13 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
       GEP(hPrivateData, {0, swr_draw_context_num_constantsFS});
    const_sizes_ptr->setName("num_fs_constants");
 
-   // xxx should check for flat shading versus interpolation
-
-
    // load *pAttribs, *pPerspAttribs
    Value *pRawAttribs = LOAD(pPS, {0, SWR_PS_CONTEXT_pAttribs}, "pRawAttribs");
    Value *pPerspAttribs =
       LOAD(pPS, {0, SWR_PS_CONTEXT_pPerspAttribs}, "pPerspAttribs");
 
    swr_fs->constantMask = 0;
+   swr_fs->flatConstantMask = 0;
    swr_fs->pointSpriteMask = 0;
 
    for (int attrib = 0; attrib < PIPE_MAX_SHADER_INPUTS; attrib++) {
@@ -457,6 +454,8 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 
       if (interpMode == TGSI_INTERPOLATE_CONSTANT) {
          swr_fs->constantMask |= 1 << linkedAttrib;
+      } else if (interpMode == TGSI_INTERPOLATE_COLOR) {
+         swr_fs->flatConstantMask |= 1 << linkedAttrib;
       }
 
       for (int channel = 0; channel < TGSI_NUM_CHANNELS; channel++) {
@@ -484,6 +483,8 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 
                if (interpMode == TGSI_INTERPOLATE_CONSTANT) {
                   swr_fs->constantMask |= 1 << bcolorAttrib;
+               } else if (interpMode == TGSI_INTERPOLATE_COLOR) {
+                  swr_fs->flatConstantMask |= 1 << bcolorAttrib;
                }
             }
 
@@ -493,9 +494,6 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 
             if (interpMode == TGSI_INTERPOLATE_CONSTANT) {
                inputs[attrib][channel] = wrap(va);
-            } else if ((interpMode == TGSI_INTERPOLATE_COLOR) &&
-                       (key.flatshade == true)) {
-               inputs[attrib][channel] = wrap(vc);
             } else {
                Value *vk = FSUB(FSUB(VIMMED1(1.0f), vi), vj);
 

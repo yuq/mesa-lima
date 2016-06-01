@@ -1351,7 +1351,10 @@ swr_update_derived(struct pipe_context *pipe,
    SWR_BACKEND_STATE backendState = {0};
    backendState.numAttributes = 1;
    backendState.numComponents[0] = 4;
-   backendState.constantInterpolationMask = ctx->fs->constantMask;
+   backendState.constantInterpolationMask =
+      ctx->rasterizer->flatshade ?
+      ctx->fs->flatConstantMask :
+      ctx->fs->constantMask;
    backendState.pointSpriteTexCoordMask = ctx->fs->pointSpriteMask;
 
    SwrSetBackendState(ctx->swrContext, &backendState);

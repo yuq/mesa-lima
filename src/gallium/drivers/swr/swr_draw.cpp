@@ -162,6 +162,36 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    /* Set up frontend state
     * XXX setup provokingVertex & topologyProvokingVertex */
    SWR_FRONTEND_STATE feState = {0};
+   if (ctx->rasterizer->flatshade_first) {
+      feState.provokingVertex = {1, 0, 0};
+   } else {
+      feState.provokingVertex = {2, 1, 2};
+   }
+
+   switch (info->mode) {
+   case PIPE_PRIM_TRIANGLE_FAN:
+      feState.topologyProvokingVertex = feState.provokingVertex.triFan;
+      break;
+   case PIPE_PRIM_TRIANGLE_STRIP:
+   case PIPE_PRIM_TRIANGLES:
+      feState.topologyProvokingVertex = feState.provokingVertex.triStripList;
+      break;
+   case PIPE_PRIM_QUAD_STRIP:
+   case PIPE_PRIM_QUADS:
+      if (ctx->rasterizer->flatshade_first)
+         feState.topologyProvokingVertex = 0;
+      else
+         feState.topologyProvokingVertex = 3;
+      break;
+   case PIPE_PRIM_LINES:
+   case PIPE_PRIM_LINE_LOOP:
+   case PIPE_PRIM_LINE_STRIP:
+      feState.topologyProvokingVertex = feState.provokingVertex.lineStripList;
+      break;
+   default:
+      feState.topologyProvokingVertex = 0;
+   }
+
    feState.bEnableCutIndex = info->primitive_restart;
    SwrSetFrontendState(ctx->swrContext, &feState);
 

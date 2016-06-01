@@ -239,7 +239,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
       return 330;
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
-      return 0;
+      return 1;
    case PIPE_CAP_COMPUTE:
       return 0;
    case PIPE_CAP_USER_VERTEX_BUFFERS:

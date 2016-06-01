@@ -63,6 +63,7 @@ struct swr_fragment_shader {
    struct pipe_shader_state pipe;
    struct lp_tgsi_info info;
    uint32_t constantMask;
+   uint32_t flatConstantMask;
    uint32_t pointSpriteMask;
    std::unordered_map<swr_jit_fs_key, std::unique_ptr<VariantFS>> map;
 };

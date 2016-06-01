@@ -1467,6 +1467,7 @@ INLINE void ProcessAttributes(
     uint32_t mapIdx = 0;
     LONG constantInterpMask = pDC->pState->state.backendState.constantInterpolationMask;
     const uint32_t provokingVertex = pDC->pState->state.frontendState.topologyProvokingVertex;
+    const PRIMITIVE_TOPOLOGY topo = pDC->pState->state.topology;
 
     while (_BitScanForward(&slot, linkageMask))
     {
@@ -1476,18 +1477,51 @@ INLINE void ProcessAttributes(
         uint32_t inputSlot = VERTEX_ATTRIB_START_SLOT + pLinkageMap[mapIdx];
 
         __m128 attrib[3];    // triangle attribs (always 4 wide)
-        pa.AssembleSingle(inputSlot, triIndex, attrib);
 
         if (_bittest(&constantInterpMask, mapIdx))
         {
+            uint32_t vid;
+            static const uint32_t tristripProvokingVertex[] = {0, 2, 1};
+            static const int32_t quadProvokingTri[2][4] = {{0, 0, 0, 1}, {0, -1, 0, 0}};
+            static const uint32_t quadProvokingVertex[2][4] = {{0, 1, 2, 2}, {0, 1, 1, 2}};
+            static const int32_t qstripProvokingTri[2][4] = {{0, 0, 0, 1}, {-1, 0, 0, 0}};
+            static const uint32_t qstripProvokingVertex[2][4] = {{0, 1, 2, 1}, {0, 0, 2, 1}};
+
+            switch (topo) {
+            case TOP_QUAD_LIST:
+                pa.AssembleSingle(inputSlot,
+                                  triIndex + quadProvokingTri[triIndex & 1][provokingVertex],
+                                  attrib);
+                vid = quadProvokingVertex[triIndex & 1][provokingVertex];
+                break;
+            case TOP_QUAD_STRIP:
+                pa.AssembleSingle(inputSlot,
+                                  triIndex + qstripProvokingTri[triIndex & 1][provokingVertex],
+                                  attrib);
+                vid = qstripProvokingVertex[triIndex & 1][provokingVertex];
+                break;
+            case TOP_TRIANGLE_STRIP:
+               pa.AssembleSingle(inputSlot, triIndex, attrib);
+               vid = (triIndex & 1)
+                   ? tristripProvokingVertex[provokingVertex]
+                   : provokingVertex;
+               break;
+            default:
+                pa.AssembleSingle(inputSlot, triIndex, attrib);
+                vid = provokingVertex;
+                break;
+            }
+
             for (uint32_t i = 0; i < NumVerts; ++i)
             {
-                _mm_store_ps(pBuffer, attrib[provokingVertex]);
+                _mm_store_ps(pBuffer, attrib[vid]);
                 pBuffer += 4;
             }
         }
         else
         {
+            pa.AssembleSingle(inputSlot, triIndex, attrib);
+
             for (uint32_t i = 0; i < NumVerts; ++i)
             {
                 _mm_store_ps(pBuffer, attrib[i]);
