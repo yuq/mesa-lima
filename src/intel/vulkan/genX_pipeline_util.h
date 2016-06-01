@@ -21,6 +21,8 @@
  * IN THE SOFTWARE.
  */
 
+#include "vk_format_info.h"
+
 static uint32_t
 vertex_element_comp_control(enum isl_format format, unsigned comp)
 {
@@ -428,7 +430,9 @@ static const uint32_t vk_to_gen_stencil_op[] = {
 
 static void
 emit_ds_state(struct anv_pipeline *pipeline,
-              const VkPipelineDepthStencilStateCreateInfo *info)
+              const VkPipelineDepthStencilStateCreateInfo *info,
+              const struct anv_render_pass *pass,
+              const struct anv_subpass *subpass)
 {
 #if GEN_GEN == 7
 #  define depth_stencil_dw pipeline->gen7.depth_stencil_state
@@ -469,6 +473,30 @@ emit_ds_state(struct anv_pipeline *pipeline,
       .BackfaceStencilPassDepthFailOp =vk_to_gen_stencil_op[info->back.depthFailOp],
       .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
    };
+
+   VkImageAspectFlags aspects = 0;
+   if (pass->attachments == NULL) {
+      /* This comes from meta.  Assume we have verything. */
+      aspects = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+   } else if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
+      VkFormat depth_stencil_format =
+         pass->attachments[subpass->depth_stencil_attachment].format;
+      aspects = vk_format_aspects(depth_stencil_format);
+   }
+
+   /* The Vulkan spec requires that if either depth or stencil is not present,
+    * the pipeline is to act as if the test silently passes.
+    */
+   if (!(aspects & VK_IMAGE_ASPECT_DEPTH_BIT)) {
+      depth_stencil.DepthBufferWriteEnable = false;
+      depth_stencil.DepthTestFunction = PREFILTEROPALWAYS;
+   }
+
+   if (!(aspects & VK_IMAGE_ASPECT_STENCIL_BIT)) {
+      depth_stencil.StencilBufferWriteEnable = false;
+      depth_stencil.StencilTestFunction = PREFILTEROPALWAYS;
+      depth_stencil.BackfaceStencilTestFunction = PREFILTEROPALWAYS;
+   }
 
    /* From the Broadwell PRM:
     *

@@ -155,6 +155,8 @@ genX(graphics_pipeline_create)(
     VkPipeline*                                 pPipeline)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_render_pass, pass, pCreateInfo->renderPass);
+   struct anv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
    struct anv_pipeline *pipeline;
    VkResult result;
 
@@ -178,7 +180,7 @@ genX(graphics_pipeline_create)(
    assert(pCreateInfo->pRasterizationState);
    gen7_emit_rs_state(pipeline, pCreateInfo->pRasterizationState, extra);
 
-   emit_ds_state(pipeline, pCreateInfo->pDepthStencilState);
+   emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
 
    gen7_emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
                                 pCreateInfo->pMultisampleState);
