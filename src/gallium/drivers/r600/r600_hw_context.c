@@ -405,7 +405,9 @@ void r600_cp_dma_copy_buffer(struct r600_context *rctx,
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
 		unsigned src_reloc, dst_reloc;
 
-		r600_need_cs_space(rctx, 10 + (rctx->b.flags ? R600_MAX_FLUSH_CS_DWORDS : 0), FALSE);
+		r600_need_cs_space(rctx,
+				   10 + (rctx->b.flags ? R600_MAX_FLUSH_CS_DWORDS : 0) +
+				   3, FALSE);
 
 		/* Flush the caches for the first copy only. */
 		if (rctx->b.flags) {
@@ -439,6 +441,11 @@ void r600_cp_dma_copy_buffer(struct r600_context *rctx,
 		src_offset += byte_count;
 		dst_offset += byte_count;
 	}
+
+	/* CP_DMA_CP_SYNC doesn't wait for idle on R6xx, but this does. */
+	if (rctx->b.chip_class == R600)
+		radeon_set_config_reg(cs, R_008040_WAIT_UNTIL,
+				      S_008040_WAIT_CP_DMA_IDLE(1));
 
 	/* Invalidate the read caches. */
 	rctx->b.flags |= R600_CONTEXT_INV_CONST_CACHE |
