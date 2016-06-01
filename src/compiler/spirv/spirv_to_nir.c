@@ -1028,7 +1028,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                val->constant->value.u[i] = u[comp];
             }
          }
-         return;
+         break;
       }
 
       case SpvOpCompositeExtract:
@@ -1105,7 +1105,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                   (*c)->value.u[elem + i] = insert->constant->value.u[i];
             }
          }
-         return;
+         break;
       }
 
       default: {
@@ -1134,9 +1134,10 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          for (unsigned k = 0; k < num_components; k++)
             val->constant->value.u[k] = res.u32[k];
 
-         return;
+         break;
       } /* default */
       }
+      break;
    }
 
    case SpvOpConstantNull:
