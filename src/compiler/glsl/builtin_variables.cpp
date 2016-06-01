@@ -622,7 +622,7 @@ builtin_variable_generator::generate_constants()
    /* Max uniforms/varyings: GLSL ES counts these in units of vectors; desktop
     * GL counts them in units of "components" or "floats".
     */
-   if (state->es_shader) {
+   if (state->is_version(410, 100)) {
       add_const("gl_MaxVertexUniformVectors",
                 state->Const.MaxVertexUniformComponents / 4);
       add_const("gl_MaxFragmentUniformVectors",
