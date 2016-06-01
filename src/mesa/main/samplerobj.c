@@ -811,10 +811,8 @@ _mesa_SamplerParameteri(GLuint sampler, GLenum pname, GLint param)
        *     "An INVALID_OPERATION error is generated if sampler is not the name
        *     of a sampler object previously returned from a call to GenSamplers."
        *
-       * In desktop GL, an GL_INVALID_VALUE is returned instead.
        */
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glSamplerParameteri(sampler %u)", sampler);
       return;
    }
@@ -904,10 +902,8 @@ _mesa_SamplerParameterf(GLuint sampler, GLenum pname, GLfloat param)
        *     "An INVALID_OPERATION error is generated if sampler is not the name
        *     of a sampler object previously returned from a call to GenSamplers."
        *
-       * In desktop GL, an GL_INVALID_VALUE is returned instead.
        */
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glSamplerParameterf(sampler %u)", sampler);
       return;
    }
@@ -995,11 +991,8 @@ _mesa_SamplerParameteriv(GLuint sampler, GLenum pname, const GLint *params)
        *
        *     "An INVALID_OPERATION error is generated if sampler is not the name
        *     of a sampler object previously returned from a call to GenSamplers."
-       *
-       * In desktop GL, an GL_INVALID_VALUE is returned instead.
        */
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glSamplerParameteriv(sampler %u)", sampler);
       return;
    }
@@ -1096,10 +1089,8 @@ _mesa_SamplerParameterfv(GLuint sampler, GLenum pname, const GLfloat *params)
        *     "An INVALID_OPERATION error is generated if sampler is not the name
        *     of a sampler object previously returned from a call to GenSamplers."
        *
-       * In desktop GL, an GL_INVALID_VALUE is returned instead.
        */
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glSamplerParameterfv(sampler %u)", sampler);
       return;
    }
@@ -1184,8 +1175,7 @@ _mesa_SamplerParameterIiv(GLuint sampler, GLenum pname, const GLint *params)
 
    sampObj = _mesa_lookup_samplerobj(ctx, sampler);
    if (!sampObj) {
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glSamplerParameterIiv(sampler %u)", sampler);
       return;
    }
@@ -1271,8 +1261,7 @@ _mesa_SamplerParameterIuiv(GLuint sampler, GLenum pname, const GLuint *params)
 
    sampObj = _mesa_lookup_samplerobj(ctx, sampler);
    if (!sampObj) {
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glSamplerParameterIuiv(sampler %u)", sampler);
       return;
    }
@@ -1362,10 +1351,8 @@ _mesa_GetSamplerParameteriv(GLuint sampler, GLenum pname, GLint *params)
        *     "An INVALID_OPERATION error is generated if sampler is not the name
        *     of a sampler object previously returned from a call to GenSamplers."
        *
-       * In desktop GL, an GL_INVALID_VALUE is returned instead.
        */
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glGetSamplerParameteriv(sampler %u)", sampler);
       return;
    }
@@ -1456,10 +1443,8 @@ _mesa_GetSamplerParameterfv(GLuint sampler, GLenum pname, GLfloat *params)
        *     "An INVALID_OPERATION error is generated if sampler is not the name
        *     of a sampler object previously returned from a call to GenSamplers."
        *
-       * In desktop GL, an GL_INVALID_VALUE is returned instead.
        */
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glGetSamplerParameterfv(sampler %u)", sampler);
       return;
    }
@@ -1533,8 +1518,7 @@ _mesa_GetSamplerParameterIiv(GLuint sampler, GLenum pname, GLint *params)
 
    sampObj = _mesa_lookup_samplerobj(ctx, sampler);
    if (!sampObj) {
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glGetSamplerParameterIiv(sampler %u)",
                   sampler);
       return;
@@ -1609,8 +1593,7 @@ _mesa_GetSamplerParameterIuiv(GLuint sampler, GLenum pname, GLuint *params)
 
    sampObj = _mesa_lookup_samplerobj(ctx, sampler);
    if (!sampObj) {
-      _mesa_error(ctx, (_mesa_is_gles(ctx) ?
-                        GL_INVALID_OPERATION : GL_INVALID_VALUE),
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glGetSamplerParameterIuiv(sampler %u)",
                   sampler);
       return;
