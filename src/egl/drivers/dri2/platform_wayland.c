@@ -335,14 +335,8 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
       return -1;
    }
 
-   /* We always want to throttle to some event (either a frame callback or
-    * a sync request) after the commit so that we can be sure the
-    * compositor has had a chance to handle it and send us a release event
-    * before we look for a free buffer */
-   while (dri2_surf->throttle_callback != NULL)
-      if (wl_display_dispatch_queue(dri2_dpy->wl_dpy,
-                                    dri2_dpy->wl_queue) == -1)
-         return -1;
+   /* There might be a buffer release already queued that wasn't processed */
+   wl_display_dispatch_queue_pending(dri2_dpy->wl_dpy, dri2_dpy->wl_queue);
 
    if (dri2_surf->back == NULL) {
       for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
@@ -715,6 +709,11 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
    int i;
+
+   while (dri2_surf->throttle_callback != NULL)
+      if (wl_display_dispatch_queue(dri2_dpy->wl_dpy,
+                                    dri2_dpy->wl_queue) == -1)
+         return -1;
 
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
       if (dri2_surf->color_buffers[i].age > 0)
@@ -1475,14 +1474,8 @@ swrast_update_buffers(struct dri2_egl_surface *dri2_surf)
 
    /* find back buffer */
 
-   /* We always want to throttle to some event (either a frame callback or
-    * a sync request) after the commit so that we can be sure the
-    * compositor has had a chance to handle it and send us a release event
-    * before we look for a free buffer */
-   while (dri2_surf->throttle_callback != NULL)
-      if (wl_display_dispatch_queue(dri2_dpy->wl_dpy,
-                                    dri2_dpy->wl_queue) == -1)
-         return -1;
+   /* There might be a buffer release already queued that wasn't processed */
+   wl_display_dispatch_queue_pending(dri2_dpy->wl_dpy, dri2_dpy->wl_queue);
 
    /* try get free buffer already created */
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
@@ -1562,6 +1555,11 @@ static void
 dri2_wl_swrast_commit_backbuffer(struct dri2_egl_surface *dri2_surf)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dri2_surf->base.Resource.Display);
+
+   while (dri2_surf->throttle_callback != NULL)
+      if (wl_display_dispatch_queue(dri2_dpy->wl_dpy,
+                                    dri2_dpy->wl_queue) == -1)
+         return -1;
 
    if (dri2_surf->base.SwapInterval > 0) {
       dri2_surf->throttle_callback =
