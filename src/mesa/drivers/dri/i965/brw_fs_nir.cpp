@@ -2749,7 +2749,7 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
          break;
       case BRW_TESS_DOMAIN_ISOLINE:
          for (unsigned i = 0; i < 2; i++)
-            bld.MOV(offset(dest, bld, i), component(fs_reg(ATTR, 0), 7 - i));
+            bld.MOV(offset(dest, bld, i), component(fs_reg(ATTR, 0), 6 + i));
          break;
       }
       break;
