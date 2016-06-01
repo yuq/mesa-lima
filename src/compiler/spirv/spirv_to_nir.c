@@ -932,6 +932,25 @@ get_specialization(struct vtn_builder *b, struct vtn_value *val,
 }
 
 static void
+handle_workgroup_size_decoration_cb(struct vtn_builder *b,
+                                    struct vtn_value *val,
+                                    int member,
+                                    const struct vtn_decoration *dec,
+                                    void *data)
+{
+   assert(member == -1);
+   if (dec->decoration != SpvDecorationBuiltIn ||
+       dec->literals[0] != SpvBuiltInWorkgroupSize)
+      return;
+
+   assert(val->const_type == glsl_vector_type(GLSL_TYPE_UINT, 3));
+
+   b->shader->info.cs.local_size[0] = val->constant->value.u[0];
+   b->shader->info.cs.local_size[1] = val->constant->value.u[1];
+   b->shader->info.cs.local_size[2] = val->constant->value.u[2];
+}
+
+static void
 vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                     const uint32_t *w, unsigned count)
 {
@@ -1151,6 +1170,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
    default:
       unreachable("Unhandled opcode");
    }
+
+   /* Now that we have the value, update the workgroup size if needed */
+   vtn_foreach_decoration(b, val, handle_workgroup_size_decoration_cb, NULL);
 }
 
 static void
