@@ -236,6 +236,12 @@ _eglParseSurfaceAttribList(_EGLSurface *surf, const EGLint *attrib_list)
       }
 
       if (type == EGL_PBUFFER_BIT) {
+         if (tex_target == -1)
+            tex_target = surf->TextureTarget;
+
+         if (tex_format == -1)
+            tex_format = surf->TextureFormat;
+
          if ((tex_target == EGL_NO_TEXTURE && tex_format != EGL_NO_TEXTURE) ||
              (tex_format == EGL_NO_TEXTURE && tex_target != EGL_NO_TEXTURE)) {
             err = EGL_BAD_MATCH;
