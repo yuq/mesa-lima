@@ -7197,6 +7197,12 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 						   linear_sample[i], base + 10 + i, "");
 	}
 
+	/* Tell LLVM to insert WQM instruction sequence when needed. */
+	if (key->ps_prolog.wqm) {
+		LLVMAddTargetDependentFunctionAttr(func,
+						   "amdgpu-ps-wqm-outputs", "");
+	}
+
 	/* Compile. */
 	LLVMBuildRet(gallivm->builder, ret);
 	radeon_llvm_finalize_module(&ctx.radeon_bld);
@@ -7347,6 +7353,9 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	prolog_key.ps_prolog.colors_read = info->colors_read;
 	prolog_key.ps_prolog.num_input_sgprs = shader->info.num_input_sgprs;
 	prolog_key.ps_prolog.num_input_vgprs = shader->info.num_input_vgprs;
+	prolog_key.ps_prolog.wqm = info->uses_derivatives &&
+		(prolog_key.ps_prolog.colors_read ||
+		 prolog_key.ps_prolog.states.force_persample_interp);
 
 	if (info->colors_read) {
 		unsigned *color = shader->selector->color_attr_index;

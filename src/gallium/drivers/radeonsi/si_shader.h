@@ -355,6 +355,7 @@ union si_shader_part_key {
 		unsigned	colors_read:8; /* color input components read */
 		unsigned	num_interp_inputs:5; /* BCOLOR is at this location */
 		unsigned	face_vgpr_index:5;
+		unsigned	wqm:1;
 		char		color_attr_index[2];
 		char		color_interp_vgpr_index[2]; /* -1 == constant */
 	} ps_prolog;
