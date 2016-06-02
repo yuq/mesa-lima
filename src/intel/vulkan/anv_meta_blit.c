@@ -211,6 +211,9 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
          .magFilter = blit_filter,
          .minFilter = blit_filter,
+         .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+         .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+         .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
       }, &cmd_buffer->pool->alloc, &sampler);
 
    VkDescriptorPool desc_pool;
