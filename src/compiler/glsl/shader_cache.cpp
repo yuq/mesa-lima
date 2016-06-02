@@ -575,6 +575,7 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
       blob_write_uint32(metadata, prog->data->UniformStorage[i].offset);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].array_stride);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].hidden);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].is_shader_storage);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].matrix_stride);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].row_major);
       blob_write_uint32(metadata,
@@ -594,7 +595,9 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
     */
    blob_write_uint32(metadata, prog->data->NumHiddenUniforms);
    for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
-      if (!prog->data->UniformStorage[i].builtin) {
+      if (!prog->data->UniformStorage[i].builtin &&
+          !prog->data->UniformStorage[i].is_shader_storage &&
+          prog->data->UniformStorage[i].block_index == -1) {
          unsigned vec_size =
             values_for_type(prog->data->UniformStorage[i].type) *
             MAX2(prog->data->UniformStorage[i].array_elements, 1);
@@ -636,6 +639,7 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
       uniforms[i].offset = blob_read_uint32(metadata);
       uniforms[i].array_stride = blob_read_uint32(metadata);
       uniforms[i].hidden = blob_read_uint32(metadata);
+      uniforms[i].is_shader_storage = blob_read_uint32(metadata);
       uniforms[i].matrix_stride = blob_read_uint32(metadata);
       uniforms[i].row_major = blob_read_uint32(metadata);
       uniforms[i].num_compatible_subroutines = blob_read_uint32(metadata);
@@ -651,13 +655,18 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
    /* Restore uniform values. */
    prog->data->NumHiddenUniforms = blob_read_uint32(metadata);
    for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
-      if (!prog->data->UniformStorage[i].builtin) {
+      if (!prog->data->UniformStorage[i].builtin &&
+          !prog->data->UniformStorage[i].is_shader_storage &&
+          prog->data->UniformStorage[i].block_index == -1) {
          unsigned vec_size =
             values_for_type(prog->data->UniformStorage[i].type) *
             MAX2(prog->data->UniformStorage[i].array_elements, 1);
          blob_copy_bytes(metadata,
                          (uint8_t *) prog->data->UniformStorage[i].storage,
                          sizeof(union gl_constant_value) * vec_size);
+
+        assert(vec_size + prog->data->UniformStorage[i].storage <=
+               data +  prog->data->NumUniformDataSlots);
       }
    }
 }
