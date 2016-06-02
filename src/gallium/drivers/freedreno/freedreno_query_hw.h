@@ -163,8 +163,7 @@ fd_hw_sample_reference(struct fd_context *ctx,
 
 	if (pipe_reference(&(*ptr)->reference, &samp->reference))
 		__fd_hw_sample_destroy(ctx, old_samp);
-	if (ptr)
-		*ptr = samp;
+	*ptr = samp;
 }
 
 #endif /* FREEDRENO_QUERY_HW_H_ */
