@@ -2266,7 +2266,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityMatrix:
       case SpvCapabilityShader:
       case SpvCapabilityGeometry:
-      case SpvCapabilityTessellationPointSize:
       case SpvCapabilityGeometryPointSize:
       case SpvCapabilityUniformBufferArrayDynamicIndexing:
       case SpvCapabilitySampledImageArrayDynamicIndexing:
@@ -2280,14 +2279,57 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilitySampledBuffer:
       case SpvCapabilityImageBuffer:
       case SpvCapabilityImageQuery:
+      case SpvCapabilityDerivativeControl:
+      case SpvCapabilityInterpolationFunction:
+      case SpvCapabilityMultiViewport:
          break;
       case SpvCapabilityClipDistance:
       case SpvCapabilityCullDistance:
       case SpvCapabilityGeometryStreams:
+         /* glslang sometimes throws these at us even though it doesn't
+          * actually use the associated variable.
+          */
          fprintf(stderr, "WARNING: Unsupported SPIR-V Capability\n");
          break;
-      default:
-         assert(!"Unsupported capability");
+      case SpvCapabilityTessellation:
+      case SpvCapabilityTessellationPointSize:
+      case SpvCapabilityLinkage:
+      case SpvCapabilityVector16:
+      case SpvCapabilityFloat16Buffer:
+      case SpvCapabilityFloat16:
+      case SpvCapabilityFloat64:
+      case SpvCapabilityInt64:
+      case SpvCapabilityInt64Atomics:
+      case SpvCapabilityAtomicStorage:
+      case SpvCapabilityInt16:
+      case SpvCapabilityImageGatherExtended:
+      case SpvCapabilityStorageImageMultisample:
+      case SpvCapabilityImageCubeArray:
+      case SpvCapabilitySampleRateShading:
+      case SpvCapabilityInt8:
+      case SpvCapabilityInputAttachment:
+      case SpvCapabilitySparseResidency:
+      case SpvCapabilityMinLod:
+      case SpvCapabilityImageMSArray:
+      case SpvCapabilityStorageImageExtendedFormats:
+      case SpvCapabilityTransformFeedback:
+      case SpvCapabilityStorageImageReadWithoutFormat:
+      case SpvCapabilityStorageImageWriteWithoutFormat:
+         unreachable("Unsupported SPIR-V Capability");
+         break;
+
+      case SpvCapabilityAddresses:
+      case SpvCapabilityKernel:
+      case SpvCapabilityImageBasic:
+      case SpvCapabilityImageReadWrite:
+      case SpvCapabilityImageMipmap:
+      case SpvCapabilityPipes:
+      case SpvCapabilityGroups:
+      case SpvCapabilityDeviceEnqueue:
+      case SpvCapabilityLiteralSampler:
+      case SpvCapabilityGenericPointer:
+         unreachable("Unsupported OpenCL-style Capability");
+         break;
       }
       break;
    }
