@@ -180,7 +180,7 @@ prepare_target(struct gl_context *ctx, GLuint name, GLenum target,
          for (i = 0; i < depth; i++) {
             if (!texObj->Image[z+i][level]) {
                /* missing cube face */
-               _mesa_error(ctx, GL_INVALID_OPERATION,
+               _mesa_error(ctx, GL_INVALID_VALUE,
                            "glCopyImageSubData(missing cube face)");
                return false;
             }
