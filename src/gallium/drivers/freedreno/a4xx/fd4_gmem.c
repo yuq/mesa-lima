@@ -80,7 +80,8 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 			if (rsc->stencil) {
 				rsc = rsc->stencil;
 				pformat = rsc->base.b.format;
-				bases++;
+				if (bases)
+					bases++;
 			}
 
 			slice = fd_resource_slice(rsc, psurf->u.tex.level);
