@@ -169,7 +169,7 @@ try_pbo_readpixels(struct st_context *st, struct st_renderbuffer *strb,
       struct pipe_image_view image;
 
       memset(&image, 0, sizeof(image));
-      pipe_resource_reference(&image.resource, addr.buffer);
+      image.resource = addr.buffer;
       image.format = dst_format;
       image.access = PIPE_IMAGE_ACCESS_WRITE;
       image.u.buf.first_element = addr.first_element;
