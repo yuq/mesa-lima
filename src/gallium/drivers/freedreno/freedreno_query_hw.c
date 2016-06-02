@@ -61,6 +61,8 @@ get_sample(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	struct fd_hw_sample *samp = NULL;
 	int idx = pidx(query_type);
 
+	assume(idx >= 0);   /* query never would have been created otherwise */
+
 	if (!ctx->sample_cache[idx]) {
 		ctx->sample_cache[idx] =
 			ctx->sample_providers[idx]->get_sample(ctx, ring);
