@@ -26,6 +26,7 @@
  */
 
 #include "vtn_private.h"
+#include "spirv_info.h"
 
 static struct vtn_access_chain *
 vtn_access_chain_extend(struct vtn_builder *b, struct vtn_access_chain *old,
@@ -1040,7 +1041,8 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       break; /* Do nothing with these here */
 
    case SpvDecorationPatch:
-      unreachable("Tessellation not yet supported");
+      vtn_warn("Tessellation not yet supported");
+      break;
 
    case SpvDecorationLocation:
       unreachable("Handled above");
@@ -1056,11 +1058,15 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationDescriptorSet:
    case SpvDecorationNoContraction:
    case SpvDecorationInputAttachmentIndex:
-      unreachable("Decoration not allowed for variable or structure member");
+      vtn_warn("Decoration not allowed for variable or structure member: %s",
+               spirv_decoration_to_string(dec->decoration));
+      break;
 
    case SpvDecorationXfbBuffer:
    case SpvDecorationXfbStride:
-      unreachable("Vulkan does not have transform feedback");
+      vtn_warn("Vulkan does not have transform feedback: %s",
+               spirv_decoration_to_string(dec->decoration));
+      break;
 
    case SpvDecorationCPacked:
    case SpvDecorationSaturatedConversion:
@@ -1068,7 +1074,9 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationFPRoundingMode:
    case SpvDecorationFPFastMathMode:
    case SpvDecorationAlignment:
-      unreachable("Decoraiton only allowed for CL-style kernels");
+      vtn_warn("Decoraiton only allowed for CL-style kernels: %s",
+               spirv_decoration_to_string(dec->decoration));
+      break;
    }
 }
 

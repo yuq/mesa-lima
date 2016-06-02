@@ -517,7 +517,8 @@ struct_member_decoration_cb(struct vtn_builder *b,
       break;
 
    case SpvDecorationPatch:
-      unreachable("Tessellation not yet supported");
+      vtn_warn("Tessellation not yet supported");
+      break;
 
    case SpvDecorationSpecId:
    case SpvDecorationBlock:
@@ -534,11 +535,14 @@ struct_member_decoration_cb(struct vtn_builder *b,
    case SpvDecorationDescriptorSet:
    case SpvDecorationNoContraction:
    case SpvDecorationInputAttachmentIndex:
-      unreachable("Decoration not allowed on struct members");
+      vtn_warn("Decoration not allowed on struct members: %s",
+               spirv_decoration_to_string(dec->decoration));
+      break;
 
    case SpvDecorationXfbBuffer:
    case SpvDecorationXfbStride:
-      unreachable("Vulkan does not have transform feedback");
+      vtn_warn("Vulkan does not have transform feedback");
+      break;
 
    case SpvDecorationCPacked:
    case SpvDecorationSaturatedConversion:
@@ -546,7 +550,9 @@ struct_member_decoration_cb(struct vtn_builder *b,
    case SpvDecorationFPRoundingMode:
    case SpvDecorationFPFastMathMode:
    case SpvDecorationAlignment:
-      unreachable("Decoraiton only allowed for CL-style kernels");
+      vtn_warn("Decoraiton only allowed for CL-style kernels: %s",
+               spirv_decoration_to_string(dec->decoration));
+      break;
 
    default:
       unreachable("Unhandled member decoration");
@@ -598,7 +604,9 @@ type_decoration_cb(struct vtn_builder *b,
    case SpvDecorationOffset:
    case SpvDecorationXfbBuffer:
    case SpvDecorationXfbStride:
-      unreachable("Decoraiton only allowed for struct members");
+      vtn_warn("Decoraiton only allowed for struct members: %s",
+               spirv_decoration_to_string(dec->decoration));
+      break;
 
    case SpvDecorationRelaxedPrecision:
    case SpvDecorationSpecId:
@@ -612,7 +620,9 @@ type_decoration_cb(struct vtn_builder *b,
    case SpvDecorationLinkageAttributes:
    case SpvDecorationNoContraction:
    case SpvDecorationInputAttachmentIndex:
-      unreachable("Decoraiton not allowed on types");
+      vtn_warn("Decoraiton not allowed on types: %s",
+               spirv_decoration_to_string(dec->decoration));
+      break;
 
    case SpvDecorationCPacked:
    case SpvDecorationSaturatedConversion:
@@ -620,7 +630,9 @@ type_decoration_cb(struct vtn_builder *b,
    case SpvDecorationFPRoundingMode:
    case SpvDecorationFPFastMathMode:
    case SpvDecorationAlignment:
-      unreachable("Decoraiton only allowed for CL-style kernels");
+      vtn_warn("Decoraiton only allowed for CL-style kernels: %s",
+               spirv_decoration_to_string(dec->decoration));
+      break;
    }
 }
 
@@ -2299,14 +2311,10 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityInterpolationFunction:
       case SpvCapabilityMultiViewport:
          break;
+
       case SpvCapabilityClipDistance:
       case SpvCapabilityCullDistance:
       case SpvCapabilityGeometryStreams:
-         /* glslang sometimes throws these at us even though it doesn't
-          * actually use the associated variable.
-          */
-         fprintf(stderr, "WARNING: Unsupported SPIR-V Capability\n");
-         break;
       case SpvCapabilityTessellation:
       case SpvCapabilityTessellationPointSize:
       case SpvCapabilityLinkage:
@@ -2331,7 +2339,8 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityTransformFeedback:
       case SpvCapabilityStorageImageReadWithoutFormat:
       case SpvCapabilityStorageImageWriteWithoutFormat:
-         unreachable("Unsupported SPIR-V Capability");
+         vtn_warn("Unsupported SPIR-V capability: %s",
+                  spirv_capability_to_string(cap));
          break;
 
       case SpvCapabilityAddresses:
@@ -2344,7 +2353,8 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityDeviceEnqueue:
       case SpvCapabilityLiteralSampler:
       case SpvCapabilityGenericPointer:
-         unreachable("Unsupported OpenCL-style Capability");
+         vtn_warn("Unsupported OpenCL-style SPIR-V capability: %s",
+                  spirv_capability_to_string(cap));
          break;
       }
       break;
