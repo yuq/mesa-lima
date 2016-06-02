@@ -248,6 +248,8 @@ SPIRV_FILES = \
 	spirv/GLSL.std.450.h \
 	spirv/nir_spirv.h \
 	spirv/spirv.h \
+	spirv/spirv_info.h \
+	spirv/spirv_info.c \
 	spirv/spirv_to_nir.c \
 	spirv/vtn_alu.c \
 	spirv/vtn_cfg.c \
