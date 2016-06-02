@@ -417,6 +417,9 @@ vtn_value(struct vtn_builder *b, uint32_t value_id,
    return val;
 }
 
+void _vtn_warn(const char *file, int line, const char *msg, ...);
+#define vtn_warn(...) _vtn_warn(__FILE__, __LINE__, __VA_ARGS__)
+
 struct vtn_ssa_value *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
 
 struct vtn_ssa_value *vtn_create_ssa_value(struct vtn_builder *b,

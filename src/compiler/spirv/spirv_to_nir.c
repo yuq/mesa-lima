@@ -29,6 +29,22 @@
 #include "nir/nir_vla.h"
 #include "nir/nir_control_flow.h"
 #include "nir/nir_constant_expressions.h"
+#include "spirv_info.h"
+
+void
+_vtn_warn(const char *file, int line, const char *msg, ...)
+{
+   char *formatted;
+   va_list args;
+
+   va_start(args, msg);
+   formatted = ralloc_vasprintf(NULL, msg, args);
+   va_end(args);
+
+   fprintf(stderr, "%s:%d WARNING: %s\n", file, line, formatted);
+
+   ralloc_free(formatted);
+}
 
 static struct vtn_ssa_value *
 vtn_undef_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
