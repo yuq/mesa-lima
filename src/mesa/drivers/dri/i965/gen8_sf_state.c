@@ -166,7 +166,7 @@ upload_sf(struct brw_context *brw)
       dw2 |= GEN6_SF_LINE_END_CAP_WIDTH_1_0;
    }
 
-   /* Clamp to ARB_point_parameters user limits */
+   /* _NEW_POINT - Clamp to ARB_point_parameters user limits */
    point_size = CLAMP(ctx->Point.Size, ctx->Point.MinSize, ctx->Point.MaxSize);
 
    /* Clamp to the hardware limits and convert to fixed point */

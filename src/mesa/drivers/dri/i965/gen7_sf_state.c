@@ -217,7 +217,7 @@ upload_sf_state(struct brw_context *brw)
    if (!(ctx->VertexProgram.PointSizeEnabled || ctx->Point._Attenuated))
       dw3 |= GEN6_SF_USE_STATE_POINT_WIDTH;
 
-   /* Clamp to ARB_point_parameters user limits */
+   /* _NEW_POINT - Clamp to ARB_point_parameters user limits */
    point_size = CLAMP(ctx->Point.Size, ctx->Point.MinSize, ctx->Point.MaxSize);
 
    /* Clamp to the hardware limits and convert to fixed point */
