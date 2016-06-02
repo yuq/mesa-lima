@@ -1284,9 +1284,6 @@ nir_visitor::visit(ir_expression *ir)
           intrin->intrinsic == nir_intrinsic_interp_var_at_sample)
          intrin->src[0] = nir_src_for_ssa(evaluate_rvalue(ir->operands[1]));
 
-      if (intrin->intrinsic == nir_intrinsic_interp_var_at_offset)
-         shader->info.uses_interp_var_at_offset = true;
-
       unsigned bit_size =  glsl_get_bit_size(deref->type);
       add_instr(&intrin->instr, deref->type->vector_elements, bit_size);
 

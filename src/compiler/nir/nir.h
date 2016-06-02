@@ -1723,9 +1723,6 @@ typedef struct nir_shader_info {
    /* Whether or not this shader ever uses textureGather() */
    bool uses_texture_gather;
 
-   /** Whether or not this shader uses nir_intrinsic_interp_var_at_offset */
-   bool uses_interp_var_at_offset;
-
    /* Whether or not this shader uses the gl_ClipDistance output */
    bool uses_clip_distance_out;
 
