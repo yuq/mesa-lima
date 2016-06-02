@@ -88,7 +88,7 @@ fd4_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
 }
 
 
-static inline enum pc_di_index_size
+static inline enum a4xx_index_size
 fd4_size2indextype(unsigned index_size)
 {
 	switch (index_size) {
