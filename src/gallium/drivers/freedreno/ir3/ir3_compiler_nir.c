@@ -2188,16 +2188,7 @@ static void
 emit_instructions(struct ir3_compile *ctx)
 {
 	unsigned ninputs, noutputs;
-	nir_function_impl *fxn = NULL;
-
-	/* Find the main function: */
-	nir_foreach_function(function, ctx->s) {
-		compile_assert(ctx, strcmp(function->name, "main") == 0);
-		compile_assert(ctx, function->impl);
-		fxn = function->impl;
-		break;
-	}
-
+	nir_function_impl *fxn = nir_shader_get_entrypoint(ctx->s)->impl;
 
 	ninputs  = (max_drvloc(&ctx->s->inputs) + 1) * 4;
 	noutputs = (max_drvloc(&ctx->s->outputs) + 1) * 4;
