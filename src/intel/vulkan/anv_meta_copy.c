@@ -69,14 +69,14 @@ meta_region_offset_el(const struct anv_image *image,
 
 static struct anv_meta_blit2d_surf
 blit_surf_for_image(const struct anv_image* image,
-                    const struct isl_surf *img_isl_surf)
+                    const struct anv_surface *surf)
 {
    return (struct anv_meta_blit2d_surf) {
       .bo = image->bo,
-      .tiling = img_isl_surf->tiling,
-      .base_offset = image->offset,
-      .bs = isl_format_get_layout(img_isl_surf->format)->bs,
-      .pitch = isl_surf_get_row_pitch(img_isl_surf),
+      .tiling = surf->isl.tiling,
+      .base_offset = image->offset + surf->offset,
+      .bs = isl_format_get_layout(surf->isl.format)->bs,
+      .pitch = isl_surf_get_row_pitch(&surf->isl),
    };
 }
 
@@ -157,10 +157,10 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
 
       /* Create blit surfaces */
       VkImageAspectFlags aspect = pRegions[r].imageSubresource.aspectMask;
-      const struct isl_surf *img_isl_surf =
-         &anv_image_get_surface_for_aspect_mask(image, aspect)->isl;
+      const struct anv_surface *img_surf =
+         anv_image_get_surface_for_aspect_mask(image, aspect);
       struct anv_meta_blit2d_surf img_bsurf =
-         blit_surf_for_image(image, img_isl_surf);
+         blit_surf_for_image(image, img_surf);
       enum isl_format buf_format = anv_get_isl_format(&cmd_buffer->device->info,
                                                       image->vk_format, aspect,
                                                       VK_IMAGE_TILING_LINEAR);
@@ -186,7 +186,7 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
       while (slice_3d < num_slices_3d && slice_array < num_slices_array) {
 
          /* Finish creating blit rect */
-         isl_surf_get_image_offset_el(img_isl_surf,
+         isl_surf_get_image_offset_el(&img_surf->isl,
                                     pRegions[r].imageSubresource.mipLevel,
                                     pRegions[r].imageSubresource.baseArrayLayer
                                        + slice_array,
@@ -278,14 +278,14 @@ void anv_CmdCopyImage(
       VkImageAspectFlags aspect = pRegions[r].srcSubresource.aspectMask;
 
       /* Create blit surfaces */
-      struct isl_surf *src_isl_surf =
-         &anv_image_get_surface_for_aspect_mask(src_image, aspect)->isl;
-      struct isl_surf *dst_isl_surf =
-         &anv_image_get_surface_for_aspect_mask(dest_image, aspect)->isl;
+      struct anv_surface *src_surf =
+         anv_image_get_surface_for_aspect_mask(src_image, aspect);
+      struct anv_surface *dst_surf =
+         anv_image_get_surface_for_aspect_mask(dest_image, aspect);
       struct anv_meta_blit2d_surf b_src =
-         blit_surf_for_image(src_image, src_isl_surf);
+         blit_surf_for_image(src_image, src_surf);
       struct anv_meta_blit2d_surf b_dst =
-         blit_surf_for_image(dest_image, dst_isl_surf);
+         blit_surf_for_image(dest_image, dst_surf);
 
       /**
        * From the Vulkan 1.0.6 spec: 18.4 Copying Data Between Buffers and Images
@@ -317,14 +317,14 @@ void anv_CmdCopyImage(
       while (slice_3d < num_slices_3d && slice_array < num_slices_array) {
 
          /* Finish creating blit rect */
-         isl_surf_get_image_offset_el(dst_isl_surf,
+         isl_surf_get_image_offset_el(&dst_surf->isl,
                                     pRegions[r].dstSubresource.mipLevel,
                                     pRegions[r].dstSubresource.baseArrayLayer
                                        + slice_array,
                                     dst_offset_el.z + slice_3d,
                                     &rect.dst_x,
                                     &rect.dst_y);
-         isl_surf_get_image_offset_el(src_isl_surf,
+         isl_surf_get_image_offset_el(&src_surf->isl,
                                     pRegions[r].srcSubresource.mipLevel,
                                     pRegions[r].srcSubresource.baseArrayLayer
                                        + slice_array,
