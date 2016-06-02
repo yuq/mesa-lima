@@ -192,14 +192,8 @@ vlVaDestroyBuffer(VADriverContextP ctx, VABufferID buf_id)
       return VA_STATUS_ERROR_INVALID_BUFFER;
    }
 
-   if (buf->derived_surface.resource) {
-      if (buf->export_refcount > 0) {
-         pipe_mutex_unlock(drv->mutex);
-         return VA_STATUS_ERROR_INVALID_BUFFER;
-      }
-
+   if (buf->derived_surface.resource)
       pipe_resource_reference(&buf->derived_surface.resource, NULL);
-   }
 
    FREE(buf->data);
    FREE(buf);
