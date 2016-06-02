@@ -3331,6 +3331,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_atomic_counter_inc:
    case nir_intrinsic_atomic_counter_dec:
    case nir_intrinsic_atomic_counter_read: {
+      if (stage == MESA_SHADER_FRAGMENT &&
+          instr->intrinsic != nir_intrinsic_atomic_counter_read)
+         ((struct brw_wm_prog_data *)prog_data)->has_side_effects = true;
+
       /* Get the arguments of the atomic intrinsic. */
       const fs_reg offset = get_nir_src(instr->src[0]);
       const unsigned surface = (stage_prog_data->binding_table.abo_start +
@@ -3376,6 +3380,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_image_atomic_exchange:
    case nir_intrinsic_image_atomic_comp_swap: {
       using namespace image_access;
+
+      if (stage == MESA_SHADER_FRAGMENT &&
+          instr->intrinsic != nir_intrinsic_image_load)
+         ((struct brw_wm_prog_data *)prog_data)->has_side_effects = true;
 
       /* Get the referenced image variable and type. */
       const nir_variable *var = instr->variables[0]->var;
@@ -3690,6 +3698,9 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_store_ssbo: {
       assert(devinfo->gen >= 7);
 
+      if (stage == MESA_SHADER_FRAGMENT)
+         ((struct brw_wm_prog_data *)prog_data)->has_side_effects = true;
+
       /* Block index */
       fs_reg surf_index;
       nir_const_value *const_uniform_block =
@@ -3893,6 +3904,9 @@ void
 fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
                                  int op, nir_intrinsic_instr *instr)
 {
+   if (stage == MESA_SHADER_FRAGMENT)
+      ((struct brw_wm_prog_data *)prog_data)->has_side_effects = true;
+
    fs_reg dest;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
       dest = get_nir_dest(instr->dest);
