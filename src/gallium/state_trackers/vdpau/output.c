@@ -205,6 +205,9 @@ vlVdpOutputSurfaceGetBitsNative(VdpOutputSurface surface,
    if (!pipe)
       return VDP_STATUS_INVALID_HANDLE;
 
+   if (!destination_data || !destination_pitches)
+       return VDP_STATUS_INVALID_POINTER;
+
    pipe_mutex_lock(vlsurface->device->mutex);
    vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);
 
@@ -246,6 +249,9 @@ vlVdpOutputSurfacePutBitsNative(VdpOutputSurface surface,
    pipe = vlsurface->device->context;
    if (!pipe)
       return VDP_STATUS_INVALID_HANDLE;
+
+   if (!source_data || !source_pitches)
+       return VDP_STATUS_INVALID_POINTER;
 
    pipe_mutex_lock(vlsurface->device->mutex);
    vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);

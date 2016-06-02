@@ -215,6 +215,9 @@ vlVdpVideoSurfaceGetBitsYCbCr(VdpVideoSurface surface,
    if (!pipe)
       return VDP_STATUS_INVALID_HANDLE;
 
+   if (!destination_data || !destination_pitches)
+       return VDP_STATUS_INVALID_POINTER;
+
    format = FormatYCBCRToPipe(destination_ycbcr_format);
    if (format == PIPE_FORMAT_NONE)
       return VDP_STATUS_INVALID_Y_CB_CR_FORMAT;
@@ -312,6 +315,9 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
    pipe = p_surf->device->context;
    if (!pipe)
       return VDP_STATUS_INVALID_HANDLE;
+
+   if (!source_data || !source_pitches)
+       return VDP_STATUS_INVALID_POINTER;
 
    pipe_mutex_lock(p_surf->device->mutex);
    if (p_surf->video_buffer == NULL || pformat != p_surf->video_buffer->buffer_format) {
