@@ -2758,6 +2758,17 @@ interface_qualifier:
       memset(& $$, 0, sizeof($$));
       $$.flags.q.buffer = 1;
    }
+   | auxiliary_storage_qualifier interface_qualifier
+   {
+      if (!$1.flags.q.patch) {
+         _mesa_glsl_error(&@1, state, "invalid interface qualifier");
+      }
+      if ($2.has_auxiliary_storage()) {
+         _mesa_glsl_error(&@1, state, "duplicate patch qualifier");
+      }
+      $$ = $2;
+      $$.flags.q.patch = 1;
+   }
    ;
 
 instance_name_opt:

@@ -959,6 +959,7 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
    temp_type_qualifier.flags.q.in = true;
    temp_type_qualifier.flags.q.out = true;
    temp_type_qualifier.flags.q.buffer = true;
+   temp_type_qualifier.flags.q.patch = true;
    interface_type_mask = temp_type_qualifier.flags.i;
 
    /* Get the block's interface qualifier.  The interface_qualifier

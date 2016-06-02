@@ -7498,10 +7498,12 @@ ast_interface_block::hir(exec_list *instructions,
       _mesa_glsl_error(&loc, state, "geometry shader inputs must be arrays");
    } else if ((state->stage == MESA_SHADER_TESS_CTRL ||
                state->stage == MESA_SHADER_TESS_EVAL) &&
+              !this->layout.flags.q.patch &&
               this->array_specifier == NULL &&
               var_mode == ir_var_shader_in) {
       _mesa_glsl_error(&loc, state, "per-vertex tessellation shader inputs must be arrays");
    } else if (state->stage == MESA_SHADER_TESS_CTRL &&
+              !this->layout.flags.q.patch &&
               this->array_specifier == NULL &&
               var_mode == ir_var_shader_out) {
       _mesa_glsl_error(&loc, state, "tessellation control shader outputs must be arrays");
@@ -7616,6 +7618,8 @@ ast_interface_block::hir(exec_list *instructions,
 
       if (var_mode == ir_var_shader_in || var_mode == ir_var_uniform)
          var->data.read_only = true;
+
+      var->data.patch = this->layout.flags.q.patch;
 
       if (state->stage == MESA_SHADER_GEOMETRY && var_mode == ir_var_shader_in)
          handle_geometry_shader_input_decl(state, loc, var);
