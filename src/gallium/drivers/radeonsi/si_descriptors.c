@@ -512,6 +512,23 @@ si_disable_shader_image(struct si_images_info *images, unsigned slot)
 	}
 }
 
+static void
+si_mark_image_range_valid(struct pipe_image_view *view)
+{
+	struct r600_resource *res = (struct r600_resource *)view->resource;
+	const struct util_format_description *desc;
+	unsigned stride;
+
+	assert(res && res->b.b.target == PIPE_BUFFER);
+
+	desc = util_format_description(view->format);
+	stride = desc->block.bits / 8;
+
+	util_range_add(&res->valid_buffer_range,
+		       stride * (view->u.buf.first_element),
+		       stride * (view->u.buf.last_element + 1));
+}
+
 static void si_set_shader_image(struct si_context *ctx,
 				struct si_images_info *images,
 				unsigned slot, struct pipe_image_view *view)
@@ -533,6 +550,9 @@ static void si_set_shader_image(struct si_context *ctx,
 				   RADEON_USAGE_READWRITE);
 
 	if (res->b.b.target == PIPE_BUFFER) {
+		if (view->access & PIPE_IMAGE_ACCESS_WRITE)
+			si_mark_image_range_valid(view);
+
 		si_make_buffer_descriptor(screen, res,
 					  view->format,
 					  view->u.buf.first_element,
@@ -1361,6 +1381,9 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 			unsigned i = u_bit_scan(&mask);
 
 			if (images->views[i].resource == buf) {
+				if (images->views[i].access & PIPE_IMAGE_ACCESS_WRITE)
+					si_mark_image_range_valid(&images->views[i]);
+
 				si_desc_reset_buffer_offset(
 					ctx, images->desc.list + i * 8 + 4,
 					old_va, buf);
