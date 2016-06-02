@@ -1073,7 +1073,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
 
     // if we have a partially filled vVertexElement struct, output it
     if(currentVertexElement > 0){
-        StoreVertexElements(pVtxOut, outputElt++, currentVertexElement+1, vVertexElements);
+        StoreVertexElements(pVtxOut, outputElt++, currentVertexElement, vVertexElements);
     }
 }
 
