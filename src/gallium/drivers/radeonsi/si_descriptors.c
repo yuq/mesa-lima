@@ -570,8 +570,14 @@ static void si_set_shader_image(struct si_context *ctx,
 		assert(tex->fmask.size == 0);
 
 		if (tex->dcc_offset &&
-		    view->access & PIPE_IMAGE_ACCESS_WRITE)
-			r600_texture_disable_dcc(&screen->b, tex);
+		    view->access & PIPE_IMAGE_ACCESS_WRITE) {
+			/* If DCC can't be disabled, at least decompress it.
+			 * The decompression is relatively cheap if the surface
+			 * has been decompressed already.
+			 */
+			if (!r600_texture_disable_dcc(&screen->b, tex))
+				ctx->b.decompress_dcc(&ctx->b.b, tex);
+		}
 
 		if (is_compressed_colortex(tex)) {
 			images->compressed_colortex_mask |= 1 << slot;

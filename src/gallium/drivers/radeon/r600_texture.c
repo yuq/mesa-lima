@@ -32,7 +32,7 @@
 #include <errno.h>
 #include <inttypes.h>
 
-static void r600_texture_discard_dcc(struct r600_common_screen *rscreen,
+static bool r600_texture_discard_dcc(struct r600_common_screen *rscreen,
 				     struct r600_texture *rtex);
 static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 				       struct r600_texture *rtex);
@@ -86,7 +86,8 @@ bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
 						      src_box->height, src_box->depth))
 			return false;
 
-		r600_texture_discard_dcc(rctx->screen, rdst);
+		if (!r600_texture_discard_dcc(rctx->screen, rdst))
+			return false;
 	}
 
 	/* CMASK as:
@@ -376,25 +377,37 @@ static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 	p_atomic_inc(&rscreen->compressed_colortex_counter);
 }
 
-static void r600_texture_discard_dcc(struct r600_common_screen *rscreen,
+static bool r600_can_disable_dcc(struct r600_texture *rtex)
+{
+	/* We can't disable DCC if it can be written by another process. */
+	return rtex->dcc_offset &&
+	       (!rtex->resource.is_shared ||
+		!(rtex->resource.external_usage & PIPE_HANDLE_USAGE_WRITE));
+}
+
+static bool r600_texture_discard_dcc(struct r600_common_screen *rscreen,
 				     struct r600_texture *rtex)
 {
+	if (!r600_can_disable_dcc(rtex))
+		return false;
+
 	/* Disable DCC. */
 	rtex->dcc_offset = 0;
 	rtex->cb_color_info &= ~VI_S_028C70_DCC_ENABLE(1);
 
 	/* Notify all contexts about the change. */
 	r600_dirty_all_framebuffer_states(rscreen);
+	return true;
 }
 
-void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
+bool r600_texture_disable_dcc(struct r600_common_screen *rscreen,
 			      struct r600_texture *rtex)
 {
 	struct r600_common_context *rctx =
 		(struct r600_common_context *)rscreen->aux_context;
 
-	if (!rtex->dcc_offset)
-		return;
+	if (!r600_can_disable_dcc(rtex))
+		return false;
 
 	/* Decompress DCC. */
 	pipe_mutex_lock(rscreen->aux_context_lock);
@@ -402,7 +415,7 @@ void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
 	rctx->b.flush(&rctx->b, NULL, 0);
 	pipe_mutex_unlock(rscreen->aux_context_lock);
 
-	r600_texture_discard_dcc(rscreen, rtex);
+	return r600_texture_discard_dcc(rscreen, rtex);
 }
 
 static void r600_degrade_tile_mode_to_linear(struct r600_common_context *rctx,
@@ -497,8 +510,8 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		 * access.
 		 */
 		if (usage & PIPE_HANDLE_USAGE_WRITE && rtex->dcc_offset) {
-			r600_texture_disable_dcc(rscreen, rtex);
-			update_metadata = true;
+			if (r600_texture_disable_dcc(rscreen, rtex))
+				update_metadata = true;
 		}
 
 		if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) &&
