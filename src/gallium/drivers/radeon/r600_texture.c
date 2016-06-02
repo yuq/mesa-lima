@@ -1035,8 +1035,12 @@ r600_texture_create_object(struct pipe_screen *screen,
 			}
 		}
 
-		if (!buf && rtex->surface.dcc_size &&
-		    !(rscreen->debug_flags & DBG_NO_DCC)) {
+		/* Shared textures must always set up DCC here.
+		 * If it's not present, it will be disabled by
+		 * apply_opaque_metadata later.
+		 */
+		if (rtex->surface.dcc_size &&
+		    (buf || !(rscreen->debug_flags & DBG_NO_DCC))) {
 			/* Reserve space for the DCC buffer. */
 			rtex->dcc_offset = align64(rtex->size, rtex->surface.dcc_alignment);
 			rtex->size = rtex->dcc_offset + rtex->surface.dcc_size;
@@ -1063,7 +1067,9 @@ r600_texture_create_object(struct pipe_screen *screen,
 					 rtex->cmask.offset, rtex->cmask.size,
 					 0xCCCCCCCC, R600_COHERENCY_NONE);
 	}
-	if (rtex->dcc_offset) {
+
+	/* Initialize DCC only if the texture is not being imported. */
+	if (!buf && rtex->dcc_offset) {
 		r600_screen_clear_buffer(rscreen, &rtex->resource.b.b,
 					 rtex->dcc_offset,
 					 rtex->surface.dcc_size,
@@ -1229,6 +1235,10 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 
 	rtex->resource.is_shared = true;
 	rtex->resource.external_usage = usage;
+
+	if (rscreen->apply_opaque_metadata)
+		rscreen->apply_opaque_metadata(rscreen, rtex, &metadata);
+
 	return &rtex->resource.b.b;
 }
 

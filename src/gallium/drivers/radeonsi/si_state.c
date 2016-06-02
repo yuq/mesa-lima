@@ -3398,6 +3398,11 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_config(sctx);
 }
 
+static uint32_t si_get_bo_metadata_word1(struct r600_common_screen *rscreen)
+{
+	return (ATI_VENDOR_ID << 16) | rscreen->info.pci_id;
+}
+
 static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 				     struct r600_texture *rtex,
 			             struct radeon_bo_metadata *md)
@@ -3432,7 +3437,7 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 	md->metadata[0] = 1; /* metadata image format version 1 */
 
 	/* TILE_MODE_INDEX is ambiguous without a PCI ID. */
-	md->metadata[1] = (ATI_VENDOR_ID << 16) | rscreen->info.pci_id;
+	md->metadata[1] = si_get_bo_metadata_word1(rscreen);
 
 	si_make_texture_descriptor(sscreen, rtex, true,
 				   res->target, res->format,
@@ -3459,9 +3464,37 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 	md->size_metadata = (11 + res->last_level) * 4;
 }
 
+static void si_apply_opaque_metadata(struct r600_common_screen *rscreen,
+				     struct r600_texture *rtex,
+			             struct radeon_bo_metadata *md)
+{
+	uint32_t *desc = &md->metadata[2];
+
+	if (rscreen->chip_class < VI)
+		return;
+
+	/* Return if DCC is enabled. The texture should be set up with it
+	 * already.
+	 */
+	if (md->size_metadata >= 11 * 4 &&
+	    md->metadata[0] != 0 &&
+	    md->metadata[1] == si_get_bo_metadata_word1(rscreen) &&
+	    G_008F28_COMPRESSION_EN(desc[6])) {
+		assert(rtex->dcc_offset == ((uint64_t)desc[7] << 8));
+		return;
+	}
+
+	/* Disable DCC. These are always set by texture_from_handle and must
+	 * be cleared here.
+	 */
+	rtex->dcc_offset = 0;
+	rtex->cb_color_info &= ~VI_S_028C70_DCC_ENABLE(1);
+}
+
 void si_init_screen_state_functions(struct si_screen *sscreen)
 {
 	sscreen->b.query_opaque_metadata = si_query_opaque_metadata;
+	sscreen->b.apply_opaque_metadata = si_apply_opaque_metadata;
 }
 
 static void
