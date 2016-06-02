@@ -1106,9 +1106,9 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
        * In the case of 16x MSAA the two layouts don't match.
        * Sample index layout:                Sample number layout:
        * ---------------------               ---------------------
-       * |  0 |  1 |  2 |  3 |               | 15 | 10 |  9 | 13 |
+       * |  0 |  1 |  2 |  3 |               | 15 | 10 |  9 |  7 |
        * ---------------------               ---------------------
-       * |  4 |  5 |  6 |  7 |               |  4 |  1 |  7 |  3 |
+       * |  4 |  5 |  6 |  7 |               |  4 |  1 |  3 | 13 |
        * ---------------------               ---------------------
        * |  8 |  9 | 10 | 11 |               | 12 |  2 |  0 |  6 |
        * ---------------------               ---------------------
@@ -1116,7 +1116,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
        * ---------------------               ---------------------
        *
        * This is equivalent to
-       * S' = (0xfa9d4173c206b85e >> (S * 4)) & 0xf
+       * S' = (0xe58b602cd31479af >> (S * 4)) & 0xf
        */
       nir_ssa_def *frac = nir_ffract(b, sample_coords);
       nir_ssa_def *sample =
@@ -1130,11 +1130,11 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
                            nir_imm_int(b, 0xf));
       } else if (tex_samples == 16) {
          nir_ssa_def *sample_low =
-            nir_iand(b, nir_ishr(b, nir_imm_int(b, 0xc206b85e),
+            nir_iand(b, nir_ishr(b, nir_imm_int(b, 0xd31479af),
                                  nir_ishl(b, sample, nir_imm_int(b, 2))),
                      nir_imm_int(b, 0xf));
          nir_ssa_def *sample_high =
-            nir_iand(b, nir_ishr(b, nir_imm_int(b, 0xfa9d4173),
+            nir_iand(b, nir_ishr(b, nir_imm_int(b, 0xe58b602c),
                                  nir_ishl(b, nir_iadd(b, sample,
                                                       nir_imm_int(b, -8)),
                                           nir_imm_int(b, 2))),
@@ -1761,8 +1761,11 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    /* Scaling factors used for bilinear filtering in multisample scaled
     * blits.
     */
-   wm_prog_key.x_scale = 2.0f;
-   wm_prog_key.y_scale = src_mt->num_samples / 2.0f;
+   if (src_mt->num_samples == 16)
+      wm_prog_key.x_scale = 4.0f;
+   else
+      wm_prog_key.x_scale = 2.0f;
+   wm_prog_key.y_scale = src_mt->num_samples / wm_prog_key.x_scale;
 
    if (filter == GL_LINEAR &&
        params.src.num_samples <= 1 && params.dst.num_samples <= 1)
