@@ -510,7 +510,6 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 			 * to be called.
 			 */
 			r600_texture_discard_cmask(rscreen, rtex);
-			update_metadata = true;
 		}
 
 		/* Set metadata. */
