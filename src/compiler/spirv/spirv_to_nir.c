@@ -533,6 +533,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
    case SpvDecorationIndex:
    case SpvDecorationBinding:
    case SpvDecorationDescriptorSet:
+   case SpvDecorationLinkageAttributes:
    case SpvDecorationNoContraction:
    case SpvDecorationInputAttachmentIndex:
       vtn_warn("Decoration not allowed on struct members: %s",
@@ -553,9 +554,6 @@ struct_member_decoration_cb(struct vtn_builder *b,
       vtn_warn("Decoraiton only allowed for CL-style kernels: %s",
                spirv_decoration_to_string(dec->decoration));
       break;
-
-   default:
-      unreachable("Unhandled member decoration");
    }
 }
 
