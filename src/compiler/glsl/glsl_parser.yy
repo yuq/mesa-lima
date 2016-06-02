@@ -219,8 +219,6 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %type <type_qualifier> subroutine_qualifier
 %type <subroutine_list> subroutine_type_list
 %type <type_qualifier> interface_qualifier
-%type <type_qualifier> uniform_interface_qualifier
-%type <type_qualifier> buffer_interface_qualifier
 %type <type_specifier> type_specifier
 %type <type_specifier> type_specifier_nonarray
 %type <array_specifier> array_specifier
@@ -2663,30 +2661,11 @@ basic_interface_block:
    {
       ast_interface_block *const block = $6;
 
-      block->block_name = $2;
-      block->declarations.push_degenerate_list_at_head(& $4->link);
-
-      _mesa_ast_process_interface_block(& @1, state, block, $1);
-
-      $$ = block;
-   }
-   | uniform_interface_qualifier NEW_IDENTIFIER '{' member_list '}' instance_name_opt ';'
-   {
-      ast_interface_block *const block = $6;
-
-      block->layout = *state->default_uniform_qualifier;
-      block->block_name = $2;
-      block->declarations.push_degenerate_list_at_head(& $4->link);
-
-      _mesa_ast_process_interface_block(& @1, state, block, $1);
-
-      $$ = block;
-   }
-   | buffer_interface_qualifier NEW_IDENTIFIER '{' member_list '}' instance_name_opt ';'
-   {
-      ast_interface_block *const block = $6;
-
-      block->layout = *state->default_shader_storage_qualifier;
+      if ($1.flags.q.uniform) {
+         block->layout = *state->default_uniform_qualifier;
+      } else if ($1.flags.q.buffer) {
+         block->layout = *state->default_shader_storage_qualifier;
+      }
       block->block_name = $2;
       block->declarations.push_degenerate_list_at_head(& $4->link);
 
@@ -2707,18 +2686,12 @@ interface_qualifier:
       memset(& $$, 0, sizeof($$));
       $$.flags.q.out = 1;
    }
-   ;
-
-uniform_interface_qualifier:
-   UNIFORM
+   | UNIFORM
    {
       memset(& $$, 0, sizeof($$));
       $$.flags.q.uniform = 1;
    }
-   ;
-
-buffer_interface_qualifier:
-   BUFFER
+   | BUFFER
    {
       memset(& $$, 0, sizeof($$));
       $$.flags.q.buffer = 1;
