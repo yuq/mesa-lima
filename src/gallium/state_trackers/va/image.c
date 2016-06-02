@@ -473,19 +473,19 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
 
    if (format != surf->buffer->buffer_format) {
       struct pipe_video_buffer *tmp_buf;
-      enum pipe_format old_surf_format = surf->templat.buffer_format;
+      struct pipe_video_buffer templat = surf->templat;
 
-      surf->templat.buffer_format = format;
-      tmp_buf = drv->pipe->create_video_buffer(drv->pipe, &surf->templat);
+      templat.buffer_format = format;
+      tmp_buf = drv->pipe->create_video_buffer(drv->pipe, &templat);
 
       if (!tmp_buf) {
-         surf->templat.buffer_format = old_surf_format;
          pipe_mutex_unlock(drv->mutex);
          return VA_STATUS_ERROR_ALLOCATION_FAILED;
       }
 
       surf->buffer->destroy(surf->buffer);
       surf->buffer = tmp_buf;
+      surf->templat.buffer_format = format;
    }
 
    views = surf->buffer->get_sampler_view_planes(surf->buffer);
