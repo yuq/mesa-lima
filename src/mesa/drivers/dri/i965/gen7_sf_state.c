@@ -213,8 +213,8 @@ upload_sf_state(struct brw_context *brw)
 
    dw3 = GEN6_SF_LINE_AA_MODE_TRUE;
 
-   /* _NEW_PROGRAM | _NEW_POINT */
-   if (!(ctx->VertexProgram.PointSizeEnabled || ctx->Point._Attenuated))
+   /* _NEW_PROGRAM | _NEW_POINT, BRW_NEW_VUE_MAP_GEOM_OUT */
+   if (use_state_point_size(brw))
       dw3 |= GEN6_SF_USE_STATE_POINT_WIDTH;
 
    /* _NEW_POINT - Clamp to ARB_point_parameters user limits */
@@ -256,7 +256,8 @@ const struct brw_tracked_state gen7_sf_state = {
                _NEW_SCISSOR,
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
-               BRW_NEW_PRIMITIVE,
+               BRW_NEW_PRIMITIVE |
+               BRW_NEW_VUE_MAP_GEOM_OUT,
    },
    .emit = upload_sf_state,
 };

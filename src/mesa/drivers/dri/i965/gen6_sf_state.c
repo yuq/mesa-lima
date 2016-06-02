@@ -373,9 +373,8 @@ upload_sf_state(struct brw_context *brw)
    if (multisampled_fbo && ctx->Multisample.Enabled)
       dw3 |= GEN6_SF_MSRAST_ON_PATTERN;
 
-   /* _NEW_PROGRAM | _NEW_POINT */
-   if (!(ctx->VertexProgram.PointSizeEnabled ||
-	 ctx->Point._Attenuated))
+   /* _NEW_PROGRAM | _NEW_POINT, BRW_NEW_VUE_MAP_GEOM_OUT */
+   if (use_state_point_size(brw))
       dw4 |= GEN6_SF_USE_STATE_POINT_WIDTH;
 
    /* _NEW_POINT - Clamp to ARB_point_parameters user limits */

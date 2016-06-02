@@ -473,6 +473,55 @@ is_drawing_lines(const struct brw_context *brw)
    return false;
 }
 
+static inline bool
+use_state_point_size(const struct brw_context *brw)
+{
+   const struct gl_context *ctx = &brw->ctx;
+
+   /* Section 14.4 (Points) of the OpenGL 4.5 specification says:
+    *
+    *    "If program point size mode is enabled, the derived point size is
+    *     taken from the (potentially clipped) shader built-in gl_PointSize
+    *     written by:
+    *
+    *        * the geometry shader, if active;
+    *        * the tessellation evaluation shader, if active and no
+    *          geometry shader is active;
+    *        * the vertex shader, otherwise
+    *
+    *    and clamped to the implementation-dependent point size range.  If
+    *    the value written to gl_PointSize is less than or equal to zero,
+    *    or if no value was written to gl_PointSize, results are undefined.
+    *    If program point size mode is disabled, the derived point size is
+    *    specified with the command
+    *
+    *       void PointSize(float size);
+    *
+    *    size specifies the requested size of a point.  The default value
+    *    is 1.0."
+    *
+    * The rules for GLES come from the ES 3.2, OES_geometry_point_size, and
+    * OES_tessellation_point_size specifications.  To summarize: if the last
+    * stage before rasterization is a GS or TES, then use gl_PointSize from
+    * the shader if written.  Otherwise, use 1.0.  If the last stage is a
+    * vertex shader, use gl_PointSize, or it is undefined.
+    *
+    * We can combine these rules into a single condition for both APIs.
+    * Using the state point size when the last shader stage doesn't write
+    * gl_PointSize satisfies GL's requirements, as it's undefined.  Because
+    * ES doesn't have a PointSize() command, the state point size will
+    * remain 1.0, satisfying the ES default value in the GS/TES case, and
+    * the VS case (1.0 works for "undefined").  Mesa sets the program point
+    * mode flag to always-enabled in ES, so we can safely check that, and
+    * it'll be ignored for ES.
+    *
+    * _NEW_PROGRAM | _NEW_POINT
+    * BRW_NEW_VUE_MAP_GEOM_OUT
+    */
+   return (!ctx->VertexProgram.PointSizeEnabled && !ctx->Point._Attenuated) ||
+          (brw->vue_map_geom_out.slots_valid & VARYING_BIT_PSIZ) == 0;
+}
+
 
 #ifdef __cplusplus
 }

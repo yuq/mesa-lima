@@ -172,8 +172,8 @@ upload_sf(struct brw_context *brw)
    /* Clamp to the hardware limits and convert to fixed point */
    dw3 |= U_FIXED(CLAMP(point_size, 0.125f, 255.875f), 3);
 
-   /* _NEW_PROGRAM | _NEW_POINT */
-   if (!(ctx->VertexProgram.PointSizeEnabled || ctx->Point._Attenuated))
+   /* _NEW_PROGRAM | _NEW_POINT, BRW_NEW_VUE_MAP_GEOM_OUT */
+   if (use_state_point_size(brw))
       dw3 |= GEN6_SF_USE_STATE_POINT_WIDTH;
 
    /* _NEW_POINT | _NEW_MULTISAMPLE */
@@ -209,7 +209,8 @@ const struct brw_tracked_state gen8_sf_state = {
                _NEW_MULTISAMPLE |
                _NEW_POINT,
       .brw   = BRW_NEW_BLORP |
-               BRW_NEW_CONTEXT,
+               BRW_NEW_CONTEXT |
+               BRW_NEW_VUE_MAP_GEOM_OUT,
    },
    .emit = upload_sf,
 };
