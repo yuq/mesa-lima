@@ -335,7 +335,7 @@ lp_build_emit_fetch(
    enum tgsi_opcode_type stype = tgsi_opcode_infer_src_type(inst->Instruction.Opcode);
 
    if (chan_index == LP_CHAN_ALL) {
-      swizzle = ~0;
+      swizzle = ~0u;
    } else {
       swizzle = tgsi_util_get_full_src_register_swizzle(reg, chan_index);
       if (swizzle > 3) {
@@ -398,7 +398,7 @@ lp_build_emit_fetch(
     * Swizzle the argument
     */
 
-   if (swizzle == ~0) {
+   if (swizzle == ~0u) {
       res = bld_base->emit_swizzle(bld_base, res,
                      reg->Register.SwizzleX,
                      reg->Register.SwizzleY,
@@ -453,7 +453,7 @@ lp_build_emit_fetch_texoffset(
     * Swizzle the argument
     */
 
-   if (swizzle == ~0) {
+   if (swizzle == ~0u) {
       res = bld_base->emit_swizzle(bld_base, res,
                                    off->SwizzleX,
                                    off->SwizzleY,

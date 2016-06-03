@@ -236,7 +236,7 @@ lp_build_concat_n(struct gallivm_state *gallivm,
                   unsigned num_dsts)
 {
    int size = num_srcs / num_dsts;
-   int i;
+   unsigned i;
 
    assert(num_srcs >= num_dsts);
    assert((num_srcs % size) == 0);

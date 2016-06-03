@@ -88,8 +88,6 @@ lp_build_compare_ext(struct gallivm_state *gallivm,
    LLVMValueRef cond;
    LLVMValueRef res;
 
-   assert(func >= PIPE_FUNC_NEVER);
-   assert(func <= PIPE_FUNC_ALWAYS);
    assert(lp_check_value(type, a));
    assert(lp_check_value(type, b));
 
@@ -97,6 +95,9 @@ lp_build_compare_ext(struct gallivm_state *gallivm,
       return zeros;
    if(func == PIPE_FUNC_ALWAYS)
       return ones;
+
+   assert(func > PIPE_FUNC_NEVER);
+   assert(func < PIPE_FUNC_ALWAYS);
 
    if(type.floating) {
       LLVMRealPredicate op;
@@ -176,8 +177,6 @@ lp_build_compare(struct gallivm_state *gallivm,
    LLVMValueRef zeros = LLVMConstNull(int_vec_type);
    LLVMValueRef ones = LLVMConstAllOnes(int_vec_type);
 
-   assert(func >= PIPE_FUNC_NEVER);
-   assert(func <= PIPE_FUNC_ALWAYS);
    assert(lp_check_value(type, a));
    assert(lp_check_value(type, b));
 
@@ -185,6 +184,9 @@ lp_build_compare(struct gallivm_state *gallivm,
       return zeros;
    if(func == PIPE_FUNC_ALWAYS)
       return ones;
+
+   assert(func > PIPE_FUNC_NEVER);
+   assert(func < PIPE_FUNC_ALWAYS);
 
 #if defined(PIPE_ARCH_X86) || defined(PIPE_ARCH_X86_64)
    /*

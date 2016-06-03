@@ -642,7 +642,7 @@ static boolean default_analyse_is_last(struct lp_exec_mask *mask,
 {
    unsigned pc = bld_base->pc;
    struct function_ctx *ctx = func_ctx(mask);
-   unsigned curr_switch_stack = ctx->switch_stack_size;
+   int curr_switch_stack = ctx->switch_stack_size;
 
    if (ctx->switch_stack_size > LP_MAX_TGSI_NESTING) {
       return false;
@@ -653,7 +653,7 @@ static boolean default_analyse_is_last(struct lp_exec_mask *mask,
       pc++;
    }
 
-   while (pc != -1 && pc < bld_base->num_instructions) {
+   while (pc != ~0u && pc < bld_base->num_instructions) {
       unsigned opcode = bld_base->instructions[pc].Instruction.Opcode;
       switch (opcode) {
       case TGSI_OPCODE_CASE:
@@ -856,7 +856,7 @@ static void lp_exec_mask_endsub(struct lp_exec_mask *mask, int *pc)
 static LLVMValueRef
 get_file_ptr(struct lp_build_tgsi_soa_context *bld,
              unsigned file,
-             unsigned index,
+             int index,
              unsigned chan)
 {
    LLVMBuilderRef builder = bld->bld_base.base.gallivm->builder;
@@ -1227,7 +1227,7 @@ emit_fetch_constant(
    LLVMValueRef res;
 
    /* XXX: Handle fetching xyzw components as a vector */
-   assert(swizzle != ~0);
+   assert(swizzle != ~0u);
 
    if (reg->Register.Dimension) {
       assert(!reg->Dimension.Indirect);
@@ -2875,7 +2875,7 @@ emit_dump_file(struct lp_build_tgsi_soa_context *bld,
       int chan;
 
       if (index < 8 * sizeof(unsigned) &&
-          (info->file_mask[file] & (1 << index)) == 0)  {
+          (info->file_mask[file] & (1u << index)) == 0)  {
          /* This was not declared.*/
          continue;
       }

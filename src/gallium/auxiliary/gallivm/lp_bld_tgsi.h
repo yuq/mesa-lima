@@ -52,7 +52,7 @@
 extern "C" {
 #endif
 
-#define LP_CHAN_ALL ~0
+#define LP_CHAN_ALL ~0u
 
 #define LP_MAX_INSTRUCTIONS 256
 
