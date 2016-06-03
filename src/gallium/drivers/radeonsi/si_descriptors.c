@@ -531,10 +531,11 @@ si_mark_image_range_valid(struct pipe_image_view *view)
 }
 
 static void si_set_shader_image(struct si_context *ctx,
-				struct si_images_info *images,
+				unsigned shader,
 				unsigned slot, struct pipe_image_view *view)
 {
 	struct si_screen *screen = ctx->screen;
+	struct si_images_info *images = &ctx->images[shader];
 	struct r600_resource *res;
 
 	if (!view || !view->resource) {
@@ -624,7 +625,6 @@ si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 		     struct pipe_image_view *views)
 {
 	struct si_context *ctx = (struct si_context *)pipe;
-	struct si_images_info *images = &ctx->images[shader];
 	unsigned i, slot;
 
 	assert(shader < SI_NUM_SHADERS);
@@ -636,10 +636,10 @@ si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 
 	if (views) {
 		for (i = 0, slot = start_slot; i < count; ++i, ++slot)
-			si_set_shader_image(ctx, images, slot, &views[i]);
+			si_set_shader_image(ctx, shader, slot, &views[i]);
 	} else {
 		for (i = 0, slot = start_slot; i < count; ++i, ++slot)
-			si_set_shader_image(ctx, images, slot, NULL);
+			si_set_shader_image(ctx, shader, slot, NULL);
 	}
 }
 
@@ -1420,7 +1420,7 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 			    view->resource->target == PIPE_BUFFER)
 				continue;
 
-			si_set_shader_image(sctx, images, i, view);
+			si_set_shader_image(sctx, shader, i, view);
 		}
 
 		/* Sampler views. */
