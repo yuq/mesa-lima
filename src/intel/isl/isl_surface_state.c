@@ -373,31 +373,35 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    }
 #endif
 
-   if (GEN_GEN <= 8) {
-      /* Prior to Sky Lake, we only have one bit for the clear color which
-       * gives us 0 or 1 in whatever the surface's format happens to be.
-       */
-      if (isl_format_has_int_channel(info->view->format)) {
-         for (unsigned i = 0; i < 4; i++) {
-            assert(info->clear_color.u32[i] == 0 ||
-                   info->clear_color.u32[i] == 1);
-         }
-      } else {
-         for (unsigned i = 0; i < 4; i++) {
-            assert(info->clear_color.f32[i] == 0.0f ||
-                   info->clear_color.f32[i] == 1.0f);
-         }
+#if GEN_GEN >= 9
+   s.RedClearColor = info->clear_color.u32[0];
+   s.GreenClearColor = info->clear_color.u32[1];
+   s.BlueClearColor = info->clear_color.u32[2];
+   s.AlphaClearColor = info->clear_color.u32[3];
+#elif GEN_GEN >= 7
+   /* Prior to Sky Lake, we only have one bit for the clear color which
+    * gives us 0 or 1 in whatever the surface's format happens to be.
+    */
+   if (isl_format_has_int_channel(info->view->format)) {
+      for (unsigned i = 0; i < 4; i++) {
+         assert(info->clear_color.u32[i] == 0 ||
+                info->clear_color.u32[i] == 1);
       }
       s.RedClearColor = info->clear_color.u32[0] != 0;
       s.GreenClearColor = info->clear_color.u32[1] != 0;
       s.BlueClearColor = info->clear_color.u32[2] != 0;
       s.AlphaClearColor = info->clear_color.u32[3] != 0;
    } else {
-      s.RedClearColor = info->clear_color.u32[0];
-      s.GreenClearColor = info->clear_color.u32[1];
-      s.BlueClearColor = info->clear_color.u32[2];
-      s.AlphaClearColor = info->clear_color.u32[3];
+      for (unsigned i = 0; i < 4; i++) {
+         assert(info->clear_color.f32[i] == 0.0f ||
+                info->clear_color.f32[i] == 1.0f);
+      }
+      s.RedClearColor = info->clear_color.f32[0] != 0.0f;
+      s.GreenClearColor = info->clear_color.f32[1] != 0.0f;
+      s.BlueClearColor = info->clear_color.f32[2] != 0.0f;
+      s.AlphaClearColor = info->clear_color.f32[3] != 0.0f;
    }
+#endif
 
    GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &s);
 }
