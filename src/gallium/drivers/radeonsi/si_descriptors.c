@@ -249,6 +249,18 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	return true;
 }
 
+static void
+si_descriptors_begin_new_cs(struct si_context *sctx, struct si_descriptors *desc)
+{
+	desc->ce_ram_dirty = true;
+
+	if (!desc->buffer)
+		return;
+
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
+				  RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
+}
+
 /* SAMPLER VIEWS */
 
 static void si_release_sampler_views(struct si_sampler_views *views)
@@ -287,12 +299,7 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 					   RADEON_USAGE_READ);
 	}
 
-	views->desc.ce_ram_dirty = true;
-
-	if (!views->desc.buffer)
-		return;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, views->desc.buffer,
-			      RADEON_USAGE_READWRITE, RADEON_PRIO_DESCRIPTORS);
+	si_descriptors_begin_new_cs(sctx, &views->desc);
 }
 
 void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
@@ -489,14 +496,7 @@ si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *imag
 					   RADEON_USAGE_READWRITE);
 	}
 
-	images->desc.ce_ram_dirty = true;
-
-	if (images->desc.buffer) {
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-					  images->desc.buffer,
-					  RADEON_USAGE_READ,
-					  RADEON_PRIO_DESCRIPTORS);
-	}
+	si_descriptors_begin_new_cs(sctx, &images->desc);
 }
 
 static void
@@ -743,13 +743,7 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 				      buffers->shader_usage, buffers->priority);
 	}
 
-	buffers->desc.ce_ram_dirty = true;
-
-	if (!buffers->desc.buffer)
-		return;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-			      buffers->desc.buffer, RADEON_USAGE_READWRITE,
-			      RADEON_PRIO_DESCRIPTORS);
+	si_descriptors_begin_new_cs(sctx, &buffers->desc);
 }
 
 /* VERTEX BUFFERS */
