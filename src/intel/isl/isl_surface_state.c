@@ -76,19 +76,11 @@ static const uint8_t isl_to_gen_tiling[] = {
 };
 #endif
 
-#if GEN_GEN >= 8
-static const uint32_t isl_to_gen_multisample_layout[] = {
-   [ISL_MSAA_LAYOUT_NONE]           = MSS,
-   [ISL_MSAA_LAYOUT_INTERLEAVED]    = DEPTH_STENCIL,
-   [ISL_MSAA_LAYOUT_ARRAY]          = MSS,
-};
-#else
 static const uint32_t isl_to_gen_multisample_layout[] = {
    [ISL_MSAA_LAYOUT_NONE]           = MSFMT_MSS,
    [ISL_MSAA_LAYOUT_INTERLEAVED]    = MSFMT_DEPTH_STENCIL,
    [ISL_MSAA_LAYOUT_ARRAY]          = MSFMT_MSS,
 };
-#endif
 
 static uint8_t
 get_surftype(enum isl_surf_dim dim, isl_surf_usage_flags_t usage)
