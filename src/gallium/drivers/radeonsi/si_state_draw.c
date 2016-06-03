@@ -257,16 +257,8 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		primgroup_size = 64; /* recommended with a GS */
 
 	if (sctx->tes_shader.cso) {
-		unsigned num_cp_out =
-			sctx->tcs_shader.cso ?
-			sctx->tcs_shader.cso->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
-			info->vertices_per_patch;
-		unsigned max_size = 256 / MAX2(info->vertices_per_patch, num_cp_out);
-
-		primgroup_size = MIN2(primgroup_size, max_size);
-
 		/* primgroup_size must be set to a multiple of NUM_PATCHES */
-		primgroup_size = (primgroup_size / num_patches) * num_patches;
+		primgroup_size = num_patches;
 
 		/* SWITCH_ON_EOI must be set if PrimID is used. */
 		if ((sctx->tcs_shader.cso && sctx->tcs_shader.cso->info.uses_primid) ||
