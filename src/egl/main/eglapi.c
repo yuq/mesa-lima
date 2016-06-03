@@ -1196,61 +1196,6 @@ eglGetError(void)
 }
 
 
-static bool
-_eglDisplaySupportsApi(_EGLDisplay *dpy, EGLenum api)
-{
-   if (!dpy->Initialized) {
-      return false;
-   }
-
-   switch (api) {
-   case EGL_OPENGL_API:
-      return !!(dpy->ClientAPIs & EGL_OPENGL_BIT);
-   case EGL_OPENGL_ES_API:
-      return dpy->ClientAPIs & EGL_OPENGL_ES_BIT ||
-             dpy->ClientAPIs & EGL_OPENGL_ES2_BIT ||
-             dpy->ClientAPIs & EGL_OPENGL_ES3_BIT_KHR;
-   case EGL_OPENVG_API:
-      return !!(dpy->ClientAPIs & EGL_OPENVG_BIT);
-   }
-
-   return false;
-}
-
-
-/**
- * Return true if a client API enum is recognized.
- */
-static bool
-_eglIsApiValid(EGLenum api)
-{
-   _EGLDisplay *dpy = _eglGlobal.DisplayList;
-   _EGLThreadInfo *current_thread = _eglGetCurrentThread();
-
-   if (api != EGL_OPENGL_API && api != EGL_OPENGL_ES_API &&
-       api != EGL_OPENVG_API) {
-      return false;
-   }
-
-   while (dpy) {
-      _EGLThreadInfo *thread = dpy->ThreadList;
-
-      while (thread) {
-         if (thread == current_thread) {
-            if (_eglDisplaySupportsApi(dpy, api))
-               return true;
-         }
-
-         thread = thread->Next;
-      }
-
-      dpy = dpy->Next;
-   }
-
-   return false;
-}
-
-
 /**
  ** EGL 1.2
  **/
@@ -1266,16 +1211,6 @@ _eglIsApiValid(EGLenum api)
  *  eglWaitNative()
  * See section 3.7 "Rendering Context" in the EGL specification for details.
  */
-
- /**
-  * Section 3.7 (Rendering Contexts) of the EGL 1.5 spec says:
-  *
-  * "api must specify one of the supported client APIs, either
-  * EGL_OPENGL_API, EGL_OPENGL_ES_API, or EGL_OPENVG_API... If api
-  * is not one of the values specified above, or if the client API
-  * specified by api is not supported by the implementation, an
-  * EGL_BAD_PARAMETER error is generated."
-  */
 EGLBoolean EGLAPIENTRY
 eglBindAPI(EGLenum api)
 {

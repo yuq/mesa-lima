@@ -140,7 +140,6 @@ struct _egl_display
    _EGLPlatformType Platform; /**< The type of the platform display */
    void *PlatformDisplay;     /**< A pointer to the platform display */
 
-   _EGLThreadInfo *ThreadList;/**< A pointer to the thread the display was created form */
    _EGLDriver *Driver;        /**< Matched driver of the display */
    EGLBoolean Initialized;    /**< True if the display is initialized */
 
