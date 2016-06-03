@@ -578,9 +578,12 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
             break;
          /* fallthrough */
       case SHADER_OPCODE_POW:
-         /* Allow constant propagation into src1, and let constant combining
+         /* Allow constant propagation into src1 (except on Gen 6 which
+          * doesn't support scalar source math), and let constant combining
           * promote the constant on Gen < 8.
           */
+         if (devinfo->gen == 6)
+            break;
          /* fallthrough */
       case BRW_OPCODE_BFI1:
       case BRW_OPCODE_ASR:

@@ -2000,10 +2000,8 @@ void gen6_math(struct brw_codegen *p,
 
    assert(dest.hstride == BRW_HORIZONTAL_STRIDE_1);
    if (devinfo->gen == 6) {
-      assert(has_scalar_region(src0) ||
-             src0.hstride == BRW_HORIZONTAL_STRIDE_1);
-      assert(has_scalar_region(src1) ||
-             src1.hstride == BRW_HORIZONTAL_STRIDE_1);
+      assert(src0.hstride == BRW_HORIZONTAL_STRIDE_1);
+      assert(src1.hstride == BRW_HORIZONTAL_STRIDE_1);
    }
 
    if (function == BRW_MATH_FUNCTION_INT_DIV_QUOTIENT ||

@@ -621,14 +621,20 @@ namespace brw {
       src_reg
       fix_math_operand(const src_reg &src) const
       {
-         /* Gen6 hardware ignores source modifiers (negate and abs) on math
+         /* Can't do hstride == 0 args on gen6 math, so expand it out. We
+          * might be able to do better by doing execsize = 1 math and then
+          * expanding that result out, but we would need to be careful with
+          * masking.
+          *
+          * Gen6 hardware ignores source modifiers (negate and abs) on math
           * instructions, so we also move to a temp to set those up.
           *
           * Gen7 relaxes most of the above restrictions, but still can't use IMM
           * operands to math
           */
          if ((shader->devinfo->gen == 6 &&
-              (src.file == IMM || src.abs || src.negate)) ||
+              (src.file == IMM || src.file == UNIFORM ||
+               src.abs || src.negate)) ||
              (shader->devinfo->gen == 7 && src.file == IMM)) {
             const dst_reg tmp = vgrf(src.type);
             MOV(tmp, src);
