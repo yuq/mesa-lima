@@ -84,6 +84,23 @@ static const uint32_t isl_to_gen_multisample_layout[] = {
    [ISL_MSAA_LAYOUT_ARRAY]          = MSFMT_MSS,
 };
 
+#if GEN_GEN >= 9
+static const uint32_t isl_to_gen_aux_mode[] = {
+   [ISL_AUX_USAGE_NONE] = AUX_NONE,
+   [ISL_AUX_USAGE_HIZ] = AUX_HIZ,
+   [ISL_AUX_USAGE_MCS] = AUX_CCS_D,
+   [ISL_AUX_USAGE_CCS_D] = AUX_CCS_D,
+   [ISL_AUX_USAGE_CCS_E] = AUX_CCS_E,
+};
+#elif GEN_GEN >= 8
+static const uint32_t isl_to_gen_aux_mode[] = {
+   [ISL_AUX_USAGE_NONE] = AUX_NONE,
+   [ISL_AUX_USAGE_HIZ] = AUX_HIZ,
+   [ISL_AUX_USAGE_MCS] = AUX_MCS,
+   [ISL_AUX_USAGE_CCS_D] = AUX_MCS,
+};
+#endif
+
 static uint8_t
 get_surftype(enum isl_surf_dim dim, isl_surf_usage_flags_t usage)
 {
@@ -353,10 +370,32 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.SurfaceBaseAddress = info->address;
    s.MOCS = info->mocs;
 
+#if GEN_GEN >= 7
+   if (info->aux_surf && info->aux_usage != ISL_AUX_USAGE_NONE) {
+      struct isl_tile_info tile_info;
+      isl_surf_get_tile_info(dev, info->aux_surf, &tile_info);
+      uint32_t pitch_in_tiles =
+         info->aux_surf->row_pitch / tile_info.phys_extent_B.width;
+
 #if GEN_GEN >= 8
-   s.AuxiliarySurfaceMode = AUX_NONE;
+      assert(GEN_GEN >= 9 || info->aux_usage != ISL_AUX_USAGE_CCS_E);
+      s.AuxiliarySurfacePitch = pitch_in_tiles - 1;
+      /* Auxiliary surfaces in ISL have compressed formats but the hardware
+       * doesn't expect our definition of the compression, it expects qpitch
+       * in units of samples on the main surface.
+       */
+      s.AuxiliarySurfaceQPitch =
+         isl_surf_get_array_pitch_sa_rows(info->aux_surf);
+      s.AuxiliarySurfaceBaseAddress = info->aux_address;
+      s.AuxiliarySurfaceMode = isl_to_gen_aux_mode[info->aux_usage];
 #else
-   s.MCSEnable = false;
+      assert(info->aux_usage == ISL_AUX_USAGE_MCS ||
+             info->aux_usage == ISL_AUX_USAGE_CCS_D);
+      s.MCSBaseAddress = info->aux_address,
+      s.MCSSurfacePitch = pitch_in_tiles - 1;
+      s.MCSEnable = true;
+#endif
+   }
 #endif
 
 #if GEN_GEN >= 8
