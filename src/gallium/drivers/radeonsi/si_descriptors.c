@@ -968,6 +968,7 @@ static void si_set_shader_buffers(struct pipe_context *ctx, unsigned shader,
 			pipe_resource_reference(&buffers->buffers[slot], NULL);
 			memset(desc, 0, sizeof(uint32_t) * 4);
 			buffers->desc.enabled_mask &= ~(1u << slot);
+			buffers->desc.dirty_mask |= 1u << slot;
 			continue;
 		}
 
