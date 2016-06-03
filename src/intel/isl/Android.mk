@@ -30,6 +30,63 @@ LIBISL_GENX_COMMON_INCLUDES := \
 	$(MESA_TOP)/src/mesa/drivers/dri/i965
 
 # ---------------------------------------
+# Build libisl_gen4
+# ---------------------------------------
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libmesa_isl_gen4
+
+LOCAL_SRC_FILES := $(ISL_GEN4_FILES)
+
+LOCAL_CFLAGS := -DGEN_VERSIONx10=40
+
+LOCAL_C_INCLUDES := $(LIBISL_GENX_COMMON_INCLUDES)
+
+LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_genxml
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)
+
+# ---------------------------------------
+# Build libisl_gen5
+# ---------------------------------------
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libmesa_isl_gen5
+
+LOCAL_SRC_FILES := $(ISL_GEN5_FILES)
+
+LOCAL_CFLAGS := -DGEN_VERSIONx10=50
+
+LOCAL_C_INCLUDES := $(LIBISL_GENX_COMMON_INCLUDES)
+
+LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_genxml
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)
+
+# ---------------------------------------
+# Build libisl_gen6
+# ---------------------------------------
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libmesa_isl_gen6
+
+LOCAL_SRC_FILES := $(ISL_GEN6_FILES)
+
+LOCAL_CFLAGS := -DGEN_VERSIONx10=60
+
+LOCAL_C_INCLUDES := $(LIBISL_GENX_COMMON_INCLUDES)
+
+LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_genxml
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)
+
+# ---------------------------------------
 # Build libisl_gen7
 # ---------------------------------------
 
@@ -125,6 +182,9 @@ LOCAL_C_INCLUDES := \
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(MESA_TOP)/src/intel
 
 LOCAL_WHOLE_STATIC_LIBRARIES := \
+	libmesa_isl_gen4 \
+	libmesa_isl_gen5 \
+	libmesa_isl_gen6 \
 	libmesa_isl_gen7 \
 	libmesa_isl_gen75 \
 	libmesa_isl_gen8 \

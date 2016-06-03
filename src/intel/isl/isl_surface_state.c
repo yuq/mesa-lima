@@ -78,11 +78,13 @@ static const uint8_t isl_to_gen_tiling[] = {
 };
 #endif
 
+#if GEN_GEN >= 7
 static const uint32_t isl_to_gen_multisample_layout[] = {
    [ISL_MSAA_LAYOUT_NONE]           = MSFMT_MSS,
    [ISL_MSAA_LAYOUT_INTERLEAVED]    = MSFMT_DEPTH_STENCIL,
    [ISL_MSAA_LAYOUT_ARRAY]          = MSFMT_MSS,
 };
+#endif
 
 #if GEN_GEN >= 9
 static const uint32_t isl_to_gen_aux_mode[] = {
@@ -130,7 +132,7 @@ get_surftype(enum isl_surf_dim dim, isl_surf_usage_flags_t usage)
  * hardware.  Note that this does NOT give you the actual hardware enum values
  * but an index into the isl_to_gen_[hv]align arrays above.
  */
-static struct isl_extent3d
+static inline struct isl_extent3d
 get_image_alignment(const struct isl_surf *surf)
 {
    if (GEN_GEN >= 9) {
@@ -217,6 +219,23 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.Width = info->surf->logical_level0_px.width - 1;
    s.Height = info->surf->logical_level0_px.height - 1;
 
+   /* In the gen6 PRM Volume 1 Part 1: Graphics Core, Section 7.18.3.7.1
+    * (Surface Arrays For all surfaces other than separate stencil buffer):
+    *
+    * "[DevSNB] Errata: Sampler MSAA Qpitch will be 4 greater than the value
+    *  calculated in the equation above , for every other odd Surface Height
+    *  starting from 1 i.e. 1,5,9,13"
+    *
+    * Since this Qpitch errata only impacts the sampler, we have to adjust the
+    * input for the rendering surface to achieve the same qpitch. For the
+    * affected heights, we increment the height by 1 for the rendering
+    * surface.
+    */
+   if (GEN_GEN == 6 && (info->view->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) &&
+       info->surf->samples > 1 &&
+       (info->surf->logical_level0_px.height % 4) == 1)
+      s.Height++;
+
    switch (s.SurfaceType) {
    case SURFTYPE_1D:
    case SURFTYPE_2D:
@@ -283,7 +302,9 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       unreachable("bad SurfaceType");
    }
 
+#if GEN_GEN >= 7
    s.SurfaceArray = info->surf->dim != ISL_SURF_DIM_3D;
+#endif
 
    if (info->view->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) {
       /* For render target surfaces, the hardware interprets field
@@ -311,9 +332,13 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.MipTailStartLOD = 15;
 #endif
 
+#if GEN_GEN >= 6
    const struct isl_extent3d image_align = get_image_alignment(info->surf);
    s.SurfaceVerticalAlignment = isl_to_gen_valign[image_align.height];
+#if GEN_GEN >= 7
    s.SurfaceHorizontalAlignment = isl_to_gen_halign[image_align.width];
+#endif
+#endif
 
    if (info->surf->dim_layout == ISL_DIM_LAYOUT_GEN9_1D) {
       /* For gen9 1-D textures, surface pitch is ignored */
@@ -356,9 +381,13 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 #endif
    }
 
+#if GEN_GEN >= 6
+   s.NumberofMultisamples = ffs(info->surf->samples) - 1;
+#if GEN_GEN >= 7
    s.MultisampledSurfaceStorageFormat =
       isl_to_gen_multisample_layout[info->surf->msaa_layout];
-   s.NumberofMultisamples = ffs(info->surf->samples) - 1;
+#endif
+#endif
 
 #if (GEN_GEN >= 8 || GEN_IS_HASWELL)
    s.ShaderChannelSelectRed = info->view->channel_select[0];
@@ -368,7 +397,10 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 #endif
 
    s.SurfaceBaseAddress = info->address;
+
+#if GEN_GEN >= 6
    s.MOCS = info->mocs;
+#endif
 
 #if GEN_GEN >= 7
    if (info->aux_surf && info->aux_usage != ISL_AUX_USAGE_NONE) {
@@ -480,15 +512,31 @@ isl_genX(buffer_fill_state_s)(void *state,
    struct GENX(RENDER_SURFACE_STATE) s = { 0, };
 
    s.SurfaceType = SURFTYPE_BUFFER;
-   s.SurfaceArray = false;
    s.SurfaceFormat = info->format;
+
+#if GEN_GEN >= 6
    s.SurfaceVerticalAlignment = isl_to_gen_valign[4];
+#if GEN_GEN >= 7
    s.SurfaceHorizontalAlignment = isl_to_gen_halign[4];
+   s.SurfaceArray = false;
+#endif
+#endif
+
+#if GEN_GEN >= 7
    s.Height = ((num_elements - 1) >> 7) & 0x3fff;
    s.Width = (num_elements - 1) & 0x7f;
    s.Depth = ((num_elements - 1) >> 21) & 0x3ff;
+#else
+   s.Height = ((num_elements - 1) >> 7) & 0x1fff;
+   s.Width = (num_elements - 1) & 0x7f;
+   s.Depth = ((num_elements - 1) >> 20) & 0x7f;
+#endif
+
    s.SurfacePitch = info->stride - 1;
+
+#if GEN_GEN >= 6
    s.NumberofMultisamples = MULTISAMPLECOUNT_1;
+#endif
 
 #if (GEN_GEN >= 8)
    s.TileMode = LINEAR;
@@ -503,7 +551,9 @@ isl_genX(buffer_fill_state_s)(void *state,
 #endif
 
    s.SurfaceBaseAddress = info->address;
+#if GEN_GEN >= 6
    s.MOCS = info->mocs;
+#endif
 
 #if (GEN_GEN >= 8 || GEN_IS_HASWELL)
    s.ShaderChannelSelectRed = SCS_RED;

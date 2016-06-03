@@ -22,6 +22,9 @@
 include Makefile.sources
 
 ISL_GEN_LIBS =                                           \
+	libisl-gen4.la                                   \
+	libisl-gen5.la                                   \
+	libisl-gen6.la                                   \
 	libisl-gen7.la                                   \
 	libisl-gen75.la                                  \
 	libisl-gen8.la                                   \
@@ -51,6 +54,15 @@ libisl_la_CFLAGS = $(CFLAGS) -Wno-override-init
 libisl_la_LIBADD = $(ISL_GEN_LIBS)
 
 libisl_la_SOURCES = $(ISL_FILES) $(ISL_GENERATED_FILES)
+
+libisl_gen4_la_SOURCES = $(ISL_GEN4_FILES)
+libisl_gen4_la_CFLAGS = $(libisl_la_CFLAGS) -DGEN_VERSIONx10=40
+
+libisl_gen5_la_SOURCES = $(ISL_GEN5_FILES)
+libisl_gen5_la_CFLAGS = $(libisl_la_CFLAGS) -DGEN_VERSIONx10=50
+
+libisl_gen6_la_SOURCES = $(ISL_GEN6_FILES)
+libisl_gen6_la_CFLAGS = $(libisl_la_CFLAGS) -DGEN_VERSIONx10=60
 
 libisl_gen7_la_SOURCES = $(ISL_GEN7_FILES)
 libisl_gen7_la_CFLAGS = $(libisl_la_CFLAGS) -DGEN_VERSIONx10=70

@@ -2,12 +2,21 @@ ISL_FILES = \
 	isl.c \
 	isl.h \
 	isl_format.c \
-	isl_gen4.c \
-	isl_gen4.h \
-	isl_gen6.c \
-	isl_gen6.h \
 	isl_priv.h \
 	isl_storage_image.c
+
+ISL_GEN4_FILES = \
+	isl_gen4.c \
+	isl_gen4.h \
+	isl_surface_state.c
+
+ISL_GEN5_FILES = \
+	isl_surface_state.c
+
+ISL_GEN6_FILES = \
+	isl_gen6.c \
+	isl_gen6.h \
+	isl_surface_state.c
 
 ISL_GEN7_FILES = \
 	isl_gen7.c \

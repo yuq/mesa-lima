@@ -136,6 +136,18 @@ isl_extent3d_el_to_sa(enum isl_format fmt, struct isl_extent3d extent_el)
 }
 
 void
+isl_gen4_surf_fill_state_s(const struct isl_device *dev, void *state,
+                           const struct isl_surf_fill_state_info *restrict info);
+
+void
+isl_gen5_surf_fill_state_s(const struct isl_device *dev, void *state,
+                           const struct isl_surf_fill_state_info *restrict info);
+
+void
+isl_gen6_surf_fill_state_s(const struct isl_device *dev, void *state,
+                           const struct isl_surf_fill_state_info *restrict info);
+
+void
 isl_gen7_surf_fill_state_s(const struct isl_device *dev, void *state,
                            const struct isl_surf_fill_state_info *restrict info);
 
@@ -148,6 +160,18 @@ isl_gen8_surf_fill_state_s(const struct isl_device *dev, void *state,
 void
 isl_gen9_surf_fill_state_s(const struct isl_device *dev, void *state,
                            const struct isl_surf_fill_state_info *restrict info);
+
+void
+isl_gen4_buffer_fill_state_s(void *state,
+                             const struct isl_buffer_fill_state_info *restrict info);
+
+void
+isl_gen5_buffer_fill_state_s(void *state,
+                             const struct isl_buffer_fill_state_info *restrict info);
+
+void
+isl_gen6_buffer_fill_state_s(void *state,
+                             const struct isl_buffer_fill_state_info *restrict info);
 
 void
 isl_gen7_buffer_fill_state_s(void *state,
