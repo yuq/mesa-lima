@@ -931,8 +931,11 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->dcc_offset, rtex->surface.dcc_size,
 			rtex->surface.dcc_alignment);
 		for (i = 0; i <= rtex->surface.last_level; i++)
-			fprintf(f, "  DCCLevel[%i]: offset=%"PRIu64"\n",
-				i, rtex->surface.level[i].dcc_offset);
+			fprintf(f, "  DCCLevel[%i]: enabled=%u, offset=%"PRIu64", "
+				"fast_clear_size=%"PRIu64"\n",
+				i, rtex->surface.level[i].dcc_enabled,
+				rtex->surface.level[i].dcc_offset,
+				rtex->surface.level[i].dcc_fast_clear_size);
 	}
 
 	for (i = 0; i <= rtex->surface.last_level; i++)
@@ -1865,7 +1868,8 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			vi_get_fast_clear_parameters(fb->cbufs[i]->format, color, &reset_value, &clear_words_needed);
 
 			rctx->clear_buffer(&rctx->b, &tex->resource.b.b,
-					   tex->dcc_offset, tex->surface.dcc_size,
+					   tex->dcc_offset,
+					   tex->surface.level[0].dcc_fast_clear_size,
 					   reset_value, R600_COHERENCY_CB_META);
 
 			if (clear_words_needed)

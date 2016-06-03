@@ -230,7 +230,9 @@ static int compute_level(struct amdgpu_winsys *ws,
    surf_level->dcc_offset = 0;
    surf_level->dcc_enabled = false;
 
-   if (AddrSurfInfoIn->flags.dccCompatible) {
+   /* The previous level's flag tells us if we can use DCC for this level. */
+   if (AddrSurfInfoIn->flags.dccCompatible &&
+       (level == 0 || AddrDccOut->subLvlCompressible)) {
       AddrDccIn->colorSurfSize = AddrSurfInfoOut->surfSize;
       AddrDccIn->tileMode = AddrSurfInfoOut->tileMode;
       AddrDccIn->tileInfo = *AddrSurfInfoOut->pTileInfo;
@@ -243,14 +245,11 @@ static int compute_level(struct amdgpu_winsys *ws,
 
       if (ret == ADDR_OK) {
          surf_level->dcc_offset = surf->dcc_size;
+         surf_level->dcc_fast_clear_size = AddrDccOut->dccFastClearSize;
          surf_level->dcc_enabled = true;
          surf->dcc_size = surf_level->dcc_offset + AddrDccOut->dccRamSize;
          surf->dcc_alignment = MAX2(surf->dcc_alignment, AddrDccOut->dccRamBaseAlign);
-      } else {
-         surf->dcc_size = 0;
       }
-   } else {
-      surf->dcc_size = 0;
    }
 
    return 0;
@@ -344,11 +343,19 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    AddrSurfInfoIn.flags.display = (surf->flags & RADEON_SURF_SCANOUT) != 0;
    AddrSurfInfoIn.flags.pow2Pad = surf->last_level > 0;
    AddrSurfInfoIn.flags.degrade4Space = 1;
+
+   /* DCC notes:
+    * - If we add MSAA support, keep in mind that CB can't decompress 8bpp
+    *   with samples >= 4.
+    * - Mipmapped array textures have low performance (discovered by a closed
+    *   driver team).
+    */
    AddrSurfInfoIn.flags.dccCompatible = !(surf->flags & RADEON_SURF_Z_OR_SBUFFER) &&
                                         !(surf->flags & RADEON_SURF_SCANOUT) &&
                                         !(surf->flags & RADEON_SURF_DISABLE_DCC) &&
                                         !compressed && AddrDccIn.numSamples <= 1 &&
-                                        surf->last_level == 0;
+                                        ((surf->array_size == 1 && surf->npix_z == 1) ||
+                                         surf->last_level == 0);
 
    AddrSurfInfoIn.flags.noStencil = (surf->flags & RADEON_SURF_SBUFFER) == 0;
    AddrSurfInfoIn.flags.compressZ = AddrSurfInfoIn.flags.depth;
@@ -443,6 +450,16 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
             }
          }
       }
+   }
+
+   /* Recalculate the whole DCC miptree size including disabled levels.
+    * This is what addrlib does, but calling addrlib would be a lot more
+    * complicated.
+    */
+   if (surf->dcc_size && surf->last_level > 0) {
+      surf->dcc_size = align64(surf->bo_size >> 8,
+                               ws->info.pipe_interleave_bytes *
+                               ws->info.num_tile_pipes);
    }
 
    return 0;
