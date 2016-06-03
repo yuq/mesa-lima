@@ -288,7 +288,6 @@ struct r600_surface {
 	unsigned cb_color_dim;		/* EG only */
 	unsigned cb_color_pitch;	/* EG and later */
 	unsigned cb_color_slice;	/* EG and later */
-	unsigned cb_dcc_base;		/* VI and later */
 	unsigned cb_color_attrib;	/* EG and later */
 	unsigned cb_dcc_control;	/* VI and later */
 	unsigned cb_color_fmask;	/* CB_COLORn_FMASK (EG and later) or CB_COLORn_FRAG (r600) */

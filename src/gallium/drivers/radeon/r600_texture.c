@@ -405,7 +405,6 @@ static bool r600_texture_discard_dcc(struct r600_common_screen *rscreen,
 
 	/* Disable DCC. */
 	rtex->dcc_offset = 0;
-	rtex->cb_color_info &= ~VI_S_028C70_DCC_ENABLE(1);
 
 	/* Notify all contexts about the change. */
 	r600_dirty_all_framebuffer_states(rscreen);
@@ -1056,7 +1055,6 @@ r600_texture_create_object(struct pipe_screen *screen,
 			/* Reserve space for the DCC buffer. */
 			rtex->dcc_offset = align64(rtex->size, rtex->surface.dcc_alignment);
 			rtex->size = rtex->dcc_offset + rtex->surface.dcc_size;
-			rtex->cb_color_info |= VI_S_028C70_DCC_ENABLE(1);
 		}
 	}
 

@@ -1958,7 +1958,6 @@ static void si_initialize_color_surface(struct si_context *sctx,
 					struct r600_surface *surf)
 {
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
-	unsigned level = surf->base.u.tex.level;
 	unsigned color_info, color_attrib, color_view;
 	unsigned format, swap, ntype, endian;
 	const struct util_format_description *desc;
@@ -2058,7 +2057,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	surf->cb_color_info = color_info;
 	surf->cb_color_attrib = color_attrib;
 
-	if (sctx->b.chip_class >= VI && rtex->dcc_offset) {
+	if (sctx->b.chip_class >= VI) {
 		unsigned max_uncompressed_block_size = 2;
 
 		if (rtex->surface.nsamples > 1) {
@@ -2070,9 +2069,6 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 		surf->cb_dcc_control = S_028C78_MAX_UNCOMPRESSED_BLOCK_SIZE(max_uncompressed_block_size) |
 		                       S_028C78_INDEPENDENT_64B_BLOCKS(1);
-		surf->cb_dcc_base = (rtex->resource.gpu_address +
-				     rtex->dcc_offset +
-				     rtex->surface.level[level].dcc_offset) >> 8;
 	}
 
 	/* This must be set for fast clear to work without FMASK. */
@@ -2388,6 +2384,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 	unsigned i, nr_cbufs = state->nr_cbufs;
 	struct r600_texture *tex = NULL;
 	struct r600_surface *cb = NULL;
+	unsigned cb_color_info = 0;
 
 	/* Colorbuffers. */
 	for (i = 0; i < nr_cbufs; i++) {
@@ -2445,13 +2442,17 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 			cb_color_fmask_slice = S_028C88_TILE_MAX(slice_tile_max);
 		}
 
+		cb_color_info = cb->cb_color_info | tex->cb_color_info;
+		if (tex->dcc_offset)
+			cb_color_info |= S_028C70_DCC_ENABLE(1);
+
 		radeon_set_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C,
 					   sctx->b.chip_class >= VI ? 14 : 13);
 		radeon_emit(cs, cb_color_base);		/* R_028C60_CB_COLOR0_BASE */
 		radeon_emit(cs, cb_color_pitch);	/* R_028C64_CB_COLOR0_PITCH */
 		radeon_emit(cs, cb_color_slice);	/* R_028C68_CB_COLOR0_SLICE */
 		radeon_emit(cs, cb->cb_color_view);	/* R_028C6C_CB_COLOR0_VIEW */
-		radeon_emit(cs, cb->cb_color_info | tex->cb_color_info); /* R_028C70_CB_COLOR0_INFO */
+		radeon_emit(cs, cb_color_info);		/* R_028C70_CB_COLOR0_INFO */
 		radeon_emit(cs, cb_color_attrib);	/* R_028C74_CB_COLOR0_ATTRIB */
 		radeon_emit(cs, cb->cb_dcc_control);	/* R_028C78_CB_COLOR0_DCC_CONTROL */
 		radeon_emit(cs, tex->cmask.base_address_reg);	/* R_028C7C_CB_COLOR0_CMASK */
@@ -2461,14 +2462,16 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		radeon_emit(cs, tex->color_clear_value[0]);	/* R_028C8C_CB_COLOR0_CLEAR_WORD0 */
 		radeon_emit(cs, tex->color_clear_value[1]);	/* R_028C90_CB_COLOR0_CLEAR_WORD1 */
 
-		if (sctx->b.chip_class >= VI)
-			radeon_emit(cs, cb->cb_dcc_base);	/* R_028C94_CB_COLOR0_DCC_BASE */
+		if (sctx->b.chip_class >= VI) /* R_028C94_CB_COLOR0_DCC_BASE */
+			radeon_emit(cs, (tex->resource.gpu_address +
+					 tex->dcc_offset +
+				         tex->surface.level[cb->base.u.tex.level].dcc_offset) >> 8);
 	}
 	/* set CB_COLOR1_INFO for possible dual-src blending */
 	if (i == 1 && state->cbufs[0] &&
 	    sctx->framebuffer.dirty_cbufs & (1 << 0)) {
 		radeon_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + 1 * 0x3C,
-				       cb->cb_color_info | tex->cb_color_info);
+				       cb_color_info);
 		i++;
 	}
 	for (; i < 8 ; i++)
@@ -3485,7 +3488,6 @@ static void si_apply_opaque_metadata(struct r600_common_screen *rscreen,
 	 * be cleared here.
 	 */
 	rtex->dcc_offset = 0;
-	rtex->cb_color_info &= ~VI_S_028C70_DCC_ENABLE(1);
 }
 
 void si_init_screen_state_functions(struct si_screen *sscreen)
