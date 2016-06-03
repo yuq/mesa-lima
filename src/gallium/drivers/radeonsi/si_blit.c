@@ -415,7 +415,7 @@ si_decompress_image_color_textures(struct si_context *sctx,
 static void si_check_render_feedback_textures(struct si_context *sctx,
                                               struct si_textures_info *textures)
 {
-	uint32_t mask = textures->views.desc.enabled_mask;
+	uint32_t mask = textures->views.enabled_mask;
 
 	while (mask) {
 		const struct pipe_sampler_view *view;
@@ -458,7 +458,7 @@ static void si_check_render_feedback_textures(struct si_context *sctx,
 static void si_check_render_feedback_images(struct si_context *sctx,
                                             struct si_images_info *images)
 {
-	uint32_t mask = images->desc.enabled_mask;
+	uint32_t mask = images->enabled_mask;
 
 	while (mask) {
 		const struct pipe_image_view *view;

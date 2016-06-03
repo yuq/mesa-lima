@@ -199,9 +199,6 @@ struct si_descriptors {
 	/* Offset in CE RAM */
 	unsigned ce_offset;
 
-	/* The i-th bit is set if that element is enabled (non-NULL resource). */
-	unsigned enabled_mask;
-
 	/* elements of the list that are changed and need to be uploaded */
 	unsigned dirty_mask;
 
@@ -220,6 +217,9 @@ struct si_sampler_views {
 	struct si_descriptors		desc;
 	struct pipe_sampler_view	*views[SI_NUM_SAMPLERS];
 	void				*sampler_states[SI_NUM_SAMPLERS];
+
+	/* The i-th bit is set if that element is enabled (non-NULL resource). */
+	unsigned			enabled_mask;
 };
 
 struct si_buffer_resources {
@@ -227,6 +227,9 @@ struct si_buffer_resources {
 	enum radeon_bo_usage		shader_usage; /* READ, WRITE, or READWRITE */
 	enum radeon_bo_priority		priority;
 	struct pipe_resource		**buffers; /* this has num_buffers elements */
+
+	/* The i-th bit is set if that element is enabled (non-NULL resource). */
+	unsigned			enabled_mask;
 };
 
 #define si_pm4_block_idx(member) \

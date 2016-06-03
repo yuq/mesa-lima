@@ -148,6 +148,7 @@ struct si_images_info {
 	struct si_descriptors		desc;
 	struct pipe_image_view		views[SI_NUM_IMAGES];
 	uint32_t			compressed_colortex_mask;
+	unsigned			enabled_mask;
 };
 
 struct si_framebuffer {

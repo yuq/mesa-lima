@@ -106,7 +106,7 @@ static void si_init_descriptors(struct si_descriptors *desc,
 {
 	int i;
 
-	assert(num_elements <= sizeof(desc->enabled_mask)*8);
+	assert(num_elements <= sizeof(desc->dirty_mask)*8);
 
 	desc->list = CALLOC(num_elements, element_dw_size * 4);
 	desc->element_dw_size = element_dw_size;
@@ -277,7 +277,7 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 					  struct si_sampler_views *views)
 {
-	unsigned mask = views->desc.enabled_mask;
+	unsigned mask = views->enabled_mask;
 
 	/* Add buffers to the CS. */
 	while (mask) {
@@ -369,13 +369,13 @@ static void si_set_sampler_view(struct si_context *sctx,
 				       views->sampler_states[slot], 4*4);
 		}
 
-		views->desc.enabled_mask |= 1u << slot;
+		views->enabled_mask |= 1u << slot;
 	} else {
 		pipe_sampler_view_reference(&views->views[slot], NULL);
 		memcpy(views->desc.list + slot*16, null_texture_descriptor, 8*4);
 		/* Only clear the lower dwords of FMASK. */
 		memcpy(views->desc.list + slot*16 + 8, null_texture_descriptor, 4*4);
-		views->desc.enabled_mask &= ~(1u << slot);
+		views->enabled_mask &= ~(1u << slot);
 	}
 
 	views->desc.dirty_mask |= 1u << slot;
@@ -439,7 +439,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 static void
 si_samplers_update_compressed_colortex_mask(struct si_textures_info *samplers)
 {
-	unsigned mask = samplers->views.desc.enabled_mask;
+	unsigned mask = samplers->views.enabled_mask;
 
 	while (mask) {
 		int i = u_bit_scan(&mask);
@@ -476,7 +476,7 @@ si_release_image_views(struct si_images_info *images)
 static void
 si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *images)
 {
-	uint mask = images->desc.enabled_mask;
+	uint mask = images->enabled_mask;
 
 	/* Add buffers to the CS. */
 	while (mask) {
@@ -502,12 +502,12 @@ si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *imag
 static void
 si_disable_shader_image(struct si_images_info *images, unsigned slot)
 {
-	if (images->desc.enabled_mask & (1u << slot)) {
+	if (images->enabled_mask & (1u << slot)) {
 		pipe_resource_reference(&images->views[slot].resource, NULL);
 		images->compressed_colortex_mask &= ~(1 << slot);
 
 		memcpy(images->desc.list + slot*8, null_image_descriptor, 8*4);
-		images->desc.enabled_mask &= ~(1u << slot);
+		images->enabled_mask &= ~(1u << slot);
 		images->desc.dirty_mask |= 1u << slot;
 	}
 }
@@ -613,7 +613,7 @@ static void si_set_shader_image(struct si_context *ctx,
 					       false, desc);
 	}
 
-	images->desc.enabled_mask |= 1u << slot;
+	images->enabled_mask |= 1u << slot;
 	images->desc.dirty_mask |= 1u << slot;
 }
 
@@ -645,7 +645,7 @@ si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 static void
 si_images_update_compressed_colortex_mask(struct si_images_info *images)
 {
-	unsigned mask = images->desc.enabled_mask;
+	unsigned mask = images->enabled_mask;
 
 	while (mask) {
 		int i = u_bit_scan(&mask);
@@ -732,7 +732,7 @@ static void si_release_buffer_resources(struct si_buffer_resources *buffers)
 static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 					     struct si_buffer_resources *buffers)
 {
-	unsigned mask = buffers->desc.enabled_mask;
+	unsigned mask = buffers->enabled_mask;
 
 	/* Add buffers to the CS. */
 	while (mask) {
@@ -929,11 +929,11 @@ void si_set_constant_buffer(struct si_context *sctx,
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource*)buffer,
 				      buffers->shader_usage, buffers->priority);
-		buffers->desc.enabled_mask |= 1u << slot;
+		buffers->enabled_mask |= 1u << slot;
 	} else {
 		/* Clear the descriptor. */
 		memset(buffers->desc.list + slot*4, 0, sizeof(uint32_t) * 4);
-		buffers->desc.enabled_mask &= ~(1u << slot);
+		buffers->enabled_mask &= ~(1u << slot);
 	}
 
 	buffers->desc.dirty_mask |= 1u << slot;
@@ -973,7 +973,7 @@ static void si_set_shader_buffers(struct pipe_context *ctx, unsigned shader,
 		if (!sbuffer || !sbuffer->buffer) {
 			pipe_resource_reference(&buffers->buffers[slot], NULL);
 			memset(desc, 0, sizeof(uint32_t) * 4);
-			buffers->desc.enabled_mask &= ~(1u << slot);
+			buffers->enabled_mask &= ~(1u << slot);
 			buffers->desc.dirty_mask |= 1u << slot;
 			continue;
 		}
@@ -995,7 +995,7 @@ static void si_set_shader_buffers(struct pipe_context *ctx, unsigned shader,
 		pipe_resource_reference(&buffers->buffers[slot], &buf->b.b);
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, buf,
 				      buffers->shader_usage, buffers->priority);
-		buffers->desc.enabled_mask |= 1u << slot;
+		buffers->enabled_mask |= 1u << slot;
 		buffers->desc.dirty_mask |= 1u << slot;
 	}
 }
@@ -1082,11 +1082,11 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint slot,
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource*)buffer,
 				      buffers->shader_usage, buffers->priority);
-		buffers->desc.enabled_mask |= 1u << slot;
+		buffers->enabled_mask |= 1u << slot;
 	} else {
 		/* Clear the descriptor. */
 		memset(buffers->desc.list + slot*4, 0, sizeof(uint32_t) * 4);
-		buffers->desc.enabled_mask &= ~(1u << slot);
+		buffers->enabled_mask &= ~(1u << slot);
 	}
 
 	buffers->desc.dirty_mask |= 1u << slot;
@@ -1179,14 +1179,14 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 					      (struct r600_resource*)buffer,
 					      buffers->shader_usage, buffers->priority);
-			buffers->desc.enabled_mask |= 1u << bufidx;
+			buffers->enabled_mask |= 1u << bufidx;
 		} else {
 			/* Clear the descriptor and unset the resource. */
 			memset(buffers->desc.list + bufidx*4, 0,
 			       sizeof(uint32_t) * 4);
 			pipe_resource_reference(&buffers->buffers[bufidx],
 						NULL);
-			buffers->desc.enabled_mask &= ~(1u << bufidx);
+			buffers->enabled_mask &= ~(1u << bufidx);
 		}
 		buffers->desc.dirty_mask |= 1u << bufidx;
 	}
@@ -1195,7 +1195,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		/* Clear the descriptor and unset the resource. */
 		memset(buffers->desc.list + bufidx*4, 0, sizeof(uint32_t) * 4);
 		pipe_resource_reference(&buffers->buffers[bufidx], NULL);
-		buffers->desc.enabled_mask &= ~(1u << bufidx);
+		buffers->enabled_mask &= ~(1u << bufidx);
 		buffers->desc.dirty_mask |= 1u << bufidx;
 	}
 }
@@ -1261,7 +1261,7 @@ static void si_reset_buffer_resources(struct si_context *sctx,
 				      struct pipe_resource *buf,
 				      uint64_t old_va)
 {
-	unsigned mask = buffers->desc.enabled_mask;
+	unsigned mask = buffers->enabled_mask;
 
 	while (mask) {
 		unsigned i = u_bit_scan(&mask);
@@ -1361,7 +1361,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	/* Texture buffers - update bindings. */
 	for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
 		struct si_sampler_views *views = &sctx->samplers[shader].views;
-		unsigned mask = views->desc.enabled_mask;
+		unsigned mask = views->enabled_mask;
 
 		while (mask) {
 			unsigned i = u_bit_scan(&mask);
@@ -1382,7 +1382,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	/* Shader images */
 	for (shader = 0; shader < SI_NUM_SHADERS; ++shader) {
 		struct si_images_info *images = &sctx->images[shader];
-		unsigned mask = images->desc.enabled_mask;
+		unsigned mask = images->enabled_mask;
 
 		while (mask) {
 			unsigned i = u_bit_scan(&mask);
@@ -1416,7 +1416,7 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 		unsigned mask;
 
 		/* Images. */
-		mask = images->desc.enabled_mask;
+		mask = images->enabled_mask;
 		while (mask) {
 			unsigned i = u_bit_scan(&mask);
 			struct pipe_image_view *view = &images->views[i];
@@ -1429,7 +1429,7 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 		}
 
 		/* Sampler views. */
-		mask = samplers->desc.enabled_mask;
+		mask = samplers->enabled_mask;
 		while (mask) {
 			unsigned i = u_bit_scan(&mask);
 			struct pipe_sampler_view *view = samplers->views[i];
