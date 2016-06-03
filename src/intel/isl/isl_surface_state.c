@@ -107,12 +107,12 @@ get_surftype(enum isl_surf_dim dim, isl_surf_usage_flags_t usage)
 }
 
 /**
- * Get the values to pack into RENDER_SUFFACE_STATE.SurfaceHorizontalAlignment
- * and SurfaceVerticalAlignment.
+ * Get the horizontal and vertical alignment in the units expected by the
+ * hardware.  Note that this does NOT give you the actual hardware enum values
+ * but an index into the isl_to_gen_[hv]align arrays above.
  */
-static void
-get_halign_valign(const struct isl_surf *surf,
-                  uint32_t *halign, uint32_t *valign)
+static struct isl_extent3d
+get_image_alignment(const struct isl_surf *surf)
 {
    if (GEN_GEN >= 9) {
       if (isl_tiling_is_std_y(surf->tiling) ||
@@ -121,8 +121,7 @@ get_halign_valign(const struct isl_surf *surf,
           * true alignment is likely outside the enum range of HALIGN* and
           * VALIGN*.
           */
-         *halign = 0;
-         *valign = 0;
+         return isl_extent3d(0, 0, 0);
       } else {
          /* In Skylake, RENDER_SUFFACE_STATE.SurfaceVerticalAlignment is in units
           * of surface elements (not pixels nor samples). For compressed formats,
@@ -131,11 +130,7 @@ get_halign_valign(const struct isl_surf *surf,
           * format (ETC2 has a block height of 4), then the vertical alignment is
           * 4 compression blocks or, equivalently, 16 pixels.
           */
-         struct isl_extent3d image_align_el
-            = isl_surf_get_image_alignment_el(surf);
-
-         *halign = isl_to_gen_halign[image_align_el.width];
-         *valign = isl_to_gen_valign[image_align_el.height];
+         return isl_surf_get_image_alignment_el(surf);
       }
    } else {
       /* Pre-Skylake, RENDER_SUFFACE_STATE.SurfaceVerticalAlignment is in
@@ -144,11 +139,7 @@ get_halign_valign(const struct isl_surf *surf,
        * format (compressed or not) the vertical alignment is
        * 4 pixels.
        */
-      struct isl_extent3d image_align_sa
-         = isl_surf_get_image_alignment_sa(surf);
-
-      *halign = isl_to_gen_halign[image_align_sa.width];
-      *valign = isl_to_gen_valign[image_align_sa.height];
+      return isl_surf_get_image_alignment_sa(surf);
    }
 }
 
@@ -199,9 +190,6 @@ void
 isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
                             const struct isl_surf_fill_state_info *restrict info)
 {
-   uint32_t halign, valign;
-   get_halign_valign(info->surf, &halign, &valign);
-
    struct GENX(RENDER_SURFACE_STATE) s = { 0 };
 
    s.SurfaceType = get_surftype(info->surf->dim, info->view->usage);
@@ -288,8 +276,9 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       s.MIPCountLOD = MAX(info->view->levels, 1) - 1;
    }
 
-   s.SurfaceVerticalAlignment = valign;
-   s.SurfaceHorizontalAlignment = halign;
+   const struct isl_extent3d image_align = get_image_alignment(info->surf);
+   s.SurfaceVerticalAlignment = isl_to_gen_valign[image_align.height];
+   s.SurfaceHorizontalAlignment = isl_to_gen_halign[image_align.width];
 
    if (info->surf->tiling == ISL_TILING_W) {
       /* From the Broadwell PRM documentation for this field:
