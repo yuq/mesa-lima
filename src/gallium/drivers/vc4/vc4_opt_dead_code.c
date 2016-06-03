@@ -82,7 +82,6 @@ qir_opt_dead_code(struct vc4_compile *c)
 {
         bool progress = false;
         bool *used = calloc(c->num_temps, sizeof(bool));
-        bool sf_used = false;
 
         list_for_each_entry_safe_rev(struct qinst, inst, &c->instructions,
                                      link) {
@@ -107,22 +106,6 @@ qir_opt_dead_code(struct vc4_compile *c)
                         dce(c, inst);
                         progress = true;
                         continue;
-                }
-
-                if (qir_depends_on_flags(inst))
-                        sf_used = true;
-                if (inst->sf) {
-                        if (!sf_used) {
-                                if (debug) {
-                                        fprintf(stderr, "Removing SF on: ");
-                                        qir_dump_inst(c, inst);
-                                        fprintf(stderr, "\n");
-                                }
-
-                                inst->sf = false;
-                                progress = true;
-                        }
-                        sf_used = false;
                 }
 
                 for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {

@@ -26,6 +26,7 @@ C_SOURCES := \
 	vc4_opt_constant_folding.c \
 	vc4_opt_copy_propagation.c \
 	vc4_opt_dead_code.c \
+	vc4_opt_peephole_sf.c \
 	vc4_opt_small_immediates.c \
 	vc4_opt_vpm.c \
 	vc4_program.c \
