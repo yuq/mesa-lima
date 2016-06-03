@@ -145,7 +145,6 @@ struct si_textures_info {
 };
 
 struct si_images_info {
-	struct si_descriptors		desc;
 	struct pipe_image_view		views[SI_NUM_IMAGES];
 	uint32_t			compressed_colortex_mask;
 	unsigned			enabled_mask;
@@ -249,6 +248,7 @@ struct si_context {
 
 	/* shader descriptors */
 	struct si_descriptors		vertex_buffers;
+	struct si_descriptors		descriptors[SI_NUM_DESCS];
 	struct si_buffer_resources	rw_buffers;
 	struct si_buffer_resources	const_buffers[SI_NUM_SHADERS];
 	struct si_buffer_resources	shader_buffers[SI_NUM_SHADERS];

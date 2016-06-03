@@ -181,6 +181,31 @@ enum {
 	SI_NUM_RW_BUFFERS,
 };
 
+/* Indices into sctx->descriptors, laid out so that gfx and compute pipelines
+ * are contiguous:
+ *
+ *  0 - rw buffers
+ *  1 - vertex const buffers
+ *  2 - vertex shader buffers
+ *   ...
+ *  5 - fragment const buffers
+ *   ...
+ *  21 - compute const buffers
+ *   ...
+ */
+#define SI_SHADER_DESCS_CONST_BUFFERS  0
+#define SI_SHADER_DESCS_SHADER_BUFFERS 1
+#define SI_SHADER_DESCS_SAMPLERS       2
+#define SI_SHADER_DESCS_IMAGES         3
+#define SI_NUM_SHADER_DESCS            4
+
+#define SI_DESCS_RW_BUFFERS            0
+#define SI_DESCS_FIRST_SHADER          1
+#define SI_DESCS_FIRST_COMPUTE         (SI_DESCS_FIRST_SHADER + \
+                                        PIPE_SHADER_COMPUTE * SI_NUM_SHADER_DESCS)
+#define SI_NUM_DESCS                   (SI_DESCS_FIRST_SHADER + \
+                                        SI_NUM_SHADERS * SI_NUM_SHADER_DESCS)
+
 /* This represents descriptors in memory, such as buffer resources,
  * image resources, and sampler states.
  */
@@ -214,7 +239,6 @@ struct si_descriptors {
 };
 
 struct si_sampler_views {
-	struct si_descriptors		desc;
 	struct pipe_sampler_view	*views[SI_NUM_SAMPLERS];
 	void				*sampler_states[SI_NUM_SAMPLERS];
 
@@ -223,7 +247,6 @@ struct si_sampler_views {
 };
 
 struct si_buffer_resources {
-	struct si_descriptors		desc;
 	enum radeon_bo_usage		shader_usage; /* READ, WRITE, or READWRITE */
 	enum radeon_bo_priority		priority;
 	struct pipe_resource		**buffers; /* this has num_buffers elements */
