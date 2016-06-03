@@ -684,6 +684,8 @@ To add a new GL extension to Mesa you have to do at least the following.
 </li>
 <li>
    Add a new entry to the <code>gl_extensions</code> struct in mtypes.h
+   if the extension requires driver capabilities not already exposed by
+   another extension.
 </li>
 <li>
    Add a new entry to the src/mesa/main/extensions_table.h file.
@@ -696,6 +698,11 @@ To add a new GL extension to Mesa you have to do at least the following.
 <li>
    If the new extension adds new GL state, the functions in get.c, enable.c
    and attrib.c will most likely require new code.
+</li>
+<li>
+   To determine if the new extension is active in the current context,
+   use the auto-generated _mesa_has_##name_str() function defined in
+   src/mesa/main/extensions.h.
 </li>
 <li>
    The dispatch tests check_table.cpp and dispatch_sanity.cpp
