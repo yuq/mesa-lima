@@ -801,6 +801,11 @@ void
 intel_miptree_get_isl_surf(struct brw_context *brw,
                            const struct intel_mipmap_tree *mt,
                            struct isl_surf *surf);
+void
+intel_miptree_get_aux_isl_surf(struct brw_context *brw,
+                               const struct intel_mipmap_tree *mt,
+                               struct isl_surf *surf,
+                               enum isl_aux_usage *usage);
 
 union isl_color_value
 intel_miptree_get_isl_clear_color(struct brw_context *brw,

@@ -3168,6 +3168,123 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
    surf->usage = 0; /* TODO */
 }
 
+/* WARNING: THE SURFACE CREATED BY THIS FUNCTION IS NOT COMPLETE AND CANNOT BE
+ * USED FOR ANY REAL CALCULATIONS.  THE ONLY VALID USE OF SUCH A SURFACE IS TO
+ * PASS IT INTO isl_surf_fill_state.
+ */
+void
+intel_miptree_get_aux_isl_surf(struct brw_context *brw,
+                               const struct intel_mipmap_tree *mt,
+                               struct isl_surf *surf,
+                               enum isl_aux_usage *usage)
+{
+   /* Much is the same as the regular surface */
+   intel_miptree_get_isl_surf(brw, mt->mcs_mt, surf);
+
+   /* Figure out the layout */
+   if (_mesa_get_format_base_format(mt->format) == GL_DEPTH_COMPONENT) {
+      *usage = ISL_AUX_USAGE_HIZ;
+   } else if (mt->num_samples > 1) {
+      assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
+      *usage = ISL_AUX_USAGE_MCS;
+   } else if (intel_miptree_is_lossless_compressed(brw, mt)) {
+      assert(brw->gen >= 9);
+      *usage = ISL_AUX_USAGE_CCS_E;
+   } else if (mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS) {
+      *usage = ISL_AUX_USAGE_CCS_D;
+   } else {
+      unreachable("Invalid MCS miptree");
+   }
+
+   /* Figure out the format and tiling of the auxiliary surface */
+   switch (*usage) {
+   case ISL_AUX_USAGE_NONE:
+      unreachable("Invalid MCS miptree");
+
+   case ISL_AUX_USAGE_HIZ:
+      surf->format = ISL_FORMAT_HIZ;
+      surf->tiling = ISL_TILING_HIZ;
+      surf->usage = ISL_SURF_USAGE_HIZ_BIT;
+      break;
+
+   case ISL_AUX_USAGE_MCS:
+      /*
+       * From the SKL PRM:
+       *    "When Auxiliary Surface Mode is set to AUX_CCS_D or AUX_CCS_E,
+       *    HALIGN 16 must be used."
+       */
+      if (brw->gen >= 9)
+         assert(mt->halign == 16);
+
+      surf->usage = ISL_SURF_USAGE_MCS_BIT;
+
+      switch (mt->num_samples) {
+      case 2:  surf->format = ISL_FORMAT_MCS_2X;   break;
+      case 4:  surf->format = ISL_FORMAT_MCS_4X;   break;
+      case 8:  surf->format = ISL_FORMAT_MCS_8X;   break;
+      case 16: surf->format = ISL_FORMAT_MCS_16X;  break;
+      default:
+         unreachable("Invalid number of samples");
+      }
+      break;
+
+   case ISL_AUX_USAGE_CCS_D:
+   case ISL_AUX_USAGE_CCS_E:
+      /*
+       * From the BDW PRM, Volume 2d, page 260 (RENDER_SURFACE_STATE):
+       *
+       *    "When MCS is enabled for non-MSRT, HALIGN_16 must be used"
+       *
+       * From the hardware spec for GEN9:
+       *
+       *    "When Auxiliary Surface Mode is set to AUX_CCS_D or AUX_CCS_E,
+       *    HALIGN 16 must be used."
+       */
+      assert(mt->num_samples <= 1);
+      if (brw->gen >= 8)
+         assert(mt->halign == 16);
+
+      surf->tiling = ISL_TILING_CCS;
+      surf->usage = ISL_SURF_USAGE_CCS_BIT;
+
+      if (brw->gen >= 9) {
+         assert(mt->tiling == I915_TILING_Y);
+         switch (_mesa_get_format_bytes(mt->format)) {
+         case 4:  surf->format = ISL_FORMAT_GEN9_CCS_32BPP;   break;
+         case 8:  surf->format = ISL_FORMAT_GEN9_CCS_64BPP;   break;
+         case 16: surf->format = ISL_FORMAT_GEN9_CCS_128BPP;  break;
+         default:
+            unreachable("Invalid format size for color compression");
+         }
+      } else if (mt->tiling == I915_TILING_Y) {
+         switch (_mesa_get_format_bytes(mt->format)) {
+         case 4:  surf->format = ISL_FORMAT_GEN7_CCS_32BPP_Y;    break;
+         case 8:  surf->format = ISL_FORMAT_GEN7_CCS_64BPP_Y;    break;
+         case 16: surf->format = ISL_FORMAT_GEN7_CCS_128BPP_Y;   break;
+         default:
+            unreachable("Invalid format size for color compression");
+         }
+      } else {
+         assert(mt->tiling == I915_TILING_X);
+         switch (_mesa_get_format_bytes(mt->format)) {
+         case 4:  surf->format = ISL_FORMAT_GEN7_CCS_32BPP_X;    break;
+         case 8:  surf->format = ISL_FORMAT_GEN7_CCS_64BPP_X;    break;
+         case 16: surf->format = ISL_FORMAT_GEN7_CCS_128BPP_X;   break;
+         default:
+            unreachable("Invalid format size for color compression");
+         }
+      }
+      break;
+   }
+
+   /* Auxiliary surfaces in ISL have compressed formats and array_pitch_el_rows
+    * is in elements.  This doesn't match intel_mipmap_tree::qpitch which is
+    * in elements of the primary color surface so we have to divide by the
+    * compression block height.
+    */
+   surf->array_pitch_el_rows = mt->qpitch / isl_format_get_layout(surf->format)->bh;
+}
+
 union isl_color_value
 intel_miptree_get_isl_clear_color(struct brw_context *brw,
                                   const struct intel_mipmap_tree *mt)
