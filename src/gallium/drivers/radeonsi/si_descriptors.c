@@ -502,15 +502,19 @@ si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *imag
 }
 
 static void
-si_disable_shader_image(struct si_images_info *images, unsigned slot)
+si_disable_shader_image(struct si_context *ctx, unsigned shader, unsigned slot)
 {
+	struct si_images_info *images = &ctx->images[shader];
+
 	if (images->enabled_mask & (1u << slot)) {
+		struct si_descriptors *descs = &images->desc;
+
 		pipe_resource_reference(&images->views[slot].resource, NULL);
 		images->compressed_colortex_mask &= ~(1 << slot);
 
-		memcpy(images->desc.list + slot*8, null_image_descriptor, 8*4);
+		memcpy(descs->list + slot*8, null_image_descriptor, 8*4);
 		images->enabled_mask &= ~(1u << slot);
-		images->desc.dirty_mask |= 1u << slot;
+		descs->dirty_mask |= 1u << slot;
 	}
 }
 
@@ -541,7 +545,7 @@ static void si_set_shader_image(struct si_context *ctx,
 	struct r600_resource *res;
 
 	if (!view || !view->resource) {
-		si_disable_shader_image(images, slot);
+		si_disable_shader_image(ctx, shader, slot);
 		return;
 	}
 
