@@ -872,9 +872,9 @@ void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuf
 		util_memcpy_cpu_to_le32(tmp, ptr, size);
 }
 
-void si_set_constant_buffer(struct si_context *sctx,
-			    struct si_buffer_resources *buffers,
-			    uint slot, struct pipe_constant_buffer *input)
+static void si_set_constant_buffer(struct si_context *sctx,
+				   struct si_buffer_resources *buffers,
+				   uint slot, struct pipe_constant_buffer *input)
 {
 	assert(slot < buffers->desc.num_elements);
 	pipe_resource_reference(&buffers->buffers[slot], NULL);
@@ -932,6 +932,12 @@ void si_set_constant_buffer(struct si_context *sctx,
 	}
 
 	buffers->desc.dirty_mask |= 1u << slot;
+}
+
+void si_set_rw_buffer(struct si_context *sctx,
+		      uint slot, struct pipe_constant_buffer *input)
+{
+	si_set_constant_buffer(sctx, &sctx->rw_buffers, slot, input);
 }
 
 static void si_pipe_set_constant_buffer(struct pipe_context *ctx,
@@ -1230,8 +1236,7 @@ static void si_set_polygon_stipple(struct pipe_context *ctx,
 	cb.user_buffer = stipple;
 	cb.buffer_size = sizeof(stipple);
 
-	si_set_constant_buffer(sctx, &sctx->rw_buffers,
-			       SI_PS_CONST_POLY_STIPPLE, &cb);
+	si_set_rw_buffer(sctx, SI_PS_CONST_POLY_STIPPLE, &cb);
 }
 
 /* TEXTURE METADATA ENABLE/DISABLE */
