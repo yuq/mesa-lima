@@ -86,8 +86,9 @@ qir_opt_dead_code(struct vc4_compile *c)
 
         list_for_each_entry_safe_rev(struct qinst, inst, &c->instructions,
                                      link) {
-                if (inst->dst.file == QFILE_TEMP &&
-                    !used[inst->dst.index] &&
+                if ((inst->dst.file == QFILE_NULL ||
+                     (inst->dst.file == QFILE_TEMP &&
+                      !used[inst->dst.index])) &&
                     !inst->sf &&
                     !qir_has_side_effects(c, inst) &&
                     !has_nonremovable_reads(c, inst)) {
