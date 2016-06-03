@@ -202,7 +202,8 @@ clover::llvm::compile_program(const std::string &source,
 
 namespace {
    void
-   optimize(Module &mod, unsigned optimization_level) {
+   optimize(Module &mod, unsigned optimization_level,
+            bool internalize_symbols) {
       compat::pass_manager pm;
 
       compat::add_data_layout_pass(pm);
@@ -219,8 +220,9 @@ namespace {
       // list of kernel functions to the internalizer.  The internalizer will
       // treat the functions in the list as "main" functions and internalize
       // all of the other functions.
-      compat::add_internalize_pass(pm, map(std::mem_fn(&Function::getName),
-                                           get_kernels(mod)));
+      if (internalize_symbols)
+         compat::add_internalize_pass(pm, map(std::mem_fn(&Function::getName),
+                                              get_kernels(mod)));
 
       ::llvm::PassManagerBuilder pmb;
       pmb.OptLevel = optimization_level;
@@ -251,36 +253,33 @@ clover::llvm::link_program(const std::vector<module> &modules,
                            enum pipe_shader_ir ir, const std::string &target,
                            const std::string &opts, std::string &r_log) {
    std::vector<std::string> options = tokenize(opts + " input.cl");
+   const bool create_library = count("-create-library", options);
+   erase_if(equals("-create-library"), options);
+
    auto ctx = create_context(r_log);
    auto c = create_compiler_instance(target, options, r_log);
    auto mod = link(*ctx, *c, modules, r_log);
 
-   optimize(*mod, c->getCodeGenOpts().OptimizationLevel);
+   optimize(*mod, c->getCodeGenOpts().OptimizationLevel, !create_library);
 
    if (has_flag(debug::llvm))
       debug::log(".ll", print_module_bitcode(*mod));
 
-   module m;
-   // Build the clover::module
-   switch (ir) {
-      case PIPE_SHADER_IR_NIR:
-      case PIPE_SHADER_IR_TGSI:
-         //XXX: Handle TGSI, NIR
-         assert(0);
-         m = module();
-         break;
-      case PIPE_SHADER_IR_LLVM:
-         m = build_module_bitcode(*mod, *c);
-         break;
-      case PIPE_SHADER_IR_NATIVE:
-         if (has_flag(debug::native))
-            debug::log(".asm", print_module_native(*mod, target));
+   if (create_library) {
+      return build_module_library(*mod);
 
-         m = build_module_native(*mod, target, *c, r_log);
-         break;
+   } else if (ir == PIPE_SHADER_IR_LLVM) {
+      return build_module_bitcode(*mod, *c);
+
+   } else if (ir == PIPE_SHADER_IR_NATIVE) {
+      if (has_flag(debug::native))
+         debug::log(".asm", print_module_native(*mod, target));
+
+      return build_module_native(*mod, target, *c, r_log);
+
+   } else {
+      unreachable("Unsupported IR.");
    }
-
-   return m;
 }
 
 module
