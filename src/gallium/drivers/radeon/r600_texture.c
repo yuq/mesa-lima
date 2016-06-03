@@ -72,10 +72,10 @@ bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
 	 *   dst: If overwriting the whole texture, discard DCC and use SDMA.
 	 *        Otherwise, use the 3D path.
 	 */
-	if (rsrc->dcc_offset)
+	if (rsrc->dcc_offset && rsrc->surface.level[src_level].dcc_enabled)
 		return false;
 
-	if (rdst->dcc_offset) {
+	if (rdst->dcc_offset && rdst->surface.level[dst_level].dcc_enabled) {
 		/* We can't discard DCC if the texture has been exported.
 		 * We can only discard DCC for the entire texture.
 		 */
@@ -1872,7 +1872,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			continue;
 		}
 
-		if (tex->dcc_offset) {
+		if (tex->dcc_offset && tex->surface.level[0].dcc_enabled) {
 			uint32_t reset_value;
 			bool clear_words_needed;
 

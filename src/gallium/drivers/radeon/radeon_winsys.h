@@ -360,6 +360,7 @@ struct radeon_surf_level {
     uint32_t                    pitch_bytes;
     uint32_t                    mode;
     uint64_t                    dcc_offset;
+    bool                        dcc_enabled;
 };
 
 struct radeon_surf {

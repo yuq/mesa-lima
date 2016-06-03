@@ -321,6 +321,13 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 
 	if (rtex->dcc_offset && need_dcc_decompress) {
 		custom_blend = sctx->custom_blend_dcc_decompress;
+
+		/* disable levels without DCC */
+		for (int i = first_level; i <= last_level; i++) {
+			if (!rtex->dcc_offset ||
+			    !rtex->surface.level[i].dcc_enabled)
+				level_mask &= ~(1 << i);
+		}
 	} else if (rtex->fmask.size) {
 		custom_blend = sctx->custom_blend_decompress;
 	} else {

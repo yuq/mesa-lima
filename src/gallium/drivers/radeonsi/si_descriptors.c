@@ -331,7 +331,7 @@ void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 							     is_stencil));
 	state[4] |= S_008F20_PITCH(pitch - 1);
 
-	if (tex->dcc_offset) {
+	if (tex->dcc_offset && base_level_info->dcc_enabled) {
 		state[6] |= S_008F28_COMPRESSION_EN(1);
 		state[7] = (tex->resource.gpu_address +
 			    tex->dcc_offset +
@@ -591,14 +591,16 @@ static void si_set_shader_image(struct si_context *ctx,
 	} else {
 		static const unsigned char swizzle[4] = { 0, 1, 2, 3 };
 		struct r600_texture *tex = (struct r600_texture *)res;
-		unsigned level;
+		unsigned level = view->u.tex.level;
 		unsigned width, height, depth;
 		uint32_t *desc = descs->list + slot * 8;
+		bool uses_dcc = tex->dcc_offset &&
+				tex->surface.level[level].dcc_enabled;
 
 		assert(!tex->is_depth);
 		assert(tex->fmask.size == 0);
 
-		if (tex->dcc_offset &&
+		if (uses_dcc &&
 		    view->access & PIPE_IMAGE_ACCESS_WRITE) {
 			/* If DCC can't be disabled, at least decompress it.
 			 * The decompression is relatively cheap if the surface
@@ -624,7 +626,6 @@ static void si_set_shader_image(struct si_context *ctx,
 		 * selecting a single slice for non-layered bindings
 		 * fails. It doesn't hurt the other targets.
 		 */
-		level = view->u.tex.level;
 		width = u_minify(res->b.b.width0, level);
 		height = u_minify(res->b.b.height0, level);
 		depth = u_minify(res->b.b.depth0, level);

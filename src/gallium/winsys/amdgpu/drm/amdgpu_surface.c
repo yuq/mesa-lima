@@ -226,6 +226,10 @@ static int compute_level(struct amdgpu_winsys *ws,
 
    surf->bo_size = surf_level->offset + AddrSurfInfoOut->surfSize;
 
+   /* Clear DCC fields at the beginning. */
+   surf_level->dcc_offset = 0;
+   surf_level->dcc_enabled = false;
+
    if (AddrSurfInfoIn->flags.dccCompatible) {
       AddrDccIn->colorSurfSize = AddrSurfInfoOut->surfSize;
       AddrDccIn->tileMode = AddrSurfInfoOut->tileMode;
@@ -239,15 +243,14 @@ static int compute_level(struct amdgpu_winsys *ws,
 
       if (ret == ADDR_OK) {
          surf_level->dcc_offset = surf->dcc_size;
+         surf_level->dcc_enabled = true;
          surf->dcc_size = surf_level->dcc_offset + AddrDccOut->dccRamSize;
          surf->dcc_alignment = MAX2(surf->dcc_alignment, AddrDccOut->dccRamBaseAlign);
       } else {
          surf->dcc_size = 0;
-         surf_level->dcc_offset = 0;
       }
    } else {
       surf->dcc_size = 0;
-      surf_level->dcc_offset = 0;
    }
 
    return 0;
@@ -344,7 +347,8 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    AddrSurfInfoIn.flags.dccCompatible = !(surf->flags & RADEON_SURF_Z_OR_SBUFFER) &&
                                         !(surf->flags & RADEON_SURF_SCANOUT) &&
                                         !(surf->flags & RADEON_SURF_DISABLE_DCC) &&
-                                        !compressed && AddrDccIn.numSamples <= 1;
+                                        !compressed && AddrDccIn.numSamples <= 1 &&
+                                        surf->last_level == 0;
 
    AddrSurfInfoIn.flags.noStencil = (surf->flags & RADEON_SURF_SBUFFER) == 0;
    AddrSurfInfoIn.flags.compressZ = AddrSurfInfoIn.flags.depth;

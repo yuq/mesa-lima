@@ -2443,7 +2443,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		}
 
 		cb_color_info = cb->cb_color_info | tex->cb_color_info;
-		if (tex->dcc_offset)
+		if (tex->dcc_offset && cb->level_info->dcc_enabled)
 			cb_color_info |= S_028C70_DCC_ENABLE(1);
 
 		radeon_set_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C,
