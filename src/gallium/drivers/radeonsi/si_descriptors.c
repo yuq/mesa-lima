@@ -602,7 +602,7 @@ static void si_set_shader_image(struct si_context *ctx,
 					   view->u.tex.last_layer,
 					   width, height, depth,
 					   desc, NULL);
-		si_set_mutable_tex_desc_fields(tex, tex->surface.level, level,
+		si_set_mutable_tex_desc_fields(tex, &tex->surface.level[level], level,
 					       util_format_get_blockwidth(view->format),
 					       false, desc);
 	}
