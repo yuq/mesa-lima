@@ -308,6 +308,17 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		    (info->indirect || info->instance_count > 1))
 			wd_switch_on_eop = true;
 
+		/* Performance recommendation for 4 SE Gfx7-8 parts if
+		 * instances are smaller than a primgroup. Ignore the fact
+		 * primgroup_size is a primitive count, not vertex count.
+		 * Don't do anything for indirect draws.
+		 */
+		if (sctx->b.chip_class <= VI &&
+		    sctx->b.screen->info.max_se >= 4 &&
+		    !info->indirect &&
+		    info->instance_count > 1 && info->count < primgroup_size)
+			wd_switch_on_eop = true;
+
 		/* Required on CIK and later. */
 		if (sctx->b.screen->info.max_se > 2 && !wd_switch_on_eop)
 			ia_switch_on_eoi = true;
