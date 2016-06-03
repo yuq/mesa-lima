@@ -26,8 +26,6 @@
 #include <GL/gl.h>
 #include <GL/internal/dri_interface.h>
 
-#include "isl/isl.h"
-
 #include "intel_batchbuffer.h"
 #include "intel_mipmap_tree.h"
 #include "intel_resolve_map.h"
@@ -2998,4 +2996,174 @@ intel_miptree_unmap(struct brw_context *brw,
    }
 
    intel_miptree_release_map(mt, level, slice);
+}
+
+void
+intel_miptree_get_isl_surf(struct brw_context *brw,
+                           const struct intel_mipmap_tree *mt,
+                           struct isl_surf *surf)
+{
+   switch (mt->target) {
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_1D_ARRAY: {
+      surf->dim = ISL_SURF_DIM_1D;
+      if (brw->gen >= 9 && mt->tiling == I915_TILING_NONE)
+         surf->dim_layout = ISL_DIM_LAYOUT_GEN9_1D;
+      else
+         surf->dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
+      break;
+   }
+   case GL_TEXTURE_2D:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_RECTANGLE:
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+   case GL_TEXTURE_EXTERNAL_OES:
+      surf->dim = ISL_SURF_DIM_2D;
+      surf->dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
+      break;
+   case GL_TEXTURE_3D:
+      surf->dim = ISL_SURF_DIM_3D;
+      if (brw->gen >= 9)
+         surf->dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
+      else
+         surf->dim_layout = ISL_DIM_LAYOUT_GEN4_3D;
+      break;
+   default:
+      unreachable("Invalid texture target");
+   }
+
+   if (mt->num_samples > 1) {
+      switch (mt->msaa_layout) {
+      case INTEL_MSAA_LAYOUT_IMS:
+         surf->msaa_layout = ISL_MSAA_LAYOUT_INTERLEAVED;
+         break;
+      case INTEL_MSAA_LAYOUT_UMS:
+      case INTEL_MSAA_LAYOUT_CMS:
+         surf->msaa_layout = ISL_MSAA_LAYOUT_ARRAY;
+         break;
+      default:
+         unreachable("Invalid MSAA layout");
+      }
+   } else {
+      surf->msaa_layout = ISL_MSAA_LAYOUT_NONE;
+   }
+
+   if (mt->format == MESA_FORMAT_S_UINT8) {
+      surf->tiling = ISL_TILING_W;
+      /* The ISL definition of row_pitch matches the surface state pitch field
+       * a bit better than intel_mipmap_tree.  In particular, ISL incorporates
+       * the factor of 2 for W-tiling in row_pitch.
+       */
+      surf->row_pitch = 2 * mt->pitch;
+   } else {
+      switch (mt->tiling) {
+      case I915_TILING_NONE:
+         surf->tiling = ISL_TILING_LINEAR;
+         break;
+      case I915_TILING_X:
+         surf->tiling = ISL_TILING_X;
+         break;
+      case I915_TILING_Y:
+         switch (mt->tr_mode) {
+         case INTEL_MIPTREE_TRMODE_NONE:
+            surf->tiling = ISL_TILING_Y0;
+            break;
+         case INTEL_MIPTREE_TRMODE_YF:
+            surf->tiling = ISL_TILING_Yf;
+            break;
+         case INTEL_MIPTREE_TRMODE_YS:
+            surf->tiling = ISL_TILING_Ys;
+            break;
+         }
+         break;
+      default:
+         unreachable("Invalid tiling mode");
+      }
+
+      surf->row_pitch = mt->pitch;
+   }
+
+   surf->format = translate_tex_format(brw, mt->format, false);
+
+   if (brw->gen >= 9) {
+      if (surf->dim == ISL_SURF_DIM_1D && surf->tiling == ISL_TILING_LINEAR) {
+         /* For gen9 1-D surfaces, intel_mipmap_tree has a bogus alignment. */
+         surf->image_alignment_el = isl_extent3d(64, 1, 1);
+      } else {
+         /* On gen9+, intel_mipmap_tree stores the horizontal and vertical
+          * alignment in terms of surface elements like we want.
+          */
+         surf->image_alignment_el = isl_extent3d(mt->halign, mt->valign, 1);
+      }
+   } else {
+      /* On earlier gens it's stored in pixels. */
+      unsigned bw, bh;
+      _mesa_get_format_block_size(mt->format, &bw, &bh);
+      surf->image_alignment_el =
+         isl_extent3d(mt->halign / bw, mt->valign / bh, 1);
+   }
+
+   surf->logical_level0_px.width = mt->logical_width0;
+   surf->logical_level0_px.height = mt->logical_height0;
+   if (surf->dim == ISL_SURF_DIM_3D) {
+      surf->logical_level0_px.depth = mt->logical_depth0;
+      surf->logical_level0_px.array_len = 1;
+   } else if (mt->target == GL_TEXTURE_CUBE_MAP ||
+              mt->target == GL_TEXTURE_CUBE_MAP_ARRAY) {
+      /* For cube maps, mt->logical_depth0 is in number of cubes */
+      surf->logical_level0_px.depth = 1;
+      surf->logical_level0_px.array_len = mt->logical_depth0 * 6;
+   } else {
+      surf->logical_level0_px.depth = 1;
+      surf->logical_level0_px.array_len = mt->logical_depth0;
+   }
+
+   surf->phys_level0_sa.width = mt->physical_width0;
+   surf->phys_level0_sa.height = mt->physical_height0;
+   if (surf->dim == ISL_SURF_DIM_3D) {
+      surf->phys_level0_sa.depth = mt->physical_depth0;
+      surf->phys_level0_sa.array_len = 1;
+   } else {
+      surf->phys_level0_sa.depth = 1;
+      surf->phys_level0_sa.array_len = mt->physical_depth0;
+   }
+
+   surf->levels = mt->last_level + 1;
+   surf->samples = MAX2(mt->num_samples, 1);
+
+   surf->size = 0; /* TODO */
+   surf->alignment = 0; /* TODO */
+
+   switch (surf->dim_layout) {
+   case ISL_DIM_LAYOUT_GEN4_2D:
+   case ISL_DIM_LAYOUT_GEN4_3D:
+      if (brw->gen >= 9) {
+         surf->array_pitch_el_rows = mt->qpitch;
+      } else {
+         unsigned bw, bh;
+         _mesa_get_format_block_size(mt->format, &bw, &bh);
+         assert(mt->qpitch % bh == 0);
+         surf->array_pitch_el_rows = mt->qpitch / bh;
+      }
+      break;
+   case ISL_DIM_LAYOUT_GEN9_1D:
+      surf->array_pitch_el_rows = 1;
+      break;
+   }
+
+   switch (mt->array_layout) {
+   case ALL_LOD_IN_EACH_SLICE:
+      surf->array_pitch_span = ISL_ARRAY_PITCH_SPAN_FULL;
+      break;
+   case ALL_SLICES_AT_EACH_LOD:
+      surf->array_pitch_span = ISL_ARRAY_PITCH_SPAN_COMPACT;
+      break;
+   default:
+      unreachable("Invalid array layout");
+   }
+
+   surf->usage = 0; /* TODO */
 }

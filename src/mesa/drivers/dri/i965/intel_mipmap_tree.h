@@ -47,6 +47,7 @@
 #include <assert.h>
 
 #include "main/mtypes.h"
+#include "isl/isl.h"
 #include "intel_bufmgr.h"
 #include "intel_resolve_map.h"
 #include <GL/internal/dri_interface.h>
@@ -795,6 +796,11 @@ void
 intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
 			       GLuint level, GLuint slice,
 			       GLuint *x, GLuint *y);
+
+void
+intel_miptree_get_isl_surf(struct brw_context *brw,
+                           const struct intel_mipmap_tree *mt,
+                           struct isl_surf *surf);
 
 void
 intel_get_image_dims(struct gl_texture_image *image,
