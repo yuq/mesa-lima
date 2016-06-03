@@ -538,7 +538,7 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
 
    if (!layered) {
       irb->layer_count = 1;
-   } else if (image->TexObject->NumLayers > 0) {
+   } else if (mt->target != GL_TEXTURE_3D && image->TexObject->NumLayers > 0) {
       irb->layer_count = image->TexObject->NumLayers;
    } else {
       irb->layer_count = mt->level[level].depth / layer_multiplier;
