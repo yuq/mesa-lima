@@ -542,7 +542,7 @@ descriptor=[
   [ "MAX_COMBINED_GEOMETRY_UNIFORM_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxCombinedUniformComponents), extra_ARB_uniform_buffer_object_and_geometry_shader" ],
 
 # GL_ARB_viewport_array / GL_OES_geometry_shader
-  [ "LAYER_PROVOKING_VERTEX", "CONTEXT_ENUM(Light.ProvokingVertex), extra_ARB_viewport_array_or_oes_geometry_shader" ],
+  [ "LAYER_PROVOKING_VERTEX", "CONTEXT_ENUM(Const.LayerAndVPIndexProvokingVertex), extra_ARB_viewport_array_or_oes_geometry_shader" ],
 
 # GL_ARB_gpu_shader5 / GL_OES_geometry_shader
   [ "MAX_GEOMETRY_SHADER_INVOCATIONS", "CONST(MAX_GEOMETRY_SHADER_INVOCATIONS), extra_ARB_gpu_shader5_or_oes_geometry_shader" ],
