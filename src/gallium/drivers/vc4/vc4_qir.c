@@ -75,11 +75,11 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_FRAG_Z] = { "frag_z", 1, 0 },
         [QOP_FRAG_W] = { "frag_w", 1, 0 },
 
-        [QOP_TEX_S] = { "tex_s", 0, 2 },
-        [QOP_TEX_T] = { "tex_t", 0, 2 },
-        [QOP_TEX_R] = { "tex_r", 0, 2 },
-        [QOP_TEX_B] = { "tex_b", 0, 2 },
-        [QOP_TEX_DIRECT] = { "tex_direct", 0, 2 },
+        [QOP_TEX_S] = { "tex_s", 0, 2, true },
+        [QOP_TEX_T] = { "tex_t", 0, 2, true },
+        [QOP_TEX_R] = { "tex_r", 0, 2, true },
+        [QOP_TEX_B] = { "tex_b", 0, 2, true },
+        [QOP_TEX_DIRECT] = { "tex_direct", 0, 2, true },
         [QOP_TEX_RESULT] = { "tex_result", 1, 0, true },
 
         [QOP_LOAD_IMM] = { "load_imm", 0, 1 },
