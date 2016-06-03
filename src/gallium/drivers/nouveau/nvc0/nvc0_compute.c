@@ -262,6 +262,9 @@ nvc0_compute_validate_buffers(struct nvc0_context *nvc0)
          PUSH_DATA (push, nvc0->buffers[s][i].buffer_size);
          PUSH_DATA (push, 0);
          BCTX_REFN(nvc0->bufctx_cp, CP_BUF, res, RDWR);
+         util_range_add(&res->valid_buffer_range,
+                        nvc0->buffers[s][i].buffer_offset,
+                        nvc0->buffers[s][i].buffer_size);
       } else {
          PUSH_DATA (push, 0);
          PUSH_DATA (push, 0);
