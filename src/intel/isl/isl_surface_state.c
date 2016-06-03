@@ -47,18 +47,20 @@ static const uint8_t isl_to_gen_halign[] = {
     [8] = HALIGN8,
     [16] = HALIGN16,
 };
+#elif GEN_GEN >= 7
+static const uint8_t isl_to_gen_halign[] = {
+    [4] = HALIGN_4,
+    [8] = HALIGN_8,
+};
+#endif
 
+#if GEN_GEN >= 8
 static const uint8_t isl_to_gen_valign[] = {
     [4] = VALIGN4,
     [8] = VALIGN8,
     [16] = VALIGN16,
 };
-#else
-static const uint8_t isl_to_gen_halign[] = {
-    [4] = HALIGN_4,
-    [8] = HALIGN_8,
-};
-
+#elif GEN_GEN >= 6
 static const uint8_t isl_to_gen_valign[] = {
     [2] = VALIGN_2,
     [4] = VALIGN_4,
