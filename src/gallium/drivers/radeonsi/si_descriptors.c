@@ -330,10 +330,11 @@ void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 }
 
 static void si_set_sampler_view(struct si_context *sctx,
-				struct si_sampler_views *views,
+				unsigned shader,
 				unsigned slot, struct pipe_sampler_view *view,
 				bool disallow_early_out)
 {
+	struct si_sampler_views *views = &sctx->samplers[shader].views;
 	struct si_sampler_view *rview = (struct si_sampler_view*)view;
 
 	if (views->views[slot] == view && !disallow_early_out)
@@ -412,11 +413,11 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		if (!views || !views[i]) {
 			samplers->depth_texture_mask &= ~(1u << slot);
 			samplers->compressed_colortex_mask &= ~(1u << slot);
-			si_set_sampler_view(sctx, &samplers->views, slot, NULL, false);
+			si_set_sampler_view(sctx, shader, slot, NULL, false);
 			continue;
 		}
 
-		si_set_sampler_view(sctx, &samplers->views, slot, views[i], false);
+		si_set_sampler_view(sctx, shader, slot, views[i], false);
 
 		if (views[i]->texture && views[i]->texture->target != PIPE_BUFFER) {
 			struct r600_texture *rtex =
@@ -1433,7 +1434,7 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 			    view->texture->target == PIPE_BUFFER)
 				continue;
 
-			si_set_sampler_view(sctx, samplers, i,
+			si_set_sampler_view(sctx, shader, i,
 					    samplers->views[i], true);
 		}
 	}
