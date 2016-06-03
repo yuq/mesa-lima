@@ -606,7 +606,9 @@ static void si_set_shader_image(struct si_context *ctx,
 			 * The decompression is relatively cheap if the surface
 			 * has been decompressed already.
 			 */
-			if (!r600_texture_disable_dcc(&screen->b, tex))
+			if (r600_texture_disable_dcc(&screen->b, tex))
+				uses_dcc = false;
+			else
 				ctx->b.decompress_dcc(&ctx->b.b, tex);
 		}
 
@@ -616,7 +618,7 @@ static void si_set_shader_image(struct si_context *ctx,
 			images->compressed_colortex_mask &= ~(1 << slot);
 		}
 
-		if (tex->dcc_offset &&
+		if (uses_dcc &&
 		    p_atomic_read(&tex->framebuffers_bound))
 			ctx->need_check_render_feedback = true;
 
