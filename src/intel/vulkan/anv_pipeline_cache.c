@@ -89,11 +89,15 @@ entry_size(struct cache_entry *entry)
     * doesn't include the alignment padding bytes.
     */
 
+   struct brw_stage_prog_data *prog_data = (void *)entry->prog_data;
+   const uint32_t param_size =
+      prog_data->nr_params * sizeof(*prog_data->param);
+
    const uint32_t map_size =
       entry->surface_count * sizeof(struct anv_pipeline_binding) +
       entry->sampler_count * sizeof(struct anv_pipeline_binding);
 
-   return sizeof(*entry) + entry->prog_data_size + map_size;
+   return sizeof(*entry) + entry->prog_data_size + param_size + map_size;
 }
 
 void
@@ -141,6 +145,7 @@ anv_pipeline_cache_search_unlocked(struct anv_pipeline_cache *cache,
             void *p = entry->prog_data;
             *prog_data = p;
             p += entry->prog_data_size;
+            p += (*prog_data)->nr_params * sizeof(*(*prog_data)->param);
             map->surface_count = entry->surface_count;
             map->sampler_count = entry->sampler_count;
             map->image_count = entry->image_count;
@@ -267,12 +272,18 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
 
    struct cache_entry *entry;
 
+   assert((*prog_data)->nr_pull_params == 0);
+   assert((*prog_data)->nr_image_params == 0);
+
+   const uint32_t param_size =
+      (*prog_data)->nr_params * sizeof(*(*prog_data)->param);
+
    const uint32_t map_size =
       map->surface_count * sizeof(struct anv_pipeline_binding) +
       map->sampler_count * sizeof(struct anv_pipeline_binding);
 
    const uint32_t preamble_size =
-      align_u32(sizeof(*entry) + prog_data_size + map_size, 64);
+      align_u32(sizeof(*entry) + prog_data_size + param_size + map_size, 64);
 
    const uint32_t size = preamble_size + kernel_size;
 
@@ -290,6 +301,10 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
    void *p = entry->prog_data;
    memcpy(p, *prog_data, prog_data_size);
    p += prog_data_size;
+
+   memcpy(p, (*prog_data)->param, param_size);
+   ((struct brw_stage_prog_data *)entry->prog_data)->param = p;
+   p += param_size;
 
    memcpy(p, map->surface_to_descriptor,
           map->surface_count * sizeof(struct anv_pipeline_binding));
@@ -358,8 +373,16 @@ anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
       struct cache_entry *entry = p;
 
       void *data = entry->prog_data;
-      const struct brw_stage_prog_data *prog_data = data;
+
+      /* Make a copy of prog_data so that it's mutable */
+      uint8_t prog_data_tmp[512];
+      assert(entry->prog_data_size <= sizeof(prog_data_tmp));
+      memcpy(prog_data_tmp, data, entry->prog_data_size);
+      struct brw_stage_prog_data *prog_data = (void *)prog_data_tmp;
       data += entry->prog_data_size;
+
+      prog_data->param = data;
+      data += prog_data->nr_params * sizeof(*prog_data->param);
 
       struct anv_pipeline_binding *surface_to_descriptor = data;
       data += entry->surface_count * sizeof(struct anv_pipeline_binding);
@@ -375,9 +398,11 @@ anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
          .sampler_to_descriptor = sampler_to_descriptor
       };
 
+      const struct brw_stage_prog_data *const_prog_data = prog_data;
+
       anv_pipeline_cache_upload_kernel(cache, entry->sha1,
                                        kernel, entry->kernel_size,
-                                       &prog_data,
+                                       &const_prog_data,
                                        entry->prog_data_size, &map);
       p = kernel + entry->kernel_size;
    }
