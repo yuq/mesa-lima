@@ -325,7 +325,7 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
       assert(aux_mt->tiling == I915_TILING_Y);
       intel_get_tile_dims(aux_mt->tiling, aux_mt->tr_mode,
                           aux_mt->cpp, &tile_w, &tile_h);
-      surf[6] = SET_FIELD(mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |
+      surf[6] = SET_FIELD(aux_mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |
                 SET_FIELD((aux_mt->pitch / tile_w) - 1,
                           GEN8_SURFACE_AUX_PITCH) |
                 aux_mode;
@@ -546,7 +546,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
       assert(aux_mt->tiling == I915_TILING_Y);
       intel_get_tile_dims(aux_mt->tiling, aux_mt->tr_mode,
                           aux_mt->cpp, &tile_w, &tile_h);
-      surf[6] = SET_FIELD(mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |
+      surf[6] = SET_FIELD(aux_mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |
                 SET_FIELD((aux_mt->pitch / tile_w) - 1,
                           GEN8_SURFACE_AUX_PITCH) |
                 aux_mode;
