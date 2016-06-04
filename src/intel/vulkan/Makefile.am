@@ -82,9 +82,14 @@ VULKAN_SOURCES = \
 
 VULKAN_LIB_DEPS =
 
+VULKAN_ENTRYPOINT_CPPFLAGS =
 
 if HAVE_PLATFORM_X11
 AM_CPPFLAGS += \
+	$(XCB_DRI3_CFLAGS) \
+	-DVK_USE_PLATFORM_XCB_KHR
+
+VULKAN_ENTRYPOINT_CPPFLAGS += \
 	$(XCB_DRI3_CFLAGS) \
 	-DVK_USE_PLATFORM_XCB_KHR
 
@@ -97,6 +102,10 @@ if HAVE_PLATFORM_WAYLAND
 AM_CPPFLAGS += \
 	-I$(top_builddir)/src/egl/wayland/wayland-drm \
 	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
+	$(WAYLAND_CFLAGS) \
+	-DVK_USE_PLATFORM_WAYLAND_KHR
+
+VULKAN_ENTRYPOINT_CPPFLAGS += \
 	$(WAYLAND_CFLAGS) \
 	-DVK_USE_PLATFORM_WAYLAND_KHR
 
@@ -123,12 +132,6 @@ VULKAN_LIB_DEPS += \
 
 nodist_EXTRA_libvulkan_intel_la_SOURCES = dummy.cpp
 libvulkan_intel_la_SOURCES = $(VULKAN_GEM_FILES)
-
-VULKAN_ENTRYPOINT_CPPFLAGS = \
-	$(XCB_DRI3_CFLAGS) \
-	$(WAYLAND_CFLAGS) \
-	-DVK_USE_PLATFORM_XCB_KHR \
-	-DVK_USE_PLATFORM_WAYLAND_KHR
 
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)$(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) $(top_srcdir)/include/vulkan/vulkan_intel.h |\
