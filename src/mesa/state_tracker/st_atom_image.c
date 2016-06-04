@@ -148,7 +148,7 @@ static void bind_vs_images(struct st_context *st)
 const struct st_tracked_state st_bind_vs_images = {
    "st_bind_vs_images",
    {
-      0,
+      _NEW_TEXTURE,
       ST_NEW_VERTEX_PROGRAM | ST_NEW_IMAGE_UNITS,
    },
    bind_vs_images
@@ -168,7 +168,7 @@ static void bind_fs_images(struct st_context *st)
 const struct st_tracked_state st_bind_fs_images = {
    "st_bind_fs_images",
    {
-      0,
+      _NEW_TEXTURE,
       ST_NEW_FRAGMENT_PROGRAM | ST_NEW_IMAGE_UNITS,
    },
    bind_fs_images
@@ -188,7 +188,7 @@ static void bind_gs_images(struct st_context *st)
 const struct st_tracked_state st_bind_gs_images = {
    "st_bind_gs_images",
    {
-      0,
+      _NEW_TEXTURE,
       ST_NEW_GEOMETRY_PROGRAM | ST_NEW_IMAGE_UNITS,
    },
    bind_gs_images
@@ -208,7 +208,7 @@ static void bind_tcs_images(struct st_context *st)
 const struct st_tracked_state st_bind_tcs_images = {
    "st_bind_tcs_images",
    {
-      0,
+      _NEW_TEXTURE,
       ST_NEW_TESSCTRL_PROGRAM | ST_NEW_IMAGE_UNITS,
    },
    bind_tcs_images
@@ -228,7 +228,7 @@ static void bind_tes_images(struct st_context *st)
 const struct st_tracked_state st_bind_tes_images = {
    "st_bind_tes_images",
    {
-      0,
+      _NEW_TEXTURE,
       ST_NEW_TESSEVAL_PROGRAM | ST_NEW_IMAGE_UNITS,
    },
    bind_tes_images
@@ -248,7 +248,7 @@ static void bind_cs_images(struct st_context *st)
 const struct st_tracked_state st_bind_cs_images = {
    "st_bind_cs_images",
    {
-      0,
+      _NEW_TEXTURE,
       ST_NEW_COMPUTE_PROGRAM | ST_NEW_IMAGE_UNITS,
    },
    bind_cs_images
