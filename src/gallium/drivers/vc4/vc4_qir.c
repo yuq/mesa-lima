@@ -388,7 +388,7 @@ qir_emit(struct vc4_compile *c, struct qinst *inst)
 bool
 qir_reg_equals(struct qreg a, struct qreg b)
 {
-        return a.file == b.file && a.index == b.index;
+        return a.file == b.file && a.index == b.index && a.pack == b.pack;
 }
 
 struct vc4_compile *

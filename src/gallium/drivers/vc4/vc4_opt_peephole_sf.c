@@ -24,7 +24,7 @@
 /**
  * @file vc4_opt_peephole_sf.c
  *
- * Quick optimization to eliminate unused SF updates.
+ * Quick optimization to eliminate unused or identical SF updates.
  */
 
 #include "vc4_qir.h"
@@ -33,12 +33,12 @@
 static bool debug;
 
 static void
-dump_from(struct vc4_compile *c, struct qinst *inst)
+dump_from(struct vc4_compile *c, struct qinst *inst, const char *type)
 {
         if (!debug)
                 return;
 
-        fprintf(stderr, "optimizing: ");
+        fprintf(stderr, "optimizing %s: ", type);
         qir_dump_inst(c, inst);
         fprintf(stderr, "\n");
 }
@@ -54,24 +54,96 @@ dump_to(struct vc4_compile *c, struct qinst *inst)
         fprintf(stderr, "\n");
 }
 
+static bool
+inst_srcs_updated(struct qinst *inst, struct qinst *writer)
+{
+        /* If the sources get overwritten, stop tracking the
+         * last instruction writing SF.
+         */
+        switch (writer->dst.file) {
+        case QFILE_TEMP:
+                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                        if (inst->src[i].file == QFILE_TEMP &&
+                            inst->src[i].index == writer->dst.index) {
+                                return true;
+                        }
+                }
+                return false;
+        default:
+                return false;
+        }
+}
+
+static bool
+src_file_varies_on_reread(struct qreg reg)
+{
+        switch (reg.file) {
+        case QFILE_VARY:
+        case QFILE_VPM:
+                return true;
+        default:
+                return false;
+        }
+}
+
+static bool
+inst_result_equals(struct qinst *a, struct qinst *b)
+{
+        if (a->op != b->op ||
+            qir_depends_on_flags(a) ||
+            qir_depends_on_flags(b)) {
+                return false;
+        }
+
+        for (int i = 0; i < qir_get_op_nsrc(a->op); i++) {
+                if (!qir_reg_equals(a->src[i], b->src[i]) ||
+                    src_file_varies_on_reread(a->src[i]) ||
+                    src_file_varies_on_reread(b->src[i])) {
+                        return false;
+                }
+        }
+
+        return true;
+}
+
 bool
 qir_opt_peephole_sf(struct vc4_compile *c)
 {
         bool progress = false;
         bool sf_live = false;
+        struct qinst *last_sf = NULL;
 
         /* Walk the block from bottom to top, tracking if the SF is used, and
-         * removing unused ones.
+         * removing unused or repeated ones.
          */
         list_for_each_entry_rev(struct qinst, inst, &c->instructions, link) {
                 if (inst->sf) {
                         if (!sf_live) {
-                                dump_from(c, inst);
+                                /* Our instruction's SF isn't read, so drop it.
+                                 */
+                                dump_from(c, inst, "dead SF");
                                 inst->sf = false;
                                 dump_to(c, inst);
                                 progress = true;
+                        } else if (last_sf &&
+                                   inst_result_equals(last_sf, inst)) {
+                                /* The last_sf sets up same value as inst, so
+                                 * just drop the later one.
+                                 */
+                                dump_from(c, last_sf, "repeated SF");
+                                last_sf->sf = false;
+                                dump_to(c, last_sf);
+                                progress = true;
+                                last_sf = inst;
+                        } else {
+                                last_sf = inst;
                         }
                         sf_live = false;
+                }
+
+                if (last_sf) {
+                        if (inst_srcs_updated(last_sf, inst))
+                                last_sf = NULL;
                 }
 
                 if (qir_depends_on_flags(inst))
