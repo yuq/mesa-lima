@@ -627,13 +627,12 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
                            mt->target == GL_TEXTURE_CUBE_MAP;
       const unsigned depth = (is_cube ? 6 : 1) * mt->logical_depth0;
       const GLenum target = is_cube ? GL_TEXTURE_2D_ARRAY : mt->target;
-      const unsigned max_level = surface->level + mt->last_level + 1;
       const unsigned layer = mt->target != GL_TEXTURE_3D ?
                                 surface->layer / layer_divider : 0;
 
       brw->vtbl.emit_texture_surface_state(brw, mt, target,
-                                           layer, layer + depth,
-                                           surface->level, max_level,
+                                           layer, depth,
+                                           surface->level, mt->last_level + 1,
                                            surface->brw_surfaceformat,
                                            surface->swizzle,
                                            &wm_surf_offset_texture,
