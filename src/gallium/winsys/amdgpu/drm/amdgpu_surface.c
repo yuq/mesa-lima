@@ -343,6 +343,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    AddrSurfInfoIn.flags.degrade4Space = 1;
    AddrSurfInfoIn.flags.dccCompatible = !(surf->flags & RADEON_SURF_Z_OR_SBUFFER) &&
                                         !(surf->flags & RADEON_SURF_SCANOUT) &&
+                                        !(surf->flags & RADEON_SURF_DISABLE_DCC) &&
                                         !compressed && AddrDccIn.numSamples <= 1;
 
    AddrSurfInfoIn.flags.noStencil = (surf->flags & RADEON_SURF_SBUFFER) == 0;
