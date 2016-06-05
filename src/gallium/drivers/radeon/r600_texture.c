@@ -32,8 +32,6 @@
 #include <errno.h>
 #include <inttypes.h>
 
-static bool r600_texture_discard_dcc(struct r600_common_screen *rscreen,
-				     struct r600_texture *rtex);
 static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 				       struct r600_texture *rtex);
 static unsigned r600_choose_tiling(struct r600_common_screen *rscreen,
@@ -69,26 +67,11 @@ bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
 
 	/* DCC as:
 	 *   src: Use the 3D path. DCC decompression is expensive.
-	 *   dst: If overwriting the whole texture, discard DCC and use SDMA.
-	 *        Otherwise, use the 3D path.
+	 *   dst: Use the 3D path to compress the pixels with DCC.
 	 */
-	if (rsrc->dcc_offset && rsrc->surface.level[src_level].dcc_enabled)
+	if ((rsrc->dcc_offset && rsrc->surface.level[src_level].dcc_enabled) ||
+	    (rdst->dcc_offset && rdst->surface.level[dst_level].dcc_enabled))
 		return false;
-
-	if (rdst->dcc_offset && rdst->surface.level[dst_level].dcc_enabled) {
-		/* We can't discard DCC if the texture has been exported.
-		 * We can only discard DCC for the entire texture.
-		 */
-		if (rdst->resource.is_shared ||
-		    rdst->resource.b.b.last_level > 0 ||
-		    !util_texrange_covers_whole_level(&rdst->resource.b.b, dst_level,
-						      dstx, dsty, dstz, src_box->width,
-						      src_box->height, src_box->depth))
-			return false;
-
-		if (!r600_texture_discard_dcc(rctx->screen, rdst))
-			return false;
-	}
 
 	/* CMASK as:
 	 *   src: Both texture and SDMA paths need decompression. Use SDMA.
