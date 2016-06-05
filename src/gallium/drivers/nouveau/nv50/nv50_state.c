@@ -856,9 +856,10 @@ nv50_set_constant_buffer(struct pipe_context *pipe, uint shader, uint index,
    if (nv50->constbuf[s][i].user)
       nv50->constbuf[s][i].u.buf = NULL;
    else
-   if (nv50->constbuf[s][i].u.buf)
+   if (nv50->constbuf[s][i].u.buf) {
       nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_CB(s, i));
-
+      nv04_resource(nv50->constbuf[s][i].u.buf)->cb_bindings[s] &= ~(1 << i);
+   }
    pipe_resource_reference(&nv50->constbuf[s][i].u.buf, res);
 
    nv50->constbuf[s][i].user = (cb && cb->user_buffer) ? true : false;
