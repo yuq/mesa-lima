@@ -757,19 +757,25 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	struct r600_texture *dst = (struct r600_texture*)info->dst.resource;
 	unsigned dst_width = u_minify(info->dst.resource->width0, info->dst.level);
 	unsigned dst_height = u_minify(info->dst.resource->height0, info->dst.level);
-	enum pipe_format format = info->dst.format;
+	enum pipe_format format = info->src.format;
 	unsigned sample_mask =
 		rctx->b.chip_class == CAYMAN ? ~0 :
 		((1ull << MAX2(1, info->src.resource->nr_samples)) - 1);
+	struct pipe_resource *tmp, templ;
+	struct pipe_blit_info blit;
 
-	if (info->src.resource->nr_samples > 1 &&
-	    info->dst.resource->nr_samples <= 1 &&
-	    util_max_layer(info->src.resource, 0) == 0 &&
-	    util_max_layer(info->dst.resource, info->dst.level) == 0 &&
+	/* Check basic requirements for hw resolve. */
+	if (!(info->src.resource->nr_samples > 1 &&
+	      info->dst.resource->nr_samples <= 1 &&
+	      !util_format_is_pure_integer(format) &&
+	      !util_format_is_depth_or_stencil(format) &&
+	      util_max_layer(info->src.resource, 0) == 0))
+		return false;
+
+	/* Check the remaining requirements for hw resolve. */
+	if (util_max_layer(info->dst.resource, info->dst.level) == 0 &&
 	    util_is_format_compatible(util_format_description(info->src.format),
 				      util_format_description(info->dst.format)) &&
-	    !util_format_is_pure_integer(format) &&
-	    !util_format_is_depth_or_stencil(format) &&
 	    !info->scissor_enable &&
 	    (info->mask & PIPE_MASK_RGBA) == PIPE_MASK_RGBA &&
 	    dst_width == info->src.resource->width0 &&
@@ -797,7 +803,45 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 		r600_blitter_end(ctx);
 		return true;
 	}
-	return false;
+
+	/* Shader-based resolve is VERY SLOW. Instead, resolve into
+	 * a temporary texture and blit.
+	 */
+	memset(&templ, 0, sizeof(templ));
+	templ.target = PIPE_TEXTURE_2D;
+	templ.format = info->src.resource->format;
+	templ.width0 = info->src.resource->width0;
+	templ.height0 = info->src.resource->height0;
+	templ.depth0 = 1;
+	templ.array_size = 1;
+	templ.usage = PIPE_USAGE_DEFAULT;
+	templ.flags = R600_RESOURCE_FLAG_FORCE_TILING;
+
+	tmp = ctx->screen->resource_create(ctx->screen, &templ);
+	if (!tmp)
+		return false;
+
+	/* resolve */
+	r600_blitter_begin(ctx, R600_COLOR_RESOLVE |
+			   (info->render_condition_enable ? 0 : R600_DISABLE_RENDER_COND));
+	util_blitter_custom_resolve_color(rctx->blitter, tmp, 0, 0,
+					  info->src.resource, info->src.box.z,
+					  sample_mask, rctx->custom_blend_resolve,
+					  format);
+	r600_blitter_end(ctx);
+
+	/* blit */
+	blit = *info;
+	blit.src.resource = tmp;
+	blit.src.box.z = 0;
+
+	r600_blitter_begin(ctx, R600_BLIT |
+			   (info->render_condition_enable ? 0 : R600_DISABLE_RENDER_COND));
+	util_blitter_blit(rctx->blitter, &blit);
+	r600_blitter_end(ctx);
+
+	pipe_resource_reference(&tmp, NULL);
+	return true;
 }
 
 static void r600_blit(struct pipe_context *ctx,
