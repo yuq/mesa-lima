@@ -79,6 +79,7 @@ try_pbo_readpixels(struct st_context *st, struct st_renderbuffer *strb,
                    const struct gl_pixelstore_attrib *pack, void *pixels)
 {
    struct pipe_context *pipe = st->pipe;
+   struct pipe_screen *screen = pipe->screen;
    struct cso_context *cso = st->cso_context;
    struct pipe_surface *surface = strb->surface;
    struct pipe_resource *texture = strb->texture;
@@ -89,6 +90,11 @@ try_pbo_readpixels(struct st_context *st, struct st_renderbuffer *strb,
    bool success = false;
 
    if (texture->nr_samples > 1)
+      return false;
+
+   if (!screen->is_format_supported(screen, dst_format, PIPE_TEXTURE_2D,
+                                    texture->nr_samples,
+                                    PIPE_BIND_SHADER_IMAGE))
       return false;
 
    desc = util_format_description(dst_format);
