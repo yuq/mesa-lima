@@ -60,6 +60,10 @@
 #include "util/hash_table.h"
 #include "util/mesa-sha1.h"
 
+#ifdef _MSC_VER
+#include <stdlib.h>
+#define PATH_MAX _MAX_PATH
+#endif
 
 /**
  * Return mask of GLSL_x flags by examining the MESA_GLSL env var.

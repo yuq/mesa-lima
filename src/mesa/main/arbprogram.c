@@ -41,6 +41,10 @@
 #include "program/program.h"
 #include "program/prog_print.h"
 
+#ifdef _MSC_VER
+#include <stdlib.h>
+#define PATH_MAX _MAX_PATH
+#endif
 
 /**
  * Bind a program (make it current)
