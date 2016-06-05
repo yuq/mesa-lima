@@ -418,7 +418,7 @@ standalone_compile_shader(const struct standalone_options *_options,
             continue;
 
          shader->Program = rzalloc(shader, gl_program);
-         init_gl_program(shader->Program, shader->Type);
+         init_gl_program(shader->Program, shader->Stage);
       }
    }
 

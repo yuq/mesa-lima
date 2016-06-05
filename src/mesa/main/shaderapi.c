@@ -291,7 +291,7 @@ attach_shader(struct gl_context *ctx, GLuint program, GLuint shader)
          _mesa_error(ctx, GL_INVALID_OPERATION, "glAttachShader");
          return;
       } else if (same_type_disallowed &&
-                 shProg->Shaders[i]->Type == sh->Type) {
+                 shProg->Shaders[i]->Stage == sh->Stage) {
         /* Shader with the same type is already attached to this program,
          * OpenGL ES 2.0 and 3.0 specs say:
          *
@@ -334,7 +334,9 @@ create_shader(struct gl_context *ctx, GLenum type)
 
    _mesa_HashLockMutex(ctx->Shared->ShaderObjects);
    name = _mesa_HashFindFreeKeyBlock(ctx->Shared->ShaderObjects, 1);
-   sh = ctx->Driver.NewShader(ctx, name, type);
+   sh = ctx->Driver.NewShader(ctx, name,
+                              _mesa_shader_enum_to_shader_stage(type));
+   sh->Type = type;
    _mesa_HashInsertLocked(ctx->Shared->ShaderObjects, name, sh);
    _mesa_HashUnlockMutex(ctx->Shared->ShaderObjects);
 
@@ -456,11 +458,11 @@ detach_shader(struct gl_context *ctx, GLuint program, GLuint shader)
 #ifdef DEBUG
          /* sanity check - make sure the new list's entries are sensible */
          for (j = 0; j < shProg->NumShaders; j++) {
-            assert(shProg->Shaders[j]->Type == GL_VERTEX_SHADER ||
-                   shProg->Shaders[j]->Type == GL_TESS_CONTROL_SHADER ||
-                   shProg->Shaders[j]->Type == GL_TESS_EVALUATION_SHADER ||
-                   shProg->Shaders[j]->Type == GL_GEOMETRY_SHADER ||
-                   shProg->Shaders[j]->Type == GL_FRAGMENT_SHADER);
+            assert(shProg->Shaders[j]->Stage == MESA_SHADER_VERTEX ||
+                   shProg->Shaders[j]->Stage == MESA_SHADER_TESS_CTRL ||
+                   shProg->Shaders[j]->Stage == MESA_SHADER_TESS_EVAL ||
+                   shProg->Shaders[j]->Stage == MESA_SHADER_GEOMETRY ||
+                   shProg->Shaders[j]->Stage == MESA_SHADER_FRAGMENT);
             assert(shProg->Shaders[j]->RefCount > 0);
          }
 #endif
@@ -1117,9 +1119,9 @@ _mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
                    shProg->LinkStatus ? "Success" : "Failed");
 
       for (i = 0; i < shProg->NumShaders; i++) {
-         printf(" shader %u, type 0x%x\n",
+         printf(" shader %u, stage %u\n",
                       shProg->Shaders[i]->Name,
-                      shProg->Shaders[i]->Type);
+                      shProg->Shaders[i]->Stage);
       }
    }
 }

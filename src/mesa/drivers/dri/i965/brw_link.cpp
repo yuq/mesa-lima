@@ -185,14 +185,13 @@ process_glsl_ir(gl_shader_stage stage,
 }
 
 extern "C" struct gl_shader *
-brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
+brw_new_shader(struct gl_context *ctx, GLuint name, gl_shader_stage stage)
 {
    struct brw_shader *shader;
 
    shader = rzalloc(NULL, struct brw_shader);
    if (shader) {
-      shader->base.Type = type;
-      shader->base.Stage = _mesa_shader_enum_to_shader_stage(type);
+      shader->base.Stage = stage;
       shader->base.Name = name;
       _mesa_init_shader(ctx, &shader->base);
    }

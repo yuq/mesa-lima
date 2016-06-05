@@ -6459,7 +6459,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    GLenum target = _mesa_shader_stage_to_program(shader->Stage);
    bool progress;
    struct gl_shader_compiler_options *options =
-         &ctx->Const.ShaderCompilerOptions[_mesa_shader_enum_to_shader_stage(shader->Type)];
+         &ctx->Const.ShaderCompilerOptions[shader->Stage];
    struct pipe_screen *pscreen = ctx->st->pipe->screen;
    unsigned ptarget = st_shader_stage_to_ptarget(shader->Stage);
 
@@ -6554,8 +6554,8 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    /* Perform optimizations on the instructions in the glsl_to_tgsi_visitor. */
    v->simplify_cmp();
 
-   if (shader->Type != GL_TESS_CONTROL_SHADER &&
-       shader->Type != GL_TESS_EVALUATION_SHADER)
+   if (shader->Stage != MESA_SHADER_TESS_CTRL &&
+       shader->Stage != MESA_SHADER_TESS_EVAL)
       v->copy_propagate();
 
    while (v->eliminate_dead_code());
@@ -6591,7 +6591,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    shader->ir = NULL;
 
    /* This must be done before the uniform storage is associated. */
-   if (shader->Type == GL_FRAGMENT_SHADER &&
+   if (shader->Stage == MESA_SHADER_FRAGMENT &&
        (prog->InputsRead & VARYING_BIT_POS ||
         prog->SystemValuesRead & (1 << SYSTEM_VALUE_FRAG_COORD))) {
       static const gl_state_index wposTransformState[STATE_LENGTH] = {
@@ -6627,28 +6627,28 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    struct st_tesseval_program *sttep;
    struct st_compute_program *stcp;
 
-   switch (shader->Type) {
-   case GL_VERTEX_SHADER:
+   switch (shader->Stage) {
+   case MESA_SHADER_VERTEX:
       stvp = (struct st_vertex_program *)prog;
       stvp->glsl_to_tgsi = v;
       break;
-   case GL_FRAGMENT_SHADER:
+   case MESA_SHADER_FRAGMENT:
       stfp = (struct st_fragment_program *)prog;
       stfp->glsl_to_tgsi = v;
       break;
-   case GL_GEOMETRY_SHADER:
+   case MESA_SHADER_GEOMETRY:
       stgp = (struct st_geometry_program *)prog;
       stgp->glsl_to_tgsi = v;
       break;
-   case GL_TESS_CONTROL_SHADER:
+   case MESA_SHADER_TESS_CTRL:
       sttcp = (struct st_tessctrl_program *)prog;
       sttcp->glsl_to_tgsi = v;
       break;
-   case GL_TESS_EVALUATION_SHADER:
+   case MESA_SHADER_TESS_EVAL:
       sttep = (struct st_tesseval_program *)prog;
       sttep->glsl_to_tgsi = v;
       break;
-   case GL_COMPUTE_SHADER:
+   case MESA_SHADER_COMPUTE:
       stcp = (struct st_compute_program *)prog;
       stcp->glsl_to_tgsi = v;
       break;
@@ -6671,9 +6671,9 @@ get_mesa_program(struct gl_context *ctx,
       pscreen->get_shader_param(pscreen, ptarget, PIPE_SHADER_CAP_PREFERRED_IR);
    if (preferred_ir == PIPE_SHADER_IR_NIR) {
       /* TODO only for GLSL VS/FS for now: */
-      switch (shader->Type) {
-      case GL_VERTEX_SHADER:
-      case GL_FRAGMENT_SHADER:
+      switch (shader->Stage) {
+      case MESA_SHADER_VERTEX:
+      case MESA_SHADER_FRAGMENT:
          return st_nir_get_mesa_program(ctx, shader_program, shader);
       default:
          break;
@@ -6768,7 +6768,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 
       bool progress;
       exec_list *ir = prog->_LinkedShaders[i]->ir;
-      gl_shader_stage stage = _mesa_shader_enum_to_shader_stage(prog->_LinkedShaders[i]->Type);
+      gl_shader_stage stage = prog->_LinkedShaders[i]->Stage;
       const struct gl_shader_compiler_options *options =
             &ctx->Const.ShaderCompilerOptions[stage];
       unsigned ptarget = st_shader_stage_to_ptarget(stage);

@@ -2129,7 +2129,7 @@ assign_varying_locations(struct gl_context *ctx,
           * within a patch and can be used as shared memory.
           */
          if (input_var || (prog->SeparateShader && consumer == NULL) ||
-             producer->Type == GL_TESS_CONTROL_SHADER) {
+             producer->Stage == MESA_SHADER_TESS_CTRL) {
             matches.record(output_var, input_var);
          }
 

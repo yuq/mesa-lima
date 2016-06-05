@@ -2235,7 +2235,7 @@ link_intrastage_shaders(void *mem_ctx,
       return NULL;
    }
 
-   gl_shader *linked = ctx->Driver.NewShader(NULL, 0, main->Type);
+   gl_shader *linked = ctx->Driver.NewShader(NULL, 0, shader_list[0]->Stage);
    linked->ir = new(linked) exec_list;
    clone_ir_list(mem_ctx, linked->ir, main->ir);
 

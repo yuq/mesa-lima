@@ -99,14 +99,12 @@ _mesa_init_shader(struct gl_context *ctx, struct gl_shader *shader)
  * Called via ctx->Driver.NewShader()
  */
 struct gl_shader *
-_mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
+_mesa_new_shader(struct gl_context *ctx, GLuint name, gl_shader_stage stage)
 {
    struct gl_shader *shader;
-   assert(_mesa_validate_shader_target(ctx, type));
    shader = rzalloc(NULL, struct gl_shader);
    if (shader) {
-      shader->Type = type;
-      shader->Stage = _mesa_shader_enum_to_shader_stage(type);
+      shader->Stage = stage;
       shader->Name = name;
       _mesa_init_shader(ctx, shader);
    }

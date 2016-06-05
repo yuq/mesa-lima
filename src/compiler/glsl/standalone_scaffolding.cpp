@@ -68,17 +68,16 @@ _mesa_shader_debug(struct gl_context *, GLenum, GLuint *,
 }
 
 struct gl_shader *
-_mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
+_mesa_new_shader(struct gl_context *ctx, GLuint name, gl_shader_stage stage)
 {
    struct gl_shader *shader;
 
    (void) ctx;
 
-   assert(type == GL_FRAGMENT_SHADER || type == GL_VERTEX_SHADER);
+   assert(stage == MESA_SHADER_FRAGMENT || stage == MESA_SHADER_VERTEX);
    shader = rzalloc(NULL, struct gl_shader);
    if (shader) {
-      shader->Type = type;
-      shader->Stage = _mesa_shader_enum_to_shader_stage(type);
+      shader->Stage = stage;
       shader->Name = name;
       shader->RefCount = 1;
    }
