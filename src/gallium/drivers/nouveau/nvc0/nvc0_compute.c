@@ -324,6 +324,7 @@ nvc0_compute_validate_surfaces(struct nvc0_context *nvc0)
    nvc0_validate_suf(nvc0, 5);
 
    /* Invalidate all FRAGMENT images because they are aliased with COMPUTE. */
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_SUF);
    nvc0->dirty_3d |= NVC0_NEW_3D_SURFACES;
    nvc0->images_dirty[4] |= nvc0->images_valid[4];
 }

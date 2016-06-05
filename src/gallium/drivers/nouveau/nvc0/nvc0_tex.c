@@ -994,11 +994,6 @@ nvc0_validate_suf(struct nvc0_context *nvc0, int s)
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct nvc0_screen *screen = nvc0->screen;
 
-   if (s == 5)
-      nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_SUF);
-   else
-      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_SUF);
-
    for (int i = 0; i < NVC0_MAX_IMAGES; ++i) {
       struct pipe_image_view *view = &nvc0->images[s][i];
       int width, height, depth;
@@ -1099,6 +1094,7 @@ nvc0_update_surface_bindings(struct nvc0_context *nvc0)
    nvc0_validate_suf(nvc0, 4);
 
    /* Invalidate all COMPUTE images because they are aliased with FRAGMENT. */
+   nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_SUF);
    nvc0->dirty_cp |= NVC0_NEW_CP_SURFACES;
    nvc0->images_dirty[5] |= nvc0->images_valid[5];
 }
