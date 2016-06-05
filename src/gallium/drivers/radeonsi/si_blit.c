@@ -928,7 +928,8 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	templ.depth0 = 1;
 	templ.array_size = 1;
 	templ.usage = PIPE_USAGE_DEFAULT;
-	templ.flags = R600_RESOURCE_FLAG_FORCE_TILING;
+	templ.flags = R600_RESOURCE_FLAG_FORCE_TILING |
+		      R600_RESOURCE_FLAG_DISABLE_DCC;
 
 	tmp = ctx->screen->resource_create(ctx->screen, &templ);
 	if (!tmp)
