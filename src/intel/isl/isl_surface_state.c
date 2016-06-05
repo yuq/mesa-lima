@@ -311,10 +311,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 #endif
 
 #if GEN_GEN >= 8
-   s.SamplerL2BypassModeDisable = true;
-#endif
-
-#if GEN_GEN >= 8
    s.RenderCacheReadWriteMode = WriteOnlyCache;
 #else
    s.RenderCacheReadWriteMode = 0;
@@ -431,7 +427,6 @@ isl_genX(buffer_fill_state_s)(void *state,
 #endif
 
 #if (GEN_GEN >= 8)
-      .SamplerL2BypassModeDisable = true,
       .RenderCacheReadWriteMode = WriteOnlyCache,
 #else
       .RenderCacheReadWriteMode = 0,
