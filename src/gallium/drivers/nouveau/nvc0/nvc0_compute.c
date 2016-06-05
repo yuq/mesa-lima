@@ -458,4 +458,7 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
 
    /* TODO: Not sure if this is really necessary. */
    nvc0_compute_invalidate_surfaces(nvc0, 5);
+   nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_SUF);
+   nvc0->dirty_cp |= NVC0_NEW_CP_SURFACES;
+   nvc0->images_dirty[5] |= nvc0->images_valid[5];
 }
