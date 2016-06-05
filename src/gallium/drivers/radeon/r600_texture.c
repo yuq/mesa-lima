@@ -1793,6 +1793,21 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 		*reset_value |= 0x40404040U;
 }
 
+void vi_dcc_clear_level(struct r600_common_context *rctx,
+			struct r600_texture *rtex,
+			unsigned level, unsigned clear_value)
+{
+	struct pipe_resource *dcc_buffer = &rtex->resource.b.b;
+	uint64_t dcc_offset = rtex->dcc_offset +
+			      rtex->surface.level[level].dcc_offset;
+
+	assert(rtex->dcc_offset && rtex->surface.level[level].dcc_enabled);
+
+	rctx->clear_buffer(&rctx->b, dcc_buffer, dcc_offset,
+			   rtex->surface.level[level].dcc_fast_clear_size,
+			   clear_value, R600_COHERENCY_CB_META);
+}
+
 void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   struct pipe_framebuffer_state *fb,
 				   struct r600_atom *fb_state,
@@ -1867,11 +1882,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				continue;
 
 			vi_get_fast_clear_parameters(fb->cbufs[i]->format, color, &reset_value, &clear_words_needed);
-
-			rctx->clear_buffer(&rctx->b, &tex->resource.b.b,
-					   tex->dcc_offset,
-					   tex->surface.level[0].dcc_fast_clear_size,
-					   reset_value, R600_COHERENCY_CB_META);
+			vi_dcc_clear_level(rctx, tex, 0, reset_value);
 
 			if (clear_words_needed)
 				tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
