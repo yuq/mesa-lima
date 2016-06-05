@@ -149,27 +149,11 @@ get_image_alignment(const struct isl_surf *surf)
 static uint32_t
 get_qpitch(const struct isl_surf *surf)
 {
-   switch (surf->dim) {
+   switch (surf->dim_layout) {
    default:
       unreachable("Bad isl_surf_dim");
-   case ISL_SURF_DIM_1D:
-      if (GEN_GEN >= 9) {
-         /* QPitch is usually expressed as rows of surface elements (where
-          * a surface element is an compression block or a single surface
-          * sample). Skylake 1D is an outlier.
-          *
-          * From the Skylake BSpec >> Memory Views >> Common Surface
-          * Formats >> Surface Layout and Tiling >> 1D Surfaces:
-          *
-          *    Surface QPitch specifies the distance in pixels between array
-          *    slices.
-          */
-         return isl_surf_get_array_pitch_el(surf);
-      } else {
-         return isl_surf_get_array_pitch_el_rows(surf);
-      }
-   case ISL_SURF_DIM_2D:
-   case ISL_SURF_DIM_3D:
+   case ISL_DIM_LAYOUT_GEN4_2D:
+   case ISL_DIM_LAYOUT_GEN4_3D:
       if (GEN_GEN >= 9) {
          return isl_surf_get_array_pitch_el_rows(surf);
       } else {
@@ -184,6 +168,18 @@ get_qpitch(const struct isl_surf *surf)
           */
          return isl_surf_get_array_pitch_sa_rows(surf);
       }
+   case ISL_DIM_LAYOUT_GEN9_1D:
+      /* QPitch is usually expressed as rows of surface elements (where
+       * a surface element is an compression block or a single surface
+       * sample). Skylake 1D is an outlier.
+       *
+       * From the Skylake BSpec >> Memory Views >> Common Surface
+       * Formats >> Surface Layout and Tiling >> 1D Surfaces:
+       *
+       *    Surface QPitch specifies the distance in pixels between array
+       *    slices.
+       */
+      return isl_surf_get_array_pitch_el(surf);
    }
 }
 #endif /* GEN_GEN >= 8 */
