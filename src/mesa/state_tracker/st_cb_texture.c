@@ -456,21 +456,42 @@ guess_and_alloc_texture(struct st_context *st,
 			struct st_texture_object *stObj,
 			const struct st_texture_image *stImage)
 {
+   const struct gl_texture_image *firstImage;
    GLuint lastLevel, width, height, depth;
    GLuint bindings;
    GLuint ptWidth, ptHeight, ptDepth, ptLayers;
    enum pipe_format fmt;
+   bool guessed_box = false;
 
    DBG("%s\n", __func__);
 
    assert(!stObj->pt);
 
-   if (!guess_base_level_size(stObj->base.Target,
-                              stImage->base.Width2,
-                              stImage->base.Height2,
-                              stImage->base.Depth2,
-                              stImage->base.Level,
-                              &width, &height, &depth)) {
+   /* If a base level image with compatible size exists, use that as our guess.
+    */
+   firstImage = _mesa_base_tex_image(&stObj->base);
+   if (firstImage &&
+       guess_base_level_size(stObj->base.Target,
+                             firstImage->Width2,
+                             firstImage->Height2,
+                             firstImage->Depth2,
+                             firstImage->Level,
+                             &width, &height, &depth)) {
+      if (stImage->base.Width2 == u_minify(width, stImage->base.Level) &&
+          stImage->base.Height2 == u_minify(height, stImage->base.Level) &&
+          stImage->base.Depth2 == u_minify(depth, stImage->base.Level))
+         guessed_box = true;
+   }
+
+   if (!guessed_box)
+      guessed_box = guess_base_level_size(stObj->base.Target,
+                                          stImage->base.Width2,
+                                          stImage->base.Height2,
+                                          stImage->base.Depth2,
+                                          stImage->base.Level,
+                                          &width, &height, &depth);
+
+   if (!guessed_box) {
       /* we can't determine the image size at level=0 */
       /* this is not an out of memory error */
       return GL_TRUE;
