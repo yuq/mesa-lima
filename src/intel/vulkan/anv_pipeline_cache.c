@@ -158,7 +158,10 @@ anv_pipeline_cache_search_unlocked(struct anv_pipeline_cache *cache,
       }
    }
 
-   unreachable("hash table should never be full");
+   /* This can happen if the pipeline cache is disabled via
+    * ANV_ENABLE_PIPELINE_CACHE=false
+    */
+   return NO_KERNEL;
 }
 
 uint32_t
