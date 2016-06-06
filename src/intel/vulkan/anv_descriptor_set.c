@@ -89,6 +89,19 @@ VkResult anv_CreateDescriptorSetLayout(
    for (uint32_t j = 0; j < pCreateInfo->bindingCount; j++) {
       const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBindings[j];
       uint32_t b = binding->binding;
+      /* We temporarily store the pointer to the binding in the
+       * immutable_samplers pointer.  This provides us with a quick-and-dirty
+       * way to sort the bindings by binding number.
+       */
+      set_layout->binding[b].immutable_samplers = (void *)binding;
+   }
+
+   for (uint32_t b = 0; b <= max_binding; b++) {
+      const VkDescriptorSetLayoutBinding *binding =
+         (void *)set_layout->binding[b].immutable_samplers;
+
+      if (binding == NULL)
+         continue;
 
       assert(binding->descriptorCount > 0);
 #ifndef NDEBUG
