@@ -2443,8 +2443,16 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		}
 
 		cb_color_info = cb->cb_color_info | tex->cb_color_info;
-		if (tex->dcc_offset && cb->level_info->dcc_enabled)
-			cb_color_info |= S_028C70_DCC_ENABLE(1);
+
+		if (tex->dcc_offset && cb->level_info->dcc_enabled) {
+			bool is_msaa_resolve_dst = state->cbufs[0] &&
+						   state->cbufs[0]->texture->nr_samples > 1 &&
+						   state->cbufs[1] == &cb->base &&
+						   state->cbufs[1]->texture->nr_samples <= 1;
+
+			if (!is_msaa_resolve_dst)
+				cb_color_info |= S_028C70_DCC_ENABLE(1);
+		}
 
 		radeon_set_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C,
 					   sctx->b.chip_class >= VI ? 14 : 13);

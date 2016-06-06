@@ -902,8 +902,19 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    info->src.box.height == dst_height &&
 	    info->src.box.depth == 1 &&
 	    dst->surface.level[info->dst.level].mode >= RADEON_SURF_MODE_1D &&
-	    (!dst->cmask.size || !dst->dirty_level_mask) && /* dst cannot be fast-cleared */
-	    !dst->dcc_offset) {
+	    (!dst->cmask.size || !dst->dirty_level_mask)) { /* dst cannot be fast-cleared */
+		/* Resolving into a surface with DCC is unsupported. Since
+		 * it's being overwritten anyway, clear it to uncompressed.
+		 * This is still the fastest codepath even with this clear.
+		 */
+		if (dst->dcc_offset &&
+		    dst->surface.level[info->dst.level].dcc_enabled) {
+			vi_dcc_clear_level(&sctx->b, dst, info->dst.level,
+					   0xFFFFFFFF);
+			dst->dirty_level_mask &= ~(1 << info->dst.level);
+		}
+
+		/* Resolve directly from src to dst. */
 		si_blitter_begin(ctx, SI_COLOR_RESOLVE |
 				 (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
 		util_blitter_custom_resolve_color(sctx->blitter,
