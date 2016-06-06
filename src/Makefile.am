@@ -32,7 +32,7 @@ git_sha1.h.tmp:
 			> git_sha1.h.tmp ; \
 		fi \
 	else \
-		cp git_sha1.h git_sha1.h.tmp ;\
+		cp $(srcdir)/git_sha1.h git_sha1.h.tmp ;\
 	fi
 
 git_sha1.h: git_sha1.h.tmp
