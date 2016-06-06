@@ -266,9 +266,6 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 	default:
 		return -EINVAL;
 	}
-	if (ptex->bind & PIPE_BIND_SCANOUT) {
-		surface->flags |= RADEON_SURF_SCANOUT;
-	}
 
 	if (!is_flushed_depth && is_depth) {
 		surface->flags |= RADEON_SURF_ZBUFFER;
@@ -286,6 +283,16 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 	    ptex->format == PIPE_FORMAT_R9G9B9E5_FLOAT)
 		surface->flags |= RADEON_SURF_DISABLE_DCC;
 
+	if (ptex->bind & PIPE_BIND_SCANOUT) {
+		/* This should catch bugs in gallium users setting incorrect flags. */
+		assert(surface->nsamples == 1 &&
+		       surface->array_size == 1 &&
+		       surface->npix_z == 1 &&
+		       surface->last_level == 0 &&
+		       !(surface->flags & RADEON_SURF_Z_OR_SBUFFER));
+
+		surface->flags |= RADEON_SURF_SCANOUT;
+	}
 	return 0;
 }
 
