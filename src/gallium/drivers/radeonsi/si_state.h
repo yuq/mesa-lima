@@ -279,8 +279,9 @@ struct si_buffer_resources {
 void si_ce_enable_loads(struct radeon_winsys_cs *ib);
 void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 				    const struct radeon_surf_level *base_level_info,
-				    unsigned base_level, unsigned block_width,
-				    bool is_stencil, uint32_t *state);
+				    unsigned base_level, unsigned first_level,
+				    unsigned block_width, bool is_stencil,
+				    uint32_t *state);
 void si_set_ring_buffer(struct pipe_context *ctx, uint slot,
 			struct pipe_resource *buffer,
 			unsigned stride, unsigned num_records,

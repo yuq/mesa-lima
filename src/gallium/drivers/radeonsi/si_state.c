@@ -3446,7 +3446,7 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 				   res->width0, res->height0, res->depth0,
 				   desc, NULL);
 
-	si_set_mutable_tex_desc_fields(rtex, &rtex->surface.level[0], 0,
+	si_set_mutable_tex_desc_fields(rtex, &rtex->surface.level[0], 0, 0,
 				       rtex->surface.blk_w, false, desc);
 
 	/* Clear the base address and set the relative DCC offset. */

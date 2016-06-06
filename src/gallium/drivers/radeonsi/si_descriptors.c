@@ -312,10 +312,21 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 	}
 }
 
+/* Set texture descriptor fields that can be changed by reallocations.
+ *
+ * \param tex			texture
+ * \param base_level_info	information of the level of BASE_ADDRESS
+ * \param base_level		the level of BASE_ADDRESS
+ * \param first_level		pipe_sampler_view.u.tex.first_level
+ * \param block_width		util_format_get_blockwidth()
+ * \param is_stencil		select between separate Z & Stencil
+ * \param state			descriptor to update
+ */
 void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 				    const struct radeon_surf_level *base_level_info,
-				    unsigned base_level, unsigned block_width,
-				    bool is_stencil, uint32_t *state)
+				    unsigned base_level, unsigned first_level,
+				    unsigned block_width, bool is_stencil,
+				    uint32_t *state)
 {
 	uint64_t va = tex->resource.gpu_address + base_level_info->offset;
 	unsigned pitch = base_level_info->nblk_x * block_width;
@@ -331,7 +342,7 @@ void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 							     is_stencil));
 	state[4] |= S_008F20_PITCH(pitch - 1);
 
-	if (tex->dcc_offset && base_level_info->dcc_enabled) {
+	if (tex->dcc_offset && tex->surface.level[first_level].dcc_enabled) {
 		state[6] |= S_008F28_COMPRESSION_EN(1);
 		state[7] = (tex->resource.gpu_address +
 			    tex->dcc_offset +
@@ -369,6 +380,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 			si_set_mutable_tex_desc_fields(rtex,
 						       rview->base_level_info,
 						       rview->base_level,
+						       rview->base.u.tex.first_level,
 						       rview->block_width,
 						       is_separate_stencil,
 						       desc);
@@ -640,7 +652,8 @@ static void si_set_shader_image(struct si_context *ctx,
 					   view->u.tex.last_layer,
 					   width, height, depth,
 					   desc, NULL);
-		si_set_mutable_tex_desc_fields(tex, &tex->surface.level[level], level,
+		si_set_mutable_tex_desc_fields(tex, &tex->surface.level[level],
+					       level, level,
 					       util_format_get_blockwidth(view->format),
 					       false, desc);
 	}
