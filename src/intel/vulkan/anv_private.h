@@ -922,6 +922,11 @@ struct anv_vue_header {
 };
 
 struct anv_descriptor_set_binding_layout {
+#ifndef NDEBUG
+   /* The type of the descriptors in this binding */
+   VkDescriptorType type;
+#endif
+
    /* Number of array elements in this binding */
    uint16_t array_size;
 

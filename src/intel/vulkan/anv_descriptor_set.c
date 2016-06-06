@@ -91,6 +91,9 @@ VkResult anv_CreateDescriptorSetLayout(
       uint32_t b = binding->binding;
 
       assert(binding->descriptorCount > 0);
+#ifndef NDEBUG
+      set_layout->binding[b].type = binding->descriptorType;
+#endif
       set_layout->binding[b].array_size = binding->descriptorCount;
       set_layout->binding[b].descriptor_index = set_layout->size;
       set_layout->size += binding->descriptorCount;
@@ -525,6 +528,8 @@ void anv_UpdateDescriptorSets(
       struct anv_descriptor *desc =
          &set->descriptors[bind_layout->descriptor_index];
       desc += write->dstArrayElement;
+
+      assert(write->descriptorType == bind_layout->type);
 
       switch (write->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
