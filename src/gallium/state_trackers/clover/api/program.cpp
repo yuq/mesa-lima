@@ -237,17 +237,46 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
    return e.get();
 }
 
+namespace {
+   ref_vector<device>
+   validate_link_devices(const ref_vector<program> &progs,
+                         const ref_vector<device> &all_devs) {
+      std::vector<device *> devs;
+
+      for (auto &dev : all_devs) {
+         const auto has_binary = [&](const program &prog) {
+            return !prog.build(dev).binary.secs.empty();
+         };
+
+         // According to the CL 1.2 spec, when "all programs specified [..]
+         // contain a compiled binary or library for the device [..] a link is
+         // performed",
+         if (all_of(has_binary, progs))
+            devs.push_back(&dev);
+
+         // otherwise if "none of the programs contain a compiled binary or
+         // library for that device [..] no link is performed.  All other
+         // cases will return a CL_INVALID_OPERATION error."
+         else if (any_of(has_binary, progs))
+            throw error(CL_INVALID_OPERATION);
+      }
+
+      return map(derefs(), devs);
+   }
+}
+
 CLOVER_API cl_program
 clLinkProgram(cl_context d_ctx, cl_uint num_devs, const cl_device_id *d_devs,
               const char *p_opts, cl_uint num_progs, const cl_program *d_progs,
               void (*pfn_notify) (cl_program, void *), void *user_data,
               cl_int *r_errcode) try {
    auto &ctx = obj(d_ctx);
-   auto devs = (d_devs ? objs(d_devs, num_devs) :
-                ref_vector<device>(ctx.devices()));
    auto opts = (p_opts ? p_opts : "");
    auto progs = objs(d_progs, num_progs);
    auto prog = create<program>(ctx);
+   auto devs = validate_link_devices(progs,
+                                     (d_devs ? objs(d_devs, num_devs) :
+                                      ref_vector<device>(ctx.devices())));
 
    validate_build_common(prog, num_devs, d_devs, pfn_notify, user_data);
 
