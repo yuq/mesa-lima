@@ -3598,7 +3598,9 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          src0 = fetchSrc(0, pos);
          src1 = fetchSrc(0, pos + 1);
          mkOp2(OP_MERGE, TYPE_U64, dreg, src0, src1);
-         mkCvt(OP_CVT, dstTy, dst0[c], srcTy, dreg);
+         Instruction *cvt = mkCvt(OP_CVT, dstTy, dst0[c], srcTy, dreg);
+         if (!isFloatType(dstTy))
+            cvt->rnd = ROUND_Z;
          pos += 2;
       }
       break;
