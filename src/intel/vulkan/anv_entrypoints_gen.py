@@ -51,19 +51,31 @@ def hash(name):
 
     return h
 
+def get_platform_guard_macro(name):
+    if "Xlib" in name:
+        return "VK_USE_PLATFORM_XLIB_KHR"
+    elif "Xcb" in name:
+        return "VK_USE_PLATFORM_XCB_KHR"
+    elif "Wayland" in name:
+        return "VK_USE_PLATFORM_WAYLAND_KHR"
+    elif "Mir" in name:
+        return "VK_USE_PLATFORM_MIR_KHR"
+    elif "Android" in name:
+        return "VK_USE_PLATFORM_ANDROID_KHR"
+    elif "Win32" in name:
+        return "VK_USE_PLATFORM_WIN32_KHR"
+    else:
+        return None
+
 def print_guard_start(name):
-    if "Wayland" in name:
-        print "#ifdef VK_USE_PLATFORM_WAYLAND_KHR"
-    if "Xcb" in name:
-        print "#ifdef VK_USE_PLATFORM_XCB_KHR"
-    return
+    guard = get_platform_guard_macro(name)
+    if guard is not None:
+        print "#ifdef {0}".format(guard)
 
 def print_guard_end(name):
-    if "Wayland" in name:
-        print "#endif // VK_USE_PLATFORM_WAYLAND_KHR"
-    if "Xcb" in name:
-        print "#endif // VK_USE_PLATFORM_XCB_KHR"
-    return
+    guard = get_platform_guard_macro(name)
+    if guard is not None:
+        print "#endif // {0}".format(guard)
 
 opt_header = False
 opt_code = False
