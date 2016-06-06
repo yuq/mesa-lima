@@ -276,6 +276,7 @@ struct si_buffer_resources {
 	} while(0)
 
 /* si_descriptors.c */
+void si_ce_reinitialize_all_descriptors(struct si_context *sctx);
 void si_ce_enable_loads(struct radeon_winsys_cs *ib);
 void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 				    const struct radeon_surf_level *base_level_info,

@@ -160,8 +160,8 @@ static bool si_ce_upload(struct si_context *sctx, unsigned ce_offset, unsigned s
 	return true;
 }
 
-static void si_reinitialize_ce_ram(struct si_context *sctx,
-                            struct si_descriptors *desc)
+static void si_ce_reinitialize_descriptors(struct si_context *sctx,
+                                           struct si_descriptors *desc)
 {
 	if (desc->buffer) {
 		struct r600_resource *buffer = (struct r600_resource*)desc->buffer;
@@ -186,6 +186,14 @@ static void si_reinitialize_ce_ram(struct si_context *sctx,
 	desc->ce_ram_dirty = false;
 }
 
+void si_ce_reinitialize_all_descriptors(struct si_context *sctx)
+{
+	int i;
+
+	for (i = 0; i < SI_NUM_DESCS; ++i)
+		si_ce_reinitialize_descriptors(sctx, &sctx->descriptors[i]);
+}
+
 void si_ce_enable_loads(struct radeon_winsys_cs *ib)
 {
 	radeon_emit(ib, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
@@ -207,7 +215,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 		uint32_t const* list = (uint32_t const*)desc->list;
 
 		if (desc->ce_ram_dirty)
-			si_reinitialize_ce_ram(sctx, desc);
+			si_ce_reinitialize_descriptors(sctx, desc);
 
 		while(desc->dirty_mask) {
 			int begin, count;
