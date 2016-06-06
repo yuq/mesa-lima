@@ -182,6 +182,25 @@ process_xfb_layout_qualifiers(void *mem_ctx, const gl_shader *sh,
    return has_xfb_qualifiers;
 }
 
+static bool
+anonymous_struct_type_matches(const glsl_type *output_type,
+                              const glsl_type *to_match)
+{
+    while (output_type->is_array() && to_match->is_array()) {
+        /* if the lengths at each level don't match fail. */
+        if (output_type->length != to_match->length)
+            return false;
+        output_type = output_type->fields.array;
+        to_match = to_match->fields.array;
+    }
+
+    if (output_type->is_array() || to_match->is_array())
+        return false;
+    return output_type->is_anonymous() &&
+           to_match->is_anonymous() &&
+           to_match->record_compare(output_type);
+}
+
 /**
  * Validate the types and qualifiers of an output from one stage against the
  * matching input to another stage.
@@ -226,9 +245,7 @@ cross_validate_types_and_qualifiers(struct gl_shader_program *prog,
        *     fragment language."
        */
       if (!output->type->is_array() || !is_gl_identifier(output->name)) {
-         bool anon_matches = output->type->is_anonymous() &&
-            type_to_match->is_anonymous() &&
-            type_to_match->record_compare(output->type);
+         bool anon_matches = anonymous_struct_type_matches(output->type, type_to_match);
 
          if (!anon_matches) {
             linker_error(prog,
