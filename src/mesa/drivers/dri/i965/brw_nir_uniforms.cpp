@@ -108,7 +108,8 @@ brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
          unsigned max_vector_size = 4;
          if (storage->type->base_type == GLSL_TYPE_DOUBLE) {
             vector_size *= 2;
-            max_vector_size *= 2;
+            if (vector_size > 4)
+               max_vector_size = 8;
          }
 
          for (unsigned s = 0; s < vector_count; s++) {
