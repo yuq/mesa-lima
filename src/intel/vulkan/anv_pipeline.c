@@ -646,7 +646,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
          for (unsigned i = 0; i < array_len; i++) {
             rt_bindings[num_rts] = (struct anv_pipeline_binding) {
                .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
-               .offset = rt + i,
+               .binding = 0,
+               .index = rt + i,
             };
          }
 
@@ -662,7 +663,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
          /* If we have no render targets, we need a null render target */
          rt_bindings[0] = (struct anv_pipeline_binding) {
             .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
-            .offset = UINT16_MAX,
+            .binding = 0,
+            .index = UINT16_MAX,
          };
          num_rts = 1;
       }

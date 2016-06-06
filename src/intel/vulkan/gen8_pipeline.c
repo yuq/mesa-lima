@@ -137,11 +137,12 @@ emit_cb_state(struct anv_pipeline *pipeline,
       /* We can have at most 8 attachments */
       assert(i < 8);
 
-      if (binding->offset >= info->attachmentCount)
+      if (binding->index >= info->attachmentCount)
          continue;
 
+      assert(binding->binding == 0);
       const VkPipelineColorBlendAttachmentState *a =
-         &info->pAttachments[binding->offset];
+         &info->pAttachments[binding->index];
 
       if (a->srcColorBlendFactor != a->srcAlphaBlendFactor ||
           a->dstColorBlendFactor != a->dstAlphaBlendFactor ||

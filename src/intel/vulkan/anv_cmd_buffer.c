@@ -809,9 +809,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       if (binding->set == ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS) {
          /* Color attachment binding */
          assert(stage == MESA_SHADER_FRAGMENT);
-         if (binding->offset < subpass->color_count) {
+         assert(binding->binding == 0);
+         if (binding->index < subpass->color_count) {
             const struct anv_image_view *iview =
-               fb->attachments[subpass->color_attachments[binding->offset]];
+               fb->attachments[subpass->color_attachments[binding->index]];
 
             assert(iview->color_rt_surface_state.alloc_size);
             surface_state = iview->color_rt_surface_state;
@@ -830,7 +831,8 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
       struct anv_descriptor_set *set =
          cmd_buffer->state.descriptors[binding->set];
-      struct anv_descriptor *desc = &set->descriptors[binding->offset];
+      uint32_t offset = set->layout->binding[binding->binding].descriptor_index;
+      struct anv_descriptor *desc = &set->descriptors[offset + binding->index];
 
       switch (desc->type) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -927,7 +929,8 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
       struct anv_pipeline_binding *binding = &map->sampler_to_descriptor[s];
       struct anv_descriptor_set *set =
          cmd_buffer->state.descriptors[binding->set];
-      struct anv_descriptor *desc = &set->descriptors[binding->offset];
+      uint32_t offset = set->layout->binding[binding->binding].descriptor_index;
+      struct anv_descriptor *desc = &set->descriptors[offset + binding->index];
 
       if (desc->type != VK_DESCRIPTOR_TYPE_SAMPLER &&
           desc->type != VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)

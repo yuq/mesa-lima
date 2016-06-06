@@ -318,13 +318,13 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       BITSET_FOREACH_SET(b, _tmp, state.set[set].used,
                          set_layout->binding_count) {
          unsigned array_size = set_layout->binding[b].array_size;
-         unsigned set_offset = set_layout->binding[b].descriptor_index;
 
          if (set_layout->binding[b].stage[shader->stage].surface_index >= 0) {
             state.set[set].surface_offsets[b] = surface;
             for (unsigned i = 0; i < array_size; i++) {
                map->surface_to_descriptor[surface + i].set = set;
-               map->surface_to_descriptor[surface + i].offset = set_offset + i;
+               map->surface_to_descriptor[surface + i].binding = b;
+               map->surface_to_descriptor[surface + i].index = i;
             }
             surface += array_size;
          }
@@ -333,7 +333,8 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
             state.set[set].sampler_offsets[b] = sampler;
             for (unsigned i = 0; i < array_size; i++) {
                map->sampler_to_descriptor[sampler + i].set = set;
-               map->sampler_to_descriptor[sampler + i].offset = set_offset + i;
+               map->sampler_to_descriptor[sampler + i].binding = b;
+               map->sampler_to_descriptor[sampler + i].index = i;
             }
             sampler += array_size;
          }
