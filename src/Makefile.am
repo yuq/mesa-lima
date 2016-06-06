@@ -46,6 +46,12 @@ git_sha1.h: git_sha1.h.tmp
 
 BUILT_SOURCES = git_sha1.h
 
+# We want to keep the srcdir file since we need it on rebuild from tarball.
+# At the same time `make distclean' gets angry at us if we don't cleanup the
+# builddir one.
+distclean-local:
+	test $(top_srcdir) != $(top_builddir) && rm $(builddir)/git_sha1.h
+
 SUBDIRS = . gtest util mapi/glapi/gen mapi
 
 # include only conditionally ?
