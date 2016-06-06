@@ -33,6 +33,7 @@ git_sha1.h.tmp:
 		fi \
 	else \
 		cp $(srcdir)/git_sha1.h git_sha1.h.tmp ;\
+		chmod u+w git_sha1.h.tmp; \
 	fi
 
 git_sha1.h: git_sha1.h.tmp
