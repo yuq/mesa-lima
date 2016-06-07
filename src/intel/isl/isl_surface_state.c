@@ -202,89 +202,90 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    uint32_t halign, valign;
    get_halign_valign(info->surf, &halign, &valign);
 
-   struct GENX(RENDER_SURFACE_STATE) s = {
-      .SurfaceType = get_surftype(info->surf->dim, info->view->usage),
-      .SurfaceArray = info->surf->phys_level0_sa.array_len > 1,
-      .SurfaceVerticalAlignment = valign,
-      .SurfaceHorizontalAlignment = halign,
+   struct GENX(RENDER_SURFACE_STATE) s = { 0 };
+
+   s.SurfaceType = get_surftype(info->surf->dim, info->view->usage);
+
+   s.SurfaceArray = info->surf->phys_level0_sa.array_len > 1;
+   s.SurfaceVerticalAlignment = valign;
+   s.SurfaceHorizontalAlignment = halign;
 
 #if GEN_GEN >= 8
-      .TileMode = isl_to_gen_tiling[info->surf->tiling],
+   s.TileMode = isl_to_gen_tiling[info->surf->tiling];
 #else
-      .TiledSurface = info->surf->tiling != ISL_TILING_LINEAR,
-      .TileWalk = info->surf->tiling == ISL_TILING_X ? TILEWALK_XMAJOR :
-                                                       TILEWALK_YMAJOR,
+   s.TiledSurface = info->surf->tiling != ISL_TILING_LINEAR,
+   s.TileWalk = info->surf->tiling == ISL_TILING_X ? TILEWALK_XMAJOR :
+                                                     TILEWALK_YMAJOR;
 #endif
 
-      .VerticalLineStride = 0,
-      .VerticalLineStrideOffset = 0,
+   s.VerticalLineStride = 0;
+   s.VerticalLineStrideOffset = 0;
 
 #if (GEN_GEN == 7)
-      .SurfaceArraySpacing = info->surf->array_pitch_span ==
-                             ISL_ARRAY_PITCH_SPAN_COMPACT,
+   s.SurfaceArraySpacing = info->surf->array_pitch_span ==
+                           ISL_ARRAY_PITCH_SPAN_COMPACT;
 #endif
 
 #if GEN_GEN >= 8
-      .SamplerL2BypassModeDisable = true,
+   s.SamplerL2BypassModeDisable = true;
 #endif
 
 #if GEN_GEN >= 8
-      .RenderCacheReadWriteMode = WriteOnlyCache,
+   s.RenderCacheReadWriteMode = WriteOnlyCache;
 #else
-      .RenderCacheReadWriteMode = 0,
+   s.RenderCacheReadWriteMode = 0;
 #endif
 
 #if GEN_GEN >= 8
-      .CubeFaceEnablePositiveZ = 1,
-      .CubeFaceEnableNegativeZ = 1,
-      .CubeFaceEnablePositiveY = 1,
-      .CubeFaceEnableNegativeY = 1,
-      .CubeFaceEnablePositiveX = 1,
-      .CubeFaceEnableNegativeX = 1,
+   s.CubeFaceEnablePositiveZ = 1;
+   s.CubeFaceEnableNegativeZ = 1;
+   s.CubeFaceEnablePositiveY = 1;
+   s.CubeFaceEnableNegativeY = 1;
+   s.CubeFaceEnablePositiveX = 1;
+   s.CubeFaceEnableNegativeX = 1;
 #else
-      .CubeFaceEnables = 0x3f,
+   s.CubeFaceEnables = 0x3f;
 #endif
 
 #if GEN_GEN >= 8
-      .SurfaceQPitch = get_qpitch(info->surf) >> 2,
+   s.SurfaceQPitch = get_qpitch(info->surf) >> 2;
 #endif
 
-      .Width = info->surf->logical_level0_px.width - 1,
-      .Height = info->surf->logical_level0_px.height - 1,
-      .Depth = 0, /* TEMPLATE */
+   s.Width = info->surf->logical_level0_px.width - 1;
+   s.Height = info->surf->logical_level0_px.height - 1;
+   s.Depth = 0; /* TEMPLATE */
 
-      .RenderTargetViewExtent = 0, /* TEMPLATE */
-      .MinimumArrayElement = 0, /* TEMPLATE */
+   s.RenderTargetViewExtent = 0; /* TEMPLATE */
+   s.MinimumArrayElement = 0; /* TEMPLATE */
 
-      .MultisampledSurfaceStorageFormat =
-         isl_to_gen_multisample_layout[info->surf->msaa_layout],
-      .NumberofMultisamples = ffs(info->surf->samples) - 1,
-      .MultisamplePositionPaletteIndex = 0, /* UNUSED */
+   s.MultisampledSurfaceStorageFormat =
+      isl_to_gen_multisample_layout[info->surf->msaa_layout];
+   s.NumberofMultisamples = ffs(info->surf->samples) - 1;
+   s.MultisamplePositionPaletteIndex = 0; /* UNUSED */
 
-      .XOffset = 0,
-      .YOffset = 0,
+   s.XOffset = 0;
+   s.YOffset = 0;
 
-      .ResourceMinLOD = 0.0,
+   s.ResourceMinLOD = 0.0;
 
-      .MIPCountLOD = 0, /* TEMPLATE */
-      .SurfaceMinLOD = 0, /* TEMPLATE */
+   s.MIPCountLOD = 0; /* TEMPLATE */
+   s.SurfaceMinLOD = 0; /* TEMPLATE */
 
 #if (GEN_GEN >= 8 || GEN_IS_HASWELL)
-      .ShaderChannelSelectRed = info->view->channel_select[0],
-      .ShaderChannelSelectGreen = info->view->channel_select[1],
-      .ShaderChannelSelectBlue = info->view->channel_select[2],
-      .ShaderChannelSelectAlpha = info->view->channel_select[3],
+   s.ShaderChannelSelectRed = info->view->channel_select[0];
+   s.ShaderChannelSelectGreen = info->view->channel_select[1];
+   s.ShaderChannelSelectBlue = info->view->channel_select[2];
+   s.ShaderChannelSelectAlpha = info->view->channel_select[3];
 #endif
 
-      .SurfaceBaseAddress = info->address,
-      .MOCS = info->mocs,
+   s.SurfaceBaseAddress = info->address;
+   s.MOCS = info->mocs;
 
 #if GEN_GEN >= 8
-      .AuxiliarySurfaceMode = AUX_NONE,
+   s.AuxiliarySurfaceMode = AUX_NONE;
 #else
-      .MCSEnable = false,
+   s.MCSEnable = false;
 #endif
-   };
 
    if (info->surf->tiling == ISL_TILING_W) {
       /* From the Broadwell PRM documentation for this field:
