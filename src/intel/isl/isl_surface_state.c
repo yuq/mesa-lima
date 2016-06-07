@@ -213,90 +213,8 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       s.SurfaceFormat = info->view->format;
    }
 
-   s.SurfaceArray = info->surf->phys_level0_sa.array_len > 1;
-   s.SurfaceVerticalAlignment = valign;
-   s.SurfaceHorizontalAlignment = halign;
-
-#if GEN_GEN >= 8
-   s.TileMode = isl_to_gen_tiling[info->surf->tiling];
-#else
-   s.TiledSurface = info->surf->tiling != ISL_TILING_LINEAR,
-   s.TileWalk = info->surf->tiling == ISL_TILING_X ? TILEWALK_XMAJOR :
-                                                     TILEWALK_YMAJOR;
-#endif
-
-#if (GEN_GEN == 7)
-   s.SurfaceArraySpacing = info->surf->array_pitch_span ==
-                           ISL_ARRAY_PITCH_SPAN_COMPACT;
-#endif
-
-#if GEN_GEN >= 8
-   s.SamplerL2BypassModeDisable = true;
-#endif
-
-#if GEN_GEN >= 8
-   s.RenderCacheReadWriteMode = WriteOnlyCache;
-#else
-   s.RenderCacheReadWriteMode = 0;
-#endif
-
-#if GEN_GEN >= 8
-   s.CubeFaceEnablePositiveZ = 1;
-   s.CubeFaceEnableNegativeZ = 1;
-   s.CubeFaceEnablePositiveY = 1;
-   s.CubeFaceEnableNegativeY = 1;
-   s.CubeFaceEnablePositiveX = 1;
-   s.CubeFaceEnableNegativeX = 1;
-#else
-   s.CubeFaceEnables = 0x3f;
-#endif
-
-#if GEN_GEN >= 8
-   s.SurfaceQPitch = get_qpitch(info->surf) >> 2;
-#endif
-
    s.Width = info->surf->logical_level0_px.width - 1;
    s.Height = info->surf->logical_level0_px.height - 1;
-   s.Depth = 0; /* TEMPLATE */
-
-   s.RenderTargetViewExtent = 0; /* TEMPLATE */
-   s.MinimumArrayElement = 0; /* TEMPLATE */
-
-   s.MultisampledSurfaceStorageFormat =
-      isl_to_gen_multisample_layout[info->surf->msaa_layout];
-   s.NumberofMultisamples = ffs(info->surf->samples) - 1;
-
-   s.MIPCountLOD = 0; /* TEMPLATE */
-   s.SurfaceMinLOD = 0; /* TEMPLATE */
-
-#if (GEN_GEN >= 8 || GEN_IS_HASWELL)
-   s.ShaderChannelSelectRed = info->view->channel_select[0];
-   s.ShaderChannelSelectGreen = info->view->channel_select[1];
-   s.ShaderChannelSelectBlue = info->view->channel_select[2];
-   s.ShaderChannelSelectAlpha = info->view->channel_select[3];
-#endif
-
-   s.SurfaceBaseAddress = info->address;
-   s.MOCS = info->mocs;
-
-#if GEN_GEN >= 8
-   s.AuxiliarySurfaceMode = AUX_NONE;
-#else
-   s.MCSEnable = false;
-#endif
-
-   if (info->surf->tiling == ISL_TILING_W) {
-      /* From the Broadwell PRM documentation for this field:
-       *
-       *    "If the surface is a stencil buffer (and thus has Tile Mode set
-       *    to TILEMODE_WMAJOR), the pitch must be set to 2x the value
-       *    computed based on width, as the stencil buffer is stored with
-       *    two rows interleaved."
-       */
-      s.SurfacePitch = info->surf->row_pitch * 2 - 1;
-   } else {
-      s.SurfacePitch = info->surf->row_pitch - 1;
-   }
 
    switch (s.SurfaceType) {
    case SURFTYPE_1D:
@@ -350,6 +268,8 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       unreachable("bad SurfaceType");
    }
 
+   s.SurfaceArray = info->surf->phys_level0_sa.array_len > 1;
+
    if (info->view->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) {
       /* For render target surfaces, the hardware interprets field
        * MIPCount/LOD as LOD. The Broadwell PRM says:
@@ -366,6 +286,80 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        */
       s.SurfaceMinLOD = info->view->base_level;
       s.MIPCountLOD = MAX(info->view->levels, 1) - 1;
+   }
+
+   s.SurfaceVerticalAlignment = valign;
+   s.SurfaceHorizontalAlignment = halign;
+
+#if GEN_GEN >= 8
+   s.TileMode = isl_to_gen_tiling[info->surf->tiling];
+#else
+   s.TiledSurface = info->surf->tiling != ISL_TILING_LINEAR,
+   s.TileWalk = info->surf->tiling == ISL_TILING_X ? TILEWALK_XMAJOR :
+                                                     TILEWALK_YMAJOR;
+#endif
+
+#if (GEN_GEN == 7)
+   s.SurfaceArraySpacing = info->surf->array_pitch_span ==
+                           ISL_ARRAY_PITCH_SPAN_COMPACT;
+#endif
+
+#if GEN_GEN >= 8
+   s.SamplerL2BypassModeDisable = true;
+#endif
+
+#if GEN_GEN >= 8
+   s.RenderCacheReadWriteMode = WriteOnlyCache;
+#else
+   s.RenderCacheReadWriteMode = 0;
+#endif
+
+#if GEN_GEN >= 8
+   s.CubeFaceEnablePositiveZ = 1;
+   s.CubeFaceEnableNegativeZ = 1;
+   s.CubeFaceEnablePositiveY = 1;
+   s.CubeFaceEnableNegativeY = 1;
+   s.CubeFaceEnablePositiveX = 1;
+   s.CubeFaceEnableNegativeX = 1;
+#else
+   s.CubeFaceEnables = 0x3f;
+#endif
+
+#if GEN_GEN >= 8
+   s.SurfaceQPitch = get_qpitch(info->surf) >> 2;
+#endif
+
+   s.MultisampledSurfaceStorageFormat =
+      isl_to_gen_multisample_layout[info->surf->msaa_layout];
+   s.NumberofMultisamples = ffs(info->surf->samples) - 1;
+
+#if (GEN_GEN >= 8 || GEN_IS_HASWELL)
+   s.ShaderChannelSelectRed = info->view->channel_select[0];
+   s.ShaderChannelSelectGreen = info->view->channel_select[1];
+   s.ShaderChannelSelectBlue = info->view->channel_select[2];
+   s.ShaderChannelSelectAlpha = info->view->channel_select[3];
+#endif
+
+   s.SurfaceBaseAddress = info->address;
+   s.MOCS = info->mocs;
+
+#if GEN_GEN >= 8
+   s.AuxiliarySurfaceMode = AUX_NONE;
+#else
+   s.MCSEnable = false;
+#endif
+
+   if (info->surf->tiling == ISL_TILING_W) {
+      /* From the Broadwell PRM documentation for this field:
+       *
+       *    "If the surface is a stencil buffer (and thus has Tile Mode set
+       *    to TILEMODE_WMAJOR), the pitch must be set to 2x the value
+       *    computed based on width, as the stencil buffer is stored with
+       *    two rows interleaved."
+       */
+      s.SurfacePitch = info->surf->row_pitch * 2 - 1;
+   } else {
+      s.SurfacePitch = info->surf->row_pitch - 1;
    }
 
 #if GEN_GEN >= 8
