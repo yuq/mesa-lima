@@ -95,7 +95,9 @@ brw_upload_cs_state(struct brw_context *brw)
    const uint32_t vfe_num_urb_entries = brw->gen >= 8 ? 2 : 0;
    const uint32_t vfe_gpgpu_mode =
       brw->gen == 7 ? SET_FIELD(1, GEN7_MEDIA_VFE_STATE_GPGPU_MODE) : 0;
-   OUT_BATCH(SET_FIELD(brw->max_cs_threads - 1, MEDIA_VFE_STATE_MAX_THREADS) |
+   const uint32_t subslices = MAX2(brw->intelScreen->subslice_total, 1);
+   OUT_BATCH(SET_FIELD(brw->max_cs_threads * subslices - 1,
+                       MEDIA_VFE_STATE_MAX_THREADS) |
              SET_FIELD(vfe_num_urb_entries, MEDIA_VFE_STATE_URB_ENTRIES) |
              SET_FIELD(1, MEDIA_VFE_STATE_RESET_GTW_TIMER) |
              SET_FIELD(1, MEDIA_VFE_STATE_BYPASS_GTW) |
