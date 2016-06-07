@@ -98,10 +98,8 @@ map_function_spec(const char *spec)
  * The remap table needs to be initialized before calling the
  * CALL/GET/SET macros defined in main/dispatch.h.
  */
-static void
-_mesa_do_init_remap_table(const char *pool,
-			  int size,
-			  const struct gl_function_pool_remap *remap)
+void
+_mesa_init_remap_table(void)
 {
    static bool initialized = false;
    GLint i;
@@ -110,30 +108,21 @@ _mesa_do_init_remap_table(const char *pool,
       return;
    initialized = true;
 
-   /* initialize the remap table */
-   for (i = 0; i < size; i++) {
+   /* initialize the MESA_remap_table_functions table */
+   for (i = 0; i < driDispatchRemapTable_size; i++) {
       int offset;
       const char *spec;
 
       /* sanity check */
-      assert(i == remap[i].remap_index);
-      spec = _mesa_function_pool + remap[i].pool_index;
+      assert(i == MESA_remap_table_functions[i].remap_index);
+      spec = _mesa_function_pool + MESA_remap_table_functions[i].pool_index;
 
       offset = map_function_spec(spec);
-      /* store the dispatch offset in the remap table */
+      /* store the dispatch offset in the MESA_remap_table_functions table */
       driDispatchRemapTable[i] = offset;
       if (offset < 0) {
          const char *name = spec + strlen(spec) + 1;
          _mesa_warning(NULL, "failed to remap %s", name);
       }
    }
-}
-
-
-void
-_mesa_init_remap_table(void)
-{
-   _mesa_do_init_remap_table(_mesa_function_pool,
-			     driDispatchRemapTable_size,
-			     MESA_remap_table_functions);
 }
