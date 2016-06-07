@@ -149,8 +149,10 @@ brw_codegen_cs_prog(struct brw_context *brw,
    }
 
    if (prog_data.base.total_scratch) {
+      const unsigned subslices = MAX2(brw->intelScreen->subslice_total, 1);
       brw_get_scratch_bo(brw, &brw->cs.base.scratch_bo,
-                         prog_data.base.total_scratch * brw->max_cs_threads);
+                         prog_data.base.total_scratch *
+                         brw->max_cs_threads * subslices);
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_CS))
