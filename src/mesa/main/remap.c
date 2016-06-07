@@ -35,6 +35,7 @@
  * a dynamic entry, or the corresponding static entry, in glapi.
  */
 
+#include <stdbool.h>
 #include "remap.h"
 #include "imports.h"
 #include "glapi/glapi.h"
@@ -61,12 +62,12 @@ int driDispatchRemapTable[driDispatchRemapTable_size];
  * \return the offset of the (re-)mapped function in the dispatch
  *         table, or -1.
  */
-static GLint
+static int
 map_function_spec(const char *spec)
 {
    const char *signature;
    const char *names[MAX_ENTRY_POINTS + 1];
-   GLint num_names = 0;
+   int num_names = 0;
 
    if (!spec)
       return -1;
@@ -102,16 +103,16 @@ _mesa_do_init_remap_table(const char *pool,
 			  int size,
 			  const struct gl_function_pool_remap *remap)
 {
-   static GLboolean initialized = GL_FALSE;
+   static bool initialized = false;
    GLint i;
 
    if (initialized)
       return;
-   initialized = GL_TRUE;
+   initialized = true;
 
    /* initialize the remap table */
    for (i = 0; i < size; i++) {
-      GLint offset;
+      int offset;
       const char *spec;
 
       /* sanity check */
