@@ -94,20 +94,16 @@ fd_set_constant_buffer(struct pipe_context *pctx, uint shader, uint index,
 	struct fd_context *ctx = fd_context(pctx);
 	struct fd_constbuf_stateobj *so = &ctx->constbuf[shader];
 
+	util_copy_constant_buffer(&so->cb[index], cb);
+
 	/* Note that the state tracker can unbind constant buffers by
 	 * passing NULL here.
 	 */
 	if (unlikely(!cb)) {
 		so->enabled_mask &= ~(1 << index);
 		so->dirty_mask &= ~(1 << index);
-		pipe_resource_reference(&so->cb[index].buffer, NULL);
 		return;
 	}
-
-	pipe_resource_reference(&so->cb[index].buffer, cb->buffer);
-	so->cb[index].buffer_offset = cb->buffer_offset;
-	so->cb[index].buffer_size   = cb->buffer_size;
-	so->cb[index].user_buffer   = cb->user_buffer;
 
 	so->enabled_mask |= 1 << index;
 	so->dirty_mask |= 1 << index;
