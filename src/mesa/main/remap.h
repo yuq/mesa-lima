@@ -32,17 +32,8 @@ struct gl_function_pool_remap {
    int remap_index;
 };
 
-struct gl_function_remap {
-   int func_index;
-   int dispatch_offset; /* for sanity check */
-};
-
-
 extern int
 driDispatchRemapTable[];
-
-extern const char *
-_mesa_get_function_spec(int func_index);
 
 extern int
 _mesa_map_function_spec(const char *spec);

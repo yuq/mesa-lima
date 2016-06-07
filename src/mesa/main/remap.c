@@ -50,24 +50,6 @@ int driDispatchRemapTable[driDispatchRemapTable_size];
 
 
 /**
- * Return the spec string associated with the given function index.
- * The index is available from including remap_helper.h.
- *
- * \param func_index an opaque function index.
- *
- * \return the spec string associated with the function index, or NULL.
- */
-const char *
-_mesa_get_function_spec(GLint func_index)
-{
-   if (func_index < ARRAY_SIZE(_mesa_function_pool))
-      return _mesa_function_pool + func_index;
-   else
-      return NULL;
-}
-
-
-/**
  * Map a function by its spec.  The function will be added to glapi,
  * and the dispatch offset will be returned.
  *
