@@ -654,7 +654,6 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
    default:
       *error = ST_CONTEXT_ERROR_BAD_API;
       return NULL;
-      break;
    }
 
    if (attribs->flags & ST_CONTEXT_FLAG_ROBUST_ACCESS)
