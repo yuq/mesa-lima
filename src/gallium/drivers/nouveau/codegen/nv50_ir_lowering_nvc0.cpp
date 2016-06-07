@@ -227,18 +227,20 @@ NVC0LegalizePostRA::findFirstUsesBB(
          continue;
 
       for (int d = 0; insn->defExists(d); ++d) {
+         const Value *def = insn->def(d).rep();
          if (insn->def(d).getFile() != FILE_GPR ||
-             insn->def(d).rep()->reg.data.id < minGPR ||
-             insn->def(d).rep()->reg.data.id > maxGPR)
+             def->reg.data.id + def->reg.size / 4 - 1 < minGPR ||
+             def->reg.data.id > maxGPR)
             continue;
          addTexUse(uses, insn, texi);
          return;
       }
 
       for (int s = 0; insn->srcExists(s); ++s) {
+         const Value *src = insn->src(s).rep();
          if (insn->src(s).getFile() != FILE_GPR ||
-             insn->src(s).rep()->reg.data.id < minGPR ||
-             insn->src(s).rep()->reg.data.id > maxGPR)
+             src->reg.data.id + src->reg.size / 4 - 1 < minGPR ||
+             src->reg.data.id > maxGPR)
             continue;
          addTexUse(uses, insn, texi);
          return;
