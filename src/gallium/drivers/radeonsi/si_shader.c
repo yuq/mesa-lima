@@ -6178,9 +6178,7 @@ int si_compile_llvm(struct si_screen *sscreen,
 	}
 
 	if (!si_replace_shader(count, binary)) {
-		r = radeon_llvm_compile(mod, binary,
-			r600_get_llvm_processor_name(sscreen->b.family), tm,
-			debug);
+		r = radeon_llvm_compile(mod, binary, tm, debug);
 		if (r)
 			return r;
 	}

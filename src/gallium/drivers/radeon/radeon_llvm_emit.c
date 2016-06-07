@@ -192,39 +192,19 @@ static void radeonDiagnosticHandler(LLVMDiagnosticInfoRef di, void *context)
  * @returns 0 for success, 1 for failure
  */
 unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binary,
-			     const char *gpu_family,
 			     LLVMTargetMachineRef tm,
 			     struct pipe_debug_callback *debug)
 {
 	struct radeon_llvm_diagnostics diag;
-	char cpu[CPU_STRING_LEN];
-	char fs[FS_STRING_LEN];
 	char *err;
-	bool dispose_tm = false;
 	LLVMContextRef llvm_ctx;
 	LLVMMemoryBufferRef out_buffer;
 	unsigned buffer_size;
 	const char *buffer_data;
-	char triple[TRIPLE_STRING_LEN];
 	LLVMBool mem_err;
 
 	diag.debug = debug;
 	diag.retval = 0;
-
-	if (!tm) {
-		strncpy(triple, "r600--", TRIPLE_STRING_LEN);
-		LLVMTargetRef target = radeon_llvm_get_r600_target(triple);
-		if (!target) {
-			return 1;
-		}
-		strncpy(cpu, gpu_family, CPU_STRING_LEN);
-		memset(fs, 0, sizeof(fs));
-		strncpy(fs, "+DumpCode", FS_STRING_LEN);
-		tm = LLVMCreateTargetMachine(target, triple, cpu, fs,
-				  LLVMCodeGenLevelDefault, LLVMRelocDefault,
-						  LLVMCodeModelDefault);
-		dispose_tm = true;
-	}
 
 	/* Setup Diagnostic Handler*/
 	llvm_ctx = LLVMGetModuleContext(M);
@@ -255,9 +235,6 @@ unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binar
 	LLVMDisposeMemoryBuffer(out_buffer);
 
 out:
-	if (dispose_tm) {
-		LLVMDisposeTargetMachine(tm);
-	}
 	if (diag.retval != 0)
 		pipe_debug_message(debug, SHADER_INFO, "LLVM compile failed");
 	return diag.retval;
