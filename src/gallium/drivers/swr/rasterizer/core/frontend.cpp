@@ -1613,7 +1613,6 @@ void BinTriangles(
     const SWR_GS_STATE& gsState = state.gsState;
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
 
-    // Simple wireframe mode for debugging purposes only
 
     simdscalar vRecipW0 = _simd_set1_ps(1.0f);
     simdscalar vRecipW1 = _simd_set1_ps(1.0f);
