@@ -324,22 +324,6 @@ void gen8_upload_3dstate_so_buffers(struct brw_context *brw);
 
 void gen8_init_vtable_surface_functions(struct brw_context *brw);
 
-unsigned gen8_surface_tiling_mode(uint32_t tiling);
-unsigned gen8_vertical_alignment(const struct brw_context *brw,
-                                 const struct intel_mipmap_tree *mt,
-                                 uint32_t surf_type);
-unsigned gen8_horizontal_alignment(const struct brw_context *brw,
-                                   const struct intel_mipmap_tree *mt,
-                                   uint32_t surf_type);
-uint32_t *gen8_allocate_surface_state(struct brw_context *brw,
-                                      uint32_t *out_offset, int index);
-
-void gen8_emit_fast_clear_color(const struct brw_context *brw,
-                                const struct intel_mipmap_tree *mt,
-                                uint32_t *surf);
-uint32_t gen8_get_aux_mode(const struct brw_context *brw,
-                           const struct intel_mipmap_tree *mt);
-
 /* brw_sampler_state.c */
 void brw_emit_sampler_state(struct brw_context *brw,
                             uint32_t *sampler_state,
