@@ -952,19 +952,19 @@ st_api_query_versions(struct st_api *stapi, struct st_manager *sm,
 }
 
 static const struct st_api st_gl_api = {
-   "Mesa " PACKAGE_VERSION,
-   ST_API_OPENGL,
-   ST_PROFILE_DEFAULT_MASK |
-   ST_PROFILE_OPENGL_CORE_MASK |
-   ST_PROFILE_OPENGL_ES1_MASK |
-   ST_PROFILE_OPENGL_ES2_MASK |
-   0,
-   ST_API_FEATURE_MS_VISUALS_MASK,
-   st_api_destroy,
-   st_api_query_versions,
-   st_api_create_context,
-   st_api_make_current,
-   st_api_get_current,
+   .name = "Mesa " PACKAGE_VERSION,
+   .api = ST_API_OPENGL,
+   .profile_mask = ST_PROFILE_DEFAULT_MASK |
+                   ST_PROFILE_OPENGL_CORE_MASK |
+                   ST_PROFILE_OPENGL_ES1_MASK |
+                   ST_PROFILE_OPENGL_ES2_MASK |
+                   0,
+   .feature_mask = ST_API_FEATURE_MS_VISUALS_MASK,
+   .destroy = st_api_destroy,
+   .query_versions = st_api_query_versions,
+   .create_context = st_api_create_context,
+   .make_current = st_api_make_current,
+   .get_current = st_api_get_current,
 };
 
 struct st_api *
