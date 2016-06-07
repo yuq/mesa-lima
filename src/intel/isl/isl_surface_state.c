@@ -258,7 +258,7 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       unreachable("bad SurfaceType");
    }
 
-   s.SurfaceArray = info->surf->phys_level0_sa.array_len > 1;
+   s.SurfaceArray = info->surf->dim != ISL_SURF_DIM_3D;
 
    if (info->view->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) {
       /* For render target surfaces, the hardware interprets field
