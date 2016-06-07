@@ -2838,6 +2838,16 @@ _mesa_shader_write_subroutine_index(struct gl_context *ctx,
    } while(i < sh->NumSubroutineUniformRemapTable);
 }
 
+void
+_mesa_shader_write_subroutine_indices(struct gl_context *ctx,
+                                      gl_shader_stage stage)
+{
+   if (ctx->_Shader->CurrentProgram[stage] &&
+       ctx->_Shader->CurrentProgram[stage]->_LinkedShaders[stage])
+      _mesa_shader_write_subroutine_index(ctx,
+                                          ctx->_Shader->CurrentProgram[stage]->_LinkedShaders[stage]);
+}
+
 static void
 _mesa_shader_init_subroutine_defaults(struct gl_context *ctx,
                                       struct gl_linked_shader *sh)
