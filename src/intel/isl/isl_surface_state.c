@@ -292,6 +292,14 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       s.MIPCountLOD = MAX(info->view->levels, 1) - 1;
    }
 
+#if GEN_GEN >= 9
+   /* We don't use miptails yet.  The PRM recommends that you set "Mip Tail
+    * Start LOD" to 15 to prevent the hardware from trying to use them.
+    */
+   s.TiledResourceMode = NONE;
+   s.MipTailStartLOD = 15;
+#endif
+
    const struct isl_extent3d image_align = get_image_alignment(info->surf);
    s.SurfaceVerticalAlignment = isl_to_gen_valign[image_align.height];
    s.SurfaceHorizontalAlignment = isl_to_gen_halign[image_align.width];
