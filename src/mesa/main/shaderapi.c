@@ -65,7 +65,6 @@
 #define PATH_MAX _MAX_PATH
 #endif
 
-static void _mesa_shader_write_subroutine_index(struct gl_context *ctx, struct gl_linked_shader *sh);
 /**
  * Return mask of GLSL_x flags by examining the MESA_GLSL env var.
  */
@@ -2574,7 +2573,6 @@ _mesa_GetActiveSubroutineName(GLuint program, GLenum shadertype,
                                    length, name, api_name);
 }
 
-
 GLvoid GLAPIENTRY
 _mesa_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
                             const GLuint *indices)
@@ -2656,8 +2654,6 @@ _mesa_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
    } while(i < count);
 
    FLUSH_VERTICES(ctx, _NEW_PROGRAM_CONSTANTS);
-
-   _mesa_shader_write_subroutine_index(ctx, sh);
 }
 
 
@@ -2868,8 +2864,6 @@ _mesa_shader_init_subroutine_defaults(struct gl_context *ctx,
 
       binding->IndexPtr[i] = find_compat_subroutine(sh, uni->type);
    }
-
-   _mesa_shader_write_subroutine_index(ctx, sh);
 }
 
 void
