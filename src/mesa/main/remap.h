@@ -35,9 +35,6 @@ struct gl_function_pool_remap {
 extern int
 driDispatchRemapTable[];
 
-extern int
-_mesa_map_function_spec(const char *spec);
-
 extern void
 _mesa_init_remap_table(void);
 

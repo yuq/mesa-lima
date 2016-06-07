@@ -61,8 +61,8 @@ int driDispatchRemapTable[driDispatchRemapTable_size];
  * \return the offset of the (re-)mapped function in the dispatch
  *         table, or -1.
  */
-GLint
-_mesa_map_function_spec(const char *spec)
+static GLint
+map_function_spec(const char *spec)
 {
    const char *signature;
    const char *names[MAX_ENTRY_POINTS + 1];
@@ -118,7 +118,7 @@ _mesa_do_init_remap_table(const char *pool,
       assert(i == remap[i].remap_index);
       spec = _mesa_function_pool + remap[i].pool_index;
 
-      offset = _mesa_map_function_spec(spec);
+      offset = map_function_spec(spec);
       /* store the dispatch offset in the remap table */
       driDispatchRemapTable[i] = offset;
       if (offset < 0) {
