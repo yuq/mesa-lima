@@ -29,7 +29,7 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := $(C_SOURCES)
 
-LOCAL_SHARED_LIBRARIES := libdrm libdrm_intel
+LOCAL_SHARED_LIBRARIES := libdrm_intel
 LOCAL_MODULE := libmesa_winsys_intel
 
 include $(GALLIUM_COMMON_MK)

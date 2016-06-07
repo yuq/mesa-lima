@@ -40,7 +40,7 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_GENERATED_SOURCES := $(MESA_GEN_NIR_H)
 
-LOCAL_SHARED_LIBRARIES := libdrm libdrm_freedreno
+LOCAL_SHARED_LIBRARIES := libdrm_freedreno
 LOCAL_STATIC_LIBRARIES := libmesa_glsl libmesa_nir
 LOCAL_MODULE := libmesa_pipe_freedreno
 

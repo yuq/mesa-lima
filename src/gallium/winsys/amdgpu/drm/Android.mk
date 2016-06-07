@@ -40,7 +40,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/addrlib/inc/chip/r800 \
 	$(LOCAL_PATH)/addrlib/r800/chip
 
-LOCAL_SHARED_LIBRARIES := libdrm libdrm_amdgpu
+LOCAL_SHARED_LIBRARIES := libdrm_amdgpu
 LOCAL_MODULE := libmesa_winsys_amdgpu
 
 include $(GALLIUM_COMMON_MK)

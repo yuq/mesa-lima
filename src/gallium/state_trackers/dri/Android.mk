@@ -46,7 +46,6 @@ endif
 
 ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
 LOCAL_SRC_FILES += $(dri2_SOURCES)
-LOCAL_SHARED_LIBRARIES := libdrm
 endif
 
 LOCAL_MODULE := libmesa_st_dri

@@ -34,7 +34,7 @@ ifeq ($(MESA_ENABLE_LLVM),true)
 LOCAL_SRC_FILES += $(LLVM_C_FILES)
 endif
 
-LOCAL_SHARED_LIBRARIES := libdrm libdrm_radeon
+LOCAL_SHARED_LIBRARIES := libdrm_radeon
 LOCAL_MODULE := libmesa_pipe_radeon
 
 include $(GALLIUM_COMMON_MK)

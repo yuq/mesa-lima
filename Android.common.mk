@@ -82,6 +82,12 @@ LOCAL_CFLAGS += \
 	-D__STDC_LIMIT_MACROS
 endif
 
+# add libdrm if there are hardware drivers
+ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
+LOCAL_CFLAGS += -DHAVE_LIBDRM
+LOCAL_SHARED_LIBRARIES += libdrm
+endif
+
 LOCAL_CPPFLAGS += \
 	$(if $(filter true,$(MESA_LOLLIPOP_BUILD)),-D_USING_LIBCXX) \
 	-Wno-error=non-virtual-dtor \

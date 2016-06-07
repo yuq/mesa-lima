@@ -35,7 +35,7 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/mesa
 
 
-LOCAL_SHARED_LIBRARIES := libdrm libdrm_radeon
+LOCAL_SHARED_LIBRARIES := libdrm_radeon
 LOCAL_MODULE := libmesa_pipe_r300
 
 include $(GALLIUM_COMMON_MK)

@@ -30,7 +30,7 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := $(C_SOURCES) $(CXX_SOURCES)
 
-LOCAL_SHARED_LIBRARIES := libdrm libdrm_radeon
+LOCAL_SHARED_LIBRARIES := libdrm_radeon
 LOCAL_MODULE := libmesa_pipe_r600
 
 ifeq ($(MESA_LOLLIPOP_BUILD),true)

@@ -38,10 +38,7 @@ LOCAL_SRC_FILES := $(COMMON_SOURCES)
 LOCAL_MODULE := libmesa_pipe_loader
 
 ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
-LOCAL_CFLAGS += -DHAVE_LIBDRM
 LOCAL_SRC_FILES += $(DRM_SOURCES)
-
-LOCAL_SHARED_LIBRARIES := libdrm
 LOCAL_STATIC_LIBRARIES := libmesa_loader
 endif
 

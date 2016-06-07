@@ -61,12 +61,6 @@ ifeq ($(shell echo "$(MESA_ANDROID_VERSION) >= 4.2" | bc),1)
 LOCAL_SHARED_LIBRARIES += libsync
 endif
 
-# add libdrm if there are hardware drivers
-ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
-LOCAL_CFLAGS += -DHAVE_LIBDRM
-LOCAL_SHARED_LIBRARIES += libdrm
-endif
-
 ifeq ($(strip $(MESA_BUILD_CLASSIC)),true)
 # require i915_dri and/or i965_dri
 LOCAL_REQUIRED_MODULES += \

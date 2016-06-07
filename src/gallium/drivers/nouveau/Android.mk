@@ -36,7 +36,7 @@ LOCAL_SRC_FILES := \
 	$(NVC0_CODEGEN_SOURCES) \
 	$(NVC0_C_SOURCES)
 
-LOCAL_SHARED_LIBRARIES := libdrm libdrm_nouveau
+LOCAL_SHARED_LIBRARIES := libdrm_nouveau
 LOCAL_MODULE := libmesa_pipe_nouveau
 
 ifeq ($(MESA_LOLLIPOP_BUILD),true)

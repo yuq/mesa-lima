@@ -43,11 +43,6 @@ LOCAL_SHARED_LIBRARIES := \
 	libglapi \
 	libexpat \
 
-ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
-LOCAL_CFLAGS += -DHAVE_LIBDRM
-LOCAL_SHARED_LIBRARIES += libdrm
-endif
-
 ifneq ($(filter freedreno,$(MESA_GPU_DRIVERS)),)
 LOCAL_CFLAGS += -DGALLIUM_FREEDRENO
 gallium_DRIVERS += libmesa_winsys_freedreno libmesa_pipe_freedreno

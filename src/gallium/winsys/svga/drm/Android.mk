@@ -36,7 +36,6 @@ LOCAL_C_INCLUDES := \
 	$(GALLIUM_TOP)/drivers/svga \
 	$(GALLIUM_TOP)/drivers/svga/include
 
-LOCAL_SHARED_LIBRARIES := libdrm
 LOCAL_MODULE := libmesa_winsys_svga
 
 include $(GALLIUM_COMMON_MK)
