@@ -370,6 +370,7 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    st->shader_has_one_variant[MESA_SHADER_TESS_CTRL] = st->has_shareable_shaders;
    st->shader_has_one_variant[MESA_SHADER_TESS_EVAL] = st->has_shareable_shaders;
    st->shader_has_one_variant[MESA_SHADER_GEOMETRY] = st->has_shareable_shaders;
+   st->shader_has_one_variant[MESA_SHADER_COMPUTE] = st->has_shareable_shaders;
 
    _mesa_compute_version(ctx);
 
