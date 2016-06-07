@@ -560,7 +560,7 @@ si_disable_shader_image(struct si_context *ctx, unsigned shader, unsigned slot)
 }
 
 static void
-si_mark_image_range_valid(struct pipe_image_view *view)
+si_mark_image_range_valid(const struct pipe_image_view *view)
 {
 	struct r600_resource *res = (struct r600_resource *)view->resource;
 	const struct util_format_description *desc;
@@ -578,7 +578,7 @@ si_mark_image_range_valid(struct pipe_image_view *view)
 
 static void si_set_shader_image(struct si_context *ctx,
 				unsigned shader,
-				unsigned slot, struct pipe_image_view *view)
+				unsigned slot, const struct pipe_image_view *view)
 {
 	struct si_screen *screen = ctx->screen;
 	struct si_images_info *images = &ctx->images[shader];
@@ -674,7 +674,7 @@ static void si_set_shader_image(struct si_context *ctx,
 static void
 si_set_shader_images(struct pipe_context *pipe, unsigned shader,
 		     unsigned start_slot, unsigned count,
-		     struct pipe_image_view *views)
+		     const struct pipe_image_view *views)
 {
 	struct si_context *ctx = (struct si_context *)pipe;
 	unsigned i, slot;

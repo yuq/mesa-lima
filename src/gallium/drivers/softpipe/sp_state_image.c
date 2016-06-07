@@ -30,7 +30,7 @@ static void softpipe_set_shader_images(struct pipe_context *pipe,
                                        unsigned shader,
                                        unsigned start,
                                        unsigned num,
-                                       struct pipe_image_view *images)
+                                       const struct pipe_image_view *images)
 {
    struct softpipe_context *softpipe = softpipe_context(pipe);
    unsigned i;

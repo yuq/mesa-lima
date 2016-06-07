@@ -331,7 +331,7 @@ struct pipe_context {
     */
    void (*set_shader_images)(struct pipe_context *, unsigned shader,
                              unsigned start_slot, unsigned count,
-                             struct pipe_image_view *images);
+                             const struct pipe_image_view *images);
 
    void (*set_vertex_buffers)( struct pipe_context *,
                                unsigned start_slot,

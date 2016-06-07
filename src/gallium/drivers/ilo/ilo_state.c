@@ -1851,7 +1851,7 @@ ilo_set_sampler_views(struct pipe_context *pipe, unsigned shader,
 static void
 ilo_set_shader_images(struct pipe_context *pipe, unsigned shader,
                       unsigned start, unsigned count,
-                      struct pipe_image_view *views)
+                      const struct pipe_image_view *views)
 {
 #if 0
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;

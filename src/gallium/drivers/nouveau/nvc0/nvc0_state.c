@@ -1250,7 +1250,7 @@ nvc0_set_compute_resources(struct pipe_context *pipe,
 static bool
 nvc0_bind_images_range(struct nvc0_context *nvc0, const unsigned s,
                        unsigned start, unsigned nr,
-                       struct pipe_image_view *pimages)
+                       const struct pipe_image_view *pimages)
 {
    const unsigned end = start + nr;
    unsigned mask = 0;
@@ -1318,7 +1318,7 @@ nvc0_bind_images_range(struct nvc0_context *nvc0, const unsigned s,
 static void
 nvc0_set_shader_images(struct pipe_context *pipe, unsigned shader,
                        unsigned start, unsigned nr,
-                       struct pipe_image_view *images)
+                       const struct pipe_image_view *images)
 {
    const unsigned s = nvc0_shader_stage(shader);
    if (!nvc0_bind_images_range(nvc0_context(pipe), s, start, nr, images))
