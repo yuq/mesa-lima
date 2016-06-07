@@ -155,26 +155,6 @@ _mesa_map_function_array(const struct gl_function_remap *func_array)
 
 
 /**
- * Map the functions which are already static.
- *
- * When a extension function are incorporated into the ABI, the
- * extension suffix is usually stripped.  Mapping such functions
- * makes sure the alternative names are available.
- *
- * Note that functions mapped by _mesa_init_remap_table() are
- * excluded.
- */
-void
-_mesa_map_static_functions(void)
-{
-   /* Remap static functions which have alternative names and are in the ABI.
-    * This is to be on the safe side.  glapi should have defined those names.
-    */
-   _mesa_map_function_array(MESA_alt_functions);
-}
-
-
-/**
  * Initialize the remap table.  This is called in one_time_init().
  * The remap table needs to be initialized before calling the
  * CALL/GET/SET macros defined in main/dispatch.h.

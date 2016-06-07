@@ -51,9 +51,6 @@ extern void
 _mesa_map_function_array(const struct gl_function_remap *func_array);
 
 extern void
-_mesa_map_static_functions(void);
-
-extern void
 _mesa_init_remap_table(void);
 
 
