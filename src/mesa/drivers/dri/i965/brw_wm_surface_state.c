@@ -369,11 +369,11 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
 }
 
 static void
-brw_update_texture_surface(struct gl_context *ctx,
-                           unsigned unit,
-                           uint32_t *surf_offset,
-                           bool for_gather,
-                           uint32_t plane)
+gen4_update_texture_surface(struct gl_context *ctx,
+                            unsigned unit,
+                            uint32_t *surf_offset,
+                            bool for_gather,
+                            uint32_t plane)
 {
    struct brw_context *brw = brw_context(ctx);
    struct gl_texture_object *tObj = ctx->Texture.Unit[unit]._Current;
@@ -717,10 +717,10 @@ brw_emit_null_surface_state(struct brw_context *brw,
  * usable for further buffers when doing ARB_draw_buffer support.
  */
 static uint32_t
-brw_update_renderbuffer_surface(struct brw_context *brw,
-                                struct gl_renderbuffer *rb,
-                                bool layered, unsigned unit,
-                                uint32_t surf_index)
+gen4_update_renderbuffer_surface(struct brw_context *brw,
+                                 struct gl_renderbuffer *rb,
+                                 bool layered, unsigned unit,
+                                 uint32_t surf_index)
 {
    struct gl_context *ctx = &brw->ctx;
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
@@ -1497,8 +1497,8 @@ const struct brw_tracked_state brw_wm_image_surfaces = {
 void
 gen4_init_vtable_surface_functions(struct brw_context *brw)
 {
-   brw->vtbl.update_texture_surface = brw_update_texture_surface;
-   brw->vtbl.update_renderbuffer_surface = brw_update_renderbuffer_surface;
+   brw->vtbl.update_texture_surface = gen4_update_texture_surface;
+   brw->vtbl.update_renderbuffer_surface = gen4_update_renderbuffer_surface;
    brw->vtbl.emit_null_surface_state = brw_emit_null_surface_state;
    brw->vtbl.emit_buffer_surface_state = gen4_emit_buffer_surface_state;
 }
