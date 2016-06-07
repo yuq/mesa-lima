@@ -375,7 +375,7 @@ vc4_vertex_state_bind(struct pipe_context *pctx, void *hwcso)
 
 static void
 vc4_set_constant_buffer(struct pipe_context *pctx, uint shader, uint index,
-                        struct pipe_constant_buffer *cb)
+                        const struct pipe_constant_buffer *cb)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
         struct vc4_constbuf_stateobj *so = &vc4->constbuf[shader];

@@ -624,7 +624,7 @@ static void
 rbug_set_constant_buffer(struct pipe_context *_pipe,
                          uint shader,
                          uint index,
-                         struct pipe_constant_buffer *_cb)
+                         const struct pipe_constant_buffer *_cb)
 {
    struct rbug_context *rb_pipe = rbug_context(_pipe);
    struct pipe_context *pipe = rb_pipe->pipe;

@@ -1536,7 +1536,7 @@ ilo_set_clip_state(struct pipe_context *pipe,
 static void
 ilo_set_constant_buffer(struct pipe_context *pipe,
                         uint shader, uint index,
-                        struct pipe_constant_buffer *buf)
+                        const struct pipe_constant_buffer *buf)
 {
    const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;

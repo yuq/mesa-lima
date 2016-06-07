@@ -343,7 +343,7 @@ DD_IMM_STATE(polygon_stipple, const struct pipe_poly_stipple, *state, state)
 static void
 dd_context_set_constant_buffer(struct pipe_context *_pipe,
                                uint shader, uint index,
-                               struct pipe_constant_buffer *constant_buffer)
+                               const struct pipe_constant_buffer *constant_buffer)
 {
    struct dd_context *dctx = dd_context(_pipe);
    struct pipe_context *pipe = dctx->pipe;

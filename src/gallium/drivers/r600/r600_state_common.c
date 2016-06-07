@@ -1053,7 +1053,7 @@ void r600_constant_buffers_dirty(struct r600_context *rctx, struct r600_constbuf
 }
 
 static void r600_set_constant_buffer(struct pipe_context *ctx, uint shader, uint index,
-				     struct pipe_constant_buffer *input)
+				     const struct pipe_constant_buffer *input)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct r600_constbuf_state *state = &rctx->constbuf_state[shader];

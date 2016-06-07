@@ -89,7 +89,7 @@ fd_set_sample_mask(struct pipe_context *pctx, unsigned sample_mask)
  */
 static void
 fd_set_constant_buffer(struct pipe_context *pctx, uint shader, uint index,
-		struct pipe_constant_buffer *cb)
+		const struct pipe_constant_buffer *cb)
 {
 	struct fd_context *ctx = fd_context(pctx);
 	struct fd_constbuf_stateobj *so = &ctx->constbuf[shader];

@@ -409,7 +409,7 @@ static void
 swr_set_constant_buffer(struct pipe_context *pipe,
                         uint shader,
                         uint index,
-                        struct pipe_constant_buffer *cb)
+                        const struct pipe_constant_buffer *cb)
 {
    struct swr_context *ctx = swr_context(pipe);
    struct pipe_resource *constants = cb ? cb->buffer : NULL;

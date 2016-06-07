@@ -426,7 +426,7 @@ static void virgl_hw_set_index_buffer(struct pipe_context *ctx,
 
 static void virgl_set_constant_buffer(struct pipe_context *ctx,
                                      uint shader, uint index,
-                                     struct pipe_constant_buffer *buf)
+                                     const struct pipe_constant_buffer *buf)
 {
    struct virgl_context *vctx = virgl_context(ctx);
 

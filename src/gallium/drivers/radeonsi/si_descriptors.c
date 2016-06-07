@@ -940,7 +940,7 @@ void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuf
 static void si_set_constant_buffer(struct si_context *sctx,
 				   struct si_buffer_resources *buffers,
 				   unsigned descriptors_idx,
-				   uint slot, struct pipe_constant_buffer *input)
+				   uint slot, const struct pipe_constant_buffer *input)
 {
 	struct si_descriptors *descs = &sctx->descriptors[descriptors_idx];
 	assert(slot < descs->num_elements);
@@ -1003,7 +1003,7 @@ static void si_set_constant_buffer(struct si_context *sctx,
 }
 
 void si_set_rw_buffer(struct si_context *sctx,
-		      uint slot, struct pipe_constant_buffer *input)
+		      uint slot, const struct pipe_constant_buffer *input)
 {
 	si_set_constant_buffer(sctx, &sctx->rw_buffers,
 			                        SI_DESCS_RW_BUFFERS, slot, input);
@@ -1011,7 +1011,7 @@ void si_set_rw_buffer(struct si_context *sctx,
 
 static void si_pipe_set_constant_buffer(struct pipe_context *ctx,
 					uint shader, uint slot,
-					struct pipe_constant_buffer *input)
+					const struct pipe_constant_buffer *input)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
