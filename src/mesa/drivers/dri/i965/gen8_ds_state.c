@@ -69,9 +69,11 @@ gen8_upload_ds_state(struct brw_context *brw)
                  GEN7_DS_SIMD8_DISPATCH_ENABLE : 0) |
                 (tes_prog_data->domain == BRW_TESS_DOMAIN_TRI ?
                  GEN7_DS_COMPUTE_W_COORDINATE_ENABLE : 0));
-      OUT_BATCH(SET_FIELD(vue_prog_data->cull_distance_mask |
-                          ctx->Transform.ClipPlanesEnabled,
-                          GEN8_DS_USER_CLIP_DISTANCE));
+      OUT_BATCH(SET_FIELD(ctx->Transform.ClipPlanesEnabled,
+                          GEN8_DS_USER_CLIP_DISTANCE) |
+                SET_FIELD(vue_prog_data->cull_distance_mask,
+                          GEN8_DS_USER_CULL_DISTANCE));
+
 
       if (brw->gen >= 9) {
          OUT_BATCH(0);
