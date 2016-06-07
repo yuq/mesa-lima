@@ -4264,6 +4264,8 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
          if (coord_components >= 2) {
             bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D),
                     offset(coordinate, bld, 1));
+         } else {
+            sources[length] = brw_imm_d(0);
          }
          length++;
       }
