@@ -296,13 +296,6 @@ void brw_update_renderbuffer_surfaces(struct brw_context *brw,
                                       uint32_t *surf_offset);
 
 /* gen7_wm_surface_state.c */
-uint32_t gen7_surface_tiling_mode(uint32_t tiling);
-uint32_t gen7_surface_msaa_bits(unsigned num_samples, enum intel_msaa_layout l);
-void gen7_set_surface_mcs_info(struct brw_context *brw,
-                               uint32_t *surf,
-                               uint32_t surf_offset,
-                               const struct intel_mipmap_tree *mcs_mt,
-                               bool is_render_target);
 void gen7_check_surface_setup(uint32_t *surf, bool is_render_target);
 void gen7_init_vtable_surface_functions(struct brw_context *brw);
 
