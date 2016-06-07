@@ -218,9 +218,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
                                                      TILEWALK_YMAJOR;
 #endif
 
-   s.VerticalLineStride = 0;
-   s.VerticalLineStrideOffset = 0;
-
 #if (GEN_GEN == 7)
    s.SurfaceArraySpacing = info->surf->array_pitch_span ==
                            ISL_ARRAY_PITCH_SPAN_COMPACT;
@@ -261,12 +258,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.MultisampledSurfaceStorageFormat =
       isl_to_gen_multisample_layout[info->surf->msaa_layout];
    s.NumberofMultisamples = ffs(info->surf->samples) - 1;
-   s.MultisamplePositionPaletteIndex = 0; /* UNUSED */
-
-   s.XOffset = 0;
-   s.YOffset = 0;
-
-   s.ResourceMinLOD = 0.0;
 
    s.MIPCountLOD = 0; /* TEMPLATE */
    s.SurfaceMinLOD = 0; /* TEMPLATE */
