@@ -32,6 +32,7 @@
 #include "brw_state.h"
 #include "program/prog_statevars.h"
 #include "compiler/glsl/ir_uniform.h"
+#include "main/shaderapi.h"
 
 static void
 brw_upload_cs_state(struct brw_context *brw)
@@ -286,6 +287,7 @@ gen7_upload_cs_push_constants(struct brw_context *brw)
       /* CACHE_NEW_CS_PROG */
       struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
 
+      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_COMPUTE);
       brw_upload_cs_push_constants(brw, &cp->program.Base, cs_prog_data,
                                    stage_state, AUB_TRACE_WM_CONSTANTS);
    }
@@ -318,6 +320,7 @@ brw_upload_cs_pull_constants(struct brw_context *brw)
    /* BRW_NEW_CS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = &brw->cs.prog_data->base;
 
+   _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_COMPUTE);
    /* _NEW_PROGRAM_CONSTANTS */
    brw_upload_pull_constants(brw, BRW_NEW_SURFACES, &cp->program.Base,
                              stage_state, prog_data);

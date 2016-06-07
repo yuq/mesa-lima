@@ -23,6 +23,7 @@
 
 #include "main/mtypes.h"
 #include "program/prog_parameter.h"
+#include "main/shaderapi.h"
 
 #include "brw_context.h"
 #include "brw_state.h"
@@ -49,6 +50,7 @@ brw_upload_tes_pull_constants(struct brw_context *brw)
    /* BRW_NEW_TES_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = &brw->tes.prog_data->base.base;
 
+   _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_TESS_EVAL);
    /* _NEW_PROGRAM_CONSTANTS */
    brw_upload_pull_constants(brw, BRW_NEW_TES_CONSTBUF, &dp->program.Base,
                              stage_state, prog_data);

@@ -25,6 +25,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 #include "intel_batchbuffer.h"
+#include "main/shaderapi.h"
 
 static void
 gen7_upload_tes_push_constants(struct brw_context *brw)
@@ -37,6 +38,7 @@ gen7_upload_tes_push_constants(struct brw_context *brw)
    if (tep) {
       /* BRW_NEW_TES_PROG_DATA */
       const struct brw_stage_prog_data *prog_data = &brw->tes.prog_data->base.base;
+      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_TESS_EVAL);
       gen6_upload_push_constants(brw, &tep->program.Base, prog_data,
                                       stage_state, AUB_TRACE_VS_CONSTANTS);
    }

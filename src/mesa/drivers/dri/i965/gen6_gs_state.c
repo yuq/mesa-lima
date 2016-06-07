@@ -29,6 +29,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 #include "intel_batchbuffer.h"
+#include "main/shaderapi.h"
 
 static void
 gen6_upload_gs_push_constants(struct brw_context *brw)
@@ -43,6 +44,7 @@ gen6_upload_gs_push_constants(struct brw_context *brw)
       /* BRW_NEW_GS_PROG_DATA */
       struct brw_stage_prog_data *prog_data = &brw->gs.prog_data->base.base;
 
+      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_GEOMETRY);
       gen6_upload_push_constants(brw, &gp->program.Base, prog_data,
                                  stage_state, AUB_TRACE_VS_CONSTANTS);
    }

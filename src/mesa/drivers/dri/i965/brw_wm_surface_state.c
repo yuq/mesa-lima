@@ -39,6 +39,7 @@
 #include "program/prog_parameter.h"
 #include "program/prog_instruction.h"
 #include "main/framebuffer.h"
+#include "main/shaderapi.h"
 
 #include "isl/isl.h"
 
@@ -689,6 +690,7 @@ brw_upload_wm_pull_constants(struct brw_context *brw)
    /* BRW_NEW_FS_PROG_DATA */
    struct brw_stage_prog_data *prog_data = &brw->wm.prog_data->base;
 
+   _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_FRAGMENT);
    /* _NEW_PROGRAM_CONSTANTS */
    brw_upload_pull_constants(brw, BRW_NEW_SURFACES, &fp->program.Base,
                              stage_state, prog_data);

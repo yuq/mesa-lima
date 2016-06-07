@@ -33,6 +33,7 @@
 #include "program/program.h"
 #include "program/prog_parameter.h"
 #include "program/prog_statevars.h"
+#include "main/shaderapi.h"
 #include "main/framebuffer.h"
 #include "intel_batchbuffer.h"
 
@@ -45,6 +46,8 @@ gen6_upload_wm_push_constants(struct brw_context *brw)
       brw_fragment_program_const(brw->fragment_program);
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
+
+   _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_FRAGMENT);
 
    gen6_upload_push_constants(brw, &fp->program.Base, &prog_data->base,
                               stage_state, AUB_TRACE_WM_CONSTANTS);
