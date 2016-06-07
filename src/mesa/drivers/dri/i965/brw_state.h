@@ -274,6 +274,13 @@ GLuint translate_tex_format(struct brw_context *brw,
 int brw_get_texture_swizzle(const struct gl_context *ctx,
                             const struct gl_texture_object *t);
 
+void brw_emit_surface_state(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt,
+                            const struct isl_view *view,
+                            uint32_t mocs, bool for_gather,
+                            uint32_t *surf_offset, int surf_index,
+                            unsigned read_domains, unsigned write_domains);
+
 void brw_update_renderbuffer_surfaces(struct brw_context *brw,
                                       const struct gl_framebuffer *fb,
                                       uint32_t render_target_start,

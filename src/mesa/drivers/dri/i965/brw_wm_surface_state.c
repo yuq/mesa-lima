@@ -35,6 +35,7 @@
 #include "main/mtypes.h"
 #include "main/samplerobj.h"
 #include "main/shaderimage.h"
+#include "main/teximage.h"
 #include "program/prog_parameter.h"
 #include "program/prog_instruction.h"
 #include "main/framebuffer.h"
@@ -51,6 +52,86 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 #include "brw_wm.h"
+
+struct surface_state_info {
+   unsigned num_dwords;
+   unsigned ss_align; /* Required alignment of RENDER_SURFACE_STATE in bytes */
+   unsigned reloc_dw;
+   unsigned aux_reloc_dw;
+   unsigned tex_mocs;
+   unsigned rb_mocs;
+};
+
+static const struct surface_state_info surface_state_infos[] = {
+   [4] = {6,  32, 1,  0},
+   [5] = {6,  32, 1,  0},
+   [6] = {6,  32, 1,  0},
+   [7] = {8,  32, 1,  6,  GEN7_MOCS_L3, GEN7_MOCS_L3},
+   [8] = {13, 64, 8,  10, BDW_MOCS_WB,  BDW_MOCS_PTE},
+   [9] = {16, 64, 8,  10, SKL_MOCS_WB,  SKL_MOCS_PTE},
+};
+
+void
+brw_emit_surface_state(struct brw_context *brw,
+                       struct intel_mipmap_tree *mt,
+                       const struct isl_view *view,
+                       uint32_t mocs, bool for_gather,
+                       uint32_t *surf_offset, int surf_index,
+                       unsigned read_domains, unsigned write_domains)
+{
+   const struct surface_state_info ss_info = surface_state_infos[brw->gen];
+
+   struct isl_surf surf;
+   intel_miptree_get_isl_surf(brw, mt, &surf);
+
+   union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
+
+   struct isl_surf *aux_surf = NULL, aux_surf_s;
+   uint64_t aux_offset = 0;
+   enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
+   if (mt->mcs_mt &&
+       ((view->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) ||
+        mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED)) {
+      intel_miptree_get_aux_isl_surf(brw, mt, &aux_surf_s, &aux_usage);
+      aux_surf = &aux_surf_s;
+      assert(mt->mcs_mt->offset == 0);
+      aux_offset = mt->mcs_mt->bo->offset64;
+
+      /* We only really need a clear color if we also have an auxiliary
+       * surfacae.  Without one, it does nothing.
+       */
+      clear_color = intel_miptree_get_isl_clear_color(brw, mt);
+   }
+
+   uint32_t *dw = __brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
+                                    ss_info.num_dwords * 4, ss_info.ss_align,
+                                    surf_index, surf_offset);
+
+   isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = view,
+                       .address = mt->bo->offset64 + mt->offset,
+                       .aux_surf = aux_surf, .aux_usage = aux_usage,
+                       .aux_address = aux_offset,
+                       .mocs = mocs, .clear_color = clear_color);
+
+   drm_intel_bo_emit_reloc(brw->batch.bo,
+                           *surf_offset + 4 * ss_info.reloc_dw,
+                           mt->bo, mt->offset,
+                           read_domains, write_domains);
+
+   if (aux_surf) {
+      /* On gen7 and prior, the upper 20 bits of surface state DWORD 6 are the
+       * upper 20 bits of the GPU address of the MCS buffer; the lower 12 bits
+       * contain other control information.  Since buffer addresses are always
+       * on 4k boundaries (and thus have their lower 12 bits zero), we can use
+       * an ordinary reloc to do the necessary address translation.
+       */
+      assert((aux_offset & 0xfff) == 0);
+      drm_intel_bo_emit_reloc(brw->batch.bo,
+                              *surf_offset + 4 * ss_info.aux_reloc_dw,
+                              mt->mcs_mt->bo, dw[ss_info.aux_reloc_dw] & 0xfff,
+                              read_domains, write_domains);
+   }
+}
 
 GLuint
 translate_tex_target(GLenum target)
