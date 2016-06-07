@@ -254,14 +254,11 @@ case "$host_os" in
 *-android)
     android=yes
     ;;
-linux*|*-gnu*|gnu*)
+linux*|*-gnu*|gnu*|cygwin*)
     DEFINES="$DEFINES -D_GNU_SOURCE"
     ;;
 solaris*)
     DEFINES="$DEFINES -DSVR4"
-    ;;
-cygwin*)
-    DEFINES="$DEFINES -D_XOPEN_SOURCE=700"
     ;;
 esac
 
