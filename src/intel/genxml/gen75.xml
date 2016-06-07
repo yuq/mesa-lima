@@ -405,10 +405,10 @@
     <field name="MOCS" start="176" end="179" type="uint"/>
     <field name="Surface Min LOD" start="164" end="167" type="uint"/>
     <field name="MIP Count / LOD" start="160" end="163" type="uint"/>
-    <field name="MCS Base Address" start="204" end="223" type="address"/>
-    <field name="MCS Surface Pitch" start="195" end="203" type="uint"/>
     <field name="Append Counter Address" start="198" end="223" type="address"/>
     <field name="Append Counter Enable" start="193" end="193" type="bool"/>
+    <field name="MCS Base Address" start="204" end="223" type="address"/>
+    <field name="MCS Surface Pitch" start="195" end="203" type="uint"/>
     <field name="MCS Enable" start="192" end="192" type="bool"/>
     <field name="Reserved: MBZ" start="222" end="223" type="uint"/>
     <field name="X Offset for UV Plane" start="208" end="221" type="uint"/>
