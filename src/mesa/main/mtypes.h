@@ -4315,6 +4315,15 @@ struct gl_atomic_buffer_binding
 };
 
 /**
+ * Shader subroutines storage
+ */
+struct gl_subroutine_index_binding
+{
+   GLuint NumIndex;
+   GLuint *IndexPtr;
+};
+
+/**
  * Mesa rendering context.
  *
  * This is the central context data structure for Mesa.  Almost all
@@ -4552,6 +4561,7 @@ struct gl_context
     */
    struct gl_image_unit ImageUnits[MAX_IMAGE_UNITS];
 
+   struct gl_subroutine_index_binding SubroutineIndex[MESA_SHADER_STAGES];
    /*@}*/
 
    struct gl_meta_state *Meta;  /**< for "meta" operations */
