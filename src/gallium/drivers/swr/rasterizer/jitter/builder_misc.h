@@ -72,6 +72,12 @@ int32_t S_IMMED(Value* i);
 Value *GEP(Value* ptr, const std::initializer_list<Value*> &indexList);
 Value *GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList);
 CallInst *CALL(Value *Callee, const std::initializer_list<Value*> &args);
+#if HAVE_LLVM > 0x306
+CallInst *CALL(Value *Callee) { return CALLA(Callee); }
+CallInst *CALL(Value *Callee, Value* arg);
+CallInst *CALL2(Value *Callee, Value* arg1, Value* arg2);
+CallInst *CALL3(Value *Callee, Value* arg1, Value* arg2, Value* arg3);
+#endif
 
 LoadInst *LOAD(Value *BasePtr, const std::initializer_list<uint32_t> &offset, const llvm::Twine& name = "");
 LoadInst *LOADV(Value *BasePtr, const std::initializer_list<Value*> &offset, const llvm::Twine& name = "");

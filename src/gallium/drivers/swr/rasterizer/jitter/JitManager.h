@@ -54,7 +54,7 @@
 #endif
 
 #ifndef HAVE_LLVM
-#define HAVE_LLVM (LLVM_VERSION_MAJOR << 8) || LLVM_VERSION_MINOR
+#define HAVE_LLVM ((LLVM_VERSION_MAJOR << 8) | LLVM_VERSION_MINOR)
 #endif
 
 #include "llvm/IR/Verifier.h"
@@ -66,8 +66,12 @@
 
 #if HAVE_LLVM == 0x306
 #include "llvm/PassManager.h"
+using FunctionPassManager = llvm::FunctionPassManager;
+using PassManager = llvm::PassManager;
 #else
 #include "llvm/IR/LegacyPassManager.h"
+using FunctionPassManager = llvm::legacy::FunctionPassManager;
+using PassManager = llvm::legacy::PassManager;
 #endif
 
 #include "llvm/CodeGen/Passes.h"
@@ -77,6 +81,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/DynamicLibrary.h"
 
 
 #pragma pop_macro("DEBUG")

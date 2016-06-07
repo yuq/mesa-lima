@@ -30,8 +30,6 @@
 #include "builder.h"
 #include "common/rdtsc_buckets.h"
 
-#include "llvm/Support/DynamicLibrary.h"
-
 void __cdecl CallPrint(const char* fmt, ...);
 
 //////////////////////////////////////////////////////////////////////////
@@ -321,6 +319,32 @@ CallInst *Builder::CALL(Value *Callee, const std::initializer_list<Value*> &args
         args.push_back(arg);
     return CALLA(Callee, args);
 }
+
+#if HAVE_LLVM > 0x306
+CallInst *Builder::CALL(Value *Callee, Value* arg)
+{
+    std::vector<Value*> args;
+    args.push_back(arg);
+    return CALLA(Callee, args);
+}
+
+CallInst *Builder::CALL2(Value *Callee, Value* arg1, Value* arg2)
+{
+    std::vector<Value*> args;
+    args.push_back(arg1);
+    args.push_back(arg2);
+    return CALLA(Callee, args);
+}
+
+CallInst *Builder::CALL3(Value *Callee, Value* arg1, Value* arg2, Value* arg3)
+{
+    std::vector<Value*> args;
+    args.push_back(arg1);
+    args.push_back(arg2);
+    args.push_back(arg3);
+    return CALLA(Callee, args);
+}
+#endif
 
 Value *Builder::VRCP(Value *va)
 {
@@ -726,8 +750,7 @@ Value *Builder::PERMD(Value* a, Value* idx)
     // use avx2 permute instruction if available
     if(JM()->mArch.AVX2())
     {
-        // llvm 3.6.0 swapped the order of the args to vpermd
-        res = VPERMD(idx, a);
+        res = VPERMD(a, idx);
     }
     else
     {

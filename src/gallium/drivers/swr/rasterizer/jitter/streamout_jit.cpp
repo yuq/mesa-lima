@@ -292,12 +292,7 @@ struct StreamOutJit : public Builder
 
         JitManager::DumpToFile(soFunc, "SoFunc");
 
-#if HAVE_LLVM == 0x306
-        FunctionPassManager
-#else
-        llvm::legacy::FunctionPassManager
-#endif
-            passes(JM()->mpCurrentModule);
+        ::FunctionPassManager passes(JM()->mpCurrentModule);
 
         passes.add(createBreakCriticalEdgesPass());
         passes.add(createCFGSimplificationPass());

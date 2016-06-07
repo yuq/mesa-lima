@@ -31,7 +31,6 @@
 #include "blend_jit.h"
 #include "builder.h"
 #include "state_llvm.h"
-#include "llvm/IR/DataLayout.h"
 
 #include <sstream>
 
@@ -725,12 +724,7 @@ struct BlendJit : public Builder
 
         JitManager::DumpToFile(blendFunc, "");
 
-#if HAVE_LLVM == 0x306
-        FunctionPassManager
-#else
-        llvm::legacy::FunctionPassManager
-#endif
-            passes(JM()->mpCurrentModule);
+        ::FunctionPassManager passes(JM()->mpCurrentModule);
 
         passes.add(createBreakCriticalEdgesPass());
         passes.add(createCFGSimplificationPass());

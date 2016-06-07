@@ -102,7 +102,7 @@ intrinsics = [
         ["VPSHUFB", "x86_avx2_pshuf_b", ["a", "b"]],
         ["VPMOVSXBD", "x86_avx2_pmovsxbd", ["a"]],  # sign extend packed 8bit components
         ["VPMOVSXWD", "x86_avx2_pmovsxwd", ["a"]],  # sign extend packed 16bit components
-        ["VPERMD", "x86_avx2_permd", ["idx", "a"]],
+        ["VPERMD", "x86_avx2_permd", ["a", "idx"]],
         ["VPERMPS", "x86_avx2_permps", ["idx", "a"]],
         ["VCVTPH2PS", "x86_vcvtph2ps_256", ["a"]],
         ["VCVTPS2PH", "x86_vcvtps2ph_256", ["a", "round"]],
@@ -352,7 +352,29 @@ def generate_x86_cpp(output_file):
             'Value *Builder::%s(%s)' % (inst[0], args),
             '{',
             '    Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::%s);' % inst[1],
+        ]
+        if inst[0] == "VPERMD":
+            rev_args = ''
+            first = True
+            for arg in reversed(inst[2]):
+                if not first:
+                    rev_args += ', '
+                rev_args += arg
+                first = False
+
+            output_lines += [
+                '#if (HAVE_LLVM == 0x306) && (LLVM_VERSION_PATCH == 0)',
+                '    return CALL(func, std::initializer_list<Value*>{%s});' % rev_args,
+                '#else',
+            ]
+        output_lines += [
             '    return CALL(func, std::initializer_list<Value*>{%s});' % pass_args,
+        ]
+        if inst[0] == "VPERMD":
+            output_lines += [
+                '#endif',
+            ]
+        output_lines += [
             '}',
             '',
         ]
