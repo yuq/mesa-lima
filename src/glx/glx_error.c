@@ -43,7 +43,7 @@ __glXSendError(Display * dpy, int_fast8_t errorCode, uint_fast32_t resourceID,
    xError error;
 
    assert(glx_dpy);
-   assert(gc);
+   assert(gc != &dummyContext);
 
    LockDisplay(dpy);
 
