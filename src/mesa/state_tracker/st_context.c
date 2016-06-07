@@ -413,8 +413,12 @@ struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
    memset(&funcs, 0, sizeof(funcs));
    st_init_driver_functions(pipe->screen, &funcs);
 
-   ctx = _mesa_create_context(api, visual, shareCtx, &funcs);
-   if (!ctx) {
+   ctx = calloc(1, sizeof(struct gl_context));
+   if (!ctx)
+      return NULL;
+
+   if (!_mesa_initialize_context(ctx, api, visual, shareCtx, &funcs)) {
+      free(ctx);
       return NULL;
    }
 
