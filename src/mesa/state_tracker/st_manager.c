@@ -802,12 +802,6 @@ st_api_make_current(struct st_api *stapi, struct st_context_iface *stctxi,
    return ret;
 }
 
-static st_proc_t
-st_api_get_proc_address(struct st_api *stapi, const char *procname)
-{
-   return (st_proc_t) _glapi_get_proc_address(procname);
-}
-
 static void
 st_api_destroy(struct st_api *stapi)
 {
@@ -968,7 +962,6 @@ static const struct st_api st_gl_api = {
    ST_API_FEATURE_MS_VISUALS_MASK,
    st_api_destroy,
    st_api_query_versions,
-   st_api_get_proc_address,
    st_api_create_context,
    st_api_make_current,
    st_api_get_current,
