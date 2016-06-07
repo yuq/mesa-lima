@@ -330,16 +330,18 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.RenderCacheReadWriteMode = 0;
 #endif
 
+   if (info->view->usage & ISL_SURF_USAGE_CUBE_BIT) {
 #if GEN_GEN >= 8
-   s.CubeFaceEnablePositiveZ = 1;
-   s.CubeFaceEnableNegativeZ = 1;
-   s.CubeFaceEnablePositiveY = 1;
-   s.CubeFaceEnableNegativeY = 1;
-   s.CubeFaceEnablePositiveX = 1;
-   s.CubeFaceEnableNegativeX = 1;
+      s.CubeFaceEnablePositiveZ = 1;
+      s.CubeFaceEnableNegativeZ = 1;
+      s.CubeFaceEnablePositiveY = 1;
+      s.CubeFaceEnableNegativeY = 1;
+      s.CubeFaceEnablePositiveX = 1;
+      s.CubeFaceEnableNegativeX = 1;
 #else
-   s.CubeFaceEnables = 0x3f;
+      s.CubeFaceEnables = 0x3f;
 #endif
+   }
 
    s.MultisampledSurfaceStorageFormat =
       isl_to_gen_multisample_layout[info->surf->msaa_layout];
