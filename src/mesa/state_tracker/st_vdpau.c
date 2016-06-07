@@ -238,9 +238,6 @@ st_vdpau_map_surface(struct gl_context *ctx, GLenum target, GLenum access,
    sampler_view = st_texture_get_sampler_view(st, stObj);
    *sampler_view = st->pipe->create_sampler_view(st->pipe, res, &templ);
 
-   stObj->width0 = res->width0;
-   stObj->height0 = res->height0;
-   stObj->depth0 = 1;
    stObj->surface_format = res->format;
 
    _mesa_dirty_texobj(ctx, texObj);
