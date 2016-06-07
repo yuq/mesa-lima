@@ -111,50 +111,6 @@ _mesa_map_function_spec(const char *spec)
 
 
 /**
- * Map an array of functions.  This is a convenient function for
- * use with arrays available from including remap_helper.h.
- *
- * Note that the dispatch offsets of the functions are not returned.
- * If they are needed, _mesa_map_function_spec() should be used.
- *
- * \param func_array an array of function remaps.
- */
-void
-_mesa_map_function_array(const struct gl_function_remap *func_array)
-{
-   GLint i;
-
-   if (!func_array)
-      return;
-
-   for (i = 0; func_array[i].func_index != -1; i++) {
-      const char *spec;
-      GLint offset;
-
-      spec = _mesa_get_function_spec(func_array[i].func_index);
-      if (!spec) {
-         _mesa_problem(NULL, "invalid function index %d",
-                       func_array[i].func_index);
-         continue;
-      }
-
-      offset = _mesa_map_function_spec(spec);
-      /* error checks */
-      if (offset < 0) {
-         const char *name = spec + strlen(spec) + 1;
-         _mesa_warning(NULL, "failed to remap %s", name);
-      }
-      else if (func_array[i].dispatch_offset >= 0 &&
-               offset != func_array[i].dispatch_offset) {
-         const char *name = spec + strlen(spec) + 1;
-         _mesa_problem(NULL, "%s should be mapped to %d, not %d",
-                       name, func_array[i].dispatch_offset, offset);
-      }
-   }
-}
-
-
-/**
  * Initialize the remap table.  This is called in one_time_init().
  * The remap table needs to be initialized before calling the
  * CALL/GET/SET macros defined in main/dispatch.h.
