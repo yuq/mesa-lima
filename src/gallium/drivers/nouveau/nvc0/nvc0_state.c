@@ -1332,8 +1332,8 @@ nvc0_set_shader_images(struct pipe_context *pipe, unsigned shader,
 
 static bool
 nvc0_bind_buffers_range(struct nvc0_context *nvc0, const unsigned t,
-                         unsigned start, unsigned nr,
-                         struct pipe_shader_buffer *pbuffers)
+                        unsigned start, unsigned nr,
+                        const struct pipe_shader_buffer *pbuffers)
 {
    const unsigned end = start + nr;
    unsigned mask = 0;
@@ -1383,7 +1383,7 @@ static void
 nvc0_set_shader_buffers(struct pipe_context *pipe,
                         unsigned shader,
                         unsigned start, unsigned nr,
-                        struct pipe_shader_buffer *buffers)
+                        const struct pipe_shader_buffer *buffers)
 {
    const unsigned s = nvc0_shader_stage(shader);
    if (!nvc0_bind_buffers_range(nvc0_context(pipe), s, start, nr, buffers))

@@ -314,7 +314,7 @@ struct pipe_context {
     */
    void (*set_shader_buffers)(struct pipe_context *, unsigned shader,
                               unsigned start_slot, unsigned count,
-                              struct pipe_shader_buffer *buffers);
+                              const struct pipe_shader_buffer *buffers);
 
    /**
     * Bind an array of images that will be used by a shader.

@@ -504,7 +504,7 @@ dd_context_set_shader_images(struct pipe_context *_pipe, unsigned shader,
 static void
 dd_context_set_shader_buffers(struct pipe_context *_pipe, unsigned shader,
                               unsigned start, unsigned num_buffers,
-                              struct pipe_shader_buffer *buffers)
+                              const struct pipe_shader_buffer *buffers)
 {
    struct dd_context *dctx = dd_context(_pipe);
    struct pipe_context *pipe = dctx->pipe;

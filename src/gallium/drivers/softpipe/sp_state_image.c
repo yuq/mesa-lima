@@ -56,7 +56,7 @@ static void softpipe_set_shader_buffers(struct pipe_context *pipe,
                                         unsigned shader,
                                         unsigned start,
                                         unsigned num,
-                                        struct pipe_shader_buffer *buffers)
+                                        const struct pipe_shader_buffer *buffers)
 {
    struct softpipe_context *softpipe = softpipe_context(pipe);
    unsigned i;

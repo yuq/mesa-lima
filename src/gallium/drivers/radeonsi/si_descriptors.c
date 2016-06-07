@@ -1040,7 +1040,7 @@ si_shader_buffer_descriptors(struct si_context *sctx, unsigned shader)
 
 static void si_set_shader_buffers(struct pipe_context *ctx, unsigned shader,
 				  unsigned start_slot, unsigned count,
-				  struct pipe_shader_buffer *sbuffers)
+				  const struct pipe_shader_buffer *sbuffers)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_buffer_resources *buffers = &sctx->shader_buffers[shader];
@@ -1050,7 +1050,7 @@ static void si_set_shader_buffers(struct pipe_context *ctx, unsigned shader,
 	assert(start_slot + count <= SI_NUM_SHADER_BUFFERS);
 
 	for (i = 0; i < count; ++i) {
-		struct pipe_shader_buffer *sbuffer = sbuffers ? &sbuffers[i] : NULL;
+		const struct pipe_shader_buffer *sbuffer = sbuffers ? &sbuffers[i] : NULL;
 		struct r600_resource *buf;
 		unsigned slot = start_slot + i;
 		uint32_t *desc = descs->list + slot * 4;
