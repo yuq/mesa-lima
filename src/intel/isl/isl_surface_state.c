@@ -328,8 +328,8 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.TileMode = isl_to_gen_tiling[info->surf->tiling];
 #else
    s.TiledSurface = info->surf->tiling != ISL_TILING_LINEAR,
-   s.TileWalk = info->surf->tiling == ISL_TILING_X ? TILEWALK_XMAJOR :
-                                                     TILEWALK_YMAJOR;
+   s.TileWalk = info->surf->tiling == ISL_TILING_Y0 ? TILEWALK_YMAJOR :
+                                                      TILEWALK_XMAJOR,
 #endif
 
 #if GEN_GEN >= 8
