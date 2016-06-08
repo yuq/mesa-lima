@@ -236,11 +236,25 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 				     R600_COHERENCY_SHADER);
 	}
 
-	/* XXX: This is the maximum value allowed.  I'm not sure how to compute
-	 * this for non-cs shaders.  Using the wrong value here can result in
-	 * GPU lockups, but the maximum value seems to always work.
+	uint64_t max_threads_per_block;
+	screen->get_compute_param(screen, PIPE_SHADER_IR_TGSI,
+				  PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK,
+				  &max_threads_per_block);
+
+	/* The maximum number of scratch waves. Scratch space isn't divided
+	 * evenly between CUs. The number is only a function of the number of CUs.
+	 * We can decrease the constant to decrease the scratch buffer size.
+	 *
+	 * sctx->scratch_waves must be >= the maximum posible size of
+	 * 1 threadgroup, so that the hw doesn't hang from being unable
+	 * to start any.
+	 *
+	 * The recommended value is 4 per CU at most. Higher numbers don't
+	 * bring much benefit, but they still occupy chip resources (think
+	 * async compute). I've seen ~2% performance difference between 4 and 32.
 	 */
-	sctx->scratch_waves = 32 * sscreen->b.info.num_good_compute_units;
+	sctx->scratch_waves = MAX2(32 * sscreen->b.info.num_good_compute_units,
+				   max_threads_per_block / 64);
 
 	/* Initialize LLVM TargetMachine */
 	r600_target = radeon_llvm_get_r600_target(triple);
