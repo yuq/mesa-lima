@@ -228,6 +228,16 @@ struct st_context
       struct pipe_resource *texture;
    } drawpix_cache;
 
+   /** for glReadPixels */
+   struct {
+      struct pipe_resource *src;
+      struct pipe_resource *cache;
+      enum pipe_format dst_format;
+      unsigned level;
+      unsigned layer;
+      unsigned hits;
+   } readpix_cache;
+
    /** for glClear */
    struct {
       struct pipe_rasterizer_state raster;
@@ -306,6 +316,7 @@ extern void st_init_driver_functions(struct pipe_screen *screen,
 
 void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state);
 
+void st_invalidate_readpix_cache(struct st_context *st);
 
 
 #define Y_0_TOP 1

@@ -184,6 +184,9 @@ st_destroy_context_priv(struct st_context *st)
    free(st->drawpix_cache.image);
    pipe_resource_reference(&st->drawpix_cache.texture, NULL);
 
+   /* free glReadPixels cache data */
+   st_invalidate_readpix_cache(st);
+
    cso_destroy_context(st->cso_context);
    free( st );
 }
