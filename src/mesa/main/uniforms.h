@@ -277,6 +277,16 @@ void GLAPIENTRY
 _mesa_Uniform4dv(GLint, GLsizei, const GLdouble *);
 
 void GLAPIENTRY
+_mesa_GetUniformi64vARB(GLuint, GLint, GLint64 *);
+void GLAPIENTRY
+_mesa_GetUniformui64vARB(GLuint, GLint, GLuint64 *);
+
+void GLAPIENTRY
+_mesa_GetnUniformi64vARB(GLuint, GLint, GLsizei, GLint64 *);
+void GLAPIENTRY
+_mesa_GetnUniformui64vARB(GLuint, GLint, GLsizei, GLuint64 *);
+
+void GLAPIENTRY
 _mesa_UniformMatrix2dv(GLint, GLsizei, GLboolean, const GLdouble *);
 void GLAPIENTRY
 _mesa_UniformMatrix3dv(GLint, GLsizei, GLboolean, const GLdouble *);
@@ -346,6 +356,78 @@ _mesa_ProgramUniformMatrix3x4dv(GLuint program, GLint location, GLsizei count,
 void GLAPIENTRY
 _mesa_ProgramUniformMatrix4x3dv(GLuint program, GLint location, GLsizei count,
                                 GLboolean transpose, const GLdouble *value);
+
+void GLAPIENTRY
+_mesa_Uniform1i64ARB(GLint, GLint64);
+void GLAPIENTRY
+_mesa_Uniform2i64ARB(GLint, GLint64, GLint64);
+void GLAPIENTRY
+_mesa_Uniform3i64ARB(GLint, GLint64, GLint64, GLint64);
+void GLAPIENTRY
+_mesa_Uniform4i64ARB(GLint, GLint64, GLint64, GLint64, GLint64);
+
+void GLAPIENTRY
+_mesa_Uniform1i64vARB(GLint, GLsizei, const GLint64 *);
+void GLAPIENTRY
+_mesa_Uniform2i64vARB(GLint, GLsizei, const GLint64 *);
+void GLAPIENTRY
+_mesa_Uniform3i64vARB(GLint, GLsizei, const GLint64 *);
+void GLAPIENTRY
+_mesa_Uniform4i64vARB(GLint, GLsizei, const GLint64 *);
+
+void GLAPIENTRY
+_mesa_Uniform1ui64ARB(GLint, GLuint64);
+void GLAPIENTRY
+_mesa_Uniform2ui64ARB(GLint, GLuint64, GLuint64);
+void GLAPIENTRY
+_mesa_Uniform3ui64ARB(GLint, GLuint64, GLuint64, GLuint64);
+void GLAPIENTRY
+_mesa_Uniform4ui64ARB(GLint, GLuint64, GLuint64, GLuint64, GLuint64);
+
+void GLAPIENTRY
+_mesa_Uniform1ui64vARB(GLint, GLsizei, const GLuint64 *);
+void GLAPIENTRY
+_mesa_Uniform2ui64vARB(GLint, GLsizei, const GLuint64 *);
+void GLAPIENTRY
+_mesa_Uniform3ui64vARB(GLint, GLsizei, const GLuint64 *);
+void GLAPIENTRY
+_mesa_Uniform4ui64vARB(GLint, GLsizei, const GLuint64 *);
+
+void GLAPIENTRY
+_mesa_ProgramUniform1i64ARB(GLuint, GLint, GLint64);
+void GLAPIENTRY
+_mesa_ProgramUniform2i64ARB(GLuint, GLint, GLint64, GLint64);
+void GLAPIENTRY
+_mesa_ProgramUniform3i64ARB(GLuint, GLint, GLint64, GLint64, GLint64);
+void GLAPIENTRY
+_mesa_ProgramUniform4i64ARB(GLuint, GLint, GLint64, GLint64, GLint64, GLint64);
+
+void GLAPIENTRY
+_mesa_ProgramUniform1i64vARB(GLuint, GLint, GLsizei, const GLint64 *);
+void GLAPIENTRY
+_mesa_ProgramUniform2i64vARB(GLuint, GLint, GLsizei, const GLint64 *);
+void GLAPIENTRY
+_mesa_ProgramUniform3i64vARB(GLuint, GLint, GLsizei, const GLint64 *);
+void GLAPIENTRY
+_mesa_ProgramUniform4i64vARB(GLuint, GLint, GLsizei, const GLint64 *);
+
+void GLAPIENTRY
+_mesa_ProgramUniform1ui64ARB(GLuint, GLint, GLuint64);
+void GLAPIENTRY
+_mesa_ProgramUniform2ui64ARB(GLuint, GLint, GLuint64, GLuint64);
+void GLAPIENTRY
+_mesa_ProgramUniform3ui64ARB(GLuint, GLint, GLuint64, GLuint64, GLuint64);
+void GLAPIENTRY
+_mesa_ProgramUniform4ui64ARB(GLuint, GLint, GLuint64, GLuint64, GLuint64, GLuint64);
+
+void GLAPIENTRY
+_mesa_ProgramUniform1ui64vARB(GLuint, GLint, GLsizei, const GLuint64 *);
+void GLAPIENTRY
+_mesa_ProgramUniform2ui64vARB(GLuint, GLint, GLsizei, const GLuint64 *);
+void GLAPIENTRY
+_mesa_ProgramUniform3ui64vARB(GLuint, GLint, GLsizei, const GLuint64 *);
+void GLAPIENTRY
+_mesa_ProgramUniform4ui64vARB(GLuint, GLint, GLsizei, const GLuint64 *);
 
 void
 _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shader_program,
