@@ -91,7 +91,7 @@ public:
       this->is_double_vertex_input = false;
    }
 
-   st_src_reg(gl_register_file file, int index, int type)
+   st_src_reg(gl_register_file file, int index, enum glsl_base_type type)
    {
       this->type = type;
       this->file = file;
@@ -107,7 +107,7 @@ public:
       this->is_double_vertex_input = false;
    }
 
-   st_src_reg(gl_register_file file, int index, int type, int index2D)
+   st_src_reg(gl_register_file file, int index, enum glsl_base_type type, int index2D)
    {
       this->type = type;
       this->file = file;
@@ -146,7 +146,7 @@ public:
    int index2D;
    GLuint swizzle; /**< SWIZZLE_XYZWONEZERO swizzles from Mesa. */
    int negate; /**< NEGATE_XYZW mask from mesa */
-   int type; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
+   enum glsl_base_type type; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
    /** Register index should be offset by the integer in this reg. */
    st_src_reg *reladdr;
    st_src_reg *reladdr2;
@@ -162,7 +162,7 @@ public:
 
 class st_dst_reg {
 public:
-   st_dst_reg(gl_register_file file, int writemask, int type, int index)
+   st_dst_reg(gl_register_file file, int writemask, enum glsl_base_type type, int index)
    {
       this->file = file;
       this->index = index;
@@ -175,7 +175,7 @@ public:
       this->array_id = 0;
    }
 
-   st_dst_reg(gl_register_file file, int writemask, int type)
+   st_dst_reg(gl_register_file file, int writemask, enum glsl_base_type type)
    {
       this->file = file;
       this->index = 0;
@@ -207,7 +207,7 @@ public:
    int index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
    int index2D;
    int writemask; /**< Bitfield of WRITEMASK_[XYZW] */
-   int type; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
+   enum glsl_base_type type; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
    /** Register index should be offset by the integer in this reg. */
    st_src_reg *reladdr;
    st_src_reg *reladdr2;
@@ -343,10 +343,10 @@ struct array_decl {
    unsigned mesa_index;
    unsigned array_id;
    unsigned array_size;
-   unsigned array_type;
+   enum glsl_base_type array_type;
 };
 
-static unsigned
+static enum glsl_base_type
 find_array_type(struct array_decl *arrays, unsigned count, unsigned array_id)
 {
    unsigned i;
@@ -420,7 +420,7 @@ public:
    st_src_reg st_src_reg_for_double(double val);
    st_src_reg st_src_reg_for_float(float val);
    st_src_reg st_src_reg_for_int(int val);
-   st_src_reg st_src_reg_for_type(int type, int val);
+   st_src_reg st_src_reg_for_type(enum glsl_base_type type, int val);
 
    /**
     * \name Visit methods
@@ -736,7 +736,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
       if (inst->dst[j].type == GLSL_TYPE_DOUBLE)
          dst_is_double[j] = true;
       else if (inst->dst[j].file == PROGRAM_OUTPUT && inst->dst[j].type == GLSL_TYPE_ARRAY) {
-         unsigned type = find_array_type(this->output_arrays, this->num_output_arrays, inst->dst[j].array_id);
+         enum glsl_base_type type = find_array_type(this->output_arrays, this->num_output_arrays, inst->dst[j].array_id);
          if (type == GLSL_TYPE_DOUBLE)
             dst_is_double[j] = true;
       }
@@ -866,7 +866,7 @@ glsl_to_tgsi_visitor::get_opcode(ir_instruction *ir, unsigned op,
                                  st_dst_reg dst,
                                  st_src_reg src0, st_src_reg src1)
 {
-   int type = GLSL_TYPE_FLOAT;
+   enum glsl_base_type type = GLSL_TYPE_FLOAT;
 
    if (op == TGSI_OPCODE_MOV)
        return op;
@@ -1155,7 +1155,7 @@ glsl_to_tgsi_visitor::st_src_reg_for_int(int val)
 }
 
 st_src_reg
-glsl_to_tgsi_visitor::st_src_reg_for_type(int type, int val)
+glsl_to_tgsi_visitor::st_src_reg_for_type(enum glsl_base_type type, int val)
 {
    if (native_integers)
       return type == GLSL_TYPE_FLOAT ? st_src_reg_for_float(val) :
