@@ -1434,7 +1434,7 @@ glsl_type::can_implicitly_convert_to(const glsl_type *desired,
 unsigned
 glsl_type::std140_base_alignment(bool row_major) const
 {
-   unsigned N = is_double() ? 8 : 4;
+   unsigned N = is_64bit() ? 8 : 4;
 
    /* (1) If the member is a scalar consuming <N> basic machine units, the
     *     base alignment is <N>.
@@ -1552,7 +1552,7 @@ glsl_type::std140_base_alignment(bool row_major) const
 unsigned
 glsl_type::std140_size(bool row_major) const
 {
-   unsigned N = is_double() ? 8 : 4;
+   unsigned N = is_64bit() ? 8 : 4;
 
    /* (1) If the member is a scalar consuming <N> basic machine units, the
     *     base alignment is <N>.
@@ -1689,7 +1689,7 @@ unsigned
 glsl_type::std430_base_alignment(bool row_major) const
 {
 
-   unsigned N = is_double() ? 8 : 4;
+   unsigned N = is_64bit() ? 8 : 4;
 
    /* (1) If the member is a scalar consuming <N> basic machine units, the
     *     base alignment is <N>.
@@ -1798,7 +1798,7 @@ glsl_type::std430_base_alignment(bool row_major) const
 unsigned
 glsl_type::std430_array_stride(bool row_major) const
 {
-   unsigned N = is_double() ? 8 : 4;
+   unsigned N = is_64bit() ? 8 : 4;
 
    /* Notice that the array stride of a vec3 is not 3 * N but 4 * N.
     * See OpenGL 4.30 spec, section 7.6.2.2 "Standard Uniform Block Layout"
@@ -1816,7 +1816,7 @@ glsl_type::std430_array_stride(bool row_major) const
 unsigned
 glsl_type::std430_size(bool row_major) const
 {
-   unsigned N = is_double() ? 8 : 4;
+   unsigned N = is_64bit() ? 8 : 4;
 
    /* OpenGL 4.30 spec, section 7.6.2.2 "Standard Uniform Block Layout":
     *
