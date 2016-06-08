@@ -608,6 +608,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(ARB_fragment_layer_viewport),
    EXT(ARB_gpu_shader5),
    EXT(ARB_gpu_shader_fp64),
+   EXT(ARB_gpu_shader_int64),
    EXT(ARB_post_depth_coverage),
    EXT(ARB_sample_shading),
    EXT(ARB_separate_shader_objects),
