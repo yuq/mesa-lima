@@ -64,14 +64,14 @@ copy_constant_to_storage(union gl_constant_value *storage,
          storage[i].f = val->value.f[i];
          break;
       case GLSL_TYPE_DOUBLE:
+      case GLSL_TYPE_UINT64:
+      case GLSL_TYPE_INT64:
          /* XXX need to check on big-endian */
          memcpy(&storage[i * 2].u, &val->value.d[i], sizeof(double));
          break;
       case GLSL_TYPE_BOOL:
          storage[i].b = val->value.b[i] ? boolean_true : 0;
          break;
-      case GLSL_TYPE_INT64:
-      case GLSL_TYPE_UINT64:
       case GLSL_TYPE_ARRAY:
       case GLSL_TYPE_STRUCT:
       case GLSL_TYPE_IMAGE:
