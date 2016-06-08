@@ -206,6 +206,13 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 
    s.SurfaceType = get_surftype(info->surf->dim, info->view->usage);
 
+   if (info->view->usage & ISL_SURF_USAGE_STORAGE_BIT) {
+      s.SurfaceFormat =
+         isl_lower_storage_image_format(dev->info, info->view->format);
+   } else {
+      s.SurfaceFormat = info->view->format;
+   }
+
    s.SurfaceArray = info->surf->phys_level0_sa.array_len > 1;
    s.SurfaceVerticalAlignment = valign;
    s.SurfaceHorizontalAlignment = halign;
@@ -289,13 +296,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       s.SurfacePitch = info->surf->row_pitch * 2 - 1;
    } else {
       s.SurfacePitch = info->surf->row_pitch - 1;
-   }
-
-   if (info->view->usage & ISL_SURF_USAGE_STORAGE_BIT) {
-      s.SurfaceFormat =
-         isl_lower_storage_image_format(dev->info, info->view->format);
-   } else {
-      s.SurfaceFormat = info->view->format;
    }
 
    switch (s.SurfaceType) {
