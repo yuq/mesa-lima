@@ -291,17 +291,32 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.SurfaceVerticalAlignment = valign;
    s.SurfaceHorizontalAlignment = halign;
 
+   if (info->surf->tiling == ISL_TILING_W) {
+      /* From the Broadwell PRM documentation for this field:
+       *
+       *    "If the surface is a stencil buffer (and thus has Tile Mode set
+       *    to TILEMODE_WMAJOR), the pitch must be set to 2x the value
+       *    computed based on width, as the stencil buffer is stored with
+       *    two rows interleaved."
+       */
+      s.SurfacePitch = info->surf->row_pitch * 2 - 1;
+   } else {
+      s.SurfacePitch = info->surf->row_pitch - 1;
+   }
+
+#if GEN_GEN >= 8
+   s.SurfaceQPitch = get_qpitch(info->surf) >> 2;
+#elif GEN_GEN == 7
+   s.SurfaceArraySpacing = info->surf->array_pitch_span ==
+                           ISL_ARRAY_PITCH_SPAN_COMPACT;
+#endif
+
 #if GEN_GEN >= 8
    s.TileMode = isl_to_gen_tiling[info->surf->tiling];
 #else
    s.TiledSurface = info->surf->tiling != ISL_TILING_LINEAR,
    s.TileWalk = info->surf->tiling == ISL_TILING_X ? TILEWALK_XMAJOR :
                                                      TILEWALK_YMAJOR;
-#endif
-
-#if (GEN_GEN == 7)
-   s.SurfaceArraySpacing = info->surf->array_pitch_span ==
-                           ISL_ARRAY_PITCH_SPAN_COMPACT;
 #endif
 
 #if GEN_GEN >= 8
@@ -325,10 +340,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.CubeFaceEnables = 0x3f;
 #endif
 
-#if GEN_GEN >= 8
-   s.SurfaceQPitch = get_qpitch(info->surf) >> 2;
-#endif
-
    s.MultisampledSurfaceStorageFormat =
       isl_to_gen_multisample_layout[info->surf->msaa_layout];
    s.NumberofMultisamples = ffs(info->surf->samples) - 1;
@@ -348,19 +359,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 #else
    s.MCSEnable = false;
 #endif
-
-   if (info->surf->tiling == ISL_TILING_W) {
-      /* From the Broadwell PRM documentation for this field:
-       *
-       *    "If the surface is a stencil buffer (and thus has Tile Mode set
-       *    to TILEMODE_WMAJOR), the pitch must be set to 2x the value
-       *    computed based on width, as the stencil buffer is stored with
-       *    two rows interleaved."
-       */
-      s.SurfacePitch = info->surf->row_pitch * 2 - 1;
-   } else {
-      s.SurfacePitch = info->surf->row_pitch - 1;
-   }
 
 #if GEN_GEN >= 8
    /* From the CHV PRM, Volume 2d, page 321 (RENDER_SURFACE_STATE dword 0
