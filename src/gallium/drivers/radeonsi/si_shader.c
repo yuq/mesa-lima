@@ -5903,8 +5903,16 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 	unsigned i;
 	uint32_t scratch_rsrc_dword0 = scratch_va;
 	uint32_t scratch_rsrc_dword1 =
-		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32)
-		|  S_008F04_STRIDE(config->scratch_bytes_per_wave / 64);
+		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32);
+
+	/* Enable scratch coalescing if LLVM sets ELEMENT_SIZE & INDEX_STRIDE
+	 * correctly.
+	 */
+	if (HAVE_LLVM >= 0x0309)
+		scratch_rsrc_dword1 |= S_008F04_SWIZZLE_ENABLE(1);
+	else
+		scratch_rsrc_dword1 |=
+			S_008F04_STRIDE(config->scratch_bytes_per_wave / 64);
 
 	for (i = 0 ; i < shader->binary.reloc_count; i++) {
 		const struct radeon_shader_reloc *reloc =
