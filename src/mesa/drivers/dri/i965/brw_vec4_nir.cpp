@@ -1892,12 +1892,19 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_ffma:
-      op[0] = fix_3src_operand(op[0]);
-      op[1] = fix_3src_operand(op[1]);
-      op[2] = fix_3src_operand(op[2]);
+      if (type_sz(dst.type) == 8) {
+         dst_reg mul_dst = dst_reg(this, glsl_type::dvec4_type);
+         emit(MUL(mul_dst, op[1], op[0]));
+         inst = emit(ADD(dst, src_reg(mul_dst), op[2]));
+         inst->saturate = instr->dest.saturate;
+      } else {
+         op[0] = fix_3src_operand(op[0]);
+         op[1] = fix_3src_operand(op[1]);
+         op[2] = fix_3src_operand(op[2]);
 
-      inst = emit(MAD(dst, op[2], op[1], op[0]));
-      inst->saturate = instr->dest.saturate;
+         inst = emit(MAD(dst, op[2], op[1], op[0]));
+         inst->saturate = instr->dest.saturate;
+      }
       break;
 
    case nir_op_flrp:
