@@ -64,6 +64,11 @@ enum glsl_base_type {
    GLSL_TYPE_ERROR
 };
 
+static inline bool glsl_base_type_is_64bit(enum glsl_base_type type)
+{
+   return type == GLSL_TYPE_DOUBLE;
+}
+
 enum glsl_sampler_dim {
    GLSL_SAMPLER_DIM_1D = 0,
    GLSL_SAMPLER_DIM_2D,
@@ -495,6 +500,14 @@ struct glsl_type {
    bool is_dual_slot_double() const
    {
       return base_type == GLSL_TYPE_DOUBLE && vector_elements > 2;
+   }
+
+   /**
+    * Query whether or not a type is 64-bit
+    */
+   bool is_64bit() const
+   {
+      return glsl_base_type_is_64bit(base_type);
    }
 
    /**
