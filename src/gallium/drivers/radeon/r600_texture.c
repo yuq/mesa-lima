@@ -1012,6 +1012,8 @@ r600_texture_create_object(struct pipe_screen *screen,
 	 * This must be done after r600_setup_surface.
 	 * Applies to R600-Cayman. */
 	rtex->non_disp_tiling = rtex->is_depth && rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D;
+	/* Applies to GCN. */
+	rtex->last_msaa_resolve_target_micro_mode = rtex->surface.micro_tile_mode;
 
 	if (rtex->is_depth) {
 		if (!(base->flags & (R600_RESOURCE_FLAG_TRANSFER |
@@ -1808,6 +1810,83 @@ void vi_dcc_clear_level(struct r600_common_context *rctx,
 			   clear_value, R600_COHERENCY_CB_META);
 }
 
+/* Set the same micro tile mode as the destination of the last MSAA resolve.
+ * This allows hitting the MSAA resolve fast path, which requires that both
+ * src and dst micro tile modes match.
+ */
+static void si_set_optimal_micro_tile_mode(struct r600_common_screen *rscreen,
+					   struct r600_texture *rtex)
+{
+	if (rtex->resource.is_shared ||
+	    rtex->surface.nsamples <= 1 ||
+	    rtex->surface.micro_tile_mode == rtex->last_msaa_resolve_target_micro_mode)
+		return;
+
+	assert(rtex->surface.level[0].mode == RADEON_SURF_MODE_2D);
+	assert(rtex->surface.last_level == 0);
+
+	/* These magic numbers were copied from addrlib. It doesn't use any
+	 * definitions for them either. They are all 2D_TILED_THIN1 modes with
+	 * different bpp and micro tile mode.
+	 */
+	if (rscreen->chip_class >= CIK) {
+		switch (rtex->last_msaa_resolve_target_micro_mode) {
+		case 0: /* displayable */
+			rtex->surface.tiling_index[0] = 10;
+			break;
+		case 1: /* thin */
+			rtex->surface.tiling_index[0] = 14;
+			break;
+		case 3: /* rotated */
+			rtex->surface.tiling_index[0] = 28;
+			break;
+		default: /* depth, thick */
+			assert(!"unexpected micro mode");
+			return;
+		}
+	} else { /* SI */
+		switch (rtex->last_msaa_resolve_target_micro_mode) {
+		case 0: /* displayable */
+			switch (rtex->surface.bpe) {
+			case 8:
+                            rtex->surface.tiling_index[0] = 10;
+                            break;
+			case 16:
+                            rtex->surface.tiling_index[0] = 11;
+                            break;
+			default: /* 32, 64 */
+                            rtex->surface.tiling_index[0] = 12;
+                            break;
+			}
+			break;
+		case 1: /* thin */
+			switch (rtex->surface.bpe) {
+			case 8:
+                                rtex->surface.tiling_index[0] = 14;
+                                break;
+			case 16:
+                                rtex->surface.tiling_index[0] = 15;
+                                break;
+			case 32:
+                                rtex->surface.tiling_index[0] = 16;
+                                break;
+			default: /* 64, 128 */
+                                rtex->surface.tiling_index[0] = 17;
+                                break;
+			}
+			break;
+		default: /* depth, thick */
+			assert(!"unexpected micro mode");
+			return;
+		}
+	}
+
+	rtex->surface.micro_tile_mode = rtex->last_msaa_resolve_target_micro_mode;
+
+	p_atomic_inc(&rscreen->dirty_fb_counter);
+	p_atomic_inc(&rscreen->dirty_tex_descriptor_counter);
+}
+
 void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   struct pipe_framebuffer_state *fb,
 				   struct r600_atom *fb_state,
@@ -1881,6 +1960,10 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			if (rctx->screen->debug_flags & DBG_NO_DCC_CLEAR)
 				continue;
 
+			/* We can change the micro tile mode before a full clear. */
+			if (rctx->screen->chip_class >= SI)
+				si_set_optimal_micro_tile_mode(rctx->screen, tex);
+
 			vi_get_fast_clear_parameters(fb->cbufs[i]->format, color, &reset_value, &clear_words_needed);
 			vi_dcc_clear_level(rctx, tex, 0, reset_value);
 
@@ -1896,6 +1979,10 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			if (tex->cmask.size == 0) {
 				continue;
 			}
+
+			/* We can change the micro tile mode before a full clear. */
+			if (rctx->screen->chip_class >= SI)
+				si_set_optimal_micro_tile_mode(rctx->screen, tex);
 
 			/* Do the fast clear. */
 			rctx->clear_buffer(&rctx->b, &tex->cmask_buffer->b.b,

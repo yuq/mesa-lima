@@ -252,6 +252,7 @@ struct r600_texture {
 	uint64_t			dcc_offset; /* 0 = disabled */
 	unsigned			cb_color_info; /* fast clear enable bit */
 	unsigned			color_clear_value[2];
+	unsigned			last_msaa_resolve_target_micro_mode;
 
 	/* Depth buffer compression and fast clear. */
 	struct r600_htile_info		htile;

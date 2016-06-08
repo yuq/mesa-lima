@@ -22,6 +22,7 @@
  */
 
 #include "si_pipe.h"
+#include "sid.h"
 #include "util/u_format.h"
 #include "util/u_surface.h"
 
@@ -903,8 +904,18 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    info->src.box.height == dst_height &&
 	    info->src.box.depth == 1 &&
 	    dst->surface.level[info->dst.level].mode >= RADEON_SURF_MODE_1D &&
-	    src->surface.micro_tile_mode == dst->surface.micro_tile_mode &&
 	    (!dst->cmask.size || !dst->dirty_level_mask)) { /* dst cannot be fast-cleared */
+		/* Check the last constraint. */
+		if (src->surface.micro_tile_mode != dst->surface.micro_tile_mode) {
+			/* The next fast clear will switch to this mode to
+			 * get direct hw resolve next time if the mode is
+			 * different now.
+			 */
+			src->last_msaa_resolve_target_micro_mode =
+				dst->surface.micro_tile_mode;
+			goto resolve_to_temp;
+		}
+
 		/* Resolving into a surface with DCC is unsupported. Since
 		 * it's being overwritten anyway, clear it to uncompressed.
 		 * This is still the fastest codepath even with this clear.
@@ -929,6 +940,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 		return true;
 	}
 
+resolve_to_temp:
 	/* Shader-based resolve is VERY SLOW. Instead, resolve into
 	 * a temporary texture and blit.
 	 */
@@ -942,6 +954,12 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	templ.usage = PIPE_USAGE_DEFAULT;
 	templ.flags = R600_RESOURCE_FLAG_FORCE_TILING |
 		      R600_RESOURCE_FLAG_DISABLE_DCC;
+
+	/* The src and dst microtile modes must be the same. */
+	if (src->surface.micro_tile_mode == V_009910_ADDR_SURF_DISPLAY_MICRO_TILING)
+		templ.bind = PIPE_BIND_SCANOUT;
+	else
+		templ.bind = 0;
 
 	tmp = ctx->screen->resource_create(ctx->screen, &templ);
 	if (!tmp)
