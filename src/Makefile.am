@@ -50,7 +50,7 @@ BUILT_SOURCES = git_sha1.h
 # At the same time `make distclean' gets angry at us if we don't cleanup the
 # builddir one.
 distclean-local:
-	test $(top_srcdir) != $(top_builddir) && rm $(builddir)/git_sha1.h
+	( test $(top_srcdir) != $(top_builddir) && rm $(builddir)/git_sha1.h ) || true
 
 SUBDIRS = . gtest util mapi/glapi/gen mapi
 
