@@ -176,6 +176,14 @@ private:
       case GL_DOUBLE_MAT4:
       case GL_DOUBLE_MAT4x2:
       case GL_DOUBLE_MAT4x3:
+      case GL_INT64_ARB:
+      case GL_INT64_VEC2_ARB:
+      case GL_INT64_VEC3_ARB:
+      case GL_INT64_VEC4_ARB:
+      case GL_UNSIGNED_INT64_ARB:
+      case GL_UNSIGNED_INT64_VEC2_ARB:
+      case GL_UNSIGNED_INT64_VEC3_ARB:
+      case GL_UNSIGNED_INT64_VEC4_ARB:
          return true;
       default:
          return false;
