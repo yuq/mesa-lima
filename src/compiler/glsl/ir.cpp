@@ -261,6 +261,8 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
    case ir_unop_find_msb:
    case ir_unop_find_lsb:
    case ir_unop_subroutine_to_int:
+   case ir_unop_i642i:
+   case ir_unop_u642i:
       this->type = glsl_type::get_instance(GLSL_TYPE_INT,
 					   op0->type->vector_elements, 1);
       break;
@@ -271,6 +273,8 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
    case ir_unop_d2f:
    case ir_unop_bitcast_i2f:
    case ir_unop_bitcast_u2f:
+   case ir_unop_i642f:
+   case ir_unop_u642f:
       this->type = glsl_type::get_instance(GLSL_TYPE_FLOAT,
 					   op0->type->vector_elements, 1);
       break;
@@ -278,6 +282,7 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
    case ir_unop_f2b:
    case ir_unop_i2b:
    case ir_unop_d2b:
+   case ir_unop_i642b:
       this->type = glsl_type::get_instance(GLSL_TYPE_BOOL,
 					   op0->type->vector_elements, 1);
       break;
@@ -285,6 +290,8 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
    case ir_unop_f2d:
    case ir_unop_i2d:
    case ir_unop_u2d:
+   case ir_unop_i642d:
+   case ir_unop_u642d:
       this->type = glsl_type::get_instance(GLSL_TYPE_DOUBLE,
 					   op0->type->vector_elements, 1);
       break;
@@ -293,16 +300,41 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
    case ir_unop_f2u:
    case ir_unop_d2u:
    case ir_unop_bitcast_f2u:
+   case ir_unop_i642u:
+   case ir_unop_u642u:
       this->type = glsl_type::get_instance(GLSL_TYPE_UINT,
 					   op0->type->vector_elements, 1);
       break;
 
+   case ir_unop_i2i64:
+   case ir_unop_u2i64:
+   case ir_unop_b2i64:
+   case ir_unop_f2i64:
+   case ir_unop_d2i64:
+   case ir_unop_u642i64:
+      this->type = glsl_type::get_instance(GLSL_TYPE_INT64,
+					   op0->type->vector_elements, 1);
+      break;
+
+   case ir_unop_i2u64:
+   case ir_unop_u2u64:
+   case ir_unop_f2u64:
+   case ir_unop_d2u64:
+   case ir_unop_i642u64:
+      this->type = glsl_type::get_instance(GLSL_TYPE_UINT64,
+					   op0->type->vector_elements, 1);
+      break;
    case ir_unop_noise:
       this->type = glsl_type::float_type;
       break;
 
    case ir_unop_unpack_double_2x32:
+   case ir_unop_unpack_uint_2x32:
       this->type = glsl_type::uvec2_type;
+      break;
+
+   case ir_unop_unpack_int_2x32:
+      this->type = glsl_type::ivec2_type;
       break;
 
    case ir_unop_pack_snorm_2x16:
@@ -315,6 +347,14 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
 
    case ir_unop_pack_double_2x32:
       this->type = glsl_type::double_type;
+      break;
+
+   case ir_unop_pack_int_2x32:
+      this->type = glsl_type::int64_t_type;
+      break;
+
+   case ir_unop_pack_uint_2x32:
+      this->type = glsl_type::uint64_t_type;
       break;
 
    case ir_unop_unpack_snorm_2x16:
@@ -345,6 +385,21 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
    case ir_unop_vote_all:
    case ir_unop_vote_eq:
       this->type = glsl_type::bool_type;
+      break;
+
+   case ir_unop_bitcast_i642d:
+   case ir_unop_bitcast_u642d:
+      this->type = glsl_type::get_instance(GLSL_TYPE_DOUBLE,
+                                           op0->type->vector_elements, 1);
+      break;
+
+   case ir_unop_bitcast_d2i64:
+      this->type = glsl_type::get_instance(GLSL_TYPE_INT64,
+                                           op0->type->vector_elements, 1);
+      break;
+   case ir_unop_bitcast_d2u64:
+      this->type = glsl_type::get_instance(GLSL_TYPE_UINT64,
+                                           op0->type->vector_elements, 1);
       break;
 
    default:

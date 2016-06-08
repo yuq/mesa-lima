@@ -80,6 +80,8 @@ class type_signature_iter(object):
 
 uint_type = type("unsigned", "u", "GLSL_TYPE_UINT")
 int_type = type("int", "i", "GLSL_TYPE_INT")
+uint64_type = type("uint64_t", "u64", "GLSL_TYPE_UINT64")
+int64_type = type("int64_t", "i64", "GLSL_TYPE_INT64")
 float_type = type("float", "f", "GLSL_TYPE_FLOAT")
 double_type = type("double", "d", "GLSL_TYPE_DOUBLE")
 bool_type = type("bool", "b", "GLSL_TYPE_BOOL")
@@ -470,6 +472,37 @@ ir_expression_operation = [
    operation("bitcast_u2f", 1, source_types=(uint_type,), dest_type=float_type, c_expression="bitcast_u2f({src0})"),
    # 'Bit-identical float-to-uint "conversion"
    operation("bitcast_f2u", 1, source_types=(float_type,), dest_type=uint_type, c_expression="bitcast_f2u({src0})"),
+   # Bit-identical u64-to-double "conversion"
+   operation("bitcast_u642d", 1, source_types=(uint64_type,), dest_type=double_type),
+   # Bit-identical i64-to-double "conversion"
+   operation("bitcast_i642d", 1, source_types=(int64_type,), dest_type=double_type),
+   # Bit-identical double-to_u64 "conversion"
+   operation("bitcast_d2u64", 1, source_types=(double_type,), dest_type=uint64_type),
+   # Bit-identical double-to-i64 "conversion"
+   operation("bitcast_d2i64", 1, source_types=(double_type,), dest_type=int64_type),
+   # i64-to-i32 conversion
+   operation("i642i", 1, source_types=(int64_type,), dest_type=int_type),
+   # ui64-to-i32 conversion
+   operation("u642i", 1, source_types=(uint64_type,), dest_type=int_type),
+   operation("i642u", 1, source_types=(int64_type,), dest_type=uint_type),
+   operation("u642u", 1, source_types=(uint64_type,), dest_type=uint_type),
+   operation("i642b", 1, source_types=(int64_type,), dest_type=bool_type),
+   operation("i642f", 1, source_types=(int64_type,), dest_type=float_type),
+   operation("u642f", 1, source_types=(uint64_type,), dest_type=float_type),
+   operation("i642d", 1, source_types=(int64_type,), dest_type=double_type),
+   operation("u642d", 1, source_types=(uint64_type,), dest_type=double_type),
+   operation("i2i64", 1, source_types=(int_type,), dest_type=int64_type),
+   operation("u2i64", 1, source_types=(uint_type,), dest_type=int64_type),
+   operation("b2i64", 1, source_types=(bool_type,), dest_type=int64_type),
+   operation("f2i64", 1, source_types=(float_type,), dest_type=int64_type),
+   operation("d2i64", 1, source_types=(double_type,), dest_type=int64_type),
+   operation("i2u64", 1, source_types=(int_type,), dest_type=uint64_type),
+   operation("u2u64", 1, source_types=(uint_type,), dest_type=uint64_type),
+   operation("f2u64", 1, source_types=(float_type,), dest_type=uint64_type),
+   operation("d2u64", 1, source_types=(double_type,), dest_type=uint64_type),
+   operation("u642i64", 1, source_types=(uint_type,), dest_type=int64_type),
+   operation("i642u64", 1, source_types=(int_type,), dest_type=uint64_type),
+
 
    # Unary floating-point rounding operations.
    operation("trunc", 1, source_types=real_types, c_expression={'f': "truncf({src0})", 'd': "trunc({src0})"}),
@@ -542,6 +575,12 @@ ir_expression_operation = [
    operation("vote_any", 1),
    operation("vote_all", 1),
    operation("vote_eq", 1),
+
+   # 64-bit integer packing ops.
+   operation("pack_int_2x32", 1, printable_name="packInt2x32", source_types=(int_type,), dest_type=int64_type, flags=frozenset((horizontal_operation, non_assign_operation))),
+   operation("pack_uint_2x32", 1, printable_name="packUint2x32", source_types=(uint_type,), dest_type=uint64_type, flags=frozenset((horizontal_operation, non_assign_operation))),
+   operation("unpack_int_2x32", 1, printable_name="unpackInt2x32", source_types=(int64_type,), dest_type=int_type, flags=frozenset((horizontal_operation, non_assign_operation))),
+   operation("unpack_uint_2x32", 1, printable_name="unpackUint2x32", source_types=(uint64_type,), dest_type=uint_type, flags=frozenset((horizontal_operation, non_assign_operation))),
 
    operation("add", 2, printable_name="+", source_types=numeric_types, c_expression="{src0} + {src1}", flags=vector_scalar_operation),
    operation("sub", 2, printable_name="-", source_types=numeric_types, c_expression="{src0} - {src1}", flags=vector_scalar_operation),
