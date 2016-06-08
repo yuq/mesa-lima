@@ -195,6 +195,8 @@ enum ast_operators {
    ast_float_constant,
    ast_bool_constant,
    ast_double_constant,
+   ast_int64_constant,
+   ast_uint64_constant,
 
    ast_sequence,
    ast_aggregate
@@ -255,6 +257,8 @@ public:
       unsigned uint_constant;
       int bool_constant;
       double double_constant;
+      uint64_t uint64_constant;
+      int64_t int64_constant;
    } primary_expression;
 
 

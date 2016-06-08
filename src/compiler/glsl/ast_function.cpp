@@ -1260,6 +1260,12 @@ emit_inline_vector_constructor(const glsl_type *type,
                case GLSL_TYPE_BOOL:
                   data.b[i + base_component] = c->get_bool_component(i);
                   break;
+               case GLSL_TYPE_UINT64:
+                  data.u64[i + base_component] = c->get_uint64_component(i);
+                  break;
+               case GLSL_TYPE_INT64:
+                  data.i64[i + base_component] = c->get_int64_component(i);
+                  break;
                default:
                   assert(!"Should not get here.");
                   break;
@@ -1267,8 +1273,7 @@ emit_inline_vector_constructor(const glsl_type *type,
             }
 
             /* Mask of fields to be written in the assignment. */
-            constant_mask |=
-               ((1U << rhs_components) - 1) << base_lhs_component;
+            constant_mask |= ((1U << rhs_components) - 1) << base_lhs_component;
             constant_components += rhs_components;
 
             base_component += rhs_components;

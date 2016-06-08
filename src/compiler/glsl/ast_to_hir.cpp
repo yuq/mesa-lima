@@ -1258,6 +1258,10 @@ constant_one_for_inc_dec(void *ctx, const glsl_type *type)
       return new(ctx) ir_constant((unsigned) 1);
    case GLSL_TYPE_INT:
       return new(ctx) ir_constant(1);
+   case GLSL_TYPE_UINT64:
+      return new(ctx) ir_constant((uint64_t) 1);
+   case GLSL_TYPE_INT64:
+      return new(ctx) ir_constant((int64_t) 1);
    default:
    case GLSL_TYPE_FLOAT:
       return new(ctx) ir_constant(1.0f);
@@ -2008,6 +2012,14 @@ ast_expression::do_hir(exec_list *instructions,
       result = new(ctx) ir_constant(this->primary_expression.double_constant);
       break;
 
+   case ast_uint64_constant:
+      result = new(ctx) ir_constant(this->primary_expression.uint64_constant);
+      break;
+
+   case ast_int64_constant:
+      result = new(ctx) ir_constant(this->primary_expression.int64_constant);
+      break;
+
    case ast_sequence: {
       /* It should not be possible to generate a sequence in the AST without
        * any expressions in it.
@@ -2134,6 +2146,8 @@ ast_expression::has_sequence_subexpression() const
    case ast_float_constant:
    case ast_bool_constant:
    case ast_double_constant:
+   case ast_int64_constant:
+   case ast_uint64_constant:
       return false;
 
    case ast_aggregate:

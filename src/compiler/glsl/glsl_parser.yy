@@ -97,6 +97,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 
 %union {
    int n;
+   int64_t n64;
    float real;
    double dreal;
    const char *identifier;
@@ -174,6 +175,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %token <real> FLOATCONSTANT
 %token <dreal> DOUBLECONSTANT
 %token <n> INTCONSTANT UINTCONSTANT BOOLCONSTANT
+%token <n64> INT64CONSTANT UINT64CONSTANT
 %token <identifier> FIELD_SELECTION
 %token LEFT_OP RIGHT_OP
 %token INC_OP DEC_OP LE_OP GE_OP EQ_OP NE_OP
@@ -451,6 +453,20 @@ primary_expression:
       $$ = new(ctx) ast_expression(ast_uint_constant, NULL, NULL, NULL);
       $$->set_location(@1);
       $$->primary_expression.uint_constant = $1;
+   }
+   | INT64CONSTANT
+   {
+      void *ctx = state->linalloc;
+      $$ = new(ctx) ast_expression(ast_int64_constant, NULL, NULL, NULL);
+      $$->set_location(@1);
+      $$->primary_expression.int64_constant = $1;
+   }
+   | UINT64CONSTANT
+   {
+      void *ctx = state->linalloc;
+      $$ = new(ctx) ast_expression(ast_uint64_constant, NULL, NULL, NULL);
+      $$->set_location(@1);
+      $$->primary_expression.uint64_constant = $1;
    }
    | FLOATCONSTANT
    {
