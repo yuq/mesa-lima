@@ -41,10 +41,30 @@
 #include "st_context.h"
 #include "st_cb_bitmap.h"
 #include "st_cb_readpixels.h"
+#include "st_debug.h"
 #include "state_tracker/st_cb_texture.h"
 #include "state_tracker/st_format.h"
 #include "state_tracker/st_pbo.h"
 #include "state_tracker/st_texture.h"
+
+/* The readpixels cache caches a blitted staging texture so that back-to-back
+ * calls to glReadPixels with user pointers require less CPU-GPU synchronization.
+ *
+ * Assumptions:
+ *
+ * (1) Blits have high synchronization overheads, and it is beneficial to
+ *     use a single blit of the entire framebuffer instead of many smaller
+ *     blits (because the smaller blits cannot be batched, and we have to wait
+ *     for the GPU after each one).
+ *
+ * (2) transfer_map implicitly involves a blit as well (for de-tiling, copy
+ *     from VRAM, etc.), so that it is beneficial to replace the
+ *     _mesa_readpixels path as well when possible.
+ *
+ * Change this #define to true to fill and use the cache whenever possible
+ * (this is inefficient and only meant for testing / debugging).
+ */
+#define ALWAYS_READPIXELS_CACHE false
 
 static boolean
 needs_integer_signed_unsigned_conversion(const struct gl_context *ctx,
@@ -299,6 +319,62 @@ blit_to_staging(struct st_context *st, struct st_renderbuffer *strb,
    return dst;
 }
 
+static struct pipe_resource *
+try_cached_readpixels(struct st_context *st, struct st_renderbuffer *strb,
+                      bool invert_y,
+                      GLsizei width, GLsizei height,
+                      GLenum format,
+                      enum pipe_format src_format, enum pipe_format dst_format)
+{
+   struct pipe_resource *src = strb->texture;
+   struct pipe_resource *dst = NULL;
+
+   if (ST_DEBUG & DEBUG_NOREADPIXCACHE)
+      return NULL;
+
+   /* Reset cache after invalidation or switch of parameters. */
+   if (st->readpix_cache.src != src ||
+       st->readpix_cache.dst_format != dst_format ||
+       st->readpix_cache.level != strb->surface->u.tex.level ||
+       st->readpix_cache.layer != strb->surface->u.tex.first_layer) {
+      pipe_resource_reference(&st->readpix_cache.src, src);
+      pipe_resource_reference(&st->readpix_cache.cache, NULL);
+      st->readpix_cache.dst_format = dst_format;
+      st->readpix_cache.level = strb->surface->u.tex.level;
+      st->readpix_cache.layer = strb->surface->u.tex.first_layer;
+      st->readpix_cache.hits = 0;
+   }
+
+   /* Decide whether to trigger the cache. */
+   if (!st->readpix_cache.cache) {
+      if (!strb->use_readpix_cache && !ALWAYS_READPIXELS_CACHE) {
+         /* Heuristic: If previous successive calls read at least a fraction
+          * of the surface _and_ we read again, trigger the cache.
+          */
+         unsigned threshold = MAX2(1, strb->Base.Width * strb->Base.Height / 8);
+
+         if (st->readpix_cache.hits < threshold) {
+            st->readpix_cache.hits += width * height;
+            return NULL;
+         }
+
+         strb->use_readpix_cache = true;
+      }
+
+      /* Fill the cache */
+      st->readpix_cache.cache = blit_to_staging(st, strb, invert_y,
+                                                0, 0,
+                                                strb->Base.Width,
+                                                strb->Base.Height, format,
+                                                src_format, dst_format);
+   }
+
+   /* Return an owning reference to stay consistent with the non-cached path */
+   pipe_resource_reference(&dst, st->readpix_cache.cache);
+
+   return dst;
+}
+
 /**
  * This uses a blit to copy the read buffer to a texture format which matches
  * the format and type combo and then a fast read-back is done using memcpy.
@@ -330,6 +406,7 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
    unsigned bind = PIPE_BIND_TRANSFER_READ;
    struct pipe_transfer *tex_xfer;
    ubyte *map = NULL;
+   bool window;
 
    /* Validate state (to be sure we have up-to-date framebuffer surfaces)
     * and flush the bitmap cache prior to reading. */
@@ -395,24 +472,36 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
          return;
    }
 
-   /* See if the texture format already matches the format and type,
-    * in which case the memcpy-based fast path will likely be used and
-    * we don't have to blit. */
-   if (_mesa_format_matches_format_and_type(rb->Format, format,
-                                            type, pack->SwapBytes, NULL)) {
-      goto fallback;
-   }
-
    if (needs_integer_signed_unsigned_conversion(ctx, format, type)) {
       goto fallback;
    }
 
-   dst = blit_to_staging(st, strb,
-                         st_fb_orientation(ctx->ReadBuffer) == Y_0_TOP,
-                         x, y, width, height, format,
-                         src_format, dst_format);
-   if (!dst)
-      goto fallback;
+   /* Cache a staging texture for back-to-back ReadPixels, to avoid CPU-GPU
+    * synchronization overhead.
+    */
+   dst = try_cached_readpixels(st, strb,
+                               st_fb_orientation(ctx->ReadBuffer) == Y_0_TOP,
+                               width, height, format, src_format, dst_format);
+   if (dst) {
+      window = false;
+   } else {
+      /* See if the texture format already matches the format and type,
+       * in which case the memcpy-based fast path will likely be used and
+       * we don't have to blit. */
+      if (_mesa_format_matches_format_and_type(rb->Format, format,
+                                               type, pack->SwapBytes, NULL)) {
+         goto fallback;
+      }
+
+      dst = blit_to_staging(st, strb,
+                            st_fb_orientation(ctx->ReadBuffer) == Y_0_TOP,
+                            x, y, width, height, format,
+                            src_format, dst_format);
+      if (!dst)
+         goto fallback;
+
+      window = true;
+   }
 
    /* map resources */
    pixels = _mesa_map_pbo_dest(ctx, pack, pixels);
@@ -424,6 +513,9 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
       pipe_resource_reference(&dst, NULL);
       goto fallback;
    }
+
+   if (!window)
+      map += y * tex_xfer->stride + x * util_format_get_blocksize(dst_format);
 
    /* memcpy data into a user buffer */
    {
