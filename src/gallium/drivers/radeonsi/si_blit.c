@@ -902,6 +902,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    info->src.box.height == dst_height &&
 	    info->src.box.depth == 1 &&
 	    dst->surface.level[info->dst.level].mode >= RADEON_SURF_MODE_1D &&
+	    !(dst->surface.flags & RADEON_SURF_SCANOUT) &&
 	    (!dst->cmask.size || !dst->dirty_level_mask)) { /* dst cannot be fast-cleared */
 		/* Resolving into a surface with DCC is unsupported. Since
 		 * it's being overwritten anyway, clear it to uncompressed.
