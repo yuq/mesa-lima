@@ -432,7 +432,7 @@ lower_packed_varyings_visitor::lower_rvalue(ir_rvalue *rvalue,
                                             bool gs_input_toplevel,
                                             unsigned vertex_index)
 {
-   unsigned dmul = rvalue->type->is_double() ? 2 : 1;
+   unsigned dmul = rvalue->type->is_64bit() ? 2 : 1;
    /* When gs_input_toplevel is set, we should be looking at a geometry shader
     * input array.
     */
@@ -480,7 +480,7 @@ lower_packed_varyings_visitor::lower_rvalue(ir_rvalue *rvalue,
       char right_swizzle_name[4] = { 0, 0, 0, 0 };
 
       left_components = 4 - fine_location % 4;
-      if (rvalue->type->is_double()) {
+      if (rvalue->type->is_64bit()) {
          /* We might actually end up with 0 left components! */
          left_components /= 2;
       }
@@ -676,7 +676,7 @@ lower_packed_varyings_visitor::needs_lowering(ir_variable *var)
       return false;
 
    type = type->without_array();
-   if (type->vector_elements == 4 && !type->is_double())
+   if (type->vector_elements == 4 && !type->is_64bit())
       return false;
    return true;
 }

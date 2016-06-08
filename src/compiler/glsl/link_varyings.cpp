@@ -403,7 +403,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
              */
             last_comp = 4;
          } else {
-            unsigned dmul = var->type->is_double() ? 2 : 1;
+            unsigned dmul = var->type->is_64bit() ? 2 : 1;
             last_comp = var->data.location_frac +
                var->type->without_array()->vector_elements * dmul;
          }
@@ -708,7 +708,7 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
       + this->matched_candidate->toplevel_var->data.location_frac
       + this->matched_candidate->offset;
    const unsigned dmul =
-      this->matched_candidate->type->without_array()->is_double() ? 2 : 1;
+      this->matched_candidate->type->without_array()->is_64bit() ? 2 : 1;
 
    if (this->matched_candidate->type->is_array()) {
       /* Array variable */

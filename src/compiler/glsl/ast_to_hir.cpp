@@ -3393,7 +3393,7 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
                 (qual_component + components - 1) > 3) {
                _mesa_glsl_error(loc, state, "component overflow (%u > 3)",
                                 (qual_component + components - 1));
-            } else if (qual_component == 1 && type->is_double()) {
+            } else if (qual_component == 1 && type->is_64bit()) {
                /* We don't bother checking for 3 as it should be caught by the
                 * overflow check above.
                 */
@@ -6843,7 +6843,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             }
          } else {
             if (layout && layout->flags.q.explicit_xfb_offset) {
-               unsigned align = field_type->is_double() ? 8 : 4;
+               unsigned align = field_type->is_64bit() ? 8 : 4;
                fields[i].offset = glsl_align(block_xfb_offset, align);
                block_xfb_offset +=
                   MAX2(xfb_stride, (int) (4 * field_type->component_slots()));

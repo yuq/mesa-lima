@@ -222,7 +222,7 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
 	 val->array_elements[0]->type->base_type;
       const unsigned int elements = val->array_elements[0]->type->components();
       unsigned int idx = 0;
-      unsigned dmul = (base_type == GLSL_TYPE_DOUBLE) ? 2 : 1;
+      unsigned dmul = glsl_base_type_is_64bit(base_type) ? 2 : 1;
 
       assert(val->type->length >= storage->array_elements);
       for (unsigned int i = 0; i < storage->array_elements; i++) {
