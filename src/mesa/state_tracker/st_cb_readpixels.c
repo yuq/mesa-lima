@@ -219,6 +219,79 @@ fail:
 }
 
 /**
+ * Create a staging texture and blit the requested region to it.
+ */
+static struct pipe_resource *
+blit_to_staging(struct st_context *st, struct st_renderbuffer *strb,
+                   bool invert_y,
+                   GLint x, GLint y, GLsizei width, GLsizei height,
+                   GLenum format,
+                   enum pipe_format src_format, enum pipe_format dst_format)
+{
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_screen *screen = pipe->screen;
+   struct pipe_resource dst_templ;
+   struct pipe_resource *dst;
+   struct pipe_blit_info blit;
+
+   /* We are creating a texture of the size of the region being read back.
+    * Need to check for NPOT texture support. */
+   if (!screen->get_param(screen, PIPE_CAP_NPOT_TEXTURES) &&
+       (!util_is_power_of_two(width) ||
+        !util_is_power_of_two(height)))
+      return NULL;
+
+   /* create the destination texture */
+   memset(&dst_templ, 0, sizeof(dst_templ));
+   dst_templ.target = PIPE_TEXTURE_2D;
+   dst_templ.format = dst_format;
+   dst_templ.bind = PIPE_BIND_TRANSFER_READ;
+   if (util_format_is_depth_or_stencil(dst_format))
+      dst_templ.bind |= PIPE_BIND_DEPTH_STENCIL;
+   else
+      dst_templ.bind |= PIPE_BIND_RENDER_TARGET;
+   dst_templ.usage = PIPE_USAGE_STAGING;
+
+   st_gl_texture_dims_to_pipe_dims(GL_TEXTURE_2D, width, height, 1,
+                                   &dst_templ.width0, &dst_templ.height0,
+                                   &dst_templ.depth0, &dst_templ.array_size);
+
+   dst = screen->resource_create(screen, &dst_templ);
+   if (!dst)
+      return NULL;
+
+   memset(&blit, 0, sizeof(blit));
+   blit.src.resource = strb->texture;
+   blit.src.level = strb->surface->u.tex.level;
+   blit.src.format = src_format;
+   blit.dst.resource = dst;
+   blit.dst.level = 0;
+   blit.dst.format = dst->format;
+   blit.src.box.x = x;
+   blit.dst.box.x = 0;
+   blit.src.box.y = y;
+   blit.dst.box.y = 0;
+   blit.src.box.z = strb->surface->u.tex.first_layer;
+   blit.dst.box.z = 0;
+   blit.src.box.width = blit.dst.box.width = width;
+   blit.src.box.height = blit.dst.box.height = height;
+   blit.src.box.depth = blit.dst.box.depth = 1;
+   blit.mask = st_get_blit_mask(strb->Base._BaseFormat, format);
+   blit.filter = PIPE_TEX_FILTER_NEAREST;
+   blit.scissor_enable = FALSE;
+
+   if (invert_y) {
+      blit.src.box.y = strb->Base.Height - blit.src.box.y;
+      blit.src.box.height = -blit.src.box.height;
+   }
+
+   /* blit */
+   st->pipe->blit(st->pipe, &blit);
+
+   return dst;
+}
+
+/**
  * This uses a blit to copy the read buffer to a texture format which matches
  * the format and type combo and then a fast read-back is done using memcpy.
  * We can do arbitrary X/Y/Z/W/0/1 swizzling here as long as there is
@@ -245,9 +318,7 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
    struct pipe_screen *screen = pipe->screen;
    struct pipe_resource *src;
    struct pipe_resource *dst = NULL;
-   struct pipe_resource dst_templ;
    enum pipe_format dst_format, src_format;
-   struct pipe_blit_info blit;
    unsigned bind = PIPE_BIND_TRANSFER_READ;
    struct pipe_transfer *tex_xfer;
    ubyte *map = NULL;
@@ -316,14 +387,6 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
          return;
    }
 
-   /* We are creating a texture of the size of the region being read back.
-    * Need to check for NPOT texture support. */
-   if (!screen->get_param(screen, PIPE_CAP_NPOT_TEXTURES) &&
-       (!util_is_power_of_two(width) ||
-        !util_is_power_of_two(height))) {
-      goto fallback;
-   }
-
    /* See if the texture format already matches the format and type,
     * in which case the memcpy-based fast path will likely be used and
     * we don't have to blit. */
@@ -336,49 +399,12 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
       goto fallback;
    }
 
-   /* create the destination texture */
-   memset(&dst_templ, 0, sizeof(dst_templ));
-   dst_templ.target = PIPE_TEXTURE_2D;
-   dst_templ.format = dst_format;
-   dst_templ.bind = bind;
-   dst_templ.usage = PIPE_USAGE_STAGING;
-
-   st_gl_texture_dims_to_pipe_dims(GL_TEXTURE_2D, width, height, 1,
-                                   &dst_templ.width0, &dst_templ.height0,
-                                   &dst_templ.depth0, &dst_templ.array_size);
-
-   dst = screen->resource_create(screen, &dst_templ);
-   if (!dst) {
+   dst = blit_to_staging(st, strb,
+                         st_fb_orientation(ctx->ReadBuffer) == Y_0_TOP,
+                         x, y, width, height, format,
+                         src_format, dst_format);
+   if (!dst)
       goto fallback;
-   }
-
-   memset(&blit, 0, sizeof(blit));
-   blit.src.resource = src;
-   blit.src.level = strb->surface->u.tex.level;
-   blit.src.format = src_format;
-   blit.dst.resource = dst;
-   blit.dst.level = 0;
-   blit.dst.format = dst->format;
-   blit.src.box.x = x;
-   blit.dst.box.x = 0;
-   blit.src.box.y = y;
-   blit.dst.box.y = 0;
-   blit.src.box.z = strb->surface->u.tex.first_layer;
-   blit.dst.box.z = 0;
-   blit.src.box.width = blit.dst.box.width = width;
-   blit.src.box.height = blit.dst.box.height = height;
-   blit.src.box.depth = blit.dst.box.depth = 1;
-   blit.mask = st_get_blit_mask(rb->_BaseFormat, format);
-   blit.filter = PIPE_TEX_FILTER_NEAREST;
-   blit.scissor_enable = FALSE;
-
-   if (st_fb_orientation(ctx->ReadBuffer) == Y_0_TOP) {
-      blit.src.box.y = rb->Height - blit.src.box.y;
-      blit.src.box.height = -blit.src.box.height;
-   }
-
-   /* blit */
-   st->pipe->blit(st->pipe, &blit);
 
    /* map resources */
    pixels = _mesa_map_pbo_dest(ctx, pack, pixels);
