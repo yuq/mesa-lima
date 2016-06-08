@@ -35,6 +35,9 @@ $(BUILT_SOURCES): gen_pack_header.py
 CLEANFILES = $(BUILT_SOURCES)
 
 EXTRA_DIST = \
+	gen4.xml \
+	gen45.xml \
+	gen5.xml \
 	gen6.xml \
 	gen7.xml \
 	gen75.xml \
