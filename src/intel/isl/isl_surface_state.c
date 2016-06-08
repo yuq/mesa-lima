@@ -402,6 +402,34 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.MOCS = info->mocs;
 #endif
 
+#if GEN_GEN > 4 || GEN_IS_G4X
+   if (info->x_offset_sa != 0 || info->y_offset_sa != 0) {
+      /* There are fairly strict rules about when the offsets can be used.
+       * These are mostly taken from the Sky Lake PRM documentation for
+       * RENDER_SURFACE_STATE.
+       */
+      assert(info->surf->tiling != ISL_TILING_LINEAR);
+      assert(info->surf->dim == ISL_SURF_DIM_2D);
+      assert(isl_is_pow2(isl_format_get_layout(info->view->format)->bpb));
+      assert(info->surf->levels == 1);
+      assert(info->surf->logical_level0_px.array_len == 1);
+      assert(info->aux_usage == ISL_AUX_USAGE_NONE);
+#if GEN_GEN >= 7
+      s.SurfaceArray = false;
+#endif
+   }
+
+   const unsigned x_div = 4;
+   const unsigned y_div = GEN_GEN >= 8 ? 4 : 2;
+   assert(info->x_offset_sa % x_div == 0);
+   assert(info->y_offset_sa % y_div == 0);
+   s.XOffset = info->x_offset_sa / x_div;
+   s.YOffset = info->y_offset_sa / y_div;
+#else
+   assert(info->x_offset_sa == 0);
+   assert(info->y_offset_sa == 0);
+#endif
+
 #if GEN_GEN >= 7
    if (info->aux_surf && info->aux_usage != ISL_AUX_USAGE_NONE) {
       struct isl_tile_info tile_info;
