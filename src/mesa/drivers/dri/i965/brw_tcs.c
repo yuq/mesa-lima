@@ -153,6 +153,8 @@ brw_tcs_debug_recompile(struct brw_context *brw,
                       key->patch_outputs_written);
    found |= key_debug(brw, "TES primitive mode", old_key->tes_primitive_mode,
                       key->tes_primitive_mode);
+   found |= key_debug(brw, "quads and equal_spacing workaround",
+                      old_key->quads_workaround, key->quads_workaround);
    found |= brw_debug_recompile_sampler_key(brw, &old_key->tex, &key->tex);
 
    if (!found) {
@@ -346,6 +348,9 @@ brw_upload_tcs_prog(struct brw_context *brw,
     * based on the domain the DS is expecting to tessellate.
     */
    key.tes_primitive_mode = tep->program.PrimitiveMode;
+   key.quads_workaround = brw->gen < 9 &&
+                          tep->program.PrimitiveMode == GL_QUADS &&
+                          tep->program.Spacing == GL_EQUAL;
 
    if (tcp) {
       key.program_string_id = tcp->id;
@@ -382,6 +387,8 @@ brw_tcs_precompile(struct gl_context *ctx,
 
    struct gl_tess_ctrl_program *tcp = (struct gl_tess_ctrl_program *)prog;
    struct brw_tess_ctrl_program *btcp = brw_tess_ctrl_program(tcp);
+   const struct gl_linked_shader *tes =
+      shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
 
    memset(&key, 0, sizeof(key));
 
@@ -394,9 +401,14 @@ brw_tcs_precompile(struct gl_context *ctx,
          _LinkedShaders[MESA_SHADER_TESS_CTRL]->info.TessCtrl.VerticesOut;
    }
 
-   key.tes_primitive_mode = shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL]
-      ? shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL]->info.TessEval.PrimitiveMode
-      : GL_TRIANGLES;
+   if (tes) {
+      key.tes_primitive_mode = tes->info.TessEval.PrimitiveMode;
+      key.quads_workaround = brw->gen < 9 &&
+                             tes->info.TessEval.PrimitiveMode == GL_QUADS &&
+                             tes->info.TessEval.Spacing == GL_EQUAL;
+   } else {
+      key.tes_primitive_mode = GL_TRIANGLES;
+   }
 
    key.outputs_written = prog->OutputsWritten;
    key.patch_outputs_written = prog->PatchOutputsWritten;
