@@ -686,18 +686,9 @@ get_sample_count(const struct pipe_resource *res)
    return res->nr_samples ? res->nr_samples : 1;
 }
 
-/**
- * Try to do a blit using resource_copy_region. The function calls
- * resource_copy_region if the blit description is compatible with it.
- *
- * It returns TRUE if the blit was done using resource_copy_region.
- *
- * It returns FALSE otherwise and the caller must fall back to a more generic
- * codepath for the blit operation. (e.g. by using u_blitter)
- */
+
 boolean
-util_try_blit_via_copy_region(struct pipe_context *ctx,
-                              const struct pipe_blit_info *blit)
+util_can_blit_via_copy_region(const struct pipe_blit_info *blit)
 {
    unsigned mask = util_format_get_mask(blit->dst.format);
 
@@ -748,9 +739,32 @@ util_try_blit_via_copy_region(struct pipe_context *ctx,
    if (blit->alpha_blend)
       return FALSE;
 
-   ctx->resource_copy_region(ctx, blit->dst.resource, blit->dst.level,
-                             blit->dst.box.x, blit->dst.box.y, blit->dst.box.z,
-                             blit->src.resource, blit->src.level,
-                             &blit->src.box);
    return TRUE;
+}
+
+
+/**
+ * Try to do a blit using resource_copy_region. The function calls
+ * resource_copy_region if the blit description is compatible with it.
+ *
+ * It returns TRUE if the blit was done using resource_copy_region.
+ *
+ * It returns FALSE otherwise and the caller must fall back to a more generic
+ * codepath for the blit operation. (e.g. by using u_blitter)
+ */
+boolean
+util_try_blit_via_copy_region(struct pipe_context *ctx,
+                              const struct pipe_blit_info *blit)
+{
+   if (util_can_blit_via_copy_region(blit)) {
+      ctx->resource_copy_region(ctx, blit->dst.resource, blit->dst.level,
+                                blit->dst.box.x, blit->dst.box.y,
+                                blit->dst.box.z,
+                                blit->src.resource, blit->src.level,
+                                &blit->src.box);
+      return TRUE;
+   }
+   else {
+      return FALSE;
+   }
 }
