@@ -398,6 +398,7 @@ struct radeon_surf {
     uint32_t                    pipe_config;
     uint32_t                    num_banks;
     uint32_t                    macro_tile_index;
+    uint32_t                    micro_tile_mode; /* displayable, thin, depth, rotated */
 
     uint64_t                    dcc_size;
     uint64_t                    dcc_alignment;

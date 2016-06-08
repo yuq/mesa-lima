@@ -255,6 +255,20 @@ static int compute_level(struct amdgpu_winsys *ws,
    return 0;
 }
 
+#define   G_009910_MICRO_TILE_MODE(x)          (((x) >> 0) & 0x03)
+#define   G_009910_MICRO_TILE_MODE_NEW(x)      (((x) >> 22) & 0x07)
+
+static void set_micro_tile_mode(struct radeon_surf *surf,
+                                struct radeon_info *info)
+{
+   uint32_t tile_mode = info->si_tile_mode_array[surf->tiling_index[0]];
+
+   if (info->chip_class >= CIK)
+      surf->micro_tile_mode = G_009910_MICRO_TILE_MODE_NEW(tile_mode);
+   else
+      surf->micro_tile_mode = G_009910_MICRO_TILE_MODE(tile_mode);
+}
+
 static int amdgpu_surface_init(struct radeon_winsys *rws,
                                struct radeon_surf *surf)
 {
@@ -411,6 +425,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
       if (level == 0) {
          surf->bo_alignment = AddrSurfInfoOut.baseAlign;
          surf->pipe_config = AddrSurfInfoOut.pTileInfo->pipeConfig - 1;
+         set_micro_tile_mode(surf, &ws->info);
 
          /* For 2D modes only. */
          if (AddrSurfInfoOut.tileMode >= ADDR_TM_2D_TILED_THIN1) {
