@@ -2226,7 +2226,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
             GLSL_TYPE_UINT);
       if (!const_offset) {
          buffer.reladdr = ralloc(mem_ctx, st_src_reg);
-         memcpy(buffer.reladdr, &sampler_reladdr, sizeof(sampler_reladdr));
+         *buffer.reladdr = op[0];
          emit_arl(ir, sampler_reladdr, op[0]);
       }
       emit_asm(ir, TGSI_OPCODE_RESQ, result_dst)->buffer = buffer;
@@ -3247,9 +3247,9 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
 
    if (!const_block) {
       block->accept(this);
-      emit_arl(ir, sampler_reladdr, this->result);
       buffer.reladdr = ralloc(mem_ctx, st_src_reg);
-      memcpy(buffer.reladdr, &sampler_reladdr, sizeof(sampler_reladdr));
+      *buffer.reladdr = this->result;
+      emit_arl(ir, sampler_reladdr, this->result);
    }
 
    /* Calculate the surface offset */
@@ -3464,9 +3464,9 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
    get_deref_offsets(img, &sampler_array_size, &sampler_base,
                      (unsigned int *)&image.index, &reladdr);
    if (reladdr.file != PROGRAM_UNDEFINED) {
-      emit_arl(ir, sampler_reladdr, reladdr);
       image.reladdr = ralloc(mem_ctx, st_src_reg);
-      memcpy(image.reladdr, &sampler_reladdr, sizeof(reladdr));
+      *image.reladdr = reladdr;
+      emit_arl(ir, sampler_reladdr, reladdr);
    }
 
    st_dst_reg dst = undef_dst;
