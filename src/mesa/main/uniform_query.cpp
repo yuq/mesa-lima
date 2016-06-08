@@ -322,8 +322,8 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
    {
       unsigned elements = (uni->type->is_sampler())
 	 ? 1 : uni->type->components();
-      const int dmul = uni->type->base_type == GLSL_TYPE_DOUBLE ? 2 : 1;
-      const int rmul = returnType == GLSL_TYPE_DOUBLE ? 2 : 1;
+      const int dmul = uni->type->is_64bit() ? 2 : 1;
+      const int rmul = glsl_base_type_is_64bit(returnType) ? 2 : 1;
 
       /* Calculate the source base address *BEFORE* modifying elements to
        * account for the size of the user's buffer.
@@ -548,7 +548,7 @@ _mesa_propagate_uniforms_to_driver_storage(struct gl_uniform_storage *uni,
     */
    const unsigned components = MAX2(1, uni->type->vector_elements);
    const unsigned vectors = MAX2(1, uni->type->matrix_columns);
-   const int dmul = uni->type->base_type == GLSL_TYPE_DOUBLE ? 2 : 1;
+   const int dmul = uni->type->is_64bit() ? 2 : 1;
 
    /* Store the data in the driver's requested type in the driver's storage
     * areas.
@@ -668,7 +668,7 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
               unsigned src_components)
 {
    unsigned offset;
-   int size_mul = basicType == GLSL_TYPE_DOUBLE ? 2 : 1;
+   int size_mul = glsl_base_type_is_64bit(basicType) ? 2 : 1;
 
    struct gl_uniform_storage *const uni =
       validate_uniform_parameters(ctx, shProg, location, count,

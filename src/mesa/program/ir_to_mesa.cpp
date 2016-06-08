@@ -2407,7 +2407,7 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
 
    if (type->is_vector() || type->is_scalar()) {
       size = type->vector_elements;
-      if (type->is_double())
+      if (type->is_64bit())
          size *= 2;
    } else {
       size = type_size(type) * 4;
