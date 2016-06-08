@@ -3551,7 +3551,10 @@ fs_visitor::lower_integer_multiplication()
                ibld.MOV(imm, inst->src[1]);
                ibld.MUL(inst->dst, imm, inst->src[0]);
             } else {
-               ibld.MUL(inst->dst, inst->src[0], inst->src[1]);
+               const bool ud = (inst->src[1].type == BRW_REGISTER_TYPE_UD);
+               ibld.MUL(inst->dst, inst->src[0],
+                        ud ? brw_imm_uw(inst->src[1].ud)
+                           : brw_imm_w(inst->src[1].d));
             }
          } else {
             /* Gen < 8 (and some Gen8+ low-power parts like Cherryview) cannot
