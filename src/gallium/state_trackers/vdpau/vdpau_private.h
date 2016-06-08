@@ -363,6 +363,11 @@ typedef struct
    struct vl_compositor_state cstate;
 
    struct {
+       bool supported, enabled;
+       float luma_min, luma_max;
+   } luma_key;
+
+   struct {
 	  bool supported, enabled, spatial;
 	  struct vl_deint_filter *filter;
    } deint;
@@ -382,7 +387,6 @@ typedef struct
    unsigned video_width, video_height;
    enum pipe_video_chroma_format chroma_format;
    unsigned max_layers, skip_chroma_deint;
-   float luma_key_min, luma_key_max;
 
    bool custom_csc;
    vl_csc_matrix csc;
