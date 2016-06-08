@@ -151,7 +151,7 @@ public:
          return this->size;
       else
          return this->vector_elements * this->matrix_columns * this->size *
-            (this->is_double() ? 2 : 1);
+            (this->is_64bit() ? 2 : 1);
    }
 
    unsigned get_location() const {
@@ -160,7 +160,7 @@ public:
 
 private:
 
-   bool is_double() const
+   bool is_64bit() const
    {
       switch (this->type) {
       case GL_DOUBLE:

@@ -886,7 +886,7 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
    }
 
    if (explicit_stride && explicit_stride[buffer]) {
-      if (this->is_double() && info->Buffers[buffer].Stride % 2) {
+      if (this->is_64bit() && info->Buffers[buffer].Stride % 2) {
          linker_error(prog, "invalid qualifier xfb_stride=%d must be a "
                       "multiple of 8 as its applied to a type that is or "
                       "contains a double.",
