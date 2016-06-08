@@ -332,7 +332,8 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
 	 &uni->storage[offset * elements * dmul];
 
       assert(returnType == GLSL_TYPE_FLOAT || returnType == GLSL_TYPE_INT ||
-             returnType == GLSL_TYPE_UINT || returnType == GLSL_TYPE_DOUBLE);
+             returnType == GLSL_TYPE_UINT || returnType == GLSL_TYPE_DOUBLE ||
+             returnType == GLSL_TYPE_UINT64 || returnType == GLSL_TYPE_INT64);
 
       /* doubles have a different size than the other 3 types */
       unsigned bytes = sizeof(src[0]) * elements * rmul;
@@ -354,7 +355,11 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
 	      (uni->type->base_type == GLSL_TYPE_INT
 	       || uni->type->base_type == GLSL_TYPE_UINT
                || uni->type->base_type == GLSL_TYPE_SAMPLER
-               || uni->type->base_type == GLSL_TYPE_IMAGE))) {
+               || uni->type->base_type == GLSL_TYPE_IMAGE))
+          || ((returnType == GLSL_TYPE_UINT64 ||
+               returnType == GLSL_TYPE_INT64 ) &&
+              (uni->type->base_type == GLSL_TYPE_UINT64 ||
+               uni->type->base_type == GLSL_TYPE_INT64))) {
 	 memcpy(paramsOut, src, bytes);
       } else {
 	 union gl_constant_value *const dst =
@@ -387,6 +392,18 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                   dst[didx].f = tmp;
 		  break;
                }
+               case GLSL_TYPE_UINT64: {
+                  uint64_t tmp;
+                  memcpy(&tmp, &src[sidx].u, sizeof(tmp));
+                  dst[didx].f = tmp;
+                  break;
+               }
+               case GLSL_TYPE_INT64: {
+                  uint64_t tmp;
+                  memcpy(&tmp, &src[sidx].i, sizeof(tmp));
+                  dst[didx].f = tmp;
+                  break;
+               }
 	       default:
 		  assert(!"Should not get here.");
 		  break;
@@ -415,6 +432,22 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                   double tmp = src[sidx].f;
                   memcpy(&dst[didx].f, &tmp, sizeof(tmp));
 		  break;
+               }
+               case GLSL_TYPE_UINT64: {
+                  uint64_t tmpu;
+                  double tmp;
+                  memcpy(&tmpu, &src[sidx].u, sizeof(tmpu));
+                  tmp = tmpu;
+                  memcpy(&dst[didx].f, &tmp, sizeof(tmp));
+                  break;
+               }
+               case GLSL_TYPE_INT64: {
+                  int64_t tmpi;
+                  double tmp;
+                  memcpy(&tmpi, &src[sidx].i, sizeof(tmpi));
+                  tmp = tmpi;
+                  memcpy(&dst[didx].f, &tmp, sizeof(tmp));
+                  break;
                }
 	       default:
 		  assert(!"Should not get here.");
@@ -453,12 +486,45 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                   dst[didx].i = IROUNDD(tmp);
 		  break;
                }
+               case GLSL_TYPE_UINT64: {
+                  uint64_t tmp;
+                  memcpy(&tmp, &src[sidx].u, sizeof(tmp));
+                  dst[didx].i = tmp;
+                  break;
+               }
+               case GLSL_TYPE_INT64: {
+                  int64_t tmp;
+                  memcpy(&tmp, &src[sidx].i, sizeof(tmp));
+                  dst[didx].i = tmp;
+                  break;
+               }
 	       default:
 		  assert(!"Should not get here.");
 		  break;
 	       }
 	       break;
-
+            case GLSL_TYPE_INT64:
+            case GLSL_TYPE_UINT64:
+               switch (uni->type->base_type) {
+               case GLSL_TYPE_UINT:
+                  *(int64_t *)&dst[didx].u = (int64_t) src[sidx].u;
+                  break;
+               case GLSL_TYPE_INT:
+               case GLSL_TYPE_SAMPLER:
+               case GLSL_TYPE_IMAGE:
+                  *(int64_t *)&dst[didx].u = (int64_t) src[sidx].i;
+                  break;
+               case GLSL_TYPE_BOOL:
+                  *(int64_t *)&dst[didx].u = src[sidx].i ? 1.0f : 0.0f;
+                  break;
+               case GLSL_TYPE_FLOAT:
+                  *(int64_t *)&dst[didx].u = (int64_t) src[sidx].f;
+                  break;
+               default:
+                  assert(!"Should not get here.");
+                  break;
+               }
+               break;
 	    default:
 	       assert(!"Should not get here.");
 	       break;
@@ -496,6 +562,12 @@ log_uniform(const void *values, enum glsl_base_type basicType,
       case GLSL_TYPE_INT:
 	 printf("%d ", v[i].i);
 	 break;
+      case GLSL_TYPE_UINT64:
+         printf("%lu ", *(uint64_t* )&v[i * 2].u);
+         break;
+      case GLSL_TYPE_INT64:
+         printf("%ld ", *(int64_t* )&v[i * 2].u);
+         break;
       case GLSL_TYPE_FLOAT:
 	 printf("%g ", v[i].f);
 	 break;
@@ -667,6 +739,10 @@ glsl_type_name(enum glsl_base_type type)
       return "float";
    case GLSL_TYPE_DOUBLE:
       return "double";
+   case GLSL_TYPE_UINT64:
+      return "uint64";
+   case GLSL_TYPE_INT64:
+      return "int64";
    case GLSL_TYPE_BOOL:
       return "bool";
    case GLSL_TYPE_SAMPLER:

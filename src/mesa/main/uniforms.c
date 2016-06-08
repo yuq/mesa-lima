@@ -900,21 +900,27 @@ void GLAPIENTRY
 _mesa_GetnUniformi64vARB(GLuint program, GLint location,
                          GLsizei bufSize, GLint64 *params)
 {
-
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_get_uniform(ctx, program, location, bufSize, GLSL_TYPE_INT64, params);
 }
 void GLAPIENTRY
 _mesa_GetUniformi64vARB(GLuint program, GLint location, GLint64 *params)
 {
+   _mesa_GetnUniformi64vARB(program, location, INT_MAX, params);
 }
 
 void GLAPIENTRY
 _mesa_GetnUniformui64vARB(GLuint program, GLint location,
                          GLsizei bufSize, GLuint64 *params)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_get_uniform(ctx, program, location, bufSize, GLSL_TYPE_UINT64, params);
 }
+
 void GLAPIENTRY
 _mesa_GetUniformui64vARB(GLuint program, GLint location, GLuint64 *params)
 {
+   _mesa_GetnUniformui64vARB(program, location, INT_MAX, params);
 }
 
 
@@ -1636,160 +1642,320 @@ _mesa_ProgramUniformMatrix4x3dv(GLuint program, GLint location, GLsizei count,
 void GLAPIENTRY
 _mesa_Uniform1i64ARB(GLint location, GLint64 v0)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, &v0, GLSL_TYPE_INT64, 1);
 }
 
 void GLAPIENTRY
 _mesa_Uniform2i64ARB(GLint location, GLint64 v0, GLint64 v1)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   int64_t v[2];
+   v[0] = v0;
+   v[1] = v1;
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, v, GLSL_TYPE_INT64, 2);
 }
 
 void GLAPIENTRY
 _mesa_Uniform3i64ARB(GLint location, GLint64 v0, GLint64 v1, GLint64 v2)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   int64_t v[3];
+   v[0] = v0;
+   v[1] = v1;
+   v[2] = v2;
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, v, GLSL_TYPE_INT64, 3);
 }
 
 void GLAPIENTRY
 _mesa_Uniform4i64ARB(GLint location,  GLint64 v0, GLint64 v1, GLint64 v2, GLint64 v3)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   int64_t v[4];
+   v[0] = v0;
+   v[1] = v1;
+   v[2] = v2;
+   v[3] = v3;
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, v, GLSL_TYPE_INT64, 4);
 }
 
 void GLAPIENTRY
 _mesa_Uniform1i64vARB(GLint location, GLsizei count, const GLint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, value, GLSL_TYPE_INT64, 1);
 }
 
 void GLAPIENTRY
 _mesa_Uniform2i64vARB(GLint location,  GLsizei count, const GLint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, value, GLSL_TYPE_INT64, 2);
 }
 
 void GLAPIENTRY
 _mesa_Uniform3i64vARB(GLint location,  GLsizei count, const GLint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, value, GLSL_TYPE_INT64, 3);
 }
 
 void GLAPIENTRY
 _mesa_Uniform4i64vARB(GLint location,  GLsizei count, const GLint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, value, GLSL_TYPE_INT64, 4);
 }
 
 void GLAPIENTRY
 _mesa_Uniform1ui64ARB(GLint location,  GLuint64 v0)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, &v0, GLSL_TYPE_UINT64, 1);
 }
 
 void GLAPIENTRY
 _mesa_Uniform2ui64ARB(GLint location,  GLuint64 v0, GLuint64 v1)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   uint64_t v[2];
+   v[0] = v0;
+   v[1] = v1;
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, v, GLSL_TYPE_UINT64, 2);
 }
 
 void GLAPIENTRY
 _mesa_Uniform3ui64ARB(GLint location, GLuint64 v0, GLuint64 v1, GLuint64 v2)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   uint64_t v[3];
+   v[0] = v0;
+   v[1] = v1;
+   v[2] = v2;
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, v, GLSL_TYPE_UINT64, 3);
 }
 
 void GLAPIENTRY
 _mesa_Uniform4ui64ARB(GLint location,  GLuint64 v0, GLuint64 v1, GLuint64 v2, GLuint64 v3)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   uint64_t v[4];
+   v[0] = v0;
+   v[1] = v1;
+   v[2] = v2;
+   v[3] = v3;
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, v, GLSL_TYPE_UINT64, 4);
 }
 
 void GLAPIENTRY
 _mesa_Uniform1ui64vARB(GLint location,  GLsizei count, const GLuint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, value, GLSL_TYPE_UINT64, 1);
 }
 
 void GLAPIENTRY
 _mesa_Uniform2ui64vARB(GLint location,  GLsizei count, const GLuint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, value, GLSL_TYPE_UINT64, 2);
 }
 
 void GLAPIENTRY
 _mesa_Uniform3ui64vARB(GLint location,  GLsizei count, const GLuint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, value, GLSL_TYPE_UINT64, 3);
 }
 
 void GLAPIENTRY
 _mesa_Uniform4ui64vARB(GLint location,  GLsizei count, const GLuint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform(ctx, ctx->_Shader->ActiveProgram, location, 1, value, GLSL_TYPE_UINT64, 4);
 }
 
-/* DSA int64 entrypoints */
+/* DSA entrypoints */
 void GLAPIENTRY
 _mesa_ProgramUniform1i64ARB(GLuint program, GLint location, GLint64 v0)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+            "glProgramUniform1i64ARB");
+   _mesa_uniform(ctx, shProg, location, 1, &v0, GLSL_TYPE_INT64, 1);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform2i64ARB(GLuint program, GLint location, GLint64 v0, GLint64 v1)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform2i64ARB");
+   int64_t v[2];
+   v[0] = v0;
+   v[1] = v1;
+   _mesa_uniform(ctx, shProg, location, 1, v, GLSL_TYPE_INT64, 2);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform3i64ARB(GLuint program, GLint location, GLint64 v0, GLint64 v1, GLint64 v2)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform3i64ARB");
+   int64_t v[3];
+   v[0] = v0;
+   v[1] = v1;
+   v[2] = v2;
+   _mesa_uniform(ctx, shProg, location, 1, v, GLSL_TYPE_INT64, 3);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform4i64ARB(GLuint program, GLint location,  GLint64 v0, GLint64 v1, GLint64 v2, GLint64 v3)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform4i64ARB");
+   int64_t v[4];
+   v[0] = v0;
+   v[1] = v1;
+   v[2] = v2;
+   v[3] = v3;
+   _mesa_uniform(ctx, shProg, location, 1, v, GLSL_TYPE_INT64, 4);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform1i64vARB(GLuint program, GLint location, GLsizei count, const GLint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform1i64vARB");
+   _mesa_uniform(ctx, shProg, location, 1, value, GLSL_TYPE_INT64, 1);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform2i64vARB(GLuint program, GLint location,  GLsizei count, const GLint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform2i64vARB");
+   _mesa_uniform(ctx, shProg, location, 1, value, GLSL_TYPE_INT64, 2);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform3i64vARB(GLuint program, GLint location,  GLsizei count, const GLint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform3i64vARB");
+   _mesa_uniform(ctx, shProg, location, 1, value, GLSL_TYPE_INT64, 3);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform4i64vARB(GLuint program, GLint location,  GLsizei count, const GLint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform4i64vARB");
+   _mesa_uniform(ctx, shProg, location, 1, value, GLSL_TYPE_INT64, 4);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform1ui64ARB(GLuint program, GLint location,  GLuint64 v0)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform1ui64ARB");
+   _mesa_uniform(ctx, shProg, location, 1, &v0, GLSL_TYPE_UINT64, 1);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform2ui64ARB(GLuint program, GLint location,  GLuint64 v0, GLuint64 v1)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform2ui64ARB");
+   uint64_t v[2];
+   v[0] = v0;
+   v[1] = v1;
+   _mesa_uniform(ctx, shProg, location, 1, v, GLSL_TYPE_UINT64, 2);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform3ui64ARB(GLuint program, GLint location, GLuint64 v0, GLuint64 v1, GLuint64 v2)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform3ui64ARB");
+   uint64_t v[3];
+   v[0] = v0;
+   v[1] = v1;
+   v[2] = v2;
+   _mesa_uniform(ctx, shProg, location, 1, v, GLSL_TYPE_UINT64, 3);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform4ui64ARB(GLuint program, GLint location,  GLuint64 v0, GLuint64 v1, GLuint64 v2, GLuint64 v3)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform4ui64ARB");
+   uint64_t v[4];
+   v[0] = v0;
+   v[1] = v1;
+   v[2] = v2;
+   v[3] = v3;
+   _mesa_uniform(ctx, shProg, location, 1, v, GLSL_TYPE_UINT64, 4);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform1ui64vARB(GLuint program, GLint location,  GLsizei count, const GLuint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform1ui64vARB");
+   _mesa_uniform(ctx, shProg, location, 1, value, GLSL_TYPE_UINT64, 1);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform2ui64vARB(GLuint program, GLint location,  GLsizei count, const GLuint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform2ui64vARB");
+   _mesa_uniform(ctx, shProg, location, 1, value, GLSL_TYPE_UINT64, 2);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform3ui64vARB(GLuint program, GLint location,  GLsizei count, const GLuint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform3ui64vARB");
+   _mesa_uniform(ctx, shProg, location, 1, value, GLSL_TYPE_UINT64, 3);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniform4ui64vARB(GLuint program, GLint location,  GLsizei count, const GLuint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glProgramUniform4ui64vARB");
+   _mesa_uniform(ctx, shProg, location, 1, value, GLSL_TYPE_UINT64, 4);
 }
