@@ -2259,6 +2259,49 @@ vec4_visitor::scalarize_df()
    return progress;
 }
 
+bool
+vec4_visitor::lower_64bit_mad_to_mul_add()
+{
+   bool progress = false;
+
+   foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
+      if (inst->opcode != BRW_OPCODE_MAD)
+         continue;
+
+      if (type_sz(inst->dst.type) != 8)
+         continue;
+
+      dst_reg mul_dst = dst_reg(this, glsl_type::dvec4_type);
+
+      /* Use the copy constructor so we copy all relevant instruction fields
+       * from the original mad into the add and mul instructions
+       */
+      vec4_instruction *mul = new(mem_ctx) vec4_instruction(*inst);
+      mul->opcode = BRW_OPCODE_MUL;
+      mul->dst = mul_dst;
+      mul->src[0] = inst->src[1];
+      mul->src[1] = inst->src[2];
+      mul->src[2].file = BAD_FILE;
+
+      vec4_instruction *add = new(mem_ctx) vec4_instruction(*inst);
+      add->opcode = BRW_OPCODE_ADD;
+      add->src[0] = src_reg(mul_dst);
+      add->src[1] = inst->src[0];
+      add->src[2].file = BAD_FILE;
+
+      inst->insert_before(block, mul);
+      inst->insert_before(block, add);
+      inst->remove(block);
+
+      progress = true;
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 /* The align16 hardware can only do 32-bit swizzle channels, so we need to
  * translate the logical 64-bit swizzle channels that we use in the Vec4 IR
  * to 32-bit swizzle channels in hardware registers.
@@ -2418,6 +2461,7 @@ vec4_visitor::run()
    if (failed)
       return false;
 
+   OPT(lower_64bit_mad_to_mul_add);
    OPT(scalarize_df);
 
    setup_payload();
