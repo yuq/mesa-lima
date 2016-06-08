@@ -701,21 +701,20 @@ util_can_blit_via_copy_region(const struct pipe_blit_info *blit)
       return FALSE;
    }
 
-   /* No masks, no filtering, no scissor. */
+   /* No masks, no filtering, no scissor, no blending */
    if ((blit->mask & mask) != mask ||
        blit->filter != PIPE_TEX_FILTER_NEAREST ||
-       blit->scissor_enable) {
+       blit->scissor_enable ||
+       blit->alpha_blend) {
       return FALSE;
    }
 
-   /* No flipping. */
-   if (blit->src.box.width < 0 ||
-       blit->src.box.height < 0 ||
-       blit->src.box.depth < 0) {
-      return FALSE;
-   }
+   /* Only the src box can have negative dims for flipping */
+   assert(blit->dst.box.width >= 1);
+   assert(blit->dst.box.height >= 1);
+   assert(blit->dst.box.depth >= 1);
 
-   /* No scaling. */
+   /* No scaling or flipping */
    if (blit->src.box.width != blit->dst.box.width ||
        blit->src.box.height != blit->dst.box.height ||
        blit->src.box.depth != blit->dst.box.depth) {
@@ -735,9 +734,6 @@ util_can_blit_via_copy_region(const struct pipe_blit_info *blit)
        get_sample_count(blit->dst.resource)) {
       return FALSE;
    }
-
-   if (blit->alpha_blend)
-      return FALSE;
 
    return TRUE;
 }
