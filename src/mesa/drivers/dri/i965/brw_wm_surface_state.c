@@ -553,98 +553,6 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
                                        false /* rw */);
 }
 
-static void
-gen4_update_texture_surface(struct gl_context *ctx,
-                            unsigned unit,
-                            uint32_t *surf_offset,
-                            bool for_gather,
-                            uint32_t plane)
-{
-   struct brw_context *brw = brw_context(ctx);
-   struct gl_texture_object *tObj = ctx->Texture.Unit[unit]._Current;
-   struct intel_texture_object *intelObj = intel_texture_object(tObj);
-   struct intel_mipmap_tree *mt = intelObj->mt;
-   struct gl_sampler_object *sampler = _mesa_get_samplerobj(ctx, unit);
-   uint32_t *surf;
-
-   /* BRW_NEW_TEXTURE_BUFFER */
-   if (tObj->Target == GL_TEXTURE_BUFFER) {
-      brw_update_buffer_texture_surface(ctx, unit, surf_offset);
-      return;
-   }
-
-   if (plane > 0) {
-      if (mt->plane[plane - 1] == NULL)
-         return;
-      mt = mt->plane[plane - 1];
-   }
-
-   surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
-			  6 * 4, 32, surf_offset);
-
-   mesa_format mesa_fmt = plane == 0 ? intelObj->_Format : mt->format;
-   uint32_t tex_format = translate_tex_format(brw, mesa_fmt,
-                                              sampler->sRGBDecode);
-
-   if (for_gather) {
-      /* Sandybridge's gather4 message is broken for integer formats.
-       * To work around this, we pretend the surface is UNORM for
-       * 8 or 16-bit formats, and emit shader instructions to recover
-       * the real INT/UINT value.  For 32-bit formats, we pretend
-       * the surface is FLOAT, and simply reinterpret the resulting
-       * bits.
-       */
-      switch (tex_format) {
-      case BRW_SURFACEFORMAT_R8_SINT:
-      case BRW_SURFACEFORMAT_R8_UINT:
-         tex_format = BRW_SURFACEFORMAT_R8_UNORM;
-         break;
-
-      case BRW_SURFACEFORMAT_R16_SINT:
-      case BRW_SURFACEFORMAT_R16_UINT:
-         tex_format = BRW_SURFACEFORMAT_R16_UNORM;
-         break;
-
-      case BRW_SURFACEFORMAT_R32_SINT:
-      case BRW_SURFACEFORMAT_R32_UINT:
-         tex_format = BRW_SURFACEFORMAT_R32_FLOAT;
-         break;
-
-      default:
-         break;
-      }
-   }
-
-   surf[0] = (translate_tex_target(tObj->Target) << BRW_SURFACE_TYPE_SHIFT |
-	      BRW_SURFACE_MIPMAPLAYOUT_BELOW << BRW_SURFACE_MIPLAYOUT_SHIFT |
-	      BRW_SURFACE_CUBEFACE_ENABLES |
-	      tex_format << BRW_SURFACE_FORMAT_SHIFT);
-
-   surf[1] = mt->bo->offset64 + mt->offset; /* reloc */
-
-   surf[2] = ((intelObj->_MaxLevel - tObj->BaseLevel) << BRW_SURFACE_LOD_SHIFT |
-	      (mt->logical_width0 - 1) << BRW_SURFACE_WIDTH_SHIFT |
-	      (mt->logical_height0 - 1) << BRW_SURFACE_HEIGHT_SHIFT);
-
-   surf[3] = (brw_get_surface_tiling_bits(mt->tiling) |
-	      (mt->logical_depth0 - 1) << BRW_SURFACE_DEPTH_SHIFT |
-	      (mt->pitch - 1) << BRW_SURFACE_PITCH_SHIFT);
-
-   const unsigned min_lod = tObj->MinLevel + tObj->BaseLevel - mt->first_level;
-   surf[4] = (brw_get_surface_num_multisamples(mt->num_samples) |
-              SET_FIELD(min_lod, BRW_SURFACE_MIN_LOD) |
-              SET_FIELD(tObj->MinLayer, BRW_SURFACE_MIN_ARRAY_ELEMENT));
-
-   surf[5] = mt->valign == 4 ? BRW_SURFACE_VERTICAL_ALIGN_ENABLE : 0;
-
-   /* Emit relocation to surface contents */
-   drm_intel_bo_emit_reloc(brw->batch.bo,
-                           *surf_offset + 4,
-                           mt->bo,
-                           surf[1] - mt->bo->offset64,
-                           I915_GEM_DOMAIN_SAMPLER, 0);
-}
-
 /**
  * Create the constant buffer surface.  Vertex/fragment shader constants will be
  * read from this buffer with Data Port Read instructions/messages.
@@ -1682,7 +1590,7 @@ const struct brw_tracked_state brw_wm_image_surfaces = {
 void
 gen4_init_vtable_surface_functions(struct brw_context *brw)
 {
-   brw->vtbl.update_texture_surface = gen4_update_texture_surface;
+   brw->vtbl.update_texture_surface = brw_update_texture_surface;
    brw->vtbl.update_renderbuffer_surface = gen4_update_renderbuffer_surface;
    brw->vtbl.emit_null_surface_state = brw_emit_null_surface_state;
    brw->vtbl.emit_buffer_surface_state = gen4_emit_buffer_surface_state;
