@@ -859,6 +859,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 				     const struct pipe_blit_info *info)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
+	struct r600_texture *src = (struct r600_texture*)info->src.resource;
 	struct r600_texture *dst = (struct r600_texture*)info->dst.resource;
 	unsigned dst_width = u_minify(info->dst.resource->width0, info->dst.level);
 	unsigned dst_height = u_minify(info->dst.resource->height0, info->dst.level);
@@ -902,7 +903,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    info->src.box.height == dst_height &&
 	    info->src.box.depth == 1 &&
 	    dst->surface.level[info->dst.level].mode >= RADEON_SURF_MODE_1D &&
-	    !(dst->surface.flags & RADEON_SURF_SCANOUT) &&
+	    src->surface.micro_tile_mode == dst->surface.micro_tile_mode &&
 	    (!dst->cmask.size || !dst->dirty_level_mask)) { /* dst cannot be fast-cleared */
 		/* Resolving into a surface with DCC is unsupported. Since
 		 * it's being overwritten anyway, clear it to uncompressed.
@@ -945,6 +946,9 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	tmp = ctx->screen->resource_create(ctx->screen, &templ);
 	if (!tmp)
 		return false;
+
+	assert(src->surface.micro_tile_mode ==
+	       ((struct r600_texture*)tmp)->surface.micro_tile_mode);
 
 	/* resolve */
 	si_blitter_begin(ctx, SI_COLOR_RESOLVE |
