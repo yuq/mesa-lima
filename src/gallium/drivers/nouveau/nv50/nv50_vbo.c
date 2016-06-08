@@ -702,6 +702,7 @@ nv50_draw_elements(struct nv50_context *nv50, bool shorten,
          prim |= NV50_3D_VERTEX_BEGIN_GL_INSTANCE_NEXT;
       }
    }
+   NOUVEAU_DRV_STAT(&nv50->screen->base, draw_calls_indexed, 1);
 }
 
 static void
