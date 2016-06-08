@@ -234,6 +234,8 @@ gen7_upload_urb(struct brw_context *brw)
     */
    unsigned vs_min_entries =
       tess_present && brw->gen == 8 ? 192 : brw->urb.min_vs_entries;
+   /* Min VS Entries isn't a multiple of 8 on Cherryview/Broxton; round up */
+   vs_min_entries = ALIGN(vs_min_entries, vs_granularity);
 
    unsigned vs_chunks =
       DIV_ROUND_UP(vs_min_entries * vs_entry_size_bytes, chunk_size_bytes);

@@ -67,8 +67,9 @@ gen7_blorp_emit_urb_config(struct brw_context *brw)
       push_constant_bytes / chunk_size_bytes;
    const unsigned vs_size = 1;
    const unsigned vs_start = push_constant_chunks;
+   const unsigned min_vs_entries = ALIGN(brw->urb.min_vs_entries, 8);
    const unsigned vs_chunks =
-      DIV_ROUND_UP(brw->urb.min_vs_entries * vs_size * 64, chunk_size_bytes);
+      DIV_ROUND_UP(min_vs_entries * vs_size * 64, chunk_size_bytes);
 
    if (gen7_blorp_skip_urb_config(brw))
       return;
@@ -83,7 +84,7 @@ gen7_blorp_emit_urb_config(struct brw_context *brw)
                                  urb_size / 2 /* fs_size */);
 
    gen7_emit_urb_state(brw,
-                       brw->urb.min_vs_entries /* num_vs_entries */,
+                       min_vs_entries /* num_vs_entries */,
                        vs_size,
                        vs_start,
                        0 /* num_hs_entries */,
