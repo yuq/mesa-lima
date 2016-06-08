@@ -629,7 +629,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
 {
    glsl_to_tgsi_instruction *inst = new(mem_ctx) glsl_to_tgsi_instruction();
    int num_reladdr = 0, i, j;
-   bool dst_is_double[2];
+   bool dst_is_64bit[2];
 
    op = get_opcode(ir, op, dst, src0, src1);
 
@@ -732,18 +732,16 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
     * GLSL [0].w -> TGSI [1].zw
     */
    for (j = 0; j < 2; j++) {
-      dst_is_double[j] = false;
-      if (inst->dst[j].type == GLSL_TYPE_DOUBLE)
-         dst_is_double[j] = true;
-      else if (inst->dst[j].file == PROGRAM_OUTPUT && inst->dst[j].type == GLSL_TYPE_ARRAY) {
+      dst_is_64bit[j] = glsl_base_type_is_64bit(inst->dst[j].type);
+      if (!dst_is_64bit[j] && inst->dst[j].file == PROGRAM_OUTPUT && inst->dst[j].type == GLSL_TYPE_ARRAY) {
          enum glsl_base_type type = find_array_type(this->output_arrays, this->num_output_arrays, inst->dst[j].array_id);
-         if (type == GLSL_TYPE_DOUBLE)
-            dst_is_double[j] = true;
+         if (glsl_base_type_is_64bit(type))
+            dst_is_64bit[j] = true;
       }
    }
 
-   if (dst_is_double[0] || dst_is_double[1] ||
-       inst->src[0].type == GLSL_TYPE_DOUBLE) {
+   if (dst_is_64bit[0] || dst_is_64bit[1] ||
+       glsl_base_type_is_64bit(inst->src[0].type)) {
       glsl_to_tgsi_instruction *dinst = NULL;
       int initial_src_swz[4], initial_src_idx[4];
       int initial_dst_idx[2], initial_dst_writemask[2];
@@ -795,7 +793,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
 
          /* modify the destination if we are splitting */
          for (j = 0; j < 2; j++) {
-            if (dst_is_double[j]) {
+            if (dst_is_64bit[j]) {
                dinst->dst[j].writemask = (i & 1) ? WRITEMASK_ZW : WRITEMASK_XY;
                dinst->dst[j].index = initial_dst_idx[j];
                if (i > 1) {
@@ -816,7 +814,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
          for (j = 0; j < 4; j++) {
             int swz = GET_SWZ(initial_src_swz[j], i);
 
-            if (dinst->src[j].type == GLSL_TYPE_DOUBLE) {
+            if (glsl_base_type_is_64bit(dinst->src[j].type)) {
                dinst->src[j].index = initial_src_idx[j];
                if (swz > 1) {
                   dinst->src[j].double_reg2 = true;
@@ -833,7 +831,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
                   - F2D is a float src0, DLDEXP is integer src1 */
                if (op == TGSI_OPCODE_F2D ||
                    op == TGSI_OPCODE_DLDEXP ||
-                   (op == TGSI_OPCODE_UCMP && dst_is_double[0])) {
+                   (op == TGSI_OPCODE_UCMP && dst_is_64bit[0])) {
                   dinst->src[j].swizzle = MAKE_SWIZZLE4(swz, swz, swz, swz);
                }
             }
@@ -2093,7 +2091,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       }
 
       cbuf.swizzle = swizzle_for_size(ir->type->vector_elements);
-      if (cbuf.type == GLSL_TYPE_DOUBLE)
+      if (glsl_base_type_is_64bit(cbuf.type))
          cbuf.swizzle += MAKE_SWIZZLE4(const_offset % 16 / 8,
                                        const_offset % 16 / 8,
                                        const_offset % 16 / 8,
@@ -2850,7 +2848,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
       assert(!ir->lhs->type->is_scalar() && !ir->lhs->type->is_vector());
 
       if (ir->lhs->type->is_array() || ir->lhs->type->without_array()->is_matrix()) {
-         if (ir->lhs->type->without_array()->is_double()) {
+         if (ir->lhs->type->without_array()->is_64bit()) {
             switch (ir->lhs->type->without_array()->vector_elements) {
             case 1:
                l.writemask = WRITEMASK_X;
@@ -2869,7 +2867,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
             l.writemask = WRITEMASK_XYZW;
       }
    } else if (ir->lhs->type->is_scalar() &&
-              !ir->lhs->type->is_double() &&
+              !ir->lhs->type->is_64bit() &&
               ir->lhs->variable_referenced()->data.mode == ir_var_shader_out) {
       /* FINISHME: This hack makes writing to gl_FragDepth, which lives in the
        * FINISHME: W component of fragment shader output zero, work correctly.
@@ -4973,7 +4971,7 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
          delete inst;
          removed++;
       } else {
-         if (inst->dst[0].type == GLSL_TYPE_DOUBLE) {
+         if (glsl_base_type_is_64bit(inst->dst[0].type)) {
             if (inst->dead_mask == WRITEMASK_XY ||
                 inst->dead_mask == WRITEMASK_ZW)
                inst->dst[0].writemask &= ~(inst->dead_mask);
