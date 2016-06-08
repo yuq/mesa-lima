@@ -1101,6 +1101,7 @@ read_shader_parameters(struct blob_reader *metadata,
    uint32_t i = 0;
    uint32_t num_parameters = blob_read_uint32(metadata);
 
+   _mesa_reserve_parameter_storage(params, num_parameters);
    while (i < num_parameters) {
       gl_register_file type = (gl_register_file) blob_read_uint32(metadata);
       const char *name = blob_read_string(metadata);
