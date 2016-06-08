@@ -532,6 +532,12 @@ type_size(const struct glsl_type *type)
             return 1;
       }
       break;
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
+      if (type->vector_elements > 2)
+         return 2;
+      else
+         return 1;
    case GLSL_TYPE_ARRAY:
       assert(type->length > 0);
       return type_size(type->fields.array) * type->length;
@@ -2522,11 +2528,19 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
 	 unsigned columns = 0;
 	 int dmul = 4 * sizeof(float);
 	 switch (storage->type->base_type) {
+         case GLSL_TYPE_UINT64:
+	    if (storage->type->vector_elements > 2)
+               dmul *= 2;
+	    /* fallthrough */
 	 case GLSL_TYPE_UINT:
 	    assert(ctx->Const.NativeIntegers);
 	    format = uniform_native;
 	    columns = 1;
 	    break;
+         case GLSL_TYPE_INT64:
+	    if (storage->type->vector_elements > 2)
+               dmul *= 2;
+	    /* fallthrough */
 	 case GLSL_TYPE_INT:
 	    format =
 	       (ctx->Const.NativeIntegers) ? uniform_native : uniform_int_float;
