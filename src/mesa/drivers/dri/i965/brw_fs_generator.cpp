@@ -440,7 +440,7 @@ fs_generator::generate_urb_read(fs_inst *inst,
    assert(header.type == BRW_REGISTER_TYPE_UD);
 
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
-   brw_set_dest(p, send, dst);
+   brw_set_dest(p, send, retype(dst, BRW_REGISTER_TYPE_UD));
    brw_set_src0(p, send, header);
    brw_set_src1(p, send, brw_imm_ud(0u));
 
