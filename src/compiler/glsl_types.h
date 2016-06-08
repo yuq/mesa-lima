@@ -495,11 +495,11 @@ struct glsl_type {
    }
 
    /**
-    * Query whether a double takes two slots.
+    * Query whether a 64-bit type takes two slots.
     */
-   bool is_dual_slot_double() const
+   bool is_dual_slot() const
    {
-      return base_type == GLSL_TYPE_DOUBLE && vector_elements > 2;
+      return is_64bit() && vector_elements > 2;
    }
 
    /**

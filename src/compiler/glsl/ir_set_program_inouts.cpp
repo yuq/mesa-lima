@@ -119,7 +119,7 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
 
          /* double inputs read is only for vertex inputs */
          if (stage == MESA_SHADER_VERTEX &&
-             var->type->without_array()->is_dual_slot_double())
+             var->type->without_array()->is_dual_slot())
             prog->DoubleInputsRead |= bitfield;
 
          if (stage == MESA_SHADER_FRAGMENT) {
@@ -306,7 +306,7 @@ ir_set_program_inouts_visitor::try_mark_partial_variable(ir_variable *var,
    /* double element width for double types that takes two slots */
    if (this->shader_stage != MESA_SHADER_VERTEX ||
        var->data.mode != ir_var_shader_in) {
-      if (type->without_array()->is_dual_slot_double())
+      if (type->without_array()->is_dual_slot())
 	 elem_width *= 2;
    }
 

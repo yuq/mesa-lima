@@ -585,7 +585,7 @@ type_size_xvec4(const struct glsl_type *type, bool as_vec4)
       if (type->is_matrix()) {
          const glsl_type *col_type = type->column_type();
          unsigned col_slots =
-            (as_vec4 && col_type->is_dual_slot_double()) ? 2 : 1;
+            (as_vec4 && col_type->is_dual_slot()) ? 2 : 1;
          return type->matrix_columns * col_slots;
       } else {
          /* Regardless of size of vector, it gets a vec4. This is bad
@@ -593,7 +593,7 @@ type_size_xvec4(const struct glsl_type *type, bool as_vec4)
           * mess.  Hopefully a later pass over the code can pack scalars
           * down if appropriate.
           */
-         return (as_vec4 && type->is_dual_slot_double()) ? 2 : 1;
+         return (as_vec4 && type->is_dual_slot()) ? 2 : 1;
       }
    case GLSL_TYPE_ARRAY:
       assert(type->length > 0);

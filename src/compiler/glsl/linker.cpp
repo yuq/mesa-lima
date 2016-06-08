@@ -2863,7 +2863,7 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
              * issue (3) of the GL_ARB_vertex_attrib_64bit behavior, this
              * is optional behavior, but it seems preferable.
              */
-            if (var->type->without_array()->is_dual_slot_double())
+            if (var->type->without_array()->is_dual_slot())
                double_storage_locations |= (use_mask << attr);
 	 }
 
@@ -2940,7 +2940,7 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
       to_assign[i].var->data.is_unmatched_generic_inout = 0;
       used_locations |= (use_mask << location);
 
-      if (to_assign[i].var->type->without_array()->is_dual_slot_double())
+      if (to_assign[i].var->type->without_array()->is_dual_slot())
          double_storage_locations |= (use_mask << location);
    }
 
