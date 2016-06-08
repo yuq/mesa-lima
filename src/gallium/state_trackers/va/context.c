@@ -159,7 +159,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
    vl_compositor_init_state(&drv->cstate, drv->pipe);
 
    vl_csc_get_matrix(VL_CSC_COLOR_STANDARD_BT_601, NULL, true, &drv->csc);
-   vl_compositor_set_csc_matrix(&drv->cstate, (const vl_csc_matrix *)&drv->csc);
+   vl_compositor_set_csc_matrix(&drv->cstate, (const vl_csc_matrix *)&drv->csc, 1.0f, 0.0f);
    pipe_mutex_init(drv->mutex);
 
    ctx->pDriverData = (void *)drv;

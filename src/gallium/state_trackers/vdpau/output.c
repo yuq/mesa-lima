@@ -492,9 +492,9 @@ vlVdpOutputSurfacePutBitsYCbCr(VdpOutputSurface surface,
    if (!csc_matrix) {
       vl_csc_matrix csc;
       vl_csc_get_matrix(VL_CSC_COLOR_STANDARD_BT_601, NULL, 1, &csc);
-      vl_compositor_set_csc_matrix(cstate, (const vl_csc_matrix*)&csc);
+      vl_compositor_set_csc_matrix(cstate, (const vl_csc_matrix*)&csc, 1.0f, 0.0f);
    } else {
-      vl_compositor_set_csc_matrix(cstate, csc_matrix);
+      vl_compositor_set_csc_matrix(cstate, csc_matrix, 1.0f, 0.0f);
    }
 
    vl_compositor_clear_layers(cstate);

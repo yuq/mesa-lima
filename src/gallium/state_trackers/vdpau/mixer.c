@@ -69,7 +69,7 @@ vlVdpVideoMixerCreate(VdpDevice device,
 
    vl_csc_get_matrix(VL_CSC_COLOR_STANDARD_BT_601, NULL, true, &vmixer->csc);
    if (!debug_get_bool_option("G3DVL_NO_CSC", FALSE))
-      vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc);
+      vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc, 1.0f, 0.0f);
 
    *mixer = vlAddDataHTAB(vmixer);
    if (*mixer == 0) {
@@ -671,7 +671,7 @@ vlVdpVideoMixerSetAttributeValues(VdpVideoMixer mixer,
          else
             memcpy(vmixer->csc, vdp_csc, sizeof(vl_csc_matrix));
          if (!debug_get_bool_option("G3DVL_NO_CSC", FALSE))
-            vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc);
+            vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc, 1.0f, 0.0f);
          break;
 
       case VDP_VIDEO_MIXER_ATTRIBUTE_NOISE_REDUCTION_LEVEL:
