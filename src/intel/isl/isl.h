@@ -65,6 +65,10 @@ struct brw_image_param;
    (assert(ISL_DEV_GEN(__dev) == (__dev)->info->gen))
 #endif
 
+#ifndef ISL_DEV_IS_G4X
+#define ISL_DEV_IS_G4X(__dev) ((__dev)->info->is_g4x)
+#endif
+
 #ifndef ISL_DEV_IS_HASWELL
 /**
  * @brief Get the hardware generation of isl_device.
