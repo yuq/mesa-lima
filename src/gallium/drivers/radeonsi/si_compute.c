@@ -308,6 +308,8 @@ static bool si_switch_compute_shader(struct si_context *sctx,
 
 	sctx->cs_shader_state.emitted_program = program;
 	sctx->cs_shader_state.offset = offset;
+	sctx->cs_shader_state.uses_scratch =
+		config->scratch_bytes_per_wave != 0;
 
 	return true;
 }
@@ -487,6 +489,10 @@ static void si_launch_grid(
 	si_emit_dispatch_packets(sctx, info);
 
 	si_ce_post_draw_synchronization(sctx);
+
+	sctx->b.num_compute_calls++;
+	if (sctx->cs_shader_state.uses_scratch)
+		sctx->b.num_spill_compute_calls++;
 }
 
 

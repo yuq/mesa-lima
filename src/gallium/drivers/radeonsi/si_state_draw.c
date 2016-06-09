@@ -987,6 +987,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 
 	pipe_resource_reference(&ib.buffer, NULL);
 	sctx->b.num_draw_calls++;
+	if (G_0286E8_WAVESIZE(sctx->spi_tmpring_size))
+		sctx->b.num_spill_draw_calls++;
 }
 
 void si_trace_emit(struct si_context *sctx)
