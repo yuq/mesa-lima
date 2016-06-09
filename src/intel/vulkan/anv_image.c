@@ -537,12 +537,15 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->color_rt_surface_state.alloc_size = 0;
    }
 
+   /* NOTE: This one needs to go last since it may stomp isl_view.format */
    if (image->usage & usage_mask & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
       if (isl_has_matching_typed_storage_image_format(&device->info,
                                                       format.isl_format)) {
          isl_view.usage = cube_usage | ISL_SURF_USAGE_STORAGE_BIT;
+         isl_view.format = isl_lower_storage_image_format(&device->info,
+                                                          isl_view.format);
          isl_surf_fill_state(&device->isl_dev,
                              iview->storage_surface_state.map,
                              .surf = &surface->isl,

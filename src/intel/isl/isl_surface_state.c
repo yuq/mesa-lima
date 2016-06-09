@@ -191,13 +191,7 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    struct GENX(RENDER_SURFACE_STATE) s = { 0 };
 
    s.SurfaceType = get_surftype(info->surf->dim, info->view->usage);
-
-   if (info->view->usage & ISL_SURF_USAGE_STORAGE_BIT) {
-      s.SurfaceFormat =
-         isl_lower_storage_image_format(dev->info, info->view->format);
-   } else {
-      s.SurfaceFormat = info->view->format;
-   }
+   s.SurfaceFormat = info->view->format;
 
 #if GEN_IS_HASWELL
    s.IntegerSurfaceFormat = isl_format_has_int_channel(s.SurfaceFormat);
