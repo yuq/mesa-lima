@@ -653,7 +653,7 @@ ir_validate::visit_leave(ir_expression *ir)
 
    case ir_binop_lshift:
    case ir_binop_rshift:
-      assert(ir->operands[0]->type->is_integer() &&
+      assert(ir->operands[0]->type->is_integer_32_64() &&
              ir->operands[1]->type->is_integer());
       if (ir->operands[0]->type->is_scalar()) {
           assert(ir->operands[1]->type->is_scalar());
@@ -671,7 +671,7 @@ ir_validate::visit_leave(ir_expression *ir)
    case ir_binop_bit_or:
        assert(ir->operands[0]->type->base_type ==
               ir->operands[1]->type->base_type);
-       assert(ir->type->is_integer());
+       assert(ir->type->is_integer_32_64());
        if (ir->operands[0]->type->is_vector() &&
            ir->operands[1]->type->is_vector()) {
            assert(ir->operands[0]->type->vector_elements ==

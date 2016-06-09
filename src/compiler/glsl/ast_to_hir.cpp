@@ -533,12 +533,12 @@ bit_logic_result_type(ir_rvalue * &value_a, ir_rvalue * &value_b,
     *     (|). The operands must be of type signed or unsigned integers or
     *     integer vectors."
     */
-   if (!type_a->is_integer()) {
+   if (!type_a->is_integer_32_64()) {
       _mesa_glsl_error(loc, state, "LHS of `%s' must be an integer",
                         ast_expression::operator_string(op));
       return glsl_type::error_type;
    }
-   if (!type_b->is_integer()) {
+   if (!type_b->is_integer_32_64()) {
       _mesa_glsl_error(loc, state, "RHS of `%s' must be an integer",
                        ast_expression::operator_string(op));
       return glsl_type::error_type;
@@ -619,11 +619,11 @@ modulus_result_type(ir_rvalue * &value_a, ir_rvalue * &value_b,
     *    "The operator modulus (%) operates on signed or unsigned integers or
     *    integer vectors."
     */
-   if (!type_a->is_integer()) {
+   if (!type_a->is_integer_32_64()) {
       _mesa_glsl_error(loc, state, "LHS of operator %% must be an integer");
       return glsl_type::error_type;
    }
-   if (!type_b->is_integer()) {
+   if (!type_b->is_integer_32_64()) {
       _mesa_glsl_error(loc, state, "RHS of operator %% must be an integer");
       return glsl_type::error_type;
    }
@@ -741,7 +741,7 @@ shift_result_type(const struct glsl_type *type_a,
     *     must be signed or unsigned integers or integer vectors. One operand
     *     can be signed while the other is unsigned."
     */
-   if (!type_a->is_integer()) {
+   if (!type_a->is_integer_32_64()) {
       _mesa_glsl_error(loc, state, "LHS of operator %s must be an integer or "
                        "integer vector", ast_expression::operator_string(op));
      return glsl_type::error_type;
@@ -1561,7 +1561,7 @@ ast_expression::do_hir(exec_list *instructions,
          error_emitted = true;
       }
 
-      if (!op[0]->type->is_integer()) {
+      if (!op[0]->type->is_integer_32_64()) {
          _mesa_glsl_error(&loc, state, "operand of `~' must be an integer");
          error_emitted = true;
       }
