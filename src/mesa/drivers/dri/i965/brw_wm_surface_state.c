@@ -1402,22 +1402,33 @@ update_image_surface(struct brw_context *brw,
                access != GL_READ_ONLY);
 
          } else {
-            const unsigned min_layer = obj->MinLayer + u->_Layer;
-            const unsigned min_level = obj->MinLevel + u->Level;
             const unsigned num_layers = (!u->Layered ? 1 :
                                          obj->Target == GL_TEXTURE_CUBE_MAP ? 6 :
                                          mt->logical_depth0);
-            const GLenum target = (obj->Target == GL_TEXTURE_CUBE_MAP ||
-                                   obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY ?
-                                   GL_TEXTURE_2D_ARRAY : obj->Target);
+
+            struct isl_view view = {
+               .format = format,
+               .base_level = obj->MinLevel + u->Level,
+               .levels = 1,
+               .base_array_layer = obj->MinLayer + u->_Layer,
+               .array_len = num_layers,
+               .channel_select = {
+                  ISL_CHANNEL_SELECT_RED,
+                  ISL_CHANNEL_SELECT_GREEN,
+                  ISL_CHANNEL_SELECT_BLUE,
+                  ISL_CHANNEL_SELECT_ALPHA,
+               },
+               .usage = ISL_SURF_USAGE_STORAGE_BIT,
+            };
+
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
 
-            brw->vtbl.emit_texture_surface_state(
-               brw, mt, target,
-               min_layer, min_layer + num_layers,
-               min_level, min_level + 1,
-               format, SWIZZLE_XYZW,
-               surf_offset, surf_index, access != GL_READ_ONLY, false);
+            brw_emit_surface_state(brw, mt, &view,
+                                   surface_state_infos[brw->gen].rb_mocs, false,
+                                   surf_offset, surf_index,
+                                   I915_GEM_DOMAIN_SAMPLER,
+                                   access == GL_READ_ONLY ? 0 :
+                                             I915_GEM_DOMAIN_SAMPLER);
          }
 
          update_texture_image_param(brw, u, surface_idx, param);
