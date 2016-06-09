@@ -467,7 +467,16 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxImageUnits = MAX_IMAGE_UNITS;
    ctx->Const.MaxRenderbufferSize = 8192;
    ctx->Const.MaxTextureLevels = MIN2(14 /* 8192 */, MAX_TEXTURE_LEVELS);
-   ctx->Const.Max3DTextureLevels = 12; /* 2048 */
+
+   /* On Sandy Bridge and prior, the "Render Target View Extent" field of
+    * RENDER_SURFACE_STATE is only 9 bits so the largest 3-D texture we can do
+    * a layered render into has a depth of 512.  On Iron Lake and earlier, we
+    * don't support layered rendering and we use manual offsetting to render
+    * into the different layers so this doesn't matter.  On Sandy Bridge,
+    * however, we do support layered rendering so this is a problem.
+    */
+   ctx->Const.Max3DTextureLevels = brw->gen == 6 ? 10 /* 512 */ : 12; /* 2048 */
+
    ctx->Const.MaxCubeTextureLevels = 14; /* 8192 */
    ctx->Const.MaxArrayTextureLayers = brw->gen >= 7 ? 2048 : 512;
    ctx->Const.MaxTextureMbytes = 1536;
