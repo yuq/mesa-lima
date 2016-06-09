@@ -358,8 +358,13 @@ dri3_set_drawable(struct vl_dri3_screen *scrn, Drawable drawable)
    if (error) {
       if (error->error_code != BadWindow)
          ret = false;
-      else
+      else {
          scrn->is_pixmap = true;
+         if (scrn->front_buffer) {
+            dri3_free_front_buffer(scrn, scrn->front_buffer);
+            scrn->front_buffer = NULL;
+         }
+      }
       free(error);
    } else
       scrn->special_event =
