@@ -111,9 +111,7 @@ process_glsl_ir(gl_shader_stage stage,
                       SUB_TO_ADD_NEG |
                       EXP_TO_EXP2 |
                       LOG_TO_LOG2 |
-                      DFREXP_DLDEXP_TO_ARITH |
-                      CARRY_TO_ARITH |
-                      BORROW_TO_ARITH);
+                      DFREXP_DLDEXP_TO_ARITH);
 
    /* Pre-gen6 HW can only nest if-statements 16 deep.  Beyond this,
     * if-statements need to be flattened.
