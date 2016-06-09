@@ -167,6 +167,7 @@ dri2_invalidate_drawable(__DRIdrawable *dPriv)
 
    dri2InvalidateDrawable(dPriv);
    drawable->dPriv->lastStamp = drawable->dPriv->dri2.stamp;
+   drawable->texture_mask = 0;
 
    p_atomic_inc(&drawable->base.stamp);
 }
