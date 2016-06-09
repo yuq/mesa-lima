@@ -792,7 +792,9 @@ match_or_expand_immediate( const unsigned *v,
    unsigned nr2 = *pnr2;
    unsigned i, j;
 
-   if (type == TGSI_IMM_FLOAT64)
+   if (type == TGSI_IMM_FLOAT64 ||
+       type == TGSI_IMM_UINT64 ||
+       type == TGSI_IMM_INT64)
       return match_or_expand_immediate64(v, type, nr, v2, pnr2, swizzle);
 
    *swizzle = 0;
@@ -871,7 +873,9 @@ out:
    /* Make sure that all referenced elements are from this immediate.
     * Has the effect of making size-one immediates into scalars.
     */
-   if (type == TGSI_IMM_FLOAT64) {
+   if (type == TGSI_IMM_FLOAT64 ||
+       type == TGSI_IMM_UINT64 ||
+       type == TGSI_IMM_INT64) {
       for (j = nr; j < 4; j+=2) {
          swizzle |= (swizzle & 0xf) << (j * 2);
       }
@@ -971,6 +975,43 @@ ureg_DECL_immediate_int( struct ureg_program *ureg,
    return decl_immediate(ureg, (const unsigned *)v, nr, TGSI_IMM_INT32);
 }
 
+struct ureg_src
+ureg_DECL_immediate_uint64( struct ureg_program *ureg,
+                            const uint64_t *v,
+                            unsigned nr )
+{
+   union {
+      unsigned u[4];
+      uint64_t u64[2];
+   } fu;
+   unsigned int i;
+
+   assert((nr / 2) < 3);
+   for (i = 0; i < nr / 2; i++) {
+      fu.u64[i] = v[i];
+   }
+
+   return decl_immediate(ureg, fu.u, nr, TGSI_IMM_UINT64);
+}
+
+struct ureg_src
+ureg_DECL_immediate_int64( struct ureg_program *ureg,
+                           const int64_t *v,
+                           unsigned nr )
+{
+   union {
+      unsigned u[4];
+      int64_t i64[2];
+   } fu;
+   unsigned int i;
+
+   assert((nr / 2) < 3);
+   for (i = 0; i < nr / 2; i++) {
+      fu.i64[i] = v[i];
+   }
+
+   return decl_immediate(ureg, fu.u, nr, TGSI_IMM_INT64);
+}
 
 void
 ureg_emit_src( struct ureg_program *ureg,

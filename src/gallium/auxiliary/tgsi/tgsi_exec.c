@@ -77,6 +77,8 @@
 union tgsi_double_channel {
    double d[TGSI_QUAD_SIZE];
    unsigned u[TGSI_QUAD_SIZE][2];
+   uint64_t u64[TGSI_QUAD_SIZE];
+   int64_t i64[TGSI_QUAD_SIZE];
 };
 
 struct tgsi_double_vector {

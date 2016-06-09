@@ -245,6 +245,8 @@ enum tgsi_imm_type {
    TGSI_IMM_UINT32,
    TGSI_IMM_INT32,
    TGSI_IMM_FLOAT64,
+   TGSI_IMM_UINT64,
+   TGSI_IMM_INT64,
 };
 
 struct tgsi_immediate

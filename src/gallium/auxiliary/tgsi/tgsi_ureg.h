@@ -271,6 +271,16 @@ ureg_DECL_immediate_int( struct ureg_program *,
                          const int *v,
                          unsigned nr );
 
+struct ureg_src
+ureg_DECL_immediate_uint64( struct ureg_program *,
+                            const uint64_t *v,
+                            unsigned nr );
+
+struct ureg_src
+ureg_DECL_immediate_int64( struct ureg_program *,
+                           const int64_t *v,
+                           unsigned nr );
+
 void
 ureg_DECL_constant2D(struct ureg_program *ureg,
                      unsigned first,
