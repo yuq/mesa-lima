@@ -82,6 +82,13 @@ libgalliumvlwinsys_la_CFLAGS = \
 libgalliumvlwinsys_la_SOURCES = \
 	$(VL_WINSYS_SOURCES)
 
+if HAVE_DRI3
+
+libgalliumvlwinsys_la_SOURCES += \
+	$(VL_WINSYS_DRI3_SOURCES)
+
+endif
+
 endif
 
 endif

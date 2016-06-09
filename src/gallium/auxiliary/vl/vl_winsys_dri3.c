@@ -25,8 +25,6 @@
  *
  **************************************************************************/
 
-#if defined(HAVE_DRI3)
-
 #include <fcntl.h>
 
 #include <X11/Xlib-xcb.h>
@@ -706,5 +704,3 @@ free_screen:
    FREE(scrn);
    return NULL;
 }
-
-#endif // defined(HAVE_DRI3)
