@@ -48,6 +48,7 @@
 
 #include "state_tracker/st_debug.h"
 #include "state_tracker/st_context.h"
+#include "state_tracker/st_cb_bitmap.h"
 #include "state_tracker/st_cb_fbo.h"
 #include "state_tracker/st_cb_flush.h"
 #include "state_tracker/st_cb_texture.h"
@@ -1323,6 +1324,8 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
    unsigned dstz = texImage->Face + texImage->TexObject->MinLayer;
    unsigned dst_level = 0;
 
+   st_flush_bitmap_cache(st);
+
    if (stObj->pt == stImage->pt)
       dst_level = texImage->TexObject->MinLevel + texImage->Level;
 
@@ -1791,6 +1794,8 @@ st_GetTexSubImage(struct gl_context * ctx,
    assert(!_mesa_is_format_etc2(texImage->TexFormat) &&
           texImage->TexFormat != MESA_FORMAT_ETC1_RGB8);
 
+   st_flush_bitmap_cache(st);
+
    if (!st->prefer_blit_based_texture_transfer &&
        !_mesa_is_format_compressed(texImage->TexFormat)) {
       /* Try to avoid the fallback if we're doing texture decompression here */
@@ -2253,6 +2258,8 @@ st_CopyTexSubImage(struct gl_context *ctx, GLuint dims,
    GLboolean do_flip = (st_fb_orientation(ctx->ReadBuffer) == Y_0_TOP);
    unsigned bind;
    GLint srcY0, srcY1;
+
+   st_flush_bitmap_cache(st);
 
    assert(!_mesa_is_format_etc2(texImage->TexFormat) &&
           texImage->TexFormat != MESA_FORMAT_ETC1_RGB8);
@@ -2775,6 +2782,8 @@ st_ClearTexSubImage(struct gl_context *ctx,
 
    if (!pt)
       return;
+
+   st_flush_bitmap_cache(st);
 
    u_box_3d(xoffset, yoffset, zoffset + texImage->Face,
             width, height, depth, &box);
