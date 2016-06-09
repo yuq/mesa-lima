@@ -1477,7 +1477,7 @@ void brwInitFragProgFuncs( struct dd_function_table *functions );
 static inline int
 brw_get_scratch_size(int size)
 {
-   return util_next_power_of_two(size | 1023);
+   return MAX2(1024, util_next_power_of_two(size));
 }
 void brw_get_scratch_bo(struct brw_context *brw,
 			drm_intel_bo **scratch_bo, int size);
