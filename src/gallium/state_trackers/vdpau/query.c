@@ -470,6 +470,7 @@ vlVdpVideoMixerQueryFeatureSupport(VdpDevice device, VdpVideoMixerFeature featur
    case VDP_VIDEO_MIXER_FEATURE_SHARPNESS:
    case VDP_VIDEO_MIXER_FEATURE_NOISE_REDUCTION:
    case VDP_VIDEO_MIXER_FEATURE_DEINTERLACE_TEMPORAL:
+   case VDP_VIDEO_MIXER_FEATURE_LUMA_KEY:
       *is_supported = VDP_TRUE;
       break;
    default:
