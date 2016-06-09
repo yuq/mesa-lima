@@ -345,7 +345,8 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_FMA                 19
 #define TGSI_OPCODE_SQRT                20
 #define TGSI_OPCODE_DP2A                21
-                                /* gap */
+#define TGSI_OPCODE_F2U64               22
+#define TGSI_OPCODE_F2I64               23
 #define TGSI_OPCODE_FRC                 24
 #define TGSI_OPCODE_CLAMP               25
 #define TGSI_OPCODE_FLR                 26
@@ -354,9 +355,9 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_LG2                 29
 #define TGSI_OPCODE_POW                 30
 #define TGSI_OPCODE_XPD                 31
-                                /* gap */
+#define TGSI_OPCODE_U2I64               32
 #define TGSI_OPCODE_ABS                 33
-                                /* gap */
+#define TGSI_OPCODE_I2I64               34
 #define TGSI_OPCODE_DPH                 35
 #define TGSI_OPCODE_COS                 36
 #define TGSI_OPCODE_DDX                 37
@@ -366,14 +367,14 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_PK2US               41
 #define TGSI_OPCODE_PK4B                42
 #define TGSI_OPCODE_PK4UB               43
-                                /* gap */
+#define TGSI_OPCODE_D2U64               44
 #define TGSI_OPCODE_SEQ                 45
-                                /* gap */
+#define TGSI_OPCODE_D2I64               46
 #define TGSI_OPCODE_SGT                 47
 #define TGSI_OPCODE_SIN                 48
 #define TGSI_OPCODE_SLE                 49
 #define TGSI_OPCODE_SNE                 50
-                                /* gap */
+#define TGSI_OPCODE_U642D               51
 #define TGSI_OPCODE_TEX                 52
 #define TGSI_OPCODE_TXD                 53
 #define TGSI_OPCODE_TXP                 54
@@ -381,9 +382,10 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_UP2US               56
 #define TGSI_OPCODE_UP4B                57
 #define TGSI_OPCODE_UP4UB               58
-                                /* gap */
+#define TGSI_OPCODE_U642F               59
+#define TGSI_OPCODE_I642F               60
 #define TGSI_OPCODE_ARR                 61
-                                /* gap */
+#define TGSI_OPCODE_I642D               62
 #define TGSI_OPCODE_CAL                 63
 #define TGSI_OPCODE_RET                 64
 #define TGSI_OPCODE_SSG                 65 /* SGN */
@@ -568,7 +570,33 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_VOTE_ALL            224
 #define TGSI_OPCODE_VOTE_EQ             225
 
-#define TGSI_OPCODE_LAST                226
+#define TGSI_OPCODE_U64SEQ              226
+#define TGSI_OPCODE_U64SNE              227
+#define TGSI_OPCODE_I64SLT              228
+#define TGSI_OPCODE_U64SLT              229
+#define TGSI_OPCODE_I64SGE              230
+#define TGSI_OPCODE_U64SGE              231
+
+#define TGSI_OPCODE_I64MIN              232
+#define TGSI_OPCODE_U64MIN              233
+#define TGSI_OPCODE_I64MAX              234
+#define TGSI_OPCODE_U64MAX              235
+
+#define TGSI_OPCODE_I64ABS              236
+#define TGSI_OPCODE_I64SSG              237
+#define TGSI_OPCODE_I64NEG              238
+
+#define TGSI_OPCODE_U64ADD              239
+#define TGSI_OPCODE_U64MUL              240
+#define TGSI_OPCODE_U64SHL              241
+#define TGSI_OPCODE_I64SHR              242
+#define TGSI_OPCODE_U64SHR              243
+
+#define TGSI_OPCODE_I64DIV              244
+#define TGSI_OPCODE_U64DIV              245
+#define TGSI_OPCODE_I64MOD              246
+#define TGSI_OPCODE_U64MOD              247
+#define TGSI_OPCODE_LAST                248
 
 /**
  * Opcode is the operation code to execute. A given operation defines the
