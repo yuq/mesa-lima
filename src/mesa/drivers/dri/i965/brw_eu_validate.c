@@ -68,6 +68,12 @@ src1_is_null(const struct brw_device_info *devinfo, const brw_inst *inst)
           brw_inst_src1_da_reg_nr(devinfo, inst) == BRW_ARF_NULL;
 }
 
+static bool
+src0_is_grf(const struct brw_device_info *devinfo, const brw_inst *inst)
+{
+   return brw_inst_src0_reg_file(devinfo, inst) == BRW_GENERAL_REGISTER_FILE;
+}
+
 static unsigned
 num_sources_from_inst(const struct brw_device_info *devinfo,
                       const brw_inst *inst)
@@ -156,6 +162,18 @@ brw_validate_instructions(const struct brw_codegen *p, int start_offset,
 
       ERROR_IF(is_unsupported_inst(devinfo, inst),
                "Instruction not supported on this Gen");
+
+      if (brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SEND) {
+         ERROR_IF(brw_inst_src0_address_mode(devinfo, inst) !=
+                  BRW_ADDRESS_DIRECT, "send must use direct addressing");
+
+         if (devinfo->gen >= 7) {
+            ERROR_IF(!src0_is_grf(devinfo, inst), "send from non-GRF");
+            ERROR_IF(brw_inst_eot(devinfo, inst) &&
+                     brw_inst_src0_da_reg_nr(devinfo, inst) < 112,
+                     "send with EOT must use g112-g127");
+         }
+      }
 
       if (error_msg.str && annotation) {
          annotation_insert_error(annotation, src_offset, error_msg.str);
