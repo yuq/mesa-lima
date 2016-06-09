@@ -1567,8 +1567,11 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    intelScreen->hw_has_timestamp = intel_detect_timestamp(intelScreen);
 
    /* GENs prior to 8 do not support EU/Subslice info */
-   if (intelScreen->devinfo->gen >= 8)
+   if (intelScreen->devinfo->gen >= 8) {
       intel_detect_sseu(intelScreen);
+   } else if (intelScreen->devinfo->gen == 7) {
+      intelScreen->subslice_total = 1 << (intelScreen->devinfo->gt - 1);
+   }
 
    const char *force_msaa = getenv("INTEL_FORCE_MSAA");
    if (force_msaa) {
