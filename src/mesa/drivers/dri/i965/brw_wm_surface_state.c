@@ -133,6 +133,54 @@ brw_emit_surface_state(struct brw_context *brw,
    }
 }
 
+uint32_t
+brw_update_renderbuffer_surface(struct brw_context *brw,
+                                struct gl_renderbuffer *rb,
+                                bool layered, unsigned unit /* unused */,
+                                uint32_t surf_index)
+{
+   struct gl_context *ctx = &brw->ctx;
+   struct intel_renderbuffer *irb = intel_renderbuffer(rb);
+   struct intel_mipmap_tree *mt = irb->mt;
+
+   assert(brw_render_target_supported(brw, rb));
+   intel_miptree_used_for_rendering(mt);
+
+   mesa_format rb_format = _mesa_get_render_format(ctx, intel_rb_format(irb));
+   if (unlikely(!brw->format_supported_as_render_target[rb_format])) {
+      _mesa_problem(ctx, "%s: renderbuffer format %s unsupported\n",
+                    __func__, _mesa_get_format_name(rb_format));
+   }
+
+   const unsigned layer_multiplier =
+      (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
+       irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
+      MAX2(irb->mt->num_samples, 1) : 1;
+
+   struct isl_view view = {
+      .format = brw->render_target_format[rb_format],
+      .base_level = irb->mt_level - irb->mt->first_level,
+      .levels = 1,
+      .base_array_layer = irb->mt_layer / layer_multiplier,
+      .array_len = MAX2(irb->layer_count, 1),
+      .channel_select = {
+         ISL_CHANNEL_SELECT_RED,
+         ISL_CHANNEL_SELECT_GREEN,
+         ISL_CHANNEL_SELECT_BLUE,
+         ISL_CHANNEL_SELECT_ALPHA,
+      },
+      .usage = ISL_SURF_USAGE_RENDER_TARGET_BIT,
+   };
+
+   uint32_t offset;
+   brw_emit_surface_state(brw, mt, &view,
+                          surface_state_infos[brw->gen].rb_mocs, false,
+                          &offset, surf_index,
+                          I915_GEM_DOMAIN_RENDER,
+                          I915_GEM_DOMAIN_RENDER);
+   return offset;
+}
+
 GLuint
 translate_tex_target(GLenum target)
 {
@@ -298,6 +346,143 @@ brw_get_texture_swizzle(const struct gl_context *ctx,
                         swizzles[GET_SWZ(t->_Swizzle, 1)],
                         swizzles[GET_SWZ(t->_Swizzle, 2)],
                         swizzles[GET_SWZ(t->_Swizzle, 3)]);
+}
+
+/**
+ * Convert an swizzle enumeration (i.e. SWIZZLE_X) to one of the Gen7.5+
+ * "Shader Channel Select" enumerations (i.e. HSW_SCS_RED).  The mappings are
+ *
+ * SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_W, SWIZZLE_ZERO, SWIZZLE_ONE
+ *         0          1          2          3             4            5
+ *         4          5          6          7             0            1
+ *   SCS_RED, SCS_GREEN,  SCS_BLUE, SCS_ALPHA,     SCS_ZERO,     SCS_ONE
+ *
+ * which is simply adding 4 then modding by 8 (or anding with 7).
+ *
+ * We then may need to apply workarounds for textureGather hardware bugs.
+ */
+static unsigned
+swizzle_to_scs(GLenum swizzle, bool need_green_to_blue)
+{
+   unsigned scs = (swizzle + 4) & 7;
+
+   return (need_green_to_blue && scs == HSW_SCS_GREEN) ? HSW_SCS_BLUE : scs;
+}
+
+void
+brw_update_texture_surface(struct gl_context *ctx,
+                           unsigned unit,
+                           uint32_t *surf_offset,
+                           bool for_gather,
+                           uint32_t plane)
+{
+   struct brw_context *brw = brw_context(ctx);
+   struct gl_texture_object *obj = ctx->Texture.Unit[unit]._Current;
+
+   if (obj->Target == GL_TEXTURE_BUFFER) {
+      brw_update_buffer_texture_surface(ctx, unit, surf_offset);
+
+   } else {
+      struct intel_texture_object *intel_obj = intel_texture_object(obj);
+      struct intel_mipmap_tree *mt = intel_obj->mt;
+      struct gl_sampler_object *sampler = _mesa_get_samplerobj(ctx, unit);
+      /* If this is a view with restricted NumLayers, then our effective depth
+       * is not just the miptree depth.
+       */
+      const unsigned mt_num_layers =
+         mt->logical_depth0 * (_mesa_is_cube_map_texture(mt->target) ? 6 : 1);
+      const unsigned view_num_layers =
+         (obj->Immutable && obj->Target != GL_TEXTURE_3D) ? obj->NumLayers :
+                                                            mt_num_layers;
+
+      /* Handling GL_ALPHA as a surface format override breaks 1.30+ style
+       * texturing functions that return a float, as our code generation always
+       * selects the .x channel (which would always be 0).
+       */
+      struct gl_texture_image *firstImage = obj->Image[0][obj->BaseLevel];
+      const bool alpha_depth = obj->DepthMode == GL_ALPHA &&
+         (firstImage->_BaseFormat == GL_DEPTH_COMPONENT ||
+          firstImage->_BaseFormat == GL_DEPTH_STENCIL);
+      const unsigned swizzle = (unlikely(alpha_depth) ? SWIZZLE_XYZW :
+                                brw_get_texture_swizzle(&brw->ctx, obj));
+
+      unsigned format = translate_tex_format(
+         brw, intel_obj->_Format, sampler->sRGBDecode);
+
+      /* Implement gen6 and gen7 gather work-around */
+      bool need_green_to_blue = false;
+      if (for_gather) {
+         if (brw->gen == 7 && format == BRW_SURFACEFORMAT_R32G32_FLOAT) {
+            format = BRW_SURFACEFORMAT_R32G32_FLOAT_LD;
+            need_green_to_blue = brw->is_haswell;
+         } else if (brw->gen == 6) {
+            /* Sandybridge's gather4 message is broken for integer formats.
+             * To work around this, we pretend the surface is UNORM for
+             * 8 or 16-bit formats, and emit shader instructions to recover
+             * the real INT/UINT value.  For 32-bit formats, we pretend
+             * the surface is FLOAT, and simply reinterpret the resulting
+             * bits.
+             */
+            switch (format) {
+            case BRW_SURFACEFORMAT_R8_SINT:
+            case BRW_SURFACEFORMAT_R8_UINT:
+               format = BRW_SURFACEFORMAT_R8_UNORM;
+               break;
+
+            case BRW_SURFACEFORMAT_R16_SINT:
+            case BRW_SURFACEFORMAT_R16_UINT:
+               format = BRW_SURFACEFORMAT_R16_UNORM;
+               break;
+
+            case BRW_SURFACEFORMAT_R32_SINT:
+            case BRW_SURFACEFORMAT_R32_UINT:
+               format = BRW_SURFACEFORMAT_R32_FLOAT;
+               break;
+
+            default:
+               break;
+            }
+         }
+      }
+
+      if (obj->StencilSampling && firstImage->_BaseFormat == GL_DEPTH_STENCIL) {
+         assert(brw->gen >= 8);
+         mt = mt->stencil_mt;
+         format = BRW_SURFACEFORMAT_R8_UINT;
+      } else if (obj->Target == GL_TEXTURE_EXTERNAL_OES) {
+         if (plane > 0)
+            mt = mt->plane[plane - 1];
+         if (mt == NULL)
+            return;
+         format = translate_tex_format(brw, mt->format, sampler->sRGBDecode);
+      }
+
+      const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
+
+      struct isl_view view = {
+         .format = format,
+         .base_level = obj->MinLevel + obj->BaseLevel,
+         .levels = intel_obj->_MaxLevel - obj->BaseLevel + 1,
+         .base_array_layer = obj->MinLayer,
+         .array_len = view_num_layers,
+         .channel_select = {
+            swizzle_to_scs(GET_SWZ(swizzle, 0), need_green_to_blue),
+            swizzle_to_scs(GET_SWZ(swizzle, 1), need_green_to_blue),
+            swizzle_to_scs(GET_SWZ(swizzle, 2), need_green_to_blue),
+            swizzle_to_scs(GET_SWZ(swizzle, 3), need_green_to_blue),
+         },
+         .usage = ISL_SURF_USAGE_TEXTURE_BIT,
+      };
+
+      if (obj->Target == GL_TEXTURE_CUBE_MAP ||
+          obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY)
+         view.usage |= ISL_SURF_USAGE_CUBE_BIT;
+
+      brw_emit_surface_state(brw, mt, &view,
+                             surface_state_infos[brw->gen].tex_mocs, for_gather,
+                             surf_offset, surf_index,
+                             I915_GEM_DOMAIN_SAMPLER, 0);
+   }
 }
 
 static void

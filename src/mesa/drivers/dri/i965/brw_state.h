@@ -281,6 +281,15 @@ void brw_emit_surface_state(struct brw_context *brw,
                             uint32_t *surf_offset, int surf_index,
                             unsigned read_domains, unsigned write_domains);
 
+void brw_update_texture_surface(struct gl_context *ctx,
+                                unsigned unit, uint32_t *surf_offset,
+                                bool for_gather, uint32_t plane);
+
+uint32_t brw_update_renderbuffer_surface(struct brw_context *brw,
+                                         struct gl_renderbuffer *rb,
+                                         bool layered, unsigned unit,
+                                         uint32_t surf_index);
+
 void brw_update_renderbuffer_surfaces(struct brw_context *brw,
                                       const struct gl_framebuffer *fb,
                                       uint32_t render_target_start,
