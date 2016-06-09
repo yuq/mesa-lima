@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include "brw_device_info.h"
 #include "main/mtypes.h"
+#include "main/macros.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -830,6 +831,38 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str);
+
+static inline uint32_t
+encode_slm_size(const struct brw_device_info *devinfo, uint32_t bytes)
+{
+   uint32_t slm_size = 0;
+
+   /* Shared Local Memory is specified as powers of two, and encoded in
+    * INTERFACE_DESCRIPTOR_DATA with the following representations:
+    *
+    * Size   | 0 kB | 1 kB | 2 kB | 4 kB | 8 kB | 16 kB | 32 kB | 64 kB |
+    * -------------------------------------------------------------------
+    * Gen7-8 |    0 | none | none |    1 |    2 |     4 |     8 |    16 |
+    * -------------------------------------------------------------------
+    * Gen9+  |    0 |    1 |    2 |    3 |    4 |     5 |     6 |     7 |
+    */
+   assert(bytes <= 64 * 1024);
+
+   if (bytes > 0) {
+      /* Shared Local Memory Size is specified as powers of two. */
+      slm_size = util_next_power_of_two(bytes);
+
+      if (devinfo->gen >= 9) {
+         /* Use a minimum of 1kB; turn an exponent of 10 (1024 kB) into 1. */
+         slm_size = ffs(MAX2(slm_size, 1024)) - 10;
+      } else {
+         /* Use a minimum of 4kB; convert to the pre-Gen9 representation. */
+         slm_size = MAX2(slm_size, 4096) / 4096;
+      }
+   }
+
+   return slm_size;
+}
 
 #ifdef __cplusplus
 } /* extern "C" */

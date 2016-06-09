@@ -45,6 +45,7 @@ brw_upload_cs_state(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->cs.base;
    struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
    struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
+   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
 
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
       brw->vtbl.emit_buffer_surface_state(
@@ -147,15 +148,7 @@ brw_upload_cs_state(struct brw_context *brw)
       SET_FIELD(cs_prog_data->threads, MEDIA_GPGPU_THREAD_COUNT);
    assert(cs_prog_data->threads <= brw->max_cs_threads);
 
-   assert(prog_data->total_shared <= 64 * 1024);
-   uint32_t slm_size = 0;
-   if (prog_data->total_shared > 0) {
-      /* slm_size is in 4k increments, but must be a power of 2. */
-      slm_size = 4 * 1024;
-      while (slm_size < prog_data->total_shared)
-         slm_size <<= 1;
-      slm_size /= 4 * 1024;
-   }
+   const uint32_t slm_size = encode_slm_size(devinfo, prog_data->total_shared);
 
    desc[dw++] =
       SET_FIELD(cs_prog_data->uses_barrier, MEDIA_BARRIER_ENABLE) |
