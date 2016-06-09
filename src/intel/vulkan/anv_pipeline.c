@@ -947,9 +947,22 @@ anv_compute_urb_partition(struct anv_pipeline *pipeline)
    pipeline->urb.entries[MESA_SHADER_TESS_EVAL] = 0;
 }
 
+/**
+ * Copy pipeline state not marked as dynamic.
+ * Dynamic state is pipeline state which hasn't been provided at pipeline
+ * creation time, but is dynamically provided afterwards using various
+ * vkCmdSet* functions.
+ *
+ * The set of state considered "non_dynamic" is determined by the pieces of
+ * state that have their corresponding VkDynamicState enums omitted from
+ * VkPipelineDynamicStateCreateInfo::pDynamicStates.
+ *
+ * @param[out] pipeline    Destination non_dynamic state.
+ * @param[in]  pCreateInfo Source of non_dynamic state to be copied.
+ */
 static void
-anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
-                                const VkGraphicsPipelineCreateInfo *pCreateInfo)
+copy_non_dynamic_state(struct anv_pipeline *pipeline,
+                       const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
    anv_cmd_dirty_mask_t states = ANV_CMD_DIRTY_DYNAMIC_ALL;
    ANV_FROM_HANDLE(anv_render_pass, pass, pCreateInfo->renderPass);
@@ -1122,7 +1135,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
    pipeline->batch.relocs = &pipeline->batch_relocs;
 
-   anv_pipeline_init_dynamic_state(pipeline, pCreateInfo);
+   copy_non_dynamic_state(pipeline, pCreateInfo);
 
    pipeline->use_repclear = extra && extra->use_repclear;
 
