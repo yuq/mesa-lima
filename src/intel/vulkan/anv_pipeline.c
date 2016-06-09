@@ -979,18 +979,27 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
 
    struct anv_dynamic_state *dynamic = &pipeline->dynamic_state;
 
-   dynamic->viewport.count = pCreateInfo->pViewportState->viewportCount;
-   if (states & (1 << VK_DYNAMIC_STATE_VIEWPORT)) {
-      typed_memcpy(dynamic->viewport.viewports,
-                   pCreateInfo->pViewportState->pViewports,
-                   pCreateInfo->pViewportState->viewportCount);
-   }
+   /* Section 9.2 of the Vulkan 1.0.15 spec says:
+    *
+    *    pViewportState is [...] NULL if the pipeline
+    *    has rasterization disabled.
+    */
+   if (!pCreateInfo->pRasterizationState->rasterizerDiscardEnable) {
+      assert(pCreateInfo->pViewportState);
 
-   dynamic->scissor.count = pCreateInfo->pViewportState->scissorCount;
-   if (states & (1 << VK_DYNAMIC_STATE_SCISSOR)) {
-      typed_memcpy(dynamic->scissor.scissors,
-                   pCreateInfo->pViewportState->pScissors,
-                   pCreateInfo->pViewportState->scissorCount);
+      dynamic->viewport.count = pCreateInfo->pViewportState->viewportCount;
+      if (states & (1 << VK_DYNAMIC_STATE_VIEWPORT)) {
+         typed_memcpy(dynamic->viewport.viewports,
+                     pCreateInfo->pViewportState->pViewports,
+                     pCreateInfo->pViewportState->viewportCount);
+      }
+
+      dynamic->scissor.count = pCreateInfo->pViewportState->scissorCount;
+      if (states & (1 << VK_DYNAMIC_STATE_SCISSOR)) {
+         typed_memcpy(dynamic->scissor.scissors,
+                     pCreateInfo->pViewportState->pScissors,
+                     pCreateInfo->pViewportState->scissorCount);
+      }
    }
 
    if (states & (1 << VK_DYNAMIC_STATE_LINE_WIDTH)) {
@@ -1008,10 +1017,27 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
          pCreateInfo->pRasterizationState->depthBiasSlopeFactor;
    }
 
-   if (states & (1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS)) {
+   /* Section 9.2 of the Vulkan 1.0.15 spec says:
+    *
+    *    pColorBlendState is [...] NULL if the pipeline has rasterization
+    *    disabled or if the subpass of the render pass the pipeline is
+    *    created against does not use any color attachments.
+    */
+   bool uses_color_att = false;
+   for (unsigned i = 0; i < subpass->color_count; ++i) {
+      if (subpass->color_attachments[i] != VK_ATTACHMENT_UNUSED) {
+         uses_color_att = true;
+         break;
+      }
+   }
+
+   if (uses_color_att &&
+       !pCreateInfo->pRasterizationState->rasterizerDiscardEnable) {
       assert(pCreateInfo->pColorBlendState);
-      typed_memcpy(dynamic->blend_constants,
-                   pCreateInfo->pColorBlendState->blendConstants, 4);
+
+      if (states & (1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS))
+         typed_memcpy(dynamic->blend_constants,
+                     pCreateInfo->pColorBlendState->blendConstants, 4);
    }
 
    /* If there is no depthstencil attachment, then don't read
@@ -1020,14 +1046,17 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
     * no need to override the depthstencil defaults in
     * anv_pipeline::dynamic_state when there is no depthstencil attachment.
     *
-    * From the Vulkan spec (20 Oct 2015, git-aa308cb):
+    * Section 9.2 of the Vulkan 1.0.15 spec says:
     *
-    *    pDepthStencilState [...] may only be NULL if renderPass and subpass
-    *    specify a subpass that has no depth/stencil attachment.
+    *    pDepthStencilState is [...] NULL if the pipeline has rasterization
+    *    disabled or if the subpass of the render pass the pipeline is created
+    *    against does not use a depth/stencil attachment.
     */
-   if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
+   if (!pCreateInfo->pRasterizationState->rasterizerDiscardEnable &&
+       subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
+      assert(pCreateInfo->pDepthStencilState);
+
       if (states & (1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS)) {
-         assert(pCreateInfo->pDepthStencilState);
          dynamic->depth_bounds.min =
             pCreateInfo->pDepthStencilState->minDepthBounds;
          dynamic->depth_bounds.max =
@@ -1035,7 +1064,6 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
       }
 
       if (states & (1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK)) {
-         assert(pCreateInfo->pDepthStencilState);
          dynamic->stencil_compare_mask.front =
             pCreateInfo->pDepthStencilState->front.compareMask;
          dynamic->stencil_compare_mask.back =
@@ -1043,7 +1071,6 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
       }
 
       if (states & (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK)) {
-         assert(pCreateInfo->pDepthStencilState);
          dynamic->stencil_write_mask.front =
             pCreateInfo->pDepthStencilState->front.writeMask;
          dynamic->stencil_write_mask.back =
@@ -1051,7 +1078,6 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
       }
 
       if (states & (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE)) {
-         assert(pCreateInfo->pDepthStencilState);
          dynamic->stencil_reference.front =
             pCreateInfo->pDepthStencilState->front.reference;
          dynamic->stencil_reference.back =
