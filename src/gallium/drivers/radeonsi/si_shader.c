@@ -6230,6 +6230,14 @@ int si_compile_llvm(struct si_screen *sscreen,
 	return r;
 }
 
+static void si_llvm_build_ret(struct si_shader_context *ctx, LLVMValueRef ret)
+{
+	if (LLVMGetTypeKind(LLVMTypeOf(ret)) == LLVMVoidTypeKind)
+		LLVMBuildRetVoid(ctx->radeon_bld.gallivm.builder);
+	else
+		LLVMBuildRet(ctx->radeon_bld.gallivm.builder, ret);
+}
+
 /* Generate code for the hardware VS shader stage to go with a geometry shader */
 static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 				      struct si_shader_context *ctx,
@@ -6291,7 +6299,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
 
-	LLVMBuildRet(gallivm->builder, ctx->return_value);
+	LLVMBuildRetVoid(gallivm->builder);
 
 	/* Dump LLVM IR before any optimization passes */
 	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
@@ -6572,7 +6580,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		goto out;
 	}
 
-	LLVMBuildRet(bld_base->base.gallivm->builder, ctx.return_value);
+	si_llvm_build_ret(&ctx, ctx.return_value);
 	mod = bld_base->base.gallivm->module;
 
 	/* Dump LLVM IR before any optimization passes */
@@ -6807,7 +6815,7 @@ static bool si_compile_vs_prolog(struct si_screen *sscreen,
 	}
 
 	/* Compile. */
-	LLVMBuildRet(gallivm->builder, ret);
+	si_llvm_build_ret(&ctx, ret);
 	radeon_llvm_finalize_module(&ctx.radeon_bld);
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
@@ -6880,7 +6888,7 @@ static bool si_compile_vs_epilog(struct si_screen *sscreen,
 	}
 
 	/* Compile. */
-	LLVMBuildRet(gallivm->builder, ctx.return_value);
+	LLVMBuildRetVoid(gallivm->builder);
 	radeon_llvm_finalize_module(&ctx.radeon_bld);
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
@@ -7035,7 +7043,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 			      LLVMGetParam(func, last_sgpr + 3));
 
 	/* Compile. */
-	LLVMBuildRet(gallivm->builder, ctx.return_value);
+	LLVMBuildRetVoid(gallivm->builder);
 	radeon_llvm_finalize_module(&ctx.radeon_bld);
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
@@ -7228,7 +7236,7 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 	}
 
 	/* Compile. */
-	LLVMBuildRet(gallivm->builder, ret);
+	si_llvm_build_ret(&ctx, ret);
 	radeon_llvm_finalize_module(&ctx.radeon_bld);
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
