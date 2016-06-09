@@ -532,6 +532,18 @@ fp64(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+int64(const _mesa_glsl_parse_state *state)
+{
+   return state->has_int64();
+}
+
+static bool
+int64_fp64(const _mesa_glsl_parse_state *state)
+{
+   return state->has_int64() && state->has_double();
+}
+
+static bool
 compute_shader(const _mesa_glsl_parse_state *state)
 {
    return state->stage == MESA_SHADER_COMPUTE;
@@ -723,6 +735,12 @@ private:
    B1(floatBitsToUint)
    B1(intBitsToFloat)
    B1(uintBitsToFloat)
+
+   BA1(doubleBitsToInt64)
+   BA1(doubleBitsToUint64)
+   BA1(int64BitsToDouble)
+   BA1(uint64BitsToDouble)
+
    ir_function_signature *_packUnorm2x16(builtin_available_predicate avail);
    ir_function_signature *_packSnorm2x16(builtin_available_predicate avail);
    ir_function_signature *_packUnorm4x8(builtin_available_predicate avail);
@@ -735,6 +753,10 @@ private:
    ir_function_signature *_unpackHalf2x16(builtin_available_predicate avail);
    ir_function_signature *_packDouble2x32(builtin_available_predicate avail);
    ir_function_signature *_unpackDouble2x32(builtin_available_predicate avail);
+   ir_function_signature *_packInt2x32(builtin_available_predicate avail);
+   ir_function_signature *_unpackInt2x32(builtin_available_predicate avail);
+   ir_function_signature *_packUint2x32(builtin_available_predicate avail);
+   ir_function_signature *_unpackUint2x32(builtin_available_predicate avail);
 
    BA1(length)
    BA1(distance);
@@ -1184,7 +1206,7 @@ builtin_builder::create_builtins()
                 _##NAME(glsl_type::ivec4_type), \
                 NULL);
 
-#define FID(NAME)                                \
+#define FI64(NAME)                                \
    add_function(#NAME,                          \
                 _##NAME(always_available, glsl_type::float_type), \
                 _##NAME(always_available, glsl_type::vec2_type),  \
@@ -1198,6 +1220,10 @@ builtin_builder::create_builtins()
                 _##NAME(fp64, glsl_type::dvec2_type),  \
                 _##NAME(fp64, glsl_type::dvec3_type),  \
                 _##NAME(fp64, glsl_type::dvec4_type),  \
+                _##NAME(int64, glsl_type::int64_t_type), \
+                _##NAME(int64, glsl_type::i64vec2_type),  \
+                _##NAME(int64, glsl_type::i64vec3_type),  \
+                _##NAME(int64, glsl_type::i64vec4_type),  \
                 NULL);
 
 #define FIUD_VEC(NAME)                                            \
@@ -1216,6 +1242,14 @@ builtin_builder::create_builtins()
                 _##NAME(fp64, glsl_type::dvec2_type),  \
                 _##NAME(fp64, glsl_type::dvec3_type),  \
                 _##NAME(fp64, glsl_type::dvec4_type),  \
+                _##NAME(int64, glsl_type::int64_t_type), \
+                _##NAME(int64, glsl_type::i64vec2_type),  \
+                _##NAME(int64, glsl_type::i64vec3_type),  \
+                _##NAME(int64, glsl_type::i64vec4_type),  \
+                _##NAME(int64, glsl_type::uint64_t_type), \
+                _##NAME(int64, glsl_type::u64vec2_type),  \
+                _##NAME(int64, glsl_type::u64vec3_type),  \
+                _##NAME(int64, glsl_type::u64vec4_type),  \
                 NULL);
 
 #define IU(NAME)                                \
@@ -1252,6 +1286,14 @@ builtin_builder::create_builtins()
                 _##NAME(fp64, glsl_type::dvec2_type), \
                 _##NAME(fp64, glsl_type::dvec3_type), \
                 _##NAME(fp64, glsl_type::dvec4_type), \
+                _##NAME(int64, glsl_type::int64_t_type), \
+                _##NAME(int64, glsl_type::i64vec2_type),  \
+                _##NAME(int64, glsl_type::i64vec3_type),  \
+                _##NAME(int64, glsl_type::i64vec4_type),  \
+                _##NAME(int64, glsl_type::uint64_t_type), \
+                _##NAME(int64, glsl_type::u64vec2_type),  \
+                _##NAME(int64, glsl_type::u64vec3_type),  \
+                _##NAME(int64, glsl_type::u64vec4_type),  \
                 NULL);
 
 #define FIUD2_MIXED(NAME)                                                                 \
@@ -1290,6 +1332,21 @@ builtin_builder::create_builtins()
                 _##NAME(fp64, glsl_type::dvec2_type, glsl_type::dvec2_type),           \
                 _##NAME(fp64, glsl_type::dvec3_type, glsl_type::dvec3_type),           \
                 _##NAME(fp64, glsl_type::dvec4_type, glsl_type::dvec4_type),           \
+                                                                        \
+                _##NAME(int64, glsl_type::int64_t_type, glsl_type::int64_t_type),           \
+                _##NAME(int64, glsl_type::i64vec2_type, glsl_type::int64_t_type),           \
+                _##NAME(int64, glsl_type::i64vec3_type, glsl_type::int64_t_type),           \
+                _##NAME(int64, glsl_type::i64vec4_type, glsl_type::int64_t_type),           \
+                _##NAME(int64, glsl_type::i64vec2_type, glsl_type::i64vec2_type),           \
+                _##NAME(int64, glsl_type::i64vec3_type, glsl_type::i64vec3_type),           \
+                _##NAME(int64, glsl_type::i64vec4_type, glsl_type::i64vec4_type),           \
+                _##NAME(int64, glsl_type::uint64_t_type, glsl_type::uint64_t_type),           \
+                _##NAME(int64, glsl_type::u64vec2_type, glsl_type::uint64_t_type),           \
+                _##NAME(int64, glsl_type::u64vec3_type, glsl_type::uint64_t_type),           \
+                _##NAME(int64, glsl_type::u64vec4_type, glsl_type::uint64_t_type),           \
+                _##NAME(int64, glsl_type::u64vec2_type, glsl_type::u64vec2_type),           \
+                _##NAME(int64, glsl_type::u64vec3_type, glsl_type::u64vec3_type),           \
+                _##NAME(int64, glsl_type::u64vec4_type, glsl_type::u64vec4_type),           \
                 NULL);
 
    F(radians)
@@ -1324,8 +1381,8 @@ builtin_builder::create_builtins()
    F(log2)
    FD(sqrt)
    FD(inversesqrt)
-   FID(abs)
-   FID(sign)
+   FI64(abs)
+   FI64(sign)
    FD(floor)
    FD(trunc)
    FD(round)
@@ -1402,6 +1459,16 @@ builtin_builder::create_builtins()
                 _mix_sel(shader_integer_mix, glsl_type::bvec2_type, glsl_type::bvec2_type),
                 _mix_sel(shader_integer_mix, glsl_type::bvec3_type, glsl_type::bvec3_type),
                 _mix_sel(shader_integer_mix, glsl_type::bvec4_type, glsl_type::bvec4_type),
+
+                _mix_sel(int64, glsl_type::int64_t_type, glsl_type::bool_type),
+                _mix_sel(int64, glsl_type::i64vec2_type, glsl_type::bvec2_type),
+                _mix_sel(int64, glsl_type::i64vec3_type, glsl_type::bvec3_type),
+                _mix_sel(int64, glsl_type::i64vec4_type, glsl_type::bvec4_type),
+
+                _mix_sel(int64, glsl_type::uint64_t_type,  glsl_type::bool_type),
+                _mix_sel(int64, glsl_type::u64vec2_type, glsl_type::bvec2_type),
+                _mix_sel(int64, glsl_type::u64vec3_type, glsl_type::bvec3_type),
+                _mix_sel(int64, glsl_type::u64vec4_type, glsl_type::bvec4_type),
                 NULL);
 
    add_function("step",
@@ -1460,6 +1527,34 @@ builtin_builder::create_builtins()
                 _uintBitsToFloat(glsl_type::uvec4_type),
                 NULL);
 
+   add_function("doubleBitsToInt64",
+                _doubleBitsToInt64(int64_fp64, glsl_type::double_type),
+                _doubleBitsToInt64(int64_fp64, glsl_type::dvec2_type),
+                _doubleBitsToInt64(int64_fp64, glsl_type::dvec3_type),
+                _doubleBitsToInt64(int64_fp64, glsl_type::dvec4_type),
+                NULL);
+
+   add_function("doubleBitsToUint64",
+                _doubleBitsToUint64(int64_fp64, glsl_type::double_type),
+                _doubleBitsToUint64(int64_fp64, glsl_type::dvec2_type),
+                _doubleBitsToUint64(int64_fp64, glsl_type::dvec3_type),
+                _doubleBitsToUint64(int64_fp64, glsl_type::dvec4_type),
+                NULL);
+
+   add_function("int64BitsToDouble",
+                _int64BitsToDouble(int64_fp64, glsl_type::int64_t_type),
+                _int64BitsToDouble(int64_fp64, glsl_type::i64vec2_type),
+                _int64BitsToDouble(int64_fp64, glsl_type::i64vec3_type),
+                _int64BitsToDouble(int64_fp64, glsl_type::i64vec4_type),
+                NULL);
+
+   add_function("uint64BitsToDouble",
+                _uint64BitsToDouble(int64_fp64, glsl_type::uint64_t_type),
+                _uint64BitsToDouble(int64_fp64, glsl_type::u64vec2_type),
+                _uint64BitsToDouble(int64_fp64, glsl_type::u64vec3_type),
+                _uint64BitsToDouble(int64_fp64, glsl_type::u64vec4_type),
+                NULL);
+
    add_function("packUnorm2x16",   _packUnorm2x16(shader_packing_or_es3_or_gpu_shader5),   NULL);
    add_function("packSnorm2x16",   _packSnorm2x16(shader_packing_or_es3),                  NULL);
    add_function("packUnorm4x8",    _packUnorm4x8(shader_packing_or_es31_or_gpu_shader5),   NULL);
@@ -1473,6 +1568,10 @@ builtin_builder::create_builtins()
    add_function("packDouble2x32",    _packDouble2x32(fp64),                   NULL);
    add_function("unpackDouble2x32",  _unpackDouble2x32(fp64),                 NULL);
 
+   add_function("packInt2x32",     _packInt2x32(int64),                    NULL);
+   add_function("unpackInt2x32",   _unpackInt2x32(int64),                  NULL);
+   add_function("packUint2x32",    _packUint2x32(int64),                   NULL);
+   add_function("unpackUint2x32",  _unpackUint2x32(int64),                 NULL);
 
    FD(length)
    FD(distance)
@@ -3853,6 +3952,42 @@ builtin_builder::_uintBitsToFloat(const glsl_type *type)
 }
 
 ir_function_signature *
+builtin_builder::_doubleBitsToInt64(builtin_available_predicate avail, const glsl_type *type)
+{
+   ir_variable *x = in_var(type, "x");
+   MAKE_SIG(glsl_type::i64vec(type->vector_elements), avail, 1, x);
+   body.emit(ret(bitcast_d2i64(x)));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_doubleBitsToUint64(builtin_available_predicate avail, const glsl_type *type)
+{
+   ir_variable *x = in_var(type, "x");
+   MAKE_SIG(glsl_type::u64vec(type->vector_elements), avail, 1, x);
+   body.emit(ret(bitcast_d2u64(x)));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_int64BitsToDouble(builtin_available_predicate avail, const glsl_type *type)
+{
+   ir_variable *x = in_var(type, "x");
+   MAKE_SIG(glsl_type::dvec(type->vector_elements), avail, 1, x);
+   body.emit(ret(bitcast_i642d(x)));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_uint64BitsToDouble(builtin_available_predicate avail, const glsl_type *type)
+{
+   ir_variable *x = in_var(type, "x");
+   MAKE_SIG(glsl_type::dvec(type->vector_elements), avail, 1, x);
+   body.emit(ret(bitcast_u642d(x)));
+   return sig;
+}
+
+ir_function_signature *
 builtin_builder::_packUnorm2x16(builtin_available_predicate avail)
 {
    ir_variable *v = in_var(glsl_type::vec2_type, "v");
@@ -3958,6 +4093,42 @@ builtin_builder::_unpackDouble2x32(builtin_available_predicate avail)
    ir_variable *p = in_var(glsl_type::double_type, "p");
    MAKE_SIG(glsl_type::uvec2_type, avail, 1, p);
    body.emit(ret(expr(ir_unop_unpack_double_2x32, p)));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_packInt2x32(builtin_available_predicate avail)
+{
+   ir_variable *v = in_var(glsl_type::ivec2_type, "v");
+   MAKE_SIG(glsl_type::int64_t_type, avail, 1, v);
+   body.emit(ret(expr(ir_unop_pack_int_2x32, v)));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_unpackInt2x32(builtin_available_predicate avail)
+{
+   ir_variable *p = in_var(glsl_type::int64_t_type, "p");
+   MAKE_SIG(glsl_type::ivec2_type, avail, 1, p);
+   body.emit(ret(expr(ir_unop_unpack_int_2x32, p)));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_packUint2x32(builtin_available_predicate avail)
+{
+   ir_variable *v = in_var(glsl_type::uvec2_type, "v");
+   MAKE_SIG(glsl_type::uint64_t_type, avail, 1, v);
+   body.emit(ret(expr(ir_unop_pack_uint_2x32, v)));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_unpackUint2x32(builtin_available_predicate avail)
+{
+   ir_variable *p = in_var(glsl_type::uint64_t_type, "p");
+   MAKE_SIG(glsl_type::uvec2_type, avail, 1, p);
+   body.emit(ret(expr(ir_unop_unpack_uint_2x32, p)));
    return sig;
 }
 
