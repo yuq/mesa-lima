@@ -320,16 +320,22 @@ assign_varying_locations(struct gl_context *ctx,
 			 struct gl_shader_program *prog,
 			 gl_shader *producer, gl_shader *consumer,
                          unsigned num_tfeedback_decls,
-                         tfeedback_decl *tfeedback_decls);
+                         tfeedback_decl *tfeedback_decls,
+                         const uint64_t reserved_slots);
+
+uint64_t
+reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode);
 
 bool
 check_against_output_limit(struct gl_context *ctx,
                            struct gl_shader_program *prog,
-                           gl_shader *producer);
+                           gl_shader *producer,
+                           unsigned num_explicit_locations);
 
 bool
 check_against_input_limit(struct gl_context *ctx,
                           struct gl_shader_program *prog,
-                          gl_shader *consumer);
+                          gl_shader *consumer,
+                          unsigned num_explicit_locations);
 
 #endif /* GLSL_LINK_VARYINGS_H */

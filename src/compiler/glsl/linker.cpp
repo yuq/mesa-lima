@@ -4850,9 +4850,12 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
     */
    if (last < MESA_SHADER_FRAGMENT &&
        (num_tfeedback_decls != 0 || prog->SeparateShader)) {
+      const uint64_t reserved_out_slots =
+         reserved_varying_slot(prog->_LinkedShaders[last], ir_var_shader_out);
       if (!assign_varying_locations(ctx, mem_ctx, prog,
                                     prog->_LinkedShaders[last], NULL,
-                                    num_tfeedback_decls, tfeedback_decls))
+                                    num_tfeedback_decls, tfeedback_decls,
+                                    reserved_out_slots))
          goto done;
    }
 
@@ -4870,6 +4873,9 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
          gl_shader *const sh = prog->_LinkedShaders[last];
          if (prog->SeparateShader) {
+            const uint64_t reserved_slots =
+               reserved_varying_slot(sh, ir_var_shader_in);
+
             /* Assign input locations for SSO, output locations are already
              * assigned.
              */
@@ -4877,7 +4883,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                                           NULL /* producer */,
                                           sh /* consumer */,
                                           0 /* num_tfeedback_decls */,
-                                          NULL /* tfeedback_decls */))
+                                          NULL /* tfeedback_decls */,
+                                          reserved_slots))
                goto done;
          }
 
@@ -4898,9 +4905,15 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
             gl_shader *const sh_i = prog->_LinkedShaders[i];
             gl_shader *const sh_next = prog->_LinkedShaders[next];
 
+            const uint64_t reserved_out_slots =
+               reserved_varying_slot(sh_i, ir_var_shader_out);
+            const uint64_t reserved_in_slots =
+               reserved_varying_slot(sh_next, ir_var_shader_in);
+
             if (!assign_varying_locations(ctx, mem_ctx, prog, sh_i, sh_next,
                       next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
-                      tfeedback_decls))
+                      tfeedback_decls,
+                      reserved_out_slots | reserved_in_slots))
                goto done;
 
             do_dead_builtin_varyings(ctx, sh_i, sh_next,
@@ -4909,11 +4922,14 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
             /* This must be done after all dead varyings are eliminated. */
             if (sh_i != NULL) {
-               if (!check_against_output_limit(ctx, prog, sh_i)) {
+               unsigned slots_used = _mesa_bitcount_64(reserved_out_slots);
+               if (!check_against_output_limit(ctx, prog, sh_i, slots_used)) {
                   goto done;
                }
             }
-            if (!check_against_input_limit(ctx, prog, sh_next))
+
+            unsigned slots_used = _mesa_bitcount_64(reserved_in_slots);
+            if (!check_against_input_limit(ctx, prog, sh_next, slots_used))
                goto done;
 
             next = i;

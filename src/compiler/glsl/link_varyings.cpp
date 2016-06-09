@@ -1937,7 +1937,7 @@ canonicalize_shader_io(exec_list *ir, enum ir_variable_mode io_mode)
  * 64 bit map. Per-vertex and per-patch both have separate location domains
  * with a max of MAX_VARYING.
  */
-static uint64_t
+uint64_t
 reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode)
 {
    assert(io_mode == ir_var_shader_in || io_mode == ir_var_shader_out);
@@ -1999,7 +1999,8 @@ assign_varying_locations(struct gl_context *ctx,
                          struct gl_shader_program *prog,
                          gl_shader *producer, gl_shader *consumer,
                          unsigned num_tfeedback_decls,
-                         tfeedback_decl *tfeedback_decls)
+                         tfeedback_decl *tfeedback_decls,
+                         const uint64_t reserved_slots)
 {
    /* Tessellation shaders treat inputs and outputs as shared memory and can
     * access inputs and outputs of other invocations.
@@ -2177,10 +2178,6 @@ assign_varying_locations(struct gl_context *ctx,
       }
    }
 
-   const uint64_t reserved_slots =
-      reserved_varying_slot(producer, ir_var_shader_out) |
-      reserved_varying_slot(consumer, ir_var_shader_in);
-
    const unsigned slots_used = matches.assign_locations(prog, reserved_slots);
    matches.store_locations();
 
@@ -2263,14 +2260,16 @@ assign_varying_locations(struct gl_context *ctx,
 bool
 check_against_output_limit(struct gl_context *ctx,
                            struct gl_shader_program *prog,
-                           gl_shader *producer)
+                           gl_shader *producer,
+                           unsigned num_explicit_locations)
 {
-   unsigned output_vectors = 0;
+   unsigned output_vectors = num_explicit_locations;
 
    foreach_in_list(ir_instruction, node, producer->ir) {
       ir_variable *const var = node->as_variable();
 
-      if (var && var->data.mode == ir_var_shader_out &&
+      if (var && !var->data.explicit_location &&
+          var->data.mode == ir_var_shader_out &&
           var_counts_against_varying_limit(producer->Stage, var)) {
          /* outputs for fragment shader can't be doubles */
          output_vectors += var->type->count_attribute_slots(false);
@@ -2305,14 +2304,16 @@ check_against_output_limit(struct gl_context *ctx,
 bool
 check_against_input_limit(struct gl_context *ctx,
                           struct gl_shader_program *prog,
-                          gl_shader *consumer)
+                          gl_shader *consumer,
+                          unsigned num_explicit_locations)
 {
-   unsigned input_vectors = 0;
+   unsigned input_vectors = num_explicit_locations;
 
    foreach_in_list(ir_instruction, node, consumer->ir) {
       ir_variable *const var = node->as_variable();
 
-      if (var && var->data.mode == ir_var_shader_in &&
+      if (var && !var->data.explicit_location &&
+          var->data.mode == ir_var_shader_in &&
           var_counts_against_varying_limit(consumer->Stage, var)) {
          /* vertex inputs aren't varying counted */
          input_vectors += var->type->count_attribute_slots(false);
