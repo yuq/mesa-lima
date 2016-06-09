@@ -33,97 +33,6 @@
 
 #include "brw_blorp.h"
 
-
-/* SURFACE_STATE for renderbuffer or texture surface (see
- * brw_update_renderbuffer_surface and brw_update_texture_surface)
- */
-static uint32_t
-gen8_blorp_emit_surface_state(struct brw_context *brw,
-                              const struct brw_blorp_surface_info *surface,
-                              uint32_t read_domains, uint32_t write_domain,
-                              bool is_render_target)
-{
-   uint32_t wm_surf_offset;
-   const struct intel_mipmap_tree *mt = surface->mt;
-   const uint32_t mocs_wb = is_render_target ?
-                               (brw->gen >= 9 ? SKL_MOCS_PTE : BDW_MOCS_PTE) :
-                               (brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB);
-   const uint32_t tiling = surface->map_stencil_as_y_tiled
-      ? I915_TILING_Y : mt->tiling;
-   uint32_t tile_x, tile_y;
-
-   uint32_t *surf = gen8_allocate_surface_state(brw, &wm_surf_offset, -1);
-
-   surf[0] = BRW_SURFACE_2D << BRW_SURFACE_TYPE_SHIFT |
-             surface->brw_surfaceformat << BRW_SURFACE_FORMAT_SHIFT |
-             gen8_vertical_alignment(brw, mt, BRW_SURFACE_2D) |
-             gen8_horizontal_alignment(brw, mt, BRW_SURFACE_2D) |
-             gen8_surface_tiling_mode(tiling);
-
-   surf[1] = SET_FIELD(mocs_wb, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
-
-   surf[2] = SET_FIELD(surface->width - 1, GEN7_SURFACE_WIDTH) |
-             SET_FIELD(surface->height - 1, GEN7_SURFACE_HEIGHT);
-
-   uint32_t pitch_bytes = mt->pitch;
-   if (surface->map_stencil_as_y_tiled)
-      pitch_bytes *= 2;
-   surf[3] = pitch_bytes - 1;
-
-   surf[4] = gen7_surface_msaa_bits(surface->num_samples,
-                                    surface->msaa_layout);
-
-   if (surface->mt->mcs_mt) {
-      surf[6] = SET_FIELD(surface->mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |
-                SET_FIELD((surface->mt->mcs_mt->pitch / 128) - 1,
-                          GEN8_SURFACE_AUX_PITCH) |
-                gen8_get_aux_mode(brw, mt);
-   } else {
-      surf[6] = 0;
-   }
-
-   gen8_emit_fast_clear_color(brw, mt, surf);
-   surf[7] |= SET_FIELD(HSW_SCS_RED,   GEN7_SURFACE_SCS_R) |
-              SET_FIELD(HSW_SCS_GREEN, GEN7_SURFACE_SCS_G) |
-              SET_FIELD(HSW_SCS_BLUE,  GEN7_SURFACE_SCS_B) |
-              SET_FIELD(HSW_SCS_ALPHA, GEN7_SURFACE_SCS_A);
-
-    /* reloc */
-   *((uint64_t *)&surf[8]) =
-      brw_blorp_compute_tile_offsets(surface, &tile_x, &tile_y) +
-      mt->bo->offset64;
-
-   /* Note that the low bits of these fields are missing, so there's the
-    * possibility of getting in trouble.
-    */
-   assert(tile_x % 4 == 0);
-   assert(tile_y % 4 == 0);
-   surf[5] = SET_FIELD(tile_x / 4, BRW_SURFACE_X_OFFSET) |
-             SET_FIELD(tile_y / 4, GEN8_SURFACE_Y_OFFSET);
-
-   if (brw->gen >= 9) {
-      /* Disable Mip Tail by setting a large value. */
-      surf[5] |= SET_FIELD(15, GEN9_SURFACE_MIP_TAIL_START_LOD);
-   }
-
-   if (surface->mt->mcs_mt) {
-      *((uint64_t *) &surf[10]) = surface->mt->mcs_mt->bo->offset64;
-      drm_intel_bo_emit_reloc(brw->batch.bo,
-                              wm_surf_offset + 10 * 4,
-                              surface->mt->mcs_mt->bo, 0,
-                              read_domains, write_domain);
-   }
-
-   /* Emit relocation to surface contents */
-   drm_intel_bo_emit_reloc(brw->batch.bo,
-                           wm_surf_offset + 8 * 4,
-                           mt->bo,
-                           surf[8] - mt->bo->offset64,
-                           read_domains, write_domain);
-
-   return wm_surf_offset;
-}
-
 static uint32_t
 gen8_blorp_emit_blend_state(struct brw_context *brw,
                             const struct brw_blorp_params *params)
@@ -576,10 +485,10 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
    intel_miptree_used_for_rendering(params->dst.mt);
 
    wm_surf_offset_renderbuffer =
-      gen8_blorp_emit_surface_state(brw, &params->dst,
-                                    I915_GEM_DOMAIN_RENDER,
-                                    I915_GEM_DOMAIN_RENDER,
-                                    true /* is_render_target */);
+      brw_blorp_emit_surface_state(brw, &params->dst,
+                                   I915_GEM_DOMAIN_RENDER,
+                                   I915_GEM_DOMAIN_RENDER,
+                                   true /* is_render_target */);
    if (params->src.mt) {
       const struct brw_blorp_surface_info *surface = &params->src;
       struct intel_mipmap_tree *mt = surface->mt;
