@@ -5985,8 +5985,18 @@ fs_visitor::allocate_registers(bool allow_spilling)
 
    schedule_instructions(SCHEDULE_POST);
 
-   if (last_scratch > 0)
+   if (last_scratch > 0) {
       prog_data->total_scratch = brw_get_scratch_size(last_scratch);
+
+      if (devinfo->is_haswell && stage == MESA_SHADER_COMPUTE) {
+         /* According to the MEDIA_VFE_STATE's "Per Thread Scratch Space"
+          * field documentation, Haswell supports a minimum of 2kB of
+          * scratch space for compute shaders, unlike every other stage
+          * and platform.
+          */
+         prog_data->total_scratch = MAX2(prog_data->total_scratch, 2048);
+      }
+   }
 }
 
 bool

@@ -64,14 +64,26 @@ brw_upload_cs_state(struct brw_context *brw)
    OUT_BATCH(MEDIA_VFE_STATE << 16 | (dwords - 2));
 
    if (prog_data->total_scratch) {
-      if (brw->gen >= 8)
+      if (brw->gen >= 8) {
+         /* Broadwell's Per Thread Scratch Space is in the range [0, 11]
+          * where 0 = 1k, 1 = 4k, 2 = 8k, ..., 11 = 2M.
+          */
          OUT_RELOC64(stage_state->scratch_bo,
                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                      ffs(prog_data->total_scratch) - 11);
-      else
+      } else if (brw->is_haswell) {
+         /* Haswell's Per Thread Scratch Space is in the range [0, 10]
+          * where 0 = 2k, 1 = 4k, 2 = 8k, ..., 10 = 2M.
+          */
+         OUT_RELOC(stage_state->scratch_bo,
+                   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                   ffs(prog_data->total_scratch) - 12);
+      } else {
+         /* This is wrong but we'll fix it later */
          OUT_RELOC(stage_state->scratch_bo,
                    I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                    ffs(prog_data->total_scratch) - 11);
+      }
    } else {
       OUT_BATCH(0);
       if (brw->gen >= 8)
