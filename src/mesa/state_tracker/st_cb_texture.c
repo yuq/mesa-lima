@@ -1325,6 +1325,7 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
    unsigned dst_level = 0;
 
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    if (stObj->pt == stImage->pt)
       dst_level = texImage->TexObject->MinLevel + texImage->Level;
@@ -2260,6 +2261,7 @@ st_CopyTexSubImage(struct gl_context *ctx, GLuint dims,
    GLint srcY0, srcY1;
 
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    assert(!_mesa_is_format_etc2(texImage->TexFormat) &&
           texImage->TexFormat != MESA_FORMAT_ETC1_RGB8);
@@ -2784,6 +2786,7 @@ st_ClearTexSubImage(struct gl_context *ctx,
       return;
 
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    u_box_3d(xoffset, yoffset, zoffset + texImage->Face,
             width, height, depth, &box);

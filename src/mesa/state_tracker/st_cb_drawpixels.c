@@ -1072,6 +1072,7 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
    assert(ctx->NewState == 0x0);
 
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    st_validate_state(st, ST_PIPELINE_RENDER);
 
@@ -1437,6 +1438,7 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
    struct gl_pixelstore_attrib pack = ctx->DefaultPacking;
 
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    st_validate_state(st, ST_PIPELINE_RENDER);
 

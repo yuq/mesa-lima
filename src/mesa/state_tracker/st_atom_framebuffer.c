@@ -113,6 +113,7 @@ update_framebuffer_state( struct st_context *st )
    GLuint i;
 
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    st->state.fb_orientation = st_fb_orientation(fb);
 

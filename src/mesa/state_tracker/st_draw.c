@@ -170,6 +170,7 @@ st_draw_vbo(struct gl_context *ctx,
    assert(ctx->NewState == 0x0);
 
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    /* Validate state. */
    if (st->dirty.st || st->dirty.mesa || ctx->NewDriverState) {

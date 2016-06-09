@@ -401,6 +401,7 @@ st_Clear(struct gl_context *ctx, GLbitfield mask)
    GLuint i;
 
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    /* This makes sure the pipe has the latest scissor, etc values */
    st_validate_state( st, ST_PIPELINE_RENDER );

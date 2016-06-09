@@ -549,6 +549,7 @@ st_CopyImageSubData(struct gl_context *ctx,
    int src_level, dst_level;
 
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    if (src_image) {
       struct st_texture_image *src = st_texture_image(src_image);

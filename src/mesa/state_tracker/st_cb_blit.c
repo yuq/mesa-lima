@@ -97,6 +97,7 @@ st_BlitFramebuffer(struct gl_context *ctx,
 
    /* Make sure bitmap rendering has landed in the framebuffers */
    st_flush_bitmap_cache(st);
+   st_invalidate_readpix_cache(st);
 
    clip.srcX0 = srcX0;
    clip.srcY0 = srcY0;

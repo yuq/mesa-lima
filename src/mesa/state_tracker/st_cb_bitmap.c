@@ -636,6 +636,8 @@ st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
    assert(width > 0);
    assert(height > 0);
 
+   st_invalidate_readpix_cache(st);
+
    if (!st->bitmap.cache) {
       init_bitmap_state(st);
    }
@@ -702,6 +704,7 @@ st_DrawAtlasBitmaps(struct gl_context *ctx,
    st_flush_bitmap_cache(st);
 
    st_validate_state(st, ST_PIPELINE_RENDER);
+   st_invalidate_readpix_cache(st);
 
    sv = st_create_texture_sampler_view(pipe, stObj->pt);
    if (!sv) {
