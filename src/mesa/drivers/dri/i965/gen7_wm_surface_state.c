@@ -386,6 +386,15 @@ gen7_update_texture_surface(struct gl_context *ctx,
       unsigned format = translate_tex_format(
          brw, intel_obj->_Format, sampler->sRGBDecode);
 
+      if (obj->Target == GL_TEXTURE_EXTERNAL_OES) {
+         if (plane > 0)
+            mt = mt->plane[plane - 1];
+         if (mt == NULL)
+            return;
+
+         format = translate_tex_format(brw, mt->format, sampler->sRGBDecode);
+      }
+
       if (for_gather && format == BRW_SURFACEFORMAT_R32G32_FLOAT)
          format = BRW_SURFACEFORMAT_R32G32_FLOAT_LD;
 
