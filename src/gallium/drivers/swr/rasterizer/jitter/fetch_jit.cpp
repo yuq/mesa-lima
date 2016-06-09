@@ -61,12 +61,11 @@ struct FetchJit : public Builder
     // package up Shuffle*bpcGatherd args into a tuple for convenience
     typedef std::tuple<Value*&, Value*, const Instruction::CastOps, const ConversionType,
         uint32_t&, uint32_t&, const ComponentEnable, const ComponentControl(&)[4], Value*(&)[4],
-        const uint32_t(&)[4], Value*, bool, uint32_t, bool, uint32_t> Shuffle8bpcArgs;
+        const uint32_t(&)[4]> Shuffle8bpcArgs;
     void Shuffle8bpcGatherd(Shuffle8bpcArgs &args);
 
     typedef std::tuple<Value*(&)[2], Value*, const Instruction::CastOps, const ConversionType,
-        uint32_t&, uint32_t&, const ComponentEnable, const ComponentControl(&)[4], Value*(&)[4],
-        Value*, bool, uint32_t, bool, uint32_t> Shuffle16bpcArgs;
+        uint32_t&, uint32_t&, const ComponentEnable, const ComponentControl(&)[4], Value*(&)[4]> Shuffle16bpcArgs;
     void Shuffle16bpcGather(Shuffle16bpcArgs &args);
 
     void StoreVertexElements(Value* pVtxOut, const uint32_t outputElt, const uint32_t numEltsToStore, Value* (&vVertexElements)[4]);
@@ -82,6 +81,7 @@ struct FetchJit : public Builder
     void CreateGatherOddFormats(SWR_FORMAT format, Value* pBase, Value* offsets, Value* result[4]);
     void ConvertFormat(SWR_FORMAT format, Value *texels[4]);
 
+    void StoreSGVs(const FETCH_COMPILE_STATE& fetchState, Value* pFetchInfo, Value* pVtxOut);
 };
 
 Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
@@ -174,6 +174,9 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     (fetchState.bDisableVGATHER) ? JitLoadVertices(fetchState, fetchInfo, streams, vIndices, pVtxOut)
                                  : JitGatherVertices(fetchState, fetchInfo, streams, vIndices, pVtxOut);
 
+    // Store out SGVs if enabled
+    StoreSGVs(fetchState, fetchInfo, pVtxOut);
+
     RET_VOID();
 
     JitManager::DumpToFile(fetch, "src");
@@ -211,11 +214,29 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     return fetch;
 }
 
+// store vertex ID and instance ID if enabled
+void FetchJit::StoreSGVs(const FETCH_COMPILE_STATE& fetchState, Value* pFetchInfo, Value* pVtxOut)
+{
+    if (fetchState.InstanceIdEnable)
+    {
+        Value* pId = BITCAST(VBROADCAST(LOAD(GEP(pFetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance }))), mSimdFP32Ty);
+        Value* pDest = GEP(pVtxOut, C(fetchState.InstanceIdElementOffset * 4 + fetchState.InstanceIdComponentNumber), "instanceID");
+        STORE(pId, pDest);
+    }
+
+    if (fetchState.VertexIdEnable)
+    {
+        Value* pId = BITCAST(LOAD(GEP(pFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID })), mSimdFP32Ty);
+        Value* pDest = GEP(pVtxOut, C(fetchState.VertexIdElementOffset * 4 + fetchState.VertexIdComponentNumber), "vertexID");
+        STORE(pId, pDest);
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Loads attributes from memory using LOADs, shuffling the 
 /// components into SOA form. 
 /// *Note* currently does not support component control,
-/// component packing, instancing, InstanceID SGVs, or VertexID SGVs
+/// component packing, instancing
 /// @param fetchState - info about attributes to be fetched from memory
 /// @param streams - value pointer to the current vertex stream
 /// @param vIndices - vector value of indices to load
@@ -774,23 +795,6 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
             CreateGatherOddFormats((SWR_FORMAT)ied.Format, pStreamBase, vOffsets, pResults);
             ConvertFormat((SWR_FORMAT)ied.Format, pResults);
 
-            // check for InstanceID SGV
-            if (fetchState.InstanceIdEnable && (fetchState.InstanceIdElementOffset == nInputElt))
-            {
-                SWR_ASSERT(fetchState.InstanceIdComponentNumber < (sizeof(pResults) / sizeof(pResults[0])));
-
-                // Load a SIMD of InstanceIDs
-                pResults[fetchState.InstanceIdComponentNumber] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));    // InstanceID
-            }
-            // check for VertexID SGV
-            else if (fetchState.VertexIdEnable && (fetchState.VertexIdElementOffset == nInputElt))
-            {
-                SWR_ASSERT(fetchState.VertexIdComponentNumber < (sizeof(pResults) / sizeof(pResults[0])));
-
-                // Load a SIMD of VertexIDs
-                pResults[fetchState.VertexIdComponentNumber] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
-            }
-
             StoreVertexElements(pVtxOut, outputElt++, 4, pResults);
             currentVertexElement = 0;
         }
@@ -837,12 +841,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
 
                     // if we have at least one component to shuffle into place
                     if(compMask){
-                        const bool instanceIdEnable = (fetchState.InstanceIdEnable) && (fetchState.InstanceIdElementOffset == nInputElt);
-                        const bool vertexIdEnable = (fetchState.VertexIdEnable) && (fetchState.VertexIdElementOffset == nInputElt);
-
                         Shuffle16bpcArgs args = std::forward_as_tuple(vGatherResult, pVtxOut, Instruction::CastOps::FPExt, CONVERT_NONE,
-                            currentVertexElement, outputElt, compMask, compCtrl, vVertexElements, fetchInfo, instanceIdEnable,
-                            fetchState.InstanceIdComponentNumber, vertexIdEnable, fetchState.VertexIdComponentNumber);
+                            currentVertexElement, outputElt, compMask, compCtrl, vVertexElements);
 
                         // Shuffle gathered components into place in simdvertex struct
                         Shuffle16bpcGather(args);  // outputs to vVertexElements ref
@@ -855,20 +855,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
                     {
                         if (isComponentEnabled(compMask, i))
                         {
-                            // check for InstanceID SGV
-                            if ((fetchState.InstanceIdEnable) && (fetchState.InstanceIdElementOffset == nInputElt) && (fetchState.InstanceIdComponentNumber == currentVertexElement))
-                            {
-                                // Load a SIMD of InstanceIDs
-                                vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
-                            }
-                            // check for VertexID SGV
-                            else if ((fetchState.VertexIdEnable) && (fetchState.VertexIdElementOffset == nInputElt) && (fetchState.VertexIdComponentNumber == currentVertexElement))
-                            {
-                                // Load a SIMD of VertexIDs
-                                vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
-                            }
                             // if we need to gather the component
-                            else if (compCtrl[i] == StoreSrc)
+                            if (compCtrl[i] == StoreSrc)
                             {
                                 // save mask as it is zero'd out after each gather
                                 Value *vMask = vGatherMask;
@@ -948,12 +936,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
                         // 256i - 0    1    2    3    4    5    6    7
                         //        xyzw xyzw xyzw xyzw xyzw xyzw xyzw xyzw 
 
-                        const bool instanceIdEnable = fetchState.InstanceIdEnable && (fetchState.InstanceIdElementOffset == nInputElt);
-                        const bool vertexIdEnable = fetchState.VertexIdEnable && (fetchState.VertexIdElementOffset == nInputElt);
-
                         Shuffle8bpcArgs args = std::forward_as_tuple(vGatherResult, pVtxOut, extendCastType, conversionType,
-                            currentVertexElement, outputElt, compMask, compCtrl, vVertexElements, info.swizzle, fetchInfo,
-                            instanceIdEnable, fetchState.InstanceIdComponentNumber, vertexIdEnable, fetchState.VertexIdComponentNumber);
+                            currentVertexElement, outputElt, compMask, compCtrl, vVertexElements, info.swizzle);
 
                         // Shuffle gathered components into place in simdvertex struct
                         Shuffle8bpcGatherd(args); // outputs to vVertexElements ref
@@ -992,12 +976,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
 
                     // if we have at least one component to shuffle into place
                     if(compMask){
-                        const bool instanceIdEnable = fetchState.InstanceIdEnable && (fetchState.InstanceIdElementOffset == nInputElt);
-                        const bool vertexIdEnable = fetchState.VertexIdEnable && (fetchState.VertexIdElementOffset == nInputElt);
-
                         Shuffle16bpcArgs args = std::forward_as_tuple(vGatherResult, pVtxOut, extendCastType, conversionType,
-                            currentVertexElement, outputElt, compMask, compCtrl, vVertexElements, fetchInfo, instanceIdEnable,
-                            fetchState.InstanceIdComponentNumber, vertexIdEnable, fetchState.VertexIdComponentNumber);
+                            currentVertexElement, outputElt, compMask, compCtrl, vVertexElements);
 
                         // Shuffle gathered components into place in simdvertex struct
                         Shuffle16bpcGather(args);  // outputs to vVertexElements ref
@@ -1013,20 +993,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
                     {
                         if (isComponentEnabled(compMask, i))
                         {
-                            // check for InstanceID SGV
-                            if (fetchState.InstanceIdEnable && (fetchState.InstanceIdElementOffset == nInputElt) && (fetchState.InstanceIdComponentNumber == currentVertexElement))
-                            {
-                                // Load a SIMD of InstanceIDs
-                                vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
-                            }
-                            // check for VertexID SGV
-                            else if (fetchState.VertexIdEnable && (fetchState.VertexIdElementOffset == nInputElt) && (fetchState.VertexIdComponentNumber == currentVertexElement))
-                            {
-                                // Load a SIMD of VertexIDs
-                                vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
-                            }
                             // if we need to gather the component
-                            else if (compCtrl[i] == StoreSrc)
+                            if (compCtrl[i] == StoreSrc)
                             {
                                 // save mask as it is zero'd out after each gather
                                 Value *vMask = vGatherMask;
@@ -1187,11 +1155,6 @@ Value* FetchJit::GetSimdValid32bitIndices(Value* pIndices, Value* pLastIndex)
 ///   @param compCtrl - component control val
 ///   @param vVertexElements[4] - vertex components to output
 ///   @param swizzle[4] - component swizzle location
-///   @param fetchInfo - fetch shader info
-///   @param instanceIdEnable - InstanceID enabled?
-///   @param instanceIdComponentNumber - InstanceID component override
-///   @param vertexIdEnable - VertexID enabled?
-///   @param vertexIdComponentNumber - VertexID component override
 void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
 {
     // Unpack tuple args
@@ -1205,11 +1168,6 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
     const ComponentControl (&compCtrl)[4] = std::get<7>(args);
     Value* (&vVertexElements)[4] = std::get<8>(args);
     const uint32_t (&swizzle)[4] = std::get<9>(args);
-    Value *fetchInfo = std::get<10>(args);
-    const bool instanceIdEnable = std::get<11>(args);
-    const uint32_t instanceIdComponentNumber = std::get<12>(args);
-    const bool vertexIdEnable = std::get<13>(args);
-    const uint32_t vertexIdComponentNumber = std::get<14>(args);
 
     // cast types
     Type* vGatherTy = mSimdInt32Ty;
@@ -1280,19 +1238,7 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
         {
             if (isComponentEnabled(compMask, i))
             {
-                // check for InstanceID SGV
-                if (instanceIdEnable && (instanceIdComponentNumber == currentVertexElement))
-                {
-                    // Load a SIMD of InstanceIDs
-                    vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
-                }
-                // check for VertexID SGV
-                else if (vertexIdEnable && (vertexIdComponentNumber == currentVertexElement))
-                {
-                    // Load a SIMD of VertexIDs
-                    vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
-                }
-                else if (compCtrl[i] == ComponentControl::StoreSrc)
+                if (compCtrl[i] == ComponentControl::StoreSrc)
                 {
                     // if x or z, extract 128bits from lane 0, else for y or w, extract from lane 1
                     uint32_t lane = ((i == 0) || (i == 2)) ? 0 : 1;
@@ -1355,19 +1301,7 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
         {
             if (isComponentEnabled(compMask, i))
             {
-                // check for InstanceID SGV
-                if (instanceIdEnable && (instanceIdComponentNumber == currentVertexElement))
-                {
-                    // Load a SIMD of InstanceIDs
-                    vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
-                }
-                // check for VertexID SGV
-                else if (vertexIdEnable && (vertexIdComponentNumber == currentVertexElement))
-                {
-                    // Load a SIMD of VertexIDs
-                    vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
-                }
-                else if (compCtrl[i] == ComponentControl::StoreSrc)
+                if (compCtrl[i] == ComponentControl::StoreSrc)
                 {
                     // pshufb masks for each component
                     Value* vConstMask;
@@ -1444,11 +1378,6 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
 ///   @param compMask - component packing mask
 ///   @param compCtrl - component control val
 ///   @param vVertexElements[4] - vertex components to output
-///   @param fetchInfo - fetch shader info
-///   @param instanceIdEnable - InstanceID enabled?
-///   @param instanceIdComponentNumber - InstanceID component override
-///   @param vertexIdEnable - VertexID enabled?
-///   @param vertexIdComponentNumber - VertexID component override
 void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
 {
     // Unpack tuple args
@@ -1461,11 +1390,6 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
     const ComponentEnable compMask = std::get<6>(args);
     const ComponentControl(&compCtrl)[4] = std::get<7>(args);
     Value* (&vVertexElements)[4] = std::get<8>(args);
-    Value *fetchInfo = std::get<9>(args);
-    const bool instanceIdEnable = std::get<10>(args);
-    const uint32_t instanceIdComponentNumber = std::get<11>(args);
-    const bool vertexIdEnable = std::get<12>(args);
-    const uint32_t vertexIdComponentNumber = std::get<13>(args);
 
     // cast types
     Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), mVWidth);
@@ -1533,19 +1457,7 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
         {
             if (isComponentEnabled(compMask, i))
             {
-                // check for InstanceID SGV
-                if (instanceIdEnable && (instanceIdComponentNumber == currentVertexElement))
-                {
-                    // Load a SIMD of InstanceIDs
-                    vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
-                }
-                // check for VertexID SGV
-                else if (vertexIdEnable && (vertexIdComponentNumber == currentVertexElement))
-                {
-                    // Load a SIMD of VertexIDs
-                    vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
-                }
-                else if (compCtrl[i] == ComponentControl::StoreSrc)
+                if (compCtrl[i] == ComponentControl::StoreSrc)
                 {
                     // if x or z, extract 128bits from lane 0, else for y or w, extract from lane 1
                     uint32_t lane = ((i == 0) || (i == 2)) ? 0 : 1;
@@ -1627,19 +1539,7 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
         {
             if (isComponentEnabled(compMask, i))
             {
-                // check for InstanceID SGV
-                if (instanceIdEnable && (instanceIdComponentNumber == currentVertexElement))
-                {
-                    // Load a SIMD of InstanceIDs
-                    vVertexElements[currentVertexElement++] = VBROADCAST(LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })));   // InstanceID
-                }
-                // check for VertexID SGV
-                else if (vertexIdEnable && (vertexIdComponentNumber == currentVertexElement))
-                {
-                    // Load a SIMD of VertexIDs
-                    vVertexElements[currentVertexElement++] = LOAD(GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
-                }
-                else if (compCtrl[i] == ComponentControl::StoreSrc)
+                if (compCtrl[i] == ComponentControl::StoreSrc)
                 {
                     // select correct constMask for x/z or y/w pshufb
                     uint32_t selectedMask = ((i == 0) || (i == 2)) ? 0 : 1;
@@ -1686,6 +1586,8 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
 /// @param vVertexElements - LLVM Value*[] simdvertex to write out
 void FetchJit::StoreVertexElements(Value* pVtxOut, const uint32_t outputElt, const uint32_t numEltsToStore, Value* (&vVertexElements)[4])
 {
+    SWR_ASSERT(numEltsToStore <= 4, "Invalid element count.");
+
     for(uint32_t c = 0; c < numEltsToStore; ++c)
     {
         // STORE expects FP32 x vWidth type, just bitcast if needed
