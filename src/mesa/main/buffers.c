@@ -36,6 +36,7 @@
 #include "enums.h"
 #include "fbobject.h"
 #include "mtypes.h"
+#include "util/bitscan.h"
 
 
 #define BAD_MASK ~0u
@@ -595,13 +596,12 @@ _mesa_drawbuffers(struct gl_context *ctx, struct gl_framebuffer *fb,
    if (n > 0 && _mesa_bitcount(destMask[0]) > 1) {
       GLuint count = 0, destMask0 = destMask[0];
       while (destMask0) {
-         GLint bufIndex = ffs(destMask0) - 1;
+         const int bufIndex = u_bit_scan(&destMask0);
          if (fb->_ColorDrawBufferIndexes[count] != bufIndex) {
             updated_drawbuffers(ctx, fb);
             fb->_ColorDrawBufferIndexes[count] = bufIndex;
          }
          count++;
-         destMask0 &= ~(1 << bufIndex);
       }
       fb->ColorDrawBuffer[0] = buffers[0];
       fb->_NumColorDrawBuffers = count;
