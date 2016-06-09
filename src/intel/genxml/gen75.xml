@@ -405,8 +405,8 @@
     </field>
     <field name="Multisample Position Palette Index" start="128" end="130" type="uint"/>
     <field name="Strbuf Minimum Array Element" start="128" end="154" type="uint"/>
-    <field name="X Offset" start="185" end="191" type="offset"/>
-    <field name="Y Offset" start="180" end="183" type="offset"/>
+    <field name="X Offset" start="185" end="191" type="uint"/>
+    <field name="Y Offset" start="180" end="183" type="uint"/>
     <field name="Surface Object Control State" start="176" end="179" type="MEMORY_OBJECT_CONTROL_STATE"/>
     <field name="MOCS" start="176" end="179" type="uint"/>
     <field name="Surface Min LOD" start="164" end="167" type="uint"/>

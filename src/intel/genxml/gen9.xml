@@ -324,8 +324,8 @@
       <value name="MULTISAMPLECOUNT_16" value="4"/>
     </field>
     <field name="Multisample Position Palette Index" start="128" end="130" type="uint"/>
-    <field name="X Offset" start="185" end="191" type="offset"/>
-    <field name="Y Offset" start="181" end="183" type="offset"/>
+    <field name="X Offset" start="185" end="191" type="uint"/>
+    <field name="Y Offset" start="181" end="183" type="uint"/>
     <field name="EWA Disable For Cube" start="180" end="180" type="bool"/>
     <field name="Tiled Resource Mode" start="178" end="179" type="uint">
       <value name="NONE" value="0"/>

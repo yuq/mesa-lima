@@ -50,7 +50,7 @@
     <field name="Surface Min LOD" start="156" end="159" type="uint"/>
     <field name="Minimum Array Element" start="145" end="155" type="uint"/>
     <field name="Render Target View Extent" start="136" end="144" type="uint"/>
-    <field name="X Offset" start="185" end="191" type="offset"/>
-    <field name="Y Offset" start="180" end="183" type="offset"/>
+    <field name="X Offset" start="185" end="191" type="uint"/>
+    <field name="Y Offset" start="180" end="183" type="uint"/>
   </struct>
 </genxml>

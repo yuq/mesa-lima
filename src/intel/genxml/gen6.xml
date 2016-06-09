@@ -361,12 +361,12 @@
       <value name="MULTISAMPLECOUNT_4" value="2"/>
     </field>
     <field name="Multisample Position Palette Index" start="128" end="130" type="uint"/>
-    <field name="X Offset" start="185" end="191" type="offset"/>
+    <field name="X Offset" start="185" end="191" type="uint"/>
     <field name="Surface Vertical Alignment" start="184" end="184" type="uint">
       <value name="VALIGN_2" value="0"/>
       <value name="VALIGN_4" value="1"/>
     </field>
-    <field name="Y Offset" start="180" end="183" type="offset"/>
+    <field name="Y Offset" start="180" end="183" type="uint"/>
     <field name="Surface Object Control State" start="176" end="179" type="MEMORY_OBJECT_CONTROL_STATE"/>
     <field name="MOCS" start="176" end="179" type="uint"/>
   </struct>
