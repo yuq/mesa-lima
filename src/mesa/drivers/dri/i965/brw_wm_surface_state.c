@@ -441,20 +441,23 @@ brw_find_matching_rb(const struct gl_framebuffer *fb,
 
 static inline bool
 brw_texture_view_sane(const struct brw_context *brw,
-                      const struct intel_mipmap_tree *mt, unsigned format)
+                      const struct intel_mipmap_tree *mt,
+                      const struct isl_view *view)
 {
    /* There are special cases only for lossless compression. */
    if (!intel_miptree_is_lossless_compressed(brw, mt))
       return true;
 
    if (isl_format_supports_lossless_compression(&brw->screen->devinfo,
-                                                format))
+                                                view->format))
       return true;
 
    /* Logic elsewhere needs to take care to resolve the color buffer prior
     * to sampling it as non-compressed.
     */
-   if (mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED)
+   if (intel_miptree_has_color_unresolved(mt, view->base_level, view->levels,
+                                          view->base_array_layer,
+                                          view->array_len))
       return false;
 
    const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
@@ -473,15 +476,20 @@ brw_texture_view_sane(const struct brw_context *brw,
 
 static bool
 brw_disable_aux_surface(const struct brw_context *brw,
-                        const struct intel_mipmap_tree *mt)
+                        const struct intel_mipmap_tree *mt,
+                        const struct isl_view *view)
 {
    /* Nothing to disable. */
    if (!mt->mcs_buf)
       return false;
 
+   const bool is_unresolved = intel_miptree_has_color_unresolved(
+                                 mt, view->base_level, view->levels,
+                                 view->base_array_layer, view->array_len);
+
    /* There are special cases only for lossless compression. */
    if (!intel_miptree_is_lossless_compressed(brw, mt))
-      return mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED;
+      return !is_unresolved;
 
    const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
    const unsigned rb_index = brw_find_matching_rb(fb, mt);
@@ -499,13 +507,13 @@ brw_disable_aux_surface(const struct brw_context *brw,
     */
    if (rb_index < fb->_NumColorDrawBuffers) {
       if (brw->draw_aux_buffer_disabled[rb_index]) {
-         assert(mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED);
+         assert(!is_unresolved);
       }
 
       return brw->draw_aux_buffer_disabled[rb_index];
    }
 
-   return mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED;
+   return !is_unresolved;
 }
 
 void
@@ -625,10 +633,10 @@ brw_update_texture_surface(struct gl_context *ctx,
           obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY)
          view.usage |= ISL_SURF_USAGE_CUBE_BIT;
 
-      assert(brw_texture_view_sane(brw, mt, format));
+      assert(brw_texture_view_sane(brw, mt, &view));
 
-      const int flags =
-         brw_disable_aux_surface(brw, mt) ? INTEL_AUX_BUFFER_DISABLED : 0;
+      const int flags = brw_disable_aux_surface(brw, mt, &view) ?
+                           INTEL_AUX_BUFFER_DISABLED : 0;
       brw_emit_surface_state(brw, mt, flags, mt->target, view,
                              tex_mocs[brw->gen],
                              surf_offset, surf_index,
@@ -1749,9 +1757,10 @@ update_image_surface(struct brw_context *brw,
             };
 
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
-            const int flags =
-               mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED ?
-               INTEL_AUX_BUFFER_DISABLED : 0;
+            const bool unresolved = intel_miptree_has_color_unresolved(
+                                       mt, view.base_level, view.levels,
+                                       view.base_array_layer, view.array_len);
+            const int flags = unresolved ? 0 : INTEL_AUX_BUFFER_DISABLED;
             brw_emit_surface_state(brw, mt, flags, mt->target, view,
                                    tex_mocs[brw->gen],
                                    surf_offset, surf_index,

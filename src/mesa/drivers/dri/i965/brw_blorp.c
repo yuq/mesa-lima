@@ -216,7 +216,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
          intel_miptree_resolve_color(brw, mt,
                                      *level, start_layer, num_layers, flags);
 
-         assert(mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED);
+         assert(!intel_miptree_has_color_unresolved(mt, *level, 1,
+                                                    start_layer, num_layers));
          surf->aux_usage = ISL_AUX_USAGE_NONE;
       }
    }
@@ -811,8 +812,12 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        !brw_is_color_fast_clear_compatible(brw, irb->mt, &ctx->Color.ClearColor))
       can_fast_clear = false;
 
+   const unsigned logical_layer = irb_logical_mt_layer(irb);
    const bool is_lossless_compressed = intel_miptree_is_lossless_compressed(
                                           brw, irb->mt);
+   const enum intel_fast_clear_state fast_clear_state =
+      intel_miptree_get_fast_clear_state(irb->mt, irb->mt_level,
+                                         logical_layer);
 
    if (can_fast_clear) {
       union gl_color_union override_color =
@@ -830,8 +835,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       /* If the buffer is already in INTEL_FAST_CLEAR_STATE_CLEAR, the clear
        * is redundant and can be skipped.
        */
-      if (!color_updated &&
-          irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_CLEAR)
+      if (!color_updated && fast_clear_state == INTEL_FAST_CLEAR_STATE_CLEAR)
          return true;
 
       /* If the MCS buffer hasn't been allocated yet, we need to allocate
@@ -849,7 +853,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       }
    }
 
-   const unsigned logical_layer = irb_logical_mt_layer(irb);
    const unsigned num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
 
    /* We can't setup the blorp_surf until we've allocated the MCS above */
@@ -878,7 +881,9 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        * INTEL_FAST_CLEAR_STATE_CLEAR so that we won't waste time doing
        * redundant clears.
        */
-      irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
+      intel_miptree_set_fast_clear_state(irb->mt, irb->mt_level,
+                                         logical_layer, num_layers,
+                                         INTEL_FAST_CLEAR_STATE_CLEAR);
    } else {
       DBG("%s (slow) to mt %p level %d layer %d+%d\n", __FUNCTION__,
           irb->mt, irb->mt_level, irb->mt_layer, num_layers);
@@ -965,7 +970,8 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
                      resolve_op);
    blorp_batch_finish(&batch);
 
-   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
+   intel_miptree_set_fast_clear_state(mt, level, layer, 1,
+                                      INTEL_FAST_CLEAR_STATE_RESOLVED);
 }
 
 static void
