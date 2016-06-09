@@ -901,6 +901,10 @@ glsl_to_tgsi_visitor::get_opcode(unsigned op,
 
    if (is_resource_instruction(op))
       type = src1.type;
+   else if (src0.type == GLSL_TYPE_INT64 || src1.type == GLSL_TYPE_INT64)
+      type = GLSL_TYPE_INT64;
+   else if (src0.type == GLSL_TYPE_UINT64 || src1.type == GLSL_TYPE_UINT64)
+      type = GLSL_TYPE_UINT64;
    else if (src0.type == GLSL_TYPE_DOUBLE || src1.type == GLSL_TYPE_DOUBLE)
       type = GLSL_TYPE_DOUBLE;
    else if (src0.type == GLSL_TYPE_FLOAT || src1.type == GLSL_TYPE_FLOAT)
@@ -908,6 +912,21 @@ glsl_to_tgsi_visitor::get_opcode(unsigned op,
    else if (native_integers)
       type = src0.type == GLSL_TYPE_BOOL ? GLSL_TYPE_INT : src0.type;
 
+#define case7(c, f, i, u, d, i64, ui64)             \
+   case TGSI_OPCODE_##c: \
+      if (type == GLSL_TYPE_UINT64)           \
+         op = TGSI_OPCODE_##ui64; \
+      else if (type == GLSL_TYPE_INT64)       \
+         op = TGSI_OPCODE_##i64; \
+      else if (type == GLSL_TYPE_DOUBLE)       \
+         op = TGSI_OPCODE_##d; \
+      else if (type == GLSL_TYPE_INT)       \
+         op = TGSI_OPCODE_##i; \
+      else if (type == GLSL_TYPE_UINT) \
+         op = TGSI_OPCODE_##u; \
+      else \
+         op = TGSI_OPCODE_##f; \
+      break;
 #define case5(c, f, i, u, d)                    \
    case TGSI_OPCODE_##c: \
       if (type == GLSL_TYPE_DOUBLE)           \
@@ -931,14 +950,22 @@ glsl_to_tgsi_visitor::get_opcode(unsigned op,
       break;
 
 #define case3(f, i, u)  case4(f, f, i, u)
-#define case4d(f, i, u, d)  case5(f, f, i, u, d)
+#define case6d(f, i, u, d, i64, u64)  case7(f, f, i, u, d, i64, u64)
 #define case3fid(f, i, d) case5(f, f, i, i, d)
+#define case3fid64(f, i, d, i64) case7(f, f, i, i, d, i64, i64)
 #define case2fi(f, i)   case4(f, f, i, i)
 #define case2iu(i, u)   case4(i, LAST, i, u)
 
-#define casecomp(c, f, i, u, d)                   \
+#define case2iu64(i, i64)   case7(i, LAST, i, i, LAST, i64, i64)
+#define case4iu64(i, u, i64, u64)   case7(i, LAST, i, u, LAST, i64, u64)
+
+#define casecomp(c, f, i, u, d, i64, ui64)           \
    case TGSI_OPCODE_##c: \
-      if (type == GLSL_TYPE_DOUBLE) \
+      if (type == GLSL_TYPE_INT64)             \
+         op = TGSI_OPCODE_##i64; \
+      else if (type == GLSL_TYPE_UINT64)        \
+         op = TGSI_OPCODE_##ui64; \
+      else if (type == GLSL_TYPE_DOUBLE)       \
          op = TGSI_OPCODE_##d; \
       else if (type == GLSL_TYPE_INT || type == GLSL_TYPE_SUBROUTINE)       \
          op = TGSI_OPCODE_##i; \
@@ -951,23 +978,24 @@ glsl_to_tgsi_visitor::get_opcode(unsigned op,
       break;
 
    switch(op) {
-      case3fid(ADD, UADD, DADD);
-      case3fid(MUL, UMUL, DMUL);
+      case3fid64(ADD, UADD, DADD, U64ADD);
+      case3fid64(MUL, UMUL, DMUL, U64MUL);
       case3fid(MAD, UMAD, DMAD);
       case3fid(FMA, UMAD, DFMA);
-      case4d(DIV, IDIV, UDIV, DDIV);
-      case4d(MAX, IMAX, UMAX, DMAX);
-      case4d(MIN, IMIN, UMIN, DMIN);
-      case2iu(MOD, UMOD);
+      case6d(DIV, IDIV, UDIV, DDIV, I64DIV, U64DIV);
+      case6d(MAX, IMAX, UMAX, DMAX, I64MAX, U64MAX);
+      case6d(MIN, IMIN, UMIN, DMIN, I64MIN, U64MIN);
+      case4iu64(MOD, UMOD, I64MOD, U64MOD);
 
-      casecomp(SEQ, FSEQ, USEQ, USEQ, DSEQ);
-      casecomp(SNE, FSNE, USNE, USNE, DSNE);
-      casecomp(SGE, FSGE, ISGE, USGE, DSGE);
-      casecomp(SLT, FSLT, ISLT, USLT, DSLT);
+      casecomp(SEQ, FSEQ, USEQ, USEQ, DSEQ, U64SEQ, U64SEQ);
+      casecomp(SNE, FSNE, USNE, USNE, DSNE, U64SNE, U64SNE);
+      casecomp(SGE, FSGE, ISGE, USGE, DSGE, I64SGE, U64SGE);
+      casecomp(SLT, FSLT, ISLT, USLT, DSLT, I64SLT, U64SLT);
 
-      case2iu(ISHR, USHR);
+      case2iu64(SHL, U64SHL);
+      case4iu64(ISHR, USHR, I64SHR, U64SHR);
 
-      case3fid(SSG, ISSG, DSSG);
+      case3fid64(SSG, ISSG, DSSG, I64SSG);
 
       case2iu(IBFE, UBFE);
       case2iu(IMSB, UMSB);
@@ -1103,7 +1131,9 @@ glsl_to_tgsi_visitor::add_constant(gl_register_file file,
 
    int index = 0;
    immediate_storage *entry;
-   int size32 = size * (datatype == GL_DOUBLE ? 2 : 1);
+   int size32 = size * ((datatype == GL_DOUBLE ||
+                         datatype == GL_INT64_ARB ||
+                         datatype == GL_UNSIGNED_INT64_ARB)? 2 : 1);
    int i;
 
    /* Search immediate storage to see if we already have an identical
@@ -1594,7 +1624,9 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       }
       break;
    case ir_unop_neg:
-      if (result_dst.type == GLSL_TYPE_INT || result_dst.type == GLSL_TYPE_UINT)
+      if (result_dst.type == GLSL_TYPE_INT64 || result_dst.type == GLSL_TYPE_UINT64)
+         emit_asm(ir, TGSI_OPCODE_I64NEG, result_dst, op[0]);
+      else if (result_dst.type == GLSL_TYPE_INT || result_dst.type == GLSL_TYPE_UINT)
          emit_asm(ir, TGSI_OPCODE_INEG, result_dst, op[0]);
       else if (result_dst.type == GLSL_TYPE_DOUBLE)
          emit_asm(ir, TGSI_OPCODE_DNEG, result_dst, op[0]);
@@ -1611,6 +1643,8 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
          emit_asm(ir, TGSI_OPCODE_MOV, result_dst, op[0].get_abs());
       else if (result_dst.type == GLSL_TYPE_DOUBLE)
          emit_asm(ir, TGSI_OPCODE_DABS, result_dst, op[0]);
+      else if (result_dst.type == GLSL_TYPE_INT64 || result_dst.type == GLSL_TYPE_UINT64)
+         emit_asm(ir, TGSI_OPCODE_I64ABS, result_dst, op[0]);
       else
          emit_asm(ir, TGSI_OPCODE_IABS, result_dst, op[0]);
       break;
@@ -1957,6 +1991,8 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       /* fallthrough to next case otherwise */
    case ir_unop_i2u:
    case ir_unop_u2i:
+   case ir_unop_i642u64:
+   case ir_unop_u642i64:
       /* Converting between signed and unsigned integers is a no-op. */
       result_src = op[0];
       result_src.type = result_dst.type;
@@ -2013,6 +2049,19 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
          emit_asm(ir, TGSI_OPCODE_USNE, result_dst, op[0], st_src_reg_for_int(0));
       else
          emit_asm(ir, TGSI_OPCODE_SNE, result_dst, op[0], st_src_reg_for_float(0.0));
+      break;
+   case ir_unop_bitcast_u642d:
+   case ir_unop_bitcast_i642d:
+      result_src = op[0];
+      result_src.type = GLSL_TYPE_DOUBLE;
+      break;
+   case ir_unop_bitcast_d2i64:
+      result_src = op[0];
+      result_src.type = GLSL_TYPE_INT64;
+      break;
+   case ir_unop_bitcast_d2u64:
+      result_src = op[0];
+      result_src.type = GLSL_TYPE_UINT64;
       break;
    case ir_unop_trunc:
       emit_asm(ir, TGSI_OPCODE_TRUNC, result_dst, op[0]);
@@ -2259,6 +2308,10 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       break;
    case ir_unop_unpack_double_2x32:
    case ir_unop_pack_double_2x32:
+   case ir_unop_unpack_int_2x32:
+   case ir_unop_pack_int_2x32:
+   case ir_unop_unpack_uint_2x32:
+   case ir_unop_pack_uint_2x32:
       emit_asm(ir, TGSI_OPCODE_MOV, result_dst, op[0]);
       break;
 
@@ -2302,7 +2355,120 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
    case ir_unop_vote_eq:
       emit_asm(ir, TGSI_OPCODE_VOTE_EQ, result_dst, op[0]);
       break;
+   case ir_unop_u2i64:
+   case ir_unop_u2u64:
+   case ir_unop_b2i64: {
+      st_src_reg temp = get_temp(glsl_type::uvec4_type);
+      st_dst_reg temp_dst = st_dst_reg(temp);
+      unsigned orig_swz = op[0].swizzle;
+      /* 
+       * To convert unsigned to 64-bit:
+       * zero Y channel, copy X channel.
+       */
+      temp_dst.writemask = WRITEMASK_Y;
+      if (vector_elements > 1)
+         temp_dst.writemask |= WRITEMASK_W;
+      emit_asm(ir, TGSI_OPCODE_MOV, temp_dst, st_src_reg_for_int(0));
+      temp_dst.writemask = WRITEMASK_X;
+      if (vector_elements > 1)
+          temp_dst.writemask |= WRITEMASK_Z;
+      op[0].swizzle = MAKE_SWIZZLE4(GET_SWZ(orig_swz, 0), GET_SWZ(orig_swz, 0),
+                                    GET_SWZ(orig_swz, 1), GET_SWZ(orig_swz, 1));
+      if (ir->operation == ir_unop_u2i64 || ir->operation == ir_unop_u2u64)
+         emit_asm(ir, TGSI_OPCODE_MOV, temp_dst, op[0]);
+      else
+         emit_asm(ir, TGSI_OPCODE_AND, temp_dst, op[0], st_src_reg_for_int(1));
+      result_src = temp;
+      result_src.type = GLSL_TYPE_UINT64;
+      if (vector_elements > 2) {
+         /* Subtle: We rely on the fact that get_temp here returns the next
+          * TGSI temporary register directly after the temp register used for
+          * the first two components, so that the result gets picked up
+          * automatically.
+          */
+         st_src_reg temp = get_temp(glsl_type::uvec4_type);
+         st_dst_reg temp_dst = st_dst_reg(temp);
+         temp_dst.writemask = WRITEMASK_Y;
+         if (vector_elements > 3)
+            temp_dst.writemask |= WRITEMASK_W;
+         emit_asm(ir, TGSI_OPCODE_MOV, temp_dst, st_src_reg_for_int(0));
 
+         temp_dst.writemask = WRITEMASK_X;
+         if (vector_elements > 3)
+            temp_dst.writemask |= WRITEMASK_Z;
+         op[0].swizzle = MAKE_SWIZZLE4(GET_SWZ(orig_swz, 2), GET_SWZ(orig_swz, 2),
+                                       GET_SWZ(orig_swz, 3), GET_SWZ(orig_swz, 3));
+         if (ir->operation == ir_unop_u2i64 || ir->operation == ir_unop_u2u64)
+            emit_asm(ir, TGSI_OPCODE_MOV, temp_dst, op[0]);
+         else
+            emit_asm(ir, TGSI_OPCODE_AND, temp_dst, op[0], st_src_reg_for_int(1));
+      }
+      break;
+   }
+   case ir_unop_i642i:
+   case ir_unop_u642i:
+   case ir_unop_u642u:
+   case ir_unop_i642u: {
+      st_src_reg temp = get_temp(glsl_type::uvec4_type);
+      st_dst_reg temp_dst = st_dst_reg(temp);
+      unsigned orig_swz = op[0].swizzle;
+      unsigned orig_idx = op[0].index;
+      int el;
+      temp_dst.writemask = WRITEMASK_X;
+
+      for (el = 0; el < vector_elements; el++) {
+         unsigned swz = GET_SWZ(orig_swz, el);
+         if (swz & 1)
+            op[0].swizzle = MAKE_SWIZZLE4(SWIZZLE_Z, SWIZZLE_Z, SWIZZLE_Z, SWIZZLE_Z);
+         else
+            op[0].swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_X);
+         if (swz > 2)
+            op[0].index = orig_idx + 1;
+         op[0].type = GLSL_TYPE_UINT;
+         temp_dst.writemask = WRITEMASK_X << el;
+         emit_asm(ir, TGSI_OPCODE_MOV, temp_dst, op[0]);
+      }
+      result_src = temp;
+      if (ir->operation == ir_unop_u642u || ir->operation == ir_unop_i642u)
+         result_src.type = GLSL_TYPE_UINT;
+      else
+         result_src.type = GLSL_TYPE_INT;
+      break;
+   }
+   case ir_unop_i642b:
+      emit_asm(ir, TGSI_OPCODE_U64SNE, result_dst, op[0], st_src_reg_for_int(0));
+      break;
+   case ir_unop_i642f:
+      emit_asm(ir, TGSI_OPCODE_I642F, result_dst, op[0]);
+      break;
+   case ir_unop_u642f:
+      emit_asm(ir, TGSI_OPCODE_U642F, result_dst, op[0]);
+      break;
+   case ir_unop_i642d:
+      emit_asm(ir, TGSI_OPCODE_I642D, result_dst, op[0]);
+      break;
+   case ir_unop_u642d:
+      emit_asm(ir, TGSI_OPCODE_U642D, result_dst, op[0]);
+      break;
+   case ir_unop_i2i64:
+      emit_asm(ir, TGSI_OPCODE_I2I64, result_dst, op[0]);
+      break;
+   case ir_unop_f2i64:
+      emit_asm(ir, TGSI_OPCODE_F2I64, result_dst, op[0]);
+      break;
+   case ir_unop_d2i64:
+      emit_asm(ir, TGSI_OPCODE_D2I64, result_dst, op[0]);
+      break;
+   case ir_unop_i2u64:
+      emit_asm(ir, TGSI_OPCODE_I2I64, result_dst, op[0]);
+      break;
+   case ir_unop_f2u64:
+      emit_asm(ir, TGSI_OPCODE_F2U64, result_dst, op[0]);
+      break;
+   case ir_unop_d2u64:
+      emit_asm(ir, TGSI_OPCODE_D2U64, result_dst, op[0]);
+      break;
+      /* these might be needed */
    case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_unorm_2x16:
    case ir_unop_pack_snorm_4x8:
@@ -3192,6 +3358,20 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
       gl_type = GL_DOUBLE;
       for (i = 0; i < ir->type->vector_elements; i++) {
          memcpy(&values[i * 2], &ir->value.d[i], sizeof(double));
+      }
+      break;
+   case GLSL_TYPE_INT64:
+      gl_type = GL_INT64_ARB;
+      for (i = 0; i < ir->type->vector_elements; i++) {
+         values[i * 2].i = *(uint32_t *)&ir->value.d[i];
+         values[i * 2 + 1].i = *(((uint32_t *)&ir->value.d[i]) + 1);
+      }
+      break;
+   case GLSL_TYPE_UINT64:
+      gl_type = GL_UNSIGNED_INT64_ARB;
+      for (i = 0; i < ir->type->vector_elements; i++) {
+         values[i * 2].i = *(uint32_t *)&ir->value.d[i];
+         values[i * 2 + 1].i = *(((uint32_t *)&ir->value.d[i]) + 1);
       }
       break;
    case GLSL_TYPE_UINT:
@@ -5315,6 +5495,10 @@ emit_immediate(struct st_translate *t,
       return ureg_DECL_immediate(ureg, &values[0].f, size);
    case GL_DOUBLE:
       return ureg_DECL_immediate_f64(ureg, (double *)&values[0].f, size);
+   case GL_INT64_ARB:
+      return ureg_DECL_immediate_int64(ureg, (int64_t *)&values[0].f, size);
+   case GL_UNSIGNED_INT64_ARB:
+      return ureg_DECL_immediate_uint64(ureg, (uint64_t *)&values[0].f, size);
    case GL_INT:
       return ureg_DECL_immediate_int(ureg, &values[0].i, size);
    case GL_UNSIGNED_INT:
