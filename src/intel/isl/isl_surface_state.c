@@ -313,6 +313,9 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        *    two rows interleaved."
        */
       s.SurfacePitch = info->surf->row_pitch * 2 - 1;
+   } else if (info->surf->dim_layout == ISL_DIM_LAYOUT_GEN9_1D) {
+      /* For gen9 1-D textures, surface pitch is ignored */
+      s.SurfacePitch = 0;
    } else {
       s.SurfacePitch = info->surf->row_pitch - 1;
    }
