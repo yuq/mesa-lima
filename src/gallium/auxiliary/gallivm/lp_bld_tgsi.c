@@ -364,6 +364,8 @@ lp_build_emit_fetch(
          break;
       case TGSI_TYPE_UNSIGNED:
       case TGSI_TYPE_SIGNED:
+      case TGSI_TYPE_UNSIGNED64:
+      case TGSI_TYPE_SIGNED64:
       case TGSI_TYPE_VOID:
       default:
          /* abs modifier is only legal on floating point types */

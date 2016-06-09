@@ -105,7 +105,8 @@ enum tgsi_opcode_type {
 
 static inline bool tgsi_type_is_64bit(enum tgsi_opcode_type type)
 {
-   if (type == TGSI_TYPE_DOUBLE)
+   if (type == TGSI_TYPE_DOUBLE || type == TGSI_TYPE_UNSIGNED64 ||
+       type == TGSI_TYPE_SIGNED64)
       return true;
    return false;
 }

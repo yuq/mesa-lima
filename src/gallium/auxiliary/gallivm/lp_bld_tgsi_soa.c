@@ -1168,6 +1168,12 @@ stype_to_fetch(struct lp_build_tgsi_context * bld_base,
    case TGSI_TYPE_DOUBLE:
       bld_fetch = &bld_base->dbl_bld;
       break;
+   case TGSI_TYPE_UNSIGNED64:
+      bld_fetch = &bld_base->uint64_bld;
+      break;
+   case TGSI_TYPE_SIGNED64:
+      bld_fetch = &bld_base->int64_bld;
+      break;
    case TGSI_TYPE_VOID:
    default:
       assert(0);
@@ -1285,12 +1291,20 @@ emit_fetch_constant(
          LLVMTypeRef dptr_type = LLVMPointerType(LLVMDoubleTypeInContext(gallivm->context), 0);
          scalar_ptr = LLVMBuildBitCast(builder, scalar_ptr, dptr_type, "");
          bld_broad = &bld_base->dbl_bld;
+      } else if (stype == TGSI_TYPE_UNSIGNED64) {
+         LLVMTypeRef u64ptr_type = LLVMPointerType(LLVMInt64TypeInContext(gallivm->context), 0);
+         scalar_ptr = LLVMBuildBitCast(builder, scalar_ptr, u64ptr_type, "");
+         bld_broad = &bld_base->uint64_bld;
+      } else if (stype == TGSI_TYPE_SIGNED64) {
+         LLVMTypeRef i64ptr_type = LLVMPointerType(LLVMInt64TypeInContext(gallivm->context), 0);
+         scalar_ptr = LLVMBuildBitCast(builder, scalar_ptr, i64ptr_type, "");
+         bld_broad = &bld_base->int64_bld;
       }
       scalar = LLVMBuildLoad(builder, scalar_ptr, "");
       res = lp_build_broadcast_scalar(bld_broad, scalar);
    }
 
-   if (stype == TGSI_TYPE_SIGNED || stype == TGSI_TYPE_UNSIGNED || stype == TGSI_TYPE_DOUBLE) {
+   if (stype == TGSI_TYPE_SIGNED || stype == TGSI_TYPE_UNSIGNED || stype == TGSI_TYPE_DOUBLE || stype == TGSI_TYPE_SIGNED64 || stype == TGSI_TYPE_UNSIGNED64) {
       struct lp_build_context *bld_fetch = stype_to_fetch(bld_base, stype);
       res = LLVMBuildBitCast(builder, res, bld_fetch->vec_type, "");
    }
@@ -1403,7 +1417,7 @@ emit_fetch_immediate(
          res = emit_fetch_64bit(bld_base, stype, res, bld->immediates[reg->Register.Index][swizzle + 1]);
    }
 
-   if (stype == TGSI_TYPE_SIGNED || stype == TGSI_TYPE_UNSIGNED || stype == TGSI_TYPE_DOUBLE) {
+   if (stype == TGSI_TYPE_SIGNED || stype == TGSI_TYPE_UNSIGNED || tgsi_type_is_64bit(stype)) {
       struct lp_build_context *bld_fetch = stype_to_fetch(bld_base, stype);
       res = LLVMBuildBitCast(builder, res, bld_fetch->vec_type, "");
    }
@@ -1480,7 +1494,7 @@ emit_fetch_input(
 
    assert(res);
 
-   if (stype == TGSI_TYPE_SIGNED || stype == TGSI_TYPE_UNSIGNED || stype == TGSI_TYPE_DOUBLE) {
+   if (stype == TGSI_TYPE_SIGNED || stype == TGSI_TYPE_UNSIGNED || tgsi_type_is_64bit(stype)) {
       struct lp_build_context *bld_fetch = stype_to_fetch(bld_base, stype);
       res = LLVMBuildBitCast(builder, res, bld_fetch->vec_type, "");
    }
@@ -1617,7 +1631,11 @@ emit_fetch_temporary(
       }
    }
 
-   if (stype == TGSI_TYPE_SIGNED || stype == TGSI_TYPE_UNSIGNED || stype == TGSI_TYPE_DOUBLE) {
+   if (stype == TGSI_TYPE_SIGNED ||
+       stype == TGSI_TYPE_UNSIGNED ||
+       stype == TGSI_TYPE_DOUBLE ||
+       stype == TGSI_TYPE_SIGNED64 ||
+       stype == TGSI_TYPE_UNSIGNED64) {
       struct lp_build_context *bld_fetch = stype_to_fetch(bld_base, stype);
       res = LLVMBuildBitCast(builder, res, bld_fetch->vec_type, "");
    }
@@ -3045,6 +3063,8 @@ void lp_emit_immediate_soa(
 
       break;
    case TGSI_IMM_FLOAT64:
+   case TGSI_IMM_UINT64:
+   case TGSI_IMM_INT64:
    case TGSI_IMM_UINT32:
       for( i = 0; i < size; ++i ) {
          LLVMValueRef tmp = lp_build_const_vec(gallivm, bld_base->uint_bld.type, imm->u[i].Uint);
@@ -3901,6 +3921,18 @@ lp_build_tgsi_soa(struct gallivm_state *gallivm,
       dbl_type = type;
       dbl_type.width *= 2;
       lp_build_context_init(&bld.bld_base.dbl_bld, gallivm, dbl_type);
+   }
+   {
+      struct lp_type uint64_type;
+      uint64_type = lp_uint_type(type);
+      uint64_type.width *= 2;
+      lp_build_context_init(&bld.bld_base.uint64_bld, gallivm, uint64_type);
+   }
+   {
+      struct lp_type int64_type;
+      int64_type = lp_int_type(type);
+      int64_type.width *= 2;
+      lp_build_context_init(&bld.bld_base.int64_bld, gallivm, int64_type);
    }
    bld.mask = mask;
    bld.inputs = inputs;
