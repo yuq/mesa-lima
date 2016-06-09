@@ -490,22 +490,15 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    }
 
    /* _NEW_BUFFERS */
-   /* Render targets can't use IMS layout. Stencil in turn gets configured as
-    * single sampled and indexed manually by the program.
-    */
-   if (mt->format == MESA_FORMAT_S_UINT8) {
-      brw_configure_w_tiled(mt, true, &width, &height, &pitch,
-                            &tiling, &format);
-   } else {
-      assert(mt->msaa_layout != INTEL_MSAA_LAYOUT_IMS);
-      assert(brw_render_target_supported(brw, rb));
-      mesa_format rb_format = _mesa_get_render_format(ctx,
-                                                      intel_rb_format(irb));
-      format = brw->render_target_format[rb_format];
-      if (unlikely(!brw->format_supported_as_render_target[rb_format]))
-         _mesa_problem(ctx, "%s: renderbuffer format %s unsupported\n",
-                       __func__, _mesa_get_format_name(rb_format));
-   }
+   /* Render targets can't use IMS layout. */
+   assert(mt->msaa_layout != INTEL_MSAA_LAYOUT_IMS);
+   assert(brw_render_target_supported(brw, rb));
+   mesa_format rb_format = _mesa_get_render_format(ctx,
+                                                   intel_rb_format(irb));
+   format = brw->render_target_format[rb_format];
+   if (unlikely(!brw->format_supported_as_render_target[rb_format]))
+      _mesa_problem(ctx, "%s: renderbuffer format %s unsupported\n",
+                    __func__, _mesa_get_format_name(rb_format));
 
    struct intel_mipmap_tree *aux_mt = mt->mcs_mt;
    const uint32_t aux_mode = gen8_get_aux_mode(brw, mt);
