@@ -259,6 +259,26 @@ get_implicit_conversion_operation(const glsl_type *to, const glsl_type *from,
       case GLSL_TYPE_INT: return ir_unop_i2d;
       case GLSL_TYPE_UINT: return ir_unop_u2d;
       case GLSL_TYPE_FLOAT: return ir_unop_f2d;
+      case GLSL_TYPE_INT64: return ir_unop_i642d;
+      case GLSL_TYPE_UINT64: return ir_unop_u642d;
+      default: return (ir_expression_operation)0;
+      }
+
+   case GLSL_TYPE_UINT64:
+      if (!state->has_int64())
+         return (ir_expression_operation)0;
+      switch (from->base_type) {
+      case GLSL_TYPE_INT: return ir_unop_i2u64;
+      case GLSL_TYPE_UINT: return ir_unop_u2u64;
+      case GLSL_TYPE_INT64: return ir_unop_i642u64;
+      default: return (ir_expression_operation)0;
+      }
+
+   case GLSL_TYPE_INT64:
+      if (!state->has_int64())
+         return (ir_expression_operation)0;
+      switch (from->base_type) {
+      case GLSL_TYPE_INT: return ir_unop_i2i64;
       default: return (ir_expression_operation)0;
       }
 
