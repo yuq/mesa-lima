@@ -3864,6 +3864,8 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
                           "varying variables may not be of type struct");
          break;
       case GLSL_TYPE_DOUBLE:
+      case GLSL_TYPE_UINT64:
+      case GLSL_TYPE_INT64:
          break;
       default:
          _mesa_glsl_error(loc, state, "illegal type for a varying variable");
@@ -4922,6 +4924,9 @@ ast_declarator_list::hir(exec_list *instructions,
             switch (check_type->base_type) {
             case GLSL_TYPE_FLOAT:
             break;
+            case GLSL_TYPE_UINT64:
+            case GLSL_TYPE_INT64:
+               break;
             case GLSL_TYPE_UINT:
             case GLSL_TYPE_INT:
                if (state->is_version(120, 300))
