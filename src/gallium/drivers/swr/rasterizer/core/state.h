@@ -909,6 +909,7 @@ struct SWR_RASTSTATE
     uint32_t forcedSampleCount      : 1;
     uint32_t pixelOffset            : 1;
     uint32_t depthBiasPreAdjusted   : 1;    ///< depth bias constant is in float units, not per-format Z units
+    uint32_t conservativeRast       : 1;
 
     float pointSize;
     float lineWidth;
@@ -989,6 +990,7 @@ enum SWR_INPUT_COVERAGE
 {
     SWR_INPUT_COVERAGE_NONE,
     SWR_INPUT_COVERAGE_NORMAL,
+    SWR_INPUT_COVERAGE_INNER_CONSERVATIVE,
     SWR_INPUT_COVERAGE_MAX,
 };
 
@@ -1016,7 +1018,7 @@ struct SWR_PS_STATE
 
     // dword 2
     uint32_t killsPixel         : 1;    // pixel shader can kill pixels
-    uint32_t inputCoverage      : 1;    // type of input coverage PS uses
+    uint32_t inputCoverage      : 1;    // ps uses input coverage
     uint32_t writesODepth       : 1;    // pixel shader writes to depth
     uint32_t usesSourceDepth    : 1;    // pixel shader reads depth
     uint32_t shadingRate        : 2;    // shading per pixel / sample / coarse pixel

@@ -30,21 +30,6 @@
 #include "context.h"
 #include <type_traits>
 
-INLINE
-__m128i fpToFixedPoint(const __m128 vIn)
-{
-    __m128 vFixed = _mm_mul_ps(vIn, _mm_set1_ps(FIXED_POINT_SCALE));
-    return _mm_cvtps_epi32(vFixed);
-}
-
-INLINE
-simdscalari fpToFixedPointVertical(const simdscalar vIn)
-{
-    simdscalar vFixed = _simd_mul_ps(vIn, _simd_set1_ps(FIXED_POINT_SCALE));
-    return _simd_cvtps_epi32(vFixed);
-}
-
-
 // Calculates the A and B coefficients for the 3 edges of the triangle
 // 
 // maths for edge equations:
@@ -272,31 +257,6 @@ A = _mm_shuffle_ps(A, B, 1 0 1 0)
 }
 
 INLINE
-void calcBoundingBoxIntVertical(const simdscalari (&vX)[3], const simdscalari (&vY)[3], simdBBox &bbox)
-{
-    simdscalari vMinX = vX[0];
-    vMinX = _simd_min_epi32(vMinX, vX[1]);
-    vMinX = _simd_min_epi32(vMinX, vX[2]);
-
-    simdscalari vMaxX = vX[0];
-    vMaxX = _simd_max_epi32(vMaxX, vX[1]);
-    vMaxX = _simd_max_epi32(vMaxX, vX[2]);
-
-    simdscalari vMinY = vY[0];
-    vMinY = _simd_min_epi32(vMinY, vY[1]);
-    vMinY = _simd_min_epi32(vMinY, vY[2]);
-
-    simdscalari vMaxY = vY[0];
-    vMaxY = _simd_max_epi32(vMaxY, vY[1]);
-    vMaxY = _simd_max_epi32(vMaxY, vY[2]);
-
-    bbox.left = vMinX;
-    bbox.right = vMaxX;
-    bbox.top = vMinY;
-    bbox.bottom = vMaxY;
-}
-
-INLINE
 bool CanUseSimplePoints(DRAW_CONTEXT *pDC)
 {
     const API_STATE& state = GetApiState(pDC);
@@ -334,8 +294,9 @@ void ProcessDiscardInvalidateTiles(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uin
 void ProcessSync(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 void ProcessQueryStats(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 
+PFN_PROCESS_PRIMS GetBinTrianglesFunc(bool IsConservative);
+
 struct PA_STATE_BASE;  // forward decl
-void BinTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector tri[3], uint32_t primMask, simdscalari primID);
 void BinPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID);
 void BinLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID);
 

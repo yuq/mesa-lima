@@ -849,6 +849,36 @@ struct TemplateArgUnroller
 
         return TemplateArgUnroller<TermT, ArgsB..., std::false_type>::GetFunc(remainingArgs...);
     }
+
+    // Last Arg Terminator
+    template <typename... TArgsT>
+    static typename TermT::FuncType GetFunc(uint32_t iArg)
+    {
+        switch(iArg)
+        {
+        case 0: return TermT::template GetFunc<ArgsB..., std::integral_constant<uint32_t, 0>>();
+        case 1: return TermT::template GetFunc<ArgsB..., std::integral_constant<uint32_t, 1>>();
+        case 2: return TermT::template GetFunc<ArgsB..., std::integral_constant<uint32_t, 2>>();
+        case 3: return TermT::template GetFunc<ArgsB..., std::integral_constant<uint32_t, 3>>();
+        case 4: return TermT::template GetFunc<ArgsB..., std::integral_constant<uint32_t, 4>>();
+        default: SWR_ASSUME(false); return nullptr;
+        }
+    }
+
+    // Recursively parse args
+    template <typename... TArgsT>
+    static typename TermT::FuncType GetFunc(uint32_t iArg, TArgsT... remainingArgs)
+    {
+        switch(iArg)
+        {
+        case 0: return TemplateArgUnroller<TermT, ArgsB..., std::integral_constant<uint32_t, 0>>::GetFunc(remainingArgs...);
+        case 1: return TemplateArgUnroller<TermT, ArgsB..., std::integral_constant<uint32_t, 1>>::GetFunc(remainingArgs...);
+        case 2: return TemplateArgUnroller<TermT, ArgsB..., std::integral_constant<uint32_t, 2>>::GetFunc(remainingArgs...);
+        case 3: return TemplateArgUnroller<TermT, ArgsB..., std::integral_constant<uint32_t, 3>>::GetFunc(remainingArgs...);
+        case 4: return TemplateArgUnroller<TermT, ArgsB..., std::integral_constant<uint32_t, 4>>::GetFunc(remainingArgs...);
+        default: SWR_ASSUME(false); return nullptr;
+        }
+    }
 };
 
 

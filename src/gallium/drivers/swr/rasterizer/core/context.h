@@ -83,6 +83,8 @@ struct SWR_TRIANGLE_DESC
     float *pUserClipBuffer;
 
     uint64_t coverageMask[SWR_MAX_NUM_MULTISAMPLES];
+    uint64_t conservativeCoverageMask;
+    uint64_t innerConservativeCoverageMask;
     uint64_t anyCoveredSamples;
 
     TRI_FLAGS triFlags;

@@ -67,6 +67,7 @@ CORE_CXX_SOURCES := \
 	rasterizer/core/blend.h \
 	rasterizer/core/clip.cpp \
 	rasterizer/core/clip.h \
+	rasterizer/core/conservativeRast.h \
 	rasterizer/core/context.h \
 	rasterizer/core/depthstencil.h \
 	rasterizer/core/fifo.hpp \

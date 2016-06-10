@@ -28,8 +28,16 @@
 #pragma once
 
 #include "context.h"
+#include <type_traits>
 
 extern PFN_WORK_FUNC gRasterizerTable[2][SWR_MULTISAMPLE_TYPE_MAX];
 void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData);
 void RasterizeSimplePoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData);
 void RasterizeTriPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData);
+
+INLINE
+__m128i fpToFixedPoint(const __m128 vIn)
+{
+    __m128 vFixed = _mm_mul_ps(vIn, _mm_set1_ps(FIXED_POINT_SCALE));
+    return _mm_cvtps_epi32(vFixed);
+}

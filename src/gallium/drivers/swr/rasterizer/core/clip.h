@@ -385,7 +385,7 @@ public:
         PRIMITIVE_TOPOLOGY clipTopology = TOP_UNKNOWN;
         if (NumVertsPerPrim == 3)
         {
-            pfnBinFunc = BinTriangles;
+            pfnBinFunc = GetBinTrianglesFunc((pa.pDC->pState->state.rastState.conservativeRast > 0));
             clipTopology = TOP_TRIANGLE_FAN;
 
             // so that the binner knows to bloat wide points later
@@ -519,7 +519,7 @@ public:
             pfnBinner = BinLines;
             break;
         default:
-            pfnBinner = BinTriangles;
+            pfnBinner = GetBinTrianglesFunc((pa.pDC->pState->state.rastState.conservativeRast > 0));
             break;
         };
 

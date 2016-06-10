@@ -33,6 +33,7 @@
 #include "context.h"
 #include "rdtsc_core.h"
 #include "rasterizer.h"
+#include "conservativeRast.h"
 #include "utils.h"
 #include "threads.h"
 #include "pa.h"
@@ -1590,6 +1591,132 @@ void ProcessUserClipDist(PA_STATE& pa, uint32_t primIndex, uint8_t clipDistMask,
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Convert the X,Y coords of a triangle to the requested Fixed 
+/// Point precision from FP32.
+template <typename PT = FixedPointTraits<Fixed_16_8>>
+INLINE simdscalari fpToFixedPointVertical(const simdscalar vIn)
+{
+    simdscalar vFixed = _simd_mul_ps(vIn, _simd_set1_ps(PT::FixedPointScaleT::value));
+    return _simd_cvtps_epi32(vFixed);
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Helper function to set the X,Y coords of a triangle to the 
+/// requested Fixed Point precision from FP32. If the RequestedT
+/// FixedPointTraits precision is the same as the CurrentT, no extra
+/// conversions will be done. If they are different, convert from FP32
+/// to the Requested precision and set vXi, vYi
+/// @tparam RequestedT: requested FixedPointTraits type
+/// @tparam CurrentT: FixedPointTraits type of the last 
+template<typename RequestedT, typename CurrentT = FixedPointTraits<Fixed_Uninit>>
+struct FPToFixedPoint
+{
+    //////////////////////////////////////////////////////////////////////////
+    /// @param tri: simdvector[3] of FP triangle verts
+    /// @param vXi: fixed point X coords of tri verts
+    /// @param vYi: fixed point Y coords of tri verts
+    INLINE static void Set(const simdvector * const tri, simdscalari (&vXi)[3], simdscalari (&vYi)[3])
+    {
+        vXi[0] = fpToFixedPointVertical<RequestedT>(tri[0].x);
+        vYi[0] = fpToFixedPointVertical<RequestedT>(tri[0].y);
+        vXi[1] = fpToFixedPointVertical<RequestedT>(tri[1].x);
+        vYi[1] = fpToFixedPointVertical<RequestedT>(tri[1].y);
+        vXi[2] = fpToFixedPointVertical<RequestedT>(tri[2].x);
+        vYi[2] = fpToFixedPointVertical<RequestedT>(tri[2].y);
+    };
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief In the case where the RequestedT and CurrentT fixed point 
+/// precisions are the same, do nothing.
+template<typename RequestedT>
+struct FPToFixedPoint<RequestedT, RequestedT>
+{
+    INLINE static void Set(const simdvector * const tri, simdscalari (&vXi)[3], simdscalari (&vYi)[3]){};
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Calculate bounding box for current triangle
+/// @tparam CT: ConservativeRastFETraits type
+/// @param vX: fixed point X position for triangle verts
+/// @param vY: fixed point Y position for triangle verts
+/// @param bbox: fixed point bbox
+/// *Note*: expects vX, vY to be in the correct precision for the type 
+/// of rasterization. This avoids unnecessary FP->fixed conversions.
+template <typename CT>
+INLINE void calcBoundingBoxIntVertical(const simdvector * const tri, simdscalari (&vX)[3], simdscalari (&vY)[3], simdBBox &bbox){}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief FEStandardRastT specialization of calcBoundingBoxIntVertical
+template <>
+INLINE void calcBoundingBoxIntVertical<FEStandardRastT>(const simdvector * const tri, simdscalari (&vX)[3], simdscalari (&vY)[3], simdBBox &bbox)
+{
+    // FE conservative rast traits
+    typedef FEStandardRastT CT;
+
+    static_assert(std::is_same<CT::BBoxPrecisionT, FixedPointTraits<Fixed_16_8>>::value, "Standard rast BBox calculation needs to be in 16.8 precision");
+    // Update vXi, vYi fixed point precision for BBox calculation if necessary
+    FPToFixedPoint<CT::BBoxPrecisionT, CT::ZeroAreaPrecisionT>::Set(tri, vX, vY);
+
+    simdscalari vMinX = vX[0];
+    vMinX = _simd_min_epi32(vMinX, vX[1]);
+    vMinX = _simd_min_epi32(vMinX, vX[2]);
+
+    simdscalari vMaxX = vX[0];
+    vMaxX = _simd_max_epi32(vMaxX, vX[1]);
+    vMaxX = _simd_max_epi32(vMaxX, vX[2]);
+
+    simdscalari vMinY = vY[0];
+    vMinY = _simd_min_epi32(vMinY, vY[1]);
+    vMinY = _simd_min_epi32(vMinY, vY[2]);
+
+    simdscalari vMaxY = vY[0];
+    vMaxY = _simd_max_epi32(vMaxY, vY[1]);
+    vMaxY = _simd_max_epi32(vMaxY, vY[2]);
+
+    bbox.left = vMinX;
+    bbox.right = vMaxX;
+    bbox.top = vMinY;
+    bbox.bottom = vMaxY;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief FEConservativeRastT specialization of calcBoundingBoxIntVertical
+/// Offsets BBox for conservative rast
+template <>
+INLINE void calcBoundingBoxIntVertical<FEConservativeRastT>(const simdvector * const tri, simdscalari (&vX)[3], simdscalari (&vY)[3], simdBBox &bbox)
+{
+    // FE conservative rast traits
+    typedef FEConservativeRastT CT;
+
+    static_assert(std::is_same<CT::BBoxPrecisionT, FixedPointTraits<Fixed_16_9>>::value, "Conservative rast BBox calculation needs to be in 16.9 precision");
+    // Update vXi, vYi fixed point precision for BBox calculation if necessary
+    FPToFixedPoint<CT::BBoxPrecisionT, CT::ZeroAreaPrecisionT>::Set(tri, vX, vY);
+
+    simdscalari vMinX = vX[0];
+    vMinX = _simd_min_epi32(vMinX, vX[1]);
+    vMinX = _simd_min_epi32(vMinX, vX[2]);
+
+    simdscalari vMaxX = vX[0];
+    vMaxX = _simd_max_epi32(vMaxX, vX[1]);
+    vMaxX = _simd_max_epi32(vMaxX, vX[2]);
+
+    simdscalari vMinY = vY[0];
+    vMinY = _simd_min_epi32(vMinY, vY[1]);
+    vMinY = _simd_min_epi32(vMinY, vY[2]);
+
+    simdscalari vMaxY = vY[0];
+    vMaxY = _simd_max_epi32(vMaxY, vY[1]);
+    vMaxY = _simd_max_epi32(vMaxY, vY[2]);
+    
+    /// Bounding box needs to be expanded by 1/512 before snapping to 16.8 for conservative rasterization
+    bbox.left = _simd_srli_epi32(_simd_sub_epi32(vMinX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value)), CT::BoundingBoxShiftT::value);
+    bbox.right = _simd_srli_epi32(_simd_add_epi32(vMaxX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value)), CT::BoundingBoxShiftT::value);
+    bbox.top = _simd_srli_epi32(_simd_sub_epi32(vMinY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value)), CT::BoundingBoxShiftT::value);
+    bbox.bottom = _simd_srli_epi32(_simd_add_epi32(vMaxY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value)), CT::BoundingBoxShiftT::value);
+}
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief Bin triangle primitives to macro tiles. Performs setup, clipping
 ///        culling, viewport transform, etc.
 /// @param pDC - pointer to draw context.
@@ -1597,6 +1724,8 @@ void ProcessUserClipDist(PA_STATE& pa, uint32_t primIndex, uint8_t clipDistMask,
 /// @param workerId - thread's worker id. Even thread has a unique id.
 /// @param tri - Contains triangle position data for SIMDs worth of triangles.
 /// @param primID - Primitive ID for each triangle.
+/// @tparam CT - ConservativeRastFETraits
+template <typename CT>
 void BinTriangles(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
@@ -1652,14 +1781,9 @@ void BinTriangles(
     tri[2].x = _simd_add_ps(tri[2].x, offset);
     tri[2].y = _simd_add_ps(tri[2].y, offset);
 
-    // convert to fixed point
     simdscalari vXi[3], vYi[3];
-    vXi[0] = fpToFixedPointVertical(tri[0].x);
-    vYi[0] = fpToFixedPointVertical(tri[0].y);
-    vXi[1] = fpToFixedPointVertical(tri[1].x);
-    vYi[1] = fpToFixedPointVertical(tri[1].y);
-    vXi[2] = fpToFixedPointVertical(tri[2].x);
-    vYi[2] = fpToFixedPointVertical(tri[2].y);
+    // Set vXi, vYi to fixed point precision required for degenerate triangle check
+    FPToFixedPoint<typename CT::ZeroAreaPrecisionT>::Set(tri, vXi, vYi);
 
     // triangle setup
     simdscalari vAi[3], vBi[3];
@@ -1668,6 +1792,8 @@ void BinTriangles(
     // determinant
     simdscalari vDet[2];
     calcDeterminantIntVertical(vAi, vBi, vDet);
+
+    /// todo: handle degen tri's for Conservative Rast.  
 
     // cull zero area
     int maskLo = _simd_movemask_pd(_simd_castsi_pd(_simd_cmpeq_epi64(vDet[0], _simd_setzero_si())));
@@ -1713,6 +1839,7 @@ void BinTriangles(
         RDTSC_EVENT(FECullZeroAreaAndBackface, _mm_popcnt_u32(origTriMask ^ triMask), 0);
     }
 
+    /// Note: these variable initializations must stay above any 'goto endBenTriangles'
     // compute per tri backface
     uint32_t frontFaceMask = frontWindingTris;
 
@@ -1726,14 +1853,13 @@ void BinTriangles(
 
     // Calc bounding box of triangles
     simdBBox bbox;
-    calcBoundingBoxIntVertical(vXi, vYi, bbox);
+    calcBoundingBoxIntVertical<CT>(tri, vXi, vYi, bbox);
 
     // determine if triangle falls between pixel centers and discard
-    // only discard for non-MSAA case
+    // only discard for non-MSAA case and when conservative rast is disabled
     // (left + 127) & ~255
     // (right + 128) & ~255
-
-    if(rastState.sampleCount == SWR_MULTISAMPLE_1X)
+    if(rastState.sampleCount == SWR_MULTISAMPLE_1X && (!CT::IsConservativeT::value))
     {
         origTriMask = triMask;
 
@@ -1891,7 +2017,22 @@ endBinTriangles:
     RDTSC_STOP(FEBinTriangles, 1, 0);
 }
 
+struct FEBinTrianglesChooser
+{
+    typedef PFN_PROCESS_PRIMS FuncType;
 
+    template <typename... ArgsB>
+    static FuncType GetFunc()
+    {
+        return BinTriangles<ConservativeRastFETraits<ArgsB...>>;
+    }
+};
+
+// Selector for correct templated Draw front-end function
+PFN_PROCESS_PRIMS GetBinTrianglesFunc(bool IsConservative)
+{
+    return TemplateArgUnroller<FEBinTrianglesChooser>::GetFunc(IsConservative);
+}
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Bin SIMD points to the backend.  Only supports point size of 1
