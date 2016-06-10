@@ -2422,8 +2422,10 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
        */
       unsigned num_iterations = 1;
       unsigned num_components = instr->num_components;
+      unsigned first_component = nir_intrinsic_component(instr);
       fs_reg orig_dst = dst;
       if (type_sz(dst.type) == 8) {
+         first_component = first_component / 2;
          if (instr->num_components > 2) {
             num_iterations = 2;
             num_components = 2;
@@ -2433,7 +2435,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
          dst = tmp;
       }
 
-      unsigned first_component = nir_intrinsic_component(instr);
       for (unsigned iter = 0; iter < num_iterations; iter++) {
          if (indirect_offset.file == BAD_FILE) {
             /* Constant indexing - use global offset. */
@@ -2472,7 +2473,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
             inst->mlen = 2;
          }
          inst->regs_written =
-            (num_components * type_sz(dst.type) / 4) + first_component;
+            ((num_components + first_component) * type_sz(dst.type) / 4);
 
          /* If we are reading 64-bit data using 32-bit read messages we need
           * build proper 64-bit data elements by shuffling the low and high
@@ -2700,9 +2701,13 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
        */
       unsigned num_iterations = 1;
       unsigned iter_components = num_components;
-      if (is_64bit && instr->num_components > 2) {
-         num_iterations = 2;
-         iter_components = 2;
+      unsigned first_component = nir_intrinsic_component(instr);
+      if (is_64bit) {
+         first_component = first_component / 2;
+         if (instr->num_components > 2) {
+            num_iterations = 2;
+            iter_components = 2;
+         }
       }
 
       /* 64-bit data needs to me shuffled before we can write it to the URB.
@@ -2712,7 +2717,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
       fs_reg tmp =
          fs_reg(VGRF, alloc.allocate(2 * iter_components), value.type);
 
-      unsigned first_component = nir_intrinsic_component(instr);
       mask = mask << first_component;
 
       for (unsigned iter = 0; iter < num_iterations; iter++) {
@@ -2774,14 +2778,15 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
                unsigned idx = 2 * i;
                bld.MOV(dest, offset(tmp, bld, idx));
                bld.MOV(offset(dest, bld, 1), offset(tmp, bld, idx + 1));
-               srcs[header_regs + idx] = dest;
-               srcs[header_regs + idx + 1] = offset(dest, bld, 1);
+               srcs[header_regs + idx + first_component * 2] = dest;
+               srcs[header_regs + idx + 1 + first_component * 2] =
+                  offset(dest, bld, 1);
             }
          }
 
          unsigned mlen =
             header_regs + (is_64bit ? 2 * iter_components : iter_components) +
-            first_component;
+            (is_64bit ? 2 * first_component : first_component);
          fs_reg payload =
             bld.vgrf(BRW_REGISTER_TYPE_UD, mlen);
          bld.LOAD_PAYLOAD(payload, srcs, mlen, header_regs);
@@ -2876,6 +2881,10 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
       fs_reg indirect_offset = get_indirect_offset(instr);
       unsigned imm_offset = instr->const_index[0];
       unsigned first_component = nir_intrinsic_component(instr);
+
+      if (type_sz(dest.type) == 8) {
+         first_component = first_component / 2;
+      }
 
       fs_inst *inst;
       if (indirect_offset.file == BAD_FILE) {
