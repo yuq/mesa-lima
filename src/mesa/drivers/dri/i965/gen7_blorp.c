@@ -138,96 +138,6 @@ gen7_blorp_emit_depth_stencil_state_pointers(struct brw_context *brw,
 }
 
 
-/* SURFACE_STATE for renderbuffer or texture surface (see
- * brw_update_renderbuffer_surface and brw_update_texture_surface)
- */
-static uint32_t
-gen7_blorp_emit_surface_state(struct brw_context *brw,
-                              const struct brw_blorp_surface_info *surface,
-                              uint32_t read_domains, uint32_t write_domain,
-                              bool is_render_target)
-{
-   uint32_t wm_surf_offset;
-   uint32_t width = surface->width;
-   uint32_t height = surface->height;
-   /* Note: since gen7 uses INTEL_MSAA_LAYOUT_CMS or INTEL_MSAA_LAYOUT_UMS for
-    * color surfaces, width and height are measured in pixels; we don't need
-    * to divide them by 2 as we do for Gen6 (see
-    * gen6_blorp_emit_surface_state).
-    */
-   struct intel_mipmap_tree *mt = surface->mt;
-   uint32_t tile_x, tile_y;
-   const uint8_t mocs = GEN7_MOCS_L3;
-
-   uint32_t tiling = surface->map_stencil_as_y_tiled
-      ? I915_TILING_Y : mt->tiling;
-
-   uint32_t *surf = (uint32_t *)
-      brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 8 * 4, 32, &wm_surf_offset);
-   memset(surf, 0, 8 * 4);
-
-   surf[0] = BRW_SURFACE_2D << BRW_SURFACE_TYPE_SHIFT |
-             surface->brw_surfaceformat << BRW_SURFACE_FORMAT_SHIFT |
-             gen7_surface_tiling_mode(tiling);
-
-   if (surface->mt->valign == 4)
-      surf[0] |= GEN7_SURFACE_VALIGN_4;
-   if (surface->mt->halign == 8)
-      surf[0] |= GEN7_SURFACE_HALIGN_8;
-
-   if (surface->array_layout == ALL_SLICES_AT_EACH_LOD)
-      surf[0] |= GEN7_SURFACE_ARYSPC_LOD0;
-   else
-      surf[0] |= GEN7_SURFACE_ARYSPC_FULL;
-
-   /* reloc */
-   surf[1] = brw_blorp_compute_tile_offsets(surface, &tile_x, &tile_y) +
-             mt->bo->offset64;
-
-   /* Note that the low bits of these fields are missing, so
-    * there's the possibility of getting in trouble.
-    */
-   assert(tile_x % 4 == 0);
-   assert(tile_y % 2 == 0);
-   surf[5] = SET_FIELD(tile_x / 4, BRW_SURFACE_X_OFFSET) |
-             SET_FIELD(tile_y / 2, BRW_SURFACE_Y_OFFSET) |
-             SET_FIELD(mocs, GEN7_SURFACE_MOCS);
-
-   surf[2] = SET_FIELD(width - 1, GEN7_SURFACE_WIDTH) |
-             SET_FIELD(height - 1, GEN7_SURFACE_HEIGHT);
-
-   uint32_t pitch_bytes = mt->pitch;
-   if (surface->map_stencil_as_y_tiled)
-      pitch_bytes *= 2;
-   surf[3] = pitch_bytes - 1;
-
-   surf[4] = gen7_surface_msaa_bits(surface->num_samples, surface->msaa_layout);
-   if (surface->mt->mcs_mt) {
-      gen7_set_surface_mcs_info(brw, surf, wm_surf_offset, surface->mt->mcs_mt,
-                                is_render_target);
-   }
-
-   surf[7] = surface->mt->fast_clear_color_value;
-
-   if (brw->is_haswell) {
-      surf[7] |= (SET_FIELD(HSW_SCS_RED,   GEN7_SURFACE_SCS_R) |
-                  SET_FIELD(HSW_SCS_GREEN, GEN7_SURFACE_SCS_G) |
-                  SET_FIELD(HSW_SCS_BLUE,  GEN7_SURFACE_SCS_B) |
-                  SET_FIELD(HSW_SCS_ALPHA, GEN7_SURFACE_SCS_A));
-   }
-
-   /* Emit relocation to surface contents */
-   drm_intel_bo_emit_reloc(brw->batch.bo,
-                           wm_surf_offset + 4,
-                           mt->bo,
-                           surf[1] - mt->bo->offset64,
-                           read_domains, write_domain);
-
-   gen7_check_surface_setup(surf, is_render_target);
-
-   return wm_surf_offset;
-}
-
 /* Hardware seems to try to fetch the constants even though the corresponding
  * stage gets disabled. Therefore make sure the settings for the constant
  * buffer are valid.
@@ -787,9 +697,9 @@ gen7_blorp_exec(struct brw_context *brw,
                                       true /* is_render_target */);
       if (params->src.mt) {
          wm_surf_offset_texture =
-            gen7_blorp_emit_surface_state(brw, &params->src,
-                                          I915_GEM_DOMAIN_SAMPLER, 0,
-                                          false /* is_render_target */);
+            brw_blorp_emit_surface_state(brw, &params->src,
+                                         I915_GEM_DOMAIN_SAMPLER, 0,
+                                         false /* is_render_target */);
       }
       wm_bind_bo_offset =
          gen6_blorp_emit_binding_table(brw,
