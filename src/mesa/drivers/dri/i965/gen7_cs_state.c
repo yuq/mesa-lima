@@ -79,10 +79,12 @@ brw_upload_cs_state(struct brw_context *brw)
                    I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                    ffs(prog_data->total_scratch) - 12);
       } else {
-         /* This is wrong but we'll fix it later */
+         /* Earlier platforms use the range [0, 11] to mean [1kB, 12kB]
+          * where 0 = 1kB, 1 = 2kB, 2 = 3kB, ..., 11 = 12kB.
+          */
          OUT_RELOC(stage_state->scratch_bo,
                    I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                   ffs(prog_data->total_scratch) - 11);
+                   prog_data->total_scratch / 1024 - 1);
       }
    } else {
       OUT_BATCH(0);

@@ -5995,6 +5995,12 @@ fs_visitor::allocate_registers(bool allow_spilling)
           * and platform.
           */
          prog_data->total_scratch = MAX2(prog_data->total_scratch, 2048);
+      } else if (devinfo->gen <= 7 && stage == MESA_SHADER_COMPUTE) {
+         /* According to the MEDIAVFE_STATE's "Per Thread Scratch Space"
+          * field documentation, platforms prior to Haswell measure scratch
+          * size linearly with a range of [1kB, 12kB] and 1kB granularity.
+          */
+         prog_data->total_scratch = ALIGN(last_scratch, 1024);
       }
    }
 }
