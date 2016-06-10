@@ -693,7 +693,7 @@ vlVdpVideoMixerSetAttributeValues(VdpVideoMixer mixer,
       case VDP_VIDEO_MIXER_ATTRIBUTE_NOISE_REDUCTION_LEVEL:
 
          val = *(float*)attribute_values[i];
-         if (val < 0.f || val > 1.f) {
+         if (val < 0.0f || val > 1.0f) {
             ret = VDP_STATUS_INVALID_VALUE;
             goto fail;
          }
@@ -704,7 +704,7 @@ vlVdpVideoMixerSetAttributeValues(VdpVideoMixer mixer,
 
       case VDP_VIDEO_MIXER_ATTRIBUTE_LUMA_KEY_MIN_LUMA:
          val = *(float*)attribute_values[i];
-         if (val < 0.f || val > 1.f) {
+         if (val < 0.0f || val > 1.0f) {
             ret = VDP_STATUS_INVALID_VALUE;
             goto fail;
          }
@@ -716,7 +716,7 @@ vlVdpVideoMixerSetAttributeValues(VdpVideoMixer mixer,
 
       case VDP_VIDEO_MIXER_ATTRIBUTE_LUMA_KEY_MAX_LUMA:
          val = *(float*)attribute_values[i];
-         if (val < 0.f || val > 1.f) {
+         if (val < 0.0f || val > 1.0f) {
             ret = VDP_STATUS_INVALID_VALUE;
             goto fail;
          }
@@ -729,7 +729,7 @@ vlVdpVideoMixerSetAttributeValues(VdpVideoMixer mixer,
       case VDP_VIDEO_MIXER_ATTRIBUTE_SHARPNESS_LEVEL:
 
          val = *(float*)attribute_values[i];
-         if (val < -1.f || val > 1.f) {
+         if (val < -1.0f || val > 1.0f) {
             ret = VDP_STATUS_INVALID_VALUE;
             goto fail;
          }

@@ -588,12 +588,12 @@ vlVdpVideoMixerQueryAttributeValueRange(VdpDevice device, VdpVideoMixerAttribute
    case VDP_VIDEO_MIXER_ATTRIBUTE_NOISE_REDUCTION_LEVEL:
    case VDP_VIDEO_MIXER_ATTRIBUTE_LUMA_KEY_MIN_LUMA:
    case VDP_VIDEO_MIXER_ATTRIBUTE_LUMA_KEY_MAX_LUMA:
-      *(float*)min_value = 0.f;
-      *(float*)max_value = 1.f;
+      *(float*)min_value = 0.0f;
+      *(float*)max_value = 1.0f;
       break;
    case VDP_VIDEO_MIXER_ATTRIBUTE_SHARPNESS_LEVEL:
-      *(float*)min_value = -1.f;
-      *(float*)max_value = 1.f;
+      *(float*)min_value = -1.0f;
+      *(float*)max_value = 1.0f;
       break;
    case VDP_VIDEO_MIXER_ATTRIBUTE_SKIP_CHROMA_DEINTERLACE:
       *(uint8_t*)min_value = 0;
