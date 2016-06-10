@@ -765,14 +765,6 @@ struct brw_context
                                          uint32_t *surf_offset,
                                          int surf_index,
                                          bool rw, bool for_gather);
-      void (*emit_buffer_surface_state)(struct brw_context *brw,
-                                        uint32_t *out_offset,
-                                        drm_intel_bo *bo,
-                                        unsigned buffer_offset,
-                                        unsigned surface_format,
-                                        unsigned buffer_size,
-                                        unsigned pitch,
-                                        bool rw);
       void (*emit_null_surface_state)(struct brw_context *brw,
                                       unsigned width,
                                       unsigned height,

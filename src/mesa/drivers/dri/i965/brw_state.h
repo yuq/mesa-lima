@@ -281,6 +281,15 @@ void brw_emit_surface_state(struct brw_context *brw,
                             uint32_t *surf_offset, int surf_index,
                             unsigned read_domains, unsigned write_domains);
 
+void brw_emit_buffer_surface_state(struct brw_context *brw,
+                                   uint32_t *out_offset,
+                                   drm_intel_bo *bo,
+                                   unsigned buffer_offset,
+                                   unsigned surface_format,
+                                   unsigned buffer_size,
+                                   unsigned pitch,
+                                   bool rw);
+
 void brw_update_texture_surface(struct gl_context *ctx,
                                 unsigned unit, uint32_t *surf_offset,
                                 bool for_gather, uint32_t plane);

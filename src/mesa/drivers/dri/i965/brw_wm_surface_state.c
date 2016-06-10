@@ -485,36 +485,32 @@ brw_update_texture_surface(struct gl_context *ctx,
    }
 }
 
-static void
-gen4_emit_buffer_surface_state(struct brw_context *brw,
-                               uint32_t *out_offset,
-                               drm_intel_bo *bo,
-                               unsigned buffer_offset,
-                               unsigned surface_format,
-                               unsigned buffer_size,
-                               unsigned pitch,
-                               bool rw)
+void
+brw_emit_buffer_surface_state(struct brw_context *brw,
+                              uint32_t *out_offset,
+                              drm_intel_bo *bo,
+                              unsigned buffer_offset,
+                              unsigned surface_format,
+                              unsigned buffer_size,
+                              unsigned pitch,
+                              bool rw)
 {
-   unsigned elements = buffer_size / pitch;
-   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
-                                    6 * 4, 32, out_offset);
-   memset(surf, 0, 6 * 4);
+   const struct surface_state_info ss_info = surface_state_infos[brw->gen];
 
-   surf[0] = BRW_SURFACE_BUFFER << BRW_SURFACE_TYPE_SHIFT |
-             surface_format << BRW_SURFACE_FORMAT_SHIFT |
-             (brw->gen >= 6 ? BRW_SURFACE_RC_READ_WRITE : 0);
-   surf[1] = (bo ? bo->offset64 : 0) + buffer_offset; /* reloc */
-   surf[2] = ((elements - 1) & 0x7f) << BRW_SURFACE_WIDTH_SHIFT |
-             (((elements - 1) >> 7) & 0x1fff) << BRW_SURFACE_HEIGHT_SHIFT;
-   surf[3] = (((elements - 1) >> 20) & 0x7f) << BRW_SURFACE_DEPTH_SHIFT |
-             (pitch - 1) << BRW_SURFACE_PITCH_SHIFT;
+   uint32_t *dw = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
+                                  ss_info.num_dwords * 4, ss_info.ss_align,
+                                  out_offset);
 
-   /* Emit relocation to surface contents.  The 965 PRM, Volume 4, section
-    * 5.1.2 "Data Cache" says: "the data cache does not exist as a separate
-    * physical cache.  It is mapped in hardware to the sampler cache."
-    */
+   isl_buffer_fill_state(&brw->isl_dev, dw,
+                         .address = (bo ? bo->offset64 : 0) + buffer_offset,
+                         .size = buffer_size,
+                         .format = surface_format,
+                         .stride = pitch,
+                         .mocs = ss_info.tex_mocs);
+
    if (bo) {
-      drm_intel_bo_emit_reloc(brw->batch.bo, *out_offset + 4,
+      drm_intel_bo_emit_reloc(brw->batch.bo,
+                              *out_offset + 4 * ss_info.reloc_dw,
                               bo, buffer_offset,
                               I915_GEM_DOMAIN_SAMPLER,
                               (rw ? I915_GEM_DOMAIN_SAMPLER : 0));
@@ -546,12 +542,12 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
 		    _mesa_get_format_name(format));
    }
 
-   brw->vtbl.emit_buffer_surface_state(brw, surf_offset, bo,
-                                       tObj->BufferOffset,
-                                       brw_format,
-                                       size,
-                                       texel_size,
-                                       false /* rw */);
+   brw_emit_buffer_surface_state(brw, surf_offset, bo,
+                                 tObj->BufferOffset,
+                                 brw_format,
+                                 size,
+                                 texel_size,
+                                 false /* rw */);
 }
 
 /**
@@ -565,9 +561,9 @@ brw_create_constant_surface(struct brw_context *brw,
 			    uint32_t size,
 			    uint32_t *out_offset)
 {
-   brw->vtbl.emit_buffer_surface_state(brw, out_offset, bo, offset,
-                                       BRW_SURFACEFORMAT_R32G32B32A32_FLOAT,
-                                       size, 1, false);
+   brw_emit_buffer_surface_state(brw, out_offset, bo, offset,
+                                 BRW_SURFACEFORMAT_R32G32B32A32_FLOAT,
+                                 size, 1, false);
 }
 
 /**
@@ -587,9 +583,9 @@ brw_create_buffer_surface(struct brw_context *brw,
     * include a pixel mask header that we need to ensure correct behavior
     * with helper invocations, which cannot write to the buffer.
     */
-   brw->vtbl.emit_buffer_surface_state(brw, out_offset, bo, offset,
-                                       BRW_SURFACEFORMAT_RAW,
-                                       size, 1, true);
+   brw_emit_buffer_surface_state(brw, out_offset, bo, offset,
+                                 BRW_SURFACEFORMAT_RAW,
+                                 size, 1, true);
 }
 
 /**
@@ -1256,9 +1252,9 @@ brw_upload_abo_surfaces(struct brw_context *brw,
          drm_intel_bo *bo = intel_bufferobj_buffer(
             brw, intel_bo, binding->Offset, intel_bo->Base.Size - binding->Offset);
 
-         brw->vtbl.emit_buffer_surface_state(brw, &surf_offsets[i], bo,
-                                             binding->Offset, BRW_SURFACEFORMAT_RAW,
-                                             bo->size - binding->Offset, 1, true);
+         brw_emit_buffer_surface_state(brw, &surf_offsets[i], bo,
+                                       binding->Offset, BRW_SURFACEFORMAT_RAW,
+                                       bo->size - binding->Offset, 1, true);
       }
 
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
@@ -1478,7 +1474,7 @@ update_image_surface(struct brw_context *brw,
          const unsigned texel_size = (format == BRW_SURFACEFORMAT_RAW ? 1 :
                                       _mesa_get_format_bytes(u->_ActualFormat));
 
-         brw->vtbl.emit_buffer_surface_state(
+         brw_emit_buffer_surface_state(
             brw, surf_offset, intel_obj->buffer, obj->BufferOffset,
             format, intel_obj->Base.Size, texel_size,
             access != GL_READ_ONLY);
@@ -1490,7 +1486,7 @@ update_image_surface(struct brw_context *brw,
          struct intel_mipmap_tree *mt = intel_obj->mt;
 
          if (format == BRW_SURFACEFORMAT_RAW) {
-            brw->vtbl.emit_buffer_surface_state(
+            brw_emit_buffer_surface_state(
                brw, surf_offset, mt->bo, mt->offset,
                format, mt->bo->size - mt->offset, 1 /* pitch */,
                access != GL_READ_ONLY);
@@ -1594,7 +1590,6 @@ gen4_init_vtable_surface_functions(struct brw_context *brw)
    brw->vtbl.update_texture_surface = brw_update_texture_surface;
    brw->vtbl.update_renderbuffer_surface = gen4_update_renderbuffer_surface;
    brw->vtbl.emit_null_surface_state = brw_emit_null_surface_state;
-   brw->vtbl.emit_buffer_surface_state = gen4_emit_buffer_surface_state;
 }
 
 static void
@@ -1625,10 +1620,10 @@ brw_upload_cs_work_groups_surface(struct brw_context *brw)
          bo_offset = brw->compute.num_work_groups_offset;
       }
 
-      brw->vtbl.emit_buffer_surface_state(brw, surf_offset,
-                                          bo, bo_offset,
-                                          BRW_SURFACEFORMAT_RAW,
-                                          3 * sizeof(GLuint), 1, true);
+      brw_emit_buffer_surface_state(brw, surf_offset,
+                                    bo, bo_offset,
+                                    BRW_SURFACEFORMAT_RAW,
+                                    3 * sizeof(GLuint), 1, true);
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
    }
 }

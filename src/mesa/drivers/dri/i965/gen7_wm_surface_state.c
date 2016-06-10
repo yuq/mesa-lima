@@ -125,52 +125,6 @@ gen7_check_surface_setup(uint32_t *surf, bool is_render_target)
    }
 }
 
-static void
-gen7_emit_buffer_surface_state(struct brw_context *brw,
-                               uint32_t *out_offset,
-                               drm_intel_bo *bo,
-                               unsigned buffer_offset,
-                               unsigned surface_format,
-                               unsigned buffer_size,
-                               unsigned pitch,
-                               bool rw)
-{
-   unsigned elements = buffer_size / pitch;
-   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
-                                    8 * 4, 32, out_offset);
-   memset(surf, 0, 8 * 4);
-
-   surf[0] = BRW_SURFACE_BUFFER << BRW_SURFACE_TYPE_SHIFT |
-             surface_format << BRW_SURFACE_FORMAT_SHIFT |
-             BRW_SURFACE_RC_READ_WRITE;
-   surf[1] = (bo ? bo->offset64 : 0) + buffer_offset; /* reloc */
-   surf[2] = SET_FIELD((elements - 1) & 0x7f, GEN7_SURFACE_WIDTH) |
-             SET_FIELD(((elements - 1) >> 7) & 0x3fff, GEN7_SURFACE_HEIGHT);
-   if (surface_format == BRW_SURFACEFORMAT_RAW)
-      surf[3] = SET_FIELD(((elements - 1) >> 21) & 0x3ff, BRW_SURFACE_DEPTH);
-   else
-      surf[3] = SET_FIELD(((elements - 1) >> 21) & 0x3f, BRW_SURFACE_DEPTH);
-   surf[3] |= (pitch - 1);
-
-   surf[5] = SET_FIELD(GEN7_MOCS_L3, GEN7_SURFACE_MOCS);
-
-   if (brw->is_haswell) {
-      surf[7] |= (SET_FIELD(HSW_SCS_RED,   GEN7_SURFACE_SCS_R) |
-                  SET_FIELD(HSW_SCS_GREEN, GEN7_SURFACE_SCS_G) |
-                  SET_FIELD(HSW_SCS_BLUE,  GEN7_SURFACE_SCS_B) |
-                  SET_FIELD(HSW_SCS_ALPHA, GEN7_SURFACE_SCS_A));
-   }
-
-   /* Emit relocation to surface contents */
-   if (bo) {
-      drm_intel_bo_emit_reloc(brw->batch.bo, *out_offset + 4,
-                              bo, buffer_offset, I915_GEM_DOMAIN_SAMPLER,
-                              (rw ? I915_GEM_DOMAIN_SAMPLER : 0));
-   }
-
-   gen7_check_surface_setup(surf, false /* is_render_target */);
-}
-
 /**
  * Creates a null surface.
  *
@@ -225,5 +179,4 @@ gen7_init_vtable_surface_functions(struct brw_context *brw)
    brw->vtbl.update_texture_surface = brw_update_texture_surface;
    brw->vtbl.update_renderbuffer_surface = brw_update_renderbuffer_surface;
    brw->vtbl.emit_null_surface_state = gen7_emit_null_surface_state;
-   brw->vtbl.emit_buffer_surface_state = gen7_emit_buffer_surface_state;
 }
