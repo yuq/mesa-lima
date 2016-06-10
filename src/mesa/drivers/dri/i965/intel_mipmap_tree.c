@@ -3167,3 +3167,29 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
 
    surf->usage = 0; /* TODO */
 }
+
+union isl_color_value
+intel_miptree_get_isl_clear_color(struct brw_context *brw,
+                                  const struct intel_mipmap_tree *mt)
+{
+   union isl_color_value clear_color;
+
+   if (brw->gen >= 9) {
+      clear_color.i32[0] = mt->gen9_fast_clear_color.i[0];
+      clear_color.i32[1] = mt->gen9_fast_clear_color.i[1];
+      clear_color.i32[2] = mt->gen9_fast_clear_color.i[2];
+      clear_color.i32[3] = mt->gen9_fast_clear_color.i[3];
+   } else if (_mesa_is_format_integer(mt->format)) {
+      clear_color.i32[0] = (mt->fast_clear_color_value & (1u << 31)) != 0;
+      clear_color.i32[1] = (mt->fast_clear_color_value & (1u << 30)) != 0;
+      clear_color.i32[2] = (mt->fast_clear_color_value & (1u << 29)) != 0;
+      clear_color.i32[3] = (mt->fast_clear_color_value & (1u << 28)) != 0;
+   } else {
+      clear_color.f32[0] = (mt->fast_clear_color_value & (1u << 31)) != 0;
+      clear_color.f32[1] = (mt->fast_clear_color_value & (1u << 30)) != 0;
+      clear_color.f32[2] = (mt->fast_clear_color_value & (1u << 29)) != 0;
+      clear_color.f32[3] = (mt->fast_clear_color_value & (1u << 28)) != 0;
+   }
+
+   return clear_color;
+}

@@ -802,6 +802,10 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
                            const struct intel_mipmap_tree *mt,
                            struct isl_surf *surf);
 
+union isl_color_value
+intel_miptree_get_isl_clear_color(struct brw_context *brw,
+                                  const struct intel_mipmap_tree *mt);
+
 void
 intel_get_image_dims(struct gl_texture_image *image,
                      int *width, int *height, int *depth);
