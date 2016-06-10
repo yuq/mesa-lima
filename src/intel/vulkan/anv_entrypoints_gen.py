@@ -113,7 +113,7 @@ if opt_header:
 
     for type, name, args, num, h in entrypoints:
         print_guard_start(name)
-        print "         %s (*%s)%s;" % (type, name, args)
+        print "         PFN_vk{0} {0};".format(name)
         print_guard_end(name)
     print "      };\n"
     print "   };\n"
