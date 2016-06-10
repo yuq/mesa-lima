@@ -251,6 +251,12 @@ glsl_float_type(void)
 }
 
 const glsl_type *
+glsl_double_type(void)
+{
+   return glsl_type::double_type;
+}
+
+const glsl_type *
 glsl_vec_type(unsigned n)
 {
    return glsl_type::vec(n);
