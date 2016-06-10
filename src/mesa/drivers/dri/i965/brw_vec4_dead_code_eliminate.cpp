@@ -57,13 +57,12 @@ vec4_visitor::dead_code_eliminate()
          if ((inst->dst.file == VGRF && !inst->has_side_effects()) ||
              (inst->dst.is_null() && inst->writes_flag())){
             bool result_live[4] = { false };
-
             if (inst->dst.file == VGRF) {
-               for (unsigned i = 0; i < regs_written(inst); i++) {
-                  for (int c = 0; c < 4; c++)
-                     result_live[c] |= BITSET_TEST(live,
-                        var_from_reg(alloc,
-                                     byte_offset(inst->dst, i * REG_SIZE), c));
+               for (unsigned i = 0; i < DIV_ROUND_UP(inst->size_written, 16); i++) {
+                  for (int c = 0; c < 4; c++) {
+                     const unsigned v = var_from_reg(alloc, inst->dst, c, i);
+                     result_live[c] |= BITSET_TEST(live, v);
+                  }
                }
             } else {
                for (unsigned c = 0; c < 4; c++)
@@ -112,14 +111,11 @@ vec4_visitor::dead_code_eliminate()
 
          if (inst->dst.file == VGRF && !inst->predicate &&
              !inst->is_align1_partial_write()) {
-            for (unsigned i = 0; i < regs_written(inst); i++) {
+            for (unsigned i = 0; i < DIV_ROUND_UP(inst->size_written, 16); i++) {
                for (int c = 0; c < 4; c++) {
                   if (inst->dst.writemask & (1 << c)) {
-                     BITSET_CLEAR(live,
-                                  var_from_reg(alloc,
-                                               byte_offset(inst->dst,
-                                                           i * REG_SIZE),
-                                               c));
+                     const unsigned v = var_from_reg(alloc, inst->dst, c, i);
+                     BITSET_CLEAR(live, v);
                   }
                }
             }
@@ -137,12 +133,10 @@ vec4_visitor::dead_code_eliminate()
 
          for (int i = 0; i < 3; i++) {
             if (inst->src[i].file == VGRF) {
-               for (unsigned j = 0; j < regs_read(inst, i); j++) {
+               for (unsigned j = 0; j < DIV_ROUND_UP(inst->size_read(i), 16); j++) {
                   for (int c = 0; c < 4; c++) {
-                     BITSET_SET(live, var_from_reg(alloc,
-                                                   byte_offset(inst->src[i],
-                                                               j * REG_SIZE),
-                                                   c));
+                     const unsigned v = var_from_reg(alloc, inst->src[i], c, j);
+                     BITSET_SET(live, v);
                   }
                }
             }
