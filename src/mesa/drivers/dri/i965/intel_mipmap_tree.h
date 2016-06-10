@@ -554,15 +554,22 @@ struct intel_mipmap_tree
    struct intel_miptree_hiz_buffer *hiz_buf;
 
    /**
-    * \brief Map of miptree slices to needed resolves.
+    * \brief Maps of miptree slices to needed resolves.
     *
-    * This is used only when the miptree has a child HiZ miptree.
+    * hiz_map is used only when the miptree has a child HiZ miptree.
     *
     * Let \c mt be a depth miptree with HiZ enabled. Then the resolve map is
     * \c mt->hiz_map. The resolve map of the child HiZ miptree, \c
     * mt->hiz_mt->hiz_map, is unused.
+    *
+    *
+    * color_resolve_map is used only when the miptree uses fast clear (Gen7+)
+    * lossless compression (Gen9+). It should be noted that absence in the
+    * map means implicitly RESOLVED state. If item is found it always
+    * indicates state other than RESOLVED.
     */
    struct exec_list hiz_map; /* List of intel_resolve_map. */
+   struct exec_list color_resolve_map; /* List of intel_resolve_map. */
 
    /**
     * \brief Stencil miptree for depthstencil textures.
@@ -604,11 +611,6 @@ struct intel_mipmap_tree
     * Planes 1 and 2 in case this is a planar surface.
     */
    struct intel_mipmap_tree *plane[2];
-
-   /**
-    * Fast clear state for this buffer.
-    */
-   enum intel_fast_clear_state fast_clear_state;
 
    /**
     * The SURFACE_STATE bits associated with the last fast color clear to this

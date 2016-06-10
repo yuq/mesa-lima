@@ -969,9 +969,6 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
                      brw_blorp_to_isl_format(brw, format, true),
                      resolve_op);
    blorp_batch_finish(&batch);
-
-   intel_miptree_set_fast_clear_state(mt, level, layer, 1,
-                                      INTEL_FAST_CLEAR_STATE_RESOLVED);
 }
 
 static void

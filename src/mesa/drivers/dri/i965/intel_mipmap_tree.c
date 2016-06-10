@@ -397,11 +397,11 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->logical_width0 = width0;
    mt->logical_height0 = height0;
    mt->logical_depth0 = depth0;
-   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
    mt->disable_aux_buffers = (layout_flags & MIPTREE_LAYOUT_DISABLE_AUX) != 0;
    mt->no_ccs = true;
    mt->is_scanout = (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT) != 0;
    exec_list_make_empty(&mt->hiz_map);
+   exec_list_make_empty(&mt->color_resolve_map);
    mt->cpp = _mesa_get_format_bytes(format);
    mt->num_samples = num_samples;
    mt->compressed = _mesa_is_format_compressed(format);
@@ -933,7 +933,7 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
     */
    if (intel_tiling_supports_non_msrt_mcs(intel, singlesample_mt->tiling) &&
        intel_miptree_supports_non_msrt_fast_clear(intel, singlesample_mt)) {
-      singlesample_mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
+      singlesample_mt->no_ccs = false;
    }
 
    if (num_samples == 0) {
@@ -1048,6 +1048,7 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
          free((*mt)->mcs_buf);
       }
       intel_resolve_map_clear(&(*mt)->hiz_map);
+      intel_resolve_map_clear(&(*mt)->color_resolve_map);
 
       intel_miptree_release(&(*mt)->plane[0]);
       intel_miptree_release(&(*mt)->plane[1]);
@@ -1633,7 +1634,12 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
       return false;
 
    intel_miptree_init_mcs(brw, mt, 0xFF);
-   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
+
+   /* Multisampled miptrees are only supported for single level. */
+   assert(mt->first_level == 0);
+   intel_miptree_set_fast_clear_state(mt, mt->first_level, 0,
+                                      mt->logical_depth0,
+                                      INTEL_FAST_CLEAR_STATE_CLEAR);
 
    return true;
 }
@@ -1713,7 +1719,6 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
        *    Software needs to initialize MCS with zeros."
        */
       intel_miptree_init_mcs(brw, mt, 0);
-      mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
       mt->msaa_layout = INTEL_MSAA_LAYOUT_CMS;
    }
 
@@ -2209,7 +2214,15 @@ enum intel_fast_clear_state
 intel_miptree_get_fast_clear_state(const struct intel_mipmap_tree *mt,
                                    unsigned level, unsigned layer)
 {
-   return mt->fast_clear_state;
+   intel_miptree_check_level_layer(mt, level, layer);
+
+   const struct intel_resolve_map *item =
+      intel_resolve_map_const_get(&mt->color_resolve_map, level, layer);
+
+   if (!item)
+      return INTEL_FAST_CLEAR_STATE_RESOLVED;
+
+   return item->fast_clear_state;
 }
 
 static void
@@ -2240,11 +2253,18 @@ intel_miptree_set_fast_clear_state(struct intel_mipmap_tree *mt,
                                    unsigned num_layers,
                                    enum intel_fast_clear_state new_state)
 {
+   /* Setting the state to resolved means removing the item from the list
+    * altogether.
+    */
+   assert(new_state != INTEL_FAST_CLEAR_STATE_RESOLVED);
+
    intel_miptree_check_color_resolve(mt, level, first_layer);
 
    assert(first_layer + num_layers <= mt->physical_depth0);
 
-   mt->fast_clear_state = new_state;
+   for (unsigned i = 0; i < num_layers; i++)
+      intel_resolve_map_set(&mt->color_resolve_map, level,
+                            first_layer + i, new_state);
 }
 
 bool
@@ -2252,7 +2272,9 @@ intel_miptree_has_color_unresolved(const struct intel_mipmap_tree *mt,
                                    unsigned start_level, unsigned num_levels,
                                    unsigned start_layer, unsigned num_layers)
 {
-   return mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED;
+   return intel_resolve_map_find_any(&mt->color_resolve_map,
+                                     start_level, num_levels,
+                                     start_layer, num_layers) != NULL;
 }
 
 void
@@ -2316,19 +2338,27 @@ intel_miptree_resolve_color(struct brw_context *brw,
    if (!intel_miptree_needs_color_resolve(brw, mt, flags))
       return false;
 
-   switch (mt->fast_clear_state) {
-   case INTEL_FAST_CLEAR_STATE_RESOLVED:
-      /* No resolve needed */
-      return false;
-   case INTEL_FAST_CLEAR_STATE_UNRESOLVED:
-   case INTEL_FAST_CLEAR_STATE_CLEAR:
-      /* For now arrayed fast clear is not supported. */
-      assert(num_layers == 1);
-      brw_blorp_resolve_color(brw, mt, level, start_layer);
-      return true;
-   default:
-      unreachable("Invalid fast clear state");
+   /* For now arrayed fast clear is not supported. */
+   assert(num_layers == 1);
+
+   bool resolved = false;
+   for (unsigned i = 0; i < num_layers; ++i) {
+      intel_miptree_check_level_layer(mt, level, start_layer + i);
+
+      struct intel_resolve_map *item =
+         intel_resolve_map_get(&mt->color_resolve_map, level,
+                               start_layer + i);
+
+      if (item) {
+         assert(item->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED);
+
+         brw_blorp_resolve_color(brw, mt, level, start_layer);
+         intel_resolve_map_remove(item);
+         resolved = true;
+      }
    }
+
+   return resolved;
 }
 
 void
@@ -2336,7 +2366,16 @@ intel_miptree_all_slices_resolve_color(struct brw_context *brw,
                                        struct intel_mipmap_tree *mt,
                                        int flags)
 {
-   intel_miptree_resolve_color(brw, mt, 0, 0, 1, flags);
+   if (!intel_miptree_needs_color_resolve(brw, mt, flags))
+      return;
+      
+   foreach_list_typed_safe(struct intel_resolve_map, map, link,
+                           &mt->color_resolve_map) {
+      assert(map->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED);
+
+      brw_blorp_resolve_color(brw, mt, map->level, map->layer);
+      intel_resolve_map_remove(map);
+   }
 }
 
 /**
