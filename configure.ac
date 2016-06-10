@@ -2102,6 +2102,9 @@ AC_ARG_WITH([llvm-prefix],
 strip_unwanted_llvm_flags() {
     # Use \> (marks the end of the word)
     echo `$1` | sed \
+	-e 's/-march=\S*//g' \
+	-e 's/-mtune=\S*//g' \
+	-e 's/-mcpu=\S*//g' \
 	-e 's/-DNDEBUG\>//g' \
 	-e 's/-D_GNU_SOURCE\>//g' \
 	-e 's/-pedantic\>//g' \
