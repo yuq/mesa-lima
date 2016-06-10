@@ -183,14 +183,16 @@ fd_set_vertex_buffers(struct pipe_context *pctx,
 	 * we need to mark VTXSTATE as dirty as well to trigger patching
 	 * and re-emitting the vtx shader:
 	 */
-	for (i = 0; i < count; i++) {
-		bool new_enabled = vb && (vb[i].buffer || vb[i].user_buffer);
-		bool old_enabled = so->vb[i].buffer || so->vb[i].user_buffer;
-		uint32_t new_stride = vb ? vb[i].stride : 0;
-		uint32_t old_stride = so->vb[i].stride;
-		if ((new_enabled != old_enabled) || (new_stride != old_stride)) {
-			ctx->dirty |= FD_DIRTY_VTXSTATE;
-			break;
+	if (ctx->screen->gpu_id < 300) {
+		for (i = 0; i < count; i++) {
+			bool new_enabled = vb && (vb[i].buffer || vb[i].user_buffer);
+			bool old_enabled = so->vb[i].buffer || so->vb[i].user_buffer;
+			uint32_t new_stride = vb ? vb[i].stride : 0;
+			uint32_t old_stride = so->vb[i].stride;
+			if ((new_enabled != old_enabled) || (new_stride != old_stride)) {
+				ctx->dirty |= FD_DIRTY_VTXSTATE;
+				break;
+			}
 		}
 	}
 
