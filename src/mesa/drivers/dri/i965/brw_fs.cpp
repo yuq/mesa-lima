@@ -6001,7 +6001,21 @@ fs_visitor::allocate_registers(bool allow_spilling)
           * size linearly with a range of [1kB, 12kB] and 1kB granularity.
           */
          prog_data->total_scratch = ALIGN(last_scratch, 1024);
+
+         assert(prog_data->total_scratch < 12 * 1024);
       }
+
+      /* We currently only support up to 2MB of scratch space.  If we
+       * need to support more eventually, the documentation suggests
+       * that we could allocate a larger buffer, and partition it out
+       * ourselves.  We'd just have to undo the hardware's address
+       * calculation by subtracting (FFTID * Per Thread Scratch Space)
+       * and then add FFTID * (Larger Per Thread Scratch Space).
+       *
+       * See 3D-Media-GPGPU Engine > Media GPGPU Pipeline >
+       * Thread Group Tracking > Local Memory/Scratch Space.
+       */
+      assert(prog_data->total_scratch < 2 * 1024 * 1024);
    }
 }
 
