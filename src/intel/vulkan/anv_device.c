@@ -436,8 +436,6 @@ void anv_GetPhysicalDeviceProperties(
    ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
    const struct brw_device_info *devinfo = pdevice->info;
 
-   anv_finishme("Get correct values for VkPhysicalDeviceLimits");
-
    const float time_stamp_base = devinfo->gen >= 9 ? 83.333 : 80.0;
 
    VkSampleCountFlags sample_counts =
