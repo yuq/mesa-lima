@@ -181,6 +181,8 @@ void WakeAllThreads(SWR_CONTEXT *pContext)
     pContext->FifosNotEmpty.notify_all();
 }
 
+static TileSet gSingleThreadLockedTiles;
+
 template<bool IsDraw>
 void QueueWork(SWR_CONTEXT *pContext)
 {
@@ -213,10 +215,9 @@ void QueueWork(SWR_CONTEXT *pContext)
 
         if (IsDraw)
         {
-            static TileSet lockedTiles;
             uint64_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
             WorkOnFifoFE(pContext, 0, curDraw[0]);
-            WorkOnFifoBE(pContext, 0, curDraw[1], lockedTiles, 0, 0);
+            WorkOnFifoBE(pContext, 0, curDraw[1], gSingleThreadLockedTiles, 0, 0);
         }
         else
         {
