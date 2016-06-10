@@ -38,6 +38,7 @@ CXX_SOURCES := \
 	swr_scratch.h \
 	swr_scratch.cpp \
 	swr_shader.cpp \
+	swr_shader.h \
 	swr_memory.h \
 	swr_fence.h \
 	swr_fence.cpp \
@@ -69,6 +70,7 @@ CORE_CXX_SOURCES := \
 	rasterizer/core/context.h \
 	rasterizer/core/depthstencil.h \
 	rasterizer/core/fifo.hpp \
+	rasterizer/core/format_conversion.h \
 	rasterizer/core/format_traits.h \
 	rasterizer/core/format_types.h \
 	rasterizer/core/frontend.cpp \
@@ -85,6 +87,7 @@ CORE_CXX_SOURCES := \
 	rasterizer/core/rdtsc_core.h \
 	rasterizer/core/ringbuffer.h \
 	rasterizer/core/state.h \
+	rasterizer/core/tessellator.h \
 	rasterizer/core/threads.cpp \
 	rasterizer/core/threads.h \
 	rasterizer/core/tilemgr.cpp \
@@ -96,10 +99,12 @@ JITTER_CXX_SOURCES := \
 	rasterizer/jitter/blend_jit.h \
 	rasterizer/jitter/builder.cpp \
 	rasterizer/jitter/builder.h \
+	rasterizer/jitter/builder_math.h \
 	rasterizer/jitter/builder_misc.cpp \
 	rasterizer/jitter/builder_misc.h \
 	rasterizer/jitter/fetch_jit.cpp \
 	rasterizer/jitter/fetch_jit.h \
+	rasterizer/jitter/jit_api.h \
 	rasterizer/jitter/JitManager.cpp \
 	rasterizer/jitter/JitManager.h \
 	rasterizer/jitter/streamout_jit.cpp \
@@ -107,5 +112,8 @@ JITTER_CXX_SOURCES := \
 
 MEMORY_CXX_SOURCES := \
 	rasterizer/memory/ClearTile.cpp \
+	rasterizer/memory/Convert.h \
 	rasterizer/memory/LoadTile.cpp \
-	rasterizer/memory/StoreTile.cpp
+	rasterizer/memory/StoreTile.cpp \
+	rasterizer/memory/TilingFunctions.h \
+	rasterizer/memory/tilingtraits.h
