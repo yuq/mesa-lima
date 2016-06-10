@@ -1592,6 +1592,13 @@ gen4_init_vtable_surface_functions(struct brw_context *brw)
    brw->vtbl.emit_null_surface_state = brw_emit_null_surface_state;
 }
 
+void
+gen6_init_vtable_surface_functions(struct brw_context *brw)
+{
+   gen4_init_vtable_surface_functions(brw);
+   brw->vtbl.update_renderbuffer_surface = brw_update_renderbuffer_surface;
+}
+
 static void
 brw_upload_cs_work_groups_surface(struct brw_context *brw)
 {
