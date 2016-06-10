@@ -138,7 +138,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
    /* Since we are going to read raw data to the miptree, we need to resolve
     * any pending fast color clears before we start.
     */
-   intel_miptree_resolve_color(brw, irb->mt, 0);
+   intel_miptree_all_slices_resolve_color(brw, irb->mt, 0);
 
    bo = irb->mt->bo;
 

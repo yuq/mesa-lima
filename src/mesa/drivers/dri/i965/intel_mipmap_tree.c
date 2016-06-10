@@ -2237,6 +2237,13 @@ intel_miptree_resolve_color(struct brw_context *brw,
    }
 }
 
+void
+intel_miptree_all_slices_resolve_color(struct brw_context *brw,
+                                       struct intel_mipmap_tree *mt,
+                                       int flags)
+{
+   intel_miptree_resolve_color(brw, mt, flags);
+}
 
 /**
  * Make it possible to share the BO backing the given miptree with another
@@ -2259,7 +2266,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
    assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE);
 
    if (mt->mcs_buf) {
-      intel_miptree_resolve_color(brw, mt, 0);
+      intel_miptree_all_slices_resolve_color(brw, mt, 0);
       mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
    }
 }
@@ -2416,7 +2423,7 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
    /* CPU accesses to color buffers don't understand fast color clears, so
     * resolve any pending fast color clears before we map.
     */
-   intel_miptree_resolve_color(brw, mt, 0);
+   intel_miptree_all_slices_resolve_color(brw, mt, 0);
 
    drm_intel_bo *bo = mt->bo;
 
