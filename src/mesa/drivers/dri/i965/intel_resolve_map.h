@@ -71,10 +71,27 @@ intel_resolve_map_set(struct exec_list *resolve_map,
 		      uint32_t layer,
 		      enum blorp_hiz_op need);
 
-struct intel_resolve_map *
+const struct intel_resolve_map *
+intel_resolve_map_find_any(const struct exec_list *resolve_map,
+                           uint32_t start_level, uint32_t num_levels,
+                           uint32_t start_layer, uint32_t num_layers);
+
+static inline const struct intel_resolve_map *
+intel_resolve_map_const_get(const struct exec_list *resolve_map,
+                            uint32_t level,
+                            uint32_t layer)
+{
+   return intel_resolve_map_find_any(resolve_map, level, 1, layer, 1);
+}
+
+static inline struct intel_resolve_map *
 intel_resolve_map_get(struct exec_list *resolve_map,
 		      uint32_t level,
-		      uint32_t layer);
+		      uint32_t layer)
+{
+   return (struct intel_resolve_map *)intel_resolve_map_find_any(
+                                         resolve_map, level, 1, layer, 1);
+}
 
 void
 intel_resolve_map_remove(struct intel_resolve_map *resolve_map);
