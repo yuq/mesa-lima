@@ -1403,12 +1403,9 @@ emit_fetch_immediate(
          res = emit_fetch_64bit(bld_base, stype, res, bld->immediates[reg->Register.Index][swizzle + 1]);
    }
 
-   if (stype == TGSI_TYPE_UNSIGNED) {
-      res = LLVMBuildBitCast(builder, res, bld_base->uint_bld.vec_type, "");
-   } else if (stype == TGSI_TYPE_SIGNED) {
-      res = LLVMBuildBitCast(builder, res, bld_base->int_bld.vec_type, "");
-   } else if (stype == TGSI_TYPE_DOUBLE) {
-      res = LLVMBuildBitCast(builder, res, bld_base->dbl_bld.vec_type, "");
+   if (stype == TGSI_TYPE_SIGNED || stype == TGSI_TYPE_UNSIGNED || stype == TGSI_TYPE_DOUBLE) {
+      struct lp_build_context *bld_fetch = stype_to_fetch(bld_base, stype);
+      res = LLVMBuildBitCast(builder, res, bld_fetch->vec_type, "");
    }
    return res;
 }
@@ -1483,12 +1480,9 @@ emit_fetch_input(
 
    assert(res);
 
-   if (stype == TGSI_TYPE_UNSIGNED) {
-      res = LLVMBuildBitCast(builder, res, bld_base->uint_bld.vec_type, "");
-   } else if (stype == TGSI_TYPE_SIGNED) {
-      res = LLVMBuildBitCast(builder, res, bld_base->int_bld.vec_type, "");
-   } else if (stype == TGSI_TYPE_DOUBLE) {
-      res = LLVMBuildBitCast(builder, res, bld_base->dbl_bld.vec_type, "");
+   if (stype == TGSI_TYPE_SIGNED || stype == TGSI_TYPE_UNSIGNED || stype == TGSI_TYPE_DOUBLE) {
+      struct lp_build_context *bld_fetch = stype_to_fetch(bld_base, stype);
+      res = LLVMBuildBitCast(builder, res, bld_fetch->vec_type, "");
    }
 
    return res;
