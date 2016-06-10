@@ -570,7 +570,7 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
     */
    MAttrs.push_back(util_cpu_caps.has_avx  ? "+avx"  : "-avx");
    MAttrs.push_back(util_cpu_caps.has_f16c ? "+f16c" : "-f16c");
-   if (HAVE_LLVM >= 0x0304 || useMCJIT) {
+   if (HAVE_LLVM >= 0x0304) {
       MAttrs.push_back(util_cpu_caps.has_fma  ? "+fma"  : "-fma");
    } else {
       /*
