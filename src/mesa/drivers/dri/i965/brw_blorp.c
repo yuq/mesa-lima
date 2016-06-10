@@ -889,7 +889,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        * INTEL_FAST_CLEAR_STATE_CLEAR so that we won't waste time doing
        * redundant clears.
        */
-      intel_miptree_set_fast_clear_state(irb->mt, irb->mt_level,
+      intel_miptree_set_fast_clear_state(brw, irb->mt, irb->mt_level,
                                          logical_layer, num_layers,
                                          INTEL_FAST_CLEAR_STATE_CLEAR);
    } else {

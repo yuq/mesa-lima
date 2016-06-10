@@ -907,7 +907,8 @@ intel_miptree_get_fast_clear_state(const struct intel_mipmap_tree *mt,
                                    unsigned level, unsigned layer);
 
 void
-intel_miptree_set_fast_clear_state(struct intel_mipmap_tree *mt,
+intel_miptree_set_fast_clear_state(const struct brw_context *brw,
+                                   struct intel_mipmap_tree *mt,
                                    unsigned level,
                                    unsigned first_layer,
                                    unsigned num_layers,

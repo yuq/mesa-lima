@@ -1577,7 +1577,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
 
    /* Multisampled miptrees are only supported for single level. */
    assert(mt->first_level == 0);
-   intel_miptree_set_fast_clear_state(mt, mt->first_level, 0,
+   intel_miptree_set_fast_clear_state(brw, mt, mt->first_level, 0,
                                       mt->logical_depth0,
                                       INTEL_FAST_CLEAR_STATE_CLEAR);
 
@@ -2164,28 +2164,31 @@ intel_miptree_get_fast_clear_state(const struct intel_mipmap_tree *mt,
 }
 
 static void
-intel_miptree_check_color_resolve(const struct intel_mipmap_tree *mt,
+intel_miptree_check_color_resolve(const struct brw_context *brw,
+                                  const struct intel_mipmap_tree *mt,
                                   unsigned level, unsigned layer)
 {
    if (mt->no_ccs || !mt->mcs_buf)
       return;
 
-   /* Fast color clear is not supported for mipmapped surfaces. */
-   assert(level == 0 && mt->first_level == 0 && mt->last_level == 0);
+   /* Fast color clear is supported for mipmapped surfaces only on Gen8+. */
+   assert(brw->gen >= 8 ||
+          (level == 0 && mt->first_level == 0 && mt->last_level == 0));
 
    /* Compression of arrayed msaa surfaces is supported. */
    if (mt->num_samples > 1)
       return;
 
-   /* Fast color clear is not supported for non-msaa arrays. */
-   assert(layer == 0 && mt->logical_depth0 == 1);
+   /* Fast color clear is supported for non-msaa arrays only on Gen8+. */
+   assert(brw->gen >= 8 || (layer == 0 && mt->logical_depth0 == 1));
 
    (void)level;
    (void)layer;
 }
 
 void
-intel_miptree_set_fast_clear_state(struct intel_mipmap_tree *mt,
+intel_miptree_set_fast_clear_state(const struct brw_context *brw,
+                                   struct intel_mipmap_tree *mt,
                                    unsigned level,
                                    unsigned first_layer,
                                    unsigned num_layers,
@@ -2196,7 +2199,7 @@ intel_miptree_set_fast_clear_state(struct intel_mipmap_tree *mt,
     */
    assert(new_state != INTEL_FAST_CLEAR_STATE_RESOLVED);
 
-   intel_miptree_check_color_resolve(mt, level, first_layer);
+   intel_miptree_check_color_resolve(brw, mt, level, first_layer);
 
    assert(first_layer + num_layers <= mt->physical_depth0);
 
@@ -2234,7 +2237,7 @@ intel_miptree_used_for_rendering(const struct brw_context *brw,
       if (is_lossless_compressed ||
           fast_clear_state == INTEL_FAST_CLEAR_STATE_CLEAR) {
          intel_miptree_set_fast_clear_state(
-            mt, level, start_layer + i, 1,
+            brw, mt, level, start_layer + i, 1,
             INTEL_FAST_CLEAR_STATE_UNRESOLVED);
       }
    }
@@ -2271,13 +2274,13 @@ intel_miptree_resolve_color(struct brw_context *brw,
                             unsigned start_layer, unsigned num_layers,
                             int flags)
 {
-   intel_miptree_check_color_resolve(mt, level, start_layer);
+   intel_miptree_check_color_resolve(brw, mt, level, start_layer);
 
    if (!intel_miptree_needs_color_resolve(brw, mt, flags))
       return false;
 
-   /* For now arrayed fast clear is not supported. */
-   assert(num_layers == 1);
+   /* Arrayed fast clear is only supported for gen8+. */
+   assert(brw->gen >= 8 || num_layers == 1);
 
    bool resolved = false;
    for (unsigned i = 0; i < num_layers; ++i) {
