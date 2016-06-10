@@ -674,6 +674,19 @@ struct brw_stage_state
    /**
     * Optional scratch buffer used to store spilled register values and
     * variably-indexed GRF arrays.
+    *
+    * The contents of this buffer are short-lived so the same memory can be
+    * re-used at will for multiple shader programs (executed by the same fixed
+    * function).  However reusing a scratch BO for which shader invocations
+    * are still in flight with a per-thread scratch slot size other than the
+    * original can cause threads with different scratch slot size and FFTID
+    * (which may be executed in parallel depending on the shader stage and
+    * hardware generation) to map to an overlapping region of the scratch
+    * space, which can potentially lead to mutual scratch space corruption.
+    * For that reason if you borrow this scratch buffer you should only be
+    * using the slot size given by the \c per_thread_scratch member below,
+    * unless you're taking additional measures to synchronize thread execution
+    * across slot size changes.
     */
    drm_intel_bo *scratch_bo;
 

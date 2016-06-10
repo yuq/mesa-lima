@@ -235,7 +235,7 @@ gen7_upload_ps_state(struct brw_context *brw,
    if (prog_data->base.total_scratch) {
       OUT_RELOC(brw->wm.base.scratch_bo,
 		I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-		ffs(prog_data->base.total_scratch) - 11);
+		ffs(stage_state->per_thread_scratch) - 11);
    } else {
       OUT_BATCH(0);
    }

@@ -133,7 +133,7 @@ brw_upload_wm_unit(struct brw_context *brw)
       wm->thread2.scratch_space_base_pointer =
 	 brw->wm.base.scratch_bo->offset64 >> 10; /* reloc */
       wm->thread2.per_thread_scratch_space =
-	 ffs(prog_data->base.total_scratch) - 11;
+	 ffs(brw->wm.base.per_thread_scratch) - 11;
    } else {
       wm->thread2.scratch_space_base_pointer = 0;
       wm->thread2.per_thread_scratch_space = 0;

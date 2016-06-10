@@ -70,21 +70,21 @@ brw_upload_cs_state(struct brw_context *brw)
           */
          OUT_RELOC64(stage_state->scratch_bo,
                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                     ffs(prog_data->total_scratch) - 11);
+                     ffs(stage_state->per_thread_scratch) - 11);
       } else if (brw->is_haswell) {
          /* Haswell's Per Thread Scratch Space is in the range [0, 10]
           * where 0 = 2k, 1 = 4k, 2 = 8k, ..., 10 = 2M.
           */
          OUT_RELOC(stage_state->scratch_bo,
                    I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                   ffs(prog_data->total_scratch) - 12);
+                   ffs(stage_state->per_thread_scratch) - 12);
       } else {
          /* Earlier platforms use the range [0, 11] to mean [1kB, 12kB]
           * where 0 = 1kB, 1 = 2kB, 2 = 3kB, ..., 11 = 12kB.
           */
          OUT_RELOC(stage_state->scratch_bo,
                    I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                   prog_data->total_scratch / 1024 - 1);
+                   stage_state->per_thread_scratch / 1024 - 1);
       }
    } else {
       OUT_BATCH(0);
