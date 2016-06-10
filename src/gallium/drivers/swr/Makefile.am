@@ -36,6 +36,7 @@ COMMON_CXXFLAGS = \
 	-I$(builddir)/rasterizer/jitter \
 	-I$(srcdir)/rasterizer \
 	-I$(srcdir)/rasterizer/core \
+	-I$(srcdir)/rasterizer/scripts \
 	-I$(srcdir)/rasterizer/jitter
 
 COMMON_SOURCES = \
