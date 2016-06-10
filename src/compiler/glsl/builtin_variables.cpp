@@ -864,7 +864,7 @@ builtin_variable_generator::generate_constants()
       }
    }
 
-   if (state->is_version(450, 310) ||
+   if (state->is_version(440, 310) ||
        state->ARB_ES3_1_compatibility_enable) {
       add_const("gl_MaxCombinedShaderOutputResources",
                 state->Const.MaxCombinedShaderOutputResources);
