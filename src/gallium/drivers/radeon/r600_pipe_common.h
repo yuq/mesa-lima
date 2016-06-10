@@ -99,6 +99,7 @@
 #define DBG_SI_SCHED		(1llu << 46)
 #define DBG_MONOLITHIC_SHADERS	(1llu << 47)
 #define DBG_NO_CE		(1llu << 48)
+#define DBG_UNSAFE_MATH		(1llu << 49)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 #define R600_MAX_VIEWPORTS        16

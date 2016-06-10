@@ -5255,6 +5255,22 @@ static void si_create_function(struct si_shader_context *ctx,
 		else
 			LLVMAddAttribute(P, LLVMInRegAttribute);
 	}
+
+	if (ctx->screen->b.debug_flags & DBG_UNSAFE_MATH) {
+		/* These were copied from some LLVM test. */
+		LLVMAddTargetDependentFunctionAttr(ctx->radeon_bld.main_fn,
+						   "less-precise-fpmad",
+						   "true");
+		LLVMAddTargetDependentFunctionAttr(ctx->radeon_bld.main_fn,
+						   "no-infs-fp-math",
+						   "true");
+		LLVMAddTargetDependentFunctionAttr(ctx->radeon_bld.main_fn,
+						   "no-nans-fp-math",
+						   "true");
+		LLVMAddTargetDependentFunctionAttr(ctx->radeon_bld.main_fn,
+						   "unsafe-fp-math",
+						   "true");
+	}
 }
 
 static void create_meta_data(struct si_shader_context *ctx)
