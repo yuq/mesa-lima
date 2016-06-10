@@ -2127,6 +2127,7 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
       }
       fs_reg tmp = fs_reg(VGRF, alloc.allocate(4), dst.type);
       tmp_dst = tmp;
+      first_component = first_component / 2;
    }
 
    for (unsigned iter = 0; iter < num_iterations; iter++) {
@@ -2136,7 +2137,7 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
             unsigned read_components = num_components + first_component;
             fs_reg tmp = bld.vgrf(dst.type, read_components);
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp, icp_handle);
-            inst->regs_written = read_components;
+            inst->regs_written = read_components * type_sz(tmp_dst.type) / 4;
             for (unsigned i = 0; i < num_components; i++) {
                bld.MOV(offset(tmp_dst, bld, i),
                        offset(tmp, bld, i + first_component));
@@ -2158,7 +2159,7 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
          if (first_component != 0) {
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp,
                             payload);
-            inst->regs_written = read_components;
+            inst->regs_written = read_components * type_sz(tmp_dst.type) / 4;
             for (unsigned i = 0; i < num_components; i++) {
                bld.MOV(offset(tmp_dst, bld, i),
                        offset(tmp, bld, i + first_component));
