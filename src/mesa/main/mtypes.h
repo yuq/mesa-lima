@@ -794,6 +794,9 @@ struct gl_scissor_attrib
 {
    GLbitfield EnableFlags;	/**< Scissor test enabled? */
    struct gl_scissor_rect ScissorArray[MAX_VIEWPORTS];
+   GLint NumWindowRects;        /**< Count of enabled window rectangles */
+   GLenum WindowRectMode;       /**< Whether to include or exclude the rects */
+   struct gl_scissor_rect WindowRects[MAX_WINDOW_RECTANGLES];
 };
 
 
@@ -3447,6 +3450,7 @@ struct gl_constants
       GLfloat Min;
       GLfloat Max;
    } ViewportBounds;                         /**< GL_ARB_viewport_array */
+   GLuint MaxWindowRectangles;               /**< GL_EXT_window_rectangles */
 
    struct gl_program_constants Program[MESA_SHADER_STAGES];
    GLuint MaxProgramMatrices;
@@ -3916,6 +3920,7 @@ struct gl_extensions
    GLboolean EXT_transform_feedback;
    GLboolean EXT_timer_query;
    GLboolean EXT_vertex_array_bgra;
+   GLboolean EXT_window_rectangles;
    GLboolean OES_copy_image;
    GLboolean OES_sample_variables;
    GLboolean OES_shader_io_blocks;

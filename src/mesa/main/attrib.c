@@ -1305,6 +1305,13 @@ _mesa_PopAttrib(void)
                   _mesa_set_enablei(ctx, GL_SCISSOR_TEST, i,
                                     (scissor->EnableFlags >> i) & 1);
                }
+               if (ctx->Extensions.EXT_window_rectangles) {
+                  STATIC_ASSERT(sizeof(struct gl_scissor_rect) ==
+                                4 * sizeof(GLint));
+                  _mesa_WindowRectanglesEXT(
+                        scissor->WindowRectMode, scissor->NumWindowRects,
+                        (const GLint *)scissor->WindowRects);
+               }
             }
             break;
          case GL_STENCIL_BUFFER_BIT:

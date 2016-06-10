@@ -464,6 +464,7 @@ EXTRA_EXT(ARB_indirect_parameters);
 EXTRA_EXT(ATI_meminfo);
 EXTRA_EXT(NVX_gpu_memory_info);
 EXTRA_EXT(ARB_cull_distance);
+EXTRA_EXT(EXT_window_rectangles);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {
@@ -1942,6 +1943,17 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       v->value_int_4[1] = ctx->Scissor.ScissorArray[index].Y;
       v->value_int_4[2] = ctx->Scissor.ScissorArray[index].Width;
       v->value_int_4[3] = ctx->Scissor.ScissorArray[index].Height;
+      return TYPE_INT_4;
+
+   case GL_WINDOW_RECTANGLE_EXT:
+      if (!ctx->Extensions.EXT_window_rectangles)
+         goto invalid_enum;
+      if (index >= ctx->Const.MaxWindowRectangles)
+         goto invalid_value;
+      v->value_int_4[0] = ctx->Scissor.WindowRects[index].X;
+      v->value_int_4[1] = ctx->Scissor.WindowRects[index].Y;
+      v->value_int_4[2] = ctx->Scissor.WindowRects[index].Width;
+      v->value_int_4[3] = ctx->Scissor.WindowRects[index].Height;
       return TYPE_INT_4;
 
    case GL_VIEWPORT:
