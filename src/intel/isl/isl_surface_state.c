@@ -435,6 +435,17 @@ isl_genX(buffer_fill_state_s)(void *state,
 {
    uint32_t num_elements = info->size / info->stride;
 
+   if (GEN_GEN >= 7) {
+      if (info->format == ISL_FORMAT_RAW) {
+         assert(num_elements <= (1ull << 31));
+         assert((num_elements & 3) == 0);
+      } else {
+         assert(num_elements <= (1ull << 27));
+      }
+   } else {
+      assert(num_elements <= (1ull << 27));
+   }
+
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = SURFTYPE_BUFFER,
       .SurfaceArray = false,
