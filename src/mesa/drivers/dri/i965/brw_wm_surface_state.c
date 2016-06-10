@@ -495,6 +495,7 @@ gen4_emit_buffer_surface_state(struct brw_context *brw,
                                unsigned pitch,
                                bool rw)
 {
+   unsigned elements = buffer_size / pitch;
    uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
                                     6 * 4, 32, out_offset);
    memset(surf, 0, 6 * 4);
@@ -503,9 +504,9 @@ gen4_emit_buffer_surface_state(struct brw_context *brw,
              surface_format << BRW_SURFACE_FORMAT_SHIFT |
              (brw->gen >= 6 ? BRW_SURFACE_RC_READ_WRITE : 0);
    surf[1] = (bo ? bo->offset64 : 0) + buffer_offset; /* reloc */
-   surf[2] = ((buffer_size - 1) & 0x7f) << BRW_SURFACE_WIDTH_SHIFT |
-             (((buffer_size - 1) >> 7) & 0x1fff) << BRW_SURFACE_HEIGHT_SHIFT;
-   surf[3] = (((buffer_size - 1) >> 20) & 0x7f) << BRW_SURFACE_DEPTH_SHIFT |
+   surf[2] = ((elements - 1) & 0x7f) << BRW_SURFACE_WIDTH_SHIFT |
+             (((elements - 1) >> 7) & 0x1fff) << BRW_SURFACE_HEIGHT_SHIFT;
+   surf[3] = (((elements - 1) >> 20) & 0x7f) << BRW_SURFACE_DEPTH_SHIFT |
              (pitch - 1) << BRW_SURFACE_PITCH_SHIFT;
 
    /* Emit relocation to surface contents.  The 965 PRM, Volume 4, section
@@ -548,7 +549,7 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
    brw->vtbl.emit_buffer_surface_state(brw, surf_offset, bo,
                                        tObj->BufferOffset,
                                        brw_format,
-                                       size / texel_size,
+                                       size,
                                        texel_size,
                                        false /* rw */);
 }
@@ -1479,7 +1480,7 @@ update_image_surface(struct brw_context *brw,
 
          brw->vtbl.emit_buffer_surface_state(
             brw, surf_offset, intel_obj->buffer, obj->BufferOffset,
-            format, intel_obj->Base.Size / texel_size, texel_size,
+            format, intel_obj->Base.Size, texel_size,
             access != GL_READ_ONLY);
 
          update_buffer_image_param(brw, u, surface_idx, param);

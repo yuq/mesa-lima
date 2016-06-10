@@ -135,6 +135,7 @@ gen7_emit_buffer_surface_state(struct brw_context *brw,
                                unsigned pitch,
                                bool rw)
 {
+   unsigned elements = buffer_size / pitch;
    uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
                                     8 * 4, 32, out_offset);
    memset(surf, 0, 8 * 4);
@@ -143,12 +144,12 @@ gen7_emit_buffer_surface_state(struct brw_context *brw,
              surface_format << BRW_SURFACE_FORMAT_SHIFT |
              BRW_SURFACE_RC_READ_WRITE;
    surf[1] = (bo ? bo->offset64 : 0) + buffer_offset; /* reloc */
-   surf[2] = SET_FIELD((buffer_size - 1) & 0x7f, GEN7_SURFACE_WIDTH) |
-             SET_FIELD(((buffer_size - 1) >> 7) & 0x3fff, GEN7_SURFACE_HEIGHT);
+   surf[2] = SET_FIELD((elements - 1) & 0x7f, GEN7_SURFACE_WIDTH) |
+             SET_FIELD(((elements - 1) >> 7) & 0x3fff, GEN7_SURFACE_HEIGHT);
    if (surface_format == BRW_SURFACEFORMAT_RAW)
-      surf[3] = SET_FIELD(((buffer_size - 1) >> 21) & 0x3ff, BRW_SURFACE_DEPTH);
+      surf[3] = SET_FIELD(((elements - 1) >> 21) & 0x3ff, BRW_SURFACE_DEPTH);
    else
-      surf[3] = SET_FIELD(((buffer_size - 1) >> 21) & 0x3f, BRW_SURFACE_DEPTH);
+      surf[3] = SET_FIELD(((elements - 1) >> 21) & 0x3f, BRW_SURFACE_DEPTH);
    surf[3] |= (pitch - 1);
 
    surf[5] = SET_FIELD(GEN7_MOCS_L3, GEN7_SURFACE_MOCS);

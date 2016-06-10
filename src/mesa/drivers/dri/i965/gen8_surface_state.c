@@ -63,6 +63,7 @@ gen8_emit_buffer_surface_state(struct brw_context *brw,
                                unsigned pitch,
                                bool rw)
 {
+   unsigned elements = buffer_size / pitch;
    const unsigned mocs = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
    uint32_t *surf = gen8_allocate_surface_state(brw, out_offset, -1);
 
@@ -71,12 +72,12 @@ gen8_emit_buffer_surface_state(struct brw_context *brw,
              BRW_SURFACE_RC_READ_WRITE;
    surf[1] = SET_FIELD(mocs, GEN8_SURFACE_MOCS);
 
-   surf[2] = SET_FIELD((buffer_size - 1) & 0x7f, GEN7_SURFACE_WIDTH) |
-             SET_FIELD(((buffer_size - 1) >> 7) & 0x3fff, GEN7_SURFACE_HEIGHT);
+   surf[2] = SET_FIELD((elements - 1) & 0x7f, GEN7_SURFACE_WIDTH) |
+             SET_FIELD(((elements - 1) >> 7) & 0x3fff, GEN7_SURFACE_HEIGHT);
    if (surface_format == BRW_SURFACEFORMAT_RAW)
-      surf[3] = SET_FIELD(((buffer_size - 1) >> 21) & 0x3ff, BRW_SURFACE_DEPTH);
+      surf[3] = SET_FIELD(((elements - 1) >> 21) & 0x3ff, BRW_SURFACE_DEPTH);
    else
-      surf[3] = SET_FIELD(((buffer_size - 1) >> 21) & 0x3f, BRW_SURFACE_DEPTH);
+      surf[3] = SET_FIELD(((elements - 1) >> 21) & 0x3f, BRW_SURFACE_DEPTH);
    surf[3] |= (pitch - 1);
    surf[7] = SET_FIELD(HSW_SCS_RED,   GEN7_SURFACE_SCS_R) |
              SET_FIELD(HSW_SCS_GREEN, GEN7_SURFACE_SCS_G) |
