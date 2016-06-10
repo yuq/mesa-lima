@@ -2280,6 +2280,31 @@ intel_miptree_used_for_rendering(const struct brw_context *brw,
    }
 }
 
+static bool
+intel_miptree_needs_color_resolve(const struct brw_context *brw,
+                                  const struct intel_mipmap_tree *mt,
+                                  int flags)
+{
+   if (mt->no_ccs)
+      return false;
+
+   const bool is_lossless_compressed =
+      intel_miptree_is_lossless_compressed(brw, mt);
+
+   /* From gen9 onwards there is new compression scheme for single sampled
+    * surfaces called "lossless compressed". These don't need to be always
+    * resolved.
+    */
+   if ((flags & INTEL_MIPTREE_IGNORE_CCS_E) && is_lossless_compressed)
+      return false;
+
+   /* Fast color clear resolves only make sense for non-MSAA buffers. */
+   if (mt->msaa_layout != INTEL_MSAA_LAYOUT_NONE && !is_lossless_compressed)
+      return false;
+
+   return true;
+}
+
 bool
 intel_miptree_resolve_color(struct brw_context *brw,
                             struct intel_mipmap_tree *mt, unsigned level,
@@ -2288,12 +2313,7 @@ intel_miptree_resolve_color(struct brw_context *brw,
 {
    intel_miptree_check_color_resolve(mt, level, start_layer);
 
-   /* From gen9 onwards there is new compression scheme for single sampled
-    * surfaces called "lossless compressed". These don't need to be always
-    * resolved.
-    */
-   if ((flags & INTEL_MIPTREE_IGNORE_CCS_E) &&
-       intel_miptree_is_lossless_compressed(brw, mt))
+   if (!intel_miptree_needs_color_resolve(brw, mt, flags))
       return false;
 
    switch (mt->fast_clear_state) {
@@ -2304,15 +2324,8 @@ intel_miptree_resolve_color(struct brw_context *brw,
    case INTEL_FAST_CLEAR_STATE_CLEAR:
       /* For now arrayed fast clear is not supported. */
       assert(num_layers == 1);
-
-      /* Fast color clear resolves only make sense for non-MSAA buffers. */
-      if (mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE ||
-          intel_miptree_is_lossless_compressed(brw, mt)) {
-         brw_blorp_resolve_color(brw, mt, level, start_layer);
-         return true;
-      } else {
-         return false;
-      }
+      brw_blorp_resolve_color(brw, mt, level, start_layer);
+      return true;
    default:
       unreachable("Invalid fast clear state");
    }
