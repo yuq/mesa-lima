@@ -231,6 +231,163 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
    return program;
 }
 
+static enum isl_msaa_layout
+get_isl_msaa_layout(enum intel_msaa_layout layout)
+{
+   switch (layout) {
+   case INTEL_MSAA_LAYOUT_NONE:
+      return ISL_MSAA_LAYOUT_NONE;
+   case INTEL_MSAA_LAYOUT_IMS:
+      return ISL_MSAA_LAYOUT_INTERLEAVED;
+   case INTEL_MSAA_LAYOUT_UMS:
+   case INTEL_MSAA_LAYOUT_CMS:
+      return ISL_MSAA_LAYOUT_ARRAY;
+   default:
+      unreachable("Invalid MSAA layout");
+   }
+}
+
+struct surface_state_info {
+   unsigned num_dwords;
+   unsigned ss_align; /* Required alignment of RENDER_SURFACE_STATE in bytes */
+   unsigned reloc_dw;
+   unsigned aux_reloc_dw;
+   unsigned tex_mocs;
+   unsigned rb_mocs;
+};
+
+static const struct surface_state_info surface_state_infos[] = {
+   [6] = {6,  32, 1,  0},
+   [7] = {8,  32, 1,  6,  GEN7_MOCS_L3, GEN7_MOCS_L3},
+   [8] = {13, 64, 8,  10, BDW_MOCS_WB,  BDW_MOCS_PTE},
+   [9] = {16, 64, 8,  10, SKL_MOCS_WB,  SKL_MOCS_PTE},
+};
+
+uint32_t
+brw_blorp_emit_surface_state(struct brw_context *brw,
+                             const struct brw_blorp_surface_info *surface,
+                             uint32_t read_domains, uint32_t write_domain,
+                             bool is_render_target)
+{
+   const struct surface_state_info ss_info = surface_state_infos[brw->gen];
+
+   struct isl_surf surf;
+   intel_miptree_get_isl_surf(brw, surface->mt, &surf);
+
+   /* Stomp surface dimensions and tiling (if needed) with info from blorp */
+   surf.dim = ISL_SURF_DIM_2D;
+   surf.dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
+   surf.msaa_layout = get_isl_msaa_layout(surface->msaa_layout);
+   surf.logical_level0_px.width = surface->width;
+   surf.logical_level0_px.height = surface->height;
+   surf.logical_level0_px.depth = 1;
+   surf.logical_level0_px.array_len = 1;
+   surf.levels = 1;
+   surf.samples = MAX2(surface->num_samples, 1);
+
+   /* Alignment doesn't matter since we have 1 miplevel and 1 array slice so
+    * just pick something that works for everybody.
+    */
+   surf.image_alignment_el = isl_extent3d(4, 4, 1);
+
+   if (brw->gen == 6 && surface->num_samples > 1) {
+      /* Since gen6 uses INTEL_MSAA_LAYOUT_IMS, width and height are measured
+       * in samples.  But SURFACE_STATE wants them in pixels, so we need to
+       * divide them each by 2.
+       */
+      surf.logical_level0_px.width /= 2;
+      surf.logical_level0_px.height /= 2;
+   }
+
+   if (brw->gen == 6 && surf.image_alignment_el.height > 4) {
+      /* This can happen on stencil buffers on Sandy Bridge due to the
+       * single-LOD work-around.  It's fairly harmless as long as we don't
+       * pass a bogus value into isl_surf_fill_state().
+       */
+      surf.image_alignment_el = isl_extent3d(4, 2, 1);
+   }
+
+   /* We need to fake W-tiling with Y-tiling */
+   if (surface->map_stencil_as_y_tiled)
+      surf.tiling = ISL_TILING_Y0;
+
+   union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
+
+   struct isl_surf *aux_surf = NULL, aux_surf_s;
+   uint64_t aux_offset = 0;
+   enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
+   if (surface->mt->mcs_mt) {
+      /* We should probably to similar stomping to above but most of the aux
+       * surf gets ignored when we fill out the surface state anyway so
+       * there's no point.
+       */
+      intel_miptree_get_aux_isl_surf(brw, surface->mt, &aux_surf_s, &aux_usage);
+      aux_surf = &aux_surf_s;
+      assert(surface->mt->mcs_mt->offset == 0);
+      aux_offset = surface->mt->mcs_mt->bo->offset64;
+
+      /* We only really need a clear color if we also have an auxiliary
+       * surface.  Without one, it does nothing.
+       */
+      clear_color = intel_miptree_get_isl_clear_color(brw, surface->mt);
+   }
+
+   struct isl_view view = {
+      .format = surface->brw_surfaceformat,
+      .base_level = 0,
+      .levels = 1,
+      .base_array_layer = 0,
+      .array_len = 1,
+      .channel_select = {
+         ISL_CHANNEL_SELECT_RED,
+         ISL_CHANNEL_SELECT_GREEN,
+         ISL_CHANNEL_SELECT_BLUE,
+         ISL_CHANNEL_SELECT_ALPHA,
+      },
+      .usage = is_render_target ? ISL_SURF_USAGE_RENDER_TARGET_BIT :
+                                  ISL_SURF_USAGE_TEXTURE_BIT,
+   };
+
+   uint32_t offset, tile_x, tile_y;
+   offset = brw_blorp_compute_tile_offsets(surface, &tile_x, &tile_y);
+
+   uint32_t surf_offset;
+   uint32_t *dw = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
+                                  ss_info.num_dwords * 4, ss_info.ss_align,
+                                  &surf_offset);
+
+   const uint32_t mocs = is_render_target ? ss_info.rb_mocs : ss_info.tex_mocs;
+
+   isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &view,
+                       .address = surface->mt->bo->offset64 + offset,
+                       .aux_surf = aux_surf, .aux_usage = aux_usage,
+                       .aux_address = aux_offset,
+                       .mocs = mocs, .clear_color = clear_color,
+                       .x_offset_sa = tile_x, .y_offset_sa = tile_y);
+
+   /* Emit relocation to surface contents */
+   drm_intel_bo_emit_reloc(brw->batch.bo,
+                           surf_offset + ss_info.reloc_dw * 4,
+                           surface->mt->bo,
+                           dw[ss_info.reloc_dw] - surface->mt->bo->offset64,
+                           read_domains, write_domain);
+
+   if (aux_surf) {
+      /* On gen7 and prior, the bottom 12 bits of the MCS base address are
+       * used to store other information.  This should be ok, however, because
+       * surface buffer addresses are always 4K page alinged.
+       */
+      assert((aux_offset & 0xfff) == 0);
+      drm_intel_bo_emit_reloc(brw->batch.bo,
+                              surf_offset + ss_info.aux_reloc_dw * 4,
+                              surface->mt->mcs_mt->bo,
+                              dw[ss_info.aux_reloc_dw] & 0xfff,
+                              read_domains, write_domain);
+   }
+
+   return surf_offset;
+}
+
 /**
  * Perform a HiZ or depth resolve operation.
  *
