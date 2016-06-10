@@ -111,8 +111,9 @@ emit_array_index(
 }
 
 LLVMValueRef
-radeon_llvm_emit_fetch_double(
+radeon_llvm_emit_fetch_64bit(
 	struct lp_build_tgsi_context *bld_base,
+	enum tgsi_opcode_type type,
 	LLVMValueRef ptr,
 	LLVMValueRef ptr2)
 {
@@ -129,7 +130,7 @@ radeon_llvm_emit_fetch_double(
 					result,
 					bitcast(bld_base, TGSI_TYPE_UNSIGNED, ptr2),
 					bld_base->int_bld.one, "");
-	return bitcast(bld_base, TGSI_TYPE_DOUBLE, result);
+	return bitcast(bld_base, type, result);
 }
 
 static LLVMValueRef
@@ -198,7 +199,7 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 	switch(reg->Register.File) {
 	case TGSI_FILE_IMMEDIATE: {
 		LLVMTypeRef ctype = tgsi2llvmtype(bld_base, type);
-		if (type == TGSI_TYPE_DOUBLE) {
+		if (tgsi_type_is_64bit(type)) {
 			result = LLVMGetUndef(LLVMVectorType(LLVMIntTypeInContext(bld_base->base.gallivm->context, 32), bld_base->base.type.length * 2));
 			result = LLVMConstInsertElement(result,
 							bld->immediates[reg->Register.Index][swizzle],
@@ -214,10 +215,10 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 
 	case TGSI_FILE_INPUT:
 		result = ctx->inputs[radeon_llvm_reg_index_soa(reg->Register.Index, swizzle)];
-		if (type == TGSI_TYPE_DOUBLE) {
+		if (tgsi_type_is_64bit(type)) {
 			ptr = result;
 			ptr2 = ctx->inputs[radeon_llvm_reg_index_soa(reg->Register.Index, swizzle + 1)];
-			return radeon_llvm_emit_fetch_double(bld_base, ptr, ptr2);
+			return radeon_llvm_emit_fetch_64bit(bld_base, type, ptr, ptr2);
 		}
 		break;
 
@@ -229,9 +230,9 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 			break;
 		}
 		ptr = ctx->temps[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle];
-		if (type == TGSI_TYPE_DOUBLE) {
+		if (tgsi_type_is_64bit(type)) {
 			ptr2 = ctx->temps[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle + 1];
-			return radeon_llvm_emit_fetch_double(bld_base,
+			return radeon_llvm_emit_fetch_64bit(bld_base, type,
 						 LLVMBuildLoad(builder, ptr, ""),
 						 LLVMBuildLoad(builder, ptr2, ""));
 		}
@@ -240,9 +241,9 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 
 	case TGSI_FILE_OUTPUT:
 		ptr = lp_get_output_ptr(bld, reg->Register.Index, swizzle);
-		if (type == TGSI_TYPE_DOUBLE) {
+		if (tgsi_type_is_64bit(type)) {
 			ptr2 = lp_get_output_ptr(bld, reg->Register.Index, swizzle + 1);
-			return radeon_llvm_emit_fetch_double(bld_base,
+			return radeon_llvm_emit_fetch_64bit(bld_base, type,
 						 LLVMBuildLoad(builder, ptr, ""),
 						 LLVMBuildLoad(builder, ptr2, ""));
 		}
@@ -425,7 +426,7 @@ void radeon_llvm_emit_store(
 	TGSI_FOR_EACH_DST0_ENABLED_CHANNEL( inst, chan_index ) {
 		LLVMValueRef value = dst[chan_index];
 
-		if (dtype == TGSI_TYPE_DOUBLE && (chan_index == 1 || chan_index == 3))
+		if (tgsi_type_is_64bit(dtype) && (chan_index == 1 || chan_index == 3))
 			continue;
 		if (inst->Instruction.Saturate)
 			value = radeon_llvm_saturate(bld_base, value);
@@ -436,7 +437,7 @@ void radeon_llvm_emit_store(
 			continue;
 		}
 
-		if (dtype != TGSI_TYPE_DOUBLE)
+		if (!tgsi_type_is_64bit(dtype))
 			value = bitcast(bld_base, TGSI_TYPE_FLOAT, value);
 
 		if (reg->Register.Indirect) {
@@ -475,7 +476,7 @@ void radeon_llvm_emit_store(
 			switch(reg->Register.File) {
 			case TGSI_FILE_OUTPUT:
 				temp_ptr = bld->outputs[reg->Register.Index][chan_index];
-				if (dtype == TGSI_TYPE_DOUBLE)
+				if (tgsi_type_is_64bit(dtype))
 					temp_ptr2 = bld->outputs[reg->Register.Index][chan_index + 1];
 				break;
 
@@ -487,7 +488,7 @@ void radeon_llvm_emit_store(
 					break;
 				}
 				temp_ptr = ctx->temps[ TGSI_NUM_CHANNELS * reg->Register.Index + chan_index];
-				if (dtype == TGSI_TYPE_DOUBLE)
+				if (tgsi_type_is_64bit(dtype))
 					temp_ptr2 = ctx->temps[ TGSI_NUM_CHANNELS * reg->Register.Index + chan_index + 1];
 
 				break;
@@ -495,7 +496,7 @@ void radeon_llvm_emit_store(
 			default:
 				return;
 			}
-			if (dtype != TGSI_TYPE_DOUBLE)
+			if (!tgsi_type_is_64bit(dtype))
 				LLVMBuildStore(builder, value, temp_ptr);
 			else {
 				LLVMValueRef ptr = LLVMBuildBitCast(builder, value,

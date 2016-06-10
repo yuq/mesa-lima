@@ -171,9 +171,10 @@ build_tgsi_intrinsic_nomem(
 		struct lp_build_emit_data * emit_data);
 
 LLVMValueRef
-radeon_llvm_emit_fetch_double(struct lp_build_tgsi_context *bld_base,
-			      LLVMValueRef ptr,
-			      LLVMValueRef ptr2);
+radeon_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
+			     enum tgsi_opcode_type type,
+			     LLVMValueRef ptr,
+			     LLVMValueRef ptr2);
 
 LLVMValueRef radeon_llvm_saturate(struct lp_build_tgsi_context *bld_base,
                                   LLVMValueRef value);

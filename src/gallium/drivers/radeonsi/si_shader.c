@@ -964,7 +964,7 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 		return LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
 	}
 
-	if (type != TGSI_TYPE_DOUBLE) {
+	if (!tgsi_type_is_64bit(type)) {
 		value = build_buffer_load(ctx, buffer, 4, NULL, base, offset,
 		                          0, 1, 0);
 
@@ -979,7 +979,7 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 	value2 = build_buffer_load(ctx, buffer, 1, NULL, base, offset,
 	                           swizzle * 4 + 4, 1, 0);
 
-	return radeon_llvm_emit_fetch_double(bld_base, value, value2);
+	return radeon_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 }
 
 /**
@@ -1011,12 +1011,12 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 			    lp_build_const_int32(gallivm, swizzle));
 
 	value = build_indexed_load(ctx, ctx->lds, dw_addr, false);
-	if (type == TGSI_TYPE_DOUBLE) {
+	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 				       lp_build_const_int32(gallivm, swizzle + 1));
 		value2 = build_indexed_load(ctx, ctx->lds, dw_addr, false);
-		return radeon_llvm_emit_fetch_double(bld_base, value, value2);
+		return radeon_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 	}
 
 	return LLVMBuildBitCast(gallivm->builder, value,
@@ -1230,15 +1230,15 @@ static LLVMValueRef fetch_input_gs(
 				   "llvm.SI.buffer.load.dword.i32.i32",
 				   ctx->i32, args, 9,
 				   LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
-	if (type == TGSI_TYPE_DOUBLE) {
+	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		args[2] = lp_build_const_int32(gallivm, (param * 4 + swizzle + 1) * 256);
 		value2 = lp_build_intrinsic(gallivm->builder,
 					    "llvm.SI.buffer.load.dword.i32.i32",
 					    ctx->i32, args, 9,
 					    LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
-		return radeon_llvm_emit_fetch_double(bld_base,
-						     value, value2);
+		return radeon_llvm_emit_fetch_64bit(bld_base, type,
+						    value, value2);
 	}
 	return LLVMBuildBitCast(gallivm->builder,
 				value,
@@ -1814,12 +1814,12 @@ static LLVMValueRef fetch_constant(
 	idx = reg->Register.Index * 4 + swizzle;
 
 	if (!reg->Register.Indirect && !reg->Dimension.Indirect) {
-		if (type != TGSI_TYPE_DOUBLE)
+		if (!tgsi_type_is_64bit(type))
 			return bitcast(bld_base, type, ctx->constants[buf][idx]);
 		else {
-			return radeon_llvm_emit_fetch_double(bld_base,
-							     ctx->constants[buf][idx],
-							     ctx->constants[buf][idx + 1]);
+			return radeon_llvm_emit_fetch_64bit(bld_base, type,
+							    ctx->constants[buf][idx],
+							    ctx->constants[buf][idx + 1]);
 		}
 	}
 
@@ -1842,7 +1842,7 @@ static LLVMValueRef fetch_constant(
 	result = buffer_load_const(base->gallivm->builder, bufp,
 				   addr, ctx->f32);
 
-	if (type != TGSI_TYPE_DOUBLE)
+	if (!tgsi_type_is_64bit(type))
 		result = bitcast(bld_base, type, result);
 	else {
 		LLVMValueRef addr2, result2;
@@ -1855,8 +1855,8 @@ static LLVMValueRef fetch_constant(
 		result2 = buffer_load_const(base->gallivm->builder, ctx->const_buffers[buf],
 				   addr2, ctx->f32);
 
-		result = radeon_llvm_emit_fetch_double(bld_base,
-					               result, result2);
+		result = radeon_llvm_emit_fetch_64bit(bld_base, type,
+						      result, result2);
 	}
 	return result;
 }
