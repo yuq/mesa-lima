@@ -246,6 +246,12 @@ void util_blitter_blit_generic(struct blitter_context *blitter,
 void util_blitter_blit(struct blitter_context *blitter,
 		       const struct pipe_blit_info *info);
 
+void util_blitter_generate_mipmap(struct blitter_context *blitter,
+                                  struct pipe_resource *tex,
+                                  enum pipe_format format,
+                                  unsigned base_level, unsigned last_level,
+                                  unsigned first_layer, unsigned last_layer);
+
 /**
  * Helper function to initialize a view for copy_texture_view.
  * The parameters must match copy_texture_view.
