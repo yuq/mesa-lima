@@ -1171,7 +1171,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("requested-VRAM",		REQUESTED_VRAM,		BYTES, AVERAGE),
 	X("requested-GTT",		REQUESTED_GTT,		BYTES, AVERAGE),
 	X("buffer-wait-time",		BUFFER_WAIT_TIME,	MICROSECONDS, CUMULATIVE),
-	X("num-cs-flushes",		NUM_CS_FLUSHES,		UINT64, CUMULATIVE),
+	X("num-cs-flushes",		NUM_CS_FLUSHES,		UINT64, AVERAGE),
 	X("num-bytes-moved",		NUM_BYTES_MOVED,	BYTES, CUMULATIVE),
 	X("VRAM-usage",			VRAM_USAGE,		BYTES, AVERAGE),
 	X("GTT-usage",			GTT_USAGE,		BYTES, AVERAGE),
