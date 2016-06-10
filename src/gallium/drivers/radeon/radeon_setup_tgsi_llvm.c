@@ -51,6 +51,9 @@ LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
 	case TGSI_TYPE_UNSIGNED:
 	case TGSI_TYPE_SIGNED:
 		return LLVMInt32TypeInContext(ctx);
+	case TGSI_TYPE_UNSIGNED64:
+	case TGSI_TYPE_SIGNED64:
+		return LLVMInt64TypeInContext(ctx);
 	case TGSI_TYPE_DOUBLE:
 		return LLVMDoubleTypeInContext(ctx);
 	case TGSI_TYPE_UNTYPED:
@@ -1180,12 +1183,18 @@ static void emit_icmp(const struct lp_build_tgsi_action *action,
 	LLVMContextRef context = bld_base->base.gallivm->context;
 
 	switch (emit_data->inst->Instruction.Opcode) {
-	case TGSI_OPCODE_USEQ: pred = LLVMIntEQ; break;
-	case TGSI_OPCODE_USNE: pred = LLVMIntNE; break;
-	case TGSI_OPCODE_USGE: pred = LLVMIntUGE; break;
-	case TGSI_OPCODE_USLT: pred = LLVMIntULT; break;
-	case TGSI_OPCODE_ISGE: pred = LLVMIntSGE; break;
-	case TGSI_OPCODE_ISLT: pred = LLVMIntSLT; break;
+	case TGSI_OPCODE_USEQ:
+	case TGSI_OPCODE_U64SEQ: pred = LLVMIntEQ; break;
+	case TGSI_OPCODE_USNE:
+	case TGSI_OPCODE_U64SNE: pred = LLVMIntNE; break;
+	case TGSI_OPCODE_USGE:
+	case TGSI_OPCODE_U64SGE: pred = LLVMIntUGE; break;
+	case TGSI_OPCODE_USLT:
+	case TGSI_OPCODE_U64SLT: pred = LLVMIntULT; break;
+	case TGSI_OPCODE_ISGE:
+	case TGSI_OPCODE_I64SGE: pred = LLVMIntSGE; break;
+	case TGSI_OPCODE_ISLT:
+	case TGSI_OPCODE_I64SLT: pred = LLVMIntSLT; break;
 	default:
 		assert(!"unknown instruction");
 		pred = 0;
@@ -1441,7 +1450,12 @@ static void emit_ssg(const struct lp_build_tgsi_action *action,
 
 	LLVMValueRef cmp, val;
 
-	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_ISSG) {
+	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_I64SSG) {
+		cmp = LLVMBuildICmp(builder, LLVMIntSGT, emit_data->args[0], bld_base->int64_bld.zero, "");
+		val = LLVMBuildSelect(builder, cmp, bld_base->int64_bld.one, emit_data->args[0], "");
+		cmp = LLVMBuildICmp(builder, LLVMIntSGE, val, bld_base->int64_bld.zero, "");
+		val = LLVMBuildSelect(builder, cmp, val, LLVMConstInt(bld_base->int64_bld.elem_type, -1, true), "");
+	} else if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_ISSG) {
 		cmp = LLVMBuildICmp(builder, LLVMIntSGT, emit_data->args[0], bld_base->int_bld.zero, "");
 		val = LLVMBuildSelect(builder, cmp, bld_base->int_bld.one, emit_data->args[0], "");
 		cmp = LLVMBuildICmp(builder, LLVMIntSGE, val, bld_base->int_bld.zero, "");
@@ -1705,15 +1719,19 @@ static void emit_minmax_int(const struct lp_build_tgsi_action *action,
 	default:
 		assert(0);
 	case TGSI_OPCODE_IMAX:
+	case TGSI_OPCODE_I64MAX:
 		op = LLVMIntSGT;
 		break;
 	case TGSI_OPCODE_IMIN:
+	case TGSI_OPCODE_I64MIN:
 		op = LLVMIntSLT;
 		break;
 	case TGSI_OPCODE_UMAX:
+	case TGSI_OPCODE_U64MAX:
 		op = LLVMIntUGT;
 		break;
 	case TGSI_OPCODE_UMIN:
+	case TGSI_OPCODE_U64MIN:
 		op = LLVMIntULT;
 		break;
 	}
@@ -1876,6 +1894,18 @@ void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *tripl
 		dbl_type.width *= 2;
 		lp_build_context_init(&ctx->soa.bld_base.dbl_bld, &ctx->gallivm, dbl_type);
 	}
+	{
+		struct lp_type dtype;
+		dtype = lp_uint_type(type);
+		dtype.width *= 2;
+		lp_build_context_init(&ctx->soa.bld_base.uint64_bld, &ctx->gallivm, dtype);
+	}
+	{
+		struct lp_type dtype;
+		dtype = lp_int_type(type);
+		dtype.width *= 2;
+		lp_build_context_init(&ctx->soa.bld_base.int64_bld, &ctx->gallivm, dtype);
+	}
 
 	bld_base->soa = 1;
 	bld_base->emit_store = radeon_llvm_emit_store;
@@ -2020,6 +2050,31 @@ void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *tripl
 	bld_base->op_actions[TGSI_OPCODE_UCMP].emit = emit_ucmp;
 	bld_base->op_actions[TGSI_OPCODE_UP2H].fetch_args = up2h_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_UP2H].emit = emit_up2h;
+
+	bld_base->op_actions[TGSI_OPCODE_I64MAX].emit = emit_minmax_int;
+	bld_base->op_actions[TGSI_OPCODE_I64MIN].emit = emit_minmax_int;
+	bld_base->op_actions[TGSI_OPCODE_U64MAX].emit = emit_minmax_int;
+	bld_base->op_actions[TGSI_OPCODE_U64MIN].emit = emit_minmax_int;
+	bld_base->op_actions[TGSI_OPCODE_I64ABS].emit = emit_iabs;
+	bld_base->op_actions[TGSI_OPCODE_I64SSG].emit = emit_ssg;
+	bld_base->op_actions[TGSI_OPCODE_I64NEG].emit = emit_ineg;
+
+	bld_base->op_actions[TGSI_OPCODE_U64SEQ].emit = emit_icmp;
+	bld_base->op_actions[TGSI_OPCODE_U64SNE].emit = emit_icmp;
+	bld_base->op_actions[TGSI_OPCODE_U64SGE].emit = emit_icmp;
+	bld_base->op_actions[TGSI_OPCODE_U64SLT].emit = emit_icmp;
+	bld_base->op_actions[TGSI_OPCODE_I64SGE].emit = emit_icmp;
+	bld_base->op_actions[TGSI_OPCODE_I64SLT].emit = emit_icmp;
+
+	bld_base->op_actions[TGSI_OPCODE_U64ADD].emit = emit_uadd;
+	bld_base->op_actions[TGSI_OPCODE_U64SHL].emit = emit_shl;
+	bld_base->op_actions[TGSI_OPCODE_U64SHR].emit = emit_ushr;
+	bld_base->op_actions[TGSI_OPCODE_I64SHR].emit = emit_ishr;
+
+	bld_base->op_actions[TGSI_OPCODE_U64MOD].emit = emit_umod;
+	bld_base->op_actions[TGSI_OPCODE_I64MOD].emit = emit_mod;
+	bld_base->op_actions[TGSI_OPCODE_U64DIV].emit = emit_udiv;
+	bld_base->op_actions[TGSI_OPCODE_I64DIV].emit = emit_idiv;
 }
 
 void radeon_llvm_create_func(struct radeon_llvm_context *ctx,
