@@ -397,15 +397,15 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
          unsigned slot_limit = idx + num_elements;
          unsigned last_comp;
 
-         if (var->type->without_array()->is_record()) {
+         if (type->without_array()->is_record()) {
             /* The component qualifier can't be used on structs so just treat
              * all component slots as used.
              */
             last_comp = 4;
          } else {
-            unsigned dmul = var->type->is_64bit() ? 2 : 1;
+            unsigned dmul = type->without_array()->is_64bit() ? 2 : 1;
             last_comp = var->data.location_frac +
-               var->type->without_array()->vector_elements * dmul;
+               type->without_array()->vector_elements * dmul;
          }
 
          while (idx < slot_limit) {
@@ -425,7 +425,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
                for (unsigned j = 0; j < 4; j++) {
                   if (explicit_locations[idx][j] &&
                       (explicit_locations[idx][j]->type->without_array()
-                       ->base_type != var->type->without_array()->base_type)) {
+                       ->base_type != type->without_array()->base_type)) {
                      linker_error(prog,
                                   "Varyings sharing the same location must "
                                   "have the same underlying numerical type. "
@@ -443,7 +443,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
                 * worry about components beginning at anything other than 0 as
                 * the spec does not allow this for dvec3 and dvec4.
                 */
-               if (i == 3 && last_comp > 4) {
+               if (i == 4 && last_comp > 4) {
                   last_comp = last_comp - 4;
                   /* Bump location index and reset the component index */
                   idx++;
