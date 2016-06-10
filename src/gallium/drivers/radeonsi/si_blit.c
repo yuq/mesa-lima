@@ -1019,6 +1019,36 @@ static void si_blit(struct pipe_context *ctx,
 	si_blitter_end(ctx);
 }
 
+static boolean si_generate_mipmap(struct pipe_context *ctx,
+				  struct pipe_resource *tex,
+				  enum pipe_format format,
+				  unsigned base_level, unsigned last_level,
+				  unsigned first_layer, unsigned last_layer)
+{
+	struct si_context *sctx = (struct si_context*)ctx;
+	struct r600_texture *rtex = (struct r600_texture *)tex;
+
+	if (!util_blitter_is_copy_supported(sctx->blitter, tex, tex))
+		return false;
+
+	/* The driver doesn't decompress resources automatically while
+	 * u_blitter is rendering. */
+	si_decompress_subresource(ctx, tex, PIPE_MASK_RGBAZS,
+				  base_level, first_layer, last_layer);
+
+	/* Clear dirty_level_mask for the levels that will be overwritten. */
+	assert(base_level < last_level);
+	rtex->dirty_level_mask &= ~u_bit_consecutive(base_level + 1,
+						     last_level - base_level);
+
+	si_blitter_begin(ctx, SI_BLIT | SI_DISABLE_RENDER_COND);
+	util_blitter_generate_mipmap(sctx->blitter, tex, format,
+				     base_level, last_level,
+				     first_layer, last_layer);
+	si_blitter_end(ctx);
+	return true;
+}
+
 static void si_flush_resource(struct pipe_context *ctx,
 			      struct pipe_resource *res)
 {
@@ -1112,6 +1142,7 @@ void si_init_blit_functions(struct si_context *sctx)
 	sctx->b.b.resource_copy_region = si_resource_copy_region;
 	sctx->b.b.blit = si_blit;
 	sctx->b.b.flush_resource = si_flush_resource;
+	sctx->b.b.generate_mipmap = si_generate_mipmap;
 	sctx->b.blit_decompress_depth = si_blit_decompress_depth;
 	sctx->b.decompress_dcc = si_decompress_dcc;
 }
