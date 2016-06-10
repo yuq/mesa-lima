@@ -1264,7 +1264,7 @@ emit_fetch_constant(
       index_vec = lp_build_shl_imm(uint_bld, indirect_index, 2);
       index_vec = lp_build_add(uint_bld, index_vec, swizzle_vec);
 
-      if (stype == TGSI_TYPE_DOUBLE) {
+      if (tgsi_type_is_64bit(stype)) {
          LLVMValueRef swizzle_vec2;
          swizzle_vec2 = lp_build_const_int_vec(gallivm, uint_bld->type, swizzle + 1);
          index_vec2 = lp_build_shl_imm(uint_bld, indirect_index, 2);
@@ -1299,14 +1299,14 @@ emit_fetch_constant(
 }
 
 /**
- * Fetch double values from two separate channels.
- * Doubles are stored split across two channels, like xy and zw.
+ * Fetch 64-bit values from two separate channels.
+ * 64-bit values are stored split across two channels, like xy and zw.
  * This function creates a set of 16 floats,
  * extracts the values from the two channels,
- * puts them in the correct place, then casts to 8 doubles.
+ * puts them in the correct place, then casts to 8 64-bits.
  */
 static LLVMValueRef
-emit_fetch_double(
+emit_fetch_64bit(
    struct lp_build_tgsi_context * bld_base,
    enum tgsi_opcode_type stype,
    LLVMValueRef input,
@@ -1369,7 +1369,7 @@ emit_fetch_immediate(
                                            indirect_index,
                                            swizzle,
                                            FALSE);
-         if (stype == TGSI_TYPE_DOUBLE)
+         if (tgsi_type_is_64bit(stype))
             index_vec2 = get_soa_array_offsets(&bld_base->uint_bld,
                                               indirect_index,
                                               swizzle + 1,
@@ -1383,7 +1383,7 @@ emit_fetch_immediate(
                                                 bld->imms_array, &lindex, 1, "");
          res = LLVMBuildLoad(builder, imms_ptr, "");
 
-         if (stype == TGSI_TYPE_DOUBLE) {
+         if (tgsi_type_is_64bit(stype)) {
             LLVMValueRef lindex1;
             LLVMValueRef imms_ptr2;
             LLVMValueRef res2;
@@ -1393,14 +1393,14 @@ emit_fetch_immediate(
             imms_ptr2 = LLVMBuildGEP(builder,
                                       bld->imms_array, &lindex1, 1, "");
             res2 = LLVMBuildLoad(builder, imms_ptr2, "");
-            res = emit_fetch_double(bld_base, stype, res, res2);
+            res = emit_fetch_64bit(bld_base, stype, res, res2);
          }
       }
    }
    else {
       res = bld->immediates[reg->Register.Index][swizzle];
-      if (stype == TGSI_TYPE_DOUBLE)
-         res = emit_fetch_double(bld_base, stype, res, bld->immediates[reg->Register.Index][swizzle + 1]);
+      if (tgsi_type_is_64bit(stype))
+         res = emit_fetch_64bit(bld_base, stype, res, bld->immediates[reg->Register.Index][swizzle + 1]);
    }
 
    if (stype == TGSI_TYPE_UNSIGNED) {
@@ -1441,7 +1441,7 @@ emit_fetch_input(
                                         indirect_index,
                                         swizzle,
                                         TRUE);
-      if (stype == TGSI_TYPE_DOUBLE) {
+      if (tgsi_type_is_64bit(stype)) {
          index_vec2 = get_soa_array_offsets(&bld_base->uint_bld,
                                            indirect_index,
                                            swizzle + 1,
@@ -1461,7 +1461,7 @@ emit_fetch_input(
                                                bld->inputs_array, &lindex, 1, "");
 
          res = LLVMBuildLoad(builder, input_ptr, "");
-         if (stype == TGSI_TYPE_DOUBLE) {
+         if (tgsi_type_is_64bit(stype)) {
             LLVMValueRef lindex1;
             LLVMValueRef input_ptr2;
             LLVMValueRef res2;
@@ -1471,13 +1471,13 @@ emit_fetch_input(
             input_ptr2 = LLVMBuildGEP(builder,
                                       bld->inputs_array, &lindex1, 1, "");
             res2 = LLVMBuildLoad(builder, input_ptr2, "");
-            res = emit_fetch_double(bld_base, stype, res, res2);
+            res = emit_fetch_64bit(bld_base, stype, res, res2);
          }
       }
       else {
          res = bld->inputs[reg->Register.Index][swizzle];
-         if (stype == TGSI_TYPE_DOUBLE)
-            res = emit_fetch_double(bld_base, stype, res, bld->inputs[reg->Register.Index][swizzle + 1]);
+         if (tgsi_type_is_64bit(stype))
+            res = emit_fetch_64bit(bld_base, stype, res, bld->inputs[reg->Register.Index][swizzle + 1]);
       }
    }
 
@@ -1548,7 +1548,7 @@ emit_fetch_gs_input(
                                     swizzle_index);
 
    assert(res);
-   if (stype == TGSI_TYPE_DOUBLE) {
+   if (tgsi_type_is_64bit(stype)) {
       LLVMValueRef swizzle_index = lp_build_const_int32(gallivm, swizzle + 1);
       LLVMValueRef res2;
       res2 = bld->gs_iface->fetch_input(bld->gs_iface, bld_base,
@@ -1558,7 +1558,7 @@ emit_fetch_gs_input(
                                         attrib_index,
                                         swizzle_index);
       assert(res2);
-      res = emit_fetch_double(bld_base, stype, res, res2);
+      res = emit_fetch_64bit(bld_base, stype, res, res2);
    } else if (stype == TGSI_TYPE_UNSIGNED) {
       res = LLVMBuildBitCast(builder, res, bld_base->uint_bld.vec_type, "");
    } else if (stype == TGSI_TYPE_SIGNED) {
@@ -1595,7 +1595,7 @@ emit_fetch_temporary(
                                         indirect_index,
                                         swizzle,
                                         TRUE);
-      if (stype == TGSI_TYPE_DOUBLE) {
+      if (tgsi_type_is_64bit(stype)) {
                index_vec2 = get_soa_array_offsets(&bld_base->uint_bld,
                                                   indirect_index,
                                                   swizzle + 1,
@@ -1614,12 +1614,12 @@ emit_fetch_temporary(
       temp_ptr = lp_get_temp_ptr_soa(bld, reg->Register.Index, swizzle);
       res = LLVMBuildLoad(builder, temp_ptr, "");
 
-      if (stype == TGSI_TYPE_DOUBLE) {
+      if (tgsi_type_is_64bit(stype)) {
          LLVMValueRef temp_ptr2, res2;
 
          temp_ptr2 = lp_get_temp_ptr_soa(bld, reg->Register.Index, swizzle + 1);
          res2 = LLVMBuildLoad(builder, temp_ptr2, "");
-         res = emit_fetch_double(bld_base, stype, res, res2);
+         res = emit_fetch_64bit(bld_base, stype, res, res2);
       }
    }
 
@@ -1790,20 +1790,19 @@ emit_fetch_predicate(
 }
 
 /**
- * store an array of 8 doubles into two arrays of 8 floats
+ * store an array of 8 64-bit into two arrays of 8 floats
  * i.e.
  * value is d0, d1, d2, d3 etc.
- * each double has high and low pieces x, y
+ * each 64-bit has high and low pieces x, y
  * so gets stored into the separate channels as:
  * chan_ptr = d0.x, d1.x, d2.x, d3.x
  * chan_ptr2 = d0.y, d1.y, d2.y, d3.y
  */
 static void
-emit_store_double_chan(struct lp_build_tgsi_context *bld_base,
-                       int dtype,
-                       LLVMValueRef chan_ptr, LLVMValueRef chan_ptr2,
-                       LLVMValueRef pred,
-                       LLVMValueRef value)
+emit_store_64bit_chan(struct lp_build_tgsi_context *bld_base,
+                      LLVMValueRef chan_ptr, LLVMValueRef chan_ptr2,
+                      LLVMValueRef pred,
+                      LLVMValueRef value)
 {
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
    struct gallivm_state *gallivm = bld_base->base.gallivm;
@@ -1870,9 +1869,9 @@ emit_store_chan(
    if (reg->Register.Indirect) {
       /*
        * Currently the mesa/st doesn't generate indirect stores
-       * to doubles, it normally uses MOV to do indirect stores.
+       * to 64-bit values, it normally uses MOV to do indirect stores.
        */
-      assert(dtype != TGSI_TYPE_DOUBLE);
+      assert(!tgsi_type_is_64bit(dtype));
       indirect_index = get_indirect_index(bld,
                                           reg->Register.File,
                                           reg->Register.Index,
@@ -1912,11 +1911,11 @@ emit_store_chan(
          LLVMValueRef out_ptr = lp_get_output_ptr(bld, reg->Register.Index,
                                                   chan_index);
 
-         if (dtype == TGSI_TYPE_DOUBLE) {
+         if (tgsi_type_is_64bit(dtype)) {
             LLVMValueRef out_ptr2 = lp_get_output_ptr(bld, reg->Register.Index,
                                                       chan_index + 1);
-            emit_store_double_chan(bld_base, dtype, out_ptr, out_ptr2,
-                                   pred, value);
+            emit_store_64bit_chan(bld_base, out_ptr, out_ptr2,
+                                  pred, value);
          } else
             lp_exec_mask_store(&bld->exec_mask, float_bld, pred, value, out_ptr);
       }
@@ -1924,7 +1923,7 @@ emit_store_chan(
 
    case TGSI_FILE_TEMPORARY:
       /* Temporaries are always stored as floats */
-      if (dtype != TGSI_TYPE_DOUBLE)
+      if (!tgsi_type_is_64bit(dtype))
          value = LLVMBuildBitCast(builder, value, float_bld->vec_type, "");
       else
          value = LLVMBuildBitCast(builder, value,  LLVMVectorType(LLVMFloatTypeInContext(gallivm->context), bld_base->base.type.length * 2), "");
@@ -1950,12 +1949,12 @@ emit_store_chan(
          LLVMValueRef temp_ptr;
          temp_ptr = lp_get_temp_ptr_soa(bld, reg->Register.Index, chan_index);
 
-         if (dtype == TGSI_TYPE_DOUBLE) {
+         if (tgsi_type_is_64bit(dtype)) {
             LLVMValueRef temp_ptr2 = lp_get_temp_ptr_soa(bld,
                                                          reg->Register.Index,
                                                          chan_index + 1);
-            emit_store_double_chan(bld_base, dtype, temp_ptr, temp_ptr2,
-                                   pred, value);
+            emit_store_64bit_chan(bld_base, temp_ptr, temp_ptr2,
+                                  pred, value);
          }
          else
             lp_exec_mask_store(&bld->exec_mask, float_bld, pred, value, temp_ptr);
@@ -2035,7 +2034,7 @@ emit_store(
 
       TGSI_FOR_EACH_DST0_ENABLED_CHANNEL( inst, chan_index ) {
 
-         if (dtype == TGSI_TYPE_DOUBLE && (chan_index == 1 || chan_index == 3))
+         if (tgsi_type_is_64bit(dtype) && (chan_index == 1 || chan_index == 3))
              continue;
          emit_store_chan(bld_base, inst, 0, chan_index, pred[chan_index], dst[chan_index]);
       }
