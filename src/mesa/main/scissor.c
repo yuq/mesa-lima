@@ -210,6 +210,13 @@ _mesa_ScissorIndexedv(GLuint index, const GLint *v)
    ScissorIndexed(index, v[0], v[1], v[2], v[3], "glScissorIndexedv");
 }
 
+void GLAPIENTRY
+_mesa_WindowRectanglesEXT(GLenum mode, GLsizei count, const GLint *box)
+{
+
+}
+
+
 /**
  * Initialize the context's scissor state.
  * \param ctx  the GL context.

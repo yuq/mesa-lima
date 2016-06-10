@@ -952,6 +952,9 @@ const struct function common_desktop_functions_possible[] = {
    /* GL_GREMEDY_string_marker */
    { "glStringMarkerGREMEDY", 15, -1 },
 
+   /* GL_EXT_window_rectangles */
+   { "glWindowRectanglesEXT", 30, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2493,6 +2496,9 @@ const struct function gles3_functions_possible[] = {
    { "glDrawArraysInstancedBaseInstanceEXT", 30, -1 },
    { "glDrawElementsInstancedBaseInstanceEXT", 30, -1 },
    { "glDrawElementsInstancedBaseVertexBaseInstanceEXT", 30, -1 },
+
+   /* GL_EXT_window_rectangles */
+   { "glWindowRectanglesEXT", 30, -1 },
 
    { NULL, 0, -1 }
 };
