@@ -23,6 +23,7 @@
  */
 
 #include "state_tracker/st_context.h"
+#include "state_tracker/st_cb_bitmap.h"
 #include "state_tracker/st_cb_copyimage.h"
 #include "state_tracker/st_cb_fbo.h"
 #include "state_tracker/st_texture.h"
@@ -546,6 +547,8 @@ st_CopyImageSubData(struct gl_context *ctx,
    struct pipe_resource *src_res, *dst_res;
    struct pipe_box box;
    int src_level, dst_level;
+
+   st_flush_bitmap_cache(st);
 
    if (src_image) {
       struct st_texture_image *src = st_texture_image(src_image);
