@@ -397,8 +397,9 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->logical_width0 = width0;
    mt->logical_height0 = height0;
    mt->logical_depth0 = depth0;
-   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
+   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
    mt->disable_aux_buffers = (layout_flags & MIPTREE_LAYOUT_DISABLE_AUX) != 0;
+   mt->no_ccs = true;
    mt->is_scanout = (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT) != 0;
    exec_list_make_empty(&mt->hiz_map);
    mt->cpp = _mesa_get_format_bytes(format);
@@ -810,7 +811,7 @@ intel_miptree_create(struct brw_context *brw,
     */
    if (intel_tiling_supports_non_msrt_mcs(brw, mt->tiling) &&
        intel_miptree_supports_non_msrt_fast_clear(brw, mt)) {
-      mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
+      mt->no_ccs = false;
       assert(brw->gen < 8 || mt->halign == 16 || num_samples <= 1);
 
       /* On Gen9+ clients are not currently capable of consuming compressed
@@ -1645,6 +1646,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
 {
    assert(mt->mcs_buf == NULL);
    assert(!mt->disable_aux_buffers);
+   assert(!mt->no_ccs);
 
    /* The format of the MCS buffer is opaque to the driver; all that matters
     * is that we get its size and pitch right.  We'll pretend that the format
@@ -2207,7 +2209,7 @@ static void
 intel_miptree_check_color_resolve(const struct intel_mipmap_tree *mt,
                                   unsigned level, unsigned layer)
 {
-   if (!mt->mcs_buf)
+   if (mt->no_ccs || !mt->mcs_buf)
       return;
 
    /* Fast color clear is not supported for mipmapped surfaces. */
@@ -2241,7 +2243,6 @@ intel_miptree_resolve_color(struct brw_context *brw,
       return false;
 
    switch (mt->fast_clear_state) {
-   case INTEL_FAST_CLEAR_STATE_NO_MCS:
    case INTEL_FAST_CLEAR_STATE_RESOLVED:
       /* No resolve needed */
       return false;
@@ -2276,9 +2277,8 @@ intel_miptree_all_slices_resolve_color(struct brw_context *brw,
  * process or another miptree.
  *
  * Fast color clears are unsafe with shared buffers, so we need to resolve and
- * then discard the MCS buffer, if present.  We also set the fast_clear_state
- * to INTEL_FAST_CLEAR_STATE_NO_MCS to ensure that no MCS buffer gets
- * allocated in the future.
+ * then discard the MCS buffer, if present.  We also set the no_ccs flag to
+ * ensure that no MCS buffer gets allocated in the future.
  */
 void
 intel_miptree_make_shareable(struct brw_context *brw,
@@ -2293,7 +2293,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
 
    if (mt->mcs_buf) {
       intel_miptree_all_slices_resolve_color(brw, mt, 0);
-      mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
+      mt->no_ccs = true;
    }
 }
 
@@ -3375,7 +3375,7 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
       } else if (intel_miptree_is_lossless_compressed(brw, mt)) {
          assert(brw->gen >= 9);
          *usage = ISL_AUX_USAGE_CCS_E;
-      } else if (mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS) {
+      } else if (!mt->no_ccs) {
          *usage = ISL_AUX_USAGE_CCS_D;
       } else {
          unreachable("Invalid MCS miptree");

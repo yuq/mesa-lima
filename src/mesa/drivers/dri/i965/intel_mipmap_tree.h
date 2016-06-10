@@ -220,12 +220,6 @@ enum intel_msaa_layout
 enum intel_fast_clear_state
 {
    /**
-    * There is no MCS buffer for this miptree, and one should never be
-    * allocated.
-    */
-   INTEL_FAST_CLEAR_STATE_NO_MCS,
-
-   /**
     * No deferred clears are pending for this miptree, and the contents of the
     * color buffer are entirely correct.  An MCS buffer may or may not exist
     * for this miptree.  If it does exist, it is entirely in the "no deferred
@@ -701,6 +695,12 @@ struct intel_mipmap_tree
     * that doesn't understand auxiliary buffers.
     */
    bool disable_aux_buffers;
+
+   /**
+    * Fast clear and lossless compression are always disabled for this
+    * miptree.
+    */
+   bool no_ccs;
 
    /**
     * Tells if the underlying buffer is to be also consumed by entities other
