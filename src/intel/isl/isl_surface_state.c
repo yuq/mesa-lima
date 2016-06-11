@@ -446,40 +446,40 @@ isl_genX(buffer_fill_state_s)(void *state,
       assert(num_elements <= (1ull << 27));
    }
 
-   struct GENX(RENDER_SURFACE_STATE) surface_state = {
-      .SurfaceType = SURFTYPE_BUFFER,
-      .SurfaceArray = false,
-      .SurfaceFormat = info->format,
-      .SurfaceVerticalAlignment = isl_to_gen_valign[4],
-      .SurfaceHorizontalAlignment = isl_to_gen_halign[4],
-      .Height = ((num_elements - 1) >> 7) & 0x3fff,
-      .Width = (num_elements - 1) & 0x7f,
-      .Depth = ((num_elements - 1) >> 21) & 0x3f,
-      .SurfacePitch = info->stride - 1,
-      .NumberofMultisamples = MULTISAMPLECOUNT_1,
+   struct GENX(RENDER_SURFACE_STATE) s = { 0, };
+
+   s.SurfaceType = SURFTYPE_BUFFER;
+   s.SurfaceArray = false;
+   s.SurfaceFormat = info->format;
+   s.SurfaceVerticalAlignment = isl_to_gen_valign[4];
+   s.SurfaceHorizontalAlignment = isl_to_gen_halign[4];
+   s.Height = ((num_elements - 1) >> 7) & 0x3fff;
+   s.Width = (num_elements - 1) & 0x7f;
+   s.Depth = ((num_elements - 1) >> 21) & 0x3f;
+   s.SurfacePitch = info->stride - 1;
+   s.NumberofMultisamples = MULTISAMPLECOUNT_1;
 
 #if (GEN_GEN >= 8)
-      .TileMode = LINEAR,
+   s.TileMode = LINEAR;
 #else
-      .TiledSurface = false,
+   s.TiledSurface = false;
 #endif
 
 #if (GEN_GEN >= 8)
-      .RenderCacheReadWriteMode = WriteOnlyCache,
+   s.RenderCacheReadWriteMode = WriteOnlyCache;
 #else
-      .RenderCacheReadWriteMode = 0,
+   s.RenderCacheReadWriteMode = 0;
 #endif
 
-      .MOCS = info->mocs,
+   s.SurfaceBaseAddress = info->address;
+   s.MOCS = info->mocs;
 
 #if (GEN_GEN >= 8 || GEN_IS_HASWELL)
-      .ShaderChannelSelectRed = SCS_RED,
-      .ShaderChannelSelectGreen = SCS_GREEN,
-      .ShaderChannelSelectBlue = SCS_BLUE,
-      .ShaderChannelSelectAlpha = SCS_ALPHA,
+   s.ShaderChannelSelectRed = SCS_RED;
+   s.ShaderChannelSelectGreen = SCS_GREEN;
+   s.ShaderChannelSelectBlue = SCS_BLUE;
+   s.ShaderChannelSelectAlpha = SCS_ALPHA;
 #endif
-      .SurfaceBaseAddress = info->address,
-   };
 
-   GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &surface_state);
+   GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &s);
 }
