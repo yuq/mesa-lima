@@ -475,6 +475,25 @@ gen8_blorp_emit_depth_stencil_state(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
+/**
+ * Convert an swizzle enumeration (i.e. SWIZZLE_X) to one of the Gen7.5+
+ * "Shader Channel Select" enumerations (i.e. HSW_SCS_RED).  The mappings are
+ *
+ * SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_W, SWIZZLE_ZERO, SWIZZLE_ONE
+ *         0          1          2          3             4            5
+ *         4          5          6          7             0            1
+ *   SCS_RED, SCS_GREEN,  SCS_BLUE, SCS_ALPHA,     SCS_ZERO,     SCS_ONE
+ *
+ * which is simply adding 4 then modding by 8 (or anding with 7).
+ *
+ * We then may need to apply workarounds for textureGather hardware bugs.
+ */
+static unsigned
+swizzle_to_scs(GLenum swizzle)
+{
+   return (swizzle + 4) & 7;
+}
+
 static uint32_t
 gen8_blorp_emit_surface_states(struct brw_context *brw,
                                const struct brw_blorp_params *params)
@@ -507,21 +526,31 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
           mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
          MAX2(mt->num_samples, 1) : 1;
 
-      /* Cube textures are sampled as 2D array. */
       const bool is_cube = mt->target == GL_TEXTURE_CUBE_MAP_ARRAY ||
                            mt->target == GL_TEXTURE_CUBE_MAP;
       const unsigned depth = (is_cube ? 6 : 1) * mt->logical_depth0;
-      const GLenum target = is_cube ? GL_TEXTURE_2D_ARRAY : mt->target;
       const unsigned layer = mt->target != GL_TEXTURE_3D ?
                                 surface->layer / layer_divider : 0;
 
-      brw->vtbl.emit_texture_surface_state(brw, mt, target,
-                                           layer, depth,
-                                           surface->level, mt->last_level + 1,
-                                           surface->brw_surfaceformat,
-                                           surface->swizzle,
-                                           &wm_surf_offset_texture,
-                                           -1, false, false);
+      struct isl_view view = {
+         .format = surface->brw_surfaceformat,
+         .base_level = surface->level,
+         .levels = mt->last_level - surface->level + 1,
+         .base_array_layer = layer,
+         .array_len = depth - layer,
+         .channel_select = {
+            swizzle_to_scs(GET_SWZ(surface->swizzle, 0)),
+            swizzle_to_scs(GET_SWZ(surface->swizzle, 1)),
+            swizzle_to_scs(GET_SWZ(surface->swizzle, 2)),
+            swizzle_to_scs(GET_SWZ(surface->swizzle, 3)),
+         },
+         .usage = ISL_SURF_USAGE_TEXTURE_BIT,
+      };
+
+      brw_emit_surface_state(brw, mt, &view,
+                             brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB,
+                             false, &wm_surf_offset_texture, -1,
+                             I915_GEM_DOMAIN_SAMPLER, 0);
    }
 
    return gen6_blorp_emit_binding_table(brw,
