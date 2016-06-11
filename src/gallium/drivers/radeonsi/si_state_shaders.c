@@ -329,13 +329,23 @@ static void si_set_tesseval_regs(struct si_screen *sscreen,
 		       S_028B6C_DISTRIBUTION_MODE(distribution_mode));
 }
 
+static struct si_pm4_state *si_get_shader_pm4_state(struct si_shader *shader)
+{
+	if (shader->pm4)
+		si_pm4_clear_state(shader->pm4);
+	else
+		shader->pm4 = CALLOC_STRUCT(si_pm4_state);
+
+	return shader->pm4;
+}
+
 static void si_shader_ls(struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
 	unsigned vgpr_comp_cnt;
 	uint64_t va;
 
-	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
+	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
 		return;
 
@@ -363,7 +373,7 @@ static void si_shader_hs(struct si_shader *shader)
 	struct si_pm4_state *pm4;
 	uint64_t va;
 
-	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
+	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
 		return;
 
@@ -391,8 +401,7 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 	uint64_t va;
 	unsigned oc_lds_en;
 
-	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
-
+	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
 		return;
 
@@ -467,8 +476,7 @@ static void si_shader_gs(struct si_shader *shader)
 	/* The GSVS_RING_ITEMSIZE register takes 15 bits */
 	assert(gsvs_itemsize < (1 << 15));
 
-	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
-
+	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
 		return;
 
@@ -525,8 +533,7 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 	   shader->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
 	bool enable_prim_id = si_vs_exports_prim_id(shader);
 
-	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
-
+	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
 		return;
 
@@ -689,8 +696,7 @@ static void si_shader_ps(struct si_shader *shader)
 	       G_0286CC_LINEAR_CENTROID_ENA(input_ena) ||
 	       G_0286CC_LINE_STIPPLE_TEX_ENA(input_ena));
 
-	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
-
+	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
 		return;
 
@@ -791,10 +797,6 @@ static void si_shader_ps(struct si_shader *shader)
 static void si_shader_init_pm4_state(struct si_screen *sscreen,
                                      struct si_shader *shader)
 {
-
-	if (shader->pm4)
-		si_pm4_free_state_simple(shader->pm4);
-
 	switch (shader->selector->type) {
 	case PIPE_SHADER_VERTEX:
 		if (shader->key.vs.as_ls)
