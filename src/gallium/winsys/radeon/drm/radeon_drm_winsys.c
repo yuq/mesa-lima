@@ -534,16 +534,11 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
 {
     struct radeon_drm_winsys *ws = (struct radeon_drm_winsys*)rws;
 
-    if (ws->thread) {
-        ws->kill_thread = 1;
-        pipe_semaphore_signal(&ws->cs_queued);
-        pipe_thread_wait(ws->thread);
-    }
-    pipe_semaphore_destroy(&ws->cs_queued);
+    if (util_queue_is_initialized(&ws->cs_queue))
+        util_queue_destroy(&ws->cs_queue);
 
     pipe_mutex_destroy(ws->hyperz_owner_mutex);
     pipe_mutex_destroy(ws->cmask_owner_mutex);
-    pipe_mutex_destroy(ws->cs_stack_lock);
 
     pb_cache_deinit(&ws->bo_cache);
 
@@ -686,55 +681,7 @@ static int compare_fd(void *key1, void *key2)
            stat1.st_rdev != stat2.st_rdev;
 }
 
-void radeon_drm_ws_queue_cs(struct radeon_drm_winsys *ws, struct radeon_drm_cs *cs)
-{
-retry:
-    pipe_mutex_lock(ws->cs_stack_lock);
-    if (ws->ncs >= RING_LAST) {
-        /* no room left for a flush */
-        pipe_mutex_unlock(ws->cs_stack_lock);
-        goto retry;
-    }
-    ws->cs_stack[ws->ncs++] = cs;
-    pipe_mutex_unlock(ws->cs_stack_lock);
-    pipe_semaphore_signal(&ws->cs_queued);
-}
-
-static PIPE_THREAD_ROUTINE(radeon_drm_cs_emit_ioctl, param)
-{
-    struct radeon_drm_winsys *ws = (struct radeon_drm_winsys *)param;
-    struct radeon_drm_cs *cs;
-    unsigned i;
-
-    while (1) {
-        pipe_semaphore_wait(&ws->cs_queued);
-        if (ws->kill_thread)
-            break;
-
-        pipe_mutex_lock(ws->cs_stack_lock);
-        cs = ws->cs_stack[0];
-        for (i = 1; i < ws->ncs; i++)
-            ws->cs_stack[i - 1] = ws->cs_stack[i];
-        ws->cs_stack[--ws->ncs] = NULL;
-        pipe_mutex_unlock(ws->cs_stack_lock);
-
-        if (cs) {
-            radeon_drm_cs_emit_ioctl_oneshot(cs, cs->cst);
-            pipe_semaphore_signal(&cs->flush_completed);
-        }
-    }
-    pipe_mutex_lock(ws->cs_stack_lock);
-    for (i = 0; i < ws->ncs; i++) {
-        pipe_semaphore_signal(&ws->cs_stack[i]->flush_completed);
-        ws->cs_stack[i] = NULL;
-    }
-    ws->ncs = 0;
-    pipe_mutex_unlock(ws->cs_stack_lock);
-    return 0;
-}
-
 DEBUG_GET_ONCE_BOOL_OPTION(thread, "RADEON_THREAD", TRUE)
-static PIPE_THREAD_ROUTINE(radeon_drm_cs_emit_ioctl, param);
 
 static bool radeon_winsys_unref(struct radeon_winsys *ws)
 {
@@ -823,7 +770,6 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
 
     pipe_mutex_init(ws->hyperz_owner_mutex);
     pipe_mutex_init(ws->cmask_owner_mutex);
-    pipe_mutex_init(ws->cs_stack_lock);
 
     ws->bo_names = util_hash_table_create(handle_hash, handle_compare);
     ws->bo_handles = util_hash_table_create(handle_hash, handle_compare);
@@ -836,10 +782,9 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     /* TTM aligns the BO size to the CPU page size */
     ws->info.gart_page_size = sysconf(_SC_PAGESIZE);
 
-    ws->ncs = 0;
-    pipe_semaphore_init(&ws->cs_queued, 0);
     if (ws->num_cpus > 1 && debug_get_option_thread())
-        ws->thread = pipe_thread_create(radeon_drm_cs_emit_ioctl, ws);
+        util_queue_init(&ws->cs_queue,
+                        radeon_drm_cs_emit_ioctl_oneshot);
 
     /* Create the screen at the end. The winsys must be initialized
      * completely.

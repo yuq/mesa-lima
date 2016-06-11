@@ -177,7 +177,7 @@ radeon_drm_cs_create(struct radeon_winsys_ctx *ctx,
     if (!cs) {
         return NULL;
     }
-    pipe_semaphore_init(&cs->flush_completed, 1);
+    util_queue_fence_init(&cs->flush_completed);
 
     cs->ws = ws;
     cs->flush_cs = flush;
@@ -427,8 +427,9 @@ static unsigned radeon_drm_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
     return cs->csc->crelocs;
 }
 
-void radeon_drm_cs_emit_ioctl_oneshot(struct radeon_drm_cs *cs, struct radeon_cs_context *csc)
+void radeon_drm_cs_emit_ioctl_oneshot(void *job)
 {
+    struct radeon_cs_context *csc = ((struct radeon_drm_cs*)job)->cst;
     unsigned i;
     int r;
 
@@ -463,11 +464,9 @@ void radeon_drm_cs_sync_flush(struct radeon_winsys_cs *rcs)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
 
-    /* Wait for any pending ioctl to complete. */
-    if (cs->ws->thread) {
-        pipe_semaphore_wait(&cs->flush_completed);
-        pipe_semaphore_signal(&cs->flush_completed);
-    }
+    /* Wait for any pending ioctl of this CS to complete. */
+    if (util_queue_is_initialized(&cs->ws->cs_queue))
+        util_queue_job_wait(&cs->flush_completed);
 }
 
 DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", FALSE)
@@ -586,13 +585,12 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
             break;
         }
 
-        if (cs->ws->thread) {
-            pipe_semaphore_wait(&cs->flush_completed);
-            radeon_drm_ws_queue_cs(cs->ws, cs);
+        if (util_queue_is_initialized(&cs->ws->cs_queue)) {
+            util_queue_add_job(&cs->ws->cs_queue, cs, &cs->flush_completed);
             if (!(flags & RADEON_FLUSH_ASYNC))
                 radeon_drm_cs_sync_flush(rcs);
         } else {
-            radeon_drm_cs_emit_ioctl_oneshot(cs, cs->cst);
+            radeon_drm_cs_emit_ioctl_oneshot(cs);
         }
     } else {
         radeon_cs_context_cleanup(cs->cst);
@@ -610,7 +608,7 @@ static void radeon_drm_cs_destroy(struct radeon_winsys_cs *rcs)
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
 
     radeon_drm_cs_sync_flush(rcs);
-    pipe_semaphore_destroy(&cs->flush_completed);
+    util_queue_fence_destroy(&cs->flush_completed);
     radeon_cs_context_cleanup(&cs->csc1);
     radeon_cs_context_cleanup(&cs->csc2);
     p_atomic_dec(&cs->ws->num_cs);

@@ -32,7 +32,7 @@
 
 #include "gallium/drivers/radeon/radeon_winsys.h"
 #include "pipebuffer/pb_cache.h"
-#include "os/os_thread.h"
+#include "util/u_queue.h"
 #include "util/list.h"
 #include <radeon_drm.h>
 
@@ -101,13 +101,8 @@ struct radeon_drm_winsys {
     struct radeon_drm_cs *cmask_owner;
     pipe_mutex cmask_owner_mutex;
 
-    /* rings submission thread */
-    pipe_mutex cs_stack_lock;
-    pipe_semaphore cs_queued;
-    pipe_thread thread;
-    int kill_thread;
-    int ncs;
-    struct radeon_drm_cs *cs_stack[RING_LAST];
+    /* multithreaded command submission */
+    struct util_queue cs_queue;
 };
 
 static inline struct radeon_drm_winsys *
@@ -116,7 +111,6 @@ radeon_drm_winsys(struct radeon_winsys *base)
     return (struct radeon_drm_winsys*)base;
 }
 
-void radeon_drm_ws_queue_cs(struct radeon_drm_winsys *ws, struct radeon_drm_cs *cs);
 void radeon_surface_init_functions(struct radeon_drm_winsys *ws);
 
 #endif
