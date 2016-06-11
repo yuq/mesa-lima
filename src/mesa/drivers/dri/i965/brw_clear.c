@@ -239,6 +239,14 @@ brw_clear(struct gl_context *ctx, GLbitfield mask)
       }
    }
 
+   if (mask & BUFFER_BIT_STENCIL) {
+      struct intel_renderbuffer *stencil_irb =
+         intel_get_renderbuffer(fb, BUFFER_STENCIL);
+      struct intel_mipmap_tree *mt = stencil_irb->mt;
+      if (mt && mt->stencil_mt)
+         mt->stencil_mt->r8stencil_needs_update = true;
+   }
+
    /* BLORP is currently only supported on Gen6+. */
    if (brw->gen >= 6 && (mask & BUFFER_BITS_COLOR)) {
       const bool encode_srgb = ctx->Color.sRGBEnabled;
