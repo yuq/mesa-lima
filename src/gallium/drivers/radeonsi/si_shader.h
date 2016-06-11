@@ -233,6 +233,13 @@ struct si_shader;
  * binaries for one TGSI program. This can be shared by multiple contexts.
  */
 struct si_shader_selector {
+	struct si_screen	*screen;
+
+	/* Should only be used by si_init_shader_selector_async
+	 * if thread_index == -1 (non-threaded). */
+	LLVMTargetMachineRef	tm;
+	struct pipe_debug_callback debug;
+
 	pipe_mutex		mutex;
 	struct si_shader	*first_variant; /* immutable after the first variant */
 	struct si_shader	*last_variant; /* mutable */

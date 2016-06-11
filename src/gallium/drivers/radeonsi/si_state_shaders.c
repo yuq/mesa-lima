@@ -981,11 +981,12 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 }
 
 /* Select the hw shader variant depending on the current state. */
-static int si_shader_select_with_key(struct pipe_context *ctx,
+static int si_shader_select_with_key(struct si_screen *sscreen,
 				     struct si_shader_ctx_state *state,
-				     union si_shader_key *key)
+				     union si_shader_key *key,
+				     LLVMTargetMachineRef tm,
+				     struct pipe_debug_callback *debug)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_shader_selector *sel = state->cso;
 	struct si_shader *current = state->current;
 	struct si_shader *iter, *shader = NULL;
@@ -1020,7 +1021,7 @@ static int si_shader_select_with_key(struct pipe_context *ctx,
 	shader->selector = sel;
 	shader->key = *key;
 
-	r = si_shader_create(sctx->screen, sctx->tm, shader, &sctx->b.debug);
+	r = si_shader_create(sscreen, tm, shader, debug);
 	if (unlikely(r)) {
 		R600_ERR("Failed to build shader variant (type=%u) %d\n",
 			 sel->type, r);
@@ -1028,7 +1029,7 @@ static int si_shader_select_with_key(struct pipe_context *ctx,
 		pipe_mutex_unlock(sel->mutex);
 		return r;
 	}
-	si_shader_init_pm4_state(sctx->screen, shader);
+	si_shader_init_pm4_state(sscreen, shader);
 
 	if (!sel->last_variant) {
 		sel->first_variant = shader;
@@ -1045,10 +1046,12 @@ static int si_shader_select_with_key(struct pipe_context *ctx,
 static int si_shader_select(struct pipe_context *ctx,
 			    struct si_shader_ctx_state *state)
 {
+	struct si_context *sctx = (struct si_context *)ctx;
 	union si_shader_key key;
 
 	si_shader_selector_key(ctx, state->cso, &key);
-	return si_shader_select_with_key(ctx, state, &key);
+	return si_shader_select_with_key(sctx->screen, state, &key,
+					 sctx->tm, &sctx->b.debug);
 }
 
 static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
@@ -1076,6 +1079,94 @@ static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
 	}
 }
 
+/**
+ * Compile the main shader part or the monolithic shader as part of
+ * si_shader_selector initialization. Since it can be done asynchronously,
+ * there is no way to report compile failures to applications.
+ */
+void si_init_shader_selector_async(void *job, int thread_index)
+{
+	struct si_shader_selector *sel = (struct si_shader_selector *)job;
+	struct si_screen *sscreen = sel->screen;
+	LLVMTargetMachineRef tm = sel->tm;
+	struct pipe_debug_callback *debug = &sel->debug;
+	unsigned i;
+
+	/* Compile the main shader part for use with a prolog and/or epilog.
+	 * If this fails, the driver will try to compile a monolithic shader
+	 * on demand.
+	 */
+	if (sel->type != PIPE_SHADER_GEOMETRY &&
+	    !sscreen->use_monolithic_shaders) {
+		struct si_shader *shader = CALLOC_STRUCT(si_shader);
+		void *tgsi_binary;
+
+		if (!shader) {
+			fprintf(stderr, "radeonsi: can't allocate a main shader part\n");
+			return;
+		}
+
+		shader->selector = sel;
+		si_parse_next_shader_property(&sel->info, &shader->key);
+
+		tgsi_binary = si_get_tgsi_binary(sel);
+
+		/* Try to load the shader from the shader cache. */
+		pipe_mutex_lock(sscreen->shader_cache_mutex);
+
+		if (tgsi_binary &&
+		    si_shader_cache_load_shader(sscreen, tgsi_binary, shader)) {
+			FREE(tgsi_binary);
+		} else {
+			/* Compile the shader if it hasn't been loaded from the cache. */
+			if (si_compile_tgsi_shader(sscreen, tm, shader, false,
+						   debug) != 0) {
+				FREE(shader);
+				FREE(tgsi_binary);
+				pipe_mutex_unlock(sscreen->shader_cache_mutex);
+				fprintf(stderr, "radeonsi: can't compile a main shader part\n");
+				return;
+			}
+
+			if (tgsi_binary &&
+			    !si_shader_cache_insert_shader(sscreen, tgsi_binary, shader))
+				FREE(tgsi_binary);
+		}
+		pipe_mutex_unlock(sscreen->shader_cache_mutex);
+
+		sel->main_shader_part = shader;
+	}
+
+	/* Pre-compilation. */
+	if (sel->type == PIPE_SHADER_GEOMETRY ||
+	    sscreen->b.debug_flags & DBG_PRECOMPILE) {
+		struct si_shader_ctx_state state = {sel};
+		union si_shader_key key;
+
+		memset(&key, 0, sizeof(key));
+		si_parse_next_shader_property(&sel->info, &key);
+
+		/* Set reasonable defaults, so that the shader key doesn't
+		 * cause any code to be eliminated.
+		 */
+		switch (sel->type) {
+		case PIPE_SHADER_TESS_CTRL:
+			key.tcs.epilog.prim_mode = PIPE_PRIM_TRIANGLES;
+			break;
+		case PIPE_SHADER_FRAGMENT:
+			key.ps.epilog.alpha_func = PIPE_FUNC_ALWAYS;
+			for (i = 0; i < 8; i++)
+				if (sel->info.colors_written & (1 << i))
+					key.ps.epilog.spi_shader_col_format |=
+						V_028710_SPI_SHADER_FP16_ABGR << (i * 4);
+			break;
+		}
+
+		if (si_shader_select_with_key(sscreen, &state, &key, tm, debug))
+			fprintf(stderr, "radeonsi: can't create a monolithic shader\n");
+	}
+}
+
 static void *si_create_shader_selector(struct pipe_context *ctx,
 				       const struct pipe_shader_state *state)
 {
@@ -1087,6 +1178,9 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	if (!sel)
 		return NULL;
 
+	sel->screen = sscreen;
+	sel->tm = sctx->tm;
+	sel->debug = sctx->b.debug;
 	sel->tokens = tgsi_dup_tokens(state->tokens);
 	if (!sel->tokens) {
 		FREE(sel);
@@ -1199,83 +1293,11 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	if (sel->info.writes_memory)
 		sel->db_shader_control |= S_02880C_EXEC_ON_HIER_FAIL(1) |
 					  S_02880C_EXEC_ON_NOOP(1);
-
-	/* Compile the main shader part for use with a prolog and/or epilog. */
-	if (sel->type != PIPE_SHADER_GEOMETRY &&
-	    !sscreen->use_monolithic_shaders) {
-		struct si_shader *shader = CALLOC_STRUCT(si_shader);
-		void *tgsi_binary;
-
-		if (!shader)
-			goto error;
-
-		shader->selector = sel;
-		si_parse_next_shader_property(&sel->info, &shader->key);
-
-		tgsi_binary = si_get_tgsi_binary(sel);
-
-		/* Try to load the shader from the shader cache. */
-		pipe_mutex_lock(sscreen->shader_cache_mutex);
-
-		if (tgsi_binary &&
-		    si_shader_cache_load_shader(sscreen, tgsi_binary, shader)) {
-			FREE(tgsi_binary);
-		} else {
-			/* Compile the shader if it hasn't been loaded from the cache. */
-			if (si_compile_tgsi_shader(sscreen, sctx->tm, shader, false,
-						   &sctx->b.debug) != 0) {
-				FREE(shader);
-				FREE(tgsi_binary);
-				pipe_mutex_unlock(sscreen->shader_cache_mutex);
-				goto error;
-			}
-
-			if (tgsi_binary &&
-			    !si_shader_cache_insert_shader(sscreen, tgsi_binary, shader))
-				FREE(tgsi_binary);
-		}
-		pipe_mutex_unlock(sscreen->shader_cache_mutex);
-
-		sel->main_shader_part = shader;
-	}
-
-	/* Pre-compilation. */
-	if (sel->type == PIPE_SHADER_GEOMETRY ||
-	    sscreen->b.debug_flags & DBG_PRECOMPILE) {
-		struct si_shader_ctx_state state = {sel};
-		union si_shader_key key;
-
-		memset(&key, 0, sizeof(key));
-		si_parse_next_shader_property(&sel->info, &key);
-
-		/* Set reasonable defaults, so that the shader key doesn't
-		 * cause any code to be eliminated.
-		 */
-		switch (sel->type) {
-		case PIPE_SHADER_TESS_CTRL:
-			key.tcs.epilog.prim_mode = PIPE_PRIM_TRIANGLES;
-			break;
-		case PIPE_SHADER_FRAGMENT:
-			key.ps.epilog.alpha_func = PIPE_FUNC_ALWAYS;
-			for (i = 0; i < 8; i++)
-				if (sel->info.colors_written & (1 << i))
-					key.ps.epilog.spi_shader_col_format |=
-						V_028710_SPI_SHADER_FP16_ABGR << (i * 4);
-			break;
-		}
-
-		if (si_shader_select_with_key(ctx, &state, &key))
-			goto error;
-	}
-
 	pipe_mutex_init(sel->mutex);
-	return sel;
 
-error:
-	fprintf(stderr, "radeonsi: can't create a shader\n");
-	tgsi_free_tokens(sel->tokens);
-	FREE(sel);
-	return NULL;
+	si_init_shader_selector_async(sel, -1);
+
+	return sel;
 }
 
 static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
