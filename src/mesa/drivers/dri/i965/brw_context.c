@@ -803,8 +803,8 @@ brw_process_driconf_options(struct brw_context *brw)
 
    brw->precompile = driQueryOptionb(&brw->optionCache, "shader_precompile");
 
-   brw->intelScreen->compiler->precise_trig =
-      driQueryOptionb(&brw->optionCache, "precise_trig");
+   if (driQueryOptionb(&brw->optionCache, "precise_trig"))
+      brw->intelScreen->compiler->precise_trig = true;
 
    ctx->Const.ForceGLSLExtensionsWarn =
       driQueryOptionb(options, "force_glsl_extensions_warn");
