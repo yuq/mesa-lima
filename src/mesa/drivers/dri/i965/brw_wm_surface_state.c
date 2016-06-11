@@ -237,9 +237,9 @@ gen4_emit_buffer_surface_state(struct brw_context *brw,
              surface_format << BRW_SURFACE_FORMAT_SHIFT |
              (brw->gen >= 6 ? BRW_SURFACE_RC_READ_WRITE : 0);
    surf[1] = (bo ? bo->offset64 : 0) + buffer_offset; /* reloc */
-   surf[2] = (buffer_size & 0x7f) << BRW_SURFACE_WIDTH_SHIFT |
-             ((buffer_size >> 7) & 0x1fff) << BRW_SURFACE_HEIGHT_SHIFT;
-   surf[3] = ((buffer_size >> 20) & 0x7f) << BRW_SURFACE_DEPTH_SHIFT |
+   surf[2] = ((buffer_size - 1) & 0x7f) << BRW_SURFACE_WIDTH_SHIFT |
+             (((buffer_size - 1) >> 7) & 0x1fff) << BRW_SURFACE_HEIGHT_SHIFT;
+   surf[3] = (((buffer_size - 1) >> 20) & 0x7f) << BRW_SURFACE_DEPTH_SHIFT |
              (pitch - 1) << BRW_SURFACE_PITCH_SHIFT;
 
    /* Emit relocation to surface contents.  The 965 PRM, Volume 4, section
