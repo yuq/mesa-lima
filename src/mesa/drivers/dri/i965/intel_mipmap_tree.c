@@ -534,6 +534,7 @@ intel_miptree_create_layout(struct brw_context *brw,
 	 intel_miptree_release(&mt);
 	 return NULL;
       }
+      mt->stencil_mt->r8stencil_needs_update = true;
 
       /* Fix up the Z miptree format for how we're splitting out separate
        * stencil.  Gen7 expects there to be no stencil bits in its depth buffer.
@@ -997,6 +998,7 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
 
       drm_intel_bo_unreference((*mt)->bo);
       intel_miptree_release(&(*mt)->stencil_mt);
+      intel_miptree_release(&(*mt)->r8stencil_mt);
       if ((*mt)->hiz_buf) {
          if ((*mt)->hiz_buf->mt)
             intel_miptree_release(&(*mt)->hiz_buf->mt);

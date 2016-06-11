@@ -615,6 +615,18 @@ struct intel_mipmap_tree
    struct intel_mipmap_tree *stencil_mt;
 
    /**
+    * \brief Stencil texturing miptree for sampling from a stencil texture
+    *
+    * Some hardware doesn't support sampling from the stencil texture as
+    * required by the GL_ARB_stencil_texturing extenion. To workaround this we
+    * blit the texture into a new texture that can be sampled.
+    *
+    * \see intel_update_r8stencil()
+    */
+   struct intel_mipmap_tree *r8stencil_mt;
+   bool r8stencil_needs_update;
+
+   /**
     * \brief MCS miptree.
     *
     * This miptree contains the "multisample control surface", which stores
