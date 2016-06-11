@@ -44,9 +44,12 @@ struct util_queue_fence {
    int signalled;
 };
 
+typedef void (*util_queue_execute_func)(void *job, int thread_index);
+
 struct util_queue_job {
    void *job;
    struct util_queue_fence *fence;
+   util_queue_execute_func execute;
 };
 
 /* Put this into your context. */
@@ -62,21 +65,20 @@ struct util_queue {
    int max_jobs;
    int write_idx, read_idx; /* ring buffer pointers */
    struct util_queue_job *jobs;
-   void (*execute_job)(void *job, int thread_index);
 };
 
 bool util_queue_init(struct util_queue *queue,
                      const char *name,
                      unsigned max_jobs,
-                     unsigned num_threads,
-                     void (*execute_job)(void *, int));
+                     unsigned num_threads);
 void util_queue_destroy(struct util_queue *queue);
 void util_queue_fence_init(struct util_queue_fence *fence);
 void util_queue_fence_destroy(struct util_queue_fence *fence);
 
 void util_queue_add_job(struct util_queue *queue,
                         void *job,
-                        struct util_queue_fence *fence);
+                        struct util_queue_fence *fence,
+                        util_queue_execute_func execute);
 void util_queue_job_wait(struct util_queue_fence *fence);
 
 /* util_queue needs to be cleared to zeroes for this to work */

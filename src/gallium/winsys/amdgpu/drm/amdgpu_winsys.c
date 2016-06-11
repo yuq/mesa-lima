@@ -493,7 +493,7 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
    pipe_mutex_init(ws->bo_fence_lock);
 
    if (sysconf(_SC_NPROCESSORS_ONLN) > 1 && debug_get_option_thread())
-      util_queue_init(&ws->cs_queue, "amdgpu_cs", 8, 1, amdgpu_cs_submit_ib);
+      util_queue_init(&ws->cs_queue, "amdgpu_cs", 8, 1);
 
    /* Create the screen at the end. The winsys must be initialized
     * completely.

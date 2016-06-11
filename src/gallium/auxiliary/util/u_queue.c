@@ -84,7 +84,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
       }
 
       job = queue->jobs[queue->read_idx];
-      queue->jobs[queue->read_idx].job = NULL;
+      memset(&queue->jobs[queue->read_idx], 0, sizeof(struct util_queue_job));
       queue->read_idx = (queue->read_idx + 1) % queue->max_jobs;
 
       queue->num_queued--;
@@ -92,7 +92,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
       pipe_mutex_unlock(queue->lock);
 
       if (job.job) {
-         queue->execute_job(job.job, thread_index);
+         job.execute(job.job, thread_index);
          util_queue_fence_signal(job.fence);
       }
    }
@@ -113,8 +113,7 @@ bool
 util_queue_init(struct util_queue *queue,
                 const char *name,
                 unsigned max_jobs,
-                unsigned num_threads,
-                void (*execute_job)(void *, int))
+                unsigned num_threads)
 {
    unsigned i;
 
@@ -128,7 +127,6 @@ util_queue_init(struct util_queue *queue,
    if (!queue->jobs)
       goto fail;
 
-   queue->execute_job = execute_job;
    pipe_mutex_init(queue->lock);
 
    queue->num_queued = 0;
@@ -216,7 +214,8 @@ util_queue_fence_destroy(struct util_queue_fence *fence)
 void
 util_queue_add_job(struct util_queue *queue,
                    void *job,
-                   struct util_queue_fence *fence)
+                   struct util_queue_fence *fence,
+                   util_queue_execute_func execute)
 {
    struct util_queue_job *ptr;
 
@@ -234,6 +233,7 @@ util_queue_add_job(struct util_queue *queue,
    assert(ptr->job == NULL);
    ptr->job = job;
    ptr->fence = fence;
+   ptr->execute = execute;
    queue->write_idx = (queue->write_idx + 1) % queue->max_jobs;
 
    queue->num_queued++;

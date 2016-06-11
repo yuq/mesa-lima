@@ -1052,7 +1052,8 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       /* Submit. */
       if ((flags & RADEON_FLUSH_ASYNC) &&
           util_queue_is_initialized(&ws->cs_queue)) {
-         util_queue_add_job(&ws->cs_queue, cs, &cs->flush_completed);
+         util_queue_add_job(&ws->cs_queue, cs, &cs->flush_completed,
+                            amdgpu_cs_submit_ib);
       } else {
          amdgpu_cs_submit_ib(cs, 0);
       }
