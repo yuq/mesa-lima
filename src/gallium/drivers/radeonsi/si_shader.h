@@ -234,6 +234,7 @@ struct si_shader;
  */
 struct si_shader_selector {
 	struct si_screen	*screen;
+	struct util_queue_fence ready;
 
 	/* Should only be used by si_init_shader_selector_async
 	 * if thread_index == -1 (non-threaded). */

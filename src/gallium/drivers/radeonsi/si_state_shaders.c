@@ -991,7 +991,8 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 				     struct si_shader_ctx_state *state,
 				     union si_shader_key *key,
 				     LLVMTargetMachineRef tm,
-				     struct pipe_debug_callback *debug)
+				     struct pipe_debug_callback *debug,
+				     bool wait)
 {
 	struct si_shader_selector *sel = state->cso;
 	struct si_shader *current = state->current;
@@ -1004,6 +1005,13 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 	 * test. */
 	if (likely(current && memcmp(&current->key, key, sizeof(*key)) == 0))
 		return 0;
+
+	/* This must be done before the mutex is locked, because async GS
+	 * compilation calls this function too, and therefore must enter
+	 * the mutex first.
+	 */
+	if (wait)
+		util_queue_job_wait(&sel->ready);
 
 	pipe_mutex_lock(sel->mutex);
 
@@ -1057,7 +1065,7 @@ static int si_shader_select(struct pipe_context *ctx,
 
 	si_shader_selector_key(ctx, state->cso, &key);
 	return si_shader_select_with_key(sctx->screen, state, &key,
-					 sctx->tm, &sctx->b.debug);
+					 sctx->tm, &sctx->b.debug, true);
 }
 
 static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
@@ -1094,9 +1102,18 @@ void si_init_shader_selector_async(void *job, int thread_index)
 {
 	struct si_shader_selector *sel = (struct si_shader_selector *)job;
 	struct si_screen *sscreen = sel->screen;
-	LLVMTargetMachineRef tm = sel->tm;
-	struct pipe_debug_callback *debug = &sel->debug;
+	LLVMTargetMachineRef tm;
+	struct pipe_debug_callback *debug;
 	unsigned i;
+
+	if (thread_index >= 0) {
+		assert(thread_index < ARRAY_SIZE(sscreen->tm));
+		tm = sscreen->tm[thread_index];
+		debug = NULL;
+	} else {
+		tm = sel->tm;
+		debug = &sel->debug;
+	}
 
 	/* Compile the main shader part for use with a prolog and/or epilog.
 	 * If this fails, the driver will try to compile a monolithic shader
@@ -1172,7 +1189,8 @@ void si_init_shader_selector_async(void *job, int thread_index)
 			break;
 		}
 
-		if (si_shader_select_with_key(sscreen, &state, &key, tm, debug))
+		if (si_shader_select_with_key(sscreen, &state, &key, tm, debug,
+					      false))
 			fprintf(stderr, "radeonsi: can't create a monolithic shader\n");
 	}
 }
@@ -1304,8 +1322,14 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		sel->db_shader_control |= S_02880C_EXEC_ON_HIER_FAIL(1) |
 					  S_02880C_EXEC_ON_NOOP(1);
 	pipe_mutex_init(sel->mutex);
+	util_queue_fence_init(&sel->ready);
 
-	si_init_shader_selector_async(sel, -1);
+	if (sctx->b.debug.debug_message ||
+	    !util_queue_is_initialized(&sscreen->shader_compiler_queue))
+		si_init_shader_selector_async(sel, -1);
+	else
+		util_queue_add_job(&sscreen->shader_compiler_queue, sel,
+                                   &sel->ready, si_init_shader_selector_async);
 
 	return sel;
 }
@@ -1442,6 +1466,8 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 		[PIPE_SHADER_FRAGMENT] = &sctx->ps_shader,
 	};
 
+	util_queue_job_wait(&sel->ready);
+
 	if (current_shader[sel->type]->cso == sel) {
 		current_shader[sel->type]->cso = NULL;
 		current_shader[sel->type]->current = NULL;
@@ -1456,6 +1482,7 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 	if (sel->main_shader_part)
 		si_delete_shader(sctx, sel->main_shader_part);
 
+	util_queue_fence_destroy(&sel->ready);
 	pipe_mutex_destroy(sel->mutex);
 	free(sel->tokens);
 	free(sel);

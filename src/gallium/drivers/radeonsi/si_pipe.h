@@ -27,6 +27,7 @@
 #define SI_PIPE_H
 
 #include "si_state.h"
+#include "util/u_queue.h"
 
 #include <llvm-c/TargetMachine.h>
 
@@ -110,6 +111,10 @@ struct si_screen {
 	 */
 	pipe_mutex			shader_cache_mutex;
 	struct hash_table		*shader_cache;
+
+	/* Shader compiler queue for multithreaded compilation. */
+	struct util_queue		shader_compiler_queue;
+	LLVMTargetMachineRef		tm[4]; /* used by the queue only */
 };
 
 struct si_blend_color {
@@ -207,7 +212,7 @@ struct si_context {
 
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct si_shader_ctx_state	fixed_func_tcs_shader;
-	LLVMTargetMachineRef		tm;
+	LLVMTargetMachineRef		tm; /* only non-threaded compilation */
 	bool				gfx_flush_in_progress;
 
 	/* Atoms (direct states). */

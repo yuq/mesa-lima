@@ -663,6 +663,13 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	if (!sscreen->b.ws->unref(sscreen->b.ws))
 		return;
 
+	if (util_queue_is_initialized(&sscreen->shader_compiler_queue))
+		util_queue_destroy(&sscreen->shader_compiler_queue);
+
+	for (i = 0; i < ARRAY_SIZE(sscreen->tm); i++)
+		if (sscreen->tm[i])
+			LLVMDisposeTargetMachine(sscreen->tm[i]);
+
 	/* Free shader parts. */
 	for (i = 0; i < ARRAY_SIZE(parts); i++) {
 		while (parts[i]) {
@@ -710,6 +717,7 @@ static bool si_init_gs_info(struct si_screen *sscreen)
 struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
+	unsigned num_cpus, num_compiler_threads, i;
 
 	if (!sscreen) {
 		return NULL;
@@ -753,6 +761,16 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 
 	if (debug_get_bool_option("RADEON_DUMP_SHADERS", false))
 		sscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS;
+
+	/* Only enable as many threads as we have target machines and CPUs. */
+	num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+	num_compiler_threads = MIN2(num_cpus, ARRAY_SIZE(sscreen->tm));
+
+	for (i = 0; i < num_compiler_threads; i++)
+		sscreen->tm[i] = si_create_llvm_target_machine(sscreen);
+
+	util_queue_init(&sscreen->shader_compiler_queue, "si_shader",
+                        32, num_compiler_threads);
 
 	/* Create the auxiliary context. This must be done last. */
 	sscreen->b.aux_context = sscreen->b.b.context_create(&sscreen->b.b, NULL, 0);
