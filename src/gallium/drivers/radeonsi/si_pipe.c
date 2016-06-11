@@ -123,14 +123,29 @@ static void si_emit_string_marker(struct pipe_context *ctx,
 	dd_parse_apitrace_marker(string, len, &sctx->apitrace_call_number);
 }
 
+static LLVMTargetMachineRef
+si_create_llvm_target_machine(struct si_screen *sscreen)
+{
+	const char *triple = "amdgcn--";
+
+	return LLVMCreateTargetMachine(radeon_llvm_get_r600_target(triple), triple,
+				       r600_get_llvm_processor_name(sscreen->b.family),
+#if HAVE_LLVM >= 0x0308
+				       sscreen->b.debug_flags & DBG_SI_SCHED ?
+					       SI_LLVM_DEFAULT_FEATURES ",+si-scheduler" :
+#endif
+					       SI_LLVM_DEFAULT_FEATURES,
+				       LLVMCodeGenLevelDefault,
+				       LLVMRelocDefault,
+				       LLVMCodeModelDefault);
+}
+
 static struct pipe_context *si_create_context(struct pipe_screen *screen,
                                               void *priv, unsigned flags)
 {
 	struct si_context *sctx = CALLOC_STRUCT(si_context);
 	struct si_screen* sscreen = (struct si_screen *)screen;
 	struct radeon_winsys *ws = sscreen->b.ws;
-	LLVMTargetRef r600_target;
-	const char *triple = "amdgcn--";
 	int shader, i;
 
 	if (!sctx)
@@ -279,18 +294,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->scratch_waves = MAX2(32 * sscreen->b.info.num_good_compute_units,
 				   max_threads_per_block / 64);
 
-	/* Initialize LLVM TargetMachine */
-	r600_target = radeon_llvm_get_r600_target(triple);
-	sctx->tm = LLVMCreateTargetMachine(r600_target, triple,
-					   r600_get_llvm_processor_name(sscreen->b.family),
-#if HAVE_LLVM >= 0x0308
-					   sscreen->b.debug_flags & DBG_SI_SCHED ?
-						SI_LLVM_DEFAULT_FEATURES ",+si-scheduler" :
-#endif
-						SI_LLVM_DEFAULT_FEATURES,
-					   LLVMCodeGenLevelDefault,
-					   LLVMRelocDefault,
-					   LLVMCodeModelDefault);
+	sctx->tm = si_create_llvm_target_machine(sscreen);
 
 	return &sctx->b.b;
 fail:
