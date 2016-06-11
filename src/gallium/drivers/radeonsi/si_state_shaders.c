@@ -186,8 +186,14 @@ static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
 					  void *tgsi_binary,
 					  struct si_shader *shader)
 {
-	void *hw_binary = si_get_shader_binary(shader);
+	void *hw_binary;
+	struct hash_entry *entry;
 
+	entry = _mesa_hash_table_search(sscreen->shader_cache, tgsi_binary);
+	if (entry)
+		return false; /* already added */
+
+	hw_binary = si_get_shader_binary(shader);
 	if (!hw_binary)
 		return false;
 
@@ -1117,22 +1123,26 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		if (tgsi_binary &&
 		    si_shader_cache_load_shader(sscreen, tgsi_binary, shader)) {
 			FREE(tgsi_binary);
+			pipe_mutex_unlock(sscreen->shader_cache_mutex);
 		} else {
+			pipe_mutex_unlock(sscreen->shader_cache_mutex);
+
 			/* Compile the shader if it hasn't been loaded from the cache. */
 			if (si_compile_tgsi_shader(sscreen, tm, shader, false,
 						   debug) != 0) {
 				FREE(shader);
 				FREE(tgsi_binary);
-				pipe_mutex_unlock(sscreen->shader_cache_mutex);
 				fprintf(stderr, "radeonsi: can't compile a main shader part\n");
 				return;
 			}
 
-			if (tgsi_binary &&
-			    !si_shader_cache_insert_shader(sscreen, tgsi_binary, shader))
-				FREE(tgsi_binary);
+			if (tgsi_binary) {
+				pipe_mutex_lock(sscreen->shader_cache_mutex);
+				if (!si_shader_cache_insert_shader(sscreen, tgsi_binary, shader))
+					FREE(tgsi_binary);
+				pipe_mutex_unlock(sscreen->shader_cache_mutex);
+			}
 		}
-		pipe_mutex_unlock(sscreen->shader_cache_mutex);
 
 		sel->main_shader_part = shader;
 	}
