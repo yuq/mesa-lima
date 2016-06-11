@@ -605,7 +605,7 @@ amdgpu_cs_create(struct radeon_winsys_ctx *rwctx,
       return NULL;
    }
 
-   pipe_semaphore_init(&cs->flush_completed, 1);
+   util_queue_fence_init(&cs->flush_completed);
 
    cs->ctx = ctx;
    cs->flush_cs = flush;
@@ -872,8 +872,9 @@ static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
    }
 }
 
-void amdgpu_cs_submit_ib(struct amdgpu_cs *acs)
+void amdgpu_cs_submit_ib(void *job)
 {
+   struct amdgpu_cs *acs = (struct amdgpu_cs*)job;
    struct amdgpu_winsys *ws = acs->ctx->ws;
    struct amdgpu_cs_context *cs = acs->cst;
    int i, r;
@@ -957,14 +958,11 @@ cleanup:
 void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
+   struct amdgpu_winsys *ws = cs->ctx->ws;
 
    /* Wait for any pending ioctl of this CS to complete. */
-   if (cs->ctx->ws->thread) {
-      /* wait and set the semaphore to "busy" */
-      pipe_semaphore_wait(&cs->flush_completed);
-      /* set the semaphore to "idle" */
-      pipe_semaphore_signal(&cs->flush_completed);
-   }
+   if (util_queue_is_initialized(&ws->cs_queue))
+      util_queue_job_wait(&cs->flush_completed);
 }
 
 DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", FALSE)
@@ -1052,10 +1050,9 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       cs->cst = cur;
 
       /* Submit. */
-      if (ws->thread && (flags & RADEON_FLUSH_ASYNC)) {
-         /* Set the semaphore to "busy". */
-         pipe_semaphore_wait(&cs->flush_completed);
-         amdgpu_ws_queue_cs(ws, cs);
+      if ((flags & RADEON_FLUSH_ASYNC) &&
+          util_queue_is_initialized(&ws->cs_queue)) {
+         util_queue_add_job(&ws->cs_queue, cs, &cs->flush_completed);
       } else {
          amdgpu_cs_submit_ib(cs);
       }
@@ -1077,7 +1074,7 @@ static void amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
 
    amdgpu_cs_sync_flush(rcs);
-   pipe_semaphore_destroy(&cs->flush_completed);
+   util_queue_fence_destroy(&cs->flush_completed);
    p_atomic_dec(&cs->ctx->ws->num_cs);
    pb_reference(&cs->main.big_ib_buffer, NULL);
    FREE(cs->main.base.prev);

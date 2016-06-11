@@ -274,6 +274,8 @@ C_SOURCES := \
 	util/u_pstipple.c \
 	util/u_pstipple.h \
 	util/u_pwr8.h \
+	util/u_queue.c \
+	util/u_queue.h \
 	util/u_range.h \
 	util/u_rect.h \
 	util/u_resource.c \

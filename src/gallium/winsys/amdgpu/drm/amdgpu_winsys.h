@@ -35,7 +35,7 @@
 #include "pipebuffer/pb_cache.h"
 #include "gallium/drivers/radeon/radeon_winsys.h"
 #include "addrlib/addrinterface.h"
-#include "os/os_thread.h"
+#include "util/u_queue.h"
 #include <amdgpu.h>
 
 struct amdgpu_cs;
@@ -59,13 +59,7 @@ struct amdgpu_winsys {
    struct radeon_info info;
 
    /* multithreaded IB submission */
-   pipe_mutex cs_queue_lock;
-   pipe_semaphore cs_queue_has_space;
-   pipe_semaphore cs_queued;
-   pipe_thread thread;
-   int kill_thread;
-   int num_enqueued_cs;
-   struct amdgpu_cs *cs_queue[8];
+   struct util_queue cs_queue;
 
    struct amdgpu_gpu_info amdinfo;
    ADDR_HANDLE addrlib;
@@ -84,7 +78,6 @@ amdgpu_winsys(struct radeon_winsys *base)
    return (struct amdgpu_winsys*)base;
 }
 
-void amdgpu_ws_queue_cs(struct amdgpu_winsys *ws, struct amdgpu_cs *cs);
 void amdgpu_surface_init_functions(struct amdgpu_winsys *ws);
 ADDR_HANDLE amdgpu_addr_create(struct amdgpu_winsys *ws);
 

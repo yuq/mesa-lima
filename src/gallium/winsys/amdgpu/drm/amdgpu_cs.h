@@ -111,7 +111,7 @@ struct amdgpu_cs {
    void (*flush_cs)(void *ctx, unsigned flags, struct pipe_fence_handle **fence);
    void *flush_data;
 
-   pipe_semaphore flush_completed;
+   struct util_queue_fence flush_completed;
 };
 
 struct amdgpu_fence {
@@ -218,6 +218,6 @@ bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
                        bool absolute);
 void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs);
 void amdgpu_cs_init_functions(struct amdgpu_winsys *ws);
-void amdgpu_cs_submit_ib(struct amdgpu_cs *cs);
+void amdgpu_cs_submit_ib(void *job);
 
 #endif
