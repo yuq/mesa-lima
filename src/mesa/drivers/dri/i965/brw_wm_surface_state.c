@@ -499,8 +499,16 @@ brw_update_texture_surface(struct gl_context *ctx,
       }
 
       if (obj->StencilSampling && firstImage->_BaseFormat == GL_DEPTH_STENCIL) {
-         assert(brw->gen >= 8);
-         mt = mt->stencil_mt;
+         if (brw->gen <= 7) {
+            assert(mt->r8stencil_mt && !mt->stencil_mt->r8stencil_needs_update);
+            mt = mt->r8stencil_mt;
+         } else {
+            mt = mt->stencil_mt;
+         }
+         format = BRW_SURFACEFORMAT_R8_UINT;
+      } else if (brw->gen <= 7 && mt->format == MESA_FORMAT_S_UINT8) {
+         assert(mt->r8stencil_mt && !mt->r8stencil_needs_update);
+         mt = mt->r8stencil_mt;
          format = BRW_SURFACEFORMAT_R8_UINT;
       }
 
