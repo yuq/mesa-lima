@@ -235,6 +235,11 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
                            0 : INTEL_MIPTREE_IGNORE_CCS_E;
       intel_miptree_resolve_color(brw, tex_obj->mt, flags);
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
+
+      if (tex_obj->base.StencilSampling ||
+          tex_obj->mt->format == MESA_FORMAT_S_UINT8) {
+         intel_update_r8stencil(brw, tex_obj->mt);
+      }
    }
 
    /* Resolve color for each active shader image. */
