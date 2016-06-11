@@ -39,7 +39,9 @@
  * Put this into your job structure.
  */
 struct util_queue_fence {
-   pipe_semaphore done;
+   pipe_mutex mutex;
+   pipe_condvar cond;
+   int signalled;
 };
 
 struct util_queue_job {
@@ -77,6 +79,12 @@ static inline bool
 util_queue_is_initialized(struct util_queue *queue)
 {
    return queue->thread != 0;
+}
+
+static inline bool
+util_queue_fence_is_signalled(struct util_queue_fence *fence)
+{
+   return fence->signalled != 0;
 }
 
 #endif

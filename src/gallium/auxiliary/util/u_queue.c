@@ -25,6 +25,28 @@
  */
 
 #include "u_queue.h"
+#include "os/os_time.h"
+
+static void
+util_queue_fence_signal(struct util_queue_fence *fence)
+{
+   pipe_mutex_lock(fence->mutex);
+   fence->signalled = true;
+   pipe_condvar_broadcast(fence->cond);
+   pipe_mutex_unlock(fence->mutex);
+}
+
+void
+util_queue_job_wait(struct util_queue_fence *fence)
+{
+   if (fence->signalled)
+      return;
+
+   pipe_mutex_lock(fence->mutex);
+   while (!fence->signalled)
+      pipe_condvar_wait(fence->cond, fence->mutex);
+   pipe_mutex_unlock(fence->mutex);
+}
 
 static PIPE_THREAD_ROUTINE(util_queue_thread_func, param)
 {
@@ -47,14 +69,15 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, param)
 
       if (job.job) {
          queue->execute_job(job.job);
-         pipe_semaphore_signal(&job.fence->done);
+         util_queue_fence_signal(job.fence);
       }
    }
 
    /* signal remaining jobs before terminating */
    pipe_mutex_lock(queue->lock);
    while (queue->jobs[queue->read_idx].job) {
-      pipe_semaphore_signal(&queue->jobs[queue->read_idx].fence->done);
+      util_queue_fence_signal(queue->jobs[queue->read_idx].fence);
+
       queue->jobs[queue->read_idx].job = NULL;
       queue->read_idx = (queue->read_idx + 1) % queue->max_jobs;
    }
@@ -113,13 +136,17 @@ util_queue_destroy(struct util_queue *queue)
 void
 util_queue_fence_init(struct util_queue_fence *fence)
 {
-   pipe_semaphore_init(&fence->done, 1);
+   memset(fence, 0, sizeof(*fence));
+   pipe_mutex_init(fence->mutex);
+   pipe_condvar_init(fence->cond);
+   fence->signalled = true;
 }
 
 void
 util_queue_fence_destroy(struct util_queue_fence *fence)
 {
-   pipe_semaphore_destroy(&fence->done);
+   pipe_condvar_destroy(fence->cond);
+   pipe_mutex_destroy(fence->mutex);
 }
 
 void
@@ -128,8 +155,9 @@ util_queue_add_job(struct util_queue *queue,
                    struct util_queue_fence *fence)
 {
    struct util_queue_job *ptr;
-   /* Set the semaphore to "busy". */
-   pipe_semaphore_wait(&fence->done);
+
+   assert(fence->signalled);
+   fence->signalled = false;
 
    /* if the queue is full, wait until there is space */
    pipe_semaphore_wait(&queue->has_space);
@@ -142,13 +170,4 @@ util_queue_add_job(struct util_queue *queue,
    queue->write_idx = (queue->write_idx + 1) % queue->max_jobs;
    pipe_mutex_unlock(queue->lock);
    pipe_semaphore_signal(&queue->queued);
-}
-
-void
-util_queue_job_wait(struct util_queue_fence *fence)
-{
-   /* wait and set the semaphore to "busy" */
-   pipe_semaphore_wait(&fence->done);
-   /* set the semaphore to "idle" */
-   pipe_semaphore_signal(&fence->done);
 }
