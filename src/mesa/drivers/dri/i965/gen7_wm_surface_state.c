@@ -295,7 +295,7 @@ gen7_emit_texture_surface_state(struct brw_context *brw,
    if (mt->halign == 8)
       surf[0] |= GEN7_SURFACE_HALIGN_8;
 
-   if (_mesa_is_array_texture(target) || target == GL_TEXTURE_CUBE_MAP)
+   if (mt->target != GL_TEXTURE_3D)
       surf[0] |= GEN7_SURFACE_IS_ARRAY;
 
    if (mt->array_layout == ALL_SLICES_AT_EACH_LOD)

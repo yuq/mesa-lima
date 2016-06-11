@@ -297,7 +297,7 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
         format == BRW_SURFACEFORMAT_BC7_UNORM))
       surf[0] |= GEN8_SURFACE_SAMPLER_L2_BYPASS_DISABLE;
 
-   if (_mesa_is_array_texture(mt->target) || mt->target == GL_TEXTURE_CUBE_MAP)
+   if (mt->target != GL_TEXTURE_3D)
       surf[0] |= GEN8_SURFACE_IS_ARRAY;
 
    surf[1] = SET_FIELD(mocs_wb, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
