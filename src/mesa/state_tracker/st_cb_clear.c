@@ -320,6 +320,18 @@ is_scissor_enabled(struct gl_context *ctx, struct gl_renderbuffer *rb)
            (unsigned) ctx->Scissor.ScissorArray[0].Height < rb->Height);
 }
 
+/**
+ * Return if window rectangles must be enabled during the clear.
+ */
+static inline bool
+is_window_rectangle_enabled(struct gl_context *ctx)
+{
+   if (ctx->DrawBuffer == ctx->WinSysDrawBuffer)
+      return false;
+   return ctx->Scissor.NumWindowRects > 0 ||
+      ctx->Scissor.WindowRectMode == GL_INCLUSIVE_EXT;
+}
+
 
 /**
  * Return if all of the color channels are masked.
@@ -410,6 +422,7 @@ st_Clear(struct gl_context *ctx, GLbitfield mask)
                continue;
 
             if (is_scissor_enabled(ctx, rb) ||
+                is_window_rectangle_enabled(ctx) ||
                 is_color_masked(ctx, colormask_index))
                quad_buffers |= PIPE_CLEAR_COLOR0 << i;
             else
@@ -422,7 +435,8 @@ st_Clear(struct gl_context *ctx, GLbitfield mask)
       struct st_renderbuffer *strb = st_renderbuffer(depthRb);
 
       if (strb->surface && ctx->Depth.Mask) {
-         if (is_scissor_enabled(ctx, depthRb))
+         if (is_scissor_enabled(ctx, depthRb) ||
+             is_window_rectangle_enabled(ctx))
             quad_buffers |= PIPE_CLEAR_DEPTH;
          else
             clear_buffers |= PIPE_CLEAR_DEPTH;
@@ -433,6 +447,7 @@ st_Clear(struct gl_context *ctx, GLbitfield mask)
 
       if (strb->surface && !is_stencil_disabled(ctx, stencilRb)) {
          if (is_scissor_enabled(ctx, stencilRb) ||
+             is_window_rectangle_enabled(ctx) ||
              is_stencil_masked(ctx, stencilRb))
             quad_buffers |= PIPE_CLEAR_STENCIL;
          else

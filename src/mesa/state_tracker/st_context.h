@@ -161,6 +161,11 @@ struct st_context
       struct pipe_framebuffer_state framebuffer;
       struct pipe_scissor_state scissor[PIPE_MAX_VIEWPORTS];
       struct pipe_viewport_state viewport[PIPE_MAX_VIEWPORTS];
+      struct {
+         unsigned num;
+         boolean include;
+         struct pipe_scissor_state rects[PIPE_MAX_WINDOW_RECTANGLES];
+      } window_rects;
       unsigned sample_mask;
 
       GLuint poly_stipple[32];  /**< In OpenGL's bottom-to-top order */

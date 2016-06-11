@@ -460,6 +460,9 @@ void st_init_limits(struct pipe_screen *screen,
     */
    c->MaxFramebufferLayers =
       screen->get_param(screen, PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS);
+
+   c->MaxWindowRectangles =
+      screen->get_param(screen, PIPE_CAP_MAX_WINDOW_RECTANGLES);
 }
 
 
@@ -624,6 +627,7 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(EXT_texture_mirror_clamp),         PIPE_CAP_TEXTURE_MIRROR_CLAMP             },
       { o(EXT_texture_swizzle),              PIPE_CAP_TEXTURE_SWIZZLE                  },
       { o(EXT_transform_feedback),           PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS        },
+      { o(EXT_window_rectangles),            PIPE_CAP_MAX_WINDOW_RECTANGLES            },
 
       { o(AMD_pinned_memory),                PIPE_CAP_RESOURCE_FROM_USER_MEMORY        },
       { o(ATI_meminfo),                      PIPE_CAP_QUERY_MEMORY_INFO                },

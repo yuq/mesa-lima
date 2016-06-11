@@ -40,6 +40,7 @@
 #include "st_cb_blit.h"
 #include "st_cb_fbo.h"
 #include "st_manager.h"
+#include "st_scissor.h"
 
 #include "util/u_format.h"
 
@@ -117,6 +118,7 @@ st_BlitFramebuffer(struct gl_context *ctx,
                         &clip.dstX0, &clip.dstY0, &clip.dstX1, &clip.dstY1)) {
       return; /* nothing to draw/blit */
    }
+   memset(&blit, 0, sizeof(struct pipe_blit_info));
    blit.scissor_enable =
       (dstX0 != clip.dstX0) ||
       (dstY0 != clip.dstY0) ||
@@ -189,6 +191,9 @@ st_BlitFramebuffer(struct gl_context *ctx,
       blit.dst.box.height = dstY0 - dstY1;
       blit.src.box.height = srcY0 - srcY1;
    }
+
+   if (drawFB != ctx->WinSysDrawBuffer)
+      st_window_rectangles_to_blit(ctx, &blit);
 
    blit.filter = pFilter;
    blit.render_condition_enable = TRUE;

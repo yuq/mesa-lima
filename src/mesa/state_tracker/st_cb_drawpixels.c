@@ -60,6 +60,7 @@
 #include "st_draw.h"
 #include "st_format.h"
 #include "st_program.h"
+#include "st_scissor.h"
 #include "st_texture.h"
 
 #include "pipe/p_context.h"
@@ -1393,6 +1394,9 @@ blit_copy_pixels(struct gl_context *ctx, GLint srcx, GLint srcy,
          blit.dst.box.depth = 1;
          blit.mask = PIPE_MASK_RGBA;
          blit.filter = PIPE_TEX_FILTER_NEAREST;
+
+         if (ctx->DrawBuffer != ctx->WinSysDrawBuffer)
+            st_window_rectangles_to_blit(ctx, &blit);
 
          if (screen->is_format_supported(screen, blit.src.format,
                                          blit.src.resource->target,
