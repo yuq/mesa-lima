@@ -176,7 +176,6 @@ gen7_emit_null_surface_state(struct brw_context *brw,
 void
 gen7_init_vtable_surface_functions(struct brw_context *brw)
 {
-   brw->vtbl.update_texture_surface = brw_update_texture_surface;
    brw->vtbl.update_renderbuffer_surface = brw_update_renderbuffer_surface;
    brw->vtbl.emit_null_surface_state = gen7_emit_null_surface_state;
 }

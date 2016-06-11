@@ -1007,7 +1007,7 @@ update_stage_texture_surfaces(struct brw_context *brw,
 
          /* _NEW_TEXTURE */
          if (ctx->Texture.Unit[unit]._Current) {
-            brw->vtbl.update_texture_surface(ctx, unit, surf_offset + s, for_gather, plane);
+            brw_update_texture_surface(ctx, unit, surf_offset + s, for_gather, plane);
          }
       }
    }
@@ -1587,7 +1587,6 @@ const struct brw_tracked_state brw_wm_image_surfaces = {
 void
 gen4_init_vtable_surface_functions(struct brw_context *brw)
 {
-   brw->vtbl.update_texture_surface = brw_update_texture_surface;
    brw->vtbl.update_renderbuffer_surface = gen4_update_renderbuffer_surface;
    brw->vtbl.emit_null_surface_state = brw_emit_null_surface_state;
 }

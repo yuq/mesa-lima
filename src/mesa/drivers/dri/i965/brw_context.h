@@ -744,27 +744,10 @@ struct brw_context
 
    struct
    {
-      void (*update_texture_surface)(struct gl_context *ctx,
-                                     unsigned unit,
-                                     uint32_t *surf_offset,
-                                     bool for_gather, uint32_t plane);
       uint32_t (*update_renderbuffer_surface)(struct brw_context *brw,
                                               struct gl_renderbuffer *rb,
                                               bool layered, unsigned unit,
                                               uint32_t surf_index);
-
-      void (*emit_texture_surface_state)(struct brw_context *brw,
-                                         struct intel_mipmap_tree *mt,
-                                         GLenum target,
-                                         unsigned min_layer,
-                                         unsigned max_layer,
-                                         unsigned min_level,
-                                         unsigned max_level,
-                                         unsigned format,
-                                         unsigned swizzle,
-                                         uint32_t *surf_offset,
-                                         int surf_index,
-                                         bool rw, bool for_gather);
       void (*emit_null_surface_state)(struct brw_context *brw,
                                       unsigned width,
                                       unsigned height,
