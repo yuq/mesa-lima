@@ -218,6 +218,6 @@ bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
                        bool absolute);
 void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs);
 void amdgpu_cs_init_functions(struct amdgpu_winsys *ws);
-void amdgpu_cs_submit_ib(void *job);
+void amdgpu_cs_submit_ib(void *job, int thread_index);
 
 #endif

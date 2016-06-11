@@ -54,17 +54,19 @@ struct util_queue {
    pipe_mutex lock;
    pipe_semaphore has_space;
    pipe_semaphore queued;
-   pipe_thread thread;
-   int kill_thread;
+   pipe_thread *threads;
+   unsigned num_threads;
+   int kill_threads;
    int max_jobs;
    int write_idx, read_idx; /* ring buffer pointers */
    struct util_queue_job *jobs;
-   void (*execute_job)(void *job);
+   void (*execute_job)(void *job, int thread_index);
 };
 
 bool util_queue_init(struct util_queue *queue,
                      unsigned max_jobs,
-                     void (*execute_job)(void *));
+                     unsigned num_threads,
+                     void (*execute_job)(void *, int));
 void util_queue_destroy(struct util_queue *queue);
 void util_queue_fence_init(struct util_queue_fence *fence);
 void util_queue_fence_destroy(struct util_queue_fence *fence);
@@ -78,7 +80,7 @@ void util_queue_job_wait(struct util_queue_fence *fence);
 static inline bool
 util_queue_is_initialized(struct util_queue *queue)
 {
-   return queue->thread != 0;
+   return queue->threads != NULL;
 }
 
 static inline bool

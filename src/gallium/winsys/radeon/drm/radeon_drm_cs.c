@@ -427,7 +427,7 @@ static unsigned radeon_drm_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
     return cs->csc->crelocs;
 }
 
-void radeon_drm_cs_emit_ioctl_oneshot(void *job)
+void radeon_drm_cs_emit_ioctl_oneshot(void *job, int thread_index)
 {
     struct radeon_cs_context *csc = ((struct radeon_drm_cs*)job)->cst;
     unsigned i;
@@ -590,7 +590,7 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
             if (!(flags & RADEON_FLUSH_ASYNC))
                 radeon_drm_cs_sync_flush(rcs);
         } else {
-            radeon_drm_cs_emit_ioctl_oneshot(cs);
+            radeon_drm_cs_emit_ioctl_oneshot(cs, 0);
         }
     } else {
         radeon_cs_context_cleanup(cs->cst);

@@ -872,7 +872,7 @@ static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
    }
 }
 
-void amdgpu_cs_submit_ib(void *job)
+void amdgpu_cs_submit_ib(void *job, int thread_index)
 {
    struct amdgpu_cs *acs = (struct amdgpu_cs*)job;
    struct amdgpu_winsys *ws = acs->ctx->ws;
@@ -1054,7 +1054,7 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
           util_queue_is_initialized(&ws->cs_queue)) {
          util_queue_add_job(&ws->cs_queue, cs, &cs->flush_completed);
       } else {
-         amdgpu_cs_submit_ib(cs);
+         amdgpu_cs_submit_ib(cs, 0);
       }
    } else {
       amdgpu_cs_context_cleanup(cs->csc);
