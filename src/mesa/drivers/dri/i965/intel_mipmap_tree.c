@@ -674,7 +674,6 @@ miptree_create(struct brw_context *brw,
 
    etc_format = (format != tex_format) ? tex_format : MESA_FORMAT_NONE;
 
-   assert((layout_flags & MIPTREE_LAYOUT_DISABLE_AUX) == 0);
    assert((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0);
    mt = intel_miptree_create_layout(brw, target, format,
                                     first_level, last_level, width0,
@@ -2284,6 +2283,62 @@ intel_miptree_updownsample(struct brw_context *brw,
                               GL_NEAREST, false, false /*mirror x, y*/,
                               false, false /* decode/encode srgb */);
    }
+}
+
+void
+intel_update_r8stencil(struct brw_context *brw,
+                       struct intel_mipmap_tree *mt)
+{
+   assert(brw->gen >= 7);
+   struct intel_mipmap_tree *src =
+      mt->format == MESA_FORMAT_S_UINT8 ? mt : mt->stencil_mt;
+   if (!src || brw->gen >= 8 || !src->r8stencil_needs_update)
+      return;
+
+   if (!mt->r8stencil_mt) {
+      const uint32_t r8stencil_flags =
+         MIPTREE_LAYOUT_ACCELERATED_UPLOAD | MIPTREE_LAYOUT_TILING_Y |
+         MIPTREE_LAYOUT_DISABLE_AUX;
+      assert(brw->gen > 6); /* Handle MIPTREE_LAYOUT_FORCE_ALL_SLICE_AT_LOD */
+      mt->r8stencil_mt = intel_miptree_create(brw,
+                                              src->target,
+                                              MESA_FORMAT_R_UINT8,
+                                              src->first_level,
+                                              src->last_level,
+                                              src->logical_width0,
+                                              src->logical_height0,
+                                              src->logical_depth0,
+                                              src->num_samples,
+                                              r8stencil_flags);
+      assert(mt->r8stencil_mt);
+   }
+
+   struct intel_mipmap_tree *dst = mt->r8stencil_mt;
+
+   for (int level = src->first_level; level <= src->last_level; level++) {
+      const unsigned depth = src->level[level].depth;
+      const int layers_per_blit =
+         (dst->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
+          dst->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
+         dst->num_samples : 1;
+
+      for (unsigned layer = 0; layer < depth; layer++) {
+         brw_blorp_blit_miptrees(brw,
+                                 src, level, layer,
+                                 src->format, SWIZZLE_X,
+                                 dst, level, layers_per_blit * layer,
+                                 MESA_FORMAT_R_UNORM8,
+                                 0, 0,
+                                 src->logical_width0, src->logical_height0,
+                                 0, 0,
+                                 dst->logical_width0, dst->logical_height0,
+                                 GL_NEAREST, false, false /*mirror x, y*/,
+                                 false, false /* decode/encode srgb */);
+      }
+   }
+
+   brw_render_cache_set_check_flush(brw, dst->bo);
+   src->r8stencil_needs_update = false;
 }
 
 static void *

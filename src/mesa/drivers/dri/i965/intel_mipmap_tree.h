@@ -974,6 +974,10 @@ intel_miptree_updownsample(struct brw_context *brw,
                            struct intel_mipmap_tree *src,
                            struct intel_mipmap_tree *dst);
 
+void
+intel_update_r8stencil(struct brw_context *brw,
+                       struct intel_mipmap_tree *mt);
+
 /**
  * Horizontal distance from one slice to the next in the two-dimensional
  * miptree layout.
