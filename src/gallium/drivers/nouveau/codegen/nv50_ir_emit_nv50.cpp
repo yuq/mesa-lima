@@ -911,6 +911,7 @@ CodeEmitterNV50::emitINTERP(const Instruction *i)
 
    defId(i->def(0), 2);
    srcAddr8(i->src(0), 16);
+   setAReg16(i, 0);
 
    if (i->encSize != 8 && i->getInterpMode() == NV50_IR_INTERP_FLAT) {
       code[0] |= 1 << 8;
