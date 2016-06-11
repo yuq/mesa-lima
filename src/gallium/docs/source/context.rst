@@ -79,6 +79,17 @@ objects. They all follow simple, one-method binding calls, e.g.
   should be the same as the number of set viewports and can be up to
   PIPE_MAX_VIEWPORTS.
 * ``set_viewport_states``
+* ``set_window_rectangles`` sets the window rectangles to be used for
+  rendering, as defined by GL_EXT_window_rectangles. There are two
+  modes - include and exclude, which define whether the supplied
+  rectangles are to be used for including fragments or excluding
+  them. All of the rectangles are ORed together, so in exclude mode,
+  any fragment inside any rectangle would be culled, while in include
+  mode, any fragment outside all rectangles would be culled. xmin/ymin
+  are inclusive, while xmax/ymax are exclusive (same as scissor states
+  above). Note that this only applies to draws, not clears or
+  blits. (Blits have their own way to pass the requisite rectangles
+  in.)
 * ``set_tess_state`` configures the default tessellation parameters:
   * ``default_outer_level`` is the default value for the outer tessellation
     levels. This corresponds to GL's ``PATCH_DEFAULT_OUTER_LEVEL``.
@@ -492,9 +503,9 @@ This can be considered the equivalent of a CPU memcpy.
 
 ``blit`` blits a region of a resource to a region of another resource, including
 scaling, format conversion, and up-/downsampling, as well as a destination clip
-rectangle (scissors). It can also optionally honor the current render condition
-(but either way the blit itself never contributes anything to queries currently
-gathering data).
+rectangle (scissors) and window rectangles. It can also optionally honor the
+current render condition (but either way the blit itself never contributes
+anything to queries currently gathering data).
 As opposed to manually drawing a textured quad, this lets the pipe driver choose
 the optimal method for blitting (like using a special 2D engine), and usually
 offers, for example, accelerated stencil-only copies even where

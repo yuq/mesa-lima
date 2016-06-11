@@ -69,6 +69,7 @@ extern "C" {
 #define PIPE_MAX_VIEWPORTS        16
 #define PIPE_MAX_CLIP_OR_CULL_DISTANCE_COUNT 8
 #define PIPE_MAX_CLIP_OR_CULL_DISTANCE_ELEMENT_COUNT 2
+#define PIPE_MAX_WINDOW_RECTANGLES 8
 
 
 struct pipe_reference
@@ -709,6 +710,11 @@ struct pipe_blit_info
 
    boolean scissor_enable;
    struct pipe_scissor_state scissor;
+
+   /* Window rectangles can either be inclusive or exclusive. */
+   boolean window_rectangle_include;
+   unsigned num_window_rectangles;
+   struct pipe_scissor_state window_rectangles[PIPE_MAX_WINDOW_RECTANGLES];
 
    boolean render_condition_enable; /**< whether the blit should honor the
                                     current render condition */

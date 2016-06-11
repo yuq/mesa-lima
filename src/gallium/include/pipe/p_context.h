@@ -274,6 +274,11 @@ struct pipe_context {
                                unsigned num_scissors,
                                const struct pipe_scissor_state * );
 
+   void (*set_window_rectangles)( struct pipe_context *,
+                                  boolean include,
+                                  unsigned num_rectangles,
+                                  const struct pipe_scissor_state * );
+
    void (*set_viewport_states)( struct pipe_context *,
                                 unsigned start_slot,
                                 unsigned num_viewports,
