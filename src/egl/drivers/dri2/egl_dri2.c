@@ -2733,6 +2733,8 @@ dri2_load(_EGLDriver *drv)
    const char *libname = "libglapi.so";
 #elif defined(__APPLE__)
    const char *libname = "libglapi.0.dylib";
+#elif defined(__CYGWIN__)
+   const char *libname = "cygglapi-0.dll";
 #else
    const char *libname = "libglapi.so.0";
 #endif
