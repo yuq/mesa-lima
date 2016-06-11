@@ -47,9 +47,10 @@ struct fd_vertex_stateobj;
 struct fd_texture_stateobj {
 	struct pipe_sampler_view *textures[PIPE_MAX_SAMPLERS];
 	unsigned num_textures;
+	unsigned valid_textures;
 	struct pipe_sampler_state *samplers[PIPE_MAX_SAMPLERS];
 	unsigned num_samplers;
-	unsigned dirty_samplers;
+	unsigned valid_samplers;
 };
 
 struct fd_program_stateobj {
