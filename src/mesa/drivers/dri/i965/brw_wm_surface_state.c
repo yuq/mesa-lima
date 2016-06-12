@@ -307,20 +307,17 @@ brw_update_texture_surface(struct gl_context *ctx,
       return;
    }
 
+   if (plane > 0) {
+      if (mt->plane[plane - 1] == NULL)
+         return;
+      mt = mt->plane[plane - 1];
+   }
+
    surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
 			  6 * 4, 32, surf_offset);
 
    uint32_t tex_format = translate_tex_format(brw, intelObj->_Format,
                                               sampler->sRGBDecode);
-
-   if (tObj->Target == GL_TEXTURE_EXTERNAL_OES) {
-      if (plane > 0)
-         mt = mt->plane[plane - 1];
-      if (mt == NULL)
-         return;
-
-      tex_format = translate_tex_format(brw, mt->format, sampler->sRGBDecode);
-   }
 
    if (for_gather) {
       /* Sandybridge's gather4 message is broken for integer formats.
