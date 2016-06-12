@@ -1100,6 +1100,10 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    drm_intel_bo_unreference(brw->curbe.curbe_bo);
    if (brw->vs.base.scratch_bo)
       drm_intel_bo_unreference(brw->vs.base.scratch_bo);
+   if (brw->tcs.base.scratch_bo)
+      drm_intel_bo_unreference(brw->tcs.base.scratch_bo);
+   if (brw->tes.base.scratch_bo)
+      drm_intel_bo_unreference(brw->tes.base.scratch_bo);
    if (brw->gs.base.scratch_bo)
       drm_intel_bo_unreference(brw->gs.base.scratch_bo);
    if (brw->wm.base.scratch_bo)
