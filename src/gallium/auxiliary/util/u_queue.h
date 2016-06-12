@@ -54,12 +54,14 @@ struct util_queue {
    pipe_semaphore queued;
    pipe_thread thread;
    int kill_thread;
-   int num_jobs;
-   struct util_queue_job jobs[8];
+   int max_jobs;
+   int write_idx, read_idx; /* ring buffer pointers */
+   struct util_queue_job *jobs;
    void (*execute_job)(void *job);
 };
 
-void util_queue_init(struct util_queue *queue,
+bool util_queue_init(struct util_queue *queue,
+                     unsigned max_jobs,
                      void (*execute_job)(void *));
 void util_queue_destroy(struct util_queue *queue);
 void util_queue_fence_init(struct util_queue_fence *fence);

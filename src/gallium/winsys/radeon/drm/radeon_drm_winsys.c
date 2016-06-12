@@ -783,7 +783,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     ws->info.gart_page_size = sysconf(_SC_PAGESIZE);
 
     if (ws->num_cpus > 1 && debug_get_option_thread())
-        util_queue_init(&ws->cs_queue,
+        util_queue_init(&ws->cs_queue, 8,
                         radeon_drm_cs_emit_ioctl_oneshot);
 
     /* Create the screen at the end. The winsys must be initialized

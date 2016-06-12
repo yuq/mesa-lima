@@ -29,7 +29,6 @@
 static PIPE_THREAD_ROUTINE(util_queue_thread_func, param)
 {
    struct util_queue *queue = (struct util_queue*)param;
-   unsigned i;
 
    while (1) {
       struct util_queue_job job;
@@ -39,10 +38,9 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, param)
          break;
 
       pipe_mutex_lock(queue->lock);
-      job = queue->jobs[0];
-      for (i = 1; i < queue->num_jobs; i++)
-         queue->jobs[i - 1] = queue->jobs[i];
-      queue->jobs[--queue->num_jobs].job = NULL;
+      job = queue->jobs[queue->read_idx];
+      queue->jobs[queue->read_idx].job = NULL;
+      queue->read_idx = (queue->read_idx + 1) % queue->max_jobs;
       pipe_mutex_unlock(queue->lock);
 
       pipe_semaphore_signal(&queue->has_space);
@@ -55,25 +53,49 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, param)
 
    /* signal remaining jobs before terminating */
    pipe_mutex_lock(queue->lock);
-   for (i = 0; i < queue->num_jobs; i++) {
-      pipe_semaphore_signal(&queue->jobs[i].fence->done);
-      queue->jobs[i].job = NULL;
+   while (queue->jobs[queue->read_idx].job) {
+      pipe_semaphore_signal(&queue->jobs[queue->read_idx].fence->done);
+      queue->jobs[queue->read_idx].job = NULL;
+      queue->read_idx = (queue->read_idx + 1) % queue->max_jobs;
    }
-   queue->num_jobs = 0;
    pipe_mutex_unlock(queue->lock);
    return 0;
 }
 
-void
+bool
 util_queue_init(struct util_queue *queue,
+                unsigned max_jobs,
                 void (*execute_job)(void *))
 {
    memset(queue, 0, sizeof(*queue));
+   queue->max_jobs = max_jobs;
+
+   queue->jobs = (struct util_queue_job*)
+                 CALLOC(max_jobs, sizeof(struct util_queue_job));
+   if (!queue->jobs)
+      goto fail;
+
    queue->execute_job = execute_job;
    pipe_mutex_init(queue->lock);
-   pipe_semaphore_init(&queue->has_space, ARRAY_SIZE(queue->jobs));
+   pipe_semaphore_init(&queue->has_space, max_jobs);
    pipe_semaphore_init(&queue->queued, 0);
+
    queue->thread = pipe_thread_create(util_queue_thread_func, queue);
+   if (!queue->thread)
+      goto fail;
+
+   return true;
+
+fail:
+   if (queue->jobs) {
+      pipe_semaphore_destroy(&queue->has_space);
+      pipe_semaphore_destroy(&queue->queued);
+      pipe_mutex_destroy(queue->lock);
+      FREE(queue->jobs);
+   }
+   /* also util_queue_is_initialized can be used to check for success */
+   memset(queue, 0, sizeof(*queue));
+   return false;
 }
 
 void
@@ -85,6 +107,7 @@ util_queue_destroy(struct util_queue *queue)
    pipe_semaphore_destroy(&queue->has_space);
    pipe_semaphore_destroy(&queue->queued);
    pipe_mutex_destroy(queue->lock);
+   FREE(queue->jobs);
 }
 
 void
@@ -104,6 +127,7 @@ util_queue_add_job(struct util_queue *queue,
                    void *job,
                    struct util_queue_fence *fence)
 {
+   struct util_queue_job *ptr;
    /* Set the semaphore to "busy". */
    pipe_semaphore_wait(&fence->done);
 
@@ -111,10 +135,11 @@ util_queue_add_job(struct util_queue *queue,
    pipe_semaphore_wait(&queue->has_space);
 
    pipe_mutex_lock(queue->lock);
-   assert(queue->num_jobs < ARRAY_SIZE(queue->jobs));
-   queue->jobs[queue->num_jobs].job = job;
-   queue->jobs[queue->num_jobs].fence = fence;
-   queue->num_jobs++;
+   ptr = &queue->jobs[queue->write_idx];
+   assert(ptr->job == NULL);
+   ptr->job = job;
+   ptr->fence = fence;
+   queue->write_idx = (queue->write_idx + 1) % queue->max_jobs;
    pipe_mutex_unlock(queue->lock);
    pipe_semaphore_signal(&queue->queued);
 }
