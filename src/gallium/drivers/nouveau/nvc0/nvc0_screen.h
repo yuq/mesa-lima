@@ -25,6 +25,8 @@
 
 #define NVC0_MAX_IMAGES 8
 
+#define NVC0_MAX_WINDOW_RECTANGLES 8
+
 struct nvc0_context;
 
 struct nvc0_blitter;

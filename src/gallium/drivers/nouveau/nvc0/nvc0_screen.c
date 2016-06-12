@@ -157,6 +157,8 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return PIPE_ENDIAN_LITTLE;
    case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
       return 30;
+   case PIPE_CAP_MAX_WINDOW_RECTANGLES:
+      return NVC0_MAX_WINDOW_RECTANGLES;
 
    /* supported caps */
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
@@ -261,7 +263,6 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_PCI_BUS:
    case PIPE_CAP_PCI_DEVICE:
    case PIPE_CAP_PCI_FUNCTION:
-   case PIPE_CAP_MAX_WINDOW_RECTANGLES:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:

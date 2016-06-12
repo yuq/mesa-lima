@@ -326,6 +326,30 @@ nvc0_validate_viewport(struct nvc0_context *nvc0)
    nvc0->viewports_dirty = 0;
 }
 
+static void
+nvc0_validate_window_rects(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   bool enable = nvc0->window_rect.rects > 0 || nvc0->window_rect.inclusive;
+   int i;
+
+   IMMED_NVC0(push, NVC0_3D(CLIP_RECTS_EN), enable);
+   if (!enable)
+      return;
+
+   IMMED_NVC0(push, NVC0_3D(CLIP_RECTS_MODE), !nvc0->window_rect.inclusive);
+   BEGIN_NVC0(push, NVC0_3D(CLIP_RECT_HORIZ(0)), NVC0_MAX_WINDOW_RECTANGLES * 2);
+   for (i = 0; i < nvc0->window_rect.rects; i++) {
+      struct pipe_scissor_state *s = &nvc0->window_rect.rect[i];
+      PUSH_DATA(push, (s->maxx << 16) | s->minx);
+      PUSH_DATA(push, (s->maxy << 16) | s->miny);
+   }
+   for (; i < NVC0_MAX_WINDOW_RECTANGLES; i++) {
+      PUSH_DATA(push, 0);
+      PUSH_DATA(push, 0);
+   }
+}
+
 static inline void
 nvc0_upload_uclip_planes(struct nvc0_context *nvc0, unsigned s)
 {
@@ -716,6 +740,7 @@ validate_list_3d[] = {
     { nvc0_validate_stipple,       NVC0_NEW_3D_STIPPLE },
     { nvc0_validate_scissor,       NVC0_NEW_3D_SCISSOR | NVC0_NEW_3D_RASTERIZER },
     { nvc0_validate_viewport,      NVC0_NEW_3D_VIEWPORT },
+    { nvc0_validate_window_rects,  NVC0_NEW_3D_WINDOW_RECTS },
     { nvc0_vertprog_validate,      NVC0_NEW_3D_VERTPROG },
     { nvc0_tctlprog_validate,      NVC0_NEW_3D_TCTLPROG },
     { nvc0_tevlprog_validate,      NVC0_NEW_3D_TEVLPROG },

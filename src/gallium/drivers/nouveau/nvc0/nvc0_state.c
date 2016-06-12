@@ -1000,6 +1000,22 @@ nvc0_set_viewport_states(struct pipe_context *pipe,
 }
 
 static void
+nvc0_set_window_rectangles(struct pipe_context *pipe,
+                           boolean include,
+                           unsigned num_rectangles,
+                           const struct pipe_scissor_state *rectangles)
+{
+   struct nvc0_context *nvc0 = nvc0_context(pipe);
+
+   nvc0->window_rect.inclusive = include;
+   nvc0->window_rect.rects = MIN2(num_rectangles, NVC0_MAX_WINDOW_RECTANGLES);
+   memcpy(nvc0->window_rect.rect, rectangles,
+          sizeof(struct pipe_scissor_state) * nvc0->window_rect.rects);
+
+   nvc0->dirty_3d |= NVC0_NEW_3D_WINDOW_RECTS;
+}
+
+static void
 nvc0_set_tess_state(struct pipe_context *pipe,
                     const float default_tess_outer[4],
                     const float default_tess_inner[2])
@@ -1490,6 +1506,7 @@ nvc0_init_state_functions(struct nvc0_context *nvc0)
    pipe->set_polygon_stipple = nvc0_set_polygon_stipple;
    pipe->set_scissor_states = nvc0_set_scissor_states;
    pipe->set_viewport_states = nvc0_set_viewport_states;
+   pipe->set_window_rectangles = nvc0_set_window_rectangles;
    pipe->set_tess_state = nvc0_set_tess_state;
 
    pipe->create_vertex_elements_state = nvc0_vertex_state_create;
