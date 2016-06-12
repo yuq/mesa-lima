@@ -825,6 +825,7 @@ struct nv50_blitctx
    enum pipe_texture_target target;
    struct {
       struct pipe_framebuffer_state fb;
+      struct nv50_window_rect_stateobj window_rect;
       struct nv50_rasterizer_stateobj *rast;
       struct nv50_program *vp;
       struct nv50_program *gp;
@@ -1210,7 +1211,8 @@ nv50_blitctx_prepare_state(struct nv50_blitctx *blit)
 }
 
 static void
-nv50_blitctx_pre_blit(struct nv50_blitctx *ctx)
+nv50_blitctx_pre_blit(struct nv50_blitctx *ctx,
+                      const struct pipe_blit_info *info)
 {
    struct nv50_context *nv50 = ctx->nv50;
    struct nv50_blitter *blitter = nv50->screen->blitter;
@@ -1229,12 +1231,20 @@ nv50_blitctx_pre_blit(struct nv50_blitctx *ctx)
    ctx->saved.fp = nv50->fragprog;
 
    ctx->saved.min_samples = nv50->min_samples;
+   ctx->saved.window_rect = nv50->window_rect;
 
    nv50->rast = &ctx->rast;
 
    nv50->vertprog = &blitter->vp;
    nv50->gmtyprog = NULL;
    nv50->fragprog = ctx->fp;
+
+   nv50->window_rect.rects =
+      MIN2(info->num_window_rectangles, NV50_MAX_WINDOW_RECTANGLES);
+   nv50->window_rect.inclusive = info->window_rectangle_include;
+   if (nv50->window_rect.rects)
+      memcpy(nv50->window_rect.rect, info->window_rectangles,
+             sizeof(struct pipe_scissor_state) * nv50->window_rect.rects);
 
    for (s = 0; s < 3; ++s) {
       ctx->saved.num_textures[s] = nv50->num_textures[s];
@@ -1261,7 +1271,7 @@ nv50_blitctx_pre_blit(struct nv50_blitctx *ctx)
    nv50->dirty_3d =
       NV50_NEW_3D_FRAMEBUFFER | NV50_NEW_3D_MIN_SAMPLES |
       NV50_NEW_3D_VERTPROG | NV50_NEW_3D_FRAGPROG | NV50_NEW_3D_GMTYPROG |
-      NV50_NEW_3D_TEXTURES | NV50_NEW_3D_SAMPLERS;
+      NV50_NEW_3D_TEXTURES | NV50_NEW_3D_SAMPLERS | NV50_NEW_3D_WINDOW_RECTS;
 }
 
 static void
@@ -1285,6 +1295,7 @@ nv50_blitctx_post_blit(struct nv50_blitctx *blit)
    nv50->fragprog = blit->saved.fp;
 
    nv50->min_samples = blit->saved.min_samples;
+   nv50->window_rect = blit->saved.window_rect;
 
    pipe_sampler_view_reference(&nv50->textures[2][0], NULL);
    pipe_sampler_view_reference(&nv50->textures[2][1], NULL);
@@ -1308,7 +1319,7 @@ nv50_blitctx_post_blit(struct nv50_blitctx *blit)
    nv50->dirty_3d = blit->saved.dirty_3d |
       (NV50_NEW_3D_FRAMEBUFFER | NV50_NEW_3D_SCISSOR | NV50_NEW_3D_SAMPLE_MASK |
        NV50_NEW_3D_RASTERIZER | NV50_NEW_3D_ZSA | NV50_NEW_3D_BLEND |
-       NV50_NEW_3D_TEXTURES | NV50_NEW_3D_SAMPLERS |
+       NV50_NEW_3D_TEXTURES | NV50_NEW_3D_SAMPLERS | NV50_NEW_3D_WINDOW_RECTS |
        NV50_NEW_3D_VERTPROG | NV50_NEW_3D_GMTYPROG | NV50_NEW_3D_FRAGPROG);
    nv50->scissors_dirty |= 1;
 
@@ -1336,7 +1347,7 @@ nv50_blit_3d(struct nv50_context *nv50, const struct pipe_blit_info *info)
    blit->render_condition_enable = info->render_condition_enable;
 
    nv50_blit_select_fp(blit, info);
-   nv50_blitctx_pre_blit(blit);
+   nv50_blitctx_pre_blit(blit, info);
 
    nv50_blit_set_dst(blit, dst, info->dst.level, -1, info->dst.format);
    nv50_blit_set_src(blit, src, info->src.level, -1, info->src.format,
@@ -1686,6 +1697,9 @@ nv50_blit(struct pipe_context *pipe, const struct pipe_blit_info *info)
 
    if (info->src.resource->nr_samples == 8 &&
        info->dst.resource->nr_samples <= 1)
+      eng3d = true;
+
+   if (info->num_window_rectangles > 0 || info->window_rectangle_include)
       eng3d = true;
 
    /* FIXME: can't make this work with eng2d anymore */

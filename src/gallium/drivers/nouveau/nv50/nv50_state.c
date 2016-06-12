@@ -1002,6 +1002,22 @@ nv50_set_viewport_states(struct pipe_context *pipe,
 }
 
 static void
+nv50_set_window_rectangles(struct pipe_context *pipe,
+                           boolean include,
+                           unsigned num_rectangles,
+                           const struct pipe_scissor_state *rectangles)
+{
+   struct nv50_context *nv50 = nv50_context(pipe);
+
+   nv50->window_rect.inclusive = include;
+   nv50->window_rect.rects = MIN2(num_rectangles, NV50_MAX_WINDOW_RECTANGLES);
+   memcpy(nv50->window_rect.rect, rectangles,
+          sizeof(struct pipe_scissor_state) * nv50->window_rect.rects);
+
+   nv50->dirty_3d |= NV50_NEW_3D_WINDOW_RECTS;
+}
+
+static void
 nv50_set_vertex_buffers(struct pipe_context *pipe,
                         unsigned start_slot, unsigned count,
                         const struct pipe_vertex_buffer *vb)
@@ -1299,6 +1315,7 @@ nv50_init_state_functions(struct nv50_context *nv50)
    pipe->set_polygon_stipple = nv50_set_polygon_stipple;
    pipe->set_scissor_states = nv50_set_scissor_states;
    pipe->set_viewport_states = nv50_set_viewport_states;
+   pipe->set_window_rectangles = nv50_set_window_rectangles;
 
    pipe->create_vertex_elements_state = nv50_vertex_state_create;
    pipe->delete_vertex_elements_state = nv50_vertex_state_delete;
