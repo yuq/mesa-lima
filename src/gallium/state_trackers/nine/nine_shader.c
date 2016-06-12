@@ -477,6 +477,7 @@ struct shader_translator
         struct ureg_dst o[PIPE_MAX_SHADER_OUTPUTS];
         struct ureg_dst oDepth;
         struct ureg_src v[PIPE_MAX_SHADER_INPUTS];
+        struct ureg_src v_consecutive; /* copy in temp array of ps inputs for rel addressing */
         struct ureg_src vPos;
         struct ureg_src vFace;
         struct ureg_src s;
@@ -894,9 +895,32 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
                       TGSI_INTERPOLATE_LOC_CENTROID : 0,
                     0, 1);
             } else {
-                assert(!param->rel); /* TODO */
-                assert(param->idx < ARRAY_SIZE(tx->regs.v));
-                src = tx->regs.v[param->idx];
+                if(param->rel) {
+                    /* Copy all inputs (non consecutive)
+                     * to temp array (consecutive).
+                     * This is not good for performance.
+                     * A better way would be to have inputs
+                     * consecutive (would need implement alternative
+                     * way to match vs outputs and ps inputs).
+                     * However even with the better way, the temp array
+                     * copy would need to be used if some inputs
+                     * are not GENERIC or if they have different
+                     * interpolation flag. */
+                    if (ureg_src_is_undef(tx->regs.v_consecutive)) {
+                        int i;
+                        tx->regs.v_consecutive = ureg_src(ureg_DECL_array_temporary(ureg, 10, 0));
+                        for (i = 0; i < 10; i++) {
+                            if (!ureg_src_is_undef(tx->regs.v[i]))
+                                ureg_MOV(ureg, ureg_dst_array_offset(ureg_dst(tx->regs.v_consecutive), i), tx->regs.v[i]);
+                            else
+                                ureg_MOV(ureg, ureg_dst_array_offset(ureg_dst(tx->regs.v_consecutive), i), ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f));
+                        }
+                    }
+                    src = ureg_src_array_offset(tx->regs.v_consecutive, param->idx);
+                } else {
+                    assert(param->idx < ARRAY_SIZE(tx->regs.v));
+                    src = tx->regs.v[param->idx];
+                }
             }
         }
         break;
