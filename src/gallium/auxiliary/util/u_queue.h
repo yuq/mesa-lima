@@ -51,6 +51,7 @@ struct util_queue_job {
 
 /* Put this into your context. */
 struct util_queue {
+   const char *name;
    pipe_mutex lock;
    pipe_semaphore has_space;
    pipe_semaphore queued;
@@ -64,6 +65,7 @@ struct util_queue {
 };
 
 bool util_queue_init(struct util_queue *queue,
+                     const char *name,
                      unsigned max_jobs,
                      unsigned num_threads,
                      void (*execute_job)(void *, int));

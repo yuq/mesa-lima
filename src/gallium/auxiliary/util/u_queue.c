@@ -26,6 +26,7 @@
 
 #include "u_queue.h"
 #include "u_memory.h"
+#include "u_string.h"
 #include "os/os_time.h"
 
 static void
@@ -60,6 +61,12 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
    int thread_index = ((struct thread_input*)input)->thread_index;
 
    FREE(input);
+
+   if (queue->name) {
+      char name[16];
+      util_snprintf(name, sizeof(name), "%s:%i", queue->name, thread_index);
+      pipe_thread_setname(name);
+   }
 
    while (1) {
       struct util_queue_job job;
@@ -96,6 +103,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
 
 bool
 util_queue_init(struct util_queue *queue,
+                const char *name,
                 unsigned max_jobs,
                 unsigned num_threads,
                 void (*execute_job)(void *, int))
@@ -103,6 +111,7 @@ util_queue_init(struct util_queue *queue,
    unsigned i;
 
    memset(queue, 0, sizeof(*queue));
+   queue->name = name;
    queue->num_threads = num_threads;
    queue->max_jobs = max_jobs;
 
