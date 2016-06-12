@@ -817,12 +817,17 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                                           brw, irb->mt);
 
    if (can_fast_clear) {
+      union gl_color_union override_color =
+         brw_meta_convert_fast_clear_color(brw, irb->mt,
+                                           &ctx->Color.ClearColor);
+
       /* Record the clear color in the miptree so that it will be
        * programmed in SURFACE_STATE by later rendering and resolve
        * operations.
        */
       const bool color_updated = brw_meta_set_fast_clear_color(
-                                    brw, irb->mt, &ctx->Color.ClearColor);
+                                    brw, &irb->mt->gen9_fast_clear_color,
+                                    &override_color);
 
       /* If the buffer is already in INTEL_FAST_CLEAR_STATE_CLEAR, the clear
        * is redundant and can be skipped.
