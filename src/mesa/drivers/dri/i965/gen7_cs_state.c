@@ -164,7 +164,8 @@ brw_upload_cs_state(struct brw_context *brw)
       SET_FIELD(cs_prog_data->threads, MEDIA_GPGPU_THREAD_COUNT);
    assert(cs_prog_data->threads <= brw->max_cs_threads);
 
-   const uint32_t slm_size = encode_slm_size(devinfo, prog_data->total_shared);
+   const uint32_t slm_size =
+      encode_slm_size(devinfo->gen, prog_data->total_shared);
 
    desc[dw++] =
       SET_FIELD(cs_prog_data->uses_barrier, MEDIA_BARRIER_ENABLE) |

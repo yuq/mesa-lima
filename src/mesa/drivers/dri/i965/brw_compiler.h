@@ -833,7 +833,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                char **error_str);
 
 static inline uint32_t
-encode_slm_size(const struct brw_device_info *devinfo, uint32_t bytes)
+encode_slm_size(unsigned gen, uint32_t bytes)
 {
    uint32_t slm_size = 0;
 
@@ -852,7 +852,7 @@ encode_slm_size(const struct brw_device_info *devinfo, uint32_t bytes)
       /* Shared Local Memory Size is specified as powers of two. */
       slm_size = util_next_power_of_two(bytes);
 
-      if (devinfo->gen >= 9) {
+      if (gen >= 9) {
          /* Use a minimum of 1kB; turn an exponent of 10 (1024 kB) into 1. */
          slm_size = ffs(MAX2(slm_size, 1024)) - 10;
       } else {
