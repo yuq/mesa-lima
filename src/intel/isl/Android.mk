@@ -139,14 +139,14 @@ LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, $(ISL_GENERATED_FILES)
 define bash-gen
 	@mkdir -p $(dir $@)
 	@echo "Gen Bash: $(PRIVATE_MODULE) <= $(notdir $(@))"
-	$(hide) $(PRIVATE_SCRIPT) < $(PRIVATE_CSV) > $@
+	$(hide) $(PRIVATE_SCRIPT) --csv $(PRIVATE_CSV) --out $@
 endef
 
 isl_format_layout_deps := \
-	$(LOCAL_PATH)/isl_format_layout_gen.bash \
+	$(LOCAL_PATH)/gen_format_layout.py \
 	$(LOCAL_PATH)/isl_format_layout.csv
 
-$(intermediates)/isl_format_layout.c: PRIVATE_SCRIPT := bash -c $(LOCAL_PATH)/isl_format_layout_gen.bash
+$(intermediates)/isl_format_layout.c: PRIVATE_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/gen_format_layout.py
 $(intermediates)/isl_format_layout.c: PRIVATE_CSV := $(LOCAL_PATH)/isl_format_layout.csv
 $(intermediates)/isl_format_layout.c: $(isl_format_layout_deps)
 	$(call bash-gen)
