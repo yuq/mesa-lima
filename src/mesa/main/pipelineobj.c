@@ -929,8 +929,21 @@ _mesa_validate_program_pipeline(struct gl_context* ctx,
     * application has created a debug context.
     */
    if ((_mesa_is_gles(ctx) || (ctx->Const.ContextFlags & GL_CONTEXT_FLAG_DEBUG_BIT)) &&
-       !_mesa_validate_pipeline_io(pipe))
-      return GL_FALSE;
+       !_mesa_validate_pipeline_io(pipe)) {
+      if (_mesa_is_gles(ctx))
+         return GL_FALSE;
+
+      static GLuint msg_id = 0;
+
+      _mesa_gl_debug(ctx, &msg_id,
+                     MESA_DEBUG_SOURCE_API,
+                     MESA_DEBUG_TYPE_PORTABILITY,
+                     MESA_DEBUG_SEVERITY_MEDIUM,
+                     "glValidateProgramPipeline: pipeline %u does not meet "
+                     "strict OpenGL ES 3.1 requirements and may not be "
+                     "portable across desktop hardware\n",
+                     pipe->Name);
+   }
 
    pipe->Validated = GL_TRUE;
    return GL_TRUE;
