@@ -116,6 +116,8 @@ LOCAL_MODULE := libmesa_isl
 LOCAL_SRC_FILES := $(ISL_FILES)
 
 LOCAL_C_INCLUDES := \
+	$(MESA_TOP)/src/gallium/include \
+	$(MESA_TOP)/src/gallium/auxiliary \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/mesa \
 	$(MESA_TOP)/src/mesa/drivers/dri/i965 \
