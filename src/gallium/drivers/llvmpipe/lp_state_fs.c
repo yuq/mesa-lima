@@ -2847,6 +2847,13 @@ llvmpipe_set_constant_buffer(struct pipe_context *pipe,
    /* note: reference counting */
    util_copy_constant_buffer(&llvmpipe->constants[shader][index], cb);
 
+   if (constants) {
+       if (!(constants->bind & PIPE_BIND_CONSTANT_BUFFER)) {
+         debug_printf("Illegal set constant without bind flag\n");
+         constants->bind |= PIPE_BIND_CONSTANT_BUFFER;
+      }
+   }
+
    if (shader == PIPE_SHADER_VERTEX ||
        shader == PIPE_SHADER_GEOMETRY) {
       /* Pass the constants to the 'draw' module */
@@ -2869,8 +2876,9 @@ llvmpipe_set_constant_buffer(struct pipe_context *pipe,
       draw_set_mapped_constant_buffer(llvmpipe->draw, shader,
                                       index, data, size);
    }
-
-   llvmpipe->dirty |= LP_NEW_CONSTANTS;
+   else {
+      llvmpipe->dirty |= LP_NEW_FS_CONSTANTS;
+   }
 
    if (cb && cb->user_buffer) {
       pipe_resource_reference(&constants, NULL);

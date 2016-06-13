@@ -235,7 +235,7 @@ void llvmpipe_update_derived( struct llvmpipe_context *llvmpipe )
                                       llvmpipe->stencil_ref.ref_value);
    }
 
-   if (llvmpipe->dirty & LP_NEW_CONSTANTS)
+   if (llvmpipe->dirty & LP_NEW_FS_CONSTANTS)
       lp_setup_set_fs_constants(llvmpipe->setup,
                                 ARRAY_SIZE(llvmpipe->constants[PIPE_SHADER_FRAGMENT]),
                                 llvmpipe->constants[PIPE_SHADER_FRAGMENT]);
