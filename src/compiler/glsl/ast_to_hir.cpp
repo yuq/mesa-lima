@@ -2278,10 +2278,10 @@ precision_qualifier_allowed(const glsl_type *type)
     * From this, we infer that GLSL 1.30 (and later) should allow precision
     * qualifiers on sampler types just like float and integer types.
     */
-   return (type->is_float()
-       || type->is_integer()
-       || type->contains_opaque())
-       && !type->without_array()->is_record();
+   const glsl_type *const t = type->without_array();
+
+   return (t->is_float() || t->is_integer() || t->contains_opaque()) &&
+          !t->is_record();
 }
 
 const glsl_type *
@@ -4994,13 +4994,8 @@ ast_declarator_list::hir(exec_list *instructions,
          state->check_precision_qualifiers_allowed(&loc);
       }
 
-
-      /* If a precision qualifier is allowed on a type, it is allowed on
-       * an array of that type.
-       */
-      if (!(this->type->qualifier.precision == ast_precision_none
-          || precision_qualifier_allowed(var->type->without_array()))) {
-
+      if (this->type->qualifier.precision != ast_precision_none &&
+          !precision_qualifier_allowed(var->type)) {
          _mesa_glsl_error(&loc, state,
                           "precision qualifiers apply only to floating point"
                           ", integer and opaque types");
