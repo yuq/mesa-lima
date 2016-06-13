@@ -77,7 +77,7 @@
 #define KNOB_NUM_STREAMS                    32
 
 // Maximum supported number of attributes per vertex
-#define KNOB_NUM_ATTRIBUTES                 38
+#define KNOB_NUM_ATTRIBUTES                 39
 
 // Maximum supported active viewports and scissors
 #define KNOB_NUM_VIEWPORTS_SCISSORS         16
