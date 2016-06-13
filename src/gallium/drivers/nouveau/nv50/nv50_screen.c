@@ -252,6 +252,7 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
    case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
    case PIPE_CAP_TGSI_VOTE:
+   case PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:

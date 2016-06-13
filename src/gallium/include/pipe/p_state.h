@@ -140,6 +140,13 @@ struct pipe_rasterizer_state
    unsigned clip_halfz:1;
 
    /**
+    * When true do not scale offset_units and use same rules for unorm and
+    * float depth buffers (D3D9). When false use GL/D3D1X behaviour.
+    * This depends on PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED.
+    */
+   unsigned offset_units_unscaled:1;
+
+   /**
     * Enable bits for clipping half-spaces.
     * This applies to both user clip planes and shader clip distances.
     * Note that if the bound shader exports any clip distances, these

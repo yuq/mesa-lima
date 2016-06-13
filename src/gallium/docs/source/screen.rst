@@ -343,6 +343,8 @@ The integer capabilities:
 * ``PIPE_CAP_TGSI_VOTE``: Whether the ``VOTE_*`` ops can be used in shaders.
 * ``PIPE_CAP_MAX_WINDOW_RECTANGLES``: The maxium number of window rectangles
   supported in ``set_window_rectangles``.
+* ``PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED``: If true, the driver implements support
+  for ``pipe_rasterizer_state::offset_units_unscaled``.
 
 
 .. _pipe_capf:
