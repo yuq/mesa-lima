@@ -2616,7 +2616,7 @@ struct gl_shader_variable
    /**
     * Interpolation mode for shader inputs / outputs
     *
-    * \sa ir_variable_interpolation
+    * \sa glsl_interp_qualifier
     */
    unsigned interpolation:2;
 
