@@ -229,6 +229,21 @@ namespace {
       pmb.populateModulePassManager(pm);
       pm.run(mod);
    }
+
+   std::unique_ptr<Module>
+   link(LLVMContext &ctx, const clang::CompilerInstance &c,
+        const std::vector<module> &modules, std::string &r_log) {
+      std::unique_ptr<Module> mod { new Module("link", ctx) };
+      auto linker = compat::create_linker(*mod);
+
+      for (auto &m : modules) {
+         if (compat::link_in_module(*linker,
+                                    parse_module_library(m, ctx, r_log)))
+            throw compile_error();
+      }
+
+      return std::move(mod);
+   }
 }
 
 module
@@ -238,9 +253,7 @@ clover::llvm::link_program(const std::vector<module> &modules,
    std::vector<std::string> options = tokenize(opts + " input.cl");
    auto ctx = create_context(r_log);
    auto c = create_compiler_instance(target, options, r_log);
-   // XXX - Implement linkage of multiple clover modules.
-   assert(modules.size() == 1);
-   auto mod = parse_module_library(modules[0], *ctx, r_log);
+   auto mod = link(*ctx, *c, modules, r_log);
 
    optimize(*mod, c->getCodeGenOpts().OptimizationLevel);
 
