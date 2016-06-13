@@ -345,6 +345,28 @@ brw_get_scratch_bo(struct brw_context *brw,
    }
 }
 
+/**
+ * Reserve enough scratch space for the given stage to hold \p per_thread_size
+ * bytes times the given \p thread_count.
+ */
+void
+brw_alloc_stage_scratch(struct brw_context *brw,
+                        struct brw_stage_state *stage_state,
+                        unsigned per_thread_size,
+                        unsigned thread_count)
+{
+   if (stage_state->per_thread_scratch < per_thread_size) {
+      stage_state->per_thread_scratch = per_thread_size;
+
+      if (stage_state->scratch_bo)
+         drm_intel_bo_unreference(stage_state->scratch_bo);
+
+      stage_state->scratch_bo =
+         drm_intel_bo_alloc(brw->bufmgr, "shader scratch space",
+                            per_thread_size * thread_count, 4096);
+   }
+}
+
 void brwInitFragProgFuncs( struct dd_function_table *functions )
 {
    assert(functions->ProgramStringNotify == _tnl_program_string);

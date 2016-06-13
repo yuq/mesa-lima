@@ -677,6 +677,12 @@ struct brw_stage_state
     */
    drm_intel_bo *scratch_bo;
 
+   /**
+    * Scratch slot size allocated for each thread in the buffer object given
+    * by \c scratch_bo.
+    */
+   uint32_t per_thread_scratch;
+
    /** Offset in the program cache to the program */
    uint32_t prog_offset;
 
@@ -1481,6 +1487,10 @@ brw_get_scratch_size(int size)
 }
 void brw_get_scratch_bo(struct brw_context *brw,
 			drm_intel_bo **scratch_bo, int size);
+void brw_alloc_stage_scratch(struct brw_context *brw,
+                             struct brw_stage_state *stage_state,
+                             unsigned per_thread_size,
+                             unsigned thread_count);
 void brw_init_shader_time(struct brw_context *brw);
 int brw_get_shader_time_index(struct brw_context *brw,
                               struct gl_shader_program *shader_prog,

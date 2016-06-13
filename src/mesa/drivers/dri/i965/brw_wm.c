@@ -163,10 +163,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
       }
    }
 
-   if (prog_data.base.total_scratch) {
-      brw_get_scratch_bo(brw, &brw->wm.base.scratch_bo,
-			 prog_data.base.total_scratch * brw->max_wm_threads);
-   }
+   brw_alloc_stage_scratch(brw, &brw->wm.base,
+                           prog_data.base.total_scratch,
+                           brw->max_wm_threads);
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM))
       fprintf(stderr, "\n");
