@@ -107,7 +107,7 @@ _mesa_init_pipeline(struct gl_context *ctx)
  * Callback for deleting a pipeline object.  Called by _mesa_HashDeleteAll().
  */
 static void
-delete_pipelineobj_cb(GLuint id, void *data, void *userData)
+delete_pipelineobj_cb(UNUSED GLuint id, void *data, void *userData)
 {
    struct gl_pipeline_object *obj = (struct gl_pipeline_object *) data;
    struct gl_context *ctx = (struct gl_context *) userData;
