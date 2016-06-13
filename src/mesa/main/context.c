@@ -407,8 +407,6 @@ one_time_init( struct gl_context *ctx )
 
    /* per-API one-time init */
    if (!(api_init_mask & (1 << ctx->API))) {
-      _mesa_init_get_hash(ctx);
-
       _mesa_init_remap_table();
    }
 

@@ -149,9 +149,6 @@ extern void
 _mesa_init_constants(struct gl_constants *consts, gl_api api);
 
 extern void
-_mesa_init_get_hash(struct gl_context *ctx);
-
-extern void
 _mesa_notifySwapBuffers(struct gl_context *gc);
 
 
