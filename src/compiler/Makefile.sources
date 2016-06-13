@@ -231,6 +231,7 @@ NIR_FILES = \
 	nir/nir_phi_builder.c \
 	nir/nir_phi_builder.h \
 	nir/nir_print.c \
+	nir/nir_propagate_invariant.c \
 	nir/nir_remove_dead_variables.c \
 	nir/nir_repair_ssa.c \
 	nir/nir_search.c \
