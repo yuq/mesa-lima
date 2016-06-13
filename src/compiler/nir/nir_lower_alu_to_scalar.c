@@ -56,6 +56,7 @@ lower_reduction(nir_alu_instr *instr, nir_op chan_op, nir_op merge_op,
          nir_alu_src_copy(&chan->src[1], &instr->src[1], chan);
          chan->src[1].swizzle[0] = chan->src[1].swizzle[i];
       }
+      chan->exact = instr->exact;
 
       nir_builder_instr_insert(builder, &chan->instr);
 
@@ -229,6 +230,7 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
       nir_alu_ssa_dest_init(lower, 1, instr->dest.dest.ssa.bit_size);
       lower->dest.saturate = instr->dest.saturate;
       comps[chan] = &lower->dest.dest.ssa;
+      lower->exact = instr->exact;
 
       nir_builder_instr_insert(b, &lower->instr);
    }
