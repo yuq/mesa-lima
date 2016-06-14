@@ -308,11 +308,8 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_GEOMETRY:
    case PIPE_SHADER_FRAGMENT:
    case PIPE_SHADER_COMPUTE:
-      break;
    case PIPE_SHADER_TESS_CTRL:
    case PIPE_SHADER_TESS_EVAL:
-      if (class_3d >= GM107_3D_CLASS)
-         return 0;
       break;
    default:
       return 0;
