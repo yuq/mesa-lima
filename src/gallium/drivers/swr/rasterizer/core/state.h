@@ -676,6 +676,9 @@ struct SWR_GS_STATE
     // geometry shader emits PrimitiveID
     bool emitsPrimitiveID;
 
+    // geometry shader emits ViewportArrayIndex
+    bool emitsViewportArrayIndex;
+
     // if true, geometry shader emits a single stream, with separate cut buffer.
     // if false, geometry shader emits vertices for multiple streams to the stream buffer, with a separate StreamID buffer
     // to map vertices to streams
