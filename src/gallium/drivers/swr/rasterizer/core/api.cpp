@@ -322,7 +322,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
 
         SWR_ASSERT(pCurDrawContext->pArena->IsEmpty() == true);
 
-        pCurDrawContext->dependency = 0;
+        pCurDrawContext->dependent = false;
         pCurDrawContext->pContext = pContext;
         pCurDrawContext->isCompute = false; // Dispatch has to set this to true.
 
@@ -406,7 +406,7 @@ void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint
     pDC->FeWork.desc.sync.userData3 = userData3;
 
     // cannot execute until all previous draws have completed
-    pDC->dependency = pDC->drawId - 1;
+    pDC->dependent = true;
 
     //enqueue
     QueueDraw(pContext);
@@ -1500,7 +1500,7 @@ void SwrGetStats(
     pDC->FeWork.desc.queryStats.pStats = pStats;
 
     // cannot execute until all previous draws have completed
-    pDC->dependency = pDC->drawId - 1;
+    pDC->dependent = true;
 
     //enqueue
     QueueDraw(pContext);

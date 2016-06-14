@@ -381,8 +381,6 @@ struct DRAW_STATE
 struct DRAW_CONTEXT
 {
     SWR_CONTEXT*    pContext;
-    uint32_t        drawId;
-    uint32_t        dependency;
     union
     {
         MacroTileMgr*   pTileMgr;
@@ -391,6 +389,8 @@ struct DRAW_CONTEXT
     DRAW_STATE*     pState;
     CachingArena*   pArena;
 
+    uint32_t        drawId;
+    bool            dependent;
     bool            isCompute;      // Is this DC a compute context?
     bool            cleanupState;   // True if this is the last draw using an entry in the state ring.
     volatile bool   doneFE;         // Is FE work done for this draw?

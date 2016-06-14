@@ -317,7 +317,7 @@ bool IDComparesLess(uint32_t a, uint32_t b)
 INLINE
 bool CheckDependency(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t lastRetiredDraw)
 {
-    return IDComparesLess(lastRetiredDraw, pDC->dependency);
+    return pDC->dependent && IDComparesLess(lastRetiredDraw, pDC->drawId - 1);
 }
 
 // inlined-only version
