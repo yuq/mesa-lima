@@ -30,7 +30,8 @@
 void
 anv_dump_image_to_ppm(struct anv_device *device,
                       struct anv_image *image, unsigned miplevel,
-                      unsigned array_layer, const char *filename)
+                      unsigned array_layer, VkImageAspectFlagBits aspect,
+                      const char *filename)
 {
    VkDevice vk_device = anv_device_to_handle(device);
    MAYBE_UNUSED VkResult result;
@@ -98,12 +99,15 @@ anv_dump_image_to_ppm(struct anv_device *device,
       });
    assert(result == VK_SUCCESS);
 
+   VkImageUsageFlags old_usage = image->usage;
+   image->usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
    anv_CmdBlitImage(cmd,
       anv_image_to_handle(image), VK_IMAGE_LAYOUT_GENERAL,
       copy_image, VK_IMAGE_LAYOUT_GENERAL, 1,
       &(VkImageBlit) {
          .srcSubresource = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .aspectMask = aspect,
             .mipLevel = miplevel,
             .baseArrayLayer = array_layer,
             .layerCount = 1,
@@ -123,6 +127,8 @@ anv_dump_image_to_ppm(struct anv_device *device,
             { extent.width, extent.height, 1 },
          },
       }, VK_FILTER_NEAREST);
+
+   image->usage = old_usage;
 
    ANV_CALL(CmdPipelineBarrier)(cmd,
       VK_PIPELINE_STAGE_TRANSFER_BIT,
