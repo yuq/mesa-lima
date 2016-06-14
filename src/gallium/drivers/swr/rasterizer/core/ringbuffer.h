@@ -90,13 +90,13 @@ public:
         return (numEnqueued == mNumEntries);
     }
 
-    INLINE uint64_t GetTail() volatile { return mRingTail; }
-    INLINE uint64_t GetHead() volatile { return mRingHead; }
+    INLINE uint32_t GetTail() volatile { return mRingTail; }
+    INLINE uint32_t GetHead() volatile { return mRingHead; }
 
 protected:
     T* mpRingBuffer;
     uint32_t mNumEntries;
 
-    OSALIGNLINE(volatile uint64_t) mRingHead;  // Consumer Counter
-    OSALIGNLINE(volatile uint64_t) mRingTail;  // Producer Counter
+    OSALIGNLINE(volatile uint32_t) mRingHead;  // Consumer Counter
+    OSALIGNLINE(volatile uint32_t) mRingTail;  // Producer Counter
 };

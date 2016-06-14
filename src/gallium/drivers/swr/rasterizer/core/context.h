@@ -381,13 +381,13 @@ struct DRAW_STATE
 struct DRAW_CONTEXT
 {
     SWR_CONTEXT*    pContext;
-    uint64_t        drawId;
+    uint32_t        drawId;
+    uint32_t        dependency;
     union
     {
         MacroTileMgr*   pTileMgr;
         DispatchQueue*  pDispatch;      // Queue for thread groups. (isCompute)
     };
-    uint64_t        dependency;
     DRAW_STATE*     pState;
     CachingArena*   pArena;
 

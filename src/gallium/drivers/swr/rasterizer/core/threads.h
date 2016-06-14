@@ -64,7 +64,7 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
 void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
 
 // Expose FE and BE worker functions to the API thread if single threaded
-void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE);
-void WorkOnFifoBE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawBE, TileSet &usedTiles, uint32_t numaNode, uint32_t numaMask);
-void WorkOnCompute(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawBE);
+void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawFE);
+void WorkOnFifoBE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawBE, TileSet &usedTiles, uint32_t numaNode, uint32_t numaMask);
+void WorkOnCompute(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawBE);
 int64_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC);

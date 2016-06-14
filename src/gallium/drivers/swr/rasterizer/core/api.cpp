@@ -215,13 +215,13 @@ void QueueWork(SWR_CONTEXT *pContext)
 
         if (IsDraw)
         {
-            uint64_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
+            uint32_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
             WorkOnFifoFE(pContext, 0, curDraw[0]);
             WorkOnFifoBE(pContext, 0, curDraw[1], gSingleThreadLockedTiles, 0, 0);
         }
         else
         {
-            uint64_t curDispatch = pContext->pCurDrawContext->drawId;
+            uint32_t curDispatch = pContext->pCurDrawContext->drawId;
             WorkOnCompute(pContext, 0, curDispatch);
         }
 
