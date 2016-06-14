@@ -5976,23 +5976,26 @@ fs_visitor::allocate_registers(bool allow_spilling)
    schedule_instructions(SCHEDULE_POST);
 
    if (last_scratch > 0) {
+      unsigned max_scratch_size = 2 * 1024 * 1024;
+
       prog_data->total_scratch = brw_get_scratch_size(last_scratch);
 
-      if (devinfo->is_haswell && stage == MESA_SHADER_COMPUTE) {
-         /* According to the MEDIA_VFE_STATE's "Per Thread Scratch Space"
-          * field documentation, Haswell supports a minimum of 2kB of
-          * scratch space for compute shaders, unlike every other stage
-          * and platform.
-          */
-         prog_data->total_scratch = MAX2(prog_data->total_scratch, 2048);
-      } else if (devinfo->gen <= 7 && stage == MESA_SHADER_COMPUTE) {
-         /* According to the MEDIAVFE_STATE's "Per Thread Scratch Space"
-          * field documentation, platforms prior to Haswell measure scratch
-          * size linearly with a range of [1kB, 12kB] and 1kB granularity.
-          */
-         prog_data->total_scratch = ALIGN(last_scratch, 1024);
-
-         assert(prog_data->total_scratch < 12 * 1024);
+      if (stage == MESA_SHADER_COMPUTE) {
+         if (devinfo->is_haswell) {
+            /* According to the MEDIA_VFE_STATE's "Per Thread Scratch Space"
+             * field documentation, Haswell supports a minimum of 2kB of
+             * scratch space for compute shaders, unlike every other stage
+             * and platform.
+             */
+            prog_data->total_scratch = MAX2(prog_data->total_scratch, 2048);
+         } else if (devinfo->gen <= 7) {
+            /* According to the MEDIA_VFE_STATE's "Per Thread Scratch Space"
+             * field documentation, platforms prior to Haswell measure scratch
+             * size linearly with a range of [1kB, 12kB] and 1kB granularity.
+             */
+            prog_data->total_scratch = ALIGN(last_scratch, 1024);
+            max_scratch_size = 12 * 1024;
+         }
       }
 
       /* We currently only support up to 2MB of scratch space.  If we
@@ -6005,7 +6008,7 @@ fs_visitor::allocate_registers(bool allow_spilling)
        * See 3D-Media-GPGPU Engine > Media GPGPU Pipeline >
        * Thread Group Tracking > Local Memory/Scratch Space.
        */
-      assert(prog_data->total_scratch < 2 * 1024 * 1024);
+      assert(prog_data->total_scratch < max_scratch_size);
    }
 }
 
