@@ -66,7 +66,7 @@ brw_upload_cs_state(struct brw_context *brw)
    if (prog_data->total_scratch) {
       if (brw->gen >= 8) {
          /* Broadwell's Per Thread Scratch Space is in the range [0, 11]
-          * where 0 = 1k, 1 = 4k, 2 = 8k, ..., 11 = 2M.
+          * where 0 = 1k, 1 = 2k, 2 = 4k, ..., 11 = 2M.
           */
          OUT_RELOC64(stage_state->scratch_bo,
                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
