@@ -273,6 +273,7 @@ struct r600_rasterizer_state {
 	float				offset_units;
 	float				offset_scale;
 	bool				offset_enable;
+	bool				offset_units_unscaled;
 	bool				scissor_enable;
 	bool				multisample_enable;
 };
@@ -282,6 +283,7 @@ struct r600_poly_offset_state {
 	enum pipe_format		zs_format;
 	float				offset_units;
 	float				offset_scale;
+	bool				offset_units_unscaled;
 };
 
 struct r600_blend_state {

@@ -492,6 +492,7 @@ static void *evergreen_create_rs_state(struct pipe_context *ctx,
 	rs->offset_units = state->offset_units;
 	rs->offset_scale = state->offset_scale * 16.0f;
 	rs->offset_enable = state->offset_point || state->offset_line || state->offset_tri;
+	rs->offset_units_unscaled = state->offset_units_unscaled;
 
 	if (state->point_size_per_vertex) {
 		psize_min = util_get_min_point_size(state);
@@ -1665,24 +1666,26 @@ static void evergreen_emit_polygon_offset(struct r600_context *rctx, struct r600
 	float offset_scale = state->offset_scale;
 	uint32_t pa_su_poly_offset_db_fmt_cntl = 0;
 
-	switch (state->zs_format) {
-	case PIPE_FORMAT_Z24X8_UNORM:
-	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-	case PIPE_FORMAT_X8Z24_UNORM:
-	case PIPE_FORMAT_S8_UINT_Z24_UNORM:
-		offset_units *= 2.0f;
-		pa_su_poly_offset_db_fmt_cntl =
-			S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-24);
-		break;
-	case PIPE_FORMAT_Z16_UNORM:
-		offset_units *= 4.0f;
-		pa_su_poly_offset_db_fmt_cntl =
-			S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-16);
-		break;
-	default:
-		pa_su_poly_offset_db_fmt_cntl =
-			S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-23) |
-			S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
+	if (!state->offset_units_unscaled) {
+		switch (state->zs_format) {
+		case PIPE_FORMAT_Z24X8_UNORM:
+		case PIPE_FORMAT_Z24_UNORM_S8_UINT:
+		case PIPE_FORMAT_X8Z24_UNORM:
+		case PIPE_FORMAT_S8_UINT_Z24_UNORM:
+			offset_units *= 2.0f;
+			pa_su_poly_offset_db_fmt_cntl =
+				S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-24);
+			break;
+		case PIPE_FORMAT_Z16_UNORM:
+			offset_units *= 4.0f;
+			pa_su_poly_offset_db_fmt_cntl =
+				S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-16);
+			break;
+		default:
+			pa_su_poly_offset_db_fmt_cntl =
+				S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-23) |
+				S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
+		}
 	}
 
 	radeon_set_context_reg_seq(cs, R_028B80_PA_SU_POLY_OFFSET_FRONT_SCALE, 4);

@@ -350,9 +350,11 @@ static void r600_bind_rs_state(struct pipe_context *ctx, void *state)
 
 	if (rs->offset_enable &&
 	    (rs->offset_units != rctx->poly_offset_state.offset_units ||
-	     rs->offset_scale != rctx->poly_offset_state.offset_scale)) {
+	     rs->offset_scale != rctx->poly_offset_state.offset_scale ||
+	     rs->offset_units_unscaled != rctx->poly_offset_state.offset_units_unscaled)) {
 		rctx->poly_offset_state.offset_units = rs->offset_units;
 		rctx->poly_offset_state.offset_scale = rs->offset_scale;
+		rctx->poly_offset_state.offset_units_unscaled = rs->offset_units_unscaled;
 		r600_mark_atom_dirty(rctx, &rctx->poly_offset_state.atom);
 	}
 
