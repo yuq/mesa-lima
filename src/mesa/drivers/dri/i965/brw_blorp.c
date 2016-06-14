@@ -819,6 +819,14 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       intel_miptree_get_fast_clear_state(irb->mt, irb->mt_level,
                                          logical_layer);
 
+   /* Surface state can only record one fast clear color value. Therefore
+    * unless different levels/layers agree on the color it can be used to
+    * represent only single level/layer. Here it will be reserved for the
+    * first slice (level 0, layer 0).
+    */
+   if (irb->layer_count > 1 || irb->mt_level || irb->mt_layer)
+      can_fast_clear = false;
+
    if (can_fast_clear) {
       union gl_color_union override_color =
          brw_meta_convert_fast_clear_color(brw, irb->mt,
