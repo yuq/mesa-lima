@@ -238,14 +238,6 @@ util_fill_box(ubyte * dst,
 }
 
 
-/** Mipmap level size computation, with minimum block size */
-static inline unsigned
-minify(unsigned value, unsigned levels, unsigned blocksize)
-{
-   return MAX2(blocksize, value >> levels);
-}
-
-
 /**
  * Fallback function for pipe->resource_copy_region().
  * We support copying between different formats (including compressed/
@@ -333,25 +325,21 @@ util_resource_copy_region(struct pipe_context *pipe,
    assert(src_box.x % src_bw == 0);
    assert(src_box.y % src_bh == 0);
    assert(src_box.width % src_bw == 0 ||
-          src_box.x + src_box.width == minify(src->width0, src_level, src_bw));
+          src_box.x + src_box.width == u_minify(src->width0, src_level));
    assert(src_box.height % src_bh == 0 ||
-          src_box.y + src_box.height == minify(src->height0, src_level, src_bh));
+          src_box.y + src_box.height == u_minify(src->height0, src_level));
    assert(dst_box.x % dst_bw == 0);
    assert(dst_box.y % dst_bh == 0);
    assert(dst_box.width % dst_bw == 0 ||
-          dst_box.x + dst_box.width == minify(dst->width0, dst_level, dst_bw));
+          dst_box.x + dst_box.width == u_minify(dst->width0, dst_level));
    assert(dst_box.height % dst_bh == 0 ||
-          dst_box.y + dst_box.height == minify(dst->height0, dst_level, dst_bh));
+          dst_box.y + dst_box.height == u_minify(dst->height0, dst_level));
 
    /* check that region boxes are not out of bounds */
-   assert(src_box.x + src_box.width <=
-          minify(src->width0, src_level, src_bw));
-   assert(src_box.y + src_box.height <=
-          minify(src->height0, src_level, src_bh));
-   assert(dst_box.x + dst_box.width <=
-          minify(dst->width0, dst_level, dst_bw));
-   assert(dst_box.y + dst_box.height <=
-          minify(dst->height0, dst_level, dst_bh));
+   assert(src_box.x + src_box.width <= u_minify(src->width0, src_level));
+   assert(src_box.y + src_box.height <= u_minify(src->height0, src_level));
+   assert(dst_box.x + dst_box.width <= u_minify(dst->width0, dst_level));
+   assert(dst_box.y + dst_box.height <= u_minify(dst->height0, dst_level));
 
    /* check that total number of src, dest bytes match */
    assert((src_box.width / src_bw) * (src_box.height / src_bh) * src_bs ==
