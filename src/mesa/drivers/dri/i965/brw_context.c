@@ -769,12 +769,35 @@ brw_initialize_context_constants(struct brw_context *brw)
 }
 
 static void
-brw_initialize_cs_context_constants(struct brw_context *brw, unsigned max_threads)
+brw_initialize_cs_context_constants(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
+   const struct intel_screen *screen = brw->intelScreen;
+   const struct brw_device_info *devinfo = screen->devinfo;
+
+   /* FINISHME: Do this for all platforms that the kernel supports */
+   if (brw->is_cherryview &&
+       screen->subslice_total > 0 && screen->eu_total > 0) {
+      /* Logical CS threads = EUs per subslice * 7 threads per EU */
+      brw->max_cs_threads = screen->eu_total / screen->subslice_total * 7;
+
+      /* Fuse configurations may give more threads than expected, never less. */
+      if (brw->max_cs_threads < devinfo->max_cs_threads)
+         brw->max_cs_threads = devinfo->max_cs_threads;
+   } else {
+      brw->max_cs_threads = devinfo->max_cs_threads;
+   }
+
    /* Maximum number of scalar compute shader invocations that can be run in
     * parallel in the same subslice assuming SIMD32 dispatch.
+    *
+    * We don't advertise more than 64 threads, because we are limited to 64 by
+    * our usage of thread_width_max in the gpgpu walker command. This only
+    * currently impacts Haswell, which otherwise might be able to advertise 70
+    * threads. With SIMD32 and 64 threads, Haswell still provides twice the
+    * required the number of invocation needed for ARB_compute_shader.
     */
+   const unsigned max_threads = MIN2(64, brw->max_cs_threads);
    const uint32_t max_invocations = 32 * max_threads;
    ctx->Const.MaxComputeWorkGroupSize[0] = max_invocations;
    ctx->Const.MaxComputeWorkGroupSize[1] = max_invocations;
@@ -978,7 +1001,7 @@ brwCreateContext(gl_api api,
    if (INTEL_DEBUG & DEBUG_PERF)
       brw->perf_debug = true;
 
-   brw_initialize_cs_context_constants(brw, devinfo->max_cs_threads);
+   brw_initialize_cs_context_constants(brw);
    brw_initialize_context_constants(brw);
 
    ctx->Const.ResetStrategy = notify_reset
@@ -1025,18 +1048,6 @@ brwCreateContext(gl_api api,
    brw->max_ds_threads = devinfo->max_ds_threads;
    brw->max_gs_threads = devinfo->max_gs_threads;
    brw->max_wm_threads = devinfo->max_wm_threads;
-   /* FINISHME: Do this for all platforms that the kernel supports */
-   if (brw->is_cherryview &&
-       screen->subslice_total > 0 && screen->eu_total > 0) {
-      /* Logical CS threads = EUs per subslice * 7 threads per EU */
-      brw->max_cs_threads = screen->eu_total / screen->subslice_total * 7;
-
-      /* Fuse configurations may give more threads than expected, never less. */
-      if (brw->max_cs_threads < devinfo->max_cs_threads)
-         brw->max_cs_threads = devinfo->max_cs_threads;
-   } else {
-      brw->max_cs_threads = devinfo->max_cs_threads;
-   }
    brw->urb.size = devinfo->urb.size;
    brw->urb.min_vs_entries = devinfo->urb.min_vs_entries;
    brw->urb.max_vs_entries = devinfo->urb.max_vs_entries;
