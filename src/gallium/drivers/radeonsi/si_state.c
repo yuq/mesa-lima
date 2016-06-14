@@ -810,20 +810,24 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 		float offset_scale = state->offset_scale * 16.0f;
 		uint32_t pa_su_poly_offset_db_fmt_cntl = 0;
 
-		switch (i) {
-		case 0: /* 16-bit zbuffer */
-			offset_units *= 4.0f;
-			pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-16);
-			break;
-		case 1: /* 24-bit zbuffer */
-			offset_units *= 2.0f;
-			pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-24);
-			break;
-		case 2: /* 32-bit zbuffer */
-			offset_units *= 1.0f;
-			pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-23) |
-							S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
-			break;
+		if (!state->offset_units_unscaled) {
+			switch (i) {
+			case 0: /* 16-bit zbuffer */
+				offset_units *= 4.0f;
+				pa_su_poly_offset_db_fmt_cntl =
+					S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-16);
+				break;
+			case 1: /* 24-bit zbuffer */
+				offset_units *= 2.0f;
+				pa_su_poly_offset_db_fmt_cntl =
+					S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-24);
+				break;
+			case 2: /* 32-bit zbuffer */
+				offset_units *= 1.0f;
+				pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-23) |
+								S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
+				break;
+			}
 		}
 
 		si_pm4_set_reg(pm4, R_028B80_PA_SU_POLY_OFFSET_FRONT_SCALE,
