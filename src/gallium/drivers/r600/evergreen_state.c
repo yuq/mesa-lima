@@ -1222,27 +1222,6 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 	surf->db_depth_slice = S_02805C_SLICE_TILE_MAX(levelinfo->nblk_x *
 						       levelinfo->nblk_y / 64 - 1);
 
-	switch (surf->base.format) {
-	case PIPE_FORMAT_Z24X8_UNORM:
-	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-	case PIPE_FORMAT_X8Z24_UNORM:
-	case PIPE_FORMAT_S8_UINT_Z24_UNORM:
-		surf->pa_su_poly_offset_db_fmt_cntl =
-			S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-24);
-		break;
-	case PIPE_FORMAT_Z32_FLOAT:
-	case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-		surf->pa_su_poly_offset_db_fmt_cntl =
-			S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-23) |
-			S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
-		break;
-	case PIPE_FORMAT_Z16_UNORM:
-		surf->pa_su_poly_offset_db_fmt_cntl =
-			S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-16);
-		break;
-	default:;
-	}
-
 	if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
 		uint64_t stencil_offset;
 		unsigned stile_split = rtex->surface.stencil_tile_split;
@@ -1627,8 +1606,6 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 							       RADEON_PRIO_DEPTH_BUFFER_MSAA :
 							       RADEON_PRIO_DEPTH_BUFFER);
 
-		radeon_set_context_reg(cs, R_028B78_PA_SU_POLY_OFFSET_DB_FMT_CNTL,
-				       zb->pa_su_poly_offset_db_fmt_cntl);
 		radeon_set_context_reg(cs, R_028008_DB_DEPTH_VIEW, zb->db_depth_view);
 
 		radeon_set_context_reg_seq(cs, R_028040_DB_Z_INFO, 8);
@@ -1686,6 +1663,7 @@ static void evergreen_emit_polygon_offset(struct r600_context *rctx, struct r600
 	struct r600_poly_offset_state *state = (struct r600_poly_offset_state*)a;
 	float offset_units = state->offset_units;
 	float offset_scale = state->offset_scale;
+	uint32_t pa_su_poly_offset_db_fmt_cntl = 0;
 
 	switch (state->zs_format) {
 	case PIPE_FORMAT_Z24X8_UNORM:
@@ -1693,11 +1671,18 @@ static void evergreen_emit_polygon_offset(struct r600_context *rctx, struct r600
 	case PIPE_FORMAT_X8Z24_UNORM:
 	case PIPE_FORMAT_S8_UINT_Z24_UNORM:
 		offset_units *= 2.0f;
+		pa_su_poly_offset_db_fmt_cntl =
+			S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-24);
 		break;
 	case PIPE_FORMAT_Z16_UNORM:
 		offset_units *= 4.0f;
+		pa_su_poly_offset_db_fmt_cntl =
+			S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-16);
 		break;
-	default:;
+	default:
+		pa_su_poly_offset_db_fmt_cntl =
+			S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS((char)-23) |
+			S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
 	}
 
 	radeon_set_context_reg_seq(cs, R_028B80_PA_SU_POLY_OFFSET_FRONT_SCALE, 4);
@@ -1705,6 +1690,9 @@ static void evergreen_emit_polygon_offset(struct r600_context *rctx, struct r600
 	radeon_emit(cs, fui(offset_units));
 	radeon_emit(cs, fui(offset_scale));
 	radeon_emit(cs, fui(offset_units));
+
+	radeon_set_context_reg(cs, R_028B78_PA_SU_POLY_OFFSET_DB_FMT_CNTL,
+			       pa_su_poly_offset_db_fmt_cntl);
 }
 
 static void evergreen_emit_cb_misc_state(struct r600_context *rctx, struct r600_atom *atom)
@@ -3645,7 +3633,7 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->db_misc_state.atom, id++, evergreen_emit_db_misc_state, 10);
 	r600_init_atom(rctx, &rctx->db_state.atom, id++, evergreen_emit_db_state, 14);
 	r600_init_atom(rctx, &rctx->dsa_state.atom, id++, r600_emit_cso_state, 0);
-	r600_init_atom(rctx, &rctx->poly_offset_state.atom, id++, evergreen_emit_polygon_offset, 6);
+	r600_init_atom(rctx, &rctx->poly_offset_state.atom, id++, evergreen_emit_polygon_offset, 9);
 	r600_init_atom(rctx, &rctx->rasterizer_state.atom, id++, r600_emit_cso_state, 0);
 	r600_add_atom(rctx, &rctx->b.scissors.atom, id++);
 	r600_add_atom(rctx, &rctx->b.viewports.atom, id++);
