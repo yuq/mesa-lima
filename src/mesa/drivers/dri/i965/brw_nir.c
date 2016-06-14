@@ -292,8 +292,8 @@ brw_nir_lower_vue_outputs(nir_shader *nir,
 {
    if (is_scalar) {
       nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
-                               type_size_vec4_times_4);
-      nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4);
+                               type_size_scalar);
+      nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
    } else {
       nir_foreach_variable(var, &nir->outputs)
          var->data.driver_location = var->data.location;

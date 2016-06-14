@@ -108,7 +108,7 @@ fs_visitor::nir_setup_single_output_varying(fs_reg *reg,
       for (unsigned count = 0; count < num_elements; count += 4) {
          this->outputs[*location] = *reg;
          this->output_components[*location] = MIN2(4, num_elements - count);
-         *reg = offset(*reg, bld, 4);
+         *reg = offset(*reg, bld, this->output_components[*location]);
          (*location)++;
       }
    }
