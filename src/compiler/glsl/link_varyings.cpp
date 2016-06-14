@@ -1611,7 +1611,8 @@ varying_matches::compute_packing_class(const ir_variable *var)
    unsigned packing_class = var->data.centroid | (var->data.sample << 1) |
                             (var->data.patch << 2);
    packing_class *= 4;
-   packing_class += var->data.interpolation;
+   packing_class += var->is_interpolation_flat()
+      ? unsigned(INTERP_QUALIFIER_FLAT) : var->data.interpolation;
    return packing_class;
 }
 
