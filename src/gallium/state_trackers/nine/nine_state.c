@@ -74,7 +74,7 @@ prepare_dsa(struct NineDevice9 *device)
 static inline void
 prepare_rasterizer(struct NineDevice9 *device)
 {
-    nine_convert_rasterizer_state(&device->state.pipe.rast, device->state.rs);
+    nine_convert_rasterizer_state(device, &device->state.pipe.rast, device->state.rs);
     device->state.commit |= NINE_STATE_COMMIT_RASTERIZER;
 }
 

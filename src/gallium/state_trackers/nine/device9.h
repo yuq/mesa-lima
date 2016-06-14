@@ -121,6 +121,7 @@ struct NineDevice9
         boolean window_space_position_support;
         boolean vs_integer;
         boolean ps_integer;
+        boolean offset_units_unscaled;
     } driver_caps;
 
     struct {
