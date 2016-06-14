@@ -269,6 +269,9 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
         uint32_t    numComponents = info.numComps;
         uint32_t bpc = info.bpp / info.numComps;  ///@todo Code below assumes all components are same size. Need to fix.
 
+        // load path doesn't support component packing
+        SWR_ASSERT(ied.ComponentPacking == ComponentEnable::XYZW, "Fetch load path doesn't support component packing.");
+
         vectors.clear();
 
         Value *vCurIndices;
@@ -699,6 +702,13 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
     for(uint32_t nInputElt = 0; nInputElt < fetchState.numAttribs; ++nInputElt)
     {
         const INPUT_ELEMENT_DESC& ied = fetchState.layout[nInputElt];
+
+        // skip element if all components are disabled
+        if (ied.ComponentPacking == ComponentEnable::NONE)
+        {
+            continue;
+        }
+
         const SWR_FORMAT_INFO &info = GetFormatInfo((SWR_FORMAT)ied.Format);
         SWR_ASSERT((info.bpp != 0), "Unsupported format in JitGatherVertices.");
         uint32_t bpc = info.bpp / info.numComps;  ///@todo Code below assumes all components are same size. Need to fix.
@@ -789,14 +799,23 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
         // Special gather/conversion for formats without equal component sizes
         if (IsOddFormat((SWR_FORMAT)ied.Format))
         {
-            // Only full 4 component fetch is supported for odd formats
-            SWR_ASSERT(compMask == XYZW);
             Value* pResults[4];
             CreateGatherOddFormats((SWR_FORMAT)ied.Format, pStreamBase, vOffsets, pResults);
             ConvertFormat((SWR_FORMAT)ied.Format, pResults);
 
-            StoreVertexElements(pVtxOut, outputElt++, 4, pResults);
-            currentVertexElement = 0;
+            for (uint32_t c = 0; c < 4; ++c)
+            {
+                if (isComponentEnabled(compMask, c))
+                {
+                    vVertexElements[currentVertexElement++] = pResults[c];
+                    if (currentVertexElement > 3)
+                    {
+                        StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
+                        // reset to the next vVertexElement to output
+                        currentVertexElement = 0;
+                    }
+                }
+            }
         }
         else if(info.type[0] == SWR_TYPE_FLOAT)
         {
