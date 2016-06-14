@@ -664,7 +664,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
          rt_bindings[0] = (struct anv_pipeline_binding) {
             .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
             .binding = 0,
-            .index = UINT16_MAX,
+            .index = UINT8_MAX,
          };
          num_rts = 1;
       }
