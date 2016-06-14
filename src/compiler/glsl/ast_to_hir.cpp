@@ -7613,6 +7613,20 @@ ast_interface_block::hir(exec_list *instructions,
                if (is_unsized_array_last_element(var)) {
                   var->data.from_ssbo_unsized_array = true;
                }
+            } else {
+               /* From GLSL ES 3.10 spec, section 4.1.9 "Arrays":
+                *
+                * "If an array is declared as the last member of a shader storage
+                * block and the size is not specified at compile-time, it is
+                * sized at run-time. In all other cases, arrays are sized only
+                * at compile-time."
+                */
+               if (state->es_shader) {
+                  _mesa_glsl_error(&loc, state, "unsized array `%s' "
+                                   "definition: only last member of a shader "
+                                   "storage block can be defined as unsized "
+                                   "array", fields[i].name);
+               }
             }
          }
 
