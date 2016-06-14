@@ -77,7 +77,8 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
 }
 
 void
-gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer)
+gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer,
+                                    bool depth_clamp_enable)
 {
    uint32_t count = cmd_buffer->state.dynamic.viewport.count;
    const VkViewport *viewports = cmd_buffer->state.dynamic.viewport.viewports;
@@ -88,8 +89,8 @@ gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer)
       const VkViewport *vp = &viewports[i];
 
       struct GENX(CC_VIEWPORT) cc_viewport = {
-         .MinimumDepth = vp->minDepth,
-         .MaximumDepth = vp->maxDepth,
+         .MinimumDepth = depth_clamp_enable ? vp->minDepth : 0.0f,
+         .MaximumDepth = depth_clamp_enable ? vp->maxDepth : 1.0f,
       };
 
       GENX(CC_VIEWPORT_pack)(NULL, cc_state.map + i * 8, &cc_viewport);

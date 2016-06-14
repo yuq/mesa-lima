@@ -196,6 +196,7 @@ genX(graphics_pipeline_create)(
       clip.ClipEnable               = !(extra && extra->use_rectlist),
       clip.APIMode                  = APIMODE_OGL,
       clip.ViewportXYClipTestEnable = true,
+      clip.ViewportZClipTestEnable  = !pipeline->depth_clamp_enable,
       clip.ClipMode                 = CLIPMODE_NORMAL,
 
       clip.TriangleStripListProvokingVertexSelect   = 0,

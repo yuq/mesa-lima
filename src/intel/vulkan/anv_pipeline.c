@@ -1165,6 +1165,8 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    pipeline->batch.relocs = &pipeline->batch_relocs;
 
    copy_non_dynamic_state(pipeline, pCreateInfo);
+   pipeline->depth_clamp_enable = pCreateInfo->pRasterizationState &&
+                                  pCreateInfo->pRasterizationState->depthClampEnable;
 
    pipeline->use_repclear = extra && extra->use_repclear;
 

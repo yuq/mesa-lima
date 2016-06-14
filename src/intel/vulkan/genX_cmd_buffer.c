@@ -525,9 +525,13 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
    if (dirty)
       gen7_cmd_buffer_emit_descriptor_pointers(cmd_buffer, dirty);
 
-   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT) {
+   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
       gen8_cmd_buffer_emit_viewport(cmd_buffer);
-      gen8_cmd_buffer_emit_depth_viewport(cmd_buffer);
+
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_DYNAMIC_VIEWPORT |
+                                  ANV_CMD_DIRTY_PIPELINE)) {
+      gen8_cmd_buffer_emit_depth_viewport(cmd_buffer,
+                                          pipeline->depth_clamp_enable);
    }
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_SCISSOR)

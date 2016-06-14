@@ -1360,7 +1360,8 @@ VkResult
 anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer);
 
 void gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer);
-void gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer);
+void gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer,
+                                         bool depth_clamp_enable);
 void gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
@@ -1484,6 +1485,8 @@ struct anv_pipeline {
    uint32_t                                     topology;
 
    uint32_t                                     cs_right_mask;
+
+   bool                                         depth_clamp_enable;
 
    struct {
       uint32_t                                  sf[7];

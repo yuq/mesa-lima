@@ -85,11 +85,11 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .BackFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
       .ScissorRectangleEnable = !(extra && extra->use_rectlist),
 #if GEN_GEN == 8
-      .ViewportZClipTestEnable = true,
+      .ViewportZClipTestEnable = !pipeline->depth_clamp_enable,
 #else
       /* GEN9+ splits ViewportZClipTestEnable into near and far enable bits */
-      .ViewportZFarClipTestEnable = true,
-      .ViewportZNearClipTestEnable = true,
+      .ViewportZFarClipTestEnable = !pipeline->depth_clamp_enable,
+      .ViewportZNearClipTestEnable = !pipeline->depth_clamp_enable,
 #endif
       .GlobalDepthOffsetEnableSolid = info->depthBiasEnable,
       .GlobalDepthOffsetEnableWireframe = info->depthBiasEnable,
