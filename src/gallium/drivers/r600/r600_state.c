@@ -254,16 +254,24 @@ static void r600_emit_polygon_offset(struct r600_context *rctx, struct r600_atom
 	struct r600_poly_offset_state *state = (struct r600_poly_offset_state*)a;
 	float offset_units = state->offset_units;
 	float offset_scale = state->offset_scale;
+	uint32_t pa_su_poly_offset_db_fmt_cntl = 0;
 
 	switch (state->zs_format) {
 	case PIPE_FORMAT_Z24X8_UNORM:
 	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
 		offset_units *= 2.0f;
+		pa_su_poly_offset_db_fmt_cntl =
+			S_028DF8_POLY_OFFSET_NEG_NUM_DB_BITS((char)-24);
 		break;
 	case PIPE_FORMAT_Z16_UNORM:
 		offset_units *= 4.0f;
+		pa_su_poly_offset_db_fmt_cntl =
+			S_028DF8_POLY_OFFSET_NEG_NUM_DB_BITS((char)-16);
 		break;
-	default:;
+	default:
+		pa_su_poly_offset_db_fmt_cntl =
+			S_028DF8_POLY_OFFSET_NEG_NUM_DB_BITS((char)-23) |
+			S_028DF8_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
 	}
 
 	radeon_set_context_reg_seq(cs, R_028E00_PA_SU_POLY_OFFSET_FRONT_SCALE, 4);
@@ -271,6 +279,9 @@ static void r600_emit_polygon_offset(struct r600_context *rctx, struct r600_atom
 	radeon_emit(cs, fui(offset_units));
 	radeon_emit(cs, fui(offset_scale));
 	radeon_emit(cs, fui(offset_units));
+
+	radeon_set_context_reg(cs, R_028DF8_PA_SU_POLY_OFFSET_DB_FMT_CNTL,
+			       pa_su_poly_offset_db_fmt_cntl);
 }
 
 static uint32_t r600_get_blend_control(const struct pipe_blend_state *state, unsigned i)
@@ -1058,25 +1069,6 @@ static void r600_init_depth_surface(struct r600_context *rctx,
 	surf->db_depth_size = S_028000_PITCH_TILE_MAX(pitch) | S_028000_SLICE_TILE_MAX(slice);
 	surf->db_prefetch_limit = (rtex->surface.level[level].nblk_y / 8) - 1;
 
-	switch (surf->base.format) {
-	case PIPE_FORMAT_Z24X8_UNORM:
-	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-		surf->pa_su_poly_offset_db_fmt_cntl =
-			S_028DF8_POLY_OFFSET_NEG_NUM_DB_BITS((char)-24);
-		break;
-	case PIPE_FORMAT_Z32_FLOAT:
-	case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-		surf->pa_su_poly_offset_db_fmt_cntl =
-			S_028DF8_POLY_OFFSET_NEG_NUM_DB_BITS((char)-23) |
-			S_028DF8_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
-		break;
-	case PIPE_FORMAT_Z16_UNORM:
-		surf->pa_su_poly_offset_db_fmt_cntl =
-			S_028DF8_POLY_OFFSET_NEG_NUM_DB_BITS((char)-16);
-		break;
-	default:;
-	}
-
 	/* use htile only for first level */
 	if (rtex->htile_buffer && !level) {
 		surf->db_htile_data_base = 0;
@@ -1455,9 +1447,6 @@ static void r600_emit_framebuffer_state(struct r600_context *rctx, struct r600_a
 						       surf->base.texture->nr_samples > 1 ?
 							       RADEON_PRIO_DEPTH_BUFFER_MSAA :
 							       RADEON_PRIO_DEPTH_BUFFER);
-
-		radeon_set_context_reg(cs, R_028DF8_PA_SU_POLY_OFFSET_DB_FMT_CNTL,
-				       surf->pa_su_poly_offset_db_fmt_cntl);
 
 		radeon_set_context_reg_seq(cs, R_028000_DB_DEPTH_SIZE, 2);
 		radeon_emit(cs, surf->db_depth_size); /* R_028000_DB_DEPTH_SIZE */
@@ -3084,7 +3073,7 @@ void r600_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->db_misc_state.atom, id++, r600_emit_db_misc_state, 7);
 	r600_init_atom(rctx, &rctx->db_state.atom, id++, r600_emit_db_state, 11);
 	r600_init_atom(rctx, &rctx->dsa_state.atom, id++, r600_emit_cso_state, 0);
-	r600_init_atom(rctx, &rctx->poly_offset_state.atom, id++, r600_emit_polygon_offset, 6);
+	r600_init_atom(rctx, &rctx->poly_offset_state.atom, id++, r600_emit_polygon_offset, 9);
 	r600_init_atom(rctx, &rctx->rasterizer_state.atom, id++, r600_emit_cso_state, 0);
 	r600_add_atom(rctx, &rctx->b.scissors.atom, id++);
 	r600_add_atom(rctx, &rctx->b.viewports.atom, id++);
