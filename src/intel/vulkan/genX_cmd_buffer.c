@@ -1024,11 +1024,11 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          db.DepthBufferObjectControlState = GENX(MOCS),
 
          db.SurfacePitch         = image->depth_surface.isl.row_pitch - 1;
-         db.Height               = fb->height - 1;
-         db.Width                = fb->width - 1;
-         db.LOD                  = 0;
-         db.Depth                = 1 - 1;
-         db.MinimumArrayElement  = 0;
+         db.Height               = image->extent.height - 1;
+         db.Width                = image->extent.width - 1;
+         db.LOD                  = iview->base_mip;
+         db.Depth                = image->array_size - 1; /* FIXME: 3-D */
+         db.MinimumArrayElement  = iview->base_layer;
 
 #if GEN_GEN >= 8
          db.SurfaceQPitch =
