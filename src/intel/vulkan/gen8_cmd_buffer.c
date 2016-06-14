@@ -40,8 +40,6 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
    const VkViewport *viewports = cmd_buffer->state.dynamic.viewport.viewports;
    struct anv_state sf_clip_state =
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 64, 64);
-   struct anv_state cc_state =
-      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 8, 32);
 
    for (uint32_t i = 0; i < count; i++) {
       const VkViewport *vp = &viewports[i];
@@ -65,28 +63,44 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
          .YMaxViewPort = vp->y + vp->height - 1,
       };
 
-      struct GENX(CC_VIEWPORT) cc_viewport = {
-         .MinimumDepth = vp->minDepth,
-         .MaximumDepth = vp->maxDepth
-      };
-
       GENX(SF_CLIP_VIEWPORT_pack)(NULL, sf_clip_state.map + i * 64,
                                  &sf_clip_viewport);
+   }
+
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(sf_clip_state);
+
+   anv_batch_emit(&cmd_buffer->batch,
+                  GENX(3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP), clip) {
+      clip.SFClipViewportPointer = sf_clip_state.offset;
+   }
+}
+
+void
+gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer)
+{
+   uint32_t count = cmd_buffer->state.dynamic.viewport.count;
+   const VkViewport *viewports = cmd_buffer->state.dynamic.viewport.viewports;
+   struct anv_state cc_state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 8, 32);
+
+   for (uint32_t i = 0; i < count; i++) {
+      const VkViewport *vp = &viewports[i];
+
+      struct GENX(CC_VIEWPORT) cc_viewport = {
+         .MinimumDepth = vp->minDepth,
+         .MaximumDepth = vp->maxDepth,
+      };
+
       GENX(CC_VIEWPORT_pack)(NULL, cc_state.map + i * 8, &cc_viewport);
    }
 
-   if (!cmd_buffer->device->info.has_llc) {
-      anv_state_clflush(sf_clip_state);
+   if (!cmd_buffer->device->info.has_llc)
       anv_state_clflush(cc_state);
-   }
 
    anv_batch_emit(&cmd_buffer->batch,
                   GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), cc) {
       cc.CCViewportPointer = cc_state.offset;
-   }
-   anv_batch_emit(&cmd_buffer->batch,
-                  GENX(3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP), clip) {
-      clip.SFClipViewportPointer = sf_clip_state.offset;
    }
 }
 #endif

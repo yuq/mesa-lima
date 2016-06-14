@@ -1360,6 +1360,7 @@ VkResult
 anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer);
 
 void gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer);
+void gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer);
 void gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
