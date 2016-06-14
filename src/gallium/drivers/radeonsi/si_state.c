@@ -808,16 +808,21 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 		struct si_pm4_state *pm4 = &rs->pm4_poly_offset[i];
 		float offset_units = state->offset_units;
 		float offset_scale = state->offset_scale * 16.0f;
+		uint32_t pa_su_poly_offset_db_fmt_cntl = 0;
 
 		switch (i) {
 		case 0: /* 16-bit zbuffer */
 			offset_units *= 4.0f;
+			pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-16);
 			break;
 		case 1: /* 24-bit zbuffer */
 			offset_units *= 2.0f;
+			pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-24);
 			break;
 		case 2: /* 32-bit zbuffer */
 			offset_units *= 1.0f;
+			pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-23) |
+							S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
 			break;
 		}
 
@@ -829,6 +834,8 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 			       fui(offset_scale));
 		si_pm4_set_reg(pm4, R_028B8C_PA_SU_POLY_OFFSET_BACK_OFFSET,
 			       fui(offset_units));
+		si_pm4_set_reg(pm4, R_028B78_PA_SU_POLY_OFFSET_DB_FMT_CNTL,
+			       pa_su_poly_offset_db_fmt_cntl);
 	}
 
 	return rs;
@@ -2094,26 +2101,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 	unsigned format;
 	uint32_t z_info, s_info, db_depth_info;
 	uint64_t z_offs, s_offs;
-	uint32_t db_htile_data_base, db_htile_surface, pa_su_poly_offset_db_fmt_cntl = 0;
-
-	switch (sctx->framebuffer.state.zsbuf->texture->format) {
-	case PIPE_FORMAT_S8_UINT_Z24_UNORM:
-	case PIPE_FORMAT_X8Z24_UNORM:
-	case PIPE_FORMAT_Z24X8_UNORM:
-	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-		pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-24);
-		break;
-	case PIPE_FORMAT_Z32_FLOAT:
-	case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-		pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-23) |
-						S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
-		break;
-	case PIPE_FORMAT_Z16_UNORM:
-		pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-16);
-		break;
-	default:
-		assert(0);
-	}
+	uint32_t db_htile_data_base, db_htile_surface;
 
 	format = si_translate_dbformat(rtex->resource.b.b.format);
 
@@ -2210,7 +2198,6 @@ static void si_init_depth_surface(struct si_context *sctx,
 	surf->db_depth_slice = S_02805C_SLICE_TILE_MAX((levelinfo->nblk_x *
 							levelinfo->nblk_y) / 64 - 1);
 	surf->db_htile_surface = db_htile_surface;
-	surf->pa_su_poly_offset_db_fmt_cntl = pa_su_poly_offset_db_fmt_cntl;
 
 	surf->depth_initialized = true;
 }
@@ -2534,8 +2521,6 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		radeon_emit(cs, fui(rtex->depth_clear_value)); /* R_02802C_DB_DEPTH_CLEAR */
 
 		radeon_set_context_reg(cs, R_028ABC_DB_HTILE_SURFACE, zb->db_htile_surface);
-		radeon_set_context_reg(cs, R_028B78_PA_SU_POLY_OFFSET_DB_FMT_CNTL,
-				       zb->pa_su_poly_offset_db_fmt_cntl);
 	} else if (sctx->framebuffer.dirty_zsbuf) {
 		radeon_set_context_reg_seq(cs, R_028040_DB_Z_INFO, 2);
 		radeon_emit(cs, S_028040_FORMAT(V_028040_Z_INVALID)); /* R_028040_DB_Z_INFO */
