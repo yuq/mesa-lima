@@ -126,6 +126,7 @@ struct pipe_video_buffer
    unsigned width;
    unsigned height;
    bool interlaced;
+   unsigned bind;
 
    /**
     * destroy this video buffer
