@@ -1038,7 +1038,7 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
       cmd_buffer->state.pipeline->prog_data[stage];
 
    /* If we don't actually have any push constants, bail. */
-   if (data == NULL || prog_data->nr_params == 0)
+   if (data == NULL || prog_data == NULL || prog_data->nr_params == 0)
       return (struct anv_state) { .offset = 0 };
 
    struct anv_state state =
