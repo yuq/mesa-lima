@@ -263,6 +263,12 @@ glsl_vec_type(unsigned n)
 }
 
 const glsl_type *
+glsl_dvec_type(unsigned n)
+{
+   return glsl_type::dvec(n);
+}
+
+const glsl_type *
 glsl_vec4_type(void)
 {
    return glsl_type::vec4_type;
