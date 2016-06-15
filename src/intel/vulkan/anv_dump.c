@@ -36,11 +36,10 @@ anv_dump_image_to_ppm(struct anv_device *device,
    VkDevice vk_device = anv_device_to_handle(device);
    MAYBE_UNUSED VkResult result;
 
-   VkExtent2D extent = { image->extent.width, image->extent.height };
-   for (unsigned i = 0; i < miplevel; i++) {
-      extent.width = MAX2(1, extent.width / 2);
-      extent.height = MAX2(1, extent.height / 2);
-   }
+   VkExtent2D extent = {
+      anv_minify(image->extent.width, miplevel),
+      anv_minify(image->extent.height, miplevel),
+   };
 
    VkImage copy_image;
    result = anv_CreateImage(vk_device,
