@@ -289,6 +289,9 @@ static const char *SemanticStr[SV_LAST + 1] =
    "VERTEX_STRIDE",
    "INVOCATION_INFO",
    "THREAD_KILL",
+   "BASEVERTEX",
+   "BASEINSTANCE",
+   "DRAWID",
    "?",
    "(INVALID)"
 };
