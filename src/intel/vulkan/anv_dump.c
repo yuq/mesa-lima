@@ -90,6 +90,28 @@ dump_image_do_blit(struct anv_device *device, struct dump_image *image,
                    VkImageAspectFlagBits aspect,
                    unsigned miplevel, unsigned array_layer)
 {
+   ANV_CALL(CmdPipelineBarrier)(anv_cmd_buffer_to_handle(cmd_buffer),
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
+      0, 0, NULL, 0, NULL, 1,
+      &(VkImageMemoryBarrier) {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+         .srcAccessMask = ~0,
+         .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+         .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+         .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+         .srcQueueFamilyIndex = 0,
+         .dstQueueFamilyIndex = 0,
+         .image = anv_image_to_handle(src),
+         .subresourceRange = (VkImageSubresourceRange) {
+            .aspectMask = aspect,
+            .baseMipLevel = miplevel,
+            .levelCount = 1,
+            .baseArrayLayer = array_layer,
+            .layerCount = 1,
+         },
+      });
+
    /* We need to do a blit so the image needs to be declared as sampled.  The
     * only thing these are used for is making sure we create the correct
     * views, so it should be find to just stomp it and set it back.
