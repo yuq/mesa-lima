@@ -1848,6 +1848,16 @@ void anv_dump_image_to_ppm(struct anv_device *device,
                            unsigned array_layer, VkImageAspectFlagBits aspect,
                            const char *filename);
 
+enum anv_dump_action {
+   ANV_DUMP_FRAMEBUFFERS_BIT = 0x1,
+};
+
+void anv_dump_start(struct anv_device *device, enum anv_dump_action actions);
+void anv_dump_finish(void);
+
+void anv_dump_add_framebuffer(struct anv_cmd_buffer *cmd_buffer,
+                              struct anv_framebuffer *fb);
+
 #define ANV_DEFINE_HANDLE_CASTS(__anv_type, __VkType)                      \
                                                                            \
    static inline struct __anv_type *                                       \

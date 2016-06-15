@@ -1191,6 +1191,10 @@ void genX(CmdEndRenderPass)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
+
+#ifndef NDEBUG
+   anv_dump_add_framebuffer(cmd_buffer, cmd_buffer->state.framebuffer);
+#endif
 }
 
 static void

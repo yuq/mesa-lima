@@ -23,11 +23,33 @@
 
 #include "anv_private.h"
 
+#include "util/list.h"
+#include "util/ralloc.h"
+
 /* This file contains utility functions for help debugging.  They can be
  * called from GDB or similar to help inspect images and buffers.
+ *
+ * To dump the framebuffers of an application after each render pass, all you
+ * have to do is the following
+ *
+ *    1) Start the application in GDB
+ *    2) Run until you get to the point where the rendering errors occur
+ *    3) Pause in GDB and set a breakpoint in anv_QueuePresentKHR
+ *    4) Continue until it reaches anv_QueuePresentKHR
+ *    5) Call anv_dump_start(queue->device, ANV_DUMP_FRAMEBUFFERS_BIT)
+ *    6) Continue until the next anv_QueuePresentKHR call
+ *    7) Call anv_dump_finish() to complete the dump and write files
+ *
+ * While it's a bit manual, the process does allow you to do some very
+ * valuable debugging by dumping every render target at the end of every
+ * render pass.  It's worth noting that this assumes that the application
+ * creates all of the command buffers more-or-less in-order and between the
+ * two anv_QueuePresentKHR calls.
  */
 
 struct dump_image {
+   struct list_head link;
+
    const char *filename;
 
    VkExtent2D extent;
@@ -287,4 +309,126 @@ anv_dump_image_to_ppm(struct anv_device *device,
 
    dump_image_write_to_ppm(device, &dump);
    dump_image_finish(device, &dump);
+}
+
+static pthread_mutex_t dump_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static enum anv_dump_action dump_actions = 0;
+
+/* Used to prevent recursive dumping */
+static enum anv_dump_action dump_old_actions;
+
+struct list_head dump_list;
+static void *dump_ctx;
+static struct anv_device *dump_device;
+static unsigned dump_count;
+
+void
+anv_dump_start(struct anv_device *device, enum anv_dump_action actions)
+{
+   pthread_mutex_lock(&dump_mutex);
+
+   dump_device = device;
+   dump_actions = actions;
+   list_inithead(&dump_list);
+   dump_ctx = ralloc_context(NULL);
+   dump_count = 0;
+
+   pthread_mutex_unlock(&dump_mutex);
+}
+
+void
+anv_dump_finish()
+{
+   anv_DeviceWaitIdle(anv_device_to_handle(dump_device));
+
+   pthread_mutex_lock(&dump_mutex);
+
+   list_for_each_entry(struct dump_image, dump, &dump_list, link) {
+      dump_image_write_to_ppm(dump_device, dump);
+      dump_image_finish(dump_device, dump);
+   }
+
+   dump_actions = 0;
+   dump_device = NULL;
+   list_inithead(&dump_list);
+
+   ralloc_free(dump_ctx);
+   dump_ctx = NULL;
+
+   pthread_mutex_unlock(&dump_mutex);
+}
+
+static bool
+dump_lock(enum anv_dump_action action)
+{
+   if (likely((dump_actions & action) == 0))
+      return false;
+
+   pthread_mutex_lock(&dump_mutex);
+
+   /* Prevent recursive dumping */
+   dump_old_actions = dump_actions;
+   dump_actions = 0;
+
+   return true;
+}
+
+static void
+dump_unlock()
+{
+   dump_actions = dump_old_actions;
+   pthread_mutex_unlock(&dump_mutex);
+}
+
+static void
+dump_add_image(struct anv_cmd_buffer *cmd_buffer, struct anv_image *image,
+               VkImageAspectFlagBits aspect,
+               unsigned miplevel, unsigned array_layer, const char *filename)
+{
+   const uint32_t width = anv_minify(image->extent.width, miplevel);
+   const uint32_t height = anv_minify(image->extent.height, miplevel);
+
+   struct dump_image *dump = ralloc(dump_ctx, struct dump_image);
+
+   dump_image_init(cmd_buffer->device, dump, width, height, filename);
+   dump_image_do_blit(cmd_buffer->device, dump, cmd_buffer, image,
+                      aspect, miplevel, array_layer);
+
+   list_addtail(&dump->link, &dump_list);
+}
+
+void
+anv_dump_add_framebuffer(struct anv_cmd_buffer *cmd_buffer,
+                         struct anv_framebuffer *fb)
+{
+   if (!dump_lock(ANV_DUMP_FRAMEBUFFERS_BIT))
+      return;
+
+   unsigned dump_idx = dump_count++;
+
+   for (unsigned i = 0; i < fb->attachment_count; i++) {
+      struct anv_image_view *iview = fb->attachments[i];
+
+      uint32_t b;
+      for_each_bit(b, iview->image->aspects) {
+         VkImageAspectFlagBits aspect = (1 << b);
+         char suffix;
+         switch (aspect) {
+         case VK_IMAGE_ASPECT_COLOR_BIT:     suffix = 'c'; break;
+         case VK_IMAGE_ASPECT_DEPTH_BIT:     suffix = 'd'; break;
+         case VK_IMAGE_ASPECT_STENCIL_BIT:   suffix = 's'; break;
+         default:
+            unreachable("Invalid aspect");
+         }
+
+         char *filename = ralloc_asprintf(dump_ctx, "framebuffer%04d-%d%c.ppm",
+                                          dump_idx, i, suffix);
+
+         dump_add_image(cmd_buffer, (struct anv_image *)iview->image, aspect,
+                        iview->base_mip, iview->base_layer, filename);
+      }
+   }
+
+   dump_unlock();
 }
