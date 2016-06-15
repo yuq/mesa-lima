@@ -69,10 +69,21 @@ os_log_message(const char *message)
    static FILE *fout = NULL;
 
    if (!fout) {
+#ifdef DEBUG
       /* one-time init */
       const char *filename = os_get_option("GALLIUM_LOG_FILE");
-      if (filename)
-         fout = fopen(filename, "w");
+      if (filename) {
+         const char *mode = "w";
+         if (filename[0] == '+') {
+            /* If the filename is prefixed with '+' then open the file for
+             * appending instead of normal writing.
+             */
+            mode = "a";
+            filename++; /* skip the '+' */
+         }
+         fout = fopen(filename, mode);
+      }
+#endif
       if (!fout)
          fout = stderr;
    }
