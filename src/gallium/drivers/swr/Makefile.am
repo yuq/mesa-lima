@@ -125,7 +125,7 @@ COMMON_LDFLAGS = \
 lib_LTLIBRARIES = libswrAVX.la libswrAVX2.la
 
 libswrAVX_la_CXXFLAGS = \
-	-march=core-avx-i \
+	$(SWR_AVX_CXXFLAGS) \
 	-DKNOB_ARCH=KNOB_ARCH_AVX \
 	$(COMMON_CXXFLAGS)
 
@@ -139,7 +139,7 @@ libswrAVX_la_LDFLAGS = \
 	$(COMMON_LDFLAGS)
 
 libswrAVX2_la_CXXFLAGS = \
-	-march=core-avx2 \
+	$(SWR_AVX2_CXXFLAGS) \
 	-DKNOB_ARCH=KNOB_ARCH_AVX2 \
 	$(COMMON_CXXFLAGS)
 
