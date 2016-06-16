@@ -324,6 +324,13 @@ try_copy_propagate(const struct gen_device_info *devinfo,
        value.file != ATTR)
       return false;
 
+   /* If the type of the copy value is different from the type of the
+    * instruction then the swizzles and writemasks involved don't have the same
+    * meaning and simply replacing the source would produce different semantics.
+    */
+   if (type_sz(value.type) != type_sz(inst->src[arg].type))
+      return false;
+
    if (devinfo->gen >= 8 && (value.negate || value.abs) &&
        is_logic_op(inst->opcode)) {
       return false;
