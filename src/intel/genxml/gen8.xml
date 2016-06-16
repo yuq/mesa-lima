@@ -1265,7 +1265,7 @@
     <field name="Accesses UAV" start="110" end="110" type="bool"/>
     <field name="Illegal Opcode Exception Enable" start="109" end="109" type="bool"/>
     <field name="Software Exception Enable" start="103" end="103" type="bool"/>
-    <field name="Scratch Space Base Pointer" start="138" end="191" type="offset"/>
+    <field name="Scratch Space Base Pointer" start="138" end="191" type="address"/>
     <field name="Per-Thread Scratch Space" start="128" end="131" type="uint"/>
     <field name="Dispatch GRF Start Register For URB Data" start="212" end="216" type="uint"/>
     <field name="Patch URB Entry Read Length" start="203" end="209" type="uint"/>
@@ -1405,7 +1405,7 @@
     <field name="Mask Stack Exception Enable" start="107" end="107" type="bool"/>
     <field name="Software  Exception Enable" start="103" end="103" type="bool"/>
     <field name="Expected Vertex Count" start="96" end="101" type="uint"/>
-    <field name="Scratch Space Base Pointer" start="138" end="191" type="offset"/>
+    <field name="Scratch Space Base Pointer" start="138" end="191" type="address"/>
     <field name="Per-Thread Scratch Space" start="128" end="131" type="uint"/>
     <field name="Output Vertex Size" start="215" end="220" type="uint"/>
     <field name="Output Topology" start="209" end="214" type="uint" prefix="OUTPUT"/>
@@ -1484,7 +1484,7 @@
     <field name="Maximum Number of Threads" start="72" end="80" type="uint"/>
     <field name="Instance Count" start="64" end="67" type="uint"/>
     <field name="Kernel Start Pointer" start="102" end="159" type="offset"/>
-    <field name="Scratch Space Base Pointer" start="170" end="223" type="offset"/>
+    <field name="Scratch Space Base Pointer" start="170" end="223" type="address"/>
     <field name="Per-Thread Scratch Space" start="160" end="163" type="uint"/>
     <field name="Single Program Flow" start="251" end="251" type="bool"/>
     <field name="Vector Mask Enable" start="250" end="250" type="bool"/>
@@ -1607,7 +1607,7 @@
     <field name="Illegal Opcode Exception Enable" start="109" end="109" type="bool"/>
     <field name="Mask Stack Exception Enable" start="107" end="107" type="bool"/>
     <field name="Software  Exception Enable" start="103" end="103" type="bool"/>
-    <field name="Scratch Space Base Pointer" start="138" end="191" type="offset"/>
+    <field name="Scratch Space Base Pointer" start="138" end="191" type="address"/>
     <field name="Per Thread Scratch Space" start="128" end="131" type="uint"/>
     <field name="Maximum Number of Threads Per PSD" start="215" end="223" type="uint"/>
     <field name="Push Constant Enable" start="203" end="203" type="bool"/>
@@ -2265,7 +2265,7 @@
     <field name="Illegal Opcode Exception Enable" start="109" end="109" type="bool"/>
     <field name="Accesses UAV" start="108" end="108" type="bool"/>
     <field name="Software Exception Enable" start="103" end="103" type="bool"/>
-    <field name="Scratch Space Base Pointer" start="138" end="191" type="offset"/>
+    <field name="Scratch Space Base Pointer" start="138" end="191" type="address"/>
     <field name="Per-Thread Scratch Space " start="128" end="131" type="uint"/>
     <field name="Dispatch GRF Start Register For URB Data" start="212" end="216" type="uint"/>
     <field name="Vertex URB Entry Read Length" start="203" end="208" type="uint"/>
@@ -2601,10 +2601,9 @@
     <field name="Media Command Opcode" start="24" end="26" type="uint" default="0"/>
     <field name="SubOpcode" start="16" end="23" type="uint" default="0"/>
     <field name="DWord Length" start="0" end="15" type="uint" default="7"/>
-    <field name="Scratch Space Base Pointer" start="42" end="63" type="offset"/>
+    <field name="Scratch Space Base Pointer" start="42" end="79" type="address"/>
     <field name="Stack Size" start="36" end="39" type="uint"/>
     <field name="Per Thread Scratch Space" start="32" end="35" type="uint"/>
-    <field name="Scratch Space Base Pointer High" start="64" end="79" type="offset"/>
     <field name="Maximum Number of Threads" start="112" end="127" type="uint"/>
     <field name="Number of URB Entries" start="104" end="111" type="uint"/>
     <field name="Reset Gateway Timer" start="103" end="103" type="uint">

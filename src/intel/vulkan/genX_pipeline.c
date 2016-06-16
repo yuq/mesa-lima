@@ -102,10 +102,12 @@ genX(compute_pipeline_create)(
             cs_prog_data->push.cross_thread.regs, 2);
 
    anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE), vfe) {
-      vfe.ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_COMPUTE];
+      vfe.ScratchSpaceBasePointer = (struct anv_address) {
+         .bo = NULL,
+         .offset = pipeline->scratch_start[MESA_SHADER_COMPUTE],
+      };
       vfe.PerThreadScratchSpace  = ffs(cs_prog_data->base.total_scratch / 2048);
 #if GEN_GEN > 7
-      vfe.ScratchSpaceBasePointerHigh = 0;
       vfe.StackSize              = 0;
 #else
       vfe.GPGPUMode              = true;
