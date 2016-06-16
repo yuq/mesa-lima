@@ -209,13 +209,13 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
       struct gl_shader *shader = shProg->_LinkedShaders[stage];
       if (!shader)
-	 continue;
+         continue;
 
       struct gl_program *prog =
-	 ctx->Driver.NewProgram(ctx, _mesa_shader_stage_to_program(stage),
+         ctx->Driver.NewProgram(ctx, _mesa_shader_stage_to_program(stage),
                                 shader->Name);
       if (!prog)
-	return false;
+        return false;
       prog->Parameters = _mesa_new_parameter_list();
 
       _mesa_copy_linked_program_data((gl_shader_stage) stage, shProg, prog);
@@ -230,19 +230,19 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
        * get sent to the shader.
        */
       foreach_in_list(ir_instruction, node, shader->ir) {
-	 ir_variable *var = node->as_variable();
+         ir_variable *var = node->as_variable();
 
-	 if ((var == NULL) || (var->data.mode != ir_var_uniform)
-	     || (strncmp(var->name, "gl_", 3) != 0))
-	    continue;
+         if ((var == NULL) || (var->data.mode != ir_var_uniform)
+             || (strncmp(var->name, "gl_", 3) != 0))
+            continue;
 
-	 const ir_state_slot *const slots = var->get_state_slots();
-	 assert(slots != NULL);
+         const ir_state_slot *const slots = var->get_state_slots();
+         assert(slots != NULL);
 
-	 for (unsigned int i = 0; i < var->get_num_state_slots(); i++) {
-	    _mesa_add_state_reference(prog->Parameters,
-				      (gl_state_index *) slots[i].tokens);
-	 }
+         for (unsigned int i = 0; i < var->get_num_state_slots(); i++) {
+            _mesa_add_state_reference(prog->Parameters,
+                                      (gl_state_index *) slots[i].tokens);
+         }
       }
 
       do_set_program_inouts(shader->ir, prog, shader->Stage);
