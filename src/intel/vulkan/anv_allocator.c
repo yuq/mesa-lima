@@ -876,3 +876,79 @@ anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo_in)
    VG(VALGRIND_MEMPOOL_FREE(pool, bo.map));
    anv_ptr_free_list_push(&pool->free_list[bucket], link);
 }
+
+// Scratch pool
+
+void
+anv_scratch_pool_init(struct anv_device *device, struct anv_scratch_pool *pool)
+{
+   memset(pool, 0, sizeof(*pool));
+}
+
+void
+anv_scratch_pool_finish(struct anv_device *device, struct anv_scratch_pool *pool)
+{
+   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
+      for (unsigned i = 0; i < 16; i++) {
+         struct anv_bo *bo = &pool->bos[i][s];
+         if (bo->size > 0)
+            anv_gem_close(device, bo->gem_handle);
+      }
+   }
+}
+
+struct anv_bo *
+anv_scratch_pool_alloc(struct anv_device *device, struct anv_scratch_pool *pool,
+                       gl_shader_stage stage, unsigned per_thread_scratch)
+{
+   if (per_thread_scratch == 0)
+      return NULL;
+
+   unsigned scratch_size_log2 = ffs(per_thread_scratch / 2048);
+   assert(scratch_size_log2 < 16);
+
+   struct anv_bo *bo = &pool->bos[scratch_size_log2][stage];
+
+   /* From now on, we go into a critical section.  In order to remain
+    * thread-safe, we use the bo size as a lock.  A value of 0 means we don't
+    * have a valid BO yet.  A value of 1 means locked.  A value greater than 1
+    * means we have a bo of the given size.
+    */
+
+   if (bo->size > 1)
+      return bo;
+
+   uint64_t size = __sync_val_compare_and_swap(&bo->size, 0, 1);
+   if (size == 0) {
+      /* We own the lock.  Allocate a buffer */
+
+      struct brw_device_info *devinfo = &device->info;
+      uint32_t max_threads[] = {
+         [MESA_SHADER_VERTEX]                  = devinfo->max_vs_threads,
+         [MESA_SHADER_TESS_CTRL]               = devinfo->max_hs_threads,
+         [MESA_SHADER_TESS_EVAL]               = devinfo->max_ds_threads,
+         [MESA_SHADER_GEOMETRY]                = devinfo->max_gs_threads,
+         [MESA_SHADER_FRAGMENT]                = devinfo->max_wm_threads,
+         [MESA_SHADER_COMPUTE]                 = devinfo->max_cs_threads,
+      };
+
+      size = per_thread_scratch * max_threads[stage];
+
+      struct anv_bo new_bo;
+      anv_bo_init_new(&new_bo, device, size);
+
+      bo->gem_handle = new_bo.gem_handle;
+
+      /* Set the size last because we use it as a lock */
+      __sync_synchronize();
+      bo->size = size;
+
+      futex_wake((uint32_t *)&bo->size, INT_MAX);
+   } else {
+      /* Someone else got here first */
+      while (bo->size == 1)
+         futex_wait((uint32_t *)&bo->size, 1);
+   }
+
+   return bo;
+}

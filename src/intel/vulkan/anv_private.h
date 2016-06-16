@@ -475,6 +475,19 @@ VkResult anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo,
                            uint32_t size);
 void anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo);
 
+struct anv_scratch_pool {
+   /* Indexed by Per-Thread Scratch Space number (the hardware value) and stage */
+   struct anv_bo bos[16][MESA_SHADER_STAGES];
+};
+
+void anv_scratch_pool_init(struct anv_device *device,
+                           struct anv_scratch_pool *pool);
+void anv_scratch_pool_finish(struct anv_device *device,
+                             struct anv_scratch_pool *pool);
+struct anv_bo *anv_scratch_pool_alloc(struct anv_device *device,
+                                      struct anv_scratch_pool *pool,
+                                      gl_shader_stage stage,
+                                      unsigned per_thread_scratch);
 
 void *anv_resolve_entrypoint(uint32_t index);
 
