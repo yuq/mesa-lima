@@ -397,22 +397,8 @@ anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
                                 const struct brw_stage_prog_data *prog_data,
                                 struct anv_pipeline_bind_map *map)
 {
-   struct brw_device_info *devinfo = &pipeline->device->info;
-   uint32_t max_threads[] = {
-      [MESA_SHADER_VERTEX]                  = devinfo->max_vs_threads,
-      [MESA_SHADER_TESS_CTRL]               = devinfo->max_hs_threads,
-      [MESA_SHADER_TESS_EVAL]               = devinfo->max_ds_threads,
-      [MESA_SHADER_GEOMETRY]                = devinfo->max_gs_threads,
-      [MESA_SHADER_FRAGMENT]                = devinfo->max_wm_threads,
-      [MESA_SHADER_COMPUTE]                 = devinfo->max_cs_threads,
-   };
-
    pipeline->prog_data[stage] = prog_data;
    pipeline->active_stages |= mesa_to_vk_shader_stage(stage);
-   pipeline->scratch_start[stage] = pipeline->total_scratch;
-   pipeline->total_scratch =
-      align_u32(pipeline->total_scratch, 1024) +
-      prog_data->total_scratch * max_threads[stage];
    pipeline->bindings[stage] = *map;
 }
 
@@ -1176,7 +1162,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
     * of various prog_data pointers.  Make them NULL by default.
     */
    memset(pipeline->prog_data, 0, sizeof(pipeline->prog_data));
-   memset(pipeline->scratch_start, 0, sizeof(pipeline->scratch_start));
    memset(pipeline->bindings, 0, sizeof(pipeline->bindings));
 
    pipeline->vs_simd8 = NO_KERNEL;
@@ -1185,7 +1170,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    pipeline->ps_ksp0 = NO_KERNEL;
 
    pipeline->active_stages = 0;
-   pipeline->total_scratch = 0;
 
    const VkPipelineShaderStageCreateInfo *pStages[MESA_SHADER_STAGES] = { 0, };
    struct anv_shader_module *modules[MESA_SHADER_STAGES] = { 0, };
@@ -1277,10 +1261,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
 
    if (extra && extra->use_rectlist)
       pipeline->topology = _3DPRIM_RECTLIST;
-
-   while (anv_block_pool_size(&device->scratch_block_pool) <
-          pipeline->total_scratch)
-      anv_block_pool_alloc(&device->scratch_block_pool);
 
    return VK_SUCCESS;
 }

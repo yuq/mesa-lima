@@ -64,7 +64,6 @@ genX(compute_pipeline_create)(
     * of various prog_data pointers.  Make them NULL by default.
     */
    memset(pipeline->prog_data, 0, sizeof(pipeline->prog_data));
-   memset(pipeline->scratch_start, 0, sizeof(pipeline->scratch_start));
    memset(pipeline->bindings, 0, sizeof(pipeline->bindings));
 
    pipeline->vs_simd8 = NO_KERNEL;
@@ -72,7 +71,6 @@ genX(compute_pipeline_create)(
    pipeline->gs_kernel = NO_KERNEL;
 
    pipeline->active_stages = 0;
-   pipeline->total_scratch = 0;
 
    pipeline->needs_data_cache = false;
 
@@ -103,8 +101,10 @@ genX(compute_pipeline_create)(
 
    anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE), vfe) {
       vfe.ScratchSpaceBasePointer = (struct anv_address) {
-         .bo = NULL,
-         .offset = pipeline->scratch_start[MESA_SHADER_COMPUTE],
+         .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
+                                      MESA_SHADER_COMPUTE,
+                                      cs_prog_data->base.total_scratch),
+         .offset = 0,
       };
       vfe.PerThreadScratchSpace  = ffs(cs_prog_data->base.total_scratch / 2048);
 #if GEN_GEN > 7

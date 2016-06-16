@@ -711,7 +711,7 @@ struct anv_device {
 
     struct anv_queue                            queue;
 
-    struct anv_block_pool                       scratch_block_pool;
+    struct anv_scratch_pool                     scratch_pool;
 
     uint32_t                                    default_mocs;
 
@@ -1471,8 +1471,6 @@ struct anv_pipeline {
    bool                                         needs_data_cache;
 
    const struct brw_stage_prog_data *           prog_data[MESA_SHADER_STAGES];
-   uint32_t                                     scratch_start[MESA_SHADER_STAGES];
-   uint32_t                                     total_scratch;
    struct {
       uint32_t                                  start[MESA_SHADER_GEOMETRY + 1];
       uint32_t                                  size[MESA_SHADER_GEOMETRY + 1];

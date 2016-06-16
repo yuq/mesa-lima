@@ -33,12 +33,6 @@ void
 genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_device *device = cmd_buffer->device;
-   struct anv_bo *scratch_bo = NULL;
-
-   cmd_buffer->state.scratch_size =
-      anv_block_pool_size(&device->scratch_block_pool);
-   if (cmd_buffer->state.scratch_size > 0)
-      scratch_bo = &device->scratch_block_pool.bo;
 
 /* XXX: Do we need this on more than just BDW? */
 #if (GEN_GEN >= 8)
@@ -55,7 +49,7 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
 #endif
 
    anv_batch_emit(&cmd_buffer->batch, GENX(STATE_BASE_ADDRESS), sba) {
-      sba.GeneralStateBaseAddress = (struct anv_address) { scratch_bo, 0 };
+      sba.GeneralStateBaseAddress = (struct anv_address) { NULL, 0 };
       sba.GeneralStateMemoryObjectControlState = GENX(MOCS);
       sba.GeneralStateBaseAddressModifyEnable = true;
 
@@ -503,13 +497,6 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.vb_dirty &= ~vb_emit;
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_PIPELINE) {
-      /* If somebody compiled a pipeline after starting a command buffer the
-       * scratch bo may have grown since we started this cmd buffer (and
-       * emitted STATE_BASE_ADDRESS).  If we're binding that pipeline now,
-       * reemit STATE_BASE_ADDRESS so that we use the bigger scratch bo. */
-      if (cmd_buffer->state.scratch_size < pipeline->total_scratch)
-         anv_cmd_buffer_emit_state_base_address(cmd_buffer);
-
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
 
       /* The exact descriptor layout is pulled from the pipeline, so we need

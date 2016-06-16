@@ -252,8 +252,10 @@ genX(graphics_pipeline_create)(
          vs.KernelStartPointer         = pipeline->vs_vec4;
 
          vs.ScratchSpaceBasePointer = (struct anv_address) {
-            .bo = NULL,
-            .offset = pipeline->scratch_start[MESA_SHADER_VERTEX],
+            .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
+                                         MESA_SHADER_VERTEX,
+                                         vs_prog_data->base.base.total_scratch),
+            .offset = 0,
          };
          vs.PerThreadScratchSpace      = scratch_space(&vs_prog_data->base.base);
 
@@ -276,8 +278,10 @@ genX(graphics_pipeline_create)(
          gs.KernelStartPointer         = pipeline->gs_kernel;
 
          gs.ScratchSpaceBasePointer = (struct anv_address) {
-            .bo = NULL,
-            .offset = pipeline->scratch_start[MESA_SHADER_GEOMETRY],
+            .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
+                                         MESA_SHADER_GEOMETRY,
+                                         gs_prog_data->base.base.total_scratch),
+            .offset = 0,
          };
          gs.PerThreadScratchSpace      = scratch_space(&gs_prog_data->base.base);
 
@@ -338,8 +342,10 @@ genX(graphics_pipeline_create)(
          ps.KernelStartPointer0           = pipeline->ps_ksp0;
 
          ps.ScratchSpaceBasePointer = (struct anv_address) {
-            .bo = NULL,
-            .offset = pipeline->scratch_start[MESA_SHADER_FRAGMENT],
+            .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
+                                         MESA_SHADER_FRAGMENT,
+                                         wm_prog_data->base.total_scratch),
+            .offset = 0,
          };
          ps.PerThreadScratchSpace         = scratch_space(&wm_prog_data->base);
          ps.MaximumNumberofThreads        = device->info.max_wm_threads - 1;
