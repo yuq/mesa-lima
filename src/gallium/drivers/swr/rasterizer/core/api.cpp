@@ -48,6 +48,11 @@
 
 void SetupDefaultState(SWR_CONTEXT *pContext);
 
+static INLINE SWR_CONTEXT* GetContext(HANDLE hContext)
+{
+    return (SWR_CONTEXT*)hContext;
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Create SWR Context.
 /// @param pCreateInfo - pointer to creation info.
@@ -140,7 +145,7 @@ HANDLE SwrCreateContext(
 
 void SwrDestroyContext(HANDLE hContext)
 {
-    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    SWR_CONTEXT *pContext = GetContext(hContext);
     DestroyThreadPool(pContext, &pContext->threadPool);
 
     // free the fifos
@@ -168,7 +173,7 @@ void SwrDestroyContext(HANDLE hContext)
     delete(pContext->pHotTileMgr);
 
     pContext->~SWR_CONTEXT();
-    AlignedFree((SWR_CONTEXT*)hContext);
+    AlignedFree(GetContext(hContext));
 }
 
 void CopyState(DRAW_STATE& dst, const DRAW_STATE& src)
@@ -357,7 +362,7 @@ void SWR_API SwrSaveState(
     void* pOutputStateBlock,
     size_t memSize)
 {
-    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    SWR_CONTEXT *pContext = GetContext(hContext);
     auto pSrc = GetDrawState(pContext);
     SWR_ASSERT(pOutputStateBlock && memSize >= sizeof(*pSrc));
 
@@ -369,7 +374,7 @@ void SWR_API SwrRestoreState(
     const void* pStateBlock,
     size_t memSize)
 {
-    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    SWR_CONTEXT *pContext = GetContext(hContext);
     auto pDst = GetDrawState(pContext);
     SWR_ASSERT(pStateBlock && memSize >= sizeof(*pDst));
 
@@ -382,11 +387,6 @@ void SetupDefaultState(SWR_CONTEXT *pContext)
 
     pState->rastState.cullMode = SWR_CULLMODE_NONE;
     pState->rastState.frontWinding = SWR_FRONTWINDING_CCW;
-}
-
-static INLINE SWR_CONTEXT* GetContext(HANDLE hContext)
-{
-    return (SWR_CONTEXT*)hContext;
 }
 
 void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint64_t userData2, uint64_t userData3)
@@ -1286,7 +1286,7 @@ void SwrInvalidateTiles(
         return;
     }
 
-    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
     pDC->FeWork.type = DISCARDINVALIDATETILES;
@@ -1316,7 +1316,7 @@ void SwrDiscardRect(
         return;
     }
 
-    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
     // Queue a load to the hottile
@@ -1350,7 +1350,7 @@ void SwrDispatch(
     }
 
     RDTSC_START(APIDispatch);
-    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
     pDC->isCompute = true;      // This is a compute context.
@@ -1384,7 +1384,7 @@ void SwrStoreTiles(
 
     RDTSC_START(APIStoreTiles);
 
-    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
     SetupMacroTileScissors(pDC);
@@ -1414,7 +1414,7 @@ void SwrClearRenderTarget(
 
     RDTSC_START(APIClearRenderTarget);
 
-    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    SWR_CONTEXT *pContext = GetContext(hContext);
 
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
