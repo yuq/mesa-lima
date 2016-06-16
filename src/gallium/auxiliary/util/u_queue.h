@@ -53,9 +53,10 @@ struct util_queue_job {
 struct util_queue {
    const char *name;
    pipe_mutex lock;
-   pipe_semaphore has_space;
-   pipe_semaphore queued;
+   pipe_condvar has_queued_cond;
+   pipe_condvar has_space_cond;
    pipe_thread *threads;
+   int num_queued;
    unsigned num_threads;
    int kill_threads;
    int max_jobs;
