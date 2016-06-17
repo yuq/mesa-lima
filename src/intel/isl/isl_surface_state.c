@@ -227,13 +227,17 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        *    For Render Target and Typed Dataport 1D and 2D Surfaces:
        *    This field must be set to the same value as the Depth field.
        */
-      s.RenderTargetViewExtent = s.Depth;
+      if (info->view->usage & (ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                               ISL_SURF_USAGE_STORAGE_BIT))
+         s.RenderTargetViewExtent = s.Depth;
       break;
    case SURFTYPE_CUBE:
       s.MinimumArrayElement = info->view->base_array_layer;
       /* Same as SURFTYPE_2D, but divided by 6 */
       s.Depth = info->view->array_len / 6 - 1;
-      s.RenderTargetViewExtent = s.Depth;
+      if (info->view->usage & (ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                               ISL_SURF_USAGE_STORAGE_BIT))
+         s.RenderTargetViewExtent = s.Depth;
       break;
    case SURFTYPE_3D:
       s.MinimumArrayElement = info->view->base_array_layer;
@@ -250,9 +254,19 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        *    For Render Target and Typed Dataport 3D Surfaces: This field
        *    indicates the extent of the accessible 'R' coordinates minus 1 on
        *    the LOD currently being rendered to.
+       *
+       * The docs specify that this only matters for render targets and
+       * surfaces used with typed dataport messages.  Prior to Ivy Bridge, the
+       * Depth field has more bits than RenderTargetViewExtent so we can have
+       * textures with more levels than we can render to.  In order to prevent
+       * assert-failures in the packing function below, we only set the field
+       * when it's actually going to be used by the hardware.
        */
-      s.RenderTargetViewExtent = isl_minify(info->surf->logical_level0_px.depth,
-                                            info->view->base_level) - 1;
+      if (info->view->usage & (ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                               ISL_SURF_USAGE_STORAGE_BIT)) {
+         s.RenderTargetViewExtent = isl_minify(info->surf->logical_level0_px.depth,
+                                               info->view->base_level) - 1;
+      }
       break;
    default:
       unreachable("bad SurfaceType");
