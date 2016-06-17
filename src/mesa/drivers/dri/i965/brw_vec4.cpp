@@ -257,6 +257,8 @@ vec4_instruction::can_do_writemask(const struct gen_device_info *devinfo)
    case VEC4_OPCODE_FLOAT_TO_DOUBLE:
    case VEC4_OPCODE_PICK_LOW_32BIT:
    case VEC4_OPCODE_PICK_HIGH_32BIT:
+   case VEC4_OPCODE_SET_LOW_32BIT:
+   case VEC4_OPCODE_SET_HIGH_32BIT:
    case VS_OPCODE_PULL_CONSTANT_LOAD:
    case VS_OPCODE_PULL_CONSTANT_LOAD_GEN7:
    case VS_OPCODE_SET_SIMD4X2_HEADER_GEN9:
@@ -514,6 +516,8 @@ vec4_visitor::opt_reduce_swizzle()
       case VEC4_OPCODE_DOUBLE_TO_FLOAT:
       case VEC4_OPCODE_PICK_LOW_32BIT:
       case VEC4_OPCODE_PICK_HIGH_32BIT:
+      case VEC4_OPCODE_SET_LOW_32BIT:
+      case VEC4_OPCODE_SET_HIGH_32BIT:
          swizzle = brw_swizzle_for_size(4);
          break;
 

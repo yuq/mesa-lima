@@ -1978,6 +1978,31 @@ generate_code(struct brw_codegen *p,
          break;
       }
 
+      case VEC4_OPCODE_SET_LOW_32BIT:
+      case VEC4_OPCODE_SET_HIGH_32BIT: {
+         /* Reads consecutive 32-bit elements from src[0] and writes
+          * them to the low/high 32-bit of each 64-bit element in dst.
+          */
+         assert(type_sz(src[0].type) == 4);
+         assert(type_sz(dst.type) == 8);
+
+         brw_set_default_access_mode(p, BRW_ALIGN_1);
+
+         dst = retype(dst, BRW_REGISTER_TYPE_UD);
+         if (inst->opcode == VEC4_OPCODE_SET_HIGH_32BIT)
+            dst = suboffset(dst, 1);
+         dst.hstride = BRW_HORIZONTAL_STRIDE_2;
+
+         src[0] = retype(src[0], BRW_REGISTER_TYPE_UD);
+         src[0].vstride = BRW_VERTICAL_STRIDE_4;
+         src[0].width = BRW_WIDTH_4;
+         src[0].hstride = BRW_HORIZONTAL_STRIDE_1;
+         brw_MOV(p, dst, src[0]);
+
+         brw_set_default_access_mode(p, BRW_ALIGN_16);
+         break;
+      }
+
       case VEC4_OPCODE_PACK_BYTES: {
          /* Is effectively:
           *

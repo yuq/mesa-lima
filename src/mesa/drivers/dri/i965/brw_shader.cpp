@@ -330,6 +330,10 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       return "pick_low_32bit";
    case VEC4_OPCODE_PICK_HIGH_32BIT:
       return "pick_high_32bit";
+   case VEC4_OPCODE_SET_LOW_32BIT:
+      return "set_low_32bit";
+   case VEC4_OPCODE_SET_HIGH_32BIT:
+      return "set_high_32bit";
 
    case FS_OPCODE_DDX_COARSE:
       return "ddx_coarse";
