@@ -98,26 +98,30 @@ check_buffers_are_unmapped(struct gl_context *ctx)
  * For debugging purposes; not normally used.
  */
 static void
-check_array_data(struct gl_context *ctx, struct gl_client_array *array,
+check_array_data(struct gl_context *ctx, struct gl_vertex_array_object *vao,
                  GLuint attrib, GLuint j)
 {
+   const struct gl_vertex_attrib_array *array = &vao->VertexAttrib[attrib];
    if (array->Enabled) {
+      const struct gl_vertex_buffer_binding *binding =
+         &vao->VertexBinding[array->VertexBinding];
+      struct gl_buffer_object *bo = binding->BufferObj;
       const void *data = array->Ptr;
-      if (_mesa_is_bufferobj(array->BufferObj)) {
-         if (!array->BufferObj->Mappings[MAP_INTERNAL].Pointer) {
+      if (_mesa_is_bufferobj(bo)) {
+         if (!bo->Mappings[MAP_INTERNAL].Pointer) {
             /* need to map now */
-            array->BufferObj->Mappings[MAP_INTERNAL].Pointer =
-               ctx->Driver.MapBufferRange(ctx, 0, array->BufferObj->Size,
-					  GL_MAP_READ_BIT, array->BufferObj,
+            bo->Mappings[MAP_INTERNAL].Pointer =
+               ctx->Driver.MapBufferRange(ctx, 0, bo->Size,
+					  GL_MAP_READ_BIT, bo,
                                           MAP_INTERNAL);
          }
-         data = ADD_POINTERS(data,
-                             array->BufferObj->Mappings[MAP_INTERNAL].Pointer);
+         data = ADD_POINTERS(_mesa_vertex_attrib_address(array, binding),
+                             bo->Mappings[MAP_INTERNAL].Pointer);
       }
       switch (array->Type) {
       case GL_FLOAT:
          {
-            GLfloat *f = (GLfloat *) ((GLubyte *) data + array->StrideB * j);
+            GLfloat *f = (GLfloat *) ((GLubyte *) data + binding->Stride * j);
             GLint k;
             for (k = 0; k < array->Size; k++) {
                if (IS_INF_OR_NAN(f[k]) ||
@@ -126,9 +130,9 @@ check_array_data(struct gl_context *ctx, struct gl_client_array *array,
                   printf("  Element[%u].%u = %f\n", j, k, f[k]);
                   printf("  Array %u at %p\n", attrib, (void* ) array);
                   printf("  Type 0x%x, Size %d, Stride %d\n",
-			 array->Type, array->Size, array->Stride);
+			 array->Type, array->Size, binding->Stride);
                   printf("  Address/offset %p in Buffer Object %u\n",
-			 array->Ptr, array->BufferObj->Name);
+			 array->Ptr, bo->Name);
                   f[k] = 1.0F; /* XXX replace the bad value! */
                }
                /*assert(!IS_INF_OR_NAN(f[k]));*/
@@ -146,12 +150,17 @@ check_array_data(struct gl_context *ctx, struct gl_client_array *array,
  * Unmap the buffer object referenced by given array, if mapped.
  */
 static void
-unmap_array_buffer(struct gl_context *ctx, struct gl_client_array *array)
+unmap_array_buffer(struct gl_context *ctx, struct gl_vertex_array_object *vao,
+                   GLuint attrib)
 {
-   if (array->Enabled &&
-       _mesa_is_bufferobj(array->BufferObj) &&
-       _mesa_bufferobj_mapped(array->BufferObj, MAP_INTERNAL)) {
-      ctx->Driver.UnmapBuffer(ctx, array->BufferObj, MAP_INTERNAL);
+   const struct gl_vertex_attrib_array *array = &vao->VertexAttrib[attrib];
+   if (array->Enabled) {
+      const struct gl_vertex_buffer_binding *binding =
+         &vao->VertexBinding[array->VertexBinding];
+      struct gl_buffer_object *bo = binding->BufferObj;
+      if (_mesa_is_bufferobj(bo) && _mesa_bufferobj_mapped(bo, MAP_INTERNAL)) {
+         ctx->Driver.UnmapBuffer(ctx, bo, MAP_INTERNAL);
+      }
    }
 }
 
@@ -197,8 +206,8 @@ check_draw_elements_data(struct gl_context *ctx, GLsizei count, GLenum elemType,
       }
 
       /* check element j of each enabled array */
-      for (k = 0; k < ARRAY_SIZE(vao->_VertexAttrib); k++) {
-         check_array_data(ctx, &vao->_VertexAttrib[k], k, j);
+      for (k = 0; k < VERT_ATTRIB_MAX; k++) {
+         check_array_data(ctx, vao, k, j);
       }
    }
 
@@ -207,8 +216,8 @@ check_draw_elements_data(struct gl_context *ctx, GLsizei count, GLenum elemType,
                               MAP_INTERNAL);
    }
 
-   for (k = 0; k < ARRAY_SIZE(vao->_VertexAttrib); k++) {
-      unmap_array_buffer(ctx, &vao->_VertexAttrib[k]);
+   for (k = 0; k < VERT_ATTRIB_MAX; k++) {
+      unmap_array_buffer(ctx, vao, k);
    }
 }
 
