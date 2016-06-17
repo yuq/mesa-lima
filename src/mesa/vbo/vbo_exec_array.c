@@ -230,37 +230,37 @@ static void
 print_draw_arrays(struct gl_context *ctx,
                   GLenum mode, GLint start, GLsizei count)
 {
-   struct vbo_context *vbo = vbo_context(ctx);
-   struct vbo_exec_context *exec = &vbo->exec;
-   struct gl_vertex_array_object *vao = ctx->Array.VAO;
-   int i;
+   const struct gl_vertex_array_object *vao = ctx->Array.VAO;
 
    printf("vbo_exec_DrawArrays(mode 0x%x, start %d, count %d):\n",
 	  mode, start, count);
 
-   for (i = 0; i < 32; i++) {
-      struct gl_buffer_object *bufObj = exec->array.inputs[i]->BufferObj;
-      GLuint bufName = bufObj->Name;
-      GLint stride = exec->array.inputs[i]->Stride;
-      printf("attr %2d: size %d stride %d  enabled %d  "
-	     "ptr %p  Bufobj %u\n",
-	     i,
-	     exec->array.inputs[i]->Size,
-	     stride,
-	     /*exec->array.inputs[i]->Enabled,*/
-	     vao->_VertexAttrib[VERT_ATTRIB_FF(i)].Enabled,
-	     exec->array.inputs[i]->Ptr,
-	     bufName);
+   unsigned i;
+   for (i = 0; i < VERT_ATTRIB_MAX; ++i) {
+      const struct gl_vertex_attrib_array *array = &vao->VertexAttrib[i];
+      if (!array->Enabled)
+         continue;
 
-      if (bufName) {
+      const struct gl_vertex_buffer_binding *binding =
+         &vao->VertexBinding[array->VertexBinding];
+      struct gl_buffer_object *bufObj = binding->BufferObj;
+
+      printf("attr %s: size %d stride %d  enabled %d  "
+	     "ptr %p  Bufobj %u\n",
+             gl_vert_attrib_name((gl_vert_attrib)i),
+	     array->Size, binding->Stride, array->Enabled,
+             array->Ptr, bufObj->Name);
+
+      if (_mesa_is_bufferobj(bufObj)) {
          GLubyte *p = ctx->Driver.MapBufferRange(ctx, 0, bufObj->Size,
 						 GL_MAP_READ_BIT, bufObj,
                                                  MAP_INTERNAL);
-         int offset = (int) (GLintptr) exec->array.inputs[i]->Ptr;
+         int offset = (int) (GLintptr)
+            _mesa_vertex_attrib_address(array, binding);
          float *f = (float *) (p + offset);
          int *k = (int *) f;
          int i;
-         int n = (count * stride) / 4;
+         int n = (count * binding->Stride) / 4;
          if (n > 32)
             n = 32;
          printf("  Data at offset %d:\n", offset);
