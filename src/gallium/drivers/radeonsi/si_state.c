@@ -3540,19 +3540,6 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 	 * fields are for, so I'm leaving them as their default
 	 * values. */
 
-	if ((num_se > 2) && ((!se_mask[0] && !se_mask[1]) ||
-			     (!se_mask[2] && !se_mask[3]))) {
-		raster_config_1 &= C_028354_SE_PAIR_MAP;
-
-		if (!se_mask[0] && !se_mask[1]) {
-			raster_config_1 |=
-				S_028354_SE_PAIR_MAP(V_028354_RASTER_CONFIG_SE_PAIR_MAP_3);
-		} else {
-			raster_config_1 |=
-				S_028354_SE_PAIR_MAP(V_028354_RASTER_CONFIG_SE_PAIR_MAP_0);
-		}
-	}
-
 	for (se = 0; se < num_se; se++) {
 		unsigned raster_config_se = raster_config;
 		unsigned pkr0_mask = ((1 << rb_per_pkr) - 1) << (se * rb_per_se);
@@ -3632,8 +3619,6 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 				       S_030800_SE_INDEX(se) | S_030800_SH_BROADCAST_WRITES(1) |
 				       S_030800_INSTANCE_BROADCAST_WRITES(1));
 		si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, raster_config_se);
-		if (sctx->b.chip_class >= CIK)
-			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, raster_config_1);
 	}
 
 	/* GRBM_GFX_INDEX has a different offset on SI and CI+ */
@@ -3641,10 +3626,26 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 		si_pm4_set_reg(pm4, GRBM_GFX_INDEX,
 			       SE_BROADCAST_WRITES | SH_BROADCAST_WRITES |
 			       INSTANCE_BROADCAST_WRITES);
-	else
+	else {
 		si_pm4_set_reg(pm4, R_030800_GRBM_GFX_INDEX,
 			       S_030800_SE_BROADCAST_WRITES(1) | S_030800_SH_BROADCAST_WRITES(1) |
 			       S_030800_INSTANCE_BROADCAST_WRITES(1));
+
+		if ((num_se > 2) && ((!se_mask[0] && !se_mask[1]) ||
+		                     (!se_mask[2] && !se_mask[3]))) {
+			raster_config_1 &= C_028354_SE_PAIR_MAP;
+
+			if (!se_mask[0] && !se_mask[1]) {
+				raster_config_1 |=
+					S_028354_SE_PAIR_MAP(V_028354_RASTER_CONFIG_SE_PAIR_MAP_3);
+			} else {
+				raster_config_1 |=
+					S_028354_SE_PAIR_MAP(V_028354_RASTER_CONFIG_SE_PAIR_MAP_0);
+			}
+		}
+
+		si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, raster_config_1);
+	}
 }
 
 static void si_init_config(struct si_context *sctx)
