@@ -1336,7 +1336,8 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
    disp->Extensions.EXT_buffer_age = EGL_TRUE;
 
 #ifdef HAVE_WAYLAND_PLATFORM
-   disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
+   if (dri2_dpy->device_name)
+      disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
 #endif
 
    if (dri2_dpy->conn) {
