@@ -295,6 +295,7 @@ recalculate_input_bindings(struct gl_context *ctx)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
+   const struct gl_vertex_attrib_array *array = ctx->Array.VAO->VertexAttrib;
    struct gl_client_array *vertexAttrib = ctx->Array.VAO->_VertexAttrib;
    const struct gl_client_array **inputs = &exec->array.inputs[0];
    GLbitfield64 const_inputs = 0x0;
@@ -308,7 +309,7 @@ recalculate_input_bindings(struct gl_context *ctx)
        * are available as per-vertex attributes.
        */
       for (i = 0; i < VERT_ATTRIB_FF_MAX; i++) {
-	 if (vertexAttrib[VERT_ATTRIB_FF(i)].Enabled)
+	 if (array[VERT_ATTRIB_FF(i)].Enabled)
 	    inputs[i] = &vertexAttrib[VERT_ATTRIB_FF(i)];
 	 else {
 	    inputs[i] = &vbo->currval[VBO_ATTRIB_POS+i];
@@ -348,9 +349,9 @@ recalculate_input_bindings(struct gl_context *ctx)
        * slots are considered "magic."
        */
       if (ctx->API == API_OPENGL_COMPAT) {
-         if (vertexAttrib[VERT_ATTRIB_GENERIC0].Enabled)
+         if (array[VERT_ATTRIB_GENERIC0].Enabled)
             inputs[0] = &vertexAttrib[VERT_ATTRIB_GENERIC0];
-         else if (vertexAttrib[VERT_ATTRIB_POS].Enabled)
+         else if (array[VERT_ATTRIB_POS].Enabled)
             inputs[0] = &vertexAttrib[VERT_ATTRIB_POS];
          else {
             inputs[0] = &vbo->currval[VBO_ATTRIB_POS];
@@ -358,7 +359,7 @@ recalculate_input_bindings(struct gl_context *ctx)
          }
 
          for (i = 1; i < VERT_ATTRIB_FF_MAX; i++) {
-            if (vertexAttrib[VERT_ATTRIB_FF(i)].Enabled)
+            if (array[VERT_ATTRIB_FF(i)].Enabled)
                inputs[i] = &vertexAttrib[VERT_ATTRIB_FF(i)];
             else {
                inputs[i] = &vbo->currval[VBO_ATTRIB_POS+i];
@@ -367,7 +368,7 @@ recalculate_input_bindings(struct gl_context *ctx)
          }
 
          for (i = 1; i < VERT_ATTRIB_GENERIC_MAX; i++) {
-            if (vertexAttrib[VERT_ATTRIB_GENERIC(i)].Enabled)
+            if (array[VERT_ATTRIB_GENERIC(i)].Enabled)
                inputs[VERT_ATTRIB_GENERIC(i)] =
                   &vertexAttrib[VERT_ATTRIB_GENERIC(i)];
             else {
@@ -385,14 +386,14 @@ recalculate_input_bindings(struct gl_context *ctx)
           * be enabled.
           */
          for (i = 0; i < VERT_ATTRIB_FF_MAX; i++) {
-            assert(!vertexAttrib[VERT_ATTRIB_FF(i)].Enabled);
+            assert(!array[VERT_ATTRIB_FF(i)].Enabled);
 
             inputs[i] = &vbo->currval[VBO_ATTRIB_POS+i];
             const_inputs |= VERT_BIT_FF(i);
          }
 
          for (i = 0; i < VERT_ATTRIB_GENERIC_MAX; i++) {
-            if (vertexAttrib[VERT_ATTRIB_GENERIC(i)].Enabled)
+            if (array[VERT_ATTRIB_GENERIC(i)].Enabled)
                inputs[VERT_ATTRIB_GENERIC(i)] =
                   &vertexAttrib[VERT_ATTRIB_GENERIC(i)];
             else {
