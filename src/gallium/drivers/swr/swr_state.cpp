@@ -776,6 +776,10 @@ swr_update_derived(struct pipe_context *pipe,
    struct swr_context *ctx = swr_context(pipe);
    struct swr_screen *screen = swr_screen(ctx->pipe.screen);
 
+   /* Update screen->pipe to current pipe context. */
+   if (screen->pipe != pipe)
+      screen->pipe = pipe;
+
    /* Any state that requires dirty flags to be re-triggered sets this mask */
    /* For example, user_buffer vertex and index buffers. */
    unsigned post_update_dirty_flags = 0;
