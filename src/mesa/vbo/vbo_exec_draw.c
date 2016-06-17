@@ -250,7 +250,6 @@ vbo_exec_bind_arrays( struct gl_context *ctx )
          }
 	 arrays[attr].Size = exec->vtx.attrsz[src];
 	 arrays[attr].StrideB = exec->vtx.vertex_size * sizeof(GLfloat);
-	 arrays[attr].Stride = exec->vtx.vertex_size * sizeof(GLfloat);
 	 arrays[attr].Type = exec->vtx.attrtype[src];
 	 arrays[attr].Integer =
                vbo_attrtype_to_integer_flag(exec->vtx.attrtype[src]);

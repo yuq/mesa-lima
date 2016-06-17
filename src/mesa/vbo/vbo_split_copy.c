@@ -161,7 +161,7 @@ dump_draw_info(struct gl_context *ctx,
 		arrays[j]->Size, arrays[j]->Type, arrays[j]->StrideB);
          if (0) {
             GLint k = prims[i].start + prims[i].count - 1;
-            GLfloat *last = (GLfloat *) (arrays[j]->Ptr + arrays[j]->Stride * k);
+            GLfloat *last = (GLfloat *) (arrays[j]->Ptr + arrays[j]->StrideB * k);
             printf("        last: %f %f %f\n",
 		   last[0], last[1], last[2]);
          }
@@ -527,7 +527,6 @@ replay_init( struct copy_context *copy )
       dst->Size = src->Size;
       dst->Type = src->Type;
       dst->Format = GL_RGBA;
-      dst->Stride = copy->vertex_size;
       dst->StrideB = copy->vertex_size;
       dst->Ptr = copy->dstbuf + offset;
       dst->Normalized = src->Normalized; 

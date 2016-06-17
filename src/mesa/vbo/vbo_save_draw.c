@@ -196,7 +196,6 @@ static void vbo_bind_vertex_list(struct gl_context *ctx,
 	 arrays[attr].Ptr = (const GLubyte *) NULL + buffer_offset;
 	 arrays[attr].Size = node_attrsz[src];
 	 arrays[attr].StrideB = node->vertex_size * sizeof(GLfloat);
-	 arrays[attr].Stride = node->vertex_size * sizeof(GLfloat);
          arrays[attr].Type = node_attrtype[src];
          arrays[attr].Integer =
                vbo_attrtype_to_integer_flag(node_attrtype[src]);

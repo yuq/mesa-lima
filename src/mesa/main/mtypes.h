@@ -1323,7 +1323,6 @@ struct gl_client_array
    GLint Size;                  /**< components per element (1,2,3,4) */
    GLenum Type;                 /**< datatype: GL_FLOAT, GL_INT, etc */
    GLenum Format;               /**< default: GL_RGBA, but may be GL_BGRA */
-   GLsizei Stride;		/**< user-specified stride */
    GLsizei StrideB;		/**< actual stride in bytes */
    GLuint _ElementSize;         /**< size of each element in bytes */
    const GLubyte *Ptr;          /**< Points to array data */

@@ -55,7 +55,6 @@ init_array(struct gl_context *ctx, struct gl_client_array *cl,
    cl->Size = size;
    cl->Type = GL_FLOAT;
    cl->Format = GL_RGBA;
-   cl->Stride = 0;
    cl->StrideB = 0;
    cl->_ElementSize = cl->Size * sizeof(GLfloat);
    cl->Ptr = pointer;
