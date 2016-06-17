@@ -27,6 +27,7 @@
  **************************************************************************/
 
 #include <stdio.h>
+#include "main/arrayobj.h"
 #include "main/glheader.h"
 #include "main/context.h"
 #include "main/state.h"
@@ -1290,7 +1291,6 @@ vbo_draw_transform_feedback(struct gl_context *ctx, GLenum mode,
                             GLuint stream, GLuint numInstances)
 {
    struct vbo_context *vbo = vbo_context(ctx);
-   struct vbo_exec_context *exec = &vbo->exec;
    struct _mesa_prim prim[2];
 
    if (!_mesa_validate_DrawTransformFeedback(ctx, mode, obj, stream,
@@ -1300,7 +1300,7 @@ vbo_draw_transform_feedback(struct gl_context *ctx, GLenum mode,
 
    if (ctx->Driver.GetTransformFeedbackVertexCount &&
        (ctx->Const.AlwaysUseGetTransformFeedbackVertexCount ||
-        !vbo_all_varyings_in_vbos(exec->array.inputs))) {
+        !_mesa_all_varyings_in_vbos(ctx->Array.VAO))) {
       GLsizei n = ctx->Driver.GetTransformFeedbackVertexCount(ctx, obj, stream);
       vbo_draw_arrays(ctx, mode, 0, n, numInstances, 0);
       return;
