@@ -1513,6 +1513,15 @@ generate_code(struct brw_codegen *p,
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
       brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
 
+      assert(inst->group % inst->exec_size == 0);
+      assert(inst->group % 8 == 0 ||
+             inst->dst.type == BRW_REGISTER_TYPE_DF ||
+             inst->src[0].type == BRW_REGISTER_TYPE_DF ||
+             inst->src[1].type == BRW_REGISTER_TYPE_DF ||
+             inst->src[2].type == BRW_REGISTER_TYPE_DF);
+      if (!inst->force_writemask_all)
+         brw_set_default_group(p, inst->group);
+
       assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF(devinfo->gen));
       assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
