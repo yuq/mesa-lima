@@ -54,7 +54,7 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
       /* For OpenGL ES, only draw if we have vertex positions
        */
       if (!ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_POS].Enabled)
-	 return false;
+         return false;
       break;
 
    case API_OPENGL_CORE:
@@ -346,10 +346,10 @@ _mesa_valid_prim_mode(struct gl_context *ctx, GLenum mode, const char *name)
       }
       if (!pass) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-	                 "%s(mode=%s vs transform feedback %s)",
-	                 name,
-	                 _mesa_lookup_prim_by_nr(mode),
-	                 _mesa_lookup_prim_by_nr(ctx->TransformFeedback.Mode));
+                         "%s(mode=%s vs transform feedback %s)",
+                         name,
+                         _mesa_lookup_prim_by_nr(mode),
+                         _mesa_lookup_prim_by_nr(ctx->TransformFeedback.Mode));
          return GL_FALSE;
       }
    }
@@ -431,8 +431,8 @@ validate_DrawElements_common(struct gl_context *ctx,
  */
 GLboolean
 _mesa_validate_DrawElements(struct gl_context *ctx,
-			    GLenum mode, GLsizei count, GLenum type,
-			    const GLvoid *indices)
+                            GLenum mode, GLsizei count, GLenum type,
+                            const GLvoid *indices)
 {
    FLUSH_CURRENT(ctx, 0);
 
@@ -494,9 +494,9 @@ _mesa_validate_MultiDrawElements(struct gl_context *ctx,
  */
 GLboolean
 _mesa_validate_DrawRangeElements(struct gl_context *ctx, GLenum mode,
-				 GLuint start, GLuint end,
-				 GLsizei count, GLenum type,
-				 const GLvoid *indices)
+                                 GLuint start, GLuint end,
+                                 GLsizei count, GLenum type,
+                                 const GLvoid *indices)
 {
    FLUSH_CURRENT(ctx, 0);
 
@@ -580,7 +580,7 @@ _mesa_validate_DrawArraysInstanced(struct gl_context *ctx, GLenum mode, GLint fi
 
    if (first < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-		  "glDrawArraysInstanced(start=%d)", first);
+                  "glDrawArraysInstanced(start=%d)", first);
       return GL_FALSE;
    }
 
