@@ -1997,6 +1997,12 @@ get_lowered_simd_width(const struct gen_device_info *devinfo,
     * only hardware that implements fp64 in Align16.
     */
    if (devinfo->gen == 7 && inst->size_written > REG_SIZE) {
+      /* Align16 8-wide double-precision SEL does not work well. Verified
+       * empirically.
+       */
+      if (inst->opcode == BRW_OPCODE_SEL && type_sz(inst->dst.type) == 8)
+         lowered_width = MIN2(lowered_width, 4);
+
       /* HSW PRM, 3D Media GPGPU Engine, Region Alignment Rules for Direct
        * Register Addressing:
        *
