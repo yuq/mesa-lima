@@ -229,6 +229,7 @@ dri3_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
 static int
 dri3_authenticate(_EGLDisplay *disp, uint32_t id)
 {
+#ifdef HAVE_WAYLAND_PLATFORM
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
 
    if (dri2_dpy->device_name) {
@@ -239,6 +240,7 @@ dri3_authenticate(_EGLDisplay *disp, uint32_t id)
 
    _eglLog(_EGL_WARNING,
            "Wayland client primary node authentication isn't supported");
+#endif
 
    return -1;
 }
@@ -533,11 +535,12 @@ dri3_x11_connect(struct dri2_egl_display *dri2_dpy)
       return EGL_FALSE;
    }
 
-   /* Only try to get a render device name since it's only needed for
-    * WL_bind_wayland_display and dri3 doesn't provide a mechanism for
-    * authenticating client opened device node fds. If this fails then
-    * don't advertise the extension. */
+#ifdef HAVE_WAYLAND_PLATFORM
+   /* Only try to get a render device name since dri3 doesn't provide a
+    * mechanism for authenticating client opened device node fds. If this
+    * fails then don't advertise the extension. */
    dri2_dpy->device_name = drmGetRenderDeviceNameFromFd(dri2_dpy->fd);
+#endif
 
    return EGL_TRUE;
 }

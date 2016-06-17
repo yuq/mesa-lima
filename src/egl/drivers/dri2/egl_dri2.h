@@ -194,7 +194,6 @@ struct dri2_egl_display
    struct gbm_dri_device    *gbm_dri;
 #endif
 
-   char                     *device_name;
    char                     *driver_name;
 
    __DRIdri2LoaderExtension    dri2_loader_extension;
@@ -221,6 +220,7 @@ struct dri2_egl_display
    int			     authenticated;
    int			     formats;
    uint32_t                  capabilities;
+   char                     *device_name;
 #endif
 
    int              is_render_node;

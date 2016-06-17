@@ -858,8 +858,11 @@ dri2_display_release(_EGLDisplay *disp) {
       close(dri2_dpy->fd);
    if (dri2_dpy->driver)
       dlclose(dri2_dpy->driver);
-   free(dri2_dpy->device_name);
    free(dri2_dpy->driver_name);
+
+#ifdef HAVE_WAYLAND_PLATFORM
+   free(dri2_dpy->device_name);
+#endif
 
    switch (disp->Platform) {
 #ifdef HAVE_X11_PLATFORM

@@ -665,23 +665,16 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
 
    device_name = xcb_dri2_connect_device_name (connect);
 
-   dri2_dpy->device_name =
-      strndup(device_name,
-              xcb_dri2_connect_device_name_length(connect));
-
-   dri2_dpy->fd = loader_open_device(dri2_dpy->device_name);
+   dri2_dpy->fd = loader_open_device(device_name);
    if (dri2_dpy->fd == -1) {
       _eglLog(_EGL_WARNING,
-              "DRI2: could not open %s (%s)", dri2_dpy->device_name,
-              strerror(errno));
-      free(dri2_dpy->device_name);
+              "DRI2: could not open %s (%s)", device_name, strerror(errno));
       free(connect);
       return EGL_FALSE;
    }
 
    if (!dri2_x11_local_authenticate(dri2_dpy)) {
       close(dri2_dpy->fd);
-      free(dri2_dpy->device_name);
       free(connect);
       return EGL_FALSE;
    }
@@ -700,13 +693,19 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
                  xcb_dri2_connect_driver_name_length(connect));
    }
 
-   if (dri2_dpy->device_name == NULL || dri2_dpy->driver_name == NULL) {
+   if (dri2_dpy->driver_name == NULL) {
       close(dri2_dpy->fd);
-      free(dri2_dpy->device_name);
       free(dri2_dpy->driver_name);
       free(connect);
       return EGL_FALSE;
    }
+
+#ifdef HAVE_WAYLAND_PLATFORM
+   dri2_dpy->device_name =
+      strndup(device_name,
+              xcb_dri2_connect_device_name_length(connect));
+#endif
+
    free(connect);
 
    return EGL_TRUE;
