@@ -2318,7 +2318,6 @@ _mesa_copy_client_array(struct gl_context *ctx,
    dst->Stride = src->Stride;
    dst->StrideB = src->StrideB;
    dst->Ptr = src->Ptr;
-   dst->Enabled = src->Enabled;
    dst->Normalized = src->Normalized;
    dst->Integer = src->Integer;
    dst->Doubles = src->Doubles;

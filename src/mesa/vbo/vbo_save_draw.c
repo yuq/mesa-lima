@@ -201,7 +201,6 @@ static void vbo_bind_vertex_list(struct gl_context *ctx,
          arrays[attr].Integer =
                vbo_attrtype_to_integer_flag(node_attrtype[src]);
          arrays[attr].Format = GL_RGBA;
-	 arrays[attr].Enabled = 1;
          arrays[attr]._ElementSize = arrays[attr].Size * sizeof(GLfloat);
          _mesa_reference_buffer_object(ctx,
                                        &arrays[attr].BufferObj,

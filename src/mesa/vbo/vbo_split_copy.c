@@ -156,8 +156,8 @@ dump_draw_info(struct gl_context *ctx,
       printf("  IB: %p\n", (void*) ib);
       for (j = 0; j < VERT_ATTRIB_MAX; j++) {
          printf("    array %d at %p:\n", j, (void*) arrays[j]);
-         printf("      enabled %d, ptr %p, size %d, type 0x%x, stride %d\n",
-		arrays[j]->Enabled, arrays[j]->Ptr,
+         printf("      ptr %p, size %d, type 0x%x, stride %d\n",
+		arrays[j]->Ptr,
 		arrays[j]->Size, arrays[j]->Type, arrays[j]->StrideB);
          if (0) {
             GLint k = prims[i].start + prims[i].count - 1;
@@ -530,7 +530,6 @@ replay_init( struct copy_context *copy )
       dst->Stride = copy->vertex_size;
       dst->StrideB = copy->vertex_size;
       dst->Ptr = copy->dstbuf + offset;
-      dst->Enabled = GL_TRUE;
       dst->Normalized = src->Normalized; 
       dst->Integer = src->Integer;
       dst->Doubles = src->Doubles;

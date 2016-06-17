@@ -59,7 +59,6 @@ init_array(struct gl_context *ctx, struct gl_client_array *cl,
    cl->StrideB = 0;
    cl->_ElementSize = cl->Size * sizeof(GLfloat);
    cl->Ptr = pointer;
-   cl->Enabled = 1;
 
    _mesa_reference_buffer_object(ctx, &cl->BufferObj,
                                  ctx->Shared->NullBufferObj);
