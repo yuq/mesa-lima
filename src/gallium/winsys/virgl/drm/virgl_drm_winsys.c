@@ -489,6 +489,9 @@ static boolean virgl_drm_winsys_resource_get_handle(struct virgl_winsys *qws,
    } else if (whandle->type == DRM_API_HANDLE_TYPE_FD) {
       if (drmPrimeHandleToFD(qdws->fd, res->bo_handle, DRM_CLOEXEC, (int*)&whandle->handle))
             return FALSE;
+      pipe_mutex_lock(qdws->bo_handles_mutex);
+      util_hash_table_set(qdws->bo_handles, (void *)(uintptr_t)res->bo_handle, res);
+      pipe_mutex_unlock(qdws->bo_handles_mutex);
    }
    whandle->stride = stride;
    return TRUE;
