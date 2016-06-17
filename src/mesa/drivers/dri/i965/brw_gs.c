@@ -206,7 +206,7 @@ brw_gs_state_dirty(const struct brw_context *brw)
                           BRW_NEW_TRANSFORM_FEEDBACK);
 }
 
-static void
+void
 brw_gs_populate_key(struct brw_context *brw,
                     struct brw_gs_prog_key *key)
 {
