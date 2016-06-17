@@ -3522,10 +3522,15 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 	unsigned se_mask[4];
 	unsigned se;
 
-	se_mask[0] = ((1 << rb_per_se) - 1) & rb_mask;
-	se_mask[1] = (se_mask[0] << rb_per_se) & rb_mask;
-	se_mask[2] = (se_mask[1] << rb_per_se) & rb_mask;
-	se_mask[3] = (se_mask[2] << rb_per_se) & rb_mask;
+	se_mask[0] = ((1 << rb_per_se) - 1);
+	se_mask[1] = (se_mask[0] << rb_per_se);
+	se_mask[2] = (se_mask[1] << rb_per_se);
+	se_mask[3] = (se_mask[2] << rb_per_se);
+
+	se_mask[0] &= rb_mask;
+	se_mask[1] &= rb_mask;
+	se_mask[2] &= rb_mask;
+	se_mask[3] &= rb_mask;
 
 	assert(num_se == 1 || num_se == 2 || num_se == 4);
 	assert(sh_per_se == 1 || sh_per_se == 2);
