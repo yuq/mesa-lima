@@ -47,16 +47,29 @@
  * to draw.
  */
 static bool
-check_input_buffers_are_unmapped(const struct gl_client_array **inputs)
+check_input_buffers_are_unmapped(const struct gl_vertex_array_object *vao)
 {
-   GLuint i;
+   /* Walk the enabled arrays that have a vbo attached */
+   GLbitfield64 mask = vao->_Enabled & vao->VertexAttribBufferMask;
 
-   for (i = 0; i < VERT_ATTRIB_MAX; i++) {
-      if (inputs[i]) {
-         struct gl_buffer_object *obj = inputs[i]->BufferObj;
-         if (_mesa_check_disallowed_mapping(obj))
-            return false;
-      }
+   while (mask) {
+      int i = ffsll(mask) - 1;
+      const struct gl_vertex_attrib_array *attrib_array =
+         &vao->VertexAttrib[i];
+      const struct gl_vertex_buffer_binding *buffer_binding =
+         &vao->VertexBinding[attrib_array->VertexBinding];
+
+      /* Only enabled arrays shall appear in the _Enabled bitmask */
+      assert(attrib_array->Enabled);
+      /* We have already masked with vao->VertexAttribBufferMask  */
+      assert(_mesa_is_bufferobj(buffer_binding->BufferObj));
+
+      /* Bail out once we find the first disallowed mapping */
+      if (_mesa_check_disallowed_mapping(buffer_binding->BufferObj))
+         return false;
+
+      /* We have handled everything that is bound to this buffer_binding. */
+      mask &= ~buffer_binding->_BoundArrays;
    }
 
    return true;
@@ -75,7 +88,7 @@ check_buffers_are_unmapped(struct gl_context *ctx)
 
    /* check the current vertex arrays */
    return !_mesa_check_disallowed_mapping(exec->vtx.bufferobj) &&
-      check_input_buffers_are_unmapped(exec->array.inputs);
+      check_input_buffers_are_unmapped(ctx->Array.VAO);
 }
 
 
