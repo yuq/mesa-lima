@@ -300,9 +300,13 @@ static void si_set_tesseval_regs(struct si_screen *sscreen,
 	else
 		topology = V_028B6C_OUTPUT_TRIANGLE_CW;
 
-	if (sscreen->b.chip_class >= VI)
-		distribution_mode = V_028B6C_DISTRIBUTION_MODE_DONUTS;
-	else
+	if (sscreen->b.chip_class >= VI) {
+		if (sscreen->b.family == CHIP_FIJI ||
+		    sscreen->b.family >= CHIP_POLARIS10)
+			distribution_mode = V_028B6C_DISTRIBUTION_MODE_TRAPEZOIDS;
+		else
+			distribution_mode = V_028B6C_DISTRIBUTION_MODE_DONUTS;
+	} else
 		distribution_mode = V_028B6C_DISTRIBUTION_MODE_NO_DIST;
 
 	si_pm4_set_reg(pm4, R_028B6C_VGT_TF_PARAM,

@@ -3839,16 +3839,28 @@ static void si_init_config(struct si_context *sctx)
 	}
 
 	if (sctx->b.chip_class >= VI) {
+		unsigned vgt_tess_distribution;
+
 		si_pm4_set_reg(pm4, R_028424_CB_DCC_CONTROL,
 			       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
 			       S_028424_OVERWRITE_COMBINER_WATERMARK(4));
 		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
 		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
-		si_pm4_set_reg(pm4, R_028B50_VGT_TESS_DISTRIBUTION,
-		               S_028B50_ACCUM_ISOLINE(32) |
-		               S_028B50_ACCUM_TRI(11) |
-		               S_028B50_ACCUM_QUAD(11) |
-		               S_028B50_DONUT_SPLIT(16));
+
+		vgt_tess_distribution =
+			S_028B50_ACCUM_ISOLINE(32) |
+			S_028B50_ACCUM_TRI(11) |
+			S_028B50_ACCUM_QUAD(11) |
+			S_028B50_DONUT_SPLIT(16);
+
+		/* Testing with Unigine Heaven extreme tesselation yielded best results
+		 * with TRAP_SPLIT = 3.
+		 */
+		if (sctx->b.family == CHIP_FIJI ||
+		    sctx->b.family >= CHIP_POLARIS10)
+			vgt_tess_distribution |= S_028B50_TRAP_SPLIT(3);
+
+		si_pm4_set_reg(pm4, R_028B50_VGT_TESS_DISTRIBUTION, vgt_tess_distribution);
 	}
 
 	if (sctx->b.family == CHIP_STONEY)
