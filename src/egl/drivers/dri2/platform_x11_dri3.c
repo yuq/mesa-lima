@@ -226,6 +226,23 @@ dri3_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    return NULL;
 }
 
+static int
+dri3_authenticate(_EGLDisplay *disp, uint32_t id)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+
+   if (dri2_dpy->device_name) {
+      _eglLog(_EGL_WARNING,
+              "Wayland client render node authentication is unnecessary");
+      return 0;
+   }
+
+   _eglLog(_EGL_WARNING,
+           "Wayland client primary node authentication isn't supported");
+
+   return -1;
+}
+
 /**
  * Called via eglCreateWindowSurface(), drv->API.CreateWindowSurface().
  */
@@ -419,7 +436,7 @@ dri3_get_dri_drawable(_EGLSurface *surf)
 }
 
 struct dri2_egl_display_vtbl dri3_x11_display_vtbl = {
-   .authenticate = NULL,
+   .authenticate = dri3_authenticate,
    .create_window_surface = dri3_create_window_surface,
    .create_pixmap_surface = dri3_create_pixmap_surface,
    .create_pbuffer_surface = dri3_create_pbuffer_surface,
