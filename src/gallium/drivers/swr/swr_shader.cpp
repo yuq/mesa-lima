@@ -21,13 +21,17 @@
  * IN THE SOFTWARE.
  ***************************************************************************/
 
+// llvm redefines DEBUG
+#pragma push_macro("DEBUG")
+#undef DEBUG
 #include "JitManager.h"
+#include "llvm-c/Core.h"
+#include "llvm/Support/CBindingWrapping.h"
+#pragma pop_macro("DEBUG")
+
 #include "state.h"
 #include "state_llvm.h"
 #include "builder.h"
-
-#include "llvm-c/Core.h"
-#include "llvm/Support/CBindingWrapping.h"
 
 #include "tgsi/tgsi_strings.h"
 #include "gallivm/lp_bld_init.h"

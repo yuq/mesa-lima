@@ -21,9 +21,14 @@
  * IN THE SOFTWARE.
  ***************************************************************************/
 
+// llvm redefines DEBUG
+#pragma push_macro("DEBUG")
+#undef DEBUG
+#include "JitManager.h"
+#pragma pop_macro("DEBUG")
+
 #include "common/os.h"
 #include "jit_api.h"
-#include "JitManager.h"
 #include "state_llvm.h"
 
 #include "gallivm/lp_bld_tgsi.h"
