@@ -61,10 +61,12 @@ void
 brw_dump_ir(const char *stage, struct gl_shader_program *shader_prog,
             struct gl_linked_shader *shader, struct gl_program *prog);
 
-void brw_upload_tcs_prog(struct brw_context *brw,
-                         uint64_t per_vertex_slots, uint32_t per_patch_slots);
-void brw_upload_tes_prog(struct brw_context *brw,
-                         uint64_t per_vertex_slots, uint32_t per_patch_slots);
+void brw_upload_tcs_prog(struct brw_context *brw);
+void brw_tcs_populate_key(struct brw_context *brw,
+                          struct brw_tcs_prog_key *key);
+void brw_upload_tes_prog(struct brw_context *brw);
+void brw_tes_populate_key(struct brw_context *brw,
+                          struct brw_tes_prog_key *key);
 
 #ifdef __cplusplus
 } /* extern "C" */

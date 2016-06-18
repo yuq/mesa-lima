@@ -312,14 +312,53 @@ brw_codegen_tcs_prog(struct brw_context *brw,
    return true;
 }
 
+void
+brw_tcs_populate_key(struct brw_context *brw,
+                     struct brw_tcs_prog_key *key)
+{
+   uint64_t per_vertex_slots = brw->tess_eval_program->Base.InputsRead;
+   uint32_t per_patch_slots = brw->tess_eval_program->Base.PatchInputsRead;
+
+   struct brw_tess_ctrl_program *tcp =
+      (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
+   struct brw_tess_eval_program *tep =
+      (struct brw_tess_eval_program *) brw->tess_eval_program;
+   struct gl_program *prog = &tcp->program.Base;
+
+   memset(key, 0, sizeof(*key));
+
+   if (brw->tess_ctrl_program) {
+      per_vertex_slots |= brw->tess_ctrl_program->Base.OutputsWritten;
+      per_patch_slots |= brw->tess_ctrl_program->Base.PatchOutputsWritten;
+   }
+
+   if (brw->gen < 8 || !tcp)
+      key->input_vertices = brw->ctx.TessCtrlProgram.patch_vertices;
+   key->outputs_written = per_vertex_slots;
+   key->patch_outputs_written = per_patch_slots;
+
+   /* We need to specialize our code generation for tessellation levels
+    * based on the domain the DS is expecting to tessellate.
+    */
+   key->tes_primitive_mode = tep->program.PrimitiveMode;
+   key->quads_workaround = brw->gen < 9 &&
+                           tep->program.PrimitiveMode == GL_QUADS &&
+                           tep->program.Spacing == GL_EQUAL;
+
+   if (tcp) {
+      key->program_string_id = tcp->id;
+
+      /* _NEW_TEXTURE */
+      brw_populate_sampler_prog_key_data(&brw->ctx, prog, &key->tex);
+   } else {
+      key->outputs_written = tep->program.Base.InputsRead;
+   }
+}
 
 void
-brw_upload_tcs_prog(struct brw_context *brw,
-                    uint64_t per_vertex_slots,
-                    uint32_t per_patch_slots)
+brw_upload_tcs_prog(struct brw_context *brw)
 {
-   struct gl_context *ctx = &brw->ctx;
-   struct gl_shader_program **current = ctx->_Shader->CurrentProgram;
+   struct gl_shader_program **current = brw->ctx._Shader->CurrentProgram;
    struct brw_stage_state *stage_state = &brw->tcs.base;
    struct brw_tcs_prog_key key;
    /* BRW_NEW_TESS_PROGRAMS */
@@ -335,32 +374,7 @@ brw_upload_tcs_prog(struct brw_context *brw,
                         BRW_NEW_TESS_PROGRAMS))
       return;
 
-   struct gl_program *prog = &tcp->program.Base;
-
-   memset(&key, 0, sizeof(key));
-
-   if (brw->gen < 8 || !tcp)
-      key.input_vertices = ctx->TessCtrlProgram.patch_vertices;
-   key.outputs_written = per_vertex_slots;
-   key.patch_outputs_written = per_patch_slots;
-
-   /* We need to specialize our code generation for tessellation levels
-    * based on the domain the DS is expecting to tessellate.
-    */
-   key.tes_primitive_mode = tep->program.PrimitiveMode;
-   key.quads_workaround = brw->gen < 9 &&
-                          tep->program.PrimitiveMode == GL_QUADS &&
-                          tep->program.Spacing == GL_EQUAL;
-
-   if (tcp) {
-      key.program_string_id = tcp->id;
-
-      /* _NEW_TEXTURE */
-      brw_populate_sampler_prog_key_data(ctx, prog, &key.tex);
-   } else {
-      key.outputs_written = tep->program.Base.InputsRead;
-   }
-
+   brw_tcs_populate_key(brw, &key);
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_TCS_PROG,
                          &key, sizeof(key),
