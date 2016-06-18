@@ -55,10 +55,11 @@ private:
 
    struct TexUse
    {
-      TexUse(Instruction *use, const Instruction *tex)
-         : insn(use), tex(tex), level(-1) { }
+      TexUse(Instruction *use, const Instruction *tex, bool after)
+         : insn(use), tex(tex), after(after), level(-1) { }
       Instruction *insn;
       const Instruction *tex; // or split / mov
+      bool after;
       int level;
    };
    struct Limits

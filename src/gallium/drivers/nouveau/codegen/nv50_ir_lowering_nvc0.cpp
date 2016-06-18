@@ -172,19 +172,33 @@ NVC0LegalizePostRA::addTexUse(std::list<TexUse> &uses,
                               Instruction *usei, const Instruction *texi)
 {
    bool add = true;
-   for (std::list<TexUse>::iterator it = uses.begin();
-        it != uses.end();) {
-      if (insnDominatedBy(usei, it->insn)) {
-         add = false;
-         break;
-      }
-      if (insnDominatedBy(it->insn, usei))
-         it = uses.erase(it);
-      else
+   bool dominated = insnDominatedBy(usei, texi);
+   // Uses before the tex have to all be included. Just because an earlier
+   // instruction dominates another instruction doesn't mean that there's no
+   // way to get from the tex to the later instruction. For example you could
+   // have nested loops, with the tex in the inner loop, and uses before it in
+   // both loops - even though the outer loop's instruction would dominate the
+   // inner's, we still want a texbar before the inner loop's instruction.
+   //
+   // However we can still use the eliding logic between uses dominated by the
+   // tex instruction, as that is unambiguously correct.
+   if (dominated) {
+      for (std::list<TexUse>::iterator it = uses.begin(); it != uses.end();) {
+         if (it->after) {
+            if (insnDominatedBy(usei, it->insn)) {
+               add = false;
+               break;
+            }
+            if (insnDominatedBy(it->insn, usei)) {
+               it = uses.erase(it);
+               continue;
+            }
+         }
          ++it;
+      }
    }
    if (add)
-      uses.push_back(TexUse(usei, texi));
+      uses.push_back(TexUse(usei, texi, dominated));
 }
 
 // While it might be tempting to use the an algorithm that just looks at tex
