@@ -1472,7 +1472,7 @@ void brw_debug_batch(struct brw_context *brw);
 void brw_annotate_aub(struct brw_context *brw);
 
 /*======================================================================
- * brw_tex.c
+ * intel_tex_validate.c
  */
 void brw_validate_textures( struct brw_context *brw );
 

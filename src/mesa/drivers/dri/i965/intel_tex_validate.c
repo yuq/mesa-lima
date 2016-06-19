@@ -183,3 +183,22 @@ intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
 
    return true;
 }
+
+/**
+ * Finalizes all textures, completing any rendering that needs to be done
+ * to prepare them.
+ */
+void
+brw_validate_textures(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   const int max_enabled_unit = ctx->Texture._MaxEnabledTexImageUnit;
+
+   for (int unit = 0; unit <= max_enabled_unit; unit++) {
+      struct gl_texture_unit *tex_unit = &ctx->Texture.Unit[unit];
+
+      if (tex_unit->_Current) {
+         intel_finalize_mipmap_tree(brw, unit);
+      }
+   }
+}
