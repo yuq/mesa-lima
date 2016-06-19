@@ -64,7 +64,7 @@ intel_update_max_level(struct intel_texture_object *intelObj,
  * BaseLevel/MaxLevel/filtering, and copy in any texture images that are
  * stored in other miptrees.
  */
-GLuint
+void
 intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -78,7 +78,7 @@ intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
 
    /* TBOs require no validation -- they always just point to their BO. */
    if (tObj->Target == GL_TEXTURE_BUFFER)
-      return true;
+      return;
 
    /* We know that this is true by now, and if it wasn't, we might have
     * mismatched level sizes and the copies would fail.
@@ -98,7 +98,7 @@ intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
    if (!intelObj->needs_validate &&
        validate_first_level >= intelObj->validated_first_level &&
        validate_last_level <= intelObj->validated_last_level) {
-      return true;
+      return;
    }
 
    /* On recent generations, immutable textures should not get this far
@@ -149,7 +149,7 @@ intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
                                           0 /* num_samples */,
                                           layout_flags);
       if (!intelObj->mt)
-         return false;
+         return;
    }
 
    /* Pull in any images not in the object's tree:
@@ -180,8 +180,6 @@ intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
    intelObj->validated_last_level = validate_last_level;
    intelObj->_Format = intelObj->mt->format;
    intelObj->needs_validate = false;
-
-   return true;
 }
 
 /**
