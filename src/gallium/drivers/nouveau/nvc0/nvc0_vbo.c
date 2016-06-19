@@ -441,8 +441,10 @@ nvc0_vertex_arrays_validate(struct nvc0_context *nvc0)
    if (unlikely(vertex->need_conversion) ||
        unlikely(nvc0->vertprog->vp.edgeflag < PIPE_MAX_ATTRIBS)) {
       vbo_mode = 3;
+   } else if (nvc0->vbo_user & ~nvc0->constant_vbos) {
+      vbo_mode = nvc0->vbo_push_hint ? 1 : 0;
    } else {
-      vbo_mode = (nvc0->vbo_user && nvc0->vbo_push_hint) ? 1 : 0;
+      vbo_mode = 0;
    }
    const_vbos = vbo_mode ? 0 : nvc0->constant_vbos;
 
