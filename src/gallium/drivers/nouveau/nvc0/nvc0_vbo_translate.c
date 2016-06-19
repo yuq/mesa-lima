@@ -19,6 +19,7 @@ struct push_context {
 
    uint32_t vertex_size;
    uint32_t restart_index;
+   uint32_t start_instance;
    uint32_t instance_id;
 
    bool prim_restart;
@@ -44,6 +45,7 @@ nvc0_push_context_init(struct nvc0_context *nvc0, struct push_context *ctx)
 
    ctx->translate = nvc0->vertex->translate;
    ctx->vertex_size = nvc0->vertex->size;
+   ctx->instance_id = 0;
 
    ctx->need_vertex_id =
       nvc0->vertprog->vp.need_vertex_id && (nvc0->vertex->num_elements < 32);
@@ -246,7 +248,8 @@ disp_vertices_i08(struct push_context *ctx, unsigned start, unsigned count)
       if (unlikely(ctx->prim_restart))
          nR = prim_restart_search_i08(elts, nR, ctx->restart_index);
 
-      translate->run_elts8(translate, elts, nR, 0, ctx->instance_id, ctx->dest);
+      translate->run_elts8(translate, elts, nR,
+                           ctx->start_instance, ctx->instance_id, ctx->dest);
       count -= nR;
       ctx->dest += nR * ctx->vertex_size;
 
@@ -302,7 +305,8 @@ disp_vertices_i16(struct push_context *ctx, unsigned start, unsigned count)
       if (unlikely(ctx->prim_restart))
          nR = prim_restart_search_i16(elts, nR, ctx->restart_index);
 
-      translate->run_elts16(translate, elts, nR, 0, ctx->instance_id, ctx->dest);
+      translate->run_elts16(translate, elts, nR,
+                            ctx->start_instance, ctx->instance_id, ctx->dest);
       count -= nR;
       ctx->dest += nR * ctx->vertex_size;
 
@@ -358,7 +362,8 @@ disp_vertices_i32(struct push_context *ctx, unsigned start, unsigned count)
       if (unlikely(ctx->prim_restart))
          nR = prim_restart_search_i32(elts, nR, ctx->restart_index);
 
-      translate->run_elts(translate, elts, nR, 0, ctx->instance_id, ctx->dest);
+      translate->run_elts(translate, elts, nR,
+                          ctx->start_instance, ctx->instance_id, ctx->dest);
       count -= nR;
       ctx->dest += nR * ctx->vertex_size;
 
@@ -410,7 +415,8 @@ disp_vertices_seq(struct push_context *ctx, unsigned start, unsigned count)
    /* XXX: This will read the data corresponding to the primitive restart index,
     *  maybe we should avoid that ?
     */
-   translate->run(translate, start, count, 0, ctx->instance_id, ctx->dest);
+   translate->run(translate, start, count,
+                  ctx->start_instance, ctx->instance_id, ctx->dest);
    do {
       unsigned nr = count;
 
@@ -515,7 +521,7 @@ nvc0_push_vbo(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
       index_size = 0;
    }
 
-   ctx.instance_id = info->start_instance;
+   ctx.start_instance = info->start_instance;
 
    prim = nvc0_prim_gl(info->mode);
    do {
