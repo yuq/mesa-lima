@@ -1006,7 +1006,7 @@ bool Source::scanSource()
 
    if (info->type == PIPE_SHADER_FRAGMENT) {
       info->prop.fp.writesDepth = scan.writes_z;
-      info->prop.fp.usesDiscard = scan.uses_kill;
+      info->prop.fp.usesDiscard = scan.uses_kill || info->io.alphaRefBase;
    } else
    if (info->type == PIPE_SHADER_GEOMETRY) {
       info->prop.gp.instanceCount = 1; // default value
@@ -3818,6 +3818,28 @@ Converter::handleUserClipPlanes()
 void
 Converter::exportOutputs()
 {
+   if (info->io.alphaRefBase) {
+      for (unsigned int i = 0; i < info->numOutputs; ++i) {
+         if (info->out[i].sn != TGSI_SEMANTIC_COLOR ||
+             info->out[i].si != 0)
+            continue;
+         const unsigned int c = 3;
+         if (!oData.exists(sub.cur->values, i, c))
+            continue;
+         Value *val = oData.load(sub.cur->values, i, c, NULL);
+         if (!val)
+            continue;
+
+         Symbol *ref = mkSymbol(FILE_MEMORY_CONST, info->io.auxCBSlot,
+                                TYPE_U32, info->io.alphaRefBase);
+         Value *pred = new_LValue(func, FILE_PREDICATE);
+         mkCmp(OP_SET, CC_TR, TYPE_U32, pred, TYPE_F32, val,
+               mkLoadv(TYPE_U32, ref, NULL))
+            ->subOp = 1;
+         mkOp(OP_DISCARD, TYPE_NONE, NULL)->setPredicate(CC_NOT_P, pred);
+      }
+   }
+
    for (unsigned int i = 0; i < info->numOutputs; ++i) {
       for (unsigned int c = 0; c < 4; ++c) {
          if (!oData.exists(sub.cur->values, i, c))

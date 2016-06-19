@@ -416,6 +416,11 @@ nv50_zsa_state_create(struct pipe_context *pipe,
       SB_DATA    (so, 0);
    }
 
+   SB_BEGIN_3D(so, CB_ADDR, 1);
+   SB_DATA    (so, NV50_CB_AUX_ALPHATEST_OFFSET << (8 - 2) | NV50_CB_AUX);
+   SB_BEGIN_3D(so, CB_DATA(0), 1);
+   SB_DATA    (so, fui(cso->alpha.ref_value));
+
    assert(so->size <= ARRAY_SIZE(so->state));
    return (void *)so;
 }

@@ -196,6 +196,10 @@ LoadPropagation::checkSwapSrc01(Instruction *insn)
          return;
    if (insn->src(1).getFile() != FILE_GPR)
       return;
+   // This is the special OP_SET used for alphatesting, we can't reverse its
+   // arguments as that will confuse the fixup code.
+   if (insn->op == OP_SET && insn->subOp)
+      return;
 
    Instruction *i0 = insn->getSrc(0)->getInsn();
    Instruction *i1 = insn->getSrc(1)->getInsn();

@@ -97,7 +97,10 @@
 /* Sample position pairs for the current output MS level */
 #define NV50_CB_AUX_SAMPLE_OFFSET 0x300
 #define NV50_CB_AUX_SAMPLE_OFFSET_SIZE (4 * 8 * 2)
-/* next spot: 0x340 */
+/* Alpha test ref value */
+#define NV50_CB_AUX_ALPHATEST_OFFSET 0x340
+#define NV50_CB_AUX_ALPHATEST_SIZE (4)
+/* next spot: 0x344 */
 /* 4 32-bit floats for the vertex runout, put at the end */
 #define NV50_CB_AUX_RUNOUT_OFFSET (NV50_CB_AUX_SIZE - 0x10)
 

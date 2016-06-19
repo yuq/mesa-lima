@@ -90,6 +90,7 @@ struct nv50_program {
       uint32_t colors; /* 0x1904 */
       uint8_t has_samplemask;
       uint8_t force_persample_interp;
+      uint8_t alphatest;
    } fp;
 
    struct {

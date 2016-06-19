@@ -522,7 +522,8 @@ validate_list_3d[] = {
     { nv50_vertprog_validate,      NV50_NEW_3D_VERTPROG },
     { nv50_gmtyprog_validate,      NV50_NEW_3D_GMTYPROG },
     { nv50_fragprog_validate,      NV50_NEW_3D_FRAGPROG | NV50_NEW_3D_RASTERIZER |
-                                   NV50_NEW_3D_MIN_SAMPLES },
+                                   NV50_NEW_3D_MIN_SAMPLES | NV50_NEW_3D_ZSA |
+                                   NV50_NEW_3D_FRAMEBUFFER},
     { nv50_fp_linkage_validate,    NV50_NEW_3D_FRAGPROG | NV50_NEW_3D_VERTPROG |
                                    NV50_NEW_3D_GMTYPROG | NV50_NEW_3D_RASTERIZER },
     { nv50_gp_linkage_validate,    NV50_NEW_3D_GMTYPROG | NV50_NEW_3D_VERTPROG },
