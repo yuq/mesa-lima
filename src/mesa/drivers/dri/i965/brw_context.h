@@ -1575,6 +1575,10 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
                           int dstX0, int dstY0,
                           int width, int height);
 
+/* brw_generate_mipmap.c */
+void brw_generate_mipmap(struct gl_context *ctx, GLenum target,
+                         struct gl_texture_object *tex_obj);
+
 void
 gen6_get_sample_position(struct gl_context *ctx,
                          struct gl_framebuffer *fb,

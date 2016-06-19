@@ -303,6 +303,8 @@ brw_init_driver_functions(struct brw_context *brw,
    brw_init_compute_functions(functions);
    brw_init_conditional_render_functions(functions);
 
+   functions->GenerateMipmap = brw_generate_mipmap;
+
    functions->QueryInternalFormat = brw_query_internal_format;
 
    functions->NewTransformFeedback = brw_new_transform_feedback;

@@ -42,6 +42,7 @@ files_i965 = files(
   'brw_ff_gs_emit.c',
   'brw_ff_gs.h',
   'brw_formatquery.c',
+  'brw_generate_mipmap.c',
   'brw_gs.c',
   'brw_gs.h',
   'brw_gs_surface_state.c',
