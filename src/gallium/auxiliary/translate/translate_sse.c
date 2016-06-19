@@ -1098,13 +1098,14 @@ init_inputs(struct translate_sse *p, unsigned index_size)
           *   base_ptr + stride * index, where index depends on instance divisor
           */
          if (variant->instance_divisor) {
+            struct x86_reg tmp_EDX = p->tmp2_EDX;
+
             /* Start with instance = instance_id
              * which is true if divisor is 1.
              */
             x86_mov(p->func, tmp_EAX, instance_id);
 
             if (variant->instance_divisor != 1) {
-               struct x86_reg tmp_EDX = p->tmp2_EDX;
                struct x86_reg tmp_ECX = p->src_ECX;
 
                /* TODO: Add x86_shr() to rtasm and use it whenever
@@ -1113,13 +1114,12 @@ init_inputs(struct translate_sse *p, unsigned index_size)
                x86_xor(p->func, tmp_EDX, tmp_EDX);
                x86_mov_reg_imm(p->func, tmp_ECX, variant->instance_divisor);
                x86_div(p->func, tmp_ECX);       /* EAX = EDX:EAX / ECX */
-
-               /* instance = (instance_id - start_instance) / divisor + 
-                *             start_instance 
-                */
-               x86_mov(p->func, tmp_EDX, start_instance);
-               x86_add(p->func, tmp_EAX, tmp_EDX);
             }
+
+            /* instance = (instance_id / divisor) + start_instance
+             */
+            x86_mov(p->func, tmp_EDX, start_instance);
+            x86_add(p->func, tmp_EAX, tmp_EDX);
 
             /* XXX we need to clamp the index here too, but to a
              * per-array max value, not the draw->pt.max_index value
