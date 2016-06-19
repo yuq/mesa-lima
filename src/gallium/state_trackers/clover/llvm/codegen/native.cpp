@@ -98,7 +98,7 @@ namespace {
       const auto elf = elf::get(code);
       const auto symtab = elf::get_symbol_table(elf.get());
       if (!symtab)
-         fail(r_log, compile_error(), "Unable to find symbol table.");
+         fail(r_log, build_error(), "Unable to find symbol table.");
 
       return elf::get_symbol_offsets(elf.get(), symtab);
    }
@@ -110,7 +110,7 @@ namespace {
       std::string err;
       auto t = ::llvm::TargetRegistry::lookupTarget(target.triple, err);
       if (!t)
-         fail(r_log, compile_error(), err);
+         fail(r_log, build_error(), err);
 
       std::unique_ptr<TargetMachine> tm {
          t->createTargetMachine(target.triple, target.cpu, "", {},
@@ -118,7 +118,7 @@ namespace {
                                 ::llvm::CodeModel::Default,
                                 ::llvm::CodeGenOpt::Default) };
       if (!tm)
-         fail(r_log, compile_error(),
+         fail(r_log, build_error(),
               "Could not create TargetMachine: " + target.triple);
 
       ::llvm::SmallVector<char, 1024> data;
@@ -133,7 +133,7 @@ namespace {
             (ft == TargetMachine::CGFT_AssemblyFile);
 
          if (tm->addPassesToEmitFile(pm, fos, ft))
-            fail(r_log, compile_error(), "TargetMachine can't emit this file");
+            fail(r_log, build_error(), "TargetMachine can't emit this file");
 
          pm.run(mod);
       }

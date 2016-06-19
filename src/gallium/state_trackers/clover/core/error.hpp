@@ -65,11 +65,10 @@ namespace clover {
       cl_int code;
    };
 
-   class compile_error : public error {
+   class build_error : public error {
    public:
-      compile_error(const std::string &what = "") :
-         error(CL_COMPILE_PROGRAM_FAILURE, what) {
-      }
+      build_error(const std::string &what = "") :
+         error(CL_BUILD_PROGRAM_FAILURE, what) {}
    };
 
    template<typename O>

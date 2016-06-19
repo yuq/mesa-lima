@@ -70,7 +70,7 @@ namespace {
          raw_string_ostream os { *reinterpret_cast<std::string *>(data) };
          ::llvm::DiagnosticPrinterRawOStream printer { os };
          di.print(printer);
-         throw compile_error();
+         throw build_error();
       }
    }
 
@@ -173,7 +173,7 @@ namespace {
       // Compile the code
       clang::EmitLLVMOnlyAction act(&ctx);
       if (!c.ExecuteAction(act))
-         throw compile_error();
+         throw build_error();
 
       return act.takeModule();
    }
@@ -241,7 +241,7 @@ namespace {
       for (auto &m : modules) {
          if (compat::link_in_module(*linker,
                                     parse_module_library(m, ctx, r_log)))
-            throw compile_error();
+            throw build_error();
       }
 
       return std::move(mod);
