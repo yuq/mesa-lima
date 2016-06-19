@@ -43,10 +43,10 @@
  * allow sampling beyond level 0.
  */
 static void
-intel_update_max_level(struct intel_texture_object *intelObj,
+intel_update_max_level(struct gl_texture_object *tObj,
 		       struct gl_sampler_object *sampler)
 {
-   struct gl_texture_object *tObj = &intelObj->base;
+   struct intel_texture_object *intelObj = intel_texture_object(tObj);
 
    if (!tObj->_MipmapComplete ||
        (tObj->_RenderToTexture &&
@@ -85,7 +85,7 @@ intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
     */
    assert(intelObj->base._BaseComplete);
 
-   intel_update_max_level(intelObj, sampler);
+   intel_update_max_level(tObj, sampler);
 
    /* What levels does this validated texture image require? */
    int validate_first_level = tObj->BaseLevel;
