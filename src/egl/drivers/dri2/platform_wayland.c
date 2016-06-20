@@ -1155,8 +1155,6 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
    } else
       dri2_dpy->extensions[3] = NULL;
 
-   dri2_dpy->swap_available = EGL_TRUE;
-
    if (!dri2_create_screen(disp))
       goto cleanup_driver;
 
