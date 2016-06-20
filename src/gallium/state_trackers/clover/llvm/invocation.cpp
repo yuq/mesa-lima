@@ -207,7 +207,7 @@ namespace {
       c.getDiagnosticOpts().ShowCarets = false;
       c.getInvocation().setLangDefaults(c.getLangOpts(), clang::IK_OpenCL,
 #if HAVE_LLVM >= 0x0309
-                                        llvm::Triple(triple),
+                                        llvm::Triple(triple), c.getPreprocessorOpts(),
 #endif
                                         clang::LangStandard::lang_opencl11);
       c.createDiagnostics(
