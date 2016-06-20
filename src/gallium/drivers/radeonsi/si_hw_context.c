@@ -144,8 +144,14 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		ws->fence_reference(fence, ctx->last_gfx_fence);
 
 	/* Check VM faults if needed. */
-	if (ctx->screen->b.debug_flags & DBG_CHECK_VM)
+	if (ctx->screen->b.debug_flags & DBG_CHECK_VM) {
+		/* Use conservative timeout 800ms, after which we won't wait any
+		 * longer and assume the GPU is hung.
+		 */
+		ctx->b.ws->fence_wait(ctx->b.ws, ctx->last_gfx_fence, 800*1000*1000);
+
 		si_check_vm_faults(ctx);
+	}
 
 	si_begin_new_cs(ctx);
 	ctx->gfx_flush_in_progress = false;
