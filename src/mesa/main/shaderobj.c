@@ -351,13 +351,15 @@ _mesa_clear_shader_program_data(struct gl_context *ctx,
    ralloc_free(shProg->data->InfoLog);
    shProg->data->InfoLog = ralloc_strdup(shProg->data, "");
 
-   ralloc_free(shProg->data->UniformBlocks);
-   shProg->data->UniformBlocks = NULL;
-   shProg->data->NumUniformBlocks = 0;
+   if (!shProg->data->cache_fallback) {
+      ralloc_free(shProg->data->UniformBlocks);
+      shProg->data->UniformBlocks = NULL;
+      shProg->data->NumUniformBlocks = 0;
 
-   ralloc_free(shProg->data->ShaderStorageBlocks);
-   shProg->data->ShaderStorageBlocks = NULL;
-   shProg->data->NumShaderStorageBlocks = 0;
+      ralloc_free(shProg->data->ShaderStorageBlocks);
+      shProg->data->ShaderStorageBlocks = NULL;
+      shProg->data->NumShaderStorageBlocks = 0;
+   }
 
    if (shProg->data->AtomicBuffers && !shProg->data->cache_fallback) {
       ralloc_free(shProg->data->AtomicBuffers);

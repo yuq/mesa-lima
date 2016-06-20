@@ -2252,32 +2252,34 @@ link_intrastage_shaders(void *mem_ctx,
    v.run(linked->ir);
    v.fixup_unnamed_interface_types();
 
-   /* Link up uniform blocks defined within this stage. */
-   link_uniform_blocks(mem_ctx, ctx, prog, linked, &ubo_blocks,
-                       &num_ubo_blocks, &ssbo_blocks, &num_ssbo_blocks);
+   if (!prog->data->cache_fallback) {
+      /* Link up uniform blocks defined within this stage. */
+      link_uniform_blocks(mem_ctx, ctx, prog, linked, &ubo_blocks,
+                          &num_ubo_blocks, &ssbo_blocks, &num_ssbo_blocks);
 
-   if (!prog->data->LinkStatus) {
-      _mesa_delete_linked_shader(ctx, linked);
-      return NULL;
-   }
+      if (!prog->data->LinkStatus) {
+         _mesa_delete_linked_shader(ctx, linked);
+         return NULL;
+      }
 
-   /* Copy ubo blocks to linked shader list */
-   linked->Program->sh.UniformBlocks =
-      ralloc_array(linked, gl_uniform_block *, num_ubo_blocks);
-   ralloc_steal(linked, ubo_blocks);
-   for (unsigned i = 0; i < num_ubo_blocks; i++) {
-      linked->Program->sh.UniformBlocks[i] = &ubo_blocks[i];
-   }
-   linked->Program->info.num_ubos = num_ubo_blocks;
+      /* Copy ubo blocks to linked shader list */
+      linked->Program->sh.UniformBlocks =
+         ralloc_array(linked, gl_uniform_block *, num_ubo_blocks);
+      ralloc_steal(linked, ubo_blocks);
+      for (unsigned i = 0; i < num_ubo_blocks; i++) {
+         linked->Program->sh.UniformBlocks[i] = &ubo_blocks[i];
+      }
+      linked->Program->info.num_ubos = num_ubo_blocks;
 
-   /* Copy ssbo blocks to linked shader list */
-   linked->Program->sh.ShaderStorageBlocks =
-      ralloc_array(linked, gl_uniform_block *, num_ssbo_blocks);
-   ralloc_steal(linked, ssbo_blocks);
-   for (unsigned i = 0; i < num_ssbo_blocks; i++) {
-      linked->Program->sh.ShaderStorageBlocks[i] = &ssbo_blocks[i];
+      /* Copy ssbo blocks to linked shader list */
+      linked->Program->sh.ShaderStorageBlocks =
+         ralloc_array(linked, gl_uniform_block *, num_ssbo_blocks);
+      ralloc_steal(linked, ssbo_blocks);
+      for (unsigned i = 0; i < num_ssbo_blocks; i++) {
+         linked->Program->sh.ShaderStorageBlocks[i] = &ssbo_blocks[i];
+      }
+      linked->Program->info.num_ssbos = num_ssbo_blocks;
    }
-   linked->Program->info.num_ssbos = num_ssbo_blocks;
 
    /* At this point linked should contain all of the linked IR, so
     * validate it to make sure nothing went wrong.
@@ -4870,13 +4872,15 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    if (prog->SeparateShader)
       disable_varying_optimizations_for_sso(prog);
 
-   /* Process UBOs */
-   if (!interstage_cross_validate_uniform_blocks(prog, false))
-      goto done;
+   if (!prog->data->cache_fallback) {
+      /* Process UBOs */
+      if (!interstage_cross_validate_uniform_blocks(prog, false))
+         goto done;
 
-   /* Process SSBOs */
-   if (!interstage_cross_validate_uniform_blocks(prog, true))
-      goto done;
+      /* Process SSBOs */
+      if (!interstage_cross_validate_uniform_blocks(prog, true))
+         goto done;
+   }
 
    /* Do common optimization before assigning storage for attributes,
     * uniforms, and varyings.  Later optimization could possibly make
