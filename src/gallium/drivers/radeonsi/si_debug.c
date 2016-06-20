@@ -730,7 +730,12 @@ static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)
 
 		/* Get the timestamp. */
 		if (sscanf(line, "[%u.%u]", &sec, &usec) != 2) {
-			assert(0);
+			static bool hit = false;
+			if (!hit) {
+				fprintf(stderr, "%s: failed to parse line '%s'\n",
+					__func__, line);
+				hit = true;
+			}
 			continue;
 		}
 		timestamp = sec * 1000000llu + usec;
