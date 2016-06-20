@@ -354,7 +354,8 @@ void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */
 void si_init_debug_functions(struct si_context *sctx);
-void si_check_vm_faults(struct si_context *sctx);
+void si_check_vm_faults(struct r600_common_context *ctx,
+			struct radeon_saved_cs *saved, enum ring_type ring);
 bool si_replace_shader(unsigned num, struct radeon_shader_binary *binary);
 
 /* si_dma.c */

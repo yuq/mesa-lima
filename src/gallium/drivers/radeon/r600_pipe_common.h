@@ -580,6 +580,10 @@ struct r600_common_context {
 
 	void (*set_atom_dirty)(struct r600_common_context *ctx,
 			       struct r600_atom *atom, bool dirty);
+
+	void (*check_vm_faults)(struct r600_common_context *ctx,
+				struct radeon_saved_cs *saved,
+				enum ring_type ring);
 };
 
 /* r600_buffer.c */

@@ -150,7 +150,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		 */
 		ctx->b.ws->fence_wait(ctx->b.ws, ctx->last_gfx_fence, 800*1000*1000);
 
-		si_check_vm_faults(ctx);
+		si_check_vm_faults(&ctx->b, &ctx->last_gfx, RING_GFX);
 	}
 
 	si_begin_new_cs(ctx);

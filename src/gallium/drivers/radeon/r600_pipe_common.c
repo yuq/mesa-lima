@@ -295,11 +295,33 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct radeon_winsys_cs *cs = rctx->dma.cs;
+	struct radeon_saved_cs saved;
+	bool check_vm =
+		(rctx->screen->debug_flags & DBG_CHECK_VM) &&
+		rctx->check_vm_faults;
 
-	if (radeon_emitted(cs, 0))
-		rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence);
+	if (!radeon_emitted(cs, 0)) {
+		if (fence)
+			rctx->ws->fence_reference(fence, rctx->last_sdma_fence);
+		return;
+	}
+
+	if (check_vm)
+		radeon_save_cs(rctx->ws, cs, &saved);
+
+	rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence);
 	if (fence)
 		rctx->ws->fence_reference(fence, rctx->last_sdma_fence);
+
+	if (check_vm) {
+		/* Use conservative timeout 800ms, after which we won't wait any
+		 * longer and assume the GPU is hung.
+		 */
+		rctx->ws->fence_wait(rctx->ws, rctx->last_sdma_fence, 800*1000*1000);
+
+		rctx->check_vm_faults(rctx, &saved, RING_DMA);
+		radeon_clear_saved_cs(&saved);
+	}
 }
 
 /**

@@ -690,6 +690,26 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	r600_resource_reference(&sctx->last_trace_buf, NULL);
 }
 
+static void si_dump_dma(struct si_context *sctx,
+			struct radeon_saved_cs *saved, FILE *f)
+{
+	static const char ib_name[] = "sDMA IB";
+	unsigned i;
+
+	si_dump_bo_list(sctx, saved, f);
+
+	fprintf(f, "------------------ %s begin ------------------\n", ib_name);
+
+	for (i = 0; i < saved->num_dw; ++i) {
+		fprintf(f, " %08x\n", saved->ib[i]);
+	}
+
+	fprintf(f, "------------------- %s end -------------------\n", ib_name);
+	fprintf(f, "\n");
+
+	fprintf(f, "SDMA Dump Done.\n");
+}
+
 static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)
 {
 	char line[2000];
@@ -768,8 +788,10 @@ static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)
 	return fault;
 }
 
-void si_check_vm_faults(struct si_context *sctx)
+void si_check_vm_faults(struct r600_common_context *ctx,
+			struct radeon_saved_cs *saved, enum ring_type ring)
 {
+	struct si_context *sctx = (struct si_context *)ctx;
 	struct pipe_screen *screen = sctx->b.b.screen;
 	FILE *f;
 	uint32_t addr;
@@ -787,7 +809,19 @@ void si_check_vm_faults(struct si_context *sctx)
 	fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
 	fprintf(f, "Failing VM page: 0x%08x\n\n", addr);
 
-	si_dump_debug_state(&sctx->b.b, f, 0);
+	switch (ring) {
+	case RING_GFX:
+		si_dump_debug_state(&sctx->b.b, f, 0);
+		break;
+
+	case RING_DMA:
+		si_dump_dma(sctx, saved, f);
+		break;
+
+	default:
+		break;
+	}
+
 	fclose(f);
 
 	fprintf(stderr, "Detected a VM fault, exiting...\n");
@@ -797,6 +831,7 @@ void si_check_vm_faults(struct si_context *sctx)
 void si_init_debug_functions(struct si_context *sctx)
 {
 	sctx->b.b.dump_debug_state = si_dump_debug_state;
+	sctx->b.check_vm_faults = si_check_vm_faults;
 
 	/* Set the initial dmesg timestamp for this context, so that
 	 * only new messages will be checked for VM faults.
