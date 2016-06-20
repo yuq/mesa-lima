@@ -40,6 +40,10 @@
 
 THREAD UINT tlsThreadId = 0;
 
+BucketManager::~BucketManager()
+{
+}
+
 void BucketManager::RegisterThread(const std::string& name)
 {
     // lazy evaluate threadviz knob
@@ -51,7 +55,7 @@ void BucketManager::RegisterThread(const std::string& name)
         mThreadVizDir = str.str();
         CreateDirectory(mThreadVizDir.c_str(), NULL);
 
-        mThreadViz = true;
+        mThreadViz = KNOB_BUCKETS_ENABLE_THREADVIZ;
     }
 
     BUCKET_THREAD newThread;
@@ -207,10 +211,20 @@ void BucketManager::PrintReport(const std::string& filename)
             PrintThread(f, thread);
             fprintf(f, "\n");
         }
+
         mThreadMutex.unlock();
 
         fclose(f);
     }
+}
+
+
+void BucketManager::StartCapture()
+{
+
+    printf("Capture Starting\n");
+
+    mCapturing = true;
 }
 
 void BucketManager_StartBucket(BucketManager* pBucketMgr, uint32_t id)
