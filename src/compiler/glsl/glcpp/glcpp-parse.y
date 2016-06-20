@@ -2479,6 +2479,9 @@ _glcpp_parser_handle_version_declaration(glcpp_parser_t *parser, intmax_t versio
 
       if (extensions->EXT_shader_samples_identical)
          add_builtin_define(parser, "GL_EXT_shader_samples_identical", 1);
+
+      if (extensions->MESA_shader_integer_functions)
+         add_builtin_define(parser, "GL_MESA_shader_integer_functions", 1);
    }
 
    if (version >= 150)

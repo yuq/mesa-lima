@@ -652,6 +652,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(EXT_shader_samples_identical,   true,  true,      EXT_shader_samples_identical),
    EXT(EXT_texture_array,              true,  false,     EXT_texture_array),
    EXT(EXT_texture_buffer,             false, true,      OES_texture_buffer),
+   EXT(MESA_shader_integer_functions,  true,  true,      MESA_shader_integer_functions),
 };
 
 #undef EXT

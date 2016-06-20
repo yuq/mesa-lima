@@ -681,6 +681,8 @@ struct _mesa_glsl_parse_state {
    bool EXT_texture_array_warn;
    bool EXT_texture_buffer_enable;
    bool EXT_texture_buffer_warn;
+   bool MESA_shader_integer_functions_enable;
+   bool MESA_shader_integer_functions_warn;
    /*@}*/
 
    /** Extensions supported by the OpenGL implementation. */
