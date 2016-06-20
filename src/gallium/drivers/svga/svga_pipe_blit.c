@@ -37,14 +37,14 @@
 
 
 static void
-svga_surface_copy(struct pipe_context *pipe,
-                  struct pipe_resource* dst_tex,
-                  unsigned dst_level,
-                  unsigned dstx, unsigned dsty, unsigned dstz,
-                  struct pipe_resource* src_tex,
-                  unsigned src_level,
-                  const struct pipe_box *src_box)
- {
+svga_resource_copy_region(struct pipe_context *pipe,
+                          struct pipe_resource* dst_tex,
+                          unsigned dst_level,
+                          unsigned dstx, unsigned dsty, unsigned dstz,
+                          struct pipe_resource* src_tex,
+                          unsigned src_level,
+                          const struct pipe_box *src_box)
+{
    struct svga_context *svga = svga_context(pipe);
    struct svga_texture *stex, *dtex;
    unsigned dst_face_layer, dst_z, src_face_layer, src_z;
@@ -167,7 +167,7 @@ svga_flush_resource(struct pipe_context *pipe,
 void
 svga_init_blit_functions(struct svga_context *svga)
 {
-   svga->pipe.resource_copy_region = svga_surface_copy;
+   svga->pipe.resource_copy_region = svga_resource_copy_region;
    svga->pipe.blit = svga_blit;
    svga->pipe.flush_resource = svga_flush_resource;
 }
