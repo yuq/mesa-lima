@@ -459,6 +459,15 @@ struct r600_ring {
 		      struct pipe_fence_handle **fence);
 };
 
+/* Saved CS data for debugging features. */
+struct radeon_saved_cs {
+	uint32_t			*ib;
+	unsigned			num_dw;
+
+	struct radeon_bo_list_item	*bo_list;
+	unsigned			bo_count;
+};
+
 struct r600_common_context {
 	struct pipe_context b; /* base class */
 
@@ -624,6 +633,9 @@ const char *r600_get_llvm_processor_name(enum radeon_family family);
 void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 			 struct r600_resource *dst, struct r600_resource *src);
 void r600_dma_emit_wait_idle(struct r600_common_context *rctx);
+void radeon_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
+		    struct radeon_saved_cs *saved);
+void radeon_clear_saved_cs(struct radeon_saved_cs *saved);
 
 /* r600_gpu_load.c */
 void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen);

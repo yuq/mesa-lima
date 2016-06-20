@@ -130,32 +130,11 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		si_trace_emit(ctx);
 
 	if (ctx->is_debug) {
-		uint32_t *buf;
-		unsigned i;
-
 		/* Save the IB for debug contexts. */
-		free(ctx->last_ib);
-		ctx->last_ib_dw_size = cs->prev_dw + cs->current.cdw;
-		ctx->last_ib = malloc(ctx->last_ib_dw_size * 4);
-		buf = ctx->last_ib;
-		for (i = 0; i < cs->num_prev; ++i) {
-			memcpy(buf, cs->prev[i].buf, cs->prev[i].cdw * 4);
-			buf += cs->prev[i].cdw;
-		}
-		memcpy(buf, cs->current.buf, cs->current.cdw * 4);
+		radeon_clear_saved_cs(&ctx->last_gfx);
+		radeon_save_cs(ws, cs, &ctx->last_gfx);
 		r600_resource_reference(&ctx->last_trace_buf, ctx->trace_buf);
 		r600_resource_reference(&ctx->trace_buf, NULL);
-
-		/* Save the buffer list. */
-		if (ctx->last_bo_list) {
-			for (i = 0; i < ctx->last_bo_count; i++)
-				pb_reference(&ctx->last_bo_list[i].buf, NULL);
-			free(ctx->last_bo_list);
-		}
-		ctx->last_bo_count = ws->cs_get_buffer_list(cs, NULL);
-		ctx->last_bo_list = calloc(ctx->last_bo_count,
-					   sizeof(ctx->last_bo_list[0]));
-		ws->cs_get_buffer_list(cs, ctx->last_bo_list);
 	}
 
 	/* Flush the CS. */

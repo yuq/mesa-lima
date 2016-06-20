@@ -302,6 +302,59 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 		rctx->ws->fence_reference(fence, rctx->last_sdma_fence);
 }
 
+/**
+ * Store a linearized copy of all chunks of \p cs together with the buffer
+ * list in \p saved.
+ */
+void radeon_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
+		    struct radeon_saved_cs *saved)
+{
+	void *buf;
+	unsigned i;
+
+	/* Save the IB chunks. */
+	saved->num_dw = cs->prev_dw + cs->current.cdw;
+	saved->ib = MALLOC(4 * saved->num_dw);
+	if (!saved->ib)
+		goto oom;
+
+	buf = saved->ib;
+	for (i = 0; i < cs->num_prev; ++i) {
+		memcpy(buf, cs->prev[i].buf, cs->prev[i].cdw * 4);
+		buf += cs->prev[i].cdw;
+	}
+	memcpy(buf, cs->current.buf, cs->current.cdw * 4);
+
+	/* Save the buffer list. */
+	saved->bo_count = ws->cs_get_buffer_list(cs, NULL);
+	saved->bo_list = CALLOC(saved->bo_count,
+				sizeof(saved->bo_list[0]));
+	if (!saved->bo_list) {
+		FREE(saved->ib);
+		goto oom;
+	}
+	ws->cs_get_buffer_list(cs, saved->bo_list);
+
+	return;
+
+oom:
+	fprintf(stderr, "%s: out of memory\n", __func__);
+	memset(saved, 0, sizeof(*saved));
+}
+
+void radeon_clear_saved_cs(struct radeon_saved_cs *saved)
+{
+	unsigned i;
+
+	FREE(saved->ib);
+
+	for (i = 0; i < saved->bo_count; i++)
+		pb_reference(&saved->bo_list[i].buf, NULL);
+	FREE(saved->bo_list);
+
+	memset(saved, 0, sizeof(*saved));
+}
+
 static enum pipe_reset_status r600_get_reset_status(struct pipe_context *ctx)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;

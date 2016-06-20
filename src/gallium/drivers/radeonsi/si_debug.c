@@ -508,7 +508,7 @@ static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 {
 	int last_trace_id = -1;
 
-	if (!sctx->last_ib)
+	if (!sctx->last_gfx.ib)
 		return;
 
 	if (sctx->last_trace_buf) {
@@ -533,11 +533,8 @@ static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 			    sctx->init_config_gs_rings->ndw,
 			    -1, "IB2: Init GS rings");
 
-	si_parse_ib(f, sctx->last_ib, sctx->last_ib_dw_size,
+	si_parse_ib(f, sctx->last_gfx.ib, sctx->last_gfx.num_dw,
 		    last_trace_id, "IB");
-	free(sctx->last_ib); /* dump only once */
-	sctx->last_ib = NULL;
-	r600_resource_reference(&sctx->last_trace_buf, NULL);
 }
 
 static const char *priority_to_string(enum radeon_bo_priority priority)
@@ -592,32 +589,33 @@ static int bo_list_compare_va(const struct radeon_bo_list_item *a,
 	       a->vm_address > b->vm_address ? 1 : 0;
 }
 
-static void si_dump_last_bo_list(struct si_context *sctx, FILE *f)
+static void si_dump_bo_list(struct si_context *sctx,
+			    const struct radeon_saved_cs *saved, FILE *f)
 {
 	unsigned i,j;
 
-	if (!sctx->last_bo_list)
+	if (!saved->bo_list)
 		return;
 
 	/* Sort the list according to VM adddresses first. */
-	qsort(sctx->last_bo_list, sctx->last_bo_count,
-	      sizeof(sctx->last_bo_list[0]), (void*)bo_list_compare_va);
+	qsort(saved->bo_list, saved->bo_count,
+	      sizeof(saved->bo_list[0]), (void*)bo_list_compare_va);
 
 	fprintf(f, "Buffer list (in units of pages = 4kB):\n"
 		COLOR_YELLOW "        Size    VM start page         "
 		"VM end page           Usage" COLOR_RESET "\n");
 
-	for (i = 0; i < sctx->last_bo_count; i++) {
+	for (i = 0; i < saved->bo_count; i++) {
 		/* Note: Buffer sizes are expected to be aligned to 4k by the winsys. */
 		const unsigned page_size = sctx->b.screen->info.gart_page_size;
-		uint64_t va = sctx->last_bo_list[i].vm_address;
-		uint64_t size = sctx->last_bo_list[i].buf->size;
+		uint64_t va = saved->bo_list[i].vm_address;
+		uint64_t size = saved->bo_list[i].buf->size;
 		bool hit = false;
 
 		/* If there's unused virtual memory between 2 buffers, print it. */
 		if (i) {
-			uint64_t previous_va_end = sctx->last_bo_list[i-1].vm_address +
-						   sctx->last_bo_list[i-1].buf->size;
+			uint64_t previous_va_end = saved->bo_list[i-1].vm_address +
+						   saved->bo_list[i-1].buf->size;
 
 			if (va > previous_va_end) {
 				fprintf(f, "  %10"PRIu64"    -- hole --\n",
@@ -631,7 +629,7 @@ static void si_dump_last_bo_list(struct si_context *sctx, FILE *f)
 
 		/* Print the usage. */
 		for (j = 0; j < 64; j++) {
-			if (!(sctx->last_bo_list[i].priority_usage & (1llu << j)))
+			if (!(saved->bo_list[i].priority_usage & (1llu << j)))
 				continue;
 
 			fprintf(f, "%s%s", !hit ? "" : ", ", priority_to_string(j));
@@ -641,11 +639,6 @@ static void si_dump_last_bo_list(struct si_context *sctx, FILE *f)
 	}
 	fprintf(f, "\nNote: The holes represent memory not used by the IB.\n"
 		   "      Other buffers can still be allocated there.\n\n");
-
-	for (i = 0; i < sctx->last_bo_count; i++)
-		pb_reference(&sctx->last_bo_list[i].buf, NULL);
-	free(sctx->last_bo_list);
-	sctx->last_bo_list = NULL;
 }
 
 static void si_dump_framebuffer(struct si_context *sctx, FILE *f)
@@ -687,10 +680,14 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	si_dump_shader(sctx->screen, &sctx->gs_shader, f);
 	si_dump_shader(sctx->screen, &sctx->ps_shader, f);
 
-	si_dump_last_bo_list(sctx, f);
+	si_dump_bo_list(sctx, &sctx->last_gfx, f);
 	si_dump_last_ib(sctx, f);
 
 	fprintf(f, "Done.\n");
+
+	/* dump only once */
+	radeon_clear_saved_cs(&sctx->last_gfx);
+	r600_resource_reference(&sctx->last_trace_buf, NULL);
 }
 
 static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)

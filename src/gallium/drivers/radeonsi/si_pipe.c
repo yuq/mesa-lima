@@ -90,12 +90,8 @@ static void si_destroy_context(struct pipe_context *context)
 
 	r600_resource_reference(&sctx->trace_buf, NULL);
 	r600_resource_reference(&sctx->last_trace_buf, NULL);
-	free(sctx->last_ib);
-	if (sctx->last_bo_list) {
-		for (i = 0; i < sctx->last_bo_count; i++)
-			pb_reference(&sctx->last_bo_list[i].buf, NULL);
-		free(sctx->last_bo_list);
-	}
+	radeon_clear_saved_cs(&sctx->last_gfx);
+
 	FREE(sctx);
 }
 

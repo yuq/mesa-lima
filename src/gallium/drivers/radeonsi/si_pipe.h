@@ -321,14 +321,11 @@ struct si_context {
 
 	/* Debug state. */
 	bool			is_debug;
-	uint32_t		*last_ib;
-	unsigned		last_ib_dw_size;
+	struct radeon_saved_cs	last_gfx;
 	struct r600_resource	*last_trace_buf;
 	struct r600_resource	*trace_buf;
 	unsigned		trace_id;
 	uint64_t		dmesg_timestamp;
-	unsigned		last_bo_count;
-	struct radeon_bo_list_item *last_bo_list;
 
 	/* Other state */
 	bool need_check_render_feedback;
