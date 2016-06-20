@@ -138,7 +138,7 @@ public:
 void
 ir_constant_propagation_visitor::constant_folding(ir_rvalue **rvalue)
 {
-   if (*rvalue == NULL)
+   if (this->in_assignee || *rvalue == NULL)
       return;
 
    if (ir_constant_fold(rvalue))
