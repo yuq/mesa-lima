@@ -462,6 +462,8 @@ type_size_scalar(const struct glsl_type *type)
    case GLSL_TYPE_BOOL:
       return type->components();
    case GLSL_TYPE_DOUBLE:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
       return type->components() * 2;
    case GLSL_TYPE_ARRAY:
       return type_size_scalar(type->fields.array) * type->length;

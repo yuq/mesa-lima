@@ -69,6 +69,8 @@ brw_type_for_base_type(const struct glsl_type *type)
    case GLSL_TYPE_ERROR:
    case GLSL_TYPE_INTERFACE:
    case GLSL_TYPE_FUNCTION:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
       unreachable("not reached");
    }
 

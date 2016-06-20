@@ -586,6 +586,8 @@ type_size_xvec4(const struct glsl_type *type, bool as_vec4)
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_DOUBLE:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
       if (type->is_matrix()) {
          const glsl_type *col_type = type->column_type();
          unsigned col_slots =
