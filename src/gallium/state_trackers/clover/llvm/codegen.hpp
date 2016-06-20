@@ -29,6 +29,7 @@
 #ifndef CLOVER_LLVM_CODEGEN_HPP
 #define CLOVER_LLVM_CODEGEN_HPP
 
+#include "llvm/util.hpp"
 #include "core/module.hpp"
 
 #include <llvm/IR/Module.h>
@@ -43,6 +44,14 @@ namespace clover {
 
       std::string
       print_module_bitcode(const ::llvm::Module &mod);
+
+      module
+      build_module_native(::llvm::Module &mod, const target &target,
+                          const clang::CompilerInstance &c,
+                          std::string &r_log);
+
+      std::string
+      print_module_native(const ::llvm::Module &mod, const target &target);
 
       module
       build_module_common(const ::llvm::Module &mod,
