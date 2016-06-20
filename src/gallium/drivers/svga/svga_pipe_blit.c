@@ -105,26 +105,25 @@ svga_blit(struct pipe_context *pipe,
           const struct pipe_blit_info *blit_info)
 {
    struct svga_context *svga = svga_context(pipe);
-   struct pipe_blit_info info = *blit_info;
 
    if (!svga_have_vgpu10(svga) &&
-       info.src.resource->nr_samples > 1 &&
-       info.dst.resource->nr_samples <= 1 &&
-       !util_format_is_depth_or_stencil(info.src.resource->format) &&
-       !util_format_is_pure_integer(info.src.resource->format)) {
+       blit_info->src.resource->nr_samples > 1 &&
+       blit_info->dst.resource->nr_samples <= 1 &&
+       !util_format_is_depth_or_stencil(blit_info->src.resource->format) &&
+       !util_format_is_pure_integer(blit_info->src.resource->format)) {
       debug_printf("svga: color resolve unimplemented\n");
       return;
    }
 
-   if (util_try_blit_via_copy_region(pipe, &info)) {
+   if (util_try_blit_via_copy_region(pipe, blit_info)) {
       return; /* done */
    }
 
-   if ((info.mask & PIPE_MASK_S) ||
-       !util_blitter_is_blit_supported(svga->blitter, &info)) {
+   if ((blit_info->mask & PIPE_MASK_S) ||
+       !util_blitter_is_blit_supported(svga->blitter, blit_info)) {
       debug_printf("svga: blit unsupported %s -> %s\n",
-                   util_format_short_name(info.src.resource->format),
-                   util_format_short_name(info.dst.resource->format));
+                   util_format_short_name(blit_info->src.resource->format),
+                   util_format_short_name(blit_info->dst.resource->format));
       return;
    }
 
@@ -154,7 +153,7 @@ svga_blit(struct pipe_context *pipe,
                      svga->curr.sampler_views[PIPE_SHADER_FRAGMENT]);
    /*util_blitter_save_render_condition(svga->blitter, svga->render_cond_query,
                                       svga->render_cond_cond, svga->render_cond_mode);*/
-   util_blitter_blit(svga->blitter, &info);
+   util_blitter_blit(svga->blitter, blit_info);
 }
 
 
