@@ -393,9 +393,8 @@ brw_tcs_precompile(struct gl_context *ctx,
    if (brw->gen < 8)
       key.input_vertices = shader_prog->TessCtrl.VerticesOut;
 
-   key.tes_primitive_mode =
-      shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL] ?
-      shader_prog->TessEval.PrimitiveMode : GL_TRIANGLES;
+   key.tes_primitive_mode = brw->tess_eval_program ?
+      brw->tess_eval_program->PrimitiveMode : GL_TRIANGLES;
 
    key.outputs_written = prog->OutputsWritten;
    key.patch_outputs_written = prog->PatchOutputsWritten;
