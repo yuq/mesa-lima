@@ -32,6 +32,9 @@
 #include "util/u_suballoc.h"
 #include "vl/vl_decoder.h"
 
+#define SI_LLVM_DEFAULT_FEATURES \
+	"+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals"
+
 /*
  * pipe_context
  */
@@ -262,9 +265,9 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 					   r600_get_llvm_processor_name(sscreen->b.family),
 #if HAVE_LLVM >= 0x0308
 					   sscreen->b.debug_flags & DBG_SI_SCHED ?
-					   	"+DumpCode,+vgpr-spilling,+si-scheduler" :
+						SI_LLVM_DEFAULT_FEATURES ",+si-scheduler" :
 #endif
-					   	"+DumpCode,+vgpr-spilling",
+						SI_LLVM_DEFAULT_FEATURES,
 					   LLVMCodeGenLevelDefault,
 					   LLVMRelocDefault,
 					   LLVMCodeModelDefault);
