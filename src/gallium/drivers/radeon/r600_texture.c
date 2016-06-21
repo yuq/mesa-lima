@@ -479,7 +479,7 @@ static void r600_degrade_tile_mode_to_linear(struct r600_common_context *rctx,
 	assert(!rtex->dcc_offset);
 	assert(!rtex->is_depth);
 
-	pipe_resource_reference((struct pipe_resource**)&new_tex, NULL);
+	r600_texture_reference(&new_tex, NULL);
 
 	r600_dirty_all_framebuffer_states(rctx->screen);
 	p_atomic_inc(&rctx->screen->dirty_tex_descriptor_counter);
@@ -561,7 +561,7 @@ static void r600_texture_destroy(struct pipe_screen *screen,
 	struct r600_resource *resource = &rtex->resource;
 
 	if (rtex->flushed_depth_texture)
-		pipe_resource_reference((struct pipe_resource **)&rtex->flushed_depth_texture, NULL);
+		r600_texture_reference(&rtex->flushed_depth_texture, NULL);
 
 	r600_resource_reference(&rtex->htile_buffer, NULL);
 	if (rtex->cmask_buffer != &rtex->resource) {
@@ -1759,14 +1759,12 @@ static unsigned vi_get_context_dcc_stats_index(struct r600_common_context *rctx,
 				rctx->dcc_stats[oldest_slot].ps_stats[i] = NULL;
 			}
 
-		pipe_resource_reference((struct pipe_resource**)
-					&rctx->dcc_stats[oldest_slot].tex, NULL);
+		r600_texture_reference(&rctx->dcc_stats[oldest_slot].tex, NULL);
 		empty_slot = oldest_slot;
 	}
 
 	/* Add the texture to the new slot. */
-	pipe_resource_reference((struct pipe_resource**)&rctx->dcc_stats[empty_slot].tex,
-				&tex->resource.b.b);
+	r600_texture_reference(&rctx->dcc_stats[empty_slot].tex, tex);
 	rctx->dcc_stats[empty_slot].last_use_timestamp = os_time_get();
 	return empty_slot;
 }

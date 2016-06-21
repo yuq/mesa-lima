@@ -483,8 +483,7 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 				rctx->b.destroy_query(&rctx->b,
 						      rctx->dcc_stats[i].ps_stats[j]);
 
-		pipe_resource_reference((struct pipe_resource**)
-					&rctx->dcc_stats[i].tex, NULL);
+		r600_texture_reference(&rctx->dcc_stats[i].tex, NULL);
 	}
 
 	if (rctx->gfx.cs)

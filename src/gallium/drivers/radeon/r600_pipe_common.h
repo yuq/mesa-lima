@@ -794,6 +794,12 @@ r600_resource_reference(struct r600_resource **ptr, struct r600_resource *res)
 				(struct pipe_resource *)res);
 }
 
+static inline void
+r600_texture_reference(struct r600_texture **ptr, struct r600_texture *res)
+{
+	pipe_resource_reference((struct pipe_resource **)ptr, &res->resource.b.b);
+}
+
 static inline bool r600_get_strmout_en(struct r600_common_context *rctx)
 {
 	return rctx->streamout.streamout_enabled ||
