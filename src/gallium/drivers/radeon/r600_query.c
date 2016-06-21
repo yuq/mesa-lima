@@ -94,6 +94,7 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_GPU_TEMPERATURE:
 	case R600_QUERY_CURRENT_GPU_SCLK:
 	case R600_QUERY_CURRENT_GPU_MCLK:
+	case R600_QUERY_BACK_BUFFER_PS_DRAW_RATIO:
 		query->begin_result = 0;
 		break;
 	case R600_QUERY_BUFFER_WAIT_TIME:
@@ -175,6 +176,9 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		break;
 	case R600_QUERY_NUM_SHADERS_CREATED:
 		query->end_result = p_atomic_read(&rctx->screen->num_shaders_created);
+		break;
+	case R600_QUERY_BACK_BUFFER_PS_DRAW_RATIO:
+		query->end_result = rctx->last_tex_ps_draw_ratio;
 		break;
 	case R600_QUERY_GPIN_ASIC_ID:
 	case R600_QUERY_GPIN_NUM_SIMD:
@@ -1176,6 +1180,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("num-bytes-moved",		NUM_BYTES_MOVED,	BYTES, CUMULATIVE),
 	X("VRAM-usage",			VRAM_USAGE,		BYTES, AVERAGE),
 	X("GTT-usage",			GTT_USAGE,		BYTES, AVERAGE),
+	X("back-buffer-ps-draw-ratio",	BACK_BUFFER_PS_DRAW_RATIO, UINT64, AVERAGE),
 
 	/* GPIN queries are for the benefit of old versions of GPUPerfStudio,
 	 * which use it as a fallback path to detect the GPU type.

@@ -547,6 +547,7 @@ struct r600_common_context {
 	unsigned			num_spill_compute_calls;
 	unsigned			num_dma_calls;
 	uint64_t			num_alloc_tex_transfer_bytes;
+	unsigned			last_tex_ps_draw_ratio; /* for query */
 
 	/* Render condition. */
 	struct r600_atom		render_cond_atom;

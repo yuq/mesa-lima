@@ -1902,6 +1902,7 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 		tex->ps_draw_ratio =
 			result.pipeline_statistics.ps_invocations /
 			(tex->resource.b.b.width0 * tex->resource.b.b.height0);
+		rctx->last_tex_ps_draw_ratio = tex->ps_draw_ratio;
 
 		disable = tex->dcc_separate_buffer &&
 			  !vi_should_enable_separate_dcc(tex);
