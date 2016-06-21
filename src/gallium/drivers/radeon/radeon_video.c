@@ -73,7 +73,7 @@ bool rvid_create_buffer(struct pipe_screen *screen, struct rvid_buffer *buffer,
 /* destroy a buffer */
 void rvid_destroy_buffer(struct rvid_buffer *buffer)
 {
-	pipe_resource_reference((struct pipe_resource **)&buffer->res, NULL);
+	r600_resource_reference(&buffer->res, NULL);
 }
 
 /* reallocate a buffer, preserving its content */

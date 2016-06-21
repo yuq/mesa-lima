@@ -132,7 +132,7 @@ static void si_init_descriptors(struct si_descriptors *desc,
 
 static void si_release_descriptors(struct si_descriptors *desc)
 {
-	pipe_resource_reference((struct pipe_resource**)&desc->buffer, NULL);
+	r600_resource_reference(&desc->buffer, NULL);
 	FREE(desc->list);
 }
 

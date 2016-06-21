@@ -208,9 +208,7 @@ static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
 		scratch_bo_size = sctx->compute_scratch_buffer->b.b.width0;
 
 	if (scratch_bo_size < scratch_needed) {
-		pipe_resource_reference(
-			(struct pipe_resource**)&sctx->compute_scratch_buffer,
-			NULL);
+		r600_resource_reference(&sctx->compute_scratch_buffer, NULL);
 
 		sctx->compute_scratch_buffer =
 				si_resource_create_custom(&sctx->screen->b.b,
@@ -361,7 +359,7 @@ static void si_upload_compute_input(struct si_context *sctx,
 	radeon_emit(cs, S_008F04_BASE_ADDRESS_HI (kernel_args_va >> 32) |
 	                S_008F04_STRIDE(0));
 
-	pipe_resource_reference((struct pipe_resource**)&input_buffer, NULL);
+	r600_resource_reference(&input_buffer, NULL);
 }
 
 static void si_setup_tgsi_grid(struct si_context *sctx,

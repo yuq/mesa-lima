@@ -374,7 +374,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 
 			data = r600_buffer_map_sync_with_rings(rctx, staging, PIPE_TRANSFER_READ);
 			if (!data) {
-				pipe_resource_reference((struct pipe_resource **)&staging, NULL);
+				r600_resource_reference(&staging, NULL);
 				return NULL;
 			}
 			data += box->x % R600_MAP_BUFFER_ALIGNMENT;
@@ -444,7 +444,7 @@ static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
 		r600_buffer_do_flush_region(ctx, transfer, &transfer->box);
 
 	if (rtransfer->staging)
-		pipe_resource_reference((struct pipe_resource**)&rtransfer->staging, NULL);
+		r600_resource_reference(&rtransfer->staging, NULL);
 
 	util_slab_free(&rctx->pool_transfers, transfer);
 }

@@ -366,7 +366,7 @@ static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 		rtex->cb_color_info &= ~EG_S_028C70_FAST_CLEAR(1);
 
 	if (rtex->cmask_buffer != &rtex->resource)
-	    pipe_resource_reference((struct pipe_resource**)&rtex->cmask_buffer, NULL);
+	    r600_resource_reference(&rtex->cmask_buffer, NULL);
 
 	/* Notify all contexts about the change. */
 	r600_dirty_all_framebuffer_states(rscreen);
@@ -559,9 +559,9 @@ static void r600_texture_destroy(struct pipe_screen *screen,
 	if (rtex->flushed_depth_texture)
 		pipe_resource_reference((struct pipe_resource **)&rtex->flushed_depth_texture, NULL);
 
-	pipe_resource_reference((struct pipe_resource**)&rtex->htile_buffer, NULL);
+	r600_resource_reference(&rtex->htile_buffer, NULL);
 	if (rtex->cmask_buffer != &rtex->resource) {
-	    pipe_resource_reference((struct pipe_resource**)&rtex->cmask_buffer, NULL);
+	    r600_resource_reference(&rtex->cmask_buffer, NULL);
 	}
 	pb_reference(&resource->buf, NULL);
 	FREE(rtex);
@@ -1511,7 +1511,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	}
 
 	if (!(map = r600_buffer_map_sync_with_rings(rctx, buf, usage))) {
-		pipe_resource_reference((struct pipe_resource**)&trans->staging, NULL);
+		r600_resource_reference(&trans->staging, NULL);
 		FREE(trans);
 		return NULL;
 	}
@@ -1541,7 +1541,7 @@ static void r600_texture_transfer_unmap(struct pipe_context *ctx,
 
 	if (rtransfer->staging) {
 		rctx->num_alloc_tex_transfer_bytes += rtransfer->staging->buf->size;
-		pipe_resource_reference((struct pipe_resource**)&rtransfer->staging, NULL);
+		r600_resource_reference(&rtransfer->staging, NULL);
 	}
 
 	/* Heuristic for {upload, draw, upload, draw, ..}:
@@ -1635,8 +1635,8 @@ static void r600_surface_destroy(struct pipe_context *pipe,
 				 struct pipe_surface *surface)
 {
 	struct r600_surface *surf = (struct r600_surface*)surface;
-	pipe_resource_reference((struct pipe_resource**)&surf->cb_buffer_fmask, NULL);
-	pipe_resource_reference((struct pipe_resource**)&surf->cb_buffer_cmask, NULL);
+	r600_resource_reference(&surf->cb_buffer_fmask, NULL);
+	r600_resource_reference(&surf->cb_buffer_cmask, NULL);
 	pipe_resource_reference(&surface->texture, NULL);
 	FREE(surface);
 }

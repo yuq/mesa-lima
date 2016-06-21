@@ -275,11 +275,11 @@ void r600_query_hw_destroy(struct r600_common_context *rctx,
 	while (prev) {
 		struct r600_query_buffer *qbuf = prev;
 		prev = prev->previous;
-		pipe_resource_reference((struct pipe_resource**)&qbuf->buf, NULL);
+		r600_resource_reference(&qbuf->buf, NULL);
 		FREE(qbuf);
 	}
 
-	pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
+	r600_resource_reference(&query->buffer.buf, NULL);
 	FREE(rquery);
 }
 
@@ -301,7 +301,7 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 
 	if (query->flags & R600_QUERY_HW_FLAG_PREDICATE) {
 		if (!query->ops->prepare_buffer(ctx, query, buf)) {
-			pipe_resource_reference((struct pipe_resource **)&buf, NULL);
+			r600_resource_reference(&buf, NULL);
 			return NULL;
 		}
 	}
@@ -733,7 +733,7 @@ static void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
 	while (prev) {
 		struct r600_query_buffer *qbuf = prev;
 		prev = prev->previous;
-		pipe_resource_reference((struct pipe_resource**)&qbuf->buf, NULL);
+		r600_resource_reference(&qbuf->buf, NULL);
 		FREE(qbuf);
 	}
 
@@ -744,11 +744,11 @@ static void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
 		/* Obtain a new buffer if the current one can't be mapped without a stall. */
 		if (r600_rings_is_buffer_referenced(rctx, query->buffer.buf->buf, RADEON_USAGE_READWRITE) ||
 		    !rctx->ws->buffer_wait(query->buffer.buf->buf, 0, RADEON_USAGE_READWRITE)) {
-			pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
+			r600_resource_reference(&query->buffer.buf, NULL);
 			query->buffer.buf = r600_new_query_buffer(rctx, query);
 		} else {
 			if (!query->ops->prepare_buffer(rctx, query, query->buffer.buf))
-				pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
+				r600_resource_reference(&query->buffer.buf, NULL);
 		}
 	}
 }
@@ -1132,7 +1132,7 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 		}
 	}
 
-	pipe_resource_reference((struct pipe_resource**)&buffer, NULL);
+	r600_resource_reference(&buffer, NULL);
 
 	if (mask != 0) {
 		ctx->backend_mask = mask;

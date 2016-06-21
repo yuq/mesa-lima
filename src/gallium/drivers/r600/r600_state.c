@@ -967,10 +967,8 @@ static void r600_init_color_surface(struct r600_context *rctx,
 	surf->cb_color_cmask = surf->cb_color_base;
 	surf->cb_color_mask = 0;
 
-	pipe_resource_reference((struct pipe_resource**)&surf->cb_buffer_cmask,
-				&rtex->resource.b.b);
-	pipe_resource_reference((struct pipe_resource**)&surf->cb_buffer_fmask,
-				&rtex->resource.b.b);
+	r600_resource_reference(&surf->cb_buffer_cmask, &rtex->resource);
+	r600_resource_reference(&surf->cb_buffer_fmask, &rtex->resource);
 
 	if (rtex->cmask.size) {
 		surf->cb_color_cmask = rtex->cmask.offset >> 8;
@@ -1003,7 +1001,7 @@ static void r600_init_color_surface(struct r600_context *rctx,
 			struct pipe_transfer *transfer;
 			void *ptr;
 
-			pipe_resource_reference((struct pipe_resource**)&rctx->dummy_cmask, NULL);
+			r600_resource_reference(&rctx->dummy_cmask, NULL);
 			rctx->dummy_cmask = r600_buffer_create_helper(rscreen, cmask.size, cmask.alignment);
 
 			/* Set the contents to 0xCC. */
@@ -1011,19 +1009,17 @@ static void r600_init_color_surface(struct r600_context *rctx,
 			memset(ptr, 0xCC, cmask.size);
 			pipe_buffer_unmap(&rctx->b.b, transfer);
 		}
-		pipe_resource_reference((struct pipe_resource**)&surf->cb_buffer_cmask,
-					&rctx->dummy_cmask->b.b);
+		r600_resource_reference(&surf->cb_buffer_cmask, rctx->dummy_cmask);
 
 		/* FMASK. */
 		if (!rctx->dummy_fmask ||
 		    rctx->dummy_fmask->b.b.width0 < fmask.size ||
 		    rctx->dummy_fmask->buf->alignment % fmask.alignment != 0) {
-			pipe_resource_reference((struct pipe_resource**)&rctx->dummy_fmask, NULL);
+			r600_resource_reference(&rctx->dummy_fmask, NULL);
 			rctx->dummy_fmask = r600_buffer_create_helper(rscreen, fmask.size, fmask.alignment);
 
 		}
-		pipe_resource_reference((struct pipe_resource**)&surf->cb_buffer_fmask,
-					&rctx->dummy_fmask->b.b);
+		r600_resource_reference(&surf->cb_buffer_fmask, rctx->dummy_fmask);
 
 		/* Init the registers. */
 		color_info |= S_0280A0_TILE_MODE(V_0280A0_FRAG_ENABLE);

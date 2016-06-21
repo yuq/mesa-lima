@@ -71,8 +71,8 @@ static void r600_destroy_context(struct pipe_context *context)
 
 	r600_sb_context_destroy(rctx->sb_context);
 
-	pipe_resource_reference((struct pipe_resource**)&rctx->dummy_cmask, NULL);
-	pipe_resource_reference((struct pipe_resource**)&rctx->dummy_fmask, NULL);
+	r600_resource_reference(&rctx->dummy_cmask, NULL);
+	r600_resource_reference(&rctx->dummy_fmask, NULL);
 
 	for (sh = 0; sh < PIPE_SHADER_TYPES; sh++) {
 		rctx->b.b.set_constant_buffer(&rctx->b.b, sh, R600_BUFFER_INFO_CONST_BUFFER, NULL);

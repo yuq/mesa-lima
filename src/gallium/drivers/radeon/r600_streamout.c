@@ -70,7 +70,7 @@ static void r600_so_target_destroy(struct pipe_context *ctx,
 {
 	struct r600_so_target *t = (struct r600_so_target*)target;
 	pipe_resource_reference(&t->b.buffer, NULL);
-	pipe_resource_reference((struct pipe_resource**)&t->buf_filled_size, NULL);
+	r600_resource_reference(&t->buf_filled_size, NULL);
 	FREE(t);
 }
 
