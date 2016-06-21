@@ -547,6 +547,13 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       baseLevelSize.height = tex->b.b.height0;
       baseLevelSize.depth = tex->b.b.depth0;
 
+      if ((tex->b.b.target == PIPE_TEXTURE_1D_ARRAY) ||
+          (tex->b.b.target == PIPE_TEXTURE_2D_ARRAY)) {
+         st->base.layer_stride =
+            svga3dsurface_get_image_offset(tex->key.format, baseLevelSize,
+                                           tex->b.b.last_level + 1, 1, 0);
+      }
+
       offset = svga3dsurface_get_image_offset(tex->key.format, baseLevelSize,
                                               tex->b.b.last_level + 1, /* numMips */
                                               st->slice, level);
@@ -673,27 +680,35 @@ svga_texture_transfer_unmap(struct pipe_context *pipe,
 	 svga_texture(transfer->resource)->handle;
       SVGA3dBox box;
       enum pipe_error ret;
+      unsigned nlayers = 1;
 
       assert(svga_have_gb_objects(svga));
 
       /* update the effected region */
       box.x = transfer->box.x;
       box.y = transfer->box.y;
+      box.w = transfer->box.width;
+      box.h = transfer->box.height;
+      box.d = transfer->box.depth;
+
       switch (tex->b.b.target) {
       case PIPE_TEXTURE_CUBE:
-      case PIPE_TEXTURE_2D_ARRAY:
          box.z = 0;
          break;
+      case PIPE_TEXTURE_2D_ARRAY:
+         nlayers = box.d;
+         box.z = 0;
+         box.d = 1;
+         break;
       case PIPE_TEXTURE_1D_ARRAY:
+         nlayers = box.d;
          box.y = box.z = 0;
+         box.d = 1;
          break;
       default:
          box.z = transfer->box.z;
          break;
       }
-      box.w = transfer->box.width;
-      box.h = transfer->box.height;
-      box.d = transfer->box.depth;
 
       if (0)
          debug_printf("%s %d, %d, %d  %d x %d x %d\n",
@@ -702,15 +717,21 @@ svga_texture_transfer_unmap(struct pipe_context *pipe,
                       box.w, box.h, box.d);
 
       if (svga_have_vgpu10(svga)) {
-         ret = update_image_vgpu10(svga, surf, &box, st->slice, transfer->level,
-                                   tex->b.b.last_level + 1);
+         unsigned i;
+         for (i = 0; i < nlayers; i++) {
+            ret = update_image_vgpu10(svga, surf, &box,
+                                      st->slice + i, transfer->level,
+                                      tex->b.b.last_level + 1);
+            assert(ret == PIPE_OK);
+         }
       } else {
+         assert(nlayers == 1);
          ret = update_image_vgpu9(svga, surf, &box, st->slice, transfer->level);
+         assert(ret == PIPE_OK);
       }
 
       svga->hud.num_resource_updates++;
 
-      assert(ret == PIPE_OK);
       (void) ret;
    }
 
