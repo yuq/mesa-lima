@@ -164,7 +164,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		sctx->ce_suballocator =
 				u_suballocator_create(&sctx->b.b, 1024 * 1024,
 						      PIPE_BIND_CUSTOM,
-						      PIPE_USAGE_DEFAULT, FALSE);
+						      PIPE_USAGE_DEFAULT, false);
 		if (!sctx->ce_suballocator)
 			goto fail;
 	}
@@ -704,7 +704,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		return NULL;
 	}
 
-	if (!debug_get_bool_option("RADEON_DISABLE_PERFCOUNTERS", FALSE))
+	if (!debug_get_bool_option("RADEON_DISABLE_PERFCOUNTERS", false))
 		si_init_perfcounters(sscreen);
 
 	sscreen->b.has_cp_dma = true;
@@ -714,7 +714,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		HAVE_LLVM < 0x0308 ||
 		(sscreen->b.debug_flags & DBG_MONOLITHIC_SHADERS) != 0;
 
-	if (debug_get_bool_option("RADEON_DUMP_SHADERS", FALSE))
+	if (debug_get_bool_option("RADEON_DUMP_SHADERS", false))
 		sscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS;
 
 	/* Create the auxiliary context. This must be done last. */

@@ -1290,7 +1290,7 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 	bool enable_compressed_formats = (sscreen->b.info.drm_major == 2 &&
 					  sscreen->b.info.drm_minor >= 31) ||
 					 sscreen->b.info.drm_major == 3;
-	boolean uniform = TRUE;
+	bool uniform = true;
 	int i;
 
 	/* Colorspace (return non-RGB formats directly). */
@@ -1751,7 +1751,7 @@ static bool si_is_vertex_format_supported(struct pipe_screen *screen, enum pipe_
 static bool si_is_colorbuffer_format_supported(enum pipe_format format)
 {
 	return si_translate_colorformat(format) != V_028C70_COLOR_INVALID &&
-		r600_translate_colorswap(format, FALSE) != ~0U;
+		r600_translate_colorswap(format, false) != ~0U;
 }
 
 static bool si_is_zs_format_supported(enum pipe_format format)
@@ -1769,15 +1769,15 @@ boolean si_is_format_supported(struct pipe_screen *screen,
 
 	if (target >= PIPE_MAX_TEXTURE_TYPES) {
 		R600_ERR("r600: unsupported texture type %d\n", target);
-		return FALSE;
+		return false;
 	}
 
 	if (!util_format_is_supported(format, usage))
-		return FALSE;
+		return false;
 
 	if (sample_count > 1) {
 		if (!screen->get_param(screen, PIPE_CAP_TEXTURE_MULTISAMPLE))
-			return FALSE;
+			return false;
 
 		switch (sample_count) {
 		case 2:
@@ -1786,11 +1786,11 @@ boolean si_is_format_supported(struct pipe_screen *screen,
 			break;
 		case 16:
 			if (format == PIPE_FORMAT_NONE)
-				return TRUE;
+				return true;
 			else
-				return FALSE;
+				return false;
 		default:
-			return FALSE;
+			return false;
 		}
 	}
 
@@ -2014,7 +2014,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 		R600_ERR("Invalid CB format: %d, disabling CB.\n", surf->base.format);
 	}
 	assert(format != V_028C70_COLOR_INVALID);
-	swap = r600_translate_colorswap(surf->base.format, FALSE);
+	swap = r600_translate_colorswap(surf->base.format, false);
 	endian = si_colorformat_endian_swap(format);
 
 	/* blend clamp should be set for all NORM/SRGB types */
@@ -2798,7 +2798,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 	state[7] = 0;
 
 	if (tex->dcc_offset) {
-		unsigned swap = r600_translate_colorswap(pipe_format, FALSE);
+		unsigned swap = r600_translate_colorswap(pipe_format, false);
 
 		state[6] = S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
 	} else {

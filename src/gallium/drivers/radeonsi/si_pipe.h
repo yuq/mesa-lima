@@ -309,7 +309,7 @@ struct si_context {
 
 	/* Scratch buffer */
 	struct r600_resource	*scratch_buffer;
-	boolean                 emit_scratch_reloc;
+	bool			emit_scratch_reloc;
 	unsigned		scratch_waves;
 	unsigned		spi_tmpring_size;
 
