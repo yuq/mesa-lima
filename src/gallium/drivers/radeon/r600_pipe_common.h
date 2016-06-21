@@ -243,7 +243,7 @@ struct r600_texture {
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
 	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */
 	struct r600_texture		*flushed_depth_texture;
-	boolean				is_flushing_texture;
+	bool				is_flushing_texture;
 	struct radeon_surf		surface;
 
 	/* Colorbuffer compression and fast clear. */
@@ -524,7 +524,7 @@ struct r600_common_context {
 	struct r600_atom		render_cond_atom;
 	struct pipe_query		*render_cond;
 	unsigned			render_cond_mode;
-	boolean				render_cond_invert;
+	bool				render_cond_invert;
 	bool				render_cond_force_off; /* for u_blitter */
 
 	/* MSAA sample locations.
@@ -586,9 +586,9 @@ struct r600_common_context {
 };
 
 /* r600_buffer.c */
-boolean r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
-					struct pb_buffer *buf,
-					enum radeon_bo_usage usage);
+bool r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
+				     struct pb_buffer *buf,
+				     enum radeon_bo_usage usage);
 void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
                                       struct r600_resource *resource,
                                       unsigned usage);

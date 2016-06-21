@@ -30,18 +30,18 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-boolean r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
-					struct pb_buffer *buf,
-					enum radeon_bo_usage usage)
+bool r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
+				     struct pb_buffer *buf,
+				     enum radeon_bo_usage usage)
 {
 	if (ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, buf, usage)) {
-		return TRUE;
+		return true;
 	}
 	if (radeon_emitted(ctx->dma.cs, 0) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs, buf, usage)) {
-		return TRUE;
+		return true;
 	}
-	return FALSE;
+	return false;
 }
 
 void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,

@@ -1274,7 +1274,7 @@ bool r600_init_flushed_depth_texture(struct pipe_context *ctx,
 		return false;
 	}
 
-	(*flushed_depth_texture)->is_flushing_texture = TRUE;
+	(*flushed_depth_texture)->is_flushing_texture = true;
 	(*flushed_depth_texture)->non_disp_tiling = false;
 	return true;
 }
@@ -1746,7 +1746,7 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 	    surface_format == PIPE_FORMAT_B5G6R5_SRGB) {
 		extra_channel = -1;
 	} else if (desc->layout == UTIL_FORMAT_LAYOUT_PLAIN) {
-		if(r600_translate_colorswap(surface_format, FALSE) <= 1)
+		if(r600_translate_colorswap(surface_format, false) <= 1)
 			extra_channel = desc->nr_channels - 1;
 		else
 			extra_channel = 0;

@@ -1124,7 +1124,7 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 		return NULL;
 
 	if (info.drm_major < 3)
-		dec->use_legacy = TRUE;
+		dec->use_legacy = true;
 
 	dec->base = *templ;
 	dec->base.context = context;

@@ -446,7 +446,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 
 	rctx->allocator_zeroed_memory =
 		u_suballocator_create(&rctx->b, rscreen->info.gart_page_size,
-				      0, PIPE_USAGE_DEFAULT, TRUE);
+				      0, PIPE_USAGE_DEFAULT, true);
 	if (!rctx->allocator_zeroed_memory)
 		return false;
 

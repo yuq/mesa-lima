@@ -418,8 +418,8 @@ error:
 	return NULL;
 }
 
-static boolean r600_init_block_names(struct r600_common_screen *screen,
-				     struct r600_perfcounter_block *block)
+static bool r600_init_block_names(struct r600_common_screen *screen,
+				  struct r600_perfcounter_block *block)
 {
 	unsigned i, j, k;
 	unsigned groups_shader = 1, groups_se = 1, groups_instance = 1;
@@ -452,7 +452,7 @@ static boolean r600_init_block_names(struct r600_common_screen *screen,
 
 	block->group_names = MALLOC(block->num_groups * block->group_name_stride);
 	if (!block->group_names)
-		return FALSE;
+		return false;
 
 	groupname = block->group_names;
 	for (i = 0; i < groups_shader; ++i) {
@@ -487,7 +487,7 @@ static boolean r600_init_block_names(struct r600_common_screen *screen,
 	block->selector_names = MALLOC(block->num_groups * block->num_selectors *
 				       block->selector_name_stride);
 	if (!block->selector_names)
-		return FALSE;
+		return false;
 
 	groupname = block->group_names;
 	p = block->selector_names;
@@ -499,7 +499,7 @@ static boolean r600_init_block_names(struct r600_common_screen *screen,
 		groupname += block->group_name_stride;
 	}
 
-	return TRUE;
+	return true;
 }
 
 int r600_get_perfcounter_info(struct r600_common_screen *screen,
@@ -577,17 +577,17 @@ void r600_perfcounters_destroy(struct r600_common_screen *rscreen)
 		rscreen->perfcounters->cleanup(rscreen);
 }
 
-boolean r600_perfcounters_init(struct r600_perfcounters *pc,
-			       unsigned num_blocks)
+bool r600_perfcounters_init(struct r600_perfcounters *pc,
+			    unsigned num_blocks)
 {
 	pc->blocks = CALLOC(num_blocks, sizeof(struct r600_perfcounter_block));
 	if (!pc->blocks)
-		return FALSE;
+		return false;
 
-	pc->separate_se = debug_get_bool_option("RADEON_PC_SEPARATE_SE", FALSE);
-	pc->separate_instance = debug_get_bool_option("RADEON_PC_SEPARATE_INSTANCE", FALSE);
+	pc->separate_se = debug_get_bool_option("RADEON_PC_SEPARATE_SE", false);
+	pc->separate_instance = debug_get_bool_option("RADEON_PC_SEPARATE_INSTANCE", false);
 
-	return TRUE;
+	return true;
 }
 
 void r600_perfcounters_add_block(struct r600_common_screen *rscreen,

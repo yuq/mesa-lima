@@ -404,7 +404,7 @@ void radeon_llvm_emit_store(
 	LLVMBuilderRef builder = bld->bld_base.base.gallivm->builder;
 	LLVMValueRef temp_ptr, temp_ptr2 = NULL;
 	unsigned chan, chan_index;
-	boolean is_vec_store = FALSE;
+	bool is_vec_store = false;
 	enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(inst->Instruction.Opcode);
 
 	if (dst[0]) {
@@ -1557,10 +1557,10 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx, const char *trip
 
 	struct lp_build_tgsi_context * bld_base = &ctx->soa.bld_base;
 
-	type.floating = TRUE;
-	type.fixed = FALSE;
-	type.sign = TRUE;
-	type.norm = FALSE;
+	type.floating = true;
+	type.fixed = false;
+	type.sign = true;
+	type.norm = false;
 	type.width = 32;
 	type.length = 1;
 
