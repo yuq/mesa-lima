@@ -763,7 +763,8 @@ bool r600_query_hw_begin(struct r600_common_context *rctx,
 		return false;
 	}
 
-	r600_query_hw_reset_buffers(rctx, query);
+	if (!(query->flags & R600_QUERY_HW_FLAG_BEGIN_RESUMES))
+		r600_query_hw_reset_buffers(rctx, query);
 
 	r600_query_hw_emit_start(rctx, query);
 	if (!query->buffer.buf)
