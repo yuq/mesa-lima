@@ -73,54 +73,6 @@ gen7_cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
       }
    }
 }
-
-uint32_t
-gen7_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
-{
-   VkShaderStageFlags dirty = cmd_buffer->state.descriptors_dirty &
-                              cmd_buffer->state.pipeline->active_stages;
-
-   VkResult result = VK_SUCCESS;
-   anv_foreach_stage(s, dirty) {
-      result = anv_cmd_buffer_emit_samplers(cmd_buffer, s,
-                                            &cmd_buffer->state.samplers[s]);
-      if (result != VK_SUCCESS)
-         break;
-      result = anv_cmd_buffer_emit_binding_table(cmd_buffer, s,
-                                                 &cmd_buffer->state.binding_tables[s]);
-      if (result != VK_SUCCESS)
-         break;
-   }
-
-   if (result != VK_SUCCESS) {
-      assert(result == VK_ERROR_OUT_OF_DEVICE_MEMORY);
-
-      result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
-      assert(result == VK_SUCCESS);
-
-      /* Re-emit state base addresses so we get the new surface state base
-       * address before we start emitting binding tables etc.
-       */
-      anv_cmd_buffer_emit_state_base_address(cmd_buffer);
-
-      /* Re-emit all active binding tables */
-      dirty |= cmd_buffer->state.pipeline->active_stages;
-      anv_foreach_stage(s, dirty) {
-         result = anv_cmd_buffer_emit_samplers(cmd_buffer, s,
-                                               &cmd_buffer->state.samplers[s]);
-         if (result != VK_SUCCESS)
-            return result;
-         result = anv_cmd_buffer_emit_binding_table(cmd_buffer, s,
-                                                    &cmd_buffer->state.binding_tables[s]);
-         if (result != VK_SUCCESS)
-            return result;
-      }
-   }
-
-   cmd_buffer->state.descriptors_dirty &= ~dirty;
-
-   return dirty;
-}
 #endif /* GEN_GEN == 7 && !GEN_IS_HASWELL */
 
 static inline int64_t

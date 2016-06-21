@@ -508,7 +508,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
     */
    uint32_t dirty = 0;
    if (cmd_buffer->state.descriptors_dirty)
-      dirty = gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
+      dirty = anv_cmd_buffer_flush_descriptor_sets(cmd_buffer);
 
    if (cmd_buffer->state.push_constants_dirty) {
 #if GEN_GEN >= 9
