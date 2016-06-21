@@ -1523,6 +1523,21 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 	}
 }
 
+/* 1/sqrt is translated to rsq for f32 if fp32 denormals are not enabled in
+ * the target machine. f64 needs global unsafe math flags to get rsq. */
+static void emit_rsq(const struct lp_build_tgsi_action *action,
+		     struct lp_build_tgsi_context *bld_base,
+		     struct lp_build_emit_data *emit_data)
+{
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	LLVMValueRef sqrt =
+		lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_SQRT,
+					 emit_data->args[0]);
+
+	emit_data->output[emit_data->chan] =
+		LLVMBuildFDiv(builder, bld_base->base.one, sqrt, "");
+}
+
 void radeon_llvm_context_init(struct radeon_llvm_context * ctx, const char *triple)
 {
 	struct lp_type type;
@@ -1661,8 +1676,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx, const char *trip
 	bld_base->op_actions[TGSI_OPCODE_POW].intr_name = "llvm.pow.f32";
 	bld_base->op_actions[TGSI_OPCODE_ROUND].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_ROUND].intr_name = "llvm.rint.f32";
-	bld_base->op_actions[TGSI_OPCODE_RSQ].intr_name = "llvm.AMDGPU.rsq.clamped.f32";
-	bld_base->op_actions[TGSI_OPCODE_RSQ].emit = build_tgsi_intrinsic_nomem;
+	bld_base->op_actions[TGSI_OPCODE_RSQ].emit = emit_rsq;
 	bld_base->op_actions[TGSI_OPCODE_SGE].emit = emit_set_cond;
 	bld_base->op_actions[TGSI_OPCODE_SEQ].emit = emit_set_cond;
 	bld_base->op_actions[TGSI_OPCODE_SHL].emit = emit_shl;
