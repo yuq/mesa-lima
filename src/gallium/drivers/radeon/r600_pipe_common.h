@@ -265,6 +265,14 @@ struct r600_texture {
 
 	bool				non_disp_tiling; /* R600-Cayman only */
 
+	/* Whether the texture is a displayable back buffer and needs DCC
+	 * decompression, which is expensive. Therefore, it's enabled only
+	 * if statistics suggest that it will pay off and it's allocated
+	 * separately. Limited to target == 2D and last_level == 0. If enabled,
+	 * dcc_offset contains the absolute GPUVM address, not the relative one.
+	 */
+	struct r600_resource		*dcc_separate_buffer;
+
 	/* Counter that should be non-zero if the texture is bound to a
 	 * framebuffer. Implemented in radeonsi only.
 	 */

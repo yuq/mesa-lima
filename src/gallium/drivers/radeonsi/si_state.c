@@ -2420,6 +2420,12 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 				RADEON_PRIO_CMASK);
 		}
 
+		if (tex->dcc_separate_buffer)
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+						  tex->dcc_separate_buffer,
+						  RADEON_USAGE_READWRITE,
+						  RADEON_PRIO_DCC);
+
 		/* Compute mutable surface parameters. */
 		pitch_tile_max = cb->level_info->nblk_x / 8 - 1;
 		slice_tile_max = cb->level_info->nblk_x *
@@ -2476,7 +2482,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		radeon_emit(cs, tex->color_clear_value[1]);	/* R_028C90_CB_COLOR0_CLEAR_WORD1 */
 
 		if (sctx->b.chip_class >= VI) /* R_028C94_CB_COLOR0_DCC_BASE */
-			radeon_emit(cs, (tex->resource.gpu_address +
+			radeon_emit(cs, ((!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
 					 tex->dcc_offset +
 				         tex->surface.level[cb->base.u.tex.level].dcc_offset) >> 8);
 	}
@@ -3447,6 +3453,7 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 	if (rscreen->info.drm_major != 3)
 		return;
 
+	assert(rtex->dcc_separate_buffer == NULL);
 	assert(rtex->fmask.size == 0);
 
 	/* Metadata image format format version 1:

@@ -304,6 +304,15 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, rres, usage,
 				  r600_get_sampler_view_priority(rres));
+
+	if (resource->target != PIPE_BUFFER) {
+		struct r600_texture *rtex = (struct r600_texture*)resource;
+
+		if (rtex->dcc_separate_buffer)
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+						  rtex->dcc_separate_buffer, usage,
+						  RADEON_PRIO_DCC);
+	}
 }
 
 static void si_sampler_views_begin_new_cs(struct si_context *sctx,
@@ -352,7 +361,7 @@ void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 
 	if (tex->dcc_offset && tex->surface.level[first_level].dcc_enabled) {
 		state[6] |= S_008F28_COMPRESSION_EN(1);
-		state[7] = (tex->resource.gpu_address +
+		state[7] = ((!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
 			    tex->dcc_offset +
 			    base_level_info->dcc_offset) >> 8;
 	}

@@ -387,6 +387,8 @@ static bool r600_texture_discard_dcc(struct r600_common_screen *rscreen,
 	if (!r600_can_disable_dcc(rtex))
 		return false;
 
+	assert(rtex->dcc_separate_buffer == NULL);
+
 	/* Disable DCC. */
 	rtex->dcc_offset = 0;
 
@@ -564,6 +566,7 @@ static void r600_texture_destroy(struct pipe_screen *screen,
 	    r600_resource_reference(&rtex->cmask_buffer, NULL);
 	}
 	pb_reference(&resource->buf, NULL);
+	r600_resource_reference(&rtex->dcc_separate_buffer, NULL);
 	FREE(rtex);
 }
 
@@ -1800,11 +1803,20 @@ void vi_dcc_clear_level(struct r600_common_context *rctx,
 			struct r600_texture *rtex,
 			unsigned level, unsigned clear_value)
 {
-	struct pipe_resource *dcc_buffer = &rtex->resource.b.b;
-	uint64_t dcc_offset = rtex->dcc_offset +
-			      rtex->surface.level[level].dcc_offset;
+	struct pipe_resource *dcc_buffer;
+	uint64_t dcc_offset;
 
 	assert(rtex->dcc_offset && rtex->surface.level[level].dcc_enabled);
+
+	if (rtex->dcc_separate_buffer) {
+		dcc_buffer = &rtex->dcc_separate_buffer->b.b;
+		dcc_offset = 0;
+	} else {
+		dcc_buffer = &rtex->resource.b.b;
+		dcc_offset = rtex->dcc_offset;
+	}
+
+	dcc_offset += rtex->surface.level[level].dcc_offset;
 
 	rctx->clear_buffer(&rctx->b, dcc_buffer, dcc_offset,
 			   rtex->surface.level[level].dcc_fast_clear_size,
