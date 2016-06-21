@@ -309,11 +309,6 @@ struct si_shader_selector;
 void si_init_atom(struct si_context *sctx, struct r600_atom *atom,
 		  struct r600_atom **list_elem,
 		  void (*emit_func)(struct si_context *ctx, struct r600_atom *state));
-boolean si_is_format_supported(struct pipe_screen *screen,
-                               enum pipe_format format,
-                               enum pipe_texture_target target,
-                               unsigned sample_count,
-                               unsigned usage);
 void si_init_state_functions(struct si_context *sctx);
 void si_init_screen_state_functions(struct si_screen *sscreen);
 void

@@ -1759,11 +1759,11 @@ static bool si_is_zs_format_supported(enum pipe_format format)
 	return si_translate_dbformat(format) != V_028040_Z_INVALID;
 }
 
-boolean si_is_format_supported(struct pipe_screen *screen,
-                               enum pipe_format format,
-                               enum pipe_texture_target target,
-                               unsigned sample_count,
-                               unsigned usage)
+static boolean si_is_format_supported(struct pipe_screen *screen,
+				      enum pipe_format format,
+				      enum pipe_texture_target target,
+				      unsigned sample_count,
+				      unsigned usage)
 {
 	unsigned retval = 0;
 
@@ -3514,6 +3514,7 @@ static void si_apply_opaque_metadata(struct r600_common_screen *rscreen,
 
 void si_init_screen_state_functions(struct si_screen *sscreen)
 {
+	sscreen->b.b.is_format_supported = si_is_format_supported;
 	sscreen->b.query_opaque_metadata = si_query_opaque_metadata;
 	sscreen->b.apply_opaque_metadata = si_apply_opaque_metadata;
 }
