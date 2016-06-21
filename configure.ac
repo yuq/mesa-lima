@@ -2620,6 +2620,8 @@ AC_SUBST([XA_MINOR], $XA_MINOR)
 AC_SUBST([XA_TINY], $XA_TINY)
 AC_SUBST([XA_VERSION], "$XA_MAJOR.$XA_MINOR.$XA_TINY")
 
+AC_SUBST([TIMESTAMP_CMD], '`test $(SOURCE_DATE_EPOCH) && echo $(SOURCE_DATE_EPOCH) || date +%s`')
+
 AC_ARG_ENABLE(valgrind,
               [AS_HELP_STRING([--enable-valgrind],
                              [Build mesa with valgrind support (default: auto)])],
