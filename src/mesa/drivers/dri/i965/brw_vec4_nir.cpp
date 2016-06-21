@@ -993,6 +993,26 @@ vec4_visitor::optimize_predicate(nir_alu_instr *instr,
    return true;
 }
 
+static void
+emit_find_msb_using_lzd(const vec4_builder &bld,
+                        const dst_reg &dst,
+                        const src_reg &src,
+                        bool is_signed)
+{
+   vec4_instruction *inst;
+
+   bld.LZD(retype(dst, BRW_REGISTER_TYPE_UD), src);
+
+   /* LZD counts from the MSB side, while GLSL's findMSB() wants the count
+    * from the LSB side. Subtract the result from 31 to convert the MSB count
+    * into an LSB count.  If no bits are set, LZD will return 32.  31-32 = -1,
+    * which is exactly what findMSB() is supposed to return.
+    */
+   inst = bld.ADD(dst, retype(src_reg(dst), BRW_REGISTER_TYPE_D),
+                  brw_imm_d(31));
+   inst->src[0].negate = true;
+}
+
 void
 vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 {
@@ -1461,6 +1481,9 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_ufind_msb:
+      emit_find_msb_using_lzd(vec4_builder(this).at_end(), dst, op[0], false);
+      break;
+
    case nir_op_ifind_msb: {
       emit(FBH(retype(dst, BRW_REGISTER_TYPE_UD), op[0]));
 

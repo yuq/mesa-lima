@@ -1761,6 +1761,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          /* FBL only supports UD type for dst. */
          brw_FBL(p, retype(dst, BRW_REGISTER_TYPE_UD), src[0]);
          break;
+      case BRW_OPCODE_LZD:
+         brw_LZD(p, dst, src[0]);
+         break;
       case BRW_OPCODE_CBIT:
          assert(devinfo->gen >= 7);
          /* CBIT only supports UD type for dst. */

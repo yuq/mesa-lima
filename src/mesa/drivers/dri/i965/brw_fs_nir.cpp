@@ -614,6 +614,25 @@ fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
    return true;
 }
 
+static void
+emit_find_msb_using_lzd(const fs_builder &bld,
+                        const fs_reg &result,
+                        const fs_reg &src,
+                        bool is_signed)
+{
+   fs_inst *inst;
+
+   bld.LZD(retype(result, BRW_REGISTER_TYPE_UD), src);
+
+   /* LZD counts from the MSB side, while GLSL's findMSB() wants the count
+    * from the LSB side. Subtract the result from 31 to convert the MSB
+    * count into an LSB count.  If no bits are set, LZD will return 32.
+    * 31-32 = -1, which is exactly what findMSB() is supposed to return.
+    */
+   inst = bld.ADD(result, retype(result, BRW_REGISTER_TYPE_D), brw_imm_d(31));
+   inst->src[0].negate = true;
+}
+
 void
 fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 {
@@ -1310,7 +1329,12 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       bld.CBIT(result, op[0]);
       break;
 
-   case nir_op_ufind_msb:
+   case nir_op_ufind_msb: {
+      assert(nir_dest_bit_size(instr->dest.dest) < 64);
+      emit_find_msb_using_lzd(bld, result, op[0], false);
+      break;
+   }
+
    case nir_op_ifind_msb: {
       assert(nir_dest_bit_size(instr->dest.dest) < 64);
       bld.FBH(retype(result, BRW_REGISTER_TYPE_UD), op[0]);
