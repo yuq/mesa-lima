@@ -511,6 +511,32 @@ enum isl_dim_layout {
    ISL_DIM_LAYOUT_GEN9_1D,
 };
 
+enum isl_aux_usage {
+   /** No Auxiliary surface is used */
+   ISL_AUX_USAGE_NONE,
+
+   /** The primary surface is a depth surface and the auxiliary surface is HiZ */
+   ISL_AUX_USAGE_HIZ,
+
+   /** The auxiliary surface is an MCS
+    *
+    * @invariant isl_surf::samples > 1
+    */
+   ISL_AUX_USAGE_MCS,
+
+   /** The auxiliary surface is a fast-clear-only compression surface
+    *
+    * @invariant isl_surf::samples == 1
+    */
+   ISL_AUX_USAGE_CCS_D,
+
+   /** The auxiliary surface provides full lossless color compression
+    *
+    * @invariant isl_surf::samples == 1
+    */
+   ISL_AUX_USAGE_CCS_E,
+};
+
 /* TODO(chadv): Explain */
 enum isl_array_pitch_span {
    ISL_ARRAY_PITCH_SPAN_FULL,
