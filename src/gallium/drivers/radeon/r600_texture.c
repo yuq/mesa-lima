@@ -1040,7 +1040,8 @@ r600_texture_create_object(struct pipe_screen *screen,
 		 * apply_opaque_metadata later.
 		 */
 		if (rtex->surface.dcc_size &&
-		    (buf || !(rscreen->debug_flags & DBG_NO_DCC))) {
+		    (buf || !(rscreen->debug_flags & DBG_NO_DCC)) &&
+		    !(rtex->surface.flags & RADEON_SURF_SCANOUT)) {
 			/* Reserve space for the DCC buffer. */
 			rtex->dcc_offset = align64(rtex->size, rtex->surface.dcc_alignment);
 			rtex->size = rtex->dcc_offset + rtex->surface.dcc_size;
