@@ -1336,8 +1336,6 @@ VkResult anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 VkResult anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
                                       unsigned stage, struct anv_state *state);
 uint32_t anv_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer);
-void gen7_cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
-                                              uint32_t stages);
 
 struct anv_state anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
                                              const void *data, uint32_t size, uint32_t alignment);

@@ -361,6 +361,47 @@ cmd_buffer_alloc_push_constants(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
 }
 
+static void
+cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
+                                    uint32_t stages)
+{
+   static const uint32_t sampler_state_opcodes[] = {
+      [MESA_SHADER_VERTEX]                      = 43,
+      [MESA_SHADER_TESS_CTRL]                   = 44, /* HS */
+      [MESA_SHADER_TESS_EVAL]                   = 45, /* DS */
+      [MESA_SHADER_GEOMETRY]                    = 46,
+      [MESA_SHADER_FRAGMENT]                    = 47,
+      [MESA_SHADER_COMPUTE]                     = 0,
+   };
+
+   static const uint32_t binding_table_opcodes[] = {
+      [MESA_SHADER_VERTEX]                      = 38,
+      [MESA_SHADER_TESS_CTRL]                   = 39,
+      [MESA_SHADER_TESS_EVAL]                   = 40,
+      [MESA_SHADER_GEOMETRY]                    = 41,
+      [MESA_SHADER_FRAGMENT]                    = 42,
+      [MESA_SHADER_COMPUTE]                     = 0,
+   };
+
+   anv_foreach_stage(s, stages) {
+      if (cmd_buffer->state.samplers[s].alloc_size > 0) {
+         anv_batch_emit(&cmd_buffer->batch,
+                        GENX(3DSTATE_SAMPLER_STATE_POINTERS_VS), ssp) {
+            ssp._3DCommandSubOpcode = sampler_state_opcodes[s];
+            ssp.PointertoVSSamplerState = cmd_buffer->state.samplers[s].offset;
+         }
+      }
+
+      /* Always emit binding table pointers if we're asked to, since on SKL
+       * this is what flushes push constants. */
+      anv_batch_emit(&cmd_buffer->batch,
+                     GENX(3DSTATE_BINDING_TABLE_POINTERS_VS), btp) {
+         btp._3DCommandSubOpcode = binding_table_opcodes[s];
+         btp.PointertoVSBindingTable = cmd_buffer->state.binding_tables[s].offset;
+      }
+   }
+}
+
 static uint32_t
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -523,7 +564,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (dirty)
-      gen7_cmd_buffer_emit_descriptor_pointers(cmd_buffer, dirty);
+      cmd_buffer_emit_descriptor_pointers(cmd_buffer, dirty);
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
       gen8_cmd_buffer_emit_viewport(cmd_buffer);
