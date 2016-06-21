@@ -1403,11 +1403,14 @@ glsl_type::can_implicitly_convert_to(const glsl_type *desired,
    if (desired->is_float() && this->is_integer())
       return true;
 
-   /* With GLSL 4.0 / ARB_gpu_shader5, int can be converted to uint.
-    * Note that state may be NULL here, when resolving function calls in the
-    * linker. By this time, all the state-dependent checks have already
-    * happened though, so allow anything that's allowed in any shader version. */
-   if ((!state || state->is_version(400, 0) || state->ARB_gpu_shader5_enable) &&
+   /* With GLSL 4.0, ARB_gpu_shader5, or MESA_shader_integer_functions, int
+    * can be converted to uint.  Note that state may be NULL here, when
+    * resolving function calls in the linker. By this time, all the
+    * state-dependent checks have already happened though, so allow anything
+    * that's allowed in any shader version.
+    */
+   if ((!state || state->is_version(400, 0) || state->ARB_gpu_shader5_enable ||
+        state->MESA_shader_integer_functions_enable) &&
          desired->base_type == GLSL_TYPE_UINT && this->base_type == GLSL_TYPE_INT)
       return true;
 

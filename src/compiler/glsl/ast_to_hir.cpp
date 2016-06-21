@@ -244,7 +244,8 @@ get_implicit_conversion_operation(const glsl_type *to, const glsl_type *from,
       }
 
    case GLSL_TYPE_UINT:
-      if (!state->is_version(400, 0) && !state->ARB_gpu_shader5_enable)
+      if (!state->is_version(400, 0) && !state->ARB_gpu_shader5_enable
+          && !state->MESA_shader_integer_functions_enable)
          return (ir_expression_operation)0;
       switch (from->base_type) {
          case GLSL_TYPE_INT: return ir_unop_i2u;
