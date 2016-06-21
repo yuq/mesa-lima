@@ -619,10 +619,10 @@ error:
    return NULL;
 }
 
-static boolean amdgpu_bo_get_handle(struct pb_buffer *buffer,
-                                    unsigned stride, unsigned offset,
-                                    unsigned slice_size,
-                                    struct winsys_handle *whandle)
+static bool amdgpu_bo_get_handle(struct pb_buffer *buffer,
+                                 unsigned stride, unsigned offset,
+                                 unsigned slice_size,
+                                 struct winsys_handle *whandle)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(buffer);
    enum amdgpu_bo_handle_type type;
@@ -641,18 +641,18 @@ static boolean amdgpu_bo_get_handle(struct pb_buffer *buffer,
       type = amdgpu_bo_handle_type_kms;
       break;
    default:
-      return FALSE;
+      return false;
    }
 
    r = amdgpu_bo_export(bo->bo, type, &whandle->handle);
    if (r)
-      return FALSE;
+      return false;
 
    whandle->stride = stride;
    whandle->offset = offset;
    whandle->offset += slice_size * whandle->layer;
    bo->is_shared = true;
-   return TRUE;
+   return true;
 }
 
 static struct pb_buffer *amdgpu_bo_from_ptr(struct radeon_winsys *rws,

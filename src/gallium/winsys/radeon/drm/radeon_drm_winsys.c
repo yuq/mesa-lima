@@ -67,16 +67,16 @@ static struct util_hash_table *fd_tab = NULL;
 pipe_static_mutex(fd_tab_mutex);
 
 /* Enable/disable feature access for one command stream.
- * If enable == TRUE, return TRUE on success.
- * Otherwise, return FALSE.
+ * If enable == true, return true on success.
+ * Otherwise, return false.
  *
  * We basically do the same thing kernel does, because we have to deal
  * with multiple contexts (here command streams) backed by one winsys. */
-static boolean radeon_set_fd_access(struct radeon_drm_cs *applier,
-                                    struct radeon_drm_cs **owner,
-                                    pipe_mutex *mutex,
-                                    unsigned request, const char *request_name,
-                                    boolean enable)
+static bool radeon_set_fd_access(struct radeon_drm_cs *applier,
+                                 struct radeon_drm_cs **owner,
+                                 pipe_mutex *mutex,
+                                 unsigned request, const char *request_name,
+                                 bool enable)
 {
     struct drm_radeon_info info;
     unsigned value = enable ? 1 : 0;
@@ -89,12 +89,12 @@ static boolean radeon_set_fd_access(struct radeon_drm_cs *applier,
     if (enable) {
         if (*owner) {
             pipe_mutex_unlock(*mutex);
-            return FALSE;
+            return false;
         }
     } else {
         if (*owner != applier) {
             pipe_mutex_unlock(*mutex);
-            return FALSE;
+            return false;
         }
     }
 
@@ -104,7 +104,7 @@ static boolean radeon_set_fd_access(struct radeon_drm_cs *applier,
     if (drmCommandWriteRead(applier->ws->fd, DRM_RADEON_INFO,
                             &info, sizeof(info)) != 0) {
         pipe_mutex_unlock(*mutex);
-        return FALSE;
+        return false;
     }
 
     /* Update the rights in the winsys. */
@@ -112,18 +112,18 @@ static boolean radeon_set_fd_access(struct radeon_drm_cs *applier,
         if (value) {
             *owner = applier;
             pipe_mutex_unlock(*mutex);
-            return TRUE;
+            return true;
         }
     } else {
         *owner = NULL;
     }
 
     pipe_mutex_unlock(*mutex);
-    return FALSE;
+    return false;
 }
 
-static boolean radeon_get_drm_value(int fd, unsigned request,
-                                    const char *errname, uint32_t *out)
+static bool radeon_get_drm_value(int fd, unsigned request,
+                                 const char *errname, uint32_t *out)
 {
     struct drm_radeon_info info;
     int retval;
@@ -139,13 +139,13 @@ static boolean radeon_get_drm_value(int fd, unsigned request,
             fprintf(stderr, "radeon: Failed to get %s, error number %d\n",
                     errname, retval);
         }
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 
 /* Helper function to do the ioctls needed for setup and init. */
-static boolean do_winsys_init(struct radeon_drm_winsys *ws)
+static bool do_winsys_init(struct radeon_drm_winsys *ws)
 {
     struct drm_radeon_gem_info gem_info;
     int retval;
@@ -182,7 +182,7 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
                 version->version_minor,
                 version->version_patchlevel);
         drmFreeVersion(version);
-        return FALSE;
+        return false;
     }
 
     ws->info.drm_major = version->version_major;
@@ -193,7 +193,7 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
     /* Get PCI ID. */
     if (!radeon_get_drm_value(ws->fd, RADEON_INFO_DEVICE_ID, "PCI ID",
                               &ws->info.pci_id))
-        return FALSE;
+        return false;
 
     /* Check PCI ID. */
     switch (ws->info.pci_id) {
@@ -211,14 +211,14 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
 
     default:
         fprintf(stderr, "radeon: Invalid PCI ID.\n");
-        return FALSE;
+        return false;
     }
 
     switch (ws->info.family) {
     default:
     case CHIP_UNKNOWN:
         fprintf(stderr, "radeon: Unknown family.\n");
-        return FALSE;
+        return false;
     case CHIP_R300:
     case CHIP_R350:
     case CHIP_RV350:
@@ -322,14 +322,14 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
     }
 
     /* Check for dma */
-    ws->info.has_sdma = FALSE;
+    ws->info.has_sdma = false;
     /* DMA is disabled on R700. There is IB corruption and hangs. */
     if (ws->info.chip_class >= EVERGREEN && ws->info.drm_minor >= 27) {
-        ws->info.has_sdma = TRUE;
+        ws->info.has_sdma = true;
     }
 
     /* Check for UVD and VCE */
-    ws->info.has_uvd = FALSE;
+    ws->info.has_uvd = false;
     ws->info.vce_fw_version = 0x00000000;
     if (ws->info.drm_minor >= 32) {
 	uint32_t value = RADEON_CS_RING_UVD;
@@ -368,7 +368,7 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
     if (retval) {
         fprintf(stderr, "radeon: Failed to get MM info, error number %d\n",
                 retval);
-        return FALSE;
+        return false;
     }
     ws->info.gart_size = gem_info.gart_size;
     ws->info.vram_size = gem_info.vram_size;
@@ -388,12 +388,12 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
         if (!radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_GB_PIPES,
                                   "GB pipe count",
                                   &ws->info.r300_num_gb_pipes))
-            return FALSE;
+            return false;
 
         if (!radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_Z_PIPES,
                                   "Z pipe count",
                                   &ws->info.r300_num_z_pipes))
-            return FALSE;
+            return false;
     }
     else if (ws->gen >= DRV_R600) {
         uint32_t tiling_config = 0;
@@ -401,7 +401,7 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
         if (!radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_BACKENDS,
                                   "num backends",
                                   &ws->info.num_render_backends))
-            return FALSE;
+            return false;
 
         /* get the GPU counter frequency, failure is not fatal */
         radeon_get_drm_value(ws->fd, RADEON_INFO_CLOCK_CRYSTAL_FREQ, NULL,
@@ -437,24 +437,24 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
 
         if (radeon_get_drm_value(ws->fd, RADEON_INFO_BACKEND_MAP, NULL,
                                   &ws->info.r600_gb_backend_map))
-            ws->info.r600_gb_backend_map_valid = TRUE;
+            ws->info.r600_gb_backend_map_valid = true;
 
-        ws->info.has_virtual_memory = FALSE;
+        ws->info.has_virtual_memory = false;
         if (ws->info.drm_minor >= 13) {
             uint32_t ib_vm_max_size;
 
-            ws->info.has_virtual_memory = TRUE;
+            ws->info.has_virtual_memory = true;
             if (!radeon_get_drm_value(ws->fd, RADEON_INFO_VA_START, NULL,
                                       &ws->va_start))
-                ws->info.has_virtual_memory = FALSE;
+                ws->info.has_virtual_memory = false;
             if (!radeon_get_drm_value(ws->fd, RADEON_INFO_IB_VM_MAX_SIZE, NULL,
                                       &ib_vm_max_size))
-                ws->info.has_virtual_memory = FALSE;
+                ws->info.has_virtual_memory = false;
             radeon_get_drm_value(ws->fd, RADEON_INFO_VA_UNMAP_WORKING, NULL,
                                  &ws->va_unmap_working);
         }
-	if (ws->gen == DRV_R600 && !debug_get_bool_option("RADEON_VA", FALSE))
-		ws->info.has_virtual_memory = FALSE;
+	if (ws->gen == DRV_R600 && !debug_get_bool_option("RADEON_VA", false))
+		ws->info.has_virtual_memory = false;
     }
 
     /* Get max pipes, this is only needed for compute shaders.  All evergreen+
@@ -501,14 +501,14 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
                 "returned accel_working2 value %u is smaller than 2. "
                 "Please install a newer kernel.\n",
                 ws->accel_working2);
-        return FALSE;
+        return false;
     }
 
     if (ws->info.chip_class == CIK) {
         if (!radeon_get_drm_value(ws->fd, RADEON_INFO_CIK_MACROTILE_MODE_ARRAY, NULL,
                                   ws->info.cik_macrotile_mode_array)) {
             fprintf(stderr, "radeon: Kernel 3.13 is required for CIK support.\n");
-            return FALSE;
+            return false;
         }
     }
 
@@ -516,7 +516,7 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
         if (!radeon_get_drm_value(ws->fd, RADEON_INFO_SI_TILE_MODE_ARRAY, NULL,
                                   ws->info.si_tile_mode_array)) {
             fprintf(stderr, "radeon: Kernel 3.10 is required for SI support.\n");
-            return FALSE;
+            return false;
         }
     }
 
@@ -529,7 +529,7 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
 
     ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
 
-    return TRUE;
+    return true;
 }
 
 static void radeon_winsys_destroy(struct radeon_winsys *rws)
@@ -566,9 +566,9 @@ static void radeon_query_info(struct radeon_winsys *rws,
     *info = ((struct radeon_drm_winsys *)rws)->info;
 }
 
-static boolean radeon_cs_request_feature(struct radeon_winsys_cs *rcs,
-                                         enum radeon_feature_id fid,
-                                         boolean enable)
+static bool radeon_cs_request_feature(struct radeon_winsys_cs *rcs,
+                                      enum radeon_feature_id fid,
+                                      bool enable)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
 
@@ -585,7 +585,7 @@ static boolean radeon_cs_request_feature(struct radeon_winsys_cs *rcs,
                                     RADEON_INFO_WANT_CMASK, "AA optimizations",
                                     enable);
     }
-    return FALSE;
+    return false;
 }
 
 static uint64_t radeon_query_value(struct radeon_winsys *rws,
@@ -683,7 +683,7 @@ static int compare_fd(void *key1, void *key2)
            stat1.st_rdev != stat2.st_rdev;
 }
 
-DEBUG_GET_ONCE_BOOL_OPTION(thread, "RADEON_THREAD", TRUE)
+DEBUG_GET_ONCE_BOOL_OPTION(thread, "RADEON_THREAD", true)
 
 static bool radeon_winsys_unref(struct radeon_winsys *ws)
 {

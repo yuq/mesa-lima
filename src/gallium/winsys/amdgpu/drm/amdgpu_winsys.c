@@ -93,7 +93,7 @@ static unsigned cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
 }
 
 /* Helper function to do the ioctls needed for setup and init. */
-static boolean do_winsys_init(struct amdgpu_winsys *ws, int fd)
+static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
 {
    struct amdgpu_buffer_size_alignments alignment_info = {};
    struct amdgpu_heap_info vram, gtt;
@@ -270,12 +270,12 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws, int fd)
    ws->info.has_uvd = uvd.available_rings != 0;
    ws->info.vce_fw_version =
          vce.available_rings ? vce_version : 0;
-   ws->info.has_userptr = TRUE;
+   ws->info.has_userptr = true;
    ws->info.num_render_backends = ws->amdinfo.rb_pipes;
    ws->info.clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
    ws->info.num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
    ws->info.pipe_interleave_bytes = 256 << ((ws->amdinfo.gb_addr_cfg >> 4) & 0x7);
-   ws->info.has_virtual_memory = TRUE;
+   ws->info.has_virtual_memory = true;
    ws->info.has_sdma = dma.available_rings != 0;
 
    /* Get the number of good compute units. */
@@ -296,14 +296,14 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws, int fd)
 
    ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
 
-   return TRUE;
+   return true;
 
 fail:
    if (ws->addrlib)
       AddrDestroy(ws->addrlib);
    amdgpu_device_deinitialize(ws->dev);
    ws->dev = NULL;
-   return FALSE;
+   return false;
 }
 
 static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
@@ -327,11 +327,11 @@ static void amdgpu_winsys_query_info(struct radeon_winsys *rws,
    *info = ((struct amdgpu_winsys *)rws)->info;
 }
 
-static boolean amdgpu_cs_request_feature(struct radeon_winsys_cs *rcs,
-                                         enum radeon_feature_id fid,
-                                         boolean enable)
+static bool amdgpu_cs_request_feature(struct radeon_winsys_cs *rcs,
+                                      enum radeon_feature_id fid,
+                                      bool enable)
 {
-   return FALSE;
+   return false;
 }
 
 static uint64_t amdgpu_query_value(struct radeon_winsys *rws,
@@ -397,7 +397,7 @@ static int compare_dev(void *key1, void *key2)
    return key1 != key2;
 }
 
-DEBUG_GET_ONCE_BOOL_OPTION(thread, "RADEON_THREAD", TRUE)
+DEBUG_GET_ONCE_BOOL_OPTION(thread, "RADEON_THREAD", true)
 
 static bool amdgpu_winsys_unref(struct radeon_winsys *rws)
 {

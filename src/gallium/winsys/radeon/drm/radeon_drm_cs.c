@@ -92,8 +92,8 @@ static void radeon_drm_ctx_destroy(struct radeon_winsys_ctx *ctx)
     /* No context support here. */
 }
 
-static boolean radeon_init_cs_context(struct radeon_cs_context *csc,
-                                      struct radeon_drm_winsys *ws)
+static bool radeon_init_cs_context(struct radeon_cs_context *csc,
+                                   struct radeon_drm_winsys *ws)
 {
     int i;
 
@@ -102,14 +102,14 @@ static boolean radeon_init_cs_context(struct radeon_cs_context *csc,
     csc->relocs_bo = (struct radeon_bo_item*)
                      CALLOC(1, csc->nrelocs * sizeof(csc->relocs_bo[0]));
     if (!csc->relocs_bo) {
-        return FALSE;
+        return false;
     }
 
     csc->relocs = (struct drm_radeon_cs_reloc*)
                   CALLOC(1, csc->nrelocs * sizeof(struct drm_radeon_cs_reloc));
     if (!csc->relocs) {
         FREE(csc->relocs_bo);
-        return FALSE;
+        return false;
     }
 
     csc->chunks[0].chunk_id = RADEON_CHUNK_ID_IB;
@@ -131,7 +131,7 @@ static boolean radeon_init_cs_context(struct radeon_cs_context *csc,
     for (i = 0; i < ARRAY_SIZE(csc->reloc_indices_hashlist); i++) {
         csc->reloc_indices_hashlist[i] = -1;
     }
-    return TRUE;
+    return true;
 }
 
 static void radeon_cs_context_cleanup(struct radeon_cs_context *csc)
@@ -347,10 +347,10 @@ static int radeon_drm_cs_lookup_buffer(struct radeon_winsys_cs *rcs,
     return radeon_lookup_buffer(cs->csc, (struct radeon_bo*)buf);
 }
 
-static boolean radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
+static bool radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
-    boolean status =
+    bool status =
         cs->csc->used_gart < cs->ws->info.gart_size * 0.8 &&
         cs->csc->used_vram < cs->ws->info.vram_size * 0.8;
 
@@ -389,7 +389,7 @@ static bool radeon_drm_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
    return rcs->current.max_dw - rcs->current.cdw >= dw;
 }
 
-static boolean radeon_drm_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint64_t vram, uint64_t gtt)
+static bool radeon_drm_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint64_t vram, uint64_t gtt)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
 
@@ -438,7 +438,7 @@ void radeon_drm_cs_emit_ioctl_oneshot(void *job, int thread_index)
     if (r) {
 	if (r == -ENOMEM)
 	    fprintf(stderr, "radeon: Not enough memory for command submission.\n");
-	else if (debug_get_bool_option("RADEON_DUMP_CS", FALSE)) {
+	else if (debug_get_bool_option("RADEON_DUMP_CS", false)) {
             unsigned i;
 
             fprintf(stderr, "radeon: The kernel rejected CS, dumping...\n");
@@ -469,7 +469,7 @@ void radeon_drm_cs_sync_flush(struct radeon_winsys_cs *rcs)
         util_queue_job_wait(&cs->flush_completed);
 }
 
-DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", FALSE)
+DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", false)
 
 static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
                                 unsigned flags,
@@ -618,27 +618,27 @@ static void radeon_drm_cs_destroy(struct radeon_winsys_cs *rcs)
     FREE(cs);
 }
 
-static boolean radeon_bo_is_referenced(struct radeon_winsys_cs *rcs,
-                                       struct pb_buffer *_buf,
-                                       enum radeon_bo_usage usage)
+static bool radeon_bo_is_referenced(struct radeon_winsys_cs *rcs,
+                                    struct pb_buffer *_buf,
+                                    enum radeon_bo_usage usage)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
     struct radeon_bo *bo = (struct radeon_bo*)_buf;
     int index;
 
     if (!bo->num_cs_references)
-        return FALSE;
+        return false;
 
     index = radeon_lookup_buffer(cs->csc, bo);
     if (index == -1)
-        return FALSE;
+        return false;
 
     if ((usage & RADEON_USAGE_WRITE) && cs->csc->relocs[index].write_domain)
-        return TRUE;
+        return true;
     if ((usage & RADEON_USAGE_READ) && cs->csc->relocs[index].read_domains)
-        return TRUE;
+        return true;
 
-    return FALSE;
+    return false;
 }
 
 /* FENCES */

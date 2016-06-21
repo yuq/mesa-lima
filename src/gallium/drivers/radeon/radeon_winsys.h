@@ -254,10 +254,10 @@ struct radeon_info {
     uint64_t                    gart_size;
     uint64_t                    vram_size;
     bool                        has_dedicated_vram;
-    boolean                     has_virtual_memory;
+    bool                        has_virtual_memory;
     bool                        gfx_ib_pad_with_type2;
-    boolean                     has_sdma;
-    boolean                     has_uvd;
+    bool                        has_sdma;
+    bool                        has_uvd;
     uint32_t                    vce_fw_version;
     uint32_t                    vce_harvest_config;
     uint32_t                    clock_crystal_freq;
@@ -266,7 +266,7 @@ struct radeon_info {
     uint32_t                    drm_major; /* version */
     uint32_t                    drm_minor;
     uint32_t                    drm_patchlevel;
-    boolean                     has_userptr;
+    bool                        has_userptr;
 
     /* Shader cores. */
     uint32_t                    r600_max_quad_pipes; /* wave size / 16 */
@@ -279,7 +279,7 @@ struct radeon_info {
     uint32_t                    r300_num_gb_pipes;
     uint32_t                    r300_num_z_pipes;
     uint32_t                    r600_gb_backend_map; /* R600 harvest config */
-    boolean                     r600_gb_backend_map_valid;
+    bool                        r600_gb_backend_map_valid;
     uint32_t                    r600_num_banks;
     uint32_t                    num_render_backends;
     uint32_t                    num_tile_pipes; /* pipe count from PIPE_CONFIG */
@@ -554,12 +554,12 @@ struct radeon_winsys {
      * \param buf       A winsys buffer object to get the handle from.
      * \param whandle   A winsys handle pointer.
      * \param stride    A stride of the buffer in bytes, for texturing.
-     * \return          TRUE on success.
+     * \return          true on success.
      */
-    boolean (*buffer_get_handle)(struct pb_buffer *buf,
-                                 unsigned stride, unsigned offset,
-                                 unsigned slice_size,
-                                 struct winsys_handle *whandle);
+    bool (*buffer_get_handle)(struct pb_buffer *buf,
+                              unsigned stride, unsigned offset,
+                              unsigned slice_size,
+                              struct winsys_handle *whandle);
 
     /**
      * Return the virtual address of a buffer.
@@ -676,14 +676,14 @@ struct radeon_winsys {
                             struct pb_buffer *buf);
 
     /**
-     * Return TRUE if there is enough memory in VRAM and GTT for the buffers
+     * Return true if there is enough memory in VRAM and GTT for the buffers
      * added so far. If the validation fails, all buffers which have
      * been added since the last call of cs_validate will be removed and
      * the CS will be flushed (provided there are still any buffers).
      *
      * \param cs        A command stream to validate.
      */
-    boolean (*cs_validate)(struct radeon_winsys_cs *cs);
+    bool (*cs_validate)(struct radeon_winsys_cs *cs);
 
     /**
      * Check whether the given number of dwords is available in the IB.
@@ -695,14 +695,15 @@ struct radeon_winsys {
     bool (*cs_check_space)(struct radeon_winsys_cs *cs, unsigned dw);
 
     /**
-     * Return TRUE if there is enough memory in VRAM and GTT for the buffers
+     * Return true if there is enough memory in VRAM and GTT for the buffers
      * added so far.
      *
      * \param cs        A command stream to validate.
      * \param vram      VRAM memory size pending to be use
      * \param gtt       GTT memory size pending to be use
      */
-    boolean (*cs_memory_below_limit)(struct radeon_winsys_cs *cs, uint64_t vram, uint64_t gtt);
+    bool (*cs_memory_below_limit)(struct radeon_winsys_cs *cs,
+                                  uint64_t vram, uint64_t gtt);
 
     uint64_t (*cs_query_memory_usage)(struct radeon_winsys_cs *cs);
 
@@ -729,14 +730,14 @@ struct radeon_winsys {
                      struct pipe_fence_handle **fence);
 
     /**
-     * Return TRUE if a buffer is referenced by a command stream.
+     * Return true if a buffer is referenced by a command stream.
      *
      * \param cs        A command stream.
      * \param buf       A winsys buffer.
      */
-    boolean (*cs_is_buffer_referenced)(struct radeon_winsys_cs *cs,
-                                       struct pb_buffer *buf,
-                                       enum radeon_bo_usage usage);
+    bool (*cs_is_buffer_referenced)(struct radeon_winsys_cs *cs,
+                                    struct pb_buffer *buf,
+                                    enum radeon_bo_usage usage);
 
     /**
      * Request access to a feature for a command stream.
@@ -745,9 +746,9 @@ struct radeon_winsys {
      * \param fid       Feature ID, one of RADEON_FID_*
      * \param enable    Whether to enable or disable the feature.
      */
-    boolean (*cs_request_feature)(struct radeon_winsys_cs *cs,
-                                  enum radeon_feature_id fid,
-                                  boolean enable);
+    bool (*cs_request_feature)(struct radeon_winsys_cs *cs,
+                               enum radeon_feature_id fid,
+                               bool enable);
      /**
       * Make sure all asynchronous flush of the cs have completed
       *

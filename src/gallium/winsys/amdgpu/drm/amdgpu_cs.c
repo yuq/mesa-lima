@@ -118,7 +118,7 @@ bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
 				    &expired);
    if (r) {
       fprintf(stderr, "amdgpu: amdgpu_cs_query_fence_status failed.\n");
-      return FALSE;
+      return false;
    }
 
    if (expired) {
@@ -497,8 +497,8 @@ static void amdgpu_ib_finalize(struct amdgpu_ib *ib)
    ib->max_ib_size = MAX2(ib->max_ib_size, ib->base.prev_dw + ib->base.current.cdw);
 }
 
-static boolean amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
-                                      enum ring_type ring_type)
+static bool amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
+                                   enum ring_type ring_type)
 {
    int i;
 
@@ -529,20 +529,20 @@ static boolean amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
    cs->buffers = (struct amdgpu_cs_buffer*)
                   CALLOC(1, cs->max_num_buffers * sizeof(struct amdgpu_cs_buffer));
    if (!cs->buffers) {
-      return FALSE;
+      return false;
    }
 
    cs->handles = CALLOC(1, cs->max_num_buffers * sizeof(amdgpu_bo_handle));
    if (!cs->handles) {
       FREE(cs->buffers);
-      return FALSE;
+      return false;
    }
 
    cs->flags = CALLOC(1, cs->max_num_buffers);
    if (!cs->flags) {
       FREE(cs->handles);
       FREE(cs->buffers);
-      return FALSE;
+      return false;
    }
 
    for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
@@ -556,7 +556,7 @@ static boolean amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
    cs->ib[IB_CONST_PREAMBLE].flags = AMDGPU_IB_FLAG_CE |
                                      AMDGPU_IB_FLAG_PREAMBLE;
 
-   return TRUE;
+   return true;
 }
 
 static void amdgpu_cs_context_cleanup(struct amdgpu_cs_context *cs)
@@ -698,9 +698,9 @@ static int amdgpu_cs_lookup_buffer(struct radeon_winsys_cs *rcs,
    return amdgpu_lookup_buffer(cs->csc, (struct amdgpu_winsys_bo*)buf);
 }
 
-static boolean amdgpu_cs_validate(struct radeon_winsys_cs *rcs)
+static bool amdgpu_cs_validate(struct radeon_winsys_cs *rcs)
 {
-   return TRUE;
+   return true;
 }
 
 static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
@@ -784,7 +784,8 @@ static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
    return true;
 }
 
-static boolean amdgpu_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint64_t vram, uint64_t gtt)
+static bool amdgpu_cs_memory_below_limit(struct radeon_winsys_cs *rcs,
+                                         uint64_t vram, uint64_t gtt)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct amdgpu_winsys *ws = cs->ctx->ws;
@@ -823,7 +824,7 @@ static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
     return cs->num_buffers;
 }
 
-DEBUG_GET_ONCE_BOOL_OPTION(all_bos, "RADEON_ALL_BOS", FALSE)
+DEBUG_GET_ONCE_BOOL_OPTION(all_bos, "RADEON_ALL_BOS", false)
 
 /* Since the kernel driver doesn't synchronize execution between different
  * rings automatically, we have to add fence dependencies manually.
@@ -965,7 +966,7 @@ void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs)
       util_queue_job_wait(&cs->flush_completed);
 }
 
-DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", FALSE)
+DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", false)
 
 static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
                             unsigned flags,
@@ -1088,9 +1089,9 @@ static void amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)
    FREE(cs);
 }
 
-static boolean amdgpu_bo_is_referenced(struct radeon_winsys_cs *rcs,
-                                       struct pb_buffer *_buf,
-                                       enum radeon_bo_usage usage)
+static bool amdgpu_bo_is_referenced(struct radeon_winsys_cs *rcs,
+                                    struct pb_buffer *_buf,
+                                    enum radeon_bo_usage usage)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)_buf;

@@ -182,7 +182,7 @@ amdgpu_cs_from_ib(struct amdgpu_ib *ib)
    }
 }
 
-static inline boolean
+static inline bool
 amdgpu_bo_is_referenced_by_cs(struct amdgpu_cs *cs,
                               struct amdgpu_winsys_bo *bo)
 {
@@ -191,7 +191,7 @@ amdgpu_bo_is_referenced_by_cs(struct amdgpu_cs *cs,
          (num_refs && amdgpu_lookup_buffer(cs->csc, bo) != -1);
 }
 
-static inline boolean
+static inline bool
 amdgpu_bo_is_referenced_by_cs_with_usage(struct amdgpu_cs *cs,
                                          struct amdgpu_winsys_bo *bo,
                                          enum radeon_bo_usage usage)
@@ -199,16 +199,16 @@ amdgpu_bo_is_referenced_by_cs_with_usage(struct amdgpu_cs *cs,
    int index;
 
    if (!bo->num_cs_references)
-      return FALSE;
+      return false;
 
    index = amdgpu_lookup_buffer(cs->csc, bo);
    if (index == -1)
-      return FALSE;
+      return false;
 
    return (cs->csc->buffers[index].usage & usage) != 0;
 }
 
-static inline boolean
+static inline bool
 amdgpu_bo_is_referenced_by_any_cs(struct amdgpu_winsys_bo *bo)
 {
    return bo->num_cs_references != 0;
