@@ -43,7 +43,11 @@ static void si_destroy_context(struct pipe_context *context)
 	struct si_context *sctx = (struct si_context *)context;
 	int i;
 
-	si_dec_framebuffer_counters(&sctx->framebuffer.state);
+	/* Unreference the framebuffer normally to disable related logic
+	 * properly.
+	 */
+	struct pipe_framebuffer_state fb = {};
+	context->set_framebuffer_state(context, &fb);
 
 	si_release_all_descriptors(sctx);
 
@@ -79,7 +83,6 @@ static void si_destroy_context(struct pipe_context *context)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_fastclear);
 	if (sctx->custom_blend_dcc_decompress)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_dcc_decompress);
-	util_unreference_framebuffer_state(&sctx->framebuffer.state);
 
 	if (sctx->blitter)
 		util_blitter_destroy(sctx->blitter);

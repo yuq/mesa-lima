@@ -332,7 +332,6 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 			      const struct pipe_sampler_view *state,
 			      unsigned width0, unsigned height0,
 			      unsigned force_level);
-void si_dec_framebuffer_counters(const struct pipe_framebuffer_state *state);
 
 /* si_state_shader.c */
 bool si_update_shaders(struct si_context *sctx);

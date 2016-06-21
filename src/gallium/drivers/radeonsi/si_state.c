@@ -2209,7 +2209,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 	surf->depth_initialized = true;
 }
 
-void si_dec_framebuffer_counters(const struct pipe_framebuffer_state *state)
+static void si_dec_framebuffer_counters(const struct pipe_framebuffer_state *state)
 {
 	for (int i = 0; i < state->nr_cbufs; ++i) {
 		struct r600_surface *surf = NULL;
