@@ -238,13 +238,8 @@ OUT_RELOCW(struct fd_ringbuffer *ring, struct fd_bo *bo,
 
 static inline void BEGIN_RING(struct fd_ringbuffer *ring, uint32_t ndwords)
 {
-	if ((ring->cur + ndwords) >= ring->end) {
-		/* this probably won't really work if we have multiple tiles..
-		 * but it is ok for 2d..  we might need different behavior
-		 * depending on 2d or 3d pipe.
-		 */
-		DBG("uh oh..");
-	}
+	if (ring->cur + ndwords >= ring->end)
+		fd_ringbuffer_grow(ring, ndwords);
 }
 
 static inline void
@@ -252,6 +247,13 @@ OUT_PKT0(struct fd_ringbuffer *ring, uint16_t regindx, uint16_t cnt)
 {
 	BEGIN_RING(ring, cnt+1);
 	OUT_RING(ring, CP_TYPE0_PKT | ((cnt-1) << 16) | (regindx & 0x7FFF));
+}
+
+static inline void
+OUT_PKT2(struct fd_ringbuffer *ring)
+{
+	BEGIN_RING(ring, 1);
+	OUT_RING(ring, CP_TYPE2_PKT);
 }
 
 static inline void
@@ -271,9 +273,7 @@ OUT_WFI(struct fd_ringbuffer *ring)
 static inline void
 __OUT_IB(struct fd_ringbuffer *ring, bool prefetch, struct fd_ringbuffer *target)
 {
-	uint32_t dwords = target->cur - target->start;
-
-	assert(dwords > 0);
+	unsigned count = fd_ringbuffer_cmd_count(target);
 
 	/* for debug after a lock up, write a unique counter value
 	 * to scratch6 for each IB, to make it easier to match up
@@ -283,9 +283,14 @@ __OUT_IB(struct fd_ringbuffer *ring, bool prefetch, struct fd_ringbuffer *target
 	 */
 	emit_marker(ring, 6);
 
-	OUT_PKT3(ring, prefetch ? CP_INDIRECT_BUFFER_PFE : CP_INDIRECT_BUFFER_PFD, 2);
-	fd_ringbuffer_emit_reloc_ring_full(ring, target, 0);
-	OUT_RING(ring, dwords);
+	for (unsigned i = 0; i < count; i++) {
+		uint32_t dwords;
+		OUT_PKT3(ring, prefetch ? CP_INDIRECT_BUFFER_PFE : CP_INDIRECT_BUFFER_PFD, 2);
+		dwords = fd_ringbuffer_emit_reloc_ring_full(ring, target, i) / 4;
+		assert(dwords > 0);
+		OUT_RING(ring, dwords);
+		OUT_PKT2(ring);
+	}
 
 	emit_marker(ring, 6);
 }

@@ -36,6 +36,7 @@ fd_batch_create(struct fd_context *ctx)
 {
 	struct fd_batch *batch = CALLOC_STRUCT(fd_batch);
 	static unsigned seqno = 0;
+	unsigned size = 0;
 
 	if (!batch)
 		return NULL;
@@ -44,13 +45,18 @@ fd_batch_create(struct fd_context *ctx)
 	batch->seqno = ++seqno;
 	batch->ctx = ctx;
 
-	/* TODO how to pick a good size?  Or maybe we should introduce
-	 * fd_ringlist?  Also, make sure size is aligned with bo-cache
-	 * bucket size, since otherwise that will round up size..
+	/* if kernel is too old to support unlimited # of cmd buffers, we
+	 * have no option but to allocate large worst-case sizes so that
+	 * we don't need to grow the ringbuffer.  Performance is likely to
+	 * suffer, but there is no good alternative.
 	 */
-	batch->draw    = fd_ringbuffer_new(ctx->screen->pipe, 0x10000);
-	batch->binning = fd_ringbuffer_new(ctx->screen->pipe, 0x10000);
-	batch->gmem    = fd_ringbuffer_new(ctx->screen->pipe, 0x10000);
+	if (fd_device_version(ctx->screen->dev) < FD_VERSION_UNLIMITED_CMDS) {
+		size = 0x100000;
+	}
+
+	batch->draw    = fd_ringbuffer_new(ctx->screen->pipe, size);
+	batch->binning = fd_ringbuffer_new(ctx->screen->pipe, size);
+	batch->gmem    = fd_ringbuffer_new(ctx->screen->pipe, size);
 
 	fd_ringbuffer_set_parent(batch->gmem, NULL);
 	fd_ringbuffer_set_parent(batch->draw, batch->gmem);
@@ -117,10 +123,9 @@ fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc,
 void
 fd_batch_check_size(struct fd_batch *batch)
 {
-	/* TODO eventually support having a list of draw/binning rb's
-	 * and if we are too close to the end, add another to the
-	 * list.  For now we just flush.
-	 */
+	if (fd_device_version(batch->ctx->screen->dev) >= FD_VERSION_UNLIMITED_CMDS)
+		return;
+
 	struct fd_ringbuffer *ring = batch->draw;
 	if (((ring->cur - ring->start) > (ring->size/4 - 0x1000)) ||
 			(fd_mesa_debug & FD_DBG_FLUSH))
