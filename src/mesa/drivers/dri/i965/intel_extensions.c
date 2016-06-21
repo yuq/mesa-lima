@@ -206,6 +206,7 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.ARB_shader_bit_encoding = true;
    ctx->Extensions.ARB_shader_draw_parameters = true;
    ctx->Extensions.ARB_shader_texture_lod = true;
+   ctx->Extensions.ARB_shading_language_packing = true;
    ctx->Extensions.ARB_shadow = true;
    ctx->Extensions.ARB_sync = true;
    ctx->Extensions.ARB_texture_border_clamp = true;
@@ -299,7 +300,6 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_fragment_layer_viewport = true;
       ctx->Extensions.ARB_sample_shading = true;
       ctx->Extensions.ARB_shading_language_420pack = true;
-      ctx->Extensions.ARB_shading_language_packing = true;
       ctx->Extensions.ARB_texture_buffer_object = true;
       ctx->Extensions.ARB_texture_buffer_object_rgb32 = true;
       ctx->Extensions.ARB_texture_buffer_range = true;
