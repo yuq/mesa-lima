@@ -512,6 +512,12 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
 
+      /* The exact descriptor layout is pulled from the pipeline, so we need
+       * to re-emit binding tables on every pipeline change.
+       */
+      cmd_buffer->state.descriptors_dirty |=
+         cmd_buffer->state.pipeline->active_stages;
+
       /* If the pipeline changed, we may need to re-allocate push constant
        * space in the URB.
        */
