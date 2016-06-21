@@ -26,9 +26,11 @@
  */
 #include "r600_pipe_common.h"
 #include "r600_cs.h"
+#include "r600_query.h"
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_pack_color.h"
+#include "os/os_time.h"
 #include <errno.h>
 #include <inttypes.h>
 
@@ -567,6 +569,7 @@ static void r600_texture_destroy(struct pipe_screen *screen,
 	}
 	pb_reference(&resource->buf, NULL);
 	r600_resource_reference(&rtex->dcc_separate_buffer, NULL);
+	r600_resource_reference(&rtex->last_dcc_separate_buffer, NULL);
 	FREE(rtex);
 }
 
@@ -1017,6 +1020,13 @@ r600_texture_create_object(struct pipe_screen *screen,
 	rtex->non_disp_tiling = rtex->is_depth && rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D;
 	/* Applies to GCN. */
 	rtex->last_msaa_resolve_target_micro_mode = rtex->surface.micro_tile_mode;
+
+	/* We want to optimistically enable separate DCC on the first clear
+	 * for apps that don't call SwapBuffers or call it too late, so set
+	 * a very high number at the beginning. If the PS/draw ratio is too
+	 * low, the first DCC decompression will disable DCC.
+	 */
+	rtex->ps_draw_ratio = 100;
 
 	if (rtex->is_depth) {
 		if (!(base->flags & (R600_RESOURCE_FLAG_TRANSFER |
@@ -1705,6 +1715,226 @@ unsigned r600_translate_colorswap(enum pipe_format format, bool do_endian_swap)
 	return ~0U;
 }
 
+/* PIPELINE_STAT-BASED DCC ENABLEMENT FOR DISPLAYABLE SURFACES */
+
+/**
+ * Return the per-context slot where DCC statistics queries for the texture live.
+ */
+static unsigned vi_get_context_dcc_stats_index(struct r600_common_context *rctx,
+					       struct r600_texture *tex)
+{
+	int i, empty_slot = -1;
+
+	for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats); i++) {
+		/* Return if found. */
+		if (rctx->dcc_stats[i].tex == tex) {
+			rctx->dcc_stats[i].last_use_timestamp = os_time_get();
+			return i;
+		}
+
+		/* Record the first seen empty slot. */
+		if (empty_slot == -1 && !rctx->dcc_stats[i].tex)
+			empty_slot = i;
+	}
+
+	/* Not found. Remove the oldest member to make space in the array. */
+	if (empty_slot == -1) {
+		int oldest_slot = 0;
+
+		/* Find the oldest slot. */
+		for (i = 1; i < ARRAY_SIZE(rctx->dcc_stats); i++)
+			if (rctx->dcc_stats[oldest_slot].last_use_timestamp >
+			    rctx->dcc_stats[i].last_use_timestamp)
+				oldest_slot = i;
+
+		/* Clean up the oldest slot. */
+		if (rctx->dcc_stats[oldest_slot].query_active)
+			vi_separate_dcc_stop_query(&rctx->b,
+						   rctx->dcc_stats[oldest_slot].tex);
+
+		for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats[oldest_slot].ps_stats); i++)
+			if (rctx->dcc_stats[oldest_slot].ps_stats[i]) {
+				rctx->b.destroy_query(&rctx->b,
+						      rctx->dcc_stats[oldest_slot].ps_stats[i]);
+				rctx->dcc_stats[oldest_slot].ps_stats[i] = NULL;
+			}
+
+		pipe_resource_reference((struct pipe_resource**)
+					&rctx->dcc_stats[oldest_slot].tex, NULL);
+		empty_slot = oldest_slot;
+	}
+
+	/* Add the texture to the new slot. */
+	pipe_resource_reference((struct pipe_resource**)&rctx->dcc_stats[empty_slot].tex,
+				&tex->resource.b.b);
+	rctx->dcc_stats[empty_slot].last_use_timestamp = os_time_get();
+	return empty_slot;
+}
+
+static struct pipe_query *
+vi_create_resuming_pipestats_query(struct pipe_context *ctx)
+{
+	struct r600_query_hw *query = (struct r600_query_hw*)
+		ctx->create_query(ctx, PIPE_QUERY_PIPELINE_STATISTICS, 0);
+
+	query->flags |= R600_QUERY_HW_FLAG_BEGIN_RESUMES;
+	return (struct pipe_query*)query;
+}
+
+/**
+ * Called when binding a color buffer.
+ */
+void vi_separate_dcc_start_query(struct pipe_context *ctx,
+				 struct r600_texture *tex)
+{
+	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
+	unsigned i = vi_get_context_dcc_stats_index(rctx, tex);
+
+	assert(!rctx->dcc_stats[i].query_active);
+
+	if (!rctx->dcc_stats[i].ps_stats[0])
+		rctx->dcc_stats[i].ps_stats[0] = vi_create_resuming_pipestats_query(ctx);
+
+	/* begin or resume the query */
+	ctx->begin_query(ctx, rctx->dcc_stats[i].ps_stats[0]);
+	rctx->dcc_stats[i].query_active = true;
+}
+
+/**
+ * Called when unbinding a color buffer.
+ */
+void vi_separate_dcc_stop_query(struct pipe_context *ctx,
+				struct r600_texture *tex)
+{
+	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
+	unsigned i = vi_get_context_dcc_stats_index(rctx, tex);
+
+	assert(rctx->dcc_stats[i].query_active);
+	assert(rctx->dcc_stats[i].ps_stats[0]);
+
+	/* pause or end the query */
+	ctx->end_query(ctx, rctx->dcc_stats[i].ps_stats[0]);
+	rctx->dcc_stats[i].query_active = false;
+}
+
+static bool vi_should_enable_separate_dcc(struct r600_texture *tex)
+{
+	/* The minimum number of fullscreen draws per frame that is required
+	 * to enable DCC. */
+	return tex->ps_draw_ratio + tex->num_slow_clears >= 5;
+}
+
+/* Called by fast clear. */
+static void vi_separate_dcc_try_enable(struct r600_common_context *rctx,
+				       struct r600_texture *tex)
+{
+	/* The intent is to use this with shared displayable back buffers,
+	 * but it's not strictly limited only to them.
+	 */
+	if (!tex->resource.is_shared ||
+	    !(tex->resource.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) ||
+	    tex->resource.b.b.target != PIPE_TEXTURE_2D ||
+	    tex->surface.last_level > 0 ||
+	    !tex->surface.dcc_size)
+		return;
+
+	if (tex->dcc_offset)
+		return; /* already enabled */
+
+	if (!vi_should_enable_separate_dcc(tex))
+		return; /* stats show that DCC decompression is too expensive */
+
+	assert(tex->surface.level[0].dcc_enabled);
+	assert(!tex->dcc_separate_buffer);
+
+	r600_texture_discard_cmask(rctx->screen, tex);
+
+	/* Get a DCC buffer. */
+	if (tex->last_dcc_separate_buffer) {
+		assert(tex->dcc_gather_statistics);
+		assert(!tex->dcc_separate_buffer);
+		tex->dcc_separate_buffer = tex->last_dcc_separate_buffer;
+		tex->last_dcc_separate_buffer = NULL;
+	} else {
+		tex->dcc_separate_buffer = (struct r600_resource*)
+			r600_aligned_buffer_create(rctx->b.screen, 0,
+						   PIPE_USAGE_DEFAULT,
+						   tex->surface.dcc_size,
+						   tex->surface.dcc_alignment);
+		if (!tex->dcc_separate_buffer)
+			return;
+
+		/* Enabling for the first time, so start the query. */
+		tex->dcc_gather_statistics = true;
+		vi_separate_dcc_start_query(&rctx->b, tex);
+	}
+
+	/* dcc_offset is the absolute GPUVM address. */
+	tex->dcc_offset = tex->dcc_separate_buffer->gpu_address;
+
+	/* no need to flag anything since this is called by fast clear that
+	 * flags framebuffer state
+	 */
+}
+
+/**
+ * Called by pipe_context::flush_resource, the place where DCC decompression
+ * takes place.
+ */
+void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
+					     struct r600_texture *tex)
+{
+	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
+	unsigned i = vi_get_context_dcc_stats_index(rctx, tex);
+	bool query_active = rctx->dcc_stats[i].query_active;
+	bool disable = false;
+
+	if (rctx->dcc_stats[i].ps_stats[2]) {
+		union pipe_query_result result;
+
+		/* Read the results. */
+		ctx->get_query_result(ctx, rctx->dcc_stats[i].ps_stats[2],
+				      true, &result);
+		ctx->destroy_query(ctx, rctx->dcc_stats[i].ps_stats[2]);
+		rctx->dcc_stats[i].ps_stats[2] = NULL;
+
+		/* Compute the approximate number of fullscreen draws. */
+		tex->ps_draw_ratio =
+			result.pipeline_statistics.ps_invocations /
+			(tex->resource.b.b.width0 * tex->resource.b.b.height0);
+
+		disable = tex->dcc_separate_buffer &&
+			  !vi_should_enable_separate_dcc(tex);
+	}
+
+	tex->num_slow_clears = 0;
+
+	/* stop the statistics query for ps_stats[0] */
+	if (query_active)
+		vi_separate_dcc_stop_query(ctx, tex);
+
+	/* Move the queries in the queue by one. */
+	rctx->dcc_stats[i].ps_stats[2] = rctx->dcc_stats[i].ps_stats[1];
+	rctx->dcc_stats[i].ps_stats[1] = rctx->dcc_stats[i].ps_stats[0];
+	rctx->dcc_stats[i].ps_stats[0] = NULL;
+
+	/* create and start a new query as ps_stats[0] */
+	if (query_active)
+		vi_separate_dcc_start_query(ctx, tex);
+
+	if (disable) {
+		assert(!tex->last_dcc_separate_buffer);
+		tex->last_dcc_separate_buffer = tex->dcc_separate_buffer;
+		tex->dcc_separate_buffer = NULL;
+		tex->dcc_offset = 0;
+		/* no need to flag anything since this is called after
+		 * decompression that re-sets framebuffer state
+		 */
+	}
+}
+
+/* FAST COLOR CLEAR */
+
 static void evergreen_set_clear_color(struct r600_texture *rtex,
 				      enum pipe_format surface_format,
 				      const union pipe_color_union *color)
@@ -1966,6 +2196,22 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			continue;
 		}
 
+		/* Fast clear is the most appropriate place to enable DCC for
+		 * displayable surfaces.
+		 */
+		if (rctx->chip_class >= VI) {
+			vi_separate_dcc_try_enable(rctx, tex);
+
+			/* Stoney can't do a CMASK-based clear, so all clears are
+			 * considered to be hypothetically slow clears, which
+			 * is weighed when determining to enable separate DCC.
+			 */
+			if (tex->dcc_gather_statistics &&
+			    rctx->family == CHIP_STONEY)
+				tex->num_slow_clears++;
+		}
+
+		/* Try to clear DCC first, otherwise try CMASK. */
 		if (tex->dcc_offset && tex->surface.level[0].dcc_enabled) {
 			uint32_t reset_value;
 			bool clear_words_needed;
@@ -1982,6 +2228,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 
 			if (clear_words_needed)
 				tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
+			tex->separate_dcc_dirty = true;
 		} else {
 			/* Stoney/RB+ doesn't work with CMASK fast clear. */
 			if (rctx->family == CHIP_STONEY)

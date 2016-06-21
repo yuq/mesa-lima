@@ -1055,10 +1055,23 @@ static void si_flush_resource(struct pipe_context *ctx,
 	struct r600_texture *rtex = (struct r600_texture*)res;
 
 	assert(res->target != PIPE_BUFFER);
+	assert(!rtex->dcc_separate_buffer || rtex->dcc_gather_statistics);
+
+	/* st/dri calls flush twice per frame (not a bug), this prevents double
+	 * decompression. */
+	if (rtex->dcc_separate_buffer && !rtex->separate_dcc_dirty)
+		return;
 
 	if (!rtex->is_depth && (rtex->cmask.size || rtex->dcc_offset)) {
 		si_blit_decompress_color(ctx, rtex, 0, res->last_level,
-					 0, util_max_layer(res, 0), false);
+					 0, util_max_layer(res, 0),
+					 rtex->dcc_separate_buffer != NULL);
+	}
+
+	/* Always do the analysis even if DCC is disabled at the moment. */
+	if (rtex->dcc_gather_statistics && rtex->separate_dcc_dirty) {
+		rtex->separate_dcc_dirty = false;
+		vi_separate_dcc_process_and_reset_stats(ctx, rtex);
 	}
 }
 

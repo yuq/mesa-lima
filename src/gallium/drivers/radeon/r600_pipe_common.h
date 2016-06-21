@@ -268,10 +268,30 @@ struct r600_texture {
 	/* Whether the texture is a displayable back buffer and needs DCC
 	 * decompression, which is expensive. Therefore, it's enabled only
 	 * if statistics suggest that it will pay off and it's allocated
-	 * separately. Limited to target == 2D and last_level == 0. If enabled,
-	 * dcc_offset contains the absolute GPUVM address, not the relative one.
+	 * separately. It can't be bound as a sampler by apps. Limited to
+	 * target == 2D and last_level == 0. If enabled, dcc_offset contains
+	 * the absolute GPUVM address, not the relative one.
 	 */
 	struct r600_resource		*dcc_separate_buffer;
+	/* When DCC is temporarily disabled, the separate buffer is here. */
+	struct r600_resource		*last_dcc_separate_buffer;
+	/* We need to track DCC dirtiness, because st/dri usually calls
+	 * flush_resource twice per frame (not a bug) and we don't wanna
+	 * decompress DCC twice. Also, the dirty tracking must be done even
+	 * if DCC isn't used, because it's required by the DCC usage analysis
+	 * for a possible future enablement.
+	 */
+	bool				separate_dcc_dirty;
+	/* Statistics gathering for the DCC enablement heuristic. */
+	bool				dcc_gather_statistics;
+	/* Estimate of how much this color buffer is written to in units of
+	 * full-screen draws: ps_invocations / (width * height)
+	 * Shader kills, late Z, and blending with trivial discards make it
+	 * inaccurate (we need to count CB updates, not PS invocations).
+	 */
+	unsigned			ps_draw_ratio;
+	/* The number of clears since the last DCC usage analysis. */
+	unsigned			num_slow_clears;
 
 	/* Counter that should be non-zero if the texture is bound to a
 	 * framebuffer. Implemented in radeonsi only.
@@ -544,6 +564,21 @@ struct r600_common_context {
 	float				sample_locations_8x[8][2];
 	float				sample_locations_16x[16][2];
 
+	/* Statistics gathering for the DCC enablement heuristic. It can't be
+	 * in r600_texture because r600_texture can be shared by multiple
+	 * contexts. This is for back buffers only. We shouldn't get too many
+	 * of those.
+	 */
+	struct {
+		struct r600_texture		*tex;
+		/* Query queue: 0 = usually active, 1 = waiting, 2 = readback. */
+		struct pipe_query		*ps_stats[3];
+		/* If all slots are used and another slot is needed,
+		 * the least recently used slot is evicted based on this. */
+		int64_t				last_use_timestamp;
+		bool				query_active;
+	} dcc_stats[2];
+
 	/* The list of all texture buffer objects in this context.
 	 * This list is walked when a buffer is invalidated/reallocated and
 	 * the GPU addresses are updated. */
@@ -703,6 +738,12 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 						const struct pipe_surface *templ,
 						unsigned width, unsigned height);
 unsigned r600_translate_colorswap(enum pipe_format format, bool do_endian_swap);
+void vi_separate_dcc_start_query(struct pipe_context *ctx,
+				 struct r600_texture *tex);
+void vi_separate_dcc_stop_query(struct pipe_context *ctx,
+				struct r600_texture *tex);
+void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
+					     struct r600_texture *tex);
 void vi_dcc_clear_level(struct r600_common_context *rctx,
 			struct r600_texture *rtex,
 			unsigned level, unsigned clear_value);

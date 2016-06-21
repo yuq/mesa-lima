@@ -2236,6 +2236,15 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	unsigned old_nr_samples = sctx->framebuffer.nr_samples;
 	int i;
 
+	for (i = 0; i < sctx->framebuffer.state.nr_cbufs; i++) {
+		if (!sctx->framebuffer.state.cbufs[i])
+			continue;
+
+		rtex = (struct r600_texture*)sctx->framebuffer.state.cbufs[i]->texture;
+		if (rtex->dcc_gather_statistics)
+			vi_separate_dcc_stop_query(ctx, rtex);
+	}
+
 	/* Only flush TC when changing the framebuffer state, because
 	 * the only client not using TC that can change textures is
 	 * the framebuffer.
@@ -2307,6 +2316,12 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		r600_context_add_resource_size(ctx, surf->base.texture);
 
 		p_atomic_inc(&rtex->framebuffers_bound);
+
+		if (rtex->dcc_gather_statistics) {
+			/* Dirty tracking must be enabled for DCC usage analysis. */
+			sctx->framebuffer.compressed_cb_mask |= 1 << i;
+			vi_separate_dcc_start_query(ctx, rtex);
+		}
 	}
 	/* Set the second SPI format for possible dual-src blending. */
 	if (i == 1 && surf) {

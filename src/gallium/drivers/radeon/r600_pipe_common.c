@@ -472,6 +472,21 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 
 void r600_common_context_cleanup(struct r600_common_context *rctx)
 {
+	unsigned i,j;
+
+	/* Release DCC stats. */
+	for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats); i++) {
+		assert(!rctx->dcc_stats[i].query_active);
+
+		for (j = 0; j < ARRAY_SIZE(rctx->dcc_stats[i].ps_stats); j++)
+			if (rctx->dcc_stats[i].ps_stats[j])
+				rctx->b.destroy_query(&rctx->b,
+						      rctx->dcc_stats[i].ps_stats[j]);
+
+		pipe_resource_reference((struct pipe_resource**)
+					&rctx->dcc_stats[i].tex, NULL);
+	}
+
 	if (rctx->gfx.cs)
 		rctx->ws->cs_destroy(rctx->gfx.cs);
 	if (rctx->dma.cs)

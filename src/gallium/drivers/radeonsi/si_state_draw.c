@@ -1042,7 +1042,10 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			surf = sctx->framebuffer.state.cbufs[i];
 			rtex = (struct r600_texture*)surf->texture;
 
-			rtex->dirty_level_mask |= 1 << surf->u.tex.level;
+			if (rtex->fmask.size)
+				rtex->dirty_level_mask |= 1 << surf->u.tex.level;
+			if (rtex->dcc_gather_statistics)
+				rtex->separate_dcc_dirty = true;
 		} while (mask);
 	}
 
