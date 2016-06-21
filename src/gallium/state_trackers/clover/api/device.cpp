@@ -302,7 +302,10 @@ clGetDeviceInfo(cl_device_id d_dev, cl_device_info param,
 
    case CL_DEVICE_VERSION:
       buf.as_string() = "OpenCL 1.1 Mesa " PACKAGE_VERSION
-                        " (" MESA_GIT_SHA1 ")";
+#ifdef MESA_GIT_SHA1
+                        " (" MESA_GIT_SHA1 ")"
+#endif
+			;
       break;
 
    case CL_DEVICE_EXTENSIONS:
