@@ -328,6 +328,11 @@ public:
 
    src_reg setup_imm_df(double v);
 
+   vec4_instruction *shuffle_64bit_data(dst_reg dst, src_reg src,
+                                        bool for_write,
+                                        bblock_t *block = NULL,
+                                        vec4_instruction *ref = NULL);
+
    virtual void emit_nir_code();
    virtual void nir_setup_uniforms();
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);

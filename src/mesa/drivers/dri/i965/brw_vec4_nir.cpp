@@ -2224,4 +2224,75 @@ vec4_visitor::nir_emit_undef(nir_ssa_undef_instr *instr)
       dst_reg(VGRF, alloc.allocate(DIV_ROUND_UP(instr->def.bit_size, 32)));
 }
 
+/* SIMD4x2 64bit data is stored in register space like this:
+ *
+ * r0.0:DF  x0 y0 z0 w0
+ * r1.0:DF  x1 y1 z1 w1
+ *
+ * When we need to write data such as this to memory using 32-bit write
+ * messages we need to shuffle it in this fashion:
+ *
+ * r0.0:DF  x0 y0 x1 y1 (to be written at base offset)
+ * r0.0:DF  z0 w0 z1 w1 (to be written at base offset + 16)
+ *
+ * We need to do the inverse operation when we read using 32-bit messages,
+ * which we can do by applying the same exact shuffling on the 64-bit data
+ * read, only that because the data for each vertex is positioned differently
+ * we need to apply different channel enables.
+ *
+ * This function takes 64bit data and shuffles it as explained above.
+ *
+ * The @for_write parameter is used to specify if the shuffling is being done
+ * for proper SIMD4x2 64-bit data that needs to be shuffled prior to a 32-bit
+ * write message (for_write = true), or instead we are doing the inverse
+ * operation and we have just read 64-bit data using a 32-bit messages that we
+ * need to shuffle to create valid SIMD4x2 64-bit data (for_write = false).
+ *
+ * If @block and @ref are non-NULL, then the shuffling is done after @ref,
+ * otherwise the instructions are emitted normally at the end. The function
+ * returns the last instruction inserted.
+ *
+ * Notice that @src and @dst cannot be the same register.
+ */
+vec4_instruction *
+vec4_visitor::shuffle_64bit_data(dst_reg dst, src_reg src, bool for_write,
+                                 bblock_t *block, vec4_instruction *ref)
+{
+   assert(type_sz(src.type) == 8);
+   assert(type_sz(dst.type) == 8);
+   assert(!regions_overlap(dst, 2 * REG_SIZE, src, 2 * REG_SIZE));
+   assert(!ref == !block);
+
+   const vec4_builder bld = !ref ? vec4_builder(this).at_end() :
+                                   vec4_builder(this).at(block, ref->next);
+
+   /* Resolve swizzle in src */
+   vec4_instruction *inst;
+   if (src.swizzle != BRW_SWIZZLE_XYZW) {
+      dst_reg data = dst_reg(this, glsl_type::dvec4_type);
+      inst = bld.MOV(data, src);
+      src = src_reg(data);
+   }
+
+   /* dst+0.XY = src+0.XY */
+   inst = bld.group(4, 0).MOV(writemask(dst, WRITEMASK_XY), src);
+
+   /* dst+0.ZW = src+1.XY */
+   inst = bld.group(4, for_write ? 1 : 0)
+             .MOV(writemask(dst, WRITEMASK_ZW),
+                  swizzle(byte_offset(src, REG_SIZE), BRW_SWIZZLE_XYXY));
+
+   /* dst+1.XY = src+0.ZW */
+   inst = bld.group(4, for_write ? 0 : 1)
+            .MOV(writemask(byte_offset(dst, REG_SIZE), WRITEMASK_XY),
+                 swizzle(src, BRW_SWIZZLE_ZWZW));
+
+   /* dst+1.ZW = src+1.ZW */
+   inst = bld.group(4, 1)
+             .MOV(writemask(byte_offset(dst, REG_SIZE), WRITEMASK_ZW),
+                 byte_offset(src, REG_SIZE));
+
+   return inst;
+}
+
 }
