@@ -369,7 +369,7 @@ svga_context_finish(struct svga_context *svga)
    struct pipe_fence_handle *fence = NULL;
 
    svga_context_flush(svga, &fence);
-   svga->pipe.screen->fence_finish(screen, fence, PIPE_TIMEOUT_INFINITE);
+   screen->fence_finish(screen, fence, PIPE_TIMEOUT_INFINITE);
    screen->fence_reference(screen, &fence, NULL);
 }
 
