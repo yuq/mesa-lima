@@ -307,6 +307,8 @@ gen6_begin_query(struct gl_context *ctx, struct gl_query_object *q)
 
    case GL_PRIMITIVES_GENERATED:
       write_primitives_generated(brw, query->bo, query->Base.Stream, 0);
+      if (query->Base.Stream == 0)
+         ctx->NewDriverState |= BRW_NEW_RASTERIZER_DISCARD;
       break;
 
    case GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN:
@@ -359,6 +361,8 @@ gen6_end_query(struct gl_context *ctx, struct gl_query_object *q)
 
    case GL_PRIMITIVES_GENERATED:
       write_primitives_generated(brw, query->bo, query->Base.Stream, 1);
+      if (query->Base.Stream == 0)
+         ctx->NewDriverState |= BRW_NEW_RASTERIZER_DISCARD;
       break;
 
    case GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN:

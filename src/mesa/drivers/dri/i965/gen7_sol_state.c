@@ -214,6 +214,12 @@ gen7_upload_3dstate_so_decl_list(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
+static bool
+query_active(struct gl_query_object *q)
+{
+   return q && q->Active;
+}
+
 static void
 upload_3dstate_streamout(struct brw_context *brw, bool active,
 			 const struct brw_vue_map *vue_map)
@@ -234,6 +240,16 @@ upload_3dstate_streamout(struct brw_context *brw, bool active,
 
       dw1 |= SO_FUNCTION_ENABLE;
       dw1 |= SO_STATISTICS_ENABLE;
+
+      /* BRW_NEW_RASTERIZER_DISCARD */
+      if (ctx->RasterDiscard) {
+         if (!query_active(ctx->Query.PrimitivesGenerated[0])) {
+            dw1 |= SO_RENDERING_DISABLE;
+         } else {
+            perf_debug("Rasterizer discard with a GL_PRIMITIVES_GENERATED "
+                       "query active relies on the clipper.");
+         }
+      }
 
       /* _NEW_LIGHT */
       if (ctx->Light.ProvokingVertex != GL_FIRST_VERTEX_CONVENTION)
@@ -319,6 +335,7 @@ const struct brw_tracked_state gen7_sol_state = {
       .mesa  = _NEW_LIGHT,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
+               BRW_NEW_RASTERIZER_DISCARD |
                BRW_NEW_VUE_MAP_GEOM_OUT |
                BRW_NEW_TRANSFORM_FEEDBACK,
    },
