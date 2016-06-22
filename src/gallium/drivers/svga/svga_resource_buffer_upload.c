@@ -223,6 +223,7 @@ svga_buffer_upload_gb_command(struct svga_context *svga,
    struct pipe_resource *dummy;
    unsigned i;
 
+   assert(svga_have_gb_objects(svga));
    assert(numBoxes);
    assert(sbuf->dma.updates == NULL);
 
@@ -318,11 +319,13 @@ svga_buffer_upload_gb_command(struct svga_context *svga,
 
 
 /**
- * Variant of SVGA3D_BufferDMA which leaves the copy box temporarily in blank.
+ * Issue DMA commands to transfer guest memory to the host.
+ * Note that the memory segments (offset, size) will be patched in
+ * later in the svga_buffer_upload_flush() function.
  */
 static enum pipe_error
-svga_buffer_upload_command(struct svga_context *svga,
-                           struct svga_buffer *sbuf)
+svga_buffer_upload_hb_command(struct svga_context *svga,
+                              struct svga_buffer *sbuf)
 {
    struct svga_winsys_context *swc = svga->swc;
    struct svga_winsys_buffer *guest = sbuf->hwbuf;
@@ -336,8 +339,7 @@ svga_buffer_upload_command(struct svga_context *svga,
    unsigned surface_flags;
    struct pipe_resource *dummy;
 
-   if (svga_have_gb_objects(svga))
-      return svga_buffer_upload_gb_command(svga, sbuf);
+   assert(!svga_have_gb_objects(svga));
 
    if (transfer == SVGA3D_WRITE_HOST_VRAM) {
       region_flags = SVGA_RELOC_READ;
@@ -390,6 +392,20 @@ svga_buffer_upload_command(struct svga_context *svga,
    svga->hud.num_buffer_uploads++;
 
    return PIPE_OK;
+}
+
+
+/**
+ * Issue commands to transfer guest memory to the host.
+ */
+static enum pipe_error
+svga_buffer_upload_command(struct svga_context *svga, struct svga_buffer *sbuf)
+{
+   if (svga_have_gb_objects(svga)) {
+      return svga_buffer_upload_gb_command(svga, sbuf);
+   } else {
+      return svga_buffer_upload_hb_command(svga, sbuf);
+   }
 }
 
 
