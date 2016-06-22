@@ -831,26 +831,34 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
    case GL_TESS_GEN_MODE:
       if (!has_tess)
          break;
-      if (check_tes_query(ctx, shProg))
-         *params = shProg->TessEval.PrimitiveMode;
+      if (check_tes_query(ctx, shProg)) {
+         *params = shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->
+            TessEval.PrimitiveMode;
+      }
       return;
    case GL_TESS_GEN_SPACING:
       if (!has_tess)
          break;
-      if (check_tes_query(ctx, shProg))
-         *params = shProg->TessEval.Spacing;
+      if (check_tes_query(ctx, shProg)) {
+         *params = shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->
+            TessEval.Spacing;
+      }
       return;
    case GL_TESS_GEN_VERTEX_ORDER:
       if (!has_tess)
          break;
-      if (check_tes_query(ctx, shProg))
-         *params = shProg->TessEval.VertexOrder;
+      if (check_tes_query(ctx, shProg)) {
+         *params = shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->
+            TessEval.VertexOrder;
+         }
       return;
    case GL_TESS_GEN_POINT_MODE:
       if (!has_tess)
          break;
-      if (check_tes_query(ctx, shProg))
-         *params = shProg->TessEval.PointMode;
+      if (check_tes_query(ctx, shProg)) {
+         *params = shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->
+            TessEval.PointMode;
+      }
       return;
    default:
       break;
@@ -2157,10 +2165,12 @@ _mesa_copy_linked_program_data(gl_shader_stage type,
    case MESA_SHADER_TESS_EVAL: {
       struct gl_tess_eval_program *dst_tep =
          (struct gl_tess_eval_program *) dst;
-      dst_tep->PrimitiveMode = src->TessEval.PrimitiveMode;
-      dst_tep->Spacing = src->TessEval.Spacing;
-      dst_tep->VertexOrder = src->TessEval.VertexOrder;
-      dst_tep->PointMode = src->TessEval.PointMode;
+      struct gl_shader *tes_sh = src->_LinkedShaders[MESA_SHADER_TESS_EVAL];
+
+      dst_tep->PrimitiveMode = tes_sh->TessEval.PrimitiveMode;
+      dst_tep->Spacing = tes_sh->TessEval.Spacing;
+      dst_tep->VertexOrder = tes_sh->TessEval.VertexOrder;
+      dst_tep->PointMode = tes_sh->TessEval.PointMode;
       dst->ClipDistanceArraySize = src->TessEval.ClipDistanceArraySize;
       dst->CullDistanceArraySize = src->TessEval.CullDistanceArraySize;
       break;

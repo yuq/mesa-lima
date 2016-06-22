@@ -2726,13 +2726,6 @@ struct gl_shader_program
     * Tessellation Evaluation shader state from layout qualifiers.
     */
    struct {
-      /** GL_TRIANGLES, GL_QUADS or GL_ISOLINES */
-      GLenum PrimitiveMode;
-      /** GL_EQUAL, GL_FRACTIONAL_ODD or GL_FRACTIONAL_EVEN */
-      GLenum Spacing;
-      /** GL_CW or GL_CCW */
-      GLenum VertexOrder;
-      bool PointMode;
       /**
        * True if gl_ClipDistance is written to.  Copied into
        * gl_tess_eval_program by _mesa_copy_linked_program_data().

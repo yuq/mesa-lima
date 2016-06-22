@@ -1886,19 +1886,15 @@ link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
 		   "primitive modes.\n");
       return;
    }
-   prog->TessEval.PrimitiveMode = linked_shader->TessEval.PrimitiveMode;
 
    if (linked_shader->TessEval.Spacing == 0)
       linked_shader->TessEval.Spacing = GL_EQUAL;
-   prog->TessEval.Spacing = linked_shader->TessEval.Spacing;
 
    if (linked_shader->TessEval.VertexOrder == 0)
       linked_shader->TessEval.VertexOrder = GL_CCW;
-   prog->TessEval.VertexOrder = linked_shader->TessEval.VertexOrder;
 
    if (linked_shader->TessEval.PointMode == -1)
       linked_shader->TessEval.PointMode = GL_FALSE;
-   prog->TessEval.PointMode = linked_shader->TessEval.PointMode;
 }
 
 
