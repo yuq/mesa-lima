@@ -1387,7 +1387,27 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_find_lsb:
       assert(nir_dest_bit_size(instr->dest.dest) < 64);
-      bld.FBL(result, op[0]);
+
+      if (devinfo->gen < 7) {
+         fs_reg temp = vgrf(glsl_type::int_type);
+
+         /* (x & -x) generates a value that consists of only the LSB of x.
+          * For all powers of 2, findMSB(y) == findLSB(y).
+          */
+         fs_reg src = retype(op[0], BRW_REGISTER_TYPE_D);
+         fs_reg negated_src = src;
+
+         /* One must be negated, and the other must be non-negated.  It
+          * doesn't matter which is which.
+          */
+         negated_src.negate = true;
+         src.negate = false;
+
+         bld.AND(temp, src, negated_src);
+         emit_find_msb_using_lzd(bld, result, temp, false);
+      } else {
+         bld.FBL(result, op[0]);
+      }
       break;
 
    case nir_op_ubitfield_extract:

@@ -1535,9 +1535,31 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
    }
 
-   case nir_op_find_lsb:
-      emit(FBL(dst, op[0]));
+   case nir_op_find_lsb: {
+      vec4_builder bld = vec4_builder(this).at_end();
+
+      if (devinfo->gen < 7) {
+         dst_reg temp = bld.vgrf(BRW_REGISTER_TYPE_D);
+
+         /* (x & -x) generates a value that consists of only the LSB of x.
+          * For all powers of 2, findMSB(y) == findLSB(y).
+          */
+         src_reg src = src_reg(retype(op[0], BRW_REGISTER_TYPE_D));
+         src_reg negated_src = src;
+
+         /* One must be negated, and the other must be non-negated.  It
+          * doesn't matter which is which.
+          */
+         negated_src.negate = true;
+         src.negate = false;
+
+         bld.AND(temp, src, negated_src);
+         emit_find_msb_using_lzd(bld, dst, src_reg(temp), false);
+      } else {
+         bld.FBL(dst, op[0]);
+      }
       break;
+   }
 
    case nir_op_ubitfield_extract:
    case nir_op_ibitfield_extract:
