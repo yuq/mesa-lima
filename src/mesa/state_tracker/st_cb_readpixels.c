@@ -520,7 +520,7 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
    /* memcpy data into a user buffer */
    {
       const uint bytesPerRow = width * util_format_get_blocksize(dst_format);
-      const uint destStride = _mesa_image_row_stride(pack, width, format, type);
+      const int destStride = _mesa_image_row_stride(pack, width, format, type);
       char *dest = _mesa_image_address2d(pack, pixels,
                                          width, height, format,
                                          type, 0, 0);
