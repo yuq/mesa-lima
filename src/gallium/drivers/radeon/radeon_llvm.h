@@ -101,6 +101,9 @@ struct radeon_llvm_context {
 	LLVMValueRef main_fn;
 	LLVMTypeRef return_type;
 
+	unsigned fpmath_md_kind;
+	LLVMValueRef fpmath_md_2p5_ulp;
+
 	struct gallivm_state gallivm;
 };
 

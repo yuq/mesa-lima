@@ -1523,19 +1523,36 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 	}
 }
 
+static void emit_fdiv(const struct lp_build_tgsi_action *action,
+		      struct lp_build_tgsi_context *bld_base,
+		      struct lp_build_emit_data *emit_data)
+{
+	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+
+	emit_data->output[emit_data->chan] =
+		LLVMBuildFDiv(bld_base->base.gallivm->builder,
+			      emit_data->args[0], emit_data->args[1], "");
+
+	/* Use v_rcp_f32 instead of precise division. */
+	if (HAVE_LLVM >= 0x0309 &&
+	    !LLVMIsConstant(emit_data->output[emit_data->chan]))
+		LLVMSetMetadata(emit_data->output[emit_data->chan],
+				ctx->fpmath_md_kind, ctx->fpmath_md_2p5_ulp);
+}
+
 /* 1/sqrt is translated to rsq for f32 if fp32 denormals are not enabled in
  * the target machine. f64 needs global unsafe math flags to get rsq. */
 static void emit_rsq(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	LLVMValueRef sqrt =
 		lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_SQRT,
 					 emit_data->args[0]);
 
 	emit_data->output[emit_data->chan] =
-		LLVMBuildFDiv(builder, bld_base->base.one, sqrt, "");
+		lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_DIV,
+					  bld_base->base.one, sqrt);
 }
 
 void radeon_llvm_context_init(struct radeon_llvm_context * ctx, const char *triple)
@@ -1586,6 +1603,13 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx, const char *trip
 	bld_base->emit_fetch_funcs[TGSI_FILE_OUTPUT] = radeon_llvm_emit_fetch;
 	bld_base->emit_fetch_funcs[TGSI_FILE_SYSTEM_VALUE] = fetch_system_value;
 
+	/* metadata allowing 2.5 ULP */
+	ctx->fpmath_md_kind = LLVMGetMDKindIDInContext(ctx->gallivm.context,
+						       "fpmath", 6);
+	LLVMValueRef arg = lp_build_const_float(&ctx->gallivm, 2.5);
+	ctx->fpmath_md_2p5_ulp = LLVMMDNodeInContext(ctx->gallivm.context,
+						     &arg, 1);
+
 	/* Allocate outputs */
 	ctx->soa.outputs = ctx->outputs;
 
@@ -1615,6 +1639,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx, const char *trip
 	bld_base->op_actions[TGSI_OPCODE_DFMA].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_DFMA].intr_name = "llvm.fma.f64";
 	bld_base->op_actions[TGSI_OPCODE_DFRAC].emit = emit_frac;
+	bld_base->op_actions[TGSI_OPCODE_DIV].emit = emit_fdiv;
 	bld_base->op_actions[TGSI_OPCODE_DNEG].emit = emit_dneg;
 	bld_base->op_actions[TGSI_OPCODE_DSEQ].emit = emit_dcmp;
 	bld_base->op_actions[TGSI_OPCODE_DSGE].emit = emit_dcmp;
