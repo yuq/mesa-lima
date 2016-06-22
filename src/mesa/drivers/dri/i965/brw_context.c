@@ -896,6 +896,8 @@ brwCreateContext(gl_api api,
    brw->must_use_separate_stencil = devinfo->must_use_separate_stencil;
    brw->has_swizzling = screen->hw_has_swizzling;
 
+   isl_device_init(&brw->isl_dev, devinfo, screen->hw_has_swizzling);
+
    brw->vs.base.stage = MESA_SHADER_VERTEX;
    brw->tcs.base.stage = MESA_SHADER_TESS_CTRL;
    brw->tes.base.stage = MESA_SHADER_TESS_EVAL;

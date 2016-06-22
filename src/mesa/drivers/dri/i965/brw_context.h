@@ -40,6 +40,8 @@
 #include "brw_compiler.h"
 #include "intel_aub.h"
 
+#include "isl/isl.h"
+
 #ifdef __cplusplus
 extern "C" {
 	/* Evil hack for using libdrm in a c++ compiler. */
@@ -913,6 +915,8 @@ struct brw_context
     * fragment shader instructions.
     */
    bool needs_unlit_centroid_workaround;
+
+   struct isl_device isl_dev;
 
    GLuint NewGLState;
    struct {
