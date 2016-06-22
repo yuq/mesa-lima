@@ -786,19 +786,12 @@ svga_buffer_handle(struct svga_context *svga,
 
    if (sbuf->map.num_ranges) {
       if (!sbuf->dma.pending) {
-         /*
-          * No pending DMA upload yet, so insert a DMA upload command now.
-          */
+         /* No pending DMA/update commands yet. */
 
-         /*
-          * Migrate the data from swbuf -> hwbuf if necessary.
-          */
+         /* Migrate the data from swbuf -> hwbuf if necessary */
          ret = svga_buffer_update_hw(svga, sbuf);
          if (ret == PIPE_OK) {
-            /*
-             * Queue a dma command.
-             */
-
+            /* Emit DMA or UpdateGBImage commands */
             ret = svga_buffer_upload_command(svga, sbuf);
             if (ret == PIPE_ERROR_OUT_OF_MEMORY) {
                svga_context_flush(svga, NULL);
