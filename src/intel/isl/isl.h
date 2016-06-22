@@ -1355,11 +1355,11 @@ isl_tiling_get_intratile_offset_el(const struct isl_device *dev,
                                    enum isl_tiling tiling,
                                    uint8_t bs,
                                    uint32_t row_pitch,
-                                   uint32_t total_x_offset_B,
-                                   uint32_t total_y_offset_rows,
+                                   uint32_t total_x_offset_el,
+                                   uint32_t total_y_offset_el,
                                    uint32_t *base_address_offset,
-                                   uint32_t *x_offset_B,
-                                   uint32_t *y_offset_rows);
+                                   uint32_t *x_offset_el,
+                                   uint32_t *y_offset_el);
 
 /**
  * @brief Get value of 3DSTATE_DEPTH_BUFFER.SurfaceFormat
