@@ -222,7 +222,9 @@ upload_3dstate_streamout(struct brw_context *brw, bool active,
    /* BRW_NEW_TRANSFORM_FEEDBACK */
    struct gl_transform_feedback_object *xfb_obj =
       ctx->TransformFeedback.CurrentObject;
-   uint32_t dw1 = 0, dw2 = 0;
+   const struct gl_transform_feedback_info *linked_xfb_info =
+      &xfb_obj->shader_program->LinkedTransformFeedback;
+   uint32_t dw1 = 0, dw2 = 0, dw3 = 0, dw4 = 0;
    int i;
 
    if (active) {
@@ -237,10 +239,12 @@ upload_3dstate_streamout(struct brw_context *brw, bool active,
       if (ctx->Light.ProvokingVertex != GL_FIRST_VERTEX_CONVENTION)
 	 dw1 |= SO_REORDER_TRAILING;
 
-      for (i = 0; i < 4; i++) {
-	 if (xfb_obj->Buffers[i]) {
-	    dw1 |= SO_BUFFER_ENABLE(i);
-	 }
+      if (brw->gen < 8) {
+         for (i = 0; i < 4; i++) {
+            if (xfb_obj->Buffers[i]) {
+               dw1 |= SO_BUFFER_ENABLE(i);
+            }
+         }
       }
 
       /* We always read the whole vertex.  This could be reduced at some
@@ -258,12 +262,30 @@ upload_3dstate_streamout(struct brw_context *brw, bool active,
 
       dw2 |= SET_FIELD(urb_entry_read_offset, SO_STREAM_3_VERTEX_READ_OFFSET);
       dw2 |= SET_FIELD(urb_entry_read_length - 1, SO_STREAM_3_VERTEX_READ_LENGTH);
+
+      if (brw->gen >= 8) {
+	 /* Set buffer pitches; 0 means unbound. */
+	 if (xfb_obj->Buffers[0])
+	    dw3 |= linked_xfb_info->Buffers[0].Stride * 4;
+	 if (xfb_obj->Buffers[1])
+	    dw3 |= (linked_xfb_info->Buffers[1].Stride * 4) << 16;
+	 if (xfb_obj->Buffers[2])
+	    dw4 |= linked_xfb_info->Buffers[2].Stride * 4;
+	 if (xfb_obj->Buffers[3])
+	    dw4 |= (linked_xfb_info->Buffers[3].Stride * 4) << 16;
+      }
    }
 
-   BEGIN_BATCH(3);
-   OUT_BATCH(_3DSTATE_STREAMOUT << 16 | (3 - 2));
+   const int dwords = brw->gen >= 8 ? 5 : 3;
+
+   BEGIN_BATCH(dwords);
+   OUT_BATCH(_3DSTATE_STREAMOUT << 16 | (dwords - 2));
    OUT_BATCH(dw1);
    OUT_BATCH(dw2);
+   if (dwords > 3) {
+      OUT_BATCH(dw3);
+      OUT_BATCH(dw4);
+   }
    ADVANCE_BATCH();
 }
 
@@ -275,7 +297,11 @@ upload_sol_state(struct brw_context *brw)
    bool active = _mesa_is_xfb_active_and_unpaused(ctx);
 
    if (active) {
-      upload_3dstate_so_buffers(brw);
+      if (brw->gen >= 8)
+         gen8_upload_3dstate_so_buffers(brw);
+      else
+         upload_3dstate_so_buffers(brw);
+
       /* BRW_NEW_VUE_MAP_GEOM_OUT */
       gen7_upload_3dstate_so_decl_list(brw, &brw->vue_map_geom_out);
    }

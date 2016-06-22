@@ -166,7 +166,6 @@ extern const struct brw_tracked_state gen8_wm_state;
 extern const struct brw_tracked_state gen8_raster_state;
 extern const struct brw_tracked_state gen8_sbe_state;
 extern const struct brw_tracked_state gen8_sf_state;
-extern const struct brw_tracked_state gen8_sol_state;
 extern const struct brw_tracked_state gen8_sf_clip_viewport;
 extern const struct brw_tracked_state gen8_vertices;
 extern const struct brw_tracked_state gen8_vf_topology;
@@ -303,6 +302,7 @@ void gen8_upload_ps_extra(struct brw_context *brw,
 /* gen7_sol_state.c */
 void gen7_upload_3dstate_so_decl_list(struct brw_context *brw,
                                       const struct brw_vue_map *vue_map);
+void gen8_upload_3dstate_so_buffers(struct brw_context *brw);
 
 /* gen8_surface_state.c */
 
