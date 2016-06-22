@@ -342,19 +342,6 @@ nv30_render_validate(struct nv30_context *nv30)
    for (; i < 16; i++)
       r->vtxfmt[i]  = NV30_3D_VTXFMT_TYPE_V32_FLOAT;
 
-   BEGIN_NV04(push, NV30_3D(VIEWPORT_TRANSLATE_X), 8);
-   PUSH_DATAf(push, 0.0);
-   PUSH_DATAf(push, 0.0);
-   PUSH_DATAf(push, 0.0);
-   PUSH_DATAf(push, 0.0);
-   PUSH_DATAf(push, 1.0);
-   PUSH_DATAf(push, 1.0);
-   PUSH_DATAf(push, 1.0);
-   PUSH_DATAf(push, 1.0);
-   BEGIN_NV04(push, NV30_3D(DEPTH_RANGE_NEAR), 2);
-   PUSH_DATAf(push, 0.0);
-   PUSH_DATAf(push, 1.0);
-
    BEGIN_NV04(push, NV30_3D(VTXFMT(0)), 16);
    PUSH_DATAp(push, r->vtxfmt, 16);
 
