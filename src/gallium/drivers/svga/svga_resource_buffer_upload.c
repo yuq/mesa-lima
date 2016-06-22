@@ -689,7 +689,7 @@ svga_buffer_upload_piecewise(struct svga_screen *ss,
    SVGA_DBG(DEBUG_DMA, "dma to sid %p\n", sbuf->handle);
 
    for (i = 0; i < sbuf->map.num_ranges; ++i) {
-      struct svga_buffer_range *range = &sbuf->map.ranges[i];
+      const struct svga_buffer_range *range = &sbuf->map.ranges[i];
       unsigned offset = range->start;
       unsigned size = range->end - range->start;
 
