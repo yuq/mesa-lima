@@ -391,8 +391,10 @@ brw_update_texture_surface(struct gl_context *ctx,
 	      (mt->logical_depth0 - 1) << BRW_SURFACE_DEPTH_SHIFT |
 	      (mt->pitch - 1) << BRW_SURFACE_PITCH_SHIFT);
 
+   const unsigned min_lod = tObj->MinLevel + tObj->BaseLevel - mt->first_level;
    surf[4] = (brw_get_surface_num_multisamples(mt->num_samples) |
-              SET_FIELD(tObj->BaseLevel - mt->first_level, BRW_SURFACE_MIN_LOD));
+              SET_FIELD(min_lod, BRW_SURFACE_MIN_LOD) |
+              SET_FIELD(tObj->MinLayer, BRW_SURFACE_MIN_ARRAY_ELEMENT));
 
    surf[5] = mt->valign == 4 ? BRW_SURFACE_VERTICAL_ALIGN_ENABLE : 0;
 
