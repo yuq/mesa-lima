@@ -138,10 +138,10 @@ intelTexImage(struct gl_context * ctx,
 static void
 intel_set_texture_image_mt(struct brw_context *brw,
                            struct gl_texture_image *image,
+                           GLenum internal_format,
                            struct intel_mipmap_tree *mt)
 
 {
-   const uint32_t internal_format = _mesa_get_format_base_format(mt->format);
    struct gl_texture_object *texobj = image->TexObject;
    struct intel_texture_object *intel_texobj = intel_texture_object(texobj);
    struct intel_texture_image *intel_image = intel_texture_image(image);
@@ -264,6 +264,7 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
    struct gl_texture_image *texImage;
    mesa_format texFormat = MESA_FORMAT_NONE;
    struct intel_mipmap_tree *mt;
+   GLenum internal_format = 0;
 
    texObj = _mesa_get_current_tex_object(ctx, target);
 
@@ -283,12 +284,15 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
 
    if (rb->mt->cpp == 4) {
       if (texture_format == __DRI_TEXTURE_FORMAT_RGB) {
+         internal_format = GL_RGB;
          texFormat = MESA_FORMAT_B8G8R8X8_UNORM;
       }
       else {
+         internal_format = GL_RGBA;
          texFormat = MESA_FORMAT_B8G8R8A8_UNORM;
       }
    } else if (rb->mt->cpp == 2) {
+      internal_format = GL_RGB;
       texFormat = MESA_FORMAT_B5G6R5_UNORM;
    }
 
@@ -305,7 +309,7 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
 
    _mesa_lock_texture(&brw->ctx, texObj);
    texImage = _mesa_get_tex_image(ctx, texObj, target, 0);
-   intel_set_texture_image_mt(brw, texImage, mt);
+   intel_set_texture_image_mt(brw, texImage, internal_format, mt);
    intel_miptree_release(&mt);
    _mesa_unlock_texture(&brw->ctx, texObj);
 }
@@ -399,7 +403,10 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
    struct intel_texture_object *intel_texobj = intel_texture_object(texObj);
    intel_texobj->planar_format = image->planar_format;
 
-   intel_set_texture_image_mt(brw, texImage, mt);
+   const GLenum internal_format =
+      image->internal_format != 0 ?
+      image->internal_format : _mesa_get_format_base_format(mt->format);
+   intel_set_texture_image_mt(brw, texImage, internal_format, mt);
    intel_miptree_release(&mt);
 }
 
