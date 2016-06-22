@@ -27,7 +27,7 @@
 /**
 ***************************************************************************************************
 * @file  ciaddrlib.cpp
-* @brief Contains the implementation for the CIAddrLib class.
+* @brief Contains the implementation for the CiAddrLib class.
 ***************************************************************************************************
 */
 
@@ -156,28 +156,28 @@ static UINT_64 AddrInsertBits(
 *   AddrCIHwlInit
 *
 *   @brief
-*       Creates an CIAddrLib object.
+*       Creates an CiAddrLib object.
 *
 *   @return
-*       Returns an CIAddrLib object pointer.
+*       Returns an CiAddrLib object pointer.
 ***************************************************************************************************
 */
 AddrLib* AddrCIHwlInit(const AddrClient* pClient)
 {
-    return CIAddrLib::CreateObj(pClient);
+    return CiAddrLib::CreateObj(pClient);
 }
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::CIAddrLib
+*   CiAddrLib::CiAddrLib
 *
 *   @brief
 *       Constructor
 *
 ***************************************************************************************************
 */
-CIAddrLib::CIAddrLib(const AddrClient* pClient) :
-    SIAddrLib(pClient),
+CiAddrLib::CiAddrLib(const AddrClient* pClient) :
+    SiAddrLib(pClient),
     m_noOfMacroEntries(0),
     m_allowNonDispThickModes(FALSE)
 {
@@ -187,19 +187,19 @@ CIAddrLib::CIAddrLib(const AddrClient* pClient) :
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::~CIAddrLib
+*   CiAddrLib::~CiAddrLib
 *
 *   @brief
 *       Destructor
 ***************************************************************************************************
 */
-CIAddrLib::~CIAddrLib()
+CiAddrLib::~CiAddrLib()
 {
 }
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlComputeDccInfo
+*   CiAddrLib::HwlComputeDccInfo
 *
 *   @brief
 *       Compute DCC key size, base alignment
@@ -207,7 +207,7 @@ CIAddrLib::~CIAddrLib()
 *       ADDR_E_RETURNCODE
 ***************************************************************************************************
 */
-ADDR_E_RETURNCODE CIAddrLib::HwlComputeDccInfo(
+ADDR_E_RETURNCODE CiAddrLib::HwlComputeDccInfo(
     const ADDR_COMPUTE_DCCINFO_INPUT*  pIn,
     ADDR_COMPUTE_DCCINFO_OUTPUT*       pOut) const
 {
@@ -276,7 +276,7 @@ ADDR_E_RETURNCODE CIAddrLib::HwlComputeDccInfo(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlComputeCmaskAddrFromCoord
+*   CiAddrLib::HwlComputeCmaskAddrFromCoord
 *
 *   @brief
 *       Compute tc compatible Cmask address from fmask ram address
@@ -285,7 +285,7 @@ ADDR_E_RETURNCODE CIAddrLib::HwlComputeDccInfo(
 *       ADDR_E_RETURNCODE
 ***************************************************************************************************
 */
-ADDR_E_RETURNCODE CIAddrLib::HwlComputeCmaskAddrFromCoord(
+ADDR_E_RETURNCODE CiAddrLib::HwlComputeCmaskAddrFromCoord(
     const ADDR_COMPUTE_CMASK_ADDRFROMCOORD_INPUT*  pIn,  ///< [in] fmask addr/bpp/tile input
     ADDR_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT*       pOut  ///< [out] cmask address
     ) const
@@ -319,7 +319,7 @@ ADDR_E_RETURNCODE CIAddrLib::HwlComputeCmaskAddrFromCoord(
 }
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlConvertChipFamily
+*   CiAddrLib::HwlConvertChipFamily
 *
 *   @brief
 *       Convert familyID defined in atiid.h to AddrChipFamily and set m_chipFamily/m_chipRevision
@@ -327,7 +327,7 @@ ADDR_E_RETURNCODE CIAddrLib::HwlComputeCmaskAddrFromCoord(
 *       AddrChipFamily
 ***************************************************************************************************
 */
-AddrChipFamily CIAddrLib::HwlConvertChipFamily(
+AddrChipFamily CiAddrLib::HwlConvertChipFamily(
     UINT_32 uChipFamily,        ///< [in] chip family defined in atiih.h
     UINT_32 uChipRevision)      ///< [in] chip revision defined in "asic_family"_id.h
 {
@@ -369,7 +369,7 @@ AddrChipFamily CIAddrLib::HwlConvertChipFamily(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlInitGlobalParams
+*   CiAddrLib::HwlInitGlobalParams
 *
 *   @brief
 *       Initializes global parameters
@@ -379,7 +379,7 @@ AddrChipFamily CIAddrLib::HwlConvertChipFamily(
 *
 ***************************************************************************************************
 */
-BOOL_32 CIAddrLib::HwlInitGlobalParams(
+BOOL_32 CiAddrLib::HwlInitGlobalParams(
     const ADDR_CREATE_INPUT* pCreateIn) ///< [in] create input
 {
     BOOL_32  valid = TRUE;
@@ -437,7 +437,7 @@ BOOL_32 CIAddrLib::HwlInitGlobalParams(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlPostCheckTileIndex
+*   CiAddrLib::HwlPostCheckTileIndex
 *
 *   @brief
 *       Map a tile setting to index if curIndex is invalid, otherwise check if curIndex matches
@@ -446,7 +446,7 @@ BOOL_32 CIAddrLib::HwlInitGlobalParams(
 *       Tile index.
 ***************************************************************************************************
 */
-INT_32 CIAddrLib::HwlPostCheckTileIndex(
+INT_32 CiAddrLib::HwlPostCheckTileIndex(
     const ADDR_TILEINFO* pInfo,     ///< [in] Tile Info
     AddrTileMode         mode,      ///< [in] Tile mode
     AddrTileType         type,      ///< [in] Tile type
@@ -527,7 +527,7 @@ INT_32 CIAddrLib::HwlPostCheckTileIndex(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlSetupTileCfg
+*   CiAddrLib::HwlSetupTileCfg
 *
 *   @brief
 *       Map tile index to tile setting.
@@ -535,7 +535,7 @@ INT_32 CIAddrLib::HwlPostCheckTileIndex(
 *       ADDR_E_RETURNCODE
 ***************************************************************************************************
 */
-ADDR_E_RETURNCODE CIAddrLib::HwlSetupTileCfg(
+ADDR_E_RETURNCODE CiAddrLib::HwlSetupTileCfg(
     INT_32          index,          ///< [in] Tile index
     INT_32          macroModeIndex, ///< [in] Index in macro tile mode table(CI)
     ADDR_TILEINFO*  pInfo,          ///< [out] Tile Info
@@ -602,7 +602,7 @@ ADDR_E_RETURNCODE CIAddrLib::HwlSetupTileCfg(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlComputeSurfaceInfo
+*   CiAddrLib::HwlComputeSurfaceInfo
 *
 *   @brief
 *       Entry of ci's ComputeSurfaceInfo
@@ -610,7 +610,7 @@ ADDR_E_RETURNCODE CIAddrLib::HwlSetupTileCfg(
 *       ADDR_E_RETURNCODE
 ***************************************************************************************************
 */
-ADDR_E_RETURNCODE CIAddrLib::HwlComputeSurfaceInfo(
+ADDR_E_RETURNCODE CiAddrLib::HwlComputeSurfaceInfo(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,    ///< [in] input structure
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut    ///< [out] output structure
     ) const
@@ -621,7 +621,7 @@ ADDR_E_RETURNCODE CIAddrLib::HwlComputeSurfaceInfo(
         pOut->macroModeIndex = TileIndexInvalid;
     }
 
-    ADDR_E_RETURNCODE retCode = SIAddrLib::HwlComputeSurfaceInfo(pIn,pOut);
+    ADDR_E_RETURNCODE retCode = SiAddrLib::HwlComputeSurfaceInfo(pIn,pOut);
 
     if (pOut->macroModeIndex == TileIndexNoMacroIndex)
     {
@@ -633,14 +633,14 @@ ADDR_E_RETURNCODE CIAddrLib::HwlComputeSurfaceInfo(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlFmaskSurfaceInfo
+*   CiAddrLib::HwlFmaskSurfaceInfo
 *   @brief
 *       Entry of r800's ComputeFmaskInfo
 *   @return
 *       ADDR_E_RETURNCODE
 ***************************************************************************************************
 */
-ADDR_E_RETURNCODE CIAddrLib::HwlComputeFmaskInfo(
+ADDR_E_RETURNCODE CiAddrLib::HwlComputeFmaskInfo(
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pIn,   ///< [in] input structure
     ADDR_COMPUTE_FMASK_INFO_OUTPUT*         pOut   ///< [out] output structure
     )
@@ -720,7 +720,7 @@ ADDR_E_RETURNCODE CIAddrLib::HwlComputeFmaskInfo(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlFmaskPreThunkSurfInfo
+*   CiAddrLib::HwlFmaskPreThunkSurfInfo
 *
 *   @brief
 *       Some preparation before thunking a ComputeSurfaceInfo call for Fmask
@@ -728,7 +728,7 @@ ADDR_E_RETURNCODE CIAddrLib::HwlComputeFmaskInfo(
 *       ADDR_E_RETURNCODE
 ***************************************************************************************************
 */
-VOID CIAddrLib::HwlFmaskPreThunkSurfInfo(
+VOID CiAddrLib::HwlFmaskPreThunkSurfInfo(
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pFmaskIn,   ///< [in] Input of fmask info
     const ADDR_COMPUTE_FMASK_INFO_OUTPUT*   pFmaskOut,  ///< [in] Output of fmask info
     ADDR_COMPUTE_SURFACE_INFO_INPUT*        pSurfIn,    ///< [out] Input of thunked surface info
@@ -741,7 +741,7 @@ VOID CIAddrLib::HwlFmaskPreThunkSurfInfo(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlFmaskPostThunkSurfInfo
+*   CiAddrLib::HwlFmaskPostThunkSurfInfo
 *
 *   @brief
 *       Copy hwl extra field after calling thunked ComputeSurfaceInfo
@@ -749,7 +749,7 @@ VOID CIAddrLib::HwlFmaskPreThunkSurfInfo(
 *       ADDR_E_RETURNCODE
 ***************************************************************************************************
 */
-VOID CIAddrLib::HwlFmaskPostThunkSurfInfo(
+VOID CiAddrLib::HwlFmaskPostThunkSurfInfo(
     const ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pSurfOut,   ///< [in] Output of surface info
     ADDR_COMPUTE_FMASK_INFO_OUTPUT* pFmaskOut           ///< [out] Output of fmask info
     ) const
@@ -760,7 +760,7 @@ VOID CIAddrLib::HwlFmaskPostThunkSurfInfo(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlDegradeThickTileMode
+*   CiAddrLib::HwlDegradeThickTileMode
 *
 *   @brief
 *       Degrades valid tile mode for thick modes if needed
@@ -769,7 +769,7 @@ VOID CIAddrLib::HwlFmaskPostThunkSurfInfo(
 *       Suitable tile mode
 ***************************************************************************************************
 */
-AddrTileMode CIAddrLib::HwlDegradeThickTileMode(
+AddrTileMode CiAddrLib::HwlDegradeThickTileMode(
     AddrTileMode        baseTileMode,   ///< [in] base tile mode
     UINT_32             numSlices,      ///< [in] current number of slices
     UINT_32*            pBytesPerTile   ///< [in/out] pointer to bytes per slice
@@ -780,7 +780,7 @@ AddrTileMode CIAddrLib::HwlDegradeThickTileMode(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlOverrideTileMode
+*   CiAddrLib::HwlOverrideTileMode
 *
 *   @brief
 *       Override THICK to THIN, for specific formats on CI
@@ -790,7 +790,7 @@ AddrTileMode CIAddrLib::HwlDegradeThickTileMode(
 *
 ***************************************************************************************************
 */
-BOOL_32 CIAddrLib::HwlOverrideTileMode(
+BOOL_32 CiAddrLib::HwlOverrideTileMode(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,       ///< [in] input structure
     AddrTileMode*                           pTileMode, ///< [in/out] pointer to the tile mode
     AddrTileType*                           pTileType  ///< [in/out] pointer to the tile type
@@ -909,7 +909,7 @@ BOOL_32 CIAddrLib::HwlOverrideTileMode(
 *       Return the threshold of switching to P4_* instead of P16_* for PRT resources
 ***************************************************************************************************
 */
-UINT_32 CIAddrLib::GetPrtSwitchP4Threshold() const
+UINT_32 CiAddrLib::GetPrtSwitchP4Threshold() const
 {
     UINT_32 threshold;
 
@@ -946,13 +946,13 @@ UINT_32 CIAddrLib::GetPrtSwitchP4Threshold() const
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlSetupTileInfo
+*   CiAddrLib::HwlSetupTileInfo
 *
 *   @brief
 *       Setup default value of tile info for SI
 ***************************************************************************************************
 */
-VOID CIAddrLib::HwlSetupTileInfo(
+VOID CiAddrLib::HwlSetupTileInfo(
     AddrTileMode                        tileMode,       ///< [in] Tile mode
     ADDR_SURFACE_FLAGS                  flags,          ///< [in] Surface type flags
     UINT_32                             bpp,            ///< [in] Bits per pixel
@@ -1219,7 +1219,7 @@ VOID CIAddrLib::HwlSetupTileInfo(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::ReadGbTileMode
+*   CiAddrLib::ReadGbTileMode
 *
 *   @brief
 *       Convert GB_TILE_MODE HW value to ADDR_TILE_CONFIG.
@@ -1227,7 +1227,7 @@ VOID CIAddrLib::HwlSetupTileInfo(
 *       NA.
 ***************************************************************************************************
 */
-VOID CIAddrLib::ReadGbTileMode(
+VOID CiAddrLib::ReadGbTileMode(
     UINT_32             regValue,   ///< [in] GB_TILE_MODE register
     ADDR_TILECONFIG*    pCfg        ///< [out] output structure
     ) const
@@ -1295,7 +1295,7 @@ VOID CIAddrLib::ReadGbTileMode(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::InitTileSettingTable
+*   CiAddrLib::InitTileSettingTable
 *
 *   @brief
 *       Initialize the ADDR_TILE_CONFIG table.
@@ -1303,7 +1303,7 @@ VOID CIAddrLib::ReadGbTileMode(
 *       TRUE if tile table is correctly initialized
 ***************************************************************************************************
 */
-BOOL_32 CIAddrLib::InitTileSettingTable(
+BOOL_32 CiAddrLib::InitTileSettingTable(
     const UINT_32*  pCfg,           ///< [in] Pointer to table of tile configs
     UINT_32         noOfEntries     ///< [in] Numbe of entries in the table above
     )
@@ -1364,7 +1364,7 @@ BOOL_32 CIAddrLib::InitTileSettingTable(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::ReadGbMacroTileCfg
+*   CiAddrLib::ReadGbMacroTileCfg
 *
 *   @brief
 *       Convert GB_MACRO_TILE_CFG HW value to ADDR_TILE_CONFIG.
@@ -1372,7 +1372,7 @@ BOOL_32 CIAddrLib::InitTileSettingTable(
 *       NA.
 ***************************************************************************************************
 */
-VOID CIAddrLib::ReadGbMacroTileCfg(
+VOID CiAddrLib::ReadGbMacroTileCfg(
     UINT_32             regValue,   ///< [in] GB_MACRO_TILE_MODE register
     ADDR_TILEINFO*      pCfg        ///< [out] output structure
     ) const
@@ -1388,7 +1388,7 @@ VOID CIAddrLib::ReadGbMacroTileCfg(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::InitMacroTileCfgTable
+*   CiAddrLib::InitMacroTileCfgTable
 *
 *   @brief
 *       Initialize the ADDR_MACRO_TILE_CONFIG table.
@@ -1396,7 +1396,7 @@ VOID CIAddrLib::ReadGbMacroTileCfg(
 *       TRUE if macro tile table is correctly initialized
 ***************************************************************************************************
 */
-BOOL_32 CIAddrLib::InitMacroTileCfgTable(
+BOOL_32 CiAddrLib::InitMacroTileCfgTable(
     const UINT_32*  pCfg,           ///< [in] Pointer to table of tile configs
     UINT_32         noOfMacroEntries     ///< [in] Numbe of entries in the table above
     )
@@ -1435,7 +1435,7 @@ BOOL_32 CIAddrLib::InitMacroTileCfgTable(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlComputeMacroModeIndex
+*   CiAddrLib::HwlComputeMacroModeIndex
 *
 *   @brief
 *       Computes macro tile mode index
@@ -1443,7 +1443,7 @@ BOOL_32 CIAddrLib::InitMacroTileCfgTable(
 *       TRUE if macro tile table is correctly initialized
 ***************************************************************************************************
 */
-INT_32 CIAddrLib::HwlComputeMacroModeIndex(
+INT_32 CiAddrLib::HwlComputeMacroModeIndex(
     INT_32              tileIndex,      ///< [in] Tile mode index
     ADDR_SURFACE_FLAGS  flags,          ///< [in] Surface flags
     UINT_32             bpp,            ///< [in] Bit per pixel
@@ -1550,7 +1550,7 @@ INT_32 CIAddrLib::HwlComputeMacroModeIndex(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlComputeTileDataWidthAndHeightLinear
+*   CiAddrLib::HwlComputeTileDataWidthAndHeightLinear
 *
 *   @brief
 *       Compute the squared cache shape for per-tile data (CMASK and HTILE) for linear layout
@@ -1562,7 +1562,7 @@ INT_32 CIAddrLib::HwlComputeMacroModeIndex(
 *       MacroWidth and macroHeight are measured in pixels
 ***************************************************************************************************
 */
-VOID CIAddrLib::HwlComputeTileDataWidthAndHeightLinear(
+VOID CiAddrLib::HwlComputeTileDataWidthAndHeightLinear(
     UINT_32*        pMacroWidth,     ///< [out] macro tile width
     UINT_32*        pMacroHeight,    ///< [out] macro tile height
     UINT_32         bpp,             ///< [in] bits per pixel
@@ -1595,7 +1595,7 @@ VOID CIAddrLib::HwlComputeTileDataWidthAndHeightLinear(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlStereoCheckRightOffsetPadding
+*   CiAddrLib::HwlStereoCheckRightOffsetPadding
 *
 *   @brief
 *       check if the height needs extra padding for stereo right eye offset, to avoid swizzling
@@ -1611,7 +1611,7 @@ VOID CIAddrLib::HwlComputeTileDataWidthAndHeightLinear(
 *       corruption observed. - EPR#374788
 ***************************************************************************************************
 */
-BOOL_32 CIAddrLib::HwlStereoCheckRightOffsetPadding() const
+BOOL_32 CiAddrLib::HwlStereoCheckRightOffsetPadding() const
 {
     BOOL_32 bNeedPadding = FALSE;
 
@@ -1625,7 +1625,7 @@ BOOL_32 CIAddrLib::HwlStereoCheckRightOffsetPadding() const
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlComputeMetadataNibbleAddress
+*   CiAddrLib::HwlComputeMetadataNibbleAddress
 *
 *   @brief
 *        calculate meta data address based on input information
@@ -1646,7 +1646,7 @@ BOOL_32 CIAddrLib::HwlStereoCheckRightOffsetPadding() const
 *
 ***************************************************************************************************
 */
-UINT_64 CIAddrLib::HwlComputeMetadataNibbleAddress(
+UINT_64 CiAddrLib::HwlComputeMetadataNibbleAddress(
     UINT_64 uncompressedDataByteAddress,
     UINT_64 dataBaseByteAddress,
     UINT_64 metadataBaseByteAddress,
@@ -1746,7 +1746,7 @@ UINT_64 CIAddrLib::HwlComputeMetadataNibbleAddress(
 
 /**
 ***************************************************************************************************
-*   CIAddrLib::HwlPadDimensions
+*   CiAddrLib::HwlPadDimensions
 *
 *   @brief
 *       Helper function to pad dimensions
@@ -1756,7 +1756,7 @@ UINT_64 CIAddrLib::HwlComputeMetadataNibbleAddress(
 *
 ***************************************************************************************************
 */
-VOID CIAddrLib::HwlPadDimensions(
+VOID CiAddrLib::HwlPadDimensions(
     AddrTileMode        tileMode,    ///< [in] tile mode
     UINT_32             bpp,         ///< [in] bits per pixel
     ADDR_SURFACE_FLAGS  flags,       ///< [in] surface flags

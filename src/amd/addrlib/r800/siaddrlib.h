@@ -74,18 +74,18 @@ struct SIChipSettings
 *        function set.
 ***************************************************************************************************
 */
-class SIAddrLib : public EgBasedAddrLib
+class SiAddrLib : public EgBasedAddrLib
 {
 public:
     /// Creates SIAddrLib object
     static AddrLib* CreateObj(const AddrClient* pClient)
     {
-        return new(pClient) SIAddrLib(pClient);
+        return new(pClient) SiAddrLib(pClient);
     }
 
 protected:
-    SIAddrLib(const AddrClient* pClient);
-    virtual ~SIAddrLib();
+    SiAddrLib(const AddrClient* pClient);
+    virtual ~SiAddrLib();
 
     // Hwl interface - defined in AddrLib
     virtual ADDR_E_RETURNCODE HwlComputeSurfaceInfo(

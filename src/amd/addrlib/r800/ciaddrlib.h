@@ -27,7 +27,7 @@
 /**
 ***************************************************************************************************
 * @file  ciaddrlib.h
-* @brief Contains the CIAddrLib class definition.
+* @brief Contains the CiAddrLib class definition.
 ***************************************************************************************************
 */
 
@@ -74,18 +74,18 @@ struct CIChipSettings
 *        function set.
 ***************************************************************************************************
 */
-class CIAddrLib : public SIAddrLib
+class CiAddrLib : public SiAddrLib
 {
 public:
-    /// Creates CIAddrLib object
+    /// Creates CiAddrLib object
     static AddrLib* CreateObj(const AddrClient* pClient)
     {
-        return new(pClient) CIAddrLib(pClient);
+        return new(pClient) CiAddrLib(pClient);
     }
 
 private:
-    CIAddrLib(const AddrClient* pClient);
-    virtual ~CIAddrLib();
+    CiAddrLib(const AddrClient* pClient);
+    virtual ~CiAddrLib();
 
 protected:
 
