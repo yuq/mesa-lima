@@ -71,6 +71,11 @@ struct brw_blorp_surface_info
 {
    struct intel_mipmap_tree *mt;
 
+   struct isl_surf surf;
+
+   struct isl_surf aux_surf;
+   enum isl_aux_usage aux_usage;
+
    /**
     * The miplevel to use.
     */

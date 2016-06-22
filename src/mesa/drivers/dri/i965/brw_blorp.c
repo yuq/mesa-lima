@@ -51,6 +51,16 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    intel_miptree_check_level_layer(mt, level, layer);
 
    info->mt = mt;
+
+   intel_miptree_get_isl_surf(brw, mt, &info->surf);
+
+   if (mt->mcs_mt) {
+      intel_miptree_get_aux_isl_surf(brw, mt, &info->aux_surf,
+                                     &info->aux_usage);
+   } else {
+      info->aux_usage = ISL_AUX_USAGE_NONE;
+   }
+
    info->level = level;
    info->layer = layer;
    info->width = minify(mt->physical_width0, level - mt->first_level);
@@ -273,8 +283,7 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
 {
    const struct surface_state_info ss_info = surface_state_infos[brw->gen];
 
-   struct isl_surf surf;
-   intel_miptree_get_isl_surf(brw, surface->mt, &surf);
+   struct isl_surf surf = surface->surf;
 
    /* Stomp surface dimensions and tiling (if needed) with info from blorp */
    surf.dim = ISL_SURF_DIM_2D;
@@ -315,16 +324,10 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
 
    union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
 
-   struct isl_surf *aux_surf = NULL, aux_surf_s;
+   const struct isl_surf *aux_surf = NULL;
    uint64_t aux_offset = 0;
-   enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
    if (surface->mt->mcs_mt) {
-      /* We should probably to similar stomping to above but most of the aux
-       * surf gets ignored when we fill out the surface state anyway so
-       * there's no point.
-       */
-      intel_miptree_get_aux_isl_surf(brw, surface->mt, &aux_surf_s, &aux_usage);
-      aux_surf = &aux_surf_s;
+      aux_surf = &surface->aux_surf;
       assert(surface->mt->mcs_mt->offset == 0);
       aux_offset = surface->mt->mcs_mt->bo->offset64;
 
@@ -362,7 +365,7 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
 
    isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &view,
                        .address = surface->mt->bo->offset64 + offset,
-                       .aux_surf = aux_surf, .aux_usage = aux_usage,
+                       .aux_surf = aux_surf, .aux_usage = surface->aux_usage,
                        .aux_address = aux_offset,
                        .mocs = mocs, .clear_color = clear_color,
                        .x_offset_sa = tile_x, .y_offset_sa = tile_y);
