@@ -71,7 +71,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
 
    info->num_samples = mt->num_samples;
    info->array_layout = mt->array_layout;
-   info->map_stencil_as_y_tiled = false;
    info->msaa_layout = mt->msaa_layout;
    info->swizzle = SWIZZLE_XYZW;
 
@@ -80,11 +79,8 @@ brw_blorp_surface_info_init(struct brw_context *brw,
 
    switch (format) {
    case MESA_FORMAT_S_UINT8:
-      /* The miptree is a W-tiled stencil buffer.  Surface states can't be set
-       * up for W tiling, so we'll need to use Y tiling and have the WM
-       * program swizzle the coordinates.
-       */
-      info->map_stencil_as_y_tiled = true;
+      assert(info->surf.tiling == ISL_TILING_W);
+      /* Prior to Broadwell, we can't render to R8_UINT */
       info->brw_surfaceformat = brw->gen >= 8 ? BRW_SURFACEFORMAT_R8_UINT :
                                                 BRW_SURFACEFORMAT_R8_UNORM;
       break;
@@ -289,10 +285,6 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
        */
       surf.image_alignment_el = isl_extent3d(4, 2, 1);
    }
-
-   /* We need to fake W-tiling with Y-tiling */
-   if (surface->map_stencil_as_y_tiled)
-      surf.tiling = ISL_TILING_Y0;
 
    union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
 

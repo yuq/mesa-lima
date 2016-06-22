@@ -118,21 +118,6 @@ struct brw_blorp_surface_info
     */
    uint32_t y_offset;
 
-   /* Setting this flag indicates that the buffer's contents are W-tiled
-    * stencil data, but the surface state should be set up for Y tiled
-    * MESA_FORMAT_R_UNORM8 data (this is necessary because surface states don't
-    * support W tiling).
-    *
-    * Since W tiles are 64 pixels wide by 64 pixels high, whereas Y tiles of
-    * MESA_FORMAT_R_UNORM8 data are 128 pixels wide by 32 pixels high, the width and
-    * pitch stored in the surface state will be multiplied by 2, and the
-    * height will be halved.  Also, since W and Y tiles store their data in a
-    * different order, the width and height will be rounded up to a multiple
-    * of the tile size, to ensure that the WM program can access the full
-    * width and height of the buffer.
-    */
-   bool map_stencil_as_y_tiled;
-
    unsigned num_samples;
 
    /**

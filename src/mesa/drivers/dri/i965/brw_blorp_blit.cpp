@@ -1716,16 +1716,6 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
          params.dst.num_samples = 0;
    }
 
-   if (params.dst.map_stencil_as_y_tiled && params.dst.num_samples > 1) {
-      /* If the destination surface is a W-tiled multisampled stencil buffer
-       * that we're mapping as Y tiled, then we need to arrange for the WM
-       * program to run once per sample rather than once per pixel, because
-       * the memory layout of related samples doesn't match between W and Y
-       * tiling.
-       */
-      wm_prog_key.persample_msaa_dispatch = true;
-   }
-
    if (params.src.num_samples > 0 && params.dst.num_samples > 1) {
       /* We are blitting from a multisample buffer to a multisample buffer, so
        * we must preserve samples within a pixel.  This means we have to
@@ -1809,8 +1799,6 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS)
       wm_prog_key.dst_layout = INTEL_MSAA_LAYOUT_NONE;
 
-   wm_prog_key.src_tiled_w = params.src.map_stencil_as_y_tiled;
-   wm_prog_key.dst_tiled_w = params.dst.map_stencil_as_y_tiled;
    /* Round floating point values to nearest integer to avoid "off by one texel"
     * kind of errors when blitting.
     */
@@ -1884,7 +1872,22 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       wm_prog_key.use_kill = true;
    }
 
-   if (params.dst.map_stencil_as_y_tiled) {
+   if (params.dst.surf.tiling == ISL_TILING_W) {
+      /* We need to fake W-tiling with Y-tiling */
+      params.dst.surf.tiling = ISL_TILING_Y0;
+
+      wm_prog_key.dst_tiled_w = true;
+
+      if (params.dst.num_samples > 1) {
+         /* If the destination surface is a W-tiled multisampled stencil
+          * buffer that we're mapping as Y tiled, then we need to arrange for
+          * the WM program to run once per sample rather than once per pixel,
+          * because the memory layout of related samples doesn't match between
+          * W and Y tiling.
+          */
+         wm_prog_key.persample_msaa_dispatch = true;
+      }
+
       /* We must modify the rectangle we send through the rendering pipeline
        * (and the size and x/y offset of the destination surface), to account
        * for the fact that we are mapping it as Y-tiled when it is in fact
@@ -1943,7 +1946,14 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       wm_prog_key.use_kill = true;
    }
 
-   if (params.src.map_stencil_as_y_tiled) {
+   if (brw->gen < 8 && params.src.surf.tiling == ISL_TILING_W) {
+      /* On Haswell and earlier, we have to fake W-tiled sources as Y-tiled.
+       * Broadwell adds support for sampling from stencil.
+       */
+      params.src.surf.tiling = ISL_TILING_Y0;
+
+      wm_prog_key.src_tiled_w = true;
+
       /* We must modify the size and x/y offset of the source surface to
        * account for the fact that we are mapping it as Y-tiled when it is in
        * fact W tiled.
