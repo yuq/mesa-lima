@@ -200,7 +200,8 @@ _mesa_valid_prim_mode(struct gl_context *ctx, GLenum mode, const char *name)
    */
    if (ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]) {
       const GLenum geom_mode =
-         ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]->Geom.InputType;
+         ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]->
+            _LinkedShaders[MESA_SHADER_GEOMETRY]->Geom.InputType;
       struct gl_shader_program *tes =
          ctx->_Shader->CurrentProgram[MESA_SHADER_TESS_EVAL];
       GLenum mode_before_gs = mode;
@@ -305,7 +306,8 @@ _mesa_valid_prim_mode(struct gl_context *ctx, GLenum mode, const char *name)
       GLboolean pass = GL_TRUE;
 
       if(ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]) {
-         switch (ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]->Geom.OutputType) {
+         switch (ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]->
+                    _LinkedShaders[MESA_SHADER_GEOMETRY]->Geom.OutputType) {
          case GL_POINTS:
             pass = ctx->TransformFeedback.Mode == GL_POINTS;
             break;

@@ -390,8 +390,10 @@ brw_tcs_precompile(struct gl_context *ctx,
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
 
    /* Guess that the input and output patches have the same dimensionality. */
-   if (brw->gen < 8)
-      key.input_vertices = shader_prog->TessCtrl.VerticesOut;
+   if (brw->gen < 8) {
+      key.input_vertices = shader_prog->
+         _LinkedShaders[MESA_SHADER_TESS_CTRL]->TessCtrl.VerticesOut;
+   }
 
    key.tes_primitive_mode = brw->tess_eval_program ?
       brw->tess_eval_program->PrimitiveMode : GL_TRIANGLES;

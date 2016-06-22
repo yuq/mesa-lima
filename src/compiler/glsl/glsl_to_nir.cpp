@@ -166,7 +166,7 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
 
    switch (stage) {
    case MESA_SHADER_TESS_CTRL:
-      shader->info.tcs.vertices_out = shader_prog->TessCtrl.VerticesOut;
+      shader->info.tcs.vertices_out = sh->TessCtrl.VerticesOut;
       break;
 
    case MESA_SHADER_GEOMETRY:
