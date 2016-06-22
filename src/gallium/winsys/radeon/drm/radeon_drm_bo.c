@@ -555,8 +555,10 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
 
     if (rws->info.has_virtual_memory) {
         struct drm_radeon_gem_va va;
+        unsigned va_gap_size;
 
-        bo->va = radeon_bomgr_find_va(rws, size, alignment);
+        va_gap_size = rws->check_vm ? MAX2(4 * alignment, 64 * 1024) : 0;
+        bo->va = radeon_bomgr_find_va(rws, size + va_gap_size, alignment);
 
         va.handle = bo->handle;
         va.vm_id = 0;

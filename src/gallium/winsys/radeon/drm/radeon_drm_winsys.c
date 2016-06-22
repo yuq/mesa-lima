@@ -527,6 +527,8 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
 				     (ws->info.family == CHIP_HAWAII &&
 				      ws->accel_working2 < 3);
 
+    ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
+
     return TRUE;
 }
 
@@ -742,7 +744,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     if (!do_winsys_init(ws))
         goto fail1;
 
-    pb_cache_init(&ws->bo_cache, 500000, 2.0f, 0,
+    pb_cache_init(&ws->bo_cache, 500000, ws->check_vm ? 1.0f : 2.0f, 0,
                   MIN2(ws->info.vram_size, ws->info.gart_size),
                   radeon_bo_destroy,
                   radeon_bo_can_reclaim);

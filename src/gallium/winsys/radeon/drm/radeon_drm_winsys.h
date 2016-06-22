@@ -91,6 +91,7 @@ struct radeon_drm_winsys {
 
     uint64_t va_offset;
     struct list_head va_holes;
+    bool check_vm;
 
     struct radeon_surface_manager *surf_man;
 
