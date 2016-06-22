@@ -397,6 +397,8 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       src = src_reg(ATTR, instr->const_index[0] + const_offset->u32[0],
                     glsl_type::uvec4_type);
+      /* Swizzle source based on component layout qualifier */
+      src.swizzle = BRW_SWZ_COMP_INPUT(nir_intrinsic_component(instr));
 
       dest = get_nir_dest(instr->dest, src.type);
       dest.writemask = brw_writemask_for_size(instr->num_components);
