@@ -181,7 +181,7 @@ compile_init(struct ir3_compiler *compiler,
 		nir_print_shader(ctx->s, stdout);
 	}
 
-	so->first_driver_param = so->first_immediate = ctx->s->num_uniforms;
+	so->first_driver_param = so->first_immediate = align(ctx->s->num_uniforms, 4);
 
 	/* Layout of constant registers:
 	 *
