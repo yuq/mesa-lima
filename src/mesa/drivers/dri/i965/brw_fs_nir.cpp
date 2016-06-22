@@ -621,8 +621,36 @@ emit_find_msb_using_lzd(const fs_builder &bld,
                         bool is_signed)
 {
    fs_inst *inst;
+   fs_reg temp = src;
 
-   bld.LZD(retype(result, BRW_REGISTER_TYPE_UD), src);
+   if (is_signed) {
+      /* LZD of an absolute value source almost always does the right
+       * thing.  There are two problem values:
+       *
+       * * 0x80000000.  Since abs(0x80000000) == 0x80000000, LZD returns
+       *   0.  However, findMSB(int(0x80000000)) == 30.
+       *
+       * * 0xffffffff.  Since abs(0xffffffff) == 1, LZD returns
+       *   31.  Section 8.8 (Integer Functions) of the GLSL 4.50 spec says:
+       *
+       *    For a value of zero or negative one, -1 will be returned.
+       *
+       * * Negative powers of two.  LZD(abs(-(1<<x))) returns x, but
+       *   findMSB(-(1<<x)) should return x-1.
+       *
+       * For all negative number cases, including 0x80000000 and
+       * 0xffffffff, the correct value is obtained from LZD if instead of
+       * negating the (already negative) value the logical-not is used.  A
+       * conditonal logical-not can be achieved in two instructions.
+       */
+      temp = bld.vgrf(BRW_REGISTER_TYPE_D);
+
+      bld.ASR(temp, src, brw_imm_d(31));
+      bld.XOR(temp, temp, src);
+   }
+
+   bld.LZD(retype(result, BRW_REGISTER_TYPE_UD),
+           retype(temp, BRW_REGISTER_TYPE_UD));
 
    /* LZD counts from the MSB side, while GLSL's findMSB() wants the count
     * from the LSB side. Subtract the result from 31 to convert the MSB
@@ -1337,17 +1365,23 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_ifind_msb: {
       assert(nir_dest_bit_size(instr->dest.dest) < 64);
-      bld.FBH(retype(result, BRW_REGISTER_TYPE_UD), op[0]);
 
-      /* FBH counts from the MSB side, while GLSL's findMSB() wants the count
-       * from the LSB side. If FBH didn't return an error (0xFFFFFFFF), then
-       * subtract the result from 31 to convert the MSB count into an LSB count.
-       */
-      bld.CMP(bld.null_reg_d(), result, brw_imm_d(-1), BRW_CONDITIONAL_NZ);
+      if (devinfo->gen < 7) {
+         emit_find_msb_using_lzd(bld, result, op[0], true);
+      } else {
+         bld.FBH(retype(result, BRW_REGISTER_TYPE_UD), op[0]);
 
-      inst = bld.ADD(result, result, brw_imm_d(31));
-      inst->predicate = BRW_PREDICATE_NORMAL;
-      inst->src[0].negate = true;
+         /* FBH counts from the MSB side, while GLSL's findMSB() wants the
+          * count from the LSB side. If FBH didn't return an error
+          * (0xFFFFFFFF), then subtract the result from 31 to convert the MSB
+          * count into an LSB count.
+          */
+         bld.CMP(bld.null_reg_d(), result, brw_imm_d(-1), BRW_CONDITIONAL_NZ);
+
+         inst = bld.ADD(result, result, brw_imm_d(31));
+         inst->predicate = BRW_PREDICATE_NORMAL;
+         inst->src[0].negate = true;
+      }
       break;
    }
 
