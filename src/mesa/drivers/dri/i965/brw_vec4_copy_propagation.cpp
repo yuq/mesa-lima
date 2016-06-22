@@ -354,6 +354,9 @@ try_copy_propagate(const struct gen_device_info *devinfo,
       return false;
    }
 
+   if (inst->src[arg].offset % REG_SIZE || value.offset % REG_SIZE)
+      return false;
+
    bool has_source_modifiers = value.negate || value.abs;
 
    /* gen6 math and gen7+ SENDs from GRFs ignore source modifiers on
