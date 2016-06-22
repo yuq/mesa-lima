@@ -120,34 +120,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
 }
 
 
-/**
- * Split x_offset and y_offset into a base offset (in bytes) and a remaining
- * x/y offset (in pixels).  Note: we can't do this by calling
- * intel_renderbuffer_tile_offsets(), because the offsets may have been
- * adjusted to account for Y vs. W tiling differences.  So we compute it
- * directly from the adjusted offsets.
- */
-uint32_t
-brw_blorp_compute_tile_offsets(const struct brw_blorp_surface_info *info,
-                               uint32_t *tile_x, uint32_t *tile_y)
-{
-   uint32_t mask_x, mask_y;
-   uint32_t tiling = info->mt->tiling;
-   if (info->map_stencil_as_y_tiled)
-      tiling = I915_TILING_Y;
-
-   intel_get_tile_masks(tiling, info->mt->tr_mode, info->mt->cpp,
-                        &mask_x, &mask_y);
-
-   *tile_x = info->x_offset & mask_x;
-   *tile_y = info->y_offset & mask_y;
-
-   return intel_miptree_get_aligned_offset(info->mt, info->x_offset & ~mask_x,
-                                           info->y_offset & ~mask_y,
-                                           info->map_stencil_as_y_tiled);
-}
-
-
 void
 brw_blorp_params_init(struct brw_blorp_params *params)
 {
@@ -354,7 +326,11 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
    };
 
    uint32_t offset, tile_x, tile_y;
-   offset = brw_blorp_compute_tile_offsets(surface, &tile_x, &tile_y);
+   isl_tiling_get_intratile_offset_el(&brw->isl_dev, surf.tiling,
+                                      isl_format_get_layout(view.format)->bpb / 8,
+                                      surf.row_pitch,
+                                      surface->x_offset, surface->y_offset,
+                                      &offset, &tile_x, &tile_y);
 
    uint32_t surf_offset;
    uint32_t *dw = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,

@@ -172,11 +172,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
                             unsigned int level, unsigned int layer,
                             mesa_format format, bool is_render_target);
 
-uint32_t
-brw_blorp_compute_tile_offsets(const struct brw_blorp_surface_info *info,
-                               uint32_t *tile_x, uint32_t *tile_y);
-
-
 
 struct brw_blorp_coord_transform
 {
