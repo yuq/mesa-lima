@@ -294,6 +294,7 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
    uint64_t va = 0;
    struct amdgpu_winsys_bo *bo;
    amdgpu_va_handle va_handle;
+   unsigned va_gap_size;
    int r;
 
    assert(initial_domain & RADEON_DOMAIN_VRAM_GTT);
@@ -327,8 +328,9 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
       goto error_bo_alloc;
    }
 
+   va_gap_size = ws->check_vm ? MAX2(4 * alignment, 64 * 1024) : 0;
    r = amdgpu_va_range_alloc(ws->dev, amdgpu_gpu_va_range_general,
-                             size, alignment, 0, &va, &va_handle, 0);
+                             size + va_gap_size, alignment, 0, &va, &va_handle, 0);
    if (r)
       goto error_va_alloc;
 

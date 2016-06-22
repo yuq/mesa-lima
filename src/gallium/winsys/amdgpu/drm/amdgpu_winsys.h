@@ -66,6 +66,8 @@ struct amdgpu_winsys {
    uint32_t rev_id;
    unsigned family;
 
+   bool check_vm;
+
    /* List of all allocated buffers */
    pipe_mutex global_bo_list_lock;
    struct list_head global_bo_list;
