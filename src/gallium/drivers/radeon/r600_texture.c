@@ -1103,6 +1103,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 	if (rscreen->debug_flags & DBG_TEX) {
 		puts("Texture:");
 		r600_print_texture_info(rtex, stdout);
+		fflush(stdout);
 	}
 
 	return rtex;
