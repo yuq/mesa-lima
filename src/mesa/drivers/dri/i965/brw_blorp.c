@@ -122,9 +122,11 @@ brw_blorp_compute_tile_offsets(const struct brw_blorp_surface_info *info,
                                uint32_t *tile_x, uint32_t *tile_y)
 {
    uint32_t mask_x, mask_y;
+   uint32_t tiling = info->mt->tiling;
+   if (info->map_stencil_as_y_tiled)
+      tiling = I915_TILING_Y;
 
-   intel_get_tile_masks(info->mt->tiling, info->mt->tr_mode, info->mt->cpp,
-                        info->map_stencil_as_y_tiled,
+   intel_get_tile_masks(tiling, info->mt->tr_mode, info->mt->cpp,
                         &mask_x, &mask_y);
 
    *tile_x = info->x_offset & mask_x;

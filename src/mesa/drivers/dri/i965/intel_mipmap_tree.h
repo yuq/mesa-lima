@@ -817,7 +817,6 @@ intel_get_image_dims(struct gl_texture_image *image,
 
 void
 intel_get_tile_masks(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
-                     bool map_stencil_as_y_tiled,
                      uint32_t *mask_x, uint32_t *mask_y);
 
 void
