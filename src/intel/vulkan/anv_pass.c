@@ -60,9 +60,8 @@ VkResult anv_CreateRenderPass(
       att->format = pCreateInfo->pAttachments[i].format;
       att->samples = pCreateInfo->pAttachments[i].samples;
       att->load_op = pCreateInfo->pAttachments[i].loadOp;
+      att->store_op = pCreateInfo->pAttachments[i].storeOp;
       att->stencil_load_op = pCreateInfo->pAttachments[i].stencilLoadOp;
-      // att->store_op = pCreateInfo->pAttachments[i].storeOp;
-      // att->stencil_store_op = pCreateInfo->pAttachments[i].stencilStoreOp;
    }
 
    uint32_t subpass_attachment_count = 0, *p;
