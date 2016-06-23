@@ -278,6 +278,7 @@ intelInitExtensions(struct gl_context *ctx)
    _mesa_override_glsl_version(&ctx->Const);
 
    ctx->Extensions.EXT_shader_integer_mix = ctx->Const.GLSLVersion >= 130;
+   ctx->Extensions.MESA_shader_integer_functions = ctx->Const.GLSLVersion >= 130;
 
    if (brw->gen >= 5) {
       ctx->Extensions.ARB_texture_query_levels = ctx->Const.GLSLVersion >= 130;
