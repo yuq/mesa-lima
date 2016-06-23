@@ -240,8 +240,6 @@ __glXInitVertexArrayState(struct glx_context * gc)
 
       arrays->arrays[4 + i].old_DrawArrays_possible = (i == 0);
       arrays->arrays[4 + i].index = i;
-
-      arrays->arrays[4 + i].header[1] = i + GL_TEXTURE0;
    }
 
    i = 4 + texture_units;
@@ -274,8 +272,6 @@ __glXInitVertexArrayState(struct glx_context * gc)
 
       arrays->arrays[idx + i].old_DrawArrays_possible = 0;
       arrays->arrays[idx + i].index = idx;
-
-      arrays->arrays[idx + i].header[1] = idx;
    }
 
    i += vertex_program_attribs;
@@ -325,7 +321,7 @@ calculate_single_vertex_size_none(const struct array_state_vector *arrays)
 
    for (i = 0; i < arrays->num_arrays; i++) {
       if (arrays->arrays[i].enabled) {
-         single_vertex_size += ((uint16_t *) arrays->arrays[i].header)[0];
+         single_vertex_size += arrays->arrays[i].header[0];
       }
    }
 
@@ -353,17 +349,45 @@ emit_element_none(GLubyte * dst,
           * protocol is for a 4Nus.  Since the sizes are small, the
           * performance impact on modern processors should be negligible.
           */
-         (void) memset(dst, 0, ((uint16_t *) arrays->arrays[i].header)[0]);
+         (void) memset(dst, 0, arrays->arrays[i].header[0]);
 
-         (void) memcpy(dst, arrays->arrays[i].header,
-                       arrays->arrays[i].header_size);
+         (void) memcpy(dst, arrays->arrays[i].header, 4);
 
-         dst += arrays->arrays[i].header_size;
+         dst += 4;
 
-         (void) memcpy(dst, ((GLubyte *) arrays->arrays[i].data) + offset,
-                       arrays->arrays[i].element_size);
-
-         dst += __GLX_PAD(arrays->arrays[i].element_size);
+         if (arrays->arrays[i].key == GL_TEXTURE_COORD_ARRAY &&
+             arrays->arrays[i].index > 0) {
+            /* Multi-texture coordinate arrays require the texture target
+             * to be sent.  For doubles it is after the data, for everything
+             * else it is before.
+             */
+            GLenum texture = arrays->arrays[i].index + GL_TEXTURE0;
+            if (arrays->arrays[i].data_type == GL_DOUBLE) {
+               (void) memcpy(dst, ((GLubyte *) arrays->arrays[i].data) + offset,
+                             arrays->arrays[i].element_size);
+               dst += arrays->arrays[i].element_size;
+               (void) memcpy(dst, &texture, 4);
+               dst += 4;
+            } else {
+               (void) memcpy(dst, &texture, 4);
+               dst += 4;
+               (void) memcpy(dst, ((GLubyte *) arrays->arrays[i].data) + offset,
+                             arrays->arrays[i].element_size);
+               dst += __GLX_PAD(arrays->arrays[i].element_size);
+            }
+         } else if (arrays->arrays[i].key == GL_VERTEX_ATTRIB_ARRAY_POINTER) {
+            /* Vertex attribute data requires the index sent first.
+             */
+            (void) memcpy(dst, &arrays->arrays[i].index, 4);
+            dst += 4;
+            (void) memcpy(dst, ((GLubyte *) arrays->arrays[i].data) + offset,
+                          arrays->arrays[i].element_size);
+            dst += __GLX_PAD(arrays->arrays[i].element_size);
+         } else {
+            (void) memcpy(dst, ((GLubyte *) arrays->arrays[i].data) + offset,
+                          arrays->arrays[i].element_size);
+            dst += __GLX_PAD(arrays->arrays[i].element_size);
+         }
       }
    }
 
@@ -1099,6 +1123,10 @@ __indirect_glMultiDrawElementsEXT(GLenum mode, const GLsizei * count,
 }
 
 
+/* The HDR_SIZE macro argument is the command header size (4 bytes)
+ * plus any additional index word e.g. for texture units or vertex
+ * attributes.
+ */
 #define COMMON_ARRAY_DATA_INIT(a, PTR, TYPE, STRIDE, COUNT, NORMALIZED, HDR_SIZE, OPCODE) \
   do {                                                                  \
     (a)->data = PTR;                                                    \
@@ -1111,9 +1139,8 @@ __indirect_glMultiDrawElementsEXT(GLenum mode, const GLsizei * count,
     (a)->true_stride = (STRIDE == 0)                                    \
       ? (a)->element_size : STRIDE;                                     \
                                                                         \
-    (a)->header_size = HDR_SIZE;                                        \
-    ((uint16_t *) (a)->header)[0] = __GLX_PAD((a)->header_size + (a)->element_size); \
-    ((uint16_t *) (a)->header)[1] = OPCODE;                             \
+    (a)->header[0] = __GLX_PAD(HDR_SIZE + (a)->element_size);           \
+    (a)->header[1] = OPCODE;                                            \
   } while(0)
 
 
@@ -1691,8 +1718,7 @@ __indirect_glVertexAttribPointer(GLuint index, GLint size,
                           opcode);
 
    true_immediate_size = __glXTypeSize(type) * true_immediate_count;
-   ((uint16_t *) (a)->header)[0] = __GLX_PAD(a->header_size
-                                             + true_immediate_size);
+   a->header[0] = __GLX_PAD(8 + true_immediate_size);
 
    if (a->enabled) {
       arrays->array_info_cache_valid = GL_FALSE;
