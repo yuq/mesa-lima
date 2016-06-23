@@ -119,15 +119,6 @@ struct brw_blorp_surface_info
    uint32_t y_offset;
 
    /**
-    * Indicates if we use the standard miptree layout (ALL_LOD_IN_EACH_SLICE),
-    * or if we tightly pack array slices at each LOD (ALL_SLICES_AT_EACH_LOD).
-    *
-    * If ALL_SLICES_AT_EACH_LOD is set, then ARYSPC_LOD0 can be used. Ignored
-    * prior to Gen7.
-    */
-   enum miptree_array_layout array_layout;
-
-   /**
     * Format that should be used when setting up the surface state for this
     * surface.  Should correspond to one of the BRW_SURFACEFORMAT_* enums.
     */

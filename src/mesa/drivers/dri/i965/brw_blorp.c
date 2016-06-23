@@ -69,7 +69,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    intel_miptree_get_image_offset(mt, level, layer,
                                   &info->x_offset, &info->y_offset);
 
-   info->array_layout = mt->array_layout;
    info->swizzle = SWIZZLE_XYZW;
 
    if (format == MESA_FORMAT_NONE)
