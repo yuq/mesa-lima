@@ -281,7 +281,16 @@ namespace {
    }
 
    std::vector<llvm::Function *>
-   find_kernels(const llvm::Module *mod) {
+   find_kernels(llvm::Module *mod) {
+      std::vector<llvm::Function *> kernels;
+#if HAVE_LLVM >= 0x0309
+      auto &list = mod->getFunctionList();
+      for_each(list.begin(), list.end(), [&](llvm::Function &f){
+         if (f.getMetadata("kernel_arg_type"))
+           kernels.push_back(&f);
+      });
+      return kernels;
+#endif
       const llvm::NamedMDNode *kernel_node =
                                  mod->getNamedMetadata("opencl.kernels");
       // This means there are no kernels in the program.  The spec does not
@@ -291,7 +300,6 @@ namespace {
          return std::vector<llvm::Function *>();
       }
 
-      std::vector<llvm::Function *> kernels;
       kernels.reserve(kernel_node->getNumOperands());
       for (unsigned i = 0; i < kernel_node->getNumOperands(); ++i) {
 #if HAVE_LLVM >= 0x0306
@@ -377,8 +385,27 @@ namespace {
       kernel_arg_md(llvm::StringRef type_name_, llvm::StringRef access_qual_):
          type_name(type_name_), access_qual(access_qual_) {}
    };
+#if HAVE_LLVM >= 0x0309
+   std::vector<kernel_arg_md>
+   get_kernel_arg_md(const llvm::Function *kernel_func) {
 
-#if HAVE_LLVM >= 0x0306
+      size_t num_args = kernel_func->getArgumentList().size();
+
+      auto aq = kernel_func->getMetadata("kernel_arg_access_qual");
+      auto ty = kernel_func->getMetadata("kernel_arg_type");
+
+      std::vector<kernel_arg_md> res;
+      res.reserve(num_args);
+      for (size_t i = 0; i < num_args; ++i) {
+         res.push_back(kernel_arg_md(
+            llvm::cast<llvm::MDString>(ty->getOperand(i))->getString(),
+            llvm::cast<llvm::MDString>(aq->getOperand(i))->getString()));
+      }
+
+      return res;
+   }
+
+#elif HAVE_LLVM >= 0x0306
 
    const llvm::MDNode *
    get_kernel_metadata(const llvm::Function *kernel_func) {
@@ -776,7 +803,7 @@ namespace {
 
    module
    build_module_native(std::vector<char> &code,
-                       const llvm::Module *mod,
+                       llvm::Module *mod,
                        const clang::LangAS::Map &address_spaces,
                        std::string &r_log) {
 
