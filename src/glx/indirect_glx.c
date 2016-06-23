@@ -131,7 +131,6 @@ indirect_bind_context(struct glx_context *gc, struct glx_context *old,
 		      GLXDrawable draw, GLXDrawable read)
 {
    GLXContextTag tag;
-   __GLXattribute *state;
    Display *dpy = gc->psc->dpy;
    int opcode = __glXSetupForCommand(dpy);
    Bool sent;
@@ -149,13 +148,6 @@ indirect_bind_context(struct glx_context *gc, struct glx_context *old,
    if (!IndirectAPI)
       IndirectAPI = __glXNewIndirectAPI();
    _glapi_set_dispatch(IndirectAPI);
-
-   state = gc->client_state_private;
-   if (state->array_state == NULL) {
-      glGetString(GL_EXTENSIONS);
-      glGetString(GL_VERSION);
-      __glXInitVertexArrayState(gc);
-   }
 
    return !sent;
 }
