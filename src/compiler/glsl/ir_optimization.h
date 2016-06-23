@@ -42,6 +42,7 @@
 #define SAT_TO_CLAMP       0x400
 #define DOPS_TO_DFRAC      0x800
 #define DFREXP_DLDEXP_TO_ARITH    0x1000
+#define BIT_COUNT_TO_MATH         0x02000
 
 /**
  * \see class lower_packing_builtins_visitor
