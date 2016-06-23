@@ -135,12 +135,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    if (!encode_srgb && _mesa_get_format_color_encoding(format) == GL_SRGB)
       format = _mesa_get_srgb_format_linear(format);
 
-   brw_blorp_surface_info_init(brw, &params.dst, irb->mt, irb->mt_level,
-                               layer, format, true);
-
-   /* Override the surface format according to the context's sRGB rules. */
-   params.dst.brw_surfaceformat = brw->render_target_format[format];
-
    params.x0 = fb->_Xmin;
    params.x1 = fb->_Xmax;
    if (rb->Name != 0) {
@@ -217,6 +211,12 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
          }
       }
    }
+
+   brw_blorp_surface_info_init(brw, &params.dst, irb->mt, irb->mt_level,
+                               layer, format, true);
+
+   /* Override the surface format according to the context's sRGB rules. */
+   params.dst.brw_surfaceformat = brw->render_target_format[format];
 
    const char *clear_type;
    if (is_fast_clear)
