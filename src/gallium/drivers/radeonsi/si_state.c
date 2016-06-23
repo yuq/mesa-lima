@@ -2555,10 +2555,14 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	unsigned sc_mode_cntl_1 =
+		S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
+		S_028A4C_FORCE_EOV_REZ_ENABLE(1);
 
 	cayman_emit_msaa_config(cs, sctx->framebuffer.nr_samples,
 				sctx->ps_iter_samples,
-				sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0);
+				sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0,
+				sc_mode_cntl_1);
 }
 
 

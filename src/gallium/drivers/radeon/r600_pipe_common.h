@@ -727,7 +727,8 @@ void cayman_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
 void cayman_init_msaa(struct pipe_context *ctx);
 void cayman_emit_msaa_sample_locs(struct radeon_winsys_cs *cs, int nr_samples);
 void cayman_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
-			     int ps_iter_samples, int overrast_samples);
+			     int ps_iter_samples, int overrast_samples,
+			     unsigned sc_mode_cntl_1);
 
 
 /* Inline helpers. */
