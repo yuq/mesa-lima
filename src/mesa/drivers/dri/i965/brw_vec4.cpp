@@ -908,12 +908,16 @@ vec4_visitor::is_dep_ctrl_unsafe(const vec4_instruction *inst)
    (reg.type == BRW_REGISTER_TYPE_UD || \
     reg.type == BRW_REGISTER_TYPE_D)
 
+#define IS_64BIT(reg) (reg.file != BAD_FILE && type_sz(reg.type) == 8)
+
    /* From the Cherryview and Broadwell PRMs:
     *
     * "When source or destination datatype is 64b or operation is integer DWord
     * multiply, DepCtrl must not be used."
     *
-    * SKL PRMs don't include this restriction though.
+    * SKL PRMs don't include this restriction, however, gen7 seems to be
+    * affected, at least by the 64b restriction, since DepCtrl with double
+    * precision instructions seems to produce GPU hangs in some cases.
     */
    if (devinfo->gen == 8 || devinfo->is_broxton) {
       if (inst->opcode == BRW_OPCODE_MUL &&
@@ -921,6 +925,14 @@ vec4_visitor::is_dep_ctrl_unsafe(const vec4_instruction *inst)
          IS_DWORD(inst->src[1]))
          return true;
    }
+
+   if (devinfo->gen >= 7 && devinfo->gen <= 8) {
+      if (IS_64BIT(inst->dst) || IS_64BIT(inst->src[0]) ||
+          IS_64BIT(inst->src[1]) || IS_64BIT(inst->src[2]))
+      return true;
+   }
+
+#undef IS_64BIT
 #undef IS_DWORD
 
    if (devinfo->gen >= 8) {
