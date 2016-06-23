@@ -1305,7 +1305,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
    nir_ssa_def *src_pos, *dst_pos, *color;
 
    /* Sanity checks */
-   if (key->dst_tiled_w && key->rt_samples > 0) {
+   if (key->dst_tiled_w && key->rt_samples > 1) {
       /* If the destination image is W tiled and multisampled, then the thread
        * must be dispatched once per sample, not once per pixel.  This is
        * necessary because after conversion between W and Y tiling, there's no
@@ -1336,13 +1336,13 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
 
    /* Make sure layout is consistent with sample count */
    assert((key->tex_layout == INTEL_MSAA_LAYOUT_NONE) ==
-          (key->tex_samples == 0));
+          (key->tex_samples <= 1));
    assert((key->rt_layout == INTEL_MSAA_LAYOUT_NONE) ==
-          (key->rt_samples == 0));
+          (key->rt_samples <= 1));
    assert((key->src_layout == INTEL_MSAA_LAYOUT_NONE) ==
-          (key->src_samples == 0));
+          (key->src_samples <= 1));
    assert((key->dst_layout == INTEL_MSAA_LAYOUT_NONE) ==
-          (key->dst_samples == 0));
+          (key->dst_samples <= 1));
 
    nir_builder b;
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
