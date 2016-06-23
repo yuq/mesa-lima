@@ -448,7 +448,11 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	if (prim != sctx->last_prim ||
 	    ia_multi_vgt_param != sctx->last_multi_vgt_param ||
 	    ls_hs_config != sctx->last_ls_hs_config) {
-		if (sctx->b.chip_class >= CIK) {
+		if (sctx->b.family >= CHIP_POLARIS10) {
+			radeon_set_context_reg_idx(cs, R_028AA8_IA_MULTI_VGT_PARAM, 1, ia_multi_vgt_param);
+			radeon_set_context_reg_idx(cs, R_028B58_VGT_LS_HS_CONFIG, 2, ls_hs_config);
+			radeon_set_uconfig_reg_idx(cs, R_030908_VGT_PRIMITIVE_TYPE, 1, prim);
+		} else if (sctx->b.chip_class >= CIK) {
 			radeon_emit(cs, PKT3(PKT3_DRAW_PREAMBLE, 2, 0));
 			radeon_emit(cs, prim); /* VGT_PRIMITIVE_TYPE */
 			radeon_emit(cs, ia_multi_vgt_param); /* IA_MULTI_VGT_PARAM */
@@ -458,6 +462,7 @@ static void si_emit_draw_registers(struct si_context *sctx,
 			radeon_set_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
 			radeon_set_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG, ls_hs_config);
 		}
+
 		sctx->last_prim = prim;
 		sctx->last_multi_vgt_param = ia_multi_vgt_param;
 		sctx->last_ls_hs_config = ls_hs_config;
