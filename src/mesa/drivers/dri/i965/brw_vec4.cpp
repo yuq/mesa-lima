@@ -908,11 +908,14 @@ vec4_visitor::is_dep_ctrl_unsafe(const vec4_instruction *inst)
    (reg.type == BRW_REGISTER_TYPE_UD || \
     reg.type == BRW_REGISTER_TYPE_D)
 
-   /* "When source or destination datatype is 64b or operation is integer DWord
+   /* From the Cherryview and Broadwell PRMs:
+    *
+    * "When source or destination datatype is 64b or operation is integer DWord
     * multiply, DepCtrl must not be used."
-    * May apply to future SoCs as well.
+    *
+    * SKL PRMs don't include this restriction though.
     */
-   if (devinfo->is_cherryview) {
+   if (devinfo->gen == 8 || devinfo->is_broxton) {
       if (inst->opcode == BRW_OPCODE_MUL &&
          IS_DWORD(inst->src[0]) &&
          IS_DWORD(inst->src[1]))
