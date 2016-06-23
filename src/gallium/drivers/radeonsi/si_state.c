@@ -2555,7 +2555,17 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	unsigned num_tile_pipes = sctx->screen->b.info.num_tile_pipes;
+	bool dst_is_linear = false; /* TODO */
 	unsigned sc_mode_cntl_1 =
+		S_028A4C_WALK_SIZE(dst_is_linear) |
+		S_028A4C_WALK_FENCE_ENABLE(!dst_is_linear) |
+		S_028A4C_WALK_FENCE_SIZE(num_tile_pipes == 2 ? 2 : 3) |
+		/* always 1: */
+		S_028A4C_WALK_ALIGN8_PRIM_FITS_ST(1) |
+		S_028A4C_SUPERTILE_WALK_ORDER_ENABLE(1) |
+		S_028A4C_TILE_WALK_ORDER_ENABLE(1) |
+		S_028A4C_MULTI_SHADER_ENGINE_PRIM_DISCARD_ENABLE(1) |
 		S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
 		S_028A4C_FORCE_EOV_REZ_ENABLE(1);
 
@@ -2564,7 +2574,6 @@ static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 				sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0,
 				sc_mode_cntl_1);
 }
-
 
 static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 {
