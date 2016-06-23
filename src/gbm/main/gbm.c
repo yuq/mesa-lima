@@ -132,7 +132,7 @@ _gbm_mesa_get_device(int fd)
  * the file descriptor returned when opening a device such as \c
  * /dev/dri/card0
  *
- * \param fd The file descriptor for an backend specific device
+ * \param fd The file descriptor for a backend specific device
  * \return The newly created struct gbm_device. The resources associated with
  * the device should be freed with gbm_device_destroy() when it is no longer
  * needed. If the creation of the device failed NULL will be returned.
@@ -522,7 +522,7 @@ gbm_surface_release_buffer(struct gbm_surface *surf, struct gbm_bo *bo)
  *
  * Before starting a new frame, the surface must have a buffer
  * available for rendering.  Initially, a gbm surface will have a free
- * buffer, but after one of more buffers have been locked (\sa
+ * buffer, but after one or more buffers have been locked (\sa
  * gbm_surface_lock_front_buffer()), the application must check for a
  * free buffer before rendering.
  *
