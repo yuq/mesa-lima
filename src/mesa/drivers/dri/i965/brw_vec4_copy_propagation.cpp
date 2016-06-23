@@ -324,6 +324,13 @@ try_copy_propagate(const struct gen_device_info *devinfo,
        value.file != ATTR)
       return false;
 
+   /* In gen < 8 instructions that write 2 registers also need to read 2
+    * registers. Make sure we don't break that restriction by copy
+    * propagating from a uniform.
+    */
+   if (devinfo->gen < 8 && inst->size_written > REG_SIZE && is_uniform(value))
+      return false;
+
    /* If the type of the copy value is different from the type of the
     * instruction then the swizzles and writemasks involved don't have the same
     * meaning and simply replacing the source would produce different semantics.
