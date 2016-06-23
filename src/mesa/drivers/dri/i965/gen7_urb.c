@@ -300,17 +300,21 @@ gen7_upload_urb(struct brw_context *brw)
       remaining_space -= vs_additional;
       total_wants -= vs_wants;
 
-      unsigned hs_additional = (unsigned)
-         round(hs_wants * (((double) remaining_space) / total_wants));
-      hs_chunks += hs_additional;
-      remaining_space -= hs_additional;
-      total_wants -= hs_wants;
+      if (total_wants > 0) {
+         unsigned hs_additional = (unsigned)
+            round(hs_wants * (((double) remaining_space) / total_wants));
+         hs_chunks += hs_additional;
+         remaining_space -= hs_additional;
+         total_wants -= hs_wants;
+      }
 
-      unsigned ds_additional = (unsigned)
-         round(ds_wants * (((double) remaining_space) / total_wants));
-      ds_chunks += ds_additional;
-      remaining_space -= ds_additional;
-      total_wants -= ds_wants;
+      if (total_wants > 0) {
+         unsigned ds_additional = (unsigned)
+            round(ds_wants * (((double) remaining_space) / total_wants));
+         ds_chunks += ds_additional;
+         remaining_space -= ds_additional;
+         total_wants -= ds_wants;
+      }
 
       gs_chunks += remaining_space;
    }
