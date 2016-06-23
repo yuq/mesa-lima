@@ -642,4 +642,10 @@ enum pipe_error
 SVGA3D_vgpu10_GenMips(struct svga_winsys_context *swc,
                       const SVGA3dShaderResourceViewId shaderResourceViewId,
                       struct svga_winsys_surface *view);
+
+enum pipe_error
+SVGA3D_vgpu10_BufferCopy(struct svga_winsys_context *swc,
+                         struct svga_winsys_surface *src,
+                         struct svga_winsys_surface *dst,
+                         unsigned srcx, unsigned dstx, unsigned width);
 #endif /* __SVGA3D_H__ */
