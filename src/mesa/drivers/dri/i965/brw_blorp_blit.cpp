@@ -904,7 +904,7 @@ static inline int count_trailing_one_bits(unsigned value)
 static nir_ssa_def *
 blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
                                unsigned tex_samples,
-                               enum intel_msaa_layout tex_layout,
+                               enum isl_aux_usage tex_aux_usage,
                                enum brw_reg_type dst_type)
 {
    /* If non-null, this is the outer-most if statement */
@@ -914,7 +914,7 @@ blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
       nir_local_variable_create(b->impl, glsl_vec4_type(), "color");
 
    nir_ssa_def *mcs = NULL;
-   if (tex_layout == INTEL_MSAA_LAYOUT_CMS)
+   if (tex_aux_usage == ISL_AUX_USAGE_MCS)
       mcs = blorp_nir_txf_ms_mcs(b, pos);
 
    /* We add together samples using a binary tree structure, e.g. for 4x MSAA:
@@ -959,7 +959,7 @@ blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
                                         nir_imm_int(b, i));
       texture_data[stack_depth++] = blorp_nir_txf_ms(b, ms_pos, mcs, dst_type);
 
-      if (i == 0 && tex_layout == INTEL_MSAA_LAYOUT_CMS) {
+      if (i == 0 && tex_aux_usage == ISL_AUX_USAGE_MCS) {
          /* The Ivy Bridge PRM, Vol4 Part1 p27 (Multisample Control Surface)
           * suggests an optimization:
           *
@@ -1076,7 +1076,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
        * here inside the loop after computing the pixel coordinates.
        */
       nir_ssa_def *mcs = NULL;
-      if (key->tex_layout == INTEL_MSAA_LAYOUT_CMS)
+      if (key->tex_aux_usage == ISL_AUX_USAGE_MCS)
          mcs = blorp_nir_txf_ms_mcs(b, sample_coords_int);
 
       /* Compute sample index and map the sample index to a sample number.
@@ -1435,7 +1435,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
       } else {
          /* Gen7+ hardware doesn't automaticaly blend. */
          color = blorp_nir_manual_blend_average(&b, src_pos, key->src_samples,
-                                                key->src_layout,
+                                                key->tex_aux_usage,
                                                 key->texture_data_type);
       }
    } else if (key->blend && key->blit_scaled) {
@@ -1488,7 +1488,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
             color = blorp_nir_txf(&b, &v, src_pos, key->texture_data_type);
          } else {
             nir_ssa_def *mcs = NULL;
-            if (key->tex_layout == INTEL_MSAA_LAYOUT_CMS)
+            if (key->tex_aux_usage == ISL_AUX_USAGE_MCS)
                mcs = blorp_nir_txf_ms_mcs(&b, src_pos);
 
             color = blorp_nir_txf_ms(&b, src_pos, mcs, key->texture_data_type);
@@ -1522,7 +1522,7 @@ brw_blorp_get_blit_kernel(struct brw_context *brw,
    struct brw_wm_prog_key wm_key;
    brw_blorp_init_wm_prog_key(&wm_key);
    wm_key.tex.compressed_multisample_layout_mask =
-      prog_key->tex_layout == INTEL_MSAA_LAYOUT_CMS;
+      prog_key->tex_aux_usage == ISL_AUX_USAGE_MCS;
    wm_key.tex.msaa_16 = prog_key->tex_samples == 16;
    wm_key.multisample_fbo = prog_key->rt_samples > 1;
 
@@ -1769,6 +1769,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     */
    wm_prog_key.tex_samples = params.src.surf.samples;
    wm_prog_key.rt_samples  = params.dst.surf.samples;
+
+   wm_prog_key.tex_aux_usage = params.src.aux_usage;
 
    /* tex_layout and rt_layout indicate the MSAA layout the GPU pipeline will
     * use to access the source and destination surfaces.

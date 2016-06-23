@@ -300,6 +300,8 @@ struct brw_blorp_blit_prog_key
     */
    enum intel_msaa_layout tex_layout;
 
+   enum isl_aux_usage tex_aux_usage;
+
    /* Actual number of samples per pixel in the source image. */
    unsigned src_samples;
 
