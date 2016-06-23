@@ -151,6 +151,7 @@ __glXInitVertexArrayState(struct glx_context * gc)
 
 
    arrays = calloc(1, sizeof(struct array_state_vector));
+   state->array_state = arrays;
 
    if (arrays == NULL) {
       __glXSetError(gc, GL_OUT_OF_MEMORY);
@@ -299,11 +300,6 @@ __glXInitVertexArrayState(struct glx_context * gc)
       __glXSetError(gc, GL_OUT_OF_MEMORY);
       return;
    }
-
-   /* Everything went ok so we put vertex array state in place
-    * in context.
-    */
-   state->array_state = arrays;
 }
 
 
