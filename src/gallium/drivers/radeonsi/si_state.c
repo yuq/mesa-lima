@@ -2238,6 +2238,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	struct r600_surface *surf = NULL;
 	struct r600_texture *rtex;
 	bool old_cb0_is_integer = sctx->framebuffer.cb0_is_integer;
+	bool old_any_dst_linear = sctx->framebuffer.any_dst_linear;
 	unsigned old_nr_samples = sctx->framebuffer.nr_samples;
 	int i;
 
@@ -2274,6 +2275,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	sctx->framebuffer.log_samples = util_logbase2(sctx->framebuffer.nr_samples);
 	sctx->framebuffer.cb0_is_integer = state->nr_cbufs && state->cbufs[0] &&
 				  util_format_is_pure_integer(state->cbufs[0]->format);
+	sctx->framebuffer.any_dst_linear = false;
 
 	if (sctx->framebuffer.cb0_is_integer != old_cb0_is_integer)
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);
@@ -2304,6 +2306,10 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (rtex->fmask.size && rtex->cmask.size) {
 			sctx->framebuffer.compressed_cb_mask |= 1 << i;
 		}
+
+		if (surf->level_info->mode == RADEON_SURF_MODE_LINEAR_ALIGNED)
+			sctx->framebuffer.any_dst_linear = true;
+
 		r600_context_add_resource_size(ctx, surf->base.texture);
 
 		p_atomic_inc(&rtex->framebuffers_bound);
@@ -2332,6 +2338,9 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	si_update_poly_offset_state(sctx);
 	si_mark_atom_dirty(sctx, &sctx->cb_render_state);
 	si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
+
+	if (sctx->framebuffer.any_dst_linear != old_any_dst_linear)
+		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 
 	if (sctx->framebuffer.nr_samples != old_nr_samples) {
 		si_mark_atom_dirty(sctx, &sctx->msaa_config);
@@ -2556,7 +2565,8 @@ static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned num_tile_pipes = sctx->screen->b.info.num_tile_pipes;
-	bool dst_is_linear = false; /* TODO */
+	/* 33% faster rendering to linear color buffers */
+	bool dst_is_linear = sctx->framebuffer.any_dst_linear;
 	unsigned sc_mode_cntl_1 =
 		S_028A4C_WALK_SIZE(dst_is_linear) |
 		S_028A4C_WALK_FENCE_ENABLE(!dst_is_linear) |

@@ -165,6 +165,7 @@ struct si_framebuffer {
 	unsigned			color_is_int8; /* bitmask */
 	unsigned			dirty_cbufs;
 	bool				dirty_zsbuf;
+	bool				any_dst_linear;
 };
 
 struct si_clip_state {
