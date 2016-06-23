@@ -138,7 +138,6 @@ svga_resource_copy_region(struct pipe_context *pipe,
       src_z = src_box->z;
    }
 
-   /* different src/dst type???*/
    if (dst_tex->target == PIPE_TEXTURE_CUBE ||
        dst_tex->target == PIPE_TEXTURE_1D_ARRAY) {
       dst_face_layer = dstz;
@@ -150,14 +149,48 @@ svga_resource_copy_region(struct pipe_context *pipe,
       dst_z = dstz;
    }
 
-   svga_texture_copy_handle(svga,
-                            stex->handle,
+   stex = svga_texture(src_tex);
+   dtex = svga_texture(dst_tex);
+
+   if (svga_have_vgpu10(svga)) {
+      /* vgpu10 */
+      if (util_format_is_compressed(src_tex->format) ==
+          util_format_is_compressed(dst_tex->format) &&
+          !util_format_is_depth_and_stencil(src_tex->format) &&
+          stex->handle != dtex->handle &&
+          src_tex->target == dst_tex->target) {
+         copy_region_vgpu10(svga,
+                            src_tex,
                             src_box->x, src_box->y, src_z,
                             src_level, src_face_layer,
-                            dtex->handle,
+                            dst_tex,
                             dstx, dsty, dst_z,
                             dst_level, dst_face_layer,
                             src_box->width, src_box->height, src_box->depth);
+      }
+      else {
+         util_resource_copy_region(pipe, dst_tex, dst_level, dstx, dsty, dstz,
+                                   src_tex, src_level, src_box);
+      }
+   }
+   else {
+      /* vgpu9 */
+      if (src_tex->format == dst_tex->format) {
+         svga_texture_copy_handle(svga,
+                                  stex->handle,
+                                  src_box->x, src_box->y, src_z,
+                                  src_level, src_face_layer,
+                                  dtex->handle,
+                                  dstx, dsty, dst_z,
+                                   dst_level, dst_face_layer,
+                                  src_box->width, src_box->height,
+                                  src_box->depth);
+      }
+      else {
+         util_resource_copy_region(pipe, dst_tex, dst_level, dstx, dsty, dstz,
+                                   src_tex, src_level, src_box);
+      }
+   }
 
    /* Mark the destination image as being defined */
    svga_define_texture_level(dtex, dst_face_layer, dst_level);
