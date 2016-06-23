@@ -160,6 +160,7 @@ private:
    void dtrunc_to_dfrac(ir_expression *);
    void dsign_to_csel(ir_expression *);
    void bit_count_to_math(ir_expression *);
+   void extract_to_shifts(ir_expression *);
 };
 
 } /* anonymous namespace */
@@ -1001,6 +1002,80 @@ lower_instructions_visitor::bit_count_to_math(ir_expression *ir)
    this->progress = true;
 }
 
+void
+lower_instructions_visitor::extract_to_shifts(ir_expression *ir)
+{
+   ir_variable *bits =
+      new(ir) ir_variable(ir->operands[0]->type, "bits", ir_var_temporary);
+
+   base_ir->insert_before(bits);
+   base_ir->insert_before(assign(bits, ir->operands[2]));
+
+   if (ir->operands[0]->type->base_type == GLSL_TYPE_UINT) {
+      ir_constant *c1 =
+         new(ir) ir_constant(1u, ir->operands[0]->type->vector_elements);
+      ir_constant *c32 =
+         new(ir) ir_constant(32u, ir->operands[0]->type->vector_elements);
+      ir_constant *cFFFFFFFF =
+         new(ir) ir_constant(0xFFFFFFFFu, ir->operands[0]->type->vector_elements);
+
+      /* At least some hardware treats (x << y) as (x << (y%32)).  This means
+       * we'd get a mask of 0 when bits is 32.  Special case it.
+       *
+       * mask = bits == 32 ? 0xffffffff : (1u << bits) - 1u;
+       */
+      ir_expression *mask = csel(equal(bits, c32),
+                                 cFFFFFFFF,
+                                 sub(lshift(c1, bits), c1->clone(ir, NULL)));
+
+      /* Section 8.8 (Integer Functions) of the GLSL 4.50 spec says:
+       *
+       *    If bits is zero, the result will be zero.
+       *
+       * Since (1 << 0) - 1 == 0, we don't need to bother with the conditional
+       * select as in the signed integer case.
+       *
+       * (value >> offset) & mask;
+       */
+      ir->operation = ir_binop_bit_and;
+      ir->operands[0] = rshift(ir->operands[0], ir->operands[1]);
+      ir->operands[1] = mask;
+      ir->operands[2] = NULL;
+   } else {
+      ir_constant *c0 =
+         new(ir) ir_constant(int(0), ir->operands[0]->type->vector_elements);
+      ir_constant *c32 =
+         new(ir) ir_constant(int(32), ir->operands[0]->type->vector_elements);
+      ir_variable *temp =
+         new(ir) ir_variable(ir->operands[0]->type, "temp", ir_var_temporary);
+
+      /* temp = 32 - bits; */
+      base_ir->insert_before(temp);
+      base_ir->insert_before(assign(temp, sub(c32, bits)));
+
+      /* expr = value << (temp - offset)) >> temp; */
+      ir_expression *expr =
+         rshift(lshift(ir->operands[0], sub(temp, ir->operands[1])), temp);
+
+      /* Section 8.8 (Integer Functions) of the GLSL 4.50 spec says:
+       *
+       *    If bits is zero, the result will be zero.
+       *
+       * Due to the (x << (y%32)) behavior mentioned before, the (value <<
+       * (32-0)) doesn't "erase" all of the data as we would like, so finish
+       * up with:
+       *
+       * (bits == 0) ? 0 : e;
+       */
+      ir->operation = ir_triop_csel;
+      ir->operands[0] = equal(c0, bits);
+      ir->operands[1] = c0->clone(ir, NULL);
+      ir->operands[2] = expr;
+   }
+
+   this->progress = true;
+}
+
 ir_visitor_status
 lower_instructions_visitor::visit_leave(ir_expression *ir)
 {
@@ -1106,6 +1181,11 @@ lower_instructions_visitor::visit_leave(ir_expression *ir)
    case ir_unop_bit_count:
       if (lowering(BIT_COUNT_TO_MATH))
          bit_count_to_math(ir);
+      break;
+
+   case ir_triop_bitfield_extract:
+      if (lowering(EXTRACT_TO_SHIFTS))
+         extract_to_shifts(ir);
       break;
 
    default:
