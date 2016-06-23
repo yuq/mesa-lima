@@ -60,6 +60,7 @@ protected:
    void emit_input_urb_read(const dst_reg &dst,
                             const src_reg &vertex_index,
                             unsigned base_offset,
+                            unsigned first_component,
                             const src_reg &indirect_offset);
    void emit_output_urb_read(const dst_reg &dst,
                              unsigned base_offset,

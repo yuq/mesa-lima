@@ -166,6 +166,7 @@ void
 vec4_tcs_visitor::emit_input_urb_read(const dst_reg &dst,
                                       const src_reg &vertex_index,
                                       unsigned base_offset,
+                                      unsigned first_component,
                                       const src_reg &indirect_offset)
 {
    vec4_instruction *inst;
@@ -191,7 +192,9 @@ vec4_tcs_visitor::emit_input_urb_read(const dst_reg &dst,
    if (inst->offset == 0 && indirect_offset.file == BAD_FILE) {
       emit(MOV(dst, swizzle(src_reg(temp), BRW_SWIZZLE_WWWW)));
    } else {
-      emit(MOV(dst, src_reg(temp)));
+      src_reg src = src_reg(temp);
+      src.swizzle = BRW_SWZ_COMP_INPUT(first_component);
+      emit(MOV(dst, src));
    }
 }
 
@@ -267,7 +270,8 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
       dst.writemask = brw_writemask_for_size(instr->num_components);
 
-      emit_input_urb_read(dst, vertex_index, imm_offset, indirect_offset);
+      emit_input_urb_read(dst, vertex_index, imm_offset,
+                          nir_intrinsic_component(instr), indirect_offset);
       break;
    }
    case nir_intrinsic_load_input:
