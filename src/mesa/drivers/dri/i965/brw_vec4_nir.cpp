@@ -416,7 +416,14 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       src = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_F,
                         instr->num_components);
 
-      output_reg[varying] = dst_reg(src);
+      if (varying >= VARYING_SLOT_VAR0) {
+         unsigned c = nir_intrinsic_component(instr);
+         unsigned v = varying - VARYING_SLOT_VAR0;
+         output_generic_reg[v][c] = dst_reg(src);
+         output_generic_num_components[v][c] = instr->num_components;
+      } else {
+         output_reg[varying] = dst_reg(src);
+      }
       break;
    }
 

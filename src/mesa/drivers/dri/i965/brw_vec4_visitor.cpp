@@ -1272,10 +1272,32 @@ vec4_visitor::emit_generic_urb_slot(dst_reg reg, int varying)
    assert(varying < VARYING_SLOT_MAX);
    assert(output_reg[varying].type == reg.type);
    current_annotation = output_reg_annotation[varying];
-   if (output_reg[varying].file != BAD_FILE)
+   if (output_reg[varying].file != BAD_FILE) {
       return emit(MOV(reg, src_reg(output_reg[varying])));
-   else
+   } else
       return NULL;
+}
+
+void
+vec4_visitor::emit_generic_urb_slot(dst_reg reg, int varying, int component)
+{
+   assert(varying < VARYING_SLOT_MAX);
+   assert(varying >= VARYING_SLOT_VAR0);
+   varying = varying - VARYING_SLOT_VAR0;
+
+   unsigned num_comps = output_generic_num_components[varying][component];
+   if (num_comps == 0)
+      return;
+
+   assert(output_generic_reg[varying][component].type == reg.type);
+   current_annotation = output_reg_annotation[varying];
+   if (output_generic_reg[varying][component].file != BAD_FILE) {
+      src_reg src = src_reg(output_generic_reg[varying][component]);
+      src.swizzle = BRW_SWZ_COMP_OUTPUT(component);
+      reg.writemask =
+         brw_writemask_for_component_packing(num_comps, component);
+      emit(MOV(reg, src));
+   }
 }
 
 void
@@ -1317,7 +1339,13 @@ vec4_visitor::emit_urb_slot(dst_reg reg, int varying)
       /* No need to write to this slot */
       break;
    default:
-      emit_generic_urb_slot(reg, varying);
+      if (varying >= VARYING_SLOT_VAR0) {
+         for (int i = 0; i < 4; i++) {
+            emit_generic_urb_slot(reg, varying, i);
+         }
+      } else {
+         emit_generic_urb_slot(reg, varying);
+      }
       break;
    }
 }
@@ -1764,6 +1792,9 @@ vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
    this->base_ir = NULL;
    this->current_annotation = NULL;
    memset(this->output_reg_annotation, 0, sizeof(this->output_reg_annotation));
+
+   memset(this->output_generic_num_components, 0,
+          sizeof(this->output_generic_num_components));
 
    this->virtual_grf_start = NULL;
    this->virtual_grf_end = NULL;
