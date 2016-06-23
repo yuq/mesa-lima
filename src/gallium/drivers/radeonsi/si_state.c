@@ -3883,6 +3883,9 @@ static void si_init_config(struct si_context *sctx)
 			vgt_tess_distribution |= S_028B50_TRAP_SPLIT(3);
 
 		si_pm4_set_reg(pm4, R_028B50_VGT_TESS_DISTRIBUTION, vgt_tess_distribution);
+	} else {
+		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 14);
+		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 16);
 	}
 
 	if (sctx->b.family == CHIP_STONEY)
