@@ -303,7 +303,7 @@ gen7_blorp_emit_sf_config(struct brw_context *brw,
       OUT_BATCH(_3DSTATE_SF << 16 | (7 - 2));
       OUT_BATCH(params->depth_format <<
                 GEN7_SF_DEPTH_BUFFER_SURFACE_FORMAT_SHIFT);
-      OUT_BATCH(params->dst.num_samples > 1 ? GEN6_SF_MSRAST_ON_PATTERN : 0);
+      OUT_BATCH(params->dst.surf.samples > 1 ? GEN6_SF_MSRAST_ON_PATTERN : 0);
       OUT_BATCH(0);
       OUT_BATCH(0);
       OUT_BATCH(0);
@@ -377,7 +377,7 @@ gen7_blorp_emit_wm_config(struct brw_context *brw,
    if (params->src.mt)
       dw1 |= GEN7_WM_KILL_ENABLE; /* TODO: temporarily smash on */
 
-   if (params->dst.num_samples > 1) {
+   if (params->dst.surf.samples > 1) {
       dw1 |= GEN7_WM_MSRAST_ON_PATTERN;
       if (prog_data && prog_data->persample_msaa_dispatch)
          dw2 |= GEN7_WM_MSDISPMODE_PERSAMPLE;
@@ -662,10 +662,10 @@ gen7_blorp_exec(struct brw_context *brw,
 
    brw_upload_state_base_address(brw);
 
-   gen6_emit_3dstate_multisample(brw, params->dst.num_samples);
+   gen6_emit_3dstate_multisample(brw, params->dst.surf.samples);
    gen6_emit_3dstate_sample_mask(brw,
-                                 params->dst.num_samples > 1 ?
-                                 (1 << params->dst.num_samples) - 1 : 1);
+                                 params->dst.surf.samples > 1 ?
+                                 (1 << params->dst.surf.samples) - 1 : 1);
    gen6_blorp_emit_vertices(brw, params);
    gen7_blorp_emit_urb_config(brw, params);
    if (params->wm_prog_data) {

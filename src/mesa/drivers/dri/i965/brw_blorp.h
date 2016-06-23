@@ -118,8 +118,6 @@ struct brw_blorp_surface_info
     */
    uint32_t y_offset;
 
-   unsigned num_samples;
-
    /**
     * Indicates if we use the standard miptree layout (ALL_LOD_IN_EACH_SLICE),
     * or if we tightly pack array slices at each LOD (ALL_SLICES_AT_EACH_LOD).

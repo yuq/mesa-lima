@@ -69,7 +69,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    intel_miptree_get_image_offset(mt, level, layer,
                                   &info->x_offset, &info->y_offset);
 
-   info->num_samples = mt->num_samples;
    info->array_layout = mt->array_layout;
    info->msaa_layout = mt->msaa_layout;
    info->swizzle = SWIZZLE_XYZW;
@@ -262,14 +261,13 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
    surf.logical_level0_px.depth = 1;
    surf.logical_level0_px.array_len = 1;
    surf.levels = 1;
-   surf.samples = MAX2(surface->num_samples, 1);
 
    /* Alignment doesn't matter since we have 1 miplevel and 1 array slice so
     * just pick something that works for everybody.
     */
    surf.image_alignment_el = isl_extent3d(4, 4, 1);
 
-   if (brw->gen == 6 && surface->num_samples > 1) {
+   if (brw->gen == 6 && surf.samples > 1) {
       /* Since gen6 uses INTEL_MSAA_LAYOUT_IMS, width and height are measured
        * in samples.  But SURFACE_STATE wants them in pixels, so we need to
        * divide them each by 2.
@@ -524,8 +522,8 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
     * not 8. But commit 1f112cc increased the alignment from 4 to 8, which
     * prevents the clobbering.
     */
-   params.dst.num_samples = mt->num_samples;
-   if (params.dst.num_samples > 1) {
+   params.dst.surf.samples = MAX2(mt->num_samples, 1);
+   if (params.depth.surf.samples > 1) {
       params.depth.width = ALIGN(mt->logical_width0, 8);
       params.depth.height = ALIGN(mt->logical_height0, 4);
    } else {

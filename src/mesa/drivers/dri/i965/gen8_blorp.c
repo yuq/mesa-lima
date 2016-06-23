@@ -368,7 +368,7 @@ gen8_blorp_emit_ps_extra(struct brw_context *brw,
    if (params->wm_prog_data->num_varying_inputs)
       dw1 |= GEN8_PSX_ATTRIBUTE_ENABLE;
 
-   if (params->dst.num_samples > 1 && prog_data &&
+   if (params->dst.surf.samples > 1 && prog_data &&
        prog_data->persample_msaa_dispatch)
       dw1 |= GEN8_PSX_SHADER_IS_PER_SAMPLE;
 
@@ -593,10 +593,10 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
       gen7_blorp_emit_sampler_state_pointers_ps(brw, sampler_offset);
    }
 
-   gen8_emit_3dstate_multisample(brw, params->dst.num_samples);
+   gen8_emit_3dstate_multisample(brw, params->dst.surf.samples);
    gen6_emit_3dstate_sample_mask(brw,
-                                 params->dst.num_samples > 1 ?
-                                    (1 << params->dst.num_samples) - 1 : 1);
+                                 params->dst.surf.samples > 1 ?
+                                    (1 << params->dst.surf.samples) - 1 : 1);
 
    gen8_disable_stages.emit(brw);
    gen8_blorp_emit_vs_disable(brw);

@@ -1672,7 +1672,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     * R32_FLOAT, so only the contents of the red channel matters.
     */
    if (brw->gen == 6 &&
-       params.src.num_samples > 1 && params.dst.num_samples <= 1 &&
+       params.src.surf.samples > 1 && params.dst.surf.samples <= 1 &&
        src_mt->format == dst_mt->format &&
        params.dst.brw_surfaceformat == BRW_SURFACEFORMAT_R32_FLOAT) {
       params.src.brw_surfaceformat = params.dst.brw_surfaceformat;
@@ -1713,10 +1713,10 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        * single-sampled texture and interleave the samples ourselves.
        */
       if (dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS)
-         params.dst.num_samples = 0;
+         params.dst.surf.samples = 1;
    }
 
-   if (params.src.num_samples > 0 && params.dst.num_samples > 1) {
+   if (params.src.surf.samples > 0 && params.dst.surf.samples > 1) {
       /* We are blitting from a multisample buffer to a multisample buffer, so
        * we must preserve samples within a pixel.  This means we have to
        * arrange for the WM program to run once per sample rather than once
@@ -1740,7 +1740,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    wm_prog_key.y_scale = src_mt->num_samples / wm_prog_key.x_scale;
 
    if (filter == GL_LINEAR &&
-       params.src.num_samples <= 1 && params.dst.num_samples <= 1)
+       params.src.surf.samples <= 1 && params.dst.surf.samples <= 1)
       wm_prog_key.bilinear_filter = true;
 
    GLenum base_format = _mesa_get_format_base_format(src_mt->format);
@@ -1767,17 +1767,17 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    /* tex_samples and rt_samples are the sample counts that are set up in
     * SURFACE_STATE.
     */
-   wm_prog_key.tex_samples = params.src.num_samples;
-   wm_prog_key.rt_samples  = params.dst.num_samples;
+   wm_prog_key.tex_samples = params.src.surf.samples;
+   wm_prog_key.rt_samples  = params.dst.surf.samples;
 
    /* tex_layout and rt_layout indicate the MSAA layout the GPU pipeline will
     * use to access the source and destination surfaces.
     */
    wm_prog_key.tex_layout =
-      compute_msaa_layout_for_pipeline(brw, params.src.num_samples,
+      compute_msaa_layout_for_pipeline(brw, params.src.surf.samples,
                                        params.src.msaa_layout);
    wm_prog_key.rt_layout =
-      compute_msaa_layout_for_pipeline(brw, params.dst.num_samples,
+      compute_msaa_layout_for_pipeline(brw, params.dst.surf.samples,
                                        params.dst.msaa_layout);
 
    /* src_layout and dst_layout indicate the true MSAA layout used by src and
@@ -1792,10 +1792,10 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     * from compiler point of view. Therefore override the type in the program
     * key.
     */
-   if (brw->gen >= 9 && params.src.num_samples <= 1 &&
+   if (brw->gen >= 9 && params.src.surf.samples <= 1 &&
        src_mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS)
       wm_prog_key.src_layout = INTEL_MSAA_LAYOUT_NONE;
-   if (brw->gen >= 9 && params.dst.num_samples <= 1 &&
+   if (brw->gen >= 9 && params.dst.surf.samples <= 1 &&
        dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS)
       wm_prog_key.dst_layout = INTEL_MSAA_LAYOUT_NONE;
 
@@ -1827,7 +1827,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       params.wm_inputs.src_z = 0;
    }
 
-   if (params.dst.num_samples <= 1 && dst_mt->num_samples > 1) {
+   if (params.dst.surf.samples <= 1 && dst_mt->num_samples > 1) {
       /* We must expand the rectangle we send through the rendering pipeline,
        * to account for the fact that we are mapping the destination region as
        * single-sampled when it is in fact multisampled.  We must also align
@@ -1878,7 +1878,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
 
       wm_prog_key.dst_tiled_w = true;
 
-      if (params.dst.num_samples > 1) {
+      if (params.dst.surf.samples > 1) {
          /* If the destination surface is a W-tiled multisampled stencil
           * buffer that we're mapping as Y tiled, then we need to arrange for
           * the WM program to run once per sample rather than once per pixel,
@@ -1934,7 +1934,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        * TODO: what if this makes the coordinates (or the texture size) too
        * large?
        */
-      const unsigned x_align = 8, y_align = params.dst.num_samples != 0 ? 8 : 4;
+      const unsigned x_align = 8, y_align = params.dst.surf.samples != 0 ? 8 : 4;
       params.x0 = ROUND_DOWN_TO(params.x0, x_align) * 2;
       params.y0 = ROUND_DOWN_TO(params.y0, y_align) / 2;
       params.x1 = ALIGN(params.x1, x_align) * 2;
@@ -1963,7 +1963,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        *
        * TODO: what if this makes the texture size too large?
        */
-      const unsigned x_align = 8, y_align = params.src.num_samples != 0 ? 8 : 4;
+      const unsigned x_align = 8, y_align = params.src.surf.samples != 0 ? 8 : 4;
       params.src.width = ALIGN(params.src.width, x_align) * 2;
       params.src.height = ALIGN(params.src.height, y_align) / 2;
       params.src.x_offset *= 2;
