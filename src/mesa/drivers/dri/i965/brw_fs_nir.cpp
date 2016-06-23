@@ -2133,7 +2133,6 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
          /* Constant indexing - use global offset. */
          inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp_dst, icp_handle);
          inst->offset = base_offset + offset_const->u32[0];
-         inst->base_mrf = -1;
          inst->mlen = 1;
          inst->regs_written = num_components * type_sz(tmp_dst.type) / 4;
       } else {
@@ -2144,7 +2143,6 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
 
          inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp_dst, payload);
          inst->offset = base_offset;
-         inst->base_mrf = -1;
          inst->mlen = 2;
          inst->regs_written = num_components * type_sz(tmp_dst.type) / 4;
       }
@@ -2415,7 +2413,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, icp_handle);
             inst->offset = imm_offset;
             inst->mlen = 1;
-            inst->base_mrf = -1;
          } else {
             /* Indirect indexing - use per-slot offsets as well. */
             const fs_reg srcs[] = { icp_handle, indirect_offset };
@@ -2424,7 +2421,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
 
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst, payload);
             inst->offset = imm_offset;
-            inst->base_mrf = -1;
             inst->mlen = 2;
          }
          inst->regs_written = num_components * type_sz(dst.type) / 4;
@@ -2497,7 +2493,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
                inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp, patch_handle);
                inst->offset = 0;
                inst->mlen = 1;
-               inst->base_mrf = -1;
                inst->regs_written = 4;
 
                /* dst.xy = tmp.wz */
@@ -2510,7 +2505,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
                inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, patch_handle);
                inst->offset = 1;
                inst->mlen = 1;
-               inst->base_mrf = -1;
                inst->regs_written = 1;
                break;
             case GL_ISOLINES:
@@ -2529,7 +2523,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp, patch_handle);
             inst->offset = 1;
             inst->mlen = 1;
-            inst->base_mrf = -1;
             inst->regs_written = 4;
 
             /* Reswizzle: WZYX */
@@ -2562,7 +2555,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, patch_handle);
             inst->offset = imm_offset;
             inst->mlen = 1;
-            inst->base_mrf = -1;
             inst->regs_written = instr->num_components;
          }
       } else {
@@ -2577,7 +2569,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
          inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst, payload);
          inst->offset = imm_offset;
          inst->mlen = 2;
-         inst->base_mrf = -1;
          inst->regs_written = instr->num_components;
       }
       break;
@@ -2744,7 +2735,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
          fs_inst *inst = bld.emit(opcode, bld.null_reg_ud(), payload);
          inst->offset = imm_offset;
          inst->mlen = mlen;
-         inst->base_mrf = -1;
 
          /* If this is a 64-bit attribute, select the next two 64-bit channels
           * to be handled in the next iteration.
@@ -2858,7 +2848,6 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dest, patch_handle);
             inst->mlen = 1;
             inst->offset = imm_offset;
-            inst->base_mrf = -1;
             inst->regs_written = instr->num_components;
          }
       } else {
@@ -2873,7 +2862,6 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
          inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dest, payload);
          inst->mlen = 2;
          inst->offset = imm_offset;
-         inst->base_mrf = -1;
          inst->regs_written = instr->num_components;
       }
       break;

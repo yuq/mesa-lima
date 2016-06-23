@@ -3403,7 +3403,6 @@ fs_visitor::lower_uniform_pull_constant_loads()
           */
          inst->opcode = FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD_GEN7;
          inst->src[1] = payload;
-         inst->base_mrf = -1;
 
          invalidate_live_intervals();
       } else {
@@ -3919,7 +3918,6 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
 
       inst->src[0] = payload;
       inst->resize_sources(1);
-      inst->base_mrf = -1;
    } else {
       /* Send from the MRF */
       load = bld.LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F),
@@ -4365,7 +4363,6 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
    inst->src[1] = surface;
    inst->src[2] = sampler;
    inst->resize_sources(3);
-   inst->base_mrf = -1;
    inst->mlen = mlen;
    inst->header_size = header_size;
 
@@ -6110,7 +6107,6 @@ fs_visitor::run_tcs_single_patch()
    fs_inst *inst = bld.emit(SHADER_OPCODE_URB_WRITE_SIMD8_MASKED,
                             bld.null_reg_ud(), payload);
    inst->mlen = 3;
-   inst->base_mrf = -1;
    inst->eot = true;
 
    if (shader_time_index >= 0)
