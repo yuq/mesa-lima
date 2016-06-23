@@ -687,19 +687,37 @@ get_sample_count(const struct pipe_resource *res)
 }
 
 
+/**
+ * Check if a blit() command can be implemented with a resource_copy_region().
+ * If tight_format_check is true, only allow the resource_copy_region() if
+ * the blit src/dst formats are identical, ignoring the resource formats.
+ * Otherwise, check for format casting and compatibility.
+ */
 boolean
-util_can_blit_via_copy_region(const struct pipe_blit_info *blit)
+util_can_blit_via_copy_region(const struct pipe_blit_info *blit,
+                              boolean tight_format_check)
 {
-   unsigned mask = util_format_get_mask(blit->dst.format);
+   const struct util_format_description *src_desc, *dst_desc;
 
-   /* No format conversions. */
-   if (blit->src.resource->format != blit->src.format ||
-       blit->dst.resource->format != blit->dst.format ||
-       !util_is_format_compatible(
-          util_format_description(blit->src.resource->format),
-          util_format_description(blit->dst.resource->format))) {
-      return FALSE;
+   src_desc = util_format_description(blit->src.resource->format);
+   dst_desc = util_format_description(blit->dst.resource->format);
+
+   if (tight_format_check) {
+      /* no format conversions allowed */
+      if (blit->src.format != blit->dst.format) {
+         return FALSE;
+      }
    }
+   else {
+      /* do loose format compatibility checking */
+      if (blit->src.resource->format != blit->src.format ||
+          blit->dst.resource->format != blit->dst.format ||
+          !util_is_format_compatible(src_desc, dst_desc)) {
+         return FALSE;
+      }
+   }
+
+   unsigned mask = util_format_get_mask(blit->dst.format);
 
    /* No masks, no filtering, no scissor, no blending */
    if ((blit->mask & mask) != mask ||
@@ -752,7 +770,7 @@ boolean
 util_try_blit_via_copy_region(struct pipe_context *ctx,
                               const struct pipe_blit_info *blit)
 {
-   if (util_can_blit_via_copy_region(blit)) {
+   if (util_can_blit_via_copy_region(blit, FALSE)) {
       ctx->resource_copy_region(ctx, blit->dst.resource, blit->dst.level,
                                 blit->dst.box.x, blit->dst.box.y,
                                 blit->dst.box.z,
