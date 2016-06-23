@@ -407,7 +407,7 @@ choose_instruction(struct schedule_state *state)
                 }
 
                 /* If we would block on the previously chosen node, but would
-                 * block less on this one, then then prefer it.
+                 * block less on this one, then prefer it.
                  */
                 if (chosen->unblocked_time > state->time &&
                     n->unblocked_time < chosen->unblocked_time) {

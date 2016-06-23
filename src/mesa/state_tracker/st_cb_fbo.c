@@ -266,7 +266,7 @@ st_new_renderbuffer(struct gl_context *ctx, GLuint name)
 
 
 /**
- * Allocate a renderbuffer for a an on-screen window (not a user-created
+ * Allocate a renderbuffer for an on-screen window (not a user-created
  * renderbuffer).  The window system code determines the format.
  */
 struct gl_renderbuffer *

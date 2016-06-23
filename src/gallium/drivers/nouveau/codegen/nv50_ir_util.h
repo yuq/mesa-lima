@@ -199,7 +199,7 @@ public:
       virtual void erase();
       virtual bool insert(void *data);
 
-      // move item to a another list, no consistency with its iterators though
+      // move item to another list, no consistency with its iterators though
       void moveToList(DLList&);
 
    private:

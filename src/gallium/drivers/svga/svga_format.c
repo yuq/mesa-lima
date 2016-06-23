@@ -1916,7 +1916,7 @@ svga_format_size(SVGA3dSurfaceFormat format,
    *block_width = format_cap_table[format].block_width;
    *block_height = format_cap_table[format].block_height;
    *bytes_per_block = format_cap_table[format].block_bytes;
-   /* Make sure the the table entry was valid */
+   /* Make sure the table entry was valid */
    if (*block_width == 0)
       debug_printf("Bad table entry for %s\n", svga_format_name(format));
    assert(*block_width);

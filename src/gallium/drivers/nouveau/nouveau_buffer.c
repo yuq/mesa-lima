@@ -163,7 +163,7 @@ nouveau_transfer_staging(struct nouveau_context *nv,
    return tx->map;
 }
 
-/* Copies data from the resource into the the transfer's temporary GART
+/* Copies data from the resource into the transfer's temporary GART
  * buffer. Also updates buf->data if present.
  *
  * Maybe just migrate to GART right away if we actually need to do this. */

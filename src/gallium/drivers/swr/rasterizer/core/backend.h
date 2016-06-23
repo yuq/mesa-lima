@@ -208,13 +208,13 @@ INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (
 
     mask[0] = _mm256_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0xC, 0x8, 0x4, 0x0,
                               -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0xC, 0x8, 0x4, 0x0);
-    // pull out the the 8bit 4x2 coverage for samples 0-7 into the lower 32 bits of each 128bit lane
+    // pull out the 8bit 4x2 coverage for samples 0-7 into the lower 32 bits of each 128bit lane
     __m256i packedCoverage0 = _simd_shuffle_epi8(sampleCoverage[0], mask[0]);
 
     __m256i packedCoverage1;
     if(T::MultisampleT::numSamples > 8)
     {
-        // pull out the the 8bit 4x2 coverage for samples 8-15 into the lower 32 bits of each 128bit lane
+        // pull out the 8bit 4x2 coverage for samples 8-15 into the lower 32 bits of each 128bit lane
         packedCoverage1 = _simd_shuffle_epi8(sampleCoverage[1], mask[0]);
     }
 

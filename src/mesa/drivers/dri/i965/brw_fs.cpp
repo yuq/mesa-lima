@@ -1180,7 +1180,7 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
 
          /* Data starts at suboffet 3 in 32-bit units (12 bytes), so it is not
           * 64-bit aligned and the current implementation fails to read the
-          * data properly. Instead, when there is is a double input varying,
+          * data properly. Instead, when there is a double input varying,
           * read it as vector of floats with twice the number of components.
           */
          if (attr->type == BRW_REGISTER_TYPE_DF) {

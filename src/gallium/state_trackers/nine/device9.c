@@ -236,7 +236,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
         NineUnknown_ConvertRefToBind(NineUnknown(This->state.rt[i]));
     }
 
-    /* Initialize a dummy VBO to be used when a a vertex declaration does not
+    /* Initialize a dummy VBO to be used when a vertex declaration does not
      * specify all the inputs needed by vertex shader, on win default behavior
      * is to pass 0,0,0,0 to the shader */
     {

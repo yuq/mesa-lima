@@ -361,7 +361,7 @@ gbm_bo_create(struct gbm_device *gbm,
  *   GBM_BO_IMPORT_EGL_IMAGE
  *   GBM_BO_IMPORT_FD
  *
- * The the gbm bo shares the underlying pixels but its life-time is
+ * The gbm bo shares the underlying pixels but its life-time is
  * independent of the foreign object.
  *
  * \param gbm The gbm device returned from gbm_create_device()

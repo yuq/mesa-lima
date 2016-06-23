@@ -55,7 +55,7 @@ struct fd_texture_stateobj;
  *         | fp16[3]   /
  *  0x08:  | padding
  *  0x10:  | int16[0]  \
- *         | int16[1]  |___ swizzled int16 channels for for "small integer"
+ *         | int16[1]  |___ swizzled int16 channels for "small integer"
  *         | int16[2]  |    formats (<= 16 bits per component, integer)
  *         | int16[3]  /
  *  0x18:  | padding

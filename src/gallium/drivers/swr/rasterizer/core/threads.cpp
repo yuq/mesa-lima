@@ -445,7 +445,7 @@ void WorkOnFifoBE(
 
         for (uint32_t tileID : macroTiles)
         {
-            // Only work on tiles for for this numa node
+            // Only work on tiles for this numa node
             uint32_t x, y;
             pDC->pTileMgr->getTileIndices(tileID, x, y);
             if (((x ^ y) & numaMask) != numaNode)

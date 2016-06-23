@@ -116,7 +116,7 @@ compute_vertex_info(struct llvmpipe_context *llvmpipe)
          /*
           * Note that we'd actually want to skip position (as we won't use
           * the attribute in the fs) but can't. The reason is that we don't
-          * actually have a input/output map for setup (even though it looks
+          * actually have an input/output map for setup (even though it looks
           * like we do...). Could adjust for this though even without a map
           * (in llvmpipe_create_fs_state()).
           */

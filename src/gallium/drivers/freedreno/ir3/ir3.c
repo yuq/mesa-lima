@@ -573,7 +573,7 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 		}
 	}
 
-	/* need a integer number of instruction "groups" (sets of 16
+	/* need an integer number of instruction "groups" (sets of 16
 	 * instructions on a4xx or sets of 4 instructions on a3xx),
 	 * so pad out w/ NOPs if needed: (NOTE each instruction is 64bits)
 	 */

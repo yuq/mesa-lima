@@ -1762,7 +1762,7 @@ alloc_immediate_float4(struct svga_shader_emitter_v10 *emit,
 
 
 /**
- * Allocate space for a int[4] immediate.
+ * Allocate space for an int[4] immediate.
  * \return  the index/position of the immediate.
  */
 static unsigned

@@ -73,7 +73,7 @@ struct brw_device_info
     * In general, you can find shader thread maximums by looking at the "Maximum
     * Number of Threads" field in the Intel PRM description of the 3DSTATE_VS,
     * 3DSTATE_GS, 3DSTATE_HS, 3DSTATE_DS, and 3DSTATE_PS commands. URB entry
-    * limits come from the "Number of URB Entries" field in the the
+    * limits come from the "Number of URB Entries" field in the
     * 3DSTATE_URB_VS command and friends.
     *
     * These fields are used to calculate the scratch space to allocate.  The

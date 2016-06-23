@@ -1950,7 +1950,7 @@ void
 nir_visitor::visit(ir_constant *ir)
 {
    /*
-    * We don't know if this variable is an an array or struct that gets
+    * We don't know if this variable is an array or struct that gets
     * dereferenced, so do the safe thing an make it a variable with a
     * constant initializer and return a dereference.
     */
