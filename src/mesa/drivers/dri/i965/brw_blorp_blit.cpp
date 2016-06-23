@@ -687,23 +687,18 @@ blorp_nir_retile_w_to_y(nir_builder *b, nir_ssa_def *pos)
  */
 static inline nir_ssa_def *
 blorp_nir_encode_msaa(nir_builder *b, nir_ssa_def *pos,
-                      unsigned num_samples, enum intel_msaa_layout layout)
+                      unsigned num_samples, enum isl_msaa_layout layout)
 {
    assert(pos->num_components == 2 || pos->num_components == 3);
 
    switch (layout) {
-   case INTEL_MSAA_LAYOUT_NONE:
+   case ISL_MSAA_LAYOUT_NONE:
       assert(pos->num_components == 2);
       return pos;
-   case INTEL_MSAA_LAYOUT_CMS:
-      /* We can't compensate for compressed layout since at this point in the
-       * program we haven't read from the MCS buffer.
-       */
-      unreachable("Bad layout in encode_msaa");
-   case INTEL_MSAA_LAYOUT_UMS:
+   case ISL_MSAA_LAYOUT_ARRAY:
       /* No translation needed */
       return pos;
-   case INTEL_MSAA_LAYOUT_IMS: {
+   case ISL_MSAA_LAYOUT_INTERLEAVED: {
       nir_ssa_def *x_in = nir_channel(b, pos, 0);
       nir_ssa_def *y_in = nir_channel(b, pos, 1);
       nir_ssa_def *s_in = pos->num_components == 2 ? nir_imm_int(b, 0) :
@@ -790,24 +785,19 @@ blorp_nir_encode_msaa(nir_builder *b, nir_ssa_def *pos,
  */
 static inline nir_ssa_def *
 blorp_nir_decode_msaa(nir_builder *b, nir_ssa_def *pos,
-                      unsigned num_samples, enum intel_msaa_layout layout)
+                      unsigned num_samples, enum isl_msaa_layout layout)
 {
    assert(pos->num_components == 2 || pos->num_components == 3);
 
    switch (layout) {
-   case INTEL_MSAA_LAYOUT_NONE:
+   case ISL_MSAA_LAYOUT_NONE:
       /* No translation necessary, and S should already be zero. */
       assert(pos->num_components == 2);
       return pos;
-   case INTEL_MSAA_LAYOUT_CMS:
-      /* We can't compensate for compressed layout since at this point in the
-       * program we don't have access to the MCS buffer.
-       */
-      unreachable("Bad layout in encode_msaa");
-   case INTEL_MSAA_LAYOUT_UMS:
+   case ISL_MSAA_LAYOUT_ARRAY:
       /* No translation necessary. */
       return pos;
-   case INTEL_MSAA_LAYOUT_IMS: {
+   case ISL_MSAA_LAYOUT_INTERLEAVED: {
       assert(pos->num_components == 2);
 
       nir_ssa_def *x_in = nir_channel(b, pos, 0);
@@ -1335,13 +1325,13 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
    }
 
    /* Make sure layout is consistent with sample count */
-   assert((key->tex_layout == INTEL_MSAA_LAYOUT_NONE) ==
+   assert((key->tex_layout == ISL_MSAA_LAYOUT_NONE) ==
           (key->tex_samples <= 1));
-   assert((key->rt_layout == INTEL_MSAA_LAYOUT_NONE) ==
+   assert((key->rt_layout == ISL_MSAA_LAYOUT_NONE) ==
           (key->rt_samples <= 1));
-   assert((key->src_layout == INTEL_MSAA_LAYOUT_NONE) ==
+   assert((key->src_layout == ISL_MSAA_LAYOUT_NONE) ==
           (key->src_samples <= 1));
-   assert((key->dst_layout == INTEL_MSAA_LAYOUT_NONE) ==
+   assert((key->dst_layout == ISL_MSAA_LAYOUT_NONE) ==
           (key->dst_samples <= 1));
 
    nir_builder b;
@@ -1567,43 +1557,25 @@ brw_blorp_setup_coord_transform(struct brw_blorp_coord_transform *xform,
    }
 }
 
-
-/**
- * Determine which MSAA layout the GPU pipeline should be configured for,
- * based on the chip generation, the number of samples, and the true layout of
- * the image in memory.
- */
-inline intel_msaa_layout
-compute_msaa_layout_for_pipeline(struct brw_context *brw, unsigned num_samples,
-                                 intel_msaa_layout true_layout)
+static enum isl_msaa_layout
+get_isl_msaa_layout(unsigned samples, enum intel_msaa_layout layout)
 {
-   if (num_samples <= 1) {
-      /* Layout is used to determine if ld2dms is needed for sampling. In
-       * single sampled case normal ld is enough avoiding also the need to
-       * fetch mcs. Therefore simply set the layout to none.
-       */
-      if (brw->gen >= 9 && true_layout == INTEL_MSAA_LAYOUT_CMS) {
-         return INTEL_MSAA_LAYOUT_NONE;
+   if (samples > 1) {
+      switch (layout) {
+      case INTEL_MSAA_LAYOUT_NONE:
+         return ISL_MSAA_LAYOUT_NONE;
+      case INTEL_MSAA_LAYOUT_IMS:
+         return ISL_MSAA_LAYOUT_INTERLEAVED;
+      case INTEL_MSAA_LAYOUT_UMS:
+      case INTEL_MSAA_LAYOUT_CMS:
+         return ISL_MSAA_LAYOUT_ARRAY;
+      default:
+         unreachable("Invalid MSAA layout");
       }
-
-      /* When configuring the GPU for non-MSAA, we can still accommodate IMS
-       * format buffers, by transforming coordinates appropriately.
-       */
-      assert(true_layout == INTEL_MSAA_LAYOUT_NONE ||
-             true_layout == INTEL_MSAA_LAYOUT_IMS);
-      return INTEL_MSAA_LAYOUT_NONE;
    } else {
-      assert(true_layout != INTEL_MSAA_LAYOUT_NONE);
+      return ISL_MSAA_LAYOUT_NONE;
    }
-
-   /* Prior to Gen7, all MSAA surfaces use IMS layout. */
-   if (brw->gen == 6) {
-      assert(true_layout == INTEL_MSAA_LAYOUT_IMS);
-   }
-
-   return true_layout;
 }
-
 
 /**
  * Note: if the src (or dst) is a 2D multisample array texture on Gen7+ using
@@ -1712,8 +1684,10 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        * buffer).  So if the destination is IMS, we'll have to map it as a
        * single-sampled texture and interleave the samples ourselves.
        */
-      if (dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS)
+      if (dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS) {
          params.dst.surf.samples = 1;
+         params.dst.surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
+      }
    }
 
    if (params.src.surf.samples > 0 && params.dst.surf.samples > 1) {
@@ -1775,31 +1749,16 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    /* tex_layout and rt_layout indicate the MSAA layout the GPU pipeline will
     * use to access the source and destination surfaces.
     */
-   wm_prog_key.tex_layout =
-      compute_msaa_layout_for_pipeline(brw, params.src.surf.samples,
-                                       params.src.msaa_layout);
-   wm_prog_key.rt_layout =
-      compute_msaa_layout_for_pipeline(brw, params.dst.surf.samples,
-                                       params.dst.msaa_layout);
+   wm_prog_key.tex_layout = params.src.surf.msaa_layout;
+   wm_prog_key.rt_layout = params.dst.surf.msaa_layout;
 
    /* src_layout and dst_layout indicate the true MSAA layout used by src and
     * dst.
     */
-   wm_prog_key.src_layout = src_mt->msaa_layout;
-   wm_prog_key.dst_layout = dst_mt->msaa_layout;
-
-   /* On gen9+ compressed single sampled buffers carry the same layout type as
-    * multisampled. The difference is that they can be sampled using normal
-    * ld message and as render target behave just like non-compressed surface
-    * from compiler point of view. Therefore override the type in the program
-    * key.
-    */
-   if (brw->gen >= 9 && params.src.surf.samples <= 1 &&
-       src_mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS)
-      wm_prog_key.src_layout = INTEL_MSAA_LAYOUT_NONE;
-   if (brw->gen >= 9 && params.dst.surf.samples <= 1 &&
-       dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS)
-      wm_prog_key.dst_layout = INTEL_MSAA_LAYOUT_NONE;
+   wm_prog_key.src_layout = get_isl_msaa_layout(src_mt->num_samples,
+                                                src_mt->msaa_layout);
+   wm_prog_key.dst_layout = get_isl_msaa_layout(dst_mt->num_samples,
+                                                dst_mt->msaa_layout);
 
    /* Round floating point values to nearest integer to avoid "off by one texel"
     * kind of errors when blitting.

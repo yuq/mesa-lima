@@ -134,12 +134,6 @@ struct brw_blorp_surface_info
    uint32_t brw_surfaceformat;
 
    /**
-    * For MSAA surfaces, MSAA layout that should be used when setting up the
-    * surface state for this surface.
-    */
-   enum intel_msaa_layout msaa_layout;
-
-   /**
     * In order to support cases where RGBA format is backing client requested
     * RGB, one needs to have means to force alpha channel to one when user
     * requested RGB surface is used as blit source. This is possible by
@@ -298,7 +292,7 @@ struct brw_blorp_blit_prog_key
    /* MSAA layout that has been configured in the surface state for texturing
     * from.
     */
-   enum intel_msaa_layout tex_layout;
+   enum isl_msaa_layout tex_layout;
 
    enum isl_aux_usage tex_aux_usage;
 
@@ -306,7 +300,7 @@ struct brw_blorp_blit_prog_key
    unsigned src_samples;
 
    /* Actual MSAA layout used by the source image. */
-   enum intel_msaa_layout src_layout;
+   enum isl_msaa_layout src_layout;
 
    /* Number of samples per pixel that have been configured in the render
     * target.
@@ -314,13 +308,13 @@ struct brw_blorp_blit_prog_key
    unsigned rt_samples;
 
    /* MSAA layout that has been configured in the render target. */
-   enum intel_msaa_layout rt_layout;
+   enum isl_msaa_layout rt_layout;
 
    /* Actual number of samples per pixel in the destination image. */
    unsigned dst_samples;
 
    /* Actual MSAA layout used by the destination image. */
-   enum intel_msaa_layout dst_layout;
+   enum isl_msaa_layout dst_layout;
 
    /* Type of the data to be read from the texture (one of
     * BRW_REGISTER_TYPE_{UD,D,F}).

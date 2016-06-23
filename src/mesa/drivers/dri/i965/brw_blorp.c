@@ -70,7 +70,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
                                   &info->x_offset, &info->y_offset);
 
    info->array_layout = mt->array_layout;
-   info->msaa_layout = mt->msaa_layout;
    info->swizzle = SWIZZLE_XYZW;
 
    if (format == MESA_FORMAT_NONE)
@@ -210,22 +209,6 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
    return program;
 }
 
-static enum isl_msaa_layout
-get_isl_msaa_layout(enum intel_msaa_layout layout)
-{
-   switch (layout) {
-   case INTEL_MSAA_LAYOUT_NONE:
-      return ISL_MSAA_LAYOUT_NONE;
-   case INTEL_MSAA_LAYOUT_IMS:
-      return ISL_MSAA_LAYOUT_INTERLEAVED;
-   case INTEL_MSAA_LAYOUT_UMS:
-   case INTEL_MSAA_LAYOUT_CMS:
-      return ISL_MSAA_LAYOUT_ARRAY;
-   default:
-      unreachable("Invalid MSAA layout");
-   }
-}
-
 struct surface_state_info {
    unsigned num_dwords;
    unsigned ss_align; /* Required alignment of RENDER_SURFACE_STATE in bytes */
@@ -255,7 +238,6 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
    /* Stomp surface dimensions and tiling (if needed) with info from blorp */
    surf.dim = ISL_SURF_DIM_2D;
    surf.dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
-   surf.msaa_layout = get_isl_msaa_layout(surface->msaa_layout);
    surf.logical_level0_px.width = surface->width;
    surf.logical_level0_px.height = surface->height;
    surf.logical_level0_px.depth = 1;
