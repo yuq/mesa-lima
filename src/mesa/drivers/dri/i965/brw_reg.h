@@ -972,6 +972,13 @@ brw_writemask_for_size(unsigned n)
    return (1 << n) - 1;
 }
 
+static inline unsigned
+brw_writemask_for_component_packing(unsigned n, unsigned first_component)
+{
+   assert(first_component + n <= 4);
+   return (((1 << n) - 1) << first_component);
+}
+
 static inline struct brw_reg
 negate(struct brw_reg reg)
 {
