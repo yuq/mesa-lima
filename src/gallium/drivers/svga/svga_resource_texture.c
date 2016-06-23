@@ -350,6 +350,30 @@ svga_texture_transfer_map(struct pipe_context *pipe,
    if (!st)
       return NULL;
 
+   st->base.level = level;
+   st->base.usage = usage;
+   st->base.box = *box;
+
+   switch (tex->b.b.target) {
+   case PIPE_TEXTURE_CUBE:
+      st->slice = st->base.box.z;
+      st->base.box.z = 0;   /* so we don't apply double offsets below */
+      break;
+   case PIPE_TEXTURE_2D_ARRAY:
+   case PIPE_TEXTURE_1D_ARRAY:
+      st->slice = st->base.box.z;
+      st->base.box.z = 0;   /* so we don't apply double offsets below */
+
+      /* Force direct map for transfering multiple slices */
+      if (st->base.box.depth > 1)
+         use_direct_map = svga_have_gb_objects(svga);
+
+      break;
+   default:
+      st->slice = 0;
+      break;
+   }
+
    {
       unsigned w, h;
       if (use_direct_map) {
@@ -370,23 +394,8 @@ svga_texture_transfer_map(struct pipe_context *pipe,
 
    pipe_resource_reference(&st->base.resource, texture);
 
-   st->base.level = level;
-   st->base.usage = usage;
-   st->base.box = *box;
    st->base.stride = nblocksx*util_format_get_blocksize(texture->format);
    st->base.layer_stride = st->base.stride * nblocksy;
-
-   switch (tex->b.b.target) {
-   case PIPE_TEXTURE_CUBE:
-   case PIPE_TEXTURE_2D_ARRAY:
-   case PIPE_TEXTURE_1D_ARRAY:
-      st->slice = st->base.box.z;
-      st->base.box.z = 0;   /* so we don't apply double offsets below */
-      break;
-   default:
-      st->slice = 0;
-      break;
-   }
 
    if (usage & PIPE_TRANSFER_WRITE) {
       /* record texture upload for HUD */
