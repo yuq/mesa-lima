@@ -77,9 +77,9 @@ gen6_blorp_emit_vertex_buffer_state(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
-void
-gen6_blorp_emit_vertices(struct brw_context *brw,
-                         const struct brw_blorp_params *params)
+static void
+gen6_blorp_emit_vertex_data(struct brw_context *brw,
+                            const struct brw_blorp_params *params)
 {
    uint32_t vertex_offset;
 
@@ -119,24 +119,28 @@ gen6_blorp_emit_vertices(struct brw_context *brw,
     * instead of reading them from the buffer. See the vertex element setup
     * below.
     */
-   {
-      float *vertex_data;
+   const float vertices[] = {
+      /* v0 */ (float)params->x0, (float)params->y1,
+      /* v1 */ (float)params->x1, (float)params->y1,
+      /* v2 */ (float)params->x0, (float)params->y0,
+   };
 
-      const float vertices[] = {
-         /* v0 */ (float)params->x0, (float)params->y1,
-         /* v1 */ (float)params->x1, (float)params->y1,
-         /* v2 */ (float)params->x0, (float)params->y0,
-      };
+   float *const vertex_data = (float *)brw_state_batch(
+                                          brw, AUB_TRACE_VERTEX_BUFFER,
+                                          sizeof(vertices), 32,
+                                          &vertex_offset);
+   memcpy(vertex_data, vertices, sizeof(vertices));
 
-      vertex_data = (float *) brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
-                                              sizeof(vertices), 32,
-                                              &vertex_offset);
-      memcpy(vertex_data, vertices, sizeof(vertices));
+   const unsigned blorp_num_vue_elems = 2;
+   gen6_blorp_emit_vertex_buffer_state(brw, blorp_num_vue_elems,
+                                       sizeof(vertices), vertex_offset);
+}
 
-      const unsigned blorp_num_vue_elems = 2;
-      gen6_blorp_emit_vertex_buffer_state(brw, blorp_num_vue_elems,
-                                          sizeof(vertices), vertex_offset);
-   }
+void
+gen6_blorp_emit_vertices(struct brw_context *brw,
+                         const struct brw_blorp_params *params)
+{
+   gen6_blorp_emit_vertex_data(brw, params);
 
    /* 3DSTATE_VERTEX_ELEMENTS
     *
