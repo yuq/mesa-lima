@@ -1386,7 +1386,7 @@ __indirect_glTexCoordPointer(GLint size, GLenum type, GLsizei stride,
       X_GLrop_TexCoord4iv
    };
    static const uint16_t float_ops[5] = {
-      0, X_GLrop_TexCoord1dv, X_GLrop_TexCoord2fv, X_GLrop_TexCoord3fv,
+      0, X_GLrop_TexCoord1fv, X_GLrop_TexCoord2fv, X_GLrop_TexCoord3fv,
       X_GLrop_TexCoord4fv
    };
    static const uint16_t double_ops[5] = {
@@ -1403,7 +1403,7 @@ __indirect_glTexCoordPointer(GLint size, GLenum type, GLsizei stride,
       X_GLrop_MultiTexCoord3ivARB, X_GLrop_MultiTexCoord4ivARB
    };
    static const uint16_t mfloat_ops[5] = {
-      0, X_GLrop_MultiTexCoord1dvARB, X_GLrop_MultiTexCoord2fvARB,
+      0, X_GLrop_MultiTexCoord1fvARB, X_GLrop_MultiTexCoord2fvARB,
       X_GLrop_MultiTexCoord3fvARB, X_GLrop_MultiTexCoord4fvARB
    };
    static const uint16_t mdouble_ops[5] = {
@@ -1587,9 +1587,18 @@ __indirect_glVertexAttribPointer(GLuint index, GLint size,
                                     GLenum type, GLboolean normalized,
                                     GLsizei stride, const GLvoid * pointer)
 {
-   static const uint16_t short_ops[5] = { 0, 4189, 4190, 4191, 4192 };
-   static const uint16_t float_ops[5] = { 0, 4193, 4194, 4195, 4196 };
-   static const uint16_t double_ops[5] = { 0, 4197, 4198, 4199, 4200 };
+   static const uint16_t short_ops[5] = {
+        0, X_GLrop_VertexAttrib1svARB, X_GLrop_VertexAttrib2svARB,
+        X_GLrop_VertexAttrib3svARB, X_GLrop_VertexAttrib4svARB
+   };
+   static const uint16_t float_ops[5] = {
+        0, X_GLrop_VertexAttrib1fvARB, X_GLrop_VertexAttrib2fvARB,
+        X_GLrop_VertexAttrib3fvARB, X_GLrop_VertexAttrib4fvARB
+   };
+   static const uint16_t double_ops[5] = {
+        0, X_GLrop_VertexAttrib1dvARB, X_GLrop_VertexAttrib2dvARB,
+        X_GLrop_VertexAttrib3dvARB, X_GLrop_VertexAttrib4dvARB
+   };
 
    uint16_t opcode;
    struct glx_context *gc = __glXGetCurrentContext();
