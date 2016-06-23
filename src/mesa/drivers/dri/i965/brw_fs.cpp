@@ -57,6 +57,7 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    this->dst = dst;
    this->sources = sources;
    this->exec_size = exec_size;
+   this->base_mrf = -1;
 
    assert(dst.file != IMM && dst.file != UNIFORM);
 
