@@ -207,7 +207,7 @@ enum gbm_bo_flags {
    GBM_BO_USE_RENDERING    = (1 << 2),
    /**
     * Buffer can be used for gbm_bo_write.  This is guaranteed to work
-    * with GBM_BO_USE_CURSOR. but may not work for other combinations.
+    * with GBM_BO_USE_CURSOR, but may not work for other combinations.
     */
    GBM_BO_USE_WRITE    = (1 << 3),
    /**

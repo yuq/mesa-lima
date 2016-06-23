@@ -232,7 +232,7 @@ gbm_bo_get_handle(struct gbm_bo *bo)
 /** Get a DMA-BUF file descriptor for the buffer object
  *
  * This function creates a DMA-BUF (also known as PRIME) file descriptor
- * handle for the buffer object.  Eeach call to gbm_bo_get_fd() returns a new
+ * handle for the buffer object.  Each call to gbm_bo_get_fd() returns a new
  * file descriptor and the caller is responsible for closing the file
  * descriptor.
 
@@ -249,8 +249,8 @@ gbm_bo_get_fd(struct gbm_bo *bo)
 /** Write data into the buffer object
  *
  * If the buffer object was created with the GBM_BO_USE_WRITE flag,
- * this function can used to write data into the buffer object.  The
- * data is copied directly into the object and it's the responsiblity
+ * this function can be used to write data into the buffer object.  The
+ * data is copied directly into the object and it's the responsibility
  * of the caller to make sure the data represents valid pixel data,
  * according to the width, height, stride and format of the buffer object.
  *
