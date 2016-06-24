@@ -1089,7 +1089,7 @@ isl_has_matching_typed_storage_image_format(const struct brw_device_info *devinf
 static inline bool
 isl_tiling_is_any_y(enum isl_tiling tiling)
 {
-   return (1u << tiling) & ISL_TILING_ANY_MASK;
+   return (1u << tiling) & ISL_TILING_ANY_Y_MASK;
 }
 
 static inline bool
