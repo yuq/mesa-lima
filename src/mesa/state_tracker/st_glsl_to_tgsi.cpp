@@ -6761,7 +6761,21 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                          (have_dround ? 0 : DOPS_TO_DFRAC) |
                          (options->EmitNoPow ? POW_TO_EXP2 : 0) |
                          (!ctx->Const.NativeIntegers ? INT_DIV_TO_MUL_RCP : 0) |
-                         (options->EmitNoSat ? SAT_TO_CLAMP : 0));
+                         (options->EmitNoSat ? SAT_TO_CLAMP : 0) |
+                         /* Assume that if ARB_gpu_shader5 is not supported
+                          * then all of the extended integer functions need
+                          * lowering.  It may be necessary to add some caps
+                          * for individual instructions.
+                          */
+                         (!ctx->Extensions.ARB_gpu_shader5
+                          ? BIT_COUNT_TO_MATH |
+                            EXTRACT_TO_SHIFTS |
+                            INSERT_TO_SHIFTS |
+                            REVERSE_TO_SHIFTS |
+                            FIND_LSB_TO_FLOAT_CAST |
+                            FIND_MSB_TO_FLOAT_CAST |
+                            IMUL_HIGH_TO_MUL
+                          : 0));
 
       do_vec_index_to_cond_assign(ir);
       lower_vector_insert(ir, true);
