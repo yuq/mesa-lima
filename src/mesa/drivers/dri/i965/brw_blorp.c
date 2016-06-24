@@ -114,6 +114,46 @@ blorp_get_image_offset_sa(struct isl_device *dev, const struct isl_surf *surf,
    }
 }
 
+static void
+surf_apply_level_layer_offsets(struct isl_device *dev, struct isl_surf *surf,
+                               struct isl_view *view, uint32_t *byte_offset,
+                               uint32_t *tile_x_sa, uint32_t *tile_y_sa)
+{
+   /* This only makes sense for a single level and array slice */
+   assert(view->levels == 1 && view->array_len == 1);
+
+   uint32_t x_offset_sa, y_offset_sa;
+   blorp_get_image_offset_sa(dev, surf, view->base_level,
+                             view->base_array_layer,
+                             &x_offset_sa, &y_offset_sa);
+
+   isl_tiling_get_intratile_offset_sa(dev, surf->tiling, view->format,
+                                      surf->row_pitch, x_offset_sa, y_offset_sa,
+                                      byte_offset, tile_x_sa, tile_y_sa);
+
+   /* Now that that's done, we have a very bare 2-D surface */
+   surf->dim = ISL_SURF_DIM_2D;
+   surf->dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
+
+   surf->logical_level0_px.width =
+      minify(surf->logical_level0_px.width, view->base_level);
+   surf->logical_level0_px.height =
+      minify(surf->logical_level0_px.height, view->base_level);
+   surf->logical_level0_px.depth = 1;
+   surf->logical_level0_px.array_len = 1;
+   surf->levels = 1;
+
+   /* Alignment doesn't matter since we have 1 miplevel and 1 array slice so
+    * just pick something that works for everybody.
+    */
+   surf->image_alignment_el = isl_extent3d(4, 4, 1);
+
+   /* TODO: surf->physcal_level0_extent_sa? */
+
+   view->base_level = 0;
+   view->base_array_layer = 0;
+}
+
 void
 brw_blorp_surface_info_init(struct brw_context *brw,
                             struct brw_blorp_surface_info *info,
@@ -206,20 +246,9 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    }
    }
 
-   uint32_t x_offset, y_offset;
-   blorp_get_image_offset_sa(&brw->isl_dev, &info->surf,
-                             level, layer / layer_multiplier,
-                             &x_offset, &y_offset);
-
-   uint32_t mt_x, mt_y;
-   intel_miptree_get_image_offset(mt, level, layer, &mt_x, &mt_y);
-   assert(mt_x == x_offset && mt_y == y_offset);
-
-   isl_tiling_get_intratile_offset_sa(&brw->isl_dev, info->surf.tiling,
-                                      info->view.format,
-                                      info->surf.row_pitch, x_offset, y_offset,
-                                      &info->bo_offset,
-                                      &info->tile_x_sa, &info->tile_y_sa);
+   surf_apply_level_layer_offsets(&brw->isl_dev, &info->surf, &info->view,
+                                  &info->bo_offset,
+                                  &info->tile_x_sa, &info->tile_y_sa);
 }
 
 
@@ -345,18 +374,8 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
    struct isl_surf surf = surface->surf;
 
    /* Stomp surface dimensions and tiling (if needed) with info from blorp */
-   surf.dim = ISL_SURF_DIM_2D;
-   surf.dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
    surf.logical_level0_px.width = surface->width;
    surf.logical_level0_px.height = surface->height;
-   surf.logical_level0_px.depth = 1;
-   surf.logical_level0_px.array_len = 1;
-   surf.levels = 1;
-
-   /* Alignment doesn't matter since we have 1 miplevel and 1 array slice so
-    * just pick something that works for everybody.
-    */
-   surf.image_alignment_el = isl_extent3d(4, 4, 1);
 
    if (brw->gen == 6 && surf.samples > 1) {
       /* Since gen6 uses INTEL_MSAA_LAYOUT_IMS, width and height are measured
@@ -365,14 +384,6 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
        */
       surf.logical_level0_px.width /= 2;
       surf.logical_level0_px.height /= 2;
-   }
-
-   if (brw->gen == 6 && surf.image_alignment_el.height > 4) {
-      /* This can happen on stencil buffers on Sandy Bridge due to the
-       * single-LOD work-around.  It's fairly harmless as long as we don't
-       * pass a bogus value into isl_surf_fill_state().
-       */
-      surf.image_alignment_el = isl_extent3d(4, 2, 1);
    }
 
    union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
