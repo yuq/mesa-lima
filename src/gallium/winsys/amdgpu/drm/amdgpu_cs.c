@@ -249,9 +249,10 @@ static bool amdgpu_cs_has_user_fence(struct amdgpu_cs_context *cs)
           cs->request.ip_type != AMDGPU_HW_IP_VCE;
 }
 
-static bool amdgpu_cs_has_chaining(enum ring_type ring_type)
+static bool amdgpu_cs_has_chaining(struct amdgpu_cs *cs)
 {
-   return ring_type == RING_GFX;
+   return cs->ctx->ws->info.chip_class >= CIK &&
+          cs->ring_type == RING_GFX;
 }
 
 static unsigned amdgpu_cs_epilog_dws(enum ring_type ring_type)
@@ -384,7 +385,7 @@ static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib)
     * is the largest power of two that fits into the size field of the
     * INDIRECT_BUFFER packet.
     */
-   if (amdgpu_cs_has_chaining(amdgpu_cs_from_ib(ib)->ring_type))
+   if (amdgpu_cs_has_chaining(amdgpu_cs_from_ib(ib)))
       buffer_size = 4 *util_next_power_of_two(ib->max_ib_size);
    else
       buffer_size = 4 *util_next_power_of_two(4 * ib->max_ib_size);
@@ -477,7 +478,7 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
       unreachable("unhandled IB type");
    }
 
-   if (!amdgpu_cs_has_chaining(cs->ring_type)) {
+   if (!amdgpu_cs_has_chaining(cs)) {
       ib_size = MAX2(ib_size,
                      4 * MIN2(util_next_power_of_two(ib->max_ib_size),
                               amdgpu_ib_max_submit_dwords(ib_type)));
@@ -741,7 +742,7 @@ static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
    if (rcs->current.max_dw - rcs->current.cdw >= dw)
       return true;
 
-   if (!amdgpu_cs_has_chaining(cs->ring_type))
+   if (!amdgpu_cs_has_chaining(cs))
       return false;
 
    /* Allocate a new chunk */
