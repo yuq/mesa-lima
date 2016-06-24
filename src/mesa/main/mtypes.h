@@ -3536,6 +3536,11 @@ struct gl_constants
    GLboolean AllowGLSLExtensionDirectiveMidShader;
 
    /**
+    * Force uninitialized variables to default to zero.
+    */
+   GLboolean GLSLZeroInit;
+
+   /**
     * Does the driver support real 32-bit integers?  (Otherwise, integers are
     * simulated via floats.)
     */

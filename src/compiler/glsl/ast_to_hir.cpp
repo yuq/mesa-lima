@@ -4697,6 +4697,14 @@ ast_declarator_list::hir(exec_list *instructions,
       apply_layout_qualifier_to_variable(&this->type->qualifier, var, state,
                                          &loc);
 
+      if ((var->data.mode == ir_var_auto || var->data.mode == ir_var_temporary)
+          && (var->type->is_numeric() || var->type->is_boolean())
+          && state->zero_init) {
+         const ir_constant_data data = {0};
+         var->data.has_initializer = true;
+         var->constant_initializer = new(var) ir_constant(var->type, &data);
+      }
+
       if (this->type->qualifier.flags.q.invariant) {
          if (!is_varying_var(var, state->stage)) {
             _mesa_glsl_error(&loc, state,

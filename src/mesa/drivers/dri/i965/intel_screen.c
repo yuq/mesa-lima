@@ -88,6 +88,10 @@ DRI_CONF_BEGIN
 	 DRI_CONF_DESC(en, "Perform code generation at shader link time.")
       DRI_CONF_OPT_END
    DRI_CONF_SECTION_END
+
+   DRI_CONF_SECTION_MISCELLANEOUS
+      DRI_CONF_GLSL_ZERO_INIT("false")
+   DRI_CONF_SECTION_END
 DRI_CONF_END
 };
 
