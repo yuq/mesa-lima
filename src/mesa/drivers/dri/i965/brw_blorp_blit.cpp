@@ -1878,8 +1878,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       params.y1 = ALIGN(params.y1, y_align) / 2;
       params.dst.width = ALIGN(params.dst.width, x_align) * 2;
       params.dst.height = ALIGN(params.dst.height, y_align) / 2;
-      params.dst.x_offset *= 2;
-      params.dst.y_offset /= 2;
+      params.dst.tile_x_sa *= 2;
+      params.dst.tile_y_sa /= 2;
       wm_prog_key.use_kill = true;
    }
 
@@ -1903,8 +1903,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       const unsigned x_align = 8, y_align = params.src.surf.samples != 0 ? 8 : 4;
       params.src.width = ALIGN(params.src.width, x_align) * 2;
       params.src.height = ALIGN(params.src.height, y_align) / 2;
-      params.src.x_offset *= 2;
-      params.src.y_offset /= 2;
+      params.src.tile_x_sa *= 2;
+      params.src.tile_y_sa /= 2;
    }
 
    /* tex_samples and rt_samples are the sample counts that are set up in

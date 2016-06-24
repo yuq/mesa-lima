@@ -104,19 +104,8 @@ struct brw_blorp_surface_info
     */
    uint32_t height;
 
-   /**
-    * X offset within the surface to texture from (or render to).  For
-    * surfaces using INTEL_MSAA_LAYOUT_IMS, this is measured in samples, not
-    * pixels.
-    */
-   uint32_t x_offset;
-
-   /**
-    * Y offset within the surface to texture from (or render to).  For
-    * surfaces using INTEL_MSAA_LAYOUT_IMS, this is measured in samples, not
-    * pixels.
-    */
-   uint32_t y_offset;
+   uint32_t bo_offset;
+   uint32_t tile_x_sa, tile_y_sa;
 
    /**
     * Format that should be used when setting up the surface state for this

@@ -66,9 +66,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    info->width = minify(mt->physical_width0, level - mt->first_level);
    info->height = minify(mt->physical_height0, level - mt->first_level);
 
-   intel_miptree_get_image_offset(mt, level, layer,
-                                  &info->x_offset, &info->y_offset);
-
    info->swizzle = SWIZZLE_XYZW;
 
    if (format == MESA_FORMAT_NONE)
@@ -110,6 +107,15 @@ brw_blorp_surface_info_init(struct brw_context *brw,
       break;
    }
    }
+
+   uint32_t x_offset, y_offset;
+   intel_miptree_get_image_offset(mt, level, layer, &x_offset, &y_offset);
+
+   uint8_t bs = isl_format_get_layout(info->brw_surfaceformat)->bpb / 8;
+   isl_tiling_get_intratile_offset_el(&brw->isl_dev, info->surf.tiling, bs,
+                                      info->surf.row_pitch, x_offset, y_offset,
+                                      &info->bo_offset,
+                                      &info->tile_x_sa, &info->tile_y_sa);
 }
 
 
@@ -296,13 +302,6 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
                                   ISL_SURF_USAGE_TEXTURE_BIT,
    };
 
-   uint32_t offset, tile_x, tile_y;
-   isl_tiling_get_intratile_offset_el(&brw->isl_dev, surf.tiling,
-                                      isl_format_get_layout(view.format)->bpb / 8,
-                                      surf.row_pitch,
-                                      surface->x_offset, surface->y_offset,
-                                      &offset, &tile_x, &tile_y);
-
    uint32_t surf_offset;
    uint32_t *dw = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
                                   ss_info.num_dwords * 4, ss_info.ss_align,
@@ -311,11 +310,12 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
    const uint32_t mocs = is_render_target ? ss_info.rb_mocs : ss_info.tex_mocs;
 
    isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &view,
-                       .address = surface->mt->bo->offset64 + offset,
+                       .address = surface->mt->bo->offset64 + surface->bo_offset,
                        .aux_surf = aux_surf, .aux_usage = surface->aux_usage,
                        .aux_address = aux_offset,
                        .mocs = mocs, .clear_color = clear_color,
-                       .x_offset_sa = tile_x, .y_offset_sa = tile_y);
+                       .x_offset_sa = surface->tile_x_sa,
+                       .y_offset_sa = surface->tile_y_sa);
 
    /* Emit relocation to surface contents */
    drm_intel_bo_emit_reloc(brw->batch.bo,
