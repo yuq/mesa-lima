@@ -32,6 +32,88 @@
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
+/**
+ * A variant of isl_surf_get_image_offset_sa() specific to gen6 stencil and
+ * HiZ surfaces.
+ */
+static void
+get_image_offset_sa_gen6_stencil(const struct isl_surf *surf,
+                                 uint32_t level, uint32_t logical_array_layer,
+                                 uint32_t *x_offset_sa,
+                                 uint32_t *y_offset_sa)
+{
+   assert(surf->tiling == ISL_TILING_W || surf->format == ISL_FORMAT_HIZ);
+   assert(level < surf->levels);
+   assert(logical_array_layer < surf->logical_level0_px.array_len);
+
+   const struct isl_extent3d image_align_sa =
+      isl_surf_get_image_alignment_sa(surf);
+
+   const uint32_t W0 = surf->phys_level0_sa.width;
+   const uint32_t H0 = surf->phys_level0_sa.height;
+
+   uint32_t x = 0, y = 0;
+   for (uint32_t l = 0; l < level; ++l) {
+      if (l == 1) {
+         uint32_t W = minify(W0, l);
+
+         if (surf->samples > 1) {
+            assert(surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
+            assert(surf->samples == 4);
+            W = ALIGN(W, 2) * 2;
+         }
+
+         x += ALIGN(W, image_align_sa.w);
+      } else {
+         uint32_t H = minify(H0, l);
+
+         if (surf->samples > 1) {
+            assert(surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
+            assert(surf->samples == 4);
+            H = ALIGN(H, 2) * 2;
+         }
+
+         y += ALIGN(H, image_align_sa.h) * surf->logical_level0_px.array_len;
+      }
+   }
+
+   /* Now account for our location within the given LOD */
+   uint32_t Hl = minify(H0, level);
+   if (surf->samples > 1) {
+      assert(surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
+      assert(surf->samples == 4);
+      Hl = ALIGN(Hl, 2) * 2;
+   }
+   y += ALIGN(Hl, image_align_sa.h) * logical_array_layer;
+
+   *x_offset_sa = x;
+   *y_offset_sa = y;
+}
+
+static void
+blorp_get_image_offset_sa(struct isl_device *dev, const struct isl_surf *surf,
+                          uint32_t level, uint32_t layer,
+                          uint32_t *x_offset_sa,
+                          uint32_t *y_offset_sa)
+{
+   if (ISL_DEV_GEN(dev) == 6 && surf->tiling == ISL_TILING_W) {
+      get_image_offset_sa_gen6_stencil(surf, level, layer,
+                                       x_offset_sa, y_offset_sa);
+   } else {
+      /* Using base_array_layer for Z in 3-D surfaces is a bit abusive, but it
+       * will go away soon enough.
+       */
+      uint32_t z = 0;
+      if (surf->dim == ISL_SURF_DIM_3D) {
+         z = layer;
+         layer = 0;
+      }
+
+      isl_surf_get_image_offset_sa(surf, level, layer, z,
+                                   x_offset_sa, y_offset_sa);
+   }
+}
+
 void
 brw_blorp_surface_info_init(struct brw_context *brw,
                             struct brw_blorp_surface_info *info,
@@ -125,10 +207,16 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    }
 
    uint32_t x_offset, y_offset;
-   intel_miptree_get_image_offset(mt, level, layer, &x_offset, &y_offset);
+   blorp_get_image_offset_sa(&brw->isl_dev, &info->surf,
+                             level, layer / layer_multiplier,
+                             &x_offset, &y_offset);
 
-   uint8_t bs = isl_format_get_layout(info->view.format)->bpb / 8;
-   isl_tiling_get_intratile_offset_el(&brw->isl_dev, info->surf.tiling, bs,
+   uint32_t mt_x, mt_y;
+   intel_miptree_get_image_offset(mt, level, layer, &mt_x, &mt_y);
+   assert(mt_x == x_offset && mt_y == y_offset);
+
+   isl_tiling_get_intratile_offset_sa(&brw->isl_dev, info->surf.tiling,
+                                      info->view.format,
                                       info->surf.row_pitch, x_offset, y_offset,
                                       &info->bo_offset,
                                       &info->tile_x_sa, &info->tile_y_sa);
