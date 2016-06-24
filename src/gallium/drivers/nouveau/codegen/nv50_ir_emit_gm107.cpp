@@ -200,6 +200,11 @@ private:
    void emitMEMBAR();
 
    void emitVOTE();
+
+   void emitSUTarget();
+   void emitSUHandle(const int s);
+   void emitSUSTx();
+   void emitSULDx();
 };
 
 /*******************************************************************************
@@ -2817,6 +2822,97 @@ CodeEmitterGM107::emitVOTE()
    emitPRED (0x27, insn->src(0));
 }
 
+void
+CodeEmitterGM107::emitSUTarget()
+{
+   const TexInstruction *insn = this->insn->asTex();
+   int target = 0;
+
+   assert(insn->op >= OP_SULDB && insn->op <= OP_SUREDP);
+
+   if (insn->tex.target == TEX_TARGET_BUFFER) {
+      target = 2;
+   } else if (insn->tex.target == TEX_TARGET_1D_ARRAY) {
+      target = 4;
+   } else if (insn->tex.target == TEX_TARGET_2D ||
+              insn->tex.target == TEX_TARGET_RECT) {
+      target = 6;
+   } else if (insn->tex.target == TEX_TARGET_2D_ARRAY ||
+              insn->tex.target == TEX_TARGET_CUBE ||
+              insn->tex.target == TEX_TARGET_CUBE_ARRAY) {
+      target = 8;
+   } else if (insn->tex.target == TEX_TARGET_3D) {
+      target = 10;
+   } else {
+      assert(insn->tex.target == TEX_TARGET_1D);
+   }
+   emitField(0x20, 4, target);
+}
+
+void
+CodeEmitterGM107::emitSUHandle(const int s)
+{
+   const TexInstruction *insn = this->insn->asTex();
+
+   assert(insn->op >= OP_SULDB && insn->op <= OP_SUREDP);
+
+   if (insn->src(s).getFile() == FILE_GPR) {
+      emitGPR(0x27, insn->src(s));
+   } else {
+      ImmediateValue *imm = insn->getSrc(s)->asImm();
+      assert(imm);
+      emitField(0x33, 1, 1);
+      emitField(0x24, 13, imm->reg.data.u32);
+   }
+}
+
+void
+CodeEmitterGM107::emitSUSTx()
+{
+   const TexInstruction *insn = this->insn->asTex();
+
+   emitInsn(0xeb200000);
+   if (insn->op == OP_SUSTB)
+      emitField(0x34, 1, 1);
+   emitSUTarget();
+
+   emitLDSTc(0x18);
+   emitField(0x14, 4, 0xf); // rgba
+   emitGPR  (0x08, insn->src(0));
+   emitGPR  (0x00, insn->src(1));
+
+   emitSUHandle(2);
+}
+
+void
+CodeEmitterGM107::emitSULDx()
+{
+   const TexInstruction *insn = this->insn->asTex();
+   int type = 0;
+
+   emitInsn(0xeb000000);
+   if (insn->op == OP_SULDB)
+      emitField(0x34, 1, 1);
+   emitSUTarget();
+
+   switch (insn->dType) {
+   case TYPE_S8:   type = 1; break;
+   case TYPE_U16:  type = 2; break;
+   case TYPE_S16:  type = 3; break;
+   case TYPE_U32:  type = 4; break;
+   case TYPE_U64:  type = 5; break;
+   case TYPE_B128: type = 6; break;
+   default:
+      assert(insn->dType == TYPE_U8);
+      break;
+   }
+   emitLDSTc(0x18);
+   emitField(0x14, 3, type);
+   emitGPR  (0x00, insn->def(0));
+   emitGPR  (0x08, insn->src(0));
+
+   emitSUHandle(1);
+}
 /*******************************************************************************
  * assembler front-end
  ******************************************************************************/
@@ -3130,6 +3226,14 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       break;
    case OP_VOTE:
       emitVOTE();
+      break;
+   case OP_SUSTB:
+   case OP_SUSTP:
+      emitSUSTx();
+      break;
+   case OP_SULDB:
+   case OP_SULDP:
+      emitSULDx();
       break;
    default:
       assert(!"invalid opcode");
