@@ -46,6 +46,7 @@
 #define EXTRACT_TO_SHIFTS         0x04000
 #define INSERT_TO_SHIFTS          0x08000
 #define REVERSE_TO_SHIFTS         0x10000
+#define FIND_LSB_TO_FLOAT_CAST    0x20000
 
 /**
  * \see class lower_packing_builtins_visitor

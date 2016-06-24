@@ -163,6 +163,7 @@ private:
    void extract_to_shifts(ir_expression *);
    void insert_to_shifts(ir_expression *);
    void reverse_to_shifts(ir_expression *ir);
+   void find_lsb_to_float_cast(ir_expression *ir);
 };
 
 } /* anonymous namespace */
@@ -1230,6 +1231,86 @@ lower_instructions_visitor::reverse_to_shifts(ir_expression *ir)
    this->progress = true;
 }
 
+void
+lower_instructions_visitor::find_lsb_to_float_cast(ir_expression *ir)
+{
+   /* For more details, see:
+    *
+    * http://graphics.stanford.edu/~seander/bithacks.html#ZerosOnRightFloatCast
+    */
+   const unsigned elements = ir->operands[0]->type->vector_elements;
+   ir_constant *c0 = new(ir) ir_constant(unsigned(0), elements);
+   ir_constant *cminus1 = new(ir) ir_constant(int(-1), elements);
+   ir_constant *c23 = new(ir) ir_constant(int(23), elements);
+   ir_constant *c7F = new(ir) ir_constant(int(0x7F), elements);
+   ir_variable *temp =
+      new(ir) ir_variable(glsl_type::ivec(elements), "temp", ir_var_temporary);
+   ir_variable *lsb_only =
+      new(ir) ir_variable(glsl_type::uvec(elements), "lsb_only", ir_var_temporary);
+   ir_variable *as_float =
+      new(ir) ir_variable(glsl_type::vec(elements), "as_float", ir_var_temporary);
+   ir_variable *lsb =
+      new(ir) ir_variable(glsl_type::ivec(elements), "lsb", ir_var_temporary);
+
+   ir_instruction &i = *base_ir;
+
+   i.insert_before(temp);
+
+   if (ir->operands[0]->type->base_type == GLSL_TYPE_INT) {
+      i.insert_before(assign(temp, ir->operands[0]));
+   } else {
+      assert(ir->operands[0]->type->base_type == GLSL_TYPE_UINT);
+      i.insert_before(assign(temp, u2i(ir->operands[0])));
+   }
+
+   /* The int-to-float conversion is lossless because (value & -value) is
+    * either a power of two or zero.  We don't use the result in the zero
+    * case.  The uint() cast is necessary so that 0x80000000 does not
+    * generate a negative value.
+    *
+    * uint lsb_only = uint(value & -value);
+    * float as_float = float(lsb_only);
+    */
+   i.insert_before(lsb_only);
+   i.insert_before(assign(lsb_only, i2u(bit_and(temp, neg(temp)))));
+
+   i.insert_before(as_float);
+   i.insert_before(assign(as_float, u2f(lsb_only)));
+
+   /* This is basically an open-coded frexp.  Implementations that have a
+    * native frexp instruction would be better served by that.  This is
+    * optimized versus a full-featured open-coded implementation in two ways:
+    *
+    * - We don't care about a correct result from subnormal numbers (including
+    *   0.0), so the raw exponent can always be safely unbiased.
+    *
+    * - The value cannot be negative, so it does not need to be masked off to
+    *   extract the exponent.
+    *
+    * int lsb = (floatBitsToInt(as_float) >> 23) - 0x7f;
+    */
+   i.insert_before(lsb);
+   i.insert_before(assign(lsb, sub(rshift(bitcast_f2i(as_float), c23), c7F)));
+
+   /* Use lsb_only in the comparison instead of temp so that the & (far above)
+    * can possibly generate the result without an explicit comparison.
+    *
+    * (lsb_only == 0) ? -1 : lsb;
+    *
+    * Since our input values are all integers, the unbiased exponent must not
+    * be negative.  It will only be negative (-0x7f, in fact) if lsb_only is
+    * 0.  Instead of using (lsb_only == 0), we could use (lsb >= 0).  Which is
+    * better is likely GPU dependent.  Either way, the difference should be
+    * small.
+    */
+   ir->operation = ir_triop_csel;
+   ir->operands[0] = equal(lsb_only, c0);
+   ir->operands[1] = cminus1;
+   ir->operands[2] = new(ir) ir_dereference_variable(lsb);
+
+   this->progress = true;
+}
+
 ir_visitor_status
 lower_instructions_visitor::visit_leave(ir_expression *ir)
 {
@@ -1350,6 +1431,11 @@ lower_instructions_visitor::visit_leave(ir_expression *ir)
    case ir_unop_bitfield_reverse:
       if (lowering(REVERSE_TO_SHIFTS))
          reverse_to_shifts(ir);
+      break;
+
+   case ir_unop_find_lsb:
+      if (lowering(FIND_LSB_TO_FLOAT_CAST))
+         find_lsb_to_float_cast(ir);
       break;
 
    default:
