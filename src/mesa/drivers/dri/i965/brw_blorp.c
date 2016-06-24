@@ -43,9 +43,11 @@ brw_blorp_surface_info_init(struct brw_context *brw,
     * using INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, then it had better
     * be a multiple of num_samples.
     */
+   unsigned layer_multiplier = 1;
    if (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
        mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
       assert(mt->num_samples <= 1 || layer % mt->num_samples == 0);
+      layer_multiplier = MAX2(mt->num_samples, 1);
    }
 
    intel_miptree_check_level_layer(mt, level, layer);
@@ -61,12 +63,26 @@ brw_blorp_surface_info_init(struct brw_context *brw,
       info->aux_usage = ISL_AUX_USAGE_NONE;
    }
 
+   info->view = (struct isl_view) {
+      .usage = is_render_target ? ISL_SURF_USAGE_RENDER_TARGET_BIT :
+                                  ISL_SURF_USAGE_TEXTURE_BIT,
+      .format = ISL_FORMAT_UNSUPPORTED, /* Set later */
+      .base_level = level,
+      .levels = 1,
+      .base_array_layer = layer / layer_multiplier,
+      .array_len = 1,
+      .channel_select = {
+         ISL_CHANNEL_SELECT_RED,
+         ISL_CHANNEL_SELECT_GREEN,
+         ISL_CHANNEL_SELECT_BLUE,
+         ISL_CHANNEL_SELECT_ALPHA,
+      },
+   };
+
    info->level = level;
    info->layer = layer;
    info->width = minify(mt->physical_width0, level - mt->first_level);
    info->height = minify(mt->physical_height0, level - mt->first_level);
-
-   info->swizzle = SWIZZLE_XYZW;
 
    if (format == MESA_FORMAT_NONE)
       format = mt->format;
@@ -75,8 +91,8 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    case MESA_FORMAT_S_UINT8:
       assert(info->surf.tiling == ISL_TILING_W);
       /* Prior to Broadwell, we can't render to R8_UINT */
-      info->brw_surfaceformat = brw->gen >= 8 ? BRW_SURFACEFORMAT_R8_UINT :
-                                                BRW_SURFACEFORMAT_R8_UNORM;
+      info->view.format = brw->gen >= 8 ? BRW_SURFACEFORMAT_R8_UINT :
+                                          BRW_SURFACEFORMAT_R8_UNORM;
       break;
    case MESA_FORMAT_Z24_UNORM_X8_UINT:
       /* It would make sense to use BRW_SURFACEFORMAT_R24_UNORM_X8_TYPELESS
@@ -89,20 +105,20 @@ brw_blorp_surface_info_init(struct brw_context *brw,
        * pattern as long as we copy the right amount of data, so just map it
        * as 8-bit BGRA.
        */
-      info->brw_surfaceformat = BRW_SURFACEFORMAT_B8G8R8A8_UNORM;
+      info->view.format = BRW_SURFACEFORMAT_B8G8R8A8_UNORM;
       break;
    case MESA_FORMAT_Z_FLOAT32:
-      info->brw_surfaceformat = BRW_SURFACEFORMAT_R32_FLOAT;
+      info->view.format = BRW_SURFACEFORMAT_R32_FLOAT;
       break;
    case MESA_FORMAT_Z_UNORM16:
-      info->brw_surfaceformat = BRW_SURFACEFORMAT_R16_UNORM;
+      info->view.format = BRW_SURFACEFORMAT_R16_UNORM;
       break;
    default: {
       if (is_render_target) {
          assert(brw->format_supported_as_render_target[format]);
-         info->brw_surfaceformat = brw->render_target_format[format];
+         info->view.format = brw->render_target_format[format];
       } else {
-         info->brw_surfaceformat = brw_format_for_mesa_format(format);
+         info->view.format = brw_format_for_mesa_format(format);
       }
       break;
    }
@@ -111,7 +127,7 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    uint32_t x_offset, y_offset;
    intel_miptree_get_image_offset(mt, level, layer, &x_offset, &y_offset);
 
-   uint8_t bs = isl_format_get_layout(info->brw_surfaceformat)->bpb / 8;
+   uint8_t bs = isl_format_get_layout(info->view.format)->bpb / 8;
    isl_tiling_get_intratile_offset_el(&brw->isl_dev, info->surf.tiling, bs,
                                       info->surf.row_pitch, x_offset, y_offset,
                                       &info->bo_offset,
@@ -287,7 +303,7 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
    }
 
    struct isl_view view = {
-      .format = surface->brw_surfaceformat,
+      .format = surface->view.format,
       .base_level = 0,
       .levels = 1,
       .base_array_layer = 0,

@@ -76,6 +76,8 @@ struct brw_blorp_surface_info
    struct isl_surf aux_surf;
    enum isl_aux_usage aux_usage;
 
+   struct isl_view view;
+
    /**
     * The miplevel to use.
     */
@@ -106,20 +108,6 @@ struct brw_blorp_surface_info
 
    uint32_t bo_offset;
    uint32_t tile_x_sa, tile_y_sa;
-
-   /**
-    * Format that should be used when setting up the surface state for this
-    * surface.  Should correspond to one of the BRW_SURFACEFORMAT_* enums.
-    */
-   uint32_t brw_surfaceformat;
-
-   /**
-    * In order to support cases where RGBA format is backing client requested
-    * RGB, one needs to have means to force alpha channel to one when user
-    * requested RGB surface is used as blit source. This is possible by
-    * setting source swizzle for the texture surface.
-    */
-   int swizzle;
 };
 
 void

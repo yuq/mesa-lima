@@ -1578,6 +1578,25 @@ get_isl_msaa_layout(unsigned samples, enum intel_msaa_layout layout)
 }
 
 /**
+ * Convert an swizzle enumeration (i.e. SWIZZLE_X) to one of the Gen7.5+
+ * "Shader Channel Select" enumerations (i.e. HSW_SCS_RED).  The mappings are
+ *
+ * SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_W, SWIZZLE_ZERO, SWIZZLE_ONE
+ *         0          1          2          3             4            5
+ *         4          5          6          7             0            1
+ *   SCS_RED, SCS_GREEN,  SCS_BLUE, SCS_ALPHA,     SCS_ZERO,     SCS_ONE
+ *
+ * which is simply adding 4 then modding by 8 (or anding with 7).
+ *
+ * We then may need to apply workarounds for textureGather hardware bugs.
+ */
+static enum isl_channel_select
+swizzle_to_scs(GLenum swizzle)
+{
+   return (enum isl_channel_select)((swizzle + 4) & 7);
+}
+
+/**
  * Note: if the src (or dst) is a 2D multisample array texture on Gen7+ using
  * INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, src_layer (dst_layer) is
  * the physical layer holding sample 0.  So, for example, if
@@ -1646,8 +1665,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    if (brw->gen == 6 &&
        params.src.surf.samples > 1 && params.dst.surf.samples <= 1 &&
        src_mt->format == dst_mt->format &&
-       params.dst.brw_surfaceformat == BRW_SURFACEFORMAT_R32_FLOAT) {
-      params.src.brw_surfaceformat = params.dst.brw_surfaceformat;
+       params.dst.view.format == ISL_FORMAT_R32_FLOAT) {
+      params.src.view.format = params.dst.view.format;
    }
 
    struct brw_blorp_blit_prog_key wm_prog_key;
@@ -1930,7 +1949,10 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
 
    brw_blorp_get_blit_kernel(brw, &params, &wm_prog_key);
 
-   params.src.swizzle = src_swizzle;
+   for (unsigned i = 0; i < 4; i++) {
+      params.src.view.channel_select[i] =
+         swizzle_to_scs(GET_SWZ(src_swizzle, i));
+   }
 
    brw_blorp_exec(brw, &params);
 

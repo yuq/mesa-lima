@@ -216,7 +216,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                                layer, format, true);
 
    /* Override the surface format according to the context's sRGB rules. */
-   params.dst.brw_surfaceformat = brw->render_target_format[format];
+   params.dst.view.format = (enum isl_format)brw->render_target_format[format];
 
    const char *clear_type;
    if (is_fast_clear)
