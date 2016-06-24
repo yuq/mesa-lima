@@ -472,6 +472,9 @@ guess_and_alloc_texture(struct st_context *st,
     */
    firstImage = _mesa_base_tex_image(&stObj->base);
    if (firstImage &&
+       firstImage->Width2 > 0 &&
+       firstImage->Height2 > 0 &&
+       firstImage->Depth2 > 0 &&
        guess_base_level_size(stObj->base.Target,
                              firstImage->Width2,
                              firstImage->Height2,
