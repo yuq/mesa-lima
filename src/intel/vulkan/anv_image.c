@@ -120,9 +120,17 @@ make_surface(const struct anv_device *dev,
       [VK_IMAGE_TYPE_3D] = ISL_SURF_DIM_3D,
    };
 
-   isl_tiling_flags_t tiling_flags = anv_info->isl_tiling_flags;
-   if (vk_info->tiling == VK_IMAGE_TILING_LINEAR)
-      tiling_flags = ISL_TILING_LINEAR_BIT;
+   /* Translate the Vulkan tiling to an equivalent ISL tiling, then filter the
+    * result with an optionally provided ISL tiling argument.
+    */
+   isl_tiling_flags_t tiling_flags =
+      (vk_info->tiling == VK_IMAGE_TILING_LINEAR) ?
+      ISL_TILING_LINEAR_BIT : ISL_TILING_ANY_MASK;
+
+   if (anv_info->isl_tiling_flags)
+      tiling_flags &= anv_info->isl_tiling_flags;
+
+   assert(tiling_flags);
 
    struct anv_surface *anv_surf = get_surface(image, aspect);
 
@@ -260,7 +268,6 @@ anv_CreateImage(VkDevice device,
    return anv_image_create(device,
       &(struct anv_image_create_info) {
          .vk_info = pCreateInfo,
-         .isl_tiling_flags = ISL_TILING_ANY_MASK,
       },
       pAllocator,
       pImage);

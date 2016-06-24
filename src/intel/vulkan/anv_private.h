@@ -1698,7 +1698,10 @@ struct anv_image_view {
 
 struct anv_image_create_info {
    const VkImageCreateInfo *vk_info;
+
+   /** An opt-in bitmask which filters an ISL-mapping of the Vulkan tiling. */
    isl_tiling_flags_t isl_tiling_flags;
+
    uint32_t stride;
 };
 
