@@ -44,6 +44,7 @@
 #define DFREXP_DLDEXP_TO_ARITH    0x1000
 #define BIT_COUNT_TO_MATH         0x02000
 #define EXTRACT_TO_SHIFTS         0x04000
+#define INSERT_TO_SHIFTS          0x08000
 
 /**
  * \see class lower_packing_builtins_visitor

@@ -161,6 +161,7 @@ private:
    void dsign_to_csel(ir_expression *);
    void bit_count_to_math(ir_expression *);
    void extract_to_shifts(ir_expression *);
+   void insert_to_shifts(ir_expression *);
 };
 
 } /* anonymous namespace */
@@ -1076,6 +1077,72 @@ lower_instructions_visitor::extract_to_shifts(ir_expression *ir)
    this->progress = true;
 }
 
+void
+lower_instructions_visitor::insert_to_shifts(ir_expression *ir)
+{
+   ir_constant *c1;
+   ir_constant *c32;
+   ir_constant *cFFFFFFFF;
+   ir_variable *offset =
+      new(ir) ir_variable(ir->operands[0]->type, "offset", ir_var_temporary);
+   ir_variable *bits =
+      new(ir) ir_variable(ir->operands[0]->type, "bits", ir_var_temporary);
+   ir_variable *mask =
+      new(ir) ir_variable(ir->operands[0]->type, "mask", ir_var_temporary);
+
+   if (ir->operands[0]->type->base_type == GLSL_TYPE_INT) {
+      c1 = new(ir) ir_constant(int(1), ir->operands[0]->type->vector_elements);
+      c32 = new(ir) ir_constant(int(32), ir->operands[0]->type->vector_elements);
+      cFFFFFFFF = new(ir) ir_constant(int(0xFFFFFFFF), ir->operands[0]->type->vector_elements);
+   } else {
+      assert(ir->operands[0]->type->base_type == GLSL_TYPE_UINT);
+
+      c1 = new(ir) ir_constant(1u, ir->operands[0]->type->vector_elements);
+      c32 = new(ir) ir_constant(32u, ir->operands[0]->type->vector_elements);
+      cFFFFFFFF = new(ir) ir_constant(0xFFFFFFFFu, ir->operands[0]->type->vector_elements);
+   }
+
+   base_ir->insert_before(offset);
+   base_ir->insert_before(assign(offset, ir->operands[2]));
+
+   base_ir->insert_before(bits);
+   base_ir->insert_before(assign(bits, ir->operands[3]));
+
+   /* At least some hardware treats (x << y) as (x << (y%32)).  This means
+    * we'd get a mask of 0 when bits is 32.  Special case it.
+    *
+    * mask = (bits == 32 ? 0xffffffff : (1u << bits) - 1u) << offset;
+    *
+    * Section 8.8 (Integer Functions) of the GLSL 4.50 spec says:
+    *
+    *    The result will be undefined if offset or bits is negative, or if the
+    *    sum of offset and bits is greater than the number of bits used to
+    *    store the operand.
+    *
+    * Since it's undefined, there are a couple other ways this could be
+    * implemented.  The other way that was considered was to put the csel
+    * around the whole thing:
+    *
+    *    final_result = bits == 32 ? insert : ... ;
+    */
+   base_ir->insert_before(mask);
+
+   base_ir->insert_before(assign(mask, csel(equal(bits, c32),
+                                            cFFFFFFFF,
+                                            lshift(sub(lshift(c1, bits),
+                                                       c1->clone(ir, NULL)),
+                                                   offset))));
+
+   /* (base & ~mask) | ((insert << offset) & mask) */
+   ir->operation = ir_binop_bit_or;
+   ir->operands[0] = bit_and(ir->operands[0], bit_not(mask));
+   ir->operands[1] = bit_and(lshift(ir->operands[1], offset), mask);
+   ir->operands[2] = NULL;
+   ir->operands[3] = NULL;
+
+   this->progress = true;
+}
+
 ir_visitor_status
 lower_instructions_visitor::visit_leave(ir_expression *ir)
 {
@@ -1187,6 +1254,12 @@ lower_instructions_visitor::visit_leave(ir_expression *ir)
       if (lowering(EXTRACT_TO_SHIFTS))
          extract_to_shifts(ir);
       break;
+
+   case ir_quadop_bitfield_insert:
+      if (lowering(INSERT_TO_SHIFTS))
+         insert_to_shifts(ir);
+      break;
+
 
    default:
       return visit_continue;
