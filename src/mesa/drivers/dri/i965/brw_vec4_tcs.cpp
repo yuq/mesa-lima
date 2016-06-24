@@ -201,6 +201,7 @@ vec4_tcs_visitor::emit_input_urb_read(const dst_reg &dst,
 void
 vec4_tcs_visitor::emit_output_urb_read(const dst_reg &dst,
                                        unsigned base_offset,
+                                       unsigned first_component,
                                        const src_reg &indirect_offset)
 {
    vec4_instruction *inst;
@@ -216,6 +217,12 @@ vec4_tcs_visitor::emit_output_urb_read(const dst_reg &dst,
    read->offset = base_offset;
    read->mlen = 1;
    read->base_mrf = -1;
+
+   if (first_component) {
+      src_reg src = src_reg(dst);
+      src.swizzle = BRW_SWZ_COMP_INPUT(first_component);
+      emit(MOV(dst, src));
+   }
 }
 
 void
@@ -295,14 +302,15 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          case GL_QUADS: {
             /* DWords 3-2 (reversed); use offset 0 and WZYX swizzle. */
             dst_reg tmp(this, glsl_type::vec4_type);
-            emit_output_urb_read(tmp, 0, src_reg());
+            emit_output_urb_read(tmp, 0, 0, src_reg());
             emit(MOV(writemask(dst, WRITEMASK_XY),
                      swizzle(src_reg(tmp), BRW_SWIZZLE_WZYX)));
             break;
          }
          case GL_TRIANGLES:
             /* DWord 4; use offset 1 but normal swizzle/writemask. */
-            emit_output_urb_read(writemask(dst, WRITEMASK_X), 1, src_reg());
+            emit_output_urb_read(writemask(dst, WRITEMASK_X), 1, 0,
+                                 src_reg());
             break;
          case GL_ISOLINES:
             /* All channels are undefined. */
@@ -334,10 +342,11 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          }
 
          dst_reg tmp(this, glsl_type::vec4_type);
-         emit_output_urb_read(tmp, 1, src_reg());
+         emit_output_urb_read(tmp, 1, 0, src_reg());
          emit(MOV(dst, swizzle(src_reg(tmp), swiz)));
       } else {
-         emit_output_urb_read(dst, imm_offset, indirect_offset);
+         emit_output_urb_read(dst, imm_offset, nir_intrinsic_component(instr),
+                              indirect_offset);
       }
       break;
    }

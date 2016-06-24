@@ -179,7 +179,7 @@ vec4_tes_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       src_reg indirect_offset = get_indirect_offset(instr);
       dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
       unsigned imm_offset = instr->const_index[0];
-      unsigned fist_component = nir_intrinsic_component(instr);
+      unsigned first_component = nir_intrinsic_component(instr);
       src_reg header = input_read_header;
 
       if (indirect_offset.file != BAD_FILE) {
@@ -193,7 +193,7 @@ vec4_tes_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          const unsigned max_push_slots = 24;
          if (imm_offset < max_push_slots) {
             src_reg src = src_reg(ATTR, imm_offset, glsl_type::ivec4_type);
-            src.swizzle = BRW_SWZ_COMP_INPUT(fist_component);
+            src.swizzle = BRW_SWZ_COMP_INPUT(first_component);
 
             emit(MOV(dst, src));
             prog_data->urb_read_length =
@@ -210,7 +210,7 @@ vec4_tes_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       read->urb_write_flags = BRW_URB_WRITE_PER_SLOT_OFFSET;
 
       src_reg src = src_reg(temp);
-      src.swizzle = BRW_SWZ_COMP_INPUT(fist_component);
+      src.swizzle = BRW_SWZ_COMP_INPUT(first_component);
 
       /* Copy to target.  We might end up with some funky writemasks landing
        * in here, but we really don't want them in the above pseudo-ops.
