@@ -164,6 +164,7 @@ private:
    void insert_to_shifts(ir_expression *);
    void reverse_to_shifts(ir_expression *ir);
    void find_lsb_to_float_cast(ir_expression *ir);
+   void find_msb_to_float_cast(ir_expression *ir);
 };
 
 } /* anonymous namespace */
@@ -1311,6 +1312,106 @@ lower_instructions_visitor::find_lsb_to_float_cast(ir_expression *ir)
    this->progress = true;
 }
 
+void
+lower_instructions_visitor::find_msb_to_float_cast(ir_expression *ir)
+{
+   /* For more details, see:
+    *
+    * http://graphics.stanford.edu/~seander/bithacks.html#ZerosOnRightFloatCast
+    */
+   const unsigned elements = ir->operands[0]->type->vector_elements;
+   ir_constant *c0 = new(ir) ir_constant(int(0), elements);
+   ir_constant *cminus1 = new(ir) ir_constant(int(-1), elements);
+   ir_constant *c23 = new(ir) ir_constant(int(23), elements);
+   ir_constant *c7F = new(ir) ir_constant(int(0x7F), elements);
+   ir_constant *c000000FF = new(ir) ir_constant(0x000000FFu, elements);
+   ir_constant *cFFFFFF00 = new(ir) ir_constant(0xFFFFFF00u, elements);
+   ir_variable *temp =
+      new(ir) ir_variable(glsl_type::uvec(elements), "temp", ir_var_temporary);
+   ir_variable *as_float =
+      new(ir) ir_variable(glsl_type::vec(elements), "as_float", ir_var_temporary);
+   ir_variable *msb =
+      new(ir) ir_variable(glsl_type::ivec(elements), "msb", ir_var_temporary);
+
+   ir_instruction &i = *base_ir;
+
+   i.insert_before(temp);
+
+   if (ir->operands[0]->type->base_type == GLSL_TYPE_UINT) {
+      i.insert_before(assign(temp, ir->operands[0]));
+   } else {
+      assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT);
+
+      /* findMSB(uint(abs(some_int))) almost always does the right thing.
+       * There are two problem values:
+       *
+       * * 0x80000000.  Since abs(0x80000000) == 0x80000000, findMSB returns
+       *   31.  However, findMSB(int(0x80000000)) == 30.
+       *
+       * * 0xffffffff.  Since abs(0xffffffff) == 1, findMSB returns
+       *   31.  Section 8.8 (Integer Functions) of the GLSL 4.50 spec says:
+       *
+       *    For a value of zero or negative one, -1 will be returned.
+       *
+       * For all negative number cases, including 0x80000000 and 0xffffffff,
+       * the correct value is obtained from findMSB if instead of negating the
+       * (already negative) value the logical-not is used.  A conditonal
+       * logical-not can be achieved in two instructions.
+       */
+      ir_variable *as_int =
+         new(ir) ir_variable(glsl_type::ivec(elements), "as_int", ir_var_temporary);
+      ir_constant *c31 = new(ir) ir_constant(int(31), elements);
+
+      i.insert_before(as_int);
+      i.insert_before(assign(as_int, ir->operands[0]));
+      i.insert_before(assign(temp, i2u(expr(ir_binop_bit_xor,
+                                            as_int,
+                                            rshift(as_int, c31)))));
+   }
+
+   /* The int-to-float conversion is lossless because bits are conditionally
+    * masked off the bottom of temp to ensure the value has at most 24 bits of
+    * data or is zero.  We don't use the result in the zero case.  The uint()
+    * cast is necessary so that 0x80000000 does not generate a negative value.
+    *
+    * float as_float = float(temp > 255 ? temp & ~255 : temp);
+    */
+   i.insert_before(as_float);
+   i.insert_before(assign(as_float, u2f(csel(greater(temp, c000000FF),
+                                             bit_and(temp, cFFFFFF00),
+                                             temp))));
+
+   /* This is basically an open-coded frexp.  Implementations that have a
+    * native frexp instruction would be better served by that.  This is
+    * optimized versus a full-featured open-coded implementation in two ways:
+    *
+    * - We don't care about a correct result from subnormal numbers (including
+    *   0.0), so the raw exponent can always be safely unbiased.
+    *
+    * - The value cannot be negative, so it does not need to be masked off to
+    *   extract the exponent.
+    *
+    * int msb = (floatBitsToInt(as_float) >> 23) - 0x7f;
+    */
+   i.insert_before(msb);
+   i.insert_before(assign(msb, sub(rshift(bitcast_f2i(as_float), c23), c7F)));
+
+   /* Use msb in the comparison instead of temp so that the subtract can
+    * possibly generate the result without an explicit comparison.
+    *
+    * (msb < 0) ? -1 : msb;
+    *
+    * Since our input values are all integers, the unbiased exponent must not
+    * be negative.  It will only be negative (-0x7f, in fact) if temp is 0.
+    */
+   ir->operation = ir_triop_csel;
+   ir->operands[0] = less(msb, c0);
+   ir->operands[1] = cminus1;
+   ir->operands[2] = new(ir) ir_dereference_variable(msb);
+
+   this->progress = true;
+}
+
 ir_visitor_status
 lower_instructions_visitor::visit_leave(ir_expression *ir)
 {
@@ -1436,6 +1537,11 @@ lower_instructions_visitor::visit_leave(ir_expression *ir)
    case ir_unop_find_lsb:
       if (lowering(FIND_LSB_TO_FLOAT_CAST))
          find_lsb_to_float_cast(ir);
+      break;
+
+   case ir_unop_find_msb:
+      if (lowering(FIND_MSB_TO_FLOAT_CAST))
+         find_msb_to_float_cast(ir);
       break;
 
    default:
