@@ -438,6 +438,25 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
 	unsigned ia_multi_vgt_param, ls_hs_config, num_patches = 0;
 
+	/* Polaris needs different VTX_REUSE_DEPTH settings depending on
+	 * whether the "fractional odd" tessellation spacing is used.
+	 */
+	if (sctx->b.family >= CHIP_POLARIS10) {
+		struct si_shader_selector *tes = sctx->tes_shader.cso;
+		unsigned vtx_reuse_depth = 30;
+
+		if (tes &&
+		    tes->info.properties[TGSI_PROPERTY_TES_SPACING] ==
+		    PIPE_TESS_SPACING_FRACTIONAL_ODD)
+			vtx_reuse_depth = 14;
+
+		if (vtx_reuse_depth != sctx->last_vtx_reuse_depth) {
+			radeon_set_context_reg(cs, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL,
+					       vtx_reuse_depth);
+			sctx->last_vtx_reuse_depth = vtx_reuse_depth;
+		}
+	}
+
 	if (sctx->tes_shader.cso)
 		si_emit_derived_tess_state(sctx, info, &num_patches);
 

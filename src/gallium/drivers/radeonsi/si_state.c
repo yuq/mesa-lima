@@ -3866,7 +3866,8 @@ static void si_init_config(struct si_context *sctx)
 		si_pm4_set_reg(pm4, R_028424_CB_DCC_CONTROL,
 			       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
 			       S_028424_OVERWRITE_COMBINER_WATERMARK(4));
-		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
+		if (sctx->b.family < CHIP_POLARIS10)
+			si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
 		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
 
 		vgt_tess_distribution =

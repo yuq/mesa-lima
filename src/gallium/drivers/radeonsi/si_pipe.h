@@ -303,6 +303,7 @@ struct si_context {
 	int			last_ls_hs_config;
 	int			last_rast_prim;
 	unsigned		last_sc_line_stipple;
+	int			last_vtx_reuse_depth;
 	int			current_rast_prim; /* primitive type after TES, GS */
 	unsigned		last_gsvs_itemsize;
 

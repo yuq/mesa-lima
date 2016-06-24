@@ -240,6 +240,7 @@ void si_begin_new_cs(struct si_context *ctx)
 	ctx->last_ls_hs_config = -1;
 	ctx->last_rast_prim = -1;
 	ctx->last_sc_line_stipple = ~0;
+	ctx->last_vtx_reuse_depth = -1;
 	ctx->emit_scratch_reloc = true;
 	ctx->last_ls = NULL;
 	ctx->last_tcs = NULL;
