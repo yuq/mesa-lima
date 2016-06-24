@@ -222,6 +222,10 @@ initialize_context(struct gl_context *ctx, gl_api api)
    ctx->Const.GenerateTemporaryNames = true;
    ctx->Const.MaxPatchVertices = 32;
 
+   /* GL_ARB_explicit_uniform_location, GL_MAX_UNIFORM_LOCATIONS */
+   ctx->Const.MaxUserAssignableUniformLocations =
+      4 * MESA_SHADER_STAGES * MAX_UNIFORMS;
+
    ctx->Driver.NewShader = _mesa_new_linked_shader;
 }
 
