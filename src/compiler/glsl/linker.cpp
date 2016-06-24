@@ -3866,6 +3866,9 @@ add_interface_variables(struct gl_shader_program *shProg,
          continue;
       };
 
+      if (var->data.patch)
+         loc_bias = int(VARYING_SLOT_PATCH0);
+
       /* Skip packed varyings, packed varyings are handled separately
        * by add_packed_varyings.
        */
