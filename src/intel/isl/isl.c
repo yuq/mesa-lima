@@ -1345,13 +1345,15 @@ isl_buffer_fill_state_s(const struct isl_device *dev, void *state,
  */
 static void
 get_image_offset_sa_gen4_2d(const struct isl_surf *surf,
-                            uint32_t level, uint32_t layer,
+                            uint32_t level, uint32_t logical_array_layer,
                             uint32_t *x_offset_sa,
                             uint32_t *y_offset_sa)
 {
    assert(level < surf->levels);
-   assert(layer < surf->phys_level0_sa.array_len);
-   assert(surf->phys_level0_sa.depth == 1);
+   if (surf->dim == ISL_SURF_DIM_3D)
+      assert(logical_array_layer < surf->logical_level0_px.depth);
+   else
+      assert(logical_array_layer < surf->logical_level0_px.array_len);
 
    const struct isl_extent3d image_align_sa =
       isl_surf_get_image_alignment_sa(surf);
@@ -1359,8 +1361,11 @@ get_image_offset_sa_gen4_2d(const struct isl_surf *surf,
    const uint32_t W0 = surf->phys_level0_sa.width;
    const uint32_t H0 = surf->phys_level0_sa.height;
 
+   const uint32_t phys_layer = logical_array_layer *
+      (surf->msaa_layout == ISL_MSAA_LAYOUT_ARRAY ? surf->samples : 1);
+
    uint32_t x = 0;
-   uint32_t y = layer * isl_surf_get_array_pitch_sa_rows(surf);
+   uint32_t y = phys_layer * isl_surf_get_array_pitch_sa_rows(surf);
 
    for (uint32_t l = 0; l < level; ++l) {
       if (l == 1) {
