@@ -406,6 +406,13 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          }
       }
 
+      unsigned first_component = nir_intrinsic_component(instr);
+      if (first_component) {
+         assert(swiz == BRW_SWIZZLE_XYZW);
+         swiz = BRW_SWZ_COMP_OUTPUT(first_component);
+         mask = mask << first_component;
+      }
+
       emit_urb_write(swizzle(value, swiz), mask,
                      imm_offset, indirect_offset);
       break;
