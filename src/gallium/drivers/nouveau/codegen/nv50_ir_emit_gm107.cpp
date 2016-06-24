@@ -205,6 +205,7 @@ private:
    void emitSUHandle(const int s);
    void emitSUSTx();
    void emitSULDx();
+   void emitSUREDx();
 };
 
 /*******************************************************************************
@@ -2913,6 +2914,51 @@ CodeEmitterGM107::emitSULDx()
 
    emitSUHandle(1);
 }
+
+void
+CodeEmitterGM107::emitSUREDx()
+{
+   const TexInstruction *insn = this->insn->asTex();
+   uint8_t type = 0, subOp;
+
+   if (insn->subOp == NV50_IR_SUBOP_ATOM_CAS)
+      emitInsn(0xeac00000);
+   else
+      emitInsn(0xea600000);
+
+   if (insn->op == OP_SUREDB)
+      emitField(0x34, 1, 1);
+   emitSUTarget();
+
+   // destination type
+   switch (insn->dType) {
+   case TYPE_S32: type = 1; break;
+   case TYPE_U64: type = 2; break;
+   case TYPE_F32: type = 3; break;
+   case TYPE_S64: type = 5; break;
+   default:
+      assert(insn->dType == TYPE_U32);
+      break;
+   }
+
+   // atomic operation
+   if (insn->subOp == NV50_IR_SUBOP_ATOM_CAS) {
+      subOp = 0;
+   } else if (insn->subOp == NV50_IR_SUBOP_ATOM_EXCH) {
+      subOp = 8;
+   } else {
+      subOp = insn->subOp;
+   }
+
+   emitField(0x24, 3, type);
+   emitField(0x1d, 4, subOp);
+   emitGPR  (0x14, insn->src(1));
+   emitGPR  (0x08, insn->src(0));
+   emitGPR  (0x00, insn->def(0));
+
+   emitSUHandle(2);
+}
+
 /*******************************************************************************
  * assembler front-end
  ******************************************************************************/
@@ -3234,6 +3280,10 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
    case OP_SULDB:
    case OP_SULDP:
       emitSULDx();
+      break;
+   case OP_SUREDB:
+   case OP_SUREDP:
+      emitSUREDx();
       break;
    default:
       assert(!"invalid opcode");
