@@ -1677,28 +1677,6 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       unreachable("Unrecognized blorp format");
    }
 
-   if (brw->gen > 6) {
-      /* Gen7's rendering hardware only supports the IMS layout for depth and
-       * stencil render targets.  Blorp always maps its destination surface as
-       * a color render target (even if it's actually a depth or stencil
-       * buffer).  So if the destination is IMS, we'll have to map it as a
-       * single-sampled texture and interleave the samples ourselves.
-       */
-      if (dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS) {
-         params.dst.surf.samples = 1;
-         params.dst.surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
-      }
-   }
-
-   if (params.src.surf.samples > 0 && params.dst.surf.samples > 1) {
-      /* We are blitting from a multisample buffer to a multisample buffer, so
-       * we must preserve samples within a pixel.  This means we have to
-       * arrange for the WM program to run once per sample rather than once
-       * per pixel.
-       */
-      wm_prog_key.persample_msaa_dispatch = true;
-   }
-
    /* Scaled blitting or not. */
    wm_prog_key.blit_scaled =
       ((dst_x1 - dst_x0) == (src_x1 - src_x0) &&
@@ -1738,19 +1716,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    wm_prog_key.src_samples = src_mt->num_samples;
    wm_prog_key.dst_samples = dst_mt->num_samples;
 
-   /* tex_samples and rt_samples are the sample counts that are set up in
-    * SURFACE_STATE.
-    */
-   wm_prog_key.tex_samples = params.src.surf.samples;
-   wm_prog_key.rt_samples  = params.dst.surf.samples;
-
    wm_prog_key.tex_aux_usage = params.src.aux_usage;
-
-   /* tex_layout and rt_layout indicate the MSAA layout the GPU pipeline will
-    * use to access the source and destination surfaces.
-    */
-   wm_prog_key.tex_layout = params.src.surf.msaa_layout;
-   wm_prog_key.rt_layout = params.dst.surf.msaa_layout;
 
    /* src_layout and dst_layout indicate the true MSAA layout used by src and
     * dst.
@@ -1788,7 +1754,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       params.wm_inputs.src_z = 0;
    }
 
-   if (params.dst.surf.samples <= 1 && dst_mt->num_samples > 1) {
+   if (brw->gen > 6 && dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS) {
       /* We must expand the rectangle we send through the rendering pipeline,
        * to account for the fact that we are mapping the destination region as
        * single-sampled when it is in fact multisampled.  We must also align
@@ -1801,8 +1767,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        * If it's UMS, then we have no choice but to set up the rendering
        * pipeline as multisampled.
        */
-      assert(dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS);
-      switch (dst_mt->num_samples) {
+      assert(params.dst.surf.msaa_layout = ISL_MSAA_LAYOUT_INTERLEAVED);
+      switch (params.dst.surf.samples) {
       case 2:
          params.x0 = ROUND_DOWN_TO(params.x0 * 2, 4);
          params.y0 = ROUND_DOWN_TO(params.y0, 4);
@@ -1830,6 +1796,16 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       default:
          unreachable("Unrecognized sample count in brw_blorp_blit_params ctor");
       }
+
+      /* Gen7's rendering hardware only supports the IMS layout for depth and
+       * stencil render targets.  Blorp always maps its destination surface as
+       * a color render target (even if it's actually a depth or stencil
+       * buffer).  So if the destination is IMS, we'll have to map it as a
+       * single-sampled texture and interleave the samples ourselves.
+       */
+      params.dst.surf.samples = 1;
+      params.dst.surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
+
       wm_prog_key.use_kill = true;
    }
 
@@ -1929,6 +1905,27 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       params.src.height = ALIGN(params.src.height, y_align) / 2;
       params.src.x_offset *= 2;
       params.src.y_offset /= 2;
+   }
+
+   /* tex_samples and rt_samples are the sample counts that are set up in
+    * SURFACE_STATE.
+    */
+   wm_prog_key.tex_samples = params.src.surf.samples;
+   wm_prog_key.rt_samples  = params.dst.surf.samples;
+
+   /* tex_layout and rt_layout indicate the MSAA layout the GPU pipeline will
+    * use to access the source and destination surfaces.
+    */
+   wm_prog_key.tex_layout = params.src.surf.msaa_layout;
+   wm_prog_key.rt_layout = params.dst.surf.msaa_layout;
+
+   if (params.src.surf.samples > 0 && params.dst.surf.samples > 1) {
+      /* We are blitting from a multisample buffer to a multisample buffer, so
+       * we must preserve samples within a pixel.  This means we have to
+       * arrange for the WM program to run once per sample rather than once
+       * per pixel.
+       */
+      wm_prog_key.persample_msaa_dispatch = true;
    }
 
    brw_blorp_get_blit_kernel(brw, &params, &wm_prog_key);
