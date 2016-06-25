@@ -96,12 +96,20 @@ namespace {
        }
    }
 
+   struct target {
+      target(const std::string &s) :
+         cpu(s.begin(), s.begin() + s.find_first_of("-")),
+         triple(s.begin() + s.find_first_of("-") + 1, s.end()) {}
+
+      std::string cpu;
+      std::string triple;
+   };
+
    llvm::Module *
    compile_llvm(llvm::LLVMContext &llvm_ctx, const std::string &source,
-                const header_map &headers,
-                const std::string &name, const std::string &triple,
-                const std::string &processor, const std::string &opts,
-                clang::LangAS::Map& address_spaces, unsigned &optimization_level,
+                const header_map &headers, const std::string &name,
+                const std::string &target, const std::string &opts,
+                clang::LangAS::Map &address_spaces, unsigned &optimization_level,
                 std::string &r_log) {
 
       clang::CompilerInstance c;
@@ -162,8 +170,9 @@ namespace {
       c.getPreprocessorOpts().addMacroDef("cl_clang_storage_class_specifiers");
 
       c.getLangOpts().NoBuiltin = true;
-      c.getTargetOpts().Triple = triple;
-      c.getTargetOpts().CPU = processor;
+      const struct target t { target };
+      c.getTargetOpts().Triple = t.triple;
+      c.getTargetOpts().CPU = t.cpu;
 
       // This is a workaround for a Clang bug which causes the number
       // of warnings and errors to be printed to stderr.
@@ -171,7 +180,7 @@ namespace {
       c.getDiagnosticOpts().ShowCarets = false;
 
       compat::set_lang_defaults(c.getInvocation(), c.getLangOpts(),
-                                clang::IK_OpenCL, ::llvm::Triple(triple),
+                                clang::IK_OpenCL, ::llvm::Triple(t.triple),
                                 c.getPreprocessorOpts(),
                                 clang::LangStandard::lang_opencl11);
 
@@ -206,9 +215,8 @@ namespace {
       // attribute will prevent Clang from creating illegal uses of
       // barrier() (e.g. Moving barrier() inside a conditional that is
       // no executed by all threads) during its optimizaton passes.
-      const std::string libclc_path = LIBCLC_LIBEXECDIR + processor + "-"
-                                      + triple + ".bc";
-      compat::add_link_bitcode_file(c.getCodeGenOpts(), libclc_path);
+      compat::add_link_bitcode_file(c.getCodeGenOpts(),
+                                    LIBCLC_LIBEXECDIR + target + ".bc");
 
       optimization_level = c.getCodeGenOpts().OptimizationLevel;
 
@@ -576,8 +584,7 @@ namespace {
    }
 
    std::vector<char>
-   compile_native(const llvm::Module *mod, const std::string &triple,
-                  const std::string &processor, unsigned dump_asm,
+   compile_native(const llvm::Module *mod, const target &t, bool dump_asm,
                   std::string &r_log) {
 
       std::string log;
@@ -588,18 +595,18 @@ namespace {
       const char *buffer_data;
       LLVMModuleRef mod_ref = wrap(mod);
 
-      if (LLVMGetTargetFromTriple(triple.c_str(), &target, &error_message)) {
+      if (LLVMGetTargetFromTriple(t.triple.c_str(), &target, &error_message)) {
          r_log = std::string(error_message);
          LLVMDisposeMessage(error_message);
          throw compile_error();
       }
 
       LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
-            target, triple.c_str(), processor.c_str(), "",
+            target, t.triple.c_str(), t.cpu.c_str(), "",
             LLVMCodeGenLevelDefault, LLVMRelocDefault, LLVMCodeModelDefault);
 
       if (!tm) {
-         r_log = "Could not create TargetMachine: " + triple;
+         r_log = "Could not create TargetMachine: " + t.triple;
          throw compile_error();
       }
 
@@ -788,10 +795,6 @@ clover::compile_program_llvm(const std::string &source,
 
    init_targets();
 
-   size_t processor_str_len = std::string(target).find_first_of("-");
-   std::string processor(target, 0, processor_str_len);
-   std::string triple(target, processor_str_len + 1,
-                      target.size() - processor_str_len - 1);
    clang::LangAS::Map address_spaces;
    ::llvm::LLVMContext llvm_ctx;
    unsigned optimization_level;
@@ -804,7 +807,7 @@ clover::compile_program_llvm(const std::string &source,
    // The input file name must have the .cl extension in order for the
    // CompilerInvocation class to recognize it as an OpenCL source file.
    Module *mod = compile_llvm(llvm_ctx, source, headers, "input.cl",
-                              triple, processor, opts, address_spaces,
+                              target, opts, address_spaces,
                               optimization_level, r_log);
 
    optimize(mod, optimization_level);
@@ -830,7 +833,7 @@ clover::compile_program_llvm(const std::string &source,
          m = build_module_llvm(mod, address_spaces);
          break;
       case PIPE_SHADER_IR_NATIVE: {
-         std::vector<char> code = compile_native(mod, triple, processor,
+         std::vector<char> code = compile_native(mod, target,
                                                  get_debug_flags() & DBG_ASM,
                                                  r_log);
          m = build_module_native(code, mod, address_spaces, r_log);
