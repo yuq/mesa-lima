@@ -614,7 +614,7 @@ nvc0_validate_driverconst(struct nvc0_context *nvc0)
 }
 
 static void
-nvc0_validate_derived_1(struct nvc0_context *nvc0)
+nvc0_validate_fp_zsa_rast(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    bool rasterizer_discard;
@@ -639,7 +639,7 @@ nvc0_validate_derived_1(struct nvc0_context *nvc0)
  * nvc0_validate_fb, otherwise that will override the RT count setting.
  */
 static void
-nvc0_validate_derived_2(struct nvc0_context *nvc0)
+nvc0_validate_zsa_fb(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
 
@@ -653,7 +653,7 @@ nvc0_validate_derived_2(struct nvc0_context *nvc0)
 }
 
 static void
-nvc0_validate_derived_3(struct nvc0_context *nvc0)
+nvc0_validate_blend_fb(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct pipe_framebuffer_state *fb = &nvc0->framebuffer;
@@ -672,7 +672,7 @@ nvc0_validate_derived_3(struct nvc0_context *nvc0)
 }
 
 static void
-nvc0_validate_derived_4(struct nvc0_context *nvc0)
+nvc0_validate_rast_fb(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct pipe_framebuffer_state *fb = &nvc0->framebuffer;
@@ -770,11 +770,11 @@ validate_list_3d[] = {
                                    NVC0_NEW_3D_FRAGPROG |
                                    NVC0_NEW_3D_FRAMEBUFFER },
     { nvc0_fragprog_validate,      NVC0_NEW_3D_FRAGPROG | NVC0_NEW_3D_RASTERIZER },
-    { nvc0_validate_derived_1,     NVC0_NEW_3D_FRAGPROG | NVC0_NEW_3D_ZSA |
+    { nvc0_validate_fp_zsa_rast,   NVC0_NEW_3D_FRAGPROG | NVC0_NEW_3D_ZSA |
                                    NVC0_NEW_3D_RASTERIZER },
-    { nvc0_validate_derived_2,     NVC0_NEW_3D_ZSA | NVC0_NEW_3D_FRAMEBUFFER },
-    { nvc0_validate_derived_3,     NVC0_NEW_3D_BLEND | NVC0_NEW_3D_FRAMEBUFFER },
-    { nvc0_validate_derived_4,     NVC0_NEW_3D_RASTERIZER | NVC0_NEW_3D_FRAMEBUFFER },
+    { nvc0_validate_zsa_fb,        NVC0_NEW_3D_ZSA | NVC0_NEW_3D_FRAMEBUFFER },
+    { nvc0_validate_blend_fb,      NVC0_NEW_3D_BLEND | NVC0_NEW_3D_FRAMEBUFFER },
+    { nvc0_validate_rast_fb,       NVC0_NEW_3D_RASTERIZER | NVC0_NEW_3D_FRAMEBUFFER },
     { nvc0_validate_clip,          NVC0_NEW_3D_CLIP | NVC0_NEW_3D_RASTERIZER |
                                    NVC0_NEW_3D_VERTPROG |
                                    NVC0_NEW_3D_TEVLPROG |
