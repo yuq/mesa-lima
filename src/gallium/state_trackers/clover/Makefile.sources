@@ -54,6 +54,7 @@ CPP_SOURCES := \
 	util/tuple.hpp
 
 LLVM_SOURCES := \
+	llvm/compat.hpp \
 	llvm/invocation.cpp
 
 TGSI_SOURCES := \

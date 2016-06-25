@@ -24,6 +24,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#include "llvm/compat.hpp"
 #include "core/compiler.hpp"
 
 #include <clang/Frontend/CompilerInstance.h>
@@ -41,11 +42,6 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/IRReader/IRReader.h>
-#if HAVE_LLVM >= 0x0307
-#include <llvm/IR/LegacyPassManager.h>
-#else
-#include <llvm/PassManager.h>
-#endif
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/MemoryBuffer.h>
@@ -57,11 +53,6 @@
 
 
 #include <llvm/IR/DataLayout.h>
-#if HAVE_LLVM >= 0x0307
-#include <llvm/Analysis/TargetLibraryInfo.h>
-#else
-#include <llvm/Target/TargetLibraryInfo.h>
-#endif
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 
@@ -82,8 +73,19 @@
 #include <gelf.h>
 
 using namespace clover;
+using namespace clover::llvm;
+
+using ::llvm::Function;
+using ::llvm::Module;
+using ::llvm::raw_string_ostream;
 
 namespace {
+   // XXX - Temporary hack to avoid breaking the build for the moment, will
+   //       get rid of this later.
+   namespace llvm {
+      using namespace ::llvm;
+   }
+
    void debug_log(const std::string &msg, const std::string &suffix) {
       const char *dbg_file = debug_get_option("CLOVER_DEBUG_FILE", "stderr");
       if (!strcmp("stderr", dbg_file)) {
@@ -106,8 +108,6 @@ namespace {
       clang::EmitLLVMOnlyAction act(&llvm_ctx);
       std::string log;
       llvm::raw_string_ostream s_log(log);
-      std::string libclc_path = LIBCLC_LIBEXECDIR + processor + "-"
-                                                  + triple + ".bc";
 
       // Parse the compiler options:
       std::vector<std::string> opts_array;
@@ -169,11 +169,12 @@ namespace {
       // of warnings and errors to be printed to stderr.
       // http://www.llvm.org/bugs/show_bug.cgi?id=19735
       c.getDiagnosticOpts().ShowCarets = false;
-      c.getInvocation().setLangDefaults(c.getLangOpts(), clang::IK_OpenCL,
-#if HAVE_LLVM >= 0x0309
-                                        llvm::Triple(triple), c.getPreprocessorOpts(),
-#endif
-                                        clang::LangStandard::lang_opencl11);
+
+      compat::set_lang_defaults(c.getInvocation(), c.getLangOpts(),
+                                clang::IK_OpenCL, ::llvm::Triple(triple),
+                                c.getPreprocessorOpts(),
+                                clang::LangStandard::lang_opencl11);
+
       c.createDiagnostics(
                           new clang::TextDiagnosticPrinter(
                                  s_log,
@@ -198,19 +199,17 @@ namespace {
          }
       }
 
-      // Setting this attribute tells clang to link this file before
-      // performing any optimizations.  This is required so that
-      // we can replace calls to the OpenCL C barrier() builtin
-      // with calls to target intrinsics that have the noduplicate
-      // attribute.  This attribute will prevent Clang from creating
-      // illegal uses of barrier() (e.g. Moving barrier() inside a conditional
-      // that is no executed by all threads) during its optimizaton passes.
-#if HAVE_LLVM >= 0x0308
-      c.getCodeGenOpts().LinkBitcodeFiles.emplace_back(llvm::Linker::Flags::None,
-                                                       libclc_path);
-#else
-      c.getCodeGenOpts().LinkBitcodeFile = libclc_path;
-#endif
+      // Tell clang to link this file before performing any
+      // optimizations.  This is required so that we can replace calls
+      // to the OpenCL C barrier() builtin with calls to target
+      // intrinsics that have the noduplicate attribute.  This
+      // attribute will prevent Clang from creating illegal uses of
+      // barrier() (e.g. Moving barrier() inside a conditional that is
+      // no executed by all threads) during its optimizaton passes.
+      const std::string libclc_path = LIBCLC_LIBEXECDIR + processor + "-"
+                                      + triple + ".bc";
+      compat::add_link_bitcode_file(c.getCodeGenOpts(), libclc_path);
+
       optimization_level = c.getCodeGenOpts().OptimizationLevel;
 
       // Compile the code
@@ -257,17 +256,10 @@ namespace {
 
    void
    optimize(llvm::Module *mod, unsigned optimization_level) {
+      compat::pass_manager PM;
 
-#if HAVE_LLVM >= 0x0307
-      llvm::legacy::PassManager PM;
-#else
-      llvm::PassManager PM;
-#endif
+      compat::add_data_layout_pass(PM);
 
-      const std::vector<llvm::Function *> kernels = find_kernels(mod);
-
-      // Add a function internalizer pass.
-      //
       // By default, the function internalizer pass will look for a function
       // called "main" and then mark all other functions as internal.  Marking
       // functions as internal enables the optimizer to perform optimizations
@@ -280,40 +272,13 @@ namespace {
       // list of kernel functions to the internalizer.  The internalizer will
       // treat the functions in the list as "main" functions and internalize
       // all of the other functions.
-#if HAVE_LLVM >= 0x0309
-      auto preserve_kernels = [=](const llvm::GlobalValue &GV) {
-         for (const auto &kernel : kernels) {
-            if (GV.getName() == kernel->getName())
-               return true;
-         }
-         return false;
-      };
-#else
-      std::vector<const char*> export_list;
-      for (std::vector<llvm::Function *>::const_iterator I = kernels.begin(),
-                                                         E = kernels.end();
-                                                         I != E; ++I) {
-         llvm::Function *kernel = *I;
-         export_list.push_back(kernel->getName().data());
-      }
-#endif
-#if HAVE_LLVM < 0x0307
-      PM.add(new llvm::DataLayoutPass());
-#endif
-#if HAVE_LLVM >= 0x0309
-      PM.add(llvm::createInternalizePass(preserve_kernels));
-#else
-      PM.add(llvm::createInternalizePass(export_list));
-#endif
+      compat::add_internalize_pass(PM, map(std::mem_fn(&Function::getName),
+                                           find_kernels(mod)));
 
       llvm::PassManagerBuilder PMB;
       PMB.OptLevel = optimization_level;
-#if HAVE_LLVM < 0x0307
-      PMB.LibraryInfo = new llvm::TargetLibraryInfo(
-#else
-      PMB.LibraryInfo = new llvm::TargetLibraryInfoImpl(
-#endif
-            llvm::Triple(mod->getTargetTriple()));
+      PMB.LibraryInfo = new compat::target_library_info(
+         llvm::Triple(mod->getTargetTriple()));
       PMB.populateModulePassManager(PM);
       PM.run(*mod);
    }
@@ -828,7 +793,7 @@ clover::compile_program_llvm(const std::string &source,
    std::string triple(target, processor_str_len + 1,
                       target.size() - processor_str_len - 1);
    clang::LangAS::Map address_spaces;
-   llvm::LLVMContext llvm_ctx;
+   ::llvm::LLVMContext llvm_ctx;
    unsigned optimization_level;
 
    llvm_ctx.setDiagnosticHandler(diagnostic_handler, &r_log);
@@ -838,15 +803,15 @@ clover::compile_program_llvm(const std::string &source,
 
    // The input file name must have the .cl extension in order for the
    // CompilerInvocation class to recognize it as an OpenCL source file.
-   llvm::Module *mod = compile_llvm(llvm_ctx, source, headers, "input.cl",
-                                    triple, processor, opts, address_spaces,
-                                    optimization_level, r_log);
+   Module *mod = compile_llvm(llvm_ctx, source, headers, "input.cl",
+                              triple, processor, opts, address_spaces,
+                              optimization_level, r_log);
 
    optimize(mod, optimization_level);
 
    if (get_debug_flags() & DBG_LLVM) {
       std::string log;
-      llvm::raw_string_ostream s_log(log);
+      raw_string_ostream s_log(log);
       mod->print(s_log, NULL);
       s_log.flush();
       debug_log(log, ".ll");
