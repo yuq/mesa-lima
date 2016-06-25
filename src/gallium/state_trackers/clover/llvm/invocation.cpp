@@ -26,6 +26,7 @@
 
 #include "llvm/compat.hpp"
 #include "core/compiler.hpp"
+#include "util/algorithm.hpp"
 
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/TextDiagnosticBuffer.h>
@@ -117,42 +118,59 @@ namespace {
       std::string triple;
    };
 
+   std::unique_ptr<clang::CompilerInstance>
+   create_compiler_instance(const target &target,
+                            const std::vector<std::string> &opts,
+                            std::string &r_log) {
+      std::unique_ptr<clang::CompilerInstance> c { new clang::CompilerInstance };
+      clang::DiagnosticsEngine diag { new clang::DiagnosticIDs,
+            new clang::DiagnosticOptions, new clang::TextDiagnosticBuffer };
+
+      // Parse the compiler options.  A file name should be present at the end
+      // and must have the .cl extension in order for the CompilerInvocation
+      // class to recognize it as an OpenCL source file.
+      const std::vector<const char *> copts =
+         map(std::mem_fn(&std::string::c_str), opts);
+
+      if (!clang::CompilerInvocation::CreateFromArgs(
+             c->getInvocation(), copts.data(), copts.data() + copts.size(), diag))
+         throw error(CL_INVALID_COMPILER_OPTIONS);
+
+      c->getTargetOpts().CPU = target.cpu;
+      c->getTargetOpts().Triple = target.triple;
+      c->getLangOpts().NoBuiltin = true;
+
+      // This is a workaround for a Clang bug which causes the number
+      // of warnings and errors to be printed to stderr.
+      // http://www.llvm.org/bugs/show_bug.cgi?id=19735
+      c->getDiagnosticOpts().ShowCarets = false;
+
+      compat::set_lang_defaults(c->getInvocation(), c->getLangOpts(),
+                                clang::IK_OpenCL, ::llvm::Triple(target.triple),
+                                c->getPreprocessorOpts(),
+                                clang::LangStandard::lang_opencl11);
+
+      c->createDiagnostics(new clang::TextDiagnosticPrinter(
+                              *new raw_string_ostream(r_log),
+                              &c->getDiagnosticOpts(), true));
+
+      c->setTarget(clang::TargetInfo::CreateTargetInfo(
+                           c->getDiagnostics(), c->getInvocation().TargetOpts));
+
+      return c;
+   }
+
    llvm::Module *
    compile_llvm(llvm::LLVMContext &llvm_ctx, const std::string &source,
                 const header_map &headers, const std::string &name,
                 const std::string &target, const std::string &opts,
                 clang::LangAS::Map &address_spaces, unsigned &optimization_level,
                 std::string &r_log) {
-
-      clang::CompilerInstance c;
       clang::EmitLLVMOnlyAction act(&llvm_ctx);
-      std::string log;
-      llvm::raw_string_ostream s_log(log);
 
-      const std::vector<std::string> opts_array = tokenize(opts + " " + name);
-      std::vector<const char *> opts_carray;
-      for (unsigned i = 0; i < opts_array.size(); i++) {
-         opts_carray.push_back(opts_array.at(i).c_str());
-      }
-
-      llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID;
-      llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts;
-      clang::TextDiagnosticBuffer *DiagsBuffer;
-
-      DiagID = new clang::DiagnosticIDs();
-      DiagOpts = new clang::DiagnosticOptions();
-      DiagsBuffer = new clang::TextDiagnosticBuffer();
-
-      clang::DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
-      bool Success;
-
-      Success = clang::CompilerInvocation::CreateFromArgs(c.getInvocation(),
-                                        opts_carray.data(),
-                                        opts_carray.data() + opts_carray.size(),
-                                        Diags);
-      if (!Success) {
-         throw error(CL_INVALID_COMPILER_OPTIONS);
-      }
+      std::unique_ptr<clang::CompilerInstance> pc =
+         create_compiler_instance(target, tokenize(opts + " " + name), r_log);
+      auto &c = *pc;
       c.getFrontendOpts().ProgramAction = clang::frontend::EmitLLVMOnly;
       c.getHeaderSearchOpts().UseBuiltinIncludes = true;
       c.getHeaderSearchOpts().UseStandardSystemIncludes = true;
@@ -169,26 +187,6 @@ namespace {
 
       // clc.h requires that this macro be defined:
       c.getPreprocessorOpts().addMacroDef("cl_clang_storage_class_specifiers");
-
-      c.getLangOpts().NoBuiltin = true;
-      const struct target t { target };
-      c.getTargetOpts().Triple = t.triple;
-      c.getTargetOpts().CPU = t.cpu;
-
-      // This is a workaround for a Clang bug which causes the number
-      // of warnings and errors to be printed to stderr.
-      // http://www.llvm.org/bugs/show_bug.cgi?id=19735
-      c.getDiagnosticOpts().ShowCarets = false;
-
-      compat::set_lang_defaults(c.getInvocation(), c.getLangOpts(),
-                                clang::IK_OpenCL, ::llvm::Triple(t.triple),
-                                c.getPreprocessorOpts(),
-                                clang::LangStandard::lang_opencl11);
-
-      c.createDiagnostics(
-                          new clang::TextDiagnosticPrinter(
-                                 s_log,
-                                 &c.getDiagnosticOpts()));
 
       c.getPreprocessorOpts().addRemappedFile(name,
                                               llvm::MemoryBuffer::getMemBuffer(source).release());
@@ -222,10 +220,7 @@ namespace {
       optimization_level = c.getCodeGenOpts().OptimizationLevel;
 
       // Compile the code
-      bool ExecSuccess = c.ExecuteAction(act);
-      r_log = log;
-
-      if (!ExecSuccess)
+      if (!c.ExecuteAction(act))
          throw compile_error();
 
       // Get address spaces map to be able to find kernel argument address space
