@@ -283,8 +283,10 @@ nvc0_rasterizer_state_create(struct pipe_context *pipe,
     if (cso->offset_point || cso->offset_line || cso->offset_tri) {
         SB_BEGIN_3D(so, POLYGON_OFFSET_FACTOR, 1);
         SB_DATA    (so, fui(cso->offset_scale));
-        SB_BEGIN_3D(so, POLYGON_OFFSET_UNITS, 1);
-        SB_DATA    (so, fui(cso->offset_units * 2.0f));
+        if (!cso->offset_units_unscaled) {
+           SB_BEGIN_3D(so, POLYGON_OFFSET_UNITS, 1);
+           SB_DATA    (so, fui(cso->offset_units * 2.0f));
+        }
         SB_BEGIN_3D(so, POLYGON_OFFSET_CLAMP, 1);
         SB_DATA    (so, fui(cso->offset_clamp));
     }
