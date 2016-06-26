@@ -585,14 +585,6 @@ qir_##name(struct vc4_compile *c, struct qreg a, struct qreg b)         \
         return inst;                                                    \
 }
 
-#define QIR_PACK(name)                                                   \
-static inline struct qreg                                                \
-qir_##name(struct vc4_compile *c, struct qreg dest, struct qreg a)       \
-{                                                                        \
-        qir_emit_nodef(c, qir_inst(QOP_##name, dest, a, c->undef));      \
-        return dest;                                                     \
-}
-
 #define QIR_PAYLOAD(name)                                                \
 static inline struct qreg                                                \
 qir_##name(struct vc4_compile *c)                                        \
