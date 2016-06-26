@@ -594,6 +594,13 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
     *    "The write data payload can be between 1 and 8 message phases long."
     */
    if (vue_map->slots_valid == 0) {
+      /* For GS, just turn EmitVertex() into a no-op.  We don't want it to
+       * end the thread, and emit_gs_thread_end() already emits a SEND with
+       * EOT at the end of the program for us.
+       */
+      if (stage == MESA_SHADER_GEOMETRY)
+         return;
+
       fs_reg payload = fs_reg(VGRF, alloc.allocate(2), BRW_REGISTER_TYPE_UD);
       bld.exec_all().MOV(payload, urb_handle);
 
