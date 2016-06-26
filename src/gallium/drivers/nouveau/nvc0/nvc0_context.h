@@ -108,34 +108,34 @@
 /* XXX: Figure out what this UNK data is. */
 #define NVC0_CB_AUX_UNK_INFO        0x000
 #define NVC0_CB_AUX_UNK_SIZE        (8 * 4)
-/* 32 textures handles, at 1 32-bits integer each */
+/* 40 textures handles (8 for GM107+ images only), at 1 32-bits integer each */
 #define NVC0_CB_AUX_TEX_INFO(i)     0x020 + (i) * 4
-#define NVC0_CB_AUX_TEX_SIZE        (32 * 4)
+#define NVC0_CB_AUX_TEX_SIZE        (40 * 4)
 /* 8 sets of 32-bits coordinate offsets */
-#define NVC0_CB_AUX_MS_INFO         0x0a0
+#define NVC0_CB_AUX_MS_INFO         0x0c0
 #define NVC0_CB_AUX_MS_SIZE         (8 * 2 * 4)
 /* block/grid size, at 3 32-bits integers each, gridid and work_dim */
-#define NVC0_CB_AUX_GRID_INFO(i)    0x0e0 + (i) * 4 /* CP */
+#define NVC0_CB_AUX_GRID_INFO(i)    0x100 + (i) * 4 /* CP */
 #define NVC0_CB_AUX_GRID_SIZE       (8 * 4)
 /* 8 user clip planes, at 4 32-bits floats each */
-#define NVC0_CB_AUX_UCP_INFO        0x100
+#define NVC0_CB_AUX_UCP_INFO        0x120
 #define NVC0_CB_AUX_UCP_SIZE        (PIPE_MAX_CLIP_PLANES * 4 * 4)
 /* 13 ubos, at 4 32-bits integer each */
-#define NVC0_CB_AUX_UBO_INFO(i)     0x100 + (i) * 4 * 4 /* CP */
+#define NVC0_CB_AUX_UBO_INFO(i)     0x120 + (i) * 4 * 4 /* CP */
 #define NVC0_CB_AUX_UBO_SIZE        ((NVC0_MAX_PIPE_CONSTBUFS - 1) * 4 * 4)
 /* 8 sets of 32-bits integer pairs sample offsets */
-#define NVC0_CB_AUX_SAMPLE_INFO     0x180 /* FP */
+#define NVC0_CB_AUX_SAMPLE_INFO     0x1a0 /* FP */
 #define NVC0_CB_AUX_SAMPLE_SIZE     (8 * 4 * 2)
 /* draw parameters (index bais, base instance, drawid) */
-#define NVC0_CB_AUX_DRAW_INFO       0x180 /* VP */
+#define NVC0_CB_AUX_DRAW_INFO       0x1a0 /* VP */
 /* 32 user buffers, at 4 32-bits integers each */
-#define NVC0_CB_AUX_BUF_INFO(i)     0x200 + (i) * 4 * 4
+#define NVC0_CB_AUX_BUF_INFO(i)     0x220 + (i) * 4 * 4
 #define NVC0_CB_AUX_BUF_SIZE        (NVC0_MAX_BUFFERS * 4 * 4)
 /* 8 surfaces, at 16 32-bits integers each */
-#define NVC0_CB_AUX_SU_INFO(i)      0x400 + (i) * 16 * 4
+#define NVC0_CB_AUX_SU_INFO(i)      0x420 + (i) * 16 * 4
 #define NVC0_CB_AUX_SU_SIZE         (NVC0_MAX_IMAGES * 16 * 4)
 /* 1 64-bits address and 1 32-bits sequence */
-#define NVC0_CB_AUX_MP_INFO         0x600
+#define NVC0_CB_AUX_MP_INFO         0x620
 #define NVC0_CB_AUX_MP_SIZE         3 * 4
 /* 4 32-bits floats for the vertex runout, put at the end */
 #define NVC0_CB_AUX_RUNOUT_INFO     NVC0_CB_USR_SIZE + (NVC0_CB_AUX_SIZE * 6)
