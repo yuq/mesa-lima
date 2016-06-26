@@ -71,6 +71,10 @@ vlVaDestroySurfaces(VADriverContextP ctx, VASurfaceID *surface_list, int num_sur
    pipe_mutex_lock(drv->mutex);
    for (i = 0; i < num_surfaces; ++i) {
       vlVaSurface *surf = handle_table_get(drv->htab, surface_list[i]);
+      if (!surf) {
+         pipe_mutex_unlock(drv->mutex);
+         return VA_STATUS_ERROR_INVALID_SURFACE;
+      }
       if (surf->buffer)
          surf->buffer->destroy(surf->buffer);
       util_dynarray_fini(&surf->subpics);
