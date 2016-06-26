@@ -678,8 +678,7 @@ CodeEmitterGM107::emitRAM()
 void
 CodeEmitterGM107::emitMOV()
 {
-   if ( insn->src(0).getFile() != FILE_IMMEDIATE ||
-       (insn->sType != TYPE_F32 && !longIMMD(insn->src(0)))) {
+   if (insn->src(0).getFile() != FILE_IMMEDIATE) {
       switch (insn->src(0).getFile()) {
       case FILE_GPR:
          if (insn->def(0).getFile() == FILE_PREDICATE) {
