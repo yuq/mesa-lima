@@ -387,6 +387,17 @@ struct pipe_sampler_state
    union pipe_color_union border_color;
 };
 
+union pipe_surface_desc {
+   struct {
+      unsigned level;
+      unsigned first_layer:16;
+      unsigned last_layer:16;
+   } tex;
+   struct {
+      unsigned first_element;
+      unsigned last_element;
+   } buf;
+};
 
 /**
  * A view into a texture that can be bound to a color render target /
@@ -405,17 +416,7 @@ struct pipe_surface
 
    unsigned writable:1;          /**< writable shader resource */
 
-   union {
-      struct {
-         unsigned level;
-         unsigned first_layer:16;
-         unsigned last_layer:16;
-      } tex;
-      struct {
-         unsigned first_element;
-         unsigned last_element;
-      } buf;
-   } u;
+   union pipe_surface_desc u;
 };
 
 
