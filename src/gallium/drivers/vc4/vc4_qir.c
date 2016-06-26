@@ -376,13 +376,37 @@ qir_inst4(enum qop op, struct qreg dst,
         return inst;
 }
 
-void
+static void
 qir_emit(struct vc4_compile *c, struct qinst *inst)
 {
+        list_addtail(&inst->link, &c->instructions);
+}
+
+/* Updates inst to write to a new temporary, emits it, and notes the def. */
+struct qreg
+qir_emit_def(struct vc4_compile *c, struct qinst *inst)
+{
+        assert(inst->dst.file == QFILE_NULL);
+
+        inst->dst = qir_get_temp(c);
+
         if (inst->dst.file == QFILE_TEMP)
                 c->defs[inst->dst.index] = inst;
 
-        qir_emit_nodef(c, inst);
+        qir_emit(c, inst);
+
+        return inst->dst;
+}
+
+struct qinst *
+qir_emit_nondef(struct vc4_compile *c, struct qinst *inst)
+{
+        if (inst->dst.file == QFILE_TEMP)
+                c->defs[inst->dst.index] = NULL;
+
+        qir_emit(c, inst);
+
+        return inst;
 }
 
 bool
