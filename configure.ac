@@ -1060,6 +1060,7 @@ xno)
     ;;
 esac
 
+AM_CONDITIONAL(HAVE_GLX, test "x$enable_glx" != xno)
 AM_CONDITIONAL(HAVE_DRI_GLX, test "x$enable_glx" = xdri)
 AM_CONDITIONAL(HAVE_XLIB_GLX, test "x$enable_glx" = xxlib)
 AM_CONDITIONAL(HAVE_GALLIUM_XLIB_GLX, test "x$enable_glx" = xgallium-xlib)
