@@ -369,7 +369,11 @@ static void evergreen_compute_upload_input(struct pipe_context *ctx,
 
 	ctx->transfer_unmap(ctx, transfer);
 
-	/* ID=0 is reserved for the parameters */
+	/* ID=0 and ID=3 are reserved for the parameters.
+	 * LLVM will preferably use ID=0, but it does not work for dynamic
+	 * indices. */
+	evergreen_cs_set_vertex_buffer(rctx, 3, 0,
+			(struct pipe_resource*)shader->kernel_param);
 	evergreen_cs_set_constant_buffer(rctx, 0, 0, input_size,
 			(struct pipe_resource*)shader->kernel_param);
 }
@@ -615,9 +619,9 @@ static void evergreen_set_compute_resources(struct pipe_context *ctx,
 			start, count);
 
 	for (unsigned i = 0; i < count; i++) {
-		/* The First three vertex buffers are reserved for parameters and
+		/* The First four vertex buffers are reserved for parameters and
 		 * global buffers. */
-		unsigned vtx_id = 3 + i;
+		unsigned vtx_id = 4 + i;
 		if (resources[i]) {
 			struct r600_resource_global *buffer =
 				(struct r600_resource_global*)
