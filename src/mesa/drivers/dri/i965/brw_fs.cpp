@@ -5324,6 +5324,10 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       fprintf(file, "(mlen: %d) ", inst->mlen);
    }
 
+   if (inst->eot) {
+      fprintf(file, "(EOT) ");
+   }
+
    switch (inst->dst.file) {
    case VGRF:
       fprintf(file, "vgrf%d", inst->dst.nr);
