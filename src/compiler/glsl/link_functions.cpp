@@ -31,8 +31,7 @@
 
 static ir_function_signature *
 find_matching_signature(const char *name, const exec_list *actual_parameters,
-			gl_shader **shader_list, unsigned num_shaders,
-			bool use_builtin);
+                        glsl_symbol_table *symbols, bool use_builtin);
 
 namespace {
 
@@ -78,8 +77,8 @@ public:
        * final linked shader.  If it does, use it as the target of the call.
        */
       ir_function_signature *sig =
-	 find_matching_signature(name, &callee->parameters, &linked, 1,
-				 ir->use_builtin);
+         find_matching_signature(name, &callee->parameters, linked->symbols,
+                                 ir->use_builtin);
       if (sig != NULL) {
 	 ir->callee = sig;
 	 return visit_continue;
@@ -88,8 +87,14 @@ public:
       /* Try to find the signature in one of the other shaders that is being
        * linked.  If it's not found there, return an error.
        */
-      sig = find_matching_signature(name, &ir->actual_parameters, shader_list,
-				    num_shaders, ir->use_builtin);
+      for (unsigned i = 0; i < num_shaders; i++) {
+         sig = find_matching_signature(name, &ir->actual_parameters,
+                                       shader_list[i]->symbols,
+                                       ir->use_builtin);
+         if (sig)
+            break;
+      }
+
       if (sig == NULL) {
 	 /* FINISHME: Log the full signature of unresolved function.
 	  */
@@ -307,30 +312,22 @@ private:
  */
 ir_function_signature *
 find_matching_signature(const char *name, const exec_list *actual_parameters,
-			gl_shader **shader_list, unsigned num_shaders,
-			bool use_builtin)
+                        glsl_symbol_table *symbols, bool use_builtin)
 {
-   for (unsigned i = 0; i < num_shaders; i++) {
-      ir_function *const f = shader_list[i]->symbols->get_function(name);
+   ir_function *const f = symbols->get_function(name);
 
-      if (f == NULL)
-	 continue;
-
+   if (f) {
       ir_function_signature *sig =
          f->matching_signature(NULL, actual_parameters, use_builtin);
 
-      if ((sig == NULL) ||
-          (!sig->is_defined && !sig->is_intrinsic))
-	 continue;
-
-      /* If this function expects to bind to a built-in function and the
-       * signature that we found isn't a built-in, keep looking.  Also keep
-       * looking if we expect a non-built-in but found a built-in.
-       */
-      if (use_builtin != sig->is_builtin())
-	    continue;
-
-      return sig;
+      if (sig && (sig->is_defined || sig->is_intrinsic)) {
+         /* If this function expects to bind to a built-in function and the
+          * signature that we found isn't a built-in, keep looking.  Also keep
+          * looking if we expect a non-built-in but found a built-in.
+          */
+         if (use_builtin == sig->is_builtin())
+            return sig;
+      }
    }
 
    return NULL;
