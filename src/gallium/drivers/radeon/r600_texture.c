@@ -1716,6 +1716,25 @@ unsigned r600_translate_colorswap(enum pipe_format format, bool do_endian_swap)
 
 /* PIPELINE_STAT-BASED DCC ENABLEMENT FOR DISPLAYABLE SURFACES */
 
+static void vi_dcc_clean_up_context_slot(struct r600_common_context *rctx,
+					 int slot)
+{
+	int i;
+
+	if (rctx->dcc_stats[slot].query_active)
+		vi_separate_dcc_stop_query(&rctx->b,
+					   rctx->dcc_stats[slot].tex);
+
+	for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats[slot].ps_stats); i++)
+		if (rctx->dcc_stats[slot].ps_stats[i]) {
+			rctx->b.destroy_query(&rctx->b,
+					      rctx->dcc_stats[slot].ps_stats[i]);
+			rctx->dcc_stats[slot].ps_stats[i] = NULL;
+		}
+
+	r600_texture_reference(&rctx->dcc_stats[slot].tex, NULL);
+}
+
 /**
  * Return the per-context slot where DCC statistics queries for the texture live.
  */
@@ -1724,6 +1743,13 @@ static unsigned vi_get_context_dcc_stats_index(struct r600_common_context *rctx,
 {
 	int i, empty_slot = -1;
 
+	/* Remove zombie textures (textures kept alive by this array only). */
+	for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats); i++)
+		if (rctx->dcc_stats[i].tex &&
+		    rctx->dcc_stats[i].tex->resource.b.b.reference.count == 1)
+			vi_dcc_clean_up_context_slot(rctx, i);
+
+	/* Find the texture. */
 	for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats); i++) {
 		/* Return if found. */
 		if (rctx->dcc_stats[i].tex == tex) {
@@ -1747,18 +1773,7 @@ static unsigned vi_get_context_dcc_stats_index(struct r600_common_context *rctx,
 				oldest_slot = i;
 
 		/* Clean up the oldest slot. */
-		if (rctx->dcc_stats[oldest_slot].query_active)
-			vi_separate_dcc_stop_query(&rctx->b,
-						   rctx->dcc_stats[oldest_slot].tex);
-
-		for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats[oldest_slot].ps_stats); i++)
-			if (rctx->dcc_stats[oldest_slot].ps_stats[i]) {
-				rctx->b.destroy_query(&rctx->b,
-						      rctx->dcc_stats[oldest_slot].ps_stats[i]);
-				rctx->dcc_stats[oldest_slot].ps_stats[i] = NULL;
-			}
-
-		r600_texture_reference(&rctx->dcc_stats[oldest_slot].tex, NULL);
+		vi_dcc_clean_up_context_slot(rctx, oldest_slot);
 		empty_slot = oldest_slot;
 	}
 
