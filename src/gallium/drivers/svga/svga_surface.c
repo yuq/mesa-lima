@@ -121,7 +121,7 @@ svga_texture_view_surface(struct svga_context *svga,
    uint32_t i, j;
    unsigned z_offset = 0;
 
-   SVGA_DBG(DEBUG_PERF, 
+   SVGA_DBG(DEBUG_PERF,
             "svga: Create surface view: layer %d zslice %d mips %d..%d\n",
             layer_pick, zslice_pick, start_mip, start_mip+num_mip-1);
 
@@ -139,7 +139,7 @@ svga_texture_view_surface(struct svga_context *svga,
    if (key->sampleCount > 1) {
       key->flags |= SVGA3D_SURFACE_MASKABLE_ANTIALIAS;
    }
-   
+
    if (tex->b.b.target == PIPE_TEXTURE_CUBE && layer_pick < 0) {
       key->flags |= SVGA3D_SURFACE_CUBEMAP;
       key->numFaces = 6;
@@ -176,9 +176,9 @@ svga_texture_view_surface(struct svga_context *svga,
                               1);
 
             svga_texture_copy_handle(svga,
-                                     tex->handle, 
-                                     0, 0, z_offset, 
-                                     i + start_mip, 
+                                     tex->handle,
+                                     0, 0, z_offset,
+                                     i + start_mip,
                                      j + layer_pick,
                                      handle, 0, 0, 0, i, j,
                                      u_minify(tex->b.b.width0, i + start_mip),
@@ -293,7 +293,8 @@ svga_create_surface_view(struct pipe_context *pipe,
       /* When we clone the surface view resource, use the format used in
        * the creation of the original resource.
        */
-      s->handle = svga_texture_view_surface(svga, tex, bind, flags, tex->key.format,
+      s->handle = svga_texture_view_surface(svga, tex, bind, flags,
+                                            tex->key.format,
                                             surf_tmpl->u.tex.level, 1,
                                             layer, nlayers, zslice, &s->key);
       if (!s->handle) {
@@ -306,7 +307,8 @@ svga_create_surface_view(struct pipe_context *pipe,
       s->real_level = 0;
       s->real_zslice = 0;
    } else {
-      SVGA_DBG(DEBUG_VIEWS, "svga: Surface view: no %p, level %u, layer %u, z %u, %p\n",
+      SVGA_DBG(DEBUG_VIEWS,
+               "svga: Surface view: no %p, level %u, layer %u, z %u, %p\n",
                pt, surf_tmpl->u.tex.level, layer, zslice, s);
 
       memset(&s->key, 0, sizeof s->key);
@@ -516,7 +518,7 @@ svga_surface_destroy(struct pipe_context *pipe,
 }
 
 
-static void 
+static void
 svga_mark_surface_dirty(struct pipe_surface *surf)
 {
    struct svga_surface *s = svga_surface(surf);
@@ -599,10 +601,13 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf)
                tex, surf->u.tex.level, surf);
       for (i = 0; i < nlayers; i++) {
          svga_texture_copy_handle(svga,
-                                  s->handle, 0, 0, 0, s->real_level, s->real_layer + i,
-                                  tex->handle, 0, 0, zslice, surf->u.tex.level, layer + i,
+                                  s->handle, 0, 0, 0, s->real_level,
+                                  s->real_layer + i,
+                                  tex->handle, 0, 0, zslice, surf->u.tex.level,
+                                  layer + i,
                                   u_minify(tex->b.b.width0, surf->u.tex.level),
-                                  u_minify(tex->b.b.height0, surf->u.tex.level), 1);
+                                  u_minify(tex->b.b.height0, surf->u.tex.level),
+                                  1);
          svga_define_texture_level(tex, layer + i, surf->u.tex.level);
       }
    }
