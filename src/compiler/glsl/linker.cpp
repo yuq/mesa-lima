@@ -2312,9 +2312,8 @@ link_intrastage_shaders(void *mem_ctx,
    v.fixup_unnamed_interface_types();
 
    /* Link up uniform blocks defined within this stage. */
-   link_uniform_blocks(mem_ctx, ctx, prog, &linked, 1,
-                       &ubo_blocks, &num_ubo_blocks, &ssbo_blocks,
-                       &num_ssbo_blocks);
+   link_uniform_blocks(mem_ctx, ctx, prog, linked, &ubo_blocks,
+                       &num_ubo_blocks, &ssbo_blocks, &num_ssbo_blocks);
 
    if (!prog->LinkStatus) {
       _mesa_delete_linked_shader(ctx, linked);
