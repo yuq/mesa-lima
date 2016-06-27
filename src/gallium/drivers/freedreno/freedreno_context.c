@@ -45,21 +45,14 @@ void
 fd_context_render(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
-
-	DBG("needs_flush: %d", ctx->needs_flush);
-
-	if (!ctx->needs_flush)
-		return;
+	struct fd_batch *new_batch;
 
 	fd_batch_flush(ctx->batch);
 
+	new_batch = fd_batch_create(ctx);
+	util_copy_framebuffer_state(&new_batch->framebuffer, &ctx->batch->framebuffer);
 	fd_batch_reference(&ctx->batch, NULL);
-	ctx->batch = fd_batch_create(ctx);
-
-	ctx->needs_flush = false;
-	ctx->cleared = ctx->partial_cleared = ctx->restore = ctx->resolve = 0;
-	ctx->gmem_reason = 0;
-	ctx->num_draws = 0;
+	ctx->batch = new_batch;
 }
 
 static void
@@ -119,8 +112,6 @@ fd_context_destroy(struct pipe_context *pctx)
 
 	fd_prog_fini(pctx);
 	fd_hw_query_fini(pctx);
-
-	util_dynarray_fini(&ctx->draw_patches);
 
 	if (ctx->blitter)
 		util_blitter_destroy(ctx->blitter);
@@ -189,8 +180,6 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	ctx->batch = fd_batch_create(ctx);
 
 	fd_reset_wfi(ctx);
-
-	util_dynarray_init(&ctx->draw_patches);
 
 	util_slab_create(&ctx->transfer_pool, sizeof(struct fd_transfer),
 			16, UTIL_SLAB_SINGLETHREADED);

@@ -71,7 +71,7 @@ get_sample(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	if (!ctx->sample_cache[idx]) {
 		ctx->sample_cache[idx] =
 			ctx->sample_providers[idx]->get_sample(ctx, ring);
-		ctx->needs_flush = true;
+		ctx->batch->needs_flush = true;
 	}
 
 	fd_hw_sample_reference(ctx, &samp, ctx->sample_cache[idx]);
@@ -213,7 +213,7 @@ fd_hw_get_query_result(struct fd_context *ctx, struct fd_query *q,
 		/* if app didn't actually trigger any cmdstream, then
 		 * we have nothing to do:
 		 */
-		if (!ctx->needs_flush)
+		if (!ctx->batch->needs_flush)
 			return true;
 		DBG("reading query result forces flush!");
 		fd_context_render(&ctx->base);

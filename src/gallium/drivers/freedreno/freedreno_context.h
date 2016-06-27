@@ -199,42 +199,6 @@ struct fd_context {
 	struct fd_program_stateobj blit_prog[MAX_RENDER_TARGETS]; // TODO move to screen?
 	struct fd_program_stateobj blit_z, blit_zs;
 
-	/* do we need to mem2gmem before rendering.  We don't, if for example,
-	 * there was a glClear() that invalidated the entire previous buffer
-	 * contents.  Keep track of which buffer(s) are cleared, or needs
-	 * restore.  Masks of PIPE_CLEAR_*
-	 *
-	 * The 'cleared' bits will be set for buffers which are *entirely*
-	 * cleared, and 'partial_cleared' bits will be set if you must
-	 * check cleared_scissor.
-	 */
-	enum {
-		/* align bitmask values w/ PIPE_CLEAR_*.. since that is convenient.. */
-		FD_BUFFER_COLOR   = PIPE_CLEAR_COLOR,
-		FD_BUFFER_DEPTH   = PIPE_CLEAR_DEPTH,
-		FD_BUFFER_STENCIL = PIPE_CLEAR_STENCIL,
-		FD_BUFFER_ALL     = FD_BUFFER_COLOR | FD_BUFFER_DEPTH | FD_BUFFER_STENCIL,
-	} cleared, partial_cleared, restore, resolve;
-
-	bool needs_flush;
-
-	/* To decide whether to render to system memory, keep track of the
-	 * number of draws, and whether any of them require multisample,
-	 * depth_test (or depth write), stencil_test, blending, and
-	 * color_logic_Op (since those functions are disabled when by-
-	 * passing GMEM.
-	 */
-	enum {
-		FD_GMEM_CLEARS_DEPTH_STENCIL = 0x01,
-		FD_GMEM_DEPTH_ENABLED        = 0x02,
-		FD_GMEM_STENCIL_ENABLED      = 0x04,
-
-		FD_GMEM_MSAA_ENABLED         = 0x08,
-		FD_GMEM_BLEND_ENABLED        = 0x10,
-		FD_GMEM_LOGICOP_ENABLED      = 0x20,
-	} gmem_reason;
-	unsigned num_draws;   /* number of draws in current batch */
-
 	/* Stats/counters:
 	 */
 	struct {
@@ -243,12 +207,6 @@ struct fd_context {
 		uint64_t draw_calls;
 		uint64_t batch_total, batch_sysmem, batch_gmem, batch_restore;
 	} stats;
-
-	/* TODO get rid of this.. only used in gmem/tiling code paths (and
-	 * NULL the rest of the time).  Just leaving for now to reduce some
-	 * churn..
-	 */
-	struct fd_ringbuffer *ring;
 
 	/* Current batch.. the rule here is that you can deref ctx->batch
 	 * in codepaths from pipe_context entrypoints.  But not in code-
@@ -269,11 +227,6 @@ struct fd_context {
 	 * */
 	bool needs_rb_fbd;
 
-	/* Keep track of DRAW initiators that need to be patched up depending
-	 * on whether we using binning or not:
-	 */
-	struct util_dynarray draw_patches;
-
 	struct pipe_scissor_state scissor;
 
 	/* we don't have a disable/enable bit for scissor, so instead we keep
@@ -282,22 +235,11 @@ struct fd_context {
 	 */
 	struct pipe_scissor_state disabled_scissor;
 
-	/* Track the maximal bounds of the scissor of all the draws within a
-	 * batch.  Used at the tile rendering step (fd_gmem_render_tiles(),
-	 * mem2gmem/gmem2mem) to avoid needlessly moving data in/out of gmem.
-	 */
-	struct pipe_scissor_state max_scissor;
-
-	/* Track the cleared scissor for color/depth/stencil, so we know
-	 * which, if any, tiles need to be restored (mem2gmem).  Only valid
-	 * if the corresponding bit in ctx->cleared is set.
-	 */
-	struct {
-		struct pipe_scissor_state color, depth, stencil;
-	} cleared_scissor;
-
 	/* Current gmem/tiling configuration.. gets updated on render_tiles()
 	 * if out of date with current maximal-scissor/cpp:
+	 *
+	 * (NOTE: this is kind of related to the batch, but moving it there
+	 * means we'd always have to recalc tiles ever batch)
 	 */
 	struct fd_gmem_stateobj gmem;
 	struct fd_vsc_pipe      pipe[8];
@@ -346,7 +288,6 @@ struct fd_context {
 	struct pipe_blend_color blend_color;
 	struct pipe_stencil_ref stencil_ref;
 	unsigned sample_mask;
-	struct pipe_framebuffer_state framebuffer;
 	struct pipe_poly_stipple stipple;
 	struct pipe_viewport_state viewport;
 	struct fd_constbuf_stateobj constbuf[PIPE_SHADER_TYPES];
@@ -361,14 +302,14 @@ struct fd_context {
 	struct pipe_debug_callback debug;
 
 	/* GMEM/tile handling fxns: */
-	void (*emit_tile_init)(struct fd_context *ctx);
-	void (*emit_tile_prep)(struct fd_context *ctx, struct fd_tile *tile);
-	void (*emit_tile_mem2gmem)(struct fd_context *ctx, struct fd_tile *tile);
-	void (*emit_tile_renderprep)(struct fd_context *ctx, struct fd_tile *tile);
-	void (*emit_tile_gmem2mem)(struct fd_context *ctx, struct fd_tile *tile);
+	void (*emit_tile_init)(struct fd_batch *batch);
+	void (*emit_tile_prep)(struct fd_batch *batch, struct fd_tile *tile);
+	void (*emit_tile_mem2gmem)(struct fd_batch *batch, struct fd_tile *tile);
+	void (*emit_tile_renderprep)(struct fd_batch *batch, struct fd_tile *tile);
+	void (*emit_tile_gmem2mem)(struct fd_batch *batch, struct fd_tile *tile);
 
 	/* optional, for GMEM bypass: */
-	void (*emit_sysmem_prep)(struct fd_context *ctx);
+	void (*emit_sysmem_prep)(struct fd_batch *batch);
 
 	/* draw: */
 	bool (*draw_vbo)(struct fd_context *ctx, const struct pipe_draw_info *info);

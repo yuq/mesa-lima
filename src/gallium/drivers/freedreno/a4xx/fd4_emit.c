@@ -505,7 +505,7 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	emit_marker(ring, 5);
 
 	if ((dirty & FD_DIRTY_FRAMEBUFFER) && !emit->key.binning_pass) {
-		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+		struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 		unsigned char mrt_comp[A4XX_MAX_RENDER_TARGETS] = {0};
 
 		for (unsigned i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
@@ -525,7 +525,7 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_FRAMEBUFFER)) {
 		struct fd4_zsa_stateobj *zsa = fd4_zsa_stateobj(ctx->zsa);
-		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+		struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 		uint32_t rb_alpha_control = zsa->rb_alpha_control;
 
 		if (util_format_is_pure_integer(pipe_surface_format(pfb->cbufs[0])))
@@ -625,10 +625,10 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, A4XX_GRAS_SC_WINDOW_SCISSOR_TL_X(scissor->minx) |
 				A4XX_GRAS_SC_WINDOW_SCISSOR_TL_Y(scissor->miny));
 
-		ctx->max_scissor.minx = MIN2(ctx->max_scissor.minx, scissor->minx);
-		ctx->max_scissor.miny = MIN2(ctx->max_scissor.miny, scissor->miny);
-		ctx->max_scissor.maxx = MAX2(ctx->max_scissor.maxx, scissor->maxx);
-		ctx->max_scissor.maxy = MAX2(ctx->max_scissor.maxy, scissor->maxy);
+		ctx->batch->max_scissor.minx = MIN2(ctx->batch->max_scissor.minx, scissor->minx);
+		ctx->batch->max_scissor.miny = MIN2(ctx->batch->max_scissor.miny, scissor->miny);
+		ctx->batch->max_scissor.maxx = MAX2(ctx->batch->max_scissor.maxx, scissor->maxx);
+		ctx->batch->max_scissor.maxy = MAX2(ctx->batch->max_scissor.maxy, scissor->maxy);
 	}
 
 	if (dirty & FD_DIRTY_VIEWPORT) {
@@ -643,7 +643,7 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER)) {
-		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+		struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 		unsigned n = pfb->nr_cbufs;
 		/* if we have depth/stencil, we need at least on MRT: */
 		if (pfb->zsbuf)
@@ -663,7 +663,7 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 		for (i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
 			enum pipe_format format = pipe_surface_format(
-					ctx->framebuffer.cbufs[i]);
+					ctx->batch->framebuffer.cbufs[i]);
 			bool is_int = util_format_is_pure_integer(format);
 			bool has_alpha = util_format_has_alpha(format);
 			uint32_t control = blend->rb_mrt[i].control;

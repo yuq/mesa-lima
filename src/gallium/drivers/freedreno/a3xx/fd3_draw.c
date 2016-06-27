@@ -84,8 +84,7 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			(info->mode == PIPE_PRIM_POINTS))
 		primtype = DI_PT_POINTLIST_PSIZE;
 
-	fd_draw_emit(ctx, ring,
-			primtype,
+	fd_draw_emit(ctx->batch, ring, primtype,
 			emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
 			info);
 }
@@ -223,7 +222,7 @@ fd3_clear_binning(struct fd_context *ctx, unsigned dirty)
 
 	fd3_emit_state(ctx, ring, &emit);
 	fd3_emit_vertex_bufs(ring, &emit);
-	reset_viewport(ring, &ctx->framebuffer);
+	reset_viewport(ring, &ctx->batch->framebuffer);
 
 	OUT_PKT0(ring, REG_A3XX_PC_PRIM_VTX_CNTL, 1);
 	OUT_RING(ring, A3XX_PC_PRIM_VTX_CNTL_STRIDE_IN_VPC(0) |
@@ -240,7 +239,7 @@ fd3_clear_binning(struct fd_context *ctx, unsigned dirty)
 
 	fd_event_write(ctx, ring, PERFCOUNTER_STOP);
 
-	fd_draw(ctx, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
+	fd_draw(ctx->batch, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
 			DI_SRC_SEL_AUTO_INDEX, 2, 0, INDEX_SIZE_IGN, 0, 0, NULL);
 }
 
@@ -249,7 +248,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
 {
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
-	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 	struct fd_ringbuffer *ring = ctx->batch->draw;
 	unsigned dirty = ctx->dirty;
 	unsigned i;
@@ -270,7 +269,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 
 	/* emit generic state now: */
 	fd3_emit_state(ctx, ring, &emit);
-	reset_viewport(ring, &ctx->framebuffer);
+	reset_viewport(ring, &ctx->batch->framebuffer);
 
 	OUT_PKT0(ring, REG_A3XX_RB_BLEND_ALPHA, 1);
 	OUT_RING(ring, A3XX_RB_BLEND_ALPHA_UINT(0xff) |
@@ -278,7 +277,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 
 	OUT_PKT0(ring, REG_A3XX_RB_RENDER_CONTROL, 1);
 	OUT_RINGP(ring, A3XX_RB_RENDER_CONTROL_ALPHA_TEST_FUNC(FUNC_NEVER),
-			&fd3_ctx->rbrc_patches);
+			&ctx->batch->rbrc_patches);
 
 	if (buffers & PIPE_CLEAR_DEPTH) {
 		OUT_PKT0(ring, REG_A3XX_RB_DEPTH_CONTROL, 1);
@@ -374,7 +373,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 
 	fd_event_write(ctx, ring, PERFCOUNTER_STOP);
 
-	fd_draw(ctx, ring, DI_PT_RECTLIST, USE_VISIBILITY,
+	fd_draw(ctx->batch, ring, DI_PT_RECTLIST, USE_VISIBILITY,
 			DI_SRC_SEL_AUTO_INDEX, 2, 0, INDEX_SIZE_IGN, 0, 0, NULL);
 }
 

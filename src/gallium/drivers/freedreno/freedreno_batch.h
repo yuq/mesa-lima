@@ -42,7 +42,73 @@ enum fd_resource_status;
 struct fd_batch {
 	struct pipe_reference reference;
 	unsigned seqno;
+
 	struct fd_context *ctx;
+
+	/* do we need to mem2gmem before rendering.  We don't, if for example,
+	 * there was a glClear() that invalidated the entire previous buffer
+	 * contents.  Keep track of which buffer(s) are cleared, or needs
+	 * restore.  Masks of PIPE_CLEAR_*
+	 *
+	 * The 'cleared' bits will be set for buffers which are *entirely*
+	 * cleared, and 'partial_cleared' bits will be set if you must
+	 * check cleared_scissor.
+	 */
+	enum {
+		/* align bitmask values w/ PIPE_CLEAR_*.. since that is convenient.. */
+		FD_BUFFER_COLOR   = PIPE_CLEAR_COLOR,
+		FD_BUFFER_DEPTH   = PIPE_CLEAR_DEPTH,
+		FD_BUFFER_STENCIL = PIPE_CLEAR_STENCIL,
+		FD_BUFFER_ALL     = FD_BUFFER_COLOR | FD_BUFFER_DEPTH | FD_BUFFER_STENCIL,
+	} cleared, partial_cleared, restore, resolve;
+
+	bool needs_flush;
+
+	/* To decide whether to render to system memory, keep track of the
+	 * number of draws, and whether any of them require multisample,
+	 * depth_test (or depth write), stencil_test, blending, and
+	 * color_logic_Op (since those functions are disabled when by-
+	 * passing GMEM.
+	 */
+	enum {
+		FD_GMEM_CLEARS_DEPTH_STENCIL = 0x01,
+		FD_GMEM_DEPTH_ENABLED        = 0x02,
+		FD_GMEM_STENCIL_ENABLED      = 0x04,
+
+		FD_GMEM_MSAA_ENABLED         = 0x08,
+		FD_GMEM_BLEND_ENABLED        = 0x10,
+		FD_GMEM_LOGICOP_ENABLED      = 0x20,
+	} gmem_reason;
+	unsigned num_draws;   /* number of draws in current batch */
+
+	/* Track the maximal bounds of the scissor of all the draws within a
+	 * batch.  Used at the tile rendering step (fd_gmem_render_tiles(),
+	 * mem2gmem/gmem2mem) to avoid needlessly moving data in/out of gmem.
+	 */
+	struct pipe_scissor_state max_scissor;
+
+	/* Track the cleared scissor for color/depth/stencil, so we know
+	 * which, if any, tiles need to be restored (mem2gmem).  Only valid
+	 * if the corresponding bit in ctx->cleared is set.
+	 */
+	struct {
+		struct pipe_scissor_state color, depth, stencil;
+	} cleared_scissor;
+
+	/* Keep track of DRAW initiators that need to be patched up depending
+	 * on whether we using binning or not:
+	 */
+	struct util_dynarray draw_patches;
+
+	/* Keep track of writes to RB_RENDER_CONTROL which need to be patched
+	 * once we know whether or not to use GMEM, and GMEM tile pitch.
+	 *
+	 * (only for a3xx.. but having gen specific subclasses of fd_batch
+	 * seemed overkill for now)
+	 */
+	struct util_dynarray rbrc_patches;
+
+	struct pipe_framebuffer_state framebuffer;
 
 	/** draw pass cmdstream: */
 	struct fd_ringbuffer *draw;

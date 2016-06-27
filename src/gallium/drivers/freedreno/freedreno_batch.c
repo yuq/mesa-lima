@@ -64,15 +64,30 @@ fd_batch_create(struct fd_context *ctx)
 
 	list_inithead(&batch->used_resources);
 
+	/* reset maximal bounds: */
+	batch->max_scissor.minx = batch->max_scissor.miny = ~0;
+	batch->max_scissor.maxx = batch->max_scissor.maxy = 0;
+
+	util_dynarray_init(&batch->draw_patches);
+
+	if (is_a3xx(ctx->screen))
+		util_dynarray_init(&batch->rbrc_patches);
+
 	return batch;
 }
 
 void
 __fd_batch_destroy(struct fd_batch *batch)
 {
+	util_copy_framebuffer_state(&batch->framebuffer, NULL);
 	fd_ringbuffer_del(batch->draw);
 	fd_ringbuffer_del(batch->binning);
 	fd_ringbuffer_del(batch->gmem);
+
+	util_dynarray_fini(&batch->draw_patches);
+
+	if (is_a3xx(batch->ctx->screen))
+		util_dynarray_fini(&batch->rbrc_patches);
 
 	free(batch);
 }
@@ -88,7 +103,12 @@ fd_batch_flush(struct fd_batch *batch)
 {
 	struct fd_resource *rsc, *rsc_tmp;
 
-	fd_gmem_render_tiles(batch->ctx);
+	DBG("%p: needs_flush=%d", batch, batch->needs_flush);
+
+	if (!batch->needs_flush)
+		return;
+
+	fd_gmem_render_tiles(batch);
 
 	/* go through all the used resources and clear their reading flag */
 	LIST_FOR_EACH_ENTRY_SAFE(rsc, rsc_tmp, &batch->used_resources, list) {

@@ -67,11 +67,11 @@
  * resolve.
  */
 
-static uint32_t bin_width(struct fd_context *ctx)
+static uint32_t bin_width(struct fd_screen *screen)
 {
-	if (is_a4xx(ctx->screen))
+	if (is_a4xx(screen))
 		return 1024;
-	if (is_a3xx(ctx->screen))
+	if (is_a3xx(screen))
 		return 992;
 	return 512;
 }
@@ -103,20 +103,21 @@ total_size(uint8_t cbuf_cpp[], uint8_t zsbuf_cpp[2],
 }
 
 static void
-calculate_tiles(struct fd_context *ctx)
+calculate_tiles(struct fd_batch *batch)
 {
+	struct fd_context *ctx = batch->ctx;
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
-	struct pipe_scissor_state *scissor = &ctx->max_scissor;
-	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct pipe_scissor_state *scissor = &batch->max_scissor;
+	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	uint32_t gmem_size = ctx->screen->gmemsize_bytes;
 	uint32_t minx, miny, width, height;
 	uint32_t nbins_x = 1, nbins_y = 1;
 	uint32_t bin_w, bin_h;
-	uint32_t max_width = bin_width(ctx);
+	uint32_t max_width = bin_width(ctx->screen);
 	uint8_t cbuf_cpp[MAX_RENDER_TARGETS] = {0}, zsbuf_cpp[2] = {0};
 	uint32_t i, j, t, xoff, yoff;
 	uint32_t tpp_x, tpp_y;
-	bool has_zs = !!(ctx->resolve & (FD_BUFFER_DEPTH | FD_BUFFER_STENCIL));
+	bool has_zs = !!(batch->resolve & (FD_BUFFER_DEPTH | FD_BUFFER_STENCIL));
 	int tile_n[ARRAY_SIZE(ctx->pipe)];
 
 	if (has_zs) {
@@ -302,14 +303,15 @@ calculate_tiles(struct fd_context *ctx)
 }
 
 static void
-render_tiles(struct fd_context *ctx)
+render_tiles(struct fd_batch *batch)
 {
+	struct fd_context *ctx = batch->ctx;
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	int i;
 
-	ctx->emit_tile_init(ctx);
+	ctx->emit_tile_init(batch);
 
-	if (ctx->restore)
+	if (batch->restore)
 		ctx->stats.batch_restore++;
 
 	for (i = 0; i < (gmem->nbins_x * gmem->nbins_y); i++) {
@@ -318,52 +320,54 @@ render_tiles(struct fd_context *ctx)
 		DBG("bin_h=%d, yoff=%d, bin_w=%d, xoff=%d",
 			tile->bin_h, tile->yoff, tile->bin_w, tile->xoff);
 
-		ctx->emit_tile_prep(ctx, tile);
+		ctx->emit_tile_prep(batch, tile);
 
-		if (ctx->restore) {
-			fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_MEM2GMEM);
-			ctx->emit_tile_mem2gmem(ctx, tile);
-			fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_NULL);
+		if (batch->restore) {
+			fd_hw_query_set_stage(ctx, batch->gmem, FD_STAGE_MEM2GMEM);
+			ctx->emit_tile_mem2gmem(batch, tile);
+			fd_hw_query_set_stage(ctx, batch->gmem, FD_STAGE_NULL);
 		}
 
-		ctx->emit_tile_renderprep(ctx, tile);
+		ctx->emit_tile_renderprep(batch, tile);
 
-		fd_hw_query_prepare_tile(ctx, i, ctx->ring);
+		fd_hw_query_prepare_tile(ctx, i, batch->gmem);
 
 		/* emit IB to drawcmds: */
-		ctx->emit_ib(ctx->ring, ctx->batch->draw);
+		ctx->emit_ib(batch->gmem, batch->draw);
 		fd_reset_wfi(ctx);
 
 		/* emit gmem2mem to transfer tile back to system memory: */
-		fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_GMEM2MEM);
-		ctx->emit_tile_gmem2mem(ctx, tile);
-		fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_NULL);
+		fd_hw_query_set_stage(ctx, batch->gmem, FD_STAGE_GMEM2MEM);
+		ctx->emit_tile_gmem2mem(batch, tile);
+		fd_hw_query_set_stage(ctx, batch->gmem, FD_STAGE_NULL);
 	}
 }
 
 static void
-render_sysmem(struct fd_context *ctx)
+render_sysmem(struct fd_batch *batch)
 {
-	ctx->emit_sysmem_prep(ctx);
+	struct fd_context *ctx = batch->ctx;
 
-	fd_hw_query_prepare_tile(ctx, 0, ctx->ring);
+	ctx->emit_sysmem_prep(batch);
+
+	fd_hw_query_prepare_tile(ctx, 0, batch->gmem);
 
 	/* emit IB to drawcmds: */
-	ctx->emit_ib(ctx->ring, ctx->batch->draw);
+	ctx->emit_ib(batch->gmem, batch->draw);
 	fd_reset_wfi(ctx);
 }
 
 void
-fd_gmem_render_tiles(struct fd_context *ctx)
+fd_gmem_render_tiles(struct fd_batch *batch)
 {
-	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
-	struct fd_batch *batch = ctx->batch;
+	struct fd_context *ctx = batch->ctx;
+	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	bool sysmem = false;
 
 	if (ctx->emit_sysmem_prep) {
-		if (ctx->cleared || ctx->gmem_reason || (ctx->num_draws > 5)) {
+		if (batch->cleared || batch->gmem_reason || (batch->num_draws > 5)) {
 			DBG("GMEM: cleared=%x, gmem_reason=%x, num_draws=%u",
-				ctx->cleared, ctx->gmem_reason, ctx->num_draws);
+				batch->cleared, batch->gmem_reason, batch->num_draws);
 		} else if (!(fd_mesa_debug & FD_DBG_NOBYPASS)) {
 			sysmem = true;
 		}
@@ -378,35 +382,27 @@ fd_gmem_render_tiles(struct fd_context *ctx)
 
 	ctx->stats.batch_total++;
 
-	ctx->ring = batch->gmem;
-
 	if (sysmem) {
 		DBG("rendering sysmem (%s/%s)",
 			util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 			util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 		fd_hw_query_prepare(ctx, 1);
-		render_sysmem(ctx);
+		render_sysmem(batch);
 		ctx->stats.batch_sysmem++;
 	} else {
 		struct fd_gmem_stateobj *gmem = &ctx->gmem;
-		calculate_tiles(ctx);
+		calculate_tiles(batch);
 		DBG("rendering %dx%d tiles (%s/%s)", gmem->nbins_x, gmem->nbins_y,
 			util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 			util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 		fd_hw_query_prepare(ctx, gmem->nbins_x * gmem->nbins_y);
-		render_tiles(ctx);
+		render_tiles(batch);
 		ctx->stats.batch_gmem++;
 	}
 
 	fd_ringbuffer_flush(batch->gmem);
 
-	ctx->ring = NULL;
-
 	fd_reset_wfi(ctx);
-
-	/* reset maximal bounds: */
-	ctx->max_scissor.minx = ctx->max_scissor.miny = ~0;
-	ctx->max_scissor.maxx = ctx->max_scissor.maxy = 0;
 
 	ctx->dirty = ~0;
 }
@@ -431,26 +427,26 @@ skip_restore(struct pipe_scissor_state *scissor, struct fd_tile *tile)
  * case would be a single clear.
  */
 bool
-fd_gmem_needs_restore(struct fd_context *ctx, struct fd_tile *tile,
+fd_gmem_needs_restore(struct fd_batch *batch, struct fd_tile *tile,
 		uint32_t buffers)
 {
-	if (!(ctx->restore & buffers))
+	if (!(batch->restore & buffers))
 		return false;
 
 	/* if buffers partially cleared, then slow-path to figure out
 	 * if this particular tile needs restoring:
 	 */
 	if ((buffers & FD_BUFFER_COLOR) &&
-			(ctx->partial_cleared & FD_BUFFER_COLOR) &&
-			skip_restore(&ctx->cleared_scissor.color, tile))
+			(batch->partial_cleared & FD_BUFFER_COLOR) &&
+			skip_restore(&batch->cleared_scissor.color, tile))
 		return false;
 	if ((buffers & FD_BUFFER_DEPTH) &&
-			(ctx->partial_cleared & FD_BUFFER_DEPTH) &&
-			skip_restore(&ctx->cleared_scissor.depth, tile))
+			(batch->partial_cleared & FD_BUFFER_DEPTH) &&
+			skip_restore(&batch->cleared_scissor.depth, tile))
 		return false;
 	if ((buffers & FD_BUFFER_STENCIL) &&
-			(ctx->partial_cleared & FD_BUFFER_STENCIL) &&
-			skip_restore(&ctx->cleared_scissor.stencil, tile))
+			(batch->partial_cleared & FD_BUFFER_STENCIL) &&
+			skip_restore(&batch->cleared_scissor.stencil, tile))
 		return false;
 
 	return true;

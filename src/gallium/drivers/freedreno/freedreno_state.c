@@ -115,12 +115,14 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 		const struct pipe_framebuffer_state *framebuffer)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	struct pipe_framebuffer_state *cso = &ctx->framebuffer;
+	struct pipe_framebuffer_state *cso;
 
-	DBG("%d: cbufs[0]=%p, zsbuf=%p", ctx->needs_flush,
+	DBG("%d: cbufs[0]=%p, zsbuf=%p", ctx->batch->needs_flush,
 			framebuffer->cbufs[0], framebuffer->zsbuf);
 
 	fd_context_render(pctx);
+
+	cso = &ctx->batch->framebuffer;
 
 	if ((cso->width != framebuffer->width) ||
 			(cso->height != framebuffer->height))

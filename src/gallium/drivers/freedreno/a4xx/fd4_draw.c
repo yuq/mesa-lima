@@ -68,8 +68,7 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			(info->mode == PIPE_PRIM_POINTS))
 		primtype = DI_PT_POINTLIST_PSIZE;
 
-	fd4_draw_emit(ctx, ring,
-			primtype,
+	fd4_draw_emit(ctx->batch, ring, primtype,
 			emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
 			info);
 }
@@ -233,7 +232,7 @@ fd4_clear_binning(struct fd_context *ctx, unsigned dirty)
 
 	fd4_emit_state(ctx, ring, &emit);
 	fd4_emit_vertex_bufs(ring, &emit);
-	reset_viewport(ring, &ctx->framebuffer);
+	reset_viewport(ring, &ctx->batch->framebuffer);
 
 	OUT_PKT0(ring, REG_A4XX_PC_PRIM_VTX_CNTL, 2);
 	OUT_RING(ring, A4XX_PC_PRIM_VTX_CNTL_VAROUT(0) |
@@ -244,7 +243,7 @@ fd4_clear_binning(struct fd_context *ctx, unsigned dirty)
 	OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
 	OUT_RING(ring, 0x00000002);
 
-	fd4_draw(ctx, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
+	fd4_draw(ctx->batch, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
 			DI_SRC_SEL_AUTO_INDEX, 2, 1, INDEX_SIZE_IGN, 0, 0, NULL);
 }
 
@@ -254,7 +253,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 {
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
 	struct fd_ringbuffer *ring = ctx->batch->draw;
-	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 	unsigned char mrt_comp[A4XX_MAX_RENDER_TARGETS] = {0};
 	unsigned dirty = ctx->dirty;
 	unsigned i;
@@ -390,7 +389,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 	OUT_PKT3(ring, CP_UNKNOWN_1A, 1);
 	OUT_RING(ring, 0x00000001);
 
-	fd4_draw(ctx, ring, DI_PT_RECTLIST, USE_VISIBILITY,
+	fd4_draw(ctx->batch, ring, DI_PT_RECTLIST, USE_VISIBILITY,
 			DI_SRC_SEL_AUTO_INDEX, 2, 1, INDEX_SIZE_IGN, 0, 0, NULL);
 
 	OUT_PKT3(ring, CP_UNKNOWN_1A, 1);

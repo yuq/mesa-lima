@@ -42,7 +42,7 @@ struct fd_ringbuffer;
 void fd_draw_init(struct pipe_context *pctx);
 
 static inline void
-fd_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
+fd_draw(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		enum pc_di_primtype primtype,
 		enum pc_di_vis_cull_mode vismode,
 		enum pc_di_src_sel src_sel, uint32_t count,
@@ -59,7 +59,7 @@ fd_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	 */
 	emit_marker(ring, 7);
 
-	if (is_a3xx_p0(ctx->screen)) {
+	if (is_a3xx_p0(batch->ctx->screen)) {
 		/* dummy-draw workaround: */
 		OUT_PKT3(ring, CP_DRAW_INDX, 3);
 		OUT_RING(ring, 0x00000000);
@@ -81,7 +81,7 @@ fd_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		 * we know if we are binning or not
 		 */
 		OUT_RINGP(ring, DRAW(primtype, src_sel, idx_type, 0, instances),
-				&ctx->draw_patches);
+				&batch->draw_patches);
 	} else {
 		OUT_RING(ring, DRAW(primtype, src_sel, idx_type, vismode, instances));
 	}
@@ -93,7 +93,7 @@ fd_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	emit_marker(ring, 7);
 
-	fd_reset_wfi(ctx);
+	fd_reset_wfi(batch->ctx);
 }
 
 
@@ -112,18 +112,19 @@ size2indextype(unsigned index_size)
 
 /* this is same for a2xx/a3xx, so split into helper: */
 static inline void
-fd_draw_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
+fd_draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		enum pc_di_primtype primtype,
 		enum pc_di_vis_cull_mode vismode,
 		const struct pipe_draw_info *info)
 {
-	struct pipe_index_buffer *idx = &ctx->indexbuf;
 	struct pipe_resource *idx_buffer = NULL;
 	enum pc_di_index_size idx_type = INDEX_SIZE_IGN;
 	enum pc_di_src_sel src_sel;
 	uint32_t idx_size, idx_offset;
 
 	if (info->indexed) {
+		struct pipe_index_buffer *idx = &batch->ctx->indexbuf;
+
 		assert(!idx->user_buffer);
 
 		idx_buffer = idx->buffer;
@@ -139,7 +140,7 @@ fd_draw_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		src_sel = DI_SRC_SEL_AUTO_INDEX;
 	}
 
-	fd_draw(ctx, ring, primtype, vismode, src_sel,
+	fd_draw(batch, ring, primtype, vismode, src_sel,
 			info->count, info->instance_count - 1,
 			idx_type, idx_size, idx_offset, idx_buffer);
 }

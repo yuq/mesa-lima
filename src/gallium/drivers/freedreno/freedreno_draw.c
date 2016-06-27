@@ -40,26 +40,27 @@
 #include "freedreno_util.h"
 
 static void
-resource_read(struct fd_context *ctx, struct pipe_resource *prsc)
+resource_read(struct fd_batch *batch, struct pipe_resource *prsc)
 {
 	if (!prsc)
 		return;
-	fd_batch_resource_used(ctx->batch, fd_resource(prsc), FD_PENDING_READ);
+	fd_batch_resource_used(batch, fd_resource(prsc), FD_PENDING_READ);
 }
 
 static void
-resource_written(struct fd_context *ctx, struct pipe_resource *prsc)
+resource_written(struct fd_batch *batch, struct pipe_resource *prsc)
 {
 	if (!prsc)
 		return;
-	fd_batch_resource_used(ctx->batch, fd_resource(prsc), FD_PENDING_WRITE);
+	fd_batch_resource_used(batch, fd_resource(prsc), FD_PENDING_WRITE);
 }
 
 static void
 fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct fd_batch *batch = ctx->batch;
+	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
 	unsigned i, prims, buffers = 0;
 
@@ -89,18 +90,18 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 	if (fd_depth_enabled(ctx)) {
 		buffers |= FD_BUFFER_DEPTH;
-		resource_written(ctx, pfb->zsbuf->texture);
-		ctx->gmem_reason |= FD_GMEM_DEPTH_ENABLED;
+		resource_written(batch, pfb->zsbuf->texture);
+		batch->gmem_reason |= FD_GMEM_DEPTH_ENABLED;
 	}
 
 	if (fd_stencil_enabled(ctx)) {
 		buffers |= FD_BUFFER_STENCIL;
-		resource_written(ctx, pfb->zsbuf->texture);
-		ctx->gmem_reason |= FD_GMEM_STENCIL_ENABLED;
+		resource_written(batch, pfb->zsbuf->texture);
+		batch->gmem_reason |= FD_GMEM_STENCIL_ENABLED;
 	}
 
 	if (fd_logicop_enabled(ctx))
-		ctx->gmem_reason |= FD_GMEM_LOGICOP_ENABLED;
+		batch->gmem_reason |= FD_GMEM_LOGICOP_ENABLED;
 
 	for (i = 0; i < pfb->nr_cbufs; i++) {
 		struct pipe_resource *surf;
@@ -110,45 +111,45 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 		surf = pfb->cbufs[i]->texture;
 
-		resource_written(ctx, surf);
+		resource_written(batch, surf);
 		buffers |= PIPE_CLEAR_COLOR0 << i;
 
 		if (surf->nr_samples > 1)
-			ctx->gmem_reason |= FD_GMEM_MSAA_ENABLED;
+			batch->gmem_reason |= FD_GMEM_MSAA_ENABLED;
 
 		if (fd_blend_enabled(ctx, i))
-			ctx->gmem_reason |= FD_GMEM_BLEND_ENABLED;
+			batch->gmem_reason |= FD_GMEM_BLEND_ENABLED;
 	}
 
 	/* Skip over buffer 0, that is sent along with the command stream */
 	for (i = 1; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
-		resource_read(ctx, ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer);
-		resource_read(ctx, ctx->constbuf[PIPE_SHADER_FRAGMENT].cb[i].buffer);
+		resource_read(batch, ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer);
+		resource_read(batch, ctx->constbuf[PIPE_SHADER_FRAGMENT].cb[i].buffer);
 	}
 
 	/* Mark VBOs as being read */
 	for (i = 0; i < ctx->vtx.vertexbuf.count; i++) {
 		assert(!ctx->vtx.vertexbuf.vb[i].user_buffer);
-		resource_read(ctx, ctx->vtx.vertexbuf.vb[i].buffer);
+		resource_read(batch, ctx->vtx.vertexbuf.vb[i].buffer);
 	}
 
 	/* Mark index buffer as being read */
-	resource_read(ctx, ctx->indexbuf.buffer);
+	resource_read(batch, ctx->indexbuf.buffer);
 
 	/* Mark textures as being read */
 	for (i = 0; i < ctx->verttex.num_textures; i++)
 		if (ctx->verttex.textures[i])
-			resource_read(ctx, ctx->verttex.textures[i]->texture);
+			resource_read(batch, ctx->verttex.textures[i]->texture);
 	for (i = 0; i < ctx->fragtex.num_textures; i++)
 		if (ctx->fragtex.textures[i])
-			resource_read(ctx, ctx->fragtex.textures[i]->texture);
+			resource_read(batch, ctx->fragtex.textures[i]->texture);
 
 	/* Mark streamout buffers as being written.. */
 	for (i = 0; i < ctx->streamout.num_targets; i++)
 		if (ctx->streamout.targets[i])
-			resource_written(ctx, ctx->streamout.targets[i]->buffer);
+			resource_written(batch, ctx->streamout.targets[i]->buffer);
 
-	ctx->num_draws++;
+	batch->num_draws++;
 
 	prims = u_reduced_prims_for_vertices(info->mode, info->count);
 
@@ -165,17 +166,17 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	ctx->stats.prims_generated += prims;
 
 	/* any buffers that haven't been cleared yet, we need to restore: */
-	ctx->restore |= buffers & (FD_BUFFER_ALL & ~ctx->cleared);
+	batch->restore |= buffers & (FD_BUFFER_ALL & ~batch->cleared);
 	/* and any buffers used, need to be resolved: */
-	ctx->resolve |= buffers;
+	batch->resolve |= buffers;
 
-	DBG("%x num_draws=%u (%s/%s)", buffers, ctx->num_draws,
+	DBG("%x num_draws=%u (%s/%s)", buffers, batch->num_draws,
 		util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 
-	fd_hw_query_set_stage(ctx, ctx->batch->draw, FD_STAGE_DRAW);
+	fd_hw_query_set_stage(ctx, batch->draw, FD_STAGE_DRAW);
 	if (ctx->draw_vbo(ctx, info))
-		ctx->needs_flush = true;
+		batch->needs_flush = true;
 
 	for (i = 0; i < ctx->streamout.num_targets; i++)
 		ctx->streamout.offsets[i] += info->count;
@@ -183,7 +184,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	if (fd_mesa_debug & FD_DBG_DDRAW)
 		ctx->dirty = 0xffffffff;
 
-	fd_batch_check_size(ctx->batch);
+	fd_batch_check_size(batch);
 }
 
 /* TODO figure out how to make better use of existing state mechanism
@@ -197,7 +198,8 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct fd_batch *batch = ctx->batch;
+	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
 	unsigned cleared_buffers;
 	int i;
@@ -213,38 +215,38 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	 * something like alpha-test causes side effects from the draw in
 	 * the depth buffer, etc)
 	 */
-	cleared_buffers = buffers & (FD_BUFFER_ALL & ~ctx->restore);
+	cleared_buffers = buffers & (FD_BUFFER_ALL & ~batch->restore);
 
 	/* do we have full-screen scissor? */
 	if (!memcmp(scissor, &ctx->disabled_scissor, sizeof(*scissor))) {
-		ctx->cleared |= cleared_buffers;
+		batch->cleared |= cleared_buffers;
 	} else {
-		ctx->partial_cleared |= cleared_buffers;
+		batch->partial_cleared |= cleared_buffers;
 		if (cleared_buffers & PIPE_CLEAR_COLOR)
-			ctx->cleared_scissor.color = *scissor;
+			batch->cleared_scissor.color = *scissor;
 		if (cleared_buffers & PIPE_CLEAR_DEPTH)
-			ctx->cleared_scissor.depth = *scissor;
+			batch->cleared_scissor.depth = *scissor;
 		if (cleared_buffers & PIPE_CLEAR_STENCIL)
-			ctx->cleared_scissor.stencil = *scissor;
+			batch->cleared_scissor.stencil = *scissor;
 	}
-	ctx->resolve |= buffers;
-	ctx->needs_flush = true;
+	batch->resolve |= buffers;
+	batch->needs_flush = true;
 
 	if (buffers & PIPE_CLEAR_COLOR)
 		for (i = 0; i < pfb->nr_cbufs; i++)
 			if (buffers & (PIPE_CLEAR_COLOR0 << i))
-				resource_written(ctx, pfb->cbufs[i]->texture);
+				resource_written(batch, pfb->cbufs[i]->texture);
 
 	if (buffers & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) {
-		resource_written(ctx, pfb->zsbuf->texture);
-		ctx->gmem_reason |= FD_GMEM_CLEARS_DEPTH_STENCIL;
+		resource_written(batch, pfb->zsbuf->texture);
+		batch->gmem_reason |= FD_GMEM_CLEARS_DEPTH_STENCIL;
 	}
 
 	DBG("%x depth=%f, stencil=%u (%s/%s)", buffers, depth, stencil,
 		util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 
-	fd_hw_query_set_stage(ctx, ctx->batch->draw, FD_STAGE_CLEAR);
+	fd_hw_query_set_stage(ctx, batch->draw, FD_STAGE_CLEAR);
 
 	ctx->clear(ctx, buffers, color, depth, stencil);
 

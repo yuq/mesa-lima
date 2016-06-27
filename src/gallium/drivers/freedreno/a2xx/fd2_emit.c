@@ -250,10 +250,10 @@ fd2_emit_state(struct fd_context *ctx, uint32_t dirty)
 		OUT_RING(ring, xy2d(scissor->maxx,       /* PA_SC_WINDOW_SCISSOR_BR */
 				scissor->maxy));
 
-		ctx->max_scissor.minx = MIN2(ctx->max_scissor.minx, scissor->minx);
-		ctx->max_scissor.miny = MIN2(ctx->max_scissor.miny, scissor->miny);
-		ctx->max_scissor.maxx = MAX2(ctx->max_scissor.maxx, scissor->maxx);
-		ctx->max_scissor.maxy = MAX2(ctx->max_scissor.maxy, scissor->maxy);
+		ctx->batch->max_scissor.minx = MIN2(ctx->batch->max_scissor.minx, scissor->minx);
+		ctx->batch->max_scissor.miny = MIN2(ctx->batch->max_scissor.miny, scissor->miny);
+		ctx->batch->max_scissor.maxx = MAX2(ctx->batch->max_scissor.maxx, scissor->maxx);
+		ctx->batch->max_scissor.maxy = MAX2(ctx->batch->max_scissor.maxy, scissor->maxy);
 	}
 
 	if (dirty & FD_DIRTY_VIEWPORT) {

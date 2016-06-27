@@ -48,7 +48,7 @@ static inline uint32_t DRAW4(enum pc_di_primtype prim_type,
 }
 
 static inline void
-fd4_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
+fd4_draw(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		enum pc_di_primtype primtype,
 		enum pc_di_vis_cull_mode vismode,
 		enum pc_di_src_sel src_sel, uint32_t count,
@@ -70,7 +70,7 @@ fd4_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		 * we know if we are binning or not
 		 */
 		OUT_RINGP(ring, DRAW4(primtype, src_sel, idx_type, 0),
-				&ctx->draw_patches);
+				&batch->draw_patches);
 	} else {
 		OUT_RING(ring, DRAW4(primtype, src_sel, idx_type, vismode));
 	}
@@ -84,7 +84,7 @@ fd4_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	emit_marker(ring, 7);
 
-	fd_reset_wfi(ctx);
+	fd_reset_wfi(batch->ctx);
 }
 
 
@@ -101,18 +101,19 @@ fd4_size2indextype(unsigned index_size)
 	return INDEX4_SIZE_32_BIT;
 }
 static inline void
-fd4_draw_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
+fd4_draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		enum pc_di_primtype primtype,
 		enum pc_di_vis_cull_mode vismode,
 		const struct pipe_draw_info *info)
 {
-	struct pipe_index_buffer *idx = &ctx->indexbuf;
 	struct pipe_resource *idx_buffer = NULL;
 	enum a4xx_index_size idx_type;
 	enum pc_di_src_sel src_sel;
 	uint32_t idx_size, idx_offset;
 
 	if (info->indexed) {
+		struct pipe_index_buffer *idx = &batch->ctx->indexbuf;
+
 		assert(!idx->user_buffer);
 
 		idx_buffer = idx->buffer;
@@ -128,7 +129,7 @@ fd4_draw_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		src_sel = DI_SRC_SEL_AUTO_INDEX;
 	}
 
-	fd4_draw(ctx, ring, primtype, vismode, src_sel,
+	fd4_draw(batch, ring, primtype, vismode, src_sel,
 			info->count, info->instance_count,
 			idx_type, idx_size, idx_offset, idx_buffer);
 }

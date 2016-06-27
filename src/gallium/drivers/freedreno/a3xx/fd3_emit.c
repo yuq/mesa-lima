@@ -516,7 +516,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		 */
 
 		OUT_PKT0(ring, REG_A3XX_RB_RENDER_CONTROL, 1);
-		OUT_RINGP(ring, val, &fd3_context(ctx)->rbrc_patches);
+		OUT_RINGP(ring, val, &ctx->batch->rbrc_patches);
 	}
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_STENCIL_REF)) {
@@ -631,10 +631,10 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, A3XX_GRAS_SC_WINDOW_SCISSOR_BR_X(scissor->maxx - 1) |
 				A3XX_GRAS_SC_WINDOW_SCISSOR_BR_Y(scissor->maxy - 1));
 
-		ctx->max_scissor.minx = MIN2(ctx->max_scissor.minx, scissor->minx);
-		ctx->max_scissor.miny = MIN2(ctx->max_scissor.miny, scissor->miny);
-		ctx->max_scissor.maxx = MAX2(ctx->max_scissor.maxx, scissor->maxx);
-		ctx->max_scissor.maxy = MAX2(ctx->max_scissor.maxy, scissor->maxy);
+		ctx->batch->max_scissor.minx = MIN2(ctx->batch->max_scissor.minx, scissor->minx);
+		ctx->batch->max_scissor.miny = MIN2(ctx->batch->max_scissor.miny, scissor->miny);
+		ctx->batch->max_scissor.maxx = MAX2(ctx->batch->max_scissor.maxx, scissor->maxx);
+		ctx->batch->max_scissor.maxy = MAX2(ctx->batch->max_scissor.maxy, scissor->maxy);
 	}
 
 	if (dirty & FD_DIRTY_VIEWPORT) {
@@ -649,7 +649,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER | FD_DIRTY_BLEND_DUAL)) {
-		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+		struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 		int nr_cbufs = pfb->nr_cbufs;
 		if (fd3_blend_stateobj(ctx->blend)->rb_render_control &
 			A3XX_RB_RENDER_CONTROL_DUAL_COLOR_IN_ENABLE)
@@ -673,7 +673,8 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		uint32_t i;
 
 		for (i = 0; i < ARRAY_SIZE(blend->rb_mrt); i++) {
-			enum pipe_format format = pipe_surface_format(ctx->framebuffer.cbufs[i]);
+			enum pipe_format format =
+				pipe_surface_format(ctx->batch->framebuffer.cbufs[i]);
 			const struct util_format_description *desc =
 				util_format_description(format);
 			bool is_float = util_format_is_float(format);
