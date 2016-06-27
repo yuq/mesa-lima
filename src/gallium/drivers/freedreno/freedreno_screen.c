@@ -75,6 +75,7 @@ static const struct debug_named_value debug_options[] = {
 		{"flush",     FD_DBG_FLUSH,  "Force flush after every draw"},
 		{"deqp",      FD_DBG_DEQP,   "Enable dEQP hacks"},
 		{"nir",       FD_DBG_NIR,    "Prefer NIR as native IR"},
+		{"reorder",   FD_DBG_REORDER,"Enable reordering for draws/blits"},
 		DEBUG_NAMED_VALUE_END
 };
 
@@ -133,6 +134,8 @@ fd_screen_destroy(struct pipe_screen *pscreen)
 
 	if (screen->dev)
 		fd_device_del(screen->dev);
+
+	fd_bc_fini(&screen->batch_cache);
 
 	free(screen);
 }
@@ -661,6 +664,16 @@ fd_screen_create(struct fd_device *dev)
 		debug_printf("unsupported GPU: a%03d\n", screen->gpu_id);
 		goto fail;
 	}
+
+	/* NOTE: don't enable reordering on a2xx, since completely untested.
+	 * Also, don't enable if we have too old of a kernel to support
+	 * growable cmdstream buffers, since memory requirement for cmdstream
+	 * buffers would be too much otherwise.
+	 */
+	if ((screen->gpu_id >= 300) && (fd_device_version(dev) >= FD_VERSION_UNLIMITED_CMDS))
+		screen->reorder = !!(fd_mesa_debug & FD_DBG_REORDER);
+
+	fd_bc_init(&screen->batch_cache);
 
 	pscreen->destroy = fd_screen_destroy;
 	pscreen->get_param = fd_screen_get_param;

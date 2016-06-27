@@ -216,7 +216,7 @@ fd_hw_get_query_result(struct fd_context *ctx, struct fd_query *q,
 		if (!ctx->batch->needs_flush)
 			return true;
 		DBG("reading query result forces flush!");
-		fd_context_render(&ctx->base);
+		fd_batch_flush(ctx->batch);
 	}
 
 	util_query_clear_result(result, q->type);

@@ -61,14 +61,7 @@ struct fd_resource_slice {
 	uint32_t size0;          /* size of first layer in slice */
 };
 
-/* status of queued up but not flushed reads and write operations.
- * In _transfer_map() we need to know if queued up rendering needs
- * to be flushed to preserve the order of cpu and gpu access.
- */
-enum fd_resource_status {
-	FD_PENDING_WRITE = 0x01,
-	FD_PENDING_READ  = 0x02,
-};
+struct set;
 
 struct fd_resource {
 	struct u_resource base;
@@ -86,13 +79,23 @@ struct fd_resource {
 	/* TODO rename to secondary or auxiliary? */
 	struct fd_resource *stencil;
 
-	/* pending read/write state: */
-	enum fd_resource_status status;
-	/* resources accessed by queued but not flushed draws are tracked
-	 * in the used_resources list.
+	/* bitmask of in-flight batches which reference this resource.  Note
+	 * that the batch doesn't hold reference to resources (but instead
+	 * the fd_ringbuffer holds refs to the underlying fd_bo), but in case
+	 * the resource is destroyed we need to clean up the batch's weak
+	 * references to us.
 	 */
-	struct list_head list;
-	struct fd_batch *pending_batch;
+	uint32_t batch_mask;
+
+	/* reference to batch that writes this resource: */
+	struct fd_batch *write_batch;
+
+	/* Set of batches whose batch-cache key references this resource.
+	 * We need to track this to know which batch-cache entries to
+	 * invalidate if, for example, the resource is invalidated or
+	 * shadowed.
+	 */
+	uint32_t bc_batch_mask;
 };
 
 static inline struct fd_resource *

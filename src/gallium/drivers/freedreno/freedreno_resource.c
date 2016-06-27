@@ -33,8 +33,10 @@
 #include "util/u_transfer.h"
 #include "util/u_string.h"
 #include "util/u_surface.h"
+#include "util/set.h"
 
 #include "freedreno_resource.h"
+#include "freedreno_batch_cache.h"
 #include "freedreno_screen.h"
 #include "freedreno_surface.h"
 #include "freedreno_context.h"
@@ -47,10 +49,20 @@
 #include "state_tracker/drm_driver.h"
 
 static bool
-pending(struct fd_resource *rsc, enum fd_resource_status status)
+pending(struct fd_resource *rsc, bool write)
 {
-	return (rsc->status & status) ||
-		(rsc->stencil && (rsc->stencil->status & status));
+	/* if we have a pending GPU write, we are busy in any case: */
+	if (rsc->write_batch)
+		return true;
+
+	/* if CPU wants to write, but we are pending a GPU read, we are busy: */
+	if (write && rsc->batch_mask)
+		return true;
+
+	if (rsc->stencil && pending(rsc->stencil, write))
+		return true;
+
+	return false;
 }
 
 static void
@@ -108,10 +120,8 @@ realloc_bo(struct fd_resource *rsc, uint32_t size)
 
 	rsc->bo = fd_bo_new(screen->dev, size, flags);
 	rsc->timestamp = 0;
-	rsc->status = 0;
-	fd_batch_reference(&rsc->pending_batch, NULL);
-	list_delinit(&rsc->list);
 	util_range_set_empty(&rsc->valid_buffer_range);
+	fd_bc_invalidate_resource(rsc, true);
 }
 
 static unsigned
@@ -324,9 +334,18 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		 * resource and we're trying to write to it, flush the renders.
 		 */
 		if (((ptrans->usage & PIPE_TRANSFER_WRITE) &&
-					pending(rsc, FD_PENDING_READ | FD_PENDING_WRITE)) ||
-				pending(rsc, FD_PENDING_WRITE))
-			fd_context_render(pctx);
+					pending(rsc, true)) ||
+				pending(rsc, false)) {
+			if (usage & PIPE_TRANSFER_WRITE) {
+				struct fd_batch *batch;
+				foreach_batch(batch, &ctx->screen->batch_cache, rsc->batch_mask) {
+					fd_batch_flush(batch);
+				}
+				assert(rsc->batch_mask == 0);
+			} else {
+				fd_batch_flush(rsc->write_batch);
+			}
+		}
 
 		/* The GPU keeps track of how the various bo's are being used, and
 		 * will wait if necessary for the proper operation to have
@@ -451,10 +470,9 @@ fd_resource_destroy(struct pipe_screen *pscreen,
 		struct pipe_resource *prsc)
 {
 	struct fd_resource *rsc = fd_resource(prsc);
+	fd_bc_invalidate_resource(rsc, true);
 	if (rsc->bo)
 		fd_bo_del(rsc->bo);
-	fd_batch_reference(&rsc->pending_batch, NULL);
-	list_delinit(&rsc->list);
 	util_range_destroy(&rsc->valid_buffer_range);
 	FREE(rsc);
 }
@@ -570,7 +588,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 	*prsc = *tmpl;
 
 	pipe_reference_init(&prsc->reference, 1);
-	list_inithead(&rsc->list);
+
 	prsc->screen = pscreen;
 
 	util_range_init(&rsc->valid_buffer_range);
@@ -657,7 +675,7 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 	*prsc = *tmpl;
 
 	pipe_reference_init(&prsc->reference, 1);
-	list_inithead(&rsc->list);
+
 	prsc->screen = pscreen;
 
 	util_range_init(&rsc->valid_buffer_range);
@@ -846,8 +864,10 @@ fd_flush_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
 {
 	struct fd_resource *rsc = fd_resource(prsc);
 
-	if (pending(rsc, FD_PENDING_WRITE | FD_PENDING_READ))
-		fd_context_render(pctx);
+	if (rsc->write_batch)
+		fd_batch_flush(rsc->write_batch);
+
+	assert(!rsc->write_batch);
 }
 
 void

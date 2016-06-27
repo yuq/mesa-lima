@@ -25,25 +25,19 @@
  */
 
 #include "util/list.h"
+#include "util/set.h"
+#include "util/hash_table.h"
 #include "util/u_string.h"
 
 #include "freedreno_batch.h"
 #include "freedreno_context.h"
 #include "freedreno_resource.h"
 
-struct fd_batch *
-fd_batch_create(struct fd_context *ctx)
+static void
+batch_init(struct fd_batch *batch)
 {
-	struct fd_batch *batch = CALLOC_STRUCT(fd_batch);
-	static unsigned seqno = 0;
+	struct fd_context *ctx = batch->ctx;
 	unsigned size = 0;
-
-	if (!batch)
-		return NULL;
-
-	pipe_reference_init(&batch->reference, 1);
-	batch->seqno = ++seqno;
-	batch->ctx = ctx;
 
 	/* if kernel is too old to support unlimited # of cmd buffers, we
 	 * have no option but to allocate large worst-case sizes so that
@@ -62,7 +56,11 @@ fd_batch_create(struct fd_context *ctx)
 	fd_ringbuffer_set_parent(batch->draw, batch->gmem);
 	fd_ringbuffer_set_parent(batch->binning, batch->gmem);
 
-	list_inithead(&batch->used_resources);
+	batch->cleared = batch->partial_cleared = 0;
+	batch->restore = batch->resolve = 0;
+	batch->needs_flush = false;
+	batch->gmem_reason = 0;
+	batch->num_draws = 0;
 
 	/* reset maximal bounds: */
 	batch->max_scissor.minx = batch->max_scissor.miny = ~0;
@@ -73,13 +71,33 @@ fd_batch_create(struct fd_context *ctx)
 	if (is_a3xx(ctx->screen))
 		util_dynarray_init(&batch->rbrc_patches);
 
+	assert(batch->resources->entries == 0);
+}
+
+struct fd_batch *
+fd_batch_create(struct fd_context *ctx)
+{
+	struct fd_batch *batch = CALLOC_STRUCT(fd_batch);
+
+	if (!batch)
+		return NULL;
+
+	DBG("%p", batch);
+
+	pipe_reference_init(&batch->reference, 1);
+	batch->ctx = ctx;
+
+	batch->resources = _mesa_set_create(NULL, _mesa_hash_pointer,
+			_mesa_key_pointer_equal);
+
+	batch_init(batch);
+
 	return batch;
 }
 
-void
-__fd_batch_destroy(struct fd_batch *batch)
+static void
+batch_fini(struct fd_batch *batch)
 {
-	util_copy_framebuffer_state(&batch->framebuffer, NULL);
 	fd_ringbuffer_del(batch->draw);
 	fd_ringbuffer_del(batch->binning);
 	fd_ringbuffer_del(batch->gmem);
@@ -88,6 +106,74 @@ __fd_batch_destroy(struct fd_batch *batch)
 
 	if (is_a3xx(batch->ctx->screen))
 		util_dynarray_fini(&batch->rbrc_patches);
+}
+
+static void
+batch_flush_reset_dependencies(struct fd_batch *batch, bool flush)
+{
+	struct fd_batch_cache *cache = &batch->ctx->screen->batch_cache;
+	struct fd_batch *dep;
+
+	foreach_batch(dep, cache, batch->dependents_mask) {
+		if (flush)
+			fd_batch_flush(dep);
+		fd_batch_reference(&dep, NULL);
+	}
+
+	batch->dependents_mask = 0;
+}
+
+static void
+batch_reset_resources(struct fd_batch *batch)
+{
+	struct set_entry *entry;
+
+	set_foreach(batch->resources, entry) {
+		struct fd_resource *rsc = (struct fd_resource *)entry->key;
+		_mesa_set_remove(batch->resources, entry);
+		debug_assert(rsc->batch_mask & (1 << batch->idx));
+		rsc->batch_mask &= ~(1 << batch->idx);
+		if (rsc->write_batch == batch)
+			fd_batch_reference(&rsc->write_batch, NULL);
+	}
+}
+
+static void
+batch_reset(struct fd_batch *batch)
+{
+	DBG("%p", batch);
+
+	batch_flush_reset_dependencies(batch, false);
+	batch_reset_resources(batch);
+
+	batch_fini(batch);
+	batch_init(batch);
+}
+
+void
+fd_batch_reset(struct fd_batch *batch)
+{
+	if (batch->needs_flush)
+		batch_reset(batch);
+}
+
+void
+__fd_batch_destroy(struct fd_batch *batch)
+{
+	fd_bc_invalidate_batch(batch, true);
+
+	DBG("%p", batch);
+
+	util_copy_framebuffer_state(&batch->framebuffer, NULL);
+
+	batch_fini(batch);
+
+	batch_reset_resources(batch);
+	debug_assert(batch->resources->entries == 0);
+	_mesa_set_destroy(batch->resources, NULL);
+
+	batch_flush_reset_dependencies(batch, false);
+	debug_assert(batch->dependents_mask == 0);
 
 	free(batch);
 }
@@ -98,46 +184,125 @@ __fd_batch_describe(char* buf, const struct fd_batch *batch)
 	util_sprintf(buf, "fd_batch<%u>", batch->seqno);
 }
 
-void
-fd_batch_flush(struct fd_batch *batch)
+static void
+batch_flush(struct fd_batch *batch)
 {
-	struct fd_resource *rsc, *rsc_tmp;
-
 	DBG("%p: needs_flush=%d", batch, batch->needs_flush);
 
 	if (!batch->needs_flush)
 		return;
 
+	batch->needs_flush = false;
+
+	batch_flush_reset_dependencies(batch, true);
+
 	fd_gmem_render_tiles(batch);
 
-	/* go through all the used resources and clear their reading flag */
-	LIST_FOR_EACH_ENTRY_SAFE(rsc, rsc_tmp, &batch->used_resources, list) {
-		debug_assert(rsc->pending_batch == batch);
-		debug_assert(rsc->status != 0);
-		rsc->status = 0;
-		fd_batch_reference(&rsc->pending_batch, NULL);
-		list_delinit(&rsc->list);
-	}
+	batch_reset_resources(batch);
 
-	assert(LIST_IS_EMPTY(&batch->used_resources));
+	debug_assert(batch->reference.count > 0);
+
+	if (batch == batch->ctx->batch) {
+		batch_reset(batch);
+	} else {
+		fd_bc_invalidate_batch(batch, false);
+	}
 }
 
 void
-fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc,
-		enum fd_resource_status status)
+fd_batch_flush(struct fd_batch *batch)
 {
-	rsc->status |= status;
-
-	if (rsc->stencil)
-		rsc->stencil->status |= status;
-
-	/* TODO resources can actually be shared across contexts,
-	 * so I'm not sure a single list-head will do the trick?
+	/* NOTE: we need to hold an extra ref across the body of flush,
+	 * since the last ref to this batch could be dropped when cleaning
+	 * up used_resources
 	 */
-	debug_assert((rsc->pending_batch == batch) || !rsc->pending_batch);
-	list_delinit(&rsc->list);
-	list_addtail(&rsc->list, &batch->used_resources);
-	fd_batch_reference(&rsc->pending_batch, batch);
+	struct fd_batch *tmp = NULL;
+	fd_batch_reference(&tmp, batch);
+	batch_flush(tmp);
+	fd_batch_reference(&tmp, NULL);
+}
+
+/* does 'batch' depend directly or indirectly on 'other' ? */
+static bool
+batch_depends_on(struct fd_batch *batch, struct fd_batch *other)
+{
+	struct fd_batch_cache *cache = &batch->ctx->screen->batch_cache;
+	struct fd_batch *dep;
+
+	if (batch->dependents_mask & (1 << other->idx))
+		return true;
+
+	foreach_batch(dep, cache, batch->dependents_mask)
+		if (batch_depends_on(batch, dep))
+			return true;
+
+	return false;
+}
+
+static void
+batch_add_dep(struct fd_batch *batch, struct fd_batch *dep)
+{
+	if (batch->dependents_mask & (1 << dep->idx))
+		return;
+
+	/* if the new depedency already depends on us, we need to flush
+	 * to avoid a loop in the dependency graph.
+	 */
+	if (batch_depends_on(dep, batch)) {
+		DBG("%p: flush forced on %p!", batch, dep);
+		fd_batch_flush(dep);
+	} else {
+		struct fd_batch *other = NULL;
+		fd_batch_reference(&other, dep);
+		batch->dependents_mask |= (1 << dep->idx);
+		DBG("%p: added dependency on %p", batch, dep);
+	}
+}
+
+void
+fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool write)
+{
+	if (rsc->stencil)
+		fd_batch_resource_used(batch, rsc->stencil, write);
+
+	DBG("%p: %s %p", batch, write ? "write" : "read", rsc);
+
+	/* note, invalidate write batch, to avoid further writes to rsc
+	 * resulting in a write-after-read hazard.
+	 */
+
+	if (write) {
+		/* if we are pending read or write by any other batch: */
+		if (rsc->batch_mask != (1 << batch->idx)) {
+			struct fd_batch_cache *cache = &batch->ctx->screen->batch_cache;
+			struct fd_batch *dep;
+			foreach_batch(dep, cache, rsc->batch_mask) {
+				struct fd_batch *b = NULL;
+				/* note that batch_add_dep could flush and unref dep, so
+				 * we need to hold a reference to keep it live for the
+				 * fd_bc_invalidate_batch()
+				 */
+				fd_batch_reference(&b, dep);
+				batch_add_dep(batch, b);
+				fd_bc_invalidate_batch(b, false);
+				fd_batch_reference_locked(&b, NULL);
+			}
+		}
+		fd_batch_reference(&rsc->write_batch, batch);
+	} else {
+		if (rsc->write_batch) {
+			batch_add_dep(batch, rsc->write_batch);
+			fd_bc_invalidate_batch(rsc->write_batch, false);
+		}
+	}
+
+	if (rsc->batch_mask & (1 << batch->idx))
+		return;
+
+	debug_assert(!_mesa_set_search(batch->resources, rsc));
+
+	_mesa_set_add(batch->resources, rsc);
+	rsc->batch_mask |= (1 << batch->idx);
 }
 
 void
@@ -149,5 +314,5 @@ fd_batch_check_size(struct fd_batch *batch)
 	struct fd_ringbuffer *ring = batch->draw;
 	if (((ring->cur - ring->start) > (ring->size/4 - 0x1000)) ||
 			(fd_mesa_debug & FD_DBG_FLUSH))
-		fd_context_render(&batch->ctx->base);
+		fd_batch_flush(batch);
 }

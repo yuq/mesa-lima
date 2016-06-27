@@ -42,6 +42,7 @@ enum fd_resource_status;
 struct fd_batch {
 	struct pipe_reference reference;
 	unsigned seqno;
+	unsigned idx;
 
 	struct fd_context *ctx;
 
@@ -117,15 +118,24 @@ struct fd_batch {
 	/** tiling/gmem (IB0) cmdstream: */
 	struct fd_ringbuffer *gmem;
 
-	/** list of resources used by currently-unsubmitted batch */
-	struct list_head used_resources;
+	/* Set of resources used by currently-unsubmitted batch (read or
+	 * write).. does not hold a reference to the resource.
+	 */
+	struct set *resources;
+
+	/** key in batch-cache (if not null): */
+	const void *key;
+	uint32_t hash;
+
+	/** set of dependent batches.. holds refs to dependent batches: */
+	uint32_t dependents_mask;
 };
 
 struct fd_batch * fd_batch_create(struct fd_context *ctx);
 
+void fd_batch_reset(struct fd_batch *batch);
 void fd_batch_flush(struct fd_batch *batch);
-void fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc,
-		enum fd_resource_status status);
+void fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool write);
 void fd_batch_check_size(struct fd_batch *batch);
 
 /* not called directly: */

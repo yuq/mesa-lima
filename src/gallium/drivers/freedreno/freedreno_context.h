@@ -381,8 +381,6 @@ struct pipe_context * fd_context_init(struct fd_context *ctx,
 		struct pipe_screen *pscreen, const uint8_t *primtypes,
 		void *priv);
 
-void fd_context_render(struct pipe_context *pctx);
-
 void fd_context_destroy(struct pipe_context *pctx);
 
 #endif /* FREEDRENO_CONTEXT_H_ */

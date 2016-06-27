@@ -35,7 +35,7 @@
 #include "pipe/p_screen.h"
 #include "util/u_memory.h"
 
-typedef uint32_t u32;
+#include "freedreno_batch_cache.h"
 
 struct fd_bo;
 
@@ -66,6 +66,10 @@ struct fd_screen {
 	struct fd_pipe *pipe;
 
 	int64_t cpu_gpu_time_delta;
+
+	struct fd_batch_cache batch_cache;
+
+	bool reorder;
 };
 
 static inline struct fd_screen *

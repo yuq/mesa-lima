@@ -117,10 +117,17 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 	struct fd_context *ctx = fd_context(pctx);
 	struct pipe_framebuffer_state *cso;
 
-	DBG("%d: cbufs[0]=%p, zsbuf=%p", ctx->batch->needs_flush,
-			framebuffer->cbufs[0], framebuffer->zsbuf);
-
-	fd_context_render(pctx);
+	if (ctx->screen->reorder) {
+		struct fd_batch *batch =
+			fd_batch_from_fb(&ctx->screen->batch_cache, ctx, framebuffer);
+		fd_batch_reference(&ctx->batch, NULL);
+		ctx->batch = batch;
+		ctx->dirty = ~0;
+	} else {
+		DBG("%d: cbufs[0]=%p, zsbuf=%p", ctx->batch->needs_flush,
+				framebuffer->cbufs[0], framebuffer->zsbuf);
+		fd_batch_flush(ctx->batch);
+	}
 
 	cso = &ctx->batch->framebuffer;
 

@@ -4,6 +4,8 @@ C_SOURCES := \
 	disasm.h \
 	freedreno_batch.c \
 	freedreno_batch.h \
+	freedreno_batch_cache.c \
+	freedreno_batch_cache.h \
 	freedreno_context.c \
 	freedreno_context.h \
 	freedreno_draw.c \

@@ -38,39 +38,27 @@
 #include "freedreno_query_hw.h"
 #include "freedreno_util.h"
 
-/* emit accumulated render cmds, needed for example if render target has
- * changed, or for flush()
- */
-void
-fd_context_render(struct pipe_context *pctx)
-{
-	struct fd_context *ctx = fd_context(pctx);
-	struct fd_batch *new_batch;
-
-	fd_batch_flush(ctx->batch);
-
-	new_batch = fd_batch_create(ctx);
-	util_copy_framebuffer_state(&new_batch->framebuffer, &ctx->batch->framebuffer);
-	fd_batch_reference(&ctx->batch, NULL);
-	ctx->batch = new_batch;
-}
-
 static void
 fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 		unsigned flags)
 {
-	struct fd_batch *batch = NULL;
+	struct fd_context *ctx = fd_context(pctx);
+	uint32_t timestamp;
 
-	fd_batch_reference(&batch, fd_context(pctx)->batch);
-
-	fd_context_render(pctx);
+	if (!ctx->screen->reorder) {
+		struct fd_batch *batch = NULL;
+		fd_batch_reference(&batch, ctx->batch);
+		fd_batch_flush(batch);
+		timestamp = fd_ringbuffer_timestamp(batch->gmem);
+		fd_batch_reference(&batch, NULL);
+	} else {
+		timestamp = fd_bc_flush(&ctx->screen->batch_cache, ctx);
+	}
 
 	if (fence) {
 		fd_screen_fence_ref(pctx->screen, fence, NULL);
-		*fence = fd_fence_create(pctx, fd_ringbuffer_timestamp(batch->gmem));
+		*fence = fd_fence_create(pctx, timestamp);
 	}
-
-	fd_batch_reference(&batch, NULL);
 }
 
 /**
@@ -81,8 +69,13 @@ static void
 fd_emit_string_marker(struct pipe_context *pctx, const char *string, int len)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	struct fd_ringbuffer *ring = ctx->batch->draw;
+	struct fd_ringbuffer *ring;
 	const uint32_t *buf = (const void *)string;
+
+	if (!ctx->batch)
+		return;
+
+	ring = ctx->batch->draw;
 
 	/* max packet size is 0x3fff dwords: */
 	len = MIN2(len, 0x3fff * 4);
@@ -110,6 +103,9 @@ fd_context_destroy(struct pipe_context *pctx)
 
 	DBG("");
 
+	fd_batch_reference(&ctx->batch, NULL);  /* unref current batch */
+	fd_bc_invalidate_context(ctx);
+
 	fd_prog_fini(pctx);
 	fd_hw_query_fini(pctx);
 
@@ -120,8 +116,6 @@ fd_context_destroy(struct pipe_context *pctx)
 		util_primconvert_destroy(ctx->primconvert);
 
 	util_slab_destroy(&ctx->transfer_pool);
-
-	fd_batch_reference(&ctx->batch, NULL);  /* unref current batch */
 
 	for (i = 0; i < ARRAY_SIZE(ctx->pipe); i++) {
 		struct fd_vsc_pipe *pipe = &ctx->pipe[i];
@@ -177,7 +171,12 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	pctx->emit_string_marker = fd_emit_string_marker;
 	pctx->set_debug_callback = fd_set_debug_callback;
 
-	ctx->batch = fd_batch_create(ctx);
+	/* TODO what about compute?  Ideally it creates it's own independent
+	 * batches per compute job (since it isn't using tiling, so no point
+	 * in getting involved with the re-ordering madness)..
+	 */
+	if (!screen->reorder)
+		ctx->batch = fd_bc_alloc_batch(&screen->batch_cache, ctx);
 
 	fd_reset_wfi(ctx);
 
