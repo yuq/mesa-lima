@@ -570,6 +570,10 @@ struct r600_common_context {
 	 * in r600_texture because r600_texture can be shared by multiple
 	 * contexts. This is for back buffers only. We shouldn't get too many
 	 * of those.
+	 *
+	 * X11 DRI3 rotates among a finite set of back buffers. They should
+	 * all fit in this array. If they don't, separate DCC might never be
+	 * enabled by DCC stat gathering.
 	 */
 	struct {
 		struct r600_texture		*tex;
@@ -579,7 +583,7 @@ struct r600_common_context {
 		 * the least recently used slot is evicted based on this. */
 		int64_t				last_use_timestamp;
 		bool				query_active;
-	} dcc_stats[2];
+	} dcc_stats[5];
 
 	/* The list of all texture buffer objects in this context.
 	 * This list is walked when a buffer is invalidated/reallocated and
