@@ -1625,6 +1625,7 @@ CodeEmitterGM107::emitLOP()
          break;
       }
       emitPRED (0x30);
+      emitCC   (0x2f);
       emitX    (0x2b);
       emitField(0x29, 2, lop);
       emitINV  (0x28, insn->src(1));
@@ -1635,6 +1636,7 @@ CodeEmitterGM107::emitLOP()
       emitINV  (0x38, insn->src(1));
       emitINV  (0x37, insn->src(0));
       emitField(0x35, 2, lop);
+      emitCC   (0x34);
       emitIMMD (0x14, 32, insn->src(1));
    }
 
