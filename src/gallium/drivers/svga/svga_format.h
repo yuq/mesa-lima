@@ -104,4 +104,8 @@ SVGA3dSurfaceFormat
 svga_sampler_format(SVGA3dSurfaceFormat format);
 
 
+bool
+svga_format_is_uncompressed_snorm(SVGA3dSurfaceFormat format);
+
+
 #endif /* SVGA_FORMAT_H_ */

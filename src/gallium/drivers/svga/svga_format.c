@@ -2193,3 +2193,23 @@ svga_sampler_format(SVGA3dSurfaceFormat format)
       return format;
    }
 }
+
+
+/**
+ * Is the given format an uncompressed snorm format?
+ */
+bool
+svga_format_is_uncompressed_snorm(SVGA3dSurfaceFormat format)
+{
+   switch (format) {
+   case SVGA3D_R8G8B8A8_SNORM:
+   case SVGA3D_R8G8_SNORM:
+   case SVGA3D_R8_SNORM:
+   case SVGA3D_R16G16B16A16_SNORM:
+   case SVGA3D_R16G16_SNORM:
+   case SVGA3D_R16_SNORM:
+      return true;
+   default:
+      return false;
+   }
+}
