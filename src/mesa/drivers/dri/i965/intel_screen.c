@@ -1605,12 +1605,10 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
          (ret != -1 || errno != EINVAL);
    }
 
-   struct drm_i915_getparam getparam;
-   getparam.param = I915_PARAM_CMD_PARSER_VERSION;
-   getparam.value = &intelScreen->cmd_parser_version;
-   const int ret = drmIoctl(psp->fd, DRM_IOCTL_I915_GETPARAM, &getparam);
-   if (ret == -1)
+   if (intel_get_param(intelScreen, I915_PARAM_CMD_PARSER_VERSION,
+                       &intelScreen->cmd_parser_version) < 0) {
       intelScreen->cmd_parser_version = 0;
+   }
 
    /* Haswell requires command parser version 6 in order to write to the
     * MI_MATH GPR registers, and version 7 in order to use
@@ -1630,12 +1628,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    intelScreen->program_id = 1;
 
    if (intelScreen->devinfo->has_resource_streamer) {
-      int val = -1;
-      getparam.param = I915_PARAM_HAS_RESOURCE_STREAMER;
-      getparam.value = &val;
-
-      drmIoctl(psp->fd, DRM_IOCTL_I915_GETPARAM, &getparam);
-      intelScreen->has_resource_streamer = val > 0;
+      intelScreen->has_resource_streamer =
+        intel_get_boolean(intelScreen, I915_PARAM_HAS_RESOURCE_STREAMER);
    }
 
    return (const __DRIconfig**) intel_screen_make_configs(psp);
