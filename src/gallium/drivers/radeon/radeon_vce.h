@@ -405,6 +405,7 @@ struct rvce_encoder {
 	struct rvid_buffer		*fb;
 	struct rvid_buffer		cpb;
 	struct pipe_h264_enc_picture_desc pic;
+	struct rvce_h264_enc_pic	enc_pic;
 
 	unsigned			task_info_idx;
 	unsigned			bs_idx;
@@ -441,5 +442,21 @@ void radeon_vce_50_init(struct rvce_encoder *enc);
 
 /* init vce fw 52 specific callbacks */
 void radeon_vce_52_init(struct rvce_encoder *enc);
+
+/* version specific function for getting parameters */
+void (*get_pic_param)(struct rvce_encoder *enc,
+                      struct pipe_h264_enc_picture_desc *pic);
+
+/* get parameters for vce 40.2.2 */
+void radeon_vce_40_2_2_get_param(struct rvce_encoder *enc,
+                                 struct pipe_h264_enc_picture_desc *pic);
+
+/* get parameters for vce 50 */
+void radeon_vce_50_get_param(struct rvce_encoder *enc,
+                             struct pipe_h264_enc_picture_desc *pic);
+
+/* get parameters for vce 52 */
+void radeon_vce_52_get_param(struct rvce_encoder *enc,
+                             struct pipe_h264_enc_picture_desc *pic);
 
 #endif

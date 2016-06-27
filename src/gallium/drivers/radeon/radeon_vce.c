@@ -267,6 +267,7 @@ static void rvce_begin_frame(struct pipe_video_codec *encoder,
 		enc->pic.quant_b_frames != pic->quant_b_frames;
 
 	enc->pic = *pic;
+	get_pic_param(enc, pic);
 
 	enc->get_buffer(vid_buf->resources[0], &enc->handle, &enc->luma);
 	enc->get_buffer(vid_buf->resources[1], NULL, &enc->chroma);
@@ -474,6 +475,7 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 	switch (rscreen->info.vce_fw_version) {
 	case FW_40_2_2:
 		radeon_vce_40_2_2_init(enc);
+		get_pic_param = radeon_vce_40_2_2_get_param;
 		break;
 
 	case FW_50_0_1:
@@ -481,11 +483,13 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 	case FW_50_10_2:
 	case FW_50_17_3:
 		radeon_vce_50_init(enc);
+		get_pic_param = radeon_vce_50_get_param;
 		break;
 
 	case FW_52_0_3:
 	case FW_52_4_3:
 		radeon_vce_52_init(enc);
+		get_pic_param = radeon_vce_52_get_param;
 		break;
 
 	default:
