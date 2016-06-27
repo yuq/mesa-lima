@@ -106,11 +106,15 @@ svga_validate_pipe_sampler_view(struct svga_context *svga,
       enum pipe_format pformat = sv->base.format;
 
       /* vgpu10 cannot create a BGRX view for a BGRA resource, so force it to
-       * create a BGRA view.
+       * create a BGRA view (and vice versa).
        */
       if (pformat == PIPE_FORMAT_B8G8R8X8_UNORM &&
           sv->base.texture->format == PIPE_FORMAT_B8G8R8A8_UNORM) {
          pformat = PIPE_FORMAT_B8G8R8A8_UNORM;
+      }
+      else if (pformat == PIPE_FORMAT_B8G8R8A8_UNORM &&
+          sv->base.texture->format == PIPE_FORMAT_B8G8R8X8_UNORM) {
+         pformat = PIPE_FORMAT_B8G8R8X8_UNORM;
       }
 
       format = svga_translate_format(ss, pformat,
