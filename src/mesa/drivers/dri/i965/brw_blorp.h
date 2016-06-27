@@ -338,6 +338,12 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
                              struct brw_blorp_prog_data *prog_data,
                              unsigned *program_size);
 
+void
+blorp_get_image_offset_sa(struct isl_device *dev, const struct isl_surf *surf,
+                          uint32_t level, uint32_t layer,
+                          uint32_t *x_offset_sa,
+                          uint32_t *y_offset_sa);
+
 uint32_t
 brw_blorp_emit_surface_state(struct brw_context *brw,
                              const struct brw_blorp_surface_info *surface,

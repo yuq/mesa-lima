@@ -1589,6 +1589,115 @@ swizzle_to_scs(GLenum swizzle)
    return (enum isl_channel_select)((swizzle + 4) & 7);
 }
 
+static void
+surf_convert_to_single_slice(struct brw_context *brw,
+                             struct brw_blorp_surface_info *info)
+{
+   /* This only makes sense for a single level and array slice */
+   assert(info->view.levels == 1 && info->view.array_len == 1);
+
+   /* Just bail if we have nothing to do. */
+   if (info->surf.dim == ISL_SURF_DIM_2D &&
+       info->view.base_level == 0 && info->view.base_array_layer == 0 &&
+       info->surf.levels == 0 && info->surf.logical_level0_px.array_len == 0)
+      return;
+
+   uint32_t x_offset_sa, y_offset_sa;
+   blorp_get_image_offset_sa(&brw->isl_dev, &info->surf, info->view.base_level,
+                             info->view.base_array_layer,
+                             &x_offset_sa, &y_offset_sa);
+
+   isl_tiling_get_intratile_offset_sa(&brw->isl_dev, info->surf.tiling,
+                                      info->view.format, info->surf.row_pitch,
+                                      x_offset_sa, y_offset_sa,
+                                      &info->bo_offset,
+                                      &info->tile_x_sa, &info->tile_y_sa);
+
+   /* TODO: Once this file gets converted to C, we shouls just use designated
+    * initializers.
+    */
+   struct isl_surf_init_info init_info = isl_surf_init_info();
+
+   init_info.dim = ISL_SURF_DIM_2D;
+   init_info.format = ISL_FORMAT_R8_UINT;
+   init_info.width =
+      minify(info->surf.logical_level0_px.width, info->view.base_level);
+   init_info.height =
+      minify(info->surf.logical_level0_px.height, info->view.base_level);
+   init_info.depth = 1;
+   init_info.levels = 1;
+   init_info.array_len = 1;
+   init_info.samples = info->surf.samples;
+   init_info.min_pitch = info->surf.row_pitch;
+   init_info.usage = info->surf.usage;
+   init_info.tiling_flags = 1 << info->surf.tiling;
+
+   isl_surf_init_s(&brw->isl_dev, &info->surf, &init_info);
+   assert(info->surf.row_pitch == init_info.min_pitch);
+
+   /* The view is also different now. */
+   info->view.base_level = 0;
+   info->view.levels = 1;
+   info->view.base_array_layer = 0;
+   info->view.array_len = 1;
+}
+
+static void
+surf_fake_interleaved_msaa(struct brw_context *brw,
+                           struct brw_blorp_surface_info *info)
+{
+   assert(info->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
+
+   /* First, we need to convert it to a simple 1-level 1-layer 2-D surface */
+   surf_convert_to_single_slice(brw, info);
+
+   info->surf.logical_level0_px = info->surf.phys_level0_sa;
+   info->surf.samples = 1;
+   info->surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
+}
+
+static void
+surf_retile_w_to_y(struct brw_context *brw,
+                   struct brw_blorp_surface_info *info)
+{
+   assert(info->surf.tiling == ISL_TILING_W);
+
+   /* First, we need to convert it to a simple 1-level 1-layer 2-D surface */
+   surf_convert_to_single_slice(brw, info);
+
+   /* On gen7+, we don't have interleaved multisampling for color render
+    * targets so we have to fake it.
+    *
+    * TODO: Are we sure we don't also need to fake it on gen6?
+    */
+   if (brw->gen > 6 && info->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
+      info->surf.logical_level0_px = info->surf.phys_level0_sa;
+      info->surf.samples = 1;
+      info->surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
+   }
+
+   if (brw->gen == 6) {
+      /* Gen6 stencil buffers have a very large alignment coming in from the
+       * miptree.  It's out-of-bounds for what the surface state can handle.
+       * Since we have a single layer and level, it doesn't really matter as
+       * long as we don't pass a bogus value into isl_surf_fill_state().
+       */
+      info->surf.image_alignment_el = isl_extent3d(4, 2, 1);
+   }
+
+   /* Now that we've converted everything to a simple 2-D surface with only
+    * one miplevel, we can go about retiling it.
+    */
+   const unsigned x_align = 8, y_align = info->surf.samples != 0 ? 8 : 4;
+   info->surf.tiling = ISL_TILING_Y0;
+   info->surf.logical_level0_px.width =
+      ALIGN(info->surf.logical_level0_px.width, x_align) * 2;
+   info->surf.logical_level0_px.height =
+      ALIGN(info->surf.logical_level0_px.height, y_align) / 2;
+   info->tile_x_sa *= 2;
+   info->tile_y_sa /= 2;
+}
+
 /**
  * Note: if the src (or dst) is a 2D multisample array texture on Gen7+ using
  * INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, src_layer (dst_layer) is
@@ -1759,7 +1868,10 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    /* For some texture types, we need to pass the layer through the sampler. */
    params.wm_inputs.src_z = params.src.z_offset;
 
-   if (brw->gen > 6 && dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS) {
+   if (brw->gen > 6 &&
+       params.dst.surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
+      assert(params.dst.surf.samples > 1);
+
       /* We must expand the rectangle we send through the rendering pipeline,
        * to account for the fact that we are mapping the destination region as
        * single-sampled when it is in fact multisampled.  We must also align
@@ -1772,71 +1884,41 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        * If it's UMS, then we have no choice but to set up the rendering
        * pipeline as multisampled.
        */
-      assert(params.dst.surf.msaa_layout = ISL_MSAA_LAYOUT_INTERLEAVED);
       switch (params.dst.surf.samples) {
       case 2:
          params.x0 = ROUND_DOWN_TO(params.x0 * 2, 4);
          params.y0 = ROUND_DOWN_TO(params.y0, 4);
          params.x1 = ALIGN(params.x1 * 2, 4);
          params.y1 = ALIGN(params.y1, 4);
-         params.dst.surf.logical_level0_px.width *= 2;
          break;
       case 4:
          params.x0 = ROUND_DOWN_TO(params.x0 * 2, 4);
          params.y0 = ROUND_DOWN_TO(params.y0 * 2, 4);
          params.x1 = ALIGN(params.x1 * 2, 4);
          params.y1 = ALIGN(params.y1 * 2, 4);
-         params.dst.surf.logical_level0_px.width *= 2;
-         params.dst.surf.logical_level0_px.height *= 2;
          break;
       case 8:
          params.x0 = ROUND_DOWN_TO(params.x0 * 4, 8);
          params.y0 = ROUND_DOWN_TO(params.y0 * 2, 4);
          params.x1 = ALIGN(params.x1 * 4, 8);
          params.y1 = ALIGN(params.y1 * 2, 4);
-         params.dst.surf.logical_level0_px.width *= 4;
-         params.dst.surf.logical_level0_px.height *= 2;
          break;
       case 16:
          params.x0 = ROUND_DOWN_TO(params.x0 * 4, 8);
          params.y0 = ROUND_DOWN_TO(params.y0 * 4, 8);
          params.x1 = ALIGN(params.x1 * 4, 8);
          params.y1 = ALIGN(params.y1 * 4, 8);
-         params.dst.surf.logical_level0_px.width *= 4;
-         params.dst.surf.logical_level0_px.height *= 4;
          break;
       default:
          unreachable("Unrecognized sample count in brw_blorp_blit_params ctor");
       }
 
-      /* Gen7's rendering hardware only supports the IMS layout for depth and
-       * stencil render targets.  Blorp always maps its destination surface as
-       * a color render target (even if it's actually a depth or stencil
-       * buffer).  So if the destination is IMS, we'll have to map it as a
-       * single-sampled texture and interleave the samples ourselves.
-       */
-      params.dst.surf.samples = 1;
-      params.dst.surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
+      surf_fake_interleaved_msaa(brw, &params.dst);
 
       wm_prog_key.use_kill = true;
    }
 
    if (params.dst.surf.tiling == ISL_TILING_W) {
-      /* We need to fake W-tiling with Y-tiling */
-      params.dst.surf.tiling = ISL_TILING_Y0;
-
-      wm_prog_key.dst_tiled_w = true;
-
-      if (params.dst.surf.samples > 1) {
-         /* If the destination surface is a W-tiled multisampled stencil
-          * buffer that we're mapping as Y tiled, then we need to arrange for
-          * the WM program to run once per sample rather than once per pixel,
-          * because the memory layout of related samples doesn't match between
-          * W and Y tiling.
-          */
-         wm_prog_key.persample_msaa_dispatch = true;
-      }
-
       /* We must modify the rectangle we send through the rendering pipeline
        * (and the size and x/y offset of the destination surface), to account
        * for the fact that we are mapping it as Y-tiled when it is in fact
@@ -1888,39 +1970,36 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       params.y0 = ROUND_DOWN_TO(params.y0, y_align) / 2;
       params.x1 = ALIGN(params.x1, x_align) * 2;
       params.y1 = ALIGN(params.y1, y_align) / 2;
-      params.dst.surf.logical_level0_px.width =
-         ALIGN(params.dst.surf.logical_level0_px.width, x_align) * 2;
-      params.dst.surf.logical_level0_px.height =
-         ALIGN(params.dst.surf.logical_level0_px.height, y_align) / 2;
-      params.dst.tile_x_sa *= 2;
-      params.dst.tile_y_sa /= 2;
+
+      /* Retile the surface to Y-tiled */
+      surf_retile_w_to_y(brw, &params.dst);
+
+      wm_prog_key.dst_tiled_w = true;
       wm_prog_key.use_kill = true;
+
+      if (params.dst.surf.samples > 1) {
+         /* If the destination surface is a W-tiled multisampled stencil
+          * buffer that we're mapping as Y tiled, then we need to arrange for
+          * the WM program to run once per sample rather than once per pixel,
+          * because the memory layout of related samples doesn't match between
+          * W and Y tiling.
+          */
+         wm_prog_key.persample_msaa_dispatch = true;
+      }
    }
 
    if (brw->gen < 8 && params.src.surf.tiling == ISL_TILING_W) {
       /* On Haswell and earlier, we have to fake W-tiled sources as Y-tiled.
        * Broadwell adds support for sampling from stencil.
-       */
-      params.src.surf.tiling = ISL_TILING_Y0;
-
-      wm_prog_key.src_tiled_w = true;
-
-      /* We must modify the size and x/y offset of the source surface to
-       * account for the fact that we are mapping it as Y-tiled when it is in
-       * fact W tiled.
        *
        * See the comments above concerning x/y offset alignment for the
        * destination surface.
        *
        * TODO: what if this makes the texture size too large?
        */
-      const unsigned x_align = 8, y_align = params.src.surf.samples != 0 ? 8 : 4;
-      params.src.surf.logical_level0_px.width =
-         ALIGN(params.src.surf.logical_level0_px.width, x_align) * 2;
-      params.src.surf.logical_level0_px.height =
-         ALIGN(params.src.surf.logical_level0_px.height, y_align) / 2;
-      params.src.tile_x_sa *= 2;
-      params.src.tile_y_sa /= 2;
+      surf_retile_w_to_y(brw, &params.src);
+
+      wm_prog_key.src_tiled_w = true;
    }
 
    /* tex_samples and rt_samples are the sample counts that are set up in

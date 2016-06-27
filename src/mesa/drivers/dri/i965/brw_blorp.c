@@ -90,7 +90,7 @@ get_image_offset_sa_gen6_stencil(const struct isl_surf *surf,
    *y_offset_sa = y;
 }
 
-static void
+void
 blorp_get_image_offset_sa(struct isl_device *dev, const struct isl_surf *surf,
                           uint32_t level, uint32_t layer,
                           uint32_t *x_offset_sa,
@@ -100,58 +100,9 @@ blorp_get_image_offset_sa(struct isl_device *dev, const struct isl_surf *surf,
       get_image_offset_sa_gen6_stencil(surf, level, layer,
                                        x_offset_sa, y_offset_sa);
    } else {
-      /* Using base_array_layer for Z in 3-D surfaces is a bit abusive, but it
-       * will go away soon enough.
-       */
-      uint32_t z = 0;
-      if (surf->dim == ISL_SURF_DIM_3D) {
-         z = layer;
-         layer = 0;
-      }
-
-      isl_surf_get_image_offset_sa(surf, level, layer, z,
+      isl_surf_get_image_offset_sa(surf, level, layer, 0,
                                    x_offset_sa, y_offset_sa);
    }
-}
-
-static void
-surf_apply_level_layer_offsets(struct isl_device *dev, struct isl_surf *surf,
-                               struct isl_view *view, uint32_t *byte_offset,
-                               uint32_t *tile_x_sa, uint32_t *tile_y_sa)
-{
-   /* This only makes sense for a single level and array slice */
-   assert(view->levels == 1 && view->array_len == 1);
-
-   uint32_t x_offset_sa, y_offset_sa;
-   blorp_get_image_offset_sa(dev, surf, view->base_level,
-                             view->base_array_layer,
-                             &x_offset_sa, &y_offset_sa);
-
-   isl_tiling_get_intratile_offset_sa(dev, surf->tiling, view->format,
-                                      surf->row_pitch, x_offset_sa, y_offset_sa,
-                                      byte_offset, tile_x_sa, tile_y_sa);
-
-   /* Now that that's done, we have a very bare 2-D surface */
-   surf->dim = ISL_SURF_DIM_2D;
-   surf->dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
-
-   surf->logical_level0_px.width =
-      minify(surf->logical_level0_px.width, view->base_level);
-   surf->logical_level0_px.height =
-      minify(surf->logical_level0_px.height, view->base_level);
-   surf->logical_level0_px.depth = 1;
-   surf->logical_level0_px.array_len = 1;
-   surf->levels = 1;
-
-   /* Alignment doesn't matter since we have 1 miplevel and 1 array slice so
-    * just pick something that works for everybody.
-    */
-   surf->image_alignment_el = isl_extent3d(4, 4, 1);
-
-   /* TODO: surf->physcal_level0_extent_sa? */
-
-   view->base_level = 0;
-   view->base_array_layer = 0;
 }
 
 void
@@ -191,8 +142,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
       .format = ISL_FORMAT_UNSUPPORTED, /* Set later */
       .base_level = level,
       .levels = 1,
-      .base_array_layer = layer / layer_multiplier,
-      .array_len = 1,
       .channel_select = {
          ISL_CHANNEL_SELECT_RED,
          ISL_CHANNEL_SELECT_GREEN,
@@ -201,12 +150,21 @@ brw_blorp_surface_info_init(struct brw_context *brw,
       },
    };
 
-   if (brw->gen >= 8 && !is_render_target && info->surf.dim == ISL_SURF_DIM_3D) {
-      /* On gen8+ we use actual 3-D textures so we need to pass the layer
-       * through to the sampler.
+   if (!is_render_target &&
+       (info->surf.dim == ISL_SURF_DIM_3D ||
+        info->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY)) {
+      /* 3-D textures don't support base_array layer and neither do 2-D
+       * multisampled textures on IVB so we need to pass it through the
+       * sampler in those cases.  These are also two cases where we are
+       * guaranteed that we won't be doing any funny surface hacks.
        */
-      info->z_offset = layer;
+      info->view.base_array_layer = 0;
+      info->view.array_len = MAX2(info->surf.logical_level0_px.depth,
+                                  info->surf.logical_level0_px.array_len);
+      info->z_offset = layer / layer_multiplier;
    } else {
+      info->view.base_array_layer = layer / layer_multiplier;
+      info->view.array_len = 1;
       info->z_offset = 0;
    }
 
@@ -252,10 +210,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
       break;
    }
    }
-
-   surf_apply_level_layer_offsets(&brw->isl_dev, &info->surf, &info->view,
-                                  &info->bo_offset,
-                                  &info->tile_x_sa, &info->tile_y_sa);
 }
 
 
