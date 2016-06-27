@@ -386,22 +386,6 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
       clear_color = intel_miptree_get_isl_clear_color(brw, surface->mt);
    }
 
-   struct isl_view view = {
-      .format = surface->view.format,
-      .base_level = 0,
-      .levels = 1,
-      .base_array_layer = 0,
-      .array_len = 1,
-      .channel_select = {
-         ISL_CHANNEL_SELECT_RED,
-         ISL_CHANNEL_SELECT_GREEN,
-         ISL_CHANNEL_SELECT_BLUE,
-         ISL_CHANNEL_SELECT_ALPHA,
-      },
-      .usage = is_render_target ? ISL_SURF_USAGE_RENDER_TARGET_BIT :
-                                  ISL_SURF_USAGE_TEXTURE_BIT,
-   };
-
    uint32_t surf_offset;
    uint32_t *dw = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
                                   ss_info.num_dwords * 4, ss_info.ss_align,
@@ -409,7 +393,7 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
 
    const uint32_t mocs = is_render_target ? ss_info.rb_mocs : ss_info.tex_mocs;
 
-   isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &view,
+   isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &surface->view,
                        .address = surface->mt->bo->offset64 + surface->bo_offset,
                        .aux_surf = aux_surf, .aux_usage = surface->aux_usage,
                        .aux_address = aux_offset,
