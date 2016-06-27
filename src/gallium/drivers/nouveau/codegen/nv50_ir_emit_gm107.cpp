@@ -420,7 +420,7 @@ CodeEmitterGM107::emitSAT(int pos)
 void
 CodeEmitterGM107::emitCC(int pos)
 {
-   emitField(pos, 1, insn->defExists(1));
+   emitField(pos, 1, insn->flagsDef >= 0);
 }
 
 void
