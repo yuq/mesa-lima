@@ -258,5 +258,7 @@ void r600_perfcounters_add_block(struct r600_common_screen *,
 				 unsigned counters, unsigned selectors,
 				 unsigned instances, void *data);
 void r600_perfcounters_do_destroy(struct r600_perfcounters *);
+void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
+				 struct r600_query_hw *query);
 
 #endif /* R600_QUERY_H */

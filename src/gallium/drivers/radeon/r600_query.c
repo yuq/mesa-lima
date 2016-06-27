@@ -728,8 +728,8 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 	return rquery->ops->begin(rctx, rquery);
 }
 
-static void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
-					struct r600_query_hw *query)
+void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
+				 struct r600_query_hw *query)
 {
 	struct r600_query_buffer *prev = query->buffer.previous;
 

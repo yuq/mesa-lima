@@ -1884,6 +1884,7 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 					     struct r600_texture *tex)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
+	struct pipe_query *tmp;
 	unsigned i = vi_get_context_dcc_stats_index(rctx, tex);
 	bool query_active = rctx->dcc_stats[i].query_active;
 	bool disable = false;
@@ -1894,8 +1895,9 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 		/* Read the results. */
 		ctx->get_query_result(ctx, rctx->dcc_stats[i].ps_stats[2],
 				      true, &result);
-		ctx->destroy_query(ctx, rctx->dcc_stats[i].ps_stats[2]);
-		rctx->dcc_stats[i].ps_stats[2] = NULL;
+		r600_query_hw_reset_buffers(rctx,
+					    (struct r600_query_hw*)
+					    rctx->dcc_stats[i].ps_stats[2]);
 
 		/* Compute the approximate number of fullscreen draws. */
 		tex->ps_draw_ratio =
@@ -1914,9 +1916,10 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 		vi_separate_dcc_stop_query(ctx, tex);
 
 	/* Move the queries in the queue by one. */
+	tmp = rctx->dcc_stats[i].ps_stats[2];
 	rctx->dcc_stats[i].ps_stats[2] = rctx->dcc_stats[i].ps_stats[1];
 	rctx->dcc_stats[i].ps_stats[1] = rctx->dcc_stats[i].ps_stats[0];
-	rctx->dcc_stats[i].ps_stats[0] = NULL;
+	rctx->dcc_stats[i].ps_stats[0] = tmp;
 
 	/* create and start a new query as ps_stats[0] */
 	if (query_active)
