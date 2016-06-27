@@ -2198,7 +2198,8 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		/* Fast clear is the most appropriate place to enable DCC for
 		 * displayable surfaces.
 		 */
-		if (rctx->chip_class >= VI) {
+		if (rctx->chip_class >= VI &&
+		    !(rctx->screen->debug_flags & DBG_NO_DCC_FB)) {
 			vi_separate_dcc_try_enable(rctx, tex);
 
 			/* Stoney can't do a CMASK-based clear, so all clears are

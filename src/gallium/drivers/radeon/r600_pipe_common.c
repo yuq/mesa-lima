@@ -572,6 +572,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "mono", DBG_MONOLITHIC_SHADERS, "Use old-style monolithic shaders compiled on demand" },
 	{ "noce", DBG_NO_CE, "Disable the constant engine"},
 	{ "unsafemath", DBG_UNSAFE_MATH, "Enable unsafe math shader optimizations" },
+	{ "nodccfb", DBG_NO_DCC_FB, "Disable separate DCC on the main framebuffer" },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
