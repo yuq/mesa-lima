@@ -1609,13 +1609,13 @@ typedef struct {
 ATTRIBUTE_RETURNS_NONNULL static inline nir_block *
 nir_start_block(nir_function_impl *impl)
 {
-   return (nir_block *) impl->body.head;
+   return (nir_block *) impl->body.head_sentinel.next;
 }
 
 ATTRIBUTE_RETURNS_NONNULL static inline nir_block *
 nir_impl_last_block(nir_function_impl *impl)
 {
-   return (nir_block *) impl->body.tail_pred;
+   return (nir_block *) impl->body.tail_sentinel.prev;
 }
 
 static inline nir_cf_node *

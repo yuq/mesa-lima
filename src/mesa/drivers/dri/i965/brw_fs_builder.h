@@ -101,7 +101,7 @@ namespace brw {
       fs_builder
       at_end() const
       {
-         return at(NULL, (exec_node *)&shader->instructions.tail);
+         return at(NULL, (exec_node *)&shader->instructions.tail_sentinel);
       }
 
       /**

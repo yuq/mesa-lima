@@ -43,8 +43,8 @@ static parameter_list_match_t
 parameter_lists_match(_mesa_glsl_parse_state *state,
                       const exec_list *list_a, const exec_list *list_b)
 {
-   const exec_node *node_a = list_a->head;
-   const exec_node *node_b = list_b->head;
+   const exec_node *node_a = list_a->get_head_raw();
+   const exec_node *node_b = list_b->get_head_raw();
 
    /* This is set to true if there is an inexact match requiring an implicit
     * conversion. */
@@ -222,9 +222,9 @@ is_best_inexact_overload(const exec_list *actual_parameters,
       if (*other == sig)
          continue;
 
-      const exec_node *node_a = sig->parameters.head;
-      const exec_node *node_b = (*other)->parameters.head;
-      const exec_node *node_p = actual_parameters->head;
+      const exec_node *node_a = sig->parameters.get_head_raw();
+      const exec_node *node_b = (*other)->parameters.get_head_raw();
+      const exec_node *node_p = actual_parameters->get_head_raw();
 
       bool better_for_some_parameter = false;
 
@@ -368,8 +368,8 @@ ir_function::matching_signature(_mesa_glsl_parse_state *state,
 static bool
 parameter_lists_match_exact(const exec_list *list_a, const exec_list *list_b)
 {
-   const exec_node *node_a = list_a->head;
-   const exec_node *node_b = list_b->head;
+   const exec_node *node_a = list_a->get_head_raw();
+   const exec_node *node_b = list_b->get_head_raw();
 
    for (/* empty */
 	; !node_a->is_tail_sentinel() && !node_b->is_tail_sentinel()

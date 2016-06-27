@@ -186,8 +186,8 @@ verify_parameter_modes(_mesa_glsl_parse_state *state,
 		       exec_list &actual_ir_parameters,
 		       exec_list &actual_ast_parameters)
 {
-   exec_node *actual_ir_node  = actual_ir_parameters.head;
-   exec_node *actual_ast_node = actual_ast_parameters.head;
+   exec_node *actual_ir_node  = actual_ir_parameters.get_head_raw();
+   exec_node *actual_ast_node = actual_ast_parameters.get_head_raw();
 
    foreach_in_list(const ir_variable, formal, &sig->parameters) {
       /* The lists must be the same length. */
@@ -318,10 +318,12 @@ verify_parameter_modes(_mesa_glsl_parse_state *state,
    const char *func_name = sig->function_name();
    bool is_atomic = is_atomic_function(func_name);
    if (is_atomic) {
-      const ir_rvalue *const actual = (ir_rvalue *) actual_ir_parameters.head;
+      const ir_rvalue *const actual =
+         (ir_rvalue *) actual_ir_parameters.get_head_raw();
 
       const ast_expression *const actual_ast =
-         exec_node_data(ast_expression, actual_ast_parameters.head, link);
+         exec_node_data(ast_expression,
+                        actual_ast_parameters.get_head_raw(), link);
       YYLTYPE loc = actual_ast->get_location();
 
       if (!verify_first_atomic_parameter(&loc, state,
@@ -1176,7 +1178,7 @@ constant_record_constructor(const glsl_type *constructor_type,
 bool
 single_scalar_parameter(exec_list *parameters)
 {
-   const ir_rvalue *const p = (ir_rvalue *) parameters->head;
+   const ir_rvalue *const p = (ir_rvalue *) parameters->get_head_raw();
    assert(((ir_rvalue *)p)->as_rvalue() != NULL);
 
    return (p->type->is_scalar() && p->next->is_tail_sentinel());
@@ -1220,7 +1222,7 @@ emit_inline_vector_constructor(const glsl_type *type,
     */
    const unsigned lhs_components = type->components();
    if (single_scalar_parameter(parameters)) {
-      ir_rvalue *first_param = (ir_rvalue *)parameters->head;
+      ir_rvalue *first_param = (ir_rvalue *)parameters->get_head_raw();
       ir_rvalue *rhs = new(ctx) ir_swizzle(first_param, 0, 0, 0, 0,
 					   lhs_components);
       ir_dereference_variable *lhs = new(ctx) ir_dereference_variable(var);
@@ -1421,7 +1423,7 @@ emit_inline_matrix_constructor(const glsl_type *type,
     *    to the upper left portion of the constructed matrix, and the remaining
     *    elements take values from the identity matrix.
     */
-   ir_rvalue *const first_param = (ir_rvalue *) parameters->head;
+   ir_rvalue *const first_param = (ir_rvalue *) parameters->get_head_raw();
    if (single_scalar_parameter(parameters)) {
       /* Assign the scalar to the X component of a vec4, and fill the remaining
        * components with zero.
@@ -1673,7 +1675,7 @@ emit_inline_record_constructor(const glsl_type *type,
 
    instructions->push_tail(var);
 
-   exec_node *node = parameters->head;
+   exec_node *node = parameters->get_head_raw();
    for (unsigned i = 0; i < type->length; i++) {
       assert(!node->is_tail_sentinel());
 
@@ -1706,7 +1708,7 @@ process_record_constructor(exec_list *instructions,
    process_parameters(instructions, &actual_parameters,
                       parameters, state);
 
-   exec_node *node = actual_parameters.head;
+   exec_node *node = actual_parameters.get_head_raw();
    for (unsigned i = 0; i < constructor_type->length; i++) {
       ir_rvalue *ir = (ir_rvalue *) node;
 
@@ -2042,7 +2044,7 @@ ast_function_expression::hir(exec_list *instructions,
       if (all_parameters_are_constant) {
 	 return new(ctx) ir_constant(constructor_type, &actual_parameters);
       } else if (constructor_type->is_scalar()) {
-	 return dereference_component((ir_rvalue *) actual_parameters.head,
+         return dereference_component((ir_rvalue *) actual_parameters.get_head_raw(),
 				      0);
       } else if (constructor_type->is_vector()) {
 	 return emit_inline_vector_constructor(constructor_type,

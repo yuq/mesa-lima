@@ -833,7 +833,7 @@ _mesa_ast_set_aggregate_type(const glsl_type *type,
        * E.g., if <type> if struct S[2] we want to set each element's type to
        * struct S.
        */
-      for (exec_node *expr_node = ai->expressions.head;
+      for (exec_node *expr_node = ai->expressions.get_head_raw();
            !expr_node->is_tail_sentinel();
            expr_node = expr_node->next) {
          ast_expression *expr = exec_node_data(ast_expression, expr_node,
@@ -845,7 +845,7 @@ _mesa_ast_set_aggregate_type(const glsl_type *type,
 
    /* If the aggregate is a struct, recursively set its fields' types. */
    } else if (type->is_record()) {
-      exec_node *expr_node = ai->expressions.head;
+      exec_node *expr_node = ai->expressions.get_head_raw();
 
       /* Iterate through the struct's fields. */
       for (unsigned i = 0; !expr_node->is_tail_sentinel() && i < type->length;
@@ -859,7 +859,7 @@ _mesa_ast_set_aggregate_type(const glsl_type *type,
       }
    /* If the aggregate is a matrix, set its columns' types. */
    } else if (type->is_matrix()) {
-      for (exec_node *expr_node = ai->expressions.head;
+      for (exec_node *expr_node = ai->expressions.get_head_raw();
            !expr_node->is_tail_sentinel();
            expr_node = expr_node->next) {
          ast_expression *expr = exec_node_data(ast_expression, expr_node,

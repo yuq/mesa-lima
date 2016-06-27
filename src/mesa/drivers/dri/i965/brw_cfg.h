@@ -333,7 +333,7 @@ struct cfg_t {
    foreach_in_list(__type, __inst, &(__block)->instructions)
 
 #define foreach_inst_in_block_safe(__type, __inst, __block)    \
-   for (__type *__inst = (__type *)__block->instructions.head, \
+   for (__type *__inst = (__type *)__block->instructions.head_sentinel.next, \
                *__next = (__type *)__inst->next;               \
         __next != NULL;                                        \
         __inst = __next,                                       \

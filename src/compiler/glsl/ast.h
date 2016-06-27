@@ -346,8 +346,8 @@ public:
 
    bool is_single_dimension() const
    {
-      return this->array_dimensions.tail_pred->prev != NULL &&
-             this->array_dimensions.tail_pred->prev->is_head_sentinel();
+      return this->array_dimensions.get_tail_raw()->prev != NULL &&
+             this->array_dimensions.get_tail_raw()->prev->is_head_sentinel();
    }
 
    virtual void print(void) const;

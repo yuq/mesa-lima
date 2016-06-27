@@ -688,8 +688,8 @@ ast_layout_expression::process_qualifier_constant(struct _mesa_glsl_parse_state 
    if (!can_be_zero)
       min_value = 1;
 
-   for (exec_node *node = layout_const_expressions.head;
-           !node->is_tail_sentinel(); node = node->next) {
+   for (exec_node *node = layout_const_expressions.get_head_raw();
+        !node->is_tail_sentinel(); node = node->next) {
 
       exec_list dummy_instructions;
       ast_node *const_expression = exec_node_data(ast_node, node, link);

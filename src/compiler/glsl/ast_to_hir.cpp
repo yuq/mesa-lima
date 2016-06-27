@@ -2007,7 +2007,7 @@ ast_expression::do_hir(exec_list *instructions,
           * effect, but I don't think these cases exist in GLSL.  Either way,
           * it would be a giant hassle to replicate that behavior.
           */
-         if (previous_tail_pred == instructions->tail_pred) {
+         if (previous_tail_pred == instructions->get_tail_raw()) {
             _mesa_glsl_warning(&previous_operand_loc, state,
                                "left-hand operand of comma expression has "
                                "no effect");
@@ -2018,7 +2018,7 @@ ast_expression::do_hir(exec_list *instructions,
           * return NULL when the list is empty.  We don't care about that
           * here, so using tail_pred directly is fine.
           */
-         previous_tail_pred = instructions->tail_pred;
+         previous_tail_pred = instructions->get_tail_raw();
          previous_operand_loc = ast->get_location();
 
          result = ast->hir(instructions, state);
@@ -2243,7 +2243,7 @@ process_array_type(YYLTYPE *loc, const glsl_type *base,
          }
       }
 
-      for (exec_node *node = array_specifier->array_dimensions.tail_pred;
+      for (exec_node *node = array_specifier->array_dimensions.get_tail_raw();
            !node->is_head_sentinel(); node = node->prev) {
          unsigned array_size = process_array_size(node, state);
          array_type = glsl_type::get_array_instance(array_type, array_size);
