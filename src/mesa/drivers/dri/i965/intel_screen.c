@@ -972,17 +972,18 @@ static const __DRIextension *intelRobustScreenExtensions[] = {
 static int
 intel_get_param(struct intel_screen *screen, int param, int *value)
 {
-   int ret;
+   int ret = 0;
    struct drm_i915_getparam gp;
 
    memset(&gp, 0, sizeof(gp));
    gp.param = param;
    gp.value = value;
 
-   ret = drmCommandWriteRead(screen->driScrnPriv->fd,
-                             DRM_I915_GETPARAM, &gp, sizeof(gp));
-   if (ret < 0 && ret != -EINVAL)
-	 _mesa_warning(NULL, "drm_i915_getparam: %d", ret);
+   if (drmIoctl(screen->driScrnPriv->fd, DRM_IOCTL_I915_GETPARAM, &gp) == -1) {
+      ret = -errno;
+      if (ret != -EINVAL)
+         _mesa_warning(NULL, "drm_i915_getparam: %d", ret);
+   }
 
    return ret;
 }
