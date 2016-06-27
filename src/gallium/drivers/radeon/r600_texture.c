@@ -961,9 +961,9 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->surface.level[i].mode);
 
 	if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+		fprintf(f, "  StencilLayout: tilesplit=%u\n",
+			rtex->surface.stencil_tile_split);
 		for (i = 0; i <= rtex->surface.last_level; i++) {
-			fprintf(f, "  StencilLayout: tilesplit=%u\n",
-				rtex->surface.stencil_tile_split);
 			fprintf(f, "  StencilLevel[%i]: offset=%"PRIu64", "
 				"slice_size=%"PRIu64", npix_x=%u, "
 				"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
