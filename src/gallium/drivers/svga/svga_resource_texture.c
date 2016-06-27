@@ -963,6 +963,16 @@ svga_texture_create(struct pipe_screen *screen,
                       svga_format_name(typeless),
                       bindings);
       }
+
+      if (svga_format_is_uncompressed_snorm(tex->key.format)) {
+         /* We can't normally render to snorm surfaces, but once we
+          * substitute a typeless format, we can if the rendertarget view
+          * is unorm.  This can happen with GL_ARB_copy_image.
+          */
+         tex->key.flags |= SVGA3D_SURFACE_HINT_RENDERTARGET;
+         tex->key.flags |= SVGA3D_SURFACE_BIND_RENDER_TARGET;
+      }
+
       tex->key.format = typeless;
    }
 
