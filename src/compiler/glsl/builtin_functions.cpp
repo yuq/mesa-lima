@@ -956,7 +956,7 @@ builtin_builder::create_shader()
     * GLSL utility code that could be linked against any stage, so just
     * arbitrarily pick GL_VERTEX_SHADER.
     */
-   shader = _mesa_new_shader(NULL, 0, MESA_SHADER_VERTEX);
+   shader = _mesa_new_shader(0, MESA_SHADER_VERTEX);
    shader->symbols = new(mem_ctx) glsl_symbol_table;
 
    gl_ModelViewProjectionMatrix =

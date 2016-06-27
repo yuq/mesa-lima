@@ -88,8 +88,8 @@ _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
    }
 }
 
-void
-_mesa_init_shader(struct gl_context *ctx, struct gl_shader *shader)
+static void
+_mesa_init_shader(struct gl_shader *shader)
 {
    shader->RefCount = 1;
    shader->Geom.VerticesOut = -1;
@@ -101,14 +101,14 @@ _mesa_init_shader(struct gl_context *ctx, struct gl_shader *shader)
  * Allocate a new gl_shader object, initialize it.
  */
 struct gl_shader *
-_mesa_new_shader(struct gl_context *ctx, GLuint name, gl_shader_stage stage)
+_mesa_new_shader(GLuint name, gl_shader_stage stage)
 {
    struct gl_shader *shader;
    shader = rzalloc(NULL, struct gl_shader);
    if (shader) {
       shader->Stage = stage;
       shader->Name = name;
-      _mesa_init_shader(ctx, shader);
+      _mesa_init_shader(shader);
    }
    return shader;
 }

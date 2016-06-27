@@ -68,11 +68,9 @@ _mesa_shader_debug(struct gl_context *, GLenum, GLuint *,
 }
 
 struct gl_shader *
-_mesa_new_shader(struct gl_context *ctx, GLuint name, gl_shader_stage stage)
+_mesa_new_shader(GLuint name, gl_shader_stage stage)
 {
    struct gl_shader *shader;
-
-   (void) ctx;
 
    assert(stage == MESA_SHADER_FRAGMENT || stage == MESA_SHADER_VERTEX);
    shader = rzalloc(NULL, struct gl_shader);

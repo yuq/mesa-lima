@@ -334,7 +334,7 @@ create_shader(struct gl_context *ctx, GLenum type)
 
    _mesa_HashLockMutex(ctx->Shared->ShaderObjects);
    name = _mesa_HashFindFreeKeyBlock(ctx->Shared->ShaderObjects, 1);
-   sh = _mesa_new_shader(ctx, name, _mesa_shader_enum_to_shader_stage(type));
+   sh = _mesa_new_shader(name, _mesa_shader_enum_to_shader_stage(type));
    sh->Type = type;
    _mesa_HashInsertLocked(ctx->Shared->ShaderObjects, name, sh);
    _mesa_HashUnlockMutex(ctx->Shared->ShaderObjects);
