@@ -1154,12 +1154,13 @@ PFN_BACKEND_FUNC gBackendSingleSample[2] // input coverage
                                      = {};
 PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_MAX]
                                        [SWR_MSAA_SAMPLE_PATTERN_MAX]
-                                       [SWR_INPUT_COVERAGE_MAX]
+                                       [2] // input coverage
                                        [2] // centroid
                                        [2] // forcedSampleCount
                                        [2] // canEarlyZ
                                        = {};
-PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_MAX][SWR_INPUT_COVERAGE_MAX]
+PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_MAX]
+                                        [2] // input coverage
                                         [2] // centroid
                                         [2] // canEarlyZ
                                         = {};
@@ -1232,28 +1233,27 @@ struct BEChooser
 
 void InitBackendSingleFuncTable(PFN_BACKEND_FUNC (&table)[2][2][2])
 {
-    for(uint32_t inputCoverage = SWR_INPUT_COVERAGE_NONE; inputCoverage < SWR_INPUT_COVERAGE_MAX; inputCoverage++)
+    for(uint32_t inputCoverage = 0; inputCoverage < 2; inputCoverage++)
     {
         for(uint32_t isCentroid = 0; isCentroid < 2; isCentroid++)
         {
             for(uint32_t canEarlyZ = 0; canEarlyZ < 2; canEarlyZ++)
             {
                 table[inputCoverage][isCentroid][canEarlyZ] =
-                    BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, (inputCoverage == SWR_INPUT_COVERAGE_NORMAL),
+                    BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, (inputCoverage > 0),
                                          (isCentroid > 0), false, (canEarlyZ > 0), SWR_BACKEND_SINGLE_SAMPLE);
             }
         }
     }
 }
 
-void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_MAX][SWR_MSAA_SAMPLE_PATTERN_MAX][SWR_INPUT_COVERAGE_MAX]
-                                                        [2][2][2])
+void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_MAX][SWR_MSAA_SAMPLE_PATTERN_MAX][2][2][2][2])
 {
     for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < SWR_MULTISAMPLE_TYPE_MAX; sampleCount++)
     {
         for(uint32_t samplePattern = SWR_MSAA_CENTER_PATTERN; samplePattern < SWR_MSAA_SAMPLE_PATTERN_MAX; samplePattern++)
         {
-            for(uint32_t inputCoverage = SWR_INPUT_COVERAGE_NONE; inputCoverage < SWR_INPUT_COVERAGE_MAX; inputCoverage++)
+            for(uint32_t inputCoverage = 0; inputCoverage < 2; inputCoverage++)
             {
                 for(uint32_t isCentroid = 0; isCentroid < 2; isCentroid++)
                 {
@@ -1262,7 +1262,7 @@ void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_MA
                         for(uint32_t canEarlyZ = 0; canEarlyZ < 2; canEarlyZ++)
                         {
                             table[sampleCount][samplePattern][inputCoverage][isCentroid][forcedSampleCount][canEarlyZ] =
-                                BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, (SWR_MSAA_SAMPLE_PATTERN)samplePattern, (inputCoverage == SWR_INPUT_COVERAGE_NORMAL), 
+                                BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, (SWR_MSAA_SAMPLE_PATTERN)samplePattern, (inputCoverage > 0), 
                                                         (isCentroid > 0), (forcedSampleCount > 0), (canEarlyZ > 0), SWR_BACKEND_MSAA_PIXEL_RATE);
                         }
                     }
@@ -1272,18 +1272,18 @@ void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_MA
     }
 }
 
-void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_MAX][SWR_INPUT_COVERAGE_MAX][2][2])
+void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_MAX][2][2][2])
 {
     for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < SWR_MULTISAMPLE_TYPE_MAX; sampleCount++)
     {
-        for(uint32_t inputCoverage = SWR_INPUT_COVERAGE_NONE; inputCoverage < SWR_INPUT_COVERAGE_MAX; inputCoverage++)
+        for(uint32_t inputCoverage = 0; inputCoverage < 2; inputCoverage++)
         {
             for(uint32_t centroid = 0; centroid < 2; centroid++)
             {
                 for(uint32_t canEarlyZ = 0; canEarlyZ < 2; canEarlyZ++)
                 {
                     table[sampleCount][inputCoverage][centroid][canEarlyZ] =
-                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN, (inputCoverage == SWR_INPUT_COVERAGE_NORMAL), 
+                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN, (inputCoverage > 0), 
                                              (centroid > 0), false, (canEarlyZ > 0), (SWR_BACKEND_FUNCS)SWR_BACKEND_MSAA_SAMPLE_RATE);
                 }
             }

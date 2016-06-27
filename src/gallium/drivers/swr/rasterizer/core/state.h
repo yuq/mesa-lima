@@ -1022,7 +1022,7 @@ struct SWR_PS_STATE
 
     // dword 2
     uint32_t killsPixel         : 1;    // pixel shader can kill pixels
-    uint32_t inputCoverage      : 1;    // ps uses input coverage
+    uint32_t inputCoverage      : 2;    // ps uses input coverage
     uint32_t writesODepth       : 1;    // pixel shader writes to depth
     uint32_t usesSourceDepth    : 1;    // pixel shader reads depth
     uint32_t shadingRate        : 2;    // shading per pixel / sample / coarse pixel

@@ -246,14 +246,6 @@ void calcBoundingBoxInt(const __m128i &vX, const __m128i &vY, BBOX &bbox)
     bbox.right = _mm_extract_epi32(vMaxX, 0);
     bbox.top = _mm_extract_epi32(vMinY, 0);
     bbox.bottom = _mm_extract_epi32(vMaxY, 0);
-
-#if 0
-    Jacob:  A = _mm_shuffle_ps(X, Y, 0 0 0 0)
-B = _mm_shuffle_ps(Z, W, 0 0 0 0)
-A = _mm_shuffle_epi32(A, 3 0 3 0)
-A = _mm_shuffle_ps(A, B, 1 0 1 0)
-#endif
-
 }
 
 INLINE

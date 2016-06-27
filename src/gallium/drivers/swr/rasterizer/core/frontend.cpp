@@ -1596,7 +1596,7 @@ void ProcessUserClipDist(PA_STATE& pa, uint32_t primIndex, uint8_t clipDistMask,
 template <typename PT = FixedPointTraits<Fixed_16_8>>
 INLINE simdscalari fpToFixedPointVertical(const simdscalar vIn)
 {
-    simdscalar vFixed = _simd_mul_ps(vIn, _simd_set1_ps(PT::FixedPointScaleT::value));
+    simdscalar vFixed = _simd_mul_ps(vIn, _simd_set1_ps(PT::ScaleT::value));
     return _simd_cvtps_epi32(vFixed);
 }
 
@@ -1842,10 +1842,13 @@ void BinTriangles(
     /// Note: these variable initializations must stay above any 'goto endBenTriangles'
     // compute per tri backface
     uint32_t frontFaceMask = frontWindingTris;
-
     uint32_t *pPrimID = (uint32_t *)&primID;
     DWORD triIndex = 0;
-
+    // for center sample pattern, all samples are at pixel center; calculate coverage
+    // once at center and broadcast the results in the backend
+    uint32_t sampleCount = (rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN) ? rastState.sampleCount : SWR_MULTISAMPLE_1X;
+    PFN_WORK_FUNC pfnWork = GetRasterizerFunc(sampleCount, (rastState.conservativeRast > 0),
+                                              pDC->pState->state.psState.inputCoverage, (rastState.scissorEnable > 0));
     if (!triMask)
     {
         goto endBinTriangles;
@@ -1945,34 +1948,23 @@ void BinTriangles(
         _simd_store_si((simdscalari*)aRTAI, _simd_setzero_si());
     }
 
-
     // scan remaining valid triangles and bin each separately
     while (_BitScanForward(&triIndex, triMask))
     {
         uint32_t linkageCount = state.linkageCount;
         uint32_t linkageMask  = state.linkageMask;
         uint32_t numScalarAttribs = linkageCount * 4;
-        
+
         BE_WORK work;
         work.type = DRAW;
+        work.pfnWork = pfnWork;
 
         TRIANGLE_WORK_DESC &desc = work.desc.tri;
 
         desc.triFlags.frontFacing = state.forceFront ? 1 : ((frontFaceMask >> triIndex) & 1);
         desc.triFlags.primID = pPrimID[triIndex];
         desc.triFlags.renderTargetArrayIndex = aRTAI[triIndex];
-
-        if(rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN)
-        {
-            work.pfnWork = gRasterizerTable[rastState.scissorEnable][rastState.sampleCount];
-        }
-        else
-        {
-            // for center sample pattern, all samples are at pixel center; calculate coverage
-            // once at center and broadcast the results in the backend
-            work.pfnWork = gRasterizerTable[rastState.scissorEnable][SWR_MULTISAMPLE_1X];
-        }
-
+        
         auto pArena = pDC->pArena;
         SWR_ASSERT(pArena != nullptr);
 
@@ -2028,7 +2020,7 @@ struct FEBinTrianglesChooser
     }
 };
 
-// Selector for correct templated Draw front-end function
+// Selector for correct templated BinTrinagles function
 PFN_PROCESS_PRIMS GetBinTrianglesFunc(bool IsConservative)
 {
     return TemplateArgUnroller<FEBinTrianglesChooser>::GetFunc(IsConservative);
