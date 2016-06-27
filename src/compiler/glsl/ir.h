@@ -2593,7 +2593,7 @@ extern gl_shader *
 _mesa_glsl_get_builtin_function_shader(void);
 
 extern ir_function_signature *
-_mesa_get_main_function_signature(gl_shader *sh);
+_mesa_get_main_function_signature(glsl_symbol_table *symbols);
 
 extern void
 _mesa_glsl_release_functions(void);

@@ -5658,9 +5658,9 @@ _mesa_glsl_get_builtin_function_shader()
  * Get the function signature for main from a shader
  */
 ir_function_signature *
-_mesa_get_main_function_signature(gl_shader *sh)
+_mesa_get_main_function_signature(glsl_symbol_table *symbols)
 {
-   ir_function *const f = sh->symbols->get_function("main");
+   ir_function *const f = symbols->get_function("main");
    if (f != NULL) {
       exec_list void_parameters;
 

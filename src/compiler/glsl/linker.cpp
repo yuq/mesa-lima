@@ -2216,7 +2216,7 @@ link_intrastage_shaders(void *mem_ctx,
     */
    gl_shader *main = NULL;
    for (unsigned i = 0; i < num_shaders; i++) {
-      if (_mesa_get_main_function_signature(shader_list[i]) != NULL) {
+      if (!_mesa_get_main_function_signature(shader_list[i]->symbols)) {
 	 main = shader_list[i];
 	 break;
       }
@@ -2246,7 +2246,7 @@ link_intrastage_shaders(void *mem_ctx,
     * copy of the original shader that contained the main function).
     */
    ir_function_signature *const main_sig =
-      _mesa_get_main_function_signature(linked);
+      _mesa_get_main_function_signature(linked->symbols);
 
    /* Move any instructions other than variable declarations or function
     * declarations into main.

@@ -1456,7 +1456,7 @@ _mesa_glsl_initialize_derived_variables(struct gl_context *ctx,
    if (shader->Stage == MESA_SHADER_COMPUTE &&
        ctx->Const.LowerCsDerivedVariables) {
       ir_function_signature *const main_sig =
-         _mesa_get_main_function_signature(shader);
+         _mesa_get_main_function_signature(shader->symbols);
 
       if (main_sig != NULL)
          initialize_cs_derived_variables(shader, main_sig);
