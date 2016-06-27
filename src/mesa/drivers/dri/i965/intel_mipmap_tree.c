@@ -3136,7 +3136,30 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
       unreachable("Invalid array layout");
    }
 
-   surf->usage = 0; /* TODO */
+   GLenum base_format = _mesa_get_format_base_format(mt->format);
+   switch (base_format) {
+   case GL_DEPTH_COMPONENT:
+      surf->usage = ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT;
+      break;
+   case GL_STENCIL_INDEX:
+      surf->usage = ISL_SURF_USAGE_STENCIL_BIT;
+      if (brw->gen >= 8)
+         surf->usage |= ISL_SURF_USAGE_TEXTURE_BIT;
+      break;
+   case GL_DEPTH_STENCIL:
+      /* In this case we only texture from the depth part */
+      surf->usage = ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_STENCIL_BIT |
+                    ISL_SURF_USAGE_TEXTURE_BIT;
+      break;
+   default:
+      surf->usage = ISL_SURF_USAGE_TEXTURE_BIT;
+      if (brw->format_supported_as_render_target[mt->format])
+         surf->usage = ISL_SURF_USAGE_RENDER_TARGET_BIT;
+      break;
+   }
+
+   if (_mesa_is_cube_map_texture(mt->target))
+      surf->usage |= ISL_SURF_USAGE_CUBE_BIT;
 }
 
 /* WARNING: THE SURFACE CREATED BY THIS FUNCTION IS NOT COMPLETE AND CANNOT BE
