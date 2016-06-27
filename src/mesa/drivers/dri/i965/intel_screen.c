@@ -970,7 +970,7 @@ static const __DRIextension *intelRobustScreenExtensions[] = {
 };
 
 static int
-intel_get_param(__DRIscreen *psp, int param, int *value)
+intel_get_param(struct intel_screen *screen, int param, int *value)
 {
    int ret;
    struct drm_i915_getparam gp;
@@ -979,7 +979,8 @@ intel_get_param(__DRIscreen *psp, int param, int *value)
    gp.param = param;
    gp.value = value;
 
-   ret = drmCommandWriteRead(psp->fd, DRM_I915_GETPARAM, &gp, sizeof(gp));
+   ret = drmCommandWriteRead(screen->driScrnPriv->fd,
+                             DRM_I915_GETPARAM, &gp, sizeof(gp));
    if (ret < 0 && ret != -EINVAL)
 	 _mesa_warning(NULL, "drm_i915_getparam: %d", ret);
 
@@ -987,10 +988,10 @@ intel_get_param(__DRIscreen *psp, int param, int *value)
 }
 
 static bool
-intel_get_boolean(__DRIscreen *psp, int param)
+intel_get_boolean(struct intel_screen *screen, int param)
 {
    int value = 0;
-   return (intel_get_param(psp, param, &value) == 0) && value;
+   return (intel_get_param(screen, param, &value) == 0) && value;
 }
 
 static void
@@ -1125,12 +1126,12 @@ intel_detect_sseu(struct intel_screen *intelScreen)
    intelScreen->subslice_total = -1;
    intelScreen->eu_total = -1;
 
-   ret = intel_get_param(intelScreen->driScrnPriv, I915_PARAM_SUBSLICE_TOTAL,
+   ret = intel_get_param(intelScreen, I915_PARAM_SUBSLICE_TOTAL,
                          &intelScreen->subslice_total);
    if (ret < 0 && ret != -EINVAL)
       goto err_out;
 
-   ret = intel_get_param(intelScreen->driScrnPriv,
+   ret = intel_get_param(intelScreen,
                          I915_PARAM_EU_TOTAL, &intelScreen->eu_total);
    if (ret < 0 && ret != -EINVAL)
       goto err_out;
@@ -1167,7 +1168,7 @@ intel_init_bufmgr(struct intel_screen *intelScreen)
 
    drm_intel_bufmgr_gem_enable_fenced_relocs(intelScreen->bufmgr);
 
-   if (!intel_get_boolean(spriv, I915_PARAM_HAS_RELAXED_DELTA)) {
+   if (!intel_get_boolean(intelScreen, I915_PARAM_HAS_RELAXED_DELTA)) {
       fprintf(stderr, "[%s: %u] Kernel 2.6.39 required.\n", __func__, __LINE__);
       return false;
    }
