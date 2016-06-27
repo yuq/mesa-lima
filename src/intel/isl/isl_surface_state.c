@@ -414,6 +414,16 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       assert(info->surf->levels == 1);
       assert(info->surf->logical_level0_px.array_len == 1);
       assert(info->aux_usage == ISL_AUX_USAGE_NONE);
+
+      if (GEN_GEN >= 8) {
+         /* Broadwell added more rules. */
+         assert(info->surf->samples == 1);
+         if (isl_format_get_layout(info->view->format)->bpb == 8)
+            assert(info->x_offset_sa % 16 == 0);
+         if (isl_format_get_layout(info->view->format)->bpb == 16)
+            assert(info->x_offset_sa % 8 == 0);
+      }
+
 #if GEN_GEN >= 7
       s.SurfaceArray = false;
 #endif
