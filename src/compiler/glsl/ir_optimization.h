@@ -48,6 +48,7 @@
 #define REVERSE_TO_SHIFTS         0x10000
 #define FIND_LSB_TO_FLOAT_CAST    0x20000
 #define FIND_MSB_TO_FLOAT_CAST    0x40000
+#define IMUL_HIGH_TO_MUL          0x80000
 
 /**
  * \see class lower_packing_builtins_visitor
