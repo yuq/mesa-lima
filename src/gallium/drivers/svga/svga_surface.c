@@ -452,10 +452,22 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
                                                     &desc);
       }
       else {
+         SVGA3dSurfaceFormat view_format = s->key.format;
+         const struct svga_texture *stex = svga_texture(s->base.texture);
+
+         /* Can't create RGBA render target view of a RGBX surface so adjust
+          * the view format.  We do something similar for texture samplers in
+          * svga_validate_pipe_sampler_view().
+          */
+         if (view_format == SVGA3D_B8G8R8A8_UNORM &&
+             stex->key.format == SVGA3D_B8G8R8X8_TYPELESS) {
+            view_format = SVGA3D_B8G8R8X8_UNORM;
+         }
+
          ret = SVGA3D_vgpu10_DefineRenderTargetView(svga->swc,
                                                     s->view_id,
                                                     s->handle,
-                                                    s->key.format,
+                                                    view_format,
                                                     resType,
                                                     &desc);
       }
