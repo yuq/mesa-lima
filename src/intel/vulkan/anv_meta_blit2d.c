@@ -105,7 +105,9 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
    const VkImageCreateInfo image_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .imageType = VK_IMAGE_TYPE_2D,
-      .format = vk_format_for_size(surf->bs),
+      /* W-tiled images must be stencil-formatted. */
+      .format = surf->tiling == ISL_TILING_W ?
+                VK_FORMAT_S8_UINT : vk_format_for_size(surf->bs),
       .extent = {
          .width = width,
          .height = height,
@@ -140,7 +142,7 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
                           .viewType = VK_IMAGE_VIEW_TYPE_2D,
                           .format = image_info.format,
                           .subresourceRange = {
-                             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                             .aspectMask = anv_image_from_handle(*img)->aspects,
                              .baseMipLevel = 0,
                              .levelCount = 1,
                              .baseArrayLayer = 0,
@@ -177,7 +179,16 @@ blit2d_bind_src(struct anv_cmd_buffer *cmd_buffer,
                                          rect->src_x, rect->src_y,
                                          &offset, &rect->src_x, &rect->src_y);
 
-      create_iview(cmd_buffer, src, offset, VK_IMAGE_USAGE_SAMPLED_BIT,
+      VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;	
+
+      /* W-tiled images must be stencil-formatted. Outside of meta,
+       * a stencil image has this usage bit set. Adding it here
+       * ensures the ISL surface is created correctly.
+       */
+      if (src->tiling == ISL_TILING_W)
+         usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+      create_iview(cmd_buffer, src, offset, usage,
                    rect->src_x + rect->width, rect->src_y + rect->height,
                    &tmp->image, &tmp->iview);
 
