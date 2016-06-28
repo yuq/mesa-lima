@@ -435,11 +435,11 @@ blorp_nir_discard_if_outside_rect(nir_builder *b, nir_ssa_def *pos,
 }
 
 static nir_tex_instr *
-blorp_create_nir_tex_instr(nir_shader *shader, nir_texop op,
-                           nir_ssa_def *pos, unsigned num_srcs,
+blorp_create_nir_tex_instr(nir_builder *b, struct brw_blorp_blit_vars *v,
+                           nir_texop op, nir_ssa_def *pos, unsigned num_srcs,
                            enum brw_reg_type dst_type)
 {
-   nir_tex_instr *tex = nir_tex_instr_create(shader, num_srcs);
+   nir_tex_instr *tex = nir_tex_instr_create(b->shader, num_srcs);
 
    tex->op = op;
 
@@ -466,22 +466,32 @@ blorp_create_nir_tex_instr(nir_shader *shader, nir_texop op,
    tex->texture_index = 0;
    tex->sampler_index = 0;
 
+   /* To properly handle 3-D and 2-D array textures, we pull the Z component
+    * from an input.  TODO: This is a bit magic; we should probably make this
+    * more explicit in the future.
+    */
+   assert(pos->num_components >= 2);
+   pos = nir_vec3(b, nir_channel(b, pos, 0), nir_channel(b, pos, 1),
+                     nir_load_var(b, v->v_src_z));
+
+   tex->src[0].src_type = nir_tex_src_coord;
+   tex->src[0].src = nir_src_for_ssa(pos);
+   tex->coord_components = 3;
+
    nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, NULL);
 
    return tex;
 }
 
 static nir_ssa_def *
-blorp_nir_tex(nir_builder *b, nir_ssa_def *pos, enum brw_reg_type dst_type)
+blorp_nir_tex(nir_builder *b, struct brw_blorp_blit_vars *v,
+              nir_ssa_def *pos, enum brw_reg_type dst_type)
 {
    nir_tex_instr *tex =
-      blorp_create_nir_tex_instr(b->shader, nir_texop_tex, pos, 2, dst_type);
+      blorp_create_nir_tex_instr(b, v, nir_texop_tex, pos, 2, dst_type);
 
    assert(pos->num_components == 2);
    tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
-   tex->coord_components = 2;
-   tex->src[0].src_type = nir_tex_src_coord;
-   tex->src[0].src = nir_src_for_ssa(pos);
    tex->src[1].src_type = nir_tex_src_lod;
    tex->src[1].src = nir_src_for_ssa(nir_imm_int(b, 0));
 
@@ -495,20 +505,9 @@ blorp_nir_txf(nir_builder *b, struct brw_blorp_blit_vars *v,
               nir_ssa_def *pos, enum brw_reg_type dst_type)
 {
    nir_tex_instr *tex =
-      blorp_create_nir_tex_instr(b->shader, nir_texop_txf, pos, 2, dst_type);
-
-   /* In order to properly handle 3-D textures, we pull the Z component from
-    * a uniform.  TODO: This is a bit magic; we should probably make this
-    * more explicit in the future.
-    */
-   assert(pos->num_components == 2);
-   pos = nir_vec3(b, nir_channel(b, pos, 0), nir_channel(b, pos, 1),
-                     nir_load_var(b, v->v_src_z));
+      blorp_create_nir_tex_instr(b, v, nir_texop_txf, pos, 2, dst_type);
 
    tex->sampler_dim = GLSL_SAMPLER_DIM_3D;
-   tex->coord_components = 3;
-   tex->src[0].src_type = nir_tex_src_coord;
-   tex->src[0].src = nir_src_for_ssa(pos);
    tex->src[1].src_type = nir_tex_src_lod;
    tex->src[1].src = nir_src_for_ssa(nir_imm_int(b, 0));
 
@@ -518,17 +517,14 @@ blorp_nir_txf(nir_builder *b, struct brw_blorp_blit_vars *v,
 }
 
 static nir_ssa_def *
-blorp_nir_txf_ms(nir_builder *b, nir_ssa_def *pos, nir_ssa_def *mcs,
-                 enum brw_reg_type dst_type)
+blorp_nir_txf_ms(nir_builder *b, struct brw_blorp_blit_vars *v,
+                 nir_ssa_def *pos, nir_ssa_def *mcs, enum brw_reg_type dst_type)
 {
    nir_tex_instr *tex =
-      blorp_create_nir_tex_instr(b->shader, nir_texop_txf_ms, pos,
+      blorp_create_nir_tex_instr(b, v, nir_texop_txf_ms, pos,
                                  mcs != NULL ? 3 : 2, dst_type);
 
    tex->sampler_dim = GLSL_SAMPLER_DIM_MS;
-   tex->coord_components = 2;
-   tex->src[0].src_type = nir_tex_src_coord;
-   tex->src[0].src = nir_src_for_ssa(pos);
 
    tex->src[1].src_type = nir_tex_src_ms_index;
    if (pos->num_components == 2) {
@@ -549,16 +545,13 @@ blorp_nir_txf_ms(nir_builder *b, nir_ssa_def *pos, nir_ssa_def *mcs,
 }
 
 static nir_ssa_def *
-blorp_nir_txf_ms_mcs(nir_builder *b, nir_ssa_def *pos)
+blorp_nir_txf_ms_mcs(nir_builder *b, struct brw_blorp_blit_vars *v, nir_ssa_def *pos)
 {
    nir_tex_instr *tex =
-      blorp_create_nir_tex_instr(b->shader, nir_texop_txf_ms_mcs,
+      blorp_create_nir_tex_instr(b, v, nir_texop_txf_ms_mcs,
                                  pos, 1, BRW_REGISTER_TYPE_D);
 
    tex->sampler_dim = GLSL_SAMPLER_DIM_MS;
-   tex->coord_components = 2;
-   tex->src[0].src_type = nir_tex_src_coord;
-   tex->src[0].src = nir_src_for_ssa(pos);
 
    nir_builder_instr_insert(b, &tex->instr);
 
@@ -892,8 +885,8 @@ static inline int count_trailing_one_bits(unsigned value)
 }
 
 static nir_ssa_def *
-blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
-                               unsigned tex_samples,
+blorp_nir_manual_blend_average(nir_builder *b, struct brw_blorp_blit_vars *v,
+                               nir_ssa_def *pos, unsigned tex_samples,
                                enum isl_aux_usage tex_aux_usage,
                                enum brw_reg_type dst_type)
 {
@@ -905,7 +898,7 @@ blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
 
    nir_ssa_def *mcs = NULL;
    if (tex_aux_usage == ISL_AUX_USAGE_MCS)
-      mcs = blorp_nir_txf_ms_mcs(b, pos);
+      mcs = blorp_nir_txf_ms_mcs(b, v, pos);
 
    /* We add together samples using a binary tree structure, e.g. for 4x MSAA:
     *
@@ -947,7 +940,7 @@ blorp_nir_manual_blend_average(nir_builder *b, nir_ssa_def *pos,
       nir_ssa_def *ms_pos = nir_vec3(b, nir_channel(b, pos, 0),
                                         nir_channel(b, pos, 1),
                                         nir_imm_int(b, i));
-      texture_data[stack_depth++] = blorp_nir_txf_ms(b, ms_pos, mcs, dst_type);
+      texture_data[stack_depth++] = blorp_nir_txf_ms(b, v, ms_pos, mcs, dst_type);
 
       if (i == 0 && tex_aux_usage == ISL_AUX_USAGE_MCS) {
          /* The Ivy Bridge PRM, Vol4 Part1 p27 (Multisample Control Surface)
@@ -1067,7 +1060,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
        */
       nir_ssa_def *mcs = NULL;
       if (key->tex_aux_usage == ISL_AUX_USAGE_MCS)
-         mcs = blorp_nir_txf_ms_mcs(b, sample_coords_int);
+         mcs = blorp_nir_txf_ms_mcs(b, v, sample_coords_int);
 
       /* Compute sample index and map the sample index to a sample number.
        * Sample index layout shows the numbering of slots in a rectangular
@@ -1139,7 +1132,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
       nir_ssa_def *pos_ms = nir_vec3(b, nir_channel(b, sample_coords_int, 0),
                                         nir_channel(b, sample_coords_int, 1),
                                         sample);
-      tex_data[i] = blorp_nir_txf_ms(b, pos_ms, mcs, key->texture_data_type);
+      tex_data[i] = blorp_nir_txf_ms(b, v, pos_ms, mcs, key->texture_data_type);
    }
 
    nir_ssa_def *frac_x = nir_channel(b, frac_xy, 0);
@@ -1421,10 +1414,10 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
          src_pos = nir_ishl(&b, src_pos, nir_imm_int(&b, 1));
          src_pos = nir_iadd(&b, src_pos, nir_imm_int(&b, 1));
          src_pos = nir_i2f(&b, src_pos);
-         color = blorp_nir_tex(&b, src_pos, key->texture_data_type);
+         color = blorp_nir_tex(&b, &v, src_pos, key->texture_data_type);
       } else {
          /* Gen7+ hardware doesn't automaticaly blend. */
-         color = blorp_nir_manual_blend_average(&b, src_pos, key->src_samples,
+         color = blorp_nir_manual_blend_average(&b, &v, src_pos, key->src_samples,
                                                 key->tex_aux_usage,
                                                 key->texture_data_type);
       }
@@ -1433,7 +1426,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
       color = blorp_nir_manual_blend_bilinear(&b, src_pos, key->src_samples, key, &v);
    } else {
       if (key->bilinear_filter) {
-         color = blorp_nir_tex(&b, src_pos, key->texture_data_type);
+         color = blorp_nir_tex(&b, &v, src_pos, key->texture_data_type);
       } else {
          /* We're going to use texelFetch, so we need integers */
          if (src_pos->num_components == 2) {
@@ -1479,9 +1472,9 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
          } else {
             nir_ssa_def *mcs = NULL;
             if (key->tex_aux_usage == ISL_AUX_USAGE_MCS)
-               mcs = blorp_nir_txf_ms_mcs(&b, src_pos);
+               mcs = blorp_nir_txf_ms_mcs(&b, &v, src_pos);
 
-            color = blorp_nir_txf_ms(&b, src_pos, mcs, key->texture_data_type);
+            color = blorp_nir_txf_ms(&b, &v, src_pos, mcs, key->texture_data_type);
          }
       }
    }
