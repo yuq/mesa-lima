@@ -1518,17 +1518,63 @@ vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
     * weren't initialized, it will confuse live interval analysis, which will
     * make spilling fail to make progress.
     */
-   const src_reg temp = swizzle(retype(src_reg(this, glsl_type::vec4_type),
+   bool is_64bit = type_sz(inst->dst.type) == 8;
+   const glsl_type *alloc_type =
+      is_64bit ? glsl_type::dvec4_type : glsl_type::vec4_type;
+   const src_reg temp = swizzle(retype(src_reg(this, alloc_type),
                                        inst->dst.type),
                                 brw_swizzle_for_mask(inst->dst.writemask));
-   dst_reg dst = dst_reg(brw_writemask(brw_vec8_grf(0, 0),
-				       inst->dst.writemask));
-   vec4_instruction *write = SCRATCH_WRITE(dst, temp, index);
-   if (inst->opcode != BRW_OPCODE_SEL)
-      write->predicate = inst->predicate;
-   write->ir = inst->ir;
-   write->annotation = inst->annotation;
-   inst->insert_after(block, write);
+
+   if (!is_64bit) {
+      dst_reg dst = dst_reg(brw_writemask(brw_vec8_grf(0, 0),
+				          inst->dst.writemask));
+      vec4_instruction *write = SCRATCH_WRITE(dst, temp, index);
+      if (inst->opcode != BRW_OPCODE_SEL)
+         write->predicate = inst->predicate;
+      write->ir = inst->ir;
+      write->annotation = inst->annotation;
+      inst->insert_after(block, write);
+   } else {
+      dst_reg shuffled = dst_reg(this, alloc_type);
+      vec4_instruction *last =
+         shuffle_64bit_data(shuffled, temp, true, block, inst);
+      src_reg shuffled_float = src_reg(retype(shuffled, BRW_REGISTER_TYPE_F));
+
+      uint8_t mask = 0;
+      if (inst->dst.writemask & WRITEMASK_X)
+         mask |= WRITEMASK_XY;
+      if (inst->dst.writemask & WRITEMASK_Y)
+         mask |= WRITEMASK_ZW;
+      if (mask) {
+         dst_reg dst = dst_reg(brw_writemask(brw_vec8_grf(0, 0), mask));
+
+         vec4_instruction *write = SCRATCH_WRITE(dst, shuffled_float, index);
+         if (inst->opcode != BRW_OPCODE_SEL)
+            write->predicate = inst->predicate;
+         write->ir = inst->ir;
+         write->annotation = inst->annotation;
+         last->insert_after(block, write);
+      }
+
+      mask = 0;
+      if (inst->dst.writemask & WRITEMASK_Z)
+         mask |= WRITEMASK_XY;
+      if (inst->dst.writemask & WRITEMASK_W)
+         mask |= WRITEMASK_ZW;
+      if (mask) {
+         dst_reg dst = dst_reg(brw_writemask(brw_vec8_grf(0, 0), mask));
+
+         src_reg index = get_scratch_offset(block, inst, inst->dst.reladdr,
+                                            reg_offset + 1);
+         vec4_instruction *write =
+            SCRATCH_WRITE(dst, byte_offset(shuffled_float, REG_SIZE), index);
+         if (inst->opcode != BRW_OPCODE_SEL)
+            write->predicate = inst->predicate;
+         write->ir = inst->ir;
+         write->annotation = inst->annotation;
+         last->insert_after(block, write);
+      }
+   }
 
    inst->dst.file = temp.file;
    inst->dst.nr = temp.nr;
