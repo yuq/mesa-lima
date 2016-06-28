@@ -429,10 +429,12 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 	    rs->pa_sc_line_stipple == sctx->last_sc_line_stipple)
 		return;
 
+	/* For lines, reset the stipple pattern at each primitive. Otherwise,
+	 * reset the stipple pattern at each packet (line strips, line loops).
+	 */
 	radeon_set_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
 		rs->pa_sc_line_stipple |
-		S_028A0C_AUTO_RESET_CNTL(rast_prim == PIPE_PRIM_LINES ? 1 :
-					 rast_prim == PIPE_PRIM_LINE_STRIP ? 2 : 0));
+		S_028A0C_AUTO_RESET_CNTL(rast_prim == PIPE_PRIM_LINES ? 1 : 2));
 
 	sctx->last_rast_prim = rast_prim;
 	sctx->last_sc_line_stipple = rs->pa_sc_line_stipple;

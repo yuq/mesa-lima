@@ -3805,7 +3805,15 @@ static void si_init_config(struct si_context *sctx)
 		       S_028034_BR_X(16384) | S_028034_BR_Y(16384));
 
 	si_pm4_set_reg(pm4, R_02820C_PA_SC_CLIPRECT_RULE, 0xFFFF);
-	si_pm4_set_reg(pm4, R_028230_PA_SC_EDGERULE, 0xAAAAAAAA);
+	si_pm4_set_reg(pm4, R_028230_PA_SC_EDGERULE,
+		       S_028230_ER_TRI(0xA) |
+		       S_028230_ER_POINT(0xA) |
+		       S_028230_ER_RECT(0xA) |
+		       /* Required by DX10_DIAMOND_TEST_ENA: */
+		       S_028230_ER_LINE_LR(0x1A) |
+		       S_028230_ER_LINE_RL(0x26) |
+		       S_028230_ER_LINE_TB(0xA) |
+		       S_028230_ER_LINE_BT(0xA));
 	/* PA_SU_HARDWARE_SCREEN_OFFSET must be 0 due to hw bug on SI */
 	si_pm4_set_reg(pm4, R_028234_PA_SU_HARDWARE_SCREEN_OFFSET, 0);
 	si_pm4_set_reg(pm4, R_028820_PA_CL_NANINF_CNTL, 0);

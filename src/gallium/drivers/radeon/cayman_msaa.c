@@ -200,6 +200,14 @@ void cayman_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
 {
 	int setup_samples = nr_samples > 1 ? nr_samples :
 			    overrast_samples > 1 ? overrast_samples : 0;
+	/* Required by OpenGL line rasterization.
+	 *
+	 * TODO: We should also enable perpendicular endcaps for AA lines,
+	 *       but that requires implementing line stippling in the pixel
+	 *       shader. SC can only do line stippling with axis-aligned
+	 *       endcaps.
+	 */
+	unsigned sc_line_cntl = S_028BDC_DX10_DIAMOND_TEST_ENA(1);
 
 	if (setup_samples > 1) {
 		/* indexed by log2(nr_samples) */
@@ -215,7 +223,7 @@ void cayman_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
 			util_logbase2(util_next_power_of_two(ps_iter_samples));
 
 		radeon_set_context_reg_seq(cs, CM_R_028BDC_PA_SC_LINE_CNTL, 2);
-		radeon_emit(cs, S_028BDC_LAST_PIXEL(1) |
+		radeon_emit(cs, sc_line_cntl |
 			    S_028BDC_EXPAND_LINE_WIDTH(1)); /* CM_R_028BDC_PA_SC_LINE_CNTL */
 		radeon_emit(cs, S_028BE0_MSAA_NUM_SAMPLES(log_samples) |
 			    S_028BE0_MAX_SAMPLE_DIST(max_dist[log_samples]) |
@@ -242,7 +250,7 @@ void cayman_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
 		}
 	} else {
 		radeon_set_context_reg_seq(cs, CM_R_028BDC_PA_SC_LINE_CNTL, 2);
-		radeon_emit(cs, S_028BDC_LAST_PIXEL(1)); /* CM_R_028BDC_PA_SC_LINE_CNTL */
+		radeon_emit(cs, sc_line_cntl); /* CM_R_028BDC_PA_SC_LINE_CNTL */
 		radeon_emit(cs, 0); /* CM_R_028BE0_PA_SC_AA_CONFIG */
 
 		radeon_set_context_reg(cs, CM_R_028804_DB_EQAA,

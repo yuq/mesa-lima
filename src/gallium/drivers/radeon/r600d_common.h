@@ -203,6 +203,12 @@
 #define   S_028BDC_LAST_PIXEL(x)                       (((unsigned)(x) & 0x1) << 10)
 #define   G_028BDC_LAST_PIXEL(x)                       (((x) >> 10) & 0x1)
 #define   C_028BDC_LAST_PIXEL                          0xFFFFFBFF
+#define   S_028BDC_PERPENDICULAR_ENDCAP_ENA(x)         (((unsigned)(x) & 0x1) << 11)
+#define   G_028BDC_PERPENDICULAR_ENDCAP_ENA(x)         (((x) >> 11) & 0x1)
+#define   C_028BDC_PERPENDICULAR_ENDCAP_ENA            0xFFFFF7FF
+#define   S_028BDC_DX10_DIAMOND_TEST_ENA(x)            (((unsigned)(x) & 0x1) << 12)
+#define   G_028BDC_DX10_DIAMOND_TEST_ENA(x)            (((x) >> 12) & 0x1)
+#define   C_028BDC_DX10_DIAMOND_TEST_ENA               0xFFFFEFFF
 #define CM_R_028BE0_PA_SC_AA_CONFIG                  0x28be0
 #define   S_028BE0_MSAA_NUM_SAMPLES(x)                  (((unsigned)(x) & 0x7) << 0)
 #define   S_028BE0_AA_MASK_CENTROID_DTMN(x)		(((unsigned)(x) & 0x1) << 4)
