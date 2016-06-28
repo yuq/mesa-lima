@@ -575,8 +575,8 @@ fd_resource_create(struct pipe_screen *pscreen,
 	enum pipe_format format = tmpl->format;
 	uint32_t size, alignment;
 
-	DBG("target=%d, format=%s, %ux%ux%u, array_size=%u, last_level=%u, "
-			"nr_samples=%u, usage=%u, bind=%x, flags=%x",
+	DBG("%p: target=%d, format=%s, %ux%ux%u, array_size=%u, last_level=%u, "
+			"nr_samples=%u, usage=%u, bind=%x, flags=%x", prsc,
 			tmpl->target, util_format_name(format),
 			tmpl->width0, tmpl->height0, tmpl->depth0,
 			tmpl->array_size, tmpl->last_level, tmpl->nr_samples,

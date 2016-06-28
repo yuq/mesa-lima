@@ -383,7 +383,8 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 	ctx->stats.batch_total++;
 
 	if (sysmem) {
-		DBG("rendering sysmem (%s/%s)",
+		DBG("%p: rendering sysmem %ux%u (%s/%s)",
+			batch, pfb->width, pfb->height,
 			util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 			util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 		fd_hw_query_prepare(ctx, 1);
@@ -392,7 +393,8 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 	} else {
 		struct fd_gmem_stateobj *gmem = &ctx->gmem;
 		calculate_tiles(batch);
-		DBG("rendering %dx%d tiles (%s/%s)", gmem->nbins_x, gmem->nbins_y,
+		DBG("%p: rendering %dx%d tiles %ux%u (%s/%s)",
+			batch, pfb->width, pfb->height, gmem->nbins_x, gmem->nbins_y,
 			util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 			util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 		fd_hw_query_prepare(ctx, gmem->nbins_x * gmem->nbins_y);

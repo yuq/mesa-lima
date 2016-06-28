@@ -170,7 +170,8 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	/* and any buffers used, need to be resolved: */
 	batch->resolve |= buffers;
 
-	DBG("%x num_draws=%u (%s/%s)", buffers, batch->num_draws,
+	DBG("%p: %x %ux%u num_draws=%u (%s/%s)", batch, buffers,
+		pfb->width, pfb->height, batch->num_draws,
 		util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 
@@ -242,7 +243,8 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 		batch->gmem_reason |= FD_GMEM_CLEARS_DEPTH_STENCIL;
 	}
 
-	DBG("%x depth=%f, stencil=%u (%s/%s)", buffers, depth, stencil,
+	DBG("%p: %x %ux%u depth=%f, stencil=%u (%s/%s)", batch, buffers,
+		pfb->width, pfb->height, depth, stencil,
 		util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 

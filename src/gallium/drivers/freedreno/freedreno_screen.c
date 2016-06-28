@@ -76,6 +76,7 @@ static const struct debug_named_value debug_options[] = {
 		{"deqp",      FD_DBG_DEQP,   "Enable dEQP hacks"},
 		{"nir",       FD_DBG_NIR,    "Prefer NIR as native IR"},
 		{"reorder",   FD_DBG_REORDER,"Enable reordering for draws/blits"},
+		{"bstat",     FD_DBG_BSTAT,  "Print batch stats at context destroy"},
 		DEBUG_NAMED_VALUE_END
 };
 
