@@ -101,6 +101,8 @@ process_glsl_ir(gl_shader_stage stage,
 
    ralloc_adopt(mem_ctx, shader->ir);
 
+   lower_blend_equation_advanced(shader);
+
    /* lower_packing_builtins() inserts arithmetic instructions, so it
     * must precede lower_instructions().
     */
