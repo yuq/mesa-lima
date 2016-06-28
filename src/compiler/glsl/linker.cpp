@@ -1871,7 +1871,7 @@ link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
  * and propagates them to the linked FS and linked shader program.
  */
 static void
-link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
+link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
 	                        struct gl_linked_shader *linked_shader,
 	                        struct gl_shader **shader_list,
 	                        unsigned num_shaders)
@@ -2217,7 +2217,7 @@ link_intrastage_shaders(void *mem_ctx,
    linked->ir = new(linked) exec_list;
    clone_ir_list(mem_ctx, linked->ir, main->ir);
 
-   link_fs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
+   link_fs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_tcs_out_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_tes_in_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_gs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
