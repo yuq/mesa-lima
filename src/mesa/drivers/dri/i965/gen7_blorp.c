@@ -485,12 +485,8 @@ gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
                                      const struct brw_blorp_params *params)
 {
    const uint8_t mocs = GEN7_MOCS_L3;
-   uint32_t surfwidth, surfheight;
    uint32_t surftype;
-   unsigned int depth = MAX2(params->depth.mt->logical_depth0, 1);
-   unsigned int min_array_element;
    GLenum gl_target = params->depth.mt->target;
-   unsigned int lod;
 
    switch (gl_target) {
    case GL_TEXTURE_CUBE_MAP_ARRAY:
@@ -501,40 +497,22 @@ gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
        * equivalent.
        */
       surftype = BRW_SURFACE_2D;
-      depth *= 6;
       break;
    default:
       surftype = translate_tex_target(gl_target);
       break;
    }
 
-   min_array_element = params->depth.layer;
-   if (params->depth.mt->num_samples > 1) {
-      /* Convert physical layer to logical layer. */
-      min_array_element /= params->depth.mt->num_samples;
-   }
-
-   lod = params->depth.level - params->depth.mt->first_level;
-
-   if (params->hiz_op != GEN6_HIZ_OP_NONE && lod == 0) {
-      /* HIZ ops for lod 0 may set the width & height a little
-       * larger to allow the fast depth clear to fit the hardware
-       * alignment requirements. (8x4)
-       */
-      surfwidth = params->depth.surf.logical_level0_px.width;
-      surfheight = params->depth.surf.logical_level0_px.height;
-   } else {
-      surfwidth = params->depth.mt->logical_width0;
-      surfheight = params->depth.mt->logical_height0;
-   }
-
    /* 3DSTATE_DEPTH_BUFFER */
    {
       brw_emit_depth_stall_flushes(brw);
 
+      unsigned depth = MAX2(params->depth.surf.logical_level0_px.depth,
+                            params->depth.surf.logical_level0_px.array_len);
+
       BEGIN_BATCH(7);
       OUT_BATCH(GEN7_3DSTATE_DEPTH_BUFFER << 16 | (7 - 2));
-      OUT_BATCH((params->depth.mt->pitch - 1) |
+      OUT_BATCH((params->depth.surf.row_pitch - 1) |
                 params->depth_format << 18 |
                 1 << 22 | /* hiz enable */
                 1 << 28 | /* depth write */
@@ -542,11 +520,11 @@ gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
       OUT_RELOC(params->depth.mt->bo,
                 I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                 0);
-      OUT_BATCH((surfwidth - 1) << 4 |
-                (surfheight - 1) << 18 |
-                lod);
+      OUT_BATCH((params->depth.surf.logical_level0_px.width - 1) << 4 |
+                (params->depth.surf.logical_level0_px.height - 1) << 18 |
+                params->depth.view.base_level);
       OUT_BATCH(((depth - 1) << 21) |
-                (min_array_element << 10) |
+                (params->depth.view.base_array_layer << 10) |
                 mocs);
       OUT_BATCH(0);
       OUT_BATCH((depth - 1) << 21);

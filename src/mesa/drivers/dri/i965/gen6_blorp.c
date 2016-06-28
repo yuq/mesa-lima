@@ -699,11 +699,8 @@ static void
 gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
                                      const struct brw_blorp_params *params)
 {
-   uint32_t surfwidth, surfheight;
    uint32_t surftype;
-   unsigned int depth = MAX2(params->depth.mt->logical_depth0, 1);
    GLenum gl_target = params->depth.mt->target;
-   unsigned int lod;
 
    switch (gl_target) {
    case GL_TEXTURE_CUBE_MAP_ARRAY:
@@ -714,39 +711,25 @@ gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
        * equivalent.
        */
       surftype = BRW_SURFACE_2D;
-      depth *= 6;
       break;
    default:
       surftype = translate_tex_target(gl_target);
       break;
    }
 
-   const unsigned min_array_element = params->depth.layer;
-
-   lod = params->depth.level - params->depth.mt->first_level;
-
-   if (params->hiz_op != GEN6_HIZ_OP_NONE && lod == 0) {
-      /* HIZ ops for lod 0 may set the width & height a little
-       * larger to allow the fast depth clear to fit the hardware
-       * alignment requirements. (8x4)
-       */
-      surfwidth = params->depth.surf.logical_level0_px.width;
-      surfheight = params->depth.surf.logical_level0_px.height;
-   } else {
-      surfwidth = params->depth.mt->logical_width0;
-      surfheight = params->depth.mt->logical_height0;
-   }
-
    /* 3DSTATE_DEPTH_BUFFER */
    {
       brw_emit_depth_stall_flushes(brw);
+
+      unsigned depth = MAX2(params->depth.surf.logical_level0_px.depth,
+                            params->depth.surf.logical_level0_px.array_len);
 
       BEGIN_BATCH(7);
       /* 3DSTATE_DEPTH_BUFFER dw0 */
       OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (7 - 2));
 
       /* 3DSTATE_DEPTH_BUFFER dw1 */
-      OUT_BATCH((params->depth.mt->pitch - 1) |
+      OUT_BATCH((params->depth.surf.row_pitch - 1) |
                 params->depth_format << 18 |
                 1 << 21 | /* separate stencil enable */
                 1 << 22 | /* hiz enable */
@@ -761,13 +744,13 @@ gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
 
       /* 3DSTATE_DEPTH_BUFFER dw3 */
       OUT_BATCH(BRW_SURFACE_MIPMAPLAYOUT_BELOW << 1 |
-                (surfwidth - 1) << 6 |
-                (surfheight - 1) << 19 |
-                lod << 2);
+                (params->depth.surf.logical_level0_px.width - 1) << 6 |
+                (params->depth.surf.logical_level0_px.height - 1) << 19 |
+                params->depth.view.base_level << 2);
 
       /* 3DSTATE_DEPTH_BUFFER dw4 */
       OUT_BATCH((depth - 1) << 21 |
-                min_array_element << 10 |
+                params->depth.view.base_array_layer << 10 |
                 (depth - 1) << 1);
 
       /* 3DSTATE_DEPTH_BUFFER dw5 */
@@ -784,6 +767,7 @@ gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
       uint32_t offset = 0;
 
       if (hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
+         const unsigned lod = params->depth.view.base_level;
          offset = intel_miptree_get_aligned_offset(hiz_mt,
                                                    hiz_mt->level[lod].level_x,
                                                    hiz_mt->level[lod].level_y,
