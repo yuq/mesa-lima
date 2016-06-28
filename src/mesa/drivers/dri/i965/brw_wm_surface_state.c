@@ -71,7 +71,7 @@ static const struct surface_state_info surface_state_infos[] = {
    [9] = {16, 64, 8,  10, SKL_MOCS_WB,  SKL_MOCS_PTE},
 };
 
-void
+static void
 brw_emit_surface_state(struct brw_context *brw,
                        struct intel_mipmap_tree *mt,
                        const struct isl_view *view,

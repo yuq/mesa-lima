@@ -490,45 +490,10 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
                                    I915_GEM_DOMAIN_RENDER,
                                    true /* is_render_target */);
    if (params->src.mt) {
-      const struct brw_blorp_surface_info *surface = &params->src;
-      struct intel_mipmap_tree *mt = surface->mt;
-
-      /* If src is a 2D multisample array texture on Gen7+ using
-       * INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, src layer is the
-       * physical layer holding sample 0.  So, for example, if mt->num_samples
-       * == 4, then logical layer n corresponds to layer == 4*n.
-       *
-       * Multisampled depth and stencil surfaces have the samples interleaved
-       * (INTEL_MSAA_LAYOUT_IMS) and therefore the layer doesn't need
-       * adjustment.
-       */
-      const unsigned layer_divider =
-         (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
-          mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
-         MAX2(mt->num_samples, 1) : 1;
-
-      const unsigned layer = mt->target != GL_TEXTURE_3D ?
-                                surface->layer / layer_divider : 0;
-
-      struct isl_view view = {
-         .format = surface->view.format,
-         .base_level = surface->level,
-         .levels = mt->last_level - surface->level + 1,
-         .base_array_layer = layer,
-         .array_len = mt->logical_depth0 - layer,
-         .channel_select = {
-            surface->view.channel_select[0],
-            surface->view.channel_select[1],
-            surface->view.channel_select[2],
-            surface->view.channel_select[3],
-         },
-         .usage = ISL_SURF_USAGE_TEXTURE_BIT,
-      };
-
-      brw_emit_surface_state(brw, mt, &view,
-                             brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB,
-                             false, &wm_surf_offset_texture, -1,
-                             I915_GEM_DOMAIN_SAMPLER, 0);
+      wm_surf_offset_texture =
+         brw_blorp_emit_surface_state(brw, &params->src,
+                                      I915_GEM_DOMAIN_SAMPLER, 0,
+                                      false /* is_render_target */);
    }
 
    return gen6_blorp_emit_binding_table(brw,

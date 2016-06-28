@@ -344,7 +344,9 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
 
    const struct isl_surf *aux_surf = NULL;
    uint64_t aux_offset = 0;
-   if (surface->mt->mcs_mt) {
+   if (surface->mt->mcs_mt &&
+       (is_render_target ||
+        surface->mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED)) {
       aux_surf = &surface->aux_surf;
       assert(surface->mt->mcs_mt->offset == 0);
       aux_offset = surface->mt->mcs_mt->bo->offset64;
