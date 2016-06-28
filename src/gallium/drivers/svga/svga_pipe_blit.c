@@ -23,10 +23,11 @@
  *
  **********************************************************/
 
-#include "svga_resource_texture.h"
 #include "svga_context.h"
 #include "svga_debug.h"
 #include "svga_cmd.h"
+#include "svga_resource_buffer.h"
+#include "svga_resource_texture.h"
 #include "svga_surface.h"
 
 //#include "util/u_blit_sw.h"
@@ -117,10 +118,33 @@ svga_resource_copy_region(struct pipe_context *pipe,
     */
    svga_surfaces_flush( svga );
 
-   /* Fallback for buffers. */
    if (dst_tex->target == PIPE_BUFFER && src_tex->target == PIPE_BUFFER) {
-      util_resource_copy_region(pipe, dst_tex, dst_level, dstx, dsty, dstz,
-                                src_tex, src_level, src_box);
+      /* can't copy within the same buffer, unfortunately */
+      if (svga_have_vgpu10(svga) && src_tex != dst_tex) {
+         enum pipe_error ret;
+         struct svga_winsys_surface *src_surf;
+         struct svga_winsys_surface *dst_surf;
+         struct svga_buffer *dbuffer = svga_buffer(dst_tex);
+
+         src_surf = svga_buffer_handle(svga, src_tex);
+         dst_surf = svga_buffer_handle(svga, dst_tex);
+
+         ret = SVGA3D_vgpu10_BufferCopy(svga->swc, src_surf, dst_surf,
+                                        src_box->x, dstx, src_box->width);
+         if (ret != PIPE_OK) {
+            svga_context_flush(svga, NULL);
+            ret = SVGA3D_vgpu10_BufferCopy(svga->swc, src_surf, dst_surf,
+                                           src_box->x, dstx, src_box->width);
+            assert(ret == PIPE_OK);
+         }
+
+         dbuffer->dirty = TRUE;
+      }
+      else {
+         /* use map/memcpy fallback */
+         util_resource_copy_region(pipe, dst_tex, dst_level, dstx,
+                                   dsty, dstz, src_tex, src_level, src_box);
+      }
       return;
    }
 
