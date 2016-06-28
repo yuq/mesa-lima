@@ -320,7 +320,7 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 1; /* may be a sw fallback, depending on restart index */
 
    case PIPE_CAP_GENERATE_MIPMAP:
-      return sws->have_vgpu10;
+      return sws->have_generate_mipmap_cmd;
 
    /* Unsupported features */
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:

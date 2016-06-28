@@ -544,6 +544,9 @@ struct svga_winsys_screen
 
    /** To rebind resources at the beginnning of a new command buffer */
    boolean need_to_rebind_resources;
+
+   boolean have_generate_mipmap_cmd;
+   boolean have_set_predication_cmd;
 };
 
 
