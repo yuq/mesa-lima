@@ -560,8 +560,7 @@ static void r600_texture_destroy(struct pipe_screen *screen,
 	struct r600_texture *rtex = (struct r600_texture*)ptex;
 	struct r600_resource *resource = &rtex->resource;
 
-	if (rtex->flushed_depth_texture)
-		r600_texture_reference(&rtex->flushed_depth_texture, NULL);
+	r600_texture_reference(&rtex->flushed_depth_texture, NULL);
 
 	r600_resource_reference(&rtex->htile_buffer, NULL);
 	if (rtex->cmask_buffer != &rtex->resource) {
