@@ -1798,9 +1798,38 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 
 static void si_init_tess_factor_ring(struct si_context *sctx)
 {
-	unsigned offchip_blocks = sctx->b.chip_class >= CIK ? 256 : 64;
-	assert(!sctx->tf_ring);
+	bool double_offchip_buffers = sctx->b.chip_class >= CIK;
+	unsigned max_offchip_buffers_per_se = double_offchip_buffers ? 128 : 64;
+	unsigned max_offchip_buffers = max_offchip_buffers_per_se *
+				       sctx->screen->b.info.max_se;
+	unsigned offchip_granularity;
 
+	switch (sctx->screen->tess_offchip_block_dw_size) {
+	default:
+		assert(0);
+		/* fall through */
+	case 8192:
+		offchip_granularity = V_03093C_X_8K_DWORDS;
+		break;
+	case 4096:
+		offchip_granularity = V_03093C_X_4K_DWORDS;
+		break;
+	}
+
+	switch (sctx->b.chip_class) {
+	case SI:
+		max_offchip_buffers = MIN2(max_offchip_buffers, 126);
+		break;
+	case CIK:
+		max_offchip_buffers = MIN2(max_offchip_buffers, 508);
+		break;
+	case VI:
+	default:
+		max_offchip_buffers = MIN2(max_offchip_buffers, 512);
+		break;
+	}
+
+	assert(!sctx->tf_ring);
 	sctx->tf_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
 					   PIPE_USAGE_DEFAULT,
 					   32768 * sctx->screen->b.info.max_se);
@@ -1812,8 +1841,8 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	sctx->tess_offchip_ring = pipe_buffer_create(sctx->b.b.screen,
 	                                             PIPE_BIND_CUSTOM,
 	                                             PIPE_USAGE_DEFAULT,
-	                                             offchip_blocks *
-	                                             SI_TESS_OFFCHIP_BLOCK_SIZE);
+	                                             max_offchip_buffers *
+	                                             sctx->screen->tess_offchip_block_dw_size * 4);
 	if (!sctx->tess_offchip_ring)
 		return;
 
@@ -1821,24 +1850,24 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 
 	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
-		unsigned offchip_buffering = offchip_blocks;
-		if(sctx->b.chip_class >= VI)
-			--offchip_buffering;
+		if (sctx->b.chip_class >= VI)
+			--max_offchip_buffers;
 
 		si_pm4_set_reg(sctx->init_config, R_030938_VGT_TF_RING_SIZE,
 			       S_030938_SIZE(sctx->tf_ring->width0 / 4));
 		si_pm4_set_reg(sctx->init_config, R_030940_VGT_TF_MEMORY_BASE,
 			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
 		si_pm4_set_reg(sctx->init_config, R_03093C_VGT_HS_OFFCHIP_PARAM,
-		             S_03093C_OFFCHIP_BUFFERING(offchip_buffering) |
-		             S_03093C_OFFCHIP_GRANULARITY(V_03093C_X_8K_DWORDS));
+		             S_03093C_OFFCHIP_BUFFERING(max_offchip_buffers) |
+		             S_03093C_OFFCHIP_GRANULARITY(offchip_granularity));
 	} else {
+		assert(offchip_granularity == V_03093C_X_8K_DWORDS);
 		si_pm4_set_reg(sctx->init_config, R_008988_VGT_TF_RING_SIZE,
 			       S_008988_SIZE(sctx->tf_ring->width0 / 4));
 		si_pm4_set_reg(sctx->init_config, R_0089B8_VGT_TF_MEMORY_BASE,
 			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
 		si_pm4_set_reg(sctx->init_config, R_0089B0_VGT_HS_OFFCHIP_PARAM,
-		               S_0089B0_OFFCHIP_BUFFERING(offchip_blocks));
+		               S_0089B0_OFFCHIP_BUFFERING(max_offchip_buffers));
 	}
 
 	/* Flush the context to re-emit the init_config state.

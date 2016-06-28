@@ -147,8 +147,9 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	                                                       output_patch_size));
 
 	/* Make sure the output data fits in the offchip buffer */
-	*num_patches = MIN2(*num_patches, SI_TESS_OFFCHIP_BLOCK_SIZE /
-	                                  output_patch_size);
+	*num_patches = MIN2(*num_patches,
+			    (sctx->screen->tess_offchip_block_dw_size * 4) /
+			    output_patch_size);
 
 	/* Not necessary for correctness, but improves performance. The
 	 * specific value is taken from the proprietary driver.

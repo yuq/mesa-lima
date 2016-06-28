@@ -40,8 +40,6 @@
 #define SI_NUM_IMAGES			16
 #define SI_NUM_SHADER_BUFFERS		16
 
-#define SI_TESS_OFFCHIP_BLOCK_SIZE	(8192 * 4)
-
 struct si_screen;
 struct si_shader;
 
