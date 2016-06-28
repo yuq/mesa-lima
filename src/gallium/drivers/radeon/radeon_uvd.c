@@ -1096,6 +1096,9 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 			}
 			rvid_clear_buffer(decoder->context, &dec->ctx);
 		}
+
+		if (dec->ctx.res)
+			dec->msg->body.decode.dpb_reserved = dec->ctx.res->buf->size;
 		break;
 
 	case PIPE_VIDEO_FORMAT_VC1:
