@@ -78,6 +78,9 @@ struct brw_blorp_surface_info
 
    struct isl_view view;
 
+   /* Z offset into a 3-D texture or slice of a 2-D array texture. */
+   uint32_t z_offset;
+
    /**
     * The miplevel to use.
     */

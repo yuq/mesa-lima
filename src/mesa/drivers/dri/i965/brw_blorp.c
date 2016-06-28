@@ -201,6 +201,15 @@ brw_blorp_surface_info_init(struct brw_context *brw,
       },
    };
 
+   if (brw->gen >= 8 && !is_render_target && info->surf.dim == ISL_SURF_DIM_3D) {
+      /* On gen8+ we use actual 3-D textures so we need to pass the layer
+       * through to the sampler.
+       */
+      info->z_offset = layer;
+   } else {
+      info->z_offset = 0;
+   }
+
    info->level = level;
    info->layer = layer;
 

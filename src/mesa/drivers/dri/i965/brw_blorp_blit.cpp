@@ -1756,15 +1756,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    brw_blorp_setup_coord_transform(&params.wm_inputs.coord_transform[1],
                                    src_y0, src_y1, dst_y0, dst_y1, mirror_y);
 
-   if (brw->gen >= 8 && params.src.mt->target == GL_TEXTURE_3D) {
-      /* On gen8+ we use actual 3-D textures so we need to pass the layer
-       * through to the sampler.
-       */
-      params.wm_inputs.src_z = params.src.layer;
-   } else {
-      /* On gen7 and earlier, we fake everything with 2-D textures */
-      params.wm_inputs.src_z = 0;
-   }
+   /* For some texture types, we need to pass the layer through the sampler. */
+   params.wm_inputs.src_z = params.src.z_offset;
 
    if (brw->gen > 6 && dst_mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS) {
       /* We must expand the rectangle we send through the rendering pipeline,
