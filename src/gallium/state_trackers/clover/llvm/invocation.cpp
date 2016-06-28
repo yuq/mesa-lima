@@ -219,13 +219,8 @@ namespace {
                                  s_log,
                                  &c.getDiagnosticOpts()));
 
-#if HAVE_LLVM >= 0x0306
       c.getPreprocessorOpts().addRemappedFile(name,
                                               llvm::MemoryBuffer::getMemBuffer(source).release());
-#else
-      c.getPreprocessorOpts().addRemappedFile(name,
-                                      llvm::MemoryBuffer::getMemBuffer(source));
-#endif
 
       if (headers.size()) {
          const std::string tmp_header_path = "/tmp/clover/";
@@ -239,11 +234,7 @@ namespace {
               it != headers.end(); ++it) {
             const std::string path = tmp_header_path + std::string(it->first);
             c.getPreprocessorOpts().addRemappedFile(path,
-#if HAVE_LLVM >= 0x0306
                     llvm::MemoryBuffer::getMemBuffer(it->second.c_str()).release());
-#else
-                    llvm::MemoryBuffer::getMemBuffer(it->second.c_str()));
-#endif
          }
       }
 
@@ -273,11 +264,7 @@ namespace {
       memcpy(address_spaces, c.getTarget().getAddressSpaceMap(),
                                                         sizeof(address_spaces));
 
-#if HAVE_LLVM >= 0x0306
       return act.takeModule().release();
-#else
-      return act.takeModule();
-#endif
    }
 
    std::vector<llvm::Function *>
@@ -302,11 +289,7 @@ namespace {
 
       kernels.reserve(kernel_node->getNumOperands());
       for (unsigned i = 0; i < kernel_node->getNumOperands(); ++i) {
-#if HAVE_LLVM >= 0x0306
          kernels.push_back(llvm::mdconst::dyn_extract<llvm::Function>(
-#else
-         kernels.push_back(llvm::dyn_cast<llvm::Function>(
-#endif
                                     kernel_node->getOperand(i)->getOperand(0)));
       }
       return kernels;
@@ -354,9 +337,7 @@ namespace {
          export_list.push_back(kernel->getName().data());
       }
 #endif
-#if HAVE_LLVM < 0x0306
-      PM.add(new llvm::DataLayoutPass(mod));
-#elif HAVE_LLVM < 0x0307
+#if HAVE_LLVM < 0x0307
       PM.add(new llvm::DataLayoutPass());
 #endif
 #if HAVE_LLVM >= 0x0309
@@ -405,7 +386,7 @@ namespace {
       return res;
    }
 
-#elif HAVE_LLVM >= 0x0306
+#else
 
    const llvm::MDNode *
    get_kernel_metadata(const llvm::Function *kernel_func) {
@@ -464,17 +445,7 @@ namespace {
 
       return res;
    }
-
-#else
-
-   std::vector<kernel_arg_md>
-   get_kernel_arg_md(const llvm::Function *kernel_func) {
-      return std::vector<kernel_arg_md>(
-            kernel_func->getArgumentList().size(),
-            kernel_arg_md("", ""));
-   }
-
-#endif // HAVE_LLVM >= 0x0306
+#endif
 
    std::vector<module::argument>
    get_kernel_args(const llvm::Module *mod, const std::string &kernel_name,
@@ -941,10 +912,7 @@ clover::compile_program_llvm(const std::string &source,
          break;
       }
    }
-#if HAVE_LLVM >= 0x0306
-   // LLVM 3.6 and newer, the user takes ownership of the module.
+   // The user takes ownership of the module.
    delete mod;
-#endif
-
    return m;
 }
