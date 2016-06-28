@@ -293,7 +293,13 @@ svga_blit(struct pipe_context *pipe,
       return;
    }
 
-   if (util_try_blit_via_copy_region(pipe, blit_info)) {
+   if (util_can_blit_via_copy_region(blit_info, TRUE) ||
+       util_can_blit_via_copy_region(blit_info, FALSE)) {
+      util_resource_copy_region(pipe, blit_info->dst.resource,
+                                blit_info->dst.level,
+                                blit_info->dst.box.x, blit_info->dst.box.y,
+                                blit_info->dst.box.z, blit_info->src.resource,
+                                blit_info->src.level, &blit_info->src.box);
       return; /* done */
    }
 
