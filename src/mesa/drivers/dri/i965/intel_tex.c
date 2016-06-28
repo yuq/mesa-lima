@@ -9,6 +9,7 @@
 #include "intel_mipmap_tree.h"
 #include "intel_tex.h"
 #include "intel_fbo.h"
+#include "intel_reg.h"
 
 #define FILE_DEBUG_FLAG DEBUG_TEXTURE
 
@@ -362,7 +363,25 @@ intel_texture_barrier(struct gl_context *ctx)
 {
    struct brw_context *brw = brw_context(ctx);
 
-   brw_emit_mi_flush(brw);
+   if (brw->gen >= 6) {
+      if (brw->gen == 6) {
+         /* [Dev-SNB{W/A}]: Before a PIPE_CONTROL with Write Cache
+          * Flush Enable = 1, a PIPE_CONTROL with any non-zero
+          * post-sync-op is required.
+          */
+         brw_emit_post_sync_nonzero_flush(brw);
+      }
+
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                  PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                  PIPE_CONTROL_CS_STALL);
+
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE);
+   } else {
+      brw_emit_mi_flush(brw);
+   }
 }
 
 void
