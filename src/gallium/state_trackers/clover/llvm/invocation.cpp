@@ -161,16 +161,12 @@ namespace {
    }
 
    llvm::Module *
-   compile_llvm(llvm::LLVMContext &llvm_ctx, const std::string &source,
+   compile_llvm(clang::CompilerInstance &c,
+                llvm::LLVMContext &llvm_ctx, const std::string &source,
                 const header_map &headers, const std::string &name,
                 const std::string &target, const std::string &opts,
-                clang::LangAS::Map &address_spaces, unsigned &optimization_level,
                 std::string &r_log) {
       clang::EmitLLVMOnlyAction act(&llvm_ctx);
-
-      std::unique_ptr<clang::CompilerInstance> pc =
-         create_compiler_instance(target, tokenize(opts + " " + name), r_log);
-      auto &c = *pc;
       c.getFrontendOpts().ProgramAction = clang::frontend::EmitLLVMOnly;
       c.getHeaderSearchOpts().UseBuiltinIncludes = true;
       c.getHeaderSearchOpts().UseStandardSystemIncludes = true;
@@ -217,15 +213,9 @@ namespace {
       compat::add_link_bitcode_file(c.getCodeGenOpts(),
                                     LIBCLC_LIBEXECDIR + target + ".bc");
 
-      optimization_level = c.getCodeGenOpts().OptimizationLevel;
-
       // Compile the code
       if (!c.ExecuteAction(act))
          throw compile_error();
-
-      // Get address spaces map to be able to find kernel argument address space
-      memcpy(address_spaces, c.getTarget().getAddressSpaceMap(),
-                                                        sizeof(address_spaces));
 
       return act.takeModule().release();
    }
@@ -378,9 +368,9 @@ namespace {
 
    std::vector<module::argument>
    get_kernel_args(const llvm::Module *mod, const std::string &kernel_name,
-                   const clang::LangAS::Map &address_spaces) {
-
+                   const clang::CompilerInstance &c) {
       std::vector<module::argument> args;
+      const auto address_spaces = c.getTarget().getAddressSpaceMap();
       llvm::Function *kernel_func = mod->getFunction(kernel_name);
       assert(kernel_func && "Kernel name not found in module.");
       auto arg_md = get_kernel_arg_md(kernel_func);
@@ -523,7 +513,7 @@ namespace {
 
    module
    build_module_llvm(llvm::Module *mod,
-                     clang::LangAS::Map& address_spaces) {
+                     const clang::CompilerInstance &c) {
 
       module m;
       struct pipe_llvm_program_header header;
@@ -540,7 +530,7 @@ namespace {
       for (unsigned i = 0; i < kernels.size(); ++i) {
          std::string kernel_name = kernels[i]->getName();
          std::vector<module::argument> args =
-               get_kernel_args(mod, kernel_name, address_spaces);
+               get_kernel_args(mod, kernel_name, c);
 
          m.syms.push_back(module::symbol(kernel_name, 0, i, args ));
       }
@@ -703,7 +693,7 @@ namespace {
    module
    build_module_native(std::vector<char> &code,
                        llvm::Module *mod,
-                       const clang::LangAS::Map &address_spaces,
+                       const clang::CompilerInstance &c,
                        std::string &r_log) {
 
       const std::vector<llvm::Function *> kernels = find_kernels(mod);
@@ -726,8 +716,7 @@ namespace {
 
       for (std::map<std::string, unsigned>::iterator i = kernel_offsets.begin(),
            e = kernel_offsets.end(); i != e; ++i) {
-         std::vector<module::argument> args =
-               get_kernel_args(mod, i->first, address_spaces);
+         std::vector<module::argument> args = get_kernel_args(mod, i->first, c);
          m.syms.push_back(module::symbol(i->first, 0, i->second, args ));
       }
 
@@ -791,9 +780,7 @@ clover::compile_program_llvm(const std::string &source,
 
    init_targets();
 
-   clang::LangAS::Map address_spaces;
    ::llvm::LLVMContext llvm_ctx;
-   unsigned optimization_level;
 
    llvm_ctx.setDiagnosticHandler(diagnostic_handler, &r_log);
 
@@ -802,11 +789,12 @@ clover::compile_program_llvm(const std::string &source,
 
    // The input file name must have the .cl extension in order for the
    // CompilerInvocation class to recognize it as an OpenCL source file.
-   Module *mod = compile_llvm(llvm_ctx, source, headers, "input.cl",
-                              target, opts, address_spaces,
-                              optimization_level, r_log);
+   const auto c = create_compiler_instance(target, tokenize(opts + " input.cl"),
+                                           r_log);
+   Module *mod = compile_llvm(*c, llvm_ctx, source, headers, "input.cl",
+                              target, opts, r_log);
 
-   optimize(mod, optimization_level);
+   optimize(mod, c->getCodeGenOpts().OptimizationLevel);
 
    if (get_debug_flags() & DBG_LLVM) {
       std::string log;
@@ -826,13 +814,13 @@ clover::compile_program_llvm(const std::string &source,
          m = module();
          break;
       case PIPE_SHADER_IR_LLVM:
-         m = build_module_llvm(mod, address_spaces);
+         m = build_module_llvm(mod, *c);
          break;
       case PIPE_SHADER_IR_NATIVE: {
          std::vector<char> code = compile_native(mod, target,
                                                  get_debug_flags() & DBG_ASM,
                                                  r_log);
-         m = build_module_native(code, mod, address_spaces, r_log);
+         m = build_module_native(code, mod, *c, r_log);
          break;
       }
    }
