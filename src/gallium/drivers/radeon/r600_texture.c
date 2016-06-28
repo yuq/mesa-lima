@@ -1021,12 +1021,11 @@ r600_texture_create_object(struct pipe_screen *screen,
 	/* Applies to GCN. */
 	rtex->last_msaa_resolve_target_micro_mode = rtex->surface.micro_tile_mode;
 
-	/* We want to optimistically enable separate DCC on the first clear
-	 * for apps that don't call SwapBuffers or call it too late, so set
-	 * a very high number at the beginning. If the PS/draw ratio is too
-	 * low, the first DCC decompression will disable DCC.
+	/* Disable separate DCC at the beginning. DRI2 doesn't reuse buffers
+	 * between frames, so the only thing that can enable separate DCC
+	 * with DRI2 is multiple slow clears within a frame.
 	 */
-	rtex->ps_draw_ratio = 100;
+	rtex->ps_draw_ratio = 0;
 
 	if (rtex->is_depth) {
 		if (!(base->flags & (R600_RESOURCE_FLAG_TRANSFER |
@@ -1839,6 +1838,12 @@ static void vi_separate_dcc_try_enable(struct r600_common_context *rctx,
 	if (tex->dcc_offset)
 		return; /* already enabled */
 
+	/* Enable the DCC stat gathering. */
+	if (!tex->dcc_gather_statistics) {
+		tex->dcc_gather_statistics = true;
+		vi_separate_dcc_start_query(&rctx->b, tex);
+	}
+
 	if (!vi_should_enable_separate_dcc(tex))
 		return; /* stats show that DCC decompression is too expensive */
 
@@ -1861,10 +1866,6 @@ static void vi_separate_dcc_try_enable(struct r600_common_context *rctx,
 						   tex->surface.dcc_alignment);
 		if (!tex->dcc_separate_buffer)
 			return;
-
-		/* Enabling for the first time, so start the query. */
-		tex->dcc_gather_statistics = true;
-		vi_separate_dcc_start_query(&rctx->b, tex);
 	}
 
 	/* dcc_offset is the absolute GPUVM address. */
