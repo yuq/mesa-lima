@@ -159,7 +159,7 @@ static void upload_cc_unit(struct brw_context *brw)
    if (ctx->Color.ColorLogicOpEnabled && ctx->Color.LogicOp != GL_COPY) {
       cc->cc2.logicop_enable = 1;
       cc->cc5.logicop_func = intel_translate_logic_op(ctx->Color.LogicOp);
-   } else if (ctx->Color.BlendEnabled) {
+   } else if (ctx->Color.BlendEnabled && !ctx->Color._AdvancedBlendMode) {
       GLenum eqRGB = ctx->Color.Blend[0].EquationRGB;
       GLenum eqA = ctx->Color.Blend[0].EquationA;
       GLenum srcRGB = ctx->Color.Blend[0].SrcRGB;
