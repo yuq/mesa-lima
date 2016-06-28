@@ -336,11 +336,11 @@ _mesa_BlendFuncSeparateiARB(GLuint buf, GLenum sfactorRGB, GLenum dfactorRGB,
 
 
 /**
- * Check if given blend equation is legal.
- * \return GL_TRUE if legal, GL_FALSE otherwise.
+ * Return true if \p mode is a legal blending equation, excluding
+ * GL_KHR_blend_equation_advanced modes.
  */
-static GLboolean
-legal_blend_equation(const struct gl_context *ctx, GLenum mode)
+static bool
+legal_simple_blend_equation(const struct gl_context *ctx, GLenum mode)
 {
    switch (mode) {
    case GL_FUNC_ADD:
@@ -352,6 +352,36 @@ legal_blend_equation(const struct gl_context *ctx, GLenum mode)
       return ctx->Extensions.EXT_blend_minmax;
    default:
       return GL_FALSE;
+   }
+}
+
+
+/**
+ * Return true if \p mode is one of the advanced blending equations
+ * defined by GL_KHR_blend_equation_advanced.
+ */
+static bool
+legal_advanced_blend_equation(const struct gl_context *ctx, GLenum mode)
+{
+   switch (mode) {
+   case GL_MULTIPLY_KHR:
+   case GL_SCREEN_KHR:
+   case GL_OVERLAY_KHR:
+   case GL_DARKEN_KHR:
+   case GL_LIGHTEN_KHR:
+   case GL_COLORDODGE_KHR:
+   case GL_COLORBURN_KHR:
+   case GL_HARDLIGHT_KHR:
+   case GL_SOFTLIGHT_KHR:
+   case GL_DIFFERENCE_KHR:
+   case GL_EXCLUSION_KHR:
+   case GL_HSL_HUE_KHR:
+   case GL_HSL_SATURATION_KHR:
+   case GL_HSL_COLOR_KHR:
+   case GL_HSL_LUMINOSITY_KHR:
+      return _mesa_has_KHR_blend_equation_advanced(ctx);
+   default:
+      return false;
    }
 }
 
@@ -390,7 +420,8 @@ _mesa_BlendEquation( GLenum mode )
    if (!changed)
       return;
 
-   if (!legal_blend_equation(ctx, mode)) {
+   if (!legal_simple_blend_equation(ctx, mode) &&
+       !legal_advanced_blend_equation(ctx, mode)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquation");
       return;
    }
@@ -426,7 +457,8 @@ _mesa_BlendEquationiARB(GLuint buf, GLenum mode)
       return;
    }
 
-   if (!legal_blend_equation(ctx, mode)) {
+   if (!legal_simple_blend_equation(ctx, mode) &&
+       !legal_advanced_blend_equation(ctx, mode)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationi");
       return;
    }
@@ -482,12 +514,18 @@ _mesa_BlendEquationSeparate( GLenum modeRGB, GLenum modeA )
       return;
    }
 
-   if (!legal_blend_equation(ctx, modeRGB)) {
+   /* Only allow simple blending equations.
+    * The GL_KHR_blend_equation_advanced spec says:
+    *
+    *    "NOTE: These enums are not accepted by the <modeRGB> or <modeAlpha>
+    *     parameters of BlendEquationSeparate or BlendEquationSeparatei."
+    */
+   if (!legal_simple_blend_equation(ctx, modeRGB)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparateEXT(modeRGB)");
       return;
    }
 
-   if (!legal_blend_equation(ctx, modeA)) {
+   if (!legal_simple_blend_equation(ctx, modeA)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparateEXT(modeA)");
       return;
    }
@@ -524,12 +562,18 @@ _mesa_BlendEquationSeparateiARB(GLuint buf, GLenum modeRGB, GLenum modeA)
       return;
    }
 
-   if (!legal_blend_equation(ctx, modeRGB)) {
+   /* Only allow simple blending equations.
+    * The GL_KHR_blend_equation_advanced spec says:
+    *
+    *    "NOTE: These enums are not accepted by the <modeRGB> or <modeAlpha>
+    *     parameters of BlendEquationSeparate or BlendEquationSeparatei."
+    */
+   if (!legal_simple_blend_equation(ctx, modeRGB)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparatei(modeRGB)");
       return;
    }
 
-   if (!legal_blend_equation(ctx, modeA)) {
+   if (!legal_simple_blend_equation(ctx, modeA)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparatei(modeA)");
       return;
    }
