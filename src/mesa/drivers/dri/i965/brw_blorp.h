@@ -81,22 +81,6 @@ struct brw_blorp_surface_info
    /* Z offset into a 3-D texture or slice of a 2-D array texture. */
    uint32_t z_offset;
 
-   /**
-    * The miplevel to use.
-    */
-   uint32_t level;
-
-   /**
-    * The 2D layer within the miplevel. Combined, level and layer define the
-    * 2D miptree slice to use.
-    *
-    * Note: if mt is a 2D multisample array texture on Gen7+ using
-    * INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, layer is the physical
-    * layer holding sample 0.  So, for example, if mt->num_samples == 4, then
-    * logical layer n corresponds to layer == 4*n.
-    */
-   uint32_t layer;
-
    uint32_t bo_offset;
    uint32_t tile_x_sa, tile_y_sa;
 };

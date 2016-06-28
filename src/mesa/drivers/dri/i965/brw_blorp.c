@@ -168,9 +168,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
       info->z_offset = 0;
    }
 
-   info->level = level;
-   info->layer = layer;
-
    if (format == MESA_FORMAT_NONE)
       format = mt->format;
 
