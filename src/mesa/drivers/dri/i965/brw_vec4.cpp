@@ -2035,6 +2035,15 @@ static unsigned
 get_lowered_simd_width(const struct gen_device_info *devinfo,
                        const vec4_instruction *inst)
 {
+   /* Do not split some instructions that require special handling */
+   switch (inst->opcode) {
+   case SHADER_OPCODE_GEN4_SCRATCH_READ:
+   case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
+      return inst->exec_size;
+   default:
+      break;
+   }
+
    unsigned lowered_width = MIN2(16, inst->exec_size);
 
    /* We need to split some cases of double-precision instructions that write
