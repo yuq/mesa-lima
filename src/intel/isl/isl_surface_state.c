@@ -142,7 +142,7 @@ get_image_alignment(const struct isl_surf *surf)
           * true alignment is likely outside the enum range of HALIGN* and
           * VALIGN*.
           */
-         return isl_extent3d(0, 0, 0);
+         return isl_extent3d(4, 4, 1);
       } else {
          /* In Skylake, RENDER_SUFFACE_STATE.SurfaceVerticalAlignment is in units
           * of surface elements (not pixels nor samples). For compressed formats,
