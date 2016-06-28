@@ -523,9 +523,9 @@ static void vid_dec_FillOutput(vid_dec_PrivateType *priv, struct pipe_video_buff
 
    for (i = 0; i < 2 /* NV12 */; i++) {
       if (!views[i]) continue;
-      width = buf->width;
-      height = buf->height;
-      vl_video_buffer_adjust_size(&width, &height, i, buf->interlaced, buf->chroma_format);
+      width = def->nFrameWidth;
+      height = def->nFrameHeight;
+      vl_video_buffer_adjust_size(&width, &height, i, buf->chroma_format, buf->interlaced);
       for (j = 0; j < views[i]->texture->array_size; ++j) {
          struct pipe_box box = {0, 0, j, width, height, 1};
          struct pipe_transfer *transfer;
@@ -535,7 +535,8 @@ static void vid_dec_FillOutput(vid_dec_PrivateType *priv, struct pipe_video_buff
          if (!map)
             return;
 
-         dst = ((uint8_t*)output->pBuffer + output->nOffset) + j * def->nStride + i * buf->width * buf->height;
+         dst = ((uint8_t*)output->pBuffer + output->nOffset) + j * def->nStride +
+               i * def->nFrameWidth * def->nFrameHeight;
          util_copy_rect(dst,
             views[i]->texture->format,
             def->nStride * views[i]->texture->array_size, 0, 0,
