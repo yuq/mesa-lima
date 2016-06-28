@@ -169,7 +169,7 @@ emit_fb_vgpu10(struct svga_context *svga)
    struct pipe_framebuffer_state *hw = &svga->state.hw_clear.framebuffer;
    const unsigned num_color = MAX2(curr->nr_cbufs, hw->nr_cbufs);
    unsigned i;
-   enum pipe_error ret;
+   enum pipe_error ret = PIPE_OK;
 
    assert(svga_have_vgpu10(svga));
 
@@ -204,28 +204,38 @@ emit_fb_vgpu10(struct svga_context *svga)
       dsv = NULL;
    }
 
-   ret = SVGA3D_vgpu10_SetRenderTargets(svga->swc, num_color, rtv, dsv);
-   if (ret != PIPE_OK)
-      return ret;
+   /* avoid emitting redundant SetRenderTargets command */
+   if ((num_color != svga->state.hw_draw.num_rendertargets) ||
+       (dsv != svga->state.hw_draw.dsv) ||
+       memcmp(rtv, svga->state.hw_draw.rtv, num_color * sizeof(rtv[0]))) {
 
-   for (i = 0; i < ss->max_color_buffers; i++) {
-      if (hw->cbufs[i] != curr->cbufs[i]) {
-         /* propagate the backed view surface before unbinding it */
-         if (hw->cbufs[i] && svga_surface(hw->cbufs[i])->backed) {
-            svga_propagate_surface(svga,
-                                   &svga_surface(hw->cbufs[i])->backed->base);
+      ret = SVGA3D_vgpu10_SetRenderTargets(svga->swc, num_color, rtv, dsv);
+      if (ret != PIPE_OK)
+         return ret;
+
+      svga->state.hw_draw.num_rendertargets = num_color;
+      svga->state.hw_draw.dsv = dsv;
+      memcpy(svga->state.hw_draw.rtv, rtv, num_color * sizeof(rtv[0]));
+    
+      for (i = 0; i < ss->max_color_buffers; i++) {
+         if (hw->cbufs[i] != curr->cbufs[i]) {
+            /* propagate the backed view surface before unbinding it */
+            if (hw->cbufs[i] && svga_surface(hw->cbufs[i])->backed) {
+               svga_propagate_surface(svga,
+                                      &svga_surface(hw->cbufs[i])->backed->base);
+            }
+            pipe_surface_reference(&hw->cbufs[i], curr->cbufs[i]);
          }
-         pipe_surface_reference(&hw->cbufs[i], curr->cbufs[i]);
       }
-   }
-   hw->nr_cbufs = curr->nr_cbufs;
+      hw->nr_cbufs = curr->nr_cbufs;
 
-   if (hw->zsbuf != curr->zsbuf) {
-      /* propagate the backed view surface before unbinding it */
-      if (hw->zsbuf && svga_surface(hw->zsbuf)->backed) {
-         svga_propagate_surface(svga, &svga_surface(hw->zsbuf)->backed->base);
+      if (hw->zsbuf != curr->zsbuf) {
+         /* propagate the backed view surface before unbinding it */
+         if (hw->zsbuf && svga_surface(hw->zsbuf)->backed) {
+            svga_propagate_surface(svga, &svga_surface(hw->zsbuf)->backed->base);
+         }
+         pipe_surface_reference(&hw->zsbuf, curr->zsbuf);
       }
-      pipe_surface_reference(&hw->zsbuf, curr->zsbuf);
    }
 
    return ret;

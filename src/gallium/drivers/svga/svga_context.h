@@ -368,6 +368,10 @@ struct svga_hw_draw_state
    unsigned num_samplers[PIPE_SHADER_TYPES];
    SVGA3dSamplerId samplers[PIPE_SHADER_TYPES][PIPE_MAX_SAMPLERS];
 
+   unsigned num_rendertargets;
+   struct pipe_surface *rtv[SVGA3D_MAX_RENDER_TARGETS];
+   struct pipe_surface *dsv;
+
    /* used for rebinding */
    unsigned num_sampler_views[PIPE_SHADER_TYPES];
    unsigned default_constbuf_size[PIPE_SHADER_TYPES];
