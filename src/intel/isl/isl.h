@@ -79,6 +79,10 @@ struct brw_image_param;
 #define ISL_DEV_IS_HASWELL(__dev) ((__dev)->info->is_haswell)
 #endif
 
+#ifndef ISL_DEV_IS_BAYTRAIL
+#define ISL_DEV_IS_BAYTRAIL(__dev) ((__dev)->info->is_baytrail)
+#endif
+
 #ifndef ISL_DEV_USE_SEPARATE_STENCIL
 /**
  * You can define this as a compile-time constant in the CFLAGS. For example,
