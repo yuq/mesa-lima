@@ -371,6 +371,12 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
 
    struct isl_surf surf = surface->surf;
 
+   if (surf.dim == ISL_SURF_DIM_1D &&
+       surf.dim_layout == ISL_DIM_LAYOUT_GEN4_2D) {
+      assert(surf.logical_level0_px.height == 1);
+      surf.dim = ISL_SURF_DIM_2D;
+   }
+
    union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
 
    const struct isl_surf *aux_surf = NULL;
