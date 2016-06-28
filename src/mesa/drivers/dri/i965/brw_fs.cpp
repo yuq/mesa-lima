@@ -43,6 +43,9 @@
 
 using namespace brw;
 
+static unsigned get_lowered_simd_width(const struct brw_device_info *devinfo,
+                                       const fs_inst *inst);
+
 void
 fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
               const fs_reg *src, unsigned sources)
@@ -3640,7 +3643,7 @@ fs_visitor::lower_integer_multiplication()
 
       } else if (inst->opcode == SHADER_OPCODE_MULH) {
          /* Should have been lowered to 8-wide. */
-         assert(inst->exec_size <= 8);
+         assert(inst->exec_size <= get_lowered_simd_width(devinfo, inst));
          const fs_reg acc = retype(brw_acc_reg(inst->exec_size),
                                    inst->dst.type);
          fs_inst *mul = ibld.MUL(acc, inst->src[0], inst->src[1]);
