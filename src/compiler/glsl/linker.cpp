@@ -1880,6 +1880,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
    linked_shader->info.uses_gl_fragcoord = false;
    linked_shader->info.origin_upper_left = false;
    linked_shader->info.pixel_center_integer = false;
+   linked_shader->info.BlendSupport = 0;
 
    if (linked_shader->Stage != MESA_SHADER_FRAGMENT ||
        (prog->Version < 150 && !prog->ARB_fragment_coord_conventions_enable))
@@ -1938,6 +1939,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
 
       linked_shader->info.EarlyFragmentTests |=
          shader->info.EarlyFragmentTests;
+      linked_shader->info.BlendSupport |= shader->info.BlendSupport;
    }
 }
 
