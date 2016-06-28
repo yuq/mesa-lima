@@ -239,6 +239,19 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    switch (s.SurfaceType) {
    case SURFTYPE_1D:
    case SURFTYPE_2D:
+      /* From the Ivy Bridge PRM >> RENDER_SURFACE_STATE::MinimumArrayElement:
+       *
+       *    "If Number of Multisamples is not MULTISAMPLECOUNT_1, this field
+       *    must be set to zero if this surface is used with sampling engine
+       *    messages."
+       *
+       * This restriction appears to exist only on Ivy Bridge.
+       */
+      if (GEN_GEN == 7 && !GEN_IS_HASWELL && !ISL_DEV_IS_BAYTRAIL(dev) &&
+          (info->view->usage & ISL_SURF_USAGE_TEXTURE_BIT) &&
+          info->surf->samples > 1)
+         assert(info->view->base_array_layer == 0);
+
       s.MinimumArrayElement = info->view->base_array_layer;
 
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
