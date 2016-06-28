@@ -274,7 +274,7 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 			partial_vs_wave = true;
 
 		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
-		if (sctx->b.chip_class >= VI) {
+		if (sctx->screen->has_distributed_tess) {
 			if (sctx->gs_shader.cso)
 				partial_es_wave = true;
 			else

@@ -83,6 +83,7 @@ struct si_screen {
 	struct r600_common_screen	b;
 	unsigned			gs_table_depth;
 	unsigned			tess_offchip_block_dw_size;
+	bool				has_distributed_tess;
 
 	/* Whether shaders are monolithic (1-part) or separate (3-part). */
 	bool				use_monolithic_shaders;

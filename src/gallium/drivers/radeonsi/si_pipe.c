@@ -712,6 +712,10 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->tess_offchip_block_dw_size =
 		sscreen->b.family == CHIP_HAWAII ? 4096 : 8192;
 
+	sscreen->has_distributed_tess =
+		sscreen->b.chip_class >= VI &&
+		sscreen->b.info.max_se >= 2;
+
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
 	pipe_mutex_init(sscreen->shader_parts_mutex);
