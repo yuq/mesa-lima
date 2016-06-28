@@ -673,10 +673,10 @@ namespace {
    }
 
    module
-   build_module_native(std::vector<char> &code,
-                       llvm::Module *mod,
+   build_module_native(llvm::Module *mod, const target &target,
                        const clang::CompilerInstance &c,
                        std::string &r_log) {
+      const auto code = compile_native(mod, target, r_log);
       return build_module_common(*mod, code,
                                  get_symbol_offsets(code, r_log), c);
    }
@@ -721,11 +721,9 @@ clover::compile_program_llvm(const std::string &source,
       case PIPE_SHADER_IR_LLVM:
          m = build_module_llvm(&*mod, *c);
          break;
-      case PIPE_SHADER_IR_NATIVE: {
-         std::vector<char> code = compile_native(&*mod, target, r_log);
-         m = build_module_native(code, &*mod, *c, r_log);
+      case PIPE_SHADER_IR_NATIVE:
+         m = build_module_native(&*mod, target, *c, r_log);
          break;
-      }
    }
 
    return m;
