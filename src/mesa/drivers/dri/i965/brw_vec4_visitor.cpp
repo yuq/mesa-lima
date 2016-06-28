@@ -1482,7 +1482,18 @@ vec4_visitor::emit_scratch_read(bblock_t *block, vec4_instruction *inst,
    src_reg index = get_scratch_offset(block, inst, orig_src.reladdr,
                                       reg_offset);
 
-   emit_before(block, inst, SCRATCH_READ(temp, index));
+   if (type_sz(orig_src.type) < 8) {
+      emit_before(block, inst, SCRATCH_READ(temp, index));
+   } else {
+      dst_reg shuffled = dst_reg(this, glsl_type::dvec4_type);
+      dst_reg shuffled_float = retype(shuffled, BRW_REGISTER_TYPE_F);
+      emit_before(block, inst, SCRATCH_READ(shuffled_float, index));
+      index = get_scratch_offset(block, inst, orig_src.reladdr, reg_offset + 1);
+      vec4_instruction *last_read =
+         SCRATCH_READ(byte_offset(shuffled_float, REG_SIZE), index);
+      emit_before(block, inst, last_read);
+      shuffle_64bit_data(temp, src_reg(shuffled), false, block, last_read);
+   }
 }
 
 /**
@@ -1548,7 +1559,8 @@ vec4_visitor::emit_resolve_reladdr(int scratch_loc[], bblock_t *block,
 
    /* Now handle scratch access on src */
    if (src.file == VGRF && scratch_loc[src.nr] != -1) {
-      dst_reg temp = dst_reg(this, glsl_type::vec4_type);
+      dst_reg temp = dst_reg(this, type_sz(src.type) == 8 ?
+         glsl_type::dvec4_type : glsl_type::vec4_type);
       emit_scratch_read(block, inst, temp, src, scratch_loc[src.nr]);
       src.nr = temp.nr;
       src.offset %= REG_SIZE;
