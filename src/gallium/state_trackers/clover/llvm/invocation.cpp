@@ -220,34 +220,6 @@ namespace {
       return act.takeModule();
    }
 
-   std::vector<llvm::Function *>
-   find_kernels(llvm::Module *mod) {
-      std::vector<llvm::Function *> kernels;
-#if HAVE_LLVM >= 0x0309
-      auto &list = mod->getFunctionList();
-      for_each(list.begin(), list.end(), [&](llvm::Function &f){
-         if (f.getMetadata("kernel_arg_type"))
-           kernels.push_back(&f);
-      });
-      return kernels;
-#endif
-      const llvm::NamedMDNode *kernel_node =
-                                 mod->getNamedMetadata("opencl.kernels");
-      // This means there are no kernels in the program.  The spec does not
-      // require that we return an error here, but there will be an error if
-      // the user tries to pass this program to a clCreateKernel() call.
-      if (!kernel_node) {
-         return std::vector<llvm::Function *>();
-      }
-
-      kernels.reserve(kernel_node->getNumOperands());
-      for (unsigned i = 0; i < kernel_node->getNumOperands(); ++i) {
-         kernels.push_back(llvm::mdconst::dyn_extract<llvm::Function>(
-                                    kernel_node->getOperand(i)->getOperand(0)));
-      }
-      return kernels;
-   }
-
    void
    optimize(Module &mod, unsigned optimization_level) {
       compat::pass_manager pm;
@@ -267,7 +239,7 @@ namespace {
       // treat the functions in the list as "main" functions and internalize
       // all of the other functions.
       compat::add_internalize_pass(pm, map(std::mem_fn(&Function::getName),
-                                           find_kernels(&mod)));
+                                           get_kernels(mod)));
 
       ::llvm::PassManagerBuilder pmb;
       pmb.OptLevel = optimization_level;
@@ -424,7 +396,7 @@ namespace {
       module m;
 
       for (const auto &name : map(std::mem_fn(&Function::getName),
-                                  find_kernels(const_cast<Module *>(&mod)))) {
+                                  get_kernels(mod))) {
          if (offsets.count(name))
             m.syms.emplace_back(name, 0, offsets.at(name),
                                 make_kernel_args(mod, name, c));
@@ -449,7 +421,7 @@ namespace {
       unsigned i = 0;
 
       for (const auto &name : map(std::mem_fn(&::llvm::Function::getName),
-                                  find_kernels(mod)))
+                                  get_kernels(*mod)))
          offsets[name] = i++;
 
       return build_module_common(*mod, { llvm_bitcode.begin(),
