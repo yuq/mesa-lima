@@ -593,14 +593,21 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
     * not 8. But commit 1f112cc increased the alignment from 4 to 8, which
     * prevents the clobbering.
     */
-   params.dst.surf.samples = MAX2(mt->num_samples, 1);
-   params.depth.surf.logical_level0_px.width =
-      ALIGN(params.depth.surf.logical_level0_px.width, 8);
-   params.depth.surf.logical_level0_px.height =
-      ALIGN(params.depth.surf.logical_level0_px.height, 4);
+   params.x1 = minify(params.depth.surf.logical_level0_px.width,
+                      params.depth.view.base_level);
+   params.y1 = minify(params.depth.surf.logical_level0_px.height,
+                      params.depth.view.base_level);
+   params.x1 = ALIGN(params.x1, 8);
+   params.y1 = ALIGN(params.y1, 4);
 
-   params.x1 = params.depth.surf.logical_level0_px.width;
-   params.y1 = params.depth.surf.logical_level0_px.height;
+   if (params.depth.view.base_level == 0) {
+      /* TODO: What about MSAA? */
+      params.depth.surf.logical_level0_px.width = params.x1;
+      params.depth.surf.logical_level0_px.height = params.y1;
+   }
+
+   params.dst.surf.samples = params.depth.surf.samples;
+   params.dst.surf.logical_level0_px = params.depth.surf.logical_level0_px;
 
    assert(intel_miptree_level_has_hiz(mt, level));
 
