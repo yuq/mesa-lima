@@ -157,6 +157,7 @@ void radeon_vce_52_get_param(struct rvce_encoder *enc, struct pipe_h264_enc_pict
 
 static void create(struct rvce_encoder *enc)
 {
+	enc->enc_pic.addrmode_arraymode_disrdo_distwoinstants = 0x00000201;
 	enc->task_info(enc, 0x00000000, 0, 0, 0);
 
 	RVCE_BEGIN(0x01000001); // create cmd
