@@ -315,6 +315,11 @@ public:
 
    bool optimize_predicate(nir_alu_instr *instr, enum brw_predicate *predicate);
 
+   void emit_conversion_from_double(dst_reg dst, src_reg src, bool saturate,
+                                    brw_reg_type single_type);
+   void emit_conversion_to_double(dst_reg dst, src_reg src, bool saturate,
+                                  brw_reg_type single_type);
+
    virtual void emit_nir_code();
    virtual void nir_setup_uniforms();
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
