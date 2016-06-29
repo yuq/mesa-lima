@@ -2978,6 +2978,25 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 
 	/* Texturing with separate depth and stencil. */
 	pipe_format = state->format;
+
+	/* Depth/stencil texturing sometimes needs separate texture. */
+	if (tmp->is_depth && !r600_can_sample_zs(tmp, view->is_stencil_sampler)) {
+		if (!tmp->flushed_depth_texture &&
+		    !r600_init_flushed_depth_texture(ctx, texture, NULL)) {
+			pipe_resource_reference(&view->base.texture, NULL);
+			FREE(view);
+			return NULL;
+		}
+
+		/* Override format for the case where the flushed texture
+		 * contains only Z or only S.
+		 */
+		if (tmp->flushed_depth_texture->resource.b.b.format != tmp->resource.b.b.format)
+			pipe_format = tmp->flushed_depth_texture->resource.b.b.format;
+
+		tmp = tmp->flushed_depth_texture;
+	}
+
 	surflevel = tmp->surface.level;
 
 	if (tmp->db_compatible) {

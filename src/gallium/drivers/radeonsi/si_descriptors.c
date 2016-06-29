@@ -295,13 +295,22 @@ static void si_release_sampler_views(struct si_sampler_views *views)
 
 static void si_sampler_view_add_buffer(struct si_context *sctx,
 				       struct pipe_resource *resource,
-				       enum radeon_bo_usage usage)
+				       enum radeon_bo_usage usage,
+				       bool is_stencil_sampler)
 {
-	struct r600_resource *rres = (struct r600_resource*)resource;
+	struct r600_resource *rres;
 
 	if (!resource)
 		return;
 
+	if (resource->target != PIPE_BUFFER) {
+		struct r600_texture *tex = (struct r600_texture*)resource;
+
+		if (tex->is_depth && !r600_can_sample_zs(tex, is_stencil_sampler))
+			resource = &tex->flushed_depth_texture->resource.b.b;
+	}
+
+	rres = (struct r600_resource*)resource;
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, rres, usage,
 				  r600_get_sampler_view_priority(rres));
 
@@ -323,9 +332,11 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 	/* Add buffers to the CS. */
 	while (mask) {
 		int i = u_bit_scan(&mask);
+		struct si_sampler_view *sview = (struct si_sampler_view *)views->views[i];
 
-		si_sampler_view_add_buffer(sctx, views->views[i]->texture,
-					   RADEON_USAGE_READ);
+		si_sampler_view_add_buffer(sctx, sview->base.texture,
+					   RADEON_USAGE_READ,
+					   sview->is_stencil_sampler);
 	}
 }
 
@@ -345,8 +356,15 @@ void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 				    unsigned block_width, bool is_stencil,
 				    uint32_t *state)
 {
-	uint64_t va = tex->resource.gpu_address + base_level_info->offset;
+	uint64_t va;
 	unsigned pitch = base_level_info->nblk_x * block_width;
+
+	if (tex->is_depth && !r600_can_sample_zs(tex, is_stencil)) {
+		tex = tex->flushed_depth_texture;
+		is_stencil = false;
+	}
+
+	va = tex->resource.gpu_address + base_level_info->offset;
 
 	state[1] &= C_008F14_BASE_ADDRESS_HI;
 	state[3] &= C_008F1C_TILING_INDEX;
@@ -384,7 +402,8 @@ static void si_set_sampler_view(struct si_context *sctx,
 		uint32_t *desc = descs->list + slot * 16;
 
 		si_sampler_view_add_buffer(sctx, view->texture,
-					   RADEON_USAGE_READ);
+					   RADEON_USAGE_READ,
+					   rview->is_stencil_sampler);
 
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(desc, rview->state, 8*4);
@@ -546,7 +565,7 @@ si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *imag
 		assert(view->resource);
 
 		si_sampler_view_add_buffer(sctx, view->resource,
-					   RADEON_USAGE_READWRITE);
+					   RADEON_USAGE_READWRITE, false);
 	}
 }
 
@@ -605,7 +624,7 @@ static void si_set_shader_image(struct si_context *ctx,
 		util_copy_image_view(&images->views[slot], view);
 
 	si_sampler_view_add_buffer(ctx, &res->b.b,
-				   RADEON_USAGE_READWRITE);
+				   RADEON_USAGE_READWRITE, false);
 
 	if (res->b.b.target == PIPE_BUFFER) {
 		if (view->access & PIPE_IMAGE_ACCESS_WRITE)
