@@ -975,6 +975,26 @@ nvc0_screen_create(struct nouveau_device *dev)
          BEGIN_NVC0(push, NVC0_3D(TEX_LIMITS(i)), 1);
          PUSH_DATA (push, 0x54);
       }
+
+      /* MS sample coordinate offsets: these do not work with _ALT modes ! */
+      BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 2 * 8);
+      PUSH_DATA (push, NVC0_CB_AUX_MS_INFO);
+      PUSH_DATA (push, 0); /* 0 */
+      PUSH_DATA (push, 0);
+      PUSH_DATA (push, 1); /* 1 */
+      PUSH_DATA (push, 0);
+      PUSH_DATA (push, 0); /* 2 */
+      PUSH_DATA (push, 1);
+      PUSH_DATA (push, 1); /* 3 */
+      PUSH_DATA (push, 1);
+      PUSH_DATA (push, 2); /* 4 */
+      PUSH_DATA (push, 0);
+      PUSH_DATA (push, 3); /* 5 */
+      PUSH_DATA (push, 0);
+      PUSH_DATA (push, 2); /* 6 */
+      PUSH_DATA (push, 1);
+      PUSH_DATA (push, 3); /* 7 */
+      PUSH_DATA (push, 1);
    }
    BEGIN_NVC0(push, NVC0_3D(LINKED_TSC), 1);
    PUSH_DATA (push, 0);

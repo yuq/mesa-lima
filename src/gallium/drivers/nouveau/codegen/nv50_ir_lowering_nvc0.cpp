@@ -1569,44 +1569,51 @@ static inline uint16_t getSuClampSubOp(const TexInstruction *su, int c)
 bool
 NVC0LoweringPass::handleSUQ(TexInstruction *suq)
 {
+   int mask = suq->tex.mask;
    int dim = suq->tex.target.getDim();
    int arg = dim + (suq->tex.target.isArray() || suq->tex.target.isCube());
-   uint8_t s = prog->driver->io.auxCBSlot;
    Value *ind = suq->getIndirectR();
    uint32_t base;
-   int c;
+   int c, d;
 
-   base = prog->driver->io.suInfoBase + suq->tex.r * NVE4_SU_INFO__STRIDE;
-
-   if (ind)
-      ind = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getScratch(),
+   if (ind) {
+      ind = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(),
+                       ind, bld.mkImm(suq->tex.r));
+      ind = bld.mkOp2v(OP_AND, TYPE_U32, bld.getSSA(),
+                       ind, bld.mkImm(7));
+      ind = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
                        ind, bld.mkImm(6));
-
-   for (c = 0; c < arg; ++c) {
-      if (suq->defExists(c)) {
-         int offset;
-
-         if (c == 1 && suq->tex.target == TEX_TARGET_1D_ARRAY) {
-            offset = base + NVE4_SU_INFO_SIZE(2);
-         } else {
-            offset = base + NVE4_SU_INFO_SIZE(c);
-         }
-         bld.mkLoad(TYPE_U32, suq->getDef(c),
-                    bld.mkSymbol(FILE_MEMORY_CONST, s, TYPE_U32, offset), ind);
-      }
+      base = 0;
+   } else {
+      base = suq->tex.r * NVE4_SU_INFO__STRIDE;
    }
 
-   if (suq->tex.target.isCube()) {
-      if (suq->defExists(2)) {
-         bld.mkOp2(OP_DIV, TYPE_U32, suq->getDef(2), suq->getDef(2),
+   for (c = 0, d = 0; c < 3; ++c, mask >>= 1) {
+      if (c >= arg || !(mask & 1))
+         continue;
+
+      int offset;
+
+      if (c == 1 && suq->tex.target == TEX_TARGET_1D_ARRAY) {
+         offset = NVE4_SU_INFO_SIZE(2);
+      } else {
+         offset = NVE4_SU_INFO_SIZE(c);
+      }
+      bld.mkMov(suq->getDef(d++), loadSuInfo32(ind, base + offset));
+      if (c == 2 && suq->tex.target.isCube())
+         bld.mkOp2(OP_DIV, TYPE_U32, suq->getDef(d - 1), suq->getDef(d - 1),
                    bld.loadImm(NULL, 6));
-      }
    }
 
-   if (suq->defExists(3)) {
-      // .w contains the number of samples for multi-sampled images but we
-      // don't support them for now.
-      bld.mkMov(suq->getDef(3), bld.loadImm(NULL, 1));
+   if (mask & 1) {
+      if (suq->tex.target.isMS()) {
+         Value *ms_x = loadSuInfo32(ind, base + NVE4_SU_INFO_MS(0));
+         Value *ms_y = loadSuInfo32(ind, base + NVE4_SU_INFO_MS(1));
+         Value *ms = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getScratch(), ms_x, ms_y);
+         bld.mkOp2(OP_SHL, TYPE_U32, suq->getDef(d++), bld.loadImm(NULL, 1), ms);
+      } else {
+         bld.mkMov(suq->getDef(d++), bld.loadImm(NULL, 1));
+      }
    }
 
    bld.remove(suq);
@@ -1616,7 +1623,7 @@ NVC0LoweringPass::handleSUQ(TexInstruction *suq)
 void
 NVC0LoweringPass::adjustCoordinatesMS(TexInstruction *tex)
 {
-   const uint16_t base = tex->tex.r * NVE4_SU_INFO__STRIDE;
+   uint16_t base;
    const int arg = tex->tex.target.getArgCount();
 
    if (tex->tex.target == TEX_TARGET_2D_MS)
@@ -1632,13 +1639,18 @@ NVC0LoweringPass::adjustCoordinatesMS(TexInstruction *tex)
    Value *s = tex->getSrc(arg - 1);
 
    Value *tx = bld.getSSA(), *ty = bld.getSSA(), *ts = bld.getSSA();
-   Value *ind = NULL;
+   Value *ind = tex->getIndirectR();
 
-   if (tex->tex.rIndirectSrc >= 0) {
-      assert(tex->tex.r == 0);
-      // FIXME: out of bounds
+   if (ind) {
+      ind = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(),
+                       ind, bld.mkImm(tex->tex.r));
+      ind = bld.mkOp2v(OP_AND, TYPE_U32, bld.getSSA(),
+                       ind, bld.mkImm(7));
       ind = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
-                       tex->getIndirectR(), bld.mkImm(6));
+                       ind, bld.mkImm(6));
+      base = 0;
+   } else {
+      base = tex->tex.r * NVE4_SU_INFO__STRIDE;
    }
 
    Value *ms_x = loadSuInfo32(ind, base + NVE4_SU_INFO_MS(0));
@@ -2043,6 +2055,10 @@ NVC0LoweringPass::processSurfaceCoordsNVC0(TexInstruction *su)
    Value *src[3];
    Value *v;
    Value *ind = NULL;
+
+   bld.setPosition(su, false);
+
+   adjustCoordinatesMS(su);
 
    if (su->tex.rIndirectSrc >= 0) {
       ind = su->getIndirectR();

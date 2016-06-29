@@ -555,29 +555,25 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
 
    info->io.genUserClip = prog->vp.num_ucps;
    info->io.auxCBSlot = 15;
+   info->io.msInfoCBSlot = 15;
    info->io.ucpBase = NVC0_CB_AUX_UCP_INFO;
    info->io.drawInfoBase = NVC0_CB_AUX_DRAW_INFO;
+   info->io.msInfoBase = NVC0_CB_AUX_MS_INFO;
+   info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
+   info->io.suInfoBase = NVC0_CB_AUX_SU_INFO(0);
+   if (chipset >= NVISA_GK104_CHIPSET) {
+      info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
+   }
 
    if (prog->type == PIPE_SHADER_COMPUTE) {
       if (chipset >= NVISA_GK104_CHIPSET) {
          info->io.auxCBSlot = 7;
-         info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
+         info->io.msInfoCBSlot = 7;
          info->prop.cp.gridInfoBase = NVC0_CB_AUX_GRID_INFO;
          info->io.uboInfoBase = NVC0_CB_AUX_UBO_INFO(0);
       }
-      info->io.msInfoCBSlot = 0;
-      info->io.msInfoBase = NVC0_CB_AUX_MS_INFO;
-      info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
-      info->io.suInfoBase = NVC0_CB_AUX_SU_INFO(0);
    } else {
-      if (chipset >= NVISA_GK104_CHIPSET) {
-         info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
-      }
       info->io.sampleInfoBase = NVC0_CB_AUX_SAMPLE_INFO;
-      info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
-      info->io.suInfoBase = NVC0_CB_AUX_SU_INFO(0);
-      info->io.msInfoCBSlot = 15;
-      info->io.msInfoBase = 0; /* TODO */
    }
 
    info->assignSlots = nvc0_program_assign_varying_slots;

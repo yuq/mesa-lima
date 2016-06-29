@@ -928,11 +928,11 @@ nve4_set_surface_info(struct nouveau_pushbuf *push,
       address += lvl->offset;
 
       info[0]  = address >> 8;
-      info[2]  = width - 1;
+      info[2]  = (width << mt->ms_x) - 1;
       /* NOTE: this is really important: */
       info[2] |= (0xff & nve4_su_format_aux_map[view->format]) << 22;
       info[3]  = (0x88 << 24) | (lvl->pitch / 64);
-      info[4]  = height - 1;
+      info[4]  = (height << mt->ms_y) - 1;
       info[4] |= (lvl->tile_mode & 0x0f0) << 25;
       info[4] |= NVC0_TILE_SHIFT_Y(lvl->tile_mode) << 22;
       info[5]  = mt->layer_stride >> 8;
@@ -1051,8 +1051,8 @@ nvc0_validate_suf(struct nvc0_context *nvc0, int s)
 
             PUSH_DATAh(push, address);
             PUSH_DATA (push, address);
-            PUSH_DATA (push, width);
-            PUSH_DATA (push, height);
+            PUSH_DATA (push, width << mt->ms_x);
+            PUSH_DATA (push, height << mt->ms_y);
             PUSH_DATA (push, rt);
             PUSH_DATA (push, lvl->tile_mode & 0xff); /* mask out z-tiling */
          }

@@ -112,7 +112,7 @@
 #define NVC0_CB_AUX_TEX_INFO(i)     0x020 + (i) * 4
 #define NVC0_CB_AUX_TEX_SIZE        (32 * 4)
 /* 8 sets of 32-bits coordinate offsets */
-#define NVC0_CB_AUX_MS_INFO         0x0a0 /* CP */
+#define NVC0_CB_AUX_MS_INFO         0x0a0
 #define NVC0_CB_AUX_MS_SIZE         (8 * 2 * 4)
 /* block/grid size, at 3 32-bits integers each and gridid */
 #define NVC0_CB_AUX_GRID_INFO       0x0e0 /* CP */

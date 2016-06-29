@@ -113,6 +113,30 @@ nvc0_screen_compute_setup(struct nvc0_screen *screen,
    PUSH_DATA (push, screen->txc->offset + 65536);
    PUSH_DATA (push, NVC0_TSC_MAX_ENTRIES - 1);
 
+   /* MS sample coordinate offsets */
+   BEGIN_NVC0(push, NVC0_CP(CB_SIZE), 3);
+   PUSH_DATA (push, 2048);
+   PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(5));
+   PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(5));
+   BEGIN_1IC0(push, NVC0_CP(CB_POS), 1 + 2 * 8);
+   PUSH_DATA (push, NVC0_CB_AUX_MS_INFO);
+   PUSH_DATA (push, 0); /* 0 */
+   PUSH_DATA (push, 0);
+   PUSH_DATA (push, 1); /* 1 */
+   PUSH_DATA (push, 0);
+   PUSH_DATA (push, 0); /* 2 */
+   PUSH_DATA (push, 1);
+   PUSH_DATA (push, 1); /* 3 */
+   PUSH_DATA (push, 1);
+   PUSH_DATA (push, 2); /* 4 */
+   PUSH_DATA (push, 0);
+   PUSH_DATA (push, 3); /* 5 */
+   PUSH_DATA (push, 0);
+   PUSH_DATA (push, 2); /* 6 */
+   PUSH_DATA (push, 1);
+   PUSH_DATA (push, 3); /* 7 */
+   PUSH_DATA (push, 1);
+
    return 0;
 }
 

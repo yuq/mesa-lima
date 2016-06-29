@@ -2388,6 +2388,9 @@ Converter::getImageCoords(std::vector<Value *> &coords, int r, int s)
 
    for (int c = 0; c < arg; ++c)
       coords.push_back(fetchSrc(s, c));
+
+   if (t.isMS())
+      coords.push_back(fetchSrc(s, 3));
 }
 
 // For raw loads, granularity is 4 byte.
