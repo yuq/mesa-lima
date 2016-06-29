@@ -98,7 +98,7 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    struct amdgpu_buffer_size_alignments alignment_info = {};
    struct amdgpu_heap_info vram, gtt;
    struct drm_amdgpu_info_hw_ip dma = {}, uvd = {}, vce = {};
-   uint32_t vce_version = 0, vce_feature = 0;
+   uint32_t vce_version = 0, vce_feature = 0, uvd_version = 0, uvd_feature = 0;
    int r, i, j;
    drmDevicePtr devinfo;
 
@@ -148,6 +148,13 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    r = amdgpu_query_hw_ip_info(ws->dev, AMDGPU_HW_IP_UVD, 0, &uvd);
    if (r) {
       fprintf(stderr, "amdgpu: amdgpu_query_hw_ip_info(uvd) failed.\n");
+      goto fail;
+   }
+
+   r = amdgpu_query_firmware_version(ws->dev, AMDGPU_INFO_FW_UVD, 0, 0,
+				     &uvd_version, &uvd_feature);
+   if (r) {
+      fprintf(stderr, "amdgpu: amdgpu_query_firmware_version(uvd) failed.\n");
       goto fail;
    }
 
@@ -268,6 +275,8 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    ws->info.max_se = ws->amdinfo.num_shader_engines;
    ws->info.max_sh_per_se = ws->amdinfo.num_shader_arrays_per_engine;
    ws->info.has_uvd = uvd.available_rings != 0;
+   ws->info.uvd_fw_version =
+         uvd.available_rings ? uvd_version : 0;
    ws->info.vce_fw_version =
          vce.available_rings ? vce_version : 0;
    ws->info.has_userptr = true;

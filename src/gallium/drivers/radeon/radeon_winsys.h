@@ -258,6 +258,7 @@ struct radeon_info {
     bool                        gfx_ib_pad_with_type2;
     bool                        has_sdma;
     bool                        has_uvd;
+    uint32_t                    uvd_fw_version;
     uint32_t                    vce_fw_version;
     uint32_t                    vce_harvest_config;
     uint32_t                    clock_crystal_freq;
