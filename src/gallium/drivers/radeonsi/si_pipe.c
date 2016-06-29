@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_suballoc.h"
 #include "vl/vl_decoder.h"
+#include "../ddebug/dd_util.h"
 
 #define SI_LLVM_DEFAULT_FEATURES \
 	"+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals"
@@ -106,6 +107,22 @@ si_amdgpu_get_reset_status(struct pipe_context *ctx)
 	return sctx->b.ws->ctx_query_reset_status(sctx->b.ctx);
 }
 
+/* Apitrace profiling:
+ *   1) qapitrace : Tools -> Profile: Measure CPU & GPU times
+ *   2) In the middle panel, zoom in (mouse wheel) on some bad draw call
+ *      and remember its number.
+ *   3) In Mesa, enable queries and performance counters around that draw
+ *      call and print the results.
+ *   4) glretrace --benchmark --markers ..
+ */
+static void si_emit_string_marker(struct pipe_context *ctx,
+				  const char *string, int len)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+
+	dd_parse_apitrace_marker(string, len, &sctx->apitrace_call_number);
+}
+
 static struct pipe_context *si_create_context(struct pipe_screen *screen,
                                               void *priv, unsigned flags)
 {
@@ -125,6 +142,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->b.b.screen = screen; /* this must be set first */
 	sctx->b.b.priv = priv;
 	sctx->b.b.destroy = si_destroy_context;
+	sctx->b.b.emit_string_marker = si_emit_string_marker;
 	sctx->b.set_atom_dirty = (void *)si_set_atom_dirty;
 	sctx->screen = sscreen; /* Easy accessing of screen/winsys. */
 	sctx->is_debug = (flags & PIPE_CONTEXT_DEBUG) != 0;
@@ -361,6 +379,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
 	case PIPE_CAP_GENERATE_MIPMAP:
 	case PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED:
+	case PIPE_CAP_STRING_MARKER:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
@@ -413,7 +432,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_DRAW_PARAMETERS:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
-	case PIPE_CAP_STRING_MARKER:
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 	case PIPE_CAP_CULL_DISTANCE:
 	case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:

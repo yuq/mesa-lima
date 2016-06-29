@@ -330,6 +330,7 @@ struct si_context {
 	struct r600_resource	*trace_buf;
 	unsigned		trace_id;
 	uint64_t		dmesg_timestamp;
+	unsigned		apitrace_call_number;
 
 	/* Other state */
 	bool need_check_render_feedback;

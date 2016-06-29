@@ -814,6 +814,10 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 	fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
 	fprintf(f, "Failing VM page: 0x%08x\n\n", addr);
 
+	if (sctx->apitrace_call_number)
+		fprintf(f, "Last apitrace call: %u\n\n",
+			sctx->apitrace_call_number);
+
 	switch (ring) {
 	case RING_GFX:
 		si_dump_debug_state(&sctx->b.b, f, 0);
