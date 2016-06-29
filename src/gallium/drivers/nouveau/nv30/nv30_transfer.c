@@ -663,8 +663,7 @@ nv30_transfer_rect(struct nv30_context *nv30, enum nv30_transfer_filter filter,
       {}
    };
 
-   method = methods - 1;
-   while ((++method)->possible) {
+   for (method = methods; method->possible; method++) {
       if (method->possible(nv30, filter, src, dst)) {
          method->execute(nv30, filter, src, dst);
          return;
