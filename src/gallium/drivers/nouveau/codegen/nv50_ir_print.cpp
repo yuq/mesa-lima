@@ -215,6 +215,11 @@ static const char *shflOpStr[] =
   "idx", "up", "down", "bfly"
 };
 
+static const char *pixldOpStr[] =
+{
+   "count", "covmask", "offset", "cent_offset", "sampleid"
+};
+
 static const char *DataTypeStr[] =
 {
    "-",
@@ -570,6 +575,10 @@ void Instruction::print() const
       case OP_SHFL:
          if (subOp < ARRAY_SIZE(shflOpStr))
             PRINT("%s ", shflOpStr[subOp]);
+         break;
+      case OP_PIXLD:
+         if (subOp < ARRAY_SIZE(pixldOpStr))
+            PRINT("%s ", pixldOpStr[subOp]);
          break;
       default:
          if (subOp)
