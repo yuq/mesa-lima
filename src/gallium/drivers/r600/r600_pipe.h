@@ -926,14 +926,6 @@ static inline unsigned r600_pack_float_12p4(float x)
 	       x >= 4096 ? 0xffff : x * 16;
 }
 
-/* Return if the depth format can be read without the DB->CB copy on r6xx-r7xx. */
-static inline bool r600_can_read_depth(struct r600_texture *rtex)
-{
-	return rtex->resource.b.b.nr_samples <= 1 &&
-	       (rtex->resource.b.b.format == PIPE_FORMAT_Z16_UNORM ||
-		rtex->resource.b.b.format == PIPE_FORMAT_Z32_FLOAT);
-}
-
 static inline unsigned r600_get_flush_flags(enum r600_coherency coher)
 {
 	switch (coher) {

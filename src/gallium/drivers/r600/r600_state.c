@@ -706,7 +706,13 @@ r600_create_sampler_view_custom(struct pipe_context *ctx,
 		return NULL;
 	}
 
-	if (tmp->is_depth && !tmp->is_flushing_texture && !r600_can_read_depth(tmp)) {
+	if (state->format == PIPE_FORMAT_X24S8_UINT ||
+	    state->format == PIPE_FORMAT_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_X32_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_S8_UINT)
+		view->is_stencil_sampler = true;
+
+	if (tmp->is_depth && !r600_can_sample_zs(tmp, view->is_stencil_sampler)) {
 		if (!r600_init_flushed_depth_texture(ctx, texture, NULL)) {
 			FREE(view);
 			return NULL;
@@ -743,12 +749,6 @@ r600_create_sampler_view_custom(struct pipe_context *ctx,
 		array_mode = V_038000_ARRAY_2D_TILED_THIN1;
 		break;
 	}
-
-	if (state->format == PIPE_FORMAT_X24S8_UINT ||
-	    state->format == PIPE_FORMAT_S8X24_UINT ||
-	    state->format == PIPE_FORMAT_X32_S8X24_UINT ||
-	    state->format == PIPE_FORMAT_S8_UINT)
-		view->is_stencil_sampler = true;
 
 	view->tex_resource = &tmp->resource;
 	view->tex_resource_words[0] = (S_038000_DIM(r600_tex_dim(texture->target, texture->nr_samples)) |
@@ -842,7 +842,7 @@ static void r600_init_color_surface(struct r600_context *rctx,
 	int i;
 	bool blend_bypass = 0, blend_clamp = 1, do_endian_swap = FALSE;
 
-	if (rtex->is_depth && !rtex->is_flushing_texture && !r600_can_read_depth(rtex)) {
+	if (rtex->is_depth && !rtex->is_flushing_texture && !r600_can_sample_zs(rtex, false)) {
 		r600_init_flushed_depth_texture(&rctx->b.b, surf->base.texture, NULL);
 		rtex = rtex->flushed_depth_texture;
 		assert(rtex);

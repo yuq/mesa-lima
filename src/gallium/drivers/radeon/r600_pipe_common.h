@@ -242,6 +242,8 @@ struct r600_texture {
 	uint64_t			size;
 	unsigned			num_level0_transfers;
 	bool				is_depth;
+	bool				can_sample_z;
+	bool				can_sample_s;
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
 	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */
 	struct r600_texture		*flushed_depth_texture;
@@ -870,6 +872,13 @@ r600_get_sampler_view_priority(struct r600_resource *res)
 		return RADEON_PRIO_SAMPLER_TEXTURE_MSAA;
 
 	return RADEON_PRIO_SAMPLER_TEXTURE;
+}
+
+static inline bool
+r600_can_sample_zs(struct r600_texture *tex, bool stencil_sampler)
+{
+	return (stencil_sampler && tex->can_sample_s) ||
+	       (!stencil_sampler && tex->can_sample_z);
 }
 
 #define COMPUTE_DBG(rscreen, fmt, args...) \

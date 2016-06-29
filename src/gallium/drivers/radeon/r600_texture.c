@@ -1027,11 +1027,22 @@ r600_texture_create_object(struct pipe_screen *screen,
 	rtex->ps_draw_ratio = 0;
 
 	if (rtex->is_depth) {
-		if (!(base->flags & (R600_RESOURCE_FLAG_TRANSFER |
-				     R600_RESOURCE_FLAG_FLUSHED_DEPTH)) &&
-		    !(rscreen->debug_flags & DBG_NO_HYPERZ)) {
+		if (base->flags & (R600_RESOURCE_FLAG_TRANSFER |
+				   R600_RESOURCE_FLAG_FLUSHED_DEPTH) ||
+		    rscreen->chip_class >= EVERGREEN) {
+			rtex->can_sample_z = true;
+			rtex->can_sample_s = true;
+		} else {
+			if (rtex->resource.b.b.nr_samples <= 1 &&
+			    (rtex->resource.b.b.format == PIPE_FORMAT_Z16_UNORM ||
+			     rtex->resource.b.b.format == PIPE_FORMAT_Z32_FLOAT))
+				rtex->can_sample_z = true;
+		}
 
-			r600_texture_allocate_htile(rscreen, rtex);
+		if (!(base->flags & (R600_RESOURCE_FLAG_TRANSFER |
+				     R600_RESOURCE_FLAG_FLUSHED_DEPTH))) {
+			if (!(rscreen->debug_flags & DBG_NO_HYPERZ))
+				r600_texture_allocate_htile(rscreen, rtex);
 		}
 	} else {
 		if (base->nr_samples > 1) {
