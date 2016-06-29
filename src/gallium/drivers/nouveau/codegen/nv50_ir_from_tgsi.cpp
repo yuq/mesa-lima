@@ -2750,8 +2750,8 @@ Converter::handleINTERP(Value *dst[4])
    Value *offset = NULL, *ptr = NULL, *w = NULL;
    Symbol *sym[4] = { NULL };
    bool linear;
-   operation op;
-   int c, mode;
+   operation op = OP_NOP;
+   int c, mode = 0;
 
    tgsi::Instruction::SrcRegister src = tgsi.getSrc(0);
 
