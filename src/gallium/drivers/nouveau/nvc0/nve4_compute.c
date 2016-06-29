@@ -431,8 +431,8 @@ nve4_compute_upload_input(struct nvc0_context *nvc0,
       PUSH_DATAp(push, info->input, cp->parm_size / 4);
    }
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
-   PUSH_DATAh(push, address + NVC0_CB_AUX_GRID_INFO);
-   PUSH_DATA (push, address + NVC0_CB_AUX_GRID_INFO);
+   PUSH_DATAh(push, address + NVC0_CB_AUX_GRID_INFO(0));
+   PUSH_DATA (push, address + NVC0_CB_AUX_GRID_INFO(0));
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
    PUSH_DATA (push, 7 * 4);
    PUSH_DATA (push, 0x1);

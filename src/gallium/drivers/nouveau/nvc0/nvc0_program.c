@@ -569,7 +569,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
       if (chipset >= NVISA_GK104_CHIPSET) {
          info->io.auxCBSlot = 7;
          info->io.msInfoCBSlot = 7;
-         info->prop.cp.gridInfoBase = NVC0_CB_AUX_GRID_INFO;
+         info->prop.cp.gridInfoBase = NVC0_CB_AUX_GRID_INFO(0);
          info->io.uboInfoBase = NVC0_CB_AUX_UBO_INFO(0);
       }
    } else {

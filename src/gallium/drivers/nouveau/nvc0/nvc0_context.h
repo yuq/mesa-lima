@@ -115,7 +115,7 @@
 #define NVC0_CB_AUX_MS_INFO         0x0a0
 #define NVC0_CB_AUX_MS_SIZE         (8 * 2 * 4)
 /* block/grid size, at 3 32-bits integers each and gridid */
-#define NVC0_CB_AUX_GRID_INFO       0x0e0 /* CP */
+#define NVC0_CB_AUX_GRID_INFO(i)    0x0e0 + (i) * 4 /* CP */
 #define NVC0_CB_AUX_GRID_SIZE       (7 * 4)
 /* 8 user clip planes, at 4 32-bits floats each */
 #define NVC0_CB_AUX_UCP_INFO        0x100
