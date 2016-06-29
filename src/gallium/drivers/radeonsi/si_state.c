@@ -1779,6 +1779,9 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 		if (!screen->get_param(screen, PIPE_CAP_TEXTURE_MULTISAMPLE))
 			return false;
 
+		if (usage & PIPE_BIND_SHADER_IMAGE)
+			return false;
+
 		switch (sample_count) {
 		case 2:
 		case 4:
