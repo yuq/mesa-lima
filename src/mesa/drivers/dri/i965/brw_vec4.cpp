@@ -1612,6 +1612,9 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    if (inst->force_writemask_all)
       fprintf(file, " NoMask");
 
+   if (inst->exec_size != 8)
+      fprintf(file, " group%d", inst->group);
+
    fprintf(file, "\n");
 }
 
