@@ -210,6 +210,11 @@ static const char *subfmOpStr[] =
    "", "3d"
 };
 
+static const char *shflOpStr[] =
+{
+  "idx", "up", "down", "bfly"
+};
+
 static const char *DataTypeStr[] =
 {
    "-",
@@ -561,6 +566,10 @@ void Instruction::print() const
       case OP_SUBFM:
          if (subOp < ARRAY_SIZE(subfmOpStr))
             PRINT("%s ", subfmOpStr[subOp]);
+         break;
+      case OP_SHFL:
+         if (subOp < ARRAY_SIZE(shflOpStr))
+            PRINT("%s ", shflOpStr[subOp]);
          break;
       default:
          if (subOp)
