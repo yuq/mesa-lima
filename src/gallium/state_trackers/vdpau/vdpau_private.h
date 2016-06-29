@@ -45,6 +45,7 @@
 #include "os/os_thread.h"
 
 #include "vl/vl_video_buffer.h"
+#include "vl/vl_bicubic_filter.h"
 #include "vl/vl_compositor.h"
 #include "vl/vl_csc.h"
 #include "vl/vl_deint_filter.h"
@@ -371,6 +372,11 @@ typedef struct
 	  bool supported, enabled, spatial;
 	  struct vl_deint_filter *filter;
    } deint;
+
+   struct {
+	  bool supported, enabled;
+	  struct vl_bicubic_filter *filter;
+   } bicubic;
 
    struct {
       bool supported, enabled;
