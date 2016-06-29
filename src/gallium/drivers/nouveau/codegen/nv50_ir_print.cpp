@@ -225,6 +225,11 @@ static const char *rcprsqOpStr[] =
    "", "64h"
 };
 
+static const char *emitOpStr[] =
+{
+   "", "restart"
+};
+
 static const char *DataTypeStr[] =
 {
    "-",
@@ -589,6 +594,10 @@ void Instruction::print() const
       case OP_RSQ:
          if (subOp < ARRAY_SIZE(rcprsqOpStr))
             PRINT("%s ", rcprsqOpStr[subOp]);
+         break;
+      case OP_EMIT:
+         if (subOp < ARRAY_SIZE(emitOpStr))
+            PRINT("%s ", emitOpStr[subOp]);
          break;
       default:
          if (subOp)
