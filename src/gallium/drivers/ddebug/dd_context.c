@@ -665,9 +665,11 @@ static void
 dd_context_emit_string_marker(struct pipe_context *_pipe,
                               const char *string, int len)
 {
-   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+   struct dd_context *dctx = dd_context(_pipe);
+   struct pipe_context *pipe = dctx->pipe;
 
    pipe->emit_string_marker(pipe, string, len);
+   dd_parse_apitrace_marker(string, len, &dctx->apitrace_call_number);
 }
 
 static void

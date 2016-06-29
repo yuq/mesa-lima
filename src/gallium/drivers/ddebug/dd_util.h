@@ -71,4 +71,27 @@ dd_get_debug_file(bool verbose)
    return f;
 }
 
+static inline void
+dd_parse_apitrace_marker(const char *string, int len, unsigned *call_number)
+{
+   unsigned num;
+   char *s;
+
+   if (len <= 0)
+      return;
+
+   /* Make it zero-terminated. */
+   s = alloca(len + 1);
+   memcpy(s, string, len);
+   s[len] = 0;
+
+   /* Parse the number. */
+   errno = 0;
+   num = strtol(s, NULL, 10);
+   if (errno)
+      return;
+
+   *call_number = num;
+}
+
 #endif /* DD_UTIL_H */

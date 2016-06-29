@@ -99,6 +99,10 @@ dd_get_file_stream(struct dd_context *dctx)
    fprintf(f, "Driver vendor: %s\n", screen->get_vendor(screen));
    fprintf(f, "Device vendor: %s\n", screen->get_device_vendor(screen));
    fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
+
+   if (dctx->apitrace_call_number)
+      fprintf(f, "Last apitrace call: %u\n\n",
+              dctx->apitrace_call_number);
    return f;
 }
 

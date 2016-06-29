@@ -114,6 +114,7 @@ struct dd_context
    float tess_default_levels[6];
 
    unsigned num_draw_calls;
+   unsigned apitrace_call_number;
 };
 
 
