@@ -94,7 +94,11 @@ public:
    virtual void reset() { assert(0); } // only for graph iterators
 };
 
+#if __cplusplus >= 201103L
+typedef std::unique_ptr<Iterator> IteratorRef;
+#else
 typedef std::auto_ptr<Iterator> IteratorRef;
+#endif
 
 class ManipIterator : public Iterator
 {
