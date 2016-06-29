@@ -1801,8 +1801,24 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
 
       assert(inst->src[0].swizzle == BRW_SWIZZLE_NOOP);
 
-      emit_pull_constant_load(block, inst, inst->dst, inst->src[0],
-                              pull_constant_loc[uniform_nr], inst->src[1]);
+      if (type_sz(inst->src[0].type) != 8) {
+         emit_pull_constant_load(block, inst, inst->dst, inst->src[0],
+                                 pull_constant_loc[uniform_nr], inst->src[1]);
+      } else {
+         dst_reg shuffled = dst_reg(this, glsl_type::dvec4_type);
+         dst_reg shuffled_float = retype(shuffled, BRW_REGISTER_TYPE_F);
+
+         emit_pull_constant_load(block, inst, shuffled_float, inst->src[0],
+                                 pull_constant_loc[uniform_nr], inst->src[1]);
+         emit_pull_constant_load(block, inst,
+                                 offset(shuffled_float, 8, 1),
+                                 offset(inst->src[0], 8, 1),
+                                 pull_constant_loc[uniform_nr], inst->src[1]);
+
+         shuffle_64bit_data(retype(inst->dst, BRW_REGISTER_TYPE_DF),
+                            src_reg(shuffled), false, block, inst);
+      }
+
       inst->remove(block);
    }
 
