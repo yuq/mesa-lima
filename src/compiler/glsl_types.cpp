@@ -55,6 +55,13 @@ glsl_type::glsl_type(GLenum gl_type,
    vector_elements(vector_elements), matrix_columns(matrix_columns),
    length(0)
 {
+   /* Values of these types must fit in the two bits of
+    * glsl_type::sampled_type.
+    */
+   STATIC_ASSERT((unsigned(GLSL_TYPE_UINT)  & 3) == unsigned(GLSL_TYPE_UINT));
+   STATIC_ASSERT((unsigned(GLSL_TYPE_INT)   & 3) == unsigned(GLSL_TYPE_INT));
+   STATIC_ASSERT((unsigned(GLSL_TYPE_FLOAT) & 3) == unsigned(GLSL_TYPE_FLOAT));
+
    mtx_lock(&glsl_type::mutex);
 
    init_ralloc_type_ctx();
