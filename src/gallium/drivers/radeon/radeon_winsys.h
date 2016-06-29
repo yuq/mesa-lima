@@ -392,7 +392,6 @@ struct radeon_surf {
     uint32_t                    mtilea;
     uint32_t                    tile_split;
     uint32_t                    stencil_tile_split;
-    uint64_t                    stencil_offset;
     struct radeon_surf_level    level[RADEON_SURF_MAX_LEVEL];
     struct radeon_surf_level    stencil_level[RADEON_SURF_MAX_LEVEL];
     uint32_t                    tiling_index[RADEON_SURF_MAX_LEVEL];

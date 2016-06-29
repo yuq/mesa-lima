@@ -455,8 +455,6 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
             return r;
 
          if (level == 0) {
-            surf->stencil_offset = surf->stencil_level[0].offset;
-
             /* For 2D modes only. */
             if (AddrSurfInfoOut.tileMode >= ADDR_TM_2D_TILED_THIN1) {
                surf->stencil_tile_split =
