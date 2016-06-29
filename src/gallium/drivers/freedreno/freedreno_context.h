@@ -299,6 +299,11 @@ struct fd_context {
 	bool cond_cond; /* inverted rendering condition */
 	uint cond_mode;
 
+	/* Are we in process of shadowing a resource? Used to detect recursion
+	 * in transfer_map, and skip unneeded synchronization.
+	 */
+	bool in_shadow;
+
 	struct pipe_debug_callback debug;
 
 	/* GMEM/tile handling fxns: */

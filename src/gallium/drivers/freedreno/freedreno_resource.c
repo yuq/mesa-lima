@@ -124,6 +124,177 @@ realloc_bo(struct fd_resource *rsc, uint32_t size)
 	fd_bc_invalidate_resource(rsc, true);
 }
 
+static void fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond);
+static void fd_blitter_pipe_end(struct fd_context *ctx);
+
+static void
+do_blit(struct fd_context *ctx, const struct pipe_blit_info *blit, bool fallback)
+{
+	/* TODO size threshold too?? */
+	if ((blit->src.resource->target != PIPE_BUFFER) && !fallback) {
+		/* do blit on gpu: */
+		fd_blitter_pipe_begin(ctx, false);
+		util_blitter_blit(ctx->blitter, blit);
+		fd_blitter_pipe_end(ctx);
+	} else {
+		/* do blit on cpu: */
+		util_resource_copy_region(&ctx->base,
+				blit->dst.resource, blit->dst.level, blit->dst.box.x,
+				blit->dst.box.y, blit->dst.box.z,
+				blit->src.resource, blit->src.level, &blit->src.box);
+	}
+}
+
+static bool
+fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
+		unsigned level, unsigned usage, const struct pipe_box *box)
+{
+	struct pipe_context *pctx = &ctx->base;
+	struct pipe_resource *prsc = &rsc->base.b;
+	bool fallback = false;
+
+	/* TODO: somehow munge dimensions and format to copy unsupported
+	 * render target format to something that is supported?
+	 */
+	if (!pctx->screen->is_format_supported(pctx->screen,
+			prsc->format, prsc->target, prsc->nr_samples,
+			PIPE_BIND_RENDER_TARGET))
+		fallback = true;
+
+	/* these cases should be handled elsewhere.. just for future
+	 * reference in case this gets split into a more generic(ish)
+	 * helper.
+	 */
+	debug_assert(!(usage & PIPE_TRANSFER_READ));
+	debug_assert(!(usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE));
+
+	/* if we do a gpu blit to clone the whole resource, we'll just
+	 * end up stalling on that.. so only allow if we can discard
+	 * current range (and blit, possibly cpu or gpu, the rest)
+	 */
+	if (!(usage & PIPE_TRANSFER_DISCARD_RANGE))
+		return false;
+
+	bool whole_level = util_texrange_covers_whole_level(prsc, level,
+		box->x, box->y, box->z, box->width, box->height, box->depth);
+
+	/* TODO need to be more clever about current level */
+	if ((prsc->target >= PIPE_TEXTURE_2D) && !whole_level)
+		return false;
+
+	struct pipe_resource *pshadow =
+		pctx->screen->resource_create(pctx->screen, prsc);
+
+	if (!pshadow)
+		return false;
+
+	assert(!ctx->in_shadow);
+	ctx->in_shadow = true;
+
+	/* get rid of any references that batch-cache might have to us (which
+	 * should empty/destroy rsc->batches hashset)
+	 */
+	fd_bc_invalidate_resource(rsc, false);
+
+	/* Swap the backing bo's, so shadow becomes the old buffer,
+	 * blit from shadow to new buffer.  From here on out, we
+	 * cannot fail.
+	 *
+	 * Note that we need to do it in this order, otherwise if
+	 * we go down cpu blit path, the recursive transfer_map()
+	 * sees the wrong status..
+	 */
+	struct fd_resource *shadow = fd_resource(pshadow);
+
+	DBG("shadow: %p (%d) -> %p (%d)\n", rsc, rsc->base.b.reference.count,
+			shadow, shadow->base.b.reference.count);
+
+	/* TODO valid_buffer_range?? */
+	swap(rsc->bo,        shadow->bo);
+	swap(rsc->timestamp, shadow->timestamp);
+	swap(rsc->write_batch,   shadow->write_batch);
+
+	/* at this point, the newly created shadow buffer is not referenced
+	 * by any batches, but the existing rsc (probably) is.  We need to
+	 * transfer those references over:
+	 */
+	debug_assert(shadow->batch_mask == 0);
+	struct fd_batch *batch;
+	foreach_batch(batch, &ctx->screen->batch_cache, rsc->batch_mask) {
+		struct set_entry *entry = _mesa_set_search(batch->resources, rsc);
+		_mesa_set_remove(batch->resources, entry);
+		_mesa_set_add(batch->resources, shadow);
+	}
+	swap(rsc->batch_mask, shadow->batch_mask);
+
+	struct pipe_blit_info blit = {0};
+	blit.dst.resource = prsc;
+	blit.dst.format   = prsc->format;
+	blit.src.resource = pshadow;
+	blit.src.format   = pshadow->format;
+	blit.mask = util_format_get_mask(prsc->format);
+	blit.filter = PIPE_TEX_FILTER_NEAREST;
+
+#define set_box(field, val) do {     \
+		blit.dst.field = (val);      \
+		blit.src.field = (val);      \
+	} while (0)
+
+	/* blit the other levels in their entirety: */
+	for (unsigned l = 0; l <= prsc->last_level; l++) {
+		if (l == level)
+			continue;
+
+		/* just blit whole level: */
+		set_box(level, l);
+		set_box(box.width,  u_minify(prsc->width0, l));
+		set_box(box.height, u_minify(prsc->height0, l));
+		set_box(box.depth,  u_minify(prsc->depth0, l));
+
+		do_blit(ctx, &blit, fallback);
+	}
+
+	/* deal w/ current level specially, since we might need to split
+	 * it up into a couple blits:
+	 */
+	if (!whole_level) {
+		set_box(level, level);
+
+		switch (prsc->target) {
+		case PIPE_BUFFER:
+		case PIPE_TEXTURE_1D:
+			set_box(box.y, 0);
+			set_box(box.z, 0);
+			set_box(box.height, 1);
+			set_box(box.depth, 1);
+
+			if (box->x > 0) {
+				set_box(box.x, 0);
+				set_box(box.width, box->x);
+
+				do_blit(ctx, &blit, fallback);
+			}
+			if ((box->x + box->width) < u_minify(prsc->width0, level)) {
+				set_box(box.x, box->x + box->width);
+				set_box(box.width, u_minify(prsc->width0, level) - (box->x + box->width));
+
+				do_blit(ctx, &blit, fallback);
+			}
+			break;
+		case PIPE_TEXTURE_2D:
+			/* TODO */
+		default:
+			unreachable("TODO");
+		}
+	}
+
+	ctx->in_shadow = false;
+
+	pipe_resource_reference(&pshadow, NULL);
+
+	return true;
+}
+
 static unsigned
 fd_resource_layer_offset(struct fd_resource *rsc,
 						 struct fd_resource_slice *slice,
@@ -311,6 +482,9 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	ptrans->stride = util_format_get_nblocksx(format, slice->pitch) * rsc->cpp;
 	ptrans->layer_stride = rsc->layer_first ? rsc->layer_size : slice->size0;
 
+	if (ctx->in_shadow && !(usage & PIPE_TRANSFER_READ))
+		usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
+
 	if (usage & PIPE_TRANSFER_READ)
 		op |= DRM_FREEDRENO_PREP_READ;
 
@@ -333,27 +507,45 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		/* If the GPU is writing to the resource, or if it is reading from the
 		 * resource and we're trying to write to it, flush the renders.
 		 */
-		if (((ptrans->usage & PIPE_TRANSFER_WRITE) &&
-					pending(rsc, true)) ||
-				pending(rsc, false)) {
+		bool needs_flush = pending(rsc, !!(usage & PIPE_TRANSFER_WRITE));
+		bool busy = needs_flush || (0 != fd_bo_cpu_prep(rsc->bo,
+				ctx->screen->pipe, op | DRM_FREEDRENO_PREP_NOSYNC));
+
+		/* if we need to flush/stall, see if we can make a shadow buffer
+		 * to avoid this:
+		 *
+		 * TODO we could go down this path !reorder && !busy_for_read
+		 * ie. we only *don't* want to go down this path if the blit
+		 * will trigger a flush!
+		 */
+		if (ctx->screen->reorder && busy && !(usage & PIPE_TRANSFER_READ)) {
+			if (fd_try_shadow_resource(ctx, rsc, level, usage, box)) {
+				needs_flush = busy = false;
+				fd_invalidate_resource(ctx, prsc);
+			}
+		}
+
+		if (needs_flush) {
 			if (usage & PIPE_TRANSFER_WRITE) {
 				struct fd_batch *batch;
-				foreach_batch(batch, &ctx->screen->batch_cache, rsc->batch_mask) {
+				foreach_batch(batch, &ctx->screen->batch_cache, rsc->batch_mask)
 					fd_batch_flush(batch);
-				}
 				assert(rsc->batch_mask == 0);
 			} else {
 				fd_batch_flush(rsc->write_batch);
 			}
+			assert(!rsc->write_batch);
 		}
 
 		/* The GPU keeps track of how the various bo's are being used, and
 		 * will wait if necessary for the proper operation to have
 		 * completed.
 		 */
-		ret = fd_bo_cpu_prep(rsc->bo, ctx->screen->pipe, op);
-		if (ret)
-			goto fail;
+		if (busy) {
+			ret = fd_bo_cpu_prep(rsc->bo, ctx->screen->pipe, op);
+			if (ret)
+				goto fail;
+		}
 	}
 
 	buf = fd_bo_map(rsc->bo);
@@ -697,9 +889,6 @@ fail:
 	fd_resource_destroy(pscreen, prsc);
 	return NULL;
 }
-
-static void fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond);
-static void fd_blitter_pipe_end(struct fd_context *ctx);
 
 /**
  * _copy_region using pipe (3d engine)

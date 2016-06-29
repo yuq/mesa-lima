@@ -332,4 +332,10 @@ pack_rgba(enum pipe_format format, const float *rgba)
 	return uc.ui[0];
 }
 
+/*
+ * swap - swap value of @a and @b
+ */
+#define swap(a, b) \
+	do { __typeof(a) __tmp = (a); (a) = (b); (b) = __tmp; } while (0)
+
 #endif /* FREEDRENO_UTIL_H_ */
