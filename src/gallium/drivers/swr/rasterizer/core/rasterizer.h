@@ -97,6 +97,9 @@ struct RasterizerTraits final : public ConservativeRastBETraits<ConservativeT, I
     /// Fixed point precision of the edge tests used during rasterization
     typedef FixedPointTraits<Fixed_X_16> EdgePrecisionT;
 
+    // If conservative rast is enabled, only need a single sample coverage test, with the result copied to all samples
+    typedef std::integral_constant<int, (ConservativeT::value) ? 1 : MT::numSamples> NumRasterSamplesT; 
+
     static_assert(EdgePrecisionT::BitsT::value >=  ConservativeRastBETraits<ConservativeT, InputCoverageT>::ConservativePrecisionT::BitsT::value,
                   "Rasterizer edge fixed point precision < required conservative rast precision");
 

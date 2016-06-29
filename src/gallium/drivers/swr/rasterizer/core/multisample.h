@@ -29,6 +29,10 @@
 #include "context.h"
 #include "format_traits.h"
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief convenience typedef for testing for single sample case
+typedef std::integral_constant<int, 1> SingleSampleT;
+
 INLINE
 uint32_t GetNumSamples(SWR_MULTISAMPLE_COUNT sampleCount)
 {
