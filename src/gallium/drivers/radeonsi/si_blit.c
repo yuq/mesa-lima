@@ -101,7 +101,7 @@ static unsigned u_max_sample(struct pipe_resource *r)
 	return r->nr_samples ? r->nr_samples - 1 : 0;
 }
 
-static void
+static unsigned
 si_blit_dbcb_copy(struct si_context *sctx,
 		  struct r600_texture *src,
 		  struct r600_texture *dst,
@@ -111,6 +111,7 @@ si_blit_dbcb_copy(struct si_context *sctx,
 {
 	struct pipe_surface surf_tmpl = {{0}};
 	unsigned layer, sample, checked_last_layer, max_layer;
+	unsigned fully_copied_levels = 0;
 
 	if (planes & PIPE_MASK_Z)
 		sctx->dbcb_depth_copy_enabled = true;
@@ -157,11 +158,17 @@ si_blit_dbcb_copy(struct si_context *sctx,
 			pipe_surface_reference(&zsurf, NULL);
 			pipe_surface_reference(&cbsurf, NULL);
 		}
+
+		if (first_layer == 0 && last_layer >= max_layer &&
+		    first_sample == 0 && last_sample >= u_max_sample(&src->resource.b.b))
+			fully_copied_levels |= 1u << level;
 	}
 
 	sctx->dbcb_depth_copy_enabled = false;
 	sctx->dbcb_stencil_copy_enabled = false;
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+
+	return fully_copied_levels;
 }
 
 static void si_blit_decompress_depth(struct pipe_context *ctx,
@@ -254,48 +261,115 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 }
 
-/* Decompress Z and/or S planes in place, depending on mask.
+/* Helper function of si_flush_depth_texture: decompress the given levels
+ * of Z and/or S planes in place.
  */
 static void
 si_blit_decompress_zs_in_place(struct si_context *sctx,
 			       struct r600_texture *texture,
-			       unsigned planes,
-			       unsigned first_level, unsigned last_level,
+			       unsigned levels_z, unsigned levels_s,
 			       unsigned first_layer, unsigned last_layer)
 {
-	unsigned level_mask =
-		u_bit_consecutive(first_level, last_level - first_level + 1);
-	unsigned cur_level_mask;
+	unsigned both = levels_z & levels_s;
 
 	/* First, do combined Z & S decompresses for levels that need it. */
-	if (planes == (PIPE_MASK_Z | PIPE_MASK_S)) {
-		cur_level_mask =
-			level_mask &
-			texture->dirty_level_mask &
-			texture->stencil_dirty_level_mask;
+	if (both) {
 		si_blit_decompress_zs_planes_in_place(
 				sctx, texture, PIPE_MASK_Z | PIPE_MASK_S,
-				cur_level_mask,
+				both,
 				first_layer, last_layer);
-		level_mask &= ~cur_level_mask;
+		levels_z &= ~both;
+		levels_s &= ~both;
 	}
 
 	/* Now do separate Z and S decompresses. */
-	if (planes & PIPE_MASK_Z) {
-		cur_level_mask = level_mask & texture->dirty_level_mask;
+	if (levels_z) {
 		si_blit_decompress_zs_planes_in_place(
 				sctx, texture, PIPE_MASK_Z,
-				cur_level_mask,
+				levels_z,
 				first_layer, last_layer);
-		level_mask &= ~cur_level_mask;
 	}
 
-	if (planes & PIPE_MASK_S) {
-		cur_level_mask = level_mask & texture->stencil_dirty_level_mask;
+	if (levels_s) {
 		si_blit_decompress_zs_planes_in_place(
 				sctx, texture, PIPE_MASK_S,
-				cur_level_mask,
+				levels_s,
 				first_layer, last_layer);
+	}
+}
+
+static void
+si_flush_depth_texture(struct si_context *sctx,
+		       struct r600_texture *tex,
+		       unsigned required_planes,
+		       unsigned first_level, unsigned last_level,
+		       unsigned first_layer, unsigned last_layer)
+{
+	unsigned inplace_planes = 0;
+	unsigned copy_planes = 0;
+	unsigned level_mask = u_bit_consecutive(first_level, last_level - first_level + 1);
+	unsigned levels_z = 0;
+	unsigned levels_s = 0;
+
+	if (required_planes & PIPE_MASK_Z) {
+		levels_z = level_mask & tex->dirty_level_mask;
+
+		if (levels_z) {
+			if (r600_can_sample_zs(tex, false))
+				inplace_planes |= PIPE_MASK_Z;
+			else
+				copy_planes |= PIPE_MASK_Z;
+		}
+	}
+	if (required_planes & PIPE_MASK_S) {
+		levels_s = level_mask & tex->stencil_dirty_level_mask;
+
+		if (levels_s) {
+			if (r600_can_sample_zs(tex, true))
+				inplace_planes |= PIPE_MASK_S;
+			else
+				copy_planes |= PIPE_MASK_S;
+		}
+	}
+
+	/* We may have to allocate the flushed texture here when called from
+	 * si_decompress_subresource.
+	 */
+	if (copy_planes &&
+	    (tex->flushed_depth_texture ||
+	     r600_init_flushed_depth_texture(&sctx->b.b, &tex->resource.b.b, NULL))) {
+		struct r600_texture *dst = tex->flushed_depth_texture;
+		unsigned fully_copied_levels;
+		unsigned levels = 0;
+
+		if (util_format_is_depth_and_stencil(dst->resource.b.b.format))
+			copy_planes = PIPE_MASK_Z | PIPE_MASK_S;
+
+		if (copy_planes & PIPE_MASK_Z) {
+			levels |= levels_z;
+			levels_z = 0;
+		}
+		if (copy_planes & PIPE_MASK_S) {
+			levels |= levels_s;
+			levels_s = 0;
+		}
+
+		fully_copied_levels = si_blit_dbcb_copy(
+			sctx, tex, dst, copy_planes, levels,
+			first_layer, last_layer,
+			0, u_max_sample(&tex->resource.b.b));
+
+		if (copy_planes & PIPE_MASK_Z)
+			tex->dirty_level_mask &= ~fully_copied_levels;
+		if (copy_planes & PIPE_MASK_S)
+			tex->stencil_dirty_level_mask &= ~fully_copied_levels;
+	}
+
+	if (inplace_planes) {
+		si_blit_decompress_zs_in_place(
+			sctx, tex,
+			levels_z, levels_s,
+			first_layer, last_layer);
 	}
 }
 
@@ -320,11 +394,11 @@ si_flush_depth_textures(struct si_context *sctx,
 		tex = (struct r600_texture *)view->texture;
 		assert(tex->db_compatible);
 
-		si_blit_decompress_zs_in_place(sctx, tex,
-					       sview->is_stencil_sampler ? PIPE_MASK_S
-									 : PIPE_MASK_Z,
-					       view->u.tex.first_level, view->u.tex.last_level,
-					       0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
+		si_flush_depth_texture(
+				sctx, tex,
+				sview->is_stencil_sampler ? PIPE_MASK_S : PIPE_MASK_Z,
+				view->u.tex.first_level, view->u.tex.last_level,
+				0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
 	}
 }
 
@@ -727,9 +801,9 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 		if (!(rtex->surface.flags & RADEON_SURF_SBUFFER))
 			planes &= ~PIPE_MASK_S;
 
-		si_blit_decompress_zs_in_place(sctx, rtex, planes,
-					       level, level,
-					       first_layer, last_layer);
+		si_flush_depth_texture(sctx, rtex, planes,
+				       level, level,
+				       first_layer, last_layer);
 	} else if (rtex->fmask.size || rtex->cmask.size || rtex->dcc_offset) {
 		si_blit_decompress_color(ctx, rtex, level, level,
 					 first_layer, last_layer, false);
