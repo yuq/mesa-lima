@@ -220,6 +220,11 @@ static const char *pixldOpStr[] =
    "count", "covmask", "offset", "cent_offset", "sampleid"
 };
 
+static const char *rcprsqOpStr[] =
+{
+   "", "64h"
+};
+
 static const char *DataTypeStr[] =
 {
    "-",
@@ -579,6 +584,11 @@ void Instruction::print() const
       case OP_PIXLD:
          if (subOp < ARRAY_SIZE(pixldOpStr))
             PRINT("%s ", pixldOpStr[subOp]);
+         break;
+      case OP_RCP:
+      case OP_RSQ:
+         if (subOp < ARRAY_SIZE(rcprsqOpStr))
+            PRINT("%s ", rcprsqOpStr[subOp]);
          break;
       default:
          if (subOp)
