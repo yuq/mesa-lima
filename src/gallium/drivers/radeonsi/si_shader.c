@@ -6510,7 +6510,8 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	 * conversion fails. */
 	if (r600_can_dump_shader(&sscreen->b, sel->info.processor) &&
 	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
-		si_dump_shader_key(sel->type, &shader->key, stderr);
+		if (is_monolithic)
+			si_dump_shader_key(sel->type, &shader->key, stderr);
 		tgsi_dump(sel->tokens, 0);
 		si_dump_streamout(&sel->so);
 	}
