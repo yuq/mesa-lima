@@ -344,6 +344,9 @@ if test "x$GXX" = xyes; then
 
     # Work around aliasing bugs - developers should comment this out
     CXXFLAGS="$CXXFLAGS -fno-strict-aliasing"
+
+    # We don't want floating-point math functions to set errno or trap
+    CXXFLAGS="$CXXFLAGS -fno-math-errno -fno-trapping-math"
 fi
 
 AC_SUBST([MSVC2013_COMPAT_CFLAGS])
