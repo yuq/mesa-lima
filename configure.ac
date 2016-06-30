@@ -306,10 +306,6 @@ if test "x$GCC" = xyes; then
     # We don't want floating-point math functions to set errno or trap
     CFLAGS="$CFLAGS -fno-math-errno -fno-trapping-math"
 
-    # gcc's builtin memcmp is slower than glibc's
-    # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43052
-    CFLAGS="$CFLAGS -fno-builtin-memcmp"
-
     # Flags to help ensure that certain portions of the code -- and only those
     # portions -- can be built with MSVC:
     # - src/util, src/gallium/auxiliary, rc/gallium/drivers/llvmpipe, and
@@ -348,10 +344,6 @@ if test "x$GXX" = xyes; then
 
     # Work around aliasing bugs - developers should comment this out
     CXXFLAGS="$CXXFLAGS -fno-strict-aliasing"
-
-    # gcc's builtin memcmp is slower than glibc's
-    # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43052
-    CXXFLAGS="$CXXFLAGS -fno-builtin-memcmp"
 fi
 
 AC_SUBST([MSVC2013_COMPAT_CFLAGS])
