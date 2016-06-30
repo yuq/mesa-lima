@@ -401,6 +401,14 @@ struct radeon_surf {
     uint32_t                    macro_tile_index;
     uint32_t                    micro_tile_mode; /* displayable, thin, depth, rotated */
 
+    /* Whether the depth miptree or stencil miptree as used by the DB are
+     * adjusted from their TC compatible form to ensure depth/stencil
+     * compatibility. If either is true, the corresponding plane cannot be
+     * sampled from.
+     */
+    bool                        depth_adjusted;
+    bool                        stencil_adjusted;
+
     uint64_t                    dcc_size;
     uint64_t                    dcc_alignment;
 };

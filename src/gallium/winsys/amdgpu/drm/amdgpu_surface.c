@@ -454,6 +454,10 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
          if (r)
             return r;
 
+         /* DB uses the depth pitch for both stencil and depth. */
+         if (surf->stencil_level[level].nblk_x != surf->level[level].nblk_x)
+            surf->stencil_adjusted = true;
+
          if (level == 0) {
             /* For 2D modes only. */
             if (AddrSurfInfoOut.tileMode >= ADDR_TM_2D_TILED_THIN1) {
