@@ -444,13 +444,40 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       unsigned first_component = nir_intrinsic_component(instr);
       if (first_component) {
+         if (nir_src_bit_size(instr->src[0]) == 64)
+            first_component /= 2;
          assert(swiz == BRW_SWIZZLE_XYZW);
          swiz = BRW_SWZ_COMP_OUTPUT(first_component);
          mask = mask << first_component;
       }
 
-      emit_urb_write(swizzle(value, swiz), mask,
-                     imm_offset, indirect_offset);
+      if (nir_src_bit_size(instr->src[0]) == 64) {
+         /* For 64-bit data we need to shuffle the data before we write and
+          * emit two messages. Also, since each channel is twice as large we
+          * need to fix the writemask in each 32-bit message to account for it.
+          */
+         value = swizzle(retype(value, BRW_REGISTER_TYPE_DF), swiz);
+         dst_reg shuffled = dst_reg(this, glsl_type::dvec4_type);
+         shuffle_64bit_data(shuffled, value, true);
+         src_reg shuffled_float = src_reg(retype(shuffled, BRW_REGISTER_TYPE_F));
+
+         for (int n = 0; n < 2; n++) {
+            unsigned fixed_mask = 0;
+            if (mask & WRITEMASK_X)
+               fixed_mask |= WRITEMASK_XY;
+            if (mask & WRITEMASK_Y)
+               fixed_mask |= WRITEMASK_ZW;
+            emit_urb_write(shuffled_float, fixed_mask,
+                           imm_offset, indirect_offset);
+
+            shuffled_float = byte_offset(shuffled_float, REG_SIZE);
+            mask >>= 2;
+            imm_offset++;
+         }
+      } else {
+         emit_urb_write(swizzle(value, swiz), mask,
+                        imm_offset, indirect_offset);
+      }
       break;
    }
 
