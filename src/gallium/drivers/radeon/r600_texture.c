@@ -1275,12 +1275,43 @@ bool r600_init_flushed_depth_texture(struct pipe_context *ctx,
 	struct pipe_resource resource;
 	struct r600_texture **flushed_depth_texture = staging ?
 			staging : &rtex->flushed_depth_texture;
+	enum pipe_format pipe_format = texture->format;
 
-	if (!staging && rtex->flushed_depth_texture)
-		return true; /* it's ready */
+	if (!staging) {
+		if (rtex->flushed_depth_texture)
+			return true; /* it's ready */
+
+		if (!rtex->can_sample_z && rtex->can_sample_s) {
+			switch (pipe_format) {
+			case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+				/* Save memory by not allocating the S plane. */
+				pipe_format = PIPE_FORMAT_Z32_FLOAT;
+				break;
+			case PIPE_FORMAT_Z24_UNORM_S8_UINT:
+			case PIPE_FORMAT_S8_UINT_Z24_UNORM:
+				/* Save memory bandwidth by not copying the
+				 * stencil part during flush.
+				 *
+				 * This potentially increases memory bandwidth
+				 * if an application uses both Z and S texturing
+				 * simultaneously (a flushed Z24S8 texture
+				 * would be stored compactly), but how often
+				 * does that really happen?
+				 */
+				pipe_format = PIPE_FORMAT_Z24X8_UNORM;
+				break;
+			default:;
+			}
+		} else if (!rtex->can_sample_s && rtex->can_sample_z) {
+			assert(util_format_has_stencil(util_format_description(pipe_format)));
+
+			/* DB->CB copies to an 8bpp surface don't work. */
+			pipe_format = PIPE_FORMAT_X24S8_UINT;
+		}
+	}
 
 	resource.target = texture->target;
-	resource.format = texture->format;
+	resource.format = pipe_format;
 	resource.width0 = texture->width0;
 	resource.height0 = texture->height0;
 	resource.depth0 = texture->depth0;
