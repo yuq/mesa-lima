@@ -392,7 +392,7 @@ brw_tcs_precompile(struct gl_context *ctx,
    /* Guess that the input and output patches have the same dimensionality. */
    if (brw->gen < 8) {
       key.input_vertices = shader_prog->
-         _LinkedShaders[MESA_SHADER_TESS_CTRL]->TessCtrl.VerticesOut;
+         _LinkedShaders[MESA_SHADER_TESS_CTRL]->info.TessCtrl.VerticesOut;
    }
 
    key.tes_primitive_mode = brw->tess_eval_program ?

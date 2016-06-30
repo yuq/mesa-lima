@@ -857,7 +857,7 @@ validate_geometry_shader_executable(struct gl_shader_program *prog,
    if (shader == NULL)
       return;
 
-   unsigned num_vertices = vertices_per_prim(shader->Geom.InputType);
+   unsigned num_vertices = vertices_per_prim(shader->info.Geom.InputType);
    prog->Geom.VerticesIn = num_vertices;
 
    analyze_clip_cull_usage(prog, shader, ctx,
@@ -912,7 +912,7 @@ validate_geometry_shader_emissions(struct gl_context *ctx,
        * EmitStreamVertex() or EmitEndPrimitive() are called with a non-zero
        * stream.
        */
-      if (prog->Geom.UsesStreams && sh->Geom.OutputType != GL_POINTS) {
+      if (prog->Geom.UsesStreams && sh->info.Geom.OutputType != GL_POINTS) {
          linker_error(prog, "EmitStreamVertex(n) and EndStreamPrimitive(n) "
                       "with n>0 requires point output\n");
       }
@@ -1687,37 +1687,38 @@ link_xfb_stride_layout_qualifiers(struct gl_context *ctx,
 			          unsigned num_shaders)
 {
    for (unsigned i = 0; i < MAX_FEEDBACK_BUFFERS; i++) {
-      linked_shader->TransformFeedback.BufferStride[i] = 0;
+      linked_shader->info.TransformFeedback.BufferStride[i] = 0;
    }
 
    for (unsigned i = 0; i < num_shaders; i++) {
       struct gl_shader *shader = shader_list[i];
 
       for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
-         if (shader->TransformFeedback.BufferStride[j]) {
-	    if (linked_shader->TransformFeedback.BufferStride[j] != 0 &&
-                shader->TransformFeedback.BufferStride[j] != 0 &&
-	        linked_shader->TransformFeedback.BufferStride[j] !=
-                   shader->TransformFeedback.BufferStride[j]) {
+         if (shader->info.TransformFeedback.BufferStride[j]) {
+	    if (linked_shader->info.TransformFeedback.BufferStride[j] != 0 &&
+                shader->info.TransformFeedback.BufferStride[j] != 0 &&
+	        linked_shader->info.TransformFeedback.BufferStride[j] !=
+                   shader->info.TransformFeedback.BufferStride[j]) {
 	       linker_error(prog,
                             "intrastage shaders defined with conflicting "
                             "xfb_stride for buffer %d (%d and %d)\n", j,
-                            linked_shader->TransformFeedback.BufferStride[j],
-			    shader->TransformFeedback.BufferStride[j]);
+                            linked_shader->
+                               info.TransformFeedback.BufferStride[j],
+			    shader->info.TransformFeedback.BufferStride[j]);
 	       return;
 	    }
 
-            if (shader->TransformFeedback.BufferStride[j])
-	       linked_shader->TransformFeedback.BufferStride[j] =
-                  shader->TransformFeedback.BufferStride[j];
+            if (shader->info.TransformFeedback.BufferStride[j])
+	       linked_shader->info.TransformFeedback.BufferStride[j] =
+                  shader->info.TransformFeedback.BufferStride[j];
          }
       }
    }
 
    for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
-      if (linked_shader->TransformFeedback.BufferStride[j]) {
+      if (linked_shader->info.TransformFeedback.BufferStride[j]) {
          prog->TransformFeedback.BufferStride[j] =
-            linked_shader->TransformFeedback.BufferStride[j];
+            linked_shader->info.TransformFeedback.BufferStride[j];
 
          /* We will validate doubles at a later stage */
          if (prog->TransformFeedback.BufferStride[j] % 4) {
@@ -1750,7 +1751,7 @@ link_tcs_out_layout_qualifiers(struct gl_shader_program *prog,
 			      struct gl_shader **shader_list,
 			      unsigned num_shaders)
 {
-   linked_shader->TessCtrl.VerticesOut = 0;
+   linked_shader->info.TessCtrl.VerticesOut = 0;
 
    if (linked_shader->Stage != MESA_SHADER_TESS_CTRL)
       return;
@@ -1768,16 +1769,18 @@ link_tcs_out_layout_qualifiers(struct gl_shader_program *prog,
    for (unsigned i = 0; i < num_shaders; i++) {
       struct gl_shader *shader = shader_list[i];
 
-      if (shader->TessCtrl.VerticesOut != 0) {
-	 if (linked_shader->TessCtrl.VerticesOut != 0 &&
-	     linked_shader->TessCtrl.VerticesOut != shader->TessCtrl.VerticesOut) {
+      if (shader->info.TessCtrl.VerticesOut != 0) {
+	 if (linked_shader->info.TessCtrl.VerticesOut != 0 &&
+	     linked_shader->info.TessCtrl.VerticesOut !=
+             shader->info.TessCtrl.VerticesOut) {
 	    linker_error(prog, "tessellation control shader defined with "
 			 "conflicting output vertex count (%d and %d)\n",
-			 linked_shader->TessCtrl.VerticesOut,
-			 shader->TessCtrl.VerticesOut);
+			 linked_shader->info.TessCtrl.VerticesOut,
+			 shader->info.TessCtrl.VerticesOut);
 	    return;
 	 }
-	 linked_shader->TessCtrl.VerticesOut = shader->TessCtrl.VerticesOut;
+	 linked_shader->info.TessCtrl.VerticesOut =
+            shader->info.TessCtrl.VerticesOut;
       }
    }
 
@@ -1785,7 +1788,7 @@ link_tcs_out_layout_qualifiers(struct gl_shader_program *prog,
     * since we already know we're in the right type of shader program
     * for doing it.
     */
-   if (linked_shader->TessCtrl.VerticesOut == 0) {
+   if (linked_shader->info.TessCtrl.VerticesOut == 0) {
       linker_error(prog, "tessellation control shader didn't declare "
 		   "vertices out layout qualifier\n");
       return;
@@ -1805,10 +1808,10 @@ link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
 				struct gl_shader **shader_list,
 				unsigned num_shaders)
 {
-   linked_shader->TessEval.PrimitiveMode = PRIM_UNKNOWN;
-   linked_shader->TessEval.Spacing = 0;
-   linked_shader->TessEval.VertexOrder = 0;
-   linked_shader->TessEval.PointMode = -1;
+   linked_shader->info.TessEval.PrimitiveMode = PRIM_UNKNOWN;
+   linked_shader->info.TessEval.Spacing = 0;
+   linked_shader->info.TessEval.VertexOrder = 0;
+   linked_shader->info.TessEval.PointMode = -1;
 
    if (linked_shader->Stage != MESA_SHADER_TESS_EVAL)
       return;
@@ -1830,44 +1833,50 @@ link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
    for (unsigned i = 0; i < num_shaders; i++) {
       struct gl_shader *shader = shader_list[i];
 
-      if (shader->TessEval.PrimitiveMode != PRIM_UNKNOWN) {
-	 if (linked_shader->TessEval.PrimitiveMode != PRIM_UNKNOWN &&
-	     linked_shader->TessEval.PrimitiveMode != shader->TessEval.PrimitiveMode) {
+      if (shader->info.TessEval.PrimitiveMode != PRIM_UNKNOWN) {
+	 if (linked_shader->info.TessEval.PrimitiveMode != PRIM_UNKNOWN &&
+	     linked_shader->info.TessEval.PrimitiveMode !=
+             shader->info.TessEval.PrimitiveMode) {
 	    linker_error(prog, "tessellation evaluation shader defined with "
 			 "conflicting input primitive modes.\n");
 	    return;
 	 }
-	 linked_shader->TessEval.PrimitiveMode = shader->TessEval.PrimitiveMode;
+	 linked_shader->info.TessEval.PrimitiveMode = shader->info.TessEval.PrimitiveMode;
       }
 
-      if (shader->TessEval.Spacing != 0) {
-	 if (linked_shader->TessEval.Spacing != 0 &&
-	     linked_shader->TessEval.Spacing != shader->TessEval.Spacing) {
+      if (shader->info.TessEval.Spacing != 0) {
+	 if (linked_shader->info.TessEval.Spacing != 0 &&
+	     linked_shader->info.TessEval.Spacing !=
+             shader->info.TessEval.Spacing) {
 	    linker_error(prog, "tessellation evaluation shader defined with "
 			 "conflicting vertex spacing.\n");
 	    return;
 	 }
-	 linked_shader->TessEval.Spacing = shader->TessEval.Spacing;
+	 linked_shader->info.TessEval.Spacing = shader->info.TessEval.Spacing;
       }
 
-      if (shader->TessEval.VertexOrder != 0) {
-	 if (linked_shader->TessEval.VertexOrder != 0 &&
-	     linked_shader->TessEval.VertexOrder != shader->TessEval.VertexOrder) {
+      if (shader->info.TessEval.VertexOrder != 0) {
+	 if (linked_shader->info.TessEval.VertexOrder != 0 &&
+	     linked_shader->info.TessEval.VertexOrder !=
+             shader->info.TessEval.VertexOrder) {
 	    linker_error(prog, "tessellation evaluation shader defined with "
 			 "conflicting ordering.\n");
 	    return;
 	 }
-	 linked_shader->TessEval.VertexOrder = shader->TessEval.VertexOrder;
+	 linked_shader->info.TessEval.VertexOrder =
+            shader->info.TessEval.VertexOrder;
       }
 
-      if (shader->TessEval.PointMode != -1) {
-	 if (linked_shader->TessEval.PointMode != -1 &&
-	     linked_shader->TessEval.PointMode != shader->TessEval.PointMode) {
+      if (shader->info.TessEval.PointMode != -1) {
+	 if (linked_shader->info.TessEval.PointMode != -1 &&
+	     linked_shader->info.TessEval.PointMode !=
+             shader->info.TessEval.PointMode) {
 	    linker_error(prog, "tessellation evaluation shader defined with "
 			 "conflicting point modes.\n");
 	    return;
 	 }
-	 linked_shader->TessEval.PointMode = shader->TessEval.PointMode;
+	 linked_shader->info.TessEval.PointMode =
+            shader->info.TessEval.PointMode;
       }
 
    }
@@ -1876,21 +1885,21 @@ link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
     * since we already know we're in the right type of shader program
     * for doing it.
     */
-   if (linked_shader->TessEval.PrimitiveMode == PRIM_UNKNOWN) {
+   if (linked_shader->info.TessEval.PrimitiveMode == PRIM_UNKNOWN) {
       linker_error(prog,
 		   "tessellation evaluation shader didn't declare input "
 		   "primitive modes.\n");
       return;
    }
 
-   if (linked_shader->TessEval.Spacing == 0)
-      linked_shader->TessEval.Spacing = GL_EQUAL;
+   if (linked_shader->info.TessEval.Spacing == 0)
+      linked_shader->info.TessEval.Spacing = GL_EQUAL;
 
-   if (linked_shader->TessEval.VertexOrder == 0)
-      linked_shader->TessEval.VertexOrder = GL_CCW;
+   if (linked_shader->info.TessEval.VertexOrder == 0)
+      linked_shader->info.TessEval.VertexOrder = GL_CCW;
 
-   if (linked_shader->TessEval.PointMode == -1)
-      linked_shader->TessEval.PointMode = GL_FALSE;
+   if (linked_shader->info.TessEval.PointMode == -1)
+      linked_shader->info.TessEval.PointMode = GL_FALSE;
 }
 
 
@@ -1905,10 +1914,10 @@ link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
 	                        struct gl_shader **shader_list,
 	                        unsigned num_shaders)
 {
-   linked_shader->redeclares_gl_fragcoord = false;
-   linked_shader->uses_gl_fragcoord = false;
-   linked_shader->origin_upper_left = false;
-   linked_shader->pixel_center_integer = false;
+   linked_shader->info.redeclares_gl_fragcoord = false;
+   linked_shader->info.uses_gl_fragcoord = false;
+   linked_shader->info.origin_upper_left = false;
+   linked_shader->info.pixel_center_integer = false;
 
    if (linked_shader->Stage != MESA_SHADER_FRAGMENT ||
        (prog->Version < 150 && !prog->ARB_fragment_coord_conventions_enable))
@@ -1922,12 +1931,12 @@ link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
        *    it must be redeclared in all the fragment shaders in that program
        *    that have a static use gl_FragCoord."
        */
-      if ((linked_shader->redeclares_gl_fragcoord
-           && !shader->redeclares_gl_fragcoord
-           && shader->uses_gl_fragcoord)
-          || (shader->redeclares_gl_fragcoord
-              && !linked_shader->redeclares_gl_fragcoord
-              && linked_shader->uses_gl_fragcoord)) {
+      if ((linked_shader->info.redeclares_gl_fragcoord
+           && !shader->info.redeclares_gl_fragcoord
+           && shader->info.uses_gl_fragcoord)
+          || (shader->info.redeclares_gl_fragcoord
+              && !linked_shader->info.redeclares_gl_fragcoord
+              && linked_shader->info.uses_gl_fragcoord)) {
              linker_error(prog, "fragment shader defined with conflicting "
                          "layout qualifiers for gl_FragCoord\n");
       }
@@ -1937,9 +1946,12 @@ link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
        *   "All redeclarations of gl_FragCoord in all fragment shaders in a
        *    single program must have the same set of qualifiers."
        */
-      if (linked_shader->redeclares_gl_fragcoord && shader->redeclares_gl_fragcoord
-          && (shader->origin_upper_left != linked_shader->origin_upper_left
-          || shader->pixel_center_integer != linked_shader->pixel_center_integer)) {
+      if (linked_shader->info.redeclares_gl_fragcoord &&
+          shader->info.redeclares_gl_fragcoord &&
+          (shader->info.origin_upper_left !=
+           linked_shader->info.origin_upper_left ||
+           shader->info.pixel_center_integer !=
+           linked_shader->info.pixel_center_integer)) {
          linker_error(prog, "fragment shader defined with conflicting "
                       "layout qualifiers for gl_FragCoord\n");
       }
@@ -1949,16 +1961,21 @@ link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
        * are multiple redeclarations, all the fields except uses_gl_fragcoord
        * are already known to be the same.
        */
-      if (shader->redeclares_gl_fragcoord || shader->uses_gl_fragcoord) {
-         linked_shader->redeclares_gl_fragcoord =
-            shader->redeclares_gl_fragcoord;
-         linked_shader->uses_gl_fragcoord = linked_shader->uses_gl_fragcoord
-            || shader->uses_gl_fragcoord;
-         linked_shader->origin_upper_left = shader->origin_upper_left;
-         linked_shader->pixel_center_integer = shader->pixel_center_integer;
+      if (shader->info.redeclares_gl_fragcoord ||
+          shader->info.uses_gl_fragcoord) {
+         linked_shader->info.redeclares_gl_fragcoord =
+            shader->info.redeclares_gl_fragcoord;
+         linked_shader->info.uses_gl_fragcoord =
+            linked_shader->info.uses_gl_fragcoord ||
+            shader->info.uses_gl_fragcoord;
+         linked_shader->info.origin_upper_left =
+            shader->info.origin_upper_left;
+         linked_shader->info.pixel_center_integer =
+            shader->info.pixel_center_integer;
       }
 
-      linked_shader->EarlyFragmentTests |= shader->EarlyFragmentTests;
+      linked_shader->info.EarlyFragmentTests |=
+         shader->info.EarlyFragmentTests;
    }
 }
 
@@ -1973,10 +1990,10 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
 				struct gl_shader **shader_list,
 				unsigned num_shaders)
 {
-   linked_shader->Geom.VerticesOut = -1;
-   linked_shader->Geom.Invocations = 0;
-   linked_shader->Geom.InputType = PRIM_UNKNOWN;
-   linked_shader->Geom.OutputType = PRIM_UNKNOWN;
+   linked_shader->info.Geom.VerticesOut = -1;
+   linked_shader->info.Geom.Invocations = 0;
+   linked_shader->info.Geom.InputType = PRIM_UNKNOWN;
+   linked_shader->info.Geom.OutputType = PRIM_UNKNOWN;
 
    /* No in/out qualifiers defined for anything but GLSL 1.50+
     * geometry shaders so far.
@@ -1997,48 +2014,52 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
    for (unsigned i = 0; i < num_shaders; i++) {
       struct gl_shader *shader = shader_list[i];
 
-      if (shader->Geom.InputType != PRIM_UNKNOWN) {
-	 if (linked_shader->Geom.InputType != PRIM_UNKNOWN &&
-	     linked_shader->Geom.InputType != shader->Geom.InputType) {
+      if (shader->info.Geom.InputType != PRIM_UNKNOWN) {
+	 if (linked_shader->info.Geom.InputType != PRIM_UNKNOWN &&
+	     linked_shader->info.Geom.InputType !=
+             shader->info.Geom.InputType) {
 	    linker_error(prog, "geometry shader defined with conflicting "
 			 "input types\n");
 	    return;
 	 }
-	 linked_shader->Geom.InputType = shader->Geom.InputType;
+	 linked_shader->info.Geom.InputType = shader->info.Geom.InputType;
       }
 
-      if (shader->Geom.OutputType != PRIM_UNKNOWN) {
-	 if (linked_shader->Geom.OutputType != PRIM_UNKNOWN &&
-	     linked_shader->Geom.OutputType != shader->Geom.OutputType) {
+      if (shader->info.Geom.OutputType != PRIM_UNKNOWN) {
+	 if (linked_shader->info.Geom.OutputType != PRIM_UNKNOWN &&
+	     linked_shader->info.Geom.OutputType !=
+             shader->info.Geom.OutputType) {
 	    linker_error(prog, "geometry shader defined with conflicting "
 			 "output types\n");
 	    return;
 	 }
-	 linked_shader->Geom.OutputType = shader->Geom.OutputType;
+	 linked_shader->info.Geom.OutputType = shader->info.Geom.OutputType;
       }
 
-      if (shader->Geom.VerticesOut != -1) {
-	 if (linked_shader->Geom.VerticesOut != -1 &&
-	     linked_shader->Geom.VerticesOut != shader->Geom.VerticesOut) {
+      if (shader->info.Geom.VerticesOut != -1) {
+	 if (linked_shader->info.Geom.VerticesOut != -1 &&
+	     linked_shader->info.Geom.VerticesOut !=
+             shader->info.Geom.VerticesOut) {
 	    linker_error(prog, "geometry shader defined with conflicting "
 			 "output vertex count (%d and %d)\n",
-			 linked_shader->Geom.VerticesOut,
-			 shader->Geom.VerticesOut);
+			 linked_shader->info.Geom.VerticesOut,
+			 shader->info.Geom.VerticesOut);
 	    return;
 	 }
-	 linked_shader->Geom.VerticesOut = shader->Geom.VerticesOut;
+	 linked_shader->info.Geom.VerticesOut = shader->info.Geom.VerticesOut;
       }
 
-      if (shader->Geom.Invocations != 0) {
-	 if (linked_shader->Geom.Invocations != 0 &&
-	     linked_shader->Geom.Invocations != shader->Geom.Invocations) {
+      if (shader->info.Geom.Invocations != 0) {
+	 if (linked_shader->info.Geom.Invocations != 0 &&
+	     linked_shader->info.Geom.Invocations !=
+             shader->info.Geom.Invocations) {
 	    linker_error(prog, "geometry shader defined with conflicting "
 			 "invocation count (%d and %d)\n",
-			 linked_shader->Geom.Invocations,
-			 shader->Geom.Invocations);
+			 linked_shader->info.Geom.Invocations,
+			 shader->info.Geom.Invocations);
 	    return;
 	 }
-	 linked_shader->Geom.Invocations = shader->Geom.Invocations;
+	 linked_shader->info.Geom.Invocations = shader->info.Geom.Invocations;
       }
    }
 
@@ -2046,26 +2067,26 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
     * since we already know we're in the right type of shader program
     * for doing it.
     */
-   if (linked_shader->Geom.InputType == PRIM_UNKNOWN) {
+   if (linked_shader->info.Geom.InputType == PRIM_UNKNOWN) {
       linker_error(prog,
 		   "geometry shader didn't declare primitive input type\n");
       return;
    }
 
-   if (linked_shader->Geom.OutputType == PRIM_UNKNOWN) {
+   if (linked_shader->info.Geom.OutputType == PRIM_UNKNOWN) {
       linker_error(prog,
 		   "geometry shader didn't declare primitive output type\n");
       return;
    }
 
-   if (linked_shader->Geom.VerticesOut == -1) {
+   if (linked_shader->info.Geom.VerticesOut == -1) {
       linker_error(prog,
 		   "geometry shader didn't declare max_vertices\n");
       return;
    }
 
-   if (linked_shader->Geom.Invocations == 0)
-      linked_shader->Geom.Invocations = 1;
+   if (linked_shader->info.Geom.Invocations == 0)
+      linked_shader->info.Geom.Invocations = 1;
 }
 
 
@@ -2081,7 +2102,7 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
                                 unsigned num_shaders)
 {
    for (int i = 0; i < 3; i++)
-      linked_shader->Comp.LocalSize[i] = 0;
+      linked_shader->info.Comp.LocalSize[i] = 0;
 
    /* This function is called for all shader stages, but it only has an effect
     * for compute shaders.
@@ -2102,19 +2123,21 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
    for (unsigned sh = 0; sh < num_shaders; sh++) {
       struct gl_shader *shader = shader_list[sh];
 
-      if (shader->Comp.LocalSize[0] != 0) {
-         if (linked_shader->Comp.LocalSize[0] != 0) {
+      if (shader->info.Comp.LocalSize[0] != 0) {
+         if (linked_shader->info.Comp.LocalSize[0] != 0) {
             for (int i = 0; i < 3; i++) {
-               if (linked_shader->Comp.LocalSize[i] !=
-                   shader->Comp.LocalSize[i]) {
+               if (linked_shader->info.Comp.LocalSize[i] !=
+                   shader->info.Comp.LocalSize[i]) {
                   linker_error(prog, "compute shader defined with conflicting "
                                "local sizes\n");
                   return;
                }
             }
          }
-         for (int i = 0; i < 3; i++)
-            linked_shader->Comp.LocalSize[i] = shader->Comp.LocalSize[i];
+         for (int i = 0; i < 3; i++) {
+            linked_shader->info.Comp.LocalSize[i] =
+               shader->info.Comp.LocalSize[i];
+         }
       }
    }
 
@@ -2122,12 +2145,12 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
     * since we already know we're in the right type of shader program
     * for doing it.
     */
-   if (linked_shader->Comp.LocalSize[0] == 0) {
+   if (linked_shader->info.Comp.LocalSize[0] == 0) {
       linker_error(prog, "compute shader didn't declare local size\n");
       return;
    }
    for (int i = 0; i < 3; i++)
-      prog->Comp.LocalSize[i] = linked_shader->Comp.LocalSize[i];
+      prog->Comp.LocalSize[i] = linked_shader->info.Comp.LocalSize[i];
 }
 
 
@@ -2266,7 +2289,7 @@ link_intrastage_shaders(void *mem_ctx,
    /* Check if any shader needs built-in functions. */
    bool need_builtins = false;
    for (unsigned i = 0; i < num_shaders; i++) {
-      if (shader_list[i]->uses_builtin_functions) {
+      if (shader_list[i]->info.uses_builtin_functions) {
          need_builtins = true;
          break;
       }
@@ -2345,7 +2368,7 @@ link_intrastage_shaders(void *mem_ctx,
 
    /* Set the size of geometry shader input arrays */
    if (linked->Stage == MESA_SHADER_GEOMETRY) {
-      unsigned num_vertices = vertices_per_prim(linked->Geom.InputType);
+      unsigned num_vertices = vertices_per_prim(linked->info.Geom.InputType);
       geom_array_resize_visitor input_resize_visitor(num_vertices, prog);
       foreach_in_list(ir_instruction, ir, linked->ir) {
          ir->accept(&input_resize_visitor);
@@ -2470,7 +2493,7 @@ resize_tes_inputs(struct gl_context *ctx,
     * known until draw time.
     */
    const int num_vertices = tcs
-      ? tcs->TessCtrl.VerticesOut
+      ? tcs->info.TessCtrl.VerticesOut
       : ctx->Const.MaxPatchVertices;
 
    tess_eval_array_resize_visitor input_resize_visitor(num_vertices, prog);
@@ -4511,7 +4534,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 	 goto done;
       }
 
-      if (prog->Shaders[i]->ARB_fragment_coord_conventions_enable) {
+      if (prog->Shaders[i]->info.ARB_fragment_coord_conventions_enable) {
          prog->ARB_fragment_coord_conventions_enable = true;
       }
 

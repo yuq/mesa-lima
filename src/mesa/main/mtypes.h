@@ -2235,6 +2235,103 @@ struct gl_subroutine_function
 };
 
 /**
+ * Shader information needed by both gl_shader and gl_linked shader.
+ */
+struct gl_shader_info
+{
+   bool uses_builtin_functions;
+   bool uses_gl_fragcoord;
+   bool redeclares_gl_fragcoord;
+   bool ARB_fragment_coord_conventions_enable;
+
+   /**
+    * Fragment shader state from GLSL 1.50 layout qualifiers.
+    */
+   bool origin_upper_left;
+   bool pixel_center_integer;
+
+   struct {
+      /** Global xfb_stride out qualifier if any */
+      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
+   } TransformFeedback;
+
+   /**
+    * Tessellation Control shader state from layout qualifiers.
+    */
+   struct {
+      /**
+       * 0 - vertices not declared in shader, or
+       * 1 .. GL_MAX_PATCH_VERTICES
+       */
+      GLint VerticesOut;
+   } TessCtrl;
+
+   /**
+    * Tessellation Evaluation shader state from layout qualifiers.
+    */
+   struct {
+      /**
+       * GL_TRIANGLES, GL_QUADS, GL_ISOLINES or PRIM_UNKNOWN if it's not set
+       * in this shader.
+       */
+      GLenum PrimitiveMode;
+      /**
+       * GL_EQUAL, GL_FRACTIONAL_ODD, GL_FRACTIONAL_EVEN, or 0 if it's not set
+       * in this shader.
+       */
+      GLenum Spacing;
+      /**
+       * GL_CW, GL_CCW, or 0 if it's not set in this shader.
+       */
+      GLenum VertexOrder;
+      /**
+       * 1, 0, or -1 if it's not set in this shader.
+       */
+      int PointMode;
+   } TessEval;
+
+   /**
+    * Geometry shader state from GLSL 1.50 layout qualifiers.
+    */
+   struct {
+      GLint VerticesOut;
+      /**
+       * 0 - Invocations count not declared in shader, or
+       * 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS
+       */
+      GLint Invocations;
+      /**
+       * GL_POINTS, GL_LINES, GL_LINES_ADJACENCY, GL_TRIANGLES, or
+       * GL_TRIANGLES_ADJACENCY, or PRIM_UNKNOWN if it's not set in this
+       * shader.
+       */
+      GLenum InputType;
+       /**
+        * GL_POINTS, GL_LINE_STRIP or GL_TRIANGLE_STRIP, or PRIM_UNKNOWN if
+        * it's not set in this shader.
+        */
+      GLenum OutputType;
+   } Geom;
+
+   /**
+    * Whether early fragment tests are enabled as defined by
+    * ARB_shader_image_load_store.
+    */
+   bool EarlyFragmentTests;
+
+   /**
+    * Compute shader state from ARB_compute_shader layout qualifiers.
+    */
+   struct {
+      /**
+       * Size specified using local_size_{x,y,z}, or all 0's to indicate that
+       * it's not set in this shader.
+       */
+      unsigned LocalSize[3];
+   } Comp;
+};
+
+/**
  * A linked GLSL shader object.
  */
 struct gl_linked_shader
@@ -2291,80 +2388,6 @@ struct gl_linked_shader
    struct exec_list *fragdata_arrays;
    struct glsl_symbol_table *symbols;
 
-   bool uses_builtin_functions;
-   bool uses_gl_fragcoord;
-   bool redeclares_gl_fragcoord;
-   bool ARB_fragment_coord_conventions_enable;
-
-   /**
-    * Fragment shader state from GLSL 1.50 layout qualifiers.
-    */
-   bool origin_upper_left;
-   bool pixel_center_integer;
-
-   struct {
-      /** Global xfb_stride out qualifier if any */
-      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
-   } TransformFeedback;
-
-   /**
-    * Tessellation Control shader state from layout qualifiers.
-    */
-   struct {
-      /**
-       * 0 - vertices not declared in shader, or
-       * 1 .. GL_MAX_PATCH_VERTICES
-       */
-      GLint VerticesOut;
-   } TessCtrl;
-
-   /**
-    * Tessellation Evaluation shader state from layout qualifiers.
-    */
-   struct {
-      /**
-       * GL_TRIANGLES, GL_QUADS, GL_ISOLINES or PRIM_UNKNOWN if it's not set
-       * in this shader.
-       */
-      GLenum PrimitiveMode;
-      /**
-       * GL_EQUAL, GL_FRACTIONAL_ODD, GL_FRACTIONAL_EVEN, or 0 if it's not set
-       * in this shader.
-       */
-      GLenum Spacing;
-      /**
-       * GL_CW, GL_CCW, or 0 if it's not set in this shader.
-       */
-      GLenum VertexOrder;
-      /**
-       * 1, 0, or -1 if it's not set in this shader.
-       */
-      int PointMode;
-   } TessEval;
-
-   /**
-    * Geometry shader state from GLSL 1.50 layout qualifiers.
-    */
-   struct {
-      GLint VerticesOut;
-      /**
-       * 0 - Invocations count not declared in shader, or
-       * 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS
-       */
-      GLint Invocations;
-      /**
-       * GL_POINTS, GL_LINES, GL_LINES_ADJACENCY, GL_TRIANGLES, or
-       * GL_TRIANGLES_ADJACENCY, or PRIM_UNKNOWN if it's not set in this
-       * shader.
-       */
-      GLenum InputType;
-       /**
-        * GL_POINTS, GL_LINE_STRIP or GL_TRIANGLE_STRIP, or PRIM_UNKNOWN if
-        * it's not set in this shader.
-        */
-      GLenum OutputType;
-   } Geom;
-
    /**
     * Map from image uniform index to image unit (set by glUniform1i())
     *
@@ -2395,23 +2418,6 @@ struct gl_linked_shader
    unsigned NumAtomicBuffers;
 
    /**
-    * Whether early fragment tests are enabled as defined by
-    * ARB_shader_image_load_store.
-    */
-   bool EarlyFragmentTests;
-
-   /**
-    * Compute shader state from ARB_compute_shader layout qualifiers.
-    */
-   struct {
-      /**
-       * Size specified using local_size_{x,y,z}, or all 0's to indicate that
-       * it's not set in this shader.
-       */
-      unsigned LocalSize[3];
-   } Comp;
-
-   /**
      * Number of types for subroutine uniforms.
      */
    GLuint NumSubroutineUniformTypes;
@@ -2431,6 +2437,8 @@ struct gl_linked_shader
    GLuint NumSubroutineFunctions;
    GLuint MaxSubroutineFunctionIndex;
    struct gl_subroutine_function *SubroutineFunctions;
+
+   struct gl_shader_info info;
 };
 
 /**
@@ -2461,96 +2469,7 @@ struct gl_shader
    struct exec_list *ir;
    struct glsl_symbol_table *symbols;
 
-   bool uses_builtin_functions;
-   bool uses_gl_fragcoord;
-   bool redeclares_gl_fragcoord;
-   bool ARB_fragment_coord_conventions_enable;
-
-   /**
-    * Fragment shader state from GLSL 1.50 layout qualifiers.
-    */
-   bool origin_upper_left;
-   bool pixel_center_integer;
-
-   struct {
-      /** Global xfb_stride out qualifier if any */
-      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
-   } TransformFeedback;
-
-   /**
-    * Tessellation Control shader state from layout qualifiers.
-    */
-   struct {
-      /**
-       * 0 - vertices not declared in shader, or
-       * 1 .. GL_MAX_PATCH_VERTICES
-       */
-      GLint VerticesOut;
-   } TessCtrl;
-
-   /**
-    * Tessellation Evaluation shader state from layout qualifiers.
-    */
-   struct {
-      /**
-       * GL_TRIANGLES, GL_QUADS, GL_ISOLINES or PRIM_UNKNOWN if it's not set
-       * in this shader.
-       */
-      GLenum PrimitiveMode;
-      /**
-       * GL_EQUAL, GL_FRACTIONAL_ODD, GL_FRACTIONAL_EVEN, or 0 if it's not set
-       * in this shader.
-       */
-      GLenum Spacing;
-      /**
-       * GL_CW, GL_CCW, or 0 if it's not set in this shader.
-       */
-      GLenum VertexOrder;
-      /**
-       * 1, 0, or -1 if it's not set in this shader.
-       */
-      int PointMode;
-   } TessEval;
-
-   /**
-    * Geometry shader state from GLSL 1.50 layout qualifiers.
-    */
-   struct {
-      GLint VerticesOut;
-      /**
-       * 0 - Invocations count not declared in shader, or
-       * 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS
-       */
-      GLint Invocations;
-      /**
-       * GL_POINTS, GL_LINES, GL_LINES_ADJACENCY, GL_TRIANGLES, or
-       * GL_TRIANGLES_ADJACENCY, or PRIM_UNKNOWN if it's not set in this
-       * shader.
-       */
-      GLenum InputType;
-       /**
-        * GL_POINTS, GL_LINE_STRIP or GL_TRIANGLE_STRIP, or PRIM_UNKNOWN if
-        * it's not set in this shader.
-        */
-      GLenum OutputType;
-   } Geom;
-
-   /**
-    * Whether early fragment tests are enabled as defined by
-    * ARB_shader_image_load_store.
-    */
-   bool EarlyFragmentTests;
-
-   /**
-    * Compute shader state from ARB_compute_shader layout qualifiers.
-    */
-   struct {
-      /**
-       * Size specified using local_size_{x,y,z}, or all 0's to indicate that
-       * it's not set in this shader.
-       */
-      unsigned LocalSize[3];
-   } Comp;
+   struct gl_shader_info info;
 };
 
 

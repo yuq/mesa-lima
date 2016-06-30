@@ -118,7 +118,7 @@ process_xfb_layout_qualifiers(void *mem_ctx, const gl_linked_shader *sh,
     * xfb_stride to interface block members so this will catch that case also.
     */
    for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
-      if (sh->TransformFeedback.BufferStride[j]) {
+      if (sh->info.TransformFeedback.BufferStride[j]) {
          has_xfb_qualifiers = true;
       }
    }

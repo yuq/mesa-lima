@@ -6133,7 +6133,7 @@ st_translate_program(
    }
 
    if (procType == PIPE_SHADER_FRAGMENT) {
-      if (program->shader->EarlyFragmentTests)
+      if (program->shader->info.EarlyFragmentTests)
          ureg_property(ureg, TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL, 1);
 
       if (proginfo->InputsRead & VARYING_BIT_POS) {
