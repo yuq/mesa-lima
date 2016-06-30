@@ -1278,8 +1278,7 @@ static int lookup_interp_param_index(unsigned interpolate, unsigned location)
 static unsigned select_interp_param(struct si_shader_context *ctx,
 				    unsigned param)
 {
-	if (!ctx->shader->key.ps.prolog.force_persample_interp ||
-	    !ctx->is_monolithic)
+	if (!ctx->is_monolithic)
 		return param;
 
 	/* If the shader doesn't use center/centroid, just return the parameter.
@@ -1287,18 +1286,22 @@ static unsigned select_interp_param(struct si_shader_context *ctx,
 	 * If the shader only uses one set of (i,j), "si_emit_spi_ps_input" can
 	 * switch between center/centroid and sample without shader changes.
 	 */
-	switch (param) {
-	case SI_PARAM_PERSP_CENTROID:
-	case SI_PARAM_PERSP_CENTER:
-		return SI_PARAM_PERSP_SAMPLE;
-
-	case SI_PARAM_LINEAR_CENTROID:
-	case SI_PARAM_LINEAR_CENTER:
-		return SI_PARAM_LINEAR_SAMPLE;
-
-	default:
-		return param;
+	if (ctx->shader->key.ps.prolog.force_persp_sample_interp) {
+		switch (param) {
+		case SI_PARAM_PERSP_CENTROID:
+		case SI_PARAM_PERSP_CENTER:
+			return SI_PARAM_PERSP_SAMPLE;
+		}
 	}
+	if (ctx->shader->key.ps.prolog.force_linear_sample_interp) {
+		switch (param) {
+		case SI_PARAM_LINEAR_CENTROID:
+		case SI_PARAM_LINEAR_CENTER:
+			return SI_PARAM_LINEAR_SAMPLE;
+		}
+	}
+
+	return param;
 }
 
 /**
@@ -6377,7 +6380,8 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 	case PIPE_SHADER_FRAGMENT:
 		fprintf(f, "  prolog.color_two_side = %u\n", key->ps.prolog.color_two_side);
 		fprintf(f, "  prolog.poly_stipple = %u\n", key->ps.prolog.poly_stipple);
-		fprintf(f, "  prolog.force_persample_interp = %u\n", key->ps.prolog.force_persample_interp);
+		fprintf(f, "  prolog.force_persp_sample_interp = %u\n", key->ps.prolog.force_persp_sample_interp);
+		fprintf(f, "  prolog.force_linear_sample_interp = %u\n", key->ps.prolog.force_linear_sample_interp);
 		fprintf(f, "  epilog.spi_shader_col_format = 0x%x\n", key->ps.epilog.spi_shader_col_format);
 		fprintf(f, "  epilog.color_is_int8 = 0x%X\n", key->ps.epilog.color_is_int8);
 		fprintf(f, "  epilog.last_cbuf = %u\n", key->ps.epilog.last_cbuf);
@@ -7218,9 +7222,9 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 	}
 
 	/* Force per-sample interpolation. */
-	if (key->ps_prolog.states.force_persample_interp) {
+	if (key->ps_prolog.states.force_persp_sample_interp) {
 		unsigned i, base = key->ps_prolog.num_input_sgprs;
-		LLVMValueRef persp_sample[2], linear_sample[2];
+		LLVMValueRef persp_sample[2];
 
 		/* Read PERSP_SAMPLE. */
 		for (i = 0; i < 2; i++)
@@ -7233,6 +7237,11 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 		for (i = 0; i < 2; i++)
 			ret = LLVMBuildInsertValue(gallivm->builder, ret,
 						   persp_sample[i], base + 4 + i, "");
+	}
+	if (key->ps_prolog.states.force_linear_sample_interp) {
+		unsigned i, base = key->ps_prolog.num_input_sgprs;
+		LLVMValueRef linear_sample[2];
+
 		/* Read LINEAR_SAMPLE. */
 		for (i = 0; i < 2; i++)
 			linear_sample[i] = LLVMGetParam(func, base + 6 + i);
@@ -7404,7 +7413,8 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	prolog_key.ps_prolog.num_input_vgprs = shader->info.num_input_vgprs;
 	prolog_key.ps_prolog.wqm = info->uses_derivatives &&
 		(prolog_key.ps_prolog.colors_read ||
-		 prolog_key.ps_prolog.states.force_persample_interp);
+		 prolog_key.ps_prolog.states.force_persp_sample_interp ||
+		 prolog_key.ps_prolog.states.force_linear_sample_interp);
 
 	if (info->colors_read) {
 		unsigned *color = shader->selector->color_attr_index;
@@ -7424,16 +7434,16 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 
 			prolog_key.ps_prolog.color_attr_index[i] = color[i];
 
-			/* Force per-sample interpolation for the colors here. */
-			if (shader->key.ps.prolog.force_persample_interp)
-				location = TGSI_INTERPOLATE_LOC_SAMPLE;
-
 			switch (info->input_interpolate[color[i]]) {
 			case TGSI_INTERPOLATE_CONSTANT:
 				prolog_key.ps_prolog.color_interp_vgpr_index[i] = -1;
 				break;
 			case TGSI_INTERPOLATE_PERSPECTIVE:
 			case TGSI_INTERPOLATE_COLOR:
+				/* Force the interpolation location for colors here. */
+				if (shader->key.ps.prolog.force_persp_sample_interp)
+					location = TGSI_INTERPOLATE_LOC_SAMPLE;
+
 				switch (location) {
 				case TGSI_INTERPOLATE_LOC_SAMPLE:
 					prolog_key.ps_prolog.color_interp_vgpr_index[i] = 0;
@@ -7455,6 +7465,10 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 				}
 				break;
 			case TGSI_INTERPOLATE_LINEAR:
+				/* Force the interpolation location for colors here. */
+				if (shader->key.ps.prolog.force_linear_sample_interp)
+					location = TGSI_INTERPOLATE_LOC_SAMPLE;
+
 				switch (location) {
 				case TGSI_INTERPOLATE_LOC_SAMPLE:
 					prolog_key.ps_prolog.color_interp_vgpr_index[i] = 6;
@@ -7483,7 +7497,8 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 
 	/* The prolog is a no-op if these aren't set. */
 	if (prolog_key.ps_prolog.colors_read ||
-	    prolog_key.ps_prolog.states.force_persample_interp ||
+	    prolog_key.ps_prolog.states.force_persp_sample_interp ||
+	    prolog_key.ps_prolog.states.force_linear_sample_interp ||
 	    prolog_key.ps_prolog.states.poly_stipple) {
 		shader->prolog =
 			si_get_shader_part(sscreen, &sscreen->ps_prologs,
@@ -7515,19 +7530,19 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	}
 
 	/* Set up the enable bits for per-sample shading if needed. */
-	if (shader->key.ps.prolog.force_persample_interp) {
-		if (G_0286CC_PERSP_CENTER_ENA(shader->config.spi_ps_input_ena) ||
-		    G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena)) {
-			shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTER_ENA;
-			shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTROID_ENA;
-			shader->config.spi_ps_input_ena |= S_0286CC_PERSP_SAMPLE_ENA(1);
-		}
-		if (G_0286CC_LINEAR_CENTER_ENA(shader->config.spi_ps_input_ena) ||
-		    G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena)) {
-			shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTER_ENA;
-			shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
-			shader->config.spi_ps_input_ena |= S_0286CC_LINEAR_SAMPLE_ENA(1);
-		}
+	if (shader->key.ps.prolog.force_persp_sample_interp &&
+	    (G_0286CC_PERSP_CENTER_ENA(shader->config.spi_ps_input_ena) ||
+	     G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena))) {
+		shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTER_ENA;
+		shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTROID_ENA;
+		shader->config.spi_ps_input_ena |= S_0286CC_PERSP_SAMPLE_ENA(1);
+	}
+	if (shader->key.ps.prolog.force_linear_sample_interp &&
+	    (G_0286CC_LINEAR_CENTER_ENA(shader->config.spi_ps_input_ena) ||
+	     G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena))) {
+		shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTER_ENA;
+		shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
+		shader->config.spi_ps_input_ena |= S_0286CC_LINEAR_SAMPLE_ENA(1);
 	}
 
 	/* POW_W_FLOAT requires that one of the perspective weights is enabled. */

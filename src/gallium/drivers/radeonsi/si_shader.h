@@ -313,7 +313,8 @@ struct si_ps_prolog_bits {
 	unsigned	color_two_side:1;
 	/* TODO: add a flatshade bit that skips interpolation for colors */
 	unsigned	poly_stipple:1;
-	unsigned	force_persample_interp:1;
+	unsigned	force_persp_sample_interp:1;
+	unsigned	force_linear_sample_interp:1;
 	/* TODO:
 	 * - add force_center_interp if MSAA is disabled and centroid or
 	 *   sample are present

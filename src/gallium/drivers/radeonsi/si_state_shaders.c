@@ -935,15 +935,18 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 							     sctx->framebuffer.nr_samples <= 1;
 			key->ps.epilog.clamp_color = rs->clamp_fragment_color;
 
-			key->ps.prolog.force_persample_interp =
-				rs->force_persample_interp &&
-				rs->multisample_enable &&
-				sctx->framebuffer.nr_samples > 1 &&
-				sctx->ps_iter_samples > 1 &&
-				(sel->info.uses_persp_center ||
-				 sel->info.uses_persp_centroid ||
-				 sel->info.uses_linear_center ||
-				 sel->info.uses_linear_centroid);
+			if (rs->force_persample_interp &&
+			    rs->multisample_enable &&
+			    sctx->framebuffer.nr_samples > 1 &&
+			    sctx->ps_iter_samples > 1) {
+				key->ps.prolog.force_persp_sample_interp =
+					sel->info.uses_persp_center ||
+					sel->info.uses_persp_centroid;
+
+				key->ps.prolog.force_linear_sample_interp =
+					sel->info.uses_linear_center ||
+					sel->info.uses_linear_centroid;
+			}
 		}
 
 		key->ps.epilog.alpha_func = si_get_alpha_test_func(sctx);
