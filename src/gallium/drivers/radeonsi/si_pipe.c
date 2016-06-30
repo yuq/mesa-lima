@@ -419,7 +419,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		       HAVE_LLVM >= 0x0307 ? 410 : 330;
 
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
-		return MIN2(sscreen->b.info.vram_size, 0xFFFFFFFF);
+		return MIN2(sscreen->b.info.max_alloc_size, INT_MAX);
 
 	case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
 		return 0;
@@ -566,7 +566,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 			pscreen->get_compute_param(pscreen, PIPE_SHADER_IR_TGSI,
 				PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE,
 				&max_const_buffer_size);
-			return max_const_buffer_size;
+			return MIN2(max_const_buffer_size, INT_MAX);
 		}
 		default:
 			/* If compute shaders don't require a special value

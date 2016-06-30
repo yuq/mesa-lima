@@ -301,7 +301,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return 0;
 
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
-		return MIN2(rscreen->b.info.vram_size, 0xFFFFFFFF);
+		return MIN2(rscreen->b.info.max_alloc_size, INT_MAX);
 
         case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:
                 return R600_MAP_BUFFER_ALIGNMENT;
@@ -509,7 +509,7 @@ static int r600_get_shader_param(struct pipe_screen* pscreen, unsigned shader, e
 			pscreen->get_compute_param(pscreen, PIPE_SHADER_IR_TGSI,
 				PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE,
 				&max_const_buffer_size);
-			return max_const_buffer_size;
+			return MIN2(max_const_buffer_size, INT_MAX);
 
 		} else {
 			return R600_MAX_CONST_BUFFER_SIZE;

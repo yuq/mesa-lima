@@ -864,8 +864,8 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 			 * 4 * MAX_MEM_ALLOC_SIZE.
 			 */
 			*max_global_size = MIN2(4 * max_mem_alloc_size,
-				rscreen->info.gart_size +
-				rscreen->info.vram_size);
+						MAX2(rscreen->info.gart_size,
+						     rscreen->info.vram_size));
 		}
 		return sizeof(uint64_t);
 
@@ -889,10 +889,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 		if (ret) {
 			uint64_t *max_mem_alloc_size = ret;
 
-			/* XXX: The limit in older kernels is 256 MB.  We
-			 * should add a query here for newer kernels.
-			 */
-			*max_mem_alloc_size = 256 * 1024 * 1024;
+			*max_mem_alloc_size = rscreen->info.max_alloc_size;
 		}
 		return sizeof(uint64_t);
 
@@ -1098,6 +1095,8 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		printf("chip_class = %i\n", rscreen->info.chip_class);
 		printf("gart_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.gart_size, 1024*1024));
 		printf("vram_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.vram_size, 1024*1024));
+		printf("max_alloc_size = %i MB\n",
+		       (int)DIV_ROUND_UP(rscreen->info.max_alloc_size, 1024*1024));
 		printf("has_virtual_memory = %i\n", rscreen->info.has_virtual_memory);
 		printf("gfx_ib_pad_with_type2 = %i\n", rscreen->info.gfx_ib_pad_with_type2);
 		printf("has_sdma = %i\n", rscreen->info.has_sdma);
