@@ -311,7 +311,7 @@ struct si_tcs_epilog_bits {
 /* Common PS bits between the shader key and the prolog key. */
 struct si_ps_prolog_bits {
 	unsigned	color_two_side:1;
-	/* TODO: add a flatshade bit that skips interpolation for colors */
+	unsigned	flatshade_colors:1;
 	unsigned	poly_stipple:1;
 	unsigned	force_persp_sample_interp:1;
 	unsigned	force_linear_sample_interp:1;

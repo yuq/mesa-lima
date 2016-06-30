@@ -1528,6 +1528,11 @@ static void declare_input_fs(
 		interp_param = get_interp_param(ctx, interp_param_idx);
 	}
 
+	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
+	    decl->Interp.Interpolate == TGSI_INTERPOLATE_COLOR &&
+	    ctx->shader->key.ps.prolog.flatshade_colors)
+		interp_param = NULL; /* load the constant color */
+
 	interp_fs_input(ctx, input_index, decl->Semantic.Name,
 			decl->Semantic.Index, shader->selector->info.num_inputs,
 			shader->selector->info.colors_read, interp_param,
@@ -6443,6 +6448,7 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 
 	case PIPE_SHADER_FRAGMENT:
 		fprintf(f, "  prolog.color_two_side = %u\n", key->ps.prolog.color_two_side);
+		fprintf(f, "  prolog.flatshade_colors = %u\n", key->ps.prolog.flatshade_colors);
 		fprintf(f, "  prolog.poly_stipple = %u\n", key->ps.prolog.poly_stipple);
 		fprintf(f, "  prolog.force_persp_sample_interp = %u\n", key->ps.prolog.force_persp_sample_interp);
 		fprintf(f, "  prolog.force_linear_sample_interp = %u\n", key->ps.prolog.force_linear_sample_interp);
@@ -7585,6 +7591,7 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 		}
 
 		for (i = 0; i < 2; i++) {
+			unsigned interp = info->input_interpolate[color[i]];
 			unsigned location = info->input_interpolate_loc[color[i]];
 
 			if (!(info->colors_read & (0xf << i*4)))
@@ -7592,7 +7599,11 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 
 			prolog_key.ps_prolog.color_attr_index[i] = color[i];
 
-			switch (info->input_interpolate[color[i]]) {
+			if (shader->key.ps.prolog.flatshade_colors &&
+			    interp == TGSI_INTERPOLATE_COLOR)
+				interp = TGSI_INTERPOLATE_CONSTANT;
+
+			switch (interp) {
 			case TGSI_INTERPOLATE_CONSTANT:
 				prolog_key.ps_prolog.color_interp_vgpr_index[i] = -1;
 				break;
