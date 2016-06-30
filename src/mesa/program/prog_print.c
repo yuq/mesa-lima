@@ -994,16 +994,6 @@ _mesa_write_shader_to_file(const struct gl_shader *shader)
    if (shader->InfoLog) {
       fputs(shader->InfoLog, f);
    }
-   if (shader->CompileStatus && shader->Program) {
-      fprintf(f, "/* GPU code */\n");
-      fprintf(f, "/*\n");
-      _mesa_fprint_program_opt(f, shader->Program, PROG_PRINT_DEBUG, GL_TRUE);
-      fprintf(f, "*/\n");
-      fprintf(f, "/* Parameters / constants */\n");
-      fprintf(f, "/*\n");
-      _mesa_fprint_parameter_list(f, shader->Program->Parameters);
-      fprintf(f, "*/\n");
-   }
 
    fclose(f);
 }
