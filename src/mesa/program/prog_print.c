@@ -1017,7 +1017,7 @@ _mesa_append_uniforms_to_file(const struct gl_shader *shader)
    else
       type = "vert";
 
-   _mesa_snprintf(filename, sizeof(filename), "shader_%u.%s", shader->Name, type);
+   _mesa_snprintf(filename, sizeof(filename), "shader.%s", type);
    f = fopen(filename, "a"); /* append */
    if (!f) {
       fprintf(stderr, "Unable to open %s for appending\n", filename);
