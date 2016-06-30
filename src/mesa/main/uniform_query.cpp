@@ -824,7 +824,7 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
    if (uni->type->is_sampler()) {
       bool flushed = false;
       for (int i = 0; i < MESA_SHADER_STAGES; i++) {
-	 struct gl_shader *const sh = shProg->_LinkedShaders[i];
+	 struct gl_linked_shader *const sh = shProg->_LinkedShaders[i];
 
 	 /* If the shader stage doesn't use the sampler uniform, skip this.
 	  */
@@ -876,7 +876,7 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
    if (uni->type->is_image()) {
       for (int i = 0; i < MESA_SHADER_STAGES; i++) {
 	 if (uni->opaque[i].active) {
-            struct gl_shader *sh = shProg->_LinkedShaders[i];
+            struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
 
             for (int j = 0; j < count; j++)
                sh->ImageUnits[uni->opaque[i].index + offset + j] =

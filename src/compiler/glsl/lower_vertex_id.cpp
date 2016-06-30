@@ -122,7 +122,7 @@ lower_vertex_id_visitor::visit(ir_dereference_variable *ir)
 }
 
 bool
-lower_vertex_id(gl_shader *shader)
+lower_vertex_id(gl_linked_shader *shader)
 {
    /* gl_VertexID only exists in the vertex shader.
     */

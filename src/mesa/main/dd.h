@@ -783,8 +783,7 @@ struct dd_function_table {
     * \name GLSL-related functions (ARB extensions and OpenGL 2.x)
     */
    /*@{*/
-   struct gl_shader *(*NewShader)(struct gl_context *ctx,
-                                  GLuint name, gl_shader_stage stage);
+   struct gl_linked_shader *(*NewShader)(gl_shader_stage stage);
    void (*UseProgram)(struct gl_context *ctx, struct gl_shader_program *shProg);
    /*@}*/
 

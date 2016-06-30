@@ -2175,7 +2175,8 @@ _mesa_copy_linked_program_data(gl_shader_stage type,
    case MESA_SHADER_TESS_EVAL: {
       struct gl_tess_eval_program *dst_tep =
          (struct gl_tess_eval_program *) dst;
-      struct gl_shader *tes_sh = src->_LinkedShaders[MESA_SHADER_TESS_EVAL];
+      struct gl_linked_shader *tes_sh =
+         src->_LinkedShaders[MESA_SHADER_TESS_EVAL];
 
       dst_tep->PrimitiveMode = tes_sh->TessEval.PrimitiveMode;
       dst_tep->Spacing = tes_sh->TessEval.Spacing;
@@ -2187,7 +2188,8 @@ _mesa_copy_linked_program_data(gl_shader_stage type,
    }
    case MESA_SHADER_GEOMETRY: {
       struct gl_geometry_program *dst_gp = (struct gl_geometry_program *) dst;
-      struct gl_shader *geom_sh = src->_LinkedShaders[MESA_SHADER_GEOMETRY];
+      struct gl_linked_shader *geom_sh =
+         src->_LinkedShaders[MESA_SHADER_GEOMETRY];
 
       dst_gp->VerticesIn = src->Geom.VerticesIn;
       dst_gp->VerticesOut = geom_sh->Geom.VerticesOut;
@@ -2420,7 +2422,7 @@ _mesa_GetActiveSubroutineUniformiv(GLuint program, GLenum shadertype,
    GET_CURRENT_CONTEXT(ctx);
    const char *api_name = "glGetActiveSubroutineUniformiv";
    struct gl_shader_program *shProg;
-   struct gl_shader *sh;
+   struct gl_linked_shader *sh;
    gl_shader_stage stage;
    struct gl_program_resource *res;
    const struct gl_uniform_storage *uni;
@@ -2585,7 +2587,7 @@ _mesa_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
    GET_CURRENT_CONTEXT(ctx);
    const char *api_name = "glUniformSubroutinesuiv";
    struct gl_shader_program *shProg;
-   struct gl_shader *sh;
+   struct gl_linked_shader *sh;
    gl_shader_stage stage;
    int i;
 
@@ -2683,7 +2685,7 @@ _mesa_GetUniformSubroutineuiv(GLenum shadertype, GLint location,
    GET_CURRENT_CONTEXT(ctx);
    const char *api_name = "glGetUniformSubroutineuiv";
    struct gl_shader_program *shProg;
-   struct gl_shader *sh;
+   struct gl_linked_shader *sh;
    gl_shader_stage stage;
 
    if (!_mesa_has_shader_subroutine(ctx)) {
@@ -2730,7 +2732,7 @@ _mesa_GetProgramStageiv(GLuint program, GLenum shadertype,
    GET_CURRENT_CONTEXT(ctx);
    const char *api_name = "glGetProgramStageiv";
    struct gl_shader_program *shProg;
-   struct gl_shader *sh;
+   struct gl_linked_shader *sh;
    gl_shader_stage stage;
 
    if (!_mesa_has_shader_subroutine(ctx)) {
@@ -2812,7 +2814,8 @@ _mesa_GetProgramStageiv(GLuint program, GLenum shadertype,
 }
 
 static int
-find_compat_subroutine(struct gl_shader *sh, const struct glsl_type *type)
+find_compat_subroutine(struct gl_linked_shader *sh,
+                       const struct glsl_type *type)
 {
    int i, j;
 
@@ -2827,7 +2830,7 @@ find_compat_subroutine(struct gl_shader *sh, const struct glsl_type *type)
 }
 
 static void
-_mesa_shader_init_subroutine_defaults(struct gl_shader *sh)
+_mesa_shader_init_subroutine_defaults(struct gl_linked_shader *sh)
 {
    int i, j;
 

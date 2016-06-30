@@ -239,8 +239,9 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
 
    /* Resolve color for each active shader image. */
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      const struct gl_shader *shader = ctx->_Shader->CurrentProgram[i] ?
-         ctx->_Shader->CurrentProgram[i]->_LinkedShaders[i] : NULL;
+      const struct gl_linked_shader *shader =
+         ctx->_Shader->CurrentProgram[i] ?
+            ctx->_Shader->CurrentProgram[i]->_LinkedShaders[i] : NULL;
 
       if (unlikely(shader && shader->NumImages)) {
          for (unsigned j = 0; j < shader->NumImages; j++) {

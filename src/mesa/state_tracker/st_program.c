@@ -1756,10 +1756,6 @@ destroy_shader_program_variants_cb(GLuint key, void *data, void *userData)
          struct gl_shader_program *shProg = (struct gl_shader_program *) data;
          GLuint i;
 
-         for (i = 0; i < shProg->NumShaders; i++) {
-            destroy_program_variants(st, shProg->Shaders[i]->Program);
-         }
-
 	 for (i = 0; i < ARRAY_SIZE(shProg->_LinkedShaders); i++) {
 	    if (shProg->_LinkedShaders[i])
                destroy_program_variants(st, shProg->_LinkedShaders[i]->Program);
@@ -1772,9 +1768,6 @@ destroy_shader_program_variants_cb(GLuint key, void *data, void *userData)
    case GL_TESS_CONTROL_SHADER:
    case GL_TESS_EVALUATION_SHADER:
    case GL_COMPUTE_SHADER:
-      {
-         destroy_program_variants(st, shader->Program);
-      }
       break;
    default:
       assert(0);

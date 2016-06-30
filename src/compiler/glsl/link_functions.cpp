@@ -37,7 +37,7 @@ namespace {
 
 class call_link_visitor : public ir_hierarchical_visitor {
 public:
-   call_link_visitor(gl_shader_program *prog, gl_shader *linked,
+   call_link_visitor(gl_shader_program *prog, gl_linked_shader *linked,
 		     gl_shader **shader_list, unsigned num_shaders)
    {
       this->prog = prog;
@@ -297,7 +297,7 @@ private:
     * linked shader that are accessed by the function.  It is also used to add
     * global variables from the shader where the function originated.
     */
-   gl_shader *linked;
+   gl_linked_shader *linked;
 
    /**
     * Table of variables local to the function.
@@ -335,7 +335,7 @@ find_matching_signature(const char *name, const exec_list *actual_parameters,
 
 
 bool
-link_function_calls(gl_shader_program *prog, gl_shader *main,
+link_function_calls(gl_shader_program *prog, gl_linked_shader *main,
 		    gl_shader **shader_list, unsigned num_shaders)
 {
    call_link_visitor v(prog, main, shader_list, num_shaders);

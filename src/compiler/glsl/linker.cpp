@@ -655,7 +655,7 @@ link_invalidate_variable_locations(exec_list *ir)
  */
 static void
 analyze_clip_cull_usage(struct gl_shader_program *prog,
-                        struct gl_shader *shader,
+                        struct gl_linked_shader *shader,
                         struct gl_context *ctx,
                         GLuint *clip_distance_array_size,
                         GLuint *cull_distance_array_size)
@@ -750,7 +750,7 @@ analyze_clip_cull_usage(struct gl_shader_program *prog,
  */
 void
 validate_vertex_shader_executable(struct gl_shader_program *prog,
-                                  struct gl_shader *shader,
+                                  struct gl_linked_shader *shader,
                                   struct gl_context *ctx)
 {
    if (shader == NULL)
@@ -805,7 +805,7 @@ validate_vertex_shader_executable(struct gl_shader_program *prog,
 
 void
 validate_tess_eval_shader_executable(struct gl_shader_program *prog,
-                                     struct gl_shader *shader,
+                                     struct gl_linked_shader *shader,
                                      struct gl_context *ctx)
 {
    if (shader == NULL)
@@ -824,7 +824,7 @@ validate_tess_eval_shader_executable(struct gl_shader_program *prog,
  */
 void
 validate_fragment_shader_executable(struct gl_shader_program *prog,
-                                    struct gl_shader *shader)
+                                    struct gl_linked_shader *shader)
 {
    if (shader == NULL)
       return;
@@ -851,7 +851,7 @@ validate_fragment_shader_executable(struct gl_shader_program *prog,
  */
 void
 validate_geometry_shader_executable(struct gl_shader_program *prog,
-                                    struct gl_shader *shader,
+                                    struct gl_linked_shader *shader,
                                     struct gl_context *ctx)
 {
    if (shader == NULL)
@@ -873,7 +873,7 @@ static void
 validate_geometry_shader_emissions(struct gl_context *ctx,
                                    struct gl_shader_program *prog)
 {
-   struct gl_shader *sh = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
+   struct gl_linked_shader *sh = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
 
    if (sh != NULL) {
       find_emit_vertex_visitor emit_vertex(ctx->Const.MaxVertexStreams - 1);
@@ -1240,7 +1240,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
    }
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_shader *sh = prog->_LinkedShaders[i];
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
 
       InterfaceBlockStageIndex[i] = new int[max_num_buffer_blocks];
       for (unsigned int j = 0; j < max_num_buffer_blocks; j++)
@@ -1285,7 +1285,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
          int stage_index = InterfaceBlockStageIndex[i][j];
 
 	 if (stage_index != -1) {
-	    struct gl_shader *sh = prog->_LinkedShaders[i];
+	    struct gl_linked_shader *sh = prog->_LinkedShaders[i];
 
             blks[j].stageref |= (1 << i);
 
@@ -1314,7 +1314,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
  * Populates a shaders symbol table with all global declarations
  */
 static void
-populate_symbol_table(gl_shader *sh)
+populate_symbol_table(gl_linked_shader *sh)
 {
    sh->symbols = new(sh) glsl_symbol_table;
 
@@ -1352,12 +1352,12 @@ populate_symbol_table(gl_shader *sh)
  *                     should be added.
  */
 void
-remap_variables(ir_instruction *inst, struct gl_shader *target,
+remap_variables(ir_instruction *inst, struct gl_linked_shader *target,
 		hash_table *temps)
 {
    class remap_visitor : public ir_hierarchical_visitor {
    public:
-	 remap_visitor(struct gl_shader *target,
+	 remap_visitor(struct gl_linked_shader *target,
 		    hash_table *temps)
       {
 	 this->target = target;
@@ -1392,7 +1392,7 @@ remap_variables(ir_instruction *inst, struct gl_shader *target,
       }
 
    private:
-      struct gl_shader *target;
+      struct gl_linked_shader *target;
       glsl_symbol_table *symbols;
       exec_list *instructions;
       hash_table *temps;
@@ -1427,7 +1427,7 @@ remap_variables(ir_instruction *inst, struct gl_shader *target,
  */
 exec_node *
 move_non_declarations(exec_list *instructions, exec_node *last,
-		      bool make_copies, gl_shader *target)
+		      bool make_copies, gl_linked_shader *target)
 {
    hash_table *temps = NULL;
 
@@ -1682,7 +1682,7 @@ private:
 static void
 link_xfb_stride_layout_qualifiers(struct gl_context *ctx,
                                   struct gl_shader_program *prog,
-			          struct gl_shader *linked_shader,
+			          struct gl_linked_shader *linked_shader,
 			          struct gl_shader **shader_list,
 			          unsigned num_shaders)
 {
@@ -1746,7 +1746,7 @@ link_xfb_stride_layout_qualifiers(struct gl_context *ctx,
  */
 static void
 link_tcs_out_layout_qualifiers(struct gl_shader_program *prog,
-			      struct gl_shader *linked_shader,
+			      struct gl_linked_shader *linked_shader,
 			      struct gl_shader **shader_list,
 			      unsigned num_shaders)
 {
@@ -1801,7 +1801,7 @@ link_tcs_out_layout_qualifiers(struct gl_shader_program *prog,
  */
 static void
 link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
-				struct gl_shader *linked_shader,
+				struct gl_linked_shader *linked_shader,
 				struct gl_shader **shader_list,
 				unsigned num_shaders)
 {
@@ -1901,7 +1901,7 @@ link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
  */
 static void
 link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
-	                        struct gl_shader *linked_shader,
+	                        struct gl_linked_shader *linked_shader,
 	                        struct gl_shader **shader_list,
 	                        unsigned num_shaders)
 {
@@ -1969,7 +1969,7 @@ link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
  */
 static void
 link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
-				struct gl_shader *linked_shader,
+				struct gl_linked_shader *linked_shader,
 				struct gl_shader **shader_list,
 				unsigned num_shaders)
 {
@@ -2076,7 +2076,7 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
  */
 static void
 link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
-                                struct gl_shader *linked_shader,
+                                struct gl_linked_shader *linked_shader,
                                 struct gl_shader **shader_list,
                                 unsigned num_shaders)
 {
@@ -2138,7 +2138,7 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
  * If this function is supplied a single shader, it is cloned, and the new
  * shader is returned.
  */
-static struct gl_shader *
+static struct gl_linked_shader *
 link_intrastage_shaders(void *mem_ctx,
 			struct gl_context *ctx,
 			struct gl_shader_program *prog,
@@ -2216,7 +2216,7 @@ link_intrastage_shaders(void *mem_ctx,
     */
    gl_shader *main = NULL;
    for (unsigned i = 0; i < num_shaders; i++) {
-      if (!_mesa_get_main_function_signature(shader_list[i]->symbols)) {
+      if (_mesa_get_main_function_signature(shader_list[i]->symbols)) {
 	 main = shader_list[i];
 	 break;
       }
@@ -2228,7 +2228,7 @@ link_intrastage_shaders(void *mem_ctx,
       return NULL;
    }
 
-   gl_shader *linked = ctx->Driver.NewShader(NULL, 0, shader_list[0]->Stage);
+   gl_linked_shader *linked = ctx->Driver.NewShader(shader_list[0]->Stage);
    linked->ir = new(linked) exec_list;
    clone_ir_list(mem_ctx, linked->ir, main->ir);
 
@@ -2299,7 +2299,7 @@ link_intrastage_shaders(void *mem_ctx,
 
 
    if (!ok) {
-      _mesa_delete_shader(ctx, linked);
+      _mesa_delete_linked_shader(ctx, linked);
       return NULL;
    }
 
@@ -2317,7 +2317,7 @@ link_intrastage_shaders(void *mem_ctx,
                        &num_ssbo_blocks);
 
    if (!prog->LinkStatus) {
-      _mesa_delete_shader(ctx, linked);
+      _mesa_delete_linked_shader(ctx, linked);
       return NULL;
    }
 
@@ -2463,8 +2463,8 @@ resize_tes_inputs(struct gl_context *ctx,
    if (prog->_LinkedShaders[MESA_SHADER_TESS_EVAL] == NULL)
       return;
 
-   gl_shader *const tcs = prog->_LinkedShaders[MESA_SHADER_TESS_CTRL];
-   gl_shader *const tes = prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
+   gl_linked_shader *const tcs = prog->_LinkedShaders[MESA_SHADER_TESS_CTRL];
+   gl_linked_shader *const tes = prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
 
    /* If no control shader is present, then the TES inputs are statically
     * sized to MaxPatchVertices; the actual size of the arrays won't be
@@ -2576,7 +2576,7 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
    assert((target_index == MESA_SHADER_VERTEX)
 	  || (target_index == MESA_SHADER_FRAGMENT));
 
-   gl_shader *const sh = prog->_LinkedShaders[target_index];
+   gl_linked_shader *const sh = prog->_LinkedShaders[target_index];
    if (sh == NULL)
       return true;
 
@@ -2976,8 +2976,8 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
  * unmatch flag if found so we don't optimise them away.
  */
 static void
-match_explicit_outputs_to_inputs(gl_shader *producer,
-                                 gl_shader *consumer)
+match_explicit_outputs_to_inputs(gl_linked_shader *producer,
+                                 gl_linked_shader *consumer)
 {
    glsl_symbol_table parameters;
    ir_variable *explicit_locations[MAX_VARYINGS_INCL_PATCH][4] =
@@ -3081,7 +3081,7 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
    unsigned total_shader_storage_blocks = 0;
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_shader *sh = prog->_LinkedShaders[i];
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
 
       if (sh == NULL)
 	 continue;
@@ -3175,7 +3175,7 @@ static void
 link_calculate_subroutine_compat(struct gl_shader_program *prog)
 {
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_shader *sh = prog->_LinkedShaders[i];
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
       int count;
       if (!sh)
          continue;
@@ -3213,7 +3213,7 @@ static void
 check_subroutine_resources(struct gl_shader_program *prog)
 {
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_shader *sh = prog->_LinkedShaders[i];
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
 
       if (sh) {
          if (sh->NumSubroutineUniformRemapTable > MAX_SUBROUTINE_UNIFORM_LOCATIONS)
@@ -3236,7 +3236,7 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
       return;
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_shader *sh = prog->_LinkedShaders[i];
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
 
       if (sh) {
          if (sh->NumImages > ctx->Const.Program[i].MaxImageUniforms)
@@ -3340,7 +3340,7 @@ reserve_explicit_locations(struct gl_shader_program *prog,
 
 static bool
 reserve_subroutine_explicit_locations(struct gl_shader_program *prog,
-                                      struct gl_shader *sh,
+                                      struct gl_linked_shader *sh,
                                       ir_variable *var)
 {
    unsigned slots = var->type->uniform_locations();
@@ -3415,7 +3415,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
 
    unsigned entries_total = 0;
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_shader *sh = prog->_LinkedShaders[i];
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
 
       if (!sh)
          continue;
@@ -3620,7 +3620,7 @@ build_stageref(struct gl_shader_program *shProg, const char *name,
    assert(MESA_SHADER_STAGES < 8);
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_shader *sh = shProg->_LinkedShaders[i];
+      struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
       if (!sh)
          continue;
 
@@ -3859,7 +3859,7 @@ add_interface_variables(struct gl_shader_program *shProg,
 static bool
 add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
 {
-   struct gl_shader *sh = shProg->_LinkedShaders[stage];
+   struct gl_linked_shader *sh = shProg->_LinkedShaders[stage];
    GLenum iface;
 
    if (!sh || !sh->packed_varyings)
@@ -3895,7 +3895,7 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
 static bool
 add_fragdata_arrays(struct gl_shader_program *shProg)
 {
-   struct gl_shader *sh = shProg->_LinkedShaders[MESA_SHADER_FRAGMENT];
+   struct gl_linked_shader *sh = shProg->_LinkedShaders[MESA_SHADER_FRAGMENT];
 
    if (!sh || !sh->fragdata_arrays)
       return true;
@@ -4270,7 +4270,7 @@ build_program_resource_list(struct gl_context *ctx,
    }
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_shader *sh = shProg->_LinkedShaders[i];
+      struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
       GLuint type;
 
       if (!sh)
@@ -4322,7 +4322,7 @@ static void
 link_assign_subroutine_types(struct gl_shader_program *prog)
 {
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      gl_shader *sh = prog->_LinkedShaders[i];
+      gl_linked_shader *sh = prog->_LinkedShaders[i];
 
       if (sh == NULL)
          continue;
@@ -4428,7 +4428,7 @@ disable_varying_optimizations_for_sso(struct gl_shader_program *prog)
       return;
 
    for (unsigned stage = 0; stage < MESA_SHADER_STAGES; stage++) {
-      gl_shader *sh = prog->_LinkedShaders[stage];
+      gl_linked_shader *sh = prog->_LinkedShaders[stage];
       if (!sh)
          continue;
 
@@ -4587,8 +4587,9 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    }
 
    for (unsigned int i = 0; i < MESA_SHADER_STAGES; i++) {
-      if (prog->_LinkedShaders[i] != NULL)
-	 _mesa_delete_shader(ctx, prog->_LinkedShaders[i]);
+      if (prog->_LinkedShaders[i] != NULL) {
+	 _mesa_delete_linked_shader(ctx, prog->_LinkedShaders[i]);
+      }
 
       prog->_LinkedShaders[i] = NULL;
    }
@@ -4597,13 +4598,13 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
     */
    for (int stage = 0; stage < MESA_SHADER_STAGES; stage++) {
       if (num_shaders[stage] > 0) {
-         gl_shader *const sh =
+         gl_linked_shader *const sh =
             link_intrastage_shaders(mem_ctx, ctx, prog, shader_list[stage],
                                     num_shaders[stage]);
 
          if (!prog->LinkStatus) {
             if (sh)
-               _mesa_delete_shader(ctx, sh);
+               _mesa_delete_linked_shader(ctx, sh);
             goto done;
          }
 
@@ -4626,11 +4627,11 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          }
          if (!prog->LinkStatus) {
             if (sh)
-               _mesa_delete_shader(ctx, sh);
+               _mesa_delete_linked_shader(ctx, sh);
             goto done;
          }
 
-         _mesa_reference_shader(ctx, &prog->_LinkedShaders[stage], sh);
+         prog->_LinkedShaders[stage] = sh;
       }
    }
 
@@ -4701,8 +4702,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    }
 
    /* Cross-validate uniform blocks between shader stages */
-   validate_interstage_uniform_blocks(prog, prog->_LinkedShaders,
-                                      MESA_SHADER_STAGES);
+   validate_interstage_uniform_blocks(prog, prog->_LinkedShaders);
    if (!prog->LinkStatus)
       goto done;
 
@@ -4718,7 +4718,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
     * This rule also applies to GLSL ES 3.00.
     */
    if (max_version >= (prog->IsES ? 300 : 130)) {
-      struct gl_shader *sh = prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
+      struct gl_linked_shader *sh = prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
       if (sh) {
 	 lower_discard_flow(sh->ir);
       }
@@ -4879,7 +4879,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       /* If the program is made up of only a single stage */
       if (first == last) {
 
-         gl_shader *const sh = prog->_LinkedShaders[last];
+         gl_linked_shader *const sh = prog->_LinkedShaders[last];
          if (prog->SeparateShader) {
             const uint64_t reserved_slots =
                reserved_varying_slot(sh, ir_var_shader_in);
@@ -4910,8 +4910,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
             if (prog->_LinkedShaders[i] == NULL && i != 0)
                continue;
 
-            gl_shader *const sh_i = prog->_LinkedShaders[i];
-            gl_shader *const sh_next = prog->_LinkedShaders[next];
+            gl_linked_shader *const sh_i = prog->_LinkedShaders[i];
+            gl_linked_shader *const sh_next = prog->_LinkedShaders[next];
 
             const uint64_t reserved_out_slots =
                reserved_varying_slot(sh_i, ir_var_shader_out);

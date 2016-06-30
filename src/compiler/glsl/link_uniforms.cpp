@@ -886,7 +886,7 @@ public:
  * shaders).
  */
 static void
-link_update_uniform_buffer_variables(struct gl_shader *shader)
+link_update_uniform_buffer_variables(struct gl_linked_shader *shader)
 {
    foreach_in_list(ir_instruction, node, shader->ir) {
       ir_variable *const var = node->as_variable();
@@ -1022,7 +1022,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
    struct string_to_uint_map *hiddenUniforms = new string_to_uint_map;
    count_uniform_size uniform_size(prog->UniformHash, hiddenUniforms);
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_shader *sh = prog->_LinkedShaders[i];
+      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
 
       if (sh == NULL)
          continue;
@@ -1204,7 +1204,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
          continue;
 
       for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
-         struct gl_shader *sh = prog->_LinkedShaders[j];
+         struct gl_linked_shader *sh = prog->_LinkedShaders[j];
          if (!sh)
             continue;
 
@@ -1234,7 +1234,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       if (uniforms[i].remap_location != UNMAPPED_UNIFORM_LOC)
          continue;
       for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
-         struct gl_shader *sh = prog->_LinkedShaders[j];
+         struct gl_linked_shader *sh = prog->_LinkedShaders[j];
          if (!sh)
             continue;
 

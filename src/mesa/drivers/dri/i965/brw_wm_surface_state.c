@@ -946,7 +946,7 @@ const struct brw_tracked_state brw_cs_texture_surfaces = {
 
 void
 brw_upload_ubo_surfaces(struct brw_context *brw,
-			struct gl_shader *shader,
+			struct gl_linked_shader *shader,
                         struct brw_stage_state *stage_state,
                         struct brw_stage_prog_data *prog_data)
 {
@@ -1064,7 +1064,7 @@ const struct brw_tracked_state brw_cs_ubo_surfaces = {
 
 void
 brw_upload_abo_surfaces(struct brw_context *brw,
-                        struct gl_shader *shader,
+                        struct gl_linked_shader *shader,
                         struct brw_stage_state *stage_state,
                         struct brw_stage_prog_data *prog_data)
 {
@@ -1350,7 +1350,7 @@ update_image_surface(struct brw_context *brw,
 
 void
 brw_upload_image_surfaces(struct brw_context *brw,
-                          struct gl_shader *shader,
+                          struct gl_linked_shader *shader,
                           struct brw_stage_state *stage_state,
                           struct brw_stage_prog_data *prog_data)
 {

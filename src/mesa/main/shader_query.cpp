@@ -1264,7 +1264,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       return 1;
    case GL_COMPATIBLE_SUBROUTINES: {
       const struct gl_uniform_storage *uni;
-      struct gl_shader *sh;
+      struct gl_linked_shader *sh;
       unsigned count, i;
       int j;
 

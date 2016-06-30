@@ -150,7 +150,7 @@ namespace {
       *num_buffers = 0;
 
       for (unsigned i = 0; i < MESA_SHADER_STAGES; ++i) {
-         struct gl_shader *sh = prog->_LinkedShaders[i];
+         struct gl_linked_shader *sh = prog->_LinkedShaders[i];
          if (sh == NULL)
             continue;
 

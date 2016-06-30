@@ -376,7 +376,7 @@ public:
    struct gl_context *ctx;
    struct gl_program *prog;
    struct gl_shader_program *shader_program;
-   struct gl_shader *shader;
+   struct gl_linked_shader *shader;
    struct gl_shader_compiler_options *options;
 
    int next_temp;
@@ -6452,7 +6452,7 @@ out:
 static struct gl_program *
 get_mesa_program_tgsi(struct gl_context *ctx,
                       struct gl_shader_program *shader_program,
-                      struct gl_shader *shader)
+                      struct gl_linked_shader *shader)
 {
    glsl_to_tgsi_visitor* v;
    struct gl_program *prog;
@@ -6663,7 +6663,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 static struct gl_program *
 get_mesa_program(struct gl_context *ctx,
                  struct gl_shader_program *shader_program,
-                 struct gl_shader *shader)
+                 struct gl_linked_shader *shader)
 {
    struct pipe_screen *pscreen = ctx->st->pipe->screen;
    unsigned ptarget = st_shader_stage_to_ptarget(shader->Stage);

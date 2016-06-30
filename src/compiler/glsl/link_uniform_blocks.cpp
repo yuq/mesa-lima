@@ -391,7 +391,7 @@ void
 link_uniform_blocks(void *mem_ctx,
                     struct gl_context *ctx,
                     struct gl_shader_program *prog,
-                    struct gl_shader **shader_list,
+                    struct gl_linked_shader **shader_list,
                     unsigned num_shaders,
                     struct gl_uniform_block **ubo_blocks,
                     unsigned *num_ubo_blocks,

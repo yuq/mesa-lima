@@ -43,12 +43,12 @@ static bool
 brw_shader_precompile(struct gl_context *ctx,
                       struct gl_shader_program *sh_prog)
 {
-   struct gl_shader *vs = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX];
-   struct gl_shader *tcs = sh_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL];
-   struct gl_shader *tes = sh_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
-   struct gl_shader *gs = sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
-   struct gl_shader *fs = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
-   struct gl_shader *cs = sh_prog->_LinkedShaders[MESA_SHADER_COMPUTE];
+   struct gl_linked_shader *vs = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX];
+   struct gl_linked_shader *tcs = sh_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL];
+   struct gl_linked_shader *tes = sh_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
+   struct gl_linked_shader *gs = sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
+   struct gl_linked_shader *fs = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
+   struct gl_linked_shader *cs = sh_prog->_LinkedShaders[MESA_SHADER_COMPUTE];
 
    if (fs && !brw_fs_precompile(ctx, sh_prog, fs->Program))
       return false;
@@ -89,7 +89,7 @@ static void
 process_glsl_ir(gl_shader_stage stage,
                 struct brw_context *brw,
                 struct gl_shader_program *shader_prog,
-                struct gl_shader *shader)
+                struct gl_linked_shader *shader)
 {
    struct gl_context *ctx = &brw->ctx;
    const struct brw_compiler *compiler = brw->intelScreen->compiler;
@@ -186,16 +186,14 @@ process_glsl_ir(gl_shader_stage stage,
    }
 }
 
-extern "C" struct gl_shader *
-brw_new_shader(struct gl_context *ctx, GLuint name, gl_shader_stage stage)
+extern "C" struct gl_linked_shader *
+brw_new_shader(gl_shader_stage stage)
 {
    struct brw_shader *shader;
 
    shader = rzalloc(NULL, struct brw_shader);
    if (shader) {
       shader->base.Stage = stage;
-      shader->base.Name = name;
-      _mesa_init_shader(ctx, &shader->base);
    }
 
    return &shader->base;
@@ -209,13 +207,13 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
    unsigned int stage;
 
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
-      struct gl_shader *shader = shProg->_LinkedShaders[stage];
+      struct gl_linked_shader *shader = shProg->_LinkedShaders[stage];
       if (!shader)
          continue;
 
       struct gl_program *prog =
          ctx->Driver.NewProgram(ctx, _mesa_shader_stage_to_program(stage),
-                                shader->Name);
+                                0);
       if (!prog)
         return false;
       prog->Parameters = _mesa_new_parameter_list();

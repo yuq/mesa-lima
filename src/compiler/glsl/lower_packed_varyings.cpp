@@ -172,7 +172,7 @@ public:
                                  bool disable_varying_packing,
                                  bool xfb_enabled);
 
-   void run(struct gl_shader *shader);
+   void run(struct gl_linked_shader *shader);
 
 private:
    void bitwise_assign_pack(ir_rvalue *lhs, ir_rvalue *rhs);
@@ -260,7 +260,7 @@ lower_packed_varyings_visitor::lower_packed_varyings_visitor(
 }
 
 void
-lower_packed_varyings_visitor::run(struct gl_shader *shader)
+lower_packed_varyings_visitor::run(struct gl_linked_shader *shader)
 {
    foreach_in_list(ir_instruction, node, shader->ir) {
       ir_variable *var = node->as_variable();
@@ -767,7 +767,7 @@ lower_packed_varyings_return_splicer::visit_leave(ir_return *ret)
 void
 lower_packed_varyings(void *mem_ctx, unsigned locations_used,
                       ir_variable_mode mode, unsigned gs_input_vertices,
-                      gl_shader *shader, bool disable_varying_packing,
+                      gl_linked_shader *shader, bool disable_varying_packing,
                       bool xfb_enabled)
 {
    exec_list *instructions = shader->ir;

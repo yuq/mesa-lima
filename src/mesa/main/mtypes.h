@@ -2235,30 +2235,13 @@ struct gl_subroutine_function
 };
 
 /**
- * A GLSL vertex or fragment shader object.
+ * A linked GLSL shader object.
  */
-struct gl_shader
+struct gl_linked_shader
 {
-   /** GL_FRAGMENT_SHADER || GL_VERTEX_SHADER || GL_GEOMETRY_SHADER_ARB ||
-    *  GL_TESS_CONTROL_SHADER || GL_TESS_EVALUATION_SHADER.
-    * Must be the first field.
-    */
-   GLenum Type;
    gl_shader_stage Stage;
-   GLuint Name;  /**< AKA the handle */
-   GLint RefCount;  /**< Reference count */
-   GLchar *Label;   /**< GL_KHR_debug */
-   GLboolean DeletePending;
-   GLboolean CompileStatus;
-   bool IsES;              /**< True if this shader uses GLSL ES */
-
-   GLuint SourceChecksum;       /**< for debug/logging purposes */
-   const GLchar *Source;  /**< Source code string */
 
    struct gl_program *Program;  /**< Post-compile assembly code */
-   GLchar *InfoLog;
-
-   unsigned Version;       /**< GLSL version used for linking */
 
    /**
     * \name Sampler tracking
@@ -2448,6 +2431,126 @@ struct gl_shader
    GLuint NumSubroutineFunctions;
    GLuint MaxSubroutineFunctionIndex;
    struct gl_subroutine_function *SubroutineFunctions;
+};
+
+/**
+ * A GLSL shader object.
+ */
+struct gl_shader
+{
+   /** GL_FRAGMENT_SHADER || GL_VERTEX_SHADER || GL_GEOMETRY_SHADER_ARB ||
+    *  GL_TESS_CONTROL_SHADER || GL_TESS_EVALUATION_SHADER.
+    * Must be the first field.
+    */
+   GLenum Type;
+   gl_shader_stage Stage;
+   GLuint Name;  /**< AKA the handle */
+   GLint RefCount;  /**< Reference count */
+   GLchar *Label;   /**< GL_KHR_debug */
+   GLboolean DeletePending;
+   GLboolean CompileStatus;
+   bool IsES;              /**< True if this shader uses GLSL ES */
+
+   GLuint SourceChecksum;       /**< for debug/logging purposes */
+   const GLchar *Source;  /**< Source code string */
+
+   GLchar *InfoLog;
+
+   unsigned Version;       /**< GLSL version used for linking */
+
+   struct exec_list *ir;
+   struct glsl_symbol_table *symbols;
+
+   bool uses_builtin_functions;
+   bool uses_gl_fragcoord;
+   bool redeclares_gl_fragcoord;
+   bool ARB_fragment_coord_conventions_enable;
+
+   /**
+    * Fragment shader state from GLSL 1.50 layout qualifiers.
+    */
+   bool origin_upper_left;
+   bool pixel_center_integer;
+
+   struct {
+      /** Global xfb_stride out qualifier if any */
+      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
+   } TransformFeedback;
+
+   /**
+    * Tessellation Control shader state from layout qualifiers.
+    */
+   struct {
+      /**
+       * 0 - vertices not declared in shader, or
+       * 1 .. GL_MAX_PATCH_VERTICES
+       */
+      GLint VerticesOut;
+   } TessCtrl;
+
+   /**
+    * Tessellation Evaluation shader state from layout qualifiers.
+    */
+   struct {
+      /**
+       * GL_TRIANGLES, GL_QUADS, GL_ISOLINES or PRIM_UNKNOWN if it's not set
+       * in this shader.
+       */
+      GLenum PrimitiveMode;
+      /**
+       * GL_EQUAL, GL_FRACTIONAL_ODD, GL_FRACTIONAL_EVEN, or 0 if it's not set
+       * in this shader.
+       */
+      GLenum Spacing;
+      /**
+       * GL_CW, GL_CCW, or 0 if it's not set in this shader.
+       */
+      GLenum VertexOrder;
+      /**
+       * 1, 0, or -1 if it's not set in this shader.
+       */
+      int PointMode;
+   } TessEval;
+
+   /**
+    * Geometry shader state from GLSL 1.50 layout qualifiers.
+    */
+   struct {
+      GLint VerticesOut;
+      /**
+       * 0 - Invocations count not declared in shader, or
+       * 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS
+       */
+      GLint Invocations;
+      /**
+       * GL_POINTS, GL_LINES, GL_LINES_ADJACENCY, GL_TRIANGLES, or
+       * GL_TRIANGLES_ADJACENCY, or PRIM_UNKNOWN if it's not set in this
+       * shader.
+       */
+      GLenum InputType;
+       /**
+        * GL_POINTS, GL_LINE_STRIP or GL_TRIANGLE_STRIP, or PRIM_UNKNOWN if
+        * it's not set in this shader.
+        */
+      GLenum OutputType;
+   } Geom;
+
+   /**
+    * Whether early fragment tests are enabled as defined by
+    * ARB_shader_image_load_store.
+    */
+   bool EarlyFragmentTests;
+
+   /**
+    * Compute shader state from ARB_compute_shader layout qualifiers.
+    */
+   struct {
+      /**
+       * Size specified using local_size_{x,y,z}, or all 0's to indicate that
+       * it's not set in this shader.
+       */
+      unsigned LocalSize[3];
+   } Comp;
 };
 
 
@@ -2834,7 +2937,7 @@ struct gl_shader_program
     * \c MESA_SHADER_* defines.  Entries for non-existent stages will be
     * \c NULL.
     */
-   struct gl_shader *_LinkedShaders[MESA_SHADER_STAGES];
+   struct gl_linked_shader *_LinkedShaders[MESA_SHADER_STAGES];
 
    /** List of all active resources after linking. */
    struct gl_program_resource *ProgramResourceList;

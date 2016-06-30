@@ -651,7 +651,7 @@ brw_stage_prog_data_free(const void *p)
 
 void
 brw_dump_ir(const char *stage, struct gl_shader_program *shader_prog,
-            struct gl_shader *shader, struct gl_program *prog)
+            struct gl_linked_shader *shader, struct gl_program *prog)
 {
    if (shader_prog) {
       if (shader->ir) {

@@ -1005,7 +1005,7 @@ _mesa_write_shader_to_file(const struct gl_shader *shader)
  * _mesa_write_shader_to_file function.
  */
 void
-_mesa_append_uniforms_to_file(const struct gl_shader *shader)
+_mesa_append_uniforms_to_file(const struct gl_linked_shader *shader)
 {
    const struct gl_program *const prog = shader->Program;
    const char *type;
