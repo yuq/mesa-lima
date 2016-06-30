@@ -1281,11 +1281,6 @@ static unsigned select_interp_param(struct si_shader_context *ctx,
 	if (!ctx->is_monolithic)
 		return param;
 
-	/* If the shader doesn't use center/centroid, just return the parameter.
-	 *
-	 * If the shader only uses one set of (i,j), "si_emit_spi_ps_input" can
-	 * switch between center/centroid and sample without shader changes.
-	 */
 	if (ctx->shader->key.ps.prolog.force_persp_sample_interp) {
 		switch (param) {
 		case SI_PARAM_PERSP_CENTROID:
