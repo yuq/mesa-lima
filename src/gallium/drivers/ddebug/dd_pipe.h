@@ -35,7 +35,8 @@
 
 enum dd_mode {
    DD_DETECT_HANGS,
-   DD_DUMP_ALL_CALLS
+   DD_DUMP_ALL_CALLS,
+   DD_DUMP_APITRACE_CALL,
 };
 
 struct dd_screen
@@ -47,6 +48,7 @@ struct dd_screen
    bool no_flush;
    bool verbose;
    unsigned skip_count;
+   unsigned apitrace_dump_call;
 };
 
 struct dd_query

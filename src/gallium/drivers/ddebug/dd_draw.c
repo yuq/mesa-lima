@@ -617,6 +617,7 @@ dd_context_flush(struct pipe_context *_pipe,
                                "GPU hang detected in pipe->flush()");
       break;
    case DD_DUMP_ALL_CALLS:
+   case DD_DUMP_APITRACE_CALL:
       pipe->flush(pipe, fence, flags);
       break;
    default:
@@ -658,6 +659,13 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
          if (!dscreen->no_flush)
             pipe->flush(pipe, NULL, 0);
          dd_dump_call(dctx, call, 0);
+         break;
+      case DD_DUMP_APITRACE_CALL:
+         if (dscreen->apitrace_dump_call == dctx->apitrace_call_number) {
+            dd_dump_call(dctx, call, 0);
+            /* No need to continue. */
+            exit(0);
+         }
          break;
       default:
          assert(0);
