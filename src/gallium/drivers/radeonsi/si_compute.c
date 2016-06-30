@@ -27,7 +27,6 @@
 #include "util/u_upload_mgr.h"
 #include "radeon/r600_pipe_common.h"
 #include "radeon/radeon_elf_util.h"
-#include "radeon/radeon_llvm_util.h"
 
 #include "radeon/r600_cs.h"
 #include "si_pipe.h"

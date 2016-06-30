@@ -30,6 +30,4 @@ LLVM_C_FILES := \
 	radeon_llvm_emit.c \
 	radeon_llvm_emit.h \
 	radeon_llvm.h \
-	radeon_llvm_util.c \
-	radeon_llvm_util.h \
 	radeon_setup_tgsi_llvm.c

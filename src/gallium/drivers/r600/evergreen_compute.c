@@ -46,9 +46,6 @@
 #include "evergreen_compute_internal.h"
 #include "compute_memory_pool.h"
 #include "sb/sb_public.h"
-#ifdef HAVE_OPENCL
-#include "radeon/radeon_llvm_util.h"
-#endif
 #include "radeon/radeon_elf_util.h"
 #include <inttypes.h>
 
