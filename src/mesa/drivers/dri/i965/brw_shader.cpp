@@ -612,6 +612,22 @@ get_atomic_counter_op(nir_intrinsic_op op)
       return BRW_AOP_INC;
    case nir_intrinsic_atomic_counter_dec:
       return BRW_AOP_PREDEC;
+   case nir_intrinsic_atomic_counter_add:
+      return BRW_AOP_ADD;
+   case nir_intrinsic_atomic_counter_min:
+      return BRW_AOP_UMIN;
+   case nir_intrinsic_atomic_counter_max:
+      return BRW_AOP_UMAX;
+   case nir_intrinsic_atomic_counter_and:
+      return BRW_AOP_AND;
+   case nir_intrinsic_atomic_counter_or:
+      return BRW_AOP_OR;
+   case nir_intrinsic_atomic_counter_xor:
+      return BRW_AOP_XOR;
+   case nir_intrinsic_atomic_counter_exchange:
+      return BRW_AOP_MOV;
+   case nir_intrinsic_atomic_counter_comp_swap:
+      return BRW_AOP_CMPWR;
    default:
       unreachable("Not reachable.");
    }

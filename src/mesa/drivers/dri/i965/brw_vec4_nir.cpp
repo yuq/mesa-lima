@@ -739,11 +739,21 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_atomic_counter_dec: {
       unsigned surf_index = prog_data->base.binding_table.abo_start +
          (unsigned) instr->const_index[0];
+      const vec4_builder bld =
+         vec4_builder(this).at_end().annotate(current_annotation, base_ir);
+
+      /* Get some metadata from the image intrinsic. */
+      const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
+
+      /* Get the arguments of the atomic intrinsic. */
       src_reg offset = get_nir_src(instr->src[0], nir_type_int,
                                    instr->num_components);
       const src_reg surface = brw_imm_ud(surf_index);
-      const vec4_builder bld =
-         vec4_builder(this).at_end().annotate(current_annotation, base_ir);
+      const src_reg src0 = (info->num_srcs >= 2
+                           ? get_nir_src(instr->src[1]) : src_reg());
+      const src_reg src1 = (info->num_srcs >= 3
+                           ? get_nir_src(instr->src[2]) : src_reg());
+
       src_reg tmp;
 
       dest = get_nir_dest(instr->dest);
@@ -752,7 +762,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          tmp = emit_untyped_read(bld, surface, offset, 1, 1);
       } else {
          tmp = emit_untyped_atomic(bld, surface, offset,
-                                   src_reg(), src_reg(),
+                                   src0, src1,
                                    1, 1,
                                    get_atomic_counter_op(instr->intrinsic));
       }
