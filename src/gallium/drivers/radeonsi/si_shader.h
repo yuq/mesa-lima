@@ -315,9 +315,9 @@ struct si_ps_prolog_bits {
 	unsigned	poly_stipple:1;
 	unsigned	force_persp_sample_interp:1;
 	unsigned	force_linear_sample_interp:1;
+	unsigned	force_persp_center_interp:1;
+	unsigned	force_linear_center_interp:1;
 	/* TODO:
-	 * - add force_center_interp if MSAA is disabled and centroid or
-	 *   sample are present
 	 * - add force_center_interp_bc_optimize to force center interpolation
 	 *   based on the bc_optimize SGPR bit if MSAA is enabled, centroid is
 	 *   present and sample isn't present.

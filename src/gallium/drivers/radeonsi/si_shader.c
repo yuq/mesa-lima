@@ -1300,6 +1300,20 @@ static unsigned select_interp_param(struct si_shader_context *ctx,
 			return SI_PARAM_LINEAR_SAMPLE;
 		}
 	}
+	if (ctx->shader->key.ps.prolog.force_persp_center_interp) {
+		switch (param) {
+		case SI_PARAM_PERSP_CENTROID:
+		case SI_PARAM_PERSP_SAMPLE:
+			return SI_PARAM_PERSP_CENTER;
+		}
+	}
+	if (ctx->shader->key.ps.prolog.force_linear_center_interp) {
+		switch (param) {
+		case SI_PARAM_LINEAR_CENTROID:
+		case SI_PARAM_LINEAR_SAMPLE:
+			return SI_PARAM_PERSP_CENTER;
+		}
+	}
 
 	return param;
 }
@@ -6382,6 +6396,8 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 		fprintf(f, "  prolog.poly_stipple = %u\n", key->ps.prolog.poly_stipple);
 		fprintf(f, "  prolog.force_persp_sample_interp = %u\n", key->ps.prolog.force_persp_sample_interp);
 		fprintf(f, "  prolog.force_linear_sample_interp = %u\n", key->ps.prolog.force_linear_sample_interp);
+		fprintf(f, "  prolog.force_persp_center_interp = %u\n", key->ps.prolog.force_persp_center_interp);
+		fprintf(f, "  prolog.force_linear_center_interp = %u\n", key->ps.prolog.force_linear_center_interp);
 		fprintf(f, "  epilog.spi_shader_col_format = 0x%x\n", key->ps.epilog.spi_shader_col_format);
 		fprintf(f, "  epilog.color_is_int8 = 0x%X\n", key->ps.epilog.color_is_int8);
 		fprintf(f, "  epilog.last_cbuf = %u\n", key->ps.epilog.last_cbuf);
@@ -7255,6 +7271,40 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 						   linear_sample[i], base + 10 + i, "");
 	}
 
+	/* Force center interpolation. */
+	if (key->ps_prolog.states.force_persp_center_interp) {
+		unsigned i, base = key->ps_prolog.num_input_sgprs;
+		LLVMValueRef persp_center[2];
+
+		/* Read PERSP_CENTER. */
+		for (i = 0; i < 2; i++)
+			persp_center[i] = LLVMGetParam(func, base + 2 + i);
+		/* Overwrite PERSP_SAMPLE. */
+		for (i = 0; i < 2; i++)
+			ret = LLVMBuildInsertValue(gallivm->builder, ret,
+						   persp_center[i], base + i, "");
+		/* Overwrite PERSP_CENTROID. */
+		for (i = 0; i < 2; i++)
+			ret = LLVMBuildInsertValue(gallivm->builder, ret,
+						   persp_center[i], base + 4 + i, "");
+	}
+	if (key->ps_prolog.states.force_linear_center_interp) {
+		unsigned i, base = key->ps_prolog.num_input_sgprs;
+		LLVMValueRef linear_center[2];
+
+		/* Read LINEAR_CENTER. */
+		for (i = 0; i < 2; i++)
+			linear_center[i] = LLVMGetParam(func, base + 8 + i);
+		/* Overwrite LINEAR_SAMPLE. */
+		for (i = 0; i < 2; i++)
+			ret = LLVMBuildInsertValue(gallivm->builder, ret,
+						   linear_center[i], base + 6 + i, "");
+		/* Overwrite LINEAR_CENTROID. */
+		for (i = 0; i < 2; i++)
+			ret = LLVMBuildInsertValue(gallivm->builder, ret,
+						   linear_center[i], base + 10 + i, "");
+	}
+
 	/* Tell LLVM to insert WQM instruction sequence when needed. */
 	if (key->ps_prolog.wqm) {
 		LLVMAddTargetDependentFunctionAttr(func,
@@ -7414,7 +7464,9 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	prolog_key.ps_prolog.wqm = info->uses_derivatives &&
 		(prolog_key.ps_prolog.colors_read ||
 		 prolog_key.ps_prolog.states.force_persp_sample_interp ||
-		 prolog_key.ps_prolog.states.force_linear_sample_interp);
+		 prolog_key.ps_prolog.states.force_linear_sample_interp ||
+		 prolog_key.ps_prolog.states.force_persp_center_interp ||
+		 prolog_key.ps_prolog.states.force_linear_center_interp);
 
 	if (info->colors_read) {
 		unsigned *color = shader->selector->color_attr_index;
@@ -7443,6 +7495,8 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 				/* Force the interpolation location for colors here. */
 				if (shader->key.ps.prolog.force_persp_sample_interp)
 					location = TGSI_INTERPOLATE_LOC_SAMPLE;
+				if (shader->key.ps.prolog.force_persp_center_interp)
+					location = TGSI_INTERPOLATE_LOC_CENTER;
 
 				switch (location) {
 				case TGSI_INTERPOLATE_LOC_SAMPLE:
@@ -7468,6 +7522,8 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 				/* Force the interpolation location for colors here. */
 				if (shader->key.ps.prolog.force_linear_sample_interp)
 					location = TGSI_INTERPOLATE_LOC_SAMPLE;
+				if (shader->key.ps.prolog.force_linear_center_interp)
+					location = TGSI_INTERPOLATE_LOC_CENTER;
 
 				switch (location) {
 				case TGSI_INTERPOLATE_LOC_SAMPLE:
@@ -7499,6 +7555,8 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	if (prolog_key.ps_prolog.colors_read ||
 	    prolog_key.ps_prolog.states.force_persp_sample_interp ||
 	    prolog_key.ps_prolog.states.force_linear_sample_interp ||
+	    prolog_key.ps_prolog.states.force_persp_center_interp ||
+	    prolog_key.ps_prolog.states.force_linear_center_interp ||
 	    prolog_key.ps_prolog.states.poly_stipple) {
 		shader->prolog =
 			si_get_shader_part(sscreen, &sscreen->ps_prologs,
@@ -7543,6 +7601,20 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 		shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTER_ENA;
 		shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
 		shader->config.spi_ps_input_ena |= S_0286CC_LINEAR_SAMPLE_ENA(1);
+	}
+	if (shader->key.ps.prolog.force_persp_center_interp &&
+	    (G_0286CC_PERSP_SAMPLE_ENA(shader->config.spi_ps_input_ena) ||
+	     G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena))) {
+		shader->config.spi_ps_input_ena &= C_0286CC_PERSP_SAMPLE_ENA;
+		shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTROID_ENA;
+		shader->config.spi_ps_input_ena |= S_0286CC_PERSP_CENTER_ENA(1);
+	}
+	if (shader->key.ps.prolog.force_linear_center_interp &&
+	    (G_0286CC_LINEAR_SAMPLE_ENA(shader->config.spi_ps_input_ena) ||
+	     G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena))) {
+		shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_SAMPLE_ENA;
+		shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
+		shader->config.spi_ps_input_ena |= S_0286CC_LINEAR_CENTER_ENA(1);
 	}
 
 	/* POW_W_FLOAT requires that one of the perspective weights is enabled. */

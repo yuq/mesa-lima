@@ -946,6 +946,19 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				key->ps.prolog.force_linear_sample_interp =
 					sel->info.uses_linear_center ||
 					sel->info.uses_linear_centroid;
+			} else if (!rs->multisample_enable ||
+				   sctx->framebuffer.nr_samples <= 1) {
+				/* Make sure SPI doesn't compute more than 1 pair
+				 * of (i,j), which is the optimization here. */
+				key->ps.prolog.force_persp_center_interp =
+					sel->info.uses_persp_center +
+					sel->info.uses_persp_centroid +
+					sel->info.uses_persp_sample > 1;
+
+				key->ps.prolog.force_linear_center_interp =
+					sel->info.uses_linear_center +
+					sel->info.uses_linear_centroid +
+					sel->info.uses_linear_sample > 1;
 			}
 		}
 
