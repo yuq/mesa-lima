@@ -601,6 +601,22 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
    return false;
 }
 
+/**
+ * Get the appropriate atomic op for an image atomic intrinsic.
+ */
+unsigned
+get_atomic_counter_op(nir_intrinsic_op op)
+{
+   switch (op) {
+   case nir_intrinsic_atomic_counter_inc:
+      return BRW_AOP_INC;
+   case nir_intrinsic_atomic_counter_dec:
+      return BRW_AOP_PREDEC;
+   default:
+      unreachable("Not reachable.");
+   }
+}
+
 unsigned
 tesslevel_outer_components(GLenum tes_primitive_mode)
 {

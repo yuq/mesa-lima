@@ -27,6 +27,7 @@
 #include "brw_reg.h"
 #include "brw_defines.h"
 #include "brw_context.h"
+#include "compiler/nir/nir.h"
 
 #ifdef __cplusplus
 #include "brw_ir_allocator.h"
@@ -285,6 +286,8 @@ struct gl_linked_shader *brw_new_shader(gl_shader_stage stage);
 unsigned tesslevel_outer_components(GLenum tes_primitive_mode);
 unsigned tesslevel_inner_components(GLenum tes_primitive_mode);
 unsigned writemask_for_backwards_vector(unsigned mask);
+
+unsigned get_atomic_counter_op(nir_intrinsic_op op);
 
 #ifdef __cplusplus
 }

@@ -748,24 +748,13 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       dest = get_nir_dest(instr->dest);
 
-      switch (instr->intrinsic) {
-      case nir_intrinsic_atomic_counter_inc:
-         tmp = emit_untyped_atomic(bld, surface, offset,
-                                   src_reg(), src_reg(),
-                                   1, 1,
-                                   BRW_AOP_INC);
-         break;
-      case nir_intrinsic_atomic_counter_dec:
-         tmp = emit_untyped_atomic(bld, surface, offset,
-                                   src_reg(), src_reg(),
-                                   1, 1,
-                                   BRW_AOP_PREDEC);
-         break;
-      case nir_intrinsic_atomic_counter_read:
+      if (instr->intrinsic == nir_intrinsic_atomic_counter_read) {
          tmp = emit_untyped_read(bld, surface, offset, 1, 1);
-         break;
-      default:
-         unreachable("Unreachable");
+      } else {
+         tmp = emit_untyped_atomic(bld, surface, offset,
+                                   src_reg(), src_reg(),
+                                   1, 1,
+                                   get_atomic_counter_op(instr->intrinsic));
       }
 
       bld.MOV(retype(dest, tmp.type), tmp);
