@@ -289,7 +289,7 @@ enum pipe_error
 svga_rebind_framebuffer_bindings(struct svga_context *svga)
 {
    const struct svga_screen *ss = svga_screen(svga->pipe.screen);
-   struct pipe_framebuffer_state *hw = &svga->state.hw_clear.framebuffer;
+   struct svga_hw_draw_state *hw = &svga->state.hw_draw;
    unsigned i;
    enum pipe_error ret;
 
@@ -298,10 +298,10 @@ svga_rebind_framebuffer_bindings(struct svga_context *svga)
    if (!svga->rebind.flags.rendertargets)
       return PIPE_OK;
 
-   for (i = 0; i < ss->max_color_buffers; i++) {
-      if (hw->cbufs[i]) {
+   for (i = 0; i < hw->num_rendertargets; i++) {
+      if (hw->rtv[i]) {
          ret = svga->swc->resource_rebind(svga->swc,
-                                          svga_surface(hw->cbufs[i])->handle,
+                                          svga_surface(hw->rtv[i])->handle,
                                           NULL,
                                           SVGA_RELOC_WRITE);
          if (ret != PIPE_OK)
@@ -309,9 +309,9 @@ svga_rebind_framebuffer_bindings(struct svga_context *svga)
       }
    }
 
-   if (hw->zsbuf) {
+   if (hw->dsv) {
       ret = svga->swc->resource_rebind(svga->swc,
-                                       svga_surface(hw->zsbuf)->handle,
+                                       svga_surface(hw->dsv)->handle,
                                        NULL,
                                        SVGA_RELOC_WRITE);
       if (ret != PIPE_OK)
