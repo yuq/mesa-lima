@@ -101,6 +101,69 @@ static unsigned u_max_sample(struct pipe_resource *r)
 	return r->nr_samples ? r->nr_samples - 1 : 0;
 }
 
+static void
+si_blit_dbcb_copy(struct si_context *sctx,
+		  struct r600_texture *src,
+		  struct r600_texture *dst,
+		  unsigned planes, unsigned level_mask,
+		  unsigned first_layer, unsigned last_layer,
+		  unsigned first_sample, unsigned last_sample)
+{
+	struct pipe_surface surf_tmpl = {{0}};
+	unsigned layer, sample, checked_last_layer, max_layer;
+
+	if (planes & PIPE_MASK_Z)
+		sctx->dbcb_depth_copy_enabled = true;
+	if (planes & PIPE_MASK_S)
+		sctx->dbcb_stencil_copy_enabled = true;
+	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+
+	assert(sctx->dbcb_depth_copy_enabled || sctx->dbcb_stencil_copy_enabled);
+
+	while (level_mask) {
+		unsigned level = u_bit_scan(&level_mask);
+
+		/* The smaller the mipmap level, the less layers there are
+		 * as far as 3D textures are concerned. */
+		max_layer = util_max_layer(&src->resource.b.b, level);
+		checked_last_layer = MIN2(last_layer, max_layer);
+
+		surf_tmpl.u.tex.level = level;
+
+		for (layer = first_layer; layer <= checked_last_layer; layer++) {
+			struct pipe_surface *zsurf, *cbsurf;
+
+			surf_tmpl.format = src->resource.b.b.format;
+			surf_tmpl.u.tex.first_layer = layer;
+			surf_tmpl.u.tex.last_layer = layer;
+
+			zsurf = sctx->b.b.create_surface(&sctx->b.b, &src->resource.b.b, &surf_tmpl);
+
+			surf_tmpl.format = dst->resource.b.b.format;
+			cbsurf = sctx->b.b.create_surface(&sctx->b.b, &dst->resource.b.b, &surf_tmpl);
+
+			for (sample = first_sample; sample <= last_sample; sample++) {
+				if (sample != sctx->dbcb_copy_sample) {
+					sctx->dbcb_copy_sample = sample;
+					si_mark_atom_dirty(sctx, &sctx->db_render_state);
+				}
+
+				si_blitter_begin(&sctx->b.b, SI_DECOMPRESS);
+				util_blitter_custom_depth_stencil(sctx->blitter, zsurf, cbsurf, 1 << sample,
+								  sctx->custom_dsa_flush, 1.0f);
+				si_blitter_end(&sctx->b.b);
+			}
+
+			pipe_surface_reference(&zsurf, NULL);
+			pipe_surface_reference(&cbsurf, NULL);
+		}
+	}
+
+	sctx->dbcb_depth_copy_enabled = false;
+	sctx->dbcb_stencil_copy_enabled = false;
+	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+}
+
 static void si_blit_decompress_depth(struct pipe_context *ctx,
 				     struct r600_texture *texture,
 				     struct r600_texture *staging,
@@ -108,60 +171,22 @@ static void si_blit_decompress_depth(struct pipe_context *ctx,
 				     unsigned first_layer, unsigned last_layer,
 				     unsigned first_sample, unsigned last_sample)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
-	unsigned layer, level, sample, checked_last_layer, max_layer;
-	float depth = 1.0f;
 	const struct util_format_description *desc;
+	unsigned planes = 0;
 
 	assert(staging != NULL && "use si_blit_decompress_zs_in_place instead");
 
 	desc = util_format_description(staging->resource.b.b.format);
 
 	if (util_format_has_depth(desc))
-		sctx->dbcb_depth_copy_enabled = true;
+		planes |= PIPE_MASK_Z;
 	if (util_format_has_stencil(desc))
-		sctx->dbcb_stencil_copy_enabled = true;
+		planes |= PIPE_MASK_S;
 
-	assert(sctx->dbcb_depth_copy_enabled || sctx->dbcb_stencil_copy_enabled);
-
-	for (level = first_level; level <= last_level; level++) {
-		/* The smaller the mipmap level, the less layers there are
-		 * as far as 3D textures are concerned. */
-		max_layer = util_max_layer(&texture->resource.b.b, level);
-		checked_last_layer = MIN2(last_layer, max_layer);
-
-		for (layer = first_layer; layer <= checked_last_layer; layer++) {
-			for (sample = first_sample; sample <= last_sample; sample++) {
-				struct pipe_surface *zsurf, *cbsurf, surf_tmpl;
-
-				sctx->dbcb_copy_sample = sample;
-				si_mark_atom_dirty(sctx, &sctx->db_render_state);
-
-				surf_tmpl.format = texture->resource.b.b.format;
-				surf_tmpl.u.tex.level = level;
-				surf_tmpl.u.tex.first_layer = layer;
-				surf_tmpl.u.tex.last_layer = layer;
-
-				zsurf = ctx->create_surface(ctx, &texture->resource.b.b, &surf_tmpl);
-
-				surf_tmpl.format = staging->resource.b.b.format;
-				cbsurf = ctx->create_surface(ctx,
-						(struct pipe_resource*)staging, &surf_tmpl);
-
-				si_blitter_begin(ctx, SI_DECOMPRESS);
-				util_blitter_custom_depth_stencil(sctx->blitter, zsurf, cbsurf, 1 << sample,
-								  sctx->custom_dsa_flush, depth);
-				si_blitter_end(ctx);
-
-				pipe_surface_reference(&zsurf, NULL);
-				pipe_surface_reference(&cbsurf, NULL);
-			}
-		}
-	}
-
-	sctx->dbcb_depth_copy_enabled = false;
-	sctx->dbcb_stencil_copy_enabled = false;
-	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+	si_blit_dbcb_copy(
+		(struct si_context *)ctx, texture, staging, planes,
+		u_bit_consecutive(first_level, last_level - first_level + 1),
+		first_layer, last_layer, first_sample, last_sample);
 }
 
 /* Helper function for si_blit_decompress_zs_in_place.
