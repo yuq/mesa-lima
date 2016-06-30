@@ -96,25 +96,36 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    transfer->box = *box;
 
    if ((usage & PIPE_TRANSFER_READ) && sbuf->dirty) {
-      /* Only need to test for vgpu10 since only vgpu10 features (streamout,
-       * buffer copy) can modify buffers on the device.
+      enum pipe_error ret;
+
+      /* Host-side buffers can only be dirtied with vgpu10 features
+       * (streamout and buffer copy).
        */
-      if (svga_have_vgpu10(svga)) {
-         enum pipe_error ret;
-         assert(sbuf->handle);
-         ret = SVGA3D_vgpu10_ReadbackSubResource(svga->swc, sbuf->handle, 0);
-         if (ret != PIPE_OK) {
-            svga_context_flush(svga, NULL);
-            ret = SVGA3D_vgpu10_ReadbackSubResource(svga->swc, sbuf->handle, 0);
-            assert(ret == PIPE_OK);
-         }
+      assert(svga_have_vgpu10(svga));
 
-         svga->hud.num_readbacks++;
-
-         svga_context_finish(svga);
-
-         sbuf->dirty = FALSE;
+      if (!sbuf->user) {
+         (void) svga_buffer_handle(svga, resource);
       }
+
+      if (sbuf->dma.pending > 0) {
+         svga_buffer_upload_flush(svga, sbuf);
+         svga_context_finish(svga);
+      }
+
+      assert(sbuf->handle);
+
+      ret = SVGA3D_vgpu10_ReadbackSubResource(svga->swc, sbuf->handle, 0);
+      if (ret != PIPE_OK) {
+         svga_context_flush(svga, NULL);
+         ret = SVGA3D_vgpu10_ReadbackSubResource(svga->swc, sbuf->handle, 0);
+         assert(ret == PIPE_OK);
+      }
+
+      svga->hud.num_readbacks++;
+
+      svga_context_finish(svga);
+
+      sbuf->dirty = FALSE;
    }
 
    if (usage & PIPE_TRANSFER_WRITE) {
