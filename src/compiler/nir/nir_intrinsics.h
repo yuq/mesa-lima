@@ -139,12 +139,12 @@ INTRINSIC(set_vertex_count, 1, ARR(1), false, 0, 0, 0, xx, xx, xx, 0)
  */
 
 #define ATOMIC(name, flags) \
-   INTRINSIC(atomic_counter_##name##_var, 0, ARR(0), true, 1, 1, 0, xx, xx, xx, flags) \
-   INTRINSIC(atomic_counter_##name, 1, ARR(1), true, 1, 0, 1, BASE, xx, xx, flags)
+   INTRINSIC(name##_var, 0, ARR(0), true, 1, 1, 0, xx, xx, xx, flags) \
+   INTRINSIC(name, 1, ARR(1), true, 1, 0, 1, BASE, xx, xx, flags)
 
-ATOMIC(inc, 0)
-ATOMIC(dec, 0)
-ATOMIC(read, NIR_INTRINSIC_CAN_ELIMINATE)
+ATOMIC(atomic_counter_inc, 0)
+ATOMIC(atomic_counter_dec, 0)
+ATOMIC(atomic_counter_read, NIR_INTRINSIC_CAN_ELIMINATE)
 
 /*
  * Image load, store and atomic intrinsics.
