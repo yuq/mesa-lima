@@ -139,6 +139,9 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	if (sscreen->b.debug_flags & DBG_CHECK_VM)
 		flags |= PIPE_CONTEXT_DEBUG;
 
+	if (flags & PIPE_CONTEXT_DEBUG)
+		sscreen->record_llvm_ir = true; /* racy but not critical */
+
 	sctx->b.b.screen = screen; /* this must be set first */
 	sctx->b.b.priv = priv;
 	sctx->b.b.destroy = si_destroy_context;

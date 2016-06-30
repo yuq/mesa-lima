@@ -67,6 +67,7 @@ void radeon_shader_binary_clean(struct radeon_shader_binary *b)
 	FREE(b->global_symbol_offsets);
 	FREE(b->relocs);
 	FREE(b->disasm_string);
+	FREE(b->llvm_ir_string);
 }
 
 /*

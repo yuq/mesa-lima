@@ -6226,6 +6226,12 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor,
 		    FILE *file)
 {
+	if (file != stderr && shader->binary.llvm_ir_string) {
+		fprintf(file, "\n%s - main shader part - LLVM IR:\n\n",
+			si_get_shader_name(shader, processor));
+		fprintf(file, "%s\n", shader->binary.llvm_ir_string);
+	}
+
 	if (file != stderr ||
 	    (r600_can_dump_shader(&sscreen->b, processor) &&
 	     !(sscreen->b.debug_flags & DBG_NO_ASM))) {
@@ -6269,6 +6275,12 @@ int si_compile_llvm(struct si_screen *sscreen,
 			LLVMDumpModule(mod);
 			fprintf(stderr, "\n");
 		}
+	}
+
+	if (sscreen->record_llvm_ir) {
+		char *ir = LLVMPrintModuleToString(mod);
+		binary->llvm_ir_string = strdup(ir);
+		LLVMDisposeMessage(ir);
 	}
 
 	if (!si_replace_shader(count, binary)) {

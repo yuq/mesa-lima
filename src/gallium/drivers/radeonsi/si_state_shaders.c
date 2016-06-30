@@ -96,6 +96,8 @@ static uint32_t *read_chunk(uint32_t *ptr, void **data, unsigned *size)
 {
 	*size = *ptr++;
 	assert(*data == NULL);
+	if (!*size)
+		return ptr;
 	*data = malloc(*size);
 	return read_data(ptr, *data, *size);
 }
@@ -110,6 +112,8 @@ static void *si_get_shader_binary(struct si_shader *shader)
 	unsigned relocs_size = shader->binary.reloc_count *
 			       sizeof(shader->binary.relocs[0]);
 	unsigned disasm_size = strlen(shader->binary.disasm_string) + 1;
+	unsigned llvm_ir_size = shader->binary.llvm_ir_string ?
+				strlen(shader->binary.llvm_ir_string) + 1 : 0;
 	unsigned size =
 		4 + /* total size */
 		4 + /* CRC32 of the data below */
@@ -118,7 +122,8 @@ static void *si_get_shader_binary(struct si_shader *shader)
 		4 + align(shader->binary.code_size, 4) +
 		4 + align(shader->binary.rodata_size, 4) +
 		4 + align(relocs_size, 4) +
-		4 + align(disasm_size, 4);
+		4 + align(disasm_size, 4) +
+		4 + align(llvm_ir_size, 4);
 	void *buffer = CALLOC(1, size);
 	uint32_t *ptr = (uint32_t*)buffer;
 
@@ -134,6 +139,7 @@ static void *si_get_shader_binary(struct si_shader *shader)
 	ptr = write_chunk(ptr, shader->binary.rodata, shader->binary.rodata_size);
 	ptr = write_chunk(ptr, shader->binary.relocs, relocs_size);
 	ptr = write_chunk(ptr, shader->binary.disasm_string, disasm_size);
+	ptr = write_chunk(ptr, shader->binary.llvm_ir_string, llvm_ir_size);
 	assert((char *)ptr - (char *)buffer == size);
 
 	/* Compute CRC32. */
@@ -165,6 +171,7 @@ static bool si_load_shader_binary(struct si_shader *shader, void *binary)
 	ptr = read_chunk(ptr, (void**)&shader->binary.relocs, &chunk_size);
 	shader->binary.reloc_count = chunk_size / sizeof(shader->binary.relocs[0]);
 	ptr = read_chunk(ptr, (void**)&shader->binary.disasm_string, &chunk_size);
+	ptr = read_chunk(ptr, (void**)&shader->binary.llvm_ir_string, &chunk_size);
 
 	return true;
 }

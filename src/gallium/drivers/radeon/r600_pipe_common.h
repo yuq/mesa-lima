@@ -155,6 +155,7 @@ struct radeon_shader_binary {
 
 	/** Disassembled shader in a string. */
 	char *disasm_string;
+	char *llvm_ir_string;
 };
 
 void radeon_shader_binary_init(struct radeon_shader_binary *b);

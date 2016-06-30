@@ -87,6 +87,7 @@ struct si_screen {
 
 	/* Whether shaders are monolithic (1-part) or separate (3-part). */
 	bool				use_monolithic_shaders;
+	bool				record_llvm_ir;
 
 	pipe_mutex			shader_parts_mutex;
 	struct si_shader_part		*vs_prologs;
