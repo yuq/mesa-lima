@@ -317,11 +317,8 @@ struct si_ps_prolog_bits {
 	unsigned	force_linear_sample_interp:1;
 	unsigned	force_persp_center_interp:1;
 	unsigned	force_linear_center_interp:1;
-	/* TODO:
-	 * - add force_center_interp_bc_optimize to force center interpolation
-	 *   based on the bc_optimize SGPR bit if MSAA is enabled, centroid is
-	 *   present and sample isn't present.
-	 */
+	unsigned	bc_optimize_for_persp:1;
+	unsigned	bc_optimize_for_linear:1;
 };
 
 /* Common PS bits between the shader key and the epilog key. */

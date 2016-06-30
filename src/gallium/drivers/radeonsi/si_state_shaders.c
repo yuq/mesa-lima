@@ -664,7 +664,6 @@ static void si_shader_ps(struct si_shader *shader)
 	unsigned spi_ps_in_control, spi_shader_col_format, cb_shader_mask;
 	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
-	bool has_centroid;
 	unsigned input_ena = shader->config.spi_ps_input_ena;
 
 	/* we need to enable at least one of them, otherwise we hang the GPU */
@@ -729,11 +728,7 @@ static void si_shader_ps(struct si_shader *shader)
 		       shader->config.spi_ps_input_addr);
 
 	/* Set interpolation controls. */
-	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena) ||
-		       G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena);
-
-	spi_ps_in_control = S_0286D8_NUM_INTERP(si_get_ps_num_interp(shader)) |
-			    S_0286D8_BC_OPTIMIZE_DISABLE(has_centroid);
+	spi_ps_in_control = S_0286D8_NUM_INTERP(si_get_ps_num_interp(shader));
 
 	/* Set registers. */
 	si_pm4_set_reg(pm4, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
@@ -946,8 +941,15 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				key->ps.prolog.force_linear_sample_interp =
 					sel->info.uses_linear_center ||
 					sel->info.uses_linear_centroid;
-			} else if (!rs->multisample_enable ||
-				   sctx->framebuffer.nr_samples <= 1) {
+			} else if (rs->multisample_enable &&
+				   sctx->framebuffer.nr_samples > 1) {
+				key->ps.prolog.bc_optimize_for_persp =
+					sel->info.uses_persp_center &&
+					sel->info.uses_persp_centroid;
+				key->ps.prolog.bc_optimize_for_linear =
+					sel->info.uses_linear_center &&
+					sel->info.uses_linear_centroid;
+			} else {
 				/* Make sure SPI doesn't compute more than 1 pair
 				 * of (i,j), which is the optimization here. */
 				key->ps.prolog.force_persp_center_interp =

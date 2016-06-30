@@ -1435,6 +1435,56 @@ static void interp_fs_input(struct si_shader_context *ctx,
 	}
 }
 
+/* LLVMGetParam with bc_optimize resolved. */
+static LLVMValueRef get_interp_param(struct si_shader_context *ctx,
+				     int interp_param_idx)
+{
+	LLVMBuilderRef builder = ctx->radeon_bld.gallivm.builder;
+	LLVMValueRef main_fn = ctx->radeon_bld.main_fn;
+	LLVMValueRef param = NULL;
+
+	/* Handle PRIM_MASK[31] (bc_optimize). */
+	if (ctx->is_monolithic &&
+	    ((ctx->shader->key.ps.prolog.bc_optimize_for_persp &&
+	      interp_param_idx == SI_PARAM_PERSP_CENTROID) ||
+	     (ctx->shader->key.ps.prolog.bc_optimize_for_linear &&
+	      interp_param_idx == SI_PARAM_LINEAR_CENTROID))) {
+		/* The shader should do: if (PRIM_MASK[31]) CENTROID = CENTER;
+		 * The hw doesn't compute CENTROID if the whole wave only
+		 * contains fully-covered quads.
+		 */
+		LLVMValueRef bc_optimize =
+			LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK);
+		bc_optimize = LLVMBuildLShr(builder,
+					    bc_optimize,
+					    LLVMConstInt(ctx->i32, 31, 0), "");
+		bc_optimize = LLVMBuildTrunc(builder, bc_optimize, ctx->i1, "");
+
+		if (ctx->shader->key.ps.prolog.bc_optimize_for_persp &&
+		    interp_param_idx == SI_PARAM_PERSP_CENTROID) {
+			param = LLVMBuildSelect(builder, bc_optimize,
+						LLVMGetParam(main_fn,
+							     SI_PARAM_PERSP_CENTER),
+						LLVMGetParam(main_fn,
+							     SI_PARAM_PERSP_CENTROID),
+						"");
+		}
+		if (ctx->shader->key.ps.prolog.bc_optimize_for_linear &&
+		    interp_param_idx == SI_PARAM_LINEAR_CENTROID) {
+			param = LLVMBuildSelect(builder, bc_optimize,
+						LLVMGetParam(main_fn,
+							     SI_PARAM_LINEAR_CENTER),
+						LLVMGetParam(main_fn,
+							     SI_PARAM_LINEAR_CENTROID),
+						"");
+		}
+	}
+
+	if (!param)
+		param = LLVMGetParam(main_fn, interp_param_idx);
+	return param;
+}
+
 static void declare_input_fs(
 	struct radeon_llvm_context *radeon_bld,
 	unsigned input_index,
@@ -1475,7 +1525,7 @@ static void declare_input_fs(
 	else if (interp_param_idx) {
 		interp_param_idx = select_interp_param(ctx,
 						       interp_param_idx);
-		interp_param = LLVMGetParam(main_fn, interp_param_idx);
+		interp_param = get_interp_param(ctx, interp_param_idx);
 	}
 
 	interp_fs_input(ctx, input_index, decl->Semantic.Name,
@@ -5041,7 +5091,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	if (interp_param_idx == -1)
 		return;
 	else if (interp_param_idx)
-		interp_param = LLVMGetParam(ctx->radeon_bld.main_fn, interp_param_idx);
+		interp_param = get_interp_param(ctx, interp_param_idx);
 	else
 		interp_param = NULL;
 
@@ -6398,6 +6448,8 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 		fprintf(f, "  prolog.force_linear_sample_interp = %u\n", key->ps.prolog.force_linear_sample_interp);
 		fprintf(f, "  prolog.force_persp_center_interp = %u\n", key->ps.prolog.force_persp_center_interp);
 		fprintf(f, "  prolog.force_linear_center_interp = %u\n", key->ps.prolog.force_linear_center_interp);
+		fprintf(f, "  prolog.bc_optimize_for_persp = %u\n", key->ps.prolog.bc_optimize_for_persp);
+		fprintf(f, "  prolog.bc_optimize_for_linear = %u\n", key->ps.prolog.bc_optimize_for_linear);
 		fprintf(f, "  epilog.spi_shader_col_format = 0x%x\n", key->ps.epilog.spi_shader_col_format);
 		fprintf(f, "  epilog.color_is_int8 = 0x%X\n", key->ps.epilog.color_is_int8);
 		fprintf(f, "  epilog.last_cbuf = %u\n", key->ps.epilog.last_cbuf);
@@ -7192,6 +7244,55 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 		si_llvm_emit_polygon_stipple(&ctx, list, pos);
 	}
 
+	if (key->ps_prolog.states.bc_optimize_for_persp ||
+	    key->ps_prolog.states.bc_optimize_for_linear) {
+		unsigned i, base = key->ps_prolog.num_input_sgprs;
+		LLVMValueRef center[2], centroid[2], tmp, bc_optimize;
+
+		/* The shader should do: if (PRIM_MASK[31]) CENTROID = CENTER;
+		 * The hw doesn't compute CENTROID if the whole wave only
+		 * contains fully-covered quads.
+		 *
+		 * PRIM_MASK is after user SGPRs.
+		 */
+		bc_optimize = LLVMGetParam(func, SI_PS_NUM_USER_SGPR);
+		bc_optimize = LLVMBuildLShr(gallivm->builder, bc_optimize,
+					    LLVMConstInt(ctx.i32, 31, 0), "");
+		bc_optimize = LLVMBuildTrunc(gallivm->builder, bc_optimize,
+					     ctx.i1, "");
+
+		if (key->ps_prolog.states.bc_optimize_for_persp) {
+			/* Read PERSP_CENTER. */
+			for (i = 0; i < 2; i++)
+				center[i] = LLVMGetParam(func, base + 2 + i);
+			/* Read PERSP_CENTROID. */
+			for (i = 0; i < 2; i++)
+				centroid[i] = LLVMGetParam(func, base + 4 + i);
+			/* Select PERSP_CENTROID. */
+			for (i = 0; i < 2; i++) {
+				tmp = LLVMBuildSelect(gallivm->builder, bc_optimize,
+						      center[i], centroid[i], "");
+				ret = LLVMBuildInsertValue(gallivm->builder, ret,
+							   tmp, base + 4 + i, "");
+			}
+		}
+		if (key->ps_prolog.states.bc_optimize_for_linear) {
+			/* Read LINEAR_CENTER. */
+			for (i = 0; i < 2; i++)
+				center[i] = LLVMGetParam(func, base + 8 + i);
+			/* Read LINEAR_CENTROID. */
+			for (i = 0; i < 2; i++)
+				centroid[i] = LLVMGetParam(func, base + 10 + i);
+			/* Select LINEAR_CENTROID. */
+			for (i = 0; i < 2; i++) {
+				tmp = LLVMBuildSelect(gallivm->builder, bc_optimize,
+						      center[i], centroid[i], "");
+				ret = LLVMBuildInsertValue(gallivm->builder, ret,
+							   tmp, base + 10 + i, "");
+			}
+		}
+	}
+
 	/* Interpolate colors. */
 	for (i = 0; i < 2; i++) {
 		unsigned writemask = (key->ps_prolog.colors_read >> (i * 4)) & 0xf;
@@ -7208,8 +7309,11 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 			unsigned interp_vgpr = key->ps_prolog.num_input_sgprs +
 					       key->ps_prolog.color_interp_vgpr_index[i];
 
-			interp[0] = LLVMGetParam(func, interp_vgpr);
-			interp[1] = LLVMGetParam(func, interp_vgpr + 1);
+			/* Get the (i,j) updated by bc_optimize handling. */
+			interp[0] = LLVMBuildExtractValue(gallivm->builder, ret,
+							  interp_vgpr, "");
+			interp[1] = LLVMBuildExtractValue(gallivm->builder, ret,
+							  interp_vgpr + 1, "");
 			interp_ij = lp_build_gather_values(gallivm, interp, 2);
 			interp_ij = LLVMBuildBitCast(gallivm->builder, interp_ij,
 						     ctx.v2i32, "");
@@ -7466,7 +7570,9 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 		 prolog_key.ps_prolog.states.force_persp_sample_interp ||
 		 prolog_key.ps_prolog.states.force_linear_sample_interp ||
 		 prolog_key.ps_prolog.states.force_persp_center_interp ||
-		 prolog_key.ps_prolog.states.force_linear_center_interp);
+		 prolog_key.ps_prolog.states.force_linear_center_interp ||
+		 prolog_key.ps_prolog.states.bc_optimize_for_persp ||
+		 prolog_key.ps_prolog.states.bc_optimize_for_linear);
 
 	if (info->colors_read) {
 		unsigned *color = shader->selector->color_attr_index;
@@ -7557,6 +7663,8 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	    prolog_key.ps_prolog.states.force_linear_sample_interp ||
 	    prolog_key.ps_prolog.states.force_persp_center_interp ||
 	    prolog_key.ps_prolog.states.force_linear_center_interp ||
+	    prolog_key.ps_prolog.states.bc_optimize_for_persp ||
+	    prolog_key.ps_prolog.states.bc_optimize_for_linear ||
 	    prolog_key.ps_prolog.states.poly_stipple) {
 		shader->prolog =
 			si_get_shader_part(sscreen, &sscreen->ps_prologs,
