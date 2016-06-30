@@ -620,6 +620,30 @@ nir_visitor::visit(ir_call *ir)
       case ir_intrinsic_atomic_counter_predecrement:
          op = nir_intrinsic_atomic_counter_dec_var;
          break;
+      case ir_intrinsic_atomic_counter_add:
+         op = nir_intrinsic_atomic_counter_add_var;
+         break;
+      case ir_intrinsic_atomic_counter_and:
+         op = nir_intrinsic_atomic_counter_and_var;
+         break;
+      case ir_intrinsic_atomic_counter_or:
+         op = nir_intrinsic_atomic_counter_or_var;
+         break;
+      case ir_intrinsic_atomic_counter_xor:
+         op = nir_intrinsic_atomic_counter_xor_var;
+         break;
+      case ir_intrinsic_atomic_counter_min:
+         op = nir_intrinsic_atomic_counter_min_var;
+         break;
+      case ir_intrinsic_atomic_counter_max:
+         op = nir_intrinsic_atomic_counter_max_var;
+         break;
+      case ir_intrinsic_atomic_counter_exchange:
+         op = nir_intrinsic_atomic_counter_exchange_var;
+         break;
+      case ir_intrinsic_atomic_counter_comp_swap:
+         op = nir_intrinsic_atomic_counter_comp_swap_var;
+         break;
       case ir_intrinsic_image_load:
          op = nir_intrinsic_image_load;
          break;
@@ -771,11 +795,40 @@ nir_visitor::visit(ir_call *ir)
       switch (op) {
       case nir_intrinsic_atomic_counter_read_var:
       case nir_intrinsic_atomic_counter_inc_var:
-      case nir_intrinsic_atomic_counter_dec_var: {
-         ir_dereference *param =
-            (ir_dereference *) ir->actual_parameters.get_head();
-         instr->variables[0] = evaluate_deref(&instr->instr, param);
-         nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
+      case nir_intrinsic_atomic_counter_dec_var:
+      case nir_intrinsic_atomic_counter_add_var:
+      case nir_intrinsic_atomic_counter_min_var:
+      case nir_intrinsic_atomic_counter_max_var:
+      case nir_intrinsic_atomic_counter_and_var:
+      case nir_intrinsic_atomic_counter_or_var:
+      case nir_intrinsic_atomic_counter_xor_var:
+      case nir_intrinsic_atomic_counter_exchange_var:
+      case nir_intrinsic_atomic_counter_comp_swap_var: {
+         /* Set the counter variable dereference. */
+         exec_node *param = ir->actual_parameters.get_head();
+         ir_dereference *counter = (ir_dereference *)param;
+
+         instr->variables[0] = evaluate_deref(&instr->instr, counter);
+         param = param->get_next();
+
+         /* Set the intrinsic destination. */
+         if (ir->return_deref) {
+            nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
+         }
+
+         /* Set the intrinsic parameters. */
+         if (!param->is_tail_sentinel()) {
+            instr->src[0] =
+               nir_src_for_ssa(evaluate_rvalue((ir_dereference *)param));
+            param = param->get_next();
+         }
+
+         if (!param->is_tail_sentinel()) {
+            instr->src[1] =
+               nir_src_for_ssa(evaluate_rvalue((ir_dereference *)param));
+            param = param->get_next();
+         }
+
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
