@@ -275,7 +275,7 @@ void r600_decompress_depth_textures(struct r600_context *rctx,
 		rview = (struct r600_pipe_sampler_view*)view;
 
 		tex = (struct r600_texture *)view->texture;
-		assert(tex->is_depth && !tex->is_flushing_texture);
+		assert(tex->db_compatible);
 
 		if (r600_can_sample_zs(tex, rview->is_stencil_sampler)) {
 			r600_blit_decompress_depth_in_place(rctx, tex,
@@ -372,7 +372,7 @@ static bool r600_decompress_subresource(struct pipe_context *ctx,
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct r600_texture *rtex = (struct r600_texture*)tex;
 
-	if (rtex->is_depth && !rtex->is_flushing_texture) {
+	if (rtex->db_compatible) {
 		if (r600_can_sample_zs(rtex, false)) {
 			r600_blit_decompress_depth_in_place(rctx, rtex, false,
 						   level, level,

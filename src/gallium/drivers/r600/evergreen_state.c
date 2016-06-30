@@ -702,14 +702,16 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 	surflevel = tmp->surface.level;
 
 	/* Texturing with separate depth and stencil. */
-	if (tmp->is_depth && !tmp->is_flushing_texture) {
+	if (tmp->db_compatible) {
 		switch (pipe_format) {
 		case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
 			pipe_format = PIPE_FORMAT_Z32_FLOAT;
 			break;
 		case PIPE_FORMAT_X8Z24_UNORM:
 		case PIPE_FORMAT_S8_UINT_Z24_UNORM:
-			/* Z24 is always stored like this. */
+			/* Z24 is always stored like this for DB
+			 * compatibility.
+			 */
 			pipe_format = PIPE_FORMAT_Z24X8_UNORM;
 			break;
 		case PIPE_FORMAT_X24S8_UINT:
@@ -724,7 +726,7 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 	}
 
 	if (R600_BIG_ENDIAN)
-		do_endian_swap = !(tmp->is_depth && !tmp->is_flushing_texture);
+		do_endian_swap = !tmp->db_compatible;
 
 	format = r600_translate_texformat(ctx->screen, pipe_format,
 					  swizzle,
@@ -868,7 +870,7 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 				      S_03001C_BANK_HEIGHT(bankh) |
 				      S_03001C_MACRO_TILE_ASPECT(macro_aspect) |
 				      S_03001C_NUM_BANKS(nbanks) |
-				      S_03001C_DEPTH_SAMPLE_ORDER(tmp->is_depth && !tmp->is_flushing_texture);
+				      S_03001C_DEPTH_SAMPLE_ORDER(tmp->db_compatible);
 	return &view->base;
 }
 
@@ -1088,7 +1090,7 @@ void evergreen_init_color_surface(struct r600_context *rctx,
 	}
 
 	if (R600_BIG_ENDIAN)
-		do_endian_swap = !(rtex->is_depth && !rtex->is_flushing_texture);
+		do_endian_swap = !rtex->db_compatible;
 
 	format = r600_translate_colorformat(rctx->b.chip_class, surf->base.format,
 			                              do_endian_swap);

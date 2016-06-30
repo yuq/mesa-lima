@@ -242,12 +242,12 @@ struct r600_texture {
 	uint64_t			size;
 	unsigned			num_level0_transfers;
 	bool				is_depth;
+	bool				db_compatible;
 	bool				can_sample_z;
 	bool				can_sample_s;
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
 	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */
 	struct r600_texture		*flushed_depth_texture;
-	bool				is_flushing_texture;
 	struct radeon_surf		surface;
 
 	/* Colorbuffer compression and fast clear. */

@@ -293,7 +293,7 @@ si_flush_depth_textures(struct si_context *sctx,
 		sview = (struct si_sampler_view*)view;
 
 		tex = (struct r600_texture *)view->texture;
-		assert(tex->is_depth && !tex->is_flushing_texture);
+		assert(tex->db_compatible);
 
 		si_blit_decompress_zs_in_place(sctx, tex,
 					       sview->is_stencil_sampler ? PIPE_MASK_S
@@ -696,7 +696,7 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct r600_texture *rtex = (struct r600_texture*)tex;
 
-	if (rtex->is_depth && !rtex->is_flushing_texture) {
+	if (rtex->db_compatible) {
 		planes &= PIPE_MASK_Z | PIPE_MASK_S;
 
 		if (!(rtex->surface.flags & RADEON_SURF_SBUFFER))

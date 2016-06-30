@@ -695,7 +695,7 @@ r600_create_sampler_view_custom(struct pipe_context *ctx,
 	swizzle[3] = state->swizzle_a;
 
 	if (R600_BIG_ENDIAN)
-		do_endian_swap = !(tmp->is_depth && !tmp->is_flushing_texture);
+		do_endian_swap = !tmp->db_compatible;
 
 	format = r600_translate_texformat(ctx->screen, state->format,
 					  swizzle,
@@ -842,7 +842,7 @@ static void r600_init_color_surface(struct r600_context *rctx,
 	int i;
 	bool blend_bypass = 0, blend_clamp = 1, do_endian_swap = FALSE;
 
-	if (rtex->is_depth && !rtex->is_flushing_texture && !r600_can_sample_zs(rtex, false)) {
+	if (rtex->db_compatible && !r600_can_sample_zs(rtex, false)) {
 		r600_init_flushed_depth_texture(&rctx->b.b, surf->base.texture, NULL);
 		rtex = rtex->flushed_depth_texture;
 		assert(rtex);
@@ -895,7 +895,7 @@ static void r600_init_color_surface(struct r600_context *rctx,
 	}
 
 	if (R600_BIG_ENDIAN)
-		do_endian_swap = !(rtex->is_depth && !rtex->is_flushing_texture);
+		do_endian_swap = !rtex->db_compatible;
 
 	format = r600_translate_colorformat(rctx->b.chip_class, surf->base.format,
 			                              do_endian_swap);

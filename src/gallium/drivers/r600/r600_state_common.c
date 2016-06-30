@@ -640,7 +640,7 @@ static void r600_set_sampler_views(struct pipe_context *pipe, unsigned shader,
 				(struct r600_texture*)rviews[i]->base.texture;
 			bool is_buffer = rviews[i]->base.texture->target == PIPE_BUFFER;
 
-			if (!is_buffer && rtex->is_depth && !rtex->is_flushing_texture) {
+			if (!is_buffer && rtex->db_compatible) {
 				dst->views.compressed_depthtex_mask |= 1 << i;
 			} else {
 				dst->views.compressed_depthtex_mask &= ~(1 << i);

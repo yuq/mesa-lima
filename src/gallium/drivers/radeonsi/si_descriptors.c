@@ -391,7 +391,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 
 		if (view->texture && view->texture->target != PIPE_BUFFER) {
 			bool is_separate_stencil =
-				rtex->is_depth && !rtex->is_flushing_texture &&
+				rtex->db_compatible &&
 				rview->is_stencil_sampler;
 
 			si_set_mutable_tex_desc_fields(rtex,
@@ -464,7 +464,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 			struct r600_texture *rtex =
 				(struct r600_texture*)views[i]->texture;
 
-			if (rtex->is_depth && !rtex->is_flushing_texture) {
+			if (rtex->db_compatible) {
 				samplers->depth_texture_mask |= 1u << slot;
 			} else {
 				samplers->depth_texture_mask &= ~(1u << slot);

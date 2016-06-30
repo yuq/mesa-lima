@@ -1041,6 +1041,8 @@ r600_texture_create_object(struct pipe_screen *screen,
 
 		if (!(base->flags & (R600_RESOURCE_FLAG_TRANSFER |
 				     R600_RESOURCE_FLAG_FLUSHED_DEPTH))) {
+			rtex->db_compatible = true;
+
 			if (!(rscreen->debug_flags & DBG_NO_HYPERZ))
 				r600_texture_allocate_htile(rscreen, rtex);
 		}
@@ -1298,7 +1300,6 @@ bool r600_init_flushed_depth_texture(struct pipe_context *ctx,
 		return false;
 	}
 
-	(*flushed_depth_texture)->is_flushing_texture = true;
 	(*flushed_depth_texture)->non_disp_tiling = false;
 	return true;
 }
