@@ -1039,6 +1039,8 @@ void _mesa_init_color( struct gl_context * ctx )
     * if EGL_KHR_gl_colorspace has been used to request sRGB.
     */
    ctx->Color.sRGBEnabled = _mesa_is_gles(ctx);
+
+   ctx->Color.BlendCoherent = true;
 }
 
 /*@}*/

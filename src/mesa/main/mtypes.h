@@ -461,6 +461,9 @@ struct gl_colorbuffer_attrib
     * requires all draw buffers to match, so we only need a single value.
     */
    enum gl_advanced_blend_mode _AdvancedBlendMode;
+
+   /** Coherency requested via glEnable(GL_BLEND_ADVANCED_COHERENT_KHR)? */
+   bool BlendCoherent;
    /*@}*/
 
    /** 
@@ -3957,6 +3960,7 @@ struct gl_extensions
    GLboolean GREMEDY_string_marker;
    GLboolean INTEL_performance_query;
    GLboolean KHR_blend_equation_advanced;
+   GLboolean KHR_blend_equation_advanced_coherent;
    GLboolean KHR_robustness;
    GLboolean KHR_texture_compression_astc_hdr;
    GLboolean KHR_texture_compression_astc_ldr;
