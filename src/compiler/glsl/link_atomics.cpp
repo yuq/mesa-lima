@@ -103,9 +103,9 @@ namespace {
                            const unsigned shader_stage)
    {
       /* FIXME: Arrays of arrays get counted separately. For example:
-       * x1[3][3][2] = 9 counters
-       * x2[3][2]    = 3 counters
-       * x3[2]       = 1 counter
+       * x1[3][3][2] = 9 uniforms, 18 atomic counters
+       * x2[3][2]    = 3 uniforms, 6 atomic counters
+       * x3[2]       = 1 uniform, 2 atomic counters
        *
        * However this code marks all the counters as active even when they
        * might not be used.
@@ -129,7 +129,13 @@ namespace {
 
          buf->push_back(*uniform_loc, var);
 
-         buf->stage_references[shader_stage]++;
+         /* When checking for atomic counters we should count every member in
+          * an array as an atomic counter reference.
+          */
+         if (t->is_array())
+            buf->stage_references[shader_stage] += t->length;
+         else
+            buf->stage_references[shader_stage]++;
          buf->size = MAX2(buf->size, *offset + t->atomic_size());
 
          storage->offset = *offset;
