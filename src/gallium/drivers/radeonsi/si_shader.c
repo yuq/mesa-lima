@@ -100,9 +100,12 @@ struct si_shader_context
 
 	LLVMTargetMachineRef tm;
 
+	unsigned range_md_kind;
+	unsigned tbaa_md_kind;
 	unsigned uniform_md_kind;
-	LLVMValueRef const_md;
+	LLVMValueRef tbaa_const_md;
 	LLVMValueRef empty_md;
+
 	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef lds;
 	LLVMValueRef *constants[SI_NUM_CONST_BUFFERS];
@@ -414,7 +417,7 @@ static LLVMValueRef build_indexed_load_const(
 	LLVMValueRef base_ptr, LLVMValueRef index)
 {
 	LLVMValueRef result = build_indexed_load(ctx, base_ptr, index, true);
-	LLVMSetMetadata(result, 1, ctx->const_md);
+	LLVMSetMetadata(result, ctx->tbaa_md_kind, ctx->tbaa_const_md);
 	return result;
 }
 
@@ -1547,19 +1550,17 @@ static LLVMValueRef get_sample_id(struct radeon_llvm_context *radeon_bld)
  * \p lo is the minimum value inclusive.
  * \p hi is the maximum value exclusive.
  */
-static void set_range_metadata(LLVMValueRef value, unsigned lo, unsigned hi)
+static void set_range_metadata(struct si_shader_context *ctx,
+			       LLVMValueRef value, unsigned lo, unsigned hi)
 {
-	const char *range_md_string = "range";
 	LLVMValueRef range_md, md_args[2];
 	LLVMTypeRef type = LLVMTypeOf(value);
 	LLVMContextRef context = LLVMGetTypeContext(type);
-	unsigned md_range_id = LLVMGetMDKindIDInContext(context,
-				range_md_string, strlen(range_md_string));
 
 	md_args[0] = LLVMConstInt(type, lo, false);
 	md_args[1] = LLVMConstInt(type, hi, false);
 	range_md = LLVMMDNodeInContext(context, md_args, 2);
-	LLVMSetMetadata(value, md_range_id, range_md);
+	LLVMSetMetadata(value, ctx->range_md_kind, range_md);
 }
 
 static LLVMValueRef get_thread_id(struct si_shader_context *ctx)
@@ -1582,7 +1583,7 @@ static LLVMValueRef get_thread_id(struct si_shader_context *ctx)
 					"llvm.amdgcn.mbcnt.hi", ctx->i32,
 					tid_args, 2, LLVMReadNoneAttribute);
 	}
-	set_range_metadata(tid, 0, 64);
+	set_range_metadata(ctx, tid, 0, 64);
 	return tid;
 }
 
@@ -5338,18 +5339,21 @@ static void si_create_function(struct si_shader_context *ctx,
 static void create_meta_data(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = ctx->radeon_bld.soa.bld_base.base.gallivm;
-	LLVMValueRef args[3];
+	LLVMValueRef tbaa_const[3];
 
-	args[0] = LLVMMDStringInContext(gallivm->context, "const", 5);
-	args[1] = 0;
-	args[2] = lp_build_const_int32(gallivm, 1);
-
-	ctx->const_md = LLVMMDNodeInContext(gallivm->context, args, 3);
-
+	ctx->range_md_kind = LLVMGetMDKindIDInContext(gallivm->context,
+						     "range", 5);
+	ctx->tbaa_md_kind = LLVMGetMDKindIDInContext(gallivm->context,
+						     "tbaa", 4);
 	ctx->uniform_md_kind = LLVMGetMDKindIDInContext(gallivm->context,
 							"amdgpu.uniform", 14);
 
 	ctx->empty_md = LLVMMDNodeInContext(gallivm->context, NULL, 0);
+
+	tbaa_const[0] = LLVMMDStringInContext(gallivm->context, "const", 5);
+	tbaa_const[1] = 0;
+	tbaa_const[2] = lp_build_const_int32(gallivm, 1);
+	ctx->tbaa_const_md = LLVMMDNodeInContext(gallivm->context, tbaa_const, 3);
 }
 
 static void declare_streamout_params(struct si_shader_context *ctx,
