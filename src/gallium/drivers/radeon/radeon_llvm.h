@@ -66,15 +66,15 @@ struct radeon_llvm_context {
 	  * called once for each input declared in the TGSI shader.
 	  */
 	void (*load_input)(struct radeon_llvm_context *,
-			unsigned input_index,
-			const struct tgsi_full_declaration *decl);
+			   unsigned input_index,
+			   const struct tgsi_full_declaration *decl);
 
 	void (*load_system_value)(struct radeon_llvm_context *,
-			unsigned index,
-			const struct tgsi_full_declaration *decl);
+				  unsigned index,
+				  const struct tgsi_full_declaration *decl);
 
 	void (*declare_memory_region)(struct radeon_llvm_context *,
-			const struct tgsi_full_declaration *decl);
+				      const struct tgsi_full_declaration *decl);
 
 	/** This array contains the input values for the shader.  Typically these
 	  * values will be in the form of a target intrinsic that will inform the
@@ -112,77 +112,38 @@ struct radeon_llvm_context {
 	struct gallivm_state gallivm;
 };
 
-static inline LLVMTypeRef tgsi2llvmtype(
-		struct lp_build_tgsi_context * bld_base,
-		enum tgsi_opcode_type type)
-{
-	LLVMContextRef ctx = bld_base->base.gallivm->context;
+LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
+			  enum tgsi_opcode_type type);
 
-	switch (type) {
-	case TGSI_TYPE_UNSIGNED:
-	case TGSI_TYPE_SIGNED:
-		return LLVMInt32TypeInContext(ctx);
-	case TGSI_TYPE_DOUBLE:
-		return LLVMDoubleTypeInContext(ctx);
-	case TGSI_TYPE_UNTYPED:
-	case TGSI_TYPE_FLOAT:
-		return LLVMFloatTypeInContext(ctx);
-	default: break;
-	}
-	return 0;
-}
+LLVMValueRef bitcast(struct lp_build_tgsi_context *bld_base,
+		     enum tgsi_opcode_type type, LLVMValueRef value);
 
-static inline LLVMValueRef bitcast(
-		struct lp_build_tgsi_context * bld_base,
-		enum tgsi_opcode_type type,
-		LLVMValueRef value
-)
-{
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	LLVMTypeRef dst_type = tgsi2llvmtype(bld_base, type);
-
-	if (dst_type)
-		return LLVMBuildBitCast(builder, value, dst_type, "");
-	else
-		return value;
-}
-
-
-void radeon_llvm_emit_prepare_cube_coords(struct lp_build_tgsi_context * bld_base,
-					  struct lp_build_emit_data * emit_data,
+void radeon_llvm_emit_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
+					  struct lp_build_emit_data *emit_data,
 					  LLVMValueRef *coords_arg,
 					  LLVMValueRef *derivs_arg);
 
-void radeon_llvm_context_init(struct radeon_llvm_context * ctx,
+void radeon_llvm_context_init(struct radeon_llvm_context *ctx,
                               const char *triple);
 
-void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
+void radeon_llvm_create_func(struct radeon_llvm_context *ctx,
 			     LLVMTypeRef *return_types, unsigned num_return_elems,
 			     LLVMTypeRef *ParamTypes, unsigned ParamCount);
 
-void radeon_llvm_dispose(struct radeon_llvm_context * ctx);
-
-inline static struct radeon_llvm_context * radeon_llvm_context(
-	struct lp_build_tgsi_context * bld_base)
-{
-	return (struct radeon_llvm_context*)bld_base;
-}
+void radeon_llvm_dispose(struct radeon_llvm_context *ctx);
 
 unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan);
 
-void radeon_llvm_finalize_module(struct radeon_llvm_context * ctx);
+void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx);
 
-void
-build_tgsi_intrinsic_nomem(
-		const struct lp_build_tgsi_action * action,
-		struct lp_build_tgsi_context * bld_base,
-		struct lp_build_emit_data * emit_data);
+void build_tgsi_intrinsic_nomem(const struct lp_build_tgsi_action *action,
+				struct lp_build_tgsi_context *bld_base,
+				struct lp_build_emit_data *emit_data);
 
-LLVMValueRef
-radeon_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
-			     enum tgsi_opcode_type type,
-			     LLVMValueRef ptr,
-			     LLVMValueRef ptr2);
+LLVMValueRef radeon_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
+					  enum tgsi_opcode_type type,
+					  LLVMValueRef ptr,
+					  LLVMValueRef ptr2);
 
 LLVMValueRef radeon_llvm_saturate(struct lp_build_tgsi_context *bld_base,
                                   LLVMValueRef value);
@@ -192,10 +153,15 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 				    enum tgsi_opcode_type type,
 				    unsigned swizzle);
 
-void radeon_llvm_emit_store(
-	struct lp_build_tgsi_context * bld_base,
-	const struct tgsi_full_instruction * inst,
-	const struct tgsi_opcode_info * info,
-	LLVMValueRef dst[4]);
+void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
+			    const struct tgsi_full_instruction *inst,
+			    const struct tgsi_opcode_info *info,
+			    LLVMValueRef dst[4]);
+
+static inline struct radeon_llvm_context *
+radeon_llvm_context(struct lp_build_tgsi_context *bld_base)
+{
+	return (struct radeon_llvm_context*)bld_base;
+}
 
 #endif /* RADEON_LLVM_H */
