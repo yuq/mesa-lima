@@ -34,6 +34,7 @@ files_i965 = files(
   'brw_cs.h',
   'brw_curbe.c',
   'brw_defines.h',
+  'brw_disk_cache.c',
   'brw_draw.c',
   'brw_draw.h',
   'brw_draw_upload.c',
