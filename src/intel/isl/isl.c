@@ -623,7 +623,7 @@ isl_calc_phys_slice0_extent_sa_gen4_2d(
 
    assert(phys_level0_sa->depth == 1);
 
-   if (info->levels == 1 && msaa_layout != ISL_MSAA_LAYOUT_INTERLEAVED) {
+   if (info->levels == 1) {
       /* Do not pad the surface to the image alignment. Instead, pad it only
        * to the pixel format's block alignment.
        *
