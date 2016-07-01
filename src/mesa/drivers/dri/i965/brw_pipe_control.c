@@ -100,6 +100,16 @@ brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags)
       if (brw->gen == 8)
          gen8_add_cs_stall_workaround_bits(&flags);
 
+      if (brw->gen == 9 &&
+          (flags & PIPE_CONTROL_VF_CACHE_INVALIDATE)) {
+         /* Hardware workaround: SKL
+          *
+          * Emit Pipe Control with all bits set to zero before emitting
+          * a Pipe Control with VF Cache Invalidate set.
+          */
+         brw_emit_pipe_control_flush(brw, 0);
+      }
+
       BEGIN_BATCH(6);
       OUT_BATCH(_3DSTATE_PIPE_CONTROL | (6 - 2));
       OUT_BATCH(flags);
@@ -322,15 +332,6 @@ brw_emit_mi_flush(struct brw_context *brw)
    } else {
       int flags = PIPE_CONTROL_NO_WRITE | PIPE_CONTROL_RENDER_TARGET_FLUSH;
       if (brw->gen >= 6) {
-         if (brw->gen == 9) {
-            /* Hardware workaround: SKL
-             *
-             * Emit Pipe Control with all bits set to zero before emitting
-             * a Pipe Control with VF Cache Invalidate set.
-             */
-            brw_emit_pipe_control_flush(brw, 0);
-         }
-
          flags |= PIPE_CONTROL_INSTRUCTION_INVALIDATE |
                   PIPE_CONTROL_DEPTH_CACHE_FLUSH |
                   PIPE_CONTROL_VF_CACHE_INVALIDATE |
