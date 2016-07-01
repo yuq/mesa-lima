@@ -124,7 +124,7 @@ realloc_bo(struct fd_resource *rsc, uint32_t size)
 	fd_bc_invalidate_resource(rsc, true);
 }
 
-static void fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond);
+static void fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard);
 static void fd_blitter_pipe_end(struct fd_context *ctx);
 
 static void
@@ -133,7 +133,7 @@ do_blit(struct fd_context *ctx, const struct pipe_blit_info *blit, bool fallback
 	/* TODO size threshold too?? */
 	if ((blit->src.resource->target != PIPE_BUFFER) && !fallback) {
 		/* do blit on gpu: */
-		fd_blitter_pipe_begin(ctx, false);
+		fd_blitter_pipe_begin(ctx, false, true);
 		util_blitter_blit(ctx->blitter, blit);
 		fd_blitter_pipe_end(ctx);
 	} else {
@@ -909,7 +909,8 @@ fd_blitter_pipe_copy_region(struct fd_context *ctx,
 	if (!util_blitter_is_copy_supported(ctx->blitter, dst, src))
 		return false;
 
-	fd_blitter_pipe_begin(ctx, false);
+	/* TODO we could discard if dst box covers dst level fully.. */
+	fd_blitter_pipe_begin(ctx, false, false);
 	util_blitter_copy_texture(ctx->blitter,
 			dst, dst_level, dstx, dsty, dstz,
 			src, src_level, src_box);
@@ -979,6 +980,7 @@ fd_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 {
 	struct fd_context *ctx = fd_context(pctx);
 	struct pipe_blit_info info = *blit_info;
+	bool discard = false;
 
 	if (info.src.resource->nr_samples > 1 &&
 			info.dst.resource->nr_samples <= 1 &&
@@ -990,6 +992,13 @@ fd_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 
 	if (info.render_condition_enable && !fd_render_condition_check(pctx))
 		return;
+
+	if (!info.scissor_enable && !info.alpha_blend) {
+		discard = util_texrange_covers_whole_level(info.dst.resource,
+				info.dst.level, info.dst.box.x, info.dst.box.y,
+				info.dst.box.z, info.dst.box.width,
+				info.dst.box.height, info.dst.box.depth);
+	}
 
 	if (util_try_blit_via_copy_region(pctx, &info)) {
 		return; /* done */
@@ -1007,13 +1016,13 @@ fd_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 		return;
 	}
 
-	fd_blitter_pipe_begin(ctx, info.render_condition_enable);
+	fd_blitter_pipe_begin(ctx, info.render_condition_enable, discard);
 	util_blitter_blit(ctx->blitter, &info);
 	fd_blitter_pipe_end(ctx);
 }
 
 static void
-fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond)
+fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard)
 {
 	util_blitter_save_vertex_buffer_slot(ctx->blitter, ctx->vtx.vertexbuf.vb);
 	util_blitter_save_vertex_elements(ctx->blitter, ctx->vtx.vtx);
@@ -1040,6 +1049,8 @@ fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond)
 			ctx->cond_query, ctx->cond_cond, ctx->cond_mode);
 
 	fd_hw_query_set_stage(ctx, ctx->batch->draw, FD_STAGE_BLIT);
+
+	ctx->discard = discard;
 }
 
 static void

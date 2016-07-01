@@ -84,6 +84,11 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		return;
 	}
 
+	if (ctx->discard) {
+		fd_batch_reset(ctx->batch);
+		ctx->discard = false;
+	}
+
 	/*
 	 * Figure out the buffers/features we need:
 	 */
@@ -208,6 +213,11 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	/* TODO: push down the region versions into the tiles */
 	if (!fd_render_condition_check(pctx))
 		return;
+
+	if (ctx->discard) {
+		fd_batch_reset(ctx->batch);
+		ctx->discard = false;
+	}
 
 	/* for bookkeeping about which buffers have been cleared (and thus
 	 * can fully or partially skip mem2gmem) we need to ignore buffers

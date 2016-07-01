@@ -304,6 +304,12 @@ struct fd_context {
 	 */
 	bool in_shadow;
 
+	/* Ie. in blit situation where we no longer care about previous framebuffer
+	 * contents.  Main point is to eliminate blits from fd_try_shadow_resource().
+	 * For example, in case of texture upload + gen-mipmaps.
+	 */
+	bool discard;
+
 	struct pipe_debug_callback debug;
 
 	/* GMEM/tile handling fxns: */
