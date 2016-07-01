@@ -214,7 +214,7 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 
 		/* The texture will always be dirty if some layers aren't flushed.
 		 * I don't think this case occurs often though. */
-		if (first_layer == 0 && last_layer == max_layer) {
+		if (first_layer == 0 && last_layer >= max_layer) {
 			fully_decompressed_mask |= 1u << level;
 		}
 	}
@@ -361,7 +361,7 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 
 		/* The texture will always be dirty if some layers aren't flushed.
 		 * I don't think this case occurs often though. */
-		if (first_layer == 0 && last_layer == max_layer) {
+		if (first_layer == 0 && last_layer >= max_layer) {
 			rtex->dirty_level_mask &= ~(1 << level);
 		}
 	}
