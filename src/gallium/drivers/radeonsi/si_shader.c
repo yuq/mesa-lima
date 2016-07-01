@@ -101,10 +101,9 @@ struct si_shader_context
 
 	LLVMTargetMachineRef tm;
 
+	unsigned invariant_load_md_kind;
 	unsigned range_md_kind;
-	unsigned tbaa_md_kind;
 	unsigned uniform_md_kind;
-	LLVMValueRef tbaa_const_md;
 	LLVMValueRef empty_md;
 
 	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
@@ -418,7 +417,7 @@ static LLVMValueRef build_indexed_load_const(
 	LLVMValueRef base_ptr, LLVMValueRef index)
 {
 	LLVMValueRef result = build_indexed_load(ctx, base_ptr, index, true);
-	LLVMSetMetadata(result, ctx->tbaa_md_kind, ctx->tbaa_const_md);
+	LLVMSetMetadata(result, ctx->invariant_load_md_kind, ctx->empty_md);
 	return result;
 }
 
@@ -5315,7 +5314,7 @@ static void si_create_function(struct si_shader_context *ctx,
 		/* The combination of:
 		 * - ByVal
 		 * - dereferenceable
-		 * - tbaa
+		 * - invariant.load
 		 * allows the optimization passes to move loads and reduces
 		 * SGPR spilling significantly.
 		 */
@@ -5346,21 +5345,15 @@ static void si_create_function(struct si_shader_context *ctx,
 static void create_meta_data(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = ctx->radeon_bld.soa.bld_base.base.gallivm;
-	LLVMValueRef tbaa_const[3];
 
+	ctx->invariant_load_md_kind = LLVMGetMDKindIDInContext(gallivm->context,
+							       "invariant.load", 14);
 	ctx->range_md_kind = LLVMGetMDKindIDInContext(gallivm->context,
 						     "range", 5);
-	ctx->tbaa_md_kind = LLVMGetMDKindIDInContext(gallivm->context,
-						     "tbaa", 4);
 	ctx->uniform_md_kind = LLVMGetMDKindIDInContext(gallivm->context,
 							"amdgpu.uniform", 14);
 
 	ctx->empty_md = LLVMMDNodeInContext(gallivm->context, NULL, 0);
-
-	tbaa_const[0] = LLVMMDStringInContext(gallivm->context, "const", 5);
-	tbaa_const[1] = 0;
-	tbaa_const[2] = lp_build_const_int32(gallivm, 1);
-	ctx->tbaa_const_md = LLVMMDNodeInContext(gallivm->context, tbaa_const, 3);
 }
 
 static void declare_streamout_params(struct si_shader_context *ctx,
