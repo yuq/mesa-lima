@@ -275,11 +275,37 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          vertex_const ? src_reg(brw_imm_ud(vertex_const->u32[0]))
                       : get_nir_src(instr->src[0], BRW_REGISTER_TYPE_UD, 1);
 
-      dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
-      dst.writemask = brw_writemask_for_size(instr->num_components);
+      unsigned first_component = nir_intrinsic_component(instr);
+      if (nir_dest_bit_size(instr->dest) == 64) {
+         /* We need to emit up to two 32-bit URB reads, then shuffle
+          * the result into a temporary, then move to the destination
+          * honoring the writemask
+          *
+          * We don't need to divide first_component by 2 because
+          * emit_input_urb_read takes a 32-bit type.
+          */
+         dst_reg tmp = dst_reg(this, glsl_type::dvec4_type);
+         dst_reg tmp_d = retype(tmp, BRW_REGISTER_TYPE_D);
+         emit_input_urb_read(tmp_d, vertex_index, imm_offset,
+                             first_component, indirect_offset);
+         if (instr->num_components > 2) {
+            emit_input_urb_read(byte_offset(tmp_d, REG_SIZE), vertex_index,
+                                imm_offset + 1, 0, indirect_offset);
+         }
 
-      emit_input_urb_read(dst, vertex_index, imm_offset,
-                          nir_intrinsic_component(instr), indirect_offset);
+         src_reg tmp_src = retype(src_reg(tmp_d), BRW_REGISTER_TYPE_DF);
+         dst_reg shuffled = dst_reg(this, glsl_type::dvec4_type);
+         shuffle_64bit_data(shuffled, tmp_src, false);
+
+         dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_DF);
+         dst.writemask = brw_writemask_for_size(instr->num_components);
+         emit(MOV(dst, src_reg(shuffled)));
+      } else {
+         dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
+         dst.writemask = brw_writemask_for_size(instr->num_components);
+         emit_input_urb_read(dst, vertex_index, imm_offset,
+                             first_component, indirect_offset);
+      }
       break;
    }
    case nir_intrinsic_load_input:
