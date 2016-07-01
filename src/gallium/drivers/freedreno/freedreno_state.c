@@ -316,6 +316,7 @@ fd_create_stream_output_target(struct pipe_context *pctx,
 		unsigned buffer_size)
 {
 	struct pipe_stream_output_target *target;
+	struct fd_resource *rsc = fd_resource(prsc);
 
 	target = CALLOC_STRUCT(pipe_stream_output_target);
 	if (!target)
@@ -327,6 +328,10 @@ fd_create_stream_output_target(struct pipe_context *pctx,
 	target->context = pctx;
 	target->buffer_offset = buffer_offset;
 	target->buffer_size = buffer_size;
+
+	assert(rsc->base.b.target == PIPE_BUFFER);
+	util_range_add(&rsc->valid_buffer_range,
+		buffer_offset, buffer_offset + buffer_size);
 
 	return target;
 }
