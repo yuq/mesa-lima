@@ -4,6 +4,7 @@ VERSION 4.1
 EXPORTS
 	OSMesaColorClamp
 	OSMesaCreateContext
+	OSMesaCreateContextAttribs
 	OSMesaCreateContextExt
 	OSMesaDestroyContext
 	OSMesaMakeCurrent
