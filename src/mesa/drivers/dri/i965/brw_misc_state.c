@@ -925,15 +925,6 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
       const unsigned dc_flush =
          brw->gen >= 7 ? PIPE_CONTROL_DATA_CACHE_FLUSH : 0;
 
-      if (brw->gen == 6) {
-         /* Hardware workaround: SNB B-Spec says:
-          *
-          *   Before a PIPE_CONTROL with Write Cache Flush Enable = 1, a
-          *   PIPE_CONTROL with any non-zero post-sync-op is required.
-          */
-         brw_emit_post_sync_nonzero_flush(brw);
-      }
-
       brw_emit_pipe_control_flush(brw,
                                   PIPE_CONTROL_RENDER_TARGET_FLUSH |
                                   PIPE_CONTROL_DEPTH_CACHE_FLUSH |
