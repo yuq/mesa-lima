@@ -425,7 +425,6 @@ static struct state_validate swtnl_validate_list[] = {
     { nv30_validate_stencil_ref,   NV30_NEW_STENCIL_REF },
     { nv30_validate_stipple,       NV30_NEW_STIPPLE },
     { nv30_validate_scissor,       NV30_NEW_SCISSOR | NV30_NEW_RASTERIZER },
-    { nv30_validate_viewport,      NV30_NEW_VIEWPORT },
     { nv30_fragprog_validate,      NV30_NEW_FRAGPROG | NV30_NEW_FRAGCONST },
     { nv30_validate_fragment,      NV30_NEW_FRAMEBUFFER | NV30_NEW_FRAGPROG },
     { nv30_fragtex_validate,       NV30_NEW_FRAGTEX },
