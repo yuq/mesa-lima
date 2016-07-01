@@ -262,6 +262,23 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       }
    }
 
+   /* Resolve color buffers for non-coherent framebufer fetch. */
+   if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
+       ctx->FragmentProgram._Current &&
+       ctx->FragmentProgram._Current->Base.OutputsRead) {
+      const struct gl_framebuffer *fb = ctx->DrawBuffer;
+
+      for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
+         const struct intel_renderbuffer *irb =
+            intel_renderbuffer(fb->_ColorDrawBuffers[i]);
+
+         if (irb &&
+             intel_miptree_resolve_color(brw, irb->mt,
+                                         INTEL_MIPTREE_IGNORE_CCS_E))
+            brw_render_cache_set_check_flush(brw, irb->mt->bo);
+      }
+   }
+
    /* If FRAMEBUFFER_SRGB is used on Gen9+ then we need to resolve any of the
     * single-sampled color renderbuffers because the CCS buffer isn't
     * supported for SRGB formats. This only matters if FRAMEBUFFER_SRGB is
