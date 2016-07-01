@@ -1747,14 +1747,6 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    if (!encode_srgb && _mesa_get_format_color_encoding(dst_format) == GL_SRGB)
       dst_format = _mesa_get_srgb_format_linear(dst_format);
 
-   struct brw_blorp_params params;
-   brw_blorp_params_init(&params);
-
-   brw_blorp_surface_info_init(brw, &params.src, src_mt, src_level,
-                               src_layer, src_format, false);
-   brw_blorp_surface_info_init(brw, &params.dst, dst_mt, dst_level,
-                               dst_layer, dst_format, true);
-
    /* When doing a multisample resolve of a GL_LUMINANCE32F or GL_INTENSITY32F
     * texture, the above code configures the source format for L32_FLOAT or
     * I32_FLOAT, and the destination format for R32_FLOAT.  On Sandy Bridge,
@@ -1765,11 +1757,20 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     * R32_FLOAT, so only the contents of the red channel matters.
     */
    if (brw->gen == 6 &&
-       params.src.surf.samples > 1 && params.dst.surf.samples <= 1 &&
+       src_mt->num_samples > 1 && dst_mt->num_samples <= 1 &&
        src_mt->format == dst_mt->format &&
-       params.dst.view.format == ISL_FORMAT_R32_FLOAT) {
-      params.src.view.format = params.dst.view.format;
+       (dst_format == MESA_FORMAT_L_FLOAT32 ||
+        dst_format == MESA_FORMAT_I_FLOAT32)) {
+      src_format = dst_format = MESA_FORMAT_R_FLOAT32;
    }
+
+   struct brw_blorp_params params;
+   brw_blorp_params_init(&params);
+
+   brw_blorp_surface_info_init(brw, &params.src, src_mt, src_level,
+                               src_layer, src_format, false);
+   brw_blorp_surface_info_init(brw, &params.dst, dst_mt, dst_level,
+                               dst_layer, dst_format, true);
 
    struct brw_blorp_blit_prog_key wm_prog_key;
    memset(&wm_prog_key, 0, sizeof(wm_prog_key));
