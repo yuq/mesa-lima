@@ -310,6 +310,25 @@ brw_memory_barrier(struct gl_context *ctx, GLbitfield barriers)
    brw_emit_pipe_control_flush(brw, bits);
 }
 
+static void
+brw_blend_barrier(struct gl_context *ctx)
+{
+   struct brw_context *brw = brw_context(ctx);
+
+   if (!ctx->Extensions.MESA_shader_framebuffer_fetch) {
+      if (brw->gen >= 6) {
+         brw_emit_pipe_control_flush(brw,
+                                     PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                     PIPE_CONTROL_CS_STALL);
+         brw_emit_pipe_control_flush(brw,
+                                     PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE);
+      } else {
+         brw_emit_pipe_control_flush(brw,
+                                     PIPE_CONTROL_RENDER_TARGET_FLUSH);
+      }
+   }
+}
+
 void
 brw_add_texrect_params(struct gl_program *prog)
 {
@@ -379,6 +398,7 @@ void brwInitFragProgFuncs( struct dd_function_table *functions )
    functions->LinkShader = brw_link_shader;
 
    functions->MemoryBarrier = brw_memory_barrier;
+   functions->BlendBarrier = brw_blend_barrier;
 }
 
 struct shader_times {
