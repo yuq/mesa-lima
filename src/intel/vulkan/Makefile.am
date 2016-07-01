@@ -33,10 +33,10 @@ lib_LTLIBRARIES = libvulkan_intel.la
 check_LTLIBRARIES = libvulkan-test.la
 
 PER_GEN_LIBS = \
-   libanv-gen7.la \
-   libanv-gen75.la \
-   libanv-gen8.la \
-   libanv-gen9.la
+	libanv-gen7.la \
+	libanv-gen75.la \
+	libanv-gen8.la \
+	libanv-gen9.la
 
 noinst_LTLIBRARIES = $(PER_GEN_LIBS)
 
