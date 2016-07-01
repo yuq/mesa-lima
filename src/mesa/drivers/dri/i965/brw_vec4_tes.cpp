@@ -177,10 +177,12 @@ vec4_tes_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_load_input:
    case nir_intrinsic_load_per_vertex_input: {
       src_reg indirect_offset = get_indirect_offset(instr);
-      dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
       unsigned imm_offset = instr->const_index[0];
-      unsigned first_component = nir_intrinsic_component(instr);
       src_reg header = input_read_header;
+      bool is_64bit = nir_dest_bit_size(instr->dest) == 64;
+      unsigned first_component = nir_intrinsic_component(instr);
+      if (is_64bit)
+         first_component /= 2;
 
       if (indirect_offset.file != BAD_FILE) {
          header = src_reg(this, glsl_type::uvec4_type);
@@ -192,31 +194,67 @@ vec4_tes_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
           */
          const unsigned max_push_slots = 24;
          if (imm_offset < max_push_slots) {
-            src_reg src = src_reg(ATTR, imm_offset, glsl_type::ivec4_type);
+            const glsl_type *src_glsl_type =
+               is_64bit ? glsl_type::dvec4_type : glsl_type::ivec4_type;
+            src_reg src = src_reg(ATTR, imm_offset, src_glsl_type);
             src.swizzle = BRW_SWZ_COMP_INPUT(first_component);
 
-            emit(MOV(dst, src));
+            const brw_reg_type dst_reg_type =
+               is_64bit ? BRW_REGISTER_TYPE_DF : BRW_REGISTER_TYPE_D;
+            emit(MOV(get_nir_dest(instr->dest, dst_reg_type), src));
+
             prog_data->urb_read_length =
                MAX2(prog_data->urb_read_length,
-                    DIV_ROUND_UP(imm_offset + 1, 2));
+                    DIV_ROUND_UP(imm_offset + (is_64bit ? 2 : 1), 2));
             break;
          }
       }
 
-      dst_reg temp(this, glsl_type::ivec4_type);
-      vec4_instruction *read =
-         emit(VEC4_OPCODE_URB_READ, temp, src_reg(header));
-      read->offset = imm_offset;
-      read->urb_write_flags = BRW_URB_WRITE_PER_SLOT_OFFSET;
+      if (!is_64bit) {
+         dst_reg temp(this, glsl_type::ivec4_type);
+         vec4_instruction *read =
+            emit(VEC4_OPCODE_URB_READ, temp, src_reg(header));
+         read->offset = imm_offset;
+         read->urb_write_flags = BRW_URB_WRITE_PER_SLOT_OFFSET;
 
-      src_reg src = src_reg(temp);
-      src.swizzle = BRW_SWZ_COMP_INPUT(first_component);
+         src_reg src = src_reg(temp);
+         src.swizzle = BRW_SWZ_COMP_INPUT(first_component);
 
-      /* Copy to target.  We might end up with some funky writemasks landing
-       * in here, but we really don't want them in the above pseudo-ops.
-       */
-      dst.writemask = brw_writemask_for_size(instr->num_components);
-      emit(MOV(dst, src));
+         /* Copy to target.  We might end up with some funky writemasks landing
+          * in here, but we really don't want them in the above pseudo-ops.
+          */
+         dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
+         dst.writemask = brw_writemask_for_size(instr->num_components);
+         emit(MOV(dst, src));
+      } else {
+         /* For 64-bit we need to load twice as many 32-bit components, and for
+          * dvec3/4 we need to emit 2 URB Read messages
+          */
+         dst_reg temp(this, glsl_type::dvec4_type);
+         dst_reg temp_d = retype(temp, BRW_REGISTER_TYPE_D);
+
+         vec4_instruction *read =
+            emit(VEC4_OPCODE_URB_READ, temp_d, src_reg(header));
+         read->offset = imm_offset;
+         read->urb_write_flags = BRW_URB_WRITE_PER_SLOT_OFFSET;
+
+         if (instr->num_components > 2) {
+            read = emit(VEC4_OPCODE_URB_READ, byte_offset(temp_d, REG_SIZE),
+                        src_reg(header));
+            read->offset = imm_offset + 1;
+            read->urb_write_flags = BRW_URB_WRITE_PER_SLOT_OFFSET;
+         }
+
+         src_reg temp_as_src = src_reg(temp);
+         temp_as_src.swizzle = BRW_SWZ_COMP_INPUT(first_component);
+
+         dst_reg shuffled(this, glsl_type::dvec4_type);
+         shuffle_64bit_data(shuffled, temp_as_src, false);
+
+         dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_DF);
+         dst.writemask = brw_writemask_for_size(instr->num_components);
+         emit(MOV(dst, src_reg(shuffled)));
+      }
       break;
    }
    default:
