@@ -3285,7 +3285,12 @@ intel_miptree_get_isl_clear_color(struct brw_context *brw,
 {
    union isl_color_value clear_color;
 
-   if (brw->gen >= 9) {
+   if (_mesa_get_format_base_format(mt->format) == GL_DEPTH_COMPONENT) {
+      clear_color.i32[0] = mt->depth_clear_value;
+      clear_color.i32[1] = 0;
+      clear_color.i32[2] = 0;
+      clear_color.i32[3] = 0;
+   } else if (brw->gen >= 9) {
       clear_color.i32[0] = mt->gen9_fast_clear_color.i[0];
       clear_color.i32[1] = mt->gen9_fast_clear_color.i[1];
       clear_color.i32[2] = mt->gen9_fast_clear_color.i[2];
