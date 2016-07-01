@@ -84,7 +84,8 @@ _mesa_BindAttribLocation(GLuint program, GLuint index,
    }
 
    if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBindAttribLocation(index)");
+      _mesa_error(ctx, GL_INVALID_VALUE, "glBindAttribLocation(%u >= %u)",
+                  index, ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs);
       return;
    }
 
