@@ -658,18 +658,6 @@ isl_calc_phys_slice0_extent_sa_gen4_2d(
       uint32_t W = isl_minify(W0, l);
       uint32_t H = isl_minify(H0, l);
 
-      if (msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
-         /* From the Broadwell PRM >> Volume 5: Memory Views >> Computing Mip Level
-          * Sizes (p133):
-          *
-          *    If the surface is multisampled and it is a depth or stencil
-          *    surface or Multisampled Surface StorageFormat in
-          *    SURFACE_STATE is MSFMT_DEPTH_STENCIL, W_L and H_L must be
-          *    adjusted as follows before proceeding: [...]
-          */
-         isl_msaa_interleaved_scale_px_to_sa(info->samples, &W, &H);
-      }
-
       uint32_t w = isl_align_npot(W, image_align_sa->w);
       uint32_t h = isl_align_npot(H, image_align_sa->h);
 
@@ -1370,17 +1358,9 @@ get_image_offset_sa_gen4_2d(const struct isl_surf *surf,
    for (uint32_t l = 0; l < level; ++l) {
       if (l == 1) {
          uint32_t W = isl_minify(W0, l);
-
-         if (surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED)
-            isl_msaa_interleaved_scale_px_to_sa(surf->samples, &W, NULL);
-
          x += isl_align_npot(W, image_align_sa.w);
       } else {
          uint32_t H = isl_minify(H0, l);
-
-         if (surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED)
-            isl_msaa_interleaved_scale_px_to_sa(surf->samples, NULL, &H);
-
          y += isl_align_npot(H, image_align_sa.h);
       }
    }
