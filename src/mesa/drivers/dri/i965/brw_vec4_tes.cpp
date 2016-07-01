@@ -82,13 +82,32 @@ vec4_tes_visitor::setup_payload()
          if (inst->src[i].file != ATTR)
             continue;
 
+         bool is_64bit = type_sz(inst->src[i].type) == 8;
+
          struct brw_reg grf =
             brw_vec4_grf(reg + inst->src[i].nr / 2, 4 * (inst->src[i].nr % 2));
-         grf = stride(grf, 0, 4, 1);
+         grf = stride(grf, 0, is_64bit ? 2 : 4, 1);
          grf.swizzle = inst->src[i].swizzle;
          grf.type = inst->src[i].type;
          grf.abs = inst->src[i].abs;
          grf.negate = inst->src[i].negate;
+
+         /* For 64-bit attributes we can end up with components XY in the
+          * second half of a register and components ZW in the first half
+          * of the next. Fix it up here.
+          */
+         if (is_64bit && grf.subnr > 0) {
+            /* We can't do swizzles that mix XY and ZW channels in this case.
+             * Such cases should have been handled by the scalarization pass.
+             */
+            assert((brw_mask_for_swizzle(grf.swizzle) & 0x3) ^
+                   (brw_mask_for_swizzle(grf.swizzle) & 0xc));
+            if (brw_mask_for_swizzle(grf.swizzle) & 0xc) {
+               grf.subnr = 0;
+               grf.nr++;
+               grf.swizzle -= BRW_SWIZZLE_ZZZZ;
+            }
+         }
 
          inst->src[i] = grf;
       }
