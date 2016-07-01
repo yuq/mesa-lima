@@ -2034,6 +2034,20 @@ vec4_visitor::convert_to_hw_regs()
    }
 }
 
+static bool
+stage_uses_interleaved_attributes(unsigned stage,
+                                  enum shader_dispatch_mode dispatch_mode)
+{
+   switch (stage) {
+   case MESA_SHADER_TESS_EVAL:
+      return true;
+   case MESA_SHADER_GEOMETRY:
+      return dispatch_mode != DISPATCH_MODE_4X2_DUAL_OBJECT;
+   default:
+      return false;
+   }
+}
+
 /**
  * Get the closest native SIMD width supported by the hardware for instruction
  * \p inst.  The instruction will be left untouched by
@@ -2042,7 +2056,8 @@ vec4_visitor::convert_to_hw_regs()
  */
 static unsigned
 get_lowered_simd_width(const struct gen_device_info *devinfo,
-                       const vec4_instruction *inst)
+                       enum shader_dispatch_mode dispatch_mode,
+                       unsigned stage, const vec4_instruction *inst)
 {
    /* Do not split some instructions that require special handling */
    switch (inst->opcode) {
@@ -2076,6 +2091,14 @@ get_lowered_simd_width(const struct gen_device_info *devinfo,
          if (inst->src[i].file == BAD_FILE)
             continue;
          if (inst->size_read(i) <= REG_SIZE)
+            lowered_width = MIN2(lowered_width, 4);
+
+         /* Interleaved attribute setups use a vertical stride of 0, which
+          * makes them hit the associated instruction decompression bug in gen7.
+          * Split them to prevent this.
+          */
+         if (inst->src[i].file == ATTR &&
+             stage_uses_interleaved_attributes(stage, dispatch_mode))
             lowered_width = MIN2(lowered_width, 4);
       }
    }
@@ -2118,7 +2141,8 @@ vec4_visitor::lower_simd_width()
    bool progress = false;
 
    foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
-      const unsigned lowered_width = get_lowered_simd_width(devinfo, inst);
+      const unsigned lowered_width =
+         get_lowered_simd_width(devinfo, prog_data->dispatch_mode, stage, inst);
       assert(lowered_width <= inst->exec_size);
       if (lowered_width == inst->exec_size)
          continue;
