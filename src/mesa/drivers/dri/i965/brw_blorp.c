@@ -133,11 +133,23 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    info->bo = mt->bo;
    info->offset = mt->offset;
 
-   if (mt->mcs_mt) {
+   if (mt->mcs_mt &&
+       (is_render_target ||
+        mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED)) {
       intel_miptree_get_aux_isl_surf(brw, mt, &info->aux_surf,
                                      &info->aux_usage);
+      info->aux_bo = mt->mcs_mt->bo;
+      info->aux_offset = mt->mcs_mt->offset;
+
+      /* We only really need a clear color if we also have an auxiliary
+       * surface.  Without one, it does nothing.
+       */
+      info->clear_color = intel_miptree_get_isl_clear_color(brw, mt);
    } else {
       info->aux_usage = ISL_AUX_USAGE_NONE;
+      info->aux_bo = NULL;
+      info->aux_offset = 0;
+      memset(&info->clear_color, 0, sizeof(info->clear_color));
    }
 
    info->view = (struct isl_view) {
@@ -341,22 +353,10 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
       surf.dim = ISL_SURF_DIM_2D;
    }
 
-   union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
-
-   const struct isl_surf *aux_surf = NULL;
-   uint64_t aux_offset = 0;
-   if (surface->mt->mcs_mt &&
-       (is_render_target ||
-        surface->mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED)) {
-      aux_surf = &surface->aux_surf;
-      assert(surface->mt->mcs_mt->offset == 0);
-      aux_offset = surface->mt->mcs_mt->bo->offset64;
-
-      /* We only really need a clear color if we also have an auxiliary
-       * surface.  Without one, it does nothing.
-       */
-      clear_color = intel_miptree_get_isl_clear_color(brw, surface->mt);
-   }
+   /* Blorp doesn't support HiZ in any of the blit or slow-clear paths */
+   enum isl_aux_usage aux_usage = surface->aux_usage;
+   if (aux_usage == ISL_AUX_USAGE_HIZ)
+      aux_usage = ISL_AUX_USAGE_NONE;
 
    uint32_t surf_offset;
    uint32_t *dw = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
@@ -364,12 +364,13 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
                                   &surf_offset);
 
    const uint32_t mocs = is_render_target ? ss_info.rb_mocs : ss_info.tex_mocs;
+   uint64_t aux_bo_offset = surface->aux_bo ? surface->aux_bo->offset64 : 0;
 
    isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &surface->view,
                        .address = surface->bo->offset64 + surface->offset,
-                       .aux_surf = aux_surf, .aux_usage = surface->aux_usage,
-                       .aux_address = aux_offset,
-                       .mocs = mocs, .clear_color = clear_color,
+                       .aux_surf = &surface->aux_surf, .aux_usage = aux_usage,
+                       .aux_address = aux_bo_offset + surface->aux_offset,
+                       .mocs = mocs, .clear_color = surface->clear_color,
                        .x_offset_sa = surface->tile_x_sa,
                        .y_offset_sa = surface->tile_y_sa);
 
@@ -380,15 +381,15 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
                            dw[ss_info.reloc_dw] - surface->bo->offset64,
                            read_domains, write_domain);
 
-   if (aux_surf) {
+   if (aux_usage != ISL_AUX_USAGE_NONE) {
       /* On gen7 and prior, the bottom 12 bits of the MCS base address are
        * used to store other information.  This should be ok, however, because
        * surface buffer addresses are always 4K page alinged.
        */
-      assert((aux_offset & 0xfff) == 0);
+      assert((surface->aux_offset & 0xfff) == 0);
       drm_intel_bo_emit_reloc(brw->batch.bo,
                               surf_offset + ss_info.aux_reloc_dw * 4,
-                              surface->mt->mcs_mt->bo,
+                              surface->aux_bo,
                               dw[ss_info.aux_reloc_dw] & 0xfff,
                               read_domains, write_domain);
    }

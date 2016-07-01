@@ -76,7 +76,11 @@ struct brw_blorp_surface_info
    uint32_t offset;
 
    struct isl_surf aux_surf;
+   drm_intel_bo *aux_bo;
+   uint32_t aux_offset;
    enum isl_aux_usage aux_usage;
+
+   union isl_color_value clear_color;
 
    struct isl_view view;
 
