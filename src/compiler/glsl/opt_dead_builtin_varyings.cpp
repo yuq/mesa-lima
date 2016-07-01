@@ -85,7 +85,8 @@ public:
    {
       ir_variable *var = ir->variable_referenced();
 
-      if (!var || var->data.mode != this->mode || !var->type->is_array())
+      if (!var || var->data.mode != this->mode || !var->type->is_array() ||
+          !is_gl_identifier(var->name))
          return visit_continue;
 
       /* Only match gl_FragData[], not gl_SecondaryFragDataEXT[] */
