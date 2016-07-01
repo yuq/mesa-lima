@@ -3172,9 +3172,6 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
                                struct isl_surf *surf,
                                enum isl_aux_usage *usage)
 {
-   /* Much is the same as the regular surface */
-   intel_miptree_get_isl_surf(brw, mt->mcs_mt, surf);
-
    /* Figure out the layout */
    if (_mesa_get_format_base_format(mt->format) == GL_DEPTH_COMPONENT) {
       *usage = ISL_AUX_USAGE_HIZ;
@@ -3191,15 +3188,16 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
       return;
    }
 
+   /* Start with a copy of the original surface. */
+   intel_miptree_get_isl_surf(brw, mt, surf);
+
    /* Figure out the format and tiling of the auxiliary surface */
    switch (*usage) {
    case ISL_AUX_USAGE_NONE:
       unreachable("Invalid MCS miptree");
 
    case ISL_AUX_USAGE_HIZ:
-      surf->format = ISL_FORMAT_HIZ;
-      surf->tiling = ISL_TILING_HIZ;
-      surf->usage = ISL_SURF_USAGE_HIZ_BIT;
+      isl_surf_get_hiz_surf(&brw->isl_dev, surf, surf);
       break;
 
    case ISL_AUX_USAGE_MCS:
@@ -3211,16 +3209,7 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
       if (brw->gen >= 9)
          assert(mt->halign == 16);
 
-      surf->usage = ISL_SURF_USAGE_MCS_BIT;
-
-      switch (mt->num_samples) {
-      case 2:  surf->format = ISL_FORMAT_MCS_2X;   break;
-      case 4:  surf->format = ISL_FORMAT_MCS_4X;   break;
-      case 8:  surf->format = ISL_FORMAT_MCS_8X;   break;
-      case 16: surf->format = ISL_FORMAT_MCS_16X;  break;
-      default:
-         unreachable("Invalid number of samples");
-      }
+      isl_surf_get_mcs_surf(&brw->isl_dev, surf, surf);
       break;
 
    case ISL_AUX_USAGE_CCS_D:
@@ -3239,38 +3228,12 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
       if (brw->gen >= 8)
          assert(mt->halign == 16);
 
-      surf->tiling = ISL_TILING_CCS;
-      surf->usage = ISL_SURF_USAGE_CCS_BIT;
-
-      if (brw->gen >= 9) {
-         assert(mt->tiling == I915_TILING_Y);
-         switch (_mesa_get_format_bytes(mt->format)) {
-         case 4:  surf->format = ISL_FORMAT_GEN9_CCS_32BPP;   break;
-         case 8:  surf->format = ISL_FORMAT_GEN9_CCS_64BPP;   break;
-         case 16: surf->format = ISL_FORMAT_GEN9_CCS_128BPP;  break;
-         default:
-            unreachable("Invalid format size for color compression");
-         }
-      } else if (mt->tiling == I915_TILING_Y) {
-         switch (_mesa_get_format_bytes(mt->format)) {
-         case 4:  surf->format = ISL_FORMAT_GEN7_CCS_32BPP_Y;    break;
-         case 8:  surf->format = ISL_FORMAT_GEN7_CCS_64BPP_Y;    break;
-         case 16: surf->format = ISL_FORMAT_GEN7_CCS_128BPP_Y;   break;
-         default:
-            unreachable("Invalid format size for color compression");
-         }
-      } else {
-         assert(mt->tiling == I915_TILING_X);
-         switch (_mesa_get_format_bytes(mt->format)) {
-         case 4:  surf->format = ISL_FORMAT_GEN7_CCS_32BPP_X;    break;
-         case 8:  surf->format = ISL_FORMAT_GEN7_CCS_64BPP_X;    break;
-         case 16: surf->format = ISL_FORMAT_GEN7_CCS_128BPP_X;   break;
-         default:
-            unreachable("Invalid format size for color compression");
-         }
-      }
+      isl_surf_get_ccs_surf(&brw->isl_dev, surf, surf);
       break;
    }
+
+   /* We want the pitch of the actual aux buffer. */
+   surf->row_pitch = mt->mcs_mt->pitch;
 
    /* Auxiliary surfaces in ISL have compressed formats and array_pitch_el_rows
     * is in elements.  This doesn't match intel_mipmap_tree::qpitch which is
