@@ -389,6 +389,7 @@ struct brw_wm_prog_data {
        * surface indices the WM-specific surfaces
        */
       uint32_t render_target_start;
+      uint32_t render_target_read_start;
       /** @} */
    } binding_table;
 

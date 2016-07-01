@@ -261,7 +261,7 @@ struct brw_gs_compile
    unsigned control_data_header_size_bits;
 };
 
-void
+uint32_t
 brw_assign_common_binding_table_offsets(gl_shader_stage stage,
                                         const struct brw_device_info *devinfo,
                                         const struct gl_shader_program *shader_prog,

@@ -56,9 +56,16 @@ assign_fs_binding_table_offsets(const struct brw_device_info *devinfo,
    prog_data->binding_table.render_target_start = next_binding_table_offset;
    next_binding_table_offset += MAX2(key->nr_color_regions, 1);
 
-   brw_assign_common_binding_table_offsets(MESA_SHADER_FRAGMENT, devinfo,
-                                           shader_prog, prog, &prog_data->base,
-                                           next_binding_table_offset);
+   next_binding_table_offset =
+      brw_assign_common_binding_table_offsets(MESA_SHADER_FRAGMENT, devinfo,
+                                              shader_prog, prog, &prog_data->base,
+                                              next_binding_table_offset);
+
+   if (prog->nir->info.outputs_read && !key->coherent_fb_fetch) {
+      prog_data->binding_table.render_target_read_start =
+         next_binding_table_offset;
+      next_binding_table_offset += key->nr_color_regions;
+   }
 }
 
 /**

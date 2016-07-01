@@ -1148,7 +1148,7 @@ backend_shader::calculate_cfg()
  * unused but also make sure that addition of small offsets to them will
  * trigger some of our asserts that surface indices are < BRW_MAX_SURFACES.
  */
-void
+uint32_t
 brw_assign_common_binding_table_offsets(gl_shader_stage stage,
                                         const struct brw_device_info *devinfo,
                                         const struct gl_shader_program *shader_prog,
@@ -1224,9 +1224,10 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
    stage_prog_data->binding_table.plane_start[2] = next_binding_table_offset;
    next_binding_table_offset += num_textures;
 
-   assert(next_binding_table_offset <= BRW_MAX_SURFACES);
-
    /* prog_data->base.binding_table.size will be set by brw_mark_surface_used. */
+
+   assert(next_binding_table_offset <= BRW_MAX_SURFACES);
+   return next_binding_table_offset;
 }
 
 static void
