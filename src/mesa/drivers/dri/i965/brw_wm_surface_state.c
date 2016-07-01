@@ -1026,6 +1026,95 @@ const struct brw_tracked_state gen6_renderbuffer_surfaces = {
    .emit = update_renderbuffer_surfaces,
 };
 
+static void
+update_renderbuffer_read_surfaces(struct brw_context *brw)
+{
+   const struct gl_context *ctx = &brw->ctx;
+
+   /* BRW_NEW_FRAGMENT_PROGRAM */
+   if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
+       brw->fragment_program &&
+       brw->fragment_program->Base.OutputsRead) {
+      /* _NEW_BUFFERS */
+      const struct gl_framebuffer *fb = ctx->DrawBuffer;
+
+      for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
+         struct gl_renderbuffer *rb = fb->_ColorDrawBuffers[i];
+         const struct intel_renderbuffer *irb = intel_renderbuffer(rb);
+         const unsigned surf_index =
+            brw->wm.prog_data->binding_table.render_target_read_start + i;
+         uint32_t *surf_offset = &brw->wm.base.surf_offset[surf_index];
+
+         if (irb) {
+            const unsigned format = brw->render_target_format[
+               _mesa_get_render_format(ctx, intel_rb_format(irb))];
+            assert(isl_format_supports_sampling(brw->intelScreen->devinfo,
+                                                format));
+
+            /* Override the target of the texture if the render buffer is a
+             * single slice of a 3D texture (since the minimum array element
+             * field of the surface state structure is ignored by the sampler
+             * unit for 3D textures on some hardware), or if the render buffer
+             * is a 1D array (since shaders always provide the array index
+             * coordinate at the Z component to avoid state-dependent
+             * recompiles when changing the texture target of the
+             * framebuffer).
+             */
+            const GLenum target =
+               (irb->mt->target == GL_TEXTURE_3D &&
+                irb->layer_count == 1) ? GL_TEXTURE_2D :
+               irb->mt->target == GL_TEXTURE_1D_ARRAY ? GL_TEXTURE_2D_ARRAY :
+               irb->mt->target;
+
+            /* intel_renderbuffer::mt_layer is expressed in sample units for
+             * the UMS and CMS multisample layouts, but
+             * intel_renderbuffer::layer_count is expressed in units of whole
+             * logical layers regardless of the multisample layout.
+             */
+            const unsigned mt_layer_unit =
+               (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
+                irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
+               MAX2(irb->mt->num_samples, 1) : 1;
+
+            const struct isl_view view = {
+               .format = format,
+               .base_level = irb->mt_level - irb->mt->first_level,
+               .levels = 1,
+               .base_array_layer = irb->mt_layer / mt_layer_unit,
+               .array_len = irb->layer_count,
+               .channel_select = {
+                  ISL_CHANNEL_SELECT_RED,
+                  ISL_CHANNEL_SELECT_GREEN,
+                  ISL_CHANNEL_SELECT_BLUE,
+                  ISL_CHANNEL_SELECT_ALPHA,
+               },
+               .usage = ISL_SURF_USAGE_TEXTURE_BIT,
+            };
+
+            brw_emit_surface_state(brw, irb->mt, target, view,
+                                   surface_state_infos[brw->gen].tex_mocs,
+                                   surf_offset, surf_index,
+                                   I915_GEM_DOMAIN_SAMPLER, 0);
+
+         } else {
+            brw->vtbl.emit_null_surface_state(
+               brw, _mesa_geometric_width(fb), _mesa_geometric_height(fb),
+               _mesa_geometric_samples(fb), surf_offset);
+         }
+      }
+
+      brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
+   }
+}
+
+const struct brw_tracked_state brw_renderbuffer_read_surfaces = {
+   .dirty = {
+      .mesa = _NEW_BUFFERS,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_FRAGMENT_PROGRAM,
+   },
+   .emit = update_renderbuffer_read_surfaces,
+};
 
 static void
 update_stage_texture_surfaces(struct brw_context *brw,
