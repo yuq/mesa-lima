@@ -494,7 +494,7 @@ static void declare_input_vs(
 	args[2] = buffer_index;
 	input = lp_build_intrinsic(gallivm->builder,
 		"llvm.SI.vs.load.input", ctx->v4f32, args, 3,
-		LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+		LLVMReadNoneAttribute);
 
 	/* Break up the vec4 into individual components */
 	for (chan = 0; chan < 4; chan++) {
@@ -909,8 +909,7 @@ static LLVMValueRef build_buffer_load(struct si_shader_context *ctx,
 		         type_names[func]);
 
 		return lp_build_intrinsic(gallivm->builder, name, types[func], args,
-		                          ARRAY_SIZE(args), LLVMReadOnlyAttribute |
-		                          LLVMNoUnwindAttribute);
+		                          ARRAY_SIZE(args), LLVMReadOnlyAttribute);
 	} else {
 		LLVMValueRef args[] = {
 			LLVMBuildBitCast(gallivm->builder, rsrc, ctx->v16i8, ""),
@@ -941,8 +940,7 @@ static LLVMValueRef build_buffer_load(struct si_shader_context *ctx,
 		         type_names[func], arg_type);
 
 		return lp_build_intrinsic(gallivm->builder, name, types[func], args,
-		                          ARRAY_SIZE(args), LLVMReadOnlyAttribute |
-		                          LLVMNoUnwindAttribute);
+		                          ARRAY_SIZE(args), LLVMReadOnlyAttribute);
 	}
 }
 
@@ -1229,14 +1227,14 @@ static LLVMValueRef fetch_input_gs(
 	value = lp_build_intrinsic(gallivm->builder,
 				   "llvm.SI.buffer.load.dword.i32.i32",
 				   ctx->i32, args, 9,
-				   LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
+				   LLVMReadOnlyAttribute);
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		args[2] = lp_build_const_int32(gallivm, (param * 4 + swizzle + 1) * 256);
 		value2 = lp_build_intrinsic(gallivm->builder,
 					    "llvm.SI.buffer.load.dword.i32.i32",
 					    ctx->i32, args, 9,
-					    LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
+					    LLVMReadOnlyAttribute);
 		return radeon_llvm_emit_fetch_64bit(bld_base, type,
 						    value, value2);
 	}
@@ -1388,12 +1386,12 @@ static void interp_fs_input(struct si_shader_context *ctx,
 			args[1] = attr_number;
 			front = lp_build_intrinsic(gallivm->builder, intr_name,
 						ctx->f32, args, args[3] ? 4 : 3,
-						LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+						LLVMReadNoneAttribute);
 
 			args[1] = back_attr_number;
 			back = lp_build_intrinsic(gallivm->builder, intr_name,
 					       ctx->f32, args, args[3] ? 4 : 3,
-					       LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+					       LLVMReadNoneAttribute);
 
 			result[chan] = LLVMBuildSelect(gallivm->builder,
 						is_face_positive,
@@ -1410,7 +1408,7 @@ static void interp_fs_input(struct si_shader_context *ctx,
 		args[3] = interp_param;
 		result[0] = lp_build_intrinsic(gallivm->builder, intr_name,
 					ctx->f32, args, args[3] ? 4 : 3,
-					LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+					LLVMReadNoneAttribute);
 		result[1] =
 		result[2] = lp_build_const_float(gallivm, 0.0f);
 		result[3] = lp_build_const_float(gallivm, 1.0f);
@@ -1425,7 +1423,7 @@ static void interp_fs_input(struct si_shader_context *ctx,
 			args[3] = interp_param;
 			result[chan] = lp_build_intrinsic(gallivm->builder, intr_name,
 						ctx->f32, args, args[3] ? 4 : 3,
-						LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+						LLVMReadNoneAttribute);
 		}
 	}
 }
@@ -1597,7 +1595,7 @@ static LLVMValueRef buffer_load_const(LLVMBuilderRef builder, LLVMValueRef resou
 	LLVMValueRef args[2] = {resource, offset};
 
 	return lp_build_intrinsic(builder, "llvm.SI.load.const", return_type, args, 2,
-			       LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+			       LLVMReadNoneAttribute);
 }
 
 static LLVMValueRef load_sample_position(struct radeon_llvm_context *radeon_bld, LLVMValueRef sample_id)
@@ -1816,7 +1814,7 @@ static void declare_system_value(
 		value = lp_build_intrinsic(gallivm->builder,
 					   "llvm.amdgcn.ps.live",
 					   ctx->i1, NULL, 0,
-					   LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+					   LLVMReadNoneAttribute);
 		value = LLVMBuildNot(gallivm->builder, value, "");
 		value = LLVMBuildSExt(gallivm->builder, value, ctx->i32, "");
 		break;
@@ -2031,7 +2029,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 			packed = lp_build_intrinsic(base->gallivm->builder,
 						    "llvm.SI.packf16",
 						    ctx->i32, pack_args, 2,
-						    LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+						    LLVMReadNoneAttribute);
 			args[chan + 5] =
 				LLVMBuildBitCast(base->gallivm->builder,
 						 packed, ctx->f32, "");
@@ -2828,7 +2826,7 @@ static void si_llvm_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
 	args[0] = lp_build_const_int32(gallivm,	SENDMSG_GS_OP_NOP | SENDMSG_GS_DONE);
 	args[1] = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_GS_WAVE_ID);
 	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
-			   ctx->voidt, args, 2, LLVMNoUnwindAttribute);
+			   ctx->voidt, args, 2, 0);
 }
 
 static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
@@ -3318,7 +3316,7 @@ static void emit_waitcnt(struct si_shader_context *ctx)
 		lp_build_const_int32(gallivm, 0xf70)
 	};
 	lp_build_intrinsic(builder, "llvm.amdgcn.s.waitcnt",
-			   ctx->voidt, args, 1, LLVMNoUnwindAttribute);
+			   ctx->voidt, args, 1, 0);
 }
 
 static void membar_emit(
@@ -3620,7 +3618,7 @@ static void load_emit_buffer(struct si_shader_context *ctx,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 			builder, intrinsic_name, dst_type,
 			emit_data->args, emit_data->arg_count,
-			LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
+			LLVMReadOnlyAttribute);
 }
 
 static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
@@ -3700,7 +3698,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, "llvm.amdgcn.buffer.load.format.v4f32", emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
+				LLVMReadOnlyAttribute);
 	} else {
 		build_int_type_name(LLVMTypeOf(emit_data->args[0]),
 				    coords_type, sizeof(coords_type));
@@ -3712,7 +3710,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, intrinsic_name, emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
+				LLVMReadOnlyAttribute);
 	}
 }
 
@@ -3843,8 +3841,7 @@ static void store_emit_buffer(
 
 		lp_build_intrinsic(
 			builder, intrinsic_name, emit_data->dst_type,
-			emit_data->args, emit_data->arg_count,
-			LLVMNoUnwindAttribute);
+			emit_data->args, emit_data->arg_count, 0);
 	}
 }
 
@@ -3902,8 +3899,8 @@ static void store_emit(
 	if (target == TGSI_TEXTURE_BUFFER) {
 		emit_data->output[emit_data->chan] = lp_build_intrinsic(
 			builder, "llvm.amdgcn.buffer.store.format.v4f32",
-			emit_data->dst_type, emit_data->args, emit_data->arg_count,
-			LLVMNoUnwindAttribute);
+			emit_data->dst_type, emit_data->args,
+			emit_data->arg_count, 0);
 	} else {
 		build_int_type_name(LLVMTypeOf(emit_data->args[1]),
 				    coords_type, sizeof(coords_type));
@@ -3913,8 +3910,7 @@ static void store_emit(
 		emit_data->output[emit_data->chan] =
 			lp_build_intrinsic(
 				builder, intrinsic_name, emit_data->dst_type,
-				emit_data->args, emit_data->arg_count,
-				LLVMNoUnwindAttribute);
+				emit_data->args, emit_data->arg_count, 0);
 	}
 }
 
@@ -4080,8 +4076,7 @@ static void atomic_emit(
 
 	tmp = lp_build_intrinsic(
 		builder, intrinsic_name, bld_base->uint_bld.elem_type,
-		emit_data->args, emit_data->arg_count,
-		LLVMNoUnwindAttribute);
+		emit_data->args, emit_data->arg_count, 0);
 	emit_data->output[emit_data->chan] =
 		LLVMBuildBitCast(builder, tmp, bld_base->base.elem_type, "");
 }
@@ -4138,7 +4133,7 @@ static void resq_emit(
 		out = lp_build_intrinsic(
 			builder, "llvm.SI.getresinfo.i32", emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
-			LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+			LLVMReadNoneAttribute);
 
 		/* Divide the number of layers by 6 to get the number of cubes. */
 		if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY) {
@@ -4378,7 +4373,7 @@ static void txq_emit(const struct lp_build_tgsi_action *action,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 		base->gallivm->builder, "llvm.SI.getresinfo.i32",
 		emit_data->dst_type, emit_data->args, emit_data->arg_count,
-		LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+		LLVMReadNoneAttribute);
 
 	/* Divide the number of layers by 6 to get the number of cubes. */
 	if (target == TGSI_TEXTURE_CUBE_ARRAY ||
@@ -4736,7 +4731,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 			base->gallivm->builder,
 			"llvm.SI.vs.load.input", emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
-			LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+			LLVMReadNoneAttribute);
 		return;
 	}
 
@@ -4790,7 +4785,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 		base->gallivm->builder, intr_name, emit_data->dst_type,
 		emit_data->args, emit_data->arg_count,
-		LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+		LLVMReadNoneAttribute);
 }
 
 static void si_llvm_emit_txqs(
@@ -5155,7 +5150,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 		emit_data->output[chan] =
 			lp_build_intrinsic(gallivm->builder, intr_name,
 					   ctx->f32, args, args[3] ? 4 : 3,
-					   LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+					   LLVMReadNoneAttribute);
 	}
 }
 
@@ -5247,7 +5242,7 @@ static void si_llvm_emit_vertex(
 	args[0] = lp_build_const_int32(gallivm, SENDMSG_GS_OP_EMIT | SENDMSG_GS | (stream << 8));
 	args[1] = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_GS_WAVE_ID);
 	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
-			   ctx->voidt, args, 2, LLVMNoUnwindAttribute);
+			   ctx->voidt, args, 2, 0);
 }
 
 /* Cut one primitive from the geometry shader */
@@ -5266,7 +5261,7 @@ static void si_llvm_emit_primitive(
 	args[0] = lp_build_const_int32(gallivm,	SENDMSG_GS_OP_CUT | SENDMSG_GS | (stream << 8));
 	args[1] = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_GS_WAVE_ID);
 	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
-			   ctx->voidt, args, 2, LLVMNoUnwindAttribute);
+			   ctx->voidt, args, 2, 0);
 }
 
 static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
@@ -5287,7 +5282,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 	lp_build_intrinsic(gallivm->builder,
 			   HAVE_LLVM >= 0x0309 ? "llvm.amdgcn.s.barrier"
 					       : "llvm.AMDGPU.barrier.local",
-			   ctx->voidt, NULL, 0, LLVMNoUnwindAttribute);
+			   ctx->voidt, NULL, 0, 0);
 }
 
 static const struct lp_build_tgsi_action tex_action = {
@@ -6387,7 +6382,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 						 lp_build_intrinsic(gallivm->builder,
 								 "llvm.SI.buffer.load.dword.i32.i32",
 								 ctx->i32, args, 9,
-								 LLVMReadOnlyAttribute | LLVMNoUnwindAttribute),
+								 LLVMReadOnlyAttribute),
 						 ctx->f32, "");
 		}
 	}
