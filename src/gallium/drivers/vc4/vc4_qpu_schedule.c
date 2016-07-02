@@ -404,7 +404,7 @@ calculate_deps(struct schedule_state *state, struct schedule_node *n)
         }
 
         process_cond_deps(state, n, QPU_GET_FIELD(inst, QPU_COND_ADD));
-        process_cond_deps(state, n, QPU_GET_FIELD(inst, QPU_COND_ADD));
+        process_cond_deps(state, n, QPU_GET_FIELD(inst, QPU_COND_MUL));
         if (inst & QPU_SF)
                 add_write_dep(state, &state->last_sf, n);
 }
