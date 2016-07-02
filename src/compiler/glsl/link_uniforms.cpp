@@ -403,7 +403,7 @@ private:
        */
       this->num_active_uniforms++;
 
-      if(!is_gl_identifier(name) && !is_shader_storage)
+      if(!is_gl_identifier(name) && !is_shader_storage && !is_buffer_block)
          this->num_values += values;
    }
 
@@ -767,9 +767,10 @@ private:
       this->uniforms[id].is_shader_storage =
          current_var->is_in_shader_storage_block();
 
-      /* Do not assign storage if the uniform is builtin */
+      /* Do not assign storage if the uniform is a builtin or buffer object */
       if (!this->uniforms[id].builtin &&
-          !this->uniforms[id].is_shader_storage)
+          !this->uniforms[id].is_shader_storage &&
+          this->buffer_block_index == -1)
          this->uniforms[id].storage = this->values;
 
       if (this->buffer_block_index != -1) {
@@ -823,7 +824,8 @@ private:
       }
 
       if (!this->uniforms[id].builtin &&
-          !this->uniforms[id].is_shader_storage)
+          !this->uniforms[id].is_shader_storage &&
+          this->buffer_block_index == -1)
          this->values += values_for_type(type);
    }
 
@@ -1257,7 +1259,8 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
 #ifndef NDEBUG
    for (unsigned i = 0; i < num_uniforms; i++) {
       assert(uniforms[i].storage != NULL || uniforms[i].builtin ||
-             uniforms[i].is_shader_storage);
+             uniforms[i].is_shader_storage ||
+             uniforms[i].block_index != -1);
    }
 
    assert(parcel.values == data_end);
