@@ -469,7 +469,7 @@ link_uniform_blocks(void *mem_ctx,
    _mesa_hash_table_destroy(block_hash, NULL);
 }
 
-bool
+static bool
 link_uniform_blocks_are_compatible(const gl_uniform_block *a,
                                    const gl_uniform_block *b)
 {

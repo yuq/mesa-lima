@@ -49,10 +49,6 @@ link_cross_validate_uniform_block(void *mem_ctx,
 				  unsigned int *num_linked_blocks,
 				  struct gl_uniform_block *new_block);
 
-extern bool
-link_uniform_blocks_are_compatible(const gl_uniform_block *a,
-				   const gl_uniform_block *b);
-
 extern void
 link_uniform_blocks(void *mem_ctx,
                     struct gl_context *ctx,
