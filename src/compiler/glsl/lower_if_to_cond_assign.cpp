@@ -54,9 +54,11 @@ namespace {
 
 class ir_if_to_cond_assign_visitor : public ir_hierarchical_visitor {
 public:
-   ir_if_to_cond_assign_visitor(unsigned max_depth)
+   ir_if_to_cond_assign_visitor(gl_shader_stage stage,
+                                unsigned max_depth)
    {
       this->progress = false;
+      this->stage = stage;
       this->max_depth = max_depth;
       this->depth = 0;
 
@@ -75,6 +77,7 @@ public:
 
    bool found_unsupported_op;
    bool progress;
+   gl_shader_stage stage;
    unsigned max_depth;
    unsigned depth;
 
@@ -84,12 +87,13 @@ public:
 } /* anonymous namespace */
 
 bool
-lower_if_to_cond_assign(exec_list *instructions, unsigned max_depth)
+lower_if_to_cond_assign(gl_shader_stage stage, exec_list *instructions,
+                        unsigned max_depth)
 {
    if (max_depth == UINT_MAX)
       return false;
 
-   ir_if_to_cond_assign_visitor v(max_depth);
+   ir_if_to_cond_assign_visitor v(stage, max_depth);
 
    visit_list_elements(&v, instructions);
 
@@ -112,6 +116,19 @@ check_ir_node(ir_instruction *ir, void *data)
    case ir_type_barrier:
       v->found_unsupported_op = true;
       break;
+
+   case ir_type_dereference_variable: {
+      ir_variable *var = ir->as_dereference_variable()->variable_referenced();
+
+      /* Lowering branches with TCS output accesses breaks many piglit tests,
+       * so don't touch them for now.
+       */
+      if (v->stage == MESA_SHADER_TESS_CTRL &&
+          var->data.mode == ir_var_shader_out)
+         v->found_unsupported_op = true;
+      break;
+   }
+
    default:
       break;
    }

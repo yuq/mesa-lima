@@ -125,7 +125,7 @@ process_glsl_ir(struct brw_context *brw,
     * if-statements need to be flattened.
     */
    if (brw->gen < 6)
-      lower_if_to_cond_assign(shader->ir, 16);
+      lower_if_to_cond_assign(shader->Stage, shader->ir, 16);
 
    do_lower_texture_projection(shader->ir);
    brw_lower_texture_gradients(brw, shader->ir);

@@ -108,7 +108,8 @@ bool do_lower_texture_projection(exec_list *instructions);
 bool do_if_simplification(exec_list *instructions);
 bool opt_flatten_nested_if_blocks(exec_list *instructions);
 bool do_discard_simplification(exec_list *instructions);
-bool lower_if_to_cond_assign(exec_list *instructions, unsigned max_depth = 0);
+bool lower_if_to_cond_assign(gl_shader_stage stage, exec_list *instructions,
+                             unsigned max_depth = 0);
 bool do_mat_op_to_vec(exec_list *instructions);
 bool do_minmax_prune(exec_list *instructions);
 bool do_noop_swizzle(exec_list *instructions);

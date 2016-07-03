@@ -6864,7 +6864,8 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                                            ctx->Const.NativeIntegers)
            || progress;
 
-         progress = lower_if_to_cond_assign(ir, options->MaxIfDepth) || progress;
+         progress = lower_if_to_cond_assign((gl_shader_stage)i, ir,
+                                            options->MaxIfDepth) || progress;
 
       } while (progress);
 
