@@ -73,6 +73,7 @@ public:
    ir_visitor_status visit_enter(ir_if *);
    ir_visitor_status visit_leave(ir_if *);
 
+   bool found_unsupported_op;
    bool progress;
    unsigned max_depth;
    unsigned depth;
@@ -98,14 +99,15 @@ lower_if_to_cond_assign(exec_list *instructions, unsigned max_depth)
 void
 check_control_flow(ir_instruction *ir, void *data)
 {
-   bool *found_control_flow = (bool *)data;
+   ir_if_to_cond_assign_visitor *v = (ir_if_to_cond_assign_visitor *)data;
+
    switch (ir->ir_type) {
    case ir_type_call:
    case ir_type_discard:
    case ir_type_loop:
    case ir_type_loop_jump:
    case ir_type_return:
-      *found_control_flow = true;
+      v->found_unsupported_op = true;
       break;
    default:
       break;
@@ -175,18 +177,19 @@ ir_if_to_cond_assign_visitor::visit_leave(ir_if *ir)
    if (this->depth-- <= this->max_depth)
       return visit_continue;
 
-   bool found_control_flow = false;
+   this->found_unsupported_op = false;
+
    ir_assignment *assign;
 
    /* Check that both blocks don't contain anything we can't support. */
    foreach_in_list(ir_instruction, then_ir, &ir->then_instructions) {
-      visit_tree(then_ir, check_control_flow, &found_control_flow);
+      visit_tree(then_ir, check_control_flow, this);
    }
    foreach_in_list(ir_instruction, else_ir, &ir->else_instructions) {
-      visit_tree(else_ir, check_control_flow, &found_control_flow);
+      visit_tree(else_ir, check_control_flow, this);
    }
-   if (found_control_flow)
-      return visit_continue;
+   if (this->found_unsupported_op)
+      return visit_continue; /* can't handle inner unsupported opcodes */
 
    void *mem_ctx = ralloc_parent(ir);
 
