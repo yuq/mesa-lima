@@ -54,6 +54,8 @@ CPP_SOURCES := \
 	util/tuple.hpp
 
 LLVM_SOURCES := \
+	llvm/codegen/common.cpp \
+	llvm/codegen.hpp \
 	llvm/compat.hpp \
 	llvm/invocation.cpp \
 	llvm/metadata.hpp \
