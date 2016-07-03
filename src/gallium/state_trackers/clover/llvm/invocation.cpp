@@ -25,6 +25,7 @@
 //
 
 #include "llvm/compat.hpp"
+#include "llvm/metadata.hpp"
 #include "llvm/util.hpp"
 #include "core/compiler.hpp"
 #include "util/algorithm.hpp"
@@ -276,95 +277,6 @@ namespace {
       pm.run(mod);
    }
 
-   // Kernel metadata
-
-   struct kernel_arg_md {
-      llvm::StringRef type_name;
-      llvm::StringRef access_qual;
-      kernel_arg_md(llvm::StringRef type_name_, llvm::StringRef access_qual_):
-         type_name(type_name_), access_qual(access_qual_) {}
-   };
-#if HAVE_LLVM >= 0x0309
-   std::vector<kernel_arg_md>
-   get_kernel_arg_md(const llvm::Function *kernel_func) {
-
-      size_t num_args = kernel_func->getArgumentList().size();
-
-      auto aq = kernel_func->getMetadata("kernel_arg_access_qual");
-      auto ty = kernel_func->getMetadata("kernel_arg_type");
-
-      std::vector<kernel_arg_md> res;
-      res.reserve(num_args);
-      for (size_t i = 0; i < num_args; ++i) {
-         res.push_back(kernel_arg_md(
-            llvm::cast<llvm::MDString>(ty->getOperand(i))->getString(),
-            llvm::cast<llvm::MDString>(aq->getOperand(i))->getString()));
-      }
-
-      return res;
-   }
-
-#else
-
-   const llvm::MDNode *
-   get_kernel_metadata(const llvm::Function *kernel_func) {
-      auto mod = kernel_func->getParent();
-      auto kernels_node = mod->getNamedMetadata("opencl.kernels");
-      if (!kernels_node) {
-         return nullptr;
-      }
-
-      const llvm::MDNode *kernel_node = nullptr;
-      for (unsigned i = 0; i < kernels_node->getNumOperands(); ++i) {
-         auto func = llvm::mdconst::dyn_extract<llvm::Function>(
-               kernels_node->getOperand(i)->getOperand(0));
-         if (func == kernel_func) {
-            kernel_node = kernels_node->getOperand(i);
-            break;
-         }
-      }
-
-      return kernel_node;
-   }
-
-   llvm::MDNode*
-   node_from_op_checked(const llvm::MDOperand &md_operand,
-                        llvm::StringRef expect_name,
-                        unsigned expect_num_args)
-   {
-      auto node = llvm::cast<llvm::MDNode>(md_operand);
-      assert(node->getNumOperands() == expect_num_args &&
-             "Wrong number of operands.");
-
-      auto str_node = llvm::cast<llvm::MDString>(node->getOperand(0));
-      assert(str_node->getString() == expect_name &&
-             "Wrong metadata node name.");
-
-      return node;
-   }
-
-   std::vector<kernel_arg_md>
-   get_kernel_arg_md(const llvm::Function *kernel_func) {
-      auto num_args = kernel_func->getArgumentList().size();
-
-      auto kernel_node = get_kernel_metadata(kernel_func);
-      auto aq = node_from_op_checked(kernel_node->getOperand(2),
-                                     "kernel_arg_access_qual", num_args + 1);
-      auto ty = node_from_op_checked(kernel_node->getOperand(3),
-                                     "kernel_arg_type", num_args + 1);
-
-      std::vector<kernel_arg_md> res;
-      res.reserve(num_args);
-      for (unsigned i = 0; i < num_args; ++i) {
-         res.push_back(kernel_arg_md(
-            llvm::cast<llvm::MDString>(ty->getOperand(i+1))->getString(),
-            llvm::cast<llvm::MDString>(aq->getOperand(i+1))->getString()));
-      }
-
-      return res;
-   }
-#endif
-
    enum module::argument::type
    get_image_type(const std::string &type,
                   const std::string &qual) {
@@ -386,7 +298,6 @@ namespace {
       std::vector<module::argument> args;
       const auto address_spaces = c.getTarget().getAddressSpaceMap();
       const Function &f = *mod.getFunction(kernel_name);
-      const auto arg_md = get_kernel_arg_md(&f);
       ::llvm::DataLayout dl(&mod);
       const auto size_type =
          dl.getSmallestLegalIntType(mod.getContext(), sizeof(cl_uint) * 8);
@@ -407,11 +318,13 @@ namespace {
          const unsigned target_size = dl.getTypeStoreSize(target_type);
          const unsigned target_align = dl.getABITypeAlignment(target_type);
 
-         const auto type_name = arg_md[arg.getArgNo()].type_name;
+         const auto type_name = get_argument_metadata(f, arg,
+                                                      "kernel_arg_type");
 
          if (type_name == "image2d_t" || type_name == "image3d_t") {
             // Image.
-            const auto access_qual = arg_md[arg.getArgNo()].access_qual;
+            const auto access_qual = get_argument_metadata(
+               f, arg, "kernel_arg_access_qual");
             args.emplace_back(get_image_type(type_name, access_qual),
                               arg_store_size, target_size,
                               target_align, module::argument::zero_ext);
