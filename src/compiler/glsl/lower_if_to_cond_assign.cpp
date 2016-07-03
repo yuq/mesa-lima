@@ -97,7 +97,7 @@ lower_if_to_cond_assign(exec_list *instructions, unsigned max_depth)
 }
 
 void
-check_control_flow(ir_instruction *ir, void *data)
+check_ir_node(ir_instruction *ir, void *data)
 {
    ir_if_to_cond_assign_visitor *v = (ir_if_to_cond_assign_visitor *)data;
 
@@ -107,6 +107,9 @@ check_control_flow(ir_instruction *ir, void *data)
    case ir_type_loop:
    case ir_type_loop_jump:
    case ir_type_return:
+   case ir_type_emit_vertex:
+   case ir_type_end_primitive:
+   case ir_type_barrier:
       v->found_unsupported_op = true;
       break;
    default:
@@ -183,10 +186,10 @@ ir_if_to_cond_assign_visitor::visit_leave(ir_if *ir)
 
    /* Check that both blocks don't contain anything we can't support. */
    foreach_in_list(ir_instruction, then_ir, &ir->then_instructions) {
-      visit_tree(then_ir, check_control_flow, this);
+      visit_tree(then_ir, check_ir_node, this);
    }
    foreach_in_list(ir_instruction, else_ir, &ir->else_instructions) {
-      visit_tree(else_ir, check_control_flow, this);
+      visit_tree(else_ir, check_ir_node, this);
    }
    if (this->found_unsupported_op)
       return visit_continue; /* can't handle inner unsupported opcodes */
