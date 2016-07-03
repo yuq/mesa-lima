@@ -242,7 +242,7 @@ static void r600_destroy_shader(struct r600_bytecode *bc)
 }
 
 static void *evergreen_create_compute_state(struct pipe_context *ctx,
-					    const const struct pipe_compute_state *cso)
+					    const struct pipe_compute_state *cso)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct r600_pipe_compute *shader = CALLOC_STRUCT(r600_pipe_compute);
