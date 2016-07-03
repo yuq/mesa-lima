@@ -353,20 +353,20 @@ brw_blorp_blit_vars_init(nir_builder *b, struct brw_blorp_blit_vars *v,
     /* Blended and scaled blits never use pixel discard. */
     assert(!key->use_kill || !(key->blend && key->blit_scaled));
 
-#define LOAD_UNIFORM(name, type)\
+#define LOAD_INPUT(name, type)\
    v->u_##name = nir_variable_create(b->shader, nir_var_uniform, type, #name); \
    v->u_##name->data.location = \
       offsetof(struct brw_blorp_wm_inputs, name);
 
-   LOAD_UNIFORM(discard_rect, glsl_vec4_type())
-   LOAD_UNIFORM(rect_grid, glsl_vec4_type())
-   LOAD_UNIFORM(x_transform.multiplier, glsl_float_type())
-   LOAD_UNIFORM(x_transform.offset, glsl_float_type())
-   LOAD_UNIFORM(y_transform.multiplier, glsl_float_type())
-   LOAD_UNIFORM(y_transform.offset, glsl_float_type())
-   LOAD_UNIFORM(src_z, glsl_uint_type())
+   LOAD_INPUT(discard_rect, glsl_vec4_type())
+   LOAD_INPUT(rect_grid, glsl_vec4_type())
+   LOAD_INPUT(x_transform.multiplier, glsl_float_type())
+   LOAD_INPUT(x_transform.offset, glsl_float_type())
+   LOAD_INPUT(y_transform.multiplier, glsl_float_type())
+   LOAD_INPUT(y_transform.offset, glsl_float_type())
+   LOAD_INPUT(src_z, glsl_uint_type())
 
-#undef DECL_UNIFORM
+#undef LOAD_INPUT
 
    v->frag_coord = nir_variable_create(b->shader, nir_var_shader_in,
                                        glsl_vec4_type(), "gl_FragCoord");
