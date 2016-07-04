@@ -1296,6 +1296,19 @@ nvc0_bind_images_range(struct nvc0_context *nvc0, const unsigned s,
 
          pipe_resource_reference(
                &img->resource, pimages[p].resource);
+
+         if (nvc0->screen->base.class_3d >= GM107_3D_CLASS) {
+            if (nvc0->images_tic[s][i]) {
+               struct nv50_tic_entry *old =
+                  nv50_tic_entry(nvc0->images_tic[s][i]);
+               nvc0_screen_tic_unlock(nvc0->screen, old);
+               pipe_sampler_view_reference(&nvc0->images_tic[s][i], NULL);
+            }
+
+            nvc0->images_tic[s][i] =
+               gm107_create_texture_view_from_image(&nvc0->base.pipe,
+                                                    &pimages[p]);
+         }
       }
       if (!mask)
          return false;
@@ -1303,8 +1316,16 @@ nvc0_bind_images_range(struct nvc0_context *nvc0, const unsigned s,
       mask = ((1 << nr) - 1) << start;
       if (!(nvc0->images_valid[s] & mask))
          return false;
-      for (i = start; i < end; ++i)
+      for (i = start; i < end; ++i) {
          pipe_resource_reference(&nvc0->images[s][i].resource, NULL);
+         if (nvc0->screen->base.class_3d >= GM107_3D_CLASS) {
+            struct nv50_tic_entry *old = nv50_tic_entry(nvc0->images_tic[s][i]);
+            if (old) {
+               nvc0_screen_tic_unlock(nvc0->screen, old);
+               pipe_sampler_view_reference(&nvc0->images_tic[s][i], NULL);
+            }
+         }
+      }
       nvc0->images_valid[s] &= ~mask;
    }
    nvc0->images_dirty[s] |= mask;

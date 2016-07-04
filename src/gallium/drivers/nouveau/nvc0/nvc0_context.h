@@ -246,6 +246,7 @@ struct nvc0_context {
    uint32_t buffers_valid[6];
 
    struct pipe_image_view images[6][NVC0_MAX_IMAGES];
+   struct pipe_sampler_view *images_tic[6][NVC0_MAX_IMAGES]; /* GM107+ */
    uint16_t images_dirty[6];
    uint16_t images_valid[6];
 
@@ -349,6 +350,9 @@ struct pipe_sampler_view *
 nvc0_create_sampler_view(struct pipe_context *,
                          struct pipe_resource *,
                          const struct pipe_sampler_view *);
+struct pipe_sampler_view *
+gm107_create_texture_view_from_image(struct pipe_context *,
+                                     const struct pipe_image_view *);
 
 /* nvc0_transfer.c */
 void

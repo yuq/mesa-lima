@@ -236,6 +236,42 @@ gm107_create_texture_view(struct pipe_context *pipe,
    return &view->pipe;
 }
 
+struct pipe_sampler_view *
+gm107_create_texture_view_from_image(struct pipe_context *pipe,
+                                     const struct pipe_image_view *view)
+{
+   struct nv04_resource *res = nv04_resource(view->resource);
+   struct pipe_sampler_view templ = {};
+   enum pipe_texture_target target;
+   uint32_t flags = 0;
+
+   if (!res)
+      return NULL;
+   target = res->base.target;
+
+   if (target == PIPE_TEXTURE_CUBE || target == PIPE_TEXTURE_CUBE_ARRAY)
+      target = PIPE_TEXTURE_2D_ARRAY;
+
+   templ.format = view->format;
+   templ.swizzle_r = PIPE_SWIZZLE_X;
+   templ.swizzle_g = PIPE_SWIZZLE_Y;
+   templ.swizzle_b = PIPE_SWIZZLE_Z;
+   templ.swizzle_a = PIPE_SWIZZLE_W;
+
+   if (target == PIPE_BUFFER) {
+      templ.u.buf.first_element = view->u.buf.first_element;
+      templ.u.buf.last_element = view->u.buf.last_element;
+   } else {
+      templ.u.tex.first_layer = view->u.tex.first_layer;
+      templ.u.tex.last_layer = view->u.tex.last_layer;
+      templ.u.tex.first_level = templ.u.tex.last_level = view->u.tex.level;
+   }
+
+   flags = NV50_TEXVIEW_SCALED_COORDS;
+
+   return nvc0_create_texture_view(pipe, &res->base, &templ, flags, target);
+}
+
 static struct pipe_sampler_view *
 gf100_create_texture_view(struct pipe_context *pipe,
                           struct pipe_resource *texture,
@@ -1099,6 +1135,60 @@ nvc0_update_surface_bindings(struct nvc0_context *nvc0)
    nvc0->images_dirty[5] |= nvc0->images_valid[5];
 }
 
+static void
+gm107_validate_surfaces(struct nvc0_context *nvc0,
+                        struct pipe_image_view *view, int stage, int slot)
+{
+   struct nv04_resource *res = nv04_resource(view->resource);
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_screen *screen = nvc0->screen;
+   struct nouveau_bo *txc = nvc0->screen->txc;
+   struct nv50_tic_entry *tic;
+
+   tic = nv50_tic_entry(nvc0->images_tic[stage][slot]);
+
+   res = nv04_resource(tic->pipe.texture);
+   nvc0_update_tic(nvc0, tic, res);
+
+   if (tic->id < 0) {
+      tic->id = nvc0_screen_tic_alloc(nvc0->screen, tic);
+
+      /* upload the texture view */
+      PUSH_SPACE(push, 16);
+      BEGIN_NVC0(push, NVE4_P2MF(UPLOAD_DST_ADDRESS_HIGH), 2);
+      PUSH_DATAh(push, txc->offset + (tic->id * 32));
+      PUSH_DATA (push, txc->offset + (tic->id * 32));
+      BEGIN_NVC0(push, NVE4_P2MF(UPLOAD_LINE_LENGTH_IN), 2);
+      PUSH_DATA (push, 32);
+      PUSH_DATA (push, 1);
+      BEGIN_1IC0(push, NVE4_P2MF(UPLOAD_EXEC), 9);
+      PUSH_DATA (push, 0x1001);
+      PUSH_DATAp(push, &tic->tic[0], 8);
+
+      BEGIN_NVC0(push, NVC0_3D(TIC_FLUSH), 1);
+      PUSH_DATA (push, 0);
+   } else
+   if (res->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
+      BEGIN_NVC0(push, NVC0_3D(TEX_CACHE_CTL), 1);
+      PUSH_DATA (push, (tic->id << 4) | 1);
+   }
+   nvc0->screen->tic.lock[tic->id / 32] |= 1 << (tic->id % 32);
+
+   res->status &= ~NOUVEAU_BUFFER_STATUS_GPU_WRITING;
+   res->status |= NOUVEAU_BUFFER_STATUS_GPU_READING;
+
+   BCTX_REFN(nvc0->bufctx_3d, 3D_SUF, res, RD);
+
+   /* upload the texture handle */
+   BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+   PUSH_DATA (push, NVC0_CB_AUX_SIZE);
+   PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(stage));
+   PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(stage));
+   BEGIN_NVC0(push, NVC0_3D(CB_POS), 2);
+   PUSH_DATA (push, NVC0_CB_AUX_TEX_INFO(slot + 32));
+   PUSH_DATA (push, tic->id);
+}
+
 static inline void
 nve4_update_surface_bindings(struct nvc0_context *nvc0)
 {
@@ -1110,15 +1200,16 @@ nve4_update_surface_bindings(struct nvc0_context *nvc0)
       if (!nvc0->images_dirty[s])
          continue;
 
-      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, NVC0_CB_AUX_SIZE);
-      PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
-      PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
-      BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 16 * NVC0_MAX_IMAGES);
-      PUSH_DATA (push, NVC0_CB_AUX_SU_INFO(0));
-
       for (i = 0; i < NVC0_MAX_IMAGES; ++i) {
          struct pipe_image_view *view = &nvc0->images[s][i];
+
+         BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+         PUSH_DATA (push, NVC0_CB_AUX_SIZE);
+         PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
+         PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
+         BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 16);
+         PUSH_DATA (push, NVC0_CB_AUX_SU_INFO(i));
+
          if (view->resource) {
             struct nv04_resource *res = nv04_resource(view->resource);
 
@@ -1129,6 +1220,9 @@ nve4_update_surface_bindings(struct nvc0_context *nvc0)
 
             nve4_set_surface_info(push, view, nvc0);
             BCTX_REFN(nvc0->bufctx_3d, 3D_SUF, res, RDWR);
+
+            if (nvc0->screen->base.class_3d >= GM107_3D_CLASS)
+               gm107_validate_surfaces(nvc0, view, s, i);
          } else {
             for (j = 0; j < 16; j++)
                PUSH_DATA(push, 0);
