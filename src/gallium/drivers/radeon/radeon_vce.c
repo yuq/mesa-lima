@@ -454,7 +454,7 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 
 	get_buffer(((struct vl_video_buffer *)tmp_buf)->resources[0], NULL, &tmp_surf);
 	cpb_size = align(tmp_surf->level[0].pitch_bytes, 128);
-	cpb_size = cpb_size * align(tmp_surf->npix_y, 16);
+	cpb_size = cpb_size * align(tmp_surf->npix_y, 32);
 	cpb_size = cpb_size * 3 / 2;
 	cpb_size = cpb_size * enc->cpb_num;
 	if (enc->dual_pipe)
