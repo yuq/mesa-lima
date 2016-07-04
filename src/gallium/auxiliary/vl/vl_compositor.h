@@ -113,7 +113,7 @@ struct vl_compositor
 
    void *vs;
    void *fs_video_buffer;
-   void *fs_weave;
+   void *fs_weave_rgb;
    void *fs_rgba;
 
    struct {
