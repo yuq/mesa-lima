@@ -1234,6 +1234,9 @@ CodeEmitterGM107::emitFADD()
       emitABS(0x2e, insn->src(0));
       emitNEG(0x2d, insn->src(1));
       emitFMZ(0x2c, 1);
+
+      if (insn->op == OP_SUB)
+         code[1] ^= 0x00002000;
    } else {
       emitInsn(0x08000000);
       emitABS(0x39, insn->src(1));
@@ -1243,10 +1246,10 @@ CodeEmitterGM107::emitFADD()
       emitNEG(0x35, insn->src(1));
       emitCC  (0x34);
       emitIMMD(0x14, 32, insn->src(1));
-   }
 
-   if (insn->op == OP_SUB)
-      code[1] ^= 0x00002000;
+      if (insn->op == OP_SUB)
+         code[1] ^= 0x00080000;
+   }
 
    emitGPR(0x08, insn->src(0));
    emitGPR(0x00, insn->def(0));
