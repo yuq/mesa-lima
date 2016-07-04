@@ -606,7 +606,8 @@ x11_image_init(struct anv_device *device, struct x11_swapchain *chain,
          .samples = 1,
          /* FIXME: Need a way to use X tiling to allow scanout */
          .tiling = VK_IMAGE_TILING_OPTIMAL,
-         .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+         .usage = (pCreateInfo->imageUsage |
+                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
          .flags = 0,
       }},
       NULL,

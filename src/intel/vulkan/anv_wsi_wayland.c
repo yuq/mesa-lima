@@ -607,7 +607,9 @@ static const struct wl_buffer_listener buffer_listener = {
 };
 
 static VkResult
-wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
+wsi_wl_image_init(struct wsi_wl_swapchain *chain,
+                  struct wsi_wl_image *image,
+                  const VkSwapchainCreateInfoKHR *pCreateInfo,
                   const VkAllocationCallbacks* pAllocator)
 {
    VkDevice vk_device = anv_device_to_handle(chain->base.device);
@@ -633,7 +635,8 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
          .samples = 1,
          /* FIXME: Need a way to use X tiling to allow scanout */
          .tiling = VK_IMAGE_TILING_OPTIMAL,
-         .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+         .usage = (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                   pCreateInfo->imageUsage),
          .flags = 0,
       }},
       pAllocator,
@@ -794,7 +797,8 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    }
 
    for (uint32_t i = 0; i < chain->image_count; i++) {
-      result = wsi_wl_image_init(chain, &chain->images[i], pAllocator);
+      result = wsi_wl_image_init(chain, &chain->images[i],
+                                 pCreateInfo, pAllocator);
       if (result != VK_SUCCESS)
          goto fail;
       chain->images[i].busy = false;
