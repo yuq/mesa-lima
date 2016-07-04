@@ -167,6 +167,19 @@ static OMX_ERRORTYPE vid_dec_Constructor(OMX_COMPONENTTYPE *comp, OMX_STRING nam
    if (!priv->pipe)
       return OMX_ErrorInsufficientResources;
 
+   if (!vl_compositor_init(&priv->compositor, priv->pipe)) {
+      priv->pipe->destroy(priv->pipe);
+      priv->pipe = NULL;
+      return OMX_ErrorInsufficientResources;
+   }
+
+   if (!vl_compositor_init_state(&priv->cstate, priv->pipe)) {
+      vl_compositor_cleanup(&priv->compositor);
+      priv->pipe->destroy(priv->pipe);
+      priv->pipe = NULL;
+      return OMX_ErrorInsufficientResources;
+   }
+
    priv->sPortTypesParam[OMX_PortDomainVideo].nStartPortNumber = 0;
    priv->sPortTypesParam[OMX_PortDomainVideo].nPorts = 2;
    priv->ports = CALLOC(2, sizeof(omx_base_PortType *));
@@ -218,8 +231,11 @@ static OMX_ERRORTYPE vid_dec_Destructor(OMX_COMPONENTTYPE *comp)
       priv->ports=NULL;
    }
 
-   if (priv->pipe)
+   if (priv->pipe) {
+      vl_compositor_cleanup_state(&priv->cstate);
+      vl_compositor_cleanup(&priv->compositor);
       priv->pipe->destroy(priv->pipe);
+   }
 
    if (priv->screen)
       omx_put_screen();
@@ -547,6 +563,25 @@ static void vid_dec_FillOutput(vid_dec_PrivateType *priv, struct pipe_video_buff
    }
 }
 
+static void vid_dec_deint(vid_dec_PrivateType *priv, struct pipe_video_buffer *src_buf,
+                          struct pipe_video_buffer *dst_buf)
+{
+   struct vl_compositor *compositor = &priv->compositor;
+   struct vl_compositor_state *s = &priv->cstate;
+   struct pipe_surface **dst_surface;
+
+   dst_surface = dst_buf->get_surfaces(dst_buf);
+   vl_compositor_clear_layers(s);
+
+   vl_compositor_set_yuv_layer(s, compositor, 0, src_buf, NULL, NULL, true);
+   vl_compositor_set_layer_dst_area(s, 0, NULL);
+   vl_compositor_render(s, compositor, dst_surface[0], NULL, false);
+
+   vl_compositor_set_yuv_layer(s, compositor, 0, src_buf, NULL, NULL, false);
+   vl_compositor_set_layer_dst_area(s, 0, NULL);
+   vl_compositor_render(s, compositor, dst_surface[1], NULL, false);
+}
+
 static void vid_dec_FrameDecoded(OMX_COMPONENTTYPE *comp, OMX_BUFFERHEADERTYPE* input,
                                  OMX_BUFFERHEADERTYPE* output)
 {
@@ -562,7 +597,33 @@ static void vid_dec_FrameDecoded(OMX_COMPONENTTYPE *comp, OMX_BUFFERHEADERTYPE* 
 
    if (input->pInputPortPrivate) {
       if (output->pInputPortPrivate) {
-         struct pipe_video_buffer *tmp = output->pOutputPortPrivate;
+         struct pipe_video_buffer *tmp, *vbuf, *new_vbuf;
+
+         tmp = output->pOutputPortPrivate;
+         vbuf = input->pInputPortPrivate;
+         if (vbuf->interlaced) {
+            /* re-allocate the progressive buffer */
+            omx_base_video_PortType *port;
+            struct pipe_video_buffer templat = {};
+
+            port = (omx_base_video_PortType *)
+                    priv->ports[OMX_BASE_FILTER_INPUTPORT_INDEX];
+            memset(&templat, 0, sizeof(templat));
+            templat.chroma_format = PIPE_VIDEO_CHROMA_FORMAT_420;
+            templat.width = port->sPortParam.format.video.nFrameWidth;
+            templat.height = port->sPortParam.format.video.nFrameHeight;
+            templat.buffer_format = PIPE_FORMAT_NV12;
+            templat.interlaced = false;
+            new_vbuf = priv->pipe->create_video_buffer(priv->pipe, &templat);
+
+            /* convert the interlaced to the progressive */
+            vid_dec_deint(priv, input->pInputPortPrivate, new_vbuf);
+            priv->pipe->flush(priv->pipe, NULL, 0);
+
+            /* set the progrssive buffer for next round */
+            vbuf->destroy(vbuf);
+            input->pInputPortPrivate = new_vbuf;
+         }
          output->pOutputPortPrivate = input->pInputPortPrivate;
          input->pInputPortPrivate = tmp;
       } else {

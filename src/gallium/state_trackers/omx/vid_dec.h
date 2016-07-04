@@ -51,6 +51,8 @@
 #include "os/os_thread.h"
 #include "util/list.h"
 
+#include "vl/vl_compositor.h"
+
 #define OMX_VID_DEC_BASE_NAME "OMX.mesa.video_decoder"
 
 #define OMX_VID_DEC_MPEG2_NAME "OMX.mesa.video_decoder.mpeg2"
@@ -108,7 +110,9 @@ DERIVEDCLASS(vid_dec_PrivateType, omx_base_filter_PrivateType)
    bool frame_finished; \
    bool frame_started; \
    unsigned bytes_left; \
-   const void *slice;
+   const void *slice; \
+   struct vl_compositor compositor; \
+   struct vl_compositor_state cstate;
 ENDCLASS(vid_dec_PrivateType)
 
 OMX_ERRORTYPE vid_dec_LoaderComponent(stLoaderComponentType *comp);
