@@ -1518,31 +1518,31 @@ NVC0LoweringPass::loadMsInfo32(Value *ptr, uint32_t off)
 /* On nvc0, surface info is obtained via the surface binding points passed
  * to the SULD/SUST instructions.
  * On nve4, surface info is stored in c[] and is used by various special
- * instructions, e.g. for clamping coordiantes or generating an address.
+ * instructions, e.g. for clamping coordinates or generating an address.
  * They couldn't just have added an equivalent to TIC now, couldn't they ?
  */
-#define NVE4_SU_INFO_ADDR   0x00
-#define NVE4_SU_INFO_FMT    0x04
-#define NVE4_SU_INFO_DIM_X  0x08
-#define NVE4_SU_INFO_PITCH  0x0c
-#define NVE4_SU_INFO_DIM_Y  0x10
-#define NVE4_SU_INFO_ARRAY  0x14
-#define NVE4_SU_INFO_DIM_Z  0x18
-#define NVE4_SU_INFO_UNK1C  0x1c
-#define NVE4_SU_INFO_WIDTH  0x20
-#define NVE4_SU_INFO_HEIGHT 0x24
-#define NVE4_SU_INFO_DEPTH  0x28
-#define NVE4_SU_INFO_TARGET 0x2c
-#define NVE4_SU_INFO_BSIZE  0x30
-#define NVE4_SU_INFO_RAW_X  0x34
-#define NVE4_SU_INFO_MS_X   0x38
-#define NVE4_SU_INFO_MS_Y   0x3c
+#define NVC0_SU_INFO_ADDR   0x00
+#define NVC0_SU_INFO_FMT    0x04
+#define NVC0_SU_INFO_DIM_X  0x08
+#define NVC0_SU_INFO_PITCH  0x0c
+#define NVC0_SU_INFO_DIM_Y  0x10
+#define NVC0_SU_INFO_ARRAY  0x14
+#define NVC0_SU_INFO_DIM_Z  0x18
+#define NVC0_SU_INFO_UNK1C  0x1c
+#define NVC0_SU_INFO_WIDTH  0x20
+#define NVC0_SU_INFO_HEIGHT 0x24
+#define NVC0_SU_INFO_DEPTH  0x28
+#define NVC0_SU_INFO_TARGET 0x2c
+#define NVC0_SU_INFO_BSIZE  0x30
+#define NVC0_SU_INFO_RAW_X  0x34
+#define NVC0_SU_INFO_MS_X   0x38
+#define NVC0_SU_INFO_MS_Y   0x3c
 
-#define NVE4_SU_INFO__STRIDE 0x40
+#define NVC0_SU_INFO__STRIDE 0x40
 
-#define NVE4_SU_INFO_DIM(i)  (0x08 + (i) * 8)
-#define NVE4_SU_INFO_SIZE(i) (0x20 + (i) * 4)
-#define NVE4_SU_INFO_MS(i)   (0x38 + (i) * 4)
+#define NVC0_SU_INFO_DIM(i)  (0x08 + (i) * 8)
+#define NVC0_SU_INFO_SIZE(i) (0x20 + (i) * 4)
+#define NVC0_SU_INFO_MS(i)   (0x38 + (i) * 4)
 
 static inline uint16_t getSuClampSubOp(const TexInstruction *su, int c)
 {
@@ -1585,7 +1585,7 @@ NVC0LoweringPass::handleSUQ(TexInstruction *suq)
                        ind, bld.mkImm(6));
       base = 0;
    } else {
-      base = suq->tex.r * NVE4_SU_INFO__STRIDE;
+      base = suq->tex.r * NVC0_SU_INFO__STRIDE;
    }
 
    for (c = 0, d = 0; c < 3; ++c, mask >>= 1) {
@@ -1595,9 +1595,9 @@ NVC0LoweringPass::handleSUQ(TexInstruction *suq)
       int offset;
 
       if (c == 1 && suq->tex.target == TEX_TARGET_1D_ARRAY) {
-         offset = NVE4_SU_INFO_SIZE(2);
+         offset = NVC0_SU_INFO_SIZE(2);
       } else {
-         offset = NVE4_SU_INFO_SIZE(c);
+         offset = NVC0_SU_INFO_SIZE(c);
       }
       bld.mkMov(suq->getDef(d++), loadSuInfo32(ind, base + offset));
       if (c == 2 && suq->tex.target.isCube())
@@ -1607,8 +1607,8 @@ NVC0LoweringPass::handleSUQ(TexInstruction *suq)
 
    if (mask & 1) {
       if (suq->tex.target.isMS()) {
-         Value *ms_x = loadSuInfo32(ind, base + NVE4_SU_INFO_MS(0));
-         Value *ms_y = loadSuInfo32(ind, base + NVE4_SU_INFO_MS(1));
+         Value *ms_x = loadSuInfo32(ind, base + NVC0_SU_INFO_MS(0));
+         Value *ms_y = loadSuInfo32(ind, base + NVC0_SU_INFO_MS(1));
          Value *ms = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getScratch(), ms_x, ms_y);
          bld.mkOp2(OP_SHL, TYPE_U32, suq->getDef(d++), bld.loadImm(NULL, 1), ms);
       } else {
@@ -1650,11 +1650,11 @@ NVC0LoweringPass::adjustCoordinatesMS(TexInstruction *tex)
                        ind, bld.mkImm(6));
       base = 0;
    } else {
-      base = tex->tex.r * NVE4_SU_INFO__STRIDE;
+      base = tex->tex.r * NVC0_SU_INFO__STRIDE;
    }
 
-   Value *ms_x = loadSuInfo32(ind, base + NVE4_SU_INFO_MS(0));
-   Value *ms_y = loadSuInfo32(ind, base + NVE4_SU_INFO_MS(1));
+   Value *ms_x = loadSuInfo32(ind, base + NVC0_SU_INFO_MS(0));
+   Value *ms_y = loadSuInfo32(ind, base + NVC0_SU_INFO_MS(1));
 
    bld.mkOp2(OP_SHL, TYPE_U32, tx, x, ms_x);
    bld.mkOp2(OP_SHL, TYPE_U32, ty, y, ms_y);
@@ -1685,7 +1685,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
    const int idx = su->tex.r;
    const int dim = su->tex.target.getDim();
    const int arg = dim + (su->tex.target.isArray() || su->tex.target.isCube());
-   uint16_t base = idx * NVE4_SU_INFO__STRIDE;
+   uint16_t base = idx * NVC0_SU_INFO__STRIDE;
    int c;
    Value *zero = bld.mkImm(0);
    Value *p1 = NULL;
@@ -1726,9 +1726,9 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
 
       src[c] = bld.getScratch();
       if (c == 0 && raw)
-         v = loadSuInfo32(ind, base + NVE4_SU_INFO_RAW_X);
+         v = loadSuInfo32(ind, base + NVC0_SU_INFO_RAW_X);
       else
-         v = loadSuInfo32(ind, base + NVE4_SU_INFO_DIM(dimc));
+         v = loadSuInfo32(ind, base + NVC0_SU_INFO_DIM(dimc));
       bld.mkOp3(OP_SUCLAMP, TYPE_S32, src[c], su->getSrc(c), v, zero)
          ->subOp = getSuClampSubOp(su, dimc);
    }
@@ -1750,16 +1750,16 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
          bld.mkOp2(OP_AND, TYPE_U32, off, src[0], bld.loadImm(NULL, 0xffff));
    } else
    if (dim == 3) {
-      v = loadSuInfo32(ind, base + NVE4_SU_INFO_UNK1C);
+      v = loadSuInfo32(ind, base + NVC0_SU_INFO_UNK1C);
       bld.mkOp3(OP_MADSP, TYPE_U32, off, src[2], v, src[1])
          ->subOp = NV50_IR_SUBOP_MADSP(4,2,8); // u16l u16l u16l
 
-      v = loadSuInfo32(ind, base + NVE4_SU_INFO_PITCH);
+      v = loadSuInfo32(ind, base + NVC0_SU_INFO_PITCH);
       bld.mkOp3(OP_MADSP, TYPE_U32, off, off, v, src[0])
          ->subOp = NV50_IR_SUBOP_MADSP(0,2,8); // u32 u16l u16l
    } else {
       assert(dim == 2);
-      v = loadSuInfo32(ind, base + NVE4_SU_INFO_PITCH);
+      v = loadSuInfo32(ind, base + NVC0_SU_INFO_PITCH);
       bld.mkOp3(OP_MADSP, TYPE_U32, off, src[1], v, src[0])
          ->subOp = (su->tex.target.isArray() || su->tex.target.isCube()) ?
          NV50_IR_SUBOP_MADSP_SD : NV50_IR_SUBOP_MADSP(4,2,8); // u16l u16l u16l
@@ -1770,7 +1770,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
       if (raw) {
          bf = src[0];
       } else {
-         v = loadSuInfo32(ind, base + NVE4_SU_INFO_FMT);
+         v = loadSuInfo32(ind, base + NVC0_SU_INFO_FMT);
          bld.mkOp3(OP_VSHL, TYPE_U32, bf, src[0], v, zero)
             ->subOp = NV50_IR_SUBOP_V1(7,6,8|2);
       }
@@ -1787,7 +1787,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
       case 2:
          z = off;
          if (!su->tex.target.isArray() && !su->tex.target.isCube()) {
-            z = loadSuInfo32(ind, base + NVE4_SU_INFO_UNK1C);
+            z = loadSuInfo32(ind, base + NVC0_SU_INFO_UNK1C);
             subOp = NV50_IR_SUBOP_SUBFM_3D;
          }
          break;
@@ -1802,7 +1802,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
    }
 
    // part 2
-   v = loadSuInfo32(ind, base + NVE4_SU_INFO_ADDR);
+   v = loadSuInfo32(ind, base + NVC0_SU_INFO_ADDR);
 
    if (su->tex.target == TEX_TARGET_BUFFER) {
       eau = v;
@@ -1811,7 +1811,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
    }
    // add array layer offset
    if (su->tex.target.isArray() || su->tex.target.isCube()) {
-      v = loadSuInfo32(ind, base + NVE4_SU_INFO_ARRAY);
+      v = loadSuInfo32(ind, base + NVC0_SU_INFO_ARRAY);
       if (dim == 1)
          bld.mkOp3(OP_MADSP, TYPE_U32, eau, src[1], v, eau)
             ->subOp = NV50_IR_SUBOP_MADSP(4,0,0); // u16 u24 u32
@@ -1851,7 +1851,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
 
    // let's just set it 0 for raw access and hope it works
    v = raw ?
-      bld.mkImm(0) : loadSuInfo32(ind, base + NVE4_SU_INFO_FMT);
+      bld.mkImm(0) : loadSuInfo32(ind, base + NVC0_SU_INFO_FMT);
 
    // get rid of old coordinate sources, make space for fmt info and predicate
    su->moveSources(arg, 3 - arg);
@@ -1864,7 +1864,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
    CmpInstruction *pred1 =
       bld.mkCmp(OP_SET, CC_EQ, TYPE_U32, bld.getSSA(1, FILE_PREDICATE),
                 TYPE_U32, bld.mkImm(0),
-                loadSuInfo32(ind, base + NVE4_SU_INFO_ADDR));
+                loadSuInfo32(ind, base + NVC0_SU_INFO_ADDR));
 
    if (su->op != OP_SUSTP && su->tex.format) {
       const TexInstruction::ImgFormatDesc *format = su->tex.format;
@@ -1875,7 +1875,7 @@ NVC0LoweringPass::processSurfaceCoordsNVE4(TexInstruction *su)
       assert(format->components != 0);
       bld.mkCmp(OP_SET_OR, CC_NE, TYPE_U32, pred1->getDef(0),
                 TYPE_U32, bld.loadImm(NULL, blockwidth / 8),
-                loadSuInfo32(ind, base + NVE4_SU_INFO_BSIZE),
+                loadSuInfo32(ind, base + NVC0_SU_INFO_BSIZE),
                 pred1->getDef(0));
    }
    su->setPredicate(CC_NOT_P, pred1->getDef(0));
@@ -2050,7 +2050,7 @@ NVC0LoweringPass::processSurfaceCoordsNVC0(TexInstruction *su)
    const int idx = su->tex.r;
    const int dim = su->tex.target.getDim();
    const int arg = dim + (su->tex.target.isArray() || su->tex.target.isCube());
-   uint16_t base = idx * NVE4_SU_INFO__STRIDE;
+   uint16_t base = idx * NVC0_SU_INFO__STRIDE;
    int c;
    Value *zero = bld.mkImm(0);
    Value *src[3];
@@ -2080,13 +2080,13 @@ NVC0LoweringPass::processSurfaceCoordsNVC0(TexInstruction *su)
 
    // calculate pixel offset
    if (su->op == OP_SULDP || su->op == OP_SUREDP) {
-      v = loadSuInfo32(ind, base + NVE4_SU_INFO_BSIZE);
+      v = loadSuInfo32(ind, base + NVC0_SU_INFO_BSIZE);
       su->setSrc(0, bld.mkOp2v(OP_MUL, TYPE_U32, bld.getSSA(), src[0], v));
    }
 
    // add array layer offset
    if (su->tex.target.isArray() || su->tex.target.isCube()) {
-      v = loadSuInfo32(ind, base + NVE4_SU_INFO_ARRAY);
+      v = loadSuInfo32(ind, base + NVC0_SU_INFO_ARRAY);
       assert(dim > 1);
       su->setSrc(2, bld.mkOp2v(OP_MUL, TYPE_U32, bld.getSSA(), src[2], v));
    }
@@ -2095,7 +2095,7 @@ NVC0LoweringPass::processSurfaceCoordsNVC0(TexInstruction *su)
    CmpInstruction *pred =
       bld.mkCmp(OP_SET, CC_EQ, TYPE_U32, bld.getSSA(1, FILE_PREDICATE),
                 TYPE_U32, bld.mkImm(0),
-                loadSuInfo32(ind, base + NVE4_SU_INFO_ADDR));
+                loadSuInfo32(ind, base + NVC0_SU_INFO_ADDR));
    if (su->op != OP_SUSTP && su->tex.format) {
       const TexInstruction::ImgFormatDesc *format = su->tex.format;
       int blockwidth = format->bits[0] + format->bits[1] +
@@ -2105,7 +2105,7 @@ NVC0LoweringPass::processSurfaceCoordsNVC0(TexInstruction *su)
       // make sure that the format doesn't mismatch when it's not FMT_NONE
       bld.mkCmp(OP_SET_OR, CC_NE, TYPE_U32, pred->getDef(0),
                 TYPE_U32, bld.loadImm(NULL, blockwidth / 8),
-                loadSuInfo32(ind, base + NVE4_SU_INFO_BSIZE),
+                loadSuInfo32(ind, base + NVC0_SU_INFO_BSIZE),
                 pred->getDef(0));
    }
    su->setPredicate(CC_NOT_P, pred->getDef(0));
