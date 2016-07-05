@@ -5956,6 +5956,12 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 				conf->scratch_bytes_per_wave =
 					G_00B860_WAVESIZE(value) * 256 * 4;
 			break;
+		case 0x4: /* SPILLED_SGPRS */
+			conf->spilled_sgprs = value;
+			break;
+		case 0x8: /* SPILLED_VGPRS */
+			conf->spilled_vgprs = value;
+			break;
 		default:
 			{
 				static bool printed;
@@ -6119,8 +6125,6 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	unsigned lds_increment = sscreen->b.chip_class >= CIK ? 512 : 256;
 	unsigned lds_per_wave = 0;
 	unsigned max_simd_waves = 10;
-	/* Assuming SGPRs aren't spilled. */
-	unsigned spilled_vgprs = conf->scratch_bytes_per_wave / 64 / 4;
 
 	/* Compute LDS usage for PS. */
 	if (processor == PIPE_SHADER_FRAGMENT) {
@@ -6167,23 +6171,27 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 		fprintf(file, "*** SHADER STATS ***\n"
 			"SGPRS: %d\n"
 			"VGPRS: %d\n"
+		        "Spilled SGPRs: %d\n"
 			"Spilled VGPRs: %d\n"
 			"Code Size: %d bytes\n"
 			"LDS: %d blocks\n"
 			"Scratch: %d bytes per wave\n"
 			"Max Waves: %d\n"
 			"********************\n",
-			conf->num_sgprs, conf->num_vgprs, spilled_vgprs, code_size,
+			conf->num_sgprs, conf->num_vgprs,
+			conf->spilled_sgprs, conf->spilled_vgprs, code_size,
 			conf->lds_size, conf->scratch_bytes_per_wave,
 			max_simd_waves);
 	}
 
 	pipe_debug_message(debug, SHADER_INFO,
 			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d "
-			   "LDS: %d Scratch: %d Max Waves: %d Spilled VGPRs: %d",
+			   "LDS: %d Scratch: %d Max Waves: %d Spilled SGPRs: %d "
+			   "Spilled VGPRs: %d",
 			   conf->num_sgprs, conf->num_vgprs, code_size,
 			   conf->lds_size, conf->scratch_bytes_per_wave,
-			   max_simd_waves, spilled_vgprs);
+			   max_simd_waves, conf->spilled_sgprs,
+			   conf->spilled_vgprs);
 }
 
 static const char *si_get_shader_name(struct si_shader *shader,
