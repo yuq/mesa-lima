@@ -248,7 +248,7 @@ struct brw_blorp_prog_data
    GLbitfield64 inputs_read;
 };
 
-inline unsigned
+static inline unsigned
 brw_blorp_get_urb_length(const struct brw_blorp_prog_data *prog_data)
 {
    if (prog_data == NULL)
