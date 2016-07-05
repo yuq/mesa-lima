@@ -1071,7 +1071,7 @@ _mesa_sampler_uniforms_pipeline_are_valid(struct gl_pipeline_object *pipeline)
 
    GLbitfield mask;
    GLbitfield TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
-   struct gl_shader *shader;
+   struct gl_linked_shader *shader;
    unsigned active_samplers = 0;
    const struct gl_shader_program **shProg =
       (const struct gl_shader_program **) pipeline->CurrentProgram;
