@@ -44,7 +44,6 @@ void brw_setup_tex_for_precompile(struct brw_context *brw,
 
 void brw_populate_sampler_prog_key_data(struct gl_context *ctx,
 				        const struct gl_program *prog,
-                                        unsigned sampler_count,
 				        struct brw_sampler_prog_key_data *key);
 bool brw_debug_recompile_sampler_key(struct brw_context *brw,
                                      const struct brw_sampler_prog_key_data *old_key,

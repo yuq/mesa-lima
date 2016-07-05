@@ -345,8 +345,7 @@ brw_vs_populate_key(struct brw_context *brw,
    }
 
    /* _NEW_TEXTURE */
-   brw_populate_sampler_prog_key_data(ctx, prog, brw->vs.base.sampler_count,
-                                      &key->tex);
+   brw_populate_sampler_prog_key_data(ctx, prog, &key->tex);
 
    /* BRW_NEW_VS_ATTRIB_WORKAROUNDS */
    memcpy(key->gl_attrib_wa_flags, brw->vb.attrib_wa_flags,

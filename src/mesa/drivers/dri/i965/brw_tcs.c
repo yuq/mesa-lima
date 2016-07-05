@@ -351,8 +351,7 @@ brw_upload_tcs_prog(struct brw_context *brw,
       key.program_string_id = tcp->id;
 
       /* _NEW_TEXTURE */
-      brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
-                                         &key.tex);
+      brw_populate_sampler_prog_key_data(ctx, prog, &key.tex);
    } else {
       key.outputs_written = tep->program.Base.InputsRead;
    }

@@ -198,8 +198,7 @@ brw_cs_populate_key(struct brw_context *brw, struct brw_cs_prog_key *key)
    memset(key, 0, sizeof(*key));
 
    /* _NEW_TEXTURE */
-   brw_populate_sampler_prog_key_data(ctx, prog, brw->cs.base.sampler_count,
-                                      &key->tex);
+   brw_populate_sampler_prog_key_data(ctx, prog, &key->tex);
 
    /* The unique compute program ID */
    key->program_string_id = cp->id;
