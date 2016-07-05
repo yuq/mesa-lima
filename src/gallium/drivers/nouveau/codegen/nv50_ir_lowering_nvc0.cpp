@@ -628,6 +628,10 @@ NVC0LoweringPass::loadTexHandle(Value *ptr, unsigned int slot)
 {
    uint8_t b = prog->driver->io.auxCBSlot;
    uint32_t off = prog->driver->io.texBindBase + slot * 4;
+
+   if (ptr)
+      ptr = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(), ptr, bld.mkImm(2));
+
    return bld.
       mkLoadv(TYPE_U32, bld.mkSymbol(FILE_MEMORY_CONST, b, TYPE_U32, off), ptr);
 }
@@ -703,10 +707,7 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
       if (i->tex.rIndirectSrc >= 0 || i->tex.sIndirectSrc >= 0) {
          // XXX this ignores tsc, and assumes a 1:1 mapping
          assert(i->tex.rIndirectSrc >= 0);
-         Value *hnd = loadTexHandle(
-               bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
-                          i->getIndirectR(), bld.mkImm(2)),
-               i->tex.r);
+         Value *hnd = loadTexHandle(i->getIndirectR(), i->tex.r);
          i->tex.r = 0xff;
          i->tex.s = 0x1f;
          i->setIndirectR(hnd);
@@ -1056,10 +1057,7 @@ NVC0LoweringPass::handleTXQ(TexInstruction *txq)
       txq->moveSources(0, 1);
       txq->setSrc(0, src);
    } else {
-      Value *hnd = loadTexHandle(
-            bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
-                       txq->getIndirectR(), bld.mkImm(2)),
-            txq->tex.r);
+      Value *hnd = loadTexHandle(txq->getIndirectR(), txq->tex.r);
       txq->tex.r = 0xff;
       txq->tex.s = 0x1f;
 
