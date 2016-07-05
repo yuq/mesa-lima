@@ -254,7 +254,7 @@ brw_blorp_get_urb_length(const struct brw_blorp_prog_data *prog_data)
    if (prog_data == NULL)
       return 1;
 
-   /* From the BSpec: 3D Pipeline - Strips and Fans - 3DSTATE_SBE 
+   /* From the BSpec: 3D Pipeline - Strips and Fans - 3DSTATE_SBE
     *
     * read_length = ceiling((max_source_attr+1)/2)
     */
