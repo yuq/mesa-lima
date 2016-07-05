@@ -90,6 +90,13 @@ nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
                  PIPE_BIND_LINEAR |
                  PIPE_BIND_SHARED);
 
+   if (bindings & PIPE_BIND_SHADER_IMAGE && sample_count > 1 &&
+       nouveau_screen(pscreen)->class_3d >= GM107_3D_CLASS) {
+      /* MS images are currently unsupported on Maxwell because they have to
+       * be handled explicitly. */
+      return false;
+   }
+
    return (( nvc0_format_table[format].usage |
             nvc0_vertex_format[format].usage) & bindings) == bindings;
 }
