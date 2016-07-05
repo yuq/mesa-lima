@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include "c99_alloca.h"
 #include "os/os_process.h"
 #include "util/u_debug.h"
 
