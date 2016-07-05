@@ -1451,24 +1451,6 @@ NVC0LoweringPass::loadResLength32(Value *ptr, uint32_t off, uint16_t base)
 }
 
 inline Value *
-NVC0LoweringPass::loadSuInfo64(Value *ptr, uint32_t off)
-{
-   return loadResInfo64(ptr, off, prog->driver->io.suInfoBase);
-}
-
-inline Value *
-NVC0LoweringPass::loadSuLength32(Value *ptr, uint32_t off)
-{
-   return loadResLength32(ptr, off, prog->driver->io.suInfoBase);
-}
-
-inline Value *
-NVC0LoweringPass::loadBufInfo32(Value *ptr, uint32_t off)
-{
-   return loadResInfo32(ptr, off, prog->driver->io.bufInfoBase);
-}
-
-inline Value *
 NVC0LoweringPass::loadBufInfo64(Value *ptr, uint32_t off)
 {
    return loadResInfo64(ptr, off, prog->driver->io.bufInfoBase);
@@ -1478,12 +1460,6 @@ inline Value *
 NVC0LoweringPass::loadBufLength32(Value *ptr, uint32_t off)
 {
    return loadResLength32(ptr, off, prog->driver->io.bufInfoBase);
-}
-
-inline Value *
-NVC0LoweringPass::loadUboInfo32(Value *ptr, uint32_t off)
-{
-   return loadResInfo32(ptr, off, prog->driver->io.uboInfoBase);
 }
 
 inline Value *
