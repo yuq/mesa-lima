@@ -1133,7 +1133,7 @@ glsl_to_tgsi_visitor::st_src_reg_for_double(double val)
 
    memcpy(uval, &val, sizeof(uval));
    src.index = add_constant(src.file, uval, 1, GL_DOUBLE, &src.swizzle);
-
+   src.swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_X, SWIZZLE_Y);
    return src;
 }
 
