@@ -1654,7 +1654,8 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 			EG_S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
 			EG_S_028A4C_FORCE_EOV_REZ_ENABLE(1);
 
-		cayman_emit_msaa_sample_locs(cs, rctx->framebuffer.nr_samples);
+		if (rctx->framebuffer.nr_samples > 1)
+			cayman_emit_msaa_sample_locs(cs, rctx->framebuffer.nr_samples);
 		cayman_emit_msaa_config(cs, rctx->framebuffer.nr_samples,
 					rctx->ps_iter_samples, 0, sc_mode_cntl_1);
 	}
