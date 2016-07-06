@@ -53,7 +53,6 @@ copy_region_vgpu10(struct svga_context *svga, struct pipe_resource *src_tex,
    uint32 srcSubResource, dstSubResource;
    struct svga_texture *dtex, *stex;
    SVGA3dCopyBox box;
-   int i, num_layers = 1;
 
    stex = svga_texture(src_tex);
    dtex = svga_texture(dst_tex);
@@ -68,36 +67,21 @@ copy_region_vgpu10(struct svga_context *svga, struct pipe_resource *src_tex,
    box.srcy = src_y;
    box.srcz = src_z;
 
-   if (src_tex->target == PIPE_TEXTURE_1D_ARRAY ||
-       src_tex->target == PIPE_TEXTURE_2D_ARRAY) {
-      /* copy layer by layer */
-      box.z = 0;
-      box.d = 1;
-      box.srcz = 0;
+   srcSubResource = src_face * (src_tex->last_level + 1) + src_level;
+   dstSubResource = dst_face * (dst_tex->last_level + 1) + dst_level;
 
-      num_layers = depth;
-      src_face = src_z;
-      dst_face = dst_z;
-   }
-
-   /* loop over array layers */
-   for (i = 0; i < num_layers; i++) {
-      srcSubResource = (src_face + i) * (src_tex->last_level + 1) + src_level;
-      dstSubResource = (dst_face + i) * (dst_tex->last_level + 1) + dst_level;
-
+   ret = SVGA3D_vgpu10_PredCopyRegion(svga->swc,
+                                      dtex->handle, dstSubResource,
+                                      stex->handle, srcSubResource, &box);
+   if (ret != PIPE_OK) {
+      svga_context_flush(svga, NULL);
       ret = SVGA3D_vgpu10_PredCopyRegion(svga->swc,
                                          dtex->handle, dstSubResource,
                                          stex->handle, srcSubResource, &box);
-      if (ret != PIPE_OK) {
-         svga_context_flush(svga, NULL);
-         ret = SVGA3D_vgpu10_PredCopyRegion(svga->swc,
-                                            dtex->handle, dstSubResource,
-                                            stex->handle, srcSubResource, &box);
-         assert(ret == PIPE_OK);
-      }
-
-      svga_define_texture_level(dtex, dst_face + i, dst_level);
+      assert(ret == PIPE_OK);
    }
+
+   svga_define_texture_level(dtex, dst_face, dst_level);
 }
 
 
@@ -152,6 +136,7 @@ svga_resource_copy_region(struct pipe_context *pipe,
    dtex = svga_texture(dst_tex);
 
    if (src_tex->target == PIPE_TEXTURE_CUBE ||
+       src_tex->target == PIPE_TEXTURE_2D_ARRAY ||
        src_tex->target == PIPE_TEXTURE_1D_ARRAY) {
       src_face_layer = src_box->z;
       src_z = 0;
@@ -163,6 +148,7 @@ svga_resource_copy_region(struct pipe_context *pipe,
    }
 
    if (dst_tex->target == PIPE_TEXTURE_CUBE ||
+       dst_tex->target == PIPE_TEXTURE_2D_ARRAY ||
        dst_tex->target == PIPE_TEXTURE_1D_ARRAY) {
       dst_face_layer = dstz;
       dst_z = 0;
