@@ -44,7 +44,8 @@ svga_swtnl_draw_vbo(struct svga_context *svga,
    struct pipe_transfer *ib_transfer = NULL;
    struct pipe_transfer *cb_transfer[SVGA_MAX_CONST_BUFS] = { 0 };
    struct draw_context *draw = svga->swtnl.draw;
-   unsigned i, old_num_vertex_buffers;
+   MAYBE_UNUSED unsigned old_num_vertex_buffers;
+   unsigned i;
    const void *map;
    enum pipe_error ret;
 
