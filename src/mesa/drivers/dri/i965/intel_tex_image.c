@@ -108,6 +108,9 @@ intelTexImage(struct gl_context * ctx,
 
    assert(intelImage->mt);
 
+   if (intelImage->mt->format == MESA_FORMAT_S_UINT8)
+      intelImage->mt->r8stencil_needs_update = true;
+
    ok = _mesa_meta_pbo_TexSubImage(ctx, dims, texImage, 0, 0, 0,
                                    texImage->Width, texImage->Height,
                                    texImage->Depth,
