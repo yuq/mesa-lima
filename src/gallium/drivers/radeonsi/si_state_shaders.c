@@ -1325,6 +1325,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	util_queue_fence_init(&sel->ready);
 
 	if ((sctx->b.debug.debug_message && !sctx->b.debug.async) ||
+	    r600_can_dump_shader(&sscreen->b, sel->info.processor) ||
 	    !util_queue_is_initialized(&sscreen->shader_compiler_queue))
 		si_init_shader_selector_async(sel, -1);
 	else
