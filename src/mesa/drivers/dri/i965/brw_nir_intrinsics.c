@@ -39,12 +39,21 @@ struct lower_intrinsics_state {
 static nir_ssa_def *
 read_thread_local_id(struct lower_intrinsics_state *state)
 {
+   nir_builder *b = &state->builder;
+   nir_shader *nir = state->nir;
+   const unsigned *sizes = nir->info.cs.local_size;
+   const unsigned group_size = sizes[0] * sizes[1] * sizes[2];
+
+   /* Some programs have local_size dimensions so small that the thread local
+    * ID will always be 0.
+    */
+   if (group_size <= 8)
+      return nir_imm_int(b, 0);
+
    assert(state->cs_prog_data->thread_local_id_index >= 0);
    state->cs_thread_id_used = true;
    const int id_index = state->cs_prog_data->thread_local_id_index;
 
-   nir_builder *b = &state->builder;
-   nir_shader *nir = state->nir;
    nir_intrinsic_instr *load =
       nir_intrinsic_instr_create(nir, nir_intrinsic_load_uniform);
    load->num_components = 1;
