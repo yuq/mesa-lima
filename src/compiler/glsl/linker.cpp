@@ -2530,6 +2530,7 @@ find_available_slots(unsigned used_mask, unsigned needed_count)
 /**
  * Assign locations for either VS inputs or FS outputs
  *
+ * \param mem_ctx       Temporary ralloc context used for linking
  * \param prog          Shader program whose variables need locations assigned
  * \param constants     Driver specific constant values for the program.
  * \param target_index  Selector for the program target to receive location
@@ -2541,7 +2542,8 @@ find_available_slots(unsigned used_mask, unsigned needed_count)
  * error is emitted to the shader link log and false is returned.
  */
 bool
-assign_attribute_or_color_locations(gl_shader_program *prog,
+assign_attribute_or_color_locations(void *mem_ctx,
+                                    gl_shader_program *prog,
                                     struct gl_constants *constants,
                                     unsigned target_index)
 {
@@ -2644,16 +2646,31 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
       } else if (target_index == MESA_SHADER_FRAGMENT) {
 	 unsigned binding;
 	 unsigned index;
+         const char *name = var->name;
+         const glsl_type *type = var->type;
 
-	 if (prog->FragDataBindings->get(binding, var->name)) {
-	    assert(binding >= FRAG_RESULT_DATA0);
-	    var->data.location = binding;
-            var->data.is_unmatched_generic_inout = 0;
+         while (type) {
+            /* Check if there's a binding for the variable name */
+            if (prog->FragDataBindings->get(binding, name)) {
+               assert(binding >= FRAG_RESULT_DATA0);
+               var->data.location = binding;
+               var->data.is_unmatched_generic_inout = 0;
 
-	    if (prog->FragDataIndexBindings->get(index, var->name)) {
-	       var->data.index = index;
-	    }
-	 }
+               if (prog->FragDataIndexBindings->get(index, name)) {
+                  var->data.index = index;
+               }
+               break;
+            }
+
+            /* If not, but it's an array type, look for name[0] */
+            if (type->is_array()) {
+               name = ralloc_asprintf(mem_ctx, "%s[0]", name);
+               type = type->fields.array;
+               continue;
+            }
+
+            break;
+         }
       }
 
       /* From GL4.5 core spec, section 15.2 (Shader Execution):
@@ -4505,12 +4522,12 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
       prev = i;
    }
 
-   if (!assign_attribute_or_color_locations(prog, &ctx->Const,
+   if (!assign_attribute_or_color_locations(mem_ctx, prog, &ctx->Const,
                                             MESA_SHADER_VERTEX)) {
       return false;
    }
 
-   if (!assign_attribute_or_color_locations(prog, &ctx->Const,
+   if (!assign_attribute_or_color_locations(mem_ctx, prog, &ctx->Const,
                                             MESA_SHADER_FRAGMENT)) {
       return false;
    }
