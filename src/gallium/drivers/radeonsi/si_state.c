@@ -3193,6 +3193,12 @@ static void si_emit_sample_mask(struct si_context *sctx, struct r600_atom *atom)
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned mask = sctx->sample_mask.sample_mask;
 
+	/* Needed for line and polygon smoothing as well as for the Polaris
+	 * small primitive filter. We expect the state tracker to take care of
+	 * this for us.
+	 */
+	assert(mask == 0xffff || sctx->framebuffer.nr_samples > 1);
+
 	radeon_set_context_reg_seq(cs, R_028C38_PA_SC_AA_MASK_X0Y0_X1Y0, 2);
 	radeon_emit(cs, mask | (mask << 16));
 	radeon_emit(cs, mask | (mask << 16));
