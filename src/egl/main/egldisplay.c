@@ -178,25 +178,24 @@ _eglNativePlatformDetectNativeDisplay(void *nativeDisplay)
 _EGLPlatformType
 _eglGetNativePlatform(void *nativeDisplay)
 {
-   static _EGLPlatformType native_platform = _EGL_INVALID_PLATFORM;
-   char *detection_method = NULL;
+   static _EGLPlatformType native_platform;
+   char *detection_method;
+
+   native_platform = _eglGetNativePlatformFromEnv();
+   detection_method = "environment overwrite";
 
    if (native_platform == _EGL_INVALID_PLATFORM) {
-      native_platform = _eglGetNativePlatformFromEnv();
-      detection_method = "environment overwrite";
-      if (native_platform == _EGL_INVALID_PLATFORM) {
-         native_platform = _eglNativePlatformDetectNativeDisplay(nativeDisplay);
-         detection_method = "autodetected";
-         if (native_platform == _EGL_INVALID_PLATFORM) {
-            native_platform = _EGL_NATIVE_PLATFORM;
-            detection_method = "build-time configuration";
-         }
-      }
+      native_platform = _eglNativePlatformDetectNativeDisplay(nativeDisplay);
+      detection_method = "autodetected";
    }
 
-   if (detection_method != NULL)
-      _eglLog(_EGL_DEBUG, "Native platform type: %s (%s)",
-              egl_platforms[native_platform].name, detection_method);
+   if (native_platform == _EGL_INVALID_PLATFORM) {
+      native_platform = _EGL_NATIVE_PLATFORM;
+      detection_method = "build-time configuration";
+   }
+
+   _eglLog(_EGL_DEBUG, "Native platform type: %s (%s)",
+           egl_platforms[native_platform].name, detection_method);
 
    return native_platform;
 }
