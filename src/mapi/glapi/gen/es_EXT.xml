@@ -790,6 +790,11 @@
     </function>
 </category>
 
+<!-- 122. GL_EXT_shader_framebuffer_fetch -->
+<category name="GL_EXT_shader_framebuffer_fetch" number="122">
+    <enum name="FRAGMENT_SHADER_DISCARDS_SAMPLES_EXT" value="0x8A52"/>
+</category>
+
 <!-- 151. GL_EXT_draw_buffers -->
 <category name="GL_EXT_draw_buffers" number="151">
     <function name="DrawBuffersEXT" alias="DrawBuffers" es2="2.0">
