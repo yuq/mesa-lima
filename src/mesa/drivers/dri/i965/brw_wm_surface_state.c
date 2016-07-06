@@ -205,7 +205,6 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    }
 
    assert(brw_render_target_supported(brw, rb));
-   intel_miptree_used_for_rendering(mt);
 
    mesa_format rb_format = _mesa_get_render_format(ctx, intel_rb_format(irb));
    if (unlikely(!brw->format_supported_as_render_target[rb_format])) {
@@ -991,8 +990,6 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
 	 mt = irb->mt;
       }
    }
-
-   intel_miptree_used_for_rendering(irb->mt);
 
    surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 6 * 4, 32, &offset);
 

@@ -220,12 +220,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
       }
    }
 
-   if (is_render_target) {
-      intel_miptree_used_for_rendering(mt);
-
-      if (surf->aux_usage == ISL_AUX_USAGE_CCS_E)
-         mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
-   }
+   if (is_render_target)
+      intel_miptree_used_for_rendering(brw, mt);
 
    if (surf->aux_usage != ISL_AUX_USAGE_NONE) {
       /* We only really need a clear color if we also have an auxiliary
