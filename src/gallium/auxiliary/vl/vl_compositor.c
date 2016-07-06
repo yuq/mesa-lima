@@ -293,6 +293,35 @@ create_frag_shader_weave_rgb(struct vl_compositor *c)
 }
 
 static void *
+create_frag_shader_weave_yuv(struct vl_compositor *c, bool y)
+{
+   struct ureg_program *shader;
+   struct ureg_dst texel, fragment;
+
+   shader = ureg_create(PIPE_SHADER_FRAGMENT);
+   if (!shader)
+      return false;
+
+   texel = ureg_DECL_temporary(shader);
+   fragment = ureg_DECL_output(shader, TGSI_SEMANTIC_COLOR, 0);
+
+   create_frag_shader_weave(shader, texel);
+
+   if (y)
+      ureg_MOV(shader, ureg_writemask(fragment, TGSI_WRITEMASK_X), ureg_src(texel));
+   else
+      ureg_MOV(shader, ureg_writemask(fragment, TGSI_WRITEMASK_XY),
+                       ureg_swizzle(ureg_src(texel), TGSI_SWIZZLE_Y,
+                               TGSI_SWIZZLE_Z, TGSI_SWIZZLE_W, TGSI_SWIZZLE_W));
+
+   ureg_release_temporary(shader, texel);
+
+   ureg_END(shader);
+
+   return ureg_create_shader_and_destroy(shader, c->pipe);
+}
+
+static void *
 create_frag_shader_palette(struct vl_compositor *c, bool include_cc)
 {
    struct ureg_program *shader;
@@ -391,6 +420,13 @@ init_shaders(struct vl_compositor *c)
       return false;
    }
 
+   c->fs_weave_yuv.y = create_frag_shader_weave_yuv(c, true);
+   c->fs_weave_yuv.uv = create_frag_shader_weave_yuv(c, false);
+   if (!c->fs_weave_yuv.y || !c->fs_weave_yuv.uv) {
+      debug_printf("Unable to create YCbCr i-to-YCbCr p weave fragment shader.\n");
+      return false;
+   }
+
    c->fs_palette.yuv = create_frag_shader_palette(c, true);
    if (!c->fs_palette.yuv) {
       debug_printf("Unable to create YUV-Palette-to-RGB fragment shader.\n");
@@ -419,6 +455,8 @@ static void cleanup_shaders(struct vl_compositor *c)
    c->pipe->delete_vs_state(c->pipe, c->vs);
    c->pipe->delete_fs_state(c->pipe, c->fs_video_buffer);
    c->pipe->delete_fs_state(c->pipe, c->fs_weave_rgb);
+   c->pipe->delete_fs_state(c->pipe, c->fs_weave_yuv.y);
+   c->pipe->delete_fs_state(c->pipe, c->fs_weave_yuv.uv);
    c->pipe->delete_fs_state(c->pipe, c->fs_palette.yuv);
    c->pipe->delete_fs_state(c->pipe, c->fs_palette.rgb);
    c->pipe->delete_fs_state(c->pipe, c->fs_rgba);
