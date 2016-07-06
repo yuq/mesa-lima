@@ -41,4 +41,10 @@ _mesa_init_barrier_functions(struct dd_function_table *driver);
 extern void GLAPIENTRY
 _mesa_TextureBarrierNV(void);
 
+void GLAPIENTRY
+_mesa_MemoryBarrier(GLbitfield barriers);
+
+void GLAPIENTRY
+_mesa_MemoryBarrierByRegion(GLbitfield barriers);
+
 #endif /* BARRIER_H */
