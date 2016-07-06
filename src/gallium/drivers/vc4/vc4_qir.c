@@ -361,11 +361,56 @@ qir_dump_inst(struct vc4_compile *c, struct qinst *inst)
 void
 qir_dump(struct vc4_compile *c)
 {
+        int ip = 0;
+
         qir_for_each_block(block, c) {
                 fprintf(stderr, "BLOCK %d:\n", block->index);
                 qir_for_each_inst(inst, block) {
+                        if (c->temp_start) {
+                                bool first = true;
+
+                                for (int i = 0; i < c->num_temps; i++) {
+                                        if (c->temp_start[i] != ip)
+                                                continue;
+
+                                        if (first) {
+                                                first = false;
+                                        } else {
+                                                fprintf(stderr, ", ");
+                                        }
+                                        fprintf(stderr, "S%4d", i);
+                                }
+
+                                if (first)
+                                        fprintf(stderr, "      ");
+                                else
+                                        fprintf(stderr, " ");
+                        }
+
+                        if (c->temp_end) {
+                                bool first = true;
+
+                                for (int i = 0; i < c->num_temps; i++) {
+                                        if (c->temp_end[i] != ip)
+                                                continue;
+
+                                        if (first) {
+                                                first = false;
+                                        } else {
+                                                fprintf(stderr, ", ");
+                                        }
+                                        fprintf(stderr, "E%4d", i);
+                                }
+
+                                if (first)
+                                        fprintf(stderr, "      ");
+                                else
+                                        fprintf(stderr, " ");
+                        }
+
                         qir_dump_inst(c, inst);
                         fprintf(stderr, "\n");
+                        ip++;
                 }
         }
 }
