@@ -241,7 +241,12 @@ bool JitManager::SetupModuleFromIR(const uint8_t *pIR)
         return false;
     }
 
+#if HAVE_LLVM == 0x307
+    // llvm-3.7 has mismatched setDataLyout/getDataLayout APIs
+    newModule->setDataLayout(*mpExec->getDataLayout());
+#else
     newModule->setDataLayout(mpExec->getDataLayout());
+#endif
 
     mpCurrentModule = newModule.get();
 #if defined(_WIN32)
