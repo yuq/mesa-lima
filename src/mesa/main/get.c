@@ -530,6 +530,13 @@ static const int extra_core_ARB_color_buffer_float_and_new_buffers[] = {
    EXTRA_END
 };
 
+static const int extra_EXT_shader_framebuffer_fetch[] = {
+   EXTRA_API_ES2,
+   EXTRA_API_ES3,
+   EXT(MESA_shader_framebuffer_fetch),
+   EXTRA_END
+};
+
 /* This is the big table describing all the enums we accept in
  * glGet*v().  The table is partitioned into six parts: enums
  * understood by all GL APIs (OpenGL, GLES and GLES2), enums shared
