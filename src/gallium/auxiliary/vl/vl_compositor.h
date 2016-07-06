@@ -241,6 +241,18 @@ vl_compositor_set_layer_rotation(struct vl_compositor_state *state,
                                  unsigned layer,
                                  enum vl_compositor_rotation rotate);
 
+/**
+ * set a layer of y or uv to render
+ */
+void
+vl_compositor_set_yuv_layer(struct vl_compositor_state *s,
+                            struct vl_compositor *c,
+                            unsigned layer,
+                            struct pipe_video_buffer *buffer,
+                            struct u_rect *src_rect,
+                            struct u_rect *dst_rect,
+                            bool y);
+
 /*@}*/
 
 /**

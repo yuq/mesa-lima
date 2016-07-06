@@ -1111,6 +1111,36 @@ vl_compositor_set_layer_rotation(struct vl_compositor_state *s,
 }
 
 void
+vl_compositor_set_yuv_layer(struct vl_compositor_state *s,
+                            struct vl_compositor *c,
+                            unsigned layer,
+                            struct pipe_video_buffer *buffer,
+                            struct u_rect *src_rect,
+                            struct u_rect *dst_rect,
+                            bool y)
+{
+   struct pipe_sampler_view **sampler_views;
+   unsigned i;
+
+   assert(s && c && buffer);
+
+   assert(layer < VL_COMPOSITOR_MAX_LAYERS);
+
+   s->used_layers |= 1 << layer;
+   sampler_views = buffer->get_sampler_view_components(buffer);
+   for (i = 0; i < 3; ++i) {
+      s->layers[layer].samplers[i] = c->sampler_linear;
+      pipe_sampler_view_reference(&s->layers[layer].sampler_views[i], sampler_views[i]);
+   }
+
+   calc_src_and_dst(&s->layers[layer], buffer->width, buffer->height,
+                    src_rect ? *src_rect : default_rect(&s->layers[layer]),
+                    dst_rect ? *dst_rect : default_rect(&s->layers[layer]));
+
+   s->layers[layer].fs = (y) ? c->fs_weave_yuv.y : c->fs_weave_yuv.uv;
+}
+
+void
 vl_compositor_render(struct vl_compositor_state *s,
                      struct vl_compositor       *c,
                      struct pipe_surface        *dst_surface,
