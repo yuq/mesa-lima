@@ -22,14 +22,14 @@
  */
 
 /**
- * \file texturebarrier.c
- * Implementation of glTextureBarrierNV.
+ * \file barrier.c
+ * Implementation of various pipeline barrier entry points.
  *
  * \author Marek Olšák <maraeo@gmail.com>
  */
 
 #include "context.h"
-#include "texturebarrier.h"
+#include "barrier.h"
 
 
 static void
@@ -39,7 +39,7 @@ _mesa_texture_barrier(struct gl_context *ctx)
 }
 
 void
-_mesa_init_texture_barrier_functions(struct dd_function_table *driver)
+_mesa_init_barrier_functions(struct dd_function_table *driver)
 {
    driver->TextureBarrier = _mesa_texture_barrier;
 }

@@ -22,23 +22,23 @@
  */
 
 /**
- * \file texturebarrier.h
- * GL_NV_texture_barrier
+ * \file barrier.h
+ * GL_NV_texture_barrier and friends.
  *
  * \author Marek Olšák <maraeo@gmail.com>
  */
 
-#ifndef TEXTUREBARRIER_H
-#define TEXTUREBARRIER_H
+#ifndef BARRIER_H
+#define BARRIER_H
 
 #include "glheader.h"
 
 struct dd_function_table;
 
 extern void
-_mesa_init_texture_barrier_functions(struct dd_function_table *driver);
+_mesa_init_barrier_functions(struct dd_function_table *driver);
 
 extern void GLAPIENTRY
 _mesa_TextureBarrierNV(void);
 
-#endif /* TEXTUREBARRIER_H */
+#endif /* BARRIER_H */

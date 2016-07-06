@@ -24,6 +24,8 @@ MAIN_FILES = \
 	main/atifragshader.h \
 	main/attrib.c \
 	main/attrib.h \
+	main/barrier.c \
+	main/barrier.h \
 	main/blend.c \
 	main/blend.h \
 	main/blit.c \
@@ -230,8 +232,6 @@ MAIN_FILES = \
 	main/texstore.h \
 	main/textureview.c \
 	main/textureview.h \
-	main/texturebarrier.c \
-	main/texturebarrier.h \
 	main/transformfeedback.c \
 	main/transformfeedback.h \
 	main/uniform_query.cpp \

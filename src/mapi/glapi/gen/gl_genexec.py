@@ -111,7 +111,7 @@ header = """/**
 #include "main/texparam.h"
 #include "main/texstate.h"
 #include "main/texstorage.h"
-#include "main/texturebarrier.h"
+#include "main/barrier.h"
 #include "main/textureview.h"
 #include "main/transformfeedback.h"
 #include "main/mtypes.h"
