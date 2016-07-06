@@ -288,7 +288,6 @@ svga_reemit_framebuffer_bindings(struct svga_context *svga)
 enum pipe_error
 svga_rebind_framebuffer_bindings(struct svga_context *svga)
 {
-   const struct svga_screen *ss = svga_screen(svga->pipe.screen);
    struct svga_hw_draw_state *hw = &svga->state.hw_draw;
    unsigned i;
    enum pipe_error ret;
