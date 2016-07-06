@@ -417,15 +417,24 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       /* We set EmitNoIndirectInput for VS */
       assert(const_offset);
 
-      src = src_reg(ATTR, instr->const_index[0] + const_offset->u32[0],
-                    glsl_type::uvec4_type);
-      /* Swizzle source based on component layout qualifier */
-      src.swizzle = BRW_SWZ_COMP_INPUT(nir_intrinsic_component(instr));
-
-      dest = get_nir_dest(instr->dest, src.type);
+      dest = get_nir_dest(instr->dest);
       dest.writemask = brw_writemask_for_size(instr->num_components);
 
-      emit(MOV(dest, src));
+      src = src_reg(ATTR, instr->const_index[0] + const_offset->u32[0],
+                    glsl_type::uvec4_type);
+      src = retype(src, dest.type);
+
+      bool is_64bit = nir_dest_bit_size(instr->dest) == 64;
+      if (is_64bit) {
+         dst_reg tmp = dst_reg(this, glsl_type::dvec4_type);
+         src.swizzle = BRW_SWIZZLE_XYZW;
+         shuffle_64bit_data(tmp, src, false);
+         emit(MOV(dest, src_reg(tmp)));
+      } else {
+         /* Swizzle source based on component layout qualifier */
+         src.swizzle = BRW_SWZ_COMP_INPUT(nir_intrinsic_component(instr));
+         emit(MOV(dest, src));
+      }
       break;
    }
 
