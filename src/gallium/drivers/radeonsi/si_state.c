@@ -856,8 +856,12 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 		return;
 
 	if (sctx->framebuffer.nr_samples > 1 &&
-	    (!old_rs || old_rs->multisample_enable != rs->multisample_enable))
+	    (!old_rs || old_rs->multisample_enable != rs->multisample_enable)) {
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+
+		if (sctx->b.family >= CHIP_POLARIS10)
+			si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs.atom);
+	}
 
 	r600_set_scissor_enable(&sctx->b, rs->scissor_enable);
 
@@ -2380,18 +2384,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		constbuf.buffer_size = sctx->framebuffer.nr_samples * 2 * 4;
 		si_set_rw_buffer(sctx, SI_PS_CONST_SAMPLE_POSITIONS, &constbuf);
 
-		/* Smoothing (only possible with nr_samples == 1) uses the same
-		 * sample locations as the MSAA it simulates.
-		 *
-		 * Therefore, don't update the sample locations when
-		 * transitioning from no AA to smoothing-equivalent AA, and
-		 * vice versa.
-		 */
-		if ((sctx->framebuffer.nr_samples != 1 ||
-		     old_nr_samples != SI_NUM_SMOOTH_AA_SAMPLES) &&
-		    (sctx->framebuffer.nr_samples != SI_NUM_SMOOTH_AA_SAMPLES ||
-		     old_nr_samples != 1))
-			si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs);
+		si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs.atom);
 	}
 
 	sctx->need_check_render_feedback = true;
@@ -2570,8 +2563,28 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned nr_samples = sctx->framebuffer.nr_samples;
 
-	cayman_emit_msaa_sample_locs(cs, nr_samples > 1 ? nr_samples :
-						SI_NUM_SMOOTH_AA_SAMPLES);
+	/* Smoothing (only possible with nr_samples == 1) uses the same
+	 * sample locations as the MSAA it simulates.
+	 */
+	if (nr_samples <= 1 && sctx->smoothing_enabled)
+		nr_samples = SI_NUM_SMOOTH_AA_SAMPLES;
+
+	/* The small primitive filter on Polaris requires explicitly setting
+	 * sample locations to 0 when MSAA is disabled.
+	 */
+	if (sctx->b.family >= CHIP_POLARIS10) {
+		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
+
+		if (!sctx->smoothing_enabled &&
+		    rs && !rs->multisample_enable)
+			nr_samples = 1;
+	}
+
+	if ((nr_samples > 1 || sctx->b.family >= CHIP_POLARIS10) &&
+	    (nr_samples != sctx->msaa_sample_locs.nr_samples)) {
+		sctx->msaa_sample_locs.nr_samples = nr_samples;
+		cayman_emit_msaa_sample_locs(cs, nr_samples);
+	}
 }
 
 static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
@@ -3402,7 +3415,7 @@ void si_init_state_functions(struct si_context *sctx)
 
 	si_init_atom(sctx, &sctx->cache_flush, &sctx->atoms.s.cache_flush, si_emit_cache_flush);
 	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state);
-	si_init_atom(sctx, &sctx->msaa_sample_locs, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs);
+	si_init_atom(sctx, &sctx->msaa_sample_locs.atom, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs);
 	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state);
 	si_init_atom(sctx, &sctx->msaa_config, &sctx->atoms.s.msaa_config, si_emit_msaa_config);
 	si_init_atom(sctx, &sctx->sample_mask.atom, &sctx->atoms.s.sample_mask, si_emit_sample_mask);
