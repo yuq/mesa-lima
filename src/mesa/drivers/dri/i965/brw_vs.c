@@ -348,8 +348,10 @@ brw_vs_populate_key(struct brw_context *brw,
    brw_populate_sampler_prog_key_data(ctx, prog, &key->tex);
 
    /* BRW_NEW_VS_ATTRIB_WORKAROUNDS */
-   memcpy(key->gl_attrib_wa_flags, brw->vb.attrib_wa_flags,
-          sizeof(brw->vb.attrib_wa_flags));
+   if (brw->gen < 8 && !brw->is_haswell) {
+      memcpy(key->gl_attrib_wa_flags, brw->vb.attrib_wa_flags,
+             sizeof(brw->vb.attrib_wa_flags));
+   }
 }
 
 void
