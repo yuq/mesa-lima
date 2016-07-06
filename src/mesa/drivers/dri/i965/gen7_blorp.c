@@ -797,7 +797,7 @@ gen7_blorp_exec(struct brw_context *brw,
    if (params->wm_prog_data)
       gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
 
-      gen7_blorp_emit_constant_ps_disable(brw);
+   gen7_blorp_emit_constant_ps_disable(brw);
 
    if (params->src.mt) {
       const uint32_t sampler_offset =
