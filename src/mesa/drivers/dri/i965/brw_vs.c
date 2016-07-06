@@ -327,21 +327,21 @@ brw_vs_populate_key(struct brw_context *brw,
          _mesa_logbase2(ctx->Transform.ClipPlanesEnabled) + 1;
    }
 
-   /* _NEW_POLYGON */
    if (brw->gen < 6) {
+      /* _NEW_POLYGON */
       key->copy_edgeflag = (ctx->Polygon.FrontMode != GL_FILL ||
                             ctx->Polygon.BackMode != GL_FILL);
+
+      /* _NEW_POINT */
+      if (ctx->Point.PointSprite) {
+         key->point_coord_replace = ctx->Point.CoordReplace & 0xff;
+      }
    }
 
    if (prog->OutputsWritten & (VARYING_BIT_COL0 | VARYING_BIT_COL1 |
                                VARYING_BIT_BFC0 | VARYING_BIT_BFC1)) {
       /* _NEW_LIGHT | _NEW_BUFFERS */
       key->clamp_vertex_color = ctx->Light._ClampVertexColor;
-   }
-
-   /* _NEW_POINT */
-   if (brw->gen < 6 && ctx->Point.PointSprite) {
-      key->point_coord_replace = ctx->Point.CoordReplace & 0xff;
    }
 
    /* _NEW_TEXTURE */
