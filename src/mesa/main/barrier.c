@@ -108,3 +108,17 @@ _mesa_MemoryBarrierByRegion(GLbitfield barriers)
       ctx->Driver.MemoryBarrier(ctx, barriers);
    }
 }
+
+void GLAPIENTRY
+_mesa_BlendBarrierMESA(void)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (!ctx->Extensions.MESA_shader_framebuffer_fetch_non_coherent) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glBlendBarrier(not supported)");
+      return;
+   }
+
+   ctx->Driver.BlendBarrier(ctx);
+}
