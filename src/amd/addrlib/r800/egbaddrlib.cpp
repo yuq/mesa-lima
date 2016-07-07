@@ -285,38 +285,43 @@ BOOL_32 EgBasedLib::ComputeSurfaceInfoLinear(
                                                   &expHeight,
                                                   &pOut->heightAlign);
 
-    if (pIn->pitchAlign != 0)
+    if ((pIn->pitchAlign != 0) || (pIn->heightAlign != 0))
     {
-       ADDR_ASSERT((pIn->pitchAlign % pOut->pitchAlign) == 0);
-       pOut->pitchAlign = pIn->pitchAlign;
+        if (pIn->pitchAlign != 0)
+        {
+           ADDR_ASSERT((pIn->pitchAlign % pOut->pitchAlign) == 0);
+           pOut->pitchAlign = pIn->pitchAlign;
 
-        if (IsPow2(pOut->pitchAlign))
-        {
-            expPitch = PowTwoAlign(expPitch, pOut->pitchAlign);
+            if (IsPow2(pOut->pitchAlign))
+            {
+                expPitch = PowTwoAlign(expPitch, pOut->pitchAlign);
+            }
+            else
+            {
+                expPitch += pOut->pitchAlign - 1;
+                expPitch /= pOut->pitchAlign;
+                expPitch *= pOut->pitchAlign;
+            }
         }
-        else
-        {
-            expPitch += pOut->pitchAlign - 1;
-            expPitch /= pOut->pitchAlign;
-            expPitch *= pOut->pitchAlign;
-        }
-    }
 
-    if (pIn->heightAlign != 0)
-    {
-       ADDR_ASSERT((pIn->heightAlign % pOut->heightAlign) == 0);
-       pOut->heightAlign = pIn->heightAlign;
+        if (pIn->heightAlign != 0)
+        {
+           ADDR_ASSERT((pIn->heightAlign % pOut->heightAlign) == 0);
+           pOut->heightAlign = pIn->heightAlign;
 
-        if (IsPow2(pOut->heightAlign))
-        {
-            expHeight = PowTwoAlign(expHeight, pOut->heightAlign);
+            if (IsPow2(pOut->heightAlign))
+            {
+                expHeight = PowTwoAlign(expHeight, pOut->heightAlign);
+            }
+            else
+            {
+                expHeight += pOut->heightAlign - 1;
+                expHeight /= pOut->heightAlign;
+                expHeight *= pOut->heightAlign;
+            }
         }
-        else
-        {
-            expHeight += pOut->heightAlign - 1;
-            expHeight /= pOut->heightAlign;
-            expHeight *= pOut->heightAlign;
-        }
+
+        logicalSliceSize = BITS_TO_BYTES(expPitch * expHeight * pIn->bpp);
     }
 
     pOut->pitch = expPitch;
