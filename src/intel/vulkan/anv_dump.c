@@ -172,7 +172,7 @@ dump_image_do_blit(struct anv_device *device, struct dump_image *image,
    ANV_CALL(CmdPipelineBarrier)(anv_cmd_buffer_to_handle(cmd_buffer),
       VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_PIPELINE_STAGE_TRANSFER_BIT,
-      true, 0, NULL, 0, NULL, 1,
+      0, 0, NULL, 0, NULL, 1,
       &(VkImageMemoryBarrier) {
          .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
          .srcAccessMask = VK_ACCESS_HOST_READ_BIT,
