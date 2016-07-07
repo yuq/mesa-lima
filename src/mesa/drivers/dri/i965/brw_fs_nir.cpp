@@ -4558,6 +4558,16 @@ setup_imm_df(const fs_builder &bld, double v)
    if (devinfo->gen >= 8)
       return brw_imm_df(v);
 
+   /* gen7.5 does not support DF immediates straighforward but the DIM
+    * instruction allows to set the 64-bit immediate value.
+    */
+   if (devinfo->is_haswell) {
+      const fs_builder ubld = bld.exec_all();
+      fs_reg dst = ubld.vgrf(BRW_REGISTER_TYPE_DF, 1);
+      ubld.DIM(dst, brw_imm_df(v));
+      return component(dst, 0);
+   }
+
    /* gen7 does not support DF immediates, so we generate a 64-bit constant by
     * writing the low 32-bit of the constant to suboffset 0 of a VGRF and
     * the high 32-bit to suboffset 4 and then applying a stride of 0.
