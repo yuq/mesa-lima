@@ -1123,12 +1123,9 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 
 	send_cmd(dec, RUVD_CMD_DPB_BUFFER, dec->dpb.res->buf, 0,
 		 RADEON_USAGE_READWRITE, RADEON_DOMAIN_VRAM);
-	if ((u_reduce_video_profile(picture->profile) == PIPE_VIDEO_FORMAT_HEVC) ||
-	    (dec->stream_type == RUVD_CODEC_H264_PERF &&
-	    ((struct r600_common_screen*)dec->screen)->family >= CHIP_POLARIS10)) {
+	if (dec->ctx.res)
 		send_cmd(dec, RUVD_CMD_CONTEXT_BUFFER, dec->ctx.res->buf, 0,
 			RADEON_USAGE_READWRITE, RADEON_DOMAIN_VRAM);
-	}
 	send_cmd(dec, RUVD_CMD_BITSTREAM_BUFFER, bs_buf->res->buf,
 		 0, RADEON_USAGE_READ, RADEON_DOMAIN_GTT);
 	send_cmd(dec, RUVD_CMD_DECODING_TARGET_BUFFER, dt, 0,
