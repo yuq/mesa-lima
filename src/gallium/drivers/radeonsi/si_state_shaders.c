@@ -1103,16 +1103,16 @@ void si_init_shader_selector_async(void *job, int thread_index)
 	struct si_shader_selector *sel = (struct si_shader_selector *)job;
 	struct si_screen *sscreen = sel->screen;
 	LLVMTargetMachineRef tm;
-	struct pipe_debug_callback *debug;
+	struct pipe_debug_callback *debug = &sel->debug;
 	unsigned i;
 
 	if (thread_index >= 0) {
 		assert(thread_index < ARRAY_SIZE(sscreen->tm));
 		tm = sscreen->tm[thread_index];
-		debug = NULL;
+		if (!debug->async)
+			debug = NULL;
 	} else {
 		tm = sel->tm;
-		debug = &sel->debug;
 	}
 
 	/* Compile the main shader part for use with a prolog and/or epilog.
@@ -1324,7 +1324,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	pipe_mutex_init(sel->mutex);
 	util_queue_fence_init(&sel->ready);
 
-	if (sctx->b.debug.debug_message ||
+	if ((sctx->b.debug.debug_message && !sctx->b.debug.async) ||
 	    !util_queue_is_initialized(&sscreen->shader_compiler_queue))
 		si_init_shader_selector_async(sel, -1);
 	else
