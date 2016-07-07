@@ -60,8 +60,6 @@
 #define FB_BUFFER_SIZE_TONGA (2048 * 64)
 #define IT_SCALING_TABLE_SIZE 992
 
-#define FW_1_66_16 ((1 << 24) | (66 << 16) | (16 << 8))
-
 /* UVD decoder representation */
 struct ruvd_decoder {
 	struct pipe_video_codec		base;
@@ -1185,12 +1183,6 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 		height = align(height, VL_MACROBLOCK_HEIGHT);
 		break;
 	case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-		if ((info.family == CHIP_POLARIS10 || info.family == CHIP_POLARIS11) &&
-		    info.uvd_fw_version < FW_1_66_16 ) {
-			RVID_ERR("POLARIS10/11 firmware version need to be updated.\n");
-			return NULL;
-		}
-
 		width = align(width, VL_MACROBLOCK_WIDTH);
 		height = align(height, VL_MACROBLOCK_HEIGHT);
 		break;

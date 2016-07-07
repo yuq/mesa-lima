@@ -43,6 +43,8 @@
 #include "radeon_video.h"
 #include "radeon_vce.h"
 
+#define UVD_FW_1_66_16 ((1 << 24) | (66 << 16) | (16 << 8))
+
 /* generate an stream handle */
 unsigned rvid_alloc_stream_handle()
 {
@@ -206,6 +208,9 @@ int rvid_get_video_param(struct pipe_screen *screen,
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen *)screen;
 	enum pipe_video_format codec = u_reduce_video_profile(profile);
+	struct radeon_info info;
+
+	rscreen->ws->query_info(rscreen->ws, &info);
 
 	if (entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
 		switch (param) {
@@ -239,10 +244,15 @@ int rvid_get_video_param(struct pipe_screen *screen,
 		case PIPE_VIDEO_FORMAT_MPEG12:
 			return profile != PIPE_VIDEO_PROFILE_MPEG1;
 		case PIPE_VIDEO_FORMAT_MPEG4:
+			/* no support for MPEG4 on older hw */
+			return rscreen->family >= CHIP_PALM;
 		case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-			if (rscreen->family < CHIP_PALM)
-				/* no support for MPEG4 */
-				return codec != PIPE_VIDEO_FORMAT_MPEG4;
+			if ((rscreen->family == CHIP_POLARIS10 ||
+			     rscreen->family == CHIP_POLARIS11) &&
+			    info.uvd_fw_version < UVD_FW_1_66_16 ) {
+				RVID_ERR("POLARIS10/11 firmware version need to be updated.\n");
+				return false;
+			}
 			return true;
 		case PIPE_VIDEO_FORMAT_VC1:
 			return true;
