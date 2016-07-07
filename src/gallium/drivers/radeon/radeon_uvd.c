@@ -937,10 +937,7 @@ static void ruvd_destroy(struct pipe_video_codec *decoder)
 	}
 
 	rvid_destroy_buffer(&dec->dpb);
-	if ((u_reduce_video_profile(dec->base.profile) == PIPE_VIDEO_FORMAT_HEVC) ||
-	    (dec->stream_type == RUVD_CODEC_H264_PERF &&
-	    ((struct r600_common_screen*)dec->screen)->family >= CHIP_POLARIS10))
-		rvid_destroy_buffer(&dec->ctx);
+	rvid_destroy_buffer(&dec->ctx);
 
 	FREE(dec);
 }
@@ -1288,8 +1285,7 @@ error:
 	}
 
 	rvid_destroy_buffer(&dec->dpb);
-	if (dec->stream_type == RUVD_CODEC_H264_PERF && info.family >= CHIP_POLARIS10)
-		rvid_destroy_buffer(&dec->ctx);
+	rvid_destroy_buffer(&dec->ctx);
 
 	FREE(dec);
 
