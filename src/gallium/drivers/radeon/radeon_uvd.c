@@ -59,6 +59,7 @@
 #define FB_BUFFER_SIZE 2048
 #define FB_BUFFER_SIZE_TONGA (2048 * 64)
 #define IT_SCALING_TABLE_SIZE 992
+#define UVD_SESSION_CONTEXT_SIZE (128 * 1024)
 
 /* UVD decoder representation */
 struct ruvd_decoder {
@@ -89,6 +90,7 @@ struct ruvd_decoder {
 	struct rvid_buffer		dpb;
 	bool				use_legacy;
 	struct rvid_buffer		ctx;
+	struct rvid_buffer		sessionctx;
 };
 
 /* flush IB to the hardware */
@@ -169,6 +171,12 @@ static void send_msg_buf(struct ruvd_decoder *dec)
 	dec->msg = NULL;
 	dec->fb = NULL;
 	dec->it = NULL;
+
+
+	if (dec->sessionctx.res)
+		send_cmd(dec, RUVD_CMD_SESSION_CONTEXT_BUFFER,
+			 dec->sessionctx.res->buf, 0, RADEON_USAGE_READWRITE,
+			 RADEON_DOMAIN_VRAM);
 
 	/* and send it to the hardware */
 	send_cmd(dec, RUVD_CMD_MSG_BUFFER, buf->res->buf, 0,
@@ -938,6 +946,7 @@ static void ruvd_destroy(struct pipe_video_codec *decoder)
 
 	rvid_destroy_buffer(&dec->dpb);
 	rvid_destroy_buffer(&dec->ctx);
+	rvid_destroy_buffer(&dec->sessionctx);
 
 	FREE(dec);
 }
@@ -1259,6 +1268,16 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 		rvid_clear_buffer(context, &dec->ctx);
 	}
 
+	if (info.family >= CHIP_POLARIS10 && info.drm_minor >= 3) {
+		if (!rvid_create_buffer(dec->screen, &dec->sessionctx,
+					UVD_SESSION_CONTEXT_SIZE,
+					PIPE_USAGE_DEFAULT)) {
+			RVID_ERR("Can't allocated session ctx.\n");
+			goto error;
+		}
+		rvid_clear_buffer(context, &dec->sessionctx);
+	}
+
 	map_msg_fb_it_buf(dec);
 	dec->msg->size = sizeof(*dec->msg);
 	dec->msg->msg_type = RUVD_MSG_CREATE;
@@ -1286,6 +1305,7 @@ error:
 
 	rvid_destroy_buffer(&dec->dpb);
 	rvid_destroy_buffer(&dec->ctx);
+	rvid_destroy_buffer(&dec->sessionctx);
 
 	FREE(dec);
 
