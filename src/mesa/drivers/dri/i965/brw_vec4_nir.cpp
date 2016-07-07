@@ -389,7 +389,7 @@ vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 
       reg.writemask = writemask;
       if (instr->def.bit_size == 64) {
-         emit(MOV(reg, brw_imm_df(instr->value.f64[i])));
+         emit(MOV(reg, setup_imm_df(instr->value.f64[i])));
       } else {
          emit(MOV(reg, brw_imm_d(instr->value.i32[i])));
       }
