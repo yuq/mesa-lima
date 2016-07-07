@@ -191,6 +191,7 @@ instructions_match(fs_inst *a, fs_inst *b, bool *negate)
           a->header_size == b->header_size &&
           a->shadow_compare == b->shadow_compare &&
           a->pi_noperspective == b->pi_noperspective &&
+          a->target == b->target &&
           a->sources == b->sources &&
           operands_match(a, b, negate);
 }
