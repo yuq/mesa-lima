@@ -172,7 +172,10 @@ st_enable_debug_output(struct st_context *st, boolean enable)
       return;
 
    if (enable) {
-      struct pipe_debug_callback cb = { st_debug_message, st };
+      struct pipe_debug_callback cb;
+      memset(&cb, 0, sizeof(cb));
+      cb.debug_message = st_debug_message;
+      cb.data = st;
       pipe->set_debug_callback(pipe, &cb);
    } else {
       pipe->set_debug_callback(pipe, NULL);

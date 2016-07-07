@@ -810,6 +810,12 @@ struct pipe_compute_state
 struct pipe_debug_callback
 {
    /**
+    * When set to \c true, the callback may be called asynchronously from a
+    * driver-created thread.
+    */
+   bool async;
+
+   /**
     * Callback for the driver to report debug/performance/etc information back
     * to the state tracker.
     *
