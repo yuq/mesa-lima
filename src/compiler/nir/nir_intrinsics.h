@@ -331,19 +331,19 @@ SYSTEM_VALUE(channel_num, 1, 0, xx, xx, xx)
 #define LOAD(name, srcs, num_indices, idx0, idx1, idx2, flags) \
    INTRINSIC(load_##name, srcs, ARR(1, 1, 1, 1), true, 0, 0, num_indices, idx0, idx1, idx2, flags)
 
-/* src[] = { offset }. const_index[] = { base } */
+/* src[] = { offset }. const_index[] = { base, range } */
 LOAD(uniform, 1, 2, BASE, RANGE, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { buffer_index, offset }. No const_index */
 LOAD(ubo, 2, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-/* src[] = { offset }. const_index[] = { base } */
+/* src[] = { offset }. const_index[] = { base, component } */
 LOAD(input, 1, 2, BASE, COMPONENT, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-/* src[] = { vertex, offset }. const_index[] = { base } */
+/* src[] = { vertex, offset }. const_index[] = { base, component } */
 LOAD(per_vertex_input, 2, 2, BASE, COMPONENT, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { buffer_index, offset }. No const_index */
 LOAD(ssbo, 2, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
-/* src[] = { offset }. const_index[] = { base } */
+/* src[] = { offset }. const_index[] = { base, component } */
 LOAD(output, 1, 1, BASE, COMPONENT, xx, NIR_INTRINSIC_CAN_ELIMINATE)
-/* src[] = { vertex, offset }. const_index[] = { base } */
+/* src[] = { vertex, offset }. const_index[] = { base, component } */
 LOAD(per_vertex_output, 2, 1, BASE, COMPONENT, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 /* src[] = { offset }. const_index[] = { base } */
 LOAD(shared, 1, 1, BASE, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
@@ -361,9 +361,11 @@ LOAD(push_constant, 1, 2, BASE, RANGE, xx,
 #define STORE(name, srcs, num_indices, idx0, idx1, idx2, flags) \
    INTRINSIC(store_##name, srcs, ARR(0, 1, 1, 1), false, 0, 0, num_indices, idx0, idx1, idx2, flags)
 
-/* src[] = { value, offset }. const_index[] = { base, write_mask } */
+/* src[] = { value, offset }. const_index[] = { base, write_mask, component } */
 STORE(output, 2, 3, BASE, WRMASK, COMPONENT, 0)
-/* src[] = { value, vertex, offset }. const_index[] = { base, write_mask } */
+/* src[] = { value, vertex, offset }.
+ * const_index[] = { base, write_mask, component }
+ */
 STORE(per_vertex_output, 3, 3, BASE, WRMASK, COMPONENT, 0)
 /* src[] = { value, block_index, offset }. const_index[] = { write_mask } */
 STORE(ssbo, 3, 1, WRMASK, xx, xx, 0)
