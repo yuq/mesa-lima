@@ -1045,7 +1045,6 @@ enum ir_intrinsic_id {
    ir_intrinsic_atomic_counter_increment,
    ir_intrinsic_atomic_counter_predecrement,
    ir_intrinsic_atomic_counter_add,
-   ir_intrinsic_atomic_counter_sub,
    ir_intrinsic_atomic_counter_and,
    ir_intrinsic_atomic_counter_or,
    ir_intrinsic_atomic_counter_xor,

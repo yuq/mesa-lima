@@ -1010,10 +1010,6 @@ builtin_builder::create_intrinsics()
                 _atomic_counter_intrinsic1(shader_atomic_counter_ops,
                                            ir_intrinsic_atomic_counter_add),
                 NULL);
-   add_function("__intrinsic_atomic_sub",
-                _atomic_counter_intrinsic1(shader_atomic_counter_ops,
-                                           ir_intrinsic_atomic_counter_sub),
-                NULL);
    add_function("__intrinsic_atomic_min",
                 _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::uint_type,
@@ -3365,13 +3361,29 @@ builtin_builder::asin_expr(ir_variable *x, float p0, float p1)
                                           mul(abs(x), imm(p1))))))))));
 }
 
+/**
+ * Generate a ir_call to a function with a set of parameters
+ *
+ * The input \c params can either be a list of \c ir_variable or a list of
+ * \c ir_dereference_variable.  In the latter case, all nodes will be removed
+ * from \c params and used directly as the parameters to the generated
+ * \c ir_call.
+ */
 ir_call *
 builtin_builder::call(ir_function *f, ir_variable *ret, exec_list params)
 {
    exec_list actual_params;
 
-   foreach_in_list(ir_variable, var, &params) {
-      actual_params.push_tail(var_ref(var));
+   foreach_in_list_safe(ir_instruction, ir, &params) {
+      ir_dereference_variable *d = ir->as_dereference_variable();
+      if (d != NULL) {
+         d->remove();
+         actual_params.push_tail(d);
+      } else {
+         ir_variable *var = ir->as_variable();
+         assert(var != NULL);
+         actual_params.push_tail(var_ref(var));
+      }
    }
 
    ir_function_signature *sig =
@@ -5348,8 +5360,34 @@ builtin_builder::_atomic_counter_op1(const char *intrinsic,
    MAKE_SIG(glsl_type::uint_type, avail, 2, counter, data);
 
    ir_variable *retval = body.make_temp(glsl_type::uint_type, "atomic_retval");
-   body.emit(call(shader->symbols->get_function(intrinsic), retval,
-                  sig->parameters));
+
+   /* Instead of generating an __intrinsic_atomic_sub, generate an
+    * __intrinsic_atomic_add with the data parameter negated.
+    */
+   if (strcmp("__intrinsic_atomic_sub", intrinsic) == 0) {
+      ir_variable *const neg_data =
+         body.make_temp(glsl_type::uint_type, "neg_data");
+
+      body.emit(assign(neg_data, neg(data)));
+
+      exec_list parameters;
+
+      parameters.push_tail(new(mem_ctx) ir_dereference_variable(counter));
+      parameters.push_tail(new(mem_ctx) ir_dereference_variable(neg_data));
+
+      ir_function *const func =
+         shader->symbols->get_function("__intrinsic_atomic_add");
+      ir_instruction *const c = call(func, retval, parameters);
+
+      assert(c != NULL);
+      assert(parameters.is_empty());
+
+      body.emit(c);
+   } else {
+      body.emit(call(shader->symbols->get_function(intrinsic), retval,
+                     sig->parameters));
+   }
+
    body.emit(ret(retval));
    return sig;
 }

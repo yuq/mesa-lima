@@ -3218,15 +3218,6 @@ glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
          data2 = this->result;
          break;
       }
-      case ir_intrinsic_atomic_counter_sub: {
-         opcode = TGSI_OPCODE_ATOMUADD;
-         st_src_reg res = get_temp(glsl_type::uvec4_type);
-         st_dst_reg dstres = st_dst_reg(res);
-         dstres.writemask = dst.writemask;
-         emit_asm(ir, TGSI_OPCODE_INEG, dstres, data);
-         data = res;
-         break;
-      }
       default:
          assert(!"Unexpected intrinsic");
          return;
@@ -3672,7 +3663,6 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
    case ir_intrinsic_atomic_counter_increment:
    case ir_intrinsic_atomic_counter_predecrement:
    case ir_intrinsic_atomic_counter_add:
-   case ir_intrinsic_atomic_counter_sub:
    case ir_intrinsic_atomic_counter_min:
    case ir_intrinsic_atomic_counter_max:
    case ir_intrinsic_atomic_counter_and:
