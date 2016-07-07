@@ -2031,9 +2031,9 @@ struct gl_fragment_program
    /**
     * GLSL interpolation qualifier associated with each fragment shader input.
     * For inputs that do not have an interpolation qualifier specified in
-    * GLSL, the value is INTERP_QUALIFIER_NONE.
+    * GLSL, the value is INTERP_MODE_NONE.
     */
-   enum glsl_interp_qualifier InterpQualifier[VARYING_SLOT_MAX];
+   enum glsl_interp_mode InterpQualifier[VARYING_SLOT_MAX];
 
    /**
     * Bitfield indicating, for each fragment shader input, 1 if that input
@@ -2638,7 +2638,7 @@ struct gl_shader_variable
    /**
     * Interpolation mode for shader inputs / outputs
     *
-    * \sa glsl_interp_qualifier
+    * \sa glsl_interp_mode
     */
    unsigned interpolation:2;
 

@@ -392,7 +392,7 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 			 */
 			uint32_t inloc = fp->inputs[j].inloc - 8;
 
-			if ((fp->inputs[j].interpolate == INTERP_QUALIFIER_FLAT) ||
+			if ((fp->inputs[j].interpolate == INTERP_MODE_FLAT) ||
 					(fp->inputs[j].rasterflat && emit->rasterflat)) {
 				uint32_t loc = inloc;
 

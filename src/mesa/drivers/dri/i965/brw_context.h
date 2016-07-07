@@ -392,7 +392,7 @@ struct interpolation_mode_map {
 static inline bool brw_any_flat_varyings(struct interpolation_mode_map *map)
 {
    for (int i = 0; i < BRW_VARYING_SLOT_COUNT; i++)
-      if (map->mode[i] == INTERP_QUALIFIER_FLAT)
+      if (map->mode[i] == INTERP_MODE_FLAT)
          return true;
 
    return false;
@@ -401,7 +401,7 @@ static inline bool brw_any_flat_varyings(struct interpolation_mode_map *map)
 static inline bool brw_any_noperspective_varyings(struct interpolation_mode_map *map)
 {
    for (int i = 0; i < BRW_VARYING_SLOT_COUNT; i++)
-      if (map->mode[i] == INTERP_QUALIFIER_NOPERSPECTIVE)
+      if (map->mode[i] == INTERP_MODE_NOPERSPECTIVE)
          return true;
 
    return false;

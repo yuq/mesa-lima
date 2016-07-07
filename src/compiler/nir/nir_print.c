@@ -374,7 +374,7 @@ print_var_decl(nir_variable *var, print_state *state)
    const char *const inv = (var->data.invariant) ? "invariant " : "";
    fprintf(fp, "%s%s%s%s%s %s ",
            cent, samp, patch, inv, get_variable_mode_str(var->data.mode),
-           glsl_interp_qualifier_name(var->data.interpolation));
+           glsl_interp_mode_name(var->data.interpolation));
 
    const char *const coher = (var->data.image.coherent) ? "coherent " : "";
    const char *const volat = (var->data.image._volatile) ? "volatile " : "";

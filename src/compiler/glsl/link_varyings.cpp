@@ -1388,13 +1388,13 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
       if (producer_var) {
          producer_var->data.centroid = false;
          producer_var->data.sample = false;
-         producer_var->data.interpolation = INTERP_QUALIFIER_FLAT;
+         producer_var->data.interpolation = INTERP_MODE_FLAT;
       }
 
       if (consumer_var) {
          consumer_var->data.centroid = false;
          consumer_var->data.sample = false;
-         consumer_var->data.interpolation = INTERP_QUALIFIER_FLAT;
+         consumer_var->data.interpolation = INTERP_MODE_FLAT;
       }
    }
 
@@ -1612,7 +1612,7 @@ varying_matches::compute_packing_class(const ir_variable *var)
                             (var->data.patch << 2);
    packing_class *= 4;
    packing_class += var->is_interpolation_flat()
-      ? unsigned(INTERP_QUALIFIER_FLAT) : var->data.interpolation;
+      ? unsigned(INTERP_MODE_FLAT) : var->data.interpolation;
    return packing_class;
 }
 

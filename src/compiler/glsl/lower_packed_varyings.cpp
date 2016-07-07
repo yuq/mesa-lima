@@ -276,8 +276,8 @@ lower_packed_varyings_visitor::run(struct gl_linked_shader *shader)
        * together when their interpolation mode is "flat".  Treat integers as
        * being flat when the interpolation mode is none.
        */
-      assert(var->data.interpolation == INTERP_QUALIFIER_FLAT ||
-             var->data.interpolation == INTERP_QUALIFIER_NONE ||
+      assert(var->data.interpolation == INTERP_MODE_FLAT ||
+             var->data.interpolation == INTERP_MODE_NONE ||
              !var->type->contains_integer());
 
       /* Clone the variable for program resource list before
@@ -628,7 +628,7 @@ lower_packed_varyings_visitor::get_packed_varying_deref(
       packed_var->data.sample = unpacked_var->data.sample;
       packed_var->data.patch = unpacked_var->data.patch;
       packed_var->data.interpolation = packed_type == glsl_type::ivec4_type
-         ? unsigned(INTERP_QUALIFIER_FLAT) : unpacked_var->data.interpolation;
+         ? unsigned(INTERP_MODE_FLAT) : unpacked_var->data.interpolation;
       packed_var->data.location = location;
       packed_var->data.precision = unpacked_var->data.precision;
       packed_var->data.always_active_io = unpacked_var->data.always_active_io;

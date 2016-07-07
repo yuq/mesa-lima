@@ -176,7 +176,7 @@ public:
    fs_reg *emit_samplemaskin_setup();
    void emit_general_interpolation(fs_reg *attr, const char *name,
                                    const glsl_type *type,
-                                   glsl_interp_qualifier interpolation_mode,
+                                   glsl_interp_mode interpolation_mode,
                                    int *location, bool mod_centroid,
                                    bool mod_sample);
    fs_reg *emit_vs_system_value(int location);

@@ -592,7 +592,7 @@ public:
 
    inline bool is_interpolation_flat() const
    {
-      return this->data.interpolation == INTERP_QUALIFIER_FLAT ||
+      return this->data.interpolation == INTERP_MODE_FLAT ||
              this->type->contains_integer() ||
              this->type->contains_double();
    }
@@ -686,7 +686,7 @@ public:
       /**
        * Interpolation mode for shader inputs / outputs
        *
-       * \sa glsl_interp_qualifier
+       * \sa glsl_interp_mode
        */
       unsigned interpolation:2;
 

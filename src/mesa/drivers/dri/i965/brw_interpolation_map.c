@@ -26,10 +26,10 @@
 static char const *get_qual_name(int mode)
 {
    switch (mode) {
-      case INTERP_QUALIFIER_NONE:          return "none";
-      case INTERP_QUALIFIER_FLAT:          return "flat";
-      case INTERP_QUALIFIER_SMOOTH:        return "smooth";
-      case INTERP_QUALIFIER_NOPERSPECTIVE: return "nopersp";
+      case INTERP_MODE_NONE:          return "none";
+      case INTERP_MODE_FLAT:          return "flat";
+      case INTERP_MODE_SMOOTH:        return "smooth";
+      case INTERP_MODE_NOPERSPECTIVE: return "nopersp";
       default:                             return "???";
    }
 }
@@ -49,7 +49,7 @@ brw_setup_vue_interpolation(struct brw_context *brw)
                         BRW_NEW_VUE_MAP_GEOM_OUT))
       return;
 
-   memset(&brw->interpolation_mode, INTERP_QUALIFIER_NONE, sizeof(brw->interpolation_mode));
+   memset(&brw->interpolation_mode, INTERP_MODE_NONE, sizeof(brw->interpolation_mode));
 
    brw->ctx.NewDriverState |= BRW_NEW_INTERPOLATION_MAP;
 
@@ -64,7 +64,7 @@ brw_setup_vue_interpolation(struct brw_context *brw)
       /* HPOS always wants noperspective. setting it up here allows
        * us to not need special handling in the SF program. */
       if (varying == VARYING_SLOT_POS) {
-         brw->interpolation_mode.mode[i] = INTERP_QUALIFIER_NOPERSPECTIVE;
+         brw->interpolation_mode.mode[i] = INTERP_MODE_NOPERSPECTIVE;
          continue;
       }
 
@@ -75,17 +75,17 @@ brw_setup_vue_interpolation(struct brw_context *brw)
       if (!(fprog->Base.InputsRead & BITFIELD64_BIT(frag_attrib)))
          continue;
 
-      enum glsl_interp_qualifier mode = fprog->InterpQualifier[frag_attrib];
+      enum glsl_interp_mode mode = fprog->InterpQualifier[frag_attrib];
 
       /* If the mode is not specified, the default varies: Color values
        * follow GL_SHADE_MODEL; everything else is smooth.
        */
-      if (mode == INTERP_QUALIFIER_NONE) {
+      if (mode == INTERP_MODE_NONE) {
          if (frag_attrib == VARYING_SLOT_COL0 || frag_attrib == VARYING_SLOT_COL1)
             mode = brw->ctx.Light.ShadeModel == GL_FLAT
-               ? INTERP_QUALIFIER_FLAT : INTERP_QUALIFIER_SMOOTH;
+               ? INTERP_MODE_FLAT : INTERP_MODE_SMOOTH;
          else
-            mode = INTERP_QUALIFIER_SMOOTH;
+            mode = INTERP_MODE_SMOOTH;
       }
 
       brw->interpolation_mode.mode[i] = mode;

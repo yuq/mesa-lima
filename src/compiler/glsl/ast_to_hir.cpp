@@ -2826,7 +2826,7 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
 static void
 validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
                                  YYLTYPE *loc,
-                                 const glsl_interp_qualifier interpolation,
+                                 const glsl_interp_mode interpolation,
                                  const struct ast_type_qualifier *qual,
                                  const struct glsl_type *var_type,
                                  ir_variable_mode mode)
@@ -2855,7 +2855,7 @@ validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
     *    fragment shader."
     */
    if (state->is_version(130, 300)
-       && interpolation != INTERP_QUALIFIER_NONE) {
+       && interpolation != INTERP_MODE_NONE) {
       const char *i = interpolation_string(interpolation);
       if (mode != ir_var_shader_in && mode != ir_var_shader_out)
          _mesa_glsl_error(loc, state,
@@ -2893,7 +2893,7 @@ validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
     * These deprecated storage qualifiers do not exist in GLSL ES 3.00.
     */
    if (state->is_version(130, 0)
-       && interpolation != INTERP_QUALIFIER_NONE
+       && interpolation != INTERP_MODE_NONE
        && qual->flags.q.varying) {
 
       const char *i = interpolation_string(interpolation);
@@ -2939,7 +2939,7 @@ validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
     */
    if (state->is_version(130, 300)
        && var_type->contains_integer()
-       && interpolation != INTERP_QUALIFIER_FLAT
+       && interpolation != INTERP_MODE_FLAT
        && ((state->stage == MESA_SHADER_FRAGMENT && mode == ir_var_shader_in)
            || (state->stage == MESA_SHADER_VERTEX && mode == ir_var_shader_out
                && state->es_shader))) {
@@ -2969,7 +2969,7 @@ validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
     */
    if (state->has_double()
        && var_type->contains_double()
-       && interpolation != INTERP_QUALIFIER_FLAT
+       && interpolation != INTERP_MODE_FLAT
        && state->stage == MESA_SHADER_FRAGMENT
        && mode == ir_var_shader_in) {
       _mesa_glsl_error(loc, state, "if a fragment input is (or contains) "
@@ -2977,20 +2977,20 @@ validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
    }
 }
 
-static glsl_interp_qualifier
+static glsl_interp_mode
 interpret_interpolation_qualifier(const struct ast_type_qualifier *qual,
                                   const struct glsl_type *var_type,
                                   ir_variable_mode mode,
                                   struct _mesa_glsl_parse_state *state,
                                   YYLTYPE *loc)
 {
-   glsl_interp_qualifier interpolation;
+   glsl_interp_mode interpolation;
    if (qual->flags.q.flat)
-      interpolation = INTERP_QUALIFIER_FLAT;
+      interpolation = INTERP_MODE_FLAT;
    else if (qual->flags.q.noperspective)
-      interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
+      interpolation = INTERP_MODE_NOPERSPECTIVE;
    else if (qual->flags.q.smooth)
-      interpolation = INTERP_QUALIFIER_SMOOTH;
+      interpolation = INTERP_MODE_SMOOTH;
    else if (state->es_shader &&
             ((mode == ir_var_shader_in &&
               state->stage != MESA_SHADER_VERTEX) ||
@@ -3001,9 +3001,9 @@ interpret_interpolation_qualifier(const struct ast_type_qualifier *qual,
        *    "When no interpolation qualifier is present, smooth interpolation
        *    is used."
        */
-      interpolation = INTERP_QUALIFIER_SMOOTH;
+      interpolation = INTERP_MODE_SMOOTH;
    else
-      interpolation = INTERP_QUALIFIER_NONE;
+      interpolation = INTERP_MODE_NONE;
 
    validate_interpolation_qualifier(state, loc,
                                     interpolation,

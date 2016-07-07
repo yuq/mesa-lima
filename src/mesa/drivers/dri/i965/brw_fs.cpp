@@ -1071,13 +1071,13 @@ fs_visitor::emit_fragcoord_interpolation()
 }
 
 static enum brw_barycentric_mode
-barycentric_mode(enum glsl_interp_qualifier mode,
+barycentric_mode(enum glsl_interp_mode mode,
                  bool is_centroid, bool is_sample)
 {
    unsigned bary;
 
    /* Barycentric modes don't make sense for flat inputs. */
-   assert(mode != INTERP_QUALIFIER_FLAT);
+   assert(mode != INTERP_MODE_FLAT);
 
    if (is_sample) {
       bary = BRW_BARYCENTRIC_PERSPECTIVE_SAMPLE;
@@ -1087,7 +1087,7 @@ barycentric_mode(enum glsl_interp_qualifier mode,
       bary = BRW_BARYCENTRIC_PERSPECTIVE_PIXEL;
    }
 
-   if (mode == INTERP_QUALIFIER_NOPERSPECTIVE)
+   if (mode == INTERP_MODE_NOPERSPECTIVE)
       bary += 3;
 
    return (enum brw_barycentric_mode) bary;
@@ -1107,7 +1107,7 @@ centroid_to_pixel(enum brw_barycentric_mode bary)
 void
 fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
                                        const glsl_type *type,
-                                       glsl_interp_qualifier interpolation_mode,
+                                       glsl_interp_mode interpolation_mode,
                                        int *location, bool mod_centroid,
                                        bool mod_sample)
 {
@@ -1142,7 +1142,7 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
 
       attr->type = brw_type_for_base_type(type->get_scalar_type());
 
-      if (interpolation_mode == INTERP_QUALIFIER_FLAT) {
+      if (interpolation_mode == INTERP_MODE_FLAT) {
          /* Constant interpolation (flat shading) case. The SF has
           * handed us defined values in only the constant offset
           * field of the setup reg.
@@ -1198,7 +1198,7 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
             } else {
                bld.emit(FS_OPCODE_LINTERP, *attr, delta_xy[bary], interp);
             }
-            if (devinfo->gen < 6 && interpolation_mode == INTERP_QUALIFIER_SMOOTH) {
+            if (devinfo->gen < 6 && interpolation_mode == INTERP_MODE_SMOOTH) {
                bld.MUL(*attr, *attr, this->pixel_w);
             }
             *attr = offset(*attr, bld, 1);
@@ -6347,7 +6347,7 @@ brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
          continue;
 
       /* Flat inputs don't need barycentric modes. */
-      if (var->data.interpolation == INTERP_QUALIFIER_FLAT)
+      if (var->data.interpolation == INTERP_MODE_FLAT)
          continue;
 
       /* Determine the set (or sets) of barycentric coordinates needed to
@@ -6357,7 +6357,7 @@ brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
        * for lit pixels, so we need both sets of barycentric coordinates.
        */
       enum brw_barycentric_mode bary_mode =
-         barycentric_mode((glsl_interp_qualifier) var->data.interpolation,
+         barycentric_mode((glsl_interp_mode) var->data.interpolation,
                           var->data.centroid, var->data.sample);
 
       barycentric_interp_modes |= 1 << bary_mode;
@@ -6382,7 +6382,7 @@ brw_compute_flat_inputs(struct brw_wm_prog_data *prog_data,
 	 continue;
 
       /* flat shading */
-      if (var->data.interpolation == INTERP_QUALIFIER_FLAT)
+      if (var->data.interpolation == INTERP_MODE_FLAT)
          prog_data->flat_inputs |= (1 << input_index);
    }
 }
@@ -6423,18 +6423,18 @@ brw_nir_set_default_interpolation(const struct brw_device_info *devinfo,
        * Everything defaults to smooth except for the legacy GL color
        * built-in variables, which might be flat depending on API state.
        */
-      if (var->data.interpolation == INTERP_QUALIFIER_NONE) {
+      if (var->data.interpolation == INTERP_MODE_NONE) {
          const bool flat = api_flat_shade &&
             (var->data.location == VARYING_SLOT_COL0 ||
              var->data.location == VARYING_SLOT_COL1);
 
-         var->data.interpolation = flat ? INTERP_QUALIFIER_FLAT
-                                        : INTERP_QUALIFIER_SMOOTH;
+         var->data.interpolation = flat ? INTERP_MODE_FLAT
+                                        : INTERP_MODE_SMOOTH;
       }
 
       /* Apply 'sample' if necessary for API state. */
       if (per_sample_interpolation &&
-          var->data.interpolation != INTERP_QUALIFIER_FLAT) {
+          var->data.interpolation != INTERP_MODE_FLAT) {
          var->data.centroid = false;
          var->data.sample = true;
       }

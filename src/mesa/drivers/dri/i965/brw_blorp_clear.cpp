@@ -70,7 +70,7 @@ brw_blorp_params_get_clear_kernel(struct brw_context *brw,
    nir_variable *v_color = nir_variable_create(b.shader, nir_var_shader_in,
                                                glsl_vec4_type(), "v_color");
    v_color->data.location = VARYING_SLOT_VAR0;
-   v_color->data.interpolation = INTERP_QUALIFIER_FLAT;
+   v_color->data.interpolation = INTERP_MODE_FLAT;
 
    nir_variable *frag_color = nir_variable_create(b.shader, nir_var_shader_out,
                                                   glsl_vec4_type(),

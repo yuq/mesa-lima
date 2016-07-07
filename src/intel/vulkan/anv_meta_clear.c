@@ -94,7 +94,7 @@ build_color_shaders(struct nir_shader **out_vs,
       nir_variable_create(vs_b.shader, nir_var_shader_out, color_type,
                           "v_color");
    vs_out_color->data.location = VARYING_SLOT_VAR0;
-   vs_out_color->data.interpolation = INTERP_QUALIFIER_FLAT;
+   vs_out_color->data.interpolation = INTERP_MODE_FLAT;
 
    nir_variable *fs_in_color =
       nir_variable_create(fs_b.shader, nir_var_shader_in, color_type,

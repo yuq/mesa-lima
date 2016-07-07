@@ -545,18 +545,18 @@ st_get_vp_variant(struct st_context *st,
 
 
 static unsigned
-st_translate_interp(enum glsl_interp_qualifier glsl_qual, bool is_color)
+st_translate_interp(enum glsl_interp_mode glsl_qual, bool is_color)
 {
    switch (glsl_qual) {
-   case INTERP_QUALIFIER_NONE:
+   case INTERP_MODE_NONE:
       if (is_color)
          return TGSI_INTERPOLATE_COLOR;
       return TGSI_INTERPOLATE_PERSPECTIVE;
-   case INTERP_QUALIFIER_SMOOTH:
+   case INTERP_MODE_SMOOTH:
       return TGSI_INTERPOLATE_PERSPECTIVE;
-   case INTERP_QUALIFIER_FLAT:
+   case INTERP_MODE_FLAT:
       return TGSI_INTERPOLATE_CONSTANT;
-   case INTERP_QUALIFIER_NOPERSPECTIVE:
+   case INTERP_MODE_NOPERSPECTIVE:
       return TGSI_INTERPOLATE_LINEAR;
    default:
       assert(0 && "unexpected interp mode in st_translate_interp()");

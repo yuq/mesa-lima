@@ -1146,7 +1146,7 @@ static void add_sysval_input(struct ir3_compile *ctx, gl_system_value slot,
 	so->inputs[n].slot = slot;
 	so->inputs[n].compmask = 1;
 	so->inputs[n].regid = r;
-	so->inputs[n].interpolate = INTERP_QUALIFIER_FLAT;
+	so->inputs[n].interpolate = INTERP_MODE_FLAT;
 	so->total_in++;
 
 	ctx->ir->ninputs = MAX2(ctx->ir->ninputs, r + 1);
@@ -2055,7 +2055,7 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 				 * we need to do flat vs smooth shading depending on
 				 * rast state:
 				 */
-				if (in->data.interpolation == INTERP_QUALIFIER_NONE) {
+				if (in->data.interpolation == INTERP_MODE_NONE) {
 					switch (slot) {
 					case VARYING_SLOT_COL0:
 					case VARYING_SLOT_COL1:
@@ -2069,7 +2069,7 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 				}
 
 				if (ctx->flat_bypass) {
-					if ((so->inputs[n].interpolate == INTERP_QUALIFIER_FLAT) ||
+					if ((so->inputs[n].interpolate == INTERP_MODE_FLAT) ||
 							(so->inputs[n].rasterflat && ctx->so->key.rasterflat))
 						use_ldlv = true;
 				}

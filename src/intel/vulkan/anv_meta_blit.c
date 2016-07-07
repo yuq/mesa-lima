@@ -54,7 +54,7 @@ build_nir_vertex_shader(void)
    nir_variable *tex_pos_out = nir_variable_create(b.shader, nir_var_shader_out,
                                                    vec4, "v_tex_pos");
    tex_pos_out->data.location = VARYING_SLOT_VAR0;
-   tex_pos_out->data.interpolation = INTERP_QUALIFIER_SMOOTH;
+   tex_pos_out->data.interpolation = INTERP_MODE_SMOOTH;
    nir_copy_var(&b, tex_pos_out, tex_pos_in);
 
    return b.shader;

@@ -709,7 +709,7 @@ build_nir_vertex_shader(void)
    nir_variable *tex_pos_out = nir_variable_create(b.shader, nir_var_shader_out,
                                                    vec4, "v_tex_pos");
    tex_pos_out->data.location = VARYING_SLOT_VAR0;
-   tex_pos_out->data.interpolation = INTERP_QUALIFIER_SMOOTH;
+   tex_pos_out->data.interpolation = INTERP_MODE_SMOOTH;
    nir_copy_var(&b, tex_pos_out, tex_pos_in);
 
    nir_variable *other_in = nir_variable_create(b.shader, nir_var_shader_in,
@@ -718,7 +718,7 @@ build_nir_vertex_shader(void)
    nir_variable *other_out = nir_variable_create(b.shader, nir_var_shader_out,
                                                    vec4, "v_other");
    other_out->data.location = VARYING_SLOT_VAR1;
-   other_out->data.interpolation = INTERP_QUALIFIER_FLAT;
+   other_out->data.interpolation = INTERP_MODE_FLAT;
    nir_copy_var(&b, other_out, other_in);
 
    return b.shader;
@@ -976,7 +976,7 @@ build_nir_w_tiled_fragment_shader(struct anv_device *device,
    nir_variable *tex_off_in = nir_variable_create(b.shader, nir_var_shader_in,
                                                   ivec3, "v_tex_off");
    tex_off_in->data.location = VARYING_SLOT_VAR0;
-   tex_off_in->data.interpolation = INTERP_QUALIFIER_FLAT;
+   tex_off_in->data.interpolation = INTERP_MODE_FLAT;
 
    /* In location 1 we have a uvec4 that gives us the bounds of the
     * destination.  We need to discard if we get outside this boundary.
@@ -984,7 +984,7 @@ build_nir_w_tiled_fragment_shader(struct anv_device *device,
    nir_variable *bounds_in = nir_variable_create(b.shader, nir_var_shader_in,
                                                  uvec4, "v_bounds");
    bounds_in->data.location = VARYING_SLOT_VAR1;
-   bounds_in->data.interpolation = INTERP_QUALIFIER_FLAT;
+   bounds_in->data.interpolation = INTERP_MODE_FLAT;
 
    nir_variable *color_out = nir_variable_create(b.shader, nir_var_shader_out,
                                                  vec4, "f_color");

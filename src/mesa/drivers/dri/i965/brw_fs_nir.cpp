@@ -76,7 +76,7 @@ fs_visitor::nir_setup_inputs()
       } else {
          int location = var->data.location;
          emit_general_interpolation(&input, var->name, var->type,
-                                    (glsl_interp_qualifier) var->data.interpolation,
+                                    (glsl_interp_mode) var->data.interpolation,
                                     &location, var->data.centroid,
                                     var->data.sample);
       }
@@ -1639,7 +1639,7 @@ emit_pixel_interpolater_send(const fs_builder &bld,
                              const fs_reg &dst,
                              const fs_reg &src,
                              const fs_reg &desc,
-                             glsl_interp_qualifier interpolation)
+                             glsl_interp_mode interpolation)
 {
    fs_inst *inst;
    fs_reg payload;
@@ -1658,7 +1658,7 @@ emit_pixel_interpolater_send(const fs_builder &bld,
    inst->mlen = mlen;
    /* 2 floats per slot returned */
    inst->regs_written = 2 * bld.dispatch_width() / 8;
-   inst->pi_noperspective = interpolation == INTERP_QUALIFIER_NOPERSPECTIVE;
+   inst->pi_noperspective = interpolation == INTERP_MODE_NOPERSPECTIVE;
 
    return inst;
 }
@@ -3108,8 +3108,8 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       wm_prog_data->pulls_bary = true;
 
       fs_reg dst_xy = bld.vgrf(BRW_REGISTER_TYPE_F, 2);
-      const glsl_interp_qualifier interpolation =
-         (glsl_interp_qualifier) instr->variables[0]->var->data.interpolation;
+      const glsl_interp_mode interpolation =
+         (glsl_interp_mode) instr->variables[0]->var->data.interpolation;
 
       switch (instr->intrinsic) {
       case nir_intrinsic_interp_var_at_centroid:
