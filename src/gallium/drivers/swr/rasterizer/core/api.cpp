@@ -732,10 +732,12 @@ void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
     }
     else
     {
+        // the vp width and height must be added to origin un-rounded then the result round to -inf.
+        // The cast to int works for rounding assuming all [left, right, top, bottom] are positive.
         left = (int32_t)pState->vp[0].x;
-        right = (int32_t)pState->vp[0].x + (int32_t)pState->vp[0].width;
+        right = (int32_t)(pState->vp[0].x + pState->vp[0].width);
         top = (int32_t)pState->vp[0].y;
-        bottom = (int32_t)pState->vp[0].y + (int32_t)pState->vp[0].height;
+        bottom = (int32_t)(pState->vp[0].y + pState->vp[0].height);
     }
 
     right = std::min<uint32_t>(right, KNOB_MAX_SCISSOR_X);
