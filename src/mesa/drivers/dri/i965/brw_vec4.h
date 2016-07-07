@@ -213,6 +213,8 @@ public:
    EMIT3(MAD)
    EMIT2(ADDC)
    EMIT2(SUBB)
+   EMIT1(DIM)
+
 #undef EMIT1
 #undef EMIT2
 #undef EMIT3

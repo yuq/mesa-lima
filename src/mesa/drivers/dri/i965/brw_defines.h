@@ -857,7 +857,7 @@ enum opcode {
    BRW_OPCODE_XOR =	7,
    BRW_OPCODE_SHR =	8,
    BRW_OPCODE_SHL =	9,
-   // BRW_OPCODE_DIM =	10,  /**< Gen7.5 only */ /* Reused */
+   BRW_OPCODE_DIM =	10,  /**< Gen7.5 only */ /* Reused */
    // BRW_OPCODE_SMOV =	10,  /**< Gen8+       */ /* Reused */
    /* Reserved - 11 */
    BRW_OPCODE_ASR =	12,

@@ -183,6 +183,7 @@ ALU3(MAD)
 ALU2_ACC(ADDC)
 ALU2_ACC(SUBB)
 ALU2(MAC)
+ALU1(DIM)
 
 /** Gen4 predicated IF. */
 vec4_instruction *

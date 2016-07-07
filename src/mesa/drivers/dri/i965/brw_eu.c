@@ -421,7 +421,7 @@ enum gen {
 #define GEN_LE(gen) (GEN_LT(gen) | (gen))
 
 static const struct opcode_desc opcode_10_descs[] = {
-   { .name = "dim",   .nsrc = 0, .ndst = 0, .gens = GEN75 },
+   { .name = "dim",   .nsrc = 1, .ndst = 1, .gens = GEN75 },
    { .name = "smov",  .nsrc = 0, .ndst = 0, .gens = GEN_GE(GEN8) },
 };
 

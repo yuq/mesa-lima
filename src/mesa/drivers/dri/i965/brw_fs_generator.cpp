@@ -2082,6 +2082,13 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 generate_barrier(inst, src[0]);
 	 break;
 
+      case BRW_OPCODE_DIM:
+         assert(devinfo->is_haswell);
+         assert(src[0].type == BRW_REGISTER_TYPE_DF);
+         assert(dst.type == BRW_REGISTER_TYPE_DF);
+         brw_DIM(p, dst, retype(src[0], BRW_REGISTER_TYPE_F));
+         break;
+
       default:
          unreachable("Unsupported opcode");
 
