@@ -212,24 +212,24 @@ int rvid_get_video_param(struct pipe_screen *screen,
 		case PIPE_VIDEO_CAP_SUPPORTED:
 			return codec == PIPE_VIDEO_FORMAT_MPEG4_AVC &&
 				rvce_is_fw_version_supported(rscreen);
-	        case PIPE_VIDEO_CAP_NPOT_TEXTURES:
-        	        return 1;
-	        case PIPE_VIDEO_CAP_MAX_WIDTH:
+		case PIPE_VIDEO_CAP_NPOT_TEXTURES:
+			return 1;
+		case PIPE_VIDEO_CAP_MAX_WIDTH:
 			return (rscreen->family < CHIP_TONGA) ? 2048 : 4096;
-	        case PIPE_VIDEO_CAP_MAX_HEIGHT:
+		case PIPE_VIDEO_CAP_MAX_HEIGHT:
 			return (rscreen->family < CHIP_TONGA) ? 1152 : 2304;
-	        case PIPE_VIDEO_CAP_PREFERED_FORMAT:
-        	        return PIPE_FORMAT_NV12;
-	        case PIPE_VIDEO_CAP_PREFERS_INTERLACED:
-        	        return false;
-	        case PIPE_VIDEO_CAP_SUPPORTS_INTERLACED:
-        	        return false;
-	        case PIPE_VIDEO_CAP_SUPPORTS_PROGRESSIVE:
-        	        return true;
-	        case PIPE_VIDEO_CAP_STACKED_FRAMES:
+		case PIPE_VIDEO_CAP_PREFERED_FORMAT:
+			return PIPE_FORMAT_NV12;
+		case PIPE_VIDEO_CAP_PREFERS_INTERLACED:
+			return false;
+		case PIPE_VIDEO_CAP_SUPPORTS_INTERLACED:
+			return false;
+		case PIPE_VIDEO_CAP_SUPPORTS_PROGRESSIVE:
+			return true;
+		case PIPE_VIDEO_CAP_STACKED_FRAMES:
 			return (rscreen->family < CHIP_TONGA) ? 1 : 2;
-	        default:
-        	        return 0;
+		default:
+			return 0;
 		}
 	}
 
