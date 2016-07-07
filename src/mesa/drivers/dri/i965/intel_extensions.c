@@ -218,8 +218,10 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.OES_primitive_bounding_box = true;
       ctx->Extensions.OES_texture_buffer = true;
 
-      if (brw->is_haswell)
+      if (brw->is_haswell) {
          ctx->Extensions.ARB_gpu_shader_fp64 = true;
+         ctx->Extensions.ARB_vertex_attrib_64bit = true;
+      }
 
       if (can_do_pipelined_register_writes(brw->screen)) {
          ctx->Extensions.ARB_draw_indirect = true;
