@@ -35,6 +35,13 @@
 #define KNOB_ARCH_AVX512 2
 
 ///////////////////////////////////////////////////////////////////////////////
+// AVX512 Support
+///////////////////////////////////////////////////////////////////////////////
+
+#define ENABLE_AVX512_SIMD16    0
+#define ENABLE_AVX512_EMULATION 0
+
+///////////////////////////////////////////////////////////////////////////////
 // Architecture validation
 ///////////////////////////////////////////////////////////////////////////////
 #if !defined(KNOB_ARCH)
@@ -52,16 +59,17 @@
 #define KNOB_SIMD_WIDTH 8
 #define KNOB_SIMD_BYTES 32
 #elif (KNOB_ARCH == KNOB_ARCH_AVX512)
+#if ENABLE_AVX512_SIMD16
+#define KNOB_ARCH_ISA AVX512F
+#define KNOB_ARCH_STR "AVX512"
+#define KNOB_SIMD_WIDTH 16
+#define KNOB_SIMD_BYTES 64
+#else
 #define KNOB_ARCH_ISA AVX2
 #define KNOB_ARCH_STR "AVX2"
 #define KNOB_SIMD_WIDTH 8
 #define KNOB_SIMD_BYTES 32
-// Disable AVX512 for now...
-//#define KNOB_ARCH_ISA AVX512F
-//#define KNOB_ARCH_STR "AVX512"
-//#define KNOB_SIMD_WIDTH 16
-//#define KNOB_SIMD_BYTES 64
-//#error "AVX512 not yet supported"
+#endif
 #else
 #error "Unknown architecture"
 #endif
@@ -121,11 +129,16 @@
 
 #if KNOB_SIMD_WIDTH==8 && KNOB_TILE_X_DIM < 4
 #error "incompatible width/tile dimensions"
+#elif KNOB_SIMD_WIDTH==16 && KNOB_TILE_X_DIM < 4
+#error "incompatible width/tile dimensions"
 #endif
 
 #if KNOB_SIMD_WIDTH == 8
 #define SIMD_TILE_X_DIM 4
 #define SIMD_TILE_Y_DIM 2
+#elif KNOB_SIMD_WIDTH == 16
+#define SIMD_TILE_X_DIM 4
+#define SIMD_TILE_Y_DIM 4
 #else
 #error "Invalid simd width"
 #endif
