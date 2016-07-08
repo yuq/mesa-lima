@@ -1307,6 +1307,7 @@ bool
 _mesa_format_no_online_compression(const struct gl_context *ctx, GLenum format)
 {
    return _mesa_is_astc_format(format) ||
+          _mesa_is_etc2_format(format) ||
           compressedteximage_only_format(ctx, format);
 }
 
