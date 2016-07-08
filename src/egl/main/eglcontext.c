@@ -557,20 +557,16 @@ _eglQueryContext(_EGLDriver *drv, _EGLDisplay *dpy, _EGLContext *c,
 static _EGLContext *
 _eglBindContextToThread(_EGLContext *ctx, _EGLThreadInfo *t)
 {
-   EGLint apiIndex;
    _EGLContext *oldCtx;
 
-   apiIndex = (ctx) ?
-      _eglConvertApiToIndex(ctx->ClientAPI) : t->CurrentAPIIndex;
-
-   oldCtx = t->CurrentContexts[apiIndex];
+   oldCtx = t->CurrentContext;
    if (ctx != oldCtx) {
       if (oldCtx)
          oldCtx->Binding = NULL;
       if (ctx)
          ctx->Binding = t;
 
-      t->CurrentContexts[apiIndex] = ctx;
+      t->CurrentContext = ctx;
    }
 
    return oldCtx;
@@ -585,7 +581,6 @@ _eglCheckMakeCurrent(_EGLContext *ctx, _EGLSurface *draw, _EGLSurface *read)
 {
    _EGLThreadInfo *t = _eglGetCurrentThread();
    _EGLDisplay *dpy;
-   EGLint conflict_api;
 
    if (_eglIsCurrentThreadDummy())
       return _eglError(EGL_BAD_ALLOC, "eglMakeCurrent");
@@ -617,13 +612,11 @@ _eglCheckMakeCurrent(_EGLContext *ctx, _EGLSurface *draw, _EGLSurface *read)
    if (ctx->Binding && ctx->Binding != t)
       return _eglError(EGL_BAD_ACCESS, "eglMakeCurrent");
    if (draw && draw->CurrentContext && draw->CurrentContext != ctx) {
-      if (draw->CurrentContext->Binding != t ||
-          draw->CurrentContext->ClientAPI != ctx->ClientAPI)
+      if (draw->CurrentContext->Binding != t)
          return _eglError(EGL_BAD_ACCESS, "eglMakeCurrent");
    }
    if (read && read->CurrentContext && read->CurrentContext != ctx) {
-      if (read->CurrentContext->Binding != t ||
-          read->CurrentContext->ClientAPI != ctx->ClientAPI)
+      if (read->CurrentContext->Binding != t)
          return _eglError(EGL_BAD_ACCESS, "eglMakeCurrent");
    }
 
@@ -643,22 +636,6 @@ _eglCheckMakeCurrent(_EGLContext *ctx, _EGLSurface *draw, _EGLSurface *read)
       if (draw && read && draw->Config != read->Config)
          return _eglError(EGL_BAD_MATCH, "eglMakeCurrent");
    }
-
-   switch (ctx->ClientAPI) {
-   /* OpenGL and OpenGL ES are conflicting */
-   case EGL_OPENGL_ES_API:
-      conflict_api = EGL_OPENGL_API;
-      break;
-   case EGL_OPENGL_API:
-      conflict_api = EGL_OPENGL_ES_API;
-      break;
-   default:
-      conflict_api = -1;
-      break;
-   }
-
-   if (conflict_api >= 0 && _eglGetAPIContext(conflict_api))
-      return _eglError(EGL_BAD_ACCESS, "eglMakeCurrent");
 
    return EGL_TRUE;
 }

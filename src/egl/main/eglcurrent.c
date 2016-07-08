@@ -111,7 +111,7 @@ _eglInitThreadInfo(_EGLThreadInfo *t)
    memset(t, 0, sizeof(*t));
    t->LastError = EGL_SUCCESS;
    /* default, per EGL spec */
-   t->CurrentAPIIndex = _eglConvertApiToIndex(EGL_OPENGL_ES_API);
+   t->CurrentAPI = EGL_OPENGL_ES_API;
 }
 
 
@@ -205,24 +205,13 @@ _eglIsCurrentThreadDummy(void)
 
 
 /**
- * Return the currently bound context of the given API, or NULL.
- */
-_EGLContext *
-_eglGetAPIContext(EGLenum api)
-{
-   _EGLThreadInfo *t = _eglGetCurrentThread();
-   return t->CurrentContexts[_eglConvertApiToIndex(api)];
-}
-
-
-/**
  * Return the currently bound context of the current API, or NULL.
  */
 _EGLContext *
 _eglGetCurrentContext(void)
 {
    _EGLThreadInfo *t = _eglGetCurrentThread();
-   return t->CurrentContexts[t->CurrentAPIIndex];
+   return t->CurrentContext;
 }
 
 

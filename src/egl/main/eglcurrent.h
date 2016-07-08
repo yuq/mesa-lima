@@ -46,20 +46,14 @@ extern "C" {
     EGL_OPENGL_BIT)
 
 
-#define _EGL_API_FIRST_API EGL_OPENGL_ES_API
-#define _EGL_API_LAST_API EGL_OPENGL_API
-#define _EGL_API_NUM_APIS (_EGL_API_LAST_API - _EGL_API_FIRST_API + 1)
-
-
 /**
  * Per-thread info
  */
 struct _egl_thread_info
 {
    EGLint LastError;
-   _EGLContext *CurrentContexts[_EGL_API_NUM_APIS];
-   /* use index for fast access to current context */
-   EGLint CurrentAPIIndex;
+   _EGLContext *CurrentContext;
+   EGLenum CurrentAPI;
 };
 
 
@@ -71,33 +65,10 @@ _eglIsApiValid(EGLenum api)
 {
 #ifdef ANDROID
    /* OpenGL is not a valid/supported API on Android */
-   return api >= _EGL_API_FIRST_API && api <= _EGL_API_LAST_API &&
-          api != EGL_OPENGL_API;
+   return api == EGL_OPENGL_ES_API;
 #else
-   return api >= _EGL_API_FIRST_API && api <= _EGL_API_LAST_API;
+   return (api == EGL_OPENGL_ES_API || api == EGL_OPENGL_API);
 #endif
-}
-
-
-/**
- * Convert a client API enum to an index, for use by thread info.
- * The client API enum is assumed to be valid.
- */
-static inline EGLint
-_eglConvertApiToIndex(EGLenum api)
-{
-   return api - _EGL_API_FIRST_API;
-}
-
-
-/**
- * Convert an index, used by thread info, to a client API enum.
- * The index is assumed to be valid.
- */
-static inline EGLenum
-_eglConvertApiFromIndex(EGLint idx)
-{
-   return _EGL_API_FIRST_API + idx;
 }
 
 
@@ -111,10 +82,6 @@ _eglDestroyCurrentThread(void);
 
 extern EGLBoolean
 _eglIsCurrentThreadDummy(void);
-
-
-extern _EGLContext *
-_eglGetAPIContext(EGLenum api);
 
 
 extern _EGLContext *

@@ -1088,18 +1088,8 @@ eglWaitClient(void)
 EGLBoolean EGLAPIENTRY
 eglWaitGL(void)
 {
-   _EGLThreadInfo *t = _eglGetCurrentThread();
-   EGLint api_index = t->CurrentAPIIndex;
-   EGLint es_index = _eglConvertApiToIndex(EGL_OPENGL_ES_API);
-   EGLBoolean ret;
-
-   if (api_index != es_index && _eglIsCurrentThreadDummy())
-      RETURN_EGL_ERROR(NULL, EGL_BAD_ALLOC, EGL_FALSE);
-
-   t->CurrentAPIIndex = es_index;
-   ret = eglWaitClient();
-   t->CurrentAPIIndex = api_index;
-   return ret;
+   /* Since we only support OpenGL and GLES, eglWaitGL is equivalent to eglWaitClient. */
+   return eglWaitClient();
 }
 
 
@@ -1222,7 +1212,7 @@ eglBindAPI(EGLenum api)
    if (!_eglIsApiValid(api))
       RETURN_EGL_ERROR(NULL, EGL_BAD_PARAMETER, EGL_FALSE);
 
-   t->CurrentAPIIndex = _eglConvertApiToIndex(api);
+   t->CurrentAPI = api;
 
    RETURN_EGL_SUCCESS(NULL, EGL_TRUE);
 }
@@ -1238,7 +1228,7 @@ eglQueryAPI(void)
    EGLenum ret;
 
    /* returns one of EGL_OPENGL_API, EGL_OPENGL_ES_API or EGL_OPENVG_API */
-   ret = _eglConvertApiFromIndex(t->CurrentAPIIndex);
+   ret = t->CurrentAPI;
 
    RETURN_EGL_SUCCESS(NULL, ret);
 }
@@ -1271,25 +1261,17 @@ eglReleaseThread(void)
    /* unbind current contexts */
    if (!_eglIsCurrentThreadDummy()) {
       _EGLThreadInfo *t = _eglGetCurrentThread();
-      EGLint api_index = t->CurrentAPIIndex;
-      EGLint i;
 
-      for (i = 0; i < _EGL_API_NUM_APIS; i++) {
-         _EGLContext *ctx = t->CurrentContexts[i];
-         if (ctx) {
-            _EGLDisplay *disp = ctx->Resource.Display;
-            _EGLDriver *drv;
+      _EGLContext *ctx = t->CurrentContext;
+      if (ctx) {
+         _EGLDisplay *disp = ctx->Resource.Display;
+         _EGLDriver *drv;
 
-            t->CurrentAPIIndex = i;
-
-            mtx_lock(&disp->Mutex);
-            drv = disp->Driver;
-            (void) drv->API.MakeCurrent(drv, disp, NULL, NULL, NULL);
-            mtx_unlock(&disp->Mutex);
-         }
+         mtx_lock(&disp->Mutex);
+         drv = disp->Driver;
+         (void) drv->API.MakeCurrent(drv, disp, NULL, NULL, NULL);
+         mtx_unlock(&disp->Mutex);
       }
-
-      t->CurrentAPIIndex = api_index;
    }
 
    _eglDestroyCurrentThread();
