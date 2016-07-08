@@ -189,6 +189,12 @@ st_FreeTextureImageBuffer(struct gl_context *ctx,
    stImage->num_transfers = 0;
 }
 
+bool
+st_etc_fallback(struct st_context *st, struct gl_texture_image *texImage)
+{
+   return (_mesa_is_format_etc2(texImage->TexFormat) && !st->has_etc2) ||
+          (texImage->TexFormat == MESA_FORMAT_ETC1_RGB8 && !st->has_etc1);
+}
 
 /** called via ctx->Driver.MapTextureImage() */
 static void
@@ -215,8 +221,7 @@ st_MapTextureImage(struct gl_context *ctx,
    map = st_texture_image_map(st, stImage, pipeMode, x, y, slice, w, h, 1,
                               &transfer);
    if (map) {
-      if ((_mesa_is_format_etc2(texImage->TexFormat) && !st->has_etc2) ||
-          (texImage->TexFormat == MESA_FORMAT_ETC1_RGB8 && !st->has_etc1)) {
+      if (st_etc_fallback(st, texImage)) {
          /* ETC isn't supported by gallium and it's represented
           * by uncompressed formats. Only write transfers with precompressed
           * data are supported by ES3, which makes this really simple.
@@ -258,8 +263,7 @@ st_UnmapTextureImage(struct gl_context *ctx,
    struct st_context *st = st_context(ctx);
    struct st_texture_image *stImage  = st_texture_image(texImage);
 
-   if ((_mesa_is_format_etc2(texImage->TexFormat) && !st->has_etc2) ||
-       (texImage->TexFormat == MESA_FORMAT_ETC1_RGB8 && !st->has_etc1)) {
+   if (st_etc_fallback(st, texImage)) {
       /* Decompress the ETC texture to the mapped one. */
       unsigned z = slice + stImage->base.Face;
       struct st_texture_image_transfer *itransfer = &stImage->transfer[z];
@@ -1618,8 +1622,7 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
    if (!_mesa_is_bufferobj(ctx->Unpack.BufferObj))
       goto fallback;
 
-   if ((_mesa_is_format_etc2(texImage->TexFormat) && !st->has_etc2) ||
-       (texImage->TexFormat == MESA_FORMAT_ETC1_RGB8 && !st->has_etc1)) {
+   if (st_etc_fallback(st, texImage)) {
       /* ETC isn't supported and is represented by uncompressed formats. */
       goto fallback;
    }
