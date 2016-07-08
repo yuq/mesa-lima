@@ -106,18 +106,21 @@ inst_result_equals(struct qinst *a, struct qinst *b)
         return true;
 }
 
-bool
-qir_opt_peephole_sf(struct vc4_compile *c)
+static bool
+qir_opt_peephole_sf_block(struct vc4_compile *c, struct qblock *block)
 {
         bool progress = false;
+        /* We don't have liveness dataflow analysis for flags, but we also
+         * never generate a use of flags across control flow, so just treat
+         * them as unused at block exit.
+         */
         bool sf_live = false;
         struct qinst *last_sf = NULL;
 
         /* Walk the block from bottom to top, tracking if the SF is used, and
          * removing unused or repeated ones.
          */
-        list_for_each_entry_rev(struct qinst, inst, &c->cur_block->instructions,
-                                link) {
+        qir_for_each_inst_rev(inst, block) {
                 if (inst->sf) {
                         if (!sf_live) {
                                 /* Our instruction's SF isn't read, so drop it.
@@ -150,6 +153,17 @@ qir_opt_peephole_sf(struct vc4_compile *c)
                 if (qir_depends_on_flags(inst))
                         sf_live = true;
         }
+
+        return progress;
+}
+
+bool
+qir_opt_peephole_sf(struct vc4_compile *c)
+{
+        bool progress = false;
+
+        qir_for_each_block(block, c)
+                progress = qir_opt_peephole_sf_block(c, block) || progress;
 
         return progress;
 }
