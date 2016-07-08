@@ -1447,11 +1447,12 @@ _mesa_target_can_be_compressed(const struct gl_context *ctx, GLenum target,
          break;
       case MESA_FORMAT_LAYOUT_ASTC:
          target_can_be_compresed =
-                             ctx->Extensions.KHR_texture_compression_astc_hdr;
+            ctx->Extensions.KHR_texture_compression_astc_hdr ||
+            ctx->Extensions.KHR_texture_compression_astc_sliced_3d;
 
          /* Throw an INVALID_OPERATION error if the target is TEXTURE_3D and
-          * and the hdr extension is not supported.
-          * See comment in switch case GL_TEXTURE_CUBE_MAP_ARRAY for more info.
+          * neither of the above extensions are supported. See comment in
+          * switch case GL_TEXTURE_CUBE_MAP_ARRAY for more info.
           */
          if (!target_can_be_compresed)
             return write_error(error, GL_INVALID_OPERATION);
