@@ -546,7 +546,7 @@ schedule_instructions(struct vc4_compile *c, struct schedule_state *state)
 
                 /* Schedule this instruction back onto the QIR list. */
                 list_del(&chosen->link);
-                list_add(&inst->link, &c->instructions);
+                list_add(&inst->link, &c->cur_block->instructions);
 
                 /* Now that we've scheduled a new instruction, some of its
                  * children can be promoted to the list of instructions ready to
@@ -597,7 +597,8 @@ qir_schedule_instructions(struct vc4_compile *c)
         list_inithead(&state.worklist);
 
         /* Wrap each instruction in a scheduler structure. */
-        list_for_each_entry_safe(struct qinst, inst, &c->instructions, link) {
+        list_for_each_entry_safe(struct qinst, inst,
+                                 &c->cur_block->instructions, link) {
                 struct schedule_node *n = rzalloc(mem_ctx, struct schedule_node);
 
                 n->inst = inst;

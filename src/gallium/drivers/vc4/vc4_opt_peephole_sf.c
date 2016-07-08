@@ -116,7 +116,8 @@ qir_opt_peephole_sf(struct vc4_compile *c)
         /* Walk the block from bottom to top, tracking if the SF is used, and
          * removing unused or repeated ones.
          */
-        list_for_each_entry_rev(struct qinst, inst, &c->instructions, link) {
+        list_for_each_entry_rev(struct qinst, inst, &c->cur_block->instructions,
+                                link) {
                 if (inst->sf) {
                         if (!sf_live) {
                                 /* Our instruction's SF isn't read, so drop it.

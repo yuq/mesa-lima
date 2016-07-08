@@ -343,6 +343,18 @@ struct vc4_vs_key {
         bool clamp_color;
 };
 
+/** A basic block of QIR intructions. */
+struct qblock {
+        struct list_head link;
+
+        struct list_head instructions;
+
+        struct set *predecessors;
+        struct qblock *successors[2];
+
+        int index;
+};
+
 struct vc4_compile {
         struct vc4_context *vc4;
         nir_shader *s;
@@ -424,7 +436,10 @@ struct vc4_compile {
         struct qreg undef;
         enum qstage stage;
         uint32_t num_temps;
-        struct list_head instructions;
+
+        struct list_head blocks;
+        int next_block_index;
+        struct qblock *cur_block;
 
         struct list_head qpu_inst_list;
         uint64_t *qpu_insts;
@@ -450,6 +465,11 @@ struct vc4_compile {
 
 struct vc4_compile *qir_compile_init(void);
 void qir_compile_destroy(struct vc4_compile *c);
+struct qblock *qir_new_block(struct vc4_compile *c);
+void qir_set_emit_block(struct vc4_compile *c, struct qblock *block);
+void qir_link_blocks(struct qblock *predecessor, struct qblock *successor);
+struct qblock *qir_entry_block(struct vc4_compile *c);
+struct qblock *qir_exit_block(struct vc4_compile *c);
 struct qinst *qir_inst(enum qop op, struct qreg dst,
                        struct qreg src0, struct qreg src1);
 struct qinst *qir_inst4(enum qop op, struct qreg dst,
@@ -587,7 +607,8 @@ qir_##name(struct vc4_compile *c)                                        \
         *payload = qir_get_temp(c);                                      \
         struct qinst *inst = qir_inst(QOP_##name, *payload,              \
                                       c->undef, c->undef);               \
-        list_add(&inst->link, &c->instructions);                         \
+        struct qblock *entry = qir_entry_block(c);                       \
+        list_add(&inst->link, &entry->instructions);                     \
         c->defs[payload->index] = inst;                                  \
         return *payload;                                                 \
 }
@@ -719,7 +740,30 @@ qir_LOAD_IMM(struct vc4_compile *c, uint32_t val)
                                         qir_reg(QFILE_LOAD_IMM, val), c->undef));
 }
 
+#define qir_for_each_block(block, c)                                    \
+        list_for_each_entry(struct qblock, block, &c->blocks, link)
+
+#define qir_for_each_block_rev(block, c)                                \
+        list_for_each_entry_rev(struct qblock, block, &c->blocks, link)
+
+/* Loop over the non-NULL members of the successors array. */
+#define qir_for_each_successor(succ, block)                             \
+        for (struct qblock *succ = block->successors[0];                \
+             succ != NULL;                                              \
+             succ = (succ == block->successors[1] ? NULL :              \
+                     block->successors[1]))
+
+#define qir_for_each_inst(inst, block)                                  \
+        list_for_each_entry(struct qinst, inst, &block->instructions, link)
+
+#define qir_for_each_inst_rev(inst, block)                                  \
+        list_for_each_entry_rev(struct qinst, inst, &block->instructions, link)
+
+#define qir_for_each_inst_safe(inst, block)                             \
+        list_for_each_entry_safe(struct qinst, inst, &block->instructions, link)
+
 #define qir_for_each_inst_inorder(inst, c)                              \
-        list_for_each_entry(struct qinst, inst, &c->instructions, link)
+        qir_for_each_block(_block, c)                                   \
+                qir_for_each_inst(inst, _block)
 
 #endif /* VC4_QIR_H */

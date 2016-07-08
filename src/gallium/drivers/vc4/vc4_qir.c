@@ -314,9 +314,12 @@ qir_dump_inst(struct vc4_compile *c, struct qinst *inst)
 void
 qir_dump(struct vc4_compile *c)
 {
-        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
-                qir_dump_inst(c, inst);
-                fprintf(stderr, "\n");
+        qir_for_each_block(block, c) {
+                fprintf(stderr, "BLOCK %d:\n", block->index);
+                qir_for_each_inst(inst, block) {
+                        qir_dump_inst(c, inst);
+                        fprintf(stderr, "\n");
+                }
         }
 }
 
@@ -379,7 +382,7 @@ qir_inst4(enum qop op, struct qreg dst,
 static void
 qir_emit(struct vc4_compile *c, struct qinst *inst)
 {
-        list_addtail(&inst->link, &c->instructions);
+        list_addtail(&inst->link, &c->cur_block->instructions);
 }
 
 /* Updates inst to write to a new temporary, emits it, and notes the def. */
@@ -415,12 +418,60 @@ qir_reg_equals(struct qreg a, struct qreg b)
         return a.file == b.file && a.index == b.index && a.pack == b.pack;
 }
 
+struct qblock *
+qir_new_block(struct vc4_compile *c)
+{
+        struct qblock *block = rzalloc(c, struct qblock);
+
+        list_inithead(&block->instructions);
+
+        block->predecessors = _mesa_set_create(block,
+                                               _mesa_hash_pointer,
+                                               _mesa_key_pointer_equal);
+
+        block->index = c->next_block_index++;
+
+        return block;
+}
+
+void
+qir_set_emit_block(struct vc4_compile *c, struct qblock *block)
+{
+        c->cur_block = block;
+        list_addtail(&block->link, &c->blocks);
+}
+
+struct qblock *
+qir_entry_block(struct vc4_compile *c)
+{
+        return list_first_entry(&c->blocks, struct qblock, link);
+}
+
+struct qblock *
+qir_exit_block(struct vc4_compile *c)
+{
+        return list_last_entry(&c->blocks, struct qblock, link);
+}
+
+void
+qir_link_blocks(struct qblock *predecessor, struct qblock *successor)
+{
+        _mesa_set_add(successor->predecessors, predecessor);
+        if (predecessor->successors[0]) {
+                assert(!predecessor->successors[1]);
+                predecessor->successors[1] = successor;
+        } else {
+                predecessor->successors[0] = successor;
+        }
+}
+
 struct vc4_compile *
 qir_compile_init(void)
 {
         struct vc4_compile *c = rzalloc(NULL, struct vc4_compile);
 
-        list_inithead(&c->instructions);
+        list_inithead(&c->blocks);
+        qir_set_emit_block(c, qir_new_block(c));
 
         c->output_position_index = -1;
         c->output_color_index = -1;
@@ -466,10 +517,13 @@ qir_follow_movs(struct vc4_compile *c, struct qreg reg)
 void
 qir_compile_destroy(struct vc4_compile *c)
 {
-        while (!list_empty(&c->instructions)) {
-                struct qinst *qinst =
-                        (struct qinst *)c->instructions.next;
-                qir_remove_instruction(c, qinst);
+        qir_for_each_block(block, c) {
+                while (!list_empty(&block->instructions)) {
+                        struct qinst *qinst =
+                                list_first_entry(&block->instructions,
+                                                 struct qinst, link);
+                        qir_remove_instruction(c, qinst);
+                }
         }
 
         ralloc_free(c);
@@ -523,8 +577,9 @@ void
 qir_SF(struct vc4_compile *c, struct qreg src)
 {
         struct qinst *last_inst = NULL;
-        if (!list_empty(&c->instructions))
-                last_inst = (struct qinst *)c->instructions.prev;
+
+        if (!list_empty(&c->cur_block->instructions))
+                last_inst = (struct qinst *)c->cur_block->instructions.prev;
 
         /* We don't have any way to guess which kind of MOV is implied. */
         assert(!src.pack);
@@ -533,7 +588,7 @@ qir_SF(struct vc4_compile *c, struct qreg src)
             !c->defs[src.index] ||
             last_inst != c->defs[src.index]) {
                 last_inst = qir_MOV_dest(c, qir_reg(QFILE_NULL, 0), src);
-                last_inst = (struct qinst *)c->instructions.prev;
+                last_inst = (struct qinst *)c->cur_block->instructions.prev;
         }
         last_inst->sf = true;
 }

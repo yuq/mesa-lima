@@ -83,7 +83,8 @@ qir_opt_dead_code(struct vc4_compile *c)
         bool progress = false;
         bool *used = calloc(c->num_temps, sizeof(bool));
 
-        list_for_each_entry_safe_rev(struct qinst, inst, &c->instructions,
+        list_for_each_entry_safe_rev(struct qinst, inst,
+                                     &c->cur_block->instructions,
                                      link) {
                 if ((inst->dst.file == QFILE_NULL ||
                      (inst->dst.file == QFILE_TEMP &&

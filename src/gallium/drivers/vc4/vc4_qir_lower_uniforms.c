@@ -152,7 +152,7 @@ qir_lower_uniforms(struct vc4_compile *c)
                 struct qreg temp = qir_get_temp(c);
                 struct qreg unif = qir_reg(QFILE_UNIF, max_index);
                 struct qinst *mov = qir_inst(QOP_MOV, temp, unif, c->undef);
-                list_add(&mov->link, &c->instructions);
+                list_add(&mov->link, &c->cur_block->instructions);
                 c->defs[temp.index] = mov;
                 qir_for_each_inst_inorder(inst, c) {
                         uint32_t nsrc = qir_get_op_nsrc(inst->op);
