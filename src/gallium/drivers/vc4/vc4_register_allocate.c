@@ -198,7 +198,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
         /* Compute the live ranges so we can figure out interference.
          */
         uint32_t ip = 0;
-        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
+        qir_for_each_inst_inorder(inst, c) {
                 if (inst->dst.file == QFILE_TEMP) {
                         def[inst->dst.index] = MIN2(ip, def[inst->dst.index]);
                         use[inst->dst.index] = ip;
@@ -242,7 +242,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                sizeof(class_bits));
 
         ip = 0;
-        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
+        qir_for_each_inst_inorder(inst, c) {
                 if (qir_writes_r4(inst)) {
                         /* This instruction writes r4 (and optionally moves
                          * its result to a temp), so nothing else can be

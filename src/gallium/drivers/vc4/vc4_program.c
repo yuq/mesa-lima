@@ -2003,7 +2003,7 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
                 bool input_live[c->num_input_slots];
 
                 memset(input_live, 0, sizeof(input_live));
-                list_for_each_entry(struct qinst, inst, &c->instructions, link) {
+                qir_for_each_inst_inorder(inst, c) {
                         for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                                 if (inst->src[i].file == QFILE_VARY)
                                         input_live[inst->src[i].index] = true;

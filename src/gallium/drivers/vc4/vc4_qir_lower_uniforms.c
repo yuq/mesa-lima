@@ -118,7 +118,7 @@ qir_lower_uniforms(struct vc4_compile *c)
          * than one uniform referenced, and add those uniform values to the
          * ht.
          */
-        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
+        qir_for_each_inst_inorder(inst, c) {
                 uint32_t nsrc = qir_get_op_nsrc(inst->op);
 
                 if (qir_get_instruction_uniform_count(inst) <= 1)
@@ -154,7 +154,7 @@ qir_lower_uniforms(struct vc4_compile *c)
                 struct qinst *mov = qir_inst(QOP_MOV, temp, unif, c->undef);
                 list_add(&mov->link, &c->instructions);
                 c->defs[temp.index] = mov;
-                list_for_each_entry(struct qinst, inst, &c->instructions, link) {
+                qir_for_each_inst_inorder(inst, c) {
                         uint32_t nsrc = qir_get_op_nsrc(inst->op);
 
                         uint32_t count = qir_get_instruction_uniform_count(inst);

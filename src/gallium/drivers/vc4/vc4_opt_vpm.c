@@ -44,7 +44,7 @@ qir_opt_vpm(struct vc4_compile *c)
         uint32_t vpm_write_count = 0;
         memset(&use_count, 0, sizeof(use_count));
 
-        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
+        qir_for_each_inst_inorder(inst, c) {
                 switch (inst->dst.file) {
                 case QFILE_VPM:
                         vpm_writes[vpm_write_count++] = inst;
@@ -64,7 +64,7 @@ qir_opt_vpm(struct vc4_compile *c)
         /* For instructions reading from a temporary that contains a VPM read
          * result, try to move the instruction up in place of the VPM read.
          */
-        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
+        qir_for_each_inst_inorder(inst, c) {
                 if (!inst)
                         continue;
 

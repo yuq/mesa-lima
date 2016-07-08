@@ -719,4 +719,7 @@ qir_LOAD_IMM(struct vc4_compile *c, uint32_t val)
                                         qir_reg(QFILE_LOAD_IMM, val), c->undef));
 }
 
+#define qir_for_each_inst_inorder(inst, c)                              \
+        list_for_each_entry(struct qinst, inst, &c->instructions, link)
+
 #endif /* VC4_QIR_H */

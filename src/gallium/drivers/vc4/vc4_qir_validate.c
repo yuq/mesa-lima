@@ -53,7 +53,7 @@ void qir_validate(struct vc4_compile *c)
                         fail_instr(c, def, "SSA def with condition");
         }
 
-        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
+        qir_for_each_inst_inorder(inst, c) {
                 switch (inst->dst.file) {
                 case QFILE_TEMP:
                         if (inst->dst.index >= c->num_temps)

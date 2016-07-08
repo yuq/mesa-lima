@@ -40,7 +40,7 @@ qir_opt_copy_propagation(struct vc4_compile *c)
         bool progress = false;
         bool debug = false;
 
-        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
+        qir_for_each_inst_inorder(inst, c) {
                 int nsrc = qir_get_op_nsrc(inst->op);
                 for (int i = 0; i < nsrc; i++) {
                         if (inst->src[i].file != QFILE_TEMP)
