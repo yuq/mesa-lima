@@ -391,6 +391,7 @@ intelInitExtensions(struct gl_context *ctx)
 
    if (brw->gen >= 9) {
       ctx->Extensions.KHR_texture_compression_astc_ldr = true;
+      ctx->Extensions.KHR_texture_compression_astc_sliced_3d = true;
       ctx->Extensions.ARB_shader_stencil_export = true;
    }
 
