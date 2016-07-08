@@ -279,7 +279,10 @@ struct _mesa_glsl_parse_state {
 
    bool has_tessellation_shader() const
    {
-      return ARB_tessellation_shader_enable || is_version(400, 0);
+      return ARB_tessellation_shader_enable ||
+             OES_tessellation_shader_enable ||
+             EXT_tessellation_shader_enable ||
+             is_version(400, 320);
    }
 
    bool has_clip_distance() const
@@ -649,6 +652,10 @@ struct _mesa_glsl_parse_state {
    bool OES_shader_multisample_interpolation_warn;
    bool OES_standard_derivatives_enable;
    bool OES_standard_derivatives_warn;
+   bool OES_tessellation_point_size_enable;
+   bool OES_tessellation_point_size_warn;
+   bool OES_tessellation_shader_enable;
+   bool OES_tessellation_shader_warn;
    bool OES_texture_3D_enable;
    bool OES_texture_3D_warn;
    bool OES_texture_buffer_enable;
@@ -684,6 +691,10 @@ struct _mesa_glsl_parse_state {
    bool EXT_shader_io_blocks_warn;
    bool EXT_shader_samples_identical_enable;
    bool EXT_shader_samples_identical_warn;
+   bool EXT_tessellation_point_size_enable;
+   bool EXT_tessellation_point_size_warn;
+   bool EXT_tessellation_shader_enable;
+   bool EXT_tessellation_shader_warn;
    bool EXT_texture_array_enable;
    bool EXT_texture_array_warn;
    bool EXT_texture_buffer_enable;
