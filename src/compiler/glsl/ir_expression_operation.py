@@ -145,12 +145,7 @@ ir_expression_operation = [
    # from the first argument.
    ("borrow", 2, None),
 
-   # Takes one of two combinations of arguments:
-   #
-   # - mod(vecN, vecN)
-   # - mod(vecN, float)
-   #
-   # Does not take integer types.
+   # Either (vector % vector) or (vector % scalar)
    ("mod", 2, "%"),
 
    # Binary comparison operators which return a boolean vector.
