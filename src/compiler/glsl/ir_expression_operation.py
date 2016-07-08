@@ -269,9 +269,6 @@ if __name__ == "__main__":
  */
 """
    enum_template = mako.template.Template(copyright + """
-/* Update ir_expression::get_num_operands() and operator_strs when
- * updating this list.
- */
 enum ir_expression_operation {
 % for item in values:
    ${name_from_item(item)},
