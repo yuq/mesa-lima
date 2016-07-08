@@ -65,7 +65,12 @@ struct st_texture_image
     */
    struct st_texture_image_transfer *transfer;
    unsigned num_transfers;
-};
+
+   /* For ETC images, keep track of the original data. This is necessary for
+    * mapping/unmapping, as well as image copies.
+    */
+   GLubyte *etc_data;
+ };
 
 
 /**
