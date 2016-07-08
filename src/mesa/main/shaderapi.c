@@ -77,6 +77,8 @@ _mesa_get_shader_flags(void)
          flags |= GLSL_DUMP;
       if (strstr(env, "log"))
          flags |= GLSL_LOG;
+      if (strstr(env, "cache_info"))
+         flags |= GLSL_CACHE_INFO;
       if (strstr(env, "nopvert"))
          flags |= GLSL_NOP_VERT;
       if (strstr(env, "nopfrag"))
