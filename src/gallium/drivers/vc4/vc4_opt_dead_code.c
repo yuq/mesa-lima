@@ -24,11 +24,15 @@
 /**
  * @file vc4_opt_dead_code.c
  *
- * This is a simmple dead code eliminator for QIR with no control flow.
+ * This is a simple dead code eliminator for SSA values in QIR.
  *
- * It walks from the bottom of the instruction list, removing instructions
- * with a destination that is never used, and marking the sources of non-dead
- * instructions as used.
+ * It walks all the instructions finding what temps are used, then walks again
+ * to remove instructions writing unused temps.
+ *
+ * This is an inefficient implementation if you have long chains of
+ * instructions where the entire chain is dead, but we expect those to have
+ * been eliminated at the NIR level, and here we're just cleaning up small
+ * problems produced by NIR->QIR.
  */
 
 #include "vc4_qir.h"
@@ -83,15 +87,27 @@ qir_opt_dead_code(struct vc4_compile *c)
         bool progress = false;
         bool *used = calloc(c->num_temps, sizeof(bool));
 
-        list_for_each_entry_safe_rev(struct qinst, inst,
-                                     &c->cur_block->instructions,
-                                     link) {
-                if ((inst->dst.file == QFILE_NULL ||
-                     (inst->dst.file == QFILE_TEMP &&
-                      !used[inst->dst.index])) &&
-                    !inst->sf &&
-                    !qir_has_side_effects(c, inst) &&
-                    !has_nonremovable_reads(c, inst)) {
+        qir_for_each_inst_inorder(inst, c) {
+                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                        if (inst->src[i].file == QFILE_TEMP)
+                                used[inst->src[i].index] = true;
+                }
+        }
+
+        qir_for_each_block(block, c) {
+                qir_for_each_inst_safe(inst, block) {
+                        if (inst->dst.file != QFILE_NULL &&
+                            !(inst->dst.file == QFILE_TEMP &&
+                              !used[inst->dst.index])) {
+                                continue;
+                        }
+
+                        if (inst->sf ||
+                            qir_has_side_effects(c, inst) ||
+                            has_nonremovable_reads(c, inst)) {
+                                continue;
+                        }
+
                         for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                                 if (inst->src[i].file != QFILE_VPM)
                                         continue;
@@ -107,11 +123,6 @@ qir_opt_dead_code(struct vc4_compile *c)
                         dce(c, inst);
                         progress = true;
                         continue;
-                }
-
-                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
-                        if (inst->src[i].file == QFILE_TEMP)
-                                used[inst->src[i].index] = true;
                 }
         }
 
