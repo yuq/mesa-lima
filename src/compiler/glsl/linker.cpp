@@ -180,97 +180,58 @@ private:
 };
 
 
-class geom_array_resize_visitor : public ir_hierarchical_visitor {
+class array_resize_visitor : public ir_hierarchical_visitor {
 public:
    unsigned num_vertices;
    gl_shader_program *prog;
+   gl_shader_stage stage;
 
-   geom_array_resize_visitor(unsigned num_vertices, gl_shader_program *prog)
+   array_resize_visitor(unsigned num_vertices,
+                        gl_shader_program *prog,
+                        gl_shader_stage stage)
    {
       this->num_vertices = num_vertices;
       this->prog = prog;
+      this->stage = stage;
    }
 
-   virtual ~geom_array_resize_visitor()
+   virtual ~array_resize_visitor()
    {
       /* empty */
    }
 
    virtual ir_visitor_status visit(ir_variable *var)
    {
-      if (!var->type->is_array() || var->data.mode != ir_var_shader_in)
+      if (!var->type->is_array() || var->data.mode != ir_var_shader_in ||
+          var->data.patch)
          return visit_continue;
 
       unsigned size = var->type->length;
 
-      /* Generate a link error if the shader has declared this array with an
-       * incorrect size.
-       */
-      if (!var->data.implicit_sized_array &&
-          size && size != this->num_vertices) {
-         linker_error(this->prog, "size of array %s declared as %u, "
-                      "but number of input vertices is %u\n",
-                      var->name, size, this->num_vertices);
-         return visit_continue;
+      if (stage == MESA_SHADER_GEOMETRY) {
+         /* Generate a link error if the shader has declared this array with
+          * an incorrect size.
+          */
+         if (!var->data.implicit_sized_array &&
+             size && size != this->num_vertices) {
+            linker_error(this->prog, "size of array %s declared as %u, "
+                         "but number of input vertices is %u\n",
+                         var->name, size, this->num_vertices);
+            return visit_continue;
+         }
+
+         /* Generate a link error if the shader attempts to access an input
+          * array using an index too large for its actual size assigned at
+          * link time.
+          */
+         if (var->data.max_array_access >= (int)this->num_vertices) {
+            linker_error(this->prog, "%s shader accesses element %i of "
+                         "%s, but only %i input vertices\n",
+                         _mesa_shader_stage_to_string(this->stage),
+                         var->data.max_array_access, var->name, this->num_vertices);
+            return visit_continue;
+         }
       }
-
-      /* Generate a link error if the shader attempts to access an input
-       * array using an index too large for its actual size assigned at link
-       * time.
-       */
-      if (var->data.max_array_access >= (int)this->num_vertices) {
-         linker_error(this->prog, "geometry shader accesses element %i of "
-                      "%s, but only %i input vertices\n",
-                      var->data.max_array_access, var->name, this->num_vertices);
-         return visit_continue;
-      }
-
-      var->type = glsl_type::get_array_instance(var->type->fields.array,
-                                                this->num_vertices);
-      var->data.max_array_access = this->num_vertices - 1;
-
-      return visit_continue;
-   }
-
-   /* Dereferences of input variables need to be updated so that their type
-    * matches the newly assigned type of the variable they are accessing. */
-   virtual ir_visitor_status visit(ir_dereference_variable *ir)
-   {
-      ir->type = ir->var->type;
-      return visit_continue;
-   }
-
-   /* Dereferences of 2D input arrays need to be updated so that their type
-    * matches the newly assigned type of the array they are accessing. */
-   virtual ir_visitor_status visit_leave(ir_dereference_array *ir)
-   {
-      const glsl_type *const vt = ir->array->type;
-      if (vt->is_array())
-         ir->type = vt->fields.array;
-      return visit_continue;
-   }
-};
-
-class tess_eval_array_resize_visitor : public ir_hierarchical_visitor {
-public:
-   unsigned num_vertices;
-   gl_shader_program *prog;
-
-   tess_eval_array_resize_visitor(unsigned num_vertices, gl_shader_program *prog)
-   {
-      this->num_vertices = num_vertices;
-      this->prog = prog;
-   }
-
-   virtual ~tess_eval_array_resize_visitor()
-   {
-      /* empty */
-   }
-
-   virtual ir_visitor_status visit(ir_variable *var)
-   {
-      if (!var->type->is_array() || var->data.mode != ir_var_shader_in || var->data.patch)
-         return visit_continue;
 
       var->type = glsl_type::get_array_instance(var->type->fields.array,
                                                 this->num_vertices);
@@ -2369,7 +2330,8 @@ link_intrastage_shaders(void *mem_ctx,
    /* Set the size of geometry shader input arrays */
    if (linked->Stage == MESA_SHADER_GEOMETRY) {
       unsigned num_vertices = vertices_per_prim(linked->info.Geom.InputType);
-      geom_array_resize_visitor input_resize_visitor(num_vertices, prog);
+      array_resize_visitor input_resize_visitor(num_vertices, prog,
+                                                MESA_SHADER_GEOMETRY);
       foreach_in_list(ir_instruction, ir, linked->ir) {
          ir->accept(&input_resize_visitor);
       }
@@ -2496,7 +2458,8 @@ resize_tes_inputs(struct gl_context *ctx,
       ? tcs->info.TessCtrl.VerticesOut
       : ctx->Const.MaxPatchVertices;
 
-   tess_eval_array_resize_visitor input_resize_visitor(num_vertices, prog);
+   array_resize_visitor input_resize_visitor(num_vertices, prog,
+                                             MESA_SHADER_TESS_EVAL);
    foreach_in_list(ir_instruction, ir, tes->ir) {
       ir->accept(&input_resize_visitor);
    }
