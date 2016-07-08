@@ -1508,7 +1508,6 @@ intel_miptree_init_mcs(struct brw_context *brw,
    void *data = mt->mcs_buf->bo->virtual;
    memset(data, init_value, mt->mcs_buf->size);
    drm_intel_bo_unmap(mt->mcs_buf->bo);
-   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
 }
 
 static struct intel_miptree_aux_buffer *
@@ -1610,6 +1609,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
       return false;
 
    intel_miptree_init_mcs(brw, mt, 0xFF);
+   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
 
    return true;
 }
