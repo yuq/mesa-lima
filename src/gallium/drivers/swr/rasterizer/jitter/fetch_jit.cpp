@@ -72,8 +72,8 @@ struct FetchJit : public Builder
 
     Value* GenerateCompCtrlVector(const ComponentControl ctrl);
 
-    void JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fetchInfo, Value* streams, Value* vIndices, Value* pVtxOut);
-    void JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* fetchInfo, Value* streams, Value* vIndices, Value* pVtxOut);
+    void JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* streams, Value* vIndices, Value* pVtxOut);
+    void JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* streams, Value* vIndices, Value* pVtxOut);
 
     bool IsOddFormat(SWR_FORMAT format);
     bool IsUniformFormat(SWR_FORMAT format);
@@ -81,7 +81,7 @@ struct FetchJit : public Builder
     void CreateGatherOddFormats(SWR_FORMAT format, Value* pBase, Value* offsets, Value* result[4]);
     void ConvertFormat(SWR_FORMAT format, Value *texels[4]);
 
-    void StoreSGVs(const FETCH_COMPILE_STATE& fetchState, Value* pFetchInfo, Value* pVtxOut);
+    Value* mpFetchInfo;
 };
 
 Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
@@ -99,8 +99,8 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     auto    argitr = fetch->getArgumentList().begin();
 
     // Fetch shader arguments
-    Value*    fetchInfo = &*argitr; ++argitr;
-    fetchInfo->setName("fetchInfo");
+    mpFetchInfo = &*argitr; ++argitr;
+    mpFetchInfo->setName("fetchInfo");
     Value*    pVtxOut = &*argitr;
     pVtxOut->setName("vtxOutput");
     // this is just shorthand to tell LLVM to get a pointer to the base address of simdvertex
@@ -114,15 +114,15 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     pVtxOut = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth), 0));
 
     // SWR_FETCH_CONTEXT::pStreams
-    Value*    streams = LOAD(fetchInfo,{0, SWR_FETCH_CONTEXT_pStreams});
+    Value*    streams = LOAD(mpFetchInfo,{0, SWR_FETCH_CONTEXT_pStreams});
     streams->setName("pStreams");
 
     // SWR_FETCH_CONTEXT::pIndices
-    Value*    indices = LOAD(fetchInfo,{0, SWR_FETCH_CONTEXT_pIndices});
+    Value*    indices = LOAD(mpFetchInfo,{0, SWR_FETCH_CONTEXT_pIndices});
     indices->setName("pIndices");
 
     // SWR_FETCH_CONTEXT::pLastIndex
-    Value*    pLastIndex = LOAD(fetchInfo,{0, SWR_FETCH_CONTEXT_pLastIndex});
+    Value*    pLastIndex = LOAD(mpFetchInfo,{0, SWR_FETCH_CONTEXT_pLastIndex});
     pLastIndex->setName("pLastIndex");
     
 
@@ -159,29 +159,28 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     }
 
     // store out vertex IDs
-    STORE(vIndices, GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
+    STORE(vIndices, GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
 
     // store out cut mask if enabled
     if (fetchState.bEnableCutIndex)
     {
         Value* vCutIndex = VIMMED1(fetchState.cutIndex);
         Value* cutMask = VMASK(ICMP_EQ(vIndices, vCutIndex));
-        STORE(cutMask, GEP(fetchInfo, { 0, SWR_FETCH_CONTEXT_CutMask }));
+        STORE(cutMask, GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_CutMask }));
     }
 
     // Fetch attributes from memory and output to a simdvertex struct
     // since VGATHER has a perf penalty on HSW vs BDW, allow client to choose which fetch method to use
-    (fetchState.bDisableVGATHER) ? JitLoadVertices(fetchState, fetchInfo, streams, vIndices, pVtxOut)
-                                 : JitGatherVertices(fetchState, fetchInfo, streams, vIndices, pVtxOut);
-
-    // Store out SGVs if enabled
-    StoreSGVs(fetchState, fetchInfo, pVtxOut);
+    (fetchState.bDisableVGATHER) ? JitLoadVertices(fetchState, streams, vIndices, pVtxOut)
+                                 : JitGatherVertices(fetchState, streams, vIndices, pVtxOut);
 
     RET_VOID();
 
     JitManager::DumpToFile(fetch, "src");
 
+#if defined(_DEBUG)
     verifyFunction(*fetch);
+#endif
 
     ::FunctionPassManager setupPasses(JM()->mpCurrentModule);
 
@@ -214,24 +213,6 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     return fetch;
 }
 
-// store vertex ID and instance ID if enabled
-void FetchJit::StoreSGVs(const FETCH_COMPILE_STATE& fetchState, Value* pFetchInfo, Value* pVtxOut)
-{
-    if (fetchState.InstanceIdEnable)
-    {
-        Value* pId = BITCAST(VBROADCAST(LOAD(GEP(pFetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance }))), mSimdFP32Ty);
-        Value* pDest = GEP(pVtxOut, C(fetchState.InstanceIdElementOffset * 4 + fetchState.InstanceIdComponentNumber), "instanceID");
-        STORE(pId, pDest);
-    }
-
-    if (fetchState.VertexIdEnable)
-    {
-        Value* pId = BITCAST(LOAD(GEP(pFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID })), mSimdFP32Ty);
-        Value* pDest = GEP(pVtxOut, C(fetchState.VertexIdElementOffset * 4 + fetchState.VertexIdComponentNumber), "vertexID");
-        STORE(pId, pDest);
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////
 /// @brief Loads attributes from memory using LOADs, shuffling the 
 /// components into SOA form. 
@@ -241,7 +222,7 @@ void FetchJit::StoreSGVs(const FETCH_COMPILE_STATE& fetchState, Value* pFetchInf
 /// @param streams - value pointer to the current vertex stream
 /// @param vIndices - vector value of indices to load
 /// @param pVtxOut - value pointer to output simdvertex struct
-void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fetchInfo, Value* streams, Value* vIndices, Value* pVtxOut)
+void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* streams, Value* vIndices, Value* pVtxOut)
 {
     // Zack shuffles; a variant of the Charleston.
 
@@ -254,10 +235,10 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* fet
     Constant* promoteMask = ConstantVector::get(pMask);
     Constant* uwvec = UndefValue::get(VectorType::get(mFP32Ty, 4));
 
-    Value* startVertex = LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_StartVertex});
-    Value* startInstance = LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_StartInstance});
-    Value* curInstance = LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_CurInstance});
-    Value* vBaseVertex = VBROADCAST(LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_BaseVertex}));
+    Value* startVertex = LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_StartVertex});
+    Value* startInstance = LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_StartInstance});
+    Value* curInstance = LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_CurInstance});
+    Value* vBaseVertex = VBROADCAST(LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_BaseVertex}));
     curInstance->setName("curInstance");
 
     for(uint32_t nelt = 0; nelt < fetchState.numAttribs; ++nelt)
@@ -682,21 +663,20 @@ void FetchJit::ConvertFormat(SWR_FORMAT format, Value *texels[4])
 //////////////////////////////////////////////////////////////////////////
 /// @brief Loads attributes from memory using AVX2 GATHER(s)
 /// @param fetchState - info about attributes to be fetched from memory
-/// @param fetchInfo - first argument passed to fetch shader
 /// @param streams - value pointer to the current vertex stream
 /// @param vIndices - vector value of indices to gather
 /// @param pVtxOut - value pointer to output simdvertex struct
-void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* fetchInfo,
+void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                  Value* streams, Value* vIndices, Value* pVtxOut)
 {
     uint32_t currentVertexElement = 0;
     uint32_t outputElt = 0;
     Value* vVertexElements[4];
 
-    Value* startVertex = LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_StartVertex});
-    Value* startInstance = LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_StartInstance});
-    Value* curInstance = LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_CurInstance});
-    Value* vBaseVertex = VBROADCAST(LOAD(fetchInfo, {0, SWR_FETCH_CONTEXT_BaseVertex}));
+    Value* startVertex = LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_StartVertex});
+    Value* startInstance = LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_StartInstance});
+    Value* curInstance = LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_CurInstance});
+    Value* vBaseVertex = VBROADCAST(LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_BaseVertex}));
     curInstance->setName("curInstance");
 
     for(uint32_t nInputElt = 0; nInputElt < fetchState.numAttribs; ++nInputElt)
@@ -1641,6 +1621,16 @@ Value* FetchJit::GenerateCompCtrlVector(const ComponentControl ctrl)
         case Store0:    return VIMMED1(0);
         case Store1Fp:  return VIMMED1(1.0f);
         case Store1Int: return VIMMED1(1);
+        case StoreVertexId:
+        {
+            Value* pId = BITCAST(LOAD(GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID })), mSimdFP32Ty);
+            return VBROADCAST(pId);
+        }
+        case StoreInstanceId:
+        {
+            Value* pId = BITCAST(LOAD(GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })), mFP32Ty);
+            return VBROADCAST(pId);
+        }
         case StoreSrc:
         default:        SWR_ASSERT(0, "Invalid component control"); return VUNDEF_I();
     }

@@ -85,6 +85,8 @@ enum ComponentControl
     Store0      = 2,
     Store1Fp    = 3,
     Store1Int   = 4,
+    StoreVertexId = 5,
+    StoreInstanceId = 6
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -96,13 +98,6 @@ struct FETCH_COMPILE_STATE
     INPUT_ELEMENT_DESC layout[KNOB_NUM_ATTRIBUTES];
     SWR_FORMAT indexType;
     uint32_t cutIndex{ 0xffffffff };
-
-    bool                InstanceIdEnable;
-    uint32_t            InstanceIdElementOffset;
-    uint32_t            InstanceIdComponentNumber;
-    bool                VertexIdEnable;
-    uint32_t            VertexIdElementOffset;
-    uint32_t            VertexIdComponentNumber;
 
     // Options that effect the JIT'd code
     bool bDisableVGATHER;           // if enabled, FetchJit will generate loads/shuffles instead of VGATHERs
@@ -120,19 +115,6 @@ struct FETCH_COMPILE_STATE
         if (bDisableIndexOOBCheck != other.bDisableIndexOOBCheck) return false;
         if (bEnableCutIndex != other.bEnableCutIndex) return false;
         if (cutIndex != other.cutIndex) return false;
-
-        if (InstanceIdEnable != other.InstanceIdEnable) return false;
-        if (InstanceIdEnable)
-        {
-            if (InstanceIdComponentNumber != other.InstanceIdComponentNumber) return false;
-            if (InstanceIdElementOffset != other.InstanceIdElementOffset) return false;
-        }
-        if (VertexIdEnable != other.VertexIdEnable) return false;
-        if (VertexIdEnable)
-        {
-            if (VertexIdComponentNumber != other.VertexIdComponentNumber) return false;
-            if (VertexIdElementOffset != other.VertexIdElementOffset) return false;
-        }
 
         for(uint32_t i = 0; i < numAttribs; ++i)
         {
