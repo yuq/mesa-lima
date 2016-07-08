@@ -2606,10 +2606,16 @@ check_rtt_cb(GLuint key, void *data, void *userData)
              att->Texture == texObj &&
              att->TextureLevel == level &&
              att->CubeMapFace == face) {
-            _mesa_update_texture_renderbuffer(ctx, ctx->DrawBuffer, att);
+            _mesa_update_texture_renderbuffer(ctx, fb, att);
             assert(att->Renderbuffer->TexImage);
             /* Mark fb status as indeterminate to force re-validation */
             fb->_Status = 0;
+
+            /* Make sure that the revalidation actually happens if this is
+             * being done to currently-bound buffers.
+             */
+            if (fb == ctx->DrawBuffer || fb == ctx->ReadBuffer)
+               ctx->NewState |= _NEW_BUFFERS;
          }
       }
    }
