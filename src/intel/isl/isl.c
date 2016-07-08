@@ -166,17 +166,6 @@ isl_tiling_get_info(const struct isl_device *dev,
    return true;
 }
 
-void
-isl_tiling_get_extent(const struct isl_device *dev,
-                      enum isl_tiling tiling,
-                      uint32_t format_block_size,
-                      struct isl_extent2d *e)
-{
-   struct isl_tile_info tile_info;
-   isl_tiling_get_info(dev, tiling, format_block_size, &tile_info);
-   *e = isl_extent2d(tile_info.width, tile_info.height);
-}
-
 /**
  * @param[out] tiling is set only on success
  */

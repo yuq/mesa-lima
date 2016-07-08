@@ -1003,12 +1003,6 @@ isl_tiling_get_info(const struct isl_device *dev,
                     enum isl_tiling tiling,
                     uint32_t format_block_size,
                     struct isl_tile_info *info);
-
-void
-isl_tiling_get_extent(const struct isl_device *dev,
-                      enum isl_tiling tiling,
-                      uint32_t format_block_size,
-                      struct isl_extent2d *e);
 bool
 isl_surf_choose_tiling(const struct isl_device *dev,
                        const struct isl_surf_init_info *restrict info,
