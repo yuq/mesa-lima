@@ -419,7 +419,7 @@ static unsigned radeon_drm_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
 
     if (list) {
         for (i = 0; i < cs->csc->crelocs; i++) {
-            pb_reference(&list[i].buf, &cs->csc->relocs_bo[i].bo->base);
+            list[i].bo_size = cs->csc->relocs_bo[i].bo->base.size;
             list[i].vm_address = cs->csc->relocs_bo[i].bo->va;
             list[i].priority_usage = cs->csc->relocs_bo[i].priority_usage;
         }

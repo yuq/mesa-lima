@@ -816,7 +816,7 @@ static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
 
     if (list) {
         for (i = 0; i < cs->num_buffers; i++) {
-            pb_reference(&list[i].buf, &cs->buffers[i].bo->base);
+            list[i].bo_size = cs->buffers[i].bo->base.size;
             list[i].vm_address = cs->buffers[i].bo->va;
             list[i].priority_usage = cs->buffers[i].priority_usage;
         }

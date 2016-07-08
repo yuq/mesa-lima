@@ -414,7 +414,7 @@ struct radeon_surf {
 };
 
 struct radeon_bo_list_item {
-    struct pb_buffer *buf;
+    uint64_t bo_size;
     uint64_t vm_address;
     uint64_t priority_usage; /* mask of (1 << RADEON_PRIO_*) */
 };

@@ -609,13 +609,13 @@ static void si_dump_bo_list(struct si_context *sctx,
 		/* Note: Buffer sizes are expected to be aligned to 4k by the winsys. */
 		const unsigned page_size = sctx->b.screen->info.gart_page_size;
 		uint64_t va = saved->bo_list[i].vm_address;
-		uint64_t size = saved->bo_list[i].buf->size;
+		uint64_t size = saved->bo_list[i].bo_size;
 		bool hit = false;
 
 		/* If there's unused virtual memory between 2 buffers, print it. */
 		if (i) {
 			uint64_t previous_va_end = saved->bo_list[i-1].vm_address +
-						   saved->bo_list[i-1].buf->size;
+						   saved->bo_list[i-1].bo_size;
 
 			if (va > previous_va_end) {
 				fprintf(f, "  %10"PRIu64"    -- hole --\n",

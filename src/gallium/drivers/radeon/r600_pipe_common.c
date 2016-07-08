@@ -367,12 +367,7 @@ oom:
 
 void radeon_clear_saved_cs(struct radeon_saved_cs *saved)
 {
-	unsigned i;
-
 	FREE(saved->ib);
-
-	for (i = 0; i < saved->bo_count; i++)
-		pb_reference(&saved->bo_list[i].buf, NULL);
 	FREE(saved->bo_list);
 
 	memset(saved, 0, sizeof(*saved));
