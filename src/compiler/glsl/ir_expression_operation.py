@@ -24,8 +24,97 @@
 import mako.template
 import sys
 
+class type(object):
+   def __init__(self, c_type, union_field, glsl_type):
+      self.c_type = c_type
+      self.union_field = union_field
+      self.glsl_type = glsl_type
+
+
+class type_signature_iter(object):
+   """Basic iterator for a set of type signatures.  Various kinds of sequences of
+   types come in, and an iteration of type_signature objects come out.
+
+   """
+
+   def __init__(self, source_types, num_operands):
+      """Initialize an iterator from a sequence of input types and a number
+      operands.  This is for signatures where all the operands have the same
+      type and the result type of the operation is the same as the input type.
+
+      """
+      self.dest_type = None
+      self.source_types = source_types
+      self.num_operands = num_operands
+      self.i = 0
+
+   def __init__(self, dest_type, source_types, num_operands):
+      """Initialize an iterator from a result tpye, a sequence of input types and a
+      number operands.  This is for signatures where all the operands have the
+      same type but the result type of the operation is different from the
+      input type.
+
+      """
+      self.dest_type = dest_type
+      self.source_types = source_types
+      self.num_operands = num_operands
+      self.i = 0
+
+   def __iter__(self):
+      return self
+
+   def next(self):
+      if self.i < len(self.source_types):
+         i = self.i
+         self.i += 1
+
+         if self.dest_type is None:
+            dest_type = self.source_types[i]
+         else:
+            dest_type = self.dest_type
+
+         return (dest_type, self.num_operands * (self.source_types[i],))
+      else:
+         raise StopIteration()
+
+
+uint_type = type("unsigned", "u", "GLSL_TYPE_UINT")
+int_type = type("int", "i", "GLSL_TYPE_INT")
+float_type = type("float", "f", "GLSL_TYPE_FLOAT")
+double_type = type("double", "d", "GLSL_TYPE_DOUBLE")
+bool_type = type("bool", "b", "GLSL_TYPE_BOOL")
+
+numeric_types = (uint_type, int_type, float_type, double_type)
+integer_types = (uint_type, int_type)
+real_types = (float_type, double_type)
+
+# This template is for unary operations that can only have operands of a
+# single type.  ir_unop_logic_not is an example.
+constant_template0 = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      assert(op[0]->type->base_type == ${op.source_types[0].glsl_type});
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
+         data.${op.source_types[0].union_field}[c] = ${op.get_c_expression(op.source_types)};
+      break;""")
+
+# This template is for unary operations that can have operands of a several
+# different types.  ir_unop_bit_not is an example.
+constant_template1 = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      switch (op[0]->type->base_type) {
+    % for dst_type, src_types in op.signatures():
+      case ${src_types[0].glsl_type}:
+         for (unsigned c = 0; c < op[0]->type->components(); c++)
+            data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types)};
+         break;
+    % endfor
+      default:
+         assert(0);
+      }
+      break;""")
+
 class operation(object):
-   def __init__(self, name, num_operands, printable_name = None):
+   def __init__(self, name, num_operands, printable_name = None, source_types = None, c_expression = None):
       self.name = name
       self.num_operands = num_operands
 
@@ -34,24 +123,60 @@ class operation(object):
       else:
          self.printable_name = printable_name
 
+      self.source_types = source_types
+      self.dest_type = None
+
+      if c_expression is None:
+         self.c_expression = None
+      elif isinstance(c_expression, str):
+         self.c_expression = {'default': c_expression}
+      else:
+         self.c_expression = c_expression
+
 
    def get_enum_name(self):
       return "ir_{}op_{}".format(("un", "bin", "tri", "quad")[self.num_operands-1], self.name)
 
 
+   def get_template(self):
+      if self.c_expression is None:
+         return None
+
+      if self.num_operands == 1:
+         if len(self.source_types) == 1:
+            return constant_template0.render(op=self)
+         else:
+            return constant_template1.render(op=self)
+
+      return None
+
+
+   def get_c_expression(self, types):
+      src0 = "op[0]->value.{}[c]".format(types[0].union_field)
+
+      expr = self.c_expression[types[0].union_field] if types[0].union_field in self.c_expression else self.c_expression['default']
+
+      return expr.format(src0=src0)
+
+
+   def signatures(self):
+      return type_signature_iter(self.dest_type, self.source_types, self.num_operands)
+
+
 ir_expression_operation = [
-   operation("bit_not", 1, printable_name="~"),
-   operation("logic_not", 1, printable_name="!"),
+   operation("bit_not", 1, printable_name="~", source_types=integer_types, c_expression="~ {src0}"),
+   operation("logic_not", 1, printable_name="!", source_types=(bool_type,), c_expression="!{src0}"),
    operation("neg", 1),
    operation("abs", 1),
    operation("sign", 1),
    operation("rcp", 1),
    operation("rsq", 1),
    operation("sqrt", 1),
-   operation("exp", 1),         # Log base e on gentype
-   operation("log", 1),         # Natural log on gentype
-   operation("exp2", 1),
-   operation("log2", 1),
+   operation("exp", 1, source_types=(float_type,), c_expression="expf({src0})"),         # Log base e on gentype
+   operation("log", 1, source_types=(float_type,), c_expression="logf({src0})"),         # Natural log on gentype
+   operation("exp2", 1, source_types=(float_type,), c_expression="exp2f({src0})"),
+   operation("log2", 1, source_types=(float_type,), c_expression="log2f({src0})"),
+
    operation("f2i", 1),         # Float-to-integer conversion.
    operation("f2u", 1),         # Float-to-unsigned conversion.
    operation("i2f", 1),         # Integer-to-float conversion.
@@ -82,16 +207,16 @@ ir_expression_operation = [
    operation("round_even", 1),
 
    # Trigonometric operations.
-   operation("sin", 1),
-   operation("cos", 1),
+   operation("sin", 1, source_types=(float_type,), c_expression="sinf({src0})"),
+   operation("cos", 1, source_types=(float_type,), c_expression="cosf({src0})"),
 
    # Partial derivatives.
-   operation("dFdx", 1),
-   operation("dFdx_coarse", 1, printable_name="dFdxCoarse"),
-   operation("dFdx_fine", 1, printable_name="dFdxFine"),
-   operation("dFdy", 1),
-   operation("dFdy_coarse", 1, printable_name="dFdyCoarse"),
-   operation("dFdy_fine", 1, printable_name="dFdyFine"),
+   operation("dFdx", 1, source_types=(float_type,), c_expression="0.0f"),
+   operation("dFdx_coarse", 1, printable_name="dFdxCoarse", source_types=(float_type,), c_expression="0.0f"),
+   operation("dFdx_fine", 1, printable_name="dFdxFine", source_types=(float_type,), c_expression="0.0f"),
+   operation("dFdy", 1, source_types=(float_type,), c_expression="0.0f"),
+   operation("dFdy_coarse", 1, printable_name="dFdyCoarse", source_types=(float_type,), c_expression="0.0f"),
+   operation("dFdy_fine", 1, printable_name="dFdyFine", source_types=(float_type,), c_expression="0.0f"),
 
    # Floating point pack and unpack operations.
    operation("pack_snorm_2x16", 1, printable_name="packSnorm2x16"),
@@ -106,12 +231,12 @@ ir_expression_operation = [
    operation("unpack_half_2x16", 1, printable_name="unpackHalf2x16"),
 
    # Bit operations, part of ARB_gpu_shader5.
-   operation("bitfield_reverse", 1),
+   operation("bitfield_reverse", 1, source_types=integer_types, c_expression="bitfield_reverse({src0})"),
    operation("bit_count", 1),
    operation("find_msb", 1),
    operation("find_lsb", 1),
 
-   operation("saturate", 1, printable_name="sat"),
+   operation("saturate", 1, printable_name="sat", source_types=(float_type,), c_expression="CLAMP({src0}, 0.0f, 1.0f)"),
 
    # Double packing, part of ARB_gpu_shader_fp64.
    operation("pack_double_2x32", 1, printable_name="packDouble2x32"),
@@ -296,6 +421,20 @@ const char *const ir_expression_operation_strings[] = {
 % endfor
 };""")
 
+   constant_template = mako.template.Template("""\
+   switch (this->operation) {
+% for op in values:
+    % if op.c_expression is not None:
+${op.get_template()}
+
+    % endif
+% endfor
+   default:
+      /* FINISHME: Should handle all expression types. */
+      return NULL;
+   }
+""")
+
    if sys.argv[1] == "enum":
       lasts = [None, None, None, None]
       for item in reversed(ir_expression_operation):
@@ -307,3 +446,5 @@ const char *const ir_expression_operation_strings[] = {
                                  lasts=lasts))
    elif sys.argv[1] == "strings":
       print(strings_template.render(values=ir_expression_operation))
+   elif sys.argv[1] == "constant":
+      print(constant_template.render(values=ir_expression_operation))
