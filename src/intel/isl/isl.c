@@ -933,21 +933,21 @@ isl_calc_row_pitch(const struct isl_device *dev,
 }
 
 /**
- * Calculate the surface's total height, including padding, in units of
- * surface elements.
+ * Calculate and apply any padding required for the surface.
+ *
+ * @param[inout] total_h_el is updated with the new height
+ * @param[out] pad_bytes is overwritten with additional padding requirements.
  */
-static uint32_t
-isl_calc_total_height_el(const struct isl_device *dev,
-                         const struct isl_surf_init_info *restrict info,
-                         const struct isl_tile_info *tile_info,
-                         uint32_t phys_array_len,
-                         uint32_t row_pitch,
-                         uint32_t array_pitch_el_rows)
+static void
+isl_apply_surface_padding(const struct isl_device *dev,
+                          const struct isl_surf_init_info *restrict info,
+                          const struct isl_tile_info *tile_info,
+                          uint32_t *total_h_el,
+                          uint32_t *pad_bytes)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
 
-   uint32_t total_h_el = phys_array_len * array_pitch_el_rows;
-   uint32_t pad_bytes = 0;
+   *pad_bytes = 0;
 
    /* From the Broadwell PRM >> Volume 5: Memory Views >> Common Surface
     * Formats >> Surface Padding Requirements >> Render Target and Media
@@ -981,14 +981,14 @@ isl_calc_total_height_el(const struct isl_device *dev,
     *      is to an even compressed row.
     */
    if (isl_format_is_compressed(info->format))
-      total_h_el = isl_align(total_h_el, 2);
+      *total_h_el = isl_align(*total_h_el, 2);
 
    /*
     *    - For cube surfaces, an additional two rows of padding are required
     *      at the bottom of the surface.
     */
    if (info->usage & ISL_SURF_USAGE_CUBE_BIT)
-      total_h_el += 2;
+      *total_h_el += 2;
 
    /*
     *    - For packed YUV, 96 bpt, 48 bpt, and 24 bpt surface formats,
@@ -998,8 +998,8 @@ isl_calc_total_height_el(const struct isl_device *dev,
     */
    if (isl_format_is_yuv(info->format) &&
        (fmtl->bs == 96 || fmtl->bs == 48|| fmtl->bs == 24)) {
-      total_h_el += 1;
-      pad_bytes += 16;
+      *total_h_el += 1;
+      *pad_bytes += 16;
    }
 
    /*
@@ -1008,7 +1008,7 @@ isl_calc_total_height_el(const struct isl_device *dev,
     *      required above.
     */
    if (tile_info->tiling == ISL_TILING_LINEAR)
-      pad_bytes += 64;
+      *pad_bytes += 64;
 
    /* The below text weakens, not strengthens, the padding requirements for
     * linear surfaces. Therefore we can safely ignore it.
@@ -1028,7 +1028,7 @@ isl_calc_total_height_el(const struct isl_device *dev,
    if (ISL_DEV_GEN(dev) >= 9 &&
        tile_info->tiling == ISL_TILING_LINEAR &&
        (info->dim == ISL_SURF_DIM_2D || info->dim == ISL_SURF_DIM_3D)) {
-      total_h_el = isl_align(total_h_el, 4);
+      *total_h_el = isl_align(*total_h_el, 4);
    }
 
    /*
@@ -1038,13 +1038,8 @@ isl_calc_total_height_el(const struct isl_device *dev,
    if (ISL_DEV_GEN(dev) >= 9 &&
        tile_info->tiling == ISL_TILING_LINEAR &&
        info->dim == ISL_SURF_DIM_1D) {
-      total_h_el += 4;
+      *total_h_el += 4;
    }
-
-   /* Be sloppy. Align any leftover padding to a row boundary. */
-   total_h_el += isl_align_div_npot(pad_bytes, row_pitch);
-
-   return total_h_el;
 }
 
 bool
@@ -1108,10 +1103,13 @@ isl_surf_init_s(const struct isl_device *dev,
                                    array_pitch_span, &image_align_sa,
                                    &phys_level0_sa, &phys_slice0_sa);
 
-   const uint32_t total_h_el =
-      isl_calc_total_height_el(dev, info, &tile_info,
-                               phys_level0_sa.array_len, row_pitch,
-                               array_pitch_el_rows);
+   uint32_t total_h_el = phys_level0_sa.array_len * array_pitch_el_rows;
+
+   uint32_t pad_bytes;
+   isl_apply_surface_padding(dev, info, &tile_info, &total_h_el, &pad_bytes);
+
+   /* Be sloppy. Align any leftover padding to a row boundary. */
+   total_h_el += isl_align_div_npot(pad_bytes, row_pitch);
 
    const uint32_t size =
       row_pitch * isl_align(total_h_el, tile_info.height);
