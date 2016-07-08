@@ -1113,8 +1113,8 @@ isl_surf_init_s(const struct isl_device *dev,
                                phys_level0_sa.array_len, row_pitch,
                                array_pitch_el_rows);
 
-   const uint32_t total_h_sa = total_h_el * fmtl->bh;
-   const uint32_t size = row_pitch * isl_align(total_h_sa, tile_info.height);
+   const uint32_t size =
+      row_pitch * isl_align(total_h_el, tile_info.height);
 
    /* Alignment of surface base address, in bytes */
    uint32_t base_alignment = MAX(1, info->min_alignment);
