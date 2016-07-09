@@ -85,6 +85,7 @@ double_type = type("double", "d", "GLSL_TYPE_DOUBLE")
 bool_type = type("bool", "b", "GLSL_TYPE_BOOL")
 
 numeric_types = (uint_type, int_type, float_type, double_type)
+signed_numeric_types = (int_type, float_type, double_type)
 integer_types = (uint_type, int_type)
 real_types = (float_type, double_type)
 
@@ -110,6 +111,24 @@ constant_template1 = mako.template.Template("""\
     % endfor
       default:
          assert(0);
+      }
+      break;""")
+
+# This template is for unary operations that can have operands of a several
+# different types, and each type has a different C expression.  ir_unop_neg is
+# an example.
+constant_template3 = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+         switch (this->type->base_type) {
+    % for dst_type, src_types in op.signatures():
+         case ${src_types[0].glsl_type}:
+            data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types)};
+            break;
+    % endfor
+         default:
+            assert(0);
+         }
       }
       break;""")
 
@@ -157,8 +176,10 @@ class operation(object):
             return constant_template2.render(op=self)
          elif len(self.source_types) == 1:
             return constant_template0.render(op=self)
-         else:
+         elif len(self.c_expression) == 1 and 'default' in self.c_expression:
             return constant_template1.render(op=self)
+         else:
+            return constant_template3.render(op=self)
 
       return None
 
@@ -178,12 +199,12 @@ class operation(object):
 ir_expression_operation = [
    operation("bit_not", 1, printable_name="~", source_types=integer_types, c_expression="~ {src0}"),
    operation("logic_not", 1, printable_name="!", source_types=(bool_type,), c_expression="!{src0}"),
-   operation("neg", 1),
-   operation("abs", 1),
-   operation("sign", 1),
-   operation("rcp", 1),
-   operation("rsq", 1),
-   operation("sqrt", 1),
+   operation("neg", 1, source_types=numeric_types, c_expression={'u': "-((int) {src0})", 'default': "-{src0}"}),
+   operation("abs", 1, source_types=signed_numeric_types, c_expression={'i': "{src0} < 0 ? -{src0} : {src0}", 'f': "fabsf({src0})", 'd': "fabs({src0})"}),
+   operation("sign", 1, source_types=signed_numeric_types, c_expression={'i': "({src0} > 0) - ({src0} < 0)", 'f': "float(({src0} > 0.0F) - ({src0} < 0.0F))", 'd': "double(({src0} > 0.0) - ({src0} < 0.0))"}),
+   operation("rcp", 1, source_types=real_types, c_expression={'f': "{src0} != 0.0F ? 1.0F / {src0} : 0.0F", 'd': "{src0} != 0.0 ? 1.0 / {src0} : 0.0"}),
+   operation("rsq", 1, source_types=real_types, c_expression={'f': "1.0F / sqrtf({src0})", 'd': "1.0 / sqrt({src0})"}),
+   operation("sqrt", 1, source_types=real_types, c_expression={'f': "sqrtf({src0})", 'd': "sqrt({src0})"}),
    operation("exp", 1, source_types=(float_type,), c_expression="expf({src0})"),         # Log base e on gentype
    operation("log", 1, source_types=(float_type,), c_expression="logf({src0})"),         # Natural log on gentype
    operation("exp2", 1, source_types=(float_type,), c_expression="exp2f({src0})"),
@@ -233,11 +254,11 @@ ir_expression_operation = [
    operation("bitcast_f2u", 1, source_types=(float_type,), dest_type=uint_type, c_expression="bitcast_f2u({src0})"),
 
    # Unary floating-point rounding operations.
-   operation("trunc", 1),
-   operation("ceil", 1),
-   operation("floor", 1),
-   operation("fract", 1),
-   operation("round_even", 1),
+   operation("trunc", 1, source_types=real_types, c_expression={'f': "truncf({src0})", 'd': "trunc({src0})"}),
+   operation("ceil", 1, source_types=real_types, c_expression={'f': "ceilf({src0})", 'd': "ceil({src0})"}),
+   operation("floor", 1, source_types=real_types, c_expression={'f': "floorf({src0})", 'd': "floor({src0})"}),
+   operation("fract", 1, source_types=real_types, c_expression={'f': "{src0} - floorf({src0})", 'd': "{src0} - floor({src0})"}),
+   operation("round_even", 1, source_types=real_types, c_expression={'f': "_mesa_roundevenf({src0})", 'd': "_mesa_roundeven({src0})"}),
 
    # Trigonometric operations.
    operation("sin", 1, source_types=(float_type,), c_expression="sinf({src0})"),
