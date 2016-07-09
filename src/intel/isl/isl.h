@@ -356,6 +356,15 @@ enum isl_format {
    ISL_FORMAT_MCS_4X,
    ISL_FORMAT_MCS_8X,
    ISL_FORMAT_MCS_16X,
+   ISL_FORMAT_GEN7_CCS_32BPP_X,
+   ISL_FORMAT_GEN7_CCS_64BPP_X,
+   ISL_FORMAT_GEN7_CCS_128BPP_X,
+   ISL_FORMAT_GEN7_CCS_32BPP_Y,
+   ISL_FORMAT_GEN7_CCS_64BPP_Y,
+   ISL_FORMAT_GEN7_CCS_128BPP_Y,
+   ISL_FORMAT_GEN9_CCS_32BPP,
+   ISL_FORMAT_GEN9_CCS_64BPP,
+   ISL_FORMAT_GEN9_CCS_128BPP,
 
    /* Hardware doesn't understand this out-of-band value */
    ISL_FORMAT_UNSUPPORTED =                             UINT16_MAX,
@@ -408,6 +417,7 @@ enum isl_txc {
    /* Used for auxiliary surface formats */
    ISL_TXC_HIZ,
    ISL_TXC_MCS,
+   ISL_TXC_CCS,
 };
 
 /**
@@ -427,6 +437,7 @@ enum isl_tiling {
    ISL_TILING_Yf, /**< Standard 4K tiling. The 'f' means "four". */
    ISL_TILING_Ys, /**< Standard 64K tiling. The 's' means "sixty-four". */
    ISL_TILING_HIZ, /**< Tiling format for HiZ surfaces */
+   ISL_TILING_CCS, /**< Tiling format for CCS surfaces */
 };
 
 /**
@@ -441,6 +452,7 @@ typedef uint32_t isl_tiling_flags_t;
 #define ISL_TILING_Yf_BIT                 (1u << ISL_TILING_Yf)
 #define ISL_TILING_Ys_BIT                 (1u << ISL_TILING_Ys)
 #define ISL_TILING_HIZ_BIT                (1u << ISL_TILING_HIZ)
+#define ISL_TILING_CCS_BIT                (1u << ISL_TILING_CCS)
 #define ISL_TILING_ANY_MASK               (~0u)
 #define ISL_TILING_NON_LINEAR_MASK        (~ISL_TILING_LINEAR_BIT)
 
@@ -525,6 +537,7 @@ typedef uint64_t isl_surf_usage_flags_t;
 #define ISL_SURF_USAGE_STORAGE_BIT             (1u << 12)
 #define ISL_SURF_USAGE_HIZ_BIT                 (1u << 13)
 #define ISL_SURF_USAGE_MCS_BIT                 (1u << 14)
+#define ISL_SURF_USAGE_CCS_BIT                 (1u << 15)
 /** @} */
 
 /**
@@ -991,6 +1004,7 @@ isl_format_has_bc_compression(enum isl_format fmt)
 
    case ISL_TXC_HIZ:
    case ISL_TXC_MCS:
+   case ISL_TXC_CCS:
       unreachable("Should not be called on an aux surface");
    }
 

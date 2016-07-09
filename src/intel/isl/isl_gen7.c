@@ -242,6 +242,13 @@ gen7_filter_tiling(const struct isl_device *dev,
    if (isl_format_get_layout(info->format)->txc == ISL_TXC_MCS)
       *flags &= ISL_TILING_Y0_BIT;
 
+   /* The CCS formats and tiling always go together */
+   if (isl_format_get_layout(info->format)->txc == ISL_TXC_CCS) {
+      *flags &= ISL_TILING_CCS_BIT;
+   } else {
+      *flags &= ~ISL_TILING_CCS_BIT;
+   }
+
    if (info->usage & (ISL_SURF_USAGE_DISPLAY_ROTATE_90_BIT |
                       ISL_SURF_USAGE_DISPLAY_ROTATE_180_BIT |
                       ISL_SURF_USAGE_DISPLAY_ROTATE_270_BIT)) {

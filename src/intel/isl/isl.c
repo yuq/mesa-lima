@@ -177,6 +177,29 @@ isl_tiling_get_info(const struct isl_device *dev,
       phys_B = isl_extent2d(128, 32);
       break;
 
+   case ISL_TILING_CCS:
+      /* CCS surfaces are required to have one of the GENX_CCS_* formats which
+       * have a block size of 1 or 2 bits per block and each CCS element
+       * corresponds to one cache-line pair in the main surface.  From the Sky
+       * Lake PRM Vol. 12 in the section on planes:
+       *
+       *    "The Color Control Surface (CCS) contains the compression status
+       *    of the cache-line pairs. The compression state of the cache-line
+       *    pair is specified by 2 bits in the CCS.  Each CCS cache-line
+       *    represents an area on the main surface of 16x16 sets of 128 byte
+       *    Y-tiled cache-line-pairs. CCS is always Y tiled."
+       *
+       * The CCS being Y-tiled implies that it's an 8x8 grid of cache-lines.
+       * Since each cache line corresponds to a 16x16 set of cache-line pairs,
+       * that yields total tile area of 128x128 cache-line pairs or CCS
+       * elements.  On older hardware, each CCS element is 1 bit and the tile
+       * is 128x256 elements.
+       */
+      assert(format_bpb == 1 || format_bpb == 2);
+      logical_el = isl_extent2d(128, 256 / format_bpb);
+      phys_B = isl_extent2d(128, 32);
+      break;
+
    default:
       unreachable("not reached");
    } /* end switch */
@@ -231,6 +254,7 @@ isl_surf_choose_tiling(const struct isl_device *dev,
       CHOOSE(ISL_TILING_LINEAR);
    }
 
+   CHOOSE(ISL_TILING_CCS);
    CHOOSE(ISL_TILING_HIZ);
    CHOOSE(ISL_TILING_Ys);
    CHOOSE(ISL_TILING_Yf);
@@ -853,6 +877,29 @@ isl_calc_array_pitch_el_rows(const struct isl_device *dev,
 
    assert(pitch_sa_rows % fmtl->bh == 0);
    uint32_t pitch_el_rows = pitch_sa_rows / fmtl->bh;
+
+   if (ISL_DEV_GEN(dev) >= 9 && fmtl->txc == ISL_TXC_CCS) {
+      /*
+       * From the Sky Lake PRM Vol 7, "MCS Buffer for Render Target(s)" (p. 632):
+       *
+       *    "Mip-mapped and arrayed surfaces are supported with MCS buffer
+       *    layout with these alignments in the RT space: Horizontal
+       *    Alignment = 128 and Vertical Alignment = 64."
+       *
+       * From the Sky Lake PRM Vol. 2d, "RENDER_SURFACE_STATE" (p. 435):
+       *
+       *    "For non-multisampled render target's CCS auxiliary surface,
+       *    QPitch must be computed with Horizontal Alignment = 128 and
+       *    Surface Vertical Alignment = 256. These alignments are only for
+       *    CCS buffer and not for associated render target."
+       *
+       * The first restriction is already handled by isl_choose_image_alignment_el
+       * but the second restriction, which is an extension of the first, only
+       * applies to qpitch and must be applied here.
+       */
+      assert(fmtl->bh == 4);
+      pitch_el_rows = isl_align(pitch_el_rows, 256 / 4);
+   }
 
    if (ISL_DEV_GEN(dev) >= 9 &&
        info->dim == ISL_SURF_DIM_3D &&

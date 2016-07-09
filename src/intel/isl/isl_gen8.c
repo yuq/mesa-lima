@@ -204,6 +204,19 @@ gen8_choose_image_alignment_el(const struct isl_device *dev,
 
    assert(!isl_tiling_is_std_y(tiling));
 
+   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+   if (fmtl->txc == ISL_TXC_CCS) {
+      /*
+       * Broadwell PRM Vol 7, "MCS Buffer for Render Target(s)" (p. 676):
+       *
+       *    "Mip-mapped and arrayed surfaces are supported with MCS buffer
+       *    layout with these alignments in the RT space: Horizontal
+       *    Alignment = 256 and Vertical Alignment = 128.
+       */
+      *image_align_el = isl_extent3d(256 / fmtl->bw, 128 / fmtl->bh, 1);
+      return;
+   }
+
    /* The below text from the Broadwell PRM provides some insight into the
     * hardware's requirements for LOD alignment.  From the Broadwell PRM >>
     * Volume 5: Memory Views >> Surface Layout >> 2D Surfaces:
