@@ -660,9 +660,28 @@ struct isl_format_layout {
 
 struct isl_tile_info {
    enum isl_tiling tiling;
-   uint32_t width; /**< in bytes */
-   uint32_t height; /**< in rows of memory */
-   uint32_t size; /**< in bytes */
+
+   /** The logical size of the tile in units of surface elements
+    *
+    * This field determines how a given surface is cut up into tiles.  It is
+    * used to compute the size of a surface in tiles and can be used to
+    * determine the location of the tile containing any given surface element.
+    * The exact value of this field depends heavily on the bits-per-block of
+    * the format being used.
+    */
+   struct isl_extent2d logical_extent_el;
+
+   /** The physical size of the tile in bytes and rows of bytes
+    *
+    * This field determines how the tiles of a surface are physically layed
+    * out in memory.  The logical and physical tile extent are frequently the
+    * same but this is not always the case.  For instance, a W-tile (which is
+    * always used with ISL_FORMAT_R8) has a logical size of 64el x 64el but
+    * its physical size is 128B x 32rows, the same as a Y-tile.
+    *
+    * @see isl_surf::row_pitch
+    */
+   struct isl_extent2d phys_extent_B;
 };
 
 /**
@@ -743,7 +762,17 @@ struct isl_surf {
    uint32_t alignment;
 
    /**
-    * Pitch between vertically adjacent surface elements, in bytes.
+    * The interpretation of this field depends on the value of
+    * isl_tile_info::physical_extent_B.  In particular, the width of the
+    * surface in tiles is row_pitch / isl_tile_info::physical_extent_B.width
+    * and the distance in bytes between vertically adjacent tiles in the image
+    * is given by row_pitch * isl_tile_info::physical_extent_B.height.
+    *
+    * For linear images where isl_tile_info::physical_extent_B.height == 1,
+    * this cleanly reduces to being the distance, in bytes, between vertically
+    * adjacent surface elements.
+    *
+    * @see isl_tile_info::phys_extent_B;
     */
    uint32_t row_pitch;
 
