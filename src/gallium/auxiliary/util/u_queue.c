@@ -204,6 +204,7 @@ util_queue_fence_init(struct util_queue_fence *fence)
 void
 util_queue_fence_destroy(struct util_queue_fence *fence)
 {
+   assert(fence->signalled);
    pipe_condvar_destroy(fence->cond);
    pipe_mutex_destroy(fence->mutex);
 }
