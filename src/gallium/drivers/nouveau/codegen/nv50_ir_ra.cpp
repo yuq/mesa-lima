@@ -969,6 +969,7 @@ GCRA::coalesce(ArrayList& insns)
    case 0x100:
    case 0x110:
    case 0x120:
+   case 0x130:
       ret = doCoalesce(insns, JOIN_MASK_UNION);
       break;
    default:
@@ -2234,6 +2235,7 @@ RegAlloc::InsertConstraintsPass::visit(BasicBlock *bb)
             break;
          case 0x110:
          case 0x120:
+         case 0x130:
             texConstraintGM107(tex);
             break;
          default:

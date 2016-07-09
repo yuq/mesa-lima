@@ -232,10 +232,11 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_CULL_DISTANCE:
    case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
    case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
-   case PIPE_CAP_COMPUTE:
    case PIPE_CAP_TGSI_VOTE:
    case PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED:
       return 1;
+   case PIPE_CAP_COMPUTE:
+      return (class_3d < GP100_3D_CLASS);
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
       return (class_3d >= NVE4_3D_CLASS) ? 1 : 0;
    case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
@@ -657,6 +658,8 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
    case 0x110:
    case 0x120:
       return nve4_screen_compute_setup(screen, screen->base.pushbuf);
+   case 0x130:
+      return 0;
    default:
       return -1;
    }
@@ -719,6 +722,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    case 0x100:
    case 0x110:
    case 0x120:
+   case 0x130:
       break;
    default:
       return NULL;
@@ -731,10 +735,8 @@ nvc0_screen_create(struct nouveau_device *dev)
    pscreen->destroy = nvc0_screen_destroy;
 
    ret = nouveau_screen_init(&screen->base, dev);
-   if (ret) {
-      nvc0_screen_destroy(pscreen);
-      return NULL;
-   }
+   if (ret)
+      FAIL_SCREEN_INIT("Base screen init failed: %d\n", ret);
    chan = screen->base.channel;
    push = screen->base.pushbuf;
    push->user_priv = screen;
@@ -787,6 +789,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, screen->nvsw->handle);
 
    switch (dev->chipset & ~0xf) {
+   case 0x130:
    case 0x120:
    case 0x110:
    case 0x100:
@@ -839,6 +842,9 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, screen->fence.bo->offset + 16);
 
    switch (dev->chipset & ~0xf) {
+   case 0x130:
+      obj_class = GP100_3D_CLASS;
+      break;
    case 0x120:
       obj_class = GM200_3D_CLASS;
       break;
