@@ -785,9 +785,6 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    case ir_unop_abs:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
          switch (this->type->base_type) {
-         case GLSL_TYPE_UINT:
-            data.u[c] = op[0]->value.u[c];
-            break;
          case GLSL_TYPE_INT:
             data.i[c] = op[0]->value.i[c];
             if (data.i[c] < 0)
@@ -808,9 +805,6 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    case ir_unop_sign:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
          switch (this->type->base_type) {
-         case GLSL_TYPE_UINT:
-            data.u[c] = op[0]->value.i[c] > 0;
-            break;
          case GLSL_TYPE_INT:
             data.i[c] = (op[0]->value.i[c] > 0) - (op[0]->value.i[c] < 0);
             break;
