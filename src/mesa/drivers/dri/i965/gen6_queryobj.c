@@ -99,7 +99,7 @@ write_xfb_primitives_written(struct brw_context *brw,
    }
 }
 
-static inline const int
+static inline int
 pipeline_target_to_index(int target)
 {
    if (target == GL_GEOMETRY_SHADER_INVOCATIONS)
