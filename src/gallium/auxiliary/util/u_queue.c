@@ -41,9 +41,6 @@ util_queue_fence_signal(struct util_queue_fence *fence)
 void
 util_queue_job_wait(struct util_queue_fence *fence)
 {
-   if (fence->signalled)
-      return;
-
    pipe_mutex_lock(fence->mutex);
    while (!fence->signalled)
       pipe_condvar_wait(fence->cond, fence->mutex);
