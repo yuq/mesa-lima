@@ -729,12 +729,6 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    case ir_unop_fract:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
          switch (this->type->base_type) {
-         case GLSL_TYPE_UINT:
-            data.u[c] = 0;
-            break;
-         case GLSL_TYPE_INT:
-            data.i[c] = 0;
-            break;
          case GLSL_TYPE_FLOAT:
             data.f[c] = op[0]->value.f[c] - floor(op[0]->value.f[c]);
             break;
@@ -823,14 +817,6 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    case ir_unop_rcp:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
          switch (this->type->base_type) {
-         case GLSL_TYPE_UINT:
-            if (op[0]->value.u[c] != 0.0)
-               data.u[c] = 1 / op[0]->value.u[c];
-            break;
-         case GLSL_TYPE_INT:
-            if (op[0]->value.i[c] != 0.0)
-               data.i[c] = 1 / op[0]->value.i[c];
-            break;
          case GLSL_TYPE_FLOAT:
             if (op[0]->value.f[c] != 0.0)
                data.f[c] = 1.0F / op[0]->value.f[c];
