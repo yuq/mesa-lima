@@ -352,6 +352,10 @@ enum isl_format {
 
    /* Formats for color compression surfaces */
    ISL_FORMAT_HIZ,
+   ISL_FORMAT_MCS_2X,
+   ISL_FORMAT_MCS_4X,
+   ISL_FORMAT_MCS_8X,
+   ISL_FORMAT_MCS_16X,
 
    /* Hardware doesn't understand this out-of-band value */
    ISL_FORMAT_UNSUPPORTED =                             UINT16_MAX,
@@ -403,6 +407,7 @@ enum isl_txc {
 
    /* Used for auxiliary surface formats */
    ISL_TXC_HIZ,
+   ISL_TXC_MCS,
 };
 
 /**
@@ -519,6 +524,7 @@ typedef uint64_t isl_surf_usage_flags_t;
 #define ISL_SURF_USAGE_DISPLAY_FLIP_Y_BIT      (1u << 11)
 #define ISL_SURF_USAGE_STORAGE_BIT             (1u << 12)
 #define ISL_SURF_USAGE_HIZ_BIT                 (1u << 13)
+#define ISL_SURF_USAGE_MCS_BIT                 (1u << 14)
 /** @} */
 
 /**
@@ -984,6 +990,7 @@ isl_format_has_bc_compression(enum isl_format fmt)
       return false;
 
    case ISL_TXC_HIZ:
+   case ISL_TXC_MCS:
       unreachable("Should not be called on an aux surface");
    }
 

@@ -238,6 +238,10 @@ gen7_filter_tiling(const struct isl_device *dev,
       *flags &= ~ISL_TILING_HIZ_BIT;
    }
 
+   /* MCS buffers are always Y-tiled */
+   if (isl_format_get_layout(info->format)->txc == ISL_TXC_MCS)
+      *flags &= ISL_TILING_Y0_BIT;
+
    if (info->usage & (ISL_SURF_USAGE_DISPLAY_ROTATE_90_BIT |
                       ISL_SURF_USAGE_DISPLAY_ROTATE_180_BIT |
                       ISL_SURF_USAGE_DISPLAY_ROTATE_270_BIT)) {
