@@ -89,6 +89,9 @@ gen6_choose_image_alignment_el(const struct isl_device *dev,
                                enum isl_msaa_layout msaa_layout,
                                struct isl_extent3d *image_align_el)
 {
+   /* Handled by isl_choose_image_alignment_el */
+   assert(info->format != ISL_FORMAT_HIZ);
+
    /* Note that the surface's horizontal image alignment is not programmable
     * on Sandybridge.
     *

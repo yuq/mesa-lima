@@ -111,7 +111,8 @@ gen7_choose_msaa_layout(const struct isl_device *dev,
     * In the table above, MSFMT_MSS refers to ISL_MSAA_LAYOUT_ARRAY, and
     * MSFMT_DEPTH_STENCIL refers to ISL_MSAA_LAYOUT_INTERLEAVED.
     */
-   if (isl_surf_usage_is_depth_or_stencil(info->usage))
+   if (isl_surf_usage_is_depth_or_stencil(info->usage) ||
+       (info->usage & ISL_SURF_USAGE_HIZ_BIT))
       require_interleaved = true;
 
    /* From the Ivybridge PRM, Volume 4 Part 1 p72, SURFACE_STATE, Multisampled
@@ -228,6 +229,13 @@ gen7_filter_tiling(const struct isl_device *dev,
       *flags &= ISL_TILING_W_BIT;
    } else {
       *flags &= ~ISL_TILING_W_BIT;
+   }
+
+   /* The HiZ format and tiling always go together */
+   if (info->format == ISL_FORMAT_HIZ) {
+      *flags &= ISL_TILING_HIZ_BIT;
+   } else {
+      *flags &= ~ISL_TILING_HIZ_BIT;
    }
 
    if (info->usage & (ISL_SURF_USAGE_DISPLAY_ROTATE_90_BIT |
@@ -384,6 +392,9 @@ gen7_choose_image_alignment_el(const struct isl_device *dev,
                                enum isl_msaa_layout msaa_layout,
                                struct isl_extent3d *image_align_el)
 {
+   /* Handled by isl_choose_image_alignment_el */
+   assert(info->format != ISL_FORMAT_HIZ);
+
    /* IVB+ does not support combined depthstencil. */
    assert(!isl_surf_usage_is_depth_and_stencil(info->usage));
 

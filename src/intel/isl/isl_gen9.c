@@ -103,6 +103,9 @@ gen9_choose_image_alignment_el(const struct isl_device *dev,
                                enum isl_msaa_layout msaa_layout,
                                struct isl_extent3d *image_align_el)
 {
+   /* Handled by isl_choose_image_alignment_el */
+   assert(info->format != ISL_FORMAT_HIZ);
+
    /* This BSpec text provides some insight into the hardware's alignment
     * requirements [Skylake BSpec > Memory Views > Common Surface Formats >
     * Surface Layout and Tiling > 2D Surfaces]:

@@ -314,3 +314,4 @@ ASTC_LDR_2D_10X8_FLT16      , 128, 10,  8,  1, sf16, sf16, sf16, sf16,     ,    
 ASTC_LDR_2D_10X10_FLT16     , 128, 10, 10,  1, sf16, sf16, sf16, sf16,     ,     ,    , linear,  astc
 ASTC_LDR_2D_12X10_FLT16     , 128, 12, 10,  1, sf16, sf16, sf16, sf16,     ,     ,    , linear,  astc
 ASTC_LDR_2D_12X12_FLT16     , 128, 12, 12,  1, sf16, sf16, sf16, sf16,     ,     ,    , linear,  astc
+HIZ                         , 128,  8,  4,  1,     ,     ,     ,     ,     ,     ,    ,       ,   hiz

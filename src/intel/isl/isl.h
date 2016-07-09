@@ -345,6 +345,14 @@ enum isl_format {
    ISL_FORMAT_ASTC_LDR_2D_12X10_FLT16 =                        638,
    ISL_FORMAT_ASTC_LDR_2D_12X12_FLT16 =                        639,
 
+   /* The formats that follow are internal to ISL and as such don't have an
+    * explicit number.  We'll just let the C compiler assign it for us.  Any
+    * actual hardware formats *must* come before these in the list.
+    */
+
+   /* Formats for color compression surfaces */
+   ISL_FORMAT_HIZ,
+
    /* Hardware doesn't understand this out-of-band value */
    ISL_FORMAT_UNSUPPORTED =                             UINT16_MAX,
 };
@@ -392,6 +400,9 @@ enum isl_txc {
    ISL_TXC_ETC1,
    ISL_TXC_ETC2,
    ISL_TXC_ASTC,
+
+   /* Used for auxiliary surface formats */
+   ISL_TXC_HIZ,
 };
 
 /**
@@ -410,6 +421,7 @@ enum isl_tiling {
    ISL_TILING_Y0, /**< Legacy Y tiling */
    ISL_TILING_Yf, /**< Standard 4K tiling. The 'f' means "four". */
    ISL_TILING_Ys, /**< Standard 64K tiling. The 's' means "sixty-four". */
+   ISL_TILING_HIZ, /**< Tiling format for HiZ surfaces */
 };
 
 /**
@@ -423,6 +435,7 @@ typedef uint32_t isl_tiling_flags_t;
 #define ISL_TILING_Y0_BIT                 (1u << ISL_TILING_Y0)
 #define ISL_TILING_Yf_BIT                 (1u << ISL_TILING_Yf)
 #define ISL_TILING_Ys_BIT                 (1u << ISL_TILING_Ys)
+#define ISL_TILING_HIZ_BIT                (1u << ISL_TILING_HIZ)
 #define ISL_TILING_ANY_MASK               (~0u)
 #define ISL_TILING_NON_LINEAR_MASK        (~ISL_TILING_LINEAR_BIT)
 
@@ -505,6 +518,7 @@ typedef uint64_t isl_surf_usage_flags_t;
 #define ISL_SURF_USAGE_DISPLAY_FLIP_X_BIT      (1u << 10)
 #define ISL_SURF_USAGE_DISPLAY_FLIP_Y_BIT      (1u << 11)
 #define ISL_SURF_USAGE_STORAGE_BIT             (1u << 12)
+#define ISL_SURF_USAGE_HIZ_BIT                 (1u << 13)
 /** @} */
 
 /**
@@ -968,6 +982,9 @@ isl_format_has_bc_compression(enum isl_format fmt)
    case ISL_TXC_ETC2:
    case ISL_TXC_ASTC:
       return false;
+
+   case ISL_TXC_HIZ:
+      unreachable("Should not be called on an aux surface");
    }
 
    unreachable("bad texture compression mode");

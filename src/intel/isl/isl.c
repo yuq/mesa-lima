@@ -167,6 +167,16 @@ isl_tiling_get_info(const struct isl_device *dev,
       break;
    }
 
+   case ISL_TILING_HIZ:
+      /* HiZ buffers are required to have ISL_FORMAT_HIZ which is an 8x4
+       * 128bpb format.  The tiling has the same physical dimensions as
+       * Y-tiling but actually has two HiZ columns per Y-tiled column.
+       */
+      assert(bs == 16);
+      logical_el = isl_extent2d(16, 16);
+      phys_B = isl_extent2d(128, 32);
+      break;
+
    default:
       unreachable("not reached");
    } /* end switch */
@@ -221,6 +231,7 @@ isl_surf_choose_tiling(const struct isl_device *dev,
       CHOOSE(ISL_TILING_LINEAR);
    }
 
+   CHOOSE(ISL_TILING_HIZ);
    CHOOSE(ISL_TILING_Ys);
    CHOOSE(ISL_TILING_Yf);
    CHOOSE(ISL_TILING_Y0);
@@ -314,7 +325,8 @@ isl_choose_array_pitch_span(const struct isl_device *dev,
             return ISL_ARRAY_PITCH_SPAN_COMPACT;
          }
 
-         if (isl_surf_usage_is_depth_or_stencil(info->usage)) {
+         if (isl_surf_usage_is_depth_or_stencil(info->usage) ||
+             (info->usage & ISL_SURF_USAGE_HIZ_BIT)) {
             /* From the Ivybridge PRM >> Volume 1 Part 1: Graphics Core >>
              * Section 6.18.4.7: Surface Arrays (p112):
              *
@@ -388,6 +400,15 @@ isl_choose_image_alignment_el(const struct isl_device *dev,
                               enum isl_msaa_layout msaa_layout,
                               struct isl_extent3d *image_align_el)
 {
+   if (info->format == ISL_FORMAT_HIZ) {
+      assert(ISL_DEV_GEN(dev) >= 6);
+      /* HiZ surfaces are always aligned to 16x8 pixels in the primary surface
+       * which works out to 2x2 HiZ elments.
+       */
+      *image_align_el = isl_extent3d(2, 2, 1);
+      return;
+   }
+
    if (ISL_DEV_GEN(dev) >= 9) {
       gen9_choose_image_alignment_el(dev, info, tiling, msaa_layout,
                                      image_align_el);

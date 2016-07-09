@@ -84,7 +84,8 @@ gen8_choose_msaa_layout(const struct isl_device *dev,
    if (isl_format_is_yuv(info->format))
       return false;
 
-   if (isl_surf_usage_is_depth_or_stencil(info->usage))
+   if (isl_surf_usage_is_depth_or_stencil(info->usage) ||
+       (info->usage & ISL_SURF_USAGE_HIZ_BIT))
       require_interleaved = true;
 
    if (require_array && require_interleaved)
@@ -198,6 +199,9 @@ gen8_choose_image_alignment_el(const struct isl_device *dev,
                                enum isl_msaa_layout msaa_layout,
                                struct isl_extent3d *image_align_el)
 {
+   /* Handled by isl_choose_image_alignment_el */
+   assert(info->format != ISL_FORMAT_HIZ);
+
    assert(!isl_tiling_is_std_y(tiling));
 
    /* The below text from the Broadwell PRM provides some insight into the
