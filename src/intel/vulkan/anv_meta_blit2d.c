@@ -540,7 +540,7 @@ anv_meta_blit2d_w_tiled_dst(struct anv_cmd_buffer *cmd_buffer,
          .tiling = ISL_TILING_Y0,
          .base_offset = dst->base_offset,
          .bs = 1,
-         .pitch = dst->pitch * 2,
+         .pitch = dst->pitch,
       };
 
       struct blit2d_dst_temps dst_temps;

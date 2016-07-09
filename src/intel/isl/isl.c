@@ -133,10 +133,20 @@ isl_tiling_get_info(const struct isl_device *dev,
       break;
 
    case ISL_TILING_W:
-      /* XXX: Should W tile be same as Y? */
       assert(bs == 1);
       logical_el = isl_extent2d(64, 64);
-      phys_B = isl_extent2d(64, 64);
+      /* From the Broadwell PRM Vol 2d, RENDER_SURFACE_STATE::SurfacePitch:
+       *
+       *    "If the surface is a stencil buffer (and thus has Tile Mode set
+       *    to TILEMODE_WMAJOR), the pitch must be set to 2x the value
+       *    computed based on width, as the stencil buffer is stored with two
+       *    rows interleaved."
+       *
+       * This, together with the fact that stencil buffers are referred to as
+       * being Y-tiled in the PRMs for older hardware implies that the
+       * physical size of a W-tile is actually the same as for a Y-tile.
+       */
+      phys_B = isl_extent2d(128, 32);
       break;
 
    case ISL_TILING_Yf:

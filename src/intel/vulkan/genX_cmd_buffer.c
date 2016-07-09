@@ -1112,12 +1112,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 #endif
          sb.StencilBufferObjectControlState = GENX(MOCS),
 
-         /* Stencil buffers have strange pitch. The PRM says:
-          *
-          *    The pitch must be set to 2x the value computed based on width,
-          *    as the stencil buffer is stored with two rows interleaved.
-          */
-         sb.SurfacePitch = 2 * image->stencil_surface.isl.row_pitch - 1,
+         sb.SurfacePitch = image->stencil_surface.isl.row_pitch - 1,
 
 #if GEN_GEN >= 8
          sb.SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->stencil_surface.isl) >> 2,
