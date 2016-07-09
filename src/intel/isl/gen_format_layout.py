@@ -68,7 +68,6 @@ TEMPLATE = template.Template(
             .format = ISL_FORMAT_${format.name},
             .name = "ISL_FORMAT_${format.name}",
             .bpb = ${format.bpb},
-            .bs = ${format.bpb // 8},
             .bw = ${format.bw},
             .bh = ${format.bh},
             .bd = ${format.bd},

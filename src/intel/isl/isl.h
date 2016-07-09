@@ -640,7 +640,6 @@ struct isl_format_layout {
    const char *name;
 
    uint16_t bpb; /**< Bits per block */
-   uint8_t bs; /**< Block size, in bytes, rounded towards 0 */
    uint8_t bw; /**< Block width, in pixels */
    uint8_t bh; /**< Block height, in pixels */
    uint8_t bd; /**< Block depth, in pixels */
@@ -1203,8 +1202,8 @@ isl_surf_get_row_pitch_el(const struct isl_surf *surf)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
 
-   assert(surf->row_pitch % fmtl->bs == 0);
-   return surf->row_pitch / fmtl->bs;
+   assert(surf->row_pitch % (fmtl->bpb / 8) == 0);
+   return surf->row_pitch / (fmtl->bpb / 8);
 }
 
 /**

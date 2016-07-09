@@ -75,7 +75,7 @@ blit_surf_for_image(const struct anv_image* image,
       .bo = image->bo,
       .tiling = surf->isl.tiling,
       .base_offset = image->offset + surf->offset,
-      .bs = isl_format_get_layout(surf->isl.format)->bs,
+      .bs = isl_format_get_layout(surf->isl.format)->bpb / 8,
       .pitch = isl_surf_get_row_pitch(&surf->isl),
    };
 }
@@ -168,7 +168,7 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
          .bo = buffer->bo,
          .tiling = ISL_TILING_LINEAR,
          .base_offset = buffer->offset + pRegions[r].bufferOffset,
-         .bs = isl_format_get_layout(buf_format)->bs,
+         .bs = isl_format_get_layout(buf_format)->bpb / 8,
          .pitch = buf_extent_el.width * buf_bsurf.bs,
       };
 

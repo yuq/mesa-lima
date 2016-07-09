@@ -904,7 +904,8 @@ isl_calc_linear_row_pitch(const struct isl_device *dev,
     *    being used to determine whether additional pages need to be defined.
     */
    assert(phys_slice0_sa->w % fmtl->bw == 0);
-   row_pitch = MAX(row_pitch, fmtl->bs * (phys_slice0_sa->w / fmtl->bw));
+   const uint32_t bs = fmtl->bpb / 8;
+   row_pitch = MAX(row_pitch, bs * (phys_slice0_sa->w / fmtl->bw));
 
    /* From the Broadwel PRM >> Volume 2d: Command Reference: Structures >>
     * RENDER_SURFACE_STATE Surface Pitch (p349):
@@ -922,9 +923,9 @@ isl_calc_linear_row_pitch(const struct isl_device *dev,
     */
    if (info->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) {
       if (isl_format_is_yuv(info->format)) {
-         row_pitch = isl_align_npot(row_pitch, 2 * fmtl->bs);
+         row_pitch = isl_align_npot(row_pitch, 2 * bs);
       } else  {
-         row_pitch = isl_align_npot(row_pitch, fmtl->bs);
+         row_pitch = isl_align_npot(row_pitch, bs);
       }
    }
 
@@ -1120,9 +1121,9 @@ isl_surf_init_s(const struct isl_device *dev,
       base_alignment = MAX(1, info->min_alignment);
       if (info->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) {
          if (isl_format_is_yuv(info->format)) {
-            base_alignment = MAX(base_alignment, 2 * fmtl->bs);
+            base_alignment = MAX(base_alignment, fmtl->bpb / 4);
          } else {
-            base_alignment = MAX(base_alignment, fmtl->bs);
+            base_alignment = MAX(base_alignment, fmtl->bpb / 8);
          }
       }
    } else {

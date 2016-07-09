@@ -639,7 +639,7 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
       anv_fill_buffer_surface_state(device, view->surface_state,
                                     view->format,
                                     view->offset, view->range,
-                                    isl_format_get_layout(view->format)->bs);
+                                    isl_format_get_layout(view->format)->bpb / 8);
    } else {
       view->surface_state = (struct anv_state){ 0 };
    }
@@ -657,7 +657,7 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
                                     storage_format,
                                     view->offset, view->range,
                                     (storage_format == ISL_FORMAT_RAW ? 1 :
-                                     isl_format_get_layout(storage_format)->bs));
+                                     isl_format_get_layout(storage_format)->bpb / 8));
 
       isl_buffer_fill_image_param(&device->isl_dev,
                                   &view->storage_image_param,

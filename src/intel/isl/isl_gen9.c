@@ -40,7 +40,7 @@ gen9_calc_std_image_alignment_sa(const struct isl_device *dev,
 
    assert(isl_tiling_is_std_y(tiling));
 
-   const uint32_t bs = fmtl->bs;
+   const uint32_t bpb = fmtl->bpb;
    const uint32_t is_Ys = tiling == ISL_TILING_Ys;
 
    switch (info->dim) {
@@ -49,7 +49,7 @@ gen9_calc_std_image_alignment_sa(const struct isl_device *dev,
        * Layout and Tiling > 1D Surfaces > 1D Alignment Requirements.
        */
       *align_sa = (struct isl_extent3d) {
-         .w = 1 << (12 - (ffs(bs) - 1) + (4 * is_Ys)),
+         .w = 1 << (12 - (ffs(bpb) - 4) + (4 * is_Ys)),
          .h = 1,
          .d = 1,
       };
@@ -60,8 +60,8 @@ gen9_calc_std_image_alignment_sa(const struct isl_device *dev,
        * Requirements.
        */
       *align_sa = (struct isl_extent3d) {
-         .w = 1 << (6 - ((ffs(bs) - 1) / 2) + (4 * is_Ys)),
-         .h = 1 << (6 - ((ffs(bs) - 0) / 2) + (4 * is_Ys)),
+         .w = 1 << (6 - ((ffs(bpb) - 4) / 2) + (4 * is_Ys)),
+         .h = 1 << (6 - ((ffs(bpb) - 3) / 2) + (4 * is_Ys)),
          .d = 1,
       };
 
@@ -86,9 +86,9 @@ gen9_calc_std_image_alignment_sa(const struct isl_device *dev,
        * Layout and Tiling > 1D Surfaces > 1D Alignment Requirements.
        */
       *align_sa = (struct isl_extent3d) {
-         .w = 1 << (4 - ((ffs(bs) + 1) / 3) + (4 * is_Ys)),
-         .h = 1 << (4 - ((ffs(bs) - 1) / 3) + (2 * is_Ys)),
-         .d = 1 << (4 - ((ffs(bs) - 0) / 3) + (2 * is_Ys)),
+         .w = 1 << (4 - ((ffs(bpb) - 2) / 3) + (4 * is_Ys)),
+         .h = 1 << (4 - ((ffs(bpb) - 4) / 3) + (2 * is_Ys)),
+         .d = 1 << (4 - ((ffs(bpb) - 3) / 3) + (2 * is_Ys)),
       };
       return;
    }

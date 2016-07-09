@@ -229,7 +229,7 @@ isl_surf_fill_image_param(const struct isl_device *dev,
    isl_surf_get_image_offset_el(surf, view->base_level, view->base_array_layer,
                                 0, &param->offset[0],  &param->offset[1]);
 
-   const int cpp = isl_format_get_layout(surf->format)->bs;
+   const int cpp = isl_format_get_layout(surf->format)->bpb / 8;
    param->stride[0] = cpp;
    param->stride[1] = surf->row_pitch / cpp;
 
@@ -301,6 +301,6 @@ isl_buffer_fill_image_param(const struct isl_device *dev,
 {
    *param = image_param_defaults;
 
-   param->stride[0] = isl_format_layouts[format].bs;
+   param->stride[0] = isl_format_layouts[format].bpb / 8;
    param->size[0] = size / param->stride[0];
 }
