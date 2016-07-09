@@ -51,7 +51,7 @@ gen6_choose_msaa_layout(const struct isl_device *dev,
     *       - any compressed texture format (BC*)
     *       - any YCRCB* format
     */
-   if (fmtl->bs > 8)
+   if (fmtl->bpb > 64)
       return false;
    if (isl_format_is_compressed(info->format))
       return false;

@@ -982,7 +982,7 @@ namespace brw {
             /* Untyped surface reads return 32 bits of the surface per
              * component, without any sort of unpacking or type conversion,
              */
-            const unsigned size = isl_format_get_layout(format)->bs / 4;
+            const unsigned size = isl_format_get_layout(format)->bpb / 32;
             /* they don't properly handle out of bounds access, so we have to
              * check manually if the coordinates are valid and predicate the
              * surface read on the result,
@@ -1130,7 +1130,7 @@ namespace brw {
                /* Untyped surface writes store 32 bits of the surface per
                 * component, without any sort of packing or type conversion,
                 */
-               const unsigned size = isl_format_get_layout(format)->bs / 4;
+               const unsigned size = isl_format_get_layout(format)->bpb / 32;
 
                /* they don't properly handle out of bounds access, so we have
                 * to check manually if the coordinates are valid and predicate

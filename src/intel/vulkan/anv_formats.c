@@ -271,7 +271,7 @@ anv_get_format(const struct brw_device_info *devinfo, VkFormat vk_format,
       isl_format_get_layout(format.isl_format);
 
    if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-       !util_is_power_of_two(isl_layout->bs)) {
+       !util_is_power_of_two(isl_layout->bpb)) {
       /* Tiled formats *must* be power-of-two because we need up upload
        * them with the render pipeline.  For 3-channel formats, we fix
        * this by switching them over to RGBX or RGBA formats under the
@@ -409,7 +409,7 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
        * what most clients will want.
        */
       if (linear_fmt.isl_format != ISL_FORMAT_UNSUPPORTED &&
-          !util_is_power_of_two(isl_format_layouts[linear_fmt.isl_format].bs) &&
+          !util_is_power_of_two(isl_format_layouts[linear_fmt.isl_format].bpb) &&
           isl_format_rgb_to_rgbx(linear_fmt.isl_format) == ISL_FORMAT_UNSUPPORTED) {
          tiled &= ~VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT &
                   ~VK_FORMAT_FEATURE_BLIT_DST_BIT;

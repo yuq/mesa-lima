@@ -194,9 +194,9 @@ isl_has_matching_typed_storage_image_format(const struct brw_device_info *devinf
    if (devinfo->gen >= 9) {
       return true;
    } else if (devinfo->gen >= 8 || devinfo->is_haswell) {
-      return isl_format_get_layout(fmt)->bs <= 8;
+      return isl_format_get_layout(fmt)->bpb <= 64;
    } else {
-      return isl_format_get_layout(fmt)->bs <= 4;
+      return isl_format_get_layout(fmt)->bpb <= 32;
    }
 }
 
