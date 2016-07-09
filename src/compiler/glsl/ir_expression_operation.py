@@ -113,8 +113,18 @@ constant_template1 = mako.template.Template("""\
       }
       break;""")
 
+# This template is for unary operations that map an operand of one type to an
+# operand of another type.  ir_unop_f2b is an example.
+constant_template2 = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      assert(op[0]->type->base_type == ${op.source_types[0].glsl_type});
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
+         data.${op.dest_type.union_field}[c] = ${op.get_c_expression(op.source_types)};
+      break;""")
+
+
 class operation(object):
-   def __init__(self, name, num_operands, printable_name = None, source_types = None, c_expression = None):
+   def __init__(self, name, num_operands, printable_name = None, source_types = None, dest_type = None, c_expression = None):
       self.name = name
       self.num_operands = num_operands
 
@@ -124,7 +134,7 @@ class operation(object):
          self.printable_name = printable_name
 
       self.source_types = source_types
-      self.dest_type = None
+      self.dest_type = dest_type
 
       if c_expression is None:
          self.c_expression = None
@@ -143,7 +153,9 @@ class operation(object):
          return None
 
       if self.num_operands == 1:
-         if len(self.source_types) == 1:
+         if self.dest_type is not None:
+            return constant_template2.render(op=self)
+         elif len(self.source_types) == 1:
             return constant_template0.render(op=self)
          else:
             return constant_template1.render(op=self)
@@ -177,27 +189,48 @@ ir_expression_operation = [
    operation("exp2", 1, source_types=(float_type,), c_expression="exp2f({src0})"),
    operation("log2", 1, source_types=(float_type,), c_expression="log2f({src0})"),
 
-   operation("f2i", 1),         # Float-to-integer conversion.
-   operation("f2u", 1),         # Float-to-unsigned conversion.
-   operation("i2f", 1),         # Integer-to-float conversion.
-   operation("f2b", 1),         # Float-to-boolean conversion
-   operation("b2f", 1),         # Boolean-to-float conversion
-   operation("i2b", 1),         # int-to-boolean conversion
-   operation("b2i", 1),         # Boolean-to-int conversion
-   operation("u2f", 1),         # Unsigned-to-float conversion.
-   operation("i2u", 1),         # Integer-to-unsigned conversion.
-   operation("u2i", 1),         # Unsigned-to-integer conversion.
-   operation("d2f", 1),         # Double-to-float conversion.
-   operation("f2d", 1),         # Float-to-double conversion.
-   operation("d2i", 1),         # Double-to-integer conversion.
-   operation("i2d", 1),         # Integer-to-double conversion.
-   operation("d2u", 1),         # Double-to-unsigned conversion.
-   operation("u2d", 1),         # Unsigned-to-double conversion.
-   operation("d2b", 1),         # Double-to-boolean conversion.
-   operation("bitcast_i2f", 1), # 'Bit-identical int-to-float "conversion"
-   operation("bitcast_f2i", 1), # 'Bit-identical float-to-int "conversion"
-   operation("bitcast_u2f", 1), # 'Bit-identical uint-to-float "conversion"
-   operation("bitcast_f2u", 1), # 'Bit-identical float-to-uint "conversion"
+   # Float-to-integer conversion.
+   operation("f2i", 1, source_types=(float_type,), dest_type=int_type, c_expression="(int) {src0}"),
+   # Float-to-unsigned conversion.
+   operation("f2u", 1, source_types=(float_type,), dest_type=uint_type, c_expression="(unsigned) {src0}"),
+   # Integer-to-float conversion.
+   operation("i2f", 1, source_types=(int_type,), dest_type=float_type, c_expression="(float) {src0}"),
+   # Float-to-boolean conversion
+   operation("f2b", 1, source_types=(float_type,), dest_type=bool_type, c_expression="{src0} != 0.0F ? true : false"),
+   # Boolean-to-float conversion
+   operation("b2f", 1, source_types=(bool_type,), dest_type=float_type, c_expression="{src0} ? 1.0F : 0.0F"),
+   # int-to-boolean conversion
+   operation("i2b", 1),
+   # Boolean-to-int conversion
+   operation("b2i", 1, source_types=(bool_type,), dest_type=int_type, c_expression="{src0} ? 1 : 0"),
+   # Unsigned-to-float conversion.
+   operation("u2f", 1, source_types=(uint_type,), dest_type=float_type, c_expression="(float) {src0}"),
+   # Integer-to-unsigned conversion.
+   operation("i2u", 1, source_types=(int_type,), dest_type=uint_type, c_expression="{src0}"),
+   # Unsigned-to-integer conversion.
+   operation("u2i", 1, source_types=(uint_type,), dest_type=int_type, c_expression="{src0}"),
+   # Double-to-float conversion.
+   operation("d2f", 1, source_types=(double_type,), dest_type=float_type, c_expression="{src0}"),
+   # Float-to-double conversion.
+   operation("f2d", 1, source_types=(float_type,), dest_type=double_type, c_expression="{src0}"),
+   # Double-to-integer conversion.
+   operation("d2i", 1, source_types=(double_type,), dest_type=int_type, c_expression="{src0}"),
+   # Integer-to-double conversion.
+   operation("i2d", 1, source_types=(int_type,), dest_type=double_type, c_expression="{src0}"),
+   # Double-to-unsigned conversion.
+   operation("d2u", 1, source_types=(double_type,), dest_type=uint_type, c_expression="{src0}"),
+   # Unsigned-to-double conversion.
+   operation("u2d", 1, source_types=(uint_type,), dest_type=double_type, c_expression="{src0}"),
+   # Double-to-boolean conversion.
+   operation("d2b", 1, source_types=(double_type,), dest_type=bool_type, c_expression="{src0} != 0.0"),
+   # 'Bit-identical int-to-float "conversion"
+   operation("bitcast_i2f", 1, source_types=(int_type,), dest_type=float_type, c_expression="bitcast_u2f({src0})"),
+   # 'Bit-identical float-to-int "conversion"
+   operation("bitcast_f2i", 1, source_types=(float_type,), dest_type=int_type, c_expression="bitcast_f2u({src0})"),
+   # 'Bit-identical uint-to-float "conversion"
+   operation("bitcast_u2f", 1, source_types=(uint_type,), dest_type=float_type, c_expression="bitcast_u2f({src0})"),
+   # 'Bit-identical float-to-uint "conversion"
+   operation("bitcast_f2u", 1, source_types=(float_type,), dest_type=uint_type, c_expression="bitcast_f2u({src0})"),
 
    # Unary floating-point rounding operations.
    operation("trunc", 1),
