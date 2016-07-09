@@ -1031,7 +1031,7 @@ isl_tiling_is_std_y(enum isl_tiling tiling)
 bool
 isl_tiling_get_info(const struct isl_device *dev,
                     enum isl_tiling tiling,
-                    uint32_t format_block_size,
+                    uint32_t format_bpb,
                     struct isl_tile_info *info);
 bool
 isl_surf_choose_tiling(const struct isl_device *dev,
