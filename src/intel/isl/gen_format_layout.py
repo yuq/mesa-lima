@@ -67,7 +67,8 @@ TEMPLATE = template.Template(
           [ISL_FORMAT_${format.name}] = {
             .format = ISL_FORMAT_${format.name},
             .name = "ISL_FORMAT_${format.name}",
-            .bs = ${format.bs},
+            .bpb = ${format.bpb},
+            .bs = ${format.bpb // 8},
             .bw = ${format.bw},
             .bh = ${format.bh},
             .bd = ${format.bd},
@@ -137,7 +138,7 @@ class Format(object):
         self.name = line[0].strip()
 
         # Future division makes this work in python 2.
-        self.bs = int(line[1]) // 8
+        self.bpb = int(line[1])
         self.bw = line[2].strip()
         self.bh = line[3].strip()
         self.bd = line[4].strip()

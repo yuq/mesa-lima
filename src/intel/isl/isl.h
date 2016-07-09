@@ -639,6 +639,7 @@ struct isl_format_layout {
    enum isl_format format;
    const char *name;
 
+   uint16_t bpb; /**< Bits per block */
    uint8_t bs; /**< Block size, in bytes, rounded towards 0 */
    uint8_t bw; /**< Block width, in pixels */
    uint8_t bh; /**< Block height, in pixels */
