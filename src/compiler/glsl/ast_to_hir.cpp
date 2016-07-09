@@ -1355,7 +1355,7 @@ ast_expression::do_hir(exec_list *instructions,
    };
    ir_rvalue *result = NULL;
    ir_rvalue *op[3];
-   const struct glsl_type *type; /* a temporary variable for switch cases */
+   const struct glsl_type *type, *orig_type;
    bool error_emitted = false;
    YYLTYPE loc;
 
@@ -1645,9 +1645,17 @@ ast_expression::do_hir(exec_list *instructions,
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
 
+      orig_type = op[0]->type;
       type = arithmetic_result_type(op[0], op[1],
                                     (this->oper == ast_mul_assign),
                                     state, & loc);
+
+      if (type != orig_type) {
+         _mesa_glsl_error(& loc, state,
+                          "could not implicitly convert "
+                          "%s to %s", type->name, orig_type->name);
+         type = glsl_type::error_type;
+      }
 
       ir_rvalue *temp_rhs = new(ctx) ir_expression(operations[this->oper], type,
                                                    op[0], op[1]);
@@ -1672,7 +1680,15 @@ ast_expression::do_hir(exec_list *instructions,
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
 
+      orig_type = op[0]->type;
       type = modulus_result_type(op[0], op[1], state, &loc);
+
+      if (type != orig_type) {
+         _mesa_glsl_error(& loc, state,
+                          "could not implicitly convert "
+                          "%s to %s", type->name, orig_type->name);
+         type = glsl_type::error_type;
+      }
 
       assert(operations[this->oper] == ir_binop_mod);
 
@@ -1713,7 +1729,17 @@ ast_expression::do_hir(exec_list *instructions,
       this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
+
+      orig_type = op[0]->type;
       type = bit_logic_result_type(op[0], op[1], this->oper, state, &loc);
+
+      if (type != orig_type) {
+         _mesa_glsl_error(& loc, state,
+                          "could not implicitly convert "
+                          "%s to %s", type->name, orig_type->name);
+         type = glsl_type::error_type;
+      }
+
       ir_rvalue *temp_rhs = new(ctx) ir_expression(operations[this->oper],
                                                    type, op[0], op[1]);
       error_emitted =
