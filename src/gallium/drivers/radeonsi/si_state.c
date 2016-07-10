@@ -3001,6 +3001,8 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 			return NULL;
 		}
 
+		assert(tmp->flushed_depth_texture);
+
 		/* Override format for the case where the flushed texture
 		 * contains only Z or only S.
 		 */

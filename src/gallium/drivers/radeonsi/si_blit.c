@@ -342,6 +342,8 @@ si_flush_depth_texture(struct si_context *sctx,
 		unsigned fully_copied_levels;
 		unsigned levels = 0;
 
+		assert(tex->flushed_depth_texture);
+
 		if (util_format_is_depth_and_stencil(dst->resource.b.b.format))
 			copy_planes = PIPE_MASK_Z | PIPE_MASK_S;
 
