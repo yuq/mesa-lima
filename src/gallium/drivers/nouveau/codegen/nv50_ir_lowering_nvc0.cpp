@@ -2008,6 +2008,13 @@ NVC0LoweringPass::processSurfaceCoordsNVC0(TexInstruction *su)
 
    adjustCoordinatesMS(su);
 
+   if (ind) {
+      Value *ptr;
+      ptr = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(), ind, bld.mkImm(su->tex.r));
+      ptr = bld.mkOp2v(OP_AND, TYPE_U32, bld.getSSA(), ptr, bld.mkImm(7));
+      su->setIndirectR(ptr);
+   }
+
    // get surface coordinates
    for (c = 0; c < arg; ++c)
       src[c] = su->getSrc(c);
