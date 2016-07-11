@@ -226,6 +226,7 @@ AX_GCC_FUNC_ATTRIBUTE([packed])
 AX_GCC_FUNC_ATTRIBUTE([pure])
 AX_GCC_FUNC_ATTRIBUTE([returns_nonnull])
 AX_GCC_FUNC_ATTRIBUTE([unused])
+AX_GCC_FUNC_ATTRIBUTE([visibility])
 AX_GCC_FUNC_ATTRIBUTE([warn_unused_result])
 AX_GCC_FUNC_ATTRIBUTE([weak])
 
