@@ -620,7 +620,6 @@ void anv_CmdBindDescriptorSets(
 
    assert(firstSet + descriptorSetCount < MAX_SETS);
 
-   uint32_t dynamic_slot = 0;
    for (uint32_t i = 0; i < descriptorSetCount; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
       set_layout = layout->set[firstSet + i].layout;
@@ -638,7 +637,7 @@ void anv_CmdBindDescriptorSets(
                cmd_buffer->state.push_constants[s];
 
             unsigned d = layout->set[firstSet + i].dynamic_offset_start;
-            const uint32_t *offsets = pDynamicOffsets + dynamic_slot;
+            const uint32_t *offsets = pDynamicOffsets;
             struct anv_descriptor *desc = set->descriptors;
 
             for (unsigned b = 0; b < set_layout->binding_count; b++) {
