@@ -1106,7 +1106,9 @@ fi
 case "$host_os" in
 darwin*)
     dri_platform='apple' ;;
-gnu*|cygwin*)
+cygwin*)
+    dri_platform='windows' ;;
+gnu*)
     dri_platform='none' ;;
 *)
     dri_platform='drm' ;;
@@ -1122,6 +1124,7 @@ AM_CONDITIONAL(HAVE_DRISW_KMS, test "x$have_drisw_kms" = xyes )
 AM_CONDITIONAL(HAVE_DRI2, test "x$enable_dri" = xyes -a "x$dri_platform" = xdrm -a "x$have_libdrm" = xyes )
 AM_CONDITIONAL(HAVE_DRI3, test "x$enable_dri3" = xyes -a "x$dri_platform" = xdrm -a "x$have_libdrm" = xyes )
 AM_CONDITIONAL(HAVE_APPLEDRI, test "x$enable_dri" = xyes -a "x$dri_platform" = xapple )
+AM_CONDITIONAL(HAVE_WINDOWSDRI, test "x$enable_dri" = xyes -a "x$dri_platform" = xwindows )
 
 AC_ARG_ENABLE([shared-glapi],
     [AS_HELP_STRING([--enable-shared-glapi],
@@ -1385,6 +1388,9 @@ xdri)
         fi
         if test x"$dri_platform" = xapple ; then
             DEFINES="$DEFINES -DGLX_USE_APPLEGL"
+        fi
+        if test x"$dri_platform" = xwindows ; then
+            DEFINES="$DEFINES -DGLX_USE_WINDOWSGL"
         fi
     fi
 
@@ -2745,6 +2751,8 @@ AC_CONFIG_FILES([Makefile
 		src/glx/Makefile
 		src/glx/apple/Makefile
 		src/glx/tests/Makefile
+		src/glx/windows/Makefile
+		src/glx/windows/windowsdriproto.pc
 		src/gtest/Makefile
 		src/intel/Makefile
 		src/intel/tools/Makefile
