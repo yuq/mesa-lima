@@ -89,8 +89,8 @@ signed_numeric_types = (int_type, float_type, double_type)
 integer_types = (uint_type, int_type)
 real_types = (float_type, double_type)
 
-# This template is for unary operations that can only have operands of a
-# single type.  ir_unop_logic_not is an example.
+# This template is for unary and binary operations that can only have operands
+# of a single type.  ir_unop_logic_not is an example.
 constant_template0 = mako.template.Template("""\
    case ${op.get_enum_name()}:
       assert(op[0]->type->base_type == ${op.source_types[0].glsl_type});
@@ -180,12 +180,16 @@ class operation(object):
             return constant_template1.render(op=self)
          else:
             return constant_template3.render(op=self)
+      elif self.num_operands == 2:
+         if len(self.source_types) == 1:
+            return constant_template0.render(op=self)
 
       return None
 
 
    def get_c_expression(self, types):
       src0 = "op[0]->value.{}[c]".format(types[0].union_field)
+      src1 = "op[1]->value.{}[c]".format(types[1].union_field) if len(types) >= 2 else "ERROR"
 
       expr = self.c_expression[types[0].union_field] if types[0].union_field in self.c_expression else self.c_expression['default']
 
@@ -366,15 +370,15 @@ ir_expression_operation = [
    operation("bit_xor", 2, printable_name="^"),
    operation("bit_or", 2, printable_name="|"),
 
-   operation("logic_and", 2, printable_name="&&"),
-   operation("logic_xor", 2, printable_name="^^"),
-   operation("logic_or", 2, printable_name="||"),
+   operation("logic_and", 2, printable_name="&&", source_types=(bool_type,), c_expression="{src0} && {src1}"),
+   operation("logic_xor", 2, printable_name="^^", source_types=(bool_type,), c_expression="{src0} != {src1}"),
+   operation("logic_or", 2, printable_name="||", source_types=(bool_type,), c_expression="{src0} || {src1}"),
 
    operation("dot", 2),
    operation("min", 2),
    operation("max", 2),
 
-   operation("pow", 2),
+   operation("pow", 2, source_types=(float_type,), c_expression="powf({src0}, {src1})"),
 
    # Load a value the size of a given GLSL type from a uniform block.
    #
