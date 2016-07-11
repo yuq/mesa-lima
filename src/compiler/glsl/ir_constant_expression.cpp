@@ -1500,15 +1500,8 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       break;
 
    case ir_unop_bit_count:
-      for (unsigned c = 0; c < components; c++) {
-         unsigned count = 0;
-         unsigned v = op[0]->value.u[c];
-
-         for (; v; count++) {
-            v &= v - 1;
-         }
-         data.u[c] = count;
-      }
+      for (unsigned c = 0; c < components; c++)
+         data.i[c] = _mesa_bitcount(op[0]->value.u[c]);
       break;
 
    case ir_unop_find_msb:
