@@ -1070,30 +1070,48 @@ fs_visitor::emit_fragcoord_interpolation()
    return reg;
 }
 
+static enum brw_barycentric_mode
+barycentric_mode(enum glsl_interp_qualifier mode,
+                 bool is_centroid, bool is_sample)
+{
+   unsigned bary;
+
+   /* Barycentric modes don't make sense for flat inputs. */
+   assert(mode != INTERP_QUALIFIER_FLAT);
+
+   if (is_sample) {
+      bary = BRW_BARYCENTRIC_PERSPECTIVE_SAMPLE;
+   } else if (is_centroid) {
+      bary = BRW_BARYCENTRIC_PERSPECTIVE_CENTROID;
+   } else {
+      bary = BRW_BARYCENTRIC_PERSPECTIVE_PIXEL;
+   }
+
+   if (mode == INTERP_QUALIFIER_NOPERSPECTIVE)
+      bary += 3;
+
+   return (enum brw_barycentric_mode) bary;
+}
+
+/**
+ * Turn one of the two CENTROID barycentric modes into PIXEL mode.
+ */
+static enum brw_barycentric_mode
+centroid_to_pixel(enum brw_barycentric_mode bary)
+{
+   assert(bary == BRW_BARYCENTRIC_PERSPECTIVE_CENTROID ||
+          bary == BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID);
+   return (enum brw_barycentric_mode) ((unsigned) bary - 1);
+}
+
 fs_inst *
 fs_visitor::emit_linterp(const fs_reg &attr, const fs_reg &interp,
                          glsl_interp_qualifier interpolation_mode,
                          bool is_centroid, bool is_sample)
 {
-   brw_barycentric_mode barycoord_mode;
-   if (true) {
-      if (is_centroid) {
-         if (interpolation_mode == INTERP_QUALIFIER_SMOOTH)
-            barycoord_mode = BRW_BARYCENTRIC_PERSPECTIVE_CENTROID;
-         else
-            barycoord_mode = BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID;
-      } else if (is_sample) {
-          if (interpolation_mode == INTERP_QUALIFIER_SMOOTH)
-            barycoord_mode = BRW_BARYCENTRIC_PERSPECTIVE_SAMPLE;
-         else
-            barycoord_mode = BRW_BARYCENTRIC_NONPERSPECTIVE_SAMPLE;
-      } else {
-         if (interpolation_mode == INTERP_QUALIFIER_SMOOTH)
-            barycoord_mode = BRW_BARYCENTRIC_PERSPECTIVE_PIXEL;
-         else
-            barycoord_mode = BRW_BARYCENTRIC_NONPERSPECTIVE_PIXEL;
-      }
-   }
+   brw_barycentric_mode barycoord_mode =
+      barycentric_mode(interpolation_mode, is_centroid, is_sample);
+
    return bld.emit(FS_OPCODE_LINTERP, attr,
                    this->delta_xy[barycoord_mode], interp);
 }
@@ -6333,14 +6351,13 @@ brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
    unsigned barycentric_interp_modes = 0;
 
    nir_foreach_variable(var, &shader->inputs) {
-      enum glsl_interp_qualifier interp_qualifier =
-         (enum glsl_interp_qualifier)var->data.interpolation;
-      bool is_centroid = var->data.centroid;
-      bool is_sample = var->data.sample;
-
       /* Ignore WPOS and FACE, because they don't require interpolation. */
       if (var->data.location == VARYING_SLOT_POS ||
           var->data.location == VARYING_SLOT_FACE)
+         continue;
+
+      /* Flat inputs don't need barycentric modes. */
+      if (var->data.interpolation == INTERP_QUALIFIER_FLAT)
          continue;
 
       /* Determine the set (or sets) of barycentric coordinates needed to
@@ -6349,33 +6366,14 @@ brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
        * uses PIXEL interpolation for unlit pixels and CENTROID interpolation
        * for lit pixels, so we need both sets of barycentric coordinates.
        */
-      if (interp_qualifier == INTERP_QUALIFIER_NOPERSPECTIVE) {
-         if (is_centroid) {
-            barycentric_interp_modes |=
-               1 << BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID;
-         } else if (is_sample) {
-            barycentric_interp_modes |=
-               1 << BRW_BARYCENTRIC_NONPERSPECTIVE_SAMPLE;
-         }
-         if ((!is_centroid && !is_sample) ||
-             devinfo->needs_unlit_centroid_workaround) {
-            barycentric_interp_modes |=
-               1 << BRW_BARYCENTRIC_NONPERSPECTIVE_PIXEL;
-         }
-      } else if (interp_qualifier == INTERP_QUALIFIER_SMOOTH) {
-         if (is_centroid) {
-            barycentric_interp_modes |=
-               1 << BRW_BARYCENTRIC_PERSPECTIVE_CENTROID;
-         } else if (is_sample) {
-            barycentric_interp_modes |=
-               1 << BRW_BARYCENTRIC_PERSPECTIVE_SAMPLE;
-         }
-         if ((!is_centroid && !is_sample) ||
-             devinfo->needs_unlit_centroid_workaround) {
-            barycentric_interp_modes |=
-               1 << BRW_BARYCENTRIC_PERSPECTIVE_PIXEL;
-         }
-      }
+      enum brw_barycentric_mode bary_mode =
+         barycentric_mode((glsl_interp_qualifier) var->data.interpolation,
+                          var->data.centroid, var->data.sample);
+
+      barycentric_interp_modes |= 1 << bary_mode;
+
+      if (var->data.centroid && devinfo->needs_unlit_centroid_workaround)
+         barycentric_interp_modes |= 1 << centroid_to_pixel(bary_mode);
    }
 
    return barycentric_interp_modes;
