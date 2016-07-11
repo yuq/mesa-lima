@@ -4112,12 +4112,12 @@ calculate_array_size_and_stride(struct gl_shader_program *shProg,
       }
    }
 
-   for (unsigned i = 0; i < shProg->NumShaders; i++) {
-      if (shProg->Shaders[i] == NULL)
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      const gl_linked_shader *sh = shProg->_LinkedShaders[i];
+      if (sh == NULL)
          continue;
 
-      const gl_shader *stage = shProg->Shaders[i];
-      foreach_in_list(ir_instruction, node, stage->ir) {
+      foreach_in_list(ir_instruction, node, sh->ir) {
          ir_variable *var = node->as_variable();
          if (!var || !var->get_interface_type() ||
              var->data.mode != ir_var_shader_storage)
