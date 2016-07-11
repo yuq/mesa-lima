@@ -499,7 +499,11 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
 static bool
 vc4_supports_branches(struct vc4_screen *screen)
 {
+#if USE_VC4_SIMULATOR
+        return true;
+#else
         return false;
+#endif
 }
 
 struct pipe_screen *
