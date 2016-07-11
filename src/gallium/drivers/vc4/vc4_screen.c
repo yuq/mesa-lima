@@ -82,7 +82,10 @@ vc4_screen_get_vendor(struct pipe_screen *pscreen)
 static void
 vc4_screen_destroy(struct pipe_screen *pscreen)
 {
+        struct vc4_screen *screen = vc4_screen(pscreen);
+
         vc4_bufmgr_destroy(pscreen);
+        close(screen->fd);
         ralloc_free(pscreen);
 }
 
