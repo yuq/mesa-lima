@@ -603,7 +603,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    case ir_unop_b2i:
       assert(op[0]->type->base_type == GLSL_TYPE_BOOL);
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
-         data.u[c] = op[0]->value.b[c] ? 1 : 0;
+         data.i[c] = op[0]->value.b[c] ? 1 : 0;
       }
       break;
    case ir_unop_i2b:
