@@ -48,10 +48,10 @@ struct fd_rb_samp_ctrs {
  */
 
 static struct fd_hw_sample *
-occlusion_get_sample(struct fd_context *ctx, struct fd_ringbuffer *ring)
+occlusion_get_sample(struct fd_batch *batch, struct fd_ringbuffer *ring)
 {
 	struct fd_hw_sample *samp =
-			fd_hw_sample_init(ctx, sizeof(struct fd_rb_samp_ctrs));
+			fd_hw_sample_init(batch, sizeof(struct fd_rb_samp_ctrs));
 
 	/* low bits of sample addr should be zero (since they are control
 	 * flags in RB_SAMPLE_COUNT_CONTROL):
@@ -73,7 +73,7 @@ occlusion_get_sample(struct fd_context *ctx, struct fd_ringbuffer *ring)
 	OUT_RING(ring, 1);             /* NumInstances */
 	OUT_RING(ring, 0);             /* NumIndices */
 
-	fd_event_write(ctx, ring, ZPASS_DONE);
+	fd_event_write(batch->ctx, ring, ZPASS_DONE);
 
 	return samp;
 }
@@ -123,18 +123,18 @@ time_elapsed_enable(struct fd_context *ctx, struct fd_ringbuffer *ring)
 }
 
 static struct fd_hw_sample *
-time_elapsed_get_sample(struct fd_context *ctx, struct fd_ringbuffer *ring)
+time_elapsed_get_sample(struct fd_batch *batch, struct fd_ringbuffer *ring)
 {
-	struct fd_hw_sample *samp = fd_hw_sample_init(ctx, sizeof(uint64_t));
+	struct fd_hw_sample *samp = fd_hw_sample_init(batch, sizeof(uint64_t));
 
 	/* use unused part of vsc_size_mem as scratch space, to avoid
 	 * extra allocation:
 	 */
-	struct fd_bo *scratch_bo = fd4_context(ctx)->vsc_size_mem;
+	struct fd_bo *scratch_bo = fd4_context(batch->ctx)->vsc_size_mem;
 	const int sample_off = 128;
 	const int addr_off = sample_off + 8;
 
-	debug_assert(ctx->screen->max_freq > 0);
+	debug_assert(batch->ctx->screen->max_freq > 0);
 
 	/* Basic issue is that we need to read counter value to a relative
 	 * destination (with per-tile offset) rather than absolute dest
@@ -161,7 +161,7 @@ time_elapsed_get_sample(struct fd_context *ctx, struct fd_ringbuffer *ring)
 	 * shot, but that's really just polishing a turd..
 	 */
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch->ctx, ring);
 
 	/* copy sample counter _LO and _HI to scratch: */
 	OUT_PKT3(ring, CP_REG_TO_MEM, 2);

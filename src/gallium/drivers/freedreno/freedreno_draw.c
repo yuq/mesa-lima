@@ -89,6 +89,10 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		ctx->discard = false;
 	}
 
+	/* NOTE: needs to be before resource_written(batch->query_buf), otherwise
+	 * query_buf may not be created yet.
+	 */
+	fd_hw_query_set_stage(batch, batch->draw, FD_STAGE_DRAW);
 	/*
 	 * Figure out the buffers/features we need:
 	 */
@@ -154,6 +158,8 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		if (ctx->streamout.targets[i])
 			resource_written(batch, ctx->streamout.targets[i]->buffer);
 
+	resource_written(batch, batch->query_buf);
+
 	batch->num_draws++;
 
 	prims = u_reduced_prims_for_vertices(info->mode, info->count);
@@ -180,7 +186,6 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 
-	fd_hw_query_set_stage(ctx, batch->draw, FD_STAGE_DRAW);
 	if (ctx->draw_vbo(ctx, info))
 		batch->needs_flush = true;
 
@@ -253,12 +258,14 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 		batch->gmem_reason |= FD_GMEM_CLEARS_DEPTH_STENCIL;
 	}
 
+	resource_written(batch, batch->query_buf);
+
 	DBG("%p: %x %ux%u depth=%f, stencil=%u (%s/%s)", batch, buffers,
 		pfb->width, pfb->height, depth, stencil,
 		util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 
-	fd_hw_query_set_stage(ctx, batch->draw, FD_STAGE_CLEAR);
+	fd_hw_query_set_stage(batch, batch->draw, FD_STAGE_CLEAR);
 
 	ctx->clear(ctx, buffers, color, depth, stencil);
 

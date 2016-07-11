@@ -734,7 +734,7 @@ fd3_emit_sysmem_prep(struct fd_batch *batch)
 		pitch = fd_resource(psurf->texture)->slices[psurf->u.tex.level].pitch;
 	}
 
-	fd3_emit_restore(batch->ctx, ring);
+	fd3_emit_restore(batch, ring);
 
 	OUT_PKT0(ring, REG_A3XX_RB_FRAME_BUFFER_DIMENSION, 1);
 	OUT_RING(ring, A3XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
@@ -927,7 +927,7 @@ fd3_emit_tile_init(struct fd_batch *batch)
 	struct fd_gmem_stateobj *gmem = &batch->ctx->gmem;
 	uint32_t rb_render_control;
 
-	fd3_emit_restore(batch->ctx, ring);
+	fd3_emit_restore(batch, ring);
 
 	/* note: use gmem->bin_w/h, the bin_w/h parameters may be truncated
 	 * at the right and bottom edge tiles

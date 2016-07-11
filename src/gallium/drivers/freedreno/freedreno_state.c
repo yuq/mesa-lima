@@ -37,6 +37,7 @@
 #include "freedreno_resource.h"
 #include "freedreno_texture.h"
 #include "freedreno_gmem.h"
+#include "freedreno_query_hw.h"
 #include "freedreno_util.h"
 
 /* All the generic state handling.. In case of CSO's that are specific
@@ -118,8 +119,10 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 	struct pipe_framebuffer_state *cso;
 
 	if (ctx->screen->reorder) {
-		struct fd_batch *batch =
-			fd_batch_from_fb(&ctx->screen->batch_cache, ctx, framebuffer);
+		struct fd_batch *batch;
+		if (likely(ctx->batch))
+			fd_hw_query_set_stage(ctx->batch, ctx->batch->draw, FD_STAGE_NULL);
+		batch = fd_batch_from_fb(&ctx->screen->batch_cache, ctx, framebuffer);
 		fd_batch_reference(&ctx->batch, NULL);
 		ctx->batch = batch;
 		ctx->dirty = ~0;

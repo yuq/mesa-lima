@@ -757,8 +757,9 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
  * state, there could have been a context switch between ioctls):
  */
 void
-fd3_emit_restore(struct fd_context *ctx, struct fd_ringbuffer *ring)
+fd3_emit_restore(struct fd_batch *batch, struct fd_ringbuffer *ring)
 {
+	struct fd_context *ctx = batch->ctx;
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	int i;
 
@@ -894,7 +895,7 @@ fd3_emit_restore(struct fd_context *ctx, struct fd_ringbuffer *ring)
 
 	fd_wfi(ctx, ring);
 
-	fd_hw_query_enable(ctx, ring);
+	fd_hw_query_enable(batch, ring);
 
 	ctx->needs_rb_fbd = true;
 }

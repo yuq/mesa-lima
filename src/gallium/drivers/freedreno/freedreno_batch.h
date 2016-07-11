@@ -28,12 +28,42 @@
 #define FREEDRENO_BATCH_H_
 
 #include "util/u_inlines.h"
+#include "util/list.h"
 
 #include "freedreno_util.h"
 
 struct fd_context;
 struct fd_resource;
 enum fd_resource_status;
+
+/* Bitmask of stages in rendering that a particular query query is
+ * active.  Queries will be automatically started/stopped (generating
+ * additional fd_hw_sample_period's) on entrance/exit from stages that
+ * are applicable to the query.
+ *
+ * NOTE: set the stage to NULL at end of IB to ensure no query is still
+ * active.  Things aren't going to work out the way you want if a query
+ * is active across IB's (or between tile IB and draw IB)
+ */
+enum fd_render_stage {
+	FD_STAGE_NULL     = 0x01,
+	FD_STAGE_DRAW     = 0x02,
+	FD_STAGE_CLEAR    = 0x04,
+	/* TODO before queries which include MEM2GMEM or GMEM2MEM will
+	 * work we will need to call fd_hw_query_prepare() from somewhere
+	 * appropriate so that queries in the tiling IB get backed with
+	 * memory to write results to.
+	 */
+	FD_STAGE_MEM2GMEM = 0x08,
+	FD_STAGE_GMEM2MEM = 0x10,
+	/* used for driver internal draws (ie. util_blitter_blit()): */
+	FD_STAGE_BLIT     = 0x20,
+	FD_STAGE_ALL      = 0xff,
+};
+
+#define MAX_HW_SAMPLE_PROVIDERS 4
+struct fd_hw_sample_provider;
+struct fd_hw_sample;
 
 /* A batch tracks everything about a cmdstream batch/submit, including the
  * ringbuffers used for binning, draw, and gmem cmds, list of associated
@@ -117,6 +147,37 @@ struct fd_batch {
 	struct fd_ringbuffer *binning;
 	/** tiling/gmem (IB0) cmdstream: */
 	struct fd_ringbuffer *gmem;
+
+	/**
+	 * hw query related state:
+	 */
+	/*@{*/
+	/* next sample offset.. incremented for each sample in the batch/
+	 * submit, reset to zero on next submit.
+	 */
+	uint32_t next_sample_offset;
+
+	/* cached samples (in case multiple queries need to reference
+	 * the same sample snapshot)
+	 */
+	struct fd_hw_sample *sample_cache[MAX_HW_SAMPLE_PROVIDERS];
+
+	/* which sample providers were active in the current batch: */
+	uint32_t active_providers;
+
+	/* tracking for current stage, to know when to start/stop
+	 * any active queries:
+	 */
+	enum fd_render_stage stage;
+
+	/* list of samples in current batch: */
+	struct util_dynarray samples;
+
+	/* current query result bo and tile stride: */
+	struct pipe_resource *query_buf;
+	uint32_t query_tile_stride;
+	/*@}*/
+
 
 	/* Set of resources used by currently-unsubmitted batch (read or
 	 * write).. does not hold a reference to the resource.

@@ -48,23 +48,6 @@
 /* XXX this should go away, needed for 'struct winsys_handle' */
 #include "state_tracker/drm_driver.h"
 
-static bool
-pending(struct fd_resource *rsc, bool write)
-{
-	/* if we have a pending GPU write, we are busy in any case: */
-	if (rsc->write_batch)
-		return true;
-
-	/* if CPU wants to write, but we are pending a GPU read, we are busy: */
-	if (write && rsc->batch_mask)
-		return true;
-
-	if (rsc->stencil && pending(rsc->stencil, write))
-		return true;
-
-	return false;
-}
-
 static void
 fd_invalidate_resource(struct fd_context *ctx, struct pipe_resource *prsc)
 {
@@ -755,6 +738,20 @@ slice_alignment(struct pipe_screen *pscreen, const struct pipe_resource *tmpl)
 	}
 }
 
+/* special case to resize query buf after allocated.. */
+void
+fd_resource_resize(struct pipe_resource *prsc, uint32_t sz)
+{
+	struct fd_resource *rsc = fd_resource(prsc);
+
+	debug_assert(prsc->width0 == 0);
+	debug_assert(prsc->target == PIPE_BUFFER);
+	debug_assert(prsc->bind == PIPE_BIND_QUERY_BUFFER);
+
+	prsc->width0 = sz;
+	realloc_bo(rsc, setup_slices(rsc, 1, prsc->format));
+}
+
 /**
  * Create a new texture object, using the given template info.
  */
@@ -811,6 +808,15 @@ fd_resource_create(struct pipe_screen *pscreen,
 	}
 
 	size = setup_slices(rsc, alignment, format);
+
+	/* special case for hw-query buffer, which we need to allocate before we
+	 * know the size:
+	 */
+	if (size == 0) {
+		/* note, semi-intention == instead of & */
+		debug_assert(prsc->bind == PIPE_BIND_QUERY_BUFFER);
+		return prsc;
+	}
 
 	if (rsc->layer_first) {
 		rsc->layer_size = align(size, 4096);
@@ -1048,7 +1054,8 @@ fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard)
 		util_blitter_save_render_condition(ctx->blitter,
 			ctx->cond_query, ctx->cond_cond, ctx->cond_mode);
 
-	fd_hw_query_set_stage(ctx, ctx->batch->draw, FD_STAGE_BLIT);
+	if (ctx->batch)
+		fd_hw_query_set_stage(ctx->batch, ctx->batch->draw, FD_STAGE_BLIT);
 
 	ctx->discard = discard;
 }
@@ -1056,7 +1063,8 @@ fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard)
 static void
 fd_blitter_pipe_end(struct fd_context *ctx)
 {
-	fd_hw_query_set_stage(ctx, ctx->batch->draw, FD_STAGE_NULL);
+	if (ctx->batch)
+		fd_hw_query_set_stage(ctx->batch, ctx->batch->draw, FD_STAGE_NULL);
 }
 
 static void

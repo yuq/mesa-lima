@@ -168,8 +168,6 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	 */
 	ctx->sample_mask = 0xffff;
 
-	ctx->stage = FD_STAGE_NULL;
-
 	pctx = &ctx->base;
 	pctx->screen = pscreen;
 	pctx->priv = priv;

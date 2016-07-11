@@ -527,7 +527,7 @@ fd4_emit_sysmem_prep(struct fd_batch *batch)
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct fd_ringbuffer *ring = batch->gmem;
 
-	fd4_emit_restore(batch->ctx, ring);
+	fd4_emit_restore(batch, ring);
 
 	OUT_PKT0(ring, REG_A4XX_RB_FRAME_BUFFER_DIMENSION, 1);
 	OUT_RING(ring, A4XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
@@ -666,7 +666,7 @@ fd4_emit_tile_init(struct fd_batch *batch)
 	struct fd_ringbuffer *ring = batch->gmem;
 	struct fd_gmem_stateobj *gmem = &batch->ctx->gmem;
 
-	fd4_emit_restore(batch->ctx, ring);
+	fd4_emit_restore(batch, ring);
 
 	OUT_PKT0(ring, REG_A4XX_VSC_BIN_SIZE, 1);
 	OUT_RING(ring, A4XX_VSC_BIN_SIZE_WIDTH(gmem->bin_w) |

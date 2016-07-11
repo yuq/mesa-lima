@@ -104,6 +104,23 @@ fd_resource(struct pipe_resource *ptex)
 	return (struct fd_resource *)ptex;
 }
 
+static inline bool
+pending(struct fd_resource *rsc, bool write)
+{
+	/* if we have a pending GPU write, we are busy in any case: */
+	if (rsc->write_batch)
+		return true;
+
+	/* if CPU wants to write, but we are pending a GPU read, we are busy: */
+	if (write && rsc->batch_mask)
+		return true;
+
+	if (rsc->stencil && pending(rsc->stencil, write))
+		return true;
+
+	return false;
+}
+
 struct fd_transfer {
 	struct pipe_transfer base;
 	void *staging;
@@ -139,6 +156,8 @@ fd_resource_offset(struct fd_resource *rsc, unsigned level, unsigned layer)
 
 void fd_resource_screen_init(struct pipe_screen *pscreen);
 void fd_resource_context_init(struct pipe_context *pctx);
+
+void fd_resource_resize(struct pipe_resource *prsc, uint32_t sz);
 
 bool fd_render_condition_check(struct pipe_context *pctx);
 

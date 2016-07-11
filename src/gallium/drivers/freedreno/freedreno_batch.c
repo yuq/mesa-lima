@@ -32,6 +32,7 @@
 #include "freedreno_batch.h"
 #include "freedreno_context.h"
 #include "freedreno_resource.h"
+#include "freedreno_query_hw.h"
 
 static void
 batch_init(struct fd_batch *batch)
@@ -61,6 +62,7 @@ batch_init(struct fd_batch *batch)
 	batch->needs_flush = false;
 	batch->gmem_reason = 0;
 	batch->num_draws = 0;
+	batch->stage = FD_STAGE_NULL;
 
 	/* reset maximal bounds: */
 	batch->max_scissor.minx = batch->max_scissor.miny = ~0;
@@ -72,6 +74,8 @@ batch_init(struct fd_batch *batch)
 		util_dynarray_init(&batch->rbrc_patches);
 
 	assert(batch->resources->entries == 0);
+
+	util_dynarray_init(&batch->samples);
 }
 
 struct fd_batch *
@@ -98,6 +102,8 @@ fd_batch_create(struct fd_context *ctx)
 static void
 batch_fini(struct fd_batch *batch)
 {
+	pipe_resource_reference(&batch->query_buf, NULL);
+
 	fd_ringbuffer_del(batch->draw);
 	fd_ringbuffer_del(batch->binning);
 	fd_ringbuffer_del(batch->gmem);
@@ -106,6 +112,13 @@ batch_fini(struct fd_batch *batch)
 
 	if (is_a3xx(batch->ctx->screen))
 		util_dynarray_fini(&batch->rbrc_patches);
+
+	while (batch->samples.size > 0) {
+		struct fd_hw_sample *samp =
+			util_dynarray_pop(&batch->samples, struct fd_hw_sample *);
+		fd_hw_sample_reference(batch->ctx, &samp, NULL);
+	}
+	util_dynarray_fini(&batch->samples);
 }
 
 static void
