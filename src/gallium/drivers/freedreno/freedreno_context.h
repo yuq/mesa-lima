@@ -182,7 +182,7 @@ struct fd_context {
 	struct list_head current_queries;
 
 	/* current query result bo and tile stride: */
-	struct fd_bo *query_bo;
+	struct pipe_resource *query_buf;
 	uint32_t query_tile_stride;
 
 	/* table with PIPE_PRIM_MAX entries mapping PIPE_PRIM_x to

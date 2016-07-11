@@ -107,7 +107,7 @@ struct fd_hw_sample {
 	 * This way we can defer allocation until total # of requested
 	 * samples, and total # of tiles, is known.
 	 */
-	struct fd_bo *bo;
+	struct pipe_resource *prsc;
 	uint32_t num_tiles;
 	uint32_t tile_stride;
 };

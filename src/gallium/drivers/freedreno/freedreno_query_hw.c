@@ -32,6 +32,7 @@
 
 #include "freedreno_query_hw.h"
 #include "freedreno_context.h"
+#include "freedreno_resource.h"
 #include "freedreno_util.h"
 
 struct fd_hw_sample_period {
@@ -237,12 +238,14 @@ fd_hw_get_query_result(struct fd_context *ctx, struct fd_query *q,
 		period = LIST_ENTRY(struct fd_hw_sample_period,
 				hq->periods.prev, list);
 
-		ret = fd_bo_cpu_prep(period->end->bo, ctx->screen->pipe,
+		struct fd_resource *rsc = fd_resource(period->end->prsc);
+
+		ret = fd_bo_cpu_prep(rsc->bo, ctx->screen->pipe,
 				DRM_FREEDRENO_PREP_READ | DRM_FREEDRENO_PREP_NOSYNC);
 		if (ret)
 			return false;
 
-		fd_bo_cpu_fini(period->end->bo);
+		fd_bo_cpu_fini(rsc->bo);
 	}
 
 	/* sum the result across all sample periods: */
@@ -252,22 +255,21 @@ fd_hw_get_query_result(struct fd_context *ctx, struct fd_query *q,
 		unsigned i;
 
 		/* start and end samples should be from same batch: */
-		assert(start->bo == end->bo);
+		assert(start->prsc == end->prsc);
 		assert(start->num_tiles == end->num_tiles);
 
+		struct fd_resource *rsc = fd_resource(start->prsc);
+
+		fd_bo_cpu_prep(rsc->bo, ctx->screen->pipe, DRM_FREEDRENO_PREP_READ);
+
+		void *ptr = fd_bo_map(rsc->bo);
+
 		for (i = 0; i < start->num_tiles; i++) {
-			void *ptr;
-
-			fd_bo_cpu_prep(start->bo, ctx->screen->pipe,
-					DRM_FREEDRENO_PREP_READ);
-
-			ptr = fd_bo_map(start->bo);
-
 			p->accumulate_result(ctx, sampptr(period->start, i, ptr),
 					sampptr(period->end, i, ptr), result);
-
-			fd_bo_cpu_fini(start->bo);
 		}
+
+		fd_bo_cpu_fini(rsc->bo);
 	}
 
 	return true;
@@ -317,7 +319,7 @@ fd_hw_sample_init(struct fd_context *ctx, uint32_t size)
 	ctx->next_sample_offset = align(ctx->next_sample_offset, size);
 	samp->offset = ctx->next_sample_offset;
 	/* NOTE: util_slab_alloc() does not zero out the buffer: */
-	samp->bo = NULL;
+	samp->prsc = NULL;
 	samp->num_tiles = 0;
 	samp->tile_stride = 0;
 	ctx->next_sample_offset += size;
@@ -327,36 +329,35 @@ fd_hw_sample_init(struct fd_context *ctx, uint32_t size)
 void
 __fd_hw_sample_destroy(struct fd_context *ctx, struct fd_hw_sample *samp)
 {
-	if (samp->bo)
-		fd_bo_del(samp->bo);
+	pipe_resource_reference(&samp->prsc, NULL);
 	util_slab_free(&ctx->sample_pool, samp);
 }
 
 static void
-prepare_sample(struct fd_hw_sample *samp, struct fd_bo *bo,
+prepare_sample(struct fd_hw_sample *samp, struct pipe_resource *prsc,
 		uint32_t num_tiles, uint32_t tile_stride)
 {
-	if (samp->bo) {
-		assert(samp->bo == bo);
+	if (samp->prsc) {
+		assert(samp->prsc == prsc);
 		assert(samp->num_tiles == num_tiles);
 		assert(samp->tile_stride == tile_stride);
 		return;
 	}
-	samp->bo = fd_bo_ref(bo);
+	pipe_resource_reference(&samp->prsc, prsc);
 	samp->num_tiles = num_tiles;
 	samp->tile_stride = tile_stride;
 }
 
 static void
-prepare_query(struct fd_hw_query *hq, struct fd_bo *bo,
+prepare_query(struct fd_hw_query *hq, struct pipe_resource *prsc,
 		uint32_t num_tiles, uint32_t tile_stride)
 {
 	struct fd_hw_sample_period *period, *s;
 
 	/* prepare all the samples in the query: */
 	LIST_FOR_EACH_ENTRY_SAFE(period, s, &hq->current_periods, list) {
-		prepare_sample(period->start, bo, num_tiles, tile_stride);
-		prepare_sample(period->end, bo, num_tiles, tile_stride);
+		prepare_sample(period->start, prsc, num_tiles, tile_stride);
+		prepare_sample(period->end, prsc, num_tiles, tile_stride);
 
 		/* move from current_periods list to periods list: */
 		list_del(&period->list);
@@ -365,13 +366,13 @@ prepare_query(struct fd_hw_query *hq, struct fd_bo *bo,
 }
 
 static void
-prepare_queries(struct fd_context *ctx, struct fd_bo *bo,
+prepare_queries(struct fd_context *ctx, struct pipe_resource *prsc,
 		uint32_t num_tiles, uint32_t tile_stride,
 		struct list_head *list, bool remove)
 {
 	struct fd_hw_query *hq, *s;
 	LIST_FOR_EACH_ENTRY_SAFE(hq, s, list, list) {
-		prepare_query(hq, bo, num_tiles, tile_stride);
+		prepare_query(hq, prsc, num_tiles, tile_stride);
 		if (remove)
 			list_delinit(&hq->list);
 	}
@@ -384,25 +385,34 @@ void
 fd_hw_query_prepare(struct fd_context *ctx, uint32_t num_tiles)
 {
 	uint32_t tile_stride = ctx->next_sample_offset;
-	struct fd_bo *bo;
+	struct pipe_resource *prsc;
 
-	if (ctx->query_bo)
-		fd_bo_del(ctx->query_bo);
+	pipe_resource_reference(&ctx->query_buf, NULL);
 
 	if (tile_stride > 0) {
-		bo = fd_bo_new(ctx->dev, tile_stride * num_tiles,
-				DRM_FREEDRENO_GEM_CACHE_WCOMBINE |
-				DRM_FREEDRENO_GEM_TYPE_KMEM);
+		struct pipe_screen *pscreen = &ctx->screen->base;
+		struct pipe_resource templ = {
+			.target  = PIPE_BUFFER,
+			.format  = PIPE_FORMAT_R8_UNORM,
+			.bind    = PIPE_BIND_QUERY_BUFFER,
+			.width0  = tile_stride * num_tiles,
+			.height0 = 1,
+			.depth0  = 1,
+			.array_size = 1,
+			.last_level = 0,
+			.nr_samples = 1,
+		};
+		prsc = pscreen->resource_create(pscreen, &templ);
 	} else {
-		bo = NULL;
+		prsc = NULL;
 	}
 
-	ctx->query_bo = bo;
+	ctx->query_buf = prsc;
 	ctx->query_tile_stride = tile_stride;
 
-	prepare_queries(ctx, bo, num_tiles, tile_stride,
+	prepare_queries(ctx, prsc, num_tiles, tile_stride,
 			&ctx->active_queries, false);
-	prepare_queries(ctx, bo, num_tiles, tile_stride,
+	prepare_queries(ctx, prsc, num_tiles, tile_stride,
 			&ctx->current_queries, true);
 
 	/* reset things for next batch: */
@@ -422,7 +432,7 @@ fd_hw_query_prepare_tile(struct fd_context *ctx, uint32_t n,
 
 	fd_wfi(ctx, ring);
 	OUT_PKT0 (ring, HW_QUERY_BASE_REG, 1);
-	OUT_RELOCW(ring, ctx->query_bo, offset, 0, 0);
+	OUT_RELOCW(ring, fd_resource(ctx->query_buf)->bo, offset, 0, 0);
 }
 
 void
