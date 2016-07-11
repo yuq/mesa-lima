@@ -329,8 +329,10 @@ vc4_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
         case PIPE_SHADER_CAP_MAX_TEX_INSTRUCTIONS:
         case PIPE_SHADER_CAP_MAX_TEX_INDIRECTIONS:
                 return 16384;
+
         case PIPE_SHADER_CAP_MAX_CONTROL_FLOW_DEPTH:
-                return 0;
+                return vc4_screen(pscreen)->has_control_flow;
+
         case PIPE_SHADER_CAP_MAX_INPUTS:
                 if (shader == PIPE_SHADER_FRAGMENT)
                         return 8;
@@ -494,6 +496,12 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
         return retval == usage;
 }
 
+static bool
+vc4_supports_branches(struct vc4_screen *screen)
+{
+        return false;
+}
+
 struct pipe_screen *
 vc4_screen_create(int fd)
 {
@@ -511,6 +519,9 @@ vc4_screen_create(int fd)
 
         screen->fd = fd;
         list_inithead(&screen->bo_cache.time_list);
+
+        if (vc4_supports_branches(screen))
+                screen->has_control_flow = true;
 
         vc4_fence_init(screen);
 

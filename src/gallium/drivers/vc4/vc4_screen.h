@@ -75,6 +75,7 @@ struct vc4_screen {
 
         uint32_t bo_size;
         uint32_t bo_count;
+        bool has_control_flow;
 };
 
 static inline struct vc4_screen *

@@ -1765,6 +1765,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
 {
         struct vc4_compile *c = qir_compile_init();
 
+        c->vc4 = vc4;
         c->stage = stage;
         c->shader_state = &key->shader_state->base;
         c->program_id = key->shader_state->program_id;
