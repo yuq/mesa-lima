@@ -789,7 +789,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
           * a register and compare with that.
           */
          fs_reg tmp = vgrf(glsl_type::double_type);
-         bld.MOV(tmp, brw_imm_df(0.0));
+         bld.MOV(tmp, setup_imm_df(bld, 0.0));
 
          /* A direct DF CMP using the flag register (null dst) won't work in
           * SIMD16 because the CMP will be split in two by lower_simd_width,
@@ -1128,7 +1128,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_d2b: {
       /* two-argument instructions can't take 64-bit immediates */
       fs_reg zero = vgrf(glsl_type::double_type);
-      bld.MOV(zero, brw_imm_df(0.0));
+      bld.MOV(zero, setup_imm_df(bld, 0.0));
       /* A SIMD16 execution needs to be split in two instructions, so use
        * a vgrf instead of the flag register as dst so instruction splitting
        * works
@@ -1440,7 +1440,8 @@ fs_visitor::nir_emit_load_const(const fs_builder &bld,
 
    case 64:
       for (unsigned i = 0; i < instr->def.num_components; i++)
-         bld.MOV(offset(reg, bld, i), brw_imm_df(instr->value.f64[i]));
+         bld.MOV(offset(reg, bld, i),
+                 setup_imm_df(bld, instr->value.f64[i]));
       break;
 
    default:
