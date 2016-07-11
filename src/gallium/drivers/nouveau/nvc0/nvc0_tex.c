@@ -735,7 +735,7 @@ nve4_set_tex_handles(struct nvc0_context *nvc0)
       if (!dirty)
          continue;
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, 2048);
+      PUSH_DATA (push, NVC0_CB_AUX_SIZE);
       PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       do {
@@ -1075,7 +1075,7 @@ nvc0_validate_suf(struct nvc0_context *nvc0, int s)
          BEGIN_NVC0(push, NVC0_CP(CB_SIZE), 3);
       else
          BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, 2048);
+      PUSH_DATA (push, NVC0_CB_AUX_SIZE);
       PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       if (s == 5)
@@ -1111,7 +1111,7 @@ nve4_update_surface_bindings(struct nvc0_context *nvc0)
          continue;
 
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, 2048);
+      PUSH_DATA (push, NVC0_CB_AUX_SIZE);
       PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 16 * NVC0_MAX_IMAGES);

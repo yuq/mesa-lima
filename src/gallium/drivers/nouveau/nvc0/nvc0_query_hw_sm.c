@@ -1836,7 +1836,7 @@ nvc0_hw_sm_upload_input(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
       PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
    } else {
       BEGIN_NVC0(push, NVC0_CP(CB_SIZE), 3);
-      PUSH_DATA (push, 2048);
+      PUSH_DATA (push, NVC0_CB_AUX_SIZE);
       PUSH_DATAh(push, address);
       PUSH_DATA (push, address);
       BEGIN_1IC0(push, NVC0_CP(CB_POS), 1 + 3);

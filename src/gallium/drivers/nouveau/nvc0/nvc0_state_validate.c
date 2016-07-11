@@ -199,7 +199,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
 
     ms = 1 << ms_mode;
     BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-    PUSH_DATA (push, 2048);
+    PUSH_DATA (push, NVC0_CB_AUX_SIZE);
     PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(4));
     PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(4));
     BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 2 * ms);
@@ -357,7 +357,7 @@ nvc0_upload_uclip_planes(struct nvc0_context *nvc0, unsigned s)
    struct nvc0_screen *screen = nvc0->screen;
 
    BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-   PUSH_DATA (push, 2048);
+   PUSH_DATA (push, NVC0_CB_AUX_SIZE);
    PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
    PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
    BEGIN_1IC0(push, NVC0_3D(CB_POS), PIPE_MAX_CLIP_PLANES * 4 + 1);
@@ -527,7 +527,7 @@ nvc0_validate_buffers(struct nvc0_context *nvc0)
 
    for (s = 0; s < 5; s++) {
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, 2048);
+      PUSH_DATA (push, NVC0_CB_AUX_SIZE);
       PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
       BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 4 * NVC0_MAX_BUFFERS);
@@ -603,7 +603,7 @@ nvc0_validate_driverconst(struct nvc0_context *nvc0)
 
    for (i = 0; i < 5; ++i) {
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, 2048);
+      PUSH_DATA (push, NVC0_CB_AUX_SIZE);
       PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(i));
       PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(i));
       BEGIN_NVC0(push, NVC0_3D(CB_BIND(i)), 1);

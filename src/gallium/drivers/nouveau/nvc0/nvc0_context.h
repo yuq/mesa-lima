@@ -104,7 +104,7 @@
 #define NVC0_CB_USR_SIZE            (6 << 16)
 /* 6 driver constbuts, at 2K each */
 #define NVC0_CB_AUX_INFO(s)         NVC0_CB_USR_SIZE + (s << 11)
-#define NVC0_CB_AUX_SIZE            (6 << 11)
+#define NVC0_CB_AUX_SIZE            (1 << 11)
 /* XXX: Figure out what this UNK data is. */
 #define NVC0_CB_AUX_UNK_INFO        0x000
 #define NVC0_CB_AUX_UNK_SIZE        (8 * 4)
@@ -138,7 +138,7 @@
 #define NVC0_CB_AUX_MP_INFO         0x600
 #define NVC0_CB_AUX_MP_SIZE         3 * 4
 /* 4 32-bits floats for the vertex runout, put at the end */
-#define NVC0_CB_AUX_RUNOUT_INFO     NVC0_CB_USR_SIZE + NVC0_CB_AUX_SIZE
+#define NVC0_CB_AUX_RUNOUT_INFO     NVC0_CB_USR_SIZE + (NVC0_CB_AUX_SIZE * 6)
 
 struct nvc0_blitctx;
 
