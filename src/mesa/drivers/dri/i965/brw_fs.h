@@ -350,7 +350,7 @@ public:
       uint8_t dest_depth_reg;
       uint8_t sample_pos_reg;
       uint8_t sample_mask_in_reg;
-      uint8_t barycentric_coord_reg[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
+      uint8_t barycentric_coord_reg[BRW_BARYCENTRIC_MODE_COUNT];
       uint8_t local_invocation_id_reg;
 
       /** The number of thread payload registers the hardware will supply. */
@@ -364,7 +364,7 @@ public:
    fs_reg pixel_y;
    fs_reg wpos_w;
    fs_reg pixel_w;
-   fs_reg delta_xy[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
+   fs_reg delta_xy[BRW_BARYCENTRIC_MODE_COUNT];
    fs_reg shader_start_time;
    fs_reg userplane[MAX_CLIP_PLANES];
    fs_reg final_gs_vertex_count;

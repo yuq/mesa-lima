@@ -563,14 +563,14 @@ fs_visitor::assign_regs(bool allow_spilling, bool spill_all)
        * second operand of a PLN instruction needs to be an
        * even-numbered register, so we have a special register class
        * wm_aligned_pairs_class to handle this case.  pre-GEN6 always
-       * uses this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] as the
+       * uses this->delta_xy[BRW_BARYCENTRIC_PERSPECTIVE_PIXEL] as the
        * second operand of a PLN instruction (since it doesn't support
        * any other interpolation modes).  So all we need to do is find
        * that register and set it to the appropriate class.
        */
       if (compiler->fs_reg_sets[rsi].aligned_pairs_class >= 0 &&
-          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].file == VGRF &&
-          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].nr == i) {
+          this->delta_xy[BRW_BARYCENTRIC_PERSPECTIVE_PIXEL].file == VGRF &&
+          this->delta_xy[BRW_BARYCENTRIC_PERSPECTIVE_PIXEL].nr == i) {
          c = compiler->fs_reg_sets[rsi].aligned_pairs_class;
       }
 

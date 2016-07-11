@@ -46,7 +46,7 @@ upload_clip_state(struct brw_context *brw)
 
    /* BRW_NEW_FS_PROG_DATA */
    if (brw->wm.prog_data->barycentric_interp_modes &
-       BRW_WM_NONPERSPECTIVE_BARYCENTRIC_BITS) {
+       BRW_BARYCENTRIC_NONPERSPECTIVE_BITS) {
       dw2 |= GEN6_CLIP_NON_PERSPECTIVE_BARYCENTRIC_ENABLE;
    }
 

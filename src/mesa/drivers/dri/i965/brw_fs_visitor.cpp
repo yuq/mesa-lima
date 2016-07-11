@@ -213,9 +213,9 @@ fs_visitor::emit_interpolation_setup_gen4()
 
    abld = bld.annotate("compute pixel deltas from v0");
 
-   this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
+   this->delta_xy[BRW_BARYCENTRIC_PERSPECTIVE_PIXEL] =
       vgrf(glsl_type::vec2_type);
-   const fs_reg &delta_xy = this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC];
+   const fs_reg &delta_xy = this->delta_xy[BRW_BARYCENTRIC_PERSPECTIVE_PIXEL];
    const fs_reg xstart(negate(brw_vec1_grf(1, 0)));
    const fs_reg ystart(negate(brw_vec1_grf(1, 1)));
 
@@ -308,7 +308,7 @@ fs_visitor::emit_interpolation_setup_gen6()
    this->wpos_w = vgrf(glsl_type::float_type);
    abld.emit(SHADER_OPCODE_RCP, this->wpos_w, this->pixel_w);
 
-   for (int i = 0; i < BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT; ++i) {
+   for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
       uint8_t reg = payload.barycentric_coord_reg[i];
       this->delta_xy[i] = fs_reg(brw_vec16_grf(reg, 0));
    }
