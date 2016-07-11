@@ -1306,7 +1306,7 @@ static unsigned select_interp_param(struct si_shader_context *ctx,
 		switch (param) {
 		case SI_PARAM_LINEAR_CENTROID:
 		case SI_PARAM_LINEAR_SAMPLE:
-			return SI_PARAM_PERSP_CENTER;
+			return SI_PARAM_LINEAR_CENTER;
 		}
 	}
 
