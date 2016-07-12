@@ -657,13 +657,13 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    switch (this->operation) {
    case ir_unop_bit_not:
        switch (op[0]->type->base_type) {
-       case GLSL_TYPE_INT:
-           for (unsigned c = 0; c < components; c++)
-               data.i[c] = ~ op[0]->value.i[c];
-           break;
        case GLSL_TYPE_UINT:
            for (unsigned c = 0; c < components; c++)
                data.u[c] = ~ op[0]->value.u[c];
+           break;
+       case GLSL_TYPE_INT:
+           for (unsigned c = 0; c < components; c++)
+               data.i[c] = ~ op[0]->value.i[c];
            break;
        default:
            assert(0);
@@ -1423,11 +1423,11 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          case GLSL_TYPE_FLOAT:
             data.b[c] = op[0]->value.f[c] == op[1]->value.f[c];
             break;
-         case GLSL_TYPE_BOOL:
-            data.b[c] = op[0]->value.b[c] == op[1]->value.b[c];
-            break;
          case GLSL_TYPE_DOUBLE:
             data.b[c] = op[0]->value.d[c] == op[1]->value.d[c];
+            break;
+         case GLSL_TYPE_BOOL:
+            data.b[c] = op[0]->value.b[c] == op[1]->value.b[c];
             break;
          default:
             assert(0);
@@ -1447,11 +1447,11 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          case GLSL_TYPE_FLOAT:
             data.b[c] = op[0]->value.f[c] != op[1]->value.f[c];
             break;
-         case GLSL_TYPE_BOOL:
-            data.b[c] = op[0]->value.b[c] != op[1]->value.b[c];
-            break;
          case GLSL_TYPE_DOUBLE:
             data.b[c] = op[0]->value.d[c] != op[1]->value.d[c];
+            break;
+         case GLSL_TYPE_BOOL:
+            data.b[c] = op[0]->value.b[c] != op[1]->value.b[c];
             break;
          default:
             assert(0);
@@ -1519,11 +1519,11 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
            c0 += c0_inc, c1 += c1_inc, c++) {
 
           switch (op[0]->type->base_type) {
-          case GLSL_TYPE_INT:
-              data.i[c] = op[0]->value.i[c0] & op[1]->value.i[c1];
-              break;
           case GLSL_TYPE_UINT:
               data.u[c] = op[0]->value.u[c0] & op[1]->value.u[c1];
+              break;
+          case GLSL_TYPE_INT:
+              data.i[c] = op[0]->value.i[c0] & op[1]->value.i[c1];
               break;
           default:
               assert(0);
@@ -1537,11 +1537,11 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
            c0 += c0_inc, c1 += c1_inc, c++) {
 
           switch (op[0]->type->base_type) {
-          case GLSL_TYPE_INT:
-              data.i[c] = op[0]->value.i[c0] | op[1]->value.i[c1];
-              break;
           case GLSL_TYPE_UINT:
               data.u[c] = op[0]->value.u[c0] | op[1]->value.u[c1];
+              break;
+          case GLSL_TYPE_INT:
+              data.i[c] = op[0]->value.i[c0] | op[1]->value.i[c1];
               break;
           default:
               assert(0);
@@ -1581,11 +1581,11 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
            c0 += c0_inc, c1 += c1_inc, c++) {
 
           switch (op[0]->type->base_type) {
-          case GLSL_TYPE_INT:
-              data.i[c] = op[0]->value.i[c0] ^ op[1]->value.i[c1];
-              break;
           case GLSL_TYPE_UINT:
               data.u[c] = op[0]->value.u[c0] ^ op[1]->value.u[c1];
+              break;
+          case GLSL_TYPE_INT:
+              data.i[c] = op[0]->value.i[c0] ^ op[1]->value.i[c1];
               break;
           default:
               assert(0);
@@ -1742,20 +1742,20 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       memcpy(&data, &op[0]->value, sizeof(data));
 
       switch (this->type->base_type) {
-      case GLSL_TYPE_INT:
-         data.i[idx] = op[1]->value.i[0];
-         break;
       case GLSL_TYPE_UINT:
          data.u[idx] = op[1]->value.u[0];
+         break;
+      case GLSL_TYPE_INT:
+         data.i[idx] = op[1]->value.i[0];
          break;
       case GLSL_TYPE_FLOAT:
          data.f[idx] = op[1]->value.f[0];
          break;
-      case GLSL_TYPE_BOOL:
-         data.b[idx] = op[1]->value.b[0];
-         break;
       case GLSL_TYPE_DOUBLE:
          data.d[idx] = op[1]->value.d[0];
+         break;
+      case GLSL_TYPE_BOOL:
+         data.b[idx] = op[1]->value.b[0];
          break;
       default:
          assert(!"Should not get here.");
@@ -1772,11 +1772,11 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    case ir_quadop_vector:
       for (unsigned c = 0; c < this->type->vector_elements; c++) {
          switch (this->type->base_type) {
-         case GLSL_TYPE_INT:
-            data.i[c] = op[c]->value.i[0];
-            break;
          case GLSL_TYPE_UINT:
             data.u[c] = op[c]->value.u[0];
+            break;
+         case GLSL_TYPE_INT:
+            data.i[c] = op[c]->value.i[0];
             break;
          case GLSL_TYPE_FLOAT:
             data.f[c] = op[c]->value.f[0];
