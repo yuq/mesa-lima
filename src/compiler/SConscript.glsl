@@ -124,7 +124,12 @@ env.CodeGenerate(
     source = [],
     command = python_cmd + ' $SCRIPT enum > $TARGET'
 )
-
+env.CodeGenerate(
+    target = 'glsl/ir_expression_operation_constant.h',
+    script = 'glsl/ir_expression_operation.py',
+    source = [],
+    command = python_cmd + ' $SCRIPT constant > $TARGET'
+)
 env.CodeGenerate(
     target = 'glsl/ir_expression_operation_strings.h',
     script = 'glsl/ir_expression_operation.py',

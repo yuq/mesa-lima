@@ -147,6 +147,7 @@ GLSL_COMPILER_CXX_FILES = \
 # libglsl generated sources
 LIBGLSL_GENERATED_FILES = \
 	glsl/ir_expression_operation.h \
+	glsl/ir_expression_operation_constant.h \
 	glsl/ir_expression_operation_strings.h \
 	glsl/glsl_lexer.cpp \
 	glsl/glsl_parser.cpp \
