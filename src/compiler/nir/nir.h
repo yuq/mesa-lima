@@ -1699,6 +1699,14 @@ typedef struct nir_shader_compiler_options {
    bool vertex_id_zero_based;
 
    bool lower_cs_local_index_from_id;
+
+   /**
+    * Should nir_lower_io() create load_interpolated_input intrinsics?
+    *
+    * If not, it generates regular load_input intrinsics and interpolation
+    * information must be inferred from the list of input nir_variables.
+    */
+   bool use_interpolated_input_intrinsics;
 } nir_shader_compiler_options;
 
 typedef struct nir_shader_info {
