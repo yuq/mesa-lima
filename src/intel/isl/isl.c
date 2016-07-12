@@ -308,7 +308,7 @@ isl_choose_array_pitch_span(const struct isl_device *dev,
              *    the depth buffer and stencil buffer have an implied value of
              *    ARYSPC_FULL):
              */
-            return ISL_ARRAY_PITCH_SPAN_COMPACT;
+            return ISL_ARRAY_PITCH_SPAN_FULL;
          }
 
          if (info->levels == 1) {
