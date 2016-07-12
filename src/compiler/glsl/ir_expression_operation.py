@@ -180,7 +180,8 @@ constant_template_vector_scalar = mako.template.Template("""\
       }
       break;""")
 
-# This template is for unary operations that are horizontal.  That is, the
+# This template is for operations that are horizontal and either have only a
+# single type or the implementation for all types is identical.  That is, the
 # operation consumes a vector and produces a scalar.
 constant_template_horizontal_single_implementation = mako.template.Template("""\
    case ${op.get_enum_name()}:
@@ -190,6 +191,7 @@ constant_template_horizontal_single_implementation = mako.template.Template("""\
 
 vector_scalar_operation = "vector-scalar"
 horizontal_operation = "horizontal"
+types_identical_operation = "identical"
 
 class operation(object):
    def __init__(self, name, num_operands, printable_name = None, source_types = None, dest_type = None, c_expression = None, flags = None):
@@ -243,6 +245,8 @@ class operation(object):
       elif self.num_operands == 2:
          if vector_scalar_operation in self.flags:
             return constant_template_vector_scalar.render(op=self)
+         elif horizontal_operation in self.flags and types_identical_operation in self.flags:
+            return constant_template_horizontal_single_implementation.render(op=self)
          elif len(self.source_types) == 1:
             return constant_template0.render(op=self)
          elif self.dest_type is not None:
@@ -425,11 +429,11 @@ ir_expression_operation = [
 
    # Returns single boolean for whether all components of operands[0]
    # equal the components of operands[1].
-   operation("all_equal", 2),
+   operation("all_equal", 2, source_types=all_types, dest_type=bool_type, c_expression="op[0]->has_value(op[1])", flags=frozenset((horizontal_operation, types_identical_operation))),
 
    # Returns single boolean for whether any component of operands[0]
    # is not equal to the corresponding component of operands[1].
-   operation("any_nequal", 2),
+   operation("any_nequal", 2, source_types=all_types, dest_type=bool_type, c_expression="!op[0]->has_value(op[1])", flags=frozenset((horizontal_operation, types_identical_operation))),
 
    # Bit-wise binary operations.
    operation("lshift", 2, printable_name="<<"),
