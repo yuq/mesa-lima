@@ -552,7 +552,7 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
                                 handle->stride,
                                 expected_stride);
                 }
-                return NULL;
+                goto fail;
         }
 
         rsc->tiled = false;
