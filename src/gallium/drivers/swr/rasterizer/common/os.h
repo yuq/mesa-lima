@@ -105,14 +105,30 @@ typedef unsigned int    DWORD;
 #define INLINE __inline
 #endif
 #define DEBUGBREAK asm ("int $3")
+
 #if !defined(__CYGWIN__)
+
 #ifndef __cdecl
 #define __cdecl
 #endif
 #ifndef __stdcall
 #define __stdcall
 #endif
-#define __declspec(X)
+
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+    #define __declspec(x)           __declspec_##x
+    #define __declspec_align(y)     __attribute__((aligned(y)))
+    #define __declspec_deprecated   __attribute__((deprecated))
+    #define __declspec_dllexport
+    #define __declspec_dllimport
+    #define __declspec_noinline     __attribute__((__noinline__))
+    #define __declspec_nothrow      __attribute__((nothrow))
+    #define __declspec_novtable
+    #define __declspec_thread       __thread
+#else
+    #define __declspec(X)
+#endif
+
 #endif
 
 #define GCC_VERSION (__GNUC__ * 10000 \
