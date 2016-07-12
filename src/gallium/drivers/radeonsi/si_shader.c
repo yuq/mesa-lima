@@ -33,6 +33,7 @@
 #include "gallivm/lp_bld_arit.h"
 #include "gallivm/lp_bld_bitarit.h"
 #include "gallivm/lp_bld_flow.h"
+#include "gallivm/lp_bld_misc.h"
 #include "radeon/r600_cs.h"
 #include "radeon/radeon_llvm.h"
 #include "radeon/radeon_elf_util.h"
@@ -5311,11 +5312,17 @@ static void si_create_function(struct si_shader_context *ctx,
 	for (i = 0; i <= last_sgpr; ++i) {
 		LLVMValueRef P = LLVMGetParam(ctx->radeon_bld.main_fn, i);
 
-		/* We tell llvm that array inputs are passed by value to allow Sinking pass
-		 * to move load. Inputs are constant so this is fine. */
-		if (i <= last_array_pointer)
+		/* The combination of:
+		 * - ByVal
+		 * - dereferenceable
+		 * - tbaa
+		 * allows the optimization passes to move loads and reduces
+		 * SGPR spilling significantly.
+		 */
+		if (i <= last_array_pointer) {
 			LLVMAddAttribute(P, LLVMByValAttribute);
-		else
+			lp_add_attr_dereferenceable(P, UINT64_MAX);
+		} else
 			LLVMAddAttribute(P, LLVMInRegAttribute);
 	}
 
