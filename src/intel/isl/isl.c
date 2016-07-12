@@ -996,7 +996,7 @@ isl_apply_surface_padding(const struct isl_device *dev,
     *      padding requirements.
     */
    if (isl_format_is_yuv(info->format) &&
-       (fmtl->bs == 96 || fmtl->bs == 48|| fmtl->bs == 24)) {
+       (fmtl->bpb == 96 || fmtl->bpb == 48|| fmtl->bpb == 24)) {
       *total_h_el += 1;
       *pad_bytes += 16;
    }
