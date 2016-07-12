@@ -198,7 +198,6 @@ store_op(struct lower_io_state *state,
 {
    nir_intrinsic_op op;
    switch (mode) {
-   case nir_var_shader_in:
    case nir_var_shader_out:
       op = per_vertex ? nir_intrinsic_store_per_vertex_output :
                         nir_intrinsic_store_output;
