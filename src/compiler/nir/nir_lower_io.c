@@ -289,6 +289,8 @@ nir_lower_io_block(nir_block *block,
                              per_vertex ? &vertex_index : NULL,
                              state->type_size);
 
+      nir_intrinsic_instr *replacement;
+
       switch (intrin->intrinsic) {
       case nir_intrinsic_load_var: {
          nir_intrinsic_instr *load =
@@ -311,18 +313,7 @@ nir_lower_io_block(nir_block *block,
 
          load->src[per_vertex ? 1 : 0] = nir_src_for_ssa(offset);
 
-         if (intrin->dest.is_ssa) {
-            nir_ssa_dest_init(&load->instr, &load->dest,
-                              intrin->num_components,
-                              intrin->dest.ssa.bit_size, NULL);
-            nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
-                                     nir_src_for_ssa(&load->dest.ssa));
-         } else {
-            nir_dest_copy(&load->dest, &intrin->dest, state->mem_ctx);
-         }
-
-         nir_instr_insert_before(&intrin->instr, &load->instr);
-         nir_instr_remove(&intrin->instr);
+         replacement = load;
          break;
       }
 
@@ -348,8 +339,7 @@ nir_lower_io_block(nir_block *block,
 
          store->src[per_vertex ? 2 : 1] = nir_src_for_ssa(offset);
 
-         nir_instr_insert_before(&intrin->instr, &store->instr);
-         nir_instr_remove(&intrin->instr);
+         replacement = store;
          break;
       }
 
@@ -379,24 +369,28 @@ nir_lower_io_block(nir_block *block,
             nir_src_copy(&atomic->src[i+1], &intrin->src[i], atomic);
          }
 
-         if (intrin->dest.is_ssa) {
-            nir_ssa_dest_init(&atomic->instr, &atomic->dest,
-                              intrin->dest.ssa.num_components,
-                              intrin->dest.ssa.bit_size, NULL);
-            nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
-                                     nir_src_for_ssa(&atomic->dest.ssa));
-         } else {
-            nir_dest_copy(&atomic->dest, &intrin->dest, state->mem_ctx);
-         }
-
-         nir_instr_insert_before(&intrin->instr, &atomic->instr);
-         nir_instr_remove(&intrin->instr);
+         replacement = atomic;
          break;
       }
 
       default:
          break;
       }
+
+      if (nir_intrinsic_infos[intrin->intrinsic].has_dest) {
+         if (intrin->dest.is_ssa) {
+            nir_ssa_dest_init(&replacement->instr, &replacement->dest,
+                              intrin->num_components,
+                              intrin->dest.ssa.bit_size, NULL);
+            nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
+                                     nir_src_for_ssa(&replacement->dest.ssa));
+         } else {
+            nir_dest_copy(&replacement->dest, &intrin->dest, state->mem_ctx);
+         }
+      }
+
+      nir_instr_insert_before(&intrin->instr, &replacement->instr);
+      nir_instr_remove(&intrin->instr);
    }
 
    return true;
