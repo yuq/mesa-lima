@@ -205,6 +205,21 @@ constant_template_horizontal_nonassignment = mako.template.Template("""\
       ${op.c_expression['default']};
       break;""")
 
+# This template is for binary operations that are horizontal.  That is, the
+# operation consumes a vector and produces a scalar.
+constant_template_horizontal = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      switch (op[0]->type->base_type) {
+    % for dst_type, src_types in op.signatures():
+      case ${src_types[0].glsl_type}:
+         data.${dst_type.union_field}[0] = ${op.get_c_expression(src_types)};
+         break;
+    % endfor
+      default:
+         assert(0);
+      }
+      break;""")
+
 
 vector_scalar_operation = "vector-scalar"
 horizontal_operation = "horizontal"
@@ -274,6 +289,8 @@ class operation(object):
             return constant_template_vector_scalar.render(op=self)
          elif horizontal_operation in self.flags and types_identical_operation in self.flags:
             return constant_template_horizontal_single_implementation.render(op=self)
+         elif horizontal_operation in self.flags:
+            return constant_template_horizontal.render(op=self)
          elif len(self.source_types) == 1:
             return constant_template0.render(op=self)
          elif self.dest_type is not None:
@@ -478,7 +495,7 @@ ir_expression_operation = [
    operation("logic_xor", 2, printable_name="^^", source_types=(bool_type,), c_expression="{src0} != {src1}"),
    operation("logic_or", 2, printable_name="||", source_types=(bool_type,), c_expression="{src0} || {src1}"),
 
-   operation("dot", 2),
+   operation("dot", 2, source_types=real_types, c_expression={'f': "dot_f(op[0], op[1])", 'd': "dot_d(op[0], op[1])"}, flags=horizontal_operation),
    operation("min", 2, source_types=numeric_types, c_expression="MIN2({src0}, {src1})", flags=vector_scalar_operation),
    operation("max", 2, source_types=numeric_types, c_expression="MAX2({src0}, {src1})", flags=vector_scalar_operation),
 
