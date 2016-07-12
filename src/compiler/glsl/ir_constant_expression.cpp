@@ -842,7 +842,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
          switch (this->type->base_type) {
          case GLSL_TYPE_FLOAT:
-            data.f[c] = op[0]->value.f[c] - floor(op[0]->value.f[c]);
+            data.f[c] = op[0]->value.f[c] - floorf(op[0]->value.f[c]);
             break;
          case GLSL_TYPE_DOUBLE:
             data.d[c] = op[0]->value.d[c] - floor(op[0]->value.d[c]);
@@ -915,10 +915,10 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             data.i[c] = (op[0]->value.i[c] > 0) - (op[0]->value.i[c] < 0);
             break;
          case GLSL_TYPE_FLOAT:
-            data.f[c] = float((op[0]->value.f[c] > 0)-(op[0]->value.f[c] < 0));
+            data.f[c] = float((op[0]->value.f[c] > 0.0F) - (op[0]->value.f[c] < 0.0F));
             break;
          case GLSL_TYPE_DOUBLE:
-            data.d[c] = double((op[0]->value.d[c] > 0)-(op[0]->value.d[c] < 0));
+            data.d[c] = double((op[0]->value.d[c] > 0.0) - (op[0]->value.d[c] < 0.0));
             break;
          default:
             assert(0);
@@ -930,7 +930,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
          switch (this->type->base_type) {
          case GLSL_TYPE_FLOAT:
-            if (op[0]->value.f[c] != 0.0)
+            if (op[0]->value.f[c] != 0.0F)
                data.f[c] = 1.0F / op[0]->value.f[c];
             break;
          case GLSL_TYPE_DOUBLE:
@@ -997,7 +997,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    case ir_unop_dFdy_fine:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
-         data.f[c] = 0.0;
+         data.f[c] = 0.0F;
       }
       break;
 
