@@ -312,6 +312,7 @@ static const char *SemanticStr[SV_LAST + 1] =
    "BASEVERTEX",
    "BASEINSTANCE",
    "DRAWID",
+   "WORK_DIM",
    "?",
    "(INVALID)"
 };
