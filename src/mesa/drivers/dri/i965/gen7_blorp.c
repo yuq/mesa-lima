@@ -228,6 +228,24 @@ gen7_blorp_emit_surface_state(struct brw_context *brw,
    return wm_surf_offset;
 }
 
+/* Hardware seems to try to fetch the constants even though the corresponding
+ * stage gets disabled. Therefore make sure the settings for the constant
+ * buffer are valid.
+ */
+static void
+gen7_blorp_emit_disable_constant_state(struct brw_context *brw,
+                                       unsigned opcode)
+{
+   BEGIN_BATCH(7);
+   OUT_BATCH(opcode << 16 | (7 - 2));
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   ADVANCE_BATCH();
+}
 
 /* 3DSTATE_VS
  *
@@ -760,6 +778,12 @@ gen7_blorp_exec(struct brw_context *brw,
       gen7_blorp_emit_blend_state_pointer(brw, cc_blend_state_offset);
       gen7_blorp_emit_cc_state_pointer(brw, cc_state_offset);
    }
+
+   gen7_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_VS);
+   gen7_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_HS);
+   gen7_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_DS);
+   gen7_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_GS);
+
    depthstencil_offset = gen6_blorp_emit_depth_stencil_state(brw, params);
    gen7_blorp_emit_depth_stencil_state_pointers(brw, depthstencil_offset);
    if (brw->use_resource_streamer)
