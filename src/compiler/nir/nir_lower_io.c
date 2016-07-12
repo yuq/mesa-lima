@@ -279,19 +279,18 @@ nir_lower_io_block(nir_block *block,
 
       b->cursor = nir_before_instr(instr);
 
+      const bool per_vertex =
+         is_per_vertex_input(state, var) || is_per_vertex_output(state, var);
+
+      nir_ssa_def *offset;
+      nir_ssa_def *vertex_index;
+
+      offset = get_io_offset(b, intrin->variables[0],
+                             per_vertex ? &vertex_index : NULL,
+                             state->type_size);
+
       switch (intrin->intrinsic) {
       case nir_intrinsic_load_var: {
-         const bool per_vertex =
-            is_per_vertex_input(state, var) ||
-            is_per_vertex_output(state, var);
-
-         nir_ssa_def *offset;
-         nir_ssa_def *vertex_index;
-
-         offset = get_io_offset(b, intrin->variables[0],
-                                per_vertex ? &vertex_index : NULL,
-                                state->type_size);
-
          nir_intrinsic_instr *load =
             nir_intrinsic_instr_create(state->mem_ctx,
                                        load_op(mode, per_vertex));
@@ -330,15 +329,6 @@ nir_lower_io_block(nir_block *block,
       case nir_intrinsic_store_var: {
          assert(mode == nir_var_shader_out || mode == nir_var_shared);
 
-         nir_ssa_def *offset;
-         nir_ssa_def *vertex_index;
-
-         const bool per_vertex = is_per_vertex_output(state, var);
-
-         offset = get_io_offset(b, intrin->variables[0],
-                                per_vertex ? &vertex_index : NULL,
-                                state->type_size);
-
          nir_intrinsic_instr *store =
             nir_intrinsic_instr_create(state->mem_ctx,
                                        store_op(state, mode, per_vertex));
@@ -374,11 +364,6 @@ nir_lower_io_block(nir_block *block,
       case nir_intrinsic_var_atomic_exchange:
       case nir_intrinsic_var_atomic_comp_swap: {
          assert(mode == nir_var_shared);
-
-         nir_ssa_def *offset;
-
-         offset = get_io_offset(b, intrin->variables[0],
-                                NULL, state->type_size);
 
          nir_intrinsic_instr *atomic =
             nir_intrinsic_instr_create(state->mem_ctx,
