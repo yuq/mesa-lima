@@ -180,8 +180,16 @@ constant_template_vector_scalar = mako.template.Template("""\
       }
       break;""")
 
+# This template is for unary operations that are horizontal.  That is, the
+# operation consumes a vector and produces a scalar.
+constant_template_horizontal_single_implementation = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      data.${op.dest_type.union_field}[0] = ${op.c_expression['default']};
+      break;""")
+
 
 vector_scalar_operation = "vector-scalar"
+horizontal_operation = "horizontal"
 
 class operation(object):
    def __init__(self, name, num_operands, printable_name = None, source_types = None, dest_type = None, c_expression = None, flags = None):
@@ -220,7 +228,9 @@ class operation(object):
          return None
 
       if self.num_operands == 1:
-         if self.dest_type is not None and len(self.source_types) == 1:
+         if horizontal_operation in self.flags:
+            return constant_template_horizontal_single_implementation.render(op=self)
+         elif self.dest_type is not None and len(self.source_types) == 1:
             return constant_template2.render(op=self)
          elif self.dest_type is not None:
             return constant_template5.render(op=self)
@@ -332,11 +342,11 @@ ir_expression_operation = [
    operation("dFdy_fine", 1, printable_name="dFdyFine", source_types=(float_type,), c_expression="0.0f"),
 
    # Floating point pack and unpack operations.
-   operation("pack_snorm_2x16", 1, printable_name="packSnorm2x16"),
-   operation("pack_snorm_4x8", 1, printable_name="packSnorm4x8"),
-   operation("pack_unorm_2x16", 1, printable_name="packUnorm2x16"),
-   operation("pack_unorm_4x8", 1, printable_name="packUnorm4x8"),
-   operation("pack_half_2x16", 1, printable_name="packHalf2x16"),
+   operation("pack_snorm_2x16", 1, printable_name="packSnorm2x16", source_types=(float_type,), dest_type=uint_type, c_expression="pack_2x16(pack_snorm_1x16, op[0]->value.f[0], op[0]->value.f[1])", flags=horizontal_operation),
+   operation("pack_snorm_4x8", 1, printable_name="packSnorm4x8", source_types=(float_type,), dest_type=uint_type, c_expression="pack_4x8(pack_snorm_1x8, op[0]->value.f[0], op[0]->value.f[1], op[0]->value.f[2], op[0]->value.f[3])", flags=horizontal_operation),
+   operation("pack_unorm_2x16", 1, printable_name="packUnorm2x16", source_types=(float_type,), dest_type=uint_type, c_expression="pack_2x16(pack_unorm_1x16, op[0]->value.f[0], op[0]->value.f[1])", flags=horizontal_operation),
+   operation("pack_unorm_4x8", 1, printable_name="packUnorm4x8", source_types=(float_type,), dest_type=uint_type, c_expression="pack_4x8(pack_unorm_1x8, op[0]->value.f[0], op[0]->value.f[1], op[0]->value.f[2], op[0]->value.f[3])", flags=horizontal_operation),
+   operation("pack_half_2x16", 1, printable_name="packHalf2x16", source_types=(float_type,), dest_type=uint_type, c_expression="pack_2x16(pack_half_1x16, op[0]->value.f[0], op[0]->value.f[1])", flags=horizontal_operation),
    operation("unpack_snorm_2x16", 1, printable_name="unpackSnorm2x16"),
    operation("unpack_snorm_4x8", 1, printable_name="unpackSnorm4x8"),
    operation("unpack_unorm_2x16", 1, printable_name="unpackUnorm2x16"),
