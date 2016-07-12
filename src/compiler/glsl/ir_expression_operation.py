@@ -332,6 +332,31 @@ constant_template_vector = mako.template.Template("""\
       }
       break;""")
 
+# This template is for ir_triop_lrp.
+constant_template_lrp = mako.template.Template("""\
+   case ${op.get_enum_name()}: {
+      assert(op[0]->type->base_type == GLSL_TYPE_FLOAT ||
+             op[0]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(op[1]->type->base_type == GLSL_TYPE_FLOAT ||
+             op[1]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(op[2]->type->base_type == GLSL_TYPE_FLOAT ||
+             op[2]->type->base_type == GLSL_TYPE_DOUBLE);
+
+      unsigned c2_inc = op[2]->type->is_scalar() ? 0 : 1;
+      for (unsigned c = 0, c2 = 0; c < components; c2 += c2_inc, c++) {
+         switch (this->type->base_type) {
+    % for dst_type, src_types in op.signatures():
+         case ${src_types[0].glsl_type}:
+            data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types, ("c", "c", "c2"))};
+            break;
+    % endfor
+         default:
+            assert(0);
+         }
+      }
+      break;
+   }""")
+
 
 vector_scalar_operation = "vector-scalar"
 horizontal_operation = "horizontal"
@@ -416,6 +441,8 @@ class operation(object):
       elif self.num_operands == 3:
          if self.name == "vector_insert":
             return constant_template_vector_insert.render(op=self)
+         elif self.name == "lrp":
+            return constant_template_lrp.render(op=self)
          else:
             return constant_template3.render(op=self)
       elif self.num_operands == 4:
@@ -665,7 +692,7 @@ ir_expression_operation = [
    # Fused floating-point multiply-add, part of ARB_gpu_shader5.
    operation("fma", 3, source_types=real_types, c_expression="{src0} * {src1} + {src2}"),
 
-   operation("lrp", 3),
+   operation("lrp", 3, source_types=real_types, c_expression={'f': "{src0} * (1.0f - {src2}) + ({src1} * {src2})", 'd': "{src0} * (1.0 - {src2}) + ({src1} * {src2})"}),
 
    # Conditional Select
    #
