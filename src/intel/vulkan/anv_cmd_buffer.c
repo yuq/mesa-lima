@@ -646,11 +646,9 @@ void anv_CmdBindDescriptorSets(
 
                unsigned array_size = set_layout->binding[b].array_size;
                for (unsigned j = 0; j < array_size; j++) {
-                  uint32_t range = 0;
-                  if (desc->buffer_view)
-                     range = desc->buffer_view->range;
                   push->dynamic[d].offset = *(offsets++);
-                  push->dynamic[d].range = range;
+                  push->dynamic[d].range = (desc->buffer_view) ?
+                                            desc->buffer_view->range : 0;
                   desc++;
                   d++;
                }
