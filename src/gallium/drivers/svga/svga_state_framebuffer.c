@@ -168,6 +168,7 @@ emit_fb_vgpu10(struct svga_context *svga)
    struct pipe_framebuffer_state *curr = &svga->curr.framebuffer;
    struct pipe_framebuffer_state *hw = &svga->state.hw_clear.framebuffer;
    const unsigned num_color = MAX2(curr->nr_cbufs, hw->nr_cbufs);
+   int last_rtv = -1;
    unsigned i;
    enum pipe_error ret = PIPE_OK;
 
@@ -187,6 +188,7 @@ emit_fb_vgpu10(struct svga_context *svga)
          }
 
          assert(svga_surface(rtv[i])->view_id != SVGA3D_INVALID_ID);
+         last_rtv = i;
       }
       else {
          rtv[i] = NULL;
@@ -213,7 +215,10 @@ emit_fb_vgpu10(struct svga_context *svga)
       if (ret != PIPE_OK)
          return ret;
 
-      svga->state.hw_draw.num_rendertargets = num_color;
+      /* number of render targets sent to the device, not including trailing
+       * unbound render targets.
+       */
+      svga->state.hw_draw.num_rendertargets = last_rtv + 1;
       svga->state.hw_draw.dsv = dsv;
       memcpy(svga->state.hw_draw.rtv, rtv, num_color * sizeof(rtv[0]));
     
