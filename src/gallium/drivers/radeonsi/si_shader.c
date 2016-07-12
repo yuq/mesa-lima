@@ -5299,7 +5299,7 @@ static const struct lp_build_tgsi_action interp_action = {
 static void si_create_function(struct si_shader_context *ctx,
 			       LLVMTypeRef *returns, unsigned num_returns,
 			       LLVMTypeRef *params, unsigned num_params,
-			       int last_array_pointer, int last_sgpr)
+			       int last_sgpr)
 {
 	int i;
 
@@ -5318,7 +5318,7 @@ static void si_create_function(struct si_shader_context *ctx,
 		 * allows the optimization passes to move loads and reduces
 		 * SGPR spilling significantly.
 		 */
-		if (i <= last_array_pointer) {
+		if (LLVMGetTypeKind(LLVMTypeOf(P)) == LLVMPointerTypeKind) {
 			LLVMAddAttribute(P, LLVMByValAttribute);
 			lp_add_attr_dereferenceable(P, UINT64_MAX);
 		} else
@@ -5423,7 +5423,7 @@ static void create_function(struct si_shader_context *ctx)
 	struct si_shader *shader = ctx->shader;
 	LLVMTypeRef params[SI_NUM_PARAMS + SI_NUM_VERTEX_BUFFERS], v3i32;
 	LLVMTypeRef returns[16+32*4];
-	unsigned i, last_array_pointer, last_sgpr, num_params, num_return_sgprs;
+	unsigned i, last_sgpr, num_params, num_return_sgprs;
 	unsigned num_returns = 0;
 
 	v3i32 = LLVMVectorType(ctx->i32, 3);
@@ -5433,12 +5433,10 @@ static void create_function(struct si_shader_context *ctx)
 	params[SI_PARAM_SAMPLERS] = const_array(ctx->v8i32, SI_NUM_SAMPLERS);
 	params[SI_PARAM_IMAGES] = const_array(ctx->v8i32, SI_NUM_IMAGES);
 	params[SI_PARAM_SHADER_BUFFERS] = const_array(ctx->v4i32, SI_NUM_SHADER_BUFFERS);
-	last_array_pointer = SI_PARAM_SHADER_BUFFERS;
 
 	switch (ctx->type) {
 	case PIPE_SHADER_VERTEX:
 		params[SI_PARAM_VERTEX_BUFFERS] = const_array(ctx->v16i8, SI_NUM_VERTEX_BUFFERS);
-		last_array_pointer = SI_PARAM_VERTEX_BUFFERS;
 		params[SI_PARAM_BASE_VERTEX] = ctx->i32;
 		params[SI_PARAM_START_INSTANCE] = ctx->i32;
 		num_params = SI_PARAM_START_INSTANCE+1;
@@ -5450,7 +5448,6 @@ static void create_function(struct si_shader_context *ctx)
 			num_params = SI_PARAM_LS_OUT_LAYOUT+1;
 		} else {
 			if (ctx->is_gs_copy_shader) {
-				last_array_pointer = SI_PARAM_RW_BUFFERS;
 				num_params = SI_PARAM_RW_BUFFERS+1;
 			} else {
 				params[SI_PARAM_VS_STATE_BITS] = ctx->i32;
@@ -5626,7 +5623,7 @@ static void create_function(struct si_shader_context *ctx)
 	assert(num_params <= ARRAY_SIZE(params));
 
 	si_create_function(ctx, returns, num_returns, params,
-			   num_params, last_array_pointer, last_sgpr);
+			   num_params, last_sgpr);
 
 	/* Reserve register locations for VGPR inputs the PS prolog may need. */
 	if (ctx->type == PIPE_SHADER_FRAGMENT &&
@@ -6876,7 +6873,7 @@ static bool si_compile_vs_prolog(struct si_screen *sscreen,
 
 	/* Create the function. */
 	si_create_function(&ctx, returns, num_returns, params,
-			   num_params, -1, last_sgpr);
+			   num_params, last_sgpr);
 	func = ctx.radeon_bld.main_fn;
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
@@ -6962,8 +6959,7 @@ static bool si_compile_vs_epilog(struct si_screen *sscreen,
 		params[i] = ctx.f32;
 
 	/* Create the function. */
-	si_create_function(&ctx, NULL, 0, params, num_params,
-			   -1, -1);
+	si_create_function(&ctx, NULL, 0, params, num_params, -1);
 
 	/* Emit exports. */
 	if (key->vs_epilog.states.export_prim_id) {
@@ -7105,7 +7101,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 	struct lp_build_tgsi_context *bld_base = &ctx.radeon_bld.soa.bld_base;
 	LLVMTypeRef params[16];
 	LLVMValueRef func;
-	int last_array_pointer, last_sgpr, num_params;
+	int last_sgpr, num_params;
 	bool status = true;
 
 	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
@@ -7114,7 +7110,6 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 
 	/* Declare inputs. Only RW_BUFFERS and TESS_FACTOR_OFFSET are used. */
 	params[SI_PARAM_RW_BUFFERS] = const_array(ctx.v16i8, SI_NUM_RW_BUFFERS);
-	last_array_pointer = SI_PARAM_RW_BUFFERS;
 	params[SI_PARAM_CONST_BUFFERS] = ctx.i64;
 	params[SI_PARAM_SAMPLERS] = ctx.i64;
 	params[SI_PARAM_IMAGES] = ctx.i64;
@@ -7133,8 +7128,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 	params[num_params++] = ctx.i32; /* LDS offset where tess factors should be loaded from */
 
 	/* Create the function. */
-	si_create_function(&ctx, NULL, 0, params, num_params,
-			   last_array_pointer, last_sgpr);
+	si_create_function(&ctx, NULL, 0, params, num_params, last_sgpr);
 	declare_tess_lds(&ctx);
 	func = ctx.radeon_bld.main_fn;
 
@@ -7226,7 +7220,7 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 
 	/* Create the function. */
 	si_create_function(&ctx, params, num_returns, params,
-			   num_params, -1, last_sgpr);
+			   num_params, last_sgpr);
 	func = ctx.radeon_bld.main_fn;
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
@@ -7456,7 +7450,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 	struct lp_build_tgsi_context *bld_base = &ctx.radeon_bld.soa.bld_base;
 	LLVMTypeRef params[16+8*4+3];
 	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
-	int last_array_pointer, last_sgpr, num_params, i;
+	int last_sgpr, num_params, i;
 	bool status = true;
 
 	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
@@ -7470,7 +7464,6 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 	params[SI_PARAM_IMAGES] = ctx.i64;
 	params[SI_PARAM_SHADER_BUFFERS] = ctx.i64;
 	params[SI_PARAM_ALPHA_REF] = ctx.f32;
-	last_array_pointer = -1;
 	last_sgpr = SI_PARAM_ALPHA_REF;
 
 	/* Declare input VGPRs. */
@@ -7489,8 +7482,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 		params[i] = ctx.f32;
 
 	/* Create the function. */
-	si_create_function(&ctx, NULL, 0, params, num_params,
-			   last_array_pointer, last_sgpr);
+	si_create_function(&ctx, NULL, 0, params, num_params, last_sgpr);
 	/* Disable elimination of unused inputs. */
 	radeon_llvm_add_attribute(ctx.radeon_bld.main_fn,
 				  "InitialPSInputAddr", 0xffffff);
