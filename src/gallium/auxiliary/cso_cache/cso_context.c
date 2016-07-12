@@ -251,7 +251,7 @@ struct cso_context *cso_create_context( struct pipe_context *pipe )
 {
    struct cso_context *ctx = CALLOC_STRUCT(cso_context);
    if (!ctx)
-      goto out;
+      return NULL;
 
    ctx->cache = cso_cache_create();
    if (ctx->cache == NULL)
