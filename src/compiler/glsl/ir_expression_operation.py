@@ -316,6 +316,22 @@ constant_template_vector_insert = mako.template.Template("""\
       break;
    }""")
 
+# This template is for ir_quadop_vector.
+constant_template_vector = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      for (unsigned c = 0; c < this->type->vector_elements; c++) {
+         switch (this->type->base_type) {
+    % for dst_type, src_types in op.signatures():
+         case ${src_types[0].glsl_type}:
+            data.${dst_type.union_field}[c] = op[c]->value.${src_types[0].union_field}[0];
+            break;
+    % endfor
+         default:
+            assert(0);
+         }
+      }
+      break;""")
+
 
 vector_scalar_operation = "vector-scalar"
 horizontal_operation = "horizontal"
@@ -403,7 +419,9 @@ class operation(object):
          else:
             return constant_template3.render(op=self)
       elif self.num_operands == 4:
-         if types_identical_operation in self.flags:
+         if self.name == "vector":
+            return constant_template_vector.render(op=self)
+         elif types_identical_operation in self.flags:
             return constant_template0.render(op=self)
 
       return None
@@ -676,7 +694,7 @@ ir_expression_operation = [
              c_expression="bitfield_insert({src0}, {src1}, {src2}, {src3})",
              flags=types_identical_operation),
 
-   operation("vector", 4),
+   operation("vector", 4, source_types=all_types, c_expression="anything-except-None"),
 ]
 
 
