@@ -270,6 +270,24 @@ constant_template_horizontal = mako.template.Template("""\
       }
       break;""")
 
+# This template is for ir_binop_vector_extract.
+constant_template_vector_extract = mako.template.Template("""\
+   case ${op.get_enum_name()}: {
+      const int c = CLAMP(op[1]->value.i[0], 0,
+                          (int) op[0]->type->vector_elements - 1);
+
+      switch (op[0]->type->base_type) {
+    % for dst_type, src_types in op.signatures():
+      case ${src_types[0].glsl_type}:
+         data.${dst_type.union_field}[0] = op[0]->value.${src_types[0].union_field}[c];
+         break;
+    % endfor
+      default:
+         assert(0);
+      }
+      break;
+   }""")
+
 
 vector_scalar_operation = "vector-scalar"
 horizontal_operation = "horizontal"
@@ -337,6 +355,8 @@ class operation(object):
       elif self.num_operands == 2:
          if self.name == "mul":
             return constant_template_mul.render(op=self)
+         elif self.name == "vector_extract":
+            return constant_template_vector_extract.render(op=self)
          elif vector_scalar_operation in self.flags:
             return constant_template_vector_scalar.render(op=self)
          elif horizontal_operation in self.flags and types_identical_operation in self.flags:
@@ -574,7 +594,7 @@ ir_expression_operation = [
    #
    # operand0 is the vector
    # operand1 is the index of the field to read from operand0
-   operation("vector_extract", 2),
+   operation("vector_extract", 2, source_types=all_types, c_expression="anything-except-None"),
 
    # Interpolate fs input at offset
    #
