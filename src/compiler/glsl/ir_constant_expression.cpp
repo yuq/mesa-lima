@@ -678,130 +678,130 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
    case ir_unop_f2i:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.i[c] = (int) op[0]->value.f[c];
-      }
       break;
+
    case ir_unop_f2u:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.u[c] = (unsigned) op[0]->value.f[c];
-      }
       break;
+
    case ir_unop_i2f:
       assert(op[0]->type->base_type == GLSL_TYPE_INT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = (float) op[0]->value.i[c];
-      }
       break;
+
    case ir_unop_u2f:
       assert(op[0]->type->base_type == GLSL_TYPE_UINT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = (float) op[0]->value.u[c];
-      }
       break;
+
    case ir_unop_b2f:
       assert(op[0]->type->base_type == GLSL_TYPE_BOOL);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = op[0]->value.b[c] ? 1.0F : 0.0F;
-      }
       break;
+
    case ir_unop_f2b:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.b[c] = op[0]->value.f[c] != 0.0F ? true : false;
-      }
       break;
+
    case ir_unop_b2i:
       assert(op[0]->type->base_type == GLSL_TYPE_BOOL);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.i[c] = op[0]->value.b[c] ? 1 : 0;
-      }
       break;
+
    case ir_unop_i2b:
       assert(op[0]->type->is_integer());
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.b[c] = op[0]->value.u[c] ? true : false;
-      }
       break;
+
    case ir_unop_u2i:
       assert(op[0]->type->base_type == GLSL_TYPE_UINT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.i[c] = op[0]->value.u[c];
-      }
       break;
+
    case ir_unop_i2u:
       assert(op[0]->type->base_type == GLSL_TYPE_INT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.u[c] = op[0]->value.i[c];
-      }
       break;
+
    case ir_unop_bitcast_i2f:
       assert(op[0]->type->base_type == GLSL_TYPE_INT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = bitcast_u2f(op[0]->value.i[c]);
-      }
       break;
+
    case ir_unop_bitcast_f2i:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.i[c] = bitcast_f2u(op[0]->value.f[c]);
-      }
       break;
+
    case ir_unop_bitcast_u2f:
       assert(op[0]->type->base_type == GLSL_TYPE_UINT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = bitcast_u2f(op[0]->value.u[c]);
-      }
       break;
+
    case ir_unop_bitcast_f2u:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.u[c] = bitcast_f2u(op[0]->value.f[c]);
-      }
       break;
+
    case ir_unop_d2f:
       assert(op[0]->type->base_type == GLSL_TYPE_DOUBLE);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = op[0]->value.d[c];
-      }
       break;
+
    case ir_unop_f2d:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.d[c] = op[0]->value.f[c];
-      }
       break;
+
    case ir_unop_d2i:
       assert(op[0]->type->base_type == GLSL_TYPE_DOUBLE);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.i[c] = op[0]->value.d[c];
-      }
       break;
+
    case ir_unop_i2d:
       assert(op[0]->type->base_type == GLSL_TYPE_INT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.d[c] = op[0]->value.i[c];
-      }
       break;
+
    case ir_unop_d2u:
       assert(op[0]->type->base_type == GLSL_TYPE_DOUBLE);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.u[c] = op[0]->value.d[c];
-      }
       break;
+
    case ir_unop_u2d:
       assert(op[0]->type->base_type == GLSL_TYPE_UINT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.d[c] = op[0]->value.u[c];
-      }
       break;
+
    case ir_unop_d2b:
       assert(op[0]->type->base_type == GLSL_TYPE_DOUBLE);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.b[c] = op[0]->value.d[c] != 0.0;
-      }
       break;
+
    case ir_unop_trunc:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
          if (op[0]->type->base_type == GLSL_TYPE_DOUBLE)
@@ -810,6 +810,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             data.f[c] = truncf(op[0]->value.f[c]);
       }
       break;
+
 
    case ir_unop_round_even:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
@@ -855,16 +856,14 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
    case ir_unop_sin:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = sinf(op[0]->value.f[c]);
-      }
       break;
 
    case ir_unop_cos:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = cosf(op[0]->value.f[c]);
-      }
       break;
 
    case ir_unop_neg:
@@ -963,30 +962,26 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
    case ir_unop_exp:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = expf(op[0]->value.f[c]);
-      }
       break;
 
    case ir_unop_exp2:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = exp2f(op[0]->value.f[c]);
-      }
       break;
 
    case ir_unop_log:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = logf(op[0]->value.f[c]);
-      }
       break;
 
    case ir_unop_log2:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = log2f(op[0]->value.f[c]);
-      }
       break;
 
    case ir_unop_dFdx:
@@ -996,9 +991,8 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    case ir_unop_dFdy_coarse:
    case ir_unop_dFdy_fine:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = 0.0F;
-      }
       break;
 
    case ir_unop_pack_snorm_2x16:
@@ -1007,6 +1001,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
                             op[0]->value.f[0],
                             op[0]->value.f[1]);
       break;
+
    case ir_unop_pack_snorm_4x8:
       assert(op[0]->type == glsl_type::vec4_type);
       data.u[0] = pack_4x8(pack_snorm_1x8,
@@ -1015,24 +1010,28 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
                            op[0]->value.f[2],
                            op[0]->value.f[3]);
       break;
+
    case ir_unop_unpack_snorm_2x16:
       assert(op[0]->type == glsl_type::uint_type);
       unpack_2x16(unpack_snorm_1x16,
                   op[0]->value.u[0],
                   &data.f[0], &data.f[1]);
       break;
+
    case ir_unop_unpack_snorm_4x8:
       assert(op[0]->type == glsl_type::uint_type);
       unpack_4x8(unpack_snorm_1x8,
                  op[0]->value.u[0],
                  &data.f[0], &data.f[1], &data.f[2], &data.f[3]);
       break;
+
    case ir_unop_pack_unorm_2x16:
       assert(op[0]->type == glsl_type::vec2_type);
       data.u[0] = pack_2x16(pack_unorm_1x16,
                             op[0]->value.f[0],
                             op[0]->value.f[1]);
       break;
+
    case ir_unop_pack_unorm_4x8:
       assert(op[0]->type == glsl_type::vec4_type);
       data.u[0] = pack_4x8(pack_unorm_1x8,
@@ -1041,35 +1040,39 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
                            op[0]->value.f[2],
                            op[0]->value.f[3]);
       break;
+
    case ir_unop_unpack_unorm_2x16:
       assert(op[0]->type == glsl_type::uint_type);
       unpack_2x16(unpack_unorm_1x16,
                   op[0]->value.u[0],
                   &data.f[0], &data.f[1]);
       break;
+
    case ir_unop_unpack_unorm_4x8:
       assert(op[0]->type == glsl_type::uint_type);
       unpack_4x8(unpack_unorm_1x8,
                  op[0]->value.u[0],
                  &data.f[0], &data.f[1], &data.f[2], &data.f[3]);
       break;
+
    case ir_unop_pack_half_2x16:
       assert(op[0]->type == glsl_type::vec2_type);
       data.u[0] = pack_2x16(pack_half_1x16,
                             op[0]->value.f[0],
                             op[0]->value.f[1]);
       break;
+
    case ir_unop_unpack_half_2x16:
       assert(op[0]->type == glsl_type::uint_type);
       unpack_2x16(unpack_half_1x16,
                   op[0]->value.u[0],
                   &data.f[0], &data.f[1]);
       break;
+
    case ir_binop_pow:
       assert(op[0]->type->base_type == GLSL_TYPE_FLOAT);
-      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+      for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.f[c] = powf(op[0]->value.f[c], op[1]->value.f[c]);
-      }
       break;
 
    case ir_binop_dot:
@@ -1102,8 +1105,8 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             assert(0);
          }
       }
-
       break;
+
    case ir_binop_max:
       assert(op[0]->type == op[1]->type || op0_scalar || op1_scalar);
       for (unsigned c = 0, c0 = 0, c1 = 0;
@@ -1152,8 +1155,8 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             assert(0);
          }
       }
-
       break;
+
    case ir_binop_sub:
       assert(op[0]->type == op[1]->type || op0_scalar || op1_scalar);
       for (unsigned c = 0, c0 = 0, c1 = 0;
@@ -1177,8 +1180,8 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             assert(0);
          }
       }
-
       break;
+
    case ir_binop_mul:
       /* Check for equal types, or unequal types involving scalars */
       if ((op[0]->type == op[1]->type && !op[0]->type->is_matrix())
@@ -1231,8 +1234,8 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             }
          }
       }
-
       break;
+
    case ir_binop_div:
       /* FINISHME: Emit warning when division-by-zero is detected. */
       assert(op[0]->type == op[1]->type || op0_scalar || op1_scalar);
@@ -1265,8 +1268,8 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             assert(0);
          }
       }
-
       break;
+
    case ir_binop_mod:
       /* FINISHME: Emit warning when division-by-zero is detected. */
       assert(op[0]->type == op[1]->type || op0_scalar || op1_scalar);
@@ -1307,7 +1310,6 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             assert(0);
          }
       }
-
       break;
 
    case ir_binop_logic_and:
@@ -1315,11 +1317,13 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.b[c] = op[0]->value.b[c] && op[1]->value.b[c];
       break;
+
    case ir_binop_logic_xor:
       assert(op[0]->type->base_type == GLSL_TYPE_BOOL);
       for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.b[c] = op[0]->value.b[c] ^ op[1]->value.b[c];
       break;
+
    case ir_binop_logic_or:
       assert(op[0]->type->base_type == GLSL_TYPE_BOOL);
       for (unsigned c = 0; c < op[0]->type->components(); c++)
@@ -1347,6 +1351,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          }
       }
       break;
+
    case ir_binop_greater:
       assert(op[0]->type == op[1]->type);
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
@@ -1368,6 +1373,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          }
       }
       break;
+
    case ir_binop_lequal:
       assert(op[0]->type == op[1]->type);
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
@@ -1389,6 +1395,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          }
       }
       break;
+
    case ir_binop_gequal:
       assert(op[0]->type == op[1]->type);
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
@@ -1410,6 +1417,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          }
       }
       break;
+
    case ir_binop_equal:
       assert(op[0]->type == op[1]->type);
       for (unsigned c = 0; c < components; c++) {
@@ -1434,6 +1442,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          }
       }
       break;
+
    case ir_binop_nequal:
       assert(op[0]->type == op[1]->type);
       for (unsigned c = 0; c < components; c++) {
@@ -1458,9 +1467,11 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          }
       }
       break;
+
    case ir_binop_all_equal:
       data.b[0] = op[0]->has_value(op[1]);
       break;
+
    case ir_binop_any_nequal:
       data.b[0] = !op[0]->has_value(op[1]);
       break;
@@ -1644,9 +1655,8 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       break;
 
    case ir_unop_saturate:
-      for (unsigned c = 0; c < components; c++) {
+      for (unsigned c = 0; c < components; c++)
          data.f[c] = CLAMP(op[0]->value.f[c], 0.0f, 1.0f);
-      }
       break;
    case ir_unop_pack_double_2x32:
       /* XXX needs to be checked on big-endian */
