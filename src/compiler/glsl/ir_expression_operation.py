@@ -188,10 +188,18 @@ constant_template_horizontal_single_implementation = mako.template.Template("""\
       data.${op.dest_type.union_field}[0] = ${op.c_expression['default']};
       break;""")
 
+# This template is for operations that are horizontal and do not assign the
+# result.  The various unpack operations are examples.
+constant_template_horizontal_nonassignment = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      ${op.c_expression['default']};
+      break;""")
+
 
 vector_scalar_operation = "vector-scalar"
 horizontal_operation = "horizontal"
 types_identical_operation = "identical"
+non_assign_operation = "nonassign"
 
 class operation(object):
    def __init__(self, name, num_operands, printable_name = None, source_types = None, dest_type = None, c_expression = None, flags = None):
@@ -230,7 +238,9 @@ class operation(object):
          return None
 
       if self.num_operands == 1:
-         if horizontal_operation in self.flags:
+         if horizontal_operation in self.flags and non_assign_operation in self.flags:
+            return constant_template_horizontal_nonassignment.render(op=self)
+         elif horizontal_operation in self.flags:
             return constant_template_horizontal_single_implementation.render(op=self)
          elif self.dest_type is not None and len(self.source_types) == 1:
             return constant_template2.render(op=self)
@@ -351,11 +361,11 @@ ir_expression_operation = [
    operation("pack_unorm_2x16", 1, printable_name="packUnorm2x16", source_types=(float_type,), dest_type=uint_type, c_expression="pack_2x16(pack_unorm_1x16, op[0]->value.f[0], op[0]->value.f[1])", flags=horizontal_operation),
    operation("pack_unorm_4x8", 1, printable_name="packUnorm4x8", source_types=(float_type,), dest_type=uint_type, c_expression="pack_4x8(pack_unorm_1x8, op[0]->value.f[0], op[0]->value.f[1], op[0]->value.f[2], op[0]->value.f[3])", flags=horizontal_operation),
    operation("pack_half_2x16", 1, printable_name="packHalf2x16", source_types=(float_type,), dest_type=uint_type, c_expression="pack_2x16(pack_half_1x16, op[0]->value.f[0], op[0]->value.f[1])", flags=horizontal_operation),
-   operation("unpack_snorm_2x16", 1, printable_name="unpackSnorm2x16"),
-   operation("unpack_snorm_4x8", 1, printable_name="unpackSnorm4x8"),
-   operation("unpack_unorm_2x16", 1, printable_name="unpackUnorm2x16"),
-   operation("unpack_unorm_4x8", 1, printable_name="unpackUnorm4x8"),
-   operation("unpack_half_2x16", 1, printable_name="unpackHalf2x16"),
+   operation("unpack_snorm_2x16", 1, printable_name="unpackSnorm2x16", source_types=(uint_type,), dest_type=float_type, c_expression="unpack_2x16(unpack_snorm_1x16, op[0]->value.u[0], &data.f[0], &data.f[1])", flags=frozenset((horizontal_operation, non_assign_operation))),
+   operation("unpack_snorm_4x8", 1, printable_name="unpackSnorm4x8", source_types=(uint_type,), dest_type=float_type, c_expression="unpack_4x8(unpack_snorm_1x8, op[0]->value.u[0], &data.f[0], &data.f[1], &data.f[2], &data.f[3])", flags=frozenset((horizontal_operation, non_assign_operation))),
+   operation("unpack_unorm_2x16", 1, printable_name="unpackUnorm2x16", source_types=(uint_type,), dest_type=float_type, c_expression="unpack_2x16(unpack_unorm_1x16, op[0]->value.u[0], &data.f[0], &data.f[1])", flags=frozenset((horizontal_operation, non_assign_operation))),
+   operation("unpack_unorm_4x8", 1, printable_name="unpackUnorm4x8", source_types=(uint_type,), dest_type=float_type, c_expression="unpack_4x8(unpack_unorm_1x8, op[0]->value.u[0], &data.f[0], &data.f[1], &data.f[2], &data.f[3])", flags=frozenset((horizontal_operation, non_assign_operation))),
+   operation("unpack_half_2x16", 1, printable_name="unpackHalf2x16", source_types=(uint_type,), dest_type=float_type, c_expression="unpack_2x16(unpack_half_1x16, op[0]->value.u[0], &data.f[0], &data.f[1])", flags=frozenset((horizontal_operation, non_assign_operation))),
 
    # Bit operations, part of ARB_gpu_shader5.
    operation("bitfield_reverse", 1, source_types=integer_types, c_expression="bitfield_reverse({src0})"),
@@ -366,8 +376,8 @@ ir_expression_operation = [
    operation("saturate", 1, printable_name="sat", source_types=(float_type,), c_expression="CLAMP({src0}, 0.0f, 1.0f)"),
 
    # Double packing, part of ARB_gpu_shader_fp64.
-   operation("pack_double_2x32", 1, printable_name="packDouble2x32"),
-   operation("unpack_double_2x32", 1, printable_name="unpackDouble2x32"),
+   operation("pack_double_2x32", 1, printable_name="packDouble2x32", source_types=(uint_type,), dest_type=double_type, c_expression="memcpy(&data.d[0], &op[0]->value.u[0], sizeof(double))", flags=frozenset((horizontal_operation, non_assign_operation))),
+   operation("unpack_double_2x32", 1, printable_name="unpackDouble2x32", source_types=(double_type,), dest_type=uint_type, c_expression="memcpy(&data.u[0], &op[0]->value.d[0], sizeof(double))", flags=frozenset((horizontal_operation, non_assign_operation))),
 
    operation("frexp_sig", 1),
    operation("frexp_exp", 1),
