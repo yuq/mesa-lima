@@ -1104,18 +1104,6 @@ centroid_to_pixel(enum brw_barycentric_mode bary)
    return (enum brw_barycentric_mode) ((unsigned) bary - 1);
 }
 
-fs_inst *
-fs_visitor::emit_linterp(const fs_reg &attr, const fs_reg &interp,
-                         glsl_interp_qualifier interpolation_mode,
-                         bool is_centroid, bool is_sample)
-{
-   brw_barycentric_mode barycoord_mode =
-      barycentric_mode(interpolation_mode, is_centroid, is_sample);
-
-   return bld.emit(FS_OPCODE_LINTERP, attr,
-                   this->delta_xy[barycoord_mode], interp);
-}
-
 void
 fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
                                        const glsl_type *type,
@@ -1179,6 +1167,9 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
          }
       } else {
          /* Smooth/noperspective interpolation case. */
+         enum brw_barycentric_mode bary =
+            barycentric_mode(interpolation_mode, mod_centroid, mod_sample);
+
          for (unsigned int i = 0; i < type->vector_elements; i++) {
             fs_reg interp(interp_reg(*location, i));
             if (devinfo->needs_unlit_centroid_workaround && mod_centroid) {
@@ -1190,23 +1181,22 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
                bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
 
                fs_inst *inst;
-               inst = emit_linterp(*attr, interp, interpolation_mode,
-                                   false, false);
+               inst = bld.emit(FS_OPCODE_LINTERP, *attr,
+                               delta_xy[centroid_to_pixel(bary)], interp);
                inst->predicate = BRW_PREDICATE_NORMAL;
                inst->predicate_inverse = true;
                if (devinfo->has_pln)
                   inst->no_dd_clear = true;
 
-               inst = emit_linterp(*attr, interp, interpolation_mode,
-                                   mod_centroid, mod_sample);
+               inst = bld.emit(FS_OPCODE_LINTERP, *attr,
+                               delta_xy[bary], interp);
                inst->predicate = BRW_PREDICATE_NORMAL;
                inst->predicate_inverse = false;
                if (devinfo->has_pln)
                   inst->no_dd_check = true;
 
             } else {
-               emit_linterp(*attr, interp, interpolation_mode,
-                            mod_centroid, mod_sample);
+               bld.emit(FS_OPCODE_LINTERP, *attr, delta_xy[bary], interp);
             }
             if (devinfo->gen < 6 && interpolation_mode == INTERP_QUALIFIER_SMOOTH) {
                bld.MUL(*attr, *attr, this->pixel_w);
