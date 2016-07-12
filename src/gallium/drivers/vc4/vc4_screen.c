@@ -517,6 +517,58 @@ vc4_supports_branches(struct vc4_screen *screen)
         return p.value;
 }
 
+static bool
+vc4_get_chip_info(struct vc4_screen *screen)
+{
+#if USE_VC4_SIMULATOR
+        screen->v3d_ver = 21;
+        return true;
+#endif
+
+        struct drm_vc4_get_param ident0 = {
+                .param = DRM_VC4_PARAM_V3D_IDENT0,
+        };
+        struct drm_vc4_get_param ident1 = {
+                .param = DRM_VC4_PARAM_V3D_IDENT1,
+        };
+        int ret;
+
+        ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &ident0);
+        if (ret != 0) {
+                if (errno == EINVAL) {
+                        /* Backwards compatibility with 2835 kernels which
+                         * only do V3D 2.1.
+                         */
+                        screen->v3d_ver = 21;
+                        return true;
+                } else {
+                        fprintf(stderr, "Couldn't get V3D IDENT0: %s\n",
+                                strerror(errno));
+                        return false;
+                }
+        }
+        ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &ident1);
+        if (ret != 0) {
+                fprintf(stderr, "Couldn't get V3D IDENT1: %s\n",
+                        strerror(errno));
+                return false;
+        }
+
+        uint32_t major = (ident0.value >> 24) & 0xff;
+        uint32_t minor = (ident1.value >> 0) & 0xf;
+        screen->v3d_ver = major * 10 + minor;
+
+        if (screen->v3d_ver != 21) {
+                fprintf(stderr,
+                        "V3D %d.%d not supported by this version of Mesa.\n",
+                        screen->v3d_ver / 10,
+                        screen->v3d_ver % 10);
+                return false;
+        }
+
+        return true;
+}
+
 struct pipe_screen *
 vc4_screen_create(int fd)
 {
@@ -538,6 +590,9 @@ vc4_screen_create(int fd)
         if (vc4_supports_branches(screen))
                 screen->has_control_flow = true;
 
+        if (!vc4_get_chip_info(screen))
+                goto fail;
+
         vc4_fence_init(screen);
 
         vc4_debug = debug_get_option_vc4_debug();
@@ -555,6 +610,11 @@ vc4_screen_create(int fd)
         pscreen->get_device_vendor = vc4_screen_get_vendor;
 
         return pscreen;
+
+fail:
+        close(fd);
+        ralloc_free(pscreen);
+        return NULL;
 }
 
 boolean

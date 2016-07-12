@@ -50,6 +50,8 @@ struct vc4_screen {
         struct pipe_screen base;
         int fd;
 
+        int v3d_ver;
+
         void *simulator_mem_base;
         uint32_t simulator_mem_size;
 
