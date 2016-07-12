@@ -163,7 +163,17 @@ constant_template5 = mako.template.Template("""\
 # of scalar and vector operands.
 constant_template_vector_scalar = mako.template.Template("""\
    case ${op.get_enum_name()}:
+    % if "mixed" in op.flags:
+        % for i in xrange(op.num_operands):
+      assert(op[${i}]->type->base_type == ${op.source_types[0].glsl_type} ||
+            % for src_type in op.source_types[1:-1]:
+             op[${i}]->type->base_type == ${src_type.glsl_type} ||
+            % endfor
+             op[${i}]->type->base_type == ${op.source_types[-1].glsl_type});
+        % endfor
+    % else:
       assert(op[0]->type == op[1]->type || op0_scalar || op1_scalar);
+    % endif
       for (unsigned c = 0, c0 = 0, c1 = 0;
            c < components;
            c0 += c0_inc, c1 += c1_inc, c++) {
@@ -200,6 +210,7 @@ vector_scalar_operation = "vector-scalar"
 horizontal_operation = "horizontal"
 types_identical_operation = "identical"
 non_assign_operation = "nonassign"
+mixed_type_operation = "mixed"
 
 class operation(object):
    def __init__(self, name, num_operands, printable_name = None, source_types = None, dest_type = None, c_expression = None, flags = None, all_signatures = None):
@@ -457,8 +468,8 @@ ir_expression_operation = [
    operation("any_nequal", 2, source_types=all_types, dest_type=bool_type, c_expression="!op[0]->has_value(op[1])", flags=frozenset((horizontal_operation, types_identical_operation))),
 
    # Bit-wise binary operations.
-   operation("lshift", 2, printable_name="<<"),
-   operation("rshift", 2, printable_name=">>"),
+   operation("lshift", 2, printable_name="<<", source_types=integer_types, c_expression="{src0} << {src1}", flags=frozenset((vector_scalar_operation, mixed_type_operation))),
+   operation("rshift", 2, printable_name=">>", source_types=integer_types, c_expression="{src0} >> {src1}", flags=frozenset((vector_scalar_operation, mixed_type_operation))),
    operation("bit_and", 2, printable_name="&", source_types=integer_types, c_expression="{src0} & {src1}", flags=vector_scalar_operation),
    operation("bit_xor", 2, printable_name="^", source_types=integer_types, c_expression="{src0} ^ {src1}", flags=vector_scalar_operation),
    operation("bit_or", 2, printable_name="|", source_types=integer_types, c_expression="{src0} | {src1}", flags=vector_scalar_operation),
