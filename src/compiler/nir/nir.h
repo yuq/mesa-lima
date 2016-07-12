@@ -992,6 +992,11 @@ typedef enum {
     */
    NIR_INTRINSIC_COMPONENT = 8,
 
+   /**
+    * Interpolation mode (only meaningful for FS inputs).
+    */
+   NIR_INTRINSIC_INTERP_MODE = 9,
+
    NIR_INTRINSIC_NUM_INDEX_FLAGS,
 
 } nir_intrinsic_index_flag;
@@ -1059,6 +1064,7 @@ INTRINSIC_IDX_ACCESSORS(range, RANGE, unsigned)
 INTRINSIC_IDX_ACCESSORS(desc_set, DESC_SET, unsigned)
 INTRINSIC_IDX_ACCESSORS(binding, BINDING, unsigned)
 INTRINSIC_IDX_ACCESSORS(component, COMPONENT, unsigned)
+INTRINSIC_IDX_ACCESSORS(interp_mode, INTERP_MODE, unsigned)
 
 /**
  * \group texture information
