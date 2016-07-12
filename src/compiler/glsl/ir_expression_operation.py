@@ -91,12 +91,20 @@ integer_types = (uint_type, int_type)
 real_types = (float_type, double_type)
 
 # This template is for unary and binary operations that can only have operands
-# of a single type.  ir_unop_logic_not is an example.
+# of a single type or the implementation for all types is identical.
+# ir_unop_logic_not is an example of the former, and ir_quadop_bitfield_insert
+# is an example of the latter..
 constant_template0 = mako.template.Template("""\
    case ${op.get_enum_name()}:
+    % if len(op.source_types) == 1:
       assert(op[0]->type->base_type == ${op.source_types[0].glsl_type});
+    % endif
       for (unsigned c = 0; c < op[0]->type->components(); c++)
-         data.${op.source_types[0].union_field}[c] = ${op.get_c_expression(op.source_types)};
+    % for dst_type, src_types in op.signatures():
+        % if loop.index == 0:
+         data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types)};
+        % endif
+    % endfor
       break;""")
 
 # This template is for unary operations that can have operands of a several
@@ -394,6 +402,9 @@ class operation(object):
             return constant_template_vector_insert.render(op=self)
          else:
             return constant_template3.render(op=self)
+      elif self.num_operands == 4:
+         if types_identical_operation in self.flags:
+            return constant_template0.render(op=self)
 
       return None
 
@@ -402,12 +413,14 @@ class operation(object):
       src0 = "op[0]->value.{}[{}]".format(types[0].union_field, indices[0])
       src1 = "op[1]->value.{}[{}]".format(types[1].union_field, indices[1]) if len(types) >= 2 else "ERROR"
       src2 = "op[2]->value.{}[{}]".format(types[2].union_field, indices[2]) if len(types) >= 3 else "ERROR"
+      src3 = "op[3]->value.{}[c]".format(types[3].union_field) if len(types) >= 4 else "ERROR"
 
       expr = self.c_expression[types[0].union_field] if types[0].union_field in self.c_expression else self.c_expression['default']
 
       return expr.format(src0=src0,
                          src1=src1,
-                         src2=src2)
+                         src2=src2,
+                         src3=src3)
 
 
    def signatures(self):
@@ -657,7 +670,11 @@ ir_expression_operation = [
    # operand2 is the index in operand0 to be modified
    operation("vector_insert", 3, source_types=all_types, c_expression="anything-except-None"),
 
-   operation("bitfield_insert", 4),
+   operation("bitfield_insert", 4,
+             all_signatures=((uint_type, (uint_type, uint_type, int_type, int_type)),
+                             (int_type, (int_type, int_type, int_type, int_type))),
+             c_expression="bitfield_insert({src0}, {src1}, {src2}, {src3})",
+             flags=types_identical_operation),
 
    operation("vector", 4),
 ]
