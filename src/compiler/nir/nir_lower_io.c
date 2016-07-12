@@ -265,7 +265,8 @@ nir_lower_io_block(nir_block *block,
          continue;
       }
 
-      nir_variable_mode mode = intrin->variables[0]->var->data.mode;
+      nir_variable *var = intrin->variables[0]->var;
+      nir_variable_mode mode = var->data.mode;
 
       if ((state->modes & mode) == 0)
          continue;
@@ -280,9 +281,9 @@ nir_lower_io_block(nir_block *block,
 
       switch (intrin->intrinsic) {
       case nir_intrinsic_load_var: {
-         bool per_vertex =
-            is_per_vertex_input(state, intrin->variables[0]->var) ||
-            is_per_vertex_output(state, intrin->variables[0]->var);
+         const bool per_vertex =
+            is_per_vertex_input(state, var) ||
+            is_per_vertex_output(state, var);
 
          nir_ssa_def *offset;
          nir_ssa_def *vertex_index;
@@ -297,15 +298,13 @@ nir_lower_io_block(nir_block *block,
          load->num_components = intrin->num_components;
 
          nir_intrinsic_set_base(load,
-            intrin->variables[0]->var->data.driver_location);
+            var->data.driver_location);
          if (mode == nir_var_shader_in || mode == nir_var_shader_out) {
-            nir_intrinsic_set_component(load,
-               intrin->variables[0]->var->data.location_frac);
+            nir_intrinsic_set_component(load, var->data.location_frac);
          }
 
          if (load->intrinsic == nir_intrinsic_load_uniform) {
-            nir_intrinsic_set_range(load,
-               state->type_size(intrin->variables[0]->var->type));
+            nir_intrinsic_set_range(load, state->type_size(var->type));
          }
 
          if (per_vertex)
@@ -334,8 +333,7 @@ nir_lower_io_block(nir_block *block,
          nir_ssa_def *offset;
          nir_ssa_def *vertex_index;
 
-         bool per_vertex =
-            is_per_vertex_output(state, intrin->variables[0]->var);
+         const bool per_vertex = is_per_vertex_output(state, var);
 
          offset = get_io_offset(b, intrin->variables[0],
                                 per_vertex ? &vertex_index : NULL,
@@ -349,10 +347,9 @@ nir_lower_io_block(nir_block *block,
          nir_src_copy(&store->src[0], &intrin->src[0], store);
 
          nir_intrinsic_set_base(store,
-            intrin->variables[0]->var->data.driver_location);
+            var->data.driver_location);
          if (mode == nir_var_shader_out) {
-            nir_intrinsic_set_component(store,
-               intrin->variables[0]->var->data.location_frac);
+            nir_intrinsic_set_component(store, var->data.location_frac);
          }
          nir_intrinsic_set_write_mask(store, nir_intrinsic_write_mask(intrin));
 
@@ -389,8 +386,7 @@ nir_lower_io_block(nir_block *block,
 
          atomic->src[0] = nir_src_for_ssa(offset);
 
-         atomic->const_index[0] =
-            intrin->variables[0]->var->data.driver_location;
+         atomic->const_index[0] = var->data.driver_location;
 
          for (unsigned i = 0;
               i < nir_op_infos[intrin->intrinsic].num_inputs;
