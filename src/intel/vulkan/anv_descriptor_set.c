@@ -409,6 +409,11 @@ anv_descriptor_set_create(struct anv_device *device,
       (struct anv_buffer_view *) &set->descriptors[layout->size];
    set->buffer_count = layout->buffer_count;
 
+   /* By defining the descriptors to be zero now, we can later verify that
+    * a descriptor has not been populated with user data.
+    */
+   memset(set->descriptors, 0, sizeof(struct anv_descriptor) * layout->size);
+
    /* Go through and fill out immutable samplers if we have any */
    struct anv_descriptor *desc = set->descriptors;
    for (uint32_t b = 0; b < layout->binding_count; b++) {
