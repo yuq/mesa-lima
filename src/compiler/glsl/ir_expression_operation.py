@@ -181,7 +181,7 @@ constant_template_vector_scalar = mako.template.Template("""\
          switch (op[0]->type->base_type) {
     % for dst_type, src_types in op.signatures():
          case ${src_types[0].glsl_type}:
-            data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types, ("c0", "c1"))};
+            data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types, ("c0", "c1", "c2"))};
             break;
     % endfor
          default:
@@ -297,18 +297,22 @@ class operation(object):
             return constant_template5.render(op=self)
          else:
             return constant_template3.render(op=self)
+      elif self.num_operands == 3:
+         return constant_template3.render(op=self)
 
       return None
 
 
-   def get_c_expression(self, types, indices=("c", "c")):
+   def get_c_expression(self, types, indices=("c", "c", "c")):
       src0 = "op[0]->value.{}[{}]".format(types[0].union_field, indices[0])
       src1 = "op[1]->value.{}[{}]".format(types[1].union_field, indices[1]) if len(types) >= 2 else "ERROR"
+      src2 = "op[2]->value.{}[{}]".format(types[2].union_field, indices[2]) if len(types) >= 3 else "ERROR"
 
       expr = self.c_expression[types[0].union_field] if types[0].union_field in self.c_expression else self.c_expression['default']
 
       return expr.format(src0=src0,
-                         src1=src1)
+                         src1=src1,
+                         src2=src2)
 
 
    def signatures(self):
@@ -533,7 +537,7 @@ ir_expression_operation = [
    operation("interpolate_at_sample", 2),
 
    # Fused floating-point multiply-add, part of ARB_gpu_shader5.
-   operation("fma", 3),
+   operation("fma", 3, source_types=real_types, c_expression="{src0} * {src1} + {src2}"),
 
    operation("lrp", 3),
 
@@ -545,7 +549,11 @@ ir_expression_operation = [
    # See also lower_instructions_visitor::ldexp_to_arith
    operation("csel", 3),
 
-   operation("bitfield_extract", 3),
+   operation("bitfield_extract", 3,
+             all_signatures=((int_type, (uint_type, int_type, int_type)),
+                             (int_type, (int_type, int_type, int_type))),
+             c_expression={'u': "bitfield_extract_uint({src0}, {src1}, {src2})",
+                           'i': "bitfield_extract_int({src0}, {src1}, {src2})"}),
 
    # Generate a value with one field of a vector changed
    #
