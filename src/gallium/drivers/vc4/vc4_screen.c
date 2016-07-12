@@ -72,7 +72,16 @@ uint32_t vc4_debug;
 static const char *
 vc4_screen_get_name(struct pipe_screen *pscreen)
 {
-        return "VC4";
+        struct vc4_screen *screen = vc4_screen(pscreen);
+
+        if (!screen->name) {
+                screen->name = ralloc_asprintf(screen,
+                                               "VC4 V3D %d.%d",
+                                               screen->v3d_ver / 10,
+                                               screen->v3d_ver % 10);
+        }
+
+        return screen->name;
 }
 
 static const char *

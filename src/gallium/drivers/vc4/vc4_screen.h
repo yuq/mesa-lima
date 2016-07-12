@@ -52,6 +52,8 @@ struct vc4_screen {
 
         int v3d_ver;
 
+        const char *name;
+
         void *simulator_mem_base;
         uint32_t simulator_mem_size;
 
