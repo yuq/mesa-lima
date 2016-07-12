@@ -1180,7 +1180,7 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
       } else {
          /* Smooth/noperspective interpolation case. */
          for (unsigned int i = 0; i < type->vector_elements; i++) {
-            struct brw_reg interp = interp_reg(*location, i);
+            fs_reg interp(interp_reg(*location, i));
             if (devinfo->needs_unlit_centroid_workaround && mod_centroid) {
                /* Get the pixel/sample mask into f0 so that we know
                 * which pixels are lit.  Then, for each channel that is
@@ -1190,14 +1190,14 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
                bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
 
                fs_inst *inst;
-               inst = emit_linterp(*attr, fs_reg(interp), interpolation_mode,
+               inst = emit_linterp(*attr, interp, interpolation_mode,
                                    false, false);
                inst->predicate = BRW_PREDICATE_NORMAL;
                inst->predicate_inverse = true;
                if (devinfo->has_pln)
                   inst->no_dd_clear = true;
 
-               inst = emit_linterp(*attr, fs_reg(interp), interpolation_mode,
+               inst = emit_linterp(*attr, interp, interpolation_mode,
                                    mod_centroid, mod_sample);
                inst->predicate = BRW_PREDICATE_NORMAL;
                inst->predicate_inverse = false;
@@ -1205,7 +1205,7 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
                   inst->no_dd_check = true;
 
             } else {
-               emit_linterp(*attr, fs_reg(interp), interpolation_mode,
+               emit_linterp(*attr, interp, interpolation_mode,
                             mod_centroid, mod_sample);
             }
             if (devinfo->gen < 6 && interpolation_mode == INTERP_QUALIFIER_SMOOTH) {
