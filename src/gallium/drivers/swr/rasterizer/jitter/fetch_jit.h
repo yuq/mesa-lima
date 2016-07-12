@@ -80,12 +80,12 @@ enum ComponentEnable
 
 enum ComponentControl
 {
-    NoStore     = 0,
-    StoreSrc    = 1,
-    Store0      = 2,
-    Store1Fp    = 3,
-    Store1Int   = 4,
-    StoreVertexId = 5,
+    NoStore         = 0,
+    StoreSrc        = 1,
+    Store0          = 2,
+    Store1Fp        = 3,
+    Store1Int       = 4,
+    StoreVertexId   = 5,
     StoreInstanceId = 6
 };
 

@@ -324,16 +324,13 @@ public:
         }
 
         // assemble attribs
-        DWORD slot = 0;
-        uint32_t mapIdx = 0;
-        uint32_t tmpLinkage = this->state.linkageMask;
+        const SWR_BACKEND_STATE& backendState = this->state.backendState;
 
         int32_t maxSlot = -1;
-        while (_BitScanForward(&slot, tmpLinkage))
+        for (uint32_t slot = 0; slot < backendState.numAttributes; ++slot)
         {
-            tmpLinkage &= ~(1 << slot);
             // Compute absolute attrib slot in vertex array
-            uint32_t mapSlot = this->state.linkageMap[mapIdx++];
+            uint32_t mapSlot = backendState.swizzleEnable ? backendState.swizzleMap[slot].sourceAttrib : slot;
             maxSlot = std::max<int32_t>(maxSlot, mapSlot);
             uint32_t inputSlot = VERTEX_ATTRIB_START_SLOT + mapSlot;
 

@@ -938,13 +938,34 @@ struct SWR_RASTSTATE
     uint8_t clipDistanceMask;
 };
 
+enum SWR_CONSTANT_SOURCE
+{
+    SWR_CONSTANT_SOURCE_CONST_0000,
+    SWR_CONSTANT_SOURCE_CONST_0001_FLOAT,
+    SWR_CONSTANT_SOURCE_CONST_1111_FLOAT,
+    SWR_CONSTANT_SOURCE_PRIM_ID
+};
+
+struct SWR_ATTRIB_SWIZZLE
+{
+    uint16_t sourceAttrib : 5;          // source attribute 
+    uint16_t constantSource : 2;        // constant source to apply
+    uint16_t componentOverrideMask : 4; // override component with constant source
+};
+
 // backend state
 struct SWR_BACKEND_STATE
 {
-    uint32_t constantInterpolationMask;
-    uint32_t pointSpriteTexCoordMask;
-    uint8_t numAttributes;
-    uint8_t numComponents[KNOB_NUM_ATTRIBUTES];
+    uint32_t constantInterpolationMask;     // bitmask indicating which attributes have constant interpolation
+    uint32_t pointSpriteTexCoordMask;       // bitmask indicating the attribute(s) which should be interpreted as tex coordinates
+
+    uint8_t numAttributes;                  // total number of attributes to send to backend (up to 32)
+    uint8_t numComponents[32];              // number of components to setup per attribute, this reduces some calculations for unneeded components
+
+    bool swizzleEnable;                 // when enabled, core will parse the swizzle map when 
+                                        // setting up attributes for the backend, otherwise
+                                        // all attributes up to numAttributes will be sent
+    SWR_ATTRIB_SWIZZLE swizzleMap[32];
 };
 
 

@@ -264,15 +264,8 @@ OSALIGNLINE(struct) API_STATE
     PFN_DS_FUNC             pfnDsFunc;
     SWR_TS_STATE            tsState;
 
-    // Specifies which VS outputs are sent to PS.
-    // Does not include position
-    uint32_t                linkageMask; 
-    uint32_t                linkageCount;
-    uint8_t                 linkageMap[MAX_ATTRIBUTES];
-
-    // attrib mask, specifies the total set of attributes used
-    // by the frontend (vs, so, gs)
-    uint32_t                feAttribMask;
+    // Number of attributes used by the frontend (vs, so, gs)
+    uint32_t                feNumAttributes;
 
     PRIMITIVE_TOPOLOGY      topology;
     bool                    forceFront;

@@ -330,19 +330,6 @@ void SWR_API SwrSetBlendFunc(
     PFN_BLEND_JIT_FUNC pfnBlendFunc);
 
 //////////////////////////////////////////////////////////////////////////
-/// @brief Set linkage mask
-/// @param hContext - Handle passed back from SwrCreateContext
-/// @param mask - Specifies which vertex outputs are are needed by PS.
-/// @param pMap - (Optional)Linkage map to specify where FE attributes are
-///               gathered from to supply PS attribute values.  The length
-///               of the map buffer needs to match the number of set bits
-///               in "mask".
-void SWR_API SwrSetLinkage(
-    HANDLE hContext,
-    uint32_t mask,
-    const uint8_t* pMap);
-
-//////////////////////////////////////////////////////////////////////////
 /// @brief SwrDraw
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param topology - Specifies topology for draw.

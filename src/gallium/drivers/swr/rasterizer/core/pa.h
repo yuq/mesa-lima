@@ -1169,15 +1169,8 @@ struct PA_FACTORY
             topo == TOP_LINE_LIST_ADJ || topo == TOP_LISTSTRIP_ADJ || topo == TOP_TRI_LIST_ADJ || topo == TOP_TRI_STRIP_ADJ)))
         {
             memset(&indexStore, 0, sizeof(indexStore));
-            DWORD numAttribs;
-            if (_BitScanReverse(&numAttribs, state.feAttribMask))
-            {
-                numAttribs++;
-            }
-            else
-            {
-                numAttribs = 0;
-            }
+            uint32_t numAttribs = state.feNumAttributes;
+
             new (&this->paCut) PA_STATE_CUT(pDC, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * KNOB_SIMD_WIDTH, 
                 &this->indexStore[0], numVerts, numAttribs, state.topology, false);
             cutPA = true;

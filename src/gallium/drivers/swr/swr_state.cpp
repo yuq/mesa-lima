@@ -1373,16 +1373,13 @@ swr_update_derived(struct pipe_context *pipe,
       }
    }
 
-   uint32_t linkage = ctx->vs->linkageMask;
-   if (ctx->rasterizer->sprite_coord_enable)
-      linkage |= (1 << ctx->vs->info.base.num_outputs);
-
-   SwrSetLinkage(ctx->swrContext, linkage, NULL);
-
    // set up backend state
    SWR_BACKEND_STATE backendState = {0};
-   backendState.numAttributes = 1;
-   backendState.numComponents[0] = 4;
+   backendState.numAttributes =
+      ctx->vs->info.base.num_outputs - 1 +
+      (ctx->rasterizer->sprite_coord_enable ? 1 : 0);
+   for (unsigned i = 0; i < backendState.numAttributes; i++)
+      backendState.numComponents[i] = 4;
    backendState.constantInterpolationMask =
       ctx->rasterizer->flatshade ?
       ctx->fs->flatConstantMask :

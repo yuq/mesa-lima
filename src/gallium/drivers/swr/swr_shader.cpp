@@ -157,18 +157,6 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
 {
    struct swr_vertex_shader *swr_vs = ctx->vs;
 
-   swr_vs->linkageMask = 0;
-
-   for (unsigned i = 0; i < swr_vs->info.base.num_outputs; i++) {
-      switch (swr_vs->info.base.output_semantic_name[i]) {
-      case TGSI_SEMANTIC_POSITION:
-         break;
-      default:
-         swr_vs->linkageMask |= (1 << i);
-         break;
-      }
-   }
-
    LLVMValueRef inputs[PIPE_MAX_SHADER_INPUTS][TGSI_NUM_CHANNELS];
    LLVMValueRef outputs[PIPE_MAX_SHADER_OUTPUTS][TGSI_NUM_CHANNELS];
 

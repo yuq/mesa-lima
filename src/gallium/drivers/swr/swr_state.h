@@ -53,7 +53,6 @@ typedef ShaderVariant<PFN_PIXEL_KERNEL> VariantFS;
 struct swr_vertex_shader {
    struct pipe_shader_state pipe;
    struct lp_tgsi_info info;
-   unsigned linkageMask;
    std::unordered_map<swr_jit_vs_key, std::unique_ptr<VariantVS>> map;
    SWR_STREAMOUT_STATE soState;
    PFN_SO_FUNC soFunc[PIPE_PRIM_MAX] {0};

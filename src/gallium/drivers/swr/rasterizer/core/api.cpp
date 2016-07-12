@@ -606,31 +606,6 @@ void SwrSetBlendFunc(
     pState->pfnBlendFunc[renderTarget] = pfnBlendFunc;
 }
 
-void SwrSetLinkage(
-    HANDLE hContext,
-    uint32_t mask,
-    const uint8_t* pMap)
-{
-    API_STATE* pState = GetDrawState(GetContext(hContext));
-
-    static const uint8_t IDENTITY_MAP[] =
-    {
-         0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
-        16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-    };
-    static_assert(sizeof(IDENTITY_MAP) == sizeof(pState->linkageMap),
-        "Update for new value of MAX_ATTRIBUTES");
-
-    pState->linkageMask = mask;
-    pState->linkageCount = _mm_popcnt_u32(mask);
-
-    if (!pMap)
-    {
-        pMap = IDENTITY_MAP;
-    }
-    memcpy(pState->linkageMap, pMap, pState->linkageCount);
-}
-
 // update guardband multipliers for the viewport
 void updateGuardband(API_STATE *pState)
 {
@@ -847,25 +822,44 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
         (pState->state.depthStencilState.depthWriteEnable == FALSE) &&
         (pState->state.depthStencilState.stencilTestEnable == FALSE) &&
         (pState->state.depthStencilState.stencilWriteEnable == FALSE) &&
-        (pState->state.linkageCount == 0))
+        (pState->state.backendState.numAttributes == 0))
     {
         pState->pfnProcessPrims = nullptr;
-        pState->state.linkageMask = 0;
     }
 
     if (pState->state.soState.rasterizerDisable == true)
     {
         pState->pfnProcessPrims = nullptr;
-        pState->state.linkageMask = 0;
     }
 
-    // set up the frontend attrib mask
-    pState->state.feAttribMask = pState->state.linkageMask;
+    // set up the frontend attribute count
+    pState->state.feNumAttributes = 0;
+    const SWR_BACKEND_STATE& backendState = pState->state.backendState;
+    if (backendState.swizzleEnable)
+    {
+        // attribute swizzling is enabled, iterate over the map and record the max attribute used
+        for (uint32_t i = 0; i < backendState.numAttributes; ++i)
+        {
+            pState->state.feNumAttributes = std::max(pState->state.feNumAttributes, (uint32_t)backendState.swizzleMap[i].sourceAttrib + 1);
+        }
+    }
+    else
+    {
+        pState->state.feNumAttributes = pState->state.backendState.numAttributes;
+    }
+
     if (pState->state.soState.soEnable)
     {
+        uint32_t streamMasks = 0;
         for (uint32_t i = 0; i < 4; ++i)
         {
-            pState->state.feAttribMask |= pState->state.soState.streamMasks[i];
+            streamMasks |= pState->state.soState.streamMasks[i];
+        }
+
+        DWORD maxAttrib;
+        if (_BitScanReverse(&maxAttrib, streamMasks))
+        {
+            pState->state.feNumAttributes = std::max(pState->state.feNumAttributes, (uint32_t)(maxAttrib + 1));
         }
     }
 
