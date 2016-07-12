@@ -36,7 +36,6 @@ fs_visitor::emit_nir_code()
    /* emit the arrays used for inputs and outputs - load/store intrinsics will
     * be converted to reads/writes of these arrays
     */
-   nir_setup_inputs();
    nir_setup_outputs();
    nir_setup_uniforms();
    nir_emit_system_values();
@@ -46,38 +45,6 @@ fs_visitor::emit_nir_code()
       assert(strcmp(function->name, "main") == 0);
       assert(function->impl);
       nir_emit_impl(function->impl);
-   }
-}
-
-void
-fs_visitor::nir_setup_inputs()
-{
-   if (stage != MESA_SHADER_FRAGMENT)
-      return;
-
-   nir_inputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_inputs);
-
-   nir_foreach_variable(var, &nir->inputs) {
-      fs_reg input = offset(nir_inputs, bld, var->data.driver_location);
-
-      fs_reg reg;
-      if (var->data.location == VARYING_SLOT_POS) {
-         emit_fragcoord_interpolation(input);
-      } else if (var->data.location == VARYING_SLOT_LAYER) {
-         struct brw_reg reg = suboffset(interp_reg(VARYING_SLOT_LAYER, 1), 3);
-         reg.type = BRW_REGISTER_TYPE_D;
-         bld.emit(FS_OPCODE_CINTERP, retype(input, BRW_REGISTER_TYPE_D), reg);
-      } else if (var->data.location == VARYING_SLOT_VIEWPORT) {
-         struct brw_reg reg = suboffset(interp_reg(VARYING_SLOT_VIEWPORT, 2), 3);
-         reg.type = BRW_REGISTER_TYPE_D;
-         bld.emit(FS_OPCODE_CINTERP, retype(input, BRW_REGISTER_TYPE_D), reg);
-      } else {
-         int location = var->data.location;
-         emit_general_interpolation(&input, var->name, var->type,
-                                    (glsl_interp_mode) var->data.interpolation,
-                                    &location, var->data.centroid,
-                                    var->data.sample);
-      }
    }
 }
 
@@ -3141,7 +3108,6 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
                                   nir_intrinsic_instr *instr)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   const struct brw_wm_prog_key *wm_key = (const struct brw_wm_prog_key *) key;
 
    fs_reg dest;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
@@ -3198,189 +3164,245 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       break;
    }
 
-   case nir_intrinsic_interp_var_at_centroid:
-   case nir_intrinsic_interp_var_at_sample:
-   case nir_intrinsic_interp_var_at_offset: {
-      /* Handle ARB_gpu_shader5 interpolation intrinsics
-       *
-       * It's worth a quick word of explanation as to why we handle the full
-       * variable-based interpolation intrinsic rather than a lowered version
-       * with like we do for other inputs.  We have to do that because the way
-       * we set up inputs doesn't allow us to use the already setup inputs for
-       * interpolation.  At the beginning of the shader, we go through all of
-       * the input variables and do the initial interpolation and put it in
-       * the nir_inputs array based on its location as determined in
-       * nir_lower_io.  If the input isn't used, dead code cleans up and
-       * everything works fine.  However, when we get to the ARB_gpu_shader5
-       * interpolation intrinsics, we need to reinterpolate the input
-       * differently.  If we used an intrinsic that just had an index it would
-       * only give us the offset into the nir_inputs array.  However, this is
-       * useless because that value is post-interpolation and we need
-       * pre-interpolation.  In order to get the actual location of the bits
-       * we get from the vertex fetching hardware, we need the variable.
-       */
-      fs_reg dst_xy = bld.vgrf(BRW_REGISTER_TYPE_F, 2);
-      const glsl_interp_mode interpolation =
-         (glsl_interp_mode) instr->variables[0]->var->data.interpolation;
+   case nir_intrinsic_load_input: {
+      /* load_input is only used for flat inputs */
+      unsigned base = nir_intrinsic_base(instr);
+      unsigned component = nir_intrinsic_component(instr);
+      unsigned num_components = instr->num_components;
+      enum brw_reg_type type = dest.type;
 
-      switch (instr->intrinsic) {
-      case nir_intrinsic_interp_var_at_centroid:
-         emit_pixel_interpolater_send(bld,
-                                      FS_OPCODE_INTERPOLATE_AT_CENTROID,
-                                      dst_xy,
-                                      fs_reg(), /* src */
-                                      brw_imm_ud(0u),
-                                      interpolation);
-         break;
+      /* Special case fields in the VUE header */
+      if (base == VARYING_SLOT_LAYER)
+         component = 1;
+      else if (base == VARYING_SLOT_VIEWPORT)
+         component = 2;
 
-      case nir_intrinsic_interp_var_at_sample: {
-         if (!wm_key->multisample_fbo) {
-            /* From the ARB_gpu_shader5 specification:
-             * "If multisample buffers are not available, the input varying
-             *  will be evaluated at the center of the pixel."
-             */
-            emit_pixel_interpolater_send(bld,
-                                         FS_OPCODE_INTERPOLATE_AT_CENTROID,
-                                         dst_xy,
-                                         fs_reg(), /* src */
-                                         brw_imm_ud(0u),
-                                         interpolation);
-            break;
-         }
-
-         nir_const_value *const_sample = nir_src_as_const_value(instr->src[0]);
-
-         if (const_sample) {
-            unsigned msg_data = const_sample->i32[0] << 4;
-
-            emit_pixel_interpolater_send(bld,
-                                         FS_OPCODE_INTERPOLATE_AT_SAMPLE,
-                                         dst_xy,
-                                         fs_reg(), /* src */
-                                         brw_imm_ud(msg_data),
-                                         interpolation);
-         } else {
-            const fs_reg sample_src = retype(get_nir_src(instr->src[0]),
-                                             BRW_REGISTER_TYPE_UD);
-
-            if (nir_src_is_dynamically_uniform(instr->src[0])) {
-               const fs_reg sample_id = bld.emit_uniformize(sample_src);
-               const fs_reg msg_data = vgrf(glsl_type::uint_type);
-               bld.exec_all().group(1, 0)
-                  .SHL(msg_data, sample_id, brw_imm_ud(4u));
-               emit_pixel_interpolater_send(bld,
-                                            FS_OPCODE_INTERPOLATE_AT_SAMPLE,
-                                            dst_xy,
-                                            fs_reg(), /* src */
-                                            msg_data,
-                                            interpolation);
-            } else {
-               /* Make a loop that sends a message to the pixel interpolater
-                * for the sample number in each live channel. If there are
-                * multiple channels with the same sample number then these
-                * will be handled simultaneously with a single interation of
-                * the loop.
-                */
-               bld.emit(BRW_OPCODE_DO);
-
-               /* Get the next live sample number into sample_id_reg */
-               const fs_reg sample_id = bld.emit_uniformize(sample_src);
-
-               /* Set the flag register so that we can perform the send
-                * message on all channels that have the same sample number
-                */
-               bld.CMP(bld.null_reg_ud(),
-                       sample_src, sample_id,
-                       BRW_CONDITIONAL_EQ);
-               const fs_reg msg_data = vgrf(glsl_type::uint_type);
-               bld.exec_all().group(1, 0)
-                  .SHL(msg_data, sample_id, brw_imm_ud(4u));
-               fs_inst *inst =
-                  emit_pixel_interpolater_send(bld,
-                                               FS_OPCODE_INTERPOLATE_AT_SAMPLE,
-                                               dst_xy,
-                                               fs_reg(), /* src */
-                                               msg_data,
-                                               interpolation);
-               set_predicate(BRW_PREDICATE_NORMAL, inst);
-
-               /* Continue the loop if there are any live channels left */
-               set_predicate_inv(BRW_PREDICATE_NORMAL,
-                                 true, /* inverse */
-                                 bld.emit(BRW_OPCODE_WHILE));
-            }
-         }
-
-         break;
+      if (nir_dest_bit_size(instr->dest) == 64) {
+         /* const_index is in 32-bit type size units that could not be aligned
+          * with DF. We need to read the double vector as if it was a float
+          * vector of twice the number of components to fetch the right data.
+          */
+         type = BRW_REGISTER_TYPE_F;
+         num_components *= 2;
       }
 
-      case nir_intrinsic_interp_var_at_offset: {
-         nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
-
-         if (const_offset) {
-            unsigned off_x = MIN2((int)(const_offset->f32[0] * 16), 7) & 0xf;
-            unsigned off_y = MIN2((int)(const_offset->f32[1] * 16), 7) & 0xf;
-
-            emit_pixel_interpolater_send(bld,
-                                         FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET,
-                                         dst_xy,
-                                         fs_reg(), /* src */
-                                         brw_imm_ud(off_x | (off_y << 4)),
-                                         interpolation);
-         } else {
-            fs_reg src = vgrf(glsl_type::ivec2_type);
-            fs_reg offset_src = retype(get_nir_src(instr->src[0]),
-                                       BRW_REGISTER_TYPE_F);
-            for (int i = 0; i < 2; i++) {
-               fs_reg temp = vgrf(glsl_type::float_type);
-               bld.MUL(temp, offset(offset_src, bld, i), brw_imm_f(16.0f));
-               fs_reg itemp = vgrf(glsl_type::int_type);
-               /* float to int */
-               bld.MOV(itemp, temp);
-
-               /* Clamp the upper end of the range to +7/16.
-                * ARB_gpu_shader5 requires that we support a maximum offset
-                * of +0.5, which isn't representable in a S0.4 value -- if
-                * we didn't clamp it, we'd end up with -8/16, which is the
-                * opposite of what the shader author wanted.
-                *
-                * This is legal due to ARB_gpu_shader5's quantization
-                * rules:
-                *
-                * "Not all values of <offset> may be supported; x and y
-                * offsets may be rounded to fixed-point values with the
-                * number of fraction bits given by the
-                * implementation-dependent constant
-                * FRAGMENT_INTERPOLATION_OFFSET_BITS"
-                */
-               set_condmod(BRW_CONDITIONAL_L,
-                           bld.SEL(offset(src, bld, i), itemp, brw_imm_d(7)));
-            }
-
-            const enum opcode opcode = FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET;
-            emit_pixel_interpolater_send(bld,
-                                         opcode,
-                                         dst_xy,
-                                         src,
-                                         brw_imm_ud(0u),
-                                         interpolation);
-         }
-         break;
+      for (unsigned int i = 0; i < num_components; i++) {
+         struct brw_reg interp = interp_reg(base, component + i);
+         interp = suboffset(interp, 3);
+         bld.emit(FS_OPCODE_CINTERP, offset(retype(dest, type), bld, i),
+                  retype(fs_reg(interp), type));
       }
 
-      default:
-         unreachable("Invalid intrinsic");
-      }
-
-      for (unsigned j = 0; j < instr->num_components; j++) {
-         fs_reg src = interp_reg(instr->variables[0]->var->data.location, j);
-         src.type = dest.type;
-
-         bld.emit(FS_OPCODE_LINTERP, dest, dst_xy, src);
-         dest = offset(dest, bld, 1);
+      if (nir_dest_bit_size(instr->dest) == 64) {
+         shuffle_32bit_load_result_to_64bit_data(bld,
+                                                 dest,
+                                                 retype(dest, type),
+                                                 instr->num_components);
       }
       break;
    }
+
+   case nir_intrinsic_load_barycentric_pixel:
+   case nir_intrinsic_load_barycentric_centroid:
+   case nir_intrinsic_load_barycentric_sample:
+      /* Do nothing - load_interpolated_input handling will handle it later. */
+      break;
+
+   case nir_intrinsic_load_barycentric_at_sample: {
+      const glsl_interp_mode interpolation =
+         (enum glsl_interp_mode) nir_intrinsic_interp_mode(instr);
+
+      nir_const_value *const_sample = nir_src_as_const_value(instr->src[0]);
+
+      if (const_sample) {
+         unsigned msg_data = const_sample->i32[0] << 4;
+
+         emit_pixel_interpolater_send(bld,
+                                      FS_OPCODE_INTERPOLATE_AT_SAMPLE,
+                                      dest,
+                                      fs_reg(), /* src */
+                                      brw_imm_ud(msg_data),
+                                      interpolation);
+      } else {
+         const fs_reg sample_src = retype(get_nir_src(instr->src[0]),
+                                          BRW_REGISTER_TYPE_UD);
+
+         if (nir_src_is_dynamically_uniform(instr->src[0])) {
+            const fs_reg sample_id = bld.emit_uniformize(sample_src);
+            const fs_reg msg_data = vgrf(glsl_type::uint_type);
+            bld.exec_all().group(1, 0)
+               .SHL(msg_data, sample_id, brw_imm_ud(4u));
+            emit_pixel_interpolater_send(bld,
+                                         FS_OPCODE_INTERPOLATE_AT_SAMPLE,
+                                         dest,
+                                         fs_reg(), /* src */
+                                         msg_data,
+                                         interpolation);
+         } else {
+            /* Make a loop that sends a message to the pixel interpolater
+             * for the sample number in each live channel. If there are
+             * multiple channels with the same sample number then these
+             * will be handled simultaneously with a single interation of
+             * the loop.
+             */
+            bld.emit(BRW_OPCODE_DO);
+
+            /* Get the next live sample number into sample_id_reg */
+            const fs_reg sample_id = bld.emit_uniformize(sample_src);
+
+            /* Set the flag register so that we can perform the send
+             * message on all channels that have the same sample number
+             */
+            bld.CMP(bld.null_reg_ud(),
+                    sample_src, sample_id,
+                    BRW_CONDITIONAL_EQ);
+            const fs_reg msg_data = vgrf(glsl_type::uint_type);
+            bld.exec_all().group(1, 0)
+               .SHL(msg_data, sample_id, brw_imm_ud(4u));
+            fs_inst *inst =
+               emit_pixel_interpolater_send(bld,
+                                            FS_OPCODE_INTERPOLATE_AT_SAMPLE,
+                                            dest,
+                                            fs_reg(), /* src */
+                                            msg_data,
+                                            interpolation);
+            set_predicate(BRW_PREDICATE_NORMAL, inst);
+
+            /* Continue the loop if there are any live channels left */
+            set_predicate_inv(BRW_PREDICATE_NORMAL,
+                              true, /* inverse */
+                              bld.emit(BRW_OPCODE_WHILE));
+         }
+      }
+      break;
+   }
+
+   case nir_intrinsic_load_barycentric_at_offset: {
+      const glsl_interp_mode interpolation =
+         (enum glsl_interp_mode) nir_intrinsic_interp_mode(instr);
+
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
+
+      if (const_offset) {
+         unsigned off_x = MIN2((int)(const_offset->f32[0] * 16), 7) & 0xf;
+         unsigned off_y = MIN2((int)(const_offset->f32[1] * 16), 7) & 0xf;
+
+         emit_pixel_interpolater_send(bld,
+                                      FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET,
+                                      dest,
+                                      fs_reg(), /* src */
+                                      brw_imm_ud(off_x | (off_y << 4)),
+                                      interpolation);
+      } else {
+         fs_reg src = vgrf(glsl_type::ivec2_type);
+         fs_reg offset_src = retype(get_nir_src(instr->src[0]),
+                                    BRW_REGISTER_TYPE_F);
+         for (int i = 0; i < 2; i++) {
+            fs_reg temp = vgrf(glsl_type::float_type);
+            bld.MUL(temp, offset(offset_src, bld, i), brw_imm_f(16.0f));
+            fs_reg itemp = vgrf(glsl_type::int_type);
+            /* float to int */
+            bld.MOV(itemp, temp);
+
+            /* Clamp the upper end of the range to +7/16.
+             * ARB_gpu_shader5 requires that we support a maximum offset
+             * of +0.5, which isn't representable in a S0.4 value -- if
+             * we didn't clamp it, we'd end up with -8/16, which is the
+             * opposite of what the shader author wanted.
+             *
+             * This is legal due to ARB_gpu_shader5's quantization
+             * rules:
+             *
+             * "Not all values of <offset> may be supported; x and y
+             * offsets may be rounded to fixed-point values with the
+             * number of fraction bits given by the
+             * implementation-dependent constant
+             * FRAGMENT_INTERPOLATION_OFFSET_BITS"
+             */
+            set_condmod(BRW_CONDITIONAL_L,
+                        bld.SEL(offset(src, bld, i), itemp, brw_imm_d(7)));
+         }
+
+         const enum opcode opcode = FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET;
+         emit_pixel_interpolater_send(bld,
+                                      opcode,
+                                      dest,
+                                      src,
+                                      brw_imm_ud(0u),
+                                      interpolation);
+      }
+      break;
+   }
+
+   case nir_intrinsic_load_interpolated_input: {
+      if (nir_intrinsic_base(instr) == VARYING_SLOT_POS) {
+         emit_fragcoord_interpolation(dest);
+         break;
+      }
+
+      assert(instr->src[0].ssa &&
+             instr->src[0].ssa->parent_instr->type == nir_instr_type_intrinsic);
+      nir_intrinsic_instr *bary_intrinsic =
+         nir_instr_as_intrinsic(instr->src[0].ssa->parent_instr);
+      nir_intrinsic_op bary_intrin = bary_intrinsic->intrinsic;
+      enum glsl_interp_mode interp_mode =
+         (enum glsl_interp_mode) nir_intrinsic_interp_mode(bary_intrinsic);
+      fs_reg dst_xy;
+
+      if (bary_intrin == nir_intrinsic_load_barycentric_at_offset ||
+          bary_intrin == nir_intrinsic_load_barycentric_at_sample) {
+         /* Use the result of the PI message */
+         dst_xy = retype(get_nir_src(instr->src[0]), BRW_REGISTER_TYPE_F);
+      } else {
+         /* Use the delta_xy values computed from the payload */
+         enum brw_barycentric_mode bary =
+            brw_barycentric_mode(interp_mode, bary_intrin);
+
+         dst_xy = this->delta_xy[bary];
+      }
+
+      for (unsigned int i = 0; i < instr->num_components; i++) {
+         fs_reg interp =
+            fs_reg(interp_reg(nir_intrinsic_base(instr),
+                              nir_intrinsic_component(instr) + i));
+         interp.type = BRW_REGISTER_TYPE_F;
+         dest.type = BRW_REGISTER_TYPE_F;
+
+         if (devinfo->needs_unlit_centroid_workaround &&
+             bary_intrin == nir_intrinsic_load_barycentric_centroid) {
+
+            /* Get the pixel/sample mask into f0 so that we know which
+             * pixels are lit.  Then, for each channel that is unlit,
+             * replace the centroid data with non-centroid data.
+             */
+            bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
+
+            fs_reg dest_i = offset(dest, bld, i);
+            fs_reg dst_xy_pixel =
+               delta_xy[brw_barycentric_mode(interp_mode,
+                  nir_intrinsic_load_barycentric_pixel)];
+
+            fs_inst *inst;
+            inst = bld.emit(FS_OPCODE_LINTERP, dest_i, dst_xy_pixel, interp);
+            inst->predicate = BRW_PREDICATE_NORMAL;
+            inst->predicate_inverse = true;
+            inst->no_dd_clear = true;
+
+            inst = bld.emit(FS_OPCODE_LINTERP, dest_i, dst_xy, interp);
+            inst->predicate = BRW_PREDICATE_NORMAL;
+            inst->predicate_inverse = false;
+            inst->no_dd_check = true;
+         } else if (devinfo->gen < 6 && interp_mode == INTERP_MODE_SMOOTH) {
+            fs_reg tmp = vgrf(glsl_type::float_type);
+            bld.emit(FS_OPCODE_LINTERP, tmp, dst_xy, interp);
+            bld.MUL(offset(dest, bld, i), tmp, this->pixel_w);
+         } else {
+            bld.emit(FS_OPCODE_LINTERP, offset(dest, bld, i), dst_xy, interp);
+         }
+      }
+      break;
+   }
+
    default:
       nir_emit_intrinsic(bld, instr);
       break;
@@ -3947,25 +3969,9 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    }
 
    case nir_intrinsic_load_input: {
-      fs_reg src;
+      fs_reg src = fs_reg(ATTR, instr->const_index[0], dest.type);
       unsigned num_components = instr->num_components;
       enum brw_reg_type type = dest.type;
-
-      if (stage == MESA_SHADER_VERTEX) {
-         src = fs_reg(ATTR, instr->const_index[0], dest.type);
-      } else {
-         assert(type_sz(type) >= 4);
-         if (type == BRW_REGISTER_TYPE_DF) {
-            /* const_index is in 32-bit type size units that could not be aligned
-             * with DF. We need to read the double vector as if it was a float
-             * vector of twice the number of components to fetch the right data.
-             */
-            dest = retype(dest, BRW_REGISTER_TYPE_F);
-            num_components *= 2;
-         }
-         src = offset(retype(nir_inputs, dest.type), bld,
-                      instr->const_index[0]);
-      }
 
       nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
       assert(const_offset && "Indirect input loads not allowed");

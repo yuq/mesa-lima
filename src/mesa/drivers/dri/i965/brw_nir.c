@@ -30,7 +30,8 @@ static bool
 is_input(nir_intrinsic_instr *intrin)
 {
    return intrin->intrinsic == nir_intrinsic_load_input ||
-          intrin->intrinsic == nir_intrinsic_load_per_vertex_input;
+          intrin->intrinsic == nir_intrinsic_load_per_vertex_input ||
+          intrin->intrinsic == nir_intrinsic_load_interpolated_input;
 }
 
 static bool
@@ -282,9 +283,16 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
 void
 brw_nir_lower_fs_inputs(nir_shader *nir)
 {
-   nir_assign_var_locations(&nir->inputs, &nir->num_inputs, VARYING_SLOT_VAR0,
-                            type_size_scalar);
-   nir_lower_io(nir, nir_var_shader_in, type_size_scalar);
+   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+      var->data.driver_location = var->data.location;
+   }
+
+   nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+
+   /* This pass needs actual constants */
+   nir_opt_constant_folding(nir);
+
+   add_const_offset_to_base(nir, nir_var_shader_in);
 }
 
 void

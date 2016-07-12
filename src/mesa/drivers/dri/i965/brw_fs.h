@@ -174,11 +174,6 @@ public:
    fs_reg *emit_samplepos_setup();
    fs_reg *emit_sampleid_setup();
    fs_reg *emit_samplemaskin_setup();
-   void emit_general_interpolation(fs_reg *attr, const char *name,
-                                   const glsl_type *type,
-                                   glsl_interp_mode interpolation_mode,
-                                   int *location, bool mod_centroid,
-                                   bool mod_sample);
    fs_reg *emit_vs_system_value(int location);
    void emit_interpolation_setup_gen4();
    void emit_interpolation_setup_gen6();
@@ -195,7 +190,6 @@ public:
    bool opt_zero_samples();
 
    void emit_nir_code();
-   void nir_setup_inputs();
    void nir_setup_single_output_varying(fs_reg *reg, const glsl_type *type,
                                         unsigned *location);
    void nir_setup_outputs();
@@ -511,3 +505,6 @@ void shuffle_64bit_data_for_32bit_write(const brw::fs_builder &bld,
                                         uint32_t components);
 fs_reg setup_imm_df(const brw::fs_builder &bld,
                     double v);
+
+enum brw_barycentric_mode brw_barycentric_mode(enum glsl_interp_mode mode,
+                                               nir_intrinsic_op op);
