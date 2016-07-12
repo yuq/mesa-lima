@@ -84,6 +84,7 @@ float_type = type("float", "f", "GLSL_TYPE_FLOAT")
 double_type = type("double", "d", "GLSL_TYPE_DOUBLE")
 bool_type = type("bool", "b", "GLSL_TYPE_BOOL")
 
+all_types = (uint_type, int_type, float_type, double_type, bool_type)
 numeric_types = (uint_type, int_type, float_type, double_type)
 signed_numeric_types = (int_type, float_type, double_type)
 integer_types = (uint_type, int_type)
@@ -139,6 +140,23 @@ constant_template2 = mako.template.Template("""\
       assert(op[0]->type->base_type == ${op.source_types[0].glsl_type});
       for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.${op.dest_type.union_field}[c] = ${op.get_c_expression(op.source_types)};
+      break;""")
+
+# This template is for operations with an output type that doesn't match the
+# input types.
+constant_template5 = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      for (unsigned c = 0; c < components; c++) {
+         switch (op[0]->type->base_type) {
+    % for dst_type, src_types in op.signatures():
+         case ${src_types[0].glsl_type}:
+            data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types)};
+            break;
+    % endfor
+         default:
+            assert(0);
+         }
+      }
       break;""")
 
 # This template is for binary operations that can operate on some combination
@@ -202,8 +220,10 @@ class operation(object):
          return None
 
       if self.num_operands == 1:
-         if self.dest_type is not None:
+         if self.dest_type is not None and len(self.source_types) == 1:
             return constant_template2.render(op=self)
+         elif self.dest_type is not None:
+            return constant_template5.render(op=self)
          elif len(self.source_types) == 1:
             return constant_template0.render(op=self)
          elif len(self.c_expression) == 1 and 'default' in self.c_expression:
@@ -215,6 +235,8 @@ class operation(object):
             return constant_template_vector_scalar.render(op=self)
          elif len(self.source_types) == 1:
             return constant_template0.render(op=self)
+         elif self.dest_type is not None:
+            return constant_template5.render(op=self)
 
       return None
 
@@ -258,7 +280,7 @@ ir_expression_operation = [
    # Boolean-to-float conversion
    operation("b2f", 1, source_types=(bool_type,), dest_type=float_type, c_expression="{src0} ? 1.0F : 0.0F"),
    # int-to-boolean conversion
-   operation("i2b", 1),
+   operation("i2b", 1, source_types=integer_types, dest_type=bool_type, c_expression="{src0} ? true : false"),
    # Boolean-to-int conversion
    operation("b2i", 1, source_types=(bool_type,), dest_type=int_type, c_expression="{src0} ? 1 : 0"),
    # Unsigned-to-float conversion.
@@ -323,9 +345,9 @@ ir_expression_operation = [
 
    # Bit operations, part of ARB_gpu_shader5.
    operation("bitfield_reverse", 1, source_types=integer_types, c_expression="bitfield_reverse({src0})"),
-   operation("bit_count", 1),
-   operation("find_msb", 1),
-   operation("find_lsb", 1),
+   operation("bit_count", 1, source_types=integer_types, dest_type=int_type, c_expression="_mesa_bitcount({src0})"),
+   operation("find_msb", 1, source_types=integer_types, dest_type=int_type, c_expression={'u': "find_msb_uint({src0})", 'i': "find_msb_int({src0})"}),
+   operation("find_lsb", 1, source_types=integer_types, dest_type=int_type, c_expression="find_msb_uint({src0} & -{src0})"),
 
    operation("saturate", 1, printable_name="sat", source_types=(float_type,), c_expression="CLAMP({src0}, 0.0f, 1.0f)"),
 
@@ -384,12 +406,12 @@ ir_expression_operation = [
 
    # Binary comparison operators which return a boolean vector.
    # The type of both operands must be equal.
-   operation("less", 2, printable_name="<"),
-   operation("greater", 2, printable_name=">"),
-   operation("lequal", 2, printable_name="<="),
-   operation("gequal", 2, printable_name=">="),
-   operation("equal", 2, printable_name="=="),
-   operation("nequal", 2, printable_name="!="),
+   operation("less", 2, printable_name="<", source_types=numeric_types, dest_type=bool_type, c_expression="{src0} < {src1}"),
+   operation("greater", 2, printable_name=">", source_types=numeric_types, dest_type=bool_type, c_expression="{src0} > {src1}"),
+   operation("lequal", 2, printable_name="<=", source_types=numeric_types, dest_type=bool_type, c_expression="{src0} <= {src1}"),
+   operation("gequal", 2, printable_name=">=", source_types=numeric_types, dest_type=bool_type, c_expression="{src0} >= {src1}"),
+   operation("equal", 2, printable_name="==", source_types=all_types, dest_type=bool_type, c_expression="{src0} == {src1}"),
+   operation("nequal", 2, printable_name="!=", source_types=all_types, dest_type=bool_type, c_expression="{src0} != {src1}"),
 
    # Returns single boolean for whether all components of operands[0]
    # equal the components of operands[1].
