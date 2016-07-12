@@ -357,6 +357,24 @@ constant_template_lrp = mako.template.Template("""\
       break;
    }""")
 
+# This template is for ir_triop_csel.  This expression is really unique
+# because not all of the operands are the same type, and the second operand
+# determines the type of the expression (instead of the first).
+constant_template_csel = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      for (unsigned c = 0; c < components; c++) {
+         switch (this->type->base_type) {
+    % for dst_type, src_types in op.signatures():
+         case ${src_types[1].glsl_type}:
+            data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types)};
+            break;
+    % endfor
+         default:
+            assert(0);
+         }
+      }
+      break;""")
+
 
 vector_scalar_operation = "vector-scalar"
 horizontal_operation = "horizontal"
@@ -443,6 +461,8 @@ class operation(object):
             return constant_template_vector_insert.render(op=self)
          elif self.name == "lrp":
             return constant_template_lrp.render(op=self)
+         elif self.name == "csel":
+            return constant_template_csel.render(op=self)
          else:
             return constant_template3.render(op=self)
       elif self.num_operands == 4:
@@ -700,7 +720,9 @@ ir_expression_operation = [
    # component on vectors).
    #
    # See also lower_instructions_visitor::ldexp_to_arith
-   operation("csel", 3),
+   operation("csel", 3,
+             all_signatures=zip(all_types, zip(len(all_types) * (bool_type,), all_types, all_types)),
+             c_expression="{src0} ? {src1} : {src2}"),
 
    operation("bitfield_extract", 3,
              all_signatures=((int_type, (uint_type, int_type, int_type)),
