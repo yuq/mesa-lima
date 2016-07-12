@@ -202,7 +202,7 @@ types_identical_operation = "identical"
 non_assign_operation = "nonassign"
 
 class operation(object):
-   def __init__(self, name, num_operands, printable_name = None, source_types = None, dest_type = None, c_expression = None, flags = None):
+   def __init__(self, name, num_operands, printable_name = None, source_types = None, dest_type = None, c_expression = None, flags = None, all_signatures = None):
       self.name = name
       self.num_operands = num_operands
 
@@ -211,7 +211,13 @@ class operation(object):
       else:
          self.printable_name = printable_name
 
-      self.source_types = source_types
+      self.all_signatures = all_signatures
+
+      if source_types is None:
+         self.source_types = tuple()
+      else:
+         self.source_types = source_types
+
       self.dest_type = dest_type
 
       if c_expression is None:
@@ -261,6 +267,8 @@ class operation(object):
             return constant_template0.render(op=self)
          elif self.dest_type is not None:
             return constant_template5.render(op=self)
+         else:
+            return constant_template3.render(op=self)
 
       return None
 
@@ -276,7 +284,10 @@ class operation(object):
 
 
    def signatures(self):
-      return type_signature_iter(self.dest_type, self.source_types, self.num_operands)
+      if self.all_signatures is not None:
+         return self.all_signatures
+      else:
+         return type_signature_iter(self.dest_type, self.source_types, self.num_operands)
 
 
 ir_expression_operation = [
@@ -469,7 +480,11 @@ ir_expression_operation = [
    operation("ubo_load", 2),
 
    # Multiplies a number by two to a power, part of ARB_gpu_shader5.
-   operation("ldexp", 2),
+   operation("ldexp", 2,
+             all_signatures=((float_type, (float_type, int_type)),
+                             (double_type, (double_type, int_type))),
+             c_expression={'f': "ldexpf_flush_subnormal({src0}, {src1})",
+                           'd': "ldexp_flush_subnormal({src0}, {src1})"}),
 
    # Extract a scalar from a vector
    #
