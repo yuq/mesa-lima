@@ -190,6 +190,56 @@ constant_template_vector_scalar = mako.template.Template("""\
       }
       break;""")
 
+# This template is for multiplication.  It is unique because it has to support
+# matrix * vector and matrix * matrix operations, and those are just different.
+constant_template_mul = mako.template.Template("""\
+   case ${op.get_enum_name()}:
+      /* Check for equal types, or unequal types involving scalars */
+      if ((op[0]->type == op[1]->type && !op[0]->type->is_matrix())
+          || op0_scalar || op1_scalar) {
+         for (unsigned c = 0, c0 = 0, c1 = 0;
+              c < components;
+              c0 += c0_inc, c1 += c1_inc, c++) {
+
+            switch (op[0]->type->base_type) {
+    % for dst_type, src_types in op.signatures():
+            case ${src_types[0].glsl_type}:
+               data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types, ("c0", "c1", "c2"))};
+               break;
+    % endfor
+            default:
+               assert(0);
+            }
+         }
+      } else {
+         assert(op[0]->type->is_matrix() || op[1]->type->is_matrix());
+
+         /* Multiply an N-by-M matrix with an M-by-P matrix.  Since either
+          * matrix can be a GLSL vector, either N or P can be 1.
+          *
+          * For vec*mat, the vector is treated as a row vector.  This
+          * means the vector is a 1-row x M-column matrix.
+          *
+          * For mat*vec, the vector is treated as a column vector.  Since
+          * matrix_columns is 1 for vectors, this just works.
+          */
+         const unsigned n = op[0]->type->is_vector()
+            ? 1 : op[0]->type->vector_elements;
+         const unsigned m = op[1]->type->vector_elements;
+         const unsigned p = op[1]->type->matrix_columns;
+         for (unsigned j = 0; j < p; j++) {
+            for (unsigned i = 0; i < n; i++) {
+               for (unsigned k = 0; k < m; k++) {
+                  if (op[0]->type->base_type == GLSL_TYPE_DOUBLE)
+                     data.d[i+n*j] += op[0]->value.d[i+n*k]*op[1]->value.d[k+m*j];
+                  else
+                     data.f[i+n*j] += op[0]->value.f[i+n*k]*op[1]->value.f[k+m*j];
+               }
+            }
+         }
+      }
+      break;""")
+
 # This template is for operations that are horizontal and either have only a
 # single type or the implementation for all types is identical.  That is, the
 # operation consumes a vector and produces a scalar.
@@ -285,7 +335,9 @@ class operation(object):
          else:
             return constant_template3.render(op=self)
       elif self.num_operands == 2:
-         if vector_scalar_operation in self.flags:
+         if self.name == "mul":
+            return constant_template_mul.render(op=self)
+         elif vector_scalar_operation in self.flags:
             return constant_template_vector_scalar.render(op=self)
          elif horizontal_operation in self.flags and types_identical_operation in self.flags:
             return constant_template_horizontal_single_implementation.render(op=self)
@@ -454,7 +506,7 @@ ir_expression_operation = [
    operation("add", 2, printable_name="+", source_types=numeric_types, c_expression="{src0} + {src1}", flags=vector_scalar_operation),
    operation("sub", 2, printable_name="-", source_types=numeric_types, c_expression="{src0} - {src1}", flags=vector_scalar_operation),
    # "Floating-point or low 32-bit integer multiply."
-   operation("mul", 2, printable_name="*"),
+   operation("mul", 2, printable_name="*", source_types=numeric_types, c_expression="{src0} * {src1}"),
    operation("imul_high", 2),       # Calculates the high 32-bits of a 64-bit multiply.
    operation("div", 2, printable_name="/", source_types=numeric_types, c_expression={'u': "{src1} == 0 ? 0 : {src0} / {src1}", 'i': "{src1} == 0 ? 0 : {src0} / {src1}", 'default': "{src0} / {src1}"}, flags=vector_scalar_operation),
 
