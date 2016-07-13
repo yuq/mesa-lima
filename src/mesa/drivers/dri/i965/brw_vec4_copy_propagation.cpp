@@ -331,6 +331,17 @@ try_copy_propagate(const struct gen_device_info *devinfo,
    if (devinfo->gen < 8 && inst->size_written > REG_SIZE && is_uniform(value))
       return false;
 
+   /* There is a regioning restriction such that if execsize == width
+    * and hstride != 0 then the vstride can't be 0. When we split instrutions
+    * that take a single-precision source (like F->DF conversions) we end up
+    * with a 4-wide source on an instruction with an execution size of 4.
+    * If we then copy-propagate the source from a uniform we also end up with a
+    * vstride of 0 and we violate the restriction.
+    */
+   if (inst->exec_size == 4 && value.file == UNIFORM &&
+       type_sz(value.type) == 4)
+      return false;
+
    /* If the type of the copy value is different from the type of the
     * instruction then the swizzles and writemasks involved don't have the same
     * meaning and simply replacing the source would produce different semantics.
