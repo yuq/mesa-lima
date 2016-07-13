@@ -900,6 +900,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       if (!handles) {
          pipe_mutex_unlock(ws->global_bo_list_lock);
          amdgpu_cs_context_cleanup(cs);
+         cs->error_code = -ENOMEM;
          return;
       }
 
@@ -923,10 +924,12 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       fprintf(stderr, "amdgpu: buffer list creation failed (%d)\n", r);
       cs->request.resources = NULL;
       amdgpu_fence_signalled(cs->fence);
+      cs->error_code = r;
       goto cleanup;
    }
 
    r = amdgpu_cs_submit(acs->ctx->ctx, 0, &cs->request, 1);
+   cs->error_code = r;
    if (r) {
       if (r == -ENOMEM)
          fprintf(stderr, "amdgpu: Not enough memory for command submission.\n");
@@ -974,6 +977,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct amdgpu_winsys *ws = cs->ctx->ws;
+   int error_code = 0;
 
    rcs->current.max_dw += amdgpu_cs_epilog_dws(cs->ring_type);
 
@@ -1057,6 +1061,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
                             amdgpu_cs_submit_ib);
       } else {
          amdgpu_cs_submit_ib(cs, 0);
+         error_code = cs->cst->error_code;
       }
    } else {
       amdgpu_cs_context_cleanup(cs->csc);
@@ -1069,7 +1074,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       amdgpu_get_new_ib(&ws->base, cs, IB_CONST_PREAMBLE);
 
    ws->num_cs_flushes++;
-   return 0;
+   return error_code;
 }
 
 static void amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)

@@ -88,6 +88,9 @@ struct amdgpu_cs_context {
    unsigned                    max_dependencies;
 
    struct pipe_fence_handle    *fence;
+
+   /* the error returned from cs_flush for non-async submissions */
+   int                         error_code;
 };
 
 struct amdgpu_cs {
