@@ -1560,16 +1560,15 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
    case ir_unop_find_lsb:
       for (unsigned c = 0; c < components; c++) {
-         if (op[0]->value.i[c] == 0)
-            data.i[c] = -1;
-         else {
-            unsigned pos = 0;
-            unsigned v = op[0]->value.u[c];
-
-            for (; !(v & 1); v >>= 1) {
-               pos++;
-            }
-            data.u[c] = pos;
+         switch (op[0]->type->base_type) {
+         case GLSL_TYPE_UINT:
+            data.i[c] = find_msb_uint(op[0]->value.u[c] & -op[0]->value.u[c]);
+            break;
+         case GLSL_TYPE_INT:
+            data.i[c] = find_msb_uint(op[0]->value.i[c] & -op[0]->value.i[c]);
+            break;
+         default:
+            assert(0);
          }
       }
       break;
