@@ -163,8 +163,7 @@ static void si_initialize_compute(struct si_context *sctx)
 	radeon_emit(cs, 0);
 	radeon_emit(cs, 0);
 
-	radeon_set_sh_reg_seq(cs, R_00B854_COMPUTE_RESOURCE_LIMITS, 3);
-	radeon_emit(cs, 0);
+	radeon_set_sh_reg_seq(cs, R_00B858_COMPUTE_STATIC_THREAD_MGMT_SE0, 2);
 	/* R_00B858_COMPUTE_STATIC_THREAD_MGMT_SE0 / SE1 */
 	radeon_emit(cs, S_00B858_SH0_CU_EN(0xffff) | S_00B858_SH1_CU_EN(0xffff));
 	radeon_emit(cs, S_00B85C_SH0_CU_EN(0xffff) | S_00B85C_SH1_CU_EN(0xffff));
@@ -400,6 +399,11 @@ static void si_emit_dispatch_packets(struct si_context *sctx,
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	bool render_cond_bit = sctx->b.render_cond && !sctx->b.render_cond_force_off;
+	unsigned waves_per_threadgroup =
+		DIV_ROUND_UP(info->block[0] * info->block[1] * info->block[2], 64);
+
+	radeon_set_sh_reg(cs, R_00B854_COMPUTE_RESOURCE_LIMITS,
+			  S_00B854_SIMD_DEST_CNTL(waves_per_threadgroup % 4 == 0));
 
 	radeon_set_sh_reg_seq(cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
 	radeon_emit(cs, S_00B81C_NUM_THREAD_FULL(info->block[0]));
