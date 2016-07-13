@@ -113,21 +113,23 @@ isl_tiling_get_info(const struct isl_device *dev,
    const uint32_t bs = format_bpb / 8;
    struct isl_extent2d logical_el, phys_B;
 
-   assert(bs > 0);
-   assert(tiling == ISL_TILING_LINEAR || isl_is_pow2(bs));
+   assert(tiling == ISL_TILING_LINEAR || isl_is_pow2(format_bpb));
 
    switch (tiling) {
    case ISL_TILING_LINEAR:
+      assert(bs > 0);
       logical_el = isl_extent2d(1, 1);
       phys_B = isl_extent2d(bs, 1);
       break;
 
    case ISL_TILING_X:
+      assert(bs > 0);
       logical_el = isl_extent2d(512 / bs, 8);
       phys_B = isl_extent2d(512, 8);
       break;
 
    case ISL_TILING_Y0:
+      assert(bs > 0);
       logical_el = isl_extent2d(128 / bs, 32);
       phys_B = isl_extent2d(128, 32);
       break;
@@ -159,6 +161,7 @@ isl_tiling_get_info(const struct isl_device *dev,
 
       bool is_Ys = tiling == ISL_TILING_Ys;
 
+      assert(bs > 0);
       unsigned width = 1 << (6 + (ffs(bs) / 2) + (2 * is_Ys));
       unsigned height = 1 << (6 - (ffs(bs) / 2) + (2 * is_Ys));
 
