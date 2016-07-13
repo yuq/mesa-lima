@@ -569,6 +569,26 @@ bitfield_extract_int(int32_t value, int offset, int bits)
    }
 }
 
+static uint32_t
+bitfield_insert(uint32_t base, uint32_t insert, int offset, int bits)
+{
+   if (bits == 0)
+      return base;
+   else if (offset < 0 || bits < 0)
+      return 0; /* Undefined, per spec. */
+   else if (offset + bits > 32)
+      return 0; /* Undefined, per spec. */
+   else {
+      unsigned insert_mask = ((1ull << bits) - 1) << offset;
+
+      insert <<= offset;
+      insert &= insert_mask;
+      base &= ~insert_mask;
+
+      return base | insert;
+   }
+}
+
 ir_constant *
 ir_expression::constant_expression_value(struct hash_table *variable_context)
 {
@@ -1744,32 +1764,10 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       break;
    }
 
-   case ir_quadop_bitfield_insert: {
-      for (unsigned c = 0; c < components; c++) {
-         int offset = op[2]->value.i[c];
-         int bits = op[3]->value.i[c];
-
-         if (bits == 0)
-            data.u[c] = op[0]->value.u[c];
-         else if (offset < 0 || bits < 0)
-            data.u[c] = 0; /* Undefined, per spec. */
-         else if (offset + bits > 32)
-            data.u[c] = 0; /* Undefined, per spec. */
-         else {
-            unsigned insert_mask = ((1ull << bits) - 1) << offset;
-
-            unsigned insert = op[1]->value.u[c];
-            insert <<= offset;
-            insert &= insert_mask;
-
-            unsigned base = op[0]->value.u[c];
-            base &= ~insert_mask;
-
-            data.u[c] = base | insert;
-         }
-      }
+   case ir_quadop_bitfield_insert:
+      for (unsigned c = 0; c < components; c++)
+         data.u[c] = bitfield_insert(op[0]->value.u[c], op[1]->value.u[c], op[2]->value.i[c], op[3]->value.i[c]);
       break;
-   }
 
    case ir_quadop_vector:
       for (unsigned c = 0; c < this->type->vector_elements; c++) {
