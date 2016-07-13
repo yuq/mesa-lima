@@ -494,6 +494,31 @@ bitfield_reverse(uint32_t v)
    return r;
 }
 
+static int
+find_msb_uint(uint32_t v)
+{
+   int count = 0;
+
+   /* If v == 0, then the loop will terminate when count == 32.  In that case
+    * 31-count will produce the -1 result required by GLSL findMSB().
+    */
+   while (((v & (1u << 31)) == 0) && count != 32) {
+      count++;
+      v <<= 1;
+   }
+
+   return 31 - count;
+}
+
+static int
+find_msb_int(int32_t v)
+{
+   /* If v is signed, findMSB() returns the position of the most significant
+    * zero bit.
+    */
+   return find_msb_uint(v < 0 ? ~v : v);
+}
+
 ir_constant *
 ir_expression::constant_expression_value(struct hash_table *variable_context)
 {
@@ -1520,21 +1545,15 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
    case ir_unop_find_msb:
       for (unsigned c = 0; c < components; c++) {
-         int v = op[0]->value.i[c];
-
-         if (v == 0 || (op[0]->type->base_type == GLSL_TYPE_INT && v == -1))
-            data.i[c] = -1;
-         else {
-            int count = 0;
-            unsigned top_bit = op[0]->type->base_type == GLSL_TYPE_UINT
-                               ? 0 : v & (1u << 31);
-
-            while (((v & (1u << 31)) == top_bit) && count != 32) {
-               count++;
-               v <<= 1;
-            }
-
-            data.i[c] = 31 - count;
+         switch (op[0]->type->base_type) {
+         case GLSL_TYPE_UINT:
+            data.i[c] = find_msb_uint(op[0]->value.u[c]);
+            break;
+         case GLSL_TYPE_INT:
+            data.i[c] = find_msb_int(op[0]->value.i[c]);
+            break;
+         default:
+            assert(0);
          }
       }
       break;
