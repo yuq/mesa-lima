@@ -385,7 +385,7 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        * in units of samples on the main surface.
        */
       s.AuxiliarySurfaceQPitch =
-         isl_surf_get_array_pitch_sa_rows(info->aux_surf);
+         isl_surf_get_array_pitch_sa_rows(info->aux_surf) >> 2;
       s.AuxiliarySurfaceBaseAddress = info->aux_address;
       s.AuxiliarySurfaceMode = isl_to_gen_aux_mode[info->aux_usage];
 #else
