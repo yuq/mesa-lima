@@ -242,7 +242,7 @@ vl_bicubic_filter_init(struct vl_bicubic_filter *filter, struct pipe_context *pi
 {
    struct pipe_rasterizer_state rs_state;
    struct pipe_blend_state blend;
-   struct vertex2f *offsets = NULL;
+   struct vertex2f offsets[16];
    struct pipe_sampler_state sampler;
    struct pipe_vertex_element ve;
    unsigned i;
@@ -301,10 +301,6 @@ vl_bicubic_filter_init(struct vl_bicubic_filter *filter, struct pipe_context *pi
    if (!filter->ves)
       goto error_ves;
 
-   offsets = MALLOC(sizeof(struct vertex2f) * 16);
-   if (!offsets)
-      goto error_offsets;
-
    offsets[0].x = -1.0f; offsets[0].y = -1.0f;
    offsets[1].x = 0.0f; offsets[1].y = -1.0f;
    offsets[2].x = 1.0f; offsets[2].y = -1.0f;
@@ -344,8 +340,6 @@ error_fs:
    pipe->delete_vs_state(pipe, filter->vs);
 
 error_vs:
-
-error_offsets:
    pipe->delete_vertex_elements_state(pipe, filter->ves);
 
 error_ves:
