@@ -139,17 +139,17 @@ dd_close_file_stream(FILE *f)
 }
 
 static unsigned
-dd_num_active_viewports(struct dd_context *dctx)
+dd_num_active_viewports(struct dd_draw_state *dstate)
 {
    struct tgsi_shader_info info;
    const struct tgsi_token *tokens;
 
-   if (dctx->shaders[PIPE_SHADER_GEOMETRY])
-      tokens = dctx->shaders[PIPE_SHADER_GEOMETRY]->state.shader.tokens;
-   else if (dctx->shaders[PIPE_SHADER_TESS_EVAL])
-      tokens = dctx->shaders[PIPE_SHADER_TESS_EVAL]->state.shader.tokens;
-   else if (dctx->shaders[PIPE_SHADER_VERTEX])
-      tokens = dctx->shaders[PIPE_SHADER_VERTEX]->state.shader.tokens;
+   if (dstate->shaders[PIPE_SHADER_GEOMETRY])
+      tokens = dstate->shaders[PIPE_SHADER_GEOMETRY]->state.shader.tokens;
+   else if (dstate->shaders[PIPE_SHADER_TESS_EVAL])
+      tokens = dstate->shaders[PIPE_SHADER_TESS_EVAL]->state.shader.tokens;
+   else if (dstate->shaders[PIPE_SHADER_VERTEX])
+      tokens = dstate->shaders[PIPE_SHADER_VERTEX]->state.shader.tokens;
    else
       return 1;
 
@@ -240,19 +240,19 @@ util_dump_query(FILE *f, struct dd_query *query)
 }
 
 static void
-dd_dump_render_condition(struct dd_context *dctx, FILE *f)
+dd_dump_render_condition(struct dd_draw_state *dstate, FILE *f)
 {
-   if (dctx->render_cond.query) {
+   if (dstate->render_cond.query) {
       fprintf(f, "render condition:\n");
-      DUMP_M(query, &dctx->render_cond, query);
-      DUMP_M(uint, &dctx->render_cond, condition);
-      DUMP_M(uint, &dctx->render_cond, mode);
+      DUMP_M(query, &dstate->render_cond, query);
+      DUMP_M(uint, &dstate->render_cond, condition);
+      DUMP_M(uint, &dstate->render_cond, mode);
       fprintf(f, "\n");
    }
 }
 
 static void
-dd_dump_draw_vbo(struct dd_context *dctx, struct pipe_draw_info *info, FILE *f)
+dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE *f)
 {
    int sh, i;
    const char *shader_str[PIPE_SHADER_TYPES];
@@ -266,9 +266,9 @@ dd_dump_draw_vbo(struct dd_context *dctx, struct pipe_draw_info *info, FILE *f)
 
    DUMP(draw_info, info);
    if (info->indexed) {
-      DUMP(index_buffer, &dctx->index_buffer);
-      if (dctx->index_buffer.buffer)
-         DUMP_M(resource, &dctx->index_buffer, buffer);
+      DUMP(index_buffer, &dstate->index_buffer);
+      if (dstate->index_buffer.buffer)
+         DUMP_M(resource, &dstate->index_buffer, buffer);
    }
    if (info->count_from_stream_output)
       DUMP_M(stream_output_target, info,
@@ -279,31 +279,31 @@ dd_dump_draw_vbo(struct dd_context *dctx, struct pipe_draw_info *info, FILE *f)
 
    /* TODO: dump active queries */
 
-   dd_dump_render_condition(dctx, f);
+   dd_dump_render_condition(dstate, f);
 
    for (i = 0; i < PIPE_MAX_ATTRIBS; i++)
-      if (dctx->vertex_buffers[i].buffer ||
-          dctx->vertex_buffers[i].user_buffer) {
-         DUMP_I(vertex_buffer, &dctx->vertex_buffers[i], i);
-         if (dctx->vertex_buffers[i].buffer)
-            DUMP_M(resource, &dctx->vertex_buffers[i], buffer);
+      if (dstate->vertex_buffers[i].buffer ||
+          dstate->vertex_buffers[i].user_buffer) {
+         DUMP_I(vertex_buffer, &dstate->vertex_buffers[i], i);
+         if (dstate->vertex_buffers[i].buffer)
+            DUMP_M(resource, &dstate->vertex_buffers[i], buffer);
       }
 
-   if (dctx->velems) {
+   if (dstate->velems) {
       print_named_value(f, "num vertex elements",
-                        dctx->velems->state.velems.count);
-      for (i = 0; i < dctx->velems->state.velems.count; i++) {
+                        dstate->velems->state.velems.count);
+      for (i = 0; i < dstate->velems->state.velems.count; i++) {
          fprintf(f, "  ");
-         DUMP_I(vertex_element, &dctx->velems->state.velems.velems[i], i);
+         DUMP_I(vertex_element, &dstate->velems->state.velems.velems[i], i);
       }
    }
 
-   print_named_value(f, "num stream output targets", dctx->num_so_targets);
-   for (i = 0; i < dctx->num_so_targets; i++)
-      if (dctx->so_targets[i]) {
-         DUMP_I(stream_output_target, dctx->so_targets[i], i);
-         DUMP_M(resource, dctx->so_targets[i], buffer);
-         fprintf(f, "  offset = %i\n", dctx->so_offsets[i]);
+   print_named_value(f, "num stream output targets", dstate->num_so_targets);
+   for (i = 0; i < dstate->num_so_targets; i++)
+      if (dstate->so_targets[i]) {
+         DUMP_I(stream_output_target, dstate->so_targets[i], i);
+         DUMP_M(resource, dstate->so_targets[i], buffer);
+         fprintf(f, "  offset = %i\n", dstate->so_offsets[i]);
       }
 
    fprintf(f, "\n");
@@ -312,60 +312,60 @@ dd_dump_draw_vbo(struct dd_context *dctx, struct pipe_draw_info *info, FILE *f)
          continue;
 
       if (sh == PIPE_SHADER_TESS_CTRL &&
-          !dctx->shaders[PIPE_SHADER_TESS_CTRL] &&
-          dctx->shaders[PIPE_SHADER_TESS_EVAL])
+          !dstate->shaders[PIPE_SHADER_TESS_CTRL] &&
+          dstate->shaders[PIPE_SHADER_TESS_EVAL])
          fprintf(f, "tess_state: {default_outer_level = {%f, %f, %f, %f}, "
                  "default_inner_level = {%f, %f}}\n",
-                 dctx->tess_default_levels[0],
-                 dctx->tess_default_levels[1],
-                 dctx->tess_default_levels[2],
-                 dctx->tess_default_levels[3],
-                 dctx->tess_default_levels[4],
-                 dctx->tess_default_levels[5]);
+                 dstate->tess_default_levels[0],
+                 dstate->tess_default_levels[1],
+                 dstate->tess_default_levels[2],
+                 dstate->tess_default_levels[3],
+                 dstate->tess_default_levels[4],
+                 dstate->tess_default_levels[5]);
 
       if (sh == PIPE_SHADER_FRAGMENT)
-         if (dctx->rs) {
-            unsigned num_viewports = dd_num_active_viewports(dctx);
+         if (dstate->rs) {
+            unsigned num_viewports = dd_num_active_viewports(dstate);
 
-            if (dctx->rs->state.rs.clip_plane_enable)
-               DUMP(clip_state, &dctx->clip_state);
+            if (dstate->rs->state.rs.clip_plane_enable)
+               DUMP(clip_state, &dstate->clip_state);
 
             for (i = 0; i < num_viewports; i++)
-               DUMP_I(viewport_state, &dctx->viewports[i], i);
+               DUMP_I(viewport_state, &dstate->viewports[i], i);
 
-            if (dctx->rs->state.rs.scissor)
+            if (dstate->rs->state.rs.scissor)
                for (i = 0; i < num_viewports; i++)
-                  DUMP_I(scissor_state, &dctx->scissors[i], i);
+                  DUMP_I(scissor_state, &dstate->scissors[i], i);
 
-            DUMP(rasterizer_state, &dctx->rs->state.rs);
+            DUMP(rasterizer_state, &dstate->rs->state.rs);
 
-            if (dctx->rs->state.rs.poly_stipple_enable)
-               DUMP(poly_stipple, &dctx->polygon_stipple);
+            if (dstate->rs->state.rs.poly_stipple_enable)
+               DUMP(poly_stipple, &dstate->polygon_stipple);
             fprintf(f, "\n");
          }
 
-      if (!dctx->shaders[sh])
+      if (!dstate->shaders[sh])
          continue;
 
       fprintf(f, COLOR_SHADER "begin shader: %s" COLOR_RESET "\n", shader_str[sh]);
-      DUMP(shader_state, &dctx->shaders[sh]->state.shader);
+      DUMP(shader_state, &dstate->shaders[sh]->state.shader);
 
       for (i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++)
-         if (dctx->constant_buffers[sh][i].buffer ||
-             dctx->constant_buffers[sh][i].user_buffer) {
-            DUMP_I(constant_buffer, &dctx->constant_buffers[sh][i], i);
-            if (dctx->constant_buffers[sh][i].buffer)
-               DUMP_M(resource, &dctx->constant_buffers[sh][i], buffer);
+         if (dstate->constant_buffers[sh][i].buffer ||
+             dstate->constant_buffers[sh][i].user_buffer) {
+            DUMP_I(constant_buffer, &dstate->constant_buffers[sh][i], i);
+            if (dstate->constant_buffers[sh][i].buffer)
+               DUMP_M(resource, &dstate->constant_buffers[sh][i], buffer);
          }
 
       for (i = 0; i < PIPE_MAX_SAMPLERS; i++)
-         if (dctx->sampler_states[sh][i])
-            DUMP_I(sampler_state, &dctx->sampler_states[sh][i]->state.sampler, i);
+         if (dstate->sampler_states[sh][i])
+            DUMP_I(sampler_state, &dstate->sampler_states[sh][i]->state.sampler, i);
 
       for (i = 0; i < PIPE_MAX_SAMPLERS; i++)
-         if (dctx->sampler_views[sh][i]) {
-            DUMP_I(sampler_view, dctx->sampler_views[sh][i], i);
-            DUMP_M(resource, dctx->sampler_views[sh][i], texture);
+         if (dstate->sampler_views[sh][i]) {
+            DUMP_I(sampler_view, dstate->sampler_views[sh][i], i);
+            DUMP_M(resource, dstate->sampler_views[sh][i], texture);
          }
 
       /* TODO: print shader images */
@@ -374,44 +374,44 @@ dd_dump_draw_vbo(struct dd_context *dctx, struct pipe_draw_info *info, FILE *f)
       fprintf(f, COLOR_SHADER "end shader: %s" COLOR_RESET "\n\n", shader_str[sh]);
    }
 
-   if (dctx->dsa)
-      DUMP(depth_stencil_alpha_state, &dctx->dsa->state.dsa);
-   DUMP(stencil_ref, &dctx->stencil_ref);
+   if (dstate->dsa)
+      DUMP(depth_stencil_alpha_state, &dstate->dsa->state.dsa);
+   DUMP(stencil_ref, &dstate->stencil_ref);
 
-   if (dctx->blend)
-      DUMP(blend_state, &dctx->blend->state.blend);
-   DUMP(blend_color, &dctx->blend_color);
+   if (dstate->blend)
+      DUMP(blend_state, &dstate->blend->state.blend);
+   DUMP(blend_color, &dstate->blend_color);
 
-   print_named_value(f, "min_samples", dctx->min_samples);
-   print_named_xvalue(f, "sample_mask", dctx->sample_mask);
+   print_named_value(f, "min_samples", dstate->min_samples);
+   print_named_xvalue(f, "sample_mask", dstate->sample_mask);
    fprintf(f, "\n");
 
-   DUMP(framebuffer_state, &dctx->framebuffer_state);
-   for (i = 0; i < dctx->framebuffer_state.nr_cbufs; i++)
-      if (dctx->framebuffer_state.cbufs[i]) {
+   DUMP(framebuffer_state, &dstate->framebuffer_state);
+   for (i = 0; i < dstate->framebuffer_state.nr_cbufs; i++)
+      if (dstate->framebuffer_state.cbufs[i]) {
          fprintf(f, "  " COLOR_STATE "cbufs[%i]:" COLOR_RESET "\n    ", i);
-         DUMP(surface, dctx->framebuffer_state.cbufs[i]);
+         DUMP(surface, dstate->framebuffer_state.cbufs[i]);
          fprintf(f, "    ");
-         DUMP(resource, dctx->framebuffer_state.cbufs[i]->texture);
+         DUMP(resource, dstate->framebuffer_state.cbufs[i]->texture);
       }
-   if (dctx->framebuffer_state.zsbuf) {
+   if (dstate->framebuffer_state.zsbuf) {
       fprintf(f, "  " COLOR_STATE "zsbuf:" COLOR_RESET "\n    ");
-      DUMP(surface, dctx->framebuffer_state.zsbuf);
+      DUMP(surface, dstate->framebuffer_state.zsbuf);
       fprintf(f, "    ");
-      DUMP(resource, dctx->framebuffer_state.zsbuf->texture);
+      DUMP(resource, dstate->framebuffer_state.zsbuf->texture);
    }
    fprintf(f, "\n");
 }
 
 static void
-dd_dump_launch_grid(struct dd_context *dctx, struct pipe_grid_info *info, FILE *f)
+dd_dump_launch_grid(struct dd_draw_state *dstate, struct pipe_grid_info *info, FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
    /* TODO */
 }
 
 static void
-dd_dump_resource_copy_region(struct dd_context *dctx,
+dd_dump_resource_copy_region(struct dd_draw_state *dstate,
                              struct call_resource_copy_region *info,
                              FILE *f)
 {
@@ -427,7 +427,7 @@ dd_dump_resource_copy_region(struct dd_context *dctx,
 }
 
 static void
-dd_dump_blit(struct dd_context *dctx, struct pipe_blit_info *info, FILE *f)
+dd_dump_blit(struct dd_draw_state *dstate, struct pipe_blit_info *info, FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
    DUMP_M(resource, info, dst.resource);
@@ -447,18 +447,18 @@ dd_dump_blit(struct dd_context *dctx, struct pipe_blit_info *info, FILE *f)
    DUMP_M(uint, info, render_condition_enable);
 
    if (info->render_condition_enable)
-      dd_dump_render_condition(dctx, f);
+      dd_dump_render_condition(dstate, f);
 }
 
 static void
-dd_dump_generate_mipmap(struct dd_context *dctx, FILE *f)
+dd_dump_generate_mipmap(struct dd_draw_state *dstate, FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
    /* TODO */
 }
 
 static void
-dd_dump_flush_resource(struct dd_context *dctx, struct pipe_resource *res,
+dd_dump_flush_resource(struct dd_draw_state *dstate, struct pipe_resource *res,
                        FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
@@ -466,7 +466,7 @@ dd_dump_flush_resource(struct dd_context *dctx, struct pipe_resource *res,
 }
 
 static void
-dd_dump_clear(struct dd_context *dctx, struct call_clear *info, FILE *f)
+dd_dump_clear(struct dd_draw_state *dstate, struct call_clear *info, FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
    DUMP_M(uint, info, buffers);
@@ -476,7 +476,7 @@ dd_dump_clear(struct dd_context *dctx, struct call_clear *info, FILE *f)
 }
 
 static void
-dd_dump_clear_buffer(struct dd_context *dctx, struct call_clear_buffer *info,
+dd_dump_clear_buffer(struct dd_draw_state *dstate, struct call_clear_buffer *info,
                      FILE *f)
 {
    int i;
@@ -495,14 +495,14 @@ dd_dump_clear_buffer(struct dd_context *dctx, struct call_clear_buffer *info,
 }
 
 static void
-dd_dump_clear_render_target(struct dd_context *dctx, FILE *f)
+dd_dump_clear_render_target(struct dd_draw_state *dstate, FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
    /* TODO */
 }
 
 static void
-dd_dump_clear_depth_stencil(struct dd_context *dctx, FILE *f)
+dd_dump_clear_depth_stencil(struct dd_draw_state *dstate, FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
    /* TODO */
@@ -524,41 +524,42 @@ dd_dump_call(struct dd_context *dctx, struct dd_call *call, unsigned flags,
              bool dump_dmesg)
 {
    FILE *f = dd_get_file_stream(dd_screen(dctx->base.screen),
-                                dctx->apitrace_call_number);
+                                dctx->draw_state.apitrace_call_number);
 
    if (!f)
       return;
 
    switch (call->type) {
    case CALL_DRAW_VBO:
-      dd_dump_draw_vbo(dctx, &call->info.draw_vbo, f);
+      dd_dump_draw_vbo(&dctx->draw_state, &call->info.draw_vbo, f);
       break;
    case CALL_LAUNCH_GRID:
-      dd_dump_launch_grid(dctx, &call->info.launch_grid, f);
+      dd_dump_launch_grid(&dctx->draw_state, &call->info.launch_grid, f);
       break;
    case CALL_RESOURCE_COPY_REGION:
-      dd_dump_resource_copy_region(dctx, &call->info.resource_copy_region, f);
+      dd_dump_resource_copy_region(&dctx->draw_state,
+                                   &call->info.resource_copy_region, f);
       break;
    case CALL_BLIT:
-      dd_dump_blit(dctx, &call->info.blit, f);
+      dd_dump_blit(&dctx->draw_state, &call->info.blit, f);
       break;
    case CALL_FLUSH_RESOURCE:
-      dd_dump_flush_resource(dctx, call->info.flush_resource, f);
+      dd_dump_flush_resource(&dctx->draw_state, call->info.flush_resource, f);
       break;
    case CALL_CLEAR:
-      dd_dump_clear(dctx, &call->info.clear, f);
+      dd_dump_clear(&dctx->draw_state, &call->info.clear, f);
       break;
    case CALL_CLEAR_BUFFER:
-      dd_dump_clear_buffer(dctx, &call->info.clear_buffer, f);
+      dd_dump_clear_buffer(&dctx->draw_state, &call->info.clear_buffer, f);
       break;
    case CALL_CLEAR_RENDER_TARGET:
-      dd_dump_clear_render_target(dctx, f);
+      dd_dump_clear_render_target(&dctx->draw_state, f);
       break;
    case CALL_CLEAR_DEPTH_STENCIL:
-      dd_dump_clear_depth_stencil(dctx, f);
+      dd_dump_clear_depth_stencil(&dctx->draw_state, f);
       break;
    case CALL_GENERATE_MIPMAP:
-      dd_dump_generate_mipmap(dctx, f);
+      dd_dump_generate_mipmap(&dctx->draw_state, f);
       break;
    }
 
@@ -611,7 +612,7 @@ dd_flush_and_handle_hang(struct dd_context *dctx,
 {
    if (dd_flush_and_check_hang(dctx, fence, flags)) {
       FILE *f = dd_get_file_stream(dd_screen(dctx->base.screen),
-                                   dctx->apitrace_call_number);
+                                   dctx->draw_state.apitrace_call_number);
 
       if (f) {
          fprintf(f, "dd: %s.\n", cause);
@@ -691,7 +692,8 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
          dd_dump_call(dctx, call, 0, false);
          break;
       case DD_DUMP_APITRACE_CALL:
-         if (dscreen->apitrace_dump_call == dctx->apitrace_call_number) {
+         if (dscreen->apitrace_dump_call ==
+             dctx->draw_state.apitrace_call_number) {
             dd_dump_call(dctx, call, 0, false);
             /* No need to continue. */
             exit(0);

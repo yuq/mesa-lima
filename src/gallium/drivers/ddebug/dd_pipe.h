@@ -74,11 +74,8 @@ struct dd_state
    } state;
 };
 
-struct dd_context
+struct dd_draw_state
 {
-   struct pipe_context base;
-   struct pipe_context *pipe;
-
    struct {
       struct dd_query *query;
       bool condition;
@@ -115,8 +112,16 @@ struct dd_context
    struct pipe_viewport_state viewports[PIPE_MAX_VIEWPORTS];
    float tess_default_levels[6];
 
-   unsigned num_draw_calls;
    unsigned apitrace_call_number;
+};
+
+struct dd_context
+{
+   struct pipe_context base;
+   struct pipe_context *pipe;
+
+   struct dd_draw_state draw_state;
+   unsigned num_draw_calls;
 };
 
 
