@@ -968,9 +968,9 @@ void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs)
 
 DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", false)
 
-static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
-                            unsigned flags,
-                            struct pipe_fence_handle **fence)
+static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
+                           unsigned flags,
+                           struct pipe_fence_handle **fence)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct amdgpu_winsys *ws = cs->ctx->ws;
@@ -1069,6 +1069,7 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       amdgpu_get_new_ib(&ws->base, cs, IB_CONST_PREAMBLE);
 
    ws->num_cs_flushes++;
+   return 0;
 }
 
 static void amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)

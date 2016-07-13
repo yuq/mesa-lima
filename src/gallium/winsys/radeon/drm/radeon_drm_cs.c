@@ -471,9 +471,9 @@ void radeon_drm_cs_sync_flush(struct radeon_winsys_cs *rcs)
 
 DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", false)
 
-static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
-                                unsigned flags,
-                                struct pipe_fence_handle **fence)
+static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
+                               unsigned flags,
+                               struct pipe_fence_handle **fence)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
     struct radeon_cs_context *tmp;
@@ -602,6 +602,7 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
     cs->base.current.cdw = 0;
 
     cs->ws->num_cs_flushes++;
+    return 0;
 }
 
 static void radeon_drm_cs_destroy(struct radeon_winsys_cs *rcs)

@@ -733,10 +733,12 @@ struct radeon_winsys {
      * \param flags,      RADEON_FLUSH_ASYNC or 0.
      * \param fence       Pointer to a fence. If non-NULL, a fence is inserted
      *                    after the CS and is returned through this parameter.
+     * \return Negative POSIX error code or 0 for success.
+     *         Asynchronous submissions never return an error.
      */
-    void (*cs_flush)(struct radeon_winsys_cs *cs,
-                     unsigned flags,
-                     struct pipe_fence_handle **fence);
+    int (*cs_flush)(struct radeon_winsys_cs *cs,
+                    unsigned flags,
+                    struct pipe_fence_handle **fence);
 
     /**
      * Return true if a buffer is referenced by a command stream.
