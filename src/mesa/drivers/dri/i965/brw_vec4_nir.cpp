@@ -647,14 +647,39 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       const vec4_builder bld = vec4_builder(this).at_end()
          .annotate(current_annotation, base_ir);
 
-      src_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
-                                              1 /* dims */, 4 /* size*/,
-                                              BRW_PREDICATE_NONE);
+      src_reg read_result;
       dst_reg dest = get_nir_dest(instr->dest);
+      if (type_sz(dest.type) < 8) {
+         read_result = emit_untyped_read(bld, surf_index, offset_reg,
+                                         1 /* dims */, 4 /* size*/,
+                                         BRW_PREDICATE_NONE);
+      } else {
+         src_reg shuffled = src_reg(this, glsl_type::dvec4_type);
+
+         src_reg temp;
+         temp = emit_untyped_read(bld, surf_index, offset_reg,
+                                  1 /* dims */, 4 /* size*/,
+                                  BRW_PREDICATE_NONE);
+         emit(MOV(dst_reg(retype(shuffled, temp.type)), temp));
+
+         if (offset_reg.file == IMM)
+            offset_reg.ud += 16;
+         else
+            emit(ADD(dst_reg(offset_reg), offset_reg, brw_imm_ud(16)));
+
+         temp = emit_untyped_read(bld, surf_index, offset_reg,
+                                  1 /* dims */, 4 /* size*/,
+                                  BRW_PREDICATE_NONE);
+         emit(MOV(dst_reg(retype(byte_offset(shuffled, REG_SIZE), temp.type)),
+                  temp));
+
+         read_result = src_reg(this, glsl_type::dvec4_type);
+         shuffle_64bit_data(dst_reg(read_result), shuffled, false);
+      }
+
       read_result.type = dest.type;
       read_result.swizzle = brw_swizzle_for_size(instr->num_components);
       emit(MOV(dest, read_result));
-
       break;
    }
 
