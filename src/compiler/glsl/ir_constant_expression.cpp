@@ -537,6 +537,38 @@ ldexp_flush_subnormal(double x, int exp)
    return !isnormal(result) ? copysign(0.0, x) : result;
 }
 
+static uint32_t
+bitfield_extract_uint(uint32_t value, int offset, int bits)
+{
+   if (bits == 0)
+      return 0;
+   else if (offset < 0 || bits < 0)
+      return 0; /* Undefined, per spec. */
+   else if (offset + bits > 32)
+      return 0; /* Undefined, per spec. */
+   else {
+      value <<= 32 - bits - offset;
+      value >>= 32 - bits;
+      return value;
+   }
+}
+
+static int32_t
+bitfield_extract_int(int32_t value, int offset, int bits)
+{
+   if (bits == 0)
+      return 0;
+   else if (offset < 0 || bits < 0)
+      return 0; /* Undefined, per spec. */
+   else if (offset + bits > 32)
+      return 0; /* Undefined, per spec. */
+   else {
+      value <<= 32 - bits - offset;
+      value >>= 32 - bits;
+      return value;
+   }
+}
+
 ir_constant *
 ir_expression::constant_expression_value(struct hash_table *variable_context)
 {
@@ -1605,34 +1637,20 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       memcpy(&data.u[0], &op[0]->value.d[0], sizeof(double));
       break;
 
-   case ir_triop_bitfield_extract: {
+   case ir_triop_bitfield_extract:
       for (unsigned c = 0; c < components; c++) {
-         int offset = op[1]->value.i[c];
-         int bits = op[2]->value.i[c];
-
-         if (bits == 0)
-            data.u[c] = 0;
-         else if (offset < 0 || bits < 0)
-            data.u[c] = 0; /* Undefined, per spec. */
-         else if (offset + bits > 32)
-            data.u[c] = 0; /* Undefined, per spec. */
-         else {
-            if (op[0]->type->base_type == GLSL_TYPE_INT) {
-               /* int so that the right shift will sign-extend. */
-               int value = op[0]->value.i[c];
-               value <<= 32 - bits - offset;
-               value >>= 32 - bits;
-               data.i[c] = value;
-            } else {
-               unsigned value = op[0]->value.u[c];
-               value <<= 32 - bits - offset;
-               value >>= 32 - bits;
-               data.u[c] = value;
-            }
+         switch (this->type->base_type) {
+         case GLSL_TYPE_UINT:
+            data.u[c] = bitfield_extract_uint(op[0]->value.u[c], op[1]->value.i[c], op[2]->value.i[c]);
+            break;
+         case GLSL_TYPE_INT:
+            data.i[c] = bitfield_extract_int(op[0]->value.i[c], op[1]->value.i[c], op[2]->value.i[c]);
+            break;
+         default:
+            assert(0);
          }
       }
       break;
-   }
 
    case ir_binop_ldexp:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
