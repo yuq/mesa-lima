@@ -477,6 +477,23 @@ ir_rvalue::constant_expression_value(struct hash_table *)
    return NULL;
 }
 
+static uint32_t
+bitfield_reverse(uint32_t v)
+{
+   /* http://graphics.stanford.edu/~seander/bithacks.html#BitReverseObvious */
+   uint32_t r = v; // r will be reversed bits of v; first get LSB of v
+   int s = sizeof(v) * CHAR_BIT - 1; // extra shift needed at end
+
+   for (v >>= 1; v; v >>= 1) {
+      r <<= 1;
+      r |= v & 1;
+      s--;
+   }
+   r <<= s; // shift when v's highest bits are zero
+
+   return r;
+}
+
 ir_constant *
 ir_expression::constant_expression_value(struct hash_table *variable_context)
 {
@@ -1482,20 +1499,17 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       break;
 
    case ir_unop_bitfield_reverse:
-      /* http://graphics.stanford.edu/~seander/bithacks.html#BitReverseObvious */
-      for (unsigned c = 0; c < components; c++) {
-         unsigned int v = op[0]->value.u[c]; // input bits to be reversed
-         unsigned int r = v; // r will be reversed bits of v; first get LSB of v
-         int s = sizeof(v) * CHAR_BIT - 1; // extra shift needed at end
-
-         for (v >>= 1; v; v >>= 1) {
-            r <<= 1;
-            r |= v & 1;
-            s--;
+      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+         switch (this->type->base_type) {
+         case GLSL_TYPE_UINT:
+            data.u[c] = bitfield_reverse(op[0]->value.u[c]);
+            break;
+         case GLSL_TYPE_INT:
+            data.i[c] = bitfield_reverse(op[0]->value.i[c]);
+            break;
+         default:
+            assert(0);
          }
-         r <<= s; // shift when v's highest bits are zero
-
-         data.u[c] = r;
       }
       break;
 
