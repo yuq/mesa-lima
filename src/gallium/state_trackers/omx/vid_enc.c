@@ -1006,6 +1006,14 @@ static void enc_ScaleInput(omx_base_PortType *port, struct pipe_video_buffer **v
    priv->current_scale_buffer %= OMX_VID_ENC_NUM_SCALING_BUFFERS;
 }
 
+static void enc_GetPictureParamPreset(struct pipe_h264_enc_picture_desc *picture)
+{
+   picture->motion_est.enc_disable_sub_mode = 0x000000fe;
+   picture->motion_est.enc_ime2_search_range_x = 0x00000001;
+   picture->motion_est.enc_ime2_search_range_y = 0x00000001;
+   picture->pic_ctrl.enc_constraint_set_flags = 0x00000040;
+}
+
 static void enc_ControlPicture(omx_base_PortType *port, struct pipe_h264_enc_picture_desc *picture)
 {
    OMX_COMPONENTTYPE* comp = port->standCompContainer;
@@ -1064,6 +1072,8 @@ static void enc_ControlPicture(omx_base_PortType *port, struct pipe_h264_enc_pic
    picture->frame_num = priv->frame_num;
    picture->ref_idx_l0 = priv->ref_idx_l0;
    picture->ref_idx_l1 = priv->ref_idx_l1;
+   picture->enable_vui = (picture->rate_ctrl.frame_rate_num != 0);
+   enc_GetPictureParamPreset(picture);
 }
 
 static void enc_HandleTask(omx_base_PortType *port, struct encode_task *task,
