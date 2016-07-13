@@ -822,31 +822,50 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                                nir->info->num_ubos - 1);
       }
 
-      src_reg offset;
+      src_reg offset_reg;
       nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
       if (const_offset) {
-         offset = brw_imm_ud(const_offset->u32[0] & ~15);
+         offset_reg = brw_imm_ud(const_offset->u32[0] & ~15);
       } else {
-         offset = get_nir_src(instr->src[1], nir_type_uint32, 1);
+         offset_reg = get_nir_src(instr->src[1], nir_type_uint32, 1);
       }
 
-      src_reg packed_consts = src_reg(this, glsl_type::vec4_type);
-      packed_consts.type = dest.type;
+      src_reg packed_consts;
+      if (nir_dest_bit_size(instr->dest) == 32) {
+         packed_consts = src_reg(this, glsl_type::vec4_type);
+         emit_pull_constant_load_reg(dst_reg(packed_consts),
+                                     surf_index,
+                                     offset_reg,
+                                     NULL, NULL /* before_block/inst */);
+      } else {
+         src_reg temp = src_reg(this, glsl_type::dvec4_type);
+         src_reg temp_float = retype(temp, BRW_REGISTER_TYPE_F);
 
-      emit_pull_constant_load_reg(dst_reg(packed_consts),
-                                  surf_index,
-                                  offset,
-                                  NULL, NULL /* before_block/inst */);
+         emit_pull_constant_load_reg(dst_reg(temp_float),
+                                     surf_index, offset_reg, NULL, NULL);
+         if (offset_reg.file == IMM)
+            offset_reg.ud += 16;
+         else
+            emit(ADD(dst_reg(offset_reg), offset_reg, brw_imm_ud(16u)));
+         emit_pull_constant_load_reg(dst_reg(byte_offset(temp_float, REG_SIZE)),
+                                     surf_index, offset_reg, NULL, NULL);
+
+         packed_consts = src_reg(this, glsl_type::dvec4_type);
+         shuffle_64bit_data(dst_reg(packed_consts), temp, false);
+      }
 
       packed_consts.swizzle = brw_swizzle_for_size(instr->num_components);
       if (const_offset) {
-         packed_consts.swizzle += BRW_SWIZZLE4(const_offset->u32[0] % 16 / 4,
-                                               const_offset->u32[0] % 16 / 4,
-                                               const_offset->u32[0] % 16 / 4,
-                                               const_offset->u32[0] % 16 / 4);
+         unsigned type_size = type_sz(dest.type);
+         packed_consts.swizzle +=
+            BRW_SWIZZLE4(const_offset->u32[0] % 16 / type_size,
+                         const_offset->u32[0] % 16 / type_size,
+                         const_offset->u32[0] % 16 / type_size,
+                         const_offset->u32[0] % 16 / type_size);
       }
 
-      emit(MOV(dest, packed_consts));
+      emit(MOV(dest, retype(packed_consts, dest.type)));
+
       break;
    }
 
