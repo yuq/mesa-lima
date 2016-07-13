@@ -1481,7 +1481,6 @@ INLINE void ProcessAttributes(
         }
 
         __m128 attrib[3];    // triangle attribs (always 4 wide)
-        static const uint32_t numVerts = NumVertsT::value < 3 ? NumVertsT::value : 3;
         float* pAttribStart = pBuffer;
 
         if (HasConstantInterpT::value)
@@ -1519,7 +1518,7 @@ INLINE void ProcessAttributes(
 
                 pa.AssembleSingle(inputSlot, adjustedTriIndex, attrib);
 
-                for (uint32_t i = 0; i < numVerts; ++i)
+                for (uint32_t i = 0; i < NumVertsT::value; ++i)
                 {
                     _mm_store_ps(pBuffer, attrib[vid]);
                     pBuffer += 4;
@@ -1529,7 +1528,7 @@ INLINE void ProcessAttributes(
             {
                 pa.AssembleSingle(inputSlot, triIndex, attrib);
 
-                for (uint32_t i = 0; i < numVerts; ++i)
+                for (uint32_t i = 0; i < NumVertsT::value; ++i)
                 {
                     _mm_store_ps(pBuffer, attrib[i]);
                     pBuffer += 4;
@@ -1540,7 +1539,7 @@ INLINE void ProcessAttributes(
         {
             pa.AssembleSingle(inputSlot, triIndex, attrib);
 
-            for (uint32_t i = 0; i < numVerts; ++i)
+            for (uint32_t i = 0; i < NumVertsT::value; ++i)
             {
                 _mm_store_ps(pBuffer, attrib[i]);
                 pBuffer += 4;
@@ -1551,9 +1550,9 @@ INLINE void ProcessAttributes(
         // interpolation code in the pixel shader works correctly for the
         // 3 topologies - point, line, tri.  This effectively zeros out the
         // effect of the missing vertices in the triangle interpolation.
-        for (uint32_t v = numVerts; v < 3; ++v)
+        for (uint32_t v = NumVertsT::value; v < 3; ++v)
         {
-            _mm_store_ps(pBuffer, attrib[numVerts - 1]);
+            _mm_store_ps(pBuffer, attrib[NumVertsT::value - 1]);
             pBuffer += 4;
         }
 
@@ -1608,7 +1607,7 @@ struct ProcessAttributesChooser
 
 PFN_PROCESS_ATTRIBUTES GetProcessAttributesFunc(uint32_t NumVerts, bool IsSwizzled, bool HasConstantInterp)
 {
-    return TemplateArgUnroller<ProcessAttributesChooser>::GetFunc(NumVerts, IsSwizzled, HasConstantInterp);
+    return TemplateArgUnroller<ProcessAttributesChooser>::GetFunc(IntArg<1, 3>{NumVerts}, IsSwizzled, HasConstantInterp);
 }
 
 //////////////////////////////////////////////////////////////////////////

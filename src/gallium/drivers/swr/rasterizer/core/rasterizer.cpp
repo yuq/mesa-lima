@@ -1544,5 +1544,9 @@ PFN_WORK_FUNC GetRasterizerFunc(
     bool RasterizeScissorEdges
 )
 {
-    return TemplateArgUnroller<RasterizerChooser>::GetFunc(numSamples, IsConservative, InputCoverage, RasterizeScissorEdges);
+    return TemplateArgUnroller<RasterizerChooser>::GetFunc(
+        IntArg<0,4>{numSamples},
+        IsConservative,
+        IntArg<SWR_INPUT_COVERAGE_NONE, SWR_INPUT_COVERAGE_MAX>{InputCoverage},
+        RasterizeScissorEdges);
 }
