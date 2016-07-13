@@ -1330,7 +1330,8 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		si_init_shader_selector_async(sel, -1);
 	else
 		util_queue_add_job(&sscreen->shader_compiler_queue, sel,
-                                   &sel->ready, si_init_shader_selector_async);
+                                   &sel->ready, si_init_shader_selector_async,
+                                   NULL);
 
 	return sel;
 }

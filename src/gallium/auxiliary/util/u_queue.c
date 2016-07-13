@@ -91,6 +91,8 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
       if (job.job) {
          job.execute(job.job, thread_index);
          util_queue_fence_signal(job.fence);
+         if (job.cleanup)
+            job.cleanup(job.job, thread_index);
       }
    }
 
@@ -213,7 +215,8 @@ void
 util_queue_add_job(struct util_queue *queue,
                    void *job,
                    struct util_queue_fence *fence,
-                   util_queue_execute_func execute)
+                   util_queue_execute_func execute,
+                   util_queue_execute_func cleanup)
 {
    struct util_queue_job *ptr;
 
@@ -232,6 +235,7 @@ util_queue_add_job(struct util_queue *queue,
    ptr->job = job;
    ptr->fence = fence;
    ptr->execute = execute;
+   ptr->cleanup = cleanup;
    queue->write_idx = (queue->write_idx + 1) % queue->max_jobs;
 
    queue->num_queued++;
