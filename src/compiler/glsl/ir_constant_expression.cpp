@@ -519,6 +519,24 @@ find_msb_int(int32_t v)
    return find_msb_uint(v < 0 ? ~v : v);
 }
 
+static float
+ldexpf_flush_subnormal(float x, int exp)
+{
+   const float result = ldexpf(x, exp);
+
+   /* Flush subnormal values to zero. */
+   return !isnormal(result) ? copysignf(0.0f, x) : result;
+}
+
+static double
+ldexp_flush_subnormal(double x, int exp)
+{
+   const double result = ldexp(x, exp);
+
+   /* Flush subnormal values to zero. */
+   return !isnormal(result) ? copysign(0.0, x) : result;
+}
+
 ir_constant *
 ir_expression::constant_expression_value(struct hash_table *variable_context)
 {
@@ -1617,17 +1635,16 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
    }
 
    case ir_binop_ldexp:
-      for (unsigned c = 0; c < components; c++) {
-         if (op[0]->type->base_type == GLSL_TYPE_DOUBLE) {
-            data.d[c] = ldexp(op[0]->value.d[c], op[1]->value.i[c]);
-            /* Flush subnormal values to zero. */
-            if (!isnormal(data.d[c]))
-               data.d[c] = copysign(0.0, op[0]->value.d[c]);
-         } else {
-            data.f[c] = ldexpf(op[0]->value.f[c], op[1]->value.i[c]);
-            /* Flush subnormal values to zero. */
-            if (!isnormal(data.f[c]))
-               data.f[c] = copysignf(0.0f, op[0]->value.f[c]);
+      for (unsigned c = 0; c < op[0]->type->components(); c++) {
+         switch (this->type->base_type) {
+         case GLSL_TYPE_FLOAT:
+            data.f[c] = ldexpf_flush_subnormal(op[0]->value.f[c], op[1]->value.i[c]);
+            break;
+         case GLSL_TYPE_DOUBLE:
+            data.d[c] = ldexp_flush_subnormal(op[0]->value.d[c], op[1]->value.i[c]);
+            break;
+         default:
+            assert(0);
          }
       }
       break;
