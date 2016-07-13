@@ -48,13 +48,14 @@ static void get_rate_control_param(struct rvce_encoder *enc, struct pipe_h264_en
 	enc->enc_pic.rc.quant_i_frames = pic->quant_i_frames;
 	enc->enc_pic.rc.quant_p_frames = pic->quant_p_frames;
 	enc->enc_pic.rc.quant_b_frames = pic->quant_b_frames;
+	enc->enc_pic.rc.gop_size = pic->gop_size;
 	enc->enc_pic.rc.frame_rate_num = pic->rate_ctrl.frame_rate_num;
 	enc->enc_pic.rc.frame_rate_den = pic->rate_ctrl.frame_rate_den;
 	enc->enc_pic.rc.max_qp = 51;
 	enc->enc_pic.rc.vbv_buffer_size = pic->rate_ctrl.vbv_buffer_size;
-	enc->enc_pic.rc.vbv_buf_lv = 0;
-	enc->enc_pic.rc.fill_data_enable = 0;
-	enc->enc_pic.rc.enforce_hrd = 0;
+	enc->enc_pic.rc.vbv_buf_lv = pic->rate_ctrl.vbv_buf_lv;
+	enc->enc_pic.rc.fill_data_enable = pic->rate_ctrl.fill_data_enable;
+	enc->enc_pic.rc.enforce_hrd = pic->rate_ctrl.enforce_hrd;
 	enc->enc_pic.rc.target_bits_picture = pic->rate_ctrl.target_bits_picture;
 	enc->enc_pic.rc.peak_bits_picture_integer = pic->rate_ctrl.peak_bits_picture_integer;
 	enc->enc_pic.rc.peak_bits_picture_fraction = pic->rate_ctrl.peak_bits_picture_fraction;
@@ -62,13 +63,13 @@ static void get_rate_control_param(struct rvce_encoder *enc, struct pipe_h264_en
 
 static void get_motion_estimation_param(struct rvce_encoder *enc, struct pipe_h264_enc_picture_desc *pic)
 {
-	enc->enc_pic.me.motion_est_quarter_pixel = 0x00000000;
-	enc->enc_pic.me.enc_disable_sub_mode = 0x000000fe;
-	enc->enc_pic.me.lsmvert = 0x00000000;
-	enc->enc_pic.me.enc_en_ime_overw_dis_subm = 0x00000000;
-	enc->enc_pic.me.enc_ime_overw_dis_subm_no = 0x00000000;
-	enc->enc_pic.me.enc_ime2_search_range_x = 0x00000001;
-	enc->enc_pic.me.enc_ime2_search_range_y = 0x00000001;
+	enc->enc_pic.me.motion_est_quarter_pixel = pic->motion_est.motion_est_quarter_pixel;
+	enc->enc_pic.me.enc_disable_sub_mode = pic->motion_est.enc_disable_sub_mode;
+	enc->enc_pic.me.lsmvert = pic->motion_est.lsmvert;
+	enc->enc_pic.me.enc_en_ime_overw_dis_subm = pic->motion_est.enc_en_ime_overw_dis_subm;
+	enc->enc_pic.me.enc_ime_overw_dis_subm_no = pic->motion_est.enc_ime_overw_dis_subm_no;
+	enc->enc_pic.me.enc_ime2_search_range_x = pic->motion_est.enc_ime2_search_range_x;
+	enc->enc_pic.me.enc_ime2_search_range_y = pic->motion_est.enc_ime2_search_range_y;
 	enc->enc_pic.me.enc_ime_decimation_search = 0x00000001;
 	enc->enc_pic.me.motion_est_half_pixel = 0x00000001;
 	enc->enc_pic.me.enc_search_range_x = 0x00000010;
@@ -90,8 +91,8 @@ static void get_pic_control_param(struct rvce_encoder *enc, struct pipe_h264_enc
 	enc->enc_pic.pc.enc_max_num_ref_frames = enc->base.max_references + 1;
 	enc->enc_pic.pc.enc_num_default_active_ref_l0 = 0x00000001;
 	enc->enc_pic.pc.enc_num_default_active_ref_l1 = 0x00000001;
-	enc->enc_pic.pc.enc_cabac_enable = 0x00000000;
-	enc->enc_pic.pc.enc_constraint_set_flags = 0x00000040;
+	enc->enc_pic.pc.enc_cabac_enable = pic->pic_ctrl.enc_cabac_enable;
+	enc->enc_pic.pc.enc_constraint_set_flags = pic->pic_ctrl.enc_constraint_set_flags;
 	enc->enc_pic.pc.enc_num_default_active_ref_l0 = 0x00000001;
 	enc->enc_pic.pc.enc_num_default_active_ref_l1 = 0x00000001;
 }
@@ -113,7 +114,7 @@ static void get_config_ext_param(struct rvce_encoder *enc)
 
 static void get_vui_param(struct rvce_encoder *enc, struct pipe_h264_enc_picture_desc *pic)
 {
-	enc->enc_pic.enable_vui = (pic->rate_ctrl.frame_rate_num != 0);
+	enc->enc_pic.enable_vui = pic->enable_vui;
 	enc->enc_pic.vui.video_format = 0x00000005;
 	enc->enc_pic.vui.color_prim = 0x00000002;
 	enc->enc_pic.vui.transfer_char = 0x00000002;
@@ -149,10 +150,16 @@ void radeon_vce_52_get_param(struct rvce_encoder *enc, struct pipe_h264_enc_pict
 
 	enc->enc_pic.picture_type = pic->picture_type;
 	enc->enc_pic.frame_num = pic->frame_num;
+	enc->enc_pic.frame_num_cnt = pic->frame_num_cnt;
+	enc->enc_pic.p_remain = pic->p_remain;
+	enc->enc_pic.i_remain = pic->i_remain;
+	enc->enc_pic.gop_cnt = pic->gop_cnt;
 	enc->enc_pic.pic_order_cnt = pic->pic_order_cnt;
 	enc->enc_pic.ref_idx_l0 = pic->ref_idx_l0;
 	enc->enc_pic.ref_idx_l1 = pic->ref_idx_l1;
 	enc->enc_pic.not_referenced = pic->not_referenced;
+	enc->enc_pic.addrmode_arraymode_disrdo_distwoinstants = pic->ref_pic_mode;
+	enc->enc_pic.is_idr = pic->is_idr;
 }
 
 static void create(struct rvce_encoder *enc)
