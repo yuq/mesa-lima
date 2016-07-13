@@ -1086,7 +1086,7 @@ function_key_compare(const void *a, const void *b)
    const glsl_type *const key2 = (glsl_type *) b;
 
    if (key1->length != key2->length)
-      return 1;
+      return false;
 
    return memcmp(key1->fields.parameters, key2->fields.parameters,
                  (key1->length + 1) * sizeof(*key1->fields.parameters)) == 0;
