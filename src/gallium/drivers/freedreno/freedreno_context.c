@@ -48,7 +48,7 @@ fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 	if (!ctx->screen->reorder) {
 		struct fd_batch *batch = NULL;
 		fd_batch_reference(&batch, ctx->batch);
-		fd_batch_flush(batch);
+		fd_batch_flush(batch, true);
 		timestamp = fd_ringbuffer_timestamp(batch->gmem);
 		fd_batch_reference(&batch, NULL);
 	} else {
@@ -102,6 +102,9 @@ fd_context_destroy(struct pipe_context *pctx)
 	unsigned i;
 
 	DBG("");
+
+	if (ctx->screen->reorder)
+		util_queue_destroy(&ctx->flush_queue);
 
 	fd_batch_reference(&ctx->batch, NULL);  /* unref current batch */
 	fd_bc_invalidate_context(ctx);
@@ -179,8 +182,11 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	 * batches per compute job (since it isn't using tiling, so no point
 	 * in getting involved with the re-ordering madness)..
 	 */
-	if (!screen->reorder)
+	if (!screen->reorder) {
 		ctx->batch = fd_bc_alloc_batch(&screen->batch_cache, ctx);
+	} else {
+		util_queue_init(&ctx->flush_queue, "flush_queue", 16, 1);
+	}
 
 	fd_reset_wfi(ctx);
 

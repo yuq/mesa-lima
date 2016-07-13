@@ -28,6 +28,7 @@
 #define FREEDRENO_BATCH_H_
 
 #include "util/u_inlines.h"
+#include "util/u_queue.h"
 #include "util/list.h"
 
 #include "freedreno_util.h"
@@ -75,6 +76,8 @@ struct fd_batch {
 	unsigned idx;
 
 	struct fd_context *ctx;
+
+	struct util_queue_fence flush_fence;
 
 	/* do we need to mem2gmem before rendering.  We don't, if for example,
 	 * there was a glClear() that invalidated the entire previous buffer
@@ -197,7 +200,8 @@ struct fd_batch {
 struct fd_batch * fd_batch_create(struct fd_context *ctx);
 
 void fd_batch_reset(struct fd_batch *batch);
-void fd_batch_flush(struct fd_batch *batch);
+void fd_batch_sync(struct fd_batch *batch);
+void fd_batch_flush(struct fd_batch *batch, bool sync);
 void fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool write);
 void fd_batch_check_size(struct fd_batch *batch);
 

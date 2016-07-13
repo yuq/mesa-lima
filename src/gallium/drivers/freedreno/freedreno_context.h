@@ -114,6 +114,8 @@ struct fd_context {
 	struct fd_device *dev;
 	struct fd_screen *screen;
 
+	struct util_queue flush_queue;
+
 	struct blitter_context *blitter;
 	struct primconvert_context *primconvert;
 
@@ -160,6 +162,8 @@ struct fd_context {
 	 * you care about is not necessarily the same as ctx->batch.
 	 */
 	struct fd_batch *batch;
+
+	uint32_t last_fence;
 
 	/* Are we in process of shadowing a resource? Used to detect recursion
 	 * in transfer_map, and skip unneeded synchronization.

@@ -405,8 +405,6 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 	fd_ringbuffer_flush(batch->gmem);
 
 	fd_reset_wfi(ctx);
-
-	ctx->dirty = ~0;
 }
 
 /* tile needs restore if it isn't completely contained within the

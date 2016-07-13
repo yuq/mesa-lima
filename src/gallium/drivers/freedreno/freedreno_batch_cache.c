@@ -128,19 +128,24 @@ uint32_t
 fd_bc_flush(struct fd_batch_cache *cache, struct fd_context *ctx)
 {
 	struct hash_entry *entry;
-	uint32_t timestamp = 0;
+	struct fd_batch *last_batch = NULL;
 
 	hash_table_foreach(cache->ht, entry) {
 		struct fd_batch *batch = NULL;
 		fd_batch_reference(&batch, (struct fd_batch *)entry->data);
 		if (batch->ctx == ctx) {
-			fd_batch_flush(batch);
-			timestamp = MAX2(timestamp, fd_ringbuffer_timestamp(batch->gmem));
+			fd_batch_reference(&last_batch, batch);
+			fd_batch_flush(batch, false);
 		}
 		fd_batch_reference(&batch, NULL);
 	}
 
-	return timestamp;
+	if (last_batch) {
+		fd_batch_sync(last_batch);
+		fd_batch_reference(&last_batch, NULL);
+	}
+
+	return ctx->last_fence;
 }
 
 void
@@ -238,7 +243,7 @@ fd_bc_alloc_batch(struct fd_batch_cache *cache, struct fd_context *ctx)
 				fd_batch_reference(&flush_batch, cache->batches[i]);
 		}
 		DBG("%p: too many batches!  flush forced!", flush_batch);
-		fd_batch_flush(flush_batch);
+		fd_batch_flush(flush_batch, true);
 
 		/* While the resources get cleaned up automatically, the flush_batch
 		 * doesn't get removed from the dependencies of other batches, so
