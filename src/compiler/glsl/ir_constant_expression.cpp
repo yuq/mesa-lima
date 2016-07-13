@@ -996,76 +996,52 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
    case ir_unop_pack_snorm_2x16:
       assert(op[0]->type == glsl_type::vec2_type);
-      data.u[0] = pack_2x16(pack_snorm_1x16,
-                            op[0]->value.f[0],
-                            op[0]->value.f[1]);
+      data.u[0] = pack_2x16(pack_snorm_1x16, op[0]->value.f[0], op[0]->value.f[1]);
       break;
 
    case ir_unop_pack_snorm_4x8:
       assert(op[0]->type == glsl_type::vec4_type);
-      data.u[0] = pack_4x8(pack_snorm_1x8,
-                           op[0]->value.f[0],
-                           op[0]->value.f[1],
-                           op[0]->value.f[2],
-                           op[0]->value.f[3]);
+      data.u[0] = pack_4x8(pack_snorm_1x8, op[0]->value.f[0], op[0]->value.f[1], op[0]->value.f[2], op[0]->value.f[3]);
       break;
 
    case ir_unop_pack_unorm_2x16:
       assert(op[0]->type == glsl_type::vec2_type);
-      data.u[0] = pack_2x16(pack_unorm_1x16,
-                            op[0]->value.f[0],
-                            op[0]->value.f[1]);
+      data.u[0] = pack_2x16(pack_unorm_1x16, op[0]->value.f[0], op[0]->value.f[1]);
       break;
 
    case ir_unop_pack_unorm_4x8:
       assert(op[0]->type == glsl_type::vec4_type);
-      data.u[0] = pack_4x8(pack_unorm_1x8,
-                           op[0]->value.f[0],
-                           op[0]->value.f[1],
-                           op[0]->value.f[2],
-                           op[0]->value.f[3]);
+      data.u[0] = pack_4x8(pack_unorm_1x8, op[0]->value.f[0], op[0]->value.f[1], op[0]->value.f[2], op[0]->value.f[3]);
       break;
 
    case ir_unop_pack_half_2x16:
       assert(op[0]->type == glsl_type::vec2_type);
-      data.u[0] = pack_2x16(pack_half_1x16,
-                            op[0]->value.f[0],
-                            op[0]->value.f[1]);
+      data.u[0] = pack_2x16(pack_half_1x16, op[0]->value.f[0], op[0]->value.f[1]);
       break;
 
    case ir_unop_unpack_snorm_2x16:
       assert(op[0]->type == glsl_type::uint_type);
-      unpack_2x16(unpack_snorm_1x16,
-                  op[0]->value.u[0],
-                  &data.f[0], &data.f[1]);
+      unpack_2x16(unpack_snorm_1x16, op[0]->value.u[0], &data.f[0], &data.f[1]);
       break;
 
    case ir_unop_unpack_snorm_4x8:
       assert(op[0]->type == glsl_type::uint_type);
-      unpack_4x8(unpack_snorm_1x8,
-                 op[0]->value.u[0],
-                 &data.f[0], &data.f[1], &data.f[2], &data.f[3]);
+      unpack_4x8(unpack_snorm_1x8, op[0]->value.u[0], &data.f[0], &data.f[1], &data.f[2], &data.f[3]);
       break;
 
    case ir_unop_unpack_unorm_2x16:
       assert(op[0]->type == glsl_type::uint_type);
-      unpack_2x16(unpack_unorm_1x16,
-                  op[0]->value.u[0],
-                  &data.f[0], &data.f[1]);
+      unpack_2x16(unpack_unorm_1x16, op[0]->value.u[0], &data.f[0], &data.f[1]);
       break;
 
    case ir_unop_unpack_unorm_4x8:
       assert(op[0]->type == glsl_type::uint_type);
-      unpack_4x8(unpack_unorm_1x8,
-                 op[0]->value.u[0],
-                 &data.f[0], &data.f[1], &data.f[2], &data.f[3]);
+      unpack_4x8(unpack_unorm_1x8, op[0]->value.u[0], &data.f[0], &data.f[1], &data.f[2], &data.f[3]);
       break;
 
    case ir_unop_unpack_half_2x16:
       assert(op[0]->type == glsl_type::uint_type);
-      unpack_2x16(unpack_half_1x16,
-                  op[0]->value.u[0],
-                  &data.f[0], &data.f[1]);
+      unpack_2x16(unpack_half_1x16, op[0]->value.u[0], &data.f[0], &data.f[1]);
       break;
 
    case ir_unop_bitfield_reverse:
@@ -1246,18 +1222,10 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
          switch (op[0]->type->base_type) {
          case GLSL_TYPE_UINT:
-            if (op[1]->value.u[c1] == 0) {
-               data.u[c] = 0;
-            } else {
-               data.u[c] = op[0]->value.u[c0] / op[1]->value.u[c1];
-            }
+            data.u[c] = op[1]->value.u[c1] == 0 ? 0 : op[0]->value.u[c0] / op[1]->value.u[c1];
             break;
          case GLSL_TYPE_INT:
-            if (op[1]->value.i[c1] == 0) {
-               data.i[c] = 0;
-            } else {
-               data.i[c] = op[0]->value.i[c0] / op[1]->value.i[c1];
-            }
+            data.i[c] = op[1]->value.i[c1] == 0 ? 0 : op[0]->value.i[c0] / op[1]->value.i[c1];
             break;
          case GLSL_TYPE_FLOAT:
             data.f[c] = op[0]->value.f[c0] / op[1]->value.f[c1];
@@ -1280,32 +1248,22 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
          switch (op[0]->type->base_type) {
          case GLSL_TYPE_UINT:
-            if (op[1]->value.u[c1] == 0) {
-               data.u[c] = 0;
-            } else {
-               data.u[c] = op[0]->value.u[c0] % op[1]->value.u[c1];
-            }
+            data.u[c] = op[1]->value.u[c1] == 0 ? 0 : op[0]->value.u[c0] % op[1]->value.u[c1];
             break;
          case GLSL_TYPE_INT:
-            if (op[1]->value.i[c1] == 0) {
-               data.i[c] = 0;
-            } else {
-               data.i[c] = op[0]->value.i[c0] % op[1]->value.i[c1];
-            }
+            data.i[c] = op[1]->value.i[c1] == 0 ? 0 : op[0]->value.i[c0] % op[1]->value.i[c1];
             break;
          case GLSL_TYPE_FLOAT:
             /* We don't use fmod because it rounds toward zero; GLSL specifies
              * the use of floor.
              */
-            data.f[c] = op[0]->value.f[c0] - op[1]->value.f[c1]
-               * floorf(op[0]->value.f[c0] / op[1]->value.f[c1]);
+            data.f[c] = op[0]->value.f[c0] - op[1]->value.f[c1] * floorf(op[0]->value.f[c0] / op[1]->value.f[c1]);
             break;
          case GLSL_TYPE_DOUBLE:
             /* We don't use fmod because it rounds toward zero; GLSL specifies
              * the use of floor.
              */
-            data.d[c] = op[0]->value.d[c0] - op[1]->value.d[c1]
-               * floor(op[0]->value.d[c0] / op[1]->value.d[c1]);
+            data.d[c] = op[0]->value.d[c0] - op[1]->value.d[c1] * floor(op[0]->value.d[c0] / op[1]->value.d[c1]);
             break;
          default:
             assert(0);
@@ -1693,11 +1651,9 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
       for (unsigned c = 0; c < components; c++) {
          if (op[0]->type->base_type == GLSL_TYPE_DOUBLE)
-            data.d[c] = op[0]->value.d[c] * op[1]->value.d[c]
-                                          + op[2]->value.d[c];
+            data.d[c] = op[0]->value.d[c] * op[1]->value.d[c] + op[2]->value.d[c];
          else
-            data.f[c] = op[0]->value.f[c] * op[1]->value.f[c]
-                                          + op[2]->value.f[c];
+            data.f[c] = op[0]->value.f[c] * op[1]->value.f[c] + op[2]->value.f[c];
       }
       break;
 
@@ -1712,11 +1668,9 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       unsigned c2_inc = op[2]->type->is_scalar() ? 0 : 1;
       for (unsigned c = 0, c2 = 0; c < components; c2 += c2_inc, c++) {
          if (op[0]->type->base_type == GLSL_TYPE_DOUBLE)
-            data.d[c] = op[0]->value.d[c] * (1.0 - op[2]->value.d[c2]) +
-               (op[1]->value.d[c] * op[2]->value.d[c2]);
+            data.d[c] = op[0]->value.d[c] * (1.0 - op[2]->value.d[c2]) + (op[1]->value.d[c] * op[2]->value.d[c2]);
          else
-            data.f[c] = op[0]->value.f[c] * (1.0f - op[2]->value.f[c2]) +
-               (op[1]->value.f[c] * op[2]->value.f[c2]);
+            data.f[c] = op[0]->value.f[c] * (1.0f - op[2]->value.f[c2]) + (op[1]->value.f[c] * op[2]->value.f[c2]);
       }
       break;
    }
