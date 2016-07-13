@@ -329,6 +329,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       /* If the shader uses any push constants at all, we'll just give
        * them the maximum possible number
        */
+      assert(nir->num_uniforms <= MAX_PUSH_CONSTANTS_SIZE);
       prog_data->nr_params += MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
    }
 
