@@ -1097,20 +1097,8 @@ static uint32_t
 function_key_hash(const void *a)
 {
    const glsl_type *const key = (glsl_type *) a;
-   char hash_key[128];
-   unsigned size = 0;
-
-   size = snprintf(hash_key, sizeof(hash_key), "%08x", key->length);
-
-   for (unsigned i = 0; i < key->length; i++) {
-      if (size >= sizeof(hash_key))
-	 break;
-
-      size += snprintf(& hash_key[size], sizeof(hash_key) - size,
-		       "%p", (void *) key->fields.structure[i].type);
-   }
-
-   return _mesa_hash_string(hash_key);
+   return _mesa_hash_data(key->fields.parameters,
+                          (key->length + 1) * sizeof(*key->fields.parameters));
 }
 
 const glsl_type *
