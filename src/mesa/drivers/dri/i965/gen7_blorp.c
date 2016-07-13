@@ -233,7 +233,7 @@ gen7_blorp_emit_surface_state(struct brw_context *brw,
  * buffer are valid.
  */
 static void
-gen7_blorp_emit_disable_constant_state(struct brw_context *brw,
+gen7_blorp_disable_constant_state(struct brw_context *brw,
                                        unsigned opcode)
 {
    BEGIN_BATCH(7);
@@ -570,20 +570,6 @@ gen7_blorp_emit_sampler_state_pointers_ps(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
-void
-gen7_blorp_emit_constant_ps_disable(struct brw_context *brw)
-{
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_CONSTANT_PS << 16 | (7 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
 static void
 gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
                                      const struct brw_blorp_params *params)
@@ -779,10 +765,11 @@ gen7_blorp_exec(struct brw_context *brw,
       gen7_blorp_emit_cc_state_pointer(brw, cc_state_offset);
    }
 
-   gen7_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_VS);
-   gen7_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_HS);
-   gen7_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_DS);
-   gen7_blorp_emit_disable_constant_state(brw, _3DSTATE_CONSTANT_GS);
+   gen7_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_VS);
+   gen7_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_HS);
+   gen7_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_DS);
+   gen7_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_GS);
+   gen7_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_PS);
 
    depthstencil_offset = gen6_blorp_emit_depth_stencil_state(brw, params);
    gen7_blorp_emit_depth_stencil_state_pointers(brw, depthstencil_offset);
@@ -820,8 +807,6 @@ gen7_blorp_exec(struct brw_context *brw,
    gen7_blorp_emit_wm_config(brw, params);
    if (params->wm_prog_data)
       gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
-
-   gen7_blorp_emit_constant_ps_disable(brw);
 
    if (params->src.mt) {
       const uint32_t sampler_offset =
