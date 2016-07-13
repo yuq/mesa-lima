@@ -513,15 +513,12 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 RDTSC_START(BEBarycentric);
                 CalcPixelBarycentrics(coeffs, psContext);
 
-                if(T::bCentroidPos)
-                {
-                    // for 1x case, centroid is pixel center
-                    psContext.vX.centroid = psContext.vX.center;
-                    psContext.vY.centroid = psContext.vY.center;
-                    psContext.vI.centroid = psContext.vI.center;
-                    psContext.vJ.centroid = psContext.vJ.center;
-                    psContext.vOneOverW.centroid = psContext.vOneOverW.center;
-                }
+                // for 1x case, centroid is pixel center
+                psContext.vX.centroid = psContext.vX.center;
+                psContext.vY.centroid = psContext.vY.center;
+                psContext.vI.centroid = psContext.vI.center;
+                psContext.vJ.centroid = psContext.vJ.center;
+                psContext.vOneOverW.centroid = psContext.vOneOverW.center;
 
                 // interpolate and quantize z
                 psContext.vZ = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.center, psContext.vJ.center);
@@ -714,6 +711,11 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                 }
                 CalcCentroidBarycentrics(coeffs, psContext, psContext.vX.UL, psContext.vY.UL);
                 RDTSC_STOP(BEBarycentric, 0, 0);
+            }
+            else
+            {
+                psContext.vX.centroid = psContext.vX.sample;
+                psContext.vY.centroid = psContext.vY.sample;
             }
 
             for(uint32_t sample = 0; sample < T::MultisampleT::numSamples; sample++)
@@ -925,8 +927,14 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                     psContext.vX.centroid = _simd_add_ps(psContext.vX.UL, _simd_set1_ps(0.5f));
                     psContext.vY.centroid = _simd_add_ps(psContext.vY.UL, _simd_set1_ps(0.5f));
                 }
+
                 CalcCentroidBarycentrics(coeffs, psContext, psContext.vX.UL, psContext.vY.UL);
                 RDTSC_STOP(BEBarycentric, 0, 0);
+            }
+            else
+            {
+                psContext.vX.centroid = _simd_add_ps(psContext.vX.UL, _simd_set1_ps(0.5f));
+                psContext.vY.centroid = _simd_add_ps(psContext.vY.UL, _simd_set1_ps(0.5f));
             }
 
             if(T::bForcedSampleCount)
