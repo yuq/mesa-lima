@@ -842,34 +842,34 @@ vec4_visitor::move_push_constants_to_pull_constants()
       pull_constant_loc[i / 4] = -1;
 
       if (i >= max_uniform_components) {
-	 const gl_constant_value **values = &stage_prog_data->param[i];
+         const gl_constant_value **values = &stage_prog_data->param[i];
 
-	 /* Try to find an existing copy of this uniform in the pull
-	  * constants if it was part of an array access already.
-	  */
-	 for (unsigned int j = 0; j < stage_prog_data->nr_pull_params; j += 4) {
-	    int matches;
+         /* Try to find an existing copy of this uniform in the pull
+          * constants if it was part of an array access already.
+          */
+         for (unsigned int j = 0; j < stage_prog_data->nr_pull_params; j += 4) {
+            int matches;
 
-	    for (matches = 0; matches < 4; matches++) {
-	       if (stage_prog_data->pull_param[j + matches] != values[matches])
-		  break;
-	    }
+            for (matches = 0; matches < 4; matches++) {
+               if (stage_prog_data->pull_param[j + matches] != values[matches])
+                  break;
+            }
 
-	    if (matches == 4) {
-	       pull_constant_loc[i / 4] = j / 4;
-	       break;
-	    }
-	 }
+            if (matches == 4) {
+               pull_constant_loc[i / 4] = j / 4;
+               break;
+            }
+         }
 
-	 if (pull_constant_loc[i / 4] == -1) {
-	    assert(stage_prog_data->nr_pull_params % 4 == 0);
-	    pull_constant_loc[i / 4] = stage_prog_data->nr_pull_params / 4;
+         if (pull_constant_loc[i / 4] == -1) {
+            assert(stage_prog_data->nr_pull_params % 4 == 0);
+            pull_constant_loc[i / 4] = stage_prog_data->nr_pull_params / 4;
 
-	    for (int j = 0; j < 4; j++) {
-	       stage_prog_data->pull_param[stage_prog_data->nr_pull_params++] =
+            for (int j = 0; j < 4; j++) {
+               stage_prog_data->pull_param[stage_prog_data->nr_pull_params++] =
                   values[j];
-	    }
-	 }
+            }
+         }
       }
    }
 
@@ -878,21 +878,21 @@ vec4_visitor::move_push_constants_to_pull_constants()
     */
    foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
       for (int i = 0 ; i < 3; i++) {
-	 if (inst->src[i].file != UNIFORM ||
+         if (inst->src[i].file != UNIFORM ||
              pull_constant_loc[inst->src[i].nr] == -1)
-	    continue;
+            continue;
 
          int uniform = inst->src[i].nr;
 
-	 dst_reg temp = dst_reg(this, glsl_type::vec4_type);
+         dst_reg temp = dst_reg(this, glsl_type::vec4_type);
 
-	 emit_pull_constant_load(block, inst, temp, inst->src[i],
-				 pull_constant_loc[uniform], src_reg());
+         emit_pull_constant_load(block, inst, temp, inst->src[i],
+                                 pull_constant_loc[uniform], src_reg());
 
-	 inst->src[i].file = temp.file;
+         inst->src[i].file = temp.file;
          inst->src[i].nr = temp.nr;
-	 inst->src[i].offset %= 16;
-	 inst->src[i].reladdr = NULL;
+         inst->src[i].offset %= 16;
+         inst->src[i].reladdr = NULL;
       }
    }
 
