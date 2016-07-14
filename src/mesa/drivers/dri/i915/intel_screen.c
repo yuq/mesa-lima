@@ -787,6 +787,7 @@ static const __DRI2rendererQueryExtension intelRendererQueryExtension = {
 
 static const __DRIextension *intelScreenExtensions[] = {
     &intelTexBufferExtension.base,
+    &intelFenceExtension.base,
     &intelFlushExtension.base,
     &intelImageExtension.base,
     &intelRendererQueryExtension.base,
