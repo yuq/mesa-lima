@@ -277,9 +277,9 @@ lower_atomic(nir_intrinsic_instr *intrin, struct lower_io_state *state,
    nir_intrinsic_instr *atomic =
       nir_intrinsic_instr_create(state->mem_ctx, op);
 
-   atomic->src[0] = nir_src_for_ssa(offset);
-   atomic->const_index[0] = var->data.driver_location;
+   nir_intrinsic_set_base(atomic, var->data.driver_location);
 
+   atomic->src[0] = nir_src_for_ssa(offset);
    for (unsigned i = 0; i < nir_op_infos[intrin->intrinsic].num_inputs; i++) {
       nir_src_copy(&atomic->src[i+1], &intrin->src[i], atomic);
    }
