@@ -19,11 +19,11 @@ static void *__glXGLVNDGetProcAddress(const GLubyte *procName)
 
 static unsigned FindGLXFunction(const GLubyte *name)
 {
-    unsigned first = 0;
-    unsigned last = DI_FUNCTION_COUNT - 1;
+    int first = 0;
+    int last = DI_FUNCTION_COUNT - 1;
 
     while (first <= last) {
-        unsigned middle = (first + last) / 2;
+        int middle = (first + last) / 2;
         int comp = strcmp((const char *) name,
                           __glXDispatchTableStrings[middle]);
 
