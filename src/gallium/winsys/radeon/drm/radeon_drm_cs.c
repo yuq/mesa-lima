@@ -563,13 +563,10 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
         default:
         case RING_GFX:
         case RING_COMPUTE:
-            cs->cst->flags[0] = 0;
+            cs->cst->flags[0] = RADEON_CS_KEEP_TILING_FLAGS;
             cs->cst->flags[1] = RADEON_CS_RING_GFX;
-            cs->cst->cs.num_chunks = 2;
-            if (flags & RADEON_FLUSH_KEEP_TILING_FLAGS) {
-                cs->cst->flags[0] |= RADEON_CS_KEEP_TILING_FLAGS;
-                cs->cst->cs.num_chunks = 3;
-            }
+            cs->cst->cs.num_chunks = 3;
+
             if (cs->ws->info.has_virtual_memory) {
                 cs->cst->flags[0] |= RADEON_CS_USE_VM;
                 cs->cst->cs.num_chunks = 3;

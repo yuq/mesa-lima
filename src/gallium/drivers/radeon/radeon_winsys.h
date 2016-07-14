@@ -29,8 +29,7 @@
 #include "pipebuffer/pb_buffer.h"
 
 #define RADEON_FLUSH_ASYNC		(1 << 0)
-#define RADEON_FLUSH_KEEP_TILING_FLAGS	(1 << 1)
-#define RADEON_FLUSH_END_OF_FRAME       (1 << 2)
+#define RADEON_FLUSH_END_OF_FRAME       (1 << 1)
 
 /* Tiling flags. */
 enum radeon_bo_layout {

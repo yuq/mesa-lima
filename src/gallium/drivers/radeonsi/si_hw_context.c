@@ -123,9 +123,6 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	si_emit_cache_flush(ctx, NULL);
 
-	/* force to keep tiling flags */
-	flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
-
 	if (ctx->trace_buf)
 		si_trace_emit(ctx);
 

@@ -274,9 +274,6 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 		radeon_set_context_reg(cs, R_028350_SX_MISC, 0);
 	}
 
-	/* force to keep tiling flags */
-	flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
-
 	/* Flush the CS. */
 	ctx->b.ws->cs_flush(cs, flags, fence);
 
