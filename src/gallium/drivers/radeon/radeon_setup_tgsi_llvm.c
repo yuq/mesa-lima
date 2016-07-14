@@ -112,25 +112,11 @@ static LLVMValueRef emit_swizzle(struct lp_build_tgsi_context *bld_base,
 
 static struct tgsi_declaration_range
 get_array_range(struct lp_build_tgsi_context *bld_base,
-		unsigned File, unsigned reg_index,
-		const struct tgsi_ind_register *reg)
+		unsigned File, const struct tgsi_ind_register *reg)
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 
-	if (!reg) {
-		unsigned i;
-		unsigned num_arrays = bld_base->info->array_max[TGSI_FILE_TEMPORARY];
-		for (i = 0; i < num_arrays; i++) {
-			const struct tgsi_declaration_range *range =
-						&ctx->arrays[i].range;
-
-			if (reg_index >= range->First && reg_index <= range->Last) {
-				return ctx->arrays[i].range;
-			}
-		}
-	}
-
-	if (File != TGSI_FILE_TEMPORARY || !reg || reg->ArrayID == 0 ||
+	if (File != TGSI_FILE_TEMPORARY || reg->ArrayID == 0 ||
 	    reg->ArrayID > bld_base->info->array_max[TGSI_FILE_TEMPORARY]) {
 		struct tgsi_declaration_range range;
 		range.First = 0;
@@ -138,30 +124,7 @@ get_array_range(struct lp_build_tgsi_context *bld_base,
 		return range;
 	}
 
-	return ctx->arrays[reg->ArrayID - 1].range;
-}
-
-static LLVMValueRef get_alloca_for_array(struct lp_build_tgsi_context *bld_base,
-					 unsigned file,
-					 unsigned index)
-{
-	unsigned i;
-	unsigned num_arrays;
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
-
-	if (file != TGSI_FILE_TEMPORARY)
-		return NULL;
-
-	num_arrays = bld_base->info->array_max[TGSI_FILE_TEMPORARY];
-	for (i = 0; i < num_arrays; i++) {
-		const struct tgsi_declaration_range *range =
-						&ctx->arrays[i].range;
-
-		if (index >= range->First && index <= range->Last) {
-			return ctx->arrays[i].alloca;
-		}
-	}
-	return NULL;
+	return ctx->arrays[reg->ArrayID - 1];
 }
 
 static LLVMValueRef
@@ -171,9 +134,6 @@ emit_array_index(struct lp_build_tgsi_soa_context *bld,
 {
 	struct gallivm_state *gallivm = bld->bld_base.base.gallivm;
 
-	if (!reg) {
-		return lp_build_const_int32(gallivm, offset);
-	}
 	LLVMValueRef addr = LLVMBuildLoad(gallivm->builder, bld->addr[reg->Index][reg->Swizzle], "");
 	return LLVMBuildAdd(gallivm->builder, addr, lp_build_const_int32(gallivm, offset), "");
 }
@@ -221,7 +181,7 @@ emit_array_fetch(struct lp_build_tgsi_context *bld_base,
 		tmp_reg.Register.Index = i + range.First;
 		LLVMValueRef temp = radeon_llvm_emit_fetch(bld_base, &tmp_reg, type, swizzle);
 		result = LLVMBuildInsertElement(builder, result, temp,
-			lp_build_const_int32(gallivm, i), "array_vector");
+			lp_build_const_int32(gallivm, i), "");
 	}
 	return result;
 }
@@ -235,35 +195,13 @@ load_value_from_array(struct lp_build_tgsi_context *bld_base,
 		      const struct tgsi_ind_register *reg_indirect)
 {
 	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
-	struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_index, reg_indirect);
-	LLVMValueRef index = emit_array_index(bld, reg_indirect, reg_index - range.First);
-	LLVMValueRef array = get_alloca_for_array(bld_base, file, reg_index);
-	LLVMValueRef ptr, val, indices[2];
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_indirect);
 
-	if (!array) {
-		/* Handle the case where the array is stored as a vector. */
-		return LLVMBuildExtractElement(builder,
-				emit_array_fetch(bld_base, file, type, range, swizzle),
-				index, "");
-	}
+	return LLVMBuildExtractElement(builder,
+			emit_array_fetch(bld_base, file, type, range, swizzle),
+			emit_array_index(bld, reg_indirect, reg_index - range.First), "");
 
-	index = LLVMBuildMul(builder, index, lp_build_const_int32(gallivm, TGSI_NUM_CHANNELS), "");
-	index = LLVMBuildAdd(builder, index, lp_build_const_int32(gallivm, swizzle), "");
-	indices[0] = bld_base->uint_bld.zero;
-	indices[1] = index;
-	ptr = LLVMBuildGEP(builder, array, indices, 2, "");
-	val = LLVMBuildLoad(builder, ptr, "");
-	if (tgsi_type_is_64bit(type)) {
-		LLVMValueRef ptr_hi, val_hi;
-		indices[0] = lp_build_const_int32(gallivm, 1);
-		ptr_hi = LLVMBuildGEP(builder, ptr, indices, 1, "");
-		val_hi = LLVMBuildLoad(builder, ptr_hi, "");
-		val = radeon_llvm_emit_fetch_64bit(bld_base, type, val, val_hi);
-
-	}
-	return val;
 }
 
 static LLVMValueRef
@@ -275,26 +213,13 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 		     const struct tgsi_ind_register *reg_indirect)
 {
 	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
-	struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_index, reg_indirect);
-	LLVMValueRef index = emit_array_index(bld, reg_indirect, reg_index - range.First);
-	LLVMValueRef array = get_alloca_for_array(bld_base, file, reg_index);
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_indirect);
 
-	if (array) {
-		LLVMValueRef indices[2];
-		index = LLVMBuildMul(builder, index, lp_build_const_int32(gallivm, TGSI_NUM_CHANNELS), "");
-		index = LLVMBuildAdd(builder, index, lp_build_const_int32(gallivm, chan_index), "");
-		indices[0] = bld_base->uint_bld.zero;
-		indices[1] = index;
-		LLVMValueRef pointer = LLVMBuildGEP(builder, array, indices, 2, "");
-		LLVMBuildStore(builder, value, pointer);
-		return NULL;
-	} else {
-		return LLVMBuildInsertElement(builder,
+	return LLVMBuildInsertElement(builder,
 				emit_array_fetch(bld_base, file, TGSI_TYPE_FLOAT, range, chan_index),
-				value, index, "");
-	}
+				value,  emit_array_index(bld, reg_indirect, reg_index - range.First), "");
+	return NULL;
 }
 
 LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
@@ -318,9 +243,8 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 	}
 
 	if (reg->Register.Indirect) {
-		LLVMValueRef load = load_value_from_array(bld_base, reg->Register.File, type,
+		return load_value_from_array(bld_base, reg->Register.File, type,
 				swizzle, reg->Register.Index, &reg->Indirect);
-		return bitcast(bld_base, type, load);
 	}
 
 	switch(reg->Register.File) {
@@ -358,11 +282,6 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 			return radeon_llvm_emit_fetch_64bit(bld_base, type,
 						 LLVMBuildLoad(builder, ptr, ""),
 						 LLVMBuildLoad(builder, ptr2, ""));
-		}
-		LLVMValueRef array = get_alloca_for_array(bld_base, reg->Register.File, reg->Register.Index);
-		if (array) {
-			return bitcast(bld_base, type, load_value_from_array(bld_base, reg->Register.File, type,
-					swizzle, reg->Register.Index, NULL));
 		}
 		result = LLVMBuildLoad(builder, ptr, "");
 		break;
@@ -414,7 +333,6 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			     const struct tgsi_full_declaration *decl)
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	unsigned first, last, i, idx;
 	switch(decl->Declaration.File) {
 	case TGSI_FILE_ADDRESS:
@@ -432,36 +350,13 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 	}
 
 	case TGSI_FILE_TEMPORARY:
-	{
-		unsigned decl_size;
-		first = decl->Range.First;
-		last = decl->Range.Last;
-		decl_size = 4 * ((last - first) + 1);
 		if (decl->Declaration.Array) {
-			unsigned id = decl->Array.ArrayID - 1;
 			if (!ctx->arrays) {
 				int size = bld_base->info->array_max[TGSI_FILE_TEMPORARY];
-				ctx->arrays = CALLOC(size, sizeof(ctx->arrays[0]));
-			for (i = 0; i < size; ++i) {
-				assert(!ctx->arrays[i].alloca);}
+				ctx->arrays = MALLOC(sizeof(ctx->arrays[0]) * size);
 			}
 
-			ctx->arrays[id].range = decl->Range;
-
-			/* If the array is more than 16 elements (each element
-			 * is 32-bits), then store it in a vector.  Storing the
-			 * array in a vector will causes the compiler to store
-			 * the array in registers and access it using indirect
-			 * addressing.  16 is number of vector elements that
-			 * LLVM will store in a register.
-			 * FIXME: We shouldn't need to do this.  LLVM should be
-			 * smart enough to promote allocas int registers when
-			 * profitable.
-			 */
-			if (decl_size > 16) {
-				ctx->arrays[id].alloca = LLVMBuildAlloca(builder,
-					LLVMArrayType(bld_base->base.vec_type, decl_size),"array");
-			}
+			ctx->arrays[decl->Array.ArrayID - 1] = decl->Range;
 		}
 		first = decl->Range.First;
 		last = decl->Range.Last;
@@ -478,7 +373,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			}
 		}
 		break;
-	}
+
 	case TGSI_FILE_INPUT:
 	{
 		unsigned idx;
@@ -587,16 +482,11 @@ void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 
 		if (reg->Register.Indirect) {
 			struct tgsi_declaration_range range = get_array_range(bld_base,
-				reg->Register.File, reg->Register.Index, &reg->Indirect);
+				reg->Register.File, &reg->Indirect);
 
         		unsigned i, size = range.Last - range.First + 1;
-			unsigned file = reg->Register.File;
-			unsigned reg_index = reg->Register.Index;
-			LLVMValueRef array = store_value_to_array(bld_base, value, file, chan_index,
-			                                          reg_index, &reg->Indirect);
-	                if (get_alloca_for_array(bld_base, file, reg_index)) {
-				continue;
-			}
+			LLVMValueRef array = store_value_to_array(bld_base, value, reg->Register.File, chan_index,
+			                                          reg->Register.Index, &reg->Indirect);
         		for (i = 0; i < size; ++i) {
 				switch(reg->Register.File) {
 				case TGSI_FILE_OUTPUT:
@@ -610,7 +500,7 @@ void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 					break;
 
 				default:
-					continue;
+					return;
 				}
 				value = LLVMBuildExtractElement(builder, array, 
 					lp_build_const_int32(gallivm, i), "");
@@ -626,23 +516,14 @@ void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 				break;
 
 			case TGSI_FILE_TEMPORARY:
-			{
-				LLVMValueRef array;
 				if (reg->Register.Index >= ctx->temps_count)
 					continue;
-				array = get_alloca_for_array(bld_base, reg->Register.File, reg->Register.Index);
-
-				if (array) {
-					store_value_to_array(bld_base, value, reg->Register.File, chan_index, reg->Register.Index,
-								NULL);
-					continue;
-				}
 				temp_ptr = ctx->temps[ TGSI_NUM_CHANNELS * reg->Register.Index + chan_index];
 				if (tgsi_type_is_64bit(dtype))
 					temp_ptr2 = ctx->temps[ TGSI_NUM_CHANNELS * reg->Register.Index + chan_index + 1];
 
 				break;
-			}
+
 			default:
 				return;
 			}

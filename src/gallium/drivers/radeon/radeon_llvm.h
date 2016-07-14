@@ -50,11 +50,6 @@ struct radeon_llvm_loop {
 	LLVMBasicBlockRef endloop_block;
 };
 
-struct radeon_llvm_array {
-	struct tgsi_declaration_range range;
-	LLVMValueRef alloca;
-};
-
 struct radeon_llvm_context {
 	struct lp_build_tgsi_soa_context soa;
 
@@ -101,7 +96,7 @@ struct radeon_llvm_context {
 	unsigned loop_depth;
 	unsigned loop_depth_max;
 
-	struct radeon_llvm_array *arrays;
+	struct tgsi_declaration_range *arrays;
 
 	LLVMValueRef main_fn;
 	LLVMTypeRef return_type;
