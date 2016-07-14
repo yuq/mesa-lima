@@ -144,9 +144,10 @@ GLSL_COMPILER_CXX_FILES = \
 	glsl/standalone.h
 
 # libglsl generated sources
-LIBGLSL_GENERATED_CXX_FILES = \
+LIBGLSL_GENERATED_FILES = \
 	glsl/glsl_lexer.cpp \
-	glsl/glsl_parser.cpp
+	glsl/glsl_parser.cpp \
+	glsl/glsl_parser.h
 
 # libglcpp
 

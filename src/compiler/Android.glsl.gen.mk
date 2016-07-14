@@ -39,7 +39,7 @@ LOCAL_C_INCLUDES += \
 
 LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, \
 	$(LIBGLCPP_GENERATED_FILES) \
-	$(LIBGLSL_GENERATED_CXX_FILES))
+	$(LIBGLSL_GENERATED_FILES))
 
 define local-l-or-ll-to-c-or-cpp
 	@mkdir -p $(dir $@)

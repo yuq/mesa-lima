@@ -116,9 +116,7 @@ glsl_libglsl_la_LIBADD = \
 	glsl/libglcpp.la
 
 glsl_libglsl_la_SOURCES =				\
-	glsl/glsl_lexer.cpp				\
-	glsl/glsl_parser.cpp				\
-	glsl/glsl_parser.h				\
+	$(LIBGLSL_GENERATED_FILES)			\
 	$(LIBGLSL_FILES)
 
 
