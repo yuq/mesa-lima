@@ -3979,6 +3979,18 @@ get_variable_being_redeclared(ir_variable *var, YYLTYPE loc,
 
       earlier->data.depth_layout = var->data.depth_layout;
 
+   } else if (state->has_framebuffer_fetch() &&
+              strcmp(var->name, "gl_LastFragData") == 0 &&
+              var->type == earlier->type &&
+              var->data.mode == ir_var_auto) {
+      /* According to the EXT_shader_framebuffer_fetch spec:
+       *
+       *   "By default, gl_LastFragData is declared with the mediump precision
+       *    qualifier. This can be changed by redeclaring the corresponding
+       *    variables with the desired precision qualifier."
+       */
+      earlier->data.precision = var->data.precision;
+
    } else if (allow_all_redeclarations) {
       if (earlier->data.mode != var->data.mode) {
          _mesa_glsl_error(&loc, state,
