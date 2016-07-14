@@ -278,7 +278,7 @@ enum pipe_transfer_usage
     *
     * See also:
     * - Direct3D's D3DLOCK_DONOTWAIT flag.
-    * - Mesa3D's MESA_MAP_NOWAIT_BIT flag.
+    * - Mesa's MESA_MAP_NOWAIT_BIT flag.
     * - WDDM's D3DDDICB_LOCKFLAGS.DonotWait flag.
     */
    PIPE_TRANSFER_DONTBLOCK = (1 << 9),
