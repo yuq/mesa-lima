@@ -2673,6 +2673,9 @@ assign_attribute_or_color_locations(void *mem_ctx,
          }
       }
 
+      if (strcmp(var->name, "gl_LastFragData") == 0)
+         continue;
+
       /* From GL4.5 core spec, section 15.2 (Shader Execution):
        *
        *     "Output binding assignments will cause LinkProgram to fail:
