@@ -323,9 +323,7 @@ render_tiles(struct fd_batch *batch)
 		ctx->emit_tile_prep(batch, tile);
 
 		if (batch->restore) {
-			fd_hw_query_set_stage(batch, batch->gmem, FD_STAGE_MEM2GMEM);
 			ctx->emit_tile_mem2gmem(batch, tile);
-			fd_hw_query_set_stage(batch, batch->gmem, FD_STAGE_NULL);
 		}
 
 		ctx->emit_tile_renderprep(batch, tile);
@@ -337,9 +335,7 @@ render_tiles(struct fd_batch *batch)
 		fd_reset_wfi(ctx);
 
 		/* emit gmem2mem to transfer tile back to system memory: */
-		fd_hw_query_set_stage(batch, batch->gmem, FD_STAGE_GMEM2MEM);
 		ctx->emit_tile_gmem2mem(batch, tile);
-		fd_hw_query_set_stage(batch, batch->gmem, FD_STAGE_NULL);
 	}
 }
 
@@ -372,11 +368,6 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 			sysmem = true;
 		}
 	}
-
-	/* close out the draw cmds by making sure any active queries are
-	 * paused:
-	 */
-	fd_hw_query_set_stage(batch, batch->draw, FD_STAGE_NULL);
 
 	fd_reset_wfi(ctx);
 

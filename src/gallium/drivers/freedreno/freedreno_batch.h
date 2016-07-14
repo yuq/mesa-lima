@@ -50,15 +50,8 @@ enum fd_render_stage {
 	FD_STAGE_NULL     = 0x01,
 	FD_STAGE_DRAW     = 0x02,
 	FD_STAGE_CLEAR    = 0x04,
-	/* TODO before queries which include MEM2GMEM or GMEM2MEM will
-	 * work we will need to call fd_hw_query_prepare() from somewhere
-	 * appropriate so that queries in the tiling IB get backed with
-	 * memory to write results to.
-	 */
-	FD_STAGE_MEM2GMEM = 0x08,
-	FD_STAGE_GMEM2MEM = 0x10,
 	/* used for driver internal draws (ie. util_blitter_blit()): */
-	FD_STAGE_BLIT     = 0x20,
+	FD_STAGE_BLIT     = 0x08,
 	FD_STAGE_ALL      = 0xff,
 };
 
