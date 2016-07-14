@@ -286,11 +286,6 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 	case PKT3_SET_SH_REG:
 		si_parse_set_reg_packet(f, ib, count, SI_SH_REG_OFFSET);
 		break;
-	case PKT3_DRAW_PREAMBLE:
-		si_dump_reg(f, R_030908_VGT_PRIMITIVE_TYPE, ib[1], ~0);
-		si_dump_reg(f, R_028AA8_IA_MULTI_VGT_PARAM, ib[2], ~0);
-		si_dump_reg(f, R_028B58_VGT_LS_HS_CONFIG, ib[3], ~0);
-		break;
 	case PKT3_ACQUIRE_MEM:
 		si_dump_reg(f, R_0301F0_CP_COHER_CNTL, ib[1], ~0);
 		si_dump_reg(f, R_0301F4_CP_COHER_SIZE, ib[2], ~0);
