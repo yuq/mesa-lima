@@ -396,8 +396,8 @@ _mesa_texture_storage(struct gl_context *ctx, GLuint dims,
    dimensionsOK = _mesa_legal_texture_dimensions(ctx, target, 0,
                                                   width, height, depth, 0);
 
-   sizeOK = ctx->Driver.TestProxyTexImage(ctx, target, 0, texFormat,
-                                          width, height, depth, 0);
+   sizeOK = ctx->Driver.TestProxyTexImage(ctx, target, levels, 0, texFormat,
+                                          1, width, height, depth);
 
    if (_mesa_is_proxy_texture(target)) {
       if (dimensionsOK && sizeOK) {

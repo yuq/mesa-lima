@@ -308,9 +308,10 @@ struct dd_function_table {
     * \return GL_TRUE if the image is OK, GL_FALSE if too large
     */
    GLboolean (*TestProxyTexImage)(struct gl_context *ctx, GLenum target,
-                                  GLint level, mesa_format format,
+                                  GLuint numLevels, GLint level,
+                                  mesa_format format, GLuint numSamples,
                                   GLint width, GLint height,
-                                  GLint depth, GLint border);
+                                  GLint depth);
    /*@}*/
 
    

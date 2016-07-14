@@ -1253,18 +1253,20 @@ error_check_subtexture_dimensions(struct gl_context *ctx, GLuint dims,
  * and texturing will effectively be disabled.
  *
  * \param target  any texture target/type
+ * \param numLevels  number of mipmap levels in the texture or 0 if not known
  * \param level  as passed to glTexImage
  * \param format  the MESA_FORMAT_x for the tex image
+ * \param numSamples  number of samples per texel
  * \param width  as passed to glTexImage
  * \param height  as passed to glTexImage
  * \param depth  as passed to glTexImage
- * \param border  as passed to glTexImage
  * \return GL_TRUE if the image is acceptable, GL_FALSE if not acceptable.
  */
 GLboolean
-_mesa_test_proxy_teximage(struct gl_context *ctx, GLenum target, GLint level,
-                          mesa_format format,
-                          GLint width, GLint height, GLint depth, GLint border)
+_mesa_test_proxy_teximage(struct gl_context *ctx, GLenum target,
+                          GLuint numLevels, GLint level,
+                          mesa_format format, GLuint numSamples,
+                          GLint width, GLint height, GLint depth)
 {
    /* We just check if the image size is less than MaxTextureMbytes.
     * Some drivers may do more specific checks.
@@ -2949,8 +2951,8 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
 
    /* check that the texture won't take too much memory, etc */
    sizeOK = ctx->Driver.TestProxyTexImage(ctx, proxy_target(target),
-                                          level, texFormat,
-                                          width, height, depth, border);
+                                          0, level, texFormat, 1,
+                                          width, height, depth);
 
    if (_mesa_is_proxy_texture(target)) {
       /* Proxy texture: just clear or set state depending on error checking */
@@ -3646,8 +3648,8 @@ copyteximage(struct gl_context *ctx, GLuint dims,
    assert(texFormat != MESA_FORMAT_NONE);
 
    if (!ctx->Driver.TestProxyTexImage(ctx, proxy_target(target),
-                                      level, texFormat,
-                                      width, height, 1, border)) {
+                                      0, level, texFormat, 1,
+                                      width, height, 1)) {
       _mesa_error(ctx, GL_OUT_OF_MEMORY,
                   "glCopyTexImage%uD(image too large)", dims);
       return;
@@ -5386,8 +5388,8 @@ texture_image_multisample(struct gl_context *ctx, GLuint dims,
    dimensionsOK = _mesa_legal_texture_dimensions(ctx, target, 0,
          width, height, depth, 0);
 
-   sizeOK = ctx->Driver.TestProxyTexImage(ctx, target, 0, texFormat,
-         width, height, depth, 0);
+   sizeOK = ctx->Driver.TestProxyTexImage(ctx, target, 0, 0, texFormat,
+                                          samples, width, height, depth);
 
    if (_mesa_is_proxy_texture(target)) {
       if (samplesOK && dimensionsOK && sizeOK) {
