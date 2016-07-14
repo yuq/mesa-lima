@@ -1155,19 +1155,19 @@ void InitClearTilesTable()
     sClearTilesTable[R8_UINT] = ClearMacroTile<R8_UINT>;
 }
 
-PFN_BACKEND_FUNC gBackendNullPs[SWR_MULTISAMPLE_TYPE_MAX];
+PFN_BACKEND_FUNC gBackendNullPs[SWR_MULTISAMPLE_TYPE_COUNT];
 PFN_BACKEND_FUNC gBackendSingleSample[2] // input coverage
                                      [2] // centroid
                                      [2] // canEarlyZ
                                      = {};
-PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_MAX]
-                                       [SWR_MSAA_SAMPLE_PATTERN_MAX]
+PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_COUNT]
+                                       [SWR_MSAA_SAMPLE_PATTERN_COUNT]
                                        [2] // input coverage
                                        [2] // centroid
                                        [2] // forcedSampleCount
                                        [2] // canEarlyZ
                                        = {};
-PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_MAX]
+PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_COUNT]
                                         [2] // input coverage
                                         [2] // centroid
                                         [2] // canEarlyZ
@@ -1255,11 +1255,11 @@ void InitBackendSingleFuncTable(PFN_BACKEND_FUNC (&table)[2][2][2])
     }
 }
 
-void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_MAX][SWR_MSAA_SAMPLE_PATTERN_MAX][2][2][2][2])
+void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_COUNT][SWR_MSAA_SAMPLE_PATTERN_COUNT][2][2][2][2])
 {
-    for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < SWR_MULTISAMPLE_TYPE_MAX; sampleCount++)
+    for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < SWR_MULTISAMPLE_TYPE_COUNT; sampleCount++)
     {
-        for(uint32_t samplePattern = SWR_MSAA_CENTER_PATTERN; samplePattern < SWR_MSAA_SAMPLE_PATTERN_MAX; samplePattern++)
+        for(uint32_t samplePattern = SWR_MSAA_CENTER_PATTERN; samplePattern < SWR_MSAA_SAMPLE_PATTERN_COUNT; samplePattern++)
         {
             for(uint32_t inputCoverage = 0; inputCoverage < 2; inputCoverage++)
             {
@@ -1280,9 +1280,9 @@ void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_MA
     }
 }
 
-void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_MAX][2][2][2])
+void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_COUNT][2][2][2])
 {
-    for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < SWR_MULTISAMPLE_TYPE_MAX; sampleCount++)
+    for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < SWR_MULTISAMPLE_TYPE_COUNT; sampleCount++)
     {
         for(uint32_t inputCoverage = 0; inputCoverage < 2; inputCoverage++)
         {
