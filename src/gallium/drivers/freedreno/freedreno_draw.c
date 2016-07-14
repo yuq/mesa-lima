@@ -134,14 +134,13 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 			batch->gmem_reason |= FD_GMEM_BLEND_ENABLED;
 	}
 
-	/* Skip over buffer 0, that is sent along with the command stream */
-	for (i = 1; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
+	foreach_bit(i, ctx->constbuf[PIPE_SHADER_VERTEX].enabled_mask)
 		resource_read(batch, ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer);
+	foreach_bit(i, ctx->constbuf[PIPE_SHADER_FRAGMENT].enabled_mask)
 		resource_read(batch, ctx->constbuf[PIPE_SHADER_FRAGMENT].cb[i].buffer);
-	}
 
 	/* Mark VBOs as being read */
-	for (i = 0; i < ctx->vtx.vertexbuf.count; i++) {
+	foreach_bit(i, ctx->vtx.vertexbuf.enabled_mask) {
 		assert(!ctx->vtx.vertexbuf.vb[i].user_buffer);
 		resource_read(batch, ctx->vtx.vertexbuf.vb[i].buffer);
 	}
@@ -150,12 +149,10 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	resource_read(batch, ctx->indexbuf.buffer);
 
 	/* Mark textures as being read */
-	for (i = 0; i < ctx->verttex.num_textures; i++)
-		if (ctx->verttex.textures[i])
-			resource_read(batch, ctx->verttex.textures[i]->texture);
-	for (i = 0; i < ctx->fragtex.num_textures; i++)
-		if (ctx->fragtex.textures[i])
-			resource_read(batch, ctx->fragtex.textures[i]->texture);
+	foreach_bit(i, ctx->verttex.valid_textures)
+		resource_read(batch, ctx->verttex.textures[i]->texture);
+	foreach_bit(i, ctx->fragtex.valid_textures)
+		resource_read(batch, ctx->fragtex.textures[i]->texture);
 
 	/* Mark streamout buffers as being written.. */
 	for (i = 0; i < ctx->streamout.num_targets; i++)

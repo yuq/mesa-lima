@@ -338,4 +338,7 @@ pack_rgba(enum pipe_format format, const float *rgba)
 #define swap(a, b) \
 	do { __typeof(a) __tmp = (a); (a) = (b); (b) = __tmp; } while (0)
 
+#define foreach_bit(b, mask) \
+	for (uint32_t _m = (mask); _m && ({(b) = u_bit_scan(&_m); 1;});)
+
 #endif /* FREEDRENO_UTIL_H_ */
