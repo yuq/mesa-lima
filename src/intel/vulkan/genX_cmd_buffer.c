@@ -1447,4 +1447,17 @@ void genX(CmdCopyQueryPoolResults)(
    }
 }
 
+#else
+void genX(CmdCopyQueryPoolResults)(
+    VkCommandBuffer                             commandBuffer,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    firstQuery,
+    uint32_t                                    queryCount,
+    VkBuffer                                    destBuffer,
+    VkDeviceSize                                destOffset,
+    VkDeviceSize                                destStride,
+    VkQueryResultFlags                          flags)
+{
+   anv_finishme("Queries not yet supported on Ivy Bridge");
+}
 #endif
