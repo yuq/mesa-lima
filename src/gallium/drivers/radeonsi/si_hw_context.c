@@ -102,9 +102,9 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	ctx->gfx_flush_in_progress = true;
 
 	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size) &&
-	    (!fence || ctx->last_gfx_fence)) {
+	    (!fence || ctx->b.last_gfx_fence)) {
 		if (fence)
-			ws->fence_reference(fence, ctx->last_gfx_fence);
+			ws->fence_reference(fence, ctx->b.last_gfx_fence);
 		if (!(flags & RADEON_FLUSH_ASYNC))
 			ws->cs_sync_flush(cs);
 		ctx->gfx_flush_in_progress = false;
@@ -135,17 +135,17 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	}
 
 	/* Flush the CS. */
-	ws->cs_flush(cs, flags, &ctx->last_gfx_fence);
+	ws->cs_flush(cs, flags, &ctx->b.last_gfx_fence);
 
 	if (fence)
-		ws->fence_reference(fence, ctx->last_gfx_fence);
+		ws->fence_reference(fence, ctx->b.last_gfx_fence);
 
 	/* Check VM faults if needed. */
 	if (ctx->screen->b.debug_flags & DBG_CHECK_VM) {
 		/* Use conservative timeout 800ms, after which we won't wait any
 		 * longer and assume the GPU is hung.
 		 */
-		ctx->b.ws->fence_wait(ctx->b.ws, ctx->last_gfx_fence, 800*1000*1000);
+		ctx->b.ws->fence_wait(ctx->b.ws, ctx->b.last_gfx_fence, 800*1000*1000);
 
 		si_check_vm_faults(&ctx->b, &ctx->last_gfx, RING_GFX);
 	}

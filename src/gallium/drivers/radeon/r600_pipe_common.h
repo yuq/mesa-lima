@@ -509,6 +509,7 @@ struct r600_common_context {
 	enum chip_class			chip_class;
 	struct r600_ring		gfx;
 	struct r600_ring		dma;
+	struct pipe_fence_handle	*last_gfx_fence;
 	struct pipe_fence_handle	*last_sdma_fence;
 	unsigned			initial_gfx_cs_size;
 	unsigned			gpu_reset_counter;

@@ -510,6 +510,7 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 	if (rctx->allocator_zeroed_memory) {
 		u_suballocator_destroy(rctx->allocator_zeroed_memory);
 	}
+	rctx->ws->fence_reference(&rctx->last_gfx_fence, NULL);
 	rctx->ws->fence_reference(&rctx->last_sdma_fence, NULL);
 }
 

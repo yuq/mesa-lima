@@ -64,7 +64,6 @@ static void si_destroy_context(struct pipe_context *context)
 	free(sctx->border_color_table);
 	r600_resource_reference(&sctx->scratch_buffer, NULL);
 	r600_resource_reference(&sctx->compute_scratch_buffer, NULL);
-	sctx->b.ws->fence_reference(&sctx->last_gfx_fence, NULL);
 
 	si_pm4_free_state(sctx, sctx->init_config, ~0);
 	if (sctx->init_config_gs_rings)

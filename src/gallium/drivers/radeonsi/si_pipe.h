@@ -215,7 +215,6 @@ struct si_context {
 	bool				ce_need_synchronization;
 	struct u_suballocator		*ce_suballocator;
 
-	struct pipe_fence_handle	*last_gfx_fence;
 	struct si_shader_ctx_state	fixed_func_tcs_shader;
 	LLVMTargetMachineRef		tm; /* only non-threaded compilation */
 	bool				gfx_flush_in_progress;
