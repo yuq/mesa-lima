@@ -40,6 +40,7 @@
 #include "image.h"
 #include "imports.h"
 #include "macros.h"
+#include "mipmap.h"
 #include "multisample.h"
 #include "pixelstore.h"
 #include "state.h"
@@ -1268,12 +1269,50 @@ _mesa_test_proxy_teximage(struct gl_context *ctx, GLenum target,
                           mesa_format format, GLuint numSamples,
                           GLint width, GLint height, GLint depth)
 {
+   uint64_t bytes, mbytes;
+
+   assert(numSamples > 0);
+
+   if (numLevels > 0) {
+      /* Compute total memory for a whole mipmap.  This is the path
+       * taken for glTexStorage(GL_PROXY_TEXTURE_x).
+       */
+      unsigned l;
+
+      assert(level == 0);
+
+      bytes = 0;
+
+      for (l = 0; l < numLevels; l++) {
+         GLint nextWidth, nextHeight, nextDepth;
+
+         bytes += _mesa_format_image_size64(format, width, height, depth);
+
+         if (_mesa_next_mipmap_level_size(target, 0, width, height, depth,
+                                          &nextWidth, &nextHeight,
+                                          &nextDepth)) {
+            width = nextWidth;
+            height = nextHeight;
+            depth = nextDepth;
+         } else {
+            break;
+         }
+      }
+   } else {
+      /* We just compute the size of one mipmap level.  This is the path
+       * taken for glTexImage(GL_PROXY_TEXTURE_x).
+       */
+      bytes = _mesa_format_image_size64(format, width, height, depth);
+   }
+
+   bytes *= _mesa_num_tex_faces(target);
+   bytes *= numSamples;
+
+   mbytes = bytes / (1024 * 1024); /* convert to MB */
+
    /* We just check if the image size is less than MaxTextureMbytes.
     * Some drivers may do more specific checks.
     */
-   uint64_t bytes = _mesa_format_image_size64(format, width, height, depth);
-   uint64_t mbytes = bytes / (1024 * 1024); /* convert to MB */
-   mbytes *= _mesa_num_tex_faces(target);
    return mbytes <= (uint64_t) ctx->Const.MaxTextureMbytes;
 }
 
