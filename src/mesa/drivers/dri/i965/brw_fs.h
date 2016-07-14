@@ -169,7 +169,7 @@ public:
 
    void emit_dummy_fs();
    void emit_repclear_shader();
-   fs_reg *emit_fragcoord_interpolation();
+   void emit_fragcoord_interpolation(fs_reg wpos);
    fs_reg *emit_frontfacing_interpolation();
    fs_reg *emit_samplepos_setup();
    fs_reg *emit_sampleid_setup();

@@ -1039,12 +1039,10 @@ fs_visitor::import_uniforms(fs_visitor *v)
    this->uniforms = v->uniforms;
 }
 
-fs_reg *
-fs_visitor::emit_fragcoord_interpolation()
+void
+fs_visitor::emit_fragcoord_interpolation(fs_reg wpos)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::vec4_type));
-   fs_reg wpos = *reg;
 
    /* gl_FragCoord.x */
    bld.MOV(wpos, this->pixel_x);
@@ -1066,8 +1064,6 @@ fs_visitor::emit_fragcoord_interpolation()
 
    /* gl_FragCoord.w: Already set up in emit_interpolation */
    bld.MOV(wpos, this->wpos_w);
-
-   return reg;
 }
 
 static enum brw_barycentric_mode

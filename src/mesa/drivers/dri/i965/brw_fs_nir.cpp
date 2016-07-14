@@ -62,9 +62,7 @@ fs_visitor::nir_setup_inputs()
 
       fs_reg reg;
       if (var->data.location == VARYING_SLOT_POS) {
-         reg = *emit_fragcoord_interpolation();
-         emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
-                                   input, reg), 0xF);
+         emit_fragcoord_interpolation(input);
       } else if (var->data.location == VARYING_SLOT_LAYER) {
          struct brw_reg reg = suboffset(interp_reg(VARYING_SLOT_LAYER, 1), 3);
          reg.type = BRW_REGISTER_TYPE_D;
