@@ -6341,9 +6341,8 @@ brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
    unsigned barycentric_interp_modes = 0;
 
    nir_foreach_variable(var, &shader->inputs) {
-      /* Ignore WPOS and FACE, because they don't require interpolation. */
-      if (var->data.location == VARYING_SLOT_POS ||
-          var->data.location == VARYING_SLOT_FACE)
+      /* Ignore WPOS; it doesn't require interpolation. */
+      if (var->data.location == VARYING_SLOT_POS)
          continue;
 
       /* Flat inputs don't need barycentric modes. */
