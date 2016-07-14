@@ -1639,6 +1639,8 @@ emit_pixel_interpolater_send(const fs_builder &bld,
                              const fs_reg &desc,
                              glsl_interp_mode interpolation)
 {
+   struct brw_wm_prog_data *wm_prog_data =
+      (struct brw_wm_prog_data *) bld.shader->stage_prog_data;
    fs_inst *inst;
    fs_reg payload;
    int mlen;
@@ -1657,6 +1659,8 @@ emit_pixel_interpolater_send(const fs_builder &bld,
    /* 2 floats per slot returned */
    inst->regs_written = 2 * bld.dispatch_width() / 8;
    inst->pi_noperspective = interpolation == INTERP_MODE_NOPERSPECTIVE;
+
+   wm_prog_data->pulls_bary = true;
 
    return inst;
 }
@@ -3023,8 +3027,6 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
                                   nir_intrinsic_instr *instr)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   struct brw_wm_prog_data *wm_prog_data =
-      (struct brw_wm_prog_data *) prog_data;
    const struct brw_wm_prog_key *wm_key = (const struct brw_wm_prog_key *) key;
 
    fs_reg dest;
@@ -3103,8 +3105,6 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
        * pre-interpolation.  In order to get the actual location of the bits
        * we get from the vertex fetching hardware, we need the variable.
        */
-      wm_prog_data->pulls_bary = true;
-
       fs_reg dst_xy = bld.vgrf(BRW_REGISTER_TYPE_F, 2);
       const glsl_interp_mode interpolation =
          (glsl_interp_mode) instr->variables[0]->var->data.interpolation;
