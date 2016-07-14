@@ -119,13 +119,28 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 	struct pipe_framebuffer_state *cso;
 
 	if (ctx->screen->reorder) {
-		struct fd_batch *batch;
-		if (likely(ctx->batch))
-			fd_hw_query_set_stage(ctx->batch, ctx->batch->draw, FD_STAGE_NULL);
+		struct fd_batch *batch, *old_batch = NULL;
+
+		fd_batch_reference(&old_batch, ctx->batch);
+
+		if (likely(old_batch))
+			fd_hw_query_set_stage(old_batch, old_batch->draw, FD_STAGE_NULL);
+
 		batch = fd_batch_from_fb(&ctx->screen->batch_cache, ctx, framebuffer);
 		fd_batch_reference(&ctx->batch, NULL);
 		ctx->batch = batch;
 		ctx->dirty = ~0;
+
+		if (old_batch && old_batch->blit && !old_batch->back_blit) {
+			/* for blits, there is not really much point in hanging on
+			 * to the uncommitted batch (ie. you probably don't blit
+			 * multiple times to the same surface), so we might as
+			 * well go ahead and flush this one:
+			 */
+			fd_batch_flush(old_batch);
+		}
+
+		fd_batch_reference(&old_batch, NULL);
 	} else {
 		DBG("%d: cbufs[0]=%p, zsbuf=%p", ctx->batch->needs_flush,
 				framebuffer->cbufs[0], framebuffer->zsbuf);

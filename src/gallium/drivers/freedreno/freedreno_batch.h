@@ -93,7 +93,9 @@ struct fd_batch {
 		FD_BUFFER_ALL     = FD_BUFFER_COLOR | FD_BUFFER_DEPTH | FD_BUFFER_STENCIL,
 	} cleared, partial_cleared, restore, resolve;
 
-	bool needs_flush;
+	bool needs_flush : 1;
+	bool blit : 1;
+	bool back_blit : 1;      /* only blit so far is resource shadowing back-blit */
 
 	/* To decide whether to render to system memory, keep track of the
 	 * number of draws, and whether any of them require multisample,

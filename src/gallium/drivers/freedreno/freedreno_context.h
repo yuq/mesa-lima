@@ -161,16 +161,27 @@ struct fd_context {
 	 */
 	struct fd_batch *batch;
 
+	/* Are we in process of shadowing a resource? Used to detect recursion
+	 * in transfer_map, and skip unneeded synchronization.
+	 */
+	bool in_shadow : 1;
+
+	/* Ie. in blit situation where we no longer care about previous framebuffer
+	 * contents.  Main point is to eliminate blits from fd_try_shadow_resource().
+	 * For example, in case of texture upload + gen-mipmaps.
+	 */
+	bool in_blit : 1;
+
 	/* Keep track if WAIT_FOR_IDLE is needed for registers we need
 	 * to update via RMW:
 	 */
-	bool needs_wfi;
+	bool needs_wfi : 1;
 
 	/* Do we need to re-emit RB_FRAME_BUFFER_DIMENSION?  At least on a3xx
 	 * it is not a banked context register, so it needs a WFI to update.
 	 * Keep track if it has actually changed, to avoid unneeded WFI.
 	 * */
-	bool needs_rb_fbd;
+	bool needs_rb_fbd : 1;
 
 	struct pipe_scissor_state scissor;
 
@@ -243,17 +254,6 @@ struct fd_context {
 	struct pipe_query *cond_query;
 	bool cond_cond; /* inverted rendering condition */
 	uint cond_mode;
-
-	/* Are we in process of shadowing a resource? Used to detect recursion
-	 * in transfer_map, and skip unneeded synchronization.
-	 */
-	bool in_shadow;
-
-	/* Ie. in blit situation where we no longer care about previous framebuffer
-	 * contents.  Main point is to eliminate blits from fd_try_shadow_resource().
-	 * For example, in case of texture upload + gen-mipmaps.
-	 */
-	bool discard;
 
 	struct pipe_debug_callback debug;
 

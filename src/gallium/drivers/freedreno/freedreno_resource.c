@@ -487,6 +487,12 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		 * to wait.
 		 */
 	} else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
+		if ((usage & PIPE_TRANSFER_WRITE) && rsc->write_batch &&
+				rsc->write_batch->back_blit) {
+			/* if only thing pending is a back-blit, we can discard it: */
+			fd_batch_reset(rsc->write_batch);
+		}
+
 		/* If the GPU is writing to the resource, or if it is reading from the
 		 * resource and we're trying to write to it, flush the renders.
 		 */
@@ -1057,7 +1063,7 @@ fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard)
 	if (ctx->batch)
 		fd_hw_query_set_stage(ctx->batch, ctx->batch->draw, FD_STAGE_BLIT);
 
-	ctx->discard = discard;
+	ctx->in_blit = discard;
 }
 
 static void
@@ -1065,6 +1071,7 @@ fd_blitter_pipe_end(struct fd_context *ctx)
 {
 	if (ctx->batch)
 		fd_hw_query_set_stage(ctx->batch, ctx->batch->draw, FD_STAGE_NULL);
+	ctx->in_blit = false;
 }
 
 static void

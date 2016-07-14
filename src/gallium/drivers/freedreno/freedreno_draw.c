@@ -84,15 +84,19 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		return;
 	}
 
-	if (ctx->discard) {
-		fd_batch_reset(ctx->batch);
-		ctx->discard = false;
+	if (ctx->in_blit) {
+		fd_batch_reset(batch);
+		ctx->dirty = ~0;
 	}
+
+	batch->blit = ctx->in_blit;
+	batch->back_blit = ctx->in_shadow;
 
 	/* NOTE: needs to be before resource_written(batch->query_buf), otherwise
 	 * query_buf may not be created yet.
 	 */
 	fd_hw_query_set_stage(batch, batch->draw, FD_STAGE_DRAW);
+
 	/*
 	 * Figure out the buffers/features we need:
 	 */
@@ -219,9 +223,9 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	if (!fd_render_condition_check(pctx))
 		return;
 
-	if (ctx->discard) {
-		fd_batch_reset(ctx->batch);
-		ctx->discard = false;
+	if (ctx->in_blit) {
+		fd_batch_reset(batch);
+		ctx->dirty = ~0;
 	}
 
 	/* for bookkeeping about which buffers have been cleared (and thus
