@@ -353,7 +353,7 @@ struct adjustEdgeConservative<RT, std::false_type>
 template <typename RT>
 INLINE void adjustScissorEdge(const double a, const double b, __m256d &vEdge)
 {
-    int32_t aabs = std::abs(static_cast<int32_t>(a)), babs = std::abs(static_cast<int32_t>(b));
+    int64_t aabs = std::abs(static_cast<int64_t>(a)), babs = std::abs(static_cast<int64_t>(b));
 
     int64_t manh = ((aabs * RT::ConservativeEdgeOffsetT::value) + (babs * RT::ConservativeEdgeOffsetT::value)) >>
         ((RT::PrecisionT::BitsT::value + RT::ConservativePrecisionT::BitsT::value) - RT::EdgePrecisionT::BitsT::value);
