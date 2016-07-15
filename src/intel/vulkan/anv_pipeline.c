@@ -136,6 +136,13 @@ anv_shader_compile_to_nir(struct anv_device *device,
       nir_validate_shader(nir);
    }
 
+   /* We have to lower away local constant initializers right before we
+    * inline functions.  That way they get properly initialized at the top
+    * of the function and not at the top of its caller.
+    */
+   nir_lower_constant_initializers(nir, nir_var_local);
+   nir_validate_shader(nir);
+
    nir_lower_returns(nir);
    nir_validate_shader(nir);
 
@@ -153,6 +160,12 @@ anv_shader_compile_to_nir(struct anv_device *device,
    nir_remove_dead_variables(nir, nir_var_shader_in);
    nir_remove_dead_variables(nir, nir_var_shader_out);
    nir_remove_dead_variables(nir, nir_var_system_value);
+   nir_validate_shader(nir);
+
+   /* Now that we've deleted all but the main function, we can go ahead and
+    * lower the rest of the constant initializers.
+    */
+   nir_lower_constant_initializers(nir, ~0);
    nir_validate_shader(nir);
 
    nir_propagate_invariant(nir);
