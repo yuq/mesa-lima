@@ -73,7 +73,7 @@ static void st_fence_sync(struct gl_context *ctx, struct gl_sync_object *obj,
    assert(condition == GL_SYNC_GPU_COMMANDS_COMPLETE && flags == 0);
    assert(so->fence == NULL);
 
-   pipe->flush(pipe, &so->fence, 0);
+   pipe->flush(pipe, &so->fence, PIPE_FLUSH_DEFERRED);
 }
 
 static void st_check_sync(struct gl_context *ctx, struct gl_sync_object *obj)

@@ -463,6 +463,16 @@ Flushing
 
 ``flush``
 
+PIPE_FLUSH_END_OF_FRAME: Whether the flush marks the end of frame.
+
+PIPE_FLUSH_DEFERRED: It is not required to flush right away, but it is required
+to return a valid fence. The behavior of fence_finish or any other call isn't
+changed. The only side effect can be that fence_finish will wait a little
+longer. No guidance is given as to how drivers should implement fence_finish
+with deferred flushes. If some drivers can't do deferred flushes safely, they
+should just ignore the flag.
+
+
 
 ``flush_resource``
 

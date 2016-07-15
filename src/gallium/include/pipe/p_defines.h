@@ -348,7 +348,8 @@ enum pipe_transfer_usage
  */
 enum pipe_flush_flags
 {
-   PIPE_FLUSH_END_OF_FRAME = (1 << 0)
+   PIPE_FLUSH_END_OF_FRAME = (1 << 0),
+   PIPE_FLUSH_DEFERRED = (1 << 1),
 };
 
 /**
