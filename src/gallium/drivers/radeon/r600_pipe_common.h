@@ -363,6 +363,7 @@ struct r600_common_screen {
 	uint64_t			debug_flags;
 	bool				has_cp_dma;
 	bool				has_streamout;
+	int				num_contexts;
 
 	/* Texture filter settings. */
 	int				force_aniso; /* -1 = disabled */
