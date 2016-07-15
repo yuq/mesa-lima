@@ -280,6 +280,8 @@ droid_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
 
    config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
                                 dri2_surf->base.GLColorspace);
+   if (!config)
+      goto cleanup_surface;
 
    dri2_surf->dri_drawable =
       (*dri2_dpy->dri2->createNewDrawable)(dri2_dpy->dri_screen, config,
