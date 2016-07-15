@@ -269,6 +269,8 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 
 	if (flags & PIPE_FLUSH_END_OF_FRAME)
 		rflags |= RADEON_FLUSH_END_OF_FRAME;
+	if (flags & PIPE_FLUSH_DEFERRED)
+		rflags |= RADEON_FLUSH_ASYNC;
 
 	if (rctx->dma.cs) {
 		rctx->dma.flush(rctx, rflags, fence ? &sdma_fence : NULL);
