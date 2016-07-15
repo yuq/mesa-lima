@@ -482,8 +482,6 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
 static struct vc4_texture_stateobj *
 vc4_get_stage_tex(struct vc4_context *vc4, unsigned shader)
 {
-        vc4->dirty |= VC4_DIRTY_TEXSTATE;
-
         switch (shader) {
         case PIPE_SHADER_FRAGMENT:
                 vc4->dirty |= VC4_DIRTY_FRAGTEX;
@@ -667,8 +665,6 @@ vc4_set_sampler_views(struct pipe_context *pctx, unsigned shader,
         unsigned new_nr = 0;
 
         assert(start == 0);
-
-        vc4->dirty |= VC4_DIRTY_TEXSTATE;
 
         for (i = 0; i < nr; i++) {
                 if (views[i])

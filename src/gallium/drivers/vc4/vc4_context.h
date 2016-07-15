@@ -49,7 +49,6 @@
 #define VC4_DIRTY_ZSA           (1 <<  2)
 #define VC4_DIRTY_FRAGTEX       (1 <<  3)
 #define VC4_DIRTY_VERTTEX       (1 <<  4)
-#define VC4_DIRTY_TEXSTATE      (1 <<  5)
 
 #define VC4_DIRTY_BLEND_COLOR   (1 <<  7)
 #define VC4_DIRTY_STENCIL_REF   (1 <<  8)

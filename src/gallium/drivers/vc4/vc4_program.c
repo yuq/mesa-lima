@@ -2352,7 +2352,6 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
                             VC4_DIRTY_RASTERIZER |
                             VC4_DIRTY_SAMPLE_MASK |
                             VC4_DIRTY_FRAGTEX |
-                            VC4_DIRTY_TEXSTATE |
                             VC4_DIRTY_UNCOMPILED_FS))) {
                 return;
         }
@@ -2421,7 +2420,6 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
         if (!(vc4->dirty & (VC4_DIRTY_PRIM_MODE |
                             VC4_DIRTY_RASTERIZER |
                             VC4_DIRTY_VERTTEX |
-                            VC4_DIRTY_TEXSTATE |
                             VC4_DIRTY_VTXSTATE |
                             VC4_DIRTY_UNCOMPILED_VS |
                             VC4_DIRTY_COMPILED_FS))) {

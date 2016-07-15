@@ -375,7 +375,10 @@ vc4_set_shader_uniform_dirty_flags(struct vc4_compiled_shader *shader)
                 case QUNIFORM_TEXTURE_MSAA_ADDR:
                 case QUNIFORM_TEXRECT_SCALE_X:
                 case QUNIFORM_TEXRECT_SCALE_Y:
-                        dirty |= VC4_DIRTY_TEXSTATE;
+                        /* We could flag this on just the stage we're
+                         * compiling for, but it's not passed in.
+                         */
+                        dirty |= VC4_DIRTY_FRAGTEX | VC4_DIRTY_VERTTEX;
                         break;
 
                 case QUNIFORM_BLEND_CONST_COLOR_X:
