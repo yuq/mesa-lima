@@ -2928,31 +2928,73 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
          }
       } else {
          /* Indirect indexing - use per-slot offsets as well. */
-         const fs_reg srcs[] = {
-            retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD),
-            indirect_offset
-         };
-         fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
-         bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
 
-         if (first_component != 0) {
-            unsigned read_components =
-                instr->num_components + first_component;
-            fs_reg tmp = bld.vgrf(dest.type, read_components);
-            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp,
-                            payload);
-            inst->regs_written = read_components;
-            for (unsigned i = 0; i < instr->num_components; i++) {
-               bld.MOV(offset(dest, bld, i),
-                       offset(tmp, bld, i + first_component));
+         /* We can only read two double components with each URB read, so
+          * we send two read messages in that case, each one loading up to
+          * two double components.
+          */
+         unsigned num_iterations = 1;
+         unsigned num_components = instr->num_components;
+         fs_reg orig_dest = dest;
+         if (type_sz(dest.type) == 8) {
+            if (instr->num_components > 2) {
+               num_iterations = 2;
+               num_components = 2;
             }
-         } else {
-            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dest,
-                            payload);
-            inst->regs_written = instr->num_components;
+            fs_reg tmp = fs_reg(VGRF, alloc.allocate(4), dest.type);
+            dest = tmp;
          }
-         inst->mlen = 2;
-         inst->offset = imm_offset;
+
+         for (unsigned iter = 0; iter < num_iterations; iter++) {
+            const fs_reg srcs[] = {
+               retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD),
+               indirect_offset
+            };
+            fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+            bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
+
+            if (first_component != 0) {
+               unsigned read_components =
+                   num_components + first_component;
+               fs_reg tmp = bld.vgrf(dest.type, read_components);
+               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp,
+                               payload);
+               for (unsigned i = 0; i < num_components; i++) {
+                  bld.MOV(offset(dest, bld, i),
+                          offset(tmp, bld, i + first_component));
+               }
+            } else {
+               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dest,
+                               payload);
+            }
+            inst->mlen = 2;
+            inst->offset = imm_offset;
+            inst->regs_written =
+               ((num_components + first_component) * type_sz(dest.type) / 4);
+
+            /* If we are reading 64-bit data using 32-bit read messages we need
+             * build proper 64-bit data elements by shuffling the low and high
+             * 32-bit components around like we do for other things like UBOs
+             * or SSBOs.
+             */
+            if (type_sz(dest.type) == 8) {
+               shuffle_32bit_load_result_to_64bit_data(
+                  bld, dest, retype(dest, BRW_REGISTER_TYPE_F), num_components);
+
+               for (unsigned c = 0; c < num_components; c++) {
+                  bld.MOV(offset(orig_dest, bld, iter * 2 + c),
+                          offset(dest, bld, c));
+               }
+            }
+
+            /* If we are loading double data and we need a second read message
+             * adjust the offset
+             */
+            if (num_iterations > 1) {
+               num_components = instr->num_components - 2;
+               imm_offset++;
+            }
+         }
       }
       break;
    }
