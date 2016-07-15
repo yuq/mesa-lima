@@ -353,8 +353,10 @@ update_buffers(struct dri2_egl_surface *dri2_surf)
       return 0;
 
    /* try to dequeue the next back buffer */
-   if (!dri2_surf->buffer && !droid_window_dequeue_buffer(dri2_surf))
+   if (!dri2_surf->buffer && !droid_window_dequeue_buffer(dri2_surf)) {
+      _eglLog(_EGL_WARNING, "Could not dequeue buffer from native window");
       return -1;
+   }
 
    /* free outdated buffers and update the surface size */
    if (dri2_surf->base.Width != dri2_surf->buffer->width ||
@@ -379,16 +381,21 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
       return -1;
 
    fd = get_native_buffer_fd(dri2_surf->buffer);
-   if (fd < 0)
+   if (fd < 0) {
+      _eglLog(_EGL_WARNING, "Could not get native buffer FD");
       return -1;
+   }
 
    fourcc = get_fourcc(get_format(dri2_surf->buffer->format));
 
    pitch = dri2_surf->buffer->stride *
       get_format_bpp(dri2_surf->buffer->format);
 
-   if (fourcc == -1 || pitch == 0)
+   if (fourcc == -1 || pitch == 0) {
+      _eglLog(_EGL_WARNING, "Invalid buffer fourcc(%x) or pitch(%d)",
+              fourcc, pitch);
       return -1;
+   }
 
    dri2_surf->dri_image =
       dri2_dpy->image->createImageFromFds(dri2_dpy->dri_screen,
