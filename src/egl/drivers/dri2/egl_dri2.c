@@ -158,7 +158,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
 		const unsigned int *rgba_masks)
 {
    struct dri2_egl_config *conf;
-   struct dri2_egl_display *dri2_dpy;
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    _EGLConfig base;
    unsigned int attrib, value, double_buffer;
    bool srgb = false;
@@ -169,7 +169,6 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
    EGLint config_id;
    int i;
 
-   dri2_dpy = disp->DriverData;
    _eglInitConfig(&base, disp, id);
 
    i = 0;
@@ -432,7 +431,7 @@ dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
 static const __DRIextension **
 dri2_open_driver(_EGLDisplay *disp)
 {
-   struct dri2_egl_display *dri2_dpy = disp->DriverData;
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    const __DRIextension **extensions = NULL;
    char path[PATH_MAX], *search_paths, *p, *next, *end;
    char *get_extensions_name;
@@ -516,7 +515,7 @@ dri2_open_driver(_EGLDisplay *disp)
 EGLBoolean
 dri2_load_driver_dri3(_EGLDisplay *disp)
 {
-   struct dri2_egl_display *dri2_dpy = disp->DriverData;
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    const __DRIextension **extensions;
 
    extensions = dri2_open_driver(disp);
@@ -535,7 +534,7 @@ dri2_load_driver_dri3(_EGLDisplay *disp)
 EGLBoolean
 dri2_load_driver(_EGLDisplay *disp)
 {
-   struct dri2_egl_display *dri2_dpy = disp->DriverData;
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    const __DRIextension **extensions;
 
    extensions = dri2_open_driver(disp);
@@ -554,7 +553,7 @@ dri2_load_driver(_EGLDisplay *disp)
 EGLBoolean
 dri2_load_driver_swrast(_EGLDisplay *disp)
 {
-   struct dri2_egl_display *dri2_dpy = disp->DriverData;
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    const __DRIextension **extensions;
 
    extensions = dri2_open_driver(disp);
@@ -680,10 +679,8 @@ EGLBoolean
 dri2_create_screen(_EGLDisplay *disp)
 {
    const __DRIextension **extensions;
-   struct dri2_egl_display *dri2_dpy;
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    unsigned i;
-
-   dri2_dpy = disp->DriverData;
 
    if (dri2_dpy->image_driver) {
       dri2_dpy->dri_screen =
