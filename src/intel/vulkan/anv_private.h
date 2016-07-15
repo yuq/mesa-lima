@@ -83,6 +83,12 @@ extern "C" {
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 static inline uint32_t
+align_down_npot_u32(uint32_t v, uint32_t a)
+{
+   return v - (v % a);
+}
+
+static inline uint32_t
 align_u32(uint32_t v, uint32_t a)
 {
    assert(a != 0 && a == (a & -a));
