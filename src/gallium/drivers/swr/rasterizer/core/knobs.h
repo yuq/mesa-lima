@@ -59,7 +59,8 @@
 #define KNOB_SIMD_WIDTH 8
 #define KNOB_SIMD_BYTES 32
 #elif (KNOB_ARCH == KNOB_ARCH_AVX512)
-#if ENABLE_AVX512_SIMD16
+#if 0
+// not ready to enable this globally, enabled on the side (below)
 #define KNOB_ARCH_ISA AVX512F
 #define KNOB_ARCH_STR "AVX512"
 #define KNOB_SIMD_WIDTH 16
@@ -72,6 +73,11 @@
 #endif
 #else
 #error "Unknown architecture"
+#endif
+
+#if ENABLE_AVX512_SIMD16
+#define KNOB_SIMD16_WIDTH 16
+#define KNOB_SIMD16_BYTES 64
 #endif
 
 #define MAX_KNOB_ARCH_STR_LEN sizeof("AVX512_PLUS_PADDING")
@@ -133,6 +139,12 @@
 #error "incompatible width/tile dimensions"
 #endif
 
+#if ENABLE_AVX512_SIMD16
+#if KNOB_SIMD16_WIDTH==16 && KNOB_TILE_X_DIM < 4
+#error "incompatible width/tile dimensions"
+#endif
+#endif
+
 #if KNOB_SIMD_WIDTH == 8
 #define SIMD_TILE_X_DIM 4
 #define SIMD_TILE_Y_DIM 2
@@ -141,6 +153,15 @@
 #define SIMD_TILE_Y_DIM 4
 #else
 #error "Invalid simd width"
+#endif
+
+#if ENABLE_AVX512_SIMD16
+#if KNOB_SIMD16_WIDTH == 16
+#define SIMD16_TILE_X_DIM 4
+#define SIMD16_TILE_Y_DIM 4
+#else
+#error "Invalid simd width"
+#endif
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////

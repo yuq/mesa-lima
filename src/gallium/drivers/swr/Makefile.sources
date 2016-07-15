@@ -54,6 +54,7 @@ COMMON_CXX_SOURCES := \
 	rasterizer/common/rdtsc_buckets.h \
 	rasterizer/common/rdtsc_buckets_shared.h \
 	rasterizer/common/rdtsc_buckets_shared.h \
+	rasterizer/common/simd16intrin.h \
 	rasterizer/common/simdintrin.h \
 	rasterizer/common/swr_assert.cpp \
 	rasterizer/common/swr_assert.h

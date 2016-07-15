@@ -43,19 +43,20 @@ struct simdscalar
     __m256  lo;
     __m256  hi;
 };
-struct simdscalari
-{
-    __m256i lo;
-    __m256i hi;
-};
 struct simdscalard
 {
     __m256d lo;
     __m256d hi;
 };
+struct simdscalari
+{
+    __m256i lo;
+    __m256i hi;
+};
 typedef uint16_t simdmask;
 #else
 typedef __m512 simdscalar;
+typedef __m512d simdscalard;
 typedef __m512i simdscalari;
 typedef __mask16 simdmask;
 #endif
@@ -487,6 +488,7 @@ simdscalari _simd_permute_epi32(simdscalari a, simdscalari index)
 }
 #endif
 
+#define _simd_permute_128 _mm256_permute2f128_si256
 #define _simd_shuffleps_epi32(vA, vB, imm) _mm256_castps_si256(_mm256_shuffle_ps(_mm256_castsi256_ps(vA), _mm256_castsi256_ps(vB), imm))
 #define _simd_shuffle_ps _mm256_shuffle_ps
 #define _simd_set1_epi32 _mm256_set1_epi32
@@ -1699,5 +1701,9 @@ UINT pext_u32(UINT a, UINT mask)
     return result;
 #endif
 }
+
+#if ENABLE_AVX512_SIMD16
+#include "simd16intrin.h"
+#endif//ENABLE_AVX512_SIMD16
 
 #endif//__SWR_SIMDINTRIN_H__
