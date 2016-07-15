@@ -144,6 +144,8 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    v2.run(sh->ir);
    visit_exec_list(sh->ir, &v1);
 
+   nir_lower_constant_initializers(shader, (nir_variable_mode)~0);
+
    shader->info->name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
    if (shader_prog->Label)
       shader->info->label = ralloc_strdup(shader, shader_prog->Label);
