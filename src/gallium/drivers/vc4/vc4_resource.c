@@ -877,7 +877,9 @@ vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
         if (shadow->writes == orig->writes && orig->bo->private)
                 return;
 
-        perf_debug("Updating shadow texture due to %s\n",
+        perf_debug("Updating %dx%d@%d shadow texture due to %s\n",
+                   orig->base.b.width0, orig->base.b.height0,
+                   view->u.tex.first_level,
                    view->u.tex.first_level ? "base level" : "raster layout");
 
         for (int i = 0; i <= shadow->base.b.last_level; i++) {

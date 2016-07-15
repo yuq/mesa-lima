@@ -393,6 +393,12 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 }
         }
 
+        if (c->key->tex[unit].forced_first_level) {
+                lod = qir_uniform_f(c, c->key->tex[unit].forced_first_level);
+                is_txl = true;
+                is_txb = false;
+        }
+
         struct qreg texture_u[] = {
                 qir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P0, unit),
                 qir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P1, unit),
@@ -2313,6 +2319,7 @@ vc4_setup_shared_key(struct vc4_context *vc4, struct vc4_key *key,
 {
         for (int i = 0; i < texstate->num_textures; i++) {
                 struct pipe_sampler_view *sampler = texstate->textures[i];
+                struct vc4_sampler_view *vc4_sampler = vc4_sampler_view(sampler);
                 struct pipe_sampler_state *sampler_state =
                         texstate->samplers[i];
 
@@ -2333,6 +2340,10 @@ vc4_setup_shared_key(struct vc4_context *vc4, struct vc4_key *key,
                         key->tex[i].compare_func = sampler_state->compare_func;
                         key->tex[i].wrap_s = sampler_state->wrap_s;
                         key->tex[i].wrap_t = sampler_state->wrap_t;
+                        if (vc4_sampler->force_first_level) {
+                                key->tex[i].forced_first_level =
+                                        sampler->u.tex.first_level;
+                        }
                 }
         }
 

@@ -603,7 +603,8 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
          * Also, Raspberry Pi doesn't support sampling from raster textures,
          * so we also have to copy to a temporary then.
          */
-        if (cso->u.tex.first_level ||
+        if ((cso->u.tex.first_level &&
+             (cso->u.tex.first_level != cso->u.tex.last_level)) ||
             rsc->vc4_format == VC4_TEXTURE_TYPE_RGBA32R) {
                 struct vc4_resource *shadow_parent = vc4_resource(prsc);
                 struct pipe_resource tmpl = shadow_parent->base.b;
@@ -626,6 +627,8 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                 clone->writes = shadow_parent->writes - 1;
 
                 assert(clone->vc4_format != VC4_TEXTURE_TYPE_RGBA32R);
+        } else if (cso->u.tex.first_level) {
+                so->force_first_level = true;
         }
         so->base.texture = prsc;
         so->base.reference.count = 1;
@@ -634,7 +637,9 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
         so->texture_p0 =
                 (VC4_SET_FIELD(rsc->slices[0].offset >> 12, VC4_TEX_P0_OFFSET) |
                  VC4_SET_FIELD(rsc->vc4_format & 15, VC4_TEX_P0_TYPE) |
-                 VC4_SET_FIELD(cso->u.tex.last_level -
+                 VC4_SET_FIELD(so->force_first_level ?
+                               cso->u.tex.last_level :
+                               cso->u.tex.last_level -
                                cso->u.tex.first_level, VC4_TEX_P0_MIPLVLS) |
                  VC4_SET_FIELD(cso->target == PIPE_TEXTURE_CUBE,
                                VC4_TEX_P0_CMMODE));

@@ -314,6 +314,7 @@ struct vc4_key {
                                 unsigned compare_func:3;
                                 unsigned wrap_s:3;
                                 unsigned wrap_t:3;
+                                unsigned forced_first_level:8;
                         };
                         struct {
                                 uint16_t msaa_width, msaa_height;

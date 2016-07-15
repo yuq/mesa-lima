@@ -74,6 +74,7 @@ struct vc4_sampler_view {
         struct pipe_sampler_view base;
         uint32_t texture_p0;
         uint32_t texture_p1;
+        bool force_first_level;
 };
 
 struct vc4_sampler_state {
