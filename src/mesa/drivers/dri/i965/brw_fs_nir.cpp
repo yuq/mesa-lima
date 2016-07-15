@@ -2509,13 +2509,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
           */
          if (num_iterations > 1) {
             num_components = instr->num_components - 2;
-            if (indirect_offset.file == BAD_FILE) {
-               imm_offset++;
-            } else {
-               fs_reg new_indirect = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
-               bld.ADD(new_indirect, indirect_offset, brw_imm_ud(1u));
-               indirect_offset = new_indirect;
-            }
+            imm_offset++;
          }
       }
       break;
