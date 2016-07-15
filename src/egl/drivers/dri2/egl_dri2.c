@@ -1190,8 +1190,10 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
    __DRIcontext *cctx;
 
    /* make new bindings */
-   if (!_eglBindContext(ctx, dsurf, rsurf, &old_ctx, &old_dsurf, &old_rsurf))
+   if (!_eglBindContext(ctx, dsurf, rsurf, &old_ctx, &old_dsurf, &old_rsurf)) {
+      /* _eglBindContext already sets the EGL error (in _eglCheckMakeCurrent) */
       return EGL_FALSE;
+   }
 
    /* flush before context switch */
    if (old_ctx && dri2_drv->glFlush)
@@ -1231,7 +1233,11 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
       _eglPutSurface(old_rsurf);
       _eglPutContext(old_ctx);
 
-      return EGL_FALSE;
+      /* dri2_dpy->core->bindContext failed. We cannot tell for sure why, but
+       * setting the error to EGL_BAD_MATCH is surely better than leaving it
+       * as EGL_SUCCESS.
+       */
+      return _eglError(EGL_BAD_MATCH, "eglMakeCurrent");
    }
 }
 
