@@ -635,18 +635,19 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
    view->format = anv_get_isl_format(&device->info, pCreateInfo->format,
                                      VK_IMAGE_ASPECT_COLOR_BIT,
                                      VK_IMAGE_TILING_LINEAR);
+   const uint32_t format_bs = isl_format_get_layout(view->format)->bpb / 8;
    view->bo = buffer->bo;
    view->offset = buffer->offset + pCreateInfo->offset;
    view->range = pCreateInfo->range == VK_WHOLE_SIZE ?
-                 buffer->size - view->offset : pCreateInfo->range;
+                 buffer->size - pCreateInfo->offset : pCreateInfo->range;
+   view->range = align_down_npot_u32(view->range, format_bs);
 
    if (buffer->usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
       view->surface_state = alloc_surface_state(device, cmd_buffer);
 
       anv_fill_buffer_surface_state(device, view->surface_state,
                                     view->format,
-                                    view->offset, view->range,
-                                    isl_format_get_layout(view->format)->bpb / 8);
+                                    view->offset, view->range, format_bs);
    } else {
       view->surface_state = (struct anv_state){ 0 };
    }
