@@ -372,7 +372,7 @@ void anv_GetPhysicalDeviceFeatures(
       .robustBufferAccess                       = true,
       .fullDrawIndexUint32                      = true,
       .imageCubeArray                           = false,
-      .independentBlend                         = pdevice->info->gen >= 8,
+      .independentBlend                         = true,
       .geometryShader                           = true,
       .tessellationShader                       = false,
       .sampleRateShading                        = false,
