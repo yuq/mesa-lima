@@ -90,27 +90,10 @@ signed_numeric_types = (int_type, float_type, double_type)
 integer_types = (uint_type, int_type)
 real_types = (float_type, double_type)
 
-# This template is for unary and binary operations that can only have operands
-# of a single type or the implementation for all types is identical.
-# ir_unop_logic_not is an example of the former, and ir_quadop_bitfield_insert
-# is an example of the latter..
-constant_template0 = mako.template.Template("""\
-   case ${op.get_enum_name()}:
-    % if len(op.source_types) == 1:
-      assert(op[0]->type->base_type == ${op.source_types[0].glsl_type});
-    % endif
-      for (unsigned c = 0; c < op[0]->type->components(); c++)
-    % for dst_type, src_types in op.signatures():
-        % if loop.index == 0:
-         data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types)};
-        % endif
-    % endfor
-      break;""")
-
 # This template is for operations that can have operands of a several
 # different types, and each type may or may not has a different C expression.
-# ir_unop_bit_not and ir_unop_neg are examples.
-constant_template3 = mako.template.Template("""\
+# This is used by most operations.
+constant_template_common = mako.template.Template("""\
    case ${op.get_enum_name()}:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
          switch (this->type->base_type) {
@@ -417,10 +400,6 @@ class operation(object):
             return constant_template2.render(op=self)
          elif self.dest_type is not None:
             return constant_template5.render(op=self)
-         elif len(self.source_types) == 1:
-            return constant_template0.render(op=self)
-         else:
-            return constant_template3.render(op=self)
       elif self.num_operands == 2:
          if self.name == "mul":
             return constant_template_mul.render(op=self)
@@ -432,12 +411,8 @@ class operation(object):
             return constant_template_horizontal_single_implementation.render(op=self)
          elif horizontal_operation in self.flags:
             return constant_template_horizontal.render(op=self)
-         elif len(self.source_types) == 1:
-            return constant_template0.render(op=self)
          elif self.dest_type is not None:
             return constant_template5.render(op=self)
-         else:
-            return constant_template3.render(op=self)
       elif self.num_operands == 3:
          if self.name == "vector_insert":
             return constant_template_vector_insert.render(op=self)
@@ -445,15 +420,11 @@ class operation(object):
             return constant_template_lrp.render(op=self)
          elif self.name == "csel":
             return constant_template_csel.render(op=self)
-         else:
-            return constant_template3.render(op=self)
       elif self.num_operands == 4:
          if self.name == "vector":
             return constant_template_vector.render(op=self)
-         elif types_identical_operation in self.flags:
-            return constant_template0.render(op=self)
 
-      return None
+      return constant_template_common.render(op=self)
 
 
    def get_c_expression(self, types, indices=("c", "c", "c")):
@@ -722,8 +693,7 @@ ir_expression_operation = [
    operation("bitfield_insert", 4,
              all_signatures=((uint_type, (uint_type, uint_type, int_type, int_type)),
                              (int_type, (int_type, int_type, int_type, int_type))),
-             c_expression="bitfield_insert({src0}, {src1}, {src2}, {src3})",
-             flags=types_identical_operation),
+             c_expression="bitfield_insert({src0}, {src1}, {src2}, {src3})"),
 
    operation("vector", 4, source_types=all_types, c_expression="anything-except-None"),
 ]
