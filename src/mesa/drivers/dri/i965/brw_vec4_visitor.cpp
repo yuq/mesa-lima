@@ -1702,33 +1702,57 @@ vec4_visitor::move_grf_array_access_to_scratch()
  */
 void
 vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
-				      dst_reg temp, src_reg orig_src,
+                                      dst_reg temp, src_reg orig_src,
                                       int base_offset, src_reg indirect)
 {
    assert(orig_src.offset % 16 == 0);
-   int reg_offset = base_offset + orig_src.offset / 16;
    const unsigned index = prog_data->base.binding_table.pull_constants_start;
 
-   src_reg offset;
-   if (indirect.file != BAD_FILE) {
-      offset = src_reg(this, glsl_type::uint_type);
-
-      emit_before(block, inst, ADD(dst_reg(offset), indirect,
-                                   brw_imm_ud(reg_offset * 16)));
-   } else if (devinfo->gen >= 8) {
-      /* Store the offset in a GRF so we can send-from-GRF. */
-      offset = src_reg(this, glsl_type::uint_type);
-      emit_before(block, inst, MOV(dst_reg(offset), brw_imm_ud(reg_offset * 16)));
-   } else {
-      offset = brw_imm_d(reg_offset * 16);
+   /* For 64bit loads we need to emit two 32-bit load messages and we also
+    * we need to shuffle the 32-bit data result into proper 64-bit data. To do
+    * that we emit the 32-bit loads into a temporary and we shuffle the result
+    * into the original destination.
+    */
+   dst_reg orig_temp = temp;
+   bool is_64bit = type_sz(orig_src.type) == 8;
+   if (is_64bit) {
+      assert(type_sz(temp.type) == 8);
+      dst_reg temp_df = dst_reg(this, glsl_type::dvec4_type);
+      temp = retype(temp_df, BRW_REGISTER_TYPE_F);
    }
 
-   emit_pull_constant_load_reg(temp,
-                               brw_imm_ud(index),
-                               offset,
-                               block, inst);
+   src_reg src = orig_src;
+   for (int i = 0; i < (is_64bit ? 2 : 1); i++) {
+      int reg_offset = base_offset + src.offset / 16;
+
+      src_reg offset;
+      if (indirect.file != BAD_FILE) {
+         offset = src_reg(this, glsl_type::uint_type);
+         emit_before(block, inst, ADD(dst_reg(offset), indirect,
+                                      brw_imm_ud(reg_offset * 16)));
+      } else if (devinfo->gen >= 8) {
+         /* Store the offset in a GRF so we can send-from-GRF. */
+         offset = src_reg(this, glsl_type::uint_type);
+         emit_before(block, inst, MOV(dst_reg(offset),
+                                      brw_imm_ud(reg_offset * 16)));
+      } else {
+         offset = brw_imm_d(reg_offset * 16);
+      }
+
+      emit_pull_constant_load_reg(byte_offset(temp, i * REG_SIZE),
+                                  brw_imm_ud(index),
+                                  offset,
+                                  block, inst);
+
+      src = byte_offset(src, 16);
+   }
 
    brw_mark_surface_used(&prog_data->base, index);
+
+   if (is_64bit) {
+      temp = retype(temp, BRW_REGISTER_TYPE_DF);
+      shuffle_64bit_data(orig_temp, src_reg(temp), false, block, inst);
+   }
 }
 
 /**
@@ -1801,24 +1825,8 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
 
       assert(inst->src[0].swizzle == BRW_SWIZZLE_NOOP);
 
-      if (type_sz(inst->src[0].type) != 8) {
-         emit_pull_constant_load(block, inst, inst->dst, inst->src[0],
-                                 pull_constant_loc[uniform_nr], inst->src[1]);
-      } else {
-         dst_reg shuffled = dst_reg(this, glsl_type::dvec4_type);
-         dst_reg shuffled_float = retype(shuffled, BRW_REGISTER_TYPE_F);
-
-         emit_pull_constant_load(block, inst, shuffled_float, inst->src[0],
-                                 pull_constant_loc[uniform_nr], inst->src[1]);
-         emit_pull_constant_load(block, inst,
-                                 offset(shuffled_float, 8, 1),
-                                 offset(inst->src[0], 8, 1),
-                                 pull_constant_loc[uniform_nr], inst->src[1]);
-
-         shuffle_64bit_data(retype(inst->dst, BRW_REGISTER_TYPE_DF),
-                            src_reg(shuffled), false, block, inst);
-      }
-
+      emit_pull_constant_load(block, inst, inst->dst, inst->src[0],
+                              pull_constant_loc[uniform_nr], inst->src[1]);
       inst->remove(block);
    }
 

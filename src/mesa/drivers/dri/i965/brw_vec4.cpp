@@ -884,25 +884,12 @@ vec4_visitor::move_push_constants_to_pull_constants()
 
          int uniform = inst->src[i].nr;
 
-         dst_reg temp;
-         if (type_sz(inst->src[i].type) != 8) {
-            temp = dst_reg(this, glsl_type::vec4_type);
-            emit_pull_constant_load(block, inst, temp, inst->src[i],
-                                    pull_constant_loc[uniform], src_reg());
-         } else {
-            dst_reg shuffled = dst_reg(this, glsl_type::dvec4_type);
-            dst_reg shuffled_float = retype(shuffled, BRW_REGISTER_TYPE_F);
+         const glsl_type *temp_type = type_sz(inst->src[i].type) == 8 ?
+            glsl_type::dvec4_type : glsl_type::vec4_type;
+         dst_reg temp = dst_reg(this, temp_type);
 
-            emit_pull_constant_load(block, inst, shuffled_float, inst->src[i],
-                                    pull_constant_loc[uniform], src_reg());
-            emit_pull_constant_load(block, inst,
-                                    offset(shuffled_float, 8, 1),
-                                    offset(inst->src[i], 8, 1),
-                                    pull_constant_loc[uniform], src_reg());
-
-            temp = dst_reg(this, glsl_type::dvec4_type);
-            shuffle_64bit_data(temp, src_reg(shuffled), false, block, inst);
-         }
+         emit_pull_constant_load(block, inst, temp, inst->src[i],
+                                 pull_constant_loc[uniform], src_reg());
 
          inst->src[i].file = temp.file;
          inst->src[i].nr = temp.nr;
