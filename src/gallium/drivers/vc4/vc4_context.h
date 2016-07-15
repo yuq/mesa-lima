@@ -87,7 +87,6 @@ struct vc4_texture_stateobj {
         unsigned num_textures;
         struct pipe_sampler_state *samplers[PIPE_MAX_SAMPLERS];
         unsigned num_samplers;
-        unsigned dirty_samplers;
 };
 
 struct vc4_shader_uniform_info {

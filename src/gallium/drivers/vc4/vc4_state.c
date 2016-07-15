@@ -575,12 +575,10 @@ vc4_sampler_states_bind(struct pipe_context *pctx,
                 if (hwcso[i])
                         new_nr = i + 1;
                 stage_tex->samplers[i] = hwcso[i];
-                stage_tex->dirty_samplers |= (1 << i);
         }
 
         for (; i < stage_tex->num_samplers; i++) {
                 stage_tex->samplers[i] = NULL;
-                stage_tex->dirty_samplers |= (1 << i);
         }
 
         stage_tex->num_samplers = new_nr;
@@ -676,12 +674,10 @@ vc4_set_sampler_views(struct pipe_context *pctx, unsigned shader,
                 if (views[i])
                         new_nr = i + 1;
                 pipe_sampler_view_reference(&stage_tex->textures[i], views[i]);
-                stage_tex->dirty_samplers |= (1 << i);
         }
 
         for (; i < stage_tex->num_textures; i++) {
                 pipe_sampler_view_reference(&stage_tex->textures[i], NULL);
-                stage_tex->dirty_samplers |= (1 << i);
         }
 
         stage_tex->num_textures = new_nr;
