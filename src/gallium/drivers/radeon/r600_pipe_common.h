@@ -514,6 +514,7 @@ struct r600_common_context {
 	struct r600_ring		dma;
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct pipe_fence_handle	*last_sdma_fence;
+	unsigned			num_gfx_cs_flushes;
 	unsigned			initial_gfx_cs_size;
 	unsigned			gpu_reset_counter;
 	unsigned			last_dirty_fb_counter;

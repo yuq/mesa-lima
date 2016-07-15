@@ -286,6 +286,7 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 	ws->cs_flush(cs, flags, &ctx->b.last_gfx_fence);
 	if (fence)
 		ws->fence_reference(fence, ctx->b.last_gfx_fence);
+	ctx->b.num_gfx_cs_flushes++;
 
 	r600_begin_new_cs(ctx);
 }

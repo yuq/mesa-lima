@@ -137,9 +137,9 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	/* Flush the CS. */
 	ws->cs_flush(cs, flags, &ctx->b.last_gfx_fence);
-
 	if (fence)
 		ws->fence_reference(fence, ctx->b.last_gfx_fence);
+	ctx->b.num_gfx_cs_flushes++;
 
 	/* Check VM faults if needed. */
 	if (ctx->screen->b.debug_flags & DBG_CHECK_VM) {
