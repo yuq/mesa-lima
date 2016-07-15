@@ -86,17 +86,18 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
       pipeline->blend_state =
          anv_state_pool_emit(&device->dynamic_state_pool,
             GENX(BLEND_STATE), 64,
-            .ColorBufferBlendEnable = false,
-            .WriteDisableAlpha = true,
-            .WriteDisableRed = true,
-            .WriteDisableGreen = true,
-            .WriteDisableBlue = true);
+            .Entry = { {
+               .ColorBufferBlendEnable = false,
+               .WriteDisableAlpha = true,
+               .WriteDisableRed = true,
+               .WriteDisableGreen = true,
+               .WriteDisableBlue = true
+            } });
    } else {
       const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[0];
-      struct GENX(BLEND_STATE) blend = {
+      struct GENX(BLEND_STATE) blend = { .Entry = { {
          .AlphaToCoverageEnable = ms_info && ms_info->alphaToCoverageEnable,
          .AlphaToOneEnable = ms_info && ms_info->alphaToOneEnable,
-
          .LogicOpEnable = info->logicOpEnable,
          .LogicOpFunction = vk_to_gen_logic_op[info->logicOp],
          .ColorBufferBlendEnable = a->blendEnable,
@@ -113,7 +114,7 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
          .WriteDisableRed = !(a->colorWriteMask & VK_COLOR_COMPONENT_R_BIT),
          .WriteDisableGreen = !(a->colorWriteMask & VK_COLOR_COMPONENT_G_BIT),
          .WriteDisableBlue = !(a->colorWriteMask & VK_COLOR_COMPONENT_B_BIT),
-      };
+      } } };
 
       /* Our hardware applies the blend factor prior to the blend function
        * regardless of what function is used.  Technically, this means the
@@ -123,13 +124,13 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
        */
       if (a->colorBlendOp == VK_BLEND_OP_MIN ||
           a->colorBlendOp == VK_BLEND_OP_MAX) {
-         blend.SourceBlendFactor = BLENDFACTOR_ONE;
-         blend.DestinationBlendFactor = BLENDFACTOR_ONE;
+         blend.Entry[0].SourceBlendFactor = BLENDFACTOR_ONE;
+         blend.Entry[0].DestinationBlendFactor = BLENDFACTOR_ONE;
       }
       if (a->alphaBlendOp == VK_BLEND_OP_MIN ||
           a->alphaBlendOp == VK_BLEND_OP_MAX) {
-         blend.SourceAlphaBlendFactor = BLENDFACTOR_ONE;
-         blend.DestinationAlphaBlendFactor = BLENDFACTOR_ONE;
+         blend.Entry[0].SourceAlphaBlendFactor = BLENDFACTOR_ONE;
+         blend.Entry[0].DestinationAlphaBlendFactor = BLENDFACTOR_ONE;
       }
 
       pipeline->blend_state = anv_state_pool_alloc(&device->dynamic_state_pool,
