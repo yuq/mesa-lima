@@ -107,25 +107,9 @@ constant_template0 = mako.template.Template("""\
     % endfor
       break;""")
 
-# This template is for unary operations that can have operands of a several
-# different types.  ir_unop_bit_not is an example.
-constant_template1 = mako.template.Template("""\
-   case ${op.get_enum_name()}:
-      switch (op[0]->type->base_type) {
-    % for dst_type, src_types in op.signatures():
-      case ${src_types[0].glsl_type}:
-         for (unsigned c = 0; c < op[0]->type->components(); c++)
-            data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types)};
-         break;
-    % endfor
-      default:
-         assert(0);
-      }
-      break;""")
-
-# This template is for unary operations that can have operands of a several
-# different types, and each type has a different C expression.  ir_unop_neg is
-# an example.
+# This template is for operations that can have operands of a several
+# different types, and each type may or may not has a different C expression.
+# ir_unop_bit_not and ir_unop_neg are examples.
 constant_template3 = mako.template.Template("""\
    case ${op.get_enum_name()}:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
@@ -435,8 +419,6 @@ class operation(object):
             return constant_template5.render(op=self)
          elif len(self.source_types) == 1:
             return constant_template0.render(op=self)
-         elif len(self.c_expression) == 1 and 'default' in self.c_expression:
-            return constant_template1.render(op=self)
          else:
             return constant_template3.render(op=self)
       elif self.num_operands == 2:
