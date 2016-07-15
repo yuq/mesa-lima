@@ -162,6 +162,8 @@ droid_window_dequeue_buffer(struct dri2_egl_surface *dri2_surf)
 static EGLBoolean
 droid_window_enqueue_buffer(_EGLDisplay *disp, struct dri2_egl_surface *dri2_surf)
 {
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+
    /* To avoid blocking other EGL calls, release the display mutex before
     * we enter droid_window_enqueue_buffer() and re-acquire the mutex upon
     * return.
@@ -192,6 +194,12 @@ droid_window_enqueue_buffer(_EGLDisplay *disp, struct dri2_egl_surface *dri2_sur
    dri2_surf->buffer = NULL;
 
    mtx_lock(&disp->Mutex);
+
+   if (dri2_surf->dri_image) {
+      dri2_dpy->image->destroyImage(dri2_surf->dri_image);
+      dri2_surf->dri_image = NULL;
+   }
+
    return EGL_TRUE;
 }
 
@@ -376,6 +384,9 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
       dri2_egl_display(dri2_surf->base.Resource.Display);
    int fourcc, pitch;
    int offset = 0, fd;
+
+   if (dri2_surf->dri_image)
+	   return 0;
 
    if (!dri2_surf->buffer)
       return -1;
