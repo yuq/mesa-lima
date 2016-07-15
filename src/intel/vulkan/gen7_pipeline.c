@@ -75,77 +75,6 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
    GENX(3DSTATE_SF_pack)(NULL, &pipeline->gen7.sf, &sf);
 }
 
-static void
-gen7_emit_cb_state(struct anv_pipeline *pipeline,
-                   const VkPipelineColorBlendStateCreateInfo *info,
-                   const VkPipelineMultisampleStateCreateInfo *ms_info)
-{
-   struct anv_device *device = pipeline->device;
-
-   if (info == NULL || info->attachmentCount == 0) {
-      pipeline->blend_state =
-         anv_state_pool_emit(&device->dynamic_state_pool,
-            GENX(BLEND_STATE), 64,
-            .Entry = { {
-               .ColorBufferBlendEnable = false,
-               .WriteDisableAlpha = true,
-               .WriteDisableRed = true,
-               .WriteDisableGreen = true,
-               .WriteDisableBlue = true
-            } });
-   } else {
-      const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[0];
-      struct GENX(BLEND_STATE) blend = { .Entry = { {
-         .AlphaToCoverageEnable = ms_info && ms_info->alphaToCoverageEnable,
-         .AlphaToOneEnable = ms_info && ms_info->alphaToOneEnable,
-         .LogicOpEnable = info->logicOpEnable,
-         .LogicOpFunction = vk_to_gen_logic_op[info->logicOp],
-         .ColorBufferBlendEnable = a->blendEnable,
-         .ColorClampRange = COLORCLAMP_RTFORMAT,
-         .PreBlendColorClampEnable = true,
-         .PostBlendColorClampEnable = true,
-         .SourceBlendFactor = vk_to_gen_blend[a->srcColorBlendFactor],
-         .DestinationBlendFactor = vk_to_gen_blend[a->dstColorBlendFactor],
-         .ColorBlendFunction = vk_to_gen_blend_op[a->colorBlendOp],
-         .SourceAlphaBlendFactor = vk_to_gen_blend[a->srcAlphaBlendFactor],
-         .DestinationAlphaBlendFactor = vk_to_gen_blend[a->dstAlphaBlendFactor],
-         .AlphaBlendFunction = vk_to_gen_blend_op[a->alphaBlendOp],
-         .WriteDisableAlpha = !(a->colorWriteMask & VK_COLOR_COMPONENT_A_BIT),
-         .WriteDisableRed = !(a->colorWriteMask & VK_COLOR_COMPONENT_R_BIT),
-         .WriteDisableGreen = !(a->colorWriteMask & VK_COLOR_COMPONENT_G_BIT),
-         .WriteDisableBlue = !(a->colorWriteMask & VK_COLOR_COMPONENT_B_BIT),
-      } } };
-
-      /* Our hardware applies the blend factor prior to the blend function
-       * regardless of what function is used.  Technically, this means the
-       * hardware can do MORE than GL or Vulkan specify.  However, it also
-       * means that, for MIN and MAX, we have to stomp the blend factor to
-       * ONE to make it a no-op.
-       */
-      if (a->colorBlendOp == VK_BLEND_OP_MIN ||
-          a->colorBlendOp == VK_BLEND_OP_MAX) {
-         blend.Entry[0].SourceBlendFactor = BLENDFACTOR_ONE;
-         blend.Entry[0].DestinationBlendFactor = BLENDFACTOR_ONE;
-      }
-      if (a->alphaBlendOp == VK_BLEND_OP_MIN ||
-          a->alphaBlendOp == VK_BLEND_OP_MAX) {
-         blend.Entry[0].SourceAlphaBlendFactor = BLENDFACTOR_ONE;
-         blend.Entry[0].DestinationAlphaBlendFactor = BLENDFACTOR_ONE;
-      }
-
-      pipeline->blend_state = anv_state_pool_alloc(&device->dynamic_state_pool,
-                                                   GENX(BLEND_STATE_length) * 4,
-                                                   64);
-      GENX(BLEND_STATE_pack)(NULL, pipeline->blend_state.map, &blend);
-      if (pipeline->device->info.has_llc)
-         anv_state_clflush(pipeline->blend_state);
-    }
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_BLEND_STATE_POINTERS), bsp) {
-      bsp.BlendStatePointer = pipeline->blend_state.offset;
-   }
-}
-
 VkResult
 genX(graphics_pipeline_create)(
     VkDevice                                    _device,
@@ -183,8 +112,8 @@ genX(graphics_pipeline_create)(
 
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
 
-   gen7_emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
-                                pCreateInfo->pMultisampleState);
+   emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
+                           pCreateInfo->pMultisampleState);
 
    emit_urb_setup(pipeline);
 
