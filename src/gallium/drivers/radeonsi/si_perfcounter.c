@@ -595,16 +595,19 @@ static void si_pc_emit_stop(struct r600_common_context *ctx,
 		/* Two EOP events are required to make all engines go idle
 		 * (and optional cache flushes executed) before the timestamp
 		 * is written.
+		 *
+		 * Write 1, because we need to wait for the second EOP event.
 		 */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
 				EVENT_INDEX(5));
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
-		radeon_emit(cs, 0); /* immediate data */
+		radeon_emit(cs, 1); /* immediate data */
 		radeon_emit(cs, 0); /* unused */
 	}
 
+	/* Write 0. */
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
 			EVENT_INDEX(5));
@@ -613,6 +616,7 @@ static void si_pc_emit_stop(struct r600_common_context *ctx,
 	radeon_emit(cs, 0); /* immediate data */
 	radeon_emit(cs, 0); /* unused */
 
+	/* Wait until the memory location is 0. */
 	radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
 	radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
 	radeon_emit(cs, va);
