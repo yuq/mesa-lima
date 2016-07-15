@@ -1185,16 +1185,13 @@ fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
                                delta_xy[centroid_to_pixel(bary)], interp);
                inst->predicate = BRW_PREDICATE_NORMAL;
                inst->predicate_inverse = true;
-               if (devinfo->has_pln)
-                  inst->no_dd_clear = true;
+               inst->no_dd_clear = true;
 
                inst = bld.emit(FS_OPCODE_LINTERP, *attr,
                                delta_xy[bary], interp);
                inst->predicate = BRW_PREDICATE_NORMAL;
                inst->predicate_inverse = false;
-               if (devinfo->has_pln)
-                  inst->no_dd_check = true;
-
+               inst->no_dd_check = true;
             } else {
                bld.emit(FS_OPCODE_LINTERP, *attr, delta_xy[bary], interp);
             }
