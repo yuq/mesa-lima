@@ -508,6 +508,8 @@ static nv50_ir::ImgFormat translateImgFormat(uint format)
    FMT_CASE(R8G8_SNORM, RG8_SNORM);
    FMT_CASE(R16_SNORM, R16_SNORM);
    FMT_CASE(R8_SNORM, R8_SNORM);
+
+   FMT_CASE(B8G8R8A8_UNORM, BGRA8);
    }
 
    assert(!"Unexpected format");

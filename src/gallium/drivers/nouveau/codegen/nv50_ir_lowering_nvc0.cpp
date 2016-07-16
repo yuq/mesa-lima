@@ -1940,6 +1940,10 @@ NVC0LoweringPass::convertSurfaceFormat(TexInstruction *su)
          bld.mkCvt(OP_CVT, TYPE_F32, typedDst[i], TYPE_F16, typedDst[i]);
       }
    }
+
+   if (format->bgra) {
+      std::swap(typedDst[0], typedDst[2]);
+   }
 }
 
 void
