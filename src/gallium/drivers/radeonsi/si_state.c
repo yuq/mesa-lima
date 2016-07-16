@@ -2569,21 +2569,30 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 	if (nr_samples <= 1 && sctx->smoothing_enabled)
 		nr_samples = SI_NUM_SMOOTH_AA_SAMPLES;
 
-	/* The small primitive filter on Polaris requires explicitly setting
-	 * sample locations to 0 when MSAA is disabled.
+	/* On Polaris, the small primitive filter uses the sample locations
+	 * even when MSAA is off, so we need to make sure they're set to 0.
 	 */
-	if (sctx->b.family >= CHIP_POLARIS10) {
-		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
-
-		if (!sctx->smoothing_enabled &&
-		    rs && !rs->multisample_enable)
-			nr_samples = 1;
-	}
-
 	if ((nr_samples > 1 || sctx->b.family >= CHIP_POLARIS10) &&
 	    (nr_samples != sctx->msaa_sample_locs.nr_samples)) {
 		sctx->msaa_sample_locs.nr_samples = nr_samples;
 		cayman_emit_msaa_sample_locs(cs, nr_samples);
+	}
+
+	if (sctx->b.family >= CHIP_POLARIS10) {
+		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
+		unsigned small_prim_filter_cntl =
+			S_028830_SMALL_PRIM_FILTER_ENABLE(1) |
+			S_028830_LINE_FILTER_DISABLE(1); /* line bug */
+
+		/* The alternative of setting sample locations to 0 would
+		 * require a DB flush to avoid Z errors, see
+		 * https://bugs.freedesktop.org/show_bug.cgi?id=96908
+		 */
+		if (sctx->framebuffer.nr_samples > 1 && rs && !rs->multisample_enable)
+			small_prim_filter_cntl &= C_028830_SMALL_PRIM_FILTER_ENABLE;
+
+		radeon_set_context_reg(cs, R_028830_PA_SU_SMALL_PRIM_FILTER_CNTL,
+				       small_prim_filter_cntl);
 	}
 }
 
@@ -3956,11 +3965,6 @@ static void si_init_config(struct si_context *sctx)
 
 	if (sctx->b.family == CHIP_STONEY)
 		si_pm4_set_reg(pm4, R_028C40_PA_SC_SHADER_CONTROL, 0);
-
-	if (sctx->b.family >= CHIP_POLARIS10)
-		si_pm4_set_reg(pm4, R_028830_PA_SU_SMALL_PRIM_FILTER_CNTL,
-			       S_028830_SMALL_PRIM_FILTER_ENABLE(1) |
-			       S_028830_LINE_FILTER_DISABLE(1)); /* line bug */
 
 	si_pm4_set_reg(pm4, R_028080_TA_BC_BASE_ADDR, border_color_va >> 8);
 	if (sctx->b.chip_class >= CIK)
