@@ -375,7 +375,7 @@ nir_lower_io_block(nir_block *block,
       if (nir_intrinsic_infos[intrin->intrinsic].has_dest) {
          if (intrin->dest.is_ssa) {
             nir_ssa_dest_init(&replacement->instr, &replacement->dest,
-                              intrin->num_components,
+                              intrin->dest.ssa.num_components,
                               intrin->dest.ssa.bit_size, NULL);
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
                                      nir_src_for_ssa(&replacement->dest.ssa));
