@@ -449,6 +449,28 @@ static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
 	util_slab_free(&rctx->pool_transfers, transfer);
 }
 
+void r600_buffer_subdata(struct pipe_context *ctx,
+			 struct pipe_resource *buffer,
+			 unsigned usage, unsigned offset,
+			 unsigned size, const void *data)
+{
+	struct pipe_transfer *transfer = NULL;
+	struct pipe_box box;
+	uint8_t *map = NULL;
+
+	u_box_1d(offset, size, &box);
+	map = r600_buffer_transfer_map(ctx, buffer, 0,
+				       PIPE_TRANSFER_WRITE |
+				       PIPE_TRANSFER_DISCARD_RANGE |
+				       usage,
+				       &box, &transfer);
+	if (!map)
+		return;
+
+	memcpy(map, data, size);
+	r600_buffer_transfer_unmap(ctx, transfer);
+}
+
 static const struct u_resource_vtbl r600_buffer_vtbl =
 {
 	NULL,				/* get_handle */

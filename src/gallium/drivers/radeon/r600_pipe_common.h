@@ -644,6 +644,10 @@ bool r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
 void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
                                       struct r600_resource *resource,
                                       unsigned usage);
+void r600_buffer_subdata(struct pipe_context *ctx,
+			 struct pipe_resource *buffer,
+			 unsigned usage, unsigned offset,
+			 unsigned size, const void *data);
 bool r600_init_resource(struct r600_common_screen *rscreen,
 			struct r600_resource *res,
 			uint64_t size, unsigned alignment);
@@ -674,7 +678,8 @@ void r600_destroy_common_screen(struct r600_common_screen *rscreen);
 void r600_preflush_suspend_features(struct r600_common_context *ctx);
 void r600_postflush_resume_features(struct r600_common_context *ctx);
 bool r600_common_context_init(struct r600_common_context *rctx,
-			      struct r600_common_screen *rscreen);
+			      struct r600_common_screen *rscreen,
+			      unsigned context_flags);
 void r600_common_context_cleanup(struct r600_common_context *rctx);
 void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r);
 bool r600_can_dump_shader(struct r600_common_screen *rscreen,

@@ -129,7 +129,7 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 	rctx->b.b.destroy = r600_destroy_context;
 	rctx->b.set_atom_dirty = (void *)r600_set_atom_dirty;
 
-	if (!r600_common_context_init(&rctx->b, &rscreen->b))
+	if (!r600_common_context_init(&rctx->b, &rscreen->b, flags))
 		goto fail;
 
 	rctx->screen = rscreen;

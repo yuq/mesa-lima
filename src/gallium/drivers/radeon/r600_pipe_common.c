@@ -400,7 +400,8 @@ static void r600_set_debug_callback(struct pipe_context *ctx,
 }
 
 bool r600_common_context_init(struct r600_common_context *rctx,
-			      struct r600_common_screen *rscreen)
+			      struct r600_common_screen *rscreen,
+			      unsigned context_flags)
 {
 	util_slab_create(&rctx->pool_transfers,
 			 sizeof(struct r600_transfer), 64,
@@ -422,11 +423,19 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	rctx->b.transfer_map = u_transfer_map_vtbl;
 	rctx->b.transfer_flush_region = u_transfer_flush_region_vtbl;
 	rctx->b.transfer_unmap = u_transfer_unmap_vtbl;
-	rctx->b.buffer_subdata = u_default_buffer_subdata;
 	rctx->b.texture_subdata = u_default_texture_subdata;
 	rctx->b.memory_barrier = r600_memory_barrier;
 	rctx->b.flush = r600_flush_from_st;
 	rctx->b.set_debug_callback = r600_set_debug_callback;
+
+	/* evergreen_compute.c has a special codepath for global buffers.
+	 * Everything else can use the direct path.
+	 */
+	if ((rscreen->chip_class == EVERGREEN || rscreen->chip_class == CAYMAN) &&
+	    (context_flags & PIPE_CONTEXT_COMPUTE_ONLY))
+		rctx->b.buffer_subdata = u_default_buffer_subdata;
+	else
+		rctx->b.buffer_subdata = r600_buffer_subdata;
 
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 43) {
 		rctx->b.get_device_reset_status = r600_get_reset_status;
