@@ -367,8 +367,6 @@ brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
    case FS_OPCODE_PLACEHOLDER_HALT:
       return "placeholder_halt";
 
-   case FS_OPCODE_INTERPOLATE_AT_CENTROID:
-      return "interp_centroid";
    case FS_OPCODE_INTERPOLATE_AT_SAMPLE:
       return "interp_sample";
    case FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET:

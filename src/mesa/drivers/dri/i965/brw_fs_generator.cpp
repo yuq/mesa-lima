@@ -2057,11 +2057,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          }
          break;
 
-      case FS_OPCODE_INTERPOLATE_AT_CENTROID:
-         generate_pixel_interpolator_query(inst, dst, src[0], src[1],
-                                           GEN7_PIXEL_INTERPOLATOR_LOC_CENTROID);
-         break;
-
       case FS_OPCODE_INTERPOLATE_AT_SAMPLE:
          generate_pixel_interpolator_query(inst, dst, src[0], src[1],
                                            GEN7_PIXEL_INTERPOLATOR_LOC_SAMPLE);
