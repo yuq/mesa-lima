@@ -2917,9 +2917,14 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 	FREE(outputs);
 }
 
+struct si_ps_exports {
+	unsigned num;
+	LLVMValueRef args[10][9];
+};
+
 static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
-			   LLVMValueRef depth, LLVMValueRef stencil,
-			   LLVMValueRef samplemask)
+			    LLVMValueRef depth, LLVMValueRef stencil,
+			    LLVMValueRef samplemask, struct si_ps_exports *exp)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_context *base = &bld_base->base;
@@ -2965,14 +2970,13 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 	/* Specify which components to enable */
 	args[0] = lp_build_const_int32(base->gallivm, mask);
 
-	lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-			   ctx->voidt, args, 9, 0);
+	memcpy(exp->args[exp->num++], args, sizeof(args));
 }
 
 static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 				LLVMValueRef *color, unsigned index,
 				unsigned samplemask_param,
-				bool is_last)
+				bool is_last, struct si_ps_exports *exp)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_context *base = &bld_base->base;
@@ -3018,8 +3022,7 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 			} else if (args[c][0] == bld_base->uint_bld.zero)
 				continue; /* unnecessary NULL export */
 
-			lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-					   ctx->voidt, args[c], 9, 0);
+			memcpy(exp->args[exp->num++], args[c], sizeof(args[c]));
 		}
 	} else {
 		LLVMValueRef args[9];
@@ -3033,9 +3036,17 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 		} else if (args[0] == bld_base->uint_bld.zero)
 			return; /* unnecessary NULL export */
 
-		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-				   ctx->voidt, args, 9, 0);
+		memcpy(exp->args[exp->num++], args, sizeof(args));
 	}
+}
+
+static void si_emit_ps_exports(struct si_shader_context *ctx,
+			       struct si_ps_exports *exp)
+{
+	for (unsigned i = 0; i < exp->num; i++)
+		lp_build_intrinsic(ctx->radeon_bld.gallivm.builder,
+				   "llvm.SI.export", ctx->voidt,
+				   exp->args[i], 9, 0);
 }
 
 static void si_export_null(struct lp_build_tgsi_context *bld_base)
@@ -3069,6 +3080,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context *bld_base)
 	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
 	int last_color_export = -1;
 	int i;
+	struct si_ps_exports exp = {};
 
 	/* Determine the last export. If MRTZ is present, it's always last.
 	 * Otherwise, find the last color export.
@@ -3135,7 +3147,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context *bld_base)
 
 			si_export_mrt_color(bld_base, color, semantic_index,
 					    SI_PARAM_SAMPLE_COVERAGE,
-					    last_color_export == i);
+					    last_color_export == i, &exp);
 			break;
 		default:
 			fprintf(stderr,
@@ -3145,7 +3157,9 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context *bld_base)
 	}
 
 	if (depth || stencil || samplemask)
-		si_export_mrt_z(bld_base, depth, stencil, samplemask);
+		si_export_mrt_z(bld_base, depth, stencil, samplemask, &exp);
+
+	si_emit_ps_exports(ctx, &exp);
 }
 
 /**
@@ -7495,6 +7509,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
 	int last_sgpr, num_params, i;
 	bool status = true;
+	struct si_ps_exports exp = {};
 
 	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
 	ctx.type = PIPE_SHADER_FRAGMENT;
@@ -7564,7 +7579,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 
 		si_export_mrt_color(bld_base, color, mrt,
 				    num_params - 1,
-				    mrt == last_color_export);
+				    mrt == last_color_export, &exp);
 	}
 
 	/* Process depth, stencil, samplemask. */
@@ -7576,9 +7591,12 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 		samplemask = LLVMGetParam(ctx.radeon_bld.main_fn, vgpr++);
 
 	if (depth || stencil || samplemask)
-		si_export_mrt_z(bld_base, depth, stencil, samplemask);
+		si_export_mrt_z(bld_base, depth, stencil, samplemask, &exp);
 	else if (last_color_export == -1)
 		si_export_null(bld_base);
+
+	if (exp.num)
+		si_emit_ps_exports(&ctx, &exp);
 
 	/* Compile. */
 	LLVMBuildRetVoid(gallivm->builder);
