@@ -38,15 +38,16 @@ static void
 destroy_buffer_locked(struct pb_cache_entry *entry)
 {
    struct pb_cache *mgr = entry->mgr;
+   struct pb_buffer *buf = entry->buffer;
 
-   assert(!pipe_is_referenced(&entry->buffer->reference));
+   assert(!pipe_is_referenced(&buf->reference));
    if (entry->head.next) {
       LIST_DEL(&entry->head);
       assert(mgr->num_buffers);
       --mgr->num_buffers;
-      mgr->cache_size -= entry->buffer->size;
+      mgr->cache_size -= buf->size;
    }
-   entry->mgr->destroy_buffer(entry->buffer);
+   mgr->destroy_buffer(buf);
 }
 
 /**
@@ -85,17 +86,18 @@ pb_cache_add_buffer(struct pb_cache_entry *entry)
 {
    struct pb_cache *mgr = entry->mgr;
    struct list_head *cache = &mgr->buckets[entry->bucket_index];
+   struct pb_buffer *buf = entry->buffer;
    unsigned i;
 
    pipe_mutex_lock(mgr->mutex);
-   assert(!pipe_is_referenced(&entry->buffer->reference));
+   assert(!pipe_is_referenced(&buf->reference));
 
    for (i = 0; i < ARRAY_SIZE(mgr->buckets); i++)
       release_expired_buffers_locked(&mgr->buckets[i]);
 
    /* Directly release any buffer that exceeds the limit. */
-   if (mgr->cache_size + entry->buffer->size > mgr->max_cache_size) {
-      entry->mgr->destroy_buffer(entry->buffer);
+   if (mgr->cache_size + buf->size > mgr->max_cache_size) {
+      mgr->destroy_buffer(buf);
       pipe_mutex_unlock(mgr->mutex);
       return;
    }
@@ -104,7 +106,7 @@ pb_cache_add_buffer(struct pb_cache_entry *entry)
    entry->end = entry->start + mgr->usecs;
    LIST_ADDTAIL(&entry->head, cache);
    ++mgr->num_buffers;
-   mgr->cache_size += entry->buffer->size;
+   mgr->cache_size += buf->size;
    pipe_mutex_unlock(mgr->mutex);
 }
 
