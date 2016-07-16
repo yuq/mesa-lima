@@ -194,32 +194,6 @@ typedef struct nir_variable {
       /*@}*/
 
       /**
-       * Was the location explicitly set in the shader?
-       *
-       * If the location is explicitly set in the shader, it \b cannot be changed
-       * by the linker or by the API (e.g., calls to \c glBindAttribLocation have
-       * no effect).
-       */
-      unsigned explicit_location:1;
-      unsigned explicit_index:1;
-
-      /**
-       * Was an initial binding explicitly set in the shader?
-       *
-       * If so, constant_initializer contains an integer nir_constant
-       * representing the initial binding point.
-       */
-      unsigned explicit_binding:1;
-
-      /**
-       * Does this variable have an initializer?
-       *
-       * This is used by the linker to cross-validiate initializers of global
-       * variables.
-       */
-      unsigned has_initializer:1;
-
-      /**
        * If non-zero, then this variable may be packed along with other variables
        * into a single varying slot, so this offset should be applied when
        * accessing components.  For example, an offset of 1 means that the x
@@ -312,14 +286,6 @@ typedef struct nir_variable {
          /** Image internal format if specified explicitly, otherwise GL_NONE. */
          GLenum format;
       } image;
-
-      /**
-       * Highest element accessed with a constant expression array index
-       *
-       * Not used for non-array variables.
-       */
-      unsigned max_array_access;
-
    } data;
 
    /**

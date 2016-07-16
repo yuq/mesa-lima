@@ -340,10 +340,6 @@ nir_visitor::visit(ir_variable *ir)
    var->data.interpolation = ir->data.interpolation;
    var->data.origin_upper_left = ir->data.origin_upper_left;
    var->data.pixel_center_integer = ir->data.pixel_center_integer;
-   var->data.explicit_location = ir->data.explicit_location;
-   var->data.explicit_index = ir->data.explicit_index;
-   var->data.explicit_binding = ir->data.explicit_binding;
-   var->data.has_initializer = ir->data.has_initializer;
    var->data.compact = false;
    var->data.location_frac = ir->data.location_frac;
 
@@ -376,7 +372,6 @@ nir_visitor::visit(ir_variable *ir)
    var->data.image._volatile = ir->data.image_volatile;
    var->data.image.restrict_flag = ir->data.image_restrict;
    var->data.image.format = ir->data.image_format;
-   var->data.max_array_access = ir->data.max_array_access;
    var->data.fb_fetch_output = ir->data.fb_fetch_output;
 
    var->num_state_slots = ir->get_num_state_slots();
