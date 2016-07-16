@@ -551,7 +551,7 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
     bo->va = 0;
     bo->initial_domain = initial_domains;
     pipe_mutex_init(bo->map_mutex);
-    pb_cache_init_entry(&rws->bo_cache, &bo->cache_entry, &bo->base);
+    pb_cache_init_entry(&rws->bo_cache, &bo->cache_entry, &bo->base, 0);
 
     if (rws->info.has_virtual_memory) {
         struct drm_radeon_gem_va va;
@@ -746,7 +746,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     assert(flags < sizeof(usage) * 8 - 3);
     usage |= 1 << (flags + 3);
 
-    bo = radeon_bo(pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage));
+    bo = radeon_bo(pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage, 0));
     if (bo)
         return &bo->base;
 

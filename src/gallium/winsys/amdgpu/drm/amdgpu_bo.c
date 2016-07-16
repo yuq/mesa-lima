@@ -303,7 +303,7 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
       return NULL;
    }
 
-   pb_cache_init_entry(&ws->bo_cache, &bo->cache_entry, &bo->base);
+   pb_cache_init_entry(&ws->bo_cache, &bo->cache_entry, &bo->base, 0);
    request.alloc_size = size;
    request.phys_alignment = alignment;
 
@@ -508,7 +508,7 @@ amdgpu_bo_create(struct radeon_winsys *rws,
 
    /* Get a buffer from the cache. */
    bo = (struct amdgpu_winsys_bo*)
-        pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage);
+        pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage, 0);
    if (bo)
       return &bo->base;
 
