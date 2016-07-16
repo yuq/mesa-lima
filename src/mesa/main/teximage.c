@@ -1271,8 +1271,6 @@ _mesa_test_proxy_teximage(struct gl_context *ctx, GLenum target,
 {
    uint64_t bytes, mbytes;
 
-   assert(numSamples > 0);
-
    if (numLevels > 0) {
       /* Compute total memory for a whole mipmap.  This is the path
        * taken for glTexStorage(GL_PROXY_TEXTURE_x).
@@ -1306,7 +1304,7 @@ _mesa_test_proxy_teximage(struct gl_context *ctx, GLenum target,
    }
 
    bytes *= _mesa_num_tex_faces(target);
-   bytes *= numSamples;
+   bytes *= MAX2(1, numSamples);
 
    mbytes = bytes / (1024 * 1024); /* convert to MB */
 
