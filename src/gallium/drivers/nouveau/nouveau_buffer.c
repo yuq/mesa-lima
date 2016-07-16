@@ -634,7 +634,6 @@ const struct u_resource_vtbl nouveau_buffer_vtbl =
    nouveau_buffer_transfer_map,          /* transfer_map */
    nouveau_buffer_transfer_flush_region, /* transfer_flush_region */
    nouveau_buffer_transfer_unmap,        /* transfer_unmap */
-   u_default_transfer_inline_write    /* transfer_inline_write */
 };
 
 struct pipe_resource *

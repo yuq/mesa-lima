@@ -242,14 +242,14 @@ graw_util_create_tex2d(const struct graw_info *info,
 
    u_box_2d(0, 0, width, height, &box);
 
-   info->ctx->transfer_inline_write(info->ctx,
-                                    tex,
-                                    0,
-                                    PIPE_TRANSFER_WRITE,
-                                    &box,
-                                    data,
-                                    row_stride,
-                                    image_bytes);
+   info->ctx->texture_subdata(info->ctx,
+                              tex,
+                              0,
+                              PIPE_TRANSFER_WRITE,
+                              &box,
+                              data,
+                              row_stride,
+                              image_bytes);
 
    /* Possibly read back & compare against original data:
     */

@@ -476,7 +476,6 @@ static const struct u_resource_vtbl fd_resource_vtbl = {
 		.transfer_map             = fd_resource_transfer_map,
 		.transfer_flush_region    = fd_resource_transfer_flush_region,
 		.transfer_unmap           = fd_resource_transfer_unmap,
-		.transfer_inline_write    = u_default_transfer_inline_write,
 };
 
 static uint32_t
@@ -864,7 +863,8 @@ fd_resource_context_init(struct pipe_context *pctx)
 	pctx->transfer_map = u_transfer_map_vtbl;
 	pctx->transfer_flush_region = u_transfer_flush_region_vtbl;
 	pctx->transfer_unmap = u_transfer_unmap_vtbl;
-	pctx->transfer_inline_write = u_transfer_inline_write_vtbl;
+	pctx->buffer_subdata = u_default_buffer_subdata;
+        pctx->texture_subdata = u_default_texture_subdata;
 	pctx->create_surface = fd_create_surface;
 	pctx->surface_destroy = fd_surface_destroy;
 	pctx->resource_copy_region = fd_resource_copy_region;

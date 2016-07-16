@@ -905,16 +905,16 @@ static OMX_ERRORTYPE enc_LoadImage(omx_base_PortType *port, OMX_BUFFERHEADERTYPE
       box.width = def->nFrameWidth;
       box.height = def->nFrameHeight;
       box.depth = 1;
-      priv->s_pipe->transfer_inline_write(priv->s_pipe, views[0]->texture, 0,
-                                          PIPE_TRANSFER_WRITE, &box,
-                                          ptr, def->nStride, 0);
+      priv->s_pipe->texture_subdata(priv->s_pipe, views[0]->texture, 0,
+                                    PIPE_TRANSFER_WRITE, &box,
+                                    ptr, def->nStride, 0);
       ptr = ((uint8_t*)buf->pBuffer) + (def->nStride * box.height);
       box.width = def->nFrameWidth / 2;
       box.height = def->nFrameHeight / 2;
       box.depth = 1;
-      priv->s_pipe->transfer_inline_write(priv->s_pipe, views[1]->texture, 0,
-                                          PIPE_TRANSFER_WRITE, &box,
-                                          ptr, def->nStride, 0);
+      priv->s_pipe->texture_subdata(priv->s_pipe, views[1]->texture, 0,
+                                    PIPE_TRANSFER_WRITE, &box,
+                                    ptr, def->nStride, 0);
    } else {
       struct pipe_blit_info blit;
       struct vl_video_buffer *dst_buf = (struct vl_video_buffer *)vbuf;

@@ -1470,7 +1470,7 @@ trace_context_transfer_map(struct pipe_context *_context,
 
    /*
     * Map and transfers can't be serialized so we convert all write transfers
-    * to transfer_inline_write and ignore read transfers.
+    * to texture/buffer_subdata and ignore read transfers.
     */
 
    map = context->transfer_map(context, texture, level, usage, box, &result);
@@ -1512,7 +1512,7 @@ trace_context_transfer_unmap(struct pipe_context *_context,
 
    if (tr_trans->map) {
       /*
-       * Fake a transfer_inline_write
+       * Fake a texture/buffer_subdata
        */
 
       struct pipe_resource *resource = transfer->resource;
@@ -1522,7 +1522,10 @@ trace_context_transfer_unmap(struct pipe_context *_context,
       unsigned stride = transfer->stride;
       unsigned layer_stride = transfer->layer_stride;
 
-      trace_dump_call_begin("pipe_context", "transfer_inline_write");
+      if (resource->target == PIPE_BUFFER)
+         trace_dump_call_begin("pipe_context", "buffer_subdata");
+      else
+         trace_dump_call_begin("pipe_context", "texture_subdata");
 
       trace_dump_arg(ptr, context);
       trace_dump_arg(ptr, resource);
@@ -1552,14 +1555,47 @@ trace_context_transfer_unmap(struct pipe_context *_context,
 
 
 static void
-trace_context_transfer_inline_write(struct pipe_context *_context,
-                                    struct pipe_resource *_resource,
-                                    unsigned level,
-                                    unsigned usage,
-                                    const struct pipe_box *box,
-                                    const void *data,
-                                    unsigned stride,
-                                    unsigned layer_stride)
+trace_context_buffer_subdata(struct pipe_context *_context,
+                             struct pipe_resource *_resource,
+                             unsigned usage, unsigned offset,
+                             unsigned size, const void *data)
+{
+   struct trace_context *tr_context = trace_context(_context);
+   struct trace_resource *tr_res = trace_resource(_resource);
+   struct pipe_context *context = tr_context->pipe;
+   struct pipe_resource *resource = tr_res->resource;
+   struct pipe_box box;
+
+   assert(resource->screen == context->screen);
+
+   trace_dump_call_begin("pipe_context", "buffer_subdata");
+
+   trace_dump_arg(ptr, context);
+   trace_dump_arg(ptr, resource);
+   trace_dump_arg(uint, usage);
+   trace_dump_arg(uint, offset);
+   trace_dump_arg(uint, size);
+
+   trace_dump_arg_begin("data");
+   u_box_1d(offset, size, &box);
+   trace_dump_box_bytes(data, resource, &box, 0, 0);
+   trace_dump_arg_end();
+
+   trace_dump_call_end();
+
+   context->buffer_subdata(context, resource, usage, offset, size, data);
+}
+
+
+static void
+trace_context_texture_subdata(struct pipe_context *_context,
+                              struct pipe_resource *_resource,
+                              unsigned level,
+                              unsigned usage,
+                              const struct pipe_box *box,
+                              const void *data,
+                              unsigned stride,
+                              unsigned layer_stride)
 {
    struct trace_context *tr_context = trace_context(_context);
    struct trace_resource *tr_res = trace_resource(_resource);
@@ -1568,7 +1604,7 @@ trace_context_transfer_inline_write(struct pipe_context *_context,
 
    assert(resource->screen == context->screen);
 
-   trace_dump_call_begin("pipe_context", "transfer_inline_write");
+   trace_dump_call_begin("pipe_context", "texture_subdata");
 
    trace_dump_arg(ptr, context);
    trace_dump_arg(ptr, resource);
@@ -1589,8 +1625,8 @@ trace_context_transfer_inline_write(struct pipe_context *_context,
 
    trace_dump_call_end();
 
-   context->transfer_inline_write(context, resource, level, usage, box,
-                                  data, stride, layer_stride);
+   context->texture_subdata(context, resource, level, usage, box,
+                            data, stride, layer_stride);
 }
 
 
@@ -1873,7 +1909,8 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(transfer_map);
    TR_CTX_INIT(transfer_unmap);
    TR_CTX_INIT(transfer_flush_region);
-   TR_CTX_INIT(transfer_inline_write);
+   TR_CTX_INIT(buffer_subdata);
+   TR_CTX_INIT(texture_subdata);
 
 #undef TR_CTX_INIT
 

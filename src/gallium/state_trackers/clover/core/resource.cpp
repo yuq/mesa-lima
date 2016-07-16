@@ -161,9 +161,13 @@ root_resource::root_resource(clover::device &dev, memory_obj &obj,
       box rect { {{ 0, 0, 0 }}, {{ info.width0, info.height0, info.depth0 }} };
       unsigned cpp = util_format_get_blocksize(info.format);
 
-      q.pipe->transfer_inline_write(q.pipe, pipe, 0, PIPE_TRANSFER_WRITE,
-                                    rect, data_ptr, cpp * info.width0,
-                                    cpp * info.width0 * info.height0);
+      if (pipe->target == PIPE_BUFFER)
+         q.pipe->buffer_subdata(q.pipe, pipe, PIPE_TRANSFER_WRITE,
+                                0, info.width0, data_ptr);
+      else
+         q.pipe->texture_subdata(q.pipe, pipe, 0, PIPE_TRANSFER_WRITE,
+                                 rect, data_ptr, cpp * info.width0,
+                                 cpp * info.width0 * info.height0);
    }
 }
 

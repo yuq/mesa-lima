@@ -816,5 +816,6 @@ llvmpipe_init_context_resource_funcs(struct pipe_context *pipe)
    pipe->transfer_unmap = llvmpipe_transfer_unmap;
 
    pipe->transfer_flush_region = u_default_transfer_flush_region;
-   pipe->transfer_inline_write = u_default_transfer_inline_write;
+   pipe->buffer_subdata = u_default_buffer_subdata;
+   pipe->texture_subdata = u_default_texture_subdata;
 }

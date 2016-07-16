@@ -456,7 +456,6 @@ static const struct u_resource_vtbl r600_buffer_vtbl =
 	r600_buffer_transfer_map,	/* transfer_map */
 	r600_buffer_flush_region,	/* transfer_flush_region */
 	r600_buffer_transfer_unmap,	/* transfer_unmap */
-	NULL				/* transfer_inline_write */
 };
 
 static struct r600_resource *

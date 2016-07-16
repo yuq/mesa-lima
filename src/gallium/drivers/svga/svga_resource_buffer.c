@@ -369,7 +369,6 @@ struct u_resource_vtbl svga_buffer_vtbl =
    svga_buffer_transfer_map,	     /* transfer_map */
    svga_buffer_transfer_flush_region,  /* transfer_flush_region */
    svga_buffer_transfer_unmap,	     /* transfer_unmap */
-   u_default_transfer_inline_write   /* transfer_inline_write */
 };
 
 

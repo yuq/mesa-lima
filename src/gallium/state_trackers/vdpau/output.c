@@ -257,9 +257,9 @@ vlVdpOutputSurfacePutBitsNative(VdpOutputSurface surface,
    vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);
 
    dst_box = RectToPipeBox(destination_rect, vlsurface->sampler_view->texture);
-   pipe->transfer_inline_write(pipe, vlsurface->sampler_view->texture, 0,
-                               PIPE_TRANSFER_WRITE, &dst_box, *source_data,
-                               *source_pitches, 0);
+   pipe->texture_subdata(pipe, vlsurface->sampler_view->texture, 0,
+                         PIPE_TRANSFER_WRITE, &dst_box, *source_data,
+                         *source_pitches, 0);
    pipe_mutex_unlock(vlsurface->device->mutex);
 
    return VDP_STATUS_OK;
@@ -346,9 +346,9 @@ vlVdpOutputSurfacePutBitsIndexed(VdpOutputSurface surface,
    box.height = res->height0;
    box.depth = res->depth0;
 
-   context->transfer_inline_write(context, res, 0, PIPE_TRANSFER_WRITE, &box,
-                                  source_data[0], source_pitch[0],
-                                  source_pitch[0] * res->height0);
+   context->texture_subdata(context, res, 0, PIPE_TRANSFER_WRITE, &box,
+                            source_data[0], source_pitch[0],
+                            source_pitch[0] * res->height0);
 
    memset(&sv_tmpl, 0, sizeof(sv_tmpl));
    u_sampler_view_default_template(&sv_tmpl, res, res->format);
@@ -379,8 +379,8 @@ vlVdpOutputSurfacePutBitsIndexed(VdpOutputSurface surface,
    box.height = res->height0;
    box.depth = res->depth0;
 
-   context->transfer_inline_write(context, res, 0, PIPE_TRANSFER_WRITE, &box, color_table,
-                                  util_format_get_stride(colortbl_format, res->width0), 0);
+   context->texture_subdata(context, res, 0, PIPE_TRANSFER_WRITE, &box, color_table,
+                            util_format_get_stride(colortbl_format, res->width0), 0);
 
    memset(&sv_tmpl, 0, sizeof(sv_tmpl));
    u_sampler_view_default_template(&sv_tmpl, res, res->format);
@@ -485,8 +485,8 @@ vlVdpOutputSurfacePutBitsYCbCr(VdpOutputSurface surface,
          sv->texture->width0, sv->texture->height0, 1
       };
 
-      pipe->transfer_inline_write(pipe, sv->texture, 0, PIPE_TRANSFER_WRITE, &dst_box,
-                                  source_data[i], source_pitches[i], 0);
+      pipe->texture_subdata(pipe, sv->texture, 0, PIPE_TRANSFER_WRITE, &dst_box,
+                            source_data[i], source_pitches[i], 0);
    }
 
    if (!csc_matrix) {

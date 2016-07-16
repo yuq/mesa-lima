@@ -100,15 +100,9 @@ static void init_fs_constbuf( void )
 
    u_box_2d(0,0,sizeof(constants),1, &box);
 
-   ctx->transfer_inline_write(ctx,
-                              constbuf,
-                              0,
-                              PIPE_TRANSFER_WRITE,
-                              &box,
-                              constants,
-                              sizeof constants,
-                              sizeof constants);
-
+   ctx->buffer_subdata(ctx, constbuf,
+                       PIPE_TRANSFER_WRITE,
+                       0, sizeof(constants), constants);
 
    pipe_set_constant_buffer(ctx,
                             PIPE_SHADER_VERTEX, 0,
@@ -305,14 +299,14 @@ static void init_tex( void )
 
    u_box_2d(0,0,SIZE,SIZE, &box);
 
-   ctx->transfer_inline_write(ctx,
-                              samptex,
-                              0,
-                              PIPE_TRANSFER_WRITE,
-                              &box,
-                              tex2d,
-                              sizeof tex2d[0],
-                              sizeof tex2d);
+   ctx->texture_subdata(ctx,
+                        samptex,
+                        0,
+                        PIPE_TRANSFER_WRITE,
+                        &box,
+                        tex2d,
+                        sizeof tex2d[0],
+                        sizeof tex2d);
 
    /* Possibly read back & compare against original data:
     */

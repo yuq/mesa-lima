@@ -196,12 +196,9 @@ st_bufferobj_data(struct gl_context *ctx,
           * This should be the same as creating a new buffer, but we avoid
           * a lot of validation in Mesa.
           */
-         struct pipe_box box;
-
-         u_box_1d(0, size, &box);
-         pipe->transfer_inline_write(pipe, st_obj->buffer, 0,
-                                    PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE,
-                                    &box, data, 0, 0);
+         pipe->buffer_subdata(pipe, st_obj->buffer,
+                              PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE,
+                              0, size, data);
          return GL_TRUE;
       } else if (screen->get_param(screen, PIPE_CAP_INVALIDATE_BUFFER)) {
          pipe->invalidate_resource(pipe, st_obj->buffer);

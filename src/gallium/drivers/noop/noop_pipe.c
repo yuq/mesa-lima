@@ -192,14 +192,21 @@ static void noop_transfer_unmap(struct pipe_context *pipe,
    FREE(transfer);
 }
 
-static void noop_transfer_inline_write(struct pipe_context *pipe,
-					struct pipe_resource *resource,
-					unsigned level,
-					unsigned usage,
-					const struct pipe_box *box,
-					const void *data,
-					unsigned stride,
-					unsigned layer_stride)
+static void noop_buffer_subdata(struct pipe_context *pipe,
+                                struct pipe_resource *resource,
+                                unsigned usage, unsigned offset,
+                                unsigned size, const void *data)
+{
+}
+
+static void noop_texture_subdata(struct pipe_context *pipe,
+                                 struct pipe_resource *resource,
+                                 unsigned level,
+                                 unsigned usage,
+                                 const struct pipe_box *box,
+                                 const void *data,
+                                 unsigned stride,
+                                 unsigned layer_stride)
 {
 }
 
@@ -294,7 +301,8 @@ static struct pipe_context *noop_create_context(struct pipe_screen *screen,
 	ctx->transfer_map = noop_transfer_map;
 	ctx->transfer_flush_region = noop_transfer_flush_region;
 	ctx->transfer_unmap = noop_transfer_unmap;
-	ctx->transfer_inline_write = noop_transfer_inline_write;
+	ctx->buffer_subdata = noop_buffer_subdata;
+	ctx->texture_subdata = noop_texture_subdata;
 	noop_init_state_functions(ctx);
 
 	return ctx;

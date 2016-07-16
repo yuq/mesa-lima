@@ -977,18 +977,6 @@ static void r600_compute_global_transfer_flush_region(struct pipe_context *ctx,
 	assert(0 && "TODO");
 }
 
-static void r600_compute_global_transfer_inline_write(struct pipe_context *pipe,
-						      struct pipe_resource *resource,
-						      unsigned level,
-						      unsigned usage,
-						      const struct pipe_box *box,
-						      const void *data,
-						      unsigned stride,
-						      unsigned layer_stride)
-{
-	assert(0 && "TODO");
-}
-
 static void r600_compute_global_buffer_destroy(struct pipe_screen *screen,
 					       struct pipe_resource *res)
 {
@@ -1014,7 +1002,6 @@ static const struct u_resource_vtbl r600_global_buffer_vtbl =
 	r600_compute_global_transfer_map, /* transfer_map */
 	r600_compute_global_transfer_flush_region,/* transfer_flush_region */
 	r600_compute_global_transfer_unmap, /* transfer_unmap */
-	r600_compute_global_transfer_inline_write /* transfer_inline_write */
 };
 
 struct pipe_resource *r600_compute_global_buffer_create(struct pipe_screen *screen,

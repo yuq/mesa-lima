@@ -538,8 +538,9 @@ to the transfer object remains unchanged (i.e. it can be non-NULL).
 the transfer object. The pointer into the resource should be considered
 invalid and discarded.
 
-``transfer_inline_write`` performs a simplified transfer for simple writes.
-Basically transfer_map, data write, and transfer_unmap all in one.
+``texture_subdata`` and ``buffer_subdata`` perform a simplified
+transfer for simple writes. Basically transfer_map, data write, and
+transfer_unmap all in one.
 
 
 The box parameter to some of these functions defines a 1D, 2D or 3D

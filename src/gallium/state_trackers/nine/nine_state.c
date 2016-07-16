@@ -86,8 +86,7 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device);
         DBG("upload ConstantF [%u .. %u]\n", x, (x) + (c) - 1); \
         box.x = (p) * 4 * sizeof(float); \
         box.width = (c) * 4 * sizeof(float); \
-        pipe->transfer_inline_write(pipe, buf, 0, usage, &box, &((d)[p * 4]), \
-                                    0, 0); \
+        pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, &((d)[p * 4])); \
     } while(0)
 
 /* OK, this is a bit ugly ... */
@@ -186,7 +185,7 @@ upload_constants(struct NineDevice9 *device, unsigned shader_type)
        box.x = x;
        box.width = c * 4;
        DBG("upload ConstantB [%u .. %u]\n", x, x + c - 1);
-       pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data_b, 0, 0);
+       pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, data_b);
     }
 
     /* int4 */
@@ -203,7 +202,7 @@ upload_constants(struct NineDevice9 *device, unsigned shader_type)
             box.x += x * 4 * sizeof(int);
             box.width = c * 4 * sizeof(int);
             c = 0;
-            pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data, 0, 0);
+            pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, data);
         }
     }
     if (c) {
@@ -212,7 +211,7 @@ upload_constants(struct NineDevice9 *device, unsigned shader_type)
         box.x  = buf->width0 - (NINE_MAX_CONST_I * 4 + NINE_MAX_CONST_B) * 4;
         box.x += x * 4 * sizeof(int);
         box.width = c * 4 * sizeof(int);
-        pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data, 0, 0);
+        pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, data);
     }
 
     /* TODO: only upload these when shader itself changes */
@@ -224,7 +223,7 @@ upload_constants(struct NineDevice9 *device, unsigned shader_type)
             n += r->end - r->bgn;
             box.width = (r->end - r->bgn) * 4 * sizeof(float);
             data = &lconstf_data[4 * n];
-            pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data, 0, 0);
+            pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, data);
             r = r->next;
         }
     }

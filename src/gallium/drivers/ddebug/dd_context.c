@@ -599,17 +599,28 @@ dd_context_transfer_unmap(struct pipe_context *_pipe,
 }
 
 static void
-dd_context_transfer_inline_write(struct pipe_context *_pipe,
-                                 struct pipe_resource *resource,
-                                 unsigned level, unsigned usage,
-                                 const struct pipe_box *box,
-                                 const void *data, unsigned stride,
-                                 unsigned layer_stride)
+dd_context_buffer_subdata(struct pipe_context *_pipe,
+                          struct pipe_resource *resource,
+                          unsigned usage, unsigned offset,
+                          unsigned size, const void *data)
 {
    struct pipe_context *pipe = dd_context(_pipe)->pipe;
 
-   pipe->transfer_inline_write(pipe, resource, level, usage, box, data,
-                               stride, layer_stride);
+   pipe->buffer_subdata(pipe, resource, usage, offset, size, data);
+}
+
+static void
+dd_context_texture_subdata(struct pipe_context *_pipe,
+                           struct pipe_resource *resource,
+                           unsigned level, unsigned usage,
+                           const struct pipe_box *box,
+                           const void *data, unsigned stride,
+                           unsigned layer_stride)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+
+   pipe->texture_subdata(pipe, resource, level, usage, box, data,
+                         stride, layer_stride);
 }
 
 
@@ -767,7 +778,8 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
    CTX_INIT(transfer_map);
    CTX_INIT(transfer_flush_region);
    CTX_INIT(transfer_unmap);
-   CTX_INIT(transfer_inline_write);
+   CTX_INIT(buffer_subdata);
+   CTX_INIT(texture_subdata);
    CTX_INIT(texture_barrier);
    CTX_INIT(memory_barrier);
    /* create_video_codec */

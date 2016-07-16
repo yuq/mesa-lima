@@ -1339,7 +1339,7 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
    if (!dst)
       goto fallback;
 
-   /* Try transfer_inline_write, which should be the fastest memcpy path. */
+   /* Try texture_subdata, which should be the fastest memcpy path. */
    if (pixels &&
        !_mesa_is_bufferobj(unpack->BufferObj) &&
        _mesa_texstore_can_use_memcpy(ctx, texImage->_BaseFormat,
@@ -1365,8 +1365,8 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
       }
 
       u_box_3d(xoffset, yoffset, zoffset + dstz, width, height, depth, &box);
-      pipe->transfer_inline_write(pipe, dst, dst_level, 0,
-                                  &box, data, stride, layer_stride);
+      pipe->texture_subdata(pipe, dst, dst_level, 0,
+                            &box, data, stride, layer_stride);
       return;
    }
 

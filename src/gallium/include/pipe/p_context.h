@@ -519,16 +519,23 @@ struct pipe_context {
                           struct pipe_transfer *transfer);
 
    /* One-shot transfer operation with data supplied in a user
-    * pointer.  XXX: strides??
+    * pointer.
     */
-   void (*transfer_inline_write)( struct pipe_context *,
-                                  struct pipe_resource *,
-                                  unsigned level,
-                                  unsigned usage, /* a combination of PIPE_TRANSFER_x */
-                                  const struct pipe_box *,
-                                  const void *data,
-                                  unsigned stride,
-                                  unsigned layer_stride);
+   void (*buffer_subdata)(struct pipe_context *,
+                          struct pipe_resource *,
+                          unsigned usage, /* a combination of PIPE_TRANSFER_x */
+                          unsigned offset,
+                          unsigned size,
+                          const void *data);
+
+   void (*texture_subdata)(struct pipe_context *,
+                           struct pipe_resource *,
+                           unsigned level,
+                           unsigned usage, /* a combination of PIPE_TRANSFER_x */
+                           const struct pipe_box *,
+                           const void *data,
+                           unsigned stride,
+                           unsigned layer_stride);
 
    /**
     * Flush any pending framebuffer writes and invalidate texture caches.

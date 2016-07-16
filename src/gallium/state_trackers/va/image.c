@@ -515,10 +515,10 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
       vlVaVideoSurfaceSize(surf, i, &width, &height);
       for (j = 0; j < views[i]->texture->array_size; ++j) {
          struct pipe_box dst_box = {0, 0, j, width, height, 1};
-         drv->pipe->transfer_inline_write(drv->pipe, views[i]->texture, 0,
-            PIPE_TRANSFER_WRITE, &dst_box,
-            data[i] + pitches[i] * j,
-            pitches[i] * views[i]->texture->array_size, 0);
+         drv->pipe->texture_subdata(drv->pipe, views[i]->texture, 0,
+                                    PIPE_TRANSFER_WRITE, &dst_box,
+                                    data[i] + pitches[i] * j,
+                                    pitches[i] * views[i]->texture->array_size, 0);
       }
    }
    pipe_mutex_unlock(drv->mutex);

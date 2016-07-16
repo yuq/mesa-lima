@@ -673,8 +673,8 @@ NineSurface9_UploadSelf( struct NineSurface9 *This,
 
     ptr = NineSurface9_GetSystemMemPointer(This, box.x, box.y);
 
-    pipe->transfer_inline_write(pipe, res, This->level, 0,
-                                &box, ptr, This->stride, 0);
+    pipe->texture_subdata(pipe, res, This->level, 0,
+                          &box, ptr, This->stride, 0);
 
     return D3D_OK;
 }

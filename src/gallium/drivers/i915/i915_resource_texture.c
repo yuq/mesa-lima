@@ -818,7 +818,7 @@ i915_texture_transfer_unmap(struct pipe_context *pipe,
 }
 
 #if 0
-static void i915_transfer_inline_write( struct pipe_context *pipe,
+static void i915_texture_subdata(struct pipe_context *pipe,
                                  struct pipe_resource *resource,
                                  unsigned level,
                                  unsigned usage,
@@ -913,7 +913,6 @@ struct u_resource_vtbl i915_texture_vtbl =
    i915_texture_transfer_map,	      /* transfer_map */
    u_default_transfer_flush_region,   /* transfer_flush_region */
    i915_texture_transfer_unmap,	      /* transfer_unmap */
-   u_default_transfer_inline_write    /* transfer_inline_write */
 };
 
 

@@ -339,7 +339,6 @@ pipe_buffer_write(struct pipe_context *pipe,
                   unsigned size,
                   const void *data)
 {
-   struct pipe_box box;
    unsigned access = PIPE_TRANSFER_WRITE;
 
    if (offset == 0 && size == buf->width0) {
@@ -348,16 +347,7 @@ pipe_buffer_write(struct pipe_context *pipe,
       access |= PIPE_TRANSFER_DISCARD_RANGE;
    }
 
-   u_box_1d(offset, size, &box);
-
-   pipe->transfer_inline_write( pipe,
-                                buf,
-                                0,
-                                access,
-                                &box,
-                                data,
-                                size,
-                                0);
+   pipe->buffer_subdata(pipe, buf, access, offset, size, data);
 }
 
 /**
@@ -372,18 +362,10 @@ pipe_buffer_write_nooverlap(struct pipe_context *pipe,
                             unsigned offset, unsigned size,
                             const void *data)
 {
-   struct pipe_box box;
-
-   u_box_1d(offset, size, &box);
-
-   pipe->transfer_inline_write(pipe,
-                               buf,
-                               0,
-                               (PIPE_TRANSFER_WRITE |
-                                PIPE_TRANSFER_UNSYNCHRONIZED),
-                               &box,
-                               data,
-                               0, 0);
+   pipe->buffer_subdata(pipe, buf,
+                        (PIPE_TRANSFER_WRITE |
+                         PIPE_TRANSFER_UNSYNCHRONIZED),
+                        offset, size, data);
 }
 
 

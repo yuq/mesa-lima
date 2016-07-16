@@ -1628,7 +1628,6 @@ static const struct u_resource_vtbl r600_texture_vtbl =
 	r600_texture_transfer_map,	/* transfer_map */
 	u_default_transfer_flush_region, /* transfer_flush_region */
 	r600_texture_transfer_unmap,	/* transfer_unmap */
-	NULL				/* transfer_inline_write */
 };
 
 struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,

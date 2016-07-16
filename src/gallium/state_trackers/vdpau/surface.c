@@ -359,11 +359,11 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
             width, height, 1
          };
 
-         pipe->transfer_inline_write(pipe, sv->texture, 0,
-                                     PIPE_TRANSFER_WRITE, &dst_box,
-                                     source_data[i] + source_pitches[i] * j,
-                                     source_pitches[i] * sv->texture->array_size,
-                                     0);
+         pipe->texture_subdata(pipe, sv->texture, 0,
+                               PIPE_TRANSFER_WRITE, &dst_box,
+                               source_data[i] + source_pitches[i] * j,
+                               source_pitches[i] * sv->texture->array_size,
+                               0);
       }
    }
    pipe_mutex_unlock(p_surf->device->mutex);

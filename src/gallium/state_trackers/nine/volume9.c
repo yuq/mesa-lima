@@ -496,8 +496,8 @@ NineVolume9_UploadSelf( struct NineVolume9 *This,
 
     ptr = NineVolume9_GetSystemMemPointer(This, box.x, box.y, box.z);
 
-    pipe->transfer_inline_write(pipe, res, This->level, 0, &box,
-                                ptr, This->stride, This->layer_stride);
+    pipe->texture_subdata(pipe, res, This->level, 0, &box,
+                          ptr, This->stride, This->layer_stride);
 
     return D3D_OK;
 }

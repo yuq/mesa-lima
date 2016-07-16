@@ -145,7 +145,6 @@ static const struct u_resource_vtbl virgl_buffer_vtbl =
    virgl_buffer_transfer_map,                /* transfer_map */
    virgl_buffer_transfer_flush_region,       /* transfer_flush_region */
    virgl_buffer_transfer_unmap,              /* transfer_unmap */
-   virgl_transfer_inline_write               /* transfer_inline_write */
 };
 
 struct pipe_resource *virgl_buffer_create(struct virgl_screen *vs,
