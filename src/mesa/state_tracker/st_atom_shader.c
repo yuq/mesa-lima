@@ -217,6 +217,7 @@ update_gp( struct st_context *st )
 
    if (!st->ctx->GeometryProgram._Current) {
       cso_set_geometry_shader_handle(st->cso_context, NULL);
+      st_reference_geomprog(st, &st->gp, NULL);
       return;
    }
 
@@ -245,6 +246,7 @@ update_tcp( struct st_context *st )
 
    if (!st->ctx->TessCtrlProgram._Current) {
       cso_set_tessctrl_shader_handle(st->cso_context, NULL);
+      st_reference_tesscprog(st, &st->tcp, NULL);
       return;
    }
 
@@ -273,6 +275,7 @@ update_tep( struct st_context *st )
 
    if (!st->ctx->TessEvalProgram._Current) {
       cso_set_tesseval_shader_handle(st->cso_context, NULL);
+      st_reference_tesseprog(st, &st->tep, NULL);
       return;
    }
 
@@ -301,6 +304,7 @@ update_cp( struct st_context *st )
 
    if (!st->ctx->ComputeProgram._Current) {
       cso_set_compute_shader_handle(st->cso_context, NULL);
+      st_reference_compprog(st, &st->cp, NULL);
       return;
    }
 
