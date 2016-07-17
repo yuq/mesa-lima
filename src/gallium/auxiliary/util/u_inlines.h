@@ -339,15 +339,8 @@ pipe_buffer_write(struct pipe_context *pipe,
                   unsigned size,
                   const void *data)
 {
-   unsigned access = PIPE_TRANSFER_WRITE;
-
-   if (offset == 0 && size == buf->width0) {
-      access |= PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
-   } else {
-      access |= PIPE_TRANSFER_DISCARD_RANGE;
-   }
-
-   pipe->buffer_subdata(pipe, buf, access, offset, size, data);
+   /* Don't set any other usage bits. Drivers should derive them. */
+   pipe->buffer_subdata(pipe, buf, PIPE_TRANSFER_WRITE, offset, size, data);
 }
 
 /**

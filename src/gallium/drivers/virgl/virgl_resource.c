@@ -89,6 +89,11 @@ static void virgl_buffer_subdata(struct pipe_context *pipe,
 {
    struct pipe_box box;
 
+   if (offset == 0 && size == resource->width0)
+      usage |= PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
+   else
+      usage |= PIPE_TRANSFER_DISCARD_RANGE;
+
    u_box_1d(offset, size, &box);
    virgl_transfer_inline_write(pipe, resource, 0, usage, &box, data, 0, 0);
 }
