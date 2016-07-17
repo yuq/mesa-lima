@@ -84,7 +84,6 @@ update_stipple( struct st_context *st )
 
 /** Update the stipple when the pattern or window height changes */
 const struct st_tracked_state st_update_polygon_stipple = {
-   "st_update_polygon_stipple",				/* name */
    {							/* dirty */
       (_NEW_POLYGONSTIPPLE |
        _NEW_BUFFERS),					/* mesa */

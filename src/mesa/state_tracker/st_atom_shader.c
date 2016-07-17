@@ -152,7 +152,6 @@ update_fp( struct st_context *st )
 
 
 const struct st_tracked_state st_update_fp = {
-   "st_update_fp",					/* name */
    {							/* dirty */
       _NEW_BUFFERS | _NEW_MULTISAMPLE | _NEW_FOG,	/* mesa */
       ST_NEW_FRAGMENT_PROGRAM                           /* st */
@@ -210,7 +209,6 @@ update_vp( struct st_context *st )
 
 
 const struct st_tracked_state st_update_vp = {
-   "st_update_vp",					/* name */
    {							/* dirty */
       0,                                                /* mesa */
       ST_NEW_VERTEX_PROGRAM                             /* st */
@@ -243,7 +241,6 @@ update_gp( struct st_context *st )
 }
 
 const struct st_tracked_state st_update_gp = {
-   "st_update_gp",			/* name */
    {					/* dirty */
       0,				/* mesa */
       ST_NEW_GEOMETRY_PROGRAM           /* st */
@@ -276,7 +273,6 @@ update_tcp( struct st_context *st )
 }
 
 const struct st_tracked_state st_update_tcp = {
-   "st_update_tcp",			/* name */
    {					/* dirty */
       0,				/* mesa */
       ST_NEW_TESSCTRL_PROGRAM           /* st */
@@ -309,7 +305,6 @@ update_tep( struct st_context *st )
 }
 
 const struct st_tracked_state st_update_tep = {
-   "st_update_tep",			/* name */
    {					/* dirty */
       0,				/* mesa */
       ST_NEW_TESSEVAL_PROGRAM           /* st */
@@ -341,7 +336,6 @@ update_cp( struct st_context *st )
 }
 
 const struct st_tracked_state st_update_cp = {
-   "st_update_cp",			/* name */
    {					/* dirty */
       0,				/* mesa */
       ST_NEW_COMPUTE_PROGRAM           /* st */

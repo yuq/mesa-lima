@@ -53,7 +53,6 @@ update_tess(struct st_context *st)
 
 
 const struct st_tracked_state st_update_tess = {
-   "update_tess",		/* name */
    {				/* dirty */
       0,			/* mesa */
       ST_NEW_TESS_STATE,	/* st */

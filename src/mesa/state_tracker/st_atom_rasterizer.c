@@ -290,7 +290,6 @@ static void update_raster_state( struct st_context *st )
 }
 
 const struct st_tracked_state st_update_rasterizer = {
-   "st_update_rasterizer",    /* name */
    {
       (_NEW_BUFFERS |
        _NEW_LIGHT |

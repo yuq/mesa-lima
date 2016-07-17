@@ -334,7 +334,6 @@ update_samplers(struct st_context *st)
 
 
 const struct st_tracked_state st_update_sampler = {
-   "st_update_sampler",					/* name */
    {							/* dirty */
       _NEW_TEXTURE,					/* mesa */
       0,						/* st */

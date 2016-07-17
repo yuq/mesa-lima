@@ -74,7 +74,6 @@ struct st_state_flags {
 };
 
 struct st_tracked_state {
-   const char *name;
    struct st_state_flags dirty;
    void (*update)( struct st_context *st );
 };

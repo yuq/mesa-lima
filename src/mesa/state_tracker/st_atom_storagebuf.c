@@ -103,7 +103,6 @@ static void bind_vs_ssbos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_vs_ssbos = {
-   "st_bind_vs_ssbos",
    {
       0,
       ST_NEW_VERTEX_PROGRAM | ST_NEW_STORAGE_BUFFER,
@@ -124,7 +123,6 @@ static void bind_fs_ssbos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_fs_ssbos = {
-   "st_bind_fs_ssbos",
    {
       0,
       ST_NEW_FRAGMENT_PROGRAM | ST_NEW_STORAGE_BUFFER,
@@ -145,7 +143,6 @@ static void bind_gs_ssbos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_gs_ssbos = {
-   "st_bind_gs_ssbos",
    {
       0,
       ST_NEW_GEOMETRY_PROGRAM | ST_NEW_STORAGE_BUFFER,
@@ -166,7 +163,6 @@ static void bind_tcs_ssbos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_tcs_ssbos = {
-   "st_bind_tcs_ssbos",
    {
       0,
       ST_NEW_TESSCTRL_PROGRAM | ST_NEW_STORAGE_BUFFER,
@@ -187,7 +183,6 @@ static void bind_tes_ssbos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_tes_ssbos = {
-   "st_bind_tes_ssbos",
    {
       0,
       ST_NEW_TESSEVAL_PROGRAM | ST_NEW_STORAGE_BUFFER,
@@ -208,7 +203,6 @@ static void bind_cs_ssbos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_cs_ssbos = {
-   "st_bind_cs_ssbos",
    {
       0,
       ST_NEW_COMPUTE_PROGRAM | ST_NEW_STORAGE_BUFFER,
