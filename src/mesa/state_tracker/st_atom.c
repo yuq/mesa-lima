@@ -107,6 +107,7 @@ static void check_attrib_edgeflag(struct st_context *st)
 
 void st_validate_state( struct st_context *st, enum st_pipeline pipeline )
 {
+   struct gl_context *ctx = st->ctx;
    uint64_t dirty, pipeline_mask;
    uint32_t dirty_lo, dirty_hi;
 
@@ -117,11 +118,23 @@ void st_validate_state( struct st_context *st, enum st_pipeline pipeline )
    /* Get pipeline state. */
    switch (pipeline) {
    case ST_PIPELINE_RENDER:
-      check_attrib_edgeflag(st);
+      if (st->ctx->API == API_OPENGL_COMPAT)
+         check_attrib_edgeflag(st);
+
       check_program_state(st);
       st_manager_validate_framebuffers(st);
 
       pipeline_mask = ST_PIPELINE_RENDER_STATE_MASK;
+
+      /* Don't update states that have no effect. */
+      if (!ctx->TessCtrlProgram._Current)
+         pipeline_mask &= ~ST_NEW_TCS_RESOURCES;
+      if (!ctx->TessEvalProgram._Current)
+         pipeline_mask &= ~ST_NEW_TES_RESOURCES;
+      if (!ctx->GeometryProgram._Current)
+         pipeline_mask &= ~ST_NEW_GS_RESOURCES;
+      if (!ctx->Transform.ClipPlanesEnabled)
+         pipeline_mask &= ~ST_NEW_CLIP_STATE;
       break;
    case ST_PIPELINE_COMPUTE:
       pipeline_mask = ST_PIPELINE_COMPUTE_STATE_MASK;

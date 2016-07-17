@@ -99,30 +99,36 @@ enum {
                                  ST_NEW_CLIP_STATE | \
                                  ST_NEW_RASTERIZER)
 
-#define ST_NEW_TESSCTRL_PROGRAM (ST_NEW_TCS_STATE | \
-                                 ST_NEW_TCS_SAMPLER_VIEWS | \
+#define ST_NEW_TCS_RESOURCES    (ST_NEW_TCS_SAMPLER_VIEWS | \
                                  ST_NEW_TCS_IMAGES | \
                                  ST_NEW_TCS_CONSTANTS | \
                                  ST_NEW_TCS_UBOS | \
                                  ST_NEW_TCS_ATOMICS | \
                                  ST_NEW_TCS_SSBOS)
 
-#define ST_NEW_TESSEVAL_PROGRAM (ST_NEW_TES_STATE | \
-                                 ST_NEW_TES_SAMPLER_VIEWS | \
+#define ST_NEW_TESSCTRL_PROGRAM (ST_NEW_TCS_STATE | \
+                                 ST_NEW_TCS_RESOURCES)
+
+#define ST_NEW_TES_RESOURCES    (ST_NEW_TES_SAMPLER_VIEWS | \
                                  ST_NEW_TES_IMAGES | \
                                  ST_NEW_TES_CONSTANTS | \
                                  ST_NEW_TES_UBOS | \
                                  ST_NEW_TES_ATOMICS | \
-                                 ST_NEW_TES_SSBOS | \
+                                 ST_NEW_TES_SSBOS)
+
+#define ST_NEW_TESSEVAL_PROGRAM (ST_NEW_TES_STATE | \
+                                 ST_NEW_TES_RESOURCES | \
                                  ST_NEW_RASTERIZER)
 
-#define ST_NEW_GEOMETRY_PROGRAM (ST_NEW_GS_STATE | \
-                                 ST_NEW_GS_SAMPLER_VIEWS | \
+#define ST_NEW_GS_RESOURCES     (ST_NEW_GS_SAMPLER_VIEWS | \
                                  ST_NEW_GS_IMAGES | \
                                  ST_NEW_GS_CONSTANTS | \
                                  ST_NEW_GS_UBOS | \
                                  ST_NEW_GS_ATOMICS | \
-                                 ST_NEW_GS_SSBOS | \
+                                 ST_NEW_GS_SSBOS)
+
+#define ST_NEW_GEOMETRY_PROGRAM (ST_NEW_GS_STATE | \
+                                 ST_NEW_GS_RESOURCES | \
                                  ST_NEW_RASTERIZER)
 
 #define ST_NEW_FRAGMENT_PROGRAM (ST_NEW_FS_STATE | \
