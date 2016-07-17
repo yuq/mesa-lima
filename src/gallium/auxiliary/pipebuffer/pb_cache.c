@@ -114,25 +114,24 @@ static int
 pb_cache_is_buffer_compat(struct pb_cache_entry *entry,
                           pb_size size, unsigned alignment, unsigned usage)
 {
+   struct pb_cache *mgr = entry->mgr;
    struct pb_buffer *buf = entry->buffer;
 
-   if (usage & entry->mgr->bypass_usage)
-      return 0;
-
-   if (buf->size < size)
+   if (!pb_check_usage(usage, buf->usage))
       return 0;
 
    /* be lenient with size */
-   if (buf->size > (unsigned) (entry->mgr->size_factor * size))
+   if (buf->size < size ||
+       buf->size > (unsigned) (mgr->size_factor * size))
+      return 0;
+
+   if (usage & mgr->bypass_usage)
       return 0;
 
    if (!pb_check_alignment(alignment, buf->alignment))
       return 0;
 
-   if (!pb_check_usage(usage, buf->usage))
-      return 0;
-
-   return entry->mgr->can_reclaim(buf) ? 1 : -1;
+   return mgr->can_reclaim(buf) ? 1 : -1;
 }
 
 /**
