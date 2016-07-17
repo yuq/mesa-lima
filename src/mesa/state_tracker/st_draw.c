@@ -173,7 +173,8 @@ st_draw_vbo(struct gl_context *ctx,
    st_invalidate_readpix_cache(st);
 
    /* Validate state. */
-   if ((st->dirty | ctx->NewDriverState) & ST_PIPELINE_RENDER_STATE_MASK) {
+   if ((st->dirty | ctx->NewDriverState) & ST_PIPELINE_RENDER_STATE_MASK ||
+       st->gfx_shaders_may_be_dirty) {
       st_validate_state(st, ST_PIPELINE_RENDER);
    }
 
@@ -278,7 +279,8 @@ st_indirect_draw_vbo(struct gl_context *ctx,
    assert(stride);
 
    /* Validate state. */
-   if ((st->dirty | ctx->NewDriverState) & ST_PIPELINE_RENDER_STATE_MASK) {
+   if ((st->dirty | ctx->NewDriverState) & ST_PIPELINE_RENDER_STATE_MASK ||
+       st->gfx_shaders_may_be_dirty) {
       st_validate_state(st, ST_PIPELINE_RENDER);
    }
 

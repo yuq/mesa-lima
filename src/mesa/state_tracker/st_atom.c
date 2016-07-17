@@ -72,6 +72,14 @@ static void check_program_state( struct st_context *st )
 
    if (ctx->GeometryProgram._Current != &st->gp->Base)
       st->dirty |= ST_NEW_GEOMETRY_PROGRAM;
+
+   if (ctx->TessCtrlProgram._Current != &st->tcp->Base)
+      st->dirty |= ST_NEW_TESSCTRL_PROGRAM;
+
+   if (ctx->TessEvalProgram._Current != &st->tep->Base)
+      st->dirty |= ST_NEW_TESSEVAL_PROGRAM;
+
+   st->gfx_shaders_may_be_dirty = false;
 }
 
 static void check_attrib_edgeflag(struct st_context *st)
@@ -135,8 +143,13 @@ void st_validate_state( struct st_context *st, enum st_pipeline pipeline )
          pipeline_mask &= ~ST_NEW_GS_RESOURCES;
       if (!ctx->Transform.ClipPlanesEnabled)
          pipeline_mask &= ~ST_NEW_CLIP_STATE;
+
       break;
    case ST_PIPELINE_COMPUTE:
+      if (ctx->ComputeProgram._Current != &st->cp->Base)
+         st->dirty |= ST_NEW_COMPUTE_PROGRAM;
+
+      st->compute_shader_may_be_dirty = false;
       pipeline_mask = ST_PIPELINE_COMPUTE_STATE_MASK;
       break;
    default:

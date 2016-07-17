@@ -49,57 +49,6 @@
 #include "st_atifs_to_tgsi.h"
 
 
-
-/**
- * Called via ctx->Driver.BindProgram() to bind an ARB vertex or
- * fragment program.
- */
-static void
-st_bind_program(struct gl_context *ctx, GLenum target, struct gl_program *prog)
-{
-   struct st_context *st = st_context(ctx);
-
-   switch (target) {
-   case GL_VERTEX_PROGRAM_ARB: 
-      st->dirty |= ST_NEW_VERTEX_PROGRAM;
-      break;
-   case GL_FRAGMENT_PROGRAM_ARB:
-      st->dirty |= ST_NEW_FRAGMENT_PROGRAM;
-      break;
-   case GL_GEOMETRY_PROGRAM_NV:
-      st->dirty |= ST_NEW_GEOMETRY_PROGRAM;
-      break;
-   case GL_TESS_CONTROL_PROGRAM_NV:
-      st->dirty |= ST_NEW_TESSCTRL_PROGRAM;
-      break;
-   case GL_TESS_EVALUATION_PROGRAM_NV:
-      st->dirty |= ST_NEW_TESSEVAL_PROGRAM;
-      break;
-   case GL_COMPUTE_PROGRAM_NV:
-      st->dirty |= ST_NEW_COMPUTE_PROGRAM;
-      break;
-   }
-}
-
-
-/**
- * Called via ctx->Driver.UseProgram() to bind a linked GLSL program
- * (vertex shader + fragment shader).
- */
-static void
-st_use_program(struct gl_context *ctx, struct gl_shader_program *shProg)
-{
-   struct st_context *st = st_context(ctx);
-
-   st->dirty |= ST_NEW_FRAGMENT_PROGRAM;
-   st->dirty |= ST_NEW_VERTEX_PROGRAM;
-   st->dirty |= ST_NEW_GEOMETRY_PROGRAM;
-   st->dirty |= ST_NEW_TESSCTRL_PROGRAM;
-   st->dirty |= ST_NEW_TESSEVAL_PROGRAM;
-   st->dirty |= ST_NEW_COMPUTE_PROGRAM;
-}
-
-
 /**
  * Called via ctx->Driver.NewProgram() to allocate a new vertex or
  * fragment program.
@@ -347,8 +296,6 @@ st_new_ati_fs(struct gl_context *ctx, struct ati_fragment_shader *curProg)
 void
 st_init_program_functions(struct dd_function_table *functions)
 {
-   functions->BindProgram = st_bind_program;
-   functions->UseProgram = st_use_program;
    functions->NewProgram = st_new_program;
    functions->DeleteProgram = st_delete_program;
    functions->ProgramStringNotify = st_program_string_notify;

@@ -219,6 +219,12 @@ void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
    if (st->clamp_vert_color_in_shader && (new_state & _NEW_LIGHT))
       st->dirty |= ST_NEW_VS_STATE;
 
+   /* Which shaders are dirty will be determined manually. */
+   if (new_state & _NEW_PROGRAM) {
+      st->gfx_shaders_may_be_dirty = true;
+      st->compute_shader_may_be_dirty = true;
+   }
+
    /* This is the only core Mesa module we depend upon.
     * No longer use swrast, swsetup, tnl.
     */

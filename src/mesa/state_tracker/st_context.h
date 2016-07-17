@@ -140,6 +140,12 @@ struct st_context
 
    uint64_t dirty; /**< dirty states */
 
+   /* If true, further analysis of states is required to know if something
+    * has changed. Used mainly for shaders.
+    */
+   bool gfx_shaders_may_be_dirty;
+   bool compute_shader_may_be_dirty;
+
    GLboolean vertdata_edgeflags;
    GLboolean edgeflag_culls_prims;
 
