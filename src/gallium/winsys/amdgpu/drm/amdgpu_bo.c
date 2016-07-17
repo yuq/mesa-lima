@@ -287,7 +287,8 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
                                                  unsigned alignment,
                                                  unsigned usage,
                                                  enum radeon_bo_domain initial_domain,
-                                                 unsigned flags)
+                                                 unsigned flags,
+                                                 unsigned pb_cache_bucket)
 {
    struct amdgpu_bo_alloc_request request = {0};
    amdgpu_bo_handle buf_handle;
@@ -303,7 +304,8 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
       return NULL;
    }
 
-   pb_cache_init_entry(&ws->bo_cache, &bo->cache_entry, &bo->base, 0);
+   pb_cache_init_entry(&ws->bo_cache, &bo->cache_entry, &bo->base,
+                       pb_cache_bucket);
    request.alloc_size = size;
    request.phys_alignment = alignment;
 
@@ -487,7 +489,7 @@ amdgpu_bo_create(struct radeon_winsys *rws,
 {
    struct amdgpu_winsys *ws = amdgpu_winsys(rws);
    struct amdgpu_winsys_bo *bo;
-   unsigned usage = 0;
+   unsigned usage = 0, pb_cache_bucket;
 
    /* Align size to page size. This is the minimum alignment for normal
     * BOs. Aligning this here helps the cached bufmgr. Especially small BOs,
@@ -506,18 +508,31 @@ amdgpu_bo_create(struct radeon_winsys *rws,
    assert(flags < sizeof(usage) * 8 - 3);
    usage |= 1 << (flags + 3);
 
+   /* Determine the pb_cache bucket for minimizing pb_cache misses. */
+   pb_cache_bucket = 0;
+   if (size <= 4096) /* small buffers */
+      pb_cache_bucket += 1;
+   if (domain & RADEON_DOMAIN_VRAM) /* VRAM or VRAM+GTT */
+      pb_cache_bucket += 2;
+   if (flags == RADEON_FLAG_GTT_WC) /* WC */
+      pb_cache_bucket += 4;
+   assert(pb_cache_bucket < ARRAY_SIZE(ws->bo_cache.buckets));
+
    /* Get a buffer from the cache. */
    bo = (struct amdgpu_winsys_bo*)
-        pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage, 0);
+        pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage,
+                                pb_cache_bucket);
    if (bo)
       return &bo->base;
 
    /* Create a new one. */
-   bo = amdgpu_create_bo(ws, size, alignment, usage, domain, flags);
+   bo = amdgpu_create_bo(ws, size, alignment, usage, domain, flags,
+                         pb_cache_bucket);
    if (!bo) {
       /* Clear the cache and try again. */
       pb_cache_release_all_buffers(&ws->bo_cache);
-      bo = amdgpu_create_bo(ws, size, alignment, usage, domain, flags);
+      bo = amdgpu_create_bo(ws, size, alignment, usage, domain, flags,
+                            pb_cache_bucket);
       if (!bo)
          return NULL;
    }
