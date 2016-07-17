@@ -37,87 +37,18 @@
 #include "st_manager.h"
 
 
-/**
- * This is used to initialize st->render_atoms[].
- */
-static const struct st_tracked_state *render_atoms[] =
+/* The list state update functions. */
+static const struct st_tracked_state *atoms[] =
 {
-   &st_update_depth_stencil_alpha,
-   &st_update_clip,
-
-   &st_update_fp,
-   &st_update_gp,
-   &st_update_tep,
-   &st_update_tcp,
-   &st_update_vp,
-
-   &st_update_rasterizer,
-   &st_update_polygon_stipple,
-   &st_update_viewport,
-   &st_update_scissor,
-   &st_update_window_rectangles,
-   &st_update_blend,
-   &st_update_vertex_texture,
-   &st_update_fragment_texture,
-   &st_update_geometry_texture,
-   &st_update_tessctrl_texture,
-   &st_update_tesseval_texture,
-   &st_update_sampler, /* depends on update_*_texture for swizzle */
-   &st_bind_vs_images,
-   &st_bind_tcs_images,
-   &st_bind_tes_images,
-   &st_bind_gs_images,
-   &st_bind_fs_images,
-   &st_update_framebuffer, /* depends on update_*_texture and bind_*_images */
-   &st_update_msaa,
-   &st_update_sample_shading,
-   &st_update_vs_constants,
-   &st_update_tcs_constants,
-   &st_update_tes_constants,
-   &st_update_gs_constants,
-   &st_update_fs_constants,
-   &st_bind_vs_ubos,
-   &st_bind_tcs_ubos,
-   &st_bind_tes_ubos,
-   &st_bind_fs_ubos,
-   &st_bind_gs_ubos,
-   &st_bind_vs_atomics,
-   &st_bind_tcs_atomics,
-   &st_bind_tes_atomics,
-   &st_bind_fs_atomics,
-   &st_bind_gs_atomics,
-   &st_bind_vs_ssbos,
-   &st_bind_tcs_ssbos,
-   &st_bind_tes_ssbos,
-   &st_bind_fs_ssbos,
-   &st_bind_gs_ssbos,
-   &st_update_pixel_transfer,
-   &st_update_tess,
-
-   /* this must be done after the vertex program update */
-   &st_update_array
-};
-
-
-/**
- * This is used to initialize st->compute_atoms[].
- */
-static const struct st_tracked_state *compute_atoms[] =
-{
-   &st_update_cp,
-   &st_update_compute_texture,
-   &st_update_sampler, /* depends on update_compute_texture for swizzle */
-   &st_update_cs_constants,
-   &st_bind_cs_ubos,
-   &st_bind_cs_atomics,
-   &st_bind_cs_ssbos,
-   &st_bind_cs_images,
+#define ST_STATE(FLAG, st_update) &st_update,
+#include "st_atom_list.h"
+#undef ST_STATE
 };
 
 
 void st_init_atoms( struct st_context *st )
 {
-   /* no-op */
+   STATIC_ASSERT(ARRAY_SIZE(atoms) <= 64);
 }
 
 
@@ -127,13 +58,6 @@ void st_destroy_atoms( struct st_context *st )
 }
 
 
-
-static bool
-check_state(const struct st_state_flags *a, const struct st_state_flags *b)
-{
-   return (a->mesa & b->mesa) || (a->st & b->st);
-}
-
 /* Too complex to figure out, just check every time:
  */
 static void check_program_state( struct st_context *st )
@@ -141,13 +65,13 @@ static void check_program_state( struct st_context *st )
    struct gl_context *ctx = st->ctx;
 
    if (ctx->VertexProgram._Current != &st->vp->Base)
-      st->dirty.st |= ST_NEW_VERTEX_PROGRAM;
+      st->dirty |= ST_NEW_VERTEX_PROGRAM;
 
    if (ctx->FragmentProgram._Current != &st->fp->Base)
-      st->dirty.st |= ST_NEW_FRAGMENT_PROGRAM;
+      st->dirty |= ST_NEW_FRAGMENT_PROGRAM;
 
    if (ctx->GeometryProgram._Current != &st->gp->Base)
-      st->dirty.st |= ST_NEW_GEOMETRY_PROGRAM;
+      st->dirty |= ST_NEW_GEOMETRY_PROGRAM;
 }
 
 static void check_attrib_edgeflag(struct st_context *st)
@@ -165,14 +89,14 @@ static void check_attrib_edgeflag(struct st_context *st)
                         arrays[VERT_ATTRIB_EDGEFLAG]->StrideB != 0;
    if (vertdata_edgeflags != st->vertdata_edgeflags) {
       st->vertdata_edgeflags = vertdata_edgeflags;
-      st->dirty.st |= ST_NEW_VERTEX_PROGRAM;
+      st->dirty |= ST_NEW_VERTEX_PROGRAM;
    }
 
    edgeflag_culls_prims = edgeflags_enabled && !vertdata_edgeflags &&
                           !st->ctx->Current.Attrib[VERT_ATTRIB_EDGEFLAG][0];
    if (edgeflag_culls_prims != st->edgeflag_culls_prims) {
       st->edgeflag_culls_prims = edgeflag_culls_prims;
-      st->dirty.st |= ST_NEW_RASTERIZER;
+      st->dirty |= ST_NEW_RASTERIZER;
    }
 }
 
@@ -183,49 +107,45 @@ static void check_attrib_edgeflag(struct st_context *st)
 
 void st_validate_state( struct st_context *st, enum st_pipeline pipeline )
 {
-   const struct st_tracked_state **atoms;
-   struct st_state_flags *state;
-   GLuint num_atoms;
-   GLuint i;
+   uint64_t dirty, pipeline_mask;
+   uint32_t dirty_lo, dirty_hi;
+
+   /* Get Mesa driver state. */
+   st->dirty |= st->ctx->NewDriverState & ST_ALL_STATES_MASK;
+   st->ctx->NewDriverState = 0;
 
    /* Get pipeline state. */
    switch (pipeline) {
-    case ST_PIPELINE_RENDER:
-      atoms     = render_atoms;
-      num_atoms = ARRAY_SIZE(render_atoms);
-      state     = &st->dirty;
+   case ST_PIPELINE_RENDER:
+      check_attrib_edgeflag(st);
+      check_program_state(st);
+      st_manager_validate_framebuffers(st);
+
+      pipeline_mask = ST_PIPELINE_RENDER_STATE_MASK;
       break;
    case ST_PIPELINE_COMPUTE:
-      atoms     = compute_atoms;
-      num_atoms = ARRAY_SIZE(compute_atoms);
-      state     = &st->dirty_cp;
+      pipeline_mask = ST_PIPELINE_COMPUTE_STATE_MASK;
       break;
    default:
       unreachable("Invalid pipeline specified");
    }
 
-   /* Get Mesa driver state. */
-   st->dirty.st |= st->ctx->NewDriverState;
-   st->dirty_cp.st |= st->ctx->NewDriverState;
-   st->ctx->NewDriverState = 0;
-
-   if (pipeline == ST_PIPELINE_RENDER) {
-      check_attrib_edgeflag(st);
-
-      check_program_state(st);
-
-      st_manager_validate_framebuffers(st);
-   }
-
-   if (state->st == 0 && state->mesa == 0)
+   dirty = st->dirty & pipeline_mask;
+   if (!dirty)
       return;
 
-   /*printf("%s %x/%x\n", __func__, state->mesa, state->st);*/
+   dirty_lo = dirty;
+   dirty_hi = dirty >> 32;
 
-   for (i = 0; i < num_atoms; i++) {
-      if (check_state(state, &atoms[i]->dirty))
-         atoms[i]->update( st );
-   }
+   /* Update states.
+    *
+    * Don't use u_bit_scan64, it may be slower on 32-bit.
+    */
+   while (dirty_lo)
+      atoms[u_bit_scan(&dirty_lo)]->update(st);
+   while (dirty_hi)
+      atoms[32 + u_bit_scan(&dirty_hi)]->update(st);
 
-   memset(state, 0, sizeof(*state));
+   /* Clear the render or compute state bits. */
+   st->dirty &= ~pipeline_mask;
 }

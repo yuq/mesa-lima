@@ -32,6 +32,7 @@
 #include "pipe/p_state.h"
 #include "state_tracker/st_api.h"
 #include "main/fbobject.h"
+#include "state_tracker/st_atom.h"
 
 
 #ifdef __cplusplus
@@ -48,44 +49,6 @@ struct st_context;
 struct st_fragment_program;
 struct st_perf_monitor_group;
 struct u_upload_mgr;
-
-
-/* gap  */
-#define ST_NEW_FRAGMENT_PROGRAM        (1 << 1)
-#define ST_NEW_VERTEX_PROGRAM          (1 << 2)
-#define ST_NEW_FRAMEBUFFER             (1 << 3)
-#define ST_NEW_TESS_STATE              (1 << 4)
-#define ST_NEW_GEOMETRY_PROGRAM        (1 << 5)
-#define ST_NEW_VERTEX_ARRAYS           (1 << 6)
-#define ST_NEW_RASTERIZER              (1 << 7)
-#define ST_NEW_UNIFORM_BUFFER          (1 << 8)
-#define ST_NEW_TESSCTRL_PROGRAM        (1 << 9)
-#define ST_NEW_TESSEVAL_PROGRAM        (1 << 10)
-#define ST_NEW_SAMPLER_VIEWS           (1 << 11)
-#define ST_NEW_ATOMIC_BUFFER           (1 << 12)
-#define ST_NEW_STORAGE_BUFFER          (1 << 13)
-#define ST_NEW_COMPUTE_PROGRAM         (1 << 14)
-#define ST_NEW_IMAGE_UNITS             (1 << 15)
-
-
-struct st_state_flags {
-   GLbitfield mesa;  /**< Mask of _NEW_x flags */
-   uint32_t st;      /**< Mask of ST_NEW_x flags */
-};
-
-struct st_tracked_state {
-   struct st_state_flags dirty;
-   void (*update)( struct st_context *st );
-};
-
-
-/**
- * Enumeration of state tracker pipelines.
- */
-enum st_pipeline {
-   ST_PIPELINE_RENDER,
-   ST_PIPELINE_COMPUTE,
-};
 
 
 /** For drawing quads for glClear, glDraw/CopyPixels, glBitmap, etc. */
@@ -175,8 +138,7 @@ struct st_context
    char vendor[100];
    char renderer[100];
 
-   struct st_state_flags dirty;
-   struct st_state_flags dirty_cp;
+   uint64_t dirty; /**< dirty states */
 
    GLboolean vertdata_edgeflags;
    GLboolean edgeflag_culls_prims;

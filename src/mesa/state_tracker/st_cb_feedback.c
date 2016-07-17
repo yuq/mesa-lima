@@ -294,7 +294,7 @@ st_RenderMode(struct gl_context *ctx, GLenum newMode )
       /* Plug in new vbo draw function */
       vbo_set_draw_func(ctx, st_feedback_draw_vbo);
       /* need to generate/use a vertex program that emits pos/color/tex */
-      st->dirty.st |= ST_NEW_VERTEX_PROGRAM;
+      st->dirty |= ST_NEW_VERTEX_PROGRAM;
    }
 }
 

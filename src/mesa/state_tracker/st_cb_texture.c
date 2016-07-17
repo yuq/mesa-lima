@@ -2540,7 +2540,7 @@ st_finalize_texture(struct gl_context *ctx,
           */
          pipe_resource_reference(&stObj->pt, NULL);
          st_texture_release_all_sampler_views(st, stObj);
-         st->dirty.st |= ST_NEW_FRAMEBUFFER;
+         st->dirty |= ST_NEW_FRAMEBUFFER;
       }
    }
 

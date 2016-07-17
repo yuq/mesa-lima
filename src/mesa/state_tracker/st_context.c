@@ -130,20 +130,94 @@ void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
 {
    struct st_context *st = st_context(ctx);
 
-   /* Replace _NEW_FRAG_CLAMP with ST_NEW_FRAGMENT_PROGRAM for the fallback. */
-   if (st->clamp_frag_color_in_shader && (new_state & _NEW_FRAG_CLAMP)) {
-      new_state &= ~_NEW_FRAG_CLAMP;
-      st->dirty.st |= ST_NEW_FRAGMENT_PROGRAM;
+   if (new_state & _NEW_BUFFERS) {
+      st->dirty |= ST_NEW_DSA |
+                   ST_NEW_FB_STATE |
+                   ST_NEW_SAMPLE_MASK |
+                   ST_NEW_SAMPLE_SHADING |
+                   ST_NEW_FS_STATE |
+                   ST_NEW_POLY_STIPPLE |
+                   ST_NEW_VIEWPORT |
+                   ST_NEW_RASTERIZER |
+                   ST_NEW_SCISSOR |
+                   ST_NEW_WINDOW_RECTANGLES;
+   } else {
+      /* These set a subset of flags set by _NEW_BUFFERS, so we only have to
+       * check them when _NEW_BUFFERS isn't set.
+       */
+      if (new_state & (_NEW_DEPTH |
+                       _NEW_STENCIL))
+         st->dirty |= ST_NEW_DSA;
+
+      if (new_state & _NEW_PROGRAM)
+         st->dirty |= ST_NEW_SAMPLE_SHADING |
+                      ST_NEW_RASTERIZER;
+
+      if (new_state & _NEW_SCISSOR)
+         st->dirty |= ST_NEW_RASTERIZER |
+                      ST_NEW_SCISSOR |
+                      ST_NEW_WINDOW_RECTANGLES;
+
+      if (new_state & _NEW_FOG)
+         st->dirty |= ST_NEW_FS_STATE;
+
+      if (new_state & _NEW_POLYGONSTIPPLE)
+         st->dirty |= ST_NEW_POLY_STIPPLE;
+
+      if (new_state & _NEW_VIEWPORT)
+         st->dirty |= ST_NEW_VIEWPORT;
+
+      if (new_state & _NEW_FRAG_CLAMP) {
+         if (st->clamp_frag_color_in_shader)
+            st->dirty |= ST_NEW_FS_STATE;
+         else
+            st->dirty |= ST_NEW_RASTERIZER;
+      }
    }
+
+   if (new_state & _NEW_MULTISAMPLE) {
+      st->dirty |= ST_NEW_BLEND |
+                   ST_NEW_SAMPLE_MASK |
+                   ST_NEW_SAMPLE_SHADING |
+                   ST_NEW_RASTERIZER |
+                   ST_NEW_FS_STATE;
+   } else {
+      /* These set a subset of flags set by _NEW_MULTISAMPLE, so we only
+       * have to check them when _NEW_MULTISAMPLE isn't set.
+       */
+      if (new_state & (_NEW_LIGHT |
+                       _NEW_LINE |
+                       _NEW_POINT |
+                       _NEW_POLYGON |
+                       _NEW_TRANSFORM))
+         st->dirty |= ST_NEW_RASTERIZER;
+   }
+
+   if (new_state & (_NEW_PROJECTION |
+                    _NEW_TRANSFORM))
+      st->dirty |= ST_NEW_CLIP_STATE;
+
+   if (new_state & _NEW_COLOR)
+      st->dirty |= ST_NEW_BLEND |
+                   ST_NEW_DSA;
+
+   if (new_state & _NEW_PIXEL)
+      st->dirty |= ST_NEW_PIXEL_TRANSFER;
+
+   if (new_state & _NEW_TEXTURE)
+      st->dirty |= ST_NEW_SAMPLER_VIEWS |
+                   ST_NEW_SAMPLERS |
+                   ST_NEW_IMAGE_UNITS;
+
+   if (new_state & _NEW_CURRENT_ATTRIB)
+      st->dirty |= ST_NEW_VERTEX_ARRAYS;
+
+   if (new_state & _NEW_PROGRAM_CONSTANTS)
+      st->dirty |= ST_NEW_CONSTANTS;
 
    /* Update the vertex shader if ctx->Light._ClampVertexColor was changed. */
-   if (st->clamp_vert_color_in_shader && (new_state & _NEW_LIGHT)) {
-      st->dirty.st |= ST_NEW_VERTEX_PROGRAM;
-   }
-
-   /* Invalidate render and compute pipelines. */
-   st->dirty.mesa |= new_state;
-   st->dirty_cp.mesa |= new_state;
+   if (st->clamp_vert_color_in_shader && (new_state & _NEW_LIGHT))
+      st->dirty |= ST_NEW_VS_STATE;
 
    /* This is the only core Mesa module we depend upon.
     * No longer use swrast, swsetup, tnl.
@@ -214,11 +288,7 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    /* state tracker needs the VBO module */
    _vbo_CreateContext(ctx);
 
-   /* Initialize render and compute pipelines flags */
-   st->dirty.mesa = ~0;
-   st->dirty.st = ~0;
-   st->dirty_cp.mesa = ~0;
-   st->dirty_cp.st = ~0;
+   st->dirty = ST_ALL_STATES_MASK;
 
    /* Create upload manager for vertex data for glBitmap, glDrawPixels,
     * glClear, etc.

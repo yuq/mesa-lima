@@ -145,10 +145,6 @@ static void update_vs_constants(struct st_context *st )
 
 
 const struct st_tracked_state st_update_vs_constants = {
-   {							/* dirty */
-      _NEW_PROGRAM_CONSTANTS,                           /* mesa */
-      ST_NEW_VERTEX_PROGRAM,				/* st */
-   },
    update_vs_constants					/* update */
 };
 
@@ -167,10 +163,6 @@ static void update_fs_constants(struct st_context *st )
 
 
 const struct st_tracked_state st_update_fs_constants = {
-   {							/* dirty */
-      _NEW_PROGRAM_CONSTANTS,                           /* mesa */
-      ST_NEW_FRAGMENT_PROGRAM,				/* st */
-   },
    update_fs_constants					/* update */
 };
 
@@ -188,10 +180,6 @@ static void update_gs_constants(struct st_context *st )
 }
 
 const struct st_tracked_state st_update_gs_constants = {
-   {							/* dirty */
-      _NEW_PROGRAM_CONSTANTS,                           /* mesa */
-      ST_NEW_GEOMETRY_PROGRAM,				/* st */
-   },
    update_gs_constants					/* update */
 };
 
@@ -209,10 +197,6 @@ static void update_tcs_constants(struct st_context *st )
 }
 
 const struct st_tracked_state st_update_tcs_constants = {
-   {							/* dirty */
-      _NEW_PROGRAM_CONSTANTS,                           /* mesa */
-      ST_NEW_TESSCTRL_PROGRAM,				/* st */
-   },
    update_tcs_constants					/* update */
 };
 
@@ -230,10 +214,6 @@ static void update_tes_constants(struct st_context *st )
 }
 
 const struct st_tracked_state st_update_tes_constants = {
-   {							/* dirty */
-      _NEW_PROGRAM_CONSTANTS,                           /* mesa */
-      ST_NEW_TESSEVAL_PROGRAM,				/* st */
-   },
    update_tes_constants					/* update */
 };
 
@@ -251,10 +231,6 @@ static void update_cs_constants(struct st_context *st )
 }
 
 const struct st_tracked_state st_update_cs_constants = {
-   {							/* dirty */
-      _NEW_PROGRAM_CONSTANTS,                           /* mesa */
-      ST_NEW_COMPUTE_PROGRAM,				/* st */
-   },
    update_cs_constants					/* update */
 };
 
@@ -308,10 +284,6 @@ static void bind_vs_ubos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_vs_ubos = {
-   {
-      0,
-      ST_NEW_VERTEX_PROGRAM | ST_NEW_UNIFORM_BUFFER,
-   },
    bind_vs_ubos
 };
 
@@ -327,10 +299,6 @@ static void bind_fs_ubos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_fs_ubos = {
-   {
-      0,
-      ST_NEW_FRAGMENT_PROGRAM | ST_NEW_UNIFORM_BUFFER,
-   },
    bind_fs_ubos
 };
 
@@ -346,10 +314,6 @@ static void bind_gs_ubos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_gs_ubos = {
-   {
-      0,
-      ST_NEW_GEOMETRY_PROGRAM | ST_NEW_UNIFORM_BUFFER,
-   },
    bind_gs_ubos
 };
 
@@ -365,10 +329,6 @@ static void bind_tcs_ubos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_tcs_ubos = {
-   {
-      0,
-      ST_NEW_TESSCTRL_PROGRAM | ST_NEW_UNIFORM_BUFFER,
-   },
    bind_tcs_ubos
 };
 
@@ -384,10 +344,6 @@ static void bind_tes_ubos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_tes_ubos = {
-   {
-      0,
-      ST_NEW_TESSEVAL_PROGRAM | ST_NEW_UNIFORM_BUFFER,
-   },
    bind_tes_ubos
 };
 
@@ -404,9 +360,5 @@ static void bind_cs_ubos(struct st_context *st)
 }
 
 const struct st_tracked_state st_bind_cs_ubos = {
-   {
-      0,
-      ST_NEW_COMPUTE_PROGRAM | ST_NEW_UNIFORM_BUFFER,
-   },
    bind_cs_ubos
 };

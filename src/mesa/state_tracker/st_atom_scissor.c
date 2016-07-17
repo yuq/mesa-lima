@@ -141,17 +141,9 @@ update_window_rectangles(struct st_context *st)
 }
 
 const struct st_tracked_state st_update_scissor = {
-   {							/* dirty */
-      (_NEW_SCISSOR | _NEW_BUFFERS),			/* mesa */
-      0,						/* st */
-   },
    update_scissor					/* update */
 };
 
 const struct st_tracked_state st_update_window_rectangles = {
-   {							/* dirty */
-      (_NEW_SCISSOR | _NEW_BUFFERS),			/* mesa */
-      0,						/* st */
-   },
    update_window_rectangles				/* update */
 };
