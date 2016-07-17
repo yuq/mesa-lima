@@ -1253,9 +1253,6 @@ _mesa_use_program(struct gl_context *ctx, struct gl_shader_program *shProg)
    for (i = 0; i < MESA_SHADER_STAGES; i++)
       use_shader_program(ctx, i, shProg, &ctx->Shader);
    _mesa_active_program(ctx, shProg, "glUseProgram");
-
-   if (ctx->Driver.UseProgram)
-      ctx->Driver.UseProgram(ctx, shProg);
 }
 
 
@@ -2145,9 +2142,6 @@ _mesa_use_shader_program(struct gl_context *ctx, GLenum type,
 {
    gl_shader_stage stage = _mesa_shader_enum_to_shader_stage(type);
    use_shader_program(ctx, stage, shProg, shTarget);
-
-   if (ctx->Driver.UseProgram)
-      ctx->Driver.UseProgram(ctx, shProg);
 }
 
 
