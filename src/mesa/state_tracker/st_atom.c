@@ -134,25 +134,6 @@ check_state(const struct st_state_flags *a, const struct st_state_flags *b)
    return (a->mesa & b->mesa) || (a->st & b->st);
 }
 
-
-static void
-accumulate_state(struct st_state_flags *a, const struct st_state_flags *b)
-{
-   a->mesa |= b->mesa;
-   a->st |= b->st;
-}
-
-
-static void
-xor_states(struct st_state_flags *result,
-           const struct st_state_flags *a,
-           const struct st_state_flags *b)
-{
-   result->mesa = a->mesa ^ b->mesa;
-   result->st = a->st ^ b->st;
-}
-
-
 /* Too complex to figure out, just check every time:
  */
 static void check_program_state( struct st_context *st )
@@ -241,54 +222,9 @@ void st_validate_state( struct st_context *st, enum st_pipeline pipeline )
 
    /*printf("%s %x/%x\n", __func__, state->mesa, state->st);*/
 
-#ifdef DEBUG
-   if (1) {
-#else
-   if (0) {
-#endif
-      /* Debug version which enforces various sanity checks on the
-       * state flags which are generated and checked to help ensure
-       * state atoms are ordered correctly in the list.
-       */
-      struct st_state_flags examined, prev;      
-      memset(&examined, 0, sizeof(examined));
-      prev = *state;
-
-      for (i = 0; i < num_atoms; i++) {
-	 const struct st_tracked_state *atom = atoms[i];
-	 struct st_state_flags generated;
-	 
-	 /*printf("atom %s %x/%x\n", atom->name, atom->dirty.mesa, atom->dirty.st);*/
-
-	 if (!(atom->dirty.mesa || atom->dirty.st) ||
-	     !atom->update) {
-	    printf("malformed atom %s\n", atom->name);
-	    assert(0);
-	 }
-
-	 if (check_state(state, &atom->dirty)) {
-	    atoms[i]->update( st );
-	    /*printf("after: %x\n", atom->dirty.mesa);*/
-	 }
-
-	 accumulate_state(&examined, &atom->dirty);
-
-	 /* generated = (prev ^ state)
-	  * if (examined & generated)
-	  *     fail;
-	  */
-	 xor_states(&generated, &prev, state);
-	 assert(!check_state(&examined, &generated));
-	 prev = *state;
-      }
-      /*printf("\n");*/
-
-   }
-   else {
-      for (i = 0; i < num_atoms; i++) {
-	 if (check_state(state, &atoms[i]->dirty))
-	    atoms[i]->update( st );
-      }
+   for (i = 0; i < num_atoms; i++) {
+      if (check_state(state, &atoms[i]->dirty))
+         atoms[i]->update( st );
    }
 
    memset(state, 0, sizeof(*state));
