@@ -150,8 +150,7 @@ void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
          st->dirty |= ST_NEW_DSA;
 
       if (new_state & _NEW_PROGRAM)
-         st->dirty |= ST_NEW_SAMPLE_SHADING |
-                      ST_NEW_RASTERIZER;
+         st->dirty |= ST_NEW_RASTERIZER;
 
       if (new_state & _NEW_SCISSOR)
          st->dirty |= ST_NEW_RASTERIZER |
