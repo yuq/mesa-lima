@@ -385,6 +385,13 @@ brw_update_texture_surface(struct gl_context *ctx,
    } else {
       struct intel_texture_object *intel_obj = intel_texture_object(obj);
       struct intel_mipmap_tree *mt = intel_obj->mt;
+
+      if (plane > 0) {
+         if (mt->plane[plane - 1] == NULL)
+            return;
+         mt = mt->plane[plane - 1];
+      }
+
       struct gl_sampler_object *sampler = _mesa_get_samplerobj(ctx, unit);
       /* If this is a view with restricted NumLayers, then our effective depth
        * is not just the miptree depth.
@@ -406,8 +413,9 @@ brw_update_texture_surface(struct gl_context *ctx,
       const unsigned swizzle = (unlikely(alpha_depth) ? SWIZZLE_XYZW :
                                 brw_get_texture_swizzle(&brw->ctx, obj));
 
-      unsigned format = translate_tex_format(
-         brw, intel_obj->_Format, sampler->sRGBDecode);
+      mesa_format mesa_fmt = plane == 0 ? intel_obj->_Format : mt->format;
+      unsigned format = translate_tex_format(brw, mesa_fmt,
+                                             sampler->sRGBDecode);
 
       /* Implement gen6 and gen7 gather work-around */
       bool need_green_to_blue = false;
@@ -449,12 +457,6 @@ brw_update_texture_surface(struct gl_context *ctx,
          assert(brw->gen >= 8);
          mt = mt->stencil_mt;
          format = BRW_SURFACEFORMAT_R8_UINT;
-      } else if (obj->Target == GL_TEXTURE_EXTERNAL_OES) {
-         if (plane > 0)
-            mt = mt->plane[plane - 1];
-         if (mt == NULL)
-            return;
-         format = translate_tex_format(brw, mt->format, sampler->sRGBDecode);
       }
 
       const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
