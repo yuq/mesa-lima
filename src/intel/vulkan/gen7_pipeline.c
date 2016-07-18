@@ -124,7 +124,7 @@ genX(graphics_pipeline_create)(
       clip.FrontWinding             = vk_to_gen_front_face[rs_info->frontFace],
       clip.CullMode                 = vk_to_gen_cullmode[rs_info->cullMode],
       clip.ClipEnable               = !(extra && extra->use_rectlist),
-      clip.APIMode                  = APIMODE_OGL,
+      clip.APIMode                  = APIMODE_D3D,
       clip.ViewportXYClipTestEnable = true,
       clip.ViewportZClipTestEnable  = !pipeline->depth_clamp_enable,
       clip.ClipMode                 = CLIPMODE_NORMAL,
