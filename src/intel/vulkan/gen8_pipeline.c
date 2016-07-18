@@ -195,7 +195,7 @@ genX(graphics_pipeline_create)(
 
       clip.ClipMode =
          pCreateInfo->pRasterizationState->rasterizerDiscardEnable ?
-         REJECT_ALL : NORMAL;
+         CLIPMODE_REJECT_ALL : CLIPMODE_NORMAL;
 
       clip.NonPerspectiveBarycentricEnable = wm_prog_data ?
          (wm_prog_data->barycentric_interp_modes & 0x38) != 0 : 0;

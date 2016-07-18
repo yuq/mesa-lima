@@ -1173,9 +1173,9 @@
     <field name="Guardband Clip Test Enable" start="90" end="90" type="bool"/>
     <field name="User Clip Distance Clip Test Enable Bitmask" start="80" end="87" type="uint"/>
     <field name="Clip Mode" start="77" end="79" type="uint">
-      <value name="NORMAL" value="0"/>
-      <value name="REJECT_ALL" value="3"/>
-      <value name="ACCEPT_ALL" value="4"/>
+      <value name="CLIPMODE_NORMAL" value="0"/>
+      <value name="CLIPMODE_REJECT_ALL" value="3"/>
+      <value name="CLIPMODE_ACCEPT_ALL" value="4"/>
     </field>
     <field name="Perspective Divide Disable" start="73" end="73" type="bool"/>
     <field name="Non-Perspective Barycentric Enable" start="72" end="72" type="bool"/>
