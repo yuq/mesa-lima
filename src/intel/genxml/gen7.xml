@@ -959,6 +959,7 @@
     <field name="Clip Enable" start="95" end="95" type="bool"/>
     <field name="API Mode" start="94" end="94" type="uint">
       <value name="APIMODE_OGL" value="0"/>
+      <value name="APIMODE_D3D" value="1"/>
     </field>
     <field name="Viewport XY ClipTest Enable" start="92" end="92" type="bool"/>
     <field name="Viewport Z ClipTest Enable" start="91" end="91" type="bool"/>

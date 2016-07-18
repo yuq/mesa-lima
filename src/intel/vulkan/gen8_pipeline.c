@@ -190,7 +190,7 @@ genX(graphics_pipeline_create)(
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
       clip.ClipEnable               = !(extra && extra->use_rectlist);
       clip.EarlyCullEnable          = true;
-      clip.APIMode                  = 1; /* D3D */
+      clip.APIMode                  = APIMODE_D3D;
       clip.ViewportXYClipTestEnable = true;
 
       clip.ClipMode =

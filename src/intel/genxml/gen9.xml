@@ -1167,7 +1167,8 @@
     <field name="User Clip Distance Cull Test Enable Bitmask" start="32" end="39" type="uint"/>
     <field name="Clip Enable" start="95" end="95" type="bool"/>
     <field name="API Mode" start="94" end="94" type="uint">
-      <value name="OGL" value="0"/>
+      <value name="APIMODE_OGL" value="0"/>
+      <value name="APIMODE_D3D" value="1"/>
     </field>
     <field name="Viewport XY Clip Test Enable" start="92" end="92" type="bool"/>
     <field name="Guardband Clip Test Enable" start="90" end="90" type="bool"/>
