@@ -369,7 +369,7 @@ class operation(object):
          if horizontal_operation in self.flags and non_assign_operation in self.flags:
             return constant_template_horizontal_nonassignment.render(op=self)
          elif horizontal_operation in self.flags:
-            return constant_template_horizontal_single_implementation.render(op=self)
+            return constant_template_horizontal.render(op=self)
       elif self.num_operands == 2:
          if self.name == "mul":
             return constant_template_mul.render(op=self)
