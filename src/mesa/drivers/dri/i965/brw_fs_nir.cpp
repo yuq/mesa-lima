@@ -4286,11 +4286,22 @@ fs_visitor::nir_emit_shared_atomic(const fs_builder &bld,
       dest = get_nir_dest(instr->dest);
 
    fs_reg surface = brw_imm_ud(GEN7_BTI_SLM);
-   fs_reg offset = get_nir_src(instr->src[0]);
+   fs_reg offset;
    fs_reg data1 = get_nir_src(instr->src[1]);
    fs_reg data2;
    if (op == BRW_AOP_CMPWR)
       data2 = get_nir_src(instr->src[2]);
+
+   /* Get the offset */
+   nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
+   if (const_offset) {
+      offset = brw_imm_ud(instr->const_index[0] + const_offset->u32[0]);
+   } else {
+      offset = vgrf(glsl_type::uint_type);
+      bld.ADD(offset,
+	      retype(get_nir_src(instr->src[0]), BRW_REGISTER_TYPE_UD),
+	      brw_imm_ud(instr->const_index[0]));
+   }
 
    /* Emit the actual atomic operation operation */
 
