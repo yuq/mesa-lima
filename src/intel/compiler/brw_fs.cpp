@@ -4585,11 +4585,7 @@ get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
        !inst->force_writemask_all) {
       const unsigned channels_per_grf = inst->exec_size /
          DIV_ROUND_UP(inst->size_written, REG_SIZE);
-      unsigned exec_type_size = 0;
-      for (int i = 0; i < inst->sources; i++) {
-         if (inst->src[i].file != BAD_FILE)
-            exec_type_size = MAX2(exec_type_size, type_sz(inst->src[i].type));
-      }
+      const unsigned exec_type_size = get_exec_type_size(inst);
       assert(exec_type_size);
 
       /* The hardware shifts exactly 8 channels per compressed half of the

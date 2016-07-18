@@ -325,6 +325,36 @@ type_sz(unsigned type)
    }
 }
 
+static inline bool
+brw_reg_type_is_floating_point(enum brw_reg_type type)
+{
+   switch (type) {
+   case BRW_REGISTER_TYPE_F:
+   case BRW_REGISTER_TYPE_HF:
+   case BRW_REGISTER_TYPE_DF:
+      return true;
+   default:
+      return false;
+   }
+}
+
+static inline enum brw_reg_type
+get_exec_type(const enum brw_reg_type type)
+{
+   switch (type) {
+   case BRW_REGISTER_TYPE_B:
+   case BRW_REGISTER_TYPE_V:
+      return BRW_REGISTER_TYPE_W;
+   case BRW_REGISTER_TYPE_UB:
+   case BRW_REGISTER_TYPE_UV:
+      return BRW_REGISTER_TYPE_UW;
+   case BRW_REGISTER_TYPE_VF:
+      return BRW_REGISTER_TYPE_F;
+   default:
+      return type;
+   }
+}
+
 /**
  * Return an integer type of the requested size and signedness.
  */

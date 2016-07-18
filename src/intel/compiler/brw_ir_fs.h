@@ -448,4 +448,37 @@ regs_read(const fs_inst *inst, unsigned i)
                        reg_size);
 }
 
+static inline enum brw_reg_type
+get_exec_type(const fs_inst *inst)
+{
+   brw_reg_type exec_type = BRW_REGISTER_TYPE_B;
+
+   for (int i = 0; i < inst->sources; i++) {
+      if (inst->src[i].file != BAD_FILE) {
+         const brw_reg_type t = get_exec_type(inst->src[i].type);
+         if (type_sz(t) > type_sz(exec_type))
+            exec_type = t;
+         else if (type_sz(t) == type_sz(exec_type) &&
+                  brw_reg_type_is_floating_point(t))
+            exec_type = t;
+      }
+   }
+
+   if (exec_type == BRW_REGISTER_TYPE_B)
+      exec_type = inst->dst.type;
+
+   /* TODO: We need to handle half-float conversions. */
+   assert(exec_type != BRW_REGISTER_TYPE_HF ||
+          inst->dst.type == BRW_REGISTER_TYPE_HF);
+   assert(exec_type != BRW_REGISTER_TYPE_B);
+
+   return exec_type;
+}
+
+static inline unsigned
+get_exec_type_size(const fs_inst *inst)
+{
+   return type_sz(get_exec_type(inst));
+}
+
 #endif
