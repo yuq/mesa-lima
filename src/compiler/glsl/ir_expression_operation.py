@@ -96,7 +96,7 @@ real_types = (float_type, double_type)
 constant_template_common = mako.template.Template("""\
    case ${op.get_enum_name()}:
       for (unsigned c = 0; c < op[0]->type->components(); c++) {
-         switch (this->type->base_type) {
+         switch (op[0]->type->base_type) {
     % for dst_type, src_types in op.signatures():
          case ${src_types[0].glsl_type}:
             data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types)};
@@ -115,23 +115,6 @@ constant_template2 = mako.template.Template("""\
       assert(op[0]->type->base_type == ${op.source_types[0].glsl_type});
       for (unsigned c = 0; c < op[0]->type->components(); c++)
          data.${op.dest_type.union_field}[c] = ${op.get_c_expression(op.source_types)};
-      break;""")
-
-# This template is for operations with an output type that doesn't match the
-# input types.
-constant_template5 = mako.template.Template("""\
-   case ${op.get_enum_name()}:
-      for (unsigned c = 0; c < components; c++) {
-         switch (op[0]->type->base_type) {
-    % for dst_type, src_types in op.signatures():
-         case ${src_types[0].glsl_type}:
-            data.${dst_type.union_field}[c] = ${op.get_c_expression(src_types)};
-            break;
-    % endfor
-         default:
-            assert(0);
-         }
-      }
       break;""")
 
 # This template is for binary operations that can operate on some combination
@@ -398,8 +381,6 @@ class operation(object):
             return constant_template_horizontal_single_implementation.render(op=self)
          elif self.dest_type is not None and len(self.source_types) == 1:
             return constant_template2.render(op=self)
-         elif self.dest_type is not None:
-            return constant_template5.render(op=self)
       elif self.num_operands == 2:
          if self.name == "mul":
             return constant_template_mul.render(op=self)
@@ -411,8 +392,6 @@ class operation(object):
             return constant_template_horizontal_single_implementation.render(op=self)
          elif horizontal_operation in self.flags:
             return constant_template_horizontal.render(op=self)
-         elif self.dest_type is not None:
-            return constant_template5.render(op=self)
       elif self.num_operands == 3:
          if self.name == "vector_insert":
             return constant_template_vector_insert.render(op=self)
