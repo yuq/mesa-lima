@@ -359,7 +359,7 @@ anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
    switch (cmd_buffer->device->info.gen) {
    case 7:
       if (cmd_buffer->device->info.is_haswell)
-         return gen7_cmd_buffer_emit_state_base_address(cmd_buffer);
+         return gen75_cmd_buffer_emit_state_base_address(cmd_buffer);
       else
          return gen7_cmd_buffer_emit_state_base_address(cmd_buffer);
    case 8:
