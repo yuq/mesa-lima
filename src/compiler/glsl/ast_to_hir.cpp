@@ -1495,6 +1495,10 @@ ast_expression::do_hir(exec_list *instructions,
                  !state->check_version(120, 300, &loc,
                                        "array comparisons forbidden")) {
          error_emitted = true;
+      } else if ((op[0]->type->contains_subroutine() ||
+                  op[1]->type->contains_subroutine())) {
+         _mesa_glsl_error(&loc, state, "subroutine comparisons forbidden");
+         error_emitted = true;
       } else if ((op[0]->type->contains_opaque() ||
                   op[1]->type->contains_opaque())) {
          _mesa_glsl_error(&loc, state, "opaque type comparisons forbidden");
