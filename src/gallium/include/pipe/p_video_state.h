@@ -131,6 +131,7 @@ enum pipe_h264_enc_rate_control_method
 struct pipe_picture_desc
 {
    enum pipe_video_profile profile;
+   enum pipe_video_entrypoint entry_point;
 };
 
 struct pipe_quant_matrix
