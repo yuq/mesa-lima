@@ -6403,6 +6403,69 @@ computed_depth_mode(const nir_shader *shader)
 }
 
 /**
+ * Move load_interpolated_input with simple (payload-based) barycentric modes
+ * to the top of the program so we don't emit multiple PLNs for the same input.
+ *
+ * This works around CSE not being able to handle non-dominating cases
+ * such as:
+ *
+ *    if (...) {
+ *       interpolate input
+ *    } else {
+ *       interpolate the same exact input
+ *    }
+ *
+ * This should be replaced by global value numbering someday.
+ */
+void
+move_interpolation_to_top(nir_shader *nir)
+{
+   nir_foreach_function(f, nir) {
+      if (!f->impl)
+         continue;
+
+      nir_block *top = nir_start_block(f->impl);
+
+      nir_foreach_block(block, f->impl) {
+         if (block == top)
+            continue;
+
+         nir_foreach_instr_reverse_safe(instr, block) {
+            if (instr->type != nir_instr_type_intrinsic)
+               continue;
+
+            nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+            switch (intrin->intrinsic) {
+            case nir_intrinsic_load_barycentric_pixel:
+            case nir_intrinsic_load_barycentric_centroid:
+            case nir_intrinsic_load_barycentric_sample:
+               break;
+            case nir_intrinsic_load_interpolated_input: {
+               nir_intrinsic_instr *bary_intrinsic =
+                  nir_instr_as_intrinsic(intrin->src[0].ssa->parent_instr);
+               nir_intrinsic_op op = bary_intrinsic->intrinsic;
+
+               /* Leave interpolateAtSample/Offset() where it is. */
+               if (op == nir_intrinsic_load_barycentric_at_sample ||
+                   op == nir_intrinsic_load_barycentric_at_offset)
+                  continue;
+            }
+            default:
+               continue;
+            }
+
+            exec_node_remove(&instr->node);
+            exec_list_push_head(&top->instr_list, &instr->node);
+            instr->block = top;
+         }
+      }
+      nir_metadata_preserve(f->impl, (nir_metadata)
+                            ((unsigned) nir_metadata_block_index |
+                             (unsigned) nir_metadata_dominance));
+   }
+}
+
+/**
  * Apply default interpolation settings to FS inputs which don't specify any.
  */
 static void
@@ -6509,6 +6572,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
    brw_nir_lower_fs_outputs(shader);
    if (!key->multisample_fbo)
       NIR_PASS_V(shader, demote_sample_qualifiers);
+   NIR_PASS_V(shader, move_interpolation_to_top);
    shader = brw_postprocess_nir(shader, compiler->devinfo, true);
 
    /* key->alpha_test_func means simulating alpha testing via discards,
