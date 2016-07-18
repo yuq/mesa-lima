@@ -122,6 +122,7 @@ genX(graphics_pipeline_create)(
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
       clip.FrontWinding             = vk_to_gen_front_face[rs_info->frontFace],
+      clip.EarlyCullEnable          = true,
       clip.CullMode                 = vk_to_gen_cullmode[rs_info->cullMode],
       clip.ClipEnable               = !(extra && extra->use_rectlist),
       clip.APIMode                  = APIMODE_D3D,
