@@ -666,8 +666,7 @@ emit_3dstate_clip(struct anv_pipeline *pipeline,
       clip.APIMode                  = APIMODE_D3D,
       clip.ViewportXYClipTestEnable = true;
 
-      clip.ClipMode = rs_info->rasterizerDiscardEnable ?
-         CLIPMODE_REJECT_ALL : CLIPMODE_NORMAL;
+      clip.ClipMode = CLIPMODE_NORMAL;
 
       clip.TriangleStripListProvokingVertexSelect = 0;
       clip.LineStripListProvokingVertexSelect     = 0;
@@ -685,5 +684,14 @@ emit_3dstate_clip(struct anv_pipeline *pipeline,
       clip.NonPerspectiveBarycentricEnable = wm_prog_data ?
          (wm_prog_data->barycentric_interp_modes & 0x38) != 0 : 0;
 #endif
+   }
+}
+
+static void
+emit_3dstate_streamout(struct anv_pipeline *pipeline,
+                       const VkPipelineRasterizationStateCreateInfo *rs_info)
+{
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_STREAMOUT), so) {
+      so.RenderingDisable = rs_info->rasterizerDiscardEnable;
    }
 }

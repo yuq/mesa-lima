@@ -119,6 +119,7 @@ genX(graphics_pipeline_create)(
 
    emit_3dstate_clip(pipeline, pCreateInfo->pViewportState,
                      pCreateInfo->pRasterizationState, extra);
+   emit_3dstate_streamout(pipeline, pCreateInfo->pRasterizationState);
 
    if (pCreateInfo->pMultisampleState &&
        pCreateInfo->pMultisampleState->rasterizationSamples > 1)

@@ -185,6 +185,7 @@ genX(graphics_pipeline_create)(
 
    emit_3dstate_clip(pipeline, pCreateInfo->pViewportState,
                      pCreateInfo->pRasterizationState, extra);
+   emit_3dstate_streamout(pipeline, pCreateInfo->pRasterizationState);
 
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {

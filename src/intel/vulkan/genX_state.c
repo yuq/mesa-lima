@@ -58,7 +58,6 @@ genX(init_device_state)(struct anv_device *device)
    anv_batch_emit(&batch, GENX(3DSTATE_TE), ts);
    anv_batch_emit(&batch, GENX(3DSTATE_DS), ds);
 
-   anv_batch_emit(&batch, GENX(3DSTATE_STREAMOUT), so);
    anv_batch_emit(&batch, GENX(3DSTATE_AA_LINE_PARAMETERS), aa);
 
    anv_batch_emit(&batch, GENX(3DSTATE_DRAWING_RECTANGLE), rect) {
