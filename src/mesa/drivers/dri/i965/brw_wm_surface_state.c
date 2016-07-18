@@ -1516,7 +1516,7 @@ update_image_surface(struct brw_context *brw,
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
 
             brw_emit_surface_state(brw, mt, &view,
-                                   surface_state_infos[brw->gen].rb_mocs, false,
+                                   surface_state_infos[brw->gen].tex_mocs, false,
                                    surf_offset, surf_index,
                                    I915_GEM_DOMAIN_SAMPLER,
                                    access == GL_READ_ONLY ? 0 :
