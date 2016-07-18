@@ -290,18 +290,17 @@ struct pipe_screen *
 ddebug_screen_create(struct pipe_screen *screen)
 {
    struct dd_screen *dscreen;
-   const char *option = debug_get_option("GALLIUM_DDEBUG", NULL);
-   bool dump_always = option && !strncmp(option, "always", 6);
-   bool dump_apitrace = option && !strncmp(option, "apitrace", 8);
-   bool no_flush = option && strstr(option, "noflush");
-   bool help = option && !strcmp(option, "help");
+   const char *option;
+   bool no_flush;
    unsigned timeout = 0;
    unsigned apitrace_dump_call = 0;
+   enum dd_mode mode;
 
-   if (dump_apitrace)
-      no_flush = true;
+   option = debug_get_option("GALLIUM_DDEBUG", NULL);
+   if (!option)
+      return screen;
 
-   if (help) {
+   if (!strcmp(option, "help")) {
       puts("Gallium driver debugger");
       puts("");
       puts("Usage:");
@@ -328,13 +327,22 @@ ddebug_screen_create(struct pipe_screen *screen)
       exit(0);
    }
 
-   if (!option)
-      return screen;
-   if (!dump_always && !dump_apitrace && sscanf(option, "%u", &timeout) != 1)
-      return screen;
+   no_flush = strstr(option, "noflush") != NULL;
 
-   if (dump_apitrace && sscanf(option+8, "%u", &apitrace_dump_call) != 1)
-      return screen;
+   if (!strncmp(option, "always", 6)) {
+      mode = DD_DUMP_ALL_CALLS;
+   } else if (!strncmp(option, "apitrace", 8)) {
+      mode = DD_DUMP_APITRACE_CALL;
+      no_flush = true;
+
+      if (sscanf(option+8, "%u", &apitrace_dump_call) != 1)
+         return screen;
+   } else {
+      mode = DD_DETECT_HANGS;
+
+      if (sscanf(option, "%u", &timeout) != 1)
+         return screen;
+   }
 
    dscreen = CALLOC_STRUCT(dd_screen);
    if (!dscreen)
@@ -374,8 +382,7 @@ ddebug_screen_create(struct pipe_screen *screen)
 
    dscreen->screen = screen;
    dscreen->timeout_ms = timeout;
-   dscreen->mode = dump_always ? DD_DUMP_ALL_CALLS :
-                   dump_apitrace ? DD_DUMP_APITRACE_CALL : DD_DETECT_HANGS;
+   dscreen->mode = mode;
    dscreen->no_flush = no_flush;
    dscreen->verbose = strstr(option, "verbose") != NULL;
    dscreen->apitrace_dump_call = apitrace_dump_call;
