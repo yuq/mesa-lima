@@ -14,7 +14,6 @@ env.Append(CPPPATH = [
     '#/src',
     Dir('../mapi'), # src/mapi build path
     '#/src/mapi',
-    '#/src/glsl',
     Dir('.'), # src/mesa build path
     '#/src/mesa',
     Dir('main'),  # src/mesa/main/ build path
