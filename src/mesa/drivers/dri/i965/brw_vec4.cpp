@@ -2267,7 +2267,28 @@ vec4_visitor::apply_logical_swizzle(struct brw_reg *hw_reg,
     */
    assert(brw_is_single_value_swizzle(reg.swizzle));
 
+   /* To gain access to Z/W components we need to select the second half
+    * of the register and then use a X/Y swizzle to select Z/W respectively.
+    */
    unsigned swizzle = BRW_GET_SWZ(reg.swizzle, 0);
+
+   if (swizzle >= 2) {
+      *hw_reg = suboffset(*hw_reg, 2);
+      swizzle -= 2;
+   }
+
+   /* Any 64-bit source with an offset at 16B is intended to address the
+    * second half of a register and needs a vertical stride of 0 so we:
+    *
+    * 1. Don't violate register region restrictions.
+    * 2. Activate the gen7 instruction decompresion bug exploit when
+    *    execsize > 4
+    */
+   if (hw_reg->subnr % REG_SIZE == 16) {
+      assert(devinfo->gen == 7);
+      hw_reg->vstride = BRW_VERTICAL_STRIDE_0;
+   }
+
    hw_reg->swizzle = BRW_SWIZZLE4(swizzle * 2, swizzle * 2 + 1,
                                   swizzle * 2, swizzle * 2 + 1);
 }
