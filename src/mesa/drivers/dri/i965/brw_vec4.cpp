@@ -1191,6 +1191,20 @@ vec4_visitor::opt_register_coalesce()
                   scan_inst->dst.type == scan_inst->src[0].type))
                break;
 
+            /* Only allow coalescing between registers of the same type size.
+             * Otherwise we would need to make the pass aware of the fact that
+             * channel sizes are different for single and double precision.
+             */
+            if (type_sz(inst->src[0].type) != type_sz(scan_inst->src[0].type))
+               break;
+
+            /* Check that scan_inst writes the same amount of data as the
+             * instruction, otherwise coalescing would lead to writing a
+             * different (larger or smaller) region of the destination
+             */
+            if (scan_inst->size_written != inst->size_written)
+               break;
+
             /* If we can't handle the swizzle, bail. */
             if (!scan_inst->can_reswizzle(devinfo, inst->dst.writemask,
                                           inst->src[0].swizzle,
@@ -1198,10 +1212,12 @@ vec4_visitor::opt_register_coalesce()
                break;
             }
 
-            /* This only handles coalescing of a single register starting at
-             * the source offset of the copy instruction.
+            /* This only handles coalescing writes of 8 channels (1 register
+             * for single-precision and 2 registers for double-precision)
+             * starting at the source offset of the copy instruction.
              */
-            if (scan_inst->size_written > REG_SIZE ||
+            if (DIV_ROUND_UP(scan_inst->size_written,
+                             type_sz(scan_inst->dst.type)) > 8 ||
                 scan_inst->dst.offset != inst->src[0].offset)
                break;
 
