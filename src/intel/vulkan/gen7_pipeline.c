@@ -117,27 +117,8 @@ genX(graphics_pipeline_create)(
 
    emit_urb_setup(pipeline);
 
-   const VkPipelineRasterizationStateCreateInfo *rs_info =
-      pCreateInfo->pRasterizationState;
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
-      clip.FrontWinding             = vk_to_gen_front_face[rs_info->frontFace],
-      clip.EarlyCullEnable          = true,
-      clip.CullMode                 = vk_to_gen_cullmode[rs_info->cullMode],
-      clip.ClipEnable               = !(extra && extra->use_rectlist),
-      clip.APIMode                  = APIMODE_D3D,
-      clip.ViewportXYClipTestEnable = true,
-      clip.ViewportZClipTestEnable  = !pipeline->depth_clamp_enable,
-      clip.ClipMode                 = CLIPMODE_NORMAL,
-
-      clip.TriangleStripListProvokingVertexSelect   = 0,
-      clip.LineStripListProvokingVertexSelect       = 0,
-      clip.TriangleFanProvokingVertexSelect         = 1,
-
-      clip.MinimumPointWidth        = 0.125,
-      clip.MaximumPointWidth        = 255.875,
-      clip.MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1;
-   }
+   emit_3dstate_clip(pipeline, pCreateInfo->pViewportState,
+                     pCreateInfo->pRasterizationState, extra);
 
    if (pCreateInfo->pMultisampleState &&
        pCreateInfo->pMultisampleState->rasterizationSamples > 1)

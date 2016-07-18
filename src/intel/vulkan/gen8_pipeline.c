@@ -186,29 +186,10 @@ genX(graphics_pipeline_create)(
 
    emit_urb_setup(pipeline);
 
+   emit_3dstate_clip(pipeline, pCreateInfo->pViewportState,
+                     pCreateInfo->pRasterizationState, extra);
+
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
-      clip.ClipEnable               = !(extra && extra->use_rectlist);
-      clip.EarlyCullEnable          = true;
-      clip.APIMode                  = APIMODE_D3D;
-      clip.ViewportXYClipTestEnable = true;
-
-      clip.ClipMode =
-         pCreateInfo->pRasterizationState->rasterizerDiscardEnable ?
-         CLIPMODE_REJECT_ALL : CLIPMODE_NORMAL;
-
-      clip.NonPerspectiveBarycentricEnable = wm_prog_data ?
-         (wm_prog_data->barycentric_interp_modes & 0x38) != 0 : 0;
-
-      clip.TriangleStripListProvokingVertexSelect  = 0;
-      clip.LineStripListProvokingVertexSelect      = 0;
-      clip.TriangleFanProvokingVertexSelect        = 1;
-
-      clip.MinimumPointWidth  = 0.125;
-      clip.MaximumPointWidth  = 255.875;
-      clip.MaximumVPIndex     = pCreateInfo->pViewportState->viewportCount - 1;
-   }
-
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
       wm.StatisticsEnable                    = true;
       wm.LineEndCapAntialiasingRegionWidth   = _05pixels;

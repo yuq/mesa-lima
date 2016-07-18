@@ -646,3 +646,39 @@ emit_cb_state(struct anv_pipeline *pipeline,
 #endif
    }
 }
+
+static void
+emit_3dstate_clip(struct anv_pipeline *pipeline,
+                  const VkPipelineViewportStateCreateInfo *vp_info,
+                  const VkPipelineRasterizationStateCreateInfo *rs_info,
+                  const struct anv_graphics_pipeline_create_info *extra)
+{
+   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
+   (void) wm_prog_data;
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
+      clip.ClipEnable               = !(extra && extra->use_rectlist);
+      clip.EarlyCullEnable          = true;
+      clip.APIMode                  = APIMODE_D3D,
+      clip.ViewportXYClipTestEnable = true;
+
+      clip.ClipMode = rs_info->rasterizerDiscardEnable ?
+         CLIPMODE_REJECT_ALL : CLIPMODE_NORMAL;
+
+      clip.TriangleStripListProvokingVertexSelect = 0;
+      clip.LineStripListProvokingVertexSelect     = 0;
+      clip.TriangleFanProvokingVertexSelect       = 1;
+
+      clip.MinimumPointWidth = 0.125;
+      clip.MaximumPointWidth = 255.875;
+      clip.MaximumVPIndex    = vp_info->viewportCount - 1;
+
+#if GEN_GEN == 7
+      clip.FrontWinding            = vk_to_gen_front_face[rs_info->frontFace];
+      clip.CullMode                = vk_to_gen_cullmode[rs_info->cullMode];
+      clip.ViewportZClipTestEnable = !pipeline->depth_clamp_enable;
+#else
+      clip.NonPerspectiveBarycentricEnable = wm_prog_data ?
+         (wm_prog_data->barycentric_interp_modes & 0x38) != 0 : 0;
+#endif
+   }
+}
