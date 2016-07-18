@@ -39,6 +39,7 @@
 #include "brw_program.h"
 #include "brw_dead_control_flow.h"
 #include "compiler/glsl_types.h"
+#include "compiler/nir/nir_builder.h"
 #include "program/prog_parameter.h"
 
 using namespace brw;
@@ -6445,6 +6446,47 @@ brw_nir_set_default_interpolation(const struct brw_device_info *devinfo,
    }
 }
 
+/**
+ * Demote per-sample barycentric intrinsics to centroid.
+ *
+ * Useful when rendering to a non-multisampled buffer.
+ */
+static void
+demote_sample_qualifiers(nir_shader *nir)
+{
+   nir_foreach_function(f, nir) {
+      if (!f->impl)
+         continue;
+
+      nir_builder b;
+      nir_builder_init(&b, f->impl);
+
+      nir_foreach_block(block, f->impl) {
+         nir_foreach_instr_safe(instr, block) {
+            if (instr->type != nir_instr_type_intrinsic)
+               continue;
+
+            nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+            if (intrin->intrinsic != nir_intrinsic_load_barycentric_sample &&
+                intrin->intrinsic != nir_intrinsic_load_barycentric_at_sample)
+               continue;
+
+            b.cursor = nir_before_instr(instr);
+            nir_ssa_def *centroid =
+               nir_load_barycentric(&b, nir_intrinsic_load_barycentric_centroid,
+                                    nir_intrinsic_interp_mode(intrin));
+            nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
+                                     nir_src_for_ssa(centroid));
+            nir_instr_remove(instr);
+         }
+      }
+
+      nir_metadata_preserve(f->impl, (nir_metadata)
+                            ((unsigned) nir_metadata_block_index |
+                             (unsigned) nir_metadata_dominance));
+   }
+}
+
 const unsigned *
 brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
@@ -6465,6 +6507,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                                      key->flat_shade, key->persample_interp);
    brw_nir_lower_fs_inputs(shader);
    brw_nir_lower_fs_outputs(shader);
+   if (!key->multisample_fbo)
+      NIR_PASS_V(shader, demote_sample_qualifiers);
    shader = brw_postprocess_nir(shader, compiler->devinfo, true);
 
    /* key->alpha_test_func means simulating alpha testing via discards,
