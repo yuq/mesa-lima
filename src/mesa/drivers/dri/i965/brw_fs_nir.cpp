@@ -4535,26 +4535,15 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    for (unsigned i = 0; i < dest_size; i++)
       nir_dest[i] = offset(dst, bld, i);
 
-   bool is_cube_array = instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
-                        instr->is_array;
-
    if (instr->op == nir_texop_query_levels) {
       /* # levels is in .w */
       nir_dest[0] = offset(dst, bld, 3);
-   } else if (instr->op == nir_texop_txs && dest_size >= 3 &&
-              (devinfo->gen < 7 || is_cube_array)) {
+   } else if (instr->op == nir_texop_txs &&
+              dest_size >= 3 && devinfo->gen < 7) {
+      /* Gen4-6 return 0 instead of 1 for single layer surfaces. */
       fs_reg depth = offset(dst, bld, 2);
-      fs_reg fixed_depth = vgrf(glsl_type::int_type);
-
-      if (is_cube_array) {
-         /* fixup #layers for cube map arrays */
-         bld.emit(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, brw_imm_d(6));
-      } else if (devinfo->gen < 7) {
-         /* Gen4-6 return 0 instead of 1 for single layer surfaces. */
-         bld.emit_minmax(fixed_depth, depth, brw_imm_d(1), BRW_CONDITIONAL_GE);
-      }
-
-      nir_dest[2] = fixed_depth;
+      nir_dest[2] = vgrf(glsl_type::int_type);
+      bld.emit_minmax(nir_dest[2], depth, brw_imm_d(1), BRW_CONDITIONAL_GE);
    }
 
    bld.LOAD_PAYLOAD(get_nir_dest(instr->dest), nir_dest, dest_size, 0);

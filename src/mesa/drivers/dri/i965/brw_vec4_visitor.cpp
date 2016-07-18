@@ -907,7 +907,6 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
                            uint32_t constant_offset,
                            src_reg offset_value,
                            src_reg mcs,
-                           bool is_cube_array,
                            uint32_t surface,
                            src_reg surface_reg,
                            uint32_t sampler,
@@ -1095,16 +1094,10 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    /* fixup num layers (z) for cube arrays: hardware returns faces * layers;
     * spec requires layers.
     */
-   if (op == ir_txs) {
-      if (is_cube_array) {
-         emit_math(SHADER_OPCODE_INT_QUOTIENT,
-                   writemask(inst->dst, WRITEMASK_Z),
-                   src_reg(inst->dst), brw_imm_d(6));
-      } else if (devinfo->gen < 7) {
-         /* Gen4-6 return 0 instead of 1 for single layer surfaces. */
-         emit_minmax(BRW_CONDITIONAL_GE, writemask(inst->dst, WRITEMASK_Z),
-                     src_reg(inst->dst), brw_imm_d(1));
-      }
+   if (op == ir_txs && devinfo->gen < 7) {
+      /* Gen4-6 return 0 instead of 1 for single layer surfaces. */
+      emit_minmax(BRW_CONDITIONAL_GE, writemask(inst->dst, WRITEMASK_Z),
+                  src_reg(inst->dst), brw_imm_d(1));
    }
 
    if (devinfo->gen == 6 && op == ir_tg4) {

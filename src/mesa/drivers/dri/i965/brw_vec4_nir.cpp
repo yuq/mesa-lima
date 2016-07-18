@@ -1955,16 +1955,10 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 
    ir_texture_opcode op = ir_texture_opcode_for_nir_texop(instr->op);
 
-   bool is_cube_array =
-      instr->op == nir_texop_txs &&
-      instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
-      instr->is_array;
-
    emit_texture(op, dest, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor,
                 lod, lod2, sample_index,
-                constant_offset, offset_value,
-                mcs, is_cube_array,
+                constant_offset, offset_value, mcs,
                 texture, texture_reg, sampler, sampler_reg);
 }
 

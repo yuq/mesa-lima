@@ -396,11 +396,9 @@ brw_update_texture_surface(struct gl_context *ctx,
       /* If this is a view with restricted NumLayers, then our effective depth
        * is not just the miptree depth.
        */
-      const unsigned mt_num_layers =
-         mt->logical_depth0 * (_mesa_is_cube_map_texture(mt->target) ? 6 : 1);
       const unsigned view_num_layers =
          (obj->Immutable && obj->Target != GL_TEXTURE_3D) ? obj->NumLayers :
-                                                            mt_num_layers;
+                                                            mt->logical_depth0;
 
       /* Handling GL_ALPHA as a surface format override breaks 1.30+ style
        * texturing functions that return a float, as our code generation always

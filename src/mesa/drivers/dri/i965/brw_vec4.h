@@ -259,7 +259,6 @@ public:
                      uint32_t constant_offset,
                      src_reg offset_value,
                      src_reg mcs,
-                     bool is_cube_array,
                      uint32_t surface, src_reg surface_reg,
                      uint32_t sampler, src_reg sampler_reg);
 
