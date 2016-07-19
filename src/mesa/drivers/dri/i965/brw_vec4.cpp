@@ -2263,6 +2263,52 @@ scalarize_predicate(brw_predicate predicate, unsigned writemask)
    }
 }
 
+/* 64-bit sources use regions with a width of 2. These 2 elements in each row
+ * can be addressed using 32-bit swizzles (which is what the hardware supports)
+ * but it also means that the swizzle we apply on the first two components of a
+ * dvec4 is coupled with the swizzle we use for the last 2. In other words,
+ * only some specific swizzle combinations can be natively supported.
+ *
+ * FIXME: We can also exploit the vstride 0 decompression bug in gen7 to
+ *        implement some more swizzles via simple translations. For
+ *        example: XXXX as XYXY, YYYY as ZWZW (same for ZZZZ and WWWW by
+ *        using subnr), XYXY as XYZW, YXYX as ZWXY (same for ZWZW and
+ *        WZWZ using subnr).
+ *
+ * FIXME: we can go an step further and implement even more swizzle
+ *        variations using only partial scalarization.
+ *
+ * For more details see:
+ * https://bugs.freedesktop.org/show_bug.cgi?id=92760#c82
+ */
+bool
+vec4_visitor::is_supported_64bit_region(src_reg src)
+{
+   assert(type_sz(src.type) == 8);
+
+   /* Uniform regions have a vstride=0. Because we use 2-wide rows with
+    * 64-bit regions it means that we cannot access components Z/W, so
+    * return false for any such case. Interleaved attributes will also be
+    * mapped to GRF registers with a vstride of 0, so apply the same
+    * treatment.
+    */
+   if ((is_uniform(src) ||
+        (stage_uses_interleaved_attributes(stage, prog_data->dispatch_mode) &&
+         src.file == ATTR)) &&
+       (brw_mask_for_swizzle(src.swizzle) & 12))
+      return false;
+
+   switch (src.swizzle) {
+   case BRW_SWIZZLE_XYZW:
+   case BRW_SWIZZLE_XXZZ:
+   case BRW_SWIZZLE_YYWW:
+   case BRW_SWIZZLE_YXWZ:
+      return true;
+   default:
+      return false;
+   }
+}
+
 bool
 vec4_visitor::scalarize_df()
 {
@@ -2281,6 +2327,29 @@ vec4_visitor::scalarize_df()
       }
 
       if (!is_double)
+         continue;
+
+      /* Skip the lowering for specific regioning scenarios that we can
+       * support natively.
+       */
+      bool skip_lowering = true;
+
+      /* XY and ZW writemasks operate in 32-bit, which means that they don't
+       * have a native 64-bit representation and they should always be split.
+       */
+      if (inst->dst.writemask == WRITEMASK_XY ||
+          inst->dst.writemask == WRITEMASK_ZW) {
+         skip_lowering = false;
+      } else {
+         for (unsigned i = 0; i < 3; i++) {
+            if (inst->src[i].file == BAD_FILE || type_sz(inst->src[i].type) < 8)
+               continue;
+            skip_lowering = skip_lowering &&
+                            is_supported_64bit_region(inst->src[i]);
+         }
+      }
+
+      if (skip_lowering)
          continue;
 
       /* Generate scalar instructions for each enabled channel */
@@ -2388,35 +2457,49 @@ vec4_visitor::apply_logical_swizzle(struct brw_reg *hw_reg,
       return;
    }
 
-   /* Otherwise we should have scalarized the instruction, so take the single
-    * 64-bit logical swizzle channel and translate it to 32-bit
-    */
-   assert(brw_is_single_value_swizzle(reg.swizzle));
+   /* Take the 64-bit logical swizzle channel and translate it to 32-bit */
+   assert(brw_is_single_value_swizzle(reg.swizzle) ||
+          is_supported_64bit_region(reg));
 
-   /* To gain access to Z/W components we need to select the second half
-    * of the register and then use a X/Y swizzle to select Z/W respectively.
-    */
-   unsigned swizzle = BRW_GET_SWZ(reg.swizzle, 0);
+   if (is_supported_64bit_region(reg)) {
+      /* Supported 64-bit swizzles are those such that their first two
+       * components, when expanded to 32-bit swizzles, match the semantics
+       * of the original 64-bit swizzle with 2-wide row regioning.
+       */
+      unsigned swizzle0 = BRW_GET_SWZ(reg.swizzle, 0);
+      unsigned swizzle1 = BRW_GET_SWZ(reg.swizzle, 1);
+      hw_reg->swizzle = BRW_SWIZZLE4(swizzle0 * 2, swizzle0 * 2 + 1,
+                                     swizzle1 * 2, swizzle1 * 2 + 1);
+   } else {
+      /* If we got here then we have an unsupported swizzle and the
+       * instruction should have been scalarized.
+       */
+      assert(brw_is_single_value_swizzle(reg.swizzle));
+      unsigned swizzle = BRW_GET_SWZ(reg.swizzle, 0);
 
-   if (swizzle >= 2) {
-      *hw_reg = suboffset(*hw_reg, 2);
-      swizzle -= 2;
+      /* To gain access to Z/W components we need to select the second half
+       * of the register and then use a X/Y swizzle to select Z/W respectively.
+       */
+      if (swizzle >= 2) {
+         *hw_reg = suboffset(*hw_reg, 2);
+         swizzle -= 2;
+      }
+
+      /* Any 64-bit source with an offset at 16B is intended to address the
+       * second half of a register and needs a vertical stride of 0 so we:
+       *
+       * 1. Don't violate register region restrictions.
+       * 2. Activate the gen7 instruction decompresion bug exploit when
+       *    execsize > 4
+       */
+      if (hw_reg->subnr % REG_SIZE == 16) {
+         assert(devinfo->gen == 7);
+         hw_reg->vstride = BRW_VERTICAL_STRIDE_0;
+      }
+
+      hw_reg->swizzle = BRW_SWIZZLE4(swizzle * 2, swizzle * 2 + 1,
+                                     swizzle * 2, swizzle * 2 + 1);
    }
-
-   /* Any 64-bit source with an offset at 16B is intended to address the
-    * second half of a register and needs a vertical stride of 0 so we:
-    *
-    * 1. Don't violate register region restrictions.
-    * 2. Activate the gen7 instruction decompresion bug exploit when
-    *    execsize > 4
-    */
-   if (hw_reg->subnr % REG_SIZE == 16) {
-      assert(devinfo->gen == 7);
-      hw_reg->vstride = BRW_VERTICAL_STRIDE_0;
-   }
-
-   hw_reg->swizzle = BRW_SWIZZLE4(swizzle * 2, swizzle * 2 + 1,
-                                  swizzle * 2, swizzle * 2 + 1);
 }
 
 bool

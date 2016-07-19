@@ -161,6 +161,7 @@ public:
    void opt_schedule_instructions();
    void convert_to_hw_regs();
 
+   bool is_supported_64bit_region(src_reg src);
    bool lower_simd_width();
    bool scalarize_df();
    bool lower_64bit_mad_to_mul_add();

@@ -87,6 +87,9 @@ struct gen_device_info;
 #define BRW_SWIZZLE_ZXYW      BRW_SWIZZLE4(2,0,1,3)
 #define BRW_SWIZZLE_ZWZW      BRW_SWIZZLE4(2,3,2,3)
 #define BRW_SWIZZLE_WZYX      BRW_SWIZZLE4(3,2,1,0)
+#define BRW_SWIZZLE_XXZZ      BRW_SWIZZLE4(0,0,2,2)
+#define BRW_SWIZZLE_YYWW      BRW_SWIZZLE4(1,1,3,3)
+#define BRW_SWIZZLE_YXWZ      BRW_SWIZZLE4(1,0,3,2)
 
 #define BRW_SWZ_COMP_INPUT(comp) (BRW_SWIZZLE_XYZW >> ((comp)*2))
 #define BRW_SWZ_COMP_OUTPUT(comp) (BRW_SWIZZLE_XYZW << ((comp)*2))
