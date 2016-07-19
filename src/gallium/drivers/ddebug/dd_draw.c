@@ -520,8 +520,46 @@ dd_dump_driver_state(struct dd_context *dctx, FILE *f, unsigned flags)
 }
 
 static void
-dd_dump_call(struct dd_context *dctx, struct dd_call *call, unsigned flags,
-             bool dump_dmesg)
+dd_dump_call(FILE *f, struct dd_draw_state *state, struct dd_call *call)
+{
+   switch (call->type) {
+   case CALL_DRAW_VBO:
+      dd_dump_draw_vbo(state, &call->info.draw_vbo, f);
+      break;
+   case CALL_LAUNCH_GRID:
+      dd_dump_launch_grid(state, &call->info.launch_grid, f);
+      break;
+   case CALL_RESOURCE_COPY_REGION:
+      dd_dump_resource_copy_region(state,
+                                   &call->info.resource_copy_region, f);
+      break;
+   case CALL_BLIT:
+      dd_dump_blit(state, &call->info.blit, f);
+      break;
+   case CALL_FLUSH_RESOURCE:
+      dd_dump_flush_resource(state, call->info.flush_resource, f);
+      break;
+   case CALL_CLEAR:
+      dd_dump_clear(state, &call->info.clear, f);
+      break;
+   case CALL_CLEAR_BUFFER:
+      dd_dump_clear_buffer(state, &call->info.clear_buffer, f);
+      break;
+   case CALL_CLEAR_RENDER_TARGET:
+      dd_dump_clear_render_target(state, f);
+      break;
+   case CALL_CLEAR_DEPTH_STENCIL:
+      dd_dump_clear_depth_stencil(state, f);
+      break;
+   case CALL_GENERATE_MIPMAP:
+      dd_dump_generate_mipmap(state, f);
+      break;
+   }
+}
+
+static void
+dd_write_report(struct dd_context *dctx, struct dd_call *call, unsigned flags,
+                bool dump_dmesg)
 {
    FILE *f = dd_get_file_stream(dd_screen(dctx->base.screen),
                                 dctx->draw_state.apitrace_call_number);
@@ -529,40 +567,7 @@ dd_dump_call(struct dd_context *dctx, struct dd_call *call, unsigned flags,
    if (!f)
       return;
 
-   switch (call->type) {
-   case CALL_DRAW_VBO:
-      dd_dump_draw_vbo(&dctx->draw_state, &call->info.draw_vbo, f);
-      break;
-   case CALL_LAUNCH_GRID:
-      dd_dump_launch_grid(&dctx->draw_state, &call->info.launch_grid, f);
-      break;
-   case CALL_RESOURCE_COPY_REGION:
-      dd_dump_resource_copy_region(&dctx->draw_state,
-                                   &call->info.resource_copy_region, f);
-      break;
-   case CALL_BLIT:
-      dd_dump_blit(&dctx->draw_state, &call->info.blit, f);
-      break;
-   case CALL_FLUSH_RESOURCE:
-      dd_dump_flush_resource(&dctx->draw_state, call->info.flush_resource, f);
-      break;
-   case CALL_CLEAR:
-      dd_dump_clear(&dctx->draw_state, &call->info.clear, f);
-      break;
-   case CALL_CLEAR_BUFFER:
-      dd_dump_clear_buffer(&dctx->draw_state, &call->info.clear_buffer, f);
-      break;
-   case CALL_CLEAR_RENDER_TARGET:
-      dd_dump_clear_render_target(&dctx->draw_state, f);
-      break;
-   case CALL_CLEAR_DEPTH_STENCIL:
-      dd_dump_clear_depth_stencil(&dctx->draw_state, f);
-      break;
-   case CALL_GENERATE_MIPMAP:
-      dd_dump_generate_mipmap(&dctx->draw_state, f);
-      break;
-   }
-
+   dd_dump_call(f, &dctx->draw_state, call);
    dd_dump_driver_state(dctx, f, flags);
    if (dump_dmesg)
       dd_dump_dmesg(f);
@@ -675,7 +680,7 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
       case DD_DETECT_HANGS:
          if (!dscreen->no_flush &&
             dd_flush_and_check_hang(dctx, NULL, 0)) {
-            dd_dump_call(dctx, call,
+            dd_write_report(dctx, call,
                          PIPE_DUMP_DEVICE_STATUS_REGISTERS |
                          PIPE_DUMP_CURRENT_STATES |
                          PIPE_DUMP_CURRENT_SHADERS |
@@ -689,12 +694,12 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
       case DD_DUMP_ALL_CALLS:
          if (!dscreen->no_flush)
             pipe->flush(pipe, NULL, 0);
-         dd_dump_call(dctx, call, 0, false);
+         dd_write_report(dctx, call, 0, false);
          break;
       case DD_DUMP_APITRACE_CALL:
          if (dscreen->apitrace_dump_call ==
              dctx->draw_state.apitrace_call_number) {
-            dd_dump_call(dctx, call, 0, false);
+            dd_write_report(dctx, call, 0, false);
             /* No need to continue. */
             exit(0);
          }
