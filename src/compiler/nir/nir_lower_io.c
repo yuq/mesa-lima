@@ -369,7 +369,7 @@ nir_lower_io_block(nir_block *block,
          break;
 
       default:
-         break;
+         continue;
       }
 
       if (nir_intrinsic_infos[intrin->intrinsic].has_dest) {
