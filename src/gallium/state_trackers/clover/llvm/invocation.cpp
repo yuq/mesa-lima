@@ -24,13 +24,6 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#include "llvm/codegen.hpp"
-#include "llvm/compat.hpp"
-#include "llvm/invocation.hpp"
-#include "llvm/metadata.hpp"
-#include "llvm/util.hpp"
-#include "util/algorithm.hpp"
-
 #include <llvm/IR/DiagnosticPrinter.h>
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/LLVMContext.h>
@@ -43,6 +36,23 @@
 #include <clang/Frontend/TextDiagnosticBuffer.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Basic/TargetInfo.h>
+
+// We need to include internal headers last, because the internal headers
+// include CL headers which have #define's like:
+//
+//#define cl_khr_gl_sharing 1
+//#define cl_khr_icd 1
+//
+// Which will break the compilation of clang/Basic/OpenCLOptions.h
+
+#include "core/error.hpp"
+#include "llvm/codegen.hpp"
+#include "llvm/compat.hpp"
+#include "llvm/invocation.hpp"
+#include "llvm/metadata.hpp"
+#include "llvm/util.hpp"
+#include "util/algorithm.hpp"
+
 
 using namespace clover;
 using namespace clover::llvm;
