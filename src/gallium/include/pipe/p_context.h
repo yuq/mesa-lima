@@ -690,7 +690,7 @@ struct pipe_context {
     *
     * \param ctx        pipe context
     * \param stream     where the output should be written to
-    * \param flags      a mask of PIPE_DEBUG_* flags
+    * \param flags      a mask of PIPE_DUMP_* flags
     */
    void (*dump_debug_state)(struct pipe_context *ctx, FILE *stream,
                             unsigned flags);

@@ -595,7 +595,11 @@ dd_flush_and_handle_hang(struct dd_context *dctx,
 
       if (f) {
          fprintf(f, "dd: %s.\n", cause);
-         dd_dump_driver_state(dctx, f, PIPE_DEBUG_DEVICE_IS_HUNG);
+         dd_dump_driver_state(dctx, f,
+                              PIPE_DUMP_DEVICE_STATUS_REGISTERS |
+                              PIPE_DUMP_CURRENT_STATES |
+                              PIPE_DUMP_CURRENT_SHADERS |
+                              PIPE_DUMP_LAST_COMMAND_BUFFER);
          dd_close_file_stream(f);
       }
 
@@ -649,7 +653,11 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
       case DD_DETECT_HANGS:
          if (!dscreen->no_flush &&
             dd_flush_and_check_hang(dctx, NULL, 0)) {
-            dd_dump_call(dctx, call, PIPE_DEBUG_DEVICE_IS_HUNG);
+            dd_dump_call(dctx, call,
+                         PIPE_DUMP_DEVICE_STATUS_REGISTERS |
+                         PIPE_DUMP_CURRENT_STATES |
+                         PIPE_DUMP_CURRENT_SHADERS |
+                         PIPE_DUMP_LAST_COMMAND_BUFFER);
 
             /* Terminate the process to prevent future hangs. */
             dd_kill_process();

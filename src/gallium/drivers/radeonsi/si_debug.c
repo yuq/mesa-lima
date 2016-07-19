@@ -665,24 +665,30 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 
-	if (flags & PIPE_DEBUG_DEVICE_IS_HUNG)
+	if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS)
 		si_dump_debug_registers(sctx, f);
 
-	si_dump_framebuffer(sctx, f);
-	si_dump_shader(sctx->screen, &sctx->vs_shader, f);
-	si_dump_shader(sctx->screen, &sctx->tcs_shader, f);
-	si_dump_shader(sctx->screen, &sctx->tes_shader, f);
-	si_dump_shader(sctx->screen, &sctx->gs_shader, f);
-	si_dump_shader(sctx->screen, &sctx->ps_shader, f);
+	if (flags & PIPE_DUMP_CURRENT_STATES)
+		si_dump_framebuffer(sctx, f);
 
-	si_dump_bo_list(sctx, &sctx->last_gfx, f);
-	si_dump_last_ib(sctx, f);
+	if (flags & PIPE_DUMP_CURRENT_SHADERS) {
+		si_dump_shader(sctx->screen, &sctx->vs_shader, f);
+		si_dump_shader(sctx->screen, &sctx->tcs_shader, f);
+		si_dump_shader(sctx->screen, &sctx->tes_shader, f);
+		si_dump_shader(sctx->screen, &sctx->gs_shader, f);
+		si_dump_shader(sctx->screen, &sctx->ps_shader, f);
+	}
 
-	fprintf(f, "Done.\n");
+	if (flags & PIPE_DUMP_LAST_COMMAND_BUFFER) {
+		si_dump_bo_list(sctx, &sctx->last_gfx, f);
+		si_dump_last_ib(sctx, f);
 
-	/* dump only once */
-	radeon_clear_saved_cs(&sctx->last_gfx);
-	r600_resource_reference(&sctx->last_trace_buf, NULL);
+		fprintf(f, "Done.\n");
+
+		/* dump only once */
+		radeon_clear_saved_cs(&sctx->last_gfx);
+		r600_resource_reference(&sctx->last_trace_buf, NULL);
+	}
 }
 
 static void si_dump_dma(struct si_context *sctx,
