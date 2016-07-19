@@ -386,7 +386,7 @@ ddebug_screen_create(struct pipe_screen *screen)
       break;
    case DD_DETECT_HANGS:
       fprintf(stderr, "Gallium debugger active. "
-              "The hang detection timout is %i ms.\n", timeout);
+              "The hang detection timeout is %i ms.\n", timeout);
       break;
    case DD_DUMP_APITRACE_CALL:
       fprintf(stderr, "Gallium debugger active. Going to dump an apitrace call.\n");
