@@ -1707,6 +1707,7 @@ CodeEmitterGM107::emitIADD()
       emitX  (0x2b);
    } else {
       emitInsn(0x1c000000);
+      emitNEG (0x38, insn->src(0));
       emitSAT (0x36);
       emitX   (0x35);
       emitCC  (0x34);
