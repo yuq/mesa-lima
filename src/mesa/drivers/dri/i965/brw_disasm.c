@@ -388,6 +388,30 @@ static const char *const dp_rc_msg_type_gen6[16] = {
    [GEN6_DATAPORT_WRITE_MESSAGE_RENDER_TARGET_UNORM_WRITE] = "RT UNORM write",
 };
 
+static const char *const dp_rc_msg_type_gen7[16] = {
+   [GEN7_DATAPORT_RC_MEDIA_BLOCK_READ] = "media block read",
+   [GEN7_DATAPORT_RC_TYPED_SURFACE_READ] = "typed surface read",
+   [GEN7_DATAPORT_RC_TYPED_ATOMIC_OP] = "typed atomic op",
+   [GEN7_DATAPORT_RC_MEMORY_FENCE] = "memory fence",
+   [GEN7_DATAPORT_RC_MEDIA_BLOCK_WRITE] = "media block write",
+   [GEN7_DATAPORT_RC_RENDER_TARGET_WRITE] = "RT write",
+   [GEN7_DATAPORT_RC_TYPED_SURFACE_WRITE] = "typed surface write"
+};
+
+static const char *const dp_rc_msg_type_gen9[16] = {
+   [GEN9_DATAPORT_RC_RENDER_TARGET_WRITE] = "RT write",
+   [GEN9_DATAPORT_RC_RENDER_TARGET_READ] = "RT read"
+};
+
+static const char *const *
+dp_rc_msg_type(const struct brw_device_info *devinfo)
+{
+   return (devinfo->gen >= 9 ? dp_rc_msg_type_gen9 :
+           devinfo->gen >= 7 ? dp_rc_msg_type_gen7 :
+           devinfo->gen >= 6 ? dp_rc_msg_type_gen6 :
+           dp_write_port_msg_type);
+}
+
 static const char *const m_rt_write_subtype[] = {
    [0b000] = "SIMD16",
    [0b001] = "SIMD16/RepData",
@@ -1413,9 +1437,7 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
             unsigned msg_type = brw_inst_dp_write_msg_type(devinfo, inst);
 
             err |= control(file, "DP rc message type",
-                           devinfo->gen >= 6 ? dp_rc_msg_type_gen6
-                                         : dp_write_port_msg_type,
-                           msg_type, &space);
+                           dp_rc_msg_type(devinfo), msg_type, &space);
 
             bool is_rt_write = msg_type ==
                (devinfo->gen >= 6 ? GEN6_DATAPORT_WRITE_MESSAGE_RENDER_TARGET_WRITE
