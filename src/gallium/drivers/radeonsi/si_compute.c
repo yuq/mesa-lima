@@ -298,6 +298,9 @@ static bool si_switch_compute_shader(struct si_context *sctx,
 	radeon_emit(cs, config->rsrc1);
 	radeon_emit(cs, config->rsrc2);
 
+	COMPUTE_DBG(sctx->screen, "COMPUTE_PGM_RSRC1: 0x%08x "
+		"COMPUTE_PGM_RSRC2: 0x%08x\n", config->rsrc1, config->rsrc2);
+
 	radeon_set_sh_reg(cs, R_00B860_COMPUTE_TMPRING_SIZE,
 	          S_00B860_WAVES(sctx->scratch_waves)
 	             | S_00B860_WAVESIZE(config->scratch_bytes_per_wave >> 10));
