@@ -314,6 +314,11 @@ ddebug_screen_create(struct pipe_screen *screen)
       puts("    fence timeout and dump context and driver information into");
       puts("    $HOME/"DD_DIR"/ when a hang is detected.");
       puts("");
+      puts("  GALLIUM_DDEBUG=\"pipelined [timeout in ms] [verbose]\"");
+      puts("    Detect a device hang after every draw call based on the given fence");
+      puts("    timeout without flushes and dump context and driver information into");
+      puts("    $HOME/"DD_DIR"/ when a hang is detected.");
+      puts("");
       puts("  GALLIUM_DDEBUG=\"apitrace [call#] [verbose]\"");
       puts("    Dump apitrace draw call information into $HOME/"DD_DIR"/. Implies 'noflush'.");
       puts("");
@@ -336,6 +341,11 @@ ddebug_screen_create(struct pipe_screen *screen)
       no_flush = true;
 
       if (sscanf(option+8, "%u", &apitrace_dump_call) != 1)
+         return screen;
+   } else if (!strncmp(option, "pipelined", 8)) {
+      mode = DD_DETECT_HANGS_PIPELINED;
+
+      if (sscanf(option+10, "%u", &timeout) != 1)
          return screen;
    } else {
       mode = DD_DETECT_HANGS;
@@ -392,6 +402,7 @@ ddebug_screen_create(struct pipe_screen *screen)
       fprintf(stderr, "Gallium debugger active. Logging all calls.\n");
       break;
    case DD_DETECT_HANGS:
+   case DD_DETECT_HANGS_PIPELINED:
       fprintf(stderr, "Gallium debugger active. "
               "The hang detection timeout is %i ms.\n", timeout);
       break;

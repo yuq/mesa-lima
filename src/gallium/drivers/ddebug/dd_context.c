@@ -27,6 +27,7 @@
 
 #include "dd_pipe.h"
 #include "tgsi/tgsi_parse.h"
+#include "util/u_inlines.h"
 #include "util/u_memory.h"
 
 
@@ -589,6 +590,19 @@ dd_context_destroy(struct pipe_context *_pipe)
    struct dd_context *dctx = dd_context(_pipe);
    struct pipe_context *pipe = dctx->pipe;
 
+   if (dctx->thread) {
+      pipe_mutex_lock(dctx->mutex);
+      dctx->kill_thread = 1;
+      pipe_mutex_unlock(dctx->mutex);
+      pipe_thread_wait(dctx->thread);
+      pipe_mutex_destroy(dctx->mutex);
+      assert(!dctx->records);
+   }
+
+   if (dctx->fence) {
+      pipe->transfer_unmap(pipe, dctx->fence_transfer);
+      pipe_resource_reference(&dctx->fence, NULL);
+   }
    pipe->destroy(pipe);
    FREE(dctx);
 }
@@ -731,10 +745,8 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
       return NULL;
 
    dctx = CALLOC_STRUCT(dd_context);
-   if (!dctx) {
-      pipe->destroy(pipe);
-      return NULL;
-   }
+   if (!dctx)
+      goto fail;
 
    dctx->pipe = pipe;
    dctx->base.priv = pipe->priv; /* expose wrapped priv data */
@@ -826,5 +838,40 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
    dd_init_draw_functions(dctx);
 
    dctx->draw_state.sample_mask = ~0;
+
+   if (dscreen->mode == DD_DETECT_HANGS_PIPELINED) {
+      dctx->fence = pipe_buffer_create(dscreen->screen, PIPE_BIND_CUSTOM,
+                                            PIPE_USAGE_STAGING, 4);
+      if (!dctx->fence)
+         goto fail;
+
+      dctx->mapped_fence = pipe_buffer_map(pipe, dctx->fence,
+                                           PIPE_TRANSFER_READ_WRITE |
+                                           PIPE_TRANSFER_PERSISTENT |
+                                           PIPE_TRANSFER_COHERENT,
+                                           &dctx->fence_transfer);
+      if (!dctx->mapped_fence)
+         goto fail;
+
+      *dctx->mapped_fence = 0;
+
+      pipe_mutex_init(dctx->mutex);
+      dctx->thread = pipe_thread_create(dd_thread_pipelined_hang_detect, dctx);
+      if (!dctx->thread) {
+         pipe_mutex_destroy(dctx->mutex);
+         goto fail;
+      }
+   }
+
    return &dctx->base;
+
+fail:
+   if (dctx) {
+      if (dctx->mapped_fence)
+         pipe_transfer_unmap(pipe, dctx->fence_transfer);
+      pipe_resource_reference(&dctx->fence, NULL);
+      FREE(dctx);
+   }
+   pipe->destroy(pipe);
+   return NULL;
 }
