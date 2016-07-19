@@ -1648,7 +1648,7 @@ esac
 
 AC_ARG_WITH([vulkan-icddir],
     [AS_HELP_STRING([--with-vulkan-icddir=DIR],
-        [directory for the Vulkan driver icd files @<:@${sysconfdir}/vulkan/icd.d@:>@])],
+        [directory for the Vulkan driver icd files @<:@${datarootdir}/vulkan/icd.d@:>@])],
     [VULKAN_ICD_INSTALL_DIR="$withval"],
     [VULKAN_ICD_INSTALL_DIR='${datarootdir}/vulkan/icd.d'])
 AC_SUBST([VULKAN_ICD_INSTALL_DIR])
