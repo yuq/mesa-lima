@@ -345,6 +345,8 @@ The integer capabilities:
   supported in ``set_window_rectangles``.
 * ``PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED``: If true, the driver implements support
   for ``pipe_rasterizer_state::offset_units_unscaled``.
+* ``PIPE_CAP_VIEWPORT_SUBPIXEL_BITS``: Number of bits of subpixel precision for
+  floating point viewport bounds.
 
 
 .. _pipe_capf:

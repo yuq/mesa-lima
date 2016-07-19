@@ -105,6 +105,9 @@ void st_init_limits(struct pipe_screen *screen,
    c->MaxViewportHeight =
    c->MaxRenderbufferSize = c->MaxTextureRectSize;
 
+   c->ViewportSubpixelBits =
+      screen->get_param(screen, PIPE_CAP_VIEWPORT_SUBPIXEL_BITS);
+
    c->MaxDrawBuffers = c->MaxColorAttachments =
       _clamp(screen->get_param(screen, PIPE_CAP_MAX_RENDER_TARGETS),
              1, MAX_DRAW_BUFFERS);
