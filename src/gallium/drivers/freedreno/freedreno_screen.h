@@ -34,6 +34,7 @@
 
 #include "pipe/p_screen.h"
 #include "util/u_memory.h"
+#include "os/os_thread.h"
 
 #include "freedreno_batch_cache.h"
 
@@ -41,6 +42,8 @@ struct fd_bo;
 
 struct fd_screen {
 	struct pipe_screen base;
+
+	pipe_mutex lock;
 
 	/* it would be tempting to use pipe_reference here, but that
 	 * really doesn't work well if it isn't the first member of

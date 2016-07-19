@@ -207,6 +207,17 @@ void fd_batch_check_size(struct fd_batch *batch);
 void __fd_batch_describe(char* buf, const struct fd_batch *batch);
 void __fd_batch_destroy(struct fd_batch *batch);
 
+/*
+ * NOTE the rule is, you need to hold the screen->lock when destroying
+ * a batch..  so either use fd_batch_reference() (which grabs the lock
+ * for you) if you don't hold the lock, or fd_batch_reference_locked()
+ * if you do hold the lock.
+ *
+ * WARNING the _locked() version can briefly drop the lock.  Without
+ * recursive mutexes, I'm not sure there is much else we can do (since
+ * __fd_batch_destroy() needs to unref resources)
+ */
+
 static inline void
 fd_batch_reference(struct fd_batch **ptr, struct fd_batch *batch)
 {
@@ -216,6 +227,33 @@ fd_batch_reference(struct fd_batch **ptr, struct fd_batch *batch)
 		__fd_batch_destroy(old_batch);
 	*ptr = batch;
 }
+
+/* fwd-decl prototypes to untangle header dependency :-/ */
+static inline void fd_context_assert_locked(struct fd_context *ctx);
+static inline void fd_context_lock(struct fd_context *ctx);
+static inline void fd_context_unlock(struct fd_context *ctx);
+
+static inline void
+fd_batch_reference_locked(struct fd_batch **ptr, struct fd_batch *batch)
+{
+	struct fd_batch *old_batch = *ptr;
+
+	if (old_batch)
+		fd_context_assert_locked(old_batch->ctx);
+	else if (batch)
+		fd_context_assert_locked(batch->ctx);
+
+	if (pipe_reference_described(&(*ptr)->reference, &batch->reference,
+			(debug_reference_descriptor)__fd_batch_describe)) {
+		struct fd_context *ctx = old_batch->ctx;
+		fd_context_unlock(ctx);
+		__fd_batch_destroy(old_batch);
+		fd_context_lock(ctx);
+	}
+	*ptr = batch;
+}
+
+#include "freedreno_context.h"
 
 static inline void
 fd_reset_wfi(struct fd_batch *batch)

@@ -29,7 +29,9 @@
 
 #include "pipe/p_state.h"
 
-#include "freedreno_batch.h"
+struct fd_resource;
+struct fd_batch;
+struct fd_context;
 
 struct hash_table;
 

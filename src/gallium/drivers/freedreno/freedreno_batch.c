@@ -145,9 +145,11 @@ batch_flush_reset_dependencies(struct fd_batch *batch, bool flush)
 }
 
 static void
-batch_reset_resources(struct fd_batch *batch)
+batch_reset_resources_locked(struct fd_batch *batch)
 {
 	struct set_entry *entry;
+
+	pipe_mutex_assert_locked(batch->ctx->screen->lock);
 
 	set_foreach(batch->resources, entry) {
 		struct fd_resource *rsc = (struct fd_resource *)entry->key;
@@ -155,8 +157,16 @@ batch_reset_resources(struct fd_batch *batch)
 		debug_assert(rsc->batch_mask & (1 << batch->idx));
 		rsc->batch_mask &= ~(1 << batch->idx);
 		if (rsc->write_batch == batch)
-			fd_batch_reference(&rsc->write_batch, NULL);
+			fd_batch_reference_locked(&rsc->write_batch, NULL);
 	}
+}
+
+static void
+batch_reset_resources(struct fd_batch *batch)
+{
+	pipe_mutex_lock(batch->ctx->screen->lock);
+	batch_reset_resources_locked(batch);
+	pipe_mutex_unlock(batch->ctx->screen->lock);
 }
 
 static void
@@ -183,11 +193,13 @@ fd_batch_reset(struct fd_batch *batch)
 void
 __fd_batch_destroy(struct fd_batch *batch)
 {
-	fd_bc_invalidate_batch(batch, true);
-
 	DBG("%p", batch);
 
 	util_copy_framebuffer_state(&batch->framebuffer, NULL);
+
+	pipe_mutex_lock(batch->ctx->screen->lock);
+	fd_bc_invalidate_batch(batch, true);
+	pipe_mutex_unlock(batch->ctx->screen->lock);
 
 	batch_fini(batch);
 
@@ -267,7 +279,9 @@ batch_flush(struct fd_batch *batch)
 	if (batch == batch->ctx->batch) {
 		batch_reset(batch);
 	} else {
+		pipe_mutex_lock(batch->ctx->screen->lock);
 		fd_bc_invalidate_batch(batch, false);
+		pipe_mutex_unlock(batch->ctx->screen->lock);
 	}
 }
 
@@ -315,10 +329,12 @@ batch_add_dep(struct fd_batch *batch, struct fd_batch *dep)
 	 */
 	if (batch_depends_on(dep, batch)) {
 		DBG("%p: flush forced on %p!", batch, dep);
+		pipe_mutex_unlock(batch->ctx->screen->lock);
 		fd_batch_flush(dep, false);
+		pipe_mutex_lock(batch->ctx->screen->lock);
 	} else {
 		struct fd_batch *other = NULL;
-		fd_batch_reference(&other, dep);
+		fd_batch_reference_locked(&other, dep);
 		batch->dependents_mask |= (1 << dep->idx);
 		DBG("%p: added dependency on %p", batch, dep);
 	}
@@ -327,6 +343,8 @@ batch_add_dep(struct fd_batch *batch, struct fd_batch *dep)
 void
 fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool write)
 {
+	pipe_mutex_assert_locked(batch->ctx->screen->lock);
+
 	if (rsc->stencil)
 		fd_batch_resource_used(batch, rsc->stencil, write);
 
@@ -353,7 +371,7 @@ fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool wri
 				fd_batch_reference_locked(&b, NULL);
 			}
 		}
-		fd_batch_reference(&rsc->write_batch, batch);
+		fd_batch_reference_locked(&rsc->write_batch, batch);
 	} else {
 		if (rsc->write_batch) {
 			batch_add_dep(batch, rsc->write_batch);

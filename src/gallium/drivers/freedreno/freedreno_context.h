@@ -283,6 +283,24 @@ fd_context(struct pipe_context *pctx)
 	return (struct fd_context *)pctx;
 }
 
+static inline void
+fd_context_assert_locked(struct fd_context *ctx)
+{
+	pipe_mutex_assert_locked(ctx->screen->lock);
+}
+
+static inline void
+fd_context_lock(struct fd_context *ctx)
+{
+	pipe_mutex_lock(ctx->screen->lock);
+}
+
+static inline void
+fd_context_unlock(struct fd_context *ctx)
+{
+	pipe_mutex_unlock(ctx->screen->lock);
+}
+
 static inline struct pipe_scissor_state *
 fd_context_get_scissor(struct fd_context *ctx)
 {

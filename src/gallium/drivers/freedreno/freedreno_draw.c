@@ -101,6 +101,8 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	 * Figure out the buffers/features we need:
 	 */
 
+	pipe_mutex_lock(ctx->screen->lock);
+
 	if (fd_depth_enabled(ctx)) {
 		buffers |= FD_BUFFER_DEPTH;
 		resource_written(batch, pfb->zsbuf->texture);
@@ -160,6 +162,8 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 			resource_written(batch, ctx->streamout.targets[i]->buffer);
 
 	resource_written(batch, batch->query_buf);
+
+	pipe_mutex_unlock(ctx->screen->lock);
 
 	batch->num_draws++;
 
@@ -249,6 +253,8 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	batch->resolve |= buffers;
 	batch->needs_flush = true;
 
+	pipe_mutex_lock(ctx->screen->lock);
+
 	if (buffers & PIPE_CLEAR_COLOR)
 		for (i = 0; i < pfb->nr_cbufs; i++)
 			if (buffers & (PIPE_CLEAR_COLOR0 << i))
@@ -260,6 +266,8 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	}
 
 	resource_written(batch, batch->query_buf);
+
+	pipe_mutex_unlock(ctx->screen->lock);
 
 	DBG("%p: %x %ux%u depth=%f, stencil=%u (%s/%s)", batch, buffers,
 		pfb->width, pfb->height, depth, stencil,

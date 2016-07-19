@@ -179,6 +179,8 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
 	 */
 	fd_bc_invalidate_resource(rsc, false);
 
+	pipe_mutex_lock(ctx->screen->lock);
+
 	/* Swap the backing bo's, so shadow becomes the old buffer,
 	 * blit from shadow to new buffer.  From here on out, we
 	 * cannot fail.
@@ -209,6 +211,8 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
 		_mesa_set_add(batch->resources, shadow);
 	}
 	swap(rsc->batch_mask, shadow->batch_mask);
+
+	pipe_mutex_unlock(ctx->screen->lock);
 
 	struct pipe_blit_info blit = {0};
 	blit.dst.resource = prsc;
@@ -487,10 +491,15 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		 * to wait.
 		 */
 	} else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
-		if ((usage & PIPE_TRANSFER_WRITE) && rsc->write_batch &&
-				rsc->write_batch->back_blit) {
+		struct fd_batch *write_batch = NULL;
+
+		/* hold a reference, so it doesn't disappear under us: */
+		fd_batch_reference(&write_batch, rsc->write_batch);
+
+		if ((usage & PIPE_TRANSFER_WRITE) && write_batch &&
+				write_batch->back_blit) {
 			/* if only thing pending is a back-blit, we can discard it: */
-			fd_batch_reset(rsc->write_batch);
+			fd_batch_reset(write_batch);
 		}
 
 		/* If the GPU is writing to the resource, or if it is reading from the
@@ -527,10 +536,12 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 				}
 				assert(rsc->batch_mask == 0);
 			} else {
-				fd_batch_flush(rsc->write_batch, true);
+				fd_batch_flush(write_batch, true);
 			}
 			assert(!rsc->write_batch);
 		}
+
+		fd_batch_reference(&write_batch, NULL);
 
 		/* The GPU keeps track of how the various bo's are being used, and
 		 * will wait if necessary for the proper operation to have

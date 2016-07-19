@@ -138,6 +138,8 @@ fd_screen_destroy(struct pipe_screen *pscreen)
 
 	fd_bc_fini(&screen->batch_cache);
 
+	pipe_mutex_destroy(screen->lock);
+
 	free(screen);
 }
 
@@ -675,6 +677,8 @@ fd_screen_create(struct fd_device *dev)
 		screen->reorder = !!(fd_mesa_debug & FD_DBG_REORDER);
 
 	fd_bc_init(&screen->batch_cache);
+
+	pipe_mutex_init(screen->lock);
 
 	pscreen->destroy = fd_screen_destroy;
 	pscreen->get_param = fd_screen_get_param;

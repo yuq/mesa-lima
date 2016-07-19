@@ -130,15 +130,21 @@ fd_bc_flush(struct fd_batch_cache *cache, struct fd_context *ctx)
 	struct hash_entry *entry;
 	struct fd_batch *last_batch = NULL;
 
+	pipe_mutex_lock(ctx->screen->lock);
+
 	hash_table_foreach(cache->ht, entry) {
 		struct fd_batch *batch = NULL;
-		fd_batch_reference(&batch, (struct fd_batch *)entry->data);
+		fd_batch_reference_locked(&batch, (struct fd_batch *)entry->data);
 		if (batch->ctx == ctx) {
+			pipe_mutex_unlock(ctx->screen->lock);
 			fd_batch_reference(&last_batch, batch);
 			fd_batch_flush(batch, false);
+			pipe_mutex_lock(ctx->screen->lock);
 		}
-		fd_batch_reference(&batch, NULL);
+		fd_batch_reference_locked(&batch, NULL);
 	}
+
+	pipe_mutex_unlock(ctx->screen->lock);
 
 	if (last_batch) {
 		fd_batch_sync(last_batch);
@@ -154,19 +160,26 @@ fd_bc_invalidate_context(struct fd_context *ctx)
 	struct fd_batch_cache *cache = &ctx->screen->batch_cache;
 	struct fd_batch *batch;
 
+	pipe_mutex_lock(ctx->screen->lock);
+
 	foreach_batch(batch, cache, cache->batch_mask) {
-		if (batch->ctx == ctx) {
-			fd_batch_reset(batch);
-			fd_batch_reference(&batch, NULL);
-		}
+		if (batch->ctx == ctx)
+			fd_batch_reference_locked(&batch, NULL);
 	}
+
+	pipe_mutex_unlock(ctx->screen->lock);
 }
 
 void
 fd_bc_invalidate_batch(struct fd_batch *batch, bool destroy)
 {
+	if (!batch)
+		return;
+
 	struct fd_batch_cache *cache = &batch->ctx->screen->batch_cache;
 	struct key *key = (struct key *)batch->key;
+
+	pipe_mutex_assert_locked(batch->ctx->screen->lock);
 
 	if (destroy) {
 		cache->batches[batch->idx] = NULL;
@@ -194,7 +207,9 @@ void
 fd_bc_invalidate_resource(struct fd_resource *rsc, bool destroy)
 {
 	struct fd_screen *screen = fd_screen(rsc->base.b.screen);
-		struct fd_batch *batch;
+	struct fd_batch *batch;
+
+	pipe_mutex_lock(screen->lock);
 
 	if (destroy) {
 		foreach_batch(batch, &screen->batch_cache, rsc->batch_mask) {
@@ -203,13 +218,15 @@ fd_bc_invalidate_resource(struct fd_resource *rsc, bool destroy)
 		}
 		rsc->batch_mask = 0;
 
-		fd_batch_reference(&rsc->write_batch, NULL);
+		fd_batch_reference_locked(&rsc->write_batch, NULL);
 	}
 
 	foreach_batch(batch, &screen->batch_cache, rsc->bc_batch_mask)
 		fd_bc_invalidate_batch(batch, false);
 
 	rsc->bc_batch_mask = 0;
+
+	pipe_mutex_unlock(screen->lock);
 }
 
 struct fd_batch *
@@ -217,6 +234,8 @@ fd_bc_alloc_batch(struct fd_batch_cache *cache, struct fd_context *ctx)
 {
 	struct fd_batch *batch;
 	uint32_t idx;
+
+	pipe_mutex_lock(ctx->screen->lock);
 
 	while ((idx = ffs(~cache->batch_mask)) == 0) {
 #if 0
@@ -240,10 +259,16 @@ fd_bc_alloc_batch(struct fd_batch_cache *cache, struct fd_context *ctx)
 					!cache->batches[i]->needs_flush)
 				continue;
 			if (!flush_batch || (cache->batches[i]->seqno < flush_batch->seqno))
-				fd_batch_reference(&flush_batch, cache->batches[i]);
+				fd_batch_reference_locked(&flush_batch, cache->batches[i]);
 		}
+
+		/* we can drop lock temporarily here, since we hold a ref,
+		 * flush_batch won't disappear under us.
+		 */
+		pipe_mutex_unlock(ctx->screen->lock);
 		DBG("%p: too many batches!  flush forced!", flush_batch);
 		fd_batch_flush(flush_batch, true);
+		pipe_mutex_lock(ctx->screen->lock);
 
 		/* While the resources get cleaned up automatically, the flush_batch
 		 * doesn't get removed from the dependencies of other batches, so
@@ -259,18 +284,18 @@ fd_bc_alloc_batch(struct fd_batch_cache *cache, struct fd_context *ctx)
 			if (other->dependents_mask & (1 << flush_batch->idx)) {
 				other->dependents_mask &= ~(1 << flush_batch->idx);
 				struct fd_batch *ref = flush_batch;
-				fd_batch_reference(&ref, NULL);
+				fd_batch_reference_locked(&ref, NULL);
 			}
 		}
 
-		fd_batch_reference(&flush_batch, NULL);
+		fd_batch_reference_locked(&flush_batch, NULL);
 	}
 
 	idx--;              /* bit zero returns 1 for ffs() */
 
 	batch = fd_batch_create(ctx);
 	if (!batch)
-		return NULL;
+		goto out;
 
 	batch->seqno = cache->cnt++;
 	batch->idx = idx;
@@ -278,6 +303,9 @@ fd_bc_alloc_batch(struct fd_batch_cache *cache, struct fd_context *ctx)
 
 	debug_assert(cache->batches[idx] == NULL);
 	cache->batches[idx] = batch;
+
+out:
+	pipe_mutex_unlock(ctx->screen->lock);
 
 	return batch;
 }
@@ -312,6 +340,8 @@ batch_from_key(struct fd_batch_cache *cache, struct key *key,
 	if (!batch)
 		return NULL;
 
+	pipe_mutex_lock(ctx->screen->lock);
+
 	_mesa_hash_table_insert_pre_hashed(cache->ht, hash, key, batch);
 	batch->key = key;
 	batch->hash = hash;
@@ -320,6 +350,8 @@ batch_from_key(struct fd_batch_cache *cache, struct key *key,
 		struct fd_resource *rsc = fd_resource(key->surf[idx].texture);
 		rsc->bc_batch_mask = (1 << batch->idx);
 	}
+
+	pipe_mutex_unlock(ctx->screen->lock);
 
 	return batch;
 }
