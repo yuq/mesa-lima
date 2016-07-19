@@ -499,10 +499,8 @@ intel_miptree_create_layout(struct brw_context *brw,
       }
    }
 
-   if (target == GL_TEXTURE_CUBE_MAP) {
-      assert(depth0 == 1);
-      depth0 = 6;
-   }
+   if (target == GL_TEXTURE_CUBE_MAP)
+      assert(depth0 == 6);
 
    mt->physical_width0 = width0;
    mt->physical_height0 = height0;
@@ -1035,6 +1033,15 @@ intel_get_image_dims(struct gl_texture_image *image,
       *width = image->Width;
       *height = 1;
       *depth = image->Height;
+      break;
+   case GL_TEXTURE_CUBE_MAP:
+      /* For Cube maps, the mesa/main api layer gives us a depth of 1 even
+       * though we really have 6 slices.
+       */
+      assert(image->Depth == 1);
+      *width = image->Width;
+      *height = image->Height;
+      *depth = 6;
       break;
    default:
       *width = image->Width;
