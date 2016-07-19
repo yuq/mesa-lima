@@ -664,6 +664,7 @@ static void
 fd4_emit_tile_init(struct fd_batch *batch)
 {
 	struct fd_ringbuffer *ring = batch->gmem;
+	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct fd_gmem_stateobj *gmem = &batch->ctx->gmem;
 
 	fd4_emit_restore(batch, ring);
@@ -673,6 +674,11 @@ fd4_emit_tile_init(struct fd_batch *batch)
 			A4XX_VSC_BIN_SIZE_HEIGHT(gmem->bin_h));
 
 	update_vsc_pipe(batch);
+
+	fd_wfi(batch, ring);
+	OUT_PKT0(ring, REG_A4XX_RB_FRAME_BUFFER_DIMENSION, 1);
+	OUT_RING(ring, A4XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
+			A4XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
 
 	if (use_hw_binning(batch)) {
 		OUT_PKT0(ring, REG_A4XX_RB_MODE_CONTROL, 1);
@@ -743,14 +749,6 @@ fd4_emit_tile_prep(struct fd_batch *batch, struct fd_tile *tile)
 				fd4_pipe2depth(pfb->zsbuf->format)));
 	} else {
 		OUT_RING(ring, A4XX_GRAS_DEPTH_CONTROL_FORMAT(DEPTH4_NONE));
-	}
-
-	if (ctx->needs_rb_fbd) {
-		fd_wfi(batch, ring);
-		OUT_PKT0(ring, REG_A4XX_RB_FRAME_BUFFER_DIMENSION, 1);
-		OUT_RING(ring, A4XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
-				A4XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
-		ctx->needs_rb_fbd = false;
 	}
 }
 

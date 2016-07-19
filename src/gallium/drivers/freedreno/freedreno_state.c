@@ -150,10 +150,6 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 
 	cso = &ctx->batch->framebuffer;
 
-	if ((cso->width != framebuffer->width) ||
-			(cso->height != framebuffer->height))
-		ctx->needs_rb_fbd = true;
-
 	util_copy_framebuffer_state(cso, framebuffer);
 
 	ctx->dirty |= FD_DIRTY_FRAMEBUFFER;

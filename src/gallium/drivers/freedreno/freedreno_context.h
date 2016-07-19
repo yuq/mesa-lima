@@ -176,12 +176,6 @@ struct fd_context {
 	 */
 	bool in_blit : 1;
 
-	/* Do we need to re-emit RB_FRAME_BUFFER_DIMENSION?  At least on a3xx
-	 * it is not a banked context register, so it needs a WFI to update.
-	 * Keep track if it has actually changed, to avoid unneeded WFI.
-	 * */
-	bool needs_rb_fbd : 1;
-
 	struct pipe_scissor_state scissor;
 
 	/* we don't have a disable/enable bit for scissor, so instead we keep

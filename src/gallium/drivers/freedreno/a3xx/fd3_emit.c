@@ -896,8 +896,6 @@ fd3_emit_restore(struct fd_batch *batch, struct fd_ringbuffer *ring)
 	fd_wfi(batch, ring);
 
 	fd_hw_query_enable(batch, ring);
-
-	ctx->needs_rb_fbd = true;
 }
 
 static void

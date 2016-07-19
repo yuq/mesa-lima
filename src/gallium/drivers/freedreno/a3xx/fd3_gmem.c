@@ -924,6 +924,7 @@ static void
 fd3_emit_tile_init(struct fd_batch *batch)
 {
 	struct fd_ringbuffer *ring = batch->gmem;
+	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct fd_gmem_stateobj *gmem = &batch->ctx->gmem;
 	uint32_t rb_render_control;
 
@@ -937,6 +938,11 @@ fd3_emit_tile_init(struct fd_batch *batch)
 			A3XX_VSC_BIN_SIZE_HEIGHT(gmem->bin_h));
 
 	update_vsc_pipe(batch);
+
+	fd_wfi(batch, ring);
+	OUT_PKT0(ring, REG_A3XX_RB_FRAME_BUFFER_DIMENSION, 1);
+	OUT_RING(ring, A3XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
+			A3XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
 
 	if (use_hw_binning(batch)) {
 		/* emit hw binning pass: */
@@ -957,17 +963,8 @@ fd3_emit_tile_init(struct fd_batch *batch)
 static void
 fd3_emit_tile_prep(struct fd_batch *batch, struct fd_tile *tile)
 {
-	struct fd_context *ctx = batch->ctx;
 	struct fd_ringbuffer *ring = batch->gmem;
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
-
-	if (ctx->needs_rb_fbd) {
-		fd_wfi(batch, ring);
-		OUT_PKT0(ring, REG_A3XX_RB_FRAME_BUFFER_DIMENSION, 1);
-		OUT_RING(ring, A3XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
-				A3XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
-		ctx->needs_rb_fbd = false;
-	}
 
 	OUT_PKT0(ring, REG_A3XX_RB_MODE_CONTROL, 1);
 	OUT_RING(ring, A3XX_RB_MODE_CONTROL_RENDER_MODE(RB_RENDERING_PASS) |

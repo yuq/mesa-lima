@@ -887,8 +887,6 @@ fd4_emit_restore(struct fd_batch *batch, struct fd_ringbuffer *ring)
 	OUT_RING(ring, 0x0);
 
 	fd_hw_query_enable(batch, ring);
-
-	ctx->needs_rb_fbd = true;
 }
 
 static void
