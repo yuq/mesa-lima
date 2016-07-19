@@ -281,6 +281,9 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.EXT_shader_integer_mix = ctx->Const.GLSLVersion >= 130;
    ctx->Extensions.MESA_shader_integer_functions = ctx->Const.GLSLVersion >= 130;
 
+   if ((brw->is_g4x || brw->gen >= 5) && brw->gen < 9)
+      ctx->Extensions.MESA_shader_framebuffer_fetch_non_coherent = true;
+
    if (brw->gen >= 5) {
       ctx->Extensions.ARB_texture_query_levels = ctx->Const.GLSLVersion >= 130;
       ctx->Extensions.ARB_texture_query_lod = true;
