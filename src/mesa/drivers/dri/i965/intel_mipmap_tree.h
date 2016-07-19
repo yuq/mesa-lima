@@ -797,6 +797,13 @@ intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
 			       GLuint level, GLuint slice,
 			       GLuint *x, GLuint *y);
 
+enum isl_surf_dim
+get_isl_surf_dim(GLenum target);
+
+enum isl_dim_layout
+get_isl_dim_layout(const struct brw_device_info *devinfo, uint32_t tiling,
+                   GLenum target);
+
 void
 intel_miptree_get_isl_surf(struct brw_context *brw,
                            const struct intel_mipmap_tree *mt,

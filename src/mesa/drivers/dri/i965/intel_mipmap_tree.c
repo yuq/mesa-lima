@@ -2978,21 +2978,14 @@ intel_miptree_unmap(struct brw_context *brw,
    intel_miptree_release_map(mt, level, slice);
 }
 
-void
-intel_miptree_get_isl_surf(struct brw_context *brw,
-                           const struct intel_mipmap_tree *mt,
-                           struct isl_surf *surf)
+enum isl_surf_dim
+get_isl_surf_dim(GLenum target)
 {
-   switch (mt->target) {
+   switch (target) {
    case GL_TEXTURE_1D:
-   case GL_TEXTURE_1D_ARRAY: {
-      surf->dim = ISL_SURF_DIM_1D;
-      if (brw->gen >= 9 && mt->tiling == I915_TILING_NONE)
-         surf->dim_layout = ISL_DIM_LAYOUT_GEN9_1D;
-      else
-         surf->dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
-      break;
-   }
+   case GL_TEXTURE_1D_ARRAY:
+      return ISL_SURF_DIM_1D;
+
    case GL_TEXTURE_2D:
    case GL_TEXTURE_2D_ARRAY:
    case GL_TEXTURE_RECTANGLE:
@@ -3001,19 +2994,51 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
    case GL_TEXTURE_EXTERNAL_OES:
-      surf->dim = ISL_SURF_DIM_2D;
-      surf->dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
-      break;
+      return ISL_SURF_DIM_2D;
+
    case GL_TEXTURE_3D:
-      surf->dim = ISL_SURF_DIM_3D;
-      if (brw->gen >= 9)
-         surf->dim_layout = ISL_DIM_LAYOUT_GEN4_2D;
-      else
-         surf->dim_layout = ISL_DIM_LAYOUT_GEN4_3D;
-      break;
-   default:
-      unreachable("Invalid texture target");
+      return ISL_SURF_DIM_3D;
    }
+
+   unreachable("Invalid texture target");
+}
+
+enum isl_dim_layout
+get_isl_dim_layout(const struct brw_device_info *devinfo, uint32_t tiling,
+                   GLenum target)
+{
+   switch (target) {
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_1D_ARRAY:
+      return (devinfo->gen >= 9 && tiling == I915_TILING_NONE ?
+              ISL_DIM_LAYOUT_GEN9_1D : ISL_DIM_LAYOUT_GEN4_2D);
+
+   case GL_TEXTURE_2D:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_RECTANGLE:
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+   case GL_TEXTURE_EXTERNAL_OES:
+      return ISL_DIM_LAYOUT_GEN4_2D;
+
+   case GL_TEXTURE_3D:
+      return (devinfo->gen >= 9 ?
+              ISL_DIM_LAYOUT_GEN4_2D : ISL_DIM_LAYOUT_GEN4_3D);
+   }
+
+   unreachable("Invalid texture target");
+}
+
+void
+intel_miptree_get_isl_surf(struct brw_context *brw,
+                           const struct intel_mipmap_tree *mt,
+                           struct isl_surf *surf)
+{
+   surf->dim = get_isl_surf_dim(mt->target);
+   surf->dim_layout = get_isl_dim_layout(brw->intelScreen->devinfo,
+                                         mt->tiling, mt->target);
 
    if (mt->num_samples > 1) {
       switch (mt->msaa_layout) {
