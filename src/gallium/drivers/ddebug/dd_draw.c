@@ -99,10 +99,9 @@ struct dd_call
 };
 
 static FILE *
-dd_get_file_stream(struct dd_context *dctx)
+dd_get_file_stream(struct dd_screen *dscreen, unsigned apitrace_call_number)
 {
-   struct dd_screen *dscreen = dd_screen(dctx->base.screen);
-   struct pipe_screen *screen = dctx->pipe->screen;
+   struct pipe_screen *screen = dscreen->screen;
    FILE *f = dd_get_debug_file(dscreen->verbose);
    if (!f)
       return NULL;
@@ -111,9 +110,9 @@ dd_get_file_stream(struct dd_context *dctx)
    fprintf(f, "Device vendor: %s\n", screen->get_device_vendor(screen));
    fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
 
-   if (dctx->apitrace_call_number)
+   if (apitrace_call_number)
       fprintf(f, "Last apitrace call: %u\n\n",
-              dctx->apitrace_call_number);
+              apitrace_call_number);
    return f;
 }
 
@@ -507,7 +506,8 @@ dd_dump_driver_state(struct dd_context *dctx, FILE *f, unsigned flags)
 static void
 dd_dump_call(struct dd_context *dctx, struct dd_call *call, unsigned flags)
 {
-   FILE *f = dd_get_file_stream(dctx);
+   FILE *f = dd_get_file_stream(dd_screen(dctx->base.screen),
+                                dctx->apitrace_call_number);
 
    if (!f)
       return;
@@ -591,7 +591,8 @@ dd_flush_and_handle_hang(struct dd_context *dctx,
                          const char *cause)
 {
    if (dd_flush_and_check_hang(dctx, fence, flags)) {
-      FILE *f = dd_get_file_stream(dctx);
+      FILE *f = dd_get_file_stream(dd_screen(dctx->base.screen),
+                                   dctx->apitrace_call_number);
 
       if (f) {
          fprintf(f, "dd: %s.\n", cause);
