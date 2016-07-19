@@ -39,6 +39,7 @@
 #include <llvm-c/Target.h>
 
 #include <clang/CodeGen/CodeGenAction.h>
+#include <clang/Lex/PreprocessorOptions.h>
 #include <clang/Frontend/TextDiagnosticBuffer.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Basic/TargetInfo.h>
