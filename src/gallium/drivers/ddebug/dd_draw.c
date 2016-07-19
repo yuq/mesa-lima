@@ -556,7 +556,7 @@ dd_kill_process(void)
    fprintf(stderr, "dd: Aborting the process...\n");
    fflush(stdout);
    fflush(stderr);
-   abort();
+   exit(1);
 }
 
 static bool
