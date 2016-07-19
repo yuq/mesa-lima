@@ -257,7 +257,7 @@ emit_binning_workaround(struct fd_batch *batch)
 	OUT_RING(ring, A3XX_GRAS_SC_SCREEN_SCISSOR_BR_X(31) |
 			A3XX_GRAS_SC_SCREEN_SCISSOR_BR_Y(0));
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 	OUT_PKT0(ring, REG_A3XX_GRAS_CL_VPORT_XOFFSET, 6);
 	OUT_RING(ring, A3XX_GRAS_CL_VPORT_XOFFSET(0.0));
 	OUT_RING(ring, A3XX_GRAS_CL_VPORT_XSCALE(1.0));
@@ -284,7 +284,7 @@ emit_binning_workaround(struct fd_batch *batch)
 	OUT_RING(ring, 2);            /* NumIndices */
 	OUT_RING(ring, 2);
 	OUT_RING(ring, 1);
-	fd_reset_wfi(ctx);
+	fd_reset_wfi(batch);
 
 	OUT_PKT0(ring, REG_A3XX_HLSQ_CONTROL_0_REG, 1);
 	OUT_RING(ring, A3XX_HLSQ_CONTROL_0_REG_FSTHREADSIZE(TWO_QUADS));
@@ -292,7 +292,7 @@ emit_binning_workaround(struct fd_batch *batch)
 	OUT_PKT0(ring, REG_A3XX_VFD_PERFCOUNTER0_SELECT, 1);
 	OUT_RING(ring, 0x00000000);
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 	OUT_PKT0(ring, REG_A3XX_VSC_BIN_SIZE, 1);
 	OUT_RING(ring, A3XX_VSC_BIN_SIZE_WIDTH(gmem->bin_w) |
 			A3XX_VSC_BIN_SIZE_HEIGHT(gmem->bin_h));
@@ -393,7 +393,7 @@ fd3_emit_tile_gmem2mem(struct fd_batch *batch, struct fd_tile *tile)
 	OUT_PKT0(ring, REG_A3XX_GRAS_CL_CLIP_CNTL, 1);
 	OUT_RING(ring, 0x00000000);   /* GRAS_CL_CLIP_CNTL */
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 	OUT_PKT0(ring, REG_A3XX_GRAS_CL_VPORT_XOFFSET, 6);
 	OUT_RING(ring, A3XX_GRAS_CL_VPORT_XOFFSET((float)pfb->width/2.0 - 0.5));
 	OUT_RING(ring, A3XX_GRAS_CL_VPORT_XSCALE((float)pfb->width/2.0));
@@ -565,7 +565,7 @@ fd3_emit_tile_mem2gmem(struct fd_batch *batch, struct fd_tile *tile)
 	OUT_RING(ring, fui(x1));
 	OUT_RING(ring, fui(y1));
 
-	fd3_emit_cache_flush(ctx, ring);
+	fd3_emit_cache_flush(batch, ring);
 
 	for (i = 0; i < 4; i++) {
 		OUT_PKT0(ring, REG_A3XX_RB_MRT_CONTROL(i), 1);
@@ -586,7 +586,7 @@ fd3_emit_tile_mem2gmem(struct fd_batch *batch, struct fd_tile *tile)
 	OUT_RING(ring, A3XX_RB_RENDER_CONTROL_ALPHA_TEST_FUNC(FUNC_ALWAYS) |
 			A3XX_RB_RENDER_CONTROL_BIN_WIDTH(gmem->bin_w));
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 	OUT_PKT0(ring, REG_A3XX_RB_DEPTH_CONTROL, 1);
 	OUT_RING(ring, A3XX_RB_DEPTH_CONTROL_ZFUNC(FUNC_LESS));
 
@@ -597,7 +597,7 @@ fd3_emit_tile_mem2gmem(struct fd_batch *batch, struct fd_tile *tile)
 	OUT_PKT0(ring, REG_A3XX_GRAS_CL_CLIP_CNTL, 1);
 	OUT_RING(ring, A3XX_GRAS_CL_CLIP_CNTL_IJ_PERSP_CENTER);   /* GRAS_CL_CLIP_CNTL */
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 	OUT_PKT0(ring, REG_A3XX_GRAS_CL_VPORT_XOFFSET, 6);
 	OUT_RING(ring, A3XX_GRAS_CL_VPORT_XOFFSET((float)bin_w/2.0 - 0.5));
 	OUT_RING(ring, A3XX_GRAS_CL_VPORT_XSCALE((float)bin_w/2.0));
@@ -808,7 +808,7 @@ emit_binning_pass(struct fd_batch *batch)
 
 	if (ctx->screen->gpu_id == 320) {
 		emit_binning_workaround(batch);
-		fd_wfi(ctx, ring);
+		fd_wfi(batch, ring);
 		OUT_PKT3(ring, CP_INVALIDATE_STATE, 1);
 		OUT_RING(ring, 0x00007fff);
 	}
@@ -862,9 +862,9 @@ emit_binning_pass(struct fd_batch *batch)
 
 	/* emit IB to binning drawcmds: */
 	ctx->emit_ib(ring, batch->binning);
-	fd_reset_wfi(ctx);
+	fd_reset_wfi(batch);
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 
 	/* and then put stuff back the way it was: */
 
@@ -893,8 +893,8 @@ emit_binning_pass(struct fd_batch *batch)
 			A3XX_RB_RENDER_CONTROL_ALPHA_TEST_FUNC(FUNC_NEVER) |
 			A3XX_RB_RENDER_CONTROL_BIN_WIDTH(gmem->bin_w));
 
-	fd_event_write(ctx, ring, CACHE_FLUSH);
-	fd_wfi(ctx, ring);
+	fd_event_write(batch, ring, CACHE_FLUSH);
+	fd_wfi(batch, ring);
 
 	if (ctx->screen->gpu_id == 320) {
 		/* dummy-draw workaround: */
@@ -903,7 +903,7 @@ emit_binning_pass(struct fd_batch *batch)
 		OUT_RING(ring, DRAW(1, DI_SRC_SEL_AUTO_INDEX,
 							INDEX_SIZE_IGN, IGNORE_VISIBILITY, 0));
 		OUT_RING(ring, 0);             /* NumIndices */
-		fd_reset_wfi(ctx);
+		fd_reset_wfi(batch);
 	}
 
 	OUT_PKT3(ring, CP_NOP, 4);
@@ -912,7 +912,7 @@ emit_binning_pass(struct fd_batch *batch)
 	OUT_RING(ring, 0x00000000);
 	OUT_RING(ring, 0x00000000);
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 
 	if (ctx->screen->gpu_id == 320) {
 		emit_binning_workaround(batch);
@@ -962,7 +962,7 @@ fd3_emit_tile_prep(struct fd_batch *batch, struct fd_tile *tile)
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 
 	if (ctx->needs_rb_fbd) {
-		fd_wfi(ctx, ring);
+		fd_wfi(batch, ring);
 		OUT_PKT0(ring, REG_A3XX_RB_FRAME_BUFFER_DIMENSION, 1);
 		OUT_RING(ring, A3XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
 				A3XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
@@ -1015,8 +1015,8 @@ fd3_emit_tile_renderprep(struct fd_batch *batch, struct fd_tile *tile)
 
 		assert(pipe->w * pipe->h);
 
-		fd_event_write(ctx, ring, HLSQ_FLUSH);
-		fd_wfi(ctx, ring);
+		fd_event_write(batch, ring, HLSQ_FLUSH);
+		fd_wfi(batch, ring);
 
 		OUT_PKT0(ring, REG_A3XX_PC_VSTREAM_CONTROL, 1);
 		OUT_RING(ring, A3XX_PC_VSTREAM_CONTROL_SIZE(pipe->w * pipe->h) |

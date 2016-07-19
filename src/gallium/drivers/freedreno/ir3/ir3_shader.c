@@ -508,7 +508,7 @@ emit_user_consts(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		size = MIN2(size, 4 * max_const);
 
 		if (size > 0) {
-			fd_wfi(ctx, ring);
+			fd_wfi(ctx->batch, ring);
 			ctx->emit_const(ring, v->type, 0,
 					cb->buffer_offset, size,
 					cb->user_buffer, cb->buffer);
@@ -541,7 +541,7 @@ emit_ubos(struct fd_context *ctx, const struct ir3_shader_variant *v,
 			}
 		}
 
-		fd_wfi(ctx, ring);
+		fd_wfi(ctx->batch, ring);
 		ctx->emit_const_bo(ring, v->type, false, offset * 4, params, prscs, offsets);
 	}
 }
@@ -563,7 +563,7 @@ emit_immediates(struct fd_context *ctx, const struct ir3_shader_variant *v,
 	size *= 4;
 
 	if (size > 0) {
-		fd_wfi(ctx, ring);
+		fd_wfi(ctx->batch, ring);
 		ctx->emit_const(ring, v->type, base,
 			0, size, v->immediates[0].val, NULL);
 	}
@@ -596,7 +596,7 @@ emit_tfbos(struct fd_context *ctx, const struct ir3_shader_variant *v,
 			}
 		}
 
-		fd_wfi(ctx, ring);
+		fd_wfi(ctx->batch, ring);
 		ctx->emit_const_bo(ring, v->type, true, offset * 4, params, prscs, offsets);
 	}
 }
@@ -698,7 +698,7 @@ ir3_emit_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 				vertex_params_size = ARRAY_SIZE(vertex_params);
 			}
 
-			fd_wfi(ctx, ring);
+			fd_wfi(ctx->batch, ring);
 			ctx->emit_const(ring, SHADER_VERTEX, offset * 4, 0,
 					vertex_params_size, vertex_params, NULL);
 

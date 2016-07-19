@@ -176,11 +176,6 @@ struct fd_context {
 	 */
 	bool in_blit : 1;
 
-	/* Keep track if WAIT_FOR_IDLE is needed for registers we need
-	 * to update via RMW:
-	 */
-	bool needs_wfi : 1;
-
 	/* Do we need to re-emit RB_FRAME_BUFFER_DIMENSION?  At least on a3xx
 	 * it is not a banked context register, so it needs a WFI to update.
 	 * Keep track if it has actually changed, to avoid unneeded WFI.
@@ -306,35 +301,6 @@ static inline bool
 fd_supported_prim(struct fd_context *ctx, unsigned prim)
 {
 	return (1 << prim) & ctx->primtype_mask;
-}
-
-static inline void
-fd_reset_wfi(struct fd_context *ctx)
-{
-	ctx->needs_wfi = true;
-}
-
-/* emit a WAIT_FOR_IDLE only if needed, ie. if there has not already
- * been one since last draw:
- */
-static inline void
-fd_wfi(struct fd_context *ctx, struct fd_ringbuffer *ring)
-{
-	if (ctx->needs_wfi) {
-		OUT_WFI(ring);
-		ctx->needs_wfi = false;
-	}
-}
-
-/* emit a CP_EVENT_WRITE:
- */
-static inline void
-fd_event_write(struct fd_context *ctx, struct fd_ringbuffer *ring,
-		enum vgt_event_type evt)
-{
-	OUT_PKT3(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, evt);
-	fd_reset_wfi(ctx);
 }
 
 struct pipe_context * fd_context_init(struct fd_context *ctx,

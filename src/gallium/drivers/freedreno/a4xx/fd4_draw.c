@@ -166,7 +166,7 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 	struct fd_ringbuffer *ring = ctx->batch->draw;
 
 	if (ctx->rasterizer->rasterizer_discard) {
-		fd_wfi(ctx, ring);
+		fd_wfi(ctx->batch, ring);
 		OUT_PKT3(ring, CP_REG_RMW, 3);
 		OUT_RING(ring, REG_A4XX_RB_RENDER_CONTROL);
 		OUT_RING(ring, ~A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
@@ -176,7 +176,7 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 	draw_impl(ctx, ctx->batch->draw, &emit);
 
 	if (ctx->rasterizer->rasterizer_discard) {
-		fd_wfi(ctx, ring);
+		fd_wfi(ctx->batch, ring);
 		OUT_PKT3(ring, CP_REG_RMW, 3);
 		OUT_RING(ring, REG_A4XX_RB_RENDER_CONTROL);
 		OUT_RING(ring, ~A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE);
@@ -285,7 +285,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 				A4XX_RB_DEPTH_CONTROL_Z_ENABLE |
 				A4XX_RB_DEPTH_CONTROL_ZFUNC(FUNC_ALWAYS));
 
-		fd_wfi(ctx, ring);
+		fd_wfi(ctx->batch, ring);
 		OUT_PKT0(ring, REG_A4XX_GRAS_CL_VPORT_ZOFFSET_0, 2);
 		OUT_RING(ring, A4XX_GRAS_CL_VPORT_ZOFFSET_0(0.0));
 		OUT_RING(ring, A4XX_GRAS_CL_VPORT_ZSCALE_0(depth));

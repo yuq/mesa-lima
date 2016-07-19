@@ -73,7 +73,7 @@ occlusion_get_sample(struct fd_batch *batch, struct fd_ringbuffer *ring)
 	OUT_RING(ring, 1);             /* NumInstances */
 	OUT_RING(ring, 0);             /* NumIndices */
 
-	fd_event_write(batch->ctx, ring, ZPASS_DONE);
+	fd_event_write(batch, ring, ZPASS_DONE);
 
 	return samp;
 }
@@ -117,7 +117,7 @@ time_elapsed_enable(struct fd_context *ctx, struct fd_ringbuffer *ring)
 	 * just hard coded.  If we start exposing more countables than we
 	 * have counters, we will need to be more clever.
 	 */
-	fd_wfi(ctx, ring);
+	fd_wfi(ctx->batch, ring);
 	OUT_PKT0(ring, REG_A4XX_CP_PERFCTR_CP_SEL_0, 1);
 	OUT_RING(ring, CP_ALWAYS_COUNT);
 }
@@ -161,7 +161,7 @@ time_elapsed_get_sample(struct fd_batch *batch, struct fd_ringbuffer *ring)
 	 * shot, but that's really just polishing a turd..
 	 */
 
-	fd_wfi(batch->ctx, ring);
+	fd_wfi(batch, ring);
 
 	/* copy sample counter _LO and _HI to scratch: */
 	OUT_PKT3(ring, CP_REG_TO_MEM, 2);

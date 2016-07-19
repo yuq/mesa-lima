@@ -67,6 +67,8 @@ batch_init(struct fd_batch *batch)
 	batch->num_draws = 0;
 	batch->stage = FD_STAGE_NULL;
 
+	fd_reset_wfi(batch);
+
 	/* reset maximal bounds: */
 	batch->max_scissor.minx = batch->max_scissor.miny = ~0;
 	batch->max_scissor.maxx = batch->max_scissor.maxy = 0;

@@ -128,6 +128,7 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 
 		batch = fd_batch_from_fb(&ctx->screen->batch_cache, ctx, framebuffer);
 		fd_batch_reference(&ctx->batch, NULL);
+		fd_reset_wfi(batch);
 		ctx->batch = batch;
 		ctx->dirty = ~0;
 

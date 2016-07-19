@@ -586,7 +586,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			int i = ffs(planes) - 1;
 
 			planes &= ~(1U << i);
-			fd_wfi(ctx, ring);
+			fd_wfi(ctx->batch, ring);
 			OUT_PKT0(ring, REG_A3XX_GRAS_CL_USER_PLANE(count++), 4);
 			OUT_RING(ring, fui(ctx->ucp.ucp[i][0]));
 			OUT_RING(ring, fui(ctx->ucp.ucp[i][1]));
@@ -638,7 +638,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (dirty & FD_DIRTY_VIEWPORT) {
-		fd_wfi(ctx, ring);
+		fd_wfi(ctx->batch, ring);
 		OUT_PKT0(ring, REG_A3XX_GRAS_CL_VPORT_XOFFSET, 6);
 		OUT_RING(ring, A3XX_GRAS_CL_VPORT_XOFFSET(ctx->viewport.translate[0] - 0.5));
 		OUT_RING(ring, A3XX_GRAS_CL_VPORT_XSCALE(ctx->viewport.scale[0]));
@@ -734,7 +734,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (dirty & (FD_DIRTY_VERTTEX | FD_DIRTY_FRAGTEX))
-		fd_wfi(ctx, ring);
+		fd_wfi(ctx->batch, ring);
 
 	if (dirty & FD_DIRTY_VERTTEX) {
 		if (vp->has_samp)
@@ -770,7 +770,7 @@ fd3_emit_restore(struct fd_batch *batch, struct fd_ringbuffer *ring)
 		OUT_RING(ring, 0x00000000);
 	}
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 	OUT_PKT3(ring, CP_INVALIDATE_STATE, 1);
 	OUT_RING(ring, 0x00007fff);
 
@@ -840,7 +840,7 @@ fd3_emit_restore(struct fd_batch *batch, struct fd_ringbuffer *ring)
 	OUT_RING(ring, A3XX_HLSQ_CONST_FSPRESV_RANGE_REG_STARTENTRY(0) |
 			A3XX_HLSQ_CONST_FSPRESV_RANGE_REG_ENDENTRY(0));
 
-	fd3_emit_cache_flush(ctx, ring);
+	fd3_emit_cache_flush(batch, ring);
 
 	OUT_PKT0(ring, REG_A3XX_GRAS_CL_CLIP_CNTL, 1);
 	OUT_RING(ring, 0x00000000);                  /* GRAS_CL_CLIP_CNTL */
@@ -877,7 +877,7 @@ fd3_emit_restore(struct fd_batch *batch, struct fd_ringbuffer *ring)
 	OUT_PKT0(ring, REG_A3XX_PC_VSTREAM_CONTROL, 1);
 	OUT_RING(ring, 0x00000000);
 
-	fd_event_write(ctx, ring, CACHE_FLUSH);
+	fd_event_write(batch, ring, CACHE_FLUSH);
 
 	if (is_a3xx_p0(ctx->screen)) {
 		OUT_PKT3(ring, CP_DRAW_INDX, 3);
@@ -893,7 +893,7 @@ fd3_emit_restore(struct fd_batch *batch, struct fd_ringbuffer *ring)
 	OUT_RING(ring, 0x00000000);
 	OUT_RING(ring, 0x00000000);
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 
 	fd_hw_query_enable(batch, ring);
 

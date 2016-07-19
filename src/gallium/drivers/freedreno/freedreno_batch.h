@@ -93,6 +93,11 @@ struct fd_batch {
 	bool blit : 1;
 	bool back_blit : 1;      /* only blit so far is resource shadowing back-blit */
 
+	/* Keep track if WAIT_FOR_IDLE is needed for registers we need
+	 * to update via RMW:
+	 */
+	bool needs_wfi : 1;
+
 	/* To decide whether to render to system memory, keep track of the
 	 * number of draws, and whether any of them require multisample,
 	 * depth_test (or depth write), stencil_test, blending, and
@@ -210,6 +215,35 @@ fd_batch_reference(struct fd_batch **ptr, struct fd_batch *batch)
 			(debug_reference_descriptor)__fd_batch_describe))
 		__fd_batch_destroy(old_batch);
 	*ptr = batch;
+}
+
+static inline void
+fd_reset_wfi(struct fd_batch *batch)
+{
+	batch->needs_wfi = true;
+}
+
+/* emit a WAIT_FOR_IDLE only if needed, ie. if there has not already
+ * been one since last draw:
+ */
+static inline void
+fd_wfi(struct fd_batch *batch, struct fd_ringbuffer *ring)
+{
+	if (batch->needs_wfi) {
+		OUT_WFI(ring);
+		batch->needs_wfi = false;
+	}
+}
+
+/* emit a CP_EVENT_WRITE:
+ */
+static inline void
+fd_event_write(struct fd_batch *batch, struct fd_ringbuffer *ring,
+		enum vgt_event_type evt)
+{
+	OUT_PKT3(ring, CP_EVENT_WRITE, 1);
+	OUT_RING(ring, evt);
+	fd_reset_wfi(batch);
 }
 
 #endif /* FREEDRENO_BATCH_H_ */

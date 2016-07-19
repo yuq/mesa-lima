@@ -93,7 +93,7 @@ fd_draw(struct fd_batch *batch, struct fd_ringbuffer *ring,
 
 	emit_marker(ring, 7);
 
-	fd_reset_wfi(batch->ctx);
+	fd_reset_wfi(batch);
 }
 
 

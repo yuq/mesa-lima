@@ -228,7 +228,7 @@ fd4_emit_tile_gmem2mem(struct fd_batch *batch, struct fd_tile *tile)
 	OUT_PKT0(ring, REG_A4XX_GRAS_SU_MODE_CONTROL, 1);
 	OUT_RING(ring, A4XX_GRAS_SU_MODE_CONTROL_LINEHALFWIDTH(0));
 
-	fd_wfi(ctx, ring);
+	fd_wfi(batch, ring);
 
 	OUT_PKT0(ring, REG_A4XX_GRAS_CL_CLIP_CNTL, 1);
 	OUT_RING(ring, 0x80000);      /* GRAS_CL_CLIP_CNTL */
@@ -641,8 +641,8 @@ emit_binning_pass(struct fd_batch *batch)
 	/* emit IB to binning drawcmds: */
 	ctx->emit_ib(ring, batch->binning);
 
-	fd_reset_wfi(ctx);
-	fd_wfi(ctx, ring);
+	fd_reset_wfi(batch);
+	fd_wfi(batch, ring);
 
 	/* and then put stuff back the way it was: */
 
@@ -655,8 +655,8 @@ emit_binning_pass(struct fd_batch *batch)
 			A4XX_GRAS_SC_CONTROL_MSAA_SAMPLES(MSAA_ONE) |
 			A4XX_GRAS_SC_CONTROL_RASTER_MODE(0));
 
-	fd_event_write(ctx, ring, CACHE_FLUSH);
-	fd_wfi(ctx, ring);
+	fd_event_write(batch, ring, CACHE_FLUSH);
+	fd_wfi(batch, ring);
 }
 
 /* before first tile */
@@ -746,7 +746,7 @@ fd4_emit_tile_prep(struct fd_batch *batch, struct fd_tile *tile)
 	}
 
 	if (ctx->needs_rb_fbd) {
-		fd_wfi(ctx, ring);
+		fd_wfi(batch, ring);
 		OUT_PKT0(ring, REG_A4XX_RB_FRAME_BUFFER_DIMENSION, 1);
 		OUT_RING(ring, A4XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
 				A4XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
@@ -774,8 +774,8 @@ fd4_emit_tile_renderprep(struct fd_batch *batch, struct fd_tile *tile)
 
 		assert(pipe->w * pipe->h);
 
-		fd_event_write(ctx, ring, HLSQ_FLUSH);
-		fd_wfi(ctx, ring);
+		fd_event_write(batch, ring, HLSQ_FLUSH);
+		fd_wfi(batch, ring);
 
 		OUT_PKT0(ring, REG_A4XX_PC_VSTREAM_CONTROL, 1);
 		OUT_RING(ring, A4XX_PC_VSTREAM_CONTROL_SIZE(pipe->w * pipe->h) |

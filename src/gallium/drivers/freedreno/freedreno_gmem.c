@@ -332,7 +332,7 @@ render_tiles(struct fd_batch *batch)
 
 		/* emit IB to drawcmds: */
 		ctx->emit_ib(batch->gmem, batch->draw);
-		fd_reset_wfi(ctx);
+		fd_reset_wfi(batch);
 
 		/* emit gmem2mem to transfer tile back to system memory: */
 		ctx->emit_tile_gmem2mem(batch, tile);
@@ -350,7 +350,7 @@ render_sysmem(struct fd_batch *batch)
 
 	/* emit IB to drawcmds: */
 	ctx->emit_ib(batch->gmem, batch->draw);
-	fd_reset_wfi(ctx);
+	fd_reset_wfi(batch);
 }
 
 void
@@ -369,7 +369,7 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 		}
 	}
 
-	fd_reset_wfi(ctx);
+	fd_reset_wfi(batch);
 
 	ctx->stats.batch_total++;
 
@@ -394,8 +394,6 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 	}
 
 	fd_ringbuffer_flush(batch->gmem);
-
-	fd_reset_wfi(ctx);
 }
 
 /* tile needs restore if it isn't completely contained within the

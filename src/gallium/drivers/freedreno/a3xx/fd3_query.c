@@ -68,7 +68,7 @@ occlusion_get_sample(struct fd_batch *batch, struct fd_ringbuffer *ring)
 						INDEX_SIZE_IGN, USE_VISIBILITY, 0));
 	OUT_RING(ring, 0);             /* NumIndices */
 
-	fd_event_write(batch->ctx, ring, ZPASS_DONE);
+	fd_event_write(batch, ring, ZPASS_DONE);
 
 	OUT_PKT0(ring, REG_A3XX_RBBM_PERFCTR_CTL, 1);
 	OUT_RING(ring, A3XX_RBBM_PERFCTR_CTL_ENABLE);
