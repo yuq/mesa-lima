@@ -1603,9 +1603,9 @@ surf_convert_to_single_slice(struct brw_context *brw,
       return;
 
    uint32_t x_offset_sa, y_offset_sa;
-   blorp_get_image_offset_sa(&brw->isl_dev, &info->surf, info->view.base_level,
-                             info->view.base_array_layer,
-                             &x_offset_sa, &y_offset_sa);
+   isl_surf_get_image_offset_sa(&info->surf, info->view.base_level,
+                                info->view.base_array_layer, 0,
+                                &x_offset_sa, &y_offset_sa);
 
    uint32_t byte_offset;
    isl_tiling_get_intratile_offset_sa(&brw->isl_dev, info->surf.tiling,

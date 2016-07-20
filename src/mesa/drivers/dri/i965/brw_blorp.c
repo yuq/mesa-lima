@@ -32,79 +32,6 @@
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
-/**
- * A variant of isl_surf_get_image_offset_sa() specific to gen6 stencil and
- * HiZ surfaces.
- */
-static void
-get_image_offset_sa_gen6_stencil(const struct isl_surf *surf,
-                                 uint32_t level, uint32_t logical_array_layer,
-                                 uint32_t *x_offset_sa,
-                                 uint32_t *y_offset_sa)
-{
-   assert(surf->tiling == ISL_TILING_W || surf->format == ISL_FORMAT_HIZ);
-   assert(level < surf->levels);
-   assert(logical_array_layer < surf->logical_level0_px.array_len);
-
-   const struct isl_extent3d image_align_sa =
-      isl_surf_get_image_alignment_sa(surf);
-
-   const uint32_t W0 = surf->phys_level0_sa.width;
-   const uint32_t H0 = surf->phys_level0_sa.height;
-
-   uint32_t x = 0, y = 0;
-   for (uint32_t l = 0; l < level; ++l) {
-      if (l == 1) {
-         uint32_t W = minify(W0, l);
-
-         if (surf->samples > 1) {
-            assert(surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
-            assert(surf->samples == 4);
-            W = ALIGN(W, 2) * 2;
-         }
-
-         x += ALIGN(W, image_align_sa.w);
-      } else {
-         uint32_t H = minify(H0, l);
-
-         if (surf->samples > 1) {
-            assert(surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
-            assert(surf->samples == 4);
-            H = ALIGN(H, 2) * 2;
-         }
-
-         y += ALIGN(H, image_align_sa.h) * surf->logical_level0_px.array_len;
-      }
-   }
-
-   /* Now account for our location within the given LOD */
-   uint32_t Hl = minify(H0, level);
-   if (surf->samples > 1) {
-      assert(surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
-      assert(surf->samples == 4);
-      Hl = ALIGN(Hl, 2) * 2;
-   }
-   y += ALIGN(Hl, image_align_sa.h) * logical_array_layer;
-
-   *x_offset_sa = x;
-   *y_offset_sa = y;
-}
-
-void
-blorp_get_image_offset_sa(struct isl_device *dev, const struct isl_surf *surf,
-                          uint32_t level, uint32_t layer,
-                          uint32_t *x_offset_sa,
-                          uint32_t *y_offset_sa)
-{
-   if (ISL_DEV_GEN(dev) == 6 && surf->tiling == ISL_TILING_W) {
-      get_image_offset_sa_gen6_stencil(surf, level, layer,
-                                       x_offset_sa, y_offset_sa);
-   } else {
-      isl_surf_get_image_offset_sa(surf, level, layer, 0,
-                                   x_offset_sa, y_offset_sa);
-   }
-}
-
 static void
 apply_gen6_stencil_hiz_offset(struct isl_surf *surf,
                               struct intel_mipmap_tree *mt,
@@ -113,10 +40,19 @@ apply_gen6_stencil_hiz_offset(struct isl_surf *surf,
 {
    assert(mt->array_layout == ALL_SLICES_AT_EACH_LOD);
 
-   *offset = intel_miptree_get_aligned_offset(mt,
-                                              mt->level[lod].level_x,
-                                              mt->level[lod].level_y,
-                                              false);
+   if (mt->format == MESA_FORMAT_S_UINT8) {
+      /* Note: we can't compute the stencil offset using
+       * intel_miptree_get_aligned_offset(), because the miptree
+       * claims that the region is untiled even though it's W tiled.
+       */
+      *offset = mt->level[lod].level_y * mt->pitch +
+                mt->level[lod].level_x * 64;
+   } else {
+      *offset = intel_miptree_get_aligned_offset(mt,
+                                                 mt->level[lod].level_x,
+                                                 mt->level[lod].level_y,
+                                                 false);
+   }
 
    surf->logical_level0_px.width = minify(surf->logical_level0_px.width, lod);
    surf->logical_level0_px.height = minify(surf->logical_level0_px.height, lod);
@@ -153,6 +89,24 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    intel_miptree_get_isl_surf(brw, mt, &info->surf);
    info->bo = mt->bo;
    info->offset = mt->offset;
+
+   if (brw->gen == 6 && mt->format == MESA_FORMAT_S_UINT8 &&
+       mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
+      /* Sandy bridge stencil and HiZ use this ALL_SLICES_AT_EACH_LOD hack in
+       * order to allow for layered rendering.  The hack makes each LOD of the
+       * stencil or HiZ buffer a single tightly packed array surface at some
+       * offset into the surface.  Since ISL doesn't know how to deal with the
+       * crazy ALL_SLICES_AT_EACH_LOD layout and since we have to do a manual
+       * offset of it anyway, we might as well do the offset here and keep the
+       * hacks inside the i965 driver.
+       *
+       * See also gen6_depth_stencil_state.c
+       */
+      uint32_t offset;
+      apply_gen6_stencil_hiz_offset(&info->surf, mt, level, &offset);
+      info->offset += offset;
+      level = 0;
+   }
 
    intel_miptree_get_aux_isl_surf(brw, mt, &info->aux_surf,
                                   &info->aux_usage);
