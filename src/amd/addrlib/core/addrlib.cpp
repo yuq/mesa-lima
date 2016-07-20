@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  addrlib.cpp
-* @brief Contains the implementation for the AddrLib base class..
+* @brief Contains the implementation for the Addr::Lib class.
 ****************************************************************************************************
 */
 

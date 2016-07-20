@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  addr1lib.cpp
-* @brief Contains the implementation for the AddrLib1 base class..
+* @brief Contains the implementation for the Addr::V1::Lib base class.
 ****************************************************************************************************
 */
 
@@ -1706,7 +1706,6 @@ ADDR_E_RETURNCODE Lib::ComputeCmaskCoordFromAddr(
     return returnCode;
 }
 
-
 /**
 ****************************************************************************************************
 *   Lib::ComputeTileDataWidthAndHeight
@@ -3225,14 +3224,14 @@ VOID Lib::PadDimensions(
     UINT_32             bpp,         ///< [in] bits per pixel
     ADDR_SURFACE_FLAGS  flags,       ///< [in] surface flags
     UINT_32             numSamples,  ///< [in] number of samples
-    ADDR_TILEINFO*      pTileInfo,   ///< [in/out] bank structure.
+    ADDR_TILEINFO*      pTileInfo,   ///< [in,out] bank structure.
     UINT_32             padDims,     ///< [in] Dimensions to pad valid value 1,2,3
     UINT_32             mipLevel,    ///< [in] MipLevel
-    UINT_32*            pPitch,      ///< [in/out] pitch in pixels
+    UINT_32*            pPitch,      ///< [in,out] pitch in pixels
     UINT_32             pitchAlign,  ///< [in] pitch alignment
-    UINT_32*            pHeight,     ///< [in/out] height in pixels
+    UINT_32*            pHeight,     ///< [in,out] height in pixels
     UINT_32             heightAlign, ///< [in] height alignment
-    UINT_32*            pSlices,     ///< [in/out] number of slices
+    UINT_32*            pSlices,     ///< [in,out] number of slices
     UINT_32             sliceAlign   ///< [in] number of slice alignment
     ) const
 {
@@ -3487,7 +3486,7 @@ BOOL_32 Lib::IsPrtTileMode(
 ****************************************************************************************************
 */
 VOID Lib::ComputeMipLevel(
-    ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn ///< [in/out] Input structure
+    ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn ///< [in,out] Input structure
     ) const
 {
     if (ElemLib::IsBlockCompressed(pIn->format))
@@ -3656,7 +3655,7 @@ AddrTileMode Lib::DegradeLargeThickTile(
 ****************************************************************************************************
 */
 ADDR_E_RETURNCODE Lib::PostComputeMipLevel(
-    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pIn,   ///< [in/out] Input structure
+    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pIn,   ///< [in,out] Input structure
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*   pOut   ///< [out] Output structure
     ) const
 {
@@ -3737,7 +3736,7 @@ UINT_32 Lib::HwlGetPipes(
 ****************************************************************************************************
 */
 BOOL_32 Lib::ComputeQbStereoInfo(
-    ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut    ///< [in/out] updated pOut+pStereoInfo
+    ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut    ///< [in,out] updated pOut+pStereoInfo
     ) const
 {
     BOOL_32 success = FALSE;

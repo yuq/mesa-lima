@@ -861,7 +861,7 @@ VOID CiLib::HwlFmaskPostThunkSurfInfo(
 AddrTileMode CiLib::HwlDegradeThickTileMode(
     AddrTileMode        baseTileMode,   ///< [in] base tile mode
     UINT_32             numSlices,      ///< [in] current number of slices
-    UINT_32*            pBytesPerTile   ///< [in/out] pointer to bytes per slice
+    UINT_32*            pBytesPerTile   ///< [in,out] pointer to bytes per slice
     ) const
 {
     return baseTileMode;
@@ -880,7 +880,7 @@ AddrTileMode CiLib::HwlDegradeThickTileMode(
 ****************************************************************************************************
 */
 VOID CiLib::HwlOverrideTileMode(
-    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut      ///< [in/out] input output structure
+    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut      ///< [in,out] input output structure
     ) const
 {
     AddrTileMode tileMode = pInOut->tileMode;
@@ -1041,7 +1041,7 @@ VOID CiLib::HwlOverrideTileMode(
 ****************************************************************************************************
 */
 VOID CiLib::HwlSelectTileMode(
-    ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in/out] input output structure
+    ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in,out] input output structure
     ) const
 {
     AddrTileMode tileMode;
@@ -1956,14 +1956,14 @@ VOID CiLib::HwlPadDimensions(
     UINT_32             bpp,         ///< [in] bits per pixel
     ADDR_SURFACE_FLAGS  flags,       ///< [in] surface flags
     UINT_32             numSamples,  ///< [in] number of samples
-    ADDR_TILEINFO*      pTileInfo,   ///< [in/out] bank structure.
+    ADDR_TILEINFO*      pTileInfo,   ///< [in,out] bank structure.
     UINT_32             padDims,     ///< [in] Dimensions to pad valid value 1,2,3
     UINT_32             mipLevel,    ///< [in] MipLevel
-    UINT_32*            pPitch,      ///< [in/out] pitch in pixels
+    UINT_32*            pPitch,      ///< [in,out] pitch in pixels
     UINT_32             pitchAlign,  ///< [in] pitch alignment
-    UINT_32*            pHeight,     ///< [in/out] height in pixels
+    UINT_32*            pHeight,     ///< [in,out] height in pixels
     UINT_32             heightAlign, ///< [in] height alignment
-    UINT_32*            pSlices,     ///< [in/out] number of slices
+    UINT_32*            pSlices,     ///< [in,out] number of slices
     UINT_32             sliceAlign   ///< [in] number of slice alignment
     ) const
 {

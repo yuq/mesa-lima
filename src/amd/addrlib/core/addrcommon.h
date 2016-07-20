@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  addrcommon.h
-* @brief Contains the helper function and constants
+* @brief Contains the helper function and constants.
 ****************************************************************************************************
 */
 

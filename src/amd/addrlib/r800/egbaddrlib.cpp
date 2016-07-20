@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  egbaddrlib.cpp
-* @brief Contains the EgBasedLib class implementation
+* @brief Contains the EgBasedLib class implementation.
 ****************************************************************************************************
 */
 
@@ -49,7 +49,8 @@ namespace V1
 *
 ****************************************************************************************************
 */
-EgBasedLib::EgBasedLib(const Client* pClient) :
+EgBasedLib::EgBasedLib(const Client* pClient)
+    :
     Lib(pClient),
     m_ranks(0),
     m_logicalBanks(0),
@@ -743,7 +744,7 @@ BOOL_32 EgBasedLib::HwlReduceBankWidthHeight(
     UINT_32             numSamples,         ///< [in] number of samples
     UINT_32             bankHeightAlign,    ///< [in] bank height alignment
     UINT_32             pipes,              ///< [in] pipes
-    ADDR_TILEINFO*      pTileInfo           ///< [in/out] bank structure.
+    ADDR_TILEINFO*      pTileInfo           ///< [in,out] bank structure.
     ) const
 {
     UINT_32 macroAspectAlign;
@@ -846,7 +847,7 @@ BOOL_32 EgBasedLib::ComputeSurfaceAlignmentsMacroTiled(
     ADDR_SURFACE_FLAGS  flags,              ///< [in] surface flags
     UINT_32             mipLevel,           ///< [in] mip level
     UINT_32             numSamples,         ///< [in] number of samples
-    ADDR_TILEINFO*      pTileInfo,          ///< [in/out] bank structure.
+    ADDR_TILEINFO*      pTileInfo,          ///< [in,out] bank structure.
     UINT_32*            pBaseAlign,         ///< [out] base address alignment in bytes
     UINT_32*            pPitchAlign,        ///< [out] pitch alignment in pixels
     UINT_32*            pHeightAlign,       ///< [out] height alignment in pixels
@@ -1247,7 +1248,7 @@ BOOL_32 EgBasedLib::HwlDegradeBaseLevel(
 AddrTileMode EgBasedLib::HwlDegradeThickTileMode(
     AddrTileMode        baseTileMode,   ///< [in] base tile mode
     UINT_32             numSlices,      ///< [in] current number of slices
-    UINT_32*            pBytesPerTile   ///< [in/out] pointer to bytes per slice
+    UINT_32*            pBytesPerTile   ///< [in,out] pointer to bytes per slice
     ) const
 {
     ADDR_ASSERT(numSlices < Thickness(baseTileMode));
@@ -4755,8 +4756,8 @@ UINT_64 EgBasedLib::HwlGetSizeAdjustmentMicroTiled(
     UINT_32             numSamples,     ///< [in] number of samples
     UINT_32             baseAlign,      ///< [in] base alignment
     UINT_32             pitchAlign,     ///< [in] pitch alignment
-    UINT_32*            pPitch,         ///< [in/out] pointer to pitch
-    UINT_32*            pHeight         ///< [in/out] pointer to height
+    UINT_32*            pPitch,         ///< [in,out] pointer to pitch
+    UINT_32*            pHeight         ///< [in,out] pointer to height
     ) const
 {
     UINT_64 logicalSliceSize;

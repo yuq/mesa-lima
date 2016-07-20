@@ -1527,9 +1527,9 @@ UINT_64 SiLib::HwlGetSizeAdjustmentLinear(
     UINT_32             numSamples,     ///< [in] number of samples
     UINT_32             baseAlign,      ///< [in] base alignment
     UINT_32             pitchAlign,     ///< [in] pitch alignment
-    UINT_32*            pPitch,         ///< [in/out] pointer to pitch
-    UINT_32*            pHeight,        ///< [in/out] pointer to height
-    UINT_32*            pHeightAlign    ///< [in/out] pointer to height align
+    UINT_32*            pPitch,         ///< [in,out] pointer to pitch
+    UINT_32*            pHeight,        ///< [in,out] pointer to height
+    UINT_32*            pHeightAlign    ///< [in,out] pointer to height align
     ) const
 {
     UINT_64 sliceSize;
@@ -1682,8 +1682,8 @@ UINT_64 SiLib::HwlGetSizeAdjustmentMicroTiled(
     UINT_32             numSamples,     ///< [in] number of samples
     UINT_32             baseAlign,      ///< [in] base alignment
     UINT_32             pitchAlign,     ///< [in] pitch alignment
-    UINT_32*            pPitch,         ///< [in/out] pointer to pitch
-    UINT_32*            pHeight         ///< [in/out] pointer to height
+    UINT_32*            pPitch,         ///< [in,out] pointer to pitch
+    UINT_32*            pHeight         ///< [in,out] pointer to height
     ) const
 {
     UINT_64 logicalSliceSize;
@@ -2316,8 +2316,8 @@ UINT_32 SiLib::HwlComputeXmaskCoordYFrom8Pipe(
 */
 VOID SiLib::HwlComputeSurfaceCoord2DFromBankPipe(
     AddrTileMode        tileMode,   ///< [in] tile mode
-    UINT_32*            pX,         ///< [in/out] x coordinate
-    UINT_32*            pY,         ///< [in/out] y coordinate
+    UINT_32*            pX,         ///< [in,out] x coordinate
+    UINT_32*            pY,         ///< [in,out] y coordinate
     UINT_32             slice,      ///< [in] slice index
     UINT_32             bank,       ///< [in] bank number
     UINT_32             pipe,       ///< [in] pipe number
@@ -2555,7 +2555,7 @@ ADDR_E_RETURNCODE SiLib::HwlComputeSurfaceInfo(
 ****************************************************************************************************
 */
 BOOL_32 SiLib::HwlComputeMipLevel(
-    ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn ///< [in/out] Input structure
+    ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn ///< [in,out] Input structure
     ) const
 {
     // basePitch is calculated from level 0 so we only check this for mipLevel > 0
@@ -2595,7 +2595,7 @@ BOOL_32 SiLib::HwlComputeMipLevel(
 */
 VOID SiLib::HwlCheckLastMacroTiledLvl(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn, ///< [in] Input structure
-    ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut      ///< [in/out] Output structure (used as input, too)
+    ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut      ///< [in,out] Output structure (used as input, too)
     ) const
 {
     // pow2Pad covers all mipmap cases
@@ -2672,7 +2672,7 @@ VOID SiLib::HwlCheckLastMacroTiledLvl(
 AddrTileMode SiLib::HwlDegradeThickTileMode(
     AddrTileMode        baseTileMode,   ///< [in] base tile mode
     UINT_32             numSlices,      ///< [in] current number of slices
-    UINT_32*            pBytesPerTile   ///< [in/out] pointer to bytes per slice
+    UINT_32*            pBytesPerTile   ///< [in,out] pointer to bytes per slice
     ) const
 {
     return EgBasedLib::HwlDegradeThickTileMode(baseTileMode, numSlices, pBytesPerTile);
@@ -3146,7 +3146,7 @@ UINT_32 SiLib::HwlComputeFmaskBits(
 ****************************************************************************************************
 */
 VOID SiLib::HwlOverrideTileMode(
-    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut          ///< [in/out] input output structure
+    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut          ///< [in,out] input output structure
     ) const
 {
     AddrTileMode tileMode = pInOut->tileMode;
@@ -3216,7 +3216,7 @@ VOID SiLib::HwlOverrideTileMode(
 ****************************************************************************************************
 */
 VOID SiLib::HwlSelectTileMode(
-    ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in/out] input output structure
+    ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in,out] input output structure
     ) const
 {
     AddrTileMode tileMode;
@@ -3508,9 +3508,9 @@ VOID SiLib::InitEquationTable()
 ****************************************************************************************************
 */
 BOOL_32 SiLib::IsEquationSupported(
-    UINT_32        bpp,         ///< Bits per pixel
+    UINT_32    bpp,         ///< Bits per pixel
     TileConfig tileConfig,  ///< Tile config
-    INT_32         tileIndex    ///< Tile index
+    INT_32     tileIndex    ///< Tile index
     ) const
 {
     BOOL_32 supported = TRUE;

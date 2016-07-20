@@ -57,7 +57,7 @@ struct CIChipSettings
         UINT_32 isSpectre   : 1;
         UINT_32 isSpooky    : 1;
         UINT_32 isKalindi   : 1;
-        // Hawaii is GFXIP 7.2, similar with CI (Bonaire)
+        // Hawaii is GFXIP 7.2
         UINT_32 isHawaii    : 1;
 
         // VI

@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  addrelemlib.h
-* @brief Contains the class for element/pixel related functions
+* @brief Contains the class for element/pixel related functions.
 ****************************************************************************************************
 */
 

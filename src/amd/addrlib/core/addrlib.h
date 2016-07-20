@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  addrlib.h
-* @brief Contains the AddrLib base class definition.
+* @brief Contains the Addr::Lib base class definition.
 ****************************************************************************************************
 */
 
@@ -54,10 +54,6 @@
 
 #ifndef CIASICIDGFXENGINE_SOUTHERNISLAND
 #define CIASICIDGFXENGINE_SOUTHERNISLAND 0x0000000A
-#endif
-
-#ifndef CIASICIDGFXENGINE_SEAISLAND
-#define CIASICIDGFXENGINE_SEAISLAND 0x0000000B
 #endif
 
 namespace Addr
@@ -227,36 +223,36 @@ private:
     VOID SetMinPitchAlignPixels(UINT_32 minPitchAlignPixels);
 
 protected:
-    LibClass            m_class;        ///< Store class type (HWL type)
+    LibClass    m_class;        ///< Store class type (HWL type)
 
-    ChipFamily          m_chipFamily;   ///< Chip family translated from the one in atiid.h
+    ChipFamily  m_chipFamily;   ///< Chip family translated from the one in atiid.h
 
-    UINT_32             m_chipRevision; ///< Revision id from xxx_id.h
+    UINT_32     m_chipRevision; ///< Revision id from xxx_id.h
 
-    UINT_32             m_version;      ///< Current version
+    UINT_32     m_version;      ///< Current version
 
     //
     // Global parameters
     //
-    ConfigFlags         m_configFlags;    ///< Global configuration flags. Note this is setup by
+    ConfigFlags m_configFlags;          ///< Global configuration flags. Note this is setup by
                                         ///  AddrLib instead of Client except forceLinearAligned
 
-    UINT_32             m_pipes;        ///< Number of pipes
-    UINT_32             m_banks;        ///< Number of banks
+    UINT_32     m_pipes;                ///< Number of pipes
+    UINT_32     m_banks;                ///< Number of banks
                                         ///  For r800 this is MC_ARB_RAMCFG.NOOFBANK
                                         ///  Keep it here to do default parameter calculation
 
-    UINT_32             m_pipeInterleaveBytes;
+    UINT_32     m_pipeInterleaveBytes;
                                         ///< Specifies the size of contiguous address space
                                         ///  within each tiling pipe when making linear
                                         ///  accesses. (Formerly Group Size)
 
-    UINT_32             m_rowSize;      ///< DRAM row size, in bytes
+    UINT_32     m_rowSize;              ///< DRAM row size, in bytes
 
-    UINT_32             m_minPitchAlignPixels; ///< Minimum pitch alignment in pixels
-    UINT_32             m_maxSamples;   ///< Max numSamples
+    UINT_32     m_minPitchAlignPixels;  ///< Minimum pitch alignment in pixels
+    UINT_32     m_maxSamples;           ///< Max numSamples
 private:
-    ElemLib*            m_pElemLib;     ///< Element Lib pointer
+    ElemLib*    m_pElemLib;             ///< Element Lib pointer
 };
 
 Lib* SiHwlInit  (const Client* pClient);
@@ -265,4 +261,3 @@ Lib* CiHwlInit  (const Client* pClient);
 } // Addr
 
 #endif
-

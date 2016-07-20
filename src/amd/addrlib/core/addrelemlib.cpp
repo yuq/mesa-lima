@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  addrelemlib.cpp
-* @brief Contains the class implementation for element/pixel related functions
+* @brief Contains the class implementation for element/pixel related functions.
 ****************************************************************************************************
 */
 
@@ -720,7 +720,7 @@ VOID ElemLib::GetCompType(
 */
 VOID ElemLib::GetCompSwap(
     AddrSurfaceSwap  swap,   ///< [in] swap mode
-    PixelFormatInfo* pInfo)  ///< [in/out] output per component info
+    PixelFormatInfo* pInfo)  ///< [in,out] output per component info
 {
     switch (pInfo->comps)
     {
@@ -811,7 +811,7 @@ VOID ElemLib::GetCompSwap(
 VOID ElemLib::SwapComps(
     UINT_32          c0,     ///< [in] component index 0
     UINT_32          c1,     ///< [in] component index 1
-    PixelFormatInfo* pInfo)  ///< [in/out] output per component info
+    PixelFormatInfo* pInfo)  ///< [in,out] output per component info
 {
     UINT_32 start;
     UINT_32 bits;
@@ -1127,10 +1127,10 @@ VOID ElemLib::AdjustSurfaceInfo(
     ElemMode        elemMode,       ///< [in] element mode
     UINT_32         expandX,        ///< [in] decompression expansion factor in X
     UINT_32         expandY,        ///< [in] decompression expansion factor in Y
-    UINT_32*        pBpp,           ///< [in/out] bpp
-    UINT_32*        pBasePitch,     ///< [in/out] base pitch
-    UINT_32*        pWidth,         ///< [in/out] width
-    UINT_32*        pHeight)        ///< [in/out] height
+    UINT_32*        pBpp,           ///< [in,out] bpp
+    UINT_32*        pBasePitch,     ///< [in,out] base pitch
+    UINT_32*        pWidth,         ///< [in,out] width
+    UINT_32*        pHeight)        ///< [in,out] height
 {
     UINT_32 packedBits;
     UINT_32 basePitch;
@@ -1252,9 +1252,9 @@ VOID ElemLib::RestoreSurfaceInfo(
     ElemMode        elemMode,       ///< [in] element mode
     UINT_32         expandX,        ///< [in] decompression expansion factor in X
     UINT_32         expandY,        ///< [out] decompression expansion factor in Y
-    UINT_32*        pBpp,           ///< [in/out] bpp
-    UINT_32*        pWidth,         ///< [in/out] width
-    UINT_32*        pHeight)        ///< [in/out] height
+    UINT_32*        pBpp,           ///< [in,out] bpp
+    UINT_32*        pWidth,         ///< [in,out] width
+    UINT_32*        pHeight)        ///< [in,out] height
 {
     UINT_32 originalBits;
     UINT_32 width;
@@ -1561,7 +1561,7 @@ VOID ElemLib::GetCompBits(
 ****************************************************************************************************
 */
 VOID ElemLib::SetClearComps(
-    ADDR_FLT_32 comps[4],   ///< [in/out] components
+    ADDR_FLT_32 comps[4],   ///< [in,out] components
     BOOL_32 clearColor,     ///< [in] TRUE if clear color is set (CLEAR_COLOR)
     BOOL_32 float32)        ///< [in] TRUE if float32 component (BLEND_FLOAT32)
 {
