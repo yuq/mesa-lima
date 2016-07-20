@@ -1205,7 +1205,7 @@ VOID CiLib::HwlSetupTileInfo(
 
             if (flags.depth && (flags.nonSplit || flags.tcCompatible || flags.needEquation))
             {
-                // Texure readable depth surface should not be split
+                // Texture readable depth surface should not be split
                 switch (tileSize)
                 {
                     case 128:
@@ -1307,12 +1307,12 @@ VOID CiLib::HwlSetupTileInfo(
         {
             switch (tileMode)
             {
-            case ADDR_TM_1D_TILED_THICK:
-                    //special check for bonaire, for the compatablity between old KMD and new UMD for bonaire
+                case ADDR_TM_1D_TILED_THICK:
+                    // special check for bonaire, for the compatablity between old KMD and new UMD
                     index = ((inTileType == ADDR_THICK) || m_settings.isBonaire) ? 19 : 18;
                     break;
-            case ADDR_TM_2D_TILED_THICK:
-                    // special check for bonaire, for the compatablity between old KMD and new UMD for bonaire
+                case ADDR_TM_2D_TILED_THICK:
+                    // special check for bonaire, for the compatablity between old KMD and new UMD
                     index = ((inTileType == ADDR_THICK) || m_settings.isBonaire) ? 20 : 24;
                     break;
                 case ADDR_TM_3D_TILED_THICK:
@@ -1401,7 +1401,7 @@ VOID CiLib::HwlSetupTileInfo(
     {
         macroModeIndex = HwlComputeMacroModeIndex(index, flags, bpp, numSamples, pTileInfo);
 
-        /// Copy to pOut->tileType/tileIndex/macroModeIndex
+        // Copy to pOut->tileType/tileIndex/macroModeIndex
         pOut->tileIndex = index;
         pOut->tileType = m_tileTable[index].type; // Or inTileType, the samea
         pOut->macroModeIndex = macroModeIndex;
@@ -1463,8 +1463,6 @@ VOID CiLib::HwlSetupTileInfo(
 *
 *   @brief
 *       Convert GB_TILE_MODE HW value to ADDR_TILE_CONFIG.
-*   @return
-*       NA.
 ****************************************************************************************************
 */
 VOID CiLib::ReadGbTileMode(
@@ -1608,8 +1606,6 @@ BOOL_32 CiLib::InitTileSettingTable(
 *
 *   @brief
 *       Convert GB_MACRO_TILE_CFG HW value to ADDR_TILE_CONFIG.
-*   @return
-*       NA.
 ****************************************************************************************************
 */
 VOID CiLib::ReadGbMacroTileCfg(
@@ -1780,9 +1776,6 @@ INT_32 CiLib::HwlComputeMacroModeIndex(
 *   @brief
 *       Compute the squared cache shape for per-tile data (CMASK and HTILE) for linear layout
 *
-*   @return
-*       N/A
-*
 *   @note
 *       MacroWidth and macroHeight are measured in pixels
 ****************************************************************************************************
@@ -1946,9 +1939,6 @@ UINT_64 CiLib::HwlComputeMetadataNibbleAddress(
 *   @brief
 *       Hardware layer function to compute alignment request for macro tile mode
 *
-*   @return
-*       N/A
-*
 ****************************************************************************************************
 */
 VOID CiLib::HwlComputeSurfaceAlignmentsMacroTiled(
@@ -1980,9 +1970,6 @@ VOID CiLib::HwlComputeSurfaceAlignmentsMacroTiled(
 *
 *   @brief
 *       Helper function to pad dimensions
-*
-*   @return
-*       N/A
 *
 ****************************************************************************************************
 */

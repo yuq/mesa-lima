@@ -892,19 +892,19 @@ BOOL_32 EgBasedLib::ComputeSurfaceAlignmentsMacroTiled(
         {
             // this restriction is only for mipmap (mipmap's numSamples must be 1)
             macroAspectAlign = Max(1u,
-                               m_pipeInterleaveBytes * m_bankInterleave /
-                               (tileSize * pipes * pTileInfo->bankWidth)
-                               );
+                                   m_pipeInterleaveBytes * m_bankInterleave /
+                                   (tileSize * pipes * pTileInfo->bankWidth)
+                                   );
             pTileInfo->macroAspectRatio = PowTwoAlign(pTileInfo->macroAspectRatio, macroAspectAlign);
         }
 
         valid = HwlReduceBankWidthHeight(tileSize,
-                                      bpp,
-                                      flags,
-                                      numSamples,
-                                      bankHeightAlign,
-                                      pipes,
-                                      pTileInfo);
+                                         bpp,
+                                         flags,
+                                         numSamples,
+                                         bankHeightAlign,
+                                         pipes,
+                                         pTileInfo);
 
         //
         // The required granularity for pitch is the macro tile width.
