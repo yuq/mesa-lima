@@ -14,6 +14,8 @@ ADDRLIB_FILES = \
 	addrlib/core/addrelemlib.h \
 	addrlib/core/addrlib.cpp \
 	addrlib/core/addrlib.h \
+	addrlib/core/addrlib1.cpp \
+	addrlib/core/addrlib1.h \
 	addrlib/core/addrobject.cpp \
 	addrlib/core/addrobject.h \
 	addrlib/inc/chip/r800/si_gb_reg.h \
