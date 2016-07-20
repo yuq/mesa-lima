@@ -34,7 +34,7 @@
 #ifndef __CI_ADDR_LIB_H__
 #define __CI_ADDR_LIB_H__
 
-#include "addrlib.h"
+#include "addrlib1.h"
 #include "siaddrlib.h"
 
 /**
@@ -89,7 +89,7 @@ private:
 
 protected:
 
-    // Hwl interface - defined in AddrLib
+    // Hwl interface - defined in AddrLib1
     virtual ADDR_E_RETURNCODE HwlComputeSurfaceInfo(
         const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn,
         ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut) const;

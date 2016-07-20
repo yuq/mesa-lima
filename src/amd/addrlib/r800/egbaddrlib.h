@@ -34,7 +34,7 @@
 #ifndef __EG_BASED_ADDR_LIB_H__
 #define __EG_BASED_ADDR_LIB_H__
 
-#include "addrlib.h"
+#include "addrlib1.h"
 
 
 /// Structures for functions
@@ -58,7 +58,7 @@ struct CoordFromBankPipe
 * @note  Abstract class
 ***************************************************************************************************
 */
-class EgBasedAddrLib : public AddrLib
+class EgBasedAddrLib : public AddrLib1
 {
 protected:
     EgBasedAddrLib(const AddrClient* pClient);

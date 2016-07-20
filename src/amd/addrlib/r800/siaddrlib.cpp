@@ -1254,7 +1254,7 @@ UINT_32 SiAddrLib::HwlPreHandleBaseLvl3xPitch(
     // do here
     if (!pIn->flags.pow2Pad)
     {
-        AddrLib::HwlPreHandleBaseLvl3xPitch(pIn, expPitch);
+        AddrLib1::HwlPreHandleBaseLvl3xPitch(pIn, expPitch);
     }
     else
     {
@@ -1287,7 +1287,7 @@ UINT_32 SiAddrLib::HwlPostHandleBaseLvl3xPitch(
     // From SI, the pitch is expanded 3x first, then padded to pow2, so no special handler here
     if (!pIn->flags.pow2Pad)
     {
-        AddrLib::HwlPostHandleBaseLvl3xPitch(pIn, expPitch);
+        AddrLib1::HwlPostHandleBaseLvl3xPitch(pIn, expPitch);
     }
 
     return expPitch;

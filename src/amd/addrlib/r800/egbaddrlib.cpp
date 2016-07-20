@@ -45,7 +45,7 @@
 ***************************************************************************************************
 */
 EgBasedAddrLib::EgBasedAddrLib(const AddrClient* pClient) :
-    AddrLib(pClient),
+    AddrLib1(pClient),
     m_ranks(0),
     m_logicalBanks(0),
     m_bankInterleave(1)
