@@ -62,6 +62,20 @@ brw_blorp_to_isl_format(struct brw_context *brw, mesa_format format,
                         bool is_render_target);
 
 void
+brw_blorp_blit(struct brw_context *brw,
+               const struct brw_blorp_surf *src_surf,
+               unsigned src_level, unsigned src_layer,
+               enum isl_format src_format, int src_swizzle,
+               const struct brw_blorp_surf *dst_surf,
+               unsigned dst_level, unsigned dst_layer,
+               enum isl_format dst_format,
+               float src_x0, float src_y0,
+               float src_x1, float src_y1,
+               float dst_x0, float dst_y0,
+               float dst_x1, float dst_y1,
+               GLenum filter, bool mirror_x, bool mirror_y);
+
+void
 brw_blorp_blit_miptrees(struct brw_context *brw,
                         struct intel_mipmap_tree *src_mt,
                         unsigned src_level, unsigned src_layer,

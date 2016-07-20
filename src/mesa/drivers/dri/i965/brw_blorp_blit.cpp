@@ -1750,23 +1750,48 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    intel_miptree_check_level_layer(dst_mt, dst_level, dst_layer);
    intel_miptree_used_for_rendering(dst_mt);
 
+   struct isl_surf tmp_surfs[4];
+   struct brw_blorp_surf src_surf, dst_surf;
+   brw_blorp_surf_for_miptree(brw, &src_surf, src_mt, false,
+                              &src_level, &tmp_surfs[0]);
+   brw_blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true,
+                              &dst_level, &tmp_surfs[2]);
+
+   brw_blorp_blit(brw, &src_surf, src_level, src_layer,
+                  brw_blorp_to_isl_format(brw, src_format, false), src_swizzle,
+                  &dst_surf, dst_level, dst_layer,
+                  brw_blorp_to_isl_format(brw, dst_format, true),
+                  src_x0, src_y0, src_x1, src_y1,
+                  dst_x0, dst_y0, dst_x1, dst_y1,
+                  filter, mirror_x, mirror_y);
+
+   intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_layer);
+
+   if (intel_miptree_is_lossless_compressed(brw, dst_mt))
+      dst_mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
+}
+
+void
+brw_blorp_blit(struct brw_context *brw,
+               const struct brw_blorp_surf *src_surf,
+               unsigned src_level, unsigned src_layer,
+               enum isl_format src_format, int src_swizzle,
+               const struct brw_blorp_surf *dst_surf,
+               unsigned dst_level, unsigned dst_layer,
+               enum isl_format dst_format,
+               float src_x0, float src_y0,
+               float src_x1, float src_y1,
+               float dst_x0, float dst_y0,
+               float dst_x1, float dst_y1,
+               GLenum filter, bool mirror_x, bool mirror_y)
+{
    struct brw_blorp_params params;
    brw_blorp_params_init(&params);
 
-   struct isl_surf isl_tmp[4];
-   struct brw_blorp_surf src_surf, dst_surf;
-   brw_blorp_surf_for_miptree(brw, &src_surf, src_mt, false,
-                              &src_level, &isl_tmp[0]);
-   brw_blorp_surface_info_init(brw, &params.src,
-                               &src_surf, src_level, src_layer,
-                               brw_blorp_to_isl_format(brw, src_format, false),
-                               false);
-   brw_blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true,
-                              &dst_level, &isl_tmp[2]);
-   brw_blorp_surface_info_init(brw, &params.dst,
-                               &dst_surf, dst_level, dst_layer,
-                               brw_blorp_to_isl_format(brw, dst_format, true),
-                               true);
+   brw_blorp_surface_info_init(brw, &params.src, src_surf, src_level,
+                               src_layer, src_format, false);
+   brw_blorp_surface_info_init(brw, &params.dst, dst_surf, dst_level,
+                               dst_layer, dst_format, true);
 
    struct brw_blorp_blit_prog_key wm_prog_key;
    memset(&wm_prog_key, 0, sizeof(wm_prog_key));
@@ -2011,9 +2036,4 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    }
 
    brw_blorp_exec(brw, &params);
-
-   intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_layer);
-
-   if (intel_miptree_is_lossless_compressed(brw, dst_mt))
-      dst_mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
 }
