@@ -137,7 +137,7 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
          assert(var->data.mode == ir_var_shader_out);
          if (is_patch_generic)
             prog->PatchOutputsWritten |= bitfield;
-         else
+         else if (!var->data.read_only)
             prog->OutputsWritten |= bitfield;
       }
    }
