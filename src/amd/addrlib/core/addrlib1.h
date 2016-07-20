@@ -436,7 +436,7 @@ protected:
 
     /// Overwrite tile config according to tile index
     virtual ADDR_E_RETURNCODE HwlSetupTileCfg(
-        INT_32 index, INT_32 macroModeIndex,
+        UINT_32 bpp, INT_32 index, INT_32 macroModeIndex,
         ADDR_TILEINFO* pInfo, AddrTileMode* mode = NULL, AddrTileType* type = NULL) const;
 
     /// Overwrite macro tile config according to tile index

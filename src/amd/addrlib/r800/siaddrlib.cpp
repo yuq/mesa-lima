@@ -2443,6 +2443,7 @@ INT_32 SiAddrLib::HwlPostCheckTileIndex(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE SiAddrLib::HwlSetupTileCfg(
+    UINT_32         bpp,            ///< [in] Bits per pixel
     INT_32          index,          ///< [in] Tile index
     INT_32          macroModeIndex, ///< [in] Index in macro tile mode table(CI)
     ADDR_TILEINFO*  pInfo,          ///< [out] Tile Info

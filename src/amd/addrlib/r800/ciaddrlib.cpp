@@ -542,6 +542,7 @@ INT_32 CiAddrLib::HwlPostCheckTileIndex(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE CiAddrLib::HwlSetupTileCfg(
+    UINT_32         bpp,            ///< [in] Bits per pixel
     INT_32          index,          ///< [in] Tile index
     INT_32          macroModeIndex, ///< [in] Index in macro tile mode table(CI)
     ADDR_TILEINFO*  pInfo,          ///< [out] Tile Info
@@ -566,23 +567,37 @@ ADDR_E_RETURNCODE CiAddrLib::HwlSetupTileCfg(
             {
                 if (IsMacroTiled(pCfgTable->mode))
                 {
-                    ADDR_ASSERT(((macroModeIndex != TileIndexInvalid)
-                        && (macroModeIndex != TileIndexNoMacroIndex)));
-                    // Here we used tile_bytes to replace of tile_split
-                    // According info as below:
-                    // "tile_split_c = MIN(ROW_SIZE, tile_split)
-                    // "tile_bytes = MIN(tile_split_c, num_samples * tile_bytes_1x)
-                    // when using tile_bytes replacing of tile_split, the result of
-                    // alignment and others(such as slicesPerTile) are unaffected -
-                    // since if tile_split_c is larger, split won't happen, otherwise
-                    // (num_samples * tile_bytes_1x is larger), a correct tile_split is
-                    // returned.
+                    ADDR_ASSERT((macroModeIndex != TileIndexInvalid) &&
+                                (macroModeIndex != TileIndexNoMacroIndex));
+
+                    UINT_32 tileSplit;
+
                     *pInfo = m_macroTileTable[macroModeIndex];
 
                     if (pCfgTable->type == ADDR_DEPTH_SAMPLE_ORDER)
                     {
-                        pInfo->tileSplitBytes = pCfgTable->info.tileSplitBytes;
+                        tileSplit = pCfgTable->info.tileSplitBytes;
                     }
+                    else
+                    {
+                        if (bpp > 0)
+                        {
+                            UINT_32 thickness = ComputeSurfaceThickness(pCfgTable->mode);
+                            UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
+                            // Non-depth entries store a split factor
+                            UINT_32 sampleSplit = m_tileTable[index].info.tileSplitBytes;
+                            tileSplit = Max(256u, sampleSplit * tileBytes1x);
+                        }
+                        else
+                        {
+                            // Return tileBytes instead if not enough info
+                            tileSplit = pInfo->tileSplitBytes;
+                        }
+                    }
+
+                    // Clamp to row_size
+                    pInfo->tileSplitBytes = Min(m_rowSize, tileSplit);
+
                     pInfo->pipeConfig = pCfgTable->info.pipeConfig;
                 }
                 else // 1D and linear modes, we return default value stored in table

@@ -1877,6 +1877,7 @@ typedef struct _ADDR_CONVERT_TILEINFOTOHW_INPUT
                                         ///  while the global useTileIndex is set to 1
     INT_32          macroModeIndex;     ///< Index in macro tile mode table if there is one (CI)
                                         ///< README: When tileIndex is not -1, this must be valid
+    UINT_32         bpp;                ///< Bits per pixel
 } ADDR_CONVERT_TILEINFOTOHW_INPUT;
 
 /**
@@ -1925,6 +1926,7 @@ typedef struct _ADDR_CONVERT_TILEINDEX_INPUT
 
     INT_32          tileIndex;          ///< Tile index
     INT_32          macroModeIndex;     ///< Index in macro tile mode table if there is one (CI)
+    UINT_32         bpp;                ///< Bits per pixel
     BOOL_32         tileInfoHw;         ///< Set to TRUE if client wants HW enum, otherwise actual
 } ADDR_CONVERT_TILEINDEX_INPUT;
 

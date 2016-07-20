@@ -307,7 +307,8 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
                 // If macroModeIndex is not needed, then call HwlSetupTileCfg to get tile info
                 if (macroModeIndex == TileIndexNoMacroIndex)
                 {
-                    returnCode = HwlSetupTileCfg(localIn.tileIndex, macroModeIndex,
+                    returnCode = HwlSetupTileCfg(localIn.bpp,
+                                                 localIn.tileIndex, macroModeIndex,
                                                  localIn.pTileInfo,
                                                  &localIn.tileMode, &localIn.tileType);
                 }
@@ -475,7 +476,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceAddrFromCoord(
             // If macroModeIndex is not needed, then call HwlSetupTileCfg to get tile info
             if (macroModeIndex == TileIndexNoMacroIndex)
             {
-                returnCode = HwlSetupTileCfg(input.tileIndex, macroModeIndex,
+                returnCode = HwlSetupTileCfg(input.bpp, input.tileIndex, macroModeIndex,
                                              input.pTileInfo, &input.tileMode, &input.tileType);
             }
             // If macroModeIndex is invalid, then assert this is not macro tiled
@@ -555,7 +556,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceCoordFromAddr(
             // If macroModeIndex is not needed, then call HwlSetupTileCfg to get tile info
             if (macroModeIndex == TileIndexNoMacroIndex)
             {
-                returnCode = HwlSetupTileCfg(input.tileIndex, macroModeIndex,
+                returnCode = HwlSetupTileCfg(input.bpp, input.tileIndex, macroModeIndex,
                                              input.pTileInfo, &input.tileMode, &input.tileType);
             }
             // If macroModeIndex is invalid, then assert this is not macro tiled
@@ -615,7 +616,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSliceTileSwizzle(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex,
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex,
                                          input.pTileInfo, &input.tileMode);
             // Change the input structure
             pIn = &input;
@@ -668,7 +669,7 @@ ADDR_E_RETURNCODE AddrLib1::ExtractBankPipeSwizzle(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex, input.pTileInfo);
             // Change the input structure
             pIn = &input;
         }
@@ -720,7 +721,7 @@ ADDR_E_RETURNCODE AddrLib1::CombineBankPipeSwizzle(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex, input.pTileInfo);
             // Change the input structure
             pIn = &input;
         }
@@ -774,7 +775,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeBaseSwizzle(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex, input.pTileInfo);
             // Change the input structure
             pIn = &input;
         }
@@ -861,7 +862,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeFmaskInfo(
             // If macroModeIndex is not needed, then call HwlSetupTileCfg to get tile info
             if (macroModeIndex == TileIndexNoMacroIndex)
             {
-                returnCode = HwlSetupTileCfg(input.tileIndex, macroModeIndex,
+                returnCode = HwlSetupTileCfg(0, input.tileIndex, macroModeIndex,
                                              input.pTileInfo, &input.tileMode);
             }
 
@@ -1014,7 +1015,8 @@ ADDR_E_RETURNCODE AddrLib1::ConvertTileInfoToHW(
             input = *pIn;
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(input.bpp, input.tileIndex,
+                                         input.macroModeIndex, input.pTileInfo);
 
             pIn = &input;
         }
@@ -1058,7 +1060,7 @@ ADDR_E_RETURNCODE AddrLib1::ConvertTileIndex(
     if (returnCode == ADDR_OK)
     {
 
-        returnCode = HwlSetupTileCfg(pIn->tileIndex, pIn->macroModeIndex,
+        returnCode = HwlSetupTileCfg(pIn->bpp, pIn->tileIndex, pIn->macroModeIndex,
                                      pOut->pTileInfo, &pOut->tileMode, &pOut->tileType);
 
         if (returnCode == ADDR_OK && pIn->tileInfoHw)
@@ -1226,7 +1228,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileInfo(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex, input.pTileInfo);
 
             // Change the input structure
             pIn = &input;
@@ -1293,7 +1295,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskInfo(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex, input.pTileInfo);
 
             // Change the input structure
             pIn = &input;
@@ -1356,7 +1358,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeDccInfo(
         {
             input = *pIn;
 
-            ret = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex,
+            ret = HwlSetupTileCfg(input.bpp, input.tileIndex, input.macroModeIndex,
                                   &input.tileInfo, &input.tileMode);
 
             pIn = &input;
@@ -1412,7 +1414,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileAddrFromCoord(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex, input.pTileInfo);
 
             // Change the input structure
             pIn = &input;
@@ -1480,7 +1482,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileCoordFromAddr(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex, input.pTileInfo);
 
             // Change the input structure
             pIn = &input;
@@ -1545,7 +1547,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskAddrFromCoord(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex, input.pTileInfo);
 
             // Change the input structure
             pIn = &input;
@@ -1617,7 +1619,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskCoordFromAddr(
             // Use temp tile info for calcalation
             input.pTileInfo = &tileInfoNull;
 
-            returnCode = HwlSetupTileCfg(input.tileIndex, input.macroModeIndex, input.pTileInfo);
+            returnCode = HwlSetupTileCfg(0, input.tileIndex, input.macroModeIndex, input.pTileInfo);
 
             // Change the input structure
             pIn = &input;
@@ -3422,6 +3424,7 @@ ADDR_E_RETURNCODE AddrLib1::PostComputeMipLevel(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE AddrLib1::HwlSetupTileCfg(
+    UINT_32         bpp,              ///< Bits per pixel
     INT_32          index,            ///< [in] Tile index
     INT_32          macroModeIndex,   ///< [in] Index in macro tile mode table(CI)
     ADDR_TILEINFO*  pInfo,            ///< [out] Tile Info

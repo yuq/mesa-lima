@@ -105,7 +105,7 @@ protected:
         const ADDR_CREATE_INPUT* pCreateIn);
 
     virtual ADDR_E_RETURNCODE HwlSetupTileCfg(
-        INT_32 index, INT_32 macroModeIndex, ADDR_TILEINFO* pInfo,
+        UINT_32 bpp, INT_32 index, INT_32 macroModeIndex, ADDR_TILEINFO* pInfo,
         AddrTileMode* pMode = 0, AddrTileType* pType = 0) const;
 
     virtual VOID HwlComputeTileDataWidthAndHeightLinear(
