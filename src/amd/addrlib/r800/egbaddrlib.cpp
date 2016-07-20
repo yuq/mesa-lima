@@ -264,7 +264,7 @@ BOOL_32 EgBasedLib::ComputeSurfaceInfoLinear(
                   pOut->pTileInfo,
                   padDims,
                   pIn->mipLevel,
-                  &expPitch, pOut->pitchAlign,
+                  &expPitch, &pOut->pitchAlign,
                   &expHeight, pOut->heightAlign,
                   &expNumSlices, microTileThickness);
 
@@ -378,7 +378,7 @@ BOOL_32 EgBasedLib::ComputeSurfaceInfoMicroTiled(
                   pOut->pTileInfo,
                   padDims,
                   pIn->mipLevel,
-                  &expPitch, pOut->pitchAlign,
+                  &expPitch, &pOut->pitchAlign,
                   &expHeight, pOut->heightAlign,
                   &expNumSlices, microTileThickness);
 
@@ -527,7 +527,7 @@ BOOL_32 EgBasedLib::ComputeSurfaceInfoMacroTiled(
                       pOut->pTileInfo,
                       padDims,
                       pIn->mipLevel,
-                      &paddedPitch, pOut->pitchAlign,
+                      &paddedPitch, &pOut->pitchAlign,
                       &paddedHeight, pOut->heightAlign,
                       &expNumSlices, microTileThickness);
 
@@ -932,22 +932,9 @@ BOOL_32 EgBasedLib::ComputeSurfaceAlignmentsMacroTiled(
         *pBaseAlign = pipes *
             pTileInfo->bankWidth * pTileInfo->banks * pTileInfo->bankHeight * tileSize;
 
-        if ((mipLevel == 0) && (flags.prt) && (m_chipFamily == ADDR_CHIP_FAMILY_SI))
-        {
-            static const UINT_32 PrtTileSize = 0x10000;
-
-            UINT_32 macroTileSize = macroTileWidth * macroTileHeight * numSamples * bpp / 8;
-
-            if (macroTileSize < PrtTileSize)
-            {
-                UINT_32 numMacroTiles = PrtTileSize / macroTileSize;
-
-                ADDR_ASSERT((PrtTileSize % macroTileSize) == 0);
-
-                *pPitchAlign *= numMacroTiles;
-                *pBaseAlign  *= numMacroTiles;
-            }
-        }
+        HwlComputeSurfaceAlignmentsMacroTiled(tileMode, bpp, flags, mipLevel, numSamples,
+                                              pTileInfo, pBaseAlign, pPitchAlign, pHeightAlign,
+                                              pMacroTileWidth, pMacroTileHeight);
     }
 
     return valid;

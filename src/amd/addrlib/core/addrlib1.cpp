@@ -3228,13 +3228,14 @@ VOID Lib::PadDimensions(
     UINT_32             padDims,     ///< [in] Dimensions to pad valid value 1,2,3
     UINT_32             mipLevel,    ///< [in] MipLevel
     UINT_32*            pPitch,      ///< [in,out] pitch in pixels
-    UINT_32             pitchAlign,  ///< [in] pitch alignment
+    UINT_32*            pPitchAlign, ///< [in,out] pitch align could be changed in HwlPadDimensions
     UINT_32*            pHeight,     ///< [in,out] height in pixels
     UINT_32             heightAlign, ///< [in] height alignment
     UINT_32*            pSlices,     ///< [in,out] number of slices
     UINT_32             sliceAlign   ///< [in] number of slice alignment
     ) const
 {
+    UINT_32 pitchAlign = *pPitchAlign;
     UINT_32 thickness = Thickness(tileMode);
 
     ADDR_ASSERT(padDims <= 3);
@@ -3302,14 +3303,11 @@ VOID Lib::PadDimensions(
                      flags,
                      numSamples,
                      pTileInfo,
-                     padDims,
                      mipLevel,
                      pPitch,
-                     pitchAlign,
-                     pHeight,
-                     heightAlign,
-                     pSlices,
-                     sliceAlign);
+                     pPitchAlign,
+                     *pHeight,
+                     heightAlign);
 }
 
 

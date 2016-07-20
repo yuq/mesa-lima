@@ -166,9 +166,14 @@ protected:
 
     virtual VOID HwlPadDimensions(
         AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
-        UINT_32 numSamples, ADDR_TILEINFO* pTileInfo, UINT_32 padDims, UINT_32 mipLevel,
-        UINT_32* pPitch, UINT_32 pitchAlign, UINT_32* pHeight, UINT_32 heightAlign,
-        UINT_32* pSlices, UINT_32 sliceAlign) const;
+        UINT_32 numSamples, ADDR_TILEINFO* pTileInfo, UINT_32 mipLevel,
+        UINT_32* pPitch, UINT_32 *PitchAlign, UINT_32 height, UINT_32 heightAlign) const;
+
+    virtual VOID HwlComputeSurfaceAlignmentsMacroTiled(
+        AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
+        UINT_32 mipLevel, UINT_32 numSamples, ADDR_TILEINFO* pTileInfo,
+        UINT_32* pBaseAlign, UINT_32* pPitchAlign, UINT_32* pHeightAlign,
+        UINT_32* pMacroTileWidth, UINT_32* pMacroTileHeight) const;
 
 private:
     VOID ReadGbTileMode(

@@ -1941,6 +1941,41 @@ UINT_64 CiLib::HwlComputeMetadataNibbleAddress(
 
 /**
 ****************************************************************************************************
+*   CiLib::HwlComputeSurfaceAlignmentsMacroTiled
+*
+*   @brief
+*       Hardware layer function to compute alignment request for macro tile mode
+*
+*   @return
+*       N/A
+*
+****************************************************************************************************
+*/
+VOID CiLib::HwlComputeSurfaceAlignmentsMacroTiled(
+    AddrTileMode        tileMode,           ///< [in] tile mode
+    UINT_32             bpp,                ///< [in] bits per pixel
+    ADDR_SURFACE_FLAGS  flags,              ///< [in] surface flags
+    UINT_32             mipLevel,           ///< [in] mip level
+    UINT_32             numSamples,         ///< [in] number of samples
+    ADDR_TILEINFO*      pTileInfo,          ///< [in,out] bank structure.
+    UINT_32*            pBaseAlign,         ///< [out] base address alignment in bytes
+    UINT_32*            pPitchAlign,        ///< [out] pitch alignment in pixels
+    UINT_32*            pHeightAlign,       ///< [out] height alignment in pixels
+    UINT_32*            pMacroTileWidth,    ///< [out] macro tile width in pixels
+    UINT_32*            pMacroTileHeight    ///< [out] macro tile height in pixels
+    ) const
+{
+    if ((m_settings.isFiji == TRUE) &&
+        (flags.dccCompatible == TRUE) &&
+        (mipLevel == 0) &&
+        (tileMode == ADDR_TM_PRT_TILED_THIN1))
+    {
+        *pPitchAlign = PowTwoAlign(*pPitchAlign, 256);
+    }
+}
+
+/**
+****************************************************************************************************
 *   CiLib::HwlPadDimensions
 *
 *   @brief
@@ -1956,22 +1991,19 @@ VOID CiLib::HwlPadDimensions(
     UINT_32             bpp,         ///< [in] bits per pixel
     ADDR_SURFACE_FLAGS  flags,       ///< [in] surface flags
     UINT_32             numSamples,  ///< [in] number of samples
-    ADDR_TILEINFO*      pTileInfo,   ///< [in,out] bank structure.
-    UINT_32             padDims,     ///< [in] Dimensions to pad valid value 1,2,3
-    UINT_32             mipLevel,    ///< [in] MipLevel
+    ADDR_TILEINFO*      pTileInfo,   ///< [in] tile info
+    UINT_32             mipLevel,    ///< [in] mip level
     UINT_32*            pPitch,      ///< [in,out] pitch in pixels
-    UINT_32             pitchAlign,  ///< [in] pitch alignment
-    UINT_32*            pHeight,     ///< [in,out] height in pixels
-    UINT_32             heightAlign, ///< [in] height alignment
-    UINT_32*            pSlices,     ///< [in,out] number of slices
-    UINT_32             sliceAlign   ///< [in] number of slice alignment
+    UINT_32*            pPitchAlign, ///< [in,out] pitch alignment
+    UINT_32             height,      ///< [in] height in pixels
+    UINT_32             heightAlign  ///< [in] height alignment
     ) const
 {
-    if (m_settings.isVolcanicIslands &&
-        flags.dccCompatible &&
+    if ((m_settings.isVolcanicIslands == TRUE) &&
+        (flags.dccCompatible == TRUE) &&
         (numSamples > 1) &&
         (mipLevel == 0) &&
-        IsMacroTiled(tileMode))
+        (IsMacroTiled(tileMode) == TRUE))
     {
         UINT_32 tileSizePerSample = BITS_TO_BYTES(bpp * MicroTileWidth * MicroTileHeight);
         UINT_32 samplesPerSplit  = pTileInfo->tileSplitBytes / tileSizePerSample;
@@ -1979,7 +2011,7 @@ VOID CiLib::HwlPadDimensions(
         if (samplesPerSplit < numSamples)
         {
             UINT_32 dccFastClearByteAlign = HwlGetPipes(pTileInfo) * m_pipeInterleaveBytes * 256;
-            UINT_32 bytesPerSplit = BITS_TO_BYTES((*pPitch) * (*pHeight) * bpp * samplesPerSplit);
+            UINT_32 bytesPerSplit = BITS_TO_BYTES((*pPitch) * height * bpp * samplesPerSplit);
 
             ADDR_ASSERT(IsPow2(dccFastClearByteAlign));
 
@@ -1988,15 +2020,14 @@ VOID CiLib::HwlPadDimensions(
                 UINT_32 dccFastClearPixelAlign = dccFastClearByteAlign /
                                                 BITS_TO_BYTES(bpp) /
                                                 samplesPerSplit;
-                UINT_32 macroTilePixelAlign = pitchAlign * heightAlign;
+                UINT_32 macroTilePixelAlign = (*pPitchAlign) * heightAlign;
 
                 if ((dccFastClearPixelAlign >= macroTilePixelAlign) &&
                     ((dccFastClearPixelAlign % macroTilePixelAlign) == 0))
                 {
                     UINT_32 dccFastClearPitchAlignInMacroTile =
                         dccFastClearPixelAlign / macroTilePixelAlign;
-                    UINT_32 heightInMacroTile = *pHeight / heightAlign;
-                    UINT_32 dccFastClearPitchAlignInPixels;
+                    UINT_32 heightInMacroTile = height / heightAlign;
 
                     while ((heightInMacroTile > 1) &&
                            ((heightInMacroTile % 2) == 0) &&
@@ -2007,7 +2038,8 @@ VOID CiLib::HwlPadDimensions(
                         dccFastClearPitchAlignInMacroTile >>= 1;
                     }
 
-                    dccFastClearPitchAlignInPixels = pitchAlign * dccFastClearPitchAlignInMacroTile;
+                    UINT_32 dccFastClearPitchAlignInPixels =
+                        (*pPitchAlign) * dccFastClearPitchAlignInMacroTile;
 
                     if (IsPow2(dccFastClearPitchAlignInPixels))
                     {
@@ -2019,6 +2051,8 @@ VOID CiLib::HwlPadDimensions(
                         *pPitch /= dccFastClearPitchAlignInPixels;
                         *pPitch *= dccFastClearPitchAlignInPixels;
                     }
+
+                    *pPitchAlign = dccFastClearPitchAlignInPixels;
                 }
             }
         }

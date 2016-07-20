@@ -241,6 +241,12 @@ protected:
 
     virtual ADDR_E_RETURNCODE HwlGetMaxAlignments(ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) const;
 
+    virtual VOID HwlComputeSurfaceAlignmentsMacroTiled(
+        AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
+        UINT_32 mipLevel, UINT_32 numSamples, ADDR_TILEINFO* pTileInfo,
+        UINT_32* pBaseAlign, UINT_32* pPitchAlign, UINT_32* pHeightAlign,
+        UINT_32* pMacroTileWidth, UINT_32* pMacroTileHeight) const;
+
     // Get equation table pointer and number of equations
     virtual UINT_32 HwlGetEquationTableInfo(const ADDR_EQUATION** ppEquationTable) const
     {

@@ -3327,6 +3327,48 @@ ADDR_E_RETURNCODE SiLib::HwlGetMaxAlignments(
 
 /**
 ****************************************************************************************************
+*   SiLib::HwlComputeSurfaceAlignmentsMacroTiled
+*
+*   @brief
+*       Hardware layer function to compute alignment request for macro tile mode
+*
+*   @return
+*       N/A
+*
+****************************************************************************************************
+*/
+VOID SiLib::HwlComputeSurfaceAlignmentsMacroTiled(
+    AddrTileMode        tileMode,           ///< [in] tile mode
+    UINT_32             bpp,                ///< [in] bits per pixel
+    ADDR_SURFACE_FLAGS  flags,              ///< [in] surface flags
+    UINT_32             mipLevel,           ///< [in] mip level
+    UINT_32             numSamples,         ///< [in] number of samples
+    ADDR_TILEINFO*      pTileInfo,          ///< [in,out] bank structure.
+    UINT_32*            pBaseAlign,         ///< [out] base address alignment in bytes
+    UINT_32*            pPitchAlign,        ///< [out] pitch alignment in pixels
+    UINT_32*            pHeightAlign,       ///< [out] height alignment in pixels
+    UINT_32*            pMacroTileWidth,    ///< [out] macro tile width in pixels
+    UINT_32*            pMacroTileHeight    ///< [out] macro tile height in pixels
+    ) const
+{
+    if ((mipLevel == 0) && (flags.prt))
+    {
+        UINT_32 macroTileSize = (*pMacroTileWidth) * (*pMacroTileHeight) * numSamples * bpp / 8;
+
+        if (macroTileSize < PrtTileSize)
+        {
+            UINT_32 numMacroTiles = PrtTileSize / macroTileSize;
+
+            ADDR_ASSERT((PrtTileSize % macroTileSize) == 0);
+
+            *pPitchAlign *= numMacroTiles;
+            *pBaseAlign  *= numMacroTiles;
+        }
+    }
+}
+
+/**
+****************************************************************************************************
 *   SiLib::InitEquationTable
 *
 *   @brief

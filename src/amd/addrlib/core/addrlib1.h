@@ -71,6 +71,9 @@ struct TileModeFlags
     UINT_32 isBankSwapped   : 1;
 };
 
+static const UINT_32 Block64K = 0x10000;
+static const UINT_32 PrtTileSize = Block64K;
+
 /**
 ****************************************************************************************************
 * @brief This class contains asic independent address lib functionalities
@@ -365,14 +368,13 @@ protected:
     VOID PadDimensions(
         AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
         UINT_32 numSamples, ADDR_TILEINFO* pTileInfo, UINT_32 padDims, UINT_32 mipLevel,
-        UINT_32* pPitch, UINT_32 pitchAlign, UINT_32* pHeight, UINT_32 heightAlign,
+        UINT_32* pPitch, UINT_32* pPitchAlign, UINT_32* pHeight, UINT_32 heightAlign,
         UINT_32* pSlices, UINT_32 sliceAlign) const;
 
     virtual VOID HwlPadDimensions(
         AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
-        UINT_32 numSamples, ADDR_TILEINFO* pTileInfo, UINT_32 padDims, UINT_32 mipLevel,
-        UINT_32* pPitch, UINT_32 pitchAlign, UINT_32* pHeight, UINT_32 heightAlign,
-        UINT_32* pSlices, UINT_32 sliceAlign) const
+        UINT_32 numSamples, ADDR_TILEINFO* pTileInfo, UINT_32 mipLevel,
+        UINT_32* pPitch, UINT_32* pPitchAlign, UINT_32 height, UINT_32 heightAlign) const
     {
     }
 
