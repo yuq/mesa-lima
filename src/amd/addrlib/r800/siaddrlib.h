@@ -42,7 +42,7 @@
 * @brief Describes the information in tile mode table
 ***************************************************************************************************
 */
-struct ADDR_TILECONFIG
+struct AddrTileConfig
 {
     AddrTileMode  mode;
     AddrTileType  type;
@@ -131,6 +131,14 @@ protected:
         UINT_32 pitch, UINT_32 height, UINT_32 bpp,
         BOOL_32 isLinear, UINT_32 numSlices, UINT_64* pSliceBytes, UINT_32 baseAlign) const;
 
+    virtual ADDR_E_RETURNCODE ComputeBankEquation(
+        UINT_32 log2BytesPP, UINT_32 threshX, UINT_32 threshY,
+        ADDR_TILEINFO* pTileInfo, ADDR_EQUATION* pEquation) const;
+
+    virtual ADDR_E_RETURNCODE ComputePipeEquation(
+        UINT_32 log2BytesPP, UINT_32 threshX, UINT_32 threshY,
+        ADDR_TILEINFO* pTileInfo, ADDR_EQUATION* pEquation) const;
+
     virtual UINT_32 ComputePipeFromCoord(
         UINT_32 x, UINT_32 y, UINT_32 slice,
         AddrTileMode tileMode, UINT_32 pipeSwizzle, BOOL_32 ignoreSE,
@@ -173,10 +181,7 @@ protected:
     virtual AddrTileMode HwlDegradeThickTileMode(
         AddrTileMode baseTileMode, UINT_32 numSlices, UINT_32* pBytesPerTile) const;
 
-    virtual BOOL_32 HwlOverrideTileMode(
-        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn,
-        AddrTileMode* pTileMode,
-        AddrTileType* pTileType) const;
+    virtual VOID HwlOverrideTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const;
 
     virtual BOOL_32 HwlSanityCheckMacroTiled(
         ADDR_TILEINFO* pTileInfo) const
@@ -229,6 +234,18 @@ protected:
 
     virtual ADDR_E_RETURNCODE HwlGetMaxAlignments(ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) const;
 
+    // Get equation table pointer and number of equations
+    virtual UINT_32 HwlGetEquationTableInfo(const ADDR_EQUATION** ppEquationTable) const
+    {
+        *ppEquationTable = m_equationTable;
+
+        return m_numEquations;
+    }
+
+    // Check if it is supported for given bpp and tile config to generate an equation
+    BOOL_32 IsEquationSupported(
+        UINT_32 bpp, AddrTileConfig tileConfig, INT_32 tileIndex) const;
+
     // Protected non-virtual functions
     VOID ComputeTileCoordFromPipeAndElemIdx(
         UINT_32 elemIdx, UINT_32 pipe, AddrPipeCfg pipeCfg, UINT_32 pitchInMacroTile,
@@ -241,19 +258,36 @@ protected:
     BOOL_32 DecodeGbRegs(
         const ADDR_REGISTER_VALUE* pRegValue);
 
-    const ADDR_TILECONFIG* GetTileSetting(
+    const AddrTileConfig* GetTileSetting(
         UINT_32 index) const;
 
+    // Initialize equation table
+    VOID InitEquationTable();
+
     static const UINT_32    TileTableSize = 32;
-    ADDR_TILECONFIG         m_tileTable[TileTableSize];
+    AddrTileConfig          m_tileTable[TileTableSize];
     UINT_32                 m_noOfEntries;
+
+    // Max number of bpp (8bpp/16bpp/32bpp/64bpp/128bpp)
+    static const UINT_32    MaxNumElementBytes  = 5;
+    // More than half slots in tile mode table can't support equation
+    static const UINT_32    EquationTableSize = (MaxNumElementBytes * TileTableSize) / 2;
+    // Equation table
+    ADDR_EQUATION           m_equationTable[EquationTableSize];
+    UINT_32                 m_blockWidth[EquationTableSize];
+    UINT_32                 m_blockHeight[EquationTableSize];
+    UINT_32                 m_blockSlices[EquationTableSize];
+    // Number of equation entries in the table
+    UINT_32                 m_numEquations;
+    // Equation lookup table according to bpp and tile index
+    UINT_32                 m_equationLookupTable[MaxNumElementBytes][TileTableSize];
 
 private:
 
     UINT_32 GetPipePerSurf(AddrPipeCfg pipeConfig) const;
 
     VOID ReadGbTileMode(
-        UINT_32 regValue, ADDR_TILECONFIG* pCfg) const;
+        UINT_32 regValue, AddrTileConfig* pCfg) const;
     BOOL_32 InitTileSettingTable(
         const UINT_32 *pSetting, UINT_32 noOfEntries);
 

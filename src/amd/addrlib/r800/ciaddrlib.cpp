@@ -482,6 +482,11 @@ BOOL_32 CiAddrLib::HwlInitGlobalParams(
         valid = InitMacroTileCfgTable(pRegValue->pMacroTileConfig, pRegValue->noOfMacroEntries);
     }
 
+    if (valid)
+    {
+        InitEquationTable();
+    }
+
     return valid;
 }
 
@@ -615,7 +620,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlSetupTileCfg(
         }
         else
         {
-            const ADDR_TILECONFIG* pCfgTable = GetTileSetting(index);
+            const AddrTileConfig* pCfgTable = GetTileSetting(index);
 
             if (pInfo != NULL)
             {
@@ -864,18 +869,16 @@ AddrTileMode CiAddrLib::HwlDegradeThickTileMode(
 *       Override THICK to THIN, for specific formats on CI
 *
 *   @return
-*       Suitable tile mode
+*       N/A
 *
 ***************************************************************************************************
 */
-BOOL_32 CiAddrLib::HwlOverrideTileMode(
-    const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,       ///< [in] input structure
-    AddrTileMode*                           pTileMode, ///< [in/out] pointer to the tile mode
-    AddrTileType*                           pTileType  ///< [in/out] pointer to the tile type
+VOID CiAddrLib::HwlOverrideTileMode(
+    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut      ///< [in/out] input output structure
     ) const
 {
-    BOOL_32 bOverrided = FALSE;
-    AddrTileMode tileMode = *pTileMode;
+    AddrTileMode tileMode = pInOut->tileMode;
+    AddrTileType tileType = pInOut->tileType;
 
     // currently, all CI/VI family do not
     // support ADDR_TM_PRT_2D_TILED_THICK,ADDR_TM_PRT_3D_TILED_THICK and
@@ -902,7 +905,7 @@ BOOL_32 CiAddrLib::HwlOverrideTileMode(
         // tile_thickness = (array_mode == XTHICK) ? 8 : ((array_mode == THICK) ? 4 : 1)
         if (thickness > 1)
         {
-            switch (pIn->format)
+            switch (pInOut->format)
             {
                 // see //gfxip/gcB/devel/cds/src/verif/tc/models/csim/tcp.cpp
                 // tcpError("Thick micro tiling is not supported for format...
@@ -957,10 +960,10 @@ BOOL_32 CiAddrLib::HwlOverrideTileMode(
                     }
 
                     // Switch tile type from thick to thin
-                    if (tileMode != *pTileMode)
+                    if (tileMode != pInOut->tileMode)
                     {
                         // see tileIndex: 13-18
-                        *pTileType = ADDR_NON_DISPLAYABLE;
+                        tileType = ADDR_NON_DISPLAYABLE;
                     }
 
                     break;
@@ -970,13 +973,53 @@ BOOL_32 CiAddrLib::HwlOverrideTileMode(
         }
     }
 
-    if (tileMode != *pTileMode)
+    // Override 2D/3D macro tile mode to PRT_* tile mode if
+    // client driver requests this surface is equation compatible
+    if ((pInOut->flags.needEquation == TRUE) &&
+        (pInOut->numSamples <= 1) &&
+        (IsMacroTiled(tileMode) == TRUE) &&
+        (IsPrtTileMode(tileMode) == FALSE))
     {
-        *pTileMode = tileMode;
-        bOverrided = TRUE;
+        UINT_32 thickness = Thickness(tileMode);
+
+        if (thickness == 1)
+        {
+            tileMode = ADDR_TM_PRT_TILED_THIN1;
+        }
+        else
+        {
+            static const UINT_32 PrtTileBytes = 0x10000;
+            // First prt thick tile index in the tile mode table
+            static const UINT_32 PrtThickTileIndex = 22;
+            ADDR_TILEINFO tileInfo = {0};
+
+            HwlComputeMacroModeIndex(PrtThickTileIndex,
+                                     pInOut->flags,
+                                     pInOut->bpp,
+                                     pInOut->numSamples,
+                                     &tileInfo);
+
+            UINT_32 macroTileBytes = ((pInOut->bpp) >> 3) * 64 * pInOut->numSamples *
+                                     thickness * HwlGetPipes(&tileInfo) *
+                                     tileInfo.banks * tileInfo.bankWidth *
+                                     tileInfo.bankHeight;
+
+            if (macroTileBytes <= PrtTileBytes)
+            {
+                tileMode = ADDR_TM_PRT_TILED_THICK;
+            }
+            else
+            {
+                tileMode = ADDR_TM_PRT_TILED_THIN1;
+            }
+        }
     }
 
-    return bOverrided;
+    if (tileMode != pInOut->tileMode)
+    {
+        pInOut->tileMode = tileMode;
+        pInOut->tileType = tileType;
+    }
 }
 
 /**
@@ -1016,7 +1059,10 @@ VOID CiAddrLib::HwlSetupTileInfo(
             {
                 inTileType = ADDR_NON_DISPLAYABLE;
             }
-            else if ((m_allowNonDispThickModes == FALSE) || (inTileType != ADDR_NON_DISPLAYABLE))
+            else if ((m_allowNonDispThickModes == FALSE) ||
+                     (inTileType != ADDR_NON_DISPLAYABLE) ||
+                     // There is no PRT_THICK + THIN entry in tile mode table except Bonaire
+                     (IsPrtTileMode(tileMode) == TRUE))
             {
                 inTileType = ADDR_THICK;
             }
@@ -1055,7 +1101,7 @@ VOID CiAddrLib::HwlSetupTileInfo(
                 pOut->tcCompatible = FALSE;
             }
 
-            if (flags.depth && (flags.nonSplit || flags.tcCompatible))
+            if (flags.depth && (flags.nonSplit || flags.tcCompatible || flags.needEquation))
             {
                 // Texure readable depth surface should not be split
                 switch (tileSize)
@@ -1277,7 +1323,7 @@ VOID CiAddrLib::HwlSetupTileInfo(
     {
         if (IsMacroTiled(tileMode))
         {
-            UINT_32 tileIndex = static_cast<UINT_32>(pOut->tileIndex);
+            INT_32 tileIndex = pOut->tileIndex;
 
             if ((tileIndex == TileIndexInvalid) && (IsTileInfoAllZero(pTileInfo) == FALSE))
             {
@@ -1286,7 +1332,7 @@ VOID CiAddrLib::HwlSetupTileInfo(
 
             if (tileIndex != TileIndexInvalid)
             {
-                ADDR_ASSERT(tileIndex < TileTableSize);
+                ADDR_ASSERT(static_cast<UINT_32>(tileIndex) < TileTableSize);
                 // Non-depth entries store a split factor
                 UINT_32 sampleSplit = m_tileTable[tileIndex].info.tileSplitBytes;
                 UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
@@ -1318,7 +1364,7 @@ VOID CiAddrLib::HwlSetupTileInfo(
 */
 VOID CiAddrLib::ReadGbTileMode(
     UINT_32             regValue,   ///< [in] GB_TILE_MODE register
-    ADDR_TILECONFIG*    pCfg        ///< [out] output structure
+    AddrTileConfig*     pCfg        ///< [out] output structure
     ) const
 {
     GB_TILE_MODE gbTileMode;
@@ -1914,4 +1960,5 @@ ADDR_E_RETURNCODE CiAddrLib::HwlGetMaxAlignments(
 
     return ADDR_OK;
 }
+
 

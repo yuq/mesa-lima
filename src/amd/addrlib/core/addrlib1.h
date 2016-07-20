@@ -346,13 +346,9 @@ protected:
     virtual BOOL_32 HwlDegradeBaseLevel(
         const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn) const = 0;
 
-    virtual BOOL_32 HwlOverrideTileMode(
-        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn,
-        AddrTileMode* pTileMode,
-        AddrTileType* pTileType) const
+    virtual VOID HwlOverrideTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const
     {
-        // not supported in hwl layer, FALSE for not-overrided
-        return FALSE;
+        // not supported in hwl layer
     }
 
     AddrTileMode DegradeLargeThickTile(AddrTileMode tileMode, UINT_32 bpp) const;
@@ -391,6 +387,10 @@ protected:
         UINT_32* pX, UINT_32* pY, UINT_32* pSlice, UINT_32* pSample,
         AddrTileType microTileType, BOOL_32 isDepthSampleOrder) const;
 
+    ADDR_E_RETURNCODE ComputeMicroTileEquation(
+        UINT_32 bpp, AddrTileMode tileMode,
+        AddrTileType microTileType, ADDR_EQUATION* pEquation) const;
+
     UINT_32 ComputePixelIndexWithinMicroTile(
         UINT_32 x, UINT_32 y, UINT_32 z,
         UINT_32 bpp, AddrTileMode tileMode, AddrTileType microTileType) const;
@@ -410,6 +410,12 @@ protected:
 
     UINT_32 ComputePipeFromAddr(
         UINT_64 addr, UINT_32 numPipes) const;
+
+    virtual ADDR_E_RETURNCODE ComputePipeEquation(
+        UINT_32 log2BytesPP, UINT_32 threshX, UINT_32 threshY, ADDR_TILEINFO* pTileInfo, ADDR_EQUATION* pEquation) const
+    {
+        return ADDR_NOTSUPPORTED;
+    }
 
     /// Pure Virtual function for Hwl computing pipe from coord
     virtual UINT_32 ComputePipeFromCoord(

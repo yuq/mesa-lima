@@ -196,6 +196,14 @@ protected:
     /// Pure Virtual function for Hwl converting chip family
     virtual AddrChipFamily HwlConvertChipFamily(UINT_32 uChipFamily, UINT_32 uChipRevision) = 0;
 
+    /// Get equation table pointer and number of equations
+    virtual UINT_32 HwlGetEquationTableInfo(const ADDR_EQUATION** ppEquationTable) const
+    {
+        *ppEquationTable = NULL;
+
+        return 0;
+    }
+
     //
     // Misc helper
     //

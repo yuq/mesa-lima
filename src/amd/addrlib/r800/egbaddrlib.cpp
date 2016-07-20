@@ -448,7 +448,9 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
                                                pOut->pTileInfo,
                                                &pOut->baseAlign,
                                                &pOut->pitchAlign,
-                                               &pOut->heightAlign);
+                                               &pOut->heightAlign,
+                                               &pOut->blockWidth,
+                                               &pOut->blockHeight);
 
     if (valid)
     {
@@ -471,23 +473,20 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
                                                          expHeight,
                                                          expNumSlices,
                                                          numSamples,
-                                                         pOut->pitchAlign,
-                                                         pOut->heightAlign,
+                                                         pOut->blockWidth,
+                                                         pOut->blockHeight,
                                                          pOut->pTileInfo);
 
             if (!IsMacroTiled(expTileMode)) // Downgraded to micro-tiled
             {
                 return ComputeSurfaceInfoMicroTiled(pIn, pOut, padDims, expTileMode);
             }
-            else
+            else if (microTileThickness != Thickness(expTileMode))
             {
-                if (microTileThickness != Thickness(expTileMode))
-                {
-                    //
-                    // Re-compute if thickness changed since bank-height may be changed!
-                    //
-                    return ComputeSurfaceInfoMacroTiled(pIn, pOut, padDims, expTileMode);
-                }
+                //
+                // Re-compute if thickness changed since bank-height may be changed!
+                //
+                return ComputeSurfaceInfoMacroTiled(pIn, pOut, padDims, expTileMode);
             }
         }
 
@@ -507,7 +506,9 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
                                                        pOut->pTileInfo,
                                                        &pOut->baseAlign,
                                                        &pOut->pitchAlign,
-                                                       &pOut->heightAlign);
+                                                       &pOut->heightAlign,
+                                                       &pOut->blockWidth,
+                                                       &pOut->blockHeight);
         }
 
         //
@@ -535,11 +536,51 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
             }
         }
 
-        //
-        // Compute the size of a slice.
-        //
-        bytesPerSlice = BITS_TO_BYTES(static_cast<UINT_64>(paddedPitch) *
-                                      paddedHeight * NextPow2(pIn->bpp) * numSamples);
+        if ((pIn->flags.needEquation == TRUE) &&
+            (m_chipFamily == ADDR_CHIP_FAMILY_SI) &&
+            (pIn->numMipLevels > 1) &&
+            (pIn->mipLevel == 0))
+        {
+            BOOL_32 convertTo1D = FALSE;
+
+            ADDR_ASSERT(Thickness(expTileMode) == 1);
+
+            for (UINT_32 i = 1; i < pIn->numMipLevels; i++)
+            {
+                UINT_32 mipPitch = Max(1u, paddedPitch >> i);
+                UINT_32 mipHeight = Max(1u, pIn->height >> i);
+                UINT_32 mipSlices = pIn->flags.volume ?
+                                    Max(1u, pIn->numSlices >> i) : pIn->numSlices;
+                expTileMode = ComputeSurfaceMipLevelTileMode(expTileMode,
+                                                             pIn->bpp,
+                                                             mipPitch,
+                                                             mipHeight,
+                                                             mipSlices,
+                                                             numSamples,
+                                                             pOut->blockWidth,
+                                                             pOut->blockHeight,
+                                                             pOut->pTileInfo);
+
+                if (IsMacroTiled(expTileMode))
+                {
+                    if (PowTwoAlign(mipPitch, pOut->blockWidth) !=
+                        PowTwoAlign(mipPitch, pOut->pitchAlign))
+                    {
+                        convertTo1D = TRUE;
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (convertTo1D)
+            {
+                return ComputeSurfaceInfoMicroTiled(pIn, pOut, padDims, ADDR_TM_1D_TILED_THIN1);
+            }
+        }
 
         pOut->pitch = paddedPitch;
         // Put this check right here to workaround special mipmap cases which the original height
@@ -554,6 +595,12 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
         pOut->height = paddedHeight;
 
         pOut->depth = expNumSlices;
+
+        //
+        // Compute the size of a slice.
+        //
+        bytesPerSlice = BITS_TO_BYTES(static_cast<UINT_64>(paddedPitch) *
+                                      paddedHeight * NextPow2(pIn->bpp) * numSamples);
 
         pOut->surfSize = bytesPerSlice * expNumSlices;
 
@@ -797,7 +844,9 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMacroTiled(
     ADDR_TILEINFO*      pTileInfo,          ///< [in/out] bank structure.
     UINT_32*            pBaseAlign,         ///< [out] base address alignment in bytes
     UINT_32*            pPitchAlign,        ///< [out] pitch alignment in pixels
-    UINT_32*            pHeightAlign        ///< [out] height alignment in pixels
+    UINT_32*            pHeightAlign,       ///< [out] height alignment in pixels
+    UINT_32*            pMacroTileWidth,    ///< [out] macro tile width in pixels
+    UINT_32*            pMacroTileHeight    ///< [out] macro tile height in pixels
     ) const
 {
     BOOL_32 valid = SanityCheckMacroTiled(pTileInfo);
@@ -858,6 +907,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMacroTiled(
             pTileInfo->macroAspectRatio;
 
         *pPitchAlign = macroTileWidth;
+        *pMacroTileWidth = macroTileWidth;
 
         AdjustPitchAlignment(flags, pPitchAlign);
 
@@ -868,6 +918,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMacroTiled(
             pTileInfo->macroAspectRatio;
 
         *pHeightAlign = macroTileHeight;
+        *pMacroTileHeight = macroTileHeight;
 
         //
         // Compute base alignment
@@ -1113,6 +1164,8 @@ BOOL_32 EgBasedAddrLib::HwlDegradeBaseLevel(
     UINT_32 baseAlign;
     UINT_32 pitchAlign;
     UINT_32 heightAlign;
+    UINT_32 macroTileWidth;
+    UINT_32 macroTileHeight;
 
     ADDR_ASSERT(pIn->pTileInfo);
     ADDR_TILEINFO tileInfo = *pIn->pTileInfo;
@@ -1143,11 +1196,13 @@ BOOL_32 EgBasedAddrLib::HwlDegradeBaseLevel(
                                                &tileInfo,
                                                &baseAlign,
                                                &pitchAlign,
-                                               &heightAlign);
+                                               &heightAlign,
+                                               &macroTileWidth,
+                                               &macroTileHeight);
 
     if (valid)
     {
-        degrade = (pIn->width < pitchAlign || pIn->height < heightAlign);
+        degrade = ((pIn->width < macroTileWidth) || (pIn->height < macroTileHeight));
         // Check whether 2D tiling still has too much footprint
         if (degrade == FALSE)
         {
@@ -1409,6 +1464,137 @@ UINT_64 EgBasedAddrLib::DispatchComputeSurfaceAddrFromCoord(
 #endif
 
     return addr;
+}
+
+/**
+***************************************************************************************************
+*   EgBasedAddrLib::ComputeMacroTileEquation
+*
+*   @brief
+*       Computes the address equation in macro tile
+*   @return
+*       If equation can be computed
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE EgBasedAddrLib::ComputeMacroTileEquation(
+    UINT_32             log2BytesPP,            ///< [in] log2 of bytes per pixel
+    AddrTileMode        tileMode,               ///< [in] tile mode
+    AddrTileType        microTileType,          ///< [in] micro tiling type
+    ADDR_TILEINFO*      pTileInfo,              ///< [in] bank structure
+    ADDR_EQUATION*      pEquation               ///< [out] Equation for addressing in macro tile
+    ) const
+{
+    ADDR_E_RETURNCODE retCode;
+
+    // Element equation within a tile
+    retCode = ComputeMicroTileEquation(log2BytesPP, tileMode, microTileType, pEquation);
+
+    if (retCode == ADDR_OK)
+    {
+        // Tile equesiton with signle pipe bank
+        UINT_32 numPipes              = HwlGetPipes(pTileInfo);
+        UINT_32 numPipeBits           = Log2(numPipes);
+
+        for (UINT_32 i = 0; i < Log2(pTileInfo->bankWidth); i++)
+        {
+            pEquation->addr[pEquation->numBits].valid = 1;
+            pEquation->addr[pEquation->numBits].channel = 0;
+            pEquation->addr[pEquation->numBits].index = i + log2BytesPP + 3 + numPipeBits;
+            pEquation->numBits++;
+        }
+
+        for (UINT_32 i = 0; i < Log2(pTileInfo->bankHeight); i++)
+        {
+            pEquation->addr[pEquation->numBits].valid = 1;
+            pEquation->addr[pEquation->numBits].channel = 1;
+            pEquation->addr[pEquation->numBits].index = i + 3;
+            pEquation->numBits++;
+        }
+
+        ADDR_EQUATION equation;
+        memset(&equation, 0, sizeof(ADDR_EQUATION));
+
+        UINT_32 thresholdX = 32;
+        UINT_32 thresholdY = 32;
+
+        if (IsPrtNoRotationTileMode(tileMode))
+        {
+            UINT_32 macroTilePitch  =
+                (MicroTileWidth  * pTileInfo->bankWidth  * numPipes) * pTileInfo->macroAspectRatio;
+            UINT_32 macroTileHeight =
+                (MicroTileHeight * pTileInfo->bankHeight * pTileInfo->banks) /
+                pTileInfo->macroAspectRatio;
+            thresholdX = Log2(macroTilePitch);
+            thresholdY = Log2(macroTileHeight);
+        }
+
+        // Pipe equation
+        retCode = ComputePipeEquation(log2BytesPP, thresholdX, thresholdY, pTileInfo, &equation);
+
+        if (retCode == ADDR_OK)
+        {
+            UINT_32 pipeBitStart = Log2(m_pipeInterleaveBytes);
+
+            if (pEquation->numBits > pipeBitStart)
+            {
+                UINT_32 numLeftShift = pEquation->numBits - pipeBitStart;
+
+                for (UINT_32 i = 0; i < numLeftShift; i++)
+                {
+                    pEquation->addr[pEquation->numBits + equation.numBits - i - 1] =
+                        pEquation->addr[pEquation->numBits - i - 1];
+                    pEquation->xor1[pEquation->numBits + equation.numBits - i - 1] =
+                        pEquation->xor1[pEquation->numBits - i - 1];
+                    pEquation->xor2[pEquation->numBits + equation.numBits - i - 1] =
+                        pEquation->xor2[pEquation->numBits - i - 1];
+                }
+            }
+
+            for (UINT_32 i = 0; i < equation.numBits; i++)
+            {
+                pEquation->addr[pipeBitStart + i] = equation.addr[i];
+                pEquation->xor1[pipeBitStart + i] = equation.xor1[i];
+                pEquation->xor2[pipeBitStart + i] = equation.xor2[i];
+                pEquation->numBits++;
+            }
+
+            // Bank equation
+            memset(&equation, 0, sizeof(ADDR_EQUATION));
+
+            retCode = ComputeBankEquation(log2BytesPP, thresholdX, thresholdY,
+                                          pTileInfo, &equation);
+
+            if (retCode == ADDR_OK)
+            {
+                UINT_32 bankBitStart = pipeBitStart + numPipeBits + Log2(m_bankInterleave);
+
+                if (pEquation->numBits > bankBitStart)
+                {
+                    UINT_32 numLeftShift = pEquation->numBits - bankBitStart;
+
+                    for (UINT_32 i = 0; i < numLeftShift; i++)
+                    {
+                        pEquation->addr[pEquation->numBits + equation.numBits - i - 1] =
+                            pEquation->addr[pEquation->numBits - i - 1];
+                        pEquation->xor1[pEquation->numBits + equation.numBits - i - 1] =
+                            pEquation->xor1[pEquation->numBits - i - 1];
+                        pEquation->xor2[pEquation->numBits + equation.numBits - i - 1] =
+                            pEquation->xor2[pEquation->numBits - i - 1];
+                    }
+                }
+
+                for (UINT_32 i = 0; i < equation.numBits; i++)
+                {
+                    pEquation->addr[bankBitStart + i] = equation.addr[i];
+                    pEquation->xor1[bankBitStart + i] = equation.xor1[i];
+                    pEquation->xor2[bankBitStart + i] = equation.xor2[i];
+                    pEquation->numBits++;
+                }
+            }
+        }
+    }
+
+    return retCode;
 }
 
 /**

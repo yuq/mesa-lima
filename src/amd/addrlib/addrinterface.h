@@ -119,6 +119,65 @@ typedef VOID*   ADDR_CLIENT_HANDLE;
 
 /**
 ***************************************************************************************************
+* @brief channel setting structure
+***************************************************************************************************
+*/
+typedef union _ADDR_CHANNEL_SETTING
+{
+    struct
+    {
+        UINT_8 valid   : 1;    ///< Indicate whehter this channel setting is valid
+        UINT_8 channel : 2;    ///< 0 for x channel, 1 for y channel, 2 for z channel
+        UINT_8 index   : 5;    ///< Channel index
+    };
+    UINT_8 value;              ///< Value
+} ADDR_CHANNEL_SETTING;
+
+/**
+***************************************************************************************************
+* @brief address equation key structure
+***************************************************************************************************
+*/
+typedef union _ADDR_EQUATION_KEY
+{
+    struct
+    {
+        UINT_32 log2ElementBytes : 3; ///< Log2 of Bytes per pixel
+        UINT_32 tileMode         : 5; ///< Tile mode
+        UINT_32 microTileType    : 3; ///< Micro tile type
+        UINT_32 pipeConfig       : 5; ///< pipe config
+        UINT_32 numBanks         : 5; ///< Number of banks
+        UINT_32 bankWidth        : 4; ///< Bank width
+        UINT_32 bankHeight       : 4; ///< Bank height
+        UINT_32 macroAspectRatio : 3; ///< Macro tile aspect ratio
+    } fields;
+    UINT_32 value;
+} ADDR_EQUATION_KEY;
+
+/**
+***************************************************************************************************
+* @brief address equation structure
+***************************************************************************************************
+*/
+#define ADDR_MAX_EQUATION_BIT 20u
+
+// Invalid equation index
+#define ADDR_INVALID_EQUATION_INDEX 0xFFFFFFFF
+
+typedef struct _ADDR_EQUATION
+{
+    ADDR_CHANNEL_SETTING addr[ADDR_MAX_EQUATION_BIT];  ///< addr setting
+                                                       ///< each bit is result of addr ^ xor ^ xor2
+    ADDR_CHANNEL_SETTING xor1[ADDR_MAX_EQUATION_BIT];  ///< xor setting
+    ADDR_CHANNEL_SETTING xor2[ADDR_MAX_EQUATION_BIT];  ///< xor2 setting
+    UINT_32              numBits;                      ///< The number of bits in equation
+    BOOL_32              stackedDepthSlices;           ///< TRUE if depth slices are treated as being
+                                                       ///< stacked vertically prior to swizzling
+} ADDR_EQUATION;
+
+
+/**
+***************************************************************************************************
 * @brief Alloc system memory flags.
 * @note These flags are reserved for future use and if flags are added will minimize the impact
 *       of the client.
@@ -322,9 +381,12 @@ typedef struct _ADDR_CREATE_INPUT
 */
 typedef struct _ADDR_CREATE_OUTPUT
 {
-    UINT_32     size;    ///< Size of this structure in bytes
+    UINT_32              size;            ///< Size of this structure in bytes
 
-    ADDR_HANDLE hLib;    ///< Address lib handle
+    ADDR_HANDLE          hLib;            ///< Address lib handle
+
+    UINT_32              numEquations;    ///< Number of equations in the table
+    const ADDR_EQUATION* pEquationTable;  ///< Pointer to the equation table
 } ADDR_CREATE_OUTPUT;
 
 /**
@@ -420,33 +482,38 @@ typedef union _ADDR_SURFACE_FLAGS
 {
     struct
     {
-        UINT_32 color           : 1; ///< Flag indicates this is a color buffer
-        UINT_32 depth           : 1; ///< Flag indicates this is a depth/stencil buffer
-        UINT_32 stencil         : 1; ///< Flag indicates this is a stencil buffer
-        UINT_32 texture         : 1; ///< Flag indicates this is a texture
-        UINT_32 cube            : 1; ///< Flag indicates this is a cubemap
-        UINT_32 volume          : 1; ///< Flag indicates this is a volume texture
-        UINT_32 fmask           : 1; ///< Flag indicates this is an fmask
-        UINT_32 cubeAsArray     : 1; ///< Flag indicates if treat cubemap as arrays
-        UINT_32 compressZ       : 1; ///< Flag indicates z buffer is compressed
-        UINT_32 overlay         : 1; ///< Flag indicates this is an overlay surface
-        UINT_32 noStencil       : 1; ///< Flag indicates this depth has no separate stencil
-        UINT_32 display         : 1; ///< Flag indicates this should match display controller req.
-        UINT_32 opt4Space       : 1; ///< Flag indicates this surface should be optimized for space
-                                     ///  i.e. save some memory but may lose performance
-        UINT_32 prt             : 1; ///< Flag for partially resident texture
-        UINT_32 qbStereo        : 1; ///< Quad buffer stereo surface
-        UINT_32 pow2Pad         : 1; ///< SI: Pad to pow2, must set for mipmap (include level0)
-        UINT_32 interleaved     : 1; ///< Special flag for interleaved YUV surface padding
-        UINT_32 tcCompatible    : 1; ///< Flag indicates surface needs to be shader readable
-        UINT_32 dispTileType    : 1; ///< NI: force display Tiling for 128 bit shared resoruce
-        UINT_32 dccCompatible   : 1; ///< VI: whether to support dcc fast clear
-        UINT_32 czDispCompatible: 1; ///< SI+: CZ family has a HW bug needs special alignment.
-                                     ///  This flag indicates we need to follow the alignment with
-                                     ///  CZ families or other ASICs under PX configuration + CZ.
-        UINT_32 nonSplit        : 1; ///< CI: depth texture should not be split
-        UINT_32 disableLinearOpt: 1; ///< Disable tile mode optimization to linear
-        UINT_32 reserved        : 9; ///< Reserved bits
+        UINT_32 color                : 1; ///< Flag indicates this is a color buffer
+        UINT_32 depth                : 1; ///< Flag indicates this is a depth/stencil buffer
+        UINT_32 stencil              : 1; ///< Flag indicates this is a stencil buffer
+        UINT_32 texture              : 1; ///< Flag indicates this is a texture
+        UINT_32 cube                 : 1; ///< Flag indicates this is a cubemap
+        UINT_32 volume               : 1; ///< Flag indicates this is a volume texture
+        UINT_32 fmask                : 1; ///< Flag indicates this is an fmask
+        UINT_32 cubeAsArray          : 1; ///< Flag indicates if treat cubemap as arrays
+        UINT_32 compressZ            : 1; ///< Flag indicates z buffer is compressed
+        UINT_32 overlay              : 1; ///< Flag indicates this is an overlay surface
+        UINT_32 noStencil            : 1; ///< Flag indicates this depth has no separate stencil
+        UINT_32 display              : 1; ///< Flag indicates this should match display controller req.
+        UINT_32 opt4Space            : 1; ///< Flag indicates this surface should be optimized for space
+                                          ///  i.e. save some memory but may lose performance
+        UINT_32 prt                  : 1; ///< Flag for partially resident texture
+        UINT_32 qbStereo             : 1; ///< Quad buffer stereo surface
+        UINT_32 pow2Pad              : 1; ///< SI: Pad to pow2, must set for mipmap (include level0)
+        UINT_32 interleaved          : 1; ///< Special flag for interleaved YUV surface padding
+        UINT_32 tcCompatible         : 1; ///< Flag indicates surface needs to be shader readable
+        UINT_32 dispTileType         : 1; ///< NI: force display Tiling for 128 bit shared resoruce
+        UINT_32 dccCompatible        : 1; ///< VI: whether to support dcc fast clear
+        UINT_32 czDispCompatible     : 1; ///< SI+: CZ family has a HW bug needs special alignment.
+                                          ///  This flag indicates we need to follow the
+                                          ///  alignment with CZ families or other ASICs under
+                                          ///  PX configuration + CZ.
+        UINT_32 nonSplit             : 1; ///< CI: depth texture should not be split
+        UINT_32 disableLinearOpt     : 1; ///< Disable tile mode optimization to linear
+        UINT_32 needEquation         : 1; ///< Make the surface tile setting equation compatible.
+                                          ///  This flag indicates we need to override tile
+                                          ///  mode to PRT_* tile mode to disable slice rotation,
+                                          ///  which is needed by swizzle pattern equation.
+        UINT_32 reserved             : 8; ///< Reserved bits
     };
 
     UINT_32 value;
@@ -474,6 +541,7 @@ typedef struct _ADDR_COMPUTE_SURFACE_INFO_INPUT
     UINT_32             numSlices;          ///< Number of surface slices or depth
     UINT_32             slice;              ///< Slice index
     UINT_32             mipLevel;           ///< Current mipmap level
+    UINT_32             numMipLevels;       ///< Number of mips in mip chain
     ADDR_SURFACE_FLAGS  flags;              ///< Surface type flags
     UINT_32             numFrags;           ///< Number of fragments, leave it zero or the same as
                                             ///  number of samples for normal AA; Set it to the
@@ -539,8 +607,14 @@ typedef struct _ADDR_COMPUTE_SURFACE_INFO_OUTPUT
         UINT_32     last2DLevel  : 1;  ///< TRUE if this is the last 2D(3D) tiled
                                        ///< Only meaningful when create flag checkLast2DLevel is set
         UINT_32     tcCompatible : 1;  ///< If the surface can be shader compatible
-        UINT_32     reserved     :30; ///< Reserved bits
+        UINT_32     reserved     :30;  ///< Reserved bits
     };
+
+    UINT_32         equationIndex;     ///< Equation index in the equation table;
+
+    UINT_32         blockWidth;        ///< Width in element inside one block(1D->Micro, 2D->Macro)
+    UINT_32         blockHeight;       ///< Height in element inside one block(1D->Micro, 2D->Macro)
+    UINT_32         blockSlices;       ///< Slice number inside one block(1D->Micro, 2D->Macro)
 
     /// Stereo info
     ADDR_QBSTEREOINFO*  pStereoInfo;///< Stereo information, needed when .qbStereo flag is TRUE

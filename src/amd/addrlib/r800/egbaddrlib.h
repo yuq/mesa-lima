@@ -254,6 +254,13 @@ protected:
         ADDR_TILEINFO* pTileInfo) const;
 
     /// Addressing functions
+    virtual ADDR_E_RETURNCODE ComputeBankEquation(
+        UINT_32 log2BytesPP, UINT_32 threshX, UINT_32 threshY,
+        ADDR_TILEINFO* pTileInfo, ADDR_EQUATION* pEquation) const
+    {
+        return ADDR_NOTSUPPORTED;
+    }
+
     UINT_32 ComputeBankFromCoord(
         UINT_32 x, UINT_32 y, UINT_32 slice,
         AddrTileMode tileMode, UINT_32 bankSwizzle, UINT_32 tileSpitSlice,
@@ -280,6 +287,10 @@ protected:
     UINT_64 ComputeHtileBytes(
         UINT_32 pitch, UINT_32 height, UINT_32 bpp,
         BOOL_32 isLinear, UINT_32 numSlices, UINT_64* sliceBytes, UINT_32 baseAlign) const;
+
+    ADDR_E_RETURNCODE ComputeMacroTileEquation(
+        UINT_32 log2BytesPP, AddrTileMode tileMode, AddrTileType microTileType,
+        ADDR_TILEINFO* pTileInfo, ADDR_EQUATION* pEquation) const;
 
     // Static functions
     static BOOL_32 IsTileInfoAllZero(ADDR_TILEINFO* pTileInfo);
@@ -318,7 +329,8 @@ private:
         AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
         UINT_32 mipLevel, UINT_32 numSamples,
         ADDR_TILEINFO* pTileInfo,
-        UINT_32* pBaseAlign, UINT_32* pPitchAlign, UINT_32* pHeightAlign) const;
+        UINT_32* pBaseAlign, UINT_32* pPitchAlign, UINT_32* pHeightAlign,
+        UINT_32* pMacroTileWidth, UINT_32* pMacroTileHeight) const;
 
     /// Surface addressing functions
     UINT_64 DispatchComputeSurfaceAddrFromCoord(

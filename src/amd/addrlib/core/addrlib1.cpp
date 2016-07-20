@@ -324,15 +324,11 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
 
         if (returnCode == ADDR_OK)
         {
-            AddrTileMode tileMode = localIn.tileMode;
-            AddrTileType tileType = localIn.tileType;
-
             // HWL layer may override tile mode if necessary
-            if (HwlOverrideTileMode(&localIn, &tileMode, &tileType))
-            {
-                localIn.tileMode = tileMode;
-                localIn.tileType = tileType;
-            }
+            HwlOverrideTileMode(&localIn);
+
+            AddrTileMode tileMode = localIn.tileMode;
+
             // Optimize tile mode if possible
             if (OptimizeTileMode(&localIn, &tileMode))
             {
@@ -1206,10 +1202,10 @@ ADDR_E_RETURNCODE AddrLib1::GetTileIndex(
 *   AddrLib1::Thickness
 *
 *   @brief
-*       Compute surface thickness
+*       Get tile mode thickness
 *
 *   @return
-*       Surface thickness
+*       Tile mode thickness
 ***************************************************************************************************
 */
 UINT_32 AddrLib1::Thickness(
@@ -2732,6 +2728,219 @@ UINT_32 AddrLib1::ComputePipeFromAddr(
     pipe = static_cast<UINT_32>(addr >> Log2(groupBytes)) & (numPipes - 1);
 
     return pipe;
+}
+
+/**
+***************************************************************************************************
+*   AddrLib1::ComputeMicroTileEquation
+*
+*   @brief
+*       Compute micro tile equation
+*
+*   @return
+*       If equation can be computed
+*
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE AddrLib1::ComputeMicroTileEquation(
+    UINT_32         log2BytesPP,    ///< [in] log2 of bytes per pixel
+    AddrTileMode    tileMode,       ///< [in] tile mode
+    AddrTileType    microTileType,  ///< [in] pixel order in display/non-display mode
+    ADDR_EQUATION*  pEquation       ///< [out] equation
+    ) const
+{
+    ADDR_E_RETURNCODE retCode = ADDR_OK;
+
+    for (UINT_32 i = 0; i < log2BytesPP; i++)
+    {
+        pEquation->addr[i].valid = 1;
+        pEquation->addr[i].channel = 0;
+        pEquation->addr[i].index = i;
+    }
+
+    ADDR_CHANNEL_SETTING* pixelBit = &pEquation->addr[log2BytesPP];
+
+    ADDR_CHANNEL_SETTING x0 = InitChannel(1, 0, log2BytesPP + 0);
+    ADDR_CHANNEL_SETTING x1 = InitChannel(1, 0, log2BytesPP + 1);
+    ADDR_CHANNEL_SETTING x2 = InitChannel(1, 0, log2BytesPP + 2);
+    ADDR_CHANNEL_SETTING y0 = InitChannel(1, 1, 0);
+    ADDR_CHANNEL_SETTING y1 = InitChannel(1, 1, 1);
+    ADDR_CHANNEL_SETTING y2 = InitChannel(1, 1, 2);
+    ADDR_CHANNEL_SETTING z0 = InitChannel(1, 2, 0);
+    ADDR_CHANNEL_SETTING z1 = InitChannel(1, 2, 1);
+    ADDR_CHANNEL_SETTING z2 = InitChannel(1, 2, 2);
+
+    UINT_32 thickness = Thickness(tileMode);
+    UINT_32 bpp = 1 << (log2BytesPP + 3);
+
+    if (microTileType != ADDR_THICK)
+    {
+        if (microTileType == ADDR_DISPLAYABLE)
+        {
+            switch (bpp)
+            {
+                case 8:
+                    pixelBit[0] = x0;
+                    pixelBit[1] = x1;
+                    pixelBit[2] = x2;
+                    pixelBit[3] = y1;
+                    pixelBit[4] = y0;
+                    pixelBit[5] = y2;
+                    break;
+                case 16:
+                    pixelBit[0] = x0;
+                    pixelBit[1] = x1;
+                    pixelBit[2] = x2;
+                    pixelBit[3] = y0;
+                    pixelBit[4] = y1;
+                    pixelBit[5] = y2;
+                    break;
+                case 32:
+                    pixelBit[0] = x0;
+                    pixelBit[1] = x1;
+                    pixelBit[2] = y0;
+                    pixelBit[3] = x2;
+                    pixelBit[4] = y1;
+                    pixelBit[5] = y2;
+                    break;
+                case 64:
+                    pixelBit[0] = x0;
+                    pixelBit[1] = y0;
+                    pixelBit[2] = x1;
+                    pixelBit[3] = x2;
+                    pixelBit[4] = y1;
+                    pixelBit[5] = y2;
+                    break;
+                case 128:
+                    pixelBit[0] = y0;
+                    pixelBit[1] = x0;
+                    pixelBit[2] = x1;
+                    pixelBit[3] = x2;
+                    pixelBit[4] = y1;
+                    pixelBit[5] = y2;
+                    break;
+                default:
+                    ADDR_ASSERT_ALWAYS();
+                    break;
+            }
+        }
+        else if (microTileType == ADDR_NON_DISPLAYABLE || microTileType == ADDR_DEPTH_SAMPLE_ORDER)
+        {
+            pixelBit[0] = x0;
+            pixelBit[1] = y0;
+            pixelBit[2] = x1;
+            pixelBit[3] = y1;
+            pixelBit[4] = x2;
+            pixelBit[5] = y2;
+        }
+        else if (microTileType == ADDR_ROTATED)
+        {
+            ADDR_ASSERT(thickness == 1);
+
+            switch (bpp)
+            {
+                case 8:
+                    pixelBit[0] = y0;
+                    pixelBit[1] = y1;
+                    pixelBit[2] = y2;
+                    pixelBit[3] = x1;
+                    pixelBit[4] = x0;
+                    pixelBit[5] = x2;
+                    break;
+                case 16:
+                    pixelBit[0] = y0;
+                    pixelBit[1] = y1;
+                    pixelBit[2] = y2;
+                    pixelBit[3] = x0;
+                    pixelBit[4] = x1;
+                    pixelBit[5] = x2;
+                    break;
+                case 32:
+                    pixelBit[0] = y0;
+                    pixelBit[1] = y1;
+                    pixelBit[2] = x0;
+                    pixelBit[3] = y2;
+                    pixelBit[4] = x1;
+                    pixelBit[5] = x2;
+                    break;
+                case 64:
+                    pixelBit[0] = y0;
+                    pixelBit[1] = x0;
+                    pixelBit[2] = y1;
+                    pixelBit[3] = x1;
+                    pixelBit[4] = x2;
+                    pixelBit[5] = y2;
+                    break;
+                default:
+                    retCode = ADDR_NOTSUPPORTED;
+                    break;
+            }
+        }
+
+        if (thickness > 1)
+        {
+            pixelBit[6] = z0;
+            pixelBit[7] = z1;
+            pEquation->numBits = 8 + log2BytesPP;
+        }
+        else
+        {
+            pEquation->numBits = 6 + log2BytesPP;
+        }
+    }
+    else // ADDR_THICK
+    {
+        ADDR_ASSERT(thickness > 1);
+
+        switch (bpp)
+        {
+            case 8:
+            case 16:
+                pixelBit[0] = x0;
+                pixelBit[1] = y0;
+                pixelBit[2] = x1;
+                pixelBit[3] = y1;
+                pixelBit[4] = z0;
+                pixelBit[5] = z1;
+                break;
+            case 32:
+                pixelBit[0] = x0;
+                pixelBit[1] = y0;
+                pixelBit[2] = x1;
+                pixelBit[3] = z0;
+                pixelBit[4] = y1;
+                pixelBit[5] = z1;
+                break;
+            case 64:
+            case 128:
+                pixelBit[0] = y0;
+                pixelBit[1] = x0;
+                pixelBit[2] = z0;
+                pixelBit[3] = x1;
+                pixelBit[4] = y1;
+                pixelBit[5] = z1;
+                break;
+            default:
+                ADDR_ASSERT_ALWAYS();
+                break;
+        }
+
+        pixelBit[6] = x2;
+        pixelBit[7] = y2;
+        pEquation->numBits = 8 + log2BytesPP;
+    }
+
+    if (thickness == 8)
+    {
+        pixelBit[8] = z2;
+        pEquation->numBits = 9 + log2BytesPP;
+    }
+
+    // stackedDepthSlices is used for addressing mode that a tile block contains multiple slices,
+    // which is not supported by our address lib
+    pEquation->stackedDepthSlices = FALSE;
+
+    return retCode;
 }
 
 /**

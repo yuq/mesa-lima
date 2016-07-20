@@ -141,10 +141,7 @@ protected:
     virtual AddrTileMode HwlDegradeThickTileMode(
         AddrTileMode baseTileMode, UINT_32 numSlices, UINT_32* pBytesPerTile) const;
 
-    virtual BOOL_32 HwlOverrideTileMode(
-        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn,
-        AddrTileMode* pTileMode,
-        AddrTileType* pTileType) const;
+    virtual VOID HwlOverrideTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const;
 
     virtual ADDR_E_RETURNCODE HwlComputeDccInfo(
         const ADDR_COMPUTE_DCCINFO_INPUT* pIn,
@@ -168,7 +165,7 @@ protected:
 
 private:
     VOID ReadGbTileMode(
-        UINT_32 regValue, ADDR_TILECONFIG* pCfg) const;
+        UINT_32 regValue, AddrTileConfig* pCfg) const;
 
     VOID ReadGbMacroTileCfg(
         UINT_32 regValue, ADDR_TILEINFO* pCfg) const;

@@ -576,5 +576,26 @@ static inline VOID SafeAssign(
     }
 }
 
+/**
+***************************************************************************************************
+*   InitChannel
+*
+*   @brief
+*       Get channel initialization value
+***************************************************************************************************
+*/
+static inline ADDR_CHANNEL_SETTING InitChannel(
+    UINT_32     valid,     ///< [in] valid setting
+    UINT_32     channel,   ///< [in] channel setting
+    UINT_32     index)     ///< [in] index setting
+{
+    ADDR_CHANNEL_SETTING t;
+    t.valid = valid;
+    t.channel = channel;
+    t.index = index;
+
+    return t;
+}
+
 #endif // __ADDR_COMMON_H__
 

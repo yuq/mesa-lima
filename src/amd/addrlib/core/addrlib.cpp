@@ -266,6 +266,13 @@ ADDR_E_RETURNCODE AddrLib::Create(
 
     pCreateOut->hLib = pLib;
 
+    if ((pLib != NULL) &&
+        (returnCode == ADDR_OK))
+    {
+        pCreateOut->numEquations =
+            pLib->HwlGetEquationTableInfo(&pCreateOut->pEquationTable);
+    }
+
     if ((pLib == NULL) &&
         (returnCode == ADDR_OK))
     {

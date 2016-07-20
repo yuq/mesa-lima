@@ -73,7 +73,8 @@ AddrLib* AddrSIHwlInit(const AddrClient* pClient)
 */
 SiAddrLib::SiAddrLib(const AddrClient* pClient) :
     EgBasedAddrLib(pClient),
-    m_noOfEntries(0)
+    m_noOfEntries(0),
+    m_numEquations(0)
 {
     m_class = SI_ADDRLIB;
     memset(&m_settings, 0, sizeof(m_settings));
@@ -164,6 +165,338 @@ UINT_32 SiAddrLib::GetPipePerSurf(
             numPipes = m_pipes;
     }
     return numPipes;
+}
+
+/**
+***************************************************************************************************
+*   SiAddrLib::ComputeBankEquation
+*
+*   @brief
+*       Compute bank equation
+*
+*   @return
+*       If equation can be computed
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE SiAddrLib::ComputeBankEquation(
+    UINT_32         log2BytesPP,    ///< [in] log2 of bytes per pixel
+    UINT_32         threshX,        ///< [in] threshold for x channel
+    UINT_32         threshY,        ///< [in] threshold for y channel
+    ADDR_TILEINFO*  pTileInfo,      ///< [in] tile info
+    ADDR_EQUATION*  pEquation       ///< [out] bank equation
+    ) const
+{
+    ADDR_E_RETURNCODE retCode = ADDR_OK;
+
+    UINT_32 pipes = HwlGetPipes(pTileInfo);
+    UINT_32 bankXStart = 3 + Log2(pipes) + Log2(pTileInfo->bankWidth);
+    UINT_32 bankYStart = 3 + Log2(pTileInfo->bankHeight);
+
+    ADDR_CHANNEL_SETTING x3 = InitChannel(1, 0, log2BytesPP + bankXStart);
+    ADDR_CHANNEL_SETTING x4 = InitChannel(1, 0, log2BytesPP + bankXStart + 1);
+    ADDR_CHANNEL_SETTING x5 = InitChannel(1, 0, log2BytesPP + bankXStart + 2);
+    ADDR_CHANNEL_SETTING x6 = InitChannel(1, 0, log2BytesPP + bankXStart + 3);
+    ADDR_CHANNEL_SETTING y3 = InitChannel(1, 1, bankYStart);
+    ADDR_CHANNEL_SETTING y4 = InitChannel(1, 1, bankYStart + 1);
+    ADDR_CHANNEL_SETTING y5 = InitChannel(1, 1, bankYStart + 2);
+    ADDR_CHANNEL_SETTING y6 = InitChannel(1, 1, bankYStart + 3);
+
+    x3.value = (threshX > bankXStart)     ? x3.value : 0;
+    x4.value = (threshX > bankXStart + 1) ? x4.value : 0;
+    x5.value = (threshX > bankXStart + 2) ? x5.value : 0;
+    x6.value = (threshX > bankXStart + 3) ? x6.value : 0;
+    y3.value = (threshY > bankYStart)     ? y3.value : 0;
+    y4.value = (threshY > bankYStart + 1) ? y4.value : 0;
+    y5.value = (threshY > bankYStart + 2) ? y5.value : 0;
+    y6.value = (threshY > bankYStart + 3) ? y6.value : 0;
+
+    switch (pTileInfo->banks)
+    {
+        case 16:
+            pEquation->addr[0] = y6;
+            pEquation->xor1[0] = x3;
+            pEquation->addr[1] = y5;
+            pEquation->xor1[1] = y6;
+            pEquation->xor2[1] = x4;
+            pEquation->addr[2] = y4;
+            pEquation->xor1[2] = x5;
+            pEquation->addr[3] = y3;
+            pEquation->xor1[3] = x6;
+            pEquation->numBits = 4;
+            break;
+        case 8:
+            pEquation->addr[0] = y5;
+            pEquation->xor1[0] = x3;
+            pEquation->addr[1] = y4;
+            pEquation->xor1[1] = y5;
+            pEquation->xor2[1] = x4;
+            pEquation->addr[2] = y3;
+            pEquation->xor1[2] = x5;
+            pEquation->numBits = 3;
+            break;
+        case 4:
+            pEquation->addr[0] = y4;
+            pEquation->xor1[0] = x3;
+            pEquation->addr[1] = y3;
+            pEquation->xor1[1] = x4;
+            pEquation->numBits = 2;
+            break;
+        case 2:
+            pEquation->addr[0] = y3;
+            pEquation->xor1[0] = x3;
+            pEquation->numBits = 1;
+            break;
+        default:
+            pEquation->numBits = 0;
+            retCode = ADDR_NOTSUPPORTED;
+            ADDR_ASSERT_ALWAYS();
+            break;
+    }
+
+    for (UINT_32 i = 0; i < pEquation->numBits; i++)
+    {
+        if (pEquation->addr[i].value == 0)
+        {
+            if (pEquation->xor1[i].value == 0)
+            {
+                // 00X -> X00
+                pEquation->addr[i].value = pEquation->xor2[i].value;
+                pEquation->xor2[i].value = 0;
+            }
+            else
+            {
+                pEquation->addr[i].value = pEquation->xor1[i].value;
+
+                if (pEquation->xor2[i].value != 0)
+                {
+                    // 0XY -> XY0
+                    pEquation->xor1[i].value = pEquation->xor2[i].value;
+                    pEquation->xor2[i].value = 0;
+                }
+                else
+                {
+                    // 0X0 -> X00
+                    pEquation->xor1[i].value = 0;
+                }
+            }
+        }
+        else if (pEquation->xor1[i].value == 0)
+        {
+            if (pEquation->xor2[i].value != 0)
+            {
+                // X0Y -> XY0
+                pEquation->xor1[i].value = pEquation->xor2[i].value;
+                pEquation->xor2[i].value = 0;
+            }
+        }
+    }
+
+    if ((pTileInfo->bankWidth == 1) &&
+        ((pTileInfo->pipeConfig == ADDR_PIPECFG_P4_32x32) ||
+         (pTileInfo->pipeConfig == ADDR_PIPECFG_P8_32x64_32x32)))
+    {
+        retCode = ADDR_NOTSUPPORTED;
+    }
+
+    return retCode;
+}
+
+/**
+***************************************************************************************************
+*   SiAddrLib::ComputePipeEquation
+*
+*   @brief
+*       Compute pipe equation
+*
+*   @return
+*       If equation can be computed
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE SiAddrLib::ComputePipeEquation(
+    UINT_32        log2BytesPP, ///< [in] Log2 of bytes per pixel
+    UINT_32        threshX,     ///< [in] Threshold for X channel
+    UINT_32        threshY,     ///< [in] Threshold for Y channel
+    ADDR_TILEINFO* pTileInfo,   ///< [in] Tile info
+    ADDR_EQUATION* pEquation    ///< [out] Pipe configure
+    ) const
+{
+    ADDR_E_RETURNCODE retCode = ADDR_OK;
+
+    ADDR_CHANNEL_SETTING* pAddr = pEquation->addr;
+    ADDR_CHANNEL_SETTING* pXor1 = pEquation->xor1;
+    ADDR_CHANNEL_SETTING* pXor2 = pEquation->xor2;
+
+    ADDR_CHANNEL_SETTING x3 = InitChannel(1, 0, 3 + log2BytesPP);
+    ADDR_CHANNEL_SETTING x4 = InitChannel(1, 0, 4 + log2BytesPP);
+    ADDR_CHANNEL_SETTING x5 = InitChannel(1, 0, 5 + log2BytesPP);
+    ADDR_CHANNEL_SETTING x6 = InitChannel(1, 0, 6 + log2BytesPP);
+    ADDR_CHANNEL_SETTING y3 = InitChannel(1, 1, 3);
+    ADDR_CHANNEL_SETTING y4 = InitChannel(1, 1, 4);
+    ADDR_CHANNEL_SETTING y5 = InitChannel(1, 1, 5);
+    ADDR_CHANNEL_SETTING y6 = InitChannel(1, 1, 6);
+
+    x3.value = (threshX > 3) ? x3.value : 0;
+    x4.value = (threshX > 4) ? x4.value : 0;
+    x5.value = (threshX > 5) ? x5.value : 0;
+    x6.value = (threshX > 6) ? x6.value : 0;
+    y3.value = (threshY > 3) ? y3.value : 0;
+    y4.value = (threshY > 4) ? y4.value : 0;
+    y5.value = (threshY > 5) ? y5.value : 0;
+    y6.value = (threshY > 6) ? y6.value : 0;
+
+    switch (pTileInfo->pipeConfig)
+    {
+        case ADDR_PIPECFG_P2:
+            pAddr[0] = x3;
+            pXor1[0] = y3;
+            pEquation->numBits = 1;
+            break;
+        case ADDR_PIPECFG_P4_8x16:
+            pAddr[0] = x4;
+            pXor1[0] = y3;
+            pAddr[1] = x3;
+            pXor1[1] = y4;
+            pEquation->numBits = 2;
+            break;
+        case ADDR_PIPECFG_P4_16x16:
+            pAddr[0] = x3;
+            pXor1[0] = y3;
+            pXor2[0] = x4;
+            pAddr[1] = x4;
+            pXor1[1] = y4;
+            pEquation->numBits = 2;
+            break;
+        case ADDR_PIPECFG_P4_16x32:
+            pAddr[0] = x3;
+            pXor1[0] = y3;
+            pXor2[0] = x4;
+            pAddr[1] = x4;
+            pXor1[1] = y5;
+            pEquation->numBits = 2;
+            break;
+        case ADDR_PIPECFG_P4_32x32:
+            pAddr[0] = x3;
+            pXor1[0] = y3;
+            pXor2[0] = x5;
+            pAddr[1] = x5;
+            pXor1[1] = y5;
+            pEquation->numBits = 2;
+            break;
+        case ADDR_PIPECFG_P8_16x16_8x16:
+            pAddr[0] = x4;
+            pXor1[0] = y3;
+            pXor2[0] = x5;
+            pAddr[1] = x3;
+            pXor1[1] = y5;
+            pEquation->numBits = 3;
+            break;
+        case ADDR_PIPECFG_P8_16x32_8x16:
+            pAddr[0] = x4;
+            pXor1[0] = y3;
+            pXor2[0] = x5;
+            pAddr[1] = x3;
+            pXor1[1] = y4;
+            pAddr[2] = x4;
+            pXor1[2] = y5;
+            pEquation->numBits = 3;
+            break;
+        case ADDR_PIPECFG_P8_16x32_16x16:
+            pAddr[0] = x3;
+            pXor1[0] = y3;
+            pXor2[0] = x4;
+            pAddr[1] = x5;
+            pXor1[1] = y4;
+            pAddr[2] = x4;
+            pXor1[2] = y5;
+            pEquation->numBits = 3;
+            break;
+        case ADDR_PIPECFG_P8_32x32_8x16:
+            pAddr[0] = x4;
+            pXor1[0] = y3;
+            pXor2[0] = x5;
+            pAddr[1] = x3;
+            pXor1[1] = y4;
+            pAddr[2] = x5;
+            pXor1[2] = y5;
+            pEquation->numBits = 3;
+            break;
+        case ADDR_PIPECFG_P8_32x32_16x16:
+            pAddr[0] = x3;
+            pXor1[0] = y3;
+            pXor2[0] = x4;
+            pAddr[1] = x4;
+            pXor1[1] = y4;
+            pAddr[2] = x5;
+            pXor1[2] = y5;
+            pEquation->numBits = 3;
+            break;
+        case ADDR_PIPECFG_P8_32x32_16x32:
+            pAddr[0] = x3;
+            pXor1[0] = y3;
+            pXor2[0] = x4;
+            pAddr[1] = x4;
+            pXor1[1] = y6;
+            pAddr[2] = x5;
+            pXor1[2] = y5;
+            pEquation->numBits = 3;
+            break;
+        case ADDR_PIPECFG_P8_32x64_32x32:
+            pAddr[0] = x3;
+            pXor1[0] = y3;
+            pXor2[0] = x5;
+            pAddr[1] = x6;
+            pXor1[1] = y5;
+            pAddr[2] = x5;
+            pXor1[2] = y6;
+            pEquation->numBits = 3;
+            break;
+        case ADDR_PIPECFG_P16_32x32_8x16:
+            pAddr[0] = x4;
+            pXor1[0] = y3;
+            pAddr[1] = x3;
+            pXor1[1] = y4;
+            pAddr[2] = x5;
+            pXor1[2] = y6;
+            pAddr[3] = x6;
+            pXor1[3] = y5;
+            pEquation->numBits = 4;
+            break;
+        case ADDR_PIPECFG_P16_32x32_16x16:
+            pAddr[0] = x3;
+            pXor1[0] = y3;
+            pXor2[0] = x4;
+            pAddr[1] = x4;
+            pXor1[1] = y4;
+            pAddr[2] = x5;
+            pXor1[2] = y6;
+            pAddr[3] = x6;
+            pXor1[3] = y5;
+            pEquation->numBits = 4;
+            break;
+        default:
+            ADDR_UNHANDLED_CASE();
+            pEquation->numBits = 0;
+            retCode = ADDR_NOTSUPPORTED;
+            break;
+    }
+
+    for (UINT_32 i = 0; i < pEquation->numBits; i++)
+    {
+        if (pAddr[i].value == 0)
+        {
+            if (pXor1[i].value == 0)
+            {
+                pAddr[i].value = pXor2[i].value;
+            }
+            else
+            {
+                pAddr[i].value = pXor1[i].value;
+                pXor1[i].value = 0;
+            }
+        }
+    }
+
+    return retCode;
 }
 
 /**
@@ -1889,6 +2222,11 @@ BOOL_32 SiAddrLib::HwlInitGlobalParams(
 
         valid = InitTileSettingTable(pRegValue->pTileConfig, pRegValue->noOfEntries);
 
+        if (valid)
+        {
+            InitEquationTable();
+        }
+
         m_maxSamples = 16;
     }
 
@@ -2174,7 +2512,31 @@ ADDR_E_RETURNCODE SiAddrLib::HwlComputeSurfaceInfo(
 {
     pOut->tileIndex = pIn->tileIndex;
 
-    return EgBasedAddrLib::HwlComputeSurfaceInfo(pIn,pOut);
+    ADDR_E_RETURNCODE retCode = EgBasedAddrLib::HwlComputeSurfaceInfo(pIn, pOut);
+
+    UINT_32 tileIndex = static_cast<UINT_32>(pOut->tileIndex);
+
+    if ((pIn->flags.needEquation == TRUE) &&
+        (pIn->numSamples <= 1) &&
+        (tileIndex < TileTableSize))
+    {
+        pOut->equationIndex = m_equationLookupTable[Log2(pIn->bpp >> 3)][tileIndex];
+
+        if (pOut->equationIndex != ADDR_INVALID_EQUATION_INDEX)
+        {
+            pOut->blockWidth = m_blockWidth[pOut->equationIndex];
+
+            pOut->blockHeight = m_blockHeight[pOut->equationIndex];
+
+            pOut->blockSlices = m_blockSlices[pOut->equationIndex];
+        }
+    }
+    else
+    {
+        pOut->equationIndex = ADDR_INVALID_EQUATION_INDEX;
+    }
+
+    return retCode;
 }
 
 /**
@@ -2282,8 +2644,8 @@ VOID SiAddrLib::HwlCheckLastMacroTiledLvl(
                                                       nextHeight,
                                                       nextSlices,
                                                       pIn->numSamples,
-                                                      pOut->pitchAlign,
-                                                      pOut->heightAlign,
+                                                      pOut->blockWidth,
+                                                      pOut->blockHeight,
                                                       pOut->pTileInfo);
 
         pOut->last2DLevel = IsMicroTiled(nextTileMode);
@@ -2345,7 +2707,7 @@ BOOL_32 SiAddrLib::HwlTileInfoEqual(
 *       Tile setting info.
 ***************************************************************************************************
 */
-const ADDR_TILECONFIG* SiAddrLib::GetTileSetting(
+const AddrTileConfig* SiAddrLib::GetTileSetting(
     UINT_32 index          ///< [in] Tile index
     ) const
 {
@@ -2484,7 +2846,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlSetupTileCfg(
         }
         else
         {
-            const ADDR_TILECONFIG* pCfgTable = GetTileSetting(index);
+            const AddrTileConfig* pCfgTable = GetTileSetting(index);
 
             if (pInfo)
             {
@@ -2525,7 +2887,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlSetupTileCfg(
 */
 VOID SiAddrLib::ReadGbTileMode(
     UINT_32             regValue,   ///< [in] GB_TILE_MODE register
-    ADDR_TILECONFIG*    pCfg        ///< [out] output structure
+    AddrTileConfig*     pCfg        ///< [out] output structure
     ) const
 {
     GB_TILE_MODE gbTileMode;
@@ -2773,18 +3135,15 @@ UINT_32 SiAddrLib::HwlComputeFmaskBits(
 *       Override tile modes (for PRT only, avoid client passes in an invalid PRT mode for SI.
 *
 *   @return
-*       Suitable tile mode
+*       N/A
 *
 ***************************************************************************************************
 */
-BOOL_32 SiAddrLib::HwlOverrideTileMode(
-    const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,       ///< [in] input structure
-    AddrTileMode*                           pTileMode, ///< [in/out] pointer to the tile mode
-    AddrTileType*                           pTileType  ///< [in/out] pointer to the tile type
+void SiAddrLib::HwlOverrideTileMode(
+    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut          ///< [in/out] input output structure
     ) const
 {
-    BOOL_32 bOverrided = FALSE;
-    AddrTileMode tileMode = *pTileMode;
+    AddrTileMode tileMode = pInOut->tileMode;
 
     switch (tileMode)
     {
@@ -2808,14 +3167,34 @@ BOOL_32 SiAddrLib::HwlOverrideTileMode(
             break;
     }
 
-    if (tileMode != *pTileMode)
+    if ((pInOut->flags.needEquation == TRUE) &&
+        (IsMacroTiled(tileMode) == TRUE) &&
+        (pInOut->numSamples <= 1))
     {
-        *pTileMode = tileMode;
-        bOverrided = TRUE;
-        ADDR_ASSERT(pIn->flags.prt == TRUE);
+        UINT_32 thickness = Thickness(tileMode);
+
+        pInOut->flags.prt = TRUE;
+
+        if (thickness > 1)
+        {
+            tileMode = ADDR_TM_1D_TILED_THICK;
+        }
+        else if (pInOut->numSlices > 1)
+        {
+            tileMode = ADDR_TM_1D_TILED_THIN1;
+        }
+        else
+        {
+            tileMode = ADDR_TM_2D_TILED_THIN1;
+        }
     }
 
-    return bOverrided;
+    if (tileMode != pInOut->tileMode)
+    {
+        pInOut->tileMode = tileMode;
+
+        ADDR_ASSERT(pInOut->flags.prt == TRUE);
+    }
 }
 
 /**
@@ -2863,4 +3242,250 @@ ADDR_E_RETURNCODE SiAddrLib::HwlGetMaxAlignments(
 
     return ADDR_OK;
 }
+
+/**
+***************************************************************************************************
+*   SiAddrLib::InitEquationTable
+*
+*   @brief
+*       Initialize Equation table.
+*
+*   @return
+*       N/A
+***************************************************************************************************
+*/
+VOID SiAddrLib::InitEquationTable()
+{
+    ADDR_EQUATION_KEY equationKeyTable[EquationTableSize];
+    memset(equationKeyTable, 0, sizeof(equationKeyTable));
+
+    memset(m_equationTable, 0, sizeof(m_equationTable));
+
+    memset(m_blockWidth, 0, sizeof(m_blockWidth));
+
+    memset(m_blockHeight, 0, sizeof(m_blockHeight));
+
+    memset(m_blockSlices, 0, sizeof(m_blockSlices));
+
+    // Loop all possible bpp
+    for (UINT_32 log2ElementBytes = 0; log2ElementBytes < MaxNumElementBytes; log2ElementBytes++)
+    {
+        // Get bits per pixel
+        UINT_32 bpp = 1 << (log2ElementBytes + 3);
+
+        // Loop all possible tile index
+        for (INT_32 tileIndex = 0; tileIndex < m_noOfEntries; tileIndex++)
+        {
+            UINT_32 equationIndex = ADDR_INVALID_EQUATION_INDEX;
+
+            AddrTileConfig tileConfig = m_tileTable[tileIndex];
+
+            ADDR_SURFACE_FLAGS flags = {{0}};
+
+            // Compute tile info, hardcode numSamples to 1 because MSAA is not supported
+            // in swizzle pattern equation
+            HwlComputeMacroModeIndex(tileIndex, flags, bpp, 1, &tileConfig.info, NULL, NULL);
+
+            // Check if the input is supported
+            if (IsEquationSupported(bpp, tileConfig, tileIndex) == TRUE)
+            {
+                ADDR_EQUATION_KEY  key   = {{0}};
+
+                // Generate swizzle equation key from bpp and tile config
+                key.fields.log2ElementBytes = log2ElementBytes;
+                key.fields.tileMode         = tileConfig.mode;
+                // Treat depth micro tile type and non-display micro tile type as the same key
+                // because they have the same equation actually
+                key.fields.microTileType    = (tileConfig.type == ADDR_DEPTH_SAMPLE_ORDER) ?
+                                              ADDR_NON_DISPLAYABLE : tileConfig.type;
+                key.fields.pipeConfig       = tileConfig.info.pipeConfig;
+                key.fields.numBanks         = tileConfig.info.banks;
+                key.fields.bankWidth        = tileConfig.info.bankWidth;
+                key.fields.bankHeight       = tileConfig.info.bankHeight;
+                key.fields.macroAspectRatio = tileConfig.info.macroAspectRatio;
+
+                // Find in the table if the equation has been built based on the key
+                for (UINT_32 i = 0; i < m_numEquations; i++)
+                {
+                    if (key.value == equationKeyTable[i].value)
+                    {
+                        equationIndex = i;
+                        break;
+                    }
+                }
+
+                // If found, just fill the index into the lookup table and no need
+                // to generate the equation again. Otherwise, generate the equation.
+                if (equationIndex == ADDR_INVALID_EQUATION_INDEX)
+                {
+                    ADDR_EQUATION equation;
+                    ADDR_E_RETURNCODE retCode;
+
+                    memset(&equation, 0, sizeof(ADDR_EQUATION));
+
+                    // Generate the equation
+                    if (IsMicroTiled(tileConfig.mode))
+                    {
+                        retCode = ComputeMicroTileEquation(log2ElementBytes,
+                                                           tileConfig.mode,
+                                                           tileConfig.type,
+                                                           &equation);
+                    }
+                    else
+                    {
+                        retCode = ComputeMacroTileEquation(log2ElementBytes,
+                                                           tileConfig.mode,
+                                                           tileConfig.type,
+                                                           &tileConfig.info,
+                                                           &equation);
+                    }
+                    // Only fill the equation into the table if the return code is ADDR_OK,
+                    // otherwise if the return code is not ADDR_OK, it indicates this is not
+                    // a valid input, we do nothing but just fill invalid equation index
+                    // into the lookup table.
+                    if (retCode == ADDR_OK)
+                    {
+                        equationIndex = m_numEquations;
+                        ADDR_ASSERT(equationIndex < EquationTableSize);
+
+                        m_blockSlices[equationIndex] = Thickness(tileConfig.mode);
+
+                        if (IsMicroTiled(tileConfig.mode))
+                        {
+                            m_blockWidth[equationIndex]  = MicroTileWidth;
+                            m_blockHeight[equationIndex] = MicroTileHeight;
+                        }
+                        else
+                        {
+                            const ADDR_TILEINFO* pTileInfo = &tileConfig.info;
+
+                            m_blockWidth[equationIndex]  =
+                                HwlGetPipes(pTileInfo) * MicroTileWidth * pTileInfo->bankWidth *
+                                pTileInfo->macroAspectRatio;
+                            m_blockHeight[equationIndex] =
+                                MicroTileHeight * pTileInfo->bankHeight * pTileInfo->banks /
+                                pTileInfo->macroAspectRatio;
+
+                            if (m_chipFamily == ADDR_CHIP_FAMILY_SI)
+                            {
+                                static const UINT_32 PrtTileSize = 0x10000;
+
+                                UINT_32 macroTileSize =
+                                    m_blockWidth[equationIndex] * m_blockHeight[equationIndex] *
+                                    bpp / 8;
+
+                                if (macroTileSize < PrtTileSize)
+                                {
+                                    UINT_32 numMacroTiles = PrtTileSize / macroTileSize;
+
+                                    ADDR_ASSERT(macroTileSize == (1u << equation.numBits));
+                                    ADDR_ASSERT((PrtTileSize % macroTileSize) == 0);
+
+                                    UINT_32 numBits = Log2(numMacroTiles);
+
+                                    UINT_32 xStart = Log2(m_blockWidth[equationIndex]) +
+                                                     log2ElementBytes;
+
+                                    m_blockWidth[equationIndex] *= numMacroTiles;
+
+                                    for (UINT_32 i = 0; i < numBits; i++)
+                                    {
+                                        equation.addr[equation.numBits + i].valid = 1;
+                                        equation.addr[equation.numBits + i].index = xStart + i;
+                                    }
+
+                                    equation.numBits += numBits;
+                                }
+                            }
+                        }
+
+                        equationKeyTable[equationIndex] = key;
+                        m_equationTable[equationIndex]  = equation;
+
+                        m_numEquations++;
+                    }
+                }
+            }
+
+            // Fill the index into the lookup table, if the combination is not supported
+            // fill the invalid equation index
+            m_equationLookupTable[log2ElementBytes][tileIndex] = equationIndex;
+        }
+    }
+}
+
+/**
+***************************************************************************************************
+*   SiAddrLib::IsEquationSupported
+*
+*   @brief
+*       Check if it is supported for given bpp and tile config to generate a equation.
+*
+*   @return
+*       TRUE if supported
+***************************************************************************************************
+*/
+BOOL_32 SiAddrLib::IsEquationSupported(
+    UINT_32        bpp,         ///< Bits per pixel
+    AddrTileConfig tileConfig,  ///< Tile config
+    INT_32         tileIndex    ///< Tile index
+    ) const
+{
+    BOOL_32 supported = TRUE;
+
+    // Linear tile mode is not supported in swizzle pattern equation
+    if (IsLinear(tileConfig.mode))
+    {
+        supported = FALSE;
+    }
+    // These tile modes are for Tex2DArray and Tex3D which has depth (num_slice > 1) use,
+    // which is not supported in swizzle pattern equation due to slice rotation
+    else if ((tileConfig.mode == ADDR_TM_2D_TILED_THICK)  ||
+             (tileConfig.mode == ADDR_TM_2D_TILED_XTHICK) ||
+             (tileConfig.mode == ADDR_TM_3D_TILED_THIN1)  ||
+             (tileConfig.mode == ADDR_TM_3D_TILED_THICK)  ||
+             (tileConfig.mode == ADDR_TM_3D_TILED_XTHICK))
+    {
+        supported = FALSE;
+    }
+    // Only 8bpp(stencil), 16bpp and 32bpp is supported for depth
+    else if ((tileConfig.type == ADDR_DEPTH_SAMPLE_ORDER) && (bpp > 32))
+    {
+        supported = FALSE;
+    }
+    // Tile split is not supported in swizzle pattern equation
+    else if (IsMacroTiled(tileConfig.mode))
+    {
+        UINT_32 thickness = Thickness(tileConfig.mode);
+        if (((bpp >> 3) * MicroTilePixels * thickness) > tileConfig.info.tileSplitBytes)
+        {
+            supported = FALSE;
+        }
+
+        if ((supported == TRUE) && (m_chipFamily == ADDR_CHIP_FAMILY_SI))
+        {
+            // Please refer to SiAddrLib::HwlSetupTileInfo for PRT tile index selecting
+            // Tile index 3, 6, 21-25 are for PRT single sample
+            if (tileIndex == 3)
+            {
+                supported = (bpp == 16);
+            }
+            else if (tileIndex == 6)
+            {
+                supported = (bpp == 32);
+            }
+            else if ((tileIndex >= 21) && (tileIndex <= 25))
+            {
+                supported = (bpp == 8u * (1u << (static_cast<UINT_32>(tileIndex) - 21u)));
+            }
+            else
+            {
+                supported = FALSE;
+            }
+        }
+    }
+
+    return supported;
+}
+
 
