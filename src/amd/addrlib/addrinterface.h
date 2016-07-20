@@ -906,6 +906,8 @@ typedef struct _ADDR_COMPUTE_HTILE_INFO_OUTPUT
     UINT_32 macroWidth;         ///< Macro width in pixels, actually squared cache shape
     UINT_32 macroHeight;        ///< Macro height in pixels
     UINT_64 sliceSize;          ///< Slice size, in bytes.
+    BOOL_32 sliceInterleaved;   ///< Flag to indicate if different slice's htile is interleaved
+                                ///  Compute engine clear can't be used if htile is interleaved
 } ADDR_COMPUTE_HTILE_INFO_OUTPUT;
 
 /**

@@ -1295,6 +1295,22 @@ ADDR_E_RETURNCODE Lib::ComputeHtileInfo(
                                          &pOut->macroHeight,
                                          &pOut->sliceSize,
                                          &pOut->baseAlign);
+
+            if (pIn->flags.tcCompatible && (pIn->numSlices > 1))
+            {
+                pOut->sliceSize = pIn->pitch * pIn->height * 4 / (8 * 8);
+
+                const UINT_32 align = HwlGetPipes(pIn->pTileInfo) * pIn->pTileInfo->banks * m_pipeInterleaveBytes;
+
+                if ((pOut->sliceSize % align) == 0)
+                {
+                    pOut->sliceInterleaved = FALSE;
+                }
+                else
+                {
+                    pOut->sliceInterleaved = TRUE;
+                }
+            }
         }
     }
 
