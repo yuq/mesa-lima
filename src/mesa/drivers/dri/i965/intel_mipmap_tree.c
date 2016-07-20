@@ -3102,11 +3102,6 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
    if (surf->dim == ISL_SURF_DIM_3D) {
       surf->logical_level0_px.depth = mt->logical_depth0;
       surf->logical_level0_px.array_len = 1;
-   } else if (mt->target == GL_TEXTURE_CUBE_MAP ||
-              mt->target == GL_TEXTURE_CUBE_MAP_ARRAY) {
-      /* For cube maps, mt->logical_depth0 is in number of cubes */
-      surf->logical_level0_px.depth = 1;
-      surf->logical_level0_px.array_len = mt->logical_depth0 * 6;
    } else {
       surf->logical_level0_px.depth = 1;
       surf->logical_level0_px.array_len = mt->logical_depth0;
