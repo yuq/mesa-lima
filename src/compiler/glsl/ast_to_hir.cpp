@@ -3713,7 +3713,7 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
     */
    assert(var->data.mode != ir_var_temporary);
    if (qual->flags.q.in && qual->flags.q.out)
-      var->data.mode = ir_var_function_inout;
+      var->data.mode = is_parameter ? ir_var_function_inout : ir_var_shader_out;
    else if (qual->flags.q.in)
       var->data.mode = is_parameter ? ir_var_function_in : ir_var_shader_in;
    else if (qual->flags.q.attribute
@@ -3729,6 +3729,9 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
       var->data.mode = ir_var_shader_storage;
    else if (qual->flags.q.shared_storage)
       var->data.mode = ir_var_shader_shared;
+
+   var->data.fb_fetch_output = state->stage == MESA_SHADER_FRAGMENT &&
+                               qual->flags.q.in && qual->flags.q.out;
 
    if (!is_parameter && is_varying_var(var, state->stage)) {
       /* User-defined ins/outs are not permitted in compute shaders. */

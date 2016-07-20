@@ -1944,6 +1944,18 @@ storage_qualifier:
           $$.xfb_buffer = state->out_qualifier->xfb_buffer;
       }
    }
+   | INOUT_TOK
+   {
+      memset(& $$, 0, sizeof($$));
+      $$.flags.q.in = 1;
+      $$.flags.q.out = 1;
+
+      if (!state->has_framebuffer_fetch() ||
+          !state->is_version(130, 300) ||
+          state->stage != MESA_SHADER_FRAGMENT)
+         _mesa_glsl_error(&@1, state, "A single interface variable cannot be "
+                          "declared as both input and output");
+   }
    | UNIFORM
    {
       memset(& $$, 0, sizeof($$));
