@@ -117,6 +117,22 @@ dd_get_file_stream(struct dd_screen *dscreen, unsigned apitrace_call_number)
 }
 
 static void
+dd_dump_dmesg(FILE *f)
+{
+   char line[2000];
+   FILE *p = popen("dmesg | tail -n60", "r");
+
+   if (!p)
+      return;
+
+   fprintf(f, "\nLast 60 lines of dmesg:\n\n");
+   while (fgets(line, sizeof(line), p))
+      fputs(line, f);
+
+   fclose(p);
+}
+
+static void
 dd_close_file_stream(FILE *f)
 {
    fclose(f);
@@ -504,7 +520,8 @@ dd_dump_driver_state(struct dd_context *dctx, FILE *f, unsigned flags)
 }
 
 static void
-dd_dump_call(struct dd_context *dctx, struct dd_call *call, unsigned flags)
+dd_dump_call(struct dd_context *dctx, struct dd_call *call, unsigned flags,
+             bool dump_dmesg)
 {
    FILE *f = dd_get_file_stream(dd_screen(dctx->base.screen),
                                 dctx->apitrace_call_number);
@@ -546,6 +563,8 @@ dd_dump_call(struct dd_context *dctx, struct dd_call *call, unsigned flags)
    }
 
    dd_dump_driver_state(dctx, f, flags);
+   if (dump_dmesg)
+      dd_dump_dmesg(f);
    dd_close_file_stream(f);
 }
 
@@ -601,6 +620,7 @@ dd_flush_and_handle_hang(struct dd_context *dctx,
                               PIPE_DUMP_CURRENT_STATES |
                               PIPE_DUMP_CURRENT_SHADERS |
                               PIPE_DUMP_LAST_COMMAND_BUFFER);
+         dd_dump_dmesg(f);
          dd_close_file_stream(f);
       }
 
@@ -658,7 +678,8 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
                          PIPE_DUMP_DEVICE_STATUS_REGISTERS |
                          PIPE_DUMP_CURRENT_STATES |
                          PIPE_DUMP_CURRENT_SHADERS |
-                         PIPE_DUMP_LAST_COMMAND_BUFFER);
+                         PIPE_DUMP_LAST_COMMAND_BUFFER,
+                         true);
 
             /* Terminate the process to prevent future hangs. */
             dd_kill_process();
@@ -667,11 +688,11 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
       case DD_DUMP_ALL_CALLS:
          if (!dscreen->no_flush)
             pipe->flush(pipe, NULL, 0);
-         dd_dump_call(dctx, call, 0);
+         dd_dump_call(dctx, call, 0, false);
          break;
       case DD_DUMP_APITRACE_CALL:
          if (dscreen->apitrace_dump_call == dctx->apitrace_call_number) {
-            dd_dump_call(dctx, call, 0);
+            dd_dump_call(dctx, call, 0, false);
             /* No need to continue. */
             exit(0);
          }
