@@ -227,6 +227,7 @@ EXT(EXT_rescale_normal                      , dummy_true                        
 EXT(EXT_secondary_color                     , dummy_true                             , GLL,  x ,  x ,  x , 1999)
 EXT(EXT_separate_shader_objects             , dummy_true                             ,  x ,  x ,  x , ES2, 2013)
 EXT(EXT_separate_specular_color             , dummy_true                             , GLL,  x ,  x ,  x , 1997)
+EXT(EXT_shader_framebuffer_fetch            , MESA_shader_framebuffer_fetch          ,  x ,  x ,  x , ES2, 2013)
 EXT(EXT_shader_integer_mix                  , EXT_shader_integer_mix                 , GLL, GLC,  x ,  30, 2013)
 EXT(EXT_shader_io_blocks                    , OES_shader_io_blocks                   ,  x ,  x ,  x ,  31, 2014)
 EXT(EXT_shader_samples_identical            , EXT_shader_samples_identical           , GLL, GLC,  x ,  31, 2015)
