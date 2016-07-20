@@ -104,6 +104,7 @@ resume_query(struct fd_batch *batch, struct fd_hw_query *hq,
 		struct fd_ringbuffer *ring)
 {
 	int idx = pidx(hq->provider->query_type);
+	DBG("%p", hq);
 	assert(idx >= 0);   /* query never would have been created otherwise */
 	assert(!hq->period);
 	batch->active_providers |= (1 << idx);
@@ -119,6 +120,7 @@ pause_query(struct fd_batch *batch, struct fd_hw_query *hq,
 		struct fd_ringbuffer *ring)
 {
 	int idx = pidx(hq->provider->query_type);
+	DBG("%p", hq);
 	assert(idx >= 0);   /* query never would have been created otherwise */
 	assert(hq->period && !hq->period->end);
 	assert(batch->active_providers & (1 << idx));
@@ -144,6 +146,8 @@ fd_hw_destroy_query(struct fd_context *ctx, struct fd_query *q)
 {
 	struct fd_hw_query *hq = fd_hw_query(q);
 
+	DBG("%p: active=%d", q, q->active);
+
 	destroy_periods(ctx, hq);
 	list_del(&hq->list);
 
@@ -155,6 +159,8 @@ fd_hw_begin_query(struct fd_context *ctx, struct fd_query *q)
 {
 	struct fd_batch *batch = ctx->batch;
 	struct fd_hw_query *hq = fd_hw_query(q);
+
+	DBG("%p: active=%d", q, q->active);
 
 	if (q->active)
 		return false;
@@ -179,16 +185,22 @@ fd_hw_end_query(struct fd_context *ctx, struct fd_query *q)
 {
 	struct fd_batch *batch = ctx->batch;
 	struct fd_hw_query *hq = fd_hw_query(q);
+
 	/* there are a couple special cases, which don't have
 	 * a matching ->begin_query():
 	 */
 	if (skip_begin_query(q->type) && !q->active) {
 		fd_hw_begin_query(ctx, q);
 	}
+
+	DBG("%p: active=%d", q, q->active);
+
 	if (!q->active)
 		return;
+
 	if (batch && is_active(hq, batch->stage))
 		pause_query(batch, hq, batch->draw);
+
 	q->active = false;
 	/* remove from active list: */
 	list_delinit(&hq->list);
@@ -207,6 +219,8 @@ fd_hw_get_query_result(struct fd_context *ctx, struct fd_query *q,
 	struct fd_hw_query *hq = fd_hw_query(q);
 	const struct fd_hw_sample_provider *p = hq->provider;
 	struct fd_hw_sample_period *period;
+
+	DBG("%p: wait=%d, active=%d", q, wait, q->active);
 
 	if (q->active)
 		return false;
@@ -307,6 +321,8 @@ fd_hw_create_query(struct fd_context *ctx, unsigned query_type)
 	hq = CALLOC_STRUCT(fd_hw_query);
 	if (!hq)
 		return NULL;
+
+	DBG("%p: query_type=%u", hq, query_type);
 
 	hq->provider = ctx->sample_providers[idx];
 
