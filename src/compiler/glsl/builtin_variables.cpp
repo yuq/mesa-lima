@@ -1134,6 +1134,16 @@ builtin_variable_generator::generate_fs_special_vars()
                  array(vec4_t, state->Const.MaxDrawBuffers), "gl_FragData");
    }
 
+   if (state->has_framebuffer_fetch() && !state->is_version(130, 300)) {
+      ir_variable *const var =
+         add_output(FRAG_RESULT_DATA0,
+                    array(vec4_t, state->Const.MaxDrawBuffers),
+                    "gl_LastFragData");
+      var->data.precision = GLSL_PRECISION_MEDIUM;
+      var->data.read_only = 1;
+      var->data.fb_fetch_output = 1;
+   }
+
    if (state->es_shader && state->language_version == 100 && state->EXT_blend_func_extended_enable) {
       /* We make an assumption here that there will only ever be one dual-source draw buffer
        * In case this assumption is ever proven to be false, make sure to assert here
