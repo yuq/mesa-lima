@@ -122,9 +122,6 @@ emit_ms_state(struct anv_pipeline *pipeline,
    if (info && info->pSampleMask)
       sample_mask &= info->pSampleMask[0];
 
-   if (info && info->sampleShadingEnable)
-      anv_finishme("VkPipelineMultisampleStateCreateInfo::sampleShadingEnable");
-
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
       /* The PRM says that this bit is valid only for DX9:
        *
