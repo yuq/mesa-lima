@@ -2231,6 +2231,7 @@ VOID SiLib::HwlSetupTileInfo(
     }
 
     pOut->tileIndex = index;
+    pOut->prtTileIndex = flags.prt;
 }
 
 /**
