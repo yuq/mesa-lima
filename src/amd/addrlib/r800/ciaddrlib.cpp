@@ -979,7 +979,7 @@ VOID CiLib::HwlOptimizeTileMode(
 
         if (pInOut->maxBaseAlign != 0)
         {
-            pInOut->flags.dccCompatible = FALSE;
+            pInOut->flags.dccPipeWorkaround = FALSE;
         }
     }
 
@@ -2095,7 +2095,7 @@ VOID CiLib::HwlComputeSurfaceAlignmentsMacroTiled(
     // P4. In theory, all asics that have such switching should be patched but we now only know what
     // to pad for Fiji.
     if ((m_settings.isFiji == TRUE) &&
-        (flags.dccCompatible == TRUE) &&
+        (flags.dccPipeWorkaround == TRUE) &&
         (flags.prt == FALSE) &&
         (mipLevel == 0) &&
         (tileMode == ADDR_TM_PRT_TILED_THIN1) &&

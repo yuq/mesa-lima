@@ -336,6 +336,8 @@ ADDR_E_RETURNCODE Lib::ComputeSurfaceInfo(
 
         if (returnCode == ADDR_OK)
         {
+            localIn.flags.dccPipeWorkaround = localIn.flags.dccCompatible;
+
             if (localIn.tileMode == ADDR_TM_UNKNOWN)
             {
                 // HWL layer may override tile mode if necessary

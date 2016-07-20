@@ -504,7 +504,11 @@ typedef union _ADDR_SURFACE_FLAGS
         UINT_32 interleaved          : 1; ///< Special flag for interleaved YUV surface padding
         UINT_32 tcCompatible         : 1; ///< Flag indicates surface needs to be shader readable
         UINT_32 dispTileType         : 1; ///< NI: force display Tiling for 128 bit shared resoruce
-        UINT_32 dccCompatible        : 1; ///< VI: whether to support dcc fast clear
+        UINT_32 dccCompatible        : 1; ///< VI: whether to make MSAA surface support dcc fast clear
+        UINT_32 dccPipeWorkaround    : 1; ///< VI: whether to workaround the HW limit that
+                                          ///  dcc can't be enabled if pipe config of tile mode
+                                          ///  is different from that of ASIC, this flag
+                                          ///  is address lib internal flag, client should ignore it
         UINT_32 czDispCompatible     : 1; ///< SI+: CZ family has a HW bug needs special alignment.
                                           ///  This flag indicates we need to follow the
                                           ///  alignment with CZ families or other ASICs under
