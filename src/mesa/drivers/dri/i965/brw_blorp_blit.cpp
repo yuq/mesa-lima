@@ -1390,7 +1390,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
    /* If the source image is not multisampled, then we want to fetch sample
     * number 0, because that's the only sample there is.
     */
-   if (key->src_samples == 0)
+   if (key->src_samples == 1)
       src_pos = nir_channels(&b, src_pos, 0x3);
 
    /* X, Y, and S are now the coordinates of the pixel in the source image
@@ -1467,7 +1467,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
           * the texturing unit, will cause data to be read from the correct
           * memory location.  So we can fetch the texel now.
           */
-         if (key->src_samples == 0) {
+         if (key->src_samples == 1) {
             color = blorp_nir_txf(&b, &v, src_pos, key->texture_data_type);
          } else {
             nir_ssa_def *mcs = NULL;
@@ -1547,26 +1547,6 @@ brw_blorp_setup_coord_transform(struct brw_blorp_coord_transform *xform,
        */
       xform->multiplier = -scale;
       xform->offset = src0 + (dst1 - 0.5f) * scale;
-   }
-}
-
-static enum isl_msaa_layout
-get_isl_msaa_layout(unsigned samples, enum intel_msaa_layout layout)
-{
-   if (samples > 1) {
-      switch (layout) {
-      case INTEL_MSAA_LAYOUT_NONE:
-         return ISL_MSAA_LAYOUT_NONE;
-      case INTEL_MSAA_LAYOUT_IMS:
-         return ISL_MSAA_LAYOUT_INTERLEAVED;
-      case INTEL_MSAA_LAYOUT_UMS:
-      case INTEL_MSAA_LAYOUT_CMS:
-         return ISL_MSAA_LAYOUT_ARRAY;
-      default:
-         unreachable("Invalid MSAA layout");
-      }
-   } else {
-      return ISL_MSAA_LAYOUT_NONE;
    }
 }
 
@@ -1777,28 +1757,12 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    struct brw_blorp_blit_prog_key wm_prog_key;
    memset(&wm_prog_key, 0, sizeof(wm_prog_key));
 
-   /* texture_data_type indicates the register type that should be used to
-    * manipulate texture data.
-    */
-   switch (_mesa_get_format_datatype(src_mt->format)) {
-   case GL_UNSIGNED_NORMALIZED:
-   case GL_SIGNED_NORMALIZED:
-   case GL_FLOAT:
-      wm_prog_key.texture_data_type = BRW_REGISTER_TYPE_F;
-      break;
-   case GL_UNSIGNED_INT:
-      if (src_mt->format == MESA_FORMAT_S_UINT8) {
-         /* We process stencil as though it's an unsigned normalized color */
-         wm_prog_key.texture_data_type = BRW_REGISTER_TYPE_F;
-      } else {
-         wm_prog_key.texture_data_type = BRW_REGISTER_TYPE_UD;
-      }
-      break;
-   case GL_INT:
+   if (isl_format_has_sint_channel(params.src.view.format)) {
       wm_prog_key.texture_data_type = BRW_REGISTER_TYPE_D;
-      break;
-   default:
-      unreachable("Unrecognized blorp format");
+   } else if (isl_format_has_uint_channel(params.src.view.format)) {
+      wm_prog_key.texture_data_type = BRW_REGISTER_TYPE_UD;
+   } else {
+      wm_prog_key.texture_data_type = BRW_REGISTER_TYPE_F;
    }
 
    /* Scaled blitting or not. */
@@ -1809,21 +1773,20 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    /* Scaling factors used for bilinear filtering in multisample scaled
     * blits.
     */
-   if (src_mt->num_samples == 16)
+   if (params.src.surf.samples == 16)
       wm_prog_key.x_scale = 4.0f;
    else
       wm_prog_key.x_scale = 2.0f;
-   wm_prog_key.y_scale = src_mt->num_samples / wm_prog_key.x_scale;
+   wm_prog_key.y_scale = params.src.surf.samples / wm_prog_key.x_scale;
 
    if (filter == GL_LINEAR &&
        params.src.surf.samples <= 1 && params.dst.surf.samples <= 1)
       wm_prog_key.bilinear_filter = true;
 
-   GLenum base_format = _mesa_get_format_base_format(src_mt->format);
-   if (base_format != GL_DEPTH_COMPONENT && /* TODO: what about depth/stencil? */
-       base_format != GL_STENCIL_INDEX &&
-       !_mesa_is_format_integer(src_mt->format) &&
-       src_mt->num_samples > 1 && dst_mt->num_samples <= 1) {
+   if ((params.src.surf.usage & ISL_SURF_USAGE_DEPTH_BIT) == 0 &&
+       (params.src.surf.usage & ISL_SURF_USAGE_STENCIL_BIT) == 0 &&
+       !isl_format_has_int_channel(params.src.surf.format) &&
+       params.src.surf.samples > 1 && params.dst.surf.samples <= 1) {
       /* We are downsampling a non-integer color buffer, so blend.
        *
        * Regarding integer color buffers, the OpenGL ES 3.2 spec says:
@@ -1837,18 +1800,16 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    }
 
    /* src_samples and dst_samples are the true sample counts */
-   wm_prog_key.src_samples = src_mt->num_samples;
-   wm_prog_key.dst_samples = dst_mt->num_samples;
+   wm_prog_key.src_samples = params.src.surf.samples;
+   wm_prog_key.dst_samples = params.dst.surf.samples;
 
    wm_prog_key.tex_aux_usage = params.src.aux_usage;
 
    /* src_layout and dst_layout indicate the true MSAA layout used by src and
     * dst.
     */
-   wm_prog_key.src_layout = get_isl_msaa_layout(src_mt->num_samples,
-                                                src_mt->msaa_layout);
-   wm_prog_key.dst_layout = get_isl_msaa_layout(dst_mt->num_samples,
-                                                dst_mt->msaa_layout);
+   wm_prog_key.src_layout = params.src.surf.msaa_layout;
+   wm_prog_key.dst_layout = params.dst.surf.msaa_layout;
 
    /* Round floating point values to nearest integer to avoid "off by one texel"
     * kind of errors when blitting.
@@ -1859,9 +1820,11 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    params.y1 = params.wm_inputs.discard_rect.y1 = roundf(dst_y1);
 
    params.wm_inputs.rect_grid.x1 =
-      minify(src_mt->logical_width0, src_level) * wm_prog_key.x_scale - 1.0f;
+      minify(params.src.surf.logical_level0_px.width, src_level) *
+      wm_prog_key.x_scale - 1.0f;
    params.wm_inputs.rect_grid.y1 =
-      minify(src_mt->logical_height0, src_level) * wm_prog_key.y_scale - 1.0f;
+      minify(params.src.surf.logical_level0_px.height, src_level) *
+      wm_prog_key.y_scale - 1.0f;
 
    brw_blorp_setup_coord_transform(&params.wm_inputs.coord_transform[0],
                                    src_x0, src_x1, dst_x0, dst_x1, mirror_x);
