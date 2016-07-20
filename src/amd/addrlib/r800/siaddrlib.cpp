@@ -292,7 +292,7 @@ UINT_32 SiAddrLib::ComputePipeFromCoord(
     }
     pipe = pipeBit0 | (pipeBit1 << 1) | (pipeBit2 << 2) | (pipeBit3 << 3);
 
-    UINT_32 microTileThickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 microTileThickness = Thickness(tileMode);
 
     //
     // Apply pipe rotation for the slice.
@@ -1460,7 +1460,7 @@ VOID SiAddrLib::HwlSetupTileInfo(
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*   pOut            ///< [out] Output
     ) const
 {
-    UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 thickness = Thickness(tileMode);
     ADDR_TILEINFO* pTileInfo = pTileInfoOut;
     INT index = TileIndexInvalid;
 

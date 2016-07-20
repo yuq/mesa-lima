@@ -425,7 +425,7 @@ protected:
     //
     static const AddrTileModeFlags m_modeFlags[ADDR_TM_COUNT];
 
-    static UINT_32 ComputeSurfaceThickness(
+    static UINT_32 Thickness(
         AddrTileMode tileMode);
 
     // Checking tile mode

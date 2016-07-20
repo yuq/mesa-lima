@@ -180,7 +180,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
     }
 
     // Thick modes don't support multisample
-    if (ComputeSurfaceThickness(pIn->tileMode) > 1 && pIn->numSamples > 1)
+    if (Thickness(pIn->tileMode) > 1 && pIn->numSamples > 1)
     {
         returnCode = ADDR_INVALIDPARAMS;
     }
@@ -824,7 +824,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeFmaskInfo(
     }
 
     // No thick MSAA
-    if (ComputeSurfaceThickness(pIn->tileMode) > 1)
+    if (Thickness(pIn->tileMode) > 1)
     {
         returnCode = ADDR_INVALIDPARAMS;
     }
@@ -1203,7 +1203,7 @@ ADDR_E_RETURNCODE AddrLib1::GetTileIndex(
 
 /**
 ***************************************************************************************************
-*   AddrLib1::ComputeSurfaceThickness
+*   AddrLib1::Thickness
 *
 *   @brief
 *       Compute surface thickness
@@ -1212,7 +1212,7 @@ ADDR_E_RETURNCODE AddrLib1::GetTileIndex(
 *       Surface thickness
 ***************************************************************************************************
 */
-UINT_32 AddrLib1::ComputeSurfaceThickness(
+UINT_32 AddrLib1::Thickness(
     AddrTileMode tileMode)    ///< [in] tile mode
 {
     return m_modeFlags[tileMode].thickness;
@@ -2776,7 +2776,7 @@ UINT_32 AddrLib1::ComputePixelIndexWithinMicroTile(
     UINT_32 z1 = _BIT(z, 1);
     UINT_32 z2 = _BIT(z, 2);
 
-    UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 thickness = Thickness(tileMode);
 
     // Compute the pixel number within the micro tile.
 
@@ -3007,7 +3007,7 @@ VOID AddrLib1::PadDimensions(
     UINT_32             sliceAlign   ///< [in] number of slice alignment
     ) const
 {
-    UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 thickness = Thickness(tileMode);
 
     ADDR_ASSERT(padDims <= 3);
 
@@ -3293,7 +3293,7 @@ BOOL_32 AddrLib1::OptimizeTileMode(
     ) const
 {
     AddrTileMode tileMode = pIn->tileMode;
-    UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 thickness = Thickness(tileMode);
 
     // Optimization can only be done on level 0 and samples <= 1
     if ((pIn->flags.opt4Space == TRUE)      &&
@@ -3364,7 +3364,7 @@ AddrTileMode AddrLib1::DegradeLargeThickTile(
     // Override tilemode
     // When tile_width (8) * tile_height (8) * thickness * element_bytes is > row_size,
     // it is better to just use THIN mode in this case
-    UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 thickness = Thickness(tileMode);
 
     if (thickness > 1 && m_configFlags.allowLargeThickTile == 0)
     {

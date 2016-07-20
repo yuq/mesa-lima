@@ -636,7 +636,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlSetupTileCfg(
                     {
                         if (bpp > 0)
                         {
-                            UINT_32 thickness = ComputeSurfaceThickness(pCfgTable->mode);
+                            UINT_32 thickness = Thickness(pCfgTable->mode);
                             UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
                             // Non-depth entries store a split factor
                             UINT_32 sampleSplit = m_tileTable[index].info.tileSplitBytes;
@@ -897,7 +897,7 @@ BOOL_32 CiAddrLib::HwlOverrideTileMode(
     // UBTS#404321, we do not need such overriding, as THICK+THICK entries removed from the tile-mode table
     if (!m_settings.isBonaire)
     {
-        UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+        UINT_32 thickness = Thickness(tileMode);
 
         // tile_thickness = (array_mode == XTHICK) ? 8 : ((array_mode == THICK) ? 4 : 1)
         if (thickness > 1)
@@ -1000,7 +1000,7 @@ VOID CiAddrLib::HwlSetupTileInfo(
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*   pOut            ///< [out] Output
     ) const
 {
-    UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 thickness = Thickness(tileMode);
     ADDR_TILEINFO* pTileInfo = pTileInfoOut;
     INT index = TileIndexInvalid;
     INT macroModeIndex = TileIndexInvalid;
@@ -1546,7 +1546,7 @@ INT_32 CiAddrLib::HwlComputeMacroModeIndex(
 
     AddrTileMode tileMode = m_tileTable[tileIndex].mode;
     AddrTileType tileType = m_tileTable[tileIndex].type;
-    UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 thickness = Thickness(tileMode);
 
     if (!IsMacroTiled(tileMode))
     {

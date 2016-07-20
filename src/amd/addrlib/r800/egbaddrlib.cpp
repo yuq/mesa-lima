@@ -324,7 +324,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMicroTiled(
     //
     // Compute the micro tile thickness.
     //
-    microTileThickness = ComputeSurfaceThickness(expTileMode);
+    microTileThickness = Thickness(expTileMode);
 
     //
     // Extra override for mip levels
@@ -455,7 +455,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
         //
         // Compute the micro tile thickness.
         //
-        microTileThickness = ComputeSurfaceThickness(expTileMode);
+        microTileThickness = Thickness(expTileMode);
 
         //
         // Find the correct tiling mode for mip levels
@@ -481,7 +481,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
             }
             else
             {
-                if (microTileThickness != ComputeSurfaceThickness(expTileMode))
+                if (microTileThickness != Thickness(expTileMode))
                 {
                     //
                     // Re-compute if thickness changed since bank-height may be changed!
@@ -811,7 +811,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMacroTiled(
         UINT_32 bankHeightAlign;
         UINT_32 macroAspectAlign;
 
-        UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+        UINT_32 thickness = Thickness(tileMode);
         UINT_32 pipes = HwlGetPipes(pTileInfo);
 
         //
@@ -1027,7 +1027,7 @@ AddrTileMode EgBasedAddrLib::ComputeSurfaceMipLevelTileMode(
     UINT_32 bytesPerTile;
 
     AddrTileMode expTileMode = baseTileMode;
-    UINT_32 microTileThickness = ComputeSurfaceThickness(expTileMode);
+    UINT_32 microTileThickness = Thickness(expTileMode);
     UINT_32 interleaveSize = m_pipeInterleaveBytes * m_bankInterleave;
 
     //
@@ -1190,7 +1190,7 @@ AddrTileMode EgBasedAddrLib::HwlDegradeThickTileMode(
     UINT_32*            pBytesPerTile   ///< [in/out] pointer to bytes per slice
     ) const
 {
-    ADDR_ASSERT(numSlices < ComputeSurfaceThickness(baseTileMode));
+    ADDR_ASSERT(numSlices < Thickness(baseTileMode));
     // if pBytesPerTile is NULL, this is a don't-care....
     UINT_32 bytesPerTile = pBytesPerTile != NULL ? *pBytesPerTile : 64;
 
@@ -1306,7 +1306,7 @@ UINT_64 EgBasedAddrLib::DispatchComputeSurfaceAddrFromCoord(
         /// mipmap chain must have the same tileType, so please fill tileType correctly
         if (IsLinear(pIn->tileMode) == FALSE)
         {
-            if (bpp >= 128 || ComputeSurfaceThickness(tileMode) > 1)
+            if (bpp >= 128 || Thickness(tileMode) > 1)
             {
                 ADDR_ASSERT(microTileType != ADDR_DISPLAYABLE);
             }
@@ -1474,7 +1474,7 @@ UINT_64 EgBasedAddrLib::ComputeSurfaceAddrFromCoordMacroTiled(
     UINT_32 tileIndex;
     UINT_32 tileOffset;
 
-    UINT_32 microTileThickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 microTileThickness = Thickness(tileMode);
 
     //
     // Compute the number of group, pipe, and bank bits.
@@ -1726,7 +1726,7 @@ UINT_64 EgBasedAddrLib::ComputeSurfaceAddrFromCoordMicroTiled(
     UINT_32 pixelIndex;
     UINT_32 pixelOffset;
 
-    UINT_32 microTileThickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 microTileThickness = Thickness(tileMode);
 
     //
     // Compute the micro tile size.
@@ -1839,7 +1839,7 @@ VOID EgBasedAddrLib::HwlComputePixelCoordFromOffset(
     UINT_32 x = 0;
     UINT_32 y = 0;
     UINT_32 z = 0;
-    UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 thickness = Thickness(tileMode);
 
     // For planar surface, we adjust offset acoording to tile base
     if ((bpp != compBits) && (compBits != 0) && isDepthSampleOrder)
@@ -2053,7 +2053,7 @@ VOID EgBasedAddrLib::DispatchComputeSurfaceCoordFromAddr(
         /// mipmap chain must have the same tileType, so please fill tileType correctly
         if (IsLinear(pIn->tileMode) == FALSE)
         {
-            if (bpp >= 128 || ComputeSurfaceThickness(tileMode) > 1)
+            if (bpp >= 128 || Thickness(tileMode) > 1)
             {
                 ADDR_ASSERT(microTileType != ADDR_DISPLAYABLE);
             }
@@ -2207,7 +2207,7 @@ VOID EgBasedAddrLib::ComputeSurfaceCoordFromAddrMacroTiled(
         (((addrBits / groupBits / pipes) % bankInterleave) * groupBits) +
         (((addrBits / groupBits / pipes) / bankInterleave) / banks) * groupBits * bankInterleave;
 
-    UINT_32 microTileThickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 microTileThickness = Thickness(tileMode);
 
     UINT_32 microTileBits = bpp * microTileThickness * MicroTilePixels * numSamples;
 
@@ -2365,7 +2365,7 @@ VOID EgBasedAddrLib::ComputeSurfaceCoord2DFromBankPipe(
             break;
     }
 
-    UINT_32 microTileThickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 microTileThickness = Thickness(tileMode);
 
     bank ^= tileSplitRotation * tileSlices;
     if (pipeRotation == 0)
@@ -2703,7 +2703,7 @@ UINT_32 EgBasedAddrLib::ComputeSliceTileSwizzle(
 
     if (IsMacroTiled(tileMode)) // Swizzle only for macro tile mode
     {
-        UINT_32 firstSlice = slice / ComputeSurfaceThickness(tileMode);
+        UINT_32 firstSlice = slice / Thickness(tileMode);
 
         UINT_32 numPipes = HwlGetPipes(pTileInfo);
         UINT_32 numBanks = pTileInfo->banks;
@@ -2859,7 +2859,7 @@ UINT_32 EgBasedAddrLib::ComputeBankFromCoord(
     //
     // Compute bank rotation for the slice.
     //
-    UINT_32 microTileThickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 microTileThickness = Thickness(tileMode);
 
     switch (tileMode)
     {
@@ -3281,7 +3281,7 @@ UINT_64 EgBasedAddrLib::DispatchComputeFmaskAddrFromCoord(
     UINT_64 addr          = 0;
 
     ADDR_ASSERT(numSamples > 1);
-    ADDR_ASSERT(ComputeSurfaceThickness(tileMode) == 1);
+    ADDR_ASSERT(Thickness(tileMode) == 1);
 
     switch (tileMode)
     {
@@ -4512,7 +4512,7 @@ UINT_32 EgBasedAddrLib::HwlGetPitchAlignmentMicroTiled(
 {
     UINT_32 pitchAlign;
 
-    UINT_32 microTileThickness = ComputeSurfaceThickness(tileMode);
+    UINT_32 microTileThickness = Thickness(tileMode);
 
     UINT_32 pixelsPerMicroTile;
     UINT_32 pixelsPerPipeInterleave;
