@@ -48,7 +48,27 @@ PFN_WORK_FUNC GetRasterizerFunc(
     uint32_t numSamples,
     bool IsConservative,
     uint32_t InputCoverage,
+    uint32_t EdgeEnable,
     bool RasterizeScissorEdges);
+
+enum ValidTriEdges
+{
+    NO_VALID_EDGES = 0,
+    E0_E1_VALID = 0x3,
+    E0_E2_VALID = 0x5,
+    E1_E2_VALID = 0x6,
+    ALL_EDGES_VALID = 0x7,
+    VALID_TRI_EDGE_COUNT,
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief ValidTriEdges convenience typedefs used for templated function 
+/// specialization supported Fixed Point precisions
+typedef std::integral_constant<uint32_t, ALL_EDGES_VALID> AllEdgesValidT;
+typedef std::integral_constant<uint32_t, E0_E1_VALID> E0E1ValidT;
+typedef std::integral_constant<uint32_t, E0_E2_VALID> E0E2ValidT;
+typedef std::integral_constant<uint32_t, E1_E2_VALID> E1E2ValidT;
+typedef std::integral_constant<uint32_t, NO_VALID_EDGES> NoEdgesValidT;
 
 //////////////////////////////////////////////////////////////////////////
 /// @struct RasterScissorEdgesT
@@ -59,22 +79,26 @@ PFN_WORK_FUNC GetRasterizerFunc(
 /// 3 triangle edges + 4 scissor edges for coverage.
 /// @tparam RasterScissorEdgesT: number of multisamples
 /// @tparam ConservativeT: is this a conservative rasterization
-template <typename RasterScissorEdgesT, typename ConservativeT>
+/// @tparam EdgeMaskT: Which edges are valid(not degenerate)
+template <typename RasterScissorEdgesT, typename ConservativeT, typename EdgeMaskT>
 struct RasterEdgeTraits
 {
     typedef std::true_type RasterizeScissorEdgesT;
     typedef std::integral_constant<uint32_t, 7> NumEdgesT;
+    typedef std::integral_constant<uint32_t, EdgeMaskT::value> ValidEdgeMaskT;
 };
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief specialization of RasterEdgeTraits. If neither scissor rect
 /// nor conservative rast is enabled, only test 3 triangle edges 
 /// for coverage
-template <>
-struct RasterEdgeTraits<std::false_type, std::false_type>
+template <typename EdgeMaskT>
+struct RasterEdgeTraits<std::false_type, std::false_type, EdgeMaskT>
 {
     typedef std::false_type RasterizeScissorEdgesT;
     typedef std::integral_constant<uint32_t, 3> NumEdgesT;
+    // no need for degenerate edge masking in non-conservative case; rasterize all triangle edges
+    typedef std::integral_constant<uint32_t, ALL_EDGES_VALID> ValidEdgeMaskT;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -86,19 +110,19 @@ struct RasterEdgeTraits<std::false_type, std::false_type>
 /// @tparam InputCoverageT: what type of input coverage is the PS expecting?
 /// (only used with conservative rasterization)
 /// @tparam RasterScissorEdgesT: do we need to rasterize with a scissor?
-template <typename NumSamplesT, typename ConservativeT, typename InputCoverageT, typename RasterScissorEdgesT>
+template <typename NumSamplesT, typename ConservativeT, typename InputCoverageT, typename EdgeEnableT, typename RasterScissorEdgesT>
 struct RasterizerTraits final : public ConservativeRastBETraits<ConservativeT, InputCoverageT>,
-                                public RasterEdgeTraits<RasterScissorEdgesT, ConservativeT>
+                                public RasterEdgeTraits<RasterScissorEdgesT, ConservativeT, std::integral_constant<uint32_t, EdgeEnableT::value>>
 {
     typedef MultisampleTraits<static_cast<SWR_MULTISAMPLE_COUNT>(NumSamplesT::value)> MT;
-    
+
     /// Fixed point precision the rasterizer is using
     typedef FixedPointTraits<Fixed_16_8> PrecisionT;
     /// Fixed point precision of the edge tests used during rasterization
     typedef FixedPointTraits<Fixed_X_16> EdgePrecisionT;
 
     // If conservative rast is enabled, only need a single sample coverage test, with the result copied to all samples
-    typedef std::integral_constant<int, (ConservativeT::value) ? 1 : MT::numSamples> NumRasterSamplesT; 
+    typedef std::integral_constant<int, (ConservativeT::value) ? 1 : MT::numSamples> NumRasterSamplesT;
 
     static_assert(EdgePrecisionT::BitsT::value >=  ConservativeRastBETraits<ConservativeT, InputCoverageT>::ConservativePrecisionT::BitsT::value,
                   "Rasterizer edge fixed point precision < required conservative rast precision");

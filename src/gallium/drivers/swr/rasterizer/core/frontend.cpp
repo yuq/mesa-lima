@@ -1446,7 +1446,7 @@ PFN_FE_WORK_FUNC GetProcessDrawFunc(
 /// @param pLinkageMap - maps VS attribute slot to PS slot
 /// @param triIndex - Triangle to process attributes for
 /// @param pBuffer - Output result
-template<typename NumVertsT, typename IsSwizzledT, typename HasConstantInterpT>
+template<typename NumVertsT, typename IsSwizzledT, typename HasConstantInterpT, typename IsDegenerate>
 INLINE void ProcessAttributes(
     DRAW_CONTEXT *pDC,
     PA_STATE&pa,
@@ -1456,7 +1456,8 @@ INLINE void ProcessAttributes(
 {
     static_assert(NumVertsT::value > 0 && NumVertsT::value <= 3, "Invalid value for NumVertsT");
     const SWR_BACKEND_STATE& backendState = pDC->pState->state.backendState;
-    LONG constantInterpMask = backendState.constantInterpolationMask;
+    // Conservative Rasterization requires degenerate tris to have constant attribute interpolation
+    LONG constantInterpMask = IsDegenerate::value ? 0xFFFFFFFF : backendState.constantInterpolationMask;
     const uint32_t provokingVertex = pDC->pState->state.frontendState.topologyProvokingVertex;
     const PRIMITIVE_TOPOLOGY topo = pDC->pState->state.topology;
 
@@ -1483,7 +1484,7 @@ INLINE void ProcessAttributes(
         __m128 attrib[3];    // triangle attribs (always 4 wide)
         float* pAttribStart = pBuffer;
 
-        if (HasConstantInterpT::value)
+        if (HasConstantInterpT::value || IsDegenerate::value)
         {
             if (_bittest(&constantInterpMask, i))
             {
@@ -1605,9 +1606,9 @@ struct ProcessAttributesChooser
     }
 };
 
-PFN_PROCESS_ATTRIBUTES GetProcessAttributesFunc(uint32_t NumVerts, bool IsSwizzled, bool HasConstantInterp)
+PFN_PROCESS_ATTRIBUTES GetProcessAttributesFunc(uint32_t NumVerts, bool IsSwizzled, bool HasConstantInterp, bool IsDegenerate = false)
 {
-    return TemplateArgUnroller<ProcessAttributesChooser>::GetFunc(IntArg<1, 3>{NumVerts}, IsSwizzled, HasConstantInterp);
+    return TemplateArgUnroller<ProcessAttributesChooser>::GetFunc(IntArg<1, 3>{NumVerts}, IsSwizzled, HasConstantInterp, IsDegenerate);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1668,38 +1669,19 @@ INLINE simdscalari fpToFixedPointVertical(const simdscalar vIn)
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Helper function to set the X,Y coords of a triangle to the 
-/// requested Fixed Point precision from FP32. If the RequestedT
-/// FixedPointTraits precision is the same as the CurrentT, no extra
-/// conversions will be done. If they are different, convert from FP32
-/// to the Requested precision and set vXi, vYi
-/// @tparam RequestedT: requested FixedPointTraits type
-/// @tparam CurrentT: FixedPointTraits type of the last 
-template<typename RequestedT, typename CurrentT = FixedPointTraits<Fixed_Uninit>>
-struct FPToFixedPoint
+/// requested Fixed Point precision from FP32.
+/// @param tri: simdvector[3] of FP triangle verts
+/// @param vXi: fixed point X coords of tri verts
+/// @param vYi: fixed point Y coords of tri verts
+INLINE static void FPToFixedPoint(const simdvector * const tri, simdscalari (&vXi)[3], simdscalari (&vYi)[3])
 {
-    //////////////////////////////////////////////////////////////////////////
-    /// @param tri: simdvector[3] of FP triangle verts
-    /// @param vXi: fixed point X coords of tri verts
-    /// @param vYi: fixed point Y coords of tri verts
-    INLINE static void Set(const simdvector * const tri, simdscalari (&vXi)[3], simdscalari (&vYi)[3])
-    {
-        vXi[0] = fpToFixedPointVertical<RequestedT>(tri[0].x);
-        vYi[0] = fpToFixedPointVertical<RequestedT>(tri[0].y);
-        vXi[1] = fpToFixedPointVertical<RequestedT>(tri[1].x);
-        vYi[1] = fpToFixedPointVertical<RequestedT>(tri[1].y);
-        vXi[2] = fpToFixedPointVertical<RequestedT>(tri[2].x);
-        vYi[2] = fpToFixedPointVertical<RequestedT>(tri[2].y);
-    };
-};
-
-//////////////////////////////////////////////////////////////////////////
-/// @brief In the case where the RequestedT and CurrentT fixed point 
-/// precisions are the same, do nothing.
-template<typename RequestedT>
-struct FPToFixedPoint<RequestedT, RequestedT>
-{
-    INLINE static void Set(const simdvector * const tri, simdscalari (&vXi)[3], simdscalari (&vYi)[3]){};
-};
+    vXi[0] = fpToFixedPointVertical(tri[0].x);
+    vYi[0] = fpToFixedPointVertical(tri[0].y);
+    vXi[1] = fpToFixedPointVertical(tri[1].x);
+    vYi[1] = fpToFixedPointVertical(tri[1].y);
+    vXi[2] = fpToFixedPointVertical(tri[2].x);
+    vYi[2] = fpToFixedPointVertical(tri[2].y);
+}
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Calculate bounding box for current triangle
@@ -1710,20 +1692,8 @@ struct FPToFixedPoint<RequestedT, RequestedT>
 /// *Note*: expects vX, vY to be in the correct precision for the type 
 /// of rasterization. This avoids unnecessary FP->fixed conversions.
 template <typename CT>
-INLINE void calcBoundingBoxIntVertical(const simdvector * const tri, simdscalari (&vX)[3], simdscalari (&vY)[3], simdBBox &bbox){}
-
-//////////////////////////////////////////////////////////////////////////
-/// @brief FEStandardRastT specialization of calcBoundingBoxIntVertical
-template <>
-INLINE void calcBoundingBoxIntVertical<FEStandardRastT>(const simdvector * const tri, simdscalari (&vX)[3], simdscalari (&vY)[3], simdBBox &bbox)
+INLINE void calcBoundingBoxIntVertical(const simdvector * const tri, simdscalari (&vX)[3], simdscalari (&vY)[3], simdBBox &bbox)
 {
-    // FE conservative rast traits
-    typedef FEStandardRastT CT;
-
-    static_assert(std::is_same<CT::BBoxPrecisionT, FixedPointTraits<Fixed_16_8>>::value, "Standard rast BBox calculation needs to be in 16.8 precision");
-    // Update vXi, vYi fixed point precision for BBox calculation if necessary
-    FPToFixedPoint<CT::BBoxPrecisionT, CT::ZeroAreaPrecisionT>::Set(tri, vX, vY);
-
     simdscalari vMinX = vX[0];
     vMinX = _simd_min_epi32(vMinX, vX[1]);
     vMinX = _simd_min_epi32(vMinX, vX[2]);
@@ -1755,10 +1725,6 @@ INLINE void calcBoundingBoxIntVertical<FEConservativeRastT>(const simdvector * c
     // FE conservative rast traits
     typedef FEConservativeRastT CT;
 
-    static_assert(std::is_same<CT::BBoxPrecisionT, FixedPointTraits<Fixed_16_9>>::value, "Conservative rast BBox calculation needs to be in 16.9 precision");
-    // Update vXi, vYi fixed point precision for BBox calculation if necessary
-    FPToFixedPoint<CT::BBoxPrecisionT, CT::ZeroAreaPrecisionT>::Set(tri, vX, vY);
-
     simdscalari vMinX = vX[0];
     vMinX = _simd_min_epi32(vMinX, vX[1]);
     vMinX = _simd_min_epi32(vMinX, vX[2]);
@@ -1776,10 +1742,11 @@ INLINE void calcBoundingBoxIntVertical<FEConservativeRastT>(const simdvector * c
     vMaxY = _simd_max_epi32(vMaxY, vY[2]);
     
     /// Bounding box needs to be expanded by 1/512 before snapping to 16.8 for conservative rasterization
-    bbox.left = _simd_srli_epi32(_simd_sub_epi32(vMinX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value)), CT::BoundingBoxShiftT::value);
-    bbox.right = _simd_srli_epi32(_simd_add_epi32(vMaxX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value)), CT::BoundingBoxShiftT::value);
-    bbox.top = _simd_srli_epi32(_simd_sub_epi32(vMinY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value)), CT::BoundingBoxShiftT::value);
-    bbox.bottom = _simd_srli_epi32(_simd_add_epi32(vMaxY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value)), CT::BoundingBoxShiftT::value);
+    /// expand bbox by 1/256; coverage will be correctly handled in the rasterizer.
+    bbox.left = _simd_sub_epi32(vMinX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.right = _simd_add_epi32(vMaxX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.top = _simd_sub_epi32(vMinY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.bottom = _simd_add_epi32(vMaxY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1807,10 +1774,6 @@ void BinTriangles(
     const SWR_FRONTEND_STATE& feState = state.frontendState;
     const SWR_GS_STATE& gsState = state.gsState;
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
-
-    // Select attribute processor
-    PFN_PROCESS_ATTRIBUTES pfnProcessAttribs = GetProcessAttributesFunc(3,
-        state.backendState.swizzleEnable, state.backendState.constantInterpolationMask);
 
 
     simdscalar vRecipW0 = _simd_set1_ps(1.0f);
@@ -1852,8 +1815,8 @@ void BinTriangles(
     tri[2].y = _simd_add_ps(tri[2].y, offset);
 
     simdscalari vXi[3], vYi[3];
-    // Set vXi, vYi to fixed point precision required for degenerate triangle check
-    FPToFixedPoint<typename CT::ZeroAreaPrecisionT>::Set(tri, vXi, vYi);
+    // Set vXi, vYi to required fixed point precision
+    FPToFixedPoint(tri, vXi, vYi);
 
     // triangle setup
     simdscalari vAi[3], vBi[3];
@@ -1863,8 +1826,6 @@ void BinTriangles(
     simdscalari vDet[2];
     calcDeterminantIntVertical(vAi, vBi, vDet);
 
-    /// todo: handle degen tri's for Conservative Rast.  
-
     // cull zero area
     int maskLo = _simd_movemask_pd(_simd_castsi_pd(_simd_cmpeq_epi64(vDet[0], _simd_setzero_si())));
     int maskHi = _simd_movemask_pd(_simd_castsi_pd(_simd_cmpeq_epi64(vDet[1], _simd_setzero_si())));
@@ -1872,11 +1833,15 @@ void BinTriangles(
     int cullZeroAreaMask = maskLo | (maskHi << (KNOB_SIMD_WIDTH / 2));
 
     uint32_t origTriMask = triMask;
-    triMask &= ~cullZeroAreaMask;
+    // don't cull degenerate triangles if we're conservatively rasterizing
+    if(!CT::IsConservativeT::value)
+    {
+        triMask &= ~cullZeroAreaMask;
+    }
 
     // determine front winding tris
     // CW  +det
-    // CCW -det
+    // CCW det <= 0; 0 area triangles are marked as backfacing, which is required behavior for conservative rast
     maskLo = _simd_movemask_pd(_simd_castsi_pd(_simd_cmpgt_epi64(vDet[0], _simd_setzero_si())));
     maskHi = _simd_movemask_pd(_simd_castsi_pd(_simd_cmpgt_epi64(vDet[1], _simd_setzero_si())));
     int cwTriMask = maskLo | (maskHi << (KNOB_SIMD_WIDTH /2) );
@@ -1898,6 +1863,7 @@ void BinTriangles(
     case SWR_CULLMODE_BOTH:  cullTris = 0xffffffff; break;
     case SWR_CULLMODE_NONE:  cullTris = 0x0; break;
     case SWR_CULLMODE_FRONT: cullTris = frontWindingTris; break;
+    // 0 area triangles are marked as backfacing, which is required behavior for conservative rast
     case SWR_CULLMODE_BACK:  cullTris = ~frontWindingTris; break;
     default: SWR_ASSERT(false, "Invalid cull mode: %d", rastState.cullMode); cullTris = 0x0; break;
     }
@@ -1916,9 +1882,53 @@ void BinTriangles(
     DWORD triIndex = 0;
     // for center sample pattern, all samples are at pixel center; calculate coverage
     // once at center and broadcast the results in the backend
-    uint32_t sampleCount = (rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN) ? rastState.sampleCount : SWR_MULTISAMPLE_1X;
-    PFN_WORK_FUNC pfnWork = GetRasterizerFunc(sampleCount, (rastState.conservativeRast > 0),
-                                              pDC->pState->state.psState.inputCoverage, (rastState.scissorEnable > 0));
+    const SWR_MULTISAMPLE_COUNT sampleCount = (rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN) ? rastState.sampleCount : SWR_MULTISAMPLE_1X;
+    uint32_t edgeEnable;
+    PFN_WORK_FUNC pfnWork;
+    if(CT::IsConservativeT::value)
+    {
+        // determine which edges of the degenerate tri, if any, are valid to rasterize.
+        // used to call the appropriate templated rasterizer function
+        if(cullZeroAreaMask > 0)
+        {
+            // e0 = v1-v0
+            simdscalari x0x1Mask = _simd_cmpeq_epi32(vXi[0], vXi[1]);
+            simdscalari y0y1Mask = _simd_cmpeq_epi32(vYi[0], vYi[1]);
+            uint32_t e0Mask = _simd_movemask_ps(_simd_castsi_ps(_simd_and_si(x0x1Mask, y0y1Mask)));
+
+            // e1 = v2-v1
+            simdscalari x1x2Mask = _simd_cmpeq_epi32(vXi[1], vXi[2]);
+            simdscalari y1y2Mask = _simd_cmpeq_epi32(vYi[1], vYi[2]);
+            uint32_t e1Mask = _simd_movemask_ps(_simd_castsi_ps(_simd_and_si(x1x2Mask, y1y2Mask)));
+
+            // e2 = v0-v2
+            // if v0 == v1 & v1 == v2, v0 == v2
+            uint32_t e2Mask = e0Mask & e1Mask;
+            SWR_ASSERT(KNOB_SIMD_WIDTH == 8, "Need to update degenerate mask code for avx512");
+
+            // edge order: e0 = v0v1, e1 = v1v2, e2 = v0v2
+            // 32 bit binary: 0000 0000 0010 0100 1001 0010 0100 1001
+            e0Mask = pdep_u32(e0Mask, 0x00249249);
+            // 32 bit binary: 0000 0000 0100 1001 0010 0100 1001 0010
+            e1Mask = pdep_u32(e1Mask, 0x00492492);
+            // 32 bit binary: 0000 0000 1001 0010 0100 1001 0010 0100
+            e2Mask = pdep_u32(e2Mask, 0x00924924);
+
+            edgeEnable = (0x00FFFFFF & (~(e0Mask | e1Mask | e2Mask)));
+        }
+        else
+        {
+            edgeEnable = 0x00FFFFFF;
+        }
+    }
+    else
+    {
+        // degenerate triangles won't be sent to rasterizer; just enable all edges
+        pfnWork = GetRasterizerFunc(sampleCount, (rastState.conservativeRast > 0),
+                                    (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, ALL_EDGES_VALID, 
+                                    (rastState.scissorEnable > 0));
+    }
+
     if (!triMask)
     {
         goto endBinTriangles;
@@ -1968,6 +1978,16 @@ void BinTriangles(
     bbox.top    = _simd_max_epi32(bbox.top, _simd_set1_epi32(state.scissorInFixedPoint.top));
     bbox.right  = _simd_min_epi32(_simd_sub_epi32(bbox.right, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.right));
     bbox.bottom = _simd_min_epi32(_simd_sub_epi32(bbox.bottom, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.bottom));
+
+    if(CT::IsConservativeT::value)
+    {
+        // in the case where a degenerate triangle is on a scissor edge, we need to make sure the primitive bbox has
+        // some area. Bump the right/bottom edges out 
+        simdscalari topEqualsBottom = _simd_cmpeq_epi32(bbox.top, bbox.bottom);
+        bbox.bottom = _simd_blendv_epi32(bbox.bottom, _simd_add_epi32(bbox.bottom, _simd_set1_epi32(1)), topEqualsBottom);
+        simdscalari leftEqualsRight = _simd_cmpeq_epi32(bbox.left, bbox.right);
+        bbox.right = _simd_blendv_epi32(bbox.right, _simd_add_epi32(bbox.right, _simd_set1_epi32(1)), leftEqualsRight);
+    }
 
     // Cull tris completely outside scissor
     {
@@ -2026,7 +2046,28 @@ void BinTriangles(
 
         BE_WORK work;
         work.type = DRAW;
-        work.pfnWork = pfnWork;
+        
+        bool isDegenerate;
+        if(CT::IsConservativeT::value)
+        {
+            // only rasterize valid edges if we have a degenerate primitive
+            int32_t triEdgeEnable = (edgeEnable >> (triIndex * 3)) & ALL_EDGES_VALID;
+            work.pfnWork = GetRasterizerFunc(sampleCount, (rastState.conservativeRast > 0),
+                                        (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, triEdgeEnable,
+                                        (rastState.scissorEnable > 0));
+
+            // Degenerate triangles are required to be constant interpolated
+            isDegenerate = (triEdgeEnable != ALL_EDGES_VALID) ? true : false;
+        }
+        else
+        {
+            isDegenerate = false;
+            work.pfnWork = pfnWork;
+        }
+
+        // Select attribute processor
+        PFN_PROCESS_ATTRIBUTES pfnProcessAttribs = GetProcessAttributesFunc(3,
+            state.backendState.swizzleEnable,  state.backendState.constantInterpolationMask, isDegenerate);
 
         TRIANGLE_WORK_DESC &desc = work.desc.tri;
 

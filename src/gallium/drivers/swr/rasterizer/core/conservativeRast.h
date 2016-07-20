@@ -109,8 +109,6 @@ template <>
 struct ConservativeRastFETraits<StandardRastT>
 {
     typedef std::false_type IsConservativeT;
-    typedef FixedPointTraits<Fixed_16_8> BBoxPrecisionT;
-    typedef FixedPointTraits<Fixed_16_8> ZeroAreaPrecisionT;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -119,13 +117,7 @@ template <>
 struct ConservativeRastFETraits<ConservativeRastT>
 {
     typedef std::true_type IsConservativeT;
-    typedef FixedPointTraits<Fixed_16_8> ZeroAreaPrecisionT;
-
-    /// Conservative bounding box needs to expand the area around each vertex by 1/512, which 
-    /// is the potential snapping error when going from FP-> 16.8 fixed
-    typedef FixedPointTraits<Fixed_16_9> BBoxPrecisionT;
     typedef std::integral_constant<uint32_t, 1> BoundingBoxOffsetT;
-    typedef std::integral_constant<uint32_t, 1> BoundingBoxShiftT;
 };
 
 //////////////////////////////////////////////////////////////////////////

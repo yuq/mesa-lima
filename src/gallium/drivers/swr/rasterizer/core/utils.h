@@ -831,6 +831,26 @@ struct UnrollerL<End, End, Step> {
     }
 };
 
+// helper function to unroll loops, with mask to skip specific iterations
+template<int Begin, int End, int Step = 1, int Mask = 0x7f>
+struct UnrollerLMask {
+    template<typename Lambda>
+    INLINE static void step(Lambda& func) {
+        if(Mask & (1 << Begin))
+        {
+            func(Begin);
+        }
+        UnrollerL<Begin + Step, End, Step>::step(func);
+    }
+};
+
+template<int End, int Step, int Mask>
+struct UnrollerLMask<End, End, Step, Mask> {
+    template<typename Lambda>
+    static void step(Lambda& func) {
+    }
+};
+
 // general CRC compute
 INLINE
 uint32_t ComputeCRC(uint32_t crc, const void *pData, uint32_t size)
