@@ -36,7 +36,7 @@ private:
    void handleRCPRSQ(Instruction *); // double precision float recip/rsqrt
    void handleFTZ(Instruction *);
 
-private:
+protected:
    BuildUtil bld;
 };
 
