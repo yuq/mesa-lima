@@ -227,6 +227,13 @@ typedef struct nir_variable {
       unsigned location_frac:2;
 
       /**
+       * Whether this is a fragment shader output implicitly initialized with
+       * the previous contents of the specified render target at the
+       * framebuffer location corresponding to this shader invocation.
+       */
+      unsigned fb_fetch_output:1;
+
+      /**
        * \brief Layout qualifier for gl_FragDepth.
        *
        * This is not equal to \c ir_depth_layout_none if and only if this
@@ -1776,6 +1783,8 @@ typedef struct nir_shader_info {
    uint64_t double_inputs_read;
    /* Which outputs are actually written */
    uint64_t outputs_written;
+   /* Which outputs are actually read */
+   uint64_t outputs_read;
    /* Which system values are actually read */
    uint64_t system_values_read;
 
