@@ -803,18 +803,18 @@ typedef struct _ADDR_COMPUTE_HTILE_INFO_INPUT
 */
 typedef struct _ADDR_COMPUTE_HTILE_INFO_OUTPUT
 {
-    UINT_32 size;           ///< Size of this structure in bytes
+    UINT_32 size;               ///< Size of this structure in bytes
 
-    UINT_32 pitch;          ///< Pitch in pixels of depth buffer represented in this
-                            ///  HTile buffer. This might be larger than original depth
-                            ///  buffer pitch when called with an unaligned pitch.
-    UINT_32 height;         ///< Height in pixels, as above
-    UINT_64 htileBytes;     ///< Size of HTILE buffer, in bytes
-    UINT_32 baseAlign;      ///< Base alignment
-    UINT_32 bpp;            ///< Bits per pixel for HTILE is how many bits for an 8x8 block!
-    UINT_32 macroWidth;     ///< Macro width in pixels, actually squared cache shape
-    UINT_32 macroHeight;    ///< Macro height in pixels
-    UINT_64 sliceSize;      ///< Slice size, in bytes.
+    UINT_32 pitch;              ///< Pitch in pixels of depth buffer represented in this
+                                ///  HTile buffer. This might be larger than original depth
+                                ///  buffer pitch when called with an unaligned pitch.
+    UINT_32 height;             ///< Height in pixels, as above
+    UINT_64 htileBytes;         ///< Size of HTILE buffer, in bytes
+    UINT_32 baseAlign;          ///< Base alignment
+    UINT_32 bpp;                ///< Bits per pixel for HTILE is how many bits for an 8x8 block!
+    UINT_32 macroWidth;         ///< Macro width in pixels, actually squared cache shape
+    UINT_32 macroHeight;        ///< Macro height in pixels
+    UINT_64 sliceSize;          ///< Slice size, in bytes.
 } ADDR_COMPUTE_HTILE_INFO_OUTPUT;
 
 /**
