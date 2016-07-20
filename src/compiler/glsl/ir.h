@@ -831,6 +831,14 @@ public:
       unsigned from_ssbo_unsized_array:1; /**< unsized array buffer variable. */
 
       unsigned implicit_sized_array:1;
+
+      /**
+       * Whether this is a fragment shader output implicitly initialized with
+       * the previous contents of the specified render target at the
+       * framebuffer location corresponding to this shader invocation.
+       */
+      unsigned fb_fetch_output:1;
+
       /**
        * Emit a warning if this variable is accessed.
        */
