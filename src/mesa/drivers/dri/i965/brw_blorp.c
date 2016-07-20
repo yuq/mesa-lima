@@ -64,31 +64,17 @@ apply_gen6_stencil_hiz_offset(struct isl_surf *surf,
 }
 
 void
-brw_blorp_surface_info_init(struct brw_context *brw,
-                            struct brw_blorp_surface_info *info,
-                            struct intel_mipmap_tree *mt,
-                            unsigned int level, unsigned int layer,
-                            mesa_format format, bool is_render_target)
+brw_blorp_surf_for_miptree(struct brw_context *brw,
+                           struct brw_blorp_surf *surf,
+                           struct intel_mipmap_tree *mt,
+                           bool is_render_target,
+                           unsigned *level,
+                           struct isl_surf tmp_surfs[2])
 {
-   /* Layer is a physical layer, so if this is a 2D multisample array texture
-    * using INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, then it had better
-    * be a multiple of num_samples.
-    */
-   unsigned layer_multiplier = 1;
-   if (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
-       mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
-      assert(mt->num_samples <= 1 || layer % mt->num_samples == 0);
-      layer_multiplier = MAX2(mt->num_samples, 1);
-   }
-
-   intel_miptree_check_level_layer(mt, level, layer);
-
-   if (is_render_target)
-      intel_miptree_used_for_rendering(mt);
-
-   intel_miptree_get_isl_surf(brw, mt, &info->surf);
-   info->bo = mt->bo;
-   info->offset = mt->offset;
+   intel_miptree_get_isl_surf(brw, mt, &tmp_surfs[0]);
+   surf->surf = &tmp_surfs[0];
+   surf->bo = mt->bo;
+   surf->offset = mt->offset;
 
    if (brw->gen == 6 && mt->format == MESA_FORMAT_S_UINT8 &&
        mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
@@ -103,61 +89,140 @@ brw_blorp_surface_info_init(struct brw_context *brw,
        * See also gen6_depth_stencil_state.c
        */
       uint32_t offset;
-      apply_gen6_stencil_hiz_offset(&info->surf, mt, level, &offset);
-      info->offset += offset;
-      level = 0;
+      apply_gen6_stencil_hiz_offset(&tmp_surfs[0], mt, *level, &offset);
+      surf->offset += offset;
+      *level = 0;
    }
 
-   intel_miptree_get_aux_isl_surf(brw, mt, &info->aux_surf,
-                                  &info->aux_usage);
+   struct isl_surf *aux_surf = &tmp_surfs[1];
+   intel_miptree_get_aux_isl_surf(brw, mt, aux_surf, &surf->aux_usage);
 
    /* For textures that are in the RESOLVED state, we ignore the MCS */
    if (mt->mcs_mt && !is_render_target &&
        mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED)
-      info->aux_usage = ISL_AUX_USAGE_NONE;
+      surf->aux_usage = ISL_AUX_USAGE_NONE;
 
-   if (info->aux_usage != ISL_AUX_USAGE_NONE) {
+   if (surf->aux_usage != ISL_AUX_USAGE_NONE) {
       /* We only really need a clear color if we also have an auxiliary
        * surface.  Without one, it does nothing.
        */
-      info->clear_color = intel_miptree_get_isl_clear_color(brw, mt);
+      surf->clear_color = intel_miptree_get_isl_clear_color(brw, mt);
 
+      surf->aux_surf = aux_surf;
       if (mt->mcs_mt) {
-         info->aux_bo = mt->mcs_mt->bo;
-         info->aux_offset = mt->mcs_mt->offset;
+         surf->aux_bo = mt->mcs_mt->bo;
+         surf->aux_offset = mt->mcs_mt->offset;
       } else {
-         assert(info->aux_usage == ISL_AUX_USAGE_HIZ);
+         assert(surf->aux_usage == ISL_AUX_USAGE_HIZ);
          struct intel_mipmap_tree *hiz_mt = mt->hiz_buf->mt;
          if (hiz_mt) {
-            info->aux_bo = hiz_mt->bo;
+            surf->aux_bo = hiz_mt->bo;
             if (brw->gen == 6 &&
                 hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
                /* gen6 requires the HiZ buffer to be manually offset to the
                 * right location.  We could fixup the surf but it doesn't
                 * matter since most of those fields don't matter.
                 */
-               apply_gen6_stencil_hiz_offset(&info->aux_surf, hiz_mt, level,
-                                             &info->aux_offset);
+               apply_gen6_stencil_hiz_offset(aux_surf, hiz_mt, *level,
+                                             &surf->aux_offset);
             } else {
-               info->aux_offset = 0;
+               surf->aux_offset = 0;
             }
-            assert(hiz_mt->pitch == info->aux_surf.row_pitch);
+            assert(hiz_mt->pitch == aux_surf->row_pitch);
          } else {
-            info->aux_bo = mt->hiz_buf->bo;
-            info->aux_offset = 0;
+            surf->aux_bo = mt->hiz_buf->bo;
+            surf->aux_offset = 0;
          }
       }
    } else {
-      info->aux_bo = NULL;
-      info->aux_offset = 0;
-      memset(&info->clear_color, 0, sizeof(info->clear_color));
+      surf->aux_bo = NULL;
+      surf->aux_offset = 0;
+      memset(&surf->clear_color, 0, sizeof(surf->clear_color));
    }
-   assert((info->aux_usage == ISL_AUX_USAGE_NONE) == (info->aux_bo == NULL));
+   assert((surf->aux_usage == ISL_AUX_USAGE_NONE) == (surf->aux_bo == NULL));
+}
+
+enum isl_format
+brw_blorp_to_isl_format(struct brw_context *brw, mesa_format format,
+                        bool is_render_target)
+{
+   switch (format) {
+   case MESA_FORMAT_NONE:
+      return ISL_FORMAT_UNSUPPORTED;
+   case MESA_FORMAT_S_UINT8:
+      return ISL_FORMAT_R8_UINT;
+   case MESA_FORMAT_Z24_UNORM_X8_UINT:
+      return ISL_FORMAT_R24_UNORM_X8_TYPELESS;
+   case MESA_FORMAT_Z_FLOAT32:
+      return ISL_FORMAT_R32_FLOAT;
+   case MESA_FORMAT_Z_UNORM16:
+      return ISL_FORMAT_R16_UNORM;
+   default: {
+      if (is_render_target) {
+         assert(brw->format_supported_as_render_target[format]);
+         return brw->render_target_format[format];
+      } else {
+         return brw_format_for_mesa_format(format);
+      }
+      break;
+   }
+   }
+}
+
+void
+brw_blorp_surface_info_init(struct brw_context *brw,
+                            struct brw_blorp_surface_info *info,
+                            const struct brw_blorp_surf *surf,
+                            unsigned int level, unsigned int layer,
+                            enum isl_format format, bool is_render_target)
+{
+   /* Layer is a physical layer, so if this is a 2D multisample array texture
+    * using INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, then it had better
+    * be a multiple of num_samples.
+    */
+   unsigned layer_multiplier = 1;
+   if (surf->surf->msaa_layout == ISL_MSAA_LAYOUT_ARRAY) {
+      assert(layer % surf->surf->samples == 0);
+      layer_multiplier = surf->surf->samples;
+   }
+
+   if (format == ISL_FORMAT_UNSUPPORTED)
+      format = surf->surf->format;
+
+   if (format == ISL_FORMAT_R24_UNORM_X8_TYPELESS) {
+      /* Unfortunately, ISL_FORMAT_R24_UNORM_X8_TYPELESS it isn't supported as
+       * a render target, which would prevent us from blitting to 24-bit
+       * depth.  The miptree consists of 32 bits per pixel, arranged as 24-bit
+       * depth values interleaved with 8 "don't care" bits.  Since depth
+       * values don't require any blending, it doesn't matter how we interpret
+       * the bit pattern as long as we copy the right amount of data, so just
+       * map it as 8-bit BGRA.
+       */
+      format = ISL_FORMAT_B8G8R8A8_UNORM;
+   } else if (surf->surf->usage & ISL_SURF_USAGE_STENCIL_BIT) {
+      assert(surf->surf->format == ISL_FORMAT_R8_UINT);
+      /* Prior to Broadwell, we can't render to R8_UINT */
+      if (brw->gen < 8)
+         format = ISL_FORMAT_R8_UNORM;
+   }
+
+   info->surf = *surf->surf;
+   info->bo = surf->bo;
+   info->offset = surf->offset;
+
+   info->aux_usage = surf->aux_usage;
+   if (info->aux_usage != ISL_AUX_USAGE_NONE) {
+      info->aux_surf = *surf->aux_surf;
+      info->aux_bo = surf->aux_bo;
+      info->aux_offset = surf->aux_offset;
+   }
+
+   info->clear_color = surf->clear_color;
 
    info->view = (struct isl_view) {
       .usage = is_render_target ? ISL_SURF_USAGE_RENDER_TARGET_BIT :
                                   ISL_SURF_USAGE_TEXTURE_BIT,
-      .format = ISL_FORMAT_UNSUPPORTED, /* Set later */
+      .format = format,
       .base_level = level,
       .levels = 1,
       .channel_select = {
@@ -184,46 +249,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
       info->view.base_array_layer = layer / layer_multiplier;
       info->view.array_len = 1;
       info->z_offset = 0;
-   }
-
-   if (format == MESA_FORMAT_NONE)
-      format = mt->format;
-
-   switch (format) {
-   case MESA_FORMAT_S_UINT8:
-      assert(info->surf.tiling == ISL_TILING_W);
-      /* Prior to Broadwell, we can't render to R8_UINT */
-      info->view.format = brw->gen >= 8 ? BRW_SURFACEFORMAT_R8_UINT :
-                                          BRW_SURFACEFORMAT_R8_UNORM;
-      break;
-   case MESA_FORMAT_Z24_UNORM_X8_UINT:
-      /* It would make sense to use BRW_SURFACEFORMAT_R24_UNORM_X8_TYPELESS
-       * here, but unfortunately it isn't supported as a render target, which
-       * would prevent us from blitting to 24-bit depth.
-       *
-       * The miptree consists of 32 bits per pixel, arranged as 24-bit depth
-       * values interleaved with 8 "don't care" bits.  Since depth values don't
-       * require any blending, it doesn't matter how we interpret the bit
-       * pattern as long as we copy the right amount of data, so just map it
-       * as 8-bit BGRA.
-       */
-      info->view.format = BRW_SURFACEFORMAT_B8G8R8A8_UNORM;
-      break;
-   case MESA_FORMAT_Z_FLOAT32:
-      info->view.format = BRW_SURFACEFORMAT_R32_FLOAT;
-      break;
-   case MESA_FORMAT_Z_UNORM16:
-      info->view.format = BRW_SURFACEFORMAT_R16_UNORM;
-      break;
-   default: {
-      if (is_render_target) {
-         assert(brw->format_supported_as_render_target[format]);
-         info->view.format = brw->render_target_format[format];
-      } else {
-         info->view.format = brw_format_for_mesa_format(format);
-      }
-      break;
-   }
    }
 }
 
@@ -534,8 +559,15 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 
    params.hiz_op = op;
 
-   brw_blorp_surface_info_init(brw, &params.depth, mt, level, layer,
-                               mt->format, true);
+   intel_miptree_check_level_layer(mt, level, layer);
+   intel_miptree_used_for_rendering(mt);
+
+   struct isl_surf isl_tmp[2];
+   struct brw_blorp_surf surf;
+   brw_blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
+   brw_blorp_surface_info_init(brw, &params.depth, &surf, level, layer,
+                               brw_blorp_to_isl_format(brw, mt->format, true),
+                               true);
 
    /* Align the rectangle primitive to 8x4 pixels.
     *

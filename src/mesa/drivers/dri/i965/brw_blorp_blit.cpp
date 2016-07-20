@@ -1746,13 +1746,27 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       src_format = dst_format = MESA_FORMAT_R_FLOAT32;
    }
 
+   intel_miptree_check_level_layer(src_mt, src_level, src_layer);
+   intel_miptree_check_level_layer(dst_mt, dst_level, dst_layer);
+   intel_miptree_used_for_rendering(dst_mt);
+
    struct brw_blorp_params params;
    brw_blorp_params_init(&params);
 
-   brw_blorp_surface_info_init(brw, &params.src, src_mt, src_level,
-                               src_layer, src_format, false);
-   brw_blorp_surface_info_init(brw, &params.dst, dst_mt, dst_level,
-                               dst_layer, dst_format, true);
+   struct isl_surf isl_tmp[4];
+   struct brw_blorp_surf src_surf, dst_surf;
+   brw_blorp_surf_for_miptree(brw, &src_surf, src_mt, false,
+                              &src_level, &isl_tmp[0]);
+   brw_blorp_surface_info_init(brw, &params.src,
+                               &src_surf, src_level, src_layer,
+                               brw_blorp_to_isl_format(brw, src_format, false),
+                               false);
+   brw_blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true,
+                              &dst_level, &isl_tmp[2]);
+   brw_blorp_surface_info_init(brw, &params.dst,
+                               &dst_surf, dst_level, dst_layer,
+                               brw_blorp_to_isl_format(brw, dst_format, true),
+                               true);
 
    struct brw_blorp_blit_prog_key wm_prog_key;
    memset(&wm_prog_key, 0, sizeof(wm_prog_key));

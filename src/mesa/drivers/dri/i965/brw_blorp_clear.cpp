@@ -212,8 +212,16 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       }
    }
 
-   brw_blorp_surface_info_init(brw, &params.dst, irb->mt, irb->mt_level,
-                               layer, format, true);
+   intel_miptree_check_level_layer(irb->mt, irb->mt_level, layer);
+   intel_miptree_used_for_rendering(irb->mt);
+
+   struct isl_surf isl_tmp[2];
+   struct brw_blorp_surf surf;
+   unsigned level = irb->mt_level;
+   brw_blorp_surf_for_miptree(brw, &surf, irb->mt, true, &level, isl_tmp);
+   brw_blorp_surface_info_init(brw, &params.dst, &surf, level, layer,
+                               brw_blorp_to_isl_format(brw, format, true),
+                               true);
 
    /* Override the surface format according to the context's sRGB rules. */
    params.dst.view.format = (enum isl_format)brw->render_target_format[format];
@@ -303,11 +311,20 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
 
    const mesa_format format = _mesa_get_srgb_format_linear(mt->format);
 
+   intel_miptree_check_level_layer(mt, 0 /* level */, 0 /* layer */);
+   intel_miptree_used_for_rendering(mt);
+
    struct brw_blorp_params params;
    brw_blorp_params_init(&params);
 
-   brw_blorp_surface_info_init(brw, &params.dst, mt,
-                               0 /* level */, 0 /* layer */, format, true);
+   struct isl_surf isl_tmp[2];
+   struct brw_blorp_surf surf;
+   unsigned level = 0;
+   brw_blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
+   brw_blorp_surface_info_init(brw, &params.dst, &surf,
+                               0 /* level */, 0 /* layer */,
+                               brw_blorp_to_isl_format(brw, format, true),
+                               true);
 
    brw_get_resolve_rect(brw, mt, &params.x0, &params.y0,
                         &params.x1, &params.y1);

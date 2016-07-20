@@ -35,6 +35,32 @@ struct brw_wm_prog_key;
 extern "C" {
 #endif
 
+struct brw_blorp_surf
+{
+   const struct isl_surf *surf;
+   drm_intel_bo *bo;
+   uint32_t offset;
+
+   const struct isl_surf *aux_surf;
+   drm_intel_bo *aux_bo;
+   uint32_t aux_offset;
+   enum isl_aux_usage aux_usage;
+
+   union isl_color_value clear_color;
+};
+
+void
+brw_blorp_surf_for_miptree(struct brw_context *brw,
+                           struct brw_blorp_surf *surf,
+                           struct intel_mipmap_tree *mt,
+                           bool is_render_target,
+                           unsigned *level,
+                           struct isl_surf tmp_surfs[2]);
+
+enum isl_format
+brw_blorp_to_isl_format(struct brw_context *brw, mesa_format format,
+                        bool is_render_target);
+
 void
 brw_blorp_blit_miptrees(struct brw_context *brw,
                         struct intel_mipmap_tree *src_mt,
@@ -91,9 +117,9 @@ struct brw_blorp_surface_info
 void
 brw_blorp_surface_info_init(struct brw_context *brw,
                             struct brw_blorp_surface_info *info,
-                            struct intel_mipmap_tree *mt,
+                            const struct brw_blorp_surf *surf,
                             unsigned int level, unsigned int layer,
-                            mesa_format format, bool is_render_target);
+                            enum isl_format format, bool is_render_target);
 
 
 struct brw_blorp_coord_transform
