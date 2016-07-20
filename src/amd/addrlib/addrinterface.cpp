@@ -75,7 +75,7 @@ ADDR_E_RETURNCODE ADDR_API AddrCreate(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrDestroy(
-    ADDR_HANDLE hLib) ///< [in] address lib handle
+    ADDR_HANDLE hLib) ///< address lib handle
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -110,7 +110,7 @@ ADDR_E_RETURNCODE ADDR_API AddrDestroy(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceInfo(
-    ADDR_HANDLE                             hLib, ///< [in] address lib handle
+    ADDR_HANDLE                             hLib, ///< address lib handle
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,  ///< [in] surface information
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut) ///< [out] surface parameters and alignments
 {
@@ -144,7 +144,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceInfo(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceAddrFromCoord(
-    ADDR_HANDLE                                     hLib, ///< [in] address lib handle
+    ADDR_HANDLE                                     hLib, ///< address lib handle
     const ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT* pIn,  ///< [in] surface info and coordinates
     ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_OUTPUT*      pOut) ///< [out] surface address
 {
@@ -176,7 +176,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceAddrFromCoord(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceCoordFromAddr(
-    ADDR_HANDLE                                     hLib, ///< [in] address lib handle
+    ADDR_HANDLE                                     hLib, ///< address lib handle
     const ADDR_COMPUTE_SURFACE_COORDFROMADDR_INPUT* pIn,  ///< [in] surface info and address
     ADDR_COMPUTE_SURFACE_COORDFROMADDR_OUTPUT*      pOut) ///< [out] coordinates
 {
@@ -214,7 +214,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceCoordFromAddr(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeHtileInfo(
-    ADDR_HANDLE                             hLib, ///< [in] address lib handle
+    ADDR_HANDLE                             hLib, ///< address lib handle
     const ADDR_COMPUTE_HTILE_INFO_INPUT*    pIn,  ///< [in] Htile information
     ADDR_COMPUTE_HTILE_INFO_OUTPUT*         pOut) ///< [out] Htile pitch, height and size in bytes
 {
@@ -246,7 +246,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileInfo(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeHtileAddrFromCoord(
-    ADDR_HANDLE                                     hLib, ///< [in] address lib handle
+    ADDR_HANDLE                                     hLib, ///< address lib handle
     const ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT*   pIn,  ///< [in] Htile info and coordinates
     ADDR_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT*        pOut) ///< [out] Htile address
 {
@@ -279,7 +279,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileAddrFromCoord(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeHtileCoordFromAddr(
-    ADDR_HANDLE                                     hLib, ///< [in] address lib handle
+    ADDR_HANDLE                                     hLib, ///< address lib handle
     const ADDR_COMPUTE_HTILE_COORDFROMADDR_INPUT*   pIn,  ///< [in] Htile info and address
     ADDR_COMPUTE_HTILE_COORDFROMADDR_OUTPUT*        pOut) ///< [out] Htile coordinates
 {
@@ -318,7 +318,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileCoordFromAddr(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskInfo(
-    ADDR_HANDLE                             hLib, ///< [in] address lib handle
+    ADDR_HANDLE                             hLib, ///< address lib handle
     const ADDR_COMPUTE_CMASK_INFO_INPUT*    pIn,  ///< [in] Cmask pitch and height
     ADDR_COMPUTE_CMASK_INFO_OUTPUT*         pOut) ///< [out] Cmask pitch, height and size in bytes
 {
@@ -350,7 +350,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskInfo(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskAddrFromCoord(
-    ADDR_HANDLE                                     hLib, ///< [in] address lib handle
+    ADDR_HANDLE                                     hLib, ///< address lib handle
     const ADDR_COMPUTE_CMASK_ADDRFROMCOORD_INPUT*   pIn,  ///< [in] Cmask info and coordinates
     ADDR_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT*        pOut) ///< [out] Cmask address
 {
@@ -383,7 +383,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskAddrFromCoord(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskCoordFromAddr(
-    ADDR_HANDLE                                     hLib, ///< [in] address lib handle
+    ADDR_HANDLE                                     hLib, ///< address lib handle
     const ADDR_COMPUTE_CMASK_COORDFROMADDR_INPUT*   pIn,  ///< [in] Cmask info and address
     ADDR_COMPUTE_CMASK_COORDFROMADDR_OUTPUT*        pOut) ///< [out] Cmask coordinates
 {
@@ -421,7 +421,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskCoordFromAddr(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskInfo(
-    ADDR_HANDLE                             hLib, ///< [in] address lib handle
+    ADDR_HANDLE                             hLib, ///< address lib handle
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pIn,  ///< [in] Fmask information
     ADDR_COMPUTE_FMASK_INFO_OUTPUT*         pOut) ///< [out] Fmask pitch and height
 {
@@ -453,7 +453,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskInfo(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskAddrFromCoord(
-    ADDR_HANDLE                                     hLib, ///< [in] address lib handle
+    ADDR_HANDLE                                     hLib, ///< address lib handle
     const ADDR_COMPUTE_FMASK_ADDRFROMCOORD_INPUT*   pIn,  ///< [in] Fmask info and coordinates
     ADDR_COMPUTE_FMASK_ADDRFROMCOORD_OUTPUT*        pOut) ///< [out] Fmask address
 {
@@ -485,7 +485,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskAddrFromCoord(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskCoordFromAddr(
-    ADDR_HANDLE                                     hLib, ///< [in] address lib handle
+    ADDR_HANDLE                                     hLib, ///< address lib handle
     const ADDR_COMPUTE_FMASK_COORDFROMADDR_INPUT*   pIn,  ///< [in] Fmask info and address
     ADDR_COMPUTE_FMASK_COORDFROMADDR_OUTPUT*        pOut) ///< [out] Fmask coordinates
 {
@@ -521,7 +521,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskCoordFromAddr(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeDccInfo(
-    ADDR_HANDLE                             hLib,   ///< [in] handle of addrlib
+    ADDR_HANDLE                             hLib,   ///< handle of addrlib
     const ADDR_COMPUTE_DCCINFO_INPUT*       pIn,    ///< [in] input
     ADDR_COMPUTE_DCCINFO_OUTPUT*            pOut)   ///< [out] output
 {
@@ -631,7 +631,7 @@ BOOL_32 ADDR_API AddrUseCombinedSwizzle(ADDR_HANDLE hLib)
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrExtractBankPipeSwizzle(
-    ADDR_HANDLE                                 hLib,     ///< [in] addrlib handle
+    ADDR_HANDLE                                 hLib,     ///< addrlib handle
     const ADDR_EXTRACT_BANKPIPE_SWIZZLE_INPUT*  pIn,      ///< [in] input structure
     ADDR_EXTRACT_BANKPIPE_SWIZZLE_OUTPUT*       pOut)     ///< [out] output structure
 {
@@ -757,7 +757,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeBaseSwizzle(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API ElemFlt32ToDepthPixel(
-    ADDR_HANDLE                         hLib,    ///< [in] addrlib handle
+    ADDR_HANDLE                         hLib,    ///< addrlib handle
     const ELEM_FLT32TODEPTHPIXEL_INPUT* pIn,     ///< [in] per-component value
     ELEM_FLT32TODEPTHPIXEL_OUTPUT*      pOut)    ///< [out] final pixel value
 {
@@ -790,7 +790,7 @@ ADDR_E_RETURNCODE ADDR_API ElemFlt32ToDepthPixel(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API ElemFlt32ToColorPixel(
-    ADDR_HANDLE                         hLib,    ///< [in] addrlib handle
+    ADDR_HANDLE                         hLib,    ///< addrlib handle
     const ELEM_FLT32TOCOLORPIXEL_INPUT* pIn,     ///< [in] format, surface number and swap value
     ELEM_FLT32TOCOLORPIXEL_OUTPUT*      pOut)    ///< [out] final pixel value
 {
@@ -823,7 +823,7 @@ ADDR_E_RETURNCODE ADDR_API ElemFlt32ToColorPixel(
 ***************************************************************************************************
 */
 BOOL_32 ADDR_API ElemGetExportNorm(
-    ADDR_HANDLE                     hLib, ///< [in] addrlib handle
+    ADDR_HANDLE                     hLib, ///< addrlib handle
     const ELEM_GETEXPORTNORM_INPUT* pIn)  ///< [in] input structure
 {
     AddrLib* pLib = AddrLib::GetAddrLib(hLib);
@@ -857,7 +857,7 @@ BOOL_32 ADDR_API ElemGetExportNorm(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrConvertTileInfoToHW(
-    ADDR_HANDLE                             hLib, ///< [in] address lib handle
+    ADDR_HANDLE                             hLib, ///< address lib handle
     const ADDR_CONVERT_TILEINFOTOHW_INPUT*  pIn,  ///< [in] tile info with real value
     ADDR_CONVERT_TILEINFOTOHW_OUTPUT*       pOut) ///< [out] tile info with HW register value
 {
@@ -889,7 +889,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileInfoToHW(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex(
-    ADDR_HANDLE                          hLib, ///< [in] address lib handle
+    ADDR_HANDLE                          hLib, ///< address lib handle
     const ADDR_CONVERT_TILEINDEX_INPUT*  pIn,  ///< [in] input - tile index
     ADDR_CONVERT_TILEINDEX_OUTPUT*       pOut) ///< [out] tile mode/type/info
 {
@@ -921,7 +921,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex1(
-    ADDR_HANDLE                          hLib, ///< [in] address lib handle
+    ADDR_HANDLE                          hLib, ///< address lib handle
     const ADDR_CONVERT_TILEINDEX1_INPUT* pIn,  ///< [in] input - tile index
     ADDR_CONVERT_TILEINDEX_OUTPUT*       pOut) ///< [out] tile mode/type/info
 {
@@ -1018,7 +1018,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputePrtInfo(
 ***************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrGetMaxAlignments(
-    ADDR_HANDLE                     hLib, ///< [in] address lib handle
+    ADDR_HANDLE                     hLib, ///< address lib handle
     ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) ///< [out] output structure
 {
     AddrLib* pLib = AddrLib::GetAddrLib(hLib);

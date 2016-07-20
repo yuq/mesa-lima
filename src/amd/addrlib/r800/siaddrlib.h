@@ -205,13 +205,13 @@ protected:
         const ADDR_TILEINFO* pInfo, AddrTileMode mode, AddrTileType type,
         INT curIndex = TileIndexInvalid) const;
 
-    virtual VOID   HwlFmaskPreThunkSurfInfo(
+    virtual VOID HwlFmaskPreThunkSurfInfo(
         const ADDR_COMPUTE_FMASK_INFO_INPUT* pFmaskIn,
         const ADDR_COMPUTE_FMASK_INFO_OUTPUT* pFmaskOut,
         ADDR_COMPUTE_SURFACE_INFO_INPUT* pSurfIn,
         ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pSurfOut) const;
 
-    virtual VOID   HwlFmaskPostThunkSurfInfo(
+    virtual VOID HwlFmaskPostThunkSurfInfo(
         const ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pSurfOut,
         ADDR_COMPUTE_FMASK_INFO_OUTPUT* pFmaskOut) const;
 

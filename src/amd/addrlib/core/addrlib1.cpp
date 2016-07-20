@@ -125,10 +125,10 @@ AddrLib1::~AddrLib1()
 *      An AddrLib1 class pointer
 ***************************************************************************************************
 */
-AddrLib1 * AddrLib1::GetAddrLib1(
+AddrLib1* AddrLib1::GetAddrLib1(
     ADDR_HANDLE hLib)   ///< [in] handle of ADDR_HANDLE
 {
-    AddrLib *pAddrLib = AddrLib::GetAddrLib(hLib);
+    AddrLib* pAddrLib = AddrLib::GetAddrLib(hLib);
     if ((pAddrLib != NULL) &&
         ((pAddrLib->GetAddrChipFamily() == ADDR_CHIP_FAMILY_IVLD) ||
          (pAddrLib->GetAddrChipFamily() > ADDR_CHIP_FAMILY_VI)))
@@ -3523,7 +3523,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputePrtInfo(
                                                 &expandX,
                                                 &expandY);
 
-    if (bpp <8 || bpp == 24 || bpp == 48 || bpp == 96 )
+    if (bpp <8 || bpp == 24 || bpp == 48 || bpp == 96)
     {
         returnCode = ADDR_INVALIDPARAMS;
     }
@@ -3624,3 +3624,4 @@ ADDR_E_RETURNCODE AddrLib1::ComputePrtInfo(
 
     return returnCode;
 }
+

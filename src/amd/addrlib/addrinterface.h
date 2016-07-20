@@ -286,7 +286,6 @@ typedef struct _ADDR_REGISTER_VALUE
                                  ///< CI registers-------------------------------------------------
     const UINT_32* pMacroTileConfig;    ///< Global macro tile mode table
     UINT_32  noOfMacroEntries;   ///< Number of entries in pMacroTileConfig
-
 } ADDR_REGISTER_VALUE;
 
 /**

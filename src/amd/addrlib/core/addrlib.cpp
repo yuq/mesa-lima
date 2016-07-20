@@ -49,13 +49,13 @@ UINT_32 div64_32(UINT_64 n, UINT_32 base)
     {
         high /= base;
         res = (UINT_64) high << 32;
-        rem -= (UINT_64) (high*base) << 32;
+        rem -= (UINT_64) (high * base) << 32;
     }
 
-    while ((INT_64)b > 0 && b < rem)
+    while (((INT_64)b > 0) && (b < rem))
     {
-        b = b+b;
-        d = d+d;
+        b = b + b;
+        d = d + d;
     }
 
     do
@@ -151,9 +151,9 @@ AddrLib::~AddrLib()
     if (m_pElemLib)
     {
         delete m_pElemLib;
+        m_pElemLib = NULL;
     }
 }
-
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -221,7 +221,7 @@ ADDR_E_RETURNCODE AddrLib::Create(
         }
     }
 
-    if ((pLib != NULL))
+    if (pLib != NULL)
     {
         BOOL_32 initValid;
 
@@ -290,14 +290,12 @@ VOID AddrLib::SetAddrChipFamily(
     UINT_32 uChipFamily,        ///< [in] chip family defined in atiih.h
     UINT_32 uChipRevision)      ///< [in] chip revision defined in "asic_family"_id.h
 {
-    AddrChipFamily family = ADDR_CHIP_FAMILY_IVLD;
-
-    family = HwlConvertChipFamily(uChipFamily, uChipRevision);
+    AddrChipFamily family = HwlConvertChipFamily(uChipFamily, uChipRevision);
 
     ADDR_ASSERT(family != ADDR_CHIP_FAMILY_IVLD);
 
-    m_chipFamily    = family;
-    m_chipRevision  = uChipRevision;
+    m_chipFamily   = family;
+    m_chipRevision = uChipRevision;
 }
 
 /**
@@ -314,7 +312,7 @@ VOID AddrLib::SetAddrChipFamily(
 VOID AddrLib::SetMinPitchAlignPixels(
     UINT_32 minPitchAlignPixels)    ///< [in] minmum pitch alignment in pixels
 {
-    m_minPitchAlignPixels = (minPitchAlignPixels == 0)? 1 : minPitchAlignPixels;
+    m_minPitchAlignPixels = (minPitchAlignPixels == 0) ? 1 : minPitchAlignPixels;
 }
 
 /**
@@ -394,12 +392,13 @@ UINT_32 AddrLib::Bits2Number(
         number <<= 1;
     }
 
-    number>>=1;
+    number >>= 1;
 
     va_end(bits_ptr);
 
     return number;
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //                               Element lib
@@ -433,9 +432,8 @@ ADDR_E_RETURNCODE AddrLib::Flt32ToDepthPixel(
 
     if (returnCode == ADDR_OK)
     {
-        GetElemLib()->Flt32ToDepthPixel(pIn->format,
-                                        pIn->comps,
-                                        pOut->pPixel);
+        GetElemLib()->Flt32ToDepthPixel(pIn->format, pIn->comps, pOut->pPixel);
+
         UINT_32 depthBase = 0;
         UINT_32 stencilBase = 0;
         UINT_32 depthBits = 0;
@@ -550,9 +548,7 @@ BOOL_32 AddrLib::GetExportNorm(
 
     if (returnCode == ADDR_OK)
     {
-        enabled = GetElemLib()->PixGetExportNorm(pIn->format,
-                                                 pIn->num,
-                                                 pIn->swap);
+        enabled = GetElemLib()->PixGetExportNorm(pIn->format, pIn->num, pIn->swap);
     }
 
     return enabled;

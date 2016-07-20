@@ -1252,7 +1252,7 @@ UINT_32 SiAddrLib::HwlPreHandleBaseLvl3xPitch(
 
     // From SI, if pow2Pad is 1 the pitch is expanded 3x first, then padded to pow2, so nothing to
     // do here
-    if (!pIn->flags.pow2Pad)
+    if (pIn->flags.pow2Pad == FALSE)
     {
         AddrLib1::HwlPreHandleBaseLvl3xPitch(pIn, expPitch);
     }
@@ -1285,7 +1285,7 @@ UINT_32 SiAddrLib::HwlPostHandleBaseLvl3xPitch(
      *  be able to compute a correct pitch from it as h/w address library is doing the job.
      */
     // From SI, the pitch is expanded 3x first, then padded to pow2, so no special handler here
-    if (!pIn->flags.pow2Pad)
+    if (pIn->flags.pow2Pad == FALSE)
     {
         AddrLib1::HwlPostHandleBaseLvl3xPitch(pIn, expPitch);
     }
@@ -1378,7 +1378,7 @@ UINT_64 SiAddrLib::HwlGetSizeAdjustmentMicroTiled(
     // Note: this actually does not work for mipmap but mipmap depth texture is not really
     // sampled with mipmap.
     //
-    if (flags.depth && !flags.noStencil)
+    if (flags.depth && (flags.noStencil == FALSE))
     {
         ADDR_ASSERT(numSamples == 1);
 
@@ -1465,7 +1465,7 @@ VOID SiAddrLib::HwlSetupTileInfo(
     INT index = TileIndexInvalid;
 
     // Fail-safe code
-    if (!IsLinear(tileMode))
+    if (IsLinear(tileMode) == FALSE)
     {
         // 128 bpp/thick tiling must be non-displayable.
         // Fmask reuse color buffer's entry but bank-height field can be from another entry
@@ -2196,11 +2196,12 @@ BOOL_32 SiAddrLib::HwlComputeMipLevel(
         // Note: Don't check expand 3x formats(96 bit) as the basePitch is not pow2 even if
         // we explicity set pow2Pad flag. The 3x base pitch is padded to pow2 but after being
         // divided by expandX factor (3) - to program texture pitch, the basePitch is never pow2.
-        if (!AddrElemLib::IsExpand3x(pIn->format))
+        if (AddrElemLib::IsExpand3x(pIn->format) == FALSE)
         {
             // Sublevel pitches are generated from base level pitch instead of width on SI
             // If pow2Pad is 0, we don't assert - as this is not really used for a mip chain
-            ADDR_ASSERT(!pIn->flags.pow2Pad || ((pIn->basePitch != 0) && IsPow2(pIn->basePitch)));
+            ADDR_ASSERT((pIn->flags.pow2Pad == FALSE) ||
+                        ((pIn->basePitch != 0) && IsPow2(pIn->basePitch)));
         }
 
         if (pIn->basePitch != 0)
@@ -2386,7 +2387,7 @@ INT_32 SiAddrLib::HwlPostCheckTileIndex(
         // 3. tile info does not match for macro tiled
         if ((index == TileIndexInvalid         ||
             (mode != m_tileTable[index].mode)  ||
-            (macroTiled && !HwlTileInfoEqual(pInfo, &m_tileTable[index].info))))
+            (macroTiled && (HwlTileInfoEqual(pInfo, &m_tileTable[index].info) == FALSE))))
         {
             for (index = 0; index < static_cast<INT_32>(m_noOfEntries); index++)
             {
@@ -2446,7 +2447,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlSetupTileCfg(
     INT_32          macroModeIndex, ///< [in] Index in macro tile mode table(CI)
     ADDR_TILEINFO*  pInfo,          ///< [out] Tile Info
     AddrTileMode*   pMode,          ///< [out] Tile mode
-    AddrTileType*   pType          ///< [out] Tile type
+    AddrTileType*   pType           ///< [out] Tile type
     ) const
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
@@ -2684,7 +2685,7 @@ UINT_32 SiAddrLib::HwlComputeFmaskBits(
     {
         ADDR_ASSERT(numFrags <= 8);
 
-        if (!pIn->resolved)
+        if (pIn->resolved == FALSE)
         {
             if (numFrags == 1)
             {
@@ -2745,7 +2746,7 @@ UINT_32 SiAddrLib::HwlComputeFmaskBits(
     }
     else // Normal AA
     {
-        if (!pIn->resolved)
+        if (pIn->resolved == FALSE)
         {
             bpp          = ComputeFmaskNumPlanesFromNumSamples(numSamples);
             numSamples   = numSamples == 2 ? 8 : numSamples;
@@ -2861,3 +2862,4 @@ ADDR_E_RETURNCODE SiAddrLib::HwlGetMaxAlignments(
 
     return ADDR_OK;
 }
+

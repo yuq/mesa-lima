@@ -149,7 +149,7 @@ protected:
     /// Return Cmask block max
     virtual BOOL_32 HwlGetMaxCmaskBlockMax() const
     {
-        return 16383; // 14 bits
+        return 0x3FFF; // 14 bits, 0n16383
     }
 
     // Sub-hwl interface
@@ -325,7 +325,7 @@ private:
         const ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT* pIn,
         ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_OUTPUT* pOut) const;
 
-    VOID    DispatchComputeSurfaceCoordFromAddr(
+    VOID DispatchComputeSurfaceCoordFromAddr(
         const ADDR_COMPUTE_SURFACE_COORDFROMADDR_INPUT* pIn,
         ADDR_COMPUTE_SURFACE_COORDFROMADDR_OUTPUT* pOut) const;
 
@@ -345,7 +345,7 @@ private:
         ADDR_TILEINFO* pTileInfo,
         UINT_32* pBitPosition) const;
 
-    VOID    ComputeSurfaceCoordFromAddrMacroTiled(
+    VOID ComputeSurfaceCoordFromAddrMacroTiled(
         UINT_64 addr, UINT_32 bitPosition,
         UINT_32 bpp, UINT_32 pitch, UINT_32 height, UINT_32 numSamples,
         AddrTileMode tileMode, UINT_32 tileBase, UINT_32 compBits,
@@ -359,7 +359,7 @@ private:
         const ADDR_COMPUTE_FMASK_ADDRFROMCOORD_INPUT* pIn,
         ADDR_COMPUTE_FMASK_ADDRFROMCOORD_OUTPUT* pOut) const;
 
-    VOID    DispatchComputeFmaskCoordFromAddr(
+    VOID DispatchComputeFmaskCoordFromAddr(
         const ADDR_COMPUTE_FMASK_COORDFROMADDR_INPUT* pIn,
         ADDR_COMPUTE_FMASK_COORDFROMADDR_OUTPUT* pOut) const;
 
@@ -369,13 +369,13 @@ private:
         UINT_32 pitch, UINT_32 height, UINT_32 numSamples, AddrTileMode tileMode,
         BOOL_32 resolved, UINT_32* pBitPosition) const;
 
-    VOID    ComputeFmaskCoordFromAddrMicroTiled(
+    VOID ComputeFmaskCoordFromAddrMicroTiled(
         UINT_64 addr, UINT_32 bitPosition,
         UINT_32 pitch, UINT_32 height, UINT_32 numSamples,
         AddrTileMode tileMode, BOOL_32 resolved,
         UINT_32* pX, UINT_32* pY, UINT_32* pSlice, UINT_32* pSample, UINT_32* pPlane) const;
 
-    VOID    ComputeFmaskCoordFromAddrMacroTiled(
+    VOID ComputeFmaskCoordFromAddrMacroTiled(
         UINT_64 addr, UINT_32 bitPosition,
         UINT_32 pitch, UINT_32 height, UINT_32 numSamples, AddrTileMode tileMode,
         UINT_32 pipeSwizzle, UINT_32 bankSwizzle,

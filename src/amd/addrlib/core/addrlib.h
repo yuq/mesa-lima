@@ -154,8 +154,7 @@ public:
         delete this;
     }
 
-    static AddrLib* GetAddrLib(
-        ADDR_HANDLE hLib);
+    static AddrLib* GetAddrLib(ADDR_HANDLE hLib);
 
     /// Returns AddrLib version (from compiled binary instead include file)
     UINT_32 GetVersion()
@@ -177,8 +176,7 @@ public:
         const ELEM_FLT32TOCOLORPIXEL_INPUT* pIn,
         ELEM_FLT32TOCOLORPIXEL_OUTPUT* pOut) const;
 
-    BOOL_32 GetExportNorm(
-        const ELEM_GETEXPORTNORM_INPUT* pIn) const;
+    BOOL_32 GetExportNorm(const ELEM_GETEXPORTNORM_INPUT* pIn) const;
 
     ADDR_E_RETURNCODE GetMaxAlignments(ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) const;
 
@@ -193,8 +191,7 @@ protected:
     // Initialization
     //
     /// Pure Virtual function for Hwl computing internal global parameters from h/w registers
-    virtual BOOL_32 HwlInitGlobalParams(
-        const ADDR_CREATE_INPUT* pCreateIn) = 0;
+    virtual BOOL_32 HwlInitGlobalParams(const ADDR_CREATE_INPUT* pCreateIn) = 0;
 
     /// Pure Virtual function for Hwl converting chip family
     virtual AddrChipFamily HwlConvertChipFamily(UINT_32 uChipFamily, UINT_32 uChipRevision) = 0;
@@ -206,7 +203,7 @@ protected:
 
     static UINT_32 GetNumFragments(UINT_32 numSamples, UINT_32 numFrags)
     {
-        return numFrags != 0 ? numFrags : Max(1u, numSamples);
+        return (numFrags != 0) ? numFrags : Max(1u, numSamples);
     }
 
     /// Returns pointer of AddrElemLib

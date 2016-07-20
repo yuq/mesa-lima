@@ -546,7 +546,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
         // is needed.
         // The original height is pre-stored in pOut->height in PostComputeMipLevel and
         // pOut->pitch is needed in HwlCheckLastMacroTiledLvl, too.
-        if (m_configFlags.checkLast2DLevel && numSamples == 1) // Don't check MSAA
+        if (m_configFlags.checkLast2DLevel && (numSamples == 1)) // Don't check MSAA
         {
             // Set a TRUE in pOut if next Level is the first 1D sub level
             HwlCheckLastMacroTiledLvl(pIn, pOut);
@@ -765,7 +765,7 @@ BOOL_32 EgBasedAddrLib::HwlReduceBankWidthHeight(
         valid = !stillGreater;
 
         // Generate a warning if we still fail to meet this constraint
-        if (!valid)
+        if (valid == FALSE)
         {
             ADDR_WARN(
                 0, ("TILE_SIZE(%d)*BANK_WIDTH(%d)*BANK_HEIGHT(%d) <= ROW_SIZE(%d)",
@@ -1304,7 +1304,7 @@ UINT_64 EgBasedAddrLib::DispatchComputeSurfaceAddrFromCoord(
         /// @note
         /// 128 bit/thick tiled surface doesn't support display tiling and
         /// mipmap chain must have the same tileType, so please fill tileType correctly
-        if (!IsLinear(pIn->tileMode))
+        if (IsLinear(pIn->tileMode) == FALSE)
         {
             if (bpp >= 128 || ComputeSurfaceThickness(tileMode) > 1)
             {
@@ -2051,7 +2051,7 @@ VOID EgBasedAddrLib::DispatchComputeSurfaceCoordFromAddr(
         /// @note
         /// 128 bit/thick tiled surface doesn't support display tiling and
         /// mipmap chain must have the same tileType, so please fill tileType correctly
-        if (!IsLinear(pIn->tileMode))
+        if (IsLinear(pIn->tileMode) == FALSE)
         {
             if (bpp >= 128 || ComputeSurfaceThickness(tileMode) > 1)
             {
@@ -3378,7 +3378,7 @@ UINT_64 EgBasedAddrLib::ComputeFmaskAddrFromCoordMicroTiled(
     //
     // Compute the number of planes.
     //
-    if (!resolved)
+    if (resolved == FALSE)
     {
         effectiveSamples = ComputeFmaskNumPlanesFromNumSamples(numSamples);
         effectiveBpp = numSamples;
@@ -3490,7 +3490,7 @@ UINT_64 EgBasedAddrLib::ComputeFmaskAddrFromCoordMacroTiled(
     //
     // Compute the number of planes.
     //
-    if (!resolved)
+    if (resolved == FALSE)
     {
         effectiveSamples = ComputeFmaskNumPlanesFromNumSamples(numSamples);
         effectiveBpp = numSamples;
@@ -3603,7 +3603,7 @@ VOID EgBasedAddrLib::ComputeFmaskCoordFromAddrMicroTiled(
         numSamples = 4;
     }
 
-    if (!resolved)
+    if (resolved == FALSE)
     {
         effectiveSamples = ComputeFmaskNumPlanesFromNumSamples(numSamples);
         effectiveBpp  = numSamples;
@@ -3698,7 +3698,7 @@ VOID EgBasedAddrLib::ComputeFmaskCoordFromAddrMacroTiled(
     //
     // Compute the number of planes.
     //
-    if (!resolved)
+    if (resolved == FALSE)
     {
         effectiveSamples = ComputeFmaskNumPlanesFromNumSamples(numSamples);
         effectiveBpp  = numSamples;
@@ -4295,7 +4295,7 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSurfaceInfo(
             pOut->pTileInfo = &tileInfo;
         }
 
-        if (!DispatchComputeSurfaceInfo(pIn, pOut))
+        if (DispatchComputeSurfaceInfo(pIn, pOut) == FALSE)
         {
             retCode = ADDR_INVALIDPARAMS;
         }
@@ -4323,9 +4323,10 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSurfaceInfo(
             if (IsMacroTiled(pOut->tileMode))
             {
                 // If a valid index is returned, then no pTileInfo is okay
-                ADDR_ASSERT(!m_configFlags.useTileIndex || pOut->tileIndex != TileIndexInvalid);
+                ADDR_ASSERT((m_configFlags.useTileIndex == FALSE) ||
+                            (pOut->tileIndex != TileIndexInvalid));
 
-                if (!IsTileInfoAllZero(pIn->pTileInfo))
+                if (IsTileInfoAllZero(pIn->pTileInfo) == FALSE)
                 {
                     // The initial value of pIn->pTileInfo is copied to tileInfo
                     // We do not expect any of these value to be changed nor any 0 of inputs
@@ -4525,7 +4526,7 @@ UINT_32 EgBasedAddrLib::HwlGetPitchAlignmentMicroTiled(
     // Note: this actually does not work for mipmap but mipmap depth texture is not really
     // sampled with mipmap.
     //
-    if (flags.depth && !flags.noStencil)
+    if (flags.depth && (flags.noStencil == FALSE))
     {
         bpp = 8;
     }
@@ -4615,3 +4616,4 @@ UINT_32 EgBasedAddrLib::HwlStereoCheckRightOffsetPadding(
 
     return stereoHeightAlign;
 }
+

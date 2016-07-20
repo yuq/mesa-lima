@@ -1859,3 +1859,4 @@ ADDR_E_RETURNCODE CiAddrLib::HwlGetMaxAlignments(
 
     return ADDR_OK;
 }
+
