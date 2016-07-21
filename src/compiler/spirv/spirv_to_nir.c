@@ -1336,6 +1336,54 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       image_type = sampled.sampler->var->var->interface_type;
    }
 
+   /* Figure out the base texture operation */
+   nir_texop texop;
+   switch (opcode) {
+   case SpvOpImageSampleImplicitLod:
+   case SpvOpImageSampleDrefImplicitLod:
+   case SpvOpImageSampleProjImplicitLod:
+   case SpvOpImageSampleProjDrefImplicitLod:
+      texop = nir_texop_tex;
+      break;
+
+   case SpvOpImageSampleExplicitLod:
+   case SpvOpImageSampleDrefExplicitLod:
+   case SpvOpImageSampleProjExplicitLod:
+   case SpvOpImageSampleProjDrefExplicitLod:
+      texop = nir_texop_txl;
+      break;
+
+   case SpvOpImageFetch:
+      if (glsl_get_sampler_dim(image_type) == GLSL_SAMPLER_DIM_MS) {
+         texop = nir_texop_txf_ms;
+      } else {
+         texop = nir_texop_txf;
+      }
+      break;
+
+   case SpvOpImageGather:
+   case SpvOpImageDrefGather:
+      texop = nir_texop_tg4;
+      break;
+
+   case SpvOpImageQuerySizeLod:
+   case SpvOpImageQuerySize:
+      texop = nir_texop_txs;
+      break;
+
+   case SpvOpImageQueryLod:
+      texop = nir_texop_lod;
+      break;
+
+   case SpvOpImageQueryLevels:
+      texop = nir_texop_query_levels;
+      break;
+
+   case SpvOpImageQuerySamples:
+   default:
+      unreachable("Unhandled opcode");
+   }
+
    nir_tex_src srcs[8]; /* 8 should be enough */
    nir_tex_src *p = srcs;
 
@@ -1392,54 +1440,6 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    /* For OpImageQuerySizeLod, we always have an LOD */
    if (opcode == SpvOpImageQuerySizeLod)
       (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_lod);
-
-   /* Figure out the base texture operation */
-   nir_texop texop;
-   switch (opcode) {
-   case SpvOpImageSampleImplicitLod:
-   case SpvOpImageSampleDrefImplicitLod:
-   case SpvOpImageSampleProjImplicitLod:
-   case SpvOpImageSampleProjDrefImplicitLod:
-      texop = nir_texop_tex;
-      break;
-
-   case SpvOpImageSampleExplicitLod:
-   case SpvOpImageSampleDrefExplicitLod:
-   case SpvOpImageSampleProjExplicitLod:
-   case SpvOpImageSampleProjDrefExplicitLod:
-      texop = nir_texop_txl;
-      break;
-
-   case SpvOpImageFetch:
-      if (glsl_get_sampler_dim(image_type) == GLSL_SAMPLER_DIM_MS) {
-         texop = nir_texop_txf_ms;
-      } else {
-         texop = nir_texop_txf;
-      }
-      break;
-
-   case SpvOpImageGather:
-   case SpvOpImageDrefGather:
-      texop = nir_texop_tg4;
-      break;
-
-   case SpvOpImageQuerySizeLod:
-   case SpvOpImageQuerySize:
-      texop = nir_texop_txs;
-      break;
-
-   case SpvOpImageQueryLod:
-      texop = nir_texop_lod;
-      break;
-
-   case SpvOpImageQueryLevels:
-      texop = nir_texop_query_levels;
-      break;
-
-   case SpvOpImageQuerySamples:
-   default:
-      unreachable("Unhandled opcode");
-   }
 
    /* Now we need to handle some number of optional arguments */
    if (idx < count) {
