@@ -3826,6 +3826,23 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
 }
 
 static void
+lower_fb_read_logical_send(const fs_builder &bld, fs_inst *inst)
+{
+   const fs_builder &ubld = bld.exec_all();
+   const unsigned length = 2;
+   const fs_reg header = ubld.group(8, 0).vgrf(BRW_REGISTER_TYPE_UD, length);
+
+   ubld.group(16, 0)
+       .MOV(header, retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
+
+   inst->resize_sources(1);
+   inst->src[0] = header;
+   inst->opcode = FS_OPCODE_FB_READ;
+   inst->mlen = length;
+   inst->header_size = length;
+}
+
+static void
 lower_sampler_logical_send_gen4(const fs_builder &bld, fs_inst *inst, opcode op,
                                 const fs_reg &coordinate,
                                 const fs_reg &shadow_c,
@@ -4418,6 +4435,10 @@ fs_visitor::lower_logical_sends()
                                      payload);
          break;
 
+      case FS_OPCODE_FB_READ_LOGICAL:
+         lower_fb_read_logical_send(ibld, inst);
+         break;
+
       case SHADER_OPCODE_TEX_LOGICAL:
          lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TEX);
          break;
@@ -4911,6 +4932,9 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       /* Dual-source FB writes are unsupported in SIMD16 mode. */
       return (inst->src[FB_WRITE_LOGICAL_SRC_COLOR1].file != BAD_FILE ?
               8 : MIN2(16, inst->exec_size));
+
+   case FS_OPCODE_FB_READ_LOGICAL:
+      return MIN2(16, inst->exec_size);
 
    case SHADER_OPCODE_TEX_LOGICAL:
    case SHADER_OPCODE_TXF_CMS_LOGICAL:

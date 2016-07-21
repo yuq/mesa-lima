@@ -71,6 +71,7 @@ is_expression(const fs_visitor *v, const fs_inst *const inst)
    case BRW_OPCODE_PLN:
    case BRW_OPCODE_MAD:
    case BRW_OPCODE_LRP:
+   case FS_OPCODE_FB_READ_LOGICAL:
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
    case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL:
    case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN7:
