@@ -94,11 +94,9 @@ vlVaQueryConfigEntrypoints(VADriverContextP ctx, VAProfile profile,
 				PIPE_VIDEO_CAP_SUPPORTED))
       entrypoint_list[(*num_entrypoints)++] = VAEntrypointVLD;
 
-#if 0
    if (pscreen->get_video_param(pscreen, p, PIPE_VIDEO_ENTRYPOINT_ENCODE,
 				PIPE_VIDEO_CAP_SUPPORTED))
       entrypoint_list[(*num_entrypoints)++] = VAEntrypointEncSlice;
-#endif
 
    if (num_entrypoints == 0)
       return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
@@ -122,7 +120,7 @@ vlVaGetConfigAttributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint en
          value = VA_RT_FORMAT_YUV420;
          break;
       case VAConfigAttribRateControl:
-         value = VA_RC_NONE;
+         value = VA_RC_CQP | VA_RC_CBR;
          break;
       default:
          value = VA_ATTRIB_NOT_SUPPORTED;
@@ -183,7 +181,6 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
       config->entrypoint = PIPE_VIDEO_ENTRYPOINT_BITSTREAM;
       break;
 
-#if 0
    case VAEntrypointEncSlice:
       if (!pscreen->get_video_param(pscreen, p, PIPE_VIDEO_ENTRYPOINT_ENCODE,
 				    PIPE_VIDEO_CAP_SUPPORTED)) {
@@ -193,7 +190,6 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
 
       config->entrypoint = PIPE_VIDEO_ENTRYPOINT_ENCODE;
       break;
-#endif
 
    default:
       FREE(config);
