@@ -2409,6 +2409,16 @@ typedef struct nir_lower_tex_options {
    unsigned lower_txp;
 
    /**
+    * If true, lower away nir_tex_src_offset for all texelfetch instructions.
+    */
+   bool lower_txf_offset;
+
+   /**
+    * If true, lower away nir_tex_src_offset for all rect textures.
+    */
+   bool lower_rect_offset;
+
+   /**
     * If true, lower rect textures to 2D, using txs to fetch the
     * texture dimensions and dividing the texture coords by the
     * texture dims to normalize.
