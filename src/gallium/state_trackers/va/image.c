@@ -471,7 +471,9 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
       return VA_STATUS_ERROR_OPERATION_FAILED;
    }
 
-   if (format != surf->buffer->buffer_format) {
+   if ((format != surf->buffer->buffer_format) &&
+         ((format != PIPE_FORMAT_YV12) || (surf->buffer->buffer_format != PIPE_FORMAT_NV12)) &&
+         ((format != PIPE_FORMAT_IYUV) || (surf->buffer->buffer_format != PIPE_FORMAT_NV12))) {
       struct pipe_video_buffer *tmp_buf;
       struct pipe_video_buffer templat = surf->templat;
 
@@ -513,12 +515,30 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
       unsigned width, height;
       if (!views[i]) continue;
       vlVaVideoSurfaceSize(surf, i, &width, &height);
-      for (j = 0; j < views[i]->texture->array_size; ++j) {
-         struct pipe_box dst_box = {0, 0, j, width, height, 1};
-         drv->pipe->texture_subdata(drv->pipe, views[i]->texture, 0,
-                                    PIPE_TRANSFER_WRITE, &dst_box,
-                                    data[i] + pitches[i] * j,
-                                    pitches[i] * views[i]->texture->array_size, 0);
+      if (((format == PIPE_FORMAT_YV12) || (format == PIPE_FORMAT_IYUV)) &&
+            (surf->buffer->buffer_format == PIPE_FORMAT_NV12)) {
+         struct pipe_transfer *transfer = NULL;
+         uint8_t *map = NULL;
+         struct pipe_box dst_box_1 = {0, 0, 0, width, height, 1};
+         map = drv->pipe->transfer_map(drv->pipe,
+                                       views[i]->texture,
+                                       0,
+                                       PIPE_TRANSFER_DISCARD_RANGE,
+                                       &dst_box_1, &transfer);
+         if (map == NULL)
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+
+         u_copy_yv12_img_to_nv12_surf ((ubyte * const*)data, map, width, height,
+				       pitches[i], transfer->stride, i);
+         pipe_transfer_unmap(drv->pipe, transfer);
+      } else {
+         for (j = 0; j < views[i]->texture->array_size; ++j) {
+            struct pipe_box dst_box = {0, 0, j, width, height, 1};
+            drv->pipe->texture_subdata(drv->pipe, views[i]->texture, 0,
+                                       PIPE_TRANSFER_WRITE, &dst_box,
+                                       data[i] + pitches[i] * j,
+                                       pitches[i] * views[i]->texture->array_size, 0);
+         }
       }
    }
    pipe_mutex_unlock(drv->mutex);
