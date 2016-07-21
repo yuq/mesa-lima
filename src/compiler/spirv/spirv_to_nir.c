@@ -1368,14 +1368,23 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
-   /* These all have an explicit depth value as their next source */
+   unsigned gather_component = 0;
    switch (opcode) {
    case SpvOpImageSampleDrefImplicitLod:
    case SpvOpImageSampleDrefExplicitLod:
    case SpvOpImageSampleProjDrefImplicitLod:
    case SpvOpImageSampleProjDrefExplicitLod:
+   case SpvOpImageDrefGather:
+      /* These all have an explicit depth value as their next source */
       (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_comparitor);
       break;
+
+   case SpvOpImageGather:
+      /* This has a component as its next source */
+      gather_component =
+         vtn_value(b, w[idx++], vtn_value_type_constant)->constant->value.u[0];
+      break;
+
    default:
       break;
    }
@@ -1481,6 +1490,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    instr->is_shadow = glsl_sampler_type_is_shadow(image_type);
    instr->is_new_style_shadow = instr->is_shadow &&
                                 glsl_get_components(ret_type->type) == 1;
+   instr->component = gather_component;
 
    if (has_coord) {
       switch (instr->sampler_dim) {
