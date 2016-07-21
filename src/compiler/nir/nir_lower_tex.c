@@ -38,16 +38,39 @@
 #include "nir.h"
 #include "nir_builder.h"
 
+static int
+tex_instr_find_src(nir_tex_instr *tex, nir_tex_src_type src_type)
+{
+   for (unsigned i = 0; i < tex->num_srcs; i++) {
+      if (tex->src[i].src_type == src_type)
+         return i;
+   }
+
+   return -1;
+}
+
+static void
+tex_instr_remove_src(nir_tex_instr *tex, unsigned src_idx)
+{
+   assert(src_idx < tex->num_srcs);
+
+   /* First rewrite the source to NIR_SRC_INIT */
+   nir_instr_rewrite_src(&tex->instr, &tex->src[src_idx].src, NIR_SRC_INIT);
+
+   /* Now, move all of the other sources down */
+   for (unsigned i = src_idx + 1; i < tex->num_srcs; i++) {
+      tex->src[i-1].src_type = tex->src[i].src_type;
+      nir_instr_move_src(&tex->instr, &tex->src[i-1].src, &tex->src[i].src);
+   }
+   tex->num_srcs--;
+}
+
 static void
 project_src(nir_builder *b, nir_tex_instr *tex)
 {
    /* Find the projector in the srcs list, if present. */
-   unsigned proj_index;
-   for (proj_index = 0; proj_index < tex->num_srcs; proj_index++) {
-      if (tex->src[proj_index].src_type == nir_tex_src_projector)
-         break;
-   }
-   if (proj_index == tex->num_srcs)
+   int proj_index = tex_instr_find_src(tex, nir_tex_src_projector);
+   if (proj_index < 0)
       return;
 
    b->cursor = nir_before_instr(&tex->instr);
@@ -102,16 +125,7 @@ project_src(nir_builder *b, nir_tex_instr *tex)
                             nir_src_for_ssa(projected));
    }
 
-   /* Now move the later tex sources down the array so that the projector
-    * disappears.
-    */
-   nir_instr_rewrite_src(&tex->instr, &tex->src[proj_index].src,
-                         NIR_SRC_INIT);
-   for (unsigned i = proj_index + 1; i < tex->num_srcs; i++) {
-      tex->src[i-1].src_type = tex->src[i].src_type;
-      nir_instr_move_src(&tex->instr, &tex->src[i-1].src, &tex->src[i].src);
-   }
-   tex->num_srcs--;
+   tex_instr_remove_src(tex, proj_index);
 }
 
 static nir_ssa_def *
