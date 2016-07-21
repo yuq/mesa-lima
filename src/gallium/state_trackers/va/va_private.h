@@ -229,6 +229,7 @@ typedef struct {
       struct pipe_vc1_picture_desc vc1;
       struct pipe_h264_picture_desc h264;
       struct pipe_h265_picture_desc h265;
+      struct pipe_h264_enc_picture_desc h264enc;
    } desc;
 
    struct {
@@ -246,6 +247,7 @@ typedef struct {
 typedef struct {
    enum pipe_video_profile profile;
    enum pipe_video_entrypoint entrypoint;
+   enum pipe_h264_enc_rate_control_method rc;
 } vlVaConfig;
 
 typedef struct {

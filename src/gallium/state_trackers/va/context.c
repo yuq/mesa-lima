@@ -276,6 +276,8 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
 
    context->desc.base.profile = config->profile;
    context->desc.base.entry_point = config->entrypoint;
+   if (config->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE)
+      context->desc.h264enc.rate_ctrl.rate_ctrl_method = config->rc;
 
    pipe_mutex_lock(drv->mutex);
    *context_id = handle_table_add(drv->htab, context);

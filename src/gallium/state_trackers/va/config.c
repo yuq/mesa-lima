@@ -202,6 +202,17 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
 
    config->profile = p;
 
+   for (int i = 0; i <num_attribs ; i++) {
+      if (attrib_list[i].type == VAConfigAttribRateControl) {
+         if (attrib_list[i].value == VA_RC_CBR)
+            config->rc = PIPE_H264_ENC_RATE_CONTROL_METHOD_CONSTANT;
+         else if (attrib_list[i].value == VA_RC_VBR)
+            config->rc = PIPE_H264_ENC_RATE_CONTROL_METHOD_VARIABLE;
+         else
+            config->rc = PIPE_H264_ENC_RATE_CONTROL_METHOD_DISABLE;
+      }
+   }
+
    pipe_mutex_lock(drv->mutex);
    *config_id = handle_table_add(drv->htab, config);
    pipe_mutex_unlock(drv->mutex);
