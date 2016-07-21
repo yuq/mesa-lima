@@ -165,6 +165,8 @@ brw_instruction_name(const struct brw_device_info *devinfo, enum opcode op)
       return "fb_write_logical";
    case FS_OPCODE_REP_FB_WRITE:
       return "rep_fb_write";
+   case FS_OPCODE_FB_READ:
+      return "fb_read";
 
    case SHADER_OPCODE_RCP:
       return "rcp";

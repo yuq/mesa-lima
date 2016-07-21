@@ -354,6 +354,22 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 }
 
 void
+fs_generator::generate_fb_read(fs_inst *inst, struct brw_reg dst,
+                               struct brw_reg payload)
+{
+   brw_wm_prog_data *prog_data =
+      reinterpret_cast<brw_wm_prog_data *>(this->prog_data);
+   const unsigned surf_index =
+      prog_data->binding_table.render_target_start + inst->target;
+
+   gen9_fb_READ(p, dst, payload, surf_index,
+                inst->header_size, inst->regs_written,
+                prog_data->persample_dispatch);
+
+   brw_mark_surface_used(&prog_data->base, surf_index);
+}
+
+void
 fs_generator::generate_mov_indirect(fs_inst *inst,
                                     struct brw_reg dst,
                                     struct brw_reg reg,
@@ -1964,6 +1980,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case FS_OPCODE_FB_WRITE:
 	 generate_fb_write(inst, src[0]);
 	 break;
+
+      case FS_OPCODE_FB_READ:
+         generate_fb_read(inst, dst, src[0]);
+         break;
 
       case FS_OPCODE_MOV_DISPATCH_TO_FLAGS:
          generate_mov_dispatch_to_flags(inst);
