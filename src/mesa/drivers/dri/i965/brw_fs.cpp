@@ -6552,7 +6552,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
       (key->persample_interp ||
        (shader->info.system_values_read & (SYSTEM_BIT_SAMPLE_ID |
                                            SYSTEM_BIT_SAMPLE_POS)) ||
-       shader->info.fs.uses_sample_qualifier);
+       shader->info.fs.uses_sample_qualifier ||
+       shader->info.outputs_read);
 
    prog_data->early_fragment_tests = shader->info.fs.early_fragment_tests;
 
