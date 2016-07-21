@@ -72,13 +72,13 @@ struct call_resource_copy_region
    unsigned dstx, dsty, dstz;
    struct pipe_resource *src;
    unsigned src_level;
-   const struct pipe_box *src_box;
+   struct pipe_box src_box;
 };
 
 struct call_clear
 {
    unsigned buffers;
-   const union pipe_color_union *color;
+   union pipe_color_union color;
    double depth;
    unsigned stencil;
 };

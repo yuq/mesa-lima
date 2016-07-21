@@ -357,7 +357,7 @@ dd_dump_resource_copy_region(struct dd_draw_state *dstate,
    DUMP_M(uint, info, dstz);
    DUMP_M(resource, info, src);
    DUMP_M(uint, info, src_level);
-   DUMP_M(box, info, src_box);
+   DUMP_M_ADDR(box, info, src_box);
 }
 
 static void
@@ -404,7 +404,7 @@ dd_dump_clear(struct dd_draw_state *dstate, struct call_clear *info, FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
    DUMP_M(uint, info, buffers);
-   DUMP_M(color_union, info, color);
+   DUMP_M_ADDR(color_union, info, color);
    DUMP_M(double, info, depth);
    DUMP_M(hex, info, stencil);
 }
@@ -700,7 +700,7 @@ dd_context_resource_copy_region(struct pipe_context *_pipe,
    call.info.resource_copy_region.dstz = dstz;
    call.info.resource_copy_region.src = src;
    call.info.resource_copy_region.src_level = src_level;
-   call.info.resource_copy_region.src_box = src_box;
+   call.info.resource_copy_region.src_box = *src_box;
 
    dd_before_draw(dctx);
    pipe->resource_copy_region(pipe,
@@ -780,7 +780,7 @@ dd_context_clear(struct pipe_context *_pipe, unsigned buffers,
 
    call.type = CALL_CLEAR;
    call.info.clear.buffers = buffers;
-   call.info.clear.color = color;
+   call.info.clear.color = *color;
    call.info.clear.depth = depth;
    call.info.clear.stencil = stencil;
 
