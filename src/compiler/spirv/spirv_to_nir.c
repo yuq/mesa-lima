@@ -1511,7 +1511,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
          assert("Invalid sampler type");
       }
 
-      if (instr->is_array)
+      if (instr->is_array && instr->op != nir_texop_lod)
          instr->coord_components++;
    } else {
       instr->coord_components = 0;
