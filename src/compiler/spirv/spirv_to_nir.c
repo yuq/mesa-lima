@@ -1444,12 +1444,12 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
 
       if (operands & SpvImageOperandsLodMask) {
          assert(texop == nir_texop_txl || texop == nir_texop_txf ||
-                texop == nir_texop_txf_ms || texop == nir_texop_txs);
+                texop == nir_texop_txs);
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_lod);
       }
 
       if (operands & SpvImageOperandsGradMask) {
-         assert(texop == nir_texop_tex);
+         assert(texop == nir_texop_txl);
          texop = nir_texop_txd;
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ddx);
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ddy);
