@@ -387,6 +387,7 @@ anv_fill_binding_table(struct brw_stage_prog_data *prog_data, unsigned bias)
 {
    prog_data->binding_table.size_bytes = 0;
    prog_data->binding_table.texture_start = bias;
+   prog_data->binding_table.gather_texture_start = bias;
    prog_data->binding_table.ubo_start = bias;
    prog_data->binding_table.ssbo_start = bias;
    prog_data->binding_table.image_start = bias;
