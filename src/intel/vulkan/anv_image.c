@@ -137,10 +137,13 @@ make_surface(const struct anv_device *dev,
    image->extent = anv_sanitize_image_extent(vk_info->imageType,
                                              vk_info->extent);
 
+   enum isl_format format = anv_get_isl_format(&dev->info, vk_info->format,
+                                               aspect, vk_info->tiling);
+   assert(format != ISL_FORMAT_UNSUPPORTED);
+
    ok = isl_surf_init(&dev->isl_dev, &anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
-      .format = anv_get_isl_format(&dev->info, vk_info->format,
-                                   aspect, vk_info->tiling),
+      .format = format,
       .width = image->extent.width,
       .height = image->extent.height,
       .depth = image->extent.depth,
