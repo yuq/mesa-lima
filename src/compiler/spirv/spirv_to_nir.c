@@ -1335,6 +1335,9 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    } else {
       image_type = sampled.sampler->var->var->interface_type;
    }
+   const enum glsl_sampler_dim sampler_dim = glsl_get_sampler_dim(image_type);
+   const bool is_array = glsl_sampler_type_is_array(image_type);
+   const bool is_shadow = glsl_sampler_type_is_shadow(image_type);
 
    /* Figure out the base texture operation */
    nir_texop texop;
@@ -1485,11 +1488,11 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
 
    memcpy(instr->src, srcs, instr->num_srcs * sizeof(*instr->src));
 
-   instr->sampler_dim = glsl_get_sampler_dim(image_type);
-   instr->is_array = glsl_sampler_type_is_array(image_type);
-   instr->is_shadow = glsl_sampler_type_is_shadow(image_type);
-   instr->is_new_style_shadow = instr->is_shadow &&
-                                glsl_get_components(ret_type->type) == 1;
+   instr->sampler_dim = sampler_dim;
+   instr->is_array = is_array;
+   instr->is_shadow = is_shadow;
+   instr->is_new_style_shadow =
+      is_shadow && glsl_get_components(ret_type->type) == 1;
    instr->component = gather_component;
 
    if (has_coord) {
