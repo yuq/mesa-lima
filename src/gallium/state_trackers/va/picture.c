@@ -95,6 +95,32 @@ vlVaGetReferenceFrame(vlVaDriver *drv, VASurfaceID surface_id,
       *ref_frame = NULL;
 }
 
+static void
+getEncParamPreset(vlVaContext *context)
+{
+   //motion estimation preset
+   context->desc.h264enc.motion_est.motion_est_quarter_pixel = 0x00000001;
+   context->desc.h264enc.motion_est.lsmvert = 0x00000002;
+   context->desc.h264enc.motion_est.enc_disable_sub_mode = 0x00000078;
+   context->desc.h264enc.motion_est.enc_en_ime_overw_dis_subm = 0x00000001;
+   context->desc.h264enc.motion_est.enc_ime_overw_dis_subm_no = 0x00000001;
+   context->desc.h264enc.motion_est.enc_ime2_search_range_x = 0x00000004;
+   context->desc.h264enc.motion_est.enc_ime2_search_range_y = 0x00000004;
+
+   //pic control preset
+   context->desc.h264enc.pic_ctrl.enc_cabac_enable = 0x00000001;
+   context->desc.h264enc.pic_ctrl.enc_constraint_set_flags = 0x00000040;
+
+   //rate control
+   context->desc.h264enc.rate_ctrl.vbv_buffer_size = 20000000;
+   context->desc.h264enc.rate_ctrl.vbv_buf_lv = 48;
+   context->desc.h264enc.rate_ctrl.fill_data_enable = 1;
+   context->desc.h264enc.rate_ctrl.enforce_hrd = 1;
+   context->desc.h264enc.enable_vui = false;
+
+   context->desc.h264enc.ref_pic_mode = 0x00000201;
+}
+
 static VAStatus
 handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
@@ -524,6 +550,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
 
    if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
       coded_buf = context->coded_buf;
+      getEncParamPreset(context);
       context->decoder->begin_frame(context->decoder, context->target, &context->desc.base);
       context->decoder->encode_bitstream(context->decoder, context->target,
                                          coded_buf->derived_surface.resource, &feedback);
