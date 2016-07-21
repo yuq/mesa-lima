@@ -1442,6 +1442,21 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
+   switch (opcode) {
+   case SpvOpImageSampleProjImplicitLod:
+   case SpvOpImageSampleProjExplicitLod:
+   case SpvOpImageSampleProjDrefImplicitLod:
+   case SpvOpImageSampleProjDrefExplicitLod:
+      /* These have the projector as the last coordinate component */
+      p->src = nir_src_for_ssa(nir_channel(&b->nb, coord, coord_components));
+      p->src_type = nir_tex_src_projector;
+      p++;
+      break;
+
+   default:
+      break;
+   }
+
    unsigned gather_component = 0;
    switch (opcode) {
    case SpvOpImageSampleDrefImplicitLod:
