@@ -319,17 +319,18 @@ vlVaUnlockSurface(VADriverContextP ctx, VASurfaceID surface)
 }
 
 VAStatus
-vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config,
+vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config_id,
                            VASurfaceAttrib *attrib_list, unsigned int *num_attribs)
 {
    vlVaDriver *drv;
+   vlVaConfig *config;
    VASurfaceAttrib *attribs;
    struct pipe_screen *pscreen;
    int i, j;
 
    STATIC_ASSERT(ARRAY_SIZE(vpp_surface_formats) <= VL_VA_MAX_IMAGE_FORMATS);
 
-   if (config == VA_INVALID_ID)
+   if (config_id == VA_INVALID_ID)
       return VA_STATUS_ERROR_INVALID_CONFIG;
 
    if (!attrib_list && !num_attribs)
@@ -348,6 +349,13 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config,
    if (!drv)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
+   pipe_mutex_lock(drv->mutex);
+   config = handle_table_get(drv->htab, config_id);
+   pipe_mutex_unlock(drv->mutex);
+
+   if (!config)
+      return VA_STATUS_ERROR_INVALID_CONFIG;
+
    pscreen = VL_VA_PSCREEN(ctx);
 
    if (!pscreen)
@@ -363,7 +371,7 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config,
 
    /* vlVaCreateConfig returns PIPE_VIDEO_PROFILE_UNKNOWN
     * only for VAEntrypointVideoProc. */
-   if (config == PIPE_VIDEO_PROFILE_UNKNOWN) {
+   if (config->profile == PIPE_VIDEO_PROFILE_UNKNOWN) {
       for (j = 0; j < ARRAY_SIZE(vpp_surface_formats); ++j) {
          attribs[i].type = VASurfaceAttribPixelFormat;
          attribs[i].value.type = VAGenericValueTypeInteger;

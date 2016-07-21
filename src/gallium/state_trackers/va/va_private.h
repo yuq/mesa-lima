@@ -244,6 +244,11 @@ typedef struct {
 } vlVaContext;
 
 typedef struct {
+   enum pipe_video_profile profile;
+   enum pipe_video_entrypoint entrypoint;
+} vlVaConfig;
+
+typedef struct {
    VABufferType type;
    unsigned int size;
    unsigned int num_elements;
