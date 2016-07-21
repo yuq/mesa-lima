@@ -163,6 +163,12 @@ brw_codegen_gs_prog(struct brw_context *brw,
                      &prog_data, gs->Program->nir, prog,
                      st_index, &program_size, &error_str);
    if (program == NULL) {
+      if (prog) {
+         ralloc_strcat(&prog->InfoLog, error_str);
+      }
+
+      _mesa_problem(NULL, "Failed to compile geometry shader: %s\n", error_str);
+
       ralloc_free(mem_ctx);
       return false;
    }
