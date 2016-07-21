@@ -117,6 +117,13 @@ getEncParamPreset(vlVaContext *context)
    context->desc.h264enc.rate_ctrl.fill_data_enable = 1;
    context->desc.h264enc.rate_ctrl.enforce_hrd = 1;
    context->desc.h264enc.enable_vui = false;
+   if (context->desc.h264enc.rate_ctrl.frame_rate_num == 0)
+      context->desc.h264enc.rate_ctrl.frame_rate_num = 30;
+   context->desc.h264enc.rate_ctrl.target_bits_picture =
+      context->desc.h264enc.rate_ctrl.target_bitrate / context->desc.h264enc.rate_ctrl.frame_rate_num;
+   context->desc.h264enc.rate_ctrl.peak_bits_picture_integer =
+      context->desc.h264enc.rate_ctrl.peak_bitrate / context->desc.h264enc.rate_ctrl.frame_rate_num;
+   context->desc.h264enc.rate_ctrl.peak_bits_picture_fraction = 0;
 
    context->desc.h264enc.ref_pic_mode = 0x00000201;
 }
@@ -319,12 +326,15 @@ handleVAEncMiscParameterTypeRateControl(vlVaContext *context, VAEncMiscParameter
       context->desc.h264enc.rate_ctrl.vbv_buffer_size = MIN2((context->desc.h264enc.rate_ctrl.target_bitrate * 2.75), 2000000);
    else
       context->desc.h264enc.rate_ctrl.vbv_buffer_size = context->desc.h264enc.rate_ctrl.target_bitrate;
-   context->desc.h264enc.rate_ctrl.target_bits_picture =
-	   context->desc.h264enc.rate_ctrl.target_bitrate / context->desc.h264enc.rate_ctrl.frame_rate_num;
-   context->desc.h264enc.rate_ctrl.peak_bits_picture_integer =
-	   context->desc.h264enc.rate_ctrl.peak_bitrate / context->desc.h264enc.rate_ctrl.frame_rate_num;
-   context->desc.h264enc.rate_ctrl.peak_bits_picture_fraction = 0;
 
+   return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+handleVAEncMiscParameterTypeFrameRate(vlVaContext *context, VAEncMiscParameterBuffer *misc)
+{
+   VAEncMiscParameterFrameRate *fr = (VAEncMiscParameterFrameRate *)misc->data;
+   context->desc.h264enc.rate_ctrl.frame_rate_num = fr->framerate;
    return VA_STATUS_SUCCESS;
 }
 
@@ -355,6 +365,10 @@ handleVAEncMiscParameterBufferType(vlVaContext *context, vlVaBuffer *buf)
    switch (misc->type) {
    case VAEncMiscParameterTypeRateControl:
       vaStatus = handleVAEncMiscParameterTypeRateControl(context, misc);
+      break;
+
+   case VAEncMiscParameterTypeFrameRate:
+      vaStatus = handleVAEncMiscParameterTypeFrameRate(context, misc);
       break;
 
    default:
