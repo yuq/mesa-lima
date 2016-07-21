@@ -1383,6 +1383,9 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpImageQuerySamples:
+      texop = nir_texop_texture_samples;
+      break;
+
    default:
       unreachable("Unhandled opcode");
    }
