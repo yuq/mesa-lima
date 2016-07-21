@@ -1479,7 +1479,8 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    instr->sampler_dim = glsl_get_sampler_dim(image_type);
    instr->is_array = glsl_sampler_type_is_array(image_type);
    instr->is_shadow = glsl_sampler_type_is_shadow(image_type);
-   instr->is_new_style_shadow = instr->is_shadow;
+   instr->is_new_style_shadow = instr->is_shadow &&
+                                glsl_get_components(ret_type->type) == 1;
 
    if (has_coord) {
       switch (instr->sampler_dim) {
