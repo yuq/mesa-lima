@@ -103,12 +103,10 @@ fs_visitor::nir_setup_outputs()
          if (key->force_dual_color_blend &&
              var->data.location == FRAG_RESULT_DATA1) {
             this->dual_src_output = reg;
-            this->do_dual_src = true;
          } else if (var->data.index > 0) {
             assert(var->data.location == FRAG_RESULT_DATA0);
             assert(var->data.index == 1);
             this->dual_src_output = reg;
-            this->do_dual_src = true;
          } else if (var->data.location == FRAG_RESULT_COLOR) {
             /* Writing gl_FragColor outputs to all color regions. */
             for (unsigned int i = 0; i < MAX2(key->nr_color_regions, 1); i++) {

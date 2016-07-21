@@ -469,32 +469,24 @@ fs_visitor::emit_fb_writes()
                            "in SIMD16+ mode.\n");
    }
 
-   if (do_dual_src) {
-      const fs_builder abld = bld.annotate("FB dual-source write");
+   for (int target = 0; target < key->nr_color_regions; target++) {
+      /* Skip over outputs that weren't written. */
+      if (this->outputs[target].file == BAD_FILE)
+         continue;
 
-      inst = emit_single_fb_write(abld, this->outputs[0],
-                                  this->dual_src_output, reg_undef, 4);
-      inst->target = 0;
+      const fs_builder abld = bld.annotate(
+         ralloc_asprintf(this->mem_ctx, "FB write target %d", target));
 
-      prog_data->dual_src_blend = true;
-   } else {
-      for (int target = 0; target < key->nr_color_regions; target++) {
-         /* Skip over outputs that weren't written. */
-         if (this->outputs[target].file == BAD_FILE)
-            continue;
+      fs_reg src0_alpha;
+      if (devinfo->gen >= 6 && key->replicate_alpha && target != 0)
+         src0_alpha = offset(outputs[0], bld, 3);
 
-         const fs_builder abld = bld.annotate(
-            ralloc_asprintf(this->mem_ctx, "FB write target %d", target));
-
-         fs_reg src0_alpha;
-         if (devinfo->gen >= 6 && key->replicate_alpha && target != 0)
-            src0_alpha = offset(outputs[0], bld, 3);
-
-         inst = emit_single_fb_write(abld, this->outputs[target], reg_undef,
-                                     src0_alpha, 4);
-         inst->target = target;
-      }
+      inst = emit_single_fb_write(abld, this->outputs[target],
+                                  this->dual_src_output, src0_alpha, 4);
+      inst->target = target;
    }
+
+   prog_data->dual_src_blend = (this->dual_src_output.file != BAD_FILE);
 
    if (inst == NULL) {
       /* Even if there's no color buffers enabled, we still need to send
@@ -946,7 +938,6 @@ fs_visitor::init()
    this->promoted_constants = 0,
 
    this->spilled_any_registers = false;
-   this->do_dual_src = false;
 }
 
 fs_visitor::~fs_visitor()

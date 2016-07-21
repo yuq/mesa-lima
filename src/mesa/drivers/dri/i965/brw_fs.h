@@ -316,7 +316,6 @@ public:
    fs_reg sample_mask;
    fs_reg outputs[VARYING_SLOT_MAX];
    fs_reg dual_src_output;
-   bool do_dual_src;
    int first_non_payload_grf;
    /** Either BRW_MAX_GRF or GEN7_MRF_HACK_START */
    unsigned max_grf;
