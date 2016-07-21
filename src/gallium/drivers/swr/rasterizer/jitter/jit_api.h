@@ -47,8 +47,7 @@
 #define JITCALL
 #endif
 
-extern "C"
-{
+
 
 struct ShaderInfo;
 
@@ -63,6 +62,9 @@ struct JIT_COMPILE_INPUT
 
     bool enableJitSampler;
 };
+
+extern "C"
+{
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Create JIT context.
@@ -107,5 +109,5 @@ PFN_SO_FUNC JITCALL JitCompileStreamout(HANDLE hJitContext, const STREAMOUT_COMP
 /// @param state   - blend state to build function from
 PFN_BLEND_JIT_FUNC JITCALL JitCompileBlend(HANDLE hJitContext, const BLEND_COMPILE_STATE& state);
 
+}
 
-}; // extern "C"
