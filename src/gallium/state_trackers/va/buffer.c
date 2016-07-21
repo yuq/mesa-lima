@@ -133,6 +133,12 @@ vlVaMapBuffer(VADriverContextP ctx, VABufferID buf_id, void **pbuff)
       if (!buf->derived_surface.transfer || !*pbuff)
          return VA_STATUS_ERROR_INVALID_BUFFER;
 
+      if (buf->type == VAEncCodedBufferType) {
+         ((VACodedBufferSegment*)buf->data)->buf = *pbuff;
+         ((VACodedBufferSegment*)buf->data)->size = buf->coded_size;
+         ((VACodedBufferSegment*)buf->data)->next = NULL;
+         *pbuff = buf->data;
+      }
    } else {
       pipe_mutex_unlock(drv->mutex);
       *pbuff = buf->data;

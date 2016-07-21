@@ -242,6 +242,7 @@ typedef struct {
    } mpeg4;
 
    struct vl_deint_filter *deint;
+   struct vlVaBuffer *coded_buf;
 } vlVaContext;
 
 typedef struct {
@@ -261,6 +262,7 @@ typedef struct {
    } derived_surface;
    unsigned int export_refcount;
    VABufferInfo export_state;
+   unsigned int coded_size;
 } vlVaBuffer;
 
 typedef struct {
