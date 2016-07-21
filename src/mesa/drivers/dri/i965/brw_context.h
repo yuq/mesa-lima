@@ -1795,7 +1795,6 @@ brw_program_reloc(struct brw_context *brw, uint32_t state_offset,
 bool brw_do_cubemap_normalize(struct exec_list *instructions);
 bool brw_lower_texture_gradients(struct brw_context *brw,
                                  struct exec_list *instructions);
-bool brw_do_lower_unnormalized_offset(struct exec_list *instructions);
 
 extern const char * const conditional_modifier[16];
 extern const char *const pred_ctrl_align16[16];

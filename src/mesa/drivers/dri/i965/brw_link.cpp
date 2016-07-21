@@ -132,7 +132,6 @@ process_glsl_ir(gl_shader_stage stage,
    do_vec_index_to_cond_assign(shader->ir);
    lower_vector_insert(shader->ir, true);
    lower_offset_arrays(shader->ir);
-   brw_do_lower_unnormalized_offset(shader->ir);
    lower_noise(shader->ir);
    lower_quadop_vector(shader->ir, false);
 
