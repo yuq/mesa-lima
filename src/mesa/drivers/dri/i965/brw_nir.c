@@ -429,6 +429,8 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
 
    static const nir_lower_tex_options tex_options = {
       .lower_txp = ~0,
+      .lower_txf_offset = true,
+      .lower_rect_offset = true,
    };
 
    OPT(nir_lower_tex, &tex_options);
