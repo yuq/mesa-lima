@@ -85,6 +85,32 @@ dd_context_create_query(struct pipe_context *_pipe, unsigned query_type,
    return query;
 }
 
+static struct pipe_query *
+dd_context_create_batch_query(struct pipe_context *_pipe, unsigned num_queries,
+                              unsigned *query_types)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+   struct pipe_query *query;
+
+   query = pipe->create_batch_query(pipe, num_queries, query_types);
+
+   /* Wrap query object. */
+   if (query) {
+      struct dd_query *dd_query = CALLOC_STRUCT(dd_query);
+      if (dd_query) {
+         /* no special handling for batch queries yet */
+         dd_query->type = query_types[0];
+         dd_query->query = query;
+         query = (struct pipe_query *)dd_query;
+      } else {
+         pipe->destroy_query(pipe, query);
+         query = NULL;
+      }
+   }
+
+   return query;
+}
+
 static void
 dd_context_destroy_query(struct pipe_context *_pipe,
                          struct pipe_query *query)
@@ -714,6 +740,7 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
 
    CTX_INIT(render_condition);
    CTX_INIT(create_query);
+   CTX_INIT(create_batch_query);
    CTX_INIT(destroy_query);
    CTX_INIT(begin_query);
    CTX_INIT(end_query);
