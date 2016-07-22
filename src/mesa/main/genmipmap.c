@@ -149,6 +149,11 @@ _mesa_generate_texture_mipmap(struct gl_context *ctx,
       return;
    }
 
+   if (srcImage->Width == 0 || srcImage->Height == 0) {
+      _mesa_unlock_texture(ctx, texObj);
+      return;
+   }
+
    if (target == GL_TEXTURE_CUBE_MAP) {
       GLuint face;
       for (face = 0; face < 6; face++) {
