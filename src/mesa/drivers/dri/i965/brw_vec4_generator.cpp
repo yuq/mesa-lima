@@ -1140,6 +1140,10 @@ generate_scratch_read(struct brw_codegen *p,
    else
       msg_type = BRW_DATAPORT_READ_MESSAGE_OWORD_DUAL_BLOCK_READ;
 
+   const unsigned target_cache = devinfo->gen >= 7 ?
+      BRW_DATAPORT_READ_TARGET_DATA_CACHE :
+      BRW_DATAPORT_READ_TARGET_RENDER_CACHE;
+
    /* Each of the 8 channel enables is considered for whether each
     * dword is written.
     */
@@ -1151,8 +1155,7 @@ generate_scratch_read(struct brw_codegen *p,
    brw_set_dp_read_message(p, send,
                            brw_scratch_surface_idx(p),
 			   BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
-			   msg_type,
-			   BRW_DATAPORT_READ_TARGET_RENDER_CACHE,
+			   msg_type, target_cache,
 			   2, /* mlen */
                            true, /* header_present */
 			   1 /* rlen */);
