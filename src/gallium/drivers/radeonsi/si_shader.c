@@ -6194,7 +6194,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			"LDS: %d blocks\n"
 			"Scratch: %d bytes per wave\n"
 			"Max Waves: %d\n"
-			"********************\n",
+			"********************\n\n\n",
 			conf->num_sgprs, conf->num_vgprs,
 			conf->spilled_sgprs, conf->spilled_vgprs, code_size,
 			conf->lds_size, conf->scratch_bytes_per_wave,
