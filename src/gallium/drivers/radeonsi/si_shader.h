@@ -488,7 +488,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug);
-void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f);
 int si_compile_llvm(struct si_screen *sscreen,
 		    struct radeon_shader_binary *binary,
 		    struct si_shader_config *conf,

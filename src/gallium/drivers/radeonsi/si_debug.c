@@ -40,7 +40,6 @@ static void si_dump_shader(struct si_screen *sscreen,
 	if (!state->cso || !state->current)
 		return;
 
-	si_dump_shader_key(state->cso->type, &state->current->key, f);
 	si_shader_dump(sscreen, state->current, NULL,
 		       state->cso->info.processor, f);
 }

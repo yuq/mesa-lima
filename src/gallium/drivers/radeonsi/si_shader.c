@@ -151,6 +151,9 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 				 struct lp_build_tgsi_context *bld_base,
 				 struct lp_build_emit_data *emit_data);
 
+static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
+			       FILE *f);
+
 /* Ideally pass the sample mask input to the PS epilog as v13, which
  * is its usual location, so that the shader doesn't have to add v_mov.
  */
@@ -6244,6 +6247,10 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor,
 		    FILE *file)
 {
+	if (file != stderr ||
+	    r600_can_dump_shader(&sscreen->b, processor))
+		si_dump_shader_key(processor, &shader->key, file);
+
 	if (file != stderr && shader->binary.llvm_ir_string) {
 		fprintf(file, "\n%s - main shader part - LLVM IR:\n\n",
 			si_get_shader_name(shader, processor));
@@ -6440,7 +6447,8 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	return r;
 }
 
-void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
+static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
+			       FILE *f)
 {
 	int i;
 
@@ -6613,8 +6621,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	 * conversion fails. */
 	if (r600_can_dump_shader(&sscreen->b, sel->info.processor) &&
 	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
-		if (is_monolithic)
-			si_dump_shader_key(sel->type, &shader->key, stderr);
 		tgsi_dump(sel->tokens, 0);
 		si_dump_streamout(&sel->so);
 	}
