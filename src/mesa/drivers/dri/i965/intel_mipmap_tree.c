@@ -3016,12 +3016,15 @@ get_isl_dim_layout(const struct brw_device_info *devinfo, uint32_t tiling,
    case GL_TEXTURE_2D:
    case GL_TEXTURE_2D_ARRAY:
    case GL_TEXTURE_RECTANGLE:
-   case GL_TEXTURE_CUBE_MAP:
-   case GL_TEXTURE_CUBE_MAP_ARRAY:
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
    case GL_TEXTURE_EXTERNAL_OES:
       return ISL_DIM_LAYOUT_GEN4_2D;
+
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+      return (devinfo->gen == 4 ? ISL_DIM_LAYOUT_GEN4_3D :
+              ISL_DIM_LAYOUT_GEN4_2D);
 
    case GL_TEXTURE_3D:
       return (devinfo->gen >= 9 ?
