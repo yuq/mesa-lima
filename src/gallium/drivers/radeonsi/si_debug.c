@@ -37,11 +37,16 @@ DEBUG_GET_ONCE_OPTION(replace_shaders, "RADEON_REPLACE_SHADERS", NULL)
 static void si_dump_shader(struct si_screen *sscreen,
 			   struct si_shader_ctx_state *state, FILE *f)
 {
-	if (!state->cso || !state->current)
+	struct si_shader *current = state->current;
+
+	if (!state->cso || !current)
 		return;
 
-	si_shader_dump(sscreen, state->current, NULL,
-		       state->cso->info.processor, f);
+	if (current->shader_log)
+		fwrite(current->shader_log, current->shader_log_size, 1, f);
+	else
+		si_shader_dump(sscreen, state->current, NULL,
+			       state->cso->info.processor, f);
 }
 
 /**

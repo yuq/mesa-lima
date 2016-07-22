@@ -7951,4 +7951,6 @@ void si_shader_destroy(struct si_shader *shader)
 
 	if (!shader->is_binary_shared)
 		radeon_shader_binary_clean(&shader->binary);
+
+	free(shader->shader_log);
 }

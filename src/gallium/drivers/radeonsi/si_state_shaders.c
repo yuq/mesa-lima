@@ -992,7 +992,8 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 				     union si_shader_key *key,
 				     LLVMTargetMachineRef tm,
 				     struct pipe_debug_callback *debug,
-				     bool wait)
+				     bool wait,
+				     bool is_debug_context)
 {
 	struct si_shader_selector *sel = state->cso;
 	struct si_shader *current = state->current;
@@ -1043,6 +1044,16 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 		pipe_mutex_unlock(sel->mutex);
 		return r;
 	}
+
+	if (is_debug_context) {
+		FILE *f = open_memstream(&shader->shader_log,
+					 &shader->shader_log_size);
+		if (f) {
+			si_shader_dump(sscreen, shader, NULL, sel->type, f);
+			fclose(f);
+		}
+	}
+
 	si_shader_init_pm4_state(sscreen, shader);
 
 	if (!sel->last_variant) {
@@ -1065,7 +1076,8 @@ static int si_shader_select(struct pipe_context *ctx,
 
 	si_shader_selector_key(ctx, state->cso, &key);
 	return si_shader_select_with_key(sctx->screen, state, &key,
-					 sctx->tm, &sctx->b.debug, true);
+					 sctx->tm, &sctx->b.debug, true,
+					 sctx->is_debug);
 }
 
 static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
@@ -1190,7 +1202,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		}
 
 		if (si_shader_select_with_key(sscreen, &state, &key, tm, debug,
-					      false))
+					      false, sel->is_debug_context))
 			fprintf(stderr, "radeonsi: can't create a monolithic shader\n");
 	}
 }
@@ -1209,6 +1221,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	sel->screen = sscreen;
 	sel->tm = sctx->tm;
 	sel->debug = sctx->b.debug;
+	sel->is_debug_context = sctx->is_debug;
 	sel->tokens = tgsi_dup_tokens(state->tokens);
 	if (!sel->tokens) {
 		FREE(sel);
@@ -1325,6 +1338,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	util_queue_fence_init(&sel->ready);
 
 	if ((sctx->b.debug.debug_message && !sctx->b.debug.async) ||
+	    sctx->is_debug ||
 	    r600_can_dump_shader(&sscreen->b, sel->info.processor) ||
 	    !util_queue_is_initialized(&sscreen->shader_compiler_queue))
 		si_init_shader_selector_async(sel, -1);

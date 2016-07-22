@@ -240,6 +240,7 @@ struct si_shader_selector {
 	 * if thread_index == -1 (non-threaded). */
 	LLVMTargetMachineRef	tm;
 	struct pipe_debug_callback debug;
+	bool			is_debug_context;
 
 	pipe_mutex		mutex;
 	struct si_shader	*first_variant; /* immutable after the first variant */
@@ -438,6 +439,12 @@ struct si_shader {
 	struct radeon_shader_binary	binary;
 	struct si_shader_config		config;
 	struct si_shader_info		info;
+
+	/* Shader key + LLVM IR + disassembly + statistics.
+	 * Generated for debug contexts only.
+	 */
+	char				*shader_log;
+	size_t				shader_log_size;
 };
 
 struct si_shader_part {
