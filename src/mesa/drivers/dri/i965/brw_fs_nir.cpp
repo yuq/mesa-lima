@@ -3315,6 +3315,26 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       break;
    }
 
+   case nir_intrinsic_load_output: {
+      const unsigned l = GET_FIELD(nir_intrinsic_base(instr),
+                                   BRW_NIR_FRAG_OUTPUT_LOCATION);
+      assert(l >= FRAG_RESULT_DATA0);
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
+      assert(const_offset && "Indirect output loads not allowed");
+      const unsigned target = l - FRAG_RESULT_DATA0 + const_offset->u32[0];
+      const fs_reg tmp = bld.vgrf(dest.type, 4);
+
+      assert(!reinterpret_cast<const brw_wm_prog_key *>(key)->coherent_fb_fetch);
+      emit_non_coherent_fb_read(bld, tmp, target);
+
+      for (unsigned j = 0; j < instr->num_components; j++) {
+         bld.MOV(offset(dest, bld, j),
+                 offset(tmp, bld, nir_intrinsic_component(instr) + j));
+      }
+
+      break;
+   }
+
    case nir_intrinsic_discard:
    case nir_intrinsic_discard_if: {
       /* We track our discarded pixels in f0.1.  By predicating on it, we can
