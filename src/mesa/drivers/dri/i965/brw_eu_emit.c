@@ -2408,6 +2408,34 @@ void brw_fb_WRITE(struct brw_codegen *p,
 			    0 /* send_commit_msg */);
 }
 
+brw_inst *
+gen9_fb_READ(struct brw_codegen *p,
+             struct brw_reg dst,
+             struct brw_reg payload,
+             unsigned binding_table_index,
+             unsigned msg_length,
+             unsigned response_length,
+             bool per_sample)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   assert(devinfo->gen >= 9);
+   const unsigned msg_subtype =
+      brw_inst_exec_size(devinfo, p->current) == BRW_EXECUTE_16 ? 0 : 1;
+   brw_inst *insn = next_insn(p, BRW_OPCODE_SENDC);
+
+   brw_set_dest(p, insn, dst);
+   brw_set_src0(p, insn, payload);
+   brw_set_dp_read_message(p, insn, binding_table_index,
+                           per_sample << 5 | msg_subtype,
+                           GEN9_DATAPORT_RC_RENDER_TARGET_READ,
+                           BRW_DATAPORT_READ_TARGET_RENDER_CACHE,
+                           msg_length, true /* header_present */,
+                           response_length);
+   brw_inst_set_rt_slot_group(devinfo, insn,
+                              brw_inst_qtr_control(devinfo, p->current) / 2);
+
+   return insn;
+}
 
 /**
  * Texture sample instruction.

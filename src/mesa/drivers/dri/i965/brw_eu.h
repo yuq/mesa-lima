@@ -292,6 +292,14 @@ void brw_fb_WRITE(struct brw_codegen *p,
 		   bool last_render_target,
 		   bool header_present);
 
+brw_inst *gen9_fb_READ(struct brw_codegen *p,
+                       struct brw_reg dst,
+                       struct brw_reg payload,
+                       unsigned binding_table_index,
+                       unsigned msg_length,
+                       unsigned response_length,
+                       bool per_sample);
+
 void brw_SAMPLE(struct brw_codegen *p,
 		struct brw_reg dest,
 		unsigned msg_reg_nr,

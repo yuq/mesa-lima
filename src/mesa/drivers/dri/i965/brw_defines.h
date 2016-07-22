@@ -1777,6 +1777,10 @@ enum brw_message_target {
 #define HSW_DATAPORT_DC_PORT1_ATOMIC_COUNTER_OP_SIMD4X2             12
 #define HSW_DATAPORT_DC_PORT1_TYPED_SURFACE_WRITE                   13
 
+/* GEN9 */
+#define GEN9_DATAPORT_RC_RENDER_TARGET_WRITE                        12
+#define GEN9_DATAPORT_RC_RENDER_TARGET_READ                         13
+
 /* Dataport special binding table indices: */
 #define BRW_BTI_STATELESS                255
 #define GEN7_BTI_SLM                     254
