@@ -340,6 +340,10 @@ lower_interpolate_at(nir_intrinsic_instr *intrin, struct lower_io_state *state,
 
    assert(var->data.mode == nir_var_shader_in);
 
+   /* Ignore interpolateAt() for flat variables - flat is flat. */
+   if (var->data.interpolation == INTERP_MODE_FLAT)
+      return lower_load(intrin, state, NULL, offset);
+
    nir_intrinsic_op bary_op;
    switch (intrin->intrinsic) {
    case nir_intrinsic_interp_var_at_centroid:
