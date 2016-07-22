@@ -759,23 +759,12 @@ gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
 
    /* 3DSTATE_HIER_DEPTH_BUFFER */
    {
-      struct intel_mipmap_tree *hiz_mt = params->depth.mt->hiz_buf->mt;
-      uint32_t offset = 0;
-
-      if (hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
-         const unsigned lod = params->depth.view.base_level;
-         offset = intel_miptree_get_aligned_offset(hiz_mt,
-                                                   hiz_mt->level[lod].level_x,
-                                                   hiz_mt->level[lod].level_y,
-                                                   false);
-      }
-
       BEGIN_BATCH(3);
       OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
-      OUT_BATCH(hiz_mt->pitch - 1);
-      OUT_RELOC(hiz_mt->bo,
+      OUT_BATCH(params->depth.aux_surf.row_pitch - 1);
+      OUT_RELOC(params->depth.aux_bo,
                 I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                offset);
+                params->depth.aux_offset);
       ADVANCE_BATCH();
    }
 
@@ -835,7 +824,7 @@ gen6_blorp_emit_clear_params(struct brw_context *brw,
    OUT_BATCH(_3DSTATE_CLEAR_PARAMS << 16 |
 	     GEN5_DEPTH_CLEAR_VALID |
 	     (2 - 2));
-   OUT_BATCH(params->depth.mt ? params->depth.mt->depth_clear_value : 0);
+   OUT_BATCH(params->depth.clear_color.u32[0]);
    ADVANCE_BATCH();
 }
 

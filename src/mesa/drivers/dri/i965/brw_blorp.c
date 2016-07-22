@@ -105,6 +105,28 @@ blorp_get_image_offset_sa(struct isl_device *dev, const struct isl_surf *surf,
    }
 }
 
+static void
+apply_gen6_stencil_hiz_offset(struct isl_surf *surf,
+                              struct intel_mipmap_tree *mt,
+                              uint32_t lod,
+                              uint32_t *offset)
+{
+   assert(mt->array_layout == ALL_SLICES_AT_EACH_LOD);
+
+   *offset = intel_miptree_get_aligned_offset(mt,
+                                              mt->level[lod].level_x,
+                                              mt->level[lod].level_y,
+                                              false);
+
+   surf->logical_level0_px.width = minify(surf->logical_level0_px.width, lod);
+   surf->logical_level0_px.height = minify(surf->logical_level0_px.height, lod);
+   surf->phys_level0_sa.width = minify(surf->phys_level0_sa.width, lod);
+   surf->phys_level0_sa.height = minify(surf->phys_level0_sa.height, lod);
+   surf->levels = 1;
+   surf->array_pitch_el_rows =
+      ALIGN(surf->phys_level0_sa.height, surf->image_alignment_el.height);
+}
+
 void
 brw_blorp_surface_info_init(struct brw_context *brw,
                             struct brw_blorp_surface_info *info,
@@ -125,7 +147,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
 
    intel_miptree_check_level_layer(mt, level, layer);
 
-   info->mt = mt;
    if (is_render_target)
       intel_miptree_used_for_rendering(mt);
 
@@ -133,24 +154,51 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    info->bo = mt->bo;
    info->offset = mt->offset;
 
-   if (mt->mcs_mt &&
-       (is_render_target ||
-        mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED)) {
-      intel_miptree_get_aux_isl_surf(brw, mt, &info->aux_surf,
-                                     &info->aux_usage);
-      info->aux_bo = mt->mcs_mt->bo;
-      info->aux_offset = mt->mcs_mt->offset;
+   intel_miptree_get_aux_isl_surf(brw, mt, &info->aux_surf,
+                                  &info->aux_usage);
 
+   /* For textures that are in the RESOLVED state, we ignore the MCS */
+   if (mt->mcs_mt && !is_render_target &&
+       mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED)
+      info->aux_usage = ISL_AUX_USAGE_NONE;
+
+   if (info->aux_usage != ISL_AUX_USAGE_NONE) {
       /* We only really need a clear color if we also have an auxiliary
        * surface.  Without one, it does nothing.
        */
       info->clear_color = intel_miptree_get_isl_clear_color(brw, mt);
+
+      if (mt->mcs_mt) {
+         info->aux_bo = mt->mcs_mt->bo;
+         info->aux_offset = mt->mcs_mt->offset;
+      } else {
+         assert(info->aux_usage == ISL_AUX_USAGE_HIZ);
+         struct intel_mipmap_tree *hiz_mt = mt->hiz_buf->mt;
+         if (hiz_mt) {
+            info->aux_bo = hiz_mt->bo;
+            if (brw->gen == 6 &&
+                hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
+               /* gen6 requires the HiZ buffer to be manually offset to the
+                * right location.  We could fixup the surf but it doesn't
+                * matter since most of those fields don't matter.
+                */
+               apply_gen6_stencil_hiz_offset(&info->aux_surf, hiz_mt, level,
+                                             &info->aux_offset);
+            } else {
+               info->aux_offset = 0;
+            }
+            assert(hiz_mt->pitch == info->aux_surf.row_pitch);
+         } else {
+            info->aux_bo = mt->hiz_buf->bo;
+            info->aux_offset = 0;
+         }
+      }
    } else {
-      info->aux_usage = ISL_AUX_USAGE_NONE;
       info->aux_bo = NULL;
       info->aux_offset = 0;
       memset(&info->clear_color, 0, sizeof(info->clear_color));
    }
+   assert((info->aux_usage == ISL_AUX_USAGE_NONE) == (info->aux_bo == NULL));
 
    info->view = (struct isl_view) {
       .usage = is_render_target ? ISL_SURF_USAGE_RENDER_TARGET_BIT :

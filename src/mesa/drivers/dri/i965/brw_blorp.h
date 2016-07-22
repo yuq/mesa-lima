@@ -69,8 +69,6 @@ enum {
 
 struct brw_blorp_surface_info
 {
-   struct intel_mipmap_tree *mt;
-
    struct isl_surf surf;
    drm_intel_bo *bo;
    uint32_t offset;
