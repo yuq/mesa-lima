@@ -3283,6 +3283,21 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       break;
    }
 
+   case nir_intrinsic_store_output: {
+      const fs_reg src = get_nir_src(instr->src[0]);
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
+      assert(const_offset && "Indirect output stores not allowed");
+      const fs_reg new_dest = offset(retype(nir_outputs, src.type), bld,
+                                     nir_intrinsic_base(instr) +
+                                     const_offset->u32[0]);
+
+      for (unsigned j = 0; j < instr->num_components; j++)
+         bld.MOV(offset(new_dest, bld, nir_intrinsic_component(instr) + j),
+                 offset(src, bld, j));
+
+      break;
+   }
+
    case nir_intrinsic_discard:
    case nir_intrinsic_discard_if: {
       /* We track our discarded pixels in f0.1.  By predicating on it, we can
