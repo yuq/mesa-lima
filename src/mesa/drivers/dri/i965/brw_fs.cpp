@@ -6176,7 +6176,8 @@ fs_visitor::run_fs(bool allow_spilling, bool do_rep_send)
          emit_shader_time_begin();
 
       calculate_urb_setup();
-      if (nir->info.inputs_read > 0) {
+      if (nir->info.inputs_read > 0 ||
+          (nir->info.outputs_read > 0 && !wm_key->coherent_fb_fetch)) {
          if (devinfo->gen < 6)
             emit_interpolation_setup_gen4();
          else
