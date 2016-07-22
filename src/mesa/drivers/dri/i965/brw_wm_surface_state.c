@@ -79,11 +79,56 @@ brw_emit_surface_state(struct brw_context *brw,
                        uint32_t mocs, uint32_t *surf_offset, int surf_index,
                        unsigned read_domains, unsigned write_domains)
 {
-   assert(mt->target == target);
    const struct surface_state_info ss_info = surface_state_infos[brw->gen];
+   uint32_t tile_x = 0, tile_y = 0;
+   uint32_t offset = mt->offset;
 
    struct isl_surf surf;
    intel_miptree_get_isl_surf(brw, mt, &surf);
+
+   surf.dim = get_isl_surf_dim(target);
+
+   const enum isl_dim_layout dim_layout =
+      get_isl_dim_layout(brw->intelScreen->devinfo, mt->tiling, target);
+
+   if (surf.dim_layout != dim_layout) {
+      /* The layout of the specified texture target is not compatible with the
+       * actual layout of the miptree structure in memory -- You're entering
+       * dangerous territory, this can only possibly work if you only intended
+       * to access a single level and slice of the texture, and the hardware
+       * supports the tile offset feature in order to allow non-tile-aligned
+       * base offsets, since we'll have to point the hardware to the first
+       * texel of the level instead of relying on the usual base level/layer
+       * controls.
+       */
+      assert(brw->has_surface_tile_offset);
+      assert(view.levels == 1 && view.array_len == 1);
+
+      offset += intel_miptree_get_tile_offsets(mt, view.base_level,
+                                               view.base_array_layer,
+                                               &tile_x, &tile_y);
+
+      /* Minify the logical dimensions of the texture. */
+      const unsigned l = view.base_level - mt->first_level;
+      surf.logical_level0_px.width = minify(surf.logical_level0_px.width, l);
+      surf.logical_level0_px.height = surf.dim <= ISL_SURF_DIM_1D ? 1 :
+         minify(surf.logical_level0_px.height, l);
+      surf.logical_level0_px.depth = surf.dim <= ISL_SURF_DIM_2D ? 1 :
+         minify(surf.logical_level0_px.depth, l);
+
+      /* Only the base level and layer can be addressed with the overridden
+       * layout.
+       */
+      surf.logical_level0_px.array_len = 1;
+      surf.levels = 1;
+      surf.dim_layout = dim_layout;
+
+      /* The requested slice of the texture is now at the base level and
+       * layer.
+       */
+      view.base_level = 0;
+      view.base_array_layer = 0;
+   }
 
    union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
 
@@ -109,14 +154,15 @@ brw_emit_surface_state(struct brw_context *brw,
                                     surf_index, surf_offset);
 
    isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &view,
-                       .address = mt->bo->offset64 + mt->offset,
+                       .address = mt->bo->offset64 + offset,
                        .aux_surf = aux_surf, .aux_usage = aux_usage,
                        .aux_address = aux_offset,
-                       .mocs = mocs, .clear_color = clear_color);
+                       .mocs = mocs, .clear_color = clear_color,
+                       .x_offset_sa = tile_x, .y_offset_sa = tile_y);
 
    drm_intel_bo_emit_reloc(brw->batch.bo,
                            *surf_offset + 4 * ss_info.reloc_dw,
-                           mt->bo, mt->offset,
+                           mt->bo, offset,
                            read_domains, write_domains);
 
    if (aux_surf) {
