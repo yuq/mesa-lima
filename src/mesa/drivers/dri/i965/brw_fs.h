@@ -244,6 +244,8 @@ public:
                                  fs_reg color1, fs_reg color2,
                                  fs_reg src0_alpha, unsigned components);
    void emit_fb_writes();
+   fs_inst *emit_non_coherent_fb_read(const brw::fs_builder &bld,
+                                      const fs_reg &dst, unsigned target);
    void emit_urb_writes(const fs_reg &gs_vertex_count = fs_reg());
    void set_gs_stream_control_data_bits(const fs_reg &vertex_count,
                                         unsigned stream_id);

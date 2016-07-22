@@ -3155,6 +3155,98 @@ fs_visitor::nir_emit_gs_intrinsic(const fs_builder &bld,
    }
 }
 
+/**
+ * Fetch the current render target layer index.
+ */
+static fs_reg
+fetch_render_target_array_index(const fs_builder &bld)
+{
+   if (bld.shader->devinfo->gen >= 6) {
+      /* The render target array index is provided in the thread payload as
+       * bits 26:16 of r0.0.
+       */
+      const fs_reg idx = bld.vgrf(BRW_REGISTER_TYPE_UD);
+      bld.AND(idx, brw_uw1_reg(BRW_GENERAL_REGISTER_FILE, 0, 1),
+              brw_imm_uw(0x7ff));
+      return idx;
+   } else {
+      /* Pre-SNB we only ever render into the first layer of the framebuffer
+       * since layered rendering is not implemented.
+       */
+      return brw_imm_ud(0);
+   }
+}
+
+/**
+ * Fake non-coherent framebuffer read implemented using TXF to fetch from the
+ * framebuffer at the current fragment coordinates and sample index.
+ */
+fs_inst *
+fs_visitor::emit_non_coherent_fb_read(const fs_builder &bld, const fs_reg &dst,
+                                      unsigned target)
+{
+   const struct brw_device_info *devinfo = bld.shader->devinfo;
+
+   assert(bld.shader->stage == MESA_SHADER_FRAGMENT);
+   const brw_wm_prog_key *wm_key =
+      reinterpret_cast<const brw_wm_prog_key *>(key);
+   assert(!wm_key->coherent_fb_fetch);
+   const brw_wm_prog_data *wm_prog_data =
+      reinterpret_cast<const brw_wm_prog_data *>(stage_prog_data);
+
+   /* Calculate the surface index relative to the start of the texture binding
+    * table block, since that's what the texturing messages expect.
+    */
+   const unsigned surface = target +
+      wm_prog_data->binding_table.render_target_read_start -
+      wm_prog_data->base.binding_table.texture_start;
+
+   brw_mark_surface_used(
+      bld.shader->stage_prog_data,
+      wm_prog_data->binding_table.render_target_read_start + target);
+
+   /* Calculate the fragment coordinates. */
+   const fs_reg coords = bld.vgrf(BRW_REGISTER_TYPE_UD, 3);
+   bld.MOV(offset(coords, bld, 0), pixel_x);
+   bld.MOV(offset(coords, bld, 1), pixel_y);
+   bld.MOV(offset(coords, bld, 2), fetch_render_target_array_index(bld));
+
+   /* Calculate the sample index and MCS payload when multisampling.  Luckily
+    * the MCS fetch message behaves deterministically for UMS surfaces, so it
+    * shouldn't be necessary to recompile based on whether the framebuffer is
+    * CMS or UMS.
+    */
+   if (wm_key->multisample_fbo &&
+       nir_system_values[SYSTEM_VALUE_SAMPLE_ID].file == BAD_FILE)
+      nir_system_values[SYSTEM_VALUE_SAMPLE_ID] = *emit_sampleid_setup();
+
+   const fs_reg sample = nir_system_values[SYSTEM_VALUE_SAMPLE_ID];
+   const fs_reg mcs = wm_key->multisample_fbo ?
+      emit_mcs_fetch(coords, 3, brw_imm_ud(surface)) : fs_reg();
+
+   /* Use either a normal or a CMS texel fetch message depending on whether
+    * the framebuffer is single or multisample.  On SKL+ use the wide CMS
+    * message just in case the framebuffer uses 16x multisampling, it should
+    * be equivalent to the normal CMS fetch for lower multisampling modes.
+    */
+   const opcode op = !wm_key->multisample_fbo ? SHADER_OPCODE_TXF_LOGICAL :
+                     devinfo->gen >= 9 ? SHADER_OPCODE_TXF_CMS_W_LOGICAL :
+                     SHADER_OPCODE_TXF_CMS_LOGICAL;
+
+   /* Emit the instruction. */
+   const fs_reg srcs[] = { coords, fs_reg(), brw_imm_ud(0), fs_reg(),
+                           sample, mcs,
+                           brw_imm_ud(surface), brw_imm_ud(0),
+                           fs_reg(), brw_imm_ud(3), brw_imm_ud(0) };
+   STATIC_ASSERT(ARRAY_SIZE(srcs) == TEX_LOGICAL_NUM_SRCS);
+
+   fs_inst *inst = bld.emit(op, dst, srcs, ARRAY_SIZE(srcs));
+   inst->regs_written = 4 * inst->dst.component_size(inst->exec_size) /
+                        REG_SIZE;
+
+   return inst;
+}
+
 void
 fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
                                   nir_intrinsic_instr *instr)
