@@ -29,7 +29,7 @@
   *   Keith Whitwell <keithw@vmware.com>
   */
 
-#define INTEL_MASK(high, low) (((1<<((high)-(low)+1))-1)<<(low))
+#define INTEL_MASK(high, low) (((1u<<((high)-(low)+1))-1)<<(low))
 /* Using the GNU statement expression extension */
 #define SET_FIELD(value, field)                                         \
    ({                                                                   \
