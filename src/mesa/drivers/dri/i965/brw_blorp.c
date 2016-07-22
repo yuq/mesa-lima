@@ -126,8 +126,12 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    intel_miptree_check_level_layer(mt, level, layer);
 
    info->mt = mt;
+   if (is_render_target)
+      intel_miptree_used_for_rendering(mt);
 
    intel_miptree_get_isl_surf(brw, mt, &info->surf);
+   info->bo = mt->bo;
+   info->offset = mt->offset;
 
    if (mt->mcs_mt) {
       intel_miptree_get_aux_isl_surf(brw, mt, &info->aux_surf,
@@ -362,7 +366,7 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
    const uint32_t mocs = is_render_target ? ss_info.rb_mocs : ss_info.tex_mocs;
 
    isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &surface->view,
-                       .address = surface->mt->bo->offset64 + surface->bo_offset,
+                       .address = surface->bo->offset64 + surface->offset,
                        .aux_surf = aux_surf, .aux_usage = surface->aux_usage,
                        .aux_address = aux_offset,
                        .mocs = mocs, .clear_color = clear_color,
@@ -372,8 +376,8 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
    /* Emit relocation to surface contents */
    drm_intel_bo_emit_reloc(brw->batch.bo,
                            surf_offset + ss_info.reloc_dw * 4,
-                           surface->mt->bo,
-                           dw[ss_info.reloc_dw] - surface->mt->bo->offset64,
+                           surface->bo,
+                           dw[ss_info.reloc_dw] - surface->bo->offset64,
                            read_domains, write_domain);
 
    if (aux_surf) {

@@ -1607,11 +1607,13 @@ surf_convert_to_single_slice(struct brw_context *brw,
                              info->view.base_array_layer,
                              &x_offset_sa, &y_offset_sa);
 
+   uint32_t byte_offset;
    isl_tiling_get_intratile_offset_sa(&brw->isl_dev, info->surf.tiling,
                                       info->view.format, info->surf.row_pitch,
                                       x_offset_sa, y_offset_sa,
-                                      &info->bo_offset,
+                                      &byte_offset,
                                       &info->tile_x_sa, &info->tile_y_sa);
+   info->offset += byte_offset;
 
    /* TODO: Once this file gets converted to C, we shouls just use designated
     * initializers.

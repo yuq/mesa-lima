@@ -297,7 +297,7 @@ gen8_blorp_emit_ps_config(struct brw_context *brw,
    dw3 = dw5 = dw6 = dw7 = ksp0 = ksp2 = 0;
    dw3 |= GEN7_PS_VECTOR_MASK_ENABLE;
 
-   if (params->src.mt) {
+   if (params->src.bo) {
       dw3 |= 1 << GEN7_PS_SAMPLER_COUNT_SHIFT; /* Up to 4 samplers */
       dw3 |= 2 << GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT; /* Two surfaces */
    } else {
@@ -362,7 +362,7 @@ gen8_blorp_emit_ps_extra(struct brw_context *brw,
 
    dw1 |= GEN8_PSX_PIXEL_SHADER_VALID;
 
-   if (params->src.mt)
+   if (params->src.bo)
       dw1 |= GEN8_PSX_KILL_ENABLE;
 
    if (params->wm_prog_data->num_varying_inputs)
@@ -482,14 +482,12 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
    uint32_t wm_surf_offset_renderbuffer;
    uint32_t wm_surf_offset_texture = 0;
 
-   intel_miptree_used_for_rendering(params->dst.mt);
-
    wm_surf_offset_renderbuffer =
       brw_blorp_emit_surface_state(brw, &params->dst,
                                    I915_GEM_DOMAIN_RENDER,
                                    I915_GEM_DOMAIN_RENDER,
                                    true /* is_render_target */);
-   if (params->src.mt) {
+   if (params->src.bo) {
       wm_surf_offset_texture =
          brw_blorp_emit_surface_state(brw, &params->src,
                                       I915_GEM_DOMAIN_SAMPLER, 0,
@@ -533,7 +531,7 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
 
    gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
 
-   if (params->src.mt) {
+   if (params->src.bo) {
       const uint32_t sampler_offset =
          gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
       gen7_blorp_emit_sampler_state_pointers_ps(brw, sampler_offset);

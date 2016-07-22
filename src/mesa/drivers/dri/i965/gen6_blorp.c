@@ -634,7 +634,7 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
          dw5 |= GEN6_WM_16_DISPATCH_ENABLE;
    }
 
-   if (params->src.mt) {
+   if (params->src.bo) {
       dw5 |= GEN6_WM_KILL_ENABLE; /* TODO: temporarily smash on */
       dw2 |= 1 << GEN6_WM_SAMPLER_COUNT_SHIFT; /* Up to 4 samplers */
    }
@@ -700,20 +700,16 @@ gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
                                      const struct brw_blorp_params *params)
 {
    uint32_t surftype;
-   GLenum gl_target = params->depth.mt->target;
 
-   switch (gl_target) {
-   case GL_TEXTURE_CUBE_MAP_ARRAY:
-   case GL_TEXTURE_CUBE_MAP:
-      /* The PRM claims that we should use BRW_SURFACE_CUBE for this
-       * situation, but experiments show that gl_Layer doesn't work when we do
-       * this.  So we use BRW_SURFACE_2D, since for rendering purposes this is
-       * equivalent.
-       */
+   switch (params->depth.surf.dim) {
+   case ISL_SURF_DIM_1D:
+      surftype = BRW_SURFACE_1D;
+      break;
+   case ISL_SURF_DIM_2D:
       surftype = BRW_SURFACE_2D;
       break;
-   default:
-      surftype = translate_tex_target(gl_target);
+   case ISL_SURF_DIM_3D:
+      surftype = BRW_SURFACE_3D;
       break;
    }
 
@@ -738,9 +734,9 @@ gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
                 surftype << 29);
 
       /* 3DSTATE_DEPTH_BUFFER dw2 */
-      OUT_RELOC(params->depth.mt->bo,
+      OUT_RELOC(params->depth.bo,
                 I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                0);
+                params->depth.offset);
 
       /* 3DSTATE_DEPTH_BUFFER dw3 */
       OUT_BATCH(BRW_SURFACE_MIPMAPLAYOUT_BELOW << 1 |
@@ -940,12 +936,11 @@ gen6_blorp_exec(struct brw_context *brw,
       uint32_t wm_surf_offset_renderbuffer;
       uint32_t wm_surf_offset_texture = 0;
 
-      intel_miptree_used_for_rendering(params->dst.mt);
       wm_surf_offset_renderbuffer =
          brw_blorp_emit_surface_state(brw, &params->dst,
                                       I915_GEM_DOMAIN_RENDER,
                                       I915_GEM_DOMAIN_RENDER, true);
-      if (params->src.mt) {
+      if (params->src.bo) {
          wm_surf_offset_texture =
             brw_blorp_emit_surface_state(brw, &params->src,
                                          I915_GEM_DOMAIN_SAMPLER, 0, false);
@@ -956,7 +951,7 @@ gen6_blorp_exec(struct brw_context *brw,
                                        wm_surf_offset_texture);
    }
 
-   if (params->src.mt) {
+   if (params->src.bo) {
       const uint32_t sampler_offset =
          gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
       gen6_blorp_emit_sampler_state_pointers(brw, sampler_offset);
@@ -971,7 +966,7 @@ gen6_blorp_exec(struct brw_context *brw,
       gen6_blorp_emit_binding_table_pointers(brw, wm_bind_bo_offset);
    gen6_blorp_emit_viewport_state(brw, params);
 
-   if (params->depth.mt)
+   if (params->depth.bo)
       gen6_blorp_emit_depth_stencil_config(brw, params);
    else
       gen6_blorp_emit_depth_disable(brw, params);

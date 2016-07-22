@@ -72,6 +72,8 @@ struct brw_blorp_surface_info
    struct intel_mipmap_tree *mt;
 
    struct isl_surf surf;
+   drm_intel_bo *bo;
+   uint32_t offset;
 
    struct isl_surf aux_surf;
    enum isl_aux_usage aux_usage;
@@ -81,7 +83,6 @@ struct brw_blorp_surface_info
    /* Z offset into a 3-D texture or slice of a 2-D array texture. */
    uint32_t z_offset;
 
-   uint32_t bo_offset;
    uint32_t tile_x_sa, tile_y_sa;
 };
 
