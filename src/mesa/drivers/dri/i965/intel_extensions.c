@@ -281,7 +281,7 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.EXT_shader_integer_mix = ctx->Const.GLSLVersion >= 130;
    ctx->Extensions.MESA_shader_integer_functions = ctx->Const.GLSLVersion >= 130;
 
-   if ((brw->is_g4x || brw->gen >= 5) && brw->gen < 9)
+   if (brw->is_g4x || brw->gen >= 5)
       ctx->Extensions.MESA_shader_framebuffer_fetch_non_coherent = true;
 
    if (brw->gen >= 5) {
@@ -400,6 +400,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.KHR_texture_compression_astc_ldr = true;
       ctx->Extensions.KHR_texture_compression_astc_sliced_3d = true;
       ctx->Extensions.ARB_shader_stencil_export = true;
+      ctx->Extensions.MESA_shader_framebuffer_fetch = true;
    }
 
    if (ctx->API == API_OPENGL_CORE)
