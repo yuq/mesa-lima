@@ -549,6 +549,9 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 
    /* The unique fragment program ID */
    key->program_string_id = fp->id;
+
+   /* Whether reads from the framebuffer should behave coherently. */
+   key->coherent_fb_fetch = ctx->Extensions.MESA_shader_framebuffer_fetch;
 }
 
 void
@@ -612,6 +615,9 @@ brw_fs_precompile(struct gl_context *ctx,
            BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
 
    key.program_string_id = bfp->id;
+
+   /* Whether reads from the framebuffer should behave coherently. */
+   key.coherent_fb_fetch = ctx->Extensions.MESA_shader_framebuffer_fetch;
 
    uint32_t old_prog_offset = brw->wm.base.prog_offset;
    struct brw_wm_prog_data *old_prog_data = brw->wm.prog_data;
