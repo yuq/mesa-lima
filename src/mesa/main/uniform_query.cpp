@@ -578,14 +578,31 @@ _mesa_propagate_uniforms_to_driver_storage(struct gl_uniform_storage *uni,
 	 unsigned j;
 	 unsigned v;
 
-	 for (j = 0; j < count; j++) {
-	    for (v = 0; v < vectors; v++) {
-	       memcpy(dst, src, src_vector_byte_stride);
-	       src += src_vector_byte_stride;
-	       dst += store->vector_stride;
-	    }
+	 if (src_vector_byte_stride == store->vector_stride) {
+	    if (extra_stride) {
+	       for (j = 0; j < count; j++) {
+	          memcpy(dst, src, src_vector_byte_stride * vectors);
+	          src += src_vector_byte_stride * vectors;
+	          dst += store->vector_stride * vectors;
 
-	    dst += extra_stride;
+	          dst += extra_stride;
+	       }
+	    } else {
+	       /* Unigine Heaven benchmark gets here */
+	       memcpy(dst, src, src_vector_byte_stride * vectors * count);
+	       src += src_vector_byte_stride * vectors * count;
+	       dst += store->vector_stride * vectors * count;
+	    }
+	 } else {
+	    for (j = 0; j < count; j++) {
+	       for (v = 0; v < vectors; v++) {
+	          memcpy(dst, src, src_vector_byte_stride);
+	          src += src_vector_byte_stride;
+	          dst += store->vector_stride;
+	       }
+
+	       dst += extra_stride;
+	    }
 	 }
 	 break;
       }
