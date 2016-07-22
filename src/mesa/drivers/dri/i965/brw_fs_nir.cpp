@@ -4266,7 +4266,7 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
    if (op == BRW_AOP_CMPWR)
       data2 = get_nir_src(instr->src[3]);
 
-   /* Emit the actual atomic operation operation */
+   /* Emit the actual atomic operation */
 
    fs_reg atomic_result = emit_untyped_atomic(bld, surface, offset,
                                               data1, data2,
