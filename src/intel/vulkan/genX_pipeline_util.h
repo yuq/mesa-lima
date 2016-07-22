@@ -291,6 +291,11 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
       if (input_index < 0)
          continue;
 
+      if (attr == VARYING_SLOT_PNTC) {
+         sbe.PointSpriteTextureCoordinateEnable = 1 << input_index;
+         continue;
+      }
+
       const int slot = fs_input_map->varying_to_slot[attr];
 
       if (input_index >= 16)
