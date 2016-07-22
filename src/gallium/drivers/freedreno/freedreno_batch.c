@@ -265,6 +265,10 @@ batch_flush(struct fd_batch *batch)
 	if (batch->ctx->screen->reorder) {
 		struct fd_batch *tmp = NULL;
 		fd_batch_reference(&tmp, batch);
+
+		if (!util_queue_is_initialized(&batch->ctx->flush_queue))
+			util_queue_init(&batch->ctx->flush_queue, "flush_queue", 16, 1);
+
 		util_queue_add_job(&batch->ctx->flush_queue,
 				batch, &batch->flush_fence,
 				batch_flush_func, batch_cleanup_func);

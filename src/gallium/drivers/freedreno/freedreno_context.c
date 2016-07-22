@@ -184,8 +184,6 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	 */
 	if (!screen->reorder) {
 		ctx->batch = fd_bc_alloc_batch(&screen->batch_cache, ctx);
-	} else {
-		util_queue_init(&ctx->flush_queue, "flush_queue", 16, 1);
 	}
 
 	util_slab_create(&ctx->transfer_pool, sizeof(struct fd_transfer),
