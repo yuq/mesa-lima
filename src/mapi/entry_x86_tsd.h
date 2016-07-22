@@ -25,7 +25,7 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifdef HAVE_FUNC_ATTRIBUTE_VISIBIITY
+#ifdef HAVE_FUNC_ATTRIBUTE_VISIBILITY
 #define HIDDEN __attribute__((visibility("hidden")))
 #else
 #define HIDDEN
