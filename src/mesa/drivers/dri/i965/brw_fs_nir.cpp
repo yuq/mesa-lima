@@ -68,7 +68,7 @@ fs_visitor::nir_setup_single_output_varying(fs_reg *reg,
    } else {
       assert(type->is_scalar() || type->is_vector());
       unsigned num_iter = 1;
-      if (type->is_double())
+      if (type->is_dual_slot())
          num_iter = 2;
       for (unsigned count = 0; count < num_iter; count++) {
          this->outputs[*location] = *reg;
