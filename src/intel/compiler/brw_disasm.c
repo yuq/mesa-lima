@@ -1182,10 +1182,10 @@ qtr_ctrl(FILE *file, const struct gen_device_info *devinfo, brw_inst *inst)
 {
    int qtr_ctl = brw_inst_qtr_control(devinfo, inst);
    int exec_size = 1 << brw_inst_exec_size(devinfo, inst);
+   const unsigned nib_ctl = devinfo->gen < 7 ? 0 :
+                            brw_inst_nib_control(devinfo, inst);
 
-   if (exec_size < 8) {
-      const unsigned nib_ctl = devinfo->gen < 7 ? 0 :
-                               brw_inst_nib_control(devinfo, inst);
+   if (exec_size < 8 || nib_ctl) {
       format(file, " %dN", qtr_ctl * 2 + nib_ctl + 1);
    } else if (exec_size == 8) {
       switch (qtr_ctl) {
