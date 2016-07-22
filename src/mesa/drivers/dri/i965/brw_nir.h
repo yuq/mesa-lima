@@ -139,6 +139,11 @@ void brw_nir_setup_arb_uniforms(nir_shader *shader, struct gl_program *prog,
 
 bool brw_nir_opt_peephole_ffma(nir_shader *shader);
 
+#define BRW_NIR_FRAG_OUTPUT_INDEX_SHIFT 0
+#define BRW_NIR_FRAG_OUTPUT_INDEX_MASK INTEL_MASK(0, 0)
+#define BRW_NIR_FRAG_OUTPUT_LOCATION_SHIFT 1
+#define BRW_NIR_FRAG_OUTPUT_LOCATION_MASK INTEL_MASK(31, 1)
+
 #ifdef __cplusplus
 }
 #endif

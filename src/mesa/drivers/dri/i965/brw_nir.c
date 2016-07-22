@@ -339,9 +339,13 @@ brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue_map)
 void
 brw_nir_lower_fs_outputs(nir_shader *nir)
 {
-   nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
-                            FRAG_RESULT_DATA0, type_size_vec4_times_4);
-   nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4);
+   nir_foreach_variable(var, &nir->outputs) {
+      var->data.driver_location =
+         SET_FIELD(var->data.index, BRW_NIR_FRAG_OUTPUT_INDEX) |
+         SET_FIELD(var->data.location, BRW_NIR_FRAG_OUTPUT_LOCATION);
+   }
+
+   nir_lower_io(nir, nir_var_shader_out, type_size_dvec4);
 }
 
 void

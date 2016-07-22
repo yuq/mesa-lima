@@ -89,17 +89,19 @@ fs_visitor::nir_setup_outputs()
    nir_outputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_outputs);
 
    nir_foreach_variable(var, &nir->outputs) {
-      fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
-
       switch (stage) {
       case MESA_SHADER_VERTEX:
       case MESA_SHADER_TESS_EVAL:
       case MESA_SHADER_GEOMETRY: {
+         fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
          unsigned location = var->data.location;
          nir_setup_single_output_varying(&reg, var->type, &location);
          break;
       }
-      case MESA_SHADER_FRAGMENT:
+      case MESA_SHADER_FRAGMENT: {
+         const fs_reg reg = bld.vgrf(BRW_REGISTER_TYPE_F,
+                                     type_size_vec4_times_4(var->type));
+
          if (key->force_dual_color_blend &&
              var->data.location == FRAG_RESULT_DATA1) {
             this->dual_src_output = reg;
@@ -130,6 +132,7 @@ fs_visitor::nir_setup_outputs()
             }
          }
          break;
+      }
       default:
          unreachable("unhandled shader stage");
       }
@@ -3247,6 +3250,38 @@ fs_visitor::emit_non_coherent_fb_read(const fs_builder &bld, const fs_reg &dst,
    return inst;
 }
 
+static fs_reg
+get_frag_output(const fs_visitor *v, unsigned location)
+{
+   assert(v->stage == MESA_SHADER_FRAGMENT);
+   const brw_wm_prog_key *const key =
+      reinterpret_cast<const brw_wm_prog_key *>(v->key);
+   const unsigned l = GET_FIELD(location, BRW_NIR_FRAG_OUTPUT_LOCATION);
+   const unsigned i = GET_FIELD(location, BRW_NIR_FRAG_OUTPUT_INDEX);
+
+   if (i > 0 || (key->force_dual_color_blend && l == FRAG_RESULT_DATA1))
+      return v->dual_src_output;
+
+   else if (l == FRAG_RESULT_COLOR)
+      return v->outputs[0];
+
+   else if (l == FRAG_RESULT_DEPTH)
+      return v->frag_depth;
+
+   else if (l == FRAG_RESULT_STENCIL)
+      return v->frag_stencil;
+
+   else if (l == FRAG_RESULT_SAMPLE_MASK)
+      return v->sample_mask;
+
+   else if (l >= FRAG_RESULT_DATA0 &&
+            l < FRAG_RESULT_DATA0 + BRW_MAX_DRAW_BUFFERS)
+      return v->outputs[l - FRAG_RESULT_DATA0];
+
+   else
+      unreachable("Invalid location");
+}
+
 void
 fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
                                   nir_intrinsic_instr *instr)
@@ -3285,11 +3320,12 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
 
    case nir_intrinsic_store_output: {
       const fs_reg src = get_nir_src(instr->src[0]);
-      nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
+      const nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
       assert(const_offset && "Indirect output stores not allowed");
-      const fs_reg new_dest = offset(retype(nir_outputs, src.type), bld,
-                                     nir_intrinsic_base(instr) +
-                                     const_offset->u32[0]);
+      const unsigned location = nir_intrinsic_base(instr) +
+         SET_FIELD(const_offset->u32[0], BRW_NIR_FRAG_OUTPUT_LOCATION);
+      const fs_reg new_dest = retype(get_frag_output(this, location),
+                                     src.type);
 
       for (unsigned j = 0; j < instr->num_components; j++)
          bld.MOV(offset(new_dest, bld, nir_intrinsic_component(instr) + j),
