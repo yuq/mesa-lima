@@ -526,9 +526,6 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
           mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
          MAX2(mt->num_samples, 1) : 1;
 
-      const bool is_cube = mt->target == GL_TEXTURE_CUBE_MAP_ARRAY ||
-                           mt->target == GL_TEXTURE_CUBE_MAP;
-      const unsigned depth = (is_cube ? 6 : 1) * mt->logical_depth0;
       const unsigned layer = mt->target != GL_TEXTURE_3D ?
                                 surface->layer / layer_divider : 0;
 
@@ -537,7 +534,7 @@ gen8_blorp_emit_surface_states(struct brw_context *brw,
          .base_level = surface->level,
          .levels = mt->last_level - surface->level + 1,
          .base_array_layer = layer,
-         .array_len = depth - layer,
+         .array_len = mt->logical_depth0 - layer,
          .channel_select = {
             swizzle_to_scs(GET_SWZ(surface->swizzle, 0)),
             swizzle_to_scs(GET_SWZ(surface->swizzle, 1)),
