@@ -74,147 +74,147 @@ nvc0_fb_set_null_rt(struct nouveau_pushbuf *push, unsigned i, unsigned layers)
 static void
 nvc0_validate_fb(struct nvc0_context *nvc0)
 {
-    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-    struct pipe_framebuffer_state *fb = &nvc0->framebuffer;
-    struct nvc0_screen *screen = nvc0->screen;
-    unsigned i, ms;
-    unsigned ms_mode = NVC0_3D_MULTISAMPLE_MODE_MS1;
-    unsigned nr_cbufs = fb->nr_cbufs;
-    bool serialize = false;
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct pipe_framebuffer_state *fb = &nvc0->framebuffer;
+   struct nvc0_screen *screen = nvc0->screen;
+   unsigned i, ms;
+   unsigned ms_mode = NVC0_3D_MULTISAMPLE_MODE_MS1;
+   unsigned nr_cbufs = fb->nr_cbufs;
+   bool serialize = false;
 
-    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_FB);
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_FB);
 
-    BEGIN_NVC0(push, NVC0_3D(SCREEN_SCISSOR_HORIZ), 2);
-    PUSH_DATA (push, fb->width << 16);
-    PUSH_DATA (push, fb->height << 16);
+   BEGIN_NVC0(push, NVC0_3D(SCREEN_SCISSOR_HORIZ), 2);
+   PUSH_DATA (push, fb->width << 16);
+   PUSH_DATA (push, fb->height << 16);
 
-    for (i = 0; i < fb->nr_cbufs; ++i) {
-        struct nv50_surface *sf;
-        struct nv04_resource *res;
-        struct nouveau_bo *bo;
+   for (i = 0; i < fb->nr_cbufs; ++i) {
+      struct nv50_surface *sf;
+      struct nv04_resource *res;
+      struct nouveau_bo *bo;
 
-        if (!fb->cbufs[i]) {
-           nvc0_fb_set_null_rt(push, i, 0);
-           continue;
-        }
+      if (!fb->cbufs[i]) {
+         nvc0_fb_set_null_rt(push, i, 0);
+         continue;
+      }
 
-        sf = nv50_surface(fb->cbufs[i]);
-        res = nv04_resource(sf->base.texture);
-        bo = res->bo;
+      sf = nv50_surface(fb->cbufs[i]);
+      res = nv04_resource(sf->base.texture);
+      bo = res->bo;
 
-        BEGIN_NVC0(push, NVC0_3D(RT_ADDRESS_HIGH(i)), 9);
-        PUSH_DATAh(push, res->address + sf->offset);
-        PUSH_DATA (push, res->address + sf->offset);
-        if (likely(nouveau_bo_memtype(bo))) {
-           struct nv50_miptree *mt = nv50_miptree(sf->base.texture);
+      BEGIN_NVC0(push, NVC0_3D(RT_ADDRESS_HIGH(i)), 9);
+      PUSH_DATAh(push, res->address + sf->offset);
+      PUSH_DATA (push, res->address + sf->offset);
+      if (likely(nouveau_bo_memtype(bo))) {
+         struct nv50_miptree *mt = nv50_miptree(sf->base.texture);
 
-           assert(sf->base.texture->target != PIPE_BUFFER);
+         assert(sf->base.texture->target != PIPE_BUFFER);
 
-           PUSH_DATA(push, sf->width);
-           PUSH_DATA(push, sf->height);
-           PUSH_DATA(push, nvc0_format_table[sf->base.format].rt);
-           PUSH_DATA(push, (mt->layout_3d << 16) |
-                    mt->level[sf->base.u.tex.level].tile_mode);
-           PUSH_DATA(push, sf->base.u.tex.first_layer + sf->depth);
-           PUSH_DATA(push, mt->layer_stride >> 2);
-           PUSH_DATA(push, sf->base.u.tex.first_layer);
+         PUSH_DATA(push, sf->width);
+         PUSH_DATA(push, sf->height);
+         PUSH_DATA(push, nvc0_format_table[sf->base.format].rt);
+         PUSH_DATA(push, (mt->layout_3d << 16) |
+                          mt->level[sf->base.u.tex.level].tile_mode);
+         PUSH_DATA(push, sf->base.u.tex.first_layer + sf->depth);
+         PUSH_DATA(push, mt->layer_stride >> 2);
+         PUSH_DATA(push, sf->base.u.tex.first_layer);
 
-           ms_mode = mt->ms_mode;
-        } else {
-           if (res->base.target == PIPE_BUFFER) {
-              PUSH_DATA(push, 262144);
-              PUSH_DATA(push, 1);
-           } else {
-              PUSH_DATA(push, nv50_miptree(sf->base.texture)->level[0].pitch);
-              PUSH_DATA(push, sf->height);
-           }
-           PUSH_DATA(push, nvc0_format_table[sf->base.format].rt);
-           PUSH_DATA(push, 1 << 12);
-           PUSH_DATA(push, 1);
-           PUSH_DATA(push, 0);
-           PUSH_DATA(push, 0);
+         ms_mode = mt->ms_mode;
+      } else {
+         if (res->base.target == PIPE_BUFFER) {
+            PUSH_DATA(push, 262144);
+            PUSH_DATA(push, 1);
+         } else {
+            PUSH_DATA(push, nv50_miptree(sf->base.texture)->level[0].pitch);
+            PUSH_DATA(push, sf->height);
+         }
+         PUSH_DATA(push, nvc0_format_table[sf->base.format].rt);
+         PUSH_DATA(push, 1 << 12);
+         PUSH_DATA(push, 1);
+         PUSH_DATA(push, 0);
+         PUSH_DATA(push, 0);
 
-           nvc0_resource_fence(res, NOUVEAU_BO_WR);
+         nvc0_resource_fence(res, NOUVEAU_BO_WR);
 
-           assert(!fb->zsbuf);
-        }
+         assert(!fb->zsbuf);
+      }
 
-        if (res->status & NOUVEAU_BUFFER_STATUS_GPU_READING)
-           serialize = true;
-        res->status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
-        res->status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
+      if (res->status & NOUVEAU_BUFFER_STATUS_GPU_READING)
+         serialize = true;
+      res->status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
+      res->status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
-        /* only register for writing, otherwise we'd always serialize here */
-        BCTX_REFN(nvc0->bufctx_3d, 3D_FB, res, WR);
-    }
+      /* only register for writing, otherwise we'd always serialize here */
+      BCTX_REFN(nvc0->bufctx_3d, 3D_FB, res, WR);
+   }
 
-    if (fb->zsbuf) {
-        struct nv50_miptree *mt = nv50_miptree(fb->zsbuf->texture);
-        struct nv50_surface *sf = nv50_surface(fb->zsbuf);
-        int unk = mt->base.base.target == PIPE_TEXTURE_2D;
+   if (fb->zsbuf) {
+      struct nv50_miptree *mt = nv50_miptree(fb->zsbuf->texture);
+      struct nv50_surface *sf = nv50_surface(fb->zsbuf);
+      int unk = mt->base.base.target == PIPE_TEXTURE_2D;
 
-        BEGIN_NVC0(push, NVC0_3D(ZETA_ADDRESS_HIGH), 5);
-        PUSH_DATAh(push, mt->base.address + sf->offset);
-        PUSH_DATA (push, mt->base.address + sf->offset);
-        PUSH_DATA (push, nvc0_format_table[fb->zsbuf->format].rt);
-        PUSH_DATA (push, mt->level[sf->base.u.tex.level].tile_mode);
-        PUSH_DATA (push, mt->layer_stride >> 2);
-        BEGIN_NVC0(push, NVC0_3D(ZETA_ENABLE), 1);
-        PUSH_DATA (push, 1);
-        BEGIN_NVC0(push, NVC0_3D(ZETA_HORIZ), 3);
-        PUSH_DATA (push, sf->width);
-        PUSH_DATA (push, sf->height);
-        PUSH_DATA (push, (unk << 16) |
-                   (sf->base.u.tex.first_layer + sf->depth));
-        BEGIN_NVC0(push, NVC0_3D(ZETA_BASE_LAYER), 1);
-        PUSH_DATA (push, sf->base.u.tex.first_layer);
+      BEGIN_NVC0(push, NVC0_3D(ZETA_ADDRESS_HIGH), 5);
+      PUSH_DATAh(push, mt->base.address + sf->offset);
+      PUSH_DATA (push, mt->base.address + sf->offset);
+      PUSH_DATA (push, nvc0_format_table[fb->zsbuf->format].rt);
+      PUSH_DATA (push, mt->level[sf->base.u.tex.level].tile_mode);
+      PUSH_DATA (push, mt->layer_stride >> 2);
+      BEGIN_NVC0(push, NVC0_3D(ZETA_ENABLE), 1);
+      PUSH_DATA (push, 1);
+      BEGIN_NVC0(push, NVC0_3D(ZETA_HORIZ), 3);
+      PUSH_DATA (push, sf->width);
+      PUSH_DATA (push, sf->height);
+      PUSH_DATA (push, (unk << 16) |
+                (sf->base.u.tex.first_layer + sf->depth));
+      BEGIN_NVC0(push, NVC0_3D(ZETA_BASE_LAYER), 1);
+      PUSH_DATA (push, sf->base.u.tex.first_layer);
 
-        ms_mode = mt->ms_mode;
+      ms_mode = mt->ms_mode;
 
-        if (mt->base.status & NOUVEAU_BUFFER_STATUS_GPU_READING)
-           serialize = true;
-        mt->base.status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
-        mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
+      if (mt->base.status & NOUVEAU_BUFFER_STATUS_GPU_READING)
+         serialize = true;
+      mt->base.status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
+      mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
-        BCTX_REFN(nvc0->bufctx_3d, 3D_FB, &mt->base, WR);
-    } else {
-        BEGIN_NVC0(push, NVC0_3D(ZETA_ENABLE), 1);
-        PUSH_DATA (push, 0);
-    }
+      BCTX_REFN(nvc0->bufctx_3d, 3D_FB, &mt->base, WR);
+   } else {
+       BEGIN_NVC0(push, NVC0_3D(ZETA_ENABLE), 1);
+      PUSH_DATA (push, 0);
+   }
 
-    if (nr_cbufs == 0 && !fb->zsbuf) {
-       assert(util_is_power_of_two(fb->samples));
-       assert(fb->samples <= 8);
+   if (nr_cbufs == 0 && !fb->zsbuf) {
+      assert(util_is_power_of_two(fb->samples));
+      assert(fb->samples <= 8);
 
-       nvc0_fb_set_null_rt(push, 0, fb->layers);
+      nvc0_fb_set_null_rt(push, 0, fb->layers);
 
-       if (fb->samples > 1)
-          ms_mode = ffs(fb->samples) - 1;
-       nr_cbufs = 1;
-    }
+      if (fb->samples > 1)
+         ms_mode = ffs(fb->samples) - 1;
+      nr_cbufs = 1;
+   }
 
-    BEGIN_NVC0(push, NVC0_3D(RT_CONTROL), 1);
-    PUSH_DATA (push, (076543210 << 4) | nr_cbufs);
-    IMMED_NVC0(push, NVC0_3D(MULTISAMPLE_MODE), ms_mode);
+   BEGIN_NVC0(push, NVC0_3D(RT_CONTROL), 1);
+   PUSH_DATA (push, (076543210 << 4) | nr_cbufs);
+   IMMED_NVC0(push, NVC0_3D(MULTISAMPLE_MODE), ms_mode);
 
-    ms = 1 << ms_mode;
-    BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-    PUSH_DATA (push, NVC0_CB_AUX_SIZE);
-    PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(4));
-    PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(4));
-    BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 2 * ms);
-    PUSH_DATA (push, NVC0_CB_AUX_SAMPLE_INFO);
-    for (i = 0; i < ms; i++) {
-       float xy[2];
-       nvc0->base.pipe.get_sample_position(&nvc0->base.pipe, ms, i, xy);
-       PUSH_DATAf(push, xy[0]);
-       PUSH_DATAf(push, xy[1]);
-    }
+   ms = 1 << ms_mode;
+   BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+   PUSH_DATA (push, NVC0_CB_AUX_SIZE);
+   PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(4));
+   PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(4));
+   BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 2 * ms);
+   PUSH_DATA (push, NVC0_CB_AUX_SAMPLE_INFO);
+   for (i = 0; i < ms; i++) {
+      float xy[2];
+      nvc0->base.pipe.get_sample_position(&nvc0->base.pipe, ms, i, xy);
+      PUSH_DATAf(push, xy[0]);
+      PUSH_DATAf(push, xy[1]);
+   }
 
-    if (serialize)
-       IMMED_NVC0(push, NVC0_3D(SERIALIZE), 0);
+   if (serialize)
+      IMMED_NVC0(push, NVC0_3D(SERIALIZE), 0);
 
-    NOUVEAU_DRV_STAT(&nvc0->screen->base, gpu_serialize_count, serialize);
+   NOUVEAU_DRV_STAT(&nvc0->screen->base, gpu_serialize_count, serialize);
 }
 
 static void
