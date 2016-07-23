@@ -304,33 +304,21 @@ brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
    return true;
 }
 
-void
-brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
+static void
+brw_blorp_ccs_resolve(struct brw_context *brw, struct brw_blorp_surf *surf,
+                      enum isl_format format)
 {
-   DBG("%s to mt %p\n", __FUNCTION__, mt);
-
-   const mesa_format format = _mesa_get_srgb_format_linear(mt->format);
-
-   intel_miptree_check_level_layer(mt, 0 /* level */, 0 /* layer */);
-   intel_miptree_used_for_rendering(mt);
-
    struct brw_blorp_params params;
    brw_blorp_params_init(&params);
 
-   struct isl_surf isl_tmp[2];
-   struct brw_blorp_surf surf;
-   unsigned level = 0;
-   brw_blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
-   brw_blorp_surface_info_init(brw, &params.dst, &surf,
-                               0 /* level */, 0 /* layer */,
-                               brw_blorp_to_isl_format(brw, format, true),
-                               true);
+   brw_blorp_surface_info_init(brw, &params.dst, surf,
+                               0 /* level */, 0 /* layer */, format, true);
 
    brw_get_ccs_resolve_rect(&brw->isl_dev, &params.dst.aux_surf,
                             &params.x0, &params.y0,
                             &params.x1, &params.y1);
 
-   if (intel_miptree_is_lossless_compressed(brw, mt))
+   if (params.dst.aux_usage == ISL_AUX_USAGE_CCS_E)
       params.resolve_type = GEN9_PS_RENDER_TARGET_RESOLVE_FULL;
    else
       params.resolve_type = GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE;
@@ -344,6 +332,25 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
    brw_blorp_params_get_clear_kernel(brw, &params, true);
 
    brw_blorp_exec(brw, &params);
+}
+
+void
+brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
+{
+   DBG("%s to mt %p\n", __FUNCTION__, mt);
+
+   const mesa_format format = _mesa_get_srgb_format_linear(mt->format);
+
+   intel_miptree_check_level_layer(mt, 0 /* level */, 0 /* layer */);
+   intel_miptree_used_for_rendering(mt);
+
+   struct isl_surf isl_tmp[2];
+   struct brw_blorp_surf surf;
+   unsigned level = 0;
+   brw_blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
+
+   brw_blorp_ccs_resolve(brw, &surf, brw_blorp_to_isl_format(brw, format, true));
+
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
 }
 
