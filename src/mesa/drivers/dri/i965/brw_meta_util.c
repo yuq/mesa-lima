@@ -585,12 +585,11 @@ brw_meta_get_buffer_rect(const struct gl_framebuffer *fb,
 }
 
 void
-brw_get_resolve_rect(const struct brw_context *brw,
-                     const struct intel_mipmap_tree *mt,
-                     unsigned *x0, unsigned *y0,
-                     unsigned *x1, unsigned *y1)
+brw_get_ccs_resolve_rect(const struct isl_device *dev,
+                         const struct isl_surf *ccs_surf,
+                         unsigned *x0, unsigned *y0,
+                         unsigned *x1, unsigned *y1)
 {
-   unsigned x_align, y_align;
    unsigned x_scaledown, y_scaledown;
 
    /* From the Ivy Bridge PRM, Vol2 Part1 11.9 "Render Target Resolve":
@@ -598,25 +597,25 @@ brw_get_resolve_rect(const struct brw_context *brw,
     *     A rectangle primitive must be scaled down by the following factors
     *     with respect to render target being resolved.
     *
-    * The scaledown factors in the table that follows are related to the
-    * alignment size returned by intel_get_non_msrt_mcs_alignment() by a
-    * multiplier. For IVB and HSW, we divide by two, for BDW we multiply
-    * by 8 and 16. Similar to the fast clear, SKL eases the BDW vertical scaling
-    * by a factor of 2.
+    * The scaledown factors in the table that follows are related to the block
+    * size of the CCS format.  For IVB and HSW, we divide by two, for BDW we
+    * multiply by 8 and 16. On Sky Lake, we multiply by 8.
     */
+   const struct isl_format_layout *fmtl =
+      isl_format_get_layout(ccs_surf->format);
+   assert(fmtl->txc == ISL_TXC_CCS);
 
-   intel_get_non_msrt_mcs_alignment(mt, &x_align, &y_align);
-   if (brw->gen >= 9) {
-      x_scaledown = x_align * 8;
-      y_scaledown = y_align * 8;
-   } else if (brw->gen >= 8) {
-      x_scaledown = x_align * 8;
-      y_scaledown = y_align * 16;
+   if (ISL_DEV_GEN(dev) >= 9) {
+      x_scaledown = fmtl->bw * 8;
+      y_scaledown = fmtl->bh * 8;
+   } else if (ISL_DEV_GEN(dev) >= 8) {
+      x_scaledown = fmtl->bw * 8;
+      y_scaledown = fmtl->bh * 16;
    } else {
-      x_scaledown = x_align / 2;
-      y_scaledown = y_align / 2;
+      x_scaledown = fmtl->bw / 2;
+      y_scaledown = fmtl->bh / 2;
    }
    *x0 = *y0 = 0;
-   *x1 = ALIGN(mt->logical_width0, x_scaledown) / x_scaledown;
-   *y1 = ALIGN(mt->logical_height0, y_scaledown) / y_scaledown;
+   *x1 = ALIGN(ccs_surf->logical_level0_px.width, x_scaledown) / x_scaledown;
+   *y1 = ALIGN(ccs_surf->logical_level0_px.height, y_scaledown) / y_scaledown;
 }

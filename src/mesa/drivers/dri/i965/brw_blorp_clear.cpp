@@ -326,8 +326,9 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
                                brw_blorp_to_isl_format(brw, format, true),
                                true);
 
-   brw_get_resolve_rect(brw, mt, &params.x0, &params.y0,
-                        &params.x1, &params.y1);
+   brw_get_ccs_resolve_rect(&brw->isl_dev, &params.dst.aux_surf,
+                            &params.x0, &params.y0,
+                            &params.x1, &params.y1);
 
    if (intel_miptree_is_lossless_compressed(brw, mt))
       params.resolve_type = GEN9_PS_RENDER_TARGET_RESOLVE_FULL;

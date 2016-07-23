@@ -50,10 +50,10 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
                         unsigned *x1, unsigned *y1);
 
 void
-brw_get_resolve_rect(const struct brw_context *brw,
-                     const struct intel_mipmap_tree *mt,
-                     unsigned *x0, unsigned *y0,
-                     unsigned *x1, unsigned *y1);
+brw_get_ccs_resolve_rect(const struct isl_device *dev,
+                         const struct isl_surf *ccs_surf,
+                         unsigned *x0, unsigned *y0,
+                         unsigned *x1, unsigned *y1);
 
 void
 brw_meta_get_buffer_rect(const struct gl_framebuffer *fb, 
