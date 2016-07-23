@@ -941,7 +941,7 @@ intel_miptree_used_for_rendering(struct intel_mipmap_tree *mt)
  */
 #define INTEL_MIPTREE_IGNORE_CCS_E (1 << 0)
 
-void
+bool
 intel_miptree_resolve_color(struct brw_context *brw,
                             struct intel_mipmap_tree *mt,
                             int flags);

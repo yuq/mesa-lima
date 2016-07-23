@@ -2133,7 +2133,7 @@ intel_miptree_all_slices_resolve_depth(struct brw_context *brw,
 }
 
 
-void
+bool
 intel_miptree_resolve_color(struct brw_context *brw,
                             struct intel_mipmap_tree *mt,
                             int flags)
@@ -2144,21 +2144,25 @@ intel_miptree_resolve_color(struct brw_context *brw,
     */
    if ((flags & INTEL_MIPTREE_IGNORE_CCS_E) &&
        intel_miptree_is_lossless_compressed(brw, mt))
-      return;
+      return false;
 
    switch (mt->fast_clear_state) {
    case INTEL_FAST_CLEAR_STATE_NO_MCS:
    case INTEL_FAST_CLEAR_STATE_RESOLVED:
       /* No resolve needed */
-      break;
+      return false;
    case INTEL_FAST_CLEAR_STATE_UNRESOLVED:
    case INTEL_FAST_CLEAR_STATE_CLEAR:
       /* Fast color clear resolves only make sense for non-MSAA buffers. */
       if (mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE ||
           intel_miptree_is_lossless_compressed(brw, mt)) {
          brw_blorp_resolve_color(brw, mt);
+         return true;
+      } else {
+         return false;
       }
-      break;
+   default:
+      unreachable("Invalid fast clear state");
    }
 }
 
