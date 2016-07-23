@@ -698,16 +698,15 @@ CodeEmitterNVC0::emitUADD(const Instruction *i)
    uint32_t addOp = 0;
 
    assert(!i->src(0).mod.abs() && !i->src(1).mod.abs());
-   assert(!i->src(0).mod.neg() || !i->src(1).mod.neg());
 
    if (i->src(0).mod.neg())
       addOp |= 0x200;
    if (i->src(1).mod.neg())
       addOp |= 0x100;
-   if (i->op == OP_SUB) {
+   if (i->op == OP_SUB)
       addOp ^= 0x100;
-      assert(addOp != 0x300); // would be add-plus-one
-   }
+
+   assert(addOp != 0x300); // would be add-plus-one
 
    if (i->encSize == 8) {
       if (isLIMM(i->src(1), TYPE_U32)) {
