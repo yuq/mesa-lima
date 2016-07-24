@@ -1241,6 +1241,127 @@ isl_surf_get_tile_info(const struct isl_device *dev,
 }
 
 void
+isl_surf_get_hiz_surf(const struct isl_device *dev,
+                      const struct isl_surf *surf,
+                      struct isl_surf *hiz_surf)
+{
+   assert(ISL_DEV_GEN(dev) >= 5 && ISL_DEV_USE_SEPARATE_STENCIL(dev));
+
+   /* Multisampled depth is always interleaved */
+   assert(surf->msaa_layout == ISL_MSAA_LAYOUT_NONE ||
+          surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
+
+   isl_surf_init(dev, hiz_surf,
+                 .dim = ISL_SURF_DIM_2D,
+                 .format = ISL_FORMAT_HIZ,
+                 .width = surf->logical_level0_px.width,
+                 .height = surf->logical_level0_px.height,
+                 .depth = 1,
+                 .levels = surf->levels,
+                 .array_len = surf->logical_level0_px.array_len,
+                 /* On SKL+, HiZ is always single-sampled */
+                 .samples = ISL_DEV_GEN(dev) >= 9 ? 1 : surf->samples,
+                 .usage = ISL_SURF_USAGE_HIZ_BIT,
+                 .tiling_flags = ISL_TILING_HIZ_BIT);
+}
+
+void
+isl_surf_get_mcs_surf(const struct isl_device *dev,
+                      const struct isl_surf *surf,
+                      struct isl_surf *mcs_surf)
+{
+   /* It must be multisampled with an array layout */
+   assert(surf->samples > 1 && surf->msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
+
+   /* The following are true of all multisampled surfaces */
+   assert(surf->dim == ISL_SURF_DIM_2D);
+   assert(surf->levels == 1);
+   assert(surf->logical_level0_px.depth == 1);
+
+   enum isl_format mcs_format;
+   switch (surf->samples) {
+   case 2:  mcs_format = ISL_FORMAT_MCS_2X;  break;
+   case 4:  mcs_format = ISL_FORMAT_MCS_4X;  break;
+   case 8:  mcs_format = ISL_FORMAT_MCS_8X;  break;
+   case 16: mcs_format = ISL_FORMAT_MCS_16X; break;
+   default:
+      unreachable("Invalid sample count");
+   }
+
+   isl_surf_init(dev, mcs_surf,
+                 .dim = ISL_SURF_DIM_2D,
+                 .format = mcs_format,
+                 .width = surf->logical_level0_px.width,
+                 .height = surf->logical_level0_px.height,
+                 .depth = 1,
+                 .levels = 1,
+                 .array_len = surf->logical_level0_px.array_len,
+                 .samples = 1, /* MCS surfaces are really single-sampled */
+                 .usage = ISL_SURF_USAGE_MCS_BIT,
+                 .tiling_flags = ISL_TILING_Y0_BIT);
+}
+
+bool
+isl_surf_get_ccs_surf(const struct isl_device *dev,
+                      const struct isl_surf *surf,
+                      struct isl_surf *ccs_surf)
+{
+   assert(surf->samples == 1 && surf->msaa_layout == ISL_MSAA_LAYOUT_NONE);
+   assert(ISL_DEV_GEN(dev) >= 7);
+
+   assert(surf->dim == ISL_SURF_DIM_2D);
+   assert(surf->logical_level0_px.depth == 1);
+
+   /* TODO: More conditions where it can fail. */
+
+   enum isl_format ccs_format;
+   if (ISL_DEV_GEN(dev) >= 9) {
+      if (!isl_tiling_is_any_y(surf->tiling))
+         return false;
+
+      switch (isl_format_get_layout(surf->format)->bpb) {
+      case 32:    ccs_format = ISL_FORMAT_GEN9_CCS_32BPP;   break;
+      case 64:    ccs_format = ISL_FORMAT_GEN9_CCS_64BPP;   break;
+      case 128:   ccs_format = ISL_FORMAT_GEN9_CCS_128BPP;  break;
+      default:
+         return false;
+      }
+   } else if (surf->tiling == ISL_TILING_Y0) {
+      switch (isl_format_get_layout(surf->format)->bpb) {
+      case 32:    ccs_format = ISL_FORMAT_GEN7_CCS_32BPP_Y;    break;
+      case 64:    ccs_format = ISL_FORMAT_GEN7_CCS_64BPP_Y;    break;
+      case 128:   ccs_format = ISL_FORMAT_GEN7_CCS_128BPP_Y;   break;
+      default:
+         return false;
+      }
+   } else if (surf->tiling == ISL_TILING_X) {
+      switch (isl_format_get_layout(surf->format)->bpb) {
+      case 32:    ccs_format = ISL_FORMAT_GEN7_CCS_32BPP_X;    break;
+      case 64:    ccs_format = ISL_FORMAT_GEN7_CCS_64BPP_X;    break;
+      case 128:   ccs_format = ISL_FORMAT_GEN7_CCS_128BPP_X;   break;
+      default:
+         return false;
+      }
+   } else {
+      return false;
+   }
+
+   isl_surf_init(dev, ccs_surf,
+                 .dim = ISL_SURF_DIM_2D,
+                 .format = ccs_format,
+                 .width = surf->logical_level0_px.width,
+                 .height = surf->logical_level0_px.height,
+                 .depth = 1,
+                 .levels = surf->levels,
+                 .array_len = surf->logical_level0_px.array_len,
+                 .samples = 1,
+                 .usage = ISL_SURF_USAGE_CCS_BIT,
+                 .tiling_flags = ISL_TILING_CCS_BIT);
+
+   return true;
+}
+
+void
 isl_surf_fill_state_s(const struct isl_device *dev, void *state,
                       const struct isl_surf_fill_state_info *restrict info)
 {
