@@ -174,9 +174,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       brw_get_fast_clear_rect(brw, fb, irb->mt, &params.x0, &params.y0,
                               &params.x1, &params.y1);
-   } else {
-      brw_meta_get_buffer_rect(fb, &params.x0, &params.y0,
-                               &params.x1, &params.y1);
    }
 
    brw_blorp_params_get_clear_kernel(brw, &params, use_simd16_replicated_data);

@@ -569,22 +569,6 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
 }
 
 void
-brw_meta_get_buffer_rect(const struct gl_framebuffer *fb,
-                         unsigned *x0, unsigned *y0,
-                         unsigned *x1, unsigned *y1)
-{
-   *x0 = fb->_Xmin;
-   *x1 = fb->_Xmax;
-   if (fb->Name != 0) {
-      *y0 = fb->_Ymin;
-      *y1 = fb->_Ymax;
-   } else {
-      *y0 = fb->Height - fb->_Ymax;
-      *y1 = fb->Height - fb->_Ymin;
-   }
-}
-
-void
 brw_get_ccs_resolve_rect(const struct isl_device *dev,
                          const struct isl_surf *ccs_surf,
                          unsigned *x0, unsigned *y0,
