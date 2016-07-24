@@ -211,6 +211,19 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
       PUSH_DATAf(push, xy[1]);
    }
 
+   if (screen->base.class_3d >= GM200_3D_CLASS) {
+      const uint8_t (*ptr)[2] = nvc0_get_sample_locations(ms);
+      uint32_t val[4] = {};
+
+      for (i = 0; i < 16; i++) {
+         val[i / 4] |= ptr[i % ms][0] << (((i % 4) * 8) + 0);
+         val[i / 4] |= ptr[i % ms][1] << (((i % 4) * 8) + 4);
+      }
+
+      BEGIN_NVC0(push, SUBC_3D(0x11e0), 4);
+      PUSH_DATAp(push, val, 4);
+   }
+
    if (serialize)
       IMMED_NVC0(push, NVC0_3D(SERIALIZE), 0);
 
