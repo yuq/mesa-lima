@@ -172,7 +172,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       memset(&params.wm_inputs, 0xff, 4*sizeof(float));
       params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
 
-      brw_get_fast_clear_rect(brw, fb, irb->mt, &params.x0, &params.y0,
+      brw_get_fast_clear_rect(brw, irb->mt, &params.x0, &params.y0,
                               &params.x1, &params.y1);
    }
 

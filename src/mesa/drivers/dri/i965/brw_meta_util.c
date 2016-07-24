@@ -441,9 +441,11 @@ brw_meta_set_fast_clear_color(struct brw_context *brw,
    return updated;
 }
 
+/* The x0, y0, x1, and y1 parameters must already be populated with the render
+ * area of the framebuffer to be cleared.
+ */
 void
 brw_get_fast_clear_rect(const struct brw_context *brw,
-                        const struct gl_framebuffer *fb,
                         const struct intel_mipmap_tree* mt,
                         unsigned *x0, unsigned *y0,
                         unsigned *x1, unsigned *y1)
@@ -550,16 +552,6 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
       y_scaledown = 2;
       x_align = x_scaledown * 2;
       y_align = y_scaledown * 2;
-   }
-
-   *x0 = fb->_Xmin;
-   *x1 = fb->_Xmax;
-   if (fb->Name != 0) {
-      *y0 = fb->_Ymin;
-      *y1 = fb->_Ymax;
-   } else {
-      *y0 = fb->Height - fb->_Ymax;
-      *y1 = fb->Height - fb->_Ymin;
    }
 
    *x0 = ROUND_DOWN_TO(*x0,  x_align) / x_scaledown;
