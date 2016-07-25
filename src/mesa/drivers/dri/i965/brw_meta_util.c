@@ -446,7 +446,7 @@ brw_meta_set_fast_clear_color(struct brw_context *brw,
  */
 void
 brw_get_fast_clear_rect(const struct brw_context *brw,
-                        const struct intel_mipmap_tree* mt,
+                        const struct isl_surf *aux_surf,
                         unsigned *x0, unsigned *y0,
                         unsigned *x1, unsigned *y1)
 {
@@ -454,8 +454,7 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
    unsigned int x_scaledown, y_scaledown;
 
    /* Only single sampled surfaces need to (and actually can) be resolved. */
-   if (mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE ||
-       intel_miptree_is_lossless_compressed(brw, mt)) {
+   if (aux_surf->usage == ISL_SURF_USAGE_CCS_BIT) {
       /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
        * Target(s)", beneath the "Fast Color Clear" bullet (p327):
        *
@@ -468,10 +467,12 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
        *     follows the requirement and covers the RT.
        *
        * The alignment size in the table that follows is related to the
-       * alignment size returned by intel_get_non_msrt_mcs_alignment(), but
-       * with X alignment multiplied by 16 and Y alignment multiplied by 32.
+       * alignment size that is baked into the CCS surface format but with X
+       * alignment multiplied by 16 and Y alignment multiplied by 32.
        */
-      intel_get_non_msrt_mcs_alignment(mt, &x_align, &y_align);
+      x_align = isl_format_get_layout(aux_surf->format)->bw;
+      y_align = isl_format_get_layout(aux_surf->format)->bh;
+
       x_align *= 16;
 
       /* SKL+ line alignment requirement for Y-tiled are half those of the prior
@@ -507,6 +508,8 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
       x_align *= 2;
       y_align *= 2;
    } else {
+      assert(aux_surf->usage == ISL_SURF_USAGE_MCS_BIT);
+
       /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
        * Target(s)", beneath the "MSAA Compression" bullet (p326):
        *
@@ -535,19 +538,19 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
        * vertically and either 4 or 16 horizontally, and the scaledown
        * factor is 2 vertically and either 2 or 8 horizontally.
        */
-      switch (mt->num_samples) {
-      case 2:
-      case 4:
+      switch (aux_surf->format) {
+      case ISL_FORMAT_MCS_2X:
+      case ISL_FORMAT_MCS_4X:
          x_scaledown = 8;
          break;
-      case 8:
+      case ISL_FORMAT_MCS_8X:
          x_scaledown = 2;
          break;
-      case 16:
+      case ISL_FORMAT_MCS_16X:
          x_scaledown = 1;
          break;
       default:
-         unreachable("Unexpected sample count for fast clear");
+         unreachable("Unexpected MCS format for fast clear");
       }
       y_scaledown = 2;
       x_align = x_scaledown * 2;

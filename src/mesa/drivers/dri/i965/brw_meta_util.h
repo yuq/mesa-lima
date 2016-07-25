@@ -44,7 +44,7 @@ brw_meta_mirror_clip_and_scissor(const struct gl_context *ctx,
 
 void
 brw_get_fast_clear_rect(const struct brw_context *brw,
-                        const struct intel_mipmap_tree* mt,
+                        const struct isl_surf *aux_surf,
                         unsigned *x0, unsigned *y0,
                         unsigned *x1, unsigned *y1);
 
