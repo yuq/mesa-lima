@@ -551,7 +551,6 @@ nvc0_validate_tic(struct nvc0_context *nvc0, int s)
 static bool
 nve4_validate_tic(struct nvc0_context *nvc0, unsigned s)
 {
-   struct nouveau_bo *txc = nvc0->screen->txc;
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    unsigned i;
    bool need_flush = false;
@@ -571,17 +570,9 @@ nve4_validate_tic(struct nvc0_context *nvc0, unsigned s)
       if (tic->id < 0) {
          tic->id = nvc0_screen_tic_alloc(nvc0->screen, tic);
 
-         PUSH_SPACE(push, 16);
-         BEGIN_NVC0(push, NVE4_P2MF(UPLOAD_DST_ADDRESS_HIGH), 2);
-         PUSH_DATAh(push, txc->offset + (tic->id * 32));
-         PUSH_DATA (push, txc->offset + (tic->id * 32));
-         BEGIN_NVC0(push, NVE4_P2MF(UPLOAD_LINE_LENGTH_IN), 2);
-         PUSH_DATA (push, 32);
-         PUSH_DATA (push, 1);
-         BEGIN_1IC0(push, NVE4_P2MF(UPLOAD_EXEC), 9);
-         PUSH_DATA (push, 0x1001);
-         PUSH_DATAp(push, &tic->tic[0], 8);
-
+         nve4_p2mf_push_linear(&nvc0->base, nvc0->screen->txc, tic->id * 32,
+                               NV_VRAM_DOMAIN(&nvc0->screen->base), 32,
+                               tic->tic);
          need_flush = true;
       } else
       if (res->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
@@ -685,8 +676,6 @@ nvc0_validate_tsc(struct nvc0_context *nvc0, int s)
 bool
 nve4_validate_tsc(struct nvc0_context *nvc0, int s)
 {
-   struct nouveau_bo *txc = nvc0->screen->txc;
-   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    unsigned i;
    bool need_flush = false;
 
@@ -700,17 +689,10 @@ nve4_validate_tsc(struct nvc0_context *nvc0, int s)
       if (tsc->id < 0) {
          tsc->id = nvc0_screen_tsc_alloc(nvc0->screen, tsc);
 
-         PUSH_SPACE(push, 16);
-         BEGIN_NVC0(push, NVE4_P2MF(UPLOAD_DST_ADDRESS_HIGH), 2);
-         PUSH_DATAh(push, txc->offset + 65536 + (tsc->id * 32));
-         PUSH_DATA (push, txc->offset + 65536 + (tsc->id * 32));
-         BEGIN_NVC0(push, NVE4_P2MF(UPLOAD_LINE_LENGTH_IN), 2);
-         PUSH_DATA (push, 32);
-         PUSH_DATA (push, 1);
-         BEGIN_1IC0(push, NVE4_P2MF(UPLOAD_EXEC), 9);
-         PUSH_DATA (push, 0x1001);
-         PUSH_DATAp(push, &tsc->tsc[0], 8);
-
+         nve4_p2mf_push_linear(&nvc0->base, nvc0->screen->txc,
+                               65536 + tsc->id * 32,
+                               NV_VRAM_DOMAIN(&nvc0->screen->base),
+                               32, tsc->tsc);
          need_flush = true;
       }
       nvc0->screen->tsc.lock[tsc->id / 32] |= 1 << (tsc->id % 32);
@@ -1142,7 +1124,6 @@ gm107_validate_surfaces(struct nvc0_context *nvc0,
    struct nv04_resource *res = nv04_resource(view->resource);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct nvc0_screen *screen = nvc0->screen;
-   struct nouveau_bo *txc = nvc0->screen->txc;
    struct nv50_tic_entry *tic;
 
    tic = nv50_tic_entry(nvc0->images_tic[stage][slot]);
@@ -1154,16 +1135,8 @@ gm107_validate_surfaces(struct nvc0_context *nvc0,
       tic->id = nvc0_screen_tic_alloc(nvc0->screen, tic);
 
       /* upload the texture view */
-      PUSH_SPACE(push, 16);
-      BEGIN_NVC0(push, NVE4_P2MF(UPLOAD_DST_ADDRESS_HIGH), 2);
-      PUSH_DATAh(push, txc->offset + (tic->id * 32));
-      PUSH_DATA (push, txc->offset + (tic->id * 32));
-      BEGIN_NVC0(push, NVE4_P2MF(UPLOAD_LINE_LENGTH_IN), 2);
-      PUSH_DATA (push, 32);
-      PUSH_DATA (push, 1);
-      BEGIN_1IC0(push, NVE4_P2MF(UPLOAD_EXEC), 9);
-      PUSH_DATA (push, 0x1001);
-      PUSH_DATAp(push, &tic->tic[0], 8);
+      nve4_p2mf_push_linear(&nvc0->base, nvc0->screen->txc, tic->id * 32,
+                            NV_VRAM_DOMAIN(&nvc0->screen->base), 32, tic->tic);
 
       BEGIN_NVC0(push, NVC0_3D(TIC_FLUSH), 1);
       PUSH_DATA (push, 0);
