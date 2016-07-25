@@ -352,6 +352,8 @@ void JitManager::DumpToFile(Function *f, const char *fileName)
 
 extern "C"
 {
+    bool g_DllActive = true;
+
     //////////////////////////////////////////////////////////////////////////
     /// @brief Create JIT context.
     /// @param simdWidth - SIMD width to be used in generated program.
@@ -364,6 +366,9 @@ extern "C"
     /// @brief Destroy JIT context.
     void JITCALL JitDestroyContext(HANDLE hJitContext)
     {
-        delete reinterpret_cast<JitManager*>(hJitContext);
+        if (g_DllActive)
+        {
+            delete reinterpret_cast<JitManager*>(hJitContext);
+        }
     }
 }
