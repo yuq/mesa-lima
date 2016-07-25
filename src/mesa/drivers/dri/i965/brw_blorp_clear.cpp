@@ -166,22 +166,11 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                           params.color_write_disable))
       use_simd16_replicated_data = false;
 
+   bool is_fast_clear = false;
    if (irb->mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS &&
        !partial_clear && use_simd16_replicated_data &&
        brw_is_color_fast_clear_compatible(brw, irb->mt,
                                           &ctx->Color.ClearColor)) {
-      memset(&params.wm_inputs, 0xff, 4*sizeof(float));
-      params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
-
-      brw_get_fast_clear_rect(brw, irb->mt, &params.x0, &params.y0,
-                              &params.x1, &params.y1);
-   }
-
-   brw_blorp_params_get_clear_kernel(brw, &params, use_simd16_replicated_data);
-
-   const bool is_fast_clear =
-      params.fast_clear_op == GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
-   if (is_fast_clear) {
       /* Record the clear color in the miptree so that it will be
        * programmed in SURFACE_STATE by later rendering and resolve
        * operations.
@@ -208,7 +197,19 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
             return false;
          }
       }
+
+      is_fast_clear = true;
    }
+
+   if (is_fast_clear) {
+      memset(&params.wm_inputs, 0xff, 4*sizeof(float));
+      params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
+
+      brw_get_fast_clear_rect(brw, irb->mt, &params.x0, &params.y0,
+                              &params.x1, &params.y1);
+   }
+
+   brw_blorp_params_get_clear_kernel(brw, &params, use_simd16_replicated_data);
 
    intel_miptree_check_level_layer(irb->mt, irb->mt_level, layer);
    intel_miptree_used_for_rendering(irb->mt);
