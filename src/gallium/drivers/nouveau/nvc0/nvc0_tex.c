@@ -474,7 +474,6 @@ nvc0_validate_tic(struct nvc0_context *nvc0, int s)
 {
    uint32_t commands[32];
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-   struct nouveau_bo *txc = nvc0->screen->txc;
    unsigned i;
    unsigned n = 0;
    bool need_flush = false;
@@ -495,18 +494,9 @@ nvc0_validate_tic(struct nvc0_context *nvc0, int s)
       if (tic->id < 0) {
          tic->id = nvc0_screen_tic_alloc(nvc0->screen, tic);
 
-         PUSH_SPACE(push, 17);
-         BEGIN_NVC0(push, NVC0_M2MF(OFFSET_OUT_HIGH), 2);
-         PUSH_DATAh(push, txc->offset + (tic->id * 32));
-         PUSH_DATA (push, txc->offset + (tic->id * 32));
-         BEGIN_NVC0(push, NVC0_M2MF(LINE_LENGTH_IN), 2);
-         PUSH_DATA (push, 32);
-         PUSH_DATA (push, 1);
-         BEGIN_NVC0(push, NVC0_M2MF(EXEC), 1);
-         PUSH_DATA (push, 0x100111);
-         BEGIN_NIC0(push, NVC0_M2MF(DATA), 8);
-         PUSH_DATAp(push, &tic->tic[0], 8);
-
+         nvc0_m2mf_push_linear(&nvc0->base, nvc0->screen->txc, tic->id * 32,
+                               NV_VRAM_DOMAIN(&nvc0->screen->base), 32,
+                               tic->tic);
          need_flush = true;
       } else
       if (res->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
