@@ -201,16 +201,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       is_fast_clear = true;
    }
 
-   if (is_fast_clear) {
-      memset(&params.wm_inputs, 0xff, 4*sizeof(float));
-      params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
-
-      brw_get_fast_clear_rect(brw, irb->mt, &params.x0, &params.y0,
-                              &params.x1, &params.y1);
-   }
-
-   brw_blorp_params_get_clear_kernel(brw, &params, use_simd16_replicated_data);
-
    intel_miptree_check_level_layer(irb->mt, irb->mt_level, layer);
    intel_miptree_used_for_rendering(irb->mt);
 
@@ -221,6 +211,16 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    brw_blorp_surface_info_init(brw, &params.dst, &surf, level, layer,
                                brw_blorp_to_isl_format(brw, format, true),
                                true);
+
+   if (is_fast_clear) {
+      memset(&params.wm_inputs, 0xff, 4*sizeof(float));
+      params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
+
+      brw_get_fast_clear_rect(brw, irb->mt, &params.x0, &params.y0,
+                              &params.x1, &params.y1);
+   }
+
+   brw_blorp_params_get_clear_kernel(brw, &params, use_simd16_replicated_data);
 
    const char *clear_type;
    if (is_fast_clear)
