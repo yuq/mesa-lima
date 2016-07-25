@@ -6058,7 +6058,11 @@ st_translate_program(
                               inputSemanticName[i], inputSemanticIndex[i],
                               interpMode[i], 0, interpLocation[i],
                               array_id, array_size);
-            i += array_size - 1;
+
+            GLuint base_attr = inputSlotToAttr[i];
+            while (i + 1 < numInputs &&
+                   inputSlotToAttr[i + 1] < base_attr + array_size)
+               ++i;
          }
          else {
             t->inputs[i] = ureg_DECL_fs_input_cyl_centroid(ureg,
