@@ -328,6 +328,13 @@ INLINE int64_t CompleteDrawContextInl(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 
     if (result == 0)
     {
+        if (pDC->retireCallback.pfnCallbackFunc)
+        {
+            pDC->retireCallback.pfnCallbackFunc(pDC->retireCallback.userData,
+                                                pDC->retireCallback.userData2,
+                                                pDC->retireCallback.userData3);
+        }
+
         // Cleanup memory allocations
         pDC->pArena->Reset(true);
         if (!pDC->isCompute)

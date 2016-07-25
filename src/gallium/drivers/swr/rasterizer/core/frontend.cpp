@@ -72,11 +72,9 @@ void ProcessSync(
     uint32_t workerId,
     void *pUserData)
 {
-    SYNC_DESC *pSync = (SYNC_DESC*)pUserData;
     BE_WORK work;
     work.type = SYNC;
     work.pfnWork = ProcessSyncBE;
-    work.desc.sync = *pSync;
 
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
     pTileMgr->enqueue(0, 0, &work);

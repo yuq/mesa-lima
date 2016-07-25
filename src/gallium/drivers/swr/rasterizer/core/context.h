@@ -392,6 +392,8 @@ struct DRAW_CONTEXT
 
     volatile OSALIGNLINE(uint32_t)   FeLock;
     volatile int64_t    threadsDone;
+
+    SYNC_DESC       retireCallback; // Call this func when this DC is retired.
 };
 
 static_assert((sizeof(DRAW_CONTEXT) & 63) == 0, "Invalid size for DRAW_CONTEXT");

@@ -80,16 +80,9 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
 
 void ProcessSyncBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pUserData)
 {
-    SYNC_DESC *pSync = (SYNC_DESC*)pUserData;
-
     uint32_t x, y;
     MacroTileMgr::getTileIndices(macroTile, x, y);
     SWR_ASSERT(x == 0 && y == 0);
-
-    if (pSync->pfnCallbackFunc != nullptr)
-    {
-        pSync->pfnCallbackFunc(pSync->userData, pSync->userData2, pSync->userData3);
-    }
 }
 
 void ProcessQueryStatsBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pUserData)

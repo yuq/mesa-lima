@@ -334,6 +334,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pCurDrawContext->doneFE = false;
         pCurDrawContext->FeLock = 0;
         pCurDrawContext->threadsDone = 0;
+        pCurDrawContext->retireCallback.pfnCallbackFunc = nullptr;
 
         // Assign unique drawId for this DC
         pCurDrawContext->drawId = pContext->dcRing.GetHead();
@@ -400,13 +401,12 @@ void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint
 
     pDC->FeWork.type = SYNC;
     pDC->FeWork.pfnWork = ProcessSync;
-    pDC->FeWork.desc.sync.pfnCallbackFunc = pfnFunc;
-    pDC->FeWork.desc.sync.userData = userData;
-    pDC->FeWork.desc.sync.userData2 = userData2;
-    pDC->FeWork.desc.sync.userData3 = userData3;
 
-    // cannot execute until all previous draws have completed
-    pDC->dependent = true;
+    // Setup callback function
+    pDC->retireCallback.pfnCallbackFunc = pfnFunc;
+    pDC->retireCallback.userData = userData;
+    pDC->retireCallback.userData2 = userData2;
+    pDC->retireCallback.userData3 = userData3;
 
     //enqueue
     QueueDraw(pContext);
