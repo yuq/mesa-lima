@@ -1987,16 +1987,16 @@ ast_expression::do_hir(exec_list *instructions,
        * therefore add instructions to the instruction list), they get dropped
        * on the floor.
        */
-      exec_node *previous_tail_pred = NULL;
+      exec_node *previous_tail = NULL;
       YYLTYPE previous_operand_loc = loc;
 
       foreach_list_typed (ast_node, ast, link, &this->expressions) {
          /* If one of the operands of comma operator does not generate any
           * code, we want to emit a warning.  At each pass through the loop
-          * previous_tail_pred will point to the last instruction in the
-          * stream *before* processing the previous operand.  Naturally,
-          * instructions->tail_pred will point to the last instruction in the
-          * stream *after* processing the previous operand.  If the two
+          * previous_tail will point to the last instruction in the stream
+          * *before* processing the previous operand.  Naturally,
+          * instructions->get_tail_raw() will point to the last instruction in
+          * the stream *after* processing the previous operand.  If the two
           * pointers match, then the previous operand had no effect.
           *
           * The warning behavior here differs slightly from GCC.  GCC will
@@ -2007,18 +2007,18 @@ ast_expression::do_hir(exec_list *instructions,
           * effect, but I don't think these cases exist in GLSL.  Either way,
           * it would be a giant hassle to replicate that behavior.
           */
-         if (previous_tail_pred == instructions->get_tail_raw()) {
+         if (previous_tail == instructions->get_tail_raw()) {
             _mesa_glsl_warning(&previous_operand_loc, state,
                                "left-hand operand of comma expression has "
                                "no effect");
          }
 
-         /* tail_pred is directly accessed instead of using the get_tail()
+         /* The tail is directly accessed instead of using the get_tail()
           * method for performance reasons.  get_tail() has extra code to
           * return NULL when the list is empty.  We don't care about that
-          * here, so using tail_pred directly is fine.
+          * here, so using get_tail_raw() is fine.
           */
-         previous_tail_pred = instructions->get_tail_raw();
+         previous_tail = instructions->get_tail_raw();
          previous_operand_loc = ast->get_location();
 
          result = ast->hir(instructions, state);
