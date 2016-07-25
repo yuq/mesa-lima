@@ -900,12 +900,12 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     RDTSC_STOP(BETriangleSetup, 0, pDC->drawId);
 
     // update triangle desc
-    uint32_t tileX = intersect.left >> (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
-    uint32_t tileY = intersect.top >> (KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
+    uint32_t minTileX = intersect.left >> (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
+    uint32_t minTileY = intersect.top >> (KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
     uint32_t maxTileX = intersect.right >> (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
     uint32_t maxTileY = intersect.bottom >> (KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
-    uint32_t numTilesX = maxTileX - tileX + 1;
-    uint32_t numTilesY = maxTileY - tileY + 1;
+    uint32_t numTilesX = maxTileX - minTileX + 1;
+    uint32_t numTilesY = maxTileY - minTileY + 1;
 
     if (numTilesX == 0 || numTilesY == 0) 
     {
@@ -1021,13 +1021,13 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
     RDTSC_STOP(BEStepSetup, 0, pDC->drawId);
 
-    uint32_t tY = tileY;
-    uint32_t tX = tileX;
+    uint32_t tY = minTileY;
+    uint32_t tX = minTileX;
     uint32_t maxY = maxTileY;
     uint32_t maxX = maxTileX;
 
     RenderOutputBuffers renderBuffers, currentRenderBufferRow;
-    GetRenderHotTiles<RT::MT::numSamples>(pDC, macroTile, tileX, tileY, renderBuffers, triDesc.triFlags.renderTargetArrayIndex);
+    GetRenderHotTiles<RT::MT::numSamples>(pDC, macroTile, minTileX, minTileY, renderBuffers, triDesc.triFlags.renderTargetArrayIndex);
     currentRenderBufferRow = renderBuffers;
 
     // rasterize and generate coverage masks per sample
