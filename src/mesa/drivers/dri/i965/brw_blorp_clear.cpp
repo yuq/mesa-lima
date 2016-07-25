@@ -120,33 +120,51 @@ set_write_disables(const struct intel_renderbuffer *irb,
    return disables;
 }
 
-static bool
-do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
-                      struct gl_renderbuffer *rb, unsigned buf,
-                      bool partial_clear, bool encode_srgb, unsigned layer)
-{
-   struct gl_context *ctx = &brw->ctx;
-   struct intel_renderbuffer *irb = intel_renderbuffer(rb);
-   mesa_format format = irb->mt->format;
 
+static void
+blorp_fast_clear(struct brw_context *brw, const struct brw_blorp_surf *surf,
+                 uint32_t level, uint32_t layer,
+                 uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)
+{
    struct brw_blorp_params params;
    brw_blorp_params_init(&params);
 
-   /* Override the surface format according to the context's sRGB rules. */
-   if (!encode_srgb && _mesa_get_format_color_encoding(format) == GL_SRGB)
-      format = _mesa_get_srgb_format_linear(format);
+   params.x0 = x0;
+   params.y0 = y0;
+   params.x1 = x1;
+   params.y1 = y1;
 
-   params.x0 = fb->_Xmin;
-   params.x1 = fb->_Xmax;
-   if (rb->Name != 0) {
-      params.y0 = fb->_Ymin;
-      params.y1 = fb->_Ymax;
-   } else {
-      params.y0 = rb->Height - fb->_Ymax;
-      params.y1 = rb->Height - fb->_Ymin;
-   }
+   memset(&params.wm_inputs, 0xff, 4*sizeof(float));
+   params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
 
-   memcpy(&params.wm_inputs, ctx->Color.ClearColor.f, sizeof(float) * 4);
+   brw_get_fast_clear_rect(brw, surf->aux_surf, &params.x0, &params.y0,
+                           &params.x1, &params.y1);
+
+   brw_blorp_params_get_clear_kernel(brw, &params, true);
+
+   brw_blorp_surface_info_init(brw, &params.dst, surf, level, layer,
+                               surf->surf->format, true);
+
+   brw_blorp_exec(brw, &params);
+}
+
+
+static void
+blorp_clear(struct brw_context *brw, const struct brw_blorp_surf *surf,
+            uint32_t level, uint32_t layer,
+            uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
+            enum isl_format format, union isl_color_value clear_color,
+            bool color_write_disable[4])
+{
+   struct brw_blorp_params params;
+   brw_blorp_params_init(&params);
+
+   params.x0 = x0;
+   params.y0 = y0;
+   params.x1 = x1;
+   params.y1 = y1;
+
+   memcpy(&params.wm_inputs, clear_color.f32, sizeof(float) * 4);
 
    bool use_simd16_replicated_data = true;
 
@@ -156,21 +174,60 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
     *      accessing tiled memory.  Using this Message Type to access linear
     *      (untiled) memory is UNDEFINED."
     */
-   if (irb->mt->tiling == I915_TILING_NONE)
+   if (surf->surf->tiling == ISL_TILING_LINEAR)
       use_simd16_replicated_data = false;
 
    /* Constant color writes ignore everyting in blend and color calculator
     * state.  This is not documented.
     */
-   if (set_write_disables(irb, ctx->Color.ColorMask[buf],
-                          params.color_write_disable))
-      use_simd16_replicated_data = false;
+   for (unsigned i = 0; i < 4; i++) {
+      params.color_write_disable[i] = color_write_disable[i];
+      if (color_write_disable[i])
+         use_simd16_replicated_data = false;
+   }
 
-   bool is_fast_clear = false;
-   if (irb->mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS &&
-       !partial_clear && use_simd16_replicated_data &&
-       brw_is_color_fast_clear_compatible(brw, irb->mt,
-                                          &ctx->Color.ClearColor)) {
+   brw_blorp_params_get_clear_kernel(brw, &params, use_simd16_replicated_data);
+
+   brw_blorp_surface_info_init(brw, &params.dst, surf, level, layer,
+                               format, true);
+
+   brw_blorp_exec(brw, &params);
+}
+
+static bool
+do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
+                      struct gl_renderbuffer *rb, unsigned buf,
+                      bool partial_clear, bool encode_srgb, unsigned layer)
+{
+   struct gl_context *ctx = &brw->ctx;
+   struct intel_renderbuffer *irb = intel_renderbuffer(rb);
+   mesa_format format = irb->mt->format;
+   uint32_t x0, x1, y0, y1;
+
+   if (!encode_srgb && _mesa_get_format_color_encoding(format) == GL_SRGB)
+      format = _mesa_get_srgb_format_linear(format);
+
+   x0 = fb->_Xmin;
+   x1 = fb->_Xmax;
+   if (rb->Name != 0) {
+      y0 = fb->_Ymin;
+      y1 = fb->_Ymax;
+   } else {
+      y0 = rb->Height - fb->_Ymax;
+      y1 = rb->Height - fb->_Ymin;
+   }
+
+   bool can_fast_clear = !partial_clear;
+
+   bool color_write_disable[4] = { false, false, false, false };
+   if (set_write_disables(irb, ctx->Color.ColorMask[buf], color_write_disable))
+      can_fast_clear = false;
+
+   if (irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_NO_MCS ||
+       !brw_is_color_fast_clear_compatible(brw, irb->mt, &ctx->Color.ClearColor))
+      can_fast_clear = false;
+
+   if (can_fast_clear) {
       /* Record the clear color in the miptree so that it will be
        * programmed in SURFACE_STATE by later rendering and resolve
        * operations.
@@ -197,57 +254,47 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
             return false;
          }
       }
-
-      is_fast_clear = true;
    }
 
    intel_miptree_check_level_layer(irb->mt, irb->mt_level, layer);
    intel_miptree_used_for_rendering(irb->mt);
 
+   /* We can't setup the blorp_surf until we've allocated the MCS above */
    struct isl_surf isl_tmp[2];
    struct brw_blorp_surf surf;
    unsigned level = irb->mt_level;
    brw_blorp_surf_for_miptree(brw, &surf, irb->mt, true, &level, isl_tmp);
-   brw_blorp_surface_info_init(brw, &params.dst, &surf, level, layer,
-                               brw_blorp_to_isl_format(brw, format, true),
-                               true);
 
-   if (is_fast_clear) {
-      memset(&params.wm_inputs, 0xff, 4*sizeof(float));
-      params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
+   if (can_fast_clear) {
+      DBG("%s (fast) to mt %p level %d layer %d\n", __FUNCTION__,
+          irb->mt, irb->mt_level, irb->mt_layer);
 
-      brw_get_fast_clear_rect(brw, &params.dst.aux_surf, &params.x0, &params.y0,
-                              &params.x1, &params.y1);
-   }
+      blorp_fast_clear(brw, &surf, level, layer, x0, y0, x1, y1);
 
-   brw_blorp_params_get_clear_kernel(brw, &params, use_simd16_replicated_data);
-
-   const char *clear_type;
-   if (is_fast_clear)
-      clear_type = "fast";
-   else if (use_simd16_replicated_data)
-      clear_type = "replicated";
-   else
-      clear_type = "slow";
-
-   DBG("%s (%s) to mt %p level %d layer %d\n", __FUNCTION__, clear_type,
-       irb->mt, irb->mt_level, irb->mt_layer);
-
-   brw_blorp_exec(brw, &params);
-
-   if (is_fast_clear) {
       /* Now that the fast clear has occurred, put the buffer in
        * INTEL_FAST_CLEAR_STATE_CLEAR so that we won't waste time doing
        * redundant clears.
        */
       irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
-   } else if (intel_miptree_is_lossless_compressed(brw, irb->mt)) {
-      /* Compressed buffers can be cleared also using normal rep-clear. In
-       * such case they bahave such as if they were drawn using normal 3D
-       * render pipeline, and we simply mark the mcs as dirty.
-       */
-      assert(partial_clear);
-      irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
+   } else {
+      DBG("%s (slow) to mt %p level %d layer %d\n", __FUNCTION__,
+          irb->mt, irb->mt_level, irb->mt_layer);
+
+      union isl_color_value clear_color;
+      memcpy(clear_color.f32, ctx->Color.ClearColor.f, sizeof(float) * 4);
+
+      blorp_clear(brw, &surf, level, layer, x0, y0, x1, y1,
+                  (enum isl_format)brw->render_target_format[format],
+                  clear_color, color_write_disable);
+
+      if (intel_miptree_is_lossless_compressed(brw, irb->mt)) {
+         /* Compressed buffers can be cleared also using normal rep-clear. In
+          * such case they bahave such as if they were drawn using normal 3D
+          * render pipeline, and we simply mark the mcs as dirty.
+          */
+         assert(partial_clear);
+         irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
+      }
    }
 
    return true;
