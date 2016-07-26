@@ -3172,17 +3172,32 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
                                struct isl_surf *surf,
                                enum isl_aux_usage *usage)
 {
-   /* Figure out the layout */
-   if (_mesa_get_format_base_format(mt->format) == GL_DEPTH_COMPONENT) {
+   uint32_t aux_pitch, aux_qpitch;
+   if (mt->mcs_mt) {
+      aux_pitch = mt->mcs_mt->pitch;
+      aux_qpitch = mt->mcs_mt->qpitch;
+
+      if (mt->num_samples > 1) {
+         assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
+         *usage = ISL_AUX_USAGE_MCS;
+      } else if (intel_miptree_is_lossless_compressed(brw, mt)) {
+         assert(brw->gen >= 9);
+         *usage = ISL_AUX_USAGE_CCS_E;
+      } else if (mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS) {
+         *usage = ISL_AUX_USAGE_CCS_D;
+      } else {
+         unreachable("Invalid MCS miptree");
+      }
+   } else if (mt->hiz_buf) {
+      if (mt->hiz_buf->mt) {
+         aux_pitch = mt->hiz_buf->mt->pitch;
+         aux_qpitch = mt->hiz_buf->mt->qpitch;
+      } else {
+         aux_pitch = mt->hiz_buf->pitch;
+         aux_qpitch = mt->hiz_buf->qpitch;
+      }
+
       *usage = ISL_AUX_USAGE_HIZ;
-   } else if (mt->num_samples > 1) {
-      assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
-      *usage = ISL_AUX_USAGE_MCS;
-   } else if (intel_miptree_is_lossless_compressed(brw, mt)) {
-      assert(brw->gen >= 9);
-      *usage = ISL_AUX_USAGE_CCS_E;
-   } else if (mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_NO_MCS) {
-      *usage = ISL_AUX_USAGE_CCS_D;
    } else {
       *usage = ISL_AUX_USAGE_NONE;
       return;
@@ -3194,7 +3209,7 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
    /* Figure out the format and tiling of the auxiliary surface */
    switch (*usage) {
    case ISL_AUX_USAGE_NONE:
-      unreachable("Invalid MCS miptree");
+      unreachable("Invalid auxiliary usage");
 
    case ISL_AUX_USAGE_HIZ:
       isl_surf_get_hiz_surf(&brw->isl_dev, surf, surf);
@@ -3233,7 +3248,7 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
    }
 
    /* We want the pitch of the actual aux buffer. */
-   surf->row_pitch = mt->mcs_mt->pitch;
+   surf->row_pitch = aux_pitch;
 
    /* Auxiliary surfaces in ISL have compressed formats and array_pitch_el_rows
     * is in elements.  This doesn't match intel_mipmap_tree::qpitch which is
@@ -3241,7 +3256,7 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
     * compression block height.
     */
    surf->array_pitch_el_rows =
-      mt->mcs_mt->qpitch / isl_format_get_layout(surf->format)->bh;
+      aux_qpitch / isl_format_get_layout(surf->format)->bh;
 }
 
 union isl_color_value
