@@ -2156,6 +2156,9 @@ assign_varying_locations(struct gl_context *ctx,
       }
    }
 
+   hash_table_dtor(consumer_inputs);
+   hash_table_dtor(consumer_interface_inputs);
+
    for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
       if (!tfeedback_decls[i].is_varying())
          continue;
@@ -2165,8 +2168,6 @@ assign_varying_locations(struct gl_context *ctx,
 
       if (matched_candidate == NULL) {
          hash_table_dtor(tfeedback_candidates);
-         hash_table_dtor(consumer_inputs);
-         hash_table_dtor(consumer_interface_inputs);
          return false;
       }
 
@@ -2185,15 +2186,10 @@ assign_varying_locations(struct gl_context *ctx,
 
       if (!tfeedback_decls[i].assign_location(ctx, prog)) {
          hash_table_dtor(tfeedback_candidates);
-         hash_table_dtor(consumer_inputs);
-         hash_table_dtor(consumer_interface_inputs);
          return false;
       }
    }
-
    hash_table_dtor(tfeedback_candidates);
-   hash_table_dtor(consumer_inputs);
-   hash_table_dtor(consumer_interface_inputs);
 
    if (consumer && producer) {
       foreach_in_list(ir_instruction, node, consumer->ir) {
