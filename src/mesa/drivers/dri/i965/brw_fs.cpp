@@ -6353,38 +6353,46 @@ move_interpolation_to_top(nir_shader *nir)
          continue;
 
       nir_block *top = nir_start_block(f->impl);
+      exec_node *cursor_node = NULL;
 
       nir_foreach_block(block, f->impl) {
          if (block == top)
             continue;
 
-         nir_foreach_instr_reverse_safe(instr, block) {
+         nir_foreach_instr_safe(instr, block) {
             if (instr->type != nir_instr_type_intrinsic)
                continue;
 
             nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-            switch (intrin->intrinsic) {
-            case nir_intrinsic_load_barycentric_pixel:
-            case nir_intrinsic_load_barycentric_centroid:
-            case nir_intrinsic_load_barycentric_sample:
-               break;
-            case nir_intrinsic_load_interpolated_input: {
-               nir_intrinsic_instr *bary_intrinsic =
-                  nir_instr_as_intrinsic(intrin->src[0].ssa->parent_instr);
-               nir_intrinsic_op op = bary_intrinsic->intrinsic;
-
-               /* Leave interpolateAtSample/Offset() where it is. */
-               if (op == nir_intrinsic_load_barycentric_at_sample ||
-                   op == nir_intrinsic_load_barycentric_at_offset)
-                  continue;
-            }
-            default:
+            if (intrin->intrinsic != nir_intrinsic_load_interpolated_input)
                continue;
-            }
+            nir_intrinsic_instr *bary_intrinsic =
+               nir_instr_as_intrinsic(intrin->src[0].ssa->parent_instr);
+            nir_intrinsic_op op = bary_intrinsic->intrinsic;
 
-            exec_node_remove(&instr->node);
-            exec_list_push_head(&top->instr_list, &instr->node);
-            instr->block = top;
+            /* Leave interpolateAtSample/Offset() where they are. */
+            if (op == nir_intrinsic_load_barycentric_at_sample ||
+                op == nir_intrinsic_load_barycentric_at_offset)
+               continue;
+
+            nir_instr *move[3] = {
+               &bary_intrinsic->instr,
+               intrin->src[1].ssa->parent_instr,
+               instr
+            };
+
+            for (int i = 0; i < ARRAY_SIZE(move); i++) {
+               if (move[i]->block != top) {
+                  move[i]->block = top;
+                  exec_node_remove(&move[i]->node);
+                  if (cursor_node) {
+                     exec_node_insert_after(cursor_node, &move[i]->node);
+                  } else {
+                     exec_list_push_head(&top->instr_list, &move[i]->node);
+                  }
+                  cursor_node = &move[i]->node;
+               }
+            }
          }
       }
       nir_metadata_preserve(f->impl, (nir_metadata)
