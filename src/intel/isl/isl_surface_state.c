@@ -210,6 +210,11 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    struct GENX(RENDER_SURFACE_STATE) s = { 0 };
 
    s.SurfaceType = get_surftype(info->surf->dim, info->view->usage);
+
+   if (info->view->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT)
+      assert(isl_format_supports_rendering(dev->info, info->view->format));
+   else if (info->view->usage & ISL_SURF_USAGE_TEXTURE_BIT)
+      assert(isl_format_supports_sampling(dev->info, info->view->format));
    s.SurfaceFormat = info->view->format;
 
 #if GEN_IS_HASWELL
