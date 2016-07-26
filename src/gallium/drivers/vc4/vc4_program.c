@@ -1223,7 +1223,7 @@ emit_frag_end(struct vc4_compile *c)
                 if (c->output_position_index != -1) {
                         qir_FTOI_dest(c, qir_reg(QFILE_TLB_Z_WRITE, 0),
                                       qir_FMUL(c,
-                                               c->outputs[c->output_position_index + 2],
+                                               c->outputs[c->output_position_index],
                                                qir_uniform_f(c, 0xffffff)))->cond = discard_cond;
                 } else {
                         qir_MOV_dest(c, qir_reg(QFILE_TLB_Z_WRITE, 0),

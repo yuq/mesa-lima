@@ -1918,9 +1918,22 @@ ttn_add_output_stores(struct ttn_compile *c)
          nir_intrinsic_instr *store =
             nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_output);
          unsigned loc = var->data.driver_location + i;
-         store->num_components = 4;
-         store->src[0].reg.reg = c->output_regs[loc].reg;
-         store->src[0].reg.base_offset = c->output_regs[loc].offset;
+
+         nir_src src = nir_src_for_reg(c->output_regs[loc].reg);
+         src.reg.base_offset = c->output_regs[loc].offset;
+
+         if (c->build.shader->stage == MESA_SHADER_FRAGMENT &&
+             var->data.location == FRAG_RESULT_DEPTH) {
+            /* TGSI uses TGSI_SEMANTIC_POSITION.z for the depth output, while
+             * NIR uses a single float FRAG_RESULT_DEPTH.
+             */
+            src = nir_src_for_ssa(nir_channel(b, nir_ssa_for_src(b, src, 4), 2));
+            store->num_components = 1;
+         } else {
+            store->num_components = 4;
+         }
+         store->src[0] = src;
+
          nir_intrinsic_set_base(store, loc);
          nir_intrinsic_set_write_mask(store, 0xf);
          store->src[1] = nir_src_for_ssa(nir_imm_int(b, 0));

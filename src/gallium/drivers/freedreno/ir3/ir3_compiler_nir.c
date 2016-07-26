@@ -2498,12 +2498,6 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	/* fixup input/outputs: */
 	for (i = 0; i < so->outputs_count; i++) {
 		so->outputs[i].regid = ir->outputs[i*4]->regs[0]->num;
-		/* preserve hack for depth output.. tgsi writes depth to .z,
-		 * but what we give the hw is the scalar register:
-		 */
-		if (so->shader->from_tgsi && (so->type == SHADER_FRAGMENT) &&
-				(so->outputs[i].slot == FRAG_RESULT_DEPTH))
-			so->outputs[i].regid += 2;
 	}
 
 	/* Note that some or all channels of an input may be unused: */
