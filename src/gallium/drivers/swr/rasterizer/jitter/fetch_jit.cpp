@@ -578,6 +578,7 @@ void FetchJit::CreateGatherOddFormats(SWR_FORMAT format, Value* pBase, Value* of
         {
         case 8: load = POINTER_CAST(load, Type::getInt8PtrTy(JM()->mContext)); break;
         case 16: load = POINTER_CAST(load, Type::getInt16PtrTy(JM()->mContext)); break;
+        case 24:
         case 32: load = POINTER_CAST(load, Type::getInt32PtrTy(JM()->mContext)); break;
         default: SWR_ASSERT(0);
         }
