@@ -456,7 +456,18 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->sampler_surface_state.alloc_size = 0;
    }
 
-   if (image->usage & usage_mask & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+   /* This is kind-of hackish.  It is possible, due to get_full_usage above,
+    * to get a surface state with a non-renderable format but with
+    * VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.  This happens in particular for
+    * formats which aren't renderable but where we want to use Vulkan copy
+    * commands so VK_IMAGE_USAGE_TRANSFER_DST_BIT is set.  In the case of a
+    * copy, meta will use a format that we can render to, but most of the rest
+    * of the time, we don't want to create those surface states.  Once we
+    * start using blorp for copies, this problem will go away and we can
+    * remove a lot of hacks.
+    */
+   if ((image->usage & usage_mask & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
+       isl_format_supports_rendering(&device->info, isl_view.format)) {
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       isl_view.usage = cube_usage | ISL_SURF_USAGE_RENDER_TARGET_BIT;
