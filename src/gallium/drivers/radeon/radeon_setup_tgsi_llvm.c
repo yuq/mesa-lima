@@ -1769,8 +1769,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *tripl
 		HAVE_LLVM >= 0x0308 ? "llvm.exp2.f32" : "llvm.AMDIL.exp.";
 	bld_base->op_actions[TGSI_OPCODE_FLR].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_FLR].intr_name = "llvm.floor.f32";
-	bld_base->op_actions[TGSI_OPCODE_FMA].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_FMA].intr_name = "llvm.fma.f32";
+	bld_base->op_actions[TGSI_OPCODE_FMA].emit =
+		bld_base->op_actions[TGSI_OPCODE_MAD].emit;
 	bld_base->op_actions[TGSI_OPCODE_FRC].emit = emit_frac;
 	bld_base->op_actions[TGSI_OPCODE_F2I].emit = emit_f2i;
 	bld_base->op_actions[TGSI_OPCODE_F2U].emit = emit_f2u;
