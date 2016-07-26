@@ -586,7 +586,7 @@ static struct pipe_sampler_view *
 vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         const struct pipe_sampler_view *cso)
 {
-        struct vc4_sampler_view *so = malloc(sizeof(*so));
+        struct vc4_sampler_view *so = CALLOC_STRUCT(vc4_sampler_view);
         struct vc4_resource *rsc = vc4_resource(prsc);
 
         if (!so)
