@@ -308,6 +308,13 @@ struct _mesa_glsl_parse_state {
              is_version(450, 0);
    }
 
+   bool has_framebuffer_fetch() const
+   {
+      return EXT_shader_framebuffer_fetch_enable ||
+             MESA_shader_framebuffer_fetch_enable ||
+             MESA_shader_framebuffer_fetch_non_coherent_enable;
+   }
+
    void process_version_directive(YYLTYPE *locp, int version,
                                   const char *ident);
 
@@ -696,6 +703,8 @@ struct _mesa_glsl_parse_state {
    bool EXT_gpu_shader5_warn;
    bool EXT_separate_shader_objects_enable;
    bool EXT_separate_shader_objects_warn;
+   bool EXT_shader_framebuffer_fetch_enable;
+   bool EXT_shader_framebuffer_fetch_warn;
    bool EXT_shader_integer_mix_enable;
    bool EXT_shader_integer_mix_warn;
    bool EXT_shader_io_blocks_enable;
@@ -710,6 +719,10 @@ struct _mesa_glsl_parse_state {
    bool EXT_texture_array_warn;
    bool EXT_texture_buffer_enable;
    bool EXT_texture_buffer_warn;
+   bool MESA_shader_framebuffer_fetch_enable;
+   bool MESA_shader_framebuffer_fetch_warn;
+   bool MESA_shader_framebuffer_fetch_non_coherent_enable;
+   bool MESA_shader_framebuffer_fetch_non_coherent_warn;
    bool MESA_shader_integer_functions_enable;
    bool MESA_shader_integer_functions_warn;
    /*@}*/
