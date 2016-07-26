@@ -756,6 +756,10 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         // is the element is <= the partially valid size
         Value* vElementInBoundsMask = ICMP_SLE(vBpp, SUB(vPartialVertexSize, vAlignmentOffsets));
 
+        // override cur indices with 0 if pitch is 0
+        Value* pZeroPitchMask = ICMP_EQ(vStride, VIMMED1(0));
+        vCurIndices = SELECT(pZeroPitchMask, VIMMED1(0), vCurIndices);
+
         // are vertices partially OOB?
         Value* vMaxVertex = VBROADCAST(maxVertex);
         Value* vPartialOOBMask = ICMP_EQ(vCurIndices, vMaxVertex);
@@ -985,8 +989,6 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                 break;
                 case 32:
                 {
-                    SWR_ASSERT(conversionType == CONVERT_NONE);
-
                     // Gathered components into place in simdvertex struct
                     for (uint32_t i = 0; i < 4; i++)
                     {
@@ -998,8 +1000,18 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // save mask as it is zero'd out after each gather
                                 Value *vMask = vGatherMask;
 
-                                vVertexElements[currentVertexElement++] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask, C((char)1));
+                                Value* pGather = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask, C((char)1));
 
+                                if (conversionType == CONVERT_USCALED)
+                                {
+                                    pGather = UI_TO_FP(pGather, mSimdFP32Ty);
+                                }
+                                else if (conversionType == CONVERT_SSCALED)
+                                {
+                                    pGather = SI_TO_FP(pGather, mSimdFP32Ty);
+                                }
+
+                                vVertexElements[currentVertexElement++] = pGather;
                                 // e.g. result of a single 8x32bit integer gather for 32bit components
                                 // 256i - 0    1    2    3    4    5    6    7
                                 //        xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx 
