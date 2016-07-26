@@ -112,12 +112,12 @@
 
 // fixed macrotile pixel dimension for now, eventually will be 
 // dynamically set based on tile format and pixel size
-#define KNOB_MACROTILE_X_DIM                64
-#define KNOB_MACROTILE_Y_DIM                64
+#define KNOB_MACROTILE_X_DIM                32
+#define KNOB_MACROTILE_Y_DIM                32
+#define KNOB_MACROTILE_X_DIM_FIXED_SHIFT    13
+#define KNOB_MACROTILE_Y_DIM_FIXED_SHIFT    13
 #define KNOB_MACROTILE_X_DIM_FIXED          (KNOB_MACROTILE_X_DIM << 8)
 #define KNOB_MACROTILE_Y_DIM_FIXED          (KNOB_MACROTILE_Y_DIM << 8)
-#define KNOB_MACROTILE_X_DIM_FIXED_SHIFT    14
-#define KNOB_MACROTILE_Y_DIM_FIXED_SHIFT    14
 #define KNOB_MACROTILE_X_DIM_IN_TILES       (KNOB_MACROTILE_X_DIM >> KNOB_TILE_X_DIM_SHIFT)
 #define KNOB_MACROTILE_Y_DIM_IN_TILES       (KNOB_MACROTILE_Y_DIM >> KNOB_TILE_Y_DIM_SHIFT)
 
