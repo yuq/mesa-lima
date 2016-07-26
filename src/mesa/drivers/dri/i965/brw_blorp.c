@@ -550,24 +550,17 @@ retry:
    brw_emit_mi_flush(brw);
 }
 
-void
-gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-                    unsigned int level, unsigned int layer, enum gen6_hiz_op op)
+static void
+blorp_gen6_hiz_op(struct brw_context *brw, struct brw_blorp_surf *surf,
+                  unsigned level, unsigned layer, enum gen6_hiz_op op)
 {
    struct brw_blorp_params params;
    brw_blorp_params_init(&params);
 
    params.hiz_op = op;
 
-   intel_miptree_check_level_layer(mt, level, layer);
-   intel_miptree_used_for_rendering(mt);
-
-   struct isl_surf isl_tmp[2];
-   struct brw_blorp_surf surf;
-   brw_blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
-   brw_blorp_surface_info_init(brw, &params.depth, &surf, level, layer,
-                               brw_blorp_to_isl_format(brw, mt->format, true),
-                               true);
+   brw_blorp_surface_info_init(brw, &params.depth, surf, level, layer,
+                               surf->surf->format, true);
 
    /* Align the rectangle primitive to 8x4 pixels.
     *
@@ -610,16 +603,14 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    params.dst.surf.samples = params.depth.surf.samples;
    params.dst.surf.logical_level0_px = params.depth.surf.logical_level0_px;
 
-   assert(intel_miptree_level_has_hiz(mt, level));
-
-   switch (mt->format) {
-   case MESA_FORMAT_Z_UNORM16:
+   switch (surf->surf->format) {
+   case ISL_FORMAT_R16_UNORM:
       params.depth_format = BRW_DEPTHFORMAT_D16_UNORM;
       break;
-   case MESA_FORMAT_Z_FLOAT32:
+   case ISL_FORMAT_R32_FLOAT:
       params.depth_format = BRW_DEPTHFORMAT_D32_FLOAT;
       break;
-   case MESA_FORMAT_Z24_UNORM_X8_UINT:
+   case ISL_FORMAT_R24_UNORM_X8_TYPELESS:
       params.depth_format = BRW_DEPTHFORMAT_D24_UNORM_X8_UINT;
       break;
    default:
@@ -627,4 +618,20 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    }
 
    brw_blorp_exec(brw, &params);
+}
+
+void
+gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
+                    unsigned int level, unsigned int layer, enum gen6_hiz_op op)
+{
+   intel_miptree_check_level_layer(mt, level, layer);
+   intel_miptree_used_for_rendering(mt);
+
+   assert(intel_miptree_level_has_hiz(mt, level));
+
+   struct isl_surf isl_tmp[2];
+   struct brw_blorp_surf surf;
+   brw_blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
+
+   blorp_gen6_hiz_op(brw, &surf, level, layer, op);
 }
