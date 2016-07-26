@@ -3277,7 +3277,8 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
     * in elements of the primary color surface so we have to divide by the
     * compression block height.
     */
-   surf->array_pitch_el_rows = mt->qpitch / isl_format_get_layout(surf->format)->bh;
+   surf->array_pitch_el_rows =
+      mt->mcs_mt->qpitch / isl_format_get_layout(surf->format)->bh;
 }
 
 union isl_color_value
