@@ -278,7 +278,8 @@ anv_get_format(const struct brw_device_info *devinfo, VkFormat vk_format,
        * hood.
        */
       enum isl_format rgbx = isl_format_rgb_to_rgbx(format.isl_format);
-      if (rgbx != ISL_FORMAT_UNSUPPORTED) {
+      if (rgbx != ISL_FORMAT_UNSUPPORTED &&
+          isl_format_supports_rendering(devinfo, rgbx)) {
          format.isl_format = rgbx;
       } else {
          format.isl_format = isl_format_rgb_to_rgba(format.isl_format);
