@@ -22,6 +22,7 @@
  */
 
 #include "main/core.h"
+#include "program/hash_table.h"
 #include "ir.h"
 #include "linker.h"
 #include "ir_uniform.h"
@@ -33,14 +34,13 @@
 namespace linker {
 
 gl_uniform_storage *
-get_storage(gl_uniform_storage *storage, unsigned num_storage,
-	    const char *name)
+get_storage(struct gl_shader_program *prog, const char *name)
 {
-   for (unsigned int i = 0; i < num_storage; i++) {
-      if (strcmp(name, storage[i].name) == 0)
-	 return &storage[i];
-   }
+   unsigned id;
+   if (prog->UniformHash->get(id, name))
+      return &prog->UniformStorage[id];
 
+   assert(!"No uniform storage found!");
    return NULL;
 }
 
@@ -108,13 +108,10 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
                             element_name, binding);
       }
    } else {
-      struct gl_uniform_storage *const storage =
-         get_storage(prog->UniformStorage, prog->NumUniformStorage, name);
+      struct gl_uniform_storage *const storage = get_storage(prog, name);
 
-      if (storage == NULL) {
-         assert(storage != NULL);
+      if (!storage)
          return;
-      }
 
       const unsigned elements = MAX2(storage->array_elements, 1);
 
@@ -207,14 +204,10 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
       return;
    }
 
-   struct gl_uniform_storage *const storage =
-      get_storage(prog->UniformStorage,
-                  prog->NumUniformStorage,
-		  name);
-   if (storage == NULL) {
-      assert(storage != NULL);
+   struct gl_uniform_storage *const storage = get_storage(prog, name);
+
+   if (!storage)
       return;
-   }
 
    if (val->type->is_array()) {
       const enum glsl_base_type base_type =
