@@ -372,6 +372,15 @@ isl_format_supports_sampling(const struct brw_device_info *devinfo,
    if (!format_info[format].exists)
       return false;
 
+   if (devinfo->is_baytrail) {
+      const struct isl_format_layout *fmtl = isl_format_get_layout(format);
+      /* Support for ETC1 and ETC2 exists on Bay Trail even though big-core
+       * GPUs didn't get it until Broadwell.
+       */
+      if (fmtl->txc == ISL_TXC_ETC1 || fmtl->txc == ISL_TXC_ETC2)
+         return true;
+   }
+
    return format_gen(devinfo) >= format_info[format].sampling;
 }
 
@@ -381,6 +390,15 @@ isl_format_supports_filtering(const struct brw_device_info *devinfo,
 {
    if (!format_info[format].exists)
       return false;
+
+   if (devinfo->is_baytrail) {
+      const struct isl_format_layout *fmtl = isl_format_get_layout(format);
+      /* Support for ETC1 and ETC2 exists on Bay Trail even though big-core
+       * GPUs didn't get it until Broadwell.
+       */
+      if (fmtl->txc == ISL_TXC_ETC1 || fmtl->txc == ISL_TXC_ETC2)
+         return true;
+   }
 
    return format_gen(devinfo) >= format_info[format].filtering;
 }
