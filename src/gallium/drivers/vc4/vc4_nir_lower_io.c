@@ -342,11 +342,13 @@ vc4_nir_lower_uniform(struct vc4_compile *c, nir_builder *b,
                 intr_comp->num_components = 1;
                 nir_ssa_dest_init(&intr_comp->instr, &intr_comp->dest, 1, 32, NULL);
 
-                /* Convert the uniform offset to bytes.  If it happens to be a
-                 * constant, constant-folding will clean up the shift for us.
+                /* Convert the uniform offset to bytes.  If it happens
+                 * to be a constant, constant-folding will clean up
+                 * the shift for us.
                  */
                 nir_intrinsic_set_base(intr_comp,
-                                       nir_intrinsic_base(intr) * 16 + i * 4);
+                                       nir_intrinsic_base(intr) * 16 +
+                                       i * 4);
 
                 intr_comp->src[0] =
                         nir_src_for_ssa(nir_ishl(b, intr->src[0].ssa,

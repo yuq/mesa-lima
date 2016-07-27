@@ -110,21 +110,6 @@ indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
         return qir_TEX_RESULT(c);
 }
 
-nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
-                                       enum quniform_contents contents)
-{
-        nir_intrinsic_instr *intr =
-                nir_intrinsic_instr_create(b->shader,
-                                           nir_intrinsic_load_uniform);
-        nir_intrinsic_set_base(intr,
-                               (VC4_NIR_STATE_UNIFORM_OFFSET + contents) * 4);
-        intr->num_components = 1;
-        intr->src[0] = nir_src_for_ssa(nir_imm_int(b, 0));
-        nir_ssa_dest_init(&intr->instr, &intr->dest, 1, 32, NULL);
-        nir_builder_instr_insert(b, &intr->instr);
-        return &intr->dest.ssa;
-}
-
 nir_ssa_def *
 vc4_nir_get_swizzled_channel(nir_builder *b, nir_ssa_def **srcs, int swiz)
 {
@@ -1567,16 +1552,9 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                         assert(offset % 4 == 0);
                         /* We need dwords */
                         offset = offset / 4;
-                        if (offset < VC4_NIR_STATE_UNIFORM_OFFSET) {
-                                ntq_store_dest(c, &instr->dest, 0,
-                                               qir_uniform(c, QUNIFORM_UNIFORM,
-                                                           offset));
-                        } else {
-                                ntq_store_dest(c, &instr->dest, 0,
-                                               qir_uniform(c, offset -
-                                                           VC4_NIR_STATE_UNIFORM_OFFSET,
-                                                           0));
-                        }
+                        ntq_store_dest(c, &instr->dest, 0,
+                                       qir_uniform(c, QUNIFORM_UNIFORM,
+                                                   offset));
                 } else {
                         ntq_store_dest(c, &instr->dest, 0,
                                        indirect_uniform_load(c, instr));
@@ -1590,6 +1568,34 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                                                    nir_intrinsic_ucp_id(instr) *
                                                    4 + i));
                 }
+                break;
+
+        case nir_intrinsic_load_blend_const_color_r_float:
+        case nir_intrinsic_load_blend_const_color_g_float:
+        case nir_intrinsic_load_blend_const_color_b_float:
+        case nir_intrinsic_load_blend_const_color_a_float:
+                ntq_store_dest(c, &instr->dest, 0,
+                               qir_uniform(c, QUNIFORM_BLEND_CONST_COLOR_X +
+                                           (instr->intrinsic -
+                                            nir_intrinsic_load_blend_const_color_r_float),
+                                           0));
+                break;
+
+        case nir_intrinsic_load_blend_const_color_rgba8888_unorm:
+                ntq_store_dest(c, &instr->dest, 0,
+                               qir_uniform(c, QUNIFORM_BLEND_CONST_COLOR_RGBA,
+                                           0));
+                break;
+
+        case nir_intrinsic_load_blend_const_color_aaaa8888_unorm:
+                ntq_store_dest(c, &instr->dest, 0,
+                               qir_uniform(c, QUNIFORM_BLEND_CONST_COLOR_AAAA,
+                                           0));
+                break;
+
+        case nir_intrinsic_load_alpha_ref_float:
+                ntq_store_dest(c, &instr->dest, 0,
+                               qir_uniform(c, QUNIFORM_ALPHA_REF, 0));
                 break;
 
         case nir_intrinsic_load_sample_mask_in:

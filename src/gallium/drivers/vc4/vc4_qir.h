@@ -505,11 +505,6 @@ struct vc4_compile {
 
 #define VC4_NIR_MS_MASK_OUTPUT			2000000000
 
-/* Special offset for nir_load_uniform values to get a QUNIFORM_*
- * state-dependent value.
- */
-#define VC4_NIR_STATE_UNIFORM_OFFSET		1000000000
-
 struct vc4_compile *qir_compile_init(void);
 void qir_compile_destroy(struct vc4_compile *c);
 struct qblock *qir_new_block(struct vc4_compile *c);
@@ -566,8 +561,6 @@ bool qir_opt_small_immediates(struct vc4_compile *c);
 bool qir_opt_vpm(struct vc4_compile *c);
 void vc4_nir_lower_blend(nir_shader *s, struct vc4_compile *c);
 void vc4_nir_lower_io(nir_shader *s, struct vc4_compile *c);
-nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
-                                       enum quniform_contents contents);
 nir_ssa_def *vc4_nir_get_swizzled_channel(struct nir_builder *b,
                                           nir_ssa_def **srcs, int swiz);
 void vc4_nir_lower_txf_ms(nir_shader *s, struct vc4_compile *c);

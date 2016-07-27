@@ -127,9 +127,12 @@ vc4_blend_channel_f(nir_builder *b,
                         return nir_imm_float(b, 1.0);
                 }
         case PIPE_BLENDFACTOR_CONST_COLOR:
-                return vc4_nir_get_state_uniform(b, QUNIFORM_BLEND_CONST_COLOR_X + channel);
+                return nir_load_system_value(b,
+                                             nir_intrinsic_load_blend_const_color_r_float +
+                                             channel,
+                                             0);
         case PIPE_BLENDFACTOR_CONST_ALPHA:
-                return vc4_nir_get_state_uniform(b, QUNIFORM_BLEND_CONST_COLOR_W);
+                return nir_load_blend_const_color_a_float(b);
         case PIPE_BLENDFACTOR_ZERO:
                 return nir_imm_float(b, 0.0);
         case PIPE_BLENDFACTOR_INV_SRC_COLOR:
@@ -142,10 +145,13 @@ vc4_blend_channel_f(nir_builder *b,
                 return nir_fsub(b, nir_imm_float(b, 1.0), dst[channel]);
         case PIPE_BLENDFACTOR_INV_CONST_COLOR:
                 return nir_fsub(b, nir_imm_float(b, 1.0),
-                                vc4_nir_get_state_uniform(b, QUNIFORM_BLEND_CONST_COLOR_X + channel));
+                                nir_load_system_value(b,
+                                                      nir_intrinsic_load_blend_const_color_r_float +
+                                                      channel,
+                                                      0));
         case PIPE_BLENDFACTOR_INV_CONST_ALPHA:
                 return nir_fsub(b, nir_imm_float(b, 1.0),
-                                vc4_nir_get_state_uniform(b, QUNIFORM_BLEND_CONST_COLOR_W));
+                                nir_load_blend_const_color_a_float(b));
 
         default:
         case PIPE_BLENDFACTOR_SRC1_COLOR:
@@ -196,9 +202,9 @@ vc4_blend_channel_i(nir_builder *b,
                                                nir_imm_int(b, ~0),
                                                a_chan);
         case PIPE_BLENDFACTOR_CONST_COLOR:
-                return vc4_nir_get_state_uniform(b, QUNIFORM_BLEND_CONST_COLOR_RGBA);
+                return nir_load_blend_const_color_rgba8888_unorm(b);
         case PIPE_BLENDFACTOR_CONST_ALPHA:
-                return vc4_nir_get_state_uniform(b, QUNIFORM_BLEND_CONST_COLOR_AAAA);
+                return nir_load_blend_const_color_aaaa8888_unorm(b);
         case PIPE_BLENDFACTOR_ZERO:
                 return nir_imm_int(b, 0);
         case PIPE_BLENDFACTOR_INV_SRC_COLOR:
@@ -210,9 +216,11 @@ vc4_blend_channel_i(nir_builder *b,
         case PIPE_BLENDFACTOR_INV_DST_COLOR:
                 return nir_inot(b, dst);
         case PIPE_BLENDFACTOR_INV_CONST_COLOR:
-                return nir_inot(b, vc4_nir_get_state_uniform(b, QUNIFORM_BLEND_CONST_COLOR_RGBA));
+                return nir_inot(b,
+                                nir_load_blend_const_color_rgba8888_unorm(b));
         case PIPE_BLENDFACTOR_INV_CONST_ALPHA:
-                return nir_inot(b, vc4_nir_get_state_uniform(b, QUNIFORM_BLEND_CONST_COLOR_AAAA));
+                return nir_inot(b,
+                                nir_load_blend_const_color_aaaa8888_unorm(b));
 
         default:
         case PIPE_BLENDFACTOR_SRC1_COLOR:
@@ -475,11 +483,10 @@ vc4_nir_emit_alpha_test_discard(struct vc4_compile *c, nir_builder *b,
         if (!c->fs_key->alpha_test)
                 return;
 
-        nir_ssa_def *alpha_ref =
-                vc4_nir_get_state_uniform(b, QUNIFORM_ALPHA_REF);
         nir_ssa_def *condition =
                 vc4_nir_pipe_compare_func(b, c->fs_key->alpha_test_func,
-                                          alpha, alpha_ref);
+                                          alpha,
+                                          nir_load_alpha_ref_float(b));
 
         nir_intrinsic_instr *discard =
                 nir_intrinsic_instr_create(b->shader,
