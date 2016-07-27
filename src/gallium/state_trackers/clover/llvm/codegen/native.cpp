@@ -126,7 +126,7 @@ namespace {
       {
          compat::pass_manager pm;
          ::llvm::raw_svector_ostream os { data };
-         compat::raw_ostream_to_emit_file fos { os };
+         compat::raw_ostream_to_emit_file fos(os);
 
          mod.setDataLayout(compat::get_data_layout(*tm));
          tm->Options.MCOptions.AsmVerbose =
