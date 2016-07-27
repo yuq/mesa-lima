@@ -37,6 +37,7 @@
 #include "vc4_context.h"
 #include "vc4_qpu.h"
 #include "vc4_qir.h"
+#include "mesa/state_tracker/st_glsl_types.h"
 #ifdef USE_VC4_SIMULATOR
 #include "simpenrose/simpenrose.h"
 #endif
@@ -1486,11 +1487,11 @@ static void
 ntq_setup_uniforms(struct vc4_compile *c)
 {
         nir_foreach_variable(var, &c->s->uniforms) {
-                unsigned array_len = MAX2(glsl_get_length(var->type), 1);
-                unsigned array_elem_size = 4 * sizeof(float);
+                uint32_t vec4_count = st_glsl_type_size(var->type);
+                unsigned vec4_size = 4 * sizeof(float);
 
-                declare_uniform_range(c, var->data.driver_location * array_elem_size,
-                                      array_len * array_elem_size);
+                declare_uniform_range(c, var->data.driver_location * vec4_size,
+                                      vec4_count * vec4_size);
 
         }
 }
