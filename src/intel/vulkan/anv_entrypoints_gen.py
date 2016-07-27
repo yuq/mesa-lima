@@ -253,17 +253,6 @@ anv_resolve_entrypoint(uint32_t index)
 }
 """
 
-# Now output ifuncs and their resolve helpers for all entry points. The
-# resolve helper calls resolve_entrypoint() with the entry point index, which
-# lets the resolver look it up in the table.
-
-for type, name, args, num, h in entrypoints:
-    print_guard_start(name)
-    print "static void *resolve_%s(void) { return anv_resolve_entrypoint(%d); }" % (name, num)
-    print "%s vk%s%s\n   __attribute__ ((ifunc (\"resolve_%s\"), visibility (\"default\")));\n" % (type, name, args, name)
-    print_guard_end(name)
-
-
 # Now generate the hash table used for entry point look up.  This is a
 # uint16_t table of entry point indices. We use 0xffff to indicate an entry
 # in the hash table is empty.
