@@ -155,6 +155,7 @@ libvulkan_intel_la_LDFLAGS = \
 	-module \
 	-no-undefined \
 	-avoid-version \
+	$(BSYMBOLIC) \
 	$(GC_SECTIONS) \
 	$(LD_NO_UNDEFINED)
 
