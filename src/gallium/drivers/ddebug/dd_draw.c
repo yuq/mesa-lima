@@ -70,7 +70,7 @@ dd_dump_dmesg(FILE *f)
    while (fgets(line, sizeof(line), p))
       fputs(line, f);
 
-   fclose(p);
+   pclose(p);
 }
 
 static void
