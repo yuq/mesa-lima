@@ -1798,23 +1798,3 @@ void anv_DestroyFramebuffer(
 
    anv_free2(&device->alloc, pAllocator, fb);
 }
-
-void vkCmdDbgMarkerBegin(
-    VkCommandBuffer                              commandBuffer,
-    const char*                                 pMarker)
-   __attribute__ ((visibility ("default")));
-
-void vkCmdDbgMarkerEnd(
-   VkCommandBuffer                              commandBuffer)
-   __attribute__ ((visibility ("default")));
-
-void vkCmdDbgMarkerBegin(
-    VkCommandBuffer                              commandBuffer,
-    const char*                                 pMarker)
-{
-}
-
-void vkCmdDbgMarkerEnd(
-    VkCommandBuffer                              commandBuffer)
-{
-}
