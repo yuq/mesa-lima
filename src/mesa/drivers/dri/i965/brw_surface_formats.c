@@ -311,6 +311,16 @@ brw_init_surface_formats(struct brw_context *brw)
       if (texture == 0 && format != MESA_FORMAT_RGBA_FLOAT32)
 	 continue;
 
+      /* Don't advertise 8 and 16-bit RGB formats to core mesa.  This ensures
+       * that they are renderable from an API perspective since core mesa will
+       * fall back to RGBA or RGBX (we can't render to non-power-of-two
+       * formats).  For 8-bit, formats, this also keeps us from hitting some
+       * nasty corners in intel_miptree_map_blit if you ever try to map one.
+       */
+      int format_size = _mesa_get_format_bytes(format);
+      if (format_size == 3 || format_size == 6)
+         continue;
+
       if (isl_format_supports_sampling(devinfo, texture) &&
           (isl_format_supports_filtering(devinfo, texture) || is_integer))
 	 ctx->TextureFormatSupported[format] = true;
