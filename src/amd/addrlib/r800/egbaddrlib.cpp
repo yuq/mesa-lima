@@ -4577,7 +4577,7 @@ UINT_64 EgBasedAddrLib::HwlGetSizeAdjustmentMicroTiled(
     //
     // R800 will always pad physical slice size to baseAlign which is pipe_interleave_bytes
     //
-    ADDR_ASSERT((physicalSliceSize % baseAlign) == 0)
+    ADDR_ASSERT((physicalSliceSize % baseAlign) == 0);
 
     return logicalSliceSize;
 }

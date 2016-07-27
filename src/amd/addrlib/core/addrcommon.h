@@ -159,16 +159,26 @@ union ADDR_CONFIG_FLAGS
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Debug assertions used in AddrLib
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#if defined(_WIN32) && (_MSC_VER >= 1400)
+    #define ADDR_ANALYSIS_ASSUME(expr) __analysis_assume(expr)
+#else
+    #define ADDR_ANALYSIS_ASSUME(expr) do { } while (0)
+#endif
+
 #if DEBUG
-#define ADDR_ASSERT(__e) if ( !((__e) ? TRUE : FALSE)) { ADDR_DBG_BREAK(); }
-#define ADDR_ASSERT_ALWAYS() ADDR_DBG_BREAK()
-#define ADDR_UNHANDLED_CASE() ADDR_ASSERT(!"Unhandled case")
-#define ADDR_NOT_IMPLEMENTED() ADDR_ASSERT(!"Not implemented");
+    #define ADDR_ASSERT(__e)                                \
+        do {                                                    \
+            ADDR_ANALYSIS_ASSUME(__e);                          \
+            if ( !((__e) ? TRUE : FALSE)) { ADDR_DBG_BREAK(); } \
+        } while (0)
+    #define ADDR_ASSERT_ALWAYS() ADDR_DBG_BREAK()
+    #define ADDR_UNHANDLED_CASE() ADDR_ASSERT(!"Unhandled case")
+    #define ADDR_NOT_IMPLEMENTED() ADDR_ASSERT(!"Not implemented");
 #else //DEBUG
-#define ADDR_ASSERT(__e)
-#define ADDR_ASSERT_ALWAYS()
-#define ADDR_UNHANDLED_CASE()
-#define ADDR_NOT_IMPLEMENTED()
+    #define ADDR_ASSERT(__e) ADDR_ANALYSIS_ASSUME(__e)
+    #define ADDR_ASSERT_ALWAYS()
+    #define ADDR_UNHANDLED_CASE()
+    #define ADDR_NOT_IMPLEMENTED()
 #endif //DEBUG
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 

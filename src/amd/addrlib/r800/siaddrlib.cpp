@@ -2151,7 +2151,7 @@ UINT_32 SiAddrLib::HwlPreAdjustBank(
         bankBit0 = bankBit0 ^ x4 ^ x5;
         bank |= bankBit0;
 
-        ADDR_ASSERT(pTileInfo->macroAspectRatio > 1)
+        ADDR_ASSERT(pTileInfo->macroAspectRatio > 1);
     }
 
     return bank;
