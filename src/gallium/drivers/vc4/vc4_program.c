@@ -2173,6 +2173,14 @@ vc4_shader_state_create(struct pipe_context *pctx,
         so->base.type = PIPE_SHADER_IR_NIR;
         so->base.ir.nir = s;
 
+        if (vc4_debug & VC4_DEBUG_NIR) {
+                fprintf(stderr, "%s prog %d NIR:\n",
+                        gl_shader_stage_name(s->stage),
+                        so->program_id);
+                nir_print_shader(s, stderr);
+                fprintf(stderr, "\n");
+        }
+
         return so;
 }
 
