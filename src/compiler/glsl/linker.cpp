@@ -4589,8 +4589,12 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
 
       /* If the program is made up of only a single stage */
       if (first == last) {
-
          gl_linked_shader *const sh = prog->_LinkedShaders[last];
+
+         do_dead_builtin_varyings(ctx, NULL, sh, 0, NULL);
+         do_dead_builtin_varyings(ctx, sh, NULL, num_tfeedback_decls,
+                                  tfeedback_decls);
+
          if (prog->SeparateShader) {
             const uint64_t reserved_slots =
                reserved_varying_slot(sh, ir_var_shader_in);
@@ -4606,10 +4610,6 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
                                           reserved_slots))
                return false;
          }
-
-         do_dead_builtin_varyings(ctx, NULL, sh, 0, NULL);
-         do_dead_builtin_varyings(ctx, sh, NULL, num_tfeedback_decls,
-                                  tfeedback_decls);
       } else {
          /* Linking the stages in the opposite order (from fragment to vertex)
           * ensures that inter-shader outputs written to in an earlier stage
@@ -4629,15 +4629,15 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
             const uint64_t reserved_in_slots =
                reserved_varying_slot(sh_next, ir_var_shader_in);
 
+            do_dead_builtin_varyings(ctx, sh_i, sh_next,
+                      next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
+                      tfeedback_decls);
+
             if (!assign_varying_locations(ctx, mem_ctx, prog, sh_i, sh_next,
                       next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
                       tfeedback_decls,
                       reserved_out_slots | reserved_in_slots))
                return false;
-
-            do_dead_builtin_varyings(ctx, sh_i, sh_next,
-                      next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
-                      tfeedback_decls);
 
             /* This must be done after all dead varyings are eliminated. */
             if (sh_i != NULL) {
