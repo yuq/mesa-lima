@@ -182,10 +182,11 @@ vc4_upload_ubo(struct vc4_context *vc4,
                 return NULL;
 
         struct vc4_bo *ubo = vc4_bo_alloc(vc4->screen, shader->ubo_size, "ubo");
-        uint32_t *data = vc4_bo_map(ubo);
+        void *data = vc4_bo_map(ubo);
         for (uint32_t i = 0; i < shader->num_ubo_ranges; i++) {
                 memcpy(data + shader->ubo_ranges[i].dst_offset,
-                       gallium_uniforms + shader->ubo_ranges[i].src_offset,
+                       ((const void *)gallium_uniforms +
+                        shader->ubo_ranges[i].src_offset),
                        shader->ubo_ranges[i].size);
         }
 
