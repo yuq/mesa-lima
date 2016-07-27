@@ -1277,14 +1277,25 @@ VOID CiAddrLib::HwlSetupTileInfo(
     {
         if (IsMacroTiled(tileMode))
         {
-            // Non-depth entries store a split factor
-            UINT_32 sampleSplit = m_tileTable[pOut->tileIndex].info.tileSplitBytes;
-            UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
-            UINT_32 colorTileSplit = Max(256u, sampleSplit * tileBytes1x);
+            UINT_32 tileIndex = static_cast<UINT_32>(pOut->tileIndex);
 
-            if (m_rowSize < colorTileSplit)
+            if ((tileIndex == TileIndexInvalid) && (IsTileInfoAllZero(pTileInfo) == FALSE))
             {
-                pOut->tcCompatible = FALSE;
+                tileIndex = HwlPostCheckTileIndex(pTileInfo, tileMode, inTileType, tileIndex);
+            }
+
+            if (tileIndex != TileIndexInvalid)
+            {
+                ADDR_ASSERT(tileIndex < TileTableSize);
+                // Non-depth entries store a split factor
+                UINT_32 sampleSplit = m_tileTable[tileIndex].info.tileSplitBytes;
+                UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
+                UINT_32 colorTileSplit = Max(256u, sampleSplit * tileBytes1x);
+
+                if (m_rowSize < colorTileSplit)
+                {
+                    pOut->tcCompatible = FALSE;
+                }
             }
         }
         else
