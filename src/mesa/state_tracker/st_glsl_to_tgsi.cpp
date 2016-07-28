@@ -1131,8 +1131,7 @@ glsl_to_tgsi_visitor::st_src_reg_for_double(double val)
    st_src_reg src(PROGRAM_IMMEDIATE, -1, GLSL_TYPE_DOUBLE);
    union gl_constant_value uval[2];
 
-   uval[0].u = *(uint32_t *)&val;
-   uval[1].u = *(((uint32_t *)&val) + 1);
+   memcpy(uval, &val, sizeof(uval));
    src.index = add_constant(src.file, uval, 1, GL_DOUBLE, &src.swizzle);
 
    return src;
@@ -3066,8 +3065,7 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
    case GLSL_TYPE_DOUBLE:
       gl_type = GL_DOUBLE;
       for (i = 0; i < ir->type->vector_elements; i++) {
-         values[i * 2].i = *(uint32_t *)&ir->value.d[i];
-         values[i * 2 + 1].i = *(((uint32_t *)&ir->value.d[i]) + 1);
+         memcpy(&values[i * 2], &ir->value.d[i], sizeof(double));
       }
       break;
    case GLSL_TYPE_UINT:
