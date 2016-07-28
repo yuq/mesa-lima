@@ -365,16 +365,13 @@ genX(graphics_pipeline_create)(
             wm_prog_data->dispatch_grf_start_reg_2;
       }
 
-      bool per_sample_ps = pCreateInfo->pMultisampleState &&
-                           pCreateInfo->pMultisampleState->sampleShadingEnable;
-
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), ps) {
          ps.PixelShaderValid              = true;
          ps.PixelShaderKillsPixel         = wm_prog_data->uses_kill;
          ps.PixelShaderComputedDepthMode  = wm_prog_data->computed_depth_mode;
          ps.AttributeEnable               = wm_prog_data->num_varying_inputs > 0;
          ps.oMaskPresenttoRenderTarget    = wm_prog_data->uses_omask;
-         ps.PixelShaderIsPerSample        = per_sample_ps;
+         ps.PixelShaderIsPerSample        = wm_prog_data->persample_dispatch;
          ps.PixelShaderUsesSourceDepth    = wm_prog_data->uses_src_depth;
          ps.PixelShaderUsesSourceW        = wm_prog_data->uses_src_w;
 #if GEN_GEN >= 9
