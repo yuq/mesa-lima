@@ -593,6 +593,32 @@ droid_create_image_from_name(_EGLDisplay *disp, _EGLContext *ctx,
    return &dri2_img->base;
 }
 
+static EGLBoolean
+droid_query_surface(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surf,
+                    EGLint attribute, EGLint *value)
+{
+   struct dri2_egl_surface *dri2_surf = dri2_egl_surface(surf);
+   switch (attribute) {
+      case EGL_WIDTH:
+         if (dri2_surf->base.Type == EGL_WINDOW_BIT && dri2_surf->window) {
+            dri2_surf->window->query(dri2_surf->window,
+                                     NATIVE_WINDOW_DEFAULT_WIDTH, value);
+            return EGL_TRUE;
+         }
+         break;
+      case EGL_HEIGHT:
+         if (dri2_surf->base.Type == EGL_WINDOW_BIT && dri2_surf->window) {
+            dri2_surf->window->query(dri2_surf->window,
+                                     NATIVE_WINDOW_DEFAULT_HEIGHT, value);
+            return EGL_TRUE;
+         }
+         break;
+      default:
+         break;
+   }
+   return _eglQuerySurface(drv, dpy, surf, attribute, value);
+}
+
 static _EGLImage *
 dri2_create_image_android_native_buffer(_EGLDisplay *disp,
                                         _EGLContext *ctx,
@@ -860,6 +886,7 @@ static struct dri2_egl_display_vtbl droid_display_vtbl = {
    .post_sub_buffer = dri2_fallback_post_sub_buffer,
    .copy_buffers = dri2_fallback_copy_buffers,
    .query_buffer_age = dri2_fallback_query_buffer_age,
+   .query_surface = droid_query_surface,
    .create_wayland_buffer_from_image = dri2_fallback_create_wayland_buffer_from_image,
    .get_sync_values = dri2_fallback_get_sync_values,
    .get_dri_drawable = dri2_surface_get_dri_drawable,
