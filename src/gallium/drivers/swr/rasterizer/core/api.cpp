@@ -736,9 +736,9 @@ void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
 
 // templated backend function tables
 extern PFN_BACKEND_FUNC gBackendNullPs[SWR_MULTISAMPLE_TYPE_COUNT];
-extern PFN_BACKEND_FUNC gBackendSingleSample[2][2][2];
-extern PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_COUNT][SWR_MSAA_SAMPLE_PATTERN_COUNT][2][2][2][2];
-extern PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_COUNT][2][2][2];
+extern PFN_BACKEND_FUNC gBackendSingleSample[SWR_INPUT_COVERAGE_COUNT][2][2];
+extern PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_COUNT][SWR_MSAA_SAMPLE_PATTERN_COUNT][SWR_INPUT_COVERAGE_COUNT][2][2][2];
+extern PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_COUNT][SWR_INPUT_COVERAGE_COUNT][2][2];
 void SetupPipeline(DRAW_CONTEXT *pDC)
 {
     DRAW_STATE* pState = pDC->pState;
@@ -757,7 +757,6 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
         const bool bMultisampleEnable = ((rastState.sampleCount > SWR_MULTISAMPLE_1X) || rastState.forcedSampleCount) ? 1 : 0;
         const uint32_t centroid = ((psState.barycentricsMask & SWR_BARYCENTRIC_CENTROID_MASK) > 0) ? 1 : 0;
         const uint32_t canEarlyZ = (psState.forceEarlyZ || (!psState.writesODepth && !psState.usesSourceDepth && !psState.usesUAV)) ? 1 : 0;
-        const uint32_t inputCoverage = (psState.inputCoverage != SWR_INPUT_COVERAGE_NONE) ? 1 : 0;
      
         SWR_BARYCENTRICS_MASK barycentricsMask = (SWR_BARYCENTRICS_MASK)psState.barycentricsMask;
         
@@ -769,20 +768,20 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
             {
                 // always need to generate I & J per sample for Z interpolation
                 barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_SAMPLE_MASK);
-                backendFuncs.pfnBackend = gBackendPixelRateTable[rastState.sampleCount][rastState.samplePattern][inputCoverage][centroid][forcedSampleCount][canEarlyZ];
+                backendFuncs.pfnBackend = gBackendPixelRateTable[rastState.sampleCount][rastState.samplePattern][psState.inputCoverage][centroid][forcedSampleCount][canEarlyZ];
             }
             else
             {
                 // always need to generate I & J per pixel for Z interpolation
                 barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_PIXEL_MASK);
-                backendFuncs.pfnBackend = gBackendSingleSample[inputCoverage][centroid][canEarlyZ];
+                backendFuncs.pfnBackend = gBackendSingleSample[psState.inputCoverage][centroid][canEarlyZ];
             }
             break;
         case SWR_SHADING_RATE_SAMPLE:
             SWR_ASSERT(rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN);
             // always need to generate I & J per sample for Z interpolation
             barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_SAMPLE_MASK);
-            backendFuncs.pfnBackend = gBackendSampleRateTable[rastState.sampleCount][inputCoverage][centroid][canEarlyZ];
+            backendFuncs.pfnBackend = gBackendSampleRateTable[rastState.sampleCount][psState.inputCoverage][centroid][canEarlyZ];
             break;
         default:
             SWR_ASSERT(0 && "Invalid shading rate");

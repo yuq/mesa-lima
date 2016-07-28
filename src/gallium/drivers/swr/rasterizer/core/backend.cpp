@@ -492,9 +492,11 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 // pixel center
                 psContext.vX.center = _simd_add_ps(vCenterOffsetsX, _simd_set1_ps((float)xx));
 
-                if(T::bInputCoverage)
+                if(T::InputCoverage != SWR_INPUT_COVERAGE_NONE)
                 {
-                    generateInputCoverage<T>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
+                    const uint64_t* pCoverageMask = (T::InputCoverage == SWR_INPUT_COVERAGE_INNER_CONSERVATIVE) ? &work.innerCoverageMask : 
+                                                    &work.coverageMask[0];
+                    generateInputCoverage<T, T::InputCoverage>(pCoverageMask, psContext.inputMask, pBlendState->sampleMask);
                 }
 
                 RDTSC_START(BEBarycentric);
@@ -593,6 +595,10 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 Endtile:
             RDTSC_START(BEEndTile);
             coverageMask >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
+            if(T::InputCoverage == SWR_INPUT_COVERAGE_INNER_CONSERVATIVE)
+            {
+                work.innerCoverageMask >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
+            }
             pDepthBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;
             pStencilBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp) / 8;
 
@@ -678,9 +684,11 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
             CalcPixelBarycentrics(coeffs, psContext);
             RDTSC_STOP(BEBarycentric, 0, 0);
 
-            if(T::bInputCoverage)
+            if(T::InputCoverage != SWR_INPUT_COVERAGE_NONE)
             {
-                generateInputCoverage<T>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
+                const uint64_t* pCoverageMask = (T::InputCoverage == SWR_INPUT_COVERAGE_INNER_CONSERVATIVE) ? &work.innerCoverageMask :
+                                                &work.coverageMask[0];
+                generateInputCoverage<T, T::InputCoverage>(pCoverageMask, psContext.inputMask, pBlendState->sampleMask);
             }
 
             if(T::bCentroidPos)
@@ -808,6 +816,10 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                 work.coverageMask[sample] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
             }
             RDTSC_START(BEEndTile);
+            if(T::InputCoverage == SWR_INPUT_COVERAGE_INNER_CONSERVATIVE)
+            {
+                work.innerCoverageMask >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
+            }
             pDepthBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;
             pStencilBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp) / 8;
 
@@ -896,9 +908,11 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             CalcPixelBarycentrics(coeffs, psContext);
             RDTSC_STOP(BEBarycentric, 0, 0);
 
-            if (T::bInputCoverage)
+            if (T::InputCoverage != SWR_INPUT_COVERAGE_NONE)
             {
-                generateInputCoverage<T>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
+                const uint64_t* pCoverageMask = (T::InputCoverage == SWR_INPUT_COVERAGE_INNER_CONSERVATIVE) ? &work.innerCoverageMask :
+                                                &work.coverageMask[0];
+                generateInputCoverage<T, T::InputCoverage>(pCoverageMask, psContext.inputMask, pBlendState->sampleMask);
             }
 
             if(T::bCentroidPos)
@@ -1018,6 +1032,10 @@ Endtile:
                 work.coverageMask[sample] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
             }
 
+            if(T::InputCoverage == SWR_INPUT_COVERAGE_INNER_CONSERVATIVE)
+            {
+                work.innerCoverageMask >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
+            }
             work.anyCoveredSamples >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
             pDepthBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;
             pStencilBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp) / 8;
@@ -1143,19 +1161,19 @@ void InitClearTilesTable()
 }
 
 PFN_BACKEND_FUNC gBackendNullPs[SWR_MULTISAMPLE_TYPE_COUNT];
-PFN_BACKEND_FUNC gBackendSingleSample[2] // input coverage
+PFN_BACKEND_FUNC gBackendSingleSample[SWR_INPUT_COVERAGE_COUNT]
                                      [2] // centroid
                                      [2] // canEarlyZ
                                      = {};
 PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_COUNT]
                                        [SWR_MSAA_SAMPLE_PATTERN_COUNT]
-                                       [2] // input coverage
+                                       [SWR_INPUT_COVERAGE_COUNT]
                                        [2] // centroid
                                        [2] // forcedSampleCount
                                        [2] // canEarlyZ
                                        = {};
 PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_COUNT]
-                                        [2] // input coverage
+                                        [SWR_INPUT_COVERAGE_COUNT]
                                         [2] // centroid
                                         [2] // canEarlyZ
                                         = {};
@@ -1197,6 +1215,22 @@ struct BEChooser
 
     // Recursively parse args
     template <typename... TArgsT>
+    static PFN_BACKEND_FUNC GetFunc(SWR_INPUT_COVERAGE tArg, TArgsT... remainingArgs)
+    {
+        switch(tArg)
+        {
+        case SWR_INPUT_COVERAGE_NONE: return BEChooser<ArgsT..., SWR_INPUT_COVERAGE_NONE>::GetFunc(remainingArgs...); break;
+        case SWR_INPUT_COVERAGE_NORMAL: return BEChooser<ArgsT..., SWR_INPUT_COVERAGE_NORMAL>::GetFunc(remainingArgs...); break;
+        case SWR_INPUT_COVERAGE_INNER_CONSERVATIVE: return BEChooser<ArgsT..., SWR_INPUT_COVERAGE_INNER_CONSERVATIVE>::GetFunc(remainingArgs...); break;
+        default:
+        SWR_ASSERT(0 && "Invalid sample pattern\n");
+        return BEChooser<ArgsT..., SWR_INPUT_COVERAGE_NONE>::GetFunc(remainingArgs...);
+        break;
+        }
+    }
+
+    // Recursively parse args
+    template <typename... TArgsT>
     static PFN_BACKEND_FUNC GetFunc(SWR_MULTISAMPLE_COUNT tArg, TArgsT... remainingArgs)
     {
         switch(tArg)
@@ -1226,29 +1260,29 @@ struct BEChooser
     }
 };
 
-void InitBackendSingleFuncTable(PFN_BACKEND_FUNC (&table)[2][2][2])
+void InitBackendSingleFuncTable(PFN_BACKEND_FUNC (&table)[SWR_INPUT_COVERAGE_COUNT][2][2])
 {
-    for(uint32_t inputCoverage = 0; inputCoverage < 2; inputCoverage++)
+    for(uint32_t inputCoverage = 0; inputCoverage < SWR_INPUT_COVERAGE_COUNT; inputCoverage++)
     {
         for(uint32_t isCentroid = 0; isCentroid < 2; isCentroid++)
         {
             for(uint32_t canEarlyZ = 0; canEarlyZ < 2; canEarlyZ++)
             {
                 table[inputCoverage][isCentroid][canEarlyZ] =
-                    BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, (inputCoverage > 0),
+                    BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, (SWR_INPUT_COVERAGE)inputCoverage,
                                          (isCentroid > 0), false, (canEarlyZ > 0), SWR_BACKEND_SINGLE_SAMPLE);
             }
         }
     }
 }
 
-void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_COUNT][SWR_MSAA_SAMPLE_PATTERN_COUNT][2][2][2][2])
+void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_COUNT][SWR_MSAA_SAMPLE_PATTERN_COUNT][SWR_INPUT_COVERAGE_COUNT][2][2][2])
 {
     for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < SWR_MULTISAMPLE_TYPE_COUNT; sampleCount++)
     {
         for(uint32_t samplePattern = SWR_MSAA_CENTER_PATTERN; samplePattern < SWR_MSAA_SAMPLE_PATTERN_COUNT; samplePattern++)
         {
-            for(uint32_t inputCoverage = 0; inputCoverage < 2; inputCoverage++)
+            for(uint32_t inputCoverage = 0; inputCoverage < SWR_INPUT_COVERAGE_COUNT; inputCoverage++)
             {
                 for(uint32_t isCentroid = 0; isCentroid < 2; isCentroid++)
                 {
@@ -1257,7 +1291,7 @@ void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_CO
                         for(uint32_t canEarlyZ = 0; canEarlyZ < 2; canEarlyZ++)
                         {
                             table[sampleCount][samplePattern][inputCoverage][isCentroid][forcedSampleCount][canEarlyZ] =
-                                BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, (SWR_MSAA_SAMPLE_PATTERN)samplePattern, (inputCoverage > 0), 
+                                BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, (SWR_MSAA_SAMPLE_PATTERN)samplePattern, (SWR_INPUT_COVERAGE)inputCoverage, 
                                                         (isCentroid > 0), (forcedSampleCount > 0), (canEarlyZ > 0), SWR_BACKEND_MSAA_PIXEL_RATE);
                         }
                     }
@@ -1267,18 +1301,18 @@ void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_CO
     }
 }
 
-void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_COUNT][2][2][2])
+void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_COUNT][SWR_INPUT_COVERAGE_COUNT][2][2])
 {
     for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < SWR_MULTISAMPLE_TYPE_COUNT; sampleCount++)
     {
-        for(uint32_t inputCoverage = 0; inputCoverage < 2; inputCoverage++)
+        for(uint32_t inputCoverage = 0; inputCoverage < SWR_INPUT_COVERAGE_COUNT; inputCoverage++)
         {
             for(uint32_t centroid = 0; centroid < 2; centroid++)
             {
                 for(uint32_t canEarlyZ = 0; canEarlyZ < 2; canEarlyZ++)
                 {
                     table[sampleCount][inputCoverage][centroid][canEarlyZ] =
-                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN, (inputCoverage > 0), 
+                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN, (SWR_INPUT_COVERAGE)inputCoverage, 
                                              (centroid > 0), false, (canEarlyZ > 0), (SWR_BACKEND_FUNCS)SWR_BACKEND_MSAA_SAMPLE_RATE);
                 }
             }

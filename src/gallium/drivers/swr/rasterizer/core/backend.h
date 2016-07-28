@@ -134,154 +134,184 @@ INLINE static uint32_t RasterTileStencilOffset(uint32_t sampleNum)
     return RasterTileStencilOffsets[sampleNum];
 }
 
-template<typename T>
-INLINE void generateInputCoverage(const uint64_t *const coverageMask, uint32_t (&inputMask)[KNOB_SIMD_WIDTH], const uint32_t sampleMask)
+template<typename T, uint32_t InputCoverage>
+struct generateInputCoverage
 {
-
-    // will need to update for avx512
-    assert(KNOB_SIMD_WIDTH == 8);
-
-    __m256i mask[2];
-    __m256i sampleCoverage[2];
-    if(T::bIsStandardPattern)
+    INLINE generateInputCoverage(const uint64_t *const coverageMask, uint32_t (&inputMask)[KNOB_SIMD_WIDTH], const uint32_t sampleMask)
     {
-        __m256i src = _mm256_set1_epi32(0);
-        __m256i index0 = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0), index1;
+        // will need to update for avx512
+        assert(KNOB_SIMD_WIDTH == 8);
 
-        if(T::MultisampleT::numSamples == 1)
+        __m256i mask[2];
+        __m256i sampleCoverage[2];
+        if(T::bIsStandardPattern)
         {
-            mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, -1);
+            __m256i src = _mm256_set1_epi32(0);
+            __m256i index0 = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0), index1;
+
+            if(T::MultisampleT::numSamples == 1)
+            {
+                mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, -1);
+            }
+            else if(T::MultisampleT::numSamples == 2)
+            {
+                mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, -1, -1);
+            }
+            else if(T::MultisampleT::numSamples == 4)
+            {
+                mask[0] = _mm256_set_epi32(0, 0, 0, 0, -1, -1, -1, -1);
+            }
+            else if(T::MultisampleT::numSamples == 8)
+            {
+                mask[0] = _mm256_set1_epi32(-1);
+            }
+            else if(T::MultisampleT::numSamples == 16)
+            {
+                mask[0] = _mm256_set1_epi32(-1);
+                mask[1] = _mm256_set1_epi32(-1);
+                index1 = _mm256_set_epi32(15, 14, 13, 12, 11, 10, 9, 8);
+            }
+
+            // gather coverage for samples 0-7
+            sampleCoverage[0] = _mm256_castps_si256(_simd_mask_i32gather_ps(_mm256_castsi256_ps(src), (const float*)coverageMask, index0, _mm256_castsi256_ps(mask[0]), 8));
+            if(T::MultisampleT::numSamples > 8)
+            {
+                // gather coverage for samples 8-15
+                sampleCoverage[1] = _mm256_castps_si256(_simd_mask_i32gather_ps(_mm256_castsi256_ps(src), (const float*)coverageMask, index1, _mm256_castsi256_ps(mask[1]), 8));
+            }
         }
-        else if(T::MultisampleT::numSamples == 2)
+        else
         {
-            mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, -1, -1);
-        }
-        else if(T::MultisampleT::numSamples == 4)
-        {
-            mask[0] = _mm256_set_epi32(0, 0, 0, 0, -1, -1, -1, -1);
-        }
-        else if(T::MultisampleT::numSamples == 8)
-        {
-            mask[0] = _mm256_set1_epi32(-1);
-        }
-        else if(T::MultisampleT::numSamples == 16)
-        {
-            mask[0] = _mm256_set1_epi32(-1);
-            mask[1] = _mm256_set1_epi32(-1);
-            index1 = _mm256_set_epi32(15, 14, 13, 12, 11, 10, 9, 8);
+            // center coverage is the same for all samples; just broadcast to the sample slots
+            uint32_t centerCoverage = ((uint32_t)(*coverageMask) & MASK);
+            if(T::MultisampleT::numSamples == 1)
+            {
+                sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, centerCoverage);
+            }
+            else if(T::MultisampleT::numSamples == 2)
+            {
+                sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, centerCoverage, centerCoverage);
+            }
+            else if(T::MultisampleT::numSamples == 4)
+            {
+                sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, centerCoverage, centerCoverage, centerCoverage, centerCoverage);
+            }
+            else if(T::MultisampleT::numSamples == 8)
+            {
+                sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
+            }
+            else if(T::MultisampleT::numSamples == 16)
+            {
+                sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
+                sampleCoverage[1] = _mm256_set1_epi32(centerCoverage);
+            }
         }
 
-        // gather coverage for samples 0-7
-        sampleCoverage[0] = _mm256_castps_si256(_simd_mask_i32gather_ps(_mm256_castsi256_ps(src), (const float*)coverageMask, index0, _mm256_castsi256_ps(mask[0]), 8));
+        mask[0] = _mm256_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0xC, 0x8, 0x4, 0x0,
+                                  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0xC, 0x8, 0x4, 0x0);
+        // pull out the 8bit 4x2 coverage for samples 0-7 into the lower 32 bits of each 128bit lane
+        __m256i packedCoverage0 = _simd_shuffle_epi8(sampleCoverage[0], mask[0]);
+
+        __m256i packedCoverage1;
         if(T::MultisampleT::numSamples > 8)
         {
-            // gather coverage for samples 8-15
-            sampleCoverage[1] = _mm256_castps_si256(_simd_mask_i32gather_ps(_mm256_castsi256_ps(src), (const float*)coverageMask, index1, _mm256_castsi256_ps(mask[1]), 8));
+            // pull out the 8bit 4x2 coverage for samples 8-15 into the lower 32 bits of each 128bit lane
+            packedCoverage1 = _simd_shuffle_epi8(sampleCoverage[1], mask[0]);
         }
-    }
-    else
-    {
-        // center coverage is the same for all samples; just broadcast to the sample slots
-        uint32_t centerCoverage = ((uint32_t)(*coverageMask) & MASK);
-        if(T::MultisampleT::numSamples == 1)
+
+    #if (KNOB_ARCH == KNOB_ARCH_AVX)
+        // pack lower 32 bits of each 128 bit lane into lower 64 bits of single 128 bit lane 
+        __m256i hiToLow = _mm256_permute2f128_si256(packedCoverage0, packedCoverage0, 0x83);
+        __m256 shufRes = _mm256_shuffle_ps(_mm256_castsi256_ps(hiToLow), _mm256_castsi256_ps(hiToLow), _MM_SHUFFLE(1, 1, 0, 1));
+        packedCoverage0 = _mm256_castps_si256(_mm256_blend_ps(_mm256_castsi256_ps(packedCoverage0), shufRes, 0xFE));
+
+        __m256i packedSampleCoverage;
+        if(T::MultisampleT::numSamples > 8)
         {
-            sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, centerCoverage);
+            // pack lower 32 bits of each 128 bit lane into upper 64 bits of single 128 bit lane
+            hiToLow = _mm256_permute2f128_si256(packedCoverage1, packedCoverage1, 0x83);
+            shufRes = _mm256_shuffle_ps(_mm256_castsi256_ps(hiToLow), _mm256_castsi256_ps(hiToLow), _MM_SHUFFLE(1, 1, 0, 1));
+            shufRes = _mm256_blend_ps(_mm256_castsi256_ps(packedCoverage1), shufRes, 0xFE);
+            packedCoverage1 = _mm256_castps_si256(_mm256_castpd_ps(_mm256_shuffle_pd(_mm256_castps_pd(shufRes), _mm256_castps_pd(shufRes), 0x01)));
+            packedSampleCoverage = _mm256_castps_si256(_mm256_blend_ps(_mm256_castsi256_ps(packedCoverage0), _mm256_castsi256_ps(packedCoverage1), 0xFC));
         }
-        else if(T::MultisampleT::numSamples == 2)
+        else
         {
-            sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, centerCoverage, centerCoverage);
+            packedSampleCoverage = packedCoverage0;
         }
-        else if(T::MultisampleT::numSamples == 4)
+    #else
+        __m256i permMask = _mm256_set_epi32(0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x4, 0x0);
+        // pack lower 32 bits of each 128 bit lane into lower 64 bits of single 128 bit lane 
+        packedCoverage0 = _mm256_permutevar8x32_epi32(packedCoverage0, permMask);
+
+        __m256i packedSampleCoverage;
+        if(T::MultisampleT::numSamples > 8)
         {
-            sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, centerCoverage, centerCoverage, centerCoverage, centerCoverage);
+            permMask = _mm256_set_epi32(0x7, 0x7, 0x7, 0x7, 0x4, 0x0, 0x7, 0x7);
+            // pack lower 32 bits of each 128 bit lane into upper 64 bits of single 128 bit lane
+            packedCoverage1 = _mm256_permutevar8x32_epi32(packedCoverage1, permMask);
+
+            // blend coverage masks for samples 0-7 and samples 8-15 into single 128 bit lane
+            packedSampleCoverage = _mm256_blend_epi32(packedCoverage0, packedCoverage1, 0x0C);
         }
-        else if(T::MultisampleT::numSamples == 8)
+        else
         {
-            sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
+            packedSampleCoverage = packedCoverage0;
         }
-        else if(T::MultisampleT::numSamples == 16)
+    #endif
+
+        for(int32_t i = KNOB_SIMD_WIDTH - 1; i >= 0; i--)
         {
-            sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
-            sampleCoverage[1] = _mm256_set1_epi32(centerCoverage);
+            // convert packed sample coverage masks into single coverage masks for all samples for each pixel in the 4x2
+            inputMask[i] = _simd_movemask_epi8(packedSampleCoverage);
+
+            if(!T::bForcedSampleCount)
+            {
+                // input coverage has to be anded with sample mask if MSAA isn't forced on
+                inputMask[i] &= sampleMask;
+            }
+
+            // shift to the next pixel in the 4x2
+            packedSampleCoverage = _simd_slli_epi32(packedSampleCoverage, 1);
         }
     }
 
-    mask[0] = _mm256_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0xC, 0x8, 0x4, 0x0,
-                              -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0xC, 0x8, 0x4, 0x0);
-    // pull out the 8bit 4x2 coverage for samples 0-7 into the lower 32 bits of each 128bit lane
-    __m256i packedCoverage0 = _simd_shuffle_epi8(sampleCoverage[0], mask[0]);
-
-    __m256i packedCoverage1;
-    if(T::MultisampleT::numSamples > 8)
+    INLINE generateInputCoverage(const uint64_t *const coverageMask, __m256 &inputCoverage, const uint32_t sampleMask)
     {
-        // pull out the 8bit 4x2 coverage for samples 8-15 into the lower 32 bits of each 128bit lane
-        packedCoverage1 = _simd_shuffle_epi8(sampleCoverage[1], mask[0]);
+        uint32_t inputMask[KNOB_SIMD_WIDTH];
+        generateInputCoverage<T, T::InputCoverage>(coverageMask, inputMask, sampleMask);
+        inputCoverage = _simd_castsi_ps(_mm256_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]));
     }
 
-#if (KNOB_ARCH == KNOB_ARCH_AVX)
-    // pack lower 32 bits of each 128 bit lane into lower 64 bits of single 128 bit lane 
-    __m256i hiToLow = _mm256_permute2f128_si256(packedCoverage0, packedCoverage0, 0x83);
-    __m256 shufRes = _mm256_shuffle_ps(_mm256_castsi256_ps(hiToLow), _mm256_castsi256_ps(hiToLow), _MM_SHUFFLE(1, 1, 0, 1));
-    packedCoverage0 = _mm256_castps_si256(_mm256_blend_ps(_mm256_castsi256_ps(packedCoverage0), shufRes, 0xFE));
-
-    __m256i packedSampleCoverage;
-    if(T::MultisampleT::numSamples > 8)
-    {
-        // pack lower 32 bits of each 128 bit lane into upper 64 bits of single 128 bit lane
-        hiToLow = _mm256_permute2f128_si256(packedCoverage1, packedCoverage1, 0x83);
-        shufRes = _mm256_shuffle_ps(_mm256_castsi256_ps(hiToLow), _mm256_castsi256_ps(hiToLow), _MM_SHUFFLE(1, 1, 0, 1));
-        shufRes = _mm256_blend_ps(_mm256_castsi256_ps(packedCoverage1), shufRes, 0xFE);
-        packedCoverage1 = _mm256_castps_si256(_mm256_castpd_ps(_mm256_shuffle_pd(_mm256_castps_pd(shufRes), _mm256_castps_pd(shufRes), 0x01)));
-        packedSampleCoverage = _mm256_castps_si256(_mm256_blend_ps(_mm256_castsi256_ps(packedCoverage0), _mm256_castsi256_ps(packedCoverage1), 0xFC));
-    }
-    else
-    {
-        packedSampleCoverage = packedCoverage0;
-    }
-#else
-    __m256i permMask = _mm256_set_epi32(0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x4, 0x0);
-    // pack lower 32 bits of each 128 bit lane into lower 64 bits of single 128 bit lane 
-    packedCoverage0 = _mm256_permutevar8x32_epi32(packedCoverage0, permMask);
-
-    __m256i packedSampleCoverage;
-    if(T::MultisampleT::numSamples > 8)
-    {
-        permMask = _mm256_set_epi32(0x7, 0x7, 0x7, 0x7, 0x4, 0x0, 0x7, 0x7);
-        // pack lower 32 bits of each 128 bit lane into upper 64 bits of single 128 bit lane
-        packedCoverage1 = _mm256_permutevar8x32_epi32(packedCoverage1, permMask);
-
-        // blend coverage masks for samples 0-7 and samples 8-15 into single 128 bit lane
-        packedSampleCoverage = _mm256_blend_epi32(packedCoverage0, packedCoverage1, 0x0C);
-    }
-    else
-    {
-        packedSampleCoverage = packedCoverage0;
-    }
-#endif
-
-    for(int32_t i = KNOB_SIMD_WIDTH - 1; i >= 0; i--)
-    {
-        // convert packed sample coverage masks into single coverage masks for all samples for each pixel in the 4x2
-        inputMask[i] = _simd_movemask_epi8(packedSampleCoverage);
-
-        if(!T::bForcedSampleCount)
-        {
-            // input coverage has to be anded with sample mask if MSAA isn't forced on
-            inputMask[i] &= sampleMask;
-        }
-
-        // shift to the next pixel in the 4x2
-        packedSampleCoverage = _simd_slli_epi32(packedSampleCoverage, 1);
-    }
-}
+};
 
 template<typename T>
-INLINE void generateInputCoverage(const uint64_t *const coverageMask, __m256 &inputCoverage, const uint32_t sampleMask)
+struct generateInputCoverage<T, SWR_INPUT_COVERAGE_INNER_CONSERVATIVE>
 {
-    uint32_t inputMask[KNOB_SIMD_WIDTH]; 
-    generateInputCoverage<T>(coverageMask, inputMask, sampleMask);
-    inputCoverage = _simd_castsi_ps(_mm256_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]));
-}
+    INLINE generateInputCoverage(const uint64_t *const coverageMask, __m256 &inputCoverage, const uint32_t sampleMask)
+    {
+        // will need to update for avx512
+        assert(KNOB_SIMD_WIDTH == 8);
+        __m256i vec = _mm256_set1_epi32(coverageMask[0]);
+        const __m256i bit = _mm256_set_epi32(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01);
+        vec = _simd_and_si(vec, bit);
+        vec = _simd_cmplt_epi32(_mm256_setzero_si256(), vec);
+        vec = _simd_blendv_epi32(_simd_setzero_si(), _simd_set1_epi32(1), vec);
+        inputCoverage = _simd_castsi_ps(vec);
+    }
+
+    INLINE generateInputCoverage(const uint64_t *const coverageMask, uint32_t (&inputMask)[KNOB_SIMD_WIDTH], const uint32_t sampleMask)
+    {
+        unsigned long index;
+        uint32_t simdCoverage = (coverageMask[0] & MASK);
+        static const uint32_t FullCoverageMask = (1 << T::MultisampleT::numSamples) - 1;
+        while(_BitScanForward(&index, simdCoverage))
+        {
+            // set all samples to covered
+            inputMask[index] = FullCoverageMask;
+        }
+    }
+};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Centroid behaves exactly as follows :
@@ -298,7 +328,7 @@ INLINE void CalcCentroidPos(SWR_PS_CONTEXT &psContext, const uint64_t *const cov
                             const simdscalar vXSamplePosUL, const simdscalar vYSamplePosUL)
 {
     uint32_t inputMask[KNOB_SIMD_WIDTH];
-    generateInputCoverage<T>(coverageMask, inputMask, sampleMask);
+    generateInputCoverage<T, T::InputCoverage>(coverageMask, inputMask, sampleMask);
 
     // Case (2) - partially covered pixel
 
@@ -592,7 +622,7 @@ template<uint32_t sampleCountT = SWR_MULTISAMPLE_1X, uint32_t samplePattern = SW
 struct SwrBackendTraits
 {
     static const bool bIsStandardPattern = (samplePattern == SWR_MSAA_STANDARD_PATTERN);
-    static const bool bInputCoverage = (coverage == 1);
+    static const uint32_t InputCoverage = coverage;
     static const bool bCentroidPos = (centroid == 1);
     static const bool bForcedSampleCount = (forced == 1);
     static const bool bCanEarlyZ = (canEarlyZ == 1);
