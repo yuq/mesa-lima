@@ -33,6 +33,7 @@
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_scan.h"
 #include "tgsi/tgsi_dump.h"
+#include "util/u_bitcast.h"
 #include "util/u_memory.h"
 #include "util/u_math.h"
 #include <stdio.h>
@@ -4386,10 +4387,6 @@ static int cayman_mul_double_instr(struct r600_shader_ctx *ctx)
  */
 static int tgsi_setup_trig(struct r600_shader_ctx *ctx)
 {
-	static float half_inv_pi = 1.0 /(3.1415926535 * 2);
-	static float double_pi = 3.1415926535 * 2;
-	static float neg_pi = -3.1415926535;
-
 	int r;
 	struct r600_bytecode_alu alu;
 
@@ -4405,7 +4402,7 @@ static int tgsi_setup_trig(struct r600_shader_ctx *ctx)
 
 	alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
 	alu.src[1].chan = 0;
-	alu.src[1].value = *(uint32_t *)&half_inv_pi;
+	alu.src[1].value = u_bitcast_f2u(0.5f * M_1_PI);
 	alu.src[2].sel = V_SQ_ALU_SRC_0_5;
 	alu.src[2].chan = 0;
 	alu.last = 1;
@@ -4444,8 +4441,8 @@ static int tgsi_setup_trig(struct r600_shader_ctx *ctx)
 	alu.src[2].chan = 0;
 
 	if (ctx->bc->chip_class == R600) {
-		alu.src[1].value = *(uint32_t *)&double_pi;
-		alu.src[2].value = *(uint32_t *)&neg_pi;
+		alu.src[1].value = u_bitcast_f2u(2.0f * M_PI);
+		alu.src[2].value = u_bitcast_f2u(-M_PI);
 	} else {
 		alu.src[1].sel = V_SQ_ALU_SRC_1;
 		alu.src[2].sel = V_SQ_ALU_SRC_0_5;
@@ -6704,7 +6701,6 @@ static int r600_do_buffer_txq(struct r600_shader_ctx *ctx)
 
 static int tgsi_tex(struct r600_shader_ctx *ctx)
 {
-	static float one_point_five = 1.5f;
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	struct r600_bytecode_tex tex;
 	struct r600_bytecode_alu alu;
@@ -6906,7 +6902,7 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 
 		alu.src[2].sel = V_SQ_ALU_SRC_LITERAL;
 		alu.src[2].chan = 0;
-		alu.src[2].value = *(uint32_t *)&one_point_five;
+		alu.src[2].value = u_bitcast_f2u(1.5f);
 
 		alu.dst.sel = ctx->temp_reg;
 		alu.dst.chan = 0;
@@ -6927,7 +6923,7 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 
 		alu.src[2].sel = V_SQ_ALU_SRC_LITERAL;
 		alu.src[2].chan = 0;
-		alu.src[2].value = *(uint32_t *)&one_point_five;
+		alu.src[2].value = u_bitcast_f2u(1.5f);
 
 		alu.dst.sel = ctx->temp_reg;
 		alu.dst.chan = 1;
@@ -6961,7 +6957,6 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		    inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
 			if (ctx->bc->chip_class >= EVERGREEN) {
 				int mytmp = r600_get_temp(ctx);
-				static const float eight = 8.0f;
 				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 				alu.op = ALU_OP1_MOV;
 				alu.src[0].sel = ctx->temp_reg;
@@ -6981,7 +6976,7 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 				r600_bytecode_src(&alu.src[0], &ctx->src[0], 3);
 				alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
 				alu.src[1].chan = 0;
-				alu.src[1].value = *(uint32_t *)&eight;
+				alu.src[1].value = u_bitcast_f2u(8.0f);
 				alu.src[2].sel = mytmp;
 				alu.src[2].chan = 0;
 				alu.dst.sel = ctx->temp_reg;

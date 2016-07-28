@@ -27,6 +27,7 @@
 #include "r600d.h"
 
 #include <errno.h>
+#include "util/u_bitcast.h"
 #include "util/u_dump.h"
 #include "util/u_memory.h"
 #include "util/u_math.h"
@@ -1956,7 +1957,7 @@ static int print_src(struct r600_bytecode_alu *alu, unsigned idx)
 			need_chan = 1;
 			break;
 		case V_SQ_ALU_SRC_LITERAL:
-			o += fprintf(stderr, "[0x%08X %f]", src->value, *(float*)&src->value);
+			o += fprintf(stderr, "[0x%08X %f]", src->value, u_bitcast_u2f(src->value));
 			break;
 		case V_SQ_ALU_SRC_0_5:
 			o += fprintf(stderr, "0.5");
