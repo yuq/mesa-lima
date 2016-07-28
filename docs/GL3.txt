@@ -283,7 +283,7 @@ Khronos, ARB, and OES extensions that are not part of any OpenGL or OpenGL ES ve
   GL_ARB_ES3_2_compatibility                            not started
   GL_ARB_fragment_shader_interlock                      not started
   GL_ARB_gpu_shader_int64                               started (airlied for core and Gallium, idr for i965)
-  GL_ARB_indirect_parameters                            DONE (nvc0)
+  GL_ARB_indirect_parameters                            DONE (nvc0, radeonsi)
   GL_ARB_parallel_shader_compile                        not started, but Chia-I Wu did some related work in 2014
   GL_ARB_pipeline_statistics_query                      DONE (i965, nvc0, radeonsi, softpipe, swr)
   GL_ARB_post_depth_coverage                            not started
@@ -293,7 +293,7 @@ Khronos, ARB, and OES extensions that are not part of any OpenGL or OpenGL ES ve
   GL_ARB_shader_atomic_counter_ops                      DONE (nvc0, radeonsi, softpipe)
   GL_ARB_shader_ballot                                  not started
   GL_ARB_shader_clock                                   DONE (i965/gen7+)
-  GL_ARB_shader_draw_parameters                         DONE (i965, nvc0)
+  GL_ARB_shader_draw_parameters                         DONE (i965, nvc0, radeonsi)
   GL_ARB_shader_group_vote                              DONE (nvc0)
   GL_ARB_shader_stencil_export                          DONE (i965/gen9+, radeonsi, softpipe, llvmpipe, swr)
   GL_ARB_shader_viewport_layer_array                    not started
