@@ -99,6 +99,7 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    struct amdgpu_heap_info vram, gtt;
    struct drm_amdgpu_info_hw_ip dma = {}, uvd = {}, vce = {};
    uint32_t vce_version = 0, vce_feature = 0, uvd_version = 0, uvd_feature = 0;
+   uint32_t unused_feature;
    int r, i, j;
    drmDevicePtr devinfo;
 
@@ -148,6 +149,27 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    r = amdgpu_query_hw_ip_info(ws->dev, AMDGPU_HW_IP_UVD, 0, &uvd);
    if (r) {
       fprintf(stderr, "amdgpu: amdgpu_query_hw_ip_info(uvd) failed.\n");
+      goto fail;
+   }
+
+   r = amdgpu_query_firmware_version(ws->dev, AMDGPU_INFO_FW_GFX_ME, 0, 0,
+				     &ws->info.me_fw_version, &unused_feature);
+   if (r) {
+      fprintf(stderr, "amdgpu: amdgpu_query_firmware_version(me) failed.\n");
+      goto fail;
+   }
+
+   r = amdgpu_query_firmware_version(ws->dev, AMDGPU_INFO_FW_GFX_PFP, 0, 0,
+				     &ws->info.pfp_fw_version, &unused_feature);
+   if (r) {
+      fprintf(stderr, "amdgpu: amdgpu_query_firmware_version(pfp) failed.\n");
+      goto fail;
+   }
+
+   r = amdgpu_query_firmware_version(ws->dev, AMDGPU_INFO_FW_GFX_CE, 0, 0,
+				     &ws->info.ce_fw_version, &unused_feature);
+   if (r) {
+      fprintf(stderr, "amdgpu: amdgpu_query_firmware_version(ce) failed.\n");
       goto fail;
    }
 

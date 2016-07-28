@@ -1103,6 +1103,9 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		printf("gfx_ib_pad_with_type2 = %i\n", rscreen->info.gfx_ib_pad_with_type2);
 		printf("has_sdma = %i\n", rscreen->info.has_sdma);
 		printf("has_uvd = %i\n", rscreen->info.has_uvd);
+		printf("me_fw_version = %i\n", rscreen->info.me_fw_version);
+		printf("pfp_fw_version = %i\n", rscreen->info.pfp_fw_version);
+		printf("ce_fw_version = %i\n", rscreen->info.ce_fw_version);
 		printf("vce_fw_version = %i\n", rscreen->info.vce_fw_version);
 		printf("vce_harvest_config = %i\n", rscreen->info.vce_harvest_config);
 		printf("clock_crystal_freq = %i\n", rscreen->info.clock_crystal_freq);
