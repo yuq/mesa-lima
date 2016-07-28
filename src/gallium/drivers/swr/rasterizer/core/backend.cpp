@@ -397,12 +397,6 @@ const __m256 vULOffsetsY = {0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0};
 #error Unsupported vector width
 #endif
 
-INLINE
-bool CanEarlyZ(const SWR_PS_STATE *pPSState)
-{
-    return (pPSState->forceEarlyZ || (!pPSState->writesODepth && !pPSState->usesSourceDepth && !pPSState->usesUAV));
-}
-
 simdmask ComputeUserClipMask(uint8_t clipMask, float* pUserClipBuffer, simdscalar vI, simdscalar vJ)
 {
     simdscalar vClipMask = _simd_setzero_ps();
