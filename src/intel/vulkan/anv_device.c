@@ -524,9 +524,9 @@ void anv_GetPhysicalDeviceProperties(
       .maxTexelOffset                           = 7,
       .minTexelGatherOffset                     = -8,
       .maxTexelGatherOffset                     = 7,
-      .minInterpolationOffset                   = 0, /* FIXME */
-      .maxInterpolationOffset                   = 0, /* FIXME */
-      .subPixelInterpolationOffsetBits          = 0, /* FIXME */
+      .minInterpolationOffset                   = -0.5,
+      .maxInterpolationOffset                   = 0.4375,
+      .subPixelInterpolationOffsetBits          = 4,
       .maxFramebufferWidth                      = (1 << 14),
       .maxFramebufferHeight                     = (1 << 14),
       .maxFramebufferLayers                     = (1 << 10),
