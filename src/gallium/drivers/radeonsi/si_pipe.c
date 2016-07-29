@@ -785,6 +785,18 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		sscreen->b.chip_class >= VI &&
 		sscreen->b.info.max_se >= 2;
 
+	sscreen->has_draw_indirect_multi =
+		(sscreen->b.family >= CHIP_POLARIS10) ||
+		(sscreen->b.chip_class == VI &&
+		 sscreen->b.info.pfp_fw_version >= 121 &&
+		 sscreen->b.info.me_fw_version >= 87) ||
+		(sscreen->b.chip_class == CIK &&
+		 sscreen->b.info.pfp_fw_version >= 211 &&
+		 sscreen->b.info.me_fw_version >= 173) ||
+		(sscreen->b.chip_class == SI &&
+		 sscreen->b.info.pfp_fw_version >= 121 &&
+		 sscreen->b.info.me_fw_version >= 87);
+
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
 	pipe_mutex_init(sscreen->shader_parts_mutex);

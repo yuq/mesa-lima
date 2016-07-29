@@ -634,7 +634,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, index_max_size);
 		}
 
-		if (sctx->b.family < CHIP_POLARIS10) {
+		if (!sctx->screen->has_draw_indirect_multi) {
 			radeon_emit(cs, PKT3(info->indexed ? PKT3_DRAW_INDEX_INDIRECT
 							   : PKT3_DRAW_INDIRECT,
 					     3, render_cond_bit));
