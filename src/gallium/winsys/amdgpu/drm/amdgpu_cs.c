@@ -782,23 +782,6 @@ static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
    return true;
 }
 
-static bool amdgpu_cs_memory_below_limit(struct radeon_winsys_cs *rcs,
-                                         uint64_t vram, uint64_t gtt)
-{
-   struct amdgpu_cs *cs = amdgpu_cs(rcs);
-   struct amdgpu_winsys *ws = cs->ctx->ws;
-
-   vram += cs->main.base.used_vram;
-   gtt += cs->main.base.used_gart;
-
-   /* Anything that goes above the VRAM size should go to GTT. */
-   if (vram > ws->info.vram_size)
-       gtt += vram - ws->info.vram_size;
-
-   /* Now we just need to check if we have enough GTT. */
-   return gtt < ws->info.gart_size * 0.7;
-}
-
 static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
                                           struct radeon_bo_list_item *list)
 {
@@ -1112,7 +1095,6 @@ void amdgpu_cs_init_functions(struct amdgpu_winsys *ws)
    ws->base.cs_lookup_buffer = amdgpu_cs_lookup_buffer;
    ws->base.cs_validate = amdgpu_cs_validate;
    ws->base.cs_check_space = amdgpu_cs_check_space;
-   ws->base.cs_memory_below_limit = amdgpu_cs_memory_below_limit;
    ws->base.cs_get_buffer_list = amdgpu_cs_get_buffer_list;
    ws->base.cs_flush = amdgpu_cs_flush;
    ws->base.cs_is_buffer_referenced = amdgpu_bo_is_referenced;

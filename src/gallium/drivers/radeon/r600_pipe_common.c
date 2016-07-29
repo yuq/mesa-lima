@@ -166,7 +166,7 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	 * is too large.
 	 */
 	if (!ctx->ws->cs_check_space(ctx->dma.cs, num_dw) ||
-	    !ctx->ws->cs_memory_below_limit(ctx->dma.cs, vram, gtt)) {
+	    !radeon_cs_memory_below_limit(ctx->screen, ctx->dma.cs, vram, gtt)) {
 		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 		assert((num_dw + ctx->dma.cs->current.cdw) <= ctx->dma.cs->current.max_dw);
 	}

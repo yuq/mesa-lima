@@ -25,6 +25,7 @@
  */
 
 #include "si_pipe.h"
+#include "radeon/r600_cs.h"
 
 static unsigned si_descriptor_list_cs_space(unsigned count, unsigned element_size)
 {
@@ -71,8 +72,8 @@ void si_need_cs_space(struct si_context *ctx)
 	 * that have been added (cs_add_buffer) and two counters in the pipe
 	 * driver for those that haven't been added yet.
 	 */
-	if (unlikely(!ctx->b.ws->cs_memory_below_limit(ctx->b.gfx.cs,
-						       ctx->b.vram, ctx->b.gtt))) {
+	if (unlikely(!radeon_cs_memory_below_limit(ctx->b.screen, ctx->b.gfx.cs,
+						   ctx->b.vram, ctx->b.gtt))) {
 		ctx->b.gtt = 0;
 		ctx->b.vram = 0;
 		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);

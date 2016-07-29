@@ -708,17 +708,6 @@ struct radeon_winsys {
     bool (*cs_check_space)(struct radeon_winsys_cs *cs, unsigned dw);
 
     /**
-     * Return true if there is enough memory in VRAM and GTT for the buffers
-     * added so far.
-     *
-     * \param cs        A command stream to validate.
-     * \param vram      VRAM memory size pending to be use
-     * \param gtt       GTT memory size pending to be use
-     */
-    bool (*cs_memory_below_limit)(struct radeon_winsys_cs *cs,
-                                  uint64_t vram, uint64_t gtt);
-
-    /**
      * Return the buffer list.
      *
      * \param cs    Command stream
