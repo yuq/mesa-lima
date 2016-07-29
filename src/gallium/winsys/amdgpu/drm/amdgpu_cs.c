@@ -935,7 +935,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
          fprintf(stderr, "amdgpu: Not enough memory for command submission.\n");
       else
          fprintf(stderr, "amdgpu: The CS has been rejected, "
-                 "see dmesg for more information.\n");
+                 "see dmesg for more information (%i).\n", r);
 
       amdgpu_fence_signalled(cs->fence);
    } else {

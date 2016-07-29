@@ -447,7 +447,7 @@ void radeon_drm_cs_emit_ioctl_oneshot(void *job, int thread_index)
             }
         } else {
             fprintf(stderr, "radeon: The kernel rejected CS, "
-                    "see dmesg for more information.\n");
+                    "see dmesg for more information (%i).\n", r);
         }
     }
 
