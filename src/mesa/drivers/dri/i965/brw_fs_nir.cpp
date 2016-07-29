@@ -445,7 +445,10 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
       break;
 
    case nir_instr_type_ssa_undef:
-      nir_emit_undef(abld, nir_instr_as_ssa_undef(instr));
+      /* We create a new VGRF for undefs on every use (by handling
+       * them in get_nir_src()), rather than for each definition.
+       * This helps register coalescing eliminate MOVs from undef.
+       */
       break;
 
    case nir_instr_type_jump:
@@ -1489,21 +1492,18 @@ fs_visitor::nir_emit_load_const(const fs_builder &bld,
    nir_ssa_values[instr->def.index] = reg;
 }
 
-void
-fs_visitor::nir_emit_undef(const fs_builder &bld, nir_ssa_undef_instr *instr)
-{
-   const brw_reg_type reg_type =
-      instr->def.bit_size == 32 ? BRW_REGISTER_TYPE_D : BRW_REGISTER_TYPE_DF;
-   nir_ssa_values[instr->def.index] =
-      bld.vgrf(reg_type, instr->def.num_components);
-}
-
 fs_reg
 fs_visitor::get_nir_src(const nir_src &src)
 {
    fs_reg reg;
    if (src.is_ssa) {
-      reg = nir_ssa_values[src.ssa->index];
+      if (src.ssa->parent_instr->type == nir_instr_type_ssa_undef) {
+         const brw_reg_type reg_type = src.ssa->bit_size == 32 ?
+            BRW_REGISTER_TYPE_D : BRW_REGISTER_TYPE_DF;
+         reg = bld.vgrf(reg_type, src.ssa->num_components);
+      } else {
+         reg = nir_ssa_values[src.ssa->index];
+      }
    } else {
       /* We don't handle indirects on locals */
       assert(src.reg.indirect == NULL);

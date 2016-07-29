@@ -204,8 +204,6 @@ public:
    void nir_emit_alu(const brw::fs_builder &bld, nir_alu_instr *instr);
    void nir_emit_load_const(const brw::fs_builder &bld,
                             nir_load_const_instr *instr);
-   void nir_emit_undef(const brw::fs_builder &bld,
-                       nir_ssa_undef_instr *instr);
    void nir_emit_vs_intrinsic(const brw::fs_builder &bld,
                               nir_intrinsic_instr *instr);
    void nir_emit_tcs_intrinsic(const brw::fs_builder &bld,
