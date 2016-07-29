@@ -799,11 +799,6 @@ static bool amdgpu_cs_memory_below_limit(struct radeon_winsys_cs *rcs,
    return gtt < ws->info.gart_size * 0.7;
 }
 
-static uint64_t amdgpu_cs_query_memory_usage(struct radeon_winsys_cs *rcs)
-{
-   return rcs->used_vram + rcs->used_gart;
-}
-
 static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
                                           struct radeon_bo_list_item *list)
 {
@@ -1118,7 +1113,6 @@ void amdgpu_cs_init_functions(struct amdgpu_winsys *ws)
    ws->base.cs_validate = amdgpu_cs_validate;
    ws->base.cs_check_space = amdgpu_cs_check_space;
    ws->base.cs_memory_below_limit = amdgpu_cs_memory_below_limit;
-   ws->base.cs_query_memory_usage = amdgpu_cs_query_memory_usage;
    ws->base.cs_get_buffer_list = amdgpu_cs_get_buffer_list;
    ws->base.cs_flush = amdgpu_cs_flush;
    ws->base.cs_is_buffer_referenced = amdgpu_bo_is_referenced;

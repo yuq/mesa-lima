@@ -718,8 +718,6 @@ struct radeon_winsys {
     bool (*cs_memory_below_limit)(struct radeon_winsys_cs *cs,
                                   uint64_t vram, uint64_t gtt);
 
-    uint64_t (*cs_query_memory_usage)(struct radeon_winsys_cs *cs);
-
     /**
      * Return the buffer list.
      *

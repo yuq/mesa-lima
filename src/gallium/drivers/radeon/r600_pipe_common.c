@@ -203,7 +203,7 @@ void r600_dma_emit_wait_idle(struct r600_common_context *rctx)
 	 * It improves texture upload performance by keeping the DMA
 	 * engine busy while uploads are being submitted.
 	 */
-	if (rctx->ws->cs_query_memory_usage(rctx->dma.cs) > 64 * 1024 * 1024) {
+	if (cs->used_vram + cs->used_gart > 64 * 1024 * 1024) {
 		rctx->dma.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
 		return;
 	}
