@@ -462,6 +462,12 @@ static void si_launch_grid(
 
 	si_decompress_compute_textures(sctx);
 
+	/* Add buffer sizes for memory checking in need_cs_space. */
+	r600_context_add_resource_size(ctx, &program->shader.bo->b.b);
+	if (info->indirect)
+		r600_context_add_resource_size(ctx, info->indirect);
+	/* TODO: add the scratch buffer */
+
 	si_need_cs_space(sctx);
 
 	if (!sctx->cs_shader_state.initialized)
