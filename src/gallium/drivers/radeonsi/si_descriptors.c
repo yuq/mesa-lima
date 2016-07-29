@@ -1025,9 +1025,10 @@ static void si_set_constant_buffer(struct si_context *sctx,
 			  S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32);
 
 		buffers->buffers[slot] = buffer;
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-				      (struct r600_resource*)buffer,
-				      buffers->shader_usage, buffers->priority);
+		radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+						    (struct r600_resource*)buffer,
+						    buffers->shader_usage,
+						    buffers->priority, true);
 		buffers->enabled_mask |= 1u << slot;
 	} else {
 		/* Clear the descriptor. */
@@ -1118,8 +1119,9 @@ static void si_set_shader_buffers(struct pipe_context *ctx, unsigned shader,
 			  S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32);
 
 		pipe_resource_reference(&buffers->buffers[slot], &buf->b.b);
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, buf,
-				      buffers->shader_usage, buffers->priority);
+		radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx, buf,
+						    buffers->shader_usage,
+						    buffers->priority, true);
 		buffers->enabled_mask |= 1u << slot;
 		descs->dirty_mask |= 1u << slot;
 		sctx->descriptors_dirty |=
@@ -1306,9 +1308,10 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 			/* Set the resource. */
 			pipe_resource_reference(&buffers->buffers[bufidx],
 						buffer);
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-					      (struct r600_resource*)buffer,
-					      buffers->shader_usage, buffers->priority);
+			radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+							    (struct r600_resource*)buffer,
+							    buffers->shader_usage,
+							    buffers->priority, true);
 			buffers->enabled_mask |= 1u << bufidx;
 		} else {
 			/* Clear the descriptor and unset the resource. */
@@ -1405,10 +1408,10 @@ static void si_reset_buffer_resources(struct si_context *sctx,
 			descs->dirty_mask |= 1u << i;
 			sctx->descriptors_dirty |= 1u << descriptors_idx;
 
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-						(struct r600_resource *)buf,
-						buffers->shader_usage,
-						buffers->priority);
+			radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+							    (struct r600_resource *)buf,
+							    buffers->shader_usage,
+							    buffers->priority, true);
 		}
 	}
 }
@@ -1469,9 +1472,9 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 		descs->dirty_mask |= 1u << i;
 		sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-					  rbuffer, buffers->shader_usage,
-					  buffers->priority);
+		radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+						    rbuffer, buffers->shader_usage,
+						    buffers->priority, true);
 
 		/* Update the streamout state. */
 		if (sctx->b.streamout.begin_emitted)
