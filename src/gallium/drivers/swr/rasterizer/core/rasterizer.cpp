@@ -123,8 +123,14 @@ INLINE uint64_t rasterizePartialTile(DRAW_CONTEXT *pDC, double startEdges[NumEdg
             UnrollerLMask<0, NumEdges, 1, EdgeMaskT::value>::step(eval_lambda);
 
     // update coverage mask
+    // if edge 0 is degenerate and will be skipped; init the mask
 #define UPDATE_MASK(bit) \
-            mask = edgeMask[0]; \
+            if(std::is_same<EdgeMaskT, E1E2ValidT>::value || std::is_same<EdgeMaskT, NoEdgesValidT>::value){\
+                mask = 0xf;\
+            }\
+            else{\
+                mask = edgeMask[0]; \
+            }\
             UnrollerLMask<1, NumEdges, 1, EdgeMaskT::value>::step(update_lambda); \
             coverageMask |= (mask << bit);
 

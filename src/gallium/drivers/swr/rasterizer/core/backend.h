@@ -302,13 +302,12 @@ struct generateInputCoverage<T, SWR_INPUT_COVERAGE_INNER_CONSERVATIVE>
 
     INLINE generateInputCoverage(const uint64_t *const coverageMask, uint32_t (&inputMask)[KNOB_SIMD_WIDTH], const uint32_t sampleMask)
     {
-        unsigned long index;
         uint32_t simdCoverage = (coverageMask[0] & MASK);
         static const uint32_t FullCoverageMask = (1 << T::MultisampleT::numSamples) - 1;
-        while(_BitScanForward(&index, simdCoverage))
+        for(int i = 0; i < KNOB_SIMD_WIDTH; i++)
         {
-            // set all samples to covered
-            inputMask[index] = FullCoverageMask;
+            // set all samples to covered if conservative coverage mask is set for that pixel
+            inputMask[i] = (((1 << i) & simdCoverage) > 0) ? FullCoverageMask : 0;
         }
     }
 };
