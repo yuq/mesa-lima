@@ -855,7 +855,7 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 			      RADEON_PRIO_DESCRIPTORS);
 }
 
-static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
+bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 {
 	struct si_descriptors *desc = &sctx->vertex_buffers;
 	bool bound[SI_NUM_VERTEX_BUFFERS] = {};
@@ -1801,8 +1801,7 @@ bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
 	}
 
 	sctx->descriptors_dirty &= ~mask;
-
-	return si_upload_vertex_buffer_descriptors(sctx);
+	return true;
 }
 
 bool si_upload_compute_shader_descriptors(struct si_context *sctx)
