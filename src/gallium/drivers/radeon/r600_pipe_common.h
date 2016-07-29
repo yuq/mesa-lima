@@ -170,6 +170,9 @@ struct r600_resource {
 	/* Winsys objects. */
 	struct pb_buffer		*buf;
 	uint64_t			gpu_address;
+	/* Memory usage if the buffer placement is optimal. */
+	uint64_t			vram_usage;
+	uint64_t			gart_usage;
 
 	/* Resource state. */
 	enum radeon_bo_domain		domains;

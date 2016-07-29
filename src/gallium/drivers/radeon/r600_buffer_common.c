@@ -197,6 +197,16 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 	util_range_set_empty(&res->valid_buffer_range);
 	res->TC_L2_dirty = false;
 
+	/* Set expected VRAM and GART usage for the buffer. */
+	res->vram_usage = 0;
+	res->gart_usage = 0;
+
+	if (res->domains & RADEON_DOMAIN_VRAM)
+		res->vram_usage = size;
+	else if (res->domains & RADEON_DOMAIN_GTT)
+		res->gart_usage = size;
+
+	/* Print debug information. */
 	if (rscreen->debug_flags & DBG_VM && res->b.b.target == PIPE_BUFFER) {
 		fprintf(stderr, "VM start=0x%"PRIX64"  end=0x%"PRIX64" | Buffer %"PRIu64" bytes\n",
 			res->gpu_address, res->gpu_address + res->buf->size,

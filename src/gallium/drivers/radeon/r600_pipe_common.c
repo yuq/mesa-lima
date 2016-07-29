@@ -144,16 +144,12 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	uint64_t vram = 0, gtt = 0;
 
 	if (dst) {
-		if (dst->domains & RADEON_DOMAIN_VRAM)
-			vram += dst->buf->size;
-		else if (dst->domains & RADEON_DOMAIN_GTT)
-			gtt += dst->buf->size;
+		vram += dst->vram_usage;
+		gtt += dst->gart_usage;
 	}
 	if (src) {
-		if (src->domains & RADEON_DOMAIN_VRAM)
-			vram += src->buf->size;
-		else if (src->domains & RADEON_DOMAIN_GTT)
-			gtt += src->buf->size;
+		vram += src->vram_usage;
+		gtt += src->gart_usage;
 	}
 
 	/* Flush the GFX IB if DMA depends on it. */
@@ -530,10 +526,8 @@ void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resour
 	 * In practice this gave very good estimate (+/- 10% of the target
 	 * memory limit).
 	 */
-	if (rr->domains & RADEON_DOMAIN_VRAM)
-		rctx->vram += rr->buf->size;
-	else if (rr->domains & RADEON_DOMAIN_GTT)
-		rctx->gtt += rr->buf->size;
+	rctx->vram += rr->vram_usage;
+	rctx->gtt += rr->gart_usage;
 }
 
 /*
