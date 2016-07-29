@@ -107,17 +107,18 @@ define_rasterizer_object(struct svga_context *svga,
 {
    struct svga_screen *svgascreen = svga_screen(svga->pipe.screen);
    unsigned fill_mode = translate_fill_mode(rast->templ.fill_front);
-   unsigned cull_mode = translate_cull_mode(rast->templ.cull_face);
-   int depth_bias = rast->templ.offset_units;
-   float slope_scaled_depth_bias =  rast->templ.offset_scale;
-   float depth_bias_clamp = 0.0; /* XXX fix me */
-   unsigned try;
+   const unsigned cull_mode = translate_cull_mode(rast->templ.cull_face);
+   const int depth_bias = rast->templ.offset_units;
+   const float slope_scaled_depth_bias = rast->templ.offset_scale;
+   /* PIPE_CAP_POLYGON_OFFSET_CLAMP not supported: */
+   const float depth_bias_clamp = 0.0;
    const float line_width = rast->templ.line_width > 0.0f ?
       rast->templ.line_width : 1.0f;
    const uint8 line_factor = rast->templ.line_stipple_enable ?
       rast->templ.line_stipple_factor : 0;
    const uint16 line_pattern = rast->templ.line_stipple_enable ?
       rast->templ.line_stipple_pattern : 0;
+   unsigned try;
 
    rast->id = util_bitmask_add(svga->rast_object_id_bm);
 
