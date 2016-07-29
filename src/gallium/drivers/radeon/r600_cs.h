@@ -54,6 +54,40 @@ static inline unsigned radeon_add_to_buffer_list(struct r600_common_context *rct
 				      rbo->domains, priority) * 4;
 }
 
+/**
+ * Same as above, but also checks memory usage and flushes the context
+ * accordingly.
+ *
+ * When this SHOULD NOT be used:
+ *
+ * - if r600_context_add_resource_size has been called for the buffer
+ *   followed by *_need_cs_space for checking the memory usage
+ *
+ * - if r600_need_dma_space has been called for the buffer
+ *
+ * - when emitting state packets and draw packets (because preceding packets
+ *   can't be re-emitted at that point)
+ *
+ * - if shader resource "enabled_mask" is not up-to-date or there is
+ *   a different constraint disallowing a context flush
+ */
+static inline unsigned
+radeon_add_to_buffer_list_check_mem(struct r600_common_context *rctx,
+				    struct r600_ring *ring,
+				    struct r600_resource *rbo,
+				    enum radeon_bo_usage usage,
+				    enum radeon_bo_priority priority,
+				    bool check_mem)
+{
+	if (check_mem &&
+	    !rctx->ws->cs_memory_below_limit(ring->cs,
+					     rctx->vram + rbo->vram_usage,
+					     rctx->gtt + rbo->gart_usage))
+		ring->flush(rctx, RADEON_FLUSH_ASYNC, NULL);
+
+	return radeon_add_to_buffer_list(rctx, ring, rbo, usage, priority);
+}
+
 static inline void r600_emit_reloc(struct r600_common_context *rctx,
 				   struct r600_ring *ring, struct r600_resource *rbo,
 				   enum radeon_bo_usage usage,

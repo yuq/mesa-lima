@@ -296,9 +296,12 @@ static void si_release_sampler_views(struct si_sampler_views *views)
 static void si_sampler_view_add_buffer(struct si_context *sctx,
 				       struct pipe_resource *resource,
 				       enum radeon_bo_usage usage,
-				       bool is_stencil_sampler)
+				       bool is_stencil_sampler,
+				       bool check_mem)
 {
 	struct r600_resource *rres;
+	struct r600_texture *rtex;
+	enum radeon_bo_priority priority;
 
 	if (!resource)
 		return;
@@ -311,17 +314,23 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 	}
 
 	rres = (struct r600_resource*)resource;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, rres, usage,
-				  r600_get_sampler_view_priority(rres));
+	priority = r600_get_sampler_view_priority(rres);
 
-	if (resource->target != PIPE_BUFFER) {
-		struct r600_texture *rtex = (struct r600_texture*)resource;
+	radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+					    rres, usage, priority,
+					    check_mem);
 
-		if (rtex->dcc_separate_buffer)
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-						  rtex->dcc_separate_buffer, usage,
-						  RADEON_PRIO_DCC);
-	}
+	if (resource->target == PIPE_BUFFER)
+		return;
+
+	/* Now add separate DCC if it's present. */
+	rtex = (struct r600_texture*)resource;
+	if (!rtex->dcc_separate_buffer)
+		return;
+
+	radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+					    rtex->dcc_separate_buffer, usage,
+					    RADEON_PRIO_DCC, check_mem);
 }
 
 static void si_sampler_views_begin_new_cs(struct si_context *sctx,
@@ -336,7 +345,7 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 
 		si_sampler_view_add_buffer(sctx, sview->base.texture,
 					   RADEON_USAGE_READ,
-					   sview->is_stencil_sampler);
+					   sview->is_stencil_sampler, false);
 	}
 }
 
@@ -403,7 +412,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 
 		si_sampler_view_add_buffer(sctx, view->texture,
 					   RADEON_USAGE_READ,
-					   rview->is_stencil_sampler);
+					   rview->is_stencil_sampler, true);
 
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(desc, rview->state, 8*4);
@@ -565,7 +574,7 @@ si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *imag
 		assert(view->resource);
 
 		si_sampler_view_add_buffer(sctx, view->resource,
-					   RADEON_USAGE_READWRITE, false);
+					   RADEON_USAGE_READWRITE, false, false);
 	}
 }
 
@@ -624,7 +633,7 @@ static void si_set_shader_image(struct si_context *ctx,
 		util_copy_image_view(&images->views[slot], view);
 
 	si_sampler_view_add_buffer(ctx, &res->b.b,
-				   RADEON_USAGE_READWRITE, false);
+				   RADEON_USAGE_READWRITE, false, true);
 
 	if (res->b.b.target == PIPE_BUFFER) {
 		if (view->access & PIPE_IMAGE_ACCESS_WRITE)
@@ -1506,9 +1515,10 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 				sctx->descriptors_dirty |=
 					1u << si_sampler_descriptors_idx(shader);
 
-				radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-						      rbuffer, RADEON_USAGE_READ,
-						      RADEON_PRIO_SAMPLER_BUFFER);
+				radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+								    rbuffer, RADEON_USAGE_READ,
+								    RADEON_PRIO_SAMPLER_BUFFER,
+								    true);
 			}
 		}
 	}
@@ -1534,10 +1544,10 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 				sctx->descriptors_dirty |=
 					1u << si_image_descriptors_idx(shader);
 
-				radeon_add_to_buffer_list(
+				radeon_add_to_buffer_list_check_mem(
 					&sctx->b, &sctx->b.gfx, rbuffer,
 					RADEON_USAGE_READWRITE,
-					RADEON_PRIO_SAMPLER_BUFFER);
+					RADEON_PRIO_SAMPLER_BUFFER, true);
 			}
 		}
 	}
