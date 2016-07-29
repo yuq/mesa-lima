@@ -785,6 +785,9 @@ nir_ssa_alu_instr_src_components(const nir_alu_instr *instr, unsigned src)
    return instr->dest.dest.ssa.num_components;
 }
 
+bool nir_alu_srcs_equal(const nir_alu_instr *alu1, const nir_alu_instr *alu2,
+                        unsigned src1, unsigned src2);
+
 typedef enum {
    nir_deref_type_var,
    nir_deref_type_array,
