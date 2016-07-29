@@ -236,6 +236,11 @@ struct radeon_winsys_cs {
     unsigned                      num_prev; /* Number of previous chunks. */
     unsigned                      max_prev; /* Space in array pointed to by prev. */
     unsigned                      prev_dw; /* Total number of dwords in previous chunks. */
+
+    /* Memory usage of the buffer list. These are always 0 for CE and preamble
+     * IBs. */
+    uint64_t                      used_vram;
+    uint64_t                      used_gart;
 };
 
 struct radeon_info {

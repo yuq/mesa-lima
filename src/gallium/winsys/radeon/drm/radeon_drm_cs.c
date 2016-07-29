@@ -147,8 +147,6 @@ static void radeon_cs_context_cleanup(struct radeon_cs_context *csc)
     csc->validated_crelocs = 0;
     csc->chunks[0].length_dw = 0;
     csc->chunks[1].length_dw = 0;
-    csc->used_gart = 0;
-    csc->used_vram = 0;
 
     for (i = 0; i < ARRAY_SIZE(csc->reloc_indices_hashlist); i++) {
         csc->reloc_indices_hashlist[i] = -1;
@@ -332,9 +330,9 @@ static unsigned radeon_drm_cs_add_buffer(struct radeon_winsys_cs *rcs,
                                        &added_domains);
 
     if (added_domains & RADEON_DOMAIN_VRAM)
-        cs->csc->used_vram += bo->base.size;
+        cs->base.used_vram += bo->base.size;
     else if (added_domains & RADEON_DOMAIN_GTT)
-        cs->csc->used_gart += bo->base.size;
+        cs->base.used_gart += bo->base.size;
 
     return index;
 }
@@ -351,8 +349,8 @@ static bool radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
     bool status =
-        cs->csc->used_gart < cs->ws->info.gart_size * 0.8 &&
-        cs->csc->used_vram < cs->ws->info.vram_size * 0.8;
+        cs->base.used_gart < cs->ws->info.gart_size * 0.8 &&
+        cs->base.used_vram < cs->ws->info.vram_size * 0.8;
 
     if (status) {
         cs->csc->validated_crelocs = cs->csc->crelocs;
@@ -373,6 +371,8 @@ static bool radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
             cs->flush_cs(cs->flush_data, RADEON_FLUSH_ASYNC, NULL);
         } else {
             radeon_cs_context_cleanup(cs->csc);
+            cs->base.used_vram = 0;
+            cs->base.used_gart = 0;
 
             assert(cs->base.current.cdw == 0);
             if (cs->base.current.cdw != 0) {
@@ -393,8 +393,8 @@ static bool radeon_drm_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint6
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
 
-    vram += cs->csc->used_vram;
-    gtt += cs->csc->used_gart;
+    vram += cs->base.used_vram;
+    gtt += cs->base.used_gart;
 
     /* Anything that goes above the VRAM size should go to GTT. */
     if (vram > cs->ws->info.vram_size)
@@ -406,9 +406,7 @@ static bool radeon_drm_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint6
 
 static uint64_t radeon_drm_cs_query_memory_usage(struct radeon_winsys_cs *rcs)
 {
-   struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
-
-   return cs->csc->used_vram + cs->csc->used_gart;
+   return rcs->used_vram + rcs->used_gart;
 }
 
 static unsigned radeon_drm_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
@@ -597,6 +595,8 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
     /* Prepare a new CS. */
     cs->base.current.buf = cs->csc->buf;
     cs->base.current.cdw = 0;
+    cs->base.used_vram = 0;
+    cs->base.used_gart = 0;
 
     cs->ws->num_cs_flushes++;
     return 0;

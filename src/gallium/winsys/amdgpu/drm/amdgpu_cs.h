@@ -82,8 +82,6 @@ struct amdgpu_cs_context {
 
    int                         buffer_indices_hashlist[4096];
 
-   uint64_t                    used_vram;
-   uint64_t                    used_gart;
 
    unsigned                    max_dependencies;
 

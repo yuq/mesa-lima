@@ -343,9 +343,9 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
                                      priority, &added_domains);
 
    if (added_domains & RADEON_DOMAIN_VRAM)
-      cs->csc->used_vram += bo->base.size;
+      cs->main.base.used_vram += bo->base.size;
    else if (added_domains & RADEON_DOMAIN_GTT)
-      cs->csc->used_gart += bo->base.size;
+      cs->main.base.used_gart += bo->base.size;
 
    return index;
 }
@@ -571,8 +571,6 @@ static void amdgpu_cs_context_cleanup(struct amdgpu_cs_context *cs)
    }
 
    cs->num_buffers = 0;
-   cs->used_gart = 0;
-   cs->used_vram = 0;
    amdgpu_fence_reference(&cs->fence, NULL);
 
    for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
@@ -790,8 +788,8 @@ static bool amdgpu_cs_memory_below_limit(struct radeon_winsys_cs *rcs,
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct amdgpu_winsys *ws = cs->ctx->ws;
 
-   vram += cs->csc->used_vram;
-   gtt += cs->csc->used_gart;
+   vram += cs->main.base.used_vram;
+   gtt += cs->main.base.used_gart;
 
    /* Anything that goes above the VRAM size should go to GTT. */
    if (vram > ws->info.vram_size)
@@ -803,9 +801,7 @@ static bool amdgpu_cs_memory_below_limit(struct radeon_winsys_cs *rcs,
 
 static uint64_t amdgpu_cs_query_memory_usage(struct radeon_winsys_cs *rcs)
 {
-   struct amdgpu_cs_context *cs = amdgpu_cs(rcs)->csc;
-
-   return cs->used_vram + cs->used_gart;
+   return rcs->used_vram + rcs->used_gart;
 }
 
 static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
@@ -1072,6 +1068,9 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       amdgpu_get_new_ib(&ws->base, cs, IB_CONST);
    if (cs->const_preamble_ib.ib_mapped)
       amdgpu_get_new_ib(&ws->base, cs, IB_CONST_PREAMBLE);
+
+   cs->main.base.used_gart = 0;
+   cs->main.base.used_vram = 0;
 
    ws->num_cs_flushes++;
    return error_code;

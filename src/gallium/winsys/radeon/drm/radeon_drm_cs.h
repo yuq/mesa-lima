@@ -52,9 +52,6 @@ struct radeon_cs_context {
     uint64_t                    *priority_usage;
 
     int                         reloc_indices_hashlist[4096];
-
-    uint64_t                    used_vram;
-    uint64_t                    used_gart;
 };
 
 struct radeon_drm_cs {
