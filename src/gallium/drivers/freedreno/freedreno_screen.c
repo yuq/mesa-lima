@@ -172,7 +172,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 1;
 
 	case PIPE_CAP_USER_CONSTANT_BUFFERS:
-		return is_ir3(screen) ? 0 : 1;
+		return is_a4xx(screen) ? 0 : 1;
 
 	case PIPE_CAP_SHADER_STENCIL_EXPORT:
 	case PIPE_CAP_TGSI_TEXCOORD:
