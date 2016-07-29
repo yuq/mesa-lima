@@ -591,7 +591,16 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			sctx->last_sh_base_reg = sh_base_reg;
 		}
 	} else {
+		uint64_t indirect_va = r600_resource(info->indirect)->gpu_address;
+
+		assert(indirect_va % 8 == 0);
+
 		si_invalidate_draw_sh_constants(sctx);
+
+		radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0));
+		radeon_emit(cs, 1);
+		radeon_emit(cs, indirect_va);
+		radeon_emit(cs, indirect_va >> 32);
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource *)info->indirect,
@@ -608,16 +617,8 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				      RADEON_USAGE_READ, RADEON_PRIO_INDEX_BUFFER);
 
 		if (info->indirect) {
-			uint64_t indirect_va = r600_resource(info->indirect)->gpu_address;
-
-			assert(indirect_va % 8 == 0);
 			assert(index_va % 2 == 0);
 			assert(info->indirect_offset % 4 == 0);
-
-			radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0));
-			radeon_emit(cs, 1);
-			radeon_emit(cs, indirect_va);
-			radeon_emit(cs, indirect_va >> 32);
 
 			radeon_emit(cs, PKT3(PKT3_INDEX_BASE, 1, 0));
 			radeon_emit(cs, index_va);
@@ -656,15 +657,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		}
 	} else {
 		if (info->indirect) {
-			uint64_t indirect_va = r600_resource(info->indirect)->gpu_address;
-
-			assert(indirect_va % 8 == 0);
 			assert(info->indirect_offset % 4 == 0);
-
-			radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0));
-			radeon_emit(cs, 1);
-			radeon_emit(cs, indirect_va);
-			radeon_emit(cs, indirect_va >> 32);
 
 			if (sctx->b.family < CHIP_POLARIS10) {
 				radeon_emit(cs, PKT3(PKT3_DRAW_INDIRECT, 3, render_cond_bit));
