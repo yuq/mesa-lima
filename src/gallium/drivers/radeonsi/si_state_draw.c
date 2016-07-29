@@ -989,6 +989,12 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (sctx->b.flags)
 		si_mark_atom_dirty(sctx, sctx->atoms.s.cache_flush);
 
+	/* Add buffer sizes for memory checking in need_cs_space. */
+	if (sctx->emit_scratch_reloc && sctx->scratch_buffer)
+		r600_context_add_resource_size(ctx, &sctx->scratch_buffer->b.b);
+	if (info->indirect)
+		r600_context_add_resource_size(ctx, info->indirect);
+
 	si_need_cs_space(sctx);
 
 	/* Emit states. */
