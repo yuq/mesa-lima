@@ -150,6 +150,11 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 			      struct pipe_resource *src, unsigned byte_count,
 			      uint64_t remaining_size, unsigned *flags)
 {
+	/* Count memory usage in so that need_cs_space can take it into account. */
+	r600_context_add_resource_size(&sctx->b.b, dst);
+	if (src)
+		r600_context_add_resource_size(&sctx->b.b, src);
+
 	si_need_cs_space(sctx);
 
 	/* This must be done after need_cs_space. */
