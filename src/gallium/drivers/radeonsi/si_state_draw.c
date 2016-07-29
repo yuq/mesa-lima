@@ -619,36 +619,45 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				      RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 	}
 
-	if (info->indexed) {
-		if (info->indirect) {
-			assert(info->indirect_offset % 4 == 0);
+	if (info->indirect) {
+		unsigned di_src_sel = info->indexed ? V_0287F0_DI_SRC_SEL_DMA
+						    : V_0287F0_DI_SRC_SEL_AUTO_INDEX;
 
+		assert(info->indirect_offset % 4 == 0);
+
+		if (info->indexed) {
 			radeon_emit(cs, PKT3(PKT3_INDEX_BASE, 1, 0));
 			radeon_emit(cs, index_va);
 			radeon_emit(cs, index_va >> 32);
 
 			radeon_emit(cs, PKT3(PKT3_INDEX_BUFFER_SIZE, 0, 0));
 			radeon_emit(cs, index_max_size);
+		}
 
-			if (sctx->b.family < CHIP_POLARIS10) {
-				radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_INDIRECT, 3, render_cond_bit));
-				radeon_emit(cs, info->indirect_offset);
-				radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
-				radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
-				radeon_emit(cs, V_0287F0_DI_SRC_SEL_DMA);
-			} else {
-				radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_INDIRECT_MULTI, 8, render_cond_bit));
-				radeon_emit(cs, info->indirect_offset);
-				radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
-				radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
-				radeon_emit(cs, 0); /* draw_index */
-				radeon_emit(cs, 1); /* count */
-				radeon_emit(cs, 0); /* count_addr -- disabled */
-				radeon_emit(cs, 0);
-				radeon_emit(cs, 16); /* stride */
-				radeon_emit(cs, V_0287F0_DI_SRC_SEL_DMA);
-			}
+		if (sctx->b.family < CHIP_POLARIS10) {
+			radeon_emit(cs, PKT3(info->indexed ? PKT3_DRAW_INDEX_INDIRECT
+							   : PKT3_DRAW_INDIRECT,
+					     3, render_cond_bit));
+			radeon_emit(cs, info->indirect_offset);
+			radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
+			radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
+			radeon_emit(cs, di_src_sel);
 		} else {
+			radeon_emit(cs, PKT3(info->indexed ? PKT3_DRAW_INDEX_INDIRECT_MULTI :
+							     PKT3_DRAW_INDIRECT_MULTI,
+					     8, render_cond_bit));
+			radeon_emit(cs, info->indirect_offset);
+			radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
+			radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
+			radeon_emit(cs, 0); /* draw_index */
+			radeon_emit(cs, 1); /* count */
+			radeon_emit(cs, 0); /* count_addr -- disabled */
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 16); /* stride */
+			radeon_emit(cs, di_src_sel);
+		}
+	} else {
+		if (info->indexed) {
 			index_va += info->start * ib->index_size;
 
 			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_2, 4, render_cond_bit));
@@ -657,34 +666,11 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, (index_va >> 32UL) & 0xFF);
 			radeon_emit(cs, info->count);
 			radeon_emit(cs, V_0287F0_DI_SRC_SEL_DMA);
-		}
-	} else {
-		if (info->indirect) {
-			assert(info->indirect_offset % 4 == 0);
-
-			if (sctx->b.family < CHIP_POLARIS10) {
-				radeon_emit(cs, PKT3(PKT3_DRAW_INDIRECT, 3, render_cond_bit));
-				radeon_emit(cs, info->indirect_offset);
-				radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
-				radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
-				radeon_emit(cs, V_0287F0_DI_SRC_SEL_AUTO_INDEX);
-			} else {
-				radeon_emit(cs, PKT3(PKT3_DRAW_INDIRECT_MULTI, 8, render_cond_bit));
-				radeon_emit(cs, info->indirect_offset);
-				radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
-				radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
-				radeon_emit(cs, 0); /* draw_index */
-				radeon_emit(cs, 1); /* count */
-				radeon_emit(cs, 0); /* count_addr -- disabled */
-				radeon_emit(cs, 0);
-				radeon_emit(cs, 16); /* stride */
-				radeon_emit(cs, V_0287F0_DI_SRC_SEL_AUTO_INDEX);
-			}
 		} else {
 			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_AUTO, 1, render_cond_bit));
 			radeon_emit(cs, info->count);
 			radeon_emit(cs, V_0287F0_DI_SRC_SEL_AUTO_INDEX |
-				    S_0287F0_USE_OPAQUE(!!info->count_from_stream_output));
+				        S_0287F0_USE_OPAQUE(!!info->count_from_stream_output));
 		}
 	}
 }
