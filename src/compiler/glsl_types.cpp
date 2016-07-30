@@ -1384,11 +1384,11 @@ glsl_type::can_implicitly_convert_to(const glsl_type *desired,
    if (this == desired)
       return true;
 
-   /* ESSL does not allow implicit conversions. If there is no state, we're
-    * doing intra-stage function linking where these checks have already been
-    * done.
+   /* GLSL 1.10 and ESSL do not allow implicit conversions. If there is no
+    * state, we're doing intra-stage function linking where these checks have
+    * already been done.
     */
-   if (state && state->es_shader)
+   if (state && (state->es_shader || !state->is_version(120, 0)))
       return false;
 
    /* There is no conversion among matrix types. */
