@@ -1161,24 +1161,6 @@ process_array_constructor(exec_list *instructions,
 
 
 /**
- * Try to convert a record constructor to a constant expression
- */
-static ir_constant *
-constant_record_constructor(const glsl_type *constructor_type,
-			    exec_list *parameters, void *mem_ctx)
-{
-   foreach_in_list(ir_instruction, node, parameters) {
-      ir_constant *constant = node->as_constant();
-      if (constant == NULL)
-	 return NULL;
-      node->replace_with(constant);
-   }
-
-   return new(mem_ctx) ir_constant(constructor_type, parameters);
-}
-
-
-/**
  * Determine if a list consists of a single scalar r-value
  */
 bool
@@ -1709,53 +1691,77 @@ process_record_constructor(exec_list *instructions,
                            struct _mesa_glsl_parse_state *state)
 {
    void *ctx = state;
+   /* From page 32 (page 38 of the PDF) of the GLSL 1.20 spec:
+    *
+    *    "The arguments to the constructor will be used to set the structure's
+    *     fields, in order, using one argument per field. Each argument must
+    *     be the same type as the field it sets, or be a type that can be
+    *     converted to the field's type according to Section 4.1.10 “Implicit
+    *     Conversions.”"
+    *
+    * From page 35 (page 41 of the PDF) of the GLSL 4.20 spec:
+    *
+    *    "In all cases, the innermost initializer (i.e., not a list of
+    *     initializers enclosed in curly braces) applied to an object must
+    *     have the same type as the object being initialized or be a type that
+    *     can be converted to the object's type according to section 4.1.10
+    *     "Implicit Conversions". In the latter case, an implicit conversion
+    *     will be done on the initializer before the assignment is done."
+    */
    exec_list actual_parameters;
 
-   process_parameters(instructions, &actual_parameters,
-                      parameters, state);
+   const unsigned parameter_count =
+         process_parameters(instructions, &actual_parameters, parameters,
+                            state);
 
-   exec_node *node = actual_parameters.get_head_raw();
-   for (unsigned i = 0; i < constructor_type->length; i++) {
-      ir_rvalue *ir = (ir_rvalue *) node;
+   if (parameter_count != constructor_type->length) {
+      _mesa_glsl_error(loc, state,
+                       "%s parameters in constructor for `%s'",
+                       parameter_count > constructor_type->length
+                       ? "too many": "insufficient",
+                       constructor_type->name);
+      return ir_rvalue::error_value(ctx);
+   }
 
-      if (node->is_tail_sentinel()) {
-         _mesa_glsl_error(loc, state,
-                          "insufficient parameters to constructor for `%s'",
-                          constructor_type->name);
-         return ir_rvalue::error_value(ctx);
-      }
+   bool all_parameters_are_constant = true;
 
-      if (apply_implicit_conversion(constructor_type->fields.structure[i].type,
-                                 ir, state)) {
-         node->replace_with(ir);
-      } else {
+   int i = 0;
+   /* Type cast each parameter and, if possible, fold constants. */
+   foreach_in_list_safe(ir_rvalue, ir, &actual_parameters) {
+
+      const glsl_struct_field *struct_field =
+         &constructor_type->fields.structure[i];
+
+      /* Apply implicit conversions (not the scalar constructor rules, see the
+       * spec quote above!) and attempt to convert the parameter to a constant
+       * valued expression. After doing so, track whether or not all the
+       * parameters to the constructor are trivially constant valued
+       * expressions.
+       */
+      all_parameters_are_constant &=
+         implicitly_convert_component(ir, struct_field->type->base_type,
+                                      state);
+
+      if (ir->type != struct_field->type) {
          _mesa_glsl_error(loc, state,
                           "parameter type mismatch in constructor for `%s.%s' "
                           "(%s vs %s)",
                           constructor_type->name,
-                          constructor_type->fields.structure[i].name,
+                          struct_field->name,
                           ir->type->name,
-                          constructor_type->fields.structure[i].type->name);
+                          struct_field->type->name);
          return ir_rvalue::error_value(ctx);
       }
 
-      node = node->next;
+      i++;
    }
 
-   if (!node->is_tail_sentinel()) {
-      _mesa_glsl_error(loc, state, "too many parameters in constructor "
-                                    "for `%s'", constructor_type->name);
-      return ir_rvalue::error_value(ctx);
+   if (all_parameters_are_constant) {
+      return new(ctx) ir_constant(constructor_type, &actual_parameters);
+   } else {
+      return emit_inline_record_constructor(constructor_type, instructions,
+                                            &actual_parameters, state);
    }
-
-   ir_rvalue *const constant =
-      constant_record_constructor(constructor_type, &actual_parameters,
-                                  state);
-
-   return (constant != NULL)
-            ? constant
-            : emit_inline_record_constructor(constructor_type, instructions,
-                                             &actual_parameters, state);
 }
 
 ir_rvalue *
