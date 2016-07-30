@@ -612,7 +612,7 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
                     "%s:"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
-                    "%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+                    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
                     message,
                     bad.flags.q.invariant ? " invariant" : "",
                     bad.flags.q.precise ? " precise" : "",
@@ -633,6 +633,7 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
                     bad.flags.q.origin_upper_left ? " origin_upper_left" : "",
                     bad.flags.q.pixel_center_integer ? " pixel_center_integer" : "",
                     bad.flags.q.explicit_align ? " align" : "",
+                    bad.flags.q.explicit_component ? " component" : "",
                     bad.flags.q.explicit_location ? " location" : "",
                     bad.flags.q.explicit_index ? " index" : "",
                     bad.flags.q.explicit_binding ? " binding" : "",
