@@ -930,6 +930,7 @@ PIPE_THREAD_ROUTINE(dd_thread_pipelined_hang_detect, input)
 static char *
 dd_get_driver_shader_log(struct dd_context *dctx)
 {
+#if defined(PIPE_OS_LINUX)
    FILE *f;
    char *buf;
    int written_bytes;
@@ -966,6 +967,10 @@ dd_get_driver_shader_log(struct dd_context *dctx)
    }
 
    return buf;
+#else
+   /* Return an empty string. */
+   return (char*)calloc(1, 4);
+#endif
 }
 
 static void
