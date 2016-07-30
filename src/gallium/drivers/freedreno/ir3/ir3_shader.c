@@ -309,7 +309,8 @@ ir3_shader_create(struct ir3_compiler *compiler,
 		 * (as otherwise nothing will trigger the shader to be
 		 * actually compiled)
 		 */
-		static struct ir3_shader_key key = {{0}};
+		static struct ir3_shader_key key;
+		memset(&key, 0, sizeof(key));
 		ir3_shader_variant(shader, key, debug);
 	}
 	return shader;
