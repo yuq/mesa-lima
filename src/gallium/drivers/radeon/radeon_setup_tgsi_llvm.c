@@ -902,7 +902,7 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 }
 
 static LLVMValueRef build_cube_intrinsic(struct gallivm_state *gallivm,
-					 LLVMValueRef in[4])
+					 LLVMValueRef in[3])
 {
 	if (HAVE_LLVM >= 0x0309) {
 		LLVMTypeRef f32 = LLVMTypeOf(in[0]);
@@ -919,7 +919,13 @@ static LLVMValueRef build_cube_intrinsic(struct gallivm_state *gallivm,
 
 		return lp_build_gather_values(gallivm, out, 4);
 	} else {
-		LLVMValueRef vec = lp_build_gather_values(gallivm, in, 4);
+		LLVMValueRef c[4] = {
+			in[0],
+			in[1],
+			in[2],
+			LLVMGetUndef(LLVMTypeOf(in[0]))
+		};
+		LLVMValueRef vec = lp_build_gather_values(gallivm, c, 4);
 
 		return lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.cube",
 					  LLVMTypeOf(vec), &vec, 1,
