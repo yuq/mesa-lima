@@ -61,7 +61,7 @@ fd2_screen_is_format_supported(struct pipe_screen *pscreen,
 
 	if ((usage & (PIPE_BIND_SAMPLER_VIEW |
 				PIPE_BIND_VERTEX_BUFFER)) &&
-			(fd2_pipe2surface(format) != ~0u)) {
+			(fd2_pipe2surface(format) != (enum a2xx_sq_surfaceformat)~0)) {
 		retval |= usage & (PIPE_BIND_SAMPLER_VIEW |
 				PIPE_BIND_VERTEX_BUFFER);
 	}
@@ -70,7 +70,7 @@ fd2_screen_is_format_supported(struct pipe_screen *pscreen,
 				PIPE_BIND_DISPLAY_TARGET |
 				PIPE_BIND_SCANOUT |
 				PIPE_BIND_SHARED)) &&
-			(fd2_pipe2color(format) != ~0u)) {
+			(fd2_pipe2color(format) != (enum a2xx_colorformatx)~0)) {
 		retval |= usage & (PIPE_BIND_RENDER_TARGET |
 				PIPE_BIND_DISPLAY_TARGET |
 				PIPE_BIND_SCANOUT |
@@ -78,12 +78,12 @@ fd2_screen_is_format_supported(struct pipe_screen *pscreen,
 	}
 
 	if ((usage & PIPE_BIND_DEPTH_STENCIL) &&
-			(fd_pipe2depth(format) != ~0u)) {
+			(fd_pipe2depth(format) != (enum adreno_rb_depth_format)~0)) {
 		retval |= PIPE_BIND_DEPTH_STENCIL;
 	}
 
 	if ((usage & PIPE_BIND_INDEX_BUFFER) &&
-			(fd_pipe2index(format) != ~0u)) {
+			(fd_pipe2index(format) != (enum pc_di_index_size)~0)) {
 		retval |= PIPE_BIND_INDEX_BUFFER;
 	}
 
