@@ -715,6 +715,36 @@ static bool si_init_gs_info(struct si_screen *sscreen)
 	}
 }
 
+static void si_handle_env_var_force_family(struct si_screen *sscreen)
+{
+	const char *family = debug_get_option("SI_FORCE_FAMILY", NULL);
+	unsigned i;
+
+	if (!family)
+		return;
+
+	for (i = CHIP_TAHITI; i < CHIP_LAST; i++) {
+		if (!strcmp(family, r600_get_llvm_processor_name(i))) {
+			/* Override family and chip_class. */
+			sscreen->b.family = sscreen->b.info.family = i;
+
+			if (i >= CHIP_TONGA)
+				sscreen->b.chip_class = sscreen->b.info.chip_class = VI;
+			else if (i >= CHIP_BONAIRE)
+				sscreen->b.chip_class = sscreen->b.info.chip_class = CIK;
+			else
+				sscreen->b.chip_class = sscreen->b.info.chip_class = SI;
+
+			/* Don't submit any IBs. */
+			setenv("RADEON_NOOP", "1", 1);
+			return;
+		}
+	}
+
+	fprintf(stderr, "radeonsi: Unknown family: %s\n", family);
+	exit(1);
+}
+
 struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
@@ -739,6 +769,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		FREE(sscreen);
 		return NULL;
 	}
+
+	si_handle_env_var_force_family(sscreen);
 
 	if (!debug_get_bool_option("RADEON_DISABLE_PERFCOUNTERS", false))
 		si_init_perfcounters(sscreen);
