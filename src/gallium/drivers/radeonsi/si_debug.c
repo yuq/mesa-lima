@@ -805,6 +805,7 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 	struct pipe_screen *screen = sctx->b.b.screen;
 	FILE *f;
 	uint32_t addr;
+	char cmd_line[4096];
 
 	if (!si_vm_fault_occured(sctx, &addr))
 		return;
@@ -814,6 +815,8 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 		return;
 
 	fprintf(f, "VM fault report.\n\n");
+	if (os_get_command_line(cmd_line, sizeof(cmd_line)))
+		fprintf(f, "Command: %s\n", cmd_line);
 	fprintf(f, "Driver vendor: %s\n", screen->get_vendor(screen));
 	fprintf(f, "Device vendor: %s\n", screen->get_device_vendor(screen));
 	fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
