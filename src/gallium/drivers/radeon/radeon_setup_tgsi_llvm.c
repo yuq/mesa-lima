@@ -901,6 +901,32 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 	}
 }
 
+static LLVMValueRef build_cube_intrinsic(struct gallivm_state *gallivm,
+					 LLVMValueRef in[4])
+{
+	if (HAVE_LLVM >= 0x0309) {
+		LLVMTypeRef f32 = LLVMTypeOf(in[0]);
+		LLVMValueRef out[4];
+
+		out[0] = lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.cubetc",
+					    f32, in, 3, LLVMReadNoneAttribute);
+		out[1] = lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.cubesc",
+					    f32, in, 3, LLVMReadNoneAttribute);
+		out[2] = lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.cubema",
+					    f32, in, 3, LLVMReadNoneAttribute);
+		out[3] = lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.cubeid",
+					    f32, in, 3, LLVMReadNoneAttribute);
+
+		return lp_build_gather_values(gallivm, out, 4);
+	} else {
+		LLVMValueRef vec = lp_build_gather_values(gallivm, in, 4);
+
+		return lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.cube",
+					  LLVMTypeOf(vec), &vec, 1,
+					  LLVMReadNoneAttribute);
+	}
+}
+
 static void radeon_llvm_cube_to_2d_coords(struct lp_build_tgsi_context *bld_base,
 					  LLVMValueRef *in, LLVMValueRef *out)
 {
@@ -909,12 +935,10 @@ static void radeon_llvm_cube_to_2d_coords(struct lp_build_tgsi_context *bld_base
 	LLVMTypeRef type = bld_base->base.elem_type;
 	LLVMValueRef coords[4];
 	LLVMValueRef mad_args[3];
-	LLVMValueRef v, cube_vec;
+	LLVMValueRef v;
 	unsigned i;
 
-	cube_vec = lp_build_gather_values(bld_base->base.gallivm, in, 4);
-	v = lp_build_intrinsic(builder, "llvm.AMDGPU.cube", LLVMVectorType(type, 4),
-                            &cube_vec, 1, LLVMReadNoneAttribute);
+	v = build_cube_intrinsic(gallivm, in);
 
 	for (i = 0; i < 4; ++i)
 		coords[i] = LLVMBuildExtractElement(builder, v,
