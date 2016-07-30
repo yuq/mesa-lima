@@ -755,8 +755,8 @@ struct ast_type_qualifier {
 
    bool validate_flags(YYLTYPE *loc,
                        _mesa_glsl_parse_state *state,
-                       const char *message,
-                       const ast_type_qualifier &allowed_flags);
+                       const ast_type_qualifier &allowed_flags,
+                       const char *message, const char *name);
 
    ast_subroutine_list *subroutine_list;
 };

@@ -600,8 +600,8 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
 bool
 ast_type_qualifier::validate_flags(YYLTYPE *loc,
                                    _mesa_glsl_parse_state *state,
-                                   const char *message,
-                                   const ast_type_qualifier &allowed_flags)
+                                   const ast_type_qualifier &allowed_flags,
+                                   const char *message, const char *name)
 {
    ast_type_qualifier bad;
    bad.flags.i = this->flags.i & ~allowed_flags.flags.i;
@@ -609,11 +609,11 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
       return true;
 
    _mesa_glsl_error(loc, state,
-                    "%s:"
+                    "%s '%s':"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
-                    message,
+                    message, name,
                     bad.flags.q.invariant ? " invariant" : "",
                     bad.flags.q.precise ? " precise" : "",
                     bad.flags.q.constant ? " constant" : "",

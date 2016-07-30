@@ -4517,10 +4517,9 @@ ast_declarator_list::hir(exec_list *instructions,
       allowed_atomic_qual_mask.flags.q.explicit_offset = 1;
       allowed_atomic_qual_mask.flags.q.uniform = 1;
 
-      type->qualifier.validate_flags(&loc, state,
-                                     "invalid layout qualifier for "
-                                     "atomic_uint",
-                                     allowed_atomic_qual_mask);
+      type->qualifier.validate_flags(&loc, state, allowed_atomic_qual_mask,
+                                     "invalid layout qualifier for",
+                                     "atomic_uint");
    }
 
    if (this->declarations.is_empty()) {
