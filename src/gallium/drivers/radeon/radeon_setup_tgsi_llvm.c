@@ -1758,7 +1758,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *tripl
 	bld_base->op_actions[TGSI_OPCODE_DSLT].emit = emit_dcmp;
 	bld_base->op_actions[TGSI_OPCODE_DSNE].emit = emit_dcmp;
 	bld_base->op_actions[TGSI_OPCODE_DRSQ].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_DRSQ].intr_name = "llvm.AMDGPU.rsq.f64";
+	bld_base->op_actions[TGSI_OPCODE_DRSQ].intr_name =
+		HAVE_LLVM >= 0x0309 ? "llvm.amdgcn.rsq.f64" : "llvm.AMDGPU.rsq.f64";
 	bld_base->op_actions[TGSI_OPCODE_DSQRT].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_DSQRT].intr_name = "llvm.sqrt.f64";
 	bld_base->op_actions[TGSI_OPCODE_ELSE].emit = else_emit;
