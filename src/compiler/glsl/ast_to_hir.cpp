@@ -7054,12 +7054,80 @@ ast_interface_block::hir(exec_list *instructions,
                        this->block_name);
    }
 
-   if (!this->layout.flags.q.buffer &&
-       this->layout.flags.q.std430) {
-      _mesa_glsl_error(&loc, state,
-                       "std430 storage block layout qualifier is supported "
-                       "only for shader storage blocks");
+   /* Validate qualifiers:
+    *
+    * - Layout Qualifiers as per the table in Section 4.4
+    *   ("Layout Qualifiers") of the GLSL 4.50 spec.
+    *
+    * - Memory Qualifiers as per Section 4.10 ("Memory Qualifiers") of the
+    *   GLSL 4.50 spec:
+    *
+    *     "Additionally, memory qualifiers may also be used in the declaration
+    *      of shader storage blocks"
+    *
+    * Note the table in Section 4.4 says std430 is allowed on both uniform and
+    * buffer blocks however Section 4.4.5 (Uniform and Shader Storage Block
+    * Layout Qualifiers) of the GLSL 4.50 spec says:
+    *
+    *    "The std430 qualifier is supported only for shader storage blocks;
+    *    using std430 on a uniform block will result in a compile-time error."
+    */
+   ast_type_qualifier allowed_blk_qualifiers;
+   allowed_blk_qualifiers.flags.i = 0;
+   if (this->layout.flags.q.buffer || this->layout.flags.q.uniform) {
+      allowed_blk_qualifiers.flags.q.shared = 1;
+      allowed_blk_qualifiers.flags.q.packed = 1;
+      allowed_blk_qualifiers.flags.q.std140 = 1;
+      allowed_blk_qualifiers.flags.q.row_major = 1;
+      allowed_blk_qualifiers.flags.q.column_major = 1;
+      allowed_blk_qualifiers.flags.q.explicit_align = 1;
+      allowed_blk_qualifiers.flags.q.explicit_binding = 1;
+      if (this->layout.flags.q.buffer) {
+         allowed_blk_qualifiers.flags.q.buffer = 1;
+         allowed_blk_qualifiers.flags.q.std430 = 1;
+         allowed_blk_qualifiers.flags.q.coherent = 1;
+         allowed_blk_qualifiers.flags.q._volatile = 1;
+         allowed_blk_qualifiers.flags.q.restrict_flag = 1;
+         allowed_blk_qualifiers.flags.q.read_only = 1;
+         allowed_blk_qualifiers.flags.q.write_only = 1;
+      } else {
+         allowed_blk_qualifiers.flags.q.uniform = 1;
+      }
+   } else {
+      /* Interface block */
+      assert(this->layout.flags.q.in || this->layout.flags.q.out);
+
+      allowed_blk_qualifiers.flags.q.explicit_location = 1;
+      if (this->layout.flags.q.out) {
+         allowed_blk_qualifiers.flags.q.out = 1;
+         if (state->stage == MESA_SHADER_GEOMETRY ||
+          state->stage == MESA_SHADER_TESS_CTRL ||
+          state->stage == MESA_SHADER_TESS_EVAL ||
+          state->stage == MESA_SHADER_VERTEX ) {
+            allowed_blk_qualifiers.flags.q.explicit_xfb_offset = 1;
+            allowed_blk_qualifiers.flags.q.explicit_xfb_buffer = 1;
+            allowed_blk_qualifiers.flags.q.xfb_buffer = 1;
+            allowed_blk_qualifiers.flags.q.explicit_xfb_stride = 1;
+            allowed_blk_qualifiers.flags.q.xfb_stride = 1;
+            if (state->stage == MESA_SHADER_GEOMETRY) {
+               allowed_blk_qualifiers.flags.q.stream = 1;
+               allowed_blk_qualifiers.flags.q.explicit_stream = 1;
+            }
+            if (state->stage == MESA_SHADER_TESS_CTRL) {
+               allowed_blk_qualifiers.flags.q.patch = 1;
+            }
+         }
+      } else {
+         allowed_blk_qualifiers.flags.q.in = 1;
+         if (state->stage == MESA_SHADER_TESS_EVAL) {
+            allowed_blk_qualifiers.flags.q.patch = 1;
+         }
+      }
    }
+
+   this->layout.validate_flags(&loc, state, allowed_blk_qualifiers,
+                               "invalid qualifier for block",
+                               this->block_name);
 
    /* The ast_interface_block has a list of ast_declarator_lists.  We
     * need to turn those into ir_variables with an association
@@ -7114,12 +7182,6 @@ ast_interface_block::hir(exec_list *instructions,
    if (this->layout.flags.q.read_only && this->layout.flags.q.write_only) {
       _mesa_glsl_error(&loc, state,
                        "Interface block sets both readonly and writeonly");
-   }
-
-   if (this->layout.flags.q.explicit_component) {
-      _mesa_glsl_error(&loc, state, "component layout qualifier cannot be "
-                       "applied to a matrix, a structure, a block, or an "
-                       "array containing any of these.");
    }
 
    unsigned qual_stream;
