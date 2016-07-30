@@ -43,10 +43,14 @@ static FILE *
 dd_get_file_stream(struct dd_screen *dscreen, unsigned apitrace_call_number)
 {
    struct pipe_screen *screen = dscreen->screen;
+   char cmd_line[4096];
+
    FILE *f = dd_get_debug_file(dscreen->verbose);
    if (!f)
       return NULL;
 
+   if (os_get_command_line(cmd_line, sizeof(cmd_line)))
+      fprintf(f, "Command: %s\n", cmd_line);
    fprintf(f, "Driver vendor: %s\n", screen->get_vendor(screen));
    fprintf(f, "Device vendor: %s\n", screen->get_device_vendor(screen));
    fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
