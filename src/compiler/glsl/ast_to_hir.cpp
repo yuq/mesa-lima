@@ -1351,6 +1351,7 @@ ast_expression::do_hir(exec_list *instructions,
       -1,               /* ast_float_constant doesn't conv to ir_expression. */
       -1,               /* ast_bool_constant doesn't conv to ir_expression. */
       -1,               /* ast_sequence doesn't convert to ir_expression. */
+      -1,               /* ast_aggregate shouldn't ever even get here. */
    };
    ir_rvalue *result = NULL;
    ir_rvalue *op[3];
