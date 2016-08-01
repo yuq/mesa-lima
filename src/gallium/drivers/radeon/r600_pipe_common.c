@@ -47,6 +47,12 @@ struct r600_multi_fence {
 	struct pipe_reference reference;
 	struct pipe_fence_handle *gfx;
 	struct pipe_fence_handle *sdma;
+
+	/* If the context wasn't flushed at fence creation, this is non-NULL. */
+	struct {
+		struct r600_common_context *ctx;
+		unsigned ib_index;
+	} gfx_unflushed;
 };
 
 /*
@@ -262,6 +268,7 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 	unsigned rflags = 0;
 	struct pipe_fence_handle *gfx_fence = NULL;
 	struct pipe_fence_handle *sdma_fence = NULL;
+	bool deferred_fence = false;
 
 	if (flags & PIPE_FLUSH_END_OF_FRAME)
 		rflags |= RADEON_FLUSH_END_OF_FRAME;
@@ -271,7 +278,18 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 	if (rctx->dma.cs) {
 		rctx->dma.flush(rctx, rflags, fence ? &sdma_fence : NULL);
 	}
-	rctx->gfx.flush(rctx, rflags, fence ? &gfx_fence : NULL);
+
+	/* Instead of flushing, create a deferred fence. Constraints:
+	 * - The state tracker must allow a deferred flush.
+	 * - The state tracker must request a fence.
+	 * Thread safety in fence_finish must be ensured by the state tracker.
+	 */
+	if (flags & PIPE_FLUSH_DEFERRED && fence) {
+		gfx_fence = rctx->ws->cs_get_next_fence(rctx->gfx.cs);
+		deferred_fence = true;
+	} else {
+		rctx->gfx.flush(rctx, rflags, fence ? &gfx_fence : NULL);
+	}
 
 	/* Both engines can signal out of order, so we need to keep both fences. */
 	if (gfx_fence || sdma_fence) {
@@ -283,6 +301,11 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 		multi_fence->reference.count = 1;
 		multi_fence->gfx = gfx_fence;
 		multi_fence->sdma = sdma_fence;
+
+		if (deferred_fence) {
+			multi_fence->gfx_unflushed.ctx = rctx;
+			multi_fence->gfx_unflushed.ib_index = rctx->num_gfx_cs_flushes;
+		}
 
 		screen->fence_reference(screen, fence, NULL);
 		*fence = (struct pipe_fence_handle*)multi_fence;
@@ -960,6 +983,8 @@ static boolean r600_fence_finish(struct pipe_screen *screen,
 {
 	struct radeon_winsys *rws = ((struct r600_common_screen*)screen)->ws;
 	struct r600_multi_fence *rfence = (struct r600_multi_fence *)fence;
+	struct r600_common_context *rctx =
+		ctx ? (struct r600_common_context*)ctx : NULL;
 	int64_t abs_timeout = os_time_get_absolute_timeout(timeout);
 
 	if (rfence->sdma) {
@@ -975,6 +1000,23 @@ static boolean r600_fence_finish(struct pipe_screen *screen,
 
 	if (!rfence->gfx)
 		return true;
+
+	/* Flush the gfx IB if it hasn't been flushed yet. */
+	if (rctx &&
+	    rfence->gfx_unflushed.ctx == rctx &&
+	    rfence->gfx_unflushed.ib_index == rctx->num_gfx_cs_flushes) {
+		rctx->gfx.flush(rctx, timeout ? 0 : RADEON_FLUSH_ASYNC, NULL);
+		rfence->gfx_unflushed.ctx = NULL;
+
+		if (!timeout)
+			return false;
+
+		/* Recompute the timeout after all that. */
+		if (timeout && timeout != PIPE_TIMEOUT_INFINITE) {
+			int64_t time = os_time_get_nano();
+			timeout = abs_timeout > time ? abs_timeout - time : 0;
+		}
+	}
 
 	return rws->fence_wait(rws, rfence->gfx, timeout);
 }
