@@ -732,6 +732,13 @@ struct radeon_winsys {
                     struct pipe_fence_handle **fence);
 
     /**
+     * Create a fence before the CS is flushed.
+     * The user must flush manually to complete the initializaton of the fence.
+     * The fence must not be used before the flush.
+     */
+    struct pipe_fence_handle *(*cs_get_next_fence)(struct radeon_winsys_cs *cs);
+
+    /**
      * Return true if a buffer is referenced by a command stream.
      *
      * \param cs        A command stream.
