@@ -137,6 +137,28 @@ static bool amdgpu_fence_wait_rel_timeout(struct radeon_winsys *rws,
    return amdgpu_fence_wait(fence, timeout, false);
 }
 
+static struct pipe_fence_handle *
+amdgpu_cs_get_next_fence(struct radeon_winsys_cs *rcs)
+{
+   struct amdgpu_cs *cs = amdgpu_cs(rcs);
+   struct pipe_fence_handle *fence = NULL;
+
+   if (cs->next_fence) {
+      amdgpu_fence_reference(&fence, cs->next_fence);
+      return fence;
+   }
+
+   fence = amdgpu_fence_create(cs->ctx,
+                               cs->csc->request.ip_type,
+                               cs->csc->request.ip_instance,
+                               cs->csc->request.ring);
+   if (!fence)
+      return NULL;
+
+   amdgpu_fence_reference(&cs->next_fence, fence);
+   return fence;
+}
+
 /* CONTEXTS */
 
 static struct radeon_winsys_ctx *amdgpu_ctx_create(struct radeon_winsys *ws)
@@ -1005,10 +1027,16 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
 
       /* Create a fence. */
       amdgpu_fence_reference(&cur->fence, NULL);
-      cur->fence = amdgpu_fence_create(cs->ctx,
-                                           cur->request.ip_type,
-                                           cur->request.ip_instance,
-                                           cur->request.ring);
+      if (cs->next_fence) {
+         /* just move the reference */
+         cur->fence = cs->next_fence;
+         cs->next_fence = NULL;
+      } else {
+         cur->fence = amdgpu_fence_create(cs->ctx,
+                                          cur->request.ip_type,
+                                          cur->request.ip_instance,
+                                          cur->request.ring);
+      }
       if (fence)
          amdgpu_fence_reference(fence, cur->fence);
 
@@ -1069,6 +1097,7 @@ static void amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)
    FREE(cs->const_preamble_ib.base.prev);
    amdgpu_destroy_cs_context(&cs->csc1);
    amdgpu_destroy_cs_context(&cs->csc2);
+   amdgpu_fence_reference(&cs->next_fence, NULL);
    FREE(cs);
 }
 
@@ -1097,6 +1126,7 @@ void amdgpu_cs_init_functions(struct amdgpu_winsys *ws)
    ws->base.cs_check_space = amdgpu_cs_check_space;
    ws->base.cs_get_buffer_list = amdgpu_cs_get_buffer_list;
    ws->base.cs_flush = amdgpu_cs_flush;
+   ws->base.cs_get_next_fence = amdgpu_cs_get_next_fence;
    ws->base.cs_is_buffer_referenced = amdgpu_bo_is_referenced;
    ws->base.cs_sync_flush = amdgpu_cs_sync_flush;
    ws->base.fence_wait = amdgpu_fence_wait_rel_timeout;

@@ -113,6 +113,7 @@ struct amdgpu_cs {
    void *flush_data;
 
    struct util_queue_fence flush_completed;
+   struct pipe_fence_handle *next_fence;
 };
 
 struct amdgpu_fence {
