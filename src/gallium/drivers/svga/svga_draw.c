@@ -533,11 +533,10 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
    {
       SVGA3dVertexBuffer vbuffer_attrs[PIPE_MAX_ATTRIBS];
 
-      memset(vbuffer_attrs, 0, sizeof(vbuffer_attrs));
-
       for (i = 0; i < vbuf_count; i++) {
          vbuffer_attrs[i].stride = hwtnl->cmd.vbufs[i].stride;
          vbuffer_attrs[i].offset = hwtnl->cmd.vbufs[i].buffer_offset;
+         vbuffer_attrs[i].sid = 0;
       }
 
       /* If we haven't yet emitted a drawing command or if any
