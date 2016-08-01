@@ -492,9 +492,14 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
     }
 
     if (fence) {
-        radeon_fence_reference(fence, NULL);
-        *fence = radeon_cs_create_fence(rcs);
+       if (cs->next_fence) {
+          radeon_fence_reference(fence, cs->next_fence);
+       } else {
+          radeon_fence_reference(fence, NULL);
+          *fence = radeon_cs_create_fence(rcs);
+       }
     }
+    radeon_fence_reference(&cs->next_fence, NULL);
 
     radeon_drm_cs_sync_flush(rcs);
 
@@ -593,6 +598,7 @@ static void radeon_drm_cs_destroy(struct radeon_winsys_cs *rcs)
     p_atomic_dec(&cs->ws->num_cs);
     radeon_destroy_cs_context(&cs->csc1);
     radeon_destroy_cs_context(&cs->csc2);
+    radeon_fence_reference(&cs->next_fence, NULL);
     FREE(cs);
 }
 
@@ -651,6 +657,25 @@ static void radeon_fence_reference(struct pipe_fence_handle **dst,
     pb_reference((struct pb_buffer**)dst, (struct pb_buffer*)src);
 }
 
+static struct pipe_fence_handle *
+radeon_drm_cs_get_next_fence(struct radeon_winsys_cs *rcs)
+{
+   struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
+   struct pipe_fence_handle *fence = NULL;
+
+   if (cs->next_fence) {
+      radeon_fence_reference(&fence, cs->next_fence);
+      return fence;
+   }
+
+   fence = radeon_cs_create_fence(rcs);
+   if (!fence)
+      return NULL;
+
+   radeon_fence_reference(&cs->next_fence, fence);
+   return fence;
+}
+
 void radeon_drm_cs_init_functions(struct radeon_drm_winsys *ws)
 {
     ws->base.ctx_create = radeon_drm_ctx_create;
@@ -663,6 +688,7 @@ void radeon_drm_cs_init_functions(struct radeon_drm_winsys *ws)
     ws->base.cs_check_space = radeon_drm_cs_check_space;
     ws->base.cs_get_buffer_list = radeon_drm_cs_get_buffer_list;
     ws->base.cs_flush = radeon_drm_cs_flush;
+    ws->base.cs_get_next_fence = radeon_drm_cs_get_next_fence;
     ws->base.cs_is_buffer_referenced = radeon_bo_is_referenced;
     ws->base.cs_sync_flush = radeon_drm_cs_sync_flush;
     ws->base.fence_wait = radeon_fence_wait;

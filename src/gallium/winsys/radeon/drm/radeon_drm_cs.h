@@ -76,6 +76,7 @@ struct radeon_drm_cs {
     void *flush_data;
 
     struct util_queue_fence flush_completed;
+    struct pipe_fence_handle *next_fence;
 };
 
 int radeon_lookup_buffer(struct radeon_cs_context *csc, struct radeon_bo *bo);
