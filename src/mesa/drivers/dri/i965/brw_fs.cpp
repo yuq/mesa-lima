@@ -6381,7 +6381,7 @@ move_interpolation_to_top(nir_shader *nir)
                instr
             };
 
-            for (int i = 0; i < ARRAY_SIZE(move); i++) {
+            for (unsigned i = 0; i < ARRAY_SIZE(move); i++) {
                if (move[i]->block != top) {
                   move[i]->block = top;
                   exec_node_remove(&move[i]->node);
