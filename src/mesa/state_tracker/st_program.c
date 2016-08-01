@@ -954,7 +954,7 @@ st_create_fp_variant(struct st_context *st,
 
       /* glDrawPixels (color only) */
       if (key->drawpixels) {
-         nir_lower_drawpixels_options options = {0};
+         nir_lower_drawpixels_options options = {{0}};
          unsigned samplers_used = stfp->Base.Base.SamplersUsed;
 
          /* Find the first unused slot. */
