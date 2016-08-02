@@ -1659,30 +1659,6 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    brw_blorp_surface_info_init(brw, &params.dst, dst_mt, dst_level,
                                dst_layer, dst_format, true);
 
-   /* Even though we do multisample resolves at the time of the blit, OpenGL
-    * specification defines them as if they happen at the time of rendering,
-    * which means that the type of averaging we do during the resolve should
-    * only depend on the source format; the destination format should be
-    * ignored. But, specification doesn't seem to be strict about it.
-    *
-    * It has been observed that mulitisample resolves produce slightly better
-    * looking images when averaging is done using destination format. NVIDIA's
-    * proprietary OpenGL driver also follow this approach. So, we choose to
-    * follow it in our driver.
-    *
-    * When multisampling, if the source and destination formats are equal
-    * (aside from the color space), we choose to blit in sRGB space to get
-    * this higher quality image.
-    */
-   if (params.src.num_samples > 1 &&
-       _mesa_get_format_color_encoding(dst_mt->format) == GL_SRGB &&
-       _mesa_get_srgb_format_linear(src_mt->format) ==
-       _mesa_get_srgb_format_linear(dst_mt->format)) {
-      assert(brw->format_supported_as_render_target[dst_mt->format]);
-      params.dst.brw_surfaceformat = brw->render_target_format[dst_mt->format];
-      params.src.brw_surfaceformat = brw_format_for_mesa_format(dst_mt->format);
-   }
-
    /* When doing a multisample resolve of a GL_LUMINANCE32F or GL_INTENSITY32F
     * texture, the above code configures the source format for L32_FLOAT or
     * I32_FLOAT, and the destination format for R32_FLOAT.  On Sandy Bridge,
