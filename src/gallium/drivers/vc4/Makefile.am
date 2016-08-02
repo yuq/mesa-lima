@@ -32,6 +32,7 @@ AM_CFLAGS = \
 	$(VC4_CFLAGS) \
 	$(GALLIUM_DRIVER_CFLAGS) \
 	$(SIM_CFLAGS) \
+	$(VALGRIND_CFLAGS) \
 	$()
 
 noinst_LTLIBRARIES = libvc4.la
