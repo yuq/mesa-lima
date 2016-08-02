@@ -215,7 +215,7 @@ st_program_string_notify( struct gl_context *ctx,
          return false;
 
       if (st->vp == stvp)
-	 st->dirty |= ST_NEW_VERTEX_PROGRAM;
+	 st->dirty |= ST_NEW_VERTEX_PROGRAM(st);
    }
    else if (target == GL_TESS_CONTROL_PROGRAM_NV) {
       struct st_tessctrl_program *sttcp =

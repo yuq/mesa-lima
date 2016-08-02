@@ -65,7 +65,7 @@ static void check_program_state( struct st_context *st )
    struct gl_context *ctx = st->ctx;
 
    if (ctx->VertexProgram._Current != &st->vp->Base)
-      st->dirty |= ST_NEW_VERTEX_PROGRAM;
+      st->dirty |= ST_NEW_VERTEX_PROGRAM(st);
 
    if (ctx->FragmentProgram._Current != &st->fp->Base)
       st->dirty |= ST_NEW_FRAGMENT_PROGRAM;
@@ -97,7 +97,7 @@ static void check_attrib_edgeflag(struct st_context *st)
                         arrays[VERT_ATTRIB_EDGEFLAG]->StrideB != 0;
    if (vertdata_edgeflags != st->vertdata_edgeflags) {
       st->vertdata_edgeflags = vertdata_edgeflags;
-      st->dirty |= ST_NEW_VERTEX_PROGRAM;
+      st->dirty |= ST_NEW_VERTEX_PROGRAM(st);
    }
 
    edgeflag_culls_prims = edgeflags_enabled && !vertdata_edgeflags &&

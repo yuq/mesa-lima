@@ -88,17 +88,18 @@ enum {
                                  ST_NEW_SAMPLE_MASK | \
                                  ST_NEW_SAMPLE_SHADING)
 
-#define ST_NEW_VERTEX_PROGRAM   (ST_NEW_VS_STATE | \
-                                 ST_NEW_VS_SAMPLER_VIEWS | \
-                                 ST_NEW_VS_IMAGES | \
-                                 ST_NEW_VS_CONSTANTS | \
-                                 ST_NEW_VS_UBOS | \
-                                 ST_NEW_VS_ATOMICS | \
-                                 ST_NEW_VS_SSBOS | \
-                                 ST_NEW_VERTEX_ARRAYS | \
-                                 ST_NEW_CLIP_STATE | \
-                                 ST_NEW_RASTERIZER | \
-                                 ST_NEW_RENDER_SAMPLERS)
+#define ST_NEW_VERTEX_PROGRAM(st) (ST_NEW_VS_STATE | \
+                                   ST_NEW_VS_SAMPLER_VIEWS | \
+                                   ST_NEW_VS_IMAGES | \
+                                   ST_NEW_VS_CONSTANTS | \
+                                   ST_NEW_VS_UBOS | \
+                                   ST_NEW_VS_ATOMICS | \
+                                   ST_NEW_VS_SSBOS | \
+                                   ST_NEW_VERTEX_ARRAYS | \
+                                   (st_user_clip_planes_enabled(st->ctx) ? \
+                                    ST_NEW_CLIP_STATE : 0) | \
+                                   ST_NEW_RASTERIZER | \
+                                   ST_NEW_RENDER_SAMPLERS)
 
 #define ST_NEW_TCS_RESOURCES    (ST_NEW_TCS_SAMPLER_VIEWS | \
                                  ST_NEW_TCS_IMAGES | \
