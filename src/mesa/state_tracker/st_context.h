@@ -140,6 +140,9 @@ struct st_context
 
    uint64_t dirty; /**< dirty states */
 
+   /** This masks out unused shader resources. Only valid in draw calls. */
+   uint64_t active_states;
+
    /* If true, further analysis of states is required to know if something
     * has changed. Used mainly for shaders.
     */
@@ -356,6 +359,9 @@ st_create_context(gl_api api, struct pipe_context *pipe,
 
 extern void
 st_destroy_context(struct st_context *st);
+
+uint64_t
+st_get_active_states(struct gl_context *ctx);
 
 
 #ifdef __cplusplus

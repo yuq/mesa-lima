@@ -134,6 +134,14 @@ enum {
                                  ST_NEW_FS_IMAGES | \
                                  ST_NEW_CS_IMAGES)
 
+#define ST_ALL_SHADER_RESOURCES (ST_NEW_SAMPLER_VIEWS | \
+                                 ST_NEW_SAMPLERS | \
+                                 ST_NEW_CONSTANTS | \
+                                 ST_NEW_UNIFORM_BUFFER | \
+                                 ST_NEW_ATOMIC_BUFFER | \
+                                 ST_NEW_STORAGE_BUFFER | \
+                                 ST_NEW_IMAGE_UNITS)
+
 /* All state flags within each group: */
 #define ST_PIPELINE_RENDER_STATE_MASK  (ST_NEW_CS_STATE - 1)
 #define ST_PIPELINE_COMPUTE_STATE_MASK (0xffllu << ST_NEW_CS_STATE_INDEX)
