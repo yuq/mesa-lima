@@ -478,53 +478,36 @@ droid_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
 }
 
 static _EGLImage *
-dri2_create_image_android_native_buffer(_EGLDisplay *disp,
-                                        _EGLContext *ctx,
-                                        struct ANativeWindowBuffer *buf)
+droid_create_image_from_prime_fd(_EGLDisplay *disp, _EGLContext *ctx,
+                                 struct ANativeWindowBuffer *buf, int fd)
+{
+   const int fourcc = get_fourcc(get_format(buf->format));
+   const int pitch = buf->stride * get_format_bpp(buf->format);
+
+   const EGLint attr_list[14] = {
+      EGL_WIDTH, buf->width,
+      EGL_HEIGHT, buf->height,
+      EGL_LINUX_DRM_FOURCC_EXT, fourcc,
+      EGL_DMA_BUF_PLANE0_FD_EXT, fd,
+      EGL_DMA_BUF_PLANE0_PITCH_EXT, pitch,
+      EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
+      EGL_NONE, 0
+   };
+
+   if (fourcc == -1 || pitch == 0)
+      return NULL;
+
+   return dri2_create_image_dma_buf(disp, ctx, NULL, attr_list);
+}
+
+static _EGLImage *
+droid_create_image_from_name(_EGLDisplay *disp, _EGLContext *ctx,
+                             struct ANativeWindowBuffer *buf)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_image *dri2_img;
-   int name, fd;
+   int name;
    int format;
-
-   if (ctx != NULL) {
-      /* From the EGL_ANDROID_image_native_buffer spec:
-       *
-       *     * If <target> is EGL_NATIVE_BUFFER_ANDROID and <ctx> is not
-       *       EGL_NO_CONTEXT, the error EGL_BAD_CONTEXT is generated.
-       */
-      _eglError(EGL_BAD_CONTEXT, "eglCreateEGLImageKHR: for "
-                "EGL_NATIVE_BUFFER_ANDROID, the context must be "
-                "EGL_NO_CONTEXT");
-      return NULL;
-   }
-
-   if (!buf || buf->common.magic != ANDROID_NATIVE_BUFFER_MAGIC ||
-       buf->common.version != sizeof(*buf)) {
-      _eglError(EGL_BAD_PARAMETER, "eglCreateEGLImageKHR");
-      return NULL;
-   }
-
-   fd = get_native_buffer_fd(buf);
-   if (fd >= 0) {
-      const int fourcc = get_fourcc(get_format(buf->format));
-      const int pitch = buf->stride * get_format_bpp(buf->format);
-
-      const EGLint attr_list[14] = {
-         EGL_WIDTH, buf->width,
-         EGL_HEIGHT, buf->height,
-         EGL_LINUX_DRM_FOURCC_EXT, fourcc,
-         EGL_DMA_BUF_PLANE0_FD_EXT, fd,
-         EGL_DMA_BUF_PLANE0_PITCH_EXT, pitch,
-         EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
-         EGL_NONE, 0
-      };
-
-      if (fourcc == -1 || pitch == 0)
-         return NULL;
-
-      return dri2_create_image_dma_buf(disp, ctx, NULL, attr_list);
-   }
 
    name = get_native_buffer_name(buf);
    if (!name) {
@@ -562,6 +545,38 @@ dri2_create_image_android_native_buffer(_EGLDisplay *disp,
    }
 
    return &dri2_img->base;
+}
+
+static _EGLImage *
+dri2_create_image_android_native_buffer(_EGLDisplay *disp,
+                                        _EGLContext *ctx,
+                                        struct ANativeWindowBuffer *buf)
+{
+   int fd;
+
+   if (ctx != NULL) {
+      /* From the EGL_ANDROID_image_native_buffer spec:
+       *
+       *     * If <target> is EGL_NATIVE_BUFFER_ANDROID and <ctx> is not
+       *       EGL_NO_CONTEXT, the error EGL_BAD_CONTEXT is generated.
+       */
+      _eglError(EGL_BAD_CONTEXT, "eglCreateEGLImageKHR: for "
+                "EGL_NATIVE_BUFFER_ANDROID, the context must be "
+                "EGL_NO_CONTEXT");
+      return NULL;
+   }
+
+   if (!buf || buf->common.magic != ANDROID_NATIVE_BUFFER_MAGIC ||
+       buf->common.version != sizeof(*buf)) {
+      _eglError(EGL_BAD_PARAMETER, "eglCreateEGLImageKHR");
+      return NULL;
+   }
+
+   fd = get_native_buffer_fd(buf);
+   if (fd >= 0)
+      return droid_create_image_from_prime_fd(disp, ctx, buf, fd);
+
+   return droid_create_image_from_name(disp, ctx, buf);
 }
 
 static _EGLImage *
