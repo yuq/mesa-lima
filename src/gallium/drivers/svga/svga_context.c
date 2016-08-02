@@ -31,7 +31,6 @@
 #include "util/u_memory.h"
 #include "util/u_bitmask.h"
 #include "util/u_upload_mgr.h"
-#include "os/os_time.h"
 
 #include "svga_context.h"
 #include "svga_screen.h"
@@ -320,9 +319,9 @@ void svga_context_flush( struct svga_context *svga,
 
    /* Flush pending commands to hardware:
     */
-   t0 = os_time_get();
+   t0 = svga_get_time(svga);
    svga->swc->flush(svga->swc, &fence);
-   svga->hud.flush_time += (os_time_get() - t0);
+   svga->hud.flush_time += (svga_get_time(svga) - t0);
 
    svga->hud.num_flushes++;
 

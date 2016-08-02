@@ -31,6 +31,8 @@
 #include "pipe/p_defines.h"
 #include "pipe/p_state.h"
 
+#include "os/os_time.h"
+
 #include "util/u_blitter.h"
 #include "util/list.h"
 
@@ -544,6 +546,8 @@ struct svga_context
       uint64_t num_surface_views;       /**< SVGA_QUERY_NUM_SURFACE_VIEWS */
       uint64_t num_bytes_uploaded;      /**< SVGA_QUERY_NUM_BYTES_UPLOADED */
       uint64_t num_generate_mipmap;     /**< SVGA_QUERY_NUM_GENERATE_MIPMAP */
+
+      boolean uses_time;                /**< os_time_get() calls needed? */
    } hud;
 
    /** The currently bound stream output targets */
@@ -702,5 +706,16 @@ svga_rects_equal(const SVGA3dRect *r1, const SVGA3dRect *r2)
 {
    return memcmp(r1, r2, sizeof(*r1)) == 0;
 }
+
+/**
+ * If the Gallium HUD is enabled, this will return the current time.
+ * Otherwise, just return zero.
+ */
+static inline int64_t
+svga_get_time(struct svga_context *svga)
+{
+   return svga->hud.uses_time ? os_time_get() : 0;
+}
+
 
 #endif

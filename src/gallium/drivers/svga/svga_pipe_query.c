@@ -731,11 +731,9 @@ svga_create_query(struct pipe_context *pipe,
    case SVGA_QUERY_NUM_FALLBACKS:
    case SVGA_QUERY_NUM_FLUSHES:
    case SVGA_QUERY_NUM_VALIDATIONS:
-   case SVGA_QUERY_MAP_BUFFER_TIME:
    case SVGA_QUERY_NUM_RESOURCES_MAPPED:
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
    case SVGA_QUERY_COMMAND_BUFFER_SIZE:
-   case SVGA_QUERY_FLUSH_TIME:
    case SVGA_QUERY_SURFACE_WRITE_FLUSHES:
    case SVGA_QUERY_MEMORY_USED:
    case SVGA_QUERY_NUM_SHADERS:
@@ -748,6 +746,11 @@ svga_create_query(struct pipe_context *pipe,
    case SVGA_QUERY_NUM_BUFFER_UPLOADS:
    case SVGA_QUERY_NUM_CONST_BUF_UPDATES:
    case SVGA_QUERY_NUM_CONST_UPDATES:
+      break;
+   case SVGA_QUERY_FLUSH_TIME:
+   case SVGA_QUERY_MAP_BUFFER_TIME:
+      /* These queries need os_time_get() */
+      svga->hud.uses_time = TRUE;
       break;
    default:
       assert(!"unexpected query type in svga_create_query()");

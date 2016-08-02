@@ -29,7 +29,6 @@
 #include "pipe/p_state.h"
 #include "pipe/p_defines.h"
 #include "os/os_thread.h"
-#include "os/os_time.h"
 #include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_math.h"
@@ -336,7 +335,7 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       !svga_have_gb_dma(svga);
    unsigned d;
    void *returnVal;
-   int64_t begin = os_time_get();
+   int64_t begin = svga_get_time(svga);
 
    /* We can't map texture storage directly unless we have GB objects */
    if (usage & PIPE_TRANSFER_MAP_DIRECTLY) {
@@ -579,7 +578,7 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       returnVal = (void *) (map + offset);
    }
 
-   svga->hud.map_buffer_time += (os_time_get() - begin);
+   svga->hud.map_buffer_time += (svga_get_time(svga) - begin);
    svga->hud.num_resources_mapped++;
 
    return returnVal;

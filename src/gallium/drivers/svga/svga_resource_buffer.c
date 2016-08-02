@@ -29,7 +29,6 @@
 #include "pipe/p_defines.h"
 #include "util/u_inlines.h"
 #include "os/os_thread.h"
-#include "os/os_time.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
 #include "util/u_resource.h"
@@ -78,7 +77,7 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    struct svga_buffer *sbuf = svga_buffer(resource);
    struct pipe_transfer *transfer;
    uint8_t *map;
-   int64_t begin = os_time_get();
+   int64_t begin = svga_get_time(svga);
 
    assert(box->y == 0);
    assert(box->z == 0);
@@ -264,7 +263,7 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
       FREE(transfer);
    }
 
-   svga->hud.map_buffer_time += (os_time_get() - begin);
+   svga->hud.map_buffer_time += (svga_get_time(svga) - begin);
 
    return map;
 }
