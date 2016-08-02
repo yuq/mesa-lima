@@ -836,6 +836,62 @@ convert_component(ir_rvalue *src, const glsl_type *desired_type)
    return (constant != NULL) ? (ir_rvalue *) constant : (ir_rvalue *) result;
 }
 
+
+/**
+ * Perform automatic type and constant conversion of constructor parameters
+ *
+ * This implements the rules in the "Implicit Conversions" rules, not the
+ * "Conversion and Scalar Constructors".
+ *
+ * After attempting the implicit conversion, an attempt to convert into a
+ * constant valued expression is also done.
+ *
+ * The \c from \c ir_rvalue is converted "in place".
+ *
+ * \param from   Operand that is being converted
+ * \param to     Base type the operand will be converted to
+ * \param state  GLSL compiler state
+ *
+ * \return
+ * If the attempt to convert into a constant expression succeeds, \c true is
+ * returned. Otherwise \c false is returned.
+ */
+static bool
+implicitly_convert_component(ir_rvalue * &from, const glsl_base_type to,
+                             struct _mesa_glsl_parse_state *state)
+{
+   ir_rvalue *result = from;
+
+   if (to != from->type->base_type) {
+      const glsl_type *desired_type =
+         glsl_type::get_instance(to,
+                                 from->type->vector_elements,
+                                 from->type->matrix_columns);
+
+      if (from->type->can_implicitly_convert_to(desired_type, state)) {
+         /* Even though convert_component() implements the constructor
+          * conversion rules (not the implicit conversion rules), its safe
+          * to use it here because we already checked that the implicit
+          * conversion is legal.
+          */
+         result = convert_component(from, desired_type);
+      }
+   }
+
+   ir_rvalue *const constant = result->constant_expression_value();
+
+   if (constant != NULL)
+      result = constant;
+
+   if (from != result) {
+      from->replace_with(result);
+      from = result;
+   }
+
+   return constant != NULL;
+}
+
+
 /**
  * Dereference a specific component from a scalar, vector, or matrix
  */
@@ -918,53 +974,30 @@ process_vec_mat_constructor(exec_list *instructions,
 
    /* Type cast each parameter and, if possible, fold constants. */
    foreach_in_list_safe(ir_rvalue, ir, &actual_parameters) {
-      ir_rvalue *result = ir;
-
-      /* Apply implicit conversions (not the scalar constructor rules!). See
-       * the spec quote above. */
-      if (constructor_type->base_type != result->type->base_type) {
-         const glsl_type *desired_type =
-            glsl_type::get_instance(constructor_type->base_type,
-                                    ir->type->vector_elements,
-                                    ir->type->matrix_columns);
-         if (result->type->can_implicitly_convert_to(desired_type, state)) {
-            /* Even though convert_component() implements the constructor
-             * conversion rules (not the implicit conversion rules), its safe
-             * to use it here because we already checked that the implicit
-             * conversion is legal.
-             */
-            result = convert_component(ir, desired_type);
-         }
-      }
+      /* Apply implicit conversions (not the scalar constructor rules, see the
+       * spec quote above!) and attempt to convert the parameter to a constant
+       * valued expression. After doing so, track whether or not all the
+       * parameters to the constructor are trivially constant valued
+       * expressions.
+       */
+      all_parameters_are_constant &=
+         implicitly_convert_component(ir, constructor_type->base_type, state);
 
       if (constructor_type->is_matrix()) {
-         if (result->type != constructor_type->column_type()) {
+         if (ir->type != constructor_type->column_type()) {
             _mesa_glsl_error(loc, state, "type error in matrix constructor: "
                              "expected: %s, found %s",
                              constructor_type->column_type()->name,
-                             result->type->name);
+                             ir->type->name);
             return ir_rvalue::error_value(ctx);
          }
-      } else if (result->type != constructor_type->get_scalar_type()) {
+      } else if (ir->type != constructor_type->get_scalar_type()) {
          _mesa_glsl_error(loc, state, "type error in vector constructor: "
                           "expected: %s, found %s",
                           constructor_type->get_scalar_type()->name,
-                          result->type->name);
+                          ir->type->name);
          return ir_rvalue::error_value(ctx);
       }
-
-      /* Attempt to convert the parameter to a constant valued expression.
-       * After doing so, track whether or not all the parameters to the
-       * constructor are trivially constant valued expressions.
-       */
-      ir_rvalue *const constant = result->constant_expression_value();
-
-      if (constant != NULL)
-         result = constant;
-      else
-         all_parameters_are_constant = false;
-
-      ir->replace_with(result);
    }
 
    if (all_parameters_are_constant)
@@ -1057,28 +1090,14 @@ process_array_constructor(exec_list *instructions,
 
    /* Type cast each parameter and, if possible, fold constants. */
    foreach_in_list_safe(ir_rvalue, ir, &actual_parameters) {
-      ir_rvalue *result = ir;
-
-      const glsl_base_type element_base_type =
-         constructor_type->fields.array->base_type;
-
-      /* Apply implicit conversions (not the scalar constructor rules!). See
-       * the spec quote above. */
-      if (element_base_type != result->type->base_type) {
-         const glsl_type *desired_type =
-            glsl_type::get_instance(element_base_type,
-                                    ir->type->vector_elements,
-                                    ir->type->matrix_columns);
-
-	 if (result->type->can_implicitly_convert_to(desired_type, state)) {
-	    /* Even though convert_component() implements the constructor
-	     * conversion rules (not the implicit conversion rules), its safe
-	     * to use it here because we already checked that the implicit
-	     * conversion is legal.
-	     */
-	    result = convert_component(ir, desired_type);
-	 }
-      }
+      /* Apply implicit conversions (not the scalar constructor rules, see the
+       * spec quote above!) and attempt to convert the parameter to a constant
+       * valued expression. After doing so, track whether or not all the
+       * parameters to the constructor are trivially constant valued
+       * expressions.
+       */
+      all_parameters_are_constant &=
+         implicitly_convert_component(ir, element_type->base_type, state);
 
       if (constructor_type->fields.array->is_unsized_array()) {
          /* As the inner parameters of the constructor are created without
@@ -1091,37 +1110,24 @@ process_array_constructor(exec_list *instructions,
           *                       vec4[](vec4(0.0), vec4(1.0)));
           */
          if (element_type->is_unsized_array()) {
-             /* This is the first parameter so just get the type */
-            element_type = result->type;
-         } else if (element_type != result->type) {
+            /* This is the first parameter so just get the type */
+            element_type = ir->type;
+         } else if (element_type != ir->type) {
             _mesa_glsl_error(loc, state, "type error in array constructor: "
                              "expected: %s, found %s",
                              element_type->name,
-                             result->type->name);
+                             ir->type->name);
             return ir_rvalue::error_value(ctx);
          }
-      } else if (result->type != constructor_type->fields.array) {
-	 _mesa_glsl_error(loc, state, "type error in array constructor: "
-			  "expected: %s, found %s",
-			  constructor_type->fields.array->name,
-			  result->type->name);
+      } else if (ir->type != constructor_type->fields.array) {
+         _mesa_glsl_error(loc, state, "type error in array constructor: "
+                          "expected: %s, found %s",
+                          constructor_type->fields.array->name,
+                          ir->type->name);
          return ir_rvalue::error_value(ctx);
       } else {
-         element_type = result->type;
+         element_type = ir->type;
       }
-
-      /* Attempt to convert the parameter to a constant valued expression.
-       * After doing so, track whether or not all the parameters to the
-       * constructor are trivially constant valued expressions.
-       */
-      ir_rvalue *const constant = result->constant_expression_value();
-
-      if (constant != NULL)
-         result = constant;
-      else
-         all_parameters_are_constant = false;
-
-      ir->replace_with(result);
    }
 
    if (constructor_type->fields.array->is_unsized_array()) {
