@@ -635,9 +635,6 @@ droid_get_buffers_with_format(__DRIdrawable * driDrawable,
 			     int *out_count, void *loaderPrivate)
 {
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
-   struct dri2_egl_display *dri2_dpy =
-      dri2_egl_display(dri2_surf->base.Resource.Display);
-   int i;
 
    if (update_buffers(dri2_surf) < 0)
       return NULL;
