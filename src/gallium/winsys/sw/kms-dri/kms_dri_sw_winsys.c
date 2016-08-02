@@ -276,7 +276,6 @@ kms_sw_displaytarget_from_handle(struct sw_winsys *ws,
    case DRM_API_HANDLE_TYPE_FD:
       kms_sw_dt = kms_sw_displaytarget_add_from_prime(kms_sw, whandle->handle);
       if (kms_sw_dt) {
-         kms_sw_dt->ref_count++;
          kms_sw_dt->width = templ->width0;
          kms_sw_dt->height = templ->height0;
          kms_sw_dt->stride = whandle->stride;
