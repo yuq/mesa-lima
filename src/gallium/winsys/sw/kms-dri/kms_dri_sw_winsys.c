@@ -211,7 +211,9 @@ kms_sw_displaytarget_map(struct sw_winsys *ws,
 }
 
 static struct kms_sw_displaytarget *
-kms_sw_displaytarget_add_from_prime(struct kms_sw_winsys *kms_sw, int fd)
+kms_sw_displaytarget_add_from_prime(struct kms_sw_winsys *kms_sw, int fd,
+                                    unsigned width, unsigned height,
+                                    unsigned stride)
 {
    uint32_t handle = -1;
    struct kms_sw_displaytarget * kms_sw_dt;
@@ -229,6 +231,9 @@ kms_sw_displaytarget_add_from_prime(struct kms_sw_winsys *kms_sw, int fd)
    kms_sw_dt->ref_count = 1;
    kms_sw_dt->handle = handle;
    kms_sw_dt->size = lseek(fd, 0, SEEK_END);
+   kms_sw_dt->width = width;
+   kms_sw_dt->height = height;
+   kms_sw_dt->stride = stride;
 
    if (kms_sw_dt->size == (off_t)-1) {
       FREE(kms_sw_dt);
@@ -274,13 +279,12 @@ kms_sw_displaytarget_from_handle(struct sw_winsys *ws,
 
    switch(whandle->type) {
    case DRM_API_HANDLE_TYPE_FD:
-      kms_sw_dt = kms_sw_displaytarget_add_from_prime(kms_sw, whandle->handle);
-      if (kms_sw_dt) {
-         kms_sw_dt->width = templ->width0;
-         kms_sw_dt->height = templ->height0;
-         kms_sw_dt->stride = whandle->stride;
+      kms_sw_dt = kms_sw_displaytarget_add_from_prime(kms_sw, whandle->handle,
+                                                      templ->width0,
+                                                      templ->height0,
+                                                      whandle->stride);
+      if (kms_sw_dt)
          *stride = kms_sw_dt->stride;
-      }
       return (struct sw_displaytarget *)kms_sw_dt;
    case DRM_API_HANDLE_TYPE_KMS:
       LIST_FOR_EACH_ENTRY(kms_sw_dt, &kms_sw->bo_list, link) {
