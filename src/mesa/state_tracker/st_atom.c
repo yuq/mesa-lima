@@ -157,9 +157,12 @@ void st_validate_state( struct st_context *st, enum st_pipeline pipeline )
    uint64_t dirty, pipeline_mask;
    uint32_t dirty_lo, dirty_hi;
 
-   /* Get Mesa driver state. */
-   st->dirty |= st->ctx->NewDriverState & ST_ALL_STATES_MASK;
-   st->ctx->NewDriverState = 0;
+   /* Get Mesa driver state.
+    *
+    * Inactive states are shader states not used by shaders at the moment.
+    */
+   st->dirty |= ctx->NewDriverState & st->active_states & ST_ALL_STATES_MASK;
+   ctx->NewDriverState = 0;
 
    /* Get pipeline state. */
    switch (pipeline) {
