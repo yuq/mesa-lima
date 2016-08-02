@@ -141,9 +141,6 @@ void st_validate_state( struct st_context *st, enum st_pipeline pipeline )
          pipeline_mask &= ~ST_NEW_TES_RESOURCES;
       if (!ctx->GeometryProgram._Current)
          pipeline_mask &= ~ST_NEW_GS_RESOURCES;
-      if (!ctx->Transform.ClipPlanesEnabled)
-         pipeline_mask &= ~ST_NEW_CLIP_STATE;
-
       break;
    case ST_PIPELINE_COMPUTE:
       if (ctx->ComputeProgram._Current != &st->cp->Base)

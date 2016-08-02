@@ -193,7 +193,8 @@ void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
    }
 
    if (new_state & (_NEW_PROJECTION |
-                    _NEW_TRANSFORM))
+                    _NEW_TRANSFORM) &&
+       st_user_clip_planes_enabled(ctx))
       st->dirty |= ST_NEW_CLIP_STATE;
 
    if (new_state & _NEW_COLOR)

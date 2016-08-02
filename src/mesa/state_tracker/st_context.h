@@ -336,6 +336,13 @@ st_shader_stage_to_ptarget(gl_shader_stage stage)
    return PIPE_SHADER_VERTEX;
 }
 
+static inline bool
+st_user_clip_planes_enabled(struct gl_context *ctx)
+{
+   return (ctx->API == API_OPENGL_COMPAT ||
+           ctx->API == API_OPENGLES) && /* only ES 1.x */
+          ctx->Transform.ClipPlanesEnabled;
+}
 
 /** clear-alloc a struct-sized object, with casting */
 #define ST_CALLOC_STRUCT(T)   (struct T *) calloc(1, sizeof(struct T))
