@@ -133,14 +133,6 @@ void st_validate_state( struct st_context *st, enum st_pipeline pipeline )
       st_manager_validate_framebuffers(st);
 
       pipeline_mask = ST_PIPELINE_RENDER_STATE_MASK;
-
-      /* Don't update states that have no effect. */
-      if (!ctx->TessCtrlProgram._Current)
-         pipeline_mask &= ~ST_NEW_TCS_RESOURCES;
-      if (!ctx->TessEvalProgram._Current)
-         pipeline_mask &= ~ST_NEW_TES_RESOURCES;
-      if (!ctx->GeometryProgram._Current)
-         pipeline_mask &= ~ST_NEW_GS_RESOURCES;
       break;
    case ST_PIPELINE_COMPUTE:
       if (ctx->ComputeProgram._Current != &st->cp->Base)
