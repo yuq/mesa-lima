@@ -352,6 +352,7 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
       new std::unordered_map<BLEND_COMPILE_STATE, PFN_BLEND_JIT_FUNC>;
 
    SWR_CREATECONTEXT_INFO createInfo;
+   memset(&createInfo, 0, sizeof(createInfo));
    createInfo.driver = GL;
    createInfo.privateStateSize = sizeof(swr_draw_context);
    createInfo.pfnLoadTile = swr_LoadHotTile;

@@ -320,6 +320,28 @@ bool CheckDependency(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t lastReti
     return pDC->dependent && IDComparesLess(lastRetiredDraw, pDC->drawId - 1);
 }
 
+INLINE void ExecuteCallbacks(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+{
+    if (pContext->pfnUpdateSoWriteOffset)
+    {
+        for (uint32_t i = 0; i < MAX_SO_BUFFERS; ++i)
+        {
+            if ((pDC->dynState.SoWriteOffsetDirty[i]) &&
+                (pDC->pState->state.soBuffer[i].soWriteEnable))
+            {
+                pContext->pfnUpdateSoWriteOffset(GetPrivateState(pDC), i, pDC->dynState.SoWriteOffset[i]);
+            }
+        }
+    }
+
+    if (pDC->retireCallback.pfnCallbackFunc)
+    {
+        pDC->retireCallback.pfnCallbackFunc(pDC->retireCallback.userData,
+            pDC->retireCallback.userData2,
+            pDC->retireCallback.userData3);
+    }
+}
+
 // inlined-only version
 INLINE int64_t CompleteDrawContextInl(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
@@ -328,12 +350,7 @@ INLINE int64_t CompleteDrawContextInl(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 
     if (result == 0)
     {
-        if (pDC->retireCallback.pfnCallbackFunc)
-        {
-            pDC->retireCallback.pfnCallbackFunc(pDC->retireCallback.userData,
-                                                pDC->retireCallback.userData2,
-                                                pDC->retireCallback.userData3);
-        }
+        ExecuteCallbacks(pContext, pDC);
 
         // Cleanup memory allocations
         pDC->pArena->Reset(true);

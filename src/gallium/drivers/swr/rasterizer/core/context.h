@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -367,6 +367,13 @@ struct DRAW_STATE
     CachingArena* pArena;     // This should only be used by API thread.
 };
 
+struct DRAW_DYNAMIC_STATE
+{
+    ///@todo Currently assumes only a single FE can do stream output for a draw.
+    uint32_t SoWriteOffset[4];
+    bool     SoWriteOffsetDirty[4];
+};
+
 // Draw Context
 //    The api thread sets up a draw context that exists for the life of the draw.
 //    This draw context maintains all of the state needed for the draw operation.
@@ -378,7 +385,9 @@ struct DRAW_CONTEXT
         MacroTileMgr*   pTileMgr;
         DispatchQueue*  pDispatch;      // Queue for thread groups. (isCompute)
     };
-    DRAW_STATE*     pState;
+    DRAW_STATE*     pState;             // Read-only state. Core should not update this outside of API thread.
+    DRAW_DYNAMIC_STATE dynState;
+
     CachingArena*   pArena;
 
     uint32_t        drawId;
@@ -465,10 +474,11 @@ struct SWR_CONTEXT
 
     HotTileMgr *pHotTileMgr;
 
-    // tile load/store functions, passed in at create context time
+    // Callback functions, passed in at create context time
     PFN_LOAD_TILE pfnLoadTile;
     PFN_STORE_TILE pfnStoreTile;
     PFN_CLEAR_TILE pfnClearTile;
+    PFN_UPDATE_SO_WRITE_OFFSET pfnUpdateSoWriteOffset;
 
     // Global Stats
     SWR_STATS stats[KNOB_MAX_NUM_THREADS];
@@ -484,4 +494,3 @@ void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId);
 void WakeAllThreads(SWR_CONTEXT *pContext);
 
 #define UPDATE_STAT(name, count) if (GetApiState(pDC).enableStats) { pContext->stats[workerId].name += count; }
-#define SET_STAT(name, count) if (GetApiState(pDC).enableStats) { pContext->stats[workerId].name = count; }

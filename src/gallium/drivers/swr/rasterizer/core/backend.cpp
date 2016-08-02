@@ -111,12 +111,6 @@ void ProcessQueryStatsBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTil
 
         for (uint32_t stream = 0; stream < MAX_SO_STREAMS; ++stream)
         {
-            pStats->SoWriteOffset[stream] += pContext->stats[i].SoWriteOffset[stream];
-
-            /// @note client is required to provide valid write offset before every draw, so we clear
-            /// out the contents of the write offset when storing stats
-            pContext->stats[i].SoWriteOffset[stream] = 0;
-
             pStats->SoPrimStorageNeeded[stream] += pContext->stats[i].SoPrimStorageNeeded[stream];
             pStats->SoNumPrimsWritten[stream] += pContext->stats[i].SoNumPrimsWritten[stream];
         }

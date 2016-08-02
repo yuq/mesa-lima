@@ -575,7 +575,6 @@ struct SWR_STATS
     uint64_t GsPrimitives;  // Number of prims GS outputs.
 
     // Streamout Stats
-    uint32_t SoWriteOffset[4];
     uint64_t SoPrimStorageNeeded[4];
     uint64_t SoNumPrimsWritten[4];
 };
@@ -585,11 +584,13 @@ struct SWR_STATS
 /////////////////////////////////////////////////////////////////////////
 
 #define MAX_SO_STREAMS 4
+#define MAX_SO_BUFFERS 4
 #define MAX_ATTRIBUTES 32
 
 struct SWR_STREAMOUT_BUFFER
 {
     bool enable;
+    bool soWriteEnable;
 
     // Pointers to streamout buffers.
     uint32_t* pBuffer;

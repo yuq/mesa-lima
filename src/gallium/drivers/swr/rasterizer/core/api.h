@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -67,6 +67,7 @@ typedef void(SWR_API *PFN_STORE_TILE)(HANDLE hPrivateContext, SWR_FORMAT srcForm
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
     uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, uint8_t *pSrcHotTile);
 
+//////////////////////////////////////////////////////////////////////////
 /// @brief Function signature for clearing from the hot tiles clear value
 /// @param hPrivateContext - handle to private data
 /// @param renderTargetIndex - render target to store, can be color, depth or stencil
@@ -76,6 +77,16 @@ typedef void(SWR_API *PFN_STORE_TILE)(HANDLE hPrivateContext, SWR_FORMAT srcForm
 typedef void(SWR_API *PFN_CLEAR_TILE)(HANDLE hPrivateContext,
     SWR_RENDERTARGET_ATTACHMENT rtIndex,
     uint32_t x, uint32_t y, const float* pClearColor);
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Callback to allow driver to update their copy of streamout write offset.
+///        This is call is made for any draw operation that has streamout enabled
+///        and has updated the write offset.
+/// @param hPrivateContext - handle to private data
+/// @param soBufferSlot - buffer slot for write offset
+/// @param soWriteOffset - update value for so write offset.
+typedef void(SWR_API *PFN_UPDATE_SO_WRITE_OFFSET)(HANDLE hPrivateContext,
+    uint32_t soBufferSlot, uint32_t soWriteOffset);
 
 class BucketManager;
 
@@ -90,10 +101,11 @@ struct SWR_CREATECONTEXT_INFO
     // Use SwrGetPrivateContextState() to access private state.
     uint32_t privateStateSize;
 
-    // Tile manipulation functions
+    // Callback functions
     PFN_LOAD_TILE pfnLoadTile;
     PFN_STORE_TILE pfnStoreTile;
     PFN_CLEAR_TILE pfnClearTile;
+    PFN_UPDATE_SO_WRITE_OFFSET pfnUpdateSoWriteOffset;
 
     // Pointer to rdtsc buckets mgr returned to the caller.
     // Only populated when KNOB_ENABLE_RDTSC is set

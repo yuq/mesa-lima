@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -128,10 +128,11 @@ HANDLE SwrCreateContext(
     // initialize function pointer tables
     InitClearTilesTable();
 
-    // initialize store tiles function
+    // initialize callback functions
     pContext->pfnLoadTile = pCreateInfo->pfnLoadTile;
     pContext->pfnStoreTile = pCreateInfo->pfnStoreTile;
     pContext->pfnClearTile = pCreateInfo->pfnClearTile;
+    pContext->pfnUpdateSoWriteOffset = pCreateInfo->pfnUpdateSoWriteOffset;
 
     // pass pointer to bucket manager back to caller
 #ifdef KNOB_ENABLE_RDTSC
@@ -335,6 +336,8 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pCurDrawContext->FeLock = 0;
         pCurDrawContext->threadsDone = 0;
         pCurDrawContext->retireCallback.pfnCallbackFunc = nullptr;
+
+        memset(&pCurDrawContext->dynState, 0, sizeof(pCurDrawContext->dynState));
 
         // Assign unique drawId for this DC
         pCurDrawContext->drawId = pContext->dcRing.GetHead();

@@ -594,10 +594,12 @@ static void StreamOut(
         if (state.soBuffer[i].pWriteOffset)
         {
             *state.soBuffer[i].pWriteOffset = soContext.pBuffer[i]->streamOffset * sizeof(uint32_t);
+        }
 
-            // The SOS increments the existing write offset. So we don't want to increment
-            // the SoWriteOffset stat using an absolute offset instead of relative.
-            SET_STAT(SoWriteOffset[i], soContext.pBuffer[i]->streamOffset);
+        if (state.soBuffer[i].soWriteEnable)
+        {
+            pDC->dynState.SoWriteOffset[i] = soContext.pBuffer[i]->streamOffset * sizeof(uint32_t);
+            pDC->dynState.SoWriteOffsetDirty[i] = true;
         }
     }
 
@@ -1265,13 +1267,6 @@ void ProcessDraw(
     if (HasStreamOutT::value)
     {
         pSoPrimData = (uint32_t*)pDC->pArena->AllocAligned(4096, 16);
-
-        // update the
-        for (uint32_t i = 0; i < 4; ++i)
-        {
-            SET_STAT(SoWriteOffset[i], state.soBuffer[i].streamOffset);
-        }
-
     }
 
     // choose primitive assembler
