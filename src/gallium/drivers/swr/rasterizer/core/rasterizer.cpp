@@ -729,7 +729,7 @@ INLINE bool TrivialRejectTest<NoEdgesValidT>(const int, const int, const int)
 /// @brief Primary function template for TrivialAcceptTest. Always returns
 /// false, since it will only be called for degenerate tris, and as such 
 /// will never cover the entire raster tile
-template <typename ValidEdgeMaskT>
+template <typename ScissorEnableT>
 INLINE bool TrivialAcceptTest(const int, const int, const int)
 {
     return false;
@@ -739,7 +739,7 @@ INLINE bool TrivialAcceptTest(const int, const int, const int)
 /// @brief AllEdgesValidT specialization for TrivialAcceptTest. Test all
 /// edge masks for a fully covered raster tile
 template <>
-INLINE bool TrivialAcceptTest<AllEdgesValidT>(const int mask0, const int mask1, const int mask2)
+INLINE bool TrivialAcceptTest<std::false_type>(const int mask0, const int mask1, const int mask2)
 {
     return ((mask0 & mask1 & mask2) == 0xf);
 };
@@ -1166,7 +1166,10 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                     UpdateEdgeMasksInnerConservative<RT, typename RT::ValidEdgeMaskT, typename RT::InputCoverageT>
                         (vEdgeTileBbox, vEdgeFix16, vAi, vBi, mask0, mask1, mask2);
 
-                    if (TrivialAcceptTest<typename RT::ValidEdgeMaskT>(mask0, mask1, mask2))
+                    // @todo Make this a bit smarter to allow use of trivial accept when:
+                    //   1) scissor/vp intersection rect is raster tile aligned
+                    //   2) raster tile is entirely within scissor/vp intersection rect
+                    if (TrivialAcceptTest<typename RT::RasterizeScissorEdgesT>(mask0, mask1, mask2))
                     {
                         // trivial accept, all 4 corners of all 3 edges are negative 
                         // i.e. raster tile completely inside triangle
