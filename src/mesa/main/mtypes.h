@@ -3990,6 +3990,7 @@ struct gl_matrix_stack
 {
    GLmatrix *Top;      /**< points into Stack */
    GLmatrix *Stack;    /**< array [MaxDepth] of GLmatrix */
+   unsigned StackSize; /**< Number of elements in Stack */
    GLuint Depth;       /**< 0 <= Depth < MaxDepth */
    GLuint MaxDepth;    /**< size of Stack[] array */
    GLuint DirtyFlag;   /**< _NEW_MODELVIEW or _NEW_PROJECTION, for example */
