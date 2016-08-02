@@ -66,14 +66,15 @@ get_format_bpp(int native)
 }
 
 /* createImageFromFds requires fourcc format */
-static int get_fourcc(int format)
+static int get_fourcc(int native)
 {
-   switch(format) {
-   case __DRI_IMAGE_FORMAT_RGB565:   return __DRI_IMAGE_FOURCC_RGB565;
-   case __DRI_IMAGE_FORMAT_ARGB8888: return __DRI_IMAGE_FOURCC_ARGB8888;
-   case __DRI_IMAGE_FORMAT_XRGB8888: return __DRI_IMAGE_FOURCC_XRGB8888;
-   case __DRI_IMAGE_FORMAT_ABGR8888: return __DRI_IMAGE_FOURCC_ABGR8888;
-   case __DRI_IMAGE_FORMAT_XBGR8888: return __DRI_IMAGE_FOURCC_XBGR8888;
+   switch (native) {
+   case HAL_PIXEL_FORMAT_RGB_565:   return __DRI_IMAGE_FOURCC_RGB565;
+   case HAL_PIXEL_FORMAT_BGRA_8888: return __DRI_IMAGE_FOURCC_ARGB8888;
+   case HAL_PIXEL_FORMAT_RGBA_8888: return __DRI_IMAGE_FOURCC_ABGR8888;
+   case HAL_PIXEL_FORMAT_RGBX_8888: return __DRI_IMAGE_FOURCC_XBGR8888;
+   default:
+      _eglLog(_EGL_WARNING, "unsupported native buffer format 0x%x", native);
    }
    return -1;
 }
@@ -92,6 +93,7 @@ static int get_format(int format)
    }
    return -1;
 }
+
 static int
 get_native_buffer_fd(struct ANativeWindowBuffer *buf)
 {
@@ -397,7 +399,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
       return -1;
    }
 
-   fourcc = get_fourcc(get_format(dri2_surf->buffer->format));
+   fourcc = get_fourcc(dri2_surf->buffer->format);
 
    pitch = dri2_surf->buffer->stride *
       get_format_bpp(dri2_surf->buffer->format);
@@ -481,7 +483,7 @@ static _EGLImage *
 droid_create_image_from_prime_fd(_EGLDisplay *disp, _EGLContext *ctx,
                                  struct ANativeWindowBuffer *buf, int fd)
 {
-   const int fourcc = get_fourcc(get_format(buf->format));
+   const int fourcc = get_fourcc(buf->format);
    const int pitch = buf->stride * get_format_bpp(buf->format);
 
    const EGLint attr_list[14] = {
