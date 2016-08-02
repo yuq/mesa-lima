@@ -867,7 +867,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	struct pipe_index_buffer ib = {};
-	unsigned mask, dirty_fb_counter, dirty_tex_counter;
+	unsigned mask, dirty_fb_counter, dirty_tex_counter, rast_prim;
 
 	if (!info->count && !info->indirect &&
 	    (info->indexed || !info->count_from_stream_output))
@@ -911,15 +911,21 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	 * draw_vbo recursively, and before si_update_shaders, which uses
 	 * current_rast_prim for this draw_vbo call. */
 	if (sctx->gs_shader.cso)
-		sctx->current_rast_prim = sctx->gs_shader.cso->gs_output_prim;
+		rast_prim = sctx->gs_shader.cso->gs_output_prim;
 	else if (sctx->tes_shader.cso)
-		sctx->current_rast_prim =
-			sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+		rast_prim = sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 	else
-		sctx->current_rast_prim = info->mode;
+		rast_prim = info->mode;
 
-	if (!si_update_shaders(sctx) ||
-	    !si_upload_graphics_shader_descriptors(sctx))
+	if (rast_prim != sctx->current_rast_prim) {
+		sctx->current_rast_prim = rast_prim;
+		sctx->do_update_shaders = true;
+	}
+
+	if (sctx->do_update_shaders && !si_update_shaders(sctx))
+		return;
+
+	if (!si_upload_graphics_shader_descriptors(sctx))
 		return;
 
 	if (info->indexed) {

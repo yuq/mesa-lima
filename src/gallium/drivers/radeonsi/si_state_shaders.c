@@ -1360,6 +1360,7 @@ static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
 
 	sctx->vs_shader.cso = sel;
 	sctx->vs_shader.current = sel ? sel->first_variant : NULL;
+	sctx->do_update_shaders = true;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	r600_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
 }
@@ -1375,6 +1376,7 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 
 	sctx->gs_shader.cso = sel;
 	sctx->gs_shader.current = sel ? sel->first_variant : NULL;
+	sctx->do_update_shaders = true;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 
@@ -1394,6 +1396,7 @@ static void si_bind_tcs_shader(struct pipe_context *ctx, void *state)
 
 	sctx->tcs_shader.cso = sel;
 	sctx->tcs_shader.current = sel ? sel->first_variant : NULL;
+	sctx->do_update_shaders = true;
 
 	if (enable_changed)
 		sctx->last_tcs = NULL; /* invalidate derived tess state */
@@ -1410,6 +1413,7 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 
 	sctx->tes_shader.cso = sel;
 	sctx->tes_shader.current = sel ? sel->first_variant : NULL;
+	sctx->do_update_shaders = true;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 
@@ -1431,6 +1435,7 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 
 	sctx->ps_shader.cso = sel;
 	sctx->ps_shader.current = sel ? sel->first_variant : NULL;
+	sctx->do_update_shaders = true;
 	si_mark_atom_dirty(sctx, &sctx->cb_render_state);
 }
 
@@ -2199,6 +2204,8 @@ bool si_update_shaders(struct si_context *sctx)
 		if (!si_update_spi_tmpring_size(sctx))
 			return false;
 	}
+
+	sctx->do_update_shaders = false;
 	return true;
 }
 

@@ -260,6 +260,7 @@ struct si_context {
 	struct si_vertex_element	*vertex_elements;
 	unsigned			sprite_coord_enable;
 	bool				flatshade;
+	bool				do_update_shaders;
 
 	/* shader descriptors */
 	struct si_descriptors		vertex_buffers;

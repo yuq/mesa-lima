@@ -572,6 +572,7 @@ static void si_bind_blend_state(struct pipe_context *ctx, void *state)
 	struct si_context *sctx = (struct si_context *)ctx;
 	si_pm4_bind_state(sctx, blend, (struct si_state_blend *)state);
 	si_mark_atom_dirty(sctx, &sctx->cb_render_state);
+	sctx->do_update_shaders = true;
 }
 
 static void si_delete_blend_state(struct pipe_context *ctx, void *state)
@@ -869,6 +870,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	si_update_poly_offset_state(sctx);
 
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
+	sctx->do_update_shaders = true;
 }
 
 static void si_delete_rs_state(struct pipe_context *ctx, void *state)
@@ -1018,6 +1020,7 @@ static void si_bind_dsa_state(struct pipe_context *ctx, void *state)
 		sctx->stencil_ref.dsa_part = dsa->stencil_ref;
 		si_mark_atom_dirty(sctx, &sctx->stencil_ref.atom);
 	}
+	sctx->do_update_shaders = true;
 }
 
 static void si_delete_dsa_state(struct pipe_context *ctx, void *state)
@@ -2388,6 +2391,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	}
 
 	sctx->need_check_render_feedback = true;
+	sctx->do_update_shaders = true;
 }
 
 static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom *atom)
@@ -2628,6 +2632,7 @@ static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 		return;
 
 	sctx->ps_iter_samples = min_samples;
+	sctx->do_update_shaders = true;
 
 	if (sctx->framebuffer.nr_samples > 1)
 		si_mark_atom_dirty(sctx, &sctx->msaa_config);
@@ -3267,6 +3272,7 @@ static void si_bind_vertex_elements(struct pipe_context *ctx, void *state)
 
 	sctx->vertex_elements = v;
 	sctx->vertex_buffers_dirty = true;
+	sctx->do_update_shaders = true;
 }
 
 static void si_delete_vertex_element(struct pipe_context *ctx, void *state)
