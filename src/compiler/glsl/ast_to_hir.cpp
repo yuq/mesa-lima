@@ -280,7 +280,7 @@ get_implicit_conversion_operation(const glsl_type *to, const glsl_type *from,
  * If a conversion is possible (or unnecessary), \c true is returned.
  * Otherwise \c false is returned.
  */
-bool
+static bool
 apply_implicit_conversion(const glsl_type *to, ir_rvalue * &from,
                           struct _mesa_glsl_parse_state *state)
 {
