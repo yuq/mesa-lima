@@ -61,11 +61,14 @@ do_blorp_blit(struct brw_context *brw, GLbitfield buffer_bit,
               GLfloat dstX0, GLfloat dstY0, GLfloat dstX1, GLfloat dstY1,
               GLenum filter, bool mirror_x, bool mirror_y)
 {
+   const struct gl_context *ctx = &brw->ctx;
+
    /* Find source/dst miptrees */
    struct intel_mipmap_tree *src_mt = find_miptree(buffer_bit, src_irb);
    struct intel_mipmap_tree *dst_mt = find_miptree(buffer_bit, dst_irb);
 
-   const bool es = _mesa_is_gles(&brw->ctx);
+   const bool do_srgb = ctx->Color.sRGBEnabled;
+
    /* Do the blit */
    brw_blorp_blit_miptrees(brw,
                            src_mt, src_irb->mt_level, src_irb->mt_layer,
@@ -75,7 +78,7 @@ do_blorp_blit(struct brw_context *brw, GLbitfield buffer_bit,
                            srcX0, srcY0, srcX1, srcY1,
                            dstX0, dstY0, dstX1, dstY1,
                            filter, mirror_x, mirror_y,
-                           es, es);
+                           do_srgb, do_srgb);
 
    dst_irb->need_downsample = true;
 }
