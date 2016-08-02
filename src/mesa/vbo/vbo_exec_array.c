@@ -1611,8 +1611,9 @@ vbo_exec_MultiDrawArraysIndirectCount(GLenum mode,
    if (MESA_VERBOSE & VERBOSE_DRAW)
       _mesa_debug(ctx, "glMultiDrawArraysIndirectCountARB"
                   "(%s, %lx, %lx, %i, %i)\n",
-                  _mesa_enum_to_string(mode), indirect,
-                  drawcount, maxdrawcount, stride);
+                  _mesa_enum_to_string(mode),
+                  (unsigned long)indirect, (unsigned long)drawcount,
+                  maxdrawcount, stride);
 
    /* If <stride> is zero, the array elements are treated as tightly packed. */
    if (stride == 0)
@@ -1639,9 +1640,9 @@ vbo_exec_MultiDrawElementsIndirectCount(GLenum mode, GLenum type,
    if (MESA_VERBOSE & VERBOSE_DRAW)
       _mesa_debug(ctx, "glMultiDrawElementsIndirectCountARB"
                   "(%s, %s, %lx, %lx, %i, %i)\n",
-                  _mesa_enum_to_string(mode),
-                  _mesa_enum_to_string(type), indirect,
-                  drawcount, maxdrawcount, stride);
+                  _mesa_enum_to_string(mode), _mesa_enum_to_string(type),
+                  (unsigned long)indirect, (unsigned long)drawcount,
+                  maxdrawcount, stride);
 
    /* If <stride> is zero, the array elements are treated as tightly packed. */
    if (stride == 0)
