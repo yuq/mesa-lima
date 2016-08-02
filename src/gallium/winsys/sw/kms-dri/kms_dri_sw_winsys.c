@@ -244,6 +244,10 @@ kms_sw_displaytarget_add_from_prime(struct kms_sw_winsys *kms_sw, int fd,
    if (ret)
       return NULL;
 
+   kms_sw_dt = kms_sw_displaytarget_find_and_ref(kms_sw, handle);
+   if (kms_sw_dt)
+      return kms_sw_dt;
+
    kms_sw_dt = CALLOC_STRUCT(kms_sw_displaytarget);
    if (!kms_sw_dt)
       return NULL;
