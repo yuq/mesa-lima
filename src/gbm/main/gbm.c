@@ -333,7 +333,7 @@ gbm_bo_create(struct gbm_device *gbm,
  *
  * This function imports a foreign object and creates a new gbm bo for it.
  * This enabled using the foreign object with a display API such as KMS.
- * Currently two types of foreign objects are supported, indicated by the type
+ * Currently three types of foreign objects are supported, indicated by the type
  * argument:
  *
  *   GBM_BO_IMPORT_WL_BUFFER
