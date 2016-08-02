@@ -1157,7 +1157,7 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
                                         uint32_t next_binding_table_offset)
 {
    const struct gl_linked_shader *shader = NULL;
-   int num_textures = _mesa_fls(prog->SamplersUsed);
+   int num_textures = util_last_bit(prog->SamplersUsed);
 
    if (shader_prog)
       shader = shader_prog->_LinkedShaders[stage];

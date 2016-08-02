@@ -1845,7 +1845,7 @@ fs_visitor::emit_gs_control_data_bits(const fs_reg &vertex_count)
       fs_reg prev_count = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
       abld.ADD(prev_count, vertex_count, brw_imm_ud(0xffffffffu));
       unsigned log2_bits_per_vertex =
-         _mesa_fls(gs_compile->control_data_bits_per_vertex);
+         util_last_bit(gs_compile->control_data_bits_per_vertex);
       abld.SHR(dword_index, prev_count, brw_imm_ud(6u - log2_bits_per_vertex));
 
       if (per_slot_offset.file != BAD_FILE) {
@@ -2789,7 +2789,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
       if (mask == 0)
          break;
 
-      unsigned num_components = _mesa_fls(mask);
+      unsigned num_components = util_last_bit(mask);
       enum opcode opcode;
 
       /* We can only pack two 64-bit components in a single message, so send
@@ -4523,7 +4523,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
                             nir_ssa_def_components_read(&instr->dest.ssa):
                             (1 << dest_size) - 1;
       assert(write_mask != 0); /* dead code should have been eliminated */
-      inst->regs_written = _mesa_fls(write_mask) * dispatch_width / 8;
+      inst->regs_written = util_last_bit(write_mask) * dispatch_width / 8;
    } else {
       inst->regs_written = 4 * dispatch_width / 8;
    }

@@ -334,7 +334,7 @@ vec4_gs_visitor::emit_control_data_bits()
       emit(ADD(dst_reg(prev_count), this->vertex_count,
                brw_imm_ud(0xffffffffu)));
       unsigned log2_bits_per_vertex =
-         _mesa_fls(c->control_data_bits_per_vertex);
+         util_last_bit(c->control_data_bits_per_vertex);
       emit(SHR(dst_reg(dword_index), prev_count,
                brw_imm_ud(6 - log2_bits_per_vertex)));
    }

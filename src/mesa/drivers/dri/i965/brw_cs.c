@@ -220,7 +220,7 @@ brw_upload_cs_prog(struct brw_context *brw)
       return;
 
    brw->cs.base.sampler_count =
-      _mesa_fls(ctx->ComputeProgram._Current->Base.SamplersUsed);
+      util_last_bit(ctx->ComputeProgram._Current->Base.SamplersUsed);
 
    brw_cs_populate_key(brw, &key);
 

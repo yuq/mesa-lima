@@ -998,7 +998,7 @@ update_stage_texture_surfaces(struct brw_context *brw,
    else
       surf_offset += stage_state->prog_data->binding_table.plane_start[plane];
 
-   unsigned num_samplers = _mesa_fls(prog->SamplersUsed);
+   unsigned num_samplers = util_last_bit(prog->SamplersUsed);
    for (unsigned s = 0; s < num_samplers; s++) {
       surf_offset[s] = 0;
 
