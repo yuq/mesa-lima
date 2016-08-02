@@ -393,8 +393,8 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 }
         }
 
-        if (c->key->tex[unit].forced_first_level) {
-                lod = qir_uniform_f(c, c->key->tex[unit].forced_first_level);
+        if (c->key->tex[unit].force_first_level) {
+                lod = qir_uniform(c, QUNIFORM_TEXTURE_FIRST_LEVEL, unit);
                 is_txl = true;
                 is_txb = false;
         }
@@ -2353,10 +2353,8 @@ vc4_setup_shared_key(struct vc4_context *vc4, struct vc4_key *key,
                         key->tex[i].compare_func = sampler_state->compare_func;
                         key->tex[i].wrap_s = sampler_state->wrap_s;
                         key->tex[i].wrap_t = sampler_state->wrap_t;
-                        if (vc4_sampler->force_first_level) {
-                                key->tex[i].forced_first_level =
-                                        sampler->u.tex.first_level;
-                        }
+                        key->tex[i].force_first_level =
+                                vc4_sampler->force_first_level;
                 }
         }
 

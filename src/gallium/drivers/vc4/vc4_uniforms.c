@@ -72,6 +72,18 @@ write_texture_p2(struct vc4_context *vc4,
 }
 
 static void
+write_texture_first_level(struct vc4_context *vc4,
+                          struct vc4_cl_out **uniforms,
+                          struct vc4_texture_stateobj *texstate,
+                          uint32_t data)
+{
+        uint32_t unit = data & 0xffff;
+        struct pipe_sampler_view *texture = texstate->textures[unit];
+
+        cl_aligned_f(uniforms, texture->u.tex.first_level);
+}
+
+static void
 write_texture_msaa_addr(struct vc4_context *vc4,
                  struct vc4_cl_out **uniforms,
                         struct vc4_texture_stateobj *texstate,
@@ -253,6 +265,11 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
                                          uinfo->data[i]);
                         break;
 
+                case QUNIFORM_TEXTURE_FIRST_LEVEL:
+                        write_texture_first_level(vc4, &uniforms, texstate,
+                                                  uinfo->data[i]);
+                        break;
+
                 case QUNIFORM_UBO_ADDR:
                         cl_aligned_reloc(vc4, &vc4->uniforms, &uniforms, ubo, 0);
                         break;
@@ -373,6 +390,7 @@ vc4_set_shader_uniform_dirty_flags(struct vc4_compiled_shader *shader)
                 case QUNIFORM_TEXTURE_CONFIG_P1:
                 case QUNIFORM_TEXTURE_CONFIG_P2:
                 case QUNIFORM_TEXTURE_BORDER_COLOR:
+                case QUNIFORM_TEXTURE_FIRST_LEVEL:
                 case QUNIFORM_TEXTURE_MSAA_ADDR:
                 case QUNIFORM_TEXRECT_SCALE_X:
                 case QUNIFORM_TEXRECT_SCALE_Y:

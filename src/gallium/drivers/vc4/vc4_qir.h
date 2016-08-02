@@ -246,6 +246,8 @@ enum quniform_contents {
         /** A reference to a texture config parameter 2 cubemap stride uniform */
         QUNIFORM_TEXTURE_CONFIG_P2,
 
+        QUNIFORM_TEXTURE_FIRST_LEVEL,
+
         QUNIFORM_TEXTURE_MSAA_ADDR,
 
         QUNIFORM_UBO_ADDR,
@@ -314,7 +316,7 @@ struct vc4_key {
                                 unsigned compare_func:3;
                                 unsigned wrap_s:3;
                                 unsigned wrap_t:3;
-                                unsigned forced_first_level:8;
+                                bool force_first_level:1;
                         };
                         struct {
                                 uint16_t msaa_width, msaa_height;
