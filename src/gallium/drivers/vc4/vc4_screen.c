@@ -96,6 +96,7 @@ vc4_screen_destroy(struct pipe_screen *pscreen)
 {
         struct vc4_screen *screen = vc4_screen(pscreen);
 
+        util_hash_table_destroy(screen->bo_handles);
         vc4_bufmgr_destroy(pscreen);
         close(screen->fd);
         ralloc_free(pscreen);
