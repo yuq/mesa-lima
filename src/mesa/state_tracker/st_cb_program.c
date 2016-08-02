@@ -194,7 +194,7 @@ st_program_string_notify( struct gl_context *ctx,
          return false;
 
       if (st->fp == stfp)
-	 st->dirty |= ST_NEW_FRAGMENT_PROGRAM;
+	 st->dirty |= stfp->affected_states;
    }
    else if (target == GL_GEOMETRY_PROGRAM_NV) {
       struct st_geometry_program *stgp = (struct st_geometry_program *) prog;
@@ -205,7 +205,7 @@ st_program_string_notify( struct gl_context *ctx,
          return false;
 
       if (st->gp == stgp)
-	 st->dirty |= ST_NEW_GEOMETRY_PROGRAM;
+	 st->dirty |= stgp->affected_states;
    }
    else if (target == GL_VERTEX_PROGRAM_ARB) {
       struct st_vertex_program *stvp = (struct st_vertex_program *) prog;
@@ -215,7 +215,7 @@ st_program_string_notify( struct gl_context *ctx,
          return false;
 
       if (st->vp == stvp)
-	 st->dirty |= ST_NEW_VERTEX_PROGRAM(st);
+	 st->dirty |= ST_NEW_VERTEX_PROGRAM(st, stvp);
    }
    else if (target == GL_TESS_CONTROL_PROGRAM_NV) {
       struct st_tessctrl_program *sttcp =
@@ -227,7 +227,7 @@ st_program_string_notify( struct gl_context *ctx,
          return false;
 
       if (st->tcp == sttcp)
-         st->dirty |= ST_NEW_TESSCTRL_PROGRAM;
+         st->dirty |= sttcp->affected_states;
    }
    else if (target == GL_TESS_EVALUATION_PROGRAM_NV) {
       struct st_tesseval_program *sttep =
@@ -239,7 +239,7 @@ st_program_string_notify( struct gl_context *ctx,
          return false;
 
       if (st->tep == sttep)
-         st->dirty |= ST_NEW_TESSEVAL_PROGRAM;
+         st->dirty |= sttep->affected_states;
    }
    else if (target == GL_COMPUTE_PROGRAM_NV) {
       struct st_compute_program *stcp =
@@ -250,7 +250,7 @@ st_program_string_notify( struct gl_context *ctx,
          return false;
 
       if (st->cp == stcp)
-         st->dirty |= ST_NEW_COMPUTE_PROGRAM;
+         st->dirty |= stcp->affected_states;
    }
    else if (target == GL_FRAGMENT_SHADER_ATI) {
       assert(prog);
@@ -266,7 +266,7 @@ st_program_string_notify( struct gl_context *ctx,
          return false;
 
       if (st->fp == stfp)
-         st->dirty |= ST_NEW_FRAGMENT_PROGRAM;
+         st->dirty |= stfp->affected_states;
    }
 
    if (ST_DEBUG & DEBUG_PRECOMPILE ||

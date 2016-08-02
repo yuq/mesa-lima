@@ -88,72 +88,9 @@ enum {
                                  ST_NEW_SAMPLE_MASK | \
                                  ST_NEW_SAMPLE_SHADING)
 
-#define ST_NEW_VERTEX_PROGRAM(st) (ST_NEW_VS_STATE | \
-                                   ST_NEW_VS_SAMPLER_VIEWS | \
-                                   ST_NEW_VS_IMAGES | \
-                                   ST_NEW_VS_CONSTANTS | \
-                                   ST_NEW_VS_UBOS | \
-                                   ST_NEW_VS_ATOMICS | \
-                                   ST_NEW_VS_SSBOS | \
-                                   ST_NEW_VERTEX_ARRAYS | \
-                                   (st_user_clip_planes_enabled(st->ctx) ? \
-                                    ST_NEW_CLIP_STATE : 0) | \
-                                   ST_NEW_RASTERIZER | \
-                                   ST_NEW_RENDER_SAMPLERS)
-
-#define ST_NEW_TCS_RESOURCES    (ST_NEW_TCS_SAMPLER_VIEWS | \
-                                 ST_NEW_TCS_IMAGES | \
-                                 ST_NEW_TCS_CONSTANTS | \
-                                 ST_NEW_TCS_UBOS | \
-                                 ST_NEW_TCS_ATOMICS | \
-                                 ST_NEW_TCS_SSBOS)
-
-#define ST_NEW_TESSCTRL_PROGRAM (ST_NEW_TCS_STATE | \
-                                 ST_NEW_TCS_RESOURCES | \
-                                 ST_NEW_RENDER_SAMPLERS)
-
-#define ST_NEW_TES_RESOURCES    (ST_NEW_TES_SAMPLER_VIEWS | \
-                                 ST_NEW_TES_IMAGES | \
-                                 ST_NEW_TES_CONSTANTS | \
-                                 ST_NEW_TES_UBOS | \
-                                 ST_NEW_TES_ATOMICS | \
-                                 ST_NEW_TES_SSBOS)
-
-#define ST_NEW_TESSEVAL_PROGRAM (ST_NEW_TES_STATE | \
-                                 ST_NEW_TES_RESOURCES | \
-                                 ST_NEW_RASTERIZER | \
-                                 ST_NEW_RENDER_SAMPLERS)
-
-#define ST_NEW_GS_RESOURCES     (ST_NEW_GS_SAMPLER_VIEWS | \
-                                 ST_NEW_GS_IMAGES | \
-                                 ST_NEW_GS_CONSTANTS | \
-                                 ST_NEW_GS_UBOS | \
-                                 ST_NEW_GS_ATOMICS | \
-                                 ST_NEW_GS_SSBOS)
-
-#define ST_NEW_GEOMETRY_PROGRAM (ST_NEW_GS_STATE | \
-                                 ST_NEW_GS_RESOURCES | \
-                                 ST_NEW_RASTERIZER | \
-                                 ST_NEW_RENDER_SAMPLERS)
-
-#define ST_NEW_FRAGMENT_PROGRAM (ST_NEW_FS_STATE | \
-                                 ST_NEW_FS_SAMPLER_VIEWS | \
-                                 ST_NEW_FS_IMAGES | \
-                                 ST_NEW_FS_CONSTANTS | \
-                                 ST_NEW_FS_UBOS | \
-                                 ST_NEW_FS_ATOMICS | \
-                                 ST_NEW_FS_SSBOS | \
-                                 ST_NEW_SAMPLE_SHADING | \
-                                 ST_NEW_RENDER_SAMPLERS)
-
-#define ST_NEW_COMPUTE_PROGRAM  (ST_NEW_CS_STATE | \
-                                 ST_NEW_CS_SAMPLER_VIEWS | \
-                                 ST_NEW_CS_IMAGES | \
-                                 ST_NEW_CS_CONSTANTS | \
-                                 ST_NEW_CS_UBOS | \
-                                 ST_NEW_CS_ATOMICS | \
-                                 ST_NEW_CS_SSBOS | \
-                                 ST_NEW_CS_SAMPLERS)
+#define ST_NEW_VERTEX_PROGRAM(st, p) (p->affected_states | \
+                                      (st_user_clip_planes_enabled(st->ctx) ? \
+                                       ST_NEW_CLIP_STATE : 0))
 
 #define ST_NEW_CONSTANTS        (ST_NEW_VS_CONSTANTS | \
                                  ST_NEW_TCS_CONSTANTS | \
@@ -199,8 +136,7 @@ enum {
 
 /* All state flags within each group: */
 #define ST_PIPELINE_RENDER_STATE_MASK  (ST_NEW_CS_STATE - 1)
-#define ST_PIPELINE_COMPUTE_STATE_MASK (ST_NEW_COMPUTE_PROGRAM | \
-                                        ST_NEW_CS_SAMPLERS)
+#define ST_PIPELINE_COMPUTE_STATE_MASK (0xffllu << ST_NEW_CS_STATE_INDEX)
 
 #define ST_ALL_STATES_MASK (ST_PIPELINE_RENDER_STATE_MASK | \
                             ST_PIPELINE_COMPUTE_STATE_MASK)
