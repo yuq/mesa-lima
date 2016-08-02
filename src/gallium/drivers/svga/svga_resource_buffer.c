@@ -84,7 +84,7 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    assert(box->height == 1);
    assert(box->depth == 1);
 
-   transfer = CALLOC_STRUCT(pipe_transfer);
+   transfer = MALLOC_STRUCT(pipe_transfer);
    if (!transfer) {
       return NULL;
    }
@@ -93,6 +93,8 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    transfer->level = level;
    transfer->usage = usage;
    transfer->box = *box;
+   transfer->stride = 0;
+   transfer->layer_stride = 0;
 
    if ((usage & PIPE_TRANSFER_READ) && sbuf->dirty) {
       enum pipe_error ret;
