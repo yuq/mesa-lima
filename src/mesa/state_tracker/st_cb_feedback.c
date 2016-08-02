@@ -274,7 +274,10 @@ static void
 st_RenderMode(struct gl_context *ctx, GLenum newMode )
 {
    struct st_context *st = st_context(ctx);
-   struct draw_context *draw = st->draw;
+   struct draw_context *draw = st_get_draw_context(st);
+
+   if (!st->draw)
+      return;
 
    if (newMode == GL_RENDER) {
       /* restore normal VBO draw function */

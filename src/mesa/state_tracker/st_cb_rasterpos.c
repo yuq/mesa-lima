@@ -219,9 +219,12 @@ static void
 st_RasterPos(struct gl_context *ctx, const GLfloat v[4])
 {
    struct st_context *st = st_context(ctx);
-   struct draw_context *draw = st->draw;
+   struct draw_context *draw = st_get_draw_context(st);
    struct rastpos_stage *rs;
    const struct gl_client_array **saved_arrays = ctx->Array._DrawArrays;
+
+   if (!st->draw)
+      return;
 
    if (ctx->VertexProgram._Current == NULL ||
        ctx->VertexProgram._Current == ctx->VertexProgram._TnlProgram) {
