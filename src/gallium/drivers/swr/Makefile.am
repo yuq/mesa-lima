@@ -29,6 +29,7 @@ noinst_LTLIBRARIES = libmesaswr.la
 libmesaswr_la_SOURCES = $(LOADER_SOURCES)
 
 COMMON_CXXFLAGS = \
+	-fno-strict-aliasing \
 	$(GALLIUM_DRIVER_CFLAGS) \
 	$(LLVM_CXXFLAGS) \
 	$(SWR_CXX11_CXXFLAGS) \
