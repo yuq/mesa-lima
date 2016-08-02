@@ -99,6 +99,7 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
              VkImageUsageFlags usage,
              uint32_t width,
              uint32_t height,
+             VkFormat format,
              VkImage *img,
              struct anv_image_view *iview)
 {
@@ -106,8 +107,7 @@ create_iview(struct anv_cmd_buffer *cmd_buffer,
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .imageType = VK_IMAGE_TYPE_2D,
       /* W-tiled images must be stencil-formatted. */
-      .format = surf->tiling == ISL_TILING_W ?
-                VK_FORMAT_S8_UINT : vk_format_for_size(surf->bs),
+      .format = format,
       .extent = {
          .width = width,
          .height = height,
@@ -190,6 +190,8 @@ blit2d_bind_src(struct anv_cmd_buffer *cmd_buffer,
 
       create_iview(cmd_buffer, src, offset, usage,
                    rect->src_x + rect->width, rect->src_y + rect->height,
+                   src->tiling == ISL_TILING_W ?
+                      VK_FORMAT_S8_UINT : vk_format_for_size(src->bs),
                    &tmp->image, &tmp->iview);
 
       anv_CreateDescriptorPool(vk_device,
@@ -339,10 +341,11 @@ blit2d_bind_dst(struct anv_cmd_buffer *cmd_buffer,
                 uint64_t offset,
                 uint32_t width,
                 uint32_t height,
+                VkFormat format,
                 struct blit2d_dst_temps *tmp)
 {
    create_iview(cmd_buffer, dst, offset, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                width, height, &tmp->image, &tmp->iview);
+                width, height, format, &tmp->image, &tmp->iview);
 
    anv_CreateFramebuffer(anv_device_to_handle(cmd_buffer->device),
       &(VkFramebufferCreateInfo) {
@@ -417,7 +420,8 @@ anv_meta_blit2d_normal_dst(struct anv_cmd_buffer *cmd_buffer,
 
       struct blit2d_dst_temps dst_temps;
       blit2d_bind_dst(cmd_buffer, dst, offset, rects[r].dst_x + rects[r].width,
-                      rects[r].dst_y + rects[r].height, &dst_temps);
+                      rects[r].dst_y + rects[r].height,
+                      vk_format_for_size(dst->bs), &dst_temps);
 
       struct blit_vb_data {
          float pos[2];
@@ -555,7 +559,8 @@ anv_meta_blit2d_w_tiled_dst(struct anv_cmd_buffer *cmd_buffer,
       };
 
       struct blit2d_dst_temps dst_temps;
-      blit2d_bind_dst(cmd_buffer, &dst_Y, offset, xmax_Y, ymax_Y, &dst_temps);
+      blit2d_bind_dst(cmd_buffer, &dst_Y, offset, xmax_Y, ymax_Y,
+                      VK_FORMAT_R8_UINT, &dst_temps);
 
       struct blit_vb_header {
          struct anv_vue_header vue;
