@@ -3422,31 +3422,7 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
          interp.type = BRW_REGISTER_TYPE_F;
          dest.type = BRW_REGISTER_TYPE_F;
 
-         if (devinfo->needs_unlit_centroid_workaround &&
-             bary_intrin == nir_intrinsic_load_barycentric_centroid) {
-
-            /* Get the pixel/sample mask into f0 so that we know which
-             * pixels are lit.  Then, for each channel that is unlit,
-             * replace the centroid data with non-centroid data.
-             */
-            bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
-
-            fs_reg dest_i = offset(dest, bld, i);
-            fs_reg dst_xy_pixel =
-               delta_xy[brw_barycentric_mode(interp_mode,
-                  nir_intrinsic_load_barycentric_pixel)];
-
-            fs_inst *inst;
-            inst = bld.emit(FS_OPCODE_LINTERP, dest_i, dst_xy_pixel, interp);
-            inst->predicate = BRW_PREDICATE_NORMAL;
-            inst->predicate_inverse = true;
-            inst->no_dd_clear = true;
-
-            inst = bld.emit(FS_OPCODE_LINTERP, dest_i, dst_xy, interp);
-            inst->predicate = BRW_PREDICATE_NORMAL;
-            inst->predicate_inverse = false;
-            inst->no_dd_check = true;
-         } else if (devinfo->gen < 6 && interp_mode == INTERP_MODE_SMOOTH) {
+         if (devinfo->gen < 6 && interp_mode == INTERP_MODE_SMOOTH) {
             fs_reg tmp = vgrf(glsl_type::float_type);
             bld.emit(FS_OPCODE_LINTERP, tmp, dst_xy, interp);
             bld.MUL(offset(dest, bld, i), tmp, this->pixel_w);
