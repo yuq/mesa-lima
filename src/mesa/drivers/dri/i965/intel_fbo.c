@@ -828,6 +828,14 @@ intel_blit_framebuffer_with_blitter(struct gl_context *ctx,
             return mask;
          }
 
+         if (ctx->Color.sRGBEnabled &&
+             _mesa_get_format_color_encoding(src_irb->mt->format) !=
+             _mesa_get_format_color_encoding(dst_irb->mt->format)) {
+            perf_debug("glBlitFramebuffer() with sRGB conversion cannot be "
+                       "handled by BLT path.\n");
+            return mask;
+         }
+
          if (!intel_miptree_blit(brw,
                                  src_irb->mt,
                                  src_irb->mt_level, src_irb->mt_layer,
