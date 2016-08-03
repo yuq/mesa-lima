@@ -2009,8 +2009,6 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         }
 
         c->s = nir_shader_clone(c, key->shader_state->base.ir.nir);
-        NIR_PASS_V(c->s, nir_opt_global_to_local);
-        NIR_PASS_V(c->s, nir_convert_to_ssa);
 
         if (stage == QSTAGE_FRAG)
                 NIR_PASS_V(c->s, vc4_nir_lower_blend, c);
@@ -2054,7 +2052,6 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                         tex_options.lower_srgb |= (1 << i);
         }
 
-        NIR_PASS_V(c->s, nir_normalize_cubemap_coords);
         NIR_PASS_V(c->s, nir_lower_tex, &tex_options);
 
         if (c->fs_key && c->fs_key->light_twoside)
@@ -2071,11 +2068,9 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         NIR_PASS_V(c->s, vc4_nir_lower_io, c);
         NIR_PASS_V(c->s, vc4_nir_lower_txf_ms, c);
         NIR_PASS_V(c->s, nir_lower_idiv);
-        NIR_PASS_V(c->s, nir_lower_load_const_to_scalar);
 
         vc4_optimize_nir(c->s);
 
-        NIR_PASS_V(c->s, nir_remove_dead_variables, nir_var_local);
         NIR_PASS_V(c->s, nir_convert_from_ssa, true);
 
         if (vc4_debug & VC4_DEBUG_SHADERDB) {
@@ -2169,6 +2164,18 @@ vc4_shader_state_create(struct pipe_context *pctx,
                 tgsi_dump(cso->tokens, 0);
                 fprintf(stderr, "\n");
         }
+
+        NIR_PASS_V(s, nir_opt_global_to_local);
+        NIR_PASS_V(s, nir_convert_to_ssa);
+        NIR_PASS_V(s, nir_normalize_cubemap_coords);
+        NIR_PASS_V(s, nir_lower_load_const_to_scalar);
+
+        vc4_optimize_nir(s);
+
+        NIR_PASS_V(s, nir_remove_dead_variables, nir_var_local);
+
+        /* Garbage collect dead instructions */
+        nir_sweep(s);
 
         so->base.type = PIPE_SHADER_IR_NIR;
         so->base.ir.nir = s;
