@@ -2476,6 +2476,8 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
         }
 
         key->is_coord = true;
+        /* Coord shaders don't care what the FS inputs are. */
+        key->compiled_fs_id = 0;
         struct vc4_compiled_shader *cs =
                 vc4_get_compiled_shader(vc4, QSTAGE_COORD, &key->base);
         if (cs != vc4->prog.cs) {
