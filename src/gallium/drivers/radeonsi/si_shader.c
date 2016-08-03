@@ -39,7 +39,6 @@
 #include "radeon/radeon_elf_util.h"
 #include "radeon/radeon_llvm_emit.h"
 #include "util/u_memory.h"
-#include "util/u_pstipple.h"
 #include "util/u_string.h"
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_build.h"
