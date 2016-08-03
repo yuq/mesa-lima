@@ -754,7 +754,7 @@ static void
 anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_image *image,
                     VkImageLayout image_layout,
-                    const VkClearValue *clear_value,
+                    VkClearValue clear_value,
                     uint32_t range_count,
                     const VkImageSubresourceRange *ranges)
 {
@@ -864,7 +864,7 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
             VkClearAttachment clear_att = {
                .aspectMask = range->aspectMask,
                .colorAttachment = 0,
-               .clearValue = *clear_value,
+               .clearValue = clear_value,
             };
 
             VkClearRect clear_rect = {
@@ -903,7 +903,7 @@ void anv_CmdClearColorImage(
    meta_clear_begin(&saved_state, cmd_buffer);
 
    anv_cmd_clear_image(cmd_buffer, image, imageLayout,
-                       (const VkClearValue *) pColor,
+                       (VkClearValue) { .color = *pColor },
                        rangeCount, pRanges);
 
    meta_clear_end(&saved_state, cmd_buffer);
@@ -924,7 +924,7 @@ void anv_CmdClearDepthStencilImage(
    meta_clear_begin(&saved_state, cmd_buffer);
 
    anv_cmd_clear_image(cmd_buffer, image, imageLayout,
-                       (const VkClearValue *) pDepthStencil,
+                       (VkClearValue) { .depthStencil = *pDepthStencil },
                        rangeCount, pRanges);
 
    meta_clear_end(&saved_state, cmd_buffer);
@@ -1005,7 +1005,7 @@ do_buffer_fill(struct anv_cmd_buffer *cmd_buffer,
 
    anv_cmd_clear_image(cmd_buffer, anv_image_from_handle(dest_image),
                        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                       &clear_value, 1, &range);
+                       clear_value, 1, &range);
 }
 
 void anv_CmdFillBuffer(
