@@ -25,6 +25,8 @@
 #include "anv_private.h"
 #include "nir/nir_builder.h"
 
+#include "util/format_rgb9e5.h"
+
 /** Vertex attributes for color clears.  */
 struct color_clear_vattrs {
    struct anv_vue_header vue_header;
@@ -760,6 +762,16 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
 {
    VkDevice device_h = anv_device_to_handle(cmd_buffer->device);
 
+   VkFormat vk_format = image->vk_format;
+   if (vk_format == VK_FORMAT_E5B9G9R9_UFLOAT_PACK32) {
+      /* We can't actually render to this format so we have to work around it
+       * by manually unpacking and using R32_UINT.
+       */
+      clear_value.color.uint32[0] =
+         float3_to_rgb9e5(clear_value.color.float32);
+      vk_format = VK_FORMAT_R32_UINT;
+   }
+
    for (uint32_t r = 0; r < range_count; r++) {
       const VkImageSubresourceRange *range = &ranges[r];
       for (uint32_t l = 0; l < anv_get_levelCount(image, range); ++l) {
@@ -773,7 +785,7 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
                   .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                   .image = anv_image_to_handle(image),
                   .viewType = anv_meta_get_view_type(image),
-                  .format = image->vk_format,
+                  .format = vk_format,
                   .subresourceRange = {
                      .aspectMask = range->aspectMask,
                      .baseMipLevel = range->baseMipLevel + l,
@@ -800,7 +812,7 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
                &fb);
 
             VkAttachmentDescription att_desc = {
-               .format = iview.vk_format,
+               .format = vk_format,
                .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
