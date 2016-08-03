@@ -4891,11 +4891,22 @@ get_lowered_simd_width(const struct gen_device_info *devinfo,
    case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
       return MIN2(8, inst->exec_size);
 
-   case SHADER_OPCODE_MOV_INDIRECT:
-      /* Prior to Broadwell, we only have 8 address subregisters */
+   case SHADER_OPCODE_MOV_INDIRECT: {
+      /* From IVB and HSW PRMs:
+       *
+       * "2.When the destination requires two registers and the sources are
+       *  indirect, the sources must use 1x1 regioning mode.
+       *
+       * In case of DF instructions in HSW/IVB, the exec_size is limited by
+       * the EU decompression logic not handling VxH indirect addressing
+       * correctly.
+       */
+      const unsigned max_size = (devinfo->gen >= 8 ? 2 : 1) * REG_SIZE;
+      /* Prior to Broadwell, we only have 8 address subregisters. */
       return MIN3(devinfo->gen >= 8 ? 16 : 8,
-                  2 * REG_SIZE / (inst->dst.stride * type_sz(inst->dst.type)),
+                  max_size / (inst->dst.stride * type_sz(inst->dst.type)),
                   inst->exec_size);
+   }
 
    case SHADER_OPCODE_LOAD_PAYLOAD: {
       const unsigned reg_count =
