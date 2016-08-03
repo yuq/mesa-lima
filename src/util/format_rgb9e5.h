@@ -57,24 +57,6 @@ typedef union {
    } field;
 } float754;
 
-typedef union {
-   unsigned int raw;
-   struct {
-#if defined(MESA_BIG_ENDIAN) || defined(PIPE_ARCH_BIG_ENDIAN)
-      unsigned int biasedexponent:RGB9E5_EXPONENT_BITS;
-      unsigned int b:RGB9E5_MANTISSA_BITS;
-      unsigned int g:RGB9E5_MANTISSA_BITS;
-      unsigned int r:RGB9E5_MANTISSA_BITS;
-#else
-      unsigned int r:RGB9E5_MANTISSA_BITS;
-      unsigned int g:RGB9E5_MANTISSA_BITS;
-      unsigned int b:RGB9E5_MANTISSA_BITS;
-      unsigned int biasedexponent:RGB9E5_EXPONENT_BITS;
-#endif
-   } field;
-} rgb9e5;
-
-
 static inline int rgb9e5_ClampRange(float x)
 {
    float754 f;
@@ -91,9 +73,8 @@ static inline int rgb9e5_ClampRange(float x)
       return f.raw;
 }
 
-static inline unsigned float3_to_rgb9e5(const float rgb[3])
+static inline unsigned int float3_to_rgb9e5(const float rgb[3])
 {
-   rgb9e5 retval;
    int rm, gm, bm, exp_shared;
    float754 revdenom = {0};
    float754 rc, bc, gc, maxrgb;
@@ -135,27 +116,20 @@ static inline unsigned float3_to_rgb9e5(const float rgb[3])
    assert(gm >= 0);
    assert(bm >= 0);
 
-   retval.field.r = rm;
-   retval.field.g = gm;
-   retval.field.b = bm;
-   retval.field.biasedexponent = exp_shared;
-
-   return retval.raw;
+   return (exp_shared << 27) | (bm << 18) | (gm << 9) | rm;
 }
 
 static inline void rgb9e5_to_float3(unsigned rgb, float retval[3])
 {
-   rgb9e5 v;
    int exponent;
    float754 scale = {0};
 
-   v.raw = rgb;
-   exponent = v.field.biasedexponent - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS;
+   exponent = (rgb >> 27) - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS;
    scale.field.biasedexponent = exponent + 127;
 
-   retval[0] = v.field.r * scale.value;
-   retval[1] = v.field.g * scale.value;
-   retval[2] = v.field.b * scale.value;
+   retval[0] = ( rgb        & 0x1ff) * scale.value;
+   retval[1] = ((rgb >> 9)  & 0x1ff) * scale.value;
+   retval[2] = ((rgb >> 18) & 0x1ff) * scale.value;
 }
 
 #endif
