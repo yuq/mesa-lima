@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -45,7 +45,7 @@ struct THREAD_DATA
     uint32_t htId;          // Hyperthread id
     uint32_t workerId;
     SWR_CONTEXT *pContext;
-    bool forceBindProcGroup; // Only useful when KNOB_MAX_WORKER_THREADS is set.
+    bool forceBindProcGroup; // Only useful when MAX_WORKER_THREADS is set.
 };
 
 

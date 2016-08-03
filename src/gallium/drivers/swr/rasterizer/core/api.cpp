@@ -75,6 +75,17 @@ HANDLE SwrCreateContext(
     pContext->pMacroTileManagerArray = (MacroTileMgr*)AlignedMalloc(sizeof(MacroTileMgr) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
     pContext->pDispatchQueueArray = (DispatchQueue*)AlignedMalloc(sizeof(DispatchQueue) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
 
+    pContext->threadInfo.MAX_WORKER_THREADS        = KNOB_MAX_WORKER_THREADS;
+    pContext->threadInfo.MAX_NUMA_NODES            = KNOB_MAX_NUMA_NODES;
+    pContext->threadInfo.MAX_CORES_PER_NUMA_NODE   = KNOB_MAX_CORES_PER_NUMA_NODE;
+    pContext->threadInfo.MAX_THREADS_PER_CORE      = KNOB_MAX_THREADS_PER_CORE;
+    pContext->threadInfo.SINGLE_THREADED           = KNOB_SINGLE_THREADED;
+
+    if (pCreateInfo->pThreadInfo)
+    {
+        pContext->threadInfo = *pCreateInfo->pThreadInfo;
+    }
+
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
         pContext->dcRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
@@ -84,7 +95,7 @@ HANDLE SwrCreateContext(
         pContext->dsRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
     }
 
-    if (!KNOB_SINGLE_THREADED)
+    if (!pContext->threadInfo.SINGLE_THREADED)
     {
         memset(&pContext->WaitLock, 0, sizeof(pContext->WaitLock));
         memset(&pContext->FifosNotEmpty, 0, sizeof(pContext->FifosNotEmpty));
@@ -95,9 +106,8 @@ HANDLE SwrCreateContext(
     }
 
     // Calling createThreadPool() above can set SINGLE_THREADED
-    if (KNOB_SINGLE_THREADED)
+    if (pContext->threadInfo.SINGLE_THREADED)
     {
-        SET_KNOB(HYPERTHREADED_FE, false);
         pContext->NumWorkerThreads = 1;
         pContext->NumFEThreads = 1;
         pContext->NumBEThreads = 1;
@@ -218,7 +228,7 @@ void QueueWork(SWR_CONTEXT *pContext)
         pContext->dcRing.Enqueue();
     }
 
-    if (KNOB_SINGLE_THREADED)
+    if (pContext->threadInfo.SINGLE_THREADED)
     {
         // flush denormals to 0
         uint32_t mxcsr = _mm_getcsr();

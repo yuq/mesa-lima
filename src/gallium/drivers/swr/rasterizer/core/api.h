@@ -91,6 +91,18 @@ typedef void(SWR_API *PFN_UPDATE_SO_WRITE_OFFSET)(HANDLE hPrivateContext,
 class BucketManager;
 
 //////////////////////////////////////////////////////////////////////////
+/// SWR_THREADING_INFO
+/////////////////////////////////////////////////////////////////////////
+struct SWR_THREADING_INFO
+{
+    uint32_t    MAX_WORKER_THREADS;
+    uint32_t    MAX_NUMA_NODES;
+    uint32_t    MAX_CORES_PER_NUMA_NODE;
+    uint32_t    MAX_THREADS_PER_CORE;
+    bool        SINGLE_THREADED;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// SWR_CREATECONTEXT_INFO
 /////////////////////////////////////////////////////////////////////////
 struct SWR_CREATECONTEXT_INFO
@@ -113,6 +125,9 @@ struct SWR_CREATECONTEXT_INFO
 
     // Output: size required memory passed to for SwrSaveState / SwrRestoreState
     size_t  contextSaveSize;
+
+    // Input (optional): Threading info that overrides any set KNOB values.
+    SWR_THREADING_INFO* pThreadInfo;
 };
 
 //////////////////////////////////////////////////////////////////////////

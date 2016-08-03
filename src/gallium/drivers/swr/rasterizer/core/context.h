@@ -464,6 +464,7 @@ struct SWR_CONTEXT
     uint32_t NumBEThreads;
 
     THREAD_POOL threadPool; // Thread pool associated with this context
+    SWR_THREADING_INFO threadInfo;
 
     std::condition_variable FifosNotEmpty;
     std::mutex WaitLock;

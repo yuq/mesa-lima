@@ -30,18 +30,6 @@ KNOBS = [
         'category'  : 'debug',
     }],
 
-    ['HYPERTHREADED_FE', {
-        'type'      : 'bool',
-        'default'   : 'false',
-        'desc'      : ['EXPERIMENTAL!!',
-                       'If enabled will attempt to use secondary threads per core to perform',
-                       'front-end (VS/GS) work.',
-                       '',
-                       'Note: Setting this will cause KNOB_MAX_THREADS_PER_CORE to be ignored.'],
-        'category'  : 'perf',
-        'advanced'  : 'true',
-    }],
-
     ['DUMP_SHADER_IR', {
         'type'      : 'bool',
         'default'   : 'false',

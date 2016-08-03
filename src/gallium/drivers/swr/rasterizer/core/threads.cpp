@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -239,10 +239,10 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
 }
 
 
-void bindThread(uint32_t threadId, uint32_t procGroupId = 0, bool bindProcGroup=false)
+void bindThread(SWR_CONTEXT* pContext, uint32_t threadId, uint32_t procGroupId = 0, bool bindProcGroup=false)
 {
     // Only bind threads when MAX_WORKER_THREADS isn't set.
-    if (KNOB_MAX_WORKER_THREADS && bindProcGroup == false)
+    if (pContext->threadInfo.MAX_WORKER_THREADS && bindProcGroup == false)
     {
         return;
     }
@@ -267,9 +267,9 @@ void bindThread(uint32_t threadId, uint32_t procGroupId = 0, bool bindProcGroup=
     else
 #endif
     {
-        // If KNOB_MAX_WORKER_THREADS is set, only bind to the proc group,
+        // If MAX_WORKER_THREADS is set, only bind to the proc group,
         // Not the individual HW thread.
-        if (!KNOB_MAX_WORKER_THREADS)
+        if (!pContext->threadInfo.MAX_WORKER_THREADS)
         {
             affinity.Mask = KAFFINITY(1) << threadId;
         }
@@ -648,7 +648,7 @@ DWORD workerThreadMain(LPVOID pData)
     uint32_t threadId = pThreadData->threadId;
     uint32_t workerId = pThreadData->workerId;
 
-    bindThread(threadId, pThreadData->procGroupId, pThreadData->forceBindProcGroup); 
+    bindThread(pContext, threadId, pThreadData->procGroupId, pThreadData->forceBindProcGroup); 
 
     RDTSC_INIT(threadId);
 
@@ -771,7 +771,7 @@ template<> DWORD workerThreadInit<false, false>(LPVOID pData) = delete;
 
 void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 {
-    bindThread(0);
+    bindThread(pContext, 0);
 
     CPUNumaNodes nodes;
     uint32_t numThreadsPerProcGroup = 0;
@@ -796,33 +796,23 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
     uint32_t numCoresPerNode    = numHWCoresPerNode;
     uint32_t numHyperThreads    = numHWHyperThreads;
 
-    if (KNOB_MAX_WORKER_THREADS)
+    if (pContext->threadInfo.MAX_NUMA_NODES)
     {
-        SET_KNOB(HYPERTHREADED_FE, false);
+        numNodes = std::min(numNodes, pContext->threadInfo.MAX_NUMA_NODES);
     }
 
-    if (KNOB_HYPERTHREADED_FE)
+    if (pContext->threadInfo.MAX_CORES_PER_NUMA_NODE)
     {
-        SET_KNOB(MAX_THREADS_PER_CORE, 0);
+        numCoresPerNode = std::min(numCoresPerNode, pContext->threadInfo.MAX_CORES_PER_NUMA_NODE);
     }
 
-    if (KNOB_MAX_NUMA_NODES)
+    if (pContext->threadInfo.MAX_THREADS_PER_CORE)
     {
-        numNodes = std::min(numNodes, KNOB_MAX_NUMA_NODES);
-    }
-
-    if (KNOB_MAX_CORES_PER_NUMA_NODE)
-    {
-        numCoresPerNode = std::min(numCoresPerNode, KNOB_MAX_CORES_PER_NUMA_NODE);
-    }
-
-    if (KNOB_MAX_THREADS_PER_CORE)
-    {
-        numHyperThreads = std::min(numHyperThreads, KNOB_MAX_THREADS_PER_CORE);
+        numHyperThreads = std::min(numHyperThreads, pContext->threadInfo.MAX_THREADS_PER_CORE);
     }
 
 #if defined(_WIN32) && !defined(_WIN64)
-    if (!KNOB_MAX_WORKER_THREADS)
+    if (!pContext->threadInfo.MAX_WORKER_THREADS)
     {
         // Limit 32-bit windows to bindable HW threads only
         if ((numCoresPerNode * numHWHyperThreads) > 32)
@@ -832,19 +822,14 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
     }
 #endif
 
-    if (numHyperThreads < 2)
-    {
-        SET_KNOB(HYPERTHREADED_FE, false);
-    }
-
     // Calculate numThreads
     uint32_t numThreads = numNodes * numCoresPerNode * numHyperThreads;
     numThreads = std::min(numThreads, numHWThreads);
 
-    if (KNOB_MAX_WORKER_THREADS)
+    if (pContext->threadInfo.MAX_WORKER_THREADS)
     {
         uint32_t maxHWThreads = numHWNodes * numHWCoresPerNode * numHWHyperThreads;
-        numThreads = std::min(KNOB_MAX_WORKER_THREADS, maxHWThreads);
+        numThreads = std::min(pContext->threadInfo.MAX_WORKER_THREADS, maxHWThreads);
     }
 
     if (numThreads > KNOB_MAX_NUM_THREADS)
@@ -900,7 +885,7 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
     pPool->pThreadData = (THREAD_DATA *)malloc(pPool->numThreads * sizeof(THREAD_DATA));
     pPool->numaMask = 0;
 
-    if (KNOB_MAX_WORKER_THREADS)
+    if (pContext->threadInfo.MAX_WORKER_THREADS)
     {
         bool bForceBindProcGroup = (numThreads > numThreadsPerProcGroup);
         uint32_t numProcGroups = (numThreads + numThreadsPerProcGroup - 1) / numThreadsPerProcGroup;
@@ -962,25 +947,9 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
                     pPool->pThreadData[workerId].htId = t;
                     pPool->pThreadData[workerId].pContext = pContext;
 
-                    if (KNOB_HYPERTHREADED_FE)
-                    {
-                        if (t == 0)
-                        {
-                            pContext->NumBEThreads++;
-                            pPool->threads[workerId] = new std::thread(workerThreadInit<false, true>, &pPool->pThreadData[workerId]);
-                        }
-                        else
-                        {
-                            pContext->NumFEThreads++;
-                            pPool->threads[workerId] = new std::thread(workerThreadInit<true, false>, &pPool->pThreadData[workerId]);
-                        }
-                    }
-                    else
-                    {
-                        pPool->threads[workerId] = new std::thread(workerThreadInit<true, true>, &pPool->pThreadData[workerId]);
-                        pContext->NumBEThreads++;
-                        pContext->NumFEThreads++;
-                    }
+                    pPool->threads[workerId] = new std::thread(workerThreadInit<true, true>, &pPool->pThreadData[workerId]);
+                    pContext->NumBEThreads++;
+                    pContext->NumFEThreads++;
 
                     ++workerId;
                 }
@@ -991,7 +960,7 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 
 void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 {
-    if (!KNOB_SINGLE_THREADED)
+    if (!pContext->threadInfo.SINGLE_THREADED)
     {
         // Inform threads to finish up
         std::unique_lock<std::mutex> lock(pContext->WaitLock);
