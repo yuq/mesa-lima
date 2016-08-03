@@ -67,4 +67,4 @@ void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
 void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawFE);
 void WorkOnFifoBE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawBE, TileSet &usedTiles, uint32_t numaNode, uint32_t numaMask);
 void WorkOnCompute(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawBE);
-int64_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC);
+int32_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC);

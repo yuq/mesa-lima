@@ -343,9 +343,9 @@ INLINE void ExecuteCallbacks(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 }
 
 // inlined-only version
-INLINE int64_t CompleteDrawContextInl(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+INLINE int32_t CompleteDrawContextInl(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
-    int64_t result = InterlockedDecrement64(&pDC->threadsDone);
+    int32_t result = InterlockedDecrement((volatile LONG*)&pDC->threadsDone);
     SWR_ASSERT(result >= 0);
 
     if (result == 0)
@@ -372,7 +372,7 @@ INLINE int64_t CompleteDrawContextInl(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 }
 
 // available to other translation modules
-int64_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+int32_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
     return CompleteDrawContextInl(pContext, pDC);
 }

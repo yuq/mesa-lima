@@ -399,7 +399,7 @@ struct DRAW_CONTEXT
     FE_WORK         FeWork;
 
     volatile OSALIGNLINE(uint32_t)   FeLock;
-    volatile int64_t    threadsDone;
+    volatile int32_t    threadsDone;
 
     SYNC_DESC       retireCallback; // Call this func when this DC is retired.
 };
