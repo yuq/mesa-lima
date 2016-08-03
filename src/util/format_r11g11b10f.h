@@ -27,6 +27,8 @@
  * below.
  */
 
+#include <stdint.h>
+
 #define UF11(e, m)           ((e << 6) | (m))
 #define UF11_EXPONENT_BIAS   15
 #define UF11_EXPONENT_BITS   0x1F
@@ -45,7 +47,7 @@
 
 #define F32_INFINITY         0x7f800000
 
-static inline unsigned f32_to_uf11(float val)
+static inline uint32_t f32_to_uf11(float val)
 {
    union {
       float f;
@@ -131,7 +133,7 @@ static inline float uf11_to_f32(uint16_t val)
    return f32.f;
 }
 
-static inline unsigned f32_to_uf10(float val)
+static inline uint32_t f32_to_uf10(float val)
 {
    union {
       float f;
@@ -217,14 +219,14 @@ static inline float uf10_to_f32(uint16_t val)
    return f32.f;
 }
 
-static inline unsigned float3_to_r11g11b10f(const float rgb[3])
+static inline uint32_t float3_to_r11g11b10f(const float rgb[3])
 {
    return ( f32_to_uf11(rgb[0]) & 0x7ff) |
           ((f32_to_uf11(rgb[1]) & 0x7ff) << 11) |
           ((f32_to_uf10(rgb[2]) & 0x3ff) << 22);
 }
 
-static inline void r11g11b10f_to_float3(unsigned rgb, float retval[3])
+static inline void r11g11b10f_to_float3(uint32_t rgb, float retval[3])
 {
    retval[0] = uf11_to_f32( rgb        & 0x7ff);
    retval[1] = uf11_to_f32((rgb >> 11) & 0x7ff);

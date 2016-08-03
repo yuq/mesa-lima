@@ -57,7 +57,7 @@ static inline int rgb9e5_ClampRange(float x)
       return f.u;
 }
 
-static inline unsigned int float3_to_rgb9e5(const float rgb[3])
+static inline uint32_t float3_to_rgb9e5(const float rgb[3])
 {
    int rm, gm, bm, exp_shared;
    uint32_t revdenom_biasedexp;
@@ -104,7 +104,7 @@ static inline unsigned int float3_to_rgb9e5(const float rgb[3])
    return (exp_shared << 27) | (bm << 18) | (gm << 9) | rm;
 }
 
-static inline void rgb9e5_to_float3(unsigned rgb, float retval[3])
+static inline void rgb9e5_to_float3(uint32_t rgb, float retval[3])
 {
    int exponent;
    union { float f; uint32_t u; } scale;
