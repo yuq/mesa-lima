@@ -44,6 +44,14 @@
 
 #include "util/u_format.h"
 
+static void
+st_adjust_blit_for_srgb(struct pipe_blit_info *blit, bool framebuffer_srgb)
+{
+   if (!framebuffer_srgb) {
+      blit->dst.format = util_format_linear(blit->dst.format);
+      blit->src.format = util_format_linear(blit->src.format);
+   }
+}
 
 static void
 st_BlitFramebuffer(struct gl_context *ctx,
@@ -197,12 +205,14 @@ st_BlitFramebuffer(struct gl_context *ctx,
                   blit.dst.resource = dstSurf->texture;
                   blit.dst.level = dstSurf->u.tex.level;
                   blit.dst.box.z = dstSurf->u.tex.first_layer;
-                  blit.dst.format = util_format_linear(dstSurf->format);
+                  blit.dst.format = dstSurf->format;
 
                   blit.src.resource = srcObj->pt;
                   blit.src.level = srcAtt->TextureLevel;
                   blit.src.box.z = srcAtt->Zoffset + srcAtt->CubeMapFace;
-                  blit.src.format = util_format_linear(srcObj->pt->format);
+                  blit.src.format = srcObj->pt->format;
+
+                  st_adjust_blit_for_srgb(&blit, ctx->Color.sRGBEnabled);
 
                   st->pipe->blit(st->pipe, &blit);
                   dstRb->defined = true; /* front buffer tracking */
@@ -233,12 +243,14 @@ st_BlitFramebuffer(struct gl_context *ctx,
                   blit.dst.resource = dstSurf->texture;
                   blit.dst.level = dstSurf->u.tex.level;
                   blit.dst.box.z = dstSurf->u.tex.first_layer;
-                  blit.dst.format = util_format_linear(dstSurf->format);
+                  blit.dst.format = dstSurf->format;
 
                   blit.src.resource = srcSurf->texture;
                   blit.src.level = srcSurf->u.tex.level;
                   blit.src.box.z = srcSurf->u.tex.first_layer;
-                  blit.src.format = util_format_linear(srcSurf->format);
+                  blit.src.format = srcSurf->format;
+
+                  st_adjust_blit_for_srgb(&blit, ctx->Color.sRGBEnabled);
 
                   st->pipe->blit(st->pipe, &blit);
                   dstRb->defined = true; /* front buffer tracking */
