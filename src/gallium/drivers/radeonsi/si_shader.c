@@ -5990,10 +5990,10 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 			}
 			break;
 		}
-
-		if (!conf->spi_ps_input_addr)
-			conf->spi_ps_input_addr = conf->spi_ps_input_ena;
 	}
+
+	if (!conf->spi_ps_input_addr)
+		conf->spi_ps_input_addr = conf->spi_ps_input_ena;
 }
 
 void si_shader_apply_scratch_relocs(struct si_context *sctx,
