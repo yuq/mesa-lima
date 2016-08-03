@@ -788,45 +788,34 @@ dri2_initialize(_EGLDriver *drv, _EGLDisplay *disp)
    if (disp->Options.UseFallback)
       return EGL_FALSE;
 
+   /* Nothing to initialize for a test only display */
+   if (disp->Options.TestOnly)
+      return EGL_TRUE;
+
    switch (disp->Platform) {
 #ifdef HAVE_SURFACELESS_PLATFORM
    case _EGL_PLATFORM_SURFACELESS:
-      if (disp->Options.TestOnly)
-         ret = EGL_TRUE;
-      else
-         ret = dri2_initialize_surfaceless(drv, disp);
+      ret = dri2_initialize_surfaceless(drv, disp);
       break;
 #endif
 #ifdef HAVE_X11_PLATFORM
    case _EGL_PLATFORM_X11:
-      if (disp->Options.TestOnly)
-         ret = EGL_TRUE;
-      else
-         ret = dri2_initialize_x11(drv, disp);
+      ret = dri2_initialize_x11(drv, disp);
       break;
 #endif
 #ifdef HAVE_DRM_PLATFORM
    case _EGL_PLATFORM_DRM:
-      if (disp->Options.TestOnly)
-         ret = EGL_TRUE;
-      else
-         ret = dri2_initialize_drm(drv, disp);
+      ret = dri2_initialize_drm(drv, disp);
       break;
 #endif
 #ifdef HAVE_WAYLAND_PLATFORM
    case _EGL_PLATFORM_WAYLAND:
-      if (disp->Options.TestOnly)
-         ret = EGL_TRUE;
-      else
-         ret = dri2_initialize_wayland(drv, disp);
+      ret = dri2_initialize_wayland(drv, disp);
       break;
 #endif
 #ifdef HAVE_ANDROID_PLATFORM
    case _EGL_PLATFORM_ANDROID:
-      if (disp->Options.TestOnly)
-         ret = EGL_TRUE;
-      else
-         ret = dri2_initialize_android(drv, disp);
+      ret = dri2_initialize_android(drv, disp);
       break;
 #endif
    default:
