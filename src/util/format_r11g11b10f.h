@@ -86,8 +86,7 @@ static inline uint32_t f32_to_uf11(float val)
        *      converted to 65024."
        */
       uf11 = UF11(30, 63);
-   }
-   else if (exponent > -15) { /* Representable value */
+   } else if (exponent > -15) { /* Representable value */
       exponent += UF11_EXPONENT_BIAS;
       mantissa >>= UF11_MANTISSA_SHIFT;
       uf11 = exponent << UF11_EXPONENT_SHIFT | mantissa;
@@ -113,17 +112,14 @@ static inline float uf11_to_f32(uint16_t val)
          const float scale = 1.0 / (1 << 20);
          f32.f = scale * mantissa;
       }
-   }
-   else if (exponent == 31) {
+   } else if (exponent == 31) {
       f32.ui = F32_INFINITY | mantissa;
-   }
-   else {
+   } else {
       float scale, decimal;
       exponent -= 15;
       if (exponent < 0) {
          scale = 1.0f / (1 << -exponent);
-      }
-      else {
+      } else {
          scale = (float) (1 << exponent);
       }
       decimal = 1.0f + (float) mantissa / 64;
@@ -172,8 +168,7 @@ static inline uint32_t f32_to_uf10(float val)
        *      converted to 64512."
        */
       uf10 = UF10(30, 31);
-   }
-   else if (exponent > -15) { /* Representable value */
+   } else if (exponent > -15) { /* Representable value */
       exponent += UF10_EXPONENT_BIAS;
       mantissa >>= UF10_MANTISSA_SHIFT;
       uf10 = exponent << UF10_EXPONENT_SHIFT | mantissa;
@@ -199,11 +194,9 @@ static inline float uf10_to_f32(uint16_t val)
          const float scale = 1.0 / (1 << 20);
          f32.f = scale * mantissa;
       }
-   }
-   else if (exponent == 31) {
+   } else if (exponent == 31) {
       f32.ui = F32_INFINITY | mantissa;
-   }
-   else {
+   } else {
       float scale, decimal;
       exponent -= 15;
       if (exponent < 0) {
