@@ -39,7 +39,7 @@
 #include "macros.h"
 #include "util/half_float.h"
 #include "util/format_rgb9e5.h"
-#include "../../gallium/auxiliary/util/u_format_r11g11b10f.h"
+#include "util/format_r11g11b10f.h"
 
 
 
