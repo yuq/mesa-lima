@@ -207,6 +207,11 @@ void QueueWork(SWR_CONTEXT *pContext)
     // then moved on if all work is done.)
     pContext->pCurDrawContext->threadsDone = pContext->NumFEThreads + pContext->NumBEThreads;
 
+    if (IsDraw)
+    {
+        InterlockedIncrement((volatile LONG*)&pContext->drawsOutstandingFE);
+    }
+
     _ReadWriteBarrier();
     {
         std::unique_lock<std::mutex> lock(pContext->WaitLock);
@@ -424,6 +429,20 @@ void SwrWaitForIdle(HANDLE hContext)
     RDTSC_START(APIWaitForIdle);
 
     while (!pContext->dcRing.IsEmpty())
+    {
+        _mm_pause();
+    }
+
+    RDTSC_STOP(APIWaitForIdle, 1, 0);
+}
+
+void SwrWaitForIdleFE(HANDLE hContext)
+{
+    SWR_CONTEXT *pContext = GetContext(hContext);
+
+    RDTSC_START(APIWaitForIdle);
+
+    while (pContext->drawsOutstandingFE > 0)
     {
         _mm_pause();
     }

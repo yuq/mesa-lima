@@ -486,6 +486,8 @@ struct SWR_CONTEXT
     // Scratch space for workers.
     uint8_t* pScratch[KNOB_MAX_NUM_THREADS];
 
+    volatile int32_t  drawsOutstandingFE;
+
     CachingAllocator cachingArenaAllocator;
     uint32_t frameCount;
 };

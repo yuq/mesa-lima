@@ -322,18 +322,6 @@ bool CheckDependency(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t lastReti
 
 INLINE void ExecuteCallbacks(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
-    if (pContext->pfnUpdateSoWriteOffset)
-    {
-        for (uint32_t i = 0; i < MAX_SO_BUFFERS; ++i)
-        {
-            if ((pDC->dynState.SoWriteOffsetDirty[i]) &&
-                (pDC->pState->state.soBuffer[i].soWriteEnable))
-            {
-                pContext->pfnUpdateSoWriteOffset(GetPrivateState(pDC), i, pDC->dynState.SoWriteOffset[i]);
-            }
-        }
-    }
-
     if (pDC->retireCallback.pfnCallbackFunc)
     {
         pDC->retireCallback.pfnCallbackFunc(pDC->retireCallback.userData,
@@ -540,6 +528,29 @@ void WorkOnFifoBE(
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Called when FE work is complete for this DC.
+INLINE void CompleteDrawFE(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+{
+    _ReadWriteBarrier();
+
+    if (pContext->pfnUpdateSoWriteOffset)
+    {
+        for (uint32_t i = 0; i < MAX_SO_BUFFERS; ++i)
+        {
+            if ((pDC->dynState.SoWriteOffsetDirty[i]) &&
+                (pDC->pState->state.soBuffer[i].soWriteEnable))
+            {
+                pContext->pfnUpdateSoWriteOffset(GetPrivateState(pDC), i, pDC->dynState.SoWriteOffset[i]);
+            }
+        }
+    }
+
+    pDC->doneFE = true;
+
+    InterlockedDecrement((volatile LONG*)&pContext->drawsOutstandingFE);
+}
+
 void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawFE)
 {
     // Try to grab the next DC from the ring
@@ -573,8 +584,7 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawFE)
                 // successfully grabbed the DC, now run the FE
                 pDC->FeWork.pfnWork(pContext, pDC, workerId, &pDC->FeWork.desc);
 
-                _ReadWriteBarrier();
-                pDC->doneFE = true;
+                CompleteDrawFE(pContext, pDC);
             }
         }
         curDraw++;

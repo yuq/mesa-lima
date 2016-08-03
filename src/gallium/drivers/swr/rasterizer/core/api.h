@@ -178,6 +178,12 @@ void SWR_API SwrWaitForIdle(
     HANDLE hContext);
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Blocks until all FE rendering has been completed.
+/// @param hContext - Handle passed back from SwrCreateContext
+void SWR_API SwrWaitForIdleFE(
+    HANDLE hContext);
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief Set vertex buffer state.
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param numBuffers - Number of vertex buffer state descriptors.
