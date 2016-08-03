@@ -1593,12 +1593,14 @@ static LLVMValueRef get_thread_id(struct si_shader_context *ctx)
 /**
  * Load a dword from a constant buffer.
  */
-static LLVMValueRef buffer_load_const(LLVMBuilderRef builder, LLVMValueRef resource,
-				      LLVMValueRef offset, LLVMTypeRef return_type)
+static LLVMValueRef buffer_load_const(struct si_shader_context *ctx,
+				      LLVMValueRef resource,
+				      LLVMValueRef offset)
 {
+	LLVMBuilderRef builder = ctx->radeon_bld.gallivm.builder;
 	LLVMValueRef args[2] = {resource, offset};
 
-	return lp_build_intrinsic(builder, "llvm.SI.load.const", return_type, args, 2,
+	return lp_build_intrinsic(builder, "llvm.SI.load.const", ctx->f32, args, 2,
 			       LLVMReadNoneAttribute);
 }
 
@@ -1618,8 +1620,8 @@ static LLVMValueRef load_sample_position(struct radeon_llvm_context *radeon_bld,
 	LLVMValueRef offset1 = LLVMBuildAdd(builder, offset0, lp_build_const_int32(gallivm, 4), "");
 
 	LLVMValueRef pos[4] = {
-		buffer_load_const(builder, resource, offset0, ctx->f32),
-		buffer_load_const(builder, resource, offset1, ctx->f32),
+		buffer_load_const(ctx, resource, offset0),
+		buffer_load_const(ctx, resource, offset1),
 		lp_build_const_float(gallivm, 0),
 		lp_build_const_float(gallivm, 0)
 	};
@@ -1772,9 +1774,8 @@ static void declare_system_value(
 		offset = decl->Semantic.Name == TGSI_SEMANTIC_DEFAULT_TESSINNER_SI ? 4 : 0;
 
 		for (i = 0; i < 4; i++)
-			val[i] = buffer_load_const(gallivm->builder, buf,
-						   lp_build_const_int32(gallivm, (offset + i) * 4),
-						   ctx->f32);
+			val[i] = buffer_load_const(ctx, buf,
+						   lp_build_const_int32(gallivm, (offset + i) * 4));
 		value = lp_build_gather_values(gallivm, val, 4);
 		break;
 	}
@@ -1908,8 +1909,7 @@ static LLVMValueRef fetch_constant(
 	addr = lp_build_add(&bld_base->uint_bld, addr,
 			    lp_build_const_int32(base->gallivm, idx * 4));
 
-	result = buffer_load_const(base->gallivm->builder, bufp,
-				   addr, ctx->f32);
+	result = buffer_load_const(ctx, bufp, addr);
 
 	if (!tgsi_type_is_64bit(type))
 		result = bitcast(bld_base, type, result);
@@ -1921,8 +1921,8 @@ static LLVMValueRef fetch_constant(
 		addr2 = lp_build_add(&bld_base->uint_bld, addr2,
 				     lp_build_const_int32(base->gallivm, idx * 4));
 
-		result2 = buffer_load_const(base->gallivm->builder, ctx->const_buffers[buf],
-				   addr2, ctx->f32);
+		result2 = buffer_load_const(ctx, ctx->const_buffers[buf],
+					    addr2);
 
 		result = radeon_llvm_emit_fetch_64bit(bld_base, type,
 						      result, result2);
@@ -2219,8 +2219,8 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context *bld_base,
 				args[1] = lp_build_const_int32(base->gallivm,
 							       ((reg_index * 4 + chan) * 4 +
 								const_chan) * 4);
-				base_elt = buffer_load_const(base->gallivm->builder, const_resource,
-						      args[1], ctx->f32);
+				base_elt = buffer_load_const(ctx, const_resource,
+							     args[1]);
 				args[5 + chan] =
 					lp_build_add(base, args[5 + chan],
 						     lp_build_mul(base, base_elt,
@@ -5725,10 +5725,9 @@ static void preload_constants(struct si_shader_context *ctx)
 		/* Load the constants, we rely on the code sinking to do the rest */
 		for (i = 0; i < num_const * 4; ++i) {
 			ctx->constants[buf][i] =
-				buffer_load_const(gallivm->builder,
+				buffer_load_const(ctx,
 					ctx->const_buffers[buf],
-					lp_build_const_int32(gallivm, i * 4),
-					ctx->f32);
+					lp_build_const_int32(gallivm, i * 4));
 		}
 	}
 }
@@ -5904,7 +5903,8 @@ static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
 	/* The stipple pattern is 32x32, each row has 32 bits. */
 	offset = LLVMBuildMul(builder, address[1],
 			      LLVMConstInt(ctx->i32, 4, 0), "");
-	row = buffer_load_const(builder, desc, offset, ctx->i32);
+	row = buffer_load_const(ctx, desc, offset);
+	row = LLVMBuildBitCast(builder, row, ctx->i32, "");
 	bit = LLVMBuildLShr(builder, row, address[0], "");
 	bit = LLVMBuildTrunc(builder, bit, ctx->i1, "");
 
