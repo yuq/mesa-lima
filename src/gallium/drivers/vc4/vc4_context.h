@@ -69,6 +69,7 @@
 #define VC4_DIRTY_COMPILED_CS   (1 << 23)
 #define VC4_DIRTY_COMPILED_VS   (1 << 24)
 #define VC4_DIRTY_COMPILED_FS   (1 << 25)
+#define VC4_DIRTY_FS_INPUTS     (1 << 26)
 
 struct vc4_sampler_view {
         struct pipe_sampler_view base;
@@ -123,6 +124,17 @@ struct vc4_ubo_range {
         uint32_t size;
 };
 
+struct vc4_fs_inputs {
+        /**
+         * Array of the meanings of the VPM inputs this shader needs.
+         *
+         * It doesn't include those that aren't part of the VPM, like
+         * point/line coordinates.
+         */
+        struct vc4_varying_slot *input_slots;
+        uint32_t num_inputs;
+};
+
 struct vc4_compiled_shader {
         uint64_t program_id;
         struct vc4_bo *bo;
@@ -152,13 +164,7 @@ struct vc4_compiled_shader {
         uint8_t vattr_offsets[9];
         uint8_t vattrs_live;
 
-        /**
-         * Array of the meanings of the VPM inputs this shader needs.
-         *
-         * It doesn't include those that aren't part of the VPM, like
-         * point/line coordinates.
-         */
-        struct vc4_varying_slot *input_slots;
+        const struct vc4_fs_inputs *fs_inputs;
 };
 
 struct vc4_program_stateobj {
@@ -270,6 +276,7 @@ struct vc4_context {
         struct primconvert_context *primconvert;
 
         struct hash_table *fs_cache, *vs_cache;
+        struct set *fs_inputs_set;
         uint32_t next_uncompiled_program_id;
         uint64_t next_compiled_program_id;
 

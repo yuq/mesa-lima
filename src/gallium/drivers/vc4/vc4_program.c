@@ -2100,8 +2100,8 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                 break;
         case QSTAGE_VERT:
                 emit_vert_end(c,
-                              vc4->prog.fs->input_slots,
-                              vc4->prog.fs->num_inputs);
+                              c->vs_key->fs_inputs->input_slots,
+                              c->vs_key->fs_inputs->num_inputs);
                 break;
         case QSTAGE_COORD:
                 emit_coord_end(c);
@@ -2207,6 +2207,13 @@ static void
 vc4_setup_compiled_fs_inputs(struct vc4_context *vc4, struct vc4_compile *c,
                              struct vc4_compiled_shader *shader)
 {
+        struct vc4_fs_inputs inputs;
+
+        memset(&inputs, 0, sizeof(inputs));
+        inputs.input_slots = ralloc_array(shader,
+                                          struct vc4_varying_slot,
+                                          c->num_input_slots);
+
         bool input_live[c->num_input_slots];
 
         memset(input_live, 0, sizeof(input_live));
@@ -2216,10 +2223,6 @@ vc4_setup_compiled_fs_inputs(struct vc4_context *vc4, struct vc4_compile *c,
                                 input_live[inst->src[i].index] = true;
                 }
         }
-
-        shader->input_slots = ralloc_array(shader,
-                                           struct vc4_varying_slot,
-                                           c->num_input_slots);
 
         for (int i = 0; i < c->num_input_slots; i++) {
                 struct vc4_varying_slot *slot = &c->input_slots[i];
@@ -2235,11 +2238,33 @@ vc4_setup_compiled_fs_inputs(struct vc4_context *vc4, struct vc4_compile *c,
                     slot->slot == VARYING_SLOT_COL1 ||
                     slot->slot == VARYING_SLOT_BFC0 ||
                     slot->slot == VARYING_SLOT_BFC1) {
-                        shader->color_inputs |= (1 << shader->num_inputs);
+                        shader->color_inputs |= (1 << inputs.num_inputs);
                 }
 
-                shader->input_slots[shader->num_inputs] = *slot;
-                shader->num_inputs++;
+                inputs.input_slots[inputs.num_inputs] = *slot;
+                inputs.num_inputs++;
+        }
+        shader->num_inputs = inputs.num_inputs;
+
+        /* Add our set of inputs to the set of all inputs seen.  This way, we
+         * can have a single pointer that identifies an FS inputs set,
+         * allowing VS to avoid recompiling when the FS is recompiled (or a
+         * new one is bound using separate shader objects) but the inputs
+         * don't change.
+         */
+        struct set_entry *entry = _mesa_set_search(vc4->fs_inputs_set, &inputs);
+        if (entry) {
+                shader->fs_inputs = entry->key;
+                ralloc_free(inputs.input_slots);
+        } else {
+                struct vc4_fs_inputs *alloc_inputs;
+
+                alloc_inputs = rzalloc(vc4->fs_inputs_set, struct vc4_fs_inputs);
+                memcpy(alloc_inputs, &inputs, sizeof(inputs));
+                ralloc_steal(alloc_inputs, inputs.input_slots);
+                _mesa_set_add(vc4->fs_inputs_set, alloc_inputs);
+
+                shader->fs_inputs = alloc_inputs;
         }
 }
 
@@ -2434,10 +2459,14 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
                 return;
 
         vc4->dirty |= VC4_DIRTY_COMPILED_FS;
+
         if (vc4->rasterizer->base.flatshade &&
             old_fs && vc4->prog.fs->color_inputs != old_fs->color_inputs) {
                 vc4->dirty |= VC4_DIRTY_FLAT_SHADE_FLAGS;
         }
+
+        if (old_fs && vc4->prog.fs->fs_inputs != old_fs->fs_inputs)
+                vc4->dirty |= VC4_DIRTY_FS_INPUTS;
 }
 
 static void
@@ -2451,14 +2480,14 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
                             VC4_DIRTY_VERTTEX |
                             VC4_DIRTY_VTXSTATE |
                             VC4_DIRTY_UNCOMPILED_VS |
-                            VC4_DIRTY_COMPILED_FS))) {
+                            VC4_DIRTY_FS_INPUTS))) {
                 return;
         }
 
         memset(key, 0, sizeof(*key));
         vc4_setup_shared_key(vc4, &key->base, &vc4->verttex);
         key->base.shader_state = vc4->prog.bind_vs;
-        key->compiled_fs_id = vc4->prog.fs->program_id;
+        key->fs_inputs = vc4->prog.fs->fs_inputs;
         key->clamp_color = vc4->rasterizer->base.clamp_vertex_color;
 
         for (int i = 0; i < ARRAY_SIZE(key->attr_formats); i++)
@@ -2477,7 +2506,7 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
 
         key->is_coord = true;
         /* Coord shaders don't care what the FS inputs are. */
-        key->compiled_fs_id = 0;
+        key->fs_inputs = NULL;
         struct vc4_compiled_shader *cs =
                 vc4_get_compiled_shader(vc4, QSTAGE_COORD, &key->base);
         if (cs != vc4->prog.cs) {
@@ -2515,6 +2544,29 @@ static bool
 vs_cache_compare(const void *key1, const void *key2)
 {
         return memcmp(key1, key2, sizeof(struct vc4_vs_key)) == 0;
+}
+
+static uint32_t
+fs_inputs_hash(const void *key)
+{
+        const struct vc4_fs_inputs *inputs = key;
+
+        return _mesa_hash_data(inputs->input_slots,
+                               sizeof(*inputs->input_slots) *
+                               inputs->num_inputs);
+}
+
+static bool
+fs_inputs_compare(const void *key1, const void *key2)
+{
+        const struct vc4_fs_inputs *inputs1 = key1;
+        const struct vc4_fs_inputs *inputs2 = key2;
+
+        return (inputs1->num_inputs == inputs2->num_inputs &&
+                memcmp(inputs1->input_slots,
+                       inputs2->input_slots,
+                       sizeof(*inputs1->input_slots) *
+                       inputs1->num_inputs) == 0);
 }
 
 static void
@@ -2582,6 +2634,8 @@ vc4_program_init(struct pipe_context *pctx)
                                                 fs_cache_compare);
         vc4->vs_cache = _mesa_hash_table_create(pctx, vs_cache_hash,
                                                 vs_cache_compare);
+        vc4->fs_inputs_set = _mesa_set_create(pctx, fs_inputs_hash,
+                                              fs_inputs_compare);
 }
 
 void

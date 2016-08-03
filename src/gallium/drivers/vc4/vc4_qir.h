@@ -352,12 +352,7 @@ struct vc4_fs_key {
 struct vc4_vs_key {
         struct vc4_key base;
 
-        /**
-         * This is a proxy for the array of FS input semantics, which is
-         * larger than we would want to put in the key.
-         */
-        uint64_t compiled_fs_id;
-
+        const struct vc4_fs_inputs *fs_inputs;
         enum pipe_format attr_formats[8];
         bool is_coord;
         bool per_vertex_point_size;
