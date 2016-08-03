@@ -42,7 +42,7 @@
 #include "util/u_math.h"
 #include "util/u_format.h"
 #include "util/u_cpu_detect.h"
-#include "util/u_format_rgb9e5.h"
+#include "util/format_rgb9e5.h"
 #include "lp_bld_debug.h"
 #include "lp_bld_type.h"
 #include "lp_bld_const.h"
