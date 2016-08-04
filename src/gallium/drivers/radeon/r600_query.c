@@ -51,6 +51,8 @@ static enum radeon_value_id winsys_id_from_type(unsigned type)
 	switch (type) {
 	case R600_QUERY_REQUESTED_VRAM: return RADEON_REQUESTED_VRAM_MEMORY;
 	case R600_QUERY_REQUESTED_GTT: return RADEON_REQUESTED_GTT_MEMORY;
+	case R600_QUERY_MAPPED_VRAM: return RADEON_MAPPED_VRAM;
+	case R600_QUERY_MAPPED_GTT: return RADEON_MAPPED_GTT;
 	case R600_QUERY_BUFFER_WAIT_TIME: return RADEON_BUFFER_WAIT_TIME_NS;
 	case R600_QUERY_NUM_CS_FLUSHES: return RADEON_NUM_CS_FLUSHES;
 	case R600_QUERY_NUM_BYTES_MOVED: return RADEON_NUM_BYTES_MOVED;
@@ -89,6 +91,8 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 		break;
 	case R600_QUERY_REQUESTED_VRAM:
 	case R600_QUERY_REQUESTED_GTT:
+	case R600_QUERY_MAPPED_VRAM:
+	case R600_QUERY_MAPPED_GTT:
 	case R600_QUERY_VRAM_USAGE:
 	case R600_QUERY_GTT_USAGE:
 	case R600_QUERY_GPU_TEMPERATURE:
@@ -154,6 +158,8 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		break;
 	case R600_QUERY_REQUESTED_VRAM:
 	case R600_QUERY_REQUESTED_GTT:
+	case R600_QUERY_MAPPED_VRAM:
+	case R600_QUERY_MAPPED_GTT:
 	case R600_QUERY_VRAM_USAGE:
 	case R600_QUERY_GTT_USAGE:
 	case R600_QUERY_GPU_TEMPERATURE:
@@ -1175,6 +1181,8 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("dma-calls",			DMA_CALLS,		UINT64, AVERAGE),
 	X("requested-VRAM",		REQUESTED_VRAM,		BYTES, AVERAGE),
 	X("requested-GTT",		REQUESTED_GTT,		BYTES, AVERAGE),
+	X("mapped-VRAM",		MAPPED_VRAM,		BYTES, AVERAGE),
+	X("mapped-GTT",			MAPPED_GTT,		BYTES, AVERAGE),
 	X("buffer-wait-time",		BUFFER_WAIT_TIME,	MICROSECONDS, CUMULATIVE),
 	X("num-cs-flushes",		NUM_CS_FLUSHES,		UINT64, AVERAGE),
 	X("num-bytes-moved",		NUM_BYTES_MOVED,	BYTES, CUMULATIVE),
@@ -1237,10 +1245,12 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 	switch (info->query_type) {
 	case R600_QUERY_REQUESTED_VRAM:
 	case R600_QUERY_VRAM_USAGE:
+	case R600_QUERY_MAPPED_VRAM:
 		info->max_value.u64 = rscreen->info.vram_size;
 		break;
 	case R600_QUERY_REQUESTED_GTT:
 	case R600_QUERY_GTT_USAGE:
+	case R600_QUERY_MAPPED_GTT:
 		info->max_value.u64 = rscreen->info.gart_size;
 		break;
 	case R600_QUERY_GPU_TEMPERATURE:
