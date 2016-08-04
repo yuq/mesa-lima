@@ -30,6 +30,7 @@
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_pack_color.h"
+#include "util/u_surface.h"
 #include "os/os_time.h"
 #include <errno.h>
 #include <inttypes.h>
@@ -1696,6 +1697,71 @@ static void r600_surface_destroy(struct pipe_context *pipe,
 	FREE(surface);
 }
 
+static void r600_clear_texture(struct pipe_context *pipe,
+			       struct pipe_resource *tex,
+			       unsigned level,
+			       const struct pipe_box *box,
+			       const void *data)
+{
+	struct pipe_screen *screen = pipe->screen;
+	struct r600_texture *rtex = (struct r600_texture*)tex;
+	struct pipe_surface tmpl = {{0}};
+	struct pipe_surface *sf;
+	const struct util_format_description *desc =
+		util_format_description(tex->format);
+
+	tmpl.format = tex->format;
+	tmpl.u.tex.first_layer = box->z;
+	tmpl.u.tex.last_layer = box->z + box->depth - 1;
+	tmpl.u.tex.level = level;
+	sf = pipe->create_surface(pipe, tex, &tmpl);
+	if (!sf)
+		return;
+
+	if (rtex->is_depth) {
+		unsigned clear;
+		float depth;
+		uint8_t stencil = 0;
+
+		/* Depth is always present. */
+		clear = PIPE_CLEAR_DEPTH;
+		desc->unpack_z_float(&depth, 0, data, 0, 1, 1);
+
+		if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+			clear |= PIPE_CLEAR_STENCIL;
+			desc->unpack_s_8uint(&stencil, 0, data, 0, 1, 1);
+		}
+
+		pipe->clear_depth_stencil(pipe, sf, clear, depth, stencil,
+					  box->x, box->y,
+					  box->width, box->height, false);
+	} else {
+		union pipe_color_union color;
+
+		/* pipe_color_union requires the full vec4 representation. */
+		if (util_format_is_pure_uint(tex->format))
+			desc->unpack_rgba_uint(color.ui, 0, data, 0, 1, 1);
+		else if (util_format_is_pure_sint(tex->format))
+			desc->unpack_rgba_sint(color.i, 0, data, 0, 1, 1);
+		else
+			desc->unpack_rgba_float(color.f, 0, data, 0, 1, 1);
+
+		if (screen->is_format_supported(screen, tex->format,
+						tex->target, 0,
+						PIPE_BIND_RENDER_TARGET)) {
+			pipe->clear_render_target(pipe, sf, &color,
+						  box->x, box->y,
+						  box->width, box->height, false);
+		} else {
+			/* Software fallback - just for R9G9B9E5_FLOAT */
+			util_clear_render_target(pipe, sf, &color,
+						 box->x, box->y,
+						 box->width, box->height);
+		}
+	}
+	pipe_surface_reference(&sf, NULL);
+}
+
 unsigned r600_translate_colorswap(enum pipe_format format, bool do_endian_swap)
 {
 	const struct util_format_description *desc = util_format_description(format);
@@ -2332,4 +2398,5 @@ void r600_init_context_texture_functions(struct r600_common_context *rctx)
 {
 	rctx->b.create_surface = r600_create_surface;
 	rctx->b.surface_destroy = r600_surface_destroy;
+	rctx->b.clear_texture = r600_clear_texture;
 }
