@@ -298,6 +298,7 @@ genX(graphics_pipeline_create)(
          wm.LineEndCapAntialiasingRegionWidth   = 0; /* 0.5 pixels */
          wm.LineAntialiasingRegionWidth         = 1; /* 1.0 pixels */
          wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
+         wm.PixelShaderKillPixel                = wm_prog_data->uses_kill;
          wm.PixelShaderComputedDepthMode        = wm_prog_data->computed_depth_mode;
          wm.PixelShaderUsesSourceDepth          = wm_prog_data->uses_src_depth;
          wm.PixelShaderUsesSourceW              = wm_prog_data->uses_src_w;
