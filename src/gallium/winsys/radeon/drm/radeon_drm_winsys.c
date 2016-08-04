@@ -603,6 +603,10 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
         return ws->allocated_vram;
     case RADEON_REQUESTED_GTT_MEMORY:
         return ws->allocated_gtt;
+    case RADEON_MAPPED_VRAM:
+       return ws->mapped_vram;
+    case RADEON_MAPPED_GTT:
+       return ws->mapped_gtt;
     case RADEON_BUFFER_WAIT_TIME_NS:
         return ws->buffer_wait_time;
     case RADEON_TIMESTAMP:

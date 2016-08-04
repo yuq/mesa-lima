@@ -375,8 +375,13 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
     }
     bo->ptr = ptr;
     bo->map_count = 1;
-    pipe_mutex_unlock(bo->map_mutex);
 
+    if (bo->initial_domain & RADEON_DOMAIN_VRAM)
+       bo->rws->mapped_vram += bo->base.size;
+    else
+       bo->rws->mapped_gtt += bo->base.size;
+
+    pipe_mutex_unlock(bo->map_mutex);
     return bo->ptr;
 }
 
@@ -479,6 +484,12 @@ static void radeon_bo_unmap(struct pb_buffer *_buf)
 
     os_munmap(bo->ptr, bo->base.size);
     bo->ptr = NULL;
+
+    if (bo->initial_domain & RADEON_DOMAIN_VRAM)
+       bo->rws->mapped_vram -= bo->base.size;
+    else
+       bo->rws->mapped_gtt -= bo->base.size;
+
     pipe_mutex_unlock(bo->map_mutex);
 }
 
