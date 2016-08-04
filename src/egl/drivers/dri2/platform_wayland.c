@@ -1236,6 +1236,7 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
    wl_event_queue_destroy(dri2_dpy->wl_queue);
  cleanup_dpy:
    free(dri2_dpy);
+   disp->DriverData = NULL;
 
    return EGL_FALSE;
 }
@@ -1881,6 +1882,7 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
    wl_event_queue_destroy(dri2_dpy->wl_queue);
  cleanup_dpy:
    free(dri2_dpy);
+   disp->DriverData = NULL;
 
    return EGL_FALSE;
 }
