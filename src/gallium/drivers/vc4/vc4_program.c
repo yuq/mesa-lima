@@ -71,7 +71,7 @@ static struct qreg
 indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
 {
         struct qreg indirect_offset = ntq_get_src(c, intr->src[0], 0);
-        uint32_t offset = intr->const_index[0];
+        uint32_t offset = nir_intrinsic_base(intr);
         struct vc4_compiler_ubo_range *range = NULL;
         unsigned i;
         for (i = 0; i < c->num_uniform_ranges; i++) {
@@ -116,7 +116,8 @@ nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
         nir_intrinsic_instr *intr =
                 nir_intrinsic_instr_create(b->shader,
                                            nir_intrinsic_load_uniform);
-        intr->const_index[0] = (VC4_NIR_STATE_UNIFORM_OFFSET + contents) * 4;
+        nir_intrinsic_set_base(intr,
+                               (VC4_NIR_STATE_UNIFORM_OFFSET + contents) * 4);
         intr->num_components = 1;
         intr->src[0] = nir_src_for_ssa(nir_imm_int(b, 0));
         nir_ssa_dest_init(&intr->instr, &intr->dest, 1, 32, NULL);
@@ -1562,7 +1563,7 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 assert(instr->num_components == 1);
                 const_offset = nir_src_as_const_value(instr->src[0]);
                 if (const_offset) {
-                        offset = instr->const_index[0] + const_offset->u32[0];
+                        offset = nir_intrinsic_base(instr) + const_offset->u32[0];
                         assert(offset % 4 == 0);
                         /* We need dwords */
                         offset = offset / 4;
@@ -1586,8 +1587,8 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 for (int i = 0; i < instr->num_components; i++) {
                         ntq_store_dest(c, &instr->dest, i,
                                        qir_uniform(c, QUNIFORM_USER_CLIP_PLANE,
-                                                   instr->const_index[0] * 4 +
-                                                   i));
+                                                   nir_intrinsic_ucp_id(instr) *
+                                                   4 + i));
                 }
                 break;
 
@@ -1610,12 +1611,12 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 assert(instr->num_components == 1);
                 const_offset = nir_src_as_const_value(instr->src[0]);
                 assert(const_offset && "vc4 doesn't support indirect inputs");
-                if (instr->const_index[0] >= VC4_NIR_TLB_COLOR_READ_INPUT) {
+                if (nir_intrinsic_base(instr) >= VC4_NIR_TLB_COLOR_READ_INPUT) {
                         assert(const_offset->u32[0] == 0);
                         /* Reads of the per-sample color need to be done in
                          * order.
                          */
-                        int sample_index = (instr->const_index[0] -
+                        int sample_index = (nir_intrinsic_base(instr) -
                                            VC4_NIR_TLB_COLOR_READ_INPUT);
                         for (int i = 0; i <= sample_index; i++) {
                                 if (c->color_reads[i].file == QFILE_NULL) {
@@ -1626,7 +1627,7 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                         ntq_store_dest(c, &instr->dest, 0,
                                        c->color_reads[sample_index]);
                 } else {
-                        offset = instr->const_index[0] + const_offset->u32[0];
+                        offset = nir_intrinsic_base(instr) + const_offset->u32[0];
                         ntq_store_dest(c, &instr->dest, 0,
                                        c->inputs[offset]);
                 }
@@ -1635,7 +1636,7 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
         case nir_intrinsic_store_output:
                 const_offset = nir_src_as_const_value(instr->src[1]);
                 assert(const_offset && "vc4 doesn't support indirect outputs");
-                offset = instr->const_index[0] + const_offset->u32[0];
+                offset = nir_intrinsic_base(instr) + const_offset->u32[0];
 
                 /* MSAA color outputs are the only case where we have an
                  * output that's not lowered to being a store of a single 32

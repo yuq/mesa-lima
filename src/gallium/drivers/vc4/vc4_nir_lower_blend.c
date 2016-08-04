@@ -60,7 +60,7 @@ vc4_nir_get_dst_color(nir_builder *b, int sample)
                 nir_intrinsic_instr_create(b->shader,
                                            nir_intrinsic_load_input);
         load->num_components = 1;
-        load->const_index[0] = VC4_NIR_TLB_COLOR_READ_INPUT + sample;
+        nir_intrinsic_set_base(load, VC4_NIR_TLB_COLOR_READ_INPUT + sample);
         load->src[0] = nir_src_for_ssa(nir_imm_int(b, 0));
         nir_ssa_dest_init(&load->instr, &load->dest, 1, 32, NULL);
         nir_builder_instr_insert(b, &load->instr);
@@ -609,7 +609,7 @@ vc4_nir_store_sample_mask(struct vc4_compile *c, nir_builder *b,
         nir_intrinsic_instr *intr =
                 nir_intrinsic_instr_create(c->s, nir_intrinsic_store_output);
         intr->num_components = 1;
-        intr->const_index[0] = sample_mask->data.driver_location;
+        nir_intrinsic_set_base(intr, sample_mask->data.driver_location);
 
         intr->src[0] = nir_src_for_ssa(val);
         intr->src[1] = nir_src_for_ssa(nir_imm_int(b, 0));
@@ -685,7 +685,8 @@ vc4_nir_lower_blend_block(nir_block *block, struct vc4_compile *c)
 
                 nir_variable *output_var = NULL;
                 nir_foreach_variable(var, &c->s->outputs) {
-                        if (var->data.driver_location == intr->const_index[0]) {
+                        if (var->data.driver_location ==
+                            nir_intrinsic_base(intr)) {
                                 output_var = var;
                                 break;
                         }
