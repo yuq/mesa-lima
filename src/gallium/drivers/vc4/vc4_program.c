@@ -2155,15 +2155,14 @@ vc4_shader_state_create(struct pipe_context *pctx,
 
         so->program_id = vc4->next_uncompiled_program_id++;
 
-        nir_shader *s = tgsi_to_nir(cso->tokens, &nir_options);
-
         if (vc4_debug & VC4_DEBUG_TGSI) {
-                fprintf(stderr, "%s prog %d TGSI:\n",
-                        gl_shader_stage_name(s->stage),
+                fprintf(stderr, "prog %d TGSI:\n",
                         so->program_id);
                 tgsi_dump(cso->tokens, 0);
                 fprintf(stderr, "\n");
         }
+
+        nir_shader *s = tgsi_to_nir(cso->tokens, &nir_options);
 
         NIR_PASS_V(s, nir_opt_global_to_local);
         NIR_PASS_V(s, nir_convert_to_ssa);
