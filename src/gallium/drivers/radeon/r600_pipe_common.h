@@ -388,7 +388,7 @@ struct r600_common_screen {
 	unsigned			gpu_load_counter_idle;
 	volatile unsigned		gpu_load_stop_thread; /* bool */
 
-	char				renderer_string[64];
+	char				renderer_string[100];
 
 	/* Performance counters. */
 	struct r600_perfcounters	*perfcounters;
