@@ -264,6 +264,9 @@ static void amdgpu_bo_unmap(struct pb_buffer *buf)
 {
    struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)buf;
 
+   if (bo->user_ptr)
+      return;
+
    amdgpu_bo_cpu_unmap(bo->bo);
 }
 
