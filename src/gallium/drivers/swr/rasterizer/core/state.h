@@ -340,6 +340,8 @@ struct SWR_PS_CONTEXT
     uint32_t primID;            // IN: primitive ID
     uint32_t sampleIndex;       // IN: sampleIndex
 
+    uint32_t rasterizerSampleCount; // IN: sample count used by the rasterizer
+
 };
 
 //////////////////////////////////////////////////////////////////////////

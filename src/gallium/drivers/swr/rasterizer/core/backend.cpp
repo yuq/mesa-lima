@@ -470,6 +470,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
     psContext.pRecipW = work.pRecipW;
     psContext.pSamplePosX = (const float*)&T::MultisampleT::samplePosX;
     psContext.pSamplePosY = (const float*)&T::MultisampleT::samplePosY;
+    psContext.rasterizerSampleCount = T::MultisampleT::numSamples;
 
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
@@ -660,6 +661,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     psContext.recipDet = work.recipDet;
     psContext.pSamplePosX = (const float*)&T::MultisampleT::samplePosX;
     psContext.pSamplePosY = (const float*)&T::MultisampleT::samplePosY;
+    psContext.rasterizerSampleCount = T::MultisampleT::numSamples;
 
     for (uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
@@ -880,6 +882,8 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     psContext.recipDet = work.recipDet;
     psContext.pSamplePosX = (const float*)&T::MultisampleT::samplePosX;
     psContext.pSamplePosY = (const float*)&T::MultisampleT::samplePosY;
+    psContext.rasterizerSampleCount = T::MultisampleT::numSamples;
+
     psContext.sampleIndex = 0;
     
     PixelRateZTestLoop<T> PixelRateZTest(pDC, work, coeffs, state, pDepthBase, pStencilBase, rastState.clipDistanceMask);
