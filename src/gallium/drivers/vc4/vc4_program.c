@@ -1627,15 +1627,11 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                         }
                         ntq_store_dest(c, &instr->dest, 0,
                                        c->color_reads[sample_index]);
-                } else if (c->stage == QSTAGE_FRAG) {
+                } else {
                         offset = nir_intrinsic_base(instr) + const_offset->u32[0];
                         int comp = nir_intrinsic_component(instr);
                         ntq_store_dest(c, &instr->dest, 0,
                                        c->inputs[offset * 4 + comp]);
-                } else {
-                        offset = nir_intrinsic_base(instr) + const_offset->u32[0];
-                        ntq_store_dest(c, &instr->dest, 0,
-                                       c->inputs[offset]);
                 }
                 break;
 
