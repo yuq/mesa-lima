@@ -221,16 +221,6 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
         }
     }
 
-#elif defined(__CYGWIN__)
-
-    // Dummy data just to compile
-    NumaNode node;
-    Core core;
-    core.threadIds.push_back(0);
-    node.cores.push_back(core);
-    out_nodes.push_back(node);
-    out_numThreadsPerProcGroup = 1;
-
 #else
 
 #error Unsupported platform
@@ -276,10 +266,6 @@ void bindThread(SWR_CONTEXT* pContext, uint32_t threadId, uint32_t procGroupId =
     }
 
     SetThreadGroupAffinity(GetCurrentThread(), &affinity, nullptr);
-
-#elif defined(__CYGWIN__)
-
-    // do nothing
 
 #else
 
