@@ -57,7 +57,7 @@
 #define HIGH_WORD(X) ((X & 0xFFFF0000) >> 16)
 
 
-#if defined(PIPE_CC_GCC)
+#if defined(PIPE_CC_GCC) && (PIPE_CC_GCC_VERSION > 502)
 
 /**
  * Hypervisor-specific bi-directional communication channel.  Should never
@@ -241,15 +241,25 @@ typedef uint32_t VMW_REG;
 
 #define VMW_PORT(cmd, in_bx, in_si, in_di, \
          port_num, magic,                  \
-         ax, bx, cx, dx, si, di)
+         ax, bx, cx, dx, si, di)           \
+         (void) in_bx;                     \
+         (void) ax; (void) bx; (void) cx;  \
+         (void) dx; (void) si; (void) di;
 
 #define VMW_PORT_HB_OUT(cmd, in_cx, in_si, in_di, \
          port_num, magic, bp,                     \
-         ax, bx, cx, dx, si, di)
+         ax, bx, cx, dx, si, di)                  \
+         (void) in_cx; (void) bp;                 \
+         (void) ax; (void) bx; (void) cx;         \
+         (void) dx; (void) si; (void) di;
+			
 
 #define VMW_PORT_HB_IN(cmd, in_cx, in_si, in_di,  \
          port_num, magic, bp,                     \
-         ax, bx, cx, dx, si, di)
+         ax, bx, cx, dx, si, di)                  \
+         (void) bp;                               \
+         (void) ax; (void) bx; (void) cx;         \
+         (void) dx; (void) si; (void) di;
 
 #endif /* #if PIPE_CC_GCC */
 
