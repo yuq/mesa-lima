@@ -44,6 +44,7 @@ struct amdgpu_winsys_bo {
    void *user_ptr; /* from buffer_from_ptr */
 
    amdgpu_bo_handle bo;
+   int map_count;
    uint32_t unique_id;
    amdgpu_va_handle va_handle;
    uint64_t va;

@@ -256,8 +256,17 @@ static void *amdgpu_bo_map(struct pb_buffer *buf,
       /* Clear the cache and try again. */
       pb_cache_release_all_buffers(&bo->ws->bo_cache);
       r = amdgpu_bo_cpu_map(bo->bo, &cpu);
+      if (r)
+         return NULL;
    }
-   return r ? NULL : cpu;
+
+   if (p_atomic_inc_return(&bo->map_count) == 1) {
+      if (bo->initial_domain & RADEON_DOMAIN_VRAM)
+         bo->ws->mapped_vram += bo->base.size;
+      else
+         bo->ws->mapped_gtt += bo->base.size;
+   }
+   return cpu;
 }
 
 static void amdgpu_bo_unmap(struct pb_buffer *buf)
@@ -266,6 +275,13 @@ static void amdgpu_bo_unmap(struct pb_buffer *buf)
 
    if (bo->user_ptr)
       return;
+
+   if (p_atomic_dec_zero(&bo->map_count)) {
+      if (bo->initial_domain & RADEON_DOMAIN_VRAM)
+         bo->ws->mapped_vram -= bo->base.size;
+      else
+         bo->ws->mapped_gtt -= bo->base.size;
+   }
 
    amdgpu_bo_cpu_unmap(bo->bo);
 }
