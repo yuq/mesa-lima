@@ -571,48 +571,6 @@ create_frag_coord(struct ir3_compile *ctx, unsigned comp)
 	}
 }
 
-/* NOTE: this creates the "TGSI" style fragface (ie. input slot
- * VARYING_SLOT_FACE).  For NIR style nir_intrinsic_load_front_face
- * we can just use the value from hw directly (since it is boolean)
- */
-static struct ir3_instruction *
-create_frag_face(struct ir3_compile *ctx, unsigned comp)
-{
-	struct ir3_block *block = ctx->block;
-	struct ir3_instruction *instr;
-
-	switch (comp) {
-	case 0: /* .x */
-		compile_assert(ctx, !ctx->frag_face);
-
-		ctx->frag_face = create_input(block, 0);
-		ctx->frag_face->regs[0]->flags |= IR3_REG_HALF;
-
-		/* for faceness, we always get -1 or 0 (int).. but TGSI expects
-		 * positive vs negative float.. and piglit further seems to
-		 * expect -1.0 or 1.0:
-		 *
-		 *    mul.s tmp, hr0.x, 2
-		 *    add.s tmp, tmp, 1
-		 *    mov.s32f32, dst, tmp
-		 *
-		 */
-		instr = ir3_MUL_S(block, ctx->frag_face, 0,
-				create_immed(block, 2), 0);
-		instr = ir3_ADD_S(block, instr, 0,
-				create_immed(block, 1), 0);
-		instr = ir3_COV(block, instr, TYPE_S32, TYPE_F32);
-
-		return instr;
-	case 1: /* .y */
-	case 2: /* .z */
-		return create_immed(block, fui(0.0));
-	default:
-	case 3: /* .w */
-		return create_immed(block, fui(1.0));
-	}
-}
-
 static struct ir3_instruction *
 create_driver_param(struct ir3_compile *ctx, enum ir3_driver_param dp)
 {
@@ -2053,10 +2011,6 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 				so->inputs[n].slot = VARYING_SLOT_VAR8;
 				so->inputs[n].bary = true;
 				instr = create_frag_input(ctx, false);
-			} else if (slot == VARYING_SLOT_FACE) {
-				so->inputs[n].bary = false;
-				so->frag_face = true;
-				instr = create_frag_face(ctx, i);
 			} else {
 				bool use_ldlv = false;
 

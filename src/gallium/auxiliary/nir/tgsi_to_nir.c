@@ -339,9 +339,14 @@ ttn_emit_declaration(struct ttn_compile *c)
             var->name = ralloc_asprintf(var, "in_%d", idx);
 
             if (c->scan->processor == PIPE_SHADER_FRAGMENT) {
-               var->data.location =
-                  tgsi_varying_semantic_to_slot(decl->Semantic.Name,
-                                                decl->Semantic.Index);
+               if (decl->Semantic.Name == TGSI_SEMANTIC_FACE) {
+                  var->data.location = SYSTEM_VALUE_FRONT_FACE;
+                  var->data.mode = nir_var_system_value;
+               } else {
+                  var->data.location =
+                     tgsi_varying_semantic_to_slot(decl->Semantic.Name,
+                                                   decl->Semantic.Index);
+               }
             } else {
                assert(!decl->Declaration.Semantic);
                var->data.location = VERT_ATTRIB_GENERIC0 + idx;
@@ -593,6 +598,25 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
 
       switch (file) {
       case TGSI_FILE_INPUT:
+         /* Special case: Turn the frontface varying into a load of the
+          * frontface intrinsic plus math, and appending the silly floats.
+          */
+         if (c->scan->processor == PIPE_SHADER_FRAGMENT &&
+             c->scan->input_semantic_name[index] == TGSI_SEMANTIC_FACE) {
+            nir_ssa_def *tgsi_frontface[4] = {
+               nir_bcsel(&c->build,
+                         nir_load_system_value(&c->build,
+                                               nir_intrinsic_load_front_face, 0),
+                         nir_imm_float(&c->build, 1.0),
+                         nir_imm_float(&c->build, -1.0)),
+               nir_imm_float(&c->build, 0.0),
+               nir_imm_float(&c->build, 0.0),
+               nir_imm_float(&c->build, 1.0),
+            };
+
+            return nir_src_for_ssa(nir_vec(&c->build, tgsi_frontface, 4));
+         }
+
          op = nir_intrinsic_load_input;
          assert(!dim);
          break;
