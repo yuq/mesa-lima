@@ -1652,6 +1652,7 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                                                                i));
                         }
                 } else {
+                        offset = offset * 4 + nir_intrinsic_component(instr);
                         assert(instr->num_components == 1);
                         c->outputs[offset] =
                                 qir_MOV(c, ntq_get_src(c, instr->src[0], 0));
@@ -2063,17 +2064,24 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         if (c->vs_key && c->vs_key->clamp_color)
                 NIR_PASS_V(c->s, nir_lower_clamp_color_outputs);
 
-        if (stage == QSTAGE_FRAG) {
-                NIR_PASS_V(c->s, nir_lower_clip_fs, c->key->ucp_enables);
-        } else {
-                NIR_PASS_V(c->s, nir_lower_clip_vs, c->key->ucp_enables);
+        if (c->key->ucp_enables) {
+                if (stage == QSTAGE_FRAG) {
+                        NIR_PASS_V(c->s, nir_lower_clip_fs, c->key->ucp_enables);
+                } else {
+                        NIR_PASS_V(c->s, nir_lower_clip_vs, c->key->ucp_enables);
+                        NIR_PASS_V(c->s, nir_lower_io_to_scalar,
+                                   nir_var_shader_out);
+                }
         }
 
         /* FS input scalarizing must happen after nir_lower_two_sided_color,
-         * which only handles a vec4 at a time.
+         * which only handles a vec4 at a time.  Similarly, VS output
+         * scalarizing must happen after nir_lower_clip_vs.
          */
         if (c->stage == QSTAGE_FRAG)
                 NIR_PASS_V(c->s, nir_lower_io_to_scalar, nir_var_shader_in);
+        else
+                NIR_PASS_V(c->s, nir_lower_io_to_scalar, nir_var_shader_out);
 
         NIR_PASS_V(c->s, vc4_nir_lower_io, c);
         NIR_PASS_V(c->s, vc4_nir_lower_txf_ms, c);
