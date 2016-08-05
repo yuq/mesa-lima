@@ -87,7 +87,7 @@ struct swr_blend_state {
 struct swr_derived_state {
    SWR_RASTSTATE rastState;
    SWR_VIEWPORT vp;
-   SWR_VIEWPORT_MATRIX vpm;
+   SWR_VIEWPORT_MATRICES vpm;
 };
 
 void swr_update_derived(struct pipe_context *,

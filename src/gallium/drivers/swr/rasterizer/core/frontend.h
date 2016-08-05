@@ -202,14 +202,14 @@ void viewportTransform(__m128 &vX, __m128 &vY, __m128 &vZ, const SWR_VIEWPORT_MA
 
 template<uint32_t NumVerts>
 INLINE
-void viewportTransform(simdvector *v, const SWR_VIEWPORT_MATRIX & vpMatrix)
+void viewportTransform(simdvector *v, const SWR_VIEWPORT_MATRICES & vpMatrices)
 {
-    simdscalar m00 = _simd_load1_ps(&vpMatrix.m00);
-    simdscalar m30 = _simd_load1_ps(&vpMatrix.m30);
-    simdscalar m11 = _simd_load1_ps(&vpMatrix.m11);
-    simdscalar m31 = _simd_load1_ps(&vpMatrix.m31);
-    simdscalar m22 = _simd_load1_ps(&vpMatrix.m22);
-    simdscalar m32 = _simd_load1_ps(&vpMatrix.m32);
+    simdscalar m00 = _simd_load1_ps(&vpMatrices.m00[0]);
+    simdscalar m30 = _simd_load1_ps(&vpMatrices.m30[0]);
+    simdscalar m11 = _simd_load1_ps(&vpMatrices.m11[0]);
+    simdscalar m31 = _simd_load1_ps(&vpMatrices.m31[0]);
+    simdscalar m22 = _simd_load1_ps(&vpMatrices.m22[0]);
+    simdscalar m32 = _simd_load1_ps(&vpMatrices.m32[0]);
 
     for (uint32_t i = 0; i < NumVerts; ++i)
     {

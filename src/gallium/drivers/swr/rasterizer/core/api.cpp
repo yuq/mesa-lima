@@ -663,7 +663,7 @@ void SwrSetViewports(
     HANDLE hContext,
     uint32_t numViewports,
     const SWR_VIEWPORT* pViewports,
-    const SWR_VIEWPORT_MATRIX* pMatrices)
+    const SWR_VIEWPORT_MATRICES* pMatrices)
 {
     SWR_ASSERT(numViewports <= KNOB_NUM_VIEWPORTS_SCISSORS,
         "Invalid number of viewports.");
@@ -675,7 +675,9 @@ void SwrSetViewports(
 
     if (pMatrices != nullptr)
     {
-        memcpy(&pState->vpMatrix[0], pMatrices, sizeof(SWR_VIEWPORT_MATRIX) * numViewports);
+        //memcpy(&pState->vpMatrix[0], pMatrices, sizeof(SWR_VIEWPORT_MATRIX) * numViewports);
+        // @todo Faster to copy portions of the SOA or just copy all of it?
+        memcpy(&pState->vpMatrices, pMatrices, sizeof(SWR_VIEWPORT_MATRICES));
     }
     else
     {
@@ -684,22 +686,22 @@ void SwrSetViewports(
         {
             if (pContext->driverType == DX)
             {
-                pState->vpMatrix[i].m00 = pState->vp[i].width / 2.0f;
-                pState->vpMatrix[i].m11 = -pState->vp[i].height / 2.0f;
-                pState->vpMatrix[i].m22 = pState->vp[i].maxZ - pState->vp[i].minZ;
-                pState->vpMatrix[i].m30 = pState->vp[i].x + pState->vpMatrix[i].m00;
-                pState->vpMatrix[i].m31 = pState->vp[i].y - pState->vpMatrix[i].m11;
-                pState->vpMatrix[i].m32 = pState->vp[i].minZ;
+                pState->vpMatrices.m00[i] = pState->vp[i].width / 2.0f;
+                pState->vpMatrices.m11[i] = -pState->vp[i].height / 2.0f;
+                pState->vpMatrices.m22[i] = pState->vp[i].maxZ - pState->vp[i].minZ;
+                pState->vpMatrices.m30[i] = pState->vp[i].x + pState->vpMatrices.m00[i];
+                pState->vpMatrices.m31[i] = pState->vp[i].y - pState->vpMatrices.m11[i];
+                pState->vpMatrices.m32[i] = pState->vp[i].minZ;
             }
             else
             {
                 // Standard, with the exception that Y is inverted.
-                pState->vpMatrix[i].m00 = (pState->vp[i].width - pState->vp[i].x) / 2.0f;
-                pState->vpMatrix[i].m11 = (pState->vp[i].y - pState->vp[i].height) / 2.0f;
-                pState->vpMatrix[i].m22 = (pState->vp[i].maxZ - pState->vp[i].minZ) / 2.0f;
-                pState->vpMatrix[i].m30 = pState->vp[i].x + pState->vpMatrix[i].m00;
-                pState->vpMatrix[i].m31 = pState->vp[i].height + pState->vpMatrix[i].m11;
-                pState->vpMatrix[i].m32 = pState->vp[i].minZ + pState->vpMatrix[i].m22;
+                pState->vpMatrices.m00[i] = (pState->vp[i].width - pState->vp[i].x) / 2.0f;
+                pState->vpMatrices.m11[i] = (pState->vp[i].y - pState->vp[i].height) / 2.0f;
+                pState->vpMatrices.m22[i] = (pState->vp[i].maxZ - pState->vp[i].minZ) / 2.0f;
+                pState->vpMatrices.m30[i] = pState->vp[i].x + pState->vpMatrices.m00[i];
+                pState->vpMatrices.m31[i] = pState->vp[i].height + pState->vpMatrices.m11[i];
+                pState->vpMatrices.m32[i] = pState->vp[i].minZ + pState->vpMatrices.m22[i];
 
                 // Now that the matrix is calculated, clip the view coords to screen size.
                 // OpenGL allows for -ve x,y in the viewport.

@@ -277,7 +277,7 @@ OSALIGNLINE(struct) API_STATE
     GUARDBAND               gbState;
 
     SWR_VIEWPORT            vp[KNOB_NUM_VIEWPORTS_SCISSORS];
-    SWR_VIEWPORT_MATRIX     vpMatrix[KNOB_NUM_VIEWPORTS_SCISSORS];
+    SWR_VIEWPORT_MATRICES   vpMatrices;
 
     BBOX                    scissorRects[KNOB_NUM_VIEWPORTS_SCISSORS];
     BBOX                    scissorInFixedPoint;

@@ -1793,7 +1793,7 @@ void BinTriangles(
         tri[2].v[2] = _simd_mul_ps(tri[2].v[2], vRecipW2);
 
         // viewport transform to screen coords
-        viewportTransform<3>(tri, state.vpMatrix[0]);
+        viewportTransform<3>(tri, state.vpMatrices);
     }
 
     // adjust for pixel center location
@@ -2166,7 +2166,7 @@ void BinPoints(
         primVerts.z = _simd_mul_ps(primVerts.z, vRecipW0);
 
         // viewport transform to screen coords
-        viewportTransform<1>(&primVerts, state.vpMatrix[0]);
+        viewportTransform<1>(&primVerts, state.vpMatrices);
     }
 
     // adjust for pixel center location
@@ -2484,7 +2484,7 @@ void BinLines(
         prim[1].v[2] = _simd_mul_ps(prim[1].v[2], vRecipW1);
 
         // viewport transform to screen coords
-        viewportTransform<2>(prim, state.vpMatrix[0]);
+        viewportTransform<2>(prim, state.vpMatrices);
     }
 
     // adjust for pixel center location

@@ -944,7 +944,7 @@ swr_update_derived(struct pipe_context *pipe,
       pipe_rasterizer_state *rasterizer = ctx->rasterizer;
 
       SWR_VIEWPORT *vp = &ctx->derived.vp;
-      SWR_VIEWPORT_MATRIX *vpm = &ctx->derived.vpm;
+      SWR_VIEWPORT_MATRICES *vpm = &ctx->derived.vpm;
 
       vp->x = state->translate[0] - state->scale[0];
       vp->width = state->translate[0] + state->scale[0];
@@ -958,12 +958,12 @@ swr_update_derived(struct pipe_context *pipe,
          vp->maxZ = state->translate[2] + state->scale[2];
       }
 
-      vpm->m00 = state->scale[0];
-      vpm->m11 = state->scale[1];
-      vpm->m22 = state->scale[2];
-      vpm->m30 = state->translate[0];
-      vpm->m31 = state->translate[1];
-      vpm->m32 = state->translate[2];
+      vpm->m00[0] = state->scale[0];
+      vpm->m11[0] = state->scale[1];
+      vpm->m22[0] = state->scale[2];
+      vpm->m30[0] = state->translate[0];
+      vpm->m31[0] = state->translate[1];
+      vpm->m32[0] = state->translate[2];
 
       /* Now that the matrix is calculated, clip the view coords to screen
        * size.  OpenGL allows for -ve x,y in the viewport. */

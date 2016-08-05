@@ -495,7 +495,7 @@ void SWR_API SwrSetViewports(
     HANDLE hContext,
     uint32_t numViewports,
     const SWR_VIEWPORT* pViewports,
-    const SWR_VIEWPORT_MATRIX* pMatrices);
+    const SWR_VIEWPORT_MATRICES* pMatrices);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief SwrSetScissorRects
