@@ -81,29 +81,6 @@ void ProcessSync(
 }
 
 //////////////////////////////////////////////////////////////////////////
-/// @brief FE handler for SwrGetStats.
-/// @param pContext - pointer to SWR context.
-/// @param pDC - pointer to draw context.
-/// @param workerId - thread's worker id. Even thread has a unique id.
-/// @param pUserData - Pointer to user data passed back to stats callback.
-/// @todo This should go away when we switch this to use compute threading.
-void ProcessQueryStats(
-    SWR_CONTEXT *pContext,
-    DRAW_CONTEXT *pDC,
-    uint32_t workerId,
-    void *pUserData)
-{
-    QUERY_DESC *pQueryStats = (QUERY_DESC*)pUserData;
-    BE_WORK work;
-    work.type = QUERYSTATS;
-    work.pfnWork = ProcessQueryStatsBE;
-    work.desc.queryStats = *pQueryStats;
-
-    MacroTileMgr *pTileMgr = pDC->pTileMgr;
-    pTileMgr->enqueue(0, 0, &work);
-}
-
-//////////////////////////////////////////////////////////////////////////
 /// @brief FE handler for SwrClearRenderTarget.
 /// @param pContext - pointer to SWR context.
 /// @param pDC - pointer to draw context.

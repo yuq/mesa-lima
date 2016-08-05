@@ -85,38 +85,6 @@ void ProcessSyncBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     SWR_ASSERT(x == 0 && y == 0);
 }
 
-void ProcessQueryStatsBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pUserData)
-{
-    QUERY_DESC* pQueryDesc = (QUERY_DESC*)pUserData;
-    SWR_STATS* pStats = pQueryDesc->pStats;
-    SWR_CONTEXT *pContext = pDC->pContext;
-
-    SWR_ASSERT(pStats != nullptr);
-
-    for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
-    {
-        pStats->DepthPassCount += pContext->stats[i].DepthPassCount;
-
-        pStats->IaVertices    += pContext->stats[i].IaVertices;
-        pStats->IaPrimitives  += pContext->stats[i].IaPrimitives;
-        pStats->VsInvocations += pContext->stats[i].VsInvocations;
-        pStats->HsInvocations += pContext->stats[i].HsInvocations;
-        pStats->DsInvocations += pContext->stats[i].DsInvocations;
-        pStats->GsInvocations += pContext->stats[i].GsInvocations;
-        pStats->PsInvocations += pContext->stats[i].PsInvocations;
-        pStats->CInvocations  += pContext->stats[i].CInvocations;
-        pStats->CsInvocations += pContext->stats[i].CsInvocations;
-        pStats->CPrimitives   += pContext->stats[i].CPrimitives;
-        pStats->GsPrimitives  += pContext->stats[i].GsPrimitives;
-
-        for (uint32_t stream = 0; stream < MAX_SO_STREAMS; ++stream)
-        {
-            pStats->SoPrimStorageNeeded[stream] += pContext->stats[i].SoPrimStorageNeeded[stream];
-            pStats->SoNumPrimsWritten[stream] += pContext->stats[i].SoNumPrimsWritten[stream];
-        }
-    }
-}
-
 template<SWR_FORMAT format>
 void ClearRasterTile(uint8_t *pTileBuffer, simdvector &value)
 {

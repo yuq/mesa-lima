@@ -132,11 +132,6 @@ struct SYNC_DESC
     uint64_t userData3;
 };
 
-struct QUERY_DESC
-{
-    SWR_STATS* pStats;
-};
-
 struct STORE_TILES_DESC
 {
     SWR_RENDERTARGET_ATTACHMENT attachment;
@@ -159,7 +154,6 @@ enum WORK_TYPE
     CLEAR,
     DISCARDINVALIDATETILES,
     STORETILES,
-    QUERYSTATS,
 };
 
 struct BE_WORK
@@ -173,7 +167,6 @@ struct BE_WORK
         CLEAR_DESC clear;
         DISCARD_INVALIDATE_TILES_DESC discardInvalidateTiles;
         STORE_TILES_DESC storeTiles;
-        QUERY_DESC queryStats;
     } desc;
 };
 
@@ -210,7 +203,6 @@ struct FE_WORK
         CLEAR_DESC clear;
         DISCARD_INVALIDATE_TILES_DESC discardInvalidateTiles;
         STORE_TILES_DESC storeTiles;
-        QUERY_DESC queryStats;
     } desc;
 };
 

@@ -1510,22 +1510,6 @@ VOID* SwrAllocDrawContextMemory(
 }
 
 //////////////////////////////////////////////////////////////////////////
-/// @brief Returns pointer to SWR stats.
-/// @note The counters are atomically incremented by multiple threads.
-///       When calling this, you need to ensure all previous operations
-///       have completed.
-/// @todo If necessary, add a callback to avoid stalling the pipe to
-///       sample the counters.
-/// @param hContext - Handle passed back from SwrCreateContext
-/// @param pStats - SWR will fill this out for caller.
-void SwrGetStats(
-    HANDLE hContext,
-    SWR_STATS* pStats)
-{
-    SWR_ASSERT(0);
-}
-
-//////////////////////////////////////////////////////////////////////////
 /// @brief Enables stats counting
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param enable - If true then counts are incremented.
