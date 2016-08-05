@@ -1007,14 +1007,15 @@
     <field name="Maximum Index" start="96" end="127" type="uint"/>
   </instruction>
 
-  <instruction name="3DSTATE_HIER_DEPTH_BUFFER" bias="2" length="2">
+  <instruction name="3DSTATE_HIER_DEPTH_BUFFER" bias="2" length="3">
     <field name="Command Type" start="29" end="31" type="uint" default="3"/>
     <field name="Command SubType" start="27" end="28" type="uint" default="3"/>
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="1"/>
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="15"/>
-    <field name="DWord Length" start="0" end="7" type="uint" default="0"/>
+    <field name="DWord Length" start="0" end="7" type="uint" default="1"/>
     <field name="Hierarchical Depth Buffer Object Control State" start="57" end="60" type="MEMORY_OBJECT_CONTROL_STATE"/>
     <field name="Surface Pitch" start="32" end="48" type="uint"/>
+    <field name="Surface Base Address" start="64" end="95" type="address"/>
   </instruction>
 
   <instruction name="3DSTATE_INDEX_BUFFER" bias="2" length="3">
