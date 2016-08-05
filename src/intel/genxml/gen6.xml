@@ -1883,20 +1883,26 @@
     <field name="DWord Length" start="0" end="7" type="uint" default="8"/>
     <field name="General State Base Address" start="44" end="63" type="address"/>
     <field name="General State Memory Object Control State" start="40" end="43" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="General State MOCS" start="40" end="43" type="uint"/>
     <field name="Stateless Data Port Access Memory Object Control State" start="36" end="39" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Stateless Data Port Access MOCS" start="36" end="39" type="uint"/>
     <field name="Stateless Data Port Access Force Write Thru" start="35" end="35" type="uint"/>
     <field name="General State Base Address Modify Enable" start="32" end="32" type="bool"/>
     <field name="Surface State Base Address" start="76" end="95" type="address"/>
     <field name="Surface State Memory Object Control State" start="72" end="75" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Surface State MOCS" start="72" end="75" type="uint"/>
     <field name="Surface State Base Address Modify Enable" start="64" end="64" type="bool"/>
     <field name="Dynamic State Base Address" start="108" end="127" type="address"/>
     <field name="Dynamic State Memory Object Control State" start="104" end="107" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Dynamic State MOCS" start="104" end="107" type="uint"/>
     <field name="Dynamic State Base Address Modify Enable" start="96" end="96" type="bool"/>
     <field name="Indirect Object Base Address" start="140" end="159" type="address"/>
     <field name="Indirect Object Memory Object Control State" start="136" end="139" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Indirect Object MOCS" start="136" end="139" type="uint"/>
     <field name="Indirect Object Base Address Modify Enable" start="128" end="128" type="bool"/>
     <field name="Instruction Base Address" start="172" end="191" type="address"/>
     <field name="Instruction Memory Object Control State" start="168" end="171" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Instruction MOCS" start="168" end="171" type="uint"/>
     <field name="Instruction Base Address Modify Enable" start="160" end="160" type="bool"/>
     <field name="General State Access Upper Bound" start="204" end="223" type="address"/>
     <field name="General State Access Upper Bound Modify Enable" start="192" end="192" type="bool"/>
