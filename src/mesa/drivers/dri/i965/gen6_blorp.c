@@ -27,188 +27,123 @@
 #include "intel_mipmap_tree.h"
 
 #include "brw_context.h"
-#include "brw_defines.h"
 #include "brw_state.h"
 
 #include "blorp_priv.h"
-#include "vbo/vbo.h"
-#include "brw_draw.h"
 
-/* 3DSTATE_URB
- *
- * Assign the entire URB to the VS. Even though the VS disabled, URB space
- * is still needed because the clipper loads the VUE's from the URB. From
- * the Sandybridge PRM, Volume 2, Part 1, Section 3DSTATE,
- * Dword 1.15:0 "VS Number of URB Entries":
- *     This field is always used (even if VS Function Enable is DISABLED).
- *
- * The warning below appears in the PRM (Section 3DSTATE_URB), but we can
- * safely ignore it because this batch contains only one draw call.
- *     Because of URB corruption caused by allocating a previous GS unit
- *     URB entry to the VS unit, software is required to send a “GS NULL
- *     Fence” (Send URB fence with VS URB size == 1 and GS URB size == 0)
- *     plus a dummy DRAW call before any case where VS will be taking over
- *     GS URB space.
- */
-static void
-gen6_blorp_emit_urb_config(struct brw_context *brw,
-                           const struct brw_blorp_params *params)
+#define GEN_VERSIONx10 60
+#include "genxml/gen_macros.h"
+
+static void *
+blorp_emit_dwords(struct brw_context *brw, unsigned n)
 {
-   BEGIN_BATCH(3);
-   OUT_BATCH(_3DSTATE_URB << 16 | (3 - 2));
-   OUT_BATCH(brw->urb.max_vs_entries << GEN6_URB_VS_ENTRIES_SHIFT);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
+   intel_batchbuffer_begin(brw, n, RENDER_RING);
+   uint32_t *map = brw->batch.map_next;
+   brw->batch.map_next += n;
+   intel_batchbuffer_advance(brw);
+   return map;
 }
 
+struct blorp_address {
+   drm_intel_bo *buffer;
+   uint32_t read_domains;
+   uint32_t write_domain;
+   uint32_t offset;
+};
 
-/* 3DSTATE_CC_STATE_POINTERS
- *
- * The pointer offsets are relative to
- * CMD_STATE_BASE_ADDRESS.DynamicStateBaseAddress.
- *
- * The HiZ op doesn't use BLEND_STATE or COLOR_CALC_STATE.
- */
-static void
-gen6_blorp_emit_cc_state_pointers(struct brw_context *brw,
-                                  const struct brw_blorp_params *params,
-                                  uint32_t cc_blend_state_offset,
-                                  uint32_t depthstencil_offset,
-                                  uint32_t cc_state_offset)
+static uint64_t
+blorp_emit_reloc(struct brw_context *brw, void *location,
+                 struct blorp_address address, uint32_t delta)
 {
-   BEGIN_BATCH(4);
-   OUT_BATCH(_3DSTATE_CC_STATE_POINTERS << 16 | (4 - 2));
-   OUT_BATCH(cc_blend_state_offset | 1); /* BLEND_STATE offset */
-   OUT_BATCH(depthstencil_offset | 1); /* DEPTH_STENCIL_STATE offset */
-   OUT_BATCH(cc_state_offset | 1); /* COLOR_CALC_STATE offset */
-   ADVANCE_BATCH();
+   uint32_t offset = (char *)location - (char *)brw->batch.map;
+   if (brw->gen >= 8) {
+      return intel_batchbuffer_reloc64(brw, address.buffer, offset,
+                                       address.read_domains,
+                                       address.write_domain,
+                                       address.offset + delta);
+   } else {
+      return intel_batchbuffer_reloc(brw, address.buffer, offset,
+                                     address.read_domains,
+                                     address.write_domain,
+                                     address.offset + delta);
+   }
 }
 
+#define __gen_address_type struct blorp_address
+#define __gen_user_data struct brw_context
 
-/**
- * 3DSTATE_SAMPLER_STATE_POINTERS.  See upload_sampler_state_pointers().
- */
-static void
-gen6_blorp_emit_sampler_state_pointers(struct brw_context *brw,
-                                       uint32_t sampler_offset)
+static uint64_t
+__gen_combine_address(struct brw_context *brw, void *location,
+                      struct blorp_address address, uint32_t delta)
 {
-   BEGIN_BATCH(4);
-   OUT_BATCH(_3DSTATE_SAMPLER_STATE_POINTERS << 16 |
-             VS_SAMPLER_STATE_CHANGE |
-             GS_SAMPLER_STATE_CHANGE |
-             PS_SAMPLER_STATE_CHANGE |
-             (4 - 2));
-   OUT_BATCH(0); /* VS */
-   OUT_BATCH(0); /* GS */
-   OUT_BATCH(sampler_offset);
-   ADVANCE_BATCH();
+   if (address.buffer == NULL) {
+      return address.offset + delta;
+   } else {
+      return blorp_emit_reloc(brw, location, address, delta);
+   }
 }
 
+#include "genxml/genX_pack.h"
 
-/* 3DSTATE_VS
- *
- * Disable vertex shader.
- */
+#define _blorp_cmd_length(cmd) cmd ## _length
+#define _blorp_cmd_header(cmd) cmd ## _header
+#define _blorp_cmd_pack(cmd) cmd ## _pack
+
+#define blorp_emit(brw, cmd, name)                                \
+   for (struct cmd name = { _blorp_cmd_header(cmd) },             \
+        *_dst = blorp_emit_dwords(brw, _blorp_cmd_length(cmd));   \
+        __builtin_expect(_dst != NULL, 1);                        \
+        _blorp_cmd_pack(cmd)(brw, (void *)_dst, &name),           \
+        _dst = NULL)
+
 static void
-gen6_blorp_emit_vs_disable(struct brw_context *brw,
-                           const struct brw_blorp_params *params)
-{
-   /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
-    * 3DSTATE_VS, Dword 5.0 "VS Function Enable":
-    *
-    *   [DevSNB] A pipeline flush must be programmed prior to a
-    *   3DSTATE_VS command that causes the VS Function Enable to
-    *   toggle. Pipeline flush can be executed by sending a PIPE_CONTROL
-    *   command with CS stall bit set and a post sync operation.
-    *
-    * We've already done one at the start of the BLORP operation.
-    */
-
-   BEGIN_BATCH(6);
-   OUT_BATCH(_3DSTATE_VS << 16 | (6 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
-
-/* 3DSTATE_GS
- *
- * Disable the geometry shader.
- */
-static void
-gen6_blorp_emit_gs_disable(struct brw_context *brw,
-                           const struct brw_blorp_params *params)
-{
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_GS << 16 | (7 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-   brw->gs.enabled = false;
-}
-
-
-/* 3DSTATE_SF
- *
- * Disable ViewportTransformEnable (dw2.1)
- *
- * From the SandyBridge PRM, Volume 2, Part 1, Section 1.3, "3D
- * Primitives Overview":
- *     RECTLIST: Viewport Mapping must be DISABLED (as is typical with the
- *     use of screen- space coordinates).
- *
- * A solid rectangle must be rendered, so set FrontFaceFillMode (dw2.4:3)
- * and BackFaceFillMode (dw2.5:6) to SOLID(0).
- *
- * From the Sandy Bridge PRM, Volume 2, Part 1, Section
- * 6.4.1.1 3DSTATE_SF, Field FrontFaceFillMode:
- *     SOLID: Any triangle or rectangle object found to be front-facing
- *     is rendered as a solid object. This setting is required when
- *     (rendering rectangle (RECTLIST) objects.
- */
-static void
-gen6_blorp_emit_sf_config(struct brw_context *brw,
-                          const struct brw_blorp_params *params)
-{
-   const unsigned num_varyings =
-      params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
-   const unsigned urb_read_length =
-      brw_blorp_get_urb_length(params->wm_prog_data);
-
-   BEGIN_BATCH(20);
-   OUT_BATCH(_3DSTATE_SF << 16 | (20 - 2));
-   OUT_BATCH(num_varyings << GEN6_SF_NUM_OUTPUTS_SHIFT |
-             urb_read_length << GEN6_SF_URB_ENTRY_READ_LENGTH_SHIFT |
-             BRW_SF_URB_ENTRY_READ_OFFSET <<
-                GEN6_SF_URB_ENTRY_READ_OFFSET_SHIFT);
-   OUT_BATCH(0); /* dw2 */
-   OUT_BATCH(params->dst.surf.samples > 1 ? GEN6_SF_MSRAST_ON_PATTERN : 0);
-   for (int i = 0; i < 13; ++i)
-      OUT_BATCH(0);
-   OUT_BATCH(params->wm_prog_data ? params->wm_prog_data->flat_inputs : 0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
-
-/**
- * Enable or disable thread dispatch and set the HiZ op appropriately.
- */
-static void
-gen6_blorp_emit_wm_config(struct brw_context *brw,
-                          const struct brw_blorp_params *params)
+blorp_emit_sf_config(struct brw_context *brw,
+                     const struct brw_blorp_params *params)
 {
    const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
-   uint32_t dw2, dw4, dw5, dw6, ksp0, ksp2;
+
+   /* 3DSTATE_SF
+    *
+    * Disable ViewportTransformEnable (dw2.1)
+    *
+    * From the SandyBridge PRM, Volume 2, Part 1, Section 1.3, "3D
+    * Primitives Overview":
+    *     RECTLIST: Viewport Mapping must be DISABLED (as is typical with the
+    *     use of screen- space coordinates).
+    *
+    * A solid rectangle must be rendered, so set FrontFaceFillMode (dw2.4:3)
+    * and BackFaceFillMode (dw2.5:6) to SOLID(0).
+    *
+    * From the Sandy Bridge PRM, Volume 2, Part 1, Section
+    * 6.4.1.1 3DSTATE_SF, Field FrontFaceFillMode:
+    *     SOLID: Any triangle or rectangle object found to be front-facing
+    *     is rendered as a solid object. This setting is required when
+    *     (rendering rectangle (RECTLIST) objects.
+    */
+   blorp_emit(brw, GENX(3DSTATE_SF), sf) {
+      sf.FrontFaceFillMode = FILL_MODE_SOLID;
+      sf.BackFaceFillMode = FILL_MODE_SOLID;
+
+      sf.MultisampleRasterizationMode = params->dst.surf.samples > 1 ?
+         MSRASTMODE_ON_PATTERN : MSRASTMODE_OFF_PIXEL;
+
+      sf.VertexURBEntryReadOffset = BRW_SF_URB_ENTRY_READ_OFFSET;
+      if (prog_data) {
+         sf.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
+         sf.VertexURBEntryReadLength = brw_blorp_get_urb_length(prog_data);
+         sf.ConstantInterpolationEnable = prog_data->flat_inputs;
+      } else {
+         sf.NumberofSFOutputAttributes = 0;
+         sf.VertexURBEntryReadLength = 1;
+      }
+   }
+}
+
+static void
+blorp_emit_wm_config(struct brw_context *brw,
+                     const struct brw_blorp_params *params)
+{
+   const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
 
    /* Even when thread dispatch is disabled, max threads (dw5.25:31) must be
     * nonzero to prevent the GPU from hanging.  While the documentation doesn't
@@ -218,277 +153,144 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
     * To be safe (and to minimize extraneous code) we go ahead and fully
     * configure the WM state whether or not there is a WM program.
     */
+   blorp_emit(brw, GENX(3DSTATE_WM), wm) {
+      wm.MaximumNumberofThreads = brw->max_wm_threads - 1;
 
-   dw2 = dw4 = dw5 = dw6 = ksp0 = ksp2 = 0;
-   switch (params->hiz_op) {
-   case GEN6_HIZ_OP_DEPTH_CLEAR:
-      dw4 |= GEN6_WM_DEPTH_CLEAR;
-      break;
-   case GEN6_HIZ_OP_DEPTH_RESOLVE:
-      dw4 |= GEN6_WM_DEPTH_RESOLVE;
-      break;
-   case GEN6_HIZ_OP_HIZ_RESOLVE:
-      dw4 |= GEN6_WM_HIERARCHICAL_DEPTH_RESOLVE;
-      break;
-   case GEN6_HIZ_OP_NONE:
-      break;
-   default:
-      unreachable("not reached");
-   }
-   dw5 |= (brw->max_wm_threads - 1) << GEN6_WM_MAX_THREADS_SHIFT;
-   dw6 |= 0 << GEN6_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT; /* No interp */
-   dw6 |= (params->wm_prog_data ? prog_data->num_varying_inputs : 0) <<
-          GEN6_WM_NUM_SF_OUTPUTS_SHIFT;
+      switch (params->hiz_op) {
+      case GEN6_HIZ_OP_DEPTH_CLEAR:
+         wm.DepthBufferClear = true;
+         break;
+      case GEN6_HIZ_OP_DEPTH_RESOLVE:
+         wm.DepthBufferResolveEnable = true;
+         break;
+      case GEN6_HIZ_OP_HIZ_RESOLVE:
+         wm.HierarchicalDepthBufferResolveEnable = true;
+         break;
+      case GEN6_HIZ_OP_NONE:
+         break;
+      default:
+         unreachable("not reached");
+      }
 
-   if (params->wm_prog_data) {
-      dw5 |= GEN6_WM_DISPATCH_ENABLE; /* We are rendering */
+      if (prog_data) {
+         wm.ThreadDispatchEnable = true;
 
-      dw4 |= prog_data->first_curbe_grf_0 << GEN6_WM_DISPATCH_START_GRF_SHIFT_0;
-      dw4 |= prog_data->first_curbe_grf_2 << GEN6_WM_DISPATCH_START_GRF_SHIFT_2;
+         wm.DispatchGRFStartRegisterforConstantSetupData0 =
+            prog_data->first_curbe_grf_0;
+         wm.DispatchGRFStartRegisterforConstantSetupData2 =
+            prog_data->first_curbe_grf_2;
 
-      ksp0 = params->wm_prog_kernel;
-      ksp2 = params->wm_prog_kernel + params->wm_prog_data->ksp_offset_2;
+         wm.KernelStartPointer0 = params->wm_prog_kernel;
+         wm.KernelStartPointer2 =
+            params->wm_prog_kernel + prog_data->ksp_offset_2;
 
-      if (params->wm_prog_data->dispatch_8)
-         dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
-      if (params->wm_prog_data->dispatch_16)
-         dw5 |= GEN6_WM_16_DISPATCH_ENABLE;
-   }
+         wm._8PixelDispatchEnable = prog_data->dispatch_8;
+         wm._16PixelDispatchEnable = prog_data->dispatch_16;
 
-   if (params->src.bo) {
-      dw5 |= GEN6_WM_KILL_ENABLE; /* TODO: temporarily smash on */
-      dw2 |= 1 << GEN6_WM_SAMPLER_COUNT_SHIFT; /* Up to 4 samplers */
-   }
+         wm.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
+      }
 
-   if (params->dst.surf.samples > 1) {
-      dw6 |= GEN6_WM_MSRAST_ON_PATTERN;
-      if (prog_data && prog_data->persample_msaa_dispatch)
-         dw6 |= GEN6_WM_MSDISPMODE_PERSAMPLE;
-      else
-         dw6 |= GEN6_WM_MSDISPMODE_PERPIXEL;
-   } else {
-      dw6 |= GEN6_WM_MSRAST_OFF_PIXEL;
-      dw6 |= GEN6_WM_MSDISPMODE_PERSAMPLE;
-   }
+      if (params->src.bo) {
+         wm.SamplerCount = 1; /* Up to 4 samplers */
+         wm.PixelShaderKillPixel = true; /* TODO: temporarily smash on */
+      }
 
-   BEGIN_BATCH(9);
-   OUT_BATCH(_3DSTATE_WM << 16 | (9 - 2));
-   OUT_BATCH(ksp0);
-   OUT_BATCH(dw2);
-   OUT_BATCH(0); /* No scratch needed */
-   OUT_BATCH(dw4);
-   OUT_BATCH(dw5);
-   OUT_BATCH(dw6);
-   OUT_BATCH(0); /* kernel 1 pointer */
-   OUT_BATCH(ksp2);
-   ADVANCE_BATCH();
-}
-
-static void
-gen6_blorp_emit_constant_disable(struct brw_context *brw, unsigned opcode)
-{
-   /* Disable the push constant buffers. */
-   BEGIN_BATCH(5);
-   OUT_BATCH(opcode << 16 | (5 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
-/**
- * 3DSTATE_BINDING_TABLE_POINTERS
- */
-static void
-gen6_blorp_emit_binding_table_pointers(struct brw_context *brw,
-                                       uint32_t wm_bind_bo_offset)
-{
-   BEGIN_BATCH(4);
-   OUT_BATCH(_3DSTATE_BINDING_TABLE_POINTERS << 16 |
-             GEN6_BINDING_TABLE_MODIFY_PS |
-             (4 - 2));
-   OUT_BATCH(0); /* vs -- ignored */
-   OUT_BATCH(0); /* gs -- ignored */
-   OUT_BATCH(wm_bind_bo_offset); /* wm/ps */
-   ADVANCE_BATCH();
-}
-
-
-static void
-gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
-                                     const struct brw_blorp_params *params)
-{
-   uint32_t surftype;
-
-   switch (params->depth.surf.dim) {
-   case ISL_SURF_DIM_1D:
-      surftype = BRW_SURFACE_1D;
-      break;
-   case ISL_SURF_DIM_2D:
-      surftype = BRW_SURFACE_2D;
-      break;
-   case ISL_SURF_DIM_3D:
-      surftype = BRW_SURFACE_3D;
-      break;
-   }
-
-   /* 3DSTATE_DEPTH_BUFFER */
-   {
-      brw_emit_depth_stall_flushes(brw);
-
-      unsigned depth = MAX2(params->depth.surf.logical_level0_px.depth,
-                            params->depth.surf.logical_level0_px.array_len);
-
-      BEGIN_BATCH(7);
-      /* 3DSTATE_DEPTH_BUFFER dw0 */
-      OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (7 - 2));
-
-      /* 3DSTATE_DEPTH_BUFFER dw1 */
-      OUT_BATCH((params->depth.surf.row_pitch - 1) |
-                params->depth_format << 18 |
-                1 << 21 | /* separate stencil enable */
-                1 << 22 | /* hiz enable */
-                BRW_TILEWALK_YMAJOR << 26 |
-                1 << 27 | /* y-tiled */
-                surftype << 29);
-
-      /* 3DSTATE_DEPTH_BUFFER dw2 */
-      OUT_RELOC(params->depth.bo,
-                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                params->depth.offset);
-
-      /* 3DSTATE_DEPTH_BUFFER dw3 */
-      OUT_BATCH(BRW_SURFACE_MIPMAPLAYOUT_BELOW << 1 |
-                (params->depth.surf.logical_level0_px.width - 1) << 6 |
-                (params->depth.surf.logical_level0_px.height - 1) << 19 |
-                params->depth.view.base_level << 2);
-
-      /* 3DSTATE_DEPTH_BUFFER dw4 */
-      OUT_BATCH((depth - 1) << 21 |
-                params->depth.view.base_array_layer << 10 |
-                (depth - 1) << 1);
-
-      /* 3DSTATE_DEPTH_BUFFER dw5 */
-      OUT_BATCH(0);
-
-      /* 3DSTATE_DEPTH_BUFFER dw6 */
-      OUT_BATCH(0);
-      ADVANCE_BATCH();
-   }
-
-   /* 3DSTATE_HIER_DEPTH_BUFFER */
-   {
-      BEGIN_BATCH(3);
-      OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
-      OUT_BATCH(params->depth.aux_surf.row_pitch - 1);
-      OUT_RELOC(params->depth.aux_bo,
-                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                params->depth.aux_offset);
-      ADVANCE_BATCH();
-   }
-
-   /* 3DSTATE_STENCIL_BUFFER */
-   {
-      BEGIN_BATCH(3);
-      OUT_BATCH((_3DSTATE_STENCIL_BUFFER << 16) | (3 - 2));
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      ADVANCE_BATCH();
+      if (params->dst.surf.samples > 1) {
+         wm.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
+         wm.MultisampleDispatchMode =
+            (prog_data && prog_data->persample_msaa_dispatch) ?
+            MSDISPMODE_PERSAMPLE : MSDISPMODE_PERPIXEL;
+      } else {
+         wm.MultisampleRasterizationMode = MSRASTMODE_OFF_PIXEL;
+         wm.MultisampleDispatchMode = MSDISPMODE_PERSAMPLE;
+      }
    }
 }
 
 
 static void
-gen6_blorp_emit_depth_disable(struct brw_context *brw,
-                              const struct brw_blorp_params *params)
+blorp_emit_depth_stencil_config(struct brw_context *brw,
+                                const struct brw_blorp_params *params)
 {
    brw_emit_depth_stall_flushes(brw);
 
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (7 - 2));
-   OUT_BATCH((BRW_DEPTHFORMAT_D32_FLOAT << 18) |
-             (BRW_SURFACE_NULL << 29));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
+   blorp_emit(brw, GENX(3DSTATE_DEPTH_BUFFER), db) {
+      switch (params->depth.surf.dim) {
+      case ISL_SURF_DIM_1D:
+         db.SurfaceType = SURFTYPE_1D;
+         break;
+      case ISL_SURF_DIM_2D:
+         db.SurfaceType = SURFTYPE_2D;
+         break;
+      case ISL_SURF_DIM_3D:
+         db.SurfaceType = SURFTYPE_3D;
+         break;
+      }
 
-   BEGIN_BATCH(3);
-   OUT_BATCH(_3DSTATE_HIER_DEPTH_BUFFER << 16 | (3 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
+      db.SurfaceFormat = params->depth_format;
 
-   BEGIN_BATCH(3);
-   OUT_BATCH(_3DSTATE_STENCIL_BUFFER << 16 | (3 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
+      db.TiledSurface = true;
+      db.TileWalk = TILEWALK_YMAJOR;
+      db.MIPMapLayoutMode = MIPLAYOUT_BELOW;
+
+      db.HierarchicalDepthBufferEnable = true;
+      db.SeparateStencilBufferEnable = true;
+
+      db.Width = params->depth.surf.logical_level0_px.width - 1;
+      db.Height = params->depth.surf.logical_level0_px.height - 1;
+      db.RenderTargetViewExtent = db.Depth =
+         MAX2(params->depth.surf.logical_level0_px.depth,
+              params->depth.surf.logical_level0_px.array_len) - 1;
+
+      db.LOD = params->depth.view.base_level;
+      db.MinimumArrayElement = params->depth.view.base_array_layer;
+
+      db.SurfacePitch = params->depth.surf.row_pitch - 1;
+      db.SurfaceBaseAddress = (struct blorp_address) {
+         .buffer = params->depth.bo,
+         .read_domains = I915_GEM_DOMAIN_RENDER,
+         .write_domain = I915_GEM_DOMAIN_RENDER,
+         .offset = params->depth.offset,
+      };
+   }
+
+   blorp_emit(brw, GENX(3DSTATE_HIER_DEPTH_BUFFER), hiz) {
+      hiz.SurfacePitch = params->depth.aux_surf.row_pitch - 1;
+      hiz.SurfaceBaseAddress = (struct blorp_address) {
+         .buffer = params->depth.aux_bo,
+         .read_domains = I915_GEM_DOMAIN_RENDER,
+         .write_domain = I915_GEM_DOMAIN_RENDER,
+         .offset = params->depth.aux_offset,
+      };
+   }
+
+   blorp_emit(brw, GENX(3DSTATE_STENCIL_BUFFER), sb);
 }
 
-
-/* 3DSTATE_CLEAR_PARAMS
- *
- * From the Sandybridge PRM, Volume 2, Part 1, Section 3DSTATE_CLEAR_PARAMS:
- *   [DevSNB] 3DSTATE_CLEAR_PARAMS packet must follow the DEPTH_BUFFER_STATE
- *   packet when HiZ is enabled and the DEPTH_BUFFER_STATE changes.
- */
-static void
-gen6_blorp_emit_clear_params(struct brw_context *brw,
-                             const struct brw_blorp_params *params)
-{
-   BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_CLEAR_PARAMS << 16 |
-	     GEN5_DEPTH_CLEAR_VALID |
-	     (2 - 2));
-   OUT_BATCH(params->depth.clear_color.u32[0]);
-   ADVANCE_BATCH();
-}
 
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
 static void
-gen6_blorp_emit_viewport_state(struct brw_context *brw,
-			       const struct brw_blorp_params *params)
-{
-   struct brw_cc_viewport *ccv;
-   uint32_t cc_vp_offset;
-
-   ccv = (struct brw_cc_viewport *)brw_state_batch(brw, AUB_TRACE_CC_VP_STATE,
-						   sizeof(*ccv), 32,
-						   &cc_vp_offset);
-
-   ccv->min_depth = 0.0;
-   ccv->max_depth = 1.0;
-
-   BEGIN_BATCH(4);
-   OUT_BATCH(_3DSTATE_VIEWPORT_STATE_POINTERS << 16 | (4 - 2) |
-	     GEN6_CC_VIEWPORT_MODIFY);
-   OUT_BATCH(0); /* clip VP */
-   OUT_BATCH(0); /* SF VP */
-   OUT_BATCH(cc_vp_offset);
-   ADVANCE_BATCH();
-}
-
-
-/* 3DPRIMITIVE */
-static void
-gen6_blorp_emit_primitive(struct brw_context *brw,
+blorp_emit_viewport_state(struct brw_context *brw,
                           const struct brw_blorp_params *params)
 {
-   BEGIN_BATCH(6);
-   OUT_BATCH(CMD_3D_PRIM << 16 | (6 - 2) |
-             _3DPRIM_RECTLIST << GEN4_3DPRIM_TOPOLOGY_TYPE_SHIFT |
-             GEN4_3DPRIM_VERTEXBUFFER_ACCESS_SEQUENTIAL);
-   OUT_BATCH(3); /* vertex count per instance */
-   OUT_BATCH(0);
-   OUT_BATCH(params->num_layers); /* instance count */
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
+   uint32_t cc_vp_offset;
+
+   void *state = brw_state_batch(brw, AUB_TRACE_CC_VP_STATE,
+                                 GENX(CC_VIEWPORT_length) * 4, 32,
+                                 &cc_vp_offset);
+
+   GENX(CC_VIEWPORT_pack)(brw, state,
+      &(struct GENX(CC_VIEWPORT)) {
+         .MinimumDepth = 0.0,
+         .MaximumDepth = 1.0,
+      });
+
+   blorp_emit(brw, GENX(3DSTATE_VIEWPORT_STATE_POINTERS), vsp) {
+      vsp.CCViewportStateChange = true;
+      vsp.PointertoCC_VIEWPORT = cc_vp_offset;
+   }
 }
+
 
 /**
  * \brief Execute a blit or render pass operation.
@@ -514,18 +316,52 @@ gen6_blorp_exec(struct brw_context *brw,
    brw_upload_state_base_address(brw);
 
    gen6_blorp_emit_vertices(brw, params);
-   gen6_blorp_emit_urb_config(brw, params);
+
+   /* 3DSTATE_URB
+    *
+    * Assign the entire URB to the VS. Even though the VS disabled, URB space
+    * is still needed because the clipper loads the VUE's from the URB. From
+    * the Sandybridge PRM, Volume 2, Part 1, Section 3DSTATE,
+    * Dword 1.15:0 "VS Number of URB Entries":
+    *     This field is always used (even if VS Function Enable is DISABLED).
+    *
+    * The warning below appears in the PRM (Section 3DSTATE_URB), but we can
+    * safely ignore it because this batch contains only one draw call.
+    *     Because of URB corruption caused by allocating a previous GS unit
+    *     URB entry to the VS unit, software is required to send a “GS NULL
+    *     Fence” (Send URB fence with VS URB size == 1 and GS URB size == 0)
+    *     plus a dummy DRAW call before any case where VS will be taking over
+    *     GS URB space.
+    */
+   blorp_emit(brw, GENX(3DSTATE_URB), urb) {
+      urb.VSNumberofURBEntries = brw->urb.max_vs_entries;
+   }
+
    if (params->wm_prog_data) {
       cc_blend_state_offset = gen6_blorp_emit_blend_state(brw, params);
       cc_state_offset = gen6_blorp_emit_cc_state(brw);
    }
    depthstencil_offset = gen6_blorp_emit_depth_stencil_state(brw, params);
-   gen6_blorp_emit_cc_state_pointers(brw, params, cc_blend_state_offset,
-                                     depthstencil_offset, cc_state_offset);
 
-   gen6_blorp_emit_constant_disable(brw, _3DSTATE_CONSTANT_VS);
-   gen6_blorp_emit_constant_disable(brw, _3DSTATE_CONSTANT_GS);
-   gen6_blorp_emit_constant_disable(brw, _3DSTATE_CONSTANT_PS);
+   /* 3DSTATE_CC_STATE_POINTERS
+    *
+    * The pointer offsets are relative to
+    * CMD_STATE_BASE_ADDRESS.DynamicStateBaseAddress.
+    *
+    * The HiZ op doesn't use BLEND_STATE or COLOR_CALC_STATE.
+    */
+   blorp_emit(brw, GENX(3DSTATE_CC_STATE_POINTERS), cc) {
+      cc.BLEND_STATEChange = true;
+      cc.COLOR_CALC_STATEChange = true;
+      cc.DEPTH_STENCIL_STATEChange = true;
+      cc.PointertoBLEND_STATE = cc_blend_state_offset;
+      cc.PointertoCOLOR_CALC_STATE = cc_state_offset;
+      cc.PointertoDEPTH_STENCIL_STATE = depthstencil_offset;
+   }
+
+   blorp_emit(brw, GENX(3DSTATE_CONSTANT_VS), vs);
+   blorp_emit(brw, GENX(3DSTATE_CONSTANT_GS), gs);
+   blorp_emit(brw, GENX(3DSTATE_CONSTANT_PS), ps);
 
    if (params->wm_prog_data) {
       uint32_t wm_surf_offset_renderbuffer;
@@ -544,32 +380,86 @@ gen6_blorp_exec(struct brw_context *brw,
          gen6_blorp_emit_binding_table(brw,
                                        wm_surf_offset_renderbuffer,
                                        wm_surf_offset_texture);
-      gen6_blorp_emit_binding_table_pointers(brw, wm_bind_bo_offset);
+
+      blorp_emit(brw, GENX(3DSTATE_BINDING_TABLE_POINTERS), bt) {
+         bt.PSBindingTableChange = true;
+         bt.PointertoPSBindingTable = wm_bind_bo_offset;
+      }
    }
 
    if (params->src.bo) {
       const uint32_t sampler_offset =
-         gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
-      gen6_blorp_emit_sampler_state_pointers(brw, sampler_offset);
+         gen6_blorp_emit_sampler_state(brw, MAPFILTER_LINEAR, 0, true);
+
+      blorp_emit(brw, GENX(3DSTATE_SAMPLER_STATE_POINTERS), ssp) {
+         ssp.VSSamplerStateChange = true;
+         ssp.GSSamplerStateChange = true;
+         ssp.PSSamplerStateChange = true;
+         ssp.PointertoPSSamplerState = sampler_offset;
+      }
    }
 
    gen6_emit_3dstate_multisample(brw, params->dst.surf.samples);
-   gen6_emit_3dstate_sample_mask(brw,
-                                 params->dst.surf.samples > 1 ?
-                                 (1 << params->dst.surf.samples) - 1 : 1);
 
-   gen6_blorp_emit_vs_disable(brw, params);
-   gen6_blorp_emit_gs_disable(brw, params);
-   gen6_blorp_emit_clip_disable(brw);
-   gen6_blorp_emit_sf_config(brw, params);
-   gen6_blorp_emit_wm_config(brw, params);
-   gen6_blorp_emit_viewport_state(brw, params);
+   blorp_emit(brw, GENX(3DSTATE_SAMPLE_MASK), mask) {
+      mask.SampleMask = (1 << params->dst.surf.samples) - 1;
+   }
 
-   if (params->depth.bo)
-      gen6_blorp_emit_depth_stencil_config(brw, params);
-   else
-      gen6_blorp_emit_depth_disable(brw, params);
-   gen6_blorp_emit_clear_params(brw, params);
-   gen6_blorp_emit_drawing_rectangle(brw, params);
-   gen6_blorp_emit_primitive(brw, params);
+   /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
+    * 3DSTATE_VS, Dword 5.0 "VS Function Enable":
+    *
+    *   [DevSNB] A pipeline flush must be programmed prior to a
+    *   3DSTATE_VS command that causes the VS Function Enable to
+    *   toggle. Pipeline flush can be executed by sending a PIPE_CONTROL
+    *   command with CS stall bit set and a post sync operation.
+    *
+    * We've already done one at the start of the BLORP operation.
+    */
+   blorp_emit(brw, GENX(3DSTATE_VS), vs);
+   blorp_emit(brw, GENX(3DSTATE_GS), gs);
+
+   blorp_emit(brw, GENX(3DSTATE_CLIP), clip) {
+      clip.PerspectiveDivideDisable = true;
+   }
+
+   blorp_emit_sf_config(brw, params);
+   blorp_emit_wm_config(brw, params);
+
+   blorp_emit_viewport_state(brw, params);
+
+   if (params->depth.bo) {
+      blorp_emit_depth_stencil_config(brw, params);
+   } else {
+      brw_emit_depth_stall_flushes(brw);
+
+      blorp_emit(brw, GENX(3DSTATE_DEPTH_BUFFER), db) {
+         db.SurfaceType = SURFTYPE_NULL;
+         db.SurfaceFormat = D32_FLOAT;
+      }
+      blorp_emit(brw, GENX(3DSTATE_HIER_DEPTH_BUFFER), hiz);
+      blorp_emit(brw, GENX(3DSTATE_STENCIL_BUFFER), sb);
+   }
+
+   /* 3DSTATE_CLEAR_PARAMS
+    *
+    * From the Sandybridge PRM, Volume 2, Part 1, Section 3DSTATE_CLEAR_PARAMS:
+    *   [DevSNB] 3DSTATE_CLEAR_PARAMS packet must follow the DEPTH_BUFFER_STATE
+    *   packet when HiZ is enabled and the DEPTH_BUFFER_STATE changes.
+    */
+   blorp_emit(brw, GENX(3DSTATE_CLEAR_PARAMS), clear) {
+      clear.DepthClearValueValid = true;
+      clear.DepthClearValue = params->depth.clear_color.u32[0];
+   }
+
+   blorp_emit(brw, GENX(3DSTATE_DRAWING_RECTANGLE), rect) {
+      rect.ClippedDrawingRectangleXMax = MAX2(params->x1, params->x0) - 1;
+      rect.ClippedDrawingRectangleYMax = MAX2(params->y1, params->y0) - 1;
+   }
+
+   blorp_emit(brw, GENX(3DPRIMITIVE), prim) {
+      prim.VertexAccessType = SEQUENTIAL;
+      prim.PrimitiveTopologyType = _3DPRIM_RECTLIST;
+      prim.VertexCountPerInstance = 3;
+      prim.InstanceCount = params->num_layers;
+   }
 }
