@@ -248,10 +248,14 @@ st_bufferobj_data(struct gl_context *ctx,
    /* Set usage. */
    if (st_obj->Base.Immutable) {
       /* BufferStorage */
-      if (storageFlags & GL_CLIENT_STORAGE_BIT)
-         pipe_usage = PIPE_USAGE_STAGING;
-      else
+      if (storageFlags & GL_CLIENT_STORAGE_BIT) {
+         if (storageFlags & GL_MAP_READ_BIT)
+            pipe_usage = PIPE_USAGE_STAGING;
+         else
+            pipe_usage = PIPE_USAGE_STREAM;
+      } else {
          pipe_usage = PIPE_USAGE_DEFAULT;
+      }
    }
    else {
       /* BufferData */
