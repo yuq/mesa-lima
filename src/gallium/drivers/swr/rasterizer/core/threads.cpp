@@ -306,8 +306,48 @@ bool CheckDependency(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t lastReti
     return pDC->dependent && IDComparesLess(lastRetiredDraw, pDC->drawId - 1);
 }
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Update client stats.
+INLINE void UpdateClientStats(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+{
+    if ((pContext->pfnUpdateStats == nullptr) || (GetApiState(pDC).enableStats == false))
+    {
+        return;
+    }
+
+    DRAW_DYNAMIC_STATE& dynState = pDC->dynState;
+    SWR_STATS stats{ 0 };
+
+    // Sum up stats across all workers before sending to client.
+    for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
+    {
+        stats.DepthPassCount += dynState.stats[i].DepthPassCount;
+        stats.IaVertices     += dynState.stats[i].IaVertices;
+        stats.IaPrimitives   += dynState.stats[i].IaPrimitives;
+        stats.VsInvocations  += dynState.stats[i].VsInvocations;
+        stats.HsInvocations  += dynState.stats[i].HsInvocations;
+        stats.DsInvocations  += dynState.stats[i].DsInvocations;
+        stats.GsInvocations  += dynState.stats[i].GsInvocations;
+        stats.PsInvocations  += dynState.stats[i].PsInvocations;
+        stats.CInvocations   += dynState.stats[i].CInvocations;
+        stats.CsInvocations  += dynState.stats[i].CsInvocations;
+        stats.CPrimitives    += dynState.stats[i].CPrimitives;
+        stats.GsPrimitives   += dynState.stats[i].GsPrimitives;
+
+        for (uint32_t stream = 0; stream < MAX_SO_STREAMS; ++stream)
+        {
+            stats.SoPrimStorageNeeded[stream] += dynState.stats[i].SoPrimStorageNeeded[stream];
+            stats.SoNumPrimsWritten[stream]   += dynState.stats[i].SoNumPrimsWritten[stream];
+        }
+    }
+
+    pContext->pfnUpdateStats(GetPrivateState(pDC), &stats);
+}
+
 INLINE void ExecuteCallbacks(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
+    UpdateClientStats(pContext, pDC);
+
     if (pDC->retireCallback.pfnCallbackFunc)
     {
         pDC->retireCallback.pfnCallbackFunc(pDC->retireCallback.userData,

@@ -88,6 +88,13 @@ typedef void(SWR_API *PFN_CLEAR_TILE)(HANDLE hPrivateContext,
 typedef void(SWR_API *PFN_UPDATE_SO_WRITE_OFFSET)(HANDLE hPrivateContext,
     uint32_t soBufferSlot, uint32_t soWriteOffset);
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Callback to allow driver to update their copy of stats.
+/// @param hPrivateContext - handle to private data
+/// @param pStats - pointer to draw stats
+typedef void(SWR_API *PFN_UPDATE_STATS)(HANDLE hPrivateContext,
+    const SWR_STATS* pStats);
+
 class BucketManager;
 
 //////////////////////////////////////////////////////////////////////////
@@ -118,6 +125,7 @@ struct SWR_CREATECONTEXT_INFO
     PFN_STORE_TILE pfnStoreTile;
     PFN_CLEAR_TILE pfnClearTile;
     PFN_UPDATE_SO_WRITE_OFFSET pfnUpdateSoWriteOffset;
+    PFN_UPDATE_STATS pfnUpdateStats;
 
     // Pointer to rdtsc buckets mgr returned to the caller.
     // Only populated when KNOB_ENABLE_RDTSC is set

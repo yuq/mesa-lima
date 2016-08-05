@@ -372,6 +372,8 @@ struct DRAW_DYNAMIC_STATE
     ///@todo Currently assumes only a single FE can do stream output for a draw.
     uint32_t SoWriteOffset[4];
     bool     SoWriteOffsetDirty[4];
+
+    SWR_STATS stats[KNOB_MAX_NUM_THREADS];
 };
 
 // Draw Context
@@ -480,6 +482,7 @@ struct SWR_CONTEXT
     PFN_STORE_TILE pfnStoreTile;
     PFN_CLEAR_TILE pfnClearTile;
     PFN_UPDATE_SO_WRITE_OFFSET pfnUpdateSoWriteOffset;
+    PFN_UPDATE_STATS pfnUpdateStats;
 
     // Global Stats
     SWR_STATS stats[KNOB_MAX_NUM_THREADS];
@@ -496,4 +499,4 @@ struct SWR_CONTEXT
 void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId);
 void WakeAllThreads(SWR_CONTEXT *pContext);
 
-#define UPDATE_STAT(name, count) if (GetApiState(pDC).enableStats) { pContext->stats[workerId].name += count; }
+#define UPDATE_STAT(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.stats[workerId].name += count; }

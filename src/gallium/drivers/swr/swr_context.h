@@ -92,6 +92,7 @@ struct swr_draw_context {
    float userClipPlanes[PIPE_MAX_CLIP_PLANES][4];
 
    SWR_SURFACE_STATE renderTargets[SWR_NUM_ATTACHMENTS];
+   void *swr_ctx;
 };
 
 /* gen_llvm_types FINI */
@@ -157,6 +158,8 @@ struct swr_context {
    /* SWR private state - draw context */
    struct swr_draw_context swrDC;
 
+   SWR_STATS stats;
+
    unsigned dirty; /**< Mask of SWR_NEW_x flags */
 };
 
@@ -171,6 +174,7 @@ swr_update_draw_context(struct swr_context *ctx)
 {
    swr_draw_context *pDC =
       (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+   ctx->swrDC.swr_ctx = ctx;
    memcpy(pDC, &ctx->swrDC, sizeof(swr_draw_context));
 }
 

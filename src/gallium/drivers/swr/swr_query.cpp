@@ -91,18 +91,17 @@ swr_gather_stats(struct pipe_context *pipe, struct swr_query *pq)
       /* nothing to do here */
       break;
    default:
-      /*
-       * All other results are collected from SwrCore counters via
-       * SwrGetStats. This returns immediately, but results are later filled
-       * in by the backend.  Fence status is the only indication of
-       * completion.  */
-      SwrGetStats(ctx->swrContext, &result->core);
+      /* TODO: should fence instead of stalling pipeline */
+      SwrWaitForIdle(ctx->swrContext);
+      memcpy(&result->core, &ctx->stats, sizeof(result->core));
 
+#if 0
       if (!pq->fence) {
          struct swr_screen *screen = swr_screen(pipe->screen);
          swr_fence_reference(pipe->screen, &pq->fence, screen->flush_fence);
       }
       swr_fence_submit(ctx, pq->fence);
+#endif
 
       /* Only change stat collection if there are no active queries */
       if (ctx->active_queries == 0)

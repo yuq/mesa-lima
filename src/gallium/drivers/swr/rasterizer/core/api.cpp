@@ -143,6 +143,7 @@ HANDLE SwrCreateContext(
     pContext->pfnStoreTile = pCreateInfo->pfnStoreTile;
     pContext->pfnClearTile = pCreateInfo->pfnClearTile;
     pContext->pfnUpdateSoWriteOffset = pCreateInfo->pfnUpdateSoWriteOffset;
+    pContext->pfnUpdateStats = pCreateInfo->pfnUpdateStats;
 
     // pass pointer to bucket manager back to caller
 #ifdef KNOB_ENABLE_RDTSC
@@ -1519,18 +1520,7 @@ void SwrGetStats(
     HANDLE hContext,
     SWR_STATS* pStats)
 {
-    SWR_CONTEXT *pContext = GetContext(hContext);
-    DRAW_CONTEXT* pDC = GetDrawContext(pContext);
-
-    pDC->FeWork.type = QUERYSTATS;
-    pDC->FeWork.pfnWork = ProcessQueryStats;
-    pDC->FeWork.desc.queryStats.pStats = pStats;
-
-    // cannot execute until all previous draws have completed
-    pDC->dependent = true;
-
-    //enqueue
-    QueueDraw(pContext);
+    SWR_ASSERT(0);
 }
 
 //////////////////////////////////////////////////////////////////////////

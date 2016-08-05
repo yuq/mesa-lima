@@ -344,6 +344,36 @@ swr_render_condition(struct pipe_context *pipe,
    ctx->render_cond_cond = condition;
 }
 
+static void
+swr_UpdateStats(HANDLE hPrivateContext, const SWR_STATS *pStats)
+{
+   swr_draw_context *pDC = (swr_draw_context*)hPrivateContext;
+
+   if (!pDC)
+      return;
+
+   struct swr_context *ctx = (struct swr_context *)pDC->swr_ctx;
+
+   SWR_STATS *pSwrStats = &ctx->stats;
+   pSwrStats->DepthPassCount += pStats->DepthPassCount;
+   pSwrStats->IaVertices += pStats->IaVertices;
+   pSwrStats->IaPrimitives += pStats->IaPrimitives;
+   pSwrStats->VsInvocations += pStats->VsInvocations;
+   pSwrStats->HsInvocations += pStats->HsInvocations;
+   pSwrStats->DsInvocations += pStats->DsInvocations;
+   pSwrStats->GsInvocations += pStats->GsInvocations;
+   pSwrStats->PsInvocations += pStats->PsInvocations;
+   pSwrStats->CsInvocations += pStats->CsInvocations;
+   pSwrStats->CInvocations += pStats->CInvocations;
+   pSwrStats->CPrimitives += pStats->CPrimitives;
+   pSwrStats->GsPrimitives += pStats->GsPrimitives;
+
+   for (unsigned i = 0; i < 4; i++) {
+      pSwrStats->SoPrimStorageNeeded[i] += pStats->SoPrimStorageNeeded[i];
+      pSwrStats->SoNumPrimsWritten[i] += pStats->SoNumPrimsWritten[i];
+   }
+}
+
 struct pipe_context *
 swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
 {
@@ -358,6 +388,7 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
    createInfo.pfnLoadTile = swr_LoadHotTile;
    createInfo.pfnStoreTile = swr_StoreHotTile;
    createInfo.pfnClearTile = swr_StoreHotTileClear;
+   createInfo.pfnUpdateStats = swr_UpdateStats;
    ctx->swrContext = SwrCreateContext(&createInfo);
 
    /* Init Load/Store/ClearTiles Tables */
