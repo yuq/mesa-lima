@@ -1427,10 +1427,11 @@ ntq_setup_inputs(struct vc4_compile *c)
                 if (c->stage == QSTAGE_FRAG) {
                         if (var->data.location == VARYING_SLOT_POS) {
                                 emit_fragcoord_input(c, loc);
-                        } else if (var->data.location >= VARYING_SLOT_VAR0 &&
-                                   (c->fs_key->point_sprite_mask &
-                                    (1 << (var->data.location -
-                                           VARYING_SLOT_VAR0)))) {
+                        } else if (var->data.location == VARYING_SLOT_PNTC ||
+                                   (var->data.location >= VARYING_SLOT_VAR0 &&
+                                    (c->fs_key->point_sprite_mask &
+                                     (1 << (var->data.location -
+                                            VARYING_SLOT_VAR0))))) {
                                 c->inputs[loc * 4 + 0] = c->point_x;
                                 c->inputs[loc * 4 + 1] = c->point_y;
                         } else {
