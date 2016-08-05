@@ -158,8 +158,18 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
         default: SWR_ASSERT(0, "Unsupported index type"); vIndices = nullptr; break;
     }
 
+    Value* vVertexId = vIndices;
+    if (fetchState.bVertexIDOffsetEnable)
+    {
+        // Assuming one of baseVertex or startVertex is 0, so adding both should be functionally correct
+        Value* vBaseVertex = VBROADCAST(LOAD(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_BaseVertex }));
+        Value* vStartVertex = VBROADCAST(LOAD(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_StartVertex }));
+        vVertexId = ADD(vIndices, vBaseVertex);
+        vVertexId = ADD(vVertexId, vStartVertex);
+    }
+
     // store out vertex IDs
-    STORE(vIndices, GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
+    STORE(vVertexId, GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID }));
 
     // store out cut mask if enabled
     if (fetchState.bEnableCutIndex)
