@@ -57,42 +57,43 @@ emit_rs_state(struct anv_pipeline *pipeline,
 
    struct GENX(3DSTATE_SF) sf = {
       GENX(3DSTATE_SF_header),
-      .ViewportTransformEnable = !(extra && extra->use_rectlist),
-      .TriangleStripListProvokingVertexSelect = 0,
-      .LineStripListProvokingVertexSelect = 0,
-      .TriangleFanProvokingVertexSelect = 1,
-      .PointWidthSource = Vertex,
-      .PointWidth = 1.0,
    };
+
+   sf.ViewportTransformEnable = !(extra && extra->use_rectlist);
+   sf.TriangleStripListProvokingVertexSelect = 0;
+   sf.LineStripListProvokingVertexSelect = 0;
+   sf.TriangleFanProvokingVertexSelect = 1;
+   sf.PointWidthSource = Vertex;
+   sf.PointWidth = 1.0;
 
    GENX(3DSTATE_SF_pack)(NULL, pipeline->gen8.sf, &sf);
 
    struct GENX(3DSTATE_RASTER) raster = {
       GENX(3DSTATE_RASTER_header),
-
-      /* For details on 3DSTATE_RASTER multisample state, see the BSpec table
-       * "Multisample Modes State".
-       */
-      .DXMultisampleRasterizationEnable = samples > 1,
-      .ForcedSampleCount = FSC_NUMRASTSAMPLES_0,
-      .ForceMultisampling = false,
-
-      .FrontWinding = vk_to_gen_front_face[info->frontFace],
-      .CullMode = vk_to_gen_cullmode[info->cullMode],
-      .FrontFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
-      .BackFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
-      .ScissorRectangleEnable = !(extra && extra->use_rectlist),
-#if GEN_GEN == 8
-      .ViewportZClipTestEnable = !pipeline->depth_clamp_enable,
-#else
-      /* GEN9+ splits ViewportZClipTestEnable into near and far enable bits */
-      .ViewportZFarClipTestEnable = !pipeline->depth_clamp_enable,
-      .ViewportZNearClipTestEnable = !pipeline->depth_clamp_enable,
-#endif
-      .GlobalDepthOffsetEnableSolid = info->depthBiasEnable,
-      .GlobalDepthOffsetEnableWireframe = info->depthBiasEnable,
-      .GlobalDepthOffsetEnablePoint = info->depthBiasEnable,
    };
+
+   /* For details on 3DSTATE_RASTER multisample state, see the BSpec table
+    * "Multisample Modes State".
+    */
+   raster.DXMultisampleRasterizationEnable = samples > 1;
+   raster.ForcedSampleCount = FSC_NUMRASTSAMPLES_0;
+   raster.ForceMultisampling = false;
+
+   raster.FrontWinding = vk_to_gen_front_face[info->frontFace];
+   raster.CullMode = vk_to_gen_cullmode[info->cullMode];
+   raster.FrontFaceFillMode = vk_to_gen_fillmode[info->polygonMode];
+   raster.BackFaceFillMode = vk_to_gen_fillmode[info->polygonMode];
+   raster.ScissorRectangleEnable = !(extra && extra->use_rectlist);
+#if GEN_GEN == 8
+   raster.ViewportZClipTestEnable = !pipeline->depth_clamp_enable;
+#else
+   /* GEN9+ splits ViewportZClipTestEnable into near and far enable bits */
+   raster.ViewportZFarClipTestEnable = !pipeline->depth_clamp_enable;
+   raster.ViewportZNearClipTestEnable = !pipeline->depth_clamp_enable;
+#endif
+   raster.GlobalDepthOffsetEnableSolid = info->depthBiasEnable;
+   raster.GlobalDepthOffsetEnableWireframe = info->depthBiasEnable;
+   raster.GlobalDepthOffsetEnablePoint = info->depthBiasEnable;
 
    GENX(3DSTATE_RASTER_pack)(NULL, pipeline->gen8.raster, &raster);
 }
