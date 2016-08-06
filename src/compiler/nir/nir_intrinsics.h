@@ -405,3 +405,6 @@ STORE(ssbo, 3, 1, WRMASK, xx, xx, 0)
 STORE(shared, 2, 2, BASE, WRMASK, xx, 0)
 
 LAST_INTRINSIC(store_shared)
+
+#undef INTRINSIC
+#undef LAST_INTRINSIC

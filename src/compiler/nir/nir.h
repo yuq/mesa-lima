@@ -868,9 +868,6 @@ typedef enum {
    nir_num_intrinsics = nir_last_intrinsic + 1
 } nir_intrinsic_op;
 
-#undef INTRINSIC
-#undef LAST_INTRINSIC
-
 #define NIR_INTRINSIC_MAX_CONST_INDEX 3
 
 /** Represents an intrinsic
