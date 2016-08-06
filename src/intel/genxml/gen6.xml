@@ -1365,12 +1365,12 @@
     <field name="VS Function Enable" start="160" end="160" type="bool"/>
   </instruction>
 
-  <instruction name="3DSTATE_WM" bias="2" length="3">
+  <instruction name="3DSTATE_WM" bias="2" length="9">
     <field name="Command Type" start="29" end="31" type="uint" default="3"/>
     <field name="Command SubType" start="27" end="28" type="uint" default="3"/>
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="0"/>
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="20"/>
-    <field name="DWord Length" start="0" end="7" type="uint" default="1"/>
+    <field name="DWord Length" start="0" end="7" type="uint" default="7"/>
     <field name="Kernel Start Pointer[0]" start="38" end="63" type="offset"/>
     <field name="Single Program Flow (SPF)" start="95" end="95" type="uint"/>
     <field name="Vector Mask Enable (VME)" start="94" end="94" type="uint"/>
