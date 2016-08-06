@@ -65,8 +65,6 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .PointWidth = 1.0,
    };
 
-   /* FINISHME: VkBool32 rasterizerDiscardEnable; */
-
    GENX(3DSTATE_SF_pack)(NULL, pipeline->gen8.sf, &sf);
 
    struct GENX(3DSTATE_RASTER) raster = {
