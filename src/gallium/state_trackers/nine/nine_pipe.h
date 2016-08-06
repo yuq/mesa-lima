@@ -330,6 +330,7 @@ d3d9_to_pipe_format_checked(struct pipe_screen *screen,
         case D3DFMT_D24X8:
             if (format_check_internal(PIPE_FORMAT_Z24X8_UNORM))
                 return PIPE_FORMAT_Z24X8_UNORM;
+            break;
         /* Support for X8L8V8U8 bumpenvmap format with lighting bits.
          * X8L8V8U8 is commonly supported among dx9 cards.
          * To avoid precision loss, we use PIPE_FORMAT_R32G32B32X32_FLOAT,
