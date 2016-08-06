@@ -465,6 +465,7 @@ nir_copy_var(nir_builder *build, nir_variable *dest, nir_variable *src)
    nir_builder_instr_insert(build, &copy->instr);
 }
 
+/* Generic builder for system values. */
 static inline nir_ssa_def *
 nir_load_system_value(nir_builder *build, nir_intrinsic_op op, int index)
 {
@@ -476,6 +477,20 @@ nir_load_system_value(nir_builder *build, nir_intrinsic_op op, int index)
    nir_builder_instr_insert(build, &load->instr);
    return &load->dest.ssa;
 }
+
+/* Generate custom builders for system values. */
+#define INTRINSIC(name, num_srcs, src_components, has_dest, dest_components, \
+                  num_variables, num_indices, idx0, idx1, idx2, flags)
+#define LAST_INTRINSIC(name)
+
+#define DEFINE_SYSTEM_VALUE(name)                                        \
+   static inline nir_ssa_def *                                           \
+   nir_load_##name(nir_builder *build)                                   \
+   {                                                                     \
+      return nir_load_system_value(build, nir_intrinsic_load_##name, 0); \
+   }                                                                     \
+
+#include "nir_intrinsics.h"
 
 static inline nir_ssa_def *
 nir_load_barycentric(nir_builder *build, nir_intrinsic_op op,

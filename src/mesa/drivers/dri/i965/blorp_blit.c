@@ -106,7 +106,7 @@ blorp_blit_get_frag_coords(nir_builder *b,
 
    if (key->persample_msaa_dispatch) {
       return nir_vec3(b, nir_channel(b, coord, 0), nir_channel(b, coord, 1),
-         nir_load_system_value(b, nir_intrinsic_load_sample_id, 0));
+                      nir_load_sample_id(b));
    } else {
       return nir_vec2(b, nir_channel(b, coord, 0), nir_channel(b, coord, 1));
    }
