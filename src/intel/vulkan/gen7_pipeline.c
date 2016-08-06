@@ -34,47 +34,6 @@
 
 #include "genX_pipeline_util.h"
 
-static void
-gen7_emit_rs_state(struct anv_pipeline *pipeline,
-                   const VkPipelineRasterizationStateCreateInfo *info,
-                   const struct anv_graphics_pipeline_create_info *extra)
-{
-   struct GENX(3DSTATE_SF) sf = {
-      GENX(3DSTATE_SF_header),
-
-      /* LegacyGlobalDepthBiasEnable */
-
-      .StatisticsEnable                         = true,
-      .FrontFaceFillMode                        = vk_to_gen_fillmode[info->polygonMode],
-      .BackFaceFillMode                         = vk_to_gen_fillmode[info->polygonMode],
-      .ViewportTransformEnable                  = !(extra && extra->use_rectlist),
-      .FrontWinding                             = vk_to_gen_front_face[info->frontFace],
-      /* bool                                         AntiAliasingEnable; */
-
-      .CullMode                                 = vk_to_gen_cullmode[info->cullMode],
-
-      /* uint32_t                                     LineEndCapAntialiasingRegionWidth; */
-      .ScissorRectangleEnable                   =  !(extra && extra->use_rectlist),
-
-      /* uint32_t                                     MultisampleRasterizationMode; */
-      /* bool                                         LastPixelEnable; */
-
-      .TriangleStripListProvokingVertexSelect   = 0,
-      .LineStripListProvokingVertexSelect       = 0,
-      .TriangleFanProvokingVertexSelect         = 1,
-
-      /* uint32_t                                     AALineDistanceMode; */
-      /* uint32_t                                     VertexSubPixelPrecisionSelect; */
-      .PointWidthSource                         = Vertex,
-      .PointWidth                               = 1.0,
-      .GlobalDepthOffsetEnableSolid             = info->depthBiasEnable,
-      .GlobalDepthOffsetEnableWireframe         = info->depthBiasEnable,
-      .GlobalDepthOffsetEnablePoint             = info->depthBiasEnable,
-   };
-
-   GENX(3DSTATE_SF_pack)(NULL, &pipeline->gen7.sf, &sf);
-}
-
 VkResult
 genX(graphics_pipeline_create)(
     VkDevice                                    _device,
@@ -108,7 +67,7 @@ genX(graphics_pipeline_create)(
    emit_vertex_input(pipeline, pCreateInfo->pVertexInputState, extra);
 
    assert(pCreateInfo->pRasterizationState);
-   gen7_emit_rs_state(pipeline, pCreateInfo->pRasterizationState, extra);
+   emit_rs_state(pipeline, pCreateInfo->pRasterizationState, extra);
 
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
 

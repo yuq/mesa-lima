@@ -362,6 +362,67 @@ static const uint32_t vk_to_gen_front_face[] = {
    [VK_FRONT_FACE_CLOCKWISE]                 = 0
 };
 
+static void
+emit_rs_state(struct anv_pipeline *pipeline,
+              const VkPipelineRasterizationStateCreateInfo *info,
+              const struct anv_graphics_pipeline_create_info *extra)
+{
+   struct GENX(3DSTATE_SF) sf = {
+      GENX(3DSTATE_SF_header),
+   };
+
+   sf.ViewportTransformEnable = !(extra && extra->use_rectlist);
+   sf.StatisticsEnable = true;
+   sf.TriangleStripListProvokingVertexSelect = 0;
+   sf.LineStripListProvokingVertexSelect = 0;
+   sf.TriangleFanProvokingVertexSelect = 1;
+   sf.PointWidthSource = Vertex;
+   sf.PointWidth = 1.0;
+
+#if GEN_GEN >= 8
+   struct GENX(3DSTATE_RASTER) raster = {
+      GENX(3DSTATE_RASTER_header),
+   };
+#else
+#  define raster sf
+#endif
+
+   /* For details on 3DSTATE_RASTER multisample state, see the BSpec table
+    * "Multisample Modes State".
+    */
+#if GEN_GEN >= 8
+   raster.DXMultisampleRasterizationEnable = true;
+   raster.ForcedSampleCount = FSC_NUMRASTSAMPLES_0;
+   raster.ForceMultisampling = false;
+#endif
+
+   raster.FrontWinding = vk_to_gen_front_face[info->frontFace];
+   raster.CullMode = vk_to_gen_cullmode[info->cullMode];
+   raster.FrontFaceFillMode = vk_to_gen_fillmode[info->polygonMode];
+   raster.BackFaceFillMode = vk_to_gen_fillmode[info->polygonMode];
+   raster.ScissorRectangleEnable = !(extra && extra->use_rectlist);
+
+#if GEN_GEN >= 9
+   /* GEN9+ splits ViewportZClipTestEnable into near and far enable bits */
+   raster.ViewportZFarClipTestEnable = !pipeline->depth_clamp_enable;
+   raster.ViewportZNearClipTestEnable = !pipeline->depth_clamp_enable;
+#elif GEN_GEN >= 8
+   raster.ViewportZClipTestEnable = !pipeline->depth_clamp_enable;
+#endif
+
+   raster.GlobalDepthOffsetEnableSolid = info->depthBiasEnable;
+   raster.GlobalDepthOffsetEnableWireframe = info->depthBiasEnable;
+   raster.GlobalDepthOffsetEnablePoint = info->depthBiasEnable;
+
+#if GEN_GEN >= 8
+   GENX(3DSTATE_SF_pack)(NULL, pipeline->gen8.sf, &sf);
+   GENX(3DSTATE_RASTER_pack)(NULL, pipeline->gen8.raster, &raster);
+#else
+#  undef raster
+   GENX(3DSTATE_SF_pack)(NULL, &pipeline->gen7.sf, &sf);
+#endif
+}
+
 static const uint32_t vk_to_gen_logic_op[] = {
    [VK_LOGIC_OP_COPY]                        = LOGICOP_COPY,
    [VK_LOGIC_OP_CLEAR]                       = LOGICOP_CLEAR,
