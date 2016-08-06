@@ -32,97 +32,6 @@
 
 #include "blorp_priv.h"
 
-/* Once vertex fetcher has written full VUE entries with complete
- * header the space requirement is as follows per vertex (in bytes):
- *
- *     Header    Position    Program constants
- *   +--------+------------+-------------------+
- *   |   16   |     16     |      n x 16       |
- *   +--------+------------+-------------------+
- *
- * where 'n' stands for number of varying inputs expressed as vec4s.
- *
- * The URB size is in turn expressed in 64 bytes (512 bits).
- */
-static unsigned
-gen7_blorp_get_vs_entry_size(const struct brw_blorp_params *params)
-{
-    const unsigned num_varyings =
-       params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
-    const unsigned total_needed = 16 + 16 + num_varyings * 16;
-
-   return DIV_ROUND_UP(total_needed, 64);
-}
-
-/* 3DSTATE_URB_VS
- * 3DSTATE_URB_HS
- * 3DSTATE_URB_DS
- * 3DSTATE_URB_GS
- *
- * If the 3DSTATE_URB_VS is emitted, than the others must be also.
- * From the Ivybridge PRM, Volume 2 Part 1, section 1.7.1 3DSTATE_URB_VS:
- *
- *     3DSTATE_URB_HS, 3DSTATE_URB_DS, and 3DSTATE_URB_GS must also be
- *     programmed in order for the programming of this state to be
- *     valid.
- */
-void
-gen7_blorp_emit_urb_config(struct brw_context *brw,
-                           const struct brw_blorp_params *params)
-{
-   const unsigned vs_entry_size = gen7_blorp_get_vs_entry_size(params);
-
-   if (!(brw->ctx.NewDriverState & (BRW_NEW_CONTEXT | BRW_NEW_URB_SIZE)) &&
-       brw->urb.vsize >= vs_entry_size)
-      return;
-
-   brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
-
-   gen7_upload_urb(brw, vs_entry_size, false, false);
-}
-
-
-/* 3DSTATE_BLEND_STATE_POINTERS */
-void
-gen7_blorp_emit_blend_state_pointer(struct brw_context *brw,
-                                    uint32_t cc_blend_state_offset)
-{
-   BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_BLEND_STATE_POINTERS << 16 | (2 - 2));
-   OUT_BATCH(cc_blend_state_offset | 1);
-   ADVANCE_BATCH();
-}
-
-
-/* 3DSTATE_CC_STATE_POINTERS */
-void
-gen7_blorp_emit_cc_state_pointer(struct brw_context *brw,
-                                 uint32_t cc_state_offset)
-{
-   BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_CC_STATE_POINTERS << 16 | (2 - 2));
-   OUT_BATCH(cc_state_offset | 1);
-   ADVANCE_BATCH();
-}
-
-void
-gen7_blorp_emit_cc_viewport(struct brw_context *brw)
-{
-   struct brw_cc_viewport *ccv;
-   uint32_t cc_vp_offset;
-
-   ccv = (struct brw_cc_viewport *)brw_state_batch(brw, AUB_TRACE_CC_VP_STATE,
-						   sizeof(*ccv), 32,
-						   &cc_vp_offset);
-   ccv->min_depth = 0.0;
-   ccv->max_depth = 1.0;
-
-   BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_VIEWPORT_STATE_POINTERS_CC << 16 | (2 - 2));
-   OUT_BATCH(cc_vp_offset);
-   ADVANCE_BATCH();
-}
-
 
 /* 3DSTATE_DEPTH_STENCIL_STATE_POINTERS
  *
@@ -188,22 +97,6 @@ gen7_blorp_emit_hs_disable(struct brw_context *brw)
    OUT_BATCH(0);
    OUT_BATCH(0);
    OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
-
-/* 3DSTATE_TE
- *
- * Disable the tesselation engine.
- */
-void
-gen7_blorp_emit_te_disable(struct brw_context *brw)
-{
-   BEGIN_BATCH(4);
-   OUT_BATCH(_3DSTATE_TE << 16 | (4 - 2));
    OUT_BATCH(0);
    OUT_BATCH(0);
    OUT_BATCH(0);
@@ -460,27 +353,6 @@ gen7_blorp_emit_ps_config(struct brw_context *brw,
 }
 
 
-void
-gen7_blorp_emit_binding_table_pointers_ps(struct brw_context *brw,
-                                          uint32_t wm_bind_bo_offset)
-{
-   BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_BINDING_TABLE_POINTERS_PS << 16 | (2 - 2));
-   OUT_BATCH(wm_bind_bo_offset);
-   ADVANCE_BATCH();
-}
-
-
-void
-gen7_blorp_emit_sampler_state_pointers_ps(struct brw_context *brw,
-                                          uint32_t sampler_offset)
-{
-   BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_SAMPLER_STATE_POINTERS_PS << 16 | (2 - 2));
-   OUT_BATCH(sampler_offset);
-   ADVANCE_BATCH();
-}
-
 static void
 gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
                                      const struct brw_blorp_params *params)
@@ -574,44 +446,6 @@ gen7_blorp_emit_depth_disable(struct brw_context *brw)
 
    BEGIN_BATCH(3);
    OUT_BATCH(GEN7_3DSTATE_STENCIL_BUFFER << 16 | (3 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
-
-/* 3DSTATE_CLEAR_PARAMS
- *
- * From the Ivybridge PRM, Volume 2 Part 1, Section 11.5.5.4
- * 3DSTATE_CLEAR_PARAMS:
- *    3DSTATE_CLEAR_PARAMS must always be programmed in the along
- *    with the other Depth/Stencil state commands(i.e.  3DSTATE_DEPTH_BUFFER,
- *    3DSTATE_STENCIL_BUFFER, or 3DSTATE_HIER_DEPTH_BUFFER).
- */
-void
-gen7_blorp_emit_clear_params(struct brw_context *brw,
-                             const struct brw_blorp_params *params)
-{
-   BEGIN_BATCH(3);
-   OUT_BATCH(GEN7_3DSTATE_CLEAR_PARAMS << 16 | (3 - 2));
-   OUT_BATCH(params->depth.clear_color.u32[0]);
-   OUT_BATCH(GEN7_DEPTH_CLEAR_VALID);
-   ADVANCE_BATCH();
-}
-
-
-/* 3DPRIMITIVE */
-void
-gen7_blorp_emit_primitive(struct brw_context *brw,
-                          const struct brw_blorp_params *params)
-{
-   BEGIN_BATCH(7);
-   OUT_BATCH(CMD_3D_PRIM << 16 | (7 - 2));
-   OUT_BATCH(GEN7_3DPRIM_VERTEXBUFFER_ACCESS_SEQUENTIAL |
-             _3DPRIM_RECTLIST);
-   OUT_BATCH(3); /* vertex count per instance */
-   OUT_BATCH(0);
-   OUT_BATCH(params->num_layers); /* instance count */
    OUT_BATCH(0);
    OUT_BATCH(0);
    ADVANCE_BATCH();
