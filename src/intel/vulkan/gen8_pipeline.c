@@ -47,14 +47,8 @@ emit_ia_state(struct anv_pipeline *pipeline,
 static void
 emit_rs_state(struct anv_pipeline *pipeline,
               const VkPipelineRasterizationStateCreateInfo *info,
-              const VkPipelineMultisampleStateCreateInfo *ms_info,
               const struct anv_graphics_pipeline_create_info *extra)
 {
-   uint32_t samples = 1;
-
-   if (ms_info)
-      samples = ms_info->rasterizationSamples;
-
    struct GENX(3DSTATE_SF) sf = {
       GENX(3DSTATE_SF_header),
    };
@@ -75,7 +69,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
    /* For details on 3DSTATE_RASTER multisample state, see the BSpec table
     * "Multisample Modes State".
     */
-   raster.DXMultisampleRasterizationEnable = samples > 1;
+   raster.DXMultisampleRasterizationEnable = true;
    raster.ForcedSampleCount = FSC_NUMRASTSAMPLES_0;
    raster.ForceMultisampling = false;
 
@@ -173,8 +167,7 @@ genX(graphics_pipeline_create)(
    assert(pCreateInfo->pInputAssemblyState);
    emit_ia_state(pipeline, pCreateInfo->pInputAssemblyState, extra);
    assert(pCreateInfo->pRasterizationState);
-   emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
-                 pCreateInfo->pMultisampleState, extra);
+   emit_rs_state(pipeline, pCreateInfo->pRasterizationState, extra);
    emit_ms_state(pipeline, pCreateInfo->pMultisampleState);
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
    emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
