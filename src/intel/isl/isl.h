@@ -1016,6 +1016,8 @@ isl_format_has_int_channel(enum isl_format fmt)
 
 unsigned isl_format_get_num_channels(enum isl_format fmt);
 
+uint32_t isl_format_get_depth_format(enum isl_format fmt, bool has_stencil);
+
 static inline bool
 isl_format_is_compressed(enum isl_format fmt)
 {

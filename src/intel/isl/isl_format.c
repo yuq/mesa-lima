@@ -476,6 +476,30 @@ isl_format_get_num_channels(enum isl_format fmt)
           (fmtl->channels.i.bits > 0);
 }
 
+uint32_t
+isl_format_get_depth_format(enum isl_format fmt, bool has_stencil)
+{
+   switch (fmt) {
+   default:
+      unreachable("bad isl depth format");
+   case ISL_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+      assert(has_stencil);
+      return 0; /* D32_FLOAT_S8X24_UINT */
+   case ISL_FORMAT_R32_FLOAT:
+      assert(!has_stencil);
+      return 1; /* D32_FLOAT */
+   case ISL_FORMAT_R24_UNORM_X8_TYPELESS:
+      if (has_stencil) {
+         return 2; /* D24_UNORM_S8_UINT */
+      } else {
+         return 3; /* D24_UNORM_X8_UINT */
+      }
+   case ISL_FORMAT_R16_UNORM:
+      assert(!has_stencil);
+      return 5; /* D16_UNORM */
+   }
+}
+
 enum isl_format
 isl_format_rgb_to_rgba(enum isl_format rgb)
 {
