@@ -1612,7 +1612,7 @@
       <value name="WIREFRAME" value="1"/>
       <value name="POINT" value="2"/>
     </field>
-    <field name="View Transform Enable" start="33" end="33" type="bool"/>
+    <field name="Viewport Transform Enable" start="33" end="33" type="bool"/>
     <field name="Front Winding" start="32" end="32" type="uint"/>
     <field name="Anti-Aliasing Enable" start="95" end="95" type="bool"/>
     <field name="Cull Mode" start="93" end="94" type="uint" prefix="CULLMODE">
@@ -1641,7 +1641,10 @@
       <value name="AALINEDISTANCE_TRUE" value="1"/>
     </field>
     <field name="Vertex Sub Pixel Precision Select" start="108" end="108" type="uint"/>
-    <field name="Use Point Width State" start="107" end="107" type="uint"/>
+    <field name="Point Width Source" start="107" end="107" type="uint">
+      <value name="Vertex" value="0"/>
+      <value name="State" value="1"/>
+    </field>
     <field name="Point Width" start="96" end="106" type="u8.3"/>
     <field name="Global Depth Offset Constant" start="128" end="159" type="float"/>
     <field name="Global Depth Offset Scale" start="160" end="191" type="float"/>

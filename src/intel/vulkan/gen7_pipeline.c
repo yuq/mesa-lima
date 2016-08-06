@@ -47,7 +47,7 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
       .StatisticsEnable                         = true,
       .FrontFaceFillMode                        = vk_to_gen_fillmode[info->polygonMode],
       .BackFaceFillMode                         = vk_to_gen_fillmode[info->polygonMode],
-      .ViewTransformEnable                      = !(extra && extra->use_rectlist),
+      .ViewportTransformEnable                  = !(extra && extra->use_rectlist),
       .FrontWinding                             = vk_to_gen_front_face[info->frontFace],
       /* bool                                         AntiAliasingEnable; */
 
@@ -65,7 +65,7 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
 
       /* uint32_t                                     AALineDistanceMode; */
       /* uint32_t                                     VertexSubPixelPrecisionSelect; */
-      .UsePointWidthState                       = false,
+      .PointWidthSource                         = Vertex,
       .PointWidth                               = 1.0,
       .GlobalDepthOffsetEnableSolid             = info->depthBiasEnable,
       .GlobalDepthOffsetEnableWireframe         = info->depthBiasEnable,
