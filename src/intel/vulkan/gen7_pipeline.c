@@ -67,7 +67,8 @@ genX(graphics_pipeline_create)(
    emit_vertex_input(pipeline, pCreateInfo->pVertexInputState, extra);
 
    assert(pCreateInfo->pRasterizationState);
-   emit_rs_state(pipeline, pCreateInfo->pRasterizationState, extra);
+   emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
+                 pass, subpass, extra);
 
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
 

@@ -365,6 +365,8 @@ static const uint32_t vk_to_gen_front_face[] = {
 static void
 emit_rs_state(struct anv_pipeline *pipeline,
               const VkPipelineRasterizationStateCreateInfo *info,
+              const struct anv_render_pass *pass,
+              const struct anv_subpass *subpass,
               const struct anv_graphics_pipeline_create_info *extra)
 {
    struct GENX(3DSTATE_SF) sf = {
@@ -413,6 +415,25 @@ emit_rs_state(struct anv_pipeline *pipeline,
    raster.GlobalDepthOffsetEnableSolid = info->depthBiasEnable;
    raster.GlobalDepthOffsetEnableWireframe = info->depthBiasEnable;
    raster.GlobalDepthOffsetEnablePoint = info->depthBiasEnable;
+
+#if GEN_GEN == 7
+   /* Gen7 requires that we provide the depth format in 3DSTATE_SF so that it
+    * can get the depth offsets correct.
+    */
+   if (subpass->depth_stencil_attachment < pass->attachment_count) {
+      VkFormat vk_format =
+         pass->attachments[subpass->depth_stencil_attachment].format;
+      assert(vk_format_is_depth_or_stencil(vk_format));
+      if (vk_format_aspects(vk_format) & VK_IMAGE_ASPECT_DEPTH_BIT) {
+         enum isl_format isl_format =
+            anv_get_isl_format(&pipeline->device->info, vk_format,
+                               VK_IMAGE_ASPECT_DEPTH_BIT,
+                               VK_IMAGE_TILING_OPTIMAL);
+         sf.DepthBufferSurfaceFormat =
+            isl_format_get_depth_format(isl_format, false);
+      }
+   }
+#endif
 
 #if GEN_GEN >= 8
    GENX(3DSTATE_SF_pack)(NULL, pipeline->gen8.sf, &sf);
