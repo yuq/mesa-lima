@@ -471,15 +471,12 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 		rctx->dma.flush = r600_flush_dma_ring;
 	}
 
-	p_atomic_inc(&rscreen->num_contexts);
 	return true;
 }
 
 void r600_common_context_cleanup(struct r600_common_context *rctx)
 {
 	unsigned i,j;
-
-	p_atomic_dec(&rctx->screen->num_contexts);
 
 	/* Release DCC stats. */
 	for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats); i++) {
