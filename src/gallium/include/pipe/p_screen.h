@@ -242,11 +242,20 @@ struct pipe_screen {
 
    /**
     * Wait for the fence to finish.
+    *
+    * If the fence was created with PIPE_FLUSH_DEFERRED, and the context is
+    * still unflushed, and the ctx parameter of fence_finish is equal to
+    * the context where the fence was created, fence_finish will flush
+    * the context prior to waiting for the fence.
+    *
+    * In all other cases, the ctx parameter has no effect.
+    *
     * \param timeout  in nanoseconds (may be PIPE_TIMEOUT_INFINITE).
     */
-   boolean (*fence_finish)( struct pipe_screen *screen,
-                            struct pipe_fence_handle *fence,
-                            uint64_t timeout );
+   boolean (*fence_finish)(struct pipe_screen *screen,
+                           struct pipe_context *ctx,
+                           struct pipe_fence_handle *fence,
+                           uint64_t timeout);
 
    /**
     * Returns a driver-specific query.

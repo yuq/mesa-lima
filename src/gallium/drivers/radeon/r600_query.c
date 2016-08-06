@@ -215,7 +215,7 @@ static bool r600_query_sw_get_result(struct r600_common_context *rctx,
 		return true;
 	case PIPE_QUERY_GPU_FINISHED: {
 		struct pipe_screen *screen = rctx->b.screen;
-		result->b = screen->fence_finish(screen, query->fence,
+		result->b = screen->fence_finish(screen, NULL, query->fence,
 						 wait ? PIPE_TIMEOUT_INFINITE : 0);
 		return result->b;
 	}

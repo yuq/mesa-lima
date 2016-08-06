@@ -657,7 +657,7 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
       if (!swr_is_fence_pending(screen->flush_fence))
          swr_fence_submit(swr_context(pipe), screen->flush_fence);
 
-      swr_fence_finish(p_screen, screen->flush_fence, 0);
+      swr_fence_finish(p_screen, NULL, screen->flush_fence, 0);
       swr_resource_unused(pt);
    }
 
@@ -692,7 +692,7 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
    struct pipe_context *pipe = screen->pipe;
 
    if (pipe) {
-      swr_fence_finish(p_screen, screen->flush_fence, 0);
+      swr_fence_finish(p_screen, NULL, screen->flush_fence, 0);
       swr_resource_unused(resource);
       SwrEndFrame(swr_context(pipe)->swrContext);
    }
@@ -712,7 +712,7 @@ swr_destroy_screen(struct pipe_screen *p_screen)
 
    fprintf(stderr, "SWR destroy screen!\n");
 
-   swr_fence_finish(p_screen, screen->flush_fence, 0);
+   swr_fence_finish(p_screen, NULL, screen->flush_fence, 0);
    swr_fence_reference(p_screen, &screen->flush_fence, NULL);
 
    JitDestroyContext(screen->hJitMgr);

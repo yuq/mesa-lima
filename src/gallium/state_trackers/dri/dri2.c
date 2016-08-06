@@ -1252,7 +1252,7 @@ dri2_blit_image(__DRIcontext *context, __DRIimage *dst, __DRIimage *src,
       screen = dri_screen(ctx->sPriv)->base.screen;
       pipe->flush_resource(pipe, dst->texture);
       ctx->st->flush(ctx->st, 0, &fence);
-      (void) screen->fence_finish(screen, fence, PIPE_TIMEOUT_INFINITE);
+      (void) screen->fence_finish(screen, NULL, fence, PIPE_TIMEOUT_INFINITE);
       screen->fence_reference(screen, &fence, NULL);
    }
 }
@@ -1451,13 +1451,13 @@ dri2_client_wait_sync(__DRIcontext *_ctx, void *_fence, unsigned flags,
    /* No need to flush. The context was flushed when the fence was created. */
 
    if (fence->pipe_fence)
-      return screen->fence_finish(screen, fence->pipe_fence, timeout);
+      return screen->fence_finish(screen, NULL, fence->pipe_fence, timeout);
    else if (fence->cl_event) {
       struct pipe_fence_handle *pipe_fence =
          driscreen->opencl_dri_event_get_fence(fence->cl_event);
 
       if (pipe_fence)
-         return screen->fence_finish(screen, pipe_fence, timeout);
+         return screen->fence_finish(screen, NULL, pipe_fence, timeout);
       else
          return driscreen->opencl_dri_event_wait(fence->cl_event, timeout);
    }

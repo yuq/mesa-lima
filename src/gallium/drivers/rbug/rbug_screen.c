@@ -229,15 +229,15 @@ rbug_screen_fence_reference(struct pipe_screen *_screen,
 
 static boolean
 rbug_screen_fence_finish(struct pipe_screen *_screen,
+                         struct pipe_context *_ctx,
                          struct pipe_fence_handle *fence,
                          uint64_t timeout)
 {
    struct rbug_screen *rb_screen = rbug_screen(_screen);
    struct pipe_screen *screen = rb_screen->screen;
+   struct pipe_context *ctx = _ctx ? rbug_context(_ctx)->pipe : NULL;
 
-   return screen->fence_finish(screen,
-                               fence,
-                               timeout);
+   return screen->fence_finish(screen, ctx, fence, timeout);
 }
 
 boolean

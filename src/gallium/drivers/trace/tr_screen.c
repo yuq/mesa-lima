@@ -402,20 +402,23 @@ trace_screen_fence_reference(struct pipe_screen *_screen,
 
 static boolean
 trace_screen_fence_finish(struct pipe_screen *_screen,
+                          struct pipe_context *_ctx,
                           struct pipe_fence_handle *fence,
                           uint64_t timeout)
 {
    struct trace_screen *tr_scr = trace_screen(_screen);
    struct pipe_screen *screen = tr_scr->screen;
+   struct pipe_context *ctx = _ctx ? trace_context(_ctx)->pipe : NULL;
    int result;
 
    trace_dump_call_begin("pipe_screen", "fence_finish");
 
    trace_dump_arg(ptr, screen);
+   trace_dump_arg(ptr, ctx);
    trace_dump_arg(ptr, fence);
    trace_dump_arg(uint, timeout);
 
-   result = screen->fence_finish(screen, fence, timeout);
+   result = screen->fence_finish(screen, ctx, fence, timeout);
 
    trace_dump_ret(bool, result);
 

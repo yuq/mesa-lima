@@ -239,7 +239,7 @@ swr_finish(struct pipe_context *pipe)
    struct pipe_fence_handle *fence = nullptr;
 
    swr_flush(pipe, &fence, 0);
-   swr_fence_finish(pipe->screen, fence, 0);
+   swr_fence_finish(pipe->screen, NULL, fence, 0);
    swr_fence_reference(pipe->screen, &fence, NULL);
 }
 

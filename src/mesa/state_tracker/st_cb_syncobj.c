@@ -87,7 +87,7 @@ static void st_check_sync(struct gl_context *ctx, struct gl_sync_object *obj)
       return;
    }
 
-   if (screen->fence_finish(screen, so->fence, 0)) {
+   if (screen->fence_finish(screen, NULL, so->fence, 0)) {
       screen->fence_reference(screen, &so->fence, NULL);
       so->b.StatusFlag = GL_TRUE;
    }
@@ -110,7 +110,7 @@ static void st_client_wait_sync(struct gl_context *ctx,
     * already called when creating a fence. */
 
    if (so->fence &&
-       screen->fence_finish(screen, so->fence, timeout)) {
+       screen->fence_finish(screen, NULL, so->fence, timeout)) {
       screen->fence_reference(screen, &so->fence, NULL);
       so->b.StatusFlag = GL_TRUE;
    }

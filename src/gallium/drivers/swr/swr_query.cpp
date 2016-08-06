@@ -63,7 +63,7 @@ swr_destroy_query(struct pipe_context *pipe, struct pipe_query *q)
 
    if (pq->fence) {
       if (swr_is_fence_pending(pq->fence))
-         swr_fence_finish(pipe->screen, pq->fence, 0);
+         swr_fence_finish(pipe->screen, NULL, pq->fence, 0);
       swr_fence_reference(pipe->screen, &pq->fence, NULL);
    }
 
@@ -128,7 +128,7 @@ swr_get_query_result(struct pipe_context *pipe,
       if (!wait && !swr_is_fence_done(pq->fence))
          return FALSE;
 
-      swr_fence_finish(pipe->screen, pq->fence, 0);
+      swr_fence_finish(pipe->screen, NULL, pq->fence, 0);
       swr_fence_reference(pipe->screen, &pq->fence, NULL);
    }
 

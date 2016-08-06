@@ -804,6 +804,7 @@ svga_fence_reference(struct pipe_screen *screen,
 
 static boolean
 svga_fence_finish(struct pipe_screen *screen,
+                  struct pipe_context *ctx,
                   struct pipe_fence_handle *fence,
                   uint64_t timeout)
 {

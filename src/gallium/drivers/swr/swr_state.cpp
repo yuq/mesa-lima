@@ -1390,7 +1390,7 @@ swr_update_derived(struct pipe_context *pipe,
 
    /* Ensure that any in-progress attachment change StoreTiles finish */
    if (swr_is_fence_pending(screen->flush_fence))
-      swr_fence_finish(pipe->screen, screen->flush_fence, 0);
+      swr_fence_finish(pipe->screen, NULL, screen->flush_fence, 0);
 
    /* Finally, update the in-use status of all resources involved in draw */
    swr_update_resource_status(pipe, p_draw_info);

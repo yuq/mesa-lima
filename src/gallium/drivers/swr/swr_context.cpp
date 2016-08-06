@@ -128,7 +128,7 @@ swr_transfer_map(struct pipe_context *pipe,
             if (!swr_is_fence_pending(screen->flush_fence))
                swr_fence_submit(swr_context(pipe), screen->flush_fence);
 
-            swr_fence_finish(pipe->screen, screen->flush_fence, 0);
+            swr_fence_finish(pipe->screen, NULL, screen->flush_fence, 0);
             swr_resource_unused(resource);
          }
       }
@@ -205,7 +205,7 @@ swr_resource_copy(struct pipe_context *pipe,
    swr_store_dirty_resource(pipe, src, SWR_TILE_RESOLVED);
    swr_store_dirty_resource(pipe, dst, SWR_TILE_RESOLVED);
 
-   swr_fence_finish(pipe->screen, screen->flush_fence, 0);
+   swr_fence_finish(pipe->screen, NULL, screen->flush_fence, 0);
    swr_resource_unused(src);
    swr_resource_unused(dst);
 

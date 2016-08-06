@@ -263,12 +263,14 @@ dd_screen_fence_reference(struct pipe_screen *_screen,
 
 static boolean
 dd_screen_fence_finish(struct pipe_screen *_screen,
+                       struct pipe_context *_ctx,
                        struct pipe_fence_handle *fence,
                        uint64_t timeout)
 {
    struct pipe_screen *screen = dd_screen(_screen)->screen;
+   struct pipe_context *ctx = _ctx ? dd_context(_ctx)->pipe : NULL;
 
-   return screen->fence_finish(screen, fence, timeout);
+   return screen->fence_finish(screen, ctx, fence, timeout);
 }
 
 

@@ -488,7 +488,7 @@ Status XvMCGetSurfaceStatus(Display *dpy, XvMCSurface *surface, int *status)
    *status = 0;
 
    if (surface_priv->fence)
-      if (!pipe->screen->fence_finish(pipe->screen, surface_priv->fence, 0))
+      if (!pipe->screen->fence_finish(pipe->screen, NULL, surface_priv->fence, 0))
          *status |= XVMC_RENDERING;
 
    return Success;
