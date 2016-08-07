@@ -95,6 +95,16 @@ typedef void(SWR_API *PFN_UPDATE_SO_WRITE_OFFSET)(HANDLE hPrivateContext,
 typedef void(SWR_API *PFN_UPDATE_STATS)(HANDLE hPrivateContext,
     const SWR_STATS* pStats);
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Callback to allow driver to update their copy of FE stats.
+/// @note Its optimal to have a separate callback for FE stats since
+///       there is only one DC per FE thread. This means we do not have
+///       to sum up the stats across all of the workers.
+/// @param hPrivateContext - handle to private data
+/// @param pStats - pointer to draw stats
+typedef void(SWR_API *PFN_UPDATE_STATS_FE)(HANDLE hPrivateContext,
+    const SWR_STATS_FE* pStats);
+
 class BucketManager;
 
 //////////////////////////////////////////////////////////////////////////
@@ -121,11 +131,12 @@ struct SWR_CREATECONTEXT_INFO
     uint32_t privateStateSize;
 
     // Callback functions
-    PFN_LOAD_TILE pfnLoadTile;
-    PFN_STORE_TILE pfnStoreTile;
-    PFN_CLEAR_TILE pfnClearTile;
-    PFN_UPDATE_SO_WRITE_OFFSET pfnUpdateSoWriteOffset;
-    PFN_UPDATE_STATS pfnUpdateStats;
+    PFN_LOAD_TILE               pfnLoadTile;
+    PFN_STORE_TILE              pfnStoreTile;
+    PFN_CLEAR_TILE              pfnClearTile;
+    PFN_UPDATE_SO_WRITE_OFFSET  pfnUpdateSoWriteOffset;
+    PFN_UPDATE_STATS            pfnUpdateStats;
+    PFN_UPDATE_STATS_FE         pfnUpdateStatsFE;
 
     // Pointer to rdtsc buckets mgr returned to the caller.
     // Only populated when KNOB_ENABLE_RDTSC is set

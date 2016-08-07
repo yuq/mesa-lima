@@ -355,15 +355,29 @@ swr_UpdateStats(HANDLE hPrivateContext, const SWR_STATS *pStats)
    struct swr_context *ctx = (struct swr_context *)pDC->swr_ctx;
 
    SWR_STATS *pSwrStats = &ctx->stats;
+
    pSwrStats->DepthPassCount += pStats->DepthPassCount;
+   pSwrStats->PsInvocations += pStats->PsInvocations;
+   pSwrStats->CsInvocations += pStats->CsInvocations;
+}
+
+static void
+swr_UpdateStatsFE(HANDLE hPrivateContext, const SWR_STATS_FE *pStats)
+{
+   swr_draw_context *pDC = (swr_draw_context*)hPrivateContext;
+
+   if (!pDC)
+      return;
+
+   struct swr_context *ctx = (struct swr_context *)pDC->swr_ctx;
+
+   SWR_STATS_FE *pSwrStats = &ctx->statsFE;
    pSwrStats->IaVertices += pStats->IaVertices;
    pSwrStats->IaPrimitives += pStats->IaPrimitives;
    pSwrStats->VsInvocations += pStats->VsInvocations;
    pSwrStats->HsInvocations += pStats->HsInvocations;
    pSwrStats->DsInvocations += pStats->DsInvocations;
    pSwrStats->GsInvocations += pStats->GsInvocations;
-   pSwrStats->PsInvocations += pStats->PsInvocations;
-   pSwrStats->CsInvocations += pStats->CsInvocations;
    pSwrStats->CInvocations += pStats->CInvocations;
    pSwrStats->CPrimitives += pStats->CPrimitives;
    pSwrStats->GsPrimitives += pStats->GsPrimitives;
@@ -389,6 +403,7 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
    createInfo.pfnStoreTile = swr_StoreHotTile;
    createInfo.pfnClearTile = swr_StoreHotTileClear;
    createInfo.pfnUpdateStats = swr_UpdateStats;
+   createInfo.pfnUpdateStatsFE = swr_UpdateStatsFE;
    ctx->swrContext = SwrCreateContext(&createInfo);
 
    /* Init Load/Store/ClearTiles Tables */

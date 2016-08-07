@@ -159,6 +159,7 @@ struct swr_context {
    struct swr_draw_context swrDC;
 
    SWR_STATS stats;
+   SWR_STATS_FE statsFE;
 
    unsigned dirty; /**< Mask of SWR_NEW_x flags */
 };

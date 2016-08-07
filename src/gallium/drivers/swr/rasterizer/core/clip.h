@@ -495,7 +495,7 @@ public:
 
         // update global pipeline stat
         SWR_CONTEXT* pContext = this->pDC->pContext;
-        UPDATE_STAT(CPrimitives, numClippedPrims);
+        UPDATE_STAT_FE(CPrimitives, numClippedPrims);
     }
     
     // execute the clipper stage
@@ -523,7 +523,7 @@ public:
         // update clipper invocations pipeline stat
         SWR_CONTEXT* pContext = this->pDC->pContext;
         uint32_t numInvoc = _mm_popcnt_u32(primMask);
-        UPDATE_STAT(CInvocations, numInvoc);
+        UPDATE_STAT_FE(CInvocations, numInvoc);
 
         ComputeClipCodes(prim);
 
@@ -559,7 +559,7 @@ public:
         {
             // update CPrimitives pipeline state
             SWR_CONTEXT* pContext = this->pDC->pContext;
-            UPDATE_STAT(CPrimitives, _mm_popcnt_u32(validMask));
+            UPDATE_STAT_FE(CPrimitives, _mm_popcnt_u32(validMask));
 
             // forward valid prims directly to binner
             pfnBinner(this->pDC, pa, this->workerId, prim, validMask, primId);

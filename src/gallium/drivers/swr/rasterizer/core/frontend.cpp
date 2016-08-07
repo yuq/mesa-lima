@@ -580,8 +580,8 @@ static void StreamOut(
         }
     }
 
-    UPDATE_STAT(SoPrimStorageNeeded[streamIndex], soContext.numPrimStorageNeeded);
-    UPDATE_STAT(SoNumPrimsWritten[streamIndex], soContext.numPrimsWritten);
+    UPDATE_STAT_FE(SoPrimStorageNeeded[streamIndex], soContext.numPrimStorageNeeded);
+    UPDATE_STAT_FE(SoNumPrimsWritten[streamIndex], soContext.numPrimsWritten);
 
     RDTSC_STOP(FEStreamout, 1, 0);
 }
@@ -843,8 +843,8 @@ static void GeometryShaderStage(
     }
 
     // update GS pipeline stats
-    UPDATE_STAT(GsInvocations, numInputPrims * pState->instanceCount);
-    UPDATE_STAT(GsPrimitives, totalPrimsGenerated);
+    UPDATE_STAT_FE(GsInvocations, numInputPrims * pState->instanceCount);
+    UPDATE_STAT_FE(GsPrimitives, totalPrimsGenerated);
 
     RDTSC_STOP(FEGeometryShader, 1, 0);
 }
@@ -1009,7 +1009,7 @@ static void TessellationStages(
     state.pfnHsFunc(GetPrivateState(pDC), &hsContext);
     RDTSC_STOP(FEHullShader, 0, 0);
 
-    UPDATE_STAT(HsInvocations, numPrims);
+    UPDATE_STAT_FE(HsInvocations, numPrims);
 
     const uint32_t* pPrimId = (const uint32_t*)&primID;
 
@@ -1065,7 +1065,7 @@ static void TessellationStages(
 
             dsInvocations += KNOB_SIMD_WIDTH;
         }
-        UPDATE_STAT(DsInvocations, tsData.NumDomainPoints);
+        UPDATE_STAT_FE(DsInvocations, tsData.NumDomainPoints);
 
         PA_TESS tessPa(
             pDC,
@@ -1302,7 +1302,7 @@ void ProcessDraw(
                     *pvCutIndices = _simd_movemask_ps(_simd_castsi_ps(fetchInfo.CutMask));
                 }
 
-                UPDATE_STAT(IaVertices, GetNumInvocations(i, endVertex));
+                UPDATE_STAT_FE(IaVertices, GetNumInvocations(i, endVertex));
 
 #if KNOB_ENABLE_TOSS_POINTS
                 if (!KNOB_TOSS_FETCH)
@@ -1312,7 +1312,7 @@ void ProcessDraw(
                     state.pfnVertexFunc(GetPrivateState(pDC), &vsContext);
                     RDTSC_STOP(FEVertexShader, 0, 0);
 
-                    UPDATE_STAT(VsInvocations, GetNumInvocations(i, endVertex));
+                    UPDATE_STAT_FE(VsInvocations, GetNumInvocations(i, endVertex));
                 }
             }
 
@@ -1335,7 +1335,7 @@ void ProcessDraw(
                     {
                         if (assemble)
                         {
-                            UPDATE_STAT(IaPrimitives, pa.NumPrims());
+                            UPDATE_STAT_FE(IaPrimitives, pa.NumPrims());
 
                             if (HasTessellationT::value)
                             {

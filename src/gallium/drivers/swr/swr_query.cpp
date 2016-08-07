@@ -94,6 +94,7 @@ swr_gather_stats(struct pipe_context *pipe, struct swr_query *pq)
       /* TODO: should fence instead of stalling pipeline */
       SwrWaitForIdle(ctx->swrContext);
       memcpy(&result->core, &ctx->stats, sizeof(result->core));
+      memcpy(&result->coreFE, &ctx->statsFE, sizeof(result->coreFE));
 
 #if 0
       if (!pq->fence) {
@@ -150,17 +151,17 @@ swr_get_query_result(struct pipe_context *pipe,
       result->u64 = end->timestamp - start->timestamp;
       break;
    case PIPE_QUERY_PRIMITIVES_GENERATED:
-      result->u64 = end->core.IaPrimitives - start->core.IaPrimitives;
+      result->u64 = end->coreFE.IaPrimitives - start->coreFE.IaPrimitives;
       break;
    case PIPE_QUERY_PRIMITIVES_EMITTED:
-      result->u64 = end->core.SoNumPrimsWritten[index]
-         - start->core.SoNumPrimsWritten[index];
+      result->u64 = end->coreFE.SoNumPrimsWritten[index]
+         - start->coreFE.SoNumPrimsWritten[index];
       break;
    /* Structures */
    case PIPE_QUERY_SO_STATISTICS: {
       struct pipe_query_data_so_statistics *so_stats = &result->so_statistics;
-      struct SWR_STATS *start = &pq->start.core;
-      struct SWR_STATS *end = &pq->end.core;
+      struct SWR_STATS_FE *start = &pq->start.coreFE;
+      struct SWR_STATS_FE *end = &pq->end.coreFE;
       so_stats->num_primitives_written =
          end->SoNumPrimsWritten[index] - start->SoNumPrimsWritten[index];
       so_stats->primitives_storage_needed =
@@ -176,21 +177,23 @@ swr_get_query_result(struct pipe_context *pipe,
          &result->pipeline_statistics;
       struct SWR_STATS *start = &pq->start.core;
       struct SWR_STATS *end = &pq->end.core;
-      p_stats->ia_vertices = end->IaVertices - start->IaVertices;
-      p_stats->ia_primitives = end->IaPrimitives - start->IaPrimitives;
-      p_stats->vs_invocations = end->VsInvocations - start->VsInvocations;
-      p_stats->gs_invocations = end->GsInvocations - start->GsInvocations;
-      p_stats->gs_primitives = end->GsPrimitives - start->GsPrimitives;
-      p_stats->c_invocations = end->CPrimitives - start->CPrimitives;
-      p_stats->c_primitives = end->CPrimitives - start->CPrimitives;
+      struct SWR_STATS_FE *startFE = &pq->start.coreFE;
+      struct SWR_STATS_FE *endFE = &pq->end.coreFE;
+      p_stats->ia_vertices = endFE->IaVertices - startFE->IaVertices;
+      p_stats->ia_primitives = endFE->IaPrimitives - startFE->IaPrimitives;
+      p_stats->vs_invocations = endFE->VsInvocations - startFE->VsInvocations;
+      p_stats->gs_invocations = endFE->GsInvocations - startFE->GsInvocations;
+      p_stats->gs_primitives = endFE->GsPrimitives - startFE->GsPrimitives;
+      p_stats->c_invocations = endFE->CPrimitives - startFE->CPrimitives;
+      p_stats->c_primitives = endFE->CPrimitives - startFE->CPrimitives;
       p_stats->ps_invocations = end->PsInvocations - start->PsInvocations;
-      p_stats->hs_invocations = end->HsInvocations - start->HsInvocations;
-      p_stats->ds_invocations = end->DsInvocations - start->DsInvocations;
+      p_stats->hs_invocations = endFE->HsInvocations - startFE->HsInvocations;
+      p_stats->ds_invocations = endFE->DsInvocations - startFE->DsInvocations;
       p_stats->cs_invocations = end->CsInvocations - start->CsInvocations;
     } break;
    case PIPE_QUERY_SO_OVERFLOW_PREDICATE: {
-      struct SWR_STATS *start = &pq->start.core;
-      struct SWR_STATS *end = &pq->end.core;
+      struct SWR_STATS_FE *start = &pq->start.coreFE;
+      struct SWR_STATS_FE *end = &pq->end.coreFE;
       uint64_t num_primitives_written =
          end->SoNumPrimsWritten[index] - start->SoNumPrimsWritten[index];
       uint64_t primitives_storage_needed =

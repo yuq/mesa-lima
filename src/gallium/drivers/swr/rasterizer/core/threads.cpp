@@ -322,23 +322,9 @@ INLINE void UpdateClientStats(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
     {
         stats.DepthPassCount += dynState.stats[i].DepthPassCount;
-        stats.IaVertices     += dynState.stats[i].IaVertices;
-        stats.IaPrimitives   += dynState.stats[i].IaPrimitives;
-        stats.VsInvocations  += dynState.stats[i].VsInvocations;
-        stats.HsInvocations  += dynState.stats[i].HsInvocations;
-        stats.DsInvocations  += dynState.stats[i].DsInvocations;
-        stats.GsInvocations  += dynState.stats[i].GsInvocations;
-        stats.PsInvocations  += dynState.stats[i].PsInvocations;
-        stats.CInvocations   += dynState.stats[i].CInvocations;
-        stats.CsInvocations  += dynState.stats[i].CsInvocations;
-        stats.CPrimitives    += dynState.stats[i].CPrimitives;
-        stats.GsPrimitives   += dynState.stats[i].GsPrimitives;
 
-        for (uint32_t stream = 0; stream < MAX_SO_STREAMS; ++stream)
-        {
-            stats.SoPrimStorageNeeded[stream] += dynState.stats[i].SoPrimStorageNeeded[stream];
-            stats.SoNumPrimsWritten[stream]   += dynState.stats[i].SoNumPrimsWritten[stream];
-        }
+        stats.PsInvocations  += dynState.stats[i].PsInvocations;
+        stats.CsInvocations  += dynState.stats[i].CsInvocations;
     }
 
     pContext->pfnUpdateStats(GetPrivateState(pDC), &stats);
@@ -559,6 +545,11 @@ void WorkOnFifoBE(
 INLINE void CompleteDrawFE(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
     _ReadWriteBarrier();
+
+    if (pContext->pfnUpdateStatsFE && GetApiState(pDC).enableStats)
+    {
+        pContext->pfnUpdateStatsFE(GetPrivateState(pDC), &pDC->dynState.statsFE);
+    }
 
     if (pContext->pfnUpdateSoWriteOffset)
     {

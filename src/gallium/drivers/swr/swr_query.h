@@ -29,6 +29,7 @@
 
 struct swr_query_result {
    SWR_STATS core;
+   SWR_STATS_FE coreFE;
    uint64_t timestamp;
 };
 

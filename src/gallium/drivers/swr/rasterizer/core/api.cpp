@@ -144,6 +144,7 @@ HANDLE SwrCreateContext(
     pContext->pfnClearTile = pCreateInfo->pfnClearTile;
     pContext->pfnUpdateSoWriteOffset = pCreateInfo->pfnUpdateSoWriteOffset;
     pContext->pfnUpdateStats = pCreateInfo->pfnUpdateStats;
+    pContext->pfnUpdateStatsFE = pCreateInfo->pfnUpdateStatsFE;
 
     // pass pointer to bucket manager back to caller
 #ifdef KNOB_ENABLE_RDTSC
