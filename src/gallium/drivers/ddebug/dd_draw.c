@@ -1091,7 +1091,10 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
       case DD_DUMP_APITRACE_CALL:
          if (dscreen->apitrace_dump_call ==
              dctx->draw_state.apitrace_call_number) {
-            dd_write_report(dctx, call, 0, false);
+            dd_write_report(dctx, call,
+                            PIPE_DUMP_CURRENT_STATES |
+                            PIPE_DUMP_CURRENT_SHADERS,
+                            false);
             /* No need to continue. */
             exit(0);
          }
