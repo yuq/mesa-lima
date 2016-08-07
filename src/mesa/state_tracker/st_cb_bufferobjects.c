@@ -337,15 +337,15 @@ st_bufferobj_data(struct gl_context *ctx,
     * might be using it.
     */
    /* TODO: Add arrays to usage history */
-   st->dirty |= ST_NEW_VERTEX_ARRAYS;
+   ctx->NewDriverState |= ST_NEW_VERTEX_ARRAYS;
    if (st_obj->Base.UsageHistory & USAGE_UNIFORM_BUFFER)
-      st->dirty |= ST_NEW_UNIFORM_BUFFER;
+      ctx->NewDriverState |= ST_NEW_UNIFORM_BUFFER;
    if (st_obj->Base.UsageHistory & USAGE_SHADER_STORAGE_BUFFER)
-      st->dirty |= ST_NEW_STORAGE_BUFFER;
+      ctx->NewDriverState |= ST_NEW_STORAGE_BUFFER;
    if (st_obj->Base.UsageHistory & USAGE_TEXTURE_BUFFER)
-      st->dirty |= ST_NEW_SAMPLER_VIEWS | ST_NEW_IMAGE_UNITS;
+      ctx->NewDriverState |= ST_NEW_SAMPLER_VIEWS | ST_NEW_IMAGE_UNITS;
    if (st_obj->Base.UsageHistory & USAGE_ATOMIC_COUNTER_BUFFER)
-      st->dirty |= ST_NEW_ATOMIC_BUFFER;
+      ctx->NewDriverState |= ST_NEW_ATOMIC_BUFFER;
 
    return GL_TRUE;
 }
