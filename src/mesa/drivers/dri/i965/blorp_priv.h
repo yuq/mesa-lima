@@ -25,8 +25,9 @@
 
 #include <stdint.h>
 
+#include "compiler/nir/nir.h"
+
 #include "blorp.h"
-#include "brw_reg.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -233,9 +234,9 @@ struct brw_blorp_blit_prog_key
    enum isl_msaa_layout dst_layout;
 
    /* Type of the data to be read from the texture (one of
-    * BRW_REGISTER_TYPE_{UD,D,F}).
+    * nir_type_(int|uint|float)).
     */
-   enum brw_reg_type texture_data_type;
+   nir_alu_type texture_data_type;
 
    /* True if the source image is W tiled.  If true, the surface state for the
     * source image must be configured as Y tiled, and tex_samples must be 0.

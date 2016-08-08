@@ -25,6 +25,7 @@
 #include "main/teximage.h"
 #include "main/fbobject.h"
 
+#include "program/prog_instruction.h"
 #include "compiler/nir/nir_builder.h"
 
 #include "intel_fbo.h"
@@ -156,26 +157,13 @@ blorp_nir_discard_if_outside_rect(nir_builder *b, nir_ssa_def *pos,
 static nir_tex_instr *
 blorp_create_nir_tex_instr(nir_builder *b, struct brw_blorp_blit_vars *v,
                            nir_texop op, nir_ssa_def *pos, unsigned num_srcs,
-                           enum brw_reg_type dst_type)
+                           nir_alu_type dst_type)
 {
    nir_tex_instr *tex = nir_tex_instr_create(b->shader, num_srcs);
 
    tex->op = op;
 
-   switch (dst_type) {
-   case BRW_REGISTER_TYPE_F:
-      tex->dest_type = nir_type_float;
-      break;
-   case BRW_REGISTER_TYPE_D:
-      tex->dest_type = nir_type_int;
-      break;
-   case BRW_REGISTER_TYPE_UD:
-      tex->dest_type = nir_type_uint;
-      break;
-   default:
-      unreachable("Invalid texture return type");
-   }
-
+   tex->dest_type = dst_type;
    tex->is_array = false;
    tex->is_shadow = false;
 
@@ -204,7 +192,7 @@ blorp_create_nir_tex_instr(nir_builder *b, struct brw_blorp_blit_vars *v,
 
 static nir_ssa_def *
 blorp_nir_tex(nir_builder *b, struct brw_blorp_blit_vars *v,
-              nir_ssa_def *pos, enum brw_reg_type dst_type)
+              nir_ssa_def *pos, nir_alu_type dst_type)
 {
    nir_tex_instr *tex =
       blorp_create_nir_tex_instr(b, v, nir_texop_tex, pos, 2, dst_type);
@@ -221,7 +209,7 @@ blorp_nir_tex(nir_builder *b, struct brw_blorp_blit_vars *v,
 
 static nir_ssa_def *
 blorp_nir_txf(nir_builder *b, struct brw_blorp_blit_vars *v,
-              nir_ssa_def *pos, enum brw_reg_type dst_type)
+              nir_ssa_def *pos, nir_alu_type dst_type)
 {
    nir_tex_instr *tex =
       blorp_create_nir_tex_instr(b, v, nir_texop_txf, pos, 2, dst_type);
@@ -237,7 +225,7 @@ blorp_nir_txf(nir_builder *b, struct brw_blorp_blit_vars *v,
 
 static nir_ssa_def *
 blorp_nir_txf_ms(nir_builder *b, struct brw_blorp_blit_vars *v,
-                 nir_ssa_def *pos, nir_ssa_def *mcs, enum brw_reg_type dst_type)
+                 nir_ssa_def *pos, nir_ssa_def *mcs, nir_alu_type dst_type)
 {
    nir_tex_instr *tex =
       blorp_create_nir_tex_instr(b, v, nir_texop_txf_ms, pos,
@@ -268,7 +256,7 @@ blorp_nir_txf_ms_mcs(nir_builder *b, struct brw_blorp_blit_vars *v, nir_ssa_def 
 {
    nir_tex_instr *tex =
       blorp_create_nir_tex_instr(b, v, nir_texop_txf_ms_mcs,
-                                 pos, 1, BRW_REGISTER_TYPE_D);
+                                 pos, 1, nir_type_int);
 
    tex->sampler_dim = GLSL_SAMPLER_DIM_MS;
 
@@ -607,7 +595,7 @@ static nir_ssa_def *
 blorp_nir_manual_blend_average(nir_builder *b, struct brw_blorp_blit_vars *v,
                                nir_ssa_def *pos, unsigned tex_samples,
                                enum isl_aux_usage tex_aux_usage,
-                               enum brw_reg_type dst_type)
+                               nir_alu_type dst_type)
 {
    /* If non-null, this is the outer-most if statement */
    nir_if *outer_if = NULL;
@@ -698,7 +686,7 @@ blorp_nir_manual_blend_average(nir_builder *b, struct brw_blorp_blit_vars *v,
          assert(stack_depth >= 2);
          --stack_depth;
 
-         assert(dst_type == BRW_REGISTER_TYPE_F);
+         assert(dst_type == nir_type_float);
          texture_data[stack_depth - 1] =
             nir_fadd(b, texture_data[stack_depth - 1],
                         texture_data[stack_depth]);
@@ -1425,11 +1413,11 @@ brw_blorp_blit(struct brw_context *brw,
    memset(&wm_prog_key, 0, sizeof(wm_prog_key));
 
    if (isl_format_has_sint_channel(params.src.view.format)) {
-      wm_prog_key.texture_data_type = BRW_REGISTER_TYPE_D;
+      wm_prog_key.texture_data_type = nir_type_int;
    } else if (isl_format_has_uint_channel(params.src.view.format)) {
-      wm_prog_key.texture_data_type = BRW_REGISTER_TYPE_UD;
+      wm_prog_key.texture_data_type = nir_type_uint;
    } else {
-      wm_prog_key.texture_data_type = BRW_REGISTER_TYPE_F;
+      wm_prog_key.texture_data_type = nir_type_float;
    }
 
    /* Scaled blitting or not. */
