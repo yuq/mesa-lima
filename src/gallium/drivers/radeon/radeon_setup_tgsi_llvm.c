@@ -631,16 +631,9 @@ void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 
 			case TGSI_FILE_TEMPORARY:
 			{
-				LLVMValueRef array;
 				if (reg->Register.Index >= ctx->temps_count)
 					continue;
-				array = get_alloca_for_array(bld_base, reg->Register.File, reg->Register.Index);
 
-				if (array) {
-					store_value_to_array(bld_base, value, reg->Register.File, chan_index, reg->Register.Index,
-								NULL);
-					continue;
-				}
 				temp_ptr = ctx->temps[ TGSI_NUM_CHANNELS * reg->Register.Index + chan_index];
 				if (tgsi_type_is_64bit(dtype))
 					temp_ptr2 = ctx->temps[ TGSI_NUM_CHANNELS * reg->Register.Index + chan_index + 1];
