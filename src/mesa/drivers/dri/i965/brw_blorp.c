@@ -591,6 +591,10 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       y1 = rb->Height - fb->_Ymin;
    }
 
+   /* If the clear region is empty, just return. */
+   if (x0 == x1 || y0 == y1)
+      return true;
+
    bool can_fast_clear = !partial_clear;
 
    bool color_write_disable[4] = { false, false, false, false };
