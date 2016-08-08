@@ -48,11 +48,22 @@ brw_nir_trig_workarounds.c: brw_nir_trig_workarounds.py $(top_srcdir)/src/compil
 	$(MKDIR_GEN)
 	$(AM_V_GEN) PYTHONPATH=$(top_srcdir)/src/compiler/nir $(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/brw_nir_trig_workarounds.py > $@ || ($(RM) $@; false)
 
-noinst_LTLIBRARIES = libi965_dri.la libi965_compiler.la
+I965_PERGEN_LIBS = \
+	libi965_gen6.la
+
+libi965_gen6_la_SOURCES = $(i965_gen6_FILES)
+libi965_gen6_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=60
+
+noinst_LTLIBRARIES = \
+	libi965_dri.la \
+	libi965_compiler.la \
+	$(I965_PERGEN_LIBS)
+
 libi965_dri_la_SOURCES = $(i965_FILES)
 libi965_dri_la_LIBADD = \
 	$(top_builddir)/src/intel/isl/libisl.la \
 	libi965_compiler.la \
+	$(I965_PERGEN_LIBS) \
 	$(INTEL_LIBS)
 
 libi965_compiler_la_SOURCES = \
@@ -67,6 +78,7 @@ EXTRA_DIST = \
 
 TEST_LIBS = \
 	libi965_compiler.la \
+	$(I965_PERGEN_LIBS) \
 	$(top_builddir)/src/compiler/nir/libnir.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(top_builddir)/src/intel/isl/libisl.la \

@@ -31,7 +31,6 @@
 
 #include "blorp_priv.h"
 
-#define GEN_VERSIONx10 60
 #include "genxml/gen_macros.h"
 
 static void *
@@ -302,8 +301,8 @@ blorp_emit_viewport_state(struct brw_context *brw,
  * This function alters no GL state.
  */
 void
-gen6_blorp_exec(struct brw_context *brw,
-                const struct brw_blorp_params *params)
+genX(blorp_exec)(struct brw_context *brw,
+                 const struct brw_blorp_params *params)
 {
    uint32_t cc_blend_state_offset = 0;
    uint32_t cc_state_offset = 0;

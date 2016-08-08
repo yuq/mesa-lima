@@ -176,7 +176,6 @@ i965_FILES = \
 	brw_wm.h \
 	brw_wm_state.c \
 	brw_wm_surface_state.c \
-	gen6_blorp.c \
 	gen6_cc.c \
 	gen6_clip_state.c \
 	gen6_constant_state.c \
@@ -261,3 +260,6 @@ i965_FILES = \
 	intel_tiled_memcpy.c \
 	intel_tiled_memcpy.h \
 	intel_upload.c
+
+i965_gen6_FILES = \
+	genX_blorp_exec.c
