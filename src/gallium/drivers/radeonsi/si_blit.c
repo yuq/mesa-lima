@@ -764,7 +764,8 @@ static void si_clear_render_target(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
-	si_blitter_begin(ctx, SI_CLEAR_SURFACE);
+	si_blitter_begin(ctx, SI_CLEAR_SURFACE |
+			 (render_condition_enabled ? 0 : SI_DISABLE_RENDER_COND));
 	util_blitter_clear_render_target(sctx->blitter, dst, color,
 					 dstx, dsty, width, height);
 	si_blitter_end(ctx);
@@ -781,7 +782,8 @@ static void si_clear_depth_stencil(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
-	si_blitter_begin(ctx, SI_CLEAR_SURFACE);
+	si_blitter_begin(ctx, SI_CLEAR_SURFACE |
+			 (render_condition_enabled ? 0 : SI_DISABLE_RENDER_COND));
 	util_blitter_clear_depth_stencil(sctx->blitter, dst, clear_flags, depth, stencil,
 					 dstx, dsty, width, height);
 	si_blitter_end(ctx);
