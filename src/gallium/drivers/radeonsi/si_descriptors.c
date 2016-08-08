@@ -1242,10 +1242,10 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		 * and most other clients can use TC L2 as well, we don't need
 		 * to flush it.
 		 *
-		 * The only case which requires flushing it is VGT DMA index
-		 * fetching, which is a rare case. Thus, flag the TC L2
-		 * dirtiness in the resource and handle it when index fetching
-		 * is used.
+		 * The only cases which requires flushing it is VGT DMA index
+		 * fetching (on <= CIK) and indirect draw data, which are rare
+		 * cases. Thus, flag the TC L2 dirtiness in the resource and
+		 * handle it at draw call time.
 		 */
 		for (i = 0; i < sctx->b.streamout.num_targets; i++)
 			if (sctx->b.streamout.targets[i])
