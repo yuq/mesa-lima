@@ -444,19 +444,28 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 
 			ctx->arrays[id].range = decl->Range;
 
-			/* If the array is more than 16 elements (each element
-			 * is 32-bits), then store it in a vector.  Storing the
-			 * array in a vector will causes the compiler to store
-			 * the array in registers and access it using indirect
-			 * addressing.  16 is number of vector elements that
-			 * LLVM will store in a register.
-			 * FIXME: We shouldn't need to do this.  LLVM should be
-			 * smart enough to promote allocas int registers when
-			 * profitable.
+			/* If the array has more than 16 elements, store it
+			 * in memory using an alloca that spans the entire
+			 * array.
+			 *
+			 * Otherwise, store each array element individually.
+			 * We will then generate vectors (per-channel, up to
+			 * <4 x float>) for indirect addressing.
+			 *
+			 * Note that 16 is the number of vector elements that
+			 * LLVM will store in a register, so theoretically an
+			 * array with up to 4 * 16 = 64 elements could be
+			 * handled this way, but whether that's a good idea
+			 * depends on VGPR register pressure elsewhere.
+			 *
+			 * FIXME: We shouldn't need to have the non-alloca
+			 * code path for arrays. LLVM should be smart enough to
+			 * promote allocas into registers when profitable.
 			 */
 			if (decl_size > 16) {
 				array_alloca = LLVMBuildAlloca(builder,
-					LLVMArrayType(bld_base->base.vec_type, decl_size),"array");
+					LLVMArrayType(bld_base->base.vec_type,
+						      decl_size), "array");
 				ctx->arrays[id].alloca = array_alloca;
 			}
 		}
