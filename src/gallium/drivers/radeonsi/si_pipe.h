@@ -308,6 +308,7 @@ struct si_context {
 	/* Emitted draw state. */
 	int			last_base_vertex;
 	int			last_start_instance;
+	int			last_drawid;
 	int			last_sh_base_reg;
 	int			last_primitive_restart_en;
 	int			last_restart_index;
@@ -414,8 +415,6 @@ static inline void
 si_invalidate_draw_sh_constants(struct si_context *sctx)
 {
 	sctx->last_base_vertex = SI_BASE_VERTEX_UNKNOWN;
-	sctx->last_start_instance = -1; /* reset to an unknown value */
-	sctx->last_sh_base_reg = -1; /* reset to an unknown value */
 }
 
 static inline void

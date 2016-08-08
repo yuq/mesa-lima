@@ -591,13 +591,16 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		if (base_vertex != sctx->last_base_vertex ||
 		    sctx->last_base_vertex == SI_BASE_VERTEX_UNKNOWN ||
 		    info->start_instance != sctx->last_start_instance ||
+		    info->drawid != sctx->last_drawid ||
 		    sh_base_reg != sctx->last_sh_base_reg) {
-			radeon_set_sh_reg_seq(cs, sh_base_reg + SI_SGPR_BASE_VERTEX * 4, 2);
+			radeon_set_sh_reg_seq(cs, sh_base_reg + SI_SGPR_BASE_VERTEX * 4, 3);
 			radeon_emit(cs, base_vertex);
 			radeon_emit(cs, info->start_instance);
+			radeon_emit(cs, info->drawid);
 
 			sctx->last_base_vertex = base_vertex;
 			sctx->last_start_instance = info->start_instance;
+			sctx->last_drawid = info->drawid;
 			sctx->last_sh_base_reg = sh_base_reg;
 		}
 	} else {
@@ -647,7 +650,8 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, info->indirect_offset);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
-			radeon_emit(cs, 0); /* draw_index */
+			radeon_emit(cs, ((sh_base_reg + SI_SGPR_DRAWID * 4 - SI_SH_REG_OFFSET) >> 2) |
+					S_2C3_DRAW_INDEX_ENABLE(1));
 			radeon_emit(cs, 1); /* count */
 			radeon_emit(cs, 0); /* count_addr -- disabled */
 			radeon_emit(cs, 0);
