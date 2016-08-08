@@ -96,7 +96,7 @@ brw_blorp_blit_vars_init(nir_builder *b, struct brw_blorp_blit_vars *v,
    v->color_out->data.location = FRAG_RESULT_COLOR;
 }
 
-nir_ssa_def *
+static nir_ssa_def *
 blorp_blit_get_frag_coords(nir_builder *b,
                            const struct brw_blorp_blit_prog_key *key,
                            struct brw_blorp_blit_vars *v)
@@ -115,7 +115,7 @@ blorp_blit_get_frag_coords(nir_builder *b,
  * Emit code to translate from destination (X, Y) coordinates to source (X, Y)
  * coordinates.
  */
-nir_ssa_def *
+static nir_ssa_def *
 blorp_blit_apply_transform(nir_builder *b, nir_ssa_def *src_pos,
                            struct brw_blorp_blit_vars *v)
 {
@@ -734,7 +734,7 @@ nir_imm_vec2(nir_builder *build, float x, float y)
 static nir_ssa_def *
 blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
                                 unsigned tex_samples,
-                                const brw_blorp_blit_prog_key *key,
+                                const struct brw_blorp_blit_prog_key *key,
                                 struct brw_blorp_blit_vars *v)
 {
    nir_ssa_def *pos_xy = nir_channels(b, pos, 0x3);
@@ -1002,7 +1002,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
  */
 static nir_shader *
 brw_blorp_build_nir_shader(struct brw_context *brw,
-                           const brw_blorp_blit_prog_key *key)
+                           const struct brw_blorp_blit_prog_key *key)
 {
    nir_ssa_def *src_pos, *dst_pos, *color;
 
@@ -1317,7 +1317,7 @@ surf_convert_to_single_slice(struct brw_context *brw,
    /* TODO: Once this file gets converted to C, we shouls just use designated
     * initializers.
     */
-   struct isl_surf_init_info init_info = isl_surf_init_info();
+   struct isl_surf_init_info init_info = { 0, };
 
    init_info.dim = ISL_SURF_DIM_2D;
    init_info.format = ISL_FORMAT_R8_UINT;
