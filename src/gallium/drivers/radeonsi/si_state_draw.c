@@ -644,6 +644,19 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, di_src_sel);
 		} else {
+			uint64_t count_va = 0;
+
+			if (info->indirect_params) {
+				struct r600_resource *params_buf =
+					(struct r600_resource *)info->indirect_params;
+
+				radeon_add_to_buffer_list(
+					&sctx->b, &sctx->b.gfx, params_buf,
+					RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
+
+				count_va = params_buf->gpu_address + info->indirect_params_offset;
+			}
+
 			radeon_emit(cs, PKT3(info->indexed ? PKT3_DRAW_INDEX_INDIRECT_MULTI :
 							     PKT3_DRAW_INDIRECT_MULTI,
 					     8, render_cond_bit));
@@ -651,11 +664,12 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, ((sh_base_reg + SI_SGPR_DRAWID * 4 - SI_SH_REG_OFFSET) >> 2) |
-					S_2C3_DRAW_INDEX_ENABLE(1));
-			radeon_emit(cs, 1); /* count */
-			radeon_emit(cs, 0); /* count_addr -- disabled */
-			radeon_emit(cs, 0);
-			radeon_emit(cs, 16); /* stride */
+					S_2C3_DRAW_INDEX_ENABLE(1) |
+					S_2C3_COUNT_INDIRECT_ENABLE(!!info->indirect_params));
+			radeon_emit(cs, info->indirect_count);
+			radeon_emit(cs, count_va);
+			radeon_emit(cs, count_va >> 32);
+			radeon_emit(cs, info->indirect_stride);
 			radeon_emit(cs, di_src_sel);
 		}
 	} else {
@@ -972,6 +986,12 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (info->indirect && r600_resource(info->indirect)->TC_L2_dirty) {
 		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
 		r600_resource(info->indirect)->TC_L2_dirty = false;
+	}
+
+	if (info->indirect_params &&
+	    r600_resource(info->indirect_params)->TC_L2_dirty) {
+		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+		r600_resource(info->indirect_params)->TC_L2_dirty = false;
 	}
 
 	/* Check flush flags. */
