@@ -622,6 +622,7 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
    OPT_V(nir_lower_to_source_mods);
    OPT(nir_copy_prop);
    OPT(nir_opt_dce);
+   OPT(nir_opt_move_comparisons);
 
    OPT(nir_lower_locals_to_regs);
 
