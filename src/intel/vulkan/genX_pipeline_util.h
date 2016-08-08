@@ -475,6 +475,7 @@ emit_ms_state(struct anv_pipeline *pipeline,
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
       ms.NumberofMultisamples       = log2_samples;
 
+#if GEN_GEN >= 8
       /* The PRM says that this bit is valid only for DX9:
        *
        *    SW can choose to set this bit only for DX9 API. DX10/OGL API's
@@ -482,6 +483,52 @@ emit_ms_state(struct anv_pipeline *pipeline,
        */
       ms.PixelPositionOffsetEnable  = false;
       ms.PixelLocation              = CENTER;
+#else
+      ms.PixelLocation              = PIXLOC_CENTER;
+
+      switch (samples) {
+      case 1:
+         ms.Sample0XOffset          = 0.5;
+         ms.Sample0YOffset          = 0.5;
+         break;
+      case 2:
+         ms.Sample0XOffset          = 0.25;
+         ms.Sample0YOffset          = 0.25;
+         ms.Sample1XOffset          = 0.75;
+         ms.Sample1YOffset          = 0.75;
+         break;
+      case 4:
+         ms.Sample0XOffset          = 0.375;
+         ms.Sample0YOffset          = 0.125;
+         ms.Sample1XOffset          = 0.875;
+         ms.Sample1YOffset          = 0.375;
+         ms.Sample2XOffset          = 0.125;
+         ms.Sample2YOffset          = 0.625;
+         ms.Sample3XOffset          = 0.625;
+         ms.Sample3YOffset          = 0.875;
+         break;
+      case 8:
+         ms.Sample0XOffset          = 0.5625;
+         ms.Sample0YOffset          = 0.3125;
+         ms.Sample1XOffset          = 0.4375;
+         ms.Sample1YOffset          = 0.6875;
+         ms.Sample2XOffset          = 0.8125;
+         ms.Sample2YOffset          = 0.5625;
+         ms.Sample3XOffset          = 0.3125;
+         ms.Sample3YOffset          = 0.1875;
+         ms.Sample4XOffset          = 0.1875;
+         ms.Sample4YOffset          = 0.8125;
+         ms.Sample5XOffset          = 0.0625;
+         ms.Sample5YOffset          = 0.4375;
+         ms.Sample6XOffset          = 0.6875;
+         ms.Sample6YOffset          = 0.9375;
+         ms.Sample7XOffset          = 0.9375;
+         ms.Sample7YOffset          = 0.0625;
+         break;
+      default:
+         break;
+      }
+#endif
    }
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK), sm) {
