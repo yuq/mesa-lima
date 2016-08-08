@@ -68,12 +68,12 @@ enum {
 #undef ST_STATE
 };
 
-/* Define ST_NEW_xxx */
-enum {
-#define ST_STATE(FLAG, st_update) FLAG = 1llu << FLAG##_INDEX,
+/* Define ST_NEW_xxx values as static const uint64_t values.
+ * We can't use an enum type because MSVC doesn't allow 64-bit enum values.
+ */
+#define ST_STATE(FLAG, st_update) static const uint64_t FLAG = 1llu << FLAG##_INDEX;
 #include "st_atom_list.h"
 #undef ST_STATE
-};
 
 /* Add extern struct declarations. */
 #define ST_STATE(FLAG, st_update) extern const struct st_tracked_state st_update;
