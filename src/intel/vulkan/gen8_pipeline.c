@@ -54,6 +54,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
    };
 
    sf.ViewportTransformEnable = !(extra && extra->use_rectlist);
+   sf.StatisticsEnable = true;
    sf.TriangleStripListProvokingVertexSelect = 0;
    sf.LineStripListProvokingVertexSelect = 0;
    sf.TriangleFanProvokingVertexSelect = 1;
