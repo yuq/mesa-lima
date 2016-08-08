@@ -1397,9 +1397,7 @@ fs_visitor::emit_discard_jump()
    fs_inst *discard_jump = bld.emit(FS_OPCODE_DISCARD_JUMP);
    discard_jump->flag_subreg = 1;
 
-   discard_jump->predicate = (dispatch_width == 8)
-                             ? BRW_PREDICATE_ALIGN1_ANY8H
-                             : BRW_PREDICATE_ALIGN1_ANY16H;
+   discard_jump->predicate = BRW_PREDICATE_ALIGN1_ANY4H;
    discard_jump->predicate_inverse = true;
 }
 
