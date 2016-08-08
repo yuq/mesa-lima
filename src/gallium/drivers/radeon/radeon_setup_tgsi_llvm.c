@@ -239,6 +239,21 @@ get_pointer_into_array(struct radeon_llvm_context *ctx,
 
 	index = emit_array_index(&ctx->soa, reg_indirect,
 				 reg_index - ctx->temp_arrays[array_id - 1].range.First);
+
+	/* Ensure that the index is within a valid range, to guard against
+	 * VM faults and overwriting critical data (e.g. spilled resource
+	 * descriptors).
+	 *
+	 * TODO It should be possible to avoid the additional instructions
+	 * if LLVM is changed so that it guarantuees:
+	 * 1. the scratch space descriptor isolates the current wave (this
+	 *    could even save the scratch offset SGPR at the cost of an
+	 *    additional SALU instruction)
+	 * 2. the memory for allocas must be allocated at the _end_ of the
+	 *    scratch space (after spilled registers)
+	 */
+	index = radeon_llvm_bound_index(ctx, index, array->range.Last - array->range.First + 1);
+
 	index = LLVMBuildMul(
 		builder, index,
 		lp_build_const_int32(gallivm, util_bitcount(array->writemask)),
