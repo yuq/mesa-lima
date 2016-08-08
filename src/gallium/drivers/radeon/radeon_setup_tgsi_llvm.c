@@ -415,7 +415,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	unsigned first, last, i, idx;
+	unsigned first, last, i;
 	switch(decl->Declaration.File) {
 	case TGSI_FILE_ADDRESS:
 	{
@@ -433,6 +433,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 
 	case TGSI_FILE_TEMPORARY:
 	{
+		LLVMValueRef array_alloca = NULL;
 		unsigned decl_size;
 		first = decl->Range.First;
 		last = decl->Range.Last;
@@ -442,8 +443,6 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			if (!ctx->arrays) {
 				int size = bld_base->info->array_max[TGSI_FILE_TEMPORARY];
 				ctx->arrays = CALLOC(size, sizeof(ctx->arrays[0]));
-			for (i = 0; i < size; ++i) {
-				assert(!ctx->arrays[i].alloca);}
 			}
 
 			ctx->arrays[id].range = decl->Range;
@@ -459,22 +458,32 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			 * profitable.
 			 */
 			if (decl_size > 16) {
-				ctx->arrays[id].alloca = LLVMBuildAlloca(builder,
+				array_alloca = LLVMBuildAlloca(builder,
 					LLVMArrayType(bld_base->base.vec_type, decl_size),"array");
+				ctx->arrays[id].alloca = array_alloca;
 			}
 		}
-		first = decl->Range.First;
-		last = decl->Range.Last;
+
 		if (!ctx->temps_count) {
 			ctx->temps_count = bld_base->info->file_max[TGSI_FILE_TEMPORARY] + 1;
 			ctx->temps = MALLOC(TGSI_NUM_CHANNELS * ctx->temps_count * sizeof(LLVMValueRef));
 		}
-		for (idx = first; idx <= last; idx++) {
-			for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
-				ctx->temps[idx * TGSI_NUM_CHANNELS + i] =
+		if (!array_alloca) {
+			for (i = 0; i < decl_size; ++i) {
+				ctx->temps[first * TGSI_NUM_CHANNELS + i] =
 					si_build_alloca_undef(bld_base->base.gallivm,
 							      bld_base->base.vec_type,
 							      "temp");
+			}
+		} else {
+			LLVMValueRef idxs[2] = {
+				bld_base->uint_bld.zero,
+				NULL
+			};
+			for (i = 0; i < decl_size; ++i) {
+				idxs[1] = lp_build_const_int32(bld_base->base.gallivm, i);
+				ctx->temps[first * TGSI_NUM_CHANNELS + i] =
+					LLVMBuildGEP(builder, array_alloca, idxs, 2, "temp");
 			}
 		}
 		break;
