@@ -38,6 +38,7 @@
 #include "util/u_memory.h"
 #include "util/u_debug.h"
 
+#include <stdio.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Transforms/Scalar.h>
 
@@ -428,6 +429,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 
 	case TGSI_FILE_TEMPORARY:
 	{
+		char name[16] = "";
 		LLVMValueRef array_alloca = NULL;
 		unsigned decl_size;
 		first = decl->Range.First;
@@ -465,10 +467,14 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 		}
 		if (!array_alloca) {
 			for (i = 0; i < decl_size; ++i) {
+#ifdef DEBUG
+				snprintf(name, sizeof(name), "TEMP%d.%c",
+					 first + i / 4, "xyzw"[i % 4]);
+#endif
 				ctx->temps[first * TGSI_NUM_CHANNELS + i] =
 					si_build_alloca_undef(bld_base->base.gallivm,
 							      bld_base->base.vec_type,
-							      "temp");
+							      name);
 			}
 		} else {
 			LLVMValueRef idxs[2] = {
@@ -476,9 +482,13 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 				NULL
 			};
 			for (i = 0; i < decl_size; ++i) {
+#ifdef DEBUG
+				snprintf(name, sizeof(name), "TEMP%d.%c",
+					 first + i / 4, "xyzw"[i % 4]);
+#endif
 				idxs[1] = lp_build_const_int32(bld_base->base.gallivm, i);
 				ctx->temps[first * TGSI_NUM_CHANNELS + i] =
-					LLVMBuildGEP(builder, array_alloca, idxs, 2, "temp");
+					LLVMBuildGEP(builder, array_alloca, idxs, 2, name);
 			}
 		}
 		break;
