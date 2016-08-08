@@ -676,7 +676,6 @@ void SwrSetViewports(
 
     if (pMatrices != nullptr)
     {
-        //memcpy(&pState->vpMatrix[0], pMatrices, sizeof(SWR_VIEWPORT_MATRIX) * numViewports);
         // @todo Faster to copy portions of the SOA or just copy all of it?
         memcpy(&pState->vpMatrices, pMatrices, sizeof(SWR_VIEWPORT_MATRICES));
     }

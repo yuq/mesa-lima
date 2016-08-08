@@ -833,7 +833,26 @@ static void GeometryShaderStage(
                                     vPrimId = _simd_set1_epi32(pPrimitiveId[inputPrim]);
                                 }
 
-                                pfnClipFunc(pDC, gsPa, workerId, attrib, GenMask(gsPa.NumPrims()), vPrimId);
+                                // use viewport array index if GS declares it as an output attribute. Otherwise use index 0.
+                                simdscalari vViewPortIdx;
+                                if (state.gsState.emitsViewportArrayIndex)
+                                {
+                                    simdvector vpiAttrib[3];
+                                    gsPa.Assemble(VERTEX_VIEWPORT_ARRAY_INDEX_SLOT, vpiAttrib);
+
+                                    // OOB indices => forced to zero.
+                                    simdscalari vNumViewports = _simd_set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
+                                    simdscalar vClearMask = _simd_cmplt_ps(vpiAttrib[0].x, _simd_castsi_ps(vNumViewports));
+                                    vpiAttrib[0].x = _simd_and_ps(vClearMask, vpiAttrib[0].x);
+
+                                    vViewPortIdx = _simd_castps_si(vpiAttrib[0].x);
+                                }
+                                else
+                                {
+                                    vViewPortIdx = _simd_set1_epi32(0);
+                                }
+
+                                pfnClipFunc(pDC, gsPa, workerId, attrib, GenMask(gsPa.NumPrims()), vPrimId, vViewPortIdx);
                             }
                         }
                     } while (gsPa.NextPrim());
@@ -1104,7 +1123,7 @@ static void TessellationStages(
 
                     SWR_ASSERT(pfnClipFunc);
                     pfnClipFunc(pDC, tessPa, workerId, prim,
-                        GenMask(tessPa.NumPrims()), _simd_set1_epi32(dsContext.PrimitiveID));
+                        GenMask(tessPa.NumPrims()), _simd_set1_epi32(dsContext.PrimitiveID), _simd_set1_epi32(0));
                 }
             }
 
@@ -1359,7 +1378,7 @@ void ProcessDraw(
                                 {
                                     SWR_ASSERT(pDC->pState->pfnProcessPrims);
                                     pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim,
-                                        GenMask(pa.NumPrims()), pa.GetPrimID(work.startPrimID));
+                                        GenMask(pa.NumPrims()), pa.GetPrimID(work.startPrimID), _simd_set1_epi32(0));
                                 }
                             }
                         }
@@ -1727,6 +1746,7 @@ INLINE void calcBoundingBoxIntVertical<FEConservativeRastT>(const simdvector * c
 /// @param workerId - thread's worker id. Even thread has a unique id.
 /// @param tri - Contains triangle position data for SIMDs worth of triangles.
 /// @param primID - Primitive ID for each triangle.
+/// @param viewportIdx - viewport array index for each triangle.
 /// @tparam CT - ConservativeRastFETraits
 template <typename CT>
 void BinTriangles(
@@ -1735,7 +1755,8 @@ void BinTriangles(
     uint32_t workerId,
     simdvector tri[3],
     uint32_t triMask,
-    simdscalari primID)
+    simdscalari primID,
+    simdscalari viewportIdx)
 {
     RDTSC_START(FEBinTriangles);
 
@@ -1770,7 +1791,14 @@ void BinTriangles(
         tri[2].v[2] = _simd_mul_ps(tri[2].v[2], vRecipW2);
 
         // viewport transform to screen coords
-        viewportTransform<3>(tri, state.vpMatrices);
+        if (state.gsState.emitsViewportArrayIndex)
+        {
+            viewportTransform<3>(tri, state.vpMatrices, viewportIdx);
+        }
+        else
+        {
+            viewportTransform<3>(tri, state.vpMatrices);
+        }
     }
 
     // adjust for pixel center location
@@ -2119,7 +2147,8 @@ void BinPoints(
     uint32_t workerId,
     simdvector prim[3],
     uint32_t primMask,
-    simdscalari primID)
+    simdscalari primID,
+    simdscalari viewportIdx)
 {
     RDTSC_START(FEBinPoints);
 
@@ -2143,7 +2172,14 @@ void BinPoints(
         primVerts.z = _simd_mul_ps(primVerts.z, vRecipW0);
 
         // viewport transform to screen coords
-        viewportTransform<1>(&primVerts, state.vpMatrices);
+        if (state.gsState.emitsViewportArrayIndex)
+        {
+            viewportTransform<1>(&primVerts, state.vpMatrices, viewportIdx);
+        }
+        else
+        {
+            viewportTransform<1>(&primVerts, state.vpMatrices);
+        }
     }
 
     // adjust for pixel center location
@@ -2429,7 +2465,8 @@ void BinLines(
     uint32_t workerId,
     simdvector prim[],
     uint32_t primMask,
-    simdscalari primID)
+    simdscalari primID,
+    simdscalari viewportIdx)
 {
     RDTSC_START(FEBinLines);
 
@@ -2461,7 +2498,14 @@ void BinLines(
         prim[1].v[2] = _simd_mul_ps(prim[1].v[2], vRecipW1);
 
         // viewport transform to screen coords
-        viewportTransform<2>(prim, state.vpMatrices);
+        if (state.gsState.emitsViewportArrayIndex)
+        {
+            viewportTransform<2>(prim, state.vpMatrices, viewportIdx);
+        }
+        else
+        {
+            viewportTransform<2>(prim, state.vpMatrices);
+        }
     }
 
     // adjust for pixel center location

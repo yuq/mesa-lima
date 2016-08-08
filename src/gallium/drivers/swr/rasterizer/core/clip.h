@@ -302,7 +302,7 @@ public:
     }
 
     // clip SIMD primitives
-    void ClipSimd(const simdscalar& vPrimMask, const simdscalar& vClipMask, PA_STATE& pa, const simdscalari& vPrimId)
+    void ClipSimd(const simdscalar& vPrimMask, const simdscalar& vClipMask, PA_STATE& pa, const simdscalari& vPrimId, const simdscalari& vViewportIdx)
     {
         // input/output vertex store for clipper
         simdvertex vertices[7]; // maximum 7 verts generated per triangle
@@ -402,6 +402,7 @@ public:
 
         uint32_t* pVertexCount = (uint32_t*)&vNumClippedVerts;
         uint32_t* pPrimitiveId = (uint32_t*)&vPrimId;
+        uint32_t* pViewportIdx = (uint32_t*)&vViewportIdx;
 
         const simdscalari vOffsets = _mm256_set_epi32(
             0 * sizeof(simdvertex),  // unused lane
@@ -487,7 +488,7 @@ public:
                     if (assemble)
                     {
                         static const uint32_t primMaskMap[] = { 0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f, 0xff };
-                        pfnBinFunc(this->pDC, clipPa, this->workerId, attrib, primMaskMap[numEmittedPrims], _simd_set1_epi32(pPrimitiveId[inputPrim]));
+                        pfnBinFunc(this->pDC, clipPa, this->workerId, attrib, primMaskMap[numEmittedPrims], _simd_set1_epi32(pPrimitiveId[inputPrim]), _simd_set1_epi32(pViewportIdx[inputPrim]));
                     }
                 } while (clipPa.NextPrim());
             }
@@ -499,7 +500,7 @@ public:
     }
     
     // execute the clipper stage
-    void ExecuteStage(PA_STATE& pa, simdvector prim[], uint32_t primMask, simdscalari primId)
+    void ExecuteStage(PA_STATE& pa, simdvector prim[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx)
     {
         // set up binner based on PA state
         PFN_PROCESS_PRIMS pfnBinner;
@@ -552,7 +553,7 @@ public:
             RDTSC_START(FEGuardbandClip);
             // we have to clip tris, execute the clipper, which will also
             // call the binner
-            ClipSimd(vMask(primMask), vMask(clipMask), pa, primId);
+            ClipSimd(vMask(primMask), vMask(clipMask), pa, primId, viewportIdx);
             RDTSC_STOP(FEGuardbandClip, 1, 0);
         }
         else if (validMask)
@@ -562,7 +563,7 @@ public:
             UPDATE_STAT_FE(CPrimitives, _mm_popcnt_u32(validMask));
 
             // forward valid prims directly to binner
-            pfnBinner(this->pDC, pa, this->workerId, prim, validMask, primId);
+            pfnBinner(this->pDC, pa, this->workerId, prim, validMask, primId, viewportIdx);
         }
     }
 
@@ -948,6 +949,6 @@ private:
 
 
 // pipeline stage functions
-void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId);
-void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId);
-void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId);
+void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx);
+void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx);
+void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx);

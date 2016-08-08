@@ -219,6 +219,26 @@ void viewportTransform(simdvector *v, const SWR_VIEWPORT_MATRICES & vpMatrices)
     }
 }
 
+template<uint32_t NumVerts>
+INLINE
+void viewportTransform(simdvector *v, const SWR_VIEWPORT_MATRICES & vpMatrices, simdscalari vViewportIdx)
+{
+    // perform a gather of each matrix element based on the viewport array indexes
+    simdscalar m00 = _simd_i32gather_ps(&vpMatrices.m00[0], vViewportIdx, 1);
+    simdscalar m30 = _simd_i32gather_ps(&vpMatrices.m30[0], vViewportIdx, 1);
+    simdscalar m11 = _simd_i32gather_ps(&vpMatrices.m11[0], vViewportIdx, 1);
+    simdscalar m31 = _simd_i32gather_ps(&vpMatrices.m31[0], vViewportIdx, 1);
+    simdscalar m22 = _simd_i32gather_ps(&vpMatrices.m22[0], vViewportIdx, 1);
+    simdscalar m32 = _simd_i32gather_ps(&vpMatrices.m32[0], vViewportIdx, 1);
+
+    for (uint32_t i = 0; i < NumVerts; ++i)
+    {
+        v[i].x = _simd_fmadd_ps(v[i].x, m00, m30);
+        v[i].y = _simd_fmadd_ps(v[i].y, m11, m31);
+        v[i].z = _simd_fmadd_ps(v[i].z, m22, m32);
+    }
+}
+
 INLINE
 void calcBoundingBoxInt(const __m128i &vX, const __m128i &vY, BBOX &bbox)
 {
@@ -288,6 +308,6 @@ void ProcessSync(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, vo
 PFN_PROCESS_PRIMS GetBinTrianglesFunc(bool IsConservative);
 
 struct PA_STATE_BASE;  // forward decl
-void BinPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID);
-void BinLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID);
+void BinPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
+void BinLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
 
