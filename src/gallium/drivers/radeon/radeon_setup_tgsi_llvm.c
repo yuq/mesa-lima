@@ -359,11 +359,6 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 						 LLVMBuildLoad(builder, ptr, ""),
 						 LLVMBuildLoad(builder, ptr2, ""));
 		}
-		LLVMValueRef array = get_alloca_for_array(bld_base, reg->Register.File, reg->Register.Index);
-		if (array) {
-			return bitcast(bld_base, type, load_value_from_array(bld_base, reg->Register.File, type,
-					swizzle, reg->Register.Index, NULL));
-		}
 		result = LLVMBuildLoad(builder, ptr, "");
 		break;
 
