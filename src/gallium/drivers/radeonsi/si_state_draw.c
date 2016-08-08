@@ -574,8 +574,6 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				  ib->index_size;
 		index_va = r600_resource(ib->buffer)->gpu_address + ib->offset;
 
-		assert(index_va % 2 == 0);
-
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource *)ib->buffer,
 				      RADEON_USAGE_READ, RADEON_PRIO_INDEX_BUFFER);
