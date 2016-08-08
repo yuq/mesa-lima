@@ -6038,7 +6038,7 @@ st_translate_program(
    t->num_temp_arrays = program->next_array;
    if (t->num_temp_arrays)
       t->arrays = (struct ureg_dst*)
-                  calloc(1, sizeof(t->arrays[0]) * t->num_temp_arrays);
+                  calloc(t->num_temp_arrays, sizeof(t->arrays[0]));
 
    /*
     * Declare input attributes.
