@@ -31,7 +31,7 @@
 #include "brw_defines.h"
 #include "brw_state.h"
 
-#include "brw_blorp.h"
+#include "blorp_priv.h"
 
 static uint32_t
 gen8_blorp_emit_blend_state(struct brw_context *brw,

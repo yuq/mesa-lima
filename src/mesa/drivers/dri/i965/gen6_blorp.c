@@ -29,7 +29,7 @@
 #include "brw_context.h"
 #include "brw_state.h"
 
-#include "brw_blorp.h"
+#include "blorp_priv.h"
 #include "vbo/vbo.h"
 #include "brw_draw.h"
 

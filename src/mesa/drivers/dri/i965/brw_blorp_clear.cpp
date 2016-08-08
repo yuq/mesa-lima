@@ -31,7 +31,7 @@
 
 #include "intel_fbo.h"
 
-#include "brw_blorp.h"
+#include "blorp_priv.h"
 #include "brw_meta_util.h"
 #include "brw_context.h"
 #include "brw_eu.h"
@@ -97,31 +97,7 @@ brw_blorp_params_get_clear_kernel(struct brw_context *brw,
    ralloc_free(mem_ctx);
 }
 
-static bool
-set_write_disables(const struct intel_renderbuffer *irb, 
-                   const GLubyte *color_mask, bool *color_write_disable)
-{
-   /* Format information in the renderbuffer represents the requirements
-    * given by the client. There are cases where the backing miptree uses,
-    * for example, RGBA to represent RGBX. Since the client is only expecting
-    * RGB we can treat alpha as not used and write whatever we like into it.
-    */
-   const GLenum base_format = irb->Base.Base._BaseFormat;
-   const int components = _mesa_base_format_component_count(base_format);
-   bool disables = false;
-
-   assert(components > 0);
-
-   for (int i = 0; i < components; i++) {
-      color_write_disable[i] = !color_mask[i];
-      disables = disables || !color_mask[i];
-   }
-
-   return disables;
-}
-
-
-static void
+void
 blorp_fast_clear(struct brw_context *brw, const struct brw_blorp_surf *surf,
                  uint32_t level, uint32_t layer,
                  uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)
@@ -149,7 +125,7 @@ blorp_fast_clear(struct brw_context *brw, const struct brw_blorp_surf *surf,
 }
 
 
-static void
+void
 blorp_clear(struct brw_context *brw, const struct brw_blorp_surf *surf,
             uint32_t level, uint32_t layer,
             uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
@@ -194,160 +170,9 @@ blorp_clear(struct brw_context *brw, const struct brw_blorp_surf *surf,
    brw_blorp_exec(brw, &params);
 }
 
-static bool
-do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
-                      struct gl_renderbuffer *rb, unsigned buf,
-                      bool partial_clear, bool encode_srgb, unsigned layer)
-{
-   struct gl_context *ctx = &brw->ctx;
-   struct intel_renderbuffer *irb = intel_renderbuffer(rb);
-   mesa_format format = irb->mt->format;
-   uint32_t x0, x1, y0, y1;
-
-   if (!encode_srgb && _mesa_get_format_color_encoding(format) == GL_SRGB)
-      format = _mesa_get_srgb_format_linear(format);
-
-   x0 = fb->_Xmin;
-   x1 = fb->_Xmax;
-   if (rb->Name != 0) {
-      y0 = fb->_Ymin;
-      y1 = fb->_Ymax;
-   } else {
-      y0 = rb->Height - fb->_Ymax;
-      y1 = rb->Height - fb->_Ymin;
-   }
-
-   bool can_fast_clear = !partial_clear;
-
-   bool color_write_disable[4] = { false, false, false, false };
-   if (set_write_disables(irb, ctx->Color.ColorMask[buf], color_write_disable))
-      can_fast_clear = false;
-
-   if (irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_NO_MCS ||
-       !brw_is_color_fast_clear_compatible(brw, irb->mt, &ctx->Color.ClearColor))
-      can_fast_clear = false;
-
-   if (can_fast_clear) {
-      /* Record the clear color in the miptree so that it will be
-       * programmed in SURFACE_STATE by later rendering and resolve
-       * operations.
-       */
-      const bool color_updated = brw_meta_set_fast_clear_color(
-                                    brw, irb->mt, &ctx->Color.ClearColor);
-
-      /* If the buffer is already in INTEL_FAST_CLEAR_STATE_CLEAR, the clear
-       * is redundant and can be skipped.
-       */
-      if (!color_updated &&
-          irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_CLEAR)
-         return true;
-
-      /* If the MCS buffer hasn't been allocated yet, we need to allocate
-       * it now.
-       */
-      if (!irb->mt->mcs_mt) {
-         if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt)) {
-            /* MCS allocation failed--probably this will only happen in
-             * out-of-memory conditions.  But in any case, try to recover
-             * by falling back to a non-blorp clear technique.
-             */
-            return false;
-         }
-      }
-   }
-
-   intel_miptree_check_level_layer(irb->mt, irb->mt_level, layer);
-   intel_miptree_used_for_rendering(irb->mt);
-
-   /* We can't setup the blorp_surf until we've allocated the MCS above */
-   struct isl_surf isl_tmp[2];
-   struct brw_blorp_surf surf;
-   unsigned level = irb->mt_level;
-   brw_blorp_surf_for_miptree(brw, &surf, irb->mt, true, &level, isl_tmp);
-
-   if (can_fast_clear) {
-      DBG("%s (fast) to mt %p level %d layer %d\n", __FUNCTION__,
-          irb->mt, irb->mt_level, irb->mt_layer);
-
-      blorp_fast_clear(brw, &surf, level, layer, x0, y0, x1, y1);
-
-      /* Now that the fast clear has occurred, put the buffer in
-       * INTEL_FAST_CLEAR_STATE_CLEAR so that we won't waste time doing
-       * redundant clears.
-       */
-      irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
-   } else {
-      DBG("%s (slow) to mt %p level %d layer %d\n", __FUNCTION__,
-          irb->mt, irb->mt_level, irb->mt_layer);
-
-      union isl_color_value clear_color;
-      memcpy(clear_color.f32, ctx->Color.ClearColor.f, sizeof(float) * 4);
-
-      blorp_clear(brw, &surf, level, layer, x0, y0, x1, y1,
-                  (enum isl_format)brw->render_target_format[format],
-                  clear_color, color_write_disable);
-
-      if (intel_miptree_is_lossless_compressed(brw, irb->mt)) {
-         /* Compressed buffers can be cleared also using normal rep-clear. In
-          * such case they bahave such as if they were drawn using normal 3D
-          * render pipeline, and we simply mark the mcs as dirty.
-          */
-         assert(partial_clear);
-         irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
-      }
-   }
-
-   return true;
-}
-
-
 extern "C" {
-bool
-brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
-                      GLbitfield mask, bool partial_clear, bool encode_srgb)
-{
-   for (unsigned buf = 0; buf < fb->_NumColorDrawBuffers; buf++) {
-      struct gl_renderbuffer *rb = fb->_ColorDrawBuffers[buf];
-      struct intel_renderbuffer *irb = intel_renderbuffer(rb);
 
-      /* Only clear the buffers present in the provided mask */
-      if (((1 << fb->_ColorDrawBufferIndexes[buf]) & mask) == 0)
-         continue;
-
-      /* If this is an ES2 context or GL_ARB_ES2_compatibility is supported,
-       * the framebuffer can be complete with some attachments missing.  In
-       * this case the _ColorDrawBuffers pointer will be NULL.
-       */
-      if (rb == NULL)
-         continue;
-
-      if (fb->MaxNumLayers > 0) {
-         unsigned layer_multiplier =
-            (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
-             irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
-            irb->mt->num_samples : 1;
-         unsigned num_layers = irb->layer_count;
-         for (unsigned layer = 0; layer < num_layers; layer++) {
-            if (!do_single_blorp_clear(
-                    brw, fb, rb, buf, partial_clear, encode_srgb,
-                    irb->mt_layer + layer * layer_multiplier)) {
-               return false;
-            }
-         }
-      } else {
-         unsigned layer = irb->mt_layer;
-         if (!do_single_blorp_clear(brw, fb, rb, buf, partial_clear,
-                                    encode_srgb, layer))
-            return false;
-      }
-
-      irb->need_downsample = true;
-   }
-
-   return true;
-}
-
-static void
+void
 brw_blorp_ccs_resolve(struct brw_context *brw, struct brw_blorp_surf *surf,
                       enum isl_format format)
 {
@@ -375,26 +200,6 @@ brw_blorp_ccs_resolve(struct brw_context *brw, struct brw_blorp_surf *surf,
    brw_blorp_params_get_clear_kernel(brw, &params, true);
 
    brw_blorp_exec(brw, &params);
-}
-
-void
-brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
-{
-   DBG("%s to mt %p\n", __FUNCTION__, mt);
-
-   const mesa_format format = _mesa_get_srgb_format_linear(mt->format);
-
-   intel_miptree_check_level_layer(mt, 0 /* level */, 0 /* layer */);
-   intel_miptree_used_for_rendering(mt);
-
-   struct isl_surf isl_tmp[2];
-   struct brw_blorp_surf surf;
-   unsigned level = 0;
-   brw_blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
-
-   brw_blorp_ccs_resolve(brw, &surf, brw_blorp_to_isl_format(brw, format, true));
-
-   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
 }
 
 } /* extern "C" */

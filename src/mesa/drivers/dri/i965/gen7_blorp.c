@@ -29,7 +29,7 @@
 #include "brw_context.h"
 #include "brw_state.h"
 
-#include "brw_blorp.h"
+#include "blorp_priv.h"
 
 /* Once vertex fetcher has written full VUE entries with complete
  * header the space requirement is as follows per vertex (in bytes):
