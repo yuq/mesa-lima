@@ -111,58 +111,65 @@ static LLVMValueRef emit_swizzle(struct lp_build_tgsi_context *bld_base,
 				      LLVMConstVector(swizzles, 4), "");
 }
 
+/**
+ * Return the description of the array covering the given temporary register
+ * index.
+ */
+static const struct radeon_llvm_array *
+get_temp_array(struct lp_build_tgsi_context *bld_base,
+	       unsigned reg_index,
+	       const struct tgsi_ind_register *reg)
+{
+	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	unsigned num_arrays = ctx->soa.bld_base.info->array_max[TGSI_FILE_TEMPORARY];
+	unsigned i;
+
+	if (reg && reg->ArrayID > 0 && reg->ArrayID <= num_arrays)
+		return &ctx->arrays[reg->ArrayID - 1];
+
+	for (i = 0; i < num_arrays; i++) {
+		const struct radeon_llvm_array *array = &ctx->arrays[i];
+
+		if (reg_index >= array->range.First && reg_index <= array->range.Last)
+			return array;
+	}
+
+	return NULL;
+}
+
 static struct tgsi_declaration_range
 get_array_range(struct lp_build_tgsi_context *bld_base,
 		unsigned File, unsigned reg_index,
 		const struct tgsi_ind_register *reg)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct tgsi_declaration_range range;
 
-	if (!reg) {
-		unsigned i;
-		unsigned num_arrays = bld_base->info->array_max[TGSI_FILE_TEMPORARY];
-		for (i = 0; i < num_arrays; i++) {
-			const struct tgsi_declaration_range *range =
-						&ctx->arrays[i].range;
-
-			if (reg_index >= range->First && reg_index <= range->Last) {
-				return ctx->arrays[i].range;
-			}
-		}
+	if (File == TGSI_FILE_TEMPORARY) {
+		const struct radeon_llvm_array *array =
+			get_temp_array(bld_base, reg_index, reg);
+		if (array)
+			return array->range;
 	}
 
-	if (File != TGSI_FILE_TEMPORARY || !reg || reg->ArrayID == 0 ||
-	    reg->ArrayID > bld_base->info->array_max[TGSI_FILE_TEMPORARY]) {
-		struct tgsi_declaration_range range;
-		range.First = 0;
-		range.Last = bld_base->info->file_max[File];
-		return range;
-	}
-
-	return ctx->arrays[reg->ArrayID - 1].range;
+	range.First = 0;
+	range.Last = bld_base->info->file_max[File];
+	return range;
 }
 
 static LLVMValueRef get_alloca_for_array(struct lp_build_tgsi_context *bld_base,
 					 unsigned file,
 					 unsigned index)
 {
-	unsigned i;
-	unsigned num_arrays;
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	const struct radeon_llvm_array *array;
 
 	if (file != TGSI_FILE_TEMPORARY)
 		return NULL;
 
-	num_arrays = bld_base->info->array_max[TGSI_FILE_TEMPORARY];
-	for (i = 0; i < num_arrays; i++) {
-		const struct tgsi_declaration_range *range =
-						&ctx->arrays[i].range;
+	array = get_temp_array(bld_base, index, NULL);
+	if (!array)
+		return NULL;
 
-		if (index >= range->First && index <= range->Last) {
-			return ctx->arrays[i].alloca;
-		}
-	}
-	return NULL;
+	return array->alloca;
 }
 
 static LLVMValueRef
