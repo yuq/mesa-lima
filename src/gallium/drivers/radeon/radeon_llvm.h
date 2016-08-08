@@ -99,6 +99,8 @@ struct radeon_llvm_context {
 	struct tgsi_array_info *temp_arrays;
 	LLVMValueRef *temp_array_allocas;
 
+	LLVMValueRef undef_alloca;
+
 	LLVMValueRef main_fn;
 	LLVMTypeRef return_type;
 

@@ -185,6 +185,7 @@ get_pointer_into_array(struct radeon_llvm_context *ctx,
 		       const struct tgsi_ind_register *reg_indirect)
 {
 	unsigned array_id;
+	struct tgsi_array_info *array;
 	struct gallivm_state *gallivm = ctx->soa.bld_base.base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef idxs[2];
@@ -202,10 +203,23 @@ get_pointer_into_array(struct radeon_llvm_context *ctx,
 	if (!alloca)
 		return NULL;
 
+	array = &ctx->temp_arrays[array_id - 1];
+
+	if (!(array->writemask & (1 << swizzle)))
+		return ctx->undef_alloca;
+
 	index = emit_array_index(&ctx->soa, reg_indirect,
 				 reg_index - ctx->temp_arrays[array_id - 1].range.First);
-	index = LLVMBuildMul(builder, index, lp_build_const_int32(gallivm, TGSI_NUM_CHANNELS), "");
-	index = LLVMBuildAdd(builder, index, lp_build_const_int32(gallivm, swizzle), "");
+	index = LLVMBuildMul(
+		builder, index,
+		lp_build_const_int32(gallivm, util_bitcount(array->writemask)),
+		"");
+	index = LLVMBuildAdd(
+		builder, index,
+		lp_build_const_int32(
+			gallivm,
+			util_bitcount(array->writemask & ((1 << swizzle) - 1))),
+		"");
 	idxs[0] = ctx->soa.bld_base.uint_bld.zero;
 	idxs[1] = index;
 	return LLVMBuildGEP(builder, alloca, idxs, 2, "");
@@ -479,11 +493,18 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 		char name[16] = "";
 		LLVMValueRef array_alloca = NULL;
 		unsigned decl_size;
+		unsigned writemask = decl->Declaration.UsageMask;
 		first = decl->Range.First;
 		last = decl->Range.Last;
 		decl_size = 4 * ((last - first) + 1);
+
 		if (decl->Declaration.Array) {
 			unsigned id = decl->Array.ArrayID - 1;
+			unsigned array_size;
+
+			writemask &= ctx->temp_arrays[id].writemask;
+			ctx->temp_arrays[id].writemask = writemask;
+			array_size = ((last - first) + 1) * util_bitcount(writemask);
 
 			/* If the array has more than 16 elements, store it
 			 * in memory using an alloca that spans the entire
@@ -491,7 +512,8 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			 *
 			 * Otherwise, store each array element individually.
 			 * We will then generate vectors (per-channel, up to
-			 * <4 x float>) for indirect addressing.
+			 * <16 x float> if the usagemask is a single bit) for
+			 * indirect addressing.
 			 *
 			 * Note that 16 is the number of vector elements that
 			 * LLVM will store in a register, so theoretically an
@@ -503,10 +525,10 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			 * code path for arrays. LLVM should be smart enough to
 			 * promote allocas into registers when profitable.
 			 */
-			if (decl_size > 16) {
+			if (array_size > 16) {
 				array_alloca = LLVMBuildAlloca(builder,
 					LLVMArrayType(bld_base->base.vec_type,
-						      decl_size), "array");
+						      array_size), "array");
 				ctx->temp_array_allocas[id] = array_alloca;
 			}
 		}
@@ -531,14 +553,34 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 				bld_base->uint_bld.zero,
 				NULL
 			};
+			unsigned j = 0;
+
+			if (writemask != TGSI_WRITEMASK_XYZW &&
+			    !ctx->undef_alloca) {
+				/* Create a dummy alloca. We use it so that we
+				 * have a pointer that is safe to load from if
+				 * a shader ever reads from a channel that
+				 * it never writes to.
+				 */
+				ctx->undef_alloca = si_build_alloca_undef(
+					bld_base->base.gallivm,
+					bld_base->base.vec_type, "undef");
+			}
+
 			for (i = 0; i < decl_size; ++i) {
+				LLVMValueRef ptr;
+				if (writemask & (1 << (i % 4))) {
 #ifdef DEBUG
-				snprintf(name, sizeof(name), "TEMP%d.%c",
-					 first + i / 4, "xyzw"[i % 4]);
+					snprintf(name, sizeof(name), "TEMP%d.%c",
+						 first + i / 4, "xyzw"[i % 4]);
 #endif
-				idxs[1] = lp_build_const_int32(bld_base->base.gallivm, i);
-				ctx->temps[first * TGSI_NUM_CHANNELS + i] =
-					LLVMBuildGEP(builder, array_alloca, idxs, 2, name);
+					idxs[1] = lp_build_const_int32(bld_base->base.gallivm, j);
+					ptr = LLVMBuildGEP(builder, array_alloca, idxs, 2, name);
+					j++;
+				} else {
+					ptr = ctx->undef_alloca;
+				}
+				ctx->temps[first * TGSI_NUM_CHANNELS + i] = ptr;
 			}
 		}
 		break;
