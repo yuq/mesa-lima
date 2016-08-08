@@ -97,6 +97,7 @@ intrinsics = [
         ["BEXTR_32", "x86_bmi_bextr_32", ["src", "control"]],
         ["VMASKLOADD", "x86_avx2_maskload_d_256", ["src", "mask"]],
         ["VMASKMOVPS", "x86_avx_maskload_ps_256", ["src", "mask"]],
+        ["VMASKSTOREPS", "x86_avx_maskstore_ps_256", ["src", "mask", "val"]],
         ["VPSHUFB", "x86_avx2_pshuf_b", ["a", "b"]],
         ["VPERMD", "x86_avx2_permd", ["a", "idx"]],
         ["VPERMPS", "x86_avx2_permps", ["idx", "a"]],
