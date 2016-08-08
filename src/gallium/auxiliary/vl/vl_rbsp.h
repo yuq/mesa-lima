@@ -50,7 +50,8 @@ struct vl_rbsp {
  */
 static inline void vl_rbsp_init(struct vl_rbsp *rbsp, struct vl_vlc *nal, unsigned num_bits)
 {
-   unsigned bits_left = vl_vlc_bits_left(nal);
+   unsigned valid, bits_left = vl_vlc_bits_left(nal);
+   int i;
 
    /* copy the position */
    rbsp->nal = *nal;
@@ -62,9 +63,18 @@ static inline void vl_rbsp_init(struct vl_rbsp *rbsp, struct vl_vlc *nal, unsign
       if (vl_vlc_peekbits(nal, 24) == 0x000001 ||
           vl_vlc_peekbits(nal, 32) == 0x00000001) {
          vl_vlc_limit(&rbsp->nal, bits_left - vl_vlc_bits_left(nal));
-         return;
+         break;
       }
       vl_vlc_eatbits(nal, 8);
+   }
+
+   valid = vl_vlc_valid_bits(&rbsp->nal);
+   /* search for the emulation prevention three byte */
+   for (i = 24; i <= valid; i += 8) {
+      if ((vl_vlc_peekbits(&rbsp->nal, i) & 0xffffff) == 0x3) {
+         vl_vlc_removebits(&rbsp->nal, i - 8, 8);
+         i += 8;
+      }
    }
 }
 
