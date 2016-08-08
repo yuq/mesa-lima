@@ -277,7 +277,8 @@ nv50_clear_render_target(struct pipe_context *pipe,
                          struct pipe_surface *dst,
                          const union pipe_color_union *color,
                          unsigned dstx, unsigned dsty,
-                         unsigned width, unsigned height)
+                         unsigned width, unsigned height,
+                         bool render_condition_enabled)
 {
    struct nv50_context *nv50 = nv50_context(pipe);
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
@@ -363,7 +364,8 @@ nv50_clear_depth_stencil(struct pipe_context *pipe,
                          double depth,
                          unsigned stencil,
                          unsigned dstx, unsigned dsty,
-                         unsigned width, unsigned height)
+                         unsigned width, unsigned height,
+                         bool render_condition_enabled)
 {
    struct nv50_context *nv50 = nv50_context(pipe);
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
@@ -472,7 +474,7 @@ nv50_clear_texture(struct pipe_context *pipe,
          desc->unpack_s_8uint(&stencil, 0, data, 0, 1, 1);
       }
       pipe->clear_depth_stencil(pipe, sf, clear, depth, stencil,
-                                box->x, box->y, box->width, box->height);
+                                box->x, box->y, box->width, box->height, false);
    } else {
       union pipe_color_union color;
 
@@ -508,7 +510,7 @@ nv50_clear_texture(struct pipe_context *pipe,
       }
 
       pipe->clear_render_target(pipe, sf, &color,
-                                box->x, box->y, box->width, box->height);
+                                box->x, box->y, box->width, box->height, false);
    }
    pipe->surface_destroy(pipe, sf);
 }

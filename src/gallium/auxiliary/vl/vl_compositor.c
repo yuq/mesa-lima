@@ -1168,7 +1168,7 @@ vl_compositor_render(struct vl_compositor_state *s,
        (dirty_area->x0 < dirty_area->x1 || dirty_area->y0 < dirty_area->y1)) {
 
       c->pipe->clear_render_target(c->pipe, dst_surface, &s->clear_color,
-                                   0, 0, dst_surface->width, dst_surface->height);
+                                   0, 0, dst_surface->width, dst_surface->height, false);
       dirty_area->x0 = dirty_area->y0 = MAX_DIRTY;
       dirty_area->x1 = dirty_area->y1 = MIN_DIRTY;
    }

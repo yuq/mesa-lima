@@ -1752,7 +1752,7 @@ NineDevice9_ColorFill( struct NineDevice9 *This,
     }
 
     if (!fallback) {
-        pipe->clear_render_target(pipe, psurf, &rgba, x, y, w, h);
+        pipe->clear_render_target(pipe, psurf, &rgba, x, y, w, h, false);
     } else {
         D3DLOCKED_RECT lock;
         union util_color uc;
@@ -2037,7 +2037,7 @@ NineDevice9_Clear( struct NineDevice9 *This,
 
             DBG("Clearing (%u..%u)x(%u..%u)\n", x1, x2, y1, y2);
             pipe->clear_render_target(pipe, cbuf, &rgba,
-                                      x1, y1, x2 - x1, y2 - y1);
+                                      x1, y1, x2 - x1, y2 - y1, false);
         }
     }
     if (!(bufs & PIPE_CLEAR_DEPTHSTENCIL))
@@ -2064,7 +2064,7 @@ NineDevice9_Clear( struct NineDevice9 *This,
         zsbuf = NineSurface9_GetSurface(zsbuf_surf, 0);
         assert(zsbuf);
         pipe->clear_depth_stencil(pipe, zsbuf, bufs, Z, Stencil,
-                                  x1, y1, x2 - x1, y2 - y1);
+                                  x1, y1, x2 - x1, y2 - y1, false);
     }
     return D3D_OK;
 }

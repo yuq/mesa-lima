@@ -294,7 +294,8 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 static void
 fd_clear_render_target(struct pipe_context *pctx, struct pipe_surface *ps,
 		const union pipe_color_union *color,
-		unsigned x, unsigned y, unsigned w, unsigned h)
+		unsigned x, unsigned y, unsigned w, unsigned h,
+		bool render_condition_enabled)
 {
 	DBG("TODO: x=%u, y=%u, w=%u, h=%u", x, y, w, h);
 }
@@ -302,7 +303,8 @@ fd_clear_render_target(struct pipe_context *pctx, struct pipe_surface *ps,
 static void
 fd_clear_depth_stencil(struct pipe_context *pctx, struct pipe_surface *ps,
 		unsigned buffers, double depth, unsigned stencil,
-		unsigned x, unsigned y, unsigned w, unsigned h)
+		unsigned x, unsigned y, unsigned w, unsigned h,
+		bool render_condition_enabled)
 {
 	DBG("TODO: buffers=%u, depth=%f, stencil=%u, x=%u, y=%u, w=%u, h=%u",
 			buffers, depth, stencil, x, y, w, h);

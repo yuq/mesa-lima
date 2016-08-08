@@ -1255,7 +1255,8 @@ dd_context_clear_render_target(struct pipe_context *_pipe,
                                struct pipe_surface *dst,
                                const union pipe_color_union *color,
                                unsigned dstx, unsigned dsty,
-                               unsigned width, unsigned height)
+                               unsigned width, unsigned height,
+                               bool render_condition_enabled)
 {
    struct dd_context *dctx = dd_context(_pipe);
    struct pipe_context *pipe = dctx->pipe;
@@ -1264,7 +1265,8 @@ dd_context_clear_render_target(struct pipe_context *_pipe,
    call.type = CALL_CLEAR_RENDER_TARGET;
 
    dd_before_draw(dctx);
-   pipe->clear_render_target(pipe, dst, color, dstx, dsty, width, height);
+   pipe->clear_render_target(pipe, dst, color, dstx, dsty, width, height,
+                             render_condition_enabled);
    dd_after_draw(dctx, &call);
 }
 
@@ -1272,7 +1274,8 @@ static void
 dd_context_clear_depth_stencil(struct pipe_context *_pipe,
                                struct pipe_surface *dst, unsigned clear_flags,
                                double depth, unsigned stencil, unsigned dstx,
-                               unsigned dsty, unsigned width, unsigned height)
+                               unsigned dsty, unsigned width, unsigned height,
+                               bool render_condition_enabled)
 {
    struct dd_context *dctx = dd_context(_pipe);
    struct pipe_context *pipe = dctx->pipe;
@@ -1282,7 +1285,8 @@ dd_context_clear_depth_stencil(struct pipe_context *_pipe,
 
    dd_before_draw(dctx);
    pipe->clear_depth_stencil(pipe, dst, clear_flags, depth, stencil,
-                             dstx, dsty, width, height);
+                             dstx, dsty, width, height,
+                             render_condition_enabled);
    dd_after_draw(dctx, &call);
 }
 

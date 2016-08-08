@@ -1291,7 +1291,8 @@ trace_context_clear_render_target(struct pipe_context *_pipe,
                                   struct pipe_surface *dst,
                                   const union pipe_color_union *color,
                                   unsigned dstx, unsigned dsty,
-                                  unsigned width, unsigned height)
+                                  unsigned width, unsigned height,
+                                  bool render_condition_enabled)
 {
    struct trace_context *tr_ctx = trace_context(_pipe);
    struct pipe_context *pipe = tr_ctx->pipe;
@@ -1307,8 +1308,10 @@ trace_context_clear_render_target(struct pipe_context *_pipe,
    trace_dump_arg(uint, dsty);
    trace_dump_arg(uint, width);
    trace_dump_arg(uint, height);
+   trace_dump_arg(bool, render_condition_enabled);
 
-   pipe->clear_render_target(pipe, dst, color, dstx, dsty, width, height);
+   pipe->clear_render_target(pipe, dst, color, dstx, dsty, width, height,
+                             render_condition_enabled);
 
    trace_dump_call_end();
 }
@@ -1320,7 +1323,8 @@ trace_context_clear_depth_stencil(struct pipe_context *_pipe,
                                   double depth,
                                   unsigned stencil,
                                   unsigned dstx, unsigned dsty,
-                                  unsigned width, unsigned height)
+                                  unsigned width, unsigned height,
+                                  bool render_condition_enabled)
 {
    struct trace_context *tr_ctx = trace_context(_pipe);
    struct pipe_context *pipe = tr_ctx->pipe;
@@ -1338,9 +1342,11 @@ trace_context_clear_depth_stencil(struct pipe_context *_pipe,
    trace_dump_arg(uint, dsty);
    trace_dump_arg(uint, width);
    trace_dump_arg(uint, height);
+   trace_dump_arg(bool, render_condition_enabled);
 
    pipe->clear_depth_stencil(pipe, dst, clear_flags, depth, stencil,
-                             dstx, dsty, width, height);
+                             dstx, dsty, width, height,
+                             render_condition_enabled);
 
    trace_dump_call_end();
 }

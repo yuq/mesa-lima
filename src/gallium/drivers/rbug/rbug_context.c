@@ -952,7 +952,8 @@ rbug_clear_render_target(struct pipe_context *_pipe,
                          struct pipe_surface *_dst,
                          const union pipe_color_union *color,
                          unsigned dstx, unsigned dsty,
-                         unsigned width, unsigned height)
+                         unsigned width, unsigned height,
+                         bool render_condition_enabled)
 {
    struct rbug_context *rb_pipe = rbug_context(_pipe);
    struct rbug_surface *rb_surface_dst = rbug_surface(_dst);
@@ -966,7 +967,8 @@ rbug_clear_render_target(struct pipe_context *_pipe,
                              dstx,
                              dsty,
                              width,
-                             height);
+                             height,
+                             render_condition_enabled);
    pipe_mutex_unlock(rb_pipe->call_mutex);
 }
 
@@ -977,7 +979,8 @@ rbug_clear_depth_stencil(struct pipe_context *_pipe,
                          double depth,
                          unsigned stencil,
                          unsigned dstx, unsigned dsty,
-                         unsigned width, unsigned height)
+                         unsigned width, unsigned height,
+                         bool render_condition_enabled)
 {
    struct rbug_context *rb_pipe = rbug_context(_pipe);
    struct rbug_surface *rb_surface_dst = rbug_surface(_dst);
@@ -993,7 +996,8 @@ rbug_clear_depth_stencil(struct pipe_context *_pipe,
                              dstx,
                              dsty,
                              width,
-                             height);
+                             height,
+                             render_condition_enabled);
    pipe_mutex_unlock(rb_pipe->call_mutex);
 }
 

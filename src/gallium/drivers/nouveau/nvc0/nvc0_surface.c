@@ -280,7 +280,8 @@ nvc0_clear_render_target(struct pipe_context *pipe,
                          struct pipe_surface *dst,
                          const union pipe_color_union *color,
                          unsigned dstx, unsigned dsty,
-                         unsigned width, unsigned height)
+                         unsigned width, unsigned height,
+                         bool render_condition_enabled)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
@@ -619,7 +620,8 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
                          double depth,
                          unsigned stencil,
                          unsigned dstx, unsigned dsty,
-                         unsigned width, unsigned height)
+                         unsigned width, unsigned height,
+                         bool render_condition_enabled)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;

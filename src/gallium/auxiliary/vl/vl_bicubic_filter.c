@@ -440,7 +440,7 @@ vl_bicubic_filter_render(struct vl_bicubic_filter *filter,
 
    filter->pipe->set_scissor_states(filter->pipe, 0, 1, &scissor);
    filter->pipe->clear_render_target(filter->pipe, dst, &clear_color,
-                                     0, 0, dst->width, dst->height);
+                                     0, 0, dst->width, dst->height, false);
    pipe_set_constant_buffer(filter->pipe, PIPE_SHADER_FRAGMENT, 0, surface_size);
    filter->pipe->bind_rasterizer_state(filter->pipe, filter->rs_state);
    filter->pipe->bind_blend_state(filter->pipe, filter->blend);

@@ -428,9 +428,10 @@ A drawing command can be skipped depending on the outcome of a query
 (typically an occlusion query, or streamout overflow predicate).
 The ``render_condition`` function specifies the query which should be checked
 prior to rendering anything. Functions always honoring render_condition include
-(and are limited to) draw_vbo, clear, clear_render_target, clear_depth_stencil.
-The blit function (but not resource_copy_region, which seems inconsistent)
-can also optionally honor the current render condition.
+(and are limited to) draw_vbo and clear.
+The blit, clear_render_target and clear_depth_stencil functions (but
+not resource_copy_region, which seems inconsistent) can also optionally honor
+the current render condition.
 
 If ``render_condition`` is called with ``query`` = NULL, conditional
 rendering is disabled and drawing takes place normally.

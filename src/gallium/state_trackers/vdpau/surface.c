@@ -395,7 +395,7 @@ vlVdpVideoSurfaceClear(vlVdpSurface *vlsurf)
          c.f[0] = c.f[1] = c.f[2] = c.f[3] = 0.5f;
 
       pipe->clear_render_target(pipe, surfaces[i], &c, 0, 0,
-                                surfaces[i]->width, surfaces[i]->height);
+                                surfaces[i]->width, surfaces[i]->height, false);
    }
    pipe->flush(pipe, NULL, 0);
 }

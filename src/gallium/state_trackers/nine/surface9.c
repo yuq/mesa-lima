@@ -164,7 +164,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
     /* TODO: investigate what else exactly needs to be cleared */
     if (This->base.resource && (pDesc->Usage & D3DUSAGE_RENDERTARGET)) {
         surf = NineSurface9_GetSurface(This, 0);
-        pipe->clear_render_target(pipe, surf, &rgba, 0, 0, pDesc->Width, pDesc->Height);
+        pipe->clear_render_target(pipe, surf, &rgba, 0, 0, pDesc->Width, pDesc->Height, false);
     }
 
     NineSurface9_Dump(This);

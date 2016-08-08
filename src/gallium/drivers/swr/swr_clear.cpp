@@ -86,7 +86,8 @@ swr_clear(struct pipe_context *pipe,
 static void
 swr_clear_render_target(struct pipe_context *pipe, struct pipe_surface *ps,
                         const union pipe_color_union *color,
-                        unsigned x, unsigned y, unsigned w, unsigned h)
+                        unsigned x, unsigned y, unsigned w, unsigned h,
+                        bool render_condition_enabled)
 {
    struct swr_context *ctx = swr_context(pipe);
    fprintf(stderr, "SWR swr_clear_render_target!\n");
@@ -97,7 +98,8 @@ swr_clear_render_target(struct pipe_context *pipe, struct pipe_surface *ps,
 static void
 swr_clear_depth_stencil(struct pipe_context *pipe, struct pipe_surface *ps,
                         unsigned buffers, double depth, unsigned stencil,
-                        unsigned x, unsigned y, unsigned w, unsigned h)
+                        unsigned x, unsigned y, unsigned w, unsigned h,
+                        bool render_condition_enabled)
 {
    struct swr_context *ctx = swr_context(pipe);
    fprintf(stderr, "SWR swr_clear_depth_stencil!\n");
