@@ -364,7 +364,7 @@ static const uint32_t vk_to_gen_front_face[] = {
 
 static void
 emit_rs_state(struct anv_pipeline *pipeline,
-              const VkPipelineRasterizationStateCreateInfo *info,
+              const VkPipelineRasterizationStateCreateInfo *rs_info,
               const struct anv_render_pass *pass,
               const struct anv_subpass *subpass,
               const struct anv_graphics_pipeline_create_info *extra)
@@ -398,10 +398,10 @@ emit_rs_state(struct anv_pipeline *pipeline,
    raster.ForceMultisampling = false;
 #endif
 
-   raster.FrontWinding = vk_to_gen_front_face[info->frontFace];
-   raster.CullMode = vk_to_gen_cullmode[info->cullMode];
-   raster.FrontFaceFillMode = vk_to_gen_fillmode[info->polygonMode];
-   raster.BackFaceFillMode = vk_to_gen_fillmode[info->polygonMode];
+   raster.FrontWinding = vk_to_gen_front_face[rs_info->frontFace];
+   raster.CullMode = vk_to_gen_cullmode[rs_info->cullMode];
+   raster.FrontFaceFillMode = vk_to_gen_fillmode[rs_info->polygonMode];
+   raster.BackFaceFillMode = vk_to_gen_fillmode[rs_info->polygonMode];
    raster.ScissorRectangleEnable = !(extra && extra->use_rectlist);
 
 #if GEN_GEN >= 9
@@ -412,9 +412,9 @@ emit_rs_state(struct anv_pipeline *pipeline,
    raster.ViewportZClipTestEnable = !pipeline->depth_clamp_enable;
 #endif
 
-   raster.GlobalDepthOffsetEnableSolid = info->depthBiasEnable;
-   raster.GlobalDepthOffsetEnableWireframe = info->depthBiasEnable;
-   raster.GlobalDepthOffsetEnablePoint = info->depthBiasEnable;
+   raster.GlobalDepthOffsetEnableSolid = rs_info->depthBiasEnable;
+   raster.GlobalDepthOffsetEnableWireframe = rs_info->depthBiasEnable;
+   raster.GlobalDepthOffsetEnablePoint = rs_info->depthBiasEnable;
 
 #if GEN_GEN == 7
    /* Gen7 requires that we provide the depth format in 3DSTATE_SF so that it
