@@ -68,7 +68,7 @@ genX(graphics_pipeline_create)(
 
    assert(pCreateInfo->pRasterizationState);
    emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
-                 pass, subpass, extra);
+                 pCreateInfo->pMultisampleState, pass, subpass, extra);
 
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
 
@@ -85,7 +85,8 @@ genX(graphics_pipeline_create)(
        pCreateInfo->pMultisampleState->rasterizationSamples > 1)
       anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO");
 
-   uint32_t samples = 1;
+   uint32_t samples = pCreateInfo->pMultisampleState ?
+                      pCreateInfo->pMultisampleState->rasterizationSamples : 1;
    uint32_t log2_samples = __builtin_ffs(samples) - 1;
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
@@ -273,6 +274,11 @@ genX(graphics_pipeline_create)(
          }
 
          wm.BarycentricInterpolationMode        = wm_prog_data->barycentric_interp_modes;
+
+         wm.MultisampleRasterizationMode        = samples > 1 ?
+                                                  MSRASTMODE_ON_PATTERN : MSRASTMODE_OFF_PIXEL;
+         wm.MultisampleDispatchMode             = wm_prog_data->persample_dispatch ?
+                                                  MSDISPMODE_PERSAMPLE : MSDISPMODE_PERPIXEL;
       }
    }
 

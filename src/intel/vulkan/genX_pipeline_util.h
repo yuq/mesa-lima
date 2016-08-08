@@ -365,6 +365,7 @@ static const uint32_t vk_to_gen_front_face[] = {
 static void
 emit_rs_state(struct anv_pipeline *pipeline,
               const VkPipelineRasterizationStateCreateInfo *rs_info,
+              const VkPipelineMultisampleStateCreateInfo *ms_info,
               const struct anv_render_pass *pass,
               const struct anv_subpass *subpass,
               const struct anv_graphics_pipeline_create_info *extra)
@@ -396,6 +397,10 @@ emit_rs_state(struct anv_pipeline *pipeline,
    raster.DXMultisampleRasterizationEnable = true;
    raster.ForcedSampleCount = FSC_NUMRASTSAMPLES_0;
    raster.ForceMultisampling = false;
+#else
+   raster.MultisampleRasterizationMode =
+      (ms_info && ms_info->rasterizationSamples > 1) ?
+      MSRASTMODE_ON_PATTERN : MSRASTMODE_OFF_PIXEL;
 #endif
 
    raster.FrontWinding = vk_to_gen_front_face[rs_info->frontFace];

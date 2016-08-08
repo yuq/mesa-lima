@@ -120,7 +120,7 @@ genX(graphics_pipeline_create)(
    emit_ia_state(pipeline, pCreateInfo->pInputAssemblyState, extra);
    assert(pCreateInfo->pRasterizationState);
    emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
-                 pass, subpass, extra);
+                 pCreateInfo->pMultisampleState, pass, subpass, extra);
    emit_ms_state(pipeline, pCreateInfo->pMultisampleState);
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
    emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
