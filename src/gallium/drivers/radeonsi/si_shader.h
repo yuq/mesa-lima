@@ -96,6 +96,7 @@ enum {
 	SI_SGPR_VERTEX_BUFFERS_HI,
 	SI_SGPR_BASE_VERTEX,
 	SI_SGPR_START_INSTANCE,
+	SI_SGPR_DRAWID,
 	SI_ES_NUM_USER_SGPR,
 
 	/* hw VS only */
@@ -142,10 +143,11 @@ enum {
 	SI_PARAM_VERTEX_BUFFERS	= SI_NUM_RESOURCE_PARAMS,
 	SI_PARAM_BASE_VERTEX,
 	SI_PARAM_START_INSTANCE,
+	SI_PARAM_DRAWID,
 	/* [0] = clamp vertex color, VS as VS only */
 	SI_PARAM_VS_STATE_BITS,
 	/* same value as TCS_IN_LAYOUT, VS as LS only */
-	SI_PARAM_LS_OUT_LAYOUT = SI_PARAM_START_INSTANCE + 1,
+	SI_PARAM_LS_OUT_LAYOUT = SI_PARAM_DRAWID + 1,
 	/* the other VS parameters are assigned dynamically */
 
 	/* Layout of TCS outputs in the offchip buffer

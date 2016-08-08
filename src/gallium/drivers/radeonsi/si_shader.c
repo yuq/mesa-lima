@@ -1668,6 +1668,11 @@ static void declare_system_value(
 				     SI_PARAM_START_INSTANCE);
 		break;
 
+	case TGSI_SEMANTIC_DRAWID:
+		value = LLVMGetParam(radeon_bld->main_fn,
+				     SI_PARAM_DRAWID);
+		break;
+
 	case TGSI_SEMANTIC_INVOCATIONID:
 		if (ctx->type == PIPE_SHADER_TESS_CTRL)
 			value = unpack_param(ctx, SI_PARAM_REL_IDS, 8, 5);
@@ -5460,7 +5465,8 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_VERTEX_BUFFERS] = const_array(ctx->v16i8, SI_NUM_VERTEX_BUFFERS);
 		params[SI_PARAM_BASE_VERTEX] = ctx->i32;
 		params[SI_PARAM_START_INSTANCE] = ctx->i32;
-		num_params = SI_PARAM_START_INSTANCE+1;
+		params[SI_PARAM_DRAWID] = ctx->i32;
+		num_params = SI_PARAM_DRAWID+1;
 
 		if (shader->key.vs.as_es) {
 			params[ctx->param_es2gs_offset = num_params++] = ctx->i32;
