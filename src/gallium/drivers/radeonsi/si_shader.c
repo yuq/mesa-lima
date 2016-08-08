@@ -1663,6 +1663,11 @@ static void declare_system_value(
 				     SI_PARAM_BASE_VERTEX);
 		break;
 
+	case TGSI_SEMANTIC_BASEINSTANCE:
+		value = LLVMGetParam(radeon_bld->main_fn,
+				     SI_PARAM_START_INSTANCE);
+		break;
+
 	case TGSI_SEMANTIC_INVOCATIONID:
 		if (ctx->type == PIPE_SHADER_TESS_CTRL)
 			value = unpack_param(ctx, SI_PARAM_REL_IDS, 8, 5);
