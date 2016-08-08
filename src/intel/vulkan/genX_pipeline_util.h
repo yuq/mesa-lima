@@ -449,6 +449,46 @@ emit_rs_state(struct anv_pipeline *pipeline,
 #endif
 }
 
+static void
+emit_ms_state(struct anv_pipeline *pipeline,
+              const VkPipelineMultisampleStateCreateInfo *info)
+{
+   uint32_t samples = 1;
+   uint32_t log2_samples = 0;
+
+   /* From the Vulkan 1.0 spec:
+    *    If pSampleMask is NULL, it is treated as if the mask has all bits
+    *    enabled, i.e. no coverage is removed from fragments.
+    *
+    * 3DSTATE_SAMPLE_MASK.SampleMask is 16 bits.
+    */
+   uint32_t sample_mask = 0xffff;
+
+   if (info) {
+      samples = info->rasterizationSamples;
+      log2_samples = __builtin_ffs(samples) - 1;
+   }
+
+   if (info && info->pSampleMask)
+      sample_mask &= info->pSampleMask[0];
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
+      ms.NumberofMultisamples       = log2_samples;
+
+      /* The PRM says that this bit is valid only for DX9:
+       *
+       *    SW can choose to set this bit only for DX9 API. DX10/OGL API's
+       *    should not have any effect by setting or not setting this bit.
+       */
+      ms.PixelPositionOffsetEnable  = false;
+      ms.PixelLocation              = CENTER;
+   }
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK), sm) {
+      sm.SampleMask = sample_mask;
+   }
+}
+
 static const uint32_t vk_to_gen_logic_op[] = {
    [VK_LOGIC_OP_COPY]                        = LOGICOP_COPY,
    [VK_LOGIC_OP_CLEAR]                       = LOGICOP_CLEAR,
