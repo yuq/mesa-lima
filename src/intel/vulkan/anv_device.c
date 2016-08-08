@@ -375,7 +375,7 @@ void anv_GetPhysicalDeviceFeatures(
       .independentBlend                         = true,
       .geometryShader                           = true,
       .tessellationShader                       = false,
-      .sampleRateShading                        = pdevice->info->gen >= 8,
+      .sampleRateShading                        = true,
       .dualSrcBlend                             = true,
       .logicOp                                  = true,
       .multiDrawIndirect                        = false,
