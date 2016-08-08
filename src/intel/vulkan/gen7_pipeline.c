@@ -81,22 +81,7 @@ genX(graphics_pipeline_create)(
                      pCreateInfo->pRasterizationState, extra);
    emit_3dstate_streamout(pipeline, pCreateInfo->pRasterizationState);
 
-   if (pCreateInfo->pMultisampleState &&
-       pCreateInfo->pMultisampleState->rasterizationSamples > 1)
-      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO");
-
-   uint32_t samples = pCreateInfo->pMultisampleState ?
-                      pCreateInfo->pMultisampleState->rasterizationSamples : 1;
-   uint32_t log2_samples = __builtin_ffs(samples) - 1;
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE), ms) {
-      ms.PixelLocation        = PIXLOC_CENTER;
-      ms.NumberofMultisamples = log2_samples;
-   }
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK), sm) {
-      sm.SampleMask = 0xff;
-   }
+   emit_ms_state(pipeline, pCreateInfo->pMultisampleState);
 
    const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
 
@@ -251,6 +236,9 @@ genX(graphics_pipeline_create)(
          ps.KernelStartPointer1           = 0;
          ps.KernelStartPointer2           = pipeline->ps_ksp0 + wm_prog_data->prog_offset_2;
       }
+
+      uint32_t samples = pCreateInfo->pMultisampleState ?
+                         pCreateInfo->pMultisampleState->rasterizationSamples : 1;
 
       /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
