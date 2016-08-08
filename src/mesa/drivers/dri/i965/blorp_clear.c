@@ -170,8 +170,6 @@ blorp_clear(struct brw_context *brw, const struct brw_blorp_surf *surf,
    brw_blorp_exec(brw, &params);
 }
 
-extern "C" {
-
 void
 brw_blorp_ccs_resolve(struct brw_context *brw, struct brw_blorp_surf *surf,
                       enum isl_format format)
@@ -201,5 +199,3 @@ brw_blorp_ccs_resolve(struct brw_context *brw, struct brw_blorp_surf *surf,
 
    brw_blorp_exec(brw, &params);
 }
-
-} /* extern "C" */
