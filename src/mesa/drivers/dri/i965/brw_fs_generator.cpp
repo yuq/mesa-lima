@@ -1053,11 +1053,7 @@ fs_generator::generate_discard_jump(fs_inst *inst)
     * current block (or the program).
     */
    this->discard_halt_patches.push_tail(new(mem_ctx) ip_record(p->nr_insn));
-
-   brw_push_insn_state(p);
-   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
    gen6_HALT(p);
-   brw_pop_insn_state(p);
 }
 
 void
