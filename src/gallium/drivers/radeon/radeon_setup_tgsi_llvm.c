@@ -158,14 +158,15 @@ get_array_range(struct lp_build_tgsi_context *bld_base,
 
 static LLVMValueRef get_alloca_for_array(struct lp_build_tgsi_context *bld_base,
 					 unsigned file,
-					 unsigned index)
+					 unsigned index,
+					 const struct tgsi_ind_register *reg)
 {
 	const struct radeon_llvm_array *array;
 
 	if (file != TGSI_FILE_TEMPORARY)
 		return NULL;
 
-	array = get_temp_array(bld_base, index, NULL);
+	array = get_temp_array(bld_base, index, reg);
 	if (!array)
 		return NULL;
 
@@ -247,7 +248,7 @@ load_value_from_array(struct lp_build_tgsi_context *bld_base,
 	LLVMBuilderRef builder = gallivm->builder;
 	struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_index, reg_indirect);
 	LLVMValueRef index = emit_array_index(bld, reg_indirect, reg_index - range.First);
-	LLVMValueRef array = get_alloca_for_array(bld_base, file, reg_index);
+	LLVMValueRef array = get_alloca_for_array(bld_base, file, reg_index, reg_indirect);
 	LLVMValueRef ptr, val, indices[2];
 
 	if (!array) {
@@ -287,7 +288,7 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 	LLVMBuilderRef builder = gallivm->builder;
 	struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_index, reg_indirect);
 	LLVMValueRef index = emit_array_index(bld, reg_indirect, reg_index - range.First);
-	LLVMValueRef array = get_alloca_for_array(bld_base, file, reg_index);
+	LLVMValueRef array = get_alloca_for_array(bld_base, file, reg_index, reg_indirect);
 
 	if (array) {
 		LLVMValueRef indices[2];
@@ -624,7 +625,7 @@ void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 			unsigned reg_index = reg->Register.Index;
 			LLVMValueRef array = store_value_to_array(bld_base, value, file, chan_index,
 			                                          reg_index, &reg->Indirect);
-	                if (get_alloca_for_array(bld_base, file, reg_index)) {
+	                if (get_alloca_for_array(bld_base, file, reg_index, &reg->Indirect)) {
 				continue;
 			}
         		for (i = 0; i < size; ++i) {
