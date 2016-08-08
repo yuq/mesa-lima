@@ -565,11 +565,7 @@ static LLVMValueRef get_bounded_indirect_index(struct si_shader_context *ctx,
 					       const struct tgsi_ind_register *ind,
 					       int rel_index, unsigned num)
 {
-	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef result = get_indirect_index(ctx, ind, rel_index);
-	LLVMValueRef c_max = LLVMConstInt(ctx->i32, num - 1, 0);
-	LLVMValueRef cc;
 
 	/* LLVM 3.8: If indirect resource indexing is used:
 	 * - SI & CIK hang
@@ -578,20 +574,7 @@ static LLVMValueRef get_bounded_indirect_index(struct si_shader_context *ctx,
 	if (HAVE_LLVM <= 0x0308)
 		return LLVMGetUndef(ctx->i32);
 
-	if (util_is_power_of_two(num)) {
-		result = LLVMBuildAnd(builder, result, c_max, "");
-	} else {
-		/* In theory, this MAX pattern should result in code that is
-		 * as good as the bit-wise AND above.
-		 *
-		 * In practice, LLVM generates worse code (at the time of
-		 * writing), because its value tracking is not strong enough.
-		 */
-		cc = LLVMBuildICmp(builder, LLVMIntULE, result, c_max, "");
-		result = LLVMBuildSelect(builder, cc, result, c_max, "");
-	}
-
-	return result;
+	return radeon_llvm_bound_index(&ctx->radeon_bld, result, num);
 }
 
 

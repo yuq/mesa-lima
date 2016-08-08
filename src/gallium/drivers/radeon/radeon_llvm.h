@@ -116,6 +116,10 @@ LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
 LLVMValueRef bitcast(struct lp_build_tgsi_context *bld_base,
 		     enum tgsi_opcode_type type, LLVMValueRef value);
 
+LLVMValueRef radeon_llvm_bound_index(struct radeon_llvm_context *ctx,
+				     LLVMValueRef index,
+				     unsigned num);
+
 void radeon_llvm_emit_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
 					  struct lp_build_emit_data *emit_data,
 					  LLVMValueRef *coords_arg,

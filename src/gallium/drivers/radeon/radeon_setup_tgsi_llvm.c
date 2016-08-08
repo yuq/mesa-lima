@@ -73,6 +73,35 @@ LLVMValueRef bitcast(struct lp_build_tgsi_context *bld_base,
 		return value;
 }
 
+/**
+ * Return a value that is equal to the given i32 \p index if it lies in [0,num)
+ * or an undefined value in the same interval otherwise.
+ */
+LLVMValueRef radeon_llvm_bound_index(struct radeon_llvm_context *ctx,
+				     LLVMValueRef index,
+				     unsigned num)
+{
+	struct gallivm_state *gallivm = &ctx->gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef c_max = lp_build_const_int32(gallivm, num - 1);
+	LLVMValueRef cc;
+
+	if (util_is_power_of_two(num)) {
+		index = LLVMBuildAnd(builder, index, c_max, "");
+	} else {
+		/* In theory, this MAX pattern should result in code that is
+		 * as good as the bit-wise AND above.
+		 *
+		 * In practice, LLVM generates worse code (at the time of
+		 * writing), because its value tracking is not strong enough.
+		 */
+		cc = LLVMBuildICmp(builder, LLVMIntULE, index, c_max, "");
+		index = LLVMBuildSelect(builder, cc, index, c_max, "");
+	}
+
+	return index;
+}
+
 static struct radeon_llvm_loop *get_current_loop(struct radeon_llvm_context *ctx)
 {
 	return ctx->loop_depth > 0 ? ctx->loop + (ctx->loop_depth - 1) : NULL;
