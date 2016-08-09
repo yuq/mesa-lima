@@ -269,6 +269,10 @@ optimizations = [
    (('ieq', 'a@bool', False), ('inot', 'a')),
    (('bcsel', a, True, False), a),
    (('bcsel', a, False, True), ('inot', a)),
+   (('bcsel@32', a, 1.0, 0.0), ('b2f', a)),
+   (('bcsel@32', a, 0.0, 1.0), ('b2f', ('inot', a))),
+   (('bcsel@32', a, -1.0, -0.0), ('fneg', ('b2f', a))),
+   (('bcsel@32', a, -0.0, -1.0), ('fneg', ('b2f', ('inot', a)))),
    (('bcsel', True, b, c), b),
    (('bcsel', False, b, c), c),
    # The result of this should be hit by constant propagation and, in the
