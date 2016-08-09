@@ -278,10 +278,34 @@ control_line_success:
 	HASH_TOKEN DEFINE_TOKEN define
 |	HASH_TOKEN UNDEF IDENTIFIER NEWLINE {
 		macro_t *macro;
-		if (strcmp("__LINE__", $3) == 0
-		    || strcmp("__FILE__", $3) == 0
-		    || strcmp("__VERSION__", $3) == 0
-		    || strncmp("GL_", $3, 3) == 0)
+
+                /* Section 3.4 (Preprocessor) of the GLSL ES 3.00 spec says:
+                 *
+                 *    It is an error to undefine or to redefine a built-in
+                 *    (pre-defined) macro name.
+                 *
+                 * The GLSL ES 1.00 spec does not contain this text.
+                 *
+                 * Section 3.3 (Preprocessor) of the GLSL 1.30 spec says:
+                 *
+                 *    #define and #undef functionality are defined as is
+                 *    standard for C++ preprocessors for macro definitions
+                 *    both with and without macro parameters.
+                 *
+                 * At least as far as I can tell GCC allow '#undef __FILE__'.
+                 * Furthermore, there are desktop OpenGL conformance tests
+                 * that expect '#undef __VERSION__' and '#undef
+                 * GL_core_profile' to work.
+                 *
+                 * Only disallow #undef of pre-defined macros on GLSL ES >=
+                 * 3.00 shaders.
+                 */
+		if (parser->is_gles &&
+                    parser->version >= 300 &&
+                    (strcmp("__LINE__", $3) == 0
+                     || strcmp("__FILE__", $3) == 0
+                     || strcmp("__VERSION__", $3) == 0
+                     || strncmp("GL_", $3, 3) == 0))
 			glcpp_error(& @1, parser, "Built-in (pre-defined)"
 				    " macro names cannot be undefined.");
 
