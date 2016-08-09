@@ -509,7 +509,6 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
 
    brw_upload_state_base_address(brw);
 
-   gen7_blorp_emit_cc_viewport(brw);
    gen7_l3_state.emit(brw);
 
    gen7_blorp_emit_urb_config(brw, params);
@@ -563,6 +562,8 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
    gen8_blorp_emit_ps_config(brw, params);
 
    gen8_blorp_emit_wm_state(brw);
+
+   gen7_blorp_emit_cc_viewport(brw);
 
    gen8_blorp_emit_depth_disable(brw);
    gen7_blorp_emit_clear_params(brw, params);
