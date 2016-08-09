@@ -88,7 +88,6 @@ i965_compiler_FILES = \
 	intel_asm_annotation.h \
 	intel_debug.c \
 	intel_debug.h \
-	intel_reg.h \
 	intel_resolve_map.c \
 	intel_resolve_map.h
 

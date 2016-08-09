@@ -22,9 +22,9 @@
  */
 
 #include "brw_context.h"
+#include "brw_defines.h"
 #include "intel_batchbuffer.h"
 #include "intel_fbo.h"
-#include "intel_reg.h"
 
 /**
  * According to the latest documentation, any PIPE_CONTROL with the

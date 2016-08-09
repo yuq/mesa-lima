@@ -26,6 +26,7 @@
 #include "main/version.h"
 
 #include "brw_context.h"
+#include "brw_defines.h"
 #include "intel_batchbuffer.h"
 
 /**

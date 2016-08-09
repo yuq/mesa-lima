@@ -41,7 +41,6 @@
 #include "brw_defines.h"
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
-#include "intel_reg.h"
 
 /**
  * Emit PIPE_CONTROLs to write the current GPU timestamp into a buffer.

@@ -34,7 +34,6 @@
 #include "intel_blit.h"
 #include "intel_buffers.h"
 #include "intel_fbo.h"
-#include "intel_reg.h"
 #include "intel_batchbuffer.h"
 #include "intel_mipmap_tree.h"
 

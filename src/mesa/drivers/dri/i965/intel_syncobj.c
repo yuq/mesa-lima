@@ -42,7 +42,6 @@
 
 #include "brw_context.h"
 #include "intel_batchbuffer.h"
-#include "intel_reg.h"
 
 struct brw_fence {
    struct brw_context *brw;
