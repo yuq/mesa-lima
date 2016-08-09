@@ -34,7 +34,6 @@
 #define BRW_STATE_H
 
 #include "brw_context.h"
-#include "brw_defines.h"
 
 #ifdef __cplusplus
 extern "C" {
