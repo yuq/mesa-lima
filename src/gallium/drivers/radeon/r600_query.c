@@ -139,7 +139,7 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 		break;
 	case PIPE_QUERY_GPU_FINISHED:
-		rctx->b.flush(&rctx->b, &query->fence, 0);
+		rctx->b.flush(&rctx->b, &query->fence, PIPE_FLUSH_DEFERRED);
 		break;
 	case R600_QUERY_DRAW_CALLS:
 		query->end_result = rctx->num_draw_calls;
@@ -215,7 +215,7 @@ static bool r600_query_sw_get_result(struct r600_common_context *rctx,
 		return true;
 	case PIPE_QUERY_GPU_FINISHED: {
 		struct pipe_screen *screen = rctx->b.screen;
-		result->b = screen->fence_finish(screen, NULL, query->fence,
+		result->b = screen->fence_finish(screen, &rctx->b, query->fence,
 						 wait ? PIPE_TIMEOUT_INFINITE : 0);
 		return result->b;
 	}
