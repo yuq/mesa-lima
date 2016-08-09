@@ -797,7 +797,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="16"/>
     <field name="Depth Clear Value Valid" start="15" end="15" type="bool"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="0"/>
-    <field name="Depth Clear Value" start="32" end="63" type="float"/>
+    <field name="Depth Clear Value" start="32" end="63" type="uint"/>
   </instruction>
 
   <instruction name="3DSTATE_CLIP" bias="2" length="4">
