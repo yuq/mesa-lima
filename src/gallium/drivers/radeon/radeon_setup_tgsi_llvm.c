@@ -502,15 +502,6 @@ static LLVMValueRef fetch_system_value(struct lp_build_tgsi_context *bld_base,
 	return bitcast(bld_base, type, cval);
 }
 
-static LLVMValueRef si_build_alloca_undef(struct gallivm_state *gallivm,
-					  LLVMTypeRef type,
-					  const char *name)
-{
-	LLVMValueRef ptr = lp_build_alloca(gallivm, type, name);
-	LLVMBuildStore(gallivm->builder, LLVMGetUndef(type), ptr);
-	return ptr;
-}
-
 static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			     const struct tgsi_full_declaration *decl)
 {
@@ -524,7 +515,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
 			unsigned chan;
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-				 ctx->soa.addr[idx][chan] = si_build_alloca_undef(
+				 ctx->soa.addr[idx][chan] = lp_build_alloca_undef(
 					&ctx->gallivm,
 					ctx->soa.bld_base.uint_bld.elem_type, "");
 			}
@@ -588,7 +579,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 					 first + i / 4, "xyzw"[i % 4]);
 #endif
 				ctx->temps[first * TGSI_NUM_CHANNELS + i] =
-					si_build_alloca_undef(bld_base->base.gallivm,
+					lp_build_alloca_undef(bld_base->base.gallivm,
 							      bld_base->base.vec_type,
 							      name);
 			}
@@ -606,7 +597,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 				 * a shader ever reads from a channel that
 				 * it never writes to.
 				 */
-				ctx->undef_alloca = si_build_alloca_undef(
+				ctx->undef_alloca = lp_build_alloca_undef(
 					bld_base->base.gallivm,
 					bld_base->base.vec_type, "undef");
 			}
@@ -655,7 +646,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			unsigned chan;
 			assert(idx < RADEON_LLVM_MAX_OUTPUTS);
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-				ctx->soa.outputs[idx][chan] = si_build_alloca_undef(
+				ctx->soa.outputs[idx][chan] = lp_build_alloca_undef(
 					&ctx->gallivm,
 					ctx->soa.bld_base.base.elem_type, "");
 			}
