@@ -124,15 +124,6 @@ gen6_blorp_emit_vs_disable(struct brw_context *brw,
     * We've already done one at the start of the BLORP operation.
     */
 
-   /* Disable the push constant buffers. */
-   BEGIN_BATCH(5);
-   OUT_BATCH(_3DSTATE_CONSTANT_VS << 16 | (5 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
    BEGIN_BATCH(6);
    OUT_BATCH(_3DSTATE_VS << 16 | (6 - 2));
    OUT_BATCH(0);
@@ -152,15 +143,6 @@ static void
 gen6_blorp_emit_gs_disable(struct brw_context *brw,
                            const struct brw_blorp_params *params)
 {
-   /* Disable all the constant buffers. */
-   BEGIN_BATCH(5);
-   OUT_BATCH(_3DSTATE_CONSTANT_GS << 16 | (5 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
    BEGIN_BATCH(7);
    OUT_BATCH(_3DSTATE_GS << 16 | (7 - 2));
    OUT_BATCH(0);
@@ -305,12 +287,11 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
 }
 
 static void
-gen6_blorp_emit_constant_ps_disable(struct brw_context *brw,
-                                    const struct brw_blorp_params *params)
+gen6_blorp_emit_constant_disable(struct brw_context *brw, unsigned opcode)
 {
    /* Disable the push constant buffers. */
    BEGIN_BATCH(5);
-   OUT_BATCH(_3DSTATE_CONSTANT_PS << 16 | (5 - 2));
+   OUT_BATCH(opcode << 16 | (5 - 2));
    OUT_BATCH(0);
    OUT_BATCH(0);
    OUT_BATCH(0);
@@ -547,6 +528,11 @@ gen6_blorp_exec(struct brw_context *brw,
    depthstencil_offset = gen6_blorp_emit_depth_stencil_state(brw, params);
    gen6_blorp_emit_cc_state_pointers(brw, params, cc_blend_state_offset,
                                      depthstencil_offset, cc_state_offset);
+
+   gen6_blorp_emit_constant_disable(brw, _3DSTATE_CONSTANT_VS);
+   gen6_blorp_emit_constant_disable(brw, _3DSTATE_CONSTANT_GS);
+   gen6_blorp_emit_constant_disable(brw, _3DSTATE_CONSTANT_PS);
+
    if (params->wm_prog_data) {
       uint32_t wm_surf_offset_renderbuffer;
       uint32_t wm_surf_offset_texture = 0;
@@ -575,7 +561,6 @@ gen6_blorp_exec(struct brw_context *brw,
    gen6_blorp_emit_gs_disable(brw, params);
    gen6_blorp_emit_clip_disable(brw);
    gen6_blorp_emit_sf_config(brw, params);
-   gen6_blorp_emit_constant_ps_disable(brw, params);
    gen6_blorp_emit_wm_config(brw, params);
    if (params->wm_prog_data)
       gen6_blorp_emit_binding_table_pointers(brw, wm_bind_bo_offset);
