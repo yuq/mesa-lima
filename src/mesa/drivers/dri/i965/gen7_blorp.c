@@ -468,11 +468,6 @@ gen7_blorp_exec(struct brw_context *brw,
    uint32_t wm_bind_bo_offset = 0;
 
    brw_upload_state_base_address(brw);
-
-   gen6_emit_3dstate_multisample(brw, params->dst.surf.samples);
-   gen6_emit_3dstate_sample_mask(brw,
-                                 params->dst.surf.samples > 1 ?
-                                 (1 << params->dst.surf.samples) - 1 : 1);
    gen6_blorp_emit_vertices(brw, params);
    gen7_blorp_emit_urb_config(brw, params);
    if (params->wm_prog_data) {
@@ -519,6 +514,11 @@ gen7_blorp_exec(struct brw_context *brw,
          gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
       gen7_blorp_emit_sampler_state_pointers_ps(brw, sampler_offset);
    }
+
+   gen6_emit_3dstate_multisample(brw, params->dst.surf.samples);
+   gen6_emit_3dstate_sample_mask(brw,
+                                 params->dst.surf.samples > 1 ?
+                                 (1 << params->dst.surf.samples) - 1 : 1);
 
    gen7_blorp_emit_vs_disable(brw);
    gen7_blorp_emit_hs_disable(brw);
