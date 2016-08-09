@@ -508,6 +508,25 @@ lp_build_alloca(struct gallivm_state *gallivm,
 
 
 /**
+ * Like lp_build_alloca, but do not zero-initialize the variable.
+ */
+LLVMValueRef
+lp_build_alloca_undef(struct gallivm_state *gallivm,
+                      LLVMTypeRef type,
+                      const char *name)
+{
+   LLVMBuilderRef first_builder = create_builder_at_entry(gallivm);
+   LLVMValueRef res;
+
+   res = LLVMBuildAlloca(first_builder, type, name);
+
+   LLVMDisposeBuilder(first_builder);
+
+   return res;
+}
+
+
+/**
  * Allocate an array of scalars/vectors.
  *
  * mem2reg pass is not capable of promoting structs or arrays to registers, but
