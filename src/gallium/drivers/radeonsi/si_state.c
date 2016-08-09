@@ -2066,6 +2066,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 		S_028C70_COMP_SWAP(swap) |
 		S_028C70_BLEND_CLAMP(blend_clamp) |
 		S_028C70_BLEND_BYPASS(blend_bypass) |
+		S_028C70_SIMPLE_FLOAT(1) |
 		S_028C70_NUMBER_TYPE(ntype) |
 		S_028C70_ENDIAN(endian);
 
