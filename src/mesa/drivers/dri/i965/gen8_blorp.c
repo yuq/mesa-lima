@@ -521,6 +521,8 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
    const uint32_t cc_state_offset = gen6_blorp_emit_cc_state(brw);
    gen7_blorp_emit_cc_state_pointer(brw, cc_state_offset);
 
+   gen8_blorp_emit_depth_stencil_state(brw, params);
+
    gen8_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_VS);
    gen8_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_HS);
    gen8_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_DS);
@@ -560,7 +562,6 @@ gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
 
    gen8_blorp_emit_ps_config(brw, params);
 
-   gen8_blorp_emit_depth_stencil_state(brw, params);
    gen8_blorp_emit_wm_state(brw);
 
    gen8_blorp_emit_depth_disable(brw);

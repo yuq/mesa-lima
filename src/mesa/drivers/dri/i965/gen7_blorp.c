@@ -481,6 +481,8 @@ gen7_blorp_exec(struct brw_context *brw,
       gen7_blorp_emit_blend_state_pointer(brw, cc_blend_state_offset);
       gen7_blorp_emit_cc_state_pointer(brw, cc_state_offset);
    }
+   depthstencil_offset = gen6_blorp_emit_depth_stencil_state(brw, params);
+   gen7_blorp_emit_depth_stencil_state_pointers(brw, depthstencil_offset);
 
    gen7_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_VS);
    gen7_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_HS);
@@ -488,8 +490,6 @@ gen7_blorp_exec(struct brw_context *brw,
    gen7_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_GS);
    gen7_blorp_disable_constant_state(brw, _3DSTATE_CONSTANT_PS);
 
-   depthstencil_offset = gen6_blorp_emit_depth_stencil_state(brw, params);
-   gen7_blorp_emit_depth_stencil_state_pointers(brw, depthstencil_offset);
    if (brw->use_resource_streamer)
       gen7_disable_hw_binding_tables(brw);
    if (params->wm_prog_data) {
