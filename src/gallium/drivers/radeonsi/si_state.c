@@ -460,6 +460,10 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 			S_028760_COLOR_COMB_FCN(V_028760_OPT_COMB_BLEND_DISABLED) |
 			S_028760_ALPHA_COMB_FCN(V_028760_OPT_COMB_BLEND_DISABLED);
 
+		/* Only set dual source blending for MRT0 to avoid a hang. */
+		if (i >= 1 && blend->dual_src_blend)
+			continue;
+
 		if (!state->rt[j].colormask)
 			continue;
 
