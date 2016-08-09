@@ -1216,6 +1216,7 @@
     <field name="Depth" start="181" end="191" type="uint"/>
     <field name="Minimum Array Element" start="170" end="180" type="uint"/>
     <field name="Depth Buffer Object Control State" start="160" end="166" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Depth Buffer MOCS" start="160" end="166" type="uint"/>
     <field name="Render Target View Extent" start="245" end="255" type="uint"/>
     <field name="Surface QPitch" start="224" end="238" type="uint"/>
   </instruction>
@@ -1452,6 +1453,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="7"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="3"/>
     <field name="Hierarchical Depth Buffer Object Control State" start="57" end="63" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Hierarchical Depth Buffer MOCS" start="57" end="63" type="uint"/>
     <field name="Surface Pitch" start="32" end="48" type="uint"/>
     <field name="Surface Base Address" start="64" end="127" type="address"/>
     <field name="Surface QPitch" start="128" end="142" type="uint"/>

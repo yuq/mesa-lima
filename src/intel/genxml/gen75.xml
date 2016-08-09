@@ -1177,6 +1177,7 @@
     </field>
     <field name="Minimum Array Element" start="138" end="148" type="uint"/>
     <field name="Depth Buffer Object Control State" start="128" end="131" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Depth Buffer MOCS" start="128" end="131" type="uint"/>
     <field name="Depth Coordinate Offset Y" start="176" end="191" type="int"/>
     <field name="Depth Coordinate Offset X" start="160" end="175" type="int"/>
     <field name="Render Target View Extent" start="213" end="223" type="uint"/>
@@ -1410,6 +1411,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="7"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="1"/>
     <field name="Hierarchical Depth Buffer Object Control State" start="57" end="60" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Hierarchical Depth Buffer MOCS" start="57" end="60" type="uint"/>
     <field name="Surface Pitch" start="32" end="48" type="uint"/>
     <field name="Surface Base Address" start="64" end="95" type="address"/>
   </instruction>
