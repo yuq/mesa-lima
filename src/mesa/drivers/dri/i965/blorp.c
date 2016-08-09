@@ -315,7 +315,10 @@ retry:
       gen6_blorp_exec(brw, params);
       break;
    case 7:
-      gen7_blorp_exec(brw, params);
+      if (brw->is_haswell)
+         gen75_blorp_exec(brw, params);
+      else
+         gen7_blorp_exec(brw, params);
       break;
    case 8:
    case 9:

@@ -49,10 +49,18 @@ brw_nir_trig_workarounds.c: brw_nir_trig_workarounds.py $(top_srcdir)/src/compil
 	$(AM_V_GEN) PYTHONPATH=$(top_srcdir)/src/compiler/nir $(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/brw_nir_trig_workarounds.py > $@ || ($(RM) $@; false)
 
 I965_PERGEN_LIBS = \
-	libi965_gen6.la
+	libi965_gen6.la \
+	libi965_gen7.la \
+	libi965_gen75.la
 
 libi965_gen6_la_SOURCES = $(i965_gen6_FILES)
 libi965_gen6_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=60
+
+libi965_gen7_la_SOURCES = $(i965_gen7_FILES)
+libi965_gen7_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=70
+
+libi965_gen75_la_SOURCES = $(i965_gen75_FILES)
+libi965_gen75_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=75
 
 noinst_LTLIBRARIES = \
 	libi965_dri.la \

@@ -192,7 +192,6 @@ i965_FILES = \
 	gen6_viewport_state.c \
 	gen6_vs_state.c \
 	gen6_wm_state.c \
-	gen7_blorp.c \
 	gen7_cs_state.c \
 	gen7_ds_state.c \
 	gen7_gs_state.c \
@@ -262,4 +261,10 @@ i965_FILES = \
 	intel_upload.c
 
 i965_gen6_FILES = \
+	genX_blorp_exec.c
+
+i965_gen7_FILES = \
+	genX_blorp_exec.c
+
+i965_gen75_FILES = \
 	genX_blorp_exec.c
