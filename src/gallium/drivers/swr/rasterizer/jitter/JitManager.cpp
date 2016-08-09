@@ -76,7 +76,7 @@ using namespace llvm;
 //////////////////////////////////////////////////////////////////////////
 /// @brief Contructor for JitManager.
 /// @param simdWidth - SIMD width to be used in generated program.
-JitManager::JitManager(uint32_t simdWidth, const char *arch)
+JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     : mContext(), mBuilder(mContext), mIsModuleFinalized(true), mJitNumber(0), mVWidth(simdWidth), mArch(arch)
 {
     InitializeNativeTarget();
@@ -95,6 +95,9 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch)
 #endif
 
     //tOpts.PrintMachineCode    = true;
+
+    mCore = std::string(core);
+    std::transform(mCore.begin(), mCore.end(), mCore.begin(), ::tolower);
 
     std::stringstream fnName("JitModule", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
     fnName << mJitNumber++;
@@ -357,9 +360,9 @@ extern "C"
     //////////////////////////////////////////////////////////////////////////
     /// @brief Create JIT context.
     /// @param simdWidth - SIMD width to be used in generated program.
-    HANDLE JITCALL JitCreateContext(uint32_t targetSimdWidth, const char* arch)
+    HANDLE JITCALL JitCreateContext(uint32_t targetSimdWidth, const char* arch, const char* core)
     {
-        return new JitManager(targetSimdWidth, arch);
+        return new JitManager(targetSimdWidth, arch, core);
     }
 
     //////////////////////////////////////////////////////////////////////////

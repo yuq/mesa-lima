@@ -68,7 +68,7 @@ extern "C"
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Create JIT context.
-HANDLE JITCALL JitCreateContext(uint32_t targetSimdWidth, const char* arch);
+HANDLE JITCALL JitCreateContext(uint32_t targetSimdWidth, const char* arch, const char* core);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Destroy JIT context.

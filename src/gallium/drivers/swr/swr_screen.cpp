@@ -753,7 +753,7 @@ swr_create_screen(struct sw_winsys *winsys)
 
    screen->base.flush_frontbuffer = swr_flush_frontbuffer;
 
-   screen->hJitMgr = JitCreateContext(KNOB_SIMD_WIDTH, KNOB_ARCH_STR);
+   screen->hJitMgr = JitCreateContext(KNOB_SIMD_WIDTH, KNOB_ARCH_STR, "swr");
 
    swr_fence_init(&screen->base);
 

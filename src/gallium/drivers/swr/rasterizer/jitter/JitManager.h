@@ -146,7 +146,7 @@ struct JitLLVMContext : LLVMContext
 //////////////////////////////////////////////////////////////////////////
 struct JitManager
 {
-    JitManager(uint32_t w, const char *arch);
+    JitManager(uint32_t w, const char* arch, const char* core);
     ~JitManager(){};
 
     JitLLVMContext          mContext;   ///< LLVM compiler
@@ -178,6 +178,7 @@ struct JitManager
     FunctionType*        mFetchShaderTy;
 
     JitInstructionSet mArch;
+    std::string mCore;
 
     void SetupNewModule();
     bool SetupModuleFromIR(const uint8_t *pIR);
