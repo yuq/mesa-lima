@@ -73,6 +73,7 @@
 #include "program.h"
 #include "program/hash_table.h"
 #include "program/prog_instruction.h"
+#include "util/set.h"
 #include "linker.h"
 #include "link_varyings.h"
 #include "ir_optimization.h"
@@ -3528,15 +3529,15 @@ should_add_buffer_variable(struct gl_shader_program *shProg,
 }
 
 static bool
-add_program_resource(struct gl_shader_program *prog, GLenum type,
-                     const void *data, uint8_t stages)
+add_program_resource(struct gl_shader_program *prog,
+                     struct set *resource_set,
+                     GLenum type, const void *data, uint8_t stages)
 {
    assert(data);
 
    /* If resource already exists, do not add it again. */
-   for (unsigned i = 0; i < prog->NumProgramResourceList; i++)
-      if (prog->ProgramResourceList[i].Data == data)
-         return true;
+   if (_mesa_set_search(resource_set, data))
+      return true;
 
    prog->ProgramResourceList =
       reralloc(prog,
@@ -3557,6 +3558,8 @@ add_program_resource(struct gl_shader_program *prog, GLenum type,
    res->StageReferences = stages;
 
    prog->NumProgramResourceList++;
+
+   _mesa_set_add(resource_set, data);
 
    return true;
 }
@@ -3722,7 +3725,8 @@ create_shader_variable(struct gl_shader_program *shProg,
 }
 
 static bool
-add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
+add_shader_variable(struct gl_shader_program *shProg, struct set *resource_set,
+                    unsigned stage_mask,
                     GLenum programInterface, ir_variable *var,
                     const char *name, const glsl_type *type,
                     bool use_implicit_location, int location,
@@ -3750,7 +3754,8 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
       for (unsigned i = 0; i < type->length; i++) {
          const struct glsl_struct_field *field = &type->fields.structure[i];
          char *field_name = ralloc_asprintf(shProg, "%s.%s", name, field->name);
-         if (!add_shader_variable(shProg, stage_mask, programInterface,
+         if (!add_shader_variable(shProg, resource_set,
+                                  stage_mask, programInterface,
                                   var, field_name, field->type,
                                   use_implicit_location, field_location,
                                   outermost_struct_type))
@@ -3792,13 +3797,15 @@ add_shader_variable(struct gl_shader_program *shProg, unsigned stage_mask,
       if (!sha_v)
          return false;
 
-      return add_program_resource(shProg, programInterface, sha_v, stage_mask);
+      return add_program_resource(shProg, resource_set,
+                                  programInterface, sha_v, stage_mask);
    }
    }
 }
 
 static bool
 add_interface_variables(struct gl_shader_program *shProg,
+                        struct set *resource_set,
                         unsigned stage, GLenum programInterface)
 {
    exec_list *ir = shProg->_LinkedShaders[stage]->ir;
@@ -3848,7 +3855,8 @@ add_interface_variables(struct gl_shader_program *shProg,
          (stage == MESA_SHADER_VERTEX && var->data.mode == ir_var_shader_in) ||
          (stage == MESA_SHADER_FRAGMENT && var->data.mode == ir_var_shader_out);
 
-      if (!add_shader_variable(shProg, 1 << stage, programInterface,
+      if (!add_shader_variable(shProg, resource_set,
+                               1 << stage, programInterface,
                                var, var->name, var->type, vs_input_or_fs_output,
                                var->data.location - loc_bias))
          return false;
@@ -3857,7 +3865,8 @@ add_interface_variables(struct gl_shader_program *shProg,
 }
 
 static bool
-add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
+add_packed_varyings(struct gl_shader_program *shProg, struct set *resource_set,
+                    int stage, GLenum type)
 {
    struct gl_linked_shader *sh = shProg->_LinkedShaders[stage];
    GLenum iface;
@@ -3882,7 +3891,8 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
          if (type == iface) {
             const int stage_mask =
                build_stageref(shProg, var->name, var->data.mode);
-            if (!add_shader_variable(shProg, stage_mask,
+            if (!add_shader_variable(shProg, resource_set,
+                                     stage_mask,
                                      iface, var, var->name, var->type, false,
                                      var->data.location - VARYING_SLOT_VAR0))
                return false;
@@ -3893,7 +3903,7 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
 }
 
 static bool
-add_fragdata_arrays(struct gl_shader_program *shProg)
+add_fragdata_arrays(struct gl_shader_program *shProg, struct set *resource_set)
 {
    struct gl_linked_shader *sh = shProg->_LinkedShaders[MESA_SHADER_FRAGMENT];
 
@@ -3905,7 +3915,7 @@ add_fragdata_arrays(struct gl_shader_program *shProg)
       if (var) {
          assert(var->data.mode == ir_var_shader_out);
 
-         if (!add_shader_variable(shProg,
+         if (!add_shader_variable(shProg, resource_set,
                                   1 << MESA_SHADER_FRAGMENT,
                                   GL_PROGRAM_OUTPUT, var, var->name, var->type,
                                   true, var->data.location - FRAG_RESULT_DATA0))
@@ -4158,29 +4168,38 @@ build_program_resource_list(struct gl_context *ctx,
    if (input_stage == MESA_SHADER_STAGES && output_stage == 0)
       return;
 
+   struct set *resource_set = _mesa_set_create(NULL,
+                                               _mesa_hash_pointer,
+                                               _mesa_key_pointer_equal);
+
    /* Program interface needs to expose varyings in case of SSO. */
    if (shProg->SeparateShader) {
-      if (!add_packed_varyings(shProg, input_stage, GL_PROGRAM_INPUT))
+      if (!add_packed_varyings(shProg, resource_set,
+                               input_stage, GL_PROGRAM_INPUT))
          return;
 
-      if (!add_packed_varyings(shProg, output_stage, GL_PROGRAM_OUTPUT))
+      if (!add_packed_varyings(shProg, resource_set,
+                               output_stage, GL_PROGRAM_OUTPUT))
          return;
    }
 
-   if (!add_fragdata_arrays(shProg))
+   if (!add_fragdata_arrays(shProg, resource_set))
       return;
 
    /* Add inputs and outputs to the resource list. */
-   if (!add_interface_variables(shProg, input_stage, GL_PROGRAM_INPUT))
+   if (!add_interface_variables(shProg, resource_set,
+                                input_stage, GL_PROGRAM_INPUT))
       return;
 
-   if (!add_interface_variables(shProg, output_stage, GL_PROGRAM_OUTPUT))
+   if (!add_interface_variables(shProg, resource_set,
+                                output_stage, GL_PROGRAM_OUTPUT))
       return;
 
    /* Add transform feedback varyings. */
    if (shProg->LinkedTransformFeedback.NumVarying > 0) {
       for (int i = 0; i < shProg->LinkedTransformFeedback.NumVarying; i++) {
-         if (!add_program_resource(shProg, GL_TRANSFORM_FEEDBACK_VARYING,
+         if (!add_program_resource(shProg, resource_set,
+                                   GL_TRANSFORM_FEEDBACK_VARYING,
                                    &shProg->LinkedTransformFeedback.Varyings[i],
                                    0))
          return;
@@ -4191,7 +4210,8 @@ build_program_resource_list(struct gl_context *ctx,
    for (unsigned i = 0; i < ctx->Const.MaxTransformFeedbackBuffers; i++) {
       if ((shProg->LinkedTransformFeedback.ActiveBuffers >> i) & 1) {
          shProg->LinkedTransformFeedback.Buffers[i].Binding = i;
-         if (!add_program_resource(shProg, GL_TRANSFORM_FEEDBACK_BUFFER,
+         if (!add_program_resource(shProg, resource_set,
+                                   GL_TRANSFORM_FEEDBACK_BUFFER,
                                    &shProg->LinkedTransformFeedback.Buffers[i],
                                    0))
          return;
@@ -4226,28 +4246,28 @@ build_program_resource_list(struct gl_context *ctx,
          calculate_array_size_and_stride(shProg, &shProg->UniformStorage[i]);
       }
 
-      if (!add_program_resource(shProg, type,
+      if (!add_program_resource(shProg, resource_set, type,
                                 &shProg->UniformStorage[i], stageref))
          return;
    }
 
    /* Add program uniform blocks. */
    for (unsigned i = 0; i < shProg->NumUniformBlocks; i++) {
-      if (!add_program_resource(shProg, GL_UNIFORM_BLOCK,
+      if (!add_program_resource(shProg, resource_set, GL_UNIFORM_BLOCK,
           &shProg->UniformBlocks[i], 0))
          return;
    }
 
    /* Add program shader storage blocks. */
    for (unsigned i = 0; i < shProg->NumShaderStorageBlocks; i++) {
-      if (!add_program_resource(shProg, GL_SHADER_STORAGE_BLOCK,
+      if (!add_program_resource(shProg, resource_set, GL_SHADER_STORAGE_BLOCK,
           &shProg->ShaderStorageBlocks[i], 0))
          return;
    }
 
    /* Add atomic counter buffers. */
    for (unsigned i = 0; i < shProg->NumAtomicBuffers; i++) {
-      if (!add_program_resource(shProg, GL_ATOMIC_COUNTER_BUFFER,
+      if (!add_program_resource(shProg, resource_set, GL_ATOMIC_COUNTER_BUFFER,
                                 &shProg->AtomicBuffers[i], 0))
          return;
    }
@@ -4264,7 +4284,8 @@ build_program_resource_list(struct gl_context *ctx,
 
          type = _mesa_shader_stage_to_subroutine_uniform((gl_shader_stage)j);
          /* add shader subroutines */
-         if (!add_program_resource(shProg, type, &shProg->UniformStorage[i], 0))
+         if (!add_program_resource(shProg, resource_set,
+                                   type, &shProg->UniformStorage[i], 0))
             return;
       }
    }
@@ -4278,10 +4299,13 @@ build_program_resource_list(struct gl_context *ctx,
 
       type = _mesa_shader_stage_to_subroutine((gl_shader_stage)i);
       for (unsigned j = 0; j < sh->NumSubroutineFunctions; j++) {
-         if (!add_program_resource(shProg, type, &sh->SubroutineFunctions[j], 0))
+         if (!add_program_resource(shProg, resource_set,
+                                   type, &sh->SubroutineFunctions[j], 0))
             return;
       }
    }
+
+   _mesa_set_destroy(resource_set, NULL);
 }
 
 /**
