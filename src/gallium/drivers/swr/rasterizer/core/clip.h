@@ -495,7 +495,6 @@ public:
         }
 
         // update global pipeline stat
-        SWR_CONTEXT* pContext = this->pDC->pContext;
         UPDATE_STAT_FE(CPrimitives, numClippedPrims);
     }
     
@@ -522,7 +521,6 @@ public:
         };
 
         // update clipper invocations pipeline stat
-        SWR_CONTEXT* pContext = this->pDC->pContext;
         uint32_t numInvoc = _mm_popcnt_u32(primMask);
         UPDATE_STAT_FE(CInvocations, numInvoc);
 
@@ -559,7 +557,6 @@ public:
         else if (validMask)
         {
             // update CPrimitives pipeline state
-            SWR_CONTEXT* pContext = this->pDC->pContext;
             UPDATE_STAT_FE(CPrimitives, _mm_popcnt_u32(validMask));
 
             // forward valid prims directly to binner

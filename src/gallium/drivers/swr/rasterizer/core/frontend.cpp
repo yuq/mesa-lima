@@ -510,8 +510,6 @@ static void StreamOut(
 {
     RDTSC_START(FEStreamout);
 
-    SWR_CONTEXT* pContext = pDC->pContext;
-
     const API_STATE& state = GetApiState(pDC);
     const SWR_STREAMOUT_STATE &soState = state.soState;
 
@@ -667,8 +665,6 @@ static void GeometryShaderStage(
     simdscalari primID)
 {
     RDTSC_START(FEGeometryShader);
-
-    SWR_CONTEXT* pContext = pDC->pContext;
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_GS_STATE* pState = &state.gsState;
@@ -962,7 +958,6 @@ static void TessellationStages(
 {
     const API_STATE& state = GetApiState(pDC);
     const SWR_TS_STATE& tsState = state.tsState;
-    SWR_CONTEXT *pContext = pDC->pContext; // Needed for UPDATE_STATS macro
 
     SWR_ASSERT(gt_pTessellationThreadData);
 

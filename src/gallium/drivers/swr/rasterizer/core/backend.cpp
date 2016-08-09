@@ -389,7 +389,6 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
     RDTSC_START(BESingleSampleBackend);
     RDTSC_START(BESetup);
 
-    SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
     const SWR_PS_STATE *pPSState = &state.psState;
@@ -581,7 +580,6 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     RDTSC_START(BESampleRateBackend);
     RDTSC_START(BESetup);
 
-    SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
     const SWR_PS_STATE *pPSState = &state.psState;
@@ -803,7 +801,6 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     RDTSC_START(BEPixelRateBackend);
     RDTSC_START(BESetup);
 
-    SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
     const SWR_PS_STATE *pPSState = &state.psState;
@@ -1024,7 +1021,6 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
     typedef SwrBackendTraits<sampleCountT, SWR_MSAA_STANDARD_PATTERN> T;
     RDTSC_START(BESetup);
 
-    SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = pDC->pState->state.rastState;
 
