@@ -47,7 +47,7 @@ extern "C" {
 struct hash_table;
 
 typedef unsigned (*hash_func_t)(const void *key);
-typedef int (*hash_compare_func_t)(const void *key1, const void *key2);
+typedef bool (*hash_compare_func_t)(const void *key1, const void *key2);
 
 /**
  * Hash table constructor
@@ -151,12 +151,11 @@ extern unsigned hash_table_string_hash(const void *key);
 /**
  * Compare two strings used as keys
  *
- * This is just a macro wrapper around \c strcmp.
+ * This is just a wrapper around \c strcmp.
  *
  * \sa hash_table_string_hash
  */
-#define hash_table_string_compare ((hash_compare_func_t) strcmp)
-
+bool hash_table_string_compare(const void *a, const void *b);
 
 /**
  * Compute hash value of a pointer
@@ -178,7 +177,7 @@ hash_table_pointer_hash(const void *key);
  *
  * \sa hash_table_pointer_hash
  */
-int
+bool
 hash_table_pointer_compare(const void *key1, const void *key2);
 
 void

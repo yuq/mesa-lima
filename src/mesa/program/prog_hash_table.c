@@ -228,6 +228,11 @@ hash_table_string_hash(const void *key)
     return hash;
 }
 
+bool hash_table_string_compare(const void *a, const void *b)
+{
+   return strcmp(a, b) == 0;
+}
+
 
 unsigned
 hash_table_pointer_hash(const void *key)
@@ -236,8 +241,8 @@ hash_table_pointer_hash(const void *key)
 }
 
 
-int
+bool
 hash_table_pointer_compare(const void *key1, const void *key2)
 {
-   return key1 == key2 ? 0 : 1;
+   return key1 == key2;
 }
