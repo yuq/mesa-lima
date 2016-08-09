@@ -220,6 +220,8 @@ void AlignedFree(void* p)
 #define InterlockedDecrement(Append) __sync_sub_and_fetch(Append, 1)
 #define InterlockedDecrement64(Append) __sync_sub_and_fetch(Append, 1)
 #define InterlockedIncrement(Append) __sync_add_and_fetch(Append, 1)
+#define InterlockedAdd(Addend, Value) __sync_add_and_fetch(Addend, Value)
+#define InterlockedAdd64(Addend, Value) __sync_add_and_fetch(Addend, Value)
 #define _ReadWriteBarrier() asm volatile("" ::: "memory")
 
 #define PRAGMA_WARNING_PUSH_DISABLE(...)
