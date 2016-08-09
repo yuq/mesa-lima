@@ -33,6 +33,58 @@
 #include "main/fbobject.h"
 #include "main/framebuffer.h"
 
+bool
+brw_is_drawing_points(const struct brw_context *brw)
+{
+   /* Determine if the primitives *reaching the SF* are points */
+   /* _NEW_POLYGON */
+   if (brw->ctx.Polygon.FrontMode == GL_POINT ||
+       brw->ctx.Polygon.BackMode == GL_POINT) {
+      return true;
+   }
+
+   if (brw->geometry_program) {
+      /* BRW_NEW_GEOMETRY_PROGRAM */
+      return brw->geometry_program->OutputType == GL_POINTS;
+   } else if (brw->tes.prog_data) {
+      /* BRW_NEW_TES_PROG_DATA */
+      return brw->tes.prog_data->output_topology ==
+             BRW_TESS_OUTPUT_TOPOLOGY_POINT;
+   } else {
+      /* BRW_NEW_PRIMITIVE */
+      return brw->primitive == _3DPRIM_POINTLIST;
+   }
+}
+
+bool
+brw_is_drawing_lines(const struct brw_context *brw)
+{
+   /* Determine if the primitives *reaching the SF* are points */
+   /* _NEW_POLYGON */
+   if (brw->ctx.Polygon.FrontMode == GL_LINE ||
+       brw->ctx.Polygon.BackMode == GL_LINE) {
+      return true;
+   }
+
+   if (brw->geometry_program) {
+      /* BRW_NEW_GEOMETRY_PROGRAM */
+      return brw->geometry_program->OutputType == GL_LINE_STRIP;
+   } else if (brw->tes.prog_data) {
+      /* BRW_NEW_TES_PROG_DATA */
+      return brw->tes.prog_data->output_topology ==
+             BRW_TESS_OUTPUT_TOPOLOGY_LINE;
+   } else {
+      /* BRW_NEW_PRIMITIVE */
+      switch (brw->primitive) {
+      case _3DPRIM_LINELIST:
+      case _3DPRIM_LINESTRIP:
+      case _3DPRIM_LINELOOP:
+         return true;
+      }
+   }
+   return false;
+}
+
 static void
 upload_clip_state(struct brw_context *brw)
 {
@@ -178,7 +230,7 @@ upload_clip_state(struct brw_context *brw)
    else
       enable = GEN6_CLIP_ENABLE;
 
-   if (!is_drawing_points(brw) && !is_drawing_lines(brw))
+   if (!brw_is_drawing_points(brw) && !brw_is_drawing_lines(brw))
       dw2 |= GEN6_CLIP_XY_TEST;
 
    /* BRW_NEW_VUE_MAP_GEOM_OUT */

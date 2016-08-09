@@ -195,7 +195,7 @@ calculate_attr_overrides(const struct brw_context *brw,
     * _NEW_POLYGON
     * BRW_NEW_PRIMITIVE | BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_TES_PROG_DATA
     */
-   bool drawing_points = is_drawing_points(brw);
+   bool drawing_points = brw_is_drawing_points(brw);
 
    /* Initialize all the attr_overrides to 0.  In the loop below we'll modify
     * just the ones that correspond to inputs used by the fs.
@@ -337,7 +337,7 @@ upload_sf_state(struct brw_context *brw)
 
    /* _NEW_SCISSOR _NEW_POLYGON BRW_NEW_GEOMETRY_PROGRAM BRW_NEW_PRIMITIVE */
    if (ctx->Scissor.EnableFlags ||
-       is_drawing_points(brw) || is_drawing_lines(brw))
+       brw_is_drawing_points(brw) || brw_is_drawing_lines(brw))
       dw3 |= GEN6_SF_SCISSOR_ENABLE;
 
    /* _NEW_POLYGON */
