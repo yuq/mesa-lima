@@ -443,7 +443,7 @@ gen6_blorp_emit_sampler_state_pointers(struct brw_context *brw,
  *
  * Disable vertex shader.
  */
-void
+static void
 gen6_blorp_emit_vs_disable(struct brw_context *brw,
                            const struct brw_blorp_params *params)
 {
@@ -482,7 +482,7 @@ gen6_blorp_emit_vs_disable(struct brw_context *brw,
  *
  * Disable the geometry shader.
  */
-void
+static void
 gen6_blorp_emit_gs_disable(struct brw_context *brw,
                            const struct brw_blorp_params *params)
 {
