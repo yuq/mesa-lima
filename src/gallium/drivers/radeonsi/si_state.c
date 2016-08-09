@@ -464,6 +464,16 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 		if (i >= 1 && blend->dual_src_blend)
 			continue;
 
+		/* Only addition and subtraction equations are supported with
+		 * dual source blending.
+		 */
+		if (blend->dual_src_blend &&
+		    (eqRGB == PIPE_BLEND_MIN || eqRGB == PIPE_BLEND_MAX ||
+		     eqA == PIPE_BLEND_MIN || eqA == PIPE_BLEND_MAX)) {
+			assert(!"Unsupported equation for dual source blending");
+			continue;
+		}
+
 		if (!state->rt[j].colormask)
 			continue;
 
