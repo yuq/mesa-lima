@@ -511,7 +511,15 @@ gen7_blorp_exec(struct brw_context *brw,
          gen6_blorp_emit_binding_table(brw,
                                        wm_surf_offset_renderbuffer,
                                        wm_surf_offset_texture);
+      gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
    }
+
+   if (params->src.bo) {
+      const uint32_t sampler_offset =
+         gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
+      gen7_blorp_emit_sampler_state_pointers_ps(brw, sampler_offset);
+   }
+
    gen7_blorp_emit_vs_disable(brw);
    gen7_blorp_emit_hs_disable(brw);
    gen7_blorp_emit_te_disable(brw);
@@ -521,15 +529,6 @@ gen7_blorp_exec(struct brw_context *brw,
    gen6_blorp_emit_clip_disable(brw);
    gen7_blorp_emit_sf_config(brw, params);
    gen7_blorp_emit_wm_config(brw, params);
-   if (params->wm_prog_data)
-      gen7_blorp_emit_binding_table_pointers_ps(brw, wm_bind_bo_offset);
-
-   if (params->src.bo) {
-      const uint32_t sampler_offset =
-         gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
-      gen7_blorp_emit_sampler_state_pointers_ps(brw, sampler_offset);
-   }
-
    gen7_blorp_emit_ps_config(brw, params);
    gen7_blorp_emit_cc_viewport(brw);
 

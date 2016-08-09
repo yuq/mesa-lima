@@ -550,6 +550,7 @@ gen6_blorp_exec(struct brw_context *brw,
          gen6_blorp_emit_binding_table(brw,
                                        wm_surf_offset_renderbuffer,
                                        wm_surf_offset_texture);
+      gen6_blorp_emit_binding_table_pointers(brw, wm_bind_bo_offset);
    }
 
    if (params->src.bo) {
@@ -557,13 +558,12 @@ gen6_blorp_exec(struct brw_context *brw,
          gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
       gen6_blorp_emit_sampler_state_pointers(brw, sampler_offset);
    }
+
    gen6_blorp_emit_vs_disable(brw, params);
    gen6_blorp_emit_gs_disable(brw, params);
    gen6_blorp_emit_clip_disable(brw);
    gen6_blorp_emit_sf_config(brw, params);
    gen6_blorp_emit_wm_config(brw, params);
-   if (params->wm_prog_data)
-      gen6_blorp_emit_binding_table_pointers(brw, wm_bind_bo_offset);
    gen6_blorp_emit_viewport_state(brw, params);
 
    if (params->depth.bo)
