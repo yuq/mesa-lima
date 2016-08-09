@@ -447,6 +447,30 @@
     <field name="Non normalized Coordinates" start="96" end="96" type="bool"/>
   </struct>
 
+  <enum name="3D_Prim_Topo_Type" prefix="3DPRIM">
+    <value name="POINTLIST" value="1"/>
+    <value name="LINELIST" value="2"/>
+    <value name="LINESTRIP" value="3"/>
+    <value name="TRILIST" value="4"/>
+    <value name="TRISTRIP" value="5"/>
+    <value name="TRIFAN" value="6"/>
+    <value name="QUADLIST" value="7"/>
+    <value name="QUADSTRIP" value="8"/>
+    <value name="LINELIST_ADJ" value="9"/>
+    <value name="LINESTRIP_ADJ" value="10"/>
+    <value name="TRILIST_ADJ" value="11"/>
+    <value name="TRISTRIP_ADJ" value="12"/>
+    <value name="TRISTRIP_REVERSE" value="13"/>
+    <value name="POLYGON" value="14"/>
+    <value name="RECTLIST" value="15"/>
+    <value name="LINELOOP" value="16"/>
+    <value name="POINTLIST _BF" value="17"/>
+    <value name="LINESTRIP_CONT" value="18"/>
+    <value name="LINESTRIP_BF" value="19"/>
+    <value name="LINESTRIP_CONT_BF" value="20"/>
+    <value name="TRIFAN_NOSTIPPLE" value="22"/>
+  </enum>
+
   <enum name="3D_Vertex_Component_Control" prefix="VFCOMP">
     <value name="NOSTORE" value="0"/>
     <value name="STORE_SRC" value="1"/>
