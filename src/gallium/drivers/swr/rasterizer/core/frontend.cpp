@@ -842,8 +842,8 @@ static void GeometryShaderStage(
 
                                     // OOB indices => forced to zero.
                                     simdscalari vNumViewports = _simd_set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
-                                    simdscalar vClearMask = _simd_cmplt_ps(vpiAttrib[0].x, _simd_castsi_ps(vNumViewports));
-                                    vpiAttrib[0].x = _simd_and_ps(vClearMask, vpiAttrib[0].x);
+                                    simdscalari vClearMask = _simd_cmplt_epi32(_simd_castps_si(vpiAttrib[0].x), vNumViewports);
+                                    vpiAttrib[0].x = _simd_and_ps(_simd_castsi_ps(vClearMask), vpiAttrib[0].x);
 
                                     vViewPortIdx = _simd_castps_si(vpiAttrib[0].x);
                                 }
