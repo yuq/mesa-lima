@@ -619,11 +619,11 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
 
    OPT(nir_opt_algebraic_late);
 
-   OPT(nir_lower_locals_to_regs);
-
    OPT_V(nir_lower_to_source_mods);
    OPT(nir_copy_prop);
    OPT(nir_opt_dce);
+
+   OPT(nir_lower_locals_to_regs);
 
    if (unlikely(debug_enabled)) {
       /* Re-index SSA defs so we print more sensible numbers. */
