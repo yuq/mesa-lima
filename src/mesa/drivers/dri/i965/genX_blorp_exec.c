@@ -266,6 +266,70 @@ blorp_emit_depth_stencil_config(struct brw_context *brw,
    blorp_emit(brw, GENX(3DSTATE_STENCIL_BUFFER), sb);
 }
 
+static uint32_t
+blorp_emit_blend_state(struct brw_context *brw,
+                       const struct brw_blorp_params *params)
+{
+   struct GENX(BLEND_STATE) blend;
+   memset(&blend, 0, sizeof(blend));
+
+   for (unsigned i = 0; i < params->num_draw_buffers; ++i) {
+      blend.Entry[i].PreBlendColorClampEnable = true;
+      blend.Entry[i].PostBlendColorClampEnable = true;
+      blend.Entry[i].ColorClampRange = COLORCLAMP_RTFORMAT;
+
+      blend.Entry[i].WriteDisableRed = params->color_write_disable[0];
+      blend.Entry[i].WriteDisableGreen = params->color_write_disable[1];
+      blend.Entry[i].WriteDisableBlue = params->color_write_disable[2];
+      blend.Entry[i].WriteDisableAlpha = params->color_write_disable[3];
+   }
+
+   uint32_t offset;
+   void *state = brw_state_batch(brw, AUB_TRACE_BLEND_STATE,
+                                 GENX(BLEND_STATE_length) * 4, 64, &offset);
+   GENX(BLEND_STATE_pack)(NULL, state, &blend);
+
+   return offset;
+}
+
+static uint32_t
+blorp_emit_color_calc_state(struct brw_context *brw,
+                            const struct brw_blorp_params *params)
+{
+   uint32_t offset;
+   void *state = brw_state_batch(brw, AUB_TRACE_CC_STATE,
+                                 GENX(COLOR_CALC_STATE_length) * 4, 64, &offset);
+   memset(state, 0, GENX(COLOR_CALC_STATE_length) * 4);
+
+   return offset;
+}
+
+static uint32_t
+blorp_emit_depth_stencil_state(struct brw_context *brw,
+                               const struct brw_blorp_params *params)
+{
+   /* See the following sections of the Sandy Bridge PRM, Volume 1, Part2:
+    *   - 7.5.3.1 Depth Buffer Clear
+    *   - 7.5.3.2 Depth Buffer Resolve
+    *   - 7.5.3.3 Hierarchical Depth Buffer Resolve
+    */
+   struct GENX(DEPTH_STENCIL_STATE) ds = {
+      .DepthBufferWriteEnable = true,
+   };
+
+   if (params->hiz_op == GEN6_HIZ_OP_DEPTH_RESOLVE) {
+      ds.DepthTestEnable = true;
+      ds.DepthTestFunction = COMPAREFUNCTION_NEVER;
+   }
+
+   uint32_t offset;
+   void *state = brw_state_batch(brw, AUB_TRACE_DEPTH_STENCIL_STATE,
+                                 GENX(DEPTH_STENCIL_STATE_length) * 4, 64,
+                                 &offset);
+   GENX(DEPTH_STENCIL_STATE_pack)(NULL, state, &ds);
+
+   return offset;
+}
 
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
 static void
@@ -304,9 +368,9 @@ void
 genX(blorp_exec)(struct brw_context *brw,
                  const struct brw_blorp_params *params)
 {
-   uint32_t cc_blend_state_offset = 0;
-   uint32_t cc_state_offset = 0;
-   uint32_t depthstencil_offset;
+   uint32_t blend_state_offset = 0;
+   uint32_t color_calc_state_offset = 0;
+   uint32_t depth_stencil_state_offset;
    uint32_t wm_bind_bo_offset = 0;
 
    /* Emit workaround flushes when we switch from drawing to blorping. */
@@ -337,10 +401,10 @@ genX(blorp_exec)(struct brw_context *brw,
    }
 
    if (params->wm_prog_data) {
-      cc_blend_state_offset = gen6_blorp_emit_blend_state(brw, params);
-      cc_state_offset = gen6_blorp_emit_cc_state(brw);
+      blend_state_offset = blorp_emit_blend_state(brw, params);
+      color_calc_state_offset = blorp_emit_color_calc_state(brw, params);
    }
-   depthstencil_offset = gen6_blorp_emit_depth_stencil_state(brw, params);
+   depth_stencil_state_offset = blorp_emit_depth_stencil_state(brw, params);
 
    /* 3DSTATE_CC_STATE_POINTERS
     *
@@ -353,9 +417,9 @@ genX(blorp_exec)(struct brw_context *brw,
       cc.BLEND_STATEChange = true;
       cc.COLOR_CALC_STATEChange = true;
       cc.DEPTH_STENCIL_STATEChange = true;
-      cc.PointertoBLEND_STATE = cc_blend_state_offset;
-      cc.PointertoCOLOR_CALC_STATE = cc_state_offset;
-      cc.PointertoDEPTH_STENCIL_STATE = depthstencil_offset;
+      cc.PointertoBLEND_STATE = blend_state_offset;
+      cc.PointertoCOLOR_CALC_STATE = color_calc_state_offset;
+      cc.PointertoDEPTH_STENCIL_STATE = depth_stencil_state_offset;
    }
 
    blorp_emit(brw, GENX(3DSTATE_CONSTANT_VS), vs);
