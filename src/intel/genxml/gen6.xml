@@ -414,14 +414,7 @@
       <value name="CUBECTRLMODE_PROGRAMMED" value="0"/>
       <value name="CUBECTRLMODE_OVERRIDE" value="1"/>
     </field>
-    <field name="TCX Address Control Mode" start="38" end="40" type="uint">
-      <value name="TEXCOORDMODE_WRAP" value="0"/>
-      <value name="TEXCOORDMODE_MIRROR" value="1"/>
-      <value name="TEXCOORDMODE_CLAMP" value="2"/>
-      <value name="TEXCOORDMODE_CUBE" value="3"/>
-      <value name="TEXCOORDMODE_CLAMP_BORDER" value="4"/>
-      <value name="TEXCOORDMODE_MIRROR_ONCE" value="5"/>
-    </field>
+    <field name="TCX Address Control Mode" start="38" end="40" type="uint"/>
     <field name="TCY Address Control Mode" start="35" end="37" type="uint"/>
     <field name="TCZ Address Control Mode" start="32" end="34" type="uint"/>
     <field name="Border Color Pointer" start="69" end="95" type="offset"/>
@@ -434,17 +427,22 @@
       <value name="KEYFILTER_REPLACE_BLACK" value="1"/>
     </field>
     <field name="Maximum Anisotropy" start="115" end="117" type="uint">
-      <value name="ANISORATIO_2" value="0"/>
-      <value name="ANISORATIO_4" value="1"/>
-      <value name="ANISORATIO_6" value="2"/>
-      <value name="ANISORATIO_8" value="3"/>
-      <value name="ANISORATIO_10" value="4"/>
-      <value name="ANISORATIO_12" value="5"/>
-      <value name="ANISORATIO_14" value="6"/>
-      <value name="ANISORATIO_16" value="7"/>
+      <value name="RATIO 2:1" value="0"/>
+      <value name="RATIO 4:1" value="1"/>
+      <value name="RATIO 6:1" value="2"/>
+      <value name="RATIO 8:1" value="3"/>
+      <value name="RATIO 10:1" value="4"/>
+      <value name="RATIO 12:1" value="5"/>
+      <value name="RATIO 14:1" value="6"/>
+      <value name="RATIO 16:1" value="7"/>
     </field>
-    <field name="Address Rounding Enable" start="109" end="114" type="uint"/>
-    <field name="Non normalized Coordinates" start="96" end="96" type="bool"/>
+    <field name="R Address Min Filter Rounding Enable" start="109" end="109" type="bool"/>
+    <field name="R Address Mag Filter Rounding Enable" start="110" end="110" type="bool"/>
+    <field name="V Address Min Filter Rounding Enable" start="111" end="111" type="bool"/>
+    <field name="V Address Mag Filter Rounding Enable" start="112" end="112" type="bool"/>
+    <field name="U Address Min Filter Rounding Enable" start="113" end="113" type="bool"/>
+    <field name="U Address Mag Filter Rounding Enable" start="114" end="114" type="bool"/>
+    <field name="Non-normalized Coordinate Enable" start="96" end="96" type="bool"/>
   </struct>
 
   <enum name="3D_Prim_Topo_Type" prefix="3DPRIM">
@@ -715,6 +713,15 @@
     <value name="R8G8B8_UINT" value="456"/>
     <value name="R8G8B8_SINT" value="457"/>
     <value name="RAW" value="511"/>
+  </enum>
+
+  <enum name="Texture Coordinate Mode" prefix="TCM">
+    <value name="WRAP" value="0"/>
+    <value name="MIRROR" value="1"/>
+    <value name="CLAMP" value="2"/>
+    <value name="CUBE" value="3"/>
+    <value name="CLAMP_BORDER" value="4"/>
+    <value name="MIRROR_ONCE" value="5"/>
   </enum>
 
   <instruction name="3DPRIMITIVE" bias="2" length="6">
