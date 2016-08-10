@@ -235,8 +235,6 @@ gen6_blorp_emit_wm_config(struct brw_context *brw,
    default:
       unreachable("not reached");
    }
-   dw5 |= GEN6_WM_LINE_AA_WIDTH_1_0;
-   dw5 |= GEN6_WM_LINE_END_CAP_AA_WIDTH_0_5;
    dw5 |= (brw->max_wm_threads - 1) << GEN6_WM_MAX_THREADS_SHIFT;
    dw6 |= 0 << GEN6_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT; /* No interp */
    dw6 |= (params->wm_prog_data ? prog_data->num_varying_inputs : 0) <<

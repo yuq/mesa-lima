@@ -270,9 +270,7 @@ gen8_blorp_emit_wm_state(struct brw_context *brw)
 {
    BEGIN_BATCH(2);
    OUT_BATCH(_3DSTATE_WM << 16 | (2 - 2));
-   OUT_BATCH(GEN7_WM_LINE_AA_WIDTH_1_0 |
-             GEN7_WM_LINE_END_CAP_AA_WIDTH_0_5 |
-             GEN7_WM_POINT_RASTRULE_UPPER_RIGHT);
+   OUT_BATCH(0);
    ADVANCE_BATCH();
 }
 

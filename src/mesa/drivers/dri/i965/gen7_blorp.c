@@ -261,8 +261,6 @@ gen7_blorp_emit_wm_config(struct brw_context *brw,
    default:
       unreachable("not reached");
    }
-   dw1 |= GEN7_WM_LINE_AA_WIDTH_1_0;
-   dw1 |= GEN7_WM_LINE_END_CAP_AA_WIDTH_0_5;
    dw1 |= 0 << GEN7_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT; /* No interp */
 
    if (params->wm_prog_data)
