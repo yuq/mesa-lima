@@ -635,6 +635,82 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
    tgsi_parse_free(&parse);
 }
 
+/**
+ * Collect information about the arrays of a given register file.
+ *
+ * @param tokens TGSI shader
+ * @param file the register file to scan through
+ * @param max_array_id number of entries in @p arrays; should be equal to the
+ *                     highest array id, i.e. tgsi_shader_info::array_max[file].
+ * @param arrays info for array of each ID will be written to arrays[ID - 1].
+ */
+void
+tgsi_scan_arrays(const struct tgsi_token *tokens,
+                 unsigned file,
+                 unsigned max_array_id,
+                 struct tgsi_array_info *arrays)
+{
+   struct tgsi_parse_context parse;
+
+   if (tgsi_parse_init(&parse, tokens) != TGSI_PARSE_OK) {
+      debug_printf("tgsi_parse_init() failed in tgsi_scan_arrays()!\n");
+      return;
+   }
+
+   memset(arrays, 0, sizeof(arrays[0]) * max_array_id);
+
+   while (!tgsi_parse_end_of_tokens(&parse)) {
+      struct tgsi_full_instruction *inst;
+
+      tgsi_parse_token(&parse);
+
+      if (parse.FullToken.Token.Type == TGSI_TOKEN_TYPE_DECLARATION) {
+         struct tgsi_full_declaration *decl = &parse.FullToken.FullDeclaration;
+
+         if (decl->Declaration.Array && decl->Declaration.File == file &&
+             decl->Array.ArrayID > 0 && decl->Array.ArrayID <= max_array_id) {
+            struct tgsi_array_info *array = &arrays[decl->Array.ArrayID - 1];
+            assert(!array->declared);
+            array->declared = true;
+            array->range = decl->Range;
+         }
+      }
+
+      if (parse.FullToken.Token.Type != TGSI_TOKEN_TYPE_INSTRUCTION)
+         continue;
+
+      inst = &parse.FullToken.FullInstruction;
+      for (unsigned i = 0; i < inst->Instruction.NumDstRegs; i++) {
+         const struct tgsi_full_dst_register *dst = &inst->Dst[i];
+         if (dst->Register.File != file)
+            continue;
+
+         if (dst->Register.Indirect) {
+            if (dst->Indirect.ArrayID > 0 &&
+                dst->Indirect.ArrayID <= max_array_id) {
+               arrays[dst->Indirect.ArrayID - 1].writemask |= dst->Register.WriteMask;
+            } else {
+               /* Indirect writes without an ArrayID can write anywhere. */
+               for (unsigned j = 0; j < max_array_id; ++j)
+                  arrays[j].writemask |= dst->Register.WriteMask;
+            }
+         } else {
+            /* Check whether the write falls into any of the arrays anyway. */
+            for (unsigned j = 0; j < max_array_id; ++j) {
+               struct tgsi_array_info *array = &arrays[j];
+               if (array->declared &&
+                   dst->Register.Index >= array->range.First &&
+                   dst->Register.Index <= array->range.Last)
+                  array->writemask |= dst->Register.WriteMask;
+            }
+         }
+      }
+   }
+
+   tgsi_parse_free(&parse);
+
+   return;
+}
 
 
 /**
