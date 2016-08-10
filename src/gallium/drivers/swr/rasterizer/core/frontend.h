@@ -224,12 +224,12 @@ INLINE
 void viewportTransform(simdvector *v, const SWR_VIEWPORT_MATRICES & vpMatrices, simdscalari vViewportIdx)
 {
     // perform a gather of each matrix element based on the viewport array indexes
-    simdscalar m00 = _simd_i32gather_ps(&vpMatrices.m00[0], vViewportIdx, 1);
-    simdscalar m30 = _simd_i32gather_ps(&vpMatrices.m30[0], vViewportIdx, 1);
-    simdscalar m11 = _simd_i32gather_ps(&vpMatrices.m11[0], vViewportIdx, 1);
-    simdscalar m31 = _simd_i32gather_ps(&vpMatrices.m31[0], vViewportIdx, 1);
-    simdscalar m22 = _simd_i32gather_ps(&vpMatrices.m22[0], vViewportIdx, 1);
-    simdscalar m32 = _simd_i32gather_ps(&vpMatrices.m32[0], vViewportIdx, 1);
+    simdscalar m00 = _simd_i32gather_ps(&vpMatrices.m00[0], vViewportIdx, 4);
+    simdscalar m30 = _simd_i32gather_ps(&vpMatrices.m30[0], vViewportIdx, 4);
+    simdscalar m11 = _simd_i32gather_ps(&vpMatrices.m11[0], vViewportIdx, 4);
+    simdscalar m31 = _simd_i32gather_ps(&vpMatrices.m31[0], vViewportIdx, 4);
+    simdscalar m22 = _simd_i32gather_ps(&vpMatrices.m22[0], vViewportIdx, 4);
+    simdscalar m32 = _simd_i32gather_ps(&vpMatrices.m32[0], vViewportIdx, 4);
 
     for (uint32_t i = 0; i < NumVerts; ++i)
     {
