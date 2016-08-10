@@ -88,27 +88,20 @@ static unsigned si_pack_float_12p4(float x)
 /*
  * Inferred framebuffer and blender state.
  *
- * One of the reasons CB_TARGET_MASK must be derived from the framebuffer state
- * is that:
- * - The blend state mask is 0xf most of the time.
- * - The COLOR1 format isn't INVALID because of possible dual-source blending,
- *   so COLOR1 is enabled pretty much all the time.
- * So CB_TARGET_MASK is the only register that can disable COLOR1.
- *
- * Another reason is to avoid a hang with dual source blending.
+ * CB_TARGET_MASK is emitted here to avoid a hang with dual source blending
+ * if there is not enough PS outputs.
  */
 static void si_emit_cb_render_state(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_state_blend *blend = sctx->queued.named.blend;
-	uint32_t cb_target_mask = 0, i;
+	uint32_t cb_target_mask, i;
 
-	for (i = 0; i < sctx->framebuffer.state.nr_cbufs; i++)
-		if (sctx->framebuffer.state.cbufs[i])
-			cb_target_mask |= 0xf << (4*i);
-
+	/* CB_COLORn_INFO.FORMAT=INVALID disables empty colorbuffer slots. */
 	if (blend)
-		cb_target_mask &= blend->cb_target_mask;
+		cb_target_mask = blend->cb_target_mask;
+	else
+		cb_target_mask = 0xffffffff;
 
 	/* Avoid a hang that happens when dual source blending is enabled
 	 * but there is not enough color outputs. This is undefined behavior,
