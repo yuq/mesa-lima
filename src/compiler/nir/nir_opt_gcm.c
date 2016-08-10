@@ -483,6 +483,9 @@ opt_gcm_impl(nir_function_impl *impl)
    }
 
    ralloc_free(state.blocks);
+
+   nir_metadata_preserve(impl, nir_metadata_block_index |
+                               nir_metadata_dominance);
 }
 
 void
