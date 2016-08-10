@@ -207,7 +207,6 @@ i965_FILES = \
 	gen7_wm_state.c \
 	gen7_wm_surface_state.c \
 	gen8_blend_state.c \
-	gen8_blorp.c \
 	gen8_depth_state.c \
 	gen8_disable.c \
 	gen8_draw_upload.c \
@@ -267,4 +266,10 @@ i965_gen7_FILES = \
 	genX_blorp_exec.c
 
 i965_gen75_FILES = \
+	genX_blorp_exec.c
+
+i965_gen8_FILES = \
+	genX_blorp_exec.c
+
+i965_gen9_FILES = \
 	genX_blorp_exec.c

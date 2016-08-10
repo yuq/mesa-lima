@@ -203,6 +203,9 @@ gen75_blorp_exec(struct brw_context *brw,
 void
 gen8_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params);
 
+void
+gen9_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params);
+
 struct brw_blorp_blit_prog_key
 {
    /* Number of samples per pixel that have been configured in the surface

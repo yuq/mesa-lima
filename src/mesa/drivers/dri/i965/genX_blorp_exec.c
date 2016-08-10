@@ -252,8 +252,12 @@ blorp_emit_vertex_buffers(struct brw_context *brw,
 
    unsigned num_buffers = 1;
 
-#if GEN_GEN == 7
-   uint32_t mocs = 1 /* GEN7_MOCS_L3 */;
+#if GEN_GEN == 9
+   uint32_t mocs = (2 << 1); /* SKL_MOCS_WB */
+#elif GEN_GEN == 8
+   uint32_t mocs = 0x78; /* BDW_MOCS_WB */
+#elif GEN_GEN == 7
+   uint32_t mocs = 1; /* GEN7_MOCS_L3 */
 #else
    uint32_t mocs = 0;
 #endif
@@ -266,22 +270,30 @@ blorp_emit_vertex_buffers(struct brw_context *brw,
 #if GEN_GEN >= 7
    vb[0].AddressModifyEnable = true;
 #endif
+#if GEN_GEN >= 8
+   vb[0].BufferSize = size;
+#else
    vb[0].BufferAccessType = VERTEXDATA;
    vb[0].EndAddress = vb[0].BufferStartingAddress;
    vb[0].EndAddress.offset += size - 1;
+#endif
 
    if (params->wm_prog_data && params->wm_prog_data->num_varying_inputs) {
       blorp_emit_input_varying_data(brw, params,
                                     &vb[1].BufferStartingAddress, &size);
       vb[1].VertexBufferIndex = 1;
       vb[1].BufferPitch = 0;
-      vb[1].BufferAccessType = INSTANCEDATA;
       vb[1].VertexBufferMOCS = mocs;
 #if GEN_GEN >= 7
       vb[1].AddressModifyEnable = true;
 #endif
+#if GEN_GEN >= 8
+      vb[1].BufferSize = size;
+#else
+      vb[1].BufferAccessType = INSTANCEDATA;
       vb[1].EndAddress = vb[1].BufferStartingAddress;
-      vb[1].EndAddress.offset += size;
+      vb[1].EndAddress.offset += size - 1;
+#endif
       num_buffers++;
    }
 
@@ -387,6 +399,21 @@ blorp_emit_vertex_elements(struct brw_context *brw,
       GENX(VERTEX_ELEMENT_STATE_pack)(brw, dw, &ve[i]);
       dw += GENX(VERTEX_ELEMENT_STATE_length);
    }
+
+#if GEN_GEN >= 8
+   blorp_emit(brw, GENX(3DSTATE_VF_SGVS), sgvs);
+
+   for (unsigned i = 0; i < num_elements; i++) {
+      blorp_emit(brw, GENX(3DSTATE_VF_INSTANCING), vf) {
+         vf.VertexElementIndex = i;
+         vf.InstancingEnable = false;
+      }
+   }
+
+   blorp_emit(brw, GENX(3DSTATE_VF_TOPOLOGY), topo) {
+      topo.PrimitiveTopologyType = _3DPRIM_RECTLIST;
+   }
+#endif
 }
 
 static void
@@ -414,7 +441,29 @@ blorp_emit_sf_config(struct brw_context *brw,
     *     (rendering rectangle (RECTLIST) objects.
     */
 
-#if GEN_GEN >= 7
+#if GEN_GEN >= 8
+
+   blorp_emit(brw, GENX(3DSTATE_SF), sf);
+
+   blorp_emit(brw, GENX(3DSTATE_RASTER), raster) {
+      raster.CullMode = CULLMODE_NONE;
+   }
+
+   blorp_emit(brw, GENX(3DSTATE_SBE), sbe) {
+      sbe.VertexURBEntryReadOffset = BRW_SF_URB_ENTRY_READ_OFFSET;
+      sbe.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
+      sbe.VertexURBEntryReadLength = brw_blorp_get_urb_length(prog_data);
+      sbe.ForceVertexURBEntryReadLength = true;
+      sbe.ForceVertexURBEntryReadOffset = true;
+      sbe.ConstantInterpolationEnable = prog_data->flat_inputs;
+
+#if GEN_GEN >= 9
+      for (unsigned i = 0; i < 32; i++)
+         sbe.AttributeActiveComponentFormat[i] = ACF_XYZW;
+#endif
+   }
+
+#elif GEN_GEN >= 7
 
    blorp_emit(brw, GENX(3DSTATE_SF), sf) {
       sf.FrontFaceFillMode = FILL_MODE_SOLID;
@@ -478,7 +527,73 @@ blorp_emit_ps_config(struct brw_context *brw,
     * configure the WM state whether or not there is a WM program.
     */
 
-#if GEN_GEN >= 7
+#if GEN_GEN >= 8
+
+   blorp_emit(brw, GENX(3DSTATE_WM), wm);
+
+   blorp_emit(brw, GENX(3DSTATE_PS), ps) {
+      if (params->src.bo) {
+         ps.SamplerCount = 1; /* Up to 4 samplers */
+         ps.BindingTableEntryCount = 2;
+      } else {
+         ps.BindingTableEntryCount = 1;
+      }
+
+      ps.DispatchGRFStartRegisterForConstantSetupData0 =
+         prog_data->first_curbe_grf_0;
+      ps.DispatchGRFStartRegisterForConstantSetupData2 =
+         prog_data->first_curbe_grf_2;
+
+      ps._8PixelDispatchEnable = prog_data->dispatch_8;
+      ps._16PixelDispatchEnable = prog_data->dispatch_16;
+
+      ps.KernelStartPointer0 = params->wm_prog_kernel;
+      ps.KernelStartPointer2 =
+         params->wm_prog_kernel + prog_data->ksp_offset_2;
+
+      /* 3DSTATE_PS expects the number of threads per PSD, which is always 64;
+       * it implicitly scales for different GT levels (which have some # of
+       * PSDs).
+       *
+       * In Gen8 the format is U8-2 whereas in Gen9 it is U8-1.
+       */
+      if (GEN_GEN >= 9)
+         ps.MaximumNumberofThreadsPerPSD = 64 - 1;
+      else
+         ps.MaximumNumberofThreadsPerPSD = 64 - 2;
+
+      switch (params->fast_clear_op) {
+#if GEN_GEN >= 9
+      case (1 << 6): /* GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE */
+         ps.RenderTargetResolveType = RESOLVE_PARTIAL;
+         break;
+      case (3 << 6): /* GEN9_PS_RENDER_TARGET_RESOLVE_FULL */
+         ps.RenderTargetResolveType = RESOLVE_FULL;
+         break;
+#else
+      case (1 << 6): /* GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE */
+         ps.RenderTargetResolveEnable = true;
+         break;
+#endif
+      case (1 << 8): /* GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE */
+         ps.RenderTargetFastClearEnable = true;
+         break;
+      }
+   }
+
+   blorp_emit(brw, GENX(3DSTATE_PS_EXTRA), psx) {
+      psx.PixelShaderValid = true;
+
+      if (params->src.bo)
+         psx.PixelShaderKillsPixel = true;
+
+      psx.AttributeEnable = prog_data->num_varying_inputs > 0;
+
+      if (prog_data && prog_data->persample_msaa_dispatch)
+         psx.PixelShaderIsPerSample = true;
+   }
+
+#elif GEN_GEN >= 7
 
    blorp_emit(brw, GENX(3DSTATE_WM), wm) {
       switch (params->hiz_op) {
@@ -713,6 +828,15 @@ blorp_emit_blend_state(struct brw_context *brw,
 #if GEN_GEN >= 7
    blorp_emit(brw, GENX(3DSTATE_BLEND_STATE_POINTERS), sp) {
       sp.BlendStatePointer = offset;
+#if GEN_GEN >= 8
+      sp.BlendStatePointerValid = true;
+#endif
+   }
+#endif
+
+#if GEN_GEN >= 8
+   blorp_emit(brw, GENX(3DSTATE_PS_BLEND), ps_blend) {
+      ps_blend.HasWriteableRT = true;
    }
 #endif
 
@@ -731,6 +855,9 @@ blorp_emit_color_calc_state(struct brw_context *brw,
 #if GEN_GEN >= 7
    blorp_emit(brw, GENX(3DSTATE_CC_STATE_POINTERS), sp) {
       sp.ColorCalcStatePointer = offset;
+#if GEN_GEN >= 8
+      sp.ColorCalcStatePointerValid = true;
+#endif
    }
 #endif
 
@@ -741,6 +868,14 @@ static uint32_t
 blorp_emit_depth_stencil_state(struct brw_context *brw,
                                const struct brw_blorp_params *params)
 {
+#if GEN_GEN >= 8
+
+   /* On gen8+, DEPTH_STENCIL state is simply an instruction */
+   blorp_emit(brw, GENX(3DSTATE_WM_DEPTH_STENCIL), ds);
+   return 0;
+
+#else /* GEN_GEN <= 7 */
+
    /* See the following sections of the Sandy Bridge PRM, Volume 1, Part2:
     *   - 7.5.3.1 Depth Buffer Clear
     *   - 7.5.3.2 Depth Buffer Resolve
@@ -768,6 +903,8 @@ blorp_emit_depth_stencil_state(struct brw_context *brw,
 #endif
 
    return offset;
+
+#endif /* GEN_GEN */
 }
 
 static void
@@ -898,6 +1035,10 @@ genX(blorp_exec)(struct brw_context *brw,
 
    brw_upload_state_base_address(brw);
 
+#if GEN_GEN >= 8
+   gen7_l3_state.emit(brw);
+#endif
+
    blorp_emit_vertex_buffers(brw, params);
    blorp_emit_vertex_elements(brw, params);
 
@@ -952,7 +1093,11 @@ genX(blorp_exec)(struct brw_context *brw,
    if (params->src.bo)
       blorp_emit_sampler_state(brw, params);
 
+#if GEN_GEN >= 8
+   gen8_emit_3dstate_multisample(brw, params->dst.surf.samples);
+#else
    gen6_emit_3dstate_multisample(brw, params->dst.surf.samples);
+#endif
 
    blorp_emit(brw, GENX(3DSTATE_SAMPLE_MASK), mask) {
       mask.SampleMask = (1 << params->dst.surf.samples) - 1;

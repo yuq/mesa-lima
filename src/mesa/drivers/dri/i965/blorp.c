@@ -321,8 +321,10 @@ retry:
          gen7_blorp_exec(brw, params);
       break;
    case 8:
-   case 9:
       gen8_blorp_exec(brw, params);
+      break;
+   case 9:
+      gen9_blorp_exec(brw, params);
       break;
    default:
       /* BLORP is not supported before Gen6. */
