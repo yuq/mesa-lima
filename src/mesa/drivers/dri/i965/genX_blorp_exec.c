@@ -331,6 +331,42 @@ blorp_emit_depth_stencil_state(struct brw_context *brw,
    return offset;
 }
 
+static void
+blorp_emit_sampler_state(struct brw_context *brw,
+                         const struct brw_blorp_params *params)
+{
+   struct GENX(SAMPLER_STATE) sampler = {
+      .MipModeFilter = MIPFILTER_NONE,
+      .MagModeFilter = MAPFILTER_LINEAR,
+      .MinModeFilter = MAPFILTER_LINEAR,
+      .MinLOD = 0,
+      .MaxLOD = 0,
+      .TCXAddressControlMode = TCM_CLAMP,
+      .TCYAddressControlMode = TCM_CLAMP,
+      .TCZAddressControlMode = TCM_CLAMP,
+      .MaximumAnisotropy = RATIO21,
+      .RAddressMinFilterRoundingEnable = true,
+      .RAddressMagFilterRoundingEnable = true,
+      .VAddressMinFilterRoundingEnable = true,
+      .VAddressMagFilterRoundingEnable = true,
+      .UAddressMinFilterRoundingEnable = true,
+      .UAddressMagFilterRoundingEnable = true,
+      .NonnormalizedCoordinateEnable = true,
+   };
+
+   uint32_t offset;
+   void *state = brw_state_batch(brw, AUB_TRACE_SAMPLER_STATE,
+                                 GENX(SAMPLER_STATE_length) * 4, 32, &offset);
+   GENX(SAMPLER_STATE_pack)(NULL, state, &sampler);
+
+   blorp_emit(brw, GENX(3DSTATE_SAMPLER_STATE_POINTERS), ssp) {
+      ssp.VSSamplerStateChange = true;
+      ssp.GSSamplerStateChange = true;
+      ssp.PSSamplerStateChange = true;
+      ssp.PointertoPSSamplerState = offset;
+   }
+}
+
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
 static void
 blorp_emit_viewport_state(struct brw_context *brw,
@@ -450,17 +486,8 @@ genX(blorp_exec)(struct brw_context *brw,
       }
    }
 
-   if (params->src.bo) {
-      const uint32_t sampler_offset =
-         gen6_blorp_emit_sampler_state(brw, MAPFILTER_LINEAR, 0, true);
-
-      blorp_emit(brw, GENX(3DSTATE_SAMPLER_STATE_POINTERS), ssp) {
-         ssp.VSSamplerStateChange = true;
-         ssp.GSSamplerStateChange = true;
-         ssp.PSSamplerStateChange = true;
-         ssp.PointertoPSSamplerState = sampler_offset;
-      }
-   }
+   if (params->src.bo)
+      blorp_emit_sampler_state(brw, params);
 
    gen6_emit_3dstate_multisample(brw, params->dst.surf.samples);
 
