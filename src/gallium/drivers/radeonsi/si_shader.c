@@ -6522,7 +6522,9 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	struct lp_build_tgsi_action tmpl = {};
 
 	memset(ctx, 0, sizeof(*ctx));
-	radeon_llvm_context_init(&ctx->radeon_bld, "amdgcn--");
+	radeon_llvm_context_init(
+		&ctx->radeon_bld, "amdgcn--",
+		(shader && shader->selector) ? &shader->selector->info : NULL);
 	ctx->tm = tm;
 	ctx->screen = sscreen;
 	if (shader && shader->selector)
@@ -6545,8 +6547,6 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	ctx->v8i32 = LLVMVectorType(ctx->i32, 8);
 
 	bld_base = &ctx->radeon_bld.soa.bld_base;
-	if (shader && shader->selector)
-		bld_base->info = &shader->selector->info;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;
 
 	bld_base->op_actions[TGSI_OPCODE_INTERP_CENTROID] = interp_action;

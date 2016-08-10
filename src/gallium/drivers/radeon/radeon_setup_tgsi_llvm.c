@@ -115,26 +115,26 @@ static LLVMValueRef emit_swizzle(struct lp_build_tgsi_context *bld_base,
  * Return the description of the array covering the given temporary register
  * index.
  */
-static const struct radeon_llvm_array *
-get_temp_array(struct lp_build_tgsi_context *bld_base,
-	       unsigned reg_index,
-	       const struct tgsi_ind_register *reg)
+static unsigned
+get_temp_array_id(struct lp_build_tgsi_context *bld_base,
+		  unsigned reg_index,
+		  const struct tgsi_ind_register *reg)
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	unsigned num_arrays = ctx->soa.bld_base.info->array_max[TGSI_FILE_TEMPORARY];
 	unsigned i;
 
 	if (reg && reg->ArrayID > 0 && reg->ArrayID <= num_arrays)
-		return &ctx->arrays[reg->ArrayID - 1];
+		return reg->ArrayID;
 
 	for (i = 0; i < num_arrays; i++) {
-		const struct radeon_llvm_array *array = &ctx->arrays[i];
+		const struct tgsi_array_info *array = &ctx->temp_arrays[i];
 
 		if (reg_index >= array->range.First && reg_index <= array->range.Last)
-			return array;
+			return i + 1;
 	}
 
-	return NULL;
+	return 0;
 }
 
 static struct tgsi_declaration_range
@@ -142,13 +142,13 @@ get_array_range(struct lp_build_tgsi_context *bld_base,
 		unsigned File, unsigned reg_index,
 		const struct tgsi_ind_register *reg)
 {
+	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct tgsi_declaration_range range;
 
 	if (File == TGSI_FILE_TEMPORARY) {
-		const struct radeon_llvm_array *array =
-			get_temp_array(bld_base, reg_index, reg);
-		if (array)
-			return array->range;
+		unsigned array_id = get_temp_array_id(bld_base, reg_index, reg);
+		if (array_id)
+			return ctx->temp_arrays[array_id - 1].range;
 	}
 
 	range.First = 0;
@@ -184,25 +184,31 @@ get_pointer_into_array(struct radeon_llvm_context *ctx,
 		       unsigned reg_index,
 		       const struct tgsi_ind_register *reg_indirect)
 {
-	const struct radeon_llvm_array *array;
+	unsigned array_id;
 	struct gallivm_state *gallivm = ctx->soa.bld_base.base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef idxs[2];
 	LLVMValueRef index;
+	LLVMValueRef alloca;
 
 	if (file != TGSI_FILE_TEMPORARY)
 		return NULL;
 
-	array = get_temp_array(&ctx->soa.bld_base, reg_index, reg_indirect);
-	if (!array || !array->alloca)
+	array_id = get_temp_array_id(&ctx->soa.bld_base, reg_index, reg_indirect);
+	if (!array_id)
 		return NULL;
 
-	index = emit_array_index(&ctx->soa, reg_indirect, reg_index - array->range.First);
+	alloca = ctx->temp_array_allocas[array_id - 1];
+	if (!alloca)
+		return NULL;
+
+	index = emit_array_index(&ctx->soa, reg_indirect,
+				 reg_index - ctx->temp_arrays[array_id - 1].range.First);
 	index = LLVMBuildMul(builder, index, lp_build_const_int32(gallivm, TGSI_NUM_CHANNELS), "");
 	index = LLVMBuildAdd(builder, index, lp_build_const_int32(gallivm, swizzle), "");
 	idxs[0] = ctx->soa.bld_base.uint_bld.zero;
 	idxs[1] = index;
-	return LLVMBuildGEP(builder, array->alloca, idxs, 2, "");
+	return LLVMBuildGEP(builder, alloca, idxs, 2, "");
 }
 
 LLVMValueRef
@@ -478,12 +484,8 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 		decl_size = 4 * ((last - first) + 1);
 		if (decl->Declaration.Array) {
 			unsigned id = decl->Array.ArrayID - 1;
-			if (!ctx->arrays) {
-				int size = bld_base->info->array_max[TGSI_FILE_TEMPORARY];
-				ctx->arrays = CALLOC(size, sizeof(ctx->arrays[0]));
-			}
 
-			ctx->arrays[id].range = decl->Range;
+			ctx->temp_arrays[id].range = decl->Range;
 
 			/* If the array has more than 16 elements, store it
 			 * in memory using an alloca that spans the entire
@@ -507,7 +509,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 				array_alloca = LLVMBuildAlloca(builder,
 					LLVMArrayType(bld_base->base.vec_type,
 						      decl_size), "array");
-				ctx->arrays[id].alloca = array_alloca;
+				ctx->temp_array_allocas[id] = array_alloca;
 			}
 		}
 
@@ -1727,7 +1729,8 @@ static void emit_rsq(const struct lp_build_tgsi_action *action,
 					  bld_base->base.one, sqrt);
 }
 
-void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *triple)
+void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *triple,
+			      const struct tgsi_shader_info *info)
 {
 	struct lp_type type;
 
@@ -1745,6 +1748,15 @@ void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *tripl
 	ctx->gallivm.builder = LLVMCreateBuilderInContext(ctx->gallivm.context);
 
 	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
+
+	bld_base->info = info;
+
+	if (info && info->array_max[TGSI_FILE_TEMPORARY] > 0) {
+		int size = info->array_max[TGSI_FILE_TEMPORARY];
+
+		ctx->temp_arrays = CALLOC(size, sizeof(ctx->temp_arrays[0]));
+		ctx->temp_array_allocas = CALLOC(size, sizeof(ctx->temp_array_allocas[0]));
+	}
 
 	type.floating = true;
 	type.fixed = false;
@@ -1966,8 +1978,10 @@ void radeon_llvm_dispose(struct radeon_llvm_context *ctx)
 {
 	LLVMDisposeModule(ctx->soa.bld_base.base.gallivm->module);
 	LLVMContextDispose(ctx->soa.bld_base.base.gallivm->context);
-	FREE(ctx->arrays);
-	ctx->arrays = NULL;
+	FREE(ctx->temp_arrays);
+	ctx->temp_arrays = NULL;
+	FREE(ctx->temp_array_allocas);
+	ctx->temp_array_allocas = NULL;
 	FREE(ctx->temps);
 	ctx->temps = NULL;
 	ctx->temps_count = 0;
