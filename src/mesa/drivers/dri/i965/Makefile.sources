@@ -103,7 +103,6 @@ i965_FILES = \
 	brw_binding_tables.c \
 	brw_blorp.c \
 	brw_blorp.h \
-	brw_blorp_emit.c \
 	brw_cc.c \
 	brw_clear.c \
 	brw_clip.c \
