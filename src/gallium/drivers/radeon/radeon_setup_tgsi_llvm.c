@@ -485,8 +485,6 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 		if (decl->Declaration.Array) {
 			unsigned id = decl->Array.ArrayID - 1;
 
-			ctx->temp_arrays[id].range = decl->Range;
-
 			/* If the array has more than 16 elements, store it
 			 * in memory using an alloca that spans the entire
 			 * array.
@@ -1730,7 +1728,8 @@ static void emit_rsq(const struct lp_build_tgsi_action *action,
 }
 
 void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *triple,
-			      const struct tgsi_shader_info *info)
+			      const struct tgsi_shader_info *info,
+			      const struct tgsi_token *tokens)
 {
 	struct lp_type type;
 
@@ -1756,6 +1755,10 @@ void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *tripl
 
 		ctx->temp_arrays = CALLOC(size, sizeof(ctx->temp_arrays[0]));
 		ctx->temp_array_allocas = CALLOC(size, sizeof(ctx->temp_array_allocas[0]));
+
+		if (tokens)
+			tgsi_scan_arrays(tokens, TGSI_FILE_TEMPORARY, size,
+					 ctx->temp_arrays);
 	}
 
 	type.floating = true;

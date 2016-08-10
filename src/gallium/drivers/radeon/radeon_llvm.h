@@ -121,7 +121,8 @@ void radeon_llvm_emit_prepare_cube_coords(struct lp_build_tgsi_context *bld_base
 
 void radeon_llvm_context_init(struct radeon_llvm_context *ctx,
                               const char *triple,
-			      const struct tgsi_shader_info *info);
+			      const struct tgsi_shader_info *info,
+			      const struct tgsi_token *tokens);
 
 void radeon_llvm_create_func(struct radeon_llvm_context *ctx,
 			     LLVMTypeRef *return_types, unsigned num_return_elems,
