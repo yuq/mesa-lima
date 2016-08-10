@@ -2350,17 +2350,6 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			vi_separate_dcc_start_query(ctx, rtex);
 		}
 	}
-	/* Set the second SPI format for possible dual-src blending. */
-	if (i == 1 && surf) {
-		sctx->framebuffer.spi_shader_col_format |=
-			surf->spi_shader_col_format << (i * 4);
-		sctx->framebuffer.spi_shader_col_format_alpha |=
-			surf->spi_shader_col_format_alpha << (i * 4);
-		sctx->framebuffer.spi_shader_col_format_blend |=
-			surf->spi_shader_col_format_blend << (i * 4);
-		sctx->framebuffer.spi_shader_col_format_blend_alpha |=
-			surf->spi_shader_col_format_blend_alpha << (i * 4);
-	}
 
 	if (state->zsbuf) {
 		surf = (struct r600_surface*)state->zsbuf;
