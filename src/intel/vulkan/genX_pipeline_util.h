@@ -22,6 +22,7 @@
  */
 
 #include "vk_format_info.h"
+#include "genX_multisample.h"
 
 static uint32_t
 vertex_element_comp_control(enum isl_format format, unsigned comp)
@@ -488,42 +489,16 @@ emit_ms_state(struct anv_pipeline *pipeline,
 
       switch (samples) {
       case 1:
-         ms.Sample0XOffset          = 0.5;
-         ms.Sample0YOffset          = 0.5;
+         SAMPLE_POS_1X(ms.Sample);
          break;
       case 2:
-         ms.Sample0XOffset          = 0.25;
-         ms.Sample0YOffset          = 0.25;
-         ms.Sample1XOffset          = 0.75;
-         ms.Sample1YOffset          = 0.75;
+         SAMPLE_POS_2X(ms.Sample);
          break;
       case 4:
-         ms.Sample0XOffset          = 0.375;
-         ms.Sample0YOffset          = 0.125;
-         ms.Sample1XOffset          = 0.875;
-         ms.Sample1YOffset          = 0.375;
-         ms.Sample2XOffset          = 0.125;
-         ms.Sample2YOffset          = 0.625;
-         ms.Sample3XOffset          = 0.625;
-         ms.Sample3YOffset          = 0.875;
+         SAMPLE_POS_4X(ms.Sample);
          break;
       case 8:
-         ms.Sample0XOffset          = 0.5625;
-         ms.Sample0YOffset          = 0.3125;
-         ms.Sample1XOffset          = 0.4375;
-         ms.Sample1YOffset          = 0.6875;
-         ms.Sample2XOffset          = 0.8125;
-         ms.Sample2YOffset          = 0.5625;
-         ms.Sample3XOffset          = 0.3125;
-         ms.Sample3YOffset          = 0.1875;
-         ms.Sample4XOffset          = 0.1875;
-         ms.Sample4YOffset          = 0.8125;
-         ms.Sample5XOffset          = 0.0625;
-         ms.Sample5YOffset          = 0.4375;
-         ms.Sample6XOffset          = 0.6875;
-         ms.Sample6YOffset          = 0.9375;
-         ms.Sample7XOffset          = 0.9375;
-         ms.Sample7YOffset          = 0.0625;
+         SAMPLE_POS_8X(ms.Sample);
          break;
       default:
          break;
