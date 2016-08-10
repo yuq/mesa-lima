@@ -39,7 +39,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #define ENABLE_AVX512_SIMD16    0
-#define ENABLE_AVX512_EMULATION 0
 
 ///////////////////////////////////////////////////////////////////////////////
 // Architecture validation
@@ -76,8 +75,16 @@
 #endif
 
 #if ENABLE_AVX512_SIMD16
+
 #define KNOB_SIMD16_WIDTH 16
 #define KNOB_SIMD16_BYTES 64
+
+#if (KNOB_ARCH == KNOB_ARCH_AVX512)
+#define ENABLE_AVX512_EMULATION 0
+#else
+#define ENABLE_AVX512_EMULATION 1
+#endif
+
 #endif
 
 #define MAX_KNOB_ARCH_STR_LEN sizeof("AVX512_PLUS_PADDING")

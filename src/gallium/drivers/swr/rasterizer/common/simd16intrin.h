@@ -54,7 +54,7 @@ typedef uint16_t simd16mask;
 typedef __m512 simd16scalar;
 typedef __m512d simd16scalard;
 typedef __m512i simd16scalari;
-typedef __mask16 simd16mask;
+typedef __mmask16 simd16mask;
 #endif//ENABLE_AVX512_EMULATION
 #else
 #error Unsupported vector width
@@ -435,7 +435,7 @@ INLINE simd16scalar _simd16_round_ps_temp(simd16scalar a)
     return result;
 }
 
-#define _simd16_cmp_ps(a, mode) _simd16_round_ps_temp<mode>(a)
+#define _simd16_round_ps(a, mode) _simd16_round_ps_temp<mode>(a)
 
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_mul_epi32, _mm256_mul_epi32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_mullo_epi32, _mm256_mullo_epi32)
@@ -589,126 +589,300 @@ INLINE simd16scalar vMask16(int32_t mask)
 
 #else
 
-INLINE __m512 _m512_broadcast_ss(void const *m)
+INLINE simd16mask _simd16_scalari2mask(simd16scalari mask)
 {
-    return _mm512_extload_ps(m, _MM_UPCONV_PS_NONE, _MM_BROADCAST_1X16, 0);
+    __m512i flag = _mm512_set1_epi32(0x80000000);
+
+    __m512i temp = _mm512_and_epi32(mask, flag);
+
+    return _mm512_cmpeq_epu32_mask(temp, flag);
 }
 
-INLINE __m512 _m512_broadcast_ps(void const *m)
+#if 0
+INLINE simd16mask _simd16_scalard2mask(simd16scalard mask)
 {
-    return _mm512_extload_ps(m, _MM_UPCONV_PS_NONE, _MM_BROADCAST_4X16, 0);
+    __m512i flag = _mm512_set1_epi64(0x8000000000000000);
+
+    __m512 tempi = _mm512_and_epi64(_mm512_castpd_si512(mask), flag);
+
+    return _mm512_cmpeq_epu64_mask(temp, flag);
+}
+#endif
+
+#define _simd16_setzero_ps      _mm512_setzero_ps
+#define _simd16_setzero_si      _mm512_setzero_si512
+#define _simd16_set1_ps         _mm512_set1_ps
+#define _simd16_set1_epi8       _mm512_set1_epi8
+#define _simd16_set1_epi32      _mm512_set1_epi32
+
+INLINE simd16scalari _simd16_set_epi32(int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
+{
+    simd16scalari result;
+
+    result = _mm512_set_epi32(e7, e6, e5, e4, e3, e2, e1, e0, e7, e6, e5, e4, e3, e2, e1, e0);
+
+    return result;
 }
 
-INLINE __m512 _m512_blend_ps(__m512 a, __m512 b, const int mask)
+INLINE simd16scalari _simd16_set_epi32(int e15, int e14, int e13, int e12, int e11, int e10, int e9, int e8, int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
 {
-    const __mask16 mask16 = _mm512_int2mask(mask);
+    simd16scalari result;
 
-    return _mm512_mask_blend_ps(mask16, a, b);
+    result = _mm512_set_epi32(e15, e14, e13, e12, e11, e10, e9, e8, e7, e6, e5, e4, e3, e2, e1, e0);
+
+    return result;
 }
 
-INLINE __m512 _m512_blendv_ps(__m512 a, __m512 b, __m512 mask)
-{
-    const __mask16 mask16 = _mm512_cmpeq_ps_mask(mask, _mm512_setzero_ps());
+#define _simd16_load_ps         _mm512_load_ps
+#define _simd16_loadu_ps        _mm512_loadu_ps
+#if 1
+#define _simd16_load1_ps        _simd16_broadcast_ss
+#endif
+#define _simd16_load_si         _mm256_load_si256
+#define _simd16_loadu_si        _mm256_loadu_si256
+#define _simd16_broadcast_ss(m) _mm512_extload_ps(m, _MM_UPCONV_PS_NONE, _MM_BROADCAST_1X16, 0)
+#define _simd16_broadcast_ps(m) _mm512_extload_ps(m, _MM_UPCONV_PS_NONE, _MM_BROADCAST_4X16, 0)
+#define _simd16_store_ps        _mm512_store_ps
+#define _simd16_store_si        _mm512_store_si512
 
-    return _mm512_mask_blend_ps(mask16, a, b);
+INLINE void _simd16_maskstore_ps(float *m, simd16scalari mask, simd16scalar a)
+{
+    simd16mask k = _simd16_scalari2mask(mask);
+
+    _mm512_mask_store_ps(m, k, a);
 }
 
-INLINE int _m512_movemask_ps(__m512 a)
+#define _simd16_blend_ps(a, b, mask)    _mm512_mask_blend_ps(mask, a, b)
+
+INLINE simd16scalar _simd16_blendv_ps(simd16scalar a, simd16scalar b, const simd16scalar mask)
 {
-    __m512 mask = _mm512_set1_epi32(0x80000000);
+    simd16mask k = _simd16_scalari2mask(_mm512_castps_si512(mask));
 
-    __m512 temp = _mm512_and_epi32(a, mask);
-
-    const __mask16 mask16 = _mm512_cmpeq_epu32_mask(temp, mask);
-
-    return _mm512mask2int(mask16);
+    _mm512_mask_blend_ps(k, a, b);
 }
 
-INLINE int _m512_movemask_pd(__m512 a)
+INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalar mask)
 {
-    __m512 mask = _mm512_set1_epi64(0x8000000000000000);
+    simd16mask k = _simd16_scalari2mask(_mm512_castps_si512(mask));
 
-    __m512 temp = _mm512_and_epi64(a, mask);
-
-    const __mask16 mask16 = _mm512_cmpeq_epu64_mask(temp, mask);
-
-    return _mm512mask2int(mask16);
+    _mm512_mask_blend_epi32(k, a, b);
 }
 
-INLINE __m512 _m512_cmp_ps(__m512 a, __m512 b, __m512 comp)
+INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalari mask)
 {
-    const __mask16 mask16 = _mm512_cmpeq_ps_mask(a, b, comp);
+    simd16mask k = _simd16_scalari2mask(mask);
 
-    return _mm512_mask_blend_epi32(mask16, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
+    _mm512_mask_blend_epi32(k, a, b);
 }
 
-INLINE __m512 _mm512_cmplt_epi32(__m512 a, __m512 b)
-{
-    const __mask16 mask16 = _mm512_cmplt_epi32_mask(a, b);
+#define _simd16_mul_ps          _mm512_mul_ps
+#define _simd16_add_ps          _mm512_add_ps
+#define _simd16_sub_ps          _mm512_sub_ps
+#define _simd16_rsqrt_ps        _mm512_rsqrt23_ps
+#define _simd16_min_ps          _mm512_min_ps
+#define _simd16_max_ps          _mm512_max_ps
 
-    return _mm512_mask_blend_epi32(mask16, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
+INLINE simd16mask _simd16_movemask_ps(simd16scalar a)
+{
+    return  _simd16_scalari2mask(_mm512_castps_si512(a));
 }
 
-INLINE __m512 _mm512_cmpgt_epi32(__m512 a, __m512 b)
+#if 0
+INLINE simd16mask _simd16_movemask_pd(simd16scalard a)
 {
-    const __mask16 mask16 = _mm512_cmpgt_epi32_mask(a, b);
+    return  _simd16_scalard2mask(_mm512i_castpd_si512(a));
+}
+#endif
 
-    return _mm512_mask_blend_epi32(mask16, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
+#if 0
+INLINE int _simd16_movemask_epi8(simd16scalari a)
+{
+    return  _simd16_scalar2mask(a);
+}
+#endif
+
+#define _simd16_cvtps_epi32     _mm512_cvtps_epi32
+#define _simd16_cvttps_epi32    _mm512_cvttps_epi32
+#define _simd16_cvtepi32_ps     _mm512_cvtepi32_ps
+
+template <int comp>
+INLINE simd16scalar _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
+{
+    simd16mask k = _mm512_cmpeq_ps_mask(a, b);
+
+    return _mm512_castsi256_ps(_mm512_mask_blend_epi32(k, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF)));
 }
 
-#define _simd16_load_ps _mm512_load_ps
-#define _simd16_load1_ps _mm256_broadcast_ss
-#define _simd16_loadu_ps _mm512_loadu_ps
-#define _simd16_setzero_ps _mm512_setzero_ps
-#define _simd16_set1_ps _mm512_set1_ps
-#define _simd16_blend_ps  _mm512_blend_ps
-#define _simd16_blendv_ps _mm512_blendv_ps
-#define _simd16_store_ps _mm512_store_ps
-#define _simd16_mul_ps _mm512_mul_ps
-#define _simd16_add_ps _mm512_add_ps
-#define _simd16_sub_ps _mm512_sub_ps
-#define _simd16_rsqrt_ps _mm512_rsqrt28_ps
-#define _simd16_min_ps _mm512_min_ps
-#define _simd16_max_ps _mm512_max_ps
-#define _simd16_movemask_ps _mm512_movemask_ps
-#define _simd16_cvtps_epi32 _mm512_cvtps_epi32
-#define _simd16_cvttps_epi32 _mm512_cvttps_epi32
-#define _simd16_cvtepi32_ps _mm512_cvtepi32_ps
-#define _simd16_cmplt_ps(a, b) _mm512_cmp_ps(a, b, _CMP_LT_OQ)
-#define _simd16_cmpgt_ps(a, b) _mm512_cmp_ps(a, b, _CMP_GT_OQ)
-#define _simd16_cmpneq_ps(a, b) _mm512_cmp_ps(a, b, _CMP_NEQ_OQ)
-#define _simd16_cmpeq_ps(a, b) _mm512_cmp_ps(a, b, _CMP_EQ_OQ)
-#define _simd16_cmpge_ps(a, b) _mm512_cmp_ps(a, b, _CMP_GE_OQ)
-#define _simd16_cmple_ps(a, b) _mm512_cmp_ps(a, b, _CMP_LE_OQ)
-#define _simd16_cmp_ps(a, b, comp) _mm512_cmp_ps(a, b, comp)
-#define _simd16_and_ps _mm512_and_ps
-#define _simd16_or_ps _mm512_or_ps
-#define _simd16_rcp_ps _mm512_rcp28_ps
-#define _simd16_div_ps _mm512_div_ps
-#define _simd16_castsi_ps _mm512_castsi512_ps
-#define _simd16_andnot_ps _mm512_andnot_ps
-#define _simd16_round_ps _mm512_round_ps
-#define _simd16_castpd_ps _mm512_castpd_ps
-#define _simd16_broadcast_ps _m512_broadcast_ps
-#define _simd16_movemask_pd _mm512_movemask_pd
-#define _simd16_castsi_pd _mm512_castsi512_pd
+#define _simd16_cmp_ps(a, b, comp)  _simd16_cmp_ps_temp<comp>(a, b)
 
-#define _simd16_mul_epi32 _mm512_mul_epi32
-#define _simd16_mullo_epi32 _mm512_mullo_epi32
-#define _simd16_sub_epi32 _mm512_sub_epi32
-#define _simd16_sub_epi64 _mm512_sub_epi64
-#define _simd16_min_epi32 _mm512_min_epi32
-#define _simd16_max_epi32 _mm512_max_epi32
-#define _simd16_min_epu32 _mm512_min_epu32
-#define _simd16_max_epu32 _mm512_max_epu32
-#define _simd16_add_epi32 _mm512_add_epi32
-#define _simd16_and_si _mm512_and_si512
-#define _simd16_andnot_si _mm512_andnot_si512
-#define _simd16_cmpeq_epi32 _mm512_cmpeq_epi32
-#define _simd16_cmplt_epi32(a,b) _mm256_cmpgt_epi32(b,a)
-#define _simd16_cmpgt_epi32(a,b) _mm256_cmpgt_epi32(a,b)
-#define _simd16_or_si _mm512_or_si512
-#define _simd16_castps_si _mm512_castps_si512
+#define _simd16_cmplt_ps(a, b)      _simd16_cmp_ps<_CMP_LT_OQ>(a, b)
+#define _simd16_cmpgt_ps(a, b)      _simd16_cmp_ps<_CMP_GT_OQ>(a, b)
+#define _simd16_cmpneq_ps(a, b)     _simd16_cmp_ps<_CMP_NEQ_OQ>(a, b)
+#define _simd16_cmpeq_ps(a, b)      _simd16_cmp_ps<_CMP_EQ_OQ>(a, b)
+#define _simd16_cmpge_ps(a, b)      _simd16_cmp_ps<_CMP_GE_OQ>(a, b)
+#define _simd16_cmple_ps(a, b)      _simd16_cmp_ps<_CMP_LE_OQ>(a, b)
+
+#define _simd16_castsi_ps           _mm512_castsi512_ps
+#define _simd16_castps_si           _mm512_castps_si512
+#define _simd16_castsi_pd           _mm512_castsi512_pd
+#define _simd16_castpd_si           _mm512_castpd_si512
+#define _simd16_castpd_ps           _mm512_castpd_ps
+#define _simd16_castps_pd           _mm512_castps_pd
+
+#define _simd16_andnot_ps           _mm512_andnot_ps
+
+template <int mode>
+INLINE simd16scalar _simd16_round_ps_temp(simd16scalar a)
+{
+    return _mm512_roundscale_ps(a, mode);
+}
+
+#define _simd16_round_ps(a, mode) _simd16_round_ps_temp<mode>(a)
+
+#define _simd16_mul_epi32         _mm512_mul_epi32
+#define _simd16_mullo_epi32       _mm512_mullo_epi32
+#define _simd16_sub_epi32         _mm512_sub_epi32
+#define _simd16_sub_epi64         _mm512_sub_epi64
+#define _simd16_min_epi32         _mm512_min_epi32
+#define _simd16_max_epi32         _mm512_max_epi32
+#define _simd16_min_epu32         _mm512_min_epu32
+#define _simd16_max_epu32         _mm512_max_epu32
+#define _simd16_add_epi32         _mm512_add_epi32
+#define _simd16_and_si            _mm512_and_si512
+#define _simd16_andnot_si         _mm512_andnot_si512
+#define _simd16_or_si             _mm512_or_si512
+#define _simd16_xor_si            _mm512_xor_si512
+
+INLINE simd16scalari _simd16_cmpeq_epi32(simd16scalari a, simd16scalari b)
+{
+    simd16mask k = _mm512_cmpeq_epi32_mask(a, b);
+
+    return _mm512_mask_blend_epi32(k, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
+}
+
+INLINE simd16scalari _simd16_cmpgt_epi32(simd16scalari a, simd16scalari b)
+{
+    simd16mask k = _mm512_cmpgt_epi32_mask(a, b);
+
+    return _mm512_mask_blend_epi32(k, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
+}
+
+INLINE simd16scalari _simd16_cmplt_epi32(simd16scalari a, simd16scalari b)
+{
+    simd16mask k = _mm512_cmplt_epi32_mask(a, b);
+
+    return _mm512_mask_blend_epi32(k, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
+}
+
+#if 0
+INLINE int _simd16_testz_ps(simd16scalar a, simd16scalar b)
+{
+    int lo = _mm256_testz_ps(a.lo, b.lo);
+    int hi = _mm256_testz_ps(a.hi, b.hi);
+
+    return lo & hi;
+}
+
+#endif
+
+#define _simd16_unpacklo_epi32    _mm512_unpacklo_epi32
+#define _simd16_unpackhi_epi32    _mm512_unpackhi_epi32
+#define _simd16_slli_epi32        _mm512_slli_epi32
+#define _simd16_srli_epi32        _mm512_srli_epi32
+#define _simd16_srai_epi32        _mm512_srai_epi32
+#define _simd16_fmadd_ps          _mm512_fmadd_ps
+#define _simd16_fmsub_ps          _mm512_fmsub_ps
+#define _simd16_adds_epu8         _mm512_adds_epu8
+#define _simd16_subs_epu8         _mm512_subs_epu8
+#define _simd16_add_epi8          _mm512_add_epi8
+#define _simd16_shuffle_epi8      _mm512_shuffle_epi8
+
+#define _simd16_i32gather_ps(m, index, scale) _mm512_i32gather_ps(index, m, scale)
+
+#define _simd16_abs_epi32         _mm512_abs_epi32
+#define _simd16_cmpeq_epi64       _mm512_abs_epi32
+
+INLINE simd16scalari _simd16_cmpeq_epi64(simd16scalari a, simd16scalari b)
+{
+    __mmask8 k = _mm512_cmpeq_epi64_mask(a, b);
+
+    return _mm512_mask_blend_epi64(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
+}
+
+INLINE simd16scalari _simd16_cmpgt_epi64(simd16scalari a, simd16scalari b)
+{
+    __mmask8 k = _mm512_cmpgt_epi64_mask(a, b);
+
+    return _mm512_mask_blend_epi64(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
+}
+
+INLINE simd16scalari _simd16_cmpeq_epi16(simd16scalari a, simd16scalari b)
+{
+    __mmask32 k = _mm512_cmpeq_epi16_mask(a, b);
+
+    return _mm512_mask_blend_epi16(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
+}
+
+INLINE simd16scalari _simd16_cmpgt_epi16(simd16scalari a, simd16scalari b)
+{
+    __mmask32 k = _mm512_cmpgt_epi16_mask(a, b);
+
+    return _mm512_mask_blend_epi16(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
+}
+
+INLINE simd16scalari _simd16_cmpeq_epi8(simd16scalari a, simd16scalari b)
+{
+    __mmask64 k = _mm512_cmpeq_epi8_mask(a, b);
+
+    return _mm512_mask_blend_epi8(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
+}
+
+INLINE simd16scalari _simd16_cmpgt_epi8(simd16scalari a, simd16scalari b)
+{
+    __mmask64 k = _mm512_cmpgt_epi8_mask(a, b);
+
+    return _mm512_mask_blend_epi8(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
+}
+
+#if 0
+INLINE simd16scalar _simd16_permute_ps(simd16scalar a, simd16scalari b)
+{
+    simd16scalar result;
+
+    result.lo = _mm256_permutevar8x32_ps(a.lo, b.lo);
+    result.hi = _mm256_permutevar8x32_ps(a.hi, b.hi);
+
+    return result;
+}
+
+INLINE (simd16scalari _simd16_permute_epi32(simd16scalari a, simd16scalari b)
+{
+    simd16scalar result;
+
+    result.lo = _mm256_permutevar8x32_epi32(a.lo, b.lo);
+    result.hi = _mm256_permutevar8x32_epi32(a.hi, b.hi);
+
+    return result;
+}
+
+#endif
+
+#define _simd16_sllv_epi32        _mm512_srlv_epi32
+#define _simd16_srlv_epi32        _mm512_sllv_epi32
+#define _simd16_shuffle_ps        _mm512_shuffle_ps
+#define _simd16_permute_128       _mm512_permute4f128_epi32
+
+// convert bitmask to vector mask
+INLINE simd16scalar vMask16(int32_t mask)
+{
+    simd16scalari temp = _simd16_set1_epi32(mask);
+
+    simd16scalari bits = _simd16_set_epi32(0x8000, 0x4000, 0x2000, 0x1000, 0x0800, 0x0400, 0x0200, 0x0100, 0x0080, 0x0040, 0x0020, 0x0010, 0x0008, 0x0004, 0x0002, 0x0001);
+
+    simd16scalari result = _simd16_cmplt_epi32(_simd16_setzero_si(), _simd16_and_si(temp, bits));
+
+    return _simd16_castsi_ps(result);
+}
 
 #endif//ENABLE_AVX512_EMULATION
 
