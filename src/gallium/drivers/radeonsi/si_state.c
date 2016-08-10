@@ -2507,13 +2507,6 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 					 tex->dcc_offset +
 				         tex->surface.level[cb->base.u.tex.level].dcc_offset) >> 8);
 	}
-	/* set CB_COLOR1_INFO for possible dual-src blending */
-	if (i == 1 && state->cbufs[0] &&
-	    sctx->framebuffer.dirty_cbufs & (1 << 0)) {
-		radeon_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + 1 * 0x3C,
-				       cb_color_info);
-		i++;
-	}
 	for (; i < 8 ; i++)
 		if (sctx->framebuffer.dirty_cbufs & (1 << i))
 			radeon_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C, 0);
