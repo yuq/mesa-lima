@@ -107,16 +107,13 @@ realloc_bo(struct fd_resource *rsc, uint32_t size)
 	fd_bc_invalidate_resource(rsc, true);
 }
 
-static void fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard);
-static void fd_blitter_pipe_end(struct fd_context *ctx);
-
 static void
 do_blit(struct fd_context *ctx, const struct pipe_blit_info *blit, bool fallback)
 {
 	/* TODO size threshold too?? */
 	if ((blit->src.resource->target != PIPE_BUFFER) && !fallback) {
 		/* do blit on gpu: */
-		fd_blitter_pipe_begin(ctx, false, true);
+		fd_blitter_pipe_begin(ctx, false, true, FD_STAGE_BLIT);
 		util_blitter_blit(ctx->blitter, blit);
 		fd_blitter_pipe_end(ctx);
 	} else {
@@ -939,7 +936,7 @@ fd_blitter_pipe_copy_region(struct fd_context *ctx,
 		return false;
 
 	/* TODO we could discard if dst box covers dst level fully.. */
-	fd_blitter_pipe_begin(ctx, false, false);
+	fd_blitter_pipe_begin(ctx, false, false, FD_STAGE_BLIT);
 	util_blitter_copy_texture(ctx->blitter,
 			dst, dst_level, dstx, dsty, dstz,
 			src, src_level, src_box);
@@ -1045,14 +1042,17 @@ fd_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 		return;
 	}
 
-	fd_blitter_pipe_begin(ctx, info.render_condition_enable, discard);
+	fd_blitter_pipe_begin(ctx, info.render_condition_enable, discard, FD_STAGE_BLIT);
 	util_blitter_blit(ctx->blitter, &info);
 	fd_blitter_pipe_end(ctx);
 }
 
-static void
-fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard)
+void
+fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard,
+		enum fd_render_stage stage)
 {
+	util_blitter_save_fragment_constant_buffer_slot(ctx->blitter,
+			ctx->constbuf[PIPE_SHADER_FRAGMENT].cb);
 	util_blitter_save_vertex_buffer_slot(ctx->blitter, ctx->vtx.vertexbuf.vb);
 	util_blitter_save_vertex_elements(ctx->blitter, ctx->vtx.vtx);
 	util_blitter_save_vertex_shader(ctx->blitter, ctx->prog.vp);
@@ -1078,12 +1078,12 @@ fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard)
 			ctx->cond_query, ctx->cond_cond, ctx->cond_mode);
 
 	if (ctx->batch)
-		fd_hw_query_set_stage(ctx->batch, ctx->batch->draw, FD_STAGE_BLIT);
+		fd_hw_query_set_stage(ctx->batch, ctx->batch->draw, stage);
 
 	ctx->in_blit = discard;
 }
 
-static void
+void
 fd_blitter_pipe_end(struct fd_context *ctx)
 {
 	if (ctx->batch)

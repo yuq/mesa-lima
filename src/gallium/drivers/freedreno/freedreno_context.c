@@ -115,6 +115,9 @@ fd_context_destroy(struct pipe_context *pctx)
 	if (ctx->blitter)
 		util_blitter_destroy(ctx->blitter);
 
+	if (ctx->clear_rs_state)
+		pctx->delete_rasterizer_state(pctx, ctx->clear_rs_state);
+
 	if (ctx->primconvert)
 		util_primconvert_destroy(ctx->primconvert);
 

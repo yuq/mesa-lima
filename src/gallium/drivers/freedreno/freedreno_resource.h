@@ -154,6 +154,10 @@ fd_resource_offset(struct fd_resource *rsc, unsigned level, unsigned layer)
 	return offset;
 }
 
+void fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard,
+		enum fd_render_stage stage);
+void fd_blitter_pipe_end(struct fd_context *ctx);
+
 void fd_resource_screen_init(struct pipe_screen *pscreen);
 void fd_resource_context_init(struct pipe_context *pctx);
 

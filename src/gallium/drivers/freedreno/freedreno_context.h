@@ -117,6 +117,7 @@ struct fd_context {
 	struct util_queue flush_queue;
 
 	struct blitter_context *blitter;
+	void *clear_rs_state;
 	struct primconvert_context *primconvert;
 
 	/* slab for pipe_transfer allocations: */

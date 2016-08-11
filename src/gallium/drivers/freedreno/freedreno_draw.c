@@ -203,6 +203,72 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	fd_batch_check_size(batch);
 }
 
+/* Generic clear implementation (partially) using u_blitter: */
+static void
+fd_blitter_clear(struct pipe_context *pctx, unsigned buffers,
+		const union pipe_color_union *color, double depth, unsigned stencil)
+{
+	struct fd_context *ctx = fd_context(pctx);
+	struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
+	struct blitter_context *blitter = ctx->blitter;
+
+	fd_blitter_pipe_begin(ctx, false, true, FD_STAGE_CLEAR);
+
+	util_blitter_common_clear_setup(blitter, pfb->width, pfb->height,
+			buffers, NULL, NULL);
+
+	struct pipe_stencil_ref sr = {
+		.ref_value = { stencil & 0xff }
+	};
+	pctx->set_stencil_ref(pctx, &sr);
+
+	struct pipe_constant_buffer cb = {
+		.buffer_size = 16,
+		.user_buffer = &color->ui,
+	};
+	pctx->set_constant_buffer(pctx, PIPE_SHADER_FRAGMENT, 0, &cb);
+
+	if (!ctx->clear_rs_state) {
+		const struct pipe_rasterizer_state tmpl = {
+			.cull_face = PIPE_FACE_NONE,
+			.half_pixel_center = 1,
+			.bottom_edge_rule = 1,
+			.flatshade = 1,
+			.depth_clip = 1,
+		};
+		ctx->clear_rs_state = pctx->create_rasterizer_state(pctx, &tmpl);
+	}
+	pctx->bind_rasterizer_state(pctx, ctx->clear_rs_state);
+
+	struct pipe_viewport_state vp = {
+		.scale     = { 0.5f * pfb->width, -0.5f * pfb->height, depth },
+		.translate = { 0.5f * pfb->width,  0.5f * pfb->height, 0.0f },
+	};
+	pctx->set_viewport_states(pctx, 0, 1, &vp);
+
+	pctx->bind_vertex_elements_state(pctx, ctx->solid_vbuf_state.vtx);
+	pctx->set_vertex_buffers(pctx, blitter->vb_slot, 1,
+			&ctx->solid_vbuf_state.vertexbuf.vb[0]);
+	pctx->set_stream_output_targets(pctx, 0, NULL, NULL);
+	pctx->bind_vs_state(pctx, ctx->solid_prog.vp);
+	pctx->bind_fs_state(pctx, ctx->solid_prog.fp);
+
+	struct pipe_draw_info info = {
+		.mode = PIPE_PRIM_MAX,    /* maps to DI_PT_RECTLIST */
+		.count = 2,
+		.instance_count = 1,
+	};
+	ctx->draw_vbo(ctx, &info);
+
+	util_blitter_restore_constant_buffer_state(blitter);
+	util_blitter_restore_vertex_states(blitter);
+	util_blitter_restore_fragment_states(blitter);
+	util_blitter_restore_render_cond(blitter);
+	util_blitter_unset_running_flag(blitter);
+
+	fd_blitter_pipe_end(ctx);
+}
+
 /* TODO figure out how to make better use of existing state mechanism
  * for clear (and possibly gmem->mem / mem->gmem) so we can (a) keep
  * track of what state really actually changes, and (b) reduce the code
@@ -273,6 +339,14 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 		pfb->width, pfb->height, depth, stencil,
 		util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
+
+	/* if per-gen backend doesn't implement ctx->clear() generic
+	 * blitter clear:
+	 */
+	if (!ctx->clear) {
+		fd_blitter_clear(pctx, buffers, color, depth, stencil);
+		return;
+	}
 
 	fd_hw_query_set_stage(batch, batch->draw, FD_STAGE_CLEAR);
 
