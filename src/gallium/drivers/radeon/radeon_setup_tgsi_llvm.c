@@ -2047,7 +2047,9 @@ void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx)
 	LLVMAddInstructionCombiningPass(gallivm->passmgr);
 
 	/* Run the pass */
+	LLVMInitializeFunctionPassManager(gallivm->passmgr);
 	LLVMRunFunctionPassManager(gallivm->passmgr, ctx->main_fn);
+	LLVMFinalizeFunctionPassManager(gallivm->passmgr);
 
 	LLVMDisposeBuilder(gallivm->builder);
 	LLVMDisposePassManager(gallivm->passmgr);
