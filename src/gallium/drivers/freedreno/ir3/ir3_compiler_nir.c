@@ -282,7 +282,7 @@ get_dst_ssa(struct ir3_compile *ctx, nir_ssa_def *dst, unsigned n)
 	return __get_dst(ctx, dst, n);
 }
 
-static struct ir3_instruction **
+static struct ir3_instruction * const *
 get_src(struct ir3_compile *ctx, nir_src *src)
 {
 	struct hash_entry *entry;
@@ -1105,7 +1105,8 @@ emit_intrinsic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	nir_deref_var *dvar = intr->variables[0];
 	nir_deref_array *darr = nir_deref_as_array(dvar->deref.child);
 	struct ir3_array *arr = get_var(ctx, dvar->var);
-	struct ir3_instruction *addr, **src;
+	struct ir3_instruction *addr;
+	struct ir3_instruction * const *src;
 	unsigned wrmask = nir_intrinsic_write_mask(intr);
 
 	compile_assert(ctx, dvar->deref.child &&
@@ -1157,7 +1158,8 @@ static void
 emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 {
 	const nir_intrinsic_info *info = &nir_intrinsic_infos[intr->intrinsic];
-	struct ir3_instruction **dst, **src;
+	struct ir3_instruction **dst;
+	struct ir3_instruction * const *src;
 	struct ir3_block *b = ctx->block;
 	nir_const_value *const_offset;
 	int idx;
@@ -1385,7 +1387,8 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 {
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction **dst, *sam, *src0[12], *src1[4];
-	struct ir3_instruction **coord, *lod, *compare, *proj, **off, **ddx, **ddy;
+	struct ir3_instruction * const *coord, * const *off, * const *ddx, * const *ddy;
+	struct ir3_instruction *lod, *compare, *proj;
 	bool has_bias = false, has_lod = false, has_proj = false, has_off = false;
 	unsigned i, coords, flags;
 	unsigned nsrc0 = 0, nsrc1 = 0;
@@ -1455,17 +1458,6 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 
 	tex_info(tex, &flags, &coords);
 
-	/* scale up integer coords for TXF based on the LOD */
-	if (ctx->unminify_coords && (opc == OPC_ISAML)) {
-		assert(has_lod);
-		for (i = 0; i < coords; i++)
-			coord[i] = ir3_SHL_B(b, coord[i], 0, lod, 0);
-	}
-
-	/* the array coord for cube arrays needs 0.5 added to it */
-	if (ctx->array_index_add_half && tex->is_array && (opc != OPC_ISAML))
-		coord[coords] = ir3_ADD_F(b, coord[coords], 0, create_immed(b, fui(0.5)), 0);
-
 	/*
 	 * lay out the first argument in the proper order:
 	 *  - actual coordinates first
@@ -1479,7 +1471,16 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 
 	/* insert tex coords: */
 	for (i = 0; i < coords; i++)
-		src0[nsrc0++] = coord[i];
+		src0[i] = coord[i];
+
+	nsrc0 = i;
+
+	/* scale up integer coords for TXF based on the LOD */
+	if (ctx->unminify_coords && (opc == OPC_ISAML)) {
+		assert(has_lod);
+		for (i = 0; i < coords; i++)
+			src0[i] = ir3_SHL_B(b, src0[i], 0, lod, 0);
+	}
 
 	if (coords == 1) {
 		/* hw doesn't do 1d, so we treat it as 2d with
@@ -1492,8 +1493,15 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	if (tex->is_shadow && tex->op != nir_texop_lod)
 		src0[nsrc0++] = compare;
 
-	if (tex->is_array && tex->op != nir_texop_lod)
-		src0[nsrc0++] = coord[coords];
+	if (tex->is_array && tex->op != nir_texop_lod) {
+		struct ir3_instruction *idx = coord[coords];
+
+		/* the array coord for cube arrays needs 0.5 added to it */
+		if (ctx->array_index_add_half && (opc != OPC_ISAML))
+			idx = ir3_ADD_F(b, idx, 0, create_immed(b, fui(0.5)), 0);
+
+		src0[nsrc0++] = idx;
+	}
 
 	if (has_proj) {
 		src0[nsrc0++] = proj;
@@ -1621,7 +1629,8 @@ static void
 emit_tex_txs(struct ir3_compile *ctx, nir_tex_instr *tex)
 {
 	struct ir3_block *b = ctx->block;
-	struct ir3_instruction **dst, *sam, *lod;
+	struct ir3_instruction **dst, *sam;
+	struct ir3_instruction *lod;
 	unsigned flags, coords;
 
 	tex_info(tex, &flags, &coords);
