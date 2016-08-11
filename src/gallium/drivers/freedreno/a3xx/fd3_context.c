@@ -54,7 +54,7 @@ fd3_context_destroy(struct pipe_context *pctx)
 	fd_context_destroy(pctx);
 }
 
-static const uint8_t primtypes[PIPE_PRIM_MAX] = {
+static const uint8_t primtypes[] = {
 		[PIPE_PRIM_POINTS]         = DI_PT_POINTLIST,
 		[PIPE_PRIM_LINES]          = DI_PT_LINELIST,
 		[PIPE_PRIM_LINE_STRIP]     = DI_PT_LINESTRIP,
@@ -62,6 +62,7 @@ static const uint8_t primtypes[PIPE_PRIM_MAX] = {
 		[PIPE_PRIM_TRIANGLES]      = DI_PT_TRILIST,
 		[PIPE_PRIM_TRIANGLE_STRIP] = DI_PT_TRISTRIP,
 		[PIPE_PRIM_TRIANGLE_FAN]   = DI_PT_TRIFAN,
+		[PIPE_PRIM_MAX]            = DI_PT_RECTLIST,  /* internal clear blits */
 };
 
 struct pipe_context *
