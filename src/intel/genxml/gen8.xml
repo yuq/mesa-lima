@@ -49,7 +49,7 @@
 
   <struct name="VERTEX_ELEMENT_STATE" length="2">
     <field name="Vertex Buffer Index" start="26" end="31" type="uint"/>
-    <field name="Valid" start="25" end="25" type="uint"/>
+    <field name="Valid" start="25" end="25" type="bool"/>
     <field name="Source Element Format" start="16" end="24" type="uint"/>
     <field name="Edge Flag Enable" start="15" end="15" type="bool"/>
     <field name="Source Element Offset" start="0" end="11" type="uint"/>
