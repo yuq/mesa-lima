@@ -199,8 +199,6 @@ void WakeAllThreads(SWR_CONTEXT *pContext)
     pContext->FifosNotEmpty.notify_all();
 }
 
-static TileSet gSingleThreadLockedTiles;
-
 template<bool IsDraw>
 void QueueWork(SWR_CONTEXT *pContext)
 {
@@ -240,7 +238,7 @@ void QueueWork(SWR_CONTEXT *pContext)
         {
             uint32_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
             WorkOnFifoFE(pContext, 0, curDraw[0]);
-            WorkOnFifoBE(pContext, 0, curDraw[1], gSingleThreadLockedTiles, 0, 0);
+            WorkOnFifoBE(pContext, 0, curDraw[1], pContext->singleThreadLockedTiles, 0, 0);
         }
         else
         {
@@ -291,16 +289,14 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         uint64_t curDraw = pContext->dcRing.GetHead();
         uint32_t dcIndex = curDraw % KNOB_MAX_DRAWS_IN_FLIGHT;
 
-        static uint64_t lastDrawChecked;
-        static uint32_t lastFrameChecked;
-        if ((pContext->frameCount - lastFrameChecked) > 2 ||
-            (curDraw - lastDrawChecked) > 0x10000)
+        if ((pContext->frameCount - pContext->lastFrameChecked) > 2 ||
+            (curDraw - pContext->lastDrawChecked) > 0x10000)
         {
             // Take this opportunity to clean-up old arena allocations
             pContext->cachingArenaAllocator.FreeOldBlocks();
 
-            lastFrameChecked = pContext->frameCount;
-            lastDrawChecked = curDraw;
+            pContext->lastFrameChecked = pContext->frameCount;
+            pContext->lastDrawChecked = curDraw;
         }
 
         DRAW_CONTEXT* pCurDrawContext = &pContext->dcRing[dcIndex];

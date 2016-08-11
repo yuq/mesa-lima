@@ -488,6 +488,10 @@ struct SWR_CONTEXT
 
     CachingAllocator cachingArenaAllocator;
     uint32_t frameCount;
+
+    uint32_t lastFrameChecked;
+    uint64_t lastDrawChecked;
+    TileSet singleThreadLockedTiles;
 };
 
 void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId);
