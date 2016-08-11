@@ -35,18 +35,11 @@
 
 
 /**
- * Clear the whole color buffer(s) by drawing a quad.  For VGPU10 we use
- * this when clearing integer render targets.  We'll also clear the
- * depth and/or stencil buffers if the clear_buffers mask specifies them.
+ * Saving blitter states before doing any blitter operation
  */
 static void
-clear_buffers_with_quad(struct svga_context *svga,
-                        unsigned clear_buffers,
-                        const union pipe_color_union *color,
-                        double depth, unsigned stencil)
+begin_blit(struct svga_context *svga)
 {
-   const struct pipe_framebuffer_state *fb = &svga->curr.framebuffer;
-
    util_blitter_save_vertex_buffer_slot(svga->blitter, svga->curr.vb);
    util_blitter_save_vertex_elements(svga->blitter, (void*)svga->curr.velems);
    util_blitter_save_vertex_shader(svga->blitter, svga->curr.vs);
@@ -62,7 +55,23 @@ clear_buffers_with_quad(struct svga_context *svga,
                                          (void*)svga->curr.depth);
    util_blitter_save_stencil_ref(svga->blitter, &svga->curr.stencil_ref);
    util_blitter_save_sample_mask(svga->blitter, svga->curr.sample_mask);
+}
 
+
+/**
+ * Clear the whole color buffer(s) by drawing a quad.  For VGPU10 we use
+ * this when clearing integer render targets.  We'll also clear the
+ * depth and/or stencil buffers if the clear_buffers mask specifies them.
+ */
+static void
+clear_buffers_with_quad(struct svga_context *svga,
+                        unsigned clear_buffers,
+                        const union pipe_color_union *color,
+                        double depth, unsigned stencil)
+{
+   const struct pipe_framebuffer_state *fb = &svga->curr.framebuffer;
+
+   begin_blit(svga);
    util_blitter_clear(svga->blitter,
                       fb->width, fb->height,
                       1, /* num_layers */
