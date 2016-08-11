@@ -85,6 +85,7 @@ __gen_combine_address(struct brw_context *brw, void *location,
 #include "genxml/genX_pack.h"
 
 #define _blorp_cmd_length(cmd) cmd ## _length
+#define _blorp_cmd_length_bias(cmd) cmd ## _length_bias
 #define _blorp_cmd_header(cmd) cmd ## _header
 #define _blorp_cmd_pack(cmd) cmd ## _pack
 
@@ -94,6 +95,215 @@ __gen_combine_address(struct brw_context *brw, void *location,
         __builtin_expect(_dst != NULL, 1);                        \
         _blorp_cmd_pack(cmd)(brw, (void *)_dst, &name),           \
         _dst = NULL)
+
+#define blorp_emitn(batch, cmd, n) ({                    \
+      uint32_t *_dw = blorp_emit_dwords(batch, n);       \
+      struct cmd template = {                            \
+         _blorp_cmd_header(cmd),                         \
+         .DWordLength = n - _blorp_cmd_length_bias(cmd), \
+      };                                                 \
+      _blorp_cmd_pack(cmd)(batch, _dw, &template);       \
+      _dw + 1; /* Array starts at dw[1] */               \
+   })
+
+static void
+blorp_emit_vertex_data(struct brw_context *brw,
+                       const struct brw_blorp_params *params,
+                       struct blorp_address *addr,
+                       uint32_t *size)
+{
+   const float vertices[] = {
+      /* v0 */ (float)params->x0, (float)params->y1,
+      /* v1 */ (float)params->x1, (float)params->y1,
+      /* v2 */ (float)params->x0, (float)params->y0,
+   };
+
+   uint32_t offset;
+   void *data = brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
+                                sizeof(vertices), 32, &offset);
+   memcpy(data, vertices, sizeof(vertices));
+
+   *addr = (struct blorp_address) {
+      .buffer = brw->batch.bo,
+      .read_domains = I915_GEM_DOMAIN_VERTEX,
+      .write_domain = 0,
+      .offset = offset,
+   };
+   *size = sizeof(vertices);
+}
+
+static void
+blorp_emit_input_varying_data(struct brw_context *brw,
+                              const struct brw_blorp_params *params,
+                              struct blorp_address *addr,
+                              uint32_t *size)
+{
+   const unsigned vec4_size_in_bytes = 4 * sizeof(float);
+   const unsigned max_num_varyings =
+      DIV_ROUND_UP(sizeof(params->wm_inputs), vec4_size_in_bytes);
+   const unsigned num_varyings = params->wm_prog_data->num_varying_inputs;
+
+   *size = num_varyings * vec4_size_in_bytes;
+
+   const float *const inputs_src = (const float *)&params->wm_inputs;
+   uint32_t offset;
+   float *inputs = brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
+                                   *size, 32, &offset);
+
+   /* Walk over the attribute slots, determine if the attribute is used by
+    * the program and when necessary copy the values from the input storage to
+    * the vertex data buffer.
+    */
+   for (unsigned i = 0; i < max_num_varyings; i++) {
+      const gl_varying_slot attr = VARYING_SLOT_VAR0 + i;
+
+      if (!(params->wm_prog_data->inputs_read & BITFIELD64_BIT(attr)))
+         continue;
+
+      memcpy(inputs, inputs_src + i * 4, vec4_size_in_bytes);
+
+      inputs += 4;
+   }
+
+   *addr = (struct blorp_address) {
+      .buffer = brw->batch.bo,
+      .read_domains = I915_GEM_DOMAIN_VERTEX,
+      .write_domain = 0,
+      .offset = offset,
+   };
+}
+
+static void
+blorp_emit_vertex_buffers(struct brw_context *brw,
+                          const struct brw_blorp_params *params)
+{
+   struct GENX(VERTEX_BUFFER_STATE) vb[2];
+   memset(vb, 0, sizeof(vb));
+
+   unsigned num_buffers = 1;
+
+   uint32_t size;
+   blorp_emit_vertex_data(brw, params, &vb[0].BufferStartingAddress, &size);
+   vb[0].VertexBufferIndex = 0;
+   vb[0].BufferPitch = 2 * sizeof(float);
+   vb[0].BufferAccessType = VERTEXDATA;
+   vb[0].EndAddress = vb[0].BufferStartingAddress;
+   vb[0].EndAddress.offset += size - 1;
+
+   if (params->wm_prog_data && params->wm_prog_data->num_varying_inputs) {
+      blorp_emit_input_varying_data(brw, params,
+                                    &vb[1].BufferStartingAddress, &size);
+      vb[1].VertexBufferIndex = 1;
+      vb[1].BufferPitch = 0;
+      vb[1].BufferAccessType = INSTANCEDATA;
+      vb[1].EndAddress = vb[1].BufferStartingAddress;
+      vb[1].EndAddress.offset += size;
+      num_buffers++;
+   }
+
+   const unsigned num_dwords =
+      1 + GENX(VERTEX_BUFFER_STATE_length) * num_buffers;
+   uint32_t *dw = blorp_emitn(brw, GENX(3DSTATE_VERTEX_BUFFERS), num_dwords);
+
+   for (unsigned i = 0; i < num_buffers; i++) {
+      GENX(VERTEX_BUFFER_STATE_pack)(brw, dw, &vb[i]);
+      dw += GENX(VERTEX_BUFFER_STATE_length);
+   }
+}
+
+static void
+blorp_emit_vertex_elements(struct brw_context *brw,
+                           const struct brw_blorp_params *params)
+{
+   const unsigned num_varyings =
+      params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
+   const unsigned num_elements = 2 + num_varyings;
+
+   struct GENX(VERTEX_ELEMENT_STATE) ve[num_elements];
+   memset(ve, 0, num_elements * sizeof(*ve));
+
+   /* Setup VBO for the rectangle primitive..
+    *
+    * A rectangle primitive (3DPRIM_RECTLIST) consists of only three
+    * vertices. The vertices reside in screen space with DirectX
+    * coordinates (that is, (0, 0) is the upper left corner).
+    *
+    *   v2 ------ implied
+    *    |        |
+    *    |        |
+    *   v0 ----- v1
+    *
+    * Since the VS is disabled, the clipper loads each VUE directly from
+    * the URB. This is controlled by the 3DSTATE_VERTEX_BUFFERS and
+    * 3DSTATE_VERTEX_ELEMENTS packets below. The VUE contents are as follows:
+    *   dw0: Reserved, MBZ.
+    *   dw1: Render Target Array Index. The HiZ op does not use indexed
+    *        vertices, so set the dword to 0.
+    *   dw2: Viewport Index. The HiZ op disables viewport mapping and
+    *        scissoring, so set the dword to 0.
+    *   dw3: Point Width: The HiZ op does not emit the POINTLIST primitive,
+    *        so set the dword to 0.
+    *   dw4: Vertex Position X.
+    *   dw5: Vertex Position Y.
+    *   dw6: Vertex Position Z.
+    *   dw7: Vertex Position W.
+    *
+    *   dw8: Flat vertex input 0
+    *   dw9: Flat vertex input 1
+    *   ...
+    *   dwn: Flat vertex input n - 8
+    *
+    * For details, see the Sandybridge PRM, Volume 2, Part 1, Section 1.5.1
+    * "Vertex URB Entry (VUE) Formats".
+    *
+    * Only vertex position X and Y are going to be variable, Z is fixed to
+    * zero and W to one. Header words dw0-3 are all zero. There is no need to
+    * include the fixed values in the vertex buffer. Vertex fetcher can be
+    * instructed to fill vertex elements with constant values of one and zero
+    * instead of reading them from the buffer.
+    * Flat inputs are program constants that are not interpolated. Moreover
+    * their values will be the same between vertices.
+    *
+    * See the vertex element setup below.
+    */
+   ve[0].VertexBufferIndex = 0;
+   ve[0].Valid = true;
+   ve[0].SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT;
+   ve[0].SourceElementOffset = 0;
+   ve[0].Component0Control = VFCOMP_STORE_0;
+   ve[0].Component1Control = VFCOMP_STORE_0;
+   ve[0].Component2Control = VFCOMP_STORE_0;
+   ve[0].Component3Control = VFCOMP_STORE_0;
+
+   ve[1].VertexBufferIndex = 0;
+   ve[1].Valid = true;
+   ve[1].SourceElementFormat = ISL_FORMAT_R32G32_FLOAT;
+   ve[1].SourceElementOffset = 0;
+   ve[1].Component0Control = VFCOMP_STORE_SRC;
+   ve[1].Component1Control = VFCOMP_STORE_SRC;
+   ve[1].Component2Control = VFCOMP_STORE_0;
+   ve[1].Component3Control = VFCOMP_STORE_1_FP;
+
+   for (unsigned i = 0; i < num_varyings; ++i) {
+      ve[i + 2].VertexBufferIndex = 1;
+      ve[i + 2].Valid = true;
+      ve[i + 2].SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT;
+      ve[i + 2].SourceElementOffset = i * 4 * sizeof(float);
+      ve[i + 2].Component0Control = VFCOMP_STORE_SRC;
+      ve[i + 2].Component1Control = VFCOMP_STORE_SRC;
+      ve[i + 2].Component2Control = VFCOMP_STORE_SRC;
+      ve[i + 2].Component3Control = VFCOMP_STORE_SRC;
+   }
+
+   const unsigned num_dwords =
+      1 + GENX(VERTEX_ELEMENT_STATE_length) * num_elements;
+   uint32_t *dw = blorp_emitn(brw, GENX(3DSTATE_VERTEX_ELEMENTS), num_dwords);
+
+   for (unsigned i = 0; i < num_elements; i++) {
+      GENX(VERTEX_ELEMENT_STATE_pack)(brw, dw, &ve[i]);
+      dw += GENX(VERTEX_ELEMENT_STATE_length);
+   }
+}
 
 static void
 blorp_emit_sf_config(struct brw_context *brw,
@@ -439,7 +649,8 @@ genX(blorp_exec)(struct brw_context *brw,
 
    brw_upload_state_base_address(brw);
 
-   gen6_blorp_emit_vertices(brw, params);
+   blorp_emit_vertex_buffers(brw, params);
+   blorp_emit_vertex_elements(brw, params);
 
    /* 3DSTATE_URB
     *
