@@ -47,6 +47,8 @@ install:
 - python -m pip --version
 # Install Mako
 - python -m pip install --egg Mako
+# Install pywin32 extensions, needed by SCons
+- python -m pip install pypiwin32
 # Install SCons
 - python -m pip install --egg scons==2.4.1
 - scons --version
