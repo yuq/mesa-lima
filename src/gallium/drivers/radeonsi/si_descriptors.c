@@ -663,7 +663,7 @@ static void si_set_shader_image(struct si_context *ctx,
 			 * The decompression is relatively cheap if the surface
 			 * has been decompressed already.
 			 */
-			if (r600_texture_disable_dcc(&screen->b, tex))
+			if (r600_texture_disable_dcc(&ctx->b, tex))
 				uses_dcc = false;
 			else
 				ctx->b.decompress_dcc(&ctx->b.b, tex);

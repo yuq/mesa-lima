@@ -400,20 +400,44 @@ static bool r600_texture_discard_dcc(struct r600_common_screen *rscreen,
 	return true;
 }
 
-bool r600_texture_disable_dcc(struct r600_common_screen *rscreen,
+/**
+ * Disable DCC for the texture. (first decompress, then discard metadata).
+ *
+ * There is unresolved multi-context synchronization issue between
+ * screen::aux_context and the current context. If applications do this with
+ * multiple contexts, it's already undefined behavior for them and we don't
+ * have to worry about that. The scenario is:
+ *
+ * If context 1 disables DCC and context 2 has queued commands that write
+ * to the texture via CB with DCC enabled, and the order of operations is
+ * as follows:
+ *   context 2 queues draw calls rendering to the texture, but doesn't flush
+ *   context 1 disables DCC and flushes
+ *   context 1 & 2 reset descriptors and FB state
+ *   context 2 flushes (new compressed tiles written by the draw calls)
+ *   context 1 & 2 read garbage, because DCC is disabled, yet there are
+ *   compressed tiled
+ *
+ * \param rctx  the current context if you have one, or rscreen->aux_context
+ *              if you don't.
+ */
+bool r600_texture_disable_dcc(struct r600_common_context *rctx,
 			      struct r600_texture *rtex)
 {
-	struct r600_common_context *rctx =
-		(struct r600_common_context *)rscreen->aux_context;
+	struct r600_common_screen *rscreen = rctx->screen;
 
 	if (!r600_can_disable_dcc(rtex))
 		return false;
 
+	if (&rctx->b == rscreen->aux_context)
+		pipe_mutex_lock(rscreen->aux_context_lock);
+
 	/* Decompress DCC. */
-	pipe_mutex_lock(rscreen->aux_context_lock);
 	rctx->decompress_dcc(&rctx->b, rtex);
 	rctx->b.flush(&rctx->b, NULL, 0);
-	pipe_mutex_unlock(rscreen->aux_context_lock);
+
+	if (&rctx->b == rscreen->aux_context)
+		pipe_mutex_unlock(rscreen->aux_context_lock);
 
 	return r600_texture_discard_dcc(rscreen, rtex);
 }
@@ -492,6 +516,8 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
                                        unsigned usage)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+	struct r600_common_context *aux_context =
+		(struct r600_common_context*)rscreen->aux_context;
 	struct r600_resource *res = (struct r600_resource*)resource;
 	struct r600_texture *rtex = (struct r600_texture*)resource;
 	struct radeon_bo_metadata metadata;
@@ -510,7 +536,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		 * access.
 		 */
 		if (usage & PIPE_HANDLE_USAGE_WRITE && rtex->dcc_offset) {
-			if (r600_texture_disable_dcc(rscreen, rtex))
+			if (r600_texture_disable_dcc(aux_context, rtex))
 				update_metadata = true;
 		}
 

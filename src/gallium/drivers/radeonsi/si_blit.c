@@ -557,10 +557,8 @@ static void si_check_render_feedback_textures(struct si_context *sctx,
 				render_feedback = true;
 		}
 
-		if (render_feedback) {
-			struct si_screen *screen = sctx->screen;
-			r600_texture_disable_dcc(&screen->b, tex);
-		}
+		if (render_feedback)
+			r600_texture_disable_dcc(&sctx->b, tex);
 	}
 }
 
@@ -599,10 +597,8 @@ static void si_check_render_feedback_images(struct si_context *sctx,
 				render_feedback = true;
 		}
 
-		if (render_feedback) {
-			struct si_screen *screen = sctx->screen;
-			r600_texture_disable_dcc(&screen->b, tex);
-		}
+		if (render_feedback)
+			r600_texture_disable_dcc(&sctx->b, tex);
 	}
 }
 
