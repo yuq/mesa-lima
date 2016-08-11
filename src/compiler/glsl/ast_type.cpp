@@ -242,7 +242,8 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
          if (q.flags.q.xfb_buffer) {
             this->flags.q.xfb_buffer = 1;
             this->xfb_buffer = q.xfb_buffer;
-         } else if (!this->flags.q.xfb_buffer && this->flags.q.out) {
+         } else if (!this->flags.q.xfb_buffer && this->flags.q.out &&
+                    !this->flags.q.in) {
             /* Assign global xfb_buffer value */
             this->flags.q.xfb_buffer = 1;
             this->xfb_buffer = state->out_qualifier->xfb_buffer;
