@@ -1772,7 +1772,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 	si_init_buffer_resources(&sctx->rw_buffers,
 				 &sctx->descriptors[SI_DESCS_RW_BUFFERS],
 				 SI_NUM_RW_BUFFERS, SI_SGPR_RW_BUFFERS,
-				 RADEON_USAGE_READWRITE, RADEON_PRIO_RINGS_STREAMOUT,
+				 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RINGS,
 				 &ce_offset);
 	si_init_descriptors(&sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFERS,
 			    4, SI_NUM_VERTEX_BUFFERS, NULL, NULL);

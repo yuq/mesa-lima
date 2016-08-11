@@ -1963,7 +1963,7 @@ static void r600_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rbuffer,
 						      RADEON_USAGE_READWRITE,
-						      RADEON_PRIO_RINGS_STREAMOUT));
+						      RADEON_PRIO_SHADER_RINGS));
 		radeon_set_config_reg(cs, R_008C44_SQ_ESGS_RING_SIZE,
 				state->esgs_ring.buffer_size >> 8);
 
@@ -1972,7 +1972,7 @@ static void r600_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rbuffer,
 						      RADEON_USAGE_READWRITE,
-						      RADEON_PRIO_RINGS_STREAMOUT));
+						      RADEON_PRIO_SHADER_RINGS));
 		radeon_set_config_reg(cs, R_008C4C_SQ_GSVS_RING_SIZE,
 				state->gsvs_ring.buffer_size >> 8);
 	} else {

@@ -561,7 +561,6 @@ static const char *priority_to_string(enum radeon_bo_priority priority)
 	        ITEM(SAMPLER_BUFFER),
 	        ITEM(VERTEX_BUFFER),
 	        ITEM(SHADER_RW_BUFFER),
-	        ITEM(RINGS_STREAMOUT),
 	        ITEM(SCRATCH_BUFFER),
 	        ITEM(COMPUTE_GLOBAL),
 	        ITEM(SAMPLER_TEXTURE),
@@ -574,6 +573,7 @@ static const char *priority_to_string(enum radeon_bo_priority priority)
 	        ITEM(CMASK),
 	        ITEM(DCC),
 	        ITEM(HTILE),
+		ITEM(SHADER_RINGS),
 	};
 #undef ITEM
 

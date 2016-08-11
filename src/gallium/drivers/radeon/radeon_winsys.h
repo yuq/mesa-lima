@@ -200,7 +200,6 @@ enum radeon_bo_priority {
     RADEON_PRIO_VERTEX_BUFFER,
 
     RADEON_PRIO_SHADER_RW_BUFFER = 32,
-    RADEON_PRIO_RINGS_STREAMOUT,
     RADEON_PRIO_SCRATCH_BUFFER,
     RADEON_PRIO_COMPUTE_GLOBAL,
 
@@ -220,6 +219,7 @@ enum radeon_bo_priority {
     RADEON_PRIO_CMASK = 60,
     RADEON_PRIO_DCC,
     RADEON_PRIO_HTILE,
+    RADEON_PRIO_SHADER_RINGS,
     /* 63 is the maximum value */
 };
 
