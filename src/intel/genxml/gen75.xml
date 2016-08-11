@@ -34,9 +34,9 @@
       <value name="INSTANCEDATA" value="1"/>
     </field>
     <field name="Vertex Buffer Memory Object Control State" start="16" end="19" type="MEMORY_OBJECT_CONTROL_STATE"/>
-    <field name="Address Modify Enable" start="14" end="14" type="uint"/>
+    <field name="Address Modify Enable" start="14" end="14" type="bool"/>
     <field name="Null Vertex Buffer" start="13" end="13" type="bool"/>
-    <field name="Vertex Fetch Invalidate" start="12" end="12" type="uint" default="0"/>
+    <field name="Vertex Fetch Invalidate" start="12" end="12" type="bool" default="0"/>
     <field name="Buffer Pitch" start="0" end="11" type="uint"/>
     <field name="Buffer Starting Address" start="32" end="63" type="address"/>
     <field name="End Address" start="64" end="95" type="address"/>

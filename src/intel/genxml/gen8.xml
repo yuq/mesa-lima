@@ -40,7 +40,7 @@
   <struct name="VERTEX_BUFFER_STATE" length="4">
     <field name="Vertex Buffer Index" start="26" end="31" type="uint"/>
     <field name="Memory Object Control State" start="16" end="22" type="MEMORY_OBJECT_CONTROL_STATE"/>
-    <field name="Address Modify Enable" start="14" end="14" type="uint"/>
+    <field name="Address Modify Enable" start="14" end="14" type="bool"/>
     <field name="Null Vertex Buffer" start="13" end="13" type="bool"/>
     <field name="Buffer Pitch" start="0" end="11" type="uint"/>
     <field name="Buffer Starting Address" start="32" end="95" type="address"/>
