@@ -1094,13 +1094,13 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
        *
        * In case of 8x MSAA the two layouts don't match.
        * sample index layout :  ---------    sample number layout :  ---------
-       *                        | 0 | 1 |                            | 5 | 2 |
+       *                        | 0 | 1 |                            | 3 | 7 |
        *                        ---------                            ---------
-       *                        | 2 | 3 |                            | 4 | 6 |
+       *                        | 2 | 3 |                            | 5 | 0 |
        *                        ---------                            ---------
-       *                        | 4 | 5 |                            | 0 | 3 |
+       *                        | 4 | 5 |                            | 1 | 2 |
        *                        ---------                            ---------
-       *                        | 6 | 7 |                            | 7 | 1 |
+       *                        | 6 | 7 |                            | 4 | 6 |
        *                        ---------                            ---------
        *
        * Fortunately, this can be done fairly easily as:
@@ -1128,7 +1128,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
       sample = nir_f2i(b, sample);
 
       if (tex_samples == 8) {
-         sample = nir_iand(b, nir_ishr(b, nir_imm_int(b, 0x17306425),
+         sample = nir_iand(b, nir_ishr(b, nir_imm_int(b, 0x64210573),
                                        nir_ishl(b, sample, nir_imm_int(b, 2))),
                            nir_imm_int(b, 0xf));
       } else if (tex_samples == 16) {
