@@ -1280,13 +1280,14 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
          drv->API.DestroySurface(drv, disp, old_dsurf);
       if (old_rsurf)
          drv->API.DestroySurface(drv, disp, old_rsurf);
-      if (old_ctx)
-         drv->API.DestroyContext(drv, disp, old_ctx);
 
       if (!unbind)
          dri2_dpy->ref_count++;
-      if (old_dsurf || old_rsurf || old_ctx)
-         dri2_display_release(disp);
+      if (old_ctx) {
+         EGLDisplay old_disp = _eglGetDisplayHandle(old_ctx->Resource.Display);
+         drv->API.DestroyContext(drv, disp, old_ctx);
+         dri2_display_release(old_disp);
+      }
 
       return EGL_TRUE;
    } else {
