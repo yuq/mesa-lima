@@ -237,44 +237,12 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
       .PointSpriteTextureCoordinateOrigin = UPPERLEFT,
       .NumberofSFOutputAttributes = wm_prog_data->num_varying_inputs,
       .ConstantInterpolationEnable = wm_prog_data->flat_inputs,
+   };
 
 #if GEN_GEN >= 9
-      .Attribute0ActiveComponentFormat = ACF_XYZW,
-      .Attribute1ActiveComponentFormat = ACF_XYZW,
-      .Attribute2ActiveComponentFormat = ACF_XYZW,
-      .Attribute3ActiveComponentFormat = ACF_XYZW,
-      .Attribute4ActiveComponentFormat = ACF_XYZW,
-      .Attribute5ActiveComponentFormat = ACF_XYZW,
-      .Attribute6ActiveComponentFormat = ACF_XYZW,
-      .Attribute7ActiveComponentFormat = ACF_XYZW,
-      .Attribute8ActiveComponentFormat = ACF_XYZW,
-      .Attribute9ActiveComponentFormat = ACF_XYZW,
-      .Attribute10ActiveComponentFormat = ACF_XYZW,
-      .Attribute11ActiveComponentFormat = ACF_XYZW,
-      .Attribute12ActiveComponentFormat = ACF_XYZW,
-      .Attribute13ActiveComponentFormat = ACF_XYZW,
-      .Attribute14ActiveComponentFormat = ACF_XYZW,
-      .Attribute15ActiveComponentFormat = ACF_XYZW,
-      /* wow, much field, very attribute */
-      .Attribute16ActiveComponentFormat = ACF_XYZW,
-      .Attribute17ActiveComponentFormat = ACF_XYZW,
-      .Attribute18ActiveComponentFormat = ACF_XYZW,
-      .Attribute19ActiveComponentFormat = ACF_XYZW,
-      .Attribute20ActiveComponentFormat = ACF_XYZW,
-      .Attribute21ActiveComponentFormat = ACF_XYZW,
-      .Attribute22ActiveComponentFormat = ACF_XYZW,
-      .Attribute23ActiveComponentFormat = ACF_XYZW,
-      .Attribute24ActiveComponentFormat = ACF_XYZW,
-      .Attribute25ActiveComponentFormat = ACF_XYZW,
-      .Attribute26ActiveComponentFormat = ACF_XYZW,
-      .Attribute27ActiveComponentFormat = ACF_XYZW,
-      .Attribute28ActiveComponentFormat = ACF_XYZW,
-      .Attribute29ActiveComponentFormat = ACF_XYZW,
-      .Attribute28ActiveComponentFormat = ACF_XYZW,
-      .Attribute29ActiveComponentFormat = ACF_XYZW,
-      .Attribute30ActiveComponentFormat = ACF_XYZW,
+   for (unsigned i = 0; i < 32; i++)
+      sbe.AttributeActiveComponentFormat[i] = ACF_XYZW;
 #endif
-   };
 
 #if GEN_GEN >= 8
    /* On Broadwell, they broke 3DSTATE_SBE into two packets */

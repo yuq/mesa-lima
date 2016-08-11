@@ -2097,38 +2097,9 @@
     <field name="Primitive ID Override Attribute Select" start="32" end="36" type="uint"/>
     <field name="Point Sprite Texture Coordinate Enable" start="64" end="95" type="uint"/>
     <field name="Constant Interpolation Enable" start="96" end="127" type="uint"/>
-    <field name="Attribute 15 Active Component Format" start="158" end="159" type="uint"/>
-    <field name="Attribute 14 Active Component Format" start="156" end="157" type="uint"/>
-    <field name="Attribute 13 Active Component Format" start="154" end="155" type="uint"/>
-    <field name="Attribute 12 Active Component Format" start="152" end="153" type="uint"/>
-    <field name="Attribute 11 Active Component Format" start="150" end="151" type="uint"/>
-    <field name="Attribute 10 Active Component Format" start="148" end="149" type="uint"/>
-    <field name="Attribute 9 Active Component Format" start="146" end="147" type="uint"/>
-    <field name="Attribute 8 Active Component Format" start="144" end="145" type="uint"/>
-    <field name="Attribute 7 Active Component Format" start="142" end="143" type="uint"/>
-    <field name="Attribute 6 Active Component Format" start="140" end="141" type="uint"/>
-    <field name="Attribute 5 Active Component Format" start="138" end="139" type="uint"/>
-    <field name="Attribute 4 Active Component Format" start="136" end="137" type="uint"/>
-    <field name="Attribute 3 Active Component Format" start="134" end="135" type="uint"/>
-    <field name="Attribute 2 Active Component Format" start="132" end="133" type="uint"/>
-    <field name="Attribute 1 Active Component Format" start="130" end="131" type="uint"/>
-    <field name="Attribute 0 Active Component Format" start="128" end="129" type="uint"/>
-    <field name="Attribute 31 Active Component Format" start="190" end="191" type="uint"/>
-    <field name="Attribute 30 Active Component Format" start="188" end="189" type="uint"/>
-    <field name="Attribute 29 Active Component Format" start="186" end="187" type="uint"/>
-    <field name="Attribute 28 Active Component Format" start="184" end="185" type="uint"/>
-    <field name="Attribute 27 Active Component Format" start="182" end="183" type="uint"/>
-    <field name="Attribute 26 Active Component Format" start="180" end="181" type="uint"/>
-    <field name="Attribute 25 Active Component Format" start="178" end="179" type="uint"/>
-    <field name="Attribute 24 Active Component Format" start="176" end="177" type="uint"/>
-    <field name="Attribute 23 Active Component Format" start="174" end="175" type="uint"/>
-    <field name="Attribute 22 Active Component Format" start="172" end="173" type="uint"/>
-    <field name="Attribute 21 Active Component Format" start="170" end="171" type="uint"/>
-    <field name="Attribute 20 Active Component Format" start="168" end="169" type="uint"/>
-    <field name="Attribute 19 Active Component Format" start="166" end="167" type="uint"/>
-    <field name="Attribute 18 Active Component Format" start="164" end="165" type="uint"/>
-    <field name="Attribute 17 Active Component Format" start="162" end="163" type="uint"/>
-    <field name="Attribute 16 Active Component Format" start="160" end="161" type="uint"/>
+    <group count="32" start="128" size="2">
+      <field name="Attribute Active Component Format" start="0" end="1" type="uint"/>
+    </group>
   </instruction>
 
   <instruction name="3DSTATE_SBE_SWIZ" bias="2" length="11">
