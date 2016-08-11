@@ -164,6 +164,7 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
    svga_init_query_functions(svga);
    svga_init_surface_functions(svga);
    svga_init_stream_output_functions(svga);
+   svga_init_clear_functions(svga);
 
    /* init misc state */
    svga->curr.sample_mask = ~0;

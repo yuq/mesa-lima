@@ -452,3 +452,7 @@ svga_clear_texture(struct pipe_context *pipe,
 }
 
 
+void svga_init_clear_functions(struct svga_context *svga)
+{
+   svga->pipe.clear_texture = svga_clear_texture;
+}
