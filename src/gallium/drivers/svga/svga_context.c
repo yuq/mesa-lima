@@ -141,7 +141,6 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
    svga->pipe.screen = screen;
    svga->pipe.priv = priv;
    svga->pipe.destroy = svga_destroy;
-   svga->pipe.clear = svga_clear;
 
    svga->swc = svgascreen->sws->context_create(svgascreen->sws);
    if (!svga->swc)

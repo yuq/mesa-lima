@@ -228,7 +228,7 @@ try_clear(struct svga_context *svga,
  * Clear the given surface to the specified value.
  * No masking, no scissor (clear entire buffer).
  */
-void
+static void
 svga_clear(struct pipe_context *pipe, unsigned buffers,
            const union pipe_color_union *color,
 	   double depth, unsigned stencil)
@@ -455,4 +455,5 @@ svga_clear_texture(struct pipe_context *pipe,
 void svga_init_clear_functions(struct svga_context *svga)
 {
    svga->pipe.clear_texture = svga_clear_texture;
+   svga->pipe.clear = svga_clear;
 }

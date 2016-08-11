@@ -608,15 +608,6 @@ struct svga_context
 
 
 
-/***********************************************************************
- * svga_clear.c: 
- */
-void svga_clear(struct pipe_context *pipe, 
-                unsigned buffers,
-                const union pipe_color_union *color,
-                double depth,
-                unsigned stencil);
-
 
 /***********************************************************************
  * svga_screen_texture.c: 
