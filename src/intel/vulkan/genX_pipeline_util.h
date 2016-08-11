@@ -463,7 +463,11 @@ emit_ms_state(struct anv_pipeline *pipeline,
     *
     * 3DSTATE_SAMPLE_MASK.SampleMask is 16 bits.
     */
+#if GEN_GEN >= 8
    uint32_t sample_mask = 0xffff;
+#else
+   uint32_t sample_mask = 0xff;
+#endif
 
    if (info) {
       samples = info->rasterizationSamples;
