@@ -178,8 +178,6 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    if (state->stage == MESA_SHADER_GEOMETRY) {
       allowed_duplicates_mask.flags.i |=
          stream_layout_mask.flags.i;
-      input_layout_mask.flags.i |=
-         stream_layout_mask.flags.i;
    }
 
    if (is_single_layout_merge && !state->has_enhanced_layouts() &&
@@ -229,7 +227,8 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
          if (q.flags.q.stream) {
             this->flags.q.stream = 1;
             this->stream = q.stream;
-         } else if (!this->flags.q.stream && this->flags.q.out) {
+         } else if (!this->flags.q.stream && this->flags.q.out &&
+                    !this->flags.q.in) {
             /* Assign default global stream value */
             this->flags.q.stream = 1;
             this->stream = state->out_qualifier->stream;
