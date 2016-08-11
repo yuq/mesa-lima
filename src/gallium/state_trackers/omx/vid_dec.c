@@ -569,16 +569,25 @@ static void vid_dec_deint(vid_dec_PrivateType *priv, struct pipe_video_buffer *s
    struct vl_compositor *compositor = &priv->compositor;
    struct vl_compositor_state *s = &priv->cstate;
    struct pipe_surface **dst_surface;
+   struct u_rect dst_rect;
 
    dst_surface = dst_buf->get_surfaces(dst_buf);
    vl_compositor_clear_layers(s);
 
+   dst_rect.x0 = 0;
+   dst_rect.x1 = src_buf->width;
+   dst_rect.y0 = 0;
+   dst_rect.y1 = src_buf->height;
+
    vl_compositor_set_yuv_layer(s, compositor, 0, src_buf, NULL, NULL, true);
-   vl_compositor_set_layer_dst_area(s, 0, NULL);
+   vl_compositor_set_layer_dst_area(s, 0, &dst_rect);
    vl_compositor_render(s, compositor, dst_surface[0], NULL, false);
 
+   dst_rect.x1 /= 2;
+   dst_rect.y1 /= 2;
+
    vl_compositor_set_yuv_layer(s, compositor, 0, src_buf, NULL, NULL, false);
-   vl_compositor_set_layer_dst_area(s, 0, NULL);
+   vl_compositor_set_layer_dst_area(s, 0, &dst_rect);
    vl_compositor_render(s, compositor, dst_surface[1], NULL, false);
 }
 
