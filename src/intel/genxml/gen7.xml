@@ -24,6 +24,7 @@
       <value name="INSTANCEDATA" value="1"/>
     </field>
     <field name="Vertex Buffer Memory Object Control State" start="16" end="19" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Vertex Buffer MOCS" start="16" end="19" type="uint"/>
     <field name="Address Modify Enable" start="14" end="14" type="bool"/>
     <field name="Null Vertex Buffer" start="13" end="13" type="bool"/>
     <field name="Vertex Fetch Invalidate" start="12" end="12" type="bool" default="0"/>
