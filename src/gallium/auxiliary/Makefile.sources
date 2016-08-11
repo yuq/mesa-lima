@@ -188,7 +188,6 @@ C_SOURCES := \
 	util/u_cache.h \
 	util/u_caps.c \
 	util/u_caps.h \
-	util/u_clear.h \
 	util/u_cpu_detect.c \
 	util/u_cpu_detect.h \
 	util/u_debug.c \
