@@ -218,7 +218,7 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 			radeon_emit(cs, va >> 8);			/* BUFFER_BASE */
 
 			r600_emit_reloc(rctx, &rctx->gfx, r600_resource(t[i]->b.buffer),
-					RADEON_USAGE_WRITE, RADEON_PRIO_RINGS_STREAMOUT);
+					RADEON_USAGE_WRITE, RADEON_PRIO_SHADER_RW_BUFFER);
 
 			/* R7xx requires this packet after updating BUFFER_BASE.
 			 * Without this, R7xx locks up. */
@@ -228,7 +228,7 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 				radeon_emit(cs, va >> 8);
 
 				r600_emit_reloc(rctx, &rctx->gfx, r600_resource(t[i]->b.buffer),
-						RADEON_USAGE_WRITE, RADEON_PRIO_RINGS_STREAMOUT);
+						RADEON_USAGE_WRITE, RADEON_PRIO_SHADER_RW_BUFFER);
 			}
 		}
 

@@ -1311,7 +1311,8 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 			radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
 							    (struct r600_resource*)buffer,
 							    buffers->shader_usage,
-							    buffers->priority, true);
+							    RADEON_PRIO_SHADER_RW_BUFFER,
+							    true);
 			buffers->enabled_mask |= 1u << bufidx;
 		} else {
 			/* Clear the descriptor and unset the resource. */
@@ -1474,7 +1475,8 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 
 		radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
 						    rbuffer, buffers->shader_usage,
-						    buffers->priority, true);
+						    RADEON_PRIO_SHADER_RW_BUFFER,
+						    true);
 
 		/* Update the streamout state. */
 		if (sctx->b.streamout.begin_emitted)
