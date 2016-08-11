@@ -332,6 +332,32 @@ blorp_emit_depth_stencil_state(struct brw_context *brw,
 }
 
 static void
+blorp_emit_surface_states(struct brw_context *brw,
+                          const struct brw_blorp_params *params)
+{
+   uint32_t bind_offset;
+   uint32_t *bind =
+      brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
+                      sizeof(uint32_t) * BRW_BLORP_NUM_BINDING_TABLE_ENTRIES,
+                      32, /* alignment */ &bind_offset);
+
+   bind[BRW_BLORP_RENDERBUFFER_BINDING_TABLE_INDEX] =
+      brw_blorp_emit_surface_state(brw, &params->dst,
+                                   I915_GEM_DOMAIN_RENDER,
+                                   I915_GEM_DOMAIN_RENDER, true);
+   if (params->src.bo) {
+      bind[BRW_BLORP_TEXTURE_BINDING_TABLE_INDEX] =
+         brw_blorp_emit_surface_state(brw, &params->src,
+                                      I915_GEM_DOMAIN_SAMPLER, 0, false);
+   }
+
+   blorp_emit(brw, GENX(3DSTATE_BINDING_TABLE_POINTERS), bt) {
+      bt.PSBindingTableChange = true;
+      bt.PointertoPSBindingTable = bind_offset;
+   }
+}
+
+static void
 blorp_emit_sampler_state(struct brw_context *brw,
                          const struct brw_blorp_params *params)
 {
@@ -407,7 +433,6 @@ genX(blorp_exec)(struct brw_context *brw,
    uint32_t blend_state_offset = 0;
    uint32_t color_calc_state_offset = 0;
    uint32_t depth_stencil_state_offset;
-   uint32_t wm_bind_bo_offset = 0;
 
    /* Emit workaround flushes when we switch from drawing to blorping. */
    brw_emit_post_sync_nonzero_flush(brw);
@@ -462,29 +487,8 @@ genX(blorp_exec)(struct brw_context *brw,
    blorp_emit(brw, GENX(3DSTATE_CONSTANT_GS), gs);
    blorp_emit(brw, GENX(3DSTATE_CONSTANT_PS), ps);
 
-   if (params->wm_prog_data) {
-      uint32_t wm_surf_offset_renderbuffer;
-      uint32_t wm_surf_offset_texture = 0;
-
-      wm_surf_offset_renderbuffer =
-         brw_blorp_emit_surface_state(brw, &params->dst,
-                                      I915_GEM_DOMAIN_RENDER,
-                                      I915_GEM_DOMAIN_RENDER, true);
-      if (params->src.bo) {
-         wm_surf_offset_texture =
-            brw_blorp_emit_surface_state(brw, &params->src,
-                                         I915_GEM_DOMAIN_SAMPLER, 0, false);
-      }
-      wm_bind_bo_offset =
-         gen6_blorp_emit_binding_table(brw,
-                                       wm_surf_offset_renderbuffer,
-                                       wm_surf_offset_texture);
-
-      blorp_emit(brw, GENX(3DSTATE_BINDING_TABLE_POINTERS), bt) {
-         bt.PSBindingTableChange = true;
-         bt.PointertoPSBindingTable = wm_bind_bo_offset;
-      }
-   }
+   if (params->wm_prog_data)
+      blorp_emit_surface_states(brw, params);
 
    if (params->src.bo)
       blorp_emit_sampler_state(brw, params);
