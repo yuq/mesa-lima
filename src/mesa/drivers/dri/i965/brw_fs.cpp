@@ -4198,9 +4198,6 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
       coordinate_done = true;
       break;
    case SHADER_OPCODE_TG4_OFFSET:
-      /* gather4_po_c should have been lowered in SIMD16 mode. */
-      assert(bld.dispatch_width() == 8 || shadow_c.file == BAD_FILE);
-
       /* More crazy intermixing */
       for (unsigned i = 0; i < 2; i++) /* u, v */
          bld.MOV(sources[length++], offset(coordinate, bld, i));
@@ -4687,6 +4684,67 @@ get_fpu_lowered_simd_width(const struct brw_device_info *devinfo,
 }
 
 /**
+ * Get the maximum allowed SIMD width for instruction \p inst accounting for
+ * various payload size restrictions that apply to sampler message
+ * instructions.
+ *
+ * This is only intended to provide a maximum theoretical bound for the
+ * execution size of the message based on the number of argument components
+ * alone, which in most cases will determine whether the SIMD8 or SIMD16
+ * variant of the message can be used, though some messages may have
+ * additional restrictions not accounted for here (e.g. pre-ILK hardware uses
+ * the message length to determine the exact SIMD width and argument count,
+ * which makes a number of sampler message combinations impossible to
+ * represent).
+ */
+static unsigned
+get_sampler_lowered_simd_width(const struct brw_device_info *devinfo,
+                               const fs_inst *inst)
+{
+   /* Calculate the number of coordinate components that have to be present
+    * assuming that additional arguments follow the texel coordinates in the
+    * message payload.  On IVB+ there is no need for padding, on ILK-SNB we
+    * need to pad to four or three components depending on the message,
+    * pre-ILK we need to pad to at most three components.
+    */
+   const unsigned req_coord_components =
+      (devinfo->gen >= 7 ||
+       !inst->components_read(TEX_LOGICAL_SRC_COORDINATE)) ? 0 :
+      (devinfo->gen >= 5 && inst->opcode != SHADER_OPCODE_TXF_LOGICAL &&
+                            inst->opcode != SHADER_OPCODE_TXF_CMS_LOGICAL) ? 4 :
+      3;
+
+   /* On Gen9+ the LOD argument is for free if we're able to use the LZ
+    * variant of the TXL or TXF message.
+    */
+   const bool implicit_lod = devinfo->gen >= 9 &&
+                             (inst->opcode == SHADER_OPCODE_TXL ||
+                              inst->opcode == SHADER_OPCODE_TXF) &&
+                             inst->src[TEX_LOGICAL_SRC_LOD].is_zero();
+
+   /* Calculate the total number of argument components that need to be passed
+    * to the sampler unit.
+    */
+   const unsigned num_payload_components =
+      MAX2(inst->components_read(TEX_LOGICAL_SRC_COORDINATE),
+           req_coord_components) +
+      inst->components_read(TEX_LOGICAL_SRC_SHADOW_C) +
+      (implicit_lod ? 0 : inst->components_read(TEX_LOGICAL_SRC_LOD)) +
+      inst->components_read(TEX_LOGICAL_SRC_LOD2) +
+      inst->components_read(TEX_LOGICAL_SRC_SAMPLE_INDEX) +
+      (inst->opcode == SHADER_OPCODE_TG4_OFFSET_LOGICAL ?
+       inst->components_read(TEX_LOGICAL_SRC_OFFSET_VALUE) : 0) +
+      inst->components_read(TEX_LOGICAL_SRC_MCS);
+
+   /* SIMD16 messages with more than five arguments exceed the maximum message
+    * size supported by the sampler, regardless of whether a header is
+    * provided or not.
+    */
+   return MIN2(inst->exec_size,
+               num_payload_components > MAX_SAMPLER_MESSAGE_SIZE / 2 ? 8 : 16);
+}
+
+/**
  * Get the closest native SIMD width supported by the hardware for instruction
  * \p inst.  The instruction will be left untouched by
  * fs_visitor::lower_simd_width() if the returned value is equal to the
@@ -4861,31 +4919,24 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case SHADER_OPCODE_LOD_LOGICAL:
    case SHADER_OPCODE_TG4_LOGICAL:
    case SHADER_OPCODE_SAMPLEINFO_LOGICAL:
-      return MIN2(16, inst->exec_size);
+   case SHADER_OPCODE_TXF_CMS_W_LOGICAL:
+   case SHADER_OPCODE_TG4_OFFSET_LOGICAL:
+      return get_sampler_lowered_simd_width(devinfo, inst);
 
    case SHADER_OPCODE_TXD_LOGICAL:
       /* TXD is unsupported in SIMD16 mode. */
       return 8;
 
-   case SHADER_OPCODE_TG4_OFFSET_LOGICAL: {
-      /* gather4_po_c is unsupported in SIMD16 mode. */
-      const fs_reg &shadow_c = inst->src[TEX_LOGICAL_SRC_SHADOW_C];
-      return (shadow_c.file != BAD_FILE ? 8 : MIN2(16, inst->exec_size));
-   }
    case SHADER_OPCODE_TXL_LOGICAL:
-   case FS_OPCODE_TXB_LOGICAL: {
-      /* Gen4 doesn't have SIMD8 non-shadow-compare bias/LOD instructions, and
-       * Gen4-6 can't support TXL and TXB with shadow comparison in SIMD16
-       * mode because the message exceeds the maximum length of 11.
+   case FS_OPCODE_TXB_LOGICAL:
+      /* Only one execution size is representable pre-ILK depending on whether
+       * the shadow reference argument is present.
        */
-      const fs_reg &shadow_c = inst->src[TEX_LOGICAL_SRC_SHADOW_C];
-      if (devinfo->gen == 4 && shadow_c.file == BAD_FILE)
-         return 16;
-      else if (devinfo->gen < 7 && shadow_c.file != BAD_FILE)
-         return 8;
+      if (devinfo->gen == 4)
+         return inst->src[TEX_LOGICAL_SRC_SHADOW_C].file == BAD_FILE ? 16 : 8;
       else
-         return MIN2(16, inst->exec_size);
-   }
+         return get_sampler_lowered_simd_width(devinfo, inst);
+
    case SHADER_OPCODE_TXF_LOGICAL:
    case SHADER_OPCODE_TXS_LOGICAL:
       /* Gen4 doesn't have SIMD8 variants for the RESINFO and LD-with-LOD
@@ -4894,23 +4945,7 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       if (devinfo->gen == 4)
          return 16;
       else
-         return MIN2(16, inst->exec_size);
-
-   case SHADER_OPCODE_TXF_CMS_W_LOGICAL: {
-      /* This opcode can take up to 6 arguments which means that in some
-       * circumstances it can end up with a message that is too long in SIMD16
-       * mode.
-       */
-      const unsigned coord_components =
-         inst->src[TEX_LOGICAL_SRC_COORD_COMPONENTS].ud;
-      /* First three arguments are the sample index and the two arguments for
-       * the MCS data.
-       */
-      if ((coord_components + 3) * 2 > MAX_SAMPLER_MESSAGE_SIZE)
-         return 8;
-      else
-         return MIN2(16, inst->exec_size);
-   }
+         return get_sampler_lowered_simd_width(devinfo, inst);
 
    case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
    case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
