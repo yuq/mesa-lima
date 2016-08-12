@@ -1271,8 +1271,8 @@ nvc0_bind_images_range(struct nvc0_context *nvc0, const unsigned s,
             if (img->resource == NULL)
                continue;
             if (img->resource->target == PIPE_BUFFER &&
-                img->u.buf.first_element == pimages[p].u.buf.first_element &&
-                img->u.buf.last_element == pimages[p].u.buf.last_element)
+                img->u.buf.offset == pimages[p].u.buf.offset &&
+                img->u.buf.size == pimages[p].u.buf.size)
                continue;
             if (img->resource->target != PIPE_BUFFER &&
                 img->u.tex.first_layer == pimages[p].u.tex.first_layer &&

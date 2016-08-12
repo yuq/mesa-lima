@@ -456,8 +456,8 @@ struct pipe_image_view
          unsigned level:8;            /**< mipmap level to use */
       } tex;
       struct {
-         unsigned first_element;
-         unsigned last_element;
+         unsigned offset;   /**< offset in bytes */
+         unsigned size;     /**< size of the accessible sub-range in bytes */
       } buf;
    } u;
 };

@@ -259,11 +259,8 @@ gm107_create_texture_view_from_image(struct pipe_context *pipe,
    templ.swizzle_a = PIPE_SWIZZLE_W;
 
    if (target == PIPE_BUFFER) {
-      templ.u.buf.offset = view->u.buf.first_element *
-                           util_format_get_blocksize(view->format);
-      templ.u.buf.size = (view->u.buf.last_element -
-                          view->u.buf.first_element + 1) *
-                         util_format_get_blocksize(view->format);
+      templ.u.buf.offset = view->u.buf.offset;
+      templ.u.buf.size = view->u.buf.size;
    } else {
       templ.u.tex.first_layer = view->u.tex.first_layer;
       templ.u.tex.last_layer = view->u.tex.last_layer;
@@ -776,7 +773,7 @@ nvc0_get_surface_dims(struct pipe_image_view *view, int *width, int *height,
 
    *width = *height = *depth = 1;
    if (res->base.target == PIPE_BUFFER) {
-      *width = view->u.buf.last_element - view->u.buf.first_element + 1;
+      *width = view->u.buf.size / util_format_get_blocksize(view->format);
       return;
    }
 
@@ -807,17 +804,12 @@ void
 nvc0_mark_image_range_valid(const struct pipe_image_view *view)
 {
    struct nv04_resource *res = (struct nv04_resource *)view->resource;
-   const struct util_format_description *desc;
-   unsigned stride;
 
    assert(view->resource->target == PIPE_BUFFER);
 
-   desc = util_format_description(view->format);
-   stride = desc->block.bits / 8;
-
    util_range_add(&res->valid_buffer_range,
-                  stride * (view->u.buf.first_element),
-                  stride * (view->u.buf.last_element + 1));
+                  view->u.buf.offset,
+                  view->u.buf.offset + view->u.buf.size);
 }
 
 void
@@ -903,9 +895,7 @@ nve4_set_surface_info(struct nouveau_pushbuf *push,
 #endif
 
    if (res->base.target == PIPE_BUFFER) {
-      unsigned blocksize = util_format_get_blocksize(view->format);
-
-      address += view->u.buf.first_element * blocksize;
+      address += view->u.buf.offset;
 
       info[0]  = address >> 8;
       info[2]  = width - 1;
@@ -1030,7 +1020,7 @@ nvc0_validate_suf(struct nvc0_context *nvc0, int s)
          if (res->base.target == PIPE_BUFFER) {
             unsigned blocksize = util_format_get_blocksize(view->format);
 
-            address += view->u.buf.first_element * blocksize;
+            address += view->u.buf.offset;
             assert(!(address & 0xff));
 
             if (view->access & PIPE_IMAGE_ACCESS_WRITE)

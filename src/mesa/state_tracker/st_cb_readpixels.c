@@ -192,8 +192,9 @@ try_pbo_readpixels(struct st_context *st, struct st_renderbuffer *strb,
       image.resource = addr.buffer;
       image.format = dst_format;
       image.access = PIPE_IMAGE_ACCESS_WRITE;
-      image.u.buf.first_element = addr.first_element;
-      image.u.buf.last_element = addr.last_element;
+      image.u.buf.offset = addr.first_element * addr.bytes_per_pixel;
+      image.u.buf.size = (addr.last_element - addr.first_element + 1) *
+                         addr.bytes_per_pixel;
 
       cso_set_shader_images(cso, PIPE_SHADER_FRAGMENT, 0, 1, &image);
    }

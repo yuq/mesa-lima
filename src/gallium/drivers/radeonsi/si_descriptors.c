@@ -600,17 +600,12 @@ static void
 si_mark_image_range_valid(const struct pipe_image_view *view)
 {
 	struct r600_resource *res = (struct r600_resource *)view->resource;
-	const struct util_format_description *desc;
-	unsigned stride;
 
 	assert(res && res->b.b.target == PIPE_BUFFER);
 
-	desc = util_format_description(view->format);
-	stride = desc->block.bits / 8;
-
 	util_range_add(&res->valid_buffer_range,
-		       stride * (view->u.buf.first_element),
-		       stride * (view->u.buf.last_element + 1));
+		       view->u.buf.offset,
+		       view->u.buf.offset + view->u.buf.size);
 }
 
 static void si_set_shader_image(struct si_context *ctx,
@@ -641,11 +636,8 @@ static void si_set_shader_image(struct si_context *ctx,
 
 		si_make_buffer_descriptor(screen, res,
 					  view->format,
-					  view->u.buf.first_element *
-					  util_format_get_blocksize(view->format),
-					  (view->u.buf.last_element -
-					   view->u.buf.first_element + 1) *
-					  util_format_get_blocksize(view->format),
+					  view->u.buf.offset,
+					  view->u.buf.size,
 					  descs->list + slot * 8);
 		images->compressed_colortex_mask &= ~(1 << slot);
 	} else {
