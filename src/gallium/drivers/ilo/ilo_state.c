@@ -2015,9 +2015,8 @@ ilo_create_sampler_view(struct pipe_context *pipe,
 
       memset(&info, 0, sizeof(info));
       info.vma = ilo_resource_get_vma(res);
-      info.offset = templ->u.buf.first_element * info.struct_size;
-      info.size = (templ->u.buf.last_element -
-            templ->u.buf.first_element + 1) * info.struct_size;
+      info.offset = templ->u.buf.offset;
+      info.size = templ->u.buf.size;
       info.access = ILO_STATE_SURFACE_ACCESS_SAMPLER;
       info.format = ilo_format_translate_color(dev, templ->format);
       info.format_size = util_format_get_blocksize(templ->format);

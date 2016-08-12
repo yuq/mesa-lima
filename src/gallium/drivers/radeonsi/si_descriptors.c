@@ -641,8 +641,11 @@ static void si_set_shader_image(struct si_context *ctx,
 
 		si_make_buffer_descriptor(screen, res,
 					  view->format,
-					  view->u.buf.first_element,
-					  view->u.buf.last_element,
+					  view->u.buf.first_element *
+					  util_format_get_blocksize(view->format),
+					  (view->u.buf.last_element -
+					   view->u.buf.first_element + 1) *
+					  util_format_get_blocksize(view->format),
 					  descs->list + slot * 8);
 		images->compressed_colortex_mask &= ~(1 << slot);
 	} else {

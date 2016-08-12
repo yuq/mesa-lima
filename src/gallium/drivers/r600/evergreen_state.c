@@ -613,8 +613,8 @@ texture_buffer_sampler_view(struct r600_context *rctx,
 	unsigned swizzle_res;
 	unsigned char swizzle[4];
 	const struct util_format_description *desc;
-	unsigned offset = view->base.u.buf.first_element * stride;
-	unsigned size = (view->base.u.buf.last_element - view->base.u.buf.first_element + 1) * stride;
+	unsigned offset = view->base.u.buf.offset;
+	unsigned size = view->base.u.buf.size;
 
 	swizzle[0] = view->base.swizzle_r;
 	swizzle[1] = view->base.swizzle_g;

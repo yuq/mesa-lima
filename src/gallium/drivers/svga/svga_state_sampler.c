@@ -30,6 +30,7 @@
 
 #include "pipe/p_defines.h"
 #include "util/u_bitmask.h"
+#include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
@@ -125,9 +126,10 @@ svga_validate_pipe_sampler_view(struct svga_context *svga,
       format = svga_sampler_format(format);
 
       if (texture->target == PIPE_BUFFER) {
-         viewDesc.buffer.firstElement = sv->base.u.buf.first_element;
-         viewDesc.buffer.numElements = (sv->base.u.buf.last_element -
-                                        sv->base.u.buf.first_element + 1);
+         unsigned elem_size = util_format_get_blocksize(sv->base.format);
+
+         viewDesc.buffer.firstElement = sv->base.u.buf.offset / elem_size;
+         viewDesc.buffer.numElements = sv->base.u.buf.size / elem_size;
       }
       else {
          viewDesc.tex.mostDetailedMip = sv->base.u.tex.first_level;

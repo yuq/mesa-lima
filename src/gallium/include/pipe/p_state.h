@@ -428,8 +428,8 @@ struct pipe_sampler_view
          unsigned last_level:8;    /**< last mipmap level to use */
       } tex;
       struct {
-         unsigned first_element;
-         unsigned last_element;
+         unsigned offset;   /**< offset in bytes */
+         unsigned size;     /**< size of the readable sub-range in bytes */
       } buf;
    } u;
    unsigned swizzle_r:3;         /**< PIPE_SWIZZLE_x for red component */

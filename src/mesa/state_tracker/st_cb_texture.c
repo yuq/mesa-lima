@@ -1163,8 +1163,9 @@ try_pbo_upload_common(struct gl_context *ctx,
       memset(&templ, 0, sizeof(templ));
       templ.target = PIPE_BUFFER;
       templ.format = src_format;
-      templ.u.buf.first_element = addr->first_element;
-      templ.u.buf.last_element = addr->last_element;
+      templ.u.buf.offset = addr->first_element * addr->bytes_per_pixel;
+      templ.u.buf.size = (addr->last_element - addr->first_element + 1) *
+                         addr->bytes_per_pixel;
       templ.swizzle_r = PIPE_SWIZZLE_X;
       templ.swizzle_g = PIPE_SWIZZLE_Y;
       templ.swizzle_b = PIPE_SWIZZLE_Z;

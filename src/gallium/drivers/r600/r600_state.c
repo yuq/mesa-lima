@@ -631,8 +631,8 @@ texture_buffer_sampler_view(struct r600_pipe_sampler_view *view,
 	struct r600_texture *tmp = (struct r600_texture*)view->base.texture;
 	int stride = util_format_get_blocksize(view->base.format);
 	unsigned format, num_format, format_comp, endian;
-	uint64_t offset = view->base.u.buf.first_element * stride;
-	unsigned size = (view->base.u.buf.last_element - view->base.u.buf.first_element + 1) * stride;
+	uint64_t offset = view->base.u.buf.offset;
+	unsigned size = view->base.u.buf.size;
 
 	r600_vertex_data_type(view->base.format,
 			      &format, &num_format, &format_comp,

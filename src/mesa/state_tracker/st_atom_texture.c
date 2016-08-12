@@ -279,21 +279,16 @@ st_create_texture_sampler_view_from_stobj(struct st_context *st,
 
    if (stObj->pt->target == PIPE_BUFFER) {
       unsigned base, size;
-      unsigned f, n;
-      const struct util_format_description *desc
-         = util_format_description(templ.format);
 
       base = stObj->base.BufferOffset;
       if (base >= stObj->pt->width0)
          return NULL;
       size = MIN2(stObj->pt->width0 - base, (unsigned)stObj->base.BufferSize);
-
-      f = (base / (desc->block.bits / 8)) * desc->block.width;
-      n = (size / (desc->block.bits / 8)) * desc->block.width;
-      if (!n)
+      if (!size)
          return NULL;
-      templ.u.buf.first_element = f;
-      templ.u.buf.last_element  = f + (n - 1);
+
+      templ.u.buf.offset = base;
+      templ.u.buf.size = size;
    } else {
       templ.u.tex.first_level = stObj->base.MinLevel + stObj->base.BaseLevel;
       templ.u.tex.last_level = last_level(stObj);

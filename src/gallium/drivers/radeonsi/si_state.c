@@ -2644,7 +2644,7 @@ static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 void
 si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 			  enum pipe_format format,
-			  unsigned first_element, unsigned last_element,
+			  unsigned offset, unsigned size,
 			  uint32_t *state)
 {
 	const struct util_format_description *desc;
@@ -2657,11 +2657,11 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 	desc = util_format_description(format);
 	first_non_void = util_format_get_first_non_void_channel(format);
 	stride = desc->block.bits / 8;
-	va = buf->gpu_address + first_element * stride;
+	va = buf->gpu_address + offset;
 	num_format = si_translate_buffer_numformat(&screen->b.b, desc, first_non_void);
 	data_format = si_translate_buffer_dataformat(&screen->b.b, desc, first_non_void);
 
-	num_records = last_element + 1 - first_element;
+	num_records = size / stride;
 	num_records = MIN2(num_records, buf->b.b.width0 / stride);
 
 	if (screen->b.chip_class >= VI)
@@ -2960,8 +2960,8 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 		si_make_buffer_descriptor(sctx->screen,
 					  (struct r600_resource *)texture,
 					  state->format,
-					  state->u.buf.first_element,
-					  state->u.buf.last_element,
+					  state->u.buf.offset,
+					  state->u.buf.size,
 					  view->state);
 
 		LIST_ADDTAIL(&view->list, &sctx->b.texture_buffers);

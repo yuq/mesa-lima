@@ -313,7 +313,7 @@ void si_init_screen_state_functions(struct si_screen *sscreen);
 void
 si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 			  enum pipe_format format,
-			  unsigned first_element, unsigned last_element,
+			  unsigned offset, unsigned size,
 			  uint32_t *state);
 void
 si_make_texture_descriptor(struct si_screen *screen,

@@ -889,8 +889,8 @@ lp_setup_set_fragment_sampler_views(struct lp_setup_context *setup,
                }
                else {
                   /*
-                   * For buffers, we don't have first_element, instead adjust
-                   * last_element (stored as width) plus the base pointer.
+                   * For buffers, we don't have "offset", instead adjust
+                   * the size (stored as width) plus the base pointer.
                    */
                   unsigned view_blocksize = util_format_get_blocksize(view->format);
                   /* probably don't really need to fill that out */
@@ -899,12 +899,10 @@ lp_setup_set_fragment_sampler_views(struct lp_setup_context *setup,
                   jit_tex->img_stride[0] = 0;
 
                   /* everything specified in number of elements here. */
-                  jit_tex->width = view->u.buf.last_element - view->u.buf.first_element + 1;
-                  jit_tex->base = (uint8_t *)jit_tex->base + view->u.buf.first_element *
-                                  view_blocksize;
+                  jit_tex->width = view->u.buf.size / view_blocksize;
+                  jit_tex->base = (uint8_t *)jit_tex->base + view->u.buf.offset;
                   /* XXX Unsure if we need to sanitize parameters? */
-                  assert(view->u.buf.first_element <= view->u.buf.last_element);
-                  assert(view->u.buf.last_element * view_blocksize < res->width0);
+                  assert(view->u.buf.offset + view->u.buf.size <= res->width0);
                }
             }
          }
