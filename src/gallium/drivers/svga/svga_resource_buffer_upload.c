@@ -620,6 +620,7 @@ svga_buffer_update_hw(struct svga_context *svga, struct svga_buffer *sbuf)
       enum pipe_error ret;
       boolean retry;
       void *map;
+      unsigned i;
 
       assert(sbuf->swbuf);
       if (!sbuf->swbuf)
@@ -639,7 +640,13 @@ svga_buffer_update_hw(struct svga_context *svga, struct svga_buffer *sbuf)
          return PIPE_ERROR;
       }
 
-      memcpy(map, sbuf->swbuf, sbuf->b.b.width0);
+      /* Copy data from malloc'd swbuf to the new hardware buffer */
+      for (i = 0; i < sbuf->map.num_ranges; i++) {
+         unsigned start = sbuf->map.ranges[i].start;
+         unsigned len = sbuf->map.ranges[i].end - start;
+         memcpy((uint8_t *) map + start, (uint8_t *) sbuf->swbuf + start, len);
+      }
+
       svga_buffer_hw_storage_unmap(svga, sbuf);
 
       /* This user/malloc buffer is now indistinguishable from a gpu buffer */
