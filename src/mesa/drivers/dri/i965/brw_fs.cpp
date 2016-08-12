@@ -4091,16 +4091,6 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
 
    bool coordinate_done = false;
 
-   /* The sampler can only meaningfully compute LOD for fragment shader
-    * messages. For all other stages, we change the opcode to TXL and
-    * hardcode the LOD to 0.
-    */
-   if (bld.shader->stage != MESA_SHADER_FRAGMENT &&
-       op == SHADER_OPCODE_TEX) {
-      op = SHADER_OPCODE_TXL;
-      lod = brw_imm_f(0.0f);
-   }
-
    /* Set up the LOD info */
    switch (op) {
    case FS_OPCODE_TXB:
