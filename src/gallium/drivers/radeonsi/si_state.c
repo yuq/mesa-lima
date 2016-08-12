@@ -2662,7 +2662,7 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 	data_format = si_translate_buffer_dataformat(&screen->b.b, desc, first_non_void);
 
 	num_records = size / stride;
-	num_records = MIN2(num_records, buf->b.b.width0 / stride);
+	num_records = MIN2(num_records, (buf->b.b.width0 - offset) / stride);
 
 	if (screen->b.chip_class >= VI)
 		num_records *= stride;
