@@ -1407,11 +1407,15 @@ fs_instruction_scheduler::choose_instruction_to_schedule()
    if (mode == SCHEDULE_PRE || mode == SCHEDULE_POST) {
       int chosen_time = 0;
 
-      /* Of the instructions ready to execute or the closest to
-       * being ready, choose the oldest one.
+      /* Of the instructions ready to execute or the closest to being ready,
+       * choose the one most likely to unblock an early program exit, or
+       * otherwise the oldest one.
        */
       foreach_in_list(schedule_node, n, &instructions) {
-         if (!chosen || n->unblocked_time < chosen_time) {
+         if (!chosen ||
+             exit_unblocked_time(n) < exit_unblocked_time(chosen) ||
+             (exit_unblocked_time(n) == exit_unblocked_time(chosen) &&
+              n->unblocked_time < chosen_time)) {
             chosen = n;
             chosen_time = n->unblocked_time;
          }
@@ -1497,6 +1501,15 @@ fs_instruction_scheduler::choose_instruction_to_schedule()
             chosen = n;
             continue;
          } else if (n->delay < chosen->delay) {
+            continue;
+         }
+
+         /* Prefer the node most likely to unblock an early program exit.
+          */
+         if (exit_unblocked_time(n) < exit_unblocked_time(chosen)) {
+            chosen = n;
+            continue;
+         } else if (exit_unblocked_time(n) > exit_unblocked_time(chosen)) {
             continue;
          }
 
