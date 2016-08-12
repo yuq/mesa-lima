@@ -86,6 +86,8 @@ svga_get_name( struct pipe_screen *pscreen )
     */
    build = "build: DEBUG;";
    mutex = "mutex: " PIPE_ATOMIC ";";
+#elif defined(VMX86_STATS)
+   build = "build: OPT;";
 #else
    build = "build: RELEASE;";
 #endif
