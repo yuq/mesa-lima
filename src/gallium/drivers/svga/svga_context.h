@@ -332,21 +332,28 @@ struct svga_hw_view_state
  */
 struct svga_hw_draw_state
 {
+   /** VGPU9 rasterization state */
    unsigned rs[SVGA3D_RS_MAX];
+   /** VGPU9 texture sampler and bindings state */
    unsigned ts[SVGA3D_PIXEL_SAMPLERREG_MAX][SVGA3D_TS_MAX];
+   /** VGPU9 texture views */
+   unsigned num_views;
+   struct svga_hw_view_state views[PIPE_MAX_SAMPLERS];
+   /** VGPU9 constant buffer values */
    float cb[PIPE_SHADER_TYPES][SVGA3D_CONSTREG_MAX][4];
 
+   /** Currently bound shaders */
    struct svga_shader_variant *fs;
    struct svga_shader_variant *vs;
    struct svga_shader_variant *gs;
-   struct svga_hw_view_state views[PIPE_MAX_SAMPLERS];
-   unsigned num_views;
+
+   /** Currently bound constant buffer, per shader stage */
    struct pipe_resource *constbuf[PIPE_SHADER_TYPES];
 
-   /* Bitmask of enabled constant bufffers */
+   /** Bitmask of enabled constant buffers */
    unsigned enabled_constbufs[PIPE_SHADER_TYPES];
 
-   /* VGPU10 HW state (used to prevent emitting redundant state) */
+   /** VGPU10 HW state (used to prevent emitting redundant state) */
    SVGA3dDepthStencilStateId depth_stencil_id;
    unsigned stencil_ref;
    SVGA3dBlendStateId blend_id;
