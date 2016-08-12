@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include <X11/Xlib-xcb.h>
 #include <X11/xshmfence.h>
 #include <xcb/xcb.h>
 #include <xcb/dri3.h>
@@ -256,16 +257,47 @@ VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
    return true;
 }
 
+VkBool32 anv_GetPhysicalDeviceXlibPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    Display*                                    dpy,
+    VisualID                                    visualID)
+{
+   return anv_GetPhysicalDeviceXcbPresentationSupportKHR(physicalDevice,
+                                                         queueFamilyIndex,
+                                                         XGetXCBConnection(dpy),
+                                                         visualID);
+}
+
+static xcb_connection_t*
+x11_surface_get_connection(VkIcdSurfaceBase *icd_surface)
+{
+   if (icd_surface->platform == VK_ICD_WSI_PLATFORM_XLIB)
+      return XGetXCBConnection(((VkIcdSurfaceXlib *)icd_surface)->dpy);
+   else
+      return ((VkIcdSurfaceXcb *)icd_surface)->connection;
+}
+
+static xcb_window_t
+x11_surface_get_window(VkIcdSurfaceBase *icd_surface)
+{
+   if (icd_surface->platform == VK_ICD_WSI_PLATFORM_XLIB)
+      return ((VkIcdSurfaceXlib *)icd_surface)->window;
+   else
+      return ((VkIcdSurfaceXcb *)icd_surface)->window;
+}
+
 static VkResult
 x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
                         struct anv_physical_device *device,
                         uint32_t queueFamilyIndex,
                         VkBool32* pSupported)
 {
-   VkIcdSurfaceXcb *surface = (VkIcdSurfaceXcb *)icd_surface;
+   xcb_connection_t *conn = x11_surface_get_connection(icd_surface);
+   xcb_window_t window = x11_surface_get_window(icd_surface);
 
    struct wsi_x11_connection *wsi_conn =
-      wsi_x11_get_connection(device, surface->connection);
+      wsi_x11_get_connection(device, conn);
    if (!wsi_conn)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -276,8 +308,7 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
    }
 
    unsigned visual_depth;
-   if (!get_visualtype_for_window(surface->connection, surface->window,
-                                  &visual_depth)) {
+   if (!get_visualtype_for_window(conn, window, &visual_depth)) {
       *pSupported = false;
       return VK_SUCCESS;
    }
@@ -296,22 +327,22 @@ x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
                              struct anv_physical_device *device,
                              VkSurfaceCapabilitiesKHR *caps)
 {
-   VkIcdSurfaceXcb *surface = (VkIcdSurfaceXcb *)icd_surface;
+   xcb_connection_t *conn = x11_surface_get_connection(icd_surface);
+   xcb_window_t window = x11_surface_get_window(icd_surface);
    xcb_get_geometry_cookie_t geom_cookie;
    xcb_generic_error_t *err;
    xcb_get_geometry_reply_t *geom;
    unsigned visual_depth;
 
-   geom_cookie = xcb_get_geometry(surface->connection, surface->window);
+   geom_cookie = xcb_get_geometry(conn, window);
 
    /* This does a round-trip.  This is why we do get_geometry first and
     * wait to read the reply until after we have a visual.
     */
    xcb_visualtype_t *visual =
-      get_visualtype_for_window(surface->connection, surface->window,
-                                &visual_depth);
+      get_visualtype_for_window(conn, window, &visual_depth);
 
-   geom = xcb_get_geometry_reply(surface->connection, geom_cookie, &err);
+   geom = xcb_get_geometry_reply(conn, geom_cookie, &err);
    if (geom) {
       VkExtent2D extent = { geom->width, geom->height };
       caps->currentExtent = extent;
@@ -413,6 +444,32 @@ VkResult anv_CreateXcbSurfaceKHR(
 
    surface->base.platform = VK_ICD_WSI_PLATFORM_XCB;
    surface->connection = pCreateInfo->connection;
+   surface->window = pCreateInfo->window;
+
+   *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_CreateXlibSurfaceKHR(
+    VkInstance                                  _instance,
+    const VkXlibSurfaceCreateInfoKHR*           pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR);
+
+   VkIcdSurfaceXlib *surface;
+
+   surface = anv_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
+                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (surface == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   surface->base.platform = VK_ICD_WSI_PLATFORM_XLIB;
+   surface->dpy = pCreateInfo->dpy;
    surface->window = pCreateInfo->window;
 
    *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
@@ -752,7 +809,6 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                              const VkAllocationCallbacks* pAllocator,
                              struct anv_swapchain **swapchain_out)
 {
-   VkIcdSurfaceXcb *surface = (VkIcdSurfaceXcb *)icd_surface;
    struct x11_swapchain *chain;
    xcb_void_cookie_t cookie;
    VkResult result;
@@ -782,8 +838,8 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.acquire_next_image = x11_acquire_next_image;
    chain->base.queue_present = x11_queue_present;
 
-   chain->conn = surface->connection;
-   chain->window = surface->window;
+   chain->conn = x11_surface_get_connection(icd_surface);
+   chain->window = x11_surface_get_window(icd_surface);
    chain->extent = pCreateInfo->imageExtent;
    chain->image_count = num_images;
 
@@ -877,6 +933,7 @@ anv_x11_init_wsi(struct anv_physical_device *device)
    wsi->base.create_swapchain = x11_surface_create_swapchain;
 
    device->wsi[VK_ICD_WSI_PLATFORM_XCB] = &wsi->base;
+   device->wsi[VK_ICD_WSI_PLATFORM_XLIB] = &wsi->base;
 
    return VK_SUCCESS;
 
@@ -886,6 +943,7 @@ fail_alloc:
    anv_free(&device->instance->alloc, wsi);
 fail:
    device->wsi[VK_ICD_WSI_PLATFORM_XCB] = NULL;
+   device->wsi[VK_ICD_WSI_PLATFORM_XLIB] = NULL;
 
    return result;
 }

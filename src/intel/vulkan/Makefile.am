@@ -85,7 +85,8 @@ VULKAN_LIB_DEPS =
 if HAVE_PLATFORM_X11
 AM_CPPFLAGS += \
 	$(XCB_DRI3_CFLAGS) \
-	-DVK_USE_PLATFORM_XCB_KHR
+	-DVK_USE_PLATFORM_XCB_KHR \
+	-DVK_USE_PLATFORM_XLIB_KHR
 
 VULKAN_SOURCES += $(VULKAN_WSI_X11_FILES)
 VULKAN_LIB_DEPS += $(XCB_DRI3_LIBS)
@@ -145,7 +146,7 @@ EXTRA_DIST = \
 	dev_icd.json.in \
 	intel_icd.json
 
-libvulkan_intel_la_LIBADD = $(VULKAN_LIB_DEPS)
+libvulkan_intel_la_LIBADD = $(VULKAN_LIB_DEPS) -lX11-xcb
 
 libvulkan_intel_la_LDFLAGS = \
 	-shared \
@@ -168,7 +169,7 @@ dev_icd.json : dev_icd.json.in
 
 # Libvulkan with dummy gem. Used for unit tests.
 libvulkan_test_la_SOURCES = $(VULKAN_GEM_STUB_FILES)
-libvulkan_test_la_LIBADD = $(VULKAN_LIB_DEPS)
+libvulkan_test_la_LIBADD = $(VULKAN_LIB_DEPS) -lX11-xcb
 
 include $(top_srcdir)/install-lib-links.mk
 
