@@ -29,6 +29,7 @@
 
 #include <string.h>
 #include <type_traits>
+#include <algorithm>
 #include "common/os.h"
 #include "common/simdintrin.h"
 #include "common/swr_assert.h"
@@ -94,6 +95,23 @@ OSALIGNLINE(struct) BBOX
     bool operator!=(const BBOX& rhs)
     {
         return !(*this == rhs);
+    }
+
+    BBOX& Intersect(const BBOX& other)
+    {
+        this->top = std::max(this->top, other.top);
+        this->bottom = std::min(this->bottom, other.bottom);
+        this->left = std::max(this->left, other.left);
+        this->right = std::min(this->right, other.right);
+
+        if (right - left < 0 ||
+            bottom - top < 0)
+        {
+            // Zero area
+            top = bottom = left = right = 0;
+        }
+
+        return *this;
     }
 };
 
