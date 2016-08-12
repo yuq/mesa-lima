@@ -1475,6 +1475,7 @@ generate_code(struct brw_codegen *p,
       intel_debug_flag_for_shader_stage(nir->stage);
    struct annotation_info annotation;
    memset(&annotation, 0, sizeof(annotation));
+   int spill_count = 0, fill_count = 0;
    int loop_count = 0;
 
    foreach_block_and_inst (block, vec4_instruction, inst, cfg) {
@@ -1758,10 +1759,12 @@ generate_code(struct brw_codegen *p,
 
       case SHADER_OPCODE_GEN4_SCRATCH_READ:
          generate_scratch_read(p, inst, dst, src[0]);
+         fill_count++;
          break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
          generate_scratch_write(p, inst, dst, src[0], src[1]);
+         spill_count++;
          break;
 
       case VS_OPCODE_PULL_CONSTANT_LOAD:
@@ -2068,10 +2071,10 @@ generate_code(struct brw_codegen *p,
               nir->info.label ? nir->info.label : "unnamed",
               _mesa_shader_stage_to_string(nir->stage), nir->info.name);
 
-      fprintf(stderr, "%s vec4 shader: %d instructions. %d loops. %u cycles."
-                      "Compacted %d to %d bytes (%.0f%%)\n",
-              stage_abbrev,
-              before_size / 16, loop_count, cfg->cycle_count, before_size, after_size,
+      fprintf(stderr, "%s vec4 shader: %d instructions. %d loops. %u cycles. %d:%d "
+                      "spills:fills. Compacted %d to %d bytes (%.0f%%)\n",
+              stage_abbrev, before_size / 16, loop_count, cfg->cycle_count,
+              spill_count, fill_count, before_size, after_size,
               100.0f * (before_size - after_size) / before_size);
 
       dump_assembly(p->store, annotation.ann_count, annotation.ann,
@@ -2082,10 +2085,11 @@ generate_code(struct brw_codegen *p,
 
    compiler->shader_debug_log(log_data,
                               "%s vec4 shader: %d inst, %d loops, %u cycles, "
-                              "compacted %d to %d bytes.",
+                              "%d:%d spills:fills, compacted %d to %d bytes.",
                               stage_abbrev, before_size / 16,
-                              loop_count, cfg->cycle_count,
-                              before_size, after_size);
+                              loop_count, cfg->cycle_count, spill_count,
+                              fill_count, before_size, after_size);
+
 }
 
 extern "C" const unsigned *
