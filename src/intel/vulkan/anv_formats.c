@@ -507,25 +507,15 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       sampleCounts = isl_device_get_sample_counts(&physical_device->isl_dev);
    }
 
-   if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
-      /* Meta implements transfers by sampling from the source image. */
-      if (!(format_feature_flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+   if (usage & (VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
+      /* Accept transfers on anything we can sample from or renderer to. */
+      if (!(format_feature_flags & (VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+                                    VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                                    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))) {
          goto unsupported;
       }
    }
-
-#if 0
-   if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
-      if (anv_format_for_vk_format(format)->has_stencil) {
-         /* Not yet implemented because copying to a W-tiled surface is crazy
-          * hard.
-          */
-         anv_finishme("support VK_IMAGE_USAGE_TRANSFER_DST_BIT for "
-                      "stencil format");
-         goto unsupported;
-      }
-   }
-#endif
 
    if (usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       if (!(format_feature_flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
