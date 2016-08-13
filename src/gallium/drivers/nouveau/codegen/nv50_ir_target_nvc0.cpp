@@ -615,6 +615,12 @@ bool TargetNVC0::canDualIssue(const Instruction *a, const Instruction *b) const
       // not if the 2nd instruction isn't necessarily executed
       if (clA == OPCLASS_TEXTURE || clA == OPCLASS_FLOW)
          return false;
+
+      // Check that a and b don't write to the same sources, nor that b reads
+      // anything that a writes.
+      if (!a->canCommuteDefDef(b) || !a->canCommuteDefSrc(b))
+         return false;
+
       // anything with MOV
       if (a->op == OP_MOV || b->op == OP_MOV)
          return true;

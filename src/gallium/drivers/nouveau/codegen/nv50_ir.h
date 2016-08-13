@@ -834,6 +834,10 @@ public:
    bool isActionEqual(const Instruction *) const;
    bool isResultEqual(const Instruction *) const;
 
+   // check whether the defs interfere with srcs and defs of another instruction
+   bool canCommuteDefDef(const Instruction *) const;
+   bool canCommuteDefSrc(const Instruction *) const;
+
    void print() const;
 
    inline CmpInstruction *asCmp();
