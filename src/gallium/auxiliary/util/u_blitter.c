@@ -283,6 +283,7 @@ struct blitter_context *util_blitter_create(struct pipe_context *pipe)
       ctx->rs_discard_state = pipe->create_rasterizer_state(pipe, &rs_state);
    }
 
+   ctx->base.cb_slot = 0; /* 0 for now */
    ctx->base.vb_slot = 0; /* 0 for now */
 
    /* vertex elements states */
@@ -696,6 +697,15 @@ void util_blitter_restore_textures(struct blitter_context *blitter)
       pipe_sampler_view_reference(&ctx->base.saved_sampler_views[i], NULL);
 
    ctx->base.saved_num_sampler_views = ~0;
+}
+
+void util_blitter_restore_constant_buffer_state(struct blitter_context *blitter)
+{
+   struct pipe_context *pipe = blitter->pipe;
+
+   pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, blitter->cb_slot,
+                            &blitter->saved_fs_constant_buffer);
+   pipe_resource_reference(&blitter->saved_fs_constant_buffer.buffer, NULL);
 }
 
 static void blitter_set_rectangle(struct blitter_context_priv *ctx,
