@@ -2,6 +2,7 @@
 #include "util/u_format.h"
 #include "util/u_framebuffer.h"
 #include "util/u_math.h"
+#include "util/u_viewport.h"
 
 #include "nvc0/nvc0_context.h"
 
@@ -329,8 +330,12 @@ nvc0_validate_viewport(struct nvc0_context *nvc0)
       PUSH_DATA (push, (w << 16) | x);
       PUSH_DATA (push, (h << 16) | y);
 
-      zmin = vp->translate[2] - fabsf(vp->scale[2]);
-      zmax = vp->translate[2] + fabsf(vp->scale[2]);
+      /* If the halfz setting ever changes, the viewports will also get
+       * updated. The rast will get updated before the validate function has a
+       * chance to hit, so we can just use it directly without an atom
+       * dependency.
+       */
+      util_viewport_zmin_zmax(vp, nvc0->rast->pipe.clip_halfz, &zmin, &zmax);
 
       BEGIN_NVC0(push, NVC0_3D(DEPTH_RANGE_NEAR(i)), 2);
       PUSH_DATAf(push, zmin);
