@@ -48,6 +48,6 @@ void GLAPIENTRY
 _mesa_MemoryBarrierByRegion(GLbitfield barriers);
 
 void GLAPIENTRY
-_mesa_BlendBarrierMESA(void);
+_mesa_BlendBarrier(void);
 
 #endif /* BARRIER_H */

@@ -110,7 +110,7 @@ _mesa_MemoryBarrierByRegion(GLbitfield barriers)
 }
 
 void GLAPIENTRY
-_mesa_BlendBarrierMESA(void)
+_mesa_BlendBarrier(void)
 {
    GET_CURRENT_CONTEXT(ctx);
 
