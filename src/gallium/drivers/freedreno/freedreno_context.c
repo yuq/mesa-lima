@@ -150,6 +150,82 @@ fd_set_debug_callback(struct pipe_context *pctx,
 		memset(&ctx->debug, 0, sizeof(ctx->debug));
 }
 
+/* TODO we could combine a few of these small buffers (solid_vbuf,
+ * blit_texcoord_vbuf, and vsc_size_mem, into a single buffer and
+ * save a tiny bit of memory
+ */
+
+static struct pipe_resource *
+create_solid_vertexbuf(struct pipe_context *pctx)
+{
+	static const float init_shader_const[] = {
+			-1.000000, +1.000000, +1.000000,
+			+1.000000, -1.000000, +1.000000,
+	};
+	struct pipe_resource *prsc = pipe_buffer_create(pctx->screen,
+			PIPE_BIND_CUSTOM, PIPE_USAGE_IMMUTABLE, sizeof(init_shader_const));
+	pipe_buffer_write(pctx, prsc, 0,
+			sizeof(init_shader_const), init_shader_const);
+	return prsc;
+}
+
+static struct pipe_resource *
+create_blit_texcoord_vertexbuf(struct pipe_context *pctx)
+{
+	struct pipe_resource *prsc = pipe_buffer_create(pctx->screen,
+			PIPE_BIND_CUSTOM, PIPE_USAGE_DYNAMIC, 16);
+	return prsc;
+}
+
+void
+fd_context_setup_common_vbos(struct fd_context *ctx)
+{
+	struct pipe_context *pctx = &ctx->base;
+
+	ctx->solid_vbuf = create_solid_vertexbuf(pctx);
+	ctx->blit_texcoord_vbuf = create_blit_texcoord_vertexbuf(pctx);
+
+	/* setup solid_vbuf_state: */
+	ctx->solid_vbuf_state.vtx = pctx->create_vertex_elements_state(
+			pctx, 1, (struct pipe_vertex_element[]){{
+				.vertex_buffer_index = 0,
+				.src_offset = 0,
+				.src_format = PIPE_FORMAT_R32G32B32_FLOAT,
+			}});
+	ctx->solid_vbuf_state.vertexbuf.count = 1;
+	ctx->solid_vbuf_state.vertexbuf.vb[0].stride = 12;
+	ctx->solid_vbuf_state.vertexbuf.vb[0].buffer = ctx->solid_vbuf;
+
+	/* setup blit_vbuf_state: */
+	ctx->blit_vbuf_state.vtx = pctx->create_vertex_elements_state(
+			pctx, 2, (struct pipe_vertex_element[]){{
+				.vertex_buffer_index = 0,
+				.src_offset = 0,
+				.src_format = PIPE_FORMAT_R32G32_FLOAT,
+			}, {
+				.vertex_buffer_index = 1,
+				.src_offset = 0,
+				.src_format = PIPE_FORMAT_R32G32B32_FLOAT,
+			}});
+	ctx->blit_vbuf_state.vertexbuf.count = 2;
+	ctx->blit_vbuf_state.vertexbuf.vb[0].stride = 8;
+	ctx->blit_vbuf_state.vertexbuf.vb[0].buffer = ctx->blit_texcoord_vbuf;
+	ctx->blit_vbuf_state.vertexbuf.vb[1].stride = 12;
+	ctx->blit_vbuf_state.vertexbuf.vb[1].buffer = ctx->solid_vbuf;
+}
+
+void
+fd_context_cleanup_common_vbos(struct fd_context *ctx)
+{
+	struct pipe_context *pctx = &ctx->base;
+
+	pctx->delete_vertex_elements_state(pctx, ctx->solid_vbuf_state.vtx);
+	pctx->delete_vertex_elements_state(pctx, ctx->blit_vbuf_state.vtx);
+
+	pipe_resource_reference(&ctx->solid_vbuf, NULL);
+	pipe_resource_reference(&ctx->blit_texcoord_vbuf, NULL);
+}
+
 struct pipe_context *
 fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 		const uint8_t *primtypes, void *priv)

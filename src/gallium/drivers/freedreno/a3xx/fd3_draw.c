@@ -207,11 +207,10 @@ reset_viewport(struct fd_ringbuffer *ring, struct pipe_framebuffer_state *pfb)
 static void
 fd3_clear_binning(struct fd_context *ctx, unsigned dirty)
 {
-	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct fd_ringbuffer *ring = ctx->batch->binning;
 	struct fd3_emit emit = {
 		.debug = &ctx->debug,
-		.vtx  = &fd3_ctx->solid_vbuf_state,
+		.vtx  = &ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {
 			.binning_pass = true,
@@ -247,14 +246,13 @@ static void
 fd3_clear(struct fd_context *ctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
 {
-	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 	struct fd_ringbuffer *ring = ctx->batch->draw;
 	unsigned dirty = ctx->dirty;
 	unsigned i;
 	struct fd3_emit emit = {
 		.debug = &ctx->debug,
-		.vtx  = &fd3_ctx->solid_vbuf_state,
+		.vtx  = &ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {
 			.half_precision = fd_half_precision(pfb),

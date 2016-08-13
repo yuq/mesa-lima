@@ -275,6 +275,27 @@ struct fd_context {
 
 	/* indirect-branch emit: */
 	void (*emit_ib)(struct fd_ringbuffer *ring, struct fd_ringbuffer *target);
+
+	/*
+	 * Common pre-cooked VBO state (used for a3xx and later):
+	 */
+
+	/* for clear/gmem->mem vertices, and mem->gmem */
+	struct pipe_resource *solid_vbuf;
+
+	/* for mem->gmem tex coords: */
+	struct pipe_resource *blit_texcoord_vbuf;
+
+	/* vertex state for solid_vbuf:
+	 *    - solid_vbuf / 12 / R32G32B32_FLOAT
+	 */
+	struct fd_vertex_state solid_vbuf_state;
+
+	/* vertex state for blit_prog:
+	 *    - blit_texcoord_vbuf / 8 / R32G32_FLOAT
+	 *    - solid_vbuf / 12 / R32G32B32_FLOAT
+	 */
+	struct fd_vertex_state blit_vbuf_state;
 };
 
 static inline struct fd_context *
@@ -314,6 +335,9 @@ fd_supported_prim(struct fd_context *ctx, unsigned prim)
 {
 	return (1 << prim) & ctx->primtype_mask;
 }
+
+void fd_context_setup_common_vbos(struct fd_context *ctx);
+void fd_context_cleanup_common_vbos(struct fd_context *ctx);
 
 struct pipe_context * fd_context_init(struct fd_context *ctx,
 		struct pipe_screen *pscreen, const uint8_t *primtypes,

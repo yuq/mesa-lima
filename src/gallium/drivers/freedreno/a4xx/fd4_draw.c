@@ -217,11 +217,10 @@ reset_viewport(struct fd_ringbuffer *ring, struct pipe_framebuffer_state *pfb)
 static void
 fd4_clear_binning(struct fd_context *ctx, unsigned dirty)
 {
-	struct fd4_context *fd4_ctx = fd4_context(ctx);
 	struct fd_ringbuffer *ring = ctx->batch->binning;
 	struct fd4_emit emit = {
 		.debug = &ctx->debug,
-		.vtx  = &fd4_ctx->solid_vbuf_state,
+		.vtx  = &ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {
 			.binning_pass = true,
@@ -251,7 +250,6 @@ static void
 fd4_clear(struct fd_context *ctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
 {
-	struct fd4_context *fd4_ctx = fd4_context(ctx);
 	struct fd_ringbuffer *ring = ctx->batch->draw;
 	struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 	unsigned char mrt_comp[A4XX_MAX_RENDER_TARGETS] = {0};
@@ -259,7 +257,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 	unsigned i;
 	struct fd4_emit emit = {
 		.debug = &ctx->debug,
-		.vtx  = &fd4_ctx->solid_vbuf_state,
+		.vtx  = &ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {
 			.half_precision = fd_half_precision(pfb),

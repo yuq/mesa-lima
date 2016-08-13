@@ -188,13 +188,12 @@ static void
 fd4_emit_tile_gmem2mem(struct fd_batch *batch, struct fd_tile *tile)
 {
 	struct fd_context *ctx = batch->ctx;
-	struct fd4_context *fd4_ctx = fd4_context(ctx);
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct fd_ringbuffer *ring = batch->gmem;
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct fd4_emit emit = {
 			.debug = &ctx->debug,
-			.vtx = &fd4_ctx->solid_vbuf_state,
+			.vtx = &ctx->solid_vbuf_state,
 			.prog = &ctx->solid_prog,
 			.key = {
 				.half_precision = true,
@@ -327,13 +326,12 @@ static void
 fd4_emit_tile_mem2gmem(struct fd_batch *batch, struct fd_tile *tile)
 {
 	struct fd_context *ctx = batch->ctx;
-	struct fd4_context *fd4_ctx = fd4_context(ctx);
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct fd_ringbuffer *ring = batch->gmem;
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct fd4_emit emit = {
 			.debug = &ctx->debug,
-			.vtx = &fd4_ctx->blit_vbuf_state,
+			.vtx = &ctx->blit_vbuf_state,
 			.sprite_coord_enable = 1,
 			/* NOTE: They all use the same VP, this is for vtx bufs. */
 			.prog = &ctx->blit_prog[0],
@@ -355,7 +353,7 @@ fd4_emit_tile_mem2gmem(struct fd_batch *batch, struct fd_tile *tile)
 	y1 = ((float)tile->yoff + bin_h) / ((float)pfb->height);
 
 	OUT_PKT3(ring, CP_MEM_WRITE, 5);
-	OUT_RELOCW(ring, fd_resource(fd4_ctx->blit_texcoord_vbuf)->bo, 0, 0, 0);
+	OUT_RELOCW(ring, fd_resource(ctx->blit_texcoord_vbuf)->bo, 0, 0, 0);
 	OUT_RING(ring, fui(x0));
 	OUT_RING(ring, fui(y0));
 	OUT_RING(ring, fui(x1));

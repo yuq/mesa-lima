@@ -158,12 +158,11 @@ static void
 emit_binning_workaround(struct fd_batch *batch)
 {
 	struct fd_context *ctx = batch->ctx;
-	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct fd_ringbuffer *ring = batch->gmem;
 	struct fd3_emit emit = {
 			.debug = &ctx->debug,
-			.vtx = &fd3_ctx->solid_vbuf_state,
+			.vtx = &ctx->solid_vbuf_state,
 			.prog = &ctx->solid_prog,
 			.key = {
 				.half_precision = true,
@@ -182,7 +181,7 @@ emit_binning_workaround(struct fd_batch *batch)
 	OUT_RING(ring, A3XX_RB_COPY_CONTROL_MSAA_RESOLVE(MSAA_ONE) |
 			A3XX_RB_COPY_CONTROL_MODE(0) |
 			A3XX_RB_COPY_CONTROL_GMEM_BASE(0));
-	OUT_RELOCW(ring, fd_resource(fd3_ctx->solid_vbuf)->bo, 0x20, 0, -1);  /* RB_COPY_DEST_BASE */
+	OUT_RELOCW(ring, fd_resource(ctx->solid_vbuf)->bo, 0x20, 0, -1);  /* RB_COPY_DEST_BASE */
 	OUT_RING(ring, A3XX_RB_COPY_DEST_PITCH_PITCH(128));
 	OUT_RING(ring, A3XX_RB_COPY_DEST_INFO_TILE(LINEAR) |
 			A3XX_RB_COPY_DEST_INFO_FORMAT(RB_R8G8B8A8_UNORM) |
@@ -351,12 +350,11 @@ static void
 fd3_emit_tile_gmem2mem(struct fd_batch *batch, struct fd_tile *tile)
 {
 	struct fd_context *ctx = batch->ctx;
-	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct fd_ringbuffer *ring = batch->gmem;
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct fd3_emit emit = {
 			.debug = &ctx->debug,
-			.vtx = &fd3_ctx->solid_vbuf_state,
+			.vtx = &ctx->solid_vbuf_state,
 			.prog = &ctx->solid_prog,
 			.key = {
 				.half_precision = true,
@@ -533,13 +531,12 @@ static void
 fd3_emit_tile_mem2gmem(struct fd_batch *batch, struct fd_tile *tile)
 {
 	struct fd_context *ctx = batch->ctx;
-	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct fd_ringbuffer *ring = batch->gmem;
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct fd3_emit emit = {
 			.debug = &ctx->debug,
-			.vtx = &fd3_ctx->blit_vbuf_state,
+			.vtx = &ctx->blit_vbuf_state,
 			.sprite_coord_enable = 1,
 			/* NOTE: They all use the same VP, this is for vtx bufs. */
 			.prog = &ctx->blit_prog[0],
@@ -559,7 +556,7 @@ fd3_emit_tile_mem2gmem(struct fd_batch *batch, struct fd_tile *tile)
 	y1 = ((float)tile->yoff + bin_h) / ((float)pfb->height);
 
 	OUT_PKT3(ring, CP_MEM_WRITE, 5);
-	OUT_RELOCW(ring, fd_resource(fd3_ctx->blit_texcoord_vbuf)->bo, 0, 0, 0);
+	OUT_RELOCW(ring, fd_resource(ctx->blit_texcoord_vbuf)->bo, 0, 0, 0);
 	OUT_RING(ring, fui(x0));
 	OUT_RING(ring, fui(y0));
 	OUT_RING(ring, fui(x1));
