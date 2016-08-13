@@ -542,6 +542,11 @@ util_blitter_save_render_condition(struct blitter_context *blitter,
    blitter->saved_render_cond_cond = condition;
 }
 
+void util_blitter_common_clear_setup(struct blitter_context *blitter,
+                                     unsigned width, unsigned height,
+                                     unsigned clear_buffers,
+                                     void *custom_blend, void *custom_dsa);
+
 void util_blitter_set_running_flag(struct blitter_context *blitter);
 void util_blitter_unset_running_flag(struct blitter_context *blitter);
 

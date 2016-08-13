@@ -1268,19 +1268,13 @@ static void *get_clear_blend_state(struct blitter_context_priv *ctx,
    return ctx->blend_clear[index];
 }
 
-static void util_blitter_clear_custom(struct blitter_context *blitter,
-                                      unsigned width, unsigned height,
-                                      unsigned num_layers,
-                                      unsigned clear_buffers,
-                                      const union pipe_color_union *color,
-                                      double depth, unsigned stencil,
-                                      void *custom_blend, void *custom_dsa)
+void util_blitter_common_clear_setup(struct blitter_context *blitter,
+                                     unsigned width, unsigned height,
+                                     unsigned clear_buffers,
+                                     void *custom_blend, void *custom_dsa)
 {
    struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = ctx->base.pipe;
-   struct pipe_stencil_ref sr = { { 0 } };
-
-   assert(ctx->has_layered || num_layers <= 1);
 
    util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
@@ -1306,14 +1300,32 @@ static void util_blitter_clear_custom(struct blitter_context *blitter,
       pipe->bind_depth_stencil_alpha_state(pipe, ctx->dsa_keep_depth_stencil);
    }
 
+   pipe->set_sample_mask(pipe, ~0);
+   blitter_set_dst_dimensions(ctx, width, height);
+}
+
+static void util_blitter_clear_custom(struct blitter_context *blitter,
+                                      unsigned width, unsigned height,
+                                      unsigned num_layers,
+                                      unsigned clear_buffers,
+                                      const union pipe_color_union *color,
+                                      double depth, unsigned stencil,
+                                      void *custom_blend, void *custom_dsa)
+{
+   struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
+   struct pipe_context *pipe = ctx->base.pipe;
+   struct pipe_stencil_ref sr = { { 0 } };
+
+   assert(ctx->has_layered || num_layers <= 1);
+
+   util_blitter_common_clear_setup(blitter, width, height, clear_buffers,
+                                   custom_blend, custom_dsa);
+
    sr.ref_value[0] = stencil & 0xff;
    pipe->set_stencil_ref(pipe, &sr);
 
    pipe->bind_vertex_elements_state(pipe, ctx->velem_state);
    bind_fs_write_all_cbufs(ctx);
-   pipe->set_sample_mask(pipe, ~0);
-
-   blitter_set_dst_dimensions(ctx, width, height);
 
    if (num_layers > 1 && ctx->has_layered) {
       blitter_set_common_draw_rect_state(ctx, FALSE, TRUE);
