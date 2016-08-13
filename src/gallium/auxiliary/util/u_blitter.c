@@ -510,26 +510,26 @@ void util_blitter_set_texture_multisample(struct blitter_context *blitter,
    ctx->has_texture_multisample = supported;
 }
 
-static void blitter_set_running_flag(struct blitter_context_priv *ctx)
+void util_blitter_set_running_flag(struct blitter_context *blitter)
 {
-   if (ctx->base.running) {
+   if (blitter->running) {
       _debug_printf("u_blitter:%i: Caught recursion. This is a driver bug.\n",
                     __LINE__);
    }
-   ctx->base.running = TRUE;
+   blitter->running = TRUE;
 
-   ctx->base.pipe->set_active_query_state(ctx->base.pipe, false);
+   blitter->pipe->set_active_query_state(blitter->pipe, false);
 }
 
-static void blitter_unset_running_flag(struct blitter_context_priv *ctx)
+void util_blitter_unset_running_flag(struct blitter_context *blitter)
 {
-   if (!ctx->base.running) {
+   if (!blitter->running) {
       _debug_printf("u_blitter:%i: Caught recursion. This is a driver bug.\n",
                     __LINE__);
    }
-   ctx->base.running = FALSE;
+   blitter->running = FALSE;
 
-   ctx->base.pipe->set_active_query_state(ctx->base.pipe, true);
+   blitter->pipe->set_active_query_state(blitter->pipe, true);
 }
 
 static void blitter_check_saved_vertex_states(struct blitter_context_priv *ctx)
@@ -543,8 +543,9 @@ static void blitter_check_saved_vertex_states(struct blitter_context_priv *ctx)
    assert(ctx->base.saved_rs_state != INVALID_PTR);
 }
 
-static void blitter_restore_vertex_states(struct blitter_context_priv *ctx)
+void util_blitter_restore_vertex_states(struct blitter_context *blitter)
 {
+   struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = ctx->base.pipe;
    unsigned i;
 
@@ -601,8 +602,9 @@ static void blitter_check_saved_fragment_states(struct blitter_context_priv *ctx
    assert(ctx->base.saved_blend_state != INVALID_PTR);
 }
 
-static void blitter_restore_fragment_states(struct blitter_context_priv *ctx)
+void util_blitter_restore_fragment_states(struct blitter_context *blitter)
 {
+   struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = ctx->base.pipe;
 
    /* Fragment shader. */
@@ -644,8 +646,9 @@ static void blitter_disable_render_cond(struct blitter_context_priv *ctx)
    }
 }
 
-static void blitter_restore_render_cond(struct blitter_context_priv *ctx)
+void util_blitter_restore_render_cond(struct blitter_context *blitter)
 {
+   struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = ctx->base.pipe;
 
    if (ctx->base.saved_render_cond_query) {
@@ -656,8 +659,9 @@ static void blitter_restore_render_cond(struct blitter_context_priv *ctx)
    }
 }
 
-static void blitter_restore_fb_state(struct blitter_context_priv *ctx)
+void util_blitter_restore_fb_state(struct blitter_context *blitter)
 {
+   struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = ctx->base.pipe;
 
    pipe->set_framebuffer_state(pipe, &ctx->base.saved_fb_state);
@@ -670,8 +674,9 @@ static void blitter_check_saved_textures(struct blitter_context_priv *ctx)
    assert(ctx->base.saved_num_sampler_views != ~0u);
 }
 
-static void blitter_restore_textures(struct blitter_context_priv *ctx)
+void util_blitter_restore_textures(struct blitter_context *blitter)
 {
+   struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = ctx->base.pipe;
    unsigned i;
 
@@ -1267,7 +1272,7 @@ static void util_blitter_clear_custom(struct blitter_context *blitter,
 
    assert(ctx->has_layered || num_layers <= 1);
 
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_check_saved_fragment_states(ctx);
    blitter_disable_render_cond(ctx);
@@ -1311,10 +1316,10 @@ static void util_blitter_clear_custom(struct blitter_context *blitter,
                               UTIL_BLITTER_ATTRIB_COLOR, color);
    }
 
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_fragment_states(ctx);
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_fragment_states(blitter);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
 }
 
 void util_blitter_clear(struct blitter_context *blitter,
@@ -1676,7 +1681,7 @@ void util_blitter_blit_generic(struct blitter_context *blitter,
    }
 
    /* Check whether the states are properly saved. */
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_check_saved_fragment_states(ctx);
    blitter_check_saved_textures(ctx);
@@ -1781,15 +1786,15 @@ void util_blitter_blit_generic(struct blitter_context *blitter,
    do_blits(ctx, dst, dstbox, src, src_width0, src_height0,
             srcbox, blit_depth || blit_stencil);
 
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_fragment_states(ctx);
-   blitter_restore_textures(ctx);
-   blitter_restore_fb_state(ctx);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_fragment_states(blitter);
+   util_blitter_restore_textures(blitter);
+   util_blitter_restore_fb_state(blitter);
    if (scissor) {
       pipe->set_scissor_states(pipe, 0, 1, &ctx->base.saved_scissor);
    }
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
 }
 
 void
@@ -1847,7 +1852,7 @@ void util_blitter_generate_mipmap(struct blitter_context *blitter,
    is_depth = desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS;
 
    /* Check whether the states are properly saved. */
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_check_saved_fragment_states(ctx);
    blitter_check_saved_textures(ctx);
@@ -1918,12 +1923,12 @@ void util_blitter_generate_mipmap(struct blitter_context *blitter,
       pipe_sampler_view_reference(&src_view, NULL);
    }
 
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_fragment_states(ctx);
-   blitter_restore_textures(ctx);
-   blitter_restore_fb_state(ctx);
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_fragment_states(blitter);
+   util_blitter_restore_textures(blitter);
+   util_blitter_restore_fb_state(blitter);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
 }
 
 /* Clear a region of a color surface to a constant value. */
@@ -1943,7 +1948,7 @@ void util_blitter_clear_render_target(struct blitter_context *blitter,
       return;
 
    /* check the saved state */
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_check_saved_fragment_states(ctx);
    blitter_check_saved_fb_state(ctx);
@@ -1978,11 +1983,11 @@ void util_blitter_clear_render_target(struct blitter_context *blitter,
                               UTIL_BLITTER_ATTRIB_COLOR, color);
    }
 
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_fragment_states(ctx);
-   blitter_restore_fb_state(ctx);
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_fragment_states(blitter);
+   util_blitter_restore_fb_state(blitter);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
 }
 
 /* Clear a region of a depth stencil surface. */
@@ -2005,7 +2010,7 @@ void util_blitter_clear_depth_stencil(struct blitter_context *blitter,
       return;
 
    /* check the saved state */
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_check_saved_fragment_states(ctx);
    blitter_check_saved_fb_state(ctx);
@@ -2056,11 +2061,11 @@ void util_blitter_clear_depth_stencil(struct blitter_context *blitter,
                               UTIL_BLITTER_ATTRIB_NONE, NULL);
    }
 
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_fragment_states(ctx);
-   blitter_restore_fb_state(ctx);
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_fragment_states(blitter);
+   util_blitter_restore_fb_state(blitter);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
 }
 
 /* draw a rectangle across a region using a custom dsa stage - for r600g */
@@ -2079,7 +2084,7 @@ void util_blitter_custom_depth_stencil(struct blitter_context *blitter,
       return;
 
    /* check the saved state */
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_check_saved_fragment_states(ctx);
    blitter_check_saved_fb_state(ctx);
@@ -2115,11 +2120,11 @@ void util_blitter_custom_depth_stencil(struct blitter_context *blitter,
    blitter->draw_rectangle(blitter, 0, 0, zsurf->width, zsurf->height, depth,
                            UTIL_BLITTER_ATTRIB_NONE, NULL);
 
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_fragment_states(ctx);
-   blitter_restore_fb_state(ctx);
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_fragment_states(blitter);
+   util_blitter_restore_fb_state(blitter);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
 }
 
 void util_blitter_copy_buffer(struct blitter_context *blitter,
@@ -2159,7 +2164,7 @@ void util_blitter_copy_buffer(struct blitter_context *blitter,
       return;
    }
 
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_disable_render_cond(ctx);
 
@@ -2183,9 +2188,9 @@ void util_blitter_copy_buffer(struct blitter_context *blitter,
 
    util_draw_arrays(pipe, PIPE_PRIM_POINTS, 0, size / 4);
 
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
    pipe_so_target_reference(&so_target, NULL);
 }
 
@@ -2229,7 +2234,7 @@ void util_blitter_clear_buffer(struct blitter_context *blitter,
 
    vb.stride = 0;
 
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_disable_render_cond(ctx);
 
@@ -2251,9 +2256,9 @@ void util_blitter_clear_buffer(struct blitter_context *blitter,
    util_draw_arrays(pipe, PIPE_PRIM_POINTS, 0, size / 4);
 
 out:
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
    pipe_so_target_reference(&so_target, NULL);
    pipe_resource_reference(&vb.buffer, NULL);
 }
@@ -2274,7 +2279,7 @@ void util_blitter_custom_resolve_color(struct blitter_context *blitter,
    struct pipe_framebuffer_state fb_state;
    struct pipe_surface *srcsurf, *dstsurf, surf_tmpl;
 
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_check_saved_fragment_states(ctx);
    blitter_disable_render_cond(ctx);
@@ -2313,11 +2318,11 @@ void util_blitter_custom_resolve_color(struct blitter_context *blitter,
    blitter_set_dst_dimensions(ctx, src->width0, src->height0);
    blitter->draw_rectangle(blitter, 0, 0, src->width0, src->height0,
                            0, 0, NULL);
-   blitter_restore_fb_state(ctx);
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_fragment_states(ctx);
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_fb_state(blitter);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_fragment_states(blitter);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
 
    pipe_surface_reference(&srcsurf, NULL);
    pipe_surface_reference(&dstsurf, NULL);
@@ -2336,7 +2341,7 @@ void util_blitter_custom_color(struct blitter_context *blitter,
       return;
 
    /* check the saved state */
-   blitter_set_running_flag(ctx);
+   util_blitter_set_running_flag(blitter);
    blitter_check_saved_vertex_states(ctx);
    blitter_check_saved_fragment_states(ctx);
    blitter_check_saved_fb_state(ctx);
@@ -2364,9 +2369,9 @@ void util_blitter_custom_color(struct blitter_context *blitter,
    blitter->draw_rectangle(blitter, 0, 0, dstsurf->width, dstsurf->height,
                            0, 0, NULL);
 
-   blitter_restore_vertex_states(ctx);
-   blitter_restore_fragment_states(ctx);
-   blitter_restore_fb_state(ctx);
-   blitter_restore_render_cond(ctx);
-   blitter_unset_running_flag(ctx);
+   util_blitter_restore_vertex_states(blitter);
+   util_blitter_restore_fragment_states(blitter);
+   util_blitter_restore_fb_state(blitter);
+   util_blitter_restore_render_cond(blitter);
+   util_blitter_unset_running_flag(blitter);
 }

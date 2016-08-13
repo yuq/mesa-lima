@@ -528,6 +528,15 @@ util_blitter_save_render_condition(struct blitter_context *blitter,
    blitter->saved_render_cond_cond = condition;
 }
 
+void util_blitter_set_running_flag(struct blitter_context *blitter);
+void util_blitter_unset_running_flag(struct blitter_context *blitter);
+
+void util_blitter_restore_vertex_states(struct blitter_context *blitter);
+void util_blitter_restore_fragment_states(struct blitter_context *blitter);
+void util_blitter_restore_render_cond(struct blitter_context *blitter);
+void util_blitter_restore_fb_state(struct blitter_context *blitter);
+void util_blitter_restore_textures(struct blitter_context *blitter);
+
 #ifdef __cplusplus
 }
 #endif
