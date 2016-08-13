@@ -715,6 +715,10 @@ fs_inst::is_partial_write() const
 unsigned
 fs_inst::components_read(unsigned i) const
 {
+   /* Return zero if the source is not present. */
+   if (src[i].file == BAD_FILE)
+      return 0;
+
    switch (opcode) {
    case FS_OPCODE_LINTERP:
       if (i == 0)
@@ -895,11 +899,10 @@ fs_inst::regs_read(int arg) const
    }
 
    switch (src[arg].file) {
-   case BAD_FILE:
-      return 0;
    case UNIFORM:
    case IMM:
       return 1;
+   case BAD_FILE:
    case ARF:
    case FIXED_GRF:
    case VGRF:
