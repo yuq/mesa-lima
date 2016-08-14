@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include "glheader.h"
 #include "api_validate.h"
+#include "arrayobj.h"
 #include "bufferobj.h"
 #include "context.h"
 #include "imports.h"
@@ -117,6 +118,12 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
 
    default:
       unreachable("Invalid API value in check_valid_to_render()");
+   }
+
+   if (!_mesa_all_buffers_are_unmapped(ctx->Array.VAO)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(vertex buffers are mapped)", function);
+      return false;
    }
 
    return true;

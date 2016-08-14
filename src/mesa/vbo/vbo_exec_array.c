@@ -396,13 +396,7 @@ vbo_bind_arrays(struct gl_context *ctx)
       }
    }
 
-   if (!_mesa_all_buffers_are_unmapped(ctx->Array.VAO)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "draw call (vertex buffers are mapped)");
-      return false;
-   } else {
-      return true;
-   }
+   return true;
 }
 
 /**
