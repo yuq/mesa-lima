@@ -33,7 +33,6 @@
 #include "enums.h"
 #include "vbo/vbo.h"
 #include "transformfeedback.h"
-#include <stdbool.h>
 
 
 /**
