@@ -77,22 +77,6 @@ check_input_buffers_are_unmapped(const struct gl_vertex_array_object *vao)
 
 
 /**
- * A debug function that may be called from other parts of Mesa as
- * needed during debugging.
- */
-static bool
-check_buffers_are_unmapped(struct gl_context *ctx)
-{
-   struct vbo_context *vbo = vbo_context(ctx);
-   struct vbo_exec_context *exec = &vbo->exec;
-
-   /* check the current vertex arrays */
-   return !_mesa_check_disallowed_mapping(exec->vtx.bufferobj) &&
-      check_input_buffers_are_unmapped(ctx->Array.VAO);
-}
-
-
-/**
  * Check that element 'j' of the array has reasonable data.
  * Map VBO if needed.
  * For debugging purposes; not normally used.
@@ -446,7 +430,7 @@ vbo_bind_arrays(struct gl_context *ctx)
       }
    }
 
-   if (!check_buffers_are_unmapped(ctx)) {
+   if (!check_input_buffers_are_unmapped(ctx->Array.VAO)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "draw call (vertex buffers are mapped)");
       return false;
