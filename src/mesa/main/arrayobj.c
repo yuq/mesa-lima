@@ -393,6 +393,34 @@ _mesa_all_varyings_in_vbos(const struct gl_vertex_array_object *vao)
    return true;
 }
 
+bool
+_mesa_all_buffers_are_unmapped(const struct gl_vertex_array_object *vao)
+{
+   /* Walk the enabled arrays that have a vbo attached */
+   GLbitfield64 mask = vao->_Enabled & vao->VertexAttribBufferMask;
+
+   while (mask) {
+      const int i = ffsll(mask) - 1;
+      const struct gl_vertex_attrib_array *attrib_array =
+         &vao->VertexAttrib[i];
+      const struct gl_vertex_buffer_binding *buffer_binding =
+         &vao->VertexBinding[attrib_array->VertexBinding];
+
+      /* Only enabled arrays shall appear in the _Enabled bitmask */
+      assert(attrib_array->Enabled);
+      /* We have already masked with vao->VertexAttribBufferMask  */
+      assert(_mesa_is_bufferobj(buffer_binding->BufferObj));
+
+      /* Bail out once we find the first disallowed mapping */
+      if (_mesa_check_disallowed_mapping(buffer_binding->BufferObj))
+         return false;
+
+      /* We have handled everything that is bound to this buffer_binding. */
+      mask &= ~buffer_binding->_BoundArrays;
+   }
+
+   return true;
+}
 
 /**********************************************************************/
 /* API Functions                                                      */
