@@ -369,7 +369,7 @@ recalculate_input_bindings(struct gl_context *ctx)
  * Note that this might set the _NEW_VARYING_VP_INPUTS dirty flag so state
  * validation must be done after this call.
  */
-bool
+void
 vbo_bind_arrays(struct gl_context *ctx)
 {
    struct vbo_context *vbo = vbo_context(ctx);
@@ -395,8 +395,6 @@ vbo_bind_arrays(struct gl_context *ctx)
          exec->validating = GL_FALSE;
       }
    }
-
-   return true;
 }
 
 /**
@@ -412,8 +410,7 @@ vbo_draw_arrays(struct gl_context *ctx, GLenum mode, GLint start,
    struct vbo_context *vbo = vbo_context(ctx);
    struct _mesa_prim prim[2];
 
-   if (!vbo_bind_arrays(ctx))
-      return;
+   vbo_bind_arrays(ctx);
 
    /* init most fields to zero */
    memset(prim, 0, sizeof(prim));
@@ -762,8 +759,7 @@ vbo_validated_drawrangeelements(struct gl_context *ctx, GLenum mode,
    struct _mesa_index_buffer ib;
    struct _mesa_prim prim[1];
 
-   if (!vbo_bind_arrays(ctx))
-      return;
+   vbo_bind_arrays(ctx);
 
    ib.count = count;
    ib.type = type;
@@ -1106,10 +1102,7 @@ vbo_validated_multidrawelements(struct gl_context *ctx, GLenum mode,
       return;
    }
 
-   if (!vbo_bind_arrays(ctx)) {
-      free(prim);
-      return;
-   }
+   vbo_bind_arrays(ctx);
 
    min_index_ptr = (uintptr_t)indices[0];
    max_index_ptr = 0;
@@ -1273,8 +1266,7 @@ vbo_draw_transform_feedback(struct gl_context *ctx, GLenum mode,
       return;
    }
 
-   if (!vbo_bind_arrays(ctx))
-      return;
+   vbo_bind_arrays(ctx);
 
    /* init most fields to zero */
    memset(prim, 0, sizeof(prim));
@@ -1370,8 +1362,7 @@ vbo_validated_drawarraysindirect(struct gl_context *ctx,
 {
    struct vbo_context *vbo = vbo_context(ctx);
 
-   if (!vbo_bind_arrays(ctx))
-      return;
+   vbo_bind_arrays(ctx);
 
    vbo->draw_indirect_prims(ctx, mode,
                             ctx->DrawIndirectBuffer, (GLsizeiptr)indirect,
@@ -1394,8 +1385,7 @@ vbo_validated_multidrawarraysindirect(struct gl_context *ctx,
    if (primcount == 0)
       return;
 
-   if (!vbo_bind_arrays(ctx))
-      return;
+   vbo_bind_arrays(ctx);
 
    vbo->draw_indirect_prims(ctx, mode,
                             ctx->DrawIndirectBuffer, offset,
@@ -1414,8 +1404,7 @@ vbo_validated_drawelementsindirect(struct gl_context *ctx,
    struct vbo_context *vbo = vbo_context(ctx);
    struct _mesa_index_buffer ib;
 
-   if (!vbo_bind_arrays(ctx))
-      return;
+   vbo_bind_arrays(ctx);
 
    ib.count = 0; /* unknown */
    ib.type = type;
@@ -1445,8 +1434,7 @@ vbo_validated_multidrawelementsindirect(struct gl_context *ctx,
    if (primcount == 0)
       return;
 
-   if (!vbo_bind_arrays(ctx))
-      return;
+   vbo_bind_arrays(ctx);
 
    /* NOTE: IndexBufferObj is guaranteed to be a VBO. */
 
@@ -1566,8 +1554,7 @@ vbo_validated_multidrawarraysindirectcount(struct gl_context *ctx,
    if (maxdrawcount == 0)
       return;
 
-   if (!vbo_bind_arrays(ctx))
-      return;
+   vbo_bind_arrays(ctx);
 
    vbo->draw_indirect_prims(ctx, mode,
                             ctx->DrawIndirectBuffer, offset,
@@ -1594,8 +1581,7 @@ vbo_validated_multidrawelementsindirectcount(struct gl_context *ctx,
    if (maxdrawcount == 0)
       return;
 
-   if (!vbo_bind_arrays(ctx))
-      return;
+   vbo_bind_arrays(ctx);
 
    /* NOTE: IndexBufferObj is guaranteed to be a VBO. */
 
