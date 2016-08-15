@@ -2666,19 +2666,9 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
 
       /* if timeout is EGL_FOREVER_KHR, it should wait without any timeout.*/
       if (timeout == EGL_FOREVER_KHR) {
-         if (mtx_lock(&dri2_sync->mutex)) {
-            ret = EGL_FALSE;
-            goto cleanup;
-         }
-
-         ret = cnd_wait(&dri2_sync->cond, &dri2_sync->mutex);
-
+         mtx_lock(&dri2_sync->mutex);
+         cnd_wait(&dri2_sync->cond, &dri2_sync->mutex);
          mtx_unlock(&dri2_sync->mutex);
-
-         if (ret) {
-            _eglError(EGL_BAD_PARAMETER, "eglClientWaitSyncKHR");
-            ret = EGL_FALSE;
-         }
       } else {
          /* if reusable sync has not been yet signaled */
          if (dri2_sync->base.SyncStatus != EGL_SIGNALED_KHR) {
@@ -2697,38 +2687,25 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
                expire.nsec -= 1000000000L;
             }
 
-            if (mtx_lock(&dri2_sync->mutex)) {
-               ret = EGL_FALSE;
-               goto cleanup;
-            }
-
+            mtx_lock(&dri2_sync->mutex);
             ret = cnd_timedwait(&dri2_sync->cond, &dri2_sync->mutex, &expire);
-
             mtx_unlock(&dri2_sync->mutex);
 
-            if (ret)
-               if (ret == thrd_busy) {
-                  if (dri2_sync->base.SyncStatus == EGL_UNSIGNALED_KHR) {
-                     ret = EGL_TIMEOUT_EXPIRED_KHR;
-                  } else {
-                     _eglError(EGL_BAD_ACCESS, "eglClientWaitSyncKHR");
-                     ret = EGL_FALSE;
-                  }
+            if (ret == thrd_busy) {
+               if (dri2_sync->base.SyncStatus == EGL_UNSIGNALED_KHR) {
+                  ret = EGL_TIMEOUT_EXPIRED_KHR;
+               } else {
+                  _eglError(EGL_BAD_ACCESS, "eglClientWaitSyncKHR");
+                  ret = EGL_FALSE;
                }
+            }
          }
       }
       break;
   }
+  dri2_egl_unref_sync(dri2_dpy, dri2_sync);
 
- cleanup:
-   dri2_egl_unref_sync(dri2_dpy, dri2_sync);
-
-   if (ret == EGL_FALSE) {
-      _eglError(EGL_BAD_ACCESS, "eglClientWaitSyncKHR");
-      return EGL_FALSE;
-   }
-
-   return ret;
+  return ret;
 }
 
 static EGLBoolean
