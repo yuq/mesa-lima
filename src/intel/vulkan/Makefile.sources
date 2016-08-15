@@ -49,6 +49,7 @@ VULKAN_FILES := \
 	anv_util.c \
 	anv_wsi.c \
 	anv_wsi.h \
+	genX_multisample.h \
 	genX_pipeline_util.h \
 	vk_format_info.h
 
