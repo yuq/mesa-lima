@@ -603,13 +603,9 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
       *value = image->planar_format->components;
       return true;
    case __DRI_IMAGE_ATTRIB_FD:
-      if (drm_intel_bo_gem_export_to_prime(image->bo, value) == 0)
-         return true;
-      return false;
+      return !drm_intel_bo_gem_export_to_prime(image->bo, value);
    case __DRI_IMAGE_ATTRIB_FOURCC:
-      if (intel_lookup_fourcc(image->dri_format, value))
-         return true;
-      return false;
+      return intel_lookup_fourcc(image->dri_format, value);
    case __DRI_IMAGE_ATTRIB_NUM_PLANES:
       *value = 1;
       return true;
