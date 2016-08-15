@@ -62,6 +62,8 @@ vlVaBeginPicture(VADriverContextP ctx, VAContextID context_id, VASurfaceID rende
    if (!surf || !surf->buffer)
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
+   context->target_id = render_target;
+   surf->ctx = context_id;
    context->target = surf->buffer;
 
    if (!context->decoder) {
@@ -536,6 +538,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    vlVaDriver *drv;
    vlVaContext *context;
    vlVaBuffer *coded_buf;
+   vlVaSurface *surf;
    unsigned int coded_size;
    void *feedback;
 
@@ -560,6 +563,8 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       return VA_STATUS_SUCCESS;
    }
 
+   pipe_mutex_lock(drv->mutex);
+   surf = handle_table_get(drv->htab, context->target_id);
    context->mpeg4.frame_num++;
 
    if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
@@ -568,13 +573,14 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       context->decoder->begin_frame(context->decoder, context->target, &context->desc.base);
       context->decoder->encode_bitstream(context->decoder, context->target,
                                          coded_buf->derived_surface.resource, &feedback);
+      surf->frame_num_cnt = context->desc.h264enc.frame_num_cnt;
+      surf->feedback = feedback;
+      surf->coded_buf = coded_buf;
       context->decoder->end_frame(context->decoder, context->target, &context->desc.base);
-      context->decoder->flush(context->decoder);
-      context->decoder->get_feedback(context->decoder, feedback, &coded_size);
-      coded_buf->coded_size = coded_size;
    }
    else
       context->decoder->end_frame(context->decoder, context->target, &context->desc.base);
 
+   pipe_mutex_unlock(drv->mutex);
    return VA_STATUS_SUCCESS;
 }

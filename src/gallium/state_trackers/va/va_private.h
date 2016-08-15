@@ -243,6 +243,7 @@ typedef struct {
 
    struct vl_deint_filter *deint;
    struct vlVaBuffer *coded_buf;
+   int target_id;
 } vlVaContext;
 
 typedef struct {
@@ -268,6 +269,10 @@ typedef struct {
 typedef struct {
    struct pipe_video_buffer templat, *buffer;
    struct util_dynarray subpics; /* vlVaSubpicture */
+   VAContextID ctx;
+   vlVaBuffer *coded_buf;
+   void *feedback;
+   unsigned int frame_num_cnt;
 } vlVaSurface;
 
 // Public functions:

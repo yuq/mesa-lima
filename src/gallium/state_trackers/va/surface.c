@@ -91,9 +91,41 @@ vlVaDestroySurfaces(VADriverContextP ctx, VASurfaceID *surface_list, int num_sur
 VAStatus
 vlVaSyncSurface(VADriverContextP ctx, VASurfaceID render_target)
 {
+   vlVaDriver *drv;
+   vlVaContext *context;
+   vlVaSurface *surf;
+   void *pbuff;
+
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
+   drv = VL_VA_DRIVER(ctx);
+   if (!drv)
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+   pipe_mutex_lock(drv->mutex);
+   surf = handle_table_get(drv->htab, render_target);
+
+   if (!surf || !surf->buffer)
+      return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   context = handle_table_get(drv->htab, surf->ctx);
+   if (!context) {
+      pipe_mutex_unlock(drv->mutex);
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
+   }
+
+   if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
+      int frame_diff;
+      if (context->desc.h264enc.frame_num_cnt > surf->frame_num_cnt)
+         frame_diff = context->desc.h264enc.frame_num_cnt - surf->frame_num_cnt;
+      else
+         frame_diff = 0xFFFFFFFF - surf->frame_num_cnt + 1 + context->desc.h264enc.frame_num_cnt;
+      if (frame_diff < 2)
+         context->decoder->flush(context->decoder);
+      context->decoder->get_feedback(context->decoder, surf->feedback, &(surf->coded_buf->coded_size));
+   }
+   pipe_mutex_unlock(drv->mutex);
    return VA_STATUS_SUCCESS;
 }
 
