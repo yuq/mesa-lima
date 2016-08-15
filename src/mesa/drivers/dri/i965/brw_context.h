@@ -41,6 +41,7 @@
 #include "intel_aub.h"
 
 #include "isl/isl.h"
+#include "blorp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -892,6 +893,8 @@ struct brw_context
    bool needs_unlit_centroid_workaround;
 
    struct isl_device isl_dev;
+
+   struct blorp_context blorp;
 
    GLuint NewGLState;
    struct {

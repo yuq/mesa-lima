@@ -31,6 +31,8 @@
 extern "C" {
 #endif
 
+void brw_blorp_init(struct brw_context *brw);
+
 void
 brw_blorp_blit_miptrees(struct brw_context *brw,
                         struct intel_mipmap_tree *src_mt,

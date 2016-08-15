@@ -37,6 +37,12 @@
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
+void
+brw_blorp_init(struct brw_context *brw)
+{
+   blorp_init(&brw->blorp, brw, &brw->isl_dev);
+}
+
 static void
 apply_gen6_stencil_hiz_offset(struct isl_surf *surf,
                               struct intel_mipmap_tree *mt,

@@ -37,6 +37,16 @@ struct brw_wm_prog_key;
 extern "C" {
 #endif
 
+struct blorp_context {
+   void *driver_ctx;
+
+   const struct isl_device *isl_dev;
+};
+
+void blorp_init(struct blorp_context *blorp, void *driver_ctx,
+                struct isl_device *isl_dev);
+void blorp_finish(struct blorp_context *blorp);
+
 struct brw_blorp_surf
 {
    const struct isl_surf *surf;

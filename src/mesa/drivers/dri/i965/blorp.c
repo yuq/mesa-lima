@@ -31,6 +31,20 @@
 #include "brw_state.h"
 
 void
+blorp_init(struct blorp_context *blorp, void *driver_ctx,
+           struct isl_device *isl_dev)
+{
+   blorp->driver_ctx = driver_ctx;
+   blorp->isl_dev = isl_dev;
+}
+
+void
+blorp_finish(struct blorp_context *blorp)
+{
+   blorp->driver_ctx = NULL;
+}
+
+void
 brw_blorp_surface_info_init(struct brw_context *brw,
                             struct brw_blorp_surface_info *info,
                             const struct brw_blorp_surf *surf,
