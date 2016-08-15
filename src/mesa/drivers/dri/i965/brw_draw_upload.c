@@ -552,17 +552,6 @@ brw_prepare_vertices(struct brw_context *brw)
 	    input->buffer = j++;
 	    input->offset = 0;
 	 }
-
-	 /* This is a common place to reach if the user mistakenly supplies
-	  * a pointer in place of a VBO offset.  If we just let it go through,
-	  * we may end up dereferencing a pointer beyond the bounds of the
-	  * GTT.
-	  *
-	  * The VBO spec allows application termination in this case, and it's
-	  * probably a service to the poor programmer to do so rather than
-	  * trying to just not render.
-	  */
-	 assert(input->offset < intel_buffer->Base.Size);
       } else {
 	 /* Queue the buffer object up to be uploaded in the next pass,
 	  * when we've decided if we're doing interleaved or not.
