@@ -646,15 +646,29 @@ emit_constbuf_vgpu10(struct svga_context *svga, enum pipe_shader_type shader)
       assert(extra_offset + extra_size <= new_buf_size);
       memcpy((char *) dst_map + extra_offset, extras, extra_size);
    }
-   u_upload_unmap(svga->const0_upload);
 
-   /* Issue the SetSingleConstantBuffer command */
-   dst_handle = svga_buffer_handle(svga, dst_buffer);
-   if (!dst_handle) {
-      pipe_resource_reference(&dst_buffer, NULL);
-      return PIPE_ERROR_OUT_OF_MEMORY;
+   /* Get winsys handle for the constant buffer */
+   if (svga->state.hw_draw.const0_buffer == dst_buffer &&
+       svga->state.hw_draw.const0_handle) {
+      /* re-reference already mapped buffer */
+      dst_handle = svga->state.hw_draw.const0_handle;
+   }
+   else {
+      /* we must unmap the buffer before getting the winsys handle */
+      u_upload_unmap(svga->const0_upload);
+
+      dst_handle = svga_buffer_handle(svga, dst_buffer);
+      if (!dst_handle) {
+         pipe_resource_reference(&dst_buffer, NULL);
+         return PIPE_ERROR_OUT_OF_MEMORY;
+      }
+
+      /* save the buffer / handle for next time */
+      pipe_resource_reference(&svga->state.hw_draw.const0_buffer, dst_buffer);
+      svga->state.hw_draw.const0_handle = dst_handle;
    }
 
+   /* Issue the SetSingleConstantBuffer command */
    assert(new_buf_size % 16 == 0);
    ret = SVGA3D_vgpu10_SetSingleConstantBuffer(svga->swc,
                                                0, /* index */

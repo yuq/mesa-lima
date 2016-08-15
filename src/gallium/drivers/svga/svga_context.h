@@ -355,6 +355,13 @@ struct svga_hw_draw_state
    /** Bitmask of enabled constant buffers */
    unsigned enabled_constbufs[PIPE_SHADER_TYPES];
 
+   /**
+    * These are used to reduce the number of times we call u_upload_unmap()
+    * while updating the zero-th/default VGPU10 constant buffer.
+    */
+   struct pipe_resource *const0_buffer;
+   struct svga_winsys_surface *const0_handle;
+
    /** VGPU10 HW state (used to prevent emitting redundant state) */
    SVGA3dDepthStencilStateId depth_stencil_id;
    unsigned stencil_ref;

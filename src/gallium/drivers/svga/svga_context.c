@@ -248,6 +248,8 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
    svga->state.hw_draw.num_vbuffers = 0;
    memset(svga->state.hw_draw.vbuffers, 0,
           sizeof(svga->state.hw_draw.vbuffers));
+   svga->state.hw_draw.const0_buffer = NULL;
+   svga->state.hw_draw.const0_handle = NULL;
 
    /* Create a no-operation blend state which we will bind whenever the
     * requested blend state is impossible (e.g. due to having an integer
@@ -306,6 +308,17 @@ void svga_context_flush( struct svga_context *svga,
    SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_CONTEXTFLUSH);
 
    svga->curr.nr_fbs = 0;
+
+   /* Unmap the 0th/default constant buffer.  The u_upload_unmap() function
+    * will call pipe_context::transfer_flush_region() to indicate the
+    * region of the buffer which was modified (and needs to be uploaded).
+    */
+   if (svga->state.hw_draw.const0_handle) {
+      assert(svga->state.hw_draw.const0_buffer);
+      u_upload_unmap(svga->const0_upload);
+      pipe_resource_reference(&svga->state.hw_draw.const0_buffer, NULL);
+      svga->state.hw_draw.const0_handle = NULL;
+   }
 
    /* Ensure that texture dma uploads are processed
     * before submitting commands.
