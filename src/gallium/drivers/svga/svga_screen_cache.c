@@ -558,11 +558,6 @@ svga_screen_surface_destroy(struct svga_screen *svgascreen,
     * that case.
     */
    if (SVGA_SURFACE_CACHE_ENABLED && key->cachable) {
-
-      /* Invalidate the surface before putting it into the recycle pool */
-      if (key->format != SVGA3D_BUFFER)
-         sws->surface_invalidate(sws, *p_handle);
-
       svga_screen_cache_add(svgascreen, key, p_handle);
    }
    else {
