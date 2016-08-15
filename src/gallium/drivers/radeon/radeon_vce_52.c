@@ -158,13 +158,15 @@ void radeon_vce_52_get_param(struct rvce_encoder *enc, struct pipe_h264_enc_pict
 	enc->enc_pic.ref_idx_l0 = pic->ref_idx_l0;
 	enc->enc_pic.ref_idx_l1 = pic->ref_idx_l1;
 	enc->enc_pic.not_referenced = pic->not_referenced;
-	enc->enc_pic.addrmode_arraymode_disrdo_distwoinstants = pic->ref_pic_mode;
+	if (enc->dual_inst)
+		enc->enc_pic.addrmode_arraymode_disrdo_distwoinstants = 0x00000201;
+	else
+		enc->enc_pic.addrmode_arraymode_disrdo_distwoinstants = 0x01000201;
 	enc->enc_pic.is_idr = pic->is_idr;
 }
 
 static void create(struct rvce_encoder *enc)
 {
-	enc->enc_pic.addrmode_arraymode_disrdo_distwoinstants = 0x00000201;
 	enc->task_info(enc, 0x00000000, 0, 0, 0);
 
 	RVCE_BEGIN(0x01000001); // create cmd
