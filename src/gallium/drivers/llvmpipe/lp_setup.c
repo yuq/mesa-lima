@@ -39,6 +39,7 @@
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
 #include "util/u_pack_color.h"
+#include "util/u_viewport.h"
 #include "draw/draw_pipe.h"
 #include "os/os_time.h"
 #include "lp_context.h"
@@ -771,15 +772,8 @@ lp_setup_set_viewports(struct lp_setup_context *setup,
    for (i = 0; i < num_viewports; i++) {
       float min_depth;
       float max_depth;
-
-      if (lp->rasterizer->clip_halfz == 0) {
-         float half_depth = viewports[i].scale[2];
-         min_depth = viewports[i].translate[2] - half_depth;
-         max_depth = min_depth + half_depth * 2.0f;
-      } else {
-         min_depth = viewports[i].translate[2];
-         max_depth = min_depth + viewports[i].scale[2];
-      }
+      util_viewport_zmin_zmax(&viewports[i], lp->rasterizer->clip_halfz,
+                              &min_depth, &max_depth);
 
       if (setup->viewports[i].min_depth != min_depth ||
           setup->viewports[i].max_depth != max_depth) {
