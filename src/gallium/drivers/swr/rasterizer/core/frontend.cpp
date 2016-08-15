@@ -1766,9 +1766,16 @@ void BinTriangles(
     simdscalar vRecipW1 = _simd_set1_ps(1.0f);
     simdscalar vRecipW2 = _simd_set1_ps(1.0f);
 
-    if (!feState.vpTransformDisable)
+    if (feState.vpTransformDisable)
     {
-        // perspective divide
+        // RHW is passed in directly when VP transform is disabled
+        vRecipW0 = tri[0].v[3];
+        vRecipW1 = tri[1].v[3];
+        vRecipW2 = tri[2].v[3];
+    }
+    else
+    {
+        // Perspective divide
         vRecipW0 = _simd_div_ps(_simd_set1_ps(1.0f), tri[0].w);
         vRecipW1 = _simd_div_ps(_simd_set1_ps(1.0f), tri[1].w);
         vRecipW2 = _simd_div_ps(_simd_set1_ps(1.0f), tri[2].w);
@@ -1785,7 +1792,7 @@ void BinTriangles(
         tri[1].v[2] = _simd_mul_ps(tri[1].v[2], vRecipW1);
         tri[2].v[2] = _simd_mul_ps(tri[2].v[2], vRecipW2);
 
-        // viewport transform to screen coords
+        // Viewport transform to screen space coords
         if (state.gsState.emitsViewportArrayIndex)
         {
             viewportTransform<3>(tri, state.vpMatrices, viewportIdx);
@@ -1796,7 +1803,7 @@ void BinTriangles(
         }
     }
 
-    // adjust for pixel center location
+    // Adjust for pixel center location
     simdscalar offset = g_pixelOffsets[rastState.pixelLocation];
     tri[0].x = _simd_add_ps(tri[0].x, offset);
     tri[0].y = _simd_add_ps(tri[0].y, offset);
