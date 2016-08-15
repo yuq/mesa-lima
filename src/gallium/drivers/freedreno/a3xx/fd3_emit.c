@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_helpers.h"
 #include "util/u_format.h"
+#include "util/u_viewport.h"
 
 #include "freedreno_resource.h"
 #include "freedreno_query_hw.h"
@@ -535,7 +536,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A3XX_RB_STENCILREFMASK_BF_STENCILREF(sr->ref_value[1]));
 	}
 
-	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_PROG)) {
+	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_RASTERIZER | FD_DIRTY_PROG)) {
 		uint32_t val = fd3_zsa_stateobj(ctx->zsa)->rb_depth_control;
 		if (fp->writes_pos) {
 			val |= A3XX_RB_DEPTH_CONTROL_FRAG_WRITES_Z;
@@ -543,6 +544,9 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		}
 		if (fp->has_kill) {
 			val |= A3XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE;
+		}
+		if (!ctx->rasterizer->depth_clip) {
+			val |= A3XX_RB_DEPTH_CONTROL_Z_CLAMP_ENABLE;
 		}
 		OUT_PKT0(ring, REG_A3XX_RB_DEPTH_CONTROL, 1);
 		OUT_RING(ring, val);
@@ -645,6 +649,30 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, A3XX_GRAS_CL_VPORT_YSCALE(ctx->viewport.scale[1]));
 		OUT_RING(ring, A3XX_GRAS_CL_VPORT_ZOFFSET(ctx->viewport.translate[2]));
 		OUT_RING(ring, A3XX_GRAS_CL_VPORT_ZSCALE(ctx->viewport.scale[2]));
+	}
+
+	if (dirty & (FD_DIRTY_VIEWPORT | FD_DIRTY_RASTERIZER | FD_DIRTY_FRAMEBUFFER)) {
+		float zmin, zmax;
+		int depth = 24;
+		if (ctx->batch->framebuffer.zsbuf) {
+			depth = util_format_get_component_bits(
+					pipe_surface_format(ctx->batch->framebuffer.zsbuf),
+					UTIL_FORMAT_COLORSPACE_ZS, 0);
+		}
+		util_viewport_zmin_zmax(&ctx->viewport, ctx->rasterizer->clip_halfz,
+								&zmin, &zmax);
+
+		OUT_PKT0(ring, REG_A3XX_RB_Z_CLAMP_MIN, 2);
+		if (depth == 32) {
+			OUT_RING(ring, (uint32_t)(zmin * 0xffffffff));
+			OUT_RING(ring, (uint32_t)(zmax * 0xffffffff));
+		} else if (depth == 16) {
+			OUT_RING(ring, (uint32_t)(zmin * 0xffff));
+			OUT_RING(ring, (uint32_t)(zmax * 0xffff));
+		} else {
+			OUT_RING(ring, (uint32_t)(zmin * 0xffffff));
+			OUT_RING(ring, (uint32_t)(zmax * 0xffffff));
+		}
 	}
 
 	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER | FD_DIRTY_BLEND_DUAL)) {
