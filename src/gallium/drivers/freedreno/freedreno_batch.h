@@ -68,6 +68,9 @@ struct fd_batch {
 	unsigned seqno;
 	unsigned idx;
 
+	int in_fence_fd;
+	bool needs_out_fence_fd;
+
 	struct fd_context *ctx;
 
 	struct util_queue_fence flush_fence;

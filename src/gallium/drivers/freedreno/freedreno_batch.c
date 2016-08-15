@@ -60,6 +60,8 @@ batch_init(struct fd_batch *batch)
 	fd_ringbuffer_set_parent(batch->draw, batch->gmem);
 	fd_ringbuffer_set_parent(batch->binning, batch->gmem);
 
+	batch->in_fence_fd = -1;
+
 	batch->cleared = batch->partial_cleared = 0;
 	batch->restore = batch->resolve = 0;
 	batch->needs_flush = false;
@@ -108,6 +110,9 @@ static void
 batch_fini(struct fd_batch *batch)
 {
 	pipe_resource_reference(&batch->query_buf, NULL);
+
+	if (batch->in_fence_fd != -1)
+		close(batch->in_fence_fd);
 
 	fd_ringbuffer_del(batch->draw);
 	fd_ringbuffer_del(batch->binning);

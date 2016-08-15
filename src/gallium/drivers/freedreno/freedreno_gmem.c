@@ -399,10 +399,13 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 		ctx->stats.batch_gmem++;
 	}
 
-	fd_ringbuffer_flush(batch->gmem);
+	int out_fence_fd = -1;
+	fd_ringbuffer_flush2(batch->gmem, batch->in_fence_fd,
+			batch->needs_out_fence_fd ? &out_fence_fd : NULL);
 
 	fd_fence_ref(&ctx->screen->base, &ctx->last_fence, NULL);
-	ctx->last_fence = fd_fence_create(ctx, fd_ringbuffer_timestamp(batch->gmem));
+	ctx->last_fence = fd_fence_create(ctx,
+			fd_ringbuffer_timestamp(batch->gmem), out_fence_fd);
 }
 
 /* tile needs restore if it isn't completely contained within the

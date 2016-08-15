@@ -44,6 +44,9 @@ fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 {
 	struct fd_context *ctx = fd_context(pctx);
 
+	if (flags & PIPE_FLUSH_FENCE_FD)
+		ctx->batch->needs_out_fence_fd = true;
+
 	if (!ctx->screen->reorder) {
 		fd_batch_flush(ctx->batch, true);
 	} else {
@@ -251,6 +254,8 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	pctx->flush = fd_context_flush;
 	pctx->emit_string_marker = fd_emit_string_marker;
 	pctx->set_debug_callback = fd_set_debug_callback;
+	pctx->create_fence_fd = fd_create_fence_fd;
+	pctx->fence_server_sync = fd_fence_server_sync;
 
 	/* TODO what about compute?  Ideally it creates it's own independent
 	 * batches per compute job (since it isn't using tiling, so no point
