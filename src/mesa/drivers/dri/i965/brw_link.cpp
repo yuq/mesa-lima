@@ -137,19 +137,6 @@ process_glsl_ir(struct brw_context *brw,
 
    do_copy_propagation(shader->ir);
 
-   bool lowered_variable_indexing =
-      lower_variable_index_to_cond_assign(shader->Stage, shader->ir,
-                                          options->EmitNoIndirectInput,
-                                          options->EmitNoIndirectOutput,
-                                          options->EmitNoIndirectTemp,
-                                          options->EmitNoIndirectUniform);
-
-   if (unlikely(brw->perf_debug && lowered_variable_indexing)) {
-      perf_debug("Unsupported form of variable indexing in %s; falling "
-                 "back to very inefficient code generation\n",
-                 _mesa_shader_stage_to_abbrev(shader->Stage));
-   }
-
    bool progress;
    do {
       progress = false;
