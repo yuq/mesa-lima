@@ -142,9 +142,6 @@ dri3_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 
    (void) drv;
 
-   if (!_eglPutSurface(surf))
-      return EGL_TRUE;
-
    loader_dri3_drawable_fini(&dri3_surf->loader_drawable);
 
    free(surf);

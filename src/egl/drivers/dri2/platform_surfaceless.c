@@ -161,9 +161,6 @@ surfaceless_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *sur
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(surf);
 
-   if (!_eglPutSurface(surf))
-      return EGL_TRUE;
-
    surfaceless_free_images(dri2_surf);
 
    (*dri2_dpy->core->destroyDrawable)(dri2_surf->dri_drawable);

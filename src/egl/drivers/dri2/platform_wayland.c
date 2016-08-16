@@ -229,9 +229,6 @@ dri2_wl_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 
    (void) drv;
 
-   if (!_eglPutSurface(surf))
-      return EGL_TRUE;
-
    (*dri2_dpy->core->destroyDrawable)(dri2_surf->dri_drawable);
 
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {

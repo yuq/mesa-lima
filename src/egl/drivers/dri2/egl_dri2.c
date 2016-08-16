@@ -1366,6 +1366,10 @@ static EGLBoolean
 dri2_destroy_surface(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surf)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+
+   if (!_eglPutSurface(surf))
+      return EGL_TRUE;
+
    return dri2_dpy->vtbl->destroy_surface(drv, dpy, surf);
 }
 

@@ -386,9 +386,6 @@ dri2_x11_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 
    (void) drv;
 
-   if (!_eglPutSurface(surf))
-      return EGL_TRUE;
-
    (*dri2_dpy->core->destroyDrawable)(dri2_surf->dri_drawable);
    
    if (dri2_dpy->dri2) {
