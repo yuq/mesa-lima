@@ -214,20 +214,6 @@ hash_table_pointer_compare(const void *key1, const void *key2)
    return _mesa_key_pointer_equal(key1, key2);
 }
 
-
-static inline void
-hash_table_call_foreach(struct hash_table *ht,
-			void (*callback)(const void *key,
-					 void *data,
-					 void *closure),
-			void *closure)
-{
-   struct hash_entry *entry;
-
-   hash_table_foreach(ht, entry)
-      callback(entry->key, entry->data, closure);
-}
-
 struct string_to_uint_map *
 string_to_uint_map_ctor();
 
