@@ -1291,10 +1291,8 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
    unbind = (cctx == NULL && ddraw == NULL && rdraw == NULL);
 
    if (unbind || dri2_dpy->core->bindContext(cctx, ddraw, rdraw)) {
-      if (old_dsurf)
-         dri2_destroy_surface(drv, disp, old_dsurf);
-      if (old_rsurf)
-         dri2_destroy_surface(drv, disp, old_rsurf);
+      dri2_destroy_surface(drv, disp, old_dsurf);
+      dri2_destroy_surface(drv, disp, old_rsurf);
 
       if (!unbind)
          dri2_dpy->ref_count++;
