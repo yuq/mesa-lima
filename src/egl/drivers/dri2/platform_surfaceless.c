@@ -183,38 +183,21 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
 
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
 
-   unsigned int visuals[3][4] = {
+   static const unsigned int visuals[3][4] = {
       { 0xff0000, 0xff00, 0xff, 0xff000000 },   // ARGB8888
       { 0xff0000, 0xff00, 0xff, 0x0 },          // RGB888
       { 0xf800, 0x7e0, 0x1f, 0x0  },            // RGB565
    };
 
-   int count, i, j;
-   unsigned int r, b, g, a;
+   unsigned int count, i, j;
 
    count = 0;
    for (i = 0; i < ARRAY_SIZE(visuals); i++) {
       for (j = 0; dri2_dpy->driver_configs[j]; j++) {
-         const EGLint surface_type = EGL_PBUFFER_BIT;
          struct dri2_egl_config *dri2_conf;
 
-         /* Determine driver supported masks */
-         dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[j],
-                                       __DRI_ATTRIB_RED_MASK, &r);
-         dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[j],
-                                       __DRI_ATTRIB_BLUE_MASK, &b);
-         dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[j],
-                                       __DRI_ATTRIB_GREEN_MASK, &g);
-         dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[j],
-                                       __DRI_ATTRIB_ALPHA_MASK, &a);
-
-         /* Compare with advertised visuals */
-         if (r ^ visuals[i][0] || g ^ visuals[i][1]
-            || b ^ visuals[i][2] || a ^ visuals[i][3])
-            continue;
-
          dri2_conf = dri2_add_config(dpy, dri2_dpy->driver_configs[j],
-               count + 1, surface_type, NULL, visuals[i]);
+               count + 1, EGL_PBUFFER_BIT, NULL, visuals[i]);
 
          if (dri2_conf)
             count++;
