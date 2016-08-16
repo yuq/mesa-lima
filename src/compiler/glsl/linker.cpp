@@ -1338,7 +1338,8 @@ remap_variables(ir_instruction *inst, struct gl_linked_shader *target,
       virtual ir_visitor_status visit(ir_dereference_variable *ir)
       {
 	 if (ir->var->data.mode == ir_var_temporary) {
-	    ir_variable *var = (ir_variable *) hash_table_find(temps, ir->var);
+	    hash_entry *entry = _mesa_hash_table_search(temps, ir->var);
+	    ir_variable *var = entry ? (ir_variable *) entry->data : NULL;
 
 	    assert(var != NULL);
 	    ir->var = var;
@@ -1401,8 +1402,8 @@ move_non_declarations(exec_list *instructions, exec_node *last,
    hash_table *temps = NULL;
 
    if (make_copies)
-      temps = hash_table_ctor(0, hash_table_pointer_hash,
-			      hash_table_pointer_compare);
+      temps = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                                      _mesa_key_pointer_equal);
 
    foreach_in_list_safe(ir_instruction, inst, instructions) {
       if (inst->as_function())
@@ -1421,7 +1422,7 @@ move_non_declarations(exec_list *instructions, exec_node *last,
 	 inst = inst->clone(target, NULL);
 
 	 if (var != NULL)
-	    hash_table_insert(temps, inst, var);
+	    _mesa_hash_table_insert(temps, var, inst);
 	 else
 	    remap_variables(inst, target, temps);
       } else {
@@ -1433,7 +1434,7 @@ move_non_declarations(exec_list *instructions, exec_node *last,
    }
 
    if (make_copies)
-      hash_table_dtor(temps);
+      _mesa_hash_table_destroy(temps, NULL);
 
    return last;
 }
@@ -1448,14 +1449,14 @@ class array_sizing_visitor : public ir_hierarchical_visitor {
 public:
    array_sizing_visitor()
       : mem_ctx(ralloc_context(NULL)),
-        unnamed_interfaces(hash_table_ctor(0, hash_table_pointer_hash,
-                                           hash_table_pointer_compare))
+        unnamed_interfaces(_mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                                                   _mesa_key_pointer_equal))
    {
    }
 
    ~array_sizing_visitor()
    {
-      hash_table_dtor(this->unnamed_interfaces);
+      _mesa_hash_table_destroy(this->unnamed_interfaces, NULL);
       ralloc_free(this->mem_ctx);
    }
 
@@ -1490,13 +1491,17 @@ public:
          /* Store a pointer to the variable in the unnamed_interfaces
           * hashtable.
           */
-         ir_variable **interface_vars = (ir_variable **)
-            hash_table_find(this->unnamed_interfaces, ifc_type);
+         hash_entry *entry =
+               _mesa_hash_table_search(this->unnamed_interfaces,
+                                       ifc_type);
+
+         ir_variable **interface_vars = entry ? (ir_variable **) entry->data : NULL;
+
          if (interface_vars == NULL) {
             interface_vars = rzalloc_array(mem_ctx, ir_variable *,
                                            ifc_type->length);
-            hash_table_insert(this->unnamed_interfaces, interface_vars,
-                              ifc_type);
+            _mesa_hash_table_insert(this->unnamed_interfaces, ifc_type,
+                                    interface_vars);
          }
          unsigned index = ifc_type->field_index(var->name);
          assert(index < ifc_type->length);
