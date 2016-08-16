@@ -849,7 +849,8 @@ dri2_initialize(_EGLDriver *drv, _EGLDisplay *disp)
  * Decrement display reference count, and free up display if necessary.
  */
 static void
-dri2_display_release(_EGLDisplay *disp) {
+dri2_display_release(_EGLDisplay *disp)
+{
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    unsigned i;
 
