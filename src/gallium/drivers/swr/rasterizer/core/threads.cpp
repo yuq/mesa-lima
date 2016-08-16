@@ -465,10 +465,12 @@ void WorkOnFifoBE(
         }
 
         // Grab the list of all dirty macrotiles. A tile is dirty if it has work queued to it.
-        std::vector<uint32_t> &macroTiles = pDC->pTileMgr->getDirtyTiles();
+        auto &macroTiles = pDC->pTileMgr->getDirtyTiles();
 
-        for (uint32_t tileID : macroTiles)
+        for (auto tile : macroTiles)
         {
+            uint32_t tileID = tile->mId;
+
             // Only work on tiles for this numa node
             uint32_t x, y;
             pDC->pTileMgr->getTileIndices(tileID, x, y);
@@ -477,9 +479,7 @@ void WorkOnFifoBE(
                 continue;
             }
 
-            MacroTileQueue &tile = pDC->pTileMgr->getMacroTileQueue(tileID);
-            
-            if (!tile.getNumQueued())
+            if (!tile->getNumQueued())
             {
                 continue;
             }
@@ -490,26 +490,26 @@ void WorkOnFifoBE(
                 continue;
             }
 
-            if (tile.tryLock())
+            if (tile->tryLock())
             {
                 BE_WORK *pWork;
 
                 RDTSC_START(WorkerFoundWork);
 
-                uint32_t numWorkItems = tile.getNumQueued();
+                uint32_t numWorkItems = tile->getNumQueued();
                 SWR_ASSERT(numWorkItems);
 
-                pWork = tile.peek();
+                pWork = tile->peek();
                 SWR_ASSERT(pWork);
                 if (pWork->type == DRAW)
                 {
                     pContext->pHotTileMgr->InitializeHotTiles(pContext, pDC, tileID);
                 }
 
-                while ((pWork = tile.peek()) != nullptr)
+                while ((pWork = tile->peek()) != nullptr)
                 {
                     pWork->pfnWork(pDC, workerId, tileID, &pWork->desc);
-                    tile.dequeue();
+                    tile->dequeue();
                 }
                 RDTSC_STOP(WorkerFoundWork, numWorkItems, pDC->drawId);
 

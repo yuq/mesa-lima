@@ -95,6 +95,7 @@ struct MacroTileQueue
     ///@todo This will all be private.
     uint32_t mWorkItemsFE = 0;
     uint32_t mWorkItemsBE = 0;
+    uint32_t mId = 0;
 
 private:
     QUEUE<BE_WORK> mFifo;
@@ -123,8 +124,7 @@ public:
         mDirtyTiles.clear();
     }
 
-    INLINE std::vector<uint32_t>& getDirtyTiles() { return mDirtyTiles; }
-    INLINE MacroTileQueue& getMacroTileQueue(uint32_t id) { return mTiles[id]; }
+    INLINE std::vector<MacroTileQueue*>& getDirtyTiles() { return mDirtyTiles; }
     void markTileComplete(uint32_t id);
 
     INLINE bool isWorkComplete()
@@ -145,7 +145,7 @@ private:
     std::unordered_map<uint32_t, MacroTileQueue> mTiles;
 
     // Any tile that has work queued to it is a dirty tile.
-    std::vector<uint32_t> mDirtyTiles;
+    std::vector<MacroTileQueue*> mDirtyTiles;
 
     OSALIGNLINE(LONG) mWorkItemsProduced { 0 };
     OSALIGNLINE(volatile LONG) mWorkItemsConsumed { 0 };

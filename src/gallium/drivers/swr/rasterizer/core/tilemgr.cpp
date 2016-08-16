@@ -54,11 +54,12 @@ void MacroTileMgr::enqueue(uint32_t x, uint32_t y, BE_WORK *pWork)
 
     MacroTileQueue &tile = mTiles[id];
     tile.mWorkItemsFE++;
+    tile.mId = id;
 
     if (tile.mWorkItemsFE == 1)
     {
         tile.clear(mArena);
-        mDirtyTiles.push_back(id);
+        mDirtyTiles.push_back(&tile);
     }
 
     mWorkItemsProduced++;
