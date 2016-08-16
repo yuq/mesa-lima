@@ -527,7 +527,6 @@ PROGRAM_FILES = \
 	program/prog_cache.h \
 	program/prog_execute.c \
 	program/prog_execute.h \
-	program/prog_hash_table.c \
 	program/prog_instruction.c \
 	program/prog_instruction.h \
 	program/prog_noise.c \

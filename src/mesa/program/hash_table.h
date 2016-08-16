@@ -161,16 +161,17 @@ static inline void hash_table_remove(struct hash_table *ht, const void *key)
 /**
  * Compute hash value of a string
  *
- * Computes the hash value of a string using the DJB2 algorithm developed by
- * Professor Daniel J. Bernstein.  It was published on comp.lang.c once upon
- * a time.  I was unable to find the original posting in the archives.
- *
  * \param key  Pointer to a NUL terminated string to be hashed.
  *
  * \sa hash_table_string_compare
  */
-extern unsigned hash_table_string_hash(const void *key);
-
+static unsigned
+hash_table_string_hash(const void *key)
+{
+   const char *str = (const char *) key;
+   uint32_t hash = _mesa_hash_string(str);
+   return hash;
+}
 
 /**
  * Compare two strings used as keys
@@ -179,7 +180,11 @@ extern unsigned hash_table_string_hash(const void *key);
  *
  * \sa hash_table_string_hash
  */
-bool hash_table_string_compare(const void *a, const void *b);
+static bool
+hash_table_string_compare(const void *a, const void *b)
+{
+   return _mesa_key_string_equal(a, b);
+}
 
 /**
  * Compute hash value of a pointer
@@ -192,17 +197,23 @@ bool hash_table_string_compare(const void *a, const void *b);
  *
  * \sa hash_table_pointer_compare
  */
-unsigned
-hash_table_pointer_hash(const void *key);
-
+static unsigned
+hash_table_pointer_hash(const void *key)
+{
+   return _mesa_hash_pointer(key);
+}
 
 /**
  * Compare two pointers used as keys
  *
  * \sa hash_table_pointer_hash
  */
-bool
-hash_table_pointer_compare(const void *key1, const void *key2);
+static bool
+hash_table_pointer_compare(const void *key1, const void *key2)
+{
+   return _mesa_key_pointer_equal(key1, key2);
+}
+
 
 static inline void
 hash_table_call_foreach(struct hash_table *ht,
