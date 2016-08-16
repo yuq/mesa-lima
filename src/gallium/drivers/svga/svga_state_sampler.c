@@ -304,6 +304,7 @@ update_samplers(struct svga_context *svga, unsigned dirty )
       const unsigned count = svga->curr.num_samplers[shader];
       SVGA3dSamplerId ids[PIPE_MAX_SAMPLERS];
       unsigned i;
+      unsigned nsamplers;
 
       for (i = 0; i < count; i++) {
          if (svga->curr.sampler[shader][i]) {
@@ -315,20 +316,25 @@ update_samplers(struct svga_context *svga, unsigned dirty )
          }
       }
 
-      if (count > 0) {
+      for (; i < svga->state.hw_draw.num_samplers[shader]; i++) {
+         ids[i] = SVGA3D_INVALID_ID;
+      }
+
+      nsamplers = MAX2(svga->state.hw_draw.num_samplers[shader], count);
+      if (nsamplers > 0) {
          if (count != svga->state.hw_draw.num_samplers[shader] ||
              memcmp(ids, svga->state.hw_draw.samplers[shader],
                     count * sizeof(ids[0])) != 0) {
             /* HW state is really changing */
             ret = SVGA3D_vgpu10_SetSamplers(svga->swc,
-                                            count,
+                                            nsamplers,
                                             0,                       /* start */
                                             svga_shader_type(shader), /* type */
                                             ids);
             if (ret != PIPE_OK)
                return ret;
             memcpy(svga->state.hw_draw.samplers[shader], ids,
-                   count * sizeof(ids[0]));
+                   nsamplers * sizeof(ids[0]));
             svga->state.hw_draw.num_samplers[shader] = count;
          }
       }
@@ -344,11 +350,20 @@ update_samplers(struct svga_context *svga, unsigned dirty )
          return PIPE_OK; /* probably out of memory */
       }
 
-      ret = SVGA3D_vgpu10_SetSamplers(svga->swc,
-                                      1, /* count */
-                                      unit, /* start */
-                                      SVGA3D_SHADERTYPE_PS,
-                                      &sampler->id);
+      if (svga->state.hw_draw.samplers[PIPE_SHADER_FRAGMENT][unit]
+          != sampler->id) {
+         ret = SVGA3D_vgpu10_SetSamplers(svga->swc,
+                                         1, /* count */
+                                         unit, /* start */
+                                         SVGA3D_SHADERTYPE_PS,
+                                         &sampler->id);
+         if (ret != PIPE_OK)
+            return ret;
+
+         /* save the polygon stipple sampler in the hw draw state */
+         svga->state.hw_draw.samplers[PIPE_SHADER_FRAGMENT][unit] =
+            sampler->id;
+      }
    }
 
    return ret;

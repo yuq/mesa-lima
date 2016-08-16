@@ -232,6 +232,8 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
 
    memset(&svga->state.hw_draw, 0xcd, sizeof(svga->state.hw_draw));
    memset(&svga->state.hw_draw.views, 0x0, sizeof(svga->state.hw_draw.views));
+   memset(&svga->state.hw_draw.num_samplers, 0,
+      sizeof(svga->state.hw_draw.num_samplers));
    memset(&svga->state.hw_draw.num_sampler_views, 0,
       sizeof(svga->state.hw_draw.num_sampler_views));
    svga->state.hw_draw.num_views = 0;
