@@ -196,8 +196,6 @@ struct dri2_egl_display
 
    char                     *driver_name;
 
-   __DRIdri2LoaderExtension    dri2_loader_extension;
-   __DRIswrastLoaderExtension  swrast_loader_extension;
    const __DRIextension     *extensions[5];
    const __DRIextension    **driver_extensions;
 
