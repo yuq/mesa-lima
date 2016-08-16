@@ -51,6 +51,7 @@ struct gbm_dri_device {
 
    const __DRIcoreExtension   *core;
    const __DRIdri2Extension   *dri2;
+   const __DRI2fenceExtension *fence;
    const __DRIimageExtension  *image;
    const __DRIswrastExtension *swrast;
    const __DRI2flushExtension *flush;

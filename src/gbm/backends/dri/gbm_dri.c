@@ -239,11 +239,13 @@ struct dri_extension_match {
    const char *name;
    int version;
    int offset;
+   int optional;
 };
 
 static struct dri_extension_match dri_core_extensions[] = {
    { __DRI2_FLUSH, 1, offsetof(struct gbm_dri_device, flush) },
    { __DRI_IMAGE, 1, offsetof(struct gbm_dri_device, image) },
+   { __DRI2_FENCE, 2, offsetof(struct gbm_dri_device, fence), 1 },
    { NULL, 0, 0 }
 };
 
@@ -279,7 +281,7 @@ dri_bind_extensions(struct gbm_dri_device *dri,
 
    for (j = 0; matches[j].name; j++) {
       field = ((char *) dri + matches[j].offset);
-      if (*(const __DRIextension **) field == NULL) {
+      if ((*(const __DRIextension **) field == NULL) && !matches[j].optional) {
          ret = -1;
       }
    }

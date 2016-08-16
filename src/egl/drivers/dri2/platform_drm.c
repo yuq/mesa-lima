@@ -644,6 +644,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->dri_screen = dri2_dpy->gbm_dri->screen;
    dri2_dpy->core = dri2_dpy->gbm_dri->core;
    dri2_dpy->dri2 = dri2_dpy->gbm_dri->dri2;
+   dri2_dpy->fence = dri2_dpy->gbm_dri->fence;
    dri2_dpy->image = dri2_dpy->gbm_dri->image;
    dri2_dpy->flush = dri2_dpy->gbm_dri->flush;
    dri2_dpy->swrast = dri2_dpy->gbm_dri->swrast;
