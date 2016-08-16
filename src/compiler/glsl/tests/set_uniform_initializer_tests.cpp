@@ -24,8 +24,8 @@
 #include "main/compiler.h"
 #include "main/mtypes.h"
 #include "main/macros.h"
-#include "program/hash_table.h"
 #include "util/ralloc.h"
+#include "util/string_to_uint_map.h"
 #include "uniform_initializer_utils.h"
 
 namespace linker {

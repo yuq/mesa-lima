@@ -17,26 +17,16 @@
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
-
-/**
- * \file hash_table.h
- * \brief Implementation of a generic, opaque hash table data type.
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
  *
- * \author Ian Romanick <ian.d.romanick@intel.com>
  */
 
-#ifndef HASH_TABLE_H
-#define HASH_TABLE_H
+#ifndef STRING_TO_UINT_MAP_H
+#define STRING_TO_UINT_MAP_H
 
 #include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include <limits.h>
-#include <assert.h>
 #include "util/hash_table.h"
 
 struct string_to_uint_map;
@@ -44,146 +34,6 @@ struct string_to_uint_map;
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef unsigned (*hash_func_t)(const void *key);
-typedef bool (*hash_compare_func_t)(const void *key1, const void *key2);
-
-/**
- * Hash table constructor
- *
- * Creates a hash table with the specified number of buckets.  The supplied
- * \c hash and \c compare routines are used when adding elements to the table
- * and when searching for elements in the table.
- *
- * \param num_buckets  Number of buckets (bins) in the hash table.
- * \param hash         Function used to compute hash value of input keys.
- * \param compare      Function used to compare keys.
- */
-static inline struct hash_table *hash_table_ctor(UNUSED unsigned num_buckets,
-    hash_func_t hash, hash_compare_func_t compare)
-{
-   return _mesa_hash_table_create(NULL, hash, compare);
-}
-
-/**
- * Release all memory associated with a hash table
- *
- * \warning
- * This function does not release memory occupied either by keys or data.
- */
-static inline void hash_table_dtor(struct hash_table *ht)
-{
-   return _mesa_hash_table_destroy(ht, NULL);
-}
-
-/**
- * Flush all entries from a hash table
- *
- * \param ht  Table to be cleared of its entries.
- */
-static inline void hash_table_clear(struct hash_table *ht)
-{
-   return _mesa_hash_table_clear(ht, NULL);
-}
-
-/**
- * Search a hash table for a specific element
- *
- * \param ht   Table to be searched
- * \param key  Key of the desired element
- *
- * \return
- * The \c data value supplied to \c hash_table_insert when the element with
- * the matching key was added.  If no matching key exists in the table,
- * \c NULL is returned.
- */
-static inline void *hash_table_find(struct hash_table *ht, const void *key)
-{
-   struct hash_entry *entry = _mesa_hash_table_search(ht, key);
-   if (!entry)
-      return NULL;
-   return entry->data;
-}
-
-/**
- * Add an element to a hash table
- *
- * \warning
- * The value passed by \c key is kept in the hash table and is used by later
- * calls to \c hash_table_find.
- */
-static inline void hash_table_insert(struct hash_table *ht, void *data,
-                                     const void *key)
-{
-   _mesa_hash_table_insert(ht, key, data);
-}
-
-/**
- * Remove a specific element from a hash table.
- */
-static inline void hash_table_remove(struct hash_table *ht, const void *key)
-{
-   struct hash_entry *entry = _mesa_hash_table_search(ht, key);
-
-   if (entry)
-      _mesa_hash_table_remove(ht, entry);
-}
-
-/**
- * Compute hash value of a string
- *
- * \param key  Pointer to a NUL terminated string to be hashed.
- *
- * \sa hash_table_string_compare
- */
-static unsigned
-hash_table_string_hash(const void *key)
-{
-   const char *str = (const char *) key;
-   uint32_t hash = _mesa_hash_string(str);
-   return hash;
-}
-
-/**
- * Compare two strings used as keys
- *
- * This is just a wrapper around \c strcmp.
- *
- * \sa hash_table_string_hash
- */
-static bool
-hash_table_string_compare(const void *a, const void *b)
-{
-   return _mesa_key_string_equal(a, b);
-}
-
-/**
- * Compute hash value of a pointer
- *
- * \param key  Pointer to be used as a hash key
- *
- * \note
- * The memory pointed to by \c key is \b never accessed.  The value of \c key
- * itself is used as the hash key
- *
- * \sa hash_table_pointer_compare
- */
-static unsigned
-hash_table_pointer_hash(const void *key)
-{
-   return _mesa_hash_pointer(key);
-}
-
-/**
- * Compare two pointers used as keys
- *
- * \sa hash_table_pointer_hash
- */
-static bool
-hash_table_pointer_compare(const void *key1, const void *key2)
-{
-   return _mesa_key_pointer_equal(key1, key2);
-}
 
 struct string_to_uint_map *
 string_to_uint_map_ctor();
@@ -324,4 +174,4 @@ private:
 };
 
 #endif /* __cplusplus */
-#endif /* HASH_TABLE_H */
+#endif /* STRING_TO_UINT_MAP_H */

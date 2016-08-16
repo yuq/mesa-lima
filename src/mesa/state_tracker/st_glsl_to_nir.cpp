@@ -31,11 +31,11 @@
 #include "program/prog_statevars.h"
 #include "program/prog_parameter.h"
 #include "program/ir_to_mesa.h"
-#include "program/hash_table.h"
 #include "main/mtypes.h"
 #include "main/errors.h"
 #include "main/shaderapi.h"
 #include "main/uniforms.h"
+#include "util/string_to_uint_map.h"
 
 #include "st_context.h"
 #include "st_program.h"

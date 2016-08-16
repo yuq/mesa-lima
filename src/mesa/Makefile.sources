@@ -519,7 +519,6 @@ STATETRACKER_FILES = \
 PROGRAM_FILES = \
 	program/arbprogparse.c \
 	program/arbprogparse.h \
-	program/hash_table.h \
 	program/ir_to_mesa.cpp \
 	program/ir_to_mesa.h \
 	program/lex.yy.c \
@@ -550,7 +549,6 @@ PROGRAM_FILES = \
 	program/program_parser.h \
 	program/prog_statevars.c \
 	program/prog_statevars.h \
-	program/string_to_uint_map.cpp \
 	program/symbol_table.c \
 	program/symbol_table.h
 
