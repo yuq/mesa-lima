@@ -28,7 +28,6 @@
 #include "glsl_symbol_table.h"
 #include "program/hash_table.h"
 #include "program.h"
-#include "util/hash_table.h"
 
 /**
  * \file link_uniforms.cpp
