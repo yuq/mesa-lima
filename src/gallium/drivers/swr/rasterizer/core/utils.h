@@ -38,7 +38,7 @@
 #define _MM_INSERT_EPI64 _mm_insert_epi64
 #define _MM_EXTRACT_EPI64 _mm_extract_epi64
 #else
-INLINE INT64 _MM_EXTRACT_EPI64(__m128i a, const int32_t ndx)
+INLINE int64_t _MM_EXTRACT_EPI64(__m128i a, const int32_t ndx)
 {
     OSALIGNLINE(uint32_t) elems[4];
     _mm_store_si128((__m128i*)elems, a);
@@ -56,7 +56,7 @@ INLINE INT64 _MM_EXTRACT_EPI64(__m128i a, const int32_t ndx)
     }
 }
 
-INLINE __m128i  _MM_INSERT_EPI64(__m128i a, INT64 b, const int32_t ndx)
+INLINE __m128i  _MM_INSERT_EPI64(__m128i a, int64_t b, const int32_t ndx)
 {
     OSALIGNLINE(int64_t) elems[2];
     _mm_store_si128((__m128i*)elems, a);
