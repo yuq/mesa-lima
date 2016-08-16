@@ -1260,11 +1260,11 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
    _EGLContext *old_ctx;
+   _EGLDisplay *old_disp = NULL;
    _EGLSurface *old_dsurf, *old_rsurf;
    _EGLSurface *tmp_dsurf, *tmp_rsurf;
    __DRIdrawable *ddraw, *rdraw;
    __DRIcontext *cctx;
-   EGLBoolean unbind;
 
    if (!dri2_dpy)
       return _eglError(EGL_NOT_INITIALIZED, "eglMakeCurrent");
@@ -1275,55 +1275,55 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
       return EGL_FALSE;
    }
 
-   /* flush before context switch */
-   if (old_ctx)
-      dri2_drv->glFlush();
-
    ddraw = (dsurf) ? dri2_dpy->vtbl->get_dri_drawable(dsurf) : NULL;
    rdraw = (rsurf) ? dri2_dpy->vtbl->get_dri_drawable(rsurf) : NULL;
    cctx = (dri2_ctx) ? dri2_ctx->dri_context : NULL;
 
    if (old_ctx) {
       __DRIcontext *old_cctx = dri2_egl_context(old_ctx)->dri_context;
+
+      /* flush before context switch */
+      dri2_drv->glFlush();
       dri2_dpy->core->unbindContext(old_cctx);
+
+      /* Keep track of the old dpy as we'll need it for resource cleanup */
+      old_disp = old_ctx->Resource.Display;
    }
 
-   unbind = (cctx == NULL && ddraw == NULL && rdraw == NULL);
+   /* Bind if at least one of the primitives is valid ... */
+   if (cctx || ddraw || rdraw) {
+      if (dri2_dpy->core->bindContext(cctx, ddraw, rdraw)) {
+         /* undo the previous _eglBindContext */
+         _eglBindContext(old_ctx, old_dsurf, old_rsurf, &ctx, &tmp_dsurf, &tmp_rsurf);
+         assert(&dri2_ctx->base == ctx &&
+                tmp_dsurf == dsurf &&
+                tmp_rsurf == rsurf);
 
-   if (unbind || dri2_dpy->core->bindContext(cctx, ddraw, rdraw)) {
-      dri2_destroy_surface(drv, disp, old_dsurf);
-      dri2_destroy_surface(drv, disp, old_rsurf);
+         _eglPutSurface(dsurf);
+         _eglPutSurface(rsurf);
+         _eglPutContext(ctx);
 
-      if (!unbind)
-         dri2_dpy->ref_count++;
-      if (old_ctx) {
-         EGLDisplay old_disp = _eglGetDisplayHandle(old_ctx->Resource.Display);
-         dri2_destroy_context(drv, disp, old_ctx);
-         dri2_display_release(old_disp);
+         _eglPutSurface(old_dsurf);
+         _eglPutSurface(old_rsurf);
+         _eglPutContext(old_ctx);
+
+         /* dri2_dpy->core->bindContext failed. We cannot tell for sure why, but
+          * setting the error to EGL_BAD_MATCH is surely better than leaving it
+          * as EGL_SUCCESS.
+          */
+         return _eglError(EGL_BAD_MATCH, "eglMakeCurrent");
       }
 
-      return EGL_TRUE;
-   } else {
-      /* undo the previous _eglBindContext */
-      _eglBindContext(old_ctx, old_dsurf, old_rsurf, &ctx, &tmp_dsurf, &tmp_rsurf);
-      assert(&dri2_ctx->base == ctx &&
-             tmp_dsurf == dsurf &&
-             tmp_rsurf == rsurf);
-
-      _eglPutSurface(dsurf);
-      _eglPutSurface(rsurf);
-      _eglPutContext(ctx);
-
-      _eglPutSurface(old_dsurf);
-      _eglPutSurface(old_rsurf);
-      _eglPutContext(old_ctx);
-
-      /* dri2_dpy->core->bindContext failed. We cannot tell for sure why, but
-       * setting the error to EGL_BAD_MATCH is surely better than leaving it
-       * as EGL_SUCCESS.
-       */
-      return _eglError(EGL_BAD_MATCH, "eglMakeCurrent");
+      /* ... and refcount the dpy when successful. */
+      dri2_dpy->ref_count++;
    }
+
+   dri2_destroy_surface(drv, disp, old_dsurf);
+   dri2_destroy_surface(drv, disp, old_rsurf);
+   dri2_destroy_context(drv, disp, old_ctx);
+   dri2_display_release(old_disp);
+
+   return EGL_TRUE;
 }
 
 __DRIdrawable *
