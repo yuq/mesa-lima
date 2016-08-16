@@ -883,6 +883,14 @@ static struct dri2_egl_display_vtbl droid_display_vtbl = {
    .get_dri_drawable = dri2_surface_get_dri_drawable,
 };
 
+static const __DRIdri2LoaderExtension droid_dri2_loader_extension = {
+   .base = { __DRI_DRI2_LOADER, 3 },
+
+   .getBuffers           = NULL,
+   .flushFrontBuffer     = droid_flush_front_buffer,
+   .getBuffersWithFormat = droid_get_buffers_with_format,
+};
+
 static const __DRIimageLoaderExtension droid_image_loader_extension = {
    .base = { __DRI_IMAGE_LOADER, 1 },
 
@@ -928,13 +936,7 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
    /* render nodes cannot use Gem names, and thus do not support
     * the __DRI_DRI2_LOADER extension */
    if (!dri2_dpy->is_render_node) {
-      dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
-      dri2_dpy->dri2_loader_extension.base.version = 3;
-      dri2_dpy->dri2_loader_extension.getBuffers = NULL;
-      dri2_dpy->dri2_loader_extension.flushFrontBuffer = droid_flush_front_buffer;
-      dri2_dpy->dri2_loader_extension.getBuffersWithFormat =
-        droid_get_buffers_with_format;
-      dri2_dpy->extensions[0] = &dri2_dpy->dri2_loader_extension.base;
+      dri2_dpy->extensions[0] = &droid_dri2_loader_extension.base;
    } else {
       dri2_dpy->extensions[0] = &droid_image_loader_extension.base;
    }

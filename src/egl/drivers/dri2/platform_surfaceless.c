@@ -265,6 +265,14 @@ surfaceless_get_buffers_with_format(__DRIdrawable * driDrawable,
    return dri2_surf->buffers;
 }
 
+static const __DRIdri2LoaderExtension droid_dri2_loader_extension = {
+   .base = { __DRI_DRI2_LOADER, 3 },
+
+   .getBuffers            = NULL,
+   .flushFrontBuffer      = droid_flush_front_buffer,
+   .getBuffersWithFormat = droid_get_buffers_with_format,
+};
+
 static const __DRIimageLoaderExtension image_loader_extension = {
    .base             = { __DRI_IMAGE_LOADER, 1 },
    .getBuffers       = surfaceless_image_get_buffers,
