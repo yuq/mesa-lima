@@ -180,15 +180,12 @@ dri2_surfaceless_create_pbuffer_surface(_EGLDriver *drv, _EGLDisplay *disp,
 static EGLBoolean
 surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
 {
-
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
-
    static const unsigned int visuals[3][4] = {
       { 0xff0000, 0xff00, 0xff, 0xff000000 },   // ARGB8888
       { 0xff0000, 0xff00, 0xff, 0x0 },          // RGB888
       { 0xf800, 0x7e0, 0x1f, 0x0  },            // RGB565
    };
-
    unsigned int count, i, j;
 
    count = 0;
@@ -205,7 +202,7 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
    }
 
    if (!count)
-         _eglLog(_EGL_DEBUG, "Can't create surfaceless visuals");
+      _eglLog(_EGL_DEBUG, "Can't create surfaceless visuals");
 
    return (count != 0);
 }

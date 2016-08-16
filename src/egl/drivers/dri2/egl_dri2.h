@@ -304,7 +304,6 @@ struct dri2_egl_surface
       __DRIimage           *front;
       unsigned int         visual;
 #endif
-
 };
 
 struct dri2_egl_config
