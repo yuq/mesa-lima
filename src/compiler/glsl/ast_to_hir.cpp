@@ -53,7 +53,7 @@
 #include "glsl_parser_extras.h"
 #include "ast.h"
 #include "compiler/glsl_types.h"
-#include "program/hash_table.h"
+#include "util/hash_table.h"
 #include "main/macros.h"
 #include "main/shaderobj.h"
 #include "ir.h"
@@ -5971,8 +5971,9 @@ ast_switch_statement::hir(exec_list *instructions,
 
    state->switch_state.is_switch_innermost = true;
    state->switch_state.switch_nesting_ast = this;
-   state->switch_state.labels_ht = hash_table_ctor(0, key_contents,
-                                                   compare_case_value);
+   state->switch_state.labels_ht =
+         _mesa_hash_table_create(NULL, key_contents,
+                                 compare_case_value);
    state->switch_state.previous_default = NULL;
 
    /* Initalize is_fallthru state to false.
@@ -6046,7 +6047,7 @@ ast_switch_statement::hir(exec_list *instructions,
       instructions->push_tail(irif);
    }
 
-   hash_table_dtor(state->switch_state.labels_ht);
+   _mesa_hash_table_destroy(state->switch_state.labels_ht, NULL);
 
    state->switch_state = saved;
 
@@ -6228,20 +6229,21 @@ ast_case_label::hir(exec_list *instructions,
          /* Stuff a dummy value in to allow processing to continue. */
          label_const = new(ctx) ir_constant(0);
       } else {
-         ast_expression *previous_label = (ast_expression *)
-         hash_table_find(state->switch_state.labels_ht,
-                         (void *)(uintptr_t)&label_const->value.u[0]);
+         hash_entry *entry =
+               _mesa_hash_table_search(state->switch_state.labels_ht,
+                     (void *)(uintptr_t)&label_const->value.u[0]);
 
-         if (previous_label) {
+         if (entry) {
+            ast_expression *previous_label = (ast_expression *) entry->data;
             YYLTYPE loc = this->test_value->get_location();
             _mesa_glsl_error(& loc, state, "duplicate case value");
 
             loc = previous_label->get_location();
             _mesa_glsl_error(& loc, state, "this is the previous case label");
          } else {
-            hash_table_insert(state->switch_state.labels_ht,
-                              this->test_value,
-                              (void *)(uintptr_t)&label_const->value.u[0]);
+            _mesa_hash_table_insert(state->switch_state.labels_ht,
+                                    (void *)(uintptr_t)&label_const->value.u[0],
+                                    this->test_value);
          }
       }
 
