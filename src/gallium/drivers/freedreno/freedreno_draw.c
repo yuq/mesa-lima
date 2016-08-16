@@ -256,6 +256,7 @@ fd_blitter_clear(struct pipe_context *pctx, unsigned buffers,
 	struct pipe_draw_info info = {
 		.mode = PIPE_PRIM_MAX,    /* maps to DI_PT_RECTLIST */
 		.count = 2,
+		.max_index = 1,
 		.instance_count = 1,
 	};
 	ctx->draw_vbo(ctx, &info);
