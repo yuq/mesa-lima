@@ -86,7 +86,33 @@ public:
     * its children, or just the issue_time if it's a leaf node.
     */
    int delay;
+
+   /**
+    * Preferred exit node among the (direct or indirect) successors of this
+    * node.  Among the scheduler nodes blocked by this node, this will be the
+    * one that may cause earliest program termination, or NULL if none of the
+    * successors is an exit node.
+    */
+   schedule_node *exit;
 };
+
+/**
+ * Lower bound of the scheduling time after which one of the instructions
+ * blocked by this node may lead to program termination.
+ *
+ * exit_unblocked_time() determines a strict partial ordering relation '«' on
+ * the set of scheduler nodes as follows:
+ *
+ *   n « m <-> exit_unblocked_time(n) < exit_unblocked_time(m)
+ *
+ * which can be used to heuristically order nodes according to how early they
+ * can unblock an exit node and lead to program termination.
+ */
+static inline int
+exit_unblocked_time(const schedule_node *n)
+{
+   return n->exit ? n->exit->unblocked_time : INT_MAX;
+}
 
 void
 schedule_node::set_latency_gen4()
@@ -460,6 +486,7 @@ public:
    void run(cfg_t *cfg);
    void add_insts_from_block(bblock_t *block);
    void compute_delays();
+   void compute_exits();
    virtual void calculate_deps() = 0;
    virtual schedule_node *choose_instruction_to_schedule() = 0;
 
@@ -772,6 +799,7 @@ schedule_node::schedule_node(backend_instruction *inst,
    this->unblocked_time = 0;
    this->cand_generation = 0;
    this->delay = 0;
+   this->exit = NULL;
 
    /* We can't measure Gen6 timings directly but expect them to be much
     * closer to Gen7 than Gen4.
@@ -808,6 +836,36 @@ instruction_scheduler::compute_delays()
             assert(n->children[i]->delay);
             n->delay = MAX2(n->delay, n->latency + n->children[i]->delay);
          }
+      }
+   }
+}
+
+void
+instruction_scheduler::compute_exits()
+{
+   /* Calculate a lower bound of the scheduling time of each node in the
+    * graph.  This is analogous to the node's critical path but calculated
+    * from the top instead of from the bottom of the block.
+    */
+   foreach_in_list(schedule_node, n, &instructions) {
+      for (int i = 0; i < n->child_count; i++) {
+         n->children[i]->unblocked_time =
+            MAX2(n->children[i]->unblocked_time,
+                 n->unblocked_time + issue_time(n->inst) + n->child_latency[i]);
+      }
+   }
+
+   /* Calculate the exit of each node by induction based on the exit nodes of
+    * its children.  The preferred exit of a node is the one among the exit
+    * nodes of its children which can be unblocked first according to the
+    * optimistic unblocked time estimate calculated above.
+    */
+   foreach_in_list_reverse(schedule_node, n, &instructions) {
+      n->exit = (n->inst->opcode == FS_OPCODE_DISCARD_JUMP ? n : NULL);
+
+      for (int i = 0; i < n->child_count; i++) {
+         if (exit_unblocked_time(n->children[i]) < exit_unblocked_time(n))
+            n->exit = n->children[i]->exit;
       }
    }
 }
@@ -1631,6 +1689,7 @@ instruction_scheduler::run(cfg_t *cfg)
       calculate_deps();
 
       compute_delays();
+      compute_exits();
 
       schedule_instructions(block);
    }
