@@ -1262,7 +1262,7 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
    }
 
    /* flush before context switch */
-   if (old_ctx && dri2_drv->glFlush)
+   if (old_ctx)
       dri2_drv->glFlush();
 
    ddraw = (dsurf) ? dri2_dpy->vtbl->get_dri_drawable(dsurf) : NULL;
@@ -2666,8 +2666,7 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
       if (dri2_ctx && dri2_sync->base.SyncStatus == EGL_UNSIGNALED_KHR &&
           (flags & EGL_SYNC_FLUSH_COMMANDS_BIT_KHR)) {
          /* flush context if EGL_SYNC_FLUSH_COMMANDS_BIT_KHR is set */
-         if (dri2_drv->glFlush)
-            dri2_drv->glFlush();
+         dri2_drv->glFlush();
       }
 
       /* if timeout is EGL_FOREVER_KHR, it should wait without any timeout.*/
@@ -2831,6 +2830,12 @@ dri2_load(_EGLDriver *drv)
 
    dri2_drv->glFlush = (void (*)(void))
       dri2_drv->get_proc_address("glFlush");
+
+   /* if glFlush is not available things are horribly broken */
+   if (!dri2_drv->glFlush) {
+      _eglLog(_EGL_WARNING, "DRI2: failed to find glFlush entry point");
+      return EGL_FALSE;
+   }
 
    dri2_drv->handle = handle;
 
