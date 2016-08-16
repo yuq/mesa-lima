@@ -26,7 +26,8 @@
 #include "glsl_parser_extras.h"
 #include "ir.h"
 #include "program.h"
-#include "program/hash_table.h"
+#include "util/set.h"
+#include "util/hash_table.h"
 #include "linker.h"
 
 static ir_function_signature *
@@ -46,18 +47,18 @@ public:
       this->success = true;
       this->linked = linked;
 
-      this->locals = hash_table_ctor(0, hash_table_pointer_hash,
-				     hash_table_pointer_compare);
+      this->locals = _mesa_set_create(NULL, _mesa_hash_pointer,
+                                      _mesa_key_pointer_equal);
    }
 
    ~call_link_visitor()
    {
-      hash_table_dtor(this->locals);
+      _mesa_set_destroy(this->locals, NULL);
    }
 
    virtual ir_visitor_status visit(ir_variable *ir)
    {
-      hash_table_insert(locals, ir, ir);
+      _mesa_set_add(locals, ir);
       return visit_continue;
    }
 
@@ -147,14 +148,15 @@ public:
        * replace signature stored in a function.  One could easily be added,
        * but this avoids the need.
        */
-      struct hash_table *ht = hash_table_ctor(0, hash_table_pointer_hash,
-					      hash_table_pointer_compare);
+      struct hash_table *ht = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                                                      _mesa_key_pointer_equal);
+
       exec_list formal_parameters;
       foreach_in_list(const ir_instruction, original, &sig->parameters) {
-	 assert(const_cast<ir_instruction *>(original)->as_variable());
+         assert(const_cast<ir_instruction *>(original)->as_variable());
 
-	 ir_instruction *copy = original->clone(linked, ht);
-	 formal_parameters.push_tail(copy);
+         ir_instruction *copy = original->clone(linked, ht);
+         formal_parameters.push_tail(copy);
       }
 
       linked_sig->replace_parameters(&formal_parameters);
@@ -170,7 +172,7 @@ public:
          linked_sig->is_defined = true;
       }
 
-      hash_table_dtor(ht);
+      _mesa_hash_table_destroy(ht, NULL);
 
       /* Patch references inside the function to things outside the function
        * (i.e., function calls and global variables).
@@ -217,7 +219,7 @@ public:
 
    virtual ir_visitor_status visit(ir_dereference_variable *ir)
    {
-      if (hash_table_find(locals, ir->var) == NULL) {
+      if (_mesa_set_search(locals, ir->var) == NULL) {
 	 /* The non-function variable must be a global, so try to find the
 	  * variable in the shader's symbol table.  If the variable is not
 	  * found, then it's a global that *MUST* be defined in the original
@@ -302,7 +304,7 @@ private:
    /**
     * Table of variables local to the function.
     */
-   hash_table *locals;
+   set *locals;
 };
 
 } /* anonymous namespace */
