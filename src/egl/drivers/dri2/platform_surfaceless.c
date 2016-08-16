@@ -248,31 +248,6 @@ surfaceless_flush_front_buffer(__DRIdrawable *driDrawable, void *loaderPrivate)
 {
 }
 
-static __DRIbuffer *
-surfaceless_get_buffers_with_format(__DRIdrawable * driDrawable,
-                             int *width, int *height,
-                             unsigned int *attachments, int count,
-                             int *out_count, void *loaderPrivate)
-{
-   struct dri2_egl_surface *dri2_surf = loaderPrivate;
-
-   dri2_surf->buffer_count = 1;
-   if (width)
-      *width = dri2_surf->base.Width;
-   if (height)
-      *height = dri2_surf->base.Height;
-   *out_count = dri2_surf->buffer_count;
-   return dri2_surf->buffers;
-}
-
-static const __DRIdri2LoaderExtension droid_dri2_loader_extension = {
-   .base = { __DRI_DRI2_LOADER, 3 },
-
-   .getBuffers            = NULL,
-   .flushFrontBuffer      = droid_flush_front_buffer,
-   .getBuffersWithFormat = droid_get_buffers_with_format,
-};
-
 static const __DRIimageLoaderExtension image_loader_extension = {
    .base             = { __DRI_IMAGE_LOADER, 1 },
    .getBuffers       = surfaceless_image_get_buffers,
@@ -325,14 +300,6 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
       err = "DRI2: failed to load driver";
       goto cleanup_display;
    }
-
-   dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
-   dri2_dpy->dri2_loader_extension.base.version = 3;
-   dri2_dpy->dri2_loader_extension.getBuffers = NULL;
-   dri2_dpy->dri2_loader_extension.flushFrontBuffer =
-      surfaceless_flush_front_buffer;
-   dri2_dpy->dri2_loader_extension.getBuffersWithFormat =
-      surfaceless_get_buffers_with_format;
 
    dri2_dpy->extensions[0] = &image_loader_extension.base;
    dri2_dpy->extensions[1] = &image_lookup_extension.base;
