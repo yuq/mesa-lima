@@ -1159,6 +1159,14 @@ static struct dri2_egl_display_vtbl dri2_x11_display_vtbl = {
    .get_dri_drawable = dri2_surface_get_dri_drawable,
 };
 
+static const __DRIswrastLoaderExtension swrast_loader_extension = {
+   .base = { __DRI_SWRAST_LOADER, 1 },
+
+   .getDrawableInfo = swrastGetDrawableInfo,
+   .putImage        = swrastPutImage,
+   .getImage        = swrastGetImage,
+};
+
 static EGLBoolean
 dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 {
@@ -1193,15 +1201,8 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_load_driver_swrast(disp))
       goto cleanup_conn;
 
-   dri2_dpy->swrast_loader_extension.base.name = __DRI_SWRAST_LOADER;
-   dri2_dpy->swrast_loader_extension.base.version = 2;
-   dri2_dpy->swrast_loader_extension.getDrawableInfo = swrastGetDrawableInfo;
-   dri2_dpy->swrast_loader_extension.putImage = swrastPutImage;
-   dri2_dpy->swrast_loader_extension.getImage = swrastGetImage;
-
-   dri2_dpy->extensions[0] = &dri2_dpy->swrast_loader_extension.base;
+   dri2_dpy->extensions[0] = &swrast_loader_extension.base;
    dri2_dpy->extensions[1] = NULL;
-   dri2_dpy->extensions[2] = NULL;
 
    if (!dri2_create_screen(disp))
       goto cleanup_driver;
