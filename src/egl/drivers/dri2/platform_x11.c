@@ -1374,6 +1374,22 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
 }
 #endif
 
+static const __DRIdri2LoaderExtension dri2_loader_extension_old = {
+   .base = { __DRI_DRI2_LOADER, 2 },
+
+   .getBuffers           = dri2_x11_get_buffers,
+   .flushFrontBuffer     = dri2_x11_flush_front_buffer,
+   .getBuffersWithFormat = NULL,
+};
+
+static const __DRIdri2LoaderExtension dri2_loader_extension = {
+   .base = { __DRI_DRI2_LOADER, 3 },
+
+   .getBuffers           = dri2_x11_get_buffers,
+   .flushFrontBuffer     = dri2_x11_flush_front_buffer,
+   .getBuffersWithFormat = dri2_x11_get_buffers_with_format,
+};
+
 static EGLBoolean
 dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
 {
@@ -1405,22 +1421,11 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_load_driver(disp))
       goto cleanup_fd;
 
-   if (dri2_dpy->dri2_minor >= 1) {
-      dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
-      dri2_dpy->dri2_loader_extension.base.version = 3;
-      dri2_dpy->dri2_loader_extension.getBuffers = dri2_x11_get_buffers;
-      dri2_dpy->dri2_loader_extension.flushFrontBuffer = dri2_x11_flush_front_buffer;
-      dri2_dpy->dri2_loader_extension.getBuffersWithFormat =
-	 dri2_x11_get_buffers_with_format;
-   } else {
-      dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
-      dri2_dpy->dri2_loader_extension.base.version = 2;
-      dri2_dpy->dri2_loader_extension.getBuffers = dri2_x11_get_buffers;
-      dri2_dpy->dri2_loader_extension.flushFrontBuffer = dri2_x11_flush_front_buffer;
-      dri2_dpy->dri2_loader_extension.getBuffersWithFormat = NULL;
-   }
-      
-   dri2_dpy->extensions[0] = &dri2_dpy->dri2_loader_extension.base;
+   if (dri2_dpy->dri2_minor >= 1)
+      dri2_dpy->extensions[0] = &dri2_loader_extension.base;
+   else
+      dri2_dpy->extensions[0] = &dri2_loader_extension_old.base;
+
    dri2_dpy->extensions[1] = &image_lookup_extension.base;
    dri2_dpy->extensions[2] = NULL;
 
