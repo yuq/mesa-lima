@@ -2790,8 +2790,7 @@ dri2_unload(_EGLDriver *drv)
 {
    struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
 
-   if (dri2_drv->handle)
-      dlclose(dri2_drv->handle);
+   dlclose(dri2_drv->handle);
    free(dri2_drv);
 }
 
@@ -2805,27 +2804,27 @@ dri2_load(_EGLDriver *drv)
    const char *libname = "libglapi.0.dylib";
 #elif defined(__CYGWIN__)
    const char *libname = "cygglapi-0.dll";
-#else
+#elif defined(__linux__)
    const char *libname = "libglapi.so.0";
+#else
+#error Unknown glapi provider for this platform
 #endif
    void *handle;
 
    /* RTLD_GLOBAL to make sure glapi symbols are visible to DRI drivers */
    handle = dlopen(libname, RTLD_LAZY | RTLD_GLOBAL);
-   if (handle) {
-      dri2_drv->get_proc_address = (_EGLProc (*)(const char *))
-         dlsym(handle, "_glapi_get_proc_address");
-      if (!dri2_drv->get_proc_address || !libname) {
-         /* no need to keep a reference */
-         dlclose(handle);
-         handle = NULL;
-      }
+   if (!handle) {
+      _eglLog(_EGL_WARNING, "DRI2: failed to open glapi provider");
+      goto no_handle;
    }
+
+   dri2_drv->get_proc_address = (_EGLProc (*)(const char *))
+         dlsym(handle, "_glapi_get_proc_address");
 
    /* if glapi is not available, loading DRI drivers will fail */
    if (!dri2_drv->get_proc_address) {
       _eglLog(_EGL_WARNING, "DRI2: failed to find _glapi_get_proc_address");
-      return EGL_FALSE;
+      goto no_symbol;
    }
 
    dri2_drv->glFlush = (void (*)(void))
@@ -2834,12 +2833,16 @@ dri2_load(_EGLDriver *drv)
    /* if glFlush is not available things are horribly broken */
    if (!dri2_drv->glFlush) {
       _eglLog(_EGL_WARNING, "DRI2: failed to find glFlush entry point");
-      return EGL_FALSE;
+      goto no_symbol;
    }
 
    dri2_drv->handle = handle;
-
    return EGL_TRUE;
+
+no_symbol:
+   dlclose(handle);
+no_handle:
+   return EGL_FALSE;
 }
 
 /**
