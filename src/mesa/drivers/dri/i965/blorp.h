@@ -62,6 +62,15 @@ void blorp_init(struct blorp_context *blorp, void *driver_ctx,
                 struct isl_device *isl_dev);
 void blorp_finish(struct blorp_context *blorp);
 
+struct blorp_batch {
+   struct blorp_context *blorp;
+   void *driver_batch;
+};
+
+void blorp_batch_init(struct blorp_context *blorp, struct blorp_batch *batch,
+                      void *driver_batch);
+void blorp_batch_finish(struct blorp_batch *batch);
+
 struct blorp_address {
    drm_intel_bo *buffer;
    uint32_t read_domains;

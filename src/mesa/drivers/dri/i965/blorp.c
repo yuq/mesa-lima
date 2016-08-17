@@ -45,6 +45,20 @@ blorp_finish(struct blorp_context *blorp)
 }
 
 void
+blorp_batch_init(struct blorp_context *blorp,
+                 struct blorp_batch *batch, void *driver_batch)
+{
+   batch->blorp = blorp;
+   batch->driver_batch = driver_batch;
+}
+
+void
+blorp_batch_finish(struct blorp_batch *batch)
+{
+   batch->blorp = NULL;
+}
+
+void
 brw_blorp_surface_info_init(struct brw_context *brw,
                             struct brw_blorp_surface_info *info,
                             const struct brw_blorp_surf *surf,
