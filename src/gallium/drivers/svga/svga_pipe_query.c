@@ -1091,7 +1091,7 @@ svga_get_query_result(struct pipe_context *pipe,
                                        (void *)&occResult, sizeof(occResult));
          vresult->b = occResult.anySamplesRendered != 0;
       } else {
-         uint64_t count;
+         uint64_t count = 0;
          ret = get_query_result_vgpu9(svga, sq, wait, &count);
          vresult->b = count != 0;
       }
