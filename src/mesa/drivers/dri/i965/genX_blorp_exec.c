@@ -277,21 +277,11 @@ blorp_emit_vertex_buffers(struct brw_context *brw,
 
    unsigned num_buffers = 1;
 
-#if GEN_GEN == 9
-   uint32_t mocs = (2 << 1); /* SKL_MOCS_WB */
-#elif GEN_GEN == 8
-   uint32_t mocs = 0x78; /* BDW_MOCS_WB */
-#elif GEN_GEN == 7
-   uint32_t mocs = 1; /* GEN7_MOCS_L3 */
-#else
-   uint32_t mocs = 0;
-#endif
-
    uint32_t size;
    blorp_emit_vertex_data(brw, params, &vb[0].BufferStartingAddress, &size);
    vb[0].VertexBufferIndex = 0;
    vb[0].BufferPitch = 2 * sizeof(float);
-   vb[0].VertexBufferMOCS = mocs;
+   vb[0].VertexBufferMOCS = brw->blorp.mocs.vb;
 #if GEN_GEN >= 7
    vb[0].AddressModifyEnable = true;
 #endif
@@ -308,7 +298,7 @@ blorp_emit_vertex_buffers(struct brw_context *brw,
                                     &vb[1].BufferStartingAddress, &size);
       vb[1].VertexBufferIndex = 1;
       vb[1].BufferPitch = 0;
-      vb[1].VertexBufferMOCS = mocs;
+      vb[1].VertexBufferMOCS = brw->blorp.mocs.vb;
 #if GEN_GEN >= 7
       vb[1].AddressModifyEnable = true;
 #endif

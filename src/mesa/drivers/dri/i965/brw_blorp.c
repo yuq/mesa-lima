@@ -30,6 +30,7 @@
 
 #include "brw_blorp.h"
 #include "brw_context.h"
+#include "brw_defines.h"
 #include "brw_meta_util.h"
 #include "brw_state.h"
 #include "intel_fbo.h"
@@ -64,6 +65,31 @@ void
 brw_blorp_init(struct brw_context *brw)
 {
    blorp_init(&brw->blorp, brw, &brw->isl_dev);
+
+   switch (brw->gen) {
+   case 6:
+      brw->blorp.mocs.tex = 0;
+      brw->blorp.mocs.rb = 0;
+      brw->blorp.mocs.vb = 0;
+      break;
+   case 7:
+      brw->blorp.mocs.tex = GEN7_MOCS_L3;
+      brw->blorp.mocs.rb = GEN7_MOCS_L3;
+      brw->blorp.mocs.vb = GEN7_MOCS_L3;
+      break;
+   case 8:
+      brw->blorp.mocs.tex = BDW_MOCS_WB;
+      brw->blorp.mocs.rb = BDW_MOCS_PTE;
+      brw->blorp.mocs.vb = BDW_MOCS_WB;
+      break;
+   case 9:
+      brw->blorp.mocs.tex = SKL_MOCS_WB;
+      brw->blorp.mocs.rb = SKL_MOCS_PTE;
+      brw->blorp.mocs.vb = SKL_MOCS_WB;
+      break;
+   default:
+      unreachable("Invalid gen");
+   }
 
    brw->blorp.lookup_shader = brw_blorp_lookup_shader;
    brw->blorp.upload_shader = brw_blorp_upload_shader;

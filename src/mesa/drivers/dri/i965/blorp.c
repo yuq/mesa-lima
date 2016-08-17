@@ -228,15 +228,13 @@ struct surface_state_info {
    unsigned ss_align; /* Required alignment of RENDER_SURFACE_STATE in bytes */
    unsigned reloc_dw;
    unsigned aux_reloc_dw;
-   unsigned tex_mocs;
-   unsigned rb_mocs;
 };
 
 static const struct surface_state_info surface_state_infos[] = {
    [6] = {6,  32, 1,  0},
-   [7] = {8,  32, 1,  6,  GEN7_MOCS_L3, GEN7_MOCS_L3},
-   [8] = {13, 64, 8,  10, BDW_MOCS_WB,  BDW_MOCS_PTE},
-   [9] = {16, 64, 8,  10, SKL_MOCS_WB,  SKL_MOCS_PTE},
+   [7] = {8,  32, 1,  6},
+   [8] = {13, 64, 8,  10},
+   [9] = {16, 64, 8,  10},
 };
 
 uint32_t
@@ -265,7 +263,8 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
                                   ss_info.num_dwords * 4, ss_info.ss_align,
                                   &surf_offset);
 
-   const uint32_t mocs = is_render_target ? ss_info.rb_mocs : ss_info.tex_mocs;
+   const uint32_t mocs =
+      is_render_target ? brw->blorp.mocs.rb : brw->blorp.mocs.tex;
    uint64_t aux_bo_offset = surface->aux_bo ? surface->aux_bo->offset64 : 0;
 
    isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &surface->view,
