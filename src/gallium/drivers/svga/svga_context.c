@@ -66,16 +66,6 @@ static void svga_destroy( struct pipe_context *pipe )
       }
    }
 
-   /* free polygon stipple state */
-   if (svga->polygon_stipple.sampler) {
-      pipe->delete_sampler_state(pipe, svga->polygon_stipple.sampler);
-   }
-   if (svga->polygon_stipple.sampler_view) {
-      pipe->sampler_view_destroy(pipe,
-                                 &svga->polygon_stipple.sampler_view->base);
-   }
-   pipe_resource_reference(&svga->polygon_stipple.texture, NULL);
-
    /* free HW constant buffers */
    for (shader = 0; shader < ARRAY_SIZE(svga->state.hw_draw.constbuf); shader++) {
       pipe_resource_reference(&svga->state.hw_draw.constbuf[shader], NULL);
@@ -91,9 +81,9 @@ static void svga_destroy( struct pipe_context *pipe )
 
    util_blitter_destroy(svga->blitter);
 
+   svga_cleanup_sampler_state(svga);
    svga_cleanup_framebuffer( svga );
    svga_cleanup_tss_binding( svga );
-
    svga_cleanup_vertex_state(svga);
    
    svga_destroy_swtnl( svga );

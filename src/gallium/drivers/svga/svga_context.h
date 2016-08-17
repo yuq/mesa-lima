@@ -639,6 +639,7 @@ void svga_init_stream_output_functions( struct svga_context *svga );
 void svga_init_clear_functions( struct svga_context *svga );
 
 void svga_cleanup_vertex_state( struct svga_context *svga );
+void svga_cleanup_sampler_state( struct svga_context *svga );
 void svga_cleanup_tss_binding( struct svga_context *svga );
 void svga_cleanup_framebuffer( struct svga_context *svga );
 
