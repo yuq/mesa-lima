@@ -1695,6 +1695,9 @@ gen7_emit_push_constant_state(struct brw_context *brw, unsigned vs_size,
                               unsigned gs_size, unsigned fs_size);
 
 void
+gen6_upload_urb(struct brw_context *brw, unsigned vs_size,
+                bool gs_present, unsigned gs_size);
+void
 gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
                 bool gs_present, bool tess_present);
 
