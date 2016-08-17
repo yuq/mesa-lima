@@ -42,6 +42,7 @@
 
 #include "cso_cache/cso_context.h"
 #include "util/u_draw_quad.h"
+#include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
 #include "util/u_math.h"
@@ -97,6 +98,8 @@ struct hud_context {
       unsigned max_num_vertices;
       unsigned num_vertices;
    } text, bg, whitelines;
+
+   bool has_srgb;
 };
 
 #ifdef PIPE_OS_UNIX
@@ -484,6 +487,18 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    /* set states */
    memset(&surf_templ, 0, sizeof(surf_templ));
    surf_templ.format = tex->format;
+
+   /* Without this, AA lines look thinner if they are between 2 pixels
+    * because the alpha is 0.5 on both pixels. (it's ugly)
+    *
+    * sRGB makes the width of all AA lines look the same.
+    */
+   if (hud->has_srgb) {
+      enum pipe_format srgb_format = util_format_srgb(tex->format);
+
+      if (srgb_format != PIPE_FORMAT_NONE)
+         surf_templ.format = srgb_format;
+   }
    surf = pipe->create_surface(pipe, tex, &surf_templ);
 
    memset(&fb, 0, sizeof(fb));
@@ -1138,6 +1153,7 @@ print_help(struct pipe_screen *screen)
 struct hud_context *
 hud_create(struct pipe_context *pipe, struct cso_context *cso)
 {
+   struct pipe_screen *screen = pipe->screen;
    struct hud_context *hud;
    struct pipe_sampler_view view_templ;
    unsigned i;
@@ -1172,6 +1188,11 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
       FREE(hud);
       return NULL;
    }
+
+   hud->has_srgb = screen->is_format_supported(screen,
+                                               PIPE_FORMAT_B8G8R8A8_SRGB,
+                                               PIPE_TEXTURE_2D, 0,
+                                               PIPE_BIND_RENDER_TARGET) != 0;
 
    /* blend state */
    hud->no_blend.rt[0].colormask = PIPE_MASK_RGBA;
