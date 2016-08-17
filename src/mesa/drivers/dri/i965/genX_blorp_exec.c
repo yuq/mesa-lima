@@ -200,9 +200,9 @@ static void
 emit_urb_config(struct brw_context *brw,
                 const struct brw_blorp_params *params)
 {
-#if GEN_GEN >= 7
    const unsigned vs_entry_size = gen7_blorp_get_vs_entry_size(params);
 
+#if GEN_GEN >= 7
    if (!(brw->ctx.NewDriverState & (BRW_NEW_CONTEXT | BRW_NEW_URB_SIZE)) &&
        brw->urb.vsize >= vs_entry_size)
       return;
@@ -211,9 +211,7 @@ emit_urb_config(struct brw_context *brw,
 
    gen7_upload_urb(brw, vs_entry_size, false, false);
 #else
-   blorp_emit(brw, GENX(3DSTATE_URB), urb) {
-      urb.VSNumberofURBEntries = brw->urb.max_vs_entries;
-   }
+   gen6_upload_urb(brw, vs_entry_size, false, 0);
 #endif
 }
 
