@@ -37,7 +37,7 @@
 
 #include <algorithm>
 
-typedef void(*PFN_CLEAR_TILES)(DRAW_CONTEXT*, SWR_RENDERTARGET_ATTACHMENT rt, uint32_t, DWORD[4]);
+typedef void(*PFN_CLEAR_TILES)(DRAW_CONTEXT*, SWR_RENDERTARGET_ATTACHMENT rt, uint32_t, DWORD[4], const SWR_RECT& rect);
 static PFN_CLEAR_TILES sClearTilesTable[NUM_SWR_FORMATS];
 
 //////////////////////////////////////////////////////////////////////////
@@ -88,7 +88,7 @@ void ProcessSyncBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
 template<SWR_FORMAT format>
 void ClearRasterTile(uint8_t *pTileBuffer, simdvector &value)
 {
-    auto lambda = [&](int comp)
+    auto lambda = [&](int32_t comp)
     {
         FormatTraits<format>::storeSOA(comp, pTileBuffer, value.v[comp]);
         pTileBuffer += (KNOB_SIMD_WIDTH * FormatTraits<format>::GetBPC(comp) / 8);
@@ -102,7 +102,7 @@ void ClearRasterTile(uint8_t *pTileBuffer, simdvector &value)
 }
 
 template<SWR_FORMAT format>
-INLINE void ClearMacroTile(DRAW_CONTEXT *pDC, SWR_RENDERTARGET_ATTACHMENT rt, uint32_t macroTile, DWORD clear[4])
+INLINE void ClearMacroTile(DRAW_CONTEXT *pDC, SWR_RENDERTARGET_ATTACHMENT rt, uint32_t macroTile, DWORD clear[4], const SWR_RECT& rect)
 {
     // convert clear color to hottile format
     // clear color is in RGBA float/uint32
@@ -122,32 +122,33 @@ INLINE void ClearMacroTile(DRAW_CONTEXT *pDC, SWR_RENDERTARGET_ATTACHMENT rt, ui
 
     uint32_t tileX, tileY;
     MacroTileMgr::getTileIndices(macroTile, tileX, tileY);
-    const API_STATE& state = GetApiState(pDC);
-    
-    int top = KNOB_MACROTILE_Y_DIM_FIXED * tileY;
-    int bottom = top + KNOB_MACROTILE_Y_DIM_FIXED - 1;
-    int left = KNOB_MACROTILE_X_DIM_FIXED * tileX;
-    int right = left + KNOB_MACROTILE_X_DIM_FIXED - 1;
 
-    // intersect with scissor
-    top = std::max(top, state.scissorInFixedPoint.top);
-    left = std::max(left, state.scissorInFixedPoint.left);
-    bottom = std::min(bottom, state.scissorInFixedPoint.bottom);
-    right = std::min(right, state.scissorInFixedPoint.right);
+    // Init to full macrotile
+    SWR_RECT clearTile =
+    {
+        KNOB_MACROTILE_X_DIM * int32_t(tileX),
+        KNOB_MACROTILE_Y_DIM * int32_t(tileY),
+        KNOB_MACROTILE_X_DIM * int32_t(tileX + 1),
+        KNOB_MACROTILE_Y_DIM * int32_t(tileY + 1),
+    };
+
+    // intersect with clear rect
+    clearTile &= rect;
 
     // translate to local hottile origin
-    top -= KNOB_MACROTILE_Y_DIM_FIXED * tileY;
-    bottom -= KNOB_MACROTILE_Y_DIM_FIXED * tileY;
-    left -= KNOB_MACROTILE_X_DIM_FIXED * tileX;
-    right -= KNOB_MACROTILE_X_DIM_FIXED * tileX;
+    clearTile.Translate(-int32_t(tileX) * KNOB_MACROTILE_X_DIM, -int32_t(tileY) * KNOB_MACROTILE_Y_DIM);
+
+    // Make maximums inclusive (needed for convert to raster tiles)
+    clearTile.xmax -= 1;
+    clearTile.ymax -= 1;
 
     // convert to raster tiles
-    top >>= (KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
-    bottom >>= (KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
-    left >>= (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
-    right >>= (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
+    clearTile.ymin >>= (KNOB_TILE_Y_DIM_SHIFT);
+    clearTile.ymax >>= (KNOB_TILE_Y_DIM_SHIFT);
+    clearTile.xmin >>= (KNOB_TILE_X_DIM_SHIFT);
+    clearTile.xmax >>= (KNOB_TILE_X_DIM_SHIFT);
 
-    const int numSamples = GetNumSamples(pDC->pState->state.rastState.sampleCount);
+    const int32_t numSamples = GetNumSamples(pDC->pState->state.rastState.sampleCount);
     // compute steps between raster tile samples / raster tiles / macro tile rows
     const uint32_t rasterTileSampleStep = KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * FormatTraits<format>::bpp / 8;
     const uint32_t rasterTileStep = (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * (FormatTraits<format>::bpp / 8)) * numSamples;
@@ -155,16 +156,16 @@ INLINE void ClearMacroTile(DRAW_CONTEXT *pDC, SWR_RENDERTARGET_ATTACHMENT rt, ui
     const uint32_t pitch = (FormatTraits<format>::bpp * KNOB_MACROTILE_X_DIM / 8);
 
     HOTTILE *pHotTile = pDC->pContext->pHotTileMgr->GetHotTile(pDC->pContext, pDC, macroTile, rt, true, numSamples);
-    uint32_t rasterTileStartOffset = (ComputeTileOffset2D< TilingTraits<SWR_TILE_SWRZ, FormatTraits<format>::bpp > >(pitch, left, top)) * numSamples;
+    uint32_t rasterTileStartOffset = (ComputeTileOffset2D< TilingTraits<SWR_TILE_SWRZ, FormatTraits<format>::bpp > >(pitch, clearTile.xmin, clearTile.ymin)) * numSamples;
     uint8_t* pRasterTileRow = pHotTile->pBuffer + rasterTileStartOffset; //(ComputeTileOffset2D< TilingTraits<SWR_TILE_SWRZ, FormatTraits<format>::bpp > >(pitch, x, y)) * numSamples;
 
     // loop over all raster tiles in the current hot tile
-    for (int y = top; y <= bottom; ++y)
+    for (int32_t y = clearTile.ymin; y <= clearTile.ymax; ++y)
     {
         uint8_t* pRasterTile = pRasterTileRow;
-        for (int x = left; x <= right; ++x)
+        for (int32_t x = clearTile.xmin; x <= clearTile.xmax; ++x)
         {
-            for( int sampleNum = 0; sampleNum < numSamples; sampleNum++)
+            for( int32_t sampleNum = 0; sampleNum < numSamples; sampleNum++)
             {
                 ClearRasterTile<format>(pRasterTile, vClear);
                 pRasterTile += rasterTileSampleStep;
@@ -241,7 +242,7 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
             PFN_CLEAR_TILES pfnClearTiles = sClearTilesTable[KNOB_COLOR_HOT_TILE_FORMAT];
             SWR_ASSERT(pfnClearTiles != nullptr);
 
-            pfnClearTiles(pDC, SWR_ATTACHMENT_COLOR0, macroTile, clearData);
+            pfnClearTiles(pDC, SWR_ATTACHMENT_COLOR0, macroTile, clearData, pClear->rect);
         }
 
         if (pClear->flags.mask & SWR_CLEAR_DEPTH)
@@ -251,7 +252,7 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
             PFN_CLEAR_TILES pfnClearTiles = sClearTilesTable[KNOB_DEPTH_HOT_TILE_FORMAT];
             SWR_ASSERT(pfnClearTiles != nullptr);
 
-            pfnClearTiles(pDC, SWR_ATTACHMENT_DEPTH, macroTile, clearData);
+            pfnClearTiles(pDC, SWR_ATTACHMENT_DEPTH, macroTile, clearData, pClear->rect);
         }
 
         if (pClear->flags.mask & SWR_CLEAR_STENCIL)
@@ -261,7 +262,7 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
             clearData[0] = *(DWORD*)&value;
             PFN_CLEAR_TILES pfnClearTiles = sClearTilesTable[KNOB_STENCIL_HOT_TILE_FORMAT];
 
-            pfnClearTiles(pDC, SWR_ATTACHMENT_STENCIL, macroTile, clearData);
+            pfnClearTiles(pDC, SWR_ATTACHMENT_STENCIL, macroTile, clearData, pClear->rect);
         }
 
         RDTSC_STOP(BEClear, 0, 0);
@@ -307,13 +308,13 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
             PFN_CLEAR_TILES pfnClearTiles = sClearTilesTable[srcFormat];
             SWR_ASSERT(pfnClearTiles != nullptr);
 
-            pfnClearTiles(pDC, pDesc->attachment, macroTile, pHotTile->clearData);
+            pfnClearTiles(pDC, pDesc->attachment, macroTile, pHotTile->clearData, pDesc->rect);
         }
 
         if (pHotTile->state == HOTTILE_DIRTY || pDesc->postStoreTileState == (SWR_TILE_STATE)HOTTILE_DIRTY)
         {
-            int destX = KNOB_MACROTILE_X_DIM * x;
-            int destY = KNOB_MACROTILE_Y_DIM * y;
+            int32_t destX = KNOB_MACROTILE_X_DIM * x;
+            int32_t destY = KNOB_MACROTILE_Y_DIM * y;
 
             pContext->pfnStoreTile(GetPrivateState(pDC), srcFormat,
                 pDesc->attachment, destX, destY, pHotTile->renderTargetArrayIndex, pHotTile->pBuffer);
@@ -334,7 +335,7 @@ void ProcessDiscardInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint3
     DISCARD_INVALIDATE_TILES_DESC *pDesc = (DISCARD_INVALIDATE_TILES_DESC *)pData;
     SWR_CONTEXT *pContext = pDC->pContext;
 
-    const int numSamples = GetNumSamples(pDC->pState->state.rastState.sampleCount);
+    const int32_t numSamples = GetNumSamples(pDC->pState->state.rastState.sampleCount);
 
     for (uint32_t i = 0; i < SWR_NUM_ATTACHMENTS; ++i)
     {

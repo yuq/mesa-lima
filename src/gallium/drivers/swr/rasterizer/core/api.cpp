@@ -46,6 +46,8 @@
 #include "common/simdintrin.h"
 #include "common/os.h"
 
+static const SWR_RECT g_MaxScissorRect = { 0, 0, KNOB_MAX_SCISSOR_X, KNOB_MAX_SCISSOR_Y };
+
 void SetupDefaultState(SWR_CONTEXT *pContext);
 
 static INLINE SWR_CONTEXT* GetContext(HANDLE hContext)
@@ -713,56 +715,46 @@ void SwrSetViewports(
 void SwrSetScissorRects(
     HANDLE hContext,
     uint32_t numScissors,
-    const BBOX* pScissors)
+    const SWR_RECT* pScissors)
 {
     SWR_ASSERT(numScissors <= KNOB_NUM_VIEWPORTS_SCISSORS,
         "Invalid number of scissor rects.");
 
     API_STATE* pState = GetDrawState(GetContext(hContext));
-    memcpy(&pState->scissorRects[0], pScissors, numScissors * sizeof(BBOX));
+    memcpy(&pState->scissorRects[0], pScissors, numScissors * sizeof(pScissors[0]));
 };
 
 void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
 {
     API_STATE *pState = &pDC->pState->state;
-    uint32_t left, right, top, bottom;
 
     // Set up scissor dimensions based on scissor or viewport
     if (pState->rastState.scissorEnable)
     {
-        // scissor rect right/bottom edge are exclusive, core expects scissor dimensions to be inclusive, so subtract one pixel from right/bottom edges
-        left = pState->scissorRects[0].left;
-        right = pState->scissorRects[0].right;
-        top = pState->scissorRects[0].top;
-        bottom = pState->scissorRects[0].bottom;
+        pState->scissorInFixedPoint = pState->scissorRects[0];
     }
     else
     {
         // the vp width and height must be added to origin un-rounded then the result round to -inf.
         // The cast to int works for rounding assuming all [left, right, top, bottom] are positive.
-        left = (int32_t)pState->vp[0].x;
-        right = (int32_t)(pState->vp[0].x + pState->vp[0].width);
-        top = (int32_t)pState->vp[0].y;
-        bottom = (int32_t)(pState->vp[0].y + pState->vp[0].height);
+        pState->scissorInFixedPoint.xmin = (int32_t)pState->vp[0].x;
+        pState->scissorInFixedPoint.xmax = (int32_t)(pState->vp[0].x + pState->vp[0].width);
+        pState->scissorInFixedPoint.ymin = (int32_t)pState->vp[0].y;
+        pState->scissorInFixedPoint.ymax = (int32_t)(pState->vp[0].y + pState->vp[0].height);
     }
 
-    right = std::min<uint32_t>(right, KNOB_MAX_SCISSOR_X);
-    bottom = std::min<uint32_t>(bottom, KNOB_MAX_SCISSOR_Y);
+    // Clamp to max rect
+    pState->scissorInFixedPoint &= g_MaxScissorRect;
 
-    if (left > KNOB_MAX_SCISSOR_X || top > KNOB_MAX_SCISSOR_Y)
-    {
-        pState->scissorInFixedPoint.left = 0;
-        pState->scissorInFixedPoint.right = 0;
-        pState->scissorInFixedPoint.top = 0;
-        pState->scissorInFixedPoint.bottom = 0;
-    }
-    else
-    {
-        pState->scissorInFixedPoint.left = left * FIXED_POINT_SCALE;
-        pState->scissorInFixedPoint.right = right * FIXED_POINT_SCALE - 1;
-        pState->scissorInFixedPoint.top = top * FIXED_POINT_SCALE;
-        pState->scissorInFixedPoint.bottom = bottom * FIXED_POINT_SCALE - 1;
-    }
+    // Scale to fixed point
+    pState->scissorInFixedPoint.xmin *= FIXED_POINT_SCALE;
+    pState->scissorInFixedPoint.xmax *= FIXED_POINT_SCALE;
+    pState->scissorInFixedPoint.ymin *= FIXED_POINT_SCALE;
+    pState->scissorInFixedPoint.ymax *= FIXED_POINT_SCALE;
+
+    // Make scissor inclusive
+    pState->scissorInFixedPoint.xmax -= 1;
+    pState->scissorInFixedPoint.ymax -= 1;
 }
 
 // templated backend function tables
@@ -1303,9 +1295,12 @@ void SwrDrawIndexedInstanced(
 /// @brief SwrInvalidateTiles
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param attachmentMask - The mask specifies which surfaces attached to the hottiles to invalidate.
-void SwrInvalidateTiles(
+/// @param invalidateRect - The pixel-coordinate rectangle to invalidate.  This will be expanded to
+///                         be hottile size-aligned.
+void SWR_API SwrInvalidateTiles(
     HANDLE hContext,
-    uint32_t attachmentMask)
+    uint32_t attachmentMask,
+    const SWR_RECT& invalidateRect)
 {
     if (KNOB_TOSS_DRAW)
     {
@@ -1318,7 +1313,8 @@ void SwrInvalidateTiles(
     pDC->FeWork.type = DISCARDINVALIDATETILES;
     pDC->FeWork.pfnWork = ProcessDiscardInvalidateTiles;
     pDC->FeWork.desc.discardInvalidateTiles.attachmentMask = attachmentMask;
-    memset(&pDC->FeWork.desc.discardInvalidateTiles.rect, 0, sizeof(SWR_RECT));
+    pDC->FeWork.desc.discardInvalidateTiles.rect = invalidateRect;
+    pDC->FeWork.desc.discardInvalidateTiles.rect &= g_MaxScissorRect;
     pDC->FeWork.desc.discardInvalidateTiles.newTileState = SWR_TILE_INVALID;
     pDC->FeWork.desc.discardInvalidateTiles.createNewTiles = false;
     pDC->FeWork.desc.discardInvalidateTiles.fullTilesOnly = false;
@@ -1331,11 +1327,12 @@ void SwrInvalidateTiles(
 /// @brief SwrDiscardRect
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param attachmentMask - The mask specifies which surfaces attached to the hottiles to discard.
-/// @param rect - if rect is all zeros, the entire attachment surface will be discarded
-void SwrDiscardRect(
+/// @param rect - The pixel-coordinate rectangle to discard.  Only fully-covered hottiles will be
+///               discarded.
+void SWR_API SwrDiscardRect(
     HANDLE hContext,
     uint32_t attachmentMask,
-    SWR_RECT rect)
+    const SWR_RECT& rect)
 {
     if (KNOB_TOSS_DRAW)
     {
@@ -1350,6 +1347,7 @@ void SwrDiscardRect(
     pDC->FeWork.pfnWork = ProcessDiscardInvalidateTiles;
     pDC->FeWork.desc.discardInvalidateTiles.attachmentMask = attachmentMask;
     pDC->FeWork.desc.discardInvalidateTiles.rect = rect;
+    pDC->FeWork.desc.discardInvalidateTiles.rect &= g_MaxScissorRect;
     pDC->FeWork.desc.discardInvalidateTiles.newTileState = SWR_TILE_RESOLVED;
     pDC->FeWork.desc.discardInvalidateTiles.createNewTiles = true;
     pDC->FeWork.desc.discardInvalidateTiles.fullTilesOnly = true;
@@ -1398,10 +1396,11 @@ void SwrDispatch(
 
 // Deswizzles, converts and stores current contents of the hot tiles to surface
 // described by pState
-void SwrStoreTiles(
+void SWR_API SwrStoreTiles(
     HANDLE hContext,
     SWR_RENDERTARGET_ATTACHMENT attachment,
-    SWR_TILE_STATE postStoreTileState)
+    SWR_TILE_STATE postStoreTileState,
+    const SWR_RECT& storeRect)
 {
     if (KNOB_TOSS_DRAW)
     {
@@ -1413,12 +1412,12 @@ void SwrStoreTiles(
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    SetupMacroTileScissors(pDC);
-
     pDC->FeWork.type = STORETILES;
     pDC->FeWork.pfnWork = ProcessStoreTiles;
     pDC->FeWork.desc.storeTiles.attachment = attachment;
     pDC->FeWork.desc.storeTiles.postStoreTileState = postStoreTileState;
+    pDC->FeWork.desc.storeTiles.rect = storeRect;
+    pDC->FeWork.desc.storeTiles.rect &= g_MaxScissorRect;
 
     //enqueue
     QueueDraw(pContext);
@@ -1426,12 +1425,21 @@ void SwrStoreTiles(
     RDTSC_STOP(APIStoreTiles, 0, 0);
 }
 
-void SwrClearRenderTarget(
+//////////////////////////////////////////////////////////////////////////
+/// @brief SwrClearRenderTarget - Clear attached render targets / depth / stencil
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param clearMask - combination of SWR_CLEAR_COLOR / SWR_CLEAR_DEPTH / SWR_CLEAR_STENCIL flags (or SWR_CLEAR_NONE)
+/// @param clearColor - color use for clearing render targets
+/// @param z - depth value use for clearing depth buffer
+/// @param stencil - stencil value used for clearing stencil buffer
+/// @param clearRect - The pixel-coordinate rectangle to clear in all cleared buffers
+void SWR_API SwrClearRenderTarget(
     HANDLE hContext,
     uint32_t clearMask,
     const float clearColor[4],
     float z,
-    uint8_t stencil)
+    uint8_t stencil,
+    const SWR_RECT& clearRect)
 {
     if (KNOB_TOSS_DRAW)
     {
@@ -1441,16 +1449,16 @@ void SwrClearRenderTarget(
     RDTSC_START(APIClearRenderTarget);
 
     SWR_CONTEXT *pContext = GetContext(hContext);
-
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    SetupMacroTileScissors(pDC);
-
     CLEAR_FLAGS flags;
+    flags.bits = 0;
     flags.mask = clearMask;
 
     pDC->FeWork.type = CLEAR;
     pDC->FeWork.pfnWork = ProcessClear;
+    pDC->FeWork.desc.clear.rect = clearRect;
+    pDC->FeWork.desc.clear.rect &= g_MaxScissorRect;
     pDC->FeWork.desc.clear.flags = flags;
     pDC->FeWork.desc.clear.clearDepth = z;
     pDC->FeWork.desc.clear.clearRTColor[0] = clearColor[0];

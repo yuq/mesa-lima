@@ -93,26 +93,24 @@ void ProcessClear(
     uint32_t workerId,
     void *pUserData)
 {
-    CLEAR_DESC *pClear = (CLEAR_DESC*)pUserData;
+    CLEAR_DESC *pDesc = (CLEAR_DESC*)pUserData;
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
 
-    const API_STATE& state = GetApiState(pDC);
-
     // queue a clear to each macro tile
-    // compute macro tile bounds for the current scissor/viewport
-    uint32_t macroTileLeft = state.scissorInFixedPoint.left / KNOB_MACROTILE_X_DIM_FIXED;
-    uint32_t macroTileRight = state.scissorInFixedPoint.right / KNOB_MACROTILE_X_DIM_FIXED;
-    uint32_t macroTileTop = state.scissorInFixedPoint.top / KNOB_MACROTILE_Y_DIM_FIXED;
-    uint32_t macroTileBottom = state.scissorInFixedPoint.bottom / KNOB_MACROTILE_Y_DIM_FIXED;
+    // compute macro tile bounds for the specified rect
+    uint32_t macroTileXMin = pDesc->rect.xmin / KNOB_MACROTILE_X_DIM;
+    uint32_t macroTileXMax = (pDesc->rect.xmax - 1) / KNOB_MACROTILE_X_DIM;
+    uint32_t macroTileYMin = pDesc->rect.ymin / KNOB_MACROTILE_Y_DIM;
+    uint32_t macroTileYMax = (pDesc->rect.ymax - 1) / KNOB_MACROTILE_Y_DIM;
 
     BE_WORK work;
     work.type = CLEAR;
     work.pfnWork = ProcessClearBE;
-    work.desc.clear = *pClear;
+    work.desc.clear = *pDesc;
 
-    for (uint32_t y = macroTileTop; y <= macroTileBottom; ++y)
+    for (uint32_t y = macroTileYMin; y <= macroTileYMax; ++y)
     {
-        for (uint32_t x = macroTileLeft; x <= macroTileRight; ++x)
+        for (uint32_t x = macroTileXMin; x <= macroTileXMax; ++x)
         {
             pTileMgr->enqueue(x, y, &work);
         }
@@ -133,28 +131,25 @@ void ProcessStoreTiles(
     void *pUserData)
 {
     RDTSC_START(FEProcessStoreTiles);
-    STORE_TILES_DESC *pStore = (STORE_TILES_DESC*)pUserData;
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
-
-    const API_STATE& state = GetApiState(pDC);
+    STORE_TILES_DESC* pDesc = (STORE_TILES_DESC*)pUserData;
 
     // queue a store to each macro tile
-    // compute macro tile bounds for the current render target
-    const uint32_t macroWidth = KNOB_MACROTILE_X_DIM;
-    const uint32_t macroHeight = KNOB_MACROTILE_Y_DIM;
-
-    uint32_t numMacroTilesX = ((uint32_t)state.vp[0].width + (uint32_t)state.vp[0].x + (macroWidth - 1)) / macroWidth;
-    uint32_t numMacroTilesY = ((uint32_t)state.vp[0].height + (uint32_t)state.vp[0].y + (macroHeight - 1)) / macroHeight;
+    // compute macro tile bounds for the specified rect
+    uint32_t macroTileXMin = pDesc->rect.xmin / KNOB_MACROTILE_X_DIM;
+    uint32_t macroTileXMax = (pDesc->rect.xmax - 1) / KNOB_MACROTILE_X_DIM;
+    uint32_t macroTileYMin = pDesc->rect.ymin / KNOB_MACROTILE_Y_DIM;
+    uint32_t macroTileYMax = (pDesc->rect.ymax - 1) / KNOB_MACROTILE_Y_DIM;
 
     // store tiles
     BE_WORK work;
     work.type = STORETILES;
     work.pfnWork = ProcessStoreTileBE;
-    work.desc.storeTiles = *pStore;
+    work.desc.storeTiles = *pDesc;
 
-    for (uint32_t x = 0; x < numMacroTilesX; ++x)
+    for (uint32_t y = macroTileYMin; y <= macroTileYMax; ++y)
     {
-        for (uint32_t y = 0; y < numMacroTilesY; ++y)
+        for (uint32_t x = macroTileXMin; x <= macroTileXMax; ++x)
         {
             pTileMgr->enqueue(x, y, &work);
         }
@@ -177,64 +172,39 @@ void ProcessDiscardInvalidateTiles(
     void *pUserData)
 {
     RDTSC_START(FEProcessInvalidateTiles);
-    DISCARD_INVALIDATE_TILES_DESC *pInv = (DISCARD_INVALIDATE_TILES_DESC*)pUserData;
+    DISCARD_INVALIDATE_TILES_DESC *pDesc = (DISCARD_INVALIDATE_TILES_DESC*)pUserData;
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
 
-    SWR_RECT rect;
+    // compute macro tile bounds for the specified rect
+    uint32_t macroTileXMin = (pDesc->rect.xmin + KNOB_MACROTILE_X_DIM - 1) / KNOB_MACROTILE_X_DIM;
+    uint32_t macroTileXMax = (pDesc->rect.xmax / KNOB_MACROTILE_X_DIM) - 1;
+    uint32_t macroTileYMin = (pDesc->rect.ymin + KNOB_MACROTILE_Y_DIM - 1) / KNOB_MACROTILE_Y_DIM;
+    uint32_t macroTileYMax = (pDesc->rect.ymax / KNOB_MACROTILE_Y_DIM) - 1;
 
-    if (pInv->rect.top | pInv->rect.bottom | pInv->rect.right | pInv->rect.left)
-    {
-        // Valid rect
-        rect = pInv->rect;
-    }
-    else
-    {
-        // Use viewport dimensions
-        const API_STATE& state = GetApiState(pDC);
-
-        rect.left   = (uint32_t)state.vp[0].x;
-        rect.right  = (uint32_t)(state.vp[0].x + state.vp[0].width);
-        rect.top    = (uint32_t)state.vp[0].y;
-        rect.bottom = (uint32_t)(state.vp[0].y + state.vp[0].height);
-    }
-
-    // queue a store to each macro tile
-    // compute macro tile bounds for the current render target
-    uint32_t macroWidth = KNOB_MACROTILE_X_DIM;
-    uint32_t macroHeight = KNOB_MACROTILE_Y_DIM;
-
-    // Setup region assuming full tiles
-    uint32_t macroTileStartX = (rect.left + (macroWidth - 1)) / macroWidth;
-    uint32_t macroTileStartY = (rect.top + (macroHeight - 1)) / macroHeight;
-
-    uint32_t macroTileEndX = rect.right / macroWidth;
-    uint32_t macroTileEndY = rect.bottom / macroHeight;
-
-    if (pInv->fullTilesOnly == false)
+    if (pDesc->fullTilesOnly == false)
     {
         // include partial tiles
-        macroTileStartX = rect.left / macroWidth;
-        macroTileStartY = rect.top / macroHeight;
-
-        macroTileEndX = (rect.right + macroWidth - 1) / macroWidth;
-        macroTileEndY = (rect.bottom + macroHeight - 1) / macroHeight;
+        macroTileXMin = pDesc->rect.xmin / KNOB_MACROTILE_X_DIM;
+        macroTileXMax = (pDesc->rect.xmax - 1) / KNOB_MACROTILE_X_DIM;
+        macroTileYMin = pDesc->rect.ymin / KNOB_MACROTILE_Y_DIM;
+        macroTileYMax = (pDesc->rect.ymax - 1) / KNOB_MACROTILE_Y_DIM;
     }
 
-    SWR_ASSERT(macroTileEndX <= KNOB_NUM_HOT_TILES_X);
-    SWR_ASSERT(macroTileEndY <= KNOB_NUM_HOT_TILES_Y);
+    SWR_ASSERT(macroTileXMax <= KNOB_NUM_HOT_TILES_X);
+    SWR_ASSERT(macroTileYMax <= KNOB_NUM_HOT_TILES_Y);
 
-    macroTileEndX = std::min<uint32_t>(macroTileEndX, KNOB_NUM_HOT_TILES_X);
-    macroTileEndY = std::min<uint32_t>(macroTileEndY, KNOB_NUM_HOT_TILES_Y);
+    macroTileXMax = std::min<int32_t>(macroTileXMax, KNOB_NUM_HOT_TILES_X);
+    macroTileYMax = std::min<int32_t>(macroTileYMax, KNOB_NUM_HOT_TILES_Y);
 
     // load tiles
     BE_WORK work;
     work.type = DISCARDINVALIDATETILES;
     work.pfnWork = ProcessDiscardInvalidateTilesBE;
-    work.desc.discardInvalidateTiles = *pInv;
+    work.desc.discardInvalidateTiles = *pDesc;
 
-    for (uint32_t x = macroTileStartX; x < macroTileEndX; ++x)
+    for (uint32_t x = macroTileXMin; x <= macroTileXMax; ++x)
     {
-        for (uint32_t y = macroTileStartY; y < macroTileEndY; ++y)
+        for (uint32_t y = macroTileYMin; y <= macroTileYMax; ++y)
         {
             pTileMgr->enqueue(x, y, &work);
         }
@@ -587,7 +557,7 @@ static void StreamOut(
 //////////////////////////////////////////////////////////////////////////
 /// @brief Computes number of invocations. The current index represents
 ///        the start of the SIMD. The max index represents how much work
-///        items are remaining. If there is less then a SIMD's left of work
+///        items are remaining. If there is less then a SIMD's xmin of work
 ///        then return the remaining amount of work.
 /// @param curIndex - The start index for the SIMD.
 /// @param maxIndex - The last index for all work items.
@@ -1694,10 +1664,10 @@ INLINE void calcBoundingBoxIntVertical(const simdvector * const tri, simdscalari
     vMaxY = _simd_max_epi32(vMaxY, vY[1]);
     vMaxY = _simd_max_epi32(vMaxY, vY[2]);
 
-    bbox.left = vMinX;
-    bbox.right = vMaxX;
-    bbox.top = vMinY;
-    bbox.bottom = vMaxY;
+    bbox.xmin = vMinX;
+    bbox.xmax = vMaxX;
+    bbox.ymin = vMinY;
+    bbox.ymax = vMaxY;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1727,10 +1697,10 @@ INLINE void calcBoundingBoxIntVertical<FEConservativeRastT>(const simdvector * c
     
     /// Bounding box needs to be expanded by 1/512 before snapping to 16.8 for conservative rasterization
     /// expand bbox by 1/256; coverage will be correctly handled in the rasterizer.
-    bbox.left = _simd_sub_epi32(vMinX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
-    bbox.right = _simd_add_epi32(vMaxX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
-    bbox.top = _simd_sub_epi32(vMinY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
-    bbox.bottom = _simd_add_epi32(vMaxY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.xmin = _simd_sub_epi32(vMinX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.xmax = _simd_add_epi32(vMaxX, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.ymin = _simd_sub_epi32(vMinY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.ymax = _simd_add_epi32(vMaxY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1940,27 +1910,27 @@ void BinTriangles(
 
     // determine if triangle falls between pixel centers and discard
     // only discard for non-MSAA case and when conservative rast is disabled
-    // (left + 127) & ~255
-    // (right + 128) & ~255
+    // (xmin + 127) & ~255
+    // (xmax + 128) & ~255
     if(rastState.sampleCount == SWR_MULTISAMPLE_1X && (!CT::IsConservativeT::value))
     {
         origTriMask = triMask;
 
         int cullCenterMask;
         {
-            simdscalari left = _simd_add_epi32(bbox.left, _simd_set1_epi32(127));
-            left = _simd_and_si(left, _simd_set1_epi32(~255));
-            simdscalari right = _simd_add_epi32(bbox.right, _simd_set1_epi32(128));
-            right = _simd_and_si(right, _simd_set1_epi32(~255));
+            simdscalari xmin = _simd_add_epi32(bbox.xmin, _simd_set1_epi32(127));
+            xmin = _simd_and_si(xmin, _simd_set1_epi32(~255));
+            simdscalari xmax = _simd_add_epi32(bbox.xmax, _simd_set1_epi32(128));
+            xmax = _simd_and_si(xmax, _simd_set1_epi32(~255));
 
-            simdscalari vMaskH = _simd_cmpeq_epi32(left, right);
+            simdscalari vMaskH = _simd_cmpeq_epi32(xmin, xmax);
 
-            simdscalari top = _simd_add_epi32(bbox.top, _simd_set1_epi32(127));
-            top = _simd_and_si(top, _simd_set1_epi32(~255));
-            simdscalari bottom = _simd_add_epi32(bbox.bottom, _simd_set1_epi32(128));
-            bottom = _simd_and_si(bottom, _simd_set1_epi32(~255));
+            simdscalari ymin = _simd_add_epi32(bbox.ymin, _simd_set1_epi32(127));
+            ymin = _simd_and_si(ymin, _simd_set1_epi32(~255));
+            simdscalari ymax = _simd_add_epi32(bbox.ymax, _simd_set1_epi32(128));
+            ymax = _simd_and_si(ymax, _simd_set1_epi32(~255));
 
-            simdscalari vMaskV = _simd_cmpeq_epi32(top, bottom);
+            simdscalari vMaskV = _simd_cmpeq_epi32(ymin, ymax);
             vMaskV = _simd_or_si(vMaskH, vMaskV);
             cullCenterMask = _simd_movemask_ps(_simd_castsi_ps(vMaskV));
         }
@@ -1973,26 +1943,26 @@ void BinTriangles(
         }
     }
 
-    // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since right/bottom edge is exclusive.
-    bbox.left   = _simd_max_epi32(bbox.left, _simd_set1_epi32(state.scissorInFixedPoint.left));
-    bbox.top    = _simd_max_epi32(bbox.top, _simd_set1_epi32(state.scissorInFixedPoint.top));
-    bbox.right  = _simd_min_epi32(_simd_sub_epi32(bbox.right, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.right));
-    bbox.bottom = _simd_min_epi32(_simd_sub_epi32(bbox.bottom, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.bottom));
+    // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since xmax/ymax edge is exclusive.
+    bbox.xmin   = _simd_max_epi32(bbox.xmin, _simd_set1_epi32(state.scissorInFixedPoint.xmin));
+    bbox.ymin    = _simd_max_epi32(bbox.ymin, _simd_set1_epi32(state.scissorInFixedPoint.ymin));
+    bbox.xmax  = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.xmax));
+    bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.ymax));
 
     if(CT::IsConservativeT::value)
     {
         // in the case where a degenerate triangle is on a scissor edge, we need to make sure the primitive bbox has
-        // some area. Bump the right/bottom edges out 
-        simdscalari topEqualsBottom = _simd_cmpeq_epi32(bbox.top, bbox.bottom);
-        bbox.bottom = _simd_blendv_epi32(bbox.bottom, _simd_add_epi32(bbox.bottom, _simd_set1_epi32(1)), topEqualsBottom);
-        simdscalari leftEqualsRight = _simd_cmpeq_epi32(bbox.left, bbox.right);
-        bbox.right = _simd_blendv_epi32(bbox.right, _simd_add_epi32(bbox.right, _simd_set1_epi32(1)), leftEqualsRight);
+        // some area. Bump the xmax/ymax edges out 
+        simdscalari topEqualsBottom = _simd_cmpeq_epi32(bbox.ymin, bbox.ymax);
+        bbox.ymax = _simd_blendv_epi32(bbox.ymax, _simd_add_epi32(bbox.ymax, _simd_set1_epi32(1)), topEqualsBottom);
+        simdscalari leftEqualsRight = _simd_cmpeq_epi32(bbox.xmin, bbox.xmax);
+        bbox.xmax = _simd_blendv_epi32(bbox.xmax, _simd_add_epi32(bbox.xmax, _simd_set1_epi32(1)), leftEqualsRight);
     }
 
     // Cull tris completely outside scissor
     {
-        simdscalari maskOutsideScissorX = _simd_cmpgt_epi32(bbox.left, bbox.right);
-        simdscalari maskOutsideScissorY = _simd_cmpgt_epi32(bbox.top, bbox.bottom);
+        simdscalari maskOutsideScissorX = _simd_cmpgt_epi32(bbox.xmin, bbox.xmax);
+        simdscalari maskOutsideScissorY = _simd_cmpgt_epi32(bbox.ymin, bbox.ymax);
         simdscalari maskOutsideScissorXY = _simd_or_si(maskOutsideScissorX, maskOutsideScissorY);
         uint32_t maskOutsideScissor = _simd_movemask_ps(_simd_castsi_ps(maskOutsideScissorXY));
         triMask = triMask & ~maskOutsideScissor;
@@ -2004,16 +1974,16 @@ void BinTriangles(
     }
 
     // Convert triangle bbox to macrotile units.
-    bbox.left = _simd_srai_epi32(bbox.left, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
-    bbox.top = _simd_srai_epi32(bbox.top, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
-    bbox.right = _simd_srai_epi32(bbox.right, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
-    bbox.bottom = _simd_srai_epi32(bbox.bottom, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
+    bbox.xmin = _simd_srai_epi32(bbox.xmin, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
+    bbox.ymin = _simd_srai_epi32(bbox.ymin, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
+    bbox.xmax = _simd_srai_epi32(bbox.xmax, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
+    bbox.ymax = _simd_srai_epi32(bbox.ymax, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
 
     OSALIGNSIMD(uint32_t) aMTLeft[KNOB_SIMD_WIDTH], aMTRight[KNOB_SIMD_WIDTH], aMTTop[KNOB_SIMD_WIDTH], aMTBottom[KNOB_SIMD_WIDTH];
-    _simd_store_si((simdscalari*)aMTLeft, bbox.left);
-    _simd_store_si((simdscalari*)aMTRight, bbox.right);
-    _simd_store_si((simdscalari*)aMTTop, bbox.top);
-    _simd_store_si((simdscalari*)aMTBottom, bbox.bottom);
+    _simd_store_si((simdscalari*)aMTLeft, bbox.xmin);
+    _simd_store_si((simdscalari*)aMTRight, bbox.xmax);
+    _simd_store_si((simdscalari*)aMTTop, bbox.ymin);
+    _simd_store_si((simdscalari*)aMTBottom, bbox.ymax);
 
     // transpose verts needed for backend
     /// @todo modify BE to take non-transformed verts
@@ -2196,11 +2166,11 @@ void BinPoints(
 
     if (CanUseSimplePoints(pDC))
     {
-        // adjust for top-left rule
+        // adjust for ymin-xmin rule
         vXi = _simd_sub_epi32(vXi, _simd_set1_epi32(1));
         vYi = _simd_sub_epi32(vYi, _simd_set1_epi32(1));
 
-        // cull points off the top-left edge of the viewport
+        // cull points off the ymin-xmin edge of the viewport
         primMask &= ~_simd_movemask_ps(_simd_castsi_ps(vXi));
         primMask &= ~_simd_movemask_ps(_simd_castsi_ps(vYi));
 
@@ -2325,40 +2295,40 @@ void BinPoints(
 
         // bloat point to bbox
         simdBBox bbox;
-        bbox.left = bbox.right = vXi;
-        bbox.top = bbox.bottom = vYi;
+        bbox.xmin = bbox.xmax = vXi;
+        bbox.ymin = bbox.ymax = vYi;
 
         simdscalar vHalfWidth = _simd_mul_ps(vPointSize, _simd_set1_ps(0.5f));
         simdscalari vHalfWidthi = fpToFixedPointVertical(vHalfWidth);
-        bbox.left = _simd_sub_epi32(bbox.left, vHalfWidthi);
-        bbox.right = _simd_add_epi32(bbox.right, vHalfWidthi);
-        bbox.top = _simd_sub_epi32(bbox.top, vHalfWidthi);
-        bbox.bottom = _simd_add_epi32(bbox.bottom, vHalfWidthi);
+        bbox.xmin = _simd_sub_epi32(bbox.xmin, vHalfWidthi);
+        bbox.xmax = _simd_add_epi32(bbox.xmax, vHalfWidthi);
+        bbox.ymin = _simd_sub_epi32(bbox.ymin, vHalfWidthi);
+        bbox.ymax = _simd_add_epi32(bbox.ymax, vHalfWidthi);
 
-        // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since right/bottom edge is exclusive.
-        bbox.left = _simd_max_epi32(bbox.left, _simd_set1_epi32(state.scissorInFixedPoint.left));
-        bbox.top = _simd_max_epi32(bbox.top, _simd_set1_epi32(state.scissorInFixedPoint.top));
-        bbox.right = _simd_min_epi32(_simd_sub_epi32(bbox.right, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.right));
-        bbox.bottom = _simd_min_epi32(_simd_sub_epi32(bbox.bottom, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.bottom));
+        // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since xmax/ymax edge is exclusive.
+        bbox.xmin = _simd_max_epi32(bbox.xmin, _simd_set1_epi32(state.scissorInFixedPoint.xmin));
+        bbox.ymin = _simd_max_epi32(bbox.ymin, _simd_set1_epi32(state.scissorInFixedPoint.ymin));
+        bbox.xmax = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.xmax));
+        bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.ymax));
 
         // Cull bloated points completely outside scissor
-        simdscalari maskOutsideScissorX = _simd_cmpgt_epi32(bbox.left, bbox.right);
-        simdscalari maskOutsideScissorY = _simd_cmpgt_epi32(bbox.top, bbox.bottom);
+        simdscalari maskOutsideScissorX = _simd_cmpgt_epi32(bbox.xmin, bbox.xmax);
+        simdscalari maskOutsideScissorY = _simd_cmpgt_epi32(bbox.ymin, bbox.ymax);
         simdscalari maskOutsideScissorXY = _simd_or_si(maskOutsideScissorX, maskOutsideScissorY);
         uint32_t maskOutsideScissor = _simd_movemask_ps(_simd_castsi_ps(maskOutsideScissorXY));
         primMask = primMask & ~maskOutsideScissor;
 
         // Convert bbox to macrotile units.
-        bbox.left = _simd_srai_epi32(bbox.left, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
-        bbox.top = _simd_srai_epi32(bbox.top, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
-        bbox.right = _simd_srai_epi32(bbox.right, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
-        bbox.bottom = _simd_srai_epi32(bbox.bottom, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
+        bbox.xmin = _simd_srai_epi32(bbox.xmin, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
+        bbox.ymin = _simd_srai_epi32(bbox.ymin, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
+        bbox.xmax = _simd_srai_epi32(bbox.xmax, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
+        bbox.ymax = _simd_srai_epi32(bbox.ymax, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
 
         OSALIGNSIMD(uint32_t) aMTLeft[KNOB_SIMD_WIDTH], aMTRight[KNOB_SIMD_WIDTH], aMTTop[KNOB_SIMD_WIDTH], aMTBottom[KNOB_SIMD_WIDTH];
-        _simd_store_si((simdscalari*)aMTLeft, bbox.left);
-        _simd_store_si((simdscalari*)aMTRight, bbox.right);
-        _simd_store_si((simdscalari*)aMTTop, bbox.top);
-        _simd_store_si((simdscalari*)aMTBottom, bbox.bottom);
+        _simd_store_si((simdscalari*)aMTLeft, bbox.xmin);
+        _simd_store_si((simdscalari*)aMTRight, bbox.xmax);
+        _simd_store_si((simdscalari*)aMTTop, bbox.ymin);
+        _simd_store_si((simdscalari*)aMTBottom, bbox.ymax);
 
         // store render target array index
         OSALIGNSIMD(uint32_t) aRTAI[KNOB_SIMD_WIDTH];
@@ -2543,35 +2513,35 @@ void BinLines(
 
     // Calc bounding box of lines
     simdBBox bbox;
-    bbox.left = _simd_min_epi32(vXi[0], vXi[1]);
-    bbox.right = _simd_max_epi32(vXi[0], vXi[1]);
-    bbox.top = _simd_min_epi32(vYi[0], vYi[1]);
-    bbox.bottom = _simd_max_epi32(vYi[0], vYi[1]);
+    bbox.xmin = _simd_min_epi32(vXi[0], vXi[1]);
+    bbox.xmax = _simd_max_epi32(vXi[0], vXi[1]);
+    bbox.ymin = _simd_min_epi32(vYi[0], vYi[1]);
+    bbox.ymax = _simd_max_epi32(vYi[0], vYi[1]);
 
     // bloat bbox by line width along minor axis
     simdscalar vHalfWidth = _simd_set1_ps(rastState.lineWidth / 2.0f);
     simdscalari vHalfWidthi = fpToFixedPointVertical(vHalfWidth);
     simdBBox bloatBox;
-    bloatBox.left = _simd_sub_epi32(bbox.left, vHalfWidthi);
-    bloatBox.right = _simd_add_epi32(bbox.right, vHalfWidthi);
-    bloatBox.top = _simd_sub_epi32(bbox.top, vHalfWidthi);
-    bloatBox.bottom = _simd_add_epi32(bbox.bottom, vHalfWidthi);
+    bloatBox.xmin = _simd_sub_epi32(bbox.xmin, vHalfWidthi);
+    bloatBox.xmax = _simd_add_epi32(bbox.xmax, vHalfWidthi);
+    bloatBox.ymin = _simd_sub_epi32(bbox.ymin, vHalfWidthi);
+    bloatBox.ymax = _simd_add_epi32(bbox.ymax, vHalfWidthi);
 
-    bbox.left = _simd_blendv_epi32(bbox.left, bloatBox.left, vYmajorMask);
-    bbox.right = _simd_blendv_epi32(bbox.right, bloatBox.right, vYmajorMask);
-    bbox.top = _simd_blendv_epi32(bloatBox.top, bbox.top, vYmajorMask);
-    bbox.bottom = _simd_blendv_epi32(bloatBox.bottom, bbox.bottom, vYmajorMask);
+    bbox.xmin = _simd_blendv_epi32(bbox.xmin, bloatBox.xmin, vYmajorMask);
+    bbox.xmax = _simd_blendv_epi32(bbox.xmax, bloatBox.xmax, vYmajorMask);
+    bbox.ymin = _simd_blendv_epi32(bloatBox.ymin, bbox.ymin, vYmajorMask);
+    bbox.ymax = _simd_blendv_epi32(bloatBox.ymax, bbox.ymax, vYmajorMask);
 
-    // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since right/bottom edge is exclusive.
-    bbox.left = _simd_max_epi32(bbox.left, _simd_set1_epi32(state.scissorInFixedPoint.left));
-    bbox.top = _simd_max_epi32(bbox.top, _simd_set1_epi32(state.scissorInFixedPoint.top));
-    bbox.right = _simd_min_epi32(_simd_sub_epi32(bbox.right, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.right));
-    bbox.bottom = _simd_min_epi32(_simd_sub_epi32(bbox.bottom, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.bottom));
+    // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since xmax/ymax edge is exclusive.
+    bbox.xmin = _simd_max_epi32(bbox.xmin, _simd_set1_epi32(state.scissorInFixedPoint.xmin));
+    bbox.ymin = _simd_max_epi32(bbox.ymin, _simd_set1_epi32(state.scissorInFixedPoint.ymin));
+    bbox.xmax = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.xmax));
+    bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.ymax));
 
     // Cull prims completely outside scissor
     {
-        simdscalari maskOutsideScissorX = _simd_cmpgt_epi32(bbox.left, bbox.right);
-        simdscalari maskOutsideScissorY = _simd_cmpgt_epi32(bbox.top, bbox.bottom);
+        simdscalari maskOutsideScissorX = _simd_cmpgt_epi32(bbox.xmin, bbox.xmax);
+        simdscalari maskOutsideScissorY = _simd_cmpgt_epi32(bbox.ymin, bbox.ymax);
         simdscalari maskOutsideScissorXY = _simd_or_si(maskOutsideScissorX, maskOutsideScissorY);
         uint32_t maskOutsideScissor = _simd_movemask_ps(_simd_castsi_ps(maskOutsideScissorXY));
         primMask = primMask & ~maskOutsideScissor;
@@ -2583,16 +2553,16 @@ void BinLines(
     }
 
     // Convert triangle bbox to macrotile units.
-    bbox.left = _simd_srai_epi32(bbox.left, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
-    bbox.top = _simd_srai_epi32(bbox.top, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
-    bbox.right = _simd_srai_epi32(bbox.right, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
-    bbox.bottom = _simd_srai_epi32(bbox.bottom, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
+    bbox.xmin = _simd_srai_epi32(bbox.xmin, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
+    bbox.ymin = _simd_srai_epi32(bbox.ymin, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
+    bbox.xmax = _simd_srai_epi32(bbox.xmax, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
+    bbox.ymax = _simd_srai_epi32(bbox.ymax, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
 
     OSALIGNSIMD(uint32_t) aMTLeft[KNOB_SIMD_WIDTH], aMTRight[KNOB_SIMD_WIDTH], aMTTop[KNOB_SIMD_WIDTH], aMTBottom[KNOB_SIMD_WIDTH];
-    _simd_store_si((simdscalari*)aMTLeft, bbox.left);
-    _simd_store_si((simdscalari*)aMTRight, bbox.right);
-    _simd_store_si((simdscalari*)aMTTop, bbox.top);
-    _simd_store_si((simdscalari*)aMTBottom, bbox.bottom);
+    _simd_store_si((simdscalari*)aMTLeft, bbox.xmin);
+    _simd_store_si((simdscalari*)aMTRight, bbox.xmax);
+    _simd_store_si((simdscalari*)aMTTop, bbox.ymin);
+    _simd_store_si((simdscalari*)aMTBottom, bbox.ymax);
 
     // transpose verts needed for backend
     /// @todo modify BE to take non-transformed verts

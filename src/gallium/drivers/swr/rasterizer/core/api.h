@@ -32,16 +32,80 @@
 #include "common/os.h"
 
 #include <assert.h>
-#include <vector>
+#include <algorithm>
 
 #include "common/simdintrin.h"
 #include "common/formats.h"
-#include "core/utils.h"
 #include "core/state.h"
 
-///@todo place all the API functions into the 'swr' namespace.
-
 typedef void(SWR_API *PFN_CALLBACK_FUNC)(uint64_t data, uint64_t data2, uint64_t data3);
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Rectangle structure
+struct SWR_RECT
+{
+    int32_t xmin; ///< inclusive
+    int32_t ymin; ///< inclusive
+    int32_t xmax; ///< exclusive
+    int32_t ymax; ///< exclusive 
+
+    bool operator == (const SWR_RECT& rhs)
+    {
+        return (this->ymin == rhs.ymin &&
+            this->ymax == rhs.ymax &&
+            this->xmin == rhs.xmin &&
+            this->xmax == rhs.xmax);
+    }
+
+    bool operator != (const SWR_RECT& rhs)
+    {
+        return !(*this == rhs);
+    }
+
+    SWR_RECT& Intersect(const SWR_RECT& other)
+    {
+        this->xmin = std::max(this->xmin, other.xmin);
+        this->ymin = std::max(this->ymin, other.ymin);
+        this->xmax = std::min(this->xmax, other.xmax);
+        this->ymax = std::min(this->ymax, other.ymax);
+
+        if (xmax - xmin < 0 ||
+            ymax - ymin < 0)
+        {
+            // Zero area
+            ymin = ymax = xmin = xmax = 0;
+        }
+
+        return *this;
+    }
+    SWR_RECT& operator &= (const SWR_RECT& other)
+    {
+        return Intersect(other);
+    }
+
+    SWR_RECT& Union(const SWR_RECT& other)
+    {
+        this->xmin = std::min(this->xmin, other.xmin);
+        this->ymin = std::min(this->ymin, other.ymin);
+        this->xmax = std::max(this->xmax, other.xmax);
+        this->ymax = std::max(this->ymax, other.ymax);
+
+        return *this;
+    }
+
+    SWR_RECT& operator |= (const SWR_RECT& other)
+    {
+        return Union(other);
+    }
+
+    void Translate(int32_t x, int32_t y)
+    {
+        xmin += x;
+        ymin += y;
+        xmax += x;
+        ymax += y;
+    }
+};
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Function signature for load hot tiles
@@ -105,6 +169,10 @@ typedef void(SWR_API *PFN_UPDATE_STATS)(HANDLE hPrivateContext,
 typedef void(SWR_API *PFN_UPDATE_STATS_FE)(HANDLE hPrivateContext,
     const SWR_STATS_FE* pStats);
 
+//////////////////////////////////////////////////////////////////////////
+/// BucketManager
+/// Forward Declaration (see rdtsc_buckets.h for full definition)
+/////////////////////////////////////////////////////////////////////////
 class BucketManager;
 
 //////////////////////////////////////////////////////////////////////////
@@ -147,17 +215,6 @@ struct SWR_CREATECONTEXT_INFO
 
     // Input (optional): Threading info that overrides any set KNOB values.
     SWR_THREADING_INFO* pThreadInfo;
-};
-
-//////////////////////////////////////////////////////////////////////////
-/// SWR_RECT
-/////////////////////////////////////////////////////////////////////////
-struct SWR_RECT
-{
-    uint32_t left;
-    uint32_t right;
-    uint32_t top;
-    uint32_t bottom;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -445,19 +502,23 @@ void SWR_API SwrDrawIndexedInstanced(
 /// @brief SwrInvalidateTiles
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param attachmentMask - The mask specifies which surfaces attached to the hottiles to invalidate.
+/// @param invalidateRect - The pixel-coordinate rectangle to invalidate.  This will be expanded to
+///                         be hottile size-aligned.
 void SWR_API SwrInvalidateTiles(
     HANDLE hContext,
-    uint32_t attachmentMask);
+    uint32_t attachmentMask,
+    const SWR_RECT& invalidateRect);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief SwrDiscardRect
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param attachmentMask - The mask specifies which surfaces attached to the hottiles to discard.
-/// @param rect - if rect is all zeros, the entire attachment surface will be discarded
+/// @param rect - The pixel-coordinate rectangle to discard.  Only fully-covered hottiles will be
+///               discarded.
 void SWR_API SwrDiscardRect(
     HANDLE hContext,
     uint32_t attachmentMask,
-    SWR_RECT rect);
+    const SWR_RECT& rect);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief SwrDispatch
@@ -483,15 +544,30 @@ enum SWR_TILE_STATE
 void SWR_API SwrStoreTiles(
     HANDLE hContext,
     SWR_RENDERTARGET_ATTACHMENT attachment,
-    SWR_TILE_STATE postStoreTileState);
+    SWR_TILE_STATE postStoreTileState,
+    const SWR_RECT& storeRect);
 
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief SwrClearRenderTarget - Clear attached render targets / depth / stencil
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param clearMask - combination of SWR_CLEAR_COLOR / SWR_CLEAR_DEPTH / SWR_CLEAR_STENCIL flags (or SWR_CLEAR_NONE)
+/// @param clearColor - color use for clearing render targets
+/// @param z - depth value use for clearing depth buffer
+/// @param stencil - stencil value used for clearing stencil buffer
+/// @param clearRect - The pixel-coordinate rectangle to clear in all cleared buffers
 void SWR_API SwrClearRenderTarget(
     HANDLE hContext,
     uint32_t clearMask,
     const float clearColor[4],
     float z,
-    uint8_t stencil);
+    uint8_t stencil,
+    const SWR_RECT& clearRect);
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief SwrSetRastyState
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param pRastState - New SWR_RASTSTATE used for SwrDraw* commands
 void SWR_API SwrSetRastState(
     HANDLE hContext,
     const SWR_RASTSTATE *pRastState);
@@ -516,7 +592,7 @@ void SWR_API SwrSetViewports(
 void SWR_API SwrSetScissorRects(
     HANDLE hContext,
     uint32_t numScissors,
-    const BBOX* pScissors);
+    const SWR_RECT* pScissors);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Returns a pointer to the private context state for the current
@@ -555,4 +631,5 @@ void SWR_API SwrEnableStats(
 /// @param hContext - Handle passed back from SwrCreateContext
 void SWR_API SwrEndFrame(
     HANDLE hContext);
+
 #endif//__SWR_API_H__

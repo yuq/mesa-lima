@@ -121,6 +121,7 @@ struct swr_context {
    struct pipe_framebuffer_state framebuffer;
    struct pipe_poly_stipple poly_stipple;
    struct pipe_scissor_state scissor;
+   SWR_RECT swr_scissor;
    struct pipe_sampler_view *
       sampler_views[PIPE_SHADER_TYPES][PIPE_MAX_SHADER_SAMPLER_VIEWS];
 

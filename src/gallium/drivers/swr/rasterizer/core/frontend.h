@@ -240,7 +240,7 @@ void viewportTransform(simdvector *v, const SWR_VIEWPORT_MATRICES & vpMatrices, 
 }
 
 INLINE
-void calcBoundingBoxInt(const __m128i &vX, const __m128i &vY, BBOX &bbox)
+void calcBoundingBoxInt(const __m128i &vX, const __m128i &vY, SWR_RECT &bbox)
 {
     // Need horizontal fp min here
     __m128i vX1 = _mm_shuffle_epi32(vX, _MM_SHUFFLE(3, 2, 0, 1));
@@ -262,10 +262,10 @@ void calcBoundingBoxInt(const __m128i &vX, const __m128i &vY, BBOX &bbox)
     __m128i vMaxY = _mm_max_epi32(vY, vY1);
             vMaxY = _mm_max_epi32(vMaxY, vY2);
 
-    bbox.left = _mm_extract_epi32(vMinX, 0);
-    bbox.right = _mm_extract_epi32(vMaxX, 0);
-    bbox.top = _mm_extract_epi32(vMinY, 0);
-    bbox.bottom = _mm_extract_epi32(vMaxY, 0);
+    bbox.xmin = _mm_extract_epi32(vMinX, 0);
+    bbox.xmax = _mm_extract_epi32(vMaxX, 0);
+    bbox.ymin = _mm_extract_epi32(vMinY, 0);
+    bbox.ymax = _mm_extract_epi32(vMaxY, 0);
 }
 
 INLINE

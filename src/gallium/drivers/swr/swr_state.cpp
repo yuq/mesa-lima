@@ -575,6 +575,10 @@ swr_set_scissor_states(struct pipe_context *pipe,
    struct swr_context *ctx = swr_context(pipe);
 
    ctx->scissor = *scissor;
+   ctx->swr_scissor.xmin = scissor->minx;
+   ctx->swr_scissor.xmax = scissor->maxx;
+   ctx->swr_scissor.ymin = scissor->miny;
+   ctx->swr_scissor.ymax = scissor->maxy;
    ctx->dirty |= SWR_NEW_SCISSOR;
 }
 
@@ -930,10 +934,7 @@ swr_update_derived(struct pipe_context *pipe,
 
    /* Scissor */
    if (ctx->dirty & SWR_NEW_SCISSOR) {
-      pipe_scissor_state *scissor = &ctx->scissor;
-      BBOX bbox(scissor->miny, scissor->maxy,
-                scissor->minx, scissor->maxx);
-      SwrSetScissorRects(ctx->swrContext, 1, &bbox);
+      SwrSetScissorRects(ctx->swrContext, 1, &ctx->swr_scissor);
    }
 
    /* Viewport */

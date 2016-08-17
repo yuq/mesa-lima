@@ -591,7 +591,7 @@ INLINE void UpdateEdgeMasks<SingleSampleT>(const __m256d(&)[3], const __m256d* v
 template <typename RasterScissorEdgesT, typename IsConservativeT, typename RT>
 struct ComputeScissorEdges
 {
-    INLINE ComputeScissorEdges(const BBOX &triBBox, const BBOX &scissorBBox, const int32_t x, const int32_t y, 
+    INLINE ComputeScissorEdges(const SWR_RECT &triBBox, const SWR_RECT &scissorBBox, const int32_t x, const int32_t y, 
                               EDGE (&rastEdges)[RT::NumEdgesT::value], __m256d (&vEdgeFix16)[7]){};
 };
 
@@ -604,20 +604,20 @@ struct ComputeScissorEdges<std::true_type, std::true_type, RT>
     //////////////////////////////////////////////////////////////////////////
     /// @brief Intersect tri bbox with scissor, compute scissor edge vectors, 
     /// evaluate edge equations and offset them away from pixel center.
-    INLINE ComputeScissorEdges(const BBOX &triBBox, const BBOX &scissorBBox, const int32_t x, const int32_t y,
+    INLINE ComputeScissorEdges(const SWR_RECT &triBBox, const SWR_RECT &scissorBBox, const int32_t x, const int32_t y,
                               EDGE (&rastEdges)[RT::NumEdgesT::value], __m256d (&vEdgeFix16)[7])
     {
         // if conservative rasterizing, triangle bbox intersected with scissor bbox is used
-        BBOX scissor;
-        scissor.left = std::max(triBBox.left, scissorBBox.left);
-        scissor.right = std::min(triBBox.right, scissorBBox.right);
-        scissor.top = std::max(triBBox.top, scissorBBox.top);
-        scissor.bottom = std::min(triBBox.bottom, scissorBBox.bottom);
+        SWR_RECT scissor;
+        scissor.xmin = std::max(triBBox.xmin, scissorBBox.xmin);
+        scissor.xmax = std::min(triBBox.xmax, scissorBBox.xmax);
+        scissor.ymin = std::max(triBBox.ymin, scissorBBox.ymin);
+        scissor.ymax = std::min(triBBox.ymax, scissorBBox.ymax);
 
-        POS topLeft{scissor.left, scissor.top};
-        POS bottomLeft{scissor.left, scissor.bottom};
-        POS topRight{scissor.right, scissor.top};
-        POS bottomRight{scissor.right, scissor.bottom};
+        POS topLeft{scissor.xmin, scissor.ymin};
+        POS bottomLeft{scissor.xmin, scissor.ymax};
+        POS topRight{scissor.xmax, scissor.ymin};
+        POS bottomRight{scissor.xmax, scissor.ymax};
 
         // construct 4 scissor edges in ccw direction
         ComputeEdgeData(topLeft, bottomLeft, rastEdges[3]);
@@ -625,10 +625,10 @@ struct ComputeScissorEdges<std::true_type, std::true_type, RT>
         ComputeEdgeData(bottomRight, topRight, rastEdges[5]);
         ComputeEdgeData(topRight, topLeft, rastEdges[6]);
 
-        vEdgeFix16[3] = _mm256_set1_pd((rastEdges[3].a * (x - scissor.left)) + (rastEdges[3].b * (y - scissor.top)));
-        vEdgeFix16[4] = _mm256_set1_pd((rastEdges[4].a * (x - scissor.left)) + (rastEdges[4].b * (y - scissor.bottom)));
-        vEdgeFix16[5] = _mm256_set1_pd((rastEdges[5].a * (x - scissor.right)) + (rastEdges[5].b * (y - scissor.bottom)));
-        vEdgeFix16[6] = _mm256_set1_pd((rastEdges[6].a * (x - scissor.right)) + (rastEdges[6].b * (y - scissor.top)));
+        vEdgeFix16[3] = _mm256_set1_pd((rastEdges[3].a * (x - scissor.xmin)) + (rastEdges[3].b * (y - scissor.ymin)));
+        vEdgeFix16[4] = _mm256_set1_pd((rastEdges[4].a * (x - scissor.xmin)) + (rastEdges[4].b * (y - scissor.ymax)));
+        vEdgeFix16[5] = _mm256_set1_pd((rastEdges[5].a * (x - scissor.xmax)) + (rastEdges[5].b * (y - scissor.ymax)));
+        vEdgeFix16[6] = _mm256_set1_pd((rastEdges[6].a * (x - scissor.xmax)) + (rastEdges[6].b * (y - scissor.ymin)));
 
         // if conservative rasterizing, need to bump the scissor edges out by the conservative uncertainty distance, else do nothing
         adjustScissorEdge<RT>(rastEdges[3].a, rastEdges[3].b, vEdgeFix16[3]);
@@ -647,14 +647,14 @@ struct ComputeScissorEdges<std::true_type, std::false_type, RT>
 {
     //////////////////////////////////////////////////////////////////////////
     /// @brief Compute scissor edge vectors and evaluate edge equations
-    INLINE ComputeScissorEdges(const BBOX &, const BBOX &scissorBBox, const int32_t x, const int32_t y,
+    INLINE ComputeScissorEdges(const SWR_RECT &, const SWR_RECT &scissorBBox, const int32_t x, const int32_t y,
                               EDGE (&rastEdges)[RT::NumEdgesT::value], __m256d (&vEdgeFix16)[7])
     {
-        const BBOX &scissor = scissorBBox;
-        POS topLeft{scissor.left, scissor.top};
-        POS bottomLeft{scissor.left, scissor.bottom};
-        POS topRight{scissor.right, scissor.top};
-        POS bottomRight{scissor.right, scissor.bottom};
+        const SWR_RECT &scissor = scissorBBox;
+        POS topLeft{scissor.xmin, scissor.ymin};
+        POS bottomLeft{scissor.xmin, scissor.ymax};
+        POS topRight{scissor.xmax, scissor.ymin};
+        POS bottomRight{scissor.xmax, scissor.ymax};
 
         // construct 4 scissor edges in ccw direction
         ComputeEdgeData(topLeft, bottomLeft, rastEdges[3]);
@@ -662,10 +662,10 @@ struct ComputeScissorEdges<std::true_type, std::false_type, RT>
         ComputeEdgeData(bottomRight, topRight, rastEdges[5]);
         ComputeEdgeData(topRight, topLeft, rastEdges[6]);
 
-        vEdgeFix16[3] = _mm256_set1_pd((rastEdges[3].a * (x - scissor.left)) + (rastEdges[3].b * (y - scissor.top)));
-        vEdgeFix16[4] = _mm256_set1_pd((rastEdges[4].a * (x - scissor.left)) + (rastEdges[4].b * (y - scissor.bottom)));
-        vEdgeFix16[5] = _mm256_set1_pd((rastEdges[5].a * (x - scissor.right)) + (rastEdges[5].b * (y - scissor.bottom)));
-        vEdgeFix16[6] = _mm256_set1_pd((rastEdges[6].a * (x - scissor.right)) + (rastEdges[6].b * (y - scissor.top)));
+        vEdgeFix16[3] = _mm256_set1_pd((rastEdges[3].a * (x - scissor.xmin)) + (rastEdges[3].b * (y - scissor.ymin)));
+        vEdgeFix16[4] = _mm256_set1_pd((rastEdges[4].a * (x - scissor.xmin)) + (rastEdges[4].b * (y - scissor.ymax)));
+        vEdgeFix16[5] = _mm256_set1_pd((rastEdges[5].a * (x - scissor.xmax)) + (rastEdges[5].b * (y - scissor.ymax)));
+        vEdgeFix16[6] = _mm256_set1_pd((rastEdges[6].a * (x - scissor.xmax)) + (rastEdges[6].b * (y - scissor.ymin)));
     }
 };
 
@@ -964,23 +964,23 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     triDesc.Z[2] += ComputeDepthBias(&rastState, &triDesc, workDesc.pTriBuffer + 8);
 
     // Calc bounding box of triangle
-    OSALIGNSIMD(BBOX) bbox;
+    OSALIGNSIMD(SWR_RECT) bbox;
     calcBoundingBoxInt(vXi, vYi, bbox);
 
     if(RT::ValidEdgeMaskT::value != ALL_EDGES_VALID)
     {
         // If we're rasterizing a degenerate triangle, expand bounding box to guarantee the BBox is valid
-        bbox.left--;    bbox.right++;    bbox.top--;    bbox.bottom++;
-        SWR_ASSERT(state.scissorInFixedPoint.left >= 0 && state.scissorInFixedPoint.top >= 0, 
+        bbox.xmin--;    bbox.xmax++;    bbox.ymin--;    bbox.ymax++;
+        SWR_ASSERT(state.scissorInFixedPoint.xmin >= 0 && state.scissorInFixedPoint.ymin >= 0, 
                    "Conservative rast degenerate handling requires a valid scissor rect");
     }
 
     // Intersect with scissor/viewport
-    OSALIGNSIMD(BBOX) intersect;
-    intersect.left = std::max(bbox.left, state.scissorInFixedPoint.left);
-    intersect.right = std::min(bbox.right - 1, state.scissorInFixedPoint.right);
-    intersect.top = std::max(bbox.top, state.scissorInFixedPoint.top);
-    intersect.bottom = std::min(bbox.bottom - 1, state.scissorInFixedPoint.bottom);
+    OSALIGNSIMD(SWR_RECT) intersect;
+    intersect.xmin = std::max(bbox.xmin, state.scissorInFixedPoint.xmin);
+    intersect.xmax = std::min(bbox.xmax - 1, state.scissorInFixedPoint.xmax);
+    intersect.ymin = std::max(bbox.ymin, state.scissorInFixedPoint.ymin);
+    intersect.ymax = std::min(bbox.ymax - 1, state.scissorInFixedPoint.ymax);
 
     triDesc.triFlags = workDesc.triFlags;
 
@@ -992,20 +992,20 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     int32_t macroBoxTop = macroY * KNOB_MACROTILE_Y_DIM_FIXED;
     int32_t macroBoxBottom = macroBoxTop + KNOB_MACROTILE_Y_DIM_FIXED - 1;
 
-    intersect.left   = std::max(intersect.left, macroBoxLeft);
-    intersect.top    = std::max(intersect.top, macroBoxTop);
-    intersect.right  = std::min(intersect.right, macroBoxRight);
-    intersect.bottom = std::min(intersect.bottom, macroBoxBottom);
+    intersect.xmin = std::max(intersect.xmin, macroBoxLeft);
+    intersect.ymin = std::max(intersect.ymin, macroBoxTop);
+    intersect.xmax = std::min(intersect.xmax, macroBoxRight);
+    intersect.ymax = std::min(intersect.ymax, macroBoxBottom);
 
-    SWR_ASSERT(intersect.left <= intersect.right && intersect.top <= intersect.bottom && intersect.left >= 0 && intersect.right >= 0 && intersect.top >= 0 && intersect.bottom >= 0);
+    SWR_ASSERT(intersect.xmin <= intersect.xmax && intersect.ymin <= intersect.ymax && intersect.xmin >= 0 && intersect.xmax >= 0 && intersect.ymin >= 0 && intersect.ymax >= 0);
 
     RDTSC_STOP(BETriangleSetup, 0, pDC->drawId);
 
     // update triangle desc
-    uint32_t minTileX = intersect.left >> (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
-    uint32_t minTileY = intersect.top >> (KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
-    uint32_t maxTileX = intersect.right >> (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
-    uint32_t maxTileY = intersect.bottom >> (KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
+    uint32_t minTileX = intersect.xmin >> (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
+    uint32_t minTileY = intersect.ymin >> (KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
+    uint32_t maxTileX = intersect.xmax >> (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
+    uint32_t maxTileY = intersect.ymax >> (KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
     uint32_t numTilesX = maxTileX - minTileX + 1;
     uint32_t numTilesY = maxTileY - minTileY + 1;
 
@@ -1020,8 +1020,8 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
     // Step to pixel center of top-left pixel of the triangle bbox
     // Align intersect bbox (top/left) to raster tile's (top/left).
-    int32_t x = AlignDown(intersect.left, (FIXED_POINT_SCALE * KNOB_TILE_X_DIM));
-    int32_t y = AlignDown(intersect.top, (FIXED_POINT_SCALE * KNOB_TILE_Y_DIM));
+    int32_t x = AlignDown(intersect.xmin, (FIXED_POINT_SCALE * KNOB_TILE_X_DIM));
+    int32_t y = AlignDown(intersect.ymin, (FIXED_POINT_SCALE * KNOB_TILE_Y_DIM));
 
     // convenience typedef
     typedef typename RT::NumRasterSamplesT NumRasterSamplesT;
@@ -1663,17 +1663,17 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     // make sure this macrotile intersects the triangle
     __m128i vXai = fpToFixedPoint(vXa);
     __m128i vYai = fpToFixedPoint(vYa);
-    OSALIGNSIMD(BBOX) bboxA;
+    OSALIGNSIMD(SWR_RECT) bboxA;
     calcBoundingBoxInt(vXai, vYai, bboxA);
 
-    if (!(bboxA.left > macroBoxRight ||
-          bboxA.left > state.scissorInFixedPoint.right ||
-          bboxA.right - 1 < macroBoxLeft ||
-          bboxA.right - 1 < state.scissorInFixedPoint.left ||
-          bboxA.top > macroBoxBottom ||
-          bboxA.top > state.scissorInFixedPoint.bottom ||
-          bboxA.bottom - 1 < macroBoxTop ||
-          bboxA.bottom - 1 < state.scissorInFixedPoint.top)) {
+    if (!(bboxA.xmin > macroBoxRight ||
+          bboxA.xmin > state.scissorInFixedPoint.xmax ||
+          bboxA.xmax - 1 < macroBoxLeft ||
+          bboxA.xmax - 1 < state.scissorInFixedPoint.xmin ||
+          bboxA.ymin > macroBoxBottom ||
+          bboxA.ymin > state.scissorInFixedPoint.ymax ||
+          bboxA.ymax - 1 < macroBoxTop ||
+          bboxA.ymax - 1 < state.scissorInFixedPoint.ymin)) {
         // rasterize triangle
         pfnTriRast(pDC, workerId, macroTile, (void*)&newWorkDesc);
     }
@@ -1739,14 +1739,14 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     vYai = fpToFixedPoint(vYa);
     calcBoundingBoxInt(vXai, vYai, bboxA);
 
-    if (!(bboxA.left > macroBoxRight ||
-          bboxA.left > state.scissorInFixedPoint.right ||
-          bboxA.right - 1 < macroBoxLeft ||
-          bboxA.right - 1 < state.scissorInFixedPoint.left ||
-          bboxA.top > macroBoxBottom ||
-          bboxA.top > state.scissorInFixedPoint.bottom ||
-          bboxA.bottom - 1 < macroBoxTop ||
-          bboxA.bottom - 1 < state.scissorInFixedPoint.top)) {
+    if (!(bboxA.xmin > macroBoxRight ||
+          bboxA.xmin > state.scissorInFixedPoint.xmax ||
+          bboxA.xmax - 1 < macroBoxLeft ||
+          bboxA.xmax - 1 < state.scissorInFixedPoint.xmin ||
+          bboxA.ymin > macroBoxBottom ||
+          bboxA.ymin > state.scissorInFixedPoint.ymax ||
+          bboxA.ymax - 1 < macroBoxTop ||
+          bboxA.ymax - 1 < state.scissorInFixedPoint.ymin)) {
         // rasterize triangle
         pfnTriRast(pDC, workerId, macroTile, (void*)&newWorkDesc);
     }

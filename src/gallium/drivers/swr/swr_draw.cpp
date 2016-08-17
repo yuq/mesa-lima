@@ -258,37 +258,13 @@ swr_store_render_target(struct pipe_context *pipe,
 
    /* Only proceed if there's a valid surface to store to */
    if (renderTarget->pBaseAddress) {
-      /* Set viewport to full renderTarget width/height and disable scissor
-       * before StoreTiles */
-      boolean change_viewport =
-         (ctx->derived.vp.x != 0.0f || ctx->derived.vp.y != 0.0f
-          || ctx->derived.vp.width != renderTarget->width
-          || ctx->derived.vp.height != renderTarget->height);
-      if (change_viewport) {
-         SWR_VIEWPORT vp = {0};
-         vp.width = renderTarget->width;
-         vp.height = renderTarget->height;
-         SwrSetViewports(ctx->swrContext, 1, &vp, NULL);
-      }
-
-      boolean scissor_enable = ctx->derived.rastState.scissorEnable;
-      if (scissor_enable) {
-         ctx->derived.rastState.scissorEnable = FALSE;
-         SwrSetRastState(ctx->swrContext, &ctx->derived.rastState);
-      }
-
       swr_update_draw_context(ctx);
+      SWR_RECT full_rect =
+         {0, 0, (int32_t)renderTarget->width, (int32_t)renderTarget->height};
       SwrStoreTiles(ctx->swrContext,
                     (enum SWR_RENDERTARGET_ATTACHMENT)attachment,
-                    post_tile_state);
-
-      /* Restore viewport and scissor enable */
-      if (change_viewport)
-         SwrSetViewports(ctx->swrContext, 1, &ctx->derived.vp, &ctx->derived.vpm);
-      if (scissor_enable) {
-         ctx->derived.rastState.scissorEnable = scissor_enable;
-         SwrSetRastState(ctx->swrContext, &ctx->derived.rastState);
-      }
+                    post_tile_state,
+                    full_rect);
    }
 }
 

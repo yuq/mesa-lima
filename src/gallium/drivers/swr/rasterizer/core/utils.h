@@ -33,6 +33,7 @@
 #include "common/os.h"
 #include "common/simdintrin.h"
 #include "common/swr_assert.h"
+#include "core/api.h"
 
 #if defined(_WIN64) || defined(__x86_64__)
 #define _MM_INSERT_EPI64 _mm_insert_epi64
@@ -74,53 +75,12 @@ INLINE __m128i  _MM_INSERT_EPI64(__m128i a, int64_t b, const int32_t ndx)
 }
 #endif
 
-OSALIGNLINE(struct) BBOX
-{
-    int top{ 0 };
-    int bottom{ 0 };
-    int left{ 0 };
-    int right{ 0 };
-
-    BBOX() {}
-    BBOX(int t, int b, int l, int r) : top(t), bottom(b), left(l), right(r) {}
-
-    bool operator==(const BBOX& rhs)
-    {
-        return (this->top == rhs.top &&
-            this->bottom == rhs.bottom &&
-            this->left == rhs.left &&
-            this->right == rhs.right);
-    }
-
-    bool operator!=(const BBOX& rhs)
-    {
-        return !(*this == rhs);
-    }
-
-    BBOX& Intersect(const BBOX& other)
-    {
-        this->top = std::max(this->top, other.top);
-        this->bottom = std::min(this->bottom, other.bottom);
-        this->left = std::max(this->left, other.left);
-        this->right = std::min(this->right, other.right);
-
-        if (right - left < 0 ||
-            bottom - top < 0)
-        {
-            // Zero area
-            top = bottom = left = right = 0;
-        }
-
-        return *this;
-    }
-};
-
 struct simdBBox
 {
-    simdscalari top;
-    simdscalari bottom;
-    simdscalari left;
-    simdscalari right;
+    simdscalari ymin;
+    simdscalari ymax;
+    simdscalari xmin;
+    simdscalari xmax;
 };
 
 INLINE

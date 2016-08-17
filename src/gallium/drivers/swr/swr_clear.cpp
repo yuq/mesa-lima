@@ -67,17 +67,9 @@ swr_clear(struct pipe_context *pipe,
    ((union pipe_color_union *)color)->f[3] = 1.0; /* cast off your const'd-ness */
 #endif
 
-   /* Reset viewport to full framebuffer width/height before clear, then
-    * restore it  */
-   /* Scissor affects clear, viewport should not */
-   ctx->dirty |= SWR_NEW_VIEWPORT;
-   SWR_VIEWPORT vp = {0};
-   vp.width = ctx->framebuffer.width;
-   vp.height = ctx->framebuffer.height;
-   SwrSetViewports(ctx->swrContext, 1, &vp, NULL);
-
    swr_update_draw_context(ctx);
-   SwrClearRenderTarget(ctx->swrContext, clearMask, color->f, depth, stencil);
+   SwrClearRenderTarget(ctx->swrContext, clearMask, color->f, depth, stencil,
+                        ctx->swr_scissor);
 }
 
 

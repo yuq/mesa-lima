@@ -109,6 +109,7 @@ union CLEAR_FLAGS
 
 struct CLEAR_DESC
 {
+    SWR_RECT rect;
     CLEAR_FLAGS flags;
     float clearRTColor[4];  // RGBA_32F
     float clearDepth;   // [0..1]
@@ -136,6 +137,7 @@ struct STORE_TILES_DESC
 {
     SWR_RENDERTARGET_ATTACHMENT attachment;
     SWR_TILE_STATE postStoreTileState;
+    SWR_RECT rect;
 };
 
 struct COMPUTE_DESC
@@ -271,8 +273,8 @@ OSALIGNLINE(struct) API_STATE
     SWR_VIEWPORT            vp[KNOB_NUM_VIEWPORTS_SCISSORS];
     SWR_VIEWPORT_MATRICES   vpMatrices;
 
-    BBOX                    scissorRects[KNOB_NUM_VIEWPORTS_SCISSORS];
-    BBOX                    scissorInFixedPoint;
+    SWR_RECT                scissorRects[KNOB_NUM_VIEWPORTS_SCISSORS];
+    SWR_RECT                scissorInFixedPoint;
 
     // Backend state
     SWR_BACKEND_STATE       backendState;
@@ -493,9 +495,6 @@ struct SWR_CONTEXT
     uint64_t lastDrawChecked;
     TileSet singleThreadLockedTiles;
 };
-
-void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId);
-void WakeAllThreads(SWR_CONTEXT *pContext);
 
 #define UPDATE_STAT(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.stats[workerId].name += count; }
 #define UPDATE_STAT_FE(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.statsFE.name += count; }
