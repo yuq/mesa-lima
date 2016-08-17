@@ -2436,7 +2436,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
 
       /* Set the Barrier Count and the enable bit */
       chanbld.OR(m0_2, m0_2,
-                 brw_imm_ud(tcs_prog_data->instances << 8 | (1 << 15)));
+                 brw_imm_ud(tcs_prog_data->instances << 9 | (1 << 15)));
 
       bld.emit(SHADER_OPCODE_BARRIER, bld.null_reg_ud(), m0);
       break;
