@@ -55,7 +55,7 @@ extern "C" {
  * Max texture sizes
  * XXX Check max texture size values against core and sampler.
  */
-#define SWR_MAX_TEXTURE_SIZE (4 * 1048 * 1048 * 1024ULL) /* 4GB */
+#define SWR_MAX_TEXTURE_SIZE (4 * 1024 * 1024 * 1024ULL) /* 4GB */
 #define SWR_MAX_TEXTURE_2D_LEVELS 14  /* 8K x 8K for now */
 #define SWR_MAX_TEXTURE_3D_LEVELS 12  /* 2K x 2K x 2K for now */
 #define SWR_MAX_TEXTURE_CUBE_LEVELS 14  /* 8K x 8K for now */
@@ -448,6 +448,20 @@ mesa_to_swr_format(enum pipe_format format)
       return R32_FLOAT_X8X24_TYPELESS;
    case PIPE_FORMAT_L8A8_UNORM:
       return R8G8_UNORM;
+   case PIPE_FORMAT_DXT1_RGB:
+   case PIPE_FORMAT_DXT1_RGBA:
+      return BC1_UNORM;
+   case PIPE_FORMAT_DXT3_RGBA:
+      return BC2_UNORM;
+   case PIPE_FORMAT_DXT5_RGBA:
+      return BC3_UNORM;
+   case PIPE_FORMAT_DXT1_SRGB:
+   case PIPE_FORMAT_DXT1_SRGBA:
+      return BC1_UNORM_SRGB;
+   case PIPE_FORMAT_DXT3_SRGBA:
+      return BC2_UNORM_SRGB;
+   case PIPE_FORMAT_DXT5_SRGBA:
+      return BC3_UNORM_SRGB;
    default:
       break;
    }
@@ -515,7 +529,7 @@ swr_texture_layout(struct swr_screen *screen,
 
    SWR_FORMAT_INFO finfo = GetFormatInfo(res->swr.format);
 
-   unsigned total_size = 0;
+   size_t total_size = 0;
    unsigned width = pt->width0;
    unsigned height = pt->height0;
    unsigned depth = pt->depth0;
