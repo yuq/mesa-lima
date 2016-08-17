@@ -320,7 +320,8 @@ struct _mesa_glsl_parse_state {
    bool has_texture_cube_map_array() const
    {
       return ARB_texture_cube_map_array_enable ||
-             is_version(400, 0);
+             OES_texture_cube_map_array_enable ||
+             is_version(400, 320);
    }
 
    void process_version_directive(YYLTYPE *locp, int version,
@@ -688,6 +689,8 @@ struct _mesa_glsl_parse_state {
    bool OES_texture_3D_warn;
    bool OES_texture_buffer_enable;
    bool OES_texture_buffer_warn;
+   bool OES_texture_cube_map_array_enable;
+   bool OES_texture_cube_map_array_warn;
    bool OES_texture_storage_multisample_2d_array_enable;
    bool OES_texture_storage_multisample_2d_array_warn;
 

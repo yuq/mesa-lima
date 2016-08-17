@@ -640,6 +640,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(OES_tessellation_shader),
    EXT(OES_texture_3D),
    EXT(OES_texture_buffer),
+   EXT(OES_texture_cube_map_array),
    EXT(OES_texture_storage_multisample_2d_array),
 
    /* All other extensions go here, sorted alphabetically.

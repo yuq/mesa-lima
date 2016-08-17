@@ -71,6 +71,8 @@ legal_texobj_target(const struct gl_context *ctx, GLuint dims, GLenum target)
          return true;
       case GL_TEXTURE_2D_ARRAY:
          return ctx->Extensions.EXT_texture_array;
+      case GL_TEXTURE_CUBE_MAP_ARRAY:
+         return _mesa_has_texture_cube_map_array(ctx);
       }
       break;
    }
@@ -108,7 +110,6 @@ legal_texobj_target(const struct gl_context *ctx, GLuint dims, GLenum target)
          return true;
       case GL_PROXY_TEXTURE_2D_ARRAY:
          return ctx->Extensions.EXT_texture_array;
-      case GL_TEXTURE_CUBE_MAP_ARRAY:
       case GL_PROXY_TEXTURE_CUBE_MAP_ARRAY:
          return ctx->Extensions.ARB_texture_cube_map_array;
       default:
