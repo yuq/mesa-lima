@@ -334,15 +334,13 @@ static bool
 fs_texture_cube_map_array(const _mesa_glsl_parse_state *state)
 {
    return state->stage == MESA_SHADER_FRAGMENT &&
-          (state->is_version(400, 0) ||
-           state->ARB_texture_cube_map_array_enable);
+          state->has_texture_cube_map_array();
 }
 
 static bool
 texture_cube_map_array(const _mesa_glsl_parse_state *state)
 {
-   return state->is_version(400, 0) ||
-          state->ARB_texture_cube_map_array_enable;
+   return state->has_texture_cube_map_array();
 }
 
 static bool

@@ -317,6 +317,12 @@ struct _mesa_glsl_parse_state {
              MESA_shader_framebuffer_fetch_non_coherent_enable;
    }
 
+   bool has_texture_cube_map_array() const
+   {
+      return ARB_texture_cube_map_array_enable ||
+             is_version(400, 0);
+   }
+
    void process_version_directive(YYLTYPE *locp, int version,
                                   const char *ident);
 
