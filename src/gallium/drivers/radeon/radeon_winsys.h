@@ -186,7 +186,6 @@ enum radeon_bo_priority {
     RADEON_PRIO_SDMA_TEXTURE,
 
     RADEON_PRIO_CP_DMA = 12,
-    RADEON_PRIO_SHADER_BINARY,
 
     RADEON_PRIO_CONST_BUFFER = 16,
     RADEON_PRIO_DESCRIPTORS,
@@ -214,6 +213,7 @@ enum radeon_bo_priority {
     RADEON_PRIO_CMASK = 52,
     RADEON_PRIO_DCC,
     RADEON_PRIO_HTILE,
+    RADEON_PRIO_SHADER_BINARY, /* the hw can't hide instruction cache misses */
 
     RADEON_PRIO_SHADER_RINGS = 56,
 

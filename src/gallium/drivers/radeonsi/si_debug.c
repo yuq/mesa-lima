@@ -553,7 +553,6 @@ static const char *priority_to_string(enum radeon_bo_priority priority)
 	        ITEM(SDMA_BUFFER),
 	        ITEM(SDMA_TEXTURE),
 		ITEM(CP_DMA),
-	        ITEM(SHADER_BINARY),
 	        ITEM(CONST_BUFFER),
 	        ITEM(DESCRIPTORS),
 	        ITEM(BORDER_COLORS),
@@ -571,6 +570,7 @@ static const char *priority_to_string(enum radeon_bo_priority priority)
 	        ITEM(CMASK),
 	        ITEM(DCC),
 	        ITEM(HTILE),
+		ITEM(SHADER_BINARY),
 		ITEM(SHADER_RINGS),
 		ITEM(SCRATCH_BUFFER),
 	};
