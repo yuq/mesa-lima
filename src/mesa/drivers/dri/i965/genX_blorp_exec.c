@@ -68,6 +68,37 @@ blorp_emit_reloc(struct brw_context *brw, void *location,
    }
 }
 
+static void *
+blorp_alloc_dynamic_state(struct blorp_context *blorp,
+                          enum aub_state_struct_type type,
+                          uint32_t size,
+                          uint32_t alignment,
+                          uint32_t *offset)
+{
+   struct brw_context *brw = blorp->driver_ctx;
+   return brw_state_batch(brw, type, size, alignment, offset);
+}
+
+static void *
+blorp_alloc_vertex_buffer(struct blorp_context *blorp, uint32_t size,
+                          struct blorp_address *addr)
+{
+   struct brw_context *brw = blorp->driver_ctx;
+
+   uint32_t offset;
+   void *data = brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
+                                size, 32, &offset);
+
+   *addr = (struct blorp_address) {
+      .buffer = brw->batch.bo,
+      .read_domains = I915_GEM_DOMAIN_VERTEX,
+      .write_domain = 0,
+      .offset = offset,
+   };
+
+   return data;
+}
+
 #define __gen_address_type struct blorp_address
 #define __gen_user_data struct brw_context
 
@@ -188,17 +219,8 @@ blorp_emit_vertex_data(struct brw_context *brw,
       /* v2 */ (float)params->x0, (float)params->y0,
    };
 
-   uint32_t offset;
-   void *data = brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
-                                sizeof(vertices), 32, &offset);
+   void *data = blorp_alloc_vertex_buffer(&brw->blorp, sizeof(vertices), addr);
    memcpy(data, vertices, sizeof(vertices));
-
-   *addr = (struct blorp_address) {
-      .buffer = brw->batch.bo,
-      .read_domains = I915_GEM_DOMAIN_VERTEX,
-      .write_domain = 0,
-      .offset = offset,
-   };
    *size = sizeof(vertices);
 }
 
@@ -216,9 +238,7 @@ blorp_emit_input_varying_data(struct brw_context *brw,
    *size = num_varyings * vec4_size_in_bytes;
 
    const float *const inputs_src = (const float *)&params->wm_inputs;
-   uint32_t offset;
-   float *inputs = brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
-                                   *size, 32, &offset);
+   float *inputs = blorp_alloc_vertex_buffer(&brw->blorp, *size, addr);
 
    /* Walk over the attribute slots, determine if the attribute is used by
     * the program and when necessary copy the values from the input storage to
@@ -234,13 +254,6 @@ blorp_emit_input_varying_data(struct brw_context *brw,
 
       inputs += 4;
    }
-
-   *addr = (struct blorp_address) {
-      .buffer = brw->batch.bo,
-      .read_domains = I915_GEM_DOMAIN_VERTEX,
-      .write_domain = 0,
-      .offset = offset,
-   };
 }
 
 static void
@@ -821,8 +834,10 @@ blorp_emit_blend_state(struct brw_context *brw,
    }
 
    uint32_t offset;
-   void *state = brw_state_batch(brw, AUB_TRACE_BLEND_STATE,
-                                 GENX(BLEND_STATE_length) * 4, 64, &offset);
+   void *state = blorp_alloc_dynamic_state(&brw->blorp,
+                                           AUB_TRACE_BLEND_STATE,
+                                           GENX(BLEND_STATE_length) * 4,
+                                           64, &offset);
    GENX(BLEND_STATE_pack)(NULL, state, &blend);
 
 #if GEN_GEN >= 7
@@ -848,8 +863,10 @@ blorp_emit_color_calc_state(struct brw_context *brw,
                             const struct brw_blorp_params *params)
 {
    uint32_t offset;
-   void *state = brw_state_batch(brw, AUB_TRACE_CC_STATE,
-                                 GENX(COLOR_CALC_STATE_length) * 4, 64, &offset);
+   void *state = blorp_alloc_dynamic_state(&brw->blorp,
+                                           AUB_TRACE_CC_STATE,
+                                           GENX(COLOR_CALC_STATE_length) * 4,
+                                           64, &offset);
    memset(state, 0, GENX(COLOR_CALC_STATE_length) * 4);
 
 #if GEN_GEN >= 7
@@ -891,9 +908,10 @@ blorp_emit_depth_stencil_state(struct brw_context *brw,
    }
 
    uint32_t offset;
-   void *state = brw_state_batch(brw, AUB_TRACE_DEPTH_STENCIL_STATE,
-                                 GENX(DEPTH_STENCIL_STATE_length) * 4, 64,
-                                 &offset);
+   void *state = blorp_alloc_dynamic_state(&brw->blorp,
+                                           AUB_TRACE_DEPTH_STENCIL_STATE,
+                                           GENX(DEPTH_STENCIL_STATE_length) * 4,
+                                           64, &offset);
    GENX(DEPTH_STENCIL_STATE_pack)(NULL, state, &ds);
 
 #if GEN_GEN >= 7
@@ -963,8 +981,10 @@ blorp_emit_sampler_state(struct brw_context *brw,
    };
 
    uint32_t offset;
-   void *state = brw_state_batch(brw, AUB_TRACE_SAMPLER_STATE,
-                                 GENX(SAMPLER_STATE_length) * 4, 32, &offset);
+   void *state = blorp_alloc_dynamic_state(&brw->blorp,
+                                           AUB_TRACE_SAMPLER_STATE,
+                                           GENX(SAMPLER_STATE_length) * 4,
+                                           32, &offset);
    GENX(SAMPLER_STATE_pack)(NULL, state, &sampler);
 
 #if GEN_GEN >= 7
@@ -988,9 +1008,10 @@ blorp_emit_viewport_state(struct brw_context *brw,
 {
    uint32_t cc_vp_offset;
 
-   void *state = brw_state_batch(brw, AUB_TRACE_CC_VP_STATE,
-                                 GENX(CC_VIEWPORT_length) * 4, 32,
-                                 &cc_vp_offset);
+   void *state = blorp_alloc_dynamic_state(&brw->blorp,
+                                           AUB_TRACE_CC_VP_STATE,
+                                           GENX(CC_VIEWPORT_length) * 4, 32,
+                                           &cc_vp_offset);
 
    GENX(CC_VIEWPORT_pack)(brw, state,
       &(struct GENX(CC_VIEWPORT)) {
