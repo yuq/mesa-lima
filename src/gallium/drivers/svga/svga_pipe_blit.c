@@ -223,7 +223,7 @@ can_blit_via_copy_region_vgpu10(struct svga_context *svga,
       return false;
 
    stex = svga_texture(blit_info->src.resource);
-   dtex = svga_texture(blit_info->src.resource);
+   dtex = svga_texture(blit_info->dst.resource);
 
    // can't copy within one resource
    if (stex->handle == dtex->handle)
