@@ -78,6 +78,13 @@ src_is_type(nir_src src, nir_alu_type type)
       }
 
       return nir_alu_type_get_base_type(output_type) == type;
+   } else if (src.ssa->parent_instr->type == nir_instr_type_intrinsic) {
+      nir_intrinsic_instr *intr = nir_instr_as_intrinsic(src.ssa->parent_instr);
+
+      if (type == nir_type_bool) {
+         return intr->intrinsic == nir_intrinsic_load_front_face ||
+                intr->intrinsic == nir_intrinsic_load_helper_invocation;
+      }
    }
 
    /* don't know */
