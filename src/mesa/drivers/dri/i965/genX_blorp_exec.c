@@ -99,6 +99,16 @@ blorp_alloc_vertex_buffer(struct blorp_context *blorp, uint32_t size,
    return data;
 }
 
+static void
+blorp_emit_3dstate_multisample(struct brw_context *brw, unsigned samples)
+{
+#if GEN_GEN >= 8
+   gen8_emit_3dstate_multisample(brw, samples);
+#else
+   gen6_emit_3dstate_multisample(brw, samples);
+#endif
+}
+
 #define __gen_address_type struct blorp_address
 #define __gen_user_data struct brw_context
 
@@ -1114,11 +1124,7 @@ genX(blorp_exec)(struct brw_context *brw,
    if (params->src.bo)
       blorp_emit_sampler_state(brw, params);
 
-#if GEN_GEN >= 8
-   gen8_emit_3dstate_multisample(brw, params->dst.surf.samples);
-#else
-   gen6_emit_3dstate_multisample(brw, params->dst.surf.samples);
-#endif
+   blorp_emit_3dstate_multisample(brw, params->dst.surf.samples);
 
    blorp_emit(brw, GENX(3DSTATE_SAMPLE_MASK), mask) {
       mask.SampleMask = (1 << params->dst.surf.samples) - 1;
