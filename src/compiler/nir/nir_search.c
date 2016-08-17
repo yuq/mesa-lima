@@ -42,34 +42,6 @@ match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
 
 static const uint8_t identity_swizzle[] = { 0, 1, 2, 3 };
 
-static bool alu_instr_is_bool(nir_alu_instr *instr);
-
-static bool
-src_is_bool(nir_src src)
-{
-   if (!src.is_ssa)
-      return false;
-   if (src.ssa->parent_instr->type != nir_instr_type_alu)
-      return false;
-   return alu_instr_is_bool(nir_instr_as_alu(src.ssa->parent_instr));
-}
-
-static bool
-alu_instr_is_bool(nir_alu_instr *instr)
-{
-   switch (instr->op) {
-   case nir_op_iand:
-   case nir_op_ior:
-   case nir_op_ixor:
-      return src_is_bool(instr->src[0].src) && src_is_bool(instr->src[1].src);
-   case nir_op_inot:
-      return src_is_bool(instr->src[0].src);
-   default:
-      return (nir_alu_type_get_base_type(nir_op_infos[instr->op].output_type)
-             == nir_type_bool);
-   }
-}
-
 /**
  * Check if a source produces a value of the given type.
  *
@@ -83,13 +55,29 @@ src_is_type(nir_src src, nir_alu_type type)
    if (!src.is_ssa)
       return false;
 
+   /* Turn nir_type_bool32 into nir_type_bool...they're the same thing. */
+   if (nir_alu_type_get_base_type(type) == nir_type_bool)
+      type = nir_type_bool;
+
    if (src.ssa->parent_instr->type == nir_instr_type_alu) {
       nir_alu_instr *src_alu = nir_instr_as_alu(src.ssa->parent_instr);
       nir_alu_type output_type = nir_op_infos[src_alu->op].output_type;
 
-      return nir_alu_type_get_base_type(output_type) == type ||
-             (nir_alu_type_get_base_type(type) == nir_type_bool &&
-              alu_instr_is_bool(src_alu));
+      if (type == nir_type_bool) {
+         switch (src_alu->op) {
+         case nir_op_iand:
+         case nir_op_ior:
+         case nir_op_ixor:
+            return src_is_type(src_alu->src[0].src, nir_type_bool) &&
+                   src_is_type(src_alu->src[1].src, nir_type_bool);
+         case nir_op_inot:
+            return src_is_type(src_alu->src[0].src, nir_type_bool);
+         default:
+            break;
+         }
+      }
+
+      return nir_alu_type_get_base_type(output_type) == type;
    }
 
    /* don't know */
