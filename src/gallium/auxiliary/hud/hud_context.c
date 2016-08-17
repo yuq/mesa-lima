@@ -67,7 +67,7 @@ struct hud_context {
    struct pipe_blend_state no_blend, alpha_blend;
    struct pipe_depth_stencil_alpha_state dsa;
    void *fs_color, *fs_text;
-   struct pipe_rasterizer_state rasterizer;
+   struct pipe_rasterizer_state rasterizer, rasterizer_aa_lines;
    void *vs;
    struct pipe_vertex_element velems[2];
 
@@ -590,6 +590,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    pipe_resource_reference(&hud->text.vbuf.buffer, NULL);
 
    /* draw the rest */
+   cso_set_rasterizer(cso, &hud->rasterizer_aa_lines);
    LIST_FOR_EACH_ENTRY(pane, &hud->pane_list, head) {
       if (pane)
          hud_pane_draw_colored_objects(hud, pane);
@@ -1226,6 +1227,9 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
    hud->rasterizer.depth_clip = 1;
    hud->rasterizer.line_width = 1;
    hud->rasterizer.line_last_pixel = 1;
+
+   hud->rasterizer_aa_lines = hud->rasterizer;
+   hud->rasterizer_aa_lines.line_smooth = 1;
 
    /* vertex shader */
    {
