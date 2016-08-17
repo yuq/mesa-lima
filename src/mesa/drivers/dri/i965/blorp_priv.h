@@ -303,12 +303,6 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
                              struct brw_blorp_prog_data *prog_data,
                              unsigned *program_size);
 
-uint32_t
-brw_blorp_emit_surface_state(struct brw_context *brw,
-                             const struct brw_blorp_surface_info *surface,
-                             uint32_t read_domains, uint32_t write_domain,
-                             bool is_render_target);
-
 /** \} */
 
 #ifdef __cplusplus

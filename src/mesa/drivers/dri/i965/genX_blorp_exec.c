@@ -927,6 +927,81 @@ blorp_emit_depth_stencil_state(struct brw_context *brw,
 #endif /* GEN_GEN */
 }
 
+struct surface_state_info {
+   unsigned num_dwords;
+   unsigned ss_align; /* Required alignment of RENDER_SURFACE_STATE in bytes */
+   unsigned reloc_dw;
+   unsigned aux_reloc_dw;
+};
+
+static const struct surface_state_info surface_state_infos[] = {
+   [6] = {6,  32, 1,  0},
+   [7] = {8,  32, 1,  6},
+   [8] = {13, 64, 8,  10},
+   [9] = {16, 64, 8,  10},
+};
+
+static uint32_t
+blorp_emit_surface_state(struct brw_context *brw,
+                         const struct brw_blorp_surface_info *surface,
+                         uint32_t read_domains, uint32_t write_domain,
+                         bool is_render_target)
+{
+   const struct surface_state_info ss_info = surface_state_infos[brw->gen];
+
+   struct isl_surf surf = surface->surf;
+
+   if (surf.dim == ISL_SURF_DIM_1D &&
+       surf.dim_layout == ISL_DIM_LAYOUT_GEN4_2D) {
+      assert(surf.logical_level0_px.height == 1);
+      surf.dim = ISL_SURF_DIM_2D;
+   }
+
+   /* Blorp doesn't support HiZ in any of the blit or slow-clear paths */
+   enum isl_aux_usage aux_usage = surface->aux_usage;
+   if (aux_usage == ISL_AUX_USAGE_HIZ)
+      aux_usage = ISL_AUX_USAGE_NONE;
+
+   uint32_t surf_offset;
+   uint32_t *dw = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
+                                  ss_info.num_dwords * 4, ss_info.ss_align,
+                                  &surf_offset);
+
+   const uint32_t mocs =
+      is_render_target ? brw->blorp.mocs.rb : brw->blorp.mocs.tex;
+   uint64_t aux_bo_offset = surface->aux_bo ? surface->aux_bo->offset64 : 0;
+
+   isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &surface->view,
+                       .address = surface->bo->offset64 + surface->offset,
+                       .aux_surf = &surface->aux_surf, .aux_usage = aux_usage,
+                       .aux_address = aux_bo_offset + surface->aux_offset,
+                       .mocs = mocs, .clear_color = surface->clear_color,
+                       .x_offset_sa = surface->tile_x_sa,
+                       .y_offset_sa = surface->tile_y_sa);
+
+   /* Emit relocation to surface contents */
+   drm_intel_bo_emit_reloc(brw->batch.bo,
+                           surf_offset + ss_info.reloc_dw * 4,
+                           surface->bo,
+                           dw[ss_info.reloc_dw] - surface->bo->offset64,
+                           read_domains, write_domain);
+
+   if (aux_usage != ISL_AUX_USAGE_NONE) {
+      /* On gen7 and prior, the bottom 12 bits of the MCS base address are
+       * used to store other information.  This should be ok, however, because
+       * surface buffer addresses are always 4K page alinged.
+       */
+      assert((surface->aux_offset & 0xfff) == 0);
+      drm_intel_bo_emit_reloc(brw->batch.bo,
+                              surf_offset + ss_info.aux_reloc_dw * 4,
+                              surface->aux_bo,
+                              dw[ss_info.aux_reloc_dw] & 0xfff,
+                              read_domains, write_domain);
+   }
+
+   return surf_offset;
+}
+
 static void
 blorp_emit_surface_states(struct brw_context *brw,
                           const struct brw_blorp_params *params)
@@ -938,13 +1013,13 @@ blorp_emit_surface_states(struct brw_context *brw,
                       32, /* alignment */ &bind_offset);
 
    bind[BRW_BLORP_RENDERBUFFER_BINDING_TABLE_INDEX] =
-      brw_blorp_emit_surface_state(brw, &params->dst,
-                                   I915_GEM_DOMAIN_RENDER,
-                                   I915_GEM_DOMAIN_RENDER, true);
+      blorp_emit_surface_state(brw, &params->dst,
+                               I915_GEM_DOMAIN_RENDER,
+                               I915_GEM_DOMAIN_RENDER, true);
    if (params->src.bo) {
       bind[BRW_BLORP_TEXTURE_BINDING_TABLE_INDEX] =
-         brw_blorp_emit_surface_state(brw, &params->src,
-                                      I915_GEM_DOMAIN_SAMPLER, 0, false);
+         blorp_emit_surface_state(brw, &params->src,
+                                  I915_GEM_DOMAIN_SAMPLER, 0, false);
    }
 
 #if GEN_GEN >= 7
