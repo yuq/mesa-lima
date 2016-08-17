@@ -64,7 +64,7 @@ struct hud_context {
    struct list_head pane_list;
 
    /* states */
-   struct pipe_blend_state alpha_blend;
+   struct pipe_blend_state no_blend, alpha_blend;
    struct pipe_depth_stencil_alpha_state dsa;
    void *fs_color, *fs_text;
    struct pipe_rasterizer_state rasterizer;
@@ -503,7 +503,6 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    cso_set_framebuffer(cso, &fb);
    cso_set_sample_mask(cso, ~0);
    cso_set_min_samples(cso, 1);
-   cso_set_blend(cso, &hud->alpha_blend);
    cso_set_depth_stencil_alpha(cso, &hud->dsa);
    cso_set_rasterizer(cso, &hud->rasterizer);
    cso_set_viewport(cso, &viewport);
@@ -539,6 +538,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    u_upload_unmap(hud->uploader);
 
    /* draw accumulated vertices for background quads */
+   cso_set_blend(cso, &hud->alpha_blend);
    cso_set_fragment_shader_handle(hud->cso, hud->fs_color);
 
    if (hud->bg.num_vertices) {
@@ -559,6 +559,8 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    pipe_resource_reference(&hud->bg.vbuf.buffer, NULL);
 
    /* draw accumulated vertices for white lines */
+   cso_set_blend(cso, &hud->no_blend);
+
    hud->constants.color[0] = 1;
    hud->constants.color[1] = 1;
    hud->constants.color[2] = 1;
@@ -578,6 +580,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    pipe_resource_reference(&hud->whitelines.vbuf.buffer, NULL);
 
    /* draw accumulated vertices for text */
+   cso_set_blend(cso, &hud->alpha_blend);
    if (hud->text.num_vertices) {
       cso_set_vertex_buffers(cso, cso_get_aux_vertex_buffer_slot(cso), 1,
                              &hud->text.vbuf);
@@ -1170,6 +1173,8 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
    }
 
    /* blend state */
+   hud->no_blend.rt[0].colormask = PIPE_MASK_RGBA;
+
    hud->alpha_blend.rt[0].colormask = PIPE_MASK_RGBA;
    hud->alpha_blend.rt[0].blend_enable = 1;
    hud->alpha_blend.rt[0].rgb_func = PIPE_BLEND_ADD;
