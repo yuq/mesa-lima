@@ -48,6 +48,7 @@ enum SWR_TYPE
     SWR_TYPE_SSCALED,
     SWR_TYPE_USCALED,
 };
+
 //////////////////////////////////////////////////////////////////////////
 /// SWR_FORMAT
 //////////////////////////////////////////////////////////////////////////
@@ -102,6 +103,7 @@ enum SWR_FORMAT
     B10G10R10A2_UNORM = 0xD1,
     B10G10R10A2_UNORM_SRGB = 0xD2,
     R11G11B10_FLOAT = 0xD3,
+    R10G10B10_FLOAT_A2_UNORM = 0xD5,
     R32_SINT = 0xD6,
     R32_UINT = 0xD7,
     R32_FLOAT = 0xD8,
@@ -215,6 +217,7 @@ enum SWR_FORMAT
     R8G8B8_SINT = 0x1C9,
     NUM_SWR_FORMATS = 0x1CA,
 };
+
 //////////////////////////////////////////////////////////////////////////
 /// SWR_FORMAT_INFO - Format information
 //////////////////////////////////////////////////////////////////////////
@@ -231,11 +234,11 @@ struct SWR_FORMAT_INFO
     bool isSRGB;
     bool isBC;
     bool isSubsampled;
+    bool isLuminance;
     bool isNormalized[4];
     float toFloat[4];
     uint32_t bcWidth;
     uint32_t bcHeight;
-    bool isLuminance;
 };
 
 extern const SWR_FORMAT_INFO gFormatInfo[];
