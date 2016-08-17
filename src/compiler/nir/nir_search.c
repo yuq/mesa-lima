@@ -70,6 +70,32 @@ alu_instr_is_bool(nir_alu_instr *instr)
    }
 }
 
+/**
+ * Check if a source produces a value of the given type.
+ *
+ * Used for satisfying 'a@type' constraints.
+ */
+static bool
+src_is_type(nir_src src, nir_alu_type type)
+{
+   assert(type != nir_type_invalid);
+
+   if (!src.is_ssa)
+      return false;
+
+   if (src.ssa->parent_instr->type == nir_instr_type_alu) {
+      nir_alu_instr *src_alu = nir_instr_as_alu(src.ssa->parent_instr);
+      nir_alu_type output_type = nir_op_infos[src_alu->op].output_type;
+
+      return nir_alu_type_get_base_type(output_type) == type ||
+             (nir_alu_type_get_base_type(type) == nir_type_bool &&
+              alu_instr_is_bool(src_alu));
+   }
+
+   /* don't know */
+   return false;
+}
+
 static bool
 match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
             unsigned num_components, const uint8_t *swizzle,
@@ -130,19 +156,9 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
          if (var->cond && !var->cond(instr, src, num_components, new_swizzle))
             return false;
 
-         if (var->type != nir_type_invalid) {
-            if (instr->src[src].src.ssa->parent_instr->type != nir_instr_type_alu)
-               return false;
-
-            nir_alu_instr *src_alu =
-               nir_instr_as_alu(instr->src[src].src.ssa->parent_instr);
-
-            if (nir_alu_type_get_base_type(nir_op_infos[src_alu->op].output_type) !=
-                var->type &&
-                !(nir_alu_type_get_base_type(var->type) == nir_type_bool &&
-                  alu_instr_is_bool(src_alu)))
-               return false;
-         }
+         if (var->type != nir_type_invalid &&
+             !src_is_type(instr->src[src].src, var->type))
+            return false;
 
          state->variables_seen |= (1 << var->variable);
          state->variables[var->variable].src = instr->src[src].src;
