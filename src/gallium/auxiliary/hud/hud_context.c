@@ -1242,8 +1242,8 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
    struct pipe_sampler_view view_templ;
    unsigned i;
    const char *env = debug_get_option("GALLIUM_HUD", NULL);
-   unsigned signo = debug_get_num_option("GALLIUM_HUD_TOGGLE_SIGNAL", 0);
 #ifdef PIPE_OS_UNIX
+   unsigned signo = debug_get_num_option("GALLIUM_HUD_TOGGLE_SIGNAL", 0);
    static boolean sig_handled = FALSE;
    struct sigaction action = {};
 #endif
