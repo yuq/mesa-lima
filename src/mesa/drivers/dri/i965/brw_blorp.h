@@ -94,18 +94,6 @@ struct brw_blorp_surface_info
     */
    uint32_t layer;
 
-   /**
-    * Width of the miplevel to be used.  For surfaces using
-    * INTEL_MSAA_LAYOUT_IMS, this is measured in samples, not pixels.
-    */
-   uint32_t width;
-
-   /**
-    * Height of the miplevel to be used.  For surfaces using
-    * INTEL_MSAA_LAYOUT_IMS, this is measured in samples, not pixels.
-    */
-   uint32_t height;
-
    uint32_t bo_offset;
    uint32_t tile_x_sa, tile_y_sa;
 };

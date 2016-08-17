@@ -1793,24 +1793,31 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
          params.y0 = ROUND_DOWN_TO(params.y0, 4);
          params.x1 = ALIGN(params.x1 * 2, 4);
          params.y1 = ALIGN(params.y1, 4);
+         params.dst.surf.logical_level0_px.width *= 2;
          break;
       case 4:
          params.x0 = ROUND_DOWN_TO(params.x0 * 2, 4);
          params.y0 = ROUND_DOWN_TO(params.y0 * 2, 4);
          params.x1 = ALIGN(params.x1 * 2, 4);
          params.y1 = ALIGN(params.y1 * 2, 4);
+         params.dst.surf.logical_level0_px.width *= 2;
+         params.dst.surf.logical_level0_px.height *= 2;
          break;
       case 8:
          params.x0 = ROUND_DOWN_TO(params.x0 * 4, 8);
          params.y0 = ROUND_DOWN_TO(params.y0 * 2, 4);
          params.x1 = ALIGN(params.x1 * 4, 8);
          params.y1 = ALIGN(params.y1 * 2, 4);
+         params.dst.surf.logical_level0_px.width *= 4;
+         params.dst.surf.logical_level0_px.height *= 2;
          break;
       case 16:
          params.x0 = ROUND_DOWN_TO(params.x0 * 4, 8);
          params.y0 = ROUND_DOWN_TO(params.y0 * 4, 8);
          params.x1 = ALIGN(params.x1 * 4, 8);
          params.y1 = ALIGN(params.y1 * 4, 8);
+         params.dst.surf.logical_level0_px.width *= 4;
+         params.dst.surf.logical_level0_px.height *= 4;
          break;
       default:
          unreachable("Unrecognized sample count in brw_blorp_blit_params ctor");
@@ -1895,8 +1902,10 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       params.y0 = ROUND_DOWN_TO(params.y0, y_align) / 2;
       params.x1 = ALIGN(params.x1, x_align) * 2;
       params.y1 = ALIGN(params.y1, y_align) / 2;
-      params.dst.width = ALIGN(params.dst.width, x_align) * 2;
-      params.dst.height = ALIGN(params.dst.height, y_align) / 2;
+      params.dst.surf.logical_level0_px.width =
+         ALIGN(params.dst.surf.logical_level0_px.width, x_align) * 2;
+      params.dst.surf.logical_level0_px.height =
+         ALIGN(params.dst.surf.logical_level0_px.height, y_align) / 2;
       params.dst.tile_x_sa *= 2;
       params.dst.tile_y_sa /= 2;
       wm_prog_key.use_kill = true;
@@ -1920,8 +1929,10 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        * TODO: what if this makes the texture size too large?
        */
       const unsigned x_align = 8, y_align = params.src.surf.samples != 0 ? 8 : 4;
-      params.src.width = ALIGN(params.src.width, x_align) * 2;
-      params.src.height = ALIGN(params.src.height, y_align) / 2;
+      params.src.surf.logical_level0_px.width =
+         ALIGN(params.src.surf.logical_level0_px.width, x_align) * 2;
+      params.src.surf.logical_level0_px.height =
+         ALIGN(params.src.surf.logical_level0_px.height, y_align) / 2;
       params.src.tile_x_sa *= 2;
       params.src.tile_y_sa /= 2;
    }

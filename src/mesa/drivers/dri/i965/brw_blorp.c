@@ -203,8 +203,6 @@ brw_blorp_surface_info_init(struct brw_context *brw,
 
    info->level = level;
    info->layer = layer;
-   info->width = minify(mt->physical_width0, level - mt->first_level);
-   info->height = minify(mt->physical_height0, level - mt->first_level);
 
    if (format == MESA_FORMAT_NONE)
       format = mt->format;
@@ -372,19 +370,6 @@ brw_blorp_emit_surface_state(struct brw_context *brw,
    const struct surface_state_info ss_info = surface_state_infos[brw->gen];
 
    struct isl_surf surf = surface->surf;
-
-   /* Stomp surface dimensions and tiling (if needed) with info from blorp */
-   surf.logical_level0_px.width = surface->width;
-   surf.logical_level0_px.height = surface->height;
-
-   if (brw->gen == 6 && surf.samples > 1) {
-      /* Since gen6 uses INTEL_MSAA_LAYOUT_IMS, width and height are measured
-       * in samples.  But SURFACE_STATE wants them in pixels, so we need to
-       * divide them each by 2.
-       */
-      surf.logical_level0_px.width /= 2;
-      surf.logical_level0_px.height /= 2;
-   }
 
    union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
 
@@ -619,16 +604,13 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
     * prevents the clobbering.
     */
    params.dst.surf.samples = MAX2(mt->num_samples, 1);
-   if (params.depth.surf.samples > 1) {
-      params.depth.width = ALIGN(mt->logical_width0, 8);
-      params.depth.height = ALIGN(mt->logical_height0, 4);
-   } else {
-      params.depth.width = ALIGN(params.depth.width, 8);
-      params.depth.height = ALIGN(params.depth.height, 4);
-   }
+   params.depth.surf.logical_level0_px.width =
+      ALIGN(params.depth.surf.logical_level0_px.width, 8);
+   params.depth.surf.logical_level0_px.height =
+      ALIGN(params.depth.surf.logical_level0_px.height, 4);
 
-   params.x1 = params.depth.width;
-   params.y1 = params.depth.height;
+   params.x1 = params.depth.surf.logical_level0_px.width;
+   params.y1 = params.depth.surf.logical_level0_px.height;
 
    assert(intel_miptree_level_has_hiz(mt, level));
 

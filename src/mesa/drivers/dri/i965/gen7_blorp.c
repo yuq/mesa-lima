@@ -521,8 +521,8 @@ gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
        * larger to allow the fast depth clear to fit the hardware
        * alignment requirements. (8x4)
        */
-      surfwidth = params->depth.width;
-      surfheight = params->depth.height;
+      surfwidth = params->depth.surf.logical_level0_px.width;
+      surfheight = params->depth.surf.logical_level0_px.height;
    } else {
       surfwidth = params->depth.mt->logical_width0;
       surfheight = params->depth.mt->logical_height0;
