@@ -59,6 +59,10 @@
 #define     CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_8X16   16
 #define     CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_16X16  17
 
+#ifndef AMDGPU_INFO_NUM_EVICTIONS
+#define AMDGPU_INFO_NUM_EVICTIONS		0x18
+#endif
+
 static struct util_hash_table *dev_tab = NULL;
 pipe_static_mutex(dev_tab_mutex);
 
@@ -392,6 +396,9 @@ static uint64_t amdgpu_query_value(struct radeon_winsys *rws,
       return ws->num_cs_flushes;
    case RADEON_NUM_BYTES_MOVED:
       amdgpu_query_info(ws->dev, AMDGPU_INFO_NUM_BYTES_MOVED, 8, &retval);
+      return retval;
+   case RADEON_NUM_EVICTIONS:
+      amdgpu_query_info(ws->dev, AMDGPU_INFO_NUM_EVICTIONS, 8, &retval);
       return retval;
    case RADEON_VRAM_USAGE:
       amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_VRAM, 0, &heap);
