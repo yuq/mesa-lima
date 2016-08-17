@@ -205,6 +205,7 @@ update_sampler_resources(struct svga_context *svga, unsigned dirty)
    for (shader = PIPE_SHADER_VERTEX; shader <= PIPE_SHADER_GEOMETRY; shader++) {
       SVGA3dShaderResourceViewId ids[PIPE_MAX_SAMPLERS];
       struct svga_winsys_surface *surfaces[PIPE_MAX_SAMPLERS];
+      struct pipe_sampler_view *sampler_views[PIPE_MAX_SAMPLERS];
       unsigned count;
       unsigned nviews;
       unsigned i;
@@ -213,10 +214,9 @@ update_sampler_resources(struct svga_context *svga, unsigned dirty)
       for (i = 0; i < count; i++) {
          struct svga_pipe_sampler_view *sv =
             svga_pipe_sampler_view(svga->curr.sampler_views[shader][i]);
-         struct svga_winsys_surface *surface;
 
          if (sv) {
-            surface = svga_resource_handle(sv->base.texture);
+            surfaces[i] = svga_resource_handle(sv->base.texture);
 
             ret = svga_validate_pipe_sampler_view(svga, sv);
             if (ret != PIPE_OK)
@@ -224,39 +224,19 @@ update_sampler_resources(struct svga_context *svga, unsigned dirty)
 
             assert(sv->id != SVGA3D_INVALID_ID);
             ids[i] = sv->id;
+            sampler_views[i] = &sv->base;
          }
          else {
-            surface = NULL;
+            surfaces[i] = NULL;
             ids[i] = SVGA3D_INVALID_ID;
+            sampler_views[i] = NULL;
          }
-         surfaces[i] = surface;
       }
 
-      for (; i < ARRAY_SIZE(ids); i++) {
+      for (; i < svga->state.hw_draw.num_sampler_views[shader]; i++) {
          ids[i] = SVGA3D_INVALID_ID;
          surfaces[i] = NULL;
-      }
-
-      if (shader == PIPE_SHADER_FRAGMENT) {
-         /* Handle polygon stipple sampler view */
-         if (svga->curr.rast->templ.poly_stipple_enable) {
-            const unsigned unit = svga->state.hw_draw.fs->pstipple_sampler_unit;
-            struct svga_pipe_sampler_view *sv =
-               svga->polygon_stipple.sampler_view;
-
-            assert(sv);
-            if (!sv) {
-               return PIPE_OK;  /* probably out of memory */
-            }
-
-            ret = svga_validate_pipe_sampler_view(svga, sv);
-            if (ret != PIPE_OK)
-               return ret;
-
-            ids[unit] = sv->id;
-            surfaces[unit] = svga_resource_handle(sv->base.texture);
-            count = MAX2(count, unit+1);
-         }
+         sampler_views[i] = NULL;
       }
 
       /* Number of ShaderResources that need to be modified. This includes
@@ -264,20 +244,53 @@ update_sampler_resources(struct svga_context *svga, unsigned dirty)
        */
       nviews = MAX2(svga->state.hw_draw.num_sampler_views[shader], count);
       if (nviews > 0) {
-         ret = SVGA3D_vgpu10_SetShaderResources(svga->swc,
+         if (count != svga->state.hw_draw.num_sampler_views[shader] ||
+             memcmp(sampler_views, svga->state.hw_draw.sampler_views[shader],
+                    count * sizeof(sampler_views[0])) != 0) {
+            ret = SVGA3D_vgpu10_SetShaderResources(svga->swc,
                                                 svga_shader_type(shader),
                                                 0, /* startView */
                                                 nviews,
                                                 ids,
                                                 surfaces);
-         if (ret != PIPE_OK)
-            return ret;
-      }
+            if (ret != PIPE_OK)
+               return ret;
 
-      /* Number of sampler views enabled in the device */
-      svga->state.hw_draw.num_sampler_views[shader] = count;
+            /* Save referenced sampler views in the hw draw state.  */
+            svga->state.hw_draw.num_sampler_views[shader] = count;
+            for (i = 0; i < nviews; i++) {
+               pipe_sampler_view_reference(
+                  &svga->state.hw_draw.sampler_views[shader][i],
+                  sampler_views[i]);
+            }
+         }
+      }
    }
 
+   /* Handle polygon stipple sampler view */
+   if (svga->curr.rast->templ.poly_stipple_enable) {
+      const unsigned unit = svga->state.hw_draw.fs->pstipple_sampler_unit;
+      struct svga_pipe_sampler_view *sv = svga->polygon_stipple.sampler_view;
+      struct svga_winsys_surface *surface;
+
+      assert(sv);
+      if (!sv) {
+         return PIPE_OK;  /* probably out of memory */
+      }
+
+      ret = svga_validate_pipe_sampler_view(svga, sv);
+      if (ret != PIPE_OK)
+         return ret;
+
+      surface = svga_resource_handle(sv->base.texture);
+      ret = SVGA3D_vgpu10_SetShaderResources(
+               svga->swc,
+               svga_shader_type(PIPE_SHADER_FRAGMENT),
+               unit, /* startView */
+               1,
+               &sv->id,
+               &surface);
+   }
    return ret;
 }
 

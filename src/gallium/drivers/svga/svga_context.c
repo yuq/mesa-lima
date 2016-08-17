@@ -226,6 +226,8 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
       sizeof(svga->state.hw_draw.num_samplers));
    memset(&svga->state.hw_draw.num_sampler_views, 0,
       sizeof(svga->state.hw_draw.num_sampler_views));
+   memset(svga->state.hw_draw.sampler_views, 0,
+          sizeof(svga->state.hw_draw.sampler_views));
    svga->state.hw_draw.num_views = 0;
 
    /* Initialize the shader pointers */

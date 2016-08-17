@@ -544,9 +544,20 @@ done:
 void
 svga_cleanup_sampler_state(struct svga_context *svga)
 {
+   unsigned shader;
+
    if (!svga_have_vgpu10(svga))
       return;
 
+   for (shader = 0; shader <= PIPE_SHADER_GEOMETRY; shader++) {
+      unsigned i;
+
+      for (i = 0; i < svga->state.hw_draw.num_sampler_views[shader]; i++) {
+         pipe_sampler_view_release(&svga->pipe,
+                                   &svga->state.hw_draw.sampler_views[shader][i]);
+      }
+   }
+   
    /* free polygon stipple state */
    if (svga->polygon_stipple.sampler) {
       svga->pipe.delete_sampler_state(&svga->pipe, svga->polygon_stipple.sampler);
