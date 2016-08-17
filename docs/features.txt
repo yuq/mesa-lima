@@ -271,7 +271,7 @@ GLES3.2, GLSL ES 3.2:
   GL_OES_tessellation_shader                            started (Ken)
   GL_OES_texture_border_clamp                           DONE (all drivers)
   GL_OES_texture_buffer                                 DONE (i965, nvc0, radeonsi)
-  GL_OES_texture_cube_map_array                         not started (based on GL_ARB_texture_cube_map_array, which is done for all drivers)
+  GL_OES_texture_cube_map_array                         DONE (i965/gen8+)
   GL_OES_texture_stencil8                               DONE (all drivers that support GL_ARB_texture_stencil8)
   GL_OES_texture_storage_multisample_2d_array           DONE (all drivers that support GL_ARB_texture_multisample)
 
