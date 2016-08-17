@@ -2156,7 +2156,7 @@ void r600_emit_shader(struct r600_context *rctx, struct r600_atom *a)
 	r600_emit_command_buffer(cs, &shader->command_buffer);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, shader->bo,
-					      RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER));
+					      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BINARY));
 }
 
 unsigned r600_get_swizzle_combined(const unsigned char *swizzle_format,

@@ -1909,7 +1909,7 @@ static void r600_emit_vertex_fetch_shader(struct r600_context *rctx, struct r600
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, shader->buffer,
                                                   RADEON_USAGE_READ,
-                                                  RADEON_PRIO_INTERNAL_SHADER));
+                                                  RADEON_PRIO_SHADER_BINARY));
 }
 
 static void r600_emit_shader_stages(struct r600_context *rctx, struct r600_atom *a)

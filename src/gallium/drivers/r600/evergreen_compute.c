@@ -584,7 +584,7 @@ void evergreen_emit_cs_shader(struct r600_context *rctx,
 	radeon_emit(cs, PKT3C(PKT3_NOP, 0, 0));
 	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
 					      code_bo, RADEON_USAGE_READ,
-					      RADEON_PRIO_USER_SHADER));
+					      RADEON_PRIO_SHADER_BINARY));
 }
 
 static void evergreen_launch_grid(struct pipe_context *ctx,
