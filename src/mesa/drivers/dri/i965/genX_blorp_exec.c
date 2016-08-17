@@ -100,6 +100,22 @@ blorp_alloc_vertex_buffer(struct blorp_context *blorp, uint32_t size,
 }
 
 static void
+blorp_emit_urb_config(struct brw_context *brw, unsigned vs_entry_size)
+{
+#if GEN_GEN >= 7
+   if (!(brw->ctx.NewDriverState & (BRW_NEW_CONTEXT | BRW_NEW_URB_SIZE)) &&
+       brw->urb.vsize >= vs_entry_size)
+      return;
+
+   brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
+
+   gen7_upload_urb(brw, vs_entry_size, false, false);
+#else
+   gen6_upload_urb(brw, vs_entry_size, false, 0);
+#endif
+}
+
+static void
 blorp_emit_3dstate_multisample(struct brw_context *brw, unsigned samples)
 {
 #if GEN_GEN >= 8
@@ -200,19 +216,7 @@ static void
 emit_urb_config(struct brw_context *brw,
                 const struct brw_blorp_params *params)
 {
-   const unsigned vs_entry_size = gen7_blorp_get_vs_entry_size(params);
-
-#if GEN_GEN >= 7
-   if (!(brw->ctx.NewDriverState & (BRW_NEW_CONTEXT | BRW_NEW_URB_SIZE)) &&
-       brw->urb.vsize >= vs_entry_size)
-      return;
-
-   brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
-
-   gen7_upload_urb(brw, vs_entry_size, false, false);
-#else
-   gen6_upload_urb(brw, vs_entry_size, false, 0);
-#endif
+   blorp_emit_urb_config(brw, gen7_blorp_get_vs_entry_size(params));
 }
 
 static void
