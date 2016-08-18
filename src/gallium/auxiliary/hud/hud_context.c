@@ -296,12 +296,19 @@ number_to_human_readable(uint64_t num, uint64_t max_value,
       unit++;
    }
 
-   if (d >= 100 || d == (int)d)
+   /* Round to 3 decimal places so as not to print trailing zeros. */
+   if (d*1000 != (int)(d*1000))
+      d = round(d * 1000) / 1000;
+
+   /* Show at least 4 digits with at most 3 decimal places, but not zeros. */
+   if (d >= 1000 || d == (int)d)
       sprintf(out, "%.0f%s", d, units[unit]);
-   else if (d >= 10 || d*10 == (int)(d*10))
+   else if (d >= 100 || d*10 == (int)(d*10))
       sprintf(out, "%.1f%s", d, units[unit]);
-   else
+   else if (d >= 10 || d*100 == (int)(d*100))
       sprintf(out, "%.2f%s", d, units[unit]);
+   else
+      sprintf(out, "%.3f%s", d, units[unit]);
 }
 
 static void
@@ -536,7 +543,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    /* prepare vertex buffers */
    hud_alloc_vertices(hud, &hud->bg, 4 * 128, 2 * sizeof(float));
    hud_alloc_vertices(hud, &hud->whitelines, 4 * 256, 2 * sizeof(float));
-   hud_alloc_vertices(hud, &hud->text, 4 * 512, 4 * sizeof(float));
+   hud_alloc_vertices(hud, &hud->text, 4 * 1024, 4 * sizeof(float));
 
    /* prepare all graphs */
    hud_batch_query_update(hud->batch_query);
@@ -1026,7 +1033,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       case ';':
          env++;
          y = 10;
-         x += column_width + hud->font.glyph_width * 7;
+         x += column_width + hud->font.glyph_width * 9;
          height = 100;
 
          if (pane && pane->num_graphs) {
