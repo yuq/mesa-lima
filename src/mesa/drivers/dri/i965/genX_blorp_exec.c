@@ -61,6 +61,23 @@ blorp_emit_reloc(struct brw_context *brw, void *location,
    }
 }
 
+static void
+blorp_surface_reloc(struct brw_context *brw, uint32_t ss_offset,
+                    struct blorp_address address, uint32_t delta)
+{
+   drm_intel_bo_emit_reloc(brw->batch.bo, ss_offset,
+                           address.buffer, address.offset + delta,
+                           address.read_domains, address.write_domain);
+
+   uint64_t reloc_val = address.buffer->offset64 + address.offset + delta;
+   void *reloc_ptr = (void *)brw->batch.map + ss_offset;
+#if GEN_GEN >= 8
+   *(uint64_t *)reloc_ptr = reloc_val;
+#else
+   *(uint32_t *)reloc_ptr = reloc_val;
+#endif
+}
+
 static void *
 blorp_alloc_dynamic_state(struct blorp_context *blorp,
                           enum aub_state_struct_type type,
@@ -951,24 +968,15 @@ blorp_emit_surface_state(struct brw_context *brw,
 
    const uint32_t mocs =
       is_render_target ? brw->blorp.mocs.rb : brw->blorp.mocs.tex;
-   uint64_t aux_bo_offset =
-      surface->aux_addr.buffer ? surface->aux_addr.buffer->offset64 : 0;
 
    isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &surface->view,
-                       .address = surface->addr.buffer->offset64 + surface->addr.offset,
                        .aux_surf = &surface->aux_surf, .aux_usage = aux_usage,
-                       .aux_address = aux_bo_offset + surface->aux_addr.offset,
                        .mocs = mocs, .clear_color = surface->clear_color,
                        .x_offset_sa = surface->tile_x_sa,
                        .y_offset_sa = surface->tile_y_sa);
 
-   /* Emit relocation to surface contents */
-   drm_intel_bo_emit_reloc(brw->batch.bo,
-                           surf_offset + ss_info.reloc_dw * 4,
-                           surface->addr.buffer,
-                           dw[ss_info.reloc_dw] - surface->addr.buffer->offset64,
-                           surface->addr.read_domains,
-                           surface->addr.write_domain);
+   blorp_surface_reloc(brw, surf_offset + ss_info.reloc_dw * 4,
+                       surface->addr, 0);
 
    if (aux_usage != ISL_AUX_USAGE_NONE) {
       /* On gen7 and prior, the bottom 12 bits of the MCS base address are
@@ -976,12 +984,8 @@ blorp_emit_surface_state(struct brw_context *brw,
        * surface buffer addresses are always 4K page alinged.
        */
       assert((surface->aux_addr.offset & 0xfff) == 0);
-      drm_intel_bo_emit_reloc(brw->batch.bo,
-                              surf_offset + ss_info.aux_reloc_dw * 4,
-                              surface->aux_addr.buffer,
-                              dw[ss_info.aux_reloc_dw] & 0xfff,
-                              surface->aux_addr.read_domains,
-                              surface->aux_addr.write_domain);
+      blorp_surface_reloc(brw, surf_offset + ss_info.aux_reloc_dw * 4,
+                          surface->aux_addr, dw[ss_info.aux_reloc_dw]);
    }
 
    return surf_offset;
