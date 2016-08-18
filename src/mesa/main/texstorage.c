@@ -51,11 +51,31 @@
 static GLboolean
 legal_texobj_target(struct gl_context *ctx, GLuint dims, GLenum target)
 {
-   if (_mesa_is_gles3(ctx)
-       && target != GL_TEXTURE_2D
-       && target != GL_TEXTURE_CUBE_MAP
-       && target != GL_TEXTURE_3D
-       && target != GL_TEXTURE_2D_ARRAY)
+   if (dims < 1 || dims > 3) {
+      _mesa_problem(ctx, "invalid dims=%u in legal_texobj_target()", dims);
+      return GL_FALSE;
+   }
+
+   switch (dims) {
+   case 2:
+      switch (target) {
+      case GL_TEXTURE_2D:
+         return GL_TRUE;
+      case GL_TEXTURE_CUBE_MAP:
+         return ctx->Extensions.ARB_texture_cube_map;
+      }
+      break;
+   case 3:
+      switch (target) {
+      case GL_TEXTURE_3D:
+         return GL_TRUE;
+      case GL_TEXTURE_2D_ARRAY:
+         return ctx->Extensions.EXT_texture_array;
+      }
+      break;
+   }
+
+   if (!_mesa_is_desktop_gl(ctx))
       return GL_FALSE;
 
    switch (dims) {
@@ -69,10 +89,8 @@ legal_texobj_target(struct gl_context *ctx, GLuint dims, GLenum target)
       }
    case 2:
       switch (target) {
-      case GL_TEXTURE_2D:
       case GL_PROXY_TEXTURE_2D:
          return GL_TRUE;
-      case GL_TEXTURE_CUBE_MAP:
       case GL_PROXY_TEXTURE_CUBE_MAP:
          return ctx->Extensions.ARB_texture_cube_map;
       case GL_TEXTURE_RECTANGLE:
@@ -86,10 +104,8 @@ legal_texobj_target(struct gl_context *ctx, GLuint dims, GLenum target)
       }
    case 3:
       switch (target) {
-      case GL_TEXTURE_3D:
       case GL_PROXY_TEXTURE_3D:
          return GL_TRUE;
-      case GL_TEXTURE_2D_ARRAY:
       case GL_PROXY_TEXTURE_2D_ARRAY:
          return ctx->Extensions.EXT_texture_array;
       case GL_TEXTURE_CUBE_MAP_ARRAY:
@@ -99,8 +115,7 @@ legal_texobj_target(struct gl_context *ctx, GLuint dims, GLenum target)
          return GL_FALSE;
       }
    default:
-      _mesa_problem(ctx, "invalid dims=%u in legal_texobj_target()", dims);
-      return GL_FALSE;
+      unreachable("impossible dimensions");
    }
 }
 
