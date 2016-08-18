@@ -62,15 +62,20 @@ void blorp_init(struct blorp_context *blorp, void *driver_ctx,
                 struct isl_device *isl_dev);
 void blorp_finish(struct blorp_context *blorp);
 
+struct blorp_address {
+   drm_intel_bo *buffer;
+   uint32_t read_domains;
+   uint32_t write_domain;
+   uint32_t offset;
+};
+
 struct brw_blorp_surf
 {
    const struct isl_surf *surf;
-   drm_intel_bo *bo;
-   uint32_t offset;
+   struct blorp_address addr;
 
    const struct isl_surf *aux_surf;
-   drm_intel_bo *aux_bo;
-   uint32_t aux_offset;
+   struct blorp_address aux_addr;
    enum isl_aux_usage aux_usage;
 
    union isl_color_value clear_color;

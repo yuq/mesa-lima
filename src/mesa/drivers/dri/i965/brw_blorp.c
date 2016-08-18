@@ -136,8 +136,13 @@ brw_blorp_surf_for_miptree(struct brw_context *brw,
 {
    intel_miptree_get_isl_surf(brw, mt, &tmp_surfs[0]);
    surf->surf = &tmp_surfs[0];
-   surf->bo = mt->bo;
-   surf->offset = mt->offset;
+   surf->addr = (struct blorp_address) {
+      .buffer = mt->bo,
+      .offset = mt->offset,
+      .read_domains = is_render_target ? I915_GEM_DOMAIN_RENDER :
+                                         I915_GEM_DOMAIN_SAMPLER,
+      .write_domain = is_render_target ? I915_GEM_DOMAIN_RENDER : 0,
+   };
 
    if (brw->gen == 6 && mt->format == MESA_FORMAT_S_UINT8 &&
        mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
@@ -153,7 +158,7 @@ brw_blorp_surf_for_miptree(struct brw_context *brw,
        */
       uint32_t offset;
       apply_gen6_stencil_hiz_offset(&tmp_surfs[0], mt, *level, &offset);
-      surf->offset += offset;
+      surf->addr.offset += offset;
       *level = 0;
    }
 
@@ -172,14 +177,20 @@ brw_blorp_surf_for_miptree(struct brw_context *brw,
       surf->clear_color = intel_miptree_get_isl_clear_color(brw, mt);
 
       surf->aux_surf = aux_surf;
+      surf->aux_addr = (struct blorp_address) {
+         .read_domains = is_render_target ? I915_GEM_DOMAIN_RENDER :
+                                            I915_GEM_DOMAIN_SAMPLER,
+         .write_domain = is_render_target ? I915_GEM_DOMAIN_RENDER : 0,
+      };
+
       if (mt->mcs_mt) {
-         surf->aux_bo = mt->mcs_mt->bo;
-         surf->aux_offset = mt->mcs_mt->offset;
+         surf->aux_addr.buffer = mt->mcs_mt->bo;
+         surf->aux_addr.offset = mt->mcs_mt->offset;
       } else {
          assert(surf->aux_usage == ISL_AUX_USAGE_HIZ);
          struct intel_mipmap_tree *hiz_mt = mt->hiz_buf->mt;
          if (hiz_mt) {
-            surf->aux_bo = hiz_mt->bo;
+            surf->aux_addr.buffer = hiz_mt->bo;
             if (brw->gen == 6 &&
                 hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
                /* gen6 requires the HiZ buffer to be manually offset to the
@@ -187,22 +198,24 @@ brw_blorp_surf_for_miptree(struct brw_context *brw,
                 * matter since most of those fields don't matter.
                 */
                apply_gen6_stencil_hiz_offset(aux_surf, hiz_mt, *level,
-                                             &surf->aux_offset);
+                                             &surf->aux_addr.offset);
             } else {
-               surf->aux_offset = 0;
+               surf->aux_addr.offset = 0;
             }
             assert(hiz_mt->pitch == aux_surf->row_pitch);
          } else {
-            surf->aux_bo = mt->hiz_buf->bo;
-            surf->aux_offset = 0;
+            surf->aux_addr.buffer = mt->hiz_buf->bo;
+            surf->aux_addr.offset = 0;
          }
       }
    } else {
-      surf->aux_bo = NULL;
-      surf->aux_offset = 0;
+      surf->aux_addr = (struct blorp_address) {
+         .buffer = NULL,
+      };
       memset(&surf->clear_color, 0, sizeof(surf->clear_color));
    }
-   assert((surf->aux_usage == ISL_AUX_USAGE_NONE) == (surf->aux_bo == NULL));
+   assert((surf->aux_usage == ISL_AUX_USAGE_NONE) ==
+          (surf->aux_addr.buffer == NULL));
 }
 
 static enum isl_format

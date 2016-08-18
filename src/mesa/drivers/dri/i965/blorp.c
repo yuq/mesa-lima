@@ -82,14 +82,12 @@ brw_blorp_surface_info_init(struct brw_context *brw,
    }
 
    info->surf = *surf->surf;
-   info->bo = surf->bo;
-   info->offset = surf->offset;
+   info->addr = surf->addr;
 
    info->aux_usage = surf->aux_usage;
    if (info->aux_usage != ISL_AUX_USAGE_NONE) {
       info->aux_surf = *surf->aux_surf;
-      info->aux_bo = surf->aux_bo;
-      info->aux_offset = surf->aux_offset;
+      info->aux_addr = surf->aux_addr;
    }
 
    info->clear_color = surf->clear_color;

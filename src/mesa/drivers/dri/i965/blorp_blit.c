@@ -1297,7 +1297,7 @@ surf_convert_to_single_slice(struct brw_context *brw,
                                       x_offset_sa, y_offset_sa,
                                       &byte_offset,
                                       &info->tile_x_sa, &info->tile_y_sa);
-   info->offset += byte_offset;
+   info->addr.offset += byte_offset;
 
    /* TODO: Once this file gets converted to C, we shouls just use designated
     * initializers.

@@ -45,12 +45,10 @@ enum {
 struct brw_blorp_surface_info
 {
    struct isl_surf surf;
-   drm_intel_bo *bo;
-   uint32_t offset;
+   struct blorp_address addr;
 
    struct isl_surf aux_surf;
-   drm_intel_bo *aux_bo;
-   uint32_t aux_offset;
+   struct blorp_address aux_addr;
    enum isl_aux_usage aux_usage;
 
    union isl_color_value clear_color;

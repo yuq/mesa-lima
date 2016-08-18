@@ -43,13 +43,6 @@ blorp_emit_dwords(struct brw_context *brw, unsigned n)
    return map;
 }
 
-struct blorp_address {
-   drm_intel_bo *buffer;
-   uint32_t read_domains;
-   uint32_t write_domain;
-   uint32_t offset;
-};
-
 static uint64_t
 blorp_emit_reloc(struct brw_context *brw, void *location,
                  struct blorp_address address, uint32_t delta)
@@ -547,7 +540,7 @@ blorp_emit_ps_config(struct brw_context *brw,
    blorp_emit(brw, GENX(3DSTATE_WM), wm);
 
    blorp_emit(brw, GENX(3DSTATE_PS), ps) {
-      if (params->src.bo) {
+      if (params->src.addr.buffer) {
          ps.SamplerCount = 1; /* Up to 4 samplers */
          ps.BindingTableEntryCount = 2;
       } else {
@@ -599,7 +592,7 @@ blorp_emit_ps_config(struct brw_context *brw,
    blorp_emit(brw, GENX(3DSTATE_PS_EXTRA), psx) {
       psx.PixelShaderValid = true;
 
-      if (params->src.bo)
+      if (params->src.addr.buffer)
          psx.PixelShaderKillsPixel = true;
 
       psx.AttributeEnable = prog_data->num_varying_inputs > 0;
@@ -630,7 +623,7 @@ blorp_emit_ps_config(struct brw_context *brw,
       if (prog_data)
          wm.ThreadDispatchEnable = true;
 
-      if (params->src.bo)
+      if (params->src.addr.buffer)
          wm.PixelShaderKillPixel = true;
 
       if (params->dst.surf.samples > 1) {
@@ -672,7 +665,7 @@ blorp_emit_ps_config(struct brw_context *brw,
          ps._16PixelDispatchEnable = true;
       }
 
-      if (params->src.bo)
+      if (params->src.addr.buffer)
          ps.SamplerCount = 1; /* Up to 4 samplers */
 
       switch (params->fast_clear_op) {
@@ -724,7 +717,7 @@ blorp_emit_ps_config(struct brw_context *brw,
          wm.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
       }
 
-      if (params->src.bo) {
+      if (params->src.addr.buffer) {
          wm.SamplerCount = 1; /* Up to 4 samplers */
          wm.PixelShaderKillPixel = true; /* TODO: temporarily smash on */
       }
@@ -794,23 +787,13 @@ blorp_emit_depth_stencil_config(struct brw_context *brw,
       db.MinimumArrayElement = params->depth.view.base_array_layer;
 
       db.SurfacePitch = params->depth.surf.row_pitch - 1;
-      db.SurfaceBaseAddress = (struct blorp_address) {
-         .buffer = params->depth.bo,
-         .read_domains = I915_GEM_DOMAIN_RENDER,
-         .write_domain = I915_GEM_DOMAIN_RENDER,
-         .offset = params->depth.offset,
-      };
+      db.SurfaceBaseAddress = params->depth.addr;
       db.DepthBufferMOCS = mocs;
    }
 
    blorp_emit(brw, GENX(3DSTATE_HIER_DEPTH_BUFFER), hiz) {
       hiz.SurfacePitch = params->depth.aux_surf.row_pitch - 1;
-      hiz.SurfaceBaseAddress = (struct blorp_address) {
-         .buffer = params->depth.aux_bo,
-         .read_domains = I915_GEM_DOMAIN_RENDER,
-         .write_domain = I915_GEM_DOMAIN_RENDER,
-         .offset = params->depth.aux_offset,
-      };
+      hiz.SurfaceBaseAddress = params->depth.aux_addr;
       hiz.HierarchicalDepthBufferMOCS = mocs;
    }
 
@@ -944,7 +927,6 @@ static const struct surface_state_info surface_state_infos[] = {
 static uint32_t
 blorp_emit_surface_state(struct brw_context *brw,
                          const struct brw_blorp_surface_info *surface,
-                         uint32_t read_domains, uint32_t write_domain,
                          bool is_render_target)
 {
    const struct surface_state_info ss_info = surface_state_infos[brw->gen];
@@ -969,12 +951,13 @@ blorp_emit_surface_state(struct brw_context *brw,
 
    const uint32_t mocs =
       is_render_target ? brw->blorp.mocs.rb : brw->blorp.mocs.tex;
-   uint64_t aux_bo_offset = surface->aux_bo ? surface->aux_bo->offset64 : 0;
+   uint64_t aux_bo_offset =
+      surface->aux_addr.buffer ? surface->aux_addr.buffer->offset64 : 0;
 
    isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &surface->view,
-                       .address = surface->bo->offset64 + surface->offset,
+                       .address = surface->addr.buffer->offset64 + surface->addr.offset,
                        .aux_surf = &surface->aux_surf, .aux_usage = aux_usage,
-                       .aux_address = aux_bo_offset + surface->aux_offset,
+                       .aux_address = aux_bo_offset + surface->aux_addr.offset,
                        .mocs = mocs, .clear_color = surface->clear_color,
                        .x_offset_sa = surface->tile_x_sa,
                        .y_offset_sa = surface->tile_y_sa);
@@ -982,21 +965,23 @@ blorp_emit_surface_state(struct brw_context *brw,
    /* Emit relocation to surface contents */
    drm_intel_bo_emit_reloc(brw->batch.bo,
                            surf_offset + ss_info.reloc_dw * 4,
-                           surface->bo,
-                           dw[ss_info.reloc_dw] - surface->bo->offset64,
-                           read_domains, write_domain);
+                           surface->addr.buffer,
+                           dw[ss_info.reloc_dw] - surface->addr.buffer->offset64,
+                           surface->addr.read_domains,
+                           surface->addr.write_domain);
 
    if (aux_usage != ISL_AUX_USAGE_NONE) {
       /* On gen7 and prior, the bottom 12 bits of the MCS base address are
        * used to store other information.  This should be ok, however, because
        * surface buffer addresses are always 4K page alinged.
        */
-      assert((surface->aux_offset & 0xfff) == 0);
+      assert((surface->aux_addr.offset & 0xfff) == 0);
       drm_intel_bo_emit_reloc(brw->batch.bo,
                               surf_offset + ss_info.aux_reloc_dw * 4,
-                              surface->aux_bo,
+                              surface->aux_addr.buffer,
                               dw[ss_info.aux_reloc_dw] & 0xfff,
-                              read_domains, write_domain);
+                              surface->aux_addr.read_domains,
+                              surface->aux_addr.write_domain);
    }
 
    return surf_offset;
@@ -1013,13 +998,10 @@ blorp_emit_surface_states(struct brw_context *brw,
                       32, /* alignment */ &bind_offset);
 
    bind[BRW_BLORP_RENDERBUFFER_BINDING_TABLE_INDEX] =
-      blorp_emit_surface_state(brw, &params->dst,
-                               I915_GEM_DOMAIN_RENDER,
-                               I915_GEM_DOMAIN_RENDER, true);
-   if (params->src.bo) {
+      blorp_emit_surface_state(brw, &params->dst, true);
+   if (params->src.addr.buffer) {
       bind[BRW_BLORP_TEXTURE_BINDING_TABLE_INDEX] =
-         blorp_emit_surface_state(brw, &params->src,
-                                  I915_GEM_DOMAIN_SAMPLER, 0, false);
+         blorp_emit_surface_state(brw, &params->src, false);
    }
 
 #if GEN_GEN >= 7
@@ -1188,7 +1170,7 @@ genX(blorp_exec)(struct brw_context *brw,
    if (params->wm_prog_data)
       blorp_emit_surface_states(brw, params);
 
-   if (params->src.bo)
+   if (params->src.addr.buffer)
       blorp_emit_sampler_state(brw, params);
 
    blorp_emit_3dstate_multisample(brw, params->dst.surf.samples);
@@ -1225,7 +1207,7 @@ genX(blorp_exec)(struct brw_context *brw,
 
    blorp_emit_viewport_state(brw, params);
 
-   if (params->depth.bo) {
+   if (params->depth.addr.buffer) {
       blorp_emit_depth_stencil_config(brw, params);
    } else {
       brw_emit_depth_stall_flushes(brw);
