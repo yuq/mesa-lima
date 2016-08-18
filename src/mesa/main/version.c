@@ -541,7 +541,7 @@ compute_version_es2(const struct gl_extensions *extensions,
                          extensions->ARB_tessellation_shader &&
                          extensions->ARB_texture_border_clamp &&
                          extensions->OES_texture_buffer &&
-                         extensions->ARB_texture_cube_map_array &&
+                         extensions->OES_texture_cube_map_array &&
                          extensions->ARB_texture_stencil8);
 
    if (ver_3_2) {
