@@ -610,7 +610,6 @@ begin_query_vgpu10(struct svga_context *svga, struct svga_query *sq)
 static enum pipe_error
 end_query_vgpu10(struct svga_context *svga, struct svga_query *sq)
 {
-   struct svga_winsys_screen *sws = svga_screen(svga->pipe.screen)->sws;
    enum pipe_error ret = PIPE_OK;
 
    if (svga->rebind.flags.query) {
@@ -622,15 +621,6 @@ end_query_vgpu10(struct svga_context *svga, struct svga_query *sq)
       svga_context_flush(svga, NULL);
       ret = SVGA3D_vgpu10_EndQuery(svga->swc, sq->id);
    }
-
-   /* Finish fence is copied here from get_query_result_vgpu10. This helps
-    * with cases where svga_begin_query might be called again before
-    * svga_get_query_result, such as GL_TIME_ELAPSED.
-    */
-   if (!sq->fence) {
-      svga_context_flush(svga, &sq->fence);
-   }
-   sws->fence_finish(sws, sq->fence, SVGA_FENCE_FLAG_QUERY);
 
    return ret;
 }
@@ -648,7 +638,17 @@ get_query_result_vgpu10(struct svga_context *svga, struct svga_query *sq,
 
    sws->query_get_result(sws, sq->gb_query, sq->offset, &queryState, result, resultLen);
 
-   if (queryState == SVGA3D_QUERYSTATE_PENDING) {
+   if (queryState == SVGA3D_QUERYSTATE_NEW && !sq->fence) {
+      /* The query hasn't been submitted yet.  We need to submit it now
+       * since the GL spec says "Querying the state for a given occlusion
+       * query forces that occlusion query to complete within a finite amount
+       * of time."
+       */
+      svga_context_flush(svga, &sq->fence);
+   }
+
+   if (queryState == SVGA3D_QUERYSTATE_PENDING ||
+       queryState == SVGA3D_QUERYSTATE_NEW) {
       if (!wait)
          return FALSE;
       sws->fence_finish(sws, sq->fence, SVGA_FENCE_FLAG_QUERY);
