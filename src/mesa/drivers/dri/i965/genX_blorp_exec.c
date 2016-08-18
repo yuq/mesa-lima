@@ -89,6 +89,25 @@ blorp_alloc_dynamic_state(struct blorp_context *blorp,
    return brw_state_batch(brw, type, size, alignment, offset);
 }
 
+static void
+blorp_alloc_binding_table(struct blorp_context *blorp, unsigned num_entries,
+                          unsigned state_size, unsigned state_alignment,
+                          uint32_t *bt_offset, uint32_t **bt_map,
+                          void **surface_maps)
+{
+   struct brw_context *brw = blorp->driver_ctx;
+
+   *bt_map = brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
+                             num_entries * sizeof(uint32_t), 32,
+                             bt_offset);
+
+   for (unsigned i = 0; i < num_entries; i++) {
+      surface_maps[i] = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
+                                        state_size, state_alignment,
+                                        &(*bt_map)[i]);
+   }
+}
+
 static void *
 blorp_alloc_vertex_buffer(struct blorp_context *blorp, uint32_t size,
                           struct blorp_address *addr)
@@ -941,9 +960,10 @@ static const struct surface_state_info surface_state_infos[] = {
    [9] = {16, 64, 8,  10},
 };
 
-static uint32_t
+static void
 blorp_emit_surface_state(struct brw_context *brw,
                          const struct brw_blorp_surface_info *surface,
+                         uint32_t *state, uint32_t state_offset,
                          bool is_render_target)
 {
    const struct surface_state_info ss_info = surface_state_infos[brw->gen];
@@ -961,21 +981,17 @@ blorp_emit_surface_state(struct brw_context *brw,
    if (aux_usage == ISL_AUX_USAGE_HIZ)
       aux_usage = ISL_AUX_USAGE_NONE;
 
-   uint32_t surf_offset;
-   uint32_t *dw = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
-                                  ss_info.num_dwords * 4, ss_info.ss_align,
-                                  &surf_offset);
-
    const uint32_t mocs =
       is_render_target ? brw->blorp.mocs.rb : brw->blorp.mocs.tex;
 
-   isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &surface->view,
+   isl_surf_fill_state(&brw->isl_dev, state,
+                       .surf = &surf, .view = &surface->view,
                        .aux_surf = &surface->aux_surf, .aux_usage = aux_usage,
                        .mocs = mocs, .clear_color = surface->clear_color,
                        .x_offset_sa = surface->tile_x_sa,
                        .y_offset_sa = surface->tile_y_sa);
 
-   blorp_surface_reloc(brw, surf_offset + ss_info.reloc_dw * 4,
+   blorp_surface_reloc(brw, state_offset + ss_info.reloc_dw * 4,
                        surface->addr, 0);
 
    if (aux_usage != ISL_AUX_USAGE_NONE) {
@@ -984,28 +1000,32 @@ blorp_emit_surface_state(struct brw_context *brw,
        * surface buffer addresses are always 4K page alinged.
        */
       assert((surface->aux_addr.offset & 0xfff) == 0);
-      blorp_surface_reloc(brw, surf_offset + ss_info.aux_reloc_dw * 4,
-                          surface->aux_addr, dw[ss_info.aux_reloc_dw]);
+      blorp_surface_reloc(brw, state_offset + ss_info.aux_reloc_dw * 4,
+                          surface->aux_addr, state[ss_info.aux_reloc_dw]);
    }
-
-   return surf_offset;
 }
 
 static void
 blorp_emit_surface_states(struct brw_context *brw,
                           const struct brw_blorp_params *params)
 {
-   uint32_t bind_offset;
-   uint32_t *bind =
-      brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
-                      sizeof(uint32_t) * BLORP_NUM_BT_ENTRIES,
-                      32, /* alignment */ &bind_offset);
+   uint32_t bind_offset, *bind_map;
+   void *surface_maps[2];
 
-   bind[BLORP_RENDERBUFFER_BT_INDEX] =
-      blorp_emit_surface_state(brw, &params->dst, true);
+   const unsigned ss_size = GENX(RENDER_SURFACE_STATE_length) * 4;
+   const unsigned ss_align = GENX(RENDER_SURFACE_STATE_length) > 8 ? 64 : 32;
+
+   unsigned num_surfaces = 1 + (params->src.addr.buffer != NULL);
+   blorp_alloc_binding_table(&brw->blorp, num_surfaces, ss_size, ss_align,
+                             &bind_offset, &bind_map, surface_maps);
+
+   blorp_emit_surface_state(brw, &params->dst,
+                            surface_maps[BLORP_RENDERBUFFER_BT_INDEX],
+                            bind_map[BLORP_RENDERBUFFER_BT_INDEX], true);
    if (params->src.addr.buffer) {
-      bind[BLORP_TEXTURE_BT_INDEX] =
-         blorp_emit_surface_state(brw, &params->src, false);
+      blorp_emit_surface_state(brw, &params->src,
+                               surface_maps[BLORP_TEXTURE_BT_INDEX],
+                               bind_map[BLORP_TEXTURE_BT_INDEX], false);
    }
 
 #if GEN_GEN >= 7
