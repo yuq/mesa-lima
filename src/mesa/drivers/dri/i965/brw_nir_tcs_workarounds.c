@@ -134,19 +134,16 @@ brw_nir_apply_tcs_quads_workaround(nir_shader *nir)
 {
    assert(nir->stage == MESA_SHADER_TESS_CTRL);
 
-   nir_foreach_function(func, nir) {
-      if (!func->impl)
-         continue;
+   nir_function_impl *impl = nir_shader_get_entrypoint(nir);
 
-      nir_builder b;
-      nir_builder_init(&b, func->impl);
+   nir_builder b;
+   nir_builder_init(&b, impl);
 
-      struct set_entry *entry;
-      set_foreach(func->impl->end_block->predecessors, entry) {
-         nir_block *pred = (nir_block *) entry->key;
-         emit_quads_workaround(&b, pred);
-      }
-
-      nir_metadata_preserve(func->impl, 0);
+   struct set_entry *entry;
+   set_foreach(impl->end_block->predecessors, entry) {
+      nir_block *pred = (nir_block *) entry->key;
+      emit_quads_workaround(&b, pred);
    }
+
+   nir_metadata_preserve(impl, 0);
 }
