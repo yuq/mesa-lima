@@ -94,6 +94,8 @@ public:
     * successors is an exit node.
     */
    schedule_node *exit;
+
+   bool is_barrier;
 };
 
 /**
@@ -800,6 +802,7 @@ schedule_node::schedule_node(backend_instruction *inst,
    this->cand_generation = 0;
    this->delay = 0;
    this->exit = NULL;
+   this->is_barrier = false;
 
    /* We can't measure Gen6 timings directly but expect them to be much
     * closer to Gen7 than Gen4.
@@ -931,9 +934,13 @@ instruction_scheduler::add_barrier_deps(schedule_node *n)
    schedule_node *prev = (schedule_node *)n->prev;
    schedule_node *next = (schedule_node *)n->next;
 
+   n->is_barrier = true;
+
    if (prev) {
       while (!prev->is_head_sentinel()) {
          add_dep(prev, n, 0);
+         if (prev->is_barrier)
+            break;
          prev = (schedule_node *)prev->prev;
       }
    }
@@ -941,6 +948,8 @@ instruction_scheduler::add_barrier_deps(schedule_node *n)
    if (next) {
       while (!next->is_tail_sentinel()) {
          add_dep(n, next, 0);
+         if (next->is_barrier)
+            break;
          next = (schedule_node *)next->next;
       }
    }
