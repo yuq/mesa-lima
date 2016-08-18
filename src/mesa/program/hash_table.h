@@ -111,40 +111,11 @@ static inline void *hash_table_find(struct hash_table *ht, const void *key)
  * \warning
  * The value passed by \c key is kept in the hash table and is used by later
  * calls to \c hash_table_find.
- *
- * \sa hash_table_replace
  */
 static inline void hash_table_insert(struct hash_table *ht, void *data,
                                      const void *key)
 {
    _mesa_hash_table_insert(ht, key, data);
-}
-
-/**
- * Add an element to a hash table with replacement
- *
- * \return
- * 1 if it did replace the value (in which case the old key is kept), 0 if it
- * did not replace the value (in which case the new key is kept).
- *
- * \warning
- * If \c key is already in the hash table, \c data will \b replace the most
- * recently inserted \c data (see the warning in \c hash_table_insert) for
- * that key.
- *
- * \sa hash_table_insert
- */
-static inline bool hash_table_replace(struct hash_table *ht, void *data,
-                                      const void *key)
-{
-   struct hash_entry *entry = _mesa_hash_table_search(ht, key);
-   if (entry) {
-      entry->data = data;
-      return true;
-   } else {
-      _mesa_hash_table_insert(ht, key, data);
-      return false;
-   }
 }
 
 /**
@@ -240,14 +211,14 @@ struct string_to_uint_map {
 public:
    string_to_uint_map()
    {
-      this->ht = hash_table_ctor(0, hash_table_string_hash,
-				 hash_table_string_compare);
+      this->ht = _mesa_hash_table_create(NULL, _mesa_key_hash_string,
+                                         _mesa_key_string_equal);
    }
 
    ~string_to_uint_map()
    {
       hash_table_call_foreach(this->ht, delete_key, NULL);
-      hash_table_dtor(this->ht);
+      _mesa_hash_table_destroy(this->ht, NULL);
    }
 
    /**
@@ -256,7 +227,7 @@ public:
    void clear()
    {
       hash_table_call_foreach(this->ht, delete_key, NULL);
-      hash_table_clear(this->ht);
+      _mesa_hash_table_clear(this->ht, NULL);
    }
 
    /**
@@ -290,12 +261,13 @@ public:
     */
    bool get(unsigned &value, const char *key)
    {
-      const intptr_t v =
-	 (intptr_t) hash_table_find(this->ht, (const void *) key);
+      hash_entry *entry = _mesa_hash_table_search(this->ht,
+                                                  (const void *) key);
 
-      if (v == 0)
-	 return false;
+      if (!entry)
+         return false;
 
+      const intptr_t v = (intptr_t) entry->data;
       value = (unsigned)(v - 1);
       return true;
    }
@@ -307,19 +279,25 @@ public:
        * valid value in the table.  Bias the value by +1 so that a
        * user-specified zero is stored as 1.  This enables ::get to tell the
        * difference between a user-specified zero (returned as 1 by
-       * hash_table_find) and the key not in the table (returned as 0 by
-       * hash_table_find).
+       * _mesa_hash_table_search) and the key not in the table (returned as 0 by
+       * _mesa_hash_table_search).
        *
        * The net effect is that we can't store UINT_MAX in the table.  This is
        * because UINT_MAX+1 = 0.
        */
       assert(value != UINT_MAX);
       char *dup_key = strdup(key);
-      bool result = hash_table_replace(this->ht,
-				       (void *) (intptr_t) (value + 1),
-				       dup_key);
-      if (result)
-	 free(dup_key);
+
+      struct hash_entry *entry = _mesa_hash_table_search(this->ht, dup_key);
+      if (entry) {
+         entry->data = (void *) (intptr_t) (value + 1);
+      } else {
+         _mesa_hash_table_insert(this->ht, dup_key,
+                                 (void *) (intptr_t) (value + 1));
+      }
+
+      if (entry)
+         free(dup_key);
    }
 
 private:
