@@ -238,28 +238,6 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
 void
 brw_blorp_exec(struct brw_context *brw, const struct brw_blorp_params *params)
 {
-   struct gl_context *ctx = &brw->ctx;
-   const uint32_t estimated_max_batch_usage = brw->gen >= 8 ? 1800 : 1500;
-   bool check_aperture_failed_once = false;
-
-   /* Flush the sampler and render caches.  We definitely need to flush the
-    * sampler cache so that we get updated contents from the render cache for
-    * the glBlitFramebuffer() source.  Also, we are sometimes warned in the
-    * docs to flush the cache between reinterpretations of the same surface
-    * data with different formats, which blorp does for stencil and depth
-    * data.
-    */
-   brw_emit_mi_flush(brw);
-
-   brw_select_pipeline(brw, BRW_RENDER_PIPELINE);
-
-retry:
-   intel_batchbuffer_require_space(brw, estimated_max_batch_usage, RENDER_RING);
-   intel_batchbuffer_save_state(brw);
-   drm_intel_bo *saved_bo = brw->batch.bo;
-   uint32_t saved_used = USED_BATCH(brw->batch);
-   uint32_t saved_state_batch_offset = brw->batch.state_batch_offset;
-
    switch (brw->gen) {
    case 6:
       gen6_blorp_exec(brw, params);
@@ -280,50 +258,6 @@ retry:
       /* BLORP is not supported before Gen6. */
       unreachable("not reached");
    }
-
-   /* Make sure we didn't wrap the batch unintentionally, and make sure we
-    * reserved enough space that a wrap will never happen.
-    */
-   assert(brw->batch.bo == saved_bo);
-   assert((USED_BATCH(brw->batch) - saved_used) * 4 +
-          (saved_state_batch_offset - brw->batch.state_batch_offset) <
-          estimated_max_batch_usage);
-   /* Shut up compiler warnings on release build */
-   (void)saved_bo;
-   (void)saved_used;
-   (void)saved_state_batch_offset;
-
-   /* Check if the blorp op we just did would make our batch likely to fail to
-    * map all the BOs into the GPU at batch exec time later.  If so, flush the
-    * batch and try again with nothing else in the batch.
-    */
-   if (dri_bufmgr_check_aperture_space(&brw->batch.bo, 1)) {
-      if (!check_aperture_failed_once) {
-         check_aperture_failed_once = true;
-         intel_batchbuffer_reset_to_saved(brw);
-         intel_batchbuffer_flush(brw);
-         goto retry;
-      } else {
-         int ret = intel_batchbuffer_flush(brw);
-         WARN_ONCE(ret == -ENOSPC,
-                   "i965: blorp emit exceeded available aperture space\n");
-      }
-   }
-
-   if (unlikely(brw->always_flush_batch))
-      intel_batchbuffer_flush(brw);
-
-   /* We've smashed all state compared to what the normal 3D pipeline
-    * rendering tracks for GL.
-    */
-   brw->ctx.NewDriverState |= BRW_NEW_BLORP;
-   brw->no_depth_or_stencil = false;
-   brw->ib.type = -1;
-
-   /* Flush the sampler cache so any texturing from the destination is
-    * coherent.
-    */
-   brw_emit_mi_flush(brw);
 }
 
 void
