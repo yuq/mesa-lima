@@ -1111,7 +1111,7 @@ vec4_visitor::opt_register_coalesce()
       /* Can't coalesce this GRF if someone else was going to
        * read it later.
        */
-      if (var_range_end(var_from_reg(alloc, inst->src[0]), 4) > ip)
+      if (var_range_end(var_from_reg(alloc, dst_reg(inst->src[0])), 4) > ip)
 	 continue;
 
       /* We need to check interference with the final destination between this
