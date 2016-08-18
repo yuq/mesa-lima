@@ -827,7 +827,9 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 
 	switch (ring) {
 	case RING_GFX:
-		si_dump_debug_state(&sctx->b.b, f, 0);
+		si_dump_debug_state(&sctx->b.b, f,
+				    PIPE_DUMP_CURRENT_STATES |
+				    PIPE_DUMP_CURRENT_SHADERS);
 		break;
 
 	case RING_DMA:
