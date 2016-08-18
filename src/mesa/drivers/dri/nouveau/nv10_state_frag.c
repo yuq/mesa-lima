@@ -276,6 +276,20 @@ setup_combiner(struct combiner_state *rc)
 		rc->out = RC_OUT_DOT_AB;
 		break;
 
+	case GL_DOT3_RGB_EXT:
+	case GL_DOT3_RGBA_EXT:
+		INPUT_ARG(rc, A, 0, NORMALIZE);
+		INPUT_ARG(rc, B, 1, NORMALIZE);
+
+		rc->out = RC_OUT_DOT_AB;
+
+		/* The EXT version of the DOT3 extension does not support the
+		 * scale factor, but the ARB version (and the version in
+		 * OpenGL 1.3) does.
+		 */
+		rc->logscale = 0;
+		break;
+
 	default:
 		assert(0);
 	}
@@ -305,7 +319,7 @@ nv10_get_general_combiner(struct gl_context *ctx, int i,
 	if (ctx->Texture.Unit[i]._Current) {
 		INIT_COMBINER(RGB, ctx, &rc_c, i);
 
-		if (rc_c.mode == GL_DOT3_RGBA)
+		if (rc_c.mode == GL_DOT3_RGBA || rc_c.mode == GL_DOT3_RGBA_EXT)
 			rc_a = rc_c;
 		else
 			INIT_COMBINER(A, ctx, &rc_a, i);
