@@ -344,7 +344,7 @@ hud_pane_accumulate_vertices(struct hud_context *hud,
    float *line_verts = hud->whitelines.vertices + hud->whitelines.num_vertices*2;
    unsigned i, num = 0;
    char str[32];
-   const unsigned last_line = 5;
+   const unsigned last_line = pane->last_line;
 
    /* draw background */
    hud_draw_background_quad(hud,
@@ -544,7 +544,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    cso_set_constant_buffer(cso, PIPE_SHADER_VERTEX, 0, &hud->constbuf);
 
    /* prepare vertex buffers */
-   hud_alloc_vertices(hud, &hud->bg, 4 * 128, 2 * sizeof(float));
+   hud_alloc_vertices(hud, &hud->bg, 4 * 256, 2 * sizeof(float));
    hud_alloc_vertices(hud, &hud->whitelines, 4 * 256, 2 * sizeof(float));
    hud_alloc_vertices(hud, &hud->text, 4 * 1024, 4 * sizeof(float));
 
@@ -627,6 +627,13 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    pipe_surface_reference(&surf, NULL);
 }
 
+static void
+fixup_bytes(enum pipe_driver_query_type type, int position, uint64_t *exp10)
+{
+   if (type == PIPE_DRIVER_QUERY_TYPE_BYTES && position % 3 == 0)
+      *exp10 = (*exp10 / 1000) * 1024;
+}
+
 /**
  * Set the maximum value for the Y axis of the graph.
  * This scales the graph accordingly.
@@ -634,7 +641,74 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
 void
 hud_pane_set_max_value(struct hud_pane *pane, uint64_t value)
 {
-   pane->max_value = value;
+   double leftmost_digit;
+   uint64_t exp10;
+   int i;
+
+   /* The following code determines the max_value in the graph as well as
+    * how many describing lines are drawn. The max_value is rounded up,
+    * so that all drawn numbers are rounded for readability.
+    * We want to print multiples of a simple number instead of multiples of
+    * hard-to-read numbers like 1.753.
+    */
+
+   /* Find the left-most digit. */
+   exp10 = 1;
+   for (i = 0; value > 9 * exp10; i++) {
+      exp10 *= 10;
+      fixup_bytes(pane->type, i + 1, &exp10);
+   }
+
+   leftmost_digit = DIV_ROUND_UP(value, exp10);
+
+   /* Round 9 to 10. */
+   if (leftmost_digit == 9) {
+      leftmost_digit = 1;
+      exp10 *= 10;
+      fixup_bytes(pane->type, i + 1, &exp10);
+   }
+
+   switch ((unsigned)leftmost_digit) {
+   case 1:
+      pane->last_line = 5; /* lines in +1/5 increments */
+      break;
+   case 2:
+      pane->last_line = 8; /* lines in +1/4 increments. */
+      break;
+   case 3:
+   case 4:
+      pane->last_line = leftmost_digit * 2; /* lines in +1/2 increments */
+      break;
+   case 5:
+   case 6:
+   case 7:
+   case 8:
+      pane->last_line = leftmost_digit; /* lines in +1 increments */
+      break;
+   default:
+      assert(0);
+   }
+
+   /* Truncate {3,4} to {2.5, 3.5} if possible. */
+   for (i = 3; i <= 4; i++) {
+      if (leftmost_digit == i && value <= (i - 0.5) * exp10) {
+         leftmost_digit = i - 0.5;
+         pane->last_line = leftmost_digit * 2; /* lines in +1/2 increments. */
+      }
+   }
+
+   /* Truncate 2 to a multiple of 0.2 in (1, 1.6] if possible. */
+   if (leftmost_digit == 2) {
+      for (i = 1; i <= 3; i++) {
+         if (value <= (1 + i*0.2) * exp10) {
+            leftmost_digit = 1 + i*0.2;
+            pane->last_line = 5 + i; /* lines in +1/5 increments. */
+            break;
+         }
+      }
+   }
+
+   pane->max_value = leftmost_digit * exp10;
    pane->yscale = -(int)pane->inner_height / (float)pane->max_value;
 }
 
