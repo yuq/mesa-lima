@@ -137,9 +137,15 @@ create_frag_shader_weave(struct ureg_program *shader, struct ureg_dst fragment)
    i_tc[0] = ureg_DECL_fs_input(shader, TGSI_SEMANTIC_GENERIC, VS_O_VTOP, TGSI_INTERPOLATE_LINEAR);
    i_tc[1] = ureg_DECL_fs_input(shader, TGSI_SEMANTIC_GENERIC, VS_O_VBOTTOM, TGSI_INTERPOLATE_LINEAR);
 
-   for (i = 0; i < 3; ++i)
+   for (i = 0; i < 3; ++i) {
       sampler[i] = ureg_DECL_sampler(shader, i);
-
+      ureg_DECL_sampler_view(shader, i, TGSI_TEXTURE_2D_ARRAY,
+                             TGSI_RETURN_TYPE_FLOAT,
+                             TGSI_RETURN_TYPE_FLOAT,
+                             TGSI_RETURN_TYPE_FLOAT,
+                             TGSI_RETURN_TYPE_FLOAT);
+   }
+   
    for (i = 0; i < 2; ++i) {
       t_tc[i] = ureg_DECL_temporary(shader);
       t_texel[i] = ureg_DECL_temporary(shader);
@@ -248,9 +254,15 @@ create_frag_shader_video_buffer(struct vl_compositor *c)
       return false;
 
    tc = ureg_DECL_fs_input(shader, TGSI_SEMANTIC_GENERIC, VS_O_VTEX, TGSI_INTERPOLATE_LINEAR);
-   for (i = 0; i < 3; ++i)
+   for (i = 0; i < 3; ++i) {
       sampler[i] = ureg_DECL_sampler(shader, i);
-
+      ureg_DECL_sampler_view(shader, i, TGSI_TEXTURE_2D_ARRAY,
+                             TGSI_RETURN_TYPE_FLOAT,
+                             TGSI_RETURN_TYPE_FLOAT,
+                             TGSI_RETURN_TYPE_FLOAT,
+                             TGSI_RETURN_TYPE_FLOAT);
+   }
+   
    texel = ureg_DECL_temporary(shader);
    fragment = ureg_DECL_output(shader, TGSI_SEMANTIC_COLOR, 0);
 
@@ -342,8 +354,18 @@ create_frag_shader_palette(struct vl_compositor *c, bool include_cc)
 
    tc = ureg_DECL_fs_input(shader, TGSI_SEMANTIC_GENERIC, VS_O_VTEX, TGSI_INTERPOLATE_LINEAR);
    sampler = ureg_DECL_sampler(shader, 0);
+   ureg_DECL_sampler_view(shader, 0, TGSI_TEXTURE_2D,
+                          TGSI_RETURN_TYPE_FLOAT,
+                          TGSI_RETURN_TYPE_FLOAT,
+                          TGSI_RETURN_TYPE_FLOAT,
+                          TGSI_RETURN_TYPE_FLOAT);
    palette = ureg_DECL_sampler(shader, 1);
-
+   ureg_DECL_sampler_view(shader, 1, TGSI_TEXTURE_1D,
+                          TGSI_RETURN_TYPE_FLOAT,
+                          TGSI_RETURN_TYPE_FLOAT,
+                          TGSI_RETURN_TYPE_FLOAT,
+                          TGSI_RETURN_TYPE_FLOAT);
+   
    texel = ureg_DECL_temporary(shader);
    fragment = ureg_DECL_output(shader, TGSI_SEMANTIC_COLOR, 0);
 
@@ -384,6 +406,11 @@ create_frag_shader_rgba(struct vl_compositor *c)
    tc = ureg_DECL_fs_input(shader, TGSI_SEMANTIC_GENERIC, VS_O_VTEX, TGSI_INTERPOLATE_LINEAR);
    color = ureg_DECL_fs_input(shader, TGSI_SEMANTIC_COLOR, VS_O_COLOR, TGSI_INTERPOLATE_LINEAR);
    sampler = ureg_DECL_sampler(shader, 0);
+   ureg_DECL_sampler_view(shader, 0, TGSI_TEXTURE_2D,
+                          TGSI_RETURN_TYPE_FLOAT,
+                          TGSI_RETURN_TYPE_FLOAT,
+                          TGSI_RETURN_TYPE_FLOAT,
+                          TGSI_RETURN_TYPE_FLOAT);
    texel = ureg_DECL_temporary(shader);
    fragment = ureg_DECL_output(shader, TGSI_SEMANTIC_COLOR, 0);
 
