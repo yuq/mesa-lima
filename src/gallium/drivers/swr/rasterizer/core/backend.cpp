@@ -493,14 +493,14 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 if(T::bCanEarlyZ)
                 {
                     RDTSC_START(BEEarlyDepthTest);
-                    depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
-                                                        psContext.vZ, pDepthBase, vCoverageMask, pStencilBase, &stencilPassMask);
+                    depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
+                                                     psContext.vZ, pDepthBase, vCoverageMask, pStencilBase, &stencilPassMask);
                     RDTSC_STOP(BEEarlyDepthTest, 0, 0);
 
                     // early-exit if no pixels passed depth or earlyZ is forced on
                     if(pPSState->forceEarlyZ || !_simd_movemask_ps(depthPassMask))
                     {
-                        DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                        DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                                             pDepthBase, depthPassMask, vCoverageMask, pStencilBase, stencilPassMask);
 
                         if (!_simd_movemask_ps(depthPassMask))
@@ -525,14 +525,14 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 if(!T::bCanEarlyZ)
                 {
                     RDTSC_START(BELateDepthTest);
-                    depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
+                    depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                                         psContext.vZ, pDepthBase, vCoverageMask, pStencilBase, &stencilPassMask);
                     RDTSC_STOP(BELateDepthTest, 0, 0);
 
                     if(!_simd_movemask_ps(depthPassMask))
                     {
                         // need to call depth/stencil write for stencil write
-                        DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                        DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                                             pDepthBase, depthPassMask, vCoverageMask, pStencilBase, stencilPassMask);
                         goto Endtile;
                     }
@@ -549,7 +549,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 // do final depth write after all pixel kills
                 if (!pPSState->forceEarlyZ)
                 {
-                    DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                    DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                         pDepthBase, depthPassMask, vCoverageMask, pStencilBase, stencilPassMask);
                 }
                 RDTSC_STOP(BEOutputMerger, 0, 0);
@@ -712,14 +712,14 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     if (T::bCanEarlyZ)
                     {
                         RDTSC_START(BEEarlyDepthTest);
-                        depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
+                        depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                               psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
                         RDTSC_STOP(BEEarlyDepthTest, 0, 0);
 
                         // early-exit if no samples passed depth or earlyZ is forced on.
                         if (pPSState->forceEarlyZ || !_simd_movemask_ps(depthPassMask))
                         {
-                            DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                            DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                                 pDepthSample, depthPassMask, vCoverageMask, pStencilSample, stencilPassMask);
 
                             if (!_simd_movemask_ps(depthPassMask))
@@ -745,14 +745,14 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     if (!T::bCanEarlyZ)
                     {
                         RDTSC_START(BELateDepthTest);
-                        depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
+                        depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                               psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
                         RDTSC_STOP(BELateDepthTest, 0, 0);
 
                         if (!_simd_movemask_ps(depthPassMask))
                         {
                             // need to call depth/stencil write for stencil write
-                            DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                            DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                                 pDepthSample, depthPassMask, vCoverageMask, pStencilSample, stencilPassMask);
 
                             work.coverageMask[sample] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
@@ -771,7 +771,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     // do final depth write after all pixel kills
                     if (!pPSState->forceEarlyZ)
                     {
-                        DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                        DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                             pDepthSample, depthPassMask, vCoverageMask, pStencilSample, stencilPassMask);
                     }
                     RDTSC_STOP(BEOutputMerger, 0, 0);
@@ -984,7 +984,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                     uint8_t *pDepthSample = pDepthBase + RasterTileDepthOffset(sample);
                     uint8_t * pStencilSample = pStencilBase + RasterTileStencilOffset(sample);
 
-                    DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, PixelRateZTest.vZ[coverageSampleNum],
+                    DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, PixelRateZTest.vZ[coverageSampleNum],
                                       pDepthSample, depthMask, coverageMask, pStencilSample, PixelRateZTest.stencilPassMask[coverageSampleNum]);
                 }
                 RDTSC_STOP(BEOutputMerger, 0, 0);        
@@ -1093,9 +1093,9 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
                     uint8_t *pStencilSample = pStencilBase + RasterTileStencilOffset(sample);
 
                     RDTSC_START(BEEarlyDepthTest);
-                    simdscalar depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing,
+                    simdscalar depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                         psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
-                    DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                    DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                         pDepthSample, depthPassMask, vCoverageMask, pStencilSample, stencilPassMask);
                     RDTSC_STOP(BEEarlyDepthTest, 0, 0);
 

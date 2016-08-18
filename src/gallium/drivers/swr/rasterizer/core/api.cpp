@@ -727,34 +727,52 @@ void SwrSetScissorRects(
 void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
 {
     API_STATE *pState = &pDC->pState->state;
+    uint32_t numScissors = pState->gsState.emitsViewportArrayIndex ? KNOB_NUM_VIEWPORTS_SCISSORS : 1;
+    pState->scissorsTileAligned = true;
 
-    // Set up scissor dimensions based on scissor or viewport
-    if (pState->rastState.scissorEnable)
+    for (uint32_t index = 0; index < numScissors; ++index)
     {
-        pState->scissorInFixedPoint = pState->scissorRects[0];
+        SWR_RECT &scissorInFixedPoint = pState->scissorsInFixedPoint[index];
+
+        // Set up scissor dimensions based on scissor or viewport
+        if (pState->rastState.scissorEnable)
+        {
+            scissorInFixedPoint = pState->scissorRects[index];
+        }
+        else
+        {
+            // the vp width and height must be added to origin un-rounded then the result round to -inf.
+            // The cast to int works for rounding assuming all [left, right, top, bottom] are positive.
+            scissorInFixedPoint.xmin = (int32_t)pState->vp[index].x;
+            scissorInFixedPoint.xmax = (int32_t)(pState->vp[index].x + pState->vp[index].width);
+            scissorInFixedPoint.ymin = (int32_t)pState->vp[index].y;
+            scissorInFixedPoint.ymax = (int32_t)(pState->vp[index].y + pState->vp[index].height);
+        }
+
+        // Clamp to max rect
+        scissorInFixedPoint &= g_MaxScissorRect;
+
+        // Test for tile alignment
+        bool tileAligned;
+        tileAligned  = (scissorInFixedPoint.xmin % KNOB_TILE_X_DIM) == 0;
+        tileAligned &= (scissorInFixedPoint.ymin % KNOB_TILE_Y_DIM) == 0;
+        tileAligned &= (scissorInFixedPoint.xmax % KNOB_TILE_X_DIM) == 0;
+        tileAligned &= (scissorInFixedPoint.xmax % KNOB_TILE_Y_DIM) == 0;
+
+        pState->scissorsTileAligned &= tileAligned;
+
+        // Scale to fixed point
+        scissorInFixedPoint.xmin *= FIXED_POINT_SCALE;
+        scissorInFixedPoint.xmax *= FIXED_POINT_SCALE;
+        scissorInFixedPoint.ymin *= FIXED_POINT_SCALE;
+        scissorInFixedPoint.ymax *= FIXED_POINT_SCALE;
+
+        // Make scissor inclusive
+        scissorInFixedPoint.xmax -= 1;
+        scissorInFixedPoint.ymax -= 1;
     }
-    else
-    {
-        // the vp width and height must be added to origin un-rounded then the result round to -inf.
-        // The cast to int works for rounding assuming all [left, right, top, bottom] are positive.
-        pState->scissorInFixedPoint.xmin = (int32_t)pState->vp[0].x;
-        pState->scissorInFixedPoint.xmax = (int32_t)(pState->vp[0].x + pState->vp[0].width);
-        pState->scissorInFixedPoint.ymin = (int32_t)pState->vp[0].y;
-        pState->scissorInFixedPoint.ymax = (int32_t)(pState->vp[0].y + pState->vp[0].height);
-    }
 
-    // Clamp to max rect
-    pState->scissorInFixedPoint &= g_MaxScissorRect;
-
-    // Scale to fixed point
-    pState->scissorInFixedPoint.xmin *= FIXED_POINT_SCALE;
-    pState->scissorInFixedPoint.xmax *= FIXED_POINT_SCALE;
-    pState->scissorInFixedPoint.ymin *= FIXED_POINT_SCALE;
-    pState->scissorInFixedPoint.ymax *= FIXED_POINT_SCALE;
-
-    // Make scissor inclusive
-    pState->scissorInFixedPoint.xmax -= 1;
-    pState->scissorInFixedPoint.ymax -= 1;
+    
 }
 
 // templated backend function tables

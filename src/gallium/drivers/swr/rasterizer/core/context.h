@@ -63,6 +63,7 @@ struct TRI_FLAGS
     float pointSize;
     uint32_t primID;
     uint32_t renderTargetArrayIndex;
+    uint32_t viewportIndex;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -274,7 +275,8 @@ OSALIGNLINE(struct) API_STATE
     SWR_VIEWPORT_MATRICES   vpMatrices;
 
     SWR_RECT                scissorRects[KNOB_NUM_VIEWPORTS_SCISSORS];
-    SWR_RECT                scissorInFixedPoint;
+    SWR_RECT                scissorsInFixedPoint[KNOB_NUM_VIEWPORTS_SCISSORS];
+    bool                    scissorsTileAligned;
 
     // Backend state
     SWR_BACKEND_STATE       backendState;

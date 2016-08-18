@@ -465,6 +465,70 @@ static INLINE simdscalari GenerateMask(uint32_t numItemsRemaining)
     return _simd_castps_si(vMask(mask));
 }
 
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief  Gather scissor rect data based on per-prim viewport indices.
+/// @param pScissorsInFixedPoint - array of scissor rects in 16.8 fixed point.
+/// @param pViewportIndex - array of per-primitive vewport indexes.
+/// @param scisXmin - output vector of per-prmitive scissor rect Xmin data.
+/// @param scisYmin - output vector of per-prmitive scissor rect Ymin data.
+/// @param scisXmax - output vector of per-prmitive scissor rect Xmax data.
+/// @param scisYmax - output vector of per-prmitive scissor rect Ymax data.
+//
+/// @todo:  Look at speeding this up -- weigh against corresponding costs in rasterizer.
+template<size_t SimdWidth>
+struct GatherScissors
+{
+    static void Gather(const SWR_RECT* pScissorsInFixedPoint, const uint32_t* pViewportIndex,
+        simdscalari &scisXmin, simdscalari &scisYmin,
+        simdscalari &scisXmax, simdscalari &scisYmax)
+    {
+        SWR_ASSERT(0, "Unhandled Simd Width in Scissor Rect Gather");
+    }
+};
+
+template<>
+struct GatherScissors<8>
+{
+    static void Gather(const SWR_RECT* pScissorsInFixedPoint, const uint32_t* pViewportIndex,
+        simdscalari &scisXmin, simdscalari &scisYmin,
+        simdscalari &scisXmax, simdscalari &scisYmax)
+    {
+        scisXmin = _simd_set_epi32(pScissorsInFixedPoint[pViewportIndex[0]].xmin,
+            pScissorsInFixedPoint[pViewportIndex[1]].xmin,
+            pScissorsInFixedPoint[pViewportIndex[2]].xmin,
+            pScissorsInFixedPoint[pViewportIndex[3]].xmin,
+            pScissorsInFixedPoint[pViewportIndex[4]].xmin,
+            pScissorsInFixedPoint[pViewportIndex[5]].xmin,
+            pScissorsInFixedPoint[pViewportIndex[6]].xmin,
+            pScissorsInFixedPoint[pViewportIndex[7]].xmin);
+        scisYmin = _simd_set_epi32(pScissorsInFixedPoint[pViewportIndex[0]].ymin,
+            pScissorsInFixedPoint[pViewportIndex[1]].ymin,
+            pScissorsInFixedPoint[pViewportIndex[2]].ymin,
+            pScissorsInFixedPoint[pViewportIndex[3]].ymin,
+            pScissorsInFixedPoint[pViewportIndex[4]].ymin,
+            pScissorsInFixedPoint[pViewportIndex[5]].ymin,
+            pScissorsInFixedPoint[pViewportIndex[6]].ymin,
+            pScissorsInFixedPoint[pViewportIndex[7]].ymin);
+        scisXmax = _simd_set_epi32(pScissorsInFixedPoint[pViewportIndex[0]].xmax,
+            pScissorsInFixedPoint[pViewportIndex[1]].xmax,
+            pScissorsInFixedPoint[pViewportIndex[2]].xmax,
+            pScissorsInFixedPoint[pViewportIndex[3]].xmax,
+            pScissorsInFixedPoint[pViewportIndex[4]].xmax,
+            pScissorsInFixedPoint[pViewportIndex[5]].xmax,
+            pScissorsInFixedPoint[pViewportIndex[6]].xmax,
+            pScissorsInFixedPoint[pViewportIndex[7]].xmax);
+        scisYmax = _simd_set_epi32(pScissorsInFixedPoint[pViewportIndex[0]].ymax,
+            pScissorsInFixedPoint[pViewportIndex[1]].ymax,
+            pScissorsInFixedPoint[pViewportIndex[2]].ymax,
+            pScissorsInFixedPoint[pViewportIndex[3]].ymax,
+            pScissorsInFixedPoint[pViewportIndex[4]].ymax,
+            pScissorsInFixedPoint[pViewportIndex[5]].ymax,
+            pScissorsInFixedPoint[pViewportIndex[6]].ymax,
+            pScissorsInFixedPoint[pViewportIndex[7]].ymax);
+    }
+};
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief StreamOut - Streams vertex data out to SO buffers.
 ///        Generally, we are only streaming out a SIMDs worth of triangles.
@@ -1849,6 +1913,7 @@ void BinTriangles(
     // compute per tri backface
     uint32_t frontFaceMask = frontWindingTris;
     uint32_t *pPrimID = (uint32_t *)&primID;
+    const uint32_t *pViewportIndex = (uint32_t *)&viewportIdx;
     DWORD triIndex = 0;
     // for center sample pattern, all samples are at pixel center; calculate coverage
     // once at center and broadcast the results in the backend
@@ -1944,10 +2009,26 @@ void BinTriangles(
     }
 
     // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since xmax/ymax edge is exclusive.
-    bbox.xmin   = _simd_max_epi32(bbox.xmin, _simd_set1_epi32(state.scissorInFixedPoint.xmin));
-    bbox.ymin    = _simd_max_epi32(bbox.ymin, _simd_set1_epi32(state.scissorInFixedPoint.ymin));
-    bbox.xmax  = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.xmax));
-    bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.ymax));
+    // Gather the AOS effective scissor rects based on the per-prim VP index.
+    /// @todo:  Look at speeding this up -- weigh against corresponding costs in rasterizer.
+    simdscalari scisXmin, scisYmin, scisXmax, scisYmax;
+    if (state.gsState.emitsViewportArrayIndex)
+    {
+        GatherScissors<KNOB_SIMD_WIDTH>::Gather(&state.scissorsInFixedPoint[0], pViewportIndex,
+                                                scisXmin, scisYmin, scisXmax, scisYmax);
+    }
+    else // broadcast fast path for non-VPAI case.
+    {
+        scisXmin = _simd_set1_epi32(state.scissorsInFixedPoint[0].xmin);
+        scisYmin = _simd_set1_epi32(state.scissorsInFixedPoint[0].ymin);
+        scisXmax = _simd_set1_epi32(state.scissorsInFixedPoint[0].xmax);
+        scisYmax = _simd_set1_epi32(state.scissorsInFixedPoint[0].ymax);
+    }
+
+    bbox.xmin = _simd_max_epi32(bbox.xmin, scisXmin);
+    bbox.ymin = _simd_max_epi32(bbox.ymin, scisYmin);
+    bbox.xmax = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), scisXmax);
+    bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), scisYmax);
 
     if(CT::IsConservativeT::value)
     {
@@ -2044,7 +2125,8 @@ void BinTriangles(
         desc.triFlags.frontFacing = state.forceFront ? 1 : ((frontFaceMask >> triIndex) & 1);
         desc.triFlags.primID = pPrimID[triIndex];
         desc.triFlags.renderTargetArrayIndex = aRTAI[triIndex];
-        
+        desc.triFlags.viewportIndex = pViewportIndex[triIndex];
+
         auto pArena = pDC->pArena;
         SWR_ASSERT(pArena != nullptr);
 
@@ -2130,6 +2212,7 @@ void BinPoints(
     const SWR_FRONTEND_STATE& feState = state.frontendState;
     const SWR_GS_STATE& gsState = state.gsState;
     const SWR_RASTSTATE& rastState = state.rastState;
+    const uint32_t *pViewportIndex = (uint32_t *)&viewportIdx;
 
     // Select attribute processor
     PFN_PROCESS_ATTRIBUTES pfnProcessAttribs = GetProcessAttributesFunc(1,
@@ -2240,6 +2323,7 @@ void BinPoints(
             desc.triFlags.frontFacing = 1;
             desc.triFlags.primID = pPrimID[primIndex];
             desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
+            desc.triFlags.viewportIndex = pViewportIndex[primIndex];
 
             work.pfnWork = RasterizeSimplePoint;
 
@@ -2306,10 +2390,26 @@ void BinPoints(
         bbox.ymax = _simd_add_epi32(bbox.ymax, vHalfWidthi);
 
         // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since xmax/ymax edge is exclusive.
-        bbox.xmin = _simd_max_epi32(bbox.xmin, _simd_set1_epi32(state.scissorInFixedPoint.xmin));
-        bbox.ymin = _simd_max_epi32(bbox.ymin, _simd_set1_epi32(state.scissorInFixedPoint.ymin));
-        bbox.xmax = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.xmax));
-        bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.ymax));
+        // Gather the AOS effective scissor rects based on the per-prim VP index.
+        /// @todo:  Look at speeding this up -- weigh against corresponding costs in rasterizer.
+        simdscalari scisXmin, scisYmin, scisXmax, scisYmax;
+        if (state.gsState.emitsViewportArrayIndex)
+        {
+            GatherScissors<KNOB_SIMD_WIDTH>::Gather(&state.scissorsInFixedPoint[0], pViewportIndex,
+                scisXmin, scisYmin, scisXmax, scisYmax);
+        }
+        else // broadcast fast path for non-VPAI case.
+        {
+            scisXmin = _simd_set1_epi32(state.scissorsInFixedPoint[0].xmin);
+            scisYmin = _simd_set1_epi32(state.scissorsInFixedPoint[0].ymin);
+            scisXmax = _simd_set1_epi32(state.scissorsInFixedPoint[0].xmax);
+            scisYmax = _simd_set1_epi32(state.scissorsInFixedPoint[0].ymax);
+        }
+
+        bbox.xmin = _simd_max_epi32(bbox.xmin, scisXmin);
+        bbox.ymin = _simd_max_epi32(bbox.ymin, scisYmin);
+        bbox.xmax = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), scisXmax);
+        bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), scisYmax);
 
         // Cull bloated points completely outside scissor
         simdscalari maskOutsideScissorX = _simd_cmpgt_epi32(bbox.xmin, bbox.xmax);
@@ -2374,6 +2474,7 @@ void BinPoints(
             desc.triFlags.primID = pPrimID[primIndex];
             desc.triFlags.pointSize = aPointSize[primIndex];
             desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
+            desc.triFlags.viewportIndex = pViewportIndex[primIndex];
 
             work.pfnWork = RasterizeTriPoint;
 
@@ -2431,6 +2532,7 @@ void BinPoints(
 /// @param workerId - thread's worker id. Even thread has a unique id.
 /// @param tri - Contains line position data for SIMDs worth of points.
 /// @param primID - Primitive ID for each line.
+/// @param viewportIdx - Viewport Array Index for each line.
 void BinLines(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
@@ -2508,6 +2610,7 @@ void BinLines(
     primMask &= ~_simd_movemask_ps(_simd_castsi_ps(vZeroLengthMask));
 
     uint32_t *pPrimID = (uint32_t *)&primID;
+    const uint32_t *pViewportIndex = (uint32_t *)&viewportIdx;
 
     simdscalar vUnused = _simd_setzero_ps();
 
@@ -2533,10 +2636,24 @@ void BinLines(
     bbox.ymax = _simd_blendv_epi32(bloatBox.ymax, bbox.ymax, vYmajorMask);
 
     // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since xmax/ymax edge is exclusive.
-    bbox.xmin = _simd_max_epi32(bbox.xmin, _simd_set1_epi32(state.scissorInFixedPoint.xmin));
-    bbox.ymin = _simd_max_epi32(bbox.ymin, _simd_set1_epi32(state.scissorInFixedPoint.ymin));
-    bbox.xmax = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.xmax));
-    bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.ymax));
+    simdscalari scisXmin, scisYmin, scisXmax, scisYmax;
+    if (state.gsState.emitsViewportArrayIndex)
+    {
+        GatherScissors<KNOB_SIMD_WIDTH>::Gather(&state.scissorsInFixedPoint[0], pViewportIndex,
+            scisXmin, scisYmin, scisXmax, scisYmax);
+    }
+    else // broadcast fast path for non-VPAI case.
+    {
+        scisXmin = _simd_set1_epi32(state.scissorsInFixedPoint[0].xmin);
+        scisYmin = _simd_set1_epi32(state.scissorsInFixedPoint[0].ymin);
+        scisXmax = _simd_set1_epi32(state.scissorsInFixedPoint[0].xmax);
+        scisYmax = _simd_set1_epi32(state.scissorsInFixedPoint[0].ymax);
+    }
+
+    bbox.xmin = _simd_max_epi32(bbox.xmin, scisXmin);
+    bbox.ymin = _simd_max_epi32(bbox.ymin, scisYmin);
+    bbox.xmax = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), scisXmax);
+    bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), scisYmax);
 
     // Cull prims completely outside scissor
     {
@@ -2602,6 +2719,7 @@ void BinLines(
         desc.triFlags.primID = pPrimID[primIndex];
         desc.triFlags.yMajor = (yMajorMask >> primIndex) & 1;
         desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
+        desc.triFlags.viewportIndex = pViewportIndex[primIndex];
 
         work.pfnWork = RasterizeLine;
 

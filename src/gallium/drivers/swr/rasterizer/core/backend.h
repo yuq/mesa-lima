@@ -491,14 +491,15 @@ struct PixelRateZTestLoop
             RDTSC_START(BEDepthBucket);
             depthPassMask[sample] = vCoverageMask[sample];
             stencilPassMask[sample] = vCoverageMask[sample];
-            depthPassMask[sample] = DepthStencilTest(&state, work.triFlags.frontFacing, vZ[sample], pDepthSample, 
-                                                     vCoverageMask[sample], pStencilSample, &stencilPassMask[sample]);
+            depthPassMask[sample] = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
+                                                     vZ[sample], pDepthSample, vCoverageMask[sample], 
+                                                     pStencilSample, &stencilPassMask[sample]);
             RDTSC_STOP(BEDepthBucket, 0, 0);
 
             // early-exit if no pixels passed depth or earlyZ is forced on
             if(psState.forceEarlyZ || !_simd_movemask_ps(depthPassMask[sample]))
             {
-                DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, vZ[sample],
+                DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, vZ[sample],
                                   pDepthSample, depthPassMask[sample], vCoverageMask[sample], pStencilSample, stencilPassMask[sample]);
 
                 if(!_simd_movemask_ps(depthPassMask[sample]))

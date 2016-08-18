@@ -967,20 +967,22 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     OSALIGNSIMD(SWR_RECT) bbox;
     calcBoundingBoxInt(vXi, vYi, bbox);
 
+    const SWR_RECT &scissorInFixedPoint = state.scissorsInFixedPoint[workDesc.triFlags.viewportIndex];
+
     if(RT::ValidEdgeMaskT::value != ALL_EDGES_VALID)
     {
         // If we're rasterizing a degenerate triangle, expand bounding box to guarantee the BBox is valid
         bbox.xmin--;    bbox.xmax++;    bbox.ymin--;    bbox.ymax++;
-        SWR_ASSERT(state.scissorInFixedPoint.xmin >= 0 && state.scissorInFixedPoint.ymin >= 0, 
+        SWR_ASSERT(scissorInFixedPoint.xmin >= 0 && scissorInFixedPoint.ymin >= 0,
                    "Conservative rast degenerate handling requires a valid scissor rect");
     }
 
     // Intersect with scissor/viewport
     OSALIGNSIMD(SWR_RECT) intersect;
-    intersect.xmin = std::max(bbox.xmin, state.scissorInFixedPoint.xmin);
-    intersect.xmax = std::min(bbox.xmax - 1, state.scissorInFixedPoint.xmax);
-    intersect.ymin = std::max(bbox.ymin, state.scissorInFixedPoint.ymin);
-    intersect.ymax = std::min(bbox.ymax - 1, state.scissorInFixedPoint.ymax);
+    intersect.xmin = std::max(bbox.xmin, scissorInFixedPoint.xmin);
+    intersect.xmax = std::min(bbox.xmax - 1, scissorInFixedPoint.xmax);
+    intersect.ymin = std::max(bbox.ymin, scissorInFixedPoint.ymin);
+    intersect.ymax = std::min(bbox.ymax - 1, scissorInFixedPoint.ymax);
 
     triDesc.triFlags = workDesc.triFlags;
 
@@ -1087,7 +1089,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
     // Compute and store triangle edge data if scissor needs to rasterized
     ComputeScissorEdges<typename RT::RasterizeScissorEdgesT, typename RT::IsConservativeT, RT>
-                       (bbox, state.scissorInFixedPoint, x, y, rastEdges, vEdgeFix16);
+                       (bbox, scissorInFixedPoint, x, y, rastEdges, vEdgeFix16);
 
     // Evaluate edge equations at sample positions of each of the 4 corners of a raster tile
     // used to for testing if entire raster tile is inside a triangle
@@ -1573,6 +1575,8 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     int32_t macroBoxTop = macroY * KNOB_MACROTILE_Y_DIM_FIXED;
     int32_t macroBoxBottom = macroBoxTop + KNOB_MACROTILE_Y_DIM_FIXED - 1;
 
+    const SWR_RECT &scissorInFixedPoint = state.scissorsInFixedPoint[workDesc.triFlags.viewportIndex];
+
     // create a copy of the triangle buffer to write our adjusted vertices to
     OSALIGNSIMD(float) newTriBuffer[4 * 4];
     TRIANGLE_WORK_DESC newWorkDesc = workDesc;
@@ -1667,13 +1671,13 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     calcBoundingBoxInt(vXai, vYai, bboxA);
 
     if (!(bboxA.xmin > macroBoxRight ||
-          bboxA.xmin > state.scissorInFixedPoint.xmax ||
+          bboxA.xmin > scissorInFixedPoint.xmax ||
           bboxA.xmax - 1 < macroBoxLeft ||
-          bboxA.xmax - 1 < state.scissorInFixedPoint.xmin ||
+          bboxA.xmax - 1 < scissorInFixedPoint.xmin ||
           bboxA.ymin > macroBoxBottom ||
-          bboxA.ymin > state.scissorInFixedPoint.ymax ||
+          bboxA.ymin > scissorInFixedPoint.ymax ||
           bboxA.ymax - 1 < macroBoxTop ||
-          bboxA.ymax - 1 < state.scissorInFixedPoint.ymin)) {
+          bboxA.ymax - 1 < scissorInFixedPoint.ymin)) {
         // rasterize triangle
         pfnTriRast(pDC, workerId, macroTile, (void*)&newWorkDesc);
     }
@@ -1740,13 +1744,13 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     calcBoundingBoxInt(vXai, vYai, bboxA);
 
     if (!(bboxA.xmin > macroBoxRight ||
-          bboxA.xmin > state.scissorInFixedPoint.xmax ||
+          bboxA.xmin > scissorInFixedPoint.xmax ||
           bboxA.xmax - 1 < macroBoxLeft ||
-          bboxA.xmax - 1 < state.scissorInFixedPoint.xmin ||
+          bboxA.xmax - 1 < scissorInFixedPoint.xmin ||
           bboxA.ymin > macroBoxBottom ||
-          bboxA.ymin > state.scissorInFixedPoint.ymax ||
+          bboxA.ymin > scissorInFixedPoint.ymax ||
           bboxA.ymax - 1 < macroBoxTop ||
-          bboxA.ymax - 1 < state.scissorInFixedPoint.ymin)) {
+          bboxA.ymax - 1 < scissorInFixedPoint.ymin)) {
         // rasterize triangle
         pfnTriRast(pDC, workerId, macroTile, (void*)&newWorkDesc);
     }
