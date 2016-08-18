@@ -1238,6 +1238,17 @@ dri2_destroy_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLContext *ctx)
    return EGL_TRUE;
 }
 
+static EGLBoolean
+dri2_destroy_surface(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surf)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+
+   if (!_eglPutSurface(surf))
+      return EGL_TRUE;
+
+   return dri2_dpy->vtbl->destroy_surface(drv, dpy, surf);
+}
+
 /**
  * Called via eglMakeCurrent(), drv->API.MakeCurrent().
  */
@@ -1281,15 +1292,15 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
 
    if (unbind || dri2_dpy->core->bindContext(cctx, ddraw, rdraw)) {
       if (old_dsurf)
-         drv->API.DestroySurface(drv, disp, old_dsurf);
+         dri2_destroy_surface(drv, disp, old_dsurf);
       if (old_rsurf)
-         drv->API.DestroySurface(drv, disp, old_rsurf);
+         dri2_destroy_surface(drv, disp, old_rsurf);
 
       if (!unbind)
          dri2_dpy->ref_count++;
       if (old_ctx) {
          EGLDisplay old_disp = _eglGetDisplayHandle(old_ctx->Resource.Display);
-         drv->API.DestroyContext(drv, disp, old_ctx);
+         dri2_destroy_context(drv, disp, old_ctx);
          dri2_display_release(old_disp);
       }
 
@@ -1362,17 +1373,6 @@ dri2_create_pbuffer_surface(_EGLDriver *drv, _EGLDisplay *dpy,
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
    return dri2_dpy->vtbl->create_pbuffer_surface(drv, dpy, conf, attrib_list);
-}
-
-static EGLBoolean
-dri2_destroy_surface(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surf)
-{
-   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
-
-   if (!_eglPutSurface(surf))
-      return EGL_TRUE;
-
-   return dri2_dpy->vtbl->destroy_surface(drv, dpy, surf);
 }
 
 static EGLBoolean
