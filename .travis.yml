@@ -16,7 +16,11 @@ addons:
       - libexpat1-dev
       - libxcb-dri2-0-dev
       - libx11-xcb-dev
-      - llvm-3.4-dev
+      - llvm-3.5-dev
+      # llvm-config is not in the dev package?
+      - llvm-3.5
+      # LLVM packaging is broken and misses this dep.
+      - libedit-dev
       - scons
 
 env:
@@ -95,16 +99,13 @@ install:
   - tar -jxvf $LIBXSHMFENCE_VERSION.tar.bz2
   - (cd $LIBXSHMFENCE_VERSION && ./configure --prefix=$HOME/prefix && make install)
 
-# Disabled LLVM (and therefore r300 and r600) because the build fails
-# with "undefined reference to `clock_gettime'" and "undefined
-# reference to `setupterm'" in llvmpipe.
 script:
   - if test "x$BUILD" = xmake; then
       ./autogen.sh --enable-debug
-        --disable-gallium-llvm
         --with-egl-platforms=x11,drm
         --with-dri-drivers=i915,i965,radeon,r200,swrast,nouveau
-        --with-gallium-drivers=svga,swrast,vc4,virgl
+        --with-gallium-drivers=svga,swrast,vc4,virgl,r300,r600
+        --disable-llvm-shared-libs
         ;
       make && make check;
     elif test x$BUILD = xscons; then
