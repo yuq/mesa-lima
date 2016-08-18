@@ -851,8 +851,13 @@ dri2_initialize(_EGLDriver *drv, _EGLDisplay *disp)
 static void
 dri2_display_release(_EGLDisplay *disp)
 {
-   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   struct dri2_egl_display *dri2_dpy;
    unsigned i;
+
+   if (!disp)
+      return;
+
+   dri2_dpy = dri2_egl_display(disp);
 
    assert(dri2_dpy->ref_count > 0);
    dri2_dpy->ref_count--;
