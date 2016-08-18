@@ -89,7 +89,7 @@ install:
 
   - wget http://dri.freedesktop.org/libdrm/$LIBDRM_VERSION.tar.bz2
   - tar -jxvf $LIBDRM_VERSION.tar.bz2
-  - (cd $LIBDRM_VERSION && ./configure --prefix=$HOME/prefix && make install)
+  - (cd $LIBDRM_VERSION && ./configure --prefix=$HOME/prefix --enable-vc4 && make install)
 
   - wget $XORG_RELEASES/lib/$LIBXSHMFENCE_VERSION.tar.bz2
   - tar -jxvf $LIBXSHMFENCE_VERSION.tar.bz2
