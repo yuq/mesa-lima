@@ -41,6 +41,16 @@ install:
   - export PATH="/usr/lib/ccache:$PATH"
   - pip install --user mako
 
+  # Since libdrm gets updated in configure.ac regularly, try to pick up the
+  # latest version from there.
+  - for line in `grep "^LIBDRM_.*_REQUIRED=" configure.ac`; do
+      old_ver=`echo $LIBDRM_VERSION | sed 's/libdrm-//'`;
+      new_ver=`echo $line | sed 's/.*REQUIRED=//'`;
+      if `echo "$old_ver,$new_ver" | tr ',' '\n' | sort -Vc 2> /dev/null`; then
+        export LIBDRM_VERSION="libdrm-$new_ver";
+      fi;
+    done
+
   # Install dependencies where we require specific versions (or where
   # disallowed by Travis CI's package whitelisting).
 
