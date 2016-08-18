@@ -63,7 +63,7 @@ void Clip(const float *pTriangle, const float *pAttribs, int numAttribs, float *
           int *numVerts, float *pOutAttribs);
 
 INLINE
-void ComputeClipCodes(DRIVER_TYPE type, const API_STATE& state, const simdvector& vertex, simdscalar& clipCodes)
+void ComputeClipCodes(DRIVER_TYPE type, const API_STATE& state, const simdvector& vertex, simdscalar& clipCodes, simdscalari viewportIndexes)
 {
     clipCodes = _simd_setzero_ps();
 
@@ -110,22 +110,22 @@ void ComputeClipCodes(DRIVER_TYPE type, const API_STATE& state, const simdvector
     clipCodes = _simd_or_ps(clipCodes, _simd_and_ps(vRes, _simd_castsi_ps(_simd_set1_epi32(NEGW))));
 
     // GUARDBAND_LEFT
-    simdscalar gbMult = _simd_mul_ps(vNegW, _simd_set1_ps(state.gbState.left));
+    simdscalar gbMult = _simd_mul_ps(vNegW, _simd_i32gather_ps(&state.gbState.left[0], viewportIndexes, 4));
     vRes = _simd_cmplt_ps(vertex.x, gbMult);
     clipCodes = _simd_or_ps(clipCodes, _simd_and_ps(vRes, _simd_castsi_ps(_simd_set1_epi32(GUARDBAND_LEFT))));
 
     // GUARDBAND_TOP
-    gbMult = _simd_mul_ps(vNegW, _simd_set1_ps(state.gbState.top));
+    gbMult = _simd_mul_ps(vNegW, _simd_i32gather_ps(&state.gbState.top[0], viewportIndexes, 4));
     vRes = _simd_cmplt_ps(vertex.y, gbMult);
     clipCodes = _simd_or_ps(clipCodes, _simd_and_ps(vRes, _simd_castsi_ps(_simd_set1_epi32(GUARDBAND_TOP))));
 
     // GUARDBAND_RIGHT
-    gbMult = _simd_mul_ps(vertex.w, _simd_set1_ps(state.gbState.right));
+    gbMult = _simd_mul_ps(vertex.w, _simd_i32gather_ps(&state.gbState.right[0], viewportIndexes, 4));
     vRes = _simd_cmpgt_ps(vertex.x, gbMult);
     clipCodes = _simd_or_ps(clipCodes, _simd_and_ps(vRes, _simd_castsi_ps(_simd_set1_epi32(GUARDBAND_RIGHT))));
 
     // GUARDBAND_BOTTOM
-    gbMult = _simd_mul_ps(vertex.w, _simd_set1_ps(state.gbState.bottom));
+    gbMult = _simd_mul_ps(vertex.w, _simd_i32gather_ps(&state.gbState.bottom[0], viewportIndexes, 4));
     vRes = _simd_cmpgt_ps(vertex.y, gbMult);
     clipCodes = _simd_or_ps(clipCodes, _simd_and_ps(vRes, _simd_castsi_ps(_simd_set1_epi32(GUARDBAND_BOTTOM))));
 }
@@ -140,11 +140,11 @@ public:
         static_assert(NumVertsPerPrim >= 1 && NumVertsPerPrim <= 3, "Invalid NumVertsPerPrim");
     }
 
-    void ComputeClipCodes(simdvector vertex[])
+    void ComputeClipCodes(simdvector vertex[], simdscalari viewportIndexes)
     {
         for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
         {
-            ::ComputeClipCodes(this->driverType, this->state, vertex[i], this->clipCodes[i]);
+            ::ComputeClipCodes(this->driverType, this->state, vertex[i], this->clipCodes[i], viewportIndexes);
         }
     }
 
@@ -524,7 +524,7 @@ public:
         uint32_t numInvoc = _mm_popcnt_u32(primMask);
         UPDATE_STAT_FE(CInvocations, numInvoc);
 
-        ComputeClipCodes(prim);
+        ComputeClipCodes(prim, viewportIdx);
 
         // cull prims with NAN coords
         primMask &= ~ComputeNaNMask(prim);

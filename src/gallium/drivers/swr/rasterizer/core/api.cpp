@@ -639,13 +639,18 @@ void SwrSetBlendFunc(
 }
 
 // update guardband multipliers for the viewport
-void updateGuardband(API_STATE *pState)
+void updateGuardbands(API_STATE *pState)
 {
-    // guardband center is viewport center
-    pState->gbState.left    = KNOB_GUARDBAND_WIDTH  / pState->vp[0].width;
-    pState->gbState.right   = KNOB_GUARDBAND_WIDTH  / pState->vp[0].width;
-    pState->gbState.top     = KNOB_GUARDBAND_HEIGHT / pState->vp[0].height;
-    pState->gbState.bottom  = KNOB_GUARDBAND_HEIGHT / pState->vp[0].height;
+    uint32_t numGbs = pState->gsState.emitsRenderTargetArrayIndex ? KNOB_NUM_VIEWPORTS_SCISSORS : 1;
+
+    for(uint32_t i = 0; i < numGbs; ++i)
+    {
+        // guardband center is viewport center
+        pState->gbState.left[i] = KNOB_GUARDBAND_WIDTH / pState->vp[i].width;
+        pState->gbState.right[i] = KNOB_GUARDBAND_WIDTH / pState->vp[i].width;
+        pState->gbState.top[i] = KNOB_GUARDBAND_HEIGHT / pState->vp[i].height;
+        pState->gbState.bottom[i] = KNOB_GUARDBAND_HEIGHT / pState->vp[i].height;
+    }
 }
 
 void SwrSetRastState(
@@ -709,7 +714,7 @@ void SwrSetViewports(
         }
     }
 
-    updateGuardband(pState);
+    updateGuardbands(pState);
 }
 
 void SwrSetScissorRects(

@@ -209,9 +209,12 @@ struct FE_WORK
     } desc;
 };
 
-struct GUARDBAND
+struct GUARDBANDS
 {
-    float left, right, top, bottom;
+    float left[KNOB_NUM_VIEWPORTS_SCISSORS];
+    float right[KNOB_NUM_VIEWPORTS_SCISSORS];
+    float top[KNOB_NUM_VIEWPORTS_SCISSORS];
+    float bottom[KNOB_NUM_VIEWPORTS_SCISSORS];
 };
 
 struct PA_STATE;
@@ -269,7 +272,7 @@ OSALIGNLINE(struct) API_STATE
     // floating point multisample offsets
     float samplePos[SWR_MAX_NUM_MULTISAMPLES * 2];
 
-    GUARDBAND               gbState;
+    GUARDBANDS               gbState;
 
     SWR_VIEWPORT            vp[KNOB_NUM_VIEWPORTS_SCISSORS];
     SWR_VIEWPORT_MATRICES   vpMatrices;
