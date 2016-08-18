@@ -351,6 +351,11 @@ _mesa_has_tessellation(const struct gl_context *ctx)
           _mesa_has_ARB_tessellation_shader(ctx);
 }
 
+static inline bool
+_mesa_has_texture_cube_map_array(const struct gl_context *ctx)
+{
+   return _mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_texture_cube_map_array;
+}
 
 #ifdef __cplusplus
 }
