@@ -259,16 +259,21 @@ i965_FILES = \
 	intel_upload.c
 
 i965_gen6_FILES = \
-	genX_blorp_exec.c
+	genX_blorp_exec.c \
+	genX_blorp_exec.h
 
 i965_gen7_FILES = \
-	genX_blorp_exec.c
+	genX_blorp_exec.c \
+	genX_blorp_exec.h
 
 i965_gen75_FILES = \
-	genX_blorp_exec.c
+	genX_blorp_exec.c \
+	genX_blorp_exec.h
 
 i965_gen8_FILES = \
-	genX_blorp_exec.c
+	genX_blorp_exec.c \
+	genX_blorp_exec.h
 
 i965_gen9_FILES = \
-	genX_blorp_exec.c
+	genX_blorp_exec.c \
+	genX_blorp_exec.h
