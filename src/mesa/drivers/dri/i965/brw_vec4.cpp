@@ -2263,17 +2263,32 @@ scalarize_predicate(brw_predicate predicate, unsigned writemask)
    }
 }
 
+/* Gen7 has a hardware decompression bug that we can exploit to represent
+ * handful of additional swizzles natively.
+ */
+static bool
+is_gen7_supported_64bit_swizzle(vec4_instruction *inst, unsigned arg)
+{
+   switch (inst->src[arg].swizzle) {
+   case BRW_SWIZZLE_XXXX:
+   case BRW_SWIZZLE_YYYY:
+   case BRW_SWIZZLE_ZZZZ:
+   case BRW_SWIZZLE_WWWW:
+   case BRW_SWIZZLE_XYXY:
+   case BRW_SWIZZLE_YXYX:
+   case BRW_SWIZZLE_ZWZW:
+   case BRW_SWIZZLE_WZWZ:
+      return true;
+   default:
+      return false;
+   }
+}
+
 /* 64-bit sources use regions with a width of 2. These 2 elements in each row
  * can be addressed using 32-bit swizzles (which is what the hardware supports)
  * but it also means that the swizzle we apply on the first two components of a
  * dvec4 is coupled with the swizzle we use for the last 2. In other words,
  * only some specific swizzle combinations can be natively supported.
- *
- * FIXME: We can also exploit the vstride 0 decompression bug in gen7 to
- *        implement some more swizzles via simple translations. For
- *        example: XXXX as XYXY, YYYY as ZWZW (same for ZZZZ and WWWW by
- *        using subnr), XYXY as XYZW, YXYX as ZWXY (same for ZWZW and
- *        WZWZ using subnr).
  *
  * FIXME: we can go an step further and implement even more swizzle
  *        variations using only partial scalarization.
@@ -2282,8 +2297,9 @@ scalarize_predicate(brw_predicate predicate, unsigned writemask)
  * https://bugs.freedesktop.org/show_bug.cgi?id=92760#c82
  */
 bool
-vec4_visitor::is_supported_64bit_region(src_reg src)
+vec4_visitor::is_supported_64bit_region(vec4_instruction *inst, unsigned arg)
 {
+   const src_reg &src = inst->src[arg];
    assert(type_sz(src.type) == 8);
 
    /* Uniform regions have a vstride=0. Because we use 2-wide rows with
@@ -2305,7 +2321,7 @@ vec4_visitor::is_supported_64bit_region(src_reg src)
    case BRW_SWIZZLE_YXWZ:
       return true;
    default:
-      return false;
+      return devinfo->gen == 7 && is_gen7_supported_64bit_swizzle(inst, arg);
    }
 }
 
@@ -2344,8 +2360,7 @@ vec4_visitor::scalarize_df()
          for (unsigned i = 0; i < 3; i++) {
             if (inst->src[i].file == BAD_FILE || type_sz(inst->src[i].type) < 8)
                continue;
-            skip_lowering = skip_lowering &&
-                            is_supported_64bit_region(inst->src[i]);
+            skip_lowering = skip_lowering && is_supported_64bit_region(inst, i);
          }
       }
 
@@ -2459,9 +2474,10 @@ vec4_visitor::apply_logical_swizzle(struct brw_reg *hw_reg,
 
    /* Take the 64-bit logical swizzle channel and translate it to 32-bit */
    assert(brw_is_single_value_swizzle(reg.swizzle) ||
-          is_supported_64bit_region(reg));
+          is_supported_64bit_region(inst, arg));
 
-   if (is_supported_64bit_region(reg)) {
+   if (is_supported_64bit_region(inst, arg) &&
+       !is_gen7_supported_64bit_swizzle(inst, arg)) {
       /* Supported 64-bit swizzles are those such that their first two
        * components, when expanded to 32-bit swizzles, match the semantics
        * of the original 64-bit swizzle with 2-wide row regioning.
@@ -2471,19 +2487,31 @@ vec4_visitor::apply_logical_swizzle(struct brw_reg *hw_reg,
       hw_reg->swizzle = BRW_SWIZZLE4(swizzle0 * 2, swizzle0 * 2 + 1,
                                      swizzle1 * 2, swizzle1 * 2 + 1);
    } else {
-      /* If we got here then we have an unsupported swizzle and the
-       * instruction should have been scalarized.
+      /* If we got here then we have one of the following:
+       *
+       * 1. An unsupported swizzle, which should be single-value thanks to the
+       *    scalarization pass.
+       *
+       * 2. A gen7 supported swizzle. These can be single-value or double-value
+       *    swizzles. If the latter, they are never cross-dvec2 channels. For
+       *    these we always need to activate the gen7 vstride=0 exploit.
        */
-      assert(brw_is_single_value_swizzle(reg.swizzle));
-      unsigned swizzle = BRW_GET_SWZ(reg.swizzle, 0);
+      unsigned swizzle0 = BRW_GET_SWZ(reg.swizzle, 0);
+      unsigned swizzle1 = BRW_GET_SWZ(reg.swizzle, 1);
+      assert((swizzle0 < 2) == (swizzle1 < 2));
 
       /* To gain access to Z/W components we need to select the second half
        * of the register and then use a X/Y swizzle to select Z/W respectively.
        */
-      if (swizzle >= 2) {
+      if (swizzle0 >= 2) {
          *hw_reg = suboffset(*hw_reg, 2);
-         swizzle -= 2;
+         swizzle0 -= 2;
+         swizzle1 -= 2;
       }
+
+      /* All gen7-specific supported swizzles require the vstride=0 exploit */
+      if (devinfo->gen == 7 && is_gen7_supported_64bit_swizzle(inst, arg))
+         hw_reg->vstride = BRW_VERTICAL_STRIDE_0;
 
       /* Any 64-bit source with an offset at 16B is intended to address the
        * second half of a register and needs a vertical stride of 0 so we:
@@ -2497,8 +2525,8 @@ vec4_visitor::apply_logical_swizzle(struct brw_reg *hw_reg,
          hw_reg->vstride = BRW_VERTICAL_STRIDE_0;
       }
 
-      hw_reg->swizzle = BRW_SWIZZLE4(swizzle * 2, swizzle * 2 + 1,
-                                     swizzle * 2, swizzle * 2 + 1);
+      hw_reg->swizzle = BRW_SWIZZLE4(swizzle0 * 2, swizzle0 * 2 + 1,
+                                     swizzle1 * 2, swizzle1 * 2 + 1);
    }
 }
 
