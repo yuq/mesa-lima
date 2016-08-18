@@ -37,6 +37,9 @@ struct brw_wm_prog_key;
 extern "C" {
 #endif
 
+struct blorp_batch;
+struct brw_blorp_params;
+
 struct blorp_context {
    void *driver_ctx;
 
@@ -56,6 +59,8 @@ struct blorp_context {
                          const void *kernel, uint32_t kernel_size,
                          const void *prog_data, uint32_t prog_data_size,
                          uint32_t *kernel_out, void *prog_data_out);
+   void (*exec)(struct blorp_batch *batch,
+                const struct brw_blorp_params *params);
 };
 
 void blorp_init(struct blorp_context *blorp, void *driver_ctx,

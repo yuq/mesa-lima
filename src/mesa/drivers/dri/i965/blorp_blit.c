@@ -1648,5 +1648,8 @@ brw_blorp_blit(struct brw_context *brw,
          swizzle_to_scs(GET_SWZ(src_swizzle, i));
    }
 
-   brw_blorp_exec(brw, &params);
+   struct blorp_batch batch;
+   blorp_batch_init(&brw->blorp, &batch, brw);
+   brw->blorp.exec(&batch, &params);
+   blorp_batch_finish(&batch);
 }
