@@ -48,19 +48,19 @@
  * This is a bit different than legal_teximage_target() when it comes
  * to cube maps.
  */
-static GLboolean
-legal_texobj_target(struct gl_context *ctx, GLuint dims, GLenum target)
+static bool
+legal_texobj_target(const struct gl_context *ctx, GLuint dims, GLenum target)
 {
    if (dims < 1 || dims > 3) {
       _mesa_problem(ctx, "invalid dims=%u in legal_texobj_target()", dims);
-      return GL_FALSE;
+      return false;
    }
 
    switch (dims) {
    case 2:
       switch (target) {
       case GL_TEXTURE_2D:
-         return GL_TRUE;
+         return true;
       case GL_TEXTURE_CUBE_MAP:
          return ctx->Extensions.ARB_texture_cube_map;
       }
@@ -68,7 +68,7 @@ legal_texobj_target(struct gl_context *ctx, GLuint dims, GLenum target)
    case 3:
       switch (target) {
       case GL_TEXTURE_3D:
-         return GL_TRUE;
+         return true;
       case GL_TEXTURE_2D_ARRAY:
          return ctx->Extensions.EXT_texture_array;
       }
@@ -76,21 +76,21 @@ legal_texobj_target(struct gl_context *ctx, GLuint dims, GLenum target)
    }
 
    if (!_mesa_is_desktop_gl(ctx))
-      return GL_FALSE;
+      return false;
 
    switch (dims) {
    case 1:
       switch (target) {
       case GL_TEXTURE_1D:
       case GL_PROXY_TEXTURE_1D:
-         return GL_TRUE;
+         return true;
       default:
-         return GL_FALSE;
+         return false;
       }
    case 2:
       switch (target) {
       case GL_PROXY_TEXTURE_2D:
-         return GL_TRUE;
+         return true;
       case GL_PROXY_TEXTURE_CUBE_MAP:
          return ctx->Extensions.ARB_texture_cube_map;
       case GL_TEXTURE_RECTANGLE:
@@ -100,19 +100,19 @@ legal_texobj_target(struct gl_context *ctx, GLuint dims, GLenum target)
       case GL_PROXY_TEXTURE_1D_ARRAY:
          return ctx->Extensions.EXT_texture_array;
       default:
-         return GL_FALSE;
+         return false;
       }
    case 3:
       switch (target) {
       case GL_PROXY_TEXTURE_3D:
-         return GL_TRUE;
+         return true;
       case GL_PROXY_TEXTURE_2D_ARRAY:
          return ctx->Extensions.EXT_texture_array;
       case GL_TEXTURE_CUBE_MAP_ARRAY:
       case GL_PROXY_TEXTURE_CUBE_MAP_ARRAY:
          return ctx->Extensions.ARB_texture_cube_map_array;
       default:
-         return GL_FALSE;
+         return false;
       }
    default:
       unreachable("impossible dimensions");
