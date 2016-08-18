@@ -186,7 +186,9 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->b.gfx.cs = ws->cs_create(sctx->b.ctx, RING_GFX,
 				       si_context_gfx_flush, sctx);
 
-	if (!(sscreen->b.debug_flags & DBG_NO_CE) && ws->cs_add_const_ib) {
+	/* SI + AMDGPU + CE = GPU hang */
+	if (!(sscreen->b.debug_flags & DBG_NO_CE) && ws->cs_add_const_ib &&
+	    sscreen->b.chip_class != SI) {
 		sctx->ce_ib = ws->cs_add_const_ib(sctx->b.gfx.cs);
 		if (!sctx->ce_ib)
 			goto fail;
