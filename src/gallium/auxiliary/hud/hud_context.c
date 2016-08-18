@@ -344,6 +344,7 @@ hud_pane_accumulate_vertices(struct hud_context *hud,
    float *line_verts = hud->whitelines.vertices + hud->whitelines.num_vertices*2;
    unsigned i, num = 0;
    char str[32];
+   const unsigned last_line = 5;
 
    /* draw background */
    hud_draw_background_quad(hud,
@@ -351,12 +352,13 @@ hud_pane_accumulate_vertices(struct hud_context *hud,
                             pane->x2, pane->y2);
 
    /* draw numbers on the right-hand side */
-   for (i = 0; i < 6; i++) {
+   for (i = 0; i <= last_line; i++) {
       unsigned x = pane->x2 + 2;
-      unsigned y = pane->inner_y1 + pane->inner_height * (5 - i) / 5 -
+      unsigned y = pane->inner_y1 +
+                   pane->inner_height * (last_line - i) / last_line -
                    hud->font.glyph_height / 2;
 
-      number_to_human_readable(pane->max_value * i / 5, pane->max_value,
+      number_to_human_readable(pane->max_value * i / last_line, pane->max_value,
                                pane->type, str);
       hud_draw_string(hud, x, y, "%s", str);
    }
@@ -396,8 +398,9 @@ hud_pane_accumulate_vertices(struct hud_context *hud,
    line_verts[num++] = (float) pane->y2;
 
    /* draw horizontal lines inside the graph */
-   for (i = 0; i <= 5; i++) {
-      float y = round((pane->max_value * i / 5.0) * pane->yscale + pane->inner_y2);
+   for (i = 0; i <= last_line; i++) {
+      float y = round((pane->max_value * i / (double)last_line) *
+                      pane->yscale + pane->inner_y2);
 
       assert(hud->whitelines.num_vertices + num/2 + 2 <= hud->whitelines.max_num_vertices);
       line_verts[num++] = pane->x1;
