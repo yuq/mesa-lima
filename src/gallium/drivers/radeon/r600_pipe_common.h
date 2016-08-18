@@ -174,8 +174,11 @@ struct r600_resource {
 	uint64_t			vram_usage;
 	uint64_t			gart_usage;
 
-	/* Resource state. */
+	/* Resource properties. */
+	uint64_t			bo_size;
+	unsigned			bo_alignment;
 	enum radeon_bo_domain		domains;
+	enum radeon_bo_flag		flags;
 
 	/* The buffer range which is initialized (with a write transfer,
 	 * streamout, DMA, or as a random access target). The rest of
@@ -653,9 +656,11 @@ void r600_buffer_subdata(struct pipe_context *ctx,
 			 struct pipe_resource *buffer,
 			 unsigned usage, unsigned offset,
 			 unsigned size, const void *data);
-bool r600_init_resource(struct r600_common_screen *rscreen,
-			struct r600_resource *res,
-			uint64_t size, unsigned alignment);
+void r600_init_resource_fields(struct r600_common_screen *rscreen,
+			       struct r600_resource *res,
+			       uint64_t size, unsigned alignment);
+bool r600_alloc_resource(struct r600_common_screen *rscreen,
+			 struct r600_resource *res);
 struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 					 const struct pipe_resource *templ,
 					 unsigned alignment);

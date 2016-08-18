@@ -99,20 +99,23 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	return ctx->ws->buffer_map(resource->buf, NULL, usage);
 }
 
-bool r600_init_resource(struct r600_common_screen *rscreen,
-			struct r600_resource *res,
-			uint64_t size, unsigned alignment)
+void r600_init_resource_fields(struct r600_common_screen *rscreen,
+			       struct r600_resource *res,
+			       uint64_t size, unsigned alignment)
 {
 	struct r600_texture *rtex = (struct r600_texture*)res;
-	struct pb_buffer *old_buf, *new_buf;
-	enum radeon_bo_flag flags = 0;
+
+	res->bo_size = size;
+	res->bo_alignment = alignment;
+	res->flags = 0;
 
 	switch (res->b.b.usage) {
 	case PIPE_USAGE_STREAM:
-		flags = RADEON_FLAG_GTT_WC;
+		res->flags = RADEON_FLAG_GTT_WC;
 		/* fall through */
 	case PIPE_USAGE_STAGING:
-		/* Transfers are likely to occur more often with these resources. */
+		/* Transfers are likely to occur more often with these
+		 * resources. */
 		res->domains = RADEON_DOMAIN_GTT;
 		break;
 	case PIPE_USAGE_DYNAMIC:
@@ -122,60 +125,78 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 		if (rscreen->info.drm_major == 2 &&
 		    rscreen->info.drm_minor < 40) {
 			res->domains = RADEON_DOMAIN_GTT;
-			flags |= RADEON_FLAG_GTT_WC;
+			res->flags |= RADEON_FLAG_GTT_WC;
 			break;
 		}
-		flags |= RADEON_FLAG_CPU_ACCESS;
+		res->flags |= RADEON_FLAG_CPU_ACCESS;
 		/* fall through */
 	case PIPE_USAGE_DEFAULT:
 	case PIPE_USAGE_IMMUTABLE:
 	default:
-		/* Not listing GTT here improves performance in some apps. */
+		/* Not listing GTT here improves performance in some
+		 * apps. */
 		res->domains = RADEON_DOMAIN_VRAM;
-		flags |= RADEON_FLAG_GTT_WC;
+		res->flags |= RADEON_FLAG_GTT_WC;
 		break;
 	}
 
 	if (res->b.b.target == PIPE_BUFFER &&
 	    res->b.b.flags & (PIPE_RESOURCE_FLAG_MAP_PERSISTENT |
 			      PIPE_RESOURCE_FLAG_MAP_COHERENT)) {
-		/* Use GTT for all persistent mappings with older kernels,
-		 * because they didn't always flush the HDP cache before CS
-		 * execution.
+		/* Use GTT for all persistent mappings with older
+		 * kernels, because they didn't always flush the HDP
+		 * cache before CS execution.
 		 *
-		 * Write-combined CPU mappings are fine, the kernel ensures all CPU
-		 * writes finish before the GPU executes a command stream.
+		 * Write-combined CPU mappings are fine, the kernel
+		 * ensures all CPU writes finish before the GPU
+		 * executes a command stream.
 		 */
 		if (rscreen->info.drm_major == 2 &&
 		    rscreen->info.drm_minor < 40)
 			res->domains = RADEON_DOMAIN_GTT;
 		else if (res->domains & RADEON_DOMAIN_VRAM)
-			flags |= RADEON_FLAG_CPU_ACCESS;
+			res->flags |= RADEON_FLAG_CPU_ACCESS;
 	}
 
 	/* Tiled textures are unmappable. Always put them in VRAM. */
 	if (res->b.b.target != PIPE_BUFFER &&
 	    rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D) {
 		res->domains = RADEON_DOMAIN_VRAM;
-		flags &= ~RADEON_FLAG_CPU_ACCESS;
-		flags |= RADEON_FLAG_NO_CPU_ACCESS |
+		res->flags &= ~RADEON_FLAG_CPU_ACCESS;
+		res->flags |= RADEON_FLAG_NO_CPU_ACCESS |
 			 RADEON_FLAG_GTT_WC;
 	}
 
-	/* If VRAM is just stolen system memory, allow both VRAM and GTT,
-	 * whichever has free space. If a buffer is evicted from VRAM to GTT,
-	 * it will stay there.
+	/* If VRAM is just stolen system memory, allow both VRAM and
+	 * GTT, whichever has free space. If a buffer is evicted from
+	 * VRAM to GTT, it will stay there.
 	 */
 	if (!rscreen->info.has_dedicated_vram &&
 	    res->domains == RADEON_DOMAIN_VRAM)
 		res->domains = RADEON_DOMAIN_VRAM_GTT;
 
 	if (rscreen->debug_flags & DBG_NO_WC)
-		flags &= ~RADEON_FLAG_GTT_WC;
+		res->flags &= ~RADEON_FLAG_GTT_WC;
+
+	/* Set expected VRAM and GART usage for the buffer. */
+	res->vram_usage = 0;
+	res->gart_usage = 0;
+
+	if (res->domains & RADEON_DOMAIN_VRAM)
+		res->vram_usage = size;
+	else if (res->domains & RADEON_DOMAIN_GTT)
+		res->gart_usage = size;
+}
+
+bool r600_alloc_resource(struct r600_common_screen *rscreen,
+			 struct r600_resource *res)
+{
+	struct pb_buffer *old_buf, *new_buf;
 
 	/* Allocate a new resource. */
-	new_buf = rscreen->ws->buffer_create(rscreen->ws, size, alignment,
-					     res->domains, flags);
+	new_buf = rscreen->ws->buffer_create(rscreen->ws, res->bo_size,
+					     res->bo_alignment,
+					     res->domains, res->flags);
 	if (!new_buf) {
 		return false;
 	}
@@ -196,15 +217,6 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 
 	util_range_set_empty(&res->valid_buffer_range);
 	res->TC_L2_dirty = false;
-
-	/* Set expected VRAM and GART usage for the buffer. */
-	res->vram_usage = 0;
-	res->gart_usage = 0;
-
-	if (res->domains & RADEON_DOMAIN_VRAM)
-		res->vram_usage = size;
-	else if (res->domains & RADEON_DOMAIN_GTT)
-		res->gart_usage = size;
 
 	/* Print debug information. */
 	if (rscreen->debug_flags & DBG_VM && res->b.b.target == PIPE_BUFFER) {
@@ -516,7 +528,9 @@ struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct r600_resource *rbuffer = r600_alloc_buffer_struct(screen, templ);
 
-	if (!r600_init_resource(rscreen, rbuffer, templ->width0, alignment)) {
+	r600_init_resource_fields(rscreen, rbuffer, templ->width0, alignment);
+
+	if (!r600_alloc_resource(rscreen, rbuffer)) {
 		FREE(rbuffer);
 		return NULL;
 	}

@@ -2782,12 +2782,11 @@ static void r600_invalidate_buffer(struct pipe_context *ctx, struct pipe_resourc
 {
 	struct r600_context *rctx = (struct r600_context*)ctx;
 	struct r600_resource *rbuffer = r600_resource(buf);
-	unsigned i, shader, mask, alignment = rbuffer->buf->alignment;
+	unsigned i, shader, mask;
 	struct r600_pipe_sampler_view *view;
 
 	/* Reallocate the buffer in the same pipe_resource. */
-	r600_init_resource(&rctx->screen->b, rbuffer, rbuffer->b.b.width0,
-			   alignment);
+	r600_alloc_resource(&rctx->screen->b, rbuffer);
 
 	/* We changed the buffer, now we need to bind it where the old one was bound. */
 	/* Vertex buffers. */

@@ -1103,8 +1103,10 @@ r600_texture_create_object(struct pipe_screen *screen,
 
 	/* Now create the backing buffer. */
 	if (!buf) {
-		if (!r600_init_resource(rscreen, resource, rtex->size,
-					rtex->surface.bo_alignment)) {
+		r600_init_resource_fields(rscreen, resource, rtex->size,
+					  rtex->surface.bo_alignment);
+
+		if (!r600_alloc_resource(rscreen, resource)) {
 			FREE(rtex);
 			return NULL;
 		}
@@ -1418,8 +1420,7 @@ static void r600_texture_invalidate_storage(struct r600_common_context *rctx,
 	assert(rtex->surface.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED);
 
 	/* Reallocate the buffer in the same pipe_resource. */
-	r600_init_resource(rscreen, &rtex->resource, rtex->size,
-			   rtex->surface.bo_alignment);
+	r600_alloc_resource(rscreen, &rtex->resource);
 
 	/* Initialize the CMASK base address (needed even without CMASK). */
 	rtex->cmask.base_address_reg =
