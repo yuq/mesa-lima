@@ -998,13 +998,13 @@ blorp_emit_surface_states(struct brw_context *brw,
    uint32_t bind_offset;
    uint32_t *bind =
       brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
-                      sizeof(uint32_t) * BRW_BLORP_NUM_BINDING_TABLE_ENTRIES,
+                      sizeof(uint32_t) * BLORP_NUM_BT_ENTRIES,
                       32, /* alignment */ &bind_offset);
 
-   bind[BRW_BLORP_RENDERBUFFER_BINDING_TABLE_INDEX] =
+   bind[BLORP_RENDERBUFFER_BT_INDEX] =
       blorp_emit_surface_state(brw, &params->dst, true);
    if (params->src.addr.buffer) {
-      bind[BRW_BLORP_TEXTURE_BINDING_TABLE_INDEX] =
+      bind[BLORP_TEXTURE_BT_INDEX] =
          blorp_emit_surface_state(brw, &params->src, false);
    }
 
