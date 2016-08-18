@@ -181,8 +181,8 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
    wm_prog_data.base.param = NULL;
 
    /* BLORP always just uses the first two binding table entries */
-   wm_prog_data.binding_table.render_target_start = 0;
-   wm_prog_data.base.binding_table.texture_start = 1;
+   wm_prog_data.binding_table.render_target_start = BLORP_RENDERBUFFER_BT_INDEX;
+   wm_prog_data.base.binding_table.texture_start = BLORP_TEXTURE_BT_INDEX;
 
    nir = brw_preprocess_nir(compiler, nir);
    nir_remove_dead_variables(nir, nir_var_shader_in);
