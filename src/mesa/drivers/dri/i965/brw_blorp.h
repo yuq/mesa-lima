@@ -61,15 +61,15 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 	       unsigned int level, unsigned int layer, enum blorp_hiz_op op);
 
 void gen6_blorp_exec(struct blorp_batch *batch,
-                     const struct brw_blorp_params *params);
+                     const struct blorp_params *params);
 void gen7_blorp_exec(struct blorp_batch *batch,
-                     const struct brw_blorp_params *params);
+                     const struct blorp_params *params);
 void gen75_blorp_exec(struct blorp_batch *batch,
-                      const struct brw_blorp_params *params);
+                      const struct blorp_params *params);
 void gen8_blorp_exec(struct blorp_batch *batch,
-                     const struct brw_blorp_params *params);
+                     const struct blorp_params *params);
 void gen9_blorp_exec(struct blorp_batch *batch,
-                     const struct brw_blorp_params *params);
+                     const struct blorp_params *params);
 
 #ifdef __cplusplus
 } /* extern "C" */

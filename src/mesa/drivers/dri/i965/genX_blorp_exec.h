@@ -31,7 +31,7 @@
  *
  * static void
  * blorp_exec(struct blorp_context *blorp, void *batch_data,
- *            const struct brw_blorp_params *params);
+ *            const struct blorp_params *params);
  *
  * It is the job of whoever includes this header to wrap this in something
  * to get an externally visible symbol.
@@ -126,7 +126,7 @@ __gen_combine_address(struct blorp_batch *batch, void *location,
  * The URB size is in turn expressed in 64 bytes (512 bits).
  */
 static inline unsigned
-gen7_blorp_get_vs_entry_size(const struct brw_blorp_params *params)
+gen7_blorp_get_vs_entry_size(const struct blorp_params *params)
 {
     const unsigned num_varyings =
        params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
@@ -164,14 +164,14 @@ gen7_blorp_get_vs_entry_size(const struct brw_blorp_params *params)
  */
 static void
 emit_urb_config(struct blorp_batch *batch,
-                const struct brw_blorp_params *params)
+                const struct blorp_params *params)
 {
    blorp_emit_urb_config(batch, gen7_blorp_get_vs_entry_size(params));
 }
 
 static void
 blorp_emit_vertex_data(struct blorp_batch *batch,
-                       const struct brw_blorp_params *params,
+                       const struct blorp_params *params,
                        struct blorp_address *addr,
                        uint32_t *size)
 {
@@ -188,7 +188,7 @@ blorp_emit_vertex_data(struct blorp_batch *batch,
 
 static void
 blorp_emit_input_varying_data(struct blorp_batch *batch,
-                              const struct brw_blorp_params *params,
+                              const struct blorp_params *params,
                               struct blorp_address *addr,
                               uint32_t *size)
 {
@@ -220,7 +220,7 @@ blorp_emit_input_varying_data(struct blorp_batch *batch,
 
 static void
 blorp_emit_vertex_buffers(struct blorp_batch *batch,
-                          const struct brw_blorp_params *params)
+                          const struct blorp_params *params)
 {
    struct GENX(VERTEX_BUFFER_STATE) vb[2];
    memset(vb, 0, sizeof(vb));
@@ -274,7 +274,7 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
 
 static void
 blorp_emit_vertex_elements(struct blorp_batch *batch,
-                           const struct brw_blorp_params *params)
+                           const struct blorp_params *params)
 {
    const unsigned num_varyings =
       params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
@@ -383,7 +383,7 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 
 static void
 blorp_emit_sf_config(struct blorp_batch *batch,
-                     const struct brw_blorp_params *params)
+                     const struct blorp_params *params)
 {
    const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
 
@@ -479,7 +479,7 @@ blorp_emit_sf_config(struct blorp_batch *batch,
 
 static void
 blorp_emit_ps_config(struct blorp_batch *batch,
-                     const struct brw_blorp_params *params)
+                     const struct blorp_params *params)
 {
    const struct brw_blorp_prog_data *prog_data = params->wm_prog_data;
 
@@ -706,7 +706,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
 
 static void
 blorp_emit_depth_stencil_config(struct blorp_batch *batch,
-                                const struct brw_blorp_params *params)
+                                const struct blorp_params *params)
 {
 #if GEN_GEN >= 7
    const uint32_t mocs = 1; /* GEN7_MOCS_L3 */
@@ -767,7 +767,7 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
 
 static uint32_t
 blorp_emit_blend_state(struct blorp_batch *batch,
-                       const struct brw_blorp_params *params)
+                       const struct blorp_params *params)
 {
    struct GENX(BLEND_STATE) blend;
    memset(&blend, 0, sizeof(blend));
@@ -809,7 +809,7 @@ blorp_emit_blend_state(struct blorp_batch *batch,
 
 static uint32_t
 blorp_emit_color_calc_state(struct blorp_batch *batch,
-                            const struct brw_blorp_params *params)
+                            const struct blorp_params *params)
 {
    uint32_t offset;
    void *state = blorp_alloc_dynamic_state(batch, AUB_TRACE_CC_STATE,
@@ -831,7 +831,7 @@ blorp_emit_color_calc_state(struct blorp_batch *batch,
 
 static uint32_t
 blorp_emit_depth_stencil_state(struct blorp_batch *batch,
-                               const struct brw_blorp_params *params)
+                               const struct blorp_params *params)
 {
 #if GEN_GEN >= 8
 
@@ -933,7 +933,7 @@ blorp_emit_surface_state(struct blorp_batch *batch,
 
 static void
 blorp_emit_surface_states(struct blorp_batch *batch,
-                          const struct brw_blorp_params *params)
+                          const struct blorp_params *params)
 {
    uint32_t bind_offset, *bind_map;
    void *surface_maps[2];
@@ -968,7 +968,7 @@ blorp_emit_surface_states(struct blorp_batch *batch,
 
 static void
 blorp_emit_sampler_state(struct blorp_batch *batch,
-                         const struct brw_blorp_params *params)
+                         const struct blorp_params *params)
 {
    struct GENX(SAMPLER_STATE) sampler = {
       .MipModeFilter = MIPFILTER_NONE,
@@ -1012,7 +1012,7 @@ blorp_emit_sampler_state(struct blorp_batch *batch,
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
 static void
 blorp_emit_viewport_state(struct blorp_batch *batch,
-                          const struct brw_blorp_params *params)
+                          const struct blorp_params *params)
 {
    uint32_t cc_vp_offset;
 
@@ -1049,8 +1049,7 @@ blorp_emit_viewport_state(struct blorp_batch *batch,
  * This function alters no GL state.
  */
 static void
-blorp_exec(struct blorp_batch *batch,
-           const struct brw_blorp_params *params)
+blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
 {
    uint32_t blend_state_offset = 0;
    uint32_t color_calc_state_offset = 0;

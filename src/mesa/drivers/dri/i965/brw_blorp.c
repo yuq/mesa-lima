@@ -137,12 +137,12 @@ apply_gen6_stencil_hiz_offset(struct isl_surf *surf,
 }
 
 static void
-brw_blorp_surf_for_miptree(struct brw_context *brw,
-                           struct brw_blorp_surf *surf,
-                           struct intel_mipmap_tree *mt,
-                           bool is_render_target,
-                           unsigned *level,
-                           struct isl_surf tmp_surfs[2])
+blorp_surf_for_miptree(struct brw_context *brw,
+                       struct blorp_surf *surf,
+                       struct intel_mipmap_tree *mt,
+                       bool is_render_target,
+                       unsigned *level,
+                       struct isl_surf tmp_surfs[2])
 {
    intel_miptree_get_isl_surf(brw, mt, &tmp_surfs[0]);
    surf->surf = &tmp_surfs[0];
@@ -326,21 +326,21 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    intel_miptree_used_for_rendering(dst_mt);
 
    struct isl_surf tmp_surfs[4];
-   struct brw_blorp_surf src_surf, dst_surf;
-   brw_blorp_surf_for_miptree(brw, &src_surf, src_mt, false,
-                              &src_level, &tmp_surfs[0]);
-   brw_blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true,
-                              &dst_level, &tmp_surfs[2]);
+   struct blorp_surf src_surf, dst_surf;
+   blorp_surf_for_miptree(brw, &src_surf, src_mt, false,
+                          &src_level, &tmp_surfs[0]);
+   blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true,
+                          &dst_level, &tmp_surfs[2]);
 
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw);
-   brw_blorp_blit(&batch, &src_surf, src_level, src_layer,
-                  brw_blorp_to_isl_format(brw, src_format, false), src_swizzle,
-                  &dst_surf, dst_level, dst_layer,
-                  brw_blorp_to_isl_format(brw, dst_format, true),
-                  src_x0, src_y0, src_x1, src_y1,
-                  dst_x0, dst_y0, dst_x1, dst_y1,
-                  filter, mirror_x, mirror_y);
+   blorp_blit(&batch, &src_surf, src_level, src_layer,
+              brw_blorp_to_isl_format(brw, src_format, false), src_swizzle,
+              &dst_surf, dst_level, dst_layer,
+              brw_blorp_to_isl_format(brw, dst_format, true),
+              src_x0, src_y0, src_x1, src_y1,
+              dst_x0, dst_y0, dst_x1, dst_y1,
+              filter, mirror_x, mirror_y);
    blorp_batch_finish(&batch);
 
    intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_layer);
@@ -723,9 +723,9 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
    /* We can't setup the blorp_surf until we've allocated the MCS above */
    struct isl_surf isl_tmp[2];
-   struct brw_blorp_surf surf;
+   struct blorp_surf surf;
    unsigned level = irb->mt_level;
-   brw_blorp_surf_for_miptree(brw, &surf, irb->mt, true, &level, isl_tmp);
+   blorp_surf_for_miptree(brw, &surf, irb->mt, true, &level, isl_tmp);
 
    if (can_fast_clear) {
       DBG("%s (fast) to mt %p level %d layer %d\n", __FUNCTION__,
@@ -824,14 +824,14 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
    intel_miptree_used_for_rendering(mt);
 
    struct isl_surf isl_tmp[2];
-   struct brw_blorp_surf surf;
+   struct blorp_surf surf;
    unsigned level = 0;
-   brw_blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
+   blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
 
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw);
-   brw_blorp_ccs_resolve(&batch, &surf,
-                         brw_blorp_to_isl_format(brw, format, true));
+   blorp_ccs_resolve(&batch, &surf,
+                     brw_blorp_to_isl_format(brw, format, true));
    blorp_batch_finish(&batch);
 
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
@@ -847,8 +847,8 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    assert(intel_miptree_level_has_hiz(mt, level));
 
    struct isl_surf isl_tmp[2];
-   struct brw_blorp_surf surf;
-   brw_blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
+   struct blorp_surf surf;
+   blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
 
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw);

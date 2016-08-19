@@ -1186,7 +1186,7 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp,
 
 static void
 brw_blorp_get_blit_kernel(struct blorp_context *blorp,
-                          struct brw_blorp_params *params,
+                          struct blorp_params *params,
                           const struct brw_blorp_blit_prog_key *prog_key)
 {
    if (blorp->lookup_shader(blorp, prog_key, sizeof(*prog_key),
@@ -1380,23 +1380,23 @@ surf_retile_w_to_y(const struct isl_device *isl_dev,
 }
 
 void
-brw_blorp_blit(struct blorp_batch *batch,
-               const struct brw_blorp_surf *src_surf,
-               unsigned src_level, unsigned src_layer,
-               enum isl_format src_format, int src_swizzle,
-               const struct brw_blorp_surf *dst_surf,
-               unsigned dst_level, unsigned dst_layer,
-               enum isl_format dst_format,
-               float src_x0, float src_y0,
-               float src_x1, float src_y1,
-               float dst_x0, float dst_y0,
-               float dst_x1, float dst_y1,
-               GLenum filter, bool mirror_x, bool mirror_y)
+blorp_blit(struct blorp_batch *batch,
+           const struct blorp_surf *src_surf,
+           unsigned src_level, unsigned src_layer,
+           enum isl_format src_format, int src_swizzle,
+           const struct blorp_surf *dst_surf,
+           unsigned dst_level, unsigned dst_layer,
+           enum isl_format dst_format,
+           float src_x0, float src_y0,
+           float src_x1, float src_y1,
+           float dst_x0, float dst_y0,
+           float dst_x1, float dst_y1,
+           GLenum filter, bool mirror_x, bool mirror_y)
 {
    const struct brw_device_info *devinfo = batch->blorp->isl_dev->info;
 
-   struct brw_blorp_params params;
-   brw_blorp_params_init(&params);
+   struct blorp_params params;
+   blorp_params_init(&params);
 
    brw_blorp_surface_info_init(batch->blorp, &params.src, src_surf, src_level,
                                src_layer, src_format, false);

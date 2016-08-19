@@ -176,7 +176,7 @@ blorp_emit_3dstate_multisample(struct blorp_batch *batch, unsigned samples)
 
 void
 genX(blorp_exec)(struct blorp_batch *batch,
-                 const struct brw_blorp_params *params)
+                 const struct blorp_params *params)
 {
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;

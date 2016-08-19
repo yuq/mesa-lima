@@ -72,7 +72,7 @@ struct brw_blorp_surface_info
 void
 brw_blorp_surface_info_init(struct blorp_context *blorp,
                             struct brw_blorp_surface_info *info,
-                            const struct brw_blorp_surf *surf,
+                            const struct blorp_surf *surf,
                             unsigned int level, unsigned int layer,
                             enum isl_format format, bool is_render_target);
 
@@ -165,7 +165,7 @@ brw_blorp_get_urb_length(const struct brw_blorp_prog_data *prog_data)
    return MAX2((prog_data->num_varying_inputs + 1) / 2, 1);
 }
 
-struct brw_blorp_params
+struct blorp_params
 {
    uint32_t x0;
    uint32_t y0;
@@ -185,8 +185,7 @@ struct brw_blorp_params
    struct brw_blorp_prog_data *wm_prog_data;
 };
 
-void
-brw_blorp_params_init(struct brw_blorp_params *params);
+void blorp_params_init(struct blorp_params *params);
 
 struct brw_blorp_blit_prog_key
 {
