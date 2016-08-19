@@ -49,18 +49,18 @@ supported_interface_enum(struct gl_context *ctx, GLenum iface)
    case GL_FRAGMENT_SUBROUTINE:
    case GL_VERTEX_SUBROUTINE_UNIFORM:
    case GL_FRAGMENT_SUBROUTINE_UNIFORM:
-      return _mesa_has_shader_subroutine(ctx);
+      return _mesa_has_ARB_shader_subroutine(ctx);
    case GL_GEOMETRY_SUBROUTINE:
    case GL_GEOMETRY_SUBROUTINE_UNIFORM:
-      return _mesa_has_geometry_shaders(ctx) && _mesa_has_shader_subroutine(ctx);
+      return _mesa_has_geometry_shaders(ctx) && _mesa_has_ARB_shader_subroutine(ctx);
    case GL_COMPUTE_SUBROUTINE:
    case GL_COMPUTE_SUBROUTINE_UNIFORM:
-      return _mesa_has_compute_shaders(ctx) && _mesa_has_shader_subroutine(ctx);
+      return _mesa_has_compute_shaders(ctx) && _mesa_has_ARB_shader_subroutine(ctx);
    case GL_TESS_CONTROL_SUBROUTINE:
    case GL_TESS_EVALUATION_SUBROUTINE:
    case GL_TESS_CONTROL_SUBROUTINE_UNIFORM:
    case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
-      return _mesa_has_tessellation(ctx) && _mesa_has_shader_subroutine(ctx);
+      return _mesa_has_tessellation(ctx) && _mesa_has_ARB_shader_subroutine(ctx);
    default:
       return false;
    }
@@ -514,20 +514,20 @@ _mesa_GetProgramResourceLocation(GLuint program, GLenum programInterface,
 
    case GL_VERTEX_SUBROUTINE_UNIFORM:
    case GL_FRAGMENT_SUBROUTINE_UNIFORM:
-      if (!_mesa_has_shader_subroutine(ctx))
+      if (!_mesa_has_ARB_shader_subroutine(ctx))
          goto fail;
       break;
    case GL_GEOMETRY_SUBROUTINE_UNIFORM:
-      if (!_mesa_has_geometry_shaders(ctx) || !_mesa_has_shader_subroutine(ctx))
+      if (!_mesa_has_geometry_shaders(ctx) || !_mesa_has_ARB_shader_subroutine(ctx))
          goto fail;
       break;
    case GL_COMPUTE_SUBROUTINE_UNIFORM:
-      if (!_mesa_has_compute_shaders(ctx) || !_mesa_has_shader_subroutine(ctx))
+      if (!_mesa_has_compute_shaders(ctx) || !_mesa_has_ARB_shader_subroutine(ctx))
          goto fail;
       break;
    case GL_TESS_CONTROL_SUBROUTINE_UNIFORM:
    case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
-      if (!_mesa_has_tessellation(ctx) || !_mesa_has_shader_subroutine(ctx))
+      if (!_mesa_has_tessellation(ctx) || !_mesa_has_ARB_shader_subroutine(ctx))
          goto fail;
       break;
    default:

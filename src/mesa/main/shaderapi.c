@@ -2344,7 +2344,7 @@ _mesa_GetSubroutineUniformLocation(GLuint program, GLenum shadertype,
    GLenum resource_type;
    gl_shader_stage stage;
 
-   if (!_mesa_has_shader_subroutine(ctx)) {
+   if (!_mesa_has_ARB_shader_subroutine(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
       return -1;
    }
@@ -2379,7 +2379,7 @@ _mesa_GetSubroutineIndex(GLuint program, GLenum shadertype,
    GLenum resource_type;
    gl_shader_stage stage;
 
-   if (!_mesa_has_shader_subroutine(ctx)) {
+   if (!_mesa_has_ARB_shader_subroutine(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
       return -1;
    }
@@ -2423,7 +2423,7 @@ _mesa_GetActiveSubroutineUniformiv(GLuint program, GLenum shadertype,
    GLenum resource_type;
    int count, i, j;
 
-   if (!_mesa_has_shader_subroutine(ctx)) {
+   if (!_mesa_has_ARB_shader_subroutine(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
       return;
    }
@@ -2509,7 +2509,7 @@ _mesa_GetActiveSubroutineUniformName(GLuint program, GLenum shadertype,
    GLenum resource_type;
    gl_shader_stage stage;
 
-   if (!_mesa_has_shader_subroutine(ctx)) {
+   if (!_mesa_has_ARB_shader_subroutine(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
       return;
    }
@@ -2548,7 +2548,7 @@ _mesa_GetActiveSubroutineName(GLuint program, GLenum shadertype,
    GLenum resource_type;
    gl_shader_stage stage;
 
-   if (!_mesa_has_shader_subroutine(ctx)) {
+   if (!_mesa_has_ARB_shader_subroutine(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
       return;
    }
@@ -2584,7 +2584,7 @@ _mesa_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
    gl_shader_stage stage;
    int i;
 
-   if (!_mesa_has_shader_subroutine(ctx)) {
+   if (!_mesa_has_ARB_shader_subroutine(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
       return;
    }
@@ -2667,7 +2667,7 @@ _mesa_GetUniformSubroutineuiv(GLenum shadertype, GLint location,
    struct gl_linked_shader *sh;
    gl_shader_stage stage;
 
-   if (!_mesa_has_shader_subroutine(ctx)) {
+   if (!_mesa_has_ARB_shader_subroutine(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
       return;
    }
@@ -2709,7 +2709,7 @@ _mesa_GetProgramStageiv(GLuint program, GLenum shadertype,
    struct gl_linked_shader *sh;
    gl_shader_stage stage;
 
-   if (!_mesa_has_shader_subroutine(ctx)) {
+   if (!_mesa_has_ARB_shader_subroutine(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
       return;
    }
