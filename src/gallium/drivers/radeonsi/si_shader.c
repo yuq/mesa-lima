@@ -1730,7 +1730,12 @@ static void declare_system_value(
 	}
 
 	case TGSI_SEMANTIC_VERTICESIN:
-		value = unpack_param(ctx, SI_PARAM_TCS_OUT_LAYOUT, 26, 6);
+		if (ctx->type == PIPE_SHADER_TESS_CTRL)
+			value = unpack_param(ctx, SI_PARAM_TCS_OUT_LAYOUT, 26, 6);
+		else if (ctx->type == PIPE_SHADER_TESS_EVAL)
+			value = unpack_param(ctx, SI_PARAM_TCS_OFFCHIP_LAYOUT, 9, 7);
+		else
+			assert(!"invalid shader stage for TGSI_SEMANTIC_VERTICESIN");
 		break;
 
 	case TGSI_SEMANTIC_TESSINNER:
