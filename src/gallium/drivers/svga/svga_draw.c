@@ -703,11 +703,17 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
 enum pipe_error
 svga_hwtnl_flush(struct svga_hwtnl *hwtnl)
 {
+   enum pipe_error ret = PIPE_OK;
+
+   SVGA_STATS_TIME_PUSH(svga_sws(hwtnl->svga), SVGA_STATS_TIME_HWTNLFLUSH);
+
    if (!svga_have_vgpu10(hwtnl->svga) && hwtnl->cmd.prim_count) {
       /* we only queue up primitive for VGPU9 */
-      return draw_vgpu9(hwtnl);
+      ret = draw_vgpu9(hwtnl);
    }
-   return PIPE_OK;
+
+   SVGA_STATS_TIME_POP(svga_screen(hwtnl->svga->pipe.screen)->sws);
+   return ret;
 }
 
 
@@ -881,6 +887,8 @@ svga_hwtnl_prim(struct svga_hwtnl *hwtnl,
 {
    enum pipe_error ret = PIPE_OK;
 
+   SVGA_STATS_TIME_PUSH(svga_sws(hwtnl->svga), SVGA_STATS_TIME_HWTNLPRIM);
+
    if (svga_have_vgpu10(hwtnl->svga)) {
       /* draw immediately */
       ret = draw_vgpu10(hwtnl, range, vcount, min_index, max_index, ib,
@@ -905,7 +913,7 @@ svga_hwtnl_prim(struct svga_hwtnl *hwtnl,
       if (hwtnl->cmd.prim_count + 1 >= QSZ) {
          ret = svga_hwtnl_flush(hwtnl);
          if (ret != PIPE_OK)
-            return ret;
+            goto done;
       }
 
       /* min/max indices are relative to bias */
@@ -919,5 +927,7 @@ svga_hwtnl_prim(struct svga_hwtnl *hwtnl,
       hwtnl->cmd.prim_count++;
    }
 
+done:
+   SVGA_STATS_TIME_POP(svga_screen(hwtnl->svga->pipe.screen)->sws);
    return ret;
 }

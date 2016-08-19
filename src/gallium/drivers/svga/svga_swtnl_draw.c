@@ -49,6 +49,8 @@ svga_swtnl_draw_vbo(struct svga_context *svga,
    const void *map;
    enum pipe_error ret;
 
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_SWTNLDRAWVBO);
+
    assert(!svga->dirty);
    assert(svga->state.sw.need_swtnl);
    assert(draw);
@@ -139,6 +141,7 @@ svga_swtnl_draw_vbo(struct svga_context *svga,
    svga->state.sw.in_swtnl_draw = FALSE;
    svga->dirty |= SVGA_NEW_NEED_PIPELINE | SVGA_NEW_NEED_SWVFETCH;
 
+   SVGA_STATS_TIME_POP(svga_sws(svga));
    return ret;
 }
 

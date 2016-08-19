@@ -76,8 +76,10 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    struct svga_screen *ss = svga_screen(pipe->screen);
    struct svga_buffer *sbuf = svga_buffer(resource);
    struct pipe_transfer *transfer;
-   uint8_t *map;
+   uint8_t *map = NULL;
    int64_t begin = svga_get_time(svga);
+
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_BUFFERTRANSFERMAP);
 
    assert(box->y == 0);
    assert(box->z == 0);
@@ -86,7 +88,7 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
 
    transfer = MALLOC_STRUCT(pipe_transfer);
    if (!transfer) {
-      return NULL;
+      goto done;
    }
 
    transfer->resource = resource;
@@ -203,7 +205,7 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
                    */
 
                   FREE(transfer);
-                  return NULL;
+                  goto done;
                }
 
                svga_context_flush(svga, NULL);
@@ -230,7 +232,7 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
          sbuf->swbuf = align_malloc(sbuf->b.b.width0, 16);
          if (!sbuf->swbuf) {
             FREE(transfer);
-            return NULL;
+            goto done;
          }
       }
    }
@@ -267,6 +269,8 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
 
    svga->hud.map_buffer_time += (svga_get_time(svga) - begin);
 
+done:
+   SVGA_STATS_TIME_POP(svga_sws(svga));
    return map;
 }
 
@@ -299,6 +303,8 @@ svga_buffer_transfer_unmap( struct pipe_context *pipe,
    struct svga_context *svga = svga_context(pipe);
    struct svga_buffer *sbuf = svga_buffer(transfer->resource);
 
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_BUFFERTRANSFERUNMAP);
+
    pipe_mutex_lock(ss->swc_mutex);
 
    assert(sbuf->map.count);
@@ -328,6 +334,7 @@ svga_buffer_transfer_unmap( struct pipe_context *pipe,
 
    pipe_mutex_unlock(ss->swc_mutex);
    FREE(transfer);
+   SVGA_STATS_TIME_POP(svga_sws(svga));
 }
 
 
@@ -380,6 +387,8 @@ svga_buffer_create(struct pipe_screen *screen,
 {
    struct svga_screen *ss = svga_screen(screen);
    struct svga_buffer *sbuf;
+
+   SVGA_STATS_TIME_PUSH(ss->sws, SVGA_STATS_TIME_CREATEBUFFER);
 
    sbuf = CALLOC_STRUCT(svga_buffer);
    if (!sbuf)
@@ -437,12 +446,14 @@ svga_buffer_create(struct pipe_screen *screen,
    ss->hud.total_resource_bytes += sbuf->size;
 
    ss->hud.num_resources++;
+   SVGA_STATS_TIME_POP(ss->sws);
 
    return &sbuf->b.b;
 
 error2:
    FREE(sbuf);
 error1:
+   SVGA_STATS_TIME_POP(ss->sws);
    return NULL;
 }
 

@@ -139,6 +139,9 @@ svga_hwtnl_draw_range_elements(struct svga_hwtnl *hwtnl,
    u_translate_func gen_func;
    enum pipe_error ret = PIPE_OK;
 
+   SVGA_STATS_TIME_PUSH(svga_sws(hwtnl->svga),
+                        SVGA_STATS_TIME_HWTNLDRAWELEMENTS);
+
    if (svga_need_unfilled_fallback(hwtnl, prim)) {
       gen_type = u_unfilled_translator(prim,
                                        index_size,
@@ -161,7 +164,7 @@ svga_hwtnl_draw_range_elements(struct svga_hwtnl *hwtnl,
    if (gen_type == U_TRANSLATE_MEMCPY) {
       /* No need for translation, just pass through to hardware:
        */
-      return svga_hwtnl_simple_draw_range_elements(hwtnl, index_buffer,
+      ret = svga_hwtnl_simple_draw_range_elements(hwtnl, index_buffer,
                                                    index_size,
                                                    index_bias,
                                                    min_index,
@@ -196,13 +199,11 @@ svga_hwtnl_draw_range_elements(struct svga_hwtnl *hwtnl,
                                                   gen_prim, 0, gen_nr,
                                                   start_instance,
                                                   instance_count);
-      if (ret != PIPE_OK)
-         goto done;
-
 done:
       if (gen_buf)
          pipe_resource_reference(&gen_buf, NULL);
-
-      return ret;
    }
+
+   SVGA_STATS_TIME_POP(svga_sws(hwtnl->svga));
+   return ret;
 }

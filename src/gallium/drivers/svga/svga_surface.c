@@ -212,10 +212,13 @@ svga_create_surface_view(struct pipe_context *pipe,
    unsigned nlayers = 1;
    SVGA3dSurfaceFlags flags = 0;
    SVGA3dSurfaceFormat format;
+   struct pipe_surface *retVal = NULL;
 
    s = CALLOC_STRUCT(svga_surface);
    if (!s)
       return NULL;
+
+   SVGA_STATS_TIME_PUSH(ss->sws, SVGA_STATS_TIME_CREATESURFACEVIEW);
 
    if (pt->target == PIPE_TEXTURE_CUBE) {
       layer = surf_tmpl->u.tex.first_layer;
@@ -299,7 +302,7 @@ svga_create_surface_view(struct pipe_context *pipe,
                                             layer, nlayers, zslice, &s->key);
       if (!s->handle) {
          FREE(s);
-         return NULL;
+         goto done;
       }
 
       s->key.format = format;
@@ -320,8 +323,11 @@ svga_create_surface_view(struct pipe_context *pipe,
    }
 
    svga->hud.num_surface_views++;
+   retVal = &s->base;
 
-   return &s->base;
+done:
+   SVGA_STATS_TIME_POP(ss->sws);
+   return retVal;
 }
 
 
@@ -332,7 +338,10 @@ svga_create_surface(struct pipe_context *pipe,
 {
    struct svga_context *svga = svga_context(pipe);
    struct pipe_screen *screen = pipe->screen;
+   struct pipe_surface *surf = NULL;
    boolean view = FALSE;
+
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_CREATESURFACE);
 
    if (svga_screen(screen)->debug.force_surface_view)
       view = TRUE;
@@ -347,7 +356,11 @@ svga_create_surface(struct pipe_context *pipe,
    if (svga_have_vgpu10(svga) || svga_screen(screen)->debug.no_surface_view)
       view = FALSE;
 
-   return svga_create_surface_view(pipe, pt, surf_tmpl, view);
+   surf = svga_create_surface_view(pipe, pt, surf_tmpl, view);
+
+   SVGA_STATS_TIME_POP(svga_sws(svga));
+
+   return surf;
 }
 
 
@@ -358,6 +371,9 @@ static struct svga_surface *
 create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
 {
    struct svga_surface *bs = s->backed;
+
+   SVGA_STATS_TIME_PUSH(svga_sws(svga),
+                        SVGA_STATS_TIME_CREATEBACKEDSURFACEVIEW);
 
    if (!bs) {
       struct svga_texture *tex = svga_texture(s->base.texture);
@@ -376,6 +392,8 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
 
    svga_mark_surface_dirty(&bs->base);
 
+   SVGA_STATS_TIME_POP(svga_sws(svga));
+
    return bs;
 }
 
@@ -388,8 +406,12 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
 {
    enum pipe_error ret = PIPE_OK;
    unsigned shader;
+   struct pipe_surface *surf = NULL;
 
    assert(svga_have_vgpu10(svga));
+
+   SVGA_STATS_TIME_PUSH(svga_sws(svga),
+                        SVGA_STATS_TIME_VALIDATESURFACEVIEW);
 
    /**
     * DX spec explicitly specifies that no resource can be bound to a render
@@ -406,7 +428,7 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
                   s->handle);
          s = create_backed_surface_view(svga, s);
          if (!s)
-            return NULL;
+            goto done;
 
          break;
       }
@@ -475,10 +497,15 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
       if (ret != PIPE_OK) {
          util_bitmask_clear(svga->surface_view_id_bm, s->view_id);
          s->view_id = SVGA3D_INVALID_ID;
-         return NULL;
+         goto done;
       }
    }
-   return &s->base;
+   surf = &s->base;
+   
+done:
+   SVGA_STATS_TIME_POP(svga_sws(svga));
+
+   return surf;
 }
 
 
@@ -492,6 +519,8 @@ svga_surface_destroy(struct pipe_context *pipe,
    struct svga_texture *t = svga_texture(surf->texture);
    struct svga_screen *ss = svga_screen(surf->texture->screen);
    enum pipe_error ret = PIPE_OK;
+
+   SVGA_STATS_TIME_PUSH(ss->sws, SVGA_STATS_TIME_DESTROYSURFACE);
 
    /* Destroy the backed view surface if it exists */
    if (s->backed) {
@@ -527,6 +556,7 @@ svga_surface_destroy(struct pipe_context *pipe,
    FREE(surf);
 
    svga->hud.num_surface_views--;
+   SVGA_STATS_TIME_POP(ss->sws);
 }
 
 
@@ -587,6 +617,8 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf)
    if (!s->dirty)
       return;
 
+   SVGA_STATS_TIME_PUSH(ss->sws, SVGA_STATS_TIME_PROPAGATESURFACE);
+
    if (surf->texture->target == PIPE_TEXTURE_CUBE) {
       zslice = 0;
       layer = surf->u.tex.first_layer;
@@ -622,6 +654,8 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf)
          svga_define_texture_level(tex, layer + i, surf->u.tex.level);
       }
    }
+
+   SVGA_STATS_TIME_POP(ss->sws);
 }
 
 

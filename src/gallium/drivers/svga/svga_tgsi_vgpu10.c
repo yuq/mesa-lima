@@ -6715,12 +6715,13 @@ svga_tgsi_vgpu10_translate(struct svga_context *svga,
    /* These two flags cannot be used together */
    assert(key->vs.need_prescale + key->vs.undo_viewport <= 1);
 
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_TGSIVGPU10TRANSLATE);
    /*
     * Setup the code emitter
     */
    emit = alloc_emitter();
    if (!emit)
-      return NULL;
+      goto done;
 
    emit->unit = unit;
    emit->key = *key;
@@ -6885,5 +6886,7 @@ svga_tgsi_vgpu10_translate(struct svga_context *svga,
 cleanup:
    free_emitter(emit);
 
+done:
+   SVGA_STATS_TIME_POP(svga_sws(svga));
    return variant;
 }

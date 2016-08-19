@@ -277,6 +277,8 @@ svga_create_sampler_state(struct pipe_context *pipe,
             cso->mipfilter == SVGA3D_TEX_FILTER_NONE ? "SVGA3D_TEX_FILTER_NONE" : "SOMETHING");
 
    svga->hud.num_sampler_objects++;
+   SVGA_STATS_COUNT_INC(svga_screen(svga->pipe.screen)->sws,
+                        SVGA_STATS_COUNT_SAMPLER);
 
    return cso;
 }
@@ -367,6 +369,8 @@ svga_create_sampler_view(struct pipe_context *pipe,
    sv->id = SVGA3D_INVALID_ID;
 
    svga->hud.num_samplerview_objects++;
+   SVGA_STATS_COUNT_INC(svga_screen(svga->pipe.screen)->sws,
+                        SVGA_STATS_COUNT_SAMPLERVIEW);
 
    return &sv->base;
 }
@@ -433,6 +437,8 @@ svga_set_sampler_views(struct pipe_context *pipe,
    if (!svga_have_vgpu10(svga) && shader != PIPE_SHADER_FRAGMENT)
       return;
 
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_SETSAMPLERVIEWS);
+
    /* This bit of code works around a quirk in the CSO module.
     * If start=num=0 it means all sampler views should be released.
     * Note that the CSO module treats sampler views for fragment shaders
@@ -475,7 +481,7 @@ svga_set_sampler_views(struct pipe_context *pipe,
    }
 
    if (!any_change) {
-      return;
+      goto done;
    }
 
    /* find highest non-null sampler_views[] entry */
@@ -527,6 +533,9 @@ svga_set_sampler_views(struct pipe_context *pipe,
          }
       }
    }
+
+done:
+   SVGA_STATS_TIME_POP(svga_sws(svga));
 }
 
 

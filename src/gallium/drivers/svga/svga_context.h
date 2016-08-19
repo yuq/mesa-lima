@@ -676,6 +676,11 @@ svga_context( struct pipe_context *pipe )
    return (struct svga_context *)pipe;
 }
 
+static inline struct svga_winsys_screen *
+svga_sws(struct svga_context *svga)
+{
+   return svga_screen(svga->pipe.screen)->sws;
+}
 
 static inline boolean
 svga_have_gb_objects(const struct svga_context *svga)

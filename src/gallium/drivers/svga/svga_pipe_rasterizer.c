@@ -365,6 +365,8 @@ svga_create_rasterizer_state(struct pipe_context *pipe,
    }
 
    svga->hud.num_rasterizer_objects++;
+   SVGA_STATS_COUNT_INC(svga_screen(svga->pipe.screen)->sws,
+                        SVGA_STATS_COUNT_RASTERIZERSTATE);
 
    return rast;
 }

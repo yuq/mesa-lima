@@ -334,6 +334,8 @@ svga_create_blend_state(struct pipe_context *pipe,
    }
 
    svga->hud.num_blend_objects++;
+   SVGA_STATS_COUNT_INC(svga_screen(svga->pipe.screen)->sws,
+                        SVGA_STATS_COUNT_BLENDSTATE);
 
    return blend;
 }

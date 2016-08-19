@@ -350,19 +350,22 @@ svga_define_shader(struct svga_context *svga,
    unsigned codeLen = variant->nr_tokens * sizeof(variant->tokens[0]);
    enum pipe_error ret;
 
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_DEFINESHADER);
+
    variant->id = UTIL_BITMASK_INVALID_INDEX;
 
    if (svga_have_gb_objects(svga)) {
       if (svga_have_vgpu10(svga))
-         return define_gb_shader_vgpu10(svga, type, variant, codeLen);
+         ret = define_gb_shader_vgpu10(svga, type, variant, codeLen);
       else
-         return define_gb_shader_vgpu9(svga, type, variant, codeLen);
+         ret = define_gb_shader_vgpu9(svga, type, variant, codeLen);
    }
    else {
       /* Allocate an integer ID for the shader */
       variant->id = util_bitmask_add(svga->shader_id_bm);
       if (variant->id == UTIL_BITMASK_INVALID_INDEX) {
-         return PIPE_ERROR_OUT_OF_MEMORY;
+         ret = PIPE_ERROR_OUT_OF_MEMORY;
+         goto done;
       }
 
       /* Issue SVGA3D device command to define the shader */
@@ -379,6 +382,8 @@ svga_define_shader(struct svga_context *svga,
       }
    }
 
+done:
+   SVGA_STATS_TIME_POP(svga_sws(svga));
    return ret;
 }
 

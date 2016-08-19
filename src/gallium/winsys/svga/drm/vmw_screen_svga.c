@@ -407,6 +407,22 @@ vmw_svga_winsys_shader_destroy(struct svga_winsys_screen *sws,
    vmw_svga_winsys_shader_reference(&d_shader, NULL);
 }
 
+static void
+vmw_svga_winsys_stats_inc(enum svga_stats_count index)
+{
+}
+
+static void
+vmw_svga_winsys_stats_time_push(enum svga_stats_time index,
+                                struct svga_winsys_stats_timeframe *tf)
+{
+}
+
+static void
+vmw_svga_winsys_stats_time_pop()
+{
+}
+
 boolean
 vmw_winsys_screen_init_svga(struct vmw_winsys_screen *vws)
 {
@@ -433,6 +449,10 @@ vmw_winsys_screen_init_svga(struct vmw_winsys_screen *vws)
    vws->base.query_init = vmw_svga_winsys_query_init;
    vws->base.query_destroy = vmw_svga_winsys_query_destroy;
    vws->base.query_get_result = vmw_svga_winsys_query_get_result;
+
+   vws->base.stats_inc = vmw_svga_winsys_stats_inc;
+   vws->base.stats_time_push = vmw_svga_winsys_stats_time_push;
+   vws->base.stats_time_pop = vmw_svga_winsys_stats_time_pop;
 
    return TRUE;
 }

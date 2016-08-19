@@ -835,6 +835,8 @@ svga_context_flush_buffers(struct svga_context *svga)
 {
    struct list_head *curr, *next;
 
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_BUFFERSFLUSH);
+
    curr = svga->dirty_buffers.next;
    next = curr->next;
    while (curr != &svga->dirty_buffers) {
@@ -848,4 +850,6 @@ svga_context_flush_buffers(struct svga_context *svga)
       curr = next;
       next = curr->next;
    }
+
+   SVGA_STATS_TIME_POP(svga_sws(svga));
 }

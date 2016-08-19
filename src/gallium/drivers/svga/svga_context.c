@@ -307,6 +307,8 @@ void svga_context_flush( struct svga_context *svga,
    struct pipe_fence_handle *fence = NULL;
    uint64_t t0;
 
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_CONTEXTFLUSH);
+
    svga->curr.nr_fbs = 0;
 
    /* Ensure that texture dma uploads are processed
@@ -355,6 +357,8 @@ void svga_context_flush( struct svga_context *svga,
       svgascreen->sws->fence_reference(svgascreen->sws, pfence, fence);
 
    svgascreen->sws->fence_reference(svgascreen->sws, &fence, NULL);
+
+   SVGA_STATS_TIME_POP(svga_sws(svga));
 }
 
 
@@ -413,6 +417,8 @@ void svga_surfaces_flush(struct svga_context *svga)
    struct svga_screen *svgascreen = svga_screen(svga->pipe.screen);
    unsigned i;
 
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_SURFACEFLUSH);
+
    /* Emit buffered drawing commands.
     */
    svga_hwtnl_flush_retry( svga );
@@ -427,6 +433,7 @@ void svga_surfaces_flush(struct svga_context *svga)
    if (svga->curr.framebuffer.zsbuf)
       svga_propagate_surface(svga, svga->curr.framebuffer.zsbuf);
 
+   SVGA_STATS_TIME_POP(svga_sws(svga));
 }
 
 

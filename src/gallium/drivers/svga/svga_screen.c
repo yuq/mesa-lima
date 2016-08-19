@@ -810,14 +810,23 @@ svga_fence_finish(struct pipe_screen *screen,
                   uint64_t timeout)
 {
    struct svga_winsys_screen *sws = svga_screen(screen)->sws;
+   boolean retVal;
 
-   if (!timeout)
-      return sws->fence_signalled(sws, fence, 0) == 0;
+   SVGA_STATS_TIME_PUSH(sws, SVGA_STATS_TIME_FENCEFINISH);
 
-   SVGA_DBG(DEBUG_DMA|DEBUG_PERF, "%s fence_ptr %p\n",
-            __FUNCTION__, fence);
+   if (!timeout) {
+      retVal = sws->fence_signalled(sws, fence, 0) == 0;
+   }
+   else {
+      SVGA_DBG(DEBUG_DMA|DEBUG_PERF, "%s fence_ptr %p\n",
+               __FUNCTION__, fence);
 
-   return sws->fence_finish(sws, fence, 0) == 0;
+      retVal = sws->fence_finish(sws, fence, 0) == 0;
+   }
+
+   SVGA_STATS_TIME_POP(sws);
+
+   return retVal;
 }
 
 

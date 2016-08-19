@@ -276,6 +276,8 @@ svga_create_vertex_elements_state(struct pipe_context *pipe,
    }
 
    svga->hud.num_vertexelement_objects++;
+   SVGA_STATS_COUNT_INC(svga_screen(svga->pipe.screen)->sws,
+                        SVGA_STATS_COUNT_VERTEXELEMENT);
 
    return velems;
 }
