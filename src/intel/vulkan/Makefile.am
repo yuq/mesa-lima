@@ -141,7 +141,7 @@ anv_timestamp.h:
 	$(AM_V_GEN) echo "#define ANV_TIMESTAMP \"$(TIMESTAMP_CMD)\"" > $@
 
 BUILT_SOURCES = $(VULKAN_GENERATED_FILES)
-CLEANFILES = $(BUILT_SOURCES) dev_icd.json
+CLEANFILES = $(BUILT_SOURCES) dev_icd.json intel_icd.json
 EXTRA_DIST = \
 	$(top_srcdir)/include/vulkan/vk_icd.h \
 	anv_entrypoints_gen.py \
@@ -169,6 +169,11 @@ dev_icd.json : dev_icd.json.in
 	$(AM_V_GEN) $(SED) \
 		-e "s#@build_libdir@#${abs_top_builddir}/${LIB_DIR}#" \
 		< $(srcdir)/dev_icd.json.in > $@
+
+intel_icd.json : intel_icd.json.in
+	$(AM_V_GEN) $(SED) \
+		-e "s#@install_libdir@#${libdir}#" \
+		< $(srcdir)/intel_icd.json.in > $@
 
 # Libvulkan with dummy gem. Used for unit tests.
 libvulkan_test_la_SOURCES = $(VULKAN_GEM_STUB_FILES)
