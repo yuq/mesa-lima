@@ -563,39 +563,3 @@ brw_get_fast_clear_rect(const struct isl_device *dev,
    *x1 = ALIGN(*x1, x_align) / x_scaledown;
    *y1 = ALIGN(*y1, y_align) / y_scaledown;
 }
-
-void
-brw_get_ccs_resolve_rect(const struct isl_device *dev,
-                         const struct isl_surf *ccs_surf,
-                         unsigned *x0, unsigned *y0,
-                         unsigned *x1, unsigned *y1)
-{
-   unsigned x_scaledown, y_scaledown;
-
-   /* From the Ivy Bridge PRM, Vol2 Part1 11.9 "Render Target Resolve":
-    *
-    *     A rectangle primitive must be scaled down by the following factors
-    *     with respect to render target being resolved.
-    *
-    * The scaledown factors in the table that follows are related to the block
-    * size of the CCS format.  For IVB and HSW, we divide by two, for BDW we
-    * multiply by 8 and 16. On Sky Lake, we multiply by 8.
-    */
-   const struct isl_format_layout *fmtl =
-      isl_format_get_layout(ccs_surf->format);
-   assert(fmtl->txc == ISL_TXC_CCS);
-
-   if (ISL_DEV_GEN(dev) >= 9) {
-      x_scaledown = fmtl->bw * 8;
-      y_scaledown = fmtl->bh * 8;
-   } else if (ISL_DEV_GEN(dev) >= 8) {
-      x_scaledown = fmtl->bw * 8;
-      y_scaledown = fmtl->bh * 16;
-   } else {
-      x_scaledown = fmtl->bw / 2;
-      y_scaledown = fmtl->bh / 2;
-   }
-   *x0 = *y0 = 0;
-   *x1 = ALIGN(ccs_surf->logical_level0_px.width, x_scaledown) / x_scaledown;
-   *y1 = ALIGN(ccs_surf->logical_level0_px.height, y_scaledown) / y_scaledown;
-}
