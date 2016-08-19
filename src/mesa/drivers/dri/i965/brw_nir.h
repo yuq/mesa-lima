@@ -23,14 +23,19 @@
 
 #pragma once
 
-#include "brw_context.h"
 #include "brw_reg.h"
-#include "brw_shader.h"
 #include "compiler/nir/nir.h"
+#include "brw_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+int type_size_scalar(const struct glsl_type *type);
+int type_size_vec4(const struct glsl_type *type);
+int type_size_dvec4(const struct glsl_type *type);
+int type_size_vec4_times_4(const struct glsl_type *type);
+int type_size_vs_input(const struct glsl_type *type);
 
 static inline int
 type_size_scalar_bytes(const struct glsl_type *type)
