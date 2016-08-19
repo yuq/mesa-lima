@@ -5893,6 +5893,26 @@ ast_selection_statement::hir(exec_list *instructions,
 }
 
 
+/* Used for detection of duplicate case values, compare
+ * given contents directly.
+ */
+static bool
+compare_case_value(const void *a, const void *b)
+{
+   return *(unsigned *) a == *(unsigned *) b;
+}
+
+
+/* Used for detection of duplicate case values, just
+ * returns key contents as is.
+ */
+static unsigned
+key_contents(const void *key)
+{
+   return *(unsigned *) key;
+}
+
+
 ir_rvalue *
 ast_switch_statement::hir(exec_list *instructions,
                           struct _mesa_glsl_parse_state *state)
@@ -5923,8 +5943,8 @@ ast_switch_statement::hir(exec_list *instructions,
 
    state->switch_state.is_switch_innermost = true;
    state->switch_state.switch_nesting_ast = this;
-   state->switch_state.labels_ht = hash_table_ctor(0, hash_table_pointer_hash,
-						   hash_table_pointer_compare);
+   state->switch_state.labels_ht = hash_table_ctor(0, key_contents,
+                                                   compare_case_value);
    state->switch_state.previous_default = NULL;
 
    /* Initalize is_fallthru state to false.
@@ -6182,7 +6202,7 @@ ast_case_label::hir(exec_list *instructions,
       } else {
          ast_expression *previous_label = (ast_expression *)
          hash_table_find(state->switch_state.labels_ht,
-                         (void *)(uintptr_t)label_const->value.u[0]);
+                         (void *)(uintptr_t)&label_const->value.u[0]);
 
          if (previous_label) {
             YYLTYPE loc = this->test_value->get_location();
@@ -6193,7 +6213,7 @@ ast_case_label::hir(exec_list *instructions,
          } else {
             hash_table_insert(state->switch_state.labels_ht,
                               this->test_value,
-                              (void *)(uintptr_t)label_const->value.u[0]);
+                              (void *)(uintptr_t)&label_const->value.u[0]);
          }
       }
 
