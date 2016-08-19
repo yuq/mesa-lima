@@ -42,12 +42,6 @@ brw_meta_mirror_clip_and_scissor(const struct gl_context *ctx,
                                  GLfloat *dstX1, GLfloat *dstY1,
                                  bool *mirror_x, bool *mirror_y);
 
-void
-brw_get_fast_clear_rect(const struct isl_device *dev,
-                        const struct isl_surf *aux_surf,
-                        unsigned *x0, unsigned *y0,
-                        unsigned *x1, unsigned *y1);
-
 bool
 brw_meta_set_fast_clear_color(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
