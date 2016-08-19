@@ -145,7 +145,6 @@ brw_blorp_params_init(struct brw_blorp_params *params)
 {
    memset(params, 0, sizeof(*params));
    params->hiz_op = GEN6_HIZ_OP_NONE;
-   params->fast_clear_op = 0;
    params->num_draw_buffers = 1;
    params->num_layers = 1;
 }

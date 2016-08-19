@@ -109,7 +109,7 @@ blorp_fast_clear(struct blorp_batch *batch,
    params.y1 = y1;
 
    memset(&params.wm_inputs, 0xff, 4*sizeof(float));
-   params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
+   params.fast_clear_op = BLORP_FAST_CLEAR_OP_CLEAR;
 
    brw_get_fast_clear_rect(batch->blorp->isl_dev, surf->aux_surf,
                            &params.x0, &params.y0, &params.x1, &params.y1);
@@ -184,10 +184,15 @@ brw_blorp_ccs_resolve(struct blorp_batch *batch,
                             &params.x0, &params.y0,
                             &params.x1, &params.y1);
 
-   if (params.dst.aux_usage == ISL_AUX_USAGE_CCS_E)
-      params.resolve_type = GEN9_PS_RENDER_TARGET_RESOLVE_FULL;
-   else
-      params.resolve_type = GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE;
+   if (batch->blorp->isl_dev->info->gen >= 9) {
+      if (params.dst.aux_usage == ISL_AUX_USAGE_CCS_E)
+         params.fast_clear_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+      else
+         params.fast_clear_op = BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
+   } else {
+      /* Broadwell and earlier do not have a partial resolve */
+      params.fast_clear_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+   }
 
    /* Note: there is no need to initialize push constants because it doesn't
     * matter what data gets dispatched to the render target.  However, we must
