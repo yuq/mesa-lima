@@ -194,6 +194,8 @@ lower_color(lower_drawpixels_state *state, nir_intrinsic_instr *intr)
 static void
 lower_texcoord(lower_drawpixels_state *state, nir_intrinsic_instr *intr)
 {
+   state->b.cursor = nir_before_instr(&intr->instr);
+
    nir_ssa_def *texcoord_const = get_texcoord_const(state);
    nir_ssa_def_rewrite_uses(&intr->dest.ssa, nir_src_for_ssa(texcoord_const));
 }
