@@ -3213,6 +3213,22 @@ fs_visitor::emit_non_coherent_fb_read(const fs_builder &bld, const fs_reg &dst,
    return inst;
 }
 
+/**
+ * Actual coherent framebuffer read implemented using the native render target
+ * read message.  Requires SKL+.
+ */
+static fs_inst *
+emit_coherent_fb_read(const fs_builder &bld, const fs_reg &dst, unsigned target)
+{
+   assert(bld.shader->devinfo->gen >= 9);
+   fs_inst *inst = bld.emit(FS_OPCODE_FB_READ_LOGICAL, dst);
+   inst->target = target;
+   inst->regs_written = 4 * inst->dst.component_size(inst->exec_size) /
+                        REG_SIZE;
+
+   return inst;
+}
+
 static fs_reg
 alloc_temporary(const fs_builder &bld, unsigned size, fs_reg *regs, unsigned n)
 {
@@ -3324,8 +3340,10 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       const unsigned target = l - FRAG_RESULT_DATA0 + const_offset->u32[0];
       const fs_reg tmp = bld.vgrf(dest.type, 4);
 
-      assert(!reinterpret_cast<const brw_wm_prog_key *>(key)->coherent_fb_fetch);
-      emit_non_coherent_fb_read(bld, tmp, target);
+      if (reinterpret_cast<const brw_wm_prog_key *>(key)->coherent_fb_fetch)
+         emit_coherent_fb_read(bld, tmp, target);
+      else
+         emit_non_coherent_fb_read(bld, tmp, target);
 
       for (unsigned j = 0; j < instr->num_components; j++) {
          bld.MOV(offset(dest, bld, j),
