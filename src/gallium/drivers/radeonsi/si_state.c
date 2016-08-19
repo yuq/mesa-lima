@@ -1610,6 +1610,10 @@ static unsigned si_tex_dim(unsigned res_target, unsigned view_target,
 	if (view_target == PIPE_TEXTURE_CUBE ||
 	    view_target == PIPE_TEXTURE_CUBE_ARRAY)
 		res_target = view_target;
+	/* If interpreting cubemaps as something else, set 2D_ARRAY. */
+	else if (res_target == PIPE_TEXTURE_CUBE ||
+		 res_target == PIPE_TEXTURE_CUBE_ARRAY)
+		res_target = PIPE_TEXTURE_2D_ARRAY;
 
 	switch (res_target) {
 	default:
