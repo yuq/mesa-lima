@@ -1201,6 +1201,7 @@ isl_surf_init_s(const struct isl_device *dev,
             base_alignment = MAX(base_alignment, fmtl->bpb / 8);
          }
       }
+      base_alignment = isl_round_up_to_power_of_two(base_alignment);
    } else {
       assert(phys_slice0_sa.w % fmtl->bw == 0);
       const uint32_t total_w_el = phys_slice0_sa.width / fmtl->bw;
