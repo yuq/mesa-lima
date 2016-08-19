@@ -62,7 +62,7 @@ struct brw_blorp_surface_info
 };
 
 void
-brw_blorp_surface_info_init(struct brw_context *brw,
+brw_blorp_surface_info_init(struct blorp_context *blorp,
                             struct brw_blorp_surface_info *info,
                             const struct brw_blorp_surf *surf,
                             unsigned int level, unsigned int layer,

@@ -988,9 +988,10 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
  * of samples).
  */
 static nir_shader *
-brw_blorp_build_nir_shader(struct brw_context *brw,
+brw_blorp_build_nir_shader(struct blorp_context *blorp,
                            const struct brw_blorp_blit_prog_key *key)
 {
+   const struct brw_device_info *devinfo = blorp->isl_dev->info;
    nir_ssa_def *src_pos, *dst_pos, *color;
 
    /* Sanity checks */
@@ -1043,7 +1044,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
 
    /* Render target and texture hardware don't support W tiling until Gen8. */
    const bool rt_tiled_w = false;
-   const bool tex_tiled_w = brw->gen >= 8 && key->src_tiled_w;
+   const bool tex_tiled_w = devinfo->gen >= 8 && key->src_tiled_w;
 
    /* The address that data will be written to is determined by the
     * coordinates supplied to the WM thread and the tiling and sample count of
@@ -1109,7 +1110,7 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
        */
       src_pos = nir_f2i(&b, nir_channels(&b, src_pos, 0x3));
 
-      if (brw->gen == 6) {
+      if (devinfo->gen == 6) {
          /* Because gen6 only supports 4x interleved MSAA, we can do all the
           * blending we need with a single linear-interpolated texture lookup
           * at the center of the sample. The texture coordinates to be odd
@@ -1191,12 +1192,12 @@ brw_blorp_build_nir_shader(struct brw_context *brw,
 }
 
 static void
-brw_blorp_get_blit_kernel(struct brw_context *brw,
+brw_blorp_get_blit_kernel(struct blorp_context *blorp,
                           struct brw_blorp_params *params,
                           const struct brw_blorp_blit_prog_key *prog_key)
 {
-   if (brw->blorp.lookup_shader(&brw->blorp, prog_key, sizeof(*prog_key),
-                                &params->wm_prog_kernel, &params->wm_prog_data))
+   if (blorp->lookup_shader(blorp, prog_key, sizeof(*prog_key),
+                            &params->wm_prog_kernel, &params->wm_prog_data))
       return;
 
    const unsigned *program;
@@ -1206,7 +1207,7 @@ brw_blorp_get_blit_kernel(struct brw_context *brw,
    /* Try and compile with NIR first.  If that fails, fall back to the old
     * method of building shaders manually.
     */
-   nir_shader *nir = brw_blorp_build_nir_shader(brw, prog_key);
+   nir_shader *nir = brw_blorp_build_nir_shader(blorp, prog_key);
    struct brw_wm_prog_key wm_key;
    brw_blorp_init_wm_prog_key(&wm_key);
    wm_key.tex.compressed_multisample_layout_mask =
@@ -1214,13 +1215,13 @@ brw_blorp_get_blit_kernel(struct brw_context *brw,
    wm_key.tex.msaa_16 = prog_key->tex_samples == 16;
    wm_key.multisample_fbo = prog_key->rt_samples > 1;
 
-   program = brw_blorp_compile_nir_shader(&brw->blorp, nir, &wm_key, false,
+   program = brw_blorp_compile_nir_shader(blorp, nir, &wm_key, false,
                                           &prog_data, &program_size);
 
-   brw->blorp.upload_shader(&brw->blorp, prog_key, sizeof(*prog_key),
-                            program, program_size,
-                            &prog_data, sizeof(prog_data),
-                            &params->wm_prog_kernel, &params->wm_prog_data);
+   blorp->upload_shader(blorp, prog_key, sizeof(*prog_key),
+                        program, program_size,
+                        &prog_data, sizeof(prog_data),
+                        &params->wm_prog_kernel, &params->wm_prog_data);
 }
 
 static void
@@ -1274,7 +1275,7 @@ swizzle_to_scs(GLenum swizzle)
 }
 
 static void
-surf_convert_to_single_slice(struct brw_context *brw,
+surf_convert_to_single_slice(const struct isl_device *isl_dev,
                              struct brw_blorp_surface_info *info)
 {
    /* This only makes sense for a single level and array slice */
@@ -1292,7 +1293,7 @@ surf_convert_to_single_slice(struct brw_context *brw,
                                 &x_offset_sa, &y_offset_sa);
 
    uint32_t byte_offset;
-   isl_tiling_get_intratile_offset_sa(&brw->isl_dev, info->surf.tiling,
+   isl_tiling_get_intratile_offset_sa(isl_dev, info->surf.tiling,
                                       info->view.format, info->surf.row_pitch,
                                       x_offset_sa, y_offset_sa,
                                       &byte_offset,
@@ -1318,7 +1319,7 @@ surf_convert_to_single_slice(struct brw_context *brw,
    init_info.usage = info->surf.usage;
    init_info.tiling_flags = 1 << info->surf.tiling;
 
-   isl_surf_init_s(&brw->isl_dev, &info->surf, &init_info);
+   isl_surf_init_s(isl_dev, &info->surf, &init_info);
    assert(info->surf.row_pitch == init_info.min_pitch);
 
    /* The view is also different now. */
@@ -1329,13 +1330,13 @@ surf_convert_to_single_slice(struct brw_context *brw,
 }
 
 static void
-surf_fake_interleaved_msaa(struct brw_context *brw,
+surf_fake_interleaved_msaa(const struct isl_device *isl_dev,
                            struct brw_blorp_surface_info *info)
 {
    assert(info->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
 
    /* First, we need to convert it to a simple 1-level 1-layer 2-D surface */
-   surf_convert_to_single_slice(brw, info);
+   surf_convert_to_single_slice(isl_dev, info);
 
    info->surf.logical_level0_px = info->surf.phys_level0_sa;
    info->surf.samples = 1;
@@ -1343,26 +1344,27 @@ surf_fake_interleaved_msaa(struct brw_context *brw,
 }
 
 static void
-surf_retile_w_to_y(struct brw_context *brw,
+surf_retile_w_to_y(const struct isl_device *isl_dev,
                    struct brw_blorp_surface_info *info)
 {
    assert(info->surf.tiling == ISL_TILING_W);
 
    /* First, we need to convert it to a simple 1-level 1-layer 2-D surface */
-   surf_convert_to_single_slice(brw, info);
+   surf_convert_to_single_slice(isl_dev, info);
 
    /* On gen7+, we don't have interleaved multisampling for color render
     * targets so we have to fake it.
     *
     * TODO: Are we sure we don't also need to fake it on gen6?
     */
-   if (brw->gen > 6 && info->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
+   if (isl_dev->info->gen > 6 &&
+       info->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
       info->surf.logical_level0_px = info->surf.phys_level0_sa;
       info->surf.samples = 1;
       info->surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
    }
 
-   if (brw->gen == 6) {
+   if (isl_dev->info->gen == 6) {
       /* Gen6 stencil buffers have a very large alignment coming in from the
        * miptree.  It's out-of-bounds for what the surface state can handle.
        * Since we have a single layer and level, it doesn't really matter as
@@ -1385,7 +1387,7 @@ surf_retile_w_to_y(struct brw_context *brw,
 }
 
 void
-brw_blorp_blit(struct brw_context *brw,
+brw_blorp_blit(struct blorp_batch *batch,
                const struct brw_blorp_surf *src_surf,
                unsigned src_level, unsigned src_layer,
                enum isl_format src_format, int src_swizzle,
@@ -1398,12 +1400,14 @@ brw_blorp_blit(struct brw_context *brw,
                float dst_x1, float dst_y1,
                GLenum filter, bool mirror_x, bool mirror_y)
 {
+   const struct brw_device_info *devinfo = batch->blorp->isl_dev->info;
+
    struct brw_blorp_params params;
    brw_blorp_params_init(&params);
 
-   brw_blorp_surface_info_init(brw, &params.src, src_surf, src_level,
+   brw_blorp_surface_info_init(batch->blorp, &params.src, src_surf, src_level,
                                src_layer, src_format, false);
-   brw_blorp_surface_info_init(brw, &params.dst, dst_surf, dst_level,
+   brw_blorp_surface_info_init(batch->blorp, &params.dst, dst_surf, dst_level,
                                dst_layer, dst_format, true);
 
    struct brw_blorp_blit_prog_key wm_prog_key;
@@ -1486,7 +1490,7 @@ brw_blorp_blit(struct brw_context *brw,
    /* For some texture types, we need to pass the layer through the sampler. */
    params.wm_inputs.src_z = params.src.z_offset;
 
-   if (brw->gen > 6 &&
+   if (devinfo->gen > 6 &&
        params.dst.surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
       assert(params.dst.surf.samples > 1);
 
@@ -1531,7 +1535,7 @@ brw_blorp_blit(struct brw_context *brw,
          unreachable("Unrecognized sample count in brw_blorp_blit_params ctor");
       }
 
-      surf_fake_interleaved_msaa(brw, &params.dst);
+      surf_fake_interleaved_msaa(batch->blorp->isl_dev, &params.dst);
 
       wm_prog_key.use_kill = true;
    }
@@ -1590,7 +1594,7 @@ brw_blorp_blit(struct brw_context *brw,
       params.y1 = ALIGN(params.y1, y_align) / 2;
 
       /* Retile the surface to Y-tiled */
-      surf_retile_w_to_y(brw, &params.dst);
+      surf_retile_w_to_y(batch->blorp->isl_dev, &params.dst);
 
       wm_prog_key.dst_tiled_w = true;
       wm_prog_key.use_kill = true;
@@ -1606,7 +1610,7 @@ brw_blorp_blit(struct brw_context *brw,
       }
    }
 
-   if (brw->gen < 8 && params.src.surf.tiling == ISL_TILING_W) {
+   if (devinfo->gen < 8 && params.src.surf.tiling == ISL_TILING_W) {
       /* On Haswell and earlier, we have to fake W-tiled sources as Y-tiled.
        * Broadwell adds support for sampling from stencil.
        *
@@ -1615,7 +1619,7 @@ brw_blorp_blit(struct brw_context *brw,
        *
        * TODO: what if this makes the texture size too large?
        */
-      surf_retile_w_to_y(brw, &params.src);
+      surf_retile_w_to_y(batch->blorp->isl_dev, &params.src);
 
       wm_prog_key.src_tiled_w = true;
    }
@@ -1641,15 +1645,12 @@ brw_blorp_blit(struct brw_context *brw,
       wm_prog_key.persample_msaa_dispatch = true;
    }
 
-   brw_blorp_get_blit_kernel(brw, &params, &wm_prog_key);
+   brw_blorp_get_blit_kernel(batch->blorp, &params, &wm_prog_key);
 
    for (unsigned i = 0; i < 4; i++) {
       params.src.view.channel_select[i] =
          swizzle_to_scs(GET_SWZ(src_swizzle, i));
    }
 
-   struct blorp_batch batch;
-   blorp_batch_init(&brw->blorp, &batch, brw);
-   brw->blorp.exec(&batch, &params);
-   blorp_batch_finish(&batch);
+   batch->blorp->exec(batch, &params);
 }
