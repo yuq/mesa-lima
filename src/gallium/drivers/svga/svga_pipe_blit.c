@@ -258,12 +258,13 @@ svga_blit(struct pipe_context *pipe,
           const struct pipe_blit_info *blit_info)
 {
    struct svga_context *svga = svga_context(pipe);
+   struct pipe_blit_info blit = *blit_info;
 
    if (!svga_have_vgpu10(svga) &&
-       blit_info->src.resource->nr_samples > 1 &&
-       blit_info->dst.resource->nr_samples <= 1 &&
-       !util_format_is_depth_or_stencil(blit_info->src.resource->format) &&
-       !util_format_is_pure_integer(blit_info->src.resource->format)) {
+       blit.src.resource->nr_samples > 1 &&
+       blit.dst.resource->nr_samples <= 1 &&
+       !util_format_is_depth_or_stencil(blit.src.resource->format) &&
+       !util_format_is_pure_integer(blit.src.resource->format)) {
       debug_printf("svga: color resolve unimplemented\n");
       return;
    }
@@ -271,53 +272,53 @@ svga_blit(struct pipe_context *pipe,
    if (can_blit_via_copy_region_vgpu10(svga, blit_info)) {
       unsigned src_face, src_z, dst_face, dst_z;
 
-      if (blit_info->src.resource->target == PIPE_TEXTURE_CUBE) {
-         src_face = blit_info->src.box.z;
+      if (blit.src.resource->target == PIPE_TEXTURE_CUBE) {
+         src_face = blit.src.box.z;
          src_z = 0;
-         assert(blit_info->src.box.depth == 1);
+         assert(blit.src.box.depth == 1);
       }
       else {
          src_face = 0;
-         src_z = blit_info->src.box.z;
+         src_z = blit.src.box.z;
       }
 
-      if (blit_info->dst.resource->target == PIPE_TEXTURE_CUBE) {
-         dst_face = blit_info->dst.box.z;
+      if (blit.dst.resource->target == PIPE_TEXTURE_CUBE) {
+         dst_face = blit.dst.box.z;
          dst_z = 0;
-         assert(blit_info->src.box.depth == 1);
+         assert(blit.src.box.depth == 1);
       }
       else {
          dst_face = 0;
-         dst_z = blit_info->dst.box.z;
+         dst_z = blit.dst.box.z;
       }
 
       copy_region_vgpu10(svga,
-                         blit_info->src.resource,
-                         blit_info->src.box.x, blit_info->src.box.y, src_z,
-                         blit_info->src.level, src_face,
-                         blit_info->dst.resource,
-                         blit_info->dst.box.x, blit_info->dst.box.y, dst_z,
-                         blit_info->dst.level, dst_face,
-                         blit_info->src.box.width, blit_info->src.box.height,
-                         blit_info->src.box.depth);
+                         blit.src.resource,
+                         blit.src.box.x, blit.src.box.y, src_z,
+                         blit.src.level, src_face,
+                         blit.dst.resource,
+                         blit.dst.box.x, blit.dst.box.y, dst_z,
+                         blit.dst.level, dst_face,
+                         blit.src.box.width, blit.src.box.height,
+                         blit.src.box.depth);
       return;
    }
 
    if (util_can_blit_via_copy_region(blit_info, TRUE) ||
        util_can_blit_via_copy_region(blit_info, FALSE)) {
-      util_resource_copy_region(pipe, blit_info->dst.resource,
-                                blit_info->dst.level,
-                                blit_info->dst.box.x, blit_info->dst.box.y,
-                                blit_info->dst.box.z, blit_info->src.resource,
-                                blit_info->src.level, &blit_info->src.box);
+      util_resource_copy_region(pipe, blit.dst.resource,
+                                blit.dst.level,
+                                blit.dst.box.x, blit.dst.box.y,
+                                blit.dst.box.z, blit.src.resource,
+                                blit.src.level, &blit.src.box);
       return; /* done */
    }
 
-   if ((blit_info->mask & PIPE_MASK_S) ||
+   if ((blit.mask & PIPE_MASK_S) ||
        !util_blitter_is_blit_supported(svga->blitter, blit_info)) {
       debug_printf("svga: blit unsupported %s -> %s\n",
-                   util_format_short_name(blit_info->src.resource->format),
-                   util_format_short_name(blit_info->dst.resource->format));
+                   util_format_short_name(blit.src.resource->format),
+                   util_format_short_name(blit.dst.resource->format));
       return;
    }
 
@@ -347,7 +348,7 @@ svga_blit(struct pipe_context *pipe,
                      svga->curr.sampler_views[PIPE_SHADER_FRAGMENT]);
    /*util_blitter_save_render_condition(svga->blitter, svga->render_cond_query,
                                       svga->render_cond_cond, svga->render_cond_mode);*/
-   util_blitter_blit(svga->blitter, blit_info);
+   util_blitter_blit(svga->blitter, &blit);
 }
 
 
