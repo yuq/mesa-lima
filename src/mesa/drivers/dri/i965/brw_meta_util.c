@@ -446,7 +446,7 @@ brw_meta_set_fast_clear_color(struct brw_context *brw,
  * area of the framebuffer to be cleared.
  */
 void
-brw_get_fast_clear_rect(const struct brw_context *brw,
+brw_get_fast_clear_rect(const struct isl_device *dev,
                         const struct isl_surf *aux_surf,
                         unsigned *x0, unsigned *y0,
                         unsigned *x1, unsigned *y1)
@@ -479,7 +479,7 @@ brw_get_fast_clear_rect(const struct brw_context *brw,
       /* SKL+ line alignment requirement for Y-tiled are half those of the prior
        * generations.
        */
-      if (brw->gen >= 9)
+      if (dev->info->gen >= 9)
          y_align *= 16;
       else
          y_align *= 32;

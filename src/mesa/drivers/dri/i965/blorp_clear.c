@@ -110,8 +110,8 @@ blorp_fast_clear(struct brw_context *brw, const struct brw_blorp_surf *surf,
    memset(&params.wm_inputs, 0xff, 4*sizeof(float));
    params.fast_clear_op = GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
 
-   brw_get_fast_clear_rect(brw, surf->aux_surf, &params.x0, &params.y0,
-                           &params.x1, &params.y1);
+   brw_get_fast_clear_rect(&brw->isl_dev, surf->aux_surf,
+                           &params.x0, &params.y0, &params.x1, &params.y1);
 
    brw_blorp_params_get_clear_kernel(brw, &params, true);
 

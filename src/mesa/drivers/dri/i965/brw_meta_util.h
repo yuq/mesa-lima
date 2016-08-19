@@ -43,7 +43,7 @@ brw_meta_mirror_clip_and_scissor(const struct gl_context *ctx,
                                  bool *mirror_x, bool *mirror_y);
 
 void
-brw_get_fast_clear_rect(const struct brw_context *brw,
+brw_get_fast_clear_rect(const struct isl_device *dev,
                         const struct isl_surf *aux_surf,
                         unsigned *x0, unsigned *y0,
                         unsigned *x1, unsigned *y1);
