@@ -362,6 +362,7 @@ static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 	/* Disable CMASK. */
 	memset(&rtex->cmask, 0, sizeof(rtex->cmask));
 	rtex->cmask.base_address_reg = rtex->resource.gpu_address >> 8;
+	rtex->dirty_level_mask = 0;
 
 	if (rscreen->chip_class >= SI)
 		rtex->cb_color_info &= ~SI_S_028C70_FAST_CLEAR(1);
