@@ -129,7 +129,7 @@ gen7_blorp_get_vs_entry_size(const struct brw_blorp_params *params)
 }
 
 /* 3DSTATE_URB
-/* 3DSTATE_URB_VS
+ * 3DSTATE_URB_VS
  * 3DSTATE_URB_HS
  * 3DSTATE_URB_DS
  * 3DSTATE_URB_GS
