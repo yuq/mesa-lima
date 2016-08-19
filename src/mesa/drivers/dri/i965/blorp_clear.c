@@ -21,20 +21,11 @@
  * IN THE SOFTWARE.
  */
 
-#include "main/teximage.h"
-#include "main/blend.h"
-#include "main/fbobject.h"
-#include "main/renderbuffer.h"
-#include "main/glformats.h"
-
 #include "util/ralloc.h"
-
-#include "intel_fbo.h"
 
 #include "blorp_priv.h"
 #include "brw_meta_util.h"
-#include "brw_context.h"
-#include "brw_eu.h"
+#include "brw_defines.h"
 
 #include "nir_builder.h"
 

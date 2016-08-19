@@ -22,13 +22,10 @@
  */
 
 #include <errno.h>
-#include "intel_batchbuffer.h"
-#include "intel_fbo.h"
 
 #include "blorp_priv.h"
 #include "brw_compiler.h"
 #include "brw_nir.h"
-#include "brw_state.h"
 
 void
 blorp_init(struct blorp_context *blorp, void *driver_ctx,

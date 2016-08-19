@@ -21,17 +21,10 @@
  * IN THE SOFTWARE.
  */
 
-#include "main/context.h"
-#include "main/teximage.h"
-#include "main/fbobject.h"
-
 #include "program/prog_instruction.h"
 #include "compiler/nir/nir_builder.h"
 
-#include "intel_fbo.h"
-
 #include "blorp_priv.h"
-#include "brw_context.h"
 #include "brw_meta_util.h"
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
