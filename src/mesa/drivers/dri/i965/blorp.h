@@ -27,7 +27,6 @@
 #include <stdbool.h>
 
 #include "isl/isl.h"
-#include "intel_resolve_map.h" /* needed for enum gen6_hiz_op */
 
 struct brw_context;
 struct brw_wm_prog_key;
@@ -128,10 +127,27 @@ void
 brw_blorp_ccs_resolve(struct blorp_batch *batch,
                       struct brw_blorp_surf *surf, enum isl_format format);
 
+/**
+ * For an overview of the HiZ operations, see the following sections of the
+ * Sandy Bridge PRM, Volume 1, Part2:
+ *   - 7.5.3.1 Depth Buffer Clear
+ *   - 7.5.3.2 Depth Buffer Resolve
+ *   - 7.5.3.3 Hierarchical Depth Buffer Resolve
+ *
+ * Of these, two get entered in the resolve map as needing to be done to the
+ * buffer: depth resolve and hiz resolve.
+ */
+enum blorp_hiz_op {
+   BLORP_HIZ_OP_NONE,
+   BLORP_HIZ_OP_DEPTH_CLEAR,
+   BLORP_HIZ_OP_DEPTH_RESOLVE,
+   BLORP_HIZ_OP_HIZ_RESOLVE,
+};
+
 void
 blorp_gen6_hiz_op(struct blorp_batch *batch,
                   struct brw_blorp_surf *surf, unsigned level, unsigned layer,
-                  enum gen6_hiz_op op);
+                  enum blorp_hiz_op op);
 
 #ifdef __cplusplus
 } /* end extern "C" */

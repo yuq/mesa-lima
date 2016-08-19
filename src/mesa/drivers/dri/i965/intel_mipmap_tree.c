@@ -2004,7 +2004,7 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
          exec_node_init(&m->link);
          m->level = level;
          m->layer = layer;
-         m->need = GEN6_HIZ_OP_HIZ_RESOLVE;
+         m->need = BLORP_HIZ_OP_HIZ_RESOLVE;
 
          exec_list_push_tail(&mt->hiz_map, &m->link);
       }
@@ -2032,7 +2032,7 @@ intel_miptree_slice_set_needs_hiz_resolve(struct intel_mipmap_tree *mt,
       return;
 
    intel_resolve_map_set(&mt->hiz_map,
-			 level, layer, GEN6_HIZ_OP_HIZ_RESOLVE);
+			 level, layer, BLORP_HIZ_OP_HIZ_RESOLVE);
 }
 
 
@@ -2045,7 +2045,7 @@ intel_miptree_slice_set_needs_depth_resolve(struct intel_mipmap_tree *mt,
       return;
 
    intel_resolve_map_set(&mt->hiz_map,
-			 level, layer, GEN6_HIZ_OP_DEPTH_RESOLVE);
+			 level, layer, BLORP_HIZ_OP_DEPTH_RESOLVE);
 }
 
 void
@@ -2065,7 +2065,7 @@ intel_miptree_slice_resolve(struct brw_context *brw,
 			    struct intel_mipmap_tree *mt,
 			    uint32_t level,
 			    uint32_t layer,
-			    enum gen6_hiz_op need)
+			    enum blorp_hiz_op need)
 {
    intel_miptree_check_level_layer(mt, level, layer);
 
@@ -2087,7 +2087,7 @@ intel_miptree_slice_resolve_hiz(struct brw_context *brw,
 				uint32_t layer)
 {
    return intel_miptree_slice_resolve(brw, mt, level, layer,
-				      GEN6_HIZ_OP_HIZ_RESOLVE);
+				      BLORP_HIZ_OP_HIZ_RESOLVE);
 }
 
 bool
@@ -2097,13 +2097,13 @@ intel_miptree_slice_resolve_depth(struct brw_context *brw,
 				  uint32_t layer)
 {
    return intel_miptree_slice_resolve(brw, mt, level, layer,
-				      GEN6_HIZ_OP_DEPTH_RESOLVE);
+				      BLORP_HIZ_OP_DEPTH_RESOLVE);
 }
 
 static bool
 intel_miptree_all_slices_resolve(struct brw_context *brw,
 				 struct intel_mipmap_tree *mt,
-				 enum gen6_hiz_op need)
+				 enum blorp_hiz_op need)
 {
    bool did_resolve = false;
 
@@ -2124,7 +2124,7 @@ intel_miptree_all_slices_resolve_hiz(struct brw_context *brw,
 				     struct intel_mipmap_tree *mt)
 {
    return intel_miptree_all_slices_resolve(brw, mt,
-					   GEN6_HIZ_OP_HIZ_RESOLVE);
+					   BLORP_HIZ_OP_HIZ_RESOLVE);
 }
 
 bool
@@ -2132,7 +2132,7 @@ intel_miptree_all_slices_resolve_depth(struct brw_context *brw,
 				       struct intel_mipmap_tree *mt)
 {
    return intel_miptree_all_slices_resolve(brw, mt,
-					   GEN6_HIZ_OP_DEPTH_RESOLVE);
+					   BLORP_HIZ_OP_DEPTH_RESOLVE);
 }
 
 

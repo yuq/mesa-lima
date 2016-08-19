@@ -839,7 +839,7 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
 
 static void
 gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-                    unsigned int level, unsigned int layer, enum gen6_hiz_op op)
+                    unsigned int level, unsigned int layer, enum blorp_hiz_op op)
 {
    intel_miptree_check_level_layer(mt, level, layer);
    intel_miptree_used_for_rendering(mt);
@@ -867,21 +867,21 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
  */
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-	       unsigned int level, unsigned int layer, enum gen6_hiz_op op)
+	       unsigned int level, unsigned int layer, enum blorp_hiz_op op)
 {
    const char *opname = NULL;
 
    switch (op) {
-   case GEN6_HIZ_OP_DEPTH_RESOLVE:
+   case BLORP_HIZ_OP_DEPTH_RESOLVE:
       opname = "depth resolve";
       break;
-   case GEN6_HIZ_OP_HIZ_RESOLVE:
+   case BLORP_HIZ_OP_HIZ_RESOLVE:
       opname = "hiz ambiguate";
       break;
-   case GEN6_HIZ_OP_DEPTH_CLEAR:
+   case BLORP_HIZ_OP_DEPTH_CLEAR:
       opname = "depth clear";
       break;
-   case GEN6_HIZ_OP_NONE:
+   case BLORP_HIZ_OP_NONE:
       opname = "noop?";
       break;
    }

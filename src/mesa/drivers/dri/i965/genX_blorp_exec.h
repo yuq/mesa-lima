@@ -566,16 +566,16 @@ blorp_emit_ps_config(struct blorp_batch *batch,
 
    blorp_emit(batch, GENX(3DSTATE_WM), wm) {
       switch (params->hiz_op) {
-      case GEN6_HIZ_OP_DEPTH_CLEAR:
+      case BLORP_HIZ_OP_DEPTH_CLEAR:
          wm.DepthBufferClear = true;
          break;
-      case GEN6_HIZ_OP_DEPTH_RESOLVE:
+      case BLORP_HIZ_OP_DEPTH_RESOLVE:
          wm.DepthBufferResolveEnable = true;
          break;
-      case GEN6_HIZ_OP_HIZ_RESOLVE:
+      case BLORP_HIZ_OP_HIZ_RESOLVE:
          wm.HierarchicalDepthBufferResolveEnable = true;
          break;
-      case GEN6_HIZ_OP_NONE:
+      case BLORP_HIZ_OP_NONE:
          break;
       default:
          unreachable("not reached");
@@ -651,16 +651,16 @@ blorp_emit_ps_config(struct blorp_batch *batch,
          batch->blorp->isl_dev->info->max_wm_threads - 1;
 
       switch (params->hiz_op) {
-      case GEN6_HIZ_OP_DEPTH_CLEAR:
+      case BLORP_HIZ_OP_DEPTH_CLEAR:
          wm.DepthBufferClear = true;
          break;
-      case GEN6_HIZ_OP_DEPTH_RESOLVE:
+      case BLORP_HIZ_OP_DEPTH_RESOLVE:
          wm.DepthBufferResolveEnable = true;
          break;
-      case GEN6_HIZ_OP_HIZ_RESOLVE:
+      case BLORP_HIZ_OP_HIZ_RESOLVE:
          wm.HierarchicalDepthBufferResolveEnable = true;
          break;
-      case GEN6_HIZ_OP_NONE:
+      case BLORP_HIZ_OP_NONE:
          break;
       default:
          unreachable("not reached");
@@ -850,7 +850,7 @@ blorp_emit_depth_stencil_state(struct blorp_batch *batch,
       .DepthBufferWriteEnable = true,
    };
 
-   if (params->hiz_op == GEN6_HIZ_OP_DEPTH_RESOLVE) {
+   if (params->hiz_op == BLORP_HIZ_OP_DEPTH_RESOLVE) {
       ds.DepthTestEnable = true;
       ds.DepthTestFunction = COMPAREFUNCTION_NEVER;
    }

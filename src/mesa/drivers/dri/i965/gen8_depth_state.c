@@ -398,9 +398,9 @@ const struct brw_tracked_state gen8_pma_fix = {
  */
 void
 gen8_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-              unsigned int level, unsigned int layer, enum gen6_hiz_op op)
+              unsigned int level, unsigned int layer, enum blorp_hiz_op op)
 {
-   if (op == GEN6_HIZ_OP_NONE)
+   if (op == BLORP_HIZ_OP_NONE)
       return;
 
    /* Disable the PMA stall fix since we're about to do a HiZ operation. */
@@ -468,16 +468,16 @@ gen8_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    uint32_t dw1 = 0;
 
    switch (op) {
-   case GEN6_HIZ_OP_DEPTH_RESOLVE:
+   case BLORP_HIZ_OP_DEPTH_RESOLVE:
       dw1 |= GEN8_WM_HZ_DEPTH_RESOLVE;
       break;
-   case GEN6_HIZ_OP_HIZ_RESOLVE:
+   case BLORP_HIZ_OP_HIZ_RESOLVE:
       dw1 |= GEN8_WM_HZ_HIZ_RESOLVE;
       break;
-   case GEN6_HIZ_OP_DEPTH_CLEAR:
+   case BLORP_HIZ_OP_DEPTH_CLEAR:
       dw1 |= GEN8_WM_HZ_DEPTH_CLEAR;
       break;
-   case GEN6_HIZ_OP_NONE:
+   case BLORP_HIZ_OP_NONE:
       unreachable("Should not get here.");
    }
 

@@ -1848,7 +1848,7 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
                             uint32_t tile_x, uint32_t tile_y);
 
 void gen8_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-                   unsigned int level, unsigned int layer, enum gen6_hiz_op op);
+                   unsigned int level, unsigned int layer, enum blorp_hiz_op op);
 
 uint32_t get_hw_prim_for_gl_prim(int mode);
 

@@ -1022,7 +1022,7 @@ intel_miptree_unmap(struct brw_context *brw,
 
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-	       unsigned int level, unsigned int layer, enum gen6_hiz_op op);
+	       unsigned int level, unsigned int layer, enum blorp_hiz_op op);
 
 #ifdef __cplusplus
 }

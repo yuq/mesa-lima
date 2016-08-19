@@ -58,7 +58,7 @@ brw_blorp_resolve_color(struct brw_context *brw,
 
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-	       unsigned int level, unsigned int layer, enum gen6_hiz_op op);
+	       unsigned int level, unsigned int layer, enum blorp_hiz_op op);
 
 void gen6_blorp_exec(struct blorp_batch *batch,
                      const struct brw_blorp_params *params);

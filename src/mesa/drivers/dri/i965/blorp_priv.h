@@ -174,7 +174,7 @@ struct brw_blorp_params
    uint32_t depth_format;
    struct brw_blorp_surface_info src;
    struct brw_blorp_surface_info dst;
-   enum gen6_hiz_op hiz_op;
+   enum blorp_hiz_op hiz_op;
    enum blorp_fast_clear_op fast_clear_op;
    bool color_write_disable[4];
    struct brw_blorp_wm_inputs wm_inputs;

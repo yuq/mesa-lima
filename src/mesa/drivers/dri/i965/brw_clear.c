@@ -187,11 +187,11 @@ brw_fast_clear_depth(struct gl_context *ctx)
       for (unsigned layer = 0; layer < depth_irb->layer_count; layer++) {
          intel_hiz_exec(brw, mt, depth_irb->mt_level,
                         depth_irb->mt_layer + layer,
-                        GEN6_HIZ_OP_DEPTH_CLEAR);
+                        BLORP_HIZ_OP_DEPTH_CLEAR);
       }
    } else {
       intel_hiz_exec(brw, mt, depth_irb->mt_level, depth_irb->mt_layer,
-                     GEN6_HIZ_OP_DEPTH_CLEAR);
+                     BLORP_HIZ_OP_DEPTH_CLEAR);
    }
 
    if (brw->gen == 6) {
