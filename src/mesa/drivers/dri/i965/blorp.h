@@ -28,7 +28,6 @@
 
 #include "isl/isl.h"
 #include "intel_resolve_map.h" /* needed for enum gen6_hiz_op */
-#include "intel_bufmgr.h" /* needed for drm_intel_bo */
 
 struct brw_context;
 struct brw_wm_prog_key;
@@ -79,7 +78,7 @@ void blorp_batch_init(struct blorp_context *blorp, struct blorp_batch *batch,
 void blorp_batch_finish(struct blorp_batch *batch);
 
 struct blorp_address {
-   drm_intel_bo *buffer;
+   void *buffer;
    uint32_t read_domains;
    uint32_t write_domain;
    uint32_t offset;
