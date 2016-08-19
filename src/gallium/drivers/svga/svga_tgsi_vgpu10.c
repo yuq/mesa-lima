@@ -745,7 +745,7 @@ setup_operand0_indexing(struct svga_shader_emitter_v10 *emit,
                         boolean indirect, boolean index2D,
                         unsigned tempArrayID)
 {
-   unsigned indexDim, index0Rep, index1Rep = VGPU10_OPERAND_INDEX_0D;
+   unsigned indexDim, index0Rep, index1Rep = VGPU10_OPERAND_INDEX_IMMEDIATE32;
 
    /*
     * Compute index dimensions
