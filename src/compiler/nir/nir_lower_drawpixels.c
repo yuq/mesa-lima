@@ -209,7 +209,7 @@ lower_drawpixels_block(lower_drawpixels_state *state, nir_block *block)
             nir_variable *var = dvar->var;
 
             if (var->data.location == VARYING_SLOT_COL0) {
-               /* gl_FragCoord should not have array/struct deref's: */
+               /* gl_Color should not have array/struct deref's: */
                assert(dvar->deref.child == NULL);
                lower_color(state, intr);
             } else if (var->data.location == VARYING_SLOT_TEX0) {
