@@ -638,7 +638,7 @@ get_query_result_vgpu10(struct svga_context *svga, struct svga_query *sq,
 
    sws->query_get_result(sws, sq->gb_query, sq->offset, &queryState, result, resultLen);
 
-   if (queryState == SVGA3D_QUERYSTATE_NEW && !sq->fence) {
+   if (!sq->fence) {
       /* The query hasn't been submitted yet.  We need to submit it now
        * since the GL spec says "Querying the state for a given occlusion
        * query forces that occlusion query to complete within a finite amount
