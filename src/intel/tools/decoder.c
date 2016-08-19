@@ -47,45 +47,6 @@ struct gen_spec {
    struct gen_group *registers[256];
 };
 
-struct gen_group {
-   char *name;
-   int nfields;
-   struct gen_field **fields;
-
-   uint32_t opcode_mask;
-   uint32_t opcode;
-};
-
-struct gen_type {
-   enum {
-      GEN_TYPE_UNKNOWN,
-      GEN_TYPE_INT,
-      GEN_TYPE_UINT,
-      GEN_TYPE_BOOL,
-      GEN_TYPE_FLOAT,
-      GEN_TYPE_ADDRESS,
-      GEN_TYPE_OFFSET,
-      GEN_TYPE_STRUCT,
-      GEN_TYPE_UFIXED,
-      GEN_TYPE_SFIXED,
-      GEN_TYPE_MBO
-   } kind;
-
-   /* Struct definition for  GEN_TYPE_STRUCT */
-   struct gen_group *gen_struct;
-
-   /* Integer and fractional sizes for GEN_TYPE_UFIXED and GEN_TYPE_SFIXED */
-   int i, f;
-};
-
-struct gen_field {
-   char *name;
-   int start, end;
-   struct gen_type type;
-   bool has_default;
-   uint32_t default_value;
-};
-
 struct location {
    const char *filename;
    int line_number;
@@ -185,7 +146,25 @@ create_group(struct parser_context *ctx, const char *name, const char **atts)
    if (name)
       group->name = xstrdup(name);
 
+   group->group_offset = 0;
+   group->group_count = 0;
+
    return group;
+}
+
+static void
+get_group_offset_count(struct parser_context *ctx, const char *name, const char **atts, uint32_t *offset, uint32_t *count)
+{
+   char *p;
+   int i;
+
+   for (i = 0; atts[i]; i += 2) {
+      if (strcmp(atts[i], "count") == 0)
+         *count = strtoul(atts[i + 1], &p, 0);
+      else if (strcmp(atts[i], "start") == 0)
+         *offset = strtoul(atts[i + 1], &p, 0);
+   }
+   return;
 }
 
 static inline uint64_t
@@ -201,7 +180,18 @@ mask(int start, int end)
 static inline uint64_t
 field(uint64_t value, int start, int end)
 {
-   return (value & mask(start, end)) >> start;
+   /* The field values are obtained from the DWord,
+    * Hence, get the relative start and end positions
+    * by doing a %32 on the start and end positions
+    */
+   return (value & mask(start % 32, end % 32)) >> (start % 32);
+}
+
+static inline uint64_t
+field_address(uint64_t value, int start, int end)
+{
+   /* no need to right shift for address/offset */
+   return (value & mask(start % 32, end % 32));
 }
 
 static struct gen_type
@@ -247,10 +237,12 @@ create_field(struct parser_context *ctx, const char **atts)
       if (strcmp(atts[i], "name") == 0)
          field->name = xstrdup(atts[i + 1]);
       else if (strcmp(atts[i], "start") == 0)
-         field->start = strtoul(atts[i + 1], &p, 0);
-      else if (strcmp(atts[i], "end") == 0)
-         field->end = strtoul(atts[i + 1], &p, 0);
-      else if (strcmp(atts[i], "type") == 0)
+         field->start = ctx->group->group_offset+strtoul(atts[i + 1], &p, 0);
+      else if (strcmp(atts[i], "end") == 0) {
+         field->end = ctx->group->group_offset+strtoul(atts[i + 1], &p, 0);
+         if(ctx->group->group_offset)
+            ctx->group->group_offset = field->end+1;
+      } else if (strcmp(atts[i], "type") == 0)
          field->type = string_to_type(ctx, atts[i + 1]);
       else if (strcmp(atts[i], "default") == 0 &&
                field->start >= 16 && field->end <= 31) {
@@ -299,8 +291,13 @@ start_element(void *data, const char *element_name, const char **atts)
               strcmp(element_name, "register") == 0) {
       ctx->group = create_group(ctx, name, atts);
    } else if (strcmp(element_name, "group") == 0) {
+      get_group_offset_count(ctx, name, atts,&ctx->group->group_offset,&ctx->group->group_count);
    } else if (strcmp(element_name, "field") == 0) {
-      ctx->fields[ctx->nfields++] = create_field(ctx, atts);
+      do {
+         ctx->fields[ctx->nfields++] = create_field(ctx, atts);
+         if(ctx->group->group_count)
+            ctx->group->group_count--;
+      } while (ctx->group->group_count > 0);
    } else if (strcmp(element_name, "enum") == 0) {
    } else if (strcmp(element_name, "value") == 0) {
    }
@@ -328,7 +325,7 @@ end_element(void *data, const char *name)
             group->fields[i]->end <= 31 &&
             group->fields[i]->has_default) {
             group->opcode_mask |=
-               mask(group->fields[i]->start, group->fields[i]->end);
+               mask(group->fields[i]->start % 32, group->fields[i]->end % 32);
             group->opcode |=
                group->fields[i]->default_value << group->fields[i]->start;
          }
@@ -341,6 +338,9 @@ end_element(void *data, const char *name)
          spec->structs[spec->nstructs++] = group;
       else if (strcmp(name, "register") == 0)
          spec->registers[spec->nregisters++] = group;
+   } else if (strcmp(name, "group") == 0) {
+      ctx->group->group_offset = 0;
+      ctx->group->group_count = 0;
    }
 }
 
@@ -407,7 +407,6 @@ gen_spec_load(const char *filename)
 struct gen_group *
 gen_spec_find_instruction(struct gen_spec *spec, const uint32_t *p)
 {
-   /* FIXME: Make sure the opcodes put out are correct */
    for (int i = 0; i < spec->ncommands; i++) {
       uint32_t opcode = *p & spec->commands[i]->opcode_mask;
       if (opcode == spec->commands[i]->opcode)
@@ -495,12 +494,11 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    case GEN_TYPE_ADDRESS:
    case GEN_TYPE_OFFSET:
       snprintf(iter->value, sizeof(iter->value),
-               "0x%08lx", field(v.dw, f->start, f->end));
+               "0x%08lx", field_address(v.dw, f->start, f->end));
       break;
    case GEN_TYPE_STRUCT:
-      /* FIXME: Make iterator decode the struct recursively */
       snprintf(iter->value, sizeof(iter->value),
-               "<struct %s>", f->type.gen_struct->name);
+               "<struct %s %d>", f->type.gen_struct->name, (f->start / 32));
       break;
    case GEN_TYPE_UFIXED:
       snprintf(iter->value, sizeof(iter->value),

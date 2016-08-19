@@ -51,6 +51,46 @@ struct gen_field_iterator {
    int i;
 };
 
+struct gen_group {
+   char *name;
+   int nfields;
+   struct gen_field **fields;
+   uint32_t group_offset, group_count;
+
+   uint32_t opcode_mask;
+   uint32_t opcode;
+};
+
+struct gen_type {
+   enum {
+      GEN_TYPE_UNKNOWN,
+      GEN_TYPE_INT,
+      GEN_TYPE_UINT,
+      GEN_TYPE_BOOL,
+      GEN_TYPE_FLOAT,
+      GEN_TYPE_ADDRESS,
+      GEN_TYPE_OFFSET,
+      GEN_TYPE_STRUCT,
+      GEN_TYPE_UFIXED,
+      GEN_TYPE_SFIXED,
+      GEN_TYPE_MBO
+   } kind;
+
+   /* Struct definition for  GEN_TYPE_STRUCT */
+   struct gen_group *gen_struct;
+
+   /* Integer and fractional sizes for GEN_TYPE_UFIXED and GEN_TYPE_SFIXED */
+   int i, f;
+};
+
+struct gen_field {
+   char *name;
+   int start, end;
+   struct gen_type type;
+   bool has_default;
+   uint32_t default_value;
+};
+
 void gen_field_iterator_init(struct gen_field_iterator *iter,
                              struct gen_group *group, const uint32_t *p);
 

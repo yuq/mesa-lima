@@ -88,14 +88,75 @@ valid_offset(uint32_t offset)
 }
 
 static void
+print_dword_val(struct gen_field_iterator *iter, uint64_t offset, int *dword_num)
+{
+   struct gen_field *f;
+   union {
+      uint32_t dw;
+      float f;
+   } v;
+
+   f = iter->group->fields[iter->i - 1];
+   v.dw = iter->p[f->start / 32];
+
+   if (*dword_num != (f->start / 32)) {
+      printf("0x%08lx:  0x%08x : Dword %d\n",(offset + 4 * (f->start / 32)), v.dw, f->start / 32);
+      *dword_num = (f->start / 32);
+   }
+}
+
+static char*
+print_iterator_values(struct gen_field_iterator *iter, int *idx)
+{
+    char *token = NULL;
+    if (strstr(iter->value,"struct") == NULL) {
+        printf("    %s: %s\n", iter->name, iter->value);
+    } else {
+        token = strtok(iter->value, " ");
+        if (token != NULL) {
+            token = strtok(NULL, " ");
+            *idx = atoi(strtok(NULL, ">"));
+        } else {
+            token = NULL;
+        }
+        printf("    %s:<struct %s>\n", iter->name, token);
+    }
+    return token;
+}
+
+static void
 decode_structure(struct gen_spec *spec, struct gen_group *strct, const uint32_t *p)
 {
    struct gen_field_iterator iter;
+   char *token = NULL;
+   int idx = 0, dword_num = 0;
+   uint64_t offset = 0;
+
+   if (option_print_offsets)
+      offset = (void *) p - gtt;
+   else
+      offset = 0;
 
    gen_field_iterator_init(&iter, strct, p);
    while (gen_field_iterator_next(&iter)) {
-      printf("    %s: %s\n", iter.name, iter.value);
+      idx = 0;
+      print_dword_val(&iter, offset, &dword_num);
+      token = print_iterator_values(&iter, &idx);
+      if (token != NULL) {
+         struct gen_group *struct_val = gen_spec_find_struct(spec, token);
+         decode_structure(spec, struct_val, &p[idx]);
+         token = NULL;
+      }
    }
+}
+
+static void
+handle_struct_decode(struct gen_spec *spec, char *struct_name, uint32_t *p)
+{
+    if (struct_name == NULL)
+        return;
+    struct gen_group *struct_val = gen_spec_find_struct(spec, struct_name);
+    decode_structure(spec, struct_val, p);
 }
 
 static void
@@ -347,6 +408,30 @@ handle_3dstate_vs(struct gen_spec *spec, uint32_t *p)
 }
 
 static void
+handle_3dstate_hs(struct gen_spec *spec, uint32_t *p)
+{
+   uint64_t start;
+   struct brw_instruction *insns;
+   int hs_enable;
+
+   if (gen_spec_get_gen(spec) >= gen_make_gen(8, 0)) {
+      start = get_qword(&p[4]);
+   } else {
+      start = p[4];
+   }
+
+   hs_enable = p[2] & 0x80000000;
+
+   if (hs_enable) {
+      printf("instruction_base %08lx, start %08lx\n",
+             instruction_base, start);
+
+      insns = (struct brw_instruction *) (gtt + instruction_base + start);
+      gen_disasm_disassemble(disasm, insns, 0, 8192, stdout);
+   }
+}
+
+static void
 handle_3dstate_constant(struct gen_spec *spec, uint32_t *p)
 {
    int i, j, length;
@@ -543,6 +628,8 @@ handle_3dstate_scissor_state_pointers(struct gen_spec *spec, uint32_t *p)
 
 #define _3DSTATE_VS                         0x78100000
 #define _3DSTATE_GS                         0x78110000
+#define _3DSTATE_HS                         0x781b0000
+#define _3DSTATE_DS                         0x781d0000
 
 #define _3DSTATE_CONSTANT_VS                0x78150000
 #define _3DSTATE_CONSTANT_GS                0x78160000
@@ -578,7 +665,8 @@ struct custom_handler {
    { _3DSTATE_INDEX_BUFFER, handle_3dstate_index_buffer },
    { _3DSTATE_VS, handle_3dstate_vs },
    { _3DSTATE_GS, handle_3dstate_vs },
-   /* FIXME: Handle disassmbing for 3DSTATE_HS and 3DSTATE_DS. */
+   { _3DSTATE_DS, handle_3dstate_vs },
+   { _3DSTATE_HS, handle_3dstate_hs },
    { _3DSTATE_CONSTANT_VS, handle_3dstate_constant },
    { _3DSTATE_CONSTANT_GS, handle_3dstate_constant },
    { _3DSTATE_CONSTANT_PS, handle_3dstate_constant },
@@ -643,9 +731,19 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
 
       if (option_full_decode) {
          struct gen_field_iterator iter;
+         char* token = NULL;
+         int idx = 0, dword_num = 0;
          gen_field_iterator_init(&iter, inst, p);
          while (gen_field_iterator_next(&iter)) {
-            printf("    %s: %s\n", iter.name, iter.value);
+            idx = 0;
+            print_dword_val(&iter, offset, &dword_num);
+            if (dword_num > 0)
+                token = print_iterator_values(&iter, &idx);
+            if (token != NULL) {
+                printf("0x%08lx:  0x%08x : Dword %d\n",(offset+4*idx), p[idx], idx);
+                handle_struct_decode(spec,token, &p[idx]);
+                token = NULL;
+            }
          }
 
          for (i = 0; i < ARRAY_LENGTH(custom_handlers); i++) {
