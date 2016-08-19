@@ -75,11 +75,11 @@ static const struct surface_state_info surface_state_infos[] = {
 static void
 brw_emit_surface_state(struct brw_context *brw,
                        struct intel_mipmap_tree *mt,
-                       const struct isl_view *view,
-                       uint32_t mocs, bool for_gather,
-                       uint32_t *surf_offset, int surf_index,
+                       GLenum target, struct isl_view view,
+                       uint32_t mocs, uint32_t *surf_offset, int surf_index,
                        unsigned read_domains, unsigned write_domains)
 {
+   assert(mt->target == target);
    const struct surface_state_info ss_info = surface_state_infos[brw->gen];
 
    struct isl_surf surf;
@@ -91,7 +91,7 @@ brw_emit_surface_state(struct brw_context *brw,
    uint64_t aux_offset = 0;
    enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
    if (mt->mcs_mt &&
-       ((view->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) ||
+       ((view.usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) ||
         mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED)) {
       intel_miptree_get_aux_isl_surf(brw, mt, &aux_surf_s, &aux_usage);
       aux_surf = &aux_surf_s;
@@ -108,7 +108,7 @@ brw_emit_surface_state(struct brw_context *brw,
                                     ss_info.num_dwords * 4, ss_info.ss_align,
                                     surf_index, surf_offset);
 
-   isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = view,
+   isl_surf_fill_state(&brw->isl_dev, dw, .surf = &surf, .view = &view,
                        .address = mt->bo->offset64 + mt->offset,
                        .aux_surf = aux_surf, .aux_usage = aux_usage,
                        .aux_address = aux_offset,
@@ -174,8 +174,8 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    };
 
    uint32_t offset;
-   brw_emit_surface_state(brw, mt, &view,
-                          surface_state_infos[brw->gen].rb_mocs, false,
+   brw_emit_surface_state(brw, mt, mt->target, view,
+                          surface_state_infos[brw->gen].rb_mocs,
                           &offset, surf_index,
                           I915_GEM_DOMAIN_RENDER,
                           I915_GEM_DOMAIN_RENDER);
@@ -479,8 +479,8 @@ brw_update_texture_surface(struct gl_context *ctx,
           obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY)
          view.usage |= ISL_SURF_USAGE_CUBE_BIT;
 
-      brw_emit_surface_state(brw, mt, &view,
-                             surface_state_infos[brw->gen].tex_mocs, for_gather,
+      brw_emit_surface_state(brw, mt, mt->target, view,
+                             surface_state_infos[brw->gen].tex_mocs,
                              surf_offset, surf_index,
                              I915_GEM_DOMAIN_SAMPLER, 0);
    }
@@ -1515,8 +1515,8 @@ update_image_surface(struct brw_context *brw,
 
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
 
-            brw_emit_surface_state(brw, mt, &view,
-                                   surface_state_infos[brw->gen].tex_mocs, false,
+            brw_emit_surface_state(brw, mt, mt->target, view,
+                                   surface_state_infos[brw->gen].tex_mocs,
                                    surf_offset, surf_index,
                                    I915_GEM_DOMAIN_SAMPLER,
                                    access == GL_READ_ONLY ? 0 :
