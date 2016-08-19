@@ -170,13 +170,13 @@ nir_uniform_type_size(const struct glsl_type *type)
 }
 
 const unsigned *
-brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
+brw_blorp_compile_nir_shader(struct blorp_context *blorp, struct nir_shader *nir,
                              const struct brw_wm_prog_key *wm_key,
                              bool use_repclear,
                              struct brw_blorp_prog_data *prog_data,
                              unsigned *program_size)
 {
-   const struct brw_compiler *compiler = brw->intelScreen->compiler;
+   const struct brw_compiler *compiler = blorp->compiler;
 
    void *mem_ctx = ralloc_context(NULL);
 
@@ -216,7 +216,8 @@ brw_blorp_compile_nir_shader(struct brw_context *brw, struct nir_shader *nir,
    nir_lower_io(nir, nir_var_uniform, nir_uniform_type_size);
 
    const unsigned *program =
-      brw_compile_fs(compiler, brw, mem_ctx, wm_key, &wm_prog_data, nir,
+      brw_compile_fs(compiler, blorp->driver_ctx, mem_ctx,
+                     wm_key, &wm_prog_data, nir,
                      NULL, -1, -1, false, use_repclear, program_size, NULL);
 
    /* Copy the relavent bits of wm_prog_data over into the blorp prog data */

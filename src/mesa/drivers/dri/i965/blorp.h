@@ -45,6 +45,8 @@ struct blorp_context {
 
    const struct isl_device *isl_dev;
 
+   const struct brw_compiler *compiler;
+
    struct {
       uint32_t tex;
       uint32_t rb;

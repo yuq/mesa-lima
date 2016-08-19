@@ -1214,7 +1214,7 @@ brw_blorp_get_blit_kernel(struct brw_context *brw,
    wm_key.tex.msaa_16 = prog_key->tex_samples == 16;
    wm_key.multisample_fbo = prog_key->rt_samples > 1;
 
-   program = brw_blorp_compile_nir_shader(brw, nir, &wm_key, false,
+   program = brw_blorp_compile_nir_shader(&brw->blorp, nir, &wm_key, false,
                                           &prog_data, &program_size);
 
    brw->blorp.upload_shader(&brw->blorp, prog_key, sizeof(*prog_key),
