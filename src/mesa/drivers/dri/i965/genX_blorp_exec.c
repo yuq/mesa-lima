@@ -29,7 +29,7 @@
 #include "brw_context.h"
 #include "brw_state.h"
 
-#include "genX_blorp_exec.h"
+#include "blorp/blorp_genX_exec.h"
 
 #include "brw_blorp.h"
 

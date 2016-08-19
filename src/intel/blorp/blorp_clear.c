@@ -26,7 +26,7 @@
 #include "blorp_priv.h"
 #include "brw_defines.h"
 
-#include "nir_builder.h"
+#include "compiler/nir/nir_builder.h"
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 

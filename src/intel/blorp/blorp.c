@@ -23,6 +23,8 @@
 
 #include <errno.h>
 
+#include "program/prog_instruction.h"
+
 #include "blorp_priv.h"
 #include "brw_compiler.h"
 #include "brw_nir.h"

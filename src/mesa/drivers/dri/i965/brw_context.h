@@ -41,7 +41,7 @@
 #include "intel_aub.h"
 
 #include "isl/isl.h"
-#include "blorp.h"
+#include "blorp/blorp.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "blorp.h"
+#include "blorp/blorp.h"
 #include "intel_mipmap_tree.h"
 #include "program/prog_instruction.h"
 

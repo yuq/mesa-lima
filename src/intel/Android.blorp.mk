@@ -18,13 +18,30 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
-#
 
-LOCAL_PATH := $(call my-dir)
+# ---------------------------------------
+# Build libmesa_blorp
+# ---------------------------------------
 
-# Import variables
-include $(LOCAL_PATH)/Makefile.sources
+include $(CLEAR_VARS)
 
-include $(LOCAL_PATH)/Android.blorp.mk
-include $(LOCAL_PATH)/Android.genxml.mk
-include $(LOCAL_PATH)/Android.isl.mk
+LOCAL_MODULE := libmesa_blorp
+
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+
+LOCAL_SRC_FILES := $(BLORP_FILES)
+
+LOCAL_C_INCLUDES := := \
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir \
+	$(MESA_TOP)/src/gallium/auxiliary \
+	$(MESA_TOP)/src/gallium/include \
+	$(MESA_TOP)/src/mapi \
+	$(MESA_TOP)/src/mesa \
+	$(MESA_TOP)/src/mesa/drivers/dri/i965
+
+LOCAL_STATIC_LIBRARIES := libmesa_nir
+
+LOCAL_SHARED_LIBRARIES := libdrm_intel
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)

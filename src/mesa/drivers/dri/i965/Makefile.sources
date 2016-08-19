@@ -95,11 +95,6 @@ i965_compiler_GENERATED_FILES = \
 	brw_nir_trig_workarounds.c
 
 i965_FILES = \
-	blorp.c \
-	blorp.h \
-	blorp_blit.c \
-	blorp_clear.c \
-	blorp_priv.h \
 	brw_binding_tables.c \
 	brw_blorp.c \
 	brw_blorp.h \
@@ -259,21 +254,16 @@ i965_FILES = \
 	intel_upload.c
 
 i965_gen6_FILES = \
-	genX_blorp_exec.c \
-	genX_blorp_exec.h
+	genX_blorp_exec.c
 
 i965_gen7_FILES = \
-	genX_blorp_exec.c \
-	genX_blorp_exec.h
+	genX_blorp_exec.c
 
 i965_gen75_FILES = \
-	genX_blorp_exec.c \
-	genX_blorp_exec.h
+	genX_blorp_exec.c
 
 i965_gen8_FILES = \
-	genX_blorp_exec.c \
-	genX_blorp_exec.h
+	genX_blorp_exec.c
 
 i965_gen9_FILES = \
-	genX_blorp_exec.c \
-	genX_blorp_exec.h
+	genX_blorp_exec.c

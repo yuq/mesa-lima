@@ -1,3 +1,11 @@
+BLORP_FILES = \
+	blorp/blorp.c \
+	blorp/blorp.h \
+	blorp/blorp_blit.c \
+	blorp/blorp_clear.c \
+	blorp/blorp_genX_exec.h \
+	blorp/blorp_priv.h
+
 GENXML_GENERATED_FILES = \
 	genxml/gen4_pack.h \
 	genxml/gen45_pack.h \

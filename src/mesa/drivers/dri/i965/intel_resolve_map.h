@@ -24,7 +24,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "blorp.h"
+#include "blorp/blorp.h"
 #include "compiler/glsl/list.h"
 
 #ifdef __cplusplus
