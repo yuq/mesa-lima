@@ -284,20 +284,7 @@ blorp_gen6_hiz_op(struct blorp_batch *batch,
 
    params.dst.surf.samples = params.depth.surf.samples;
    params.dst.surf.logical_level0_px = params.depth.surf.logical_level0_px;
-
-   switch (surf->surf->format) {
-   case ISL_FORMAT_R16_UNORM:
-      params.depth_format = BRW_DEPTHFORMAT_D16_UNORM;
-      break;
-   case ISL_FORMAT_R32_FLOAT:
-      params.depth_format = BRW_DEPTHFORMAT_D32_FLOAT;
-      break;
-   case ISL_FORMAT_R24_UNORM_X8_TYPELESS:
-      params.depth_format = BRW_DEPTHFORMAT_D24_UNORM_X8_UINT;
-      break;
-   default:
-      unreachable("not reached");
-   }
+   params.depth_format = isl_format_get_depth_format(surf->surf->format, false);
 
    batch->blorp->exec(batch, &params);
 }
