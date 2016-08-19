@@ -40,7 +40,9 @@ I965_PERGEN_STATIC_LIBRARIES := \
 	libmesa_nir
 
 I965_PERGEN_LIBS := \
-	libmesa_i965_gen6
+	libmesa_i965_gen6 \
+	libmesa_i965_gen7 \
+	libmesa_i965_gen75
 
 # ---------------------------------------
 # Build libmesa_i965_gen6
@@ -59,6 +61,48 @@ LOCAL_SHARED_LIBRARIES := $(I965_PERGEN_SHARED_LIBRARIES)
 LOCAL_STATIC_LIBRARIES := $(I965_PERGEN_STATIC_LIBRARIES)
 
 LOCAL_CFLAGS := -DGEN_VERSIONx10=60
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)
+
+# ---------------------------------------
+# Build libmesa_i965_gen7
+# ---------------------------------------
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libmesa_i965_gen7
+
+LOCAL_C_INCLUDES := $(I965_PERGEN_COMMON_INCLUDES)
+
+LOCAL_SRC_FILES := $(i965_gen7_FILES)
+
+LOCAL_SHARED_LIBRARIES := $(I965_PERGEN_SHARED_LIBRARIES)
+
+LOCAL_STATIC_LIBRARIES := $(I965_PERGEN_STATIC_LIBRARIES)
+
+LOCAL_CFLAGS := -DGEN_VERSIONx10=70
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)
+
+# ---------------------------------------
+# Build libmesa_i965_gen75
+# ---------------------------------------
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libmesa_i965_gen75
+
+LOCAL_C_INCLUDES := $(I965_PERGEN_COMMON_INCLUDES)
+
+LOCAL_SRC_FILES := $(i965_gen75_FILES)
+
+LOCAL_SHARED_LIBRARIES := $(I965_PERGEN_SHARED_LIBRARIES)
+
+LOCAL_STATIC_LIBRARIES := $(I965_PERGEN_STATIC_LIBRARIES)
+
+LOCAL_CFLAGS := -DGEN_VERSIONx10=75
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
