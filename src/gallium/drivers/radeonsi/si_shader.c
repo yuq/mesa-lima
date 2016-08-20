@@ -4724,16 +4724,86 @@ static void tex_fetch_args(
 			   samp_ptr, address, count, dmask);
 }
 
+/* Gather4 should follow the same rules as bilinear filtering, but the hardware
+ * incorrectly forces nearest filtering if the texture format is integer.
+ * The only effect it has on Gather4, which always returns 4 texels for
+ * bilinear filtering, is that the final coordinates are off by 0.5 of
+ * the texel size.
+ *
+ * The workaround is to subtract 0.5 from the unnormalized coordinates,
+ * or (0.5 / size) from the normalized coordinates.
+ */
+static void si_lower_gather4_integer(struct si_shader_context *ctx,
+				     struct lp_build_emit_data *emit_data,
+				     const char *intr_name,
+				     unsigned coord_vgpr_index)
+{
+	LLVMBuilderRef builder = ctx->radeon_bld.gallivm.builder;
+	LLVMValueRef coord = emit_data->args[0];
+	LLVMValueRef half_texel[2];
+	int c;
+
+	if (emit_data->inst->Texture.Texture == TGSI_TEXTURE_RECT ||
+	    emit_data->inst->Texture.Texture == TGSI_TEXTURE_SHADOWRECT) {
+		half_texel[0] = half_texel[1] = LLVMConstReal(ctx->f32, -0.5);
+	} else {
+		struct tgsi_full_instruction txq_inst = {};
+		struct lp_build_emit_data txq_emit_data = {};
+
+		/* Query the texture size. */
+		txq_inst.Texture.Texture = emit_data->inst->Texture.Texture;
+		txq_emit_data.inst = &txq_inst;
+		txq_emit_data.dst_type = ctx->v4i32;
+		set_tex_fetch_args(ctx, &txq_emit_data, TGSI_OPCODE_TXQ,
+				   txq_inst.Texture.Texture,
+				   emit_data->args[1], NULL,
+				   &ctx->radeon_bld.soa.bld_base.uint_bld.zero,
+				   1, 0xf);
+		txq_emit(NULL, &ctx->radeon_bld.soa.bld_base, &txq_emit_data);
+
+		/* Compute -0.5 / size. */
+		for (c = 0; c < 2; c++) {
+			half_texel[c] =
+				LLVMBuildExtractElement(builder, txq_emit_data.output[0],
+							LLVMConstInt(ctx->i32, c, 0), "");
+			half_texel[c] = LLVMBuildUIToFP(builder, half_texel[c], ctx->f32, "");
+			half_texel[c] =
+				lp_build_emit_llvm_unary(&ctx->radeon_bld.soa.bld_base,
+							 TGSI_OPCODE_RCP, half_texel[c]);
+			half_texel[c] = LLVMBuildFMul(builder, half_texel[c],
+						      LLVMConstReal(ctx->f32, -0.5), "");
+		}
+	}
+
+	for (c = 0; c < 2; c++) {
+		LLVMValueRef tmp;
+		LLVMValueRef index = LLVMConstInt(ctx->i32, coord_vgpr_index + c, 0);
+
+		tmp = LLVMBuildExtractElement(builder, coord, index, "");
+		tmp = LLVMBuildBitCast(builder, tmp, ctx->f32, "");
+		tmp = LLVMBuildFAdd(builder, tmp, half_texel[c], "");
+		tmp = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
+		coord = LLVMBuildInsertElement(builder, coord, tmp, index, "");
+	}
+
+	emit_data->args[0] = coord;
+	emit_data->output[emit_data->chan] =
+		lp_build_intrinsic(builder, intr_name, emit_data->dst_type,
+				   emit_data->args, emit_data->arg_count,
+				   LLVMReadNoneAttribute);
+}
+
 static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 				struct lp_build_tgsi_context *bld_base,
 				struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_context *base = &bld_base->base;
-	unsigned opcode = emit_data->inst->Instruction.Opcode;
-	unsigned target = emit_data->inst->Texture.Texture;
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	unsigned opcode = inst->Instruction.Opcode;
+	unsigned target = inst->Texture.Texture;
 	char intr_name[127];
-	bool has_offset = emit_data->inst->Texture.NumOffsets > 0;
+	bool has_offset = inst->Texture.NumOffsets > 0;
 	bool is_shadow = tgsi_is_shadow_target(target);
 	char type[64];
 	const char *name = "llvm.SI.image.sample";
@@ -4794,6 +4864,29 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	sprintf(intr_name, "%s%s%s%s.%s",
 		name, is_shadow ? ".c" : "", infix,
 		has_offset ? ".o" : "", type);
+
+	/* The hardware needs special lowering for Gather4 with integer formats. */
+	if (opcode == TGSI_OPCODE_TG4) {
+		struct tgsi_shader_info *info = &ctx->shader->selector->info;
+		/* This will also work with non-constant indexing because of how
+		 * glsl_to_tgsi works and we intent to preserve that behavior.
+		 */
+		const unsigned src_idx = 2;
+		unsigned sampler = inst->Src[src_idx].Register.Index;
+
+		assert(inst->Src[src_idx].Register.File == TGSI_FILE_SAMPLER);
+
+		if (info->sampler_type[sampler] == TGSI_RETURN_TYPE_SINT ||
+		    info->sampler_type[sampler] == TGSI_RETURN_TYPE_UINT) {
+			/* Texture coordinates start after:
+			 *   {offset, bias, z-compare, derivatives}
+			 * Only the offset and z-compare can occur here.
+			 */
+			si_lower_gather4_integer(ctx, emit_data, intr_name,
+						 (int)has_offset + (int)is_shadow);
+			return;
+		}
+	}
 
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 		base->gallivm->builder, intr_name, emit_data->dst_type,
