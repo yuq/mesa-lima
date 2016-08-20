@@ -4105,7 +4105,7 @@ static void resq_fetch_args(
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	const struct tgsi_full_src_register *reg = &inst->Src[0];
 
-	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
+	emit_data->dst_type = ctx->v4i32;
 
 	if (reg->Register.File == TGSI_FILE_BUFFER) {
 		emit_data->args[0] = shader_buffer_fetch_rsrc(ctx, reg);
@@ -4156,9 +4156,7 @@ static void resq_emit(
 			LLVMValueRef imm6 = lp_build_const_int32(gallivm, 6);
 
 			LLVMValueRef z = LLVMBuildExtractElement(builder, out, imm2, "");
-			z = LLVMBuildBitCast(builder, z, bld_base->uint_bld.elem_type, "");
 			z = LLVMBuildSDiv(builder, z, imm6, "");
-			z = LLVMBuildBitCast(builder, z, bld_base->base.elem_type, "");
 			out = LLVMBuildInsertElement(builder, out, z, imm2, "");
 		}
 	}
