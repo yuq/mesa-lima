@@ -1521,9 +1521,6 @@ struct anv_pipeline {
    struct anv_shader_bin *                      shaders[MESA_SHADER_STAGES];
 
    struct {
-      uint32_t                                  start[MESA_SHADER_GEOMETRY + 1];
-      uint32_t                                  size[MESA_SHADER_GEOMETRY + 1];
-      uint32_t                                  entries[MESA_SHADER_GEOMETRY + 1];
       const struct gen_l3_config *              l3_config;
       uint32_t                                  total_size;
    } urb;
@@ -1636,9 +1633,6 @@ anv_get_isl_format(const struct gen_device_info *devinfo, VkFormat vk_format,
 {
    return anv_get_format(devinfo, vk_format, aspect, tiling).isl_format;
 }
-
-void
-anv_compute_urb_partition(struct anv_pipeline *pipeline);
 
 void
 anv_pipeline_setup_l3_config(struct anv_pipeline *pipeline, bool needs_slm);
