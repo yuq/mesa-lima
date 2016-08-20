@@ -576,11 +576,9 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       surf->frame_num_cnt = context->desc.h264enc.frame_num_cnt;
       surf->feedback = feedback;
       surf->coded_buf = coded_buf;
-      context->decoder->end_frame(context->decoder, context->target, &context->desc.base);
    }
-   else
-      context->decoder->end_frame(context->decoder, context->target, &context->desc.base);
 
+   context->decoder->end_frame(context->decoder, context->target, &context->desc.base);
    pipe_mutex_unlock(drv->mutex);
    return VA_STATUS_SUCCESS;
 }
