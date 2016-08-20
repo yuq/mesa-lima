@@ -44,6 +44,8 @@ void nine_convert_sampler_state(struct cso_context *, int idx, const DWORD *);
 
 void nine_pipe_context_clear(struct NineDevice9 *);
 
+#define is_ATI1_ATI2(format) (format == PIPE_FORMAT_RGTC1_UNORM || format == PIPE_FORMAT_RGTC2_UNORM)
+
 static inline void
 rect_to_pipe_box(struct pipe_box *dst, const RECT *src)
 {
@@ -728,8 +730,14 @@ static inline unsigned nine_format_get_level_alloc_size(enum pipe_format format,
 
     w = u_minify(width, level);
     h = u_minify(height, level);
-    size = nine_format_get_stride(format, w) *
-        util_format_get_nblocksy(format, h);
+    if (is_ATI1_ATI2(format)) {
+        /* For "unknown" formats like ATIx use width * height bytes */
+        size = w * h;
+    } else {
+        size = nine_format_get_stride(format, w) *
+            util_format_get_nblocksy(format, h);
+    }
+
     return size;
 }
 
@@ -745,8 +753,13 @@ static inline unsigned nine_format_get_size_and_offsets(enum pipe_format format,
         w = u_minify(width, l);
         h = u_minify(height, l);
         offsets[l] = size;
-        size += nine_format_get_stride(format, w) *
-            util_format_get_nblocksy(format, h);
+        if (is_ATI1_ATI2(format)) {
+            /* For "unknown" formats like ATIx use width * height bytes */
+            size += w * h;
+        } else {
+            size += nine_format_get_stride(format, w) *
+                util_format_get_nblocksy(format, h);
+        }
     }
 
     return size;
