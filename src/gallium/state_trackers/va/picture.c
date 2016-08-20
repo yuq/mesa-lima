@@ -539,7 +539,6 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    vlVaContext *context;
    vlVaBuffer *coded_buf;
    vlVaSurface *surf;
-   unsigned int coded_size;
    void *feedback;
 
    if (!ctx)
