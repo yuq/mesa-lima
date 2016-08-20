@@ -586,9 +586,7 @@ bool
 st_translate_fragment_program(struct st_context *st,
                               struct st_fragment_program *stfp)
 {
-   GLuint outputMapping[2 * FRAG_RESULT_MAX] =
-      { 0 /* XXX - Avoid temporary regression due to bogus OutputsWritten
-           *       bitset. */ };
+   GLuint outputMapping[2 * FRAG_RESULT_MAX];
    GLuint inputMapping[VARYING_SLOT_MAX];
    GLuint inputSlotToAttr[VARYING_SLOT_MAX];
    GLuint interpMode[PIPE_MAX_SHADER_INPUTS];  /* XXX size? */
