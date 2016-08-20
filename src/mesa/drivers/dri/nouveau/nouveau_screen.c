@@ -78,7 +78,7 @@ nouveau_get_configs(void)
 					  ARRAY_SIZE(back_buffer_modes),
 					  msaa_samples,
 					  ARRAY_SIZE(msaa_samples),
-					  GL_TRUE);
+					  GL_TRUE, GL_FALSE);
 		assert(config);
 
 		configs = driConcatConfigs(configs, config);
