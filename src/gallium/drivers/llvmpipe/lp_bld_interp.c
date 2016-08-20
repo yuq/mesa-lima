@@ -338,10 +338,18 @@ attribs_update_simple(struct lp_build_interp_soa_context *bld,
                break;
             }
 
-            if ((attrib == 0) && (chan == 2)){
+            if ((attrib == 0) && (chan == 2) && !bld->depth_clamp){
                /* FIXME: Depth values can exceed 1.0, due to the fact that
                 * setup interpolation coefficients refer to (0,0) which causes
-                * precision loss. So we must clamp to 1.0 here to avoid artifacts
+                * precision loss. So we must clamp to 1.0 here to avoid artifacts.
+                * Note though values outside [0,1] are perfectly valid with
+                * depth clip disabled.
+                * XXX: If depth clip is disabled but we force depth clamp
+                * we may get values larger than 1.0 in the fs (but not in
+                * depth test). Not sure if that's an issue...
+                * Also, on a similar note, it is not obvious if the depth values
+                * appearing in fs (with depth clip disabled) should be clamped
+                * to [0,1], clamped to near/far or not be clamped at all...
                 */
                a = lp_build_min(coeff_bld, a, coeff_bld->one);
             }
@@ -633,10 +641,18 @@ attribs_update(struct lp_build_interp_soa_context *bld,
                }
 #endif
 
-               if (attrib == 0 && chan == 2) {
+               if (attrib == 0 && chan == 2 && !bld->depth_clamp) {
                   /* FIXME: Depth values can exceed 1.0, due to the fact that
                    * setup interpolation coefficients refer to (0,0) which causes
-                   * precision loss. So we must clamp to 1.0 here to avoid artifacts
+                   * precision loss. So we must clamp to 1.0 here to avoid artifacts.
+                   * Note though values outside [0,1] are perfectly valid with
+                   * depth clip disabled..
+                   * XXX: If depth clip is disabled but we force depth clamp
+                   * we may get values larger than 1.0 in the fs (but not in
+                   * depth test). Not sure if that's an issue...
+                   * Also, on a similar note, it is not obvious if the depth values
+                   * appearing in fs (with depth clip disabled) should be clamped
+                   * to [0,1], clamped to near/far or not be clamped at all...
                    */
                   a = lp_build_min(coeff_bld, a, coeff_bld->one);
                }
@@ -677,6 +693,7 @@ lp_build_interp_soa_init(struct lp_build_interp_soa_context *bld,
                          unsigned num_inputs,
                          const struct lp_shader_input *inputs,
                          boolean pixel_center_integer,
+                         boolean depth_clamp,
                          LLVMBuilderRef builder,
                          struct lp_type type,
                          LLVMValueRef a0_ptr,
@@ -738,6 +755,7 @@ lp_build_interp_soa_init(struct lp_build_interp_soa_context *bld,
    } else {
       bld->pos_offset = 0.5;
    }
+   bld->depth_clamp = depth_clamp;
 
    pos_init(bld, x0, y0);
 
