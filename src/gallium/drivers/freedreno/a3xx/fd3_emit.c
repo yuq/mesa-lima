@@ -571,19 +571,23 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	if (dirty & (FD_DIRTY_RASTERIZER | FD_DIRTY_PROG)) {
 		uint32_t val = fd3_rasterizer_stateobj(ctx->rasterizer)
 				->gras_cl_clip_cntl;
+		uint8_t planes = ctx->rasterizer->clip_plane_enable;
 		val |= COND(fp->writes_pos, A3XX_GRAS_CL_CLIP_CNTL_ZCLIP_DISABLE);
 		val |= COND(fp->frag_coord, A3XX_GRAS_CL_CLIP_CNTL_ZCOORD |
 				A3XX_GRAS_CL_CLIP_CNTL_WCOORD);
-		/* TODO only use if prog doesn't use clipvertex/clipdist */
-		val |= A3XX_GRAS_CL_CLIP_CNTL_NUM_USER_CLIP_PLANES(
-				MIN2(util_bitcount(ctx->rasterizer->clip_plane_enable), 6));
+		if (!emit->key.ucp_enables)
+			val |= A3XX_GRAS_CL_CLIP_CNTL_NUM_USER_CLIP_PLANES(
+					MIN2(util_bitcount(planes), 6));
 		OUT_PKT0(ring, REG_A3XX_GRAS_CL_CLIP_CNTL, 1);
 		OUT_RING(ring, val);
 	}
 
-	if (dirty & (FD_DIRTY_RASTERIZER | FD_DIRTY_UCP)) {
+	if (dirty & (FD_DIRTY_RASTERIZER | FD_DIRTY_PROG | FD_DIRTY_UCP)) {
 		uint32_t planes = ctx->rasterizer->clip_plane_enable;
 		int count = 0;
+
+		if (emit->key.ucp_enables)
+			planes = 0;
 
 		while (planes && count < 6) {
 			int i = ffs(planes) - 1;

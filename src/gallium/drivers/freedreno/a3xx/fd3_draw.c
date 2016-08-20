@@ -156,6 +156,9 @@ fd3_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 		.sprite_coord_mode = ctx->rasterizer->sprite_coord_mode,
 	};
 
+	if (fd3_needs_manual_clipping(ctx->prog.vp, ctx->rasterizer))
+		emit.key.ucp_enables = ctx->rasterizer->clip_plane_enable;
+
 	fixup_shader_state(ctx, &emit.key);
 
 	unsigned dirty = ctx->dirty;

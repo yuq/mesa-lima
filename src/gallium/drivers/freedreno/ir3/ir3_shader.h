@@ -272,6 +272,7 @@ void ir3_shader_destroy(struct ir3_shader *shader);
 struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
 		struct ir3_shader_key key, struct pipe_debug_callback *debug);
 void ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin);
+uint64_t ir3_shader_outputs(const struct ir3_shader *so);
 
 struct fd_ringbuffer;
 struct fd_context;

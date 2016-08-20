@@ -469,6 +469,12 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 	debug_printf("\n");
 }
 
+uint64_t
+ir3_shader_outputs(const struct ir3_shader *so)
+{
+	return so->nir->info.outputs_written;
+}
+
 /* This has to reach into the fd_context a bit more than the rest of
  * ir3, but it needs to be aligned with the compiler, so both agree
  * on which const regs hold what.  And the logic is identical between
