@@ -2826,7 +2826,8 @@ si_make_texture_descriptor(struct si_screen *screen,
 	state[1] = (S_008F14_DATA_FORMAT(data_format) |
 		    S_008F14_NUM_FORMAT(num_format));
 	state[2] = (S_008F18_WIDTH(width - 1) |
-		    S_008F18_HEIGHT(height - 1));
+		    S_008F18_HEIGHT(height - 1) |
+		    S_008F18_PERF_MOD(4));
 	state[3] = (S_008F1C_DST_SEL_X(si_map_swizzle(swizzle[0])) |
 		    S_008F1C_DST_SEL_Y(si_map_swizzle(swizzle[1])) |
 		    S_008F1C_DST_SEL_Z(si_map_swizzle(swizzle[2])) |
@@ -3172,10 +3173,13 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 			  S_008F30_MAX_ANISO_RATIO(max_aniso_ratio) |
 			  S_008F30_DEPTH_COMPARE_FUNC(si_tex_compare(state->compare_func)) |
 			  S_008F30_FORCE_UNNORMALIZED(!state->normalized_coords) |
+			  S_008F30_ANISO_THRESHOLD(max_aniso_ratio >> 1) |
+			  S_008F30_ANISO_BIAS(max_aniso_ratio) |
 			  S_008F30_DISABLE_CUBE_WRAP(!state->seamless_cube_map) |
 			  S_008F30_COMPAT_MODE(sctx->b.chip_class >= VI));
 	rstate->val[1] = (S_008F34_MIN_LOD(S_FIXED(CLAMP(state->min_lod, 0, 15), 8)) |
-			  S_008F34_MAX_LOD(S_FIXED(CLAMP(state->max_lod, 0, 15), 8)));
+			  S_008F34_MAX_LOD(S_FIXED(CLAMP(state->max_lod, 0, 15), 8)) |
+			  S_008F34_PERF_MIP(max_aniso_ratio ? max_aniso_ratio + 6 : 0));
 	rstate->val[2] = (S_008F38_LOD_BIAS(S_FIXED(CLAMP(state->lod_bias, -16, 16), 8)) |
 			  S_008F38_XY_MAG_FILTER(eg_tex_filter(state->mag_img_filter, max_aniso)) |
 			  S_008F38_XY_MIN_FILTER(eg_tex_filter(state->min_img_filter, max_aniso)) |

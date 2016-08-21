@@ -2344,12 +2344,18 @@
 #define   S_008F30_FORCE_UNNORMALIZED(x)                              (((unsigned)(x) & 0x1) << 15)
 #define   G_008F30_FORCE_UNNORMALIZED(x)                              (((x) >> 15) & 0x1)
 #define   C_008F30_FORCE_UNNORMALIZED                                 0xFFFF7FFF
+#define   S_008F30_ANISO_THRESHOLD(x)                                 (((unsigned)(x) & 0x07) << 16)
+#define   G_008F30_ANISO_THRESHOLD(x)                                 (((x) >> 16) & 0x07)
+#define   C_008F30_ANISO_THRESHOLD                                    0xFFF8FFFF
 #define   S_008F30_MC_COORD_TRUNC(x)                                  (((unsigned)(x) & 0x1) << 19)
 #define   G_008F30_MC_COORD_TRUNC(x)                                  (((x) >> 19) & 0x1)
 #define   C_008F30_MC_COORD_TRUNC                                     0xFFF7FFFF
 #define   S_008F30_FORCE_DEGAMMA(x)                                   (((unsigned)(x) & 0x1) << 20)
 #define   G_008F30_FORCE_DEGAMMA(x)                                   (((x) >> 20) & 0x1)
 #define   C_008F30_FORCE_DEGAMMA                                      0xFFEFFFFF
+#define   S_008F30_ANISO_BIAS(x)                                      (((unsigned)(x) & 0x3F) << 21)
+#define   G_008F30_ANISO_BIAS(x)                                      (((x) >> 21) & 0x3F)
+#define   C_008F30_ANISO_BIAS                                         0xF81FFFFF
 #define   S_008F30_TRUNC_COORD(x)                                     (((unsigned)(x) & 0x1) << 27)
 #define   G_008F30_TRUNC_COORD(x)                                     (((x) >> 27) & 0x1)
 #define   C_008F30_TRUNC_COORD                                        0xF7FFFFFF
