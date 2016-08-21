@@ -1070,8 +1070,13 @@ static void r600_query_memory_info(struct pipe_screen *screen,
 
 	info->device_memory_evicted =
 		ws->query_value(ws, RADEON_NUM_BYTES_MOVED) / 1024;
-	/* Just return the number of evicted 64KB pages. */
-	info->nr_device_memory_evictions = info->device_memory_evicted / 64;
+
+	if (rscreen->info.drm_major == 3 && rscreen->info.drm_minor >= 4)
+		info->nr_device_memory_evictions =
+			ws->query_value(ws, RADEON_NUM_EVICTIONS);
+	else
+		/* Just return the number of evicted 64KB pages. */
+		info->nr_device_memory_evictions = info->device_memory_evicted / 64;
 }
 
 struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
