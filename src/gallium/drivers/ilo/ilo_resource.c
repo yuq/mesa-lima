@@ -725,6 +725,7 @@ ilo_resource_from_handle(struct pipe_screen *screen,
 
 static boolean
 ilo_resource_get_handle(struct pipe_screen *screen,
+                        struct pipe_context *ctx,
                         struct pipe_resource *res,
                         struct winsys_handle *handle,
                         unsigned usage)

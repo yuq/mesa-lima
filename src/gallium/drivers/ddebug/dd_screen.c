@@ -237,13 +237,15 @@ dd_screen_resource_destroy(struct pipe_screen *_screen,
 
 static boolean
 dd_screen_resource_get_handle(struct pipe_screen *_screen,
+                              struct pipe_context *_pipe,
                               struct pipe_resource *resource,
                               struct winsys_handle *handle,
                               unsigned usage)
 {
    struct pipe_screen *screen = dd_screen(_screen)->screen;
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
 
-   return screen->resource_get_handle(screen, resource, handle, usage);
+   return screen->resource_get_handle(screen, pipe, resource, handle, usage);
 }
 
 

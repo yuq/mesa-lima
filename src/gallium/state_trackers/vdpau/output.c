@@ -796,7 +796,8 @@ VdpStatus vlVdpOutputSurfaceDMABuf(VdpVideoSurface surface,
    whandle.type = DRM_API_HANDLE_TYPE_FD;
 
    pscreen = vlsurface->surface->texture->screen;
-   if (!pscreen->resource_get_handle(pscreen, vlsurface->surface->texture, &whandle,
+   if (!pscreen->resource_get_handle(pscreen, vlsurface->device->context,
+                                     vlsurface->surface->texture, &whandle,
 				     PIPE_HANDLE_USAGE_READ_WRITE))
       return VDP_STATUS_NO_IMPLEMENTATION;
 

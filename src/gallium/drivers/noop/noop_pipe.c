@@ -135,6 +135,7 @@ static struct pipe_resource *noop_resource_from_handle(struct pipe_screen *scree
 }
 
 static boolean noop_resource_get_handle(struct pipe_screen *screen,
+					struct pipe_context *ctx,
 					struct pipe_resource *resource,
 					struct winsys_handle *handle,
                                         unsigned usage)

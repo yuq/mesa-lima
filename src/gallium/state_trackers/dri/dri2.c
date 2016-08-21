@@ -404,7 +404,7 @@ dri2_allocate_buffer(__DRIscreen *sPriv,
    else
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
 
-   screen->base.screen->resource_get_handle(screen->base.screen,
+   screen->base.screen->resource_get_handle(screen->base.screen, NULL,
          buffer->resource, &whandle,
          PIPE_HANDLE_USAGE_EXPLICIT_FLUSH | PIPE_HANDLE_USAGE_READ);
 
@@ -963,25 +963,25 @@ dri2_query_image(__DRIimage *image, int attrib, int *value)
    case __DRI_IMAGE_ATTRIB_STRIDE:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
       image->texture->screen->resource_get_handle(image->texture->screen,
-            image->texture, &whandle, usage);
+            NULL, image->texture, &whandle, usage);
       *value = whandle.stride;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_HANDLE:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
       image->texture->screen->resource_get_handle(image->texture->screen,
-         image->texture, &whandle, usage);
+         NULL, image->texture, &whandle, usage);
       *value = whandle.handle;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_NAME:
       whandle.type = DRM_API_HANDLE_TYPE_SHARED;
       image->texture->screen->resource_get_handle(image->texture->screen,
-         image->texture, &whandle, usage);
+         NULL, image->texture, &whandle, usage);
       *value = whandle.handle;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_FD:
       whandle.type= DRM_API_HANDLE_TYPE_FD;
       image->texture->screen->resource_get_handle(image->texture->screen,
-         image->texture, &whandle, usage);
+         NULL, image->texture, &whandle, usage);
       *value = whandle.handle;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_FORMAT:
@@ -1720,7 +1720,8 @@ dri2_interop_export_object(__DRIcontext *_ctx,
    memset(&whandle, 0, sizeof(whandle));
    whandle.type = DRM_API_HANDLE_TYPE_FD;
 
-   success = screen->resource_get_handle(screen, res, &whandle, usage);
+   success = screen->resource_get_handle(screen, st->pipe, res, &whandle,
+                                         usage);
    mtx_unlock(&ctx->Shared->Mutex);
 
    if (!success)

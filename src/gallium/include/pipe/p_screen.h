@@ -206,6 +206,12 @@ struct pipe_screen {
     * that the texture is created with a special usage flag like
     * DISPLAYTARGET or PRIMARY.
     *
+    * The context parameter can optionally be used to flush the resource and
+    * the context to make sure the resource is coherent with whatever user
+    * will use it. Some drivers may also use the context to convert
+    * the resource into a format compatible for sharing. The use case is
+    * OpenGL-OpenCL interop. The context parameter is allowed to be NULL.
+    *
     * NOTE: in the case of DRM_API_HANDLE_TYPE_FD handles, the caller
     * takes ownership of the FD.  (This is consistent with
     * EGL_MESA_image_dma_buf_export)
@@ -213,6 +219,7 @@ struct pipe_screen {
     * \param usage  A combination of PIPE_HANDLE_USAGE_* flags.
     */
    boolean (*resource_get_handle)(struct pipe_screen *,
+                                  struct pipe_context *context,
 				  struct pipe_resource *tex,
 				  struct winsys_handle *handle,
 				  unsigned usage);

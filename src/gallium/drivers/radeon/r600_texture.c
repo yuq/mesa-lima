@@ -511,6 +511,7 @@ static void r600_degrade_tile_mode_to_linear(struct r600_common_context *rctx,
 }
 
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
+				       struct pipe_context *ctx,
 				       struct pipe_resource *resource,
 				       struct winsys_handle *whandle,
                                        unsigned usage)

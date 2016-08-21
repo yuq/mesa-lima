@@ -176,16 +176,19 @@ rbug_screen_resource_from_handle(struct pipe_screen *_screen,
 
 static boolean
 rbug_screen_resource_get_handle(struct pipe_screen *_screen,
+                                struct pipe_context *_pipe,
                                 struct pipe_resource *_resource,
                                 struct winsys_handle *handle,
                                 unsigned usage)
 {
    struct rbug_screen *rb_screen = rbug_screen(_screen);
+   struct rbug_context *rb_pipe = rbug_context(_pipe);
    struct rbug_resource *rb_resource = rbug_resource(_resource);
    struct pipe_screen *screen = rb_screen->screen;
    struct pipe_resource *resource = rb_resource->resource;
 
-   return screen->resource_get_handle(screen, resource, handle, usage);
+   return screen->resource_get_handle(screen, rb_pipe ? rb_pipe->pipe : NULL,
+                                      resource, handle, usage);
 }
 
 

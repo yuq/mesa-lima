@@ -470,7 +470,8 @@ VdpStatus vlVdpVideoSurfaceDMABuf(VdpVideoSurface surface,
    whandle.layer = surf->u.tex.first_layer;
 
    pscreen = surf->texture->screen;
-   if (!pscreen->resource_get_handle(pscreen, surf->texture, &whandle,
+   if (!pscreen->resource_get_handle(pscreen, p_surf->device->context,
+                                     surf->texture, &whandle,
 				     PIPE_HANDLE_USAGE_READ_WRITE))
       return VDP_STATUS_NO_IMPLEMENTATION;
 

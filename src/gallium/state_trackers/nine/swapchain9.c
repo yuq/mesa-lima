@@ -88,7 +88,8 @@ D3DWindowBuffer_create(struct NineSwapChain9 *This,
 
     memset(&whandle, 0, sizeof(whandle));
     whandle.type = DRM_API_HANDLE_TYPE_FD;
-    This->screen->resource_get_handle(This->screen, resource, &whandle,
+    This->screen->resource_get_handle(This->screen, This->pipe, resource,
+                                      &whandle,
                                       for_frontbuffer_reading ?
                                           PIPE_HANDLE_USAGE_WRITE :
                                           PIPE_HANDLE_USAGE_EXPLICIT_FLUSH |

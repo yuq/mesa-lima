@@ -243,7 +243,7 @@ dri3_alloc_back_buffer(struct vl_dri3_screen *scrn)
    memset(&whandle, 0, sizeof(whandle));
    whandle.type= DRM_API_HANDLE_TYPE_FD;
    usage = PIPE_HANDLE_USAGE_EXPLICIT_FLUSH | PIPE_HANDLE_USAGE_READ;
-   scrn->base.pscreen->resource_get_handle(scrn->base.pscreen,
+   scrn->base.pscreen->resource_get_handle(scrn->base.pscreen, NULL,
                                            buffer->texture, &whandle,
                                            usage);
    buffer_fd = whandle.handle;

@@ -549,7 +549,8 @@ xa_surface_handle(struct xa_surface *srf,
 
     memset(&whandle, 0, sizeof(whandle));
     whandle.type = handle_type(type);
-    res = screen->resource_get_handle(screen, srf->tex, &whandle,
+    res = screen->resource_get_handle(screen, srf->xa->default_ctx->pipe,
+                                      srf->tex, &whandle,
                                       PIPE_HANDLE_USAGE_READ_WRITE);
     if (!res)
 	return -XA_ERR_INVAL;

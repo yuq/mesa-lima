@@ -333,18 +333,21 @@ trace_screen_resource_from_handle(struct pipe_screen *_screen,
 
 static boolean
 trace_screen_resource_get_handle(struct pipe_screen *_screen,
+                                 struct pipe_context *_pipe,
                                 struct pipe_resource *_resource,
                                 struct winsys_handle *handle,
                                  unsigned usage)
 {
    struct trace_screen *tr_screen = trace_screen(_screen);
+   struct trace_context *tr_pipe = _pipe ? trace_context(_pipe) : NULL;
    struct trace_resource *tr_resource = trace_resource(_resource);
    struct pipe_screen *screen = tr_screen->screen;
    struct pipe_resource *resource = tr_resource->resource;
 
    /* TODO trace call */
 
-   return screen->resource_get_handle(screen, resource, handle, usage);
+   return screen->resource_get_handle(screen, tr_pipe ? tr_pipe->pipe : NULL,
+                                      resource, handle, usage);
 }
 
 
