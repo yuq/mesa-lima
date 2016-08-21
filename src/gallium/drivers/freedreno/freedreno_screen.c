@@ -175,6 +175,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_STRING_MARKER:
+	case PIPE_CAP_MIXED_COLOR_DEPTH_BITS:
 		return 1;
 
 	case PIPE_CAP_USER_CONSTANT_BUFFERS:

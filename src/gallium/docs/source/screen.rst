@@ -347,6 +347,12 @@ The integer capabilities:
   for ``pipe_rasterizer_state::offset_units_unscaled``.
 * ``PIPE_CAP_VIEWPORT_SUBPIXEL_BITS``: Number of bits of subpixel precision for
   floating point viewport bounds.
+* ``PIPE_CAP_MIXED_COLOR_DEPTH_BITS``: Whether there is non-fallback
+  support for color/depth format combinations that use a different
+  number of bits. For the purpose of this cap, Z24 is treated as
+  32-bit. If set to off, that means that a B5G6R5 + Z24 or RGBA8 + Z16
+  combination will require a driver fallback, and should not be
+  advertised in the GLX/EGL config list.
 
 
 .. _pipe_capf:
