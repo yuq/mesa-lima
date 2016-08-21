@@ -548,14 +548,15 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		}
 
 		if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) &&
-		    rtex->cmask.size) {
+		    (rtex->cmask.size || rtex->dcc_offset)) {
 			/* Eliminate fast clear (both CMASK and DCC) */
 			r600_eliminate_fast_color_clear(rctx, rtex);
 
 			/* Disable CMASK if flush_resource isn't going
 			 * to be called.
 			 */
-			r600_texture_discard_cmask(rscreen, rtex);
+			if (rtex->cmask.size)
+				r600_texture_discard_cmask(rscreen, rtex);
 		}
 
 		/* Set metadata. */
