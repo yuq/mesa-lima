@@ -106,8 +106,10 @@ vlVaSyncSurface(VADriverContextP ctx, VASurfaceID render_target)
    pipe_mutex_lock(drv->mutex);
    surf = handle_table_get(drv->htab, render_target);
 
-   if (!surf || !surf->buffer)
+   if (!surf || !surf->buffer) {
+      pipe_mutex_unlock(drv->mutex);
       return VA_STATUS_ERROR_INVALID_SURFACE;
+   }
 
    context = handle_table_get(drv->htab, surf->ctx);
    if (!context) {
