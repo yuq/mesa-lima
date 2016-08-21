@@ -340,15 +340,20 @@ static void r600_dirty_all_framebuffer_states(struct r600_common_screen *rscreen
 	p_atomic_inc(&rscreen->dirty_fb_counter);
 }
 
-static void r600_eliminate_fast_color_clear(struct r600_common_screen *rscreen,
-				      struct r600_texture *rtex)
+static void r600_eliminate_fast_color_clear(struct r600_common_context *rctx,
+					    struct r600_texture *rtex)
 {
-	struct pipe_context *ctx = rscreen->aux_context;
+	struct r600_common_screen *rscreen = rctx->screen;
+	struct pipe_context *ctx = &rctx->b;
 
-	pipe_mutex_lock(rscreen->aux_context_lock);
+	if (ctx == rscreen->aux_context)
+		pipe_mutex_lock(rscreen->aux_context_lock);
+
 	ctx->flush_resource(ctx, &rtex->resource.b.b);
 	ctx->flush(ctx, NULL, 0);
-	pipe_mutex_unlock(rscreen->aux_context_lock);
+
+	if (ctx == rscreen->aux_context)
+		pipe_mutex_unlock(rscreen->aux_context_lock);
 }
 
 static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
@@ -545,7 +550,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) &&
 		    rtex->cmask.size) {
 			/* Eliminate fast clear (both CMASK and DCC) */
-			r600_eliminate_fast_color_clear(rscreen, rtex);
+			r600_eliminate_fast_color_clear(rctx, rtex);
 
 			/* Disable CMASK if flush_resource isn't going
 			 * to be called.
