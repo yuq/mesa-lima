@@ -518,8 +518,8 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
                                        unsigned usage)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
-	struct r600_common_context *aux_context =
-		(struct r600_common_context*)rscreen->aux_context;
+	struct r600_common_context *rctx = (struct r600_common_context*)
+					   (ctx ? ctx : rscreen->aux_context);
 	struct r600_resource *res = (struct r600_resource*)resource;
 	struct r600_texture *rtex = (struct r600_texture*)resource;
 	struct radeon_bo_metadata metadata;
@@ -538,7 +538,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		 * access.
 		 */
 		if (usage & PIPE_HANDLE_USAGE_WRITE && rtex->dcc_offset) {
-			if (r600_texture_disable_dcc(aux_context, rtex))
+			if (r600_texture_disable_dcc(rctx, rtex))
 				update_metadata = true;
 		}
 
