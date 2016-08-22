@@ -52,7 +52,7 @@ typedef struct xcb_connection_t xcb_connection_t;
 typedef uint32_t xcb_visualid_t;
 typedef uint32_t xcb_window_t;
 
-struct anv_l3_config;
+struct gen_l3_config;
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_intel.h>
@@ -1224,7 +1224,7 @@ struct anv_attachment_state {
 struct anv_cmd_state {
    /* PIPELINE_SELECT.PipelineSelection */
    uint32_t                                     current_pipeline;
-   const struct anv_l3_config *                 current_l3_config;
+   const struct gen_l3_config *                 current_l3_config;
    uint32_t                                     vb_dirty;
    anv_cmd_dirty_mask_t                         dirty;
    anv_cmd_dirty_mask_t                         compute_dirty;
@@ -1524,7 +1524,7 @@ struct anv_pipeline {
       uint32_t                                  start[MESA_SHADER_GEOMETRY + 1];
       uint32_t                                  size[MESA_SHADER_GEOMETRY + 1];
       uint32_t                                  entries[MESA_SHADER_GEOMETRY + 1];
-      const struct anv_l3_config *              l3_config;
+      const struct gen_l3_config *              l3_config;
       uint32_t                                  total_size;
    } urb;
 
