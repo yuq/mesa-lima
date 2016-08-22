@@ -28,6 +28,7 @@
 #include <fcntl.h>
 
 #include "util/mesa-sha1.h"
+#include "common/gen_l3_config.h"
 #include "anv_private.h"
 #include "brw_nir.h"
 #include "anv_nir.h"
@@ -802,29 +803,6 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
    return VK_SUCCESS;
 }
 
-
-void
-anv_setup_pipeline_l3_config(struct anv_pipeline *pipeline)
-{
-   const struct gen_device_info *devinfo = &pipeline->device->info;
-   switch (devinfo->gen) {
-   case 7:
-      if (devinfo->is_haswell)
-         gen75_setup_pipeline_l3_config(pipeline);
-      else
-         gen7_setup_pipeline_l3_config(pipeline);
-      break;
-   case 8:
-      gen8_setup_pipeline_l3_config(pipeline);
-      break;
-   case 9:
-      gen9_setup_pipeline_l3_config(pipeline);
-      break;
-   default:
-      unreachable("unsupported gen\n");
-   }
-}
-
 void
 anv_compute_urb_partition(struct anv_pipeline *pipeline)
 {
@@ -1151,6 +1129,26 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
    }
 }
 
+/**
+ * Calculate the desired L3 partitioning based on the current state of the
+ * pipeline.  For now this simply returns the conservative defaults calculated
+ * by get_default_l3_weights(), but we could probably do better by gathering
+ * more statistics from the pipeline state (e.g. guess of expected URB usage
+ * and bound surfaces), or by using feed-back from performance counters.
+ */
+void
+anv_pipeline_setup_l3_config(struct anv_pipeline *pipeline, bool needs_slm)
+{
+   const struct gen_device_info *devinfo = &pipeline->device->info;
+
+   const struct gen_l3_weights w =
+      gen_get_default_l3_weights(devinfo, pipeline->needs_data_cache, needs_slm);
+
+   pipeline->urb.l3_config = gen_get_l3_config(devinfo, w);
+   pipeline->urb.total_size =
+      gen_get_l3_config_urb_size(devinfo, pipeline->urb.l3_config);
+}
+
 VkResult
 anv_pipeline_init(struct anv_pipeline *pipeline,
                   struct anv_device *device,
@@ -1243,7 +1241,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
       assert(extra->disable_vs);
    }
 
-   anv_setup_pipeline_l3_config(pipeline);
+   anv_pipeline_setup_l3_config(pipeline, false);
    anv_compute_urb_partition(pipeline);
 
    const VkPipelineVertexInputStateCreateInfo *vi_info =

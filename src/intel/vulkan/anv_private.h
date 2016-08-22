@@ -1648,7 +1648,7 @@ void
 anv_compute_urb_partition(struct anv_pipeline *pipeline);
 
 void
-anv_setup_pipeline_l3_config(struct anv_pipeline *pipeline);
+anv_pipeline_setup_l3_config(struct anv_pipeline *pipeline, bool needs_slm);
 
 /**
  * Subsurface of an anv_image.

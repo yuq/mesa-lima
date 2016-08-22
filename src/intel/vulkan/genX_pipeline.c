@@ -85,9 +85,9 @@ genX(compute_pipeline_create)(
 
    pipeline->use_repclear = false;
 
-   anv_setup_pipeline_l3_config(pipeline);
-
    const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
+
+   anv_pipeline_setup_l3_config(pipeline, cs_prog_data->base.total_shared > 0);
 
    uint32_t group_size = cs_prog_data->local_size[0] *
       cs_prog_data->local_size[1] * cs_prog_data->local_size[2];

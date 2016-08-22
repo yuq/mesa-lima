@@ -27,33 +27,6 @@
 #include "genxml/gen_macros.h"
 #include "genxml/genX_pack.h"
 
-/**
- * Calculate the desired L3 partitioning based on the current state of the
- * pipeline.  For now this simply returns the conservative defaults calculated
- * by get_default_l3_weights(), but we could probably do better by gathering
- * more statistics from the pipeline state (e.g. guess of expected URB usage
- * and bound surfaces), or by using feed-back from performance counters.
- */
-static struct gen_l3_weights
-get_pipeline_state_l3_weights(const struct anv_pipeline *pipeline)
-{
-   bool needs_dc = false, needs_slm = false;
-
-   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      if (!anv_pipeline_has_stage(pipeline, i))
-         continue;
-
-      const struct brw_stage_prog_data *prog_data =
-         anv_shader_bin_get_prog_data(pipeline->shaders[i]);
-
-      needs_dc |= pipeline->needs_data_cache;
-      needs_slm |= prog_data->total_shared;
-   }
-
-   return gen_get_default_l3_weights(&pipeline->device->info,
-                                     needs_dc, needs_slm);
-}
-
 #define emit_lri(batch, reg, imm)                               \
    anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM), lri) {     \
       lri.RegisterOffset = __anv_reg_num(reg);                  \
@@ -205,17 +178,6 @@ setup_l3_config(struct anv_cmd_buffer *cmd_buffer/*, struct brw_context *brw*/,
 
 #endif
 
-}
-
-void
-genX(setup_pipeline_l3_config)(struct anv_pipeline *pipeline)
-{
-   const struct gen_l3_weights w = get_pipeline_state_l3_weights(pipeline);
-   const struct gen_device_info *devinfo = &pipeline->device->info;
-
-   pipeline->urb.l3_config = gen_get_l3_config(devinfo, w);
-   pipeline->urb.total_size =
-      gen_get_l3_config_urb_size(devinfo, pipeline->urb.l3_config);
 }
 
 void
