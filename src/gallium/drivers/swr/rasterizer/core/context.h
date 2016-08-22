@@ -368,12 +368,19 @@ struct DRAW_STATE
 
 struct DRAW_DYNAMIC_STATE
 {
+    void Reset(uint32_t numThreads)
+    {
+        SWR_STATS* pSavePtr = pStats;
+        memset(this, 0, sizeof(*this));
+        pStats = pSavePtr;
+        memset(pStats, 0, sizeof(SWR_STATS) * (numThreads ? numThreads : 1));
+    }
     ///@todo Currently assumes only a single FE can do stream output for a draw.
     uint32_t SoWriteOffset[4];
     bool     SoWriteOffsetDirty[4];
 
     SWR_STATS_FE statsFE;   // Only one FE thread per DC.
-    SWR_STATS    stats[KNOB_MAX_NUM_THREADS];
+    SWR_STATS*   pStats;
 };
 
 // Draw Context
@@ -486,10 +493,10 @@ struct SWR_CONTEXT
     PFN_UPDATE_STATS_FE         pfnUpdateStatsFE;
 
     // Global Stats
-    SWR_STATS stats[KNOB_MAX_NUM_THREADS];
+    SWR_STATS* pStats;
 
     // Scratch space for workers.
-    uint8_t* pScratch[KNOB_MAX_NUM_THREADS];
+    uint8_t** ppScratch;
 
     volatile int32_t  drawsOutstandingFE;
 
@@ -501,5 +508,5 @@ struct SWR_CONTEXT
     TileSet singleThreadLockedTiles;
 };
 
-#define UPDATE_STAT(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.stats[workerId].name += count; }
+#define UPDATE_STAT(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.pStats[workerId].name += count; }
 #define UPDATE_STAT_FE(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.statsFE.name += count; }

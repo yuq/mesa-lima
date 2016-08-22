@@ -73,14 +73,19 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
     static std::mutex m;
     std::lock_guard<std::mutex> l(m);
 
-    static SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX buffer[KNOB_MAX_NUM_THREADS];
-    DWORD bufSize = sizeof(buffer);
+    DWORD bufSize = 0;
 
-    BOOL ret = GetLogicalProcessorInformationEx(RelationProcessorCore, buffer, &bufSize);
+    BOOL ret = GetLogicalProcessorInformationEx(RelationProcessorCore, nullptr, &bufSize);
+    SWR_ASSERT(ret == FALSE && GetLastError() == ERROR_INSUFFICIENT_BUFFER);
+
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX pBufferMem = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)malloc(bufSize);
+    SWR_ASSERT(pBufferMem);
+
+    ret = GetLogicalProcessorInformationEx(RelationProcessorCore, pBufferMem, &bufSize);
     SWR_ASSERT(ret != FALSE, "Failed to get Processor Topology Information");
 
-    uint32_t count = bufSize / buffer->Size;
-    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX pBuffer = buffer;
+    uint32_t count = bufSize / pBufferMem->Size;
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX pBuffer = pBufferMem;
 
     for (uint32_t i = 0; i < count; ++i)
     {
@@ -149,6 +154,8 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
         }
         pBuffer = PtrAdd(pBuffer, pBuffer->Size);
     }
+
+    free(pBufferMem);
 
 
 #elif defined(__linux__) || defined (__gnu_linux__)
@@ -321,10 +328,10 @@ INLINE void UpdateClientStats(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
     // Sum up stats across all workers before sending to client.
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
     {
-        stats.DepthPassCount += dynState.stats[i].DepthPassCount;
+        stats.DepthPassCount += dynState.pStats[i].DepthPassCount;
 
-        stats.PsInvocations  += dynState.stats[i].PsInvocations;
-        stats.CsInvocations  += dynState.stats[i].CsInvocations;
+        stats.PsInvocations  += dynState.pStats[i].PsInvocations;
+        stats.CsInvocations  += dynState.pStats[i].CsInvocations;
     }
 
     pContext->pfnUpdateStats(GetPrivateState(pDC), &stats);
@@ -849,13 +856,6 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
         numThreads = std::min(pContext->threadInfo.MAX_WORKER_THREADS, maxHWThreads);
     }
 
-    if (numThreads > KNOB_MAX_NUM_THREADS)
-    {
-        printf("WARNING: system thread count %u exceeds max %u, "
-            "performance will be degraded\n",
-            numThreads, KNOB_MAX_NUM_THREADS);
-    }
-
     uint32_t numAPIReservedThreads = 1;
 
 
@@ -878,8 +878,8 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
         else
         {
             pPool->numThreads = 0;
-            SET_KNOB(SINGLE_THREADED, true);
-            return;
+            numThreads = 1;
+            pContext->threadInfo.SINGLE_THREADED = true;
         }
     }
     else
@@ -895,12 +895,27 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
         }
     }
 
+    // Initialize DRAW_CONTEXT's per-thread stats
+    for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
+    {
+        pContext->dcRing[dc].dynState.pStats = new SWR_STATS[numThreads];
+        memset(pContext->dcRing[dc].dynState.pStats, 0, sizeof(SWR_STATS) * numThreads);
+    }
+
+    if (pContext->threadInfo.SINGLE_THREADED)
+    {
+        return;
+    }
+
+
     pPool->numThreads = numThreads;
     pContext->NumWorkerThreads = pPool->numThreads;
 
     pPool->inThreadShutdown = false;
     pPool->pThreadData = (THREAD_DATA *)malloc(pPool->numThreads * sizeof(THREAD_DATA));
     pPool->numaMask = 0;
+
+    pPool->pThreads = new THREAD_PTR[pPool->numThreads];
 
     if (pContext->threadInfo.MAX_WORKER_THREADS)
     {
@@ -918,7 +933,7 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
             pPool->pThreadData[workerId].htId = 0;
             pPool->pThreadData[workerId].pContext = pContext;
             pPool->pThreadData[workerId].forceBindProcGroup = bForceBindProcGroup;
-            pPool->threads[workerId] = new std::thread(workerThreadInit<true, true>, &pPool->pThreadData[workerId]);
+            pPool->pThreads[workerId] = new std::thread(workerThreadInit<true, true>, &pPool->pThreadData[workerId]);
 
             pContext->NumBEThreads++;
             pContext->NumFEThreads++;
@@ -964,7 +979,7 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
                     pPool->pThreadData[workerId].htId = t;
                     pPool->pThreadData[workerId].pContext = pContext;
 
-                    pPool->threads[workerId] = new std::thread(workerThreadInit<true, true>, &pPool->pThreadData[workerId]);
+                    pPool->pThreads[workerId] = new std::thread(workerThreadInit<true, true>, &pPool->pThreadData[workerId]);
                     pContext->NumBEThreads++;
                     pContext->NumFEThreads++;
 
@@ -989,9 +1004,11 @@ void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
         // Wait for threads to finish and destroy them
         for (uint32_t t = 0; t < pPool->numThreads; ++t)
         {
-            pPool->threads[t]->join();
-            delete(pPool->threads[t]);
+            pPool->pThreads[t]->join();
+            delete(pPool->pThreads[t]);
         }
+
+        delete [] pPool->pThreads;
 
         // Clean up data used by threads
         free(pPool->pThreadData);

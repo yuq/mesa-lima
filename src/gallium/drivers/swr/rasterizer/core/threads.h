@@ -51,7 +51,7 @@ struct THREAD_DATA
 
 struct THREAD_POOL
 {
-    THREAD_PTR threads[KNOB_MAX_NUM_THREADS];
+    THREAD_PTR* pThreads;
     uint32_t numThreads;
     uint32_t numaMask;
     volatile bool inThreadShutdown;

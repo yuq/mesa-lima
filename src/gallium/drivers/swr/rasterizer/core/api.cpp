@@ -77,6 +77,15 @@ HANDLE SwrCreateContext(
     pContext->pMacroTileManagerArray = (MacroTileMgr*)AlignedMalloc(sizeof(MacroTileMgr) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
     pContext->pDispatchQueueArray = (DispatchQueue*)AlignedMalloc(sizeof(DispatchQueue) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
 
+    for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
+    {
+        pContext->dcRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
+        new (&pContext->pMacroTileManagerArray[dc]) MacroTileMgr(*pContext->dcRing[dc].pArena);
+        new (&pContext->pDispatchQueueArray[dc]) DispatchQueue();
+
+        pContext->dsRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
+    }
+
     pContext->threadInfo.MAX_WORKER_THREADS        = KNOB_MAX_WORKER_THREADS;
     pContext->threadInfo.MAX_NUMA_NODES            = KNOB_MAX_NUMA_NODES;
     pContext->threadInfo.MAX_CORES_PER_NUMA_NODE   = KNOB_MAX_CORES_PER_NUMA_NODE;
@@ -88,24 +97,12 @@ HANDLE SwrCreateContext(
         pContext->threadInfo = *pCreateInfo->pThreadInfo;
     }
 
-    for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
-    {
-        pContext->dcRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
-        new (&pContext->pMacroTileManagerArray[dc]) MacroTileMgr(*pContext->dcRing[dc].pArena);
-        new (&pContext->pDispatchQueueArray[dc]) DispatchQueue();
+    memset(&pContext->WaitLock, 0, sizeof(pContext->WaitLock));
+    memset(&pContext->FifosNotEmpty, 0, sizeof(pContext->FifosNotEmpty));
+    new (&pContext->WaitLock) std::mutex();
+    new (&pContext->FifosNotEmpty) std::condition_variable();
 
-        pContext->dsRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
-    }
-
-    if (!pContext->threadInfo.SINGLE_THREADED)
-    {
-        memset(&pContext->WaitLock, 0, sizeof(pContext->WaitLock));
-        memset(&pContext->FifosNotEmpty, 0, sizeof(pContext->FifosNotEmpty));
-        new (&pContext->WaitLock) std::mutex();
-        new (&pContext->FifosNotEmpty) std::condition_variable();
-
-        CreateThreadPool(pContext, &pContext->threadPool);
-    }
+    CreateThreadPool(pContext, &pContext->threadPool);
 
     // Calling createThreadPool() above can set SINGLE_THREADED
     if (pContext->threadInfo.SINGLE_THREADED)
@@ -115,6 +112,9 @@ HANDLE SwrCreateContext(
         pContext->NumBEThreads = 1;
     }
 
+    pContext->ppScratch = new uint8_t*[pContext->NumWorkerThreads];
+    pContext->pStats = new SWR_STATS[pContext->NumWorkerThreads];
+
     // Allocate scratch space for workers.
     ///@note We could lazily allocate this but its rather small amount of memory.
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
@@ -122,12 +122,12 @@ HANDLE SwrCreateContext(
 #if defined(_WIN32)
         uint32_t numaNode = pContext->threadPool.pThreadData ?
             pContext->threadPool.pThreadData[i].numaId : 0;
-        pContext->pScratch[i] = (uint8_t*)VirtualAllocExNuma(
+        pContext->ppScratch[i] = (uint8_t*)VirtualAllocExNuma(
             GetCurrentProcess(), nullptr, 32 * sizeof(KILOBYTE),
             MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE,
             numaNode);
 #else
-        pContext->pScratch[i] = (uint8_t*)AlignedMalloc(32 * sizeof(KILOBYTE), KNOB_SIMD_WIDTH * 4);
+        pContext->ppScratch[i] = (uint8_t*)AlignedMalloc(32 * sizeof(KILOBYTE), KNOB_SIMD_WIDTH * 4);
 #endif
     }
 
@@ -166,6 +166,7 @@ void SwrDestroyContext(HANDLE hContext)
     // free the fifos
     for (uint32_t i = 0; i < KNOB_MAX_DRAWS_IN_FLIGHT; ++i)
     {
+        delete [] pContext->dcRing[i].dynState.pStats;
         delete pContext->dcRing[i].pArena;
         delete pContext->dsRing[i].pArena;
         pContext->pMacroTileManagerArray[i].~MacroTileMgr();
@@ -179,11 +180,14 @@ void SwrDestroyContext(HANDLE hContext)
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
     {
 #if defined(_WIN32)
-        VirtualFree(pContext->pScratch[i], 0, MEM_RELEASE);
+        VirtualFree(pContext->ppScratch[i], 0, MEM_RELEASE);
 #else
-        AlignedFree(pContext->pScratch[i]);
+        AlignedFree(pContext->ppScratch[i]);
 #endif
     }
+
+    delete [] pContext->ppScratch;
+    delete [] pContext->pStats;
 
     delete(pContext->pHotTileMgr);
 
@@ -352,7 +356,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pCurDrawContext->threadsDone = 0;
         pCurDrawContext->retireCallback.pfnCallbackFunc = nullptr;
 
-        memset(&pCurDrawContext->dynState, 0, sizeof(pCurDrawContext->dynState));
+        pCurDrawContext->dynState.Reset(pContext->threadPool.numThreads);
 
         // Assign unique drawId for this DC
         pCurDrawContext->drawId = pContext->dcRing.GetHead();

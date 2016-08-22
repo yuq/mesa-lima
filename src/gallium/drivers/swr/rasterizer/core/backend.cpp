@@ -68,7 +68,7 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     csContext.dispatchDims[0] = pTaskData->threadGroupCountX;
     csContext.dispatchDims[1] = pTaskData->threadGroupCountY;
     csContext.dispatchDims[2] = pTaskData->threadGroupCountZ;
-    csContext.pTGSM = pContext->pScratch[workerId];
+    csContext.pTGSM = pContext->ppScratch[workerId];
     csContext.pSpillFillBuffer = (uint8_t*)pSpillFillBuffer;
 
     state.pfnCsFunc(GetPrivateState(pDC), &csContext);
