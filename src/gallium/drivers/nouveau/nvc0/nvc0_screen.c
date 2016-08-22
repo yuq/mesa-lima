@@ -125,9 +125,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
       return 128 * 1024 * 1024;
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
-      if (class_3d <= NVF0_3D_CLASS)
-         return 430;
-      return 410;
+      return 430;
    case PIPE_CAP_MAX_RENDER_TARGETS:
       return 8;
    case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
@@ -388,11 +386,10 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
       return 32;
    case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
-      if (class_3d == NVE4_3D_CLASS || class_3d == NVF0_3D_CLASS)
+      if (class_3d >= NVE4_3D_CLASS)
          return NVC0_MAX_IMAGES;
-      if (class_3d < NVE4_3D_CLASS)
-         if (shader == PIPE_SHADER_FRAGMENT || shader == PIPE_SHADER_COMPUTE)
-            return NVC0_MAX_IMAGES;
+      if (shader == PIPE_SHADER_FRAGMENT || shader == PIPE_SHADER_COMPUTE)
+         return NVC0_MAX_IMAGES;
       return 0;
    default:
       NOUVEAU_ERR("unknown PIPE_SHADER_CAP %d\n", param);
