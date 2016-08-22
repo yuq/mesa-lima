@@ -734,7 +734,7 @@ enum brw_predicate_state {
 
 struct shader_times;
 
-struct brw_l3_config;
+struct gen_l3_config;
 
 /**
  * brw_context is derived from gl_context.
@@ -1317,7 +1317,7 @@ struct brw_context
    int baseinstance;
 
    struct {
-      const struct brw_l3_config *config;
+      const struct gen_l3_config *config;
    } l3;
 
    struct {
