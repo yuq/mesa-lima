@@ -56,7 +56,7 @@ static inline void vl_rbsp_init(struct vl_rbsp *rbsp, struct vl_vlc *nal, unsign
    /* copy the position */
    rbsp->nal = *nal;
 
-   rbsp->escaped = 0;
+   rbsp->escaped = 16;
 
    /* search for the end of the NAL unit */
    while (vl_vlc_search_byte(nal, num_bits, 0x00)) {
