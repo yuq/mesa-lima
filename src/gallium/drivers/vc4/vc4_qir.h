@@ -494,6 +494,18 @@ struct vc4_compile {
         uint32_t qpu_inst_size;
         uint32_t num_inputs;
 
+        /**
+         * Number of inputs from num_inputs remaining to be queued to the read
+         * FIFO in the VS/CS.
+         */
+        uint32_t num_inputs_remaining;
+
+        /* Number of inputs currently in the read FIFO for the VS/CS */
+        uint32_t num_inputs_in_fifo;
+
+        /** Next offset in the VPM to read from in the VS/CS */
+        uint32_t vpm_read_offset;
+
         uint32_t program_id;
         uint32_t variant_id;
 };
