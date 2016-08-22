@@ -27,8 +27,8 @@
 #include <stdlib.h>
 
 #include "brw_device_info.h"
-#include "isl.h"
-#include "isl_priv.h"
+#include "isl/isl.h"
+#include "isl/isl_priv.h"
 
 #define BDW_GT2_DEVID 0x161a
 
