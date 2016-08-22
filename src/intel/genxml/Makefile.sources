@@ -1,9 +1,0 @@
-GENXML_GENERATED_FILES = \
-	gen4_pack.h \
-	gen45_pack.h \
-	gen5_pack.h \
-	gen6_pack.h \
-	gen7_pack.h \
-	gen75_pack.h \
-	gen8_pack.h \
-	gen9_pack.h

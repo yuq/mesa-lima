@@ -59,7 +59,7 @@ TEMPLATE = template.Template(
          *  IN THE SOFTWARE.
          */
 
-        #include "isl.h"
+        #include "isl/isl.h"
 
         const struct isl_format_layout
         isl_format_layouts[] = {

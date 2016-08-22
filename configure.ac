@@ -2746,8 +2746,6 @@ AC_CONFIG_FILES([Makefile
 		src/glx/tests/Makefile
 		src/gtest/Makefile
 		src/intel/Makefile
-		src/intel/genxml/Makefile
-		src/intel/isl/Makefile
 		src/intel/tools/Makefile
 		src/intel/vulkan/Makefile
 		src/loader/Makefile
