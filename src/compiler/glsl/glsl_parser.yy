@@ -1373,7 +1373,7 @@ layout_qualifier_id:
 
       /* Layout qualifiers for tessellation evaluation shaders. */
       if (!$$.flags.i) {
-         struct {
+         static const struct {
             const char *s;
             GLenum e;
          } map[] = {
@@ -1396,7 +1396,7 @@ layout_qualifier_id:
          }
       }
       if (!$$.flags.i) {
-         struct {
+         static const struct {
             const char *s;
             GLenum e;
          } map[] = {
