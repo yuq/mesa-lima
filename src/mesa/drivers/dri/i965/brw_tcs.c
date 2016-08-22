@@ -170,7 +170,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
 {
    struct gl_context *ctx = &brw->ctx;
    const struct brw_compiler *compiler = brw->intelScreen->compiler;
-   const struct brw_device_info *devinfo = compiler->devinfo;
+   const struct gen_device_info *devinfo = compiler->devinfo;
    struct brw_stage_state *stage_state = &brw->tcs.base;
    nir_shader *nir;
    struct brw_tcs_prog_data prog_data;

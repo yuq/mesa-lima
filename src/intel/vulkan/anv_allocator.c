@@ -922,7 +922,7 @@ anv_scratch_pool_alloc(struct anv_device *device, struct anv_scratch_pool *pool,
    if (size == 0) {
       /* We own the lock.  Allocate a buffer */
 
-      struct brw_device_info *devinfo = &device->info;
+      struct gen_device_info *devinfo = &device->info;
       uint32_t max_threads[] = {
          [MESA_SHADER_VERTEX]                  = devinfo->max_vs_threads,
          [MESA_SHADER_TESS_CTRL]               = devinfo->max_hs_threads,

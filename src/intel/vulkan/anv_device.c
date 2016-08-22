@@ -438,7 +438,7 @@ void anv_GetPhysicalDeviceProperties(
     VkPhysicalDeviceProperties*                 pProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
-   const struct brw_device_info *devinfo = pdevice->info;
+   const struct gen_device_info *devinfo = pdevice->info;
 
    const float time_stamp_base = devinfo->gen >= 9 ? 83.333 : 80.0;
 

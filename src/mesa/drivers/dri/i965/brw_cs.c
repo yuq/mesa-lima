@@ -35,7 +35,7 @@
 #include "compiler/glsl/ir_uniform.h"
 
 static void
-assign_cs_binding_table_offsets(const struct brw_device_info *devinfo,
+assign_cs_binding_table_offsets(const struct gen_device_info *devinfo,
                                 const struct gl_shader_program *shader_prog,
                                 const struct gl_program *prog,
                                 struct brw_cs_prog_data *prog_data)

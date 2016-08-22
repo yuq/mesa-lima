@@ -24,7 +24,7 @@
 #pragma once
 
 #include <stdio.h>
-#include "common/brw_device_info.h"
+#include "common/gen_device_info.h"
 #include "main/mtypes.h"
 #include "main/macros.h"
 
@@ -38,7 +38,7 @@ struct brw_geometry_program;
 union gl_constant_value;
 
 struct brw_compiler {
-   const struct brw_device_info *devinfo;
+   const struct gen_device_info *devinfo;
 
    struct {
       struct ra_regs *regs;
@@ -566,7 +566,7 @@ GLuint brw_varying_to_offset(const struct brw_vue_map *vue_map, GLuint varying)
    return brw_vue_slot_to_offset(vue_map->varying_to_slot[varying]);
 }
 
-void brw_compute_vue_map(const struct brw_device_info *devinfo,
+void brw_compute_vue_map(const struct gen_device_info *devinfo,
                          struct brw_vue_map *vue_map,
                          GLbitfield64 slots_valid,
                          bool separate_shader);
@@ -735,7 +735,7 @@ struct brw_gs_prog_data
 /** @} */
 
 struct brw_compiler *
-brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo);
+brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo);
 
 /**
  * Compile a vertex shader.

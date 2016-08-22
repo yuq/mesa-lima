@@ -331,7 +331,7 @@ public:
    bool is_copy_payload(const brw::simple_allocator &grf_alloc) const;
    unsigned components_read(unsigned i) const;
    int regs_read(int arg) const;
-   bool can_do_source_mods(const struct brw_device_info *devinfo);
+   bool can_do_source_mods(const struct gen_device_info *devinfo);
    bool can_change_types() const;
    bool has_side_effects() const;
    bool has_source_and_destination_hazard() const;
@@ -340,7 +340,7 @@ public:
     * Return the subset of flag registers read by the instruction as a bitset
     * with byte granularity.
     */
-   unsigned flags_read(const brw_device_info *devinfo) const;
+   unsigned flags_read(const gen_device_info *devinfo) const;
 
    /**
     * Return the subset of flag registers updated by the instruction (either

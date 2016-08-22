@@ -474,7 +474,7 @@ private:
    const struct brw_compiler *compiler;
    void *log_data; /* Passed to compiler->*_log functions */
 
-   const struct brw_device_info *devinfo;
+   const struct gen_device_info *devinfo;
 
    struct brw_codegen *p;
    const void * const key;

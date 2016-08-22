@@ -24,7 +24,7 @@
 #include <assert.h>
 
 #include "isl.h"
-#include "common/brw_device_info.h"
+#include "common/gen_device_info.h"
 
 struct surface_format_info {
    bool exists;
@@ -340,13 +340,13 @@ static const struct surface_format_info format_info[] = {
 #undef Y
 
 static unsigned
-format_gen(const struct brw_device_info *devinfo)
+format_gen(const struct gen_device_info *devinfo)
 {
    return devinfo->gen * 10 + (devinfo->is_g4x || devinfo->is_haswell) * 5;
 }
 
 bool
-isl_format_supports_rendering(const struct brw_device_info *devinfo,
+isl_format_supports_rendering(const struct gen_device_info *devinfo,
                               enum isl_format format)
 {
    if (!format_info[format].exists)
@@ -356,7 +356,7 @@ isl_format_supports_rendering(const struct brw_device_info *devinfo,
 }
 
 bool
-isl_format_supports_alpha_blending(const struct brw_device_info *devinfo,
+isl_format_supports_alpha_blending(const struct gen_device_info *devinfo,
                                    enum isl_format format)
 {
    if (!format_info[format].exists)
@@ -366,7 +366,7 @@ isl_format_supports_alpha_blending(const struct brw_device_info *devinfo,
 }
 
 bool
-isl_format_supports_sampling(const struct brw_device_info *devinfo,
+isl_format_supports_sampling(const struct gen_device_info *devinfo,
                              enum isl_format format)
 {
    if (!format_info[format].exists)
@@ -385,7 +385,7 @@ isl_format_supports_sampling(const struct brw_device_info *devinfo,
 }
 
 bool
-isl_format_supports_filtering(const struct brw_device_info *devinfo,
+isl_format_supports_filtering(const struct gen_device_info *devinfo,
                               enum isl_format format)
 {
    if (!format_info[format].exists)
@@ -404,7 +404,7 @@ isl_format_supports_filtering(const struct brw_device_info *devinfo,
 }
 
 bool
-isl_format_supports_vertex_fetch(const struct brw_device_info *devinfo,
+isl_format_supports_vertex_fetch(const struct gen_device_info *devinfo,
                                  enum isl_format format)
 {
    if (!format_info[format].exists)
@@ -420,7 +420,7 @@ isl_format_supports_vertex_fetch(const struct brw_device_info *devinfo,
 }
 
 bool
-isl_format_supports_lossless_compression(const struct brw_device_info *devinfo,
+isl_format_supports_lossless_compression(const struct gen_device_info *devinfo,
                                          enum isl_format format)
 {
    if (!format_info[format].exists)

@@ -45,7 +45,7 @@ static const bool debug = false;
  * replaced with a GRF source.
  */
 static bool
-could_coissue(const struct brw_device_info *devinfo, const fs_inst *inst)
+could_coissue(const struct gen_device_info *devinfo, const fs_inst *inst)
 {
    if (devinfo->gen != 7)
       return false;
@@ -65,7 +65,7 @@ could_coissue(const struct brw_device_info *devinfo, const fs_inst *inst)
  * Returns true for instructions that don't support immediate sources.
  */
 static bool
-must_promote_imm(const struct brw_device_info *devinfo, const fs_inst *inst)
+must_promote_imm(const struct gen_device_info *devinfo, const fs_inst *inst)
 {
    switch (inst->opcode) {
    case SHADER_OPCODE_POW:

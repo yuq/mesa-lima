@@ -279,7 +279,7 @@ is_logic_op(enum opcode opcode)
 
 static bool
 can_take_stride(fs_inst *inst, unsigned arg, unsigned stride,
-                const brw_device_info *devinfo)
+                const gen_device_info *devinfo)
 {
    if (stride > 4)
       return false;

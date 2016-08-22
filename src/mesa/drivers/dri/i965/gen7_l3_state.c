@@ -135,7 +135,7 @@ static const struct brw_l3_config chv_l3_configs[] = {
  * specified device.
  */
 static const struct brw_l3_config *
-get_l3_configs(const struct brw_device_info *devinfo)
+get_l3_configs(const struct gen_device_info *devinfo)
 {
    switch (devinfo->gen) {
    case 7:
@@ -156,7 +156,7 @@ get_l3_configs(const struct brw_device_info *devinfo)
  * Return the size of an L3 way in KB.
  */
 static unsigned
-get_l3_way_size(const struct brw_device_info *devinfo)
+get_l3_way_size(const struct gen_device_info *devinfo)
 {
    if (devinfo->is_baytrail)
       return 2;
@@ -245,7 +245,7 @@ diff_l3_weights(struct brw_l3_weights w0, struct brw_l3_weights w1)
  * weight vector.
  */
 static const struct brw_l3_config *
-get_l3_config(const struct brw_device_info *devinfo, struct brw_l3_weights w0)
+get_l3_config(const struct gen_device_info *devinfo, struct brw_l3_weights w0)
 {
    const struct brw_l3_config *const cfgs = get_l3_configs(devinfo);
    const struct brw_l3_config *cfg_best = NULL;
@@ -269,7 +269,7 @@ get_l3_config(const struct brw_device_info *devinfo, struct brw_l3_weights w0)
  * is intended to approximately resemble the hardware defaults.
  */
 static struct brw_l3_weights
-get_default_l3_weights(const struct brw_device_info *devinfo,
+get_default_l3_weights(const struct gen_device_info *devinfo,
                        bool needs_dc, bool needs_slm)
 {
    struct brw_l3_weights w = {{ 0 }};
@@ -448,10 +448,10 @@ setup_l3_config(struct brw_context *brw, const struct brw_l3_config *cfg)
 
 /**
  * Return the unit brw_context::urb::size is expressed in, in KB.  \sa
- * brw_device_info::urb::size.
+ * gen_device_info::urb::size.
  */
 static unsigned
-get_urb_size_scale(const struct brw_device_info *devinfo)
+get_urb_size_scale(const struct gen_device_info *devinfo)
 {
    return (devinfo->gen >= 8 ? devinfo->num_slices : 1);
 }
@@ -463,7 +463,7 @@ get_urb_size_scale(const struct brw_device_info *devinfo)
 static void
 update_urb_size(struct brw_context *brw, const struct brw_l3_config *cfg)
 {
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
+   const struct gen_device_info *devinfo = brw->intelScreen->devinfo;
    /* From the SKL "L3 Allocation and Programming" documentation:
     *
     * "URB is limited to 1008KB due to programming restrictions.  This is not
@@ -581,7 +581,7 @@ const struct brw_tracked_state gen7_l3_state = {
 void
 gen7_restore_default_l3_config(struct brw_context *brw)
 {
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
+   const struct gen_device_info *devinfo = brw->intelScreen->devinfo;
    /* For efficiency assume that the first entry of the array matches the
     * default configuration.
     */

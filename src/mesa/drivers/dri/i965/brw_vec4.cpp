@@ -224,7 +224,7 @@ vec4_instruction::regs_read(unsigned arg) const
 }
 
 bool
-vec4_instruction::can_do_source_mods(const struct brw_device_info *devinfo)
+vec4_instruction::can_do_source_mods(const struct gen_device_info *devinfo)
 {
    if (devinfo->gen == 6 && is_math())
       return false;
@@ -239,7 +239,7 @@ vec4_instruction::can_do_source_mods(const struct brw_device_info *devinfo)
 }
 
 bool
-vec4_instruction::can_do_writemask(const struct brw_device_info *devinfo)
+vec4_instruction::can_do_writemask(const struct gen_device_info *devinfo)
 {
    switch (opcode) {
    case SHADER_OPCODE_GEN4_SCRATCH_READ:
@@ -996,7 +996,7 @@ vec4_visitor::opt_set_dependency_control()
 }
 
 bool
-vec4_instruction::can_reswizzle(const struct brw_device_info *devinfo,
+vec4_instruction::can_reswizzle(const struct gen_device_info *devinfo,
                                 int dst_writemask,
                                 int swizzle,
                                 int swizzle_mask)

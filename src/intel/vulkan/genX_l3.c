@@ -151,7 +151,7 @@ static const struct anv_l3_config chv_l3_configs[] = {
  * specified device.
  */
 static inline const struct anv_l3_config *
-get_l3_configs(const struct brw_device_info *devinfo)
+get_l3_configs(const struct gen_device_info *devinfo)
 {
    assert(devinfo->gen == GEN_GEN);
 #if GEN_IS_HASWELL
@@ -171,7 +171,7 @@ get_l3_configs(const struct brw_device_info *devinfo)
  * Return the size of an L3 way in KB.
  */
 static unsigned
-get_l3_way_size(const struct brw_device_info *devinfo)
+get_l3_way_size(const struct gen_device_info *devinfo)
 {
    if (devinfo->is_baytrail)
       return 2;
@@ -260,7 +260,7 @@ diff_l3_weights(struct anv_l3_weights w0, struct anv_l3_weights w1)
  * weight vector.
  */
 static const struct anv_l3_config *
-get_l3_config(const struct brw_device_info *devinfo, struct anv_l3_weights w0)
+get_l3_config(const struct gen_device_info *devinfo, struct anv_l3_weights w0)
 {
    const struct anv_l3_config *const cfgs = get_l3_configs(devinfo);
    const struct anv_l3_config *cfg_best = NULL;
@@ -284,7 +284,7 @@ get_l3_config(const struct brw_device_info *devinfo, struct anv_l3_weights w0)
  * is intended to approximately resemble the hardware defaults.
  */
 static struct anv_l3_weights
-get_default_l3_weights(const struct brw_device_info *devinfo,
+get_default_l3_weights(const struct gen_device_info *devinfo,
                        bool needs_dc, bool needs_slm)
 {
    struct anv_l3_weights w = {{ 0 }};
@@ -418,7 +418,7 @@ setup_l3_config(struct anv_cmd_buffer *cmd_buffer/*, struct brw_context *brw*/,
     * client (URB for all validated configurations) set to the
     * lower-bandwidth 2-bank address hashing mode.
     */
-   const struct brw_device_info *devinfo = &cmd_buffer->device->info;
+   const struct gen_device_info *devinfo = &cmd_buffer->device->info;
    const bool urb_low_bw = has_slm && !devinfo->is_baytrail;
    assert(!urb_low_bw || cfg->n[L3P_URB] == cfg->n[L3P_SLM]);
 
@@ -481,10 +481,10 @@ setup_l3_config(struct anv_cmd_buffer *cmd_buffer/*, struct brw_context *brw*/,
 
 /**
  * Return the unit brw_context::urb::size is expressed in, in KB.  \sa
- * brw_device_info::urb::size.
+ * gen_device_info::urb::size.
  */
 static unsigned
-get_urb_size_scale(const struct brw_device_info *devinfo)
+get_urb_size_scale(const struct gen_device_info *devinfo)
 {
    return (devinfo->gen >= 8 ? devinfo->num_slices : 1);
 }
@@ -493,7 +493,7 @@ void
 genX(setup_pipeline_l3_config)(struct anv_pipeline *pipeline)
 {
    const struct anv_l3_weights w = get_pipeline_state_l3_weights(pipeline);
-   const struct brw_device_info *devinfo = &pipeline->device->info;
+   const struct gen_device_info *devinfo = &pipeline->device->info;
    const struct anv_l3_config *const cfg = get_l3_config(devinfo, w);
    pipeline->urb.l3_config = cfg;
 

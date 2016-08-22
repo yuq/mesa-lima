@@ -362,7 +362,7 @@ brw_emit_mi_flush(struct brw_context *brw)
 
 int
 brw_init_pipe_control(struct brw_context *brw,
-                      const struct brw_device_info *devinfo)
+                      const struct gen_device_info *devinfo)
 {
    if (devinfo->gen < 6)
       return 0;

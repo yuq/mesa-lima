@@ -23,9 +23,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "brw_device_info.h"
+#include "gen_device_info.h"
 
-static const struct brw_device_info brw_device_info_i965 = {
+static const struct gen_device_info gen_device_info_i965 = {
    .gen = 4,
    .has_negative_rhw_bug = true,
    .num_slices = 1,
@@ -37,7 +37,7 @@ static const struct brw_device_info brw_device_info_i965 = {
    },
 };
 
-static const struct brw_device_info brw_device_info_g4x = {
+static const struct gen_device_info gen_device_info_g4x = {
    .gen = 4,
    .has_pln = true,
    .has_compr4 = true,
@@ -52,7 +52,7 @@ static const struct brw_device_info brw_device_info_g4x = {
    },
 };
 
-static const struct brw_device_info brw_device_info_ilk = {
+static const struct gen_device_info gen_device_info_ilk = {
    .gen = 5,
    .has_pln = true,
    .has_compr4 = true,
@@ -66,7 +66,7 @@ static const struct brw_device_info brw_device_info_ilk = {
    },
 };
 
-static const struct brw_device_info brw_device_info_snb_gt1 = {
+static const struct gen_device_info gen_device_info_snb_gt1 = {
    .gen = 6,
    .gt = 1,
    .has_hiz_and_separate_stencil = true,
@@ -86,7 +86,7 @@ static const struct brw_device_info brw_device_info_snb_gt1 = {
    },
 };
 
-static const struct brw_device_info brw_device_info_snb_gt2 = {
+static const struct gen_device_info gen_device_info_snb_gt2 = {
    .gen = 6,
    .gt = 2,
    .has_hiz_and_separate_stencil = true,
@@ -114,7 +114,7 @@ static const struct brw_device_info brw_device_info_snb_gt2 = {
    .has_pln = true,                                 \
    .has_surface_tile_offset = true
 
-static const struct brw_device_info brw_device_info_ivb_gt1 = {
+static const struct gen_device_info gen_device_info_ivb_gt1 = {
    GEN7_FEATURES, .is_ivybridge = true, .gt = 1,
    .num_slices = 1,
    .max_vs_threads = 36,
@@ -134,7 +134,7 @@ static const struct brw_device_info brw_device_info_ivb_gt1 = {
    },
 };
 
-static const struct brw_device_info brw_device_info_ivb_gt2 = {
+static const struct gen_device_info gen_device_info_ivb_gt2 = {
    GEN7_FEATURES, .is_ivybridge = true, .gt = 2,
    .num_slices = 1,
    .max_vs_threads = 128,
@@ -154,7 +154,7 @@ static const struct brw_device_info brw_device_info_ivb_gt2 = {
    },
 };
 
-static const struct brw_device_info brw_device_info_byt = {
+static const struct gen_device_info gen_device_info_byt = {
    GEN7_FEATURES, .is_baytrail = true, .gt = 1,
    .num_slices = 1,
    .has_llc = false,
@@ -181,7 +181,7 @@ static const struct brw_device_info brw_device_info_byt = {
    .supports_simd16_3src = true, \
    .has_resource_streamer = true
 
-static const struct brw_device_info brw_device_info_hsw_gt1 = {
+static const struct gen_device_info gen_device_info_hsw_gt1 = {
    HSW_FEATURES, .gt = 1,
    .num_slices = 1,
    .max_vs_threads = 70,
@@ -201,7 +201,7 @@ static const struct brw_device_info brw_device_info_hsw_gt1 = {
    },
 };
 
-static const struct brw_device_info brw_device_info_hsw_gt2 = {
+static const struct gen_device_info gen_device_info_hsw_gt2 = {
    HSW_FEATURES, .gt = 2,
    .num_slices = 1,
    .max_vs_threads = 280,
@@ -221,7 +221,7 @@ static const struct brw_device_info brw_device_info_hsw_gt2 = {
    },
 };
 
-static const struct brw_device_info brw_device_info_hsw_gt3 = {
+static const struct gen_device_info gen_device_info_hsw_gt3 = {
    HSW_FEATURES, .gt = 3,
    .num_slices = 2,
    .max_vs_threads = 280,
@@ -256,7 +256,7 @@ static const struct brw_device_info brw_device_info_hsw_gt3 = {
    .max_gs_threads = 504,                           \
    .max_wm_threads = 384
 
-static const struct brw_device_info brw_device_info_bdw_gt1 = {
+static const struct gen_device_info gen_device_info_bdw_gt1 = {
    GEN8_FEATURES, .gt = 1,
    .num_slices = 1,
    .max_cs_threads = 42,
@@ -271,7 +271,7 @@ static const struct brw_device_info brw_device_info_bdw_gt1 = {
    }
 };
 
-static const struct brw_device_info brw_device_info_bdw_gt2 = {
+static const struct gen_device_info gen_device_info_bdw_gt2 = {
    GEN8_FEATURES, .gt = 2,
    .num_slices = 1,
    .max_cs_threads = 56,
@@ -286,7 +286,7 @@ static const struct brw_device_info brw_device_info_bdw_gt2 = {
    }
 };
 
-static const struct brw_device_info brw_device_info_bdw_gt3 = {
+static const struct gen_device_info gen_device_info_bdw_gt3 = {
    GEN8_FEATURES, .gt = 3,
    .num_slices = 2,
    .max_cs_threads = 56,
@@ -301,7 +301,7 @@ static const struct brw_device_info brw_device_info_bdw_gt3 = {
    }
 };
 
-static const struct brw_device_info brw_device_info_chv = {
+static const struct gen_device_info gen_device_info_chv = {
    GEN8_FEATURES, .is_cherryview = 1, .gt = 1,
    .has_llc = false,
    .num_slices = 1,
@@ -347,23 +347,23 @@ static const struct brw_device_info brw_device_info_chv = {
       .max_gs_entries = 640,                        \
    }
 
-static const struct brw_device_info brw_device_info_skl_gt1 = {
+static const struct gen_device_info gen_device_info_skl_gt1 = {
    GEN9_FEATURES, .gt = 1,
    .num_slices = 1,
    .urb.size = 192,
 };
 
-static const struct brw_device_info brw_device_info_skl_gt2 = {
+static const struct gen_device_info gen_device_info_skl_gt2 = {
    GEN9_FEATURES, .gt = 2,
    .num_slices = 1,
 };
 
-static const struct brw_device_info brw_device_info_skl_gt3 = {
+static const struct gen_device_info gen_device_info_skl_gt3 = {
    GEN9_FEATURES, .gt = 3,
    .num_slices = 2,
 };
 
-static const struct brw_device_info brw_device_info_skl_gt4 = {
+static const struct gen_device_info gen_device_info_skl_gt4 = {
    GEN9_FEATURES, .gt = 4,
    .num_slices = 3,
    /* From the "L3 Allocation and Programming" documentation:
@@ -377,7 +377,7 @@ static const struct brw_device_info brw_device_info_skl_gt4 = {
    .urb.size = 1008 / 3,
 };
 
-static const struct brw_device_info brw_device_info_bxt = {
+static const struct gen_device_info gen_device_info_bxt = {
    GEN9_FEATURES,
    .is_broxton = 1,
    .gt = 1,
@@ -400,7 +400,7 @@ static const struct brw_device_info brw_device_info_bxt = {
    }
 };
 
-static const struct brw_device_info brw_device_info_bxt_2x6 = {
+static const struct gen_device_info gen_device_info_bxt_2x6 = {
    GEN9_FEATURES,
    .is_broxton = 1,
    .gt = 1,
@@ -433,7 +433,7 @@ static const struct brw_device_info brw_device_info_bxt_2x6 = {
  */
 #define  KBL_MAX_THREADS_PER_PSD 64
 
-static const struct brw_device_info brw_device_info_kbl_gt1 = {
+static const struct gen_device_info gen_device_info_kbl_gt1 = {
    GEN9_FEATURES,
    .gt = 1,
 
@@ -443,7 +443,7 @@ static const struct brw_device_info brw_device_info_kbl_gt1 = {
    .num_slices = 1,
 };
 
-static const struct brw_device_info brw_device_info_kbl_gt1_5 = {
+static const struct gen_device_info gen_device_info_kbl_gt1_5 = {
    GEN9_FEATURES,
    .gt = 1,
 
@@ -452,7 +452,7 @@ static const struct brw_device_info brw_device_info_kbl_gt1_5 = {
    .num_slices = 1,
 };
 
-static const struct brw_device_info brw_device_info_kbl_gt2 = {
+static const struct gen_device_info gen_device_info_kbl_gt2 = {
    GEN9_FEATURES,
    .gt = 2,
 
@@ -460,7 +460,7 @@ static const struct brw_device_info brw_device_info_kbl_gt2 = {
    .num_slices = 1,
 };
 
-static const struct brw_device_info brw_device_info_kbl_gt3 = {
+static const struct gen_device_info gen_device_info_kbl_gt3 = {
    GEN9_FEATURES,
    .gt = 3,
 
@@ -468,7 +468,7 @@ static const struct brw_device_info brw_device_info_kbl_gt3 = {
    .num_slices = 2,
 };
 
-static const struct brw_device_info brw_device_info_kbl_gt4 = {
+static const struct gen_device_info gen_device_info_kbl_gt4 = {
    GEN9_FEATURES,
    .gt = 4,
 
@@ -487,14 +487,14 @@ static const struct brw_device_info brw_device_info_kbl_gt4 = {
    .num_slices = 3,
 };
 
-const struct brw_device_info *
+const struct gen_device_info *
 brw_get_device_info(int devid)
 {
-   const struct brw_device_info *devinfo;
+   const struct gen_device_info *devinfo;
    switch (devid) {
 #undef CHIPSET
 #define CHIPSET(id, family, name) \
-   case id: devinfo = &brw_device_info_##family; break;
+   case id: devinfo = &gen_device_info_##family; break;
 #include "pci_ids/i965_pci_ids.h"
    default:
       fprintf(stderr, "i965_dri.so does not support the 0x%x PCI ID.\n", devid);

@@ -95,7 +95,7 @@ static const struct nir_shader_compiler_options vector_nir_options_gen6 = {
 };
 
 struct brw_compiler *
-brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
+brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo)
 {
    struct brw_compiler *compiler = rzalloc(mem_ctx, struct brw_compiler);
 

@@ -984,7 +984,7 @@ static nir_shader *
 brw_blorp_build_nir_shader(struct blorp_context *blorp,
                            const struct brw_blorp_blit_prog_key *key)
 {
-   const struct brw_device_info *devinfo = blorp->isl_dev->info;
+   const struct gen_device_info *devinfo = blorp->isl_dev->info;
    nir_ssa_def *src_pos, *dst_pos, *color;
 
    /* Sanity checks */
@@ -1393,7 +1393,7 @@ blorp_blit(struct blorp_batch *batch,
            float dst_x1, float dst_y1,
            GLenum filter, bool mirror_x, bool mirror_y)
 {
-   const struct brw_device_info *devinfo = batch->blorp->isl_dev->info;
+   const struct gen_device_info *devinfo = batch->blorp->isl_dev->info;
 
    struct blorp_params params;
    blorp_params_init(&params);

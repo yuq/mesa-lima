@@ -28,7 +28,7 @@
 /**
  * Intel hardware information and quirks
  */
-struct brw_device_info
+struct gen_device_info
 {
    int gen; /**< Generation number: 4, 5, 6, 7, ... */
    int gt;
@@ -143,5 +143,5 @@ struct brw_device_info
    /** @} */
 };
 
-const struct brw_device_info *brw_get_device_info(int devid);
+const struct gen_device_info *brw_get_device_info(int devid);
 const char *brw_get_device_name(int devid);

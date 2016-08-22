@@ -33,7 +33,7 @@ class saturate_propagation_test : public ::testing::Test {
 
 public:
    struct brw_compiler *compiler;
-   struct brw_device_info *devinfo;
+   struct gen_device_info *devinfo;
    struct gl_context *ctx;
    struct brw_wm_prog_data *prog_data;
    struct gl_shader_program *shader_prog;
@@ -56,7 +56,7 @@ void saturate_propagation_test::SetUp()
 {
    ctx = (struct gl_context *)calloc(1, sizeof(*ctx));
    compiler = (struct brw_compiler *)calloc(1, sizeof(*compiler));
-   devinfo = (struct brw_device_info *)calloc(1, sizeof(*devinfo));
+   devinfo = (struct gen_device_info *)calloc(1, sizeof(*devinfo));
    compiler->devinfo = devinfo;
 
    prog_data = ralloc(NULL, struct brw_wm_prog_data);

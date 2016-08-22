@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-struct brw_device_info;
+struct gen_device_info;
 struct brw_image_param;
 
 #ifndef ISL_DEV_GEN
@@ -667,7 +667,7 @@ enum isl_msaa_layout {
 
 
 struct isl_device {
-   const struct brw_device_info *info;
+   const struct gen_device_info *info;
    bool use_separate_stencil;
    bool has_bit6_swizzling;
 };
@@ -959,7 +959,7 @@ extern const struct isl_format_layout isl_format_layouts[];
 
 void
 isl_device_init(struct isl_device *dev,
-                const struct brw_device_info *info,
+                const struct gen_device_info *info,
                 bool has_bit6_swizzling);
 
 isl_sample_count_mask_t ATTRIBUTE_CONST
@@ -977,17 +977,17 @@ isl_format_get_name(enum isl_format fmt)
    return isl_format_layouts[fmt].name;
 }
 
-bool isl_format_supports_rendering(const struct brw_device_info *devinfo,
+bool isl_format_supports_rendering(const struct gen_device_info *devinfo,
                                    enum isl_format format);
-bool isl_format_supports_alpha_blending(const struct brw_device_info *devinfo,
+bool isl_format_supports_alpha_blending(const struct gen_device_info *devinfo,
                                         enum isl_format format);
-bool isl_format_supports_sampling(const struct brw_device_info *devinfo,
+bool isl_format_supports_sampling(const struct gen_device_info *devinfo,
                                   enum isl_format format);
-bool isl_format_supports_filtering(const struct brw_device_info *devinfo,
+bool isl_format_supports_filtering(const struct gen_device_info *devinfo,
                                    enum isl_format format);
-bool isl_format_supports_vertex_fetch(const struct brw_device_info *devinfo,
+bool isl_format_supports_vertex_fetch(const struct gen_device_info *devinfo,
                                       enum isl_format format);
-bool isl_format_supports_lossless_compression(const struct brw_device_info *devinfo,
+bool isl_format_supports_lossless_compression(const struct gen_device_info *devinfo,
                                               enum isl_format format);
 
 bool isl_format_has_unorm_channel(enum isl_format fmt) ATTRIBUTE_CONST;
@@ -1089,14 +1089,14 @@ enum isl_format isl_format_rgb_to_rgbx(enum isl_format rgb) ATTRIBUTE_CONST;
 bool isl_is_storage_image_format(enum isl_format fmt);
 
 enum isl_format
-isl_lower_storage_image_format(const struct brw_device_info *devinfo,
+isl_lower_storage_image_format(const struct gen_device_info *devinfo,
                                enum isl_format fmt);
 
 /* Returns true if this hardware supports typed load/store on a format with
  * the same size as the given format.
  */
 bool
-isl_has_matching_typed_storage_image_format(const struct brw_device_info *devinfo,
+isl_has_matching_typed_storage_image_format(const struct gen_device_info *devinfo,
                                             enum isl_format fmt);
 
 static inline bool

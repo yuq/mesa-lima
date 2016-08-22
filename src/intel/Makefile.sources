@@ -7,8 +7,8 @@ BLORP_FILES = \
 	blorp/blorp_priv.h
 
 COMMON_FILES = \
-	common/brw_device_info.c \
-	common/brw_device_info.h
+	common/gen_device_info.c \
+	common/gen_device_info.h
 
 GENXML_GENERATED_FILES = \
 	genxml/gen4_pack.h \

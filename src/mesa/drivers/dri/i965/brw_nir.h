@@ -99,7 +99,7 @@ nir_shader *brw_preprocess_nir(const struct brw_compiler *compiler,
 bool brw_nir_lower_intrinsics(nir_shader *nir,
                               struct brw_stage_prog_data *prog_data);
 void brw_nir_lower_vs_inputs(nir_shader *nir,
-                             const struct brw_device_info *devinfo,
+                             const struct gen_device_info *devinfo,
                              bool is_scalar,
                              bool use_legacy_snorm_formula,
                              const uint8_t *vs_attrib_wa_flags);
@@ -113,7 +113,7 @@ void brw_nir_lower_fs_outputs(nir_shader *nir);
 void brw_nir_lower_cs_shared(nir_shader *nir);
 
 nir_shader *brw_postprocess_nir(nir_shader *nir,
-                                const struct brw_device_info *devinfo,
+                                const struct gen_device_info *devinfo,
                                 bool is_scalar);
 
 bool brw_nir_apply_attribute_workarounds(nir_shader *nir,
@@ -125,7 +125,7 @@ bool brw_nir_apply_trig_workarounds(nir_shader *nir);
 void brw_nir_apply_tcs_quads_workaround(nir_shader *nir);
 
 nir_shader *brw_nir_apply_sampler_key(nir_shader *nir,
-                                      const struct brw_device_info *devinfo,
+                                      const struct gen_device_info *devinfo,
                                       const struct brw_sampler_prog_key_data *key,
                                       bool is_scalar);
 

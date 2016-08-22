@@ -102,7 +102,7 @@ struct bblock_t;
 
 #ifdef __cplusplus
 struct backend_instruction : public exec_node {
-   bool is_3src(const struct brw_device_info *devinfo) const;
+   bool is_3src(const struct gen_device_info *devinfo) const;
    bool is_tex() const;
    bool is_math() const;
    bool is_control_flow() const;
@@ -111,7 +111,7 @@ struct backend_instruction : public exec_node {
    bool can_do_saturate() const;
    bool can_do_cmod() const;
    bool reads_accumulator_implicitly() const;
-   bool writes_accumulator_implicitly(const struct brw_device_info *devinfo) const;
+   bool writes_accumulator_implicitly(const struct gen_device_info *devinfo) const;
 
    void remove(bblock_t *block);
    void insert_after(bblock_t *block, backend_instruction *inst);
@@ -190,7 +190,7 @@ public:
    const struct brw_compiler *compiler;
    void *log_data; /* Passed to compiler->*_log functions */
 
-   const struct brw_device_info * const devinfo;
+   const struct gen_device_info * const devinfo;
    const nir_shader *nir;
    struct brw_stage_prog_data * const stage_prog_data;
 
@@ -237,7 +237,7 @@ struct backend_shader;
 enum brw_reg_type brw_type_for_base_type(const struct glsl_type *type);
 enum brw_conditional_mod brw_conditional_for_comparison(unsigned int op);
 uint32_t brw_math_function(enum opcode op);
-const char *brw_instruction_name(const struct brw_device_info *devinfo,
+const char *brw_instruction_name(const struct gen_device_info *devinfo,
                                  enum opcode op);
 bool brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg);
 bool brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg);
@@ -263,7 +263,7 @@ struct brw_gs_compile
 
 uint32_t
 brw_assign_common_binding_table_offsets(gl_shader_stage stage,
-                                        const struct brw_device_info *devinfo,
+                                        const struct gen_device_info *devinfo,
                                         const struct gl_shader_program *shader_prog,
                                         const struct gl_program *prog,
                                         struct brw_stage_prog_data *stage_prog_data,

@@ -130,7 +130,7 @@ get_copy_value(const copy_entry &entry, unsigned readmask)
 }
 
 static bool
-try_constant_propagate(const struct brw_device_info *devinfo,
+try_constant_propagate(const struct gen_device_info *devinfo,
                        vec4_instruction *inst,
                        int arg, const copy_entry *entry)
 {
@@ -281,7 +281,7 @@ try_constant_propagate(const struct brw_device_info *devinfo,
 }
 
 static bool
-try_copy_propagate(const struct brw_device_info *devinfo,
+try_copy_propagate(const struct gen_device_info *devinfo,
                    vec4_instruction *inst, int arg,
                    const copy_entry *entry, int attributes_per_reg)
 {

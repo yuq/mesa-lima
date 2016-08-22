@@ -75,7 +75,7 @@ brw_gs_debug_recompile(struct brw_context *brw,
 }
 
 static void
-assign_gs_binding_table_offsets(const struct brw_device_info *devinfo,
+assign_gs_binding_table_offsets(const struct gen_device_info *devinfo,
                                 const struct gl_shader_program *shader_prog,
                                 const struct gl_program *prog,
                                 struct brw_gs_prog_data *prog_data)

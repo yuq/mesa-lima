@@ -451,7 +451,7 @@ brw_compile_tcs(const struct brw_compiler *compiler,
                 unsigned *final_assembly_size,
                 char **error_str)
 {
-   const struct brw_device_info *devinfo = compiler->devinfo;
+   const struct gen_device_info *devinfo = compiler->devinfo;
    struct brw_vue_prog_data *vue_prog_data = &prog_data->base;
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_TESS_CTRL];
 

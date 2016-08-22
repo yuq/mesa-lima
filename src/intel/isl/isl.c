@@ -48,7 +48,7 @@ __isl_finishme(const char *file, int line, const char *fmt, ...)
 
 void
 isl_device_init(struct isl_device *dev,
-                const struct brw_device_info *info,
+                const struct gen_device_info *info,
                 bool has_bit6_swizzling)
 {
    dev->info = info;

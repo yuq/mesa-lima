@@ -76,7 +76,7 @@ isl_is_storage_image_format(enum isl_format format)
 }
 
 enum isl_format
-isl_lower_storage_image_format(const struct brw_device_info *devinfo,
+isl_lower_storage_image_format(const struct gen_device_info *devinfo,
                                enum isl_format format)
 {
    switch (format) {
@@ -188,7 +188,7 @@ isl_lower_storage_image_format(const struct brw_device_info *devinfo,
 }
 
 bool
-isl_has_matching_typed_storage_image_format(const struct brw_device_info *devinfo,
+isl_has_matching_typed_storage_image_format(const struct gen_device_info *devinfo,
                                             enum isl_format fmt)
 {
    if (devinfo->gen >= 9) {

@@ -40,7 +40,7 @@
 #define VG(x)
 #endif
 
-#include "common/brw_device_info.h"
+#include "common/gen_device_info.h"
 #include "brw_compiler.h"
 #include "util/macros.h"
 #include "util/list.h"
@@ -563,7 +563,7 @@ struct anv_physical_device {
     uint32_t                                    chipset_id;
     char                                        path[20];
     const char *                                name;
-    const struct brw_device_info *              info;
+    const struct gen_device_info *              info;
     uint64_t                                    aperture_size;
     struct brw_compiler *                       compiler;
     struct isl_device                           isl_dev;
@@ -687,7 +687,7 @@ struct anv_device {
 
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
-    struct brw_device_info                      info;
+    struct gen_device_info                      info;
     struct isl_device                           isl_dev;
     int                                         context_id;
     int                                         fd;
@@ -1634,11 +1634,11 @@ struct anv_format {
 };
 
 struct anv_format
-anv_get_format(const struct brw_device_info *devinfo, VkFormat format,
+anv_get_format(const struct gen_device_info *devinfo, VkFormat format,
                VkImageAspectFlags aspect, VkImageTiling tiling);
 
 static inline enum isl_format
-anv_get_isl_format(const struct brw_device_info *devinfo, VkFormat vk_format,
+anv_get_isl_format(const struct gen_device_info *devinfo, VkFormat vk_format,
                    VkImageAspectFlags aspect, VkImageTiling tiling)
 {
    return anv_get_format(devinfo, vk_format, aspect, tiling).isl_format;

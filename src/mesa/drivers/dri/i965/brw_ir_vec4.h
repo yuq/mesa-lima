@@ -168,11 +168,11 @@ public:
 
    bool is_send_from_grf();
    unsigned regs_read(unsigned arg) const;
-   bool can_reswizzle(const struct brw_device_info *devinfo, int dst_writemask,
+   bool can_reswizzle(const struct gen_device_info *devinfo, int dst_writemask,
                       int swizzle, int swizzle_mask);
    void reswizzle(int dst_writemask, int swizzle);
-   bool can_do_source_mods(const struct brw_device_info *devinfo);
-   bool can_do_writemask(const struct brw_device_info *devinfo);
+   bool can_do_source_mods(const struct gen_device_info *devinfo);
+   bool can_do_writemask(const struct gen_device_info *devinfo);
    bool can_change_types() const;
    bool has_source_and_destination_hazard() const;
 

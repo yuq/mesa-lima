@@ -33,14 +33,14 @@
 
 #include "dri_util.h"
 #include "intel_bufmgr.h"
-#include "common/brw_device_info.h"
+#include "common/gen_device_info.h"
 #include "i915_drm.h"
 #include "xmlconfig.h"
 
 struct intel_screen
 {
    int deviceID;
-   const struct brw_device_info *devinfo;
+   const struct gen_device_info *devinfo;
 
    __DRIscreen *driScrnPriv;
 

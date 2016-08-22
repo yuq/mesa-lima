@@ -790,7 +790,7 @@ vec4_instruction_scheduler::get_register_pressure_benefit(backend_instruction *b
 schedule_node::schedule_node(backend_instruction *inst,
                              instruction_scheduler *sched)
 {
-   const struct brw_device_info *devinfo = sched->bs->devinfo;
+   const struct gen_device_info *devinfo = sched->bs->devinfo;
 
    this->inst = inst;
    this->child_array_size = 0;
@@ -1568,7 +1568,7 @@ vec4_instruction_scheduler::issue_time(backend_instruction *inst)
 void
 instruction_scheduler::schedule_instructions(bblock_t *block)
 {
-   const struct brw_device_info *devinfo = bs->devinfo;
+   const struct gen_device_info *devinfo = bs->devinfo;
    time = 0;
    if (!post_reg_alloc)
       reg_pressure = reg_pressure_in[block->num];

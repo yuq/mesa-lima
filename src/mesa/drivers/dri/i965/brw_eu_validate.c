@@ -55,27 +55,27 @@ cat(struct string *dest, const struct string src)
    } while(0)
 
 static bool
-src0_is_null(const struct brw_device_info *devinfo, const brw_inst *inst)
+src0_is_null(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    return brw_inst_src0_reg_file(devinfo, inst) == BRW_ARCHITECTURE_REGISTER_FILE &&
           brw_inst_src0_da_reg_nr(devinfo, inst) == BRW_ARF_NULL;
 }
 
 static bool
-src1_is_null(const struct brw_device_info *devinfo, const brw_inst *inst)
+src1_is_null(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    return brw_inst_src1_reg_file(devinfo, inst) == BRW_ARCHITECTURE_REGISTER_FILE &&
           brw_inst_src1_da_reg_nr(devinfo, inst) == BRW_ARF_NULL;
 }
 
 static bool
-src0_is_grf(const struct brw_device_info *devinfo, const brw_inst *inst)
+src0_is_grf(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    return brw_inst_src0_reg_file(devinfo, inst) == BRW_GENERAL_REGISTER_FILE;
 }
 
 static unsigned
-num_sources_from_inst(const struct brw_device_info *devinfo,
+num_sources_from_inst(const struct gen_device_info *devinfo,
                       const brw_inst *inst)
 {
    const struct opcode_desc *desc =
@@ -124,7 +124,7 @@ num_sources_from_inst(const struct brw_device_info *devinfo,
 }
 
 static bool
-is_unsupported_inst(const struct brw_device_info *devinfo,
+is_unsupported_inst(const struct gen_device_info *devinfo,
                     const brw_inst *inst)
 {
    return brw_opcode_desc(devinfo, brw_inst_opcode(devinfo, inst)) == NULL;
@@ -134,7 +134,7 @@ bool
 brw_validate_instructions(const struct brw_codegen *p, int start_offset,
                           struct annotation_info *annotation)
 {
-   const struct brw_device_info *devinfo = p->devinfo;
+   const struct gen_device_info *devinfo = p->devinfo;
    const void *store = p->store + start_offset / 16;
    bool valid = true;
 

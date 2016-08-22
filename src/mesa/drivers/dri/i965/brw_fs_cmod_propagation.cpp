@@ -49,7 +49,7 @@
  */
 
 static bool
-opt_cmod_propagation_local(const brw_device_info *devinfo, bblock_t *block)
+opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
 {
    bool progress = false;
    int ip = block->end_ip + 1;

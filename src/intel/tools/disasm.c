@@ -32,14 +32,14 @@
 uint64_t INTEL_DEBUG;
 
 struct gen_disasm {
-    struct brw_device_info devinfo;
+    struct gen_device_info devinfo;
 };
 
 void
 gen_disasm_disassemble(struct gen_disasm *disasm, void *assembly, int start,
                        int end, FILE *out)
 {
-   struct brw_device_info *devinfo = &disasm->devinfo;
+   struct gen_device_info *devinfo = &disasm->devinfo;
    bool dump_hex = false;
 
    for (int offset = start; offset < end;) {
@@ -89,7 +89,7 @@ struct gen_disasm *
 gen_disasm_create(int pciid)
 {
    struct gen_disasm *gd;
-   const struct brw_device_info *dev_info = NULL;
+   const struct gen_device_info *dev_info = NULL;
 
    gd = malloc(sizeof *gd);
    if (gd == NULL)

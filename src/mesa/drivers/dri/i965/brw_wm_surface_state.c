@@ -1486,7 +1486,7 @@ const struct brw_tracked_state brw_cs_image_surfaces = {
 static uint32_t
 get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
 {
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
+   const struct gen_device_info *devinfo = brw->intelScreen->devinfo;
    uint32_t hw_format = brw_format_for_mesa_format(format);
    if (access == GL_WRITE_ONLY) {
       return hw_format;

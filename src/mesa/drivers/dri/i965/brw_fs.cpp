@@ -44,7 +44,7 @@
 
 using namespace brw;
 
-static unsigned get_lowered_simd_width(const struct brw_device_info *devinfo,
+static unsigned get_lowered_simd_width(const struct gen_device_info *devinfo,
                                        const fs_inst *inst);
 
 void
@@ -376,7 +376,7 @@ fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
 }
 
 bool
-fs_inst::can_do_source_mods(const struct brw_device_info *devinfo)
+fs_inst::can_do_source_mods(const struct gen_device_info *devinfo)
 {
    if (devinfo->gen == 6 && is_math())
       return false;
@@ -933,7 +933,7 @@ namespace {
 }
 
 unsigned
-fs_inst::flags_read(const brw_device_info *devinfo) const
+fs_inst::flags_read(const gen_device_info *devinfo) const
 {
    /* XXX - This doesn't consider explicit uses of the flag register as source
     *       region.
@@ -3679,7 +3679,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
                             const fs_visitor::thread_payload &payload)
 {
    assert(inst->src[FB_WRITE_LOGICAL_SRC_COMPONENTS].file == IMM);
-   const brw_device_info *devinfo = bld.shader->devinfo;
+   const gen_device_info *devinfo = bld.shader->devinfo;
    const fs_reg &color0 = inst->src[FB_WRITE_LOGICAL_SRC_COLOR0];
    const fs_reg &color1 = inst->src[FB_WRITE_LOGICAL_SRC_COLOR1];
    const fs_reg &src0_alpha = inst->src[FB_WRITE_LOGICAL_SRC_SRC0_ALPHA];
@@ -4047,7 +4047,7 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
 }
 
 static bool
-is_high_sampler(const struct brw_device_info *devinfo, const fs_reg &sampler)
+is_high_sampler(const struct gen_device_info *devinfo, const fs_reg &sampler)
 {
    if (devinfo->gen < 8 && !devinfo->is_haswell)
       return false;
@@ -4068,7 +4068,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
                                 unsigned coord_components,
                                 unsigned grad_components)
 {
-   const brw_device_info *devinfo = bld.shader->devinfo;
+   const gen_device_info *devinfo = bld.shader->devinfo;
    int reg_width = bld.dispatch_width() / 8;
    unsigned header_size = 0, length = 0;
    fs_reg sources[MAX_SAMPLER_MESSAGE_SIZE];
@@ -4264,7 +4264,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
 static void
 lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
 {
-   const brw_device_info *devinfo = bld.shader->devinfo;
+   const gen_device_info *devinfo = bld.shader->devinfo;
    const fs_reg &coordinate = inst->src[TEX_LOGICAL_SRC_COORDINATE];
    const fs_reg &shadow_c = inst->src[TEX_LOGICAL_SRC_SHADOW_C];
    const fs_reg &lod = inst->src[TEX_LOGICAL_SRC_LOD];
@@ -4361,7 +4361,7 @@ lower_surface_logical_send(const fs_builder &bld, fs_inst *inst, opcode op,
 static void
 lower_varying_pull_constant_logical_send(const fs_builder &bld, fs_inst *inst)
 {
-   const brw_device_info *devinfo = bld.shader->devinfo;
+   const gen_device_info *devinfo = bld.shader->devinfo;
 
    if (devinfo->gen >= 7) {
       /* We are switching the instruction from an ALU-like instruction to a
@@ -4588,7 +4588,7 @@ fs_visitor::lower_logical_sends()
  * excessively restrictive.
  */
 static unsigned
-get_fpu_lowered_simd_width(const struct brw_device_info *devinfo,
+get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
                            const fs_inst *inst)
 {
    /* Maximum execution size representable in the instruction controls. */
@@ -4662,7 +4662,7 @@ get_fpu_lowered_simd_width(const struct brw_device_info *devinfo,
       max_width = MIN2(max_width, 16);
 
    /* From the IVB PRMs (applies to other devices that don't have the
-    * brw_device_info::supports_simd16_3src flag set):
+    * gen_device_info::supports_simd16_3src flag set):
     *  "In Align16 access mode, SIMD16 is not allowed for DW operations and
     *   SIMD8 is not allowed for DF operations."
     */
@@ -4719,7 +4719,7 @@ get_fpu_lowered_simd_width(const struct brw_device_info *devinfo,
  * represent).
  */
 static unsigned
-get_sampler_lowered_simd_width(const struct brw_device_info *devinfo,
+get_sampler_lowered_simd_width(const struct gen_device_info *devinfo,
                                const fs_inst *inst)
 {
    /* Calculate the number of coordinate components that have to be present
@@ -4772,7 +4772,7 @@ get_sampler_lowered_simd_width(const struct brw_device_info *devinfo,
  * original execution size.
  */
 static unsigned
-get_lowered_simd_width(const struct brw_device_info *devinfo,
+get_lowered_simd_width(const struct gen_device_info *devinfo,
                        const fs_inst *inst)
 {
    switch (inst->opcode) {
@@ -6305,7 +6305,7 @@ fs_visitor::run_cs()
  * also need the BRW_BARYCENTRIC_[NON]PERSPECTIVE_CENTROID mode set up.
  */
 static unsigned
-brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
+brw_compute_barycentric_interp_modes(const struct gen_device_info *devinfo,
                                      const nir_shader *shader)
 {
    unsigned barycentric_interp_modes = 0;
@@ -6458,7 +6458,7 @@ move_interpolation_to_top(nir_shader *nir)
  * Apply default interpolation settings to FS inputs which don't specify any.
  */
 static void
-brw_nir_set_default_interpolation(const struct brw_device_info *devinfo,
+brw_nir_set_default_interpolation(const struct gen_device_info *devinfo,
                                   struct nir_shader *nir,
                                   bool api_flat_shade,
                                   bool per_sample_interpolation)
@@ -6719,7 +6719,7 @@ fill_push_const_block_info(struct brw_push_const_block *block, unsigned dwords)
 }
 
 static void
-cs_fill_push_const_info(const struct brw_device_info *devinfo,
+cs_fill_push_const_info(const struct gen_device_info *devinfo,
                         struct brw_cs_prog_data *cs_prog_data)
 {
    const struct brw_stage_prog_data *prog_data =

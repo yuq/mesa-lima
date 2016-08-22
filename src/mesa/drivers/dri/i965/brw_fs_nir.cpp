@@ -4833,7 +4833,7 @@ shuffle_64bit_data_for_32bit_write(const fs_builder &bld,
 fs_reg
 setup_imm_df(const fs_builder &bld, double v)
 {
-   const struct brw_device_info *devinfo = bld.shader->devinfo;
+   const struct gen_device_info *devinfo = bld.shader->devinfo;
    assert(devinfo->gen >= 7);
 
    if (devinfo->gen >= 8)

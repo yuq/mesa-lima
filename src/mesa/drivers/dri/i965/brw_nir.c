@@ -191,7 +191,7 @@ remap_patch_urb_offsets(nir_block *block, nir_builder *b,
 
 void
 brw_nir_lower_vs_inputs(nir_shader *nir,
-                        const struct brw_device_info *devinfo,
+                        const struct gen_device_info *devinfo,
                         bool is_scalar,
                         bool use_legacy_snorm_formula,
                         const uint8_t *vs_attrib_wa_flags)
@@ -470,7 +470,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
  */
 nir_shader *
 brw_postprocess_nir(nir_shader *nir,
-                    const struct brw_device_info *devinfo,
+                    const struct gen_device_info *devinfo,
                     bool is_scalar)
 {
    bool debug_enabled =
@@ -534,7 +534,7 @@ brw_postprocess_nir(nir_shader *nir,
 
 nir_shader *
 brw_nir_apply_sampler_key(nir_shader *nir,
-                          const struct brw_device_info *devinfo,
+                          const struct gen_device_info *devinfo,
                           const struct brw_sampler_prog_key_data *key_tex,
                           bool is_scalar)
 {

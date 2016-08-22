@@ -75,7 +75,7 @@ fs_visitor::assign_regs_trivial()
 static void
 brw_alloc_reg_set(struct brw_compiler *compiler, int dispatch_width)
 {
-   const struct brw_device_info *devinfo = compiler->devinfo;
+   const struct gen_device_info *devinfo = compiler->devinfo;
    int base_reg_count = BRW_MAX_GRF;
    const int index = _mesa_logbase2(dispatch_width / 8);
 
@@ -754,7 +754,7 @@ static void
 emit_unspill(const fs_builder &bld, fs_reg dst,
              uint32_t spill_offset, unsigned count)
 {
-   const brw_device_info *devinfo = bld.shader->devinfo;
+   const gen_device_info *devinfo = bld.shader->devinfo;
    const unsigned reg_size = dst.component_size(bld.dispatch_width()) /
                              REG_SIZE;
    assert(count % reg_size == 0);

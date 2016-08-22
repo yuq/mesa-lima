@@ -125,7 +125,7 @@ if opt_header:
     print "   };\n"
     print "};\n"
 
-    print "void anv_set_dispatch_devinfo(const struct brw_device_info *info);\n"
+    print "void anv_set_dispatch_devinfo(const struct gen_device_info *info);\n"
 
     for type, name, args, num, h in entrypoints:
         print_guard_start(name)
@@ -214,10 +214,10 @@ for layer in [ "anv", "gen7", "gen75", "gen8", "gen9" ]:
     print "};\n"
 
 print """
-static const struct brw_device_info *dispatch_devinfo;
+static const struct gen_device_info *dispatch_devinfo;
 
 void
-anv_set_dispatch_devinfo(const struct brw_device_info *devinfo)
+anv_set_dispatch_devinfo(const struct gen_device_info *devinfo)
 {
    dispatch_devinfo = devinfo;
 }

@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "common/brw_device_info.h"
+#include "common/gen_device_info.h"
 #include "isl/isl.h"
 #include "isl/isl_priv.h"
 

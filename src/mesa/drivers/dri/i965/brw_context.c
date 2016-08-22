@@ -896,7 +896,7 @@ brwCreateContext(gl_api api,
    __DRIscreen *sPriv = driContextPriv->driScreenPriv;
    struct gl_context *shareCtx = (struct gl_context *) sharedContextPrivate;
    struct intel_screen *screen = sPriv->driverPrivate;
-   const struct brw_device_info *devinfo = screen->devinfo;
+   const struct gen_device_info *devinfo = screen->devinfo;
    struct dd_function_table functions;
 
    /* Only allow the __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS flag if the kernel

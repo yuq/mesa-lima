@@ -1063,7 +1063,7 @@ struct brw_context
       GLuint cs_start;
       /**
        * URB size in the current configuration.  The units this is expressed
-       * in are somewhat inconsistent, see brw_device_info::urb::size.
+       * in are somewhat inconsistent, see gen_device_info::urb::size.
        *
        * FINISHME: Represent the URB size consistently in KB on all platforms.
        */
@@ -1510,7 +1510,7 @@ void brw_fs_alloc_reg_sets(struct brw_compiler *compiler);
 void brw_vec4_alloc_reg_set(struct brw_compiler *compiler);
 
 /* brw_disasm.c */
-int brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
+int brw_disassemble_inst(FILE *file, const struct gen_device_info *devinfo,
                          struct brw_inst *inst, bool is_compacted);
 
 /* brw_vs.c */
@@ -1865,7 +1865,7 @@ gen9_use_linear_1d_layout(const struct brw_context *brw,
 
 /* brw_pipe_control.c */
 int brw_init_pipe_control(struct brw_context *brw,
-			  const struct brw_device_info *info);
+			  const struct gen_device_info *info);
 void brw_fini_pipe_control(struct brw_context *brw);
 
 void brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags);

@@ -22,7 +22,7 @@
  */
 
 #include "blorp_priv.h"
-#include "common/brw_device_info.h"
+#include "common/gen_device_info.h"
 #include "intel_aub.h"
 
 /**
