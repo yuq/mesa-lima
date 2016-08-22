@@ -373,7 +373,7 @@ struct DRAW_DYNAMIC_STATE
         SWR_STATS* pSavePtr = pStats;
         memset(this, 0, sizeof(*this));
         pStats = pSavePtr;
-        memset(pStats, 0, sizeof(SWR_STATS) * (numThreads ? numThreads : 1));
+        memset(pStats, 0, sizeof(SWR_STATS) * numThreads);
     }
     ///@todo Currently assumes only a single FE can do stream output for a draw.
     uint32_t SoWriteOffset[4];

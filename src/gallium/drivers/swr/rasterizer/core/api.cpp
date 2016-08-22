@@ -104,14 +104,6 @@ HANDLE SwrCreateContext(
 
     CreateThreadPool(pContext, &pContext->threadPool);
 
-    // Calling createThreadPool() above can set SINGLE_THREADED
-    if (pContext->threadInfo.SINGLE_THREADED)
-    {
-        pContext->NumWorkerThreads = 1;
-        pContext->NumFEThreads = 1;
-        pContext->NumBEThreads = 1;
-    }
-
     pContext->ppScratch = new uint8_t*[pContext->NumWorkerThreads];
     pContext->pStats = new SWR_STATS[pContext->NumWorkerThreads];
 
@@ -356,7 +348,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pCurDrawContext->threadsDone = 0;
         pCurDrawContext->retireCallback.pfnCallbackFunc = nullptr;
 
-        pCurDrawContext->dynState.Reset(pContext->threadPool.numThreads);
+        pCurDrawContext->dynState.Reset(pContext->NumWorkerThreads);
 
         // Assign unique drawId for this DC
         pCurDrawContext->drawId = pContext->dcRing.GetHead();

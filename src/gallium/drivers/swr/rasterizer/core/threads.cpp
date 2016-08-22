@@ -877,8 +877,6 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
         }
         else
         {
-            pPool->numThreads = 0;
-            numThreads = 1;
             pContext->threadInfo.SINGLE_THREADED = true;
         }
     }
@@ -895,6 +893,11 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
         }
     }
 
+    if (pContext->threadInfo.SINGLE_THREADED)
+    {
+        numThreads = 1;
+    }
+
     // Initialize DRAW_CONTEXT's per-thread stats
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
@@ -904,9 +907,13 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 
     if (pContext->threadInfo.SINGLE_THREADED)
     {
+        pContext->NumWorkerThreads = 1;
+        pContext->NumFEThreads = 1;
+        pContext->NumBEThreads = 1;
+        pPool->numThreads = 0;
+
         return;
     }
-
 
     pPool->numThreads = numThreads;
     pContext->NumWorkerThreads = pPool->numThreads;
