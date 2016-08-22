@@ -653,7 +653,8 @@ static void si_set_shader_image(struct si_context *ctx,
 		assert(tex->fmask.size == 0);
 
 		if (uses_dcc &&
-		    view->access & PIPE_IMAGE_ACCESS_WRITE) {
+		    (view->access & PIPE_IMAGE_ACCESS_WRITE ||
+		     !vi_dcc_formats_compatible(res->b.b.format, view->format))) {
 			/* If DCC can't be disabled, at least decompress it.
 			 * The decompression is relatively cheap if the surface
 			 * has been decompressed already.

@@ -1124,6 +1124,12 @@ static void si_blit(struct pipe_context *ctx,
 
 	/* The driver doesn't decompress resources automatically while
 	 * u_blitter is rendering. */
+	vi_dcc_disable_if_incompatible_format(&sctx->b, info->src.resource,
+					      info->src.level,
+					      info->src.format);
+	vi_dcc_disable_if_incompatible_format(&sctx->b, info->dst.resource,
+					      info->dst.level,
+					      info->dst.format);
 	si_decompress_subresource(ctx, info->src.resource, info->mask,
 				  info->src.level,
 				  info->src.box.z,
@@ -1153,6 +1159,8 @@ static boolean si_generate_mipmap(struct pipe_context *ctx,
 
 	/* The driver doesn't decompress resources automatically while
 	 * u_blitter is rendering. */
+	vi_dcc_disable_if_incompatible_format(&sctx->b, tex, base_level,
+					      format);
 	si_decompress_subresource(ctx, tex, PIPE_MASK_RGBAZS,
 				  base_level, first_layer, last_layer);
 

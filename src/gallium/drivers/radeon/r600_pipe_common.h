@@ -757,6 +757,12 @@ bool r600_init_flushed_depth_texture(struct pipe_context *ctx,
 void r600_print_texture_info(struct r600_texture *rtex, FILE *f);
 struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 					const struct pipe_resource *templ);
+bool vi_dcc_formats_compatible(enum pipe_format format1,
+			       enum pipe_format format2);
+void vi_dcc_disable_if_incompatible_format(struct r600_common_context *rctx,
+					   struct pipe_resource *tex,
+					   unsigned level,
+					   enum pipe_format view_format);
 struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 						struct pipe_resource *texture,
 						const struct pipe_surface *templ,

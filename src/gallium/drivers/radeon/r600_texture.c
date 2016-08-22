@@ -1666,11 +1666,102 @@ static const struct u_resource_vtbl r600_texture_vtbl =
 	r600_texture_transfer_unmap,	/* transfer_unmap */
 };
 
+/* DCC channel type categories within which formats can be reinterpreted
+ * while keeping the same DCC encoding. The swizzle must also match. */
+enum dcc_channel_type {
+	dcc_channel_any32,
+	dcc_channel_int16,
+	dcc_channel_float16,
+	dcc_channel_any_10_10_10_2,
+	dcc_channel_any8,
+	dcc_channel_incompatible,
+};
+
+/* Return the type of DCC encoding. */
+static enum dcc_channel_type
+vi_get_dcc_channel_type(const struct util_format_description *desc)
+{
+	int i;
+
+	/* Find the first non-void channel. */
+	for (i = 0; i < desc->nr_channels; i++)
+		if (desc->channel[i].type != UTIL_FORMAT_TYPE_VOID)
+			break;
+	if (i == desc->nr_channels)
+		return dcc_channel_incompatible;
+
+	switch (desc->channel[i].size) {
+	case 32:
+		if (desc->nr_channels == 4)
+			return dcc_channel_incompatible;
+		else
+			return dcc_channel_any32;
+	case 16:
+		if (desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT)
+			return dcc_channel_float16;
+		else
+			return dcc_channel_int16;
+	case 10:
+		return dcc_channel_any_10_10_10_2;
+	case 8:
+		return dcc_channel_any8;
+	default:
+		return dcc_channel_incompatible;
+	}
+}
+
+/* Return if it's allowed to reinterpret one format as another with DCC enabled. */
+bool vi_dcc_formats_compatible(enum pipe_format format1,
+			       enum pipe_format format2)
+{
+	const struct util_format_description *desc1, *desc2;
+	enum dcc_channel_type type1, type2;
+	int i;
+
+	if (format1 == format2)
+		return true;
+
+	desc1 = util_format_description(format1);
+	desc2 = util_format_description(format2);
+
+	if (desc1->nr_channels != desc2->nr_channels)
+		return false;
+
+	/* Swizzles must be the same. */
+	for (i = 0; i < desc1->nr_channels; i++)
+		if (desc1->swizzle[i] <= PIPE_SWIZZLE_W &&
+		    desc2->swizzle[i] <= PIPE_SWIZZLE_W &&
+		    desc1->swizzle[i] != desc2->swizzle[i])
+			return false;
+
+	type1 = vi_get_dcc_channel_type(desc1);
+	type2 = vi_get_dcc_channel_type(desc2);
+
+	return type1 != dcc_channel_incompatible &&
+	       type2 != dcc_channel_incompatible &&
+	       type1 == type2;
+}
+
+void vi_dcc_disable_if_incompatible_format(struct r600_common_context *rctx,
+					   struct pipe_resource *tex,
+					   unsigned level,
+					   enum pipe_format view_format)
+{
+	struct r600_texture *rtex = (struct r600_texture *)tex;
+
+	if (rtex->dcc_offset &&
+	    rtex->surface.level[level].dcc_enabled &&
+	    !vi_dcc_formats_compatible(tex->format, view_format))
+		if (!r600_texture_disable_dcc(rctx, (struct r600_texture*)tex))
+			rctx->decompress_dcc(&rctx->b, rtex);
+}
+
 struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 						struct pipe_resource *texture,
 						const struct pipe_surface *templ,
 						unsigned width, unsigned height)
 {
+	struct r600_common_context *rctx = (struct r600_common_context*)pipe;
 	struct r600_texture *rtex = (struct r600_texture*)texture;
 	struct r600_surface *surface = CALLOC_STRUCT(r600_surface);
 
@@ -1688,6 +1779,11 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 	surface->base.height = height;
 	surface->base.u = templ->u;
 	surface->level_info = &rtex->surface.level[templ->u.tex.level];
+
+	vi_dcc_disable_if_incompatible_format(rctx, texture,
+					      templ->u.tex.level,
+					      templ->format);
+
 	return &surface->base;
 }
 
