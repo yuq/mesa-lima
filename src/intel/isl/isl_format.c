@@ -24,7 +24,7 @@
 #include <assert.h>
 
 #include "isl.h"
-#include "brw_device_info.h"
+#include "common/brw_device_info.h"
 
 struct surface_format_info {
    bool exists;

@@ -18,14 +18,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
-#
 
-LOCAL_PATH := $(call my-dir)
+# ---------------------------------------
+# Build libmesa_intel_common
+# ---------------------------------------
 
-# Import variables
-include $(LOCAL_PATH)/Makefile.sources
+include $(CLEAR_VARS)
 
-include $(LOCAL_PATH)/Android.blorp.mk
-include $(LOCAL_PATH)/Android.common.mk
-include $(LOCAL_PATH)/Android.genxml.mk
-include $(LOCAL_PATH)/Android.isl.mk
+LOCAL_MODULE := libmesa_intel_common
+
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+
+LOCAL_SRC_FILES := $(COMMON_FILES)
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)

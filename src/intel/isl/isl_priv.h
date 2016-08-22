@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <strings.h>
 
-#include "brw_device_info.h"
+#include "common/brw_device_info.h"
 #include "util/macros.h"
 
 #include "isl.h"

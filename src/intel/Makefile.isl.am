@@ -72,6 +72,7 @@ check_PROGRAMS += isl/tests/isl_surf_get_image_offset_test
 TESTS += $(check_PROGRAMS)
 
 isl_tests_isl_surf_get_image_offset_test_LDADD = \
+	common/libintel_common.la \
 	isl/libisl.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	-lm

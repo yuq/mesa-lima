@@ -78,6 +78,7 @@ noinst_LTLIBRARIES = \
 
 libi965_dri_la_SOURCES = $(i965_FILES)
 libi965_dri_la_LIBADD = \
+	$(top_builddir)/src/intel/common/libintel_common.la \
 	$(top_builddir)/src/intel/isl/libisl.la \
 	libi965_compiler.la \
 	$(top_builddir)/src/intel/blorp/libblorp.la \

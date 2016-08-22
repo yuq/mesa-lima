@@ -183,6 +183,7 @@ LOCAL_SRC_FILES := \
 LOCAL_WHOLE_STATIC_LIBRARIES := \
 	$(MESA_DRI_WHOLE_STATIC_LIBRARIES) \
 	$(I965_PERGEN_LIBS) \
+	libmesa_intel_common \
 	libmesa_blorp \
 	libmesa_isl
 

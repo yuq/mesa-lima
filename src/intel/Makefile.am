@@ -53,6 +53,7 @@ CLEANFILES =
 EXTRA_DIST =
 
 include Makefile.blorp.am
+include Makefile.common.am
 include Makefile.genxml.am
 include Makefile.isl.am
 

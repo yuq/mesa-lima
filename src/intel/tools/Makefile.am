@@ -37,6 +37,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/intel
 
 aubinator_DEPS = \
+	$(top_builddir)/src/intel/common/libintel_common.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(PER_GEN_LIBS) \

@@ -117,6 +117,7 @@ VULKAN_LIB_DEPS += \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	$(top_builddir)/src/compiler/nir/libnir.la \
 	$(top_builddir)/src/util/libmesautil.la \
+	$(top_builddir)/src/intel/common/libintel_common.la \
 	$(top_builddir)/src/intel/isl/libisl.la \
 	$(PER_GEN_LIBS) \
 	$(PTHREAD_LIBS) \

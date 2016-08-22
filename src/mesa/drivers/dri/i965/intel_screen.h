@@ -33,7 +33,7 @@
 
 #include "dri_util.h"
 #include "intel_bufmgr.h"
-#include "brw_device_info.h"
+#include "common/brw_device_info.h"
 #include "i915_drm.h"
 #include "xmlconfig.h"
 

@@ -40,7 +40,7 @@
 #define VG(x)
 #endif
 
-#include "brw_device_info.h"
+#include "common/brw_device_info.h"
 #include "brw_compiler.h"
 #include "util/macros.h"
 #include "util/list.h"

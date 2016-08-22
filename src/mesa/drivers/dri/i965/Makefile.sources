@@ -6,8 +6,6 @@ i965_compiler_FILES = \
 	brw_dead_control_flow.cpp \
 	brw_dead_control_flow.h \
 	brw_defines.h \
-	brw_device_info.c \
-	brw_device_info.h \
 	brw_disasm.c \
 	brw_eu.c \
 	brw_eu_compact.c \
