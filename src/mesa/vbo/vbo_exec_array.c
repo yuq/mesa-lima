@@ -899,7 +899,7 @@ vbo_exec_DrawRangeElementsBaseVertex(GLenum mode,
       index_bounds_valid = GL_FALSE;
 
 #if 0
-   check_draw_elements_data(ctx, count, type, indices);
+   check_draw_elements_data(ctx, count, type, indices, basevertex);
 #else
    (void) check_draw_elements_data;
 #endif
