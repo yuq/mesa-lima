@@ -52,6 +52,12 @@ void genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer);
 
 void genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer);
 
+void
+genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
+                     VkShaderStageFlags active_stages,
+                     unsigned vs_entry_size, unsigned gs_entry_size,
+                     const struct gen_l3_config *l3_config);
+
 VkResult
 genX(graphics_pipeline_create)(VkDevice _device,
                                struct anv_pipeline_cache *cache,

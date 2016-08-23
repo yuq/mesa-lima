@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "common/gen_l3_config.h"
 #include "vk_format_info.h"
 #include "genX_multisample.h"
 
@@ -187,18 +188,19 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 #endif
 }
 
-static inline void
-emit_urb_setup(struct anv_pipeline *pipeline)
+void
+genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
+                     VkShaderStageFlags active_stages,
+                     unsigned vs_size, unsigned gs_size,
+                     const struct gen_l3_config *l3_config)
 {
-   struct anv_device *device = pipeline->device;
+   if (!(active_stages & VK_SHADER_STAGE_VERTEX_BIT))
+      vs_size = 1;
 
-   bool vs_present = pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT;
-   unsigned vs_size = vs_present ?
-      get_vs_prog_data(pipeline)->base.urb_entry_size : 1;
+   if (!(active_stages & VK_SHADER_STAGE_GEOMETRY_BIT))
+      gs_size = 1;
+
    unsigned vs_entry_size_bytes = vs_size * 64;
-   bool gs_present = pipeline->active_stages & VK_SHADER_STAGE_GEOMETRY_BIT;
-   unsigned gs_size = gs_present ?
-      get_gs_prog_data(pipeline)->base.urb_entry_size : 1;
    unsigned gs_entry_size_bytes = gs_size * 64;
 
    /* From p35 of the Ivy Bridge PRM (section 1.7.1: 3DSTATE_URB_GS):
@@ -215,14 +217,16 @@ emit_urb_setup(struct anv_pipeline *pipeline)
    unsigned chunk_size_bytes = 8192;
 
    /* Determine the size of the URB in chunks. */
-   unsigned urb_chunks = pipeline->urb.total_size * 1024 / chunk_size_bytes;
+   const unsigned total_urb_size =
+      gen_get_l3_config_urb_size(&device->info, l3_config);
+   const unsigned urb_chunks = total_urb_size * 1024 / chunk_size_bytes;
 
    /* Reserve space for push constants */
    unsigned push_constant_kb;
-   if (pipeline->device->info.gen >= 8)
+   if (device->info.gen >= 8)
       push_constant_kb = 32;
-   else if (pipeline->device->info.is_haswell)
-      push_constant_kb = pipeline->device->info.gt == 3 ? 32 : 16;
+   else if (device->info.is_haswell)
+      push_constant_kb = device->info.gt == 3 ? 32 : 16;
    else
       push_constant_kb = 16;
 
@@ -245,7 +249,7 @@ emit_urb_setup(struct anv_pipeline *pipeline)
 
    unsigned gs_chunks = 0;
    unsigned gs_wants = 0;
-   if (gs_present) {
+   if (active_stages & VK_SHADER_STAGE_GEOMETRY_BIT) {
       /* There are two constraints on the minimum amount of URB space we can
        * allocate:
        *
@@ -303,7 +307,7 @@ emit_urb_setup(struct anv_pipeline *pipeline)
     * of entries needed for each stage.
     */
    assert(nr_vs_entries >= device->info.urb.min_vs_entries);
-   if (gs_present)
+   if (active_stages & VK_SHADER_STAGE_GEOMETRY_BIT)
       assert(nr_gs_entries >= 2);
 
 #if GEN_GEN == 7 && !GEN_IS_HASWELL
@@ -315,7 +319,7 @@ emit_urb_setup(struct anv_pipeline *pipeline)
     *    3DSTATE_SAMPLER_STATE_POINTER_VS command.  Only one PIPE_CONTROL
     *    needs to be sent before any combination of VS associated 3DSTATE."
     */
-   anv_batch_emit(&pipeline->batch, GEN7_PIPE_CONTROL, pc) {
+   anv_batch_emit(batch, GEN7_PIPE_CONTROL, pc) {
       pc.DepthStallEnable  = true;
       pc.PostSyncOperation = WriteImmediateData;
       pc.Address           = (struct anv_address) { &device->workaround_bo, 0 };
@@ -327,25 +331,40 @@ emit_urb_setup(struct anv_pipeline *pipeline)
     * - VS
     * - GS
     */
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_VS), urb) {
+   anv_batch_emit(batch, GENX(3DSTATE_URB_VS), urb) {
       urb.VSURBStartingAddress      = push_constant_chunks;
       urb.VSURBEntryAllocationSize  = vs_size - 1;
       urb.VSNumberofURBEntries      = nr_vs_entries;
    }
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_HS), urb) {
+   anv_batch_emit(batch, GENX(3DSTATE_URB_HS), urb) {
       urb.HSURBStartingAddress      = push_constant_chunks;
    }
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_DS), urb) {
+   anv_batch_emit(batch, GENX(3DSTATE_URB_DS), urb) {
       urb.DSURBStartingAddress      = push_constant_chunks;
    }
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_GS), urb) {
+   anv_batch_emit(batch, GENX(3DSTATE_URB_GS), urb) {
       urb.GSURBStartingAddress      = push_constant_chunks + vs_chunks;
       urb.GSURBEntryAllocationSize  = gs_size - 1;
       urb.GSNumberofURBEntries      = nr_gs_entries;
    }
+}
+
+static inline void
+emit_urb_setup(struct anv_pipeline *pipeline)
+{
+   unsigned vs_entry_size =
+      (pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT) ?
+      get_vs_prog_data(pipeline)->base.urb_entry_size : 0;
+   unsigned gs_entry_size =
+      (pipeline->active_stages & VK_SHADER_STAGE_GEOMETRY_BIT) ?
+      get_gs_prog_data(pipeline)->base.urb_entry_size : 0;
+
+   genX(emit_urb_setup)(pipeline->device, &pipeline->batch,
+                        pipeline->active_stages, vs_entry_size, gs_entry_size,
+                        pipeline->urb.l3_config);
 }
 
 static void
