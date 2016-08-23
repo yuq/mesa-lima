@@ -29,6 +29,25 @@
 #include "genxml/gen_macros.h"
 #include "genxml/genX_pack.h"
 
+static void
+emit_lrm(struct anv_batch *batch,
+         uint32_t reg, struct anv_bo *bo, uint32_t offset)
+{
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+      lrm.RegisterAddress  = reg;
+      lrm.MemoryAddress    = (struct anv_address) { bo, offset };
+   }
+}
+
+static void
+emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
+{
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
+      lri.RegisterOffset   = reg;
+      lri.DataDWord        = imm;
+   }
+}
+
 void
 genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -679,25 +698,6 @@ void genX(CmdDrawIndexed)(
 #define GEN7_3DPRIM_INSTANCE_COUNT      0x2438
 #define GEN7_3DPRIM_START_INSTANCE      0x243C
 #define GEN7_3DPRIM_BASE_VERTEX         0x2440
-
-static void
-emit_lrm(struct anv_batch *batch,
-         uint32_t reg, struct anv_bo *bo, uint32_t offset)
-{
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
-      lrm.RegisterAddress  = reg;
-      lrm.MemoryAddress    = (struct anv_address) { bo, offset };
-   }
-}
-
-static void
-emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
-{
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
-      lri.RegisterOffset   = reg;
-      lri.DataDWord        = imm;
-   }
-}
 
 void genX(CmdDrawIndirect)(
     VkCommandBuffer                             commandBuffer,
