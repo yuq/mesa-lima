@@ -90,6 +90,15 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_DMA_CALLS:
 		query->begin_result = rctx->num_dma_calls;
 		break;
+	case R600_QUERY_NUM_VS_FLUSHES:
+		query->begin_result = rctx->num_vs_flushes;
+		break;
+	case R600_QUERY_NUM_PS_FLUSHES:
+		query->begin_result = rctx->num_ps_flushes;
+		break;
+	case R600_QUERY_NUM_CS_FLUSHES:
+		query->begin_result = rctx->num_cs_flushes;
+		break;
 	case R600_QUERY_REQUESTED_VRAM:
 	case R600_QUERY_REQUESTED_GTT:
 	case R600_QUERY_MAPPED_VRAM:
@@ -157,6 +166,15 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		break;
 	case R600_QUERY_DMA_CALLS:
 		query->end_result = rctx->num_dma_calls;
+		break;
+	case R600_QUERY_NUM_VS_FLUSHES:
+		query->end_result = rctx->num_vs_flushes;
+		break;
+	case R600_QUERY_NUM_PS_FLUSHES:
+		query->end_result = rctx->num_ps_flushes;
+		break;
+	case R600_QUERY_NUM_CS_FLUSHES:
+		query->end_result = rctx->num_cs_flushes;
 		break;
 	case R600_QUERY_REQUESTED_VRAM:
 	case R600_QUERY_REQUESTED_GTT:
@@ -1182,6 +1200,9 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("compute-calls",		COMPUTE_CALLS,		UINT64, AVERAGE),
 	X("spill-compute-calls",	SPILL_COMPUTE_CALLS,	UINT64, AVERAGE),
 	X("dma-calls",			DMA_CALLS,		UINT64, AVERAGE),
+	X("num-vs-flushes",		NUM_VS_FLUSHES,		UINT64, AVERAGE),
+	X("num-ps-flushes",		NUM_PS_FLUSHES,		UINT64, AVERAGE),
+	X("num-cs-flushes",		NUM_CS_FLUSHES,		UINT64, AVERAGE),
 	X("requested-VRAM",		REQUESTED_VRAM,		BYTES, AVERAGE),
 	X("requested-GTT",		REQUESTED_GTT,		BYTES, AVERAGE),
 	X("mapped-VRAM",		MAPPED_VRAM,		BYTES, AVERAGE),

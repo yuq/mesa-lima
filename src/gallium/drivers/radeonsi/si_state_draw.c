@@ -773,14 +773,22 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 		if (sctx->flags & SI_CONTEXT_PS_PARTIAL_FLUSH) {
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 			radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
+			/* Only count explicit shader flushes, not implicit ones
+			 * done by SURFACE_SYNC.
+			 */
+			sctx->num_vs_flushes++;
+			sctx->num_ps_flushes++;
 		} else if (sctx->flags & SI_CONTEXT_VS_PARTIAL_FLUSH) {
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 			radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
+			sctx->num_vs_flushes++;
 		}
 	}
+
 	if (sctx->flags & SI_CONTEXT_CS_PARTIAL_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_CS_PARTIAL_FLUSH | EVENT_INDEX(4)));
+		sctx->num_cs_flushes++;
 	}
 
 	/* VGT state synchronization. */
