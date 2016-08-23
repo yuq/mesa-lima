@@ -54,7 +54,7 @@ static enum radeon_value_id winsys_id_from_type(unsigned type)
 	case R600_QUERY_MAPPED_VRAM: return RADEON_MAPPED_VRAM;
 	case R600_QUERY_MAPPED_GTT: return RADEON_MAPPED_GTT;
 	case R600_QUERY_BUFFER_WAIT_TIME: return RADEON_BUFFER_WAIT_TIME_NS;
-	case R600_QUERY_NUM_CS_FLUSHES: return RADEON_NUM_CS_FLUSHES;
+	case R600_QUERY_NUM_CTX_FLUSHES: return RADEON_NUM_CS_FLUSHES;
 	case R600_QUERY_NUM_BYTES_MOVED: return RADEON_NUM_BYTES_MOVED;
 	case R600_QUERY_NUM_EVICTIONS: return RADEON_NUM_EVICTIONS;
 	case R600_QUERY_VRAM_USAGE: return RADEON_VRAM_USAGE;
@@ -103,7 +103,7 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 		query->begin_result = 0;
 		break;
 	case R600_QUERY_BUFFER_WAIT_TIME:
-	case R600_QUERY_NUM_CS_FLUSHES:
+	case R600_QUERY_NUM_CTX_FLUSHES:
 	case R600_QUERY_NUM_BYTES_MOVED:
 	case R600_QUERY_NUM_EVICTIONS: {
 		enum radeon_value_id ws_id = winsys_id_from_type(query->b.type);
@@ -168,7 +168,7 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 	case R600_QUERY_CURRENT_GPU_SCLK:
 	case R600_QUERY_CURRENT_GPU_MCLK:
 	case R600_QUERY_BUFFER_WAIT_TIME:
-	case R600_QUERY_NUM_CS_FLUSHES:
+	case R600_QUERY_NUM_CTX_FLUSHES:
 	case R600_QUERY_NUM_BYTES_MOVED:
 	case R600_QUERY_NUM_EVICTIONS: {
 		enum radeon_value_id ws_id = winsys_id_from_type(query->b.type);
@@ -1187,7 +1187,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("mapped-VRAM",		MAPPED_VRAM,		BYTES, AVERAGE),
 	X("mapped-GTT",			MAPPED_GTT,		BYTES, AVERAGE),
 	X("buffer-wait-time",		BUFFER_WAIT_TIME,	MICROSECONDS, CUMULATIVE),
-	X("num-cs-flushes",		NUM_CS_FLUSHES,		UINT64, AVERAGE),
+	X("num-ctx-flushes",		NUM_CTX_FLUSHES,	UINT64, AVERAGE),
 	X("num-bytes-moved",		NUM_BYTES_MOVED,	BYTES, CUMULATIVE),
 	X("num-evictions",		NUM_EVICTIONS,		UINT64, CUMULATIVE),
 	X("VRAM-usage",			VRAM_USAGE,		BYTES, AVERAGE),
