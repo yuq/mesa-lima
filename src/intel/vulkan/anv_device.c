@@ -62,8 +62,7 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    fd = open(path, O_RDWR | O_CLOEXEC);
    if (fd < 0)
-      return vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
-                       "failed to open %s: %m", path);
+      return vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
 
    device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = instance;
@@ -73,15 +72,14 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
    if (!device->chipset_id) {
-      result = VK_ERROR_INITIALIZATION_FAILED;
+      result = vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
       goto fail;
    }
 
    device->name = brw_get_device_name(device->chipset_id);
    device->info = brw_get_device_info(device->chipset_id);
    if (!device->info) {
-      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
-                         "failed to get device info");
+      result = vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
       goto fail;
    }
 
