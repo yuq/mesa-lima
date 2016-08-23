@@ -1645,6 +1645,13 @@ AC_ARG_WITH([vulkan-icddir],
     [VULKAN_ICD_INSTALL_DIR='${datarootdir}/vulkan/icd.d'])
 AC_SUBST([VULKAN_ICD_INSTALL_DIR])
 
+AC_ARG_ENABLE([vulkan-icd-full-driver-path],
+   [AS_HELP_STRING([--disable-vulkan-icd-full-driver-path],
+                   [create Vulkan ICD files with just a .so name and no path])],
+   [vulkan_icd_driver_path="$enableval"],
+   [vulkan_icd_driver_path="yes"])
+AM_CONDITIONAL(VULKAN_ICD_DRIVER_PATH, test "x$vulkan_icd_driver_path" = xyes)
+
 if test -n "$with_vulkan_drivers"; then
     VULKAN_DRIVERS=`IFS=', '; echo $with_vulkan_drivers`
     for driver in $VULKAN_DRIVERS; do

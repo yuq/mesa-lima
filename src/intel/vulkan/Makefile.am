@@ -170,9 +170,15 @@ dev_icd.json : dev_icd.json.in
 		-e "s#@build_libdir@#${abs_top_builddir}/${LIB_DIR}#" \
 		< $(srcdir)/dev_icd.json.in > $@
 
+if VULKAN_ICD_DRIVER_PATH
+ICD_DRIVER_PATH="${libdir}/libvulkan_intel.so"
+else
+ICD_DRIVER_PATH="libvulkan_intel.so"
+endif
+
 intel_icd.json : intel_icd.json.in
 	$(AM_V_GEN) $(SED) \
-		-e "s#@install_libdir@#${libdir}#" \
+		-e "s#@ICD_DRIVER_PATH@#${ICD_DRIVER_PATH}#" \
 		< $(srcdir)/intel_icd.json.in > $@
 
 # Libvulkan with dummy gem. Used for unit tests.
