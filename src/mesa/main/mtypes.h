@@ -1919,6 +1919,7 @@ struct gl_program
    GLbitfield64 InputsRead;     /**< Bitmask of which input regs are read */
    GLbitfield64 DoubleInputsRead;     /**< Bitmask of which input regs are read  and are doubles */
    GLbitfield64 OutputsWritten; /**< Bitmask of which output regs are written */
+   GLbitfield64 SecondaryOutputsWritten; /**< Subset of OutputsWritten outputs written with non-zero index. */
    GLbitfield64 OutputsRead; /**< Bitmask of which output regs are read */
    GLbitfield PatchInputsRead;  /**< VAR[0..31] usage for patch inputs (user-defined only) */
    GLbitfield PatchOutputsWritten; /**< VAR[0..31] usage for patch outputs (user-defined only) */

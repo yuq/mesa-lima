@@ -135,10 +135,14 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
          prog->SystemValuesRead |= bitfield;
       } else {
          assert(var->data.mode == ir_var_shader_out);
-         if (is_patch_generic)
+         if (is_patch_generic) {
             prog->PatchOutputsWritten |= bitfield;
-         else if (!var->data.read_only)
+         } else if (!var->data.read_only) {
             prog->OutputsWritten |= bitfield;
+            if (var->data.index > 0)
+               prog->SecondaryOutputsWritten |= bitfield;
+         }
+
          if (var->data.fb_fetch_output)
             prog->OutputsRead |= bitfield;
       }
@@ -446,6 +450,7 @@ do_set_program_inouts(exec_list *instructions, struct gl_program *prog,
 
    prog->InputsRead = 0;
    prog->OutputsWritten = 0;
+   prog->SecondaryOutputsWritten = 0;
    prog->OutputsRead = 0;
    prog->PatchInputsRead = 0;
    prog->PatchOutputsWritten = 0;
