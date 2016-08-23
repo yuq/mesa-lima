@@ -141,7 +141,7 @@ struct brw_blorp_prog_data
     */
    uint32_t flat_inputs;
    unsigned num_varying_inputs;
-   GLbitfield64 inputs_read;
+   uint64_t inputs_read;
 };
 
 static inline unsigned

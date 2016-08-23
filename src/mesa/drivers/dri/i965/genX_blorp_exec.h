@@ -209,7 +209,7 @@ blorp_emit_input_varying_data(struct blorp_batch *batch,
    for (unsigned i = 0; i < max_num_varyings; i++) {
       const gl_varying_slot attr = VARYING_SLOT_VAR0 + i;
 
-      if (!(params->wm_prog_data->inputs_read & BITFIELD64_BIT(attr)))
+      if (!(params->wm_prog_data->inputs_read & (1ull << attr)))
          continue;
 
       memcpy(inputs, inputs_src + i * 4, vec4_size_in_bytes);
@@ -415,7 +415,7 @@ blorp_emit_sf_config(struct blorp_batch *batch,
    }
 
    blorp_emit(batch, GENX(3DSTATE_SBE), sbe) {
-      sbe.VertexURBEntryReadOffset = BRW_SF_URB_ENTRY_READ_OFFSET;
+      sbe.VertexURBEntryReadOffset = 1;
       sbe.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
       sbe.VertexURBEntryReadLength = brw_blorp_get_urb_length(prog_data);
       sbe.ForceVertexURBEntryReadLength = true;
@@ -443,7 +443,7 @@ blorp_emit_sf_config(struct blorp_batch *batch,
    }
 
    blorp_emit(batch, GENX(3DSTATE_SBE), sbe) {
-      sbe.VertexURBEntryReadOffset = BRW_SF_URB_ENTRY_READ_OFFSET;
+      sbe.VertexURBEntryReadOffset = 1;
       if (prog_data) {
          sbe.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
          sbe.VertexURBEntryReadLength = brw_blorp_get_urb_length(prog_data);
@@ -463,7 +463,7 @@ blorp_emit_sf_config(struct blorp_batch *batch,
       sf.MultisampleRasterizationMode = params->dst.surf.samples > 1 ?
          MSRASTMODE_ON_PATTERN : MSRASTMODE_OFF_PIXEL;
 
-      sf.VertexURBEntryReadOffset = BRW_SF_URB_ENTRY_READ_OFFSET;
+      sf.VertexURBEntryReadOffset = 1;
       if (prog_data) {
          sf.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
          sf.VertexURBEntryReadLength = brw_blorp_get_urb_length(prog_data);
