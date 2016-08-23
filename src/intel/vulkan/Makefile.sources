@@ -33,7 +33,6 @@ VULKAN_FILES := \
 	anv_intel.c \
 	anv_meta.c \
 	anv_meta.h \
-	anv_meta_blit.c \
 	anv_meta_blit2d.c \
 	anv_meta_clear.c \
 	anv_meta_copy.c \

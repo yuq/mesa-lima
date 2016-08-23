@@ -118,3 +118,147 @@ anv_device_finish_blorp(struct anv_device *device)
    blorp_finish(&device->blorp);
    anv_pipeline_cache_finish(&device->blorp_shader_cache);
 }
+
+static void
+get_blorp_surf_for_anv_image(const struct anv_image *image,
+                             VkImageAspectFlags aspect,
+                             struct blorp_surf *blorp_surf)
+{
+   const struct anv_surface *surface =
+      anv_image_get_surface_for_aspect_mask(image, aspect);
+
+   *blorp_surf = (struct blorp_surf) {
+      .surf = &surface->isl,
+      .addr = {
+         .buffer = image->bo,
+         .offset = image->offset + surface->offset,
+      },
+   };
+}
+
+static bool
+flip_coords(unsigned *src0, unsigned *src1, unsigned *dst0, unsigned *dst1)
+{
+   bool flip = false;
+   if (*src0 > *src1) {
+      unsigned tmp = *src0;
+      *src0 = *src1;
+      *src1 = tmp;
+      flip = !flip;
+   }
+
+   if (*dst0 > *dst1) {
+      unsigned tmp = *dst0;
+      *dst0 = *dst1;
+      *dst1 = tmp;
+      flip = !flip;
+   }
+
+   return flip;
+}
+
+void anv_CmdBlitImage(
+    VkCommandBuffer                             commandBuffer,
+    VkImage                                     srcImage,
+    VkImageLayout                               srcImageLayout,
+    VkImage                                     dstImage,
+    VkImageLayout                               dstImageLayout,
+    uint32_t                                    regionCount,
+    const VkImageBlit*                          pRegions,
+    VkFilter                                    filter)
+
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_image, src_image, srcImage);
+   ANV_FROM_HANDLE(anv_image, dst_image, dstImage);
+
+   struct blorp_surf src, dst;
+
+   uint32_t gl_filter;
+   switch (filter) {
+   case VK_FILTER_NEAREST:
+      gl_filter = 0x2600; /* GL_NEAREST */
+      break;
+   case VK_FILTER_LINEAR:
+      gl_filter = 0x2601; /* GL_LINEAR */
+      break;
+   default:
+      unreachable("Invalid filter");
+   }
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+
+   for (unsigned r = 0; r < regionCount; r++) {
+      const VkImageSubresourceLayers *src_res = &pRegions[r].srcSubresource;
+      const VkImageSubresourceLayers *dst_res = &pRegions[r].dstSubresource;
+
+      get_blorp_surf_for_anv_image(src_image, src_res->aspectMask, &src);
+      get_blorp_surf_for_anv_image(dst_image, dst_res->aspectMask, &dst);
+
+      struct anv_format src_format =
+         anv_get_format(&cmd_buffer->device->info, src_image->vk_format,
+                        src_res->aspectMask, src_image->tiling);
+      struct anv_format dst_format =
+         anv_get_format(&cmd_buffer->device->info, dst_image->vk_format,
+                        dst_res->aspectMask, dst_image->tiling);
+
+      unsigned dst_start, dst_end;
+      if (dst_image->type == VK_IMAGE_TYPE_3D) {
+         assert(dst_res->baseArrayLayer == 0);
+         dst_start = pRegions[r].dstOffsets[0].z;
+         dst_end = pRegions[r].dstOffsets[1].z;
+      } else {
+         dst_start = dst_res->baseArrayLayer;
+         dst_end = dst_start + dst_res->layerCount;
+      }
+
+      unsigned src_start, src_end;
+      if (src_image->type == VK_IMAGE_TYPE_3D) {
+         assert(src_res->baseArrayLayer == 0);
+         src_start = pRegions[r].srcOffsets[0].z;
+         src_end = pRegions[r].srcOffsets[1].z;
+      } else {
+         src_start = src_res->baseArrayLayer;
+         src_end = src_start + src_res->layerCount;
+      }
+
+      bool flip_z = flip_coords(&src_start, &src_end, &dst_start, &dst_end);
+      float src_z_step = (float)(src_end + 1 - src_start) /
+                         (float)(dst_end + 1 - dst_start);
+
+      if (flip_z) {
+         src_start = src_end;
+         src_z_step *= -1;
+      }
+
+      unsigned src_x0 = pRegions[r].srcOffsets[0].x;
+      unsigned src_x1 = pRegions[r].srcOffsets[1].x;
+      unsigned dst_x0 = pRegions[r].dstOffsets[0].x;
+      unsigned dst_x1 = pRegions[r].dstOffsets[1].x;
+      bool flip_x = flip_coords(&src_x0, &src_x1, &dst_x0, &dst_x1);
+
+      unsigned src_y0 = pRegions[r].srcOffsets[0].y;
+      unsigned src_y1 = pRegions[r].srcOffsets[1].y;
+      unsigned dst_y0 = pRegions[r].dstOffsets[0].y;
+      unsigned dst_y1 = pRegions[r].dstOffsets[1].y;
+      bool flip_y = flip_coords(&src_y0, &src_y1, &dst_y0, &dst_y1);
+
+      const unsigned num_layers = dst_end - dst_start;
+      for (unsigned i = 0; i < num_layers; i++) {
+         unsigned dst_z = dst_start + i;
+         unsigned src_z = src_start + i * src_z_step;
+
+         blorp_blit(&batch, &src, src_res->mipLevel, src_z,
+                    src_format.isl_format, src_format.swizzle,
+                    &dst, dst_res->mipLevel, dst_z,
+                    dst_format.isl_format, dst_format.swizzle,
+                    src_x0, src_y0, src_x1, src_y1,
+                    dst_x0, dst_y0, dst_x1, dst_y1,
+                    gl_filter, flip_x, flip_y);
+      }
+
+   }
+
+   blorp_batch_finish(&batch);
+}
