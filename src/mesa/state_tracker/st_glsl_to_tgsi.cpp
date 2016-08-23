@@ -2419,7 +2419,8 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
             entry = new(mem_ctx) variable_storage(var,
                                                   PROGRAM_OUTPUT,
                                                   var->data.location
-                                                  + var->data.index);
+                                                  + FRAG_RESULT_MAX *
+                                                    var->data.index);
          }
          this->variables.push_tail(entry);
          break;
@@ -5367,7 +5368,7 @@ dst_register(struct st_translate *t, gl_register_file file, unsigned index,
    case PROGRAM_OUTPUT:
       if (!array_id) {
          if (t->procType == PIPE_SHADER_FRAGMENT)
-            assert(index < FRAG_RESULT_MAX);
+            assert(index < 2 * FRAG_RESULT_MAX);
          else if (t->procType == PIPE_SHADER_TESS_CTRL ||
                   t->procType == PIPE_SHADER_TESS_EVAL)
             assert(index < VARYING_SLOT_TESS_MAX);
