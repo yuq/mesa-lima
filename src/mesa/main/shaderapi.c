@@ -2725,8 +2725,25 @@ _mesa_GetProgramStageiv(GLuint program, GLenum shadertype,
 
    stage = _mesa_shader_enum_to_shader_stage(shadertype);
    sh = shProg->_LinkedShaders[stage];
+
+   /* ARB_shader_subroutine doesn't ask the program to be linked, or list any
+    * INVALID_OPERATION in the case of not be linked.
+    *
+    * And for some pnames, like GL_ACTIVE_SUBROUTINE_UNIFORMS, you can ask the
+    * same info using other specs (ARB_program_interface_query), without the
+    * need of the program to be linked, being the value for that case 0.
+    *
+    * But at the same time, some other methods require the program to be
+    * linked for pname related to locations, so it would be inconsistent to
+    * not do the same here. So we are:
+    *   * Return GL_INVALID_OPERATION if not linked only for locations.
+    *   * Setting a default value of 0, to be returned if not linked.
+    */
    if (!sh) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
+      values[0] = 0;
+      if (pname == GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS) {
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
+      }
       return;
    }
 
