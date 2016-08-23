@@ -344,6 +344,19 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		    (info->indirect || info->instance_count > 1))
 			partial_vs_wave = true;
 
+		/* GS hw bug with single-primitive instances and SWITCH_ON_EOI.
+		 * The hw doc says all multi-SE chips are affected, but Vulkan
+		 * only applies it to Hawaii. Do what Vulkan does.
+		 */
+		if (sctx->b.family == CHIP_HAWAII &&
+		    sctx->gs_shader.cso &&
+		    ia_switch_on_eoi &&
+		    (info->indirect ||
+		     (info->instance_count > 1 &&
+		      si_num_prims_for_vertices(info) <= 1)))
+			sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
+
+
 		/* If the WD switch is false, the IA switch must be false too. */
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
 	}
@@ -355,14 +368,6 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	/* GS requirement. */
 	if (SI_GS_PER_ES / primgroup_size >= sctx->screen->gs_table_depth - 3)
 		partial_es_wave = true;
-
-	/* Hw bug with single-primitive instances and SWITCH_ON_EOI
-	 * on multi-SE chips. */
-	if (sctx->b.screen->info.max_se >= 2 && ia_switch_on_eoi &&
-	    (info->indirect ||
-	     (info->instance_count > 1 &&
-	      si_num_prims_for_vertices(info) <= 1)))
-		sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
 
 	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
