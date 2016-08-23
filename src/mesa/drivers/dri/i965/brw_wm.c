@@ -608,7 +608,8 @@ brw_fs_precompile(struct gl_context *ctx,
 
    key.nr_color_regions = _mesa_bitcount_64(fp->Base.OutputsWritten &
          ~(BITFIELD64_BIT(FRAG_RESULT_DEPTH) |
-         BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
+           BITFIELD64_BIT(FRAG_RESULT_STENCIL) |
+           BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
 
    key.program_string_id = bfp->id;
 
