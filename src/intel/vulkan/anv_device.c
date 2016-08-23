@@ -918,6 +918,8 @@ VkResult anv_CreateDevice(
    if (result != VK_SUCCESS)
       goto fail_fd;
 
+   anv_device_init_blorp(device);
+
    anv_device_init_border_colors(device);
 
    *pDevice = anv_device_to_handle(device);
@@ -939,6 +941,8 @@ void anv_DestroyDevice(
    ANV_FROM_HANDLE(anv_device, device, _device);
 
    anv_queue_finish(&device->queue);
+
+   anv_device_finish_blorp(device);
 
    anv_device_finish_meta(device);
 

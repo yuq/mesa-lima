@@ -121,6 +121,7 @@ VULKAN_LIB_DEPS += \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(top_builddir)/src/intel/common/libintel_common.la \
 	$(top_builddir)/src/intel/isl/libisl.la \
+	$(top_builddir)/src/intel/blorp/libblorp.la \
 	$(PER_GEN_LIBS) \
 	$(PTHREAD_LIBS) \
 	$(DLOPEN_LIBS) \

@@ -72,3 +72,6 @@ genX(compute_pipeline_create)(VkDevice _device,
                               const VkComputePipelineCreateInfo *pCreateInfo,
                               const VkAllocationCallbacks *alloc,
                               VkPipeline *pPipeline);
+
+void genX(blorp_exec)(struct blorp_batch *batch,
+                      const struct blorp_params *params);

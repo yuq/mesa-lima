@@ -41,6 +41,7 @@
 #endif
 
 #include "common/gen_device_info.h"
+#include "blorp/blorp.h"
 #include "brw_compiler.h"
 #include "util/macros.h"
 #include "util/list.h"
@@ -709,6 +710,9 @@ struct anv_device {
 
     struct anv_meta_state                       meta_state;
 
+    struct anv_pipeline_cache                   blorp_shader_cache;
+    struct blorp_context                        blorp;
+
     struct anv_state                            border_colors;
 
     struct anv_queue                            queue;
@@ -722,6 +726,8 @@ struct anv_device {
 
 void anv_device_get_cache_uuid(void *uuid);
 
+void anv_device_init_blorp(struct anv_device *device);
+void anv_device_finish_blorp(struct anv_device *device);
 
 void* anv_gem_mmap(struct anv_device *device,
                    uint32_t gem_handle, uint64_t offset, uint64_t size, uint32_t flags);
