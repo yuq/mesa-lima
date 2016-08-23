@@ -153,7 +153,8 @@ create_group(struct parser_context *ctx, const char *name, const char **atts)
 }
 
 static void
-get_group_offset_count(struct parser_context *ctx, const char *name, const char **atts, uint32_t *offset, uint32_t *count)
+get_group_offset_count(struct parser_context *ctx, const char *name,
+                       const char **atts, uint32_t *offset, uint32_t *count)
 {
    char *p;
    int i;
@@ -240,7 +241,7 @@ create_field(struct parser_context *ctx, const char **atts)
          field->start = ctx->group->group_offset+strtoul(atts[i + 1], &p, 0);
       else if (strcmp(atts[i], "end") == 0) {
          field->end = ctx->group->group_offset+strtoul(atts[i + 1], &p, 0);
-         if(ctx->group->group_offset)
+         if (ctx->group->group_offset)
             ctx->group->group_offset = field->end+1;
       } else if (strcmp(atts[i], "type") == 0)
          field->type = string_to_type(ctx, atts[i + 1]);
@@ -291,11 +292,12 @@ start_element(void *data, const char *element_name, const char **atts)
               strcmp(element_name, "register") == 0) {
       ctx->group = create_group(ctx, name, atts);
    } else if (strcmp(element_name, "group") == 0) {
-      get_group_offset_count(ctx, name, atts,&ctx->group->group_offset,&ctx->group->group_count);
+      get_group_offset_count(ctx, name, atts, &ctx->group->group_offset,
+                             &ctx->group->group_count);
    } else if (strcmp(element_name, "field") == 0) {
       do {
          ctx->fields[ctx->nfields++] = create_field(ctx, atts);
-         if(ctx->group->group_count)
+         if (ctx->group->group_count)
             ctx->group->group_count--;
       } while (ctx->group->group_count > 0);
    } else if (strcmp(element_name, "enum") == 0) {

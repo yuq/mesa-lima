@@ -88,7 +88,8 @@ valid_offset(uint32_t offset)
 }
 
 static void
-print_dword_val(struct gen_field_iterator *iter, uint64_t offset, int *dword_num)
+print_dword_val(struct gen_field_iterator *iter, uint64_t offset,
+                int *dword_num)
 {
    struct gen_field *f;
    union {
@@ -100,16 +101,17 @@ print_dword_val(struct gen_field_iterator *iter, uint64_t offset, int *dword_num
    v.dw = iter->p[f->start / 32];
 
    if (*dword_num != (f->start / 32)) {
-      printf("0x%08lx:  0x%08x : Dword %d\n",(offset + 4 * (f->start / 32)), v.dw, f->start / 32);
+      printf("0x%08lx:  0x%08x : Dword %d\n",
+             offset + 4 * (f->start / 32), v.dw, f->start / 32);
       *dword_num = (f->start / 32);
    }
 }
 
-static char*
+static char *
 print_iterator_values(struct gen_field_iterator *iter, int *idx)
 {
     char *token = NULL;
-    if (strstr(iter->value,"struct") == NULL) {
+    if (strstr(iter->value, "struct") == NULL) {
         printf("    %s: %s\n", iter->name, iter->value);
     } else {
         token = strtok(iter->value, " ");
@@ -125,7 +127,8 @@ print_iterator_values(struct gen_field_iterator *iter, int *idx)
 }
 
 static void
-decode_structure(struct gen_spec *spec, struct gen_group *strct, const uint32_t *p)
+decode_structure(struct gen_spec *spec, struct gen_group *strct,
+                 const uint32_t *p)
 {
    struct gen_field_iterator iter;
    char *token = NULL;
@@ -153,10 +156,10 @@ decode_structure(struct gen_spec *spec, struct gen_group *strct, const uint32_t 
 static void
 handle_struct_decode(struct gen_spec *spec, char *struct_name, uint32_t *p)
 {
-    if (struct_name == NULL)
-        return;
-    struct gen_group *struct_val = gen_spec_find_struct(spec, struct_name);
-    decode_structure(spec, struct_val, p);
+   if (struct_name == NULL)
+      return;
+   struct gen_group *struct_val = gen_spec_find_struct(spec, struct_name);
+   decode_structure(spec, struct_val, p);
 }
 
 static void
@@ -567,7 +570,8 @@ handle_3dstate_viewport_state_pointers_cc(struct gen_spec *spec, uint32_t *p)
 }
 
 static void
-handle_3dstate_viewport_state_pointers_sf_clip(struct gen_spec *spec, uint32_t *p)
+handle_3dstate_viewport_state_pointers_sf_clip(struct gen_spec *spec,
+                                               uint32_t *p)
 {
    uint64_t start;
    struct gen_group *sf_clip_viewport;
@@ -731,7 +735,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
 
       if (option_full_decode) {
          struct gen_field_iterator iter;
-         char* token = NULL;
+         char *token = NULL;
          int idx = 0, dword_num = 0;
          gen_field_iterator_init(&iter, inst, p);
          while (gen_field_iterator_next(&iter)) {
@@ -740,7 +744,8 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
             if (dword_num > 0)
                 token = print_iterator_values(&iter, &idx);
             if (token != NULL) {
-                printf("0x%08lx:  0x%08x : Dword %d\n",(offset+4*idx), p[idx], idx);
+                printf("0x%08lx:  0x%08x : Dword %d\n",
+                       offset + 4 * idx, p[idx], idx);
                 handle_struct_decode(spec,token, &p[idx]);
                 token = NULL;
             }
@@ -868,7 +873,7 @@ aub_file_open(const char *filename)
 #define SUBOPCODE_BLOCK     0x41
 #define SUBOPCODE_BMP       0x1e
 
-/* Newer version AUB opcode*/
+/* Newer version AUB opcode */
 #define OPCODE_NEW_AUB      0x2e
 #define SUBOPCODE_VERSION   0x00
 #define SUBOPCODE_REG_WRITE 0x03
@@ -1085,48 +1090,49 @@ int main(int argc, char *argv[])
       exit(EXIT_FAILURE);
    }
 
-   if (strstr(gen_val,"ivb") != NULL) {
+   if (strstr(gen_val, "ivb") != NULL) {
       /* Intel(R) Ivybridge Mobile GT2 */
       pci_id = 0x0166;
       gen_major = 7;
       gen_minor = 0;
-   } else if (strstr(gen_val,"hsw") != NULL) {
-      /* Intel(R) Haswell Mobile GT2  */
+   } else if (strstr(gen_val, "hsw") != NULL) {
+      /* Intel(R) Haswell Mobile GT2 */
       pci_id = 0x0416;
       gen_major = 7;
       gen_minor = 5;
-   } else if (strstr(gen_val,"byt") != NULL) {
-      /* Intel(R) Bay Trail  */
+   } else if (strstr(gen_val, "byt") != NULL) {
+      /* Intel(R) Bay Trail */
       pci_id = 0x0155;
       gen_major = 7;
       gen_minor = 5;
-   } else if (strstr(gen_val,"bdw") != NULL) {
+   } else if (strstr(gen_val, "bdw") != NULL) {
       /* Intel(R) HD Graphics 5500 (Broadwell GT2) */
       pci_id = 0x1616;
       gen_major = 8;
       gen_minor = 0;
-   }  else if (strstr(gen_val,"chv") != NULL) {
+   }  else if (strstr(gen_val, "chv") != NULL) {
       /* Intel(R) HD Graphics (Cherryview) */
       pci_id = 0x22B3;
       gen_major = 8;
       gen_minor = 0;
-   } else if (strstr(gen_val,"skl") != NULL) {
+   } else if (strstr(gen_val, "skl") != NULL) {
       /* Intel(R) HD Graphics 530 (Skylake GT2) */
       pci_id = 0x1912;
       gen_major = 9;
       gen_minor = 0;
-   } else if (strstr(gen_val,"kbl") != NULL) {
+   } else if (strstr(gen_val, "kbl") != NULL) {
       /* Intel(R) Kabylake GT2 */
       pci_id = 0x591D;
       gen_major = 9;
       gen_minor = 0;
-   } else if (strstr(gen_val,"bxt") != NULL) {
+   } else if (strstr(gen_val, "bxt") != NULL) {
       /* Intel(R) HD Graphics (Broxton) */
       pci_id = 0x0A84;
       gen_major = 9;
       gen_minor = 0;
    } else {
-      error(EXIT_FAILURE, 0, "can't parse gen: %s, expected ivb, byt, hsw, bdw, chv, skl, kbl or bxt\n", gen_val);
+      error(EXIT_FAILURE, 0, "can't parse gen: %s, expected ivb, byt, hsw, "
+                             "bdw, chv, skl, kbl or bxt\n", gen_val);
    }
 
    /* Do this before we redirect stdout to pager. */
@@ -1136,10 +1142,12 @@ int main(int argc, char *argv[])
    if (isatty(1) && pager)
       setup_pager();
 
-   if (gen_minor > 0)
-      snprintf(gen_file, sizeof(gen_file), "../genxml/gen%d%d.xml", gen_major, gen_minor);
-   else
+   if (gen_minor > 0) {
+      snprintf(gen_file, sizeof(gen_file), "../genxml/gen%d%d.xml",
+               gen_major, gen_minor);
+   } else {
       snprintf(gen_file, sizeof(gen_file), "../genxml/gen%d.xml", gen_major);
+   }
 
    spec = gen_spec_load(gen_file);
    disasm = gen_disasm_create(pci_id);
