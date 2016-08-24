@@ -421,6 +421,7 @@ static void
 isl_choose_image_alignment_el(const struct isl_device *dev,
                               const struct isl_surf_init_info *restrict info,
                               enum isl_tiling tiling,
+                              enum isl_dim_layout dim_layout,
                               enum isl_msaa_layout msaa_layout,
                               struct isl_extent3d *image_align_el)
 {
@@ -434,20 +435,20 @@ isl_choose_image_alignment_el(const struct isl_device *dev,
    }
 
    if (ISL_DEV_GEN(dev) >= 9) {
-      gen9_choose_image_alignment_el(dev, info, tiling, msaa_layout,
-                                     image_align_el);
+      gen9_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                     msaa_layout, image_align_el);
    } else if (ISL_DEV_GEN(dev) >= 8) {
-      gen8_choose_image_alignment_el(dev, info, tiling, msaa_layout,
-                                     image_align_el);
+      gen8_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                     msaa_layout, image_align_el);
    } else if (ISL_DEV_GEN(dev) >= 7) {
-      gen7_choose_image_alignment_el(dev, info, tiling, msaa_layout,
-                                     image_align_el);
+      gen7_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                     msaa_layout, image_align_el);
    } else if (ISL_DEV_GEN(dev) >= 6) {
-      gen6_choose_image_alignment_el(dev, info, tiling, msaa_layout,
-                                     image_align_el);
+      gen6_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                     msaa_layout, image_align_el);
    } else {
-      gen4_choose_image_alignment_el(dev, info, tiling, msaa_layout,
-                                     image_align_el);
+      gen4_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                     msaa_layout, image_align_el);
    }
 }
 
@@ -1146,7 +1147,7 @@ isl_surf_init_s(const struct isl_device *dev,
        return false;
 
    struct isl_extent3d image_align_el;
-   isl_choose_image_alignment_el(dev, info, tiling, msaa_layout,
+   isl_choose_image_alignment_el(dev, info, tiling, dim_layout, msaa_layout,
                                  &image_align_el);
 
    struct isl_extent3d image_align_sa =
