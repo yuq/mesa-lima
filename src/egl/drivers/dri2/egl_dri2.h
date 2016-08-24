@@ -196,7 +196,7 @@ struct dri2_egl_display
 
    char                     *driver_name;
 
-   const __DRIextension     *extensions[5];
+   const __DRIextension    **loader_extensions;
    const __DRIextension    **driver_extensions;
 
 #ifdef HAVE_X11_PLATFORM

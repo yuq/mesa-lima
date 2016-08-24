@@ -1167,6 +1167,11 @@ static const __DRIswrastLoaderExtension swrast_loader_extension = {
    .getImage        = swrastGetImage,
 };
 
+static const __DRIextension *swrast_loader_extensions[] = {
+   &swrast_loader_extension.base,
+   NULL,
+};
+
 static EGLBoolean
 dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 {
@@ -1201,8 +1206,7 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_load_driver_swrast(disp))
       goto cleanup_conn;
 
-   dri2_dpy->extensions[0] = &swrast_loader_extension.base;
-   dri2_dpy->extensions[1] = NULL;
+   dri2_dpy->loader_extensions = swrast_loader_extensions;
 
    if (!dri2_create_screen(disp))
       goto cleanup_driver;
@@ -1280,6 +1284,14 @@ dri2_x11_setup_swap_interval(struct dri2_egl_display *dri2_dpy)
 }
 
 #ifdef HAVE_DRI3
+
+static const __DRIextension *dri3_image_loader_extensions[] = {
+   &dri3_image_loader_extension.base,
+   &image_lookup_extension.base,
+   &use_invalidate.base,
+   NULL,
+};
+
 static EGLBoolean
 dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
 {
@@ -1313,10 +1325,7 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_load_driver_dri3(disp))
       goto cleanup_conn;
 
-   dri2_dpy->extensions[0] = &dri3_image_loader_extension.base;
-   dri2_dpy->extensions[1] = &use_invalidate.base;
-   dri2_dpy->extensions[2] = &image_lookup_extension.base;
-   dri2_dpy->extensions[3] = NULL;
+   dri2_dpy->loader_extensions = dri3_image_loader_extensions;
 
    dri2_dpy->swap_available = true;
    dri2_dpy->invalidate_available = true;
@@ -1391,6 +1400,18 @@ static const __DRIdri2LoaderExtension dri2_loader_extension = {
    .getBuffersWithFormat = dri2_x11_get_buffers_with_format,
 };
 
+static const __DRIextension *dri2_loader_extensions_old[] = {
+   &dri2_loader_extension_old.base,
+   &image_lookup_extension.base,
+   NULL,
+};
+
+static const __DRIextension *dri2_loader_extensions[] = {
+   &dri2_loader_extension.base,
+   &image_lookup_extension.base,
+   NULL,
+};
+
 static EGLBoolean
 dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
 {
@@ -1423,12 +1444,9 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup_fd;
 
    if (dri2_dpy->dri2_minor >= 1)
-      dri2_dpy->extensions[0] = &dri2_loader_extension.base;
+      dri2_dpy->loader_extensions = dri2_loader_extensions;
    else
-      dri2_dpy->extensions[0] = &dri2_loader_extension_old.base;
-
-   dri2_dpy->extensions[1] = &image_lookup_extension.base;
-   dri2_dpy->extensions[2] = NULL;
+      dri2_dpy->loader_extensions = dri2_loader_extensions_old;
 
    dri2_dpy->swap_available = (dri2_dpy->dri2_minor >= 2);
    dri2_dpy->invalidate_available = (dri2_dpy->dri2_minor >= 3);

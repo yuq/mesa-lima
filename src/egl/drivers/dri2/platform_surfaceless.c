@@ -236,6 +236,13 @@ static const __DRIimageLoaderExtension image_loader_extension = {
 
 #define DRM_RENDER_DEV_NAME  "%s/renderD%d"
 
+static const __DRIextension *image_loader_extensions[] = {
+   &image_loader_extension.base,
+   &image_lookup_extension.base,
+   &use_invalidate.base,
+   NULL,
+};
+
 EGLBoolean
 dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
 {
@@ -281,10 +288,7 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup_display;
    }
 
-   dri2_dpy->extensions[0] = &image_loader_extension.base;
-   dri2_dpy->extensions[1] = &image_lookup_extension.base;
-   dri2_dpy->extensions[2] = &use_invalidate.base;
-   dri2_dpy->extensions[3] = NULL;
+   dri2_dpy->loader_extensions = image_loader_extensions;
 
    if (!dri2_create_screen(disp)) {
       err = "DRI2: failed to create screen";

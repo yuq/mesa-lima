@@ -1068,6 +1068,20 @@ static struct dri2_egl_display_vtbl dri2_wl_display_vtbl = {
    .get_dri_drawable = dri2_surface_get_dri_drawable,
 };
 
+static const __DRIextension *dri2_loader_extensions[] = {
+   &dri2_loader_extension.base,
+   &image_lookup_extension.base,
+   &use_invalidate.base,
+   NULL,
+};
+
+static const __DRIextension *image_loader_extensions[] = {
+   &image_loader_extension.base,
+   &image_lookup_extension.base,
+   &use_invalidate.base,
+   NULL,
+};
+
 static EGLBoolean
 dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
 {
@@ -1142,17 +1156,12 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_load_driver(disp))
       goto cleanup_driver_name;
 
-   dri2_dpy->extensions[0] = &image_loader_extension.base;
-   dri2_dpy->extensions[1] = &image_lookup_extension.base;
-   dri2_dpy->extensions[2] = &use_invalidate.base;
-
    /* render nodes cannot use Gem names, and thus do not support
     * the __DRI_DRI2_LOADER extension */
-   if (!dri2_dpy->is_render_node) {
-      dri2_dpy->extensions[3] = &dri2_loader_extension.base;
-      dri2_dpy->extensions[4] = NULL;
-   } else
-      dri2_dpy->extensions[3] = NULL;
+   if (!dri2_dpy->is_render_node)
+      dri2_dpy->loader_extensions = dri2_loader_extensions;
+   else
+      dri2_dpy->loader_extensions = image_loader_extensions;
 
    if (!dri2_create_screen(disp))
       goto cleanup_driver;
@@ -1798,6 +1807,11 @@ static const __DRIswrastLoaderExtension swrast_loader_extension = {
    .putImage2       = dri2_wl_swrast_put_image2,
 };
 
+static const __DRIextension *swrast_loader_extensions[] = {
+   &swrast_loader_extension.base,
+   NULL,
+};
+
 static EGLBoolean
 dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 {
@@ -1848,8 +1862,7 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_load_driver_swrast(disp))
       goto cleanup_shm;
 
-   dri2_dpy->extensions[0] = &swrast_loader_extension.base;
-   dri2_dpy->extensions[1] = NULL;
+   dri2_dpy->loader_extensions = swrast_loader_extensions;
 
    if (!dri2_create_screen(disp))
       goto cleanup_driver;

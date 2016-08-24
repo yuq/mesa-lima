@@ -898,6 +898,20 @@ static const __DRIimageLoaderExtension droid_image_loader_extension = {
    .flushFrontBuffer    = droid_flush_front_buffer,
 };
 
+static const __DRIextension *droid_dri2_loader_extensions[] = {
+   &droid_dri2_loader_extension.base,
+   &image_lookup_extension.base,
+   &use_invalidate.base,
+   NULL,
+};
+
+static const __DRIextension *droid_image_loader_extensions[] = {
+   &droid_image_loader_extension.base,
+   &image_lookup_extension.base,
+   &use_invalidate.base,
+   NULL,
+};
+
 EGLBoolean
 dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
 {
@@ -935,15 +949,10 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
 
    /* render nodes cannot use Gem names, and thus do not support
     * the __DRI_DRI2_LOADER extension */
-   if (!dri2_dpy->is_render_node) {
-      dri2_dpy->extensions[0] = &droid_dri2_loader_extension.base;
-   } else {
-      dri2_dpy->extensions[0] = &droid_image_loader_extension.base;
-   }
-   dri2_dpy->extensions[1] = &use_invalidate.base;
-   dri2_dpy->extensions[2] = &image_lookup_extension.base;
-   dri2_dpy->extensions[3] = NULL;
-
+   if (!dri2_dpy->is_render_node)
+      dri2_dpy->loader_extensions = droid_dri2_loader_extensions;
+   else
+      dri2_dpy->loader_extensions = droid_image_loader_extensions;
 
    if (!dri2_create_screen(dpy)) {
       err = "DRI2: failed to create screen";
