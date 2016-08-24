@@ -1692,6 +1692,28 @@ struct gl_array_attrib
    struct gl_buffer_object *ArrayBufferObj;
 
    /**
+    * Vertex array object that is used with the currently active draw command.
+    * The _DrawVAO is either set to the currently bound VAO for array type
+    * draws or to internal VAO's set up by the vbo module to execute immediate
+    * mode or display list draws.
+    */
+   struct gl_vertex_array_object *_DrawVAO;
+   /**
+    * The VERT_BIT_* bits effectively enabled from the current _DrawVAO.
+    * This is always a subset of _mesa_get_vao_vp_inputs(_DrawVAO)
+    * but may omit those arrays that shall not be referenced by the current
+    * gl_vertex_program_state::_VPMode. For example the generic attributes are
+    * maked out form the _DrawVAO's enabled arrays when a fixed function
+    * array draw is executed.
+    */
+   GLbitfield _DrawVAOEnabledAttribs;
+   /**
+    * Initially or if the VAO referenced by _DrawVAO is deleted the _DrawVAO
+    * pointer is set to the _EmptyVAO which is just an empty VAO all the time.
+    */
+   struct gl_vertex_array_object *_EmptyVAO;
+
+   /**
     * Vertex arrays as consumed by a driver.
     * The array pointer is set up only by the VBO module.
     */

@@ -49,6 +49,7 @@
 #include "arrayobj.h"
 #include "macros.h"
 #include "mtypes.h"
+#include "state.h"
 #include "varray.h"
 #include "main/dispatch.h"
 #include "util/bitscan.h"
@@ -578,6 +579,7 @@ bind_vertex_array(struct gl_context *ctx, GLuint id, bool no_error)
     * deleted.
     */
    _mesa_set_drawing_arrays(ctx, NULL);
+   _mesa_set_draw_vao(ctx, ctx->Array._EmptyVAO, 0);
 
    ctx->NewState |= _NEW_ARRAY;
    _mesa_reference_vao(ctx, &ctx->Array.VAO, newObj);
@@ -629,6 +631,8 @@ delete_vertex_arrays(struct gl_context *ctx, GLsizei n, const GLuint *ids)
 
          if (ctx->Array.LastLookedUpVAO == obj)
             _mesa_reference_vao(ctx, &ctx->Array.LastLookedUpVAO, NULL);
+         if (ctx->Array._DrawVAO == obj)
+            _mesa_set_draw_vao(ctx, ctx->Array._EmptyVAO, 0);
 
          /* Unreference the array object. 
           * If refcount hits zero, the object will be deleted.

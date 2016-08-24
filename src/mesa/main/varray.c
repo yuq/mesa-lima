@@ -2925,6 +2925,8 @@ _mesa_init_varray(struct gl_context *ctx)
 {
    ctx->Array.DefaultVAO = _mesa_new_vao(ctx, 0);
    _mesa_reference_vao(ctx, &ctx->Array.VAO, ctx->Array.DefaultVAO);
+   ctx->Array._EmptyVAO = _mesa_new_vao(ctx, ~0u);
+   _mesa_reference_vao(ctx, &ctx->Array._DrawVAO, ctx->Array._EmptyVAO);
    ctx->Array.ActiveTexture = 0;   /* GL_ARB_multitexture */
 
    ctx->Array.Objects = _mesa_NewHashTable();
