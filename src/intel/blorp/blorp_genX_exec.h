@@ -75,12 +75,9 @@ blorp_emit_3dstate_multisample(struct blorp_batch *batch, unsigned samples);
 
 #include "genxml/gen_macros.h"
 
-#define __gen_address_type struct blorp_address
-#define __gen_user_data struct blorp_batch
-
 static uint64_t
-__gen_combine_address(struct blorp_batch *batch, void *location,
-                      struct blorp_address address, uint32_t delta)
+_blorp_combine_address(struct blorp_batch *batch, void *location,
+                       struct blorp_address address, uint32_t delta)
 {
    if (address.buffer == NULL) {
       return address.offset + delta;
@@ -88,6 +85,10 @@ __gen_combine_address(struct blorp_batch *batch, void *location,
       return blorp_emit_reloc(batch, location, address, delta);
    }
 }
+
+#define __gen_address_type struct blorp_address
+#define __gen_user_data struct blorp_batch
+#define __gen_combine_address _blorp_combine_address
 
 #include "genxml/genX_pack.h"
 
