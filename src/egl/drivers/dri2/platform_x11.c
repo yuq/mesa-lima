@@ -1312,15 +1312,13 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->screen = DefaultScreen(dpy);
    }
 
-   if (xcb_connection_has_error(dri2_dpy->conn)) {
+   if (!dri2_dpy->conn || xcb_connection_has_error(dri2_dpy->conn)) {
       _eglLog(_EGL_WARNING, "DRI3: xcb_connect failed");
       goto cleanup_dpy;
    }
 
-   if (dri2_dpy->conn) {
-      if (!dri3_x11_connect(dri2_dpy))
-         goto cleanup_conn;
-   }
+   if (!dri3_x11_connect(dri2_dpy))
+      goto cleanup_conn;
 
    if (!dri2_load_driver_dri3(disp))
       goto cleanup_conn;
@@ -1346,10 +1344,8 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
       disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
 #endif
 
-   if (dri2_dpy->conn) {
-      if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp, false))
-         goto cleanup_configs;
-   }
+   if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp, false))
+      goto cleanup_configs;
 
    dri2_dpy->loader_dri3_ext.core = dri2_dpy->core;
    dri2_dpy->loader_dri3_ext.image_driver = dri2_dpy->image_driver;
