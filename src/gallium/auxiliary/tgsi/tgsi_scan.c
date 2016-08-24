@@ -497,13 +497,17 @@ scan_declaration(struct tgsi_shader_info *info,
          info->samplers_declared |= 1u << reg;
       } else if (file == TGSI_FILE_SAMPLER_VIEW) {
          unsigned target = fulldecl->SamplerView.Resource;
+         unsigned type = fulldecl->SamplerView.ReturnTypeX;
+
          assert(target < TGSI_TEXTURE_UNKNOWN);
          if (info->sampler_targets[reg] == TGSI_TEXTURE_UNKNOWN) {
             /* Save sampler target for this sampler index */
             info->sampler_targets[reg] = target;
+            info->sampler_type[reg] = type;
          } else {
             /* if previously declared, make sure targets agree */
             assert(info->sampler_targets[reg] == target);
+            assert(info->sampler_type[reg] == type);
          }
       } else if (file == TGSI_FILE_IMAGE) {
          if (fulldecl->Image.Resource == TGSI_TEXTURE_BUFFER)
