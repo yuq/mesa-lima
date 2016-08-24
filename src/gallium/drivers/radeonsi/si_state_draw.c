@@ -785,10 +785,12 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 		}
 	}
 
-	if (sctx->flags & SI_CONTEXT_CS_PARTIAL_FLUSH) {
+	if (sctx->flags & SI_CONTEXT_CS_PARTIAL_FLUSH &&
+	    si_ctx->compute_is_busy) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_CS_PARTIAL_FLUSH | EVENT_INDEX(4)));
 		sctx->num_cs_flushes++;
+		si_ctx->compute_is_busy = false;
 	}
 
 	/* VGT state synchronization. */

@@ -512,6 +512,7 @@ static void si_launch_grid(
 
 	si_ce_post_draw_synchronization(sctx);
 
+	sctx->compute_is_busy = true;
 	sctx->b.num_compute_calls++;
 	if (sctx->cs_shader_state.uses_scratch)
 		sctx->b.num_spill_compute_calls++;

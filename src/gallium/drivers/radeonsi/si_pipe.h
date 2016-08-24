@@ -219,6 +219,7 @@ struct si_context {
 	struct si_shader_ctx_state	fixed_func_tcs_shader;
 	LLVMTargetMachineRef		tm; /* only non-threaded compilation */
 	bool				gfx_flush_in_progress;
+	bool				compute_is_busy;
 
 	/* Atoms (direct states). */
 	union si_state_atoms		atoms;
