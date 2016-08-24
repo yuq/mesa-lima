@@ -807,12 +807,9 @@ struct anv_address {
    uint32_t offset;
 };
 
-#define __gen_address_type struct anv_address
-#define __gen_user_data struct anv_batch
-
 static inline uint64_t
-__gen_combine_address(struct anv_batch *batch, void *location,
-                      const struct anv_address address, uint32_t delta)
+_anv_combine_address(struct anv_batch *batch, void *location,
+                     const struct anv_address address, uint32_t delta)
 {
    if (address.bo == NULL) {
       return address.offset + delta;
@@ -822,6 +819,10 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       return anv_batch_emit_reloc(batch, location, address.bo, address.offset + delta);
    }
 }
+
+#define __gen_address_type struct anv_address
+#define __gen_user_data struct anv_batch
+#define __gen_combine_address _anv_combine_address
 
 /* Wrapper macros needed to work around preprocessor argument issues.  In
  * particular, arguments don't get pre-evaluated if they are concatenated.
