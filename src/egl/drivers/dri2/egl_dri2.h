@@ -215,14 +215,14 @@ struct dri2_egl_display
    struct wl_drm            *wl_drm;
    struct wl_shm            *wl_shm;
    struct wl_event_queue    *wl_queue;
-   int			     authenticated;
-   int			     formats;
+   int                       authenticated;
+   int                       formats;
    uint32_t                  capabilities;
    char                     *device_name;
 #endif
 
-   int              is_render_node;
-   int			     is_different_gpu;
+   int                       is_render_node;
+   int                       is_different_gpu;
 };
 
 struct dri2_egl_context
@@ -262,7 +262,7 @@ struct dri2_egl_surface
    int                    dx;
    int                    dy;
    struct wl_callback    *throttle_callback;
-   int			  format;
+   int                    format;
 #endif
 
 #ifdef HAVE_DRM_PLATFORM
@@ -363,17 +363,17 @@ dri2_lookup_egl_image(__DRIscreen *screen, void *image, void *data);
 
 struct dri2_egl_config *
 dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
-		EGLint surface_type, const EGLint *attr_list,
-		const unsigned int *rgba_masks);
+                EGLint surface_type, const EGLint *attr_list,
+                const unsigned int *rgba_masks);
 
 _EGLImage *
 dri2_create_image_khr(_EGLDriver *drv, _EGLDisplay *disp,
-		      _EGLContext *ctx, EGLenum target,
-		      EGLClientBuffer buffer, const EGLint *attr_list);
+                      _EGLContext *ctx, EGLenum target,
+                      EGLClientBuffer buffer, const EGLint *attr_list);
 
 _EGLImage *
 dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
-			  EGLClientBuffer buffer, const EGLint *attr_list);
+                          EGLClientBuffer buffer, const EGLint *attr_list);
 
 EGLBoolean
 dri2_initialize_x11(_EGLDriver *drv, _EGLDisplay *disp);
