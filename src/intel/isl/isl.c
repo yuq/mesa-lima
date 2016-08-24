@@ -453,12 +453,30 @@ isl_choose_image_alignment_el(const struct isl_device *dev,
 
 static enum isl_dim_layout
 isl_surf_choose_dim_layout(const struct isl_device *dev,
-                           enum isl_surf_dim logical_dim)
+                           enum isl_surf_dim logical_dim,
+                           enum isl_tiling tiling)
 {
    if (ISL_DEV_GEN(dev) >= 9) {
       switch (logical_dim) {
       case ISL_SURF_DIM_1D:
-         return ISL_DIM_LAYOUT_GEN9_1D;
+         /* From the Sky Lake PRM Vol. 5, "1D Surfaces":
+          *
+          *    One-dimensional surfaces use a tiling mode of linear.
+          *    Technically, they are not tiled resources, but the Tiled
+          *    Resource Mode field in RENDER_SURFACE_STATE is still used to
+          *    indicate the alignment requirements for this linear surface
+          *    (See 1D Alignment requirements for how 4K and 64KB Tiled
+          *    Resource Modes impact alignment). Alternatively, a 1D surface
+          *    can be defined as a 2D tiled surface (e.g. TileY or TileX) with
+          *    a height of 0.
+          *
+          * In other words, ISL_DIM_LAYOUT_GEN9_1D is only used for linear
+          * surfaces and, for tiled surfaces, ISL_DIM_LAYOUT_GEN4_2D is used.
+          */
+         if (tiling == ISL_TILING_LINEAR)
+            return ISL_DIM_LAYOUT_GEN9_1D;
+         else
+            return ISL_DIM_LAYOUT_GEN4_2D;
       case ISL_SURF_DIM_2D:
       case ISL_SURF_DIM_3D:
          return ISL_DIM_LAYOUT_GEN4_2D;
@@ -1112,9 +1130,6 @@ isl_surf_init_s(const struct isl_device *dev,
       .a = info->array_len,
    };
 
-   enum isl_dim_layout dim_layout =
-      isl_surf_choose_dim_layout(dev, info->dim);
-
    enum isl_tiling tiling;
    if (!isl_surf_choose_tiling(dev, info, &tiling))
       return false;
@@ -1122,6 +1137,9 @@ isl_surf_init_s(const struct isl_device *dev,
    struct isl_tile_info tile_info;
    if (!isl_tiling_get_info(dev, tiling, fmtl->bpb, &tile_info))
       return false;
+
+   const enum isl_dim_layout dim_layout =
+      isl_surf_choose_dim_layout(dev, info->dim, tiling);
 
    enum isl_msaa_layout msaa_layout;
    if (!isl_choose_msaa_layout(dev, info, tiling, &msaa_layout))
