@@ -111,7 +111,7 @@ blorp_blit(struct blorp_batch *batch,
 void
 blorp_fast_clear(struct blorp_batch *batch,
                  const struct blorp_surf *surf,
-                 uint32_t level, uint32_t layer,
+                 uint32_t level, uint32_t layer, enum isl_format format,
                  uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1);
 
 void

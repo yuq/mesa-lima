@@ -209,7 +209,7 @@ get_fast_clear_rect(const struct isl_device *dev,
 void
 blorp_fast_clear(struct blorp_batch *batch,
                  const struct blorp_surf *surf,
-                 uint32_t level, uint32_t layer,
+                 uint32_t level, uint32_t layer, enum isl_format format,
                  uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)
 {
    struct blorp_params params;
@@ -229,7 +229,7 @@ blorp_fast_clear(struct blorp_batch *batch,
    blorp_params_get_clear_kernel(batch->blorp, &params, true);
 
    brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level, layer,
-                               surf->surf->format, true);
+                               format, true);
 
    batch->blorp->exec(batch, &params);
 }
