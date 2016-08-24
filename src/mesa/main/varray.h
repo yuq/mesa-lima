@@ -111,13 +111,13 @@ _mesa_update_array_format(struct gl_context *ctx,
 extern void
 _mesa_enable_vertex_array_attrib(struct gl_context *ctx,
                                  struct gl_vertex_array_object *vao,
-                                 gl_vert_attrib attrib);
+                                 gl_vert_attrib attrib, bool flush_vertices);
 
 
 extern void
 _mesa_disable_vertex_array_attrib(struct gl_context *ctx,
                                   struct gl_vertex_array_object *vao,
-                                  gl_vert_attrib attrib);
+                                  gl_vert_attrib attrib, bool flush_vertices);
 
 
 extern void

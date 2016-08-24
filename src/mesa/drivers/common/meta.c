@@ -350,7 +350,7 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
          _mesa_bind_vertex_buffer(ctx, array_obj, VERT_ATTRIB_GENERIC(0),
                                   *buf_obj, 0, sizeof(struct vertex));
          _mesa_enable_vertex_array_attrib(ctx, array_obj,
-                                          VERT_ATTRIB_GENERIC(0));
+                                          VERT_ATTRIB_GENERIC(0), true);
          if (texcoord_size > 0) {
             _mesa_update_array_format(ctx, array_obj, VERT_ATTRIB_GENERIC(1),
                                       texcoord_size, GL_FLOAT, GL_RGBA,
@@ -359,7 +359,7 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
             _mesa_bind_vertex_buffer(ctx, array_obj, VERT_ATTRIB_GENERIC(1),
                                      *buf_obj, 0, sizeof(struct vertex));
             _mesa_enable_vertex_array_attrib(ctx, array_obj,
-                                             VERT_ATTRIB_GENERIC(1));
+                                             VERT_ATTRIB_GENERIC(1), true);
          }
       } else {
          _mesa_update_array_format(ctx, array_obj, VERT_ATTRIB_POS,
@@ -368,7 +368,8 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
                                    offsetof(struct vertex, x));
          _mesa_bind_vertex_buffer(ctx, array_obj, VERT_ATTRIB_POS,
                                   *buf_obj, 0, sizeof(struct vertex));
-         _mesa_enable_vertex_array_attrib(ctx, array_obj, VERT_ATTRIB_POS);
+         _mesa_enable_vertex_array_attrib(ctx, array_obj,
+                                          VERT_ATTRIB_POS, true);
 
          if (texcoord_size > 0) {
             _mesa_update_array_format(ctx, array_obj, VERT_ATTRIB_TEX(0),
@@ -377,7 +378,8 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
                                       offsetof(struct vertex, tex));
             _mesa_bind_vertex_buffer(ctx, array_obj, VERT_ATTRIB_TEX(0),
                                      *buf_obj, 0, sizeof(struct vertex));
-            _mesa_enable_vertex_array_attrib(ctx, array_obj, VERT_ATTRIB_TEX(0));
+            _mesa_enable_vertex_array_attrib(ctx, array_obj,
+                                             VERT_ATTRIB_TEX(0), true);
          }
 
          if (color_size > 0) {
@@ -387,7 +389,8 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
                                       offsetof(struct vertex, r));
             _mesa_bind_vertex_buffer(ctx, array_obj, VERT_ATTRIB_COLOR0,
                                      *buf_obj, 0, sizeof(struct vertex));
-            _mesa_enable_vertex_array_attrib(ctx, array_obj, VERT_ATTRIB_COLOR0);
+            _mesa_enable_vertex_array_attrib(ctx, array_obj,
+                                             VERT_ATTRIB_COLOR0, true);
          }
       }
    } else {
@@ -3345,7 +3348,7 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
                                 offsetof(struct vertex, x));
       _mesa_bind_vertex_buffer(ctx, array_obj, VERT_ATTRIB_POS,
                                drawtex->buf_obj, 0, sizeof(struct vertex));
-      _mesa_enable_vertex_array_attrib(ctx, array_obj, VERT_ATTRIB_POS);
+      _mesa_enable_vertex_array_attrib(ctx, array_obj, VERT_ATTRIB_POS, true);
 
 
       for (i = 0; i < ctx->Const.MaxTextureUnits; i++) {
@@ -3356,7 +3359,8 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
                                    offsetof(struct vertex, st[i]));
          _mesa_bind_vertex_buffer(ctx, array_obj, VERT_ATTRIB_TEX(i),
                                   drawtex->buf_obj, 0, sizeof(struct vertex));
-         _mesa_enable_vertex_array_attrib(ctx, array_obj, VERT_ATTRIB_TEX(i));
+         _mesa_enable_vertex_array_attrib(ctx, array_obj,
+                                          VERT_ATTRIB_TEX(i), true);
       }
    }
    else {
