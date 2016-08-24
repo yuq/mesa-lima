@@ -395,6 +395,15 @@ static struct dri2_extension_match swrast_core_extensions[] = {
    { NULL, 0, 0 }
 };
 
+static struct dri2_extension_match optional_core_extensions[] = {
+   { __DRI2_ROBUSTNESS, 1, offsetof(struct dri2_egl_display, robustness) },
+   { __DRI2_CONFIG_QUERY, 1, offsetof(struct dri2_egl_display, config) },
+   { __DRI2_FENCE, 1, offsetof(struct dri2_egl_display, fence) },
+   { __DRI2_RENDERER_QUERY, 1, offsetof(struct dri2_egl_display, rendererQuery) },
+   { __DRI2_INTEROP, 1, offsetof(struct dri2_egl_display, interop) },
+   { NULL, 0, 0 }
+};
+
 static EGLBoolean
 dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
                      struct dri2_extension_match *matches,
@@ -686,7 +695,6 @@ dri2_create_screen(_EGLDisplay *disp)
 {
    const __DRIextension **extensions;
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   unsigned i;
 
    if (dri2_dpy->image_driver) {
       dri2_dpy->dri_screen =
@@ -740,23 +748,7 @@ dri2_create_screen(_EGLDisplay *disp)
          goto cleanup_dri_screen;
    }
 
-   for (i = 0; extensions[i]; i++) {
-      if (strcmp(extensions[i]->name, __DRI2_ROBUSTNESS) == 0) {
-         dri2_dpy->robustness = (__DRIrobustnessExtension *) extensions[i];
-      }
-      if (strcmp(extensions[i]->name, __DRI2_CONFIG_QUERY) == 0) {
-         dri2_dpy->config = (__DRI2configQueryExtension *) extensions[i];
-      }
-      if (strcmp(extensions[i]->name, __DRI2_FENCE) == 0) {
-         dri2_dpy->fence = (__DRI2fenceExtension *) extensions[i];
-      }
-      if (strcmp(extensions[i]->name, __DRI2_RENDERER_QUERY) == 0) {
-         dri2_dpy->rendererQuery = (__DRI2rendererQueryExtension *) extensions[i];
-      }
-      if (strcmp(extensions[i]->name, __DRI2_INTEROP) == 0)
-         dri2_dpy->interop = (__DRI2interopExtension *) extensions[i];
-   }
-
+   dri2_bind_extensions(dri2_dpy, optional_core_extensions, extensions, true);
    dri2_setup_screen(disp);
 
    return EGL_TRUE;
