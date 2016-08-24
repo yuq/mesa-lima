@@ -914,9 +914,11 @@ build_nir_w_tiled_fetch(struct nir_builder *b, struct anv_device *device,
    /* First, compute the block-aligned offset */
    nir_ssa_def *x_major = nir_ushr(b, x, nir_imm_int(b, 6));
    nir_ssa_def *y_major = nir_ushr(b, y, nir_imm_int(b, 6));
+   /* W tiles have physical size of 128x32 and logical size of 64x64, hence
+    * the multiplication by 32 (instead of 64). */
    nir_ssa_def *offset =
       nir_iadd(b, nir_imul(b, y_major,
-                              nir_imul(b, tex_pitch, nir_imm_int(b, 64))),
+                              nir_imul(b, tex_pitch, nir_imm_int(b, 32))),
                   nir_imul(b, x_major, nir_imm_int(b, 4096)));
 
    /* Compute the bottom 12 bits of the offset */
