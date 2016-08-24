@@ -280,6 +280,12 @@ public:
    bool can_change_types() const;
    bool has_source_and_destination_hazard() const;
 
+   bool is_align1_partial_write()
+   {
+      return opcode == VEC4_OPCODE_SET_LOW_32BIT ||
+             opcode == VEC4_OPCODE_SET_HIGH_32BIT;
+   }
+
    bool reads_flag()
    {
       return predicate || opcode == VS_OPCODE_UNPACK_FLAGS_SIMD4X2;

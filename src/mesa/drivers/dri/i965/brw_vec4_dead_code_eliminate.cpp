@@ -110,7 +110,8 @@ vec4_visitor::dead_code_eliminate()
             }
          }
 
-         if (inst->dst.file == VGRF && !inst->predicate) {
+         if (inst->dst.file == VGRF && !inst->predicate &&
+             !inst->is_align1_partial_write()) {
             for (unsigned i = 0; i < regs_written(inst); i++) {
                for (int c = 0; c < 4; c++) {
                   if (inst->dst.writemask & (1 << c)) {
