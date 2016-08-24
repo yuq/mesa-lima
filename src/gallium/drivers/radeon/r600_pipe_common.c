@@ -265,6 +265,7 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 {
 	struct pipe_screen *screen = ctx->screen;
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct radeon_winsys *ws = rctx->ws;
 	unsigned rflags = 0;
 	struct pipe_fence_handle *gfx_fence = NULL;
 	struct pipe_fence_handle *sdma_fence = NULL;
@@ -279,26 +280,34 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 		rctx->dma.flush(rctx, rflags, fence ? &sdma_fence : NULL);
 	}
 
-	/* Instead of flushing, create a deferred fence. Constraints:
-	 * - The state tracker must allow a deferred flush.
-	 * - The state tracker must request a fence.
-	 * Thread safety in fence_finish must be ensured by the state tracker.
-	 */
-	if (flags & PIPE_FLUSH_DEFERRED && fence) {
-		gfx_fence = rctx->ws->cs_get_next_fence(rctx->gfx.cs);
-		deferred_fence = true;
+	if (!radeon_emitted(rctx->gfx.cs, rctx->initial_gfx_cs_size)) {
+		if (fence)
+			ws->fence_reference(&gfx_fence, rctx->last_gfx_fence);
+		if (!(rflags & RADEON_FLUSH_ASYNC))
+			ws->cs_sync_flush(rctx->gfx.cs);
 	} else {
-		rctx->gfx.flush(rctx, rflags, fence ? &gfx_fence : NULL);
+		/* Instead of flushing, create a deferred fence. Constraints:
+		 * - The state tracker must allow a deferred flush.
+		 * - The state tracker must request a fence.
+		 * Thread safety in fence_finish must be ensured by the state tracker.
+		 */
+		if (flags & PIPE_FLUSH_DEFERRED && fence) {
+			gfx_fence = rctx->ws->cs_get_next_fence(rctx->gfx.cs);
+			deferred_fence = true;
+		} else {
+			rctx->gfx.flush(rctx, rflags, fence ? &gfx_fence : NULL);
+		}
 	}
 
 	/* Both engines can signal out of order, so we need to keep both fences. */
-	if (gfx_fence || sdma_fence) {
+	if (fence) {
 		struct r600_multi_fence *multi_fence =
 			CALLOC_STRUCT(r600_multi_fence);
 		if (!multi_fence)
 			return;
 
 		multi_fence->reference.count = 1;
+		/* If both fences are NULL, fence_finish will always return true. */
 		multi_fence->gfx = gfx_fence;
 		multi_fence->sdma = sdma_fence;
 

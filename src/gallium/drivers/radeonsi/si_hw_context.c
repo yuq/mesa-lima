@@ -100,17 +100,10 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	if (ctx->gfx_flush_in_progress)
 		return;
 
-	ctx->gfx_flush_in_progress = true;
-
-	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size) &&
-	    (!fence || ctx->b.last_gfx_fence)) {
-		if (fence)
-			ws->fence_reference(fence, ctx->b.last_gfx_fence);
-		if (!(flags & RADEON_FLUSH_ASYNC))
-			ws->cs_sync_flush(cs);
-		ctx->gfx_flush_in_progress = false;
+	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size))
 		return;
-	}
+
+	ctx->gfx_flush_in_progress = true;
 
 	r600_preflush_suspend_features(&ctx->b);
 

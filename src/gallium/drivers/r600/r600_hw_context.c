@@ -255,14 +255,8 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 	struct radeon_winsys *ws = ctx->b.ws;
 
-	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size) &&
-	    (!fence || ctx->b.last_gfx_fence)) {
-		if (fence)
-			ws->fence_reference(fence, ctx->b.last_gfx_fence);
-		if (!(flags & RADEON_FLUSH_ASYNC))
-			ws->cs_sync_flush(cs);
+	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size))
 		return;
-	}
 
 	r600_preflush_suspend_features(&ctx->b);
 
