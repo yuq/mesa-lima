@@ -44,6 +44,8 @@ struct intel_screen
 
    __DRIscreen *driScrnPriv;
 
+   uint64_t max_gtt_map_object_size;
+
    bool no_hw;
 
    bool hw_has_swizzling;

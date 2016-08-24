@@ -995,6 +995,17 @@ intel_get_boolean(struct intel_screen *screen, int param)
    return (intel_get_param(screen, param, &value) == 0) && value;
 }
 
+static int
+intel_get_integer(struct intel_screen *screen, int param)
+{
+   int value = -1;
+
+   if (intel_get_param(screen, param, &value) == 0)
+      return value;
+
+   return -1;
+}
+
 static void
 intelDestroyScreen(__DRIscreen * sPriv)
 {
@@ -1564,6 +1575,43 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
 
    if (INTEL_DEBUG & DEBUG_AUB)
       drm_intel_bufmgr_gem_set_aub_dump(intelScreen->bufmgr, true);
+
+#ifndef I915_PARAM_MMAP_GTT_VERSION
+#define I915_PARAM_MMAP_GTT_VERSION 40 /* XXX delete me with new libdrm */
+#endif
+   if (intel_get_integer(intelScreen, I915_PARAM_MMAP_GTT_VERSION) >= 1) {
+      /* Theorectically unlimited! At least for individual objects...
+       *
+       * Currently the entire (global) address space for all GTT maps is
+       * limited to 64bits. That is all objects on the system that are
+       * setup for GTT mmapping must fit within 64bits. An attempt to use
+       * one that exceeds the limit with fail in drm_intel_bo_map_gtt().
+       *
+       * Long before we hit that limit, we will be practically limited by
+       * that any single object must fit in physical memory (RAM). The upper
+       * limit on the CPU's address space is currently 48bits (Skylake), of
+       * which only 39bits can be physical memory. (The GPU itself also has
+       * a 48bit addressable virtual space.) We can fit over 32 million
+       * objects of the current maximum allocable size before running out
+       * of mmap space.
+       */
+      intelScreen->max_gtt_map_object_size = UINT64_MAX;
+   } else {
+      /* Estimate the size of the mappable aperture into the GTT.  There's an
+       * ioctl to get the whole GTT size, but not one to get the mappable subset.
+       * It turns out it's basically always 256MB, though some ancient hardware
+       * was smaller.
+       */
+      uint32_t gtt_size = 256 * 1024 * 1024;
+
+      /* We don't want to map two objects such that a memcpy between them would
+       * just fault one mapping in and then the other over and over forever.  So
+       * we would need to divide the GTT size by 2.  Additionally, some GTT is
+       * taken up by things like the framebuffer and the ringbuffer and such, so
+       * be more conservative.
+       */
+      intelScreen->max_gtt_map_object_size = gtt_size / 4;
+   }
 
    intelScreen->hw_has_swizzling = intel_detect_swizzling(intelScreen);
    intelScreen->hw_has_timestamp = intel_detect_timestamp(intelScreen);

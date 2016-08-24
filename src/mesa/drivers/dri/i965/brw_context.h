@@ -853,7 +853,7 @@ struct brw_context
     */
    bool perf_debug;
 
-   uint32_t max_gtt_map_object_size;
+   uint64_t max_gtt_map_object_size;
 
    int gen;
    int gt;
