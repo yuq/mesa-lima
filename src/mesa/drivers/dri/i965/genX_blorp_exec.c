@@ -104,20 +104,21 @@ blorp_alloc_dynamic_state(struct blorp_batch *batch,
 static void
 blorp_alloc_binding_table(struct blorp_batch *batch, unsigned num_entries,
                           unsigned state_size, unsigned state_alignment,
-                          uint32_t *bt_offset, uint32_t **bt_map,
+                          uint32_t *bt_offset, uint32_t *surface_offsets,
                           void **surface_maps)
 {
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;
 
-   *bt_map = brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
-                             num_entries * sizeof(uint32_t), 32,
-                             bt_offset);
+   uint32_t *bt_map = brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
+                                      num_entries * sizeof(uint32_t), 32,
+                                      bt_offset);
 
    for (unsigned i = 0; i < num_entries; i++) {
       surface_maps[i] = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
                                         state_size, state_alignment,
-                                        &(*bt_map)[i]);
+                                        &(surface_offsets)[i]);
+      bt_map[i] = surface_offsets[i];
    }
 }
 
