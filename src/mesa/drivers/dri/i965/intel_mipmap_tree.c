@@ -384,6 +384,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->msaa_layout = INTEL_MSAA_LAYOUT_NONE;
    mt->refcount = 1;
 
+   int depth_multiply = 1;
    if (num_samples > 1) {
       /* Adjust width/height/depth for MSAA */
       mt->msaa_layout = compute_msaa_layout(brw, format,
@@ -470,7 +471,8 @@ intel_miptree_create_layout(struct brw_context *brw,
          }
       } else {
          /* Non-interleaved */
-         depth0 *= num_samples;
+         depth_multiply = num_samples;
+         depth0 *= depth_multiply;
       }
    }
 
@@ -500,7 +502,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    }
 
    if (target == GL_TEXTURE_CUBE_MAP)
-      assert(depth0 == 6);
+      assert(depth0 == 6 * depth_multiply);
 
    mt->physical_width0 = width0;
    mt->physical_height0 = height0;
