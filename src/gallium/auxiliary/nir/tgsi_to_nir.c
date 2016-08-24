@@ -1575,7 +1575,6 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_TXB] = 0,
    [TGSI_OPCODE_DIV] = nir_op_fdiv,
    [TGSI_OPCODE_DP2] = 0,
-   [TGSI_OPCODE_DP2A] = 0,
    [TGSI_OPCODE_TXL] = 0,
 
    [TGSI_OPCODE_BRK] = 0,
