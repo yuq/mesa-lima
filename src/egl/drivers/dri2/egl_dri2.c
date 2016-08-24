@@ -398,7 +398,8 @@ static struct dri2_extension_match swrast_core_extensions[] = {
 static EGLBoolean
 dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
                      struct dri2_extension_match *matches,
-                     const __DRIextension **extensions)
+                     const __DRIextension **extensions,
+                     bool optional)
 {
    int i, j, ret = EGL_TRUE;
    void *field;
@@ -419,9 +420,14 @@ dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
    for (j = 0; matches[j].name; j++) {
       field = ((char *) dri2_dpy + matches[j].offset);
       if (*(const __DRIextension **) field == NULL) {
-         _eglLog(_EGL_WARNING, "did not find extension %s version %d",
-                 matches[j].name, matches[j].version);
-         ret = EGL_FALSE;
+         if (optional) {
+            _eglLog(_EGL_DEBUG, "did not find optional extension %s version %d",
+                    matches[j].name, matches[j].version);
+         } else {
+            _eglLog(_EGL_WARNING, "did not find extension %s version %d",
+                    matches[j].name, matches[j].version);
+            ret = EGL_FALSE;
+         }
       }
    }
 
@@ -522,7 +528,7 @@ dri2_load_driver_dri3(_EGLDisplay *disp)
    if (!extensions)
       return EGL_FALSE;
 
-   if (!dri2_bind_extensions(dri2_dpy, dri3_driver_extensions, extensions)) {
+   if (!dri2_bind_extensions(dri2_dpy, dri3_driver_extensions, extensions, false)) {
       dlclose(dri2_dpy->driver);
       return EGL_FALSE;
    }
@@ -541,7 +547,7 @@ dri2_load_driver(_EGLDisplay *disp)
    if (!extensions)
       return EGL_FALSE;
 
-   if (!dri2_bind_extensions(dri2_dpy, dri2_driver_extensions, extensions)) {
+   if (!dri2_bind_extensions(dri2_dpy, dri2_driver_extensions, extensions, false)) {
       dlclose(dri2_dpy->driver);
       return EGL_FALSE;
    }
@@ -560,7 +566,7 @@ dri2_load_driver_swrast(_EGLDisplay *disp)
    if (!extensions)
       return EGL_FALSE;
 
-   if (!dri2_bind_extensions(dri2_dpy, swrast_driver_extensions, extensions)) {
+   if (!dri2_bind_extensions(dri2_dpy, swrast_driver_extensions, extensions, false)) {
       dlclose(dri2_dpy->driver);
       return EGL_FALSE;
    }
@@ -726,11 +732,11 @@ dri2_create_screen(_EGLDisplay *disp)
    extensions = dri2_dpy->core->getExtensions(dri2_dpy->dri_screen);
 
    if (dri2_dpy->image_driver || dri2_dpy->dri2) {
-      if (!dri2_bind_extensions(dri2_dpy, dri2_core_extensions, extensions))
+      if (!dri2_bind_extensions(dri2_dpy, dri2_core_extensions, extensions, false))
          goto cleanup_dri_screen;
    } else {
       assert(dri2_dpy->swrast);
-      if (!dri2_bind_extensions(dri2_dpy, swrast_core_extensions, extensions))
+      if (!dri2_bind_extensions(dri2_dpy, swrast_core_extensions, extensions, false))
          goto cleanup_dri_screen;
    }
 
