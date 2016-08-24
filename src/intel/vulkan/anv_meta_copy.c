@@ -232,22 +232,6 @@ void anv_CmdCopyBufferToImage(
                              regionCount, pRegions, true);
 }
 
-void anv_CmdCopyImageToBuffer(
-    VkCommandBuffer                             commandBuffer,
-    VkImage                                     srcImage,
-    VkImageLayout                               srcImageLayout,
-    VkBuffer                                    destBuffer,
-    uint32_t                                    regionCount,
-    const VkBufferImageCopy*                    pRegions)
-{
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
-   ANV_FROM_HANDLE(anv_image, src_image, srcImage);
-   ANV_FROM_HANDLE(anv_buffer, dst_buffer, destBuffer);
-
-   meta_copy_buffer_to_image(cmd_buffer, dst_buffer, src_image,
-                             regionCount, pRegions, false);
-}
-
 void anv_CmdCopyImage(
     VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
