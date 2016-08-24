@@ -174,7 +174,7 @@ gen9_choose_image_alignment_el(const struct isl_device *dev,
       return;
    }
 
-   if (info->dim == ISL_SURF_DIM_1D) {
+   if (dim_layout == ISL_DIM_LAYOUT_GEN9_1D) {
       /* See the Skylake BSpec > Memory Views > Common Surface Formats > Surface
        * Layout and Tiling > 1D Surfaces > 1D Alignment Requirements.
        */
