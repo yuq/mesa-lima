@@ -58,7 +58,7 @@ struct gbm_dri_device {
    const __DRIdri2LoaderExtension *loader;
 
    const __DRIconfig   **driver_configs;
-   const __DRIextension **extensions;
+   const __DRIextension **loader_extensions;
    const __DRIextension **driver_extensions;
 
    __DRIimage *(*lookup_image)(__DRIscreen *screen, void *image, void *data);
