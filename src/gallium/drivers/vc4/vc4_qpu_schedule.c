@@ -486,6 +486,19 @@ reads_too_soon_after_write(struct choose_scoreboard *scoreboard, uint64_t inst)
                 }
         }
 
+        if (sig == QPU_SIG_SMALL_IMM &&
+            QPU_GET_FIELD(inst, QPU_SMALL_IMM) >= QPU_SMALL_IMM_MUL_ROT) {
+                uint32_t mux_a = QPU_GET_FIELD(inst, QPU_MUL_A);
+                uint32_t mux_b = QPU_GET_FIELD(inst, QPU_MUL_B);
+
+                if (scoreboard->last_waddr_a == mux_a + QPU_W_ACC0 ||
+                    scoreboard->last_waddr_a == mux_b + QPU_W_ACC0 ||
+                    scoreboard->last_waddr_b == mux_a + QPU_W_ACC0 ||
+                    scoreboard->last_waddr_b == mux_b + QPU_W_ACC0) {
+                        return true;
+                }
+        }
+
         if (reads_uniform(inst) &&
             scoreboard->tick - scoreboard->last_uniforms_reset_tick <= 2) {
                 return true;
