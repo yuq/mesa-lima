@@ -4598,6 +4598,15 @@ get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
        */
       if (channels_per_grf != (exec_type_size == 8 ? 4 : 8))
          max_width = MIN2(max_width, channels_per_grf);
+
+      /* Lower all non-force_writemask_all DF instructions to SIMD4 on IVB/BYT
+       * because HW applies the same channel enable signals to both halves of
+       * the compressed instruction which will be just wrong under
+       * non-uniform control flow.
+       */
+      if (devinfo->gen == 7 && !devinfo->is_haswell &&
+          (exec_type_size == 8 || type_sz(inst->dst.type) == 8))
+         max_width = MIN2(max_width, 4);
    }
 
    /* Only power-of-two execution sizes are representable in the instruction
