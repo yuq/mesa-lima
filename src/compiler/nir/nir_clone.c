@@ -593,6 +593,26 @@ clone_cf_list(clone_state *state, struct exec_list *dst,
    }
 }
 
+/* After we've cloned almost everything, we have to walk the list of phi
+ * sources and fix them up.  Thanks to loops, the block and SSA value for a
+ * phi source may not be defined when we first encounter it.  Instead, we
+ * add it to the phi_srcs list and we fix it up here.
+ */
+static void
+fixup_phi_srcs(clone_state *state)
+{
+   list_for_each_entry_safe(nir_phi_src, src, &state->phi_srcs, src.use_link) {
+      src->pred = remap_local(state, src->pred);
+      assert(src->src.is_ssa);
+      src->src.ssa = remap_local(state, src->src.ssa);
+
+      /* Remove from this list and place in the uses of the SSA def */
+      list_del(&src->src.use_link);
+      list_addtail(&src->src.use_link, &src->src.ssa->uses);
+   }
+   assert(list_empty(&state->phi_srcs));
+}
+
 static nir_function_impl *
 clone_function_impl(clone_state *state, const nir_function_impl *fi)
 {
@@ -614,21 +634,7 @@ clone_function_impl(clone_state *state, const nir_function_impl *fi)
 
    clone_cf_list(state, &nfi->body, &fi->body);
 
-   /* After we've cloned almost everything, we have to walk the list of phi
-    * sources and fix them up.  Thanks to loops, the block and SSA value for a
-    * phi source may not be defined when we first encounter it.  Instead, we
-    * add it to the phi_srcs list and we fix it up here.
-    */
-   list_for_each_entry_safe(nir_phi_src, src, &state->phi_srcs, src.use_link) {
-      src->pred = remap_local(state, src->pred);
-      assert(src->src.is_ssa);
-      src->src.ssa = remap_local(state, src->src.ssa);
-
-      /* Remove from this list and place in the uses of the SSA def */
-      list_del(&src->src.use_link);
-      list_addtail(&src->src.use_link, &src->src.ssa->uses);
-   }
-   assert(list_empty(&state->phi_srcs));
+   fixup_phi_srcs(state);
 
    /* All metadata is invalidated in the cloning process */
    nfi->valid_metadata = 0;
