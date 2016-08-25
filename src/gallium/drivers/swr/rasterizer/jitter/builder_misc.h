@@ -159,3 +159,9 @@ Value *VINSERTI128(Value* a, Value* b, Constant* imm8);
 // rdtsc buckets macros
 void RDTSC_START(Value* pBucketMgr, Value* pId);
 void RDTSC_STOP(Value* pBucketMgr, Value* pId);
+
+Value* CreateEntryAlloca(Function* pFunc, Type* pType);
+
+// Static stack allocations for scatter operations
+Value* pScatterStackSrc{ nullptr };
+Value* pScatterStackOffsets{ nullptr };

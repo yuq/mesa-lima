@@ -1323,6 +1323,17 @@ void Builder::Shuffle8bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInpu
     }
 }
 
+// Helper function to create alloca in entry block of function
+Value* Builder::CreateEntryAlloca(Function* pFunc, Type* pType)
+{
+    auto saveIP = IRB()->saveIP();
+    IRB()->SetInsertPoint(&pFunc->getEntryBlock(),
+                          pFunc->getEntryBlock().begin());
+    Value* pAlloca = ALLOCA(pType);
+    IRB()->restoreIP(saveIP);
+    return pAlloca;
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief emulates a scatter operation.
 /// @param pDst - pointer to destination 
@@ -1331,28 +1342,95 @@ void Builder::Shuffle8bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInpu
 /// @param vMask - mask of valid lanes
 void Builder::SCATTERPS(Value* pDst, Value* vSrc, Value* vOffsets, Value* vMask)
 {
-    Value* pStack = STACKSAVE();
+    /* Scatter algorithm
+    
+       while(Index = BitScanForward(mask))
+            srcElem = srcVector[Index]
+            offsetElem = offsetVector[Index]
+            *(pDst + offsetElem) = srcElem
+            Update mask (&= ~(1<<Index)
 
+    */
+
+    BasicBlock* pCurBB = IRB()->GetInsertBlock();
+    Function* pFunc = pCurBB->getParent();
     Type* pSrcTy = vSrc->getType()->getVectorElementType();
 
-    // allocate tmp stack for masked off lanes
-    Value* vTmpPtr = ALLOCA(pSrcTy);
-
-    Value *mask = MASK(vMask);
-    for (uint32_t i = 0; i < mVWidth; ++i)
+    // Store vectors on stack
+    if (pScatterStackSrc == nullptr)
     {
-        Value *offset = VEXTRACT(vOffsets, C(i));
-        // byte pointer to component
-        Value *storeAddress = GEP(pDst, offset);
-        storeAddress = BITCAST(storeAddress, PointerType::get(pSrcTy, 0));
-        Value *selMask = VEXTRACT(mask, C(i));
-        Value *srcElem = VEXTRACT(vSrc, C(i));
-        // switch in a safe address to load if we're trying to access a vertex 
-        Value *validAddress = SELECT(selMask, storeAddress, vTmpPtr);
-        STORE(srcElem, validAddress);
+        // Save off stack allocations and reuse per scatter. Significantly reduces stack
+        // requirements for shaders with a lot of scatters.
+        pScatterStackSrc = CreateEntryAlloca(pFunc, mSimdInt64Ty);
+        pScatterStackOffsets = CreateEntryAlloca(pFunc, mSimdInt32Ty);
     }
+    
+    Value* pSrcArrayPtr = BITCAST(pScatterStackSrc, PointerType::get(vSrc->getType(), 0));
+    Value* pOffsetsArrayPtr = pScatterStackOffsets;
+    STORE(vSrc, pSrcArrayPtr);
+    STORE(vOffsets, pOffsetsArrayPtr);
 
-    STACKRESTORE(pStack);
+    // Cast to pointers for random access
+    pSrcArrayPtr = POINTER_CAST(pSrcArrayPtr, PointerType::get(pSrcTy, 0));
+    pOffsetsArrayPtr = POINTER_CAST(pOffsetsArrayPtr, PointerType::get(mInt32Ty, 0));
+
+    Value* pMask = VMOVMSKPS(BITCAST(vMask, mSimdFP32Ty));
+
+    // Get cttz function
+    Function* pfnCttz = Intrinsic::getDeclaration(mpJitMgr->mpCurrentModule, Intrinsic::cttz, { mInt32Ty });
+    
+    // Setup loop basic block
+    BasicBlock* pLoop = BasicBlock::Create(mpJitMgr->mContext, "Scatter Loop", pFunc);
+
+    // compute first set bit
+    Value* pIndex = CALL(pfnCttz, { pMask, C(false) });
+
+    Value* pIsUndef = ICMP_EQ(pIndex, C(32));
+
+    // Split current block
+    BasicBlock* pPostLoop = pCurBB->splitBasicBlock(cast<Instruction>(pIsUndef)->getNextNode());
+
+    // Remove unconditional jump created by splitBasicBlock
+    pCurBB->getTerminator()->eraseFromParent();
+
+    // Add terminator to end of original block
+    IRB()->SetInsertPoint(pCurBB);
+
+    // Add conditional branch
+    COND_BR(pIsUndef, pPostLoop, pLoop);
+
+    // Add loop basic block contents
+    IRB()->SetInsertPoint(pLoop);
+    PHINode* pIndexPhi = PHI(mInt32Ty, 2);
+    PHINode* pMaskPhi = PHI(mInt32Ty, 2);
+
+    pIndexPhi->addIncoming(pIndex, pCurBB);
+    pMaskPhi->addIncoming(pMask, pCurBB);
+
+    // Extract elements for this index
+    Value* pSrcElem = LOADV(pSrcArrayPtr, { pIndexPhi });
+    Value* pOffsetElem = LOADV(pOffsetsArrayPtr, { pIndexPhi });
+
+    // GEP to this offset in dst
+    Value* pCurDst = GEP(pDst, pOffsetElem);
+    pCurDst = POINTER_CAST(pCurDst, PointerType::get(pSrcTy, 0));
+    STORE(pSrcElem, pCurDst);
+
+    // Update the mask
+    Value* pNewMask = AND(pMaskPhi, NOT(SHL(C(1), pIndexPhi)));
+
+    // Terminator
+    Value* pNewIndex = CALL(pfnCttz, { pNewMask, C(false) });
+
+    pIsUndef = ICMP_EQ(pNewIndex, C(32));
+    COND_BR(pIsUndef, pPostLoop, pLoop);
+
+    // Update phi edges
+    pIndexPhi->addIncoming(pNewIndex, pLoop);
+    pMaskPhi->addIncoming(pNewMask, pLoop);
+
+    // Move builder to beginning of post loop
+    IRB()->SetInsertPoint(pPostLoop, pPostLoop->begin());
 }
 
 Value* Builder::VABSPS(Value* a)
