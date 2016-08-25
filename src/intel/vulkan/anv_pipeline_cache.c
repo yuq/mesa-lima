@@ -25,6 +25,116 @@
 #include "util/debug.h"
 #include "anv_private.h"
 
+struct shader_bin_key {
+   uint32_t size;
+   uint8_t data[0];
+};
+
+static size_t
+anv_shader_bin_size(uint32_t prog_data_size, uint32_t key_size,
+                    uint32_t surface_count, uint32_t sampler_count)
+{
+   const uint32_t binding_data_size =
+      (surface_count + sampler_count) * sizeof(struct anv_pipeline_binding);
+
+   return align_u32(sizeof(struct anv_shader_bin), 8) +
+          align_u32(prog_data_size, 8) +
+          align_u32(sizeof(uint32_t) + key_size, 8) +
+          align_u32(binding_data_size, 8);
+}
+
+static inline const struct shader_bin_key *
+anv_shader_bin_get_key(const struct anv_shader_bin *shader)
+{
+   const void *data = shader;
+   data += align_u32(sizeof(struct anv_shader_bin), 8);
+   data += align_u32(shader->prog_data_size, 8);
+   return data;
+}
+
+struct anv_shader_bin *
+anv_shader_bin_create(struct anv_device *device,
+                      const void *key_data, uint32_t key_size,
+                      const void *kernel_data, uint32_t kernel_size,
+                      const void *prog_data, uint32_t prog_data_size,
+                      const struct anv_pipeline_bind_map *bind_map)
+{
+   const size_t size =
+      anv_shader_bin_size(prog_data_size, key_size,
+                          bind_map->surface_count, bind_map->sampler_count);
+
+   struct anv_shader_bin *shader =
+      anv_alloc(&device->alloc, size, 8, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
+   if (!shader)
+      return NULL;
+
+   shader->ref_cnt = 1;
+
+   shader->kernel =
+      anv_state_pool_alloc(&device->instruction_state_pool, kernel_size, 64);
+   memcpy(shader->kernel.map, kernel_data, kernel_size);
+   shader->kernel_size = kernel_size;
+   shader->bind_map = *bind_map;
+   shader->prog_data_size = prog_data_size;
+
+   /* Now we fill out the floating data at the end */
+   void *data = shader;
+   data += align_u32(sizeof(struct anv_shader_bin), 8);
+
+   memcpy(data, prog_data, prog_data_size);
+   data += align_u32(prog_data_size, 8);
+
+   struct shader_bin_key *key = data;
+   key->size = key_size;
+   memcpy(key->data, key_data, key_size);
+   data += align_u32(sizeof(*key) + key_size, 8);
+
+   shader->bind_map.surface_to_descriptor = data;
+   memcpy(data, bind_map->surface_to_descriptor,
+          bind_map->surface_count * sizeof(struct anv_pipeline_binding));
+   data += bind_map->surface_count * sizeof(struct anv_pipeline_binding);
+
+   shader->bind_map.sampler_to_descriptor = data;
+   memcpy(data, bind_map->sampler_to_descriptor,
+          bind_map->sampler_count * sizeof(struct anv_pipeline_binding));
+
+   return shader;
+}
+
+void
+anv_shader_bin_destroy(struct anv_device *device,
+                       struct anv_shader_bin *shader)
+{
+   assert(shader->ref_cnt == 0);
+   anv_state_pool_free(&device->instruction_state_pool, shader->kernel);
+   anv_free(&device->alloc, shader);
+}
+
+static size_t
+anv_shader_bin_data_size(const struct anv_shader_bin *shader)
+{
+   return anv_shader_bin_size(shader->prog_data_size,
+                              anv_shader_bin_get_key(shader)->size,
+                              shader->bind_map.surface_count,
+                              shader->bind_map.sampler_count) +
+          align_u32(shader->kernel_size, 8);
+}
+
+static void
+anv_shader_bin_write_data(const struct anv_shader_bin *shader, void *data)
+{
+   size_t struct_size =
+      anv_shader_bin_size(shader->prog_data_size,
+                          anv_shader_bin_get_key(shader)->size,
+                          shader->bind_map.surface_count,
+                          shader->bind_map.sampler_count);
+
+   memcpy(data, shader, struct_size);
+   data += struct_size;
+
+   memcpy(data, shader->kernel.map, shader->kernel_size);
+}
+
 /* Remaining work:
  *
  * - Compact binding table layout so it's tight and not dependent on

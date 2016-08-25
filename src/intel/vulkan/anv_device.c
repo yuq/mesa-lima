@@ -879,6 +879,8 @@ VkResult anv_CreateDevice(
                        &device->dynamic_state_block_pool);
 
    anv_block_pool_init(&device->instruction_block_pool, device, 128 * 1024);
+   anv_state_pool_init(&device->instruction_state_pool,
+                       &device->instruction_block_pool);
    anv_pipeline_cache_init(&device->default_pipeline_cache, device);
 
    anv_block_pool_init(&device->surface_state_block_pool, device, 4096);
@@ -954,6 +956,7 @@ void anv_DestroyDevice(
    anv_bo_pool_finish(&device->batch_bo_pool);
    anv_state_pool_finish(&device->dynamic_state_pool);
    anv_block_pool_finish(&device->dynamic_state_block_pool);
+   anv_state_pool_finish(&device->instruction_state_pool);
    anv_block_pool_finish(&device->instruction_block_pool);
    anv_state_pool_finish(&device->surface_state_pool);
    anv_block_pool_finish(&device->surface_state_block_pool);

@@ -704,6 +704,7 @@ struct anv_device {
     struct anv_state_pool                       dynamic_state_pool;
 
     struct anv_block_pool                       instruction_block_pool;
+    struct anv_state_pool                       instruction_state_pool;
     struct anv_pipeline_cache                   default_pipeline_cache;
 
     struct anv_block_pool                       surface_state_block_pool;
@@ -1462,6 +1463,52 @@ struct anv_pipeline_bind_map {
    struct anv_pipeline_binding *                surface_to_descriptor;
    struct anv_pipeline_binding *                sampler_to_descriptor;
 };
+
+struct anv_shader_bin {
+   uint32_t ref_cnt;
+
+   struct anv_state kernel;
+   uint32_t kernel_size;
+
+   struct anv_pipeline_bind_map bind_map;
+
+   uint32_t prog_data_size;
+
+   /* Prog data follows, then the key, both aligned to 8-bytes */
+};
+
+struct anv_shader_bin *
+anv_shader_bin_create(struct anv_device *device,
+                      const void *key, uint32_t key_size,
+                      const void *kernel, uint32_t kernel_size,
+                      const void *prog_data, uint32_t prog_data_size,
+                      const struct anv_pipeline_bind_map *bind_map);
+
+void
+anv_shader_bin_destroy(struct anv_device *device, struct anv_shader_bin *shader);
+
+static inline void
+anv_shader_bin_ref(struct anv_shader_bin *shader)
+{
+   assert(shader->ref_cnt >= 1);
+   __sync_fetch_and_add(&shader->ref_cnt, 1);
+}
+
+static inline void
+anv_shader_bin_unref(struct anv_device *device, struct anv_shader_bin *shader)
+{
+   assert(shader->ref_cnt >= 1);
+   if (__sync_fetch_and_add(&shader->ref_cnt, -1) == 1)
+      anv_shader_bin_destroy(device, shader);
+}
+
+static inline const struct brw_stage_prog_data *
+anv_shader_bin_get_prog_data(const struct anv_shader_bin *shader)
+{
+   const void *data = shader;
+   data += align_u32(sizeof(struct anv_shader_bin), 8);
+   return data;
+}
 
 struct anv_pipeline {
    struct anv_device *                          device;
