@@ -1961,7 +1961,7 @@ void BinTriangles(
         // degenerate triangles won't be sent to rasterizer; just enable all edges
         pfnWork = GetRasterizerFunc(sampleCount, (rastState.conservativeRast > 0),
                                     (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, ALL_EDGES_VALID, 
-                                    (rastState.scissorEnable > 0));
+                                    (rastState.scissorEnable > 0) || (state.scissorsTileAligned == false));
     }
 
     if (!triMask)
@@ -2105,7 +2105,7 @@ void BinTriangles(
             int32_t triEdgeEnable = (edgeEnable >> (triIndex * 3)) & ALL_EDGES_VALID;
             work.pfnWork = GetRasterizerFunc(sampleCount, (rastState.conservativeRast > 0),
                                         (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, triEdgeEnable,
-                                        (rastState.scissorEnable > 0));
+                                        (rastState.scissorEnable > 0) || (state.scissorsTileAligned == false));
 
             // Degenerate triangles are required to be constant interpolated
             isDegenerate = (triEdgeEnable != ALL_EDGES_VALID) ? true : false;

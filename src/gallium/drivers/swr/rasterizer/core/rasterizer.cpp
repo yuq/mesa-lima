@@ -635,6 +635,10 @@ struct ComputeScissorEdges<std::true_type, std::true_type, RT>
         adjustScissorEdge<RT>(rastEdges[4].a, rastEdges[4].b, vEdgeFix16[4]);
         adjustScissorEdge<RT>(rastEdges[5].a, rastEdges[5].b, vEdgeFix16[5]);
         adjustScissorEdge<RT>(rastEdges[6].a, rastEdges[6].b, vEdgeFix16[6]);
+
+        // Upper left rule for scissor
+        vEdgeFix16[3] = _mm256_sub_pd(vEdgeFix16[3], _mm256_set1_pd(1.0));
+        vEdgeFix16[6] = _mm256_sub_pd(vEdgeFix16[6], _mm256_set1_pd(1.0));
     }
 };
 
@@ -666,6 +670,10 @@ struct ComputeScissorEdges<std::true_type, std::false_type, RT>
         vEdgeFix16[4] = _mm256_set1_pd((rastEdges[4].a * (x - scissor.xmin)) + (rastEdges[4].b * (y - scissor.ymax)));
         vEdgeFix16[5] = _mm256_set1_pd((rastEdges[5].a * (x - scissor.xmax)) + (rastEdges[5].b * (y - scissor.ymax)));
         vEdgeFix16[6] = _mm256_set1_pd((rastEdges[6].a * (x - scissor.xmax)) + (rastEdges[6].b * (y - scissor.ymin)));
+
+        // Upper left rule for scissor
+        vEdgeFix16[3] = _mm256_sub_pd(vEdgeFix16[3], _mm256_set1_pd(1.0));
+        vEdgeFix16[6] = _mm256_sub_pd(vEdgeFix16[6], _mm256_set1_pd(1.0));
     }
 };
 
@@ -1332,7 +1340,7 @@ void RasterizeTriPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile,
     // once at center and broadcast the results in the backend
     uint32_t sampleCount = (rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN) ? rastState.sampleCount : SWR_MULTISAMPLE_1X;
     // conservative rast not supported for points/lines
-    pfnTriRast = GetRasterizerFunc(sampleCount, false, SWR_INPUT_COVERAGE_NONE, ALL_EDGES_VALID, (rastState.scissorEnable > 0));
+    pfnTriRast = GetRasterizerFunc(sampleCount, false, SWR_INPUT_COVERAGE_NONE, ALL_EDGES_VALID, (rastState.scissorEnable > 0) || (pDC->pState->state.scissorsTileAligned == false));
 
     // overwrite texcoords for point sprites
     if (isPointSpriteTexCoordEnabled)
@@ -1662,7 +1670,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     PFN_WORK_FUNC pfnTriRast;
     uint32_t sampleCount = (rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN) ? rastState.sampleCount : SWR_MULTISAMPLE_1X;
     // conservative rast not supported for points/lines
-    pfnTriRast = GetRasterizerFunc(sampleCount, false, SWR_INPUT_COVERAGE_NONE, ALL_EDGES_VALID, (rastState.scissorEnable > 0));
+    pfnTriRast = GetRasterizerFunc(sampleCount, false, SWR_INPUT_COVERAGE_NONE, ALL_EDGES_VALID, (rastState.scissorEnable > 0) || (pDC->pState->state.scissorsTileAligned == false));
 
     // make sure this macrotile intersects the triangle
     __m128i vXai = fpToFixedPoint(vXa);
