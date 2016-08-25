@@ -397,4 +397,28 @@ const __DRIconfig *
 dri2_get_dri_config(struct dri2_egl_config *conf, EGLint surface_type,
                     EGLenum colorspace);
 
+static inline void
+dri2_set_WL_bind_wayland_display(_EGLDriver *drv, _EGLDisplay *disp)
+{
+#ifdef HAVE_WAYLAND_PLATFORM
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+
+   (void) drv;
+
+   if (dri2_dpy->device_name && dri2_dpy->image) {
+       if (dri2_dpy->image->base.version >= 10 &&
+           dri2_dpy->image->getCapabilities != NULL) {
+           int capabilities;
+
+           capabilities =
+               dri2_dpy->image->getCapabilities(dri2_dpy->dri_screen);
+           disp->Extensions.WL_bind_wayland_display =
+               (capabilities & __DRI_IMAGE_CAP_GLOBAL_NAMES) != 0;
+       } else {
+           disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
+       }
+   }
+#endif
+}
+
 #endif /* EGL_DRI2_INCLUDED */

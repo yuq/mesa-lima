@@ -697,21 +697,9 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
       disp->Extensions.EXT_buffer_age = EGL_TRUE;
 
 #ifdef HAVE_WAYLAND_PLATFORM
-   if (dri2_dpy->image) {
-       dri2_dpy->device_name = loader_get_device_name_for_fd(dri2_dpy->fd);
-
-       if (dri2_dpy->image->base.version >= 10 &&
-           dri2_dpy->image->getCapabilities != NULL) {
-           int capabilities;
-
-           capabilities =
-               dri2_dpy->image->getCapabilities(dri2_dpy->dri_screen);
-           disp->Extensions.WL_bind_wayland_display =
-               (capabilities & __DRI_IMAGE_CAP_GLOBAL_NAMES) != 0;
-       } else
-           disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
-   }
+   dri2_dpy->device_name = loader_get_device_name_for_fd(dri2_dpy->fd);
 #endif
+   dri2_set_WL_bind_wayland_display(drv, disp);
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.

@@ -1339,10 +1339,7 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
    disp->Extensions.CHROMIUM_sync_control = EGL_TRUE;
    disp->Extensions.EXT_buffer_age = EGL_TRUE;
 
-#ifdef HAVE_WAYLAND_PLATFORM
-   if (dri2_dpy->device_name)
-      disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
-#endif
+   dri2_set_WL_bind_wayland_display(drv, disp);
 
    if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp, false))
       goto cleanup_configs;
@@ -1458,9 +1455,7 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    disp->Extensions.NV_post_sub_buffer = EGL_TRUE;
    disp->Extensions.CHROMIUM_sync_control = EGL_TRUE;
 
-#ifdef HAVE_WAYLAND_PLATFORM
-   disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
-#endif
+   dri2_set_WL_bind_wayland_display(drv, disp);
 
    if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp, true))
       goto cleanup_configs;

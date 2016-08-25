@@ -1206,7 +1206,7 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
         dri2_add_config(disp, config, i + 1, types, NULL, rgb565_masks);
    }
 
-   disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
+   dri2_set_WL_bind_wayland_display(drv, disp);
    /* When cannot convert EGLImage to wl_buffer when on a different gpu,
     * because the buffer of the EGLImage has likely a tiling mode the server
     * gpu won't support. These is no way to check for now. Thus do not support the
