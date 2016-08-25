@@ -117,7 +117,8 @@ struct svga_transfer
 };
 
 
-static inline struct svga_texture *svga_texture( struct pipe_resource *resource )
+static inline struct svga_texture *
+svga_texture(struct pipe_resource *resource)
 {
    struct svga_texture *tex = (struct svga_texture *)resource;
    assert(tex == NULL || tex->b.vtbl == &svga_texture_vtbl);
