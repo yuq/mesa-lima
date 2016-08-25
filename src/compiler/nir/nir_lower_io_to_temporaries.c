@@ -148,7 +148,7 @@ create_shadow_temp(struct lower_io_state *state, nir_variable *var)
 }
 
 void
-nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint,
+nir_lower_io_to_temporaries(nir_shader *shader, nir_function_impl *entrypoint,
                             bool outputs, bool inputs)
 {
    struct lower_io_state state;
@@ -157,7 +157,7 @@ nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint,
       return;
 
    state.shader = shader;
-   state.entrypoint = entrypoint->impl;
+   state.entrypoint = entrypoint;
 
    if (inputs)
       exec_list_move_nodes_to(&shader->inputs, &state.old_inputs);

@@ -2151,7 +2151,7 @@ static void
 emit_instructions(struct ir3_compile *ctx)
 {
 	unsigned ninputs, noutputs;
-	nir_function_impl *fxn = nir_shader_get_entrypoint(ctx->s)->impl;
+	nir_function_impl *fxn = nir_shader_get_entrypoint(ctx->s);
 
 	ninputs  = (max_drvloc(&ctx->s->inputs) + 1) * 4;
 	noutputs = (max_drvloc(&ctx->s->outputs) + 1) * 4;

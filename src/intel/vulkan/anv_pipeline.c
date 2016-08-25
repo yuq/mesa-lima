@@ -168,7 +168,8 @@ anv_shader_compile_to_nir(struct anv_device *device,
       nir_propagate_invariant(nir);
       nir_validate_shader(nir);
 
-      nir_lower_io_to_temporaries(entry_point->shader, entry_point, true, false);
+      nir_lower_io_to_temporaries(entry_point->shader, entry_point->impl,
+                                  true, false);
 
       nir_lower_system_values(nir);
       nir_validate_shader(nir);
@@ -616,7 +617,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
       unsigned num_rts = 0;
       struct anv_pipeline_binding rt_bindings[8];
-      nir_function_impl *impl = nir_shader_get_entrypoint(nir)->impl;
+      nir_function_impl *impl = nir_shader_get_entrypoint(nir);
       nir_foreach_variable_safe(var, &nir->outputs) {
          if (var->data.location < FRAG_RESULT_DATA0)
             continue;

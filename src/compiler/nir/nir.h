@@ -1902,7 +1902,7 @@ typedef struct nir_shader {
    gl_shader_stage stage;
 } nir_shader;
 
-static inline nir_function *
+static inline nir_function_impl *
 nir_shader_get_entrypoint(nir_shader *shader)
 {
    assert(exec_list_length(&shader->functions) == 1);
@@ -1910,7 +1910,8 @@ nir_shader_get_entrypoint(nir_shader *shader)
    nir_function *func = exec_node_data(nir_function, func_node, node);
    assert(func->return_type == glsl_void_type());
    assert(func->num_params == 0);
-   return func;
+   assert(func->impl);
+   return func->impl;
 }
 
 #define nir_foreach_function(func, shader) \
@@ -2378,7 +2379,8 @@ bool nir_lower_indirect_derefs(nir_shader *shader, nir_variable_mode modes);
 
 bool nir_lower_locals_to_regs(nir_shader *shader);
 
-void nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint,
+void nir_lower_io_to_temporaries(nir_shader *shader,
+                                 nir_function_impl *entrypoint,
                                  bool outputs, bool inputs);
 
 void nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint);

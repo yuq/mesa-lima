@@ -128,12 +128,7 @@ void
 nir_lower_bitmap(nir_shader *shader,
                  const nir_lower_bitmap_options *options)
 {
-   nir_function *function;
-
    assert(shader->stage == MESA_SHADER_FRAGMENT);
 
-   function = nir_shader_get_entrypoint(shader);
-
-   if (function->impl)
-      lower_bitmap_impl(function->impl, options);
+   lower_bitmap_impl(nir_shader_get_entrypoint(shader), options);
 }
