@@ -189,25 +189,26 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
       { "RGB888",   { 0xff0000, 0xff00, 0xff, 0x0 } },
       { "RGB565",   { 0x00f800, 0x07e0, 0x1f, 0x0 } },
    };
+   unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
    unsigned int count, i, j;
 
    count = 0;
-   for (i = 0; i < ARRAY_SIZE(visuals); i++) {
-      int format_count = 0;
-
-      for (j = 0; dri2_dpy->driver_configs[j]; j++) {
+   for (i = 0; i < dri2_dpy->driver_configs[i]; i++) {
+      for (j = 0; j < ARRAY_SIZE(visuals); j++) {
          struct dri2_egl_config *dri2_conf;
 
-         dri2_conf = dri2_add_config(dpy, dri2_dpy->driver_configs[j],
+         dri2_conf = dri2_add_config(dpy, dri2_dpy->driver_configs[i],
                count + 1, EGL_PBUFFER_BIT, NULL, visuals[i].rgba_masks);
 
          if (dri2_conf) {
             count++;
-            format_count++;
+            format_count[j]++;
          }
       }
+   }
 
-      if (!format_count) {
+   for (i = 0; i < ARRAY_SIZE(format_count); i++) {
+      if (!format_count[i]) {
          _eglLog(_EGL_DEBUG, "No DRI config supports native format %s",
                visuals[i].format_name);
       }
