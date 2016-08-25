@@ -657,6 +657,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy;
    struct gbm_device *gbm;
+   const char *err;
    int fd = -1;
 
    loader_set_logger(_eglLog);
@@ -677,20 +678,28 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
          fd = loader_open_device("/dev/dri/card0");
       dri2_dpy->own_device = 1;
       gbm = gbm_create_device(fd);
-      if (gbm == NULL)
+      if (gbm == NULL) {
+         err = "DRI2: failed to create gbm device";
          goto cleanup;
+      }
    } else {
       fd = fcntl(gbm_device_get_fd(gbm), F_DUPFD_CLOEXEC, 3);
-      if (fd < 0)
+      if (fd < 0) {
+         err = "DRI2: failed to fcntl() existing gbm device";
          goto cleanup;
+      }
    }
 
-   if (strcmp(gbm_device_get_backend_name(gbm), "drm") != 0)
+   if (strcmp(gbm_device_get_backend_name(gbm), "drm") != 0) {
+      err = "DRI2: gbm device using incorrect/incompatible backend";
       goto cleanup;
+   }
 
    dri2_dpy->gbm_dri = gbm_dri_device(gbm);
-   if (dri2_dpy->gbm_dri->base.type != GBM_DRM_DRIVER_TYPE_DRI)
+   if (dri2_dpy->gbm_dri->base.type != GBM_DRM_DRIVER_TYPE_DRI) {
+      err = "DRI2: gbm device using incorrect/incompatible type";
       goto cleanup;
+   }
 
    dri2_dpy->fd = fd;
    dri2_dpy->driver_name = strdup(dri2_dpy->gbm_dri->base.driver_name);
@@ -721,7 +730,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_setup_screen(disp);
 
    if (!drm_add_configs_for_visuals(drv, disp)) {
-      _eglError(EGL_NOT_INITIALIZED, "DRI2: failed to add configs");
+      err = "DRI2: failed to add configs";
       goto cleanup;
    }
 
@@ -747,5 +756,5 @@ cleanup:
 
    free(dri2_dpy);
    disp->DriverData = NULL;
-   return EGL_FALSE;
+   return _eglError(EGL_NOT_INITIALIZED, err);
 }
