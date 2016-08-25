@@ -422,6 +422,7 @@ dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
             *(const __DRIextension **) field = extensions[i];
             _eglLog(_EGL_INFO, "found extension %s version %d",
                     extensions[i]->name, extensions[i]->version);
+            break;
          }
       }
    }
