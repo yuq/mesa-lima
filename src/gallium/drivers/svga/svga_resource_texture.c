@@ -467,10 +467,10 @@ svga_texture_transfer_map(struct pipe_context *pipe,
          svga_surfaces_flush(svga);
 
          if (svga_have_vgpu10(svga)) {
-            ret = readback_image_vgpu10(svga, surf, st->slice, transfer->level,
+            ret = readback_image_vgpu10(svga, surf, st->slice, level,
                                         tex->b.b.last_level + 1);
          } else {
-            ret = readback_image_vgpu9(svga, surf, st->slice, transfer->level);
+            ret = readback_image_vgpu9(svga, surf, st->slice, level);
          }
 
          svga->hud.num_readbacks++;
@@ -485,12 +485,12 @@ svga_texture_transfer_map(struct pipe_context *pipe,
           * Note: if PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE were specified
           * we could potentially clear the flag for all faces/layers/mips.
           */
-         svga_clear_texture_rendered_to(tex, st->slice, transfer->level);
+         svga_clear_texture_rendered_to(tex, st->slice, level);
       }
       else {
-	 assert(transfer->usage & PIPE_TRANSFER_WRITE);
-	 if ((transfer->usage & PIPE_TRANSFER_UNSYNCHRONIZED) == 0) {
-            if (svga_is_texture_dirty(tex, st->slice, transfer->level)) {
+	 assert(usage & PIPE_TRANSFER_WRITE);
+	 if ((usage & PIPE_TRANSFER_UNSYNCHRONIZED) == 0) {
+            if (svga_is_texture_dirty(tex, st->slice, level)) {
                /*
                 * do a surface flush if the subresource has been modified
                 * in this command buffer.
@@ -504,9 +504,9 @@ svga_texture_transfer_map(struct pipe_context *pipe,
             }
 	 }
       }
-      if (transfer->usage & PIPE_TRANSFER_WRITE) {
+      if (usage & PIPE_TRANSFER_WRITE) {
          /* mark this texture level as dirty */
-         svga_set_texture_dirty(tex, st->slice, transfer->level);
+         svga_set_texture_dirty(tex, st->slice, level);
       }
    }
 
@@ -520,7 +520,7 @@ svga_texture_transfer_map(struct pipe_context *pipe,
    if (st->swbuf) {
       returnVal = st->swbuf;
    }
-   else if (!st->use_direct_map) {
+   else if (!use_direct_map) {
       returnVal = sws->buffer_map(sws, st->hwbuf, usage);
    }
    else {
