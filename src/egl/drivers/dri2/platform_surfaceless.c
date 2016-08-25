@@ -181,28 +181,37 @@ static EGLBoolean
 surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
-   static const unsigned int visuals[3][4] = {
-      { 0xff0000, 0xff00, 0xff, 0xff000000 },   // ARGB8888
-      { 0xff0000, 0xff00, 0xff, 0x0 },          // RGB888
-      { 0xf800, 0x7e0, 0x1f, 0x0  },            // RGB565
+   static const struct {
+      const char *format_name;
+      unsigned int rgba_masks[4];
+   } visuals[] = {
+      { "ARGB8888", { 0xff0000, 0xff00, 0xff, 0xff000000 } },
+      { "RGB888",   { 0xff0000, 0xff00, 0xff, 0x0 } },
+      { "RGB565",   { 0x00f800, 0x07e0, 0x1f, 0x0 } },
    };
    unsigned int count, i, j;
 
    count = 0;
    for (i = 0; i < ARRAY_SIZE(visuals); i++) {
+      int format_count = 0;
+
       for (j = 0; dri2_dpy->driver_configs[j]; j++) {
          struct dri2_egl_config *dri2_conf;
 
          dri2_conf = dri2_add_config(dpy, dri2_dpy->driver_configs[j],
-               count + 1, EGL_PBUFFER_BIT, NULL, visuals[i]);
+               count + 1, EGL_PBUFFER_BIT, NULL, visuals[i].rgba_masks);
 
-         if (dri2_conf)
+         if (dri2_conf) {
             count++;
+            format_count++;
+         }
+      }
+
+      if (!format_count) {
+         _eglLog(_EGL_DEBUG, "No DRI config supports native format %s",
+               visuals[i].format_name);
       }
    }
-
-   if (!count)
-      _eglLog(_EGL_DEBUG, "Can't create surfaceless visuals");
 
    return (count != 0);
 }
