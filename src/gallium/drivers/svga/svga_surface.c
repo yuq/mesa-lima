@@ -370,12 +370,10 @@ svga_create_surface(struct pipe_context *pipe,
 static struct svga_surface *
 create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
 {
-   struct svga_surface *bs = s->backed;
-
    SVGA_STATS_TIME_PUSH(svga_sws(svga),
                         SVGA_STATS_TIME_CREATEBACKEDSURFACEVIEW);
 
-   if (!bs) {
+   if (!s->backed) {
       struct svga_texture *tex = svga_texture(s->base.texture);
       struct pipe_surface *backed_view;
 
@@ -386,15 +384,14 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
       if (!backed_view)
          return NULL;
 
-      bs = svga_surface(backed_view);
-      s->backed = bs;
+      s->backed = svga_surface(backed_view);
    }
 
-   svga_mark_surface_dirty(&bs->base);
+   svga_mark_surface_dirty(&s->backed->base);
 
    SVGA_STATS_TIME_POP(svga_sws(svga));
 
-   return bs;
+   return s->backed;
 }
 
 /**
