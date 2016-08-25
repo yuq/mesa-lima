@@ -258,19 +258,48 @@ vc4_qpu_validate(uint64_t *insts, uint32_t num_inst)
                         last_sfu_inst = i;
         }
 
-        int last_r5_write = -10;
         for (int i = 0; i < num_inst - 1; i++) {
                 uint64_t inst = insts[i];
 
-                /* "An instruction that does a vector rotate by r5 must not
-                 *  immediately follow an instruction that writes to r5."
-                 */
-                if (last_r5_write == i - 1 &&
-                    QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_SMALL_IMM &&
-                    QPU_GET_FIELD(inst, QPU_SMALL_IMM) == 48) {
-                        fail_instr(inst,
-                                   "vector rotate by r5 immediately "
-                                   "after r5 write");
+                if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_SMALL_IMM &&
+                    QPU_GET_FIELD(inst, QPU_SMALL_IMM) >=
+                    QPU_SMALL_IMM_MUL_ROT) {
+                        uint32_t mux_a = QPU_GET_FIELD(inst, QPU_MUL_A);
+                        uint32_t mux_b = QPU_GET_FIELD(inst, QPU_MUL_B);
+
+                        /* "The full horizontal vector rotate is only
+                         *  available when both of the mul ALU input arguments
+                         *  are taken from accumulators r0-r3."
+                         */
+                        if (mux_a > QPU_MUX_R3 || mux_b > QPU_MUX_R3) {
+                                fail_instr(inst,
+                                           "MUL rotate using non-accumulator "
+                                           "input");
+                        }
+
+                        if (QPU_GET_FIELD(inst, QPU_SMALL_IMM) ==
+                            QPU_SMALL_IMM_MUL_ROT) {
+                                /* "An instruction that does a vector rotate
+                                 *  by r5 must not immediately follow an
+                                 *  instruction that writes to r5."
+                                 */
+                                if (writes_reg(insts[i - 1], QPU_W_ACC5)) {
+                                        fail_instr(inst,
+                                                   "vector rotate by r5 "
+                                                   "immediately after r5 write");
+                                }
+                        }
+
+                        /* "An instruction that does a vector rotate must not
+                         *  immediately follow an instruction that writes to the
+                         *  accumulator that is being rotated."
+                         */
+                        if (writes_reg(insts[i - 1], QPU_W_ACC0 + mux_a) ||
+                            writes_reg(insts[i - 1], QPU_W_ACC0 + mux_b)) {
+                                fail_instr(inst,
+                                           "vector rotate of value "
+                                           "written in previous instruction");
+                        }
                 }
         }
 

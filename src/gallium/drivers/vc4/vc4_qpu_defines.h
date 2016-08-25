@@ -286,6 +286,10 @@ enum qpu_unpack {
 #define QPU_RADDR_B_MASK                QPU_MASK(17, 12)
 #define QPU_SMALL_IMM_SHIFT             12
 #define QPU_SMALL_IMM_MASK              QPU_MASK(17, 12)
+/* Small immediate value for rotate-by-r5, and 49-63 are "rotate by n
+ * channels"
+ */
+#define QPU_SMALL_IMM_MUL_ROT		48
 
 #define QPU_ADD_A_SHIFT                 9
 #define QPU_ADD_A_MASK                  QPU_MASK(11, 9)
