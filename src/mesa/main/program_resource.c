@@ -104,7 +104,7 @@ stage_from_program_interface(GLenum programInterface)
    case GL_COMPUTE_SUBROUTINE_UNIFORM:
       return MESA_SHADER_COMPUTE;
    default:
-      assert(!"unexpected programInterface value");
+      unreachable("unexpected programInterface value");
    }
 }
 
