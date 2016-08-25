@@ -583,26 +583,6 @@ _glapi_get_dispatch_table_size(void)
 
 
 /**
- * Make sure there are no NULL pointers in the given dispatch table.
- * Intended for debugging purposes.
- */
-void
-_glapi_check_table_not_null(const struct _glapi_table *table)
-{
-#ifdef EXTRA_DEBUG /* set to DEBUG for extra DEBUG */
-   const GLuint entries = _glapi_get_dispatch_table_size();
-   const void **tab = (const void **) table;
-   GLuint i;
-   for (i = 1; i < entries; i++) {
-      assert(tab[i]);
-   }
-#else
-   (void) table;
-#endif
-}
-
-
-/**
  * Do some spot checks to be sure that the dispatch table
  * slots are assigned correctly. For debugging only.
  */
