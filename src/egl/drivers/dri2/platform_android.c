@@ -760,7 +760,6 @@ droid_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
       { HAL_PIXEL_FORMAT_RGB_888,   { 0xff, 0xff00, 0xff0000, 0x0 } },
       { HAL_PIXEL_FORMAT_RGB_565,   { 0xf800, 0x7e0, 0x1f, 0x0 } },
       { HAL_PIXEL_FORMAT_BGRA_8888, { 0xff0000, 0xff00, 0xff, 0xff000000 } },
-      { 0, { 0, 0, 0, 0 } }
    };
    EGLint config_attrs[] = {
      EGL_NATIVE_VISUAL_ID,   0,
@@ -771,38 +770,41 @@ droid_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
      EGL_MAX_PBUFFER_HEIGHT, _EGL_MAX_PBUFFER_HEIGHT,
      EGL_NONE
    };
+   unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
    int count, i, j;
 
    count = 0;
-   for (i = 0; visuals[i].format; i++) {
-      int format_count = 0;
+   for (i = 0; dri2_dpy->driver_configs[i]; i++) {
+      const EGLint surface_type = EGL_WINDOW_BIT | EGL_PBUFFER_BIT;
+      struct dri2_egl_config *dri2_conf;
+      unsigned int double_buffered = 0;
 
-      config_attrs[1] = visuals[i].format;
-      config_attrs[3] = visuals[i].format;
+      dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
+         __DRI_ATTRIB_DOUBLE_BUFFER, &double_buffered);
 
-      for (j = 0; dri2_dpy->driver_configs[j]; j++) {
-         const EGLint surface_type = EGL_WINDOW_BIT | EGL_PBUFFER_BIT;
-         struct dri2_egl_config *dri2_conf;
-         unsigned int double_buffered = 0;
+      /* support only double buffered configs */
+      if (!double_buffered)
+         continue;
 
-         dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[j],
-            __DRI_ATTRIB_DOUBLE_BUFFER, &double_buffered);
+      for (j = 0; j < ARRAY_SIZE(visuals); j++) {
+         int format_count = 0;
 
-         /* support only double buffered configs */
-         if (!double_buffered)
-            continue;
+         config_attrs[1] = visuals[j].format;
+         config_attrs[3] = visuals[j].format;
 
-         dri2_conf = dri2_add_config(dpy, dri2_dpy->driver_configs[j],
-               count + 1, surface_type, config_attrs, visuals[i].rgba_masks);
+         dri2_conf = dri2_add_config(dpy, dri2_dpy->driver_configs[i],
+               count + 1, surface_type, config_attrs, visuals[j].rgba_masks);
          if (dri2_conf) {
             count++;
-            format_count++;
+            format_count[j]++;
          }
       }
+   }
 
-      if (!format_count) {
+   for (i = 0; i < ARRAY_SIZE(format_count); i++) {
+      if (!format_count[i]) {
          _eglLog(_EGL_DEBUG, "No DRI config supports native format 0x%x",
-               visuals[i].format);
+                 visuals[i].format);
       }
    }
 
