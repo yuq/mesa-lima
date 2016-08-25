@@ -1520,6 +1520,13 @@ struct anv_pipeline {
    } gen9;
 };
 
+static inline bool
+anv_pipeline_has_stage(const struct anv_pipeline *pipeline,
+                       gl_shader_stage stage)
+{
+   return (pipeline->active_stages & mesa_to_vk_shader_stage(stage)) != 0;
+}
+
 static inline const struct brw_vs_prog_data *
 get_vs_prog_data(struct anv_pipeline *pipeline)
 {

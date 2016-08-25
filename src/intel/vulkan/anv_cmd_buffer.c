@@ -738,20 +738,26 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
-   struct anv_pipeline_bind_map *map;
+   struct anv_pipeline *pipeline;
    uint32_t bias, state_offset;
 
    switch (stage) {
    case  MESA_SHADER_COMPUTE:
-      map = &cmd_buffer->state.compute_pipeline->bindings[stage];
+      pipeline = cmd_buffer->state.compute_pipeline;
       bias = 1;
       break;
    default:
-      map = &cmd_buffer->state.pipeline->bindings[stage];
+      pipeline = cmd_buffer->state.pipeline;
       bias = 0;
       break;
    }
 
+   if (!anv_pipeline_has_stage(pipeline, stage)) {
+      *bt_state = (struct anv_state) { 0, };
+      return VK_SUCCESS;
+   }
+
+   struct anv_pipeline_bind_map *map = &pipeline->bindings[stage];
    if (bias + map->surface_count == 0) {
       *bt_state = (struct anv_state) { 0, };
       return VK_SUCCESS;
@@ -904,13 +910,19 @@ VkResult
 anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
                              gl_shader_stage stage, struct anv_state *state)
 {
-   struct anv_pipeline_bind_map *map;
+   struct anv_pipeline *pipeline;
 
    if (stage == MESA_SHADER_COMPUTE)
-      map = &cmd_buffer->state.compute_pipeline->bindings[stage];
+      pipeline = cmd_buffer->state.compute_pipeline;
    else
-      map = &cmd_buffer->state.pipeline->bindings[stage];
+      pipeline = cmd_buffer->state.pipeline;
 
+   if (!anv_pipeline_has_stage(pipeline, stage)) {
+      *state = (struct anv_state) { 0, };
+      return VK_SUCCESS;
+   }
+
+   struct anv_pipeline_bind_map *map = &pipeline->bindings[stage];
    if (map->sampler_count == 0) {
       *state = (struct anv_state) { 0, };
       return VK_SUCCESS;
@@ -1077,6 +1089,10 @@ struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
                               gl_shader_stage stage)
 {
+   /* If we don't have this stage, bail. */
+   if (!anv_pipeline_has_stage(cmd_buffer->state.pipeline, stage))
+      return (struct anv_state) { .offset = 0 };
+
    struct anv_push_constants *data =
       cmd_buffer->state.push_constants[stage];
    const struct brw_stage_prog_data *prog_data =
