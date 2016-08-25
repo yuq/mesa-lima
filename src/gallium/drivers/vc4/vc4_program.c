@@ -932,6 +932,46 @@ out:
         return qir_SEL(c, QPU_COND_NS, src[1], src[2]);
 }
 
+static struct qreg
+ntq_fddx(struct vc4_compile *c, struct qreg src)
+{
+        /* Make sure that we have a bare temp to use for MUL rotation, so it
+         * can be allocated to an accumulator.
+         */
+        if (src.pack || src.file != QFILE_TEMP)
+                src = qir_MOV(c, src);
+
+        struct qreg from_left = qir_ROT_MUL(c, src, 1);
+        struct qreg from_right = qir_ROT_MUL(c, src, 15);
+
+        /* Distinguish left/right pixels of the quad. */
+        qir_SF(c, qir_AND(c, qir_reg(QFILE_QPU_ELEMENT, 0),
+                          qir_uniform_ui(c, 1)));
+
+        return qir_SEL(c, QPU_COND_ZS,
+                       qir_FSUB(c, from_right, src),
+                       qir_FSUB(c, src, from_left));
+}
+
+static struct qreg
+ntq_fddy(struct vc4_compile *c, struct qreg src)
+{
+        if (src.pack || src.file != QFILE_TEMP)
+                src = qir_MOV(c, src);
+
+        struct qreg from_bottom = qir_ROT_MUL(c, src, 2);
+        struct qreg from_top = qir_ROT_MUL(c, src, 14);
+
+        /* Distinguish top/bottom pixels of the quad. */
+        qir_SF(c, qir_AND(c,
+                          qir_reg(QFILE_QPU_ELEMENT, 0),
+                          qir_uniform_ui(c, 2)));
+
+        return qir_SEL(c, QPU_COND_ZS,
+                       qir_FSUB(c, from_top, src),
+                       qir_FSUB(c, src, from_bottom));
+}
+
 static void
 ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
 {
@@ -1156,6 +1196,18 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
 
         case nir_op_umul_unorm_4x8:
                 result = qir_V8MULD(c, src[0], src[1]);
+                break;
+
+        case nir_op_fddx:
+        case nir_op_fddx_coarse:
+        case nir_op_fddx_fine:
+                result = ntq_fddx(c, src[0]);
+                break;
+
+        case nir_op_fddy:
+        case nir_op_fddy_coarse:
+        case nir_op_fddy_fine:
+                result = ntq_fddy(c, src[0]);
                 break;
 
         default:
