@@ -196,13 +196,11 @@ struct svga_buffer
 
 
 static inline struct svga_buffer *
-svga_buffer(struct pipe_resource *buffer)
+svga_buffer(struct pipe_resource *resource)
 {
-   if (buffer) {
-      assert(((struct svga_buffer *)buffer)->b.vtbl == &svga_buffer_vtbl);
-      return (struct svga_buffer *)buffer;
-   }
-   return NULL;
+   struct svga_buffer *buf = (struct svga_buffer *) resource;
+   assert(buf == NULL || buf->b.vtbl == &svga_buffer_vtbl);
+   return buf;
 }
 
 
