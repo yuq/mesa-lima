@@ -67,9 +67,8 @@ VkResult anv_CreateDescriptorSetLayout(
    struct anv_sampler **samplers =
       (struct anv_sampler **)&set_layout->binding[max_binding + 1];
 
+   memset(set_layout, 0, sizeof(*set_layout));
    set_layout->binding_count = max_binding + 1;
-   set_layout->shader_stages = 0;
-   set_layout->size = 0;
 
    for (uint32_t b = 0; b <= max_binding; b++) {
       /* Initialize all binding_layout entries to -1 */
