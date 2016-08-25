@@ -55,6 +55,7 @@ vec4_instruction::vec4_instruction(enum opcode opcode, const dst_reg &dst,
    this->mlen = 0;
    this->base_mrf = 0;
    this->offset = 0;
+   this->exec_size = 8;
    this->annotation = NULL;
 }
 

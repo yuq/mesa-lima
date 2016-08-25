@@ -133,6 +133,13 @@ struct backend_instruction {
    const char *annotation;
    /** @} */
 
+   /**
+    * Execution size of the instruction.  This is used by the generator to
+    * generate the correct binary for the given instruction.  Current valid
+    * values are 1, 4, 8, 16, 32.
+    */
+   uint8_t exec_size;
+
    uint32_t offset; /**< spill/unspill offset or texture offset bitfield */
    uint8_t mlen; /**< SEND message length */
    int8_t base_mrf; /**< First MRF in the SEND message, if mlen is nonzero. */
