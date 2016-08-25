@@ -34,7 +34,7 @@
 
 struct lower_io_state {
    nir_shader *shader;
-   nir_function *entrypoint;
+   nir_function_impl *entrypoint;
    struct exec_list old_outputs;
    struct exec_list old_inputs;
 };
@@ -93,7 +93,7 @@ emit_output_copies_impl(struct lower_io_state *state, nir_function_impl *impl)
             }
          }
       }
-   } else if (impl->function == state->entrypoint) {
+   } else if (impl == state->entrypoint) {
       nir_cursor cursor = nir_before_block(nir_start_block(impl));
       emit_copies(cursor, state->shader, &state->old_outputs,
                   &state->shader->outputs);
@@ -114,7 +114,7 @@ emit_output_copies_impl(struct lower_io_state *state, nir_function_impl *impl)
 static void
 emit_input_copies_impl(struct lower_io_state *state, nir_function_impl *impl)
 {
-   if (impl->function == state->entrypoint) {
+   if (impl == state->entrypoint) {
       nir_cursor cursor = nir_before_block(nir_start_block(impl));
       emit_copies(cursor, state->shader, &state->old_inputs,
                   &state->shader->inputs);
@@ -157,7 +157,7 @@ nir_lower_io_to_temporaries(nir_shader *shader, nir_function *entrypoint,
       return;
 
    state.shader = shader;
-   state.entrypoint = entrypoint;
+   state.entrypoint = entrypoint->impl;
 
    if (inputs)
       exec_list_move_nodes_to(&shader->inputs, &state.old_inputs);
