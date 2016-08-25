@@ -119,6 +119,7 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
         vc4->reg_class_a_or_b_or_acc = ra_alloc_reg_class(vc4->regs);
         vc4->reg_class_r4_or_a = ra_alloc_reg_class(vc4->regs);
         vc4->reg_class_a = ra_alloc_reg_class(vc4->regs);
+        vc4->reg_class_r0_r3 = ra_alloc_reg_class(vc4->regs);
         for (uint32_t i = 0; i < ARRAY_SIZE(vc4_regs); i++) {
                 /* Reserve ra31/rb31 for spilling fixup_raddr_conflict() in
                  * vc4_qpu_emit.c
@@ -134,6 +135,9 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
                         ra_class_add_reg(vc4->regs, vc4->reg_class_any, i);
                         continue;
                 }
+
+                if (vc4_regs[i].mux <= QPU_MUX_R3)
+                        ra_class_add_reg(vc4->regs, vc4->reg_class_r0_r3, i);
 
                 ra_class_add_reg(vc4->regs, vc4->reg_class_any, i);
                 ra_class_add_reg(vc4->regs, vc4->reg_class_a_or_b_or_acc, i);
@@ -164,6 +168,7 @@ node_to_temp_priority(const void *in_a, const void *in_b)
 #define CLASS_BIT_A			(1 << 0)
 #define CLASS_BIT_B_OR_ACC		(1 << 1)
 #define CLASS_BIT_R4			(1 << 2)
+#define CLASS_BIT_R0_R3			(1 << 4)
 
 /**
  * Returns a mapping from QFILE_TEMP indices to struct qpu_regs.
@@ -240,6 +245,11 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                                         AB_INDEX + QPU_R_FRAG_PAYLOAD_ZW * 2);
                         break;
 
+                case QOP_ROT_MUL:
+                        assert(inst->src[0].file == QFILE_TEMP);
+                        class_bits[inst->src[0].index] &= ~CLASS_BIT_R0_R3;
+                        break;
+
                 default:
                         break;
                 }
@@ -286,6 +296,9 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                         break;
                 case CLASS_BIT_A:
                         ra_set_node_class(g, node, vc4->reg_class_a);
+                        break;
+                case CLASS_BIT_R0_R3:
+                        ra_set_node_class(g, node, vc4->reg_class_r0_r3);
                         break;
                 default:
                         fprintf(stderr, "temp %d: bad class bits: 0x%x\n",
