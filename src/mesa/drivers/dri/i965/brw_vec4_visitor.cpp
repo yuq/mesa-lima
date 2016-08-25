@@ -55,6 +55,7 @@ vec4_instruction::vec4_instruction(enum opcode opcode, const dst_reg &dst,
    this->base_mrf = 0;
    this->offset = 0;
    this->exec_size = 8;
+   this->group = 0;
    this->size_written = (dst.file == BAD_FILE ?
                          0 : this->exec_size * type_sz(dst.type));
    this->annotation = NULL;

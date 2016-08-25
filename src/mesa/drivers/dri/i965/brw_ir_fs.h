@@ -367,15 +367,6 @@ public:
 
    uint8_t sources; /**< Number of fs_reg sources. */
 
-   /**
-    * Channel group from the hardware execution and predication mask that
-    * should be applied to the instruction.  The subset of channel enable
-    * signals (calculated from the EU control flow and predication state)
-    * given by [group, group + exec_size) will be used to mask GRF writes and
-    * any other side effects of the instruction.
-    */
-   uint8_t group;
-
    bool eot:1;
    bool pi_noperspective:1;   /**< Pixel interpolator noperspective flag */
 };

@@ -140,6 +140,15 @@ struct backend_instruction {
     */
    uint8_t exec_size;
 
+   /**
+    * Channel group from the hardware execution and predication mask that
+    * should be applied to the instruction.  The subset of channel enable
+    * signals (calculated from the EU control flow and predication state)
+    * given by [group, group + exec_size) will be used to mask GRF writes and
+    * any other side effects of the instruction.
+    */
+   uint8_t group;
+
    uint32_t offset; /**< spill/unspill offset or texture offset bitfield */
    uint8_t mlen; /**< SEND message length */
    int8_t base_mrf; /**< First MRF in the SEND message, if mlen is nonzero. */
