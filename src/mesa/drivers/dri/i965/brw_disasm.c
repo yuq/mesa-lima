@@ -404,7 +404,7 @@ static const char *const dp_rc_msg_type_gen9[16] = {
 };
 
 static const char *const *
-dp_rc_msg_type(const struct brw_device_info *devinfo)
+dp_rc_msg_type(const struct gen_device_info *devinfo)
 {
    return (devinfo->gen >= 9 ? dp_rc_msg_type_gen9 :
            devinfo->gen >= 7 ? dp_rc_msg_type_gen7 :

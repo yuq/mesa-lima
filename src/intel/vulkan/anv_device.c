@@ -76,8 +76,8 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
-   device->name = brw_get_device_name(device->chipset_id);
-   device->info = brw_get_device_info(device->chipset_id);
+   device->name = gen_get_device_name(device->chipset_id);
+   device->info = gen_get_device_info(device->chipset_id);
    if (!device->info) {
       result = vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
       goto fail;

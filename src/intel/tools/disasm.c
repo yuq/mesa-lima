@@ -95,7 +95,7 @@ gen_disasm_create(int pciid)
    if (gd == NULL)
       return NULL;
 
-   dev_info = brw_get_device_info(pciid);
+   dev_info = gen_get_device_info(pciid);
 
    gd->devinfo.gen = dev_info->gen;
    gd->devinfo.is_cherryview = dev_info->is_cherryview;

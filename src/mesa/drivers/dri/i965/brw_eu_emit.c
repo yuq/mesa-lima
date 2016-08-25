@@ -2417,7 +2417,7 @@ gen9_fb_READ(struct brw_codegen *p,
              unsigned response_length,
              bool per_sample)
 {
-   const struct brw_device_info *devinfo = p->devinfo;
+   const struct gen_device_info *devinfo = p->devinfo;
    assert(devinfo->gen >= 9);
    const unsigned msg_subtype =
       brw_inst_exec_size(devinfo, p->current) == BRW_EXECUTE_16 ? 0 : 1;

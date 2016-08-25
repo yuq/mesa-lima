@@ -3063,7 +3063,7 @@ get_isl_surf_dim(GLenum target)
 }
 
 enum isl_dim_layout
-get_isl_dim_layout(const struct brw_device_info *devinfo, uint32_t tiling,
+get_isl_dim_layout(const struct gen_device_info *devinfo, uint32_t tiling,
                    GLenum target)
 {
    switch (target) {

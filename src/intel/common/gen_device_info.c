@@ -488,7 +488,7 @@ static const struct gen_device_info gen_device_info_kbl_gt4 = {
 };
 
 const struct gen_device_info *
-brw_get_device_info(int devid)
+gen_get_device_info(int devid)
 {
    const struct gen_device_info *devinfo;
    switch (devid) {
@@ -505,7 +505,7 @@ brw_get_device_info(int devid)
 }
 
 const char *
-brw_get_device_name(int devid)
+gen_get_device_name(int devid)
 {
    switch (devid) {
 #undef CHIPSET

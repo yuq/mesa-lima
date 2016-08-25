@@ -782,7 +782,7 @@ brw_initialize_cs_context_constants(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    const struct intel_screen *screen = brw->intelScreen;
-   const struct brw_device_info *devinfo = screen->devinfo;
+   const struct gen_device_info *devinfo = screen->devinfo;
 
    /* FINISHME: Do this for all platforms that the kernel supports */
    if (brw->is_cherryview &&
