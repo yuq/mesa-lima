@@ -692,8 +692,7 @@ svga_texture_transfer_unmap(struct pipe_context *pipe,
 
       svga_transfer_dma(svga, st, SVGA3D_WRITE_HOST_VRAM, flags);
    } else if (transfer->usage & PIPE_TRANSFER_WRITE) {
-      struct svga_winsys_surface *surf =
-	 svga_texture(transfer->resource)->handle;
+      struct svga_winsys_surface *surf = tex->handle;
       SVGA3dBox box;
       enum pipe_error ret;
       unsigned nlayers = 1;
