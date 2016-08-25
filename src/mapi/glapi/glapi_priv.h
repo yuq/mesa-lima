@@ -53,12 +53,6 @@ typedef void *GLeglImageOES;
 extern "C" {
 #endif
 
-/* getproc */
-
-extern void
-_glapi_check_table(const struct _glapi_table *table);
-
-
 /* entrypoint */
 
 extern void
