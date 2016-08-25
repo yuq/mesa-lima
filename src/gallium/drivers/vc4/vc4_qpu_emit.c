@@ -434,6 +434,20 @@ vc4_generate_code_block(struct vc4_compile *c,
 
                 case QOP_LOAD_IMM_I2:
                         queue(block, qpu_load_imm_i2(dst, qinst->src[0].index));
+
+                case QOP_ROT_MUL:
+                        /* Rotation at the hardware level occurs on the inputs
+                         * to the MUL unit, and they must be accumulators in
+                         * order to have the time necessary to move things.
+                         */
+                        assert(src[0].mux <= QPU_MUX_R3);
+
+                        queue(block,
+                              qpu_m_rot(dst, src[0], qinst->src[1].index -
+                                        QPU_SMALL_IMM_MUL_ROT) | unpack);
+                        set_last_cond_mul(block, qinst->cond);
+                        handled_qinst_cond = true;
+                        set_last_dst_pack(block, qinst);
                         break;
 
                 case QOP_MS_MASK:

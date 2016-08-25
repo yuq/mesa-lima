@@ -150,6 +150,7 @@ uint64_t qpu_set_sig(uint64_t inst, uint32_t sig) ATTRIBUTE_CONST;
 uint64_t qpu_set_cond_add(uint64_t inst, uint32_t cond) ATTRIBUTE_CONST;
 uint64_t qpu_set_cond_mul(uint64_t inst, uint32_t cond) ATTRIBUTE_CONST;
 uint32_t qpu_encode_small_immediate(uint32_t i) ATTRIBUTE_CONST;
+uint64_t qpu_m_rot(struct qpu_reg dst, struct qpu_reg src, int rot) ATTRIBUTE_CONST;
 
 bool qpu_waddr_is_tlb(uint32_t waddr) ATTRIBUTE_CONST;
 bool qpu_inst_is_tlb(uint64_t inst) ATTRIBUTE_CONST;

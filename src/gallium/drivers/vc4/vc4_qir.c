@@ -86,6 +86,8 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_LOAD_IMM_U2] = { "load_imm_u2", 0, 1 },
         [QOP_LOAD_IMM_I2] = { "load_imm_i2", 0, 1 },
 
+        [QOP_ROT_MUL] = { "rot_mul", 0, 2 },
+
         [QOP_BRANCH] = { "branch", 0, 0, true },
         [QOP_UNIFORMS_RESET] = { "uniforms_reset", 0, 2, true },
 };
@@ -164,6 +166,7 @@ qir_is_mul(struct qinst *inst)
         case QOP_V8MAX:
         case QOP_V8ADDS:
         case QOP_V8SUBS:
+        case QOP_ROT_MUL:
                 return true;
         default:
                 return false;

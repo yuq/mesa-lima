@@ -168,6 +168,8 @@ enum qop {
          */
         QOP_LOAD_IMM_I2,
 
+        QOP_ROT_MUL,
+
         /* Jumps to block->successor[0] if the qinst->cond (as a
          * QPU_COND_BRANCH_*) passes, or block->successor[1] if not.  Note
          * that block->successor[1] may be unset if the condition is ALWAYS.
@@ -820,6 +822,16 @@ qir_LOAD_IMM_I2(struct vc4_compile *c, uint32_t val)
         return qir_emit_def(c, qir_inst(QOP_LOAD_IMM_I2, c->undef,
                                         qir_reg(QFILE_LOAD_IMM, val),
                                         c->undef));
+}
+
+/** Shifts the multiply output to the right by rot channels */
+static inline struct qreg
+qir_ROT_MUL(struct vc4_compile *c, struct qreg val, uint32_t rot)
+{
+        return qir_emit_def(c, qir_inst(QOP_ROT_MUL, c->undef,
+                                        val,
+                                        qir_reg(QFILE_LOAD_IMM,
+                                                QPU_SMALL_IMM_MUL_ROT + rot)));
 }
 
 static inline void

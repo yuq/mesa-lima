@@ -234,6 +234,19 @@ qpu_m_alu2(enum qpu_op_mul op,
         return inst;
 }
 
+uint64_t
+qpu_m_rot(struct qpu_reg dst, struct qpu_reg src0, int rot)
+{
+	uint64_t inst = 0;
+	inst = qpu_m_alu2(QPU_M_V8MIN, dst, src0, src0);
+
+	inst = QPU_UPDATE_FIELD(inst, QPU_SIG_SMALL_IMM, QPU_SIG);
+	inst = QPU_UPDATE_FIELD(inst, QPU_SMALL_IMM_MUL_ROT + rot,
+                                QPU_SMALL_IMM);
+
+	return inst;
+}
+
 static bool
 merge_fields(uint64_t *merge,
              uint64_t a, uint64_t b,
