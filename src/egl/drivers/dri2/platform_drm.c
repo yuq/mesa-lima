@@ -575,6 +575,64 @@ swrast_get_image(__DRIdrawable *driDrawable,
    gbm_dri_bo_unmap_dumb(bo);
 }
 
+static EGLBoolean
+drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   static const struct {
+      int format;
+      unsigned int red_mask;
+      unsigned int alpha_mask;
+   } visuals[] = {
+      { GBM_FORMAT_XRGB2101010, 0x3ff00000, 0x00000000 },
+      { GBM_FORMAT_ARGB2101010, 0x3ff00000, 0xc0000000 },
+      { GBM_FORMAT_XRGB8888,    0x00ff0000, 0x00000000 },
+      { GBM_FORMAT_ARGB8888,    0x00ff0000, 0xff000000 },
+      { GBM_FORMAT_RGB565,      0x0000f800, 0x00000000 },
+   };
+   EGLint attr_list[] = {
+      EGL_NATIVE_VISUAL_ID, 0,
+      EGL_NONE,
+   };
+   unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
+   unsigned int count, i, j;
+
+   count = 0;
+   for (i = 0; dri2_dpy->driver_configs[i]; i++) {
+      unsigned int red, alpha;
+
+      dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
+                                      __DRI_ATTRIB_RED_MASK, &red);
+      dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
+                                      __DRI_ATTRIB_ALPHA_MASK, &alpha);
+
+      for (j = 0; j < ARRAY_SIZE(visuals); j++) {
+         struct dri2_egl_config *dri2_conf;
+
+         if (visuals[j].red_mask != red || visuals[j].alpha_mask != alpha)
+            continue;
+
+         attr_list[1] = visuals[j].format;
+
+         dri2_conf = dri2_add_config(disp, dri2_dpy->driver_configs[i],
+               count + 1, EGL_WINDOW_BIT, attr_list, NULL);
+         if (dri2_conf) {
+            count++;
+            format_count[j]++;
+         }
+      }
+   }
+
+   for (i = 0; i < ARRAY_SIZE(format_count); i++) {
+      if (!format_count[i]) {
+         _eglLog(_EGL_DEBUG, "No DRI config supports native format 0x%x",
+                 visuals[i].format);
+      }
+   }
+
+   return (count != 0);
+}
+
 static struct dri2_egl_display_vtbl dri2_drm_display_vtbl = {
    .authenticate = dri2_drm_authenticate,
    .create_window_surface = dri2_drm_create_window_surface,
@@ -600,7 +658,6 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    struct dri2_egl_display *dri2_dpy;
    struct gbm_device *gbm;
    int fd = -1;
-   int i;
 
    loader_set_logger(_eglLog);
 
@@ -663,33 +720,9 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
 
    dri2_setup_screen(disp);
 
-   for (i = 0; dri2_dpy->driver_configs[i]; i++) {
-      EGLint format, attr_list[3];
-      unsigned int red, alpha;
-
-      dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
-                                       __DRI_ATTRIB_RED_MASK, &red);
-      dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
-                                       __DRI_ATTRIB_ALPHA_MASK, &alpha);
-      if (red == 0x3ff00000 && alpha == 0x00000000)
-         format = GBM_FORMAT_XRGB2101010;
-      else if (red == 0x3ff00000 && alpha == 0xc0000000)
-         format = GBM_FORMAT_ARGB2101010;
-      else if (red == 0x00ff0000 && alpha == 0x00000000)
-         format = GBM_FORMAT_XRGB8888;
-      else if (red == 0x00ff0000 && alpha == 0xff000000)
-         format = GBM_FORMAT_ARGB8888;
-      else if (red == 0xf800)
-         format = GBM_FORMAT_RGB565;
-      else
-         continue;
-
-      attr_list[0] = EGL_NATIVE_VISUAL_ID;
-      attr_list[1] = format;
-      attr_list[2] = EGL_NONE;
-
-      dri2_add_config(disp, dri2_dpy->driver_configs[i],
-                      i + 1, EGL_WINDOW_BIT, attr_list, NULL);
+   if (!drm_add_configs_for_visuals(drv, disp)) {
+      _eglError(EGL_NOT_INITIALIZED, "DRI2: failed to add configs");
+      goto cleanup;
    }
 
    disp->Extensions.KHR_image_pixmap = EGL_TRUE;
