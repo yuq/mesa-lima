@@ -22,7 +22,7 @@
  */
 
 #include "nir.h"
-#include "nir_control_flow_private.h"
+#include "nir_control_flow.h"
 
 /* Secret Decoder Ring:
  *   clone_foo():
@@ -35,6 +35,13 @@ typedef struct {
    /* True if we are cloning an entire shader. */
    bool global_clone;
 
+   /* If true allows the clone operation to fall back to the original pointer
+    * if no clone pointer is found in the remap table.  This allows us to
+    * clone a loop body without having to add srcs from outside the loop to
+    * the remap table. This is useful for loop unrolling.
+    */
+   bool allow_remap_fallback;
+
    /* maps orig ptr -> cloned ptr: */
    struct hash_table *remap_table;
 
@@ -46,11 +53,19 @@ typedef struct {
 } clone_state;
 
 static void
-init_clone_state(clone_state *state, bool global)
+init_clone_state(clone_state *state, struct hash_table *remap_table,
+                 bool global, bool allow_remap_fallback)
 {
    state->global_clone = global;
-   state->remap_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
-                                                _mesa_key_pointer_equal);
+   state->allow_remap_fallback = allow_remap_fallback;
+
+   if (remap_table) {
+      state->remap_table = remap_table;
+   } else {
+      state->remap_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                                                   _mesa_key_pointer_equal);
+   }
+
    list_inithead(&state->phi_srcs);
 }
 
@@ -72,9 +87,10 @@ _lookup_ptr(clone_state *state, const void *ptr, bool global)
       return (void *)ptr;
 
    entry = _mesa_hash_table_search(state->remap_table, ptr);
-   assert(entry && "Failed to find pointer!");
-   if (!entry)
-      return NULL;
+   if (!entry) {
+      assert(state->allow_remap_fallback);
+      return (void *)ptr;
+   }
 
    return entry->data;
 }
@@ -618,6 +634,34 @@ fixup_phi_srcs(clone_state *state)
    assert(list_empty(&state->phi_srcs));
 }
 
+void
+nir_cf_list_clone(nir_cf_list *dst, nir_cf_list *src, nir_cf_node *parent,
+                  struct hash_table *remap_table)
+{
+   exec_list_make_empty(&dst->list);
+   dst->impl = src->impl;
+
+   if (exec_list_is_empty(&src->list))
+      return;
+
+   clone_state state;
+   init_clone_state(&state, remap_table, false, true);
+
+   /* We use the same shader */
+   state.ns = src->impl->function->shader;
+
+   /* The control-flow code assumes that the list of cf_nodes always starts
+    * and ends with a block.  We start by adding an empty block.
+    */
+   nir_block *nblk = nir_block_create(state.ns);
+   nblk->cf_node.parent = parent;
+   exec_list_push_tail(&dst->list, &nblk->cf_node.node);
+
+   clone_cf_list(&state, &dst->list, &src->list);
+
+   fixup_phi_srcs(&state);
+}
+
 static nir_function_impl *
 clone_function_impl(clone_state *state, const nir_function_impl *fi)
 {
@@ -651,7 +695,7 @@ nir_function_impl *
 nir_function_impl_clone(const nir_function_impl *fi)
 {
    clone_state state;
-   init_clone_state(&state, false);
+   init_clone_state(&state, NULL, false, false);
 
    /* We use the same shader */
    state.ns = fi->function->shader;
@@ -691,7 +735,7 @@ nir_shader *
 nir_shader_clone(void *mem_ctx, const nir_shader *s)
 {
    clone_state state;
-   init_clone_state(&state, true);
+   init_clone_state(&state, NULL, true, false);
 
    nir_shader *ns = nir_shader_create(mem_ctx, s->stage, s->options, NULL);
    state.ns = ns;
