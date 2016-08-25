@@ -525,7 +525,6 @@ svga_texture_transfer_map(struct pipe_context *pipe,
    }
    else {
       SVGA3dSize baseLevelSize;
-      struct svga_texture *tex = svga_texture(texture);
       struct svga_winsys_surface *surf = tex->handle;
       uint8_t *map;
       boolean retry;
