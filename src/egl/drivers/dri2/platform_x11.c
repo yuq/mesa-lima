@@ -723,7 +723,7 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
    xcb_screen_iterator_t s;
    xcb_depth_iterator_t d;
    xcb_visualtype_t *visuals;
-   int i, j, id;
+   int i, j, count;
    unsigned int rgba_masks[4];
    EGLint surface_type;
    EGLint config_attrs[] = {
@@ -734,7 +734,7 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
 
    s = xcb_setup_roots_iterator(xcb_get_setup(dri2_dpy->conn));
    d = xcb_screen_allowed_depths_iterator(get_xcb_screen(s, dri2_dpy->screen));
-   id = 1;
+   count = 0;
 
    surface_type =
       EGL_WINDOW_BIT |
@@ -754,6 +754,9 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
 
 	 class_added[visuals[i]._class] = EGL_TRUE;
 	 for (j = 0; dri2_dpy->driver_configs[j]; j++) {
+            struct dri2_egl_config *dri2_conf;
+            const __DRIconfig *config = dri2_dpy->driver_configs[j];
+
             config_attrs[1] = visuals[i].visual_id;
             config_attrs[3] = visuals[i]._class;
 
@@ -761,8 +764,10 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
             rgba_masks[1] = visuals[i].green_mask;
             rgba_masks[2] = visuals[i].blue_mask;
             rgba_masks[3] = 0;
-	    dri2_add_config(disp, dri2_dpy->driver_configs[j], id++,
-			    surface_type, config_attrs, rgba_masks);
+            dri2_conf = dri2_add_config(disp, config, count + 1, surface_type,
+                                        config_attrs, rgba_masks);
+            if (dri2_conf)
+               count++;
 
             /* Allow a 24-bit RGB visual to match a 32-bit RGBA EGLConfig.
              * Otherwise it will only match a 32-bit RGBA visual.  On a
@@ -774,8 +779,10 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
             if (d.data->depth == 24) {
                rgba_masks[3] =
                   ~(rgba_masks[0] | rgba_masks[1] | rgba_masks[2]);
-               dri2_add_config(disp, dri2_dpy->driver_configs[j], id++,
-                               surface_type, config_attrs, rgba_masks);
+               dri2_conf = dri2_add_config(disp, config, count + 1, surface_type,
+                                           config_attrs, rgba_masks);
+               if (dri2_conf)
+                  count++;
             }
 	 }
       }
@@ -783,7 +790,7 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
       xcb_depth_next(&d);
    }
 
-   if (!_eglGetArraySize(disp->Configs)) {
+   if (!count) {
       _eglLog(_EGL_WARNING, "DRI2: failed to create any config");
       return EGL_FALSE;
    }
