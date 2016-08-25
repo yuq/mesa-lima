@@ -559,8 +559,10 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			 * FIXME: We shouldn't need to have the non-alloca
 			 * code path for arrays. LLVM should be smart enough to
 			 * promote allocas into registers when profitable.
+			 *
+			 * LLVM 3.8 crashes with this.
 			 */
-			if (array_size > 16) {
+			if (HAVE_LLVM >= 0x0309 && array_size > 16) {
 				array_alloca = LLVMBuildAlloca(builder,
 					LLVMArrayType(bld_base->base.vec_type,
 						      array_size), "array");
