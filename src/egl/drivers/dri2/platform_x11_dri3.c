@@ -123,7 +123,7 @@ egl_dri3_flush_drawable(struct loader_dri3_drawable *draw, unsigned flags)
    dri2_flush_drawable_for_swapbuffers(disp, &dri3_surf->base);
 }
 
-static struct loader_dri3_vtable egl_dri3_vtable = {
+static const struct loader_dri3_vtable egl_dri3_vtable = {
    .get_swap_interval = egl_dri3_get_swap_interval,
    .clamp_swap_interval = egl_dri3_clamp_swap_interval,
    .set_swap_interval = egl_dri3_set_swap_interval,

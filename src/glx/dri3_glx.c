@@ -172,7 +172,7 @@ glx_dri3_show_fps(struct loader_dri3_drawable *draw, uint64_t current_ust)
    }
 }
 
-static struct loader_dri3_vtable glx_dri3_vtable = {
+static const struct loader_dri3_vtable glx_dri3_vtable = {
    .get_swap_interval = glx_dri3_get_swap_interval,
    .clamp_swap_interval = glx_dri3_clamp_swap_interval,
    .set_swap_interval = glx_dri3_set_swap_interval,
