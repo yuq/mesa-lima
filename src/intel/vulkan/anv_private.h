@@ -1458,11 +1458,9 @@ struct anv_pipeline_bind_map {
    uint32_t surface_count;
    uint32_t sampler_count;
    uint32_t image_count;
-   uint32_t attachment_count;
 
    struct anv_pipeline_binding *                surface_to_descriptor;
    struct anv_pipeline_binding *                sampler_to_descriptor;
-   uint32_t *                                   surface_to_attachment;
 };
 
 struct anv_pipeline {
