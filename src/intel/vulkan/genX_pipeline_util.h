@@ -671,7 +671,7 @@ emit_cb_state(struct anv_pipeline *pipeline,
    uint32_t surface_count = 0;
    struct anv_pipeline_bind_map *map;
    if (anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
-      map = &pipeline->bindings[MESA_SHADER_FRAGMENT];
+      map = &pipeline->shaders[MESA_SHADER_FRAGMENT]->bind_map;
       surface_count = map->surface_count;
    }
 

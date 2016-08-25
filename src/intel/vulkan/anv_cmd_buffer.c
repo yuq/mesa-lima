@@ -757,7 +757,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       return VK_SUCCESS;
    }
 
-   struct anv_pipeline_bind_map *map = &pipeline->bindings[stage];
+   struct anv_pipeline_bind_map *map = &pipeline->shaders[stage]->bind_map;
    if (bias + map->surface_count == 0) {
       *bt_state = (struct anv_state) { 0, };
       return VK_SUCCESS;
@@ -922,7 +922,7 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
       return VK_SUCCESS;
    }
 
-   struct anv_pipeline_bind_map *map = &pipeline->bindings[stage];
+   struct anv_pipeline_bind_map *map = &pipeline->shaders[stage]->bind_map;
    if (map->sampler_count == 0) {
       *state = (struct anv_state) { 0, };
       return VK_SUCCESS;
@@ -1096,7 +1096,7 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
    struct anv_push_constants *data =
       cmd_buffer->state.push_constants[stage];
    const struct brw_stage_prog_data *prog_data =
-      cmd_buffer->state.pipeline->prog_data[stage];
+      anv_shader_bin_get_prog_data(cmd_buffer->state.pipeline->shaders[stage]);
 
    /* If we don't actually have any push constants, bail. */
    if (data == NULL || prog_data == NULL || prog_data->nr_params == 0)

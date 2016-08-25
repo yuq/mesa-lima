@@ -318,7 +318,8 @@ get_pipeline_state_l3_weights(const struct anv_pipeline *pipeline)
       if (!anv_pipeline_has_stage(pipeline, i))
          continue;
 
-      const struct brw_stage_prog_data *prog_data = pipeline->prog_data[i];
+      const struct brw_stage_prog_data *prog_data =
+         anv_shader_bin_get_prog_data(pipeline->shaders[i]);
 
       needs_dc |= pipeline->needs_data_cache;
       needs_slm |= prog_data->total_shared;
