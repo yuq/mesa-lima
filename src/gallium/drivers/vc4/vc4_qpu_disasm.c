@@ -317,7 +317,7 @@ print_alu_dst(uint64_t inst, bool is_mul)
 }
 
 static void
-print_alu_src(uint64_t inst, uint32_t mux)
+print_alu_src(uint64_t inst, uint32_t mux, bool is_mul)
 {
         bool is_a = mux != QPU_MUX_B;
         const char *file = is_a ? "a" : "b";
@@ -325,12 +325,14 @@ print_alu_src(uint64_t inst, uint32_t mux)
                           QPU_GET_FIELD(inst, QPU_RADDR_A) :
                           QPU_GET_FIELD(inst, QPU_RADDR_B));
         uint32_t unpack = QPU_GET_FIELD(inst, QPU_UNPACK);
+        bool has_si = QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_SMALL_IMM;
+        uint32_t si = QPU_GET_FIELD(inst, QPU_SMALL_IMM);
 
-        if (mux <= QPU_MUX_R5)
+        if (mux <= QPU_MUX_R5) {
                 fprintf(stderr, "r%d", mux);
-        else if (!is_a &&
-                 QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_SMALL_IMM) {
-                uint32_t si = QPU_GET_FIELD(inst, QPU_SMALL_IMM);
+                if (has_si && is_mul && si >= QPU_SMALL_IMM_MUL_ROT + 1)
+                        fprintf(stderr, "+%d", si - QPU_SMALL_IMM_MUL_ROT);
+        } else if (!is_a && has_si) {
                 if (si <= 15)
                         fprintf(stderr, "%d", si);
                 else if (si <= 31)
@@ -380,12 +382,12 @@ print_add_op(uint64_t inst)
         print_alu_dst(inst, false);
         fprintf(stderr, ", ");
 
-        print_alu_src(inst, QPU_GET_FIELD(inst, QPU_ADD_A));
+        print_alu_src(inst, QPU_GET_FIELD(inst, QPU_ADD_A), false);
 
         if (!is_mov) {
                 fprintf(stderr, ", ");
 
-                print_alu_src(inst, QPU_GET_FIELD(inst, QPU_ADD_B));
+                print_alu_src(inst, QPU_GET_FIELD(inst, QPU_ADD_B), false);
         }
 }
 
@@ -414,11 +416,11 @@ print_mul_op(uint64_t inst)
         print_alu_dst(inst, true);
         fprintf(stderr, ", ");
 
-        print_alu_src(inst, QPU_GET_FIELD(inst, QPU_MUL_A));
+        print_alu_src(inst, QPU_GET_FIELD(inst, QPU_MUL_A), true);
 
         if (!is_mov) {
                 fprintf(stderr, ", ");
-                print_alu_src(inst, QPU_GET_FIELD(inst, QPU_MUL_B));
+                print_alu_src(inst, QPU_GET_FIELD(inst, QPU_MUL_B), true);
         }
 }
 
